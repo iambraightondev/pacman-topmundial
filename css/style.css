@@ -1,0 +1,243 @@
+/* ============================================================
+ * PAC-MAN TOP MUNDIAL — css/style.css
+ * ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: #000;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#stage {
+  position: relative;
+  line-height: 0;
+}
+
+#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  /* El tamaño CSS lo fija UI.fitCanvas() en incrementos de x0.5 de la
+   * resolución nativa (224x288) para que el reescalado sea uniforme.
+   * max-width/height solo como red de seguridad previa al primer fit. */
+  width: auto;
+  height: auto;
+  max-width: 96vw;
+  max-height: 96vh;
+  background: #000;
+  touch-action: none;
+}
+
+/* ---------- Superposiciones (menú / opciones) ---------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.88);
+  line-height: 1.4;
+  text-align: center;
+  overflow-y: auto;
+  padding: 16px 8px;
+}
+
+.title {
+  color: #ffff00;
+  font-size: clamp(36px, 9vh, 64px);
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-shadow: 0 0 12px rgba(255, 255, 0, 0.6);
+}
+
+.subtitle {
+  color: #00ffff;
+  font-size: clamp(14px, 3vh, 22px);
+  font-weight: bold;
+  letter-spacing: 8px;
+  margin-bottom: 10px;
+}
+
+.roster {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 14px;
+  font-size: clamp(10px, 2vh, 14px);
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.roster-ghost {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px 7px 2px 2px;
+}
+
+.hint {
+  color: #888;
+  font-size: clamp(9px, 1.6vh, 12px);
+  letter-spacing: 1px;
+  margin-top: 16px;
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  font-family: inherit;
+  font-weight: bold;
+  font-size: clamp(13px, 2.4vh, 18px);
+  letter-spacing: 3px;
+  color: #fff;
+  background: #000;
+  border: 2px solid #2121ff;
+  padding: 10px 30px;
+  min-width: 200px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn:hover, .btn:focus-visible {
+  background: #2121ff;
+  outline: none;
+}
+
+.btn-primary {
+  border-color: #ffff00;
+  color: #ffff00;
+}
+
+.btn-primary:hover, .btn-primary:focus-visible {
+  background: #ffff00;
+  color: #000;
+}
+
+.btn-preset {
+  min-width: 0;
+  padding: 6px 14px;
+  font-size: clamp(10px, 1.8vh, 13px);
+}
+
+.btn-preset.active {
+  background: #2121ff;
+  color: #fff;
+}
+
+/* ---------- Panel de opciones ---------- */
+.panel-title {
+  color: #ffff00;
+  font-size: clamp(20px, 4vh, 30px);
+  font-weight: bold;
+  letter-spacing: 6px;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  color: #00ffff;
+  font-size: clamp(11px, 2vh, 14px);
+  font-weight: bold;
+  letter-spacing: 3px;
+  margin-top: 14px;
+}
+
+.preset-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.custom-tag {
+  color: #ff8c00;
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 2px;
+  display: none;
+}
+
+.slider-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 200px) minmax(110px, 160px) 52px;
+  align-items: center;
+  gap: 8px;
+  width: min(92%, 460px);
+  font-size: clamp(9px, 1.7vh, 12px);
+}
+
+.slider-label {
+  text-align: right;
+  letter-spacing: 1px;
+  color: #ddd;
+}
+
+.slider-value {
+  text-align: left;
+  color: #ffff00;
+  font-weight: bold;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: #ffff00;
+  cursor: pointer;
+}
+
+.note {
+  color: #777;
+  font-size: clamp(8px, 1.4vh, 10px);
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+
+/* ---------- Selector de color ---------- */
+.swatches {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch:hover { border-color: #fff; }
+
+.swatch.active {
+  border-color: #fff;
+  box-shadow: 0 0 6px #fff;
+}
+
+.color-input {
+  width: 34px;
+  height: 30px;
+  border: 2px solid #444;
+  border-radius: 4px;
+  background: #000;
+  cursor: pointer;
+  padding: 0 2px;
+}
