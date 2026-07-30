@@ -253,6 +253,10 @@
       var rt = Math.round(ms / 1000 * 60);
       this.enterReady(rt);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: rt });
+      // controles táctiles: una cruceta o dos según el modo recién arrancado
+      if (window.PM.UI && window.PM.UI.refreshTouchControls) {
+        window.PM.UI.refreshTouchControls(true);
+      }
     },
 
     resetLevel: function () {
@@ -520,10 +524,12 @@
       /* contexto de IA (Inky necesita la casilla de Blinky) */
       this.blinkyTile = { x: this.ghosts[0].tileX(), y: this.ghosts[0].tileY() };
 
-      /* jugadores */
+      /* jugadores (se guarda la casilla previa para detectar cruces) */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out) continue;
+        p.prevTX = p.tileX();
+        p.prevTY = p.tileY();
         p.update(this.pacSpeedPx(p));
         // el pac remoto (invitado online) avanza por estima; sus puntos
         // comidos llegan por red dentro de los mensajes 'pos'
@@ -531,7 +537,12 @@
       }
 
       /* fantasmas */
-      for (i = 0; i < 4; i++) this.ghosts[i].update(this);
+      for (i = 0; i < 4; i++) {
+        g = this.ghosts[i];
+        g.prevTX = g.tileX();
+        g.prevTY = g.tileY();
+        g.update(this);
+      }
 
       /* fruta */
       if (this.fruitActive) {
@@ -556,7 +567,10 @@
         }
       }
 
-      /* colisiones con fantasmas (el invitado decide las suyas) */
+      /* colisiones con fantasmas (el invitado decide las suyas).
+       * Cuenta la misma casilla Y TAMBIÉN el intercambio de casillas en
+       * el mismo tick (cruzarse de frente): el arcade original dejaba
+       * atravesarse en ese caso; aquí se corrige a propósito. */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || !this.isLocalAuth(i)) continue;
@@ -564,7 +578,11 @@
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
           if (g.mode === 'house' || g.mode === 'entering') continue;
-          if (g.tileX() !== px || g.tileY() !== py) continue;
+          var sameTile = (g.tileX() === px && g.tileY() === py);
+          var swapped = !sameTile &&
+            g.tileX() === p.prevTX && g.tileY() === p.prevTY &&
+            g.prevTX === px && g.prevTY === py;
+          if (!sameTile && !swapped) continue;
           if (g.mode === 'eyes') continue;
           if (g.frightened) {
             this.eatGhost(g, i);
@@ -1142,13 +1160,22 @@
 
       /* pac propio: simulación local completa (sin lag de entrada) */
       if (!me.out) {
+        me.prevTX = me.tileX();
+        me.prevTY = me.tileY();
         me.update(this.pacSpeedPx(me));
         this.guestEatAt(me);
       }
 
-      /* fantasmas: simulación local corregida por las instantáneas */
+      /* fantasmas: simulación local corregida por las instantáneas
+       * (la casilla previa se toma DESPUÉS de aplicar la instantánea,
+       * así una corrección de red nunca simula un cruce falso) */
       this.blinkyTile = { x: this.ghosts[0].tileX(), y: this.ghosts[0].tileY() };
-      for (i = 0; i < 4; i++) this.ghosts[i].update(this);
+      for (i = 0; i < 4; i++) {
+        var gh = this.ghosts[i];
+        gh.prevTX = gh.tileX();
+        gh.prevTY = gh.tileY();
+        gh.update(this);
+      }
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
       if (this.fruitActive && !me.out) {
@@ -1206,7 +1233,11 @@
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         if (g.mode === 'house' || g.mode === 'entering') continue;
-        if (g.tileX() !== px || g.tileY() !== py) continue;
+        var sameTile = (g.tileX() === px && g.tileY() === py);
+        var swapped = !sameTile &&
+          g.tileX() === me.prevTX && g.tileY() === me.prevTY &&
+          g.prevTX === px && g.prevTY === py;
+        if (!sameTile && !swapped) continue;
         if (g.mode === 'eyes') continue;
         if (g.frightened) {
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'

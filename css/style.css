@@ -140,6 +140,46 @@ body {
   touch-action: manipulation;
 }
 
+/* ---------- Crucetas táctiles ---------- */
+.dpad {
+  position: fixed;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 5;
+  display: none;
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows: repeat(3, 48px);
+  gap: 3px;
+}
+
+/* una sola cruceta (1 jugador / online): centrada abajo */
+#dpad1 { left: 50%; transform: translateX(-50%); }
+
+/* dos jugadores locales: una en cada esquina */
+#dpad1.dual { left: max(8px, env(safe-area-inset-left)); transform: none; }
+#dpad2 { right: max(8px, env(safe-area-inset-right)); }
+
+.dpad-b {
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(33, 33, 255, 0.22);
+  border: 1px solid rgba(33, 33, 255, 0.85);
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dpad-b:active { background: rgba(33, 33, 255, 0.75); }
+
+.dpad-up    { grid-column: 2; grid-row: 1; }
+.dpad-left  { grid-column: 1; grid-row: 2; }
+.dpad-right { grid-column: 3; grid-row: 2; }
+.dpad-down  { grid-column: 2; grid-row: 3; }
+
 /* Botón de pausa en pantalla (solo dispositivos táctiles, durante la partida) */
 #pauseBtn {
   position: absolute;

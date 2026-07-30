@@ -91,6 +91,7 @@
       this.buildOptions();
       this.buildOnline();
       this.buildPauseButton();
+      this.buildDpads();
       this.bindKeyboard();
       this.bindTouch();
       this.applyMute();
@@ -781,7 +782,7 @@
     },
 
     /* ------------------------------------------------------
-     * Botón de pausa en pantalla (dispositivos táctiles)
+     * Controles táctiles en pantalla: botón de pausa y cruceta(s)
      * ------------------------------------------------------ */
     buildPauseButton: function () {
       var self = this;
@@ -798,9 +799,57 @@
       this.pauseBtn = b;
     },
 
-    refreshPauseBtn: function (inGame) {
-      if (!this.pauseBtn) return;
-      this.pauseBtn.style.display = (inGame && this.touchDevice) ? 'block' : 'none';
+    /* Cruceta de dirección. En un jugador y online hay una sola
+     * (centrada) que controla al jugador local; en dos jugadores
+     * locales hay dos, en las esquinas: izquierda J1, derecha J2. */
+    buildDpads: function () {
+      this.dpad1 = this.makeDpad('dpad1', 0);
+      this.dpad2 = this.makeDpad('dpad2', 1);
+    },
+
+    makeDpad: function (id, playerIdx) {
+      var self = this;
+      var wrap = document.createElement('div');
+      wrap.className = 'dpad';
+      wrap.id = id;
+      wrap.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+      var defs = [
+        [D.UP, '▲', 'dpad-up', 'Arriba'],
+        [D.LEFT, '◀', 'dpad-left', 'Izquierda'],
+        [D.RIGHT, '▶', 'dpad-right', 'Derecha'],
+        [D.DOWN, '▼', 'dpad-down', 'Abajo']
+      ];
+      defs.forEach(function (df) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'dpad-b ' + df[2];
+        b.textContent = df[1];
+        b.setAttribute('aria-label', df[3]);
+        b.addEventListener('pointerdown', function (ev) {
+          ev.preventDefault();
+          self.resumeAudio();
+          var g = window.PM.Game;
+          if (g.state !== 'PLAYING' && g.state !== 'READY') return;
+          var idx = (g.playerCount === 2 && !g.netRole) ? playerIdx : g.localIdx;
+          g.setPacDir(idx, df[0]);
+        });
+        wrap.appendChild(b);
+      });
+      document.body.appendChild(wrap);
+      return wrap;
+    },
+
+    refreshTouchControls: function (inGame) {
+      var g = window.PM.Game;
+      var show = !!(inGame && this.touchDevice);
+      if (this.pauseBtn) {
+        this.pauseBtn.style.display = show ? 'block' : 'none';
+      }
+      if (!this.dpad1) return;
+      var dual = show && g.playerCount === 2 && !g.netRole;
+      this.dpad1.style.display = show ? 'grid' : 'none';
+      this.dpad1.classList.toggle('dual', dual);
+      this.dpad2.style.display = dual ? 'grid' : 'none';
     },
 
     /* ------------------------------------------------------
@@ -810,27 +859,27 @@
       this.els.menu.style.display = 'flex';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';
-      this.refreshPauseBtn(false);
+      this.refreshTouchControls(false);
     },
     showOptions: function () {
       this.refreshOptions();
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'flex';
       this.els.online.style.display = 'none';
-      this.refreshPauseBtn(false);
+      this.refreshTouchControls(false);
     },
     showOnline: function () {
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'flex';
       this.showOnlineIdle();
-      this.refreshPauseBtn(false);
+      this.refreshTouchControls(false);
     },
     hideAll: function () {
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';
-      this.refreshPauseBtn(true);   // se oculta al volver a un panel
+      this.refreshTouchControls(true);   // se actualiza de nuevo al arrancar la partida
     },
 
     resumeAudio: function () {

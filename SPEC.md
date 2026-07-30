@@ -185,8 +185,13 @@ Elroy ignores scatter (keeps chasing).
   white). Bottom-left: remaining lives as mini Pac-Mans (in the chosen color).
 - Controls: Arrows + WASD. Touch: swipe on canvas (multi-touch; in local
   2-player mode the left half of the canvas steers J1 and the right half J2;
-  in 1-player/online any swipe steers the local player). Touch devices get
-  an on-screen pause button (top-right) shown only during a game.
+  in 1-player/online any swipe steers the local player). Touch devices also
+  get on-screen controls during a game: a pause button (top-right) and
+  directional pads — one centered pad in 1-player/online, two corner pads
+  (left = J1, right = J2) in local 2-player.
+- Collisions: same tile as a ghost, AND tile-swap in the same tick (head-on
+  crossing). The original arcade let entities pass through each other when
+  swapping tiles between frames; that is deliberately fixed here.
 
 ## Difficulty & settings (contract used by ui.js + game.js)
 
