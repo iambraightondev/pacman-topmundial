@@ -9,15 +9,21 @@
   var CFG = window.PM.CFG;
   var T = CFG.TILE;
 
-  function Pacman() {
+  /* id: 0 = jugador 1, 1 = jugador 2 (en modos de dos jugadores) */
+  function Pacman(id) {
+    this.id = id || 0;
+    this.lives = 0;      // vidas propias (modo 'individual'; las gestiona game.js)
+    this.out = false;    // sin vidas en modo individual: queda de espectador
     this.reset();
   }
 
-  Pacman.prototype.reset = function () {
-    this.x = CFG.START.pac.x * T + T / 2;   // px (coordenadas del laberinto)
-    this.y = CFG.START.pac.y * T + T / 2;
-    this.dir = CFG.DIR.LEFT;
-    this.nextDir = CFG.DIR.LEFT;   // búfer del último rumbo pedido
+  /* start opcional: { x, y (casillas), dir }; por defecto la posición clásica */
+  Pacman.prototype.reset = function (start) {
+    var s = start || CFG.START.pac;
+    this.x = s.x * T + T / 2;      // px (coordenadas del laberinto)
+    this.y = s.y * T + T / 2;
+    this.dir = (s.dir === undefined) ? CFG.DIR.LEFT : s.dir;
+    this.nextDir = this.dir;       // búfer del último rumbo pedido
     this.moving = false;
     this.pauseTicks = 0;           // pausa por comer (1 punto / 3 energizante)
     this.mouthCounter = 0;

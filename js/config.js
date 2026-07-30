@@ -80,6 +80,13 @@
     fruit:  { x: 13.5, y: 17 }
   };
 
+  /* Salidas en modos de dos jugadores, simétricas en la fila clásica.
+   * dir en literales de CFG.DIR (1 = IZQUIERDA, 3 = DERECHA). */
+  CFG.START2 = [
+    { x: 11.5, y: 23, dir: 1 },
+    { x: 15.5, y: 23, dir: 3 }
+  ];
+
   /* ---------- Direcciones ---------- */
   CFG.DIR = { UP: 0, LEFT: 1, DOWN: 2, RIGHT: 3, NONE: -1 };
   CFG.DIR_V = [           // vectores, indexados por DIR
@@ -241,9 +248,12 @@
   /* ---------- Ajustes (contrato con ui.js/game.js) ---------- */
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';
   CFG.HIGHSCORE_KEY = 'pacman-topmundial-highscore';
+  CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // récord de equipo (2 jugadores)
   CFG.DEFAULT_SETTINGS = {
     difficultyPreset: 'normal',   // 'facil' | 'normal' | 'dificil' | 'custom'
     pacColor: '#ffff00',
+    pac2Color: '#00ff00',         // color del jugador 2
+    livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
     ghostSpeedMult: 1.0,          // 0.5–1.2, paso .05
     pacSpeedMult: 1.0,            // 0.8–1.3, paso .05
     frightMult: 1.0,              // 0–2, paso .25
@@ -280,6 +290,20 @@
     if (col < 0) return col + CFG.COLS;
     if (col >= CFG.COLS) return col - CFG.COLS;
     return col;
+  };
+
+  /* ---------- Red (modo online) ---------- */
+  CFG.NET = {
+    PROTO: 1,               // versión del protocolo (debe coincidir en ambos)
+    SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
+    POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
+    PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
+    WAIT_TICKS: 90,         // sin datos 1.5 s: aviso "esperando conexión"
+    DROP_TICKS: 480,        // sin datos 8 s: desconexión
+    NOTICE_TICKS: 150,      // aviso en pantalla ~2.5 s antes de volver al menú
+    HELLO_TIMEOUT_MS: 6000, // espera de respuesta del anfitrión al unirse
+    ROOM_ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ',   // sin I/O (se confunden)
+    ROOM_LEN: 4
   };
 
   window.PM.CFG = CFG;

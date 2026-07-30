@@ -2,12 +2,27 @@
  * PAC-MAN TOP MUNDIAL — js/game.js
  * Máquina de estados + bucle de paso fijo (60 Hz, acumulador).
  * Define window.PM.Game
+ *
+ * Modos de juego:
+ *  - 1 jugador (clásico).
+ *  - 2 jugadores en la misma máquina (J1 flechas, J2 WASD).
+ *  - 2 jugadores online: el anfitrión (J1) simula la partida
+ *    completa y emite instantáneas; el invitado (J2) simula su
+ *    propio Pac-Man en local (sin lag de entrada) y refleja el
+ *    resto del estado, con predicción para comer/morir.
+ *
+ * Reglas de dos jugadores: puntuación de EQUIPO (un marcador),
+ * vidas compartidas (fondo común) o individuales según ajustes,
+ * y cada fantasma persigue al jugador vivo más cercano
+ * conservando su personalidad.
  * ============================================================ */
 (function () {
   'use strict';
   var CFG = window.PM.CFG;
   var T = CFG.TILE;
   var D = CFG.DIR;
+
+  function r1(v) { return Math.round(v * 10) / 10; }
 
   var Game = {
     /* estado general */
@@ -17,9 +32,34 @@
     /* partida */
     level: 1,
     score: 0,
-    highScore: 0,
-    lives: 3,
+    highScore: 0,      // récord del modo en curso (1 jugador o equipo)
+    highScore1: 0,     // récord persistido de 1 jugador
+    highScore2: 0,     // récord persistido de equipo (2 jugadores)
+    lives: 3,          // fondo común (modo 'shared')
+    livesMode: 'shared',
     extraLifeAwarded: false,
+
+    /* jugadores */
+    playerCount: 1,
+    pacs: [],
+    localIdx: 0,       // índice del jugador local (1 solo para el invitado online)
+    dyingPlayer: 0,
+    eaterIdx: 0,       // quién comió el último fantasma (queda oculto en la pausa)
+
+    /* red */
+    netRole: null,     // null | 'host' | 'guest'
+    netColors: null,   // colores online [J1, J2]
+    netQueue: [],
+    netWatch: 0,
+    netNotice: null,   // { text, ticks } — aviso y vuelta al menú
+    snapTimer: 0, snapCount: 0, posTimer: 0,
+    outEaten: [],      // invitado: celdas comidas pendientes de enviar
+    recentEaten: {},   // invitado: celdas comidas hace poco (conciliación)
+    snapEaten: [],     // anfitrión: celdas comidas desde la última instantánea
+    predictFreeze: 0,  // invitado: congelado esperando confirmación de muerte
+    frightPredictTick: -9999,
+    eatPredictTick: -9999,
+    _lastSentDir: -2, _lastSentNext: -2,
 
     /* laberinto */
     pellets: null,      // matriz [fila][col] => '.'|'o'|null
@@ -27,7 +67,6 @@
     dotsEaten: 0,
 
     /* entidades */
-    pac: null,
     ghosts: [],
 
     /* calendario dispersión/persecución */
@@ -76,14 +115,16 @@
     energizerTicks: 0,
 
     /* contexto para la IA (se rellena por tick) */
-    pacTile: { x: 0, y: 0 },
-    pacDir: D.LEFT,
     blinkyTile: { x: 0, y: 0 },
 
     /* render */
     canvas: null, ctx: null,
     mazeBlue: null, mazeWhite: null,
     wallFlashOn: false,
+
+    /* bucle */
+    loopLast: 0,
+    loopAcc: 0,
 
     /* ---------------------------------------------------------
      * Inicialización
@@ -98,13 +139,17 @@
       this.mazeBlue = this.buildMazeCanvas(CFG.COLORS.wall);
       this.mazeWhite = this.buildMazeCanvas(CFG.COLORS.wallFlash);
 
-      this.highScore = 0;
+      this.highScore1 = 0;
+      this.highScore2 = 0;
       try {
         var hs = localStorage.getItem(CFG.HIGHSCORE_KEY);
-        if (hs !== null) this.highScore = parseInt(hs, 10) || 0;
+        if (hs !== null) this.highScore1 = parseInt(hs, 10) || 0;
+        var hs2 = localStorage.getItem(CFG.HIGHSCORE2_KEY);
+        if (hs2 !== null) this.highScore2 = parseInt(hs2, 10) || 0;
       } catch (e) { /* almacenamiento no disponible */ }
+      this.highScore = this.highScore1;
 
-      this.pac = new window.PM.Pacman();
+      this.pacs = [new window.PM.Pacman(0)];
       this.ghosts = [];
       for (var i = 0; i < 4; i++) this.ghosts.push(new window.PM.Ghost(i));
       this.loadPellets();
@@ -133,27 +178,81 @@
       return window.PM.settings || CFG.DEFAULT_SETTINGS;
     },
 
+    /* Color del jugador i (online: colores intercambiados en el saludo) */
+    colorFor: function (i) {
+      if (this.netColors && this.netColors[i]) return this.netColors[i];
+      var s = this.settings();
+      return (i === 1) ? (s.pac2Color || '#00ff00') : s.pacColor;
+    },
+
+    /* ¿El jugador i se simula con autoridad en esta máquina? */
+    isLocalAuth: function (i) {
+      return !this.netRole || i === this.localIdx;
+    },
+
+    inGame: function () { return this.state !== 'MENU'; },
+
     /* ---------------------------------------------------------
      * Flujo de partida
+     * opts: { players: 1|2, net: null|'host'|'guest',
+     *         cfg: ajustes (el invitado recibe los del anfitrión),
+     *         colors: ['#..','#..'] en online }
      * --------------------------------------------------------- */
-    newGame: function () {
-      var s = this.settings();
+    newGame: function (opts) {
+      opts = opts || {};
+      this.playerCount = (opts.players === 2) ? 2 : 1;
+      this.netRole = opts.net || null;
+      this.localIdx = (this.netRole === 'guest') ? 1 : 0;
+      this.netColors = opts.colors || null;
+
+      var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
       this.pacSpeedMult = s.pacSpeedMult;
       this.frightMult = s.frightMult;
-      this.lives = s.startLives;
+      this.livesMode = (this.playerCount === 2 && s.livesMode === 'individual')
+        ? 'individual' : 'shared';
       this.level = s.startLevel;
       this.score = 0;
       this.extraLifeAwarded = false;
       this.paused = false;
+
+      this.pacs = [new window.PM.Pacman(0)];
+      if (this.playerCount === 2) this.pacs.push(new window.PM.Pacman(1));
+      if (this.livesMode === 'individual') {
+        for (var i = 0; i < this.pacs.length; i++) this.pacs[i].lives = s.startLives;
+        this.lives = 0;
+      } else {
+        this.lives = s.startLives;
+      }
+      this.highScore = (this.playerCount === 2) ? this.highScore2 : this.highScore1;
+
+      /* red */
+      this.netQueue = [];
+      this.netWatch = 0;
+      this.netNotice = null;
+      this.snapTimer = 0; this.snapCount = 0; this.posTimer = 0;
+      this.outEaten = []; this.recentEaten = {}; this.snapEaten = [];
+      this.predictFreeze = 0;
+      this.frightPredictTick = -9999;
+      this.eatPredictTick = -9999;
+      this._lastSentDir = -2; this._lastSentNext = -2;
+      this.eaterIdx = 0; this.dyingPlayer = 0;
+      if (this.netRole) {
+        var self = this;
+        window.PM.Net.handler = function (n, d, sid) { self.netQueue.push([n, d, sid]); };
+        window.PM.Net.onclose = function () { self.onNetClosed(); };
+      }
+
       this.resetLevel();
       // melodía de inicio (solo en partida nueva)
       var ms = CFG.INTRO_FALLBACK_MS;
       if (window.AudioSys) {
-        var d = AudioSys.playIntro();
-        if (d) ms = d;
+        var dur = AudioSys.playIntro();
+        if (dur) ms = dur;
       }
-      this.enterReady(Math.round(ms / 1000 * 60));
+      var rt = Math.round(ms / 1000 * 60);
+      this.enterReady(rt);
+      this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: rt });
     },
 
     resetLevel: function () {
@@ -177,18 +276,30 @@
       this.popups = [];
       this.eatFreezeTicks = 0;
       this.hiddenGhost = -1;
+      this.snapEaten = [];
+      this.recentEaten = {};
+      this.outEaten = [];
       for (var i = 0; i < 4; i++) this.ghosts[i].dotCounter = 0;
     },
 
+    /* Posición inicial del jugador i según el número de jugadores */
+    pacStart: function (i) {
+      return (this.playerCount === 2) ? CFG.START2[i] : CFG.START.pac;
+    },
+
     resetActors: function () {
-      this.pac.reset();
-      for (var i = 0; i < 4; i++) this.ghosts[i].resetForLevel();
+      for (var i = 0; i < this.pacs.length; i++) {
+        this.pacs[i].reset(this.pacStart(i));
+      }
+      for (var g = 0; g < 4; g++) this.ghosts[g].resetForLevel();
     },
 
     respawn: function () {
       // tras perder una vida: pastillas intactas, contador global activo
-      this.pac.reset();
-      for (var i = 0; i < 4; i++) this.ghosts[i].resetAfterDeath();
+      for (var i = 0; i < this.pacs.length; i++) {
+        this.pacs[i].reset(this.pacStart(i));
+      }
+      for (var g = 0; g < 4; g++) this.ghosts[g].resetAfterDeath();
       this.schedIndex = 0;
       this.schedTicks = 0;
       this.globalMode = 'scatter';
@@ -226,6 +337,14 @@
     },
 
     toMenu: function () {
+      if (this.netRole) {
+        try { window.PM.Net.send('bye', {}); } catch (e) { /* canal cerrado */ }
+        window.PM.Net.leave();
+        this.netRole = null;
+        this.netColors = null;
+      }
+      this.netNotice = null;
+      this.playerCount = 1;
       this.state = 'MENU';
       this.paused = false;
       this.stopAllLoops();
@@ -239,8 +358,40 @@
       if (this.paused) this.stopAllLoops();
     },
 
-    setPacDir: function (d) {
-      this.pac.setDesiredDir(d);
+    /* Pausa pedida por el jugador local (en online se coordina en red) */
+    requestPause: function () {
+      if (this.state !== 'PLAYING' && this.state !== 'READY') return;
+      if (this.netRole === 'guest') {
+        this.netSend('gevt', { t: 'pauseReq', on: !this.paused });
+        return;
+      }
+      this.togglePause();
+      this.hostEvt({ t: 'pause', on: this.paused });
+    },
+
+    setPacDir: function (idx, d) {
+      var p = this.pacs[idx];
+      if (!p || p.out) return;
+      p.setDesiredDir(d);
+    },
+
+    /* ---------------------------------------------------------
+     * IA: contexto de objetivo para cada fantasma.
+     * Devuelve casilla y dirección del jugador vivo más cercano,
+     * de modo que cada fantasma conserva su personalidad.
+     * --------------------------------------------------------- */
+    pacContextFor: function (ghost) {
+      var best = null, bd = Infinity;
+      var gx = ghost.tileX(), gy = ghost.tileY();
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (p.out) continue;
+        var dx = p.tileX() - gx, dy = p.tileY() - gy;
+        var d2 = dx * dx + dy * dy;
+        if (d2 < bd) { bd = d2; best = p; }
+      }
+      if (!best) best = this.pacs[0];
+      return { tile: { x: best.tileX(), y: best.tileY() }, dir: best.dir };
     },
 
     /* ---------------------------------------------------------
@@ -248,22 +399,36 @@
      * --------------------------------------------------------- */
     startLoop: function () {
       var self = this;
-      var last = performance.now();
-      var acc = 0;
+      this.loopLast = performance.now();
+      this.loopAcc = 0;
       var STEP = 1000 / 60;
-      function frame(now) {
-        var dt = now - last;
-        last = now;
+
+      function pump(now, doRender) {
+        var dt = now - self.loopLast;
+        self.loopLast = now;
         if (dt > 100) dt = 100;   // pestaña en segundo plano
-        acc += dt;
-        while (acc >= STEP) {
+        self.loopAcc += dt;
+        while (self.loopAcc >= STEP) {
           self.step();
-          acc -= STEP;
+          self.loopAcc -= STEP;
         }
-        self.render();
+        if (doRender) self.render();
+      }
+
+      function frame(now) {
+        pump(now, true);
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
+
+      // Con la pestaña oculta, requestAnimationFrame se detiene; en una
+      // partida online hay que seguir simulando para no dejar colgado
+      // al otro jugador.
+      setInterval(function () {
+        if (!self.netRole) return;
+        var now = performance.now();
+        if (now - self.loopLast > 150) pump(now, false);
+      }, 100);
     },
 
     step: function () {
@@ -273,15 +438,35 @@
         this.energizerTicks = 0;
         this.energizerOn = !this.energizerOn;
       }
-      if (this.paused) return;
 
-      switch (this.state) {
-        case 'READY':      this.stepReady(); break;
-        case 'PLAYING':    this.stepPlaying(); break;
-        case 'DYING':      this.stepDying(); break;
-        case 'LEVEL_DONE': this.stepLevelDone(); break;
-        case 'GAME_OVER':  this.stepGameOver(); break;
+      if (this.netRole) this.processNetQueue();
+
+      /* aviso de red: congela y vuelve al menú */
+      if (this.netNotice) {
+        this.netNotice.ticks--;
+        if (this.netNotice.ticks <= 0) {
+          this.netNotice = null;
+          this.toMenu();
+        }
+        return;
       }
+
+      var stalled = this.netStalled();
+      if (!this.paused && !stalled) {
+        if (this.netRole === 'guest') {
+          this.stepGuest();
+        } else {
+          switch (this.state) {
+            case 'READY':      this.stepReady(); break;
+            case 'PLAYING':    this.stepPlaying(); break;
+            case 'DYING':      this.stepDying(); break;
+            case 'LEVEL_DONE': this.stepLevelDone(); break;
+            case 'GAME_OVER':  this.stepGameOver(); break;
+          }
+        }
+      }
+
+      if (this.netRole) this.netMaintain();
     },
 
     stepReady: function () {
@@ -292,10 +477,10 @@
     },
 
     /* ---------------------------------------------------------
-     * PLAYING
+     * PLAYING (1 jugador, 2 locales y anfitrión online)
      * --------------------------------------------------------- */
     stepPlaying: function () {
-      var i, g;
+      var i, j, g, p;
 
       /* congelación por fantasma comido */
       if (this.eatFreezeTicks > 0) {
@@ -332,14 +517,18 @@
       /* Elroy */
       this.updateElroy();
 
-      /* contexto de IA */
-      this.pacTile = { x: this.pac.tileX(), y: this.pac.tileY() };
-      this.pacDir = this.pac.dir;
+      /* contexto de IA (Inky necesita la casilla de Blinky) */
       this.blinkyTile = { x: this.ghosts[0].tileX(), y: this.ghosts[0].tileY() };
 
-      /* Pac-Man */
-      this.pac.update(this.pacSpeedPx());
-      this.eatAt(this.pac.tileX(), this.pac.tileY());
+      /* jugadores */
+      for (i = 0; i < this.pacs.length; i++) {
+        p = this.pacs[i];
+        if (p.out) continue;
+        p.update(this.pacSpeedPx(p));
+        // el pac remoto (invitado online) avanza por estima; sus puntos
+        // comidos llegan por red dentro de los mensajes 'pos'
+        if (this.isLocalAuth(i)) this.eatAt(p.tileX(), p.tileY(), p);
+      }
 
       /* fantasmas */
       for (i = 0; i < 4; i++) this.ghosts[i].update(this);
@@ -349,30 +538,40 @@
         this.fruitTicks--;
         if (this.fruitTicks <= 0) this.fruitActive = false;
         else {
-          var pty = this.pac.tileY(), ptx = this.pac.tileX();
-          if (pty === CFG.START.fruit.y && (ptx === 13 || ptx === 14)) {
-            this.fruitActive = false;
-            this.addScore(this.fruitInfo.points);
-            this.addPopup(CFG.START.fruit.x * T + T / 2,
-              CFG.START.fruit.y * T + T / 2,
-              this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
-            window.AudioSys && AudioSys.playEatFruit();
+          for (i = 0; i < this.pacs.length; i++) {
+            p = this.pacs[i];
+            if (p.out || !this.isLocalAuth(i)) continue;
+            if (p.tileY() === CFG.START.fruit.y &&
+                (p.tileX() === 13 || p.tileX() === 14)) {
+              this.fruitActive = false;
+              this.addScore(this.fruitInfo.points);
+              this.addPopup(CFG.START.fruit.x * T + T / 2,
+                CFG.START.fruit.y * T + T / 2,
+                this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
+              this.hostEvt({ t: 'fruitEat', pts: this.fruitInfo.points, w: i });
+              window.AudioSys && AudioSys.playEatFruit();
+              break;
+            }
           }
         }
       }
 
-      /* colisiones con fantasmas */
-      var px = this.pac.tileX(), py = this.pac.tileY();
-      for (i = 0; i < 4; i++) {
-        g = this.ghosts[i];
-        if (g.mode === 'house' || g.mode === 'entering') continue;
-        if (g.tileX() !== px || g.tileY() !== py) continue;
-        if (g.mode === 'eyes') continue;
-        if (g.frightened) {
-          this.eatGhost(g);
-        } else {
-          this.startDeath();
-          return;
+      /* colisiones con fantasmas (el invitado decide las suyas) */
+      for (i = 0; i < this.pacs.length; i++) {
+        p = this.pacs[i];
+        if (p.out || !this.isLocalAuth(i)) continue;
+        var px = p.tileX(), py = p.tileY();
+        for (j = 0; j < 4; j++) {
+          g = this.ghosts[j];
+          if (g.mode === 'house' || g.mode === 'entering') continue;
+          if (g.tileX() !== px || g.tileY() !== py) continue;
+          if (g.mode === 'eyes') continue;
+          if (g.frightened) {
+            this.eatGhost(g, i);
+          } else {
+            this.startDeath(i);
+            return;
+          }
         }
       }
 
@@ -387,6 +586,7 @@
         this.levelPhase = 0;
         this.phaseTicks = CFG.LEVEL_FREEZE_TICKS;
         this.stopAllLoops();
+        this.hostEvt({ t: 'levelDone' });
         return;
       }
 
@@ -429,9 +629,9 @@
     },
 
     /* ---------------------------------------------------------
-     * Comer pastillas
+     * Comer pastillas (pac: quién come, para su pausa por comer)
      * --------------------------------------------------------- */
-    eatAt: function (col, row) {
+    eatAt: function (col, row, pac) {
       if (row < 0 || row >= CFG.ROWS || col < 0 || col >= CFG.COLS) return;
       var ch = this.pellets[row][col];
       if (!ch) return;
@@ -440,13 +640,14 @@
       this.dotsEaten++;
       this.failsafeTicks = 0;
       this.houseDotEaten();
+      if (this.netRole === 'host') this.snapEaten.push(row * CFG.COLS + col);
 
       if (ch === '.') {
         this.addScore(CFG.DOT_POINTS);
-        this.pac.pauseTicks = CFG.DOT_PAUSE;
+        pac.pauseTicks = CFG.DOT_PAUSE;
       } else {
         this.addScore(CFG.ENERGIZER_POINTS);
-        this.pac.pauseTicks = CFG.ENERGIZER_PAUSE;
+        pac.pauseTicks = CFG.ENERGIZER_PAUSE;
         this.triggerFright();
       }
       window.AudioSys && AudioSys.playWaka();
@@ -464,7 +665,10 @@
       var secs = fr.seconds * this.frightMult;
       this.chainIndex = 0;                       // la cadena se reinicia
       this.forceReversalFright();
-      if (secs <= 0) return;                     // solo inversión, sin modo azul
+      if (secs <= 0) {                           // solo inversión, sin modo azul
+        this.hostEvt({ t: 'fright', tk: 0, fl: 0 });
+        return;
+      }
       this.frightTicks = Math.round(secs * 60);
       this.frightFlashes = fr.flashes;
       this.frightFlashOn = false;
@@ -473,6 +677,7 @@
         if (g.mode === 'eyes' || g.mode === 'entering') continue;
         g.frightened = true;
       }
+      this.hostEvt({ t: 'fright', tk: this.frightTicks, fl: this.frightFlashes });
     },
 
     forceReversalFright: function () {
@@ -532,15 +737,15 @@
     },
 
     /* ---------------------------------------------------------
-     * Velocidad de Pac-Man (px/tick)
+     * Velocidad de un Pac-Man (px/tick)
      * --------------------------------------------------------- */
-    pacSpeedPx: function () {
+    pacSpeedPx: function (pac) {
       var row = this.speedRow;
       var pct;
       if (this.frightTicks > 0) {
         pct = row.pacFright;
       } else {
-        var col = this.pac.tileX(), fila = this.pac.tileY();
+        var col = pac.tileX(), fila = pac.tileY();
         var hasPellet = (fila >= 0 && fila < CFG.ROWS && col >= 0 &&
           col < CFG.COLS && this.pellets[fila][col]);
         pct = hasPellet ? row.pacDots : row.pac;
@@ -552,7 +757,7 @@
     /* ---------------------------------------------------------
      * Comer fantasmas / morir
      * --------------------------------------------------------- */
-    eatGhost: function (g) {
+    eatGhost: function (g, who) {
       var pts = CFG.GHOST_CHAIN[Math.min(this.chainIndex, 3)];
       this.chainIndex++;
       this.addScore(pts);
@@ -560,14 +765,19 @@
       g.eaten();
       this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;
       this.hiddenGhost = g.id;
+      this.eaterIdx = who || 0;
+      this.hostEvt({ t: 'eatGhost', g: g.id, pts: pts,
+        x: Math.round(g.x), y: Math.round(g.y), w: this.eaterIdx });
       window.AudioSys && AudioSys.playEatGhost();
     },
 
-    startDeath: function () {
+    startDeath: function (who) {
       this.state = 'DYING';
+      this.dyingPlayer = who || 0;
       this.dyingPhase = 0;
       this.phaseTicks = CFG.DEATH_FREEZE_TICKS;
       this.stopAllLoops();
+      this.hostEvt({ t: 'death', w: this.dyingPlayer });
     },
 
     stepDying: function () {
@@ -579,14 +789,28 @@
         window.AudioSys && AudioSys.playDeath();
         return;
       }
-      /* animación terminada */
-      this.lives--;
-      if (this.lives > 0) {
+      /* animación terminada: descontar vida según el modo */
+      var survivors;
+      if (this.playerCount === 2 && this.livesMode === 'individual') {
+        var p = this.pacs[this.dyingPlayer];
+        p.lives--;
+        if (p.lives <= 0) { p.lives = 0; p.out = true; }
+        survivors = false;
+        for (var i = 0; i < this.pacs.length; i++) {
+          if (!this.pacs[i].out) survivors = true;
+        }
+      } else {
+        this.lives--;
+        survivors = this.lives > 0;
+      }
+      if (survivors) {
         this.respawn();
+        this.hostEvt({ t: 'ready', lvl: this.level, full: false, rt: CFG.READY_TICKS });
       } else {
         this.state = 'GAME_OVER';
         this.phaseTicks = CFG.GAMEOVER_TICKS;
         this.persistHighScore();
+        this.hostEvt({ t: 'gameOver' });
       }
     },
 
@@ -606,10 +830,11 @@
       this.level++;
       this.resetLevel();
       this.enterReady(CFG.READY_TICKS);
+      this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: CFG.READY_TICKS });
     },
 
     /* ---------------------------------------------------------
-     * Puntuación
+     * Puntuación (de equipo en modos de dos jugadores)
      * --------------------------------------------------------- */
     addScore: function (pts) {
       var before = this.score;
@@ -617,7 +842,14 @@
       if (!this.extraLifeAwarded && before < CFG.EXTRA_LIFE_AT &&
           this.score >= CFG.EXTRA_LIFE_AT) {
         this.extraLifeAwarded = true;
-        this.lives++;
+        if (this.playerCount === 2 && this.livesMode === 'individual') {
+          for (var i = 0; i < this.pacs.length; i++) {
+            if (!this.pacs[i].out) this.pacs[i].lives++;
+          }
+        } else {
+          this.lives++;
+        }
+        this.hostEvt({ t: 'extraLife' });
         window.AudioSys && AudioSys.playExtraLife();
       }
       if (this.score > this.highScore) {
@@ -627,12 +859,591 @@
     },
 
     persistHighScore: function () {
-      try { localStorage.setItem(CFG.HIGHSCORE_KEY, String(this.highScore)); }
-      catch (e) { /* sin almacenamiento */ }
+      try {
+        if (this.playerCount === 2) {
+          if (this.highScore > this.highScore2) this.highScore2 = this.highScore;
+          localStorage.setItem(CFG.HIGHSCORE2_KEY, String(this.highScore2));
+        } else {
+          if (this.highScore > this.highScore1) this.highScore1 = this.highScore;
+          localStorage.setItem(CFG.HIGHSCORE_KEY, String(this.highScore1));
+        }
+      } catch (e) { /* sin almacenamiento */ }
     },
 
     addPopup: function (x, y, text, ticks) {
       this.popups.push({ x: x, y: y, text: text, ticks: ticks });
+    },
+
+    /* =========================================================
+     * RED — común
+     * ========================================================= */
+    netSend: function (name, data) {
+      if (this.netRole && window.PM.Net) window.PM.Net.send(name, data);
+    },
+
+    hostEvt: function (o) {
+      if (this.netRole === 'host') this.netSend('evt', o);
+    },
+
+    processNetQueue: function () {
+      var q = this.netQueue;
+      if (!q.length) return;
+      this.netQueue = [];
+      for (var i = 0; i < q.length; i++) {
+        this.netWatch = 0;
+        if (this.netRole === 'host') this.hostMsg(q[i][0], q[i][1], q[i][2]);
+        else if (this.netRole === 'guest') this.guestMsg(q[i][0], q[i][1]);
+      }
+    },
+
+    netStalled: function () {
+      return !!this.netRole && this.inGame() && this.state !== 'GAME_OVER' &&
+        this.netWatch > CFG.NET.WAIT_TICKS;
+    },
+
+    netMaintain: function () {
+      if (!this.inGame()) return;
+      this.netWatch++;
+      if (this.state !== 'GAME_OVER' && this.netWatch > CFG.NET.DROP_TICKS) {
+        this.netFail('CONEXIÓN PERDIDA');
+        return;
+      }
+      if (this.netRole === 'host') {
+        this.snapTimer++;
+        if (this.snapTimer >= CFG.NET.SNAP_EVERY) {
+          this.snapTimer = 0;
+          this.snapCount++;
+          var withPellets = (this.snapCount % CFG.NET.PELLET_SYNC_EVERY) === 0;
+          this.netSend('snap', this.buildSnapshot(withPellets));
+        }
+      } else {
+        this.sendGuestUpdates();
+      }
+    },
+
+    netFail: function (msg) {
+      if (this.netNotice) return;
+      this.stopAllLoops();
+      this.netNotice = { text: msg, ticks: CFG.NET.NOTICE_TICKS };
+    },
+
+    peerLeft: function () {
+      if (this.state === 'GAME_OVER') return;   // final natural: cada uno a su menú
+      this.netFail('EL OTRO JUGADOR HA SALIDO');
+    },
+
+    onNetClosed: function () {
+      if (!this.netRole || !this.inGame()) return;
+      this.netFail('CONEXIÓN PERDIDA');
+    },
+
+    removePellet: function (idx) {
+      var col = idx % CFG.COLS, row = (idx - col) / CFG.COLS;
+      if (row >= 0 && row < CFG.ROWS && this.pellets[row] && this.pellets[row][col]) {
+        this.pellets[row][col] = null;
+      }
+    },
+
+    /* Mapa de pastillas como cadena hexadecimal (1 bit por casilla) */
+    pelletHex: function () {
+      var hex = '', nibble = 0, count = 0;
+      for (var r = 0; r < CFG.ROWS; r++) {
+        for (var c = 0; c < CFG.COLS; c++) {
+          nibble = (nibble << 1) | (this.pellets[r][c] ? 1 : 0);
+          count++;
+          if (count === 4) {
+            hex += nibble.toString(16);
+            nibble = 0;
+            count = 0;
+          }
+        }
+      }
+      if (count > 0) hex += (nibble << (4 - count)).toString(16);
+      return hex;
+    },
+
+    applyPelletHex: function (hex) {
+      var idx = 0, total = CFG.ROWS * CFG.COLS;
+      for (var i = 0; i < hex.length && idx < total; i++) {
+        var v = parseInt(hex.charAt(i), 16);
+        for (var b = 3; b >= 0 && idx < total; b--, idx++) {
+          var present = (v >> b) & 1;
+          var col = idx % CFG.COLS, row = (idx - col) / CFG.COLS;
+          var local = this.pellets[row][col];
+          if (present && !local) {
+            // no restaurar lo que acabamos de comer (aún viaja hacia el anfitrión)
+            if (!this.recentEaten[idx]) {
+              var ch = CFG.MAZE[row].charAt(col);
+              if (ch === '.' || ch === 'o') this.pellets[row][col] = ch;
+            }
+          } else if (!present && local) {
+            this.pellets[row][col] = null;
+          }
+        }
+      }
+    },
+
+    /* =========================================================
+     * RED — anfitrión
+     * ========================================================= */
+    hostMsg: function (name, data, sid) {
+      switch (name) {
+        case 'pos': {
+          var p = this.pacs[1];
+          if (!p || !data) return;
+          p.x = data.x; p.y = data.y;
+          p.dir = data.d; p.nextDir = data.nd;
+          if (data.e && this.state === 'PLAYING') {
+            for (var i = 0; i < data.e.length; i++) {
+              var idx = data.e[i];
+              var col = idx % CFG.COLS, row = (idx - col) / CFG.COLS;
+              this.eatAt(col, row, p);
+            }
+          }
+          break;
+        }
+        case 'gevt':
+          if (data) this.hostGuestEvent(data);
+          break;
+        case 'hello':
+          // la sala ya está en juego: no cabe nadie más
+          this.netSend('full', { to: sid });
+          break;
+        case 'bye':
+          this.peerLeft();
+          break;
+      }
+    },
+
+    hostGuestEvent: function (d) {
+      switch (d.t) {
+        case 'died':
+          if (this.state === 'PLAYING' && this.pacs[1] && !this.pacs[1].out) {
+            this.startDeath(1);
+          }
+          break;
+        case 'ateGhost': {
+          var g = this.ghosts[d.g];
+          if (this.state === 'PLAYING' && g && g.frightened &&
+              (g.mode === 'normal' || g.mode === 'leaving')) {
+            this.eatGhost(g, 1);
+          }
+          break;
+        }
+        case 'ateFruit':
+          if (this.state === 'PLAYING' && this.fruitActive) {
+            this.fruitActive = false;
+            this.addScore(this.fruitInfo.points);
+            this.addPopup(CFG.START.fruit.x * T + T / 2,
+              CFG.START.fruit.y * T + T / 2,
+              this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
+            this.hostEvt({ t: 'fruitEat', pts: this.fruitInfo.points, w: 1 });
+            window.AudioSys && AudioSys.playEatFruit();
+          }
+          break;
+        case 'pauseReq':
+          if (this.state === 'PLAYING' || this.state === 'READY') {
+            this.paused = !!d.on;
+            if (this.paused) this.stopAllLoops();
+            this.hostEvt({ t: 'pause', on: this.paused });
+          }
+          break;
+      }
+    },
+
+    buildSnapshot: function (withPellets) {
+      var i;
+      var p0 = this.pacs[0];
+      var s = {
+        st: this.state, pz: this.paused ? 1 : 0,
+        ph: this.phaseTicks, dph: this.dyingPhase, lph: this.levelPhase,
+        dp: this.dyingPlayer, rt: this.readyTicks,
+        lvl: this.level, sc: this.score, hs: this.highScore,
+        gm: this.globalMode, el: this.elroy,
+        ft: this.frightTicks, ffl: this.frightFlashes, ch: this.chainIndex,
+        fz: this.eatFreezeTicks, hg: this.hiddenGhost, ei: this.eaterIdx,
+        dl: this.dotsLeft, de: this.dotsEaten,
+        fa: this.fruitActive ? 1 : 0,
+        he: this.snapEaten,
+        p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
+        g: []
+      };
+      for (i = 0; i < 4; i++) {
+        var g = this.ghosts[i];
+        s.g.push({ x: r1(g.x), y: r1(g.y), d: g.dir, m: g.mode,
+          f: g.frightened ? 1 : 0, lp: g.leavePhase });
+      }
+      if (this.playerCount === 2 && this.livesMode === 'individual') {
+        s.lv = [this.pacs[0].lives, this.pacs[1].lives];
+        s.out = [this.pacs[0].out ? 1 : 0, this.pacs[1].out ? 1 : 0];
+      } else {
+        s.lv = this.lives;
+      }
+      if (withPellets) s.pm = this.pelletHex();
+      this.snapEaten = [];
+      return s;
+    },
+
+    /* =========================================================
+     * RED — invitado
+     * ========================================================= */
+    guestMsg: function (name, data) {
+      switch (name) {
+        case 'snap': if (data) this.applySnapshot(data); break;
+        case 'evt':  if (data) this.applyEvt(data); break;
+        case 'bye':  this.peerLeft(); break;
+      }
+    },
+
+    stepGuest: function () {
+      switch (this.state) {
+        case 'READY':
+          // el paso a PLAYING lo decide el anfitrión (llega por red)
+          if (this.readyTicks > 0) this.readyTicks--;
+          break;
+        case 'PLAYING':
+          this.stepGuestPlaying();
+          break;
+        case 'DYING':
+        case 'LEVEL_DONE':
+          // animaciones suaves entre instantáneas
+          if (this.phaseTicks > 0) this.phaseTicks--;
+          break;
+        case 'GAME_OVER':
+          this.phaseTicks--;
+          if (this.phaseTicks <= 0) this.toMenu();
+          break;
+      }
+    },
+
+    stepGuestPlaying: function () {
+      var i;
+
+      if (this.eatFreezeTicks > 0) {
+        this.eatFreezeTicks--;
+        for (i = this.popups.length - 1; i >= 0; i--) {
+          if (--this.popups[i].ticks <= 0) this.popups.splice(i, 1);
+        }
+        if (this.eatFreezeTicks === 0) this.hiddenGhost = -1;
+        return;
+      }
+      if (this.predictFreeze > 0) {   // muerte propia a la espera de confirmación
+        this.predictFreeze--;
+        return;
+      }
+
+      if (this.frightTicks > 0) this.stepFright();
+
+      var me = this.pacs[this.localIdx];
+      var host = this.pacs[0];
+
+      /* pac del anfitrión: avanza por estima entre instantáneas */
+      if (!host.out) host.update(this.pacSpeedPx(host));
+
+      /* pac propio: simulación local completa (sin lag de entrada) */
+      if (!me.out) {
+        me.update(this.pacSpeedPx(me));
+        this.guestEatAt(me);
+      }
+
+      /* fantasmas: simulación local corregida por las instantáneas */
+      this.blinkyTile = { x: this.ghosts[0].tileX(), y: this.ghosts[0].tileY() };
+      for (i = 0; i < 4; i++) this.ghosts[i].update(this);
+
+      /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
+      if (this.fruitActive && !me.out) {
+        if (me.tileY() === CFG.START.fruit.y &&
+            (me.tileX() === 13 || me.tileX() === 14)) {
+          this.fruitActive = false;               // el evt trae los puntos
+          this.netSend('gevt', { t: 'ateFruit' });
+        }
+      }
+
+      if (!me.out) this.guestCollisions(me);
+
+      for (i = this.popups.length - 1; i >= 0; i--) {
+        if (--this.popups[i].ticks <= 0) this.popups.splice(i, 1);
+      }
+
+      this.updateLoops();
+    },
+
+    guestEatAt: function (pac) {
+      var col = pac.tileX(), row = pac.tileY();
+      if (row < 0 || row >= CFG.ROWS || col < 0 || col >= CFG.COLS) return;
+      var ch = this.pellets[row][col];
+      if (!ch) return;
+      this.pellets[row][col] = null;
+      this.dotsLeft--;                    // provisional; la instantánea lo corrige
+      var idx = row * CFG.COLS + col;
+      this.outEaten.push(idx);
+      this.recentEaten[idx] = this.tick;
+      pac.pauseTicks = (ch === '.') ? CFG.DOT_PAUSE : CFG.ENERGIZER_PAUSE;
+      if (ch === 'o') this.predictFright();
+      window.AudioSys && AudioSys.playWaka();
+    },
+
+    /* Energizante propio: reacción visual inmediata; el anfitrión confirma */
+    predictFright: function () {
+      this.frightPredictTick = this.tick;
+      var fr = CFG.fright(this.level);
+      var secs = fr.seconds * this.frightMult;
+      for (var i = 0; i < 4; i++) {
+        var g = this.ghosts[i];
+        if (g.mode === 'normal') g.dir = CFG.OPP[g.dir];
+        if (secs > 0 && g.mode !== 'eyes' && g.mode !== 'entering') {
+          g.frightened = true;
+        }
+      }
+      if (secs <= 0) return;
+      this.frightTicks = Math.round(secs * 60);
+      this.frightFlashes = fr.flashes;
+      this.frightFlashOn = false;
+    },
+
+    guestCollisions: function (me) {
+      var px = me.tileX(), py = me.tileY();
+      for (var i = 0; i < 4; i++) {
+        var g = this.ghosts[i];
+        if (g.mode === 'house' || g.mode === 'entering') continue;
+        if (g.tileX() !== px || g.tileY() !== py) continue;
+        if (g.mode === 'eyes') continue;
+        if (g.frightened) {
+          // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'
+          g.eaten();
+          this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;
+          this.hiddenGhost = g.id;
+          this.eaterIdx = me.id;
+          this.eatPredictTick = this.tick;
+          this.netSend('gevt', { t: 'ateGhost', g: g.id });
+          window.AudioSys && AudioSys.playEatGhost();
+        } else {
+          this.predictFreeze = CFG.DEATH_FREEZE_TICKS + 30;
+          this.netSend('gevt', { t: 'died' });
+        }
+        return;
+      }
+    },
+
+    sendGuestUpdates: function () {
+      var me = this.pacs[this.localIdx];
+      if (!me) return;
+      this.posTimer++;
+      var dirty = this.outEaten.length > 0 ||
+        me.dir !== this._lastSentDir || me.nextDir !== this._lastSentNext;
+      if (!dirty && this.posTimer < CFG.NET.POS_EVERY) return;
+      this.posTimer = 0;
+      this._lastSentDir = me.dir;
+      this._lastSentNext = me.nextDir;
+      this.netSend('pos', {
+        x: r1(me.x), y: r1(me.y), d: me.dir, nd: me.nextDir,
+        e: this.outEaten
+      });
+      this.outEaten = [];
+      for (var k in this.recentEaten) {
+        if (this.recentEaten.hasOwnProperty(k) &&
+            this.tick - this.recentEaten[k] > 240) {
+          delete this.recentEaten[k];
+        }
+      }
+    },
+
+    /* READY en el invitado (partida nueva, nivel nuevo o reaparición) */
+    guestReady: function (d) {
+      if (d.lvl !== this.level || d.full) {
+        this.level = d.lvl;
+        this.speedRow = CFG.speedRow(d.lvl);
+        this.fruitInfo = CFG.fruitForLevel(d.lvl);
+        this.loadPellets();
+        this.recentEaten = {};
+      }
+      this.resetActors();
+      this.state = 'READY';
+      this.readyTicks = d.rt || CFG.READY_TICKS;
+      this.popups = [];
+      this.frightTicks = 0;
+      this.frightFlashOn = false;
+      this.eatFreezeTicks = 0;
+      this.hiddenGhost = -1;
+      this.predictFreeze = 0;
+      this.fruitActive = false;
+      this.paused = false;
+      this.outEaten = [];
+      this.stopAllLoops();
+    },
+
+    applyEvt: function (e) {
+      var i;
+      switch (e.t) {
+        case 'ready':
+          this.guestReady(e);
+          break;
+        case 'fright':
+          this.chainIndex = 0;
+          if (e.tk > 0) {
+            this.frightTicks = e.tk;
+            this.frightFlashes = e.fl;
+            this.frightFlashOn = false;
+            for (i = 0; i < 4; i++) {
+              var g = this.ghosts[i];
+              if (g.mode === 'eyes' || g.mode === 'entering') continue;
+              g.frightened = true;
+            }
+          }
+          // inversión visual, salvo que ya la hiciéramos por predicción
+          if (this.tick - this.frightPredictTick > 30) {
+            for (i = 0; i < 4; i++) {
+              if (this.ghosts[i].mode === 'normal') {
+                this.ghosts[i].dir = CFG.OPP[this.ghosts[i].dir];
+              }
+            }
+          }
+          break;
+        case 'eatGhost': {
+          var predicted = (this.hiddenGhost === e.g && this.eatFreezeTicks > 0);
+          var g2 = this.ghosts[e.g];
+          if (g2) g2.eaten();
+          this.eatFreezeTicks = Math.max(this.eatFreezeTicks, CFG.EAT_FREEZE_TICKS - 10);
+          this.hiddenGhost = e.g;
+          this.eaterIdx = e.w || 0;
+          this.addPopup(e.x, e.y, e.pts, this.eatFreezeTicks);
+          if (!predicted) window.AudioSys && AudioSys.playEatGhost();
+          break;
+        }
+        case 'death':
+          this.predictFreeze = 0;
+          this.state = 'DYING';
+          this.dyingPlayer = e.w || 0;
+          this.dyingPhase = 0;
+          this.phaseTicks = CFG.DEATH_FREEZE_TICKS;
+          this.stopAllLoops();
+          break;
+        case 'levelDone':
+          this.state = 'LEVEL_DONE';
+          this.levelPhase = 0;
+          this.phaseTicks = CFG.LEVEL_FREEZE_TICKS;
+          this.stopAllLoops();
+          break;
+        case 'fruitEat':
+          this.fruitActive = false;
+          this.addPopup(CFG.START.fruit.x * T + T / 2,
+            CFG.START.fruit.y * T + T / 2, e.pts, CFG.FRUIT_SCORE_S * 60);
+          window.AudioSys && AudioSys.playEatFruit();
+          break;
+        case 'extraLife':
+          window.AudioSys && AudioSys.playExtraLife();
+          break;
+        case 'gameOver':
+          this.state = 'GAME_OVER';
+          this.phaseTicks = CFG.GAMEOVER_TICKS;
+          this.highScore = Math.max(this.highScore, this.score);
+          this.persistHighScore();
+          this.stopAllLoops();
+          break;
+        case 'pause':
+          this.paused = !!e.on;
+          if (this.paused) this.stopAllLoops();
+          break;
+      }
+    },
+
+    applySnapshot: function (s) {
+      var i;
+
+      /* transición de estado */
+      if (s.st !== this.state) {
+        var prev = this.state;
+        this.state = s.st;
+        if (s.st === 'DYING' || s.st === 'LEVEL_DONE' || s.st === 'GAME_OVER') {
+          this.stopAllLoops();
+        }
+        if (s.st === 'DYING') this.predictFreeze = 0;
+        if (s.st === 'GAME_OVER') {
+          this.highScore = Math.max(this.highScore, s.sc || 0);
+          this.persistHighScore();
+        }
+        if (s.st === 'READY' && prev !== 'READY') {
+          // respaldo por si el evt 'ready' no llegó
+          this.guestReady({ lvl: s.lvl, full: false, rt: s.rt });
+        }
+      }
+
+      this.paused = !!s.pz;
+      if (this.paused) this.stopAllLoops();
+
+      /* sonido de muerte al ver empezar la fase 1 */
+      if (s.st === 'DYING' && s.dph === 1 && this.dyingPhase !== 1) {
+        window.AudioSys && AudioSys.playDeath();
+      }
+
+      this.phaseTicks = s.ph;
+      this.dyingPhase = s.dph;
+      this.levelPhase = s.lph;
+      this.dyingPlayer = s.dp || 0;
+      this.readyTicks = s.rt;
+
+      if (s.lvl !== this.level) {   // respaldo por si 'ready' no llegó
+        this.level = s.lvl;
+        this.speedRow = CFG.speedRow(s.lvl);
+        this.fruitInfo = CFG.fruitForLevel(s.lvl);
+        this.loadPellets();
+        this.recentEaten = {};
+      }
+
+      this.score = s.sc;
+      this.highScore = Math.max(this.highScore, s.hs || 0, s.sc || 0);
+      this.globalMode = s.gm;
+      this.elroy = s.el;
+
+      /* ventanas de protección para no pisar las predicciones locales */
+      var protFright = (this.tick - this.frightPredictTick) < 60;
+      var protEat = (this.tick - this.eatPredictTick) < 90;
+      this.frightTicks = protFright ? Math.max(this.frightTicks, s.ft) : s.ft;
+      this.frightFlashes = Math.max(this.frightFlashes, s.ffl || 0);
+      if (!protFright) this.frightFlashes = s.ffl;
+      this.chainIndex = s.ch;
+      this.eatFreezeTicks = protEat ? Math.max(this.eatFreezeTicks, s.fz) : s.fz;
+      if (!(protEat && s.hg < 0)) this.hiddenGhost = s.hg;
+      this.eaterIdx = s.ei || 0;
+
+      this.dotsLeft = s.dl;
+      this.dotsEaten = s.de;
+      this.fruitActive = !!s.fa;
+
+      /* vidas */
+      if (this.livesMode === 'individual' && s.lv && s.lv.length) {
+        for (i = 0; i < this.pacs.length && i < s.lv.length; i++) {
+          this.pacs[i].lives = s.lv[i];
+          this.pacs[i].out = !!(s.out && s.out[i]);
+        }
+      } else {
+        this.lives = s.lv;
+      }
+
+      /* celdas comidas en el anfitrión desde la última instantánea */
+      if (s.he) {
+        for (i = 0; i < s.he.length; i++) this.removePellet(s.he[i]);
+      }
+
+      /* pac del anfitrión */
+      if (s.p0) {
+        var h = this.pacs[0];
+        h.x = s.p0.x; h.y = s.p0.y;
+        h.dir = s.p0.d; h.nextDir = s.p0.nd;
+      }
+
+      /* fantasmas */
+      if (s.g) {
+        for (i = 0; i < 4 && i < s.g.length; i++) {
+          var gd = s.g[i], g = this.ghosts[i];
+          g.x = gd.x; g.y = gd.y; g.dir = gd.d;
+          g.mode = gd.m;
+          g.frightened = protFright ? (g.frightened || !!gd.f) : !!gd.f;
+          g.leavePhase = gd.lp || 0;
+        }
+      }
+
+      if (s.pm) this.applyPelletHex(s.pm);
     },
 
     /* ---------------------------------------------------------
@@ -757,9 +1568,8 @@
       var showActors = (this.state === 'READY' || this.state === 'PLAYING' ||
                         this.state === 'DYING' || this.state === 'LEVEL_DONE');
       if (showActors) {
-        var hidePac = (this.eatFreezeTicks > 0) ||
-                      (this.state === 'DYING' && this.dyingPhase === 1);
-        var hideGhosts = (this.state === 'DYING' && this.dyingPhase === 1) ||
+        var deathAnim = (this.state === 'DYING' && this.dyingPhase === 1);
+        var hideGhosts = deathAnim ||
                          (this.state === 'LEVEL_DONE' && this.levelPhase === 1);
         if (!hideGhosts) {
           for (i = 0; i < 4; i++) {
@@ -767,12 +1577,31 @@
             this.ghosts[i].draw(ctx, this);
           }
         }
-        if (!hidePac) {
-          this.pac.draw(ctx, this.settings().pacColor);
-        } else if (this.state === 'DYING' && this.dyingPhase === 1) {
-          var t = 1 - this.phaseTicks / CFG.DEATH_ANIM_TICKS;
-          window.PM.Sprites.drawPacmanDeath(ctx, this.pac.x,
-            this.pac.y + CFG.MAZE_Y, t, this.settings().pacColor);
+        for (i = this.pacs.length - 1; i >= 0; i--) {
+          var pc = this.pacs[i];
+          if (pc.out) continue;
+          if (deathAnim) {
+            if (i === this.dyingPlayer) {
+              var t = 1 - this.phaseTicks / CFG.DEATH_ANIM_TICKS;
+              window.PM.Sprites.drawPacmanDeath(ctx, pc.x,
+                pc.y + CFG.MAZE_Y, t, this.colorFor(i));
+            }
+            continue;   // los demás quedan ocultos durante la animación
+          }
+          if (this.eatFreezeTicks > 0 && i === this.eaterIdx) continue;
+          pc.draw(ctx, this.colorFor(i));
+        }
+        /* etiquetas J1/J2 durante el "¡LISTO!" en dos jugadores */
+        if (this.playerCount === 2 && this.state === 'READY') {
+          ctx.font = 'bold 8px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          for (i = 0; i < this.pacs.length; i++) {
+            if (this.pacs[i].out) continue;
+            ctx.fillStyle = this.colorFor(i);
+            ctx.fillText('J' + (i + 1), this.pacs[i].x,
+              this.pacs[i].y + CFG.MAZE_Y - 10);
+          }
         }
       }
 
@@ -787,27 +1616,41 @@
     },
 
     renderHUD: function (ctx) {
-      var i;
+      var i, p;
+      var twoP = (this.playerCount === 2 && this.state !== 'MENU');
       ctx.font = 'bold 8px monospace';
       ctx.textBaseline = 'top';
       ctx.fillStyle = CFG.COLORS.text;
 
       ctx.textAlign = 'left';
-      ctx.fillText('1UP', 20, 0);
+      ctx.fillText(twoP ? 'EQUIPO' : '1UP', 20, 0);
       ctx.textAlign = 'center';
       ctx.fillText('HIGH SCORE', 112, 0);
 
       ctx.textAlign = 'right';
       var sc = (this.state === 'MENU') ? 0 : this.score;
+      var hs = (this.state === 'MENU') ? this.highScore1 : this.highScore;
       ctx.fillText(String(sc || 0), 56, 9);
-      ctx.fillText(String(this.highScore || 0), 136, 9);
+      ctx.fillText(String(hs || 0), 136, 9);
 
-      /* vidas (mini Pac-Mans del color elegido) */
-      var color = this.settings().pacColor;
-      var livesShown = Math.max(0, this.lives - 1);
-      if (this.state === 'MENU') livesShown = 0;
-      for (i = 0; i < livesShown && i < 5; i++) {
-        window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color);
+      /* vidas (mini Pac-Mans) */
+      if (this.state !== 'MENU') {
+        if (twoP && this.livesMode === 'individual') {
+          for (p = 0; p < this.pacs.length; p++) {
+            var n = Math.min(Math.max(this.pacs[p].lives - 1, 0), 3);
+            for (i = 0; i < n; i++) {
+              window.PM.Sprites.drawPacman(ctx, 18 + p * 56 + i * 16, 278,
+                D.LEFT, 2, this.colorFor(p));
+            }
+          }
+        } else {
+          // fondo común en 2 jugadores: iconos blancos (vidas del equipo)
+          var color = twoP ? '#ffffff' : this.colorFor(0);
+          var livesShown = Math.max(0, this.lives - 1);
+          for (i = 0; i < livesShown && i < 5; i++) {
+            window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color);
+          }
+        }
       }
 
       /* frutas de los últimos <=7 niveles (abajo a la derecha) */
@@ -840,6 +1683,25 @@
         ctx.font = 'bold 12px monospace';
         ctx.fillStyle = CFG.COLORS.text;
         ctx.fillText('PAUSA', 112, CFG.NATIVE_H / 2);
+      }
+
+      /* avisos de red */
+      if (this.netRole && !this.netNotice && this.inGame() &&
+          this.state !== 'GAME_OVER' && this.netWatch > CFG.NET.WAIT_TICKS) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
+        if (Math.floor(this.tick / 20) % 2 === 0) {
+          ctx.font = 'bold 9px monospace';
+          ctx.fillStyle = CFG.COLORS.text;
+          ctx.fillText('ESPERANDO CONEXIÓN...', 112, CFG.NATIVE_H / 2);
+        }
+      }
+      if (this.netNotice) {
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = CFG.COLORS.ready;
+        ctx.fillText(this.netNotice.text, 112, CFG.NATIVE_H / 2);
       }
     }
   };

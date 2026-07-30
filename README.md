@@ -2,17 +2,51 @@
 
 Recreación fiel del Pac-Man arcade de 1980, construida desde cero en JavaScript
 vanilla (HTML5 Canvas + Web Audio API). Sin dependencias, sin build, sin
-servidor: un solo doble clic y a jugar.
+servidor: un solo doble clic y a jugar. Con modo de **dos jugadores en la misma
+máquina** y modo **online** para jugar en equipo contra los fantasmas.
 
-| Menú | Partida | Opciones |
-|------|---------|----------|
-| ![Menú](capturas/menu.png) | ![Partida](capturas/gameplay.png) | ![Opciones](capturas/opciones.png) |
+| Menú | Partida | Dos jugadores online |
+|------|---------|----------------------|
+| ![Menú](capturas/menu.png) | ![Partida](capturas/gameplay.png) | ![Online](capturas/online-2j.png) |
 
 ## Cómo jugar
 
 - **Windows**: doble clic en `jugar.bat` (levanta un servidor local y abre el navegador), o simplemente abre `index.html` directamente.
 - **Cualquier sistema**: `python -m http.server 8264` en la carpeta y visita `http://localhost:8264`.
 - **Controles**: flechas o WASD para moverte · `P` para pausa.
+- **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
+
+## Modos de juego
+
+- **Un jugador** — el arcade clásico.
+- **Dos jugadores (misma máquina)** — cooperativo simultáneo contra los
+  fantasmas, en el mismo laberinto. Puntuación de equipo (un solo marcador y
+  récord propio de 2 jugadores). Vidas **compartidas** (fondo común, por
+  defecto) o **individuales** (quien las pierde queda de espectador),
+  configurable en OPCIONES. Cada fantasma persigue al jugador vivo más
+  cercano manteniendo su personalidad original.
+- **Online (2 jugadores)** — las mismas reglas de equipo, cada uno desde su
+  casa. Uno crea una sala y comparte el código de 4 letras (o el enlace
+  directo); el otro se une. El anfitrión fija la dificultad; cada jugador usa
+  su propio color.
+
+### Configurar el modo online
+
+El modo online usa **Supabase Realtime** como canal de comunicación (solo
+canales de difusión: no crea tablas ni escribe en la base de datos). Para
+activarlo, copia la URL y la clave *anon/publishable* de tu proyecto de
+Supabase (Dashboard → Settings → API) en `js/net-config.js`:
+
+```js
+window.PM.NET_CFG = {
+  SUPABASE_URL: 'https://tuproyecto.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_... o eyJ...'
+};
+```
+
+Sin credenciales, el resto del juego funciona igual; solo el botón de crear
+o unirse a salas queda deshabilitado. Para probar el online en local sin
+Supabase, abre dos pestañas con `?red=local` en la URL.
 
 ## Características
 
@@ -28,22 +62,36 @@ servidor: un solo doble clic y a jugar.
 **Personalización:**
 
 - **Dificultad**: presets Fácil / Normal / Difícil + ajustes finos (velocidad de fantasmas y de Pac-Man, duración del power pellet, vidas, nivel inicial).
-- **Color de Pac-Man**: 8 colores rápidos + selector libre. Se aplica en vivo.
-- Configuración y récord guardados automáticamente en el navegador (localStorage).
+- **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
+- **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
+- Configuración y récords (1 jugador y equipo) guardados automáticamente en el navegador (localStorage).
+
+**Multijugador online (arquitectura):**
+
+- El **anfitrión** simula la partida completa (fantasmas, contadores, fruta,
+  puntuación) y emite instantáneas ~12 veces por segundo.
+- El **invitado** simula su propio Pac-Man en local — sin lag de entrada — y
+  refleja el resto; come puntos y fantasmas con predicción local que el
+  anfitrión confirma.
+- Salas efímeras con código de 4 letras sobre canales de difusión de
+  Supabase Realtime (cliente Phoenix/WebSocket propio, sin librerías).
+  Desconexiones detectadas con aviso y vuelta al menú.
 
 ## Estructura
 
 ```
-index.html      Página principal
-css/style.css   Estilos y escalado pixel-perfect
-js/config.js    Constantes, laberinto y tablas del arcade
-js/audio.js     Síntesis de sonido (Web Audio API)
-js/sprites.js   Sprites dibujados por código
-js/pacman.js    Jugador
-js/ghost.js     IA de los fantasmas
-js/game.js      Bucle principal y máquina de estados
-js/ui.js        Menús, opciones y selector de color
-SPEC.md         Especificación técnica completa
+index.html        Página principal
+css/style.css     Estilos y escalado pixel-perfect
+js/config.js      Constantes, laberinto y tablas del arcade
+js/audio.js       Síntesis de sonido (Web Audio API)
+js/sprites.js     Sprites dibujados por código
+js/pacman.js      Jugador
+js/ghost.js       IA de los fantasmas
+js/net-config.js  Credenciales de Supabase (modo online)
+js/net.js         Transporte en tiempo real (Supabase Realtime / local)
+js/game.js        Bucle principal, máquina de estados y sincronización
+js/ui.js          Menús, opciones, lobby online y selector de color
+SPEC.md           Especificación técnica completa
 ```
 
 ## Nota legal

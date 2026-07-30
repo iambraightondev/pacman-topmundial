@@ -9,7 +9,9 @@ Audio API. UI language: **Spanish**.
 
 - Plain JS, **no ES modules** (must run from `file://`). Classic `<script>` tags
   loaded in order. Shared state lives under the `window.PM` namespace.
-- No external network resources (fonts, CDNs, images). Fully offline.
+- No external network resources (fonts, CDNs, images). Fully offline for the
+  local modes; ONLY the online mode talks to the network (Supabase Realtime),
+  with a hand-written client (no external libraries).
 - Files (all inside the project root):
   - `index.html`
   - `css/style.css`
@@ -18,9 +20,12 @@ Audio API. UI language: **Spanish**.
   - `js/sprites.js` — procedural sprite drawing (defines `PM.Sprites`)
   - `js/pacman.js`  — player entity (defines `PM.Pacman`)
   - `js/ghost.js`   — ghost AI (defines `PM.Ghost`)
+  - `js/net-config.js` — Supabase credentials placeholder (defines `PM.NET_CFG`)
+  - `js/net.js`     — realtime transport for online mode (defines `PM.Net`)
   - `js/game.js`    — state machine + fixed-timestep loop (defines `PM.Game`)
-  - `js/ui.js`      — menus, settings panel, color picker (defines `PM.UI`)
-  - Script order in index.html: config, audio, sprites, pacman, ghost, game, ui.
+  - `js/ui.js`      — menus, settings panel, online lobby (defines `PM.UI`)
+  - Script order in index.html: config, audio, sprites, pacman, ghost,
+    net-config, net, game, ui.
 - Rendering: native resolution 224×288 px (28×36 tiles of 8 px: 3 top rows for
   scores, 31 maze rows, 2 bottom rows for lives/fruits). Integer-scale up (×2.5
   or ×3) with `imageSmoothingEnabled=false` for crisp pixels. Game logic runs in
@@ -186,6 +191,8 @@ Elroy ignores scatter (keeps chasing).
 PM.settings = {
   difficultyPreset: 'normal',  // 'facil' | 'normal' | 'dificil' | 'custom'
   pacColor: '#ffff00',
+  pac2Color: '#00ff00',  // player 2 color (2-player modes)
+  livesMode: 'shared',   // 'shared' (team pool, default) | 'individual'
   ghostSpeedMult: 1.0,   // 0.5–1.2, step .05
   pacSpeedMult: 1.0,     // 0.8–1.3, step .05
   frightMult: 1.0,       // 0–2, step .25  (× frightened duration)
@@ -245,6 +252,58 @@ eyes return), `playEatGhost()`, `playEatFruit()`, `playDeath()` (~1.5 s
 descending sweep + sputter), `playExtraLife()`. Only one of
 siren/fright/retreat audible at once (retreat > fright > siren priority).
 game.js must guard every call (`window.AudioSys && AudioSys.playWaka()`).
+
+## Multiplayer (2 players, local & online)
+
+Menu offers: UN JUGADOR · DOS JUGADORES (same machine) · JUGAR ONLINE ·
+OPCIONES. Shared 2-player rules (both modes):
+
+- **Team score**: one scoreboard for both ("EQUIPO" replaces "1UP" in the
+  HUD); ghost-eat chain and fruit go to the team. One extra life at 10 000
+  (to the pool in shared mode; +1 to each active player in individual mode).
+  Separate persisted high score `pacman-topmundial-highscore-2p`.
+- **Lives** (`livesMode`): `'shared'` (default) = one team pool (the VIDAS
+  slider), lives icons drawn white; `'individual'` = each player gets VIDAS
+  lives (icons in each player's color, ≤3 shown), a player at 0 becomes a
+  spectator, GAME OVER when everyone is out. Any death runs the classic
+  full-reset sequence (ghosts home, global dot counter active).
+- **Spawns**: symmetric on the classic row — P1 (11.5, 23) facing LEFT,
+  P2 (15.5, 23) facing RIGHT ("J1"/"J2" labels shown during READY).
+  1-player mode keeps the classic (13.5, 23).
+- **Ghost AI**: each ghost applies its own personality to the nearest alive
+  player (euclidean tile distance); Inky still doubles from Blinky's tile;
+  Clyde's 8-tile rule uses the chosen player. Players pass through each other.
+- **Local controls**: J1 arrows, J2 WASD (1-player keeps arrows+WASD both).
+
+**Online** (host = J1, guest = J2, colors exchanged in the handshake; the
+host's difficulty settings + livesMode + startLevel are imposed):
+
+- Rooms: 4-letter code (alphabet without I/O), shareable link `?sala=CODE`
+  which auto-joins on load. Handshake: guest `hello{v,color}` → host
+  `cfg{v,color,cfg}` → host `start` → both `newGame`. Third joiner gets
+  `full`. Protocol version `PM.CFG.NET.PROTO` must match.
+- Transport (`PM.Net`): Supabase Realtime broadcast channels over a minimal
+  hand-written Phoenix WebSocket client (heartbeat every 25 s; no database
+  usage), credentials in `js/net-config.js` (`PM.NET_CFG`). Dev transport
+  via `?red=local` uses BroadcastChannel between two tabs of one browser.
+  Every payload is wrapped `{s: senderId, d: data}`; after the handshake
+  only the locked peer's messages are accepted.
+- Authority: the **host simulates everything** (ghosts, schedule, house
+  counters, Elroy, fruit, score, lives, state machine) and broadcasts
+  snapshots every 5 ticks (~12 Hz; every 15th carries the full pellet
+  bitmap as hex for self-healing). The **guest simulates only its own
+  Pac-Man** locally (zero input lag), sends `pos {x,y,dir,nextDir,eaten[]}`
+  every 5 ticks (sooner on turns/eats), and mirrors everything else from
+  snapshots, dead-reckoning the host's pac and the ghosts between them.
+- Guest prediction (confirmed by host events): eating dots/energizers
+  (fright shown immediately), eating frightened ghosts (freeze + hide,
+  host validates and replies `eatGhost` with chain points), own death
+  (local freeze, host replies `death`). Pause: either player; guest's `P`
+  sends `pauseReq`, host applies and broadcasts.
+- Robustness: watchdog shows "ESPERANDO CONEXIÓN..." after 1.5 s without
+  data and drops with "CONEXIÓN PERDIDA" after 8 s; leaving sends `bye`
+  ("EL OTRO JUGADOR HA SALIDO" on the other side → menu). A hidden tab
+  keeps simulating via a 100 ms interval pump (rAF stops in background).
 
 ## Acceptance checklist (verifiers use this)
 

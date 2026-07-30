@@ -60,8 +60,9 @@
   };
 
   /* ---------- Objetivos (casillas; pueden quedar fuera del mapa) ---------- */
-  /* game aporta: pacTile {x,y}, pacDir, blinkyTile {x,y}, globalMode
-   * ('scatter'|'chase'), elroy (0|1|2) */
+  /* game aporta: pacContextFor(ghost) -> {tile:{x,y}, dir} del jugador vivo
+   * más cercano (cada fantasma conserva su personalidad con ese objetivo),
+   * blinkyTile {x,y}, globalMode ('scatter'|'chase'), elroy (0|1|2) */
   Ghost.prototype.targetTile = function (game) {
     if (this.mode === 'eyes') {
       return { x: 13.5, y: 11 };   // sobre la puerta
@@ -71,7 +72,8 @@
     if (this.id === 0 && game.elroy > 0) mode = 'chase';
     if (mode === 'scatter') return this.scatter;
 
-    var p = game.pacTile, pd = game.pacDir;
+    var pc = game.pacContextFor(this);
+    var p = pc.tile, pd = pc.dir;
     var v = CFG.DIR_V[pd];
     switch (this.id) {
       case 0:  // Blinky: casilla de Pac-Man
