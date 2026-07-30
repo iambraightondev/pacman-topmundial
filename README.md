@@ -5,9 +5,11 @@ vanilla (HTML5 Canvas + Web Audio API). Sin dependencias, sin build, sin
 servidor: un solo doble clic y a jugar. Con modo de **dos jugadores en la misma
 máquina** y modo **online** para jugar en equipo contra los fantasmas.
 
-| Menú | Partida | Dos jugadores online |
-|------|---------|----------------------|
-| ![Menú](capturas/menu.png) | ![Partida](capturas/gameplay.png) | ![Online](capturas/online-2j.png) |
+| Menú | Partida | Dos jugadores online | Móvil |
+|------|---------|----------------------|-------|
+| ![Menú](capturas/menu.png) | ![Partida](capturas/gameplay.png) | ![Online](capturas/online-2j.png) | ![Móvil](capturas/movil.png) |
+
+Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
 
 ## Cómo jugar
 
@@ -63,6 +65,7 @@ Supabase, abre dos pestañas con `?red=local` en la URL.
 - Ciclos scatter/chase con los tiempos exactos por nivel, reversa forzada en cada cambio de modo, zonas de no-subida y desempate de direcciones del original.
 - Tablas de velocidad por nivel, ralentización en el túnel, Cruise Elroy, contadores de salida de la casa de fantasmas (personales, globales tras perder vida, y temporizador de seguridad).
 - Frutas en 70 y 170 puntos comidos, cadena de fantasmas 200/400/800/1600, vida extra a los 10 000, niveles infinitos con la curva de dificultad del arcade.
+- Una mejora deliberada sobre el original: la colisión detecta el cruce de casillas en el mismo tick, así que no puedes atravesar fantasmas al cruzarte de frente (el arcade de 1980 sí lo permitía por error).
 - Sonido 100 % sintetizado en tiempo real con Web Audio API: melodía de inicio, waka-waka, sirenas progresivas, modo asustado, ojos volviendo a casa, muerte, fruta y vida extra.
 
 **Personalización:**
@@ -96,8 +99,9 @@ js/ghost.js       IA de los fantasmas
 js/net-config.js  Credenciales de Supabase (modo online)
 js/net.js         Transporte en tiempo real (Supabase Realtime / local)
 js/game.js        Bucle principal, máquina de estados y sincronización
-js/ui.js          Menús, opciones, lobby online y selector de color
+js/ui.js          Menús, opciones, lobby online, controles táctiles
 SPEC.md           Especificación técnica completa
+CHANGELOG.md      Historial de cambios
 ```
 
 ## Nota legal

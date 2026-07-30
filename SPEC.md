@@ -313,6 +313,28 @@ host's difficulty settings + livesMode + startLevel are imposed):
   ("EL OTRO JUGADOR HA SALIDO" on the other side → menu). A hidden tab
   keeps simulating via a 100 ms interval pump (rAF stops in background).
 
+### Wire messages (reference)
+
+Every payload travels wrapped as `{s: senderId, d: data}`; after the
+handshake only the locked peer is accepted (plus `hello` from third
+parties, answered with `full`). Cells are indices `row*28+col`.
+
+- Lobby: `hello {v, c(olor)}` → `cfg {v, c, cfg}` → `start {}`;
+  rejections: `full {to}`.
+- Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell]}` every 5 ticks,
+  sooner on turns or eats; `gevt {t: 'died' | 'ateGhost'{g} | 'ateFruit' |
+  'pauseReq'{on}}`.
+- Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
+  bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
+  'eatGhost'{g,pts,x,y,w} | 'death'{w} | 'levelDone' | 'fruitEat'{pts,w} |
+  'extraLife' | 'gameOver' | 'pause'{on}}`.
+- Both directions: `bye {}` on leaving.
+- `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`
+  (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),
+  `fz hg ei` (eat-freeze/hidden ghost/eater), `dl de fa` (dots/fruit),
+  `he` (cells eaten since last snap), `lv out` (lives/spectators),
+  `p0 {x,y,d,nd}` (host pac), `g[4] {x,y,d,m,f,lp}` (ghosts), `pm?`.
+
 ## Acceptance checklist (verifiers use this)
 
 1. Loads from file:// with zero console errors; 244 pellets asserted.
@@ -329,3 +351,20 @@ host's difficulty settings + livesMode + startLevel are imposed):
 9. Full game loop: menu → ready → play → death/level-up → game over → menu;
    pause works; high score persists.
 10. Spanish UI throughout; crisp pixel rendering at scale.
+11. Two-player modes: team score with its own persisted high score; shared
+    lives (default) vs individual (spectator at 0, game over when all out);
+    classic full reset on any death; each ghost targets the nearest alive
+    player keeping its personality; symmetric spawns with J1/J2 labels;
+    local controls split (J1 arrows / J2 WASD); 1-player mode unchanged.
+12. Online: create/join rooms by 4-letter code and `?sala=` link; host
+    settings imposed and colors exchanged; guest's own Pac-Man has no input
+    lag; dots, fright, ghost eats, fruit, deaths, level changes, pause and
+    game over stay in sync; disconnect/leave notices work; a third joiner
+    is rejected with `full`; version mismatch is reported.
+13. Mobile: crisp scaling; swipe + on-screen D-pads (one centered, or two
+    corner pads in local 2-player) and pause button, shown on touch devices
+    only and only during a game; panels full-screen on small viewports;
+    menus fully scrollable (no clipped title).
+14. Collision detects same-tick tile swap (no ghost pass-through), in local
+    modes and in the online guest's local simulation; eyes still pass
+    through (arcade-correct).
