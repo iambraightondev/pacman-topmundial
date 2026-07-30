@@ -183,7 +183,10 @@ Elroy ignores scatter (keeps chasing).
   ("PAUSA"). Game-over returns to MENU after ~3 s.
 - HUD: top "1UP" + score, "HIGH SCORE" + value (score font: bold monospace,
   white). Bottom-left: remaining lives as mini Pac-Mans (in the chosen color).
-- Controls: Arrows + WASD. Touch: swipe on canvas.
+- Controls: Arrows + WASD. Touch: swipe on canvas (multi-touch; in local
+  2-player mode the left half of the canvas steers J1 and the right half J2;
+  in 1-player/online any swipe steers the local player). Touch devices get
+  an on-screen pause button (top-right) shown only during a game.
 
 ## Difficulty & settings (contract used by ui.js + game.js)
 

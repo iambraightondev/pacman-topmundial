@@ -15,6 +15,11 @@ máquina** y modo **online** para jugar en equipo contra los fantasmas.
 - **Cualquier sistema**: `python -m http.server 8264` en la carpeta y visita `http://localhost:8264`.
 - **Controles**: flechas o WASD para moverte · `P` para pausa.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
+- **Móvil / táctil**: desliza sobre el laberinto para moverte; botón `❚❚`
+  en pantalla para pausar. En dos jugadores locales, la mitad izquierda de
+  la pantalla controla a J1 y la derecha a J2 (dos pulgares a la vez). El
+  modo online va perfecto en móvil: comparte el enlace de la sala por
+  WhatsApp y el otro entra directo.
 
 ## Modos de juego
 

@@ -10,6 +10,12 @@ html, body {
   color: #fff;
   font-family: 'Courier New', Courier, monospace;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 body {
@@ -44,13 +50,31 @@ body {
   display: none;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
   background: rgba(0, 0, 0, 0.88);
   line-height: 1.4;
   text-align: center;
   overflow-y: auto;
   padding: 16px 8px;
+}
+
+/* Espaciadores: centran el contenido cuando cabe y, si no cabe (pantallas
+ * bajas), permiten hacer scroll hasta arriba sin recortar el título. */
+.overlay::before,
+.overlay::after {
+  content: '';
+  margin: auto 0;
+  flex-shrink: 0;
+}
+
+/* En pantallas pequeñas los paneles ocupan todo el móvil, no solo el canvas */
+@media (max-width: 600px) {
+  .overlay {
+    position: fixed;
+    padding: max(16px, env(safe-area-inset-top)) 8px
+             max(16px, env(safe-area-inset-bottom));
+  }
 }
 
 .title {
@@ -113,6 +137,27 @@ body {
   min-width: 200px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  touch-action: manipulation;
+}
+
+/* Botón de pausa en pantalla (solo dispositivos táctiles, durante la partida) */
+#pauseBtn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 5;
+  display: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 7px 9px;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .btn:hover, .btn:focus-visible {
@@ -274,6 +319,7 @@ input[type="range"] {
   max-width: min(92%, 440px);
   word-break: break-all;
   user-select: text;
+  -webkit-user-select: text;
 }
 
 .lobby-status {
@@ -308,6 +354,9 @@ input[type="range"] {
   padding: 8px 10px;
   width: 150px;
   outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
 }
 
 .code-input:focus { border-color: #ffff00; }

@@ -78,15 +78,19 @@
   var UI = {
     els: {},
     audioResumed: false,
+    touchDevice: false,
     lobby: null,        // { mode:'host'|'join', code, locked, peerColor, hostCfg, hostColor, timer }
 
     init: function () {
+      this.touchDevice = ('ontouchstart' in window) ||
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
       this.els.menu = document.getElementById('menu');
       this.els.options = document.getElementById('options');
       this.els.online = document.getElementById('online');
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
+      this.buildPauseButton();
       this.bindKeyboard();
       this.bindTouch();
       this.applyMute();
@@ -200,6 +204,14 @@
       hint2.style.marginTop = '2px';
       hint2.textContent = 'DOS JUGADORES: J1 FLECHAS · J2 WASD · EQUIPO CONTRA LOS FANTASMAS';
       m.appendChild(hint2);
+
+      if (this.touchDevice) {
+        var hint3 = document.createElement('div');
+        hint3.className = 'hint';
+        hint3.style.marginTop = '2px';
+        hint3.textContent = 'TÁCTIL: DESLIZA PARA MOVERTE · EN DOS JUGADORES, CADA UNO SU MITAD';
+        m.appendChild(hint3);
+      }
     },
 
     makeButton: function (label, onClick) {
@@ -497,6 +509,7 @@
       this.codeInput.placeholder = 'CÓDIGO';
       this.codeInput.setAttribute('autocomplete', 'off');
       this.codeInput.setAttribute('spellcheck', 'false');
+      this.codeInput.setAttribute('autocapitalize', 'characters');
       this.codeInput.addEventListener('input', function () {
         var v = self.codeInput.value.toUpperCase().replace(/[^A-Z]/g, '');
         if (v !== self.codeInput.value) self.codeInput.value = v;
@@ -768,29 +781,56 @@
     },
 
     /* ------------------------------------------------------
+     * Botón de pausa en pantalla (dispositivos táctiles)
+     * ------------------------------------------------------ */
+    buildPauseButton: function () {
+      var self = this;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.id = 'pauseBtn';
+      b.setAttribute('aria-label', 'Pausa');
+      b.textContent = '❚❚';
+      b.addEventListener('click', function () {
+        self.resumeAudio();
+        window.PM.Game.requestPause();
+      });
+      document.getElementById('stage').appendChild(b);
+      this.pauseBtn = b;
+    },
+
+    refreshPauseBtn: function (inGame) {
+      if (!this.pauseBtn) return;
+      this.pauseBtn.style.display = (inGame && this.touchDevice) ? 'block' : 'none';
+    },
+
+    /* ------------------------------------------------------
      * Visibilidad de paneles
      * ------------------------------------------------------ */
     showMenu: function () {
       this.els.menu.style.display = 'flex';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';
+      this.refreshPauseBtn(false);
     },
     showOptions: function () {
       this.refreshOptions();
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'flex';
       this.els.online.style.display = 'none';
+      this.refreshPauseBtn(false);
     },
     showOnline: function () {
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'flex';
       this.showOnlineIdle();
+      this.refreshPauseBtn(false);
     },
     hideAll: function () {
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';
+      this.refreshPauseBtn(true);   // se oculta al volver a un panel
     },
 
     resumeAudio: function () {
@@ -851,34 +891,60 @@
       });
     },
 
+    /* Deslizar sobre el laberinto para moverse. Multitáctil: en dos
+     * jugadores locales, la mitad izquierda de la pantalla controla a J1
+     * y la derecha a J2 (cada pulgar con su zona, simultáneos). En un
+     * jugador y online, cualquier deslizamiento controla al jugador local. */
     bindTouch: function () {
       var canvas = document.getElementById('game');
-      var sx = 0, sy = 0, tracking = false;
+      var tracks = {};       // identifier -> { sx, sy, zone }
+      var THRESH = 22;       // px de deslizamiento para registrar un giro
       var self = this;
-      canvas.addEventListener('touchstart', function (ev) {
-        if (ev.touches.length !== 1) return;
-        tracking = true;
-        sx = ev.touches[0].clientX;
-        sy = ev.touches[0].clientY;
-        self.resumeAudio();
-      }, { passive: true });
-      canvas.addEventListener('touchmove', function (ev) {
-        if (!tracking) return;
-        var dx = ev.touches[0].clientX - sx;
-        var dy = ev.touches[0].clientY - sy;
-        if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+
+      function zoneFor(clientX) {
         var g = window.PM.Game;
-        if (g.state === 'PLAYING' || g.state === 'READY') {
+        if (g.playerCount === 2 && !g.netRole) {
+          var r = canvas.getBoundingClientRect();
+          return (clientX - r.left) < r.width / 2 ? 0 : 1;
+        }
+        return g.localIdx;
+      }
+
+      canvas.addEventListener('touchstart', function (ev) {
+        self.resumeAudio();
+        for (var i = 0; i < ev.changedTouches.length; i++) {
+          var t = ev.changedTouches[i];
+          tracks[t.identifier] = { sx: t.clientX, sy: t.clientY, zone: zoneFor(t.clientX) };
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', function (ev) {
+        var g = window.PM.Game;
+        if (g.state !== 'PLAYING' && g.state !== 'READY') return;
+        for (var i = 0; i < ev.changedTouches.length; i++) {
+          var t = ev.changedTouches[i];
+          var tr = tracks[t.identifier];
+          if (!tr) continue;
+          var dx = t.clientX - tr.sx;
+          var dy = t.clientY - tr.sy;
+          if (Math.abs(dx) < THRESH && Math.abs(dy) < THRESH) continue;
           var d;
           if (Math.abs(dx) > Math.abs(dy)) d = dx > 0 ? D.RIGHT : D.LEFT;
           else d = dy > 0 ? D.DOWN : D.UP;
-          g.setPacDir(g.localIdx, d);   // táctil controla al jugador local (J1 en local)
+          g.setPacDir(tr.zone, d);
+          // reanclar: el mismo dedo puede encadenar giros sin levantarse
+          tr.sx = t.clientX;
+          tr.sy = t.clientY;
         }
-        sx = ev.touches[0].clientX;
-        sy = ev.touches[0].clientY;
       }, { passive: true });
-      canvas.addEventListener('touchend', function () { tracking = false; },
-        { passive: true });
+
+      function endTouches(ev) {
+        for (var i = 0; i < ev.changedTouches.length; i++) {
+          delete tracks[ev.changedTouches[i].identifier];
+        }
+      }
+      canvas.addEventListener('touchend', endTouches, { passive: true });
+      canvas.addEventListener('touchcancel', endTouches, { passive: true });
     }
   };
 
