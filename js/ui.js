@@ -218,7 +218,7 @@
 
       var hint = document.createElement('div');
       hint.className = 'hint';
-      hint.textContent = 'J1: FLECHAS O WASD · P: PAUSA';
+      hint.textContent = 'J1: FLECHAS O WASD · P O ESC: PAUSA (REANUDAR · REINICIAR R · SALIR Q)';
       m.appendChild(hint);
 
       var hint2 = document.createElement('div');
@@ -968,11 +968,20 @@
         this.promptStatusEl = st;
       }
 
+      /* botones, con su atajo de teclado (b.keys) y la tecla a la vista */
       var row = document.createElement('div');
       row.className = 'prompt-btns';
+      this.promptKeys = [];
       (o.buttons || []).forEach(function (b) {
         var el = self.makeButton(b.label, b.onClick);
         if (b.primary) el.classList.add('btn-primary');
+        if (b.hint) {
+          var k = document.createElement('span');
+          k.className = 'btn-key';
+          k.textContent = b.hint;
+          el.appendChild(k);
+        }
+        if (b.keys) self.promptKeys.push({ keys: b.keys, el: el });
         row.appendChild(el);
       });
       p.appendChild(row);
@@ -982,11 +991,26 @@
       this.refreshControls();
     },
 
+    /* Atajos del diálogo abierto. Devuelve true si la tecla era suya. */
+    handlePromptKey: function (ev) {
+      if (!this.promptKeys) return false;
+      var key = (ev.key && ev.key.length === 1) ? ev.key.toLowerCase() : ev.key;
+      for (var i = 0; i < this.promptKeys.length; i++) {
+        var pk = this.promptKeys[i];
+        if (pk.keys.indexOf(key) === -1) continue;
+        if (pk.el.disabled) return true;
+        pk.el.click();
+        return true;
+      }
+      return false;
+    },
+
     hidePrompt: function () {
       if (!this.els.prompt) return;
       this.els.prompt.style.display = 'none';
       this.els.prompt.innerHTML = '';
       this.promptStatusEl = null;
+      this.promptKeys = [];
       this.promptOpen = false;
     },
 
@@ -1016,26 +1040,80 @@
       }
       if (g.vote) this.showVotePrompt(g.vote);
       else if (g.overIdle) this.showGameOverPrompt();
+      else if (g.paused && g.inGame() && g.state !== 'GAME_OVER') this.showPausePrompt();
       else {
         this.hidePrompt();
         this.refreshControls();
       }
     },
 
+    /* Menú de pausa: reanudar / reiniciar / salir, con atajos de teclado */
+    showPausePrompt: function () {
+      var self = this;
+      var g = window.PM.Game;
+      var lines = [];
+      if (g.netRole) {
+        lines.push('LA PARTIDA ESTÁ EN PAUSA PARA LOS DOS.');
+        lines.push('REINICIAR TIENE QUE ACEPTARLO ' + g.nameFor(g.peerIdx()) + '.');
+      } else if (g.playerCount === 2) {
+        lines.push('REINICIAR EMPIEZA UNA PARTIDA NUEVA PARA LOS DOS.');
+      }
+      this.showPrompt({
+        title: 'PAUSA',
+        color: '#ffff00',
+        lines: lines,
+        status: g.flash ? g.flash.text : '',
+        buttons: [
+          { label: 'REANUDAR', hint: 'P · ESC', primary: true,
+            keys: ['p', 'Escape', 'Enter'],
+            onClick: function () { self.resumeAudio(); g.requestPause(); } },
+          { label: 'REINICIAR', hint: 'R', keys: ['r'],
+            onClick: function () {
+              self.resumeAudio();
+              if (g.netRole) g.requestVote('restart');
+              else g.restartGame();
+            } },
+          { label: 'SALIR', hint: 'Q', keys: ['q'],
+            onClick: function () { g.toMenu(); } }
+        ]
+      });
+    },
+
+    /* Textos de cada tipo de votación: rendirse / revancha / reiniciar */
+    VOTE_TEXT: {
+      surrender: {
+        color: '#ff8c00', from: 'RENDIRSE', ask: '¿RENDIRSE?',
+        mine: 'HAS PROPUESTO ABANDONAR LA PARTIDA.',
+        theirs: ' QUIERE ABANDONAR LA PARTIDA.',
+        extra: 'SI ACEPTAS, TERMINA PARA LOS DOS.',
+        yes: 'SÍ, RENDIRSE', no: 'SEGUIR JUGANDO'
+      },
+      rematch: {
+        color: '#ffff00', from: 'REVANCHA', ask: '¿REVANCHA?',
+        mine: 'HAS PROPUESTO JUGAR OTRA PARTIDA.',
+        theirs: ' QUIERE LA REVANCHA.',
+        yes: 'SÍ, JUGAR', no: 'NO, GRACIAS'
+      },
+      restart: {
+        color: '#ffff00', from: 'REINICIAR', ask: '¿REINICIAR?',
+        mine: 'HAS PROPUESTO EMPEZAR LA PARTIDA DE NUEVO.',
+        theirs: ' QUIERE EMPEZAR LA PARTIDA DE NUEVO.',
+        extra: 'SE PIERDE LA PUNTUACIÓN DE ESTA PARTIDA.',
+        yes: 'SÍ, REINICIAR', no: 'SEGUIR JUGANDO'
+      }
+    },
+
     showVotePrompt: function (vote) {
       var self = this;
       var g = window.PM.Game;
-      var surrender = (vote.kind === 'surrender');
+      var tx = this.VOTE_TEXT[vote.kind] || this.VOTE_TEXT.surrender;
       var peer = g.playerCount === 2 ? g.nameFor(g.peerIdx()) : '';
 
       if (vote.role === 'from') {
         this.showPrompt({
-          title: surrender ? 'RENDIRSE' : 'REVANCHA',
-          color: surrender ? '#ff8c00' : '#ffff00',
-          lines: [surrender
-            ? 'HAS PROPUESTO ABANDONAR LA PARTIDA.'
-            : 'HAS PROPUESTO JUGAR OTRA PARTIDA.',
-            'TIENE QUE ACEPTARLO ' + (peer || 'EL OTRO JUGADOR') + '.'],
+          title: tx.from,
+          color: tx.color,
+          lines: [tx.mine, 'TIENE QUE ACEPTARLO ' + (peer || 'EL OTRO JUGADOR') + '.'],
           status: this.voteStatusText(vote),
           buttons: []
         });
@@ -1044,25 +1122,23 @@
 
       /* nos toca decidir (o confirmar, en local) */
       var lines;
-      if (surrender) {
-        lines = vote.local
-          ? [g.playerCount === 2
-              ? 'LA PARTIDA TERMINA PARA LOS DOS: DEBÉIS ESTAR DE ACUERDO.'
-              : 'LA PARTIDA TERMINA Y SE GUARDA LA PUNTUACIÓN.']
-          : [(peer || 'EL OTRO JUGADOR') + ' QUIERE ABANDONAR LA PARTIDA.',
-             'SI ACEPTAS, TERMINA PARA LOS DOS.'];
+      if (vote.local) {
+        lines = (vote.kind === 'surrender' && g.playerCount === 1)
+          ? ['LA PARTIDA TERMINA Y SE GUARDA LA PUNTUACIÓN.']
+          : [tx.extra || tx.mine];
       } else {
-        lines = [(peer || 'EL OTRO JUGADOR') + ' QUIERE LA REVANCHA.'];
+        lines = [(peer || 'EL OTRO JUGADOR') + tx.theirs];
+        if (tx.extra) lines.push(tx.extra);
       }
       this.showPrompt({
-        title: surrender ? '¿RENDIRSE?' : '¿REVANCHA?',
-        color: surrender ? '#ff8c00' : '#ffff00',
+        title: tx.ask,
+        color: tx.color,
         lines: lines,
         status: this.voteStatusText(vote),
         buttons: [
-          { label: surrender ? 'SÍ, RENDIRSE' : 'SÍ, JUGAR', primary: true,
+          { label: tx.yes, primary: true, hint: 'ENTER', keys: ['Enter'],
             onClick: function () { self.resumeAudio(); g.answerVote(true); } },
-          { label: surrender ? 'SEGUIR JUGANDO' : 'NO, GRACIAS',
+          { label: tx.no, hint: 'ESC', keys: ['Escape'],
             onClick: function () { g.answerVote(false); } }
         ]
       });
@@ -1083,12 +1159,14 @@
         statusError: !!g.flash,
         buttons: [
           { label: duo ? 'OTRA PARTIDA' : 'JUGAR OTRA VEZ', primary: true,
+            hint: 'R', keys: ['r', 'Enter'],
             onClick: function () {
               self.resumeAudio();
               if (g.netRole) g.requestVote('rematch');
               else g.restartGame();
             } },
-          { label: 'MENÚ', onClick: function () { g.toMenu(); } }
+          { label: 'MENÚ', hint: 'Q · ESC', keys: ['q', 'Escape'],
+            onClick: function () { g.toMenu(); } }
         ]
       });
     },
@@ -1208,7 +1286,11 @@
       };
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
-        if (self.promptOpen) return;   // hay un diálogo: decide con los botones
+        /* con un diálogo abierto mandan sus atajos (REANUDAR, R, Q, ...) */
+        if (self.promptOpen) {
+          if (self.handlePromptKey(ev)) ev.preventDefault();
+          return;
+        }
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
         var isArrow = (ev.key in ARROWS);
         var isWasd = (ev.key in WASD);

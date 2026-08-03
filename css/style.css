@@ -521,3 +521,15 @@ input[type="range"] {
   font-size: clamp(11px, 2.1vh, 15px);
   letter-spacing: 2px;
 }
+
+/* atajo de teclado, bajo la etiqueta del botón */
+.btn-key {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.7em;
+  letter-spacing: 2px;
+  color: #888;
+}
+
+.btn:hover .btn-key,
+.btn:focus-visible .btn-key { color: inherit; }

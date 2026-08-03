@@ -303,7 +303,7 @@
 
   /* ---------- Red (modo online) ---------- */
   CFG.NET = {
-    PROTO: 2,               // versión del protocolo (debe coincidir en ambos)
+    PROTO: 3,               // versión del protocolo (debe coincidir en ambos)
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

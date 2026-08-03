@@ -183,8 +183,9 @@ Elroy ignores scatter (keeps chasing).
   GAME OVER text. **In 2-player modes the game only stops when the last one
   standing dies** — see "Muerte por jugador" below.
 - States: MENU → READY ("¡LISTO!" text, intro melody first time: ~4.2 s) →
-  PLAYING → (DYING | LEVEL_DONE | GAME_OVER) → …  P or Escape = pause
-  ("PAUSA"). Game-over returns to MENU after ~3 s.
+  PLAYING → (DYING | LEVEL_DONE | GAME_OVER) → …  P or Escape = pause, which
+  opens the pause menu (REANUDAR / REINICIAR `R` / SALIR `Q`). Game over shows
+  its own panel (play again / menu) instead of dropping to MENU by itself.
 - HUD: top "1UP" + score, "HIGH SCORE" + value (score font: bold monospace,
   white). Bottom-left: remaining lives as mini Pac-Mans (in the chosen color).
 - Controls: Arrows + WASD. Touch: swipe on canvas (multi-touch; in local
@@ -273,6 +274,36 @@ confirmed), `safeTicks` (respawn grace).
   guest stops sending `pos` (and the host ignores it) so the frozen position
   cannot drag it back after respawning.
 
+## Menú de pausa (P / Esc)
+
+Pausing no longer just dims the maze: it opens a menu (the same `#prompt`
+overlay) with three actions, each with a keyboard shortcut shown under the
+label (`.btn-key`):
+
+| Acción | Tecla | Efecto |
+|---|---|---|
+| REANUDAR | `P`, `Esc`, `Enter` | unpause (online: coordinated as before) |
+| REINICIAR | `R` | new game, same options (`Game.lastOpts`) |
+| SALIR | `Q` | back to the menu (online: sends `bye`) |
+
+- The menu is state-driven: `UI.syncPrompt()` shows it whenever
+  `Game.paused` is true in a game, so in online **both** players see it (the
+  pause is coordinated and arrives via `pause` events/snapshots).
+  `Game.setPaused(on)` only refreshes the UI when the value actually changes,
+  so 12 Hz snapshots never rebuild the dialog under the player's finger.
+- REINICIAR is immediate in 1-player and local 2-player; **online it is a
+  vote** (`kind: 'restart'`, same machinery as surrender/rematch: request →
+  accept/reject, 20 s timeout, host executes and broadcasts `rematch`). A
+  rejection/timeout keeps the game paused and shows the notice in the menu's
+  status line.
+- The canvas "PAUSA" label is skipped while the menu is up (it would show
+  through underneath).
+- Dialog shortcuts in general: buttons declare `keys: [...]`, `showPrompt()`
+  registers them in `UI.promptKeys` and `UI.handlePromptKey(ev)` dispatches
+  them. While a dialog is open the keyboard drives *only* the dialog (no
+  Pac-Man movement). Vote dialogs: `Enter` accepts, `Esc` rejects. GAME OVER
+  panel: `R` plays again, `Q`/`Esc` goes to the menu.
+
 ## Surrender & rematch (both players must accept)
 
 - **Surrender**: `RENDIRSE` button in the in-game top-right bar (all devices;
@@ -285,7 +316,8 @@ confirmed), `safeTicks` (respawn grace).
   `Game.lastOpts`); online it is a vote, and on acceptance the host sends
   `rematch` and both call `newGame` with the same options (same duo, same
   colours, names, host settings and lives mode).
-- Both are the same mechanism (`Game.vote = {kind, role, local, ticks}`):
+- All three (`surrender`, `rematch`, `restart`) share one mechanism
+  (`Game.vote = {kind, role, local, ticks}`; texts in `UI.VOTE_TEXT`):
   requester → `vote{k}` → responder accepts/rejects → `voteRes{k, ok}`. The
   **host always executes** (surrender → `gameOver`, rematch → `rematch`); the
   guest waits for the host's event. A surrender vote pauses the game (the
@@ -373,7 +405,7 @@ host's difficulty settings + livesMode + startLevel are imposed):
 - Rooms: 4-letter code (alphabet without I/O), shareable link `?sala=CODE`
   which auto-joins on load. Handshake: guest `hello{v,color,name}` → host
   `cfg{v,color,name,cfg}` → host `start` → both `newGame`. Third joiner gets
-  `full`. Protocol version `PM.CFG.NET.PROTO` (= 2) must match.
+  `full`. Protocol version `PM.CFG.NET.PROTO` (= 3) must match.
 - Transport (`PM.Net`): Supabase Realtime broadcast channels over a minimal
   hand-written Phoenix WebSocket client (heartbeat every 25 s; no database
   usage), credentials in `js/net-config.js` (`PM.NET_CFG`). Dev transport
@@ -406,8 +438,9 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 - Lobby: `hello {v, c(olor), n(ame)}` → `cfg {v, c, n, cfg}` → `start {}`;
   rejections: `full {to}`.
 - Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell]}` every 5 ticks,
-  sooner on turns or eats; `gevt {t: 'died' | 'ateGhost'{g} | 'ateFruit' |
-  'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok}}`.
+  sooner on turns or eats (not while dying); `gevt {t: 'died' |
+  'ateGhost'{g} | 'ateFruit' | 'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok}}`
+  where `k` is `surrender` | `rematch` | `restart`.
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
   'eatGhost'{g,pts,x,y,w} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
@@ -471,3 +504,7 @@ parties, answered with `full`). Cells are indices `row*28+col`.
     after respawning). 1-player behaviour is unchanged.
 18. Walls drawn inset (thin blocks, wide corridors) with corners closing
     cleanly and the ghost-house door aligned.
+19. Pause menu: P/Esc opens REANUDAR / REINICIAR (`R`) / SALIR (`Q`), with
+    the shortcut printed on each button and working from the keyboard; both
+    players see it online; restarting online is a vote and a rejection leaves
+    the game paused. Dialog keys never leak into Pac-Man movement.

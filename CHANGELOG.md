@@ -2,6 +2,24 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-03 · Menú de pausa con reanudar, reiniciar y salir
+
+- **`P` o `Esc` ya no solo pausan**: abren un **menú de pausa** con tres
+  opciones, cada una con su atajo impreso en el botón:
+  **REANUDAR** (`P` · `Esc`), **REINICIAR** (`R`) y **SALIR** (`Q`).
+- **REINICIAR** empieza una partida nueva con la misma configuración. En un
+  jugador y en dos jugadores locales es inmediato; **online lo tienen que
+  aceptar los dos** (misma votación que la rendición: 20 s de plazo, y si se
+  rechaza la partida se queda en pausa con el aviso en el propio menú).
+- En online el menú sale **en las dos pantallas**, porque la pausa ya estaba
+  coordinada. El botón `❚❚` táctil abre el mismo menú, así que en móvil
+  también se puede reiniciar o salir sin recargar.
+- Atajos en el resto de diálogos: `Enter` acepta y `Esc` rechaza en las
+  votaciones; en el GAME OVER, `R` juega otra vez y `Q`/`Esc` va al menú.
+  Con un diálogo abierto las teclas ya no mueven a Pac-Man.
+- Protocolo online `PROTO` 2 → **3** (tipo de votación `restart`). Ambos
+  extremos deben estar actualizados.
+
 ## 2026-08-03 · La partida no se para al morir uno · muros finos · nombre en la portada
 
 - **Muerte por jugador**: en dos jugadores (local u online) morir ya **no

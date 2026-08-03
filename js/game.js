@@ -403,8 +403,16 @@
 
     togglePause: function () {
       if (this.state !== 'PLAYING' && this.state !== 'READY') return;
-      this.paused = !this.paused;
-      if (this.paused) this.stopAllLoops();
+      this.setPaused(!this.paused);
+    },
+
+    /* La pausa abre/cierra el menú de pausa (ui.js lo pinta según el estado) */
+    setPaused: function (on) {
+      on = !!on;
+      if (this.paused === on) return;
+      this.paused = on;
+      if (on) this.stopAllLoops();
+      this.syncUI();
     },
 
     /* Pausa pedida por el jugador local (en online se coordina en red) */
@@ -1050,8 +1058,11 @@
         !this.netNotice && !this.vote;
     },
 
+    /* kind: 'surrender' (abandonar) | 'rematch' (otra tras el game over)
+     *     | 'restart' (empezar de nuevo desde el menú de pausa) */
     voteAllowed: function (kind) {
       if (kind === 'rematch') return this.state === 'GAME_OVER' && !!this.lastOpts;
+      if (kind === 'restart') return this.canSurrender() && !!this.lastOpts;
       return this.canSurrender();
     },
 
@@ -1096,11 +1107,13 @@
     onVoteResult: function (kind, ok) {
       if (!this.vote || this.vote.role !== 'from' || this.vote.kind !== kind) return;
       this.clearVote();
-      if (ok) this.execVote(kind);
-      else this.setFlash(kind === 'surrender' ? 'RENDICIÓN RECHAZADA' : 'REVANCHA RECHAZADA');
+      if (ok) { this.execVote(kind); return; }
+      this.setFlash(kind === 'surrender' ? 'RENDICIÓN RECHAZADA'
+        : (kind === 'restart' ? 'REINICIO RECHAZADO' : 'REVANCHA RECHAZADA'));
     },
 
-    /* El invitado no ejecuta nada: espera el evento del anfitrión */
+    /* El invitado no ejecuta nada: espera el evento del anfitrión.
+     * 'rematch' y 'restart' acaban en lo mismo: partida nueva para los dos. */
     execVote: function (kind) {
       if (this.netRole === 'guest') return;
       if (kind === 'surrender') this.surrenderNow();
@@ -1374,9 +1387,8 @@
           break;
         case 'pauseReq':
           if ((this.state === 'PLAYING' || this.state === 'READY') && !this.vote) {
-            this.paused = !!d.on;
             this.dlgPaused = false;
-            if (this.paused) this.stopAllLoops();
+            this.setPaused(!!d.on);
             this.hostEvt({ t: 'pause', on: this.paused });
           }
           break;
@@ -1754,8 +1766,7 @@
           this.syncUI();
           break;
         case 'pause':
-          this.paused = !!e.on;
-          if (this.paused) this.stopAllLoops();
+          this.setPaused(!!e.on);
           break;
         case 'vote':
           this.onVoteRequest(e.k);
@@ -1794,8 +1805,7 @@
         this.syncUI();
       }
 
-      this.paused = !!s.pz;
-      if (this.paused) this.stopAllLoops();
+      this.setPaused(!!s.pz);   // solo refresca el menú de pausa si cambia
 
       // el sonido de muerte lo dispara la animación local de cada Pac-Man
 
@@ -2180,9 +2190,12 @@
       if (this.paused) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
-        ctx.font = 'bold 12px monospace';
-        ctx.fillStyle = CFG.COLORS.text;
-        ctx.fillText('PAUSA', 112, CFG.NATIVE_H / 2);
+        // el rótulo solo si no está el menú de pausa delante (lo repetiría)
+        if (!(window.PM.UI && window.PM.UI.promptOpen)) {
+          ctx.font = 'bold 12px monospace';
+          ctx.fillStyle = CFG.COLORS.text;
+          ctx.fillText('PAUSA', 112, CFG.NATIVE_H / 2);
+        }
       }
 
       /* avisos de red */

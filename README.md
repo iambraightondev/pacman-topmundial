@@ -15,7 +15,9 @@ Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
 
 - **Windows**: doble clic en `jugar.bat` (levanta un servidor local y abre el navegador), o simplemente abre `index.html` directamente.
 - **Cualquier sistema**: `python -m http.server 8264` en la carpeta y visita `http://localhost:8264`.
-- **Controles**: flechas o WASD para moverte · `P` para pausa.
+- **Controles**: flechas o WASD para moverte · `P` o `Esc` abren el **menú de
+  pausa**: REANUDAR (`P`/`Esc`), REINICIAR (`R`) y SALIR (`Q`). Online,
+  reiniciar lo tenéis que aceptar los dos.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
   u online) la partida solo termina si **lo aceptan los dos**.
