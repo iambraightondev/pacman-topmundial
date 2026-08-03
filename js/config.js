@@ -249,8 +249,11 @@
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';
   CFG.HIGHSCORE_KEY = 'pacman-topmundial-highscore';
   CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // récord de equipo (2 jugadores)
+  CFG.NICK_MAX = 8;               // longitud máxima de un nombre de jugador
   CFG.DEFAULT_SETTINGS = {
     difficultyPreset: 'normal',   // 'facil' | 'normal' | 'dificil' | 'custom'
+    nick1: '',                    // nombre del jugador 1 (y nombre propio online)
+    nick2: '',                    // nombre del jugador 2 (dos jugadores locales)
     pacColor: '#ffff00',
     pac2Color: '#00ff00',         // color del jugador 2
     livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
@@ -294,7 +297,7 @@
 
   /* ---------- Red (modo online) ---------- */
   CFG.NET = {
-    PROTO: 1,               // versión del protocolo (debe coincidir en ambos)
+    PROTO: 2,               // versión del protocolo (debe coincidir en ambos)
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
@@ -302,6 +305,7 @@
     DROP_TICKS: 480,        // sin datos 8 s: desconexión
     NOTICE_TICKS: 150,      // aviso en pantalla ~2.5 s antes de volver al menú
     HELLO_TIMEOUT_MS: 6000, // espera de respuesta del anfitrión al unirse
+    VOTE_TICKS: 1200,       // 20 s para responder a una votación (rendirse/revancha)
     ROOM_ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ',   // sin I/O (se confunden)
     ROOM_LEN: 4
   };

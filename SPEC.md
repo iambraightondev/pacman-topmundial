@@ -198,6 +198,8 @@ Elroy ignores scatter (keeps chasing).
 ```js
 PM.settings = {
   difficultyPreset: 'normal',  // 'facil' | 'normal' | 'dificil' | 'custom'
+  nick1: '',             // player 1 name (also the player's own name online)
+  nick2: '',             // player 2 name (local 2-player)
   pacColor: '#ffff00',
   pac2Color: '#00ff00',  // player 2 color (2-player modes)
   livesMode: 'shared',   // 'shared' (team pool, default) | 'individual'
@@ -216,6 +218,49 @@ lives 2, level 5. Editing any slider switches preset to 'custom'. Persist to
 localStorage `pacman-topmundial-settings`; high score
 `pacman-topmundial-highscore`. Changes to speed/lives/level apply on next new
 game; color + mute apply live.
+
+## Nombres de jugador (nicknames)
+
+Options panel section "NOMBRES": two text fields, "TU NOMBRE (J1 Y ONLINE)"
+→ `nick1` and "JUGADOR 2 (LOCAL)" → `nick2`. Sanitised to uppercase
+`A-Z0-9 ._-`, collapsed/trimmed spaces, max `CFG.NICK_MAX` (8) chars; the
+filter runs on every keystroke, the trim on blur. Empty falls back to
+"J1"/"J2" (`Game.nameFor(i)`; `Game.rawName(i)` returns '' when unset).
+
+Shown in: the HUD (1-player replaces "1UP"; 2-player keeps "EQUIPO" over the
+team score and adds a third header line, name 1 left / name 2 right in each
+player's colour, 7 px), above each Pac-Man during READY (replacing J1/J2),
+the online lobby status, the surrender/rematch dialogs and the GAME OVER
+panel. Online, the two names are exchanged in the handshake (`n` field) and
+kept in `Game.netNames = [J1, J2]`; the guest always sends its own `nick1`.
+
+## Surrender & rematch (both players must accept)
+
+- **Surrender**: `RENDIRSE` button in the in-game top-right bar (all devices;
+  the touch-only `❚❚` pause button sits next to it). 1-player asks for a
+  simple confirmation; in any 2-player mode **both must accept**.
+- **Rematch**: GAME OVER no longer returns to the menu on its own. After the
+  ~3 s label the game stays in `GAME_OVER` with `overIdle = true` and shows a
+  panel (names, score, record, level) with "OTRA PARTIDA"/"JUGAR OTRA VEZ"
+  and "MENÚ". Local modes restart immediately (`Game.restartGame()` reuses
+  `Game.lastOpts`); online it is a vote, and on acceptance the host sends
+  `rematch` and both call `newGame` with the same options (same duo, same
+  colours, names, host settings and lives mode).
+- Both are the same mechanism (`Game.vote = {kind, role, local, ticks}`):
+  requester → `vote{k}` → responder accepts/rejects → `voteRes{k, ok}`. The
+  **host always executes** (surrender → `gameOver`, rematch → `rematch`); the
+  guest waits for the host's event. A surrender vote pauses the game (the
+  host owns the pause and broadcasts it) and un-pauses on reject/timeout.
+  20 s timeout (`CFG.NET.VOTE_TICKS`), countdown shown in the dialog (only
+  the status line is rewritten, never the buttons). Rejections/timeouts show
+  a short cyan notice over the maze (`Game.flash`) or in the panel's status.
+- Dialogs are HTML overlays (`#prompt`, z-index above the other panels);
+  while one is open the D-pads, the pause and surrender buttons and the
+  keyboard are disabled. `UI.syncPrompt()` rebuilds the dialog from
+  `Game.vote` / `Game.overIdle`, so state and UI cannot drift apart.
+- During GAME OVER the connection stays alive (snapshots keep flowing) and
+  the 8 s watchdog now also applies there; a peer leaving from the panel
+  sends `bye` → "EL OTRO JUGADOR HA SALIDO" → menu.
 
 ## Color de Pac-Man
 
@@ -287,9 +332,9 @@ OPCIONES. Shared 2-player rules (both modes):
 host's difficulty settings + livesMode + startLevel are imposed):
 
 - Rooms: 4-letter code (alphabet without I/O), shareable link `?sala=CODE`
-  which auto-joins on load. Handshake: guest `hello{v,color}` → host
-  `cfg{v,color,cfg}` → host `start` → both `newGame`. Third joiner gets
-  `full`. Protocol version `PM.CFG.NET.PROTO` must match.
+  which auto-joins on load. Handshake: guest `hello{v,color,name}` → host
+  `cfg{v,color,name,cfg}` → host `start` → both `newGame`. Third joiner gets
+  `full`. Protocol version `PM.CFG.NET.PROTO` (= 2) must match.
 - Transport (`PM.Net`): Supabase Realtime broadcast channels over a minimal
   hand-written Phoenix WebSocket client (heartbeat every 25 s; no database
   usage), credentials in `js/net-config.js` (`PM.NET_CFG`). Dev transport
@@ -319,15 +364,16 @@ Every payload travels wrapped as `{s: senderId, d: data}`; after the
 handshake only the locked peer is accepted (plus `hello` from third
 parties, answered with `full`). Cells are indices `row*28+col`.
 
-- Lobby: `hello {v, c(olor)}` → `cfg {v, c, cfg}` → `start {}`;
+- Lobby: `hello {v, c(olor), n(ame)}` → `cfg {v, c, n, cfg}` → `start {}`;
   rejections: `full {to}`.
 - Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell]}` every 5 ticks,
   sooner on turns or eats; `gevt {t: 'died' | 'ateGhost'{g} | 'ateFruit' |
-  'pauseReq'{on}}`.
+  'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok}}`.
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
   'eatGhost'{g,pts,x,y,w} | 'death'{w} | 'levelDone' | 'fruitEat'{pts,w} |
-  'extraLife' | 'gameOver' | 'pause'{on}}`.
+  'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
+  'rematch'}`.
 - Both directions: `bye {}` on leaving.
 - `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`
   (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),
@@ -348,13 +394,14 @@ parties, answered with `full`). Cells are indices `row*28+col`.
    live to Pac-Man and lives icons.
 8. Sounds: intro, waka, siren stages, fright, eat-ghost, retreat, death,
    fruit, extra life — all synthesized, muteable.
-9. Full game loop: menu → ready → play → death/level-up → game over → menu;
-   pause works; high score persists.
+9. Full game loop: menu → ready → play → death/level-up → game over → panel
+   (play again / menu); pause works; high score persists.
 10. Spanish UI throughout; crisp pixel rendering at scale.
 11. Two-player modes: team score with its own persisted high score; shared
     lives (default) vs individual (spectator at 0, game over when all out);
     classic full reset on any death; each ghost targets the nearest alive
-    player keeping its personality; symmetric spawns with J1/J2 labels;
+    player keeping its personality; symmetric spawns labelled with each
+    player's name (J1/J2 if unset);
     local controls split (J1 arrows / J2 WASD); 1-player mode unchanged.
 12. Online: create/join rooms by 4-letter code and `?sala=` link; host
     settings imposed and colors exchanged; guest's own Pac-Man has no input
@@ -368,3 +415,10 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 14. Collision detects same-tick tile swap (no ghost pass-through), in local
     modes and in the online guest's local simulation; eyes still pass
     through (arcade-correct).
+15. Names: saved, sanitised and shown in HUD, READY labels, lobby, dialogs
+    and GAME OVER panel; exchanged online in the handshake.
+16. Surrender: button during play; 1-player confirms, 2-player needs both
+    yeses (online: request → accept/reject, game paused meanwhile, 20 s
+    timeout, rejection notice, host executes). GAME OVER offers a rematch
+    with the same duo and settings — a vote online, immediate in local
+    modes — and no longer drops to the menu by itself.

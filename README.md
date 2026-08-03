@@ -17,6 +17,10 @@ Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
 - **Cualquier sistema**: `python -m http.server 8264` en la carpeta y visita `http://localhost:8264`.
 - **Controles**: flechas o WASD para moverte · `P` para pausa.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
+- **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
+  u online) la partida solo termina si **lo aceptan los dos**.
+- **Al terminar**: el GAME OVER ofrece **otra partida con tu mismo dúo** (en
+  online, aceptándolo los dos) sin pasar por el menú ni volver a crear sala.
 - **Móvil / táctil**: cruceta de botones en pantalla y/o deslizar sobre el
   laberinto — lo que prefieras; botón `❚❚` para pausar. En dos jugadores
   locales hay dos crucetas (esquinas inferiores: izquierda J1, derecha J2)
@@ -71,6 +75,9 @@ Supabase, abre dos pestañas con `?red=local` en la URL.
 **Personalización:**
 
 - **Dificultad**: presets Fácil / Normal / Difícil + ajustes finos (velocidad de fantasmas y de Pac-Man, duración del power pellet, vidas, nivel inicial).
+- **Nombres de jugador** (8 caracteres): el tuyo —que es también el que ve tu
+  rival online— y el del jugador 2 local. Aparecen en el marcador, sobre cada
+  Pac-Man al empezar, en la sala online y en el panel de fin de partida.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - Configuración y récords (1 jugador y equipo) guardados automáticamente en el navegador (localStorage).
@@ -85,6 +92,9 @@ Supabase, abre dos pestañas con `?red=local` en la URL.
 - Salas efímeras con código de 4 letras sobre canales de difusión de
   Supabase Realtime (cliente Phoenix/WebSocket propio, sin librerías).
   Desconexiones detectadas con aviso y vuelta al menú.
+- **Rendición y revancha por votación**: cualquiera propone, el otro acepta o
+  rechaza (20 s de plazo); el anfitrión ejecuta la decisión y la reparte. La
+  sala sigue viva tras el GAME OVER para poder encadenar partidas.
 
 ## Estructura
 

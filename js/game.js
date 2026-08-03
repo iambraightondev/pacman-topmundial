@@ -49,6 +49,7 @@
     /* red */
     netRole: null,     // null | 'host' | 'guest'
     netColors: null,   // colores online [J1, J2]
+    netNames: null,    // nombres online [J1, J2]
     netQueue: [],
     netWatch: 0,
     netNotice: null,   // { text, ticks } — aviso y vuelta al menú
@@ -102,6 +103,13 @@
     readyTicks: 0,
     dyingPhase: 0,
     levelPhase: 0,
+
+    /* rendición y revancha (deben aceptar los dos jugadores) */
+    vote: null,          // { kind:'surrender'|'rematch', role:'from'|'to', local, ticks }
+    dlgPaused: false,    // la pausa la puso un diálogo, no un jugador
+    overIdle: false,     // GAME OVER terminado: panel de revancha en pantalla
+    lastOpts: null,      // opciones de la partida en curso (para la revancha)
+    flash: null,         // { text, ticks } — aviso breve sobre el laberinto
 
     /* varios */
     popups: [],
@@ -185,6 +193,27 @@
       return (i === 1) ? (s.pac2Color || '#00ff00') : s.pacColor;
     },
 
+    /* Nombre elegido para el jugador i ('' si no ha puesto ninguno).
+     * En online los nombres se intercambian en el saludo (netNames). */
+    rawName: function (i) {
+      var n = this.netNames && this.netNames[i];
+      if (!n) {
+        var s = this.settings();
+        n = (i === 1) ? s.nick2 : s.nick1;
+      }
+      return String(n || '').replace(/^ +| +$/g, '');
+    },
+
+    /* Nombre visible, con J1/J2 como respaldo */
+    nameFor: function (i) {
+      return this.rawName(i) || ('J' + (i + 1));
+    },
+
+    /* Índice del otro jugador (modos de dos jugadores) */
+    peerIdx: function () {
+      return this.localIdx === 1 ? 0 : 1;
+    },
+
     /* ¿El jugador i se simula con autoridad en esta máquina? */
     isLocalAuth: function (i) {
       return !this.netRole || i === this.localIdx;
@@ -196,14 +225,21 @@
      * Flujo de partida
      * opts: { players: 1|2, net: null|'host'|'guest',
      *         cfg: ajustes (el invitado recibe los del anfitrión),
-     *         colors: ['#..','#..'] en online }
+     *         colors: ['#..','#..'], names: ['..','..'] en online }
+     * Se guarda en lastOpts para poder repetir la partida (revancha).
      * --------------------------------------------------------- */
     newGame: function (opts) {
       opts = opts || {};
+      this.lastOpts = opts;
       this.playerCount = (opts.players === 2) ? 2 : 1;
       this.netRole = opts.net || null;
       this.localIdx = (this.netRole === 'guest') ? 1 : 0;
       this.netColors = opts.colors || null;
+      this.netNames = opts.names || null;
+      this.vote = null;
+      this.dlgPaused = false;
+      this.overIdle = false;
+      this.flash = null;
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -253,10 +289,13 @@
       var rt = Math.round(ms / 1000 * 60);
       this.enterReady(rt);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: rt });
-      // controles táctiles: una cruceta o dos según el modo recién arrancado
-      if (window.PM.UI && window.PM.UI.refreshTouchControls) {
-        window.PM.UI.refreshTouchControls(true);
-      }
+      // controles en pantalla: una cruceta o dos según el modo recién arrancado
+      this.syncUI();
+    },
+
+    /* Refresca los paneles y botones que dependen del estado (ui.js) */
+    syncUI: function () {
+      if (window.PM.UI && window.PM.UI.syncPrompt) window.PM.UI.syncPrompt();
     },
 
     resetLevel: function () {
@@ -346,8 +385,14 @@
         window.PM.Net.leave();
         this.netRole = null;
         this.netColors = null;
+        this.netNames = null;
       }
       this.netNotice = null;
+      this.vote = null;
+      this.dlgPaused = false;
+      this.overIdle = false;
+      this.flash = null;
+      this.lastOpts = null;
       this.playerCount = 1;
       this.state = 'MENU';
       this.paused = false;
@@ -365,6 +410,7 @@
     /* Pausa pedida por el jugador local (en online se coordina en red) */
     requestPause: function () {
       if (this.state !== 'PLAYING' && this.state !== 'READY') return;
+      if (this.vote) return;   // hay un diálogo abierto: la pausa la lleva él
       if (this.netRole === 'guest') {
         this.netSend('gevt', { t: 'pauseReq', on: !this.paused });
         return;
@@ -444,6 +490,8 @@
       }
 
       if (this.netRole) this.processNetQueue();
+      this.stepVote();
+      this.stepFlash();
 
       /* aviso de red: congela y vuelve al menú */
       if (this.netNotice) {
@@ -827,14 +875,24 @@
       } else {
         this.state = 'GAME_OVER';
         this.phaseTicks = CFG.GAMEOVER_TICKS;
+        this.overIdle = false;
         this.persistHighScore();
         this.hostEvt({ t: 'gameOver' });
+        this.syncUI();
       }
     },
 
+    /* Tras el rótulo GAME OVER ya no se vuelve solo al menú: se ofrece
+     * repetir la partida con el mismo compañero (o salir). */
     stepGameOver: function () {
-      this.phaseTicks--;
-      if (this.phaseTicks <= 0) this.toMenu();
+      if (this.phaseTicks > 0) this.phaseTicks--;
+      if (this.phaseTicks <= 0 && !this.overIdle) this.enterGameOverIdle();
+    },
+
+    enterGameOverIdle: function () {
+      this.overIdle = true;
+      this.stopAllLoops();
+      this.syncUI();
     },
 
     stepLevelDone: function () {
@@ -893,6 +951,164 @@
     },
 
     /* =========================================================
+     * RENDICIÓN Y REVANCHA
+     * Ambas son votaciones: en dos jugadores tienen que aceptarlo
+     * los dos. En online el anfitrión es quien las ejecuta y avisa;
+     * en local basta con confirmar en el diálogo.
+     * ========================================================= */
+    canSurrender: function () {
+      return this.inGame() && this.state !== 'GAME_OVER' &&
+        !this.netNotice && !this.vote;
+    },
+
+    voteAllowed: function (kind) {
+      if (kind === 'rematch') return this.state === 'GAME_OVER' && !!this.lastOpts;
+      return this.canSurrender();
+    },
+
+    /* Petición del jugador local (botón RENDIRSE / REVANCHA) */
+    requestVote: function (kind) {
+      if (this.vote || !this.voteAllowed(kind)) return;
+      if (!this.netRole) {
+        // sin red: el diálogo local hace de votación
+        this.vote = { kind: kind, role: 'to', local: true, ticks: 0 };
+        if (kind === 'surrender') this.votePause(true);
+        this.syncUI();
+        return;
+      }
+      this.vote = { kind: kind, role: 'from', local: false, ticks: CFG.NET.VOTE_TICKS };
+      if (kind === 'surrender') this.votePause(true);
+      this.voteSend({ t: 'vote', k: kind });
+      this.syncUI();
+    },
+
+    /* Petición recibida del otro jugador */
+    onVoteRequest: function (kind) {
+      if (this.vote || !this.voteAllowed(kind)) {
+        this.voteSend({ t: 'voteRes', k: kind, ok: 0 });
+        return;
+      }
+      this.vote = { kind: kind, role: 'to', local: false, ticks: CFG.NET.VOTE_TICKS };
+      if (kind === 'surrender') this.votePause(true);
+      this.syncUI();
+    },
+
+    /* Respuesta del jugador local en el diálogo */
+    answerVote: function (ok) {
+      if (!this.vote || this.vote.role !== 'to') return;
+      var kind = this.vote.kind;
+      if (!this.vote.local) this.voteSend({ t: 'voteRes', k: kind, ok: ok ? 1 : 0 });
+      this.clearVote();
+      if (ok) this.execVote(kind);
+      else if (kind === 'surrender' && this.netRole) this.setFlash('SE SIGUE JUGANDO');
+    },
+
+    /* Respuesta recibida del otro jugador */
+    onVoteResult: function (kind, ok) {
+      if (!this.vote || this.vote.role !== 'from' || this.vote.kind !== kind) return;
+      this.clearVote();
+      if (ok) this.execVote(kind);
+      else this.setFlash(kind === 'surrender' ? 'RENDICIÓN RECHAZADA' : 'REVANCHA RECHAZADA');
+    },
+
+    /* El invitado no ejecuta nada: espera el evento del anfitrión */
+    execVote: function (kind) {
+      if (this.netRole === 'guest') return;
+      if (kind === 'surrender') this.surrenderNow();
+      else this.rematch();
+    },
+
+    voteSend: function (o) {
+      if (this.netRole === 'host') this.hostEvt(o);
+      else if (this.netRole === 'guest') this.netSend('gevt', o);
+    },
+
+    clearVote: function () {
+      if (!this.vote) return;
+      var kind = this.vote.kind;
+      this.vote = null;
+      if (kind === 'surrender') this.votePause(false);
+      this.syncUI();
+    },
+
+    stepVote: function () {
+      var v = this.vote;
+      if (!v || v.ticks <= 0) return;
+      v.ticks--;
+      if (v.ticks <= 0) {
+        var from = (v.role === 'from');
+        this.clearVote();
+        this.setFlash(from ? 'SIN RESPUESTA' : 'TIEMPO AGOTADO');
+      } else if (v.ticks % 60 === 0 && window.PM.UI && window.PM.UI.tickPrompt) {
+        window.PM.UI.tickPrompt();   // cuenta atrás visible en el diálogo
+      }
+    },
+
+    /* Pausa mientras se decide una rendición (la marca el anfitrión) */
+    votePause: function (on) {
+      if (this.netRole === 'guest') return;   // la pausa online la fija el anfitrión
+      if (on) {
+        if (this.paused) return;
+        this.paused = true;
+        this.dlgPaused = true;
+        this.stopAllLoops();
+        this.hostEvt({ t: 'pause', on: true });
+      } else if (this.dlgPaused) {
+        this.dlgPaused = false;
+        this.paused = false;
+        this.hostEvt({ t: 'pause', on: false });
+      }
+    },
+
+    surrenderNow: function () {
+      if (!this.inGame() || this.state === 'GAME_OVER') return;
+      this.clearVote();
+      this.paused = false;
+      this.dlgPaused = false;
+      this.state = 'GAME_OVER';
+      this.phaseTicks = CFG.GAMEOVER_TICKS;
+      this.overIdle = false;
+      this.persistHighScore();
+      this.stopAllLoops();
+      this.hostEvt({ t: 'gameOver' });
+      this.syncUI();
+    },
+
+    /* Revancha: misma configuración, mismo compañero */
+    rematch: function () {
+      if (!this.lastOpts) { this.toMenu(); return; }
+      this.hostEvt({ t: 'rematch' });
+      this.restartGame();
+    },
+
+    restartGame: function () {
+      if (!this.lastOpts) { this.toMenu(); return; }
+      this.newGame(this.lastOpts);
+    },
+
+    setFlash: function (text) {
+      this.flash = { text: text, ticks: 180 };
+      this.syncFlashUI();
+    },
+
+    stepFlash: function () {
+      if (!this.flash) return;
+      this.flash.ticks--;
+      if (this.flash.ticks <= 0) {
+        this.flash = null;
+        this.syncFlashUI();
+      }
+    },
+
+    /* Con un diálogo abierto basta con reescribir su línea de estado */
+    syncFlashUI: function () {
+      var UI = window.PM.UI;
+      if (!UI) return;
+      if (UI.promptOpen) UI.tickPrompt();
+      else UI.syncPrompt();
+    },
+
+    /* =========================================================
      * RED — común
      * ========================================================= */
     netSend: function (name, data) {
@@ -922,7 +1138,8 @@
     netMaintain: function () {
       if (!this.inGame()) return;
       this.netWatch++;
-      if (this.state !== 'GAME_OVER' && this.netWatch > CFG.NET.DROP_TICKS) {
+      // también durante GAME OVER: ahí se espera la respuesta a la revancha
+      if (this.netWatch > CFG.NET.DROP_TICKS) {
         this.netFail('CONEXIÓN PERDIDA');
         return;
       }
@@ -942,11 +1159,14 @@
     netFail: function (msg) {
       if (this.netNotice) return;
       this.stopAllLoops();
+      this.vote = null;
+      this.overIdle = false;
+      this.flash = null;
       this.netNotice = { text: msg, ticks: CFG.NET.NOTICE_TICKS };
+      this.syncUI();
     },
 
     peerLeft: function () {
-      if (this.state === 'GAME_OVER') return;   // final natural: cada uno a su menú
       this.netFail('EL OTRO JUGADOR HA SALIDO');
     },
 
@@ -1060,11 +1280,18 @@
           }
           break;
         case 'pauseReq':
-          if (this.state === 'PLAYING' || this.state === 'READY') {
+          if ((this.state === 'PLAYING' || this.state === 'READY') && !this.vote) {
             this.paused = !!d.on;
+            this.dlgPaused = false;
             if (this.paused) this.stopAllLoops();
             this.hostEvt({ t: 'pause', on: this.paused });
           }
+          break;
+        case 'vote':
+          this.onVoteRequest(d.k);
+          break;
+        case 'voteRes':
+          this.onVoteResult(d.k, !!d.ok);
           break;
       }
     },
@@ -1128,8 +1355,7 @@
           if (this.phaseTicks > 0) this.phaseTicks--;
           break;
         case 'GAME_OVER':
-          this.phaseTicks--;
-          if (this.phaseTicks <= 0) this.toMenu();
+          this.stepGameOver();
           break;
       }
     },
@@ -1300,7 +1526,11 @@
       this.fruitActive = false;
       this.paused = false;
       this.outEaten = [];
+      // por si se perdió el evento de revancha: nunca seguir con el panel abierto
+      this.overIdle = false;
+      this.vote = null;
       this.stopAllLoops();
+      this.syncUI();
     },
 
     applyEvt: function (e) {
@@ -1365,15 +1595,28 @@
           window.AudioSys && AudioSys.playExtraLife();
           break;
         case 'gameOver':
+          this.clearVote();
           this.state = 'GAME_OVER';
           this.phaseTicks = CFG.GAMEOVER_TICKS;
+          this.overIdle = false;
           this.highScore = Math.max(this.highScore, this.score);
           this.persistHighScore();
           this.stopAllLoops();
+          this.syncUI();
           break;
         case 'pause':
           this.paused = !!e.on;
           if (this.paused) this.stopAllLoops();
+          break;
+        case 'vote':
+          this.onVoteRequest(e.k);
+          break;
+        case 'voteRes':
+          this.onVoteResult(e.k, !!e.ok);
+          break;
+        case 'rematch':
+          this.clearVote();
+          this.restartGame();
           break;
       }
     },
@@ -1389,14 +1632,17 @@
           this.stopAllLoops();
         }
         if (s.st === 'DYING') this.predictFreeze = 0;
+        this.overIdle = false;
         if (s.st === 'GAME_OVER') {
           this.highScore = Math.max(this.highScore, s.sc || 0);
           this.persistHighScore();
+          this.clearVote();          // una rendición en curso ya no pinta nada
         }
         if (s.st === 'READY' && prev !== 'READY') {
           // respaldo por si el evt 'ready' no llegó
           this.guestReady({ lvl: s.lvl, full: false, rt: s.rt });
         }
+        this.syncUI();
       }
 
       this.paused = !!s.pz;
@@ -1622,15 +1868,15 @@
           if (this.eatFreezeTicks > 0 && i === this.eaterIdx) continue;
           pc.draw(ctx, this.colorFor(i));
         }
-        /* etiquetas J1/J2 durante el "¡LISTO!" en dos jugadores */
+        /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!" */
         if (this.playerCount === 2 && this.state === 'READY') {
-          ctx.font = 'bold 8px monospace';
+          ctx.font = 'bold 7px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           for (i = 0; i < this.pacs.length; i++) {
             if (this.pacs[i].out) continue;
             ctx.fillStyle = this.colorFor(i);
-            ctx.fillText('J' + (i + 1), this.pacs[i].x,
+            ctx.fillText(this.nameFor(i), this.pacs[i].x,
               this.pacs[i].y + CFG.MAZE_Y - 10);
           }
         }
@@ -1654,7 +1900,9 @@
       ctx.fillStyle = CFG.COLORS.text;
 
       ctx.textAlign = 'left';
-      ctx.fillText(twoP ? 'EQUIPO' : '1UP', 20, 0);
+      var leftLabel = twoP ? 'EQUIPO'
+        : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
+      ctx.fillText(leftLabel, 20, 0);
       ctx.textAlign = 'center';
       ctx.fillText('HIGH SCORE', 112, 0);
 
@@ -1663,6 +1911,19 @@
       var hs = (this.state === 'MENU') ? this.highScore1 : this.highScore;
       ctx.fillText(String(sc || 0), 56, 9);
       ctx.fillText(String(hs || 0), 136, 9);
+
+      /* nombres del dúo, en la tercera línea del marcador */
+      if (twoP) {
+        ctx.font = 'bold 7px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = this.colorFor(0);
+        ctx.fillText(this.nameFor(0), 20, 16);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = this.colorFor(1);
+        ctx.fillText(this.nameFor(1), 204, 16);
+        ctx.font = 'bold 8px monospace';
+        ctx.fillStyle = CFG.COLORS.text;
+      }
 
       /* vidas (mini Pac-Mans) */
       if (this.state !== 'MENU') {
@@ -1707,6 +1968,12 @@
         ctx.font = 'bold 8px monospace';
         ctx.fillStyle = CFG.COLORS.gameOver;
         ctx.fillText('GAME OVER', 112, y);
+      }
+      /* aviso breve (rendición rechazada, sin respuesta, ...) */
+      if (this.flash) {
+        ctx.font = 'bold 8px monospace';
+        ctx.fillStyle = CFG.COLORS.popup;
+        ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
       }
       if (this.paused) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';

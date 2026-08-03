@@ -47,6 +47,7 @@ body {
 .overlay {
   position: absolute;
   inset: 0;
+  z-index: 10;
   display: none;
   flex-direction: column;
   align-items: center;
@@ -180,16 +181,24 @@ body {
 .dpad-right { grid-column: 3; grid-row: 2; }
 .dpad-down  { grid-column: 2; grid-row: 3; }
 
-/* Botón de pausa en pantalla (solo dispositivos táctiles, durante la partida) */
-#pauseBtn {
+/* Barra de botones en partida: rendirse (siempre) y pausa (solo táctil) */
+#gameBtns {
   position: absolute;
   top: 4px;
   right: 4px;
   z-index: 5;
   display: none;
+  gap: 5px;
+  line-height: 0;
+}
+
+#gameBtns.on { display: flex; }
+
+.game-btn {
   font-family: inherit;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: bold;
+  letter-spacing: 1px;
   line-height: 1;
   color: #fff;
   background: rgba(0, 0, 0, 0.55);
@@ -199,6 +208,14 @@ body {
   cursor: pointer;
   touch-action: manipulation;
 }
+
+.game-btn:hover, .game-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+#surrenderBtn { color: #ff8c00; border-color: rgba(255, 140, 0, 0.6); }
+#pauseBtn { font-size: 13px; }
 
 .btn:hover, .btn:focus-visible {
   background: #2121ff;
@@ -408,3 +425,77 @@ input[type="range"] {
 }
 
 .btn:disabled:hover { background: #000; }
+
+/* ---------- Nombres de jugador ---------- */
+.nick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: clamp(9px, 1.7vh, 12px);
+}
+
+.nick-label {
+  color: #ddd;
+  letter-spacing: 1px;
+  min-width: 150px;
+  text-align: right;
+}
+
+.nick-input {
+  font-family: inherit;
+  font-weight: bold;
+  font-size: clamp(12px, 2.2vh, 16px);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+  color: #ffff00;
+  background: #000;
+  border: 2px solid #2121ff;
+  padding: 6px 8px;
+  width: 160px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+}
+
+.nick-input:focus { border-color: #ffff00; }
+
+/* ---------- Diálogos en partida (rendición / revancha / game over) ---------- */
+#prompt {
+  z-index: 20;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.93);
+}
+
+.prompt-line {
+  color: #ddd;
+  font-size: clamp(11px, 2vh, 15px);
+  letter-spacing: 1px;
+  max-width: min(94%, 420px);
+}
+
+.prompt-line.big {
+  color: #ffff00;
+  font-size: clamp(15px, 3vh, 22px);
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+.prompt-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.prompt-btns .btn {
+  min-width: 0;
+  padding: 10px 20px;
+  font-size: clamp(11px, 2.1vh, 15px);
+  letter-spacing: 2px;
+}

@@ -2,6 +2,29 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-03 · Rendición, revancha y nombres de jugador
+
+- **Botón RENDIRSE** en la barra superior de la partida (en todos los
+  dispositivos, junto al botón de pausa táctil). En un jugador pide
+  confirmación; **en dos jugadores tienen que aceptarlo los dos**: el que lo
+  propone ve la cuenta atrás y el otro decide (ACEPTAR / SEGUIR JUGANDO). La
+  partida se queda en pausa mientras se decide, y si se rechaza o pasan 20 s
+  se sigue jugando con un aviso en pantalla.
+- **Revancha tras el GAME OVER**: el juego ya no vuelve solo al menú. Tras el
+  rótulo aparece un panel con los nombres, la puntuación, el récord y el
+  nivel, y dos botones: OTRA PARTIDA y MENÚ. En local empieza al momento; en
+  online es otra votación, y al aceptar los dos arrancan una partida nueva
+  **con el mismo compañero y la misma configuración** sin volver a la sala.
+- **Nombres de jugador** (hasta 8 caracteres) en OPCIONES → NOMBRES: el tuyo
+  (J1 y online) y el del jugador 2 local. Se ven en el marcador, sobre cada
+  Pac-Man en el "¡LISTO!", en la sala online, en los diálogos y en el panel
+  de GAME OVER. Se intercambian en el saludo de la sala.
+- Durante el GAME OVER online la conexión sigue viva (se espera la
+  respuesta a la revancha) y el vigilante de desconexión también actúa ahí:
+  si el otro se va, sale el aviso "EL OTRO JUGADOR HA SALIDO".
+- Protocolo online `PROTO` 1 → **2** (mensajes nuevos `vote`, `voteRes` y
+  `rematch`, y nombre en el saludo). Ambos extremos deben estar actualizados.
+
 ## 2026-07-29 · Crucetas táctiles y corrección de colisiones
 
 - **Crucetas de dirección en pantalla** (▲◀▶▼), además del deslizamiento:

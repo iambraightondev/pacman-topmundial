@@ -23,7 +23,21 @@
   var PRESET_NAMES = ['facil', 'normal', 'dificil', 'custom'];
   var LIVES_MODES = ['shared', 'individual'];
 
+  /* Nombres: mayúsculas, sin acentos raros ni caracteres de control, y
+   * recortados a CFG.NICK_MAX para que quepan en el marcador. */
+  function filterNick(value) {
+    return String(value == null ? '' : value)
+      .toUpperCase()
+      .replace(/[^A-Z0-9 ._-]/g, '')
+      .slice(0, CFG.NICK_MAX);
+  }
+
+  function sanitizeNick(value) {
+    return filterNick(value).replace(/ +/g, ' ').replace(/^ +| +$/g, '');
+  }
+
   function sanitizeSetting(key, value, def) {
+    if (key === 'nick1' || key === 'nick2') return sanitizeNick(value);
     if (NUM_RANGES.hasOwnProperty(key)) {
       var r = NUM_RANGES[key];
       var n = r.int ? parseInt(value, 10) : parseFloat(value);
@@ -79,7 +93,9 @@
     els: {},
     audioResumed: false,
     touchDevice: false,
-    lobby: null,        // { mode:'host'|'join', code, locked, peerColor, hostCfg, hostColor, timer }
+    promptOpen: false,  // hay un diálogo (rendición / revancha / game over) abierto
+    lobby: null,        // { mode:'host'|'join', code, locked, peerColor, peerName,
+                        //   hostCfg, hostColor, hostName, timer }
 
     init: function () {
       this.touchDevice = ('ontouchstart' in window) ||
@@ -87,10 +103,11 @@
       this.els.menu = document.getElementById('menu');
       this.els.options = document.getElementById('options');
       this.els.online = document.getElementById('online');
+      this.els.prompt = document.getElementById('prompt');
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
-      this.buildPauseButton();
+      this.buildGameButtons();
       this.buildDpads();
       this.bindKeyboard();
       this.bindTouch();
@@ -206,12 +223,18 @@
       hint2.textContent = 'DOS JUGADORES: J1 FLECHAS · J2 WASD · EQUIPO CONTRA LOS FANTASMAS';
       m.appendChild(hint2);
 
+      var hint3 = document.createElement('div');
+      hint3.className = 'hint';
+      hint3.style.marginTop = '2px';
+      hint3.textContent = 'RENDIRSE: BOTÓN ARRIBA A LA DERECHA · EN DÚO LO ACEPTÁIS LOS DOS';
+      m.appendChild(hint3);
+
       if (this.touchDevice) {
-        var hint3 = document.createElement('div');
-        hint3.className = 'hint';
-        hint3.style.marginTop = '2px';
-        hint3.textContent = 'TÁCTIL: DESLIZA PARA MOVERTE · EN DOS JUGADORES, CADA UNO SU MITAD';
-        m.appendChild(hint3);
+        var hint4 = document.createElement('div');
+        hint4.className = 'hint';
+        hint4.style.marginTop = '2px';
+        hint4.textContent = 'TÁCTIL: DESLIZA PARA MOVERTE · EN DOS JUGADORES, CADA UNO SU MITAD';
+        m.appendChild(hint4);
       }
     },
 
@@ -297,6 +320,16 @@
       lmNote.textContent = 'COMPARTIDAS: UN FONDO COMÚN PARA EL EQUIPO · INDIVIDUALES: QUIEN LAS PIERDE, MIRA';
       o.appendChild(lmNote);
 
+      /* --- NOMBRES --- */
+      o.appendChild(this.sectionTitle('NOMBRES'));
+      this.nickInputs = {};
+      o.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
+      o.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
+      var nkNote = document.createElement('div');
+      nkNote.className = 'note';
+      nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
+      o.appendChild(nkNote);
+
       /* --- COLORES --- */
       this.colorRows = {};
       o.appendChild(this.sectionTitle('COLOR JUGADOR 1'));
@@ -338,6 +371,46 @@
       d.className = 'section-title';
       d.textContent = text;
       return d;
+    },
+
+    /* Fila etiqueta + campo de texto para un nombre de jugador */
+    makeNickRow: function (key, label) {
+      var self = this;
+      var row = document.createElement('div');
+      row.className = 'nick-row';
+
+      var lab = document.createElement('label');
+      lab.className = 'nick-label';
+      lab.textContent = label;
+      row.appendChild(lab);
+
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'nick-input';
+      input.maxLength = CFG.NICK_MAX;
+      input.placeholder = (key === 'nick2') ? 'J2' : 'J1';
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('spellcheck', 'false');
+      input.setAttribute('autocapitalize', 'characters');
+      input.addEventListener('keydown', function (ev) {
+        ev.stopPropagation();     // escribir no debe mover a Pac-Man
+      });
+      input.addEventListener('input', function () {
+        var v = filterNick(input.value);
+        if (v !== input.value) input.value = v;
+        window.PM.settings[key] = v;
+        saveSettings();
+      });
+      input.addEventListener('blur', function () {
+        var v = sanitizeNick(input.value);
+        input.value = v;
+        window.PM.settings[key] = v;
+        saveSettings();
+      });
+      row.appendChild(input);
+
+      this.nickInputs[key] = input;
+      return row;
     },
 
     /* Fila de muestras + selector libre para un ajuste de color */
@@ -446,6 +519,12 @@
         var sl = this.sliders[k];
         sl.input.value = String(s[k]);
         sl.val.textContent = sl.fmt(parseFloat(s[k]));
+      }
+      for (k in this.nickInputs) {
+        if (!this.nickInputs.hasOwnProperty(k)) continue;
+        if (document.activeElement !== this.nickInputs[k]) {
+          this.nickInputs[k].value = s[k] || '';
+        }
       }
       for (k in this.colorRows) {
         if (!this.colorRows.hasOwnProperty(k)) continue;
@@ -680,13 +759,16 @@
       }
       this.lobby.locked = true;
       this.lobby.peerColor = sanitizeSetting('pac2Color', data.c, '#00ff00');
+      this.lobby.peerName = sanitizeNick(data.n);
       window.PM.Net.lockPeer(sid);
       window.PM.Net.send('cfg', {
         v: CFG.NET.PROTO,
         c: window.PM.settings.pacColor,
+        n: window.PM.settings.nick1,
         cfg: this.netCfgSubset()
       });
-      this.setLobbyStatus('¡JUGADOR 2 CONECTADO! EMPEZANDO...');
+      this.setLobbyStatus('¡' + (this.lobby.peerName || 'JUGADOR 2') +
+        ' EN LA SALA! EMPEZANDO...');
       setTimeout(function () {
         if (!self.lobby || self.lobby.mode !== 'host') return;
         window.PM.Net.send('start', {});
@@ -713,7 +795,11 @@
       window.PM.Net.connect(code, {
         onOpen: function () {
           if (!self.lobby || self.lobby.mode !== 'join') return;
-          window.PM.Net.send('hello', { v: CFG.NET.PROTO, c: window.PM.settings.pac2Color });
+          window.PM.Net.send('hello', {
+            v: CFG.NET.PROTO,
+            c: window.PM.settings.pac2Color,
+            n: window.PM.settings.nick1
+          });
           self.setLobbyStatus('BUSCANDO LA SALA...');
           self.lobby.timer = setTimeout(function () {
             if (self.lobby && self.lobby.mode === 'join' && !self.lobby.locked) {
@@ -736,8 +822,10 @@
         this.lobby.locked = true;
         this.lobby.hostCfg = data.cfg;
         this.lobby.hostColor = sanitizeSetting('pacColor', data.c, '#ffff00');
+        this.lobby.hostName = sanitizeNick(data.n);
         window.PM.Net.lockPeer(sid);
-        this.setLobbyStatus('CONECTADO · EMPEZANDO...');
+        this.setLobbyStatus('CON ' + (this.lobby.hostName || 'EL ANFITRIÓN') +
+          ' · EMPEZANDO...');
       } else if (name === 'start') {
         if (this.lobby.locked) this.startOnlineGame('guest');
       } else if (name === 'full') {
@@ -754,14 +842,19 @@
       this.lobby = null;
       this.hideAll();
       this.resumeAudio();
-      var colors, cfg = null;
+      var me = sanitizeNick(window.PM.settings.nick1);
+      var colors, names, cfg = null;
       if (role === 'host') {
         colors = [window.PM.settings.pacColor, lb.peerColor || '#00ff00'];
+        names = [me || 'J1', lb.peerName || 'J2'];
       } else {
         colors = [lb.hostColor || '#ffff00', window.PM.settings.pac2Color];
+        names = [lb.hostName || 'J1', me || 'J2'];
         cfg = this.sanitizeNetCfg(lb.hostCfg);
       }
-      window.PM.Game.newGame({ players: 2, net: role, cfg: cfg, colors: colors });
+      window.PM.Game.newGame({
+        players: 2, net: role, cfg: cfg, colors: colors, names: names
+      });
     },
 
     lobbyError: function (msg) {
@@ -782,21 +875,203 @@
     },
 
     /* ------------------------------------------------------
-     * Controles táctiles en pantalla: botón de pausa y cruceta(s)
+     * Controles en pantalla: barra de botones y cruceta(s)
      * ------------------------------------------------------ */
-    buildPauseButton: function () {
+    /* Barra superior de la partida: RENDIRSE (siempre) y pausa (táctil) */
+    buildGameButtons: function () {
       var self = this;
+      var bar = document.createElement('div');
+      bar.id = 'gameBtns';
+
+      var sur = document.createElement('button');
+      sur.type = 'button';
+      sur.id = 'surrenderBtn';
+      sur.className = 'game-btn';
+      sur.textContent = 'RENDIRSE';
+      sur.setAttribute('aria-label', 'Rendirse');
+      sur.addEventListener('click', function () {
+        self.resumeAudio();
+        window.PM.Game.requestVote('surrender');
+      });
+      bar.appendChild(sur);
+
       var b = document.createElement('button');
       b.type = 'button';
       b.id = 'pauseBtn';
+      b.className = 'game-btn';
       b.setAttribute('aria-label', 'Pausa');
       b.textContent = '❚❚';
+      b.style.display = this.touchDevice ? '' : 'none';
       b.addEventListener('click', function () {
         self.resumeAudio();
         window.PM.Game.requestPause();
       });
-      document.getElementById('stage').appendChild(b);
+      bar.appendChild(b);
+
+      document.getElementById('stage').appendChild(bar);
+      this.gameBtns = bar;
       this.pauseBtn = b;
+      this.surrenderBtn = sur;
+    },
+
+    /* ------------------------------------------------------
+     * Diálogos sobre la partida: rendición, revancha y GAME OVER.
+     * syncPrompt() reconstruye el diálogo a partir del estado del
+     * juego (Game.vote / Game.overIdle), así nunca se descuadran.
+     * ------------------------------------------------------ */
+    showPrompt: function (o) {
+      var self = this;
+      var p = this.els.prompt;
+      p.innerHTML = '';
+
+      var t = document.createElement('div');
+      t.className = 'panel-title';
+      if (o.color) t.style.color = o.color;
+      t.textContent = o.title;
+      p.appendChild(t);
+
+      /* cada línea: texto suelto u objeto { text, big } */
+      (o.lines || []).forEach(function (line) {
+        if (!line) return;
+        var obj = (typeof line === 'object');
+        var d = document.createElement('div');
+        d.className = 'prompt-line' + (obj && line.big ? ' big' : '');
+        d.textContent = obj ? line.text : line;
+        p.appendChild(d);
+      });
+
+      this.promptStatusEl = null;
+      if (typeof o.status === 'string') {
+        var st = document.createElement('div');
+        st.className = 'lobby-status' + (o.statusError ? ' error' : '');
+        st.textContent = o.status;
+        p.appendChild(st);
+        this.promptStatusEl = st;
+      }
+
+      var row = document.createElement('div');
+      row.className = 'prompt-btns';
+      (o.buttons || []).forEach(function (b) {
+        var el = self.makeButton(b.label, b.onClick);
+        if (b.primary) el.classList.add('btn-primary');
+        row.appendChild(el);
+      });
+      p.appendChild(row);
+
+      p.style.display = 'flex';
+      this.promptOpen = true;
+      this.refreshControls();
+    },
+
+    hidePrompt: function () {
+      if (!this.els.prompt) return;
+      this.els.prompt.style.display = 'none';
+      this.els.prompt.innerHTML = '';
+      this.promptStatusEl = null;
+      this.promptOpen = false;
+    },
+
+    voteStatusText: function (vote) {
+      var secs = Math.ceil(vote.ticks / 60);
+      if (vote.role === 'from') return 'ESPERANDO RESPUESTA... ' + secs;
+      return vote.local ? '' : ('QUEDAN ' + secs + ' S');
+    },
+
+    /* Cuenta atrás: se reescribe solo el texto, sin rehacer el diálogo
+     * (rehacerlo cada segundo se comería alguna pulsación de los botones) */
+    tickPrompt: function () {
+      var g = window.PM.Game;
+      if (!this.promptOpen || !this.promptStatusEl) return;
+      this.promptStatusEl.textContent = g.vote
+        ? this.voteStatusText(g.vote)
+        : (g.flash ? g.flash.text : '');
+    },
+
+    syncPrompt: function () {
+      var g = window.PM.Game;
+      if (!this.els.prompt) return;
+      if (g.state === 'MENU' || g.netNotice) {
+        this.hidePrompt();
+        this.refreshControls();
+        return;
+      }
+      if (g.vote) this.showVotePrompt(g.vote);
+      else if (g.overIdle) this.showGameOverPrompt();
+      else {
+        this.hidePrompt();
+        this.refreshControls();
+      }
+    },
+
+    showVotePrompt: function (vote) {
+      var self = this;
+      var g = window.PM.Game;
+      var surrender = (vote.kind === 'surrender');
+      var peer = g.playerCount === 2 ? g.nameFor(g.peerIdx()) : '';
+
+      if (vote.role === 'from') {
+        this.showPrompt({
+          title: surrender ? 'RENDIRSE' : 'REVANCHA',
+          color: surrender ? '#ff8c00' : '#ffff00',
+          lines: [surrender
+            ? 'HAS PROPUESTO ABANDONAR LA PARTIDA.'
+            : 'HAS PROPUESTO JUGAR OTRA PARTIDA.',
+            'TIENE QUE ACEPTARLO ' + (peer || 'EL OTRO JUGADOR') + '.'],
+          status: this.voteStatusText(vote),
+          buttons: []
+        });
+        return;
+      }
+
+      /* nos toca decidir (o confirmar, en local) */
+      var lines;
+      if (surrender) {
+        lines = vote.local
+          ? [g.playerCount === 2
+              ? 'LA PARTIDA TERMINA PARA LOS DOS: DEBÉIS ESTAR DE ACUERDO.'
+              : 'LA PARTIDA TERMINA Y SE GUARDA LA PUNTUACIÓN.']
+          : [(peer || 'EL OTRO JUGADOR') + ' QUIERE ABANDONAR LA PARTIDA.',
+             'SI ACEPTAS, TERMINA PARA LOS DOS.'];
+      } else {
+        lines = [(peer || 'EL OTRO JUGADOR') + ' QUIERE LA REVANCHA.'];
+      }
+      this.showPrompt({
+        title: surrender ? '¿RENDIRSE?' : '¿REVANCHA?',
+        color: surrender ? '#ff8c00' : '#ffff00',
+        lines: lines,
+        status: this.voteStatusText(vote),
+        buttons: [
+          { label: surrender ? 'SÍ, RENDIRSE' : 'SÍ, JUGAR', primary: true,
+            onClick: function () { self.resumeAudio(); g.answerVote(true); } },
+          { label: surrender ? 'SEGUIR JUGANDO' : 'NO, GRACIAS',
+            onClick: function () { g.answerVote(false); } }
+        ]
+      });
+    },
+
+    showGameOverPrompt: function () {
+      var self = this;
+      var g = window.PM.Game;
+      var duo = (g.playerCount === 2);
+      var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
+      if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
+      lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
+      this.showPrompt({
+        title: 'GAME OVER',
+        color: '#ff0000',
+        lines: lines,
+        status: g.flash ? g.flash.text : '',
+        statusError: !!g.flash,
+        buttons: [
+          { label: duo ? 'OTRA PARTIDA' : 'JUGAR OTRA VEZ', primary: true,
+            onClick: function () {
+              self.resumeAudio();
+              if (g.netRole) g.requestVote('rematch');
+              else g.restartGame();
+            } },
+          { label: 'MENÚ', onClick: function () { g.toMenu(); } }
+        ]
+      });
     },
 
     /* Cruceta de dirección. En un jugador y online hay una sola
@@ -839,13 +1114,15 @@
       return wrap;
     },
 
-    refreshTouchControls: function (inGame) {
+    /* Botones y crucetas: solo con la partida en marcha y sin diálogos */
+    refreshControls: function () {
       var g = window.PM.Game;
-      var show = !!(inGame && this.touchDevice);
-      if (this.pauseBtn) {
-        this.pauseBtn.style.display = show ? 'block' : 'none';
-      }
+      var playable = g.inGame() && g.state !== 'GAME_OVER' &&
+        !this.promptOpen && !g.netNotice;
+      if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
+      if (this.surrenderBtn) this.surrenderBtn.disabled = !g.canSurrender();
       if (!this.dpad1) return;
+      var show = playable && this.touchDevice;
       var dual = show && g.playerCount === 2 && !g.netRole;
       this.dpad1.style.display = show ? 'grid' : 'none';
       this.dpad1.classList.toggle('dual', dual);
@@ -856,30 +1133,34 @@
      * Visibilidad de paneles
      * ------------------------------------------------------ */
     showMenu: function () {
+      this.hidePrompt();
       this.els.menu.style.display = 'flex';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';
-      this.refreshTouchControls(false);
+      this.refreshControls();
     },
     showOptions: function () {
+      this.hidePrompt();
       this.refreshOptions();
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'flex';
       this.els.online.style.display = 'none';
-      this.refreshTouchControls(false);
+      this.refreshControls();
     },
     showOnline: function () {
+      this.hidePrompt();
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'flex';
       this.showOnlineIdle();
-      this.refreshTouchControls(false);
+      this.refreshControls();
     },
     hideAll: function () {
+      this.hidePrompt();
       this.els.menu.style.display = 'none';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';
-      this.refreshTouchControls(true);   // se actualiza de nuevo al arrancar la partida
+      this.refreshControls();   // se actualiza de nuevo al arrancar la partida
     },
 
     resumeAudio: function () {
@@ -907,6 +1188,7 @@
       };
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
+        if (self.promptOpen) return;   // hay un diálogo: decide con los botones
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
         var isArrow = (ev.key in ARROWS);
         var isWasd = (ev.key in WASD);
