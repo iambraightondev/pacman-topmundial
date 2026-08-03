@@ -435,7 +435,7 @@
       var gx = ghost.tileX(), gy = ghost.tileY();
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
-        if (p.out) continue;
+        if (p.out || p.dying) continue;   // a un muerto no se le persigue
         var dx = p.tileX() - gx, dy = p.tileY() - gy;
         var d2 = dx * dx + dy * dy;
         if (d2 < bd) { bd = d2; best = p; }
@@ -572,10 +572,13 @@
       /* contexto de IA (Inky necesita la casilla de Blinky) */
       this.blinkyTile = { x: this.ghosts[0].tileX(), y: this.ghosts[0].tileY() };
 
+      /* muertes en curso: solo se congela quien muere, la partida sigue */
+      this.stepPacDeaths(true);
+
       /* jugadores (se guarda la casilla previa para detectar cruces) */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
-        if (p.out) continue;
+        if (p.out || p.dying) continue;
         p.prevTX = p.tileX();
         p.prevTY = p.tileY();
         p.update(this.pacSpeedPx(p));
@@ -599,7 +602,7 @@
         else {
           for (i = 0; i < this.pacs.length; i++) {
             p = this.pacs[i];
-            if (p.out || !this.isLocalAuth(i)) continue;
+            if (p.out || p.dying || !this.isLocalAuth(i)) continue;
             if (p.tileY() === CFG.START.fruit.y &&
                 (p.tileX() === 13 || p.tileX() === 14)) {
               this.fruitActive = false;
@@ -621,7 +624,7 @@
        * atravesarse en ese caso; aquí se corrige a propósito. */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
-        if (p.out || !this.isLocalAuth(i)) continue;
+        if (p.out || p.dying || !this.isLocalAuth(i)) continue;
         var px = p.tileX(), py = p.tileY();
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
@@ -635,11 +638,13 @@
           if (g.frightened) {
             this.eatGhost(g, i);
           } else {
+            if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
             this.startDeath(i);
-            return;
+            break;                           // el otro jugador sigue a lo suyo
           }
         }
       }
+      if (this.state !== 'PLAYING') return;  // el último ha muerto: parón clásico
 
       /* puntuaciones emergentes */
       for (i = this.popups.length - 1; i >= 0; i--) {
@@ -837,37 +842,121 @@
       window.AudioSys && AudioSys.playEatGhost();
     },
 
-    startDeath: function (who) {
-      this.state = 'DYING';
-      this.dyingPlayer = who || 0;
-      this.dyingPhase = 0;
-      this.phaseTicks = CFG.DEATH_FREEZE_TICKS;
-      this.stopAllLoops();
-      this.hostEvt({ t: 'death', w: this.dyingPlayer });
+    /* Corta las animaciones de muerte a medias (al entrar en GAME OVER) */
+    clearDeathAnims: function () {
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        p.dying = false;
+        p.deathPhase = 0;
+        p.deathTicks = 0;
+      }
+      this.predictFreeze = 0;
     },
 
-    stepDying: function () {
-      this.phaseTicks--;
-      if (this.phaseTicks > 0) return;
-      if (this.dyingPhase === 0) {
-        this.dyingPhase = 1;
-        this.phaseTicks = CFG.DEATH_ANIM_TICKS;
-        window.AudioSys && AudioSys.playDeath();
-        return;
+    /* ¿hay alguna animación de muerte en marcha? */
+    deathAnimating: function () {
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (this.pacs[i].dying && this.pacs[i].deathPhase === 1) return true;
       }
-      /* animación terminada: descontar vida según el modo */
-      var survivors;
-      if (this.playerCount === 2 && this.livesMode === 'individual') {
-        var p = this.pacs[this.dyingPlayer];
-        p.lives--;
-        if (p.lives <= 0) { p.lives = 0; p.out = true; }
-        survivors = false;
-        for (var i = 0; i < this.pacs.length; i++) {
-          if (!this.pacs[i].out) survivors = true;
+      return false;
+    },
+
+    /* ¿queda algún jugador en danza, sin contar a exceptIdx? */
+    anyPlaying: function (exceptIdx) {
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (i === exceptIdx) continue;
+        var p = this.pacs[i];
+        if (!p.out && !p.dying) return true;
+      }
+      return false;
+    },
+
+    /* Muerte de un jugador. Si queda otro jugando, la partida NO se detiene:
+     * solo ese Pac-Man se congela, hace su animación y reaparece. El parón
+     * clásico (con reinicio de fantasmas y "¡LISTO!") es para el último. */
+    startDeath: function (who) {
+      var i = who || 0;
+      var p = this.pacs[i];
+      if (!p || p.out || p.dying) return;
+      var last = !this.anyPlaying(i);
+      this.startPacDeath(i);
+      this.dyingPlayer = i;
+      this.hostEvt({ t: 'death', w: i, g: last ? 1 : 0 });
+      if (last) {
+        this.state = 'DYING';
+        this.dyingPhase = 0;
+        this.phaseTicks = CFG.DEATH_FREEZE_TICKS;
+        this.stopAllLoops();
+      }
+    },
+
+    startPacDeath: function (i) {
+      var p = this.pacs[i];
+      if (!p || p.dying) return;
+      p.dying = true;
+      p.deathPhase = 0;
+      p.deathTicks = CFG.DEATH_FREEZE_TICKS;
+      p.deathOk = false;
+      p.safeTicks = 0;
+    },
+
+    /* Avanza las muertes en curso. finish: si la partida sigue, el jugador
+     * reaparece (o queda de espectador) al acabar su animación; si no, se
+     * queda quieto y lo resuelve stepDying(). Devuelve true si alguna
+     * animación sigue en marcha. */
+    stepPacDeaths: function (finish) {
+      var active = false;
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (p.safeTicks > 0) p.safeTicks--;
+        if (!p.dying) continue;
+        if (p.deathTicks > 0) {
+          p.deathTicks--;
+          active = true;
+          if (p.deathTicks <= 0 && p.deathPhase === 0) {
+            p.deathPhase = 1;
+            p.deathTicks = CFG.DEATH_ANIM_TICKS;
+            window.AudioSys && AudioSys.playDeath();
+          }
+          continue;
         }
+        if (finish) this.finishPacDeath(i);
+      }
+      return active;
+    },
+
+    /* Fin de la animación: descuenta la vida y reaparece en su salida.
+     * El invitado hace lo mismo (la instantánea siguiente lo confirma). */
+    finishPacDeath: function (i) {
+      var p = this.pacs[i];
+      var left;
+      p.dying = false;
+      p.deathPhase = 0;
+      p.deathTicks = 0;
+      if (this.livesMode === 'individual') {
+        p.lives = Math.max(0, p.lives - 1);
+        left = p.lives;
       } else {
-        this.lives--;
-        survivors = this.lives > 0;
+        this.lives = Math.max(0, this.lives - 1);
+        left = this.lives;
+      }
+      if (left <= 0) {
+        p.out = true;               // sin vidas: de espectador
+      } else {
+        p.reset(this.pacStart(i));
+        p.safeTicks = CFG.RESPAWN_SAFE_TICKS;
+      }
+    },
+
+    /* Parón clásico: ya no queda nadie jugando */
+    stepDying: function () {
+      if (this.stepPacDeaths(false)) return;
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (this.pacs[i].dying) this.finishPacDeath(i);
+      }
+      var survivors = false;
+      for (i = 0; i < this.pacs.length; i++) {
+        if (!this.pacs[i].out) survivors = true;
       }
       if (survivors) {
         this.respawn();
@@ -1063,6 +1152,7 @@
     surrenderNow: function () {
       if (!this.inGame() || this.state === 'GAME_OVER') return;
       this.clearVote();
+      this.clearDeathAnims();
       this.paused = false;
       this.dlgPaused = false;
       this.state = 'GAME_OVER';
@@ -1229,8 +1319,10 @@
         case 'pos': {
           var p = this.pacs[1];
           if (!p || !data) return;
-          p.x = data.x; p.y = data.y;
-          p.dir = data.d; p.nextDir = data.nd;
+          if (!p.dying) {          // mientras muere manda el anfitrión
+            p.x = data.x; p.y = data.y;
+            p.dir = data.d; p.nextDir = data.nd;
+          }
           if (data.e && this.state === 'PLAYING') {
             for (var i = 0; i < data.e.length; i++) {
               var idx = data.e[i];
@@ -1256,7 +1348,8 @@
     hostGuestEvent: function (d) {
       switch (d.t) {
         case 'died':
-          if (this.state === 'PLAYING' && this.pacs[1] && !this.pacs[1].out) {
+          if (this.state === 'PLAYING' && this.pacs[1] &&
+              !this.pacs[1].out && !this.pacs[1].dying) {
             this.startDeath(1);
           }
           break;
@@ -1320,9 +1413,16 @@
       }
       if (this.playerCount === 2 && this.livesMode === 'individual') {
         s.lv = [this.pacs[0].lives, this.pacs[1].lives];
-        s.out = [this.pacs[0].out ? 1 : 0, this.pacs[1].out ? 1 : 0];
       } else {
         s.lv = this.lives;
+      }
+      /* espectadores y muertes en curso de cada jugador */
+      s.out = [];
+      s.pd = [];
+      for (i = 0; i < this.pacs.length; i++) {
+        var pp = this.pacs[i];
+        s.out.push(pp.out ? 1 : 0);
+        s.pd.push(pp.dying ? [pp.deathPhase, Math.round(pp.deathTicks)] : 0);
       }
       if (withPellets) s.pm = this.pelletHex();
       this.snapEaten = [];
@@ -1341,6 +1441,7 @@
     },
 
     stepGuest: function () {
+      this.stepDeathConfirm();
       switch (this.state) {
         case 'READY':
           // el paso a PLAYING lo decide el anfitrión (llega por red)
@@ -1350,6 +1451,10 @@
           this.stepGuestPlaying();
           break;
         case 'DYING':
+          // animación local; el reinicio lo manda el anfitrión ('ready')
+          this.stepPacDeaths(false);
+          if (this.phaseTicks > 0) this.phaseTicks--;
+          break;
         case 'LEVEL_DONE':
           // animaciones suaves entre instantáneas
           if (this.phaseTicks > 0) this.phaseTicks--;
@@ -1357,6 +1462,21 @@
         case 'GAME_OVER':
           this.stepGameOver();
           break;
+      }
+    },
+
+    /* Invitado: su muerte es una predicción; si el anfitrión no la confirma
+     * a tiempo, se deshace y se sigue jugando. */
+    stepDeathConfirm: function () {
+      if (this.predictFreeze <= 0) return;
+      this.predictFreeze--;
+      if (this.predictFreeze > 0) return;
+      var me = this.pacs[this.localIdx];
+      if (me && me.dying && !me.deathOk) {
+        me.dying = false;
+        me.deathPhase = 0;
+        me.deathTicks = 0;
+        if (this.state === 'DYING') this.state = 'PLAYING';
       }
     },
 
@@ -1371,10 +1491,9 @@
         if (this.eatFreezeTicks === 0) this.hiddenGhost = -1;
         return;
       }
-      if (this.predictFreeze > 0) {   // muerte propia a la espera de confirmación
-        this.predictFreeze--;
-        return;
-      }
+
+      /* muertes en curso (propia o del compañero): la partida no se para */
+      this.stepPacDeaths(true);
 
       if (this.frightTicks > 0) this.stepFright();
 
@@ -1382,10 +1501,10 @@
       var host = this.pacs[0];
 
       /* pac del anfitrión: avanza por estima entre instantáneas */
-      if (!host.out) host.update(this.pacSpeedPx(host));
+      if (!host.out && !host.dying) host.update(this.pacSpeedPx(host));
 
       /* pac propio: simulación local completa (sin lag de entrada) */
-      if (!me.out) {
+      if (!me.out && !me.dying) {
         me.prevTX = me.tileX();
         me.prevTY = me.tileY();
         me.update(this.pacSpeedPx(me));
@@ -1404,7 +1523,7 @@
       }
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
-      if (this.fruitActive && !me.out) {
+      if (this.fruitActive && !me.out && !me.dying) {
         if (me.tileY() === CFG.START.fruit.y &&
             (me.tileX() === 13 || me.tileX() === 14)) {
           this.fruitActive = false;               // el evt trae los puntos
@@ -1412,7 +1531,7 @@
         }
       }
 
-      if (!me.out) this.guestCollisions(me);
+      if (!me.out && !me.dying) this.guestCollisions(me);
 
       for (i = this.popups.length - 1; i >= 0; i--) {
         if (--this.popups[i].ticks <= 0) this.popups.splice(i, 1);
@@ -1475,7 +1594,16 @@
           this.netSend('gevt', { t: 'ateGhost', g: g.id });
           window.AudioSys && AudioSys.playEatGhost();
         } else {
-          this.predictFreeze = CFG.DEATH_FREEZE_TICKS + 30;
+          if (me.safeTicks > 0) continue;      // margen tras reaparecer
+          /* predicción: se congela este Pac-Man (no la partida) y el
+           * anfitrión confirma con 'death'; si es el último, parón clásico */
+          this.startPacDeath(me.id);
+          this.predictFreeze = CFG.DEATH_CONFIRM_TICKS;
+          if (!this.anyPlaying(me.id)) {
+            this.state = 'DYING';
+            this.dyingPhase = 0;
+            this.stopAllLoops();
+          }
           this.netSend('gevt', { t: 'died' });
         }
         return;
@@ -1485,6 +1613,17 @@
     sendGuestUpdates: function () {
       var me = this.pacs[this.localIdx];
       if (!me) return;
+      /* mientras muere, su posición la manda el anfitrión: enviar la del
+       * momento de morir lo devolvería al sitio tras reaparecer */
+      if (me.dying) {
+        if (this.outEaten.length) {
+          this.netSend('pos', {
+            x: r1(me.x), y: r1(me.y), d: me.dir, nd: me.nextDir, e: this.outEaten
+          });
+          this.outEaten = [];
+        }
+        return;
+      }
       this.posTimer++;
       var dirty = this.outEaten.length > 0 ||
         me.dir !== this._lastSentDir || me.nextDir !== this._lastSentNext;
@@ -1571,14 +1710,23 @@
           if (!predicted) window.AudioSys && AudioSys.playEatGhost();
           break;
         }
-        case 'death':
-          this.predictFreeze = 0;
-          this.state = 'DYING';
-          this.dyingPlayer = e.w || 0;
-          this.dyingPhase = 0;
-          this.phaseTicks = CFG.DEATH_FREEZE_TICKS;
-          this.stopAllLoops();
+        case 'death': {
+          var w = e.w || 0;
+          var pw = this.pacs[w];
+          if (pw) {
+            if (!pw.dying) this.startPacDeath(w);
+            pw.deathOk = true;
+          }
+          if (w === this.localIdx) this.predictFreeze = 0;
+          this.dyingPlayer = w;
+          if (e.g) {                 // era el último: parón clásico
+            this.state = 'DYING';
+            this.dyingPhase = 0;
+            this.phaseTicks = CFG.DEATH_FREEZE_TICKS;
+            this.stopAllLoops();
+          }
           break;
+        }
         case 'levelDone':
           this.state = 'LEVEL_DONE';
           this.levelPhase = 0;
@@ -1596,6 +1744,7 @@
           break;
         case 'gameOver':
           this.clearVote();
+          this.clearDeathAnims();
           this.state = 'GAME_OVER';
           this.phaseTicks = CFG.GAMEOVER_TICKS;
           this.overIdle = false;
@@ -1631,9 +1780,9 @@
         if (s.st === 'DYING' || s.st === 'LEVEL_DONE' || s.st === 'GAME_OVER') {
           this.stopAllLoops();
         }
-        if (s.st === 'DYING') this.predictFreeze = 0;
         this.overIdle = false;
         if (s.st === 'GAME_OVER') {
+          this.clearDeathAnims();
           this.highScore = Math.max(this.highScore, s.sc || 0);
           this.persistHighScore();
           this.clearVote();          // una rendición en curso ya no pinta nada
@@ -1648,10 +1797,7 @@
       this.paused = !!s.pz;
       if (this.paused) this.stopAllLoops();
 
-      /* sonido de muerte al ver empezar la fase 1 */
-      if (s.st === 'DYING' && s.dph === 1 && this.dyingPhase !== 1) {
-        window.AudioSys && AudioSys.playDeath();
-      }
+      // el sonido de muerte lo dispara la animación local de cada Pac-Man
 
       this.phaseTicks = s.ph;
       this.dyingPhase = s.dph;
@@ -1687,14 +1833,41 @@
       this.dotsEaten = s.de;
       this.fruitActive = !!s.fa;
 
-      /* vidas */
+      /* vidas y espectadores */
       if (this.livesMode === 'individual' && s.lv && s.lv.length) {
         for (i = 0; i < this.pacs.length && i < s.lv.length; i++) {
           this.pacs[i].lives = s.lv[i];
-          this.pacs[i].out = !!(s.out && s.out[i]);
         }
       } else {
         this.lives = s.lv;
+      }
+      if (s.out) {
+        for (i = 0; i < this.pacs.length && i < s.out.length; i++) {
+          this.pacs[i].out = !!s.out[i];
+        }
+      }
+
+      /* Muertes en curso del OTRO jugador. La propia no se toca: nace de la
+       * predicción local, la confirma el evento 'death' y su animación va por
+       * libre; el anfitrión siempre la ve empezar y acabar más tarde, así que
+       * copiarla de aquí la reiniciaría en bucle. */
+      if (s.pd) {
+        for (i = 0; i < this.pacs.length && i < s.pd.length; i++) {
+          if (i === this.localIdx) continue;
+          var pdi = this.pacs[i], d = s.pd[i];
+          if (d) {
+            if (!pdi.dying) {              // se perdió el evento 'death'
+              this.startPacDeath(i);
+              pdi.deathPhase = d[0];
+              pdi.deathTicks = d[1];
+              pdi.deathOk = true;
+            }
+          } else if (pdi.dying) {
+            pdi.dying = false;             // el anfitrión ya la dio por acabada
+            pdi.deathPhase = 0;
+            pdi.deathTicks = 0;
+          }
+        }
       }
 
       /* celdas comidas en el anfitrión desde la última instantánea */
@@ -1773,24 +1946,49 @@
       c.fillRect(0, 0, cv.width, cv.height);
       c.strokeStyle = wallColor;
       c.lineWidth = 1;
-      c.lineCap = 'round';
+      c.lineCap = 'butt';
       c.beginPath();
       for (var r = 0; r < CFG.ROWS; r++) {
         for (var col = 0; col < CFG.COLS; col++) {
           if (CFG.MAZE[r].charAt(col) !== '#') continue;
-          var x = col * T, y = r * T;
           // arista por cada lado que da a un pasillo
-          if (this.isPath(col, r - 1)) { c.moveTo(x, y + 0.5); c.lineTo(x + T, y + 0.5); }
-          if (this.isPath(col, r + 1)) { c.moveTo(x, y + T - 0.5); c.lineTo(x + T, y + T - 0.5); }
-          if (this.isPath(col - 1, r)) { c.moveTo(x + 0.5, y); c.lineTo(x + 0.5, y + T); }
-          if (this.isPath(col + 1, r)) { c.moveTo(x + T - 0.5, y); c.lineTo(x + T - 0.5, y + T); }
+          if (this.isPath(col, r - 1)) this.wallSide(c, col, r, 0, -1);
+          if (this.isPath(col, r + 1)) this.wallSide(c, col, r, 0, 1);
+          if (this.isPath(col - 1, r)) this.wallSide(c, col, r, -1, 0);
+          if (this.isPath(col + 1, r)) this.wallSide(c, col, r, 1, 0);
         }
       }
       c.stroke();
-      /* puerta de la casa (rosa) */
+      /* puerta de la casa (rosa), a la altura del trazo de los muros vecinos */
+      var IN = CFG.WALL_INSET;
       c.fillStyle = CFG.COLORS.door;
-      c.fillRect(13 * T, 12 * T + 3, 2 * T, 2);
+      c.fillRect(13 * T - IN, 12 * T + T - IN - 1, 2 * T + IN * 2, 2);
       return cv;
+    },
+
+    /* Un lado del muro, retranqueado WALL_INSET px hacia el interior de la
+     * casilla (muros finos, pasillos anchos). Los extremos se recortan en las
+     * esquinas convexas —donde también se dibuja el lado perpendicular— y se
+     * alargan en las cóncavas, donde el contorno gira en la casilla vecina. */
+    wallSide: function (ctx, col, row, sx, sy) {
+      var IN = CFG.WALL_INSET;
+      var x = col * T, y = row * T;
+      var horiz = (sy !== 0);            // lado superior/inferior: trazo horizontal
+      var v = horiz
+        ? (sy < 0 ? y + IN + 0.5 : y + T - IN - 0.5)
+        : (sx < 0 ? x + IN + 0.5 : x + T - IN - 0.5);
+      var ax = horiz ? -1 : 0, ay = horiz ? 0 : -1;   // hacia el extremo menor
+      var a = (horiz ? x : y);
+      var b = a + T;
+      /* extremo menor */
+      if (this.isPath(col + ax, row + ay)) a += IN;
+      else if (!this.isPath(col + ax + sx, row + ay + sy)) a -= IN + 1;
+      /* extremo mayor */
+      if (this.isPath(col - ax, row - ay)) b -= IN;
+      else if (!this.isPath(col - ax + sx, row - ay + sy)) b += IN + 1;
+
+      if (horiz) { ctx.moveTo(a, v); ctx.lineTo(b, v); }
+      else { ctx.moveTo(v, a); ctx.lineTo(v, b); }
     },
 
     /* ¿la casilla es pasillo visible? (para dibujar aristas) */
@@ -1845,8 +2043,8 @@
       var showActors = (this.state === 'READY' || this.state === 'PLAYING' ||
                         this.state === 'DYING' || this.state === 'LEVEL_DONE');
       if (showActors) {
-        var deathAnim = (this.state === 'DYING' && this.dyingPhase === 1);
-        var hideGhosts = deathAnim ||
+        // los fantasmas solo desaparecen en el parón clásico del último jugador
+        var hideGhosts = (this.state === 'DYING' && this.deathAnimating()) ||
                          (this.state === 'LEVEL_DONE' && this.levelPhase === 1);
         if (!hideGhosts) {
           for (i = 0; i < 4; i++) {
@@ -1857,15 +2055,19 @@
         for (i = this.pacs.length - 1; i >= 0; i--) {
           var pc = this.pacs[i];
           if (pc.out) continue;
-          if (deathAnim) {
-            if (i === this.dyingPlayer) {
-              var t = 1 - this.phaseTicks / CFG.DEATH_ANIM_TICKS;
+          if (pc.dying) {
+            if (pc.deathPhase === 1) {
+              var t = 1 - pc.deathTicks / CFG.DEATH_ANIM_TICKS;
               window.PM.Sprites.drawPacmanDeath(ctx, pc.x,
                 pc.y + CFG.MAZE_Y, t, this.colorFor(i));
+            } else {
+              pc.draw(ctx, this.colorFor(i));   // congelado antes de la animación
             }
-            continue;   // los demás quedan ocultos durante la animación
+            continue;
           }
           if (this.eatFreezeTicks > 0 && i === this.eaterIdx) continue;
+          // parpadeo del margen de gracia al reaparecer con la partida en marcha
+          if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
           pc.draw(ctx, this.colorFor(i));
         }
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!" */

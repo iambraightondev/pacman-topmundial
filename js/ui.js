@@ -94,6 +94,7 @@
     audioResumed: false,
     touchDevice: false,
     promptOpen: false,  // hay un diálogo (rendición / revancha / game over) abierto
+    nickInputs: {},     // ajuste -> campos de texto (portada y opciones)
     lobby: null,        // { mode:'host'|'join', code, locked, peerColor, peerName,
                         //   hostCfg, hostColor, hostName, timer }
 
@@ -187,6 +188,9 @@
         roster.appendChild(row);
       }
       m.appendChild(roster);
+
+      /* nombre en la portada, estilo arcade moderno: se escribe y a jugar */
+      m.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
 
       var play = this.makeButton('UN JUGADOR', function () {
         self.resumeAudio();
@@ -322,7 +326,6 @@
 
       /* --- NOMBRES --- */
       o.appendChild(this.sectionTitle('NOMBRES'));
-      this.nickInputs = {};
       o.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
       o.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
       var nkNote = document.createElement('div');
@@ -373,11 +376,14 @@
       return d;
     },
 
-    /* Fila etiqueta + campo de texto para un nombre de jugador */
-    makeNickRow: function (key, label) {
+    /* Fila etiqueta + campo de texto para un nombre de jugador.
+     * variant 'menu': versión grande de la portada. El mismo ajuste puede
+     * tener varios campos (portada y opciones); se sincronizan entre sí. */
+    makeNickRow: function (key, label, variant) {
       var self = this;
+      var big = (variant === 'menu');
       var row = document.createElement('div');
-      row.className = 'nick-row';
+      row.className = 'nick-row' + (big ? ' nick-row-menu' : '');
 
       var lab = document.createElement('label');
       lab.className = 'nick-label';
@@ -386,31 +392,49 @@
 
       var input = document.createElement('input');
       input.type = 'text';
-      input.className = 'nick-input';
+      input.className = 'nick-input' + (big ? ' nick-input-menu' : '');
       input.maxLength = CFG.NICK_MAX;
       input.placeholder = (key === 'nick2') ? 'J2' : 'J1';
+      input.setAttribute('aria-label', label);
       input.setAttribute('autocomplete', 'off');
       input.setAttribute('spellcheck', 'false');
       input.setAttribute('autocapitalize', 'characters');
       input.addEventListener('keydown', function (ev) {
         ev.stopPropagation();     // escribir no debe mover a Pac-Man
+        if (ev.key === 'Enter') input.blur();
       });
       input.addEventListener('input', function () {
         var v = filterNick(input.value);
         if (v !== input.value) input.value = v;
         window.PM.settings[key] = v;
         saveSettings();
+        self.refreshNicks(input);
       });
       input.addEventListener('blur', function () {
         var v = sanitizeNick(input.value);
         input.value = v;
         window.PM.settings[key] = v;
         saveSettings();
+        self.refreshNicks();
       });
       row.appendChild(input);
 
-      this.nickInputs[key] = input;
+      if (!this.nickInputs[key]) this.nickInputs[key] = [];
+      this.nickInputs[key].push(input);
       return row;
+    },
+
+    /* Refresca los campos de nombre (todos menos el que se está escribiendo) */
+    refreshNicks: function (skip) {
+      var s = window.PM.settings;
+      for (var k in this.nickInputs) {
+        if (!this.nickInputs.hasOwnProperty(k)) continue;
+        var list = this.nickInputs[k];
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] === skip || list[i] === document.activeElement) continue;
+          list[i].value = s[k] || '';
+        }
+      }
     },
 
     /* Fila de muestras + selector libre para un ajuste de color */
@@ -520,12 +544,7 @@
         sl.input.value = String(s[k]);
         sl.val.textContent = sl.fmt(parseFloat(s[k]));
       }
-      for (k in this.nickInputs) {
-        if (!this.nickInputs.hasOwnProperty(k)) continue;
-        if (document.activeElement !== this.nickInputs[k]) {
-          this.nickInputs[k].value = s[k] || '';
-        }
-      }
+      this.refreshNicks();
       for (k in this.colorRows) {
         if (!this.colorRows.hasOwnProperty(k)) continue;
         var cr = this.colorRows[k];
@@ -1134,6 +1153,7 @@
      * ------------------------------------------------------ */
     showMenu: function () {
       this.hidePrompt();
+      this.refreshNicks();
       this.els.menu.style.display = 'flex';
       this.els.options.style.display = 'none';
       this.els.online.style.display = 'none';

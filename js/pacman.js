@@ -13,7 +13,7 @@
   function Pacman(id) {
     this.id = id || 0;
     this.lives = 0;      // vidas propias (modo 'individual'; las gestiona game.js)
-    this.out = false;    // sin vidas en modo individual: queda de espectador
+    this.out = false;    // sin vidas: queda de espectador
     this.reset();
   }
 
@@ -28,6 +28,13 @@
     this.pauseTicks = 0;           // pausa por comer (1 punto / 3 energizante)
     this.mouthCounter = 0;
     this.mouthPhase = 2;           // 0 cerrada, 1 media, 2 abierta
+    /* muerte propia: en dos jugadores solo se congela este Pac-Man,
+     * la partida sigue para el otro (lo lleva game.js) */
+    this.dying = false;
+    this.deathPhase = 0;           // 0 congelado, 1 animación
+    this.deathTicks = 0;
+    this.deathOk = false;          // invitado: el anfitrión confirmó la muerte
+    this.safeTicks = 0;            // invulnerable al reaparecer en marcha
   };
 
   Pacman.prototype.tileX = function () { return Math.floor(this.x / T); };

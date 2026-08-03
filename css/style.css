@@ -464,6 +464,28 @@ input[type="range"] {
 
 .nick-input:focus { border-color: #ffff00; }
 
+/* versión grande de la portada */
+.nick-row-menu {
+  flex-direction: column;
+  gap: 5px;
+  margin: 2px 0 12px;
+}
+
+.nick-row-menu .nick-label {
+  min-width: 0;
+  text-align: center;
+  color: #00ffff;
+  font-weight: bold;
+  font-size: clamp(10px, 1.8vh, 13px);
+  letter-spacing: 3px;
+}
+
+.nick-input-menu {
+  width: 220px;
+  font-size: clamp(14px, 2.6vh, 20px);
+  padding: 9px 10px;
+}
+
 /* ---------- Diálogos en partida (rendición / revancha / game over) ---------- */
 #prompt {
   z-index: 20;

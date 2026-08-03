@@ -36,7 +36,10 @@ Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
   récord propio de 2 jugadores). Vidas **compartidas** (fondo común, por
   defecto) o **individuales** (quien las pierde queda de espectador),
   configurable en OPCIONES. Cada fantasma persigue al jugador vivo más
-  cercano manteniendo su personalidad original.
+  cercano manteniendo su personalidad original. **Si muere uno, la partida
+  no se detiene**: reaparece a los pocos segundos (con un momento de
+  invulnerabilidad) mientras el otro sigue jugando; el laberinto solo se
+  reinicia cuando caen los dos.
 - **Online (2 jugadores)** — las mismas reglas de equipo, cada uno desde su
   casa. Uno crea una sala y comparte el código de 4 letras (o el enlace
   directo); el otro se une. El anfitrión fija la dificultad; cada jugador usa
@@ -75,9 +78,10 @@ Supabase, abre dos pestañas con `?red=local` en la URL.
 **Personalización:**
 
 - **Dificultad**: presets Fácil / Normal / Difícil + ajustes finos (velocidad de fantasmas y de Pac-Man, duración del power pellet, vidas, nivel inicial).
-- **Nombres de jugador** (8 caracteres): el tuyo —que es también el que ve tu
-  rival online— y el del jugador 2 local. Aparecen en el marcador, sobre cada
-  Pac-Man al empezar, en la sala online y en el panel de fin de partida.
+- **Nombres de jugador** (8 caracteres): se escribe en la propia portada
+  —el tuyo, que es también el que ve tu rival online— y en OPCIONES está
+  además el del jugador 2 local. Aparecen en el marcador, sobre cada Pac-Man
+  al empezar, en la sala online y en el panel de fin de partida.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - Configuración y récords (1 jugador y equipo) guardados automáticamente en el navegador (localStorage).

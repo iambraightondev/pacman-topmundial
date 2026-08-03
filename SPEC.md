@@ -80,10 +80,13 @@ or out-of-bounds, `-` ghost house door. EXACT layout (each line 28 chars):
 - Positions (tile coords, x may be x.5 = between tiles): Pac-Man start
   (13.5, 23); Blinky start (13.5, 11) outside; Pinky (13.5, 14), Inky
   (11.5, 14), Clyde (15.5, 14) inside house. Fruit spawns at (13.5, 17).
-- Wall rendering: blue (#2121ff) rounded line-style walls (double outline look
-  of the arcade is welcome but a clean single 1px-style stroke per wall edge is
-  acceptable); pink door; black background. Dots 2×2 px, energizers r=4 px
-  blinking (~0.2 s on/off), color #ffb8ae.
+- Wall rendering: blue (#2121ff) 1px stroke per wall edge that faces a
+  corridor, **inset `CFG.WALL_INSET` (2) px into the wall tile** so blocks
+  read thin and corridors wide, as in the arcade (`Game.wallSide()` trims the
+  stroke at convex corners and extends it at concave ones so the outline
+  closes cleanly). Pink door, aligned with the neighbouring inset strokes;
+  black background. Dots 2×2 px, energizers r=4 px blinking (~0.2 s on/off),
+  color #ffb8ae.
 
 ## Movement & speeds
 
@@ -177,7 +180,8 @@ Elroy ignores scatter (keeps chasing).
   flash white/blue 4×, ~2 s pause, next level.
 - Death: ghosts freeze 1 s, then Pac death animation (~1.5 s, opening past
   180° and vanishing) + death sound; decrement lives; respawn READY (2 s) or
-  GAME OVER text.
+  GAME OVER text. **In 2-player modes the game only stops when the last one
+  standing dies** — see "Muerte por jugador" below.
 - States: MENU → READY ("¡LISTO!" text, intro melody first time: ~4.2 s) →
   PLAYING → (DYING | LEVEL_DONE | GAME_OVER) → …  P or Escape = pause
   ("PAUSA"). Game-over returns to MENU after ~3 s.
@@ -221,8 +225,12 @@ game; color + mute apply live.
 
 ## Nombres de jugador (nicknames)
 
-Options panel section "NOMBRES": two text fields, "TU NOMBRE (J1 Y ONLINE)"
-→ `nick1` and "JUGADOR 2 (LOCAL)" → `nick2`. Sanitised to uppercase
+Entered on the **title screen** (agar.io style): a "TU NOMBRE" field right
+above the play buttons, bound to `nick1`. The options panel repeats it in
+section "NOMBRES" ("TU NOMBRE (J1 Y ONLINE)" → `nick1`, "JUGADOR 2 (LOCAL)"
+→ `nick2`). One setting may have several fields; `UI.nickInputs[key]` is an
+array and `UI.refreshNicks(skip)` keeps them in sync (never overwriting the
+field being typed in). Enter blurs the field. Sanitised to uppercase
 `A-Z0-9 ._-`, collapsed/trimmed spaces, max `CFG.NICK_MAX` (8) chars; the
 filter runs on every keystroke, the trim on blur. Empty falls back to
 "J1"/"J2" (`Game.nameFor(i)`; `Game.rawName(i)` returns '' when unset).
@@ -233,6 +241,37 @@ player's colour, 7 px), above each Pac-Man during READY (replacing J1/J2),
 the online lobby status, the surrender/rematch dialogs and the GAME OVER
 panel. Online, the two names are exchanged in the handshake (`n` field) and
 kept in `Game.netNames = [J1, J2]`; the guest always sends its own `nick1`.
+
+## Muerte por jugador (2 players: the game does not stop)
+
+A death freezes **only that Pac-Man**, never the whole game, as long as
+someone else is still playing. Per-Pac state (`js/pacman.js`): `dying`,
+`deathPhase` (0 freeze / 1 animation), `deathTicks`, `deathOk` (guest: host
+confirmed), `safeTicks` (respawn grace).
+
+- `Game.startDeath(i)` marks that Pac-Man dying and only enters the global
+  `DYING` state when `anyPlaying(i)` is false (the last one). 1-player is
+  therefore unchanged: classic freeze → animation → READY reset.
+- `stepPacDeaths(finish)` runs the freeze (`DEATH_FREEZE_TICKS`) and the
+  animation (`DEATH_ANIM_TICKS`) per player; with `finish` it then calls
+  `finishPacDeath(i)`: one life off the pool (shared) or off that player
+  (individual), and either respawn at their own spawn with
+  `CFG.RESPAWN_SAFE_TICKS` (2 s) of invulnerability — blinking, ghosts pass
+  through — or `out = true` (spectator) if there are none left.
+- While `dying` a player is skipped for movement, eating, fruit and
+  collisions, and ghosts do not target them (`pacContextFor`). Ghosts,
+  schedule, fruit, sound and the other player keep running normally; ghosts
+  are only hidden during the *last* player's animation.
+- GAME OVER when everybody is `out`. Shared lives thus mean: the pool runs
+  out, whoever dies next becomes a spectator, and the survivor plays on.
+- Online: the guest still predicts its own death (freeze + `gevt died`) and
+  the host confirms with `evt death {w, g}` (`g` = it was the last one). The
+  guest never applies the host's `pd` for its *own* Pac-Man (the host always
+  sees that death start and end later, so copying it would restart the
+  animation in a loop); if the confirmation does not arrive within
+  `CFG.DEATH_CONFIRM_TICKS` the prediction is rolled back. While dying, the
+  guest stops sending `pos` (and the host ignores it) so the frozen position
+  cannot drag it back after respawning.
 
 ## Surrender & rematch (both players must accept)
 
@@ -371,7 +410,7 @@ parties, answered with `full`). Cells are indices `row*28+col`.
   'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok}}`.
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
-  'eatGhost'{g,pts,x,y,w} | 'death'{w} | 'levelDone' | 'fruitEat'{pts,w} |
+  'eatGhost'{g,pts,x,y,w} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
   'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
   'rematch'}`.
 - Both directions: `bye {}` on leaving.
@@ -379,7 +418,8 @@ parties, answered with `full`). Cells are indices `row*28+col`.
   (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),
   `fz hg ei` (eat-freeze/hidden ghost/eater), `dl de fa` (dots/fruit),
   `he` (cells eaten since last snap), `lv out` (lives/spectators),
-  `p0 {x,y,d,nd}` (host pac), `g[4] {x,y,d,m,f,lp}` (ghosts), `pm?`.
+  `pd[i]` (per-player death: `0` or `[phase, ticks]`; the guest ignores its
+  own entry), `p0 {x,y,d,nd}` (host pac), `g[4] {x,y,d,m,f,lp}` (ghosts), `pm?`.
 
 ## Acceptance checklist (verifiers use this)
 
@@ -415,10 +455,19 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 14. Collision detects same-tick tile swap (no ghost pass-through), in local
     modes and in the online guest's local simulation; eyes still pass
     through (arcade-correct).
-15. Names: saved, sanitised and shown in HUD, READY labels, lobby, dialogs
+15. Names: entered on the title screen (and in OPCIONES, both fields kept in
+    sync), saved, sanitised and shown in HUD, READY labels, lobby, dialogs
     and GAME OVER panel; exchanged online in the handshake.
 16. Surrender: button during play; 1-player confirms, 2-player needs both
     yeses (online: request → accept/reject, game paused meanwhile, 20 s
     timeout, rejection notice, host executes). GAME OVER offers a rematch
     with the same duo and settings — a vote online, immediate in local
     modes — and no longer drops to the menu by itself.
+17. 2-player death: only the dead player freezes and animates; ghosts, the
+    schedule and the other player keep going; respawn with a 2 s blinking
+    grace; the classic full reset happens only when the last one dies; game
+    over when everybody is out. Holds in local and online (guest prediction
+    confirmed by the host, no animation restart loops, no position rubber-band
+    after respawning). 1-player behaviour is unchanged.
+18. Walls drawn inset (thin blocks, wide corridors) with corners closing
+    cleanly and the ghost-house door aligned.

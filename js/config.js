@@ -223,9 +223,15 @@
   CFG.EAT_FREEZE_TICKS = 60;        // congelación al comer fantasma (1 s)
   CFG.DEATH_FREEZE_TICKS = 60;      // congelación previa a la animación de muerte
   CFG.DEATH_ANIM_TICKS = 90;        // animación de muerte ~1.5 s
+  CFG.RESPAWN_SAFE_TICKS = 120;     // invulnerable al reaparecer sin parar la partida (2 s)
+  CFG.DEATH_CONFIRM_TICKS = 120;    // invitado: espera de confirmación de su muerte
   CFG.LEVEL_FREEZE_TICKS = 60;      // congelación al completar nivel
   CFG.LEVEL_FLASH_TICKS = 120;      // ~2 s de parpadeo de muros (4 destellos)
   CFG.GAMEOVER_TICKS = 180;         // GAME OVER ~3 s
+
+  /* Retranqueo del trazo de los muros (px dentro de la casilla): los muros
+   * se dibujan más finos y los pasillos se ven más anchos, como en el arcade. */
+  CFG.WALL_INSET = 2;
 
   /* ---------- Colores ---------- */
   CFG.COLORS = {

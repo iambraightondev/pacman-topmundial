@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-03 · La partida no se para al morir uno · muros finos · nombre en la portada
+
+- **Muerte por jugador**: en dos jugadores (local u online) morir ya **no
+  detiene la partida**. Solo se congela ese Pac-Man, hace su animación y
+  reaparece en su salida con **2 s de invulnerabilidad** (parpadea y los
+  fantasmas le atraviesan). El otro sigue comiendo, los fantasmas siguen
+  moviéndose y la música no se corta. El parón clásico (reinicio de
+  fantasmas y "¡LISTO!") solo ocurre cuando **cae el último**. Mientras
+  estás muerto los fantasmas dejan de perseguirte. En un jugador todo sigue
+  exactamente igual que antes.
+- **Muros más finos**: el trazo de cada pared se dibuja 2 px hacia dentro de
+  su casilla, así los bloques se ven delgados y los pasillos anchos, mucho
+  más cerca del arcade. Las esquinas cierran limpias y la puerta de la casa
+  se alinea con las paredes vecinas.
+- **Nombre en la portada** (estilo agar.io): campo "TU NOMBRE" justo encima
+  de los botones de jugar, además del de OPCIONES. Los dos campos se
+  sincronizan y `Intro` confirma.
+- Capturas del README actualizadas (menú, partida y opciones).
+
 ## 2026-08-03 · Rendición, revancha y nombres de jugador
 
 - **Botón RENDIRSE** en la barra superior de la partida (en todos los
