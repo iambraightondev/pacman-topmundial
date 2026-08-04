@@ -2,12 +2,17 @@
  * PAC-MAN TOP MUNDIAL — js/ghost.js
  * IA de fantasmas con fidelidad arcade. Define window.PM.Ghost
  *
- * - Decisión SOLO en centros de casilla: dirección legal (sin
- *   marcha atrás) que minimiza la distancia euclídea desde la
- *   casilla candidata al objetivo; desempate ARRIBA > IZQUIERDA >
- *   ABAJO > DERECHA.
- * - Inversión forzada al cambiar dispersión<->persecución o al
- *   entrar en modo asustado.
+ * - Como en el original, el fantasma PIENSA UNA CASILLA ANTES: en
+ *   cuanto entra en una casilla decide por dónde saldrá, y ese giro
+ *   lo ejecuta al llegar al centro. Así mira a Pac-Man medio paso
+ *   antes del cruce, que es lo que hace que a veces "se equivoque"
+ *   y lo que sostiene los patrones memorizados.
+ * - La decisión es la dirección legal (sin marcha atrás) que
+ *   minimiza la distancia euclídea desde la casilla candidata al
+ *   objetivo; desempate ARRIBA > IZQUIERDA > ABAJO > DERECHA.
+ * - Inversión forzada AL INSTANTE al cambiar dispersión<->persecución
+ *   o al entrar en modo asustado (en el arcade se dan la vuelta
+ *   donde estén, no esperan al centro de la casilla).
  * - Zonas sin ARRIBA en (12,13),(15,13),(12,25),(15,25)
  *   (ignoradas por asustado/ojos).
  * - Bug del desbordamiento de Pinky/Inky con Pac-Man mirando
@@ -39,7 +44,7 @@
     this.dir = (this.id === 0) ? D.LEFT : D.UP;
     this.mode = (this.id === 0) ? 'normal' : 'house';
     this.frightened = false;
-    this.pendingReverse = false;
+    this.clearPlan();
     this.dotCounter = 0;                 // contador personal de salida
     this.bobDir = (this.id === 2) ? 1 : -1;
     this.skirtCounter = 0;
@@ -49,6 +54,14 @@
 
   Ghost.prototype.tileX = function () { return Math.floor(this.x / T); };
   Ghost.prototype.tileY = function () { return Math.floor(this.y / T); };
+
+  /* Olvida la salida ya pensada: se vuelve a decidir en cuanto haga falta.
+   * Hay que llamarlo siempre que cambie algo que la invalide (una inversión
+   * forzada, que se lo coman, salir de la casa...). */
+  Ghost.prototype.clearPlan = function () {
+    this.planTile = -1;
+    this.planDir = -1;
+  };
 
   Ghost.prototype.inTunnelSlow = function () {
     if (this.tileY() !== CFG.TUNNEL_ROW) return false;
@@ -132,8 +145,9 @@
 
     if (isFright) {
       // pseudoaleatorio: prueba una dirección al azar; si no es válida,
-      // recorre arriba, izquierda, abajo, derecha
-      var r = Math.floor(Math.random() * 4);
+      // recorre arriba, izquierda, abajo, derecha. El azar lo lleva la
+      // partida y es reproducible, como el contador del arcade.
+      var r = game.rndDir ? game.rndDir() : Math.floor(Math.random() * 4);
       if (candidates.indexOf(r) !== -1) return r;
       for (i = 0; i < CFG.DIR_PRIORITY.length; i++) {
         if (candidates.indexOf(CFG.DIR_PRIORITY[i]) !== -1) return CFG.DIR_PRIORITY[i];
@@ -200,7 +214,6 @@
 
   /* Botar arriba/abajo dentro de la casa */
   Ghost.prototype.updateHouse = function (sp) {
-    if (this.pendingReverse) { this.pendingReverse = false; this.bobDir = -this.bobDir; }
     var cy = CFG.HOUSE.centerY;
     this.y += this.bobDir * sp;
     if (this.y < cy - 3) { this.y = cy - 3; this.bobDir = 1; }
@@ -210,7 +223,6 @@
 
   /* Salir: centrar la x, subir por la puerta hasta (13.5, 11) */
   Ghost.prototype.updateLeaving = function (sp) {
-    this.pendingReverse = false;
     var ex = CFG.HOUSE.exitX, ey = CFG.HOUSE.exitY;
     if (this.leavePhase === 0) {
       // primero, alinear con el centro de la casa
@@ -232,6 +244,7 @@
       this.mode = 'normal';
       this.leavePhase = 0;
       this.dir = D.LEFT;
+      this.clearPlan();          // sale a la calle: aún no ha pensado nada
     }
   };
 
@@ -266,6 +279,13 @@
     while (remaining > 0.0001 && guard++ < 6) {
       var cx = this.tileX(), cy = this.tileY();
       var ccx = cx * T + T / 2, ccy = cy * T + T / 2;
+      /* recién entrado en esta casilla: se decide YA por dónde saldrá,
+       * mirando a Pac-Man medio paso antes del cruce (regla del arcade) */
+      var tid = cy * CFG.COLS + cx;
+      if (this.planTile !== tid) {
+        this.planTile = tid;
+        this.planDir = this.decide(game);
+      }
       var v = CFG.DIR_V[this.dir];
       var horizontal = (v.x !== 0);
       var pos = horizontal ? this.x : this.y;
@@ -297,20 +317,31 @@
     }
   };
 
+  /* En el centro: se ejecuta el giro que ya venía pensado desde la entrada
+   * de la casilla. Si por lo que sea no hay ninguno (acaba de invertir, de
+   * salir de la casa...), se decide aquí mismo. */
   Ghost.prototype.applyDecision = function (game) {
-    if (this.pendingReverse && this.mode === 'normal') {
-      this.dir = CFG.OPP[this.dir];
-      this.pendingReverse = false;
-      return;
-    }
-    this.dir = this.decide(game);
+    var tid = this.tileY() * CFG.COLS + this.tileX();
+    this.dir = (this.planTile === tid && this.planDir >= 0)
+      ? this.planDir
+      : this.decide(game);
+  };
+
+  /* Inversión forzada (cambio de dispersión/persecución o energizante):
+   * en el arcade el fantasma se da la vuelta donde esté, sin esperar al
+   * centro de la casilla. Lo pensado deja de valer. */
+  Ghost.prototype.forceReverse = function () {
+    if (this.mode === 'house') { this.bobDir = -this.bobDir; return; }
+    if (this.mode !== 'normal') return;
+    this.dir = CFG.OPP[this.dir];
+    this.clearPlan();
   };
 
   /* Comido: pasa a ojos */
   Ghost.prototype.eaten = function () {
     this.frightened = false;
     this.mode = 'eyes';
-    this.pendingReverse = false;
+    this.clearPlan();
   };
 
   /* Reaparición tras perder una vida (Blinky fuera, resto dentro) */
@@ -321,7 +352,7 @@
     this.dir = (this.id === 0) ? D.LEFT : D.UP;
     this.mode = (this.id === 0) ? 'normal' : 'house';
     this.frightened = false;
-    this.pendingReverse = false;
+    this.clearPlan();
     this.bobDir = (this.id === 2) ? 1 : -1;
     this.leavePhase = 0;
     // el contador personal NO se reinicia (regla arcade: se usa el global)

@@ -822,6 +822,12 @@ input[type="range"] {
 /* el game over sí tapa más: ahí no hay partida que mirar */
 #prompt.solid { background: rgba(0, 0, 0, 0.85); }
 
+/* Diálogo encima de OTRO panel (subir de nivel al volver al menú, invitar
+ * desde AMIGOS, ver la partida de alguien...): el velo fino se pensó para
+ * dejar ver el laberinto, pero sobre un menú lleno de botones se leían las
+ * dos cosas a la vez y no se entendía nada. Aquí tapa de verdad. */
+#prompt.over-panel { background: #000; }
+
 .prompt-line {
   color: #ddd;
   font-size: clamp(11px, 2vh, 15px);

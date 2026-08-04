@@ -2,6 +2,56 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Los patrones del arcade vuelven a funcionar
+
+- **Pac-Man iba un 10% lento por los pasillos con puntos**, y eso solo ya
+  rompía cualquier patrón memorizado. El original le quita **un fotograma
+  por punto comido** y corre a su velocidad de siempre; aquí se le aplicaba
+  además la columna «Pac-Man (dots)» de las tablas, que es *esa misma cosa*
+  contada de otra manera. Se frenaba dos veces. Ahora cruza un pasillo de
+  puntos al 71% del nivel 1, clavado a la máquina.
+- **El azar deja de ser azar**: los fantasmas azules huían con `Math.random`,
+  así que la misma jugada salía distinta cada vez. Ahora va con un contador
+  que se reinicia con cada nivel, como en el arcade: el mismo nivel se juega
+  siempre igual y hay patrón que memorizar.
+- **Los fantasmas piensan una casilla antes**: al entrar en una casilla ya
+  deciden por dónde saldrán, en vez de decidirlo al llegar al centro. Miran a
+  Pac-Man medio paso antes del cruce, que es de donde salen esos giros que
+  parecen equivocados y por los que los patrones funcionan.
+- **La vuelta forzada es inmediata**: al cambiar de dispersión a persecución
+  (o al comerte un energizante) los fantasmas se dan la vuelta donde estén,
+  sin terminar de llegar al centro de la casilla.
+- **Cruzarse de frente con un fantasma vuelve a dejar pasar**: la colisión
+  detectaba el intercambio de casillas en el mismo fotograma, que era una
+  corrección deliberada de un fallo del arcade. Pero los patrones del original
+  cuentan con ese fallo, así que se quita: ahora colisionar es **compartir
+  casilla y nada más**, exactamente como la máquina.
+- **El laberinto es el del arcade también por fuera**: a los lados de la casa
+  de fantasmas quedaban huecos en el muro exterior, y el contorno se dibujaba
+  con aristas donde el original tiene pared maciza. Los 244 puntos y todos
+  los pasillos siguen igual.
+
+## 2026-08-04 · Récord de velocidad, ver partidas sin salirse y arreglos de menús
+
+- **Nuevo récord mundial: el nivel 1 más rápido.** Tercera pestaña en TOP
+  MUNDIAL con quién despeja el primer nivel en menos tiempo, en mm:ss.cc. La
+  marca se manda **al despejarlo**, no al acabar la partida, así que cuenta
+  aunque después te maten o te salgas. Solo vale a un jugador, sin red y con
+  los ajustes de siempre: con los fantasmas frenados o Pac-Man acelerado no
+  sería comparable con la de nadie. Tu tiempo sale también en el GAME OVER.
+- **Ver la partida de un amigo ya no obliga a dejar tu party**: se mira por
+  un canal aparte, así que el grupo sigue en pie mientras tanto. Si los tuyos
+  arrancan una partida, dejas de mirar y entras con ellos.
+- **La maestría del panel se ve como en la partida**: MAESTRÍAS enseñaba un
+  cartel grande que no era lo que sale jugando. Ahora `VER` reproduce la
+  misma chapa de `Ctrl`+`Espacio`, con tu Pac-Man debajo: la medalla sube
+  girando, la chapa se despliega con un chispazo y al final se encoge de
+  vuelta.
+- **Los avisos encima de un menú ya tapan lo de detrás**: el velo fino de los
+  diálogos está pensado para dejar ver el laberinto, pero sobre un menú lleno
+  de botones se leían las dos cosas a la vez y no se entendía nada (el aviso
+  de subir de nivel al volver al menú, por ejemplo).
+
 ## 2026-08-04 · Partys persistentes, hasta 4 jugadores, invitaciones y ver partidas
 
 - **Partys persistentes**: se entra una vez con el código y el grupo **sigue

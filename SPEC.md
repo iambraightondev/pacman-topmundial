@@ -41,7 +41,8 @@ group (`Game.toMenu()` calls `Party.resume()` instead of `Net.leave()`).
   `phello` (each member beats every 2 s), `proster` (the leader owns and
   broadcasts the list), `pbye`, `pfull`, `pstart` (leader starts; carries the
   ordered roster and the host settings). Members not heard from in 7 s drop
-  off the list. Beating pauses while a game is running.
+  off the list. Beating pauses while a game is running — but NOT while merely
+  spectating someone else's, which uses a different channel.
 - `pstart` gives everyone their own index: `order[i].s === Net.sid` →
   `localIdx`. `Net.lockPeers(others)` then filters the channel, and
   `Party.indexOf(sid)` is what `Game.idxOfSender` uses with 3 and 4 players.
@@ -62,6 +63,14 @@ plus a full snapshot with pellets. The spectator runs the guest loop with no
 Pac-Man of its own: it sends nothing, cannot eat, chat, emote or surrender,
 its pause is local, and the game never counts as its own (no history, no XP,
 no ranking).
+
+Watching runs on a **separate channel** (`Net.openView` → `viewCh`,
+`viewHandler`, `viewOnClose`), never the main one, so the watcher's own party
+stays connected the whole time and there is no need to leave the group.
+`Game.netSend` funnels through `Net.gameSend`, which picks the view channel
+when there is one; leaving a watched game only calls `Net.closeView()` and
+then `Party.resume()`. If the watcher's own party starts a game, `Party.begin`
+closes the view first and the watcher joins as a player.
 
 ## App instalable (PWA) y pruebas
 
@@ -127,15 +136,15 @@ or out-of-bounds, `-` ghost house door. EXACT layout (each line 28 chars):
 #.####.##.########.##.####.#
 #......##....##....##......#
 ######.##### ## #####.######
-     #.##### ## #####.#     
-     #.##          ##.#     
-     #.## ###--### ##.#     
+######.##### ## #####.######
+######.##          ##.######
+######.## ###--### ##.######
 ######.## #      # ##.######
       .   #      #   .      
 ######.## #      # ##.######
-     #.## ######## ##.#     
-     #.##          ##.#     
-     #.## ######## ##.######
+######.## ######## ##.######
+######.##          ##.######
+######.## ######## ##.######
 ######.## ######## ##.######
 #............##............#
 #.####.#####.##.#####.####.#
@@ -187,13 +196,28 @@ Percent-of-max tables (multiply by user difficulty multipliers, clamp ≤ 1.05·
 
 Eating a dot pauses Pac-Man 1 tick; an energizer pauses 3 ticks.
 
+**Pac(dots) is documentation, not a second brake.** That column is the *same*
+mechanic as the 1-tick dot pause, measured tile-to-tile: at level 1, 8 px at
+80% take 7.92 ticks, +1 = 8.92, i.e. 8/8.92 = 71%. Levels 2–4 give 79% and
+5–20 give 87%. Pac-Man therefore always runs at `pac` (or `pacFright`) and the
+pause does the rest; applying both left him ~10% slower than the arcade
+through dot corridors, which alone broke every memorised pattern.
+
 ## Ghost AI (the core of fidelity — implement exactly)
 
-Ghosts pick a direction ONLY at tile centers when a decision is possible:
-choose the legal direction (no reversing) minimizing **straight-line (euclidean)
-distance from the candidate next tile to the target tile**; ties break by
-priority UP > LEFT > DOWN > RIGHT. Reversal is forced only when mode switches
-scatter↔chase or on entering frightened.
+Ghosts think ONE TILE AHEAD: the moment a ghost enters a tile it decides which
+way it will leave, and executes that turn at the tile center. The target is
+therefore sampled half a step before the junction — that is what produces the
+arcade's occasional "wrong" turns and what makes memorised patterns hold.
+The decision is dropped (and retaken) whenever it stops being valid: forced
+reversal, being eaten, leaving the house.
+
+The decision itself: choose the legal direction (no reversing) minimizing
+**straight-line (euclidean) distance from the candidate next tile to the target
+tile**; ties break by priority UP > LEFT > DOWN > RIGHT. Reversal is forced
+only when mode switches scatter↔chase or on entering frightened, and it takes
+effect IMMEDIATELY, wherever the ghost happens to be — it does not wait for a
+tile center (ghosts inside the house just flip their bob direction).
 
 Targets (tile coords; off-map targets are fine):
 - **Blinky**: Pac-Man's tile. Scatter (25, -3).
@@ -208,6 +232,12 @@ Targets (tile coords; off-map targets are fine):
 Frightened mode: at each decision point pick a pseudo-random legal direction
 (try random first; if illegal, scan up,left,down,right). Blue body + white
 face; flashes white/blue N times before ending.
+
+That "random" MUST be reproducible, like the arcade's counter: the game owns a
+seeded generator (`Game.rndDir` / `Game.rndUnit`, reseeded from the level in
+`resetLevel` and from level+lives in `respawn`) and the fruit's 9–10 s lifetime
+draws from it too. `Math.random` anywhere in the simulation means the same
+level plays out differently every run and no pattern can ever be memorised.
 
 **No-up zones**: in chase/scatter, ghosts may NOT choose UP at tiles (12,13),
 (15,13), (12,25), (15,25). (Frightened/eyes ignore this.)
@@ -247,8 +277,10 @@ Elroy ignores scatter (keeps chasing).
 
 ## Collisions, scoring, flow
 
-- Collision = same tile as a ghost (chase/scatter ⇒ lose life; frightened ⇒
-  eat ghost; eyes ⇒ nothing).
+- Collision = same tile as a ghost, checked once per tick and nothing else
+  (chase/scatter ⇒ lose life; frightened ⇒ eat ghost; eyes ⇒ nothing).
+  Crossing head-on through a ghost in a single tick is therefore possible,
+  as in the arcade.
 - Scoring: dot 10, energizer 50, ghosts 200/400/800/1600, fruit per table.
   Extra life at 10 000 (once). High score persisted (localStorage).
 - Fruit: spawns at 70 and 170 dots eaten, lasts random 9–10 s, at (13.5,17).
@@ -766,9 +798,11 @@ from third parties. Cells are indices `row*28+col`.
     corner pads in local 2-player) and pause button, shown on touch devices
     only and only during a game; panels full-screen on small viewports;
     menus fully scrollable (no clipped title).
-14. Collision detects same-tick tile swap (no ghost pass-through), in local
-    modes and in the online guest's local simulation; eyes still pass
-    through (arcade-correct).
+14. Collision is SAME TILE ONLY, in local modes and in the online guest's
+    local simulation. Pac-Man and a ghost swapping tiles in the same tick
+    pass through each other — the 1980 arcade did exactly that, and the
+    original's patterns rely on it, so do NOT "fix" it. Eyes always pass
+    through.
 15. Names: entered on the title screen (and in OPCIONES, both fields kept in
     sync), saved, sanitised and shown in HUD, READY labels, lobby, dialogs
     and GAME OVER panel; exchanged online in the handshake.
@@ -805,3 +839,19 @@ from third parties. Cells are indices `row*28+col`.
     Badges are tracked separately for solo and duo: a duo record never awards
     a solo badge, each track announces its own tiers, and the panel shows the
     two with their own progress.
+22. Ghost decisions are taken on tile ENTRY (executed at the center) and the
+    scatter↔chase reversal is immediate; frightened choices and the fruit
+    timer come from the seeded generator, so the same level replays
+    identically twice in a row. Pac-Man crosses a dot corridor at the
+    Pac(dots) percentage of the tables (71/79/87), not slower.
+23. Watching a friend's game runs on its own channel (`Net.openView` /
+    `Net.gameSend`): the watcher's own party keeps its main channel, keeps
+    beating and is still there on the way back. If that party starts a game,
+    the view closes and the watcher joins it.
+24. TOP MUNDIAL has a third board: fastest level 1, read from the
+    `ranking_tiempo` view and shown as mm:ss.cc. The time is submitted the
+    moment level 1 is cleared (not at game over), once per game, only for
+    1 player, offline and with default multipliers and start level.
+25. A dialog opened on top of a panel (level-up on returning to the menu,
+    invites, watch prompts) gets `#prompt.over-panel` and hides what is
+    behind it; over the maze it stays translucent on purpose.

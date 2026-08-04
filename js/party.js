@@ -180,10 +180,13 @@
       if (this.beatTimer) { clearInterval(this.beatTimer); this.beatTimer = null; }
     },
 
-    /* Mientras se juega no hace falta: el canal ya va lleno de partida */
+    /* Mientras se juega no hace falta: el canal ya va lleno de partida.
+     * Mirando la partida de otro sí se sigue latiendo: eso pasa por un canal
+     * aparte y el grupo propio no tiene por qué darte por desaparecido. */
     beat: function () {
       if (!this.st) return;
-      if (window.PM.Game && window.PM.Game.inGame()) return;
+      var G = window.PM.Game;
+      if (G && G.inGame() && !G.isSpec()) return;
       if (this.st.leader) {
         if (this.prune()) this.changed();
         this.sendRoster();
@@ -318,6 +321,8 @@
         else otros.push(order[i].s);
       }
       if (idx < 0) return;                 // esta partida no va con nosotros
+      // si estábamos viendo la de otro, la propia manda: se deja de mirar
+      window.PM.Net.closeView();
       this.order = order;
       window.PM.Net.lockPeers(otros);
       this.stopBeat();

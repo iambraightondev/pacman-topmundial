@@ -34,15 +34,15 @@
     '#.####.##.########.##.####.#',
     '#......##....##....##......#',
     '######.##### ## #####.######',
-    '     #.##### ## #####.#     ',
-    '     #.##          ##.#     ',
-    '     #.## ###--### ##.#     ',
+    '######.##### ## #####.######',
+    '######.##          ##.######',
+    '######.## ###--### ##.######',
     '######.## #      # ##.######',
     '      .   #      #   .      ',
     '######.## #      # ##.######',
-    '     #.## ######## ##.#     ',
-    '     #.##          ##.#     ',
-    '     #.## ######## ##.######',
+    '######.## ######## ##.######',
+    '######.##          ##.######',
+    '######.## ######## ##.######',
     '######.## ######## ##.######',
     '#............##............#',
     '#.####.#####.##.#####.####.#',
@@ -132,7 +132,15 @@
   CFG.CORNER_PX = 4;             // ventaja de giro anticipado (px antes del centro)
 
   /* Tabla de porcentajes por nivel.
-   * pacDots: velocidad de Pac-Man mientras atraviesa casilla con punto. */
+   *
+   * pacDots NO se aplica: es la MISMA cosa que DOT_PAUSE, contada de otra
+   * manera. En el arcade Pac-Man corre siempre a `pac` y pierde un fotograma
+   * por cada punto que come; eso, medido de casilla a casilla, da justo la
+   * columna pacDots (nivel 1: 8 px a 80% son 7,92 fotogramas, +1 = 8,92, o
+   * sea 8/8,92 = 71%; nivel 2-4 da 79% y nivel 5+ da 87%). Aplicar las dos
+   * cosas a la vez dejaba a Pac-Man un 12% más lento que el original por los
+   * pasillos con puntos, que es lo que rompía los patrones clásicos.
+   * Se deja en la tabla como referencia. */
   CFG.speedRow = function (level) {
     if (level === 1)  return { pac: 80,  pacDots: 71, pacFright: 90,  ghost: 75, ghostTunnel: 40, ghostFright: 50 };
     if (level <= 4)   return { pac: 90,  pacDots: 79, pacFright: 95,  ghost: 85, ghostTunnel: 45, ghostFright: 55 };
@@ -343,8 +351,18 @@
   CFG.RANKING = {
     TABLE: 'ranking',         // donde se insertan las partidas
     VIEW: 'ranking_top',      // mejor marca de cada jugador/dúo (lectura)
+    VIEW_TIME: 'ranking_tiempo',  // mejor tiempo de cada jugador en el nivel 1
     LIMIT: 20,
-    MAX_POINTS: 10000000      // descarta envíos absurdos antes de mandarlos
+    MAX_POINTS: 10000000,     // descarta envíos absurdos antes de mandarlos
+    MAX_TIME: 6000000         // centésimas: 16 h y pico, de sobra
+  };
+
+  /* ---------- Récord de velocidad del primer nivel ----------
+   * El tiempo se guarda en centésimas de segundo. Solo cuenta a UN jugador,
+   * sin red y con los ajustes de siempre: con los fantasmas más lentos o
+   * Pac-Man más rápido la marca no sería comparable con la de nadie. */
+  CFG.TIME_RULES = {
+    ghostSpeedMult: 1, pacSpeedMult: 1, frightMult: 1, startLevel: 1
   };
 
   /* Palabras vetadas en el top mundial: la clasificación es pública, así que

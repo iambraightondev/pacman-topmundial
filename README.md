@@ -71,7 +71,9 @@ red.
   un aviso para entrar. También hay botón `INVITAR` en cada fila de AMIGOS.
 - **Ver la partida de un amigo**: `VER PARTIDA` en AMIGOS le pregunta dónde
   está jugando y entras solo a mirar (sin Pac-Man, sin chat y sin voto); lo
-  que veas no cuenta como partida tuya. Para mirar hay que dejar tu party.
+  que veas no cuenta como partida tuya. **Tu party sigue en pie mientras
+  miras**: se ve por un canal aparte, así que no hay que salirse del grupo, y
+  si los tuyos arrancan una partida dejas de mirar y entras con ellos.
 - **Si alguien se cae con 3 o 4 jugadores, la partida no se corta**: quien
   se va o pierde la conexión pasa a espectador y el resto sigue.
 
@@ -97,7 +99,9 @@ abre dos (o hasta cuatro) pestañas con `?red=local` en la URL.
 
 Las clasificaciones usan la tabla `ranking` del mismo proyecto de Supabase,
 **ya creada y en marcha**, con la columna `jugadores` para separar individual
-(1) de dúo (2). Si alguna vez hay que recrearla o ponerla al día, el script
+(1) de dúo (2) y `tiempo1` para el récord de velocidad del primer nivel (en
+centésimas de segundo; va a `null` en las partidas que no cuentan para esa
+clasificación). Si alguna vez hay que recrearla o ponerla al día, el script
 está en [`supabase/ranking.sql`](supabase/ranking.sql): **Dashboard → SQL
 Editor → New query**, pegar y *Run* (se puede ejecutar las veces que haga
 falta). Deja lectura e inserción públicas, sin permiso para modificar ni
@@ -114,10 +118,13 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 
 - Laberinto original de 28×31 con sus 244 puntos, túnel lateral y casa de fantasmas.
 - Las cuatro personalidades reales de los fantasmas: Blinky (persecución directa), Pinky (emboscada 4 casillas por delante, incluyendo el bug de desbordamiento del arcade al mirar hacia arriba), Inky (vector doblado desde Blinky) y Clyde (huye a menos de 8 casillas).
-- Ciclos scatter/chase con los tiempos exactos por nivel, reversa forzada en cada cambio de modo, zonas de no-subida y desempate de direcciones del original.
+- Ciclos scatter/chase con los tiempos exactos por nivel, reversa forzada **al instante** en cada cambio de modo (como el arcade, sin esperar al centro de la casilla), zonas de no-subida y desempate de direcciones del original.
+- Los fantasmas **piensan una casilla antes**: al entrar en una casilla ya deciden por dónde saldrán, así que miran a Pac-Man medio paso antes del cruce. De ahí que a veces "se equivoquen", y es lo que sostiene los patrones memorizados.
 - Tablas de velocidad por nivel, ralentización en el túnel, Cruise Elroy, contadores de salida de la casa de fantasmas (personales, globales tras perder vida, y temporizador de seguridad).
+- Comer puntos frena a Pac-Man **exactamente** lo que lo frenaba el original: corre a su velocidad normal y pierde un fotograma por punto, que es de donde sale la columna «Pac-Man (dots)» de las tablas (71% en el nivel 1).
+- **El azar es reproducible**: los fantasmas azules huyen según un contador que se reinicia con cada nivel, igual que en la máquina. Sin eso no habría patrón que valiera, porque cada intento saldría distinto.
 - Frutas en 70 y 170 puntos comidos, cadena de fantasmas 200/400/800/1600, vida extra a los 10 000, niveles infinitos con la curva de dificultad del arcade.
-- Una mejora deliberada sobre el original: la colisión detecta el cruce de casillas en el mismo tick, así que no puedes atravesar fantasmas al cruzarte de frente (el arcade de 1980 sí lo permitía por error).
+- La colisión es **compartir casilla y nada más**, como en la máquina: si Pac-Man y un fantasma se cruzan de frente e intercambian casilla en el mismo fotograma, se atraviesan. Es un fallo del arcade de 1980, pero se respeta a propósito — los patrones del original cuentan con él.
 - Sonido sintetizado en tiempo real con Web Audio API: melodía de inicio, waka-waka, sirenas progresivas, modo asustado, ojos volviendo a casa, muerte, fruta y vida extra.
 - **Voces de racha**: al comer fantasmas seguidos con el mismo energizante suenan «el hueso», «el diablo», «el huesaso» y «el diablo coño». Es lo único grabado del juego (en `audio/`), y en dúo la racha cuenta para el equipo.
 
@@ -141,9 +148,13 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
   **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del modo que estés
   jugando sobre tu Pac-Man —con la medalla subiendo y la chapa
   desplegándose—, y en online la ven los demás.
-- **Top mundial**: dos clasificaciones compartidas entre todos, **individual**
-  y **dúo**, con la mejor marca de cada jugador. Hace falta tener nombre
-  puesto (y sin palabrotas) para registrar un récord.
+- **Top mundial**: clasificaciones compartidas entre todos —**individual**,
+  **dúo** y **nivel 1** (quién lo despeja en menos tiempo)—, con la mejor
+  marca de cada jugador. Hace falta tener nombre puesto (y sin palabrotas)
+  para registrar un récord. La de velocidad se manda **en cuanto despejas el
+  primer nivel**, así que cuenta aunque después te maten o te salgas, y solo
+  vale a un jugador, sin red y con los ajustes de siempre: con los fantasmas
+  frenados o Pac-Man acelerado la marca no sería comparable con la de nadie.
 - **Tus partidas**: historial de las últimas 15 en este navegador, con o sin
   nombre y con o sin conexión.
 - **Nivel de jugador**: mide **cuánto juegas**, no si haces récord. Los

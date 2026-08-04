@@ -56,6 +56,26 @@ begin
   end if;
 end $$;
 
+-- --- récord de velocidad del primer nivel ---
+-- Centésimas de segundo en despejar el NIVEL 1. Va a null en las partidas
+-- que no cuentan para esa clasificación (dúo, online o con los ajustes
+-- cambiados): así el mismo INSERT sirve para todo.
+alter table public.ranking add column if not exists tiempo1 integer;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'ranking_tiempo1_chk'
+  ) then
+    alter table public.ranking add constraint ranking_tiempo1_chk check (
+      tiempo1 is null or (tiempo1 > 0 and tiempo1 <= 6000000)
+    );
+  end if;
+end $$;
+
+comment on column public.ranking.tiempo1 is
+  'Centésimas de segundo en completar el nivel 1 (solo individual); null si no cuenta.';
+
 comment on table public.ranking is
   'Partidas de Pac-Man Top Mundial: jugadores=1 individual, jugadores=2 dúo.';
 
@@ -109,6 +129,27 @@ order by jugadores, equipo, puntos desc, creado_en asc;
 -- la vista respeta las políticas de quien consulta, no las del creador
 alter view public.ranking_top set (security_invoker = on);
 grant select on public.ranking_top to anon, authenticated;
+
+-- ============================================================
+-- Los más rápidos en despejar el NIVEL 1 (solo individual)
+-- Igual que arriba, pero quedándose con el MENOR tiempo de cada jugador.
+-- ============================================================
+create index if not exists ranking_tiempo_idx
+  on public.ranking (tiempo1 asc)
+  where tiempo1 is not null;
+
+create or replace view public.ranking_tiempo as
+select distinct on (equipo)
+       equipo, nombre1, tiempo1, puntos, creado_en
+from (
+  select r.*, upper(btrim(r.nombre1)) as equipo
+  from public.ranking r
+  where r.jugadores = 1 and r.tiempo1 is not null
+) t
+order by equipo, tiempo1 asc, creado_en asc;
+
+alter view public.ranking_tiempo set (security_invoker = on);
+grant select on public.ranking_tiempo to anon, authenticated;
 
 -- ============================================================
 -- Freno de envíos: como cualquiera puede insertar con la clave anónima,

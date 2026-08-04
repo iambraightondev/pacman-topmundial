@@ -229,6 +229,47 @@
       return ch;
     },
 
+    /* ----------------------------------------------------------
+     * Canal de mirón: la sala de OTRO grupo, para ver su partida.
+     * Va aparte del principal a propósito, así se puede mirar sin
+     * soltar la propia party (que sigue viva en el canal principal).
+     * ---------------------------------------------------------- */
+    viewCh: null,
+    viewCode: null,
+    viewHandler: null,   // function(name, data, sid)
+    viewOnClose: null,
+
+    watching: function () { return !!this.viewCh; },
+
+    openView: function (code, cbs) {
+      var self = this;
+      this.closeView();
+      this.viewCode = code;
+      cbs = cbs || {};
+      this.viewCh = this.openChannel('sala:' + code, {
+        onOpen: function () { if (cbs.onOpen) cbs.onOpen(); },
+        onError: function (m) { if (cbs.onError) cbs.onError(m); },
+        onClose: function () { if (self.viewOnClose) self.viewOnClose(); },
+        onData: function (name, d, sid) {
+          if (self.viewHandler) self.viewHandler(name, d, sid);
+        }
+      });
+    },
+
+    closeView: function () {
+      if (this.viewCh) { this.viewCh.close(); this.viewCh = null; }
+      this.viewCode = null;
+      this.viewHandler = null;
+      this.viewOnClose = null;
+    },
+
+    /* Envío de la partida: si estamos de mirón sale por la sala que se está
+     * viendo; si no, por el canal propio de siempre. */
+    gameSend: function (name, data) {
+      if (this.viewCh) this.viewCh.send(name, data);
+      else this.send(name, data);
+    },
+
     /* Canal principal: party y partida comparten el mismo, así el grupo
      * sigue conectado al volver al menú. */
     connect: function (code, cbs) {
@@ -270,6 +311,7 @@
     },
 
     leave: function () {
+      this.closeView();
       this.leaveTransport();
       this.code = null;
       this.peers = [];

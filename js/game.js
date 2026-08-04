@@ -84,6 +84,12 @@
     frightFlashOn: false,
     chainIndex: 0,
 
+    /* Azar reproducible. El original tampoco sortea de verdad: lleva un
+     * contador que se reinicia con cada nivel, y por eso los patrones
+     * memorizados salen siempre igual. Con Math.random los fantasmas azules
+     * huían distinto en cada intento y no había patrón que valiera. */
+    rndState: 1,
+
     /* casa de fantasmas */
     globalActive: false,
     globalCounter: 0,
@@ -295,11 +301,14 @@
       this.rankingSent = false;
       this.xpSent = false;
       this.timeTicks = 0;
+      this.timeSent = false;
+      this.lvl1Cs = 0;         // centésimas que costó despejar el nivel 1
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
       this.pacSpeedMult = s.pacSpeedMult;
       this.frightMult = s.frightMult;
+      this.startLevel = s.startLevel;      // para el récord de velocidad
       this.livesMode = (this.playerCount > 1 && s.livesMode === 'individual')
         ? 'individual' : 'shared';
       this.level = s.startLevel;
@@ -333,8 +342,17 @@
       this.eaterIdx = 0; this.dyingPlayer = 0;
       if (this.netRole) {
         var self = this;
-        window.PM.Net.handler = function (n, d, sid) { self.netQueue.push([n, d, sid]); };
-        window.PM.Net.onclose = function () { self.onNetClosed(); };
+        var recibe = function (n, d, sid) { self.netQueue.push([n, d, sid]); };
+        var cerrado = function () { self.onNetClosed(); };
+        if (this.isSpec()) {
+          // de mirón la partida va por el canal de la sala ajena; el
+          // principal se queda para la party propia, que sigue en pie
+          window.PM.Net.viewHandler = recibe;
+          window.PM.Net.viewOnClose = cerrado;
+        } else {
+          window.PM.Net.handler = recibe;
+          window.PM.Net.onclose = cerrado;
+        }
       }
 
       this.resetLevel();
@@ -372,6 +390,7 @@
       this.failsafeTicks = 0;
       this.elroy = 0;
       this.elroyBlocked = false;
+      this.seedRnd(this.level);      // el nivel se juega siempre igual
       this.fruitActive = false;
       this.fruitInfo = CFG.fruitForLevel(this.level);
       this.popups = [];
@@ -411,6 +430,7 @@
       this.globalActive = true;
       this.globalCounter = 0;
       this.failsafeTicks = 0;
+      this.seedRnd(this.level * 31 + this.lives);   // el reintento, también
       this.elroyBlocked = true;    // Elroy en pausa hasta que Clyde salga
       this.fruitActive = false;
       this.popups = [];
@@ -444,12 +464,15 @@
       var subida = this.inGame() ? this.closeRun() : null;
       if (subida) this.pendingLevelUp = subida;   // lo celebra el menú
       if (this.netRole) {
-        try { window.PM.Net.send('bye', {}); } catch (e) { /* canal cerrado */ }
+        var mirando = this.isSpec();
+        try { window.PM.Net.gameSend('bye', {}); } catch (e) { /* canal cerrado */ }
+        // De mirón solo se cierra la sala ajena: la party propia ni se entera.
+        if (mirando) window.PM.Net.closeView();
         // Si venimos de una party el canal NO se cierra: el grupo sigue junto
         // en el menú y el líder puede echar otra sin volver a pasar el código.
         var P = window.PM.Party;
         if (P && P.inParty()) P.resume();
-        else window.PM.Net.leave();
+        else if (!mirando) window.PM.Net.leave();
         this.netRole = null;
         this.netColors = null;
         this.netNames = null;
@@ -671,12 +694,10 @@
       /* muertes en curso: solo se congela quien muere, la partida sigue */
       this.stepPacDeaths(true);
 
-      /* jugadores (se guarda la casilla previa para detectar cruces) */
+      /* jugadores */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || p.dying) continue;
-        p.prevTX = p.tileX();
-        p.prevTY = p.tileY();
         p.update(this.pacSpeedPx(p));
         // el pac remoto (invitado online) avanza por estima; sus puntos
         // comidos llegan por red dentro de los mensajes 'pos'
@@ -685,10 +706,7 @@
 
       /* fantasmas */
       for (i = 0; i < 4; i++) {
-        g = this.ghosts[i];
-        g.prevTX = g.tileX();
-        g.prevTY = g.tileY();
-        g.update(this);
+        this.ghosts[i].update(this);
       }
 
       /* fruta */
@@ -714,10 +732,11 @@
         }
       }
 
-      /* colisiones con fantasmas (el invitado decide las suyas).
-       * Cuenta la misma casilla Y TAMBIÉN el intercambio de casillas en
-       * el mismo tick (cruzarse de frente): el arcade original dejaba
-       * atravesarse en ese caso; aquí se corrige a propósito. */
+      /* Colisiones con fantasmas (el invitado decide las suyas): MISMA
+       * CASILLA y nada más, como el arcade. Si Pac-Man y un fantasma
+       * intercambian casillas en el mismo tick (cruzarse de frente) se
+       * atraviesan sin tocarse — el original de 1980 hacía exactamente eso, y
+       * aquí se respeta a propósito para no desviarse de sus patrones. */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || p.dying || !this.isLocalAuth(i)) continue;
@@ -725,11 +744,7 @@
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
           if (g.mode === 'house' || g.mode === 'entering') continue;
-          var sameTile = (g.tileX() === px && g.tileY() === py);
-          var swapped = !sameTile &&
-            g.tileX() === p.prevTX && g.tileY() === p.prevTY &&
-            g.prevTX === px && g.prevTY === py;
-          if (!sameTile && !swapped) continue;
+          if (g.tileX() !== px || g.tileY() !== py) continue;
           if (g.mode === 'eyes') continue;
           if (g.frightened) {
             this.eatGhost(g, i);
@@ -749,6 +764,7 @@
 
       /* nivel completado */
       if (this.dotsLeft <= 0) {
+        if (this.level === 1) this.submitLevel1Time();
         this.state = 'LEVEL_DONE';
         this.levelPhase = 0;
         this.phaseTicks = CFG.LEVEL_FREEZE_TICKS;
@@ -789,10 +805,7 @@
     },
 
     forceReversal: function () {
-      for (var i = 0; i < 4; i++) {
-        var g = this.ghosts[i];
-        if (g.mode === 'normal' || g.mode === 'house') g.pendingReverse = true;
-      }
+      for (var i = 0; i < 4; i++) this.ghosts[i].forceReverse();
     },
 
     /* ---------------------------------------------------------
@@ -823,7 +836,7 @@
       if (CFG.FRUIT_DOTS.indexOf(this.dotsEaten) !== -1) {
         this.fruitActive = true;
         this.fruitTicks = Math.round(
-          (CFG.FRUIT_MIN_S + Math.random() * (CFG.FRUIT_MAX_S - CFG.FRUIT_MIN_S)) * 60);
+          (CFG.FRUIT_MIN_S + this.rndUnit() * (CFG.FRUIT_MAX_S - CFG.FRUIT_MIN_S)) * 60);
       }
     },
 
@@ -847,10 +860,11 @@
       this.hostEvt({ t: 'fright', tk: this.frightTicks, fl: this.frightFlashes });
     },
 
+    /* Con el energizante solo se dan la vuelta los que están por el
+     * laberinto; a los de la casa no les toca */
     forceReversalFright: function () {
       for (var i = 0; i < 4; i++) {
-        var g = this.ghosts[i];
-        if (g.mode === 'normal') g.pendingReverse = true;
+        if (this.ghosts[i].mode === 'normal') this.ghosts[i].forceReverse();
       }
     },
 
@@ -906,17 +920,31 @@
     /* ---------------------------------------------------------
      * Velocidad de un Pac-Man (px/tick)
      * --------------------------------------------------------- */
+    /* ---------------------------------------------------------
+     * Azar reproducible (mismo nivel => misma tirada)
+     * --------------------------------------------------------- */
+    seedRnd: function (n) {
+      this.rndState = ((n | 0) * 2654435761 + 1013904223) >>> 0 || 1;
+    },
+
+    /* entero 0..3, que es lo único que se le pide: hacia dónde huye un
+     * fantasma azul en un cruce */
+    rndDir: function () {
+      this.rndState = (this.rndState * 1103515245 + 12345) >>> 0;
+      return (this.rndState >>> 16) & 3;
+    },
+
+    /* 0 <= x < 1, para la duración de la fruta */
+    rndUnit: function () {
+      this.rndState = (this.rndState * 1103515245 + 12345) >>> 0;
+      return (this.rndState >>> 8) / 16777216;
+    },
+
+    /* Como en el arcade: una sola velocidad, y el freno de los puntos lo pone
+     * la pausa de un tick al comerlos (ver la nota de CFG.speedRow). */
     pacSpeedPx: function (pac) {
       var row = this.speedRow;
-      var pct;
-      if (this.frightTicks > 0) {
-        pct = row.pacFright;
-      } else {
-        var col = pac.tileX(), fila = pac.tileY();
-        var hasPellet = (fila >= 0 && fila < CFG.ROWS && col >= 0 &&
-          col < CFG.COLS && this.pellets[fila][col]);
-        pct = hasPellet ? row.pacDots : row.pac;
-      }
+      var pct = (this.frightTicks > 0) ? row.pacFright : row.pac;
       pct = Math.min(pct * this.pacSpeedMult, CFG.SPEED_CLAMP * 100);
       return pct / 100 * CFG.BASE_SPEED;
     },
@@ -1338,6 +1366,35 @@
       return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     },
 
+    /* ---------- Récord de velocidad del primer nivel ----------
+     * Se manda al despejar el nivel 1, no al acabar la partida: así cuenta
+     * aunque después te salgas o te maten. Solo vale a un jugador, sin red y
+     * con los ajustes de siempre; con los fantasmas frenados o Pac-Man
+     * acelerado la marca no sería comparable con la de nadie. */
+    canTimeRecord: function () {
+      if (this.playerCount !== 1 || this.netRole) return false;
+      var r = CFG.TIME_RULES;
+      return this.startLevel === r.startLevel &&
+        this.pacSpeedMult === r.pacSpeedMult &&
+        this.ghostSpeedMult === r.ghostSpeedMult &&
+        this.frightMult === r.frightMult;
+    },
+
+    submitLevel1Time: function () {
+      if (this.timeSent) return;
+      this.timeSent = true;               // una sola vez por partida
+      var cs = Math.round(this.timeTicks * 100 / 60);
+      if (!(cs > 0) || cs > CFG.RANKING.MAX_TIME) return;
+      this.lvl1Cs = cs;                   // el panel final lo enseña igual
+      if (!this.canTimeRecord()) return;
+      var R = window.PM.Ranking;
+      if (!R || !R.configured()) return;
+      var nombre = this.rawName(0);
+      if (!nombre) return;                // sin nombre no hay récord
+      R.submit({ jugadores: 1, modo: 'local', nombre1: nombre,
+                 puntos: this.score, nivel: 1, tiempo1: cs });
+    },
+
     /* ---------- Ranking mundial ----------
      * Dos clasificaciones: individual y dúo. Sin nombre no hay récord:
      * rawName() devuelve '' si el jugador no puso ninguno (nameFor() daría
@@ -1562,7 +1619,7 @@
      * RED — común
      * ========================================================= */
     netSend: function (name, data) {
-      if (this.netRole && window.PM.Net) window.PM.Net.send(name, data);
+      if (this.netRole && window.PM.Net) window.PM.Net.gameSend(name, data);
     },
 
     hostEvt: function (o) {
@@ -1984,21 +2041,14 @@
 
       /* pac propio: simulación local completa (sin lag de entrada) */
       if (me && !me.out && !me.dying) {
-        me.prevTX = me.tileX();
-        me.prevTY = me.tileY();
         me.update(this.pacSpeedPx(me));
         this.guestEatAt(me);
       }
 
-      /* fantasmas: simulación local corregida por las instantáneas
-       * (la casilla previa se toma DESPUÉS de aplicar la instantánea,
-       * así una corrección de red nunca simula un cruce falso) */
+      /* fantasmas: simulación local corregida por las instantáneas */
       this.blinkyTile = { x: this.ghosts[0].tileX(), y: this.ghosts[0].tileY() };
       for (i = 0; i < 4; i++) {
-        var gh = this.ghosts[i];
-        gh.prevTX = gh.tileX();
-        gh.prevTY = gh.tileY();
-        gh.update(this);
+        this.ghosts[i].update(this);
       }
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
@@ -2052,16 +2102,13 @@
       this.frightFlashOn = false;
     },
 
+    /* Igual que en el anfitrión: solo cuenta compartir casilla */
     guestCollisions: function (me) {
       var px = me.tileX(), py = me.tileY();
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         if (g.mode === 'house' || g.mode === 'entering') continue;
-        var sameTile = (g.tileX() === px && g.tileY() === py);
-        var swapped = !sameTile &&
-          g.tileX() === me.prevTX && g.tileY() === me.prevTY &&
-          g.prevTX === px && g.prevTY === py;
-        if (!sameTile && !swapped) continue;
+        if (g.tileX() !== px || g.tileY() !== py) continue;
         if (g.mode === 'eyes') continue;
         if (g.frightened) {
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'

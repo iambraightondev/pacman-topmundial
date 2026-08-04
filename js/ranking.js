@@ -42,8 +42,17 @@
       .replace(/[^A-Z]/g, '');
   }
 
+  function dos(n) { return (n < 10 ? '0' : '') + n; }
+
   var Ranking = {
     lastError: null,
+
+    /* Centésimas de segundo -> mm:ss.cc */
+    fmtTime: function (cs) {
+      cs = Math.max(0, Math.floor(cs || 0));
+      var s = Math.floor(cs / 100);
+      return dos(Math.floor(s / 60)) + ':' + dos(s % 60) + '.' + dos(cs % 100);
+    },
 
     /* ¿este nombre puede aparecer en una clasificación pública? */
     nameAllowed: function (name) {
@@ -71,6 +80,33 @@
         '?select=nombre1,nombre2,puntos,nivel,modo,creado_en' +
         '&jugadores=eq.' + n +
         '&order=puntos.desc,creado_en.asc' +
+        '&limit=' + CFG.RANKING.LIMIT;
+      fetch(url, { method: 'GET', headers: headers() })
+        .then(function (res) {
+          if (!res.ok) {
+            return res.text().then(function (t) {
+              throw new Error(res.status === 404 || /does not exist/i.test(t)
+                ? 'FALTA LA TABLA EN SUPABASE'
+                : 'ERROR ' + res.status);
+            });
+          }
+          return res.json();
+        })
+        .then(function (rows) { self.lastError = null; cb(null, rows || []); })
+        .catch(function (e) {
+          self.lastError = e.message || 'SIN CONEXIÓN';
+          cb(self.lastError, null);
+        });
+    },
+
+    /* Los más rápidos en despejar el NIVEL 1 (solo individual). cb(err, filas)
+     * Cada fila: { nombre1, tiempo1 (centésimas), puntos, creado_en } */
+    topTime: function (cb) {
+      var self = this;
+      if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
+      var url = base(CFG.RANKING.VIEW_TIME) +
+        '?select=nombre1,tiempo1,puntos,creado_en' +
+        '&order=tiempo1.asc,creado_en.asc' +
         '&limit=' + CFG.RANKING.LIMIT;
       fetch(url, { method: 'GET', headers: headers() })
         .then(function (res) {
@@ -119,6 +155,11 @@
         puntos: pts,
         nivel: Math.max(1, Math.min(999, Math.floor(o.nivel || 1)))
       };
+      // tiempo del primer nivel (centésimas): opcional, solo en individual
+      if (o.tiempo1 != null) {
+        var cs = Math.floor(o.tiempo1);
+        if (players === 1 && cs > 0 && cs <= CFG.RANKING.MAX_TIME) row.tiempo1 = cs;
+      }
       var h = headers();
       h['Prefer'] = 'return=minimal';
       fetch(base(), { method: 'POST', headers: h, body: JSON.stringify(row) })

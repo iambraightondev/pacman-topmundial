@@ -1202,10 +1202,11 @@
       this.badgesSub.className = 'note';
       o.appendChild(this.badgesSub);
 
-      /* lienzo para ver la animación del cartel sin tener que jugar */
+      /* lienzo para ver la chapa sin tener que jugar: es la misma animación
+       * de la partida (Ctrl+Espacio), con tu propio Pac-Man debajo */
       this.badgeDemo = document.createElement('canvas');
-      this.badgeDemo.width = 220;
-      this.badgeDemo.height = 54;
+      this.badgeDemo.width = 260;      // 130 x 64 a doble escala
+      this.badgeDemo.height = 128;
       this.badgeDemo.className = 'badge-demo';
       o.appendChild(this.badgeDemo);
 
@@ -1240,6 +1241,7 @@
       this.badgesSub.textContent = label + best +
         (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + next.points)
               : '  ·  ¡TODAS CONSEGUIDAS!');
+      this.badgeIdle();
       this.badgesList.innerHTML = '';
       var self = this;
       CFG.BADGES.forEach(function (b) {
@@ -1272,7 +1274,7 @@
 
         // ver cómo se celebra, sin esperar a conseguirla en partida
         var ver = self.makeButton('VER', function () {
-          self.playBadgeDemo(b, mode);
+          self.playBadgeDemo(b);
         });
         ver.classList.add('btn-preset');
         row.appendChild(ver);
@@ -1281,38 +1283,61 @@
       });
     },
 
-    /* Reproduce el cartel animado dentro del panel */
-    playBadgeDemo: function (badge, mode) {
+    /* Tu Pac-Man quieto en el lienzo: así el hueco de la chapa no se ve
+     * vacío mientras no se pulsa VER */
+    badgeIdle: function () {
+      var cv = this.badgeDemo;
+      if (!cv) return;
+      this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;   // corta la demo en curso
+      var ctx = cv.getContext('2d');
+      var s = window.PM.settings || {};
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.setTransform(2, 0, 0, 2, 0, 0);
+      window.PM.Sprites.drawPacman(ctx, 65, 52, CFG.DIR.RIGHT, 2,
+        s.pacColor || CFG.PLAYER_COLORS[0], s.skin1 || 'clasico');
+    },
+
+    /* Reproduce dentro del panel la MISMA chapa de la partida: la medalla
+     * sube girando desde tu Pac-Man, la chapa se despliega con un chispazo
+     * y al final se encoge de vuelta. Antes aquí salía el cartel grande, que
+     * no es lo que se ve jugando. */
+    playBadgeDemo: function (badge) {
       var self = this;
       var cv = this.badgeDemo;
       if (!cv) return;
       var ctx = cv.getContext('2d');
       var total = CFG.BADGE_ANIM_TICKS;
-      var B = window.PM.Badges;
-      var info = {
-        name: badge.name, color: badge.color,
-        mode: B ? B.modeName(mode) : 'SOLO',
-        nueva: B ? !B.has(badge.id, mode) : true
-      };
+      var S = window.PM.Sprites;
+      var s = window.PM.settings || {};
+      var color = s.pacColor || CFG.PLAYER_COLORS[0];
+      var skin = s.skin1 || 'clasico';
+      var PX = 65, PY = 52;                 // el jugador, en coordenadas lógicas
       this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;
       var run = this.badgeDemoRun;
       var prev = null;
       var ticks = 0;
 
+      function fondo() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        ctx.setTransform(2, 0, 0, 2, 0, 0);    // doble escala, como el juego
+      }
+
       function frame(now) {
         if (self.badgeDemoRun !== run) return;      // otra demo la sustituyó
         if (prev === null) prev = now;
         // Avance por frame acotado: si el navegador ralentiza los frames
-        // (pestaña de fondo, equipo lento) el cartel se ve entero igual,
+        // (pestaña de fondo, equipo lento) la chapa se ve entera igual,
         // sólo que más despacio, en vez de saltarse la animación.
         ticks += Math.min(6, (now - prev) / (1000 / 60));
         prev = now;
         var t = ticks / total;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        if (t >= 1) return;
-        ctx.setTransform(1, 0, 0, 1, cv.width / 2 - 112, cv.height / 2 - 27);
-        window.PM.Sprites.drawBadgeBanner(ctx, 112, 27, 200, 44, t, info, ticks);
+        fondo();
+        S.drawPacman(ctx, PX, PY, CFG.DIR.RIGHT,
+          [0, 1, 2, 1][Math.floor(ticks / 4) % 4], color, skin);
+        if (t >= 1) return;                        // se queda tu Pac-Man solo
+        S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks);
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
@@ -1440,30 +1465,11 @@
     /* ------------------------------------------------------
      * Ver la partida de un amigo
      * Se le pregunta por su canal personal dónde está jugando y se
-     * entra en su sala solo a mirar. Como el canal de partida es uno,
-     * para mirar hay que dejar la party propia (se avisa antes).
+     * entra en su sala solo a mirar, por un canal aparte: la party
+     * propia sigue en pie mientras tanto, no hay que salirse.
      * ------------------------------------------------------ */
     watchFriend: function (name) {
-      var self = this;
-      var P = window.PM.Party;
-      if (!P || !window.PM.Net.configured()) return;
-      if (P.inParty()) {
-        this.showPrompt({
-          title: 'VER PARTIDA',
-          lines: ['PARA VER LA PARTIDA DE ' + name,
-                  'TIENES QUE SALIR DE TU PARTY'],
-          buttons: [
-            { label: 'SALIR Y VER', primary: true, onClick: function () {
-              self.hidePrompt();
-              P.leave();
-              self.findAndWatch(name);
-            } },
-            { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-              onClick: function () { self.hidePrompt(); } }
-          ]
-        });
-        return;
-      }
+      if (!window.PM.Party || !window.PM.Net.configured()) return;
       this.findAndWatch(name);
     },
 
@@ -1495,12 +1501,12 @@
       var self = this;
       this.spec = { code: code, name: name, timer: null };
       this.friendsMsg.textContent = 'ENTRANDO A VER A ' + name + '...';
-      window.PM.Net.handler = function (n, d, sid) { self.specData(n, d, sid); };
-      window.PM.Net.onclose = function () { self.specFail('SE PERDIÓ LA CONEXIÓN'); };
-      window.PM.Net.connect(code, {
+      window.PM.Net.viewHandler = function (n, d, sid) { self.specData(n, d, sid); };
+      window.PM.Net.viewOnClose = function () { self.specFail('SE PERDIÓ LA CONEXIÓN'); };
+      window.PM.Net.openView(code, {
         onOpen: function () {
           if (!self.spec) return;
-          window.PM.Net.send('hello', { v: CFG.NET.PROTO, spec: 1 });
+          window.PM.Net.gameSend('hello', { v: CFG.NET.PROTO, spec: 1 });
           self.spec.timer = setTimeout(function () {
             if (self.spec) self.specFail('NO SE PUDO VER LA PARTIDA');
           }, CFG.NET.HELLO_TIMEOUT_MS);
@@ -1542,7 +1548,7 @@
     specFail: function (msg) {
       if (this.spec && this.spec.timer) clearTimeout(this.spec.timer);
       this.spec = null;
-      window.PM.Net.leave();
+      window.PM.Net.closeView();     // la party propia no se toca
       this.friendsMsg.classList.add('error');
       this.friendsMsg.textContent = msg;
       this.showFriends();
@@ -1561,11 +1567,13 @@
       h.textContent = 'TOP MUNDIAL';
       o.appendChild(h);
 
-      /* dos clasificaciones separadas */
+      /* clasificaciones separadas: por puntos (individual y dúo), por tiempo
+       * en despejar el nivel 1, y tus propias partidas */
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.rankTabBtns = {};
-      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [0, 'TUS PARTIDAS']].forEach(function (t) {
+      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'NIVEL 1'],
+       [0, 'TUS PARTIDAS']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
         b.classList.add('tab');
         self.rankTabBtns[t[0]] = b;
@@ -1600,7 +1608,8 @@
     },
 
     showRankTab: function (players) {
-      this.rankTab = (players === 2) ? 2 : (players === 0 ? 0 : 1);
+      this.rankTab = (players === 2 || players === 3 || players === 0)
+        ? players : 1;
       this.loadRanking();
     },
 
@@ -1608,17 +1617,17 @@
       var self = this;
       var R = window.PM.Ranking;
       var players = this.rankTab;
-      if (players !== 0 && players !== 2) players = 1;
+      if ([0, 2, 3].indexOf(players) === -1) players = 1;
       for (var k in this.rankTabBtns) {
         if (this.rankTabBtns.hasOwnProperty(k)) {
           this.rankTabBtns[k].classList.toggle('active', +k === players);
         }
       }
-      this.rankSub.textContent = (players === 0)
-        ? 'TUS ÚLTIMAS PARTIDAS EN ESTE NAVEGADOR'
-        : (players === 1
-            ? 'MEJOR MARCA DE CADA JUGADOR'
-            : 'MEJOR MARCA DE CADA DÚO · PUNTUACIÓN DE EQUIPO');
+      this.rankSub.textContent =
+        players === 0 ? 'TUS ÚLTIMAS PARTIDAS EN ESTE NAVEGADOR' :
+        players === 1 ? 'MEJOR MARCA DE CADA JUGADOR' :
+        players === 2 ? 'MEJOR MARCA DE CADA DÚO · PUNTUACIÓN DE EQUIPO' :
+        'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE';
       this.rankList.innerHTML = '';
       this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
 
@@ -1642,7 +1651,7 @@
        * anterior puede llegar después y pisar la lista o el mensaje */
       var req = (this.rankReq || 0) + 1;
       this.rankReq = req;
-      R.top(players, function (err, rows) {
+      function llegaron(err, rows) {
         if (self.rankReq !== req) return;      // respuesta caducada
         if (err) {
           self.rankStatus.classList.add('error');
@@ -1653,12 +1662,53 @@
         }
         self.rankStatus.classList.remove('error');
         if (!rows.length) {
-          self.rankStatus.textContent = 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
+          self.rankStatus.textContent = (players === 3)
+            ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!'
+            : 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
           return;
         }
         self.rankStatus.textContent = '';
-        self.renderRanking(rows);
-      });
+        if (players === 3) self.renderTimes(rows);
+        else self.renderRanking(rows);
+      }
+      if (players === 3) R.topTime(llegaron);
+      else R.top(players, llegaron);
+    },
+
+    /* Los más rápidos en despejar el nivel 1 */
+    renderTimes: function (rows) {
+      var R = window.PM.Ranking;
+      var mine = String(window.PM.settings.nick1 || '').toUpperCase();
+      this.rankList.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var n1 = String(r.nombre1 || '').toUpperCase();
+        var row = document.createElement('div');
+        row.className = 'rank-row';
+        if (mine && n1 === mine) row.classList.add('mine');
+
+        var pos = document.createElement('span');
+        pos.className = 'rank-pos';
+        pos.textContent = (i + 1) + '.';
+        row.appendChild(pos);
+
+        var who = document.createElement('span');
+        who.className = 'rank-who';
+        who.textContent = n1;
+        row.appendChild(who);
+
+        var t = document.createElement('span');
+        t.className = 'rank-pts';
+        t.textContent = R.fmtTime(r.tiempo1);
+        row.appendChild(t);
+
+        var pts = document.createElement('span');
+        pts.className = 'rank-lvl';
+        pts.textContent = r.puntos + ' PTS';
+        row.appendChild(pts);
+
+        this.rankList.appendChild(row);
+      }
     },
 
     /* Tus últimas partidas (localStorage), lo más reciente primero */
@@ -1978,6 +2028,9 @@
       p.appendChild(row);
 
       p.classList.toggle('solid', !!o.solid);
+      // sobre un menú el velo tiene que tapar; sobre la partida, no (el
+      // laberinto se sigue viendo por detrás a propósito)
+      p.classList.toggle('over-panel', !!this.visiblePanel());
       p.style.display = 'flex';
       this.promptOpen = true;
       this.refreshControls();
@@ -2237,6 +2290,11 @@
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
       if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
       lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
+      // tiempo del primer nivel, que es lo que corre en su clasificación
+      if (g.lvl1Cs > 0 && window.PM.Ranking) {
+        lines.push('NIVEL 1 EN ' + window.PM.Ranking.fmtTime(g.lvl1Cs) +
+          (g.canTimeRecord() ? '' : ' · NO CUENTA PARA EL TOP MUNDIAL'));
+      }
       // por qué esta partida no entra en el top mundial, si es el caso
       if (g.score > 0 && window.PM.Ranking && window.PM.Ranking.configured()) {
         if (g.missingRankingName()) {

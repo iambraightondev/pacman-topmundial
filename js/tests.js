@@ -70,6 +70,124 @@
     eq(n, CFG.PELLET_TOTAL);
   });
 
+  test('el laberinto es el del arcade, sin huecos en el borde', function () {
+    for (var r = 0; r < CFG.ROWS; r++) {
+      eq(CFG.MAZE[r].length, CFG.COLS, 'fila ' + r + ' con ancho raro');
+    }
+    // el contorno solo se abre en el túnel: en las filas de la casa de
+    // fantasmas los laterales son muro macizo hasta la columna 5
+    for (r = 9; r <= 19; r++) {
+      if (r === CFG.TUNNEL_ROW) continue;
+      for (var c = 0; c <= 5; c++) {
+        eq(CFG.MAZE[r].charAt(c), '#', 'hueco en (' + c + ',' + r + ')');
+        eq(CFG.MAZE[r].charAt(CFG.COLS - 1 - c), '#',
+           'hueco a la derecha en la fila ' + r);
+      }
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Fidelidad arcade: sin esto los patrones memorizados no valen
+  // ---------------------------------------------------------------
+  /* Velocidad real de Pac-Man cruzando un pasillo con puntos. En el arcade
+   * corre a `pac` y pierde un fotograma por punto, lo que da la columna
+   * `pacDots`. Aplicar las dos cosas lo dejaba un 10% lento. */
+  function pctPorPasilloConPuntos(nivel) {
+    partida(1);
+    G.level = nivel;
+    G.speedRow = CFG.speedRow(nivel);
+    var p = G.pacs[0];
+    var desde = 2 * 8 + 4, hasta = 20 * 8 + 4;      // fila 5: 18 casillas
+    p.x = desde; p.y = 5 * 8 + 4;
+    p.dir = CFG.DIR.RIGHT; p.nextDir = CFG.DIR.RIGHT;
+    var t = 0;
+    while (p.x < hasta && t < 1000) { G.step(); t++; }
+    return ((hasta - desde) / t) / CFG.BASE_SPEED * 100;
+  }
+
+  test('comer puntos frena a Pac-Man lo justo (tabla del arcade)', function () {
+    [[1, 71], [2, 79], [5, 87]].forEach(function (caso) {
+      var pct = pctPorPasilloConPuntos(caso[0]);
+      ok(Math.abs(pct - caso[1]) <= 2.5,
+         'nivel ' + caso[0] + ': ' + pct.toFixed(1) + '% en vez de ' + caso[1] + '%');
+    });
+  });
+
+  test('el mismo nivel se juega siempre igual (azar reproducible)', function () {
+    function firma() {
+      partida(1);
+      var s = '';
+      for (var i = 0; i < 600; i++) {
+        G.step();
+        if (i % 100 === 0) {
+          s += G.ghosts.map(function (g) {
+            return Math.round(g.x) + ',' + Math.round(g.y) + ',' + g.dir;
+          }).join('|') + ' ';
+        }
+      }
+      return s;
+    }
+    eq(firma(), firma(), 'dos partidas iguales dan recorridos distintos');
+  });
+
+  test('la inversión forzada es inmediata, no espera al centro', function () {
+    partida(1);
+    var g = G.ghosts[0];
+    g.mode = 'normal';
+    g.x = 6 * 8 + 4; g.y = 5 * 8 + 3;    // entre centros, bajando
+    g.dir = CFG.DIR.DOWN;
+    G.forceReversal();
+    eq(g.dir, CFG.DIR.UP, 'debería haberse dado la vuelta ya');
+  });
+
+  /* El arcade compara casillas una vez por fotograma, así que dos que se
+   * cruzan de frente e intercambian casilla en el mismo tick se atraviesan.
+   * Se respeta a propósito: los patrones del original cuentan con ello. */
+  test('cruzarse de frente con un fantasma deja pasar, como en el arcade', function () {
+    partida(1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    p.safeTicks = 0;
+    g.mode = 'normal';
+    g.frightened = false;
+    // misma fila, casillas contiguas, yendo el uno hacia el otro
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    p.dir = CFG.DIR.RIGHT; p.nextDir = CFG.DIR.RIGHT;
+    g.x = 7 * 8 + 4; g.y = 5 * 8 + 4;
+    g.dir = CFG.DIR.LEFT;
+    g.clearPlan();
+    var pasos = 0;
+    while (pasos < 12 && G.state === 'PLAYING' && p.tileX() <= g.tileX()) {
+      G.step(); pasos++;
+    }
+    eq(G.state, 'PLAYING', 'no debería haber muerto al cruzarse');
+    ok(p.tileX() > g.tileX(), 'se han atravesado');
+  });
+
+  test('compartir casilla con un fantasma sí mata', function () {
+    partida(1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    p.safeTicks = 0;
+    g.mode = 'normal';
+    g.frightened = false;
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    g.x = p.x; g.y = p.y;
+    G.step();
+    eq(G.state, 'DYING');
+  });
+
+  test('el fantasma decide la salida al entrar en la casilla', function () {
+    partida(1);
+    var g = G.ghosts[0];
+    g.mode = 'normal';
+    g.frightened = false;
+    g.x = 6 * 8 + 4; g.y = 8 * 8 + 4;    // cruce del pasillo de la izquierda
+    g.dir = CFG.DIR.RIGHT;
+    g.clearPlan();
+    g.update(G);
+    ok(g.planDir >= 0, 'nada más entrar ya tiene pensada la salida');
+    eq(g.planTile, g.tileY() * CFG.COLS + g.tileX(), 'pensada para SU casilla');
+  });
+
   test('una partida nueva arranca en READY con las vidas configuradas', function () {
     partida(1);
     G.newGame({ players: 1 });
@@ -399,6 +517,65 @@
   });
 
   // ---------------------------------------------------------------
+  // Récord de velocidad del primer nivel
+  // ---------------------------------------------------------------
+  /* Despeja el nivel de golpe, como si se hubiera comido todo */
+  function despejar() {
+    for (var r = 0; r < CFG.ROWS; r++) {
+      for (var c = 0; c < CFG.COLS; c++) G.pellets[r][c] = null;
+    }
+    G.dotsLeft = 0;
+    G.step();
+  }
+
+  test('el tiempo del nivel 1 se mide en centésimas', function () {
+    partida(1);
+    G.timeTicks = 60 * 63 + 30;          // 1:03.50
+    G.submitLevel1Time();
+    eq(G.lvl1Cs, 6350, 'centésimas del nivel 1');
+    eq(window.PM.Ranking.fmtTime(G.lvl1Cs), '01:03.50');
+    ok(G.timeSent, 'no se vuelve a mandar');
+    G.timeTicks = 60 * 200;
+    G.submitLevel1Time();
+    eq(G.lvl1Cs, 6350, 'la segunda llamada no pisa la marca');
+  });
+
+  test('la marca se guarda al despejar el nivel 1, no al acabar la partida', function () {
+    partida(1);
+    ticks(30);
+    despejar();
+    eq(G.state, 'LEVEL_DONE');
+    ok(G.timeSent, 'se ha cerrado la marca sin esperar al game over');
+    ok(G.lvl1Cs > 0, 'con un tiempo de verdad');
+    ok(!G.rankingSent, 'la partida sigue: la puntuación aún no se ha mandado');
+  });
+
+  test('la marca de velocidad solo cuenta en condiciones normales', function () {
+    partida(1);
+    ok(G.canTimeRecord(), 'a un jugador, sin red y con los ajustes de siempre');
+    G.pacSpeedMult = 1.3;
+    ok(!G.canTimeRecord(), 'con Pac-Man acelerado, no');
+    G.pacSpeedMult = 1;
+    G.ghostSpeedMult = 0.85;
+    ok(!G.canTimeRecord(), 'con los fantasmas frenados, tampoco');
+    G.ghostSpeedMult = 1;
+    G.startLevel = 5;
+    ok(!G.canTimeRecord(), 'empezando en otro nivel, tampoco');
+    G.startLevel = 1;
+    partida(2);
+    ok(!G.canTimeRecord(), 'en dúo no hay clasificación de velocidad');
+  });
+
+  test('el tiempo del nivel 2 en adelante no toca la marca', function () {
+    partida(1);
+    G.level = 2;
+    G.timeTicks = 60 * 20;
+    despejar();
+    eq(G.lvl1Cs, 0, 'solo cuenta el primer nivel');
+    ok(!G.timeSent);
+  });
+
+  // ---------------------------------------------------------------
   // Pausa durante la animación de muerte (lo que no dejaba dar Escape)
   // ---------------------------------------------------------------
   test('se puede pausar mientras mueres', function () {
@@ -630,6 +807,37 @@
     ok(G.pacs[0].x !== antes, 'los jugadores se mueven por estima');
     eq(G.outEaten.length, 0, 'el mirón no reporta pastillas');
     G.toMenu();
+  });
+
+  /* Mirar la partida de un amigo va por un canal aparte, así que la party
+   * propia sigue en pie: antes había que salirse del grupo para poder ver. */
+  test('mirando, la party propia ni se toca', function () {
+    var Net = window.PM.Net, P = window.PM.Party;
+    var prevSt = P.st, prevTr = Net.transport, prevH = Net.handler;
+    try {
+      var canal = { cerrado: false, enviados: [],
+                    send: function (n) { this.enviados.push(n); },
+                    close: function () { this.cerrado = true; } };
+      Net.viewCh = canal;
+      Net.viewCode = 'ABCD';
+      Net.transport = { cerrado: false, send: function () {},
+                        close: function () { this.cerrado = true; } };
+      P.st = { code: 'WXYZ', leader: true, members: [], status: 'dentro' };
+      mirando(2);
+      ok(Net.viewHandler, 'la partida escucha por el canal de mirón');
+      eq(Net.handler, prevH, 'el canal principal se queda con la party');
+      G.netSend('gevt', {});
+      eq(canal.enviados.length, 1, 'lo que manda sale por la sala ajena');
+      G.toMenu();
+      ok(canal.cerrado, 'al salir se cierra solo la sala que se miraba');
+      ok(!Net.transport.cerrado, 'el canal de la party sigue abierto');
+      ok(P.inParty(), 'se sigue en la party');
+    } finally {
+      Net.viewCh = null; Net.viewCode = null;
+      Net.viewHandler = null; Net.viewOnClose = null;
+      Net.transport = prevTr; Net.handler = prevH;
+      P.st = prevSt;
+    }
   });
 
   test('el mirón no puede rendirse, ni chatear, ni poner emotes', function () {
