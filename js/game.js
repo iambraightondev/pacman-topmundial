@@ -1477,7 +1477,9 @@
         case 'pos': {
           var p = this.pacs[1];
           if (!p || !data) return;
-          if (!p.dying) {          // mientras muere manda el anfitrión
+          // dy = el invitado está muriendo: el mensaje solo sirve de señal de
+          // vida (y para las pastillas), la posición la lleva el anfitrión
+          if (!p.dying && !data.dy) {
             p.x = data.x; p.y = data.y;
             p.dir = data.d; p.nextDir = data.nd;
           }
@@ -1778,28 +1780,25 @@
     sendGuestUpdates: function () {
       var me = this.pacs[this.localIdx];
       if (!me) return;
-      /* mientras muere, su posición la manda el anfitrión: enviar la del
-       * momento de morir lo devolvería al sitio tras reaparecer */
-      if (me.dying) {
-        if (this.outEaten.length) {
-          this.netSend('pos', {
-            x: r1(me.x), y: r1(me.y), d: me.dir, nd: me.nextDir, e: this.outEaten
-          });
-          this.outEaten = [];
-        }
-        return;
-      }
+      /* Mientras muere se sigue enviando al mismo ritmo (si no, el vigilante
+       * del anfitrión lo daría por desconectado y congelaría la partida al
+       * otro jugador), pero marcado con dy: su posición la manda el
+       * anfitrión, que si no lo devolvería al sitio tras reaparecer. */
+      var dying = !!me.dying;
       this.posTimer++;
-      var dirty = this.outEaten.length > 0 ||
-        me.dir !== this._lastSentDir || me.nextDir !== this._lastSentNext;
+      var turned = !dying &&
+        (me.dir !== this._lastSentDir || me.nextDir !== this._lastSentNext);
+      var dirty = this.outEaten.length > 0 || turned;
       if (!dirty && this.posTimer < CFG.NET.POS_EVERY) return;
       this.posTimer = 0;
       this._lastSentDir = me.dir;
       this._lastSentNext = me.nextDir;
-      this.netSend('pos', {
+      var msg = {
         x: r1(me.x), y: r1(me.y), d: me.dir, nd: me.nextDir,
         e: this.outEaten
-      });
+      };
+      if (dying) msg.dy = 1;
+      this.netSend('pos', msg);
       this.outEaten = [];
       for (var k in this.recentEaten) {
         if (this.recentEaten.hasOwnProperty(k) &&

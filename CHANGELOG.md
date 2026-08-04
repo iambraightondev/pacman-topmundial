@@ -2,6 +2,22 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Corregido: al morir uno, al otro se le congelaba la partida (online)
+
+- En el modo online, cuando un jugador moría **el otro se quedaba clavado
+  cerca de un segundo** antes de poder seguir. No era rendimiento (el bucle
+  no tiene ningún pico): mientras el invitado hacía su animación de muerte
+  dejaba de enviar su posición, y al anfitrión le saltaba el vigilante de
+  desconexión (1,5 s sin datos), que **congela toda la simulación** y saca
+  "ESPERANDO CONEXIÓN...".
+- Ahora el invitado **sigue enviando al mismo ritmo mientras muere**, con la
+  marca `dy`: cuenta como señal de vida, pero el anfitrión ignora esa
+  posición (si la aplicara, devolvería al jugador al sitio donde murió justo
+  después de reaparecer). Las pastillas que comió justo antes de morir se
+  siguen contando.
+- Medido: con el arreglo, 0 ticks congelados durante los 180 de la muerte
+  completa; antes eran ~60 (un segundo entero de partida detenida).
+
 ## 2026-08-04 · Skins, emotes, maestrías, top mundial y chat
 
 - **Skins** (6, todas disponibles desde el principio): CLÁSICO, OJOS, NEÓN,

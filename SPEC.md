@@ -272,9 +272,12 @@ confirmed), `safeTicks` (respawn grace).
   guest never applies the host's `pd` for its *own* Pac-Man (the host always
   sees that death start and end later, so copying it would restart the
   animation in a loop); if the confirmation does not arrive within
-  `CFG.DEATH_CONFIRM_TICKS` the prediction is rolled back. While dying, the
-  guest stops sending `pos` (and the host ignores it) so the frozen position
-  cannot drag it back after respawning.
+  `CFG.DEATH_CONFIRM_TICKS` the prediction is rolled back. While dying the
+  guest **keeps sending `pos` at the usual rate but flagged `dy:1`**: the host
+  ignores the position of a `dy` message (its frozen spot would drag the pac
+  back after respawning) yet still counts it as a sign of life. Going silent
+  instead starves the host's watchdog, which after `WAIT_TICKS` freezes the
+  whole simulation — i.e. one player's death animation stops the other's game.
 
 ## Skins, emotes, maestrías, ranking y chat
 
@@ -479,8 +482,9 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 
 - Lobby: `hello {v, c(olor), n(ame), k(skin)}` → `cfg {v, c, n, k, cfg}` →
   `start {}`; rejections: `full {to}`.
-- Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell]}` every 5 ticks,
-  sooner on turns or eats (not while dying); `gevt {t: 'died' |
+- Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell], dy?}` every 5 ticks,
+  sooner on turns or eats; `dy:1` while dying (keep-alive whose position the
+  host must ignore); `gevt {t: 'died' |
   'ateGhost'{g} | 'ateFruit' | 'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok} |
   'emote'{e} | 'chat'{m}}` where `k` is `surrender` | `rematch` | `restart`.
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
