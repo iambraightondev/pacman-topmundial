@@ -3,9 +3,10 @@
 Recreación fiel del Pac-Man arcade de 1980, construida desde cero en JavaScript
 vanilla (HTML5 Canvas + Web Audio API). Sin dependencias, sin build, sin
 servidor: un solo doble clic y a jugar. Con modo de **dos jugadores en la misma
-máquina** y modo **online** para jugar en equipo contra los fantasmas.
+máquina** y modo **online de hasta cuatro** en equipo contra los fantasmas,
+con **partys** que no se deshacen entre partida y partida.
 
-| Menú | Partida | Dos jugadores online | Móvil |
+| Menú | Partida | Equipo online | Móvil |
 |------|---------|----------------------|-------|
 | ![Menú](capturas/menu.png) | ![Partida](capturas/gameplay.png) | ![Online](capturas/online-2j.png) | ![Móvil](capturas/movil.png) |
 
@@ -53,10 +54,26 @@ red.
   no se detiene**: reaparece a los pocos segundos (con un momento de
   invulnerabilidad) mientras el otro sigue jugando; el laberinto solo se
   reinicia cuando caen los dos.
-- **Online (2 jugadores)** — las mismas reglas de equipo, cada uno desde su
-  casa. Uno crea una sala y comparte el código de 4 letras (o el enlace
-  directo); el otro se une. El anfitrión fija la dificultad; cada jugador usa
-  su propio color.
+- **Online (2, 3 o 4 jugadores)** — las mismas reglas de equipo, cada uno
+  desde su casa. Uno crea una **party** y comparte el código de 4 letras (o
+  el enlace directo); los demás se unen. El líder fija la dificultad y decide
+  cuándo empezar; cada jugador lleva su propio color. Con 3 y 4, los dos
+  jugadores extra salen **arriba** del laberinto, no a tu lado.
+
+### Partys, amigos y espectar
+
+- **La party no se deshace**: se entra una vez y el grupo sigue junto al
+  volver al menú o al acabar la partida, así que se pueden encadenar
+  partidas sin volver a pasar el código. El botón del menú indica
+  `PARTY (n/4)`. Desde dentro: invitar, empezar, volver al menú sin salirse
+  o salir del todo.
+- **Invitar a un amigo por su nombre**: aunque no esté en la party, le llega
+  un aviso para entrar. También hay botón `INVITAR` en cada fila de AMIGOS.
+- **Ver la partida de un amigo**: `VER PARTIDA` en AMIGOS le pregunta dónde
+  está jugando y entras solo a mirar (sin Pac-Man, sin chat y sin voto); lo
+  que veas no cuenta como partida tuya. Para mirar hay que dejar tu party.
+- **Si alguien se cae con 3 o 4 jugadores, la partida no se corta**: quien
+  se va o pierde la conexión pasa a espectador y el resto sigue.
 
 ### Configurar el modo online
 
@@ -72,9 +89,9 @@ window.PM.NET_CFG = {
 };
 ```
 
-Sin credenciales, el resto del juego funciona igual; solo el botón de crear
-o unirse a salas queda deshabilitado. Para probar el online en local sin
-Supabase, abre dos pestañas con `?red=local` en la URL.
+Sin credenciales, el resto del juego funciona igual; solo crear party o
+unirse queda deshabilitado. Para probar el online en local sin Supabase,
+abre dos (o hasta cuatro) pestañas con `?red=local` en la URL.
 
 ### El TOP MUNDIAL
 
@@ -118,17 +135,23 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
   amor) con las teclas `1`–`6`, en el color de tu jugador. Y **chat** (`T`)
   en el modo online.
 - **Maestrías**: seis insignias por récord personal, en **dos rutas
-  separadas** —en solo y en dúo—, con aviso al conseguirlas y su propio panel
-  en el menú. Con **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del
-  modo que estés jugando sobre tu Pac-Man, y en online la ve tu dúo.
+  separadas** —en solo y en dúo—, con su propio panel en el menú (cada fila
+  tiene `VER` para volver a ver el cartel). En partida, **cada vez que cruzas
+  un escalón** sale el cartel animado, lo tuvieras ya o no. Con
+  **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del modo que estés
+  jugando sobre tu Pac-Man —con la medalla subiendo y la chapa
+  desplegándose—, y en online la ven los demás.
 - **Top mundial**: dos clasificaciones compartidas entre todos, **individual**
   y **dúo**, con la mejor marca de cada jugador. Hace falta tener nombre
   puesto (y sin palabrotas) para registrar un récord.
 - **Tus partidas**: historial de las últimas 15 en este navegador, con o sin
   nombre y con o sin conexión.
-- **Nivel de jugador**: los puntos de todas tus partidas suman experiencia;
-  cada nivel cuesta más que el anterior y no hay tope.
-- **Amigos**: lista para guardar con quién sueles jugar.
+- **Nivel de jugador**: mide **cuánto juegas**, no si haces récord. Los
+  puntos de todas tus partidas suman experiencia —500 puntos suman 500— y
+  cuentan **acabe como acabe la partida**: game over, rendición, reinicio o
+  salirte a medias. Cada nivel cuesta más que el anterior y no hay tope.
+- **Amigos**: lista para guardar con quién sueles jugar, invitarlos a tu
+  party y ver sus partidas.
 - **Cronómetro** en partida, con el tiempo transcurrido.
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - **Volumen por tipo de sonido**: general, música, efectos, ambiente (sirena
@@ -142,9 +165,12 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 - El **invitado** simula su propio Pac-Man en local — sin lag de entrada — y
   refleja el resto; come puntos y fantasmas con predicción local que el
   anfitrión confirma.
-- Salas efímeras con código de 4 letras sobre canales de difusión de
-  Supabase Realtime (cliente Phoenix/WebSocket propio, sin librerías).
-  Desconexiones detectadas con aviso y vuelta al menú.
+- Salas con código de 4 letras sobre canales de difusión de Supabase
+  Realtime (cliente Phoenix/WebSocket propio, sin librerías). La **party y
+  la partida comparten canal**, por eso el grupo sigue conectado en el menú;
+  además cada jugador escucha un canal propio con su nombre, por donde le
+  llegan las invitaciones. Desconexiones detectadas con aviso: con dos
+  jugadores se vuelve al menú, con tres o cuatro solo cae el que falla.
 - **Rendición y revancha por votación**: cualquiera propone, el otro acepta o
   rechaza (20 s de plazo); el anfitrión ejecuta la decisión y la reparte. La
   sala sigue viva tras el GAME OVER para poder encadenar partidas.
@@ -162,13 +188,14 @@ js/pacman.js      Jugador
 js/ghost.js       IA de los fantasmas
 js/net-config.js  Credenciales de Supabase (online y top mundial)
 js/net.js         Transporte en tiempo real (Supabase Realtime / local)
+js/party.js       Partys persistentes, invitaciones y arranque de grupo
 js/badges.js      Maestrías (insignias por récord personal)
 js/history.js     Historial local de partidas
 js/level.js       Nivel de jugador (experiencia acumulada)
 js/friends.js     Lista de amigos
 js/ranking.js     Top mundial (tabla de Supabase vía REST)
 js/game.js        Bucle principal, máquina de estados y sincronización
-js/ui.js          Menús, opciones, lobby online, paneles y controles
+js/ui.js          Menús, opciones, panel de party, paneles y controles
 manifest.json     App instalable (PWA)
 sw.js             Service worker: funciona sin conexión
 icons/            Iconos de la app
