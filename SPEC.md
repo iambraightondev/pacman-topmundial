@@ -410,6 +410,14 @@ button that plays the banner in the panel (`UI.playBadgeDemo`, which advances
 by a **capped** per-frame delta so a throttled browser slows it down instead
 of skipping it). `Ctrl+Espacio` shows the badge of the **mode being played**.
 
+**Showing off the badge in-game** (`Sprites.drawBadgeTag`, `t` from the
+emote's remaining ticks): it has its own animation, deliberately **not** the
+panel banner's — the medal rises **centred over the player** flipping twice
+(edge-on frames draw the plain back), the plaque then **unrolls to its right**
+out of the medal (which slides into its slot) with a spark burst, a glint
+sweeps the medal while it holds, and it shrinks back toward the player to
+leave. Face emotes keep their instant balloon.
+
 **Top mundial** (`PM.Ranking`): games are posted to a Supabase table via
 PostgREST with the anon key — no SDK. There are **two separate boards**, told
 apart by the `jugadores` column: `1` individual (`nombre2` NULL) and `2` duo.

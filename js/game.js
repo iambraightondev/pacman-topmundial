@@ -1183,7 +1183,8 @@
       this.emotes[who] = {
         tag: b ? b.name : 'SIN MAESTRÍA',
         color: b ? b.color : '#888888',
-        ticks: CFG.EMOTE_TICKS
+        ticks: CFG.EMOTE_TICKS,
+        total: CFG.EMOTE_TICKS      // para animar la chapa
       };
     },
 
@@ -2567,7 +2568,9 @@
           if (!em || this.pacs[i].out) continue;
           var ex = this.pacs[i].x, ey = this.pacs[i].y + CFG.MAZE_Y - 11;
           if (em.tag) {
-            window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color);
+            var et = 1 - (em.ticks / (em.total || CFG.EMOTE_TICKS));
+            window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color,
+              et, this.tick);
           } else {
             window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i));
           }

@@ -651,6 +651,34 @@
   });
 
   // ---------------------------------------------------------------
+  // Chapa de maestría sobre el jugador (Ctrl+Espacio)
+  // ---------------------------------------------------------------
+  test('la chapa de maestría sale animada, no de golpe', function () {
+    partida(1);
+    G.emoteCooldown = 0;
+    G.sendBadgeTag();
+    var e = G.emotes[0];
+    ok(e && e.tag, 'aparece la chapa');
+    eq(e.total, CFG.EMOTE_TICKS, 'guarda su duración para poder animarla');
+
+    var cv = document.createElement('canvas');
+    cv.width = 224; cv.height = 44;
+    var ctx = cv.getContext('2d');
+    function pinta(t) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      window.PM.Sprites.drawBadgeTag(ctx, 112, 34, 'EXPERTO', '#00ff00', t, 20);
+      var d = ctx.getImageData(0, 0, cv.width, cv.height).data, n = 0;
+      for (var i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
+      return n;
+    }
+    var subiendo = pinta(0.05), abierta = pinta(0.5), yendose = pinta(0.99);
+    ok(subiendo > 0, 'al empezar ya se ve la medalla subiendo');
+    ok(abierta > subiendo * 2, 'después se despliega la chapa con el nombre');
+    ok(yendose < abierta, 'y al final se encoge hacia el jugador');
+    ok(pinta(1) === 0, 'al terminar no queda nada');
+  });
+
+  // ---------------------------------------------------------------
   // Aviso de maestría animado
   // ---------------------------------------------------------------
   test('el aviso de maestría dura y se apaga solo', function () {

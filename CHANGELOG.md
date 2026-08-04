@@ -30,6 +30,11 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   celebra cada vez que se cruza un escalón dentro de la partida (una vez por
   partida y escalón) y el texto distingue si es nueva o ya conseguida.
   Además, cada fila del panel MAESTRÍAS tiene `VER` para verlo entero.
+- **La chapa de maestría en partida también se anima** (`Ctrl+Espacio` o el
+  botón MI MAESTRÍA), con una animación distinta a la del panel: la medalla
+  sube girando desde encima de tu Pac-Man, la chapa se despliega hacia su
+  derecha con un chispazo, la medalla destella mientras se mantiene y al
+  final todo se encoge de vuelta hacia ti.
 - **Corregido el retraso tras cada despliegue**: el service worker servía el
   código guardado primero, así que se seguía viendo la versión anterior una
   visita entera. Ahora el código va a la red primero y la copia es el

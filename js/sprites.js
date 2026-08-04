@@ -266,30 +266,147 @@
   };
 
   /* Etiqueta de maestría sobre un jugador (Ctrl+Espacio).
-   * Mismo globo que los emotes, con la medalla y el nombre en su color. */
-  Sprites.drawBadgeTag = function (ctx, x, y, name, color) {
+   *
+   * Tiene su propia animación, a propósito distinta del cartel grande del
+   * panel MAESTRÍAS (que baja de arriba con rayos girando): aquí la medalla
+   * SALE GIRANDO desde la cabeza del jugador, la chapa SE DESPLIEGA hacia su
+   * derecha con un chispazo, la medalla brilla mientras se mantiene y al
+   * final todo se encoge de vuelta hacia el jugador.
+   *
+   *   t    — 0 al aparecer, 1 al terminar (si no se pasa, se pinta quieta)
+   *   tick — contador libre, para el brillo y la flotación
+   */
+  Sprites.drawBadgeTag = function (ctx, x, y, name, color, t, tick) {
     var text = String(name || '');
     color = color || '#888888';
+    t = (typeof t === 'number') ? Math.max(0, Math.min(1, t)) : 1;
+    tick = tick || 0;
+
+    var SUBE = 0.16;     // hasta aquí: la medalla sube girando
+    var ABRE = 0.30;     // hasta aquí: la chapa se despliega
+    var CIERRA = 0.86;   // a partir de aquí: se va
+
     ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    var padL = 15, padR = 6, h = 14;
+    var padL = 15, padR = 6, h = 14, r = 4.5;
     var w = ctx.measureText(text).width + padL + padR;
     var bx = Math.round(x - w / 2), by = Math.round(y - h);
     if (bx < 2) bx = 2;
     if (bx + w > CFG.NATIVE_W - 2) bx = CFG.NATIVE_W - 2 - w;
+    // centro de la medalla: empieza sobre el jugador y acaba en su hueco
+    var mx = x, my = by + h / 2;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.85)';
-    ctx.fillRect(bx, by, w, h);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
-    ctx.fillStyle = color;
-    ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
+    var salida = (t > CIERRA) ? (t - CIERRA) / (1 - CIERRA) : 0;
+    var vis = 1 - salida;
+    if (vis <= 0) return;
 
-    Sprites.drawBadge(ctx, bx + 8, by + h / 2, 4.5, color, false);
-    ctx.fillStyle = color;
-    ctx.fillText(text, bx + padL, by + h / 2 + 0.5);
+    /* subida desde el jugador, con un pasito de más al llegar */
+    var sube = Math.min(1, t / SUBE);
+    var freno = 1 - Math.pow(1 - sube, 3);
+    var dy = (1 - freno) * 14 - Math.sin(sube * Math.PI) * 2.5 +
+      Math.sin(tick * 0.11) * 0.7 + salida * 12;
+
+    ctx.save();
+    ctx.globalAlpha = vis;
+    // al irse, se encoge hacia el jugador
+    if (salida > 0) {
+      ctx.translate(x, y);
+      ctx.scale(1 - salida * 0.5, 1 - salida * 0.5);
+      ctx.translate(-x, -y);
+    }
+    ctx.translate(0, -dy);
+
+    /* La medalla sube CENTRADA sobre el jugador y se corre a su hueco de la
+     * izquierda mientras la chapa crece a partir de ella. */
+    var abre = (t <= SUBE) ? 0
+      : Math.min(1, (t - SUBE) / (ABRE - SUBE));
+    abre = 1 - Math.pow(1 - abre, 3);
+    mx = Math.round(x + (bx + 8 - x) * abre);
+    var lx = mx - 8;                       // borde izquierdo de la chapa
+
+    var aw = Math.round(w * abre);
+    if (aw > 2) {
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillRect(lx, by, aw, h);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(lx + 0.5, by + 0.5, aw - 1, h - 1);
+      // pico hacia el jugador, solo con la chapa ya abierta
+      if (abre > 0.6) {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
+      }
+      // el nombre aparece recortado por el borde de la chapa
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(lx, by, aw - 2, h);
+      ctx.clip();
+      ctx.fillStyle = color;
+      ctx.fillText(text, lx + padL, my + 0.5);
+      ctx.restore();
+    }
+
+    /* chispazo al plantarse la medalla */
+    var chispa = (t < SUBE) ? 0 : Math.min(1, (t - SUBE) / 0.14);
+    if (chispa > 0 && chispa < 1) {
+      ctx.save();
+      ctx.globalAlpha = vis * (1 - chispa);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var i = 0; i < 6; i++) {
+        var a = i * Math.PI / 3 + 0.4;
+        var r0 = r + 1 + chispa * 5, r1 = r0 + 3;
+        ctx.moveTo(mx + Math.cos(a) * r0, my + Math.sin(a) * r0);
+        ctx.lineTo(mx + Math.cos(a) * r1, my + Math.sin(a) * r1);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* la medalla: girando mientras sube, quieta y con brillo después */
+    var giro = (t < SUBE) ? Math.cos(sube * Math.PI * 4) : 1;
+    var ancho = Math.max(0.18, Math.abs(giro));
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.scale(ancho, 1);
+    ctx.translate(-mx, -my);
+    if (giro < 0) {
+      // de canto se ve el reverso: disco liso, sin el Pac-Man
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(1, r * 0.22);
+      ctx.beginPath();
+      ctx.arc(mx, my, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      Sprites.drawBadge(ctx, mx, my, r, color, false);
+    }
+    ctx.restore();
+
+    /* destello que recorre la medalla de vez en cuando */
+    if (t > ABRE && t < CIERRA) {
+      var fase = (tick % 80) / 80;
+      if (fase < 0.35) {
+        var d = (fase / 0.35) * (r * 4) - r * 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(mx, my, r - 0.5, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.globalAlpha = vis * 0.7;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(mx + d - 2, my - r);
+        ctx.lineTo(mx + d + 2, my + r);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
   };
 
   /* ------------------------------------------------------------
