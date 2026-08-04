@@ -32,6 +32,10 @@ create index if not exists ranking_puntos_idx
 
 alter table public.ranking enable row level security;
 
+-- Permisos de tabla: sin esto, PostgREST responde 401 aunque las políticas
+-- de RLS permitan la operación (RLS filtra filas, el GRANT abre la puerta).
+grant select, insert on public.ranking to anon, authenticated;
+
 drop policy if exists "ranking lectura publica" on public.ranking;
 create policy "ranking lectura publica"
   on public.ranking for select

@@ -17,11 +17,12 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   100 000). Al conseguir una sale un aviso con su medalla en plena partida, y
   el panel MAESTRÍAS del menú las lista con lo que falta para la siguiente.
 - **TOP MUNDIAL**: clasificación de partidas de dos jugadores guardada en
-  Supabase. Las partidas de dúo (locales y online) se suben al terminar —en
-  online solo las sube el anfitrión, una vez por partida— y el panel resalta
-  las tuyas. **Requiere crear la tabla**: ejecuta `supabase/ranking.sql` en el
-  proyecto de Supabase del juego. Mientras no exista, el panel lo avisa y el
-  resto del juego funciona igual.
+  Supabase (tabla `ranking`, ya creada en el proyecto del juego). Las
+  partidas de dúo (locales y online) se suben al terminar —en online solo las
+  sube el anfitrión, una vez por partida— y el panel resalta las tuyas. Si la
+  tabla faltase, el panel lo avisa y el resto del juego funciona igual. El
+  script está en `supabase/ranking.sql`; además del RLS hace falta el `GRANT`
+  de tabla a `anon`, o PostgREST responde 401.
 - **Chat en el modo online**: se abre con `T` o el botón CHAT; los mensajes
   salen sobre la parte baja del laberinto unos segundos. Se limpian, se
   recortan a 40 caracteres y tienen un pequeño tiempo de espera entre envíos;

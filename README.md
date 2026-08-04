@@ -65,14 +65,15 @@ Sin credenciales, el resto del juego funciona igual; solo el botón de crear
 o unirse a salas queda deshabilitado. Para probar el online en local sin
 Supabase, abre dos pestañas con `?red=local` en la URL.
 
-### Activar el TOP MUNDIAL
+### El TOP MUNDIAL
 
-La clasificación mundial sí necesita una tabla. En el mismo proyecto de
-Supabase: **Dashboard → SQL Editor → New query**, pega el contenido de
-[`supabase/ranking.sql`](supabase/ranking.sql) y pulsa *Run*. Crea la tabla
-`ranking` con lectura e inserción públicas (y sin permiso para modificar ni
-borrar). Hasta que exista, el panel TOP MUNDIAL lo avisa y el resto del juego
-funciona con normalidad.
+La clasificación mundial usa la tabla `ranking` del mismo proyecto de
+Supabase, **ya creada y en marcha**. Si alguna vez hay que recrearla (otro
+proyecto, o se borró), el script está en
+[`supabase/ranking.sql`](supabase/ranking.sql): **Dashboard → SQL Editor →
+New query**, pegar y *Run*. Deja lectura e inserción públicas, sin permiso
+para modificar ni borrar. Si la tabla falta, el panel TOP MUNDIAL lo avisa y
+el resto del juego funciona con normalidad.
 
 Las puntuaciones las envía el navegador, así que técnicamente se pueden
 falsear; para un ranking a prueba de trampas habría que validar la partida en

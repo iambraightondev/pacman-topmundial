@@ -304,8 +304,9 @@ to a Supabase table via PostgREST with the anon key — no SDK. Only the host
 submits online, once per game (`Game.rankingSent`), never in 1-player. The
 TOP MUNDIAL panel lists the best `CFG.RANKING.LIMIT` runs and highlights
 rows containing your own nickname. The table lives in `supabase/ranking.sql`
-(public select + insert, no update/delete); if it is missing the panel says
-so instead of failing. Scores are client-submitted and therefore forgeable —
+(public select + insert, no update/delete — note it needs the table-level
+`GRANT ... TO anon` on top of the RLS policies, or PostgREST answers 401);
+if it is missing the panel says so instead of failing. Scores are client-submitted and therefore forgeable —
 hardening means validating in an Edge Function.
 
 **Chat** (online only): `T` or the CHAT button opens an input; Enter sends,
