@@ -215,7 +215,8 @@ PM.settings = {
   frightMult: 1.0,       // 0–2, step .25  (× frightened duration)
   startLives: 3,         // 1–5
   startLevel: 1,         // 1–21
-  muted: false
+  muted: false,
+  volMaster: 1, volMusic: 1, volSfx: 1, volLoops: 0.8, volVoices: 1  // 0–1, step .1
 }
 ```
 
@@ -408,7 +409,9 @@ because the single scrolling list had grown unusable:
 
 - **DIFICULTAD** — presets, the five sliders and their note.
 - **JUGADORES** — names, and per player colour + skin.
-- **PARTIDA** — lives mode in 2-player, sound, and the in-game key reminder.
+- **PARTIDA** — lives mode in 2-player and the in-game key reminder.
+- **SONIDO** — mute, the five per-category volume sliders and buttons to
+  preview each streak voice.
 
 VOLVER stays outside the tabs. Switching tabs resets the panel scroll.
 
@@ -472,7 +475,33 @@ In-game: "¡LISTO!", "PAUSA", "GAME OVER" (red). Ghost names on title screen
   `drawEmote` / `drawBadgeTag` wrap them in the speech bubble.
 - Score popups drawn as small cyan text.
 
-## Audio API (js/audio.js — window.AudioSys, all Web Audio synthesis)
+## Voces de racha (los únicos archivos de audio)
+
+Eating frightened ghosts with the same energizer plays an escalating voice
+line, one per ghost in the chain: **"el hueso" → "el diablo" → "el huesaso"
+→ "el diablo coño"** (`CFG.VOICES` / `CFG.VOICE_NAMES`, files in `audio/`).
+
+- The streak index is the chain position (`chainIndex` before its increment,
+  clamped to 3), the same counter that drives 200/400/800/1600, so it resets
+  with every energizer. The chain is **per team**: in 2-player it escalates
+  across both players' kills.
+- Loaded once via `fetch` + `decodeAudioData` on `AudioSys.init/resume` and
+  played through the `voices` bus; a new line stops the previous one so they
+  never overlap. Everything fails silently — with `file://` fetch is blocked,
+  so the voices simply don't play and the rest of the game sounds the same
+  (the SONIDO tab says so when nothing loaded).
+- Online the host owns the chain: `evt eatGhost` carries `c` (the streak
+  index) and the guest plays that line, so both hear the same escalation.
+
+## Audio API (js/audio.js — window.AudioSys, mostly Web Audio synthesis)
+
+**Volume buses**: `master` feeds `ctx.destination`, and four category buses
+feed `master` — `music` (intro), `sfx` (waka, ghost/fruit, death, extra
+life), `loops` (siren/fright/retreat ambience) and `voices` (streak lines).
+`setVolume(cat, 0..1)` / `getVolume(cat)` drive them, the settings
+`volMaster/volMusic/volSfx/volLoops/volVoices` persist them, and `muted`
+still forces the master to 0 on top. `blip(..., bus)` picks the category
+('sfx' by default).
 
 `init()` (lazy AudioContext), `resume()` (call on first user gesture),
 `setMuted(b)`, `playIntro()` → returns duration ms (~4200; two-voice square
@@ -555,7 +584,7 @@ parties, answered with `full`). Cells are indices `row*28+col`.
   | `restart` and `b` is a `CFG.BADGES` id ('' = none yet).
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
-  'eatGhost'{g,pts,x,y,w} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
+  'eatGhost'{g,pts,x,y,w,c:streak} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
   'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
   'rematch' | 'emote'{w, e} | 'chat'{w, m} | 'badge'{w, b}}`.
 - Both directions: `bye {}` on leaving.
@@ -578,7 +607,10 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 7. Difficulty presets + granular sliders + persistence work; color applies
    live to Pac-Man and lives icons.
 8. Sounds: intro, waka, siren stages, fright, eat-ghost, retreat, death,
-   fruit, extra life — all synthesized, muteable.
+   fruit, extra life — all synthesized, muteable, and each category
+   (music / sfx / loops / voices) with its own volume. The four streak
+   voices escalate per chained ghost, reset with each energizer, count the
+   team's kills in 2-player and stay in sync online.
 9. Full game loop: menu → ready → play → death/level-up → game over → panel
    (play again / menu); pause works; high score persists.
 10. Spanish UI throughout; crisp pixel rendering at scale.

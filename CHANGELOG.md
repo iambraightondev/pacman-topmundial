@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Voces de racha al comer fantasmas y volumen por tipo de sonido
+
+- **Racha con voz**: comer fantasmas seguidos con el mismo energizante suelta
+  **"el hueso"** (1.º), **"el diablo"** (2.º), **"el huesaso"** (3.º) y
+  **"el diablo coño"** (4.º). Se reinicia con cada energizante, igual que la
+  cadena de 200/400/800/1600.
+- Funciona en **solo y en dúo**: la racha es del equipo, así que en pareja
+  escala aunque los fantasmas se los coman entre los dos. En online la lleva
+  el anfitrión y los dos oyen la misma voz.
+- Los audios viven en `audio/` dentro del proyecto (ya se pueden borrar de
+  Descargas). Son los **únicos archivos de audio** del juego; el resto sigue
+  sintetizado. Si no se pueden cargar —por ejemplo abriendo `index.html` con
+  doble clic, donde el navegador bloquea la lectura— el juego suena igual y
+  la pestaña SONIDO lo avisa.
+- **Volumen por categoría**: nueva pestaña SONIDO en OPCIONES con GENERAL,
+  MÚSICA, EFECTOS, AMBIENTE (sirena y modo azul) y VOCES, cada uno de 0 a
+  100 %, más el silencio de siempre. Se guardan con el resto de ajustes, y
+  hay botones para probar cada voz.
+
 ## 2026-08-04 · Maestrías separadas: en solo y en dúo
 
 - Las maestrías se dividen en **dos rutas independientes** con los mismos

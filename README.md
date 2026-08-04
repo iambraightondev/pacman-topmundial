@@ -13,7 +13,7 @@ Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
 
 ## Cómo jugar
 
-- **Windows**: doble clic en `jugar.bat` (levanta un servidor local y abre el navegador), o simplemente abre `index.html` directamente.
+- **Windows**: doble clic en `jugar.bat` (levanta un servidor local y abre el navegador). Se puede abrir `index.html` directamente, pero entonces el navegador bloquea la lectura de los audios y las **voces de racha no suenan**; el resto del juego funciona igual.
 - **Cualquier sistema**: `python -m http.server 8264` en la carpeta y visita `http://localhost:8264`.
 - **Controles**: flechas o WASD para moverte · `P` o `Esc` abren el **menú de
   pausa** (semitransparente, se sigue viendo el laberinto): REANUDAR
@@ -92,7 +92,8 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 - Tablas de velocidad por nivel, ralentización en el túnel, Cruise Elroy, contadores de salida de la casa de fantasmas (personales, globales tras perder vida, y temporizador de seguridad).
 - Frutas en 70 y 170 puntos comidos, cadena de fantasmas 200/400/800/1600, vida extra a los 10 000, niveles infinitos con la curva de dificultad del arcade.
 - Una mejora deliberada sobre el original: la colisión detecta el cruce de casillas en el mismo tick, así que no puedes atravesar fantasmas al cruzarte de frente (el arcade de 1980 sí lo permitía por error).
-- Sonido 100 % sintetizado en tiempo real con Web Audio API: melodía de inicio, waka-waka, sirenas progresivas, modo asustado, ojos volviendo a casa, muerte, fruta y vida extra.
+- Sonido sintetizado en tiempo real con Web Audio API: melodía de inicio, waka-waka, sirenas progresivas, modo asustado, ojos volviendo a casa, muerte, fruta y vida extra.
+- **Voces de racha**: al comer fantasmas seguidos con el mismo energizante suenan «el hueso», «el diablo», «el huesaso» y «el diablo coño». Es lo único grabado del juego (en `audio/`), y en dúo la racha cuenta para el equipo.
 
 **Personalización:**
 
@@ -114,6 +115,8 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 - **Top mundial**: clasificación de partidas de dúo compartida entre todos
   (ver más abajo cómo activarla).
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
+- **Volumen por tipo de sonido**: general, música, efectos, ambiente (sirena
+  y modo azul) y voces, cada uno por separado en OPCIONES → SONIDO.
 - Configuración y récords (1 jugador y equipo) guardados automáticamente en el navegador (localStorage).
 
 **Multijugador online (arquitectura):**
@@ -136,7 +139,8 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 index.html        Página principal
 css/style.css     Estilos y escalado pixel-perfect
 js/config.js      Constantes, laberinto y tablas del arcade
-js/audio.js       Síntesis de sonido (Web Audio API)
+js/audio.js       Sonido: síntesis (Web Audio) y voces de racha
+audio/            Voces de racha (los únicos archivos de audio)
 js/sprites.js     Sprites dibujados por código
 js/pacman.js      Jugador
 js/ghost.js       IA de los fantasmas

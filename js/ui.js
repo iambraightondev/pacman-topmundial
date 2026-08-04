@@ -18,7 +18,12 @@
     pacSpeedMult:   { min: 0.8, max: 1.3, int: false },
     frightMult:     { min: 0,   max: 2,   int: false },
     startLives:     { min: 1,   max: 5,   int: true },
-    startLevel:     { min: 1,   max: 21,  int: true }
+    startLevel:     { min: 1,   max: 21,  int: true },
+    volMaster:      { min: 0,   max: 1,   int: false },
+    volMusic:       { min: 0,   max: 1,   int: false },
+    volSfx:         { min: 0,   max: 1,   int: false },
+    volLoops:       { min: 0,   max: 1,   int: false },
+    volVoices:      { min: 0,   max: 1,   int: false }
   };
   var PRESET_NAMES = ['facil', 'normal', 'dificil', 'custom'];
   var LIVES_MODES = ['shared', 'individual'];
@@ -291,7 +296,8 @@
       var TABS = [
         ['dificultad', 'DIFICULTAD'],
         ['jugadores', 'JUGADORES'],
-        ['partida', 'PARTIDA']
+        ['partida', 'PARTIDA'],
+        ['sonido', 'SONIDO']
       ];
       var bar = document.createElement('div');
       bar.className = 'tab-row';
@@ -314,6 +320,7 @@
       var dif = this.tabPanes.dificultad;
       var jug = this.tabPanes.jugadores;
       var par = this.tabPanes.partida;
+      var son = this.tabPanes.sonido;
 
       /* ===== pestaña DIFICULTAD ===== */
       dif.appendChild(this.sectionTitle('DIFICULTAD'));
@@ -392,7 +399,14 @@
       lmNote.textContent = 'COMPARTIDAS: UN FONDO COMÚN PARA EL EQUIPO · INDIVIDUALES: QUIEN LAS PIERDE, MIRA';
       par.appendChild(lmNote);
 
-      par.appendChild(this.sectionTitle('SONIDO'));
+      var ctrlNote = document.createElement('div');
+      ctrlNote.className = 'note';
+      ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
+        'CTRL+ESPACIO TU MAESTRÍA · T CHAT (ONLINE)';
+      par.appendChild(ctrlNote);
+
+      /* ===== pestaña SONIDO ===== */
+      son.appendChild(this.sectionTitle('SONIDO'));
       var sndRow = document.createElement('div');
       sndRow.className = 'preset-row';
       this.soundBtns = {};
@@ -407,13 +421,37 @@
         self.soundBtns[p[0]] = b;
         sndRow.appendChild(b);
       });
-      par.appendChild(sndRow);
+      son.appendChild(sndRow);
 
-      var ctrlNote = document.createElement('div');
-      ctrlNote.className = 'note';
-      ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
-        'CTRL+ESPACIO TU MAESTRÍA · T CHAT (ONLINE)';
-      par.appendChild(ctrlNote);
+      son.appendChild(this.sectionTitle('VOLUMEN POR TIPO'));
+      CFG.SOUND_CATS.forEach(function (c) {
+        son.appendChild(self.makeSlider(c.key, c.name, 0, 1, 0.1,
+          function (v) { return Math.round(v * 100) + '%'; }, true));
+      });
+
+      var volNote = document.createElement('div');
+      volNote.className = 'note';
+      volNote.textContent = 'EFECTOS: WAKA, FANTASMAS, FRUTA... · ' +
+        'AMBIENTE: SIRENA Y MODO AZUL · VOCES: RACHA AL COMER FANTASMAS';
+      son.appendChild(volNote);
+
+      /* prueba rápida de las voces de racha */
+      son.appendChild(this.sectionTitle('VOCES DE RACHA'));
+      var vRow = document.createElement('div');
+      vRow.className = 'preset-row';
+      CFG.VOICE_NAMES.forEach(function (name, i) {
+        var b = self.makeButton((i + 1) + ' ' + name, function () {
+          self.resumeAudio();
+          if (window.AudioSys) AudioSys.playVoice(i);
+        });
+        b.classList.add('btn-preset');
+        vRow.appendChild(b);
+      });
+      son.appendChild(vRow);
+
+      this.voicesNote = document.createElement('div');
+      this.voicesNote.className = 'note';
+      son.appendChild(this.voicesNote);
 
       /* --- VOLVER (fuera de las pestañas) --- */
       var back = this.makeButton('VOLVER', function () {
@@ -586,7 +624,9 @@
       return row;
     },
 
-    makeSlider: function (key, label, min, max, step, fmt) {
+    /* plain: ajuste suelto (volúmenes); si no, tocarlo pasa la dificultad
+     * a PERSONALIZADA */
+    makeSlider: function (key, label, min, max, step, fmt, plain) {
       var self = this;
       var wrap = document.createElement('div');
       wrap.className = 'slider-row';
@@ -610,10 +650,14 @@
       input.addEventListener('input', function () {
         var v = parseFloat(input.value);
         window.PM.settings[key] = v;
-        window.PM.settings.difficultyPreset = 'custom';
+        if (plain) {
+          self.applyVolumes();
+        } else {
+          window.PM.settings.difficultyPreset = 'custom';
+          self.refreshPresetButtons();
+        }
         saveSettings();
         val.textContent = fmt(v);
-        self.refreshPresetButtons();
       });
 
       this.sliders[key] = { input: input, val: val, fmt: fmt };
@@ -641,6 +685,18 @@
 
     applyMute: function () {
       if (window.AudioSys) AudioSys.setMuted(!!window.PM.settings.muted);
+      this.applyVolumes();
+    },
+
+    /* Vuelca los volúmenes guardados a los buses del sistema de audio */
+    applyVolumes: function () {
+      if (!window.AudioSys || !AudioSys.setVolume) return;
+      var s = window.PM.settings;
+      AudioSys.setVolume('master', s.volMaster);
+      AudioSys.setVolume('music', s.volMusic);
+      AudioSys.setVolume('sfx', s.volSfx);
+      AudioSys.setVolume('loops', s.volLoops);
+      AudioSys.setVolume('voices', s.volVoices);
     },
 
     refreshPresetButtons: function () {
@@ -679,6 +735,12 @@
       this.livesModeBtns.individual.classList.toggle('active', s.livesMode === 'individual');
       this.soundBtns.si.classList.toggle('active', !s.muted);
       this.soundBtns.no.classList.toggle('active', !!s.muted);
+      if (this.voicesNote) {
+        var ready = window.AudioSys && AudioSys.voicesReady && AudioSys.voicesReady();
+        this.voicesNote.textContent = ready
+          ? 'SUENAN AL COMER FANTASMAS SEGUIDOS CON EL MISMO ENERGIZANTE'
+          : 'SI NO SUENAN, ABRE EL JUEGO DESDE UN SERVIDOR (JUGAR.BAT), NO CON DOBLE CLIC';
+      }
     },
 
     /* ------------------------------------------------------

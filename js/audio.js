@@ -12,6 +12,20 @@
   var muted = false;
   var MASTER_LEVEL = 0.25;
 
+  /* Buses por categoría: cada efecto se enchufa al suyo y el jugador
+   * regula cada uno por separado (ver AudioSys.setVolume).
+   *   music  — melodía de inicio
+   *   sfx    — waka, comer fantasma/fruta, muerte, vida extra...
+   *   loops  — sirena, modo azul, ojos volviendo (ambiente)
+   *   voices — voces de racha (los únicos archivos de audio) */
+  var buses = { music: null, sfx: null, loops: null, voices: null };
+  var levels = { master: 1, music: 1, sfx: 1, loops: 0.8, voices: 1 };
+
+  // ---- voces de racha (archivos, cargados una vez) ------------------------
+  var voiceBufs = [];      // índice -> AudioBuffer
+  var voiceTried = [];     // índice -> true si ya se intentó cargar
+  var voiceNode = null;    // voz sonando (se corta al encadenar otra)
+
   // ---- logical loop state (survives priority suspensions) -----------------
   var sirenOn = false, sirenStage = 0;
   var frightOn = false;
@@ -36,8 +50,12 @@
     return noiseBuf;
   }
 
+  /* Bus de salida de un efecto (por defecto, efectos) */
+  function out(bus) { return buses[bus] || buses.sfx || master; }
+
   // One enveloped oscillator note. Optional pitch glide f0 -> f1.
-  function blip(type, f0, f1, t0, dur, vol, attack) {
+  // `bus` elige la categoría de volumen ('sfx' si no se indica).
+  function blip(type, f0, f1, t0, dur, vol, attack, bus) {
     var osc = ctx.createOscillator();
     var g = ctx.createGain();
     var a = (attack === undefined) ? 0.004 : attack;
@@ -51,7 +69,7 @@
     g.gain.setValueAtTime(vol, t0 + Math.max(a, dur - 0.015));
     g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
     osc.connect(g);
-    g.connect(master);
+    g.connect(out(bus));
     osc.start(t0);
     osc.stop(t0 + dur + 0.02);
     return osc;
@@ -67,7 +85,7 @@
     f.frequency.setValueAtTime(cutoff, t0);
     g.gain.setValueAtTime(vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(f); f.connect(g); g.connect(master);
+    src.connect(f); f.connect(g); g.connect(out('sfx'));
     src.start(t0);
     src.stop(t0 + dur + 0.02);
   }
@@ -108,7 +126,7 @@
     cg.gain.setValueAtTime(0.0001, now());
     cg.gain.linearRampToValueAtTime(vol, now() + 0.03);
 
-    carrier.connect(filt); filt.connect(cg); cg.connect(master);
+    carrier.connect(filt); filt.connect(cg); cg.connect(out('loops'));
     carrier.start();
     lfo.start();
     loopNodes.push(carrier, lfo, cg, lg, filt);
@@ -140,6 +158,46 @@
   }
 
   // ==========================================================================
+  // Voces de racha: se cargan de audio/*.m4a y suenan por el bus 'voices'.
+  // Todo falla en silencio (sin red, sin permiso de fetch con file://, o
+  // formato no soportado): el juego sigue sonando igual.
+  // ==========================================================================
+  function voiceList() {
+    return (window.PM && window.PM.CFG && window.PM.CFG.VOICES) || [];
+  }
+
+  function loadVoice(i) {
+    if (!ctx || voiceBufs[i] || voiceTried[i]) return;
+    var url = voiceList()[i];
+    if (!url || !window.fetch) return;
+    voiceTried[i] = true;
+    fetch(url)
+      .then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+      .then(function (ab) {
+        if (!ab) return;
+        // decodeAudioData con callbacks: compatible con navegadores antiguos
+        ctx.decodeAudioData(ab, function (buf) { voiceBufs[i] = buf; },
+          function () { /* formato no soportado */ });
+      })
+      .catch(function () { /* sin acceso al archivo */ });
+  }
+
+  function applyLevels() {
+    if (!ctx) return;
+    var m = muted ? 0 : MASTER_LEVEL * levels.master;
+    try {
+      master.gain.cancelScheduledValues(now());
+      master.gain.setValueAtTime(m, now());
+      for (var k in buses) {
+        if (buses.hasOwnProperty(k) && buses[k]) {
+          buses[k].gain.cancelScheduledValues(now());
+          buses[k].gain.setValueAtTime(levels[k], now());
+        }
+      }
+    } catch (e) { /* contexto cerrado */ }
+  }
+
+  // ==========================================================================
   // Public API
   // ==========================================================================
   var AudioSys = {
@@ -151,9 +209,15 @@
       try {
         ctx = new AC();
         master = ctx.createGain();
-        master.gain.setValueAtTime(muted ? 0 : MASTER_LEVEL, ctx.currentTime);
         master.connect(ctx.destination);
+        for (var k in buses) {
+          if (!buses.hasOwnProperty(k)) continue;
+          buses[k] = ctx.createGain();
+          buses[k].connect(master);
+        }
+        applyLevels();
       } catch (e) { ctx = null; master = null; }
+      this.preloadVoices();
     },
 
     resume: function () {
@@ -161,15 +225,55 @@
       if (ctx.state === 'suspended') {
         try { ctx.resume().catch(function () {}); } catch (e) {}
       }
+      this.preloadVoices();
+    },
+
+    preloadVoices: function () {
+      if (!ctx) return;
+      var n = voiceList().length;
+      for (var i = 0; i < n; i++) loadVoice(i);
     },
 
     setMuted: function (b) {
       muted = !!b;
-      if (!ctx) return;
+      applyLevels();
+    },
+
+    /* cat: 'master' | 'music' | 'sfx' | 'loops' | 'voices'; v en 0..1 */
+    setVolume: function (cat, v) {
+      if (!levels.hasOwnProperty(cat)) return;
+      v = parseFloat(v);
+      if (isNaN(v)) return;
+      levels[cat] = Math.max(0, Math.min(1, v));
+      applyLevels();
+    },
+
+    getVolume: function (cat) {
+      return levels.hasOwnProperty(cat) ? levels[cat] : 1;
+    },
+
+    /* Voz de racha i (0..3). Corta la anterior para que no se solapen. */
+    playVoice: function (i) {
+      if (!ctx) return false;
+      i = i | 0;
+      var buf = voiceBufs[i];
+      if (!buf) { loadVoice(i); return false; }
       try {
-        master.gain.cancelScheduledValues(now());
-        master.gain.setValueAtTime(muted ? 0 : MASTER_LEVEL, now());
-      } catch (e) {}
+        if (voiceNode) { try { voiceNode.stop(); } catch (e) {} voiceNode = null; }
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(out('voices'));
+        src.onended = function () { if (voiceNode === src) voiceNode = null; };
+        src.start(now());
+        voiceNode = src;
+        return true;
+      } catch (e2) { return false; }
+    },
+
+    /* ¿hay alguna voz cargada? (para avisar en las opciones) */
+    voicesReady: function () {
+      for (var i = 0; i < voiceBufs.length; i++) if (voiceBufs[i]) return true;
+      return false;
     },
 
     // ---- intro jingle (~4200 ms). Original two-voice square melody. -------
@@ -196,16 +300,16 @@
         [52, 1], [53, 1], [55, 2], [48, 4]
       ];
 
-      function playVoice(seq, vol) {
+      function playPart(seq, vol) {
         var tt = t;
         for (var i = 0; i < seq.length; i++) {
           var d = seq[i][1] * U;
-          blip('square', mtof(seq[i][0]), 0, tt, d * 0.88, vol);
+          blip('square', mtof(seq[i][0]), 0, tt, d * 0.88, vol, undefined, 'music');
           tt += d;
         }
       }
-      playVoice(lead, 0.30);
-      playVoice(bass, 0.20);
+      playPart(lead, 0.30);
+      playPart(bass, 0.20);
       return DUR;
     },
 
@@ -267,7 +371,7 @@
       g.gain.linearRampToValueAtTime(0.38, t + 0.03);
       g.gain.setValueAtTime(0.38, t + 0.9);
       g.gain.linearRampToValueAtTime(0.0001, t + 1.12);
-      osc.connect(g); g.connect(master);
+      osc.connect(g); g.connect(out('sfx'));
       osc.start(t); osc.stop(t + 1.15);
       vib.start(t); vib.stop(t + 1.15);
       // ...then two little sputters (noise pop + upward blurt) ≈ 1.5 s total.

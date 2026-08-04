@@ -288,6 +288,27 @@
   ];
   CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
 
+  /* ---------- Voces de racha al comer fantasmas ----------
+   * Una por fantasma comido con el mismo energizante (1.º, 2.º, 3.º, 4.º).
+   * Son los únicos archivos de audio del juego; si no se pueden cargar
+   * (por ejemplo abriendo el juego con file://) el resto suena igual. */
+  CFG.VOICES = [
+    'audio/racha1-hueso.m4a',
+    'audio/racha2-diablo.m4a',
+    'audio/racha3-huesaso.m4a',
+    'audio/racha4-diablocono.m4a'
+  ];
+  CFG.VOICE_NAMES = ['EL HUESO', 'EL DIABLO', 'EL HUESASO', 'EL DIABLO COÑO'];
+
+  /* ---------- Categorías de volumen ---------- */
+  CFG.SOUND_CATS = [
+    { key: 'volMaster', name: 'GENERAL' },
+    { key: 'volMusic',  name: 'MÚSICA' },
+    { key: 'volSfx',    name: 'EFECTOS' },
+    { key: 'volLoops',  name: 'AMBIENTE' },
+    { key: 'volVoices', name: 'VOCES' }
+  ];
+
   /* ---------- Chat (modo online) ---------- */
   CFG.CHAT_MAX = 40;          // caracteres por mensaje
   CFG.CHAT_TICKS = 420;       // ~7 s visible
@@ -320,7 +341,12 @@
     frightMult: 1.0,              // 0–2, paso .25
     startLives: 3,                // 1–5
     startLevel: 1,                // 1–21
-    muted: false
+    muted: false,
+    volMaster: 1,                 // volúmenes por categoría, 0–1 (paso .1)
+    volMusic: 1,
+    volSfx: 1,
+    volLoops: 0.8,
+    volVoices: 1
   };
   CFG.PRESETS = {
     facil:   { ghostSpeedMult: 0.85, pacSpeedMult: 1.05, frightMult: 1.5, startLives: 5, startLevel: 1 },

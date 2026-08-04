@@ -870,7 +870,8 @@
      * Comer fantasmas / morir
      * --------------------------------------------------------- */
     eatGhost: function (g, who) {
-      var pts = CFG.GHOST_CHAIN[Math.min(this.chainIndex, 3)];
+      var streak = Math.min(this.chainIndex, 3);   // 0..3 dentro de la racha
+      var pts = CFG.GHOST_CHAIN[streak];
       this.chainIndex++;
       this.addScore(pts);
       this.addPopup(g.x, g.y, pts, CFG.EAT_FREEZE_TICKS);
@@ -879,8 +880,16 @@
       this.hiddenGhost = g.id;
       this.eaterIdx = who || 0;
       this.hostEvt({ t: 'eatGhost', g: g.id, pts: pts,
-        x: Math.round(g.x), y: Math.round(g.y), w: this.eaterIdx });
+        x: Math.round(g.x), y: Math.round(g.y), w: this.eaterIdx, c: streak });
       window.AudioSys && AudioSys.playEatGhost();
+      this.playStreakVoice(streak);
+    },
+
+    /* Voz de racha: 1.º "el hueso", 2.º "el diablo", 3.º "el huesaso",
+     * 4.º "el diablo coño". La racha es del equipo, así que en dúo cuentan
+     * los fantasmas que se coman entre los dos con el mismo energizante. */
+    playStreakVoice: function (streak) {
+      if (window.AudioSys && AudioSys.playVoice) AudioSys.playVoice(streak | 0);
     },
 
     /* Corta las animaciones de muerte a medias (al entrar en GAME OVER) */
@@ -1919,6 +1928,8 @@
           this.eaterIdx = e.w || 0;
           this.addPopup(e.x, e.y, e.pts, this.eatFreezeTicks);
           if (!predicted) window.AudioSys && AudioSys.playEatGhost();
+          // la racha la lleva el anfitrión: la voz sale con su número
+          this.playStreakVoice(e.c || 0);
           break;
         }
         case 'death': {
