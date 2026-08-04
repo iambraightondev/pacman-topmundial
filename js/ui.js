@@ -1264,17 +1264,28 @@
       var self = this;
       var bar = document.createElement('div');
       bar.id = 'emoteBar';
+      /* cada botón enseña la cara y su número (el mismo atajo de teclado) */
+      this.emoteFaces = [];
       CFG.EMOTES.forEach(function (e, i) {
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'emote-btn';
-        b.textContent = (i + 1) + ' ' + e.text;
+        b.title = (i + 1) + ' · ' + e.name;
+        b.setAttribute('aria-label', 'Emote ' + (i + 1) + ' ' + e.name);
+        var cv = document.createElement('canvas');
+        cv.width = 26; cv.height = 26;
+        b.appendChild(cv);
+        var num = document.createElement('span');
+        num.className = 'emote-num';
+        num.textContent = String(i + 1);
+        b.appendChild(num);
         b.addEventListener('click', function () {
           self.resumeAudio();
           window.PM.Game.sendEmote(i);
           self.toggleEmoteBar(false);
         });
         bar.appendChild(b);
+        self.emoteFaces.push({ canvas: cv, id: e.id });
       });
       /* misma acción que Ctrl+Espacio, para quien juega sin teclado */
       var mb = document.createElement('button');
@@ -1296,6 +1307,21 @@
       var show = (on === undefined) ? !this.emoteBarOpen : !!on;
       this.emoteBarOpen = show;
       this.emoteBar.classList.toggle('on', show);
+      if (show) this.refreshEmoteFaces();
+    },
+
+    /* Las caras de la barra, con el color del jugador local */
+    refreshEmoteFaces: function () {
+      if (!this.emoteFaces) return;
+      var g = window.PM.Game;
+      var color = g.colorFor(g.netRole ? g.localIdx : 0);
+      for (var i = 0; i < this.emoteFaces.length; i++) {
+        var it = this.emoteFaces[i];
+        var c = it.canvas.getContext('2d');
+        c.clearRect(0, 0, 26, 26);
+        c.imageSmoothingEnabled = false;
+        window.PM.Sprites.drawPacFace(c, 13, 13, 10, color, it.id);
+      }
     },
 
     /* Entrada de chat (solo online) */

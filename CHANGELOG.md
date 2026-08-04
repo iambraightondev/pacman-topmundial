@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Los emotes ahora son caras de Pac-Man
+
+- Los emotes dejan de ser texto: son **caras de Pac-Man dibujadas** —
+  **RISA**, **LLANTO**, **ENFADO**, **SUSTO**, **GUIÑO** y **AMOR**— con el
+  cuerpo del color de tu jugador y los rasgos encima (ojos en arco, cejas,
+  lagrimones, ojos de corazón...). Todo dibujado por código, sin imágenes, y
+  se leen bien al tamaño del juego.
+- **Las teclas `1`–`6` siguen el mismo orden de la lista** y la barra de
+  EMOTES muestra cada cara con su número en la esquina, pintada con tu color.
+  (Ojo: hasta la versión anterior los números solo funcionaban en partidas
+  de dos jugadores; ahora van en todos los modos.)
+- Corregido de paso: la barra de emotes se partía en dos líneas sin
+  necesidad, porque al centrarla con `left:50%` solo disponía de la mitad del
+  ancho del escenario.
+
 ## 2026-08-04 · Enseñar tu maestría con Ctrl+Espacio
 
 - **`Ctrl`+`Espacio` muestra tu maestría sobre tu Pac-Man**: un globo con la

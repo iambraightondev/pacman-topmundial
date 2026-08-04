@@ -263,15 +263,16 @@
   ];
   CFG.SKIN_IDS = ['clasico', 'ojos', 'neon', 'aro', 'pixel', 'sombra'];
 
-  /* ---------- Emotes (mensajes rápidos sobre tu Pac-Man) ----------
-   * icon: dibujo del globo (ver Sprites.drawEmote). */
+  /* ---------- Emotes: caras de Pac-Man sobre tu jugador ----------
+   * El orden es el de las teclas 1..6. id = expresión que dibuja
+   * Sprites.drawPacFace; name solo se usa para las etiquetas de los botones. */
   CFG.EMOTES = [
-    { text: '¡HOLA!',    icon: 'pac' },
-    { text: '¡VAMOS!',   icon: 'pac' },
-    { text: '¡CUIDADO!', icon: 'ghost' },
-    { text: '¡BIEN!',    icon: 'dot' },
-    { text: '¡UPS!',     icon: 'dead' },
-    { text: 'GRACIAS',   icon: 'fruit' }
+    { id: 'risa',   name: 'RISA' },
+    { id: 'llanto', name: 'LLANTO' },
+    { id: 'enfado', name: 'ENFADO' },
+    { id: 'susto',  name: 'SUSTO' },
+    { id: 'guino',  name: 'GUIÑO' },
+    { id: 'amor',   name: 'AMOR' }
   ];
   CFG.EMOTE_TICKS = 150;      // 2.5 s en pantalla
   CFG.EMOTE_COOLDOWN = 72;    // 1.2 s entre emotes (antispam)

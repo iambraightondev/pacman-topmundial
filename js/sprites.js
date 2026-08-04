@@ -111,19 +111,144 @@
   };
 
   /* ------------------------------------------------------------
-   * Globo de emote sobre un Pac-Man (procedural, sin recursos)
+   * Caras de Pac-Man para los emotes (todo dibujado, sin recursos).
+   * Cuerpo del color del jugador y rasgos en negro encima, para que
+   * las expresiones se lean incluso a 8 px de casilla.
    * ------------------------------------------------------------ */
+  function heart(ctx, x, y, s, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.9);
+    ctx.bezierCurveTo(x - s * 1.3, y - s * 0.2, x - s * 0.5, y - s * 1.1, x, y - s * 0.35);
+    ctx.bezierCurveTo(x + s * 0.5, y - s * 1.1, x + s * 1.3, y - s * 0.2, x, y + s * 0.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  Sprites.drawPacFace = function (ctx, x, y, r, color, id) {
+    var ink = '#000000';
+    var ex = r * 0.42;              // separación horizontal de los ojos
+    var ey = y - r * 0.26;          // altura de los ojos
+    var lw = Math.max(1, r * 0.17);
+
+    ctx.fillStyle = color || '#ffff00';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = lw;
+
+    function dot(dx, rr) {
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.arc(x + dx, ey, rr || r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* arco de boca: up = sonrisa, !up = mueca hacia abajo */
+    function mouthArc(up, wide) {
+      var mr = r * (wide ? 0.55 : 0.42);
+      var my = y + (up ? r * 0.12 : r * 0.42);
+      ctx.beginPath();
+      if (up) ctx.arc(x, my, mr, 0.15 * Math.PI, 0.85 * Math.PI);
+      else ctx.arc(x, my, mr, 1.15 * Math.PI, 1.85 * Math.PI);
+      ctx.stroke();
+    }
+    /* ojo cerrado y curvado (^ = contento, v = triste) */
+    function arcEye(dx, up) {
+      var er = r * 0.26;
+      ctx.beginPath();
+      if (up) ctx.arc(x + dx, ey + er * 0.5, er, 1.15 * Math.PI, 1.85 * Math.PI);
+      else ctx.arc(x + dx, ey - er * 0.5, er, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+    }
+
+    if (id === 'risa') {
+      arcEye(-ex, true);
+      arcEye(ex, true);
+      // boca abierta de carcajada: media luna rellena
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.12, r * 0.56, 0, Math.PI);
+      ctx.closePath();
+      ctx.fill();
+
+    } else if (id === 'llanto') {
+      arcEye(-ex, false);
+      arcEye(ex, false);
+      mouthArc(false, false);
+      // lagrimones
+      ctx.fillStyle = '#00ffff';
+      ctx.beginPath();
+      ctx.moveTo(x - ex, ey + r * 0.25);
+      ctx.lineTo(x - ex - r * 0.16, ey + r * 0.72);
+      ctx.lineTo(x - ex + r * 0.16, ey + r * 0.72);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + ex, ey + r * 0.25);
+      ctx.lineTo(x + ex - r * 0.16, ey + r * 0.62);
+      ctx.lineTo(x + ex + r * 0.16, ey + r * 0.62);
+      ctx.closePath();
+      ctx.fill();
+
+    } else if (id === 'enfado') {
+      dot(-ex);
+      dot(ex);
+      // cejas caídas hacia el centro
+      ctx.beginPath();
+      ctx.moveTo(x - ex - r * 0.3, ey - r * 0.5);
+      ctx.lineTo(x - ex + r * 0.28, ey - r * 0.18);
+      ctx.moveTo(x + ex + r * 0.3, ey - r * 0.5);
+      ctx.lineTo(x + ex - r * 0.28, ey - r * 0.18);
+      ctx.stroke();
+      mouthArc(false, true);
+
+    } else if (id === 'susto') {
+      // ojos muy abiertos
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x - ex, ey, r * 0.27, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + ex, ey, r * 0.27, 0, Math.PI * 2);
+      ctx.fill();
+      dot(-ex, r * 0.13);
+      dot(ex, r * 0.13);
+      // boca redonda de sorpresa
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.42, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (id === 'guino') {
+      dot(-ex, r * 0.14);
+      ctx.beginPath();                       // ojo guiñado
+      ctx.moveTo(x + ex - r * 0.25, ey);
+      ctx.lineTo(x + ex + r * 0.25, ey);
+      ctx.stroke();
+      mouthArc(true, true);
+
+    } else if (id === 'amor') {
+      heart(ctx, x - ex, ey, r * 0.3, '#ff0055');
+      heart(ctx, x + ex, ey, r * 0.3, '#ff0055');
+      mouthArc(true, false);
+
+    } else {
+      dot(-ex);
+      dot(ex);
+      mouthArc(true, false);
+    }
+  };
+
+  /* Globo de emote sobre un Pac-Man */
   Sprites.drawEmote = function (ctx, x, y, emoteId, color) {
     var e = CFG.EMOTES[emoteId];
     if (!e) return;
-    ctx.font = 'bold 7px monospace';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    var tw = ctx.measureText(e.text).width;
-    var padL = 12, padR = 5, h = 12;
-    var w = tw + padL + padR;
+    var w = 22, h = 20, r = 7;
     var bx = Math.round(x - w / 2), by = Math.round(y - h);
-
     // el globo no se sale del laberinto
     if (bx < 2) bx = 2;
     if (bx + w > CFG.NATIVE_W - 2) bx = CFG.NATIVE_W - 2 - w;
@@ -137,47 +262,7 @@
     ctx.fillStyle = color || '#ffffff';
     ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
 
-    // icono a la izquierda
-    var ix = bx + 6, iy = by + h / 2;
-    if (e.icon === 'pac') {
-      ctx.fillStyle = '#ffff00';
-      ctx.beginPath();
-      ctx.moveTo(ix, iy);
-      ctx.arc(ix, iy, 3.2, 0.5, -0.5 + Math.PI * 2);
-      ctx.closePath();
-      ctx.fill();
-    } else if (e.icon === 'ghost') {
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath();
-      ctx.arc(ix, iy - 0.5, 3, Math.PI, 0);
-      ctx.lineTo(ix + 3, iy + 3);
-      ctx.lineTo(ix - 3, iy + 3);
-      ctx.closePath();
-      ctx.fill();
-    } else if (e.icon === 'dot') {
-      ctx.fillStyle = CFG.COLORS.pellet;
-      ctx.beginPath();
-      ctx.arc(ix, iy, 2.6, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (e.icon === 'dead') {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(ix - 2.5, iy - 2.5); ctx.lineTo(ix + 2.5, iy + 2.5);
-      ctx.moveTo(ix + 2.5, iy - 2.5); ctx.lineTo(ix - 2.5, iy + 2.5);
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath();
-      ctx.arc(ix - 1.2, iy + 1, 2, 0, Math.PI * 2);
-      ctx.arc(ix + 1.2, iy + 1, 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#00aa00';
-      ctx.fillRect(ix - 0.5, iy - 3.5, 1, 2);
-    }
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(e.text, bx + padL, by + h / 2 + 0.5);
+    Sprites.drawPacFace(ctx, bx + w / 2, by + h / 2, r, color || '#ffff00', e.id);
   };
 
   /* Etiqueta de maestría sobre un jugador (Ctrl+Espacio).

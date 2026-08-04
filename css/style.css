@@ -624,38 +624,60 @@ input[type="range"] {
 .rank-lvl { color: #00ffff; font-size: 0.85em; }
 
 /* ---------- Emotes y chat en partida ---------- */
+/* Ocupa todo el ancho del escenario y centra los botones: con left:50% el
+ * ancho disponible se quedaba en la mitad y la fila se partía sin necesidad. */
 #emoteBar {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 4px;
+  right: 4px;
   top: 40px;
   z-index: 6;
   display: none;
   gap: 4px;
   flex-wrap: wrap;
   justify-content: center;
-  max-width: 96%;
+  align-items: center;
 }
 
 #emoteBar.on { display: flex; }
 
 .emote-btn {
+  position: relative;
   font-family: inherit;
   font-size: 10px;
   font-weight: bold;
   letter-spacing: 1px;
+  line-height: 0;
   color: #fff;
   background: rgba(0, 0, 0, 0.8);
   border: 1px solid #2121ff;
   border-radius: 4px;
-  padding: 6px 8px;
+  padding: 5px;
   cursor: pointer;
   touch-action: manipulation;
 }
 
+.emote-btn canvas { display: block; image-rendering: pixelated; }
+
+/* el número del atajo, en la esquina */
+.emote-num {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 8px;
+  line-height: 1;
+  color: #ffff00;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+
 .emote-btn:hover, .emote-btn:active { background: #2121ff; }
 
-.emote-btn.badge-emote { border-color: #ffff00; color: #ffff00; }
+.emote-btn.badge-emote {
+  border-color: #ffff00;
+  color: #ffff00;
+  line-height: 1;
+  padding: 6px 8px;
+}
 .emote-btn.badge-emote:hover, .emote-btn.badge-emote:active {
   background: #ffff00;
   color: #000;

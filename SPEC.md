@@ -289,11 +289,18 @@ arc), `ojos` (eye looking forward), `neon` (glow), `aro` (ring outline),
 lives icons and the option thumbnails (each thumbnail is a real mini-canvas
 render). Exchanged online in the handshake (`k` field → `Game.netSkins`).
 
-**Emotes** (`CFG.EMOTES`, 6 pac-themed one-liners): keys `1..6` or the
-EMOTES button. `Game.sendEmote(i)` shows a bubble (`Sprites.drawEmote`) over
-that Pac-Man for `EMOTE_TICKS`, with an `EMOTE_COOLDOWN` antispam gap.
-Online: guest `gevt {t:'emote', e}` → host re-broadcasts
-`evt {t:'emote', w, e}`; each side ignores the echo of its own.
+**Emotes** (`CFG.EMOTES`): six **drawn Pac-Man faces**, not words —
+`risa`, `llanto`, `enfado`, `susto`, `guino`, `amor`. `Sprites.drawPacFace`
+renders them procedurally: body in the player's own colour plus black
+features on top (arc/dot eyes, eyebrows, mouth shapes, cyan tears, heart
+eyes), so they read at 8 px tiles and identify who sent them. The array
+order **is** the key order: `1..6` fire the emote at that index (and the
+EMOTES bar shows each face with its number in the corner, drawn on a mini
+canvas in the local player's colour). `Game.sendEmote(i)` shows the bubble
+(`Sprites.drawEmote`) over that Pac-Man for `EMOTE_TICKS`, with an
+`EMOTE_COOLDOWN` antispam gap. Available in every mode. Online: guest
+`gevt {t:'emote', e}` → host re-broadcasts `evt {t:'emote', w, e}`; each side
+ignores the echo of its own.
 
 **Enseñar la maestría**: `Ctrl+Espacio` (or the MI MAESTRÍA button in the
 emote bar, for touch) puts your highest badge over your own Pac-Man —
@@ -449,6 +456,8 @@ In-game: "¡LISTO!", "PAUSA", "GAME OVER" (red). Ghost names on title screen
   flash swaps to white body/red face; eyes-mode draws only the eyes.
 - `drawFruit(ctx, x, y, fruitId)` — 8 fruits as ~14×14 pixel-matrix art
   (cherry, strawberry, peach, apple, grapes, galaxian, bell, key).
+- `drawPacFace(ctx, x, y, r, color, exprId)` — emote faces (see below);
+  `drawEmote` / `drawBadgeTag` wrap them in the speech bubble.
 - Score popups drawn as small cyan text.
 
 ## Audio API (js/audio.js — window.AudioSys, all Web Audio synthesis)
