@@ -53,6 +53,7 @@
     netSkins: null,    // skins online [J1, J2]
     netQueue: [],
     netWatch: 0,
+    posWatch: [],      // por jugador: ticks sin noticias suyas (anfitrión)
     netNotice: null,   // { text, ticks } — aviso y vuelta al menú
     snapTimer: 0, snapCount: 0, posTimer: 0,
     outEaten: [],      // invitado: celdas comidas pendientes de enviar
@@ -317,6 +318,7 @@
       /* red */
       this.netQueue = [];
       this.netWatch = 0;
+      this.posWatch = [];       // silencio de cada jugador (anfitrión, 3 y 4)
       this.netNotice = null;
       this.snapTimer = 0; this.snapCount = 0; this.posTimer = 0;
       this.outEaten = []; this.recentEaten = {}; this.snapEaten = [];
@@ -436,7 +438,11 @@
     toMenu: function () {
       if (this.netRole) {
         try { window.PM.Net.send('bye', {}); } catch (e) { /* canal cerrado */ }
-        window.PM.Net.leave();
+        // Si venimos de una party el canal NO se cierra: el grupo sigue junto
+        // en el menú y el líder puede echar otra sin volver a pasar el código.
+        var P = window.PM.Party;
+        if (P && P.inParty()) P.resume();
+        else window.PM.Net.leave();
         this.netRole = null;
         this.netColors = null;
         this.netNames = null;
@@ -1543,8 +1549,12 @@
       this.netQueue = [];
       for (var i = 0; i < q.length; i++) {
         this.netWatch = 0;
+        if (this.netRole === 'host') {
+          var quien = this.idxOfSender(q[i][1], q[i][2]);
+          if (quien > 0) this.posWatch[quien] = 0;
+        }
         if (this.netRole === 'host') this.hostMsg(q[i][0], q[i][1], q[i][2]);
-        else if (this.netRole === 'guest') this.guestMsg(q[i][0], q[i][1]);
+        else if (this.netRole === 'guest') this.guestMsg(q[i][0], q[i][1], q[i][2]);
       }
     },
 
@@ -1562,6 +1572,16 @@
         return;
       }
       if (this.netRole === 'host') {
+        /* Con más de dos, el vigilante general no basta: mientras uno hable
+         * los demás podrían estar callados y sus Pac-Man quedarse clavados.
+         * Cada jugador tiene el suyo y al que calla se le deja de espectador. */
+        if (this.playerCount > 2) {
+          for (var w = 1; w < this.pacs.length; w++) {
+            if (this.pacs[w].out) continue;
+            this.posWatch[w] = (this.posWatch[w] || 0) + 1;
+            if (this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
+          }
+        }
         this.snapTimer++;
         if (this.snapTimer >= CFG.NET.SNAP_EVERY) {
           this.snapTimer = 0;
@@ -1586,6 +1606,35 @@
 
     peerLeft: function () {
       this.netFail('EL OTRO JUGADOR HA SALIDO');
+    },
+
+    /* Con 3 y 4 jugadores, que uno se vaya no puede cargarse la partida de
+     * los demás: se queda de espectador y los otros siguen. */
+    dropPlayer: function (i) {
+      var p = this.pacs[i];
+      if (!p || p.out) return;
+      p.out = true;
+      p.lives = 0;
+      p.dying = false;
+      if (this.livesMode !== 'individual' && this.lives > 0) {
+        // vidas compartidas: no se le regalan al resto las que no gastó
+      }
+      this.setFlash((this.rawName(i) || ('J' + (i + 1))) + ' SE HA IDO');
+      if (this.netRole === 'host') this.hostEvt({ t: 'left', i: i });
+      if (this.netRole === 'host' && !this.anyPlaying() && this.state === 'PLAYING') {
+        this.state = 'GAME_OVER';
+        this.phaseTicks = CFG.GAMEOVER_TICKS;
+        this.overIdle = false;
+        this.persistHighScore();
+        this.hostEvt({ t: 'gameOver' });
+        this.syncUI();
+      }
+    },
+
+    /* Alguien deja la partida: uno menos si el grupo era grande */
+    playerGone: function (i) {
+      if (this.playerCount > 2 && i >= 0 && i < this.pacs.length) this.dropPlayer(i);
+      else this.peerLeft();
     },
 
     onNetClosed: function () {
@@ -1682,7 +1731,7 @@
           this.netSend('full', { to: sid });
           break;
         case 'bye':
-          this.peerLeft();
+          this.playerGone(this.idxOfSender(data, sid));
           break;
       }
     },
@@ -1797,11 +1846,17 @@
     /* =========================================================
      * RED — invitado
      * ========================================================= */
-    guestMsg: function (name, data) {
+    guestMsg: function (name, data, sid) {
       switch (name) {
         case 'snap': if (data) this.applySnapshot(data); break;
         case 'evt':  if (data) this.applyEvt(data); break;
-        case 'bye':  this.peerLeft(); break;
+        case 'bye': {
+          // si se va el anfitrión se acabó; si se va otro invitado, sigue
+          var i = this.idxOfSender(data, sid);
+          if (i <= 0) this.peerLeft();
+          else this.playerGone(i);
+          break;
+        }
       }
     },
 
@@ -2043,6 +2098,9 @@
       switch (e.t) {
         case 'ready':
           this.guestReady(e);
+          break;
+        case 'left':                 // el anfitrión avisa de quién se ha ido
+          if (e.i !== this.localIdx) this.dropPlayer(e.i);
           break;
         case 'fright':
           this.chainIndex = 0;

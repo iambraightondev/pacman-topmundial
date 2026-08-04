@@ -499,6 +499,107 @@
   });
 
   // ---------------------------------------------------------------
+  // Party (salas de grupo)
+  // ---------------------------------------------------------------
+  /* Party de mentira: la lista de miembros sin tocar la red */
+  function party(nombres, colores) {
+    var P = window.PM.Party;
+    P.st = { code: 'ABCD', leader: true, members: [], status: 'dentro',
+             joinTimer: null };
+    for (var i = 0; i < nombres.length; i++) {
+      P.st.members.push({ s: 'sid' + i, n: nombres[i],
+                          c: (colores && colores[i]) || '#ffff00',
+                          k: 'clasico', t: new Date().getTime() });
+    }
+    return P;
+  }
+
+  test('en la party los colores repetidos se reparten', function () {
+    var P = party(['ANA', 'BENI', 'CARLOS'], ['#ffff00', '#ffff00', '#ff00ff']);
+    try {
+      var ord = P.gameOrder();
+      eq(ord.length, 3);
+      eq(ord[0].c, '#ffff00');
+      eq(ord[1].c, CFG.PLAYER_COLORS[1], 'al repetido se le da el de su puesto');
+      eq(ord[2].c, '#ff00ff', 'el que ya era distinto se queda');
+    } finally { P.st = null; P.order = null; }
+  });
+
+  test('la party no arranca con menos de dos', function () {
+    G.toMenu();                     // sin partida en marcha
+    var P = party(['ANA']);
+    try {
+      ok(!P.canStart(), 'con uno no');
+      P.st.members.push({ s: 'sid1', n: 'BENI', c: '#00ff00', k: 'clasico',
+                          t: new Date().getTime() });
+      ok(P.canStart(), 'con dos sí');
+      P.st.leader = false;
+      ok(!P.canStart(), 'solo el líder empieza');
+      P.st.leader = true;
+      partida(2);
+      ok(!P.canStart(), 'ni en mitad de una partida');
+    } finally { P.st = null; P.order = null; G.toMenu(); }
+  });
+
+  test('cada miembro sabe qué jugador le toca', function () {
+    var P = party(['ANA', 'BENI', 'CARLOS', 'DIEGO']);
+    try {
+      P.order = P.gameOrder();
+      eq(P.indexOf('sid0'), 0);
+      eq(P.indexOf('sid3'), 3);
+      eq(P.indexOf('desconocido'), -1);
+    } finally { P.st = null; P.order = null; }
+  });
+
+  test('hay salida propia y color para cada uno de los cuatro', function () {
+    for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
+      eq(CFG.STARTS[n].length, n, 'salidas para ' + n);
+      var vistos = {};
+      for (var i = 0; i < n; i++) {
+        var k = CFG.STARTS[n][i].x + ',' + CFG.STARTS[n][i].y;
+        ok(!vistos[k], 'dos jugadores no salen de la misma casilla');
+        vistos[k] = 1;
+      }
+    }
+    eq(CFG.PLAYER_COLORS.length, CFG.MAX_PLAYERS);
+  });
+
+  // ---------------------------------------------------------------
+  // Caídas con grupo grande
+  // ---------------------------------------------------------------
+  test('si se va uno de cuatro, los demás siguen jugando', function () {
+    partida(4, 'host');
+    G.playerGone(2);
+    ok(G.pacs[2].out, 'el que se fue queda de espectador');
+    eq(G.netNotice, null, 'la partida no se corta');
+    eq(G.state, 'PLAYING');
+    ok(G.anyPlaying(), 'quedan jugadores');
+  });
+
+  test('en dúo, si se va el otro sí se acaba', function () {
+    partida(2, 'host');
+    G.playerGone(1);
+    ok(G.netNotice, 'aviso de partida cortada');
+    G.netNotice = null;
+  });
+
+  test('el que deja de mandar noticias se queda fuera, no congela al resto',
+    function () {
+      partida(4, 'host');
+      G.posWatch = [];
+      // el jugador 1 sigue hablando; el 2 y el 3 se han quedado mudos
+      for (var i = 0; i < CFG.NET.DROP_TICKS + 2; i++) {
+        G.netWatch = 0;
+        G.posWatch[1] = 0;
+        G.netMaintain();
+      }
+      ok(!G.pacs[1].out, 'el que habla sigue jugando');
+      ok(G.pacs[2].out && G.pacs[3].out, 'los callados quedan de espectadores');
+      eq(G.netNotice, null, 'sin corte de partida');
+      eq(G.state, 'PLAYING');
+    });
+
+  // ---------------------------------------------------------------
   // Aviso de maestría animado
   // ---------------------------------------------------------------
   test('el aviso de maestría dura y se apaga solo', function () {

@@ -133,13 +133,15 @@
       window.addEventListener('resize', function () { self.fitCanvas(); });
       this.showMenu();
 
-      /* enlace compartido ?sala=CODE: entrar directo al lobby */
+      this.partyHooks();
+
+      /* enlace compartido ?sala=CODE: entrar directo a la party */
       var rc = window.PM.Net && window.PM.Net.roomFromUrl();
       if (rc) {
         this.showOnline();
         if (window.PM.Net.configured()) {
           this.codeInput.value = rc;
-          this.joinFlow(rc);
+          this.partyJoin(rc);
         }
       }
     },
@@ -235,10 +237,11 @@
         window.PM.Game.newGame({ players: 2 });
       }));
 
-      m.appendChild(this.makeButton('JUGAR ONLINE', function () {
+      this.onlineMenuBtn = this.makeButton('JUGAR ONLINE', function () {
         self.resumeAudio();
         self.showOnline();
-      }));
+      });
+      m.appendChild(this.onlineMenuBtn);
 
       var extras = document.createElement('div');
       extras.className = 'preset-row';
@@ -782,7 +785,8 @@
 
       var sub = document.createElement('div');
       sub.className = 'note';
-      sub.textContent = 'DOS JUGADORES CONTRA LOS FANTASMAS · PUNTUACIÓN DE EQUIPO';
+      sub.textContent = 'HASTA ' + CFG.MAX_PLAYERS +
+        ' JUGADORES CONTRA LOS FANTASMAS · PUNTUACIÓN DE EQUIPO';
       o.appendChild(sub);
 
       /* --- vista inicial --- */
@@ -795,7 +799,7 @@
       this.onlineWarn.style.display = 'none';
       idle.appendChild(this.onlineWarn);
 
-      var create = this.makeButton('CREAR SALA', function () { self.hostFlow(); });
+      var create = this.makeButton('CREAR PARTY', function () { self.partyCreate(); });
       create.classList.add('btn-primary');
       this.createBtn = create;
       idle.appendChild(create);
@@ -822,20 +826,17 @@
       });
       this.codeInput.addEventListener('keydown', function (ev) {
         ev.stopPropagation();   // que WASD no mueva el juego mientras se escribe
-        if (ev.key === 'Enter') self.joinFlow(self.codeInput.value);
+        if (ev.key === 'Enter') self.partyJoin(self.codeInput.value);
       });
       joinRow.appendChild(this.codeInput);
       this.joinBtn = this.makeButton('UNIRSE', function () {
-        self.joinFlow(self.codeInput.value);
+        self.partyJoin(self.codeInput.value);
       });
       this.joinBtn.classList.add('btn-preset');
       joinRow.appendChild(this.joinBtn);
       idle.appendChild(joinRow);
 
-      var back = this.makeButton('VOLVER', function () {
-        self.cancelLobby();
-        self.showMenu();
-      });
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.style.marginTop = '14px';
       idle.appendChild(back);
       o.appendChild(idle);
@@ -848,7 +849,7 @@
 
       var lab = document.createElement('div');
       lab.className = 'section-title';
-      lab.textContent = 'CÓDIGO DE SALA';
+      lab.textContent = 'CÓDIGO DE LA PARTY';
       room.appendChild(lab);
 
       this.roomCodeEl = document.createElement('div');
@@ -865,16 +866,41 @@
       this.copyBtn.classList.add('btn-preset');
       room.appendChild(this.copyBtn);
 
+      var lab2 = document.createElement('div');
+      lab2.className = 'section-title';
+      lab2.textContent = 'EN LA PARTY';
+      room.appendChild(lab2);
+
+      this.partyList = document.createElement('div');
+      this.partyList.className = 'friend-list';
+      room.appendChild(this.partyList);
+
       this.lobbyStatusEl = document.createElement('div');
       this.lobbyStatusEl.className = 'lobby-status';
       room.appendChild(this.lobbyStatusEl);
 
-      var cancel = this.makeButton('CANCELAR', function () {
-        self.cancelLobby();
-        self.showOnlineIdle();
+      this.startPartyBtn = this.makeButton('EMPEZAR PARTIDA', function () {
+        self.partyStart();
       });
-      cancel.style.marginTop = '10px';
-      room.appendChild(cancel);
+      this.startPartyBtn.classList.add('btn-primary');
+      room.appendChild(this.startPartyBtn);
+
+      this.inviteBtn = this.makeButton('INVITAR AMIGO', function () {
+        self.askInviteWho();
+      });
+      this.inviteBtn.classList.add('btn-preset');
+      room.appendChild(this.inviteBtn);
+
+      var volver = this.makeButton('VOLVER AL MENÚ', function () {
+        self.showMenu();      // la party sigue conectada
+      });
+      volver.style.marginTop = '10px';
+      room.appendChild(volver);
+
+      var salir = this.makeButton('SALIR DE LA PARTY', function () {
+        self.partyLeave();
+      });
+      room.appendChild(salir);
       o.appendChild(room);
     },
 
@@ -897,18 +923,10 @@
       this.codeInput.disabled = !ok;
     },
 
-    showOnlineRoom: function (code, status) {
-      this.onlineIdle.style.display = 'none';
-      this.onlineRoom.style.display = 'flex';
-      this.roomCodeEl.textContent = code.split('').join(' ');
-      this.roomLinkEl.textContent = window.PM.Net.roomLink(code);
-      this.copyBtn.textContent = 'COPIAR ENLACE';
-      this.setLobbyStatus(status || '');
-    },
-
     copyLink: function () {
       var self = this;
-      var text = window.PM.Net.roomLink(this.lobby ? this.lobby.code : '');
+      var P = window.PM.Party;
+      var text = window.PM.Net.roomLink((P && P.code()) || '');
       function done() {
         self.copyBtn.textContent = '¡COPIADO!';
         setTimeout(function () { self.copyBtn.textContent = 'COPIAR ENLACE'; }, 1500);
@@ -950,161 +968,209 @@
       return out;
     },
 
-    /* ----- anfitrión: crear sala y esperar al jugador 2 ----- */
-    hostFlow: function () {
+    /* ----- party: crear, unirse, invitar y empezar -----
+     * La party no se cierra al volver al menú ni al acabar la partida: el
+     * grupo sigue junto y el líder puede echar otra sin pasar el código. */
+    partyHooks: function () {
       var self = this;
-      if (!window.PM.Net.configured()) return;
-      var code = window.PM.Net.randomCode();
-      this.lobby = { mode: 'host', code: code, locked: false, peerColor: null };
-      window.PM.Net.handler = function (n, d, sid) { self.hostLobbyData(n, d, sid); };
-      window.PM.Net.onclose = function () { self.lobbyClosed(); };
-      this.showOnlineRoom(code, 'CONECTANDO...');
-      window.PM.Net.connect(code, {
-        onOpen: function () {
-          if (self.lobby && self.lobby.mode === 'host') {
-            self.setLobbyStatus('ESPERANDO AL JUGADOR 2...');
-          }
-        },
-        onError: function (msg) { self.lobbyError(msg || 'SIN CONEXIÓN'); }
-      });
+      var P = window.PM.Party;
+      if (!P) return;
+      P.onchange = function () {
+        self.refreshParty();
+        self.refreshOnlineBtn();
+      };
+      P.onerror = function (msg) { self.partyError(msg); };
+      P.oninvite = function (from, code) { self.askInvite(from, code); };
+      P.onstart = function (order, idx, cfg, role) {
+        self.startPartyGame(order, idx, cfg, role);
+      };
+      P.listen();
     },
 
-    hostLobbyData: function (name, data, sid) {
-      var self = this;
-      if (!this.lobby || this.lobby.mode !== 'host') return;
-      if (name !== 'hello') return;
-      if (this.lobby.locked) {
-        window.PM.Net.send('full', { to: sid });
-        return;
-      }
-      if (!data || data.v !== CFG.NET.PROTO) {
-        window.PM.Net.send('full', { to: sid });
-        this.setLobbyStatus('EL OTRO JUGADOR TIENE OTRA VERSIÓN DEL JUEGO', true);
-        return;
-      }
-      this.lobby.locked = true;
-      this.lobby.peerColor = sanitizeSetting('pac2Color', data.c, '#00ff00');
-      this.lobby.peerName = sanitizeNick(data.n);
-      this.lobby.peerSkin = sanitizeSetting('skin2', data.k, 'clasico');
-      window.PM.Net.lockPeer(sid);
-      window.PM.Net.send('cfg', {
-        v: CFG.NET.PROTO,
-        c: window.PM.settings.pacColor,
-        n: window.PM.settings.nick1,
-        k: window.PM.settings.skin1,
-        cfg: this.netCfgSubset()
-      });
-      this.setLobbyStatus('¡' + (this.lobby.peerName || 'JUGADOR 2') +
-        ' EN LA SALA! EMPEZANDO...');
-      setTimeout(function () {
-        if (!self.lobby || self.lobby.mode !== 'host') return;
-        window.PM.Net.send('start', {});
-        self.startOnlineGame('host');
-      }, 800);
+    partyCreate: function () {
+      var P = window.PM.Party;
+      if (!P || !window.PM.Net.configured()) return;
+      this.onlineWarn.style.display = 'none';
+      P.create();
     },
 
-    /* ----- invitado: unirse con código ----- */
-    joinFlow: function (code) {
-      var self = this;
-      if (!window.PM.Net.configured()) return;
+    partyJoin: function (code) {
+      var P = window.PM.Party;
+      if (!P || !window.PM.Net.configured()) return;
       code = String(code || '').toUpperCase().replace(/[^A-Z]/g, '');
       if (code.length !== CFG.NET.ROOM_LEN) {
-        this.setLobbyStatus('');
         this.onlineWarn.style.display = 'block';
         this.onlineWarn.textContent = 'EL CÓDIGO TIENE ' + CFG.NET.ROOM_LEN + ' LETRAS';
         return;
       }
       this.onlineWarn.style.display = 'none';
-      this.lobby = { mode: 'join', code: code, locked: false, hostCfg: null, hostColor: null, timer: null };
-      window.PM.Net.handler = function (n, d, sid) { self.guestLobbyData(n, d, sid); };
-      window.PM.Net.onclose = function () { self.lobbyClosed(); };
-      this.showOnlineRoom(code, 'CONECTANDO...');
-      window.PM.Net.connect(code, {
-        onOpen: function () {
-          if (!self.lobby || self.lobby.mode !== 'join') return;
-          window.PM.Net.send('hello', {
-            v: CFG.NET.PROTO,
-            c: window.PM.settings.pac2Color,
-            n: window.PM.settings.nick1,
-            k: window.PM.settings.skin1
-          });
-          self.setLobbyStatus('BUSCANDO LA SALA...');
-          self.lobby.timer = setTimeout(function () {
-            if (self.lobby && self.lobby.mode === 'join' && !self.lobby.locked) {
-              self.lobbyError('NO SE ENCONTRÓ LA SALA ' + code);
-            }
-          }, CFG.NET.HELLO_TIMEOUT_MS);
-        },
-        onError: function (msg) { self.lobbyError(msg || 'SIN CONEXIÓN'); }
+      P.join(code);
+    },
+
+    partyLeave: function () {
+      var P = window.PM.Party;
+      if (P) P.leave();
+      this.showOnlineIdle();
+    },
+
+    partyStart: function () {
+      var P = window.PM.Party;
+      if (P) P.startGame();
+    },
+
+    partyError: function (msg) {
+      this.showOnlineIdle();
+      this.onlineWarn.style.display = 'block';
+      this.onlineWarn.textContent = msg || 'SIN CONEXIÓN';
+    },
+
+    /* Lista de miembros y estado de los botones */
+    refreshParty: function () {
+      var P = window.PM.Party;
+      if (!this.onlineRoom || !P) return;
+      if (!P.inParty()) {
+        if (this.els.online.style.display !== 'none') this.showOnlineIdle();
+        return;
+      }
+      this.onlineIdle.style.display = 'none';
+      this.onlineRoom.style.display = 'flex';
+      var code = P.code() || '';
+      this.roomCodeEl.textContent = code.split('').join(' ');
+      this.roomLinkEl.textContent = window.PM.Net.roomLink(code);
+
+      var ms = P.members();
+      this.partyList.innerHTML = '';
+      for (var i = 0; i < ms.length; i++) {
+        var row = document.createElement('div');
+        row.className = 'party-row';
+
+        var dot = document.createElement('span');
+        dot.className = 'party-dot';
+        dot.style.background = ms[i].c || CFG.PLAYER_COLORS[i];
+        row.appendChild(dot);
+
+        var n = document.createElement('span');
+        n.className = 'friend-name';
+        n.textContent = ms[i].n || ('J' + (i + 1));
+        row.appendChild(n);
+
+        var tag = document.createElement('span');
+        tag.className = 'party-tag';
+        tag.textContent = (i === 0 ? 'LÍDER' : '') +
+          (ms[i].s === window.PM.Net.sid ? (i === 0 ? ' · TÚ' : 'TÚ') : '');
+        row.appendChild(tag);
+
+        this.partyList.appendChild(row);
+      }
+
+      var lider = P.isLeader();
+      this.startPartyBtn.style.display = lider ? '' : 'none';
+      this.startPartyBtn.disabled = !P.canStart();
+      this.startPartyBtn.textContent = 'EMPEZAR PARTIDA (' + P.count() + ')';
+      this.inviteBtn.disabled = !P.active();
+      this.setLobbyStatus(
+        P.connecting() ? 'CONECTANDO...'
+        : lider ? (P.count() < 2 ? 'ESPERANDO A MÁS JUGADORES...'
+                                 : 'CUANDO QUIERAS, EMPEZAD')
+                : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
+    },
+
+    /* Invitar: se le manda el código a su canal personal (su nombre) */
+    askInviteWho: function () {
+      var self = this;
+      var F = window.PM.Friends;
+      var list = F ? F.all() : [];
+      var btns = [];
+      list.slice(0, 3).forEach(function (name) {
+        btns.push({
+          label: name,
+          onClick: function () { self.hidePrompt(); self.sendInvite(name); }
+        });
+      });
+      btns.push({
+        label: 'OTRO NOMBRE',
+        onClick: function () { self.hidePrompt(); self.askInviteName(); }
+      });
+      btns.push({ label: 'VOLVER', onClick: function () { self.hidePrompt(); } });
+      this.showPrompt({
+        title: 'INVITAR A LA PARTY',
+        lines: list.length ? ['ELIGE A QUIÉN AVISAR']
+                           : ['NO TIENES AMIGOS GUARDADOS TODAVÍA'],
+        buttons: btns
       });
     },
 
-    guestLobbyData: function (name, data, sid) {
-      if (!this.lobby || this.lobby.mode !== 'join') return;
-      if (name === 'cfg') {
-        if (!data || data.v !== CFG.NET.PROTO) {
-          this.lobbyError('EL ANFITRIÓN TIENE OTRA VERSIÓN DEL JUEGO');
-          return;
-        }
-        if (this.lobby.timer) { clearTimeout(this.lobby.timer); this.lobby.timer = null; }
-        this.lobby.locked = true;
-        this.lobby.hostCfg = data.cfg;
-        this.lobby.hostColor = sanitizeSetting('pacColor', data.c, '#ffff00');
-        this.lobby.hostName = sanitizeNick(data.n);
-        this.lobby.hostSkin = sanitizeSetting('skin1', data.k, 'clasico');
-        window.PM.Net.lockPeer(sid);
-        this.setLobbyStatus('CON ' + (this.lobby.hostName || 'EL ANFITRIÓN') +
-          ' · EMPEZANDO...');
-      } else if (name === 'start') {
-        if (this.lobby.locked) this.startOnlineGame('guest');
-      } else if (name === 'full') {
-        if (data && data.to === window.PM.Net.sid) {
-          this.lobbyError('LA SALA ESTÁ LLENA');
-        }
+    askInviteName: function () {
+      var self = this;
+      function enviar() {
+        var v = self.promptInput ? self.promptInput.value : '';
+        self.hidePrompt();
+        self.sendInvite(v);
       }
+      this.showPrompt({
+        title: 'INVITAR A LA PARTY',
+        lines: ['ESCRIBE SU NOMBRE DE JUGADOR'],
+        input: { placeholder: 'NOMBRE', onAccept: function () { enviar(); } },
+        buttons: [
+          { label: 'INVITAR', primary: true, onClick: enviar },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+      if (this.promptInput) this.promptInput.focus();
     },
 
-    startOnlineGame: function (role) {
-      var lb = this.lobby;
-      if (!lb) return;
-      if (lb.timer) clearTimeout(lb.timer);
-      this.lobby = null;
+    sendInvite: function (name) {
+      var self = this;
+      var P = window.PM.Party;
+      if (!P) return;
+      this.setLobbyStatus('ENVIANDO INVITACIÓN...');
+      P.invite(name, function (ok, msg) {
+        self.setLobbyStatus(msg || '', !ok);
+      });
+    },
+
+    /* Nos invitan: preguntar antes de mover a nadie de sitio */
+    askInvite: function (from, code) {
+      var self = this;
+      if (window.PM.Game && window.PM.Game.inGame()) return;   // en partida, no
+      this.showPrompt({
+        title: 'INVITACIÓN',
+        lines: [(from || 'ALGUIEN') + ' TE INVITA A SU PARTY',
+                { text: code.split('').join(' '), big: true }],
+        buttons: [
+          { label: 'ENTRAR', primary: true, keys: ['Enter'], hint: 'ENTER',
+            onClick: function () {
+              self.hidePrompt();
+              self.showOnline();
+              self.partyJoin(code);
+            } },
+          { label: 'AHORA NO', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    startPartyGame: function (order, idx, cfg, role) {
+      this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
-      var me = sanitizeNick(window.PM.settings.nick1);
-      var mySkin = sanitizeSetting('skin1', window.PM.settings.skin1, 'clasico');
-      var colors, names, skins, cfg = null;
-      if (role === 'host') {
-        colors = [window.PM.settings.pacColor, lb.peerColor || '#00ff00'];
-        names = [me || 'J1', lb.peerName || 'J2'];
-        skins = [mySkin, lb.peerSkin || 'clasico'];
-      } else {
-        colors = [lb.hostColor || '#ffff00', window.PM.settings.pac2Color];
-        names = [lb.hostName || 'J1', me || 'J2'];
-        skins = [lb.hostSkin || 'clasico', mySkin];
-        cfg = this.sanitizeNetCfg(lb.hostCfg);
+      var colors = [], names = [], skins = [];
+      for (var i = 0; i < order.length; i++) {
+        colors.push(sanitizeSetting('pacColor', order[i].c, CFG.PLAYER_COLORS[i]));
+        names.push(sanitizeNick(order[i].n) || ('J' + (i + 1)));
+        skins.push(sanitizeSetting('skin1', order[i].k, 'clasico'));
       }
       window.PM.Game.newGame({
-        players: 2, net: role, cfg: cfg,
+        players: order.length, net: role, localIdx: idx,
+        cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
         colors: colors, names: names, skins: skins
       });
     },
 
-    lobbyError: function (msg) {
-      this.cancelLobby();
-      this.showOnlineIdle();
-      this.onlineWarn.style.display = 'block';
-      this.onlineWarn.textContent = msg;
-    },
-
-    lobbyClosed: function () {
-      if (this.lobby) this.lobbyError('SE PERDIÓ LA CONEXIÓN');
-    },
-
     cancelLobby: function () {
-      if (this.lobby && this.lobby.timer) clearTimeout(this.lobby.timer);
-      this.lobby = null;
-      window.PM.Net.leave();
+      var P = window.PM.Party;
+      if (P) P.leave();
     },
 
     /* ------------------------------------------------------
@@ -1733,6 +1799,23 @@
         p.appendChild(d);
       });
 
+      /* campo de texto opcional (invitar a alguien por su nombre) */
+      this.promptInput = null;
+      if (o.input) {
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'nick-input';
+        inp.maxLength = o.input.maxLength || CFG.NICK_MAX;
+        inp.placeholder = o.input.placeholder || '';
+        inp.setAttribute('autocomplete', 'off');
+        inp.addEventListener('keydown', function (ev) {
+          ev.stopPropagation();
+          if (ev.key === 'Enter' && o.input.onAccept) o.input.onAccept(inp.value);
+        });
+        p.appendChild(inp);
+        this.promptInput = inp;
+      }
+
       this.promptStatusEl = null;
       if (typeof o.status === 'string') {
         var st = document.createElement('div');
@@ -2115,7 +2198,21 @@
     showMenu: function () {
       this.refreshNicks();
       this.refreshLevel();
+      this.refreshOnlineBtn();
+      // el canal personal va atado al nombre: si se ha cambiado, se rehace
+      if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');
+    },
+
+    /* El botón del menú avisa de si ya estamos en una party */
+    refreshOnlineBtn: function () {
+      var P = window.PM.Party;
+      if (!this.onlineMenuBtn) return;
+      var txt = 'JUGAR ONLINE';
+      if (P && P.inParty()) {
+        txt = 'PARTY (' + P.count() + '/' + CFG.MAX_PLAYERS + ')';
+      }
+      this.onlineMenuBtn.childNodes[0].nodeValue = txt;
     },
 
     /* Nivel de jugador en la portada */
@@ -2136,8 +2233,10 @@
       this.showPanel('options');
     },
     showOnline: function () {
+      var P = window.PM.Party;
       this.showPanel('online');
-      this.showOnlineIdle();
+      if (P && P.inParty()) this.refreshParty();
+      else this.showOnlineIdle();
     },
     showBadges: function () {
       this.refreshBadges();
@@ -2238,8 +2337,7 @@
             ev.preventDefault();
           } else if (ev.key === 'Escape') {
             if (self.els.online.style.display !== 'none') {
-              self.cancelLobby();
-              self.showMenu();
+              self.showMenu();      // salir del panel no deshace la party
             } else if (self.els.options.style.display !== 'none' ||
                        self.els.badges.style.display !== 'none' ||
                        self.els.ranking.style.display !== 'none' ||

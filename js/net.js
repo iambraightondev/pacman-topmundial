@@ -42,12 +42,12 @@
     this.open = false;
   }
 
-  SupaTransport.prototype.connect = function (code, cbs) {
+  SupaTransport.prototype.connect = function (topic, cbs) {
     var self = this;
     var base = String(this.url).replace(/\/+$/, '').replace(/^http/, 'ws');
     var wsUrl = base + '/realtime/v1/websocket?apikey=' +
       encodeURIComponent(this.key) + '&vsn=1.0.0';
-    this.topic = 'realtime:sala:' + code;
+    this.topic = 'realtime:' + topic;
 
     var ws;
     try { ws = new WebSocket(wsUrl); }
@@ -134,12 +134,12 @@
    * ------------------------------------------------------------ */
   function LocalTransport() { this.bc = null; }
 
-  LocalTransport.prototype.connect = function (code, cbs) {
+  LocalTransport.prototype.connect = function (topic, cbs) {
     if (typeof BroadcastChannel === 'undefined') {
       cbs.onError('SIN CONEXIÓN');
       return;
     }
-    this.bc = new BroadcastChannel('pm-sala-' + code);
+    this.bc = new BroadcastChannel('pm-' + topic);
     this.bc.onmessage = function (ev) {
       if (ev.data) cbs.onData(ev.data.e, ev.data.p);
     };
@@ -162,7 +162,7 @@
    * ------------------------------------------------------------ */
   var Net = {
     sid: randomId(),     // identificador de esta sesión
-    peerSid: null,       // sesión del otro jugador (se fija en el saludo)
+    peers: [],           // sesiones aceptadas ([] = se acepta a cualquiera)
     transport: null,
     code: null,
     handler: null,       // function(name, data, sid) — lo fijan ui.js / game.js
@@ -200,33 +200,70 @@
       return link;
     },
 
+    newTransport: function () {
+      var c = window.PM.NET_CFG || {};
+      return this.forcedLocal()
+        ? new LocalTransport()
+        : new SupaTransport(c.SUPABASE_URL, c.SUPABASE_KEY);
+    },
+
+    /* Canal suelto, aparte del de la partida: lo usan los avisos personales
+     * (invitaciones) y las invitaciones salientes. Devuelve { send, close }. */
+    openChannel: function (topic, cbs) {
+      var self = this;
+      var tr = this.newTransport();
+      cbs = cbs || {};
+      var ch = {
+        send: function (name, data) { tr.send(name, { s: self.sid, d: data }); },
+        close: function () { tr.close(); }
+      };
+      tr.connect(topic, {
+        onOpen: function () { if (cbs.onOpen) cbs.onOpen(); },
+        onError: function (m) { if (cbs.onError) cbs.onError(m); },
+        onClose: function () { if (cbs.onClose) cbs.onClose(); },
+        onData: function (name, wrap) {
+          if (!wrap || wrap.s === self.sid) return;
+          if (cbs.onData) cbs.onData(name, wrap.d, wrap.s);
+        }
+      });
+      return ch;
+    },
+
+    /* Canal principal: party y partida comparten el mismo, así el grupo
+     * sigue conectado al volver al menú. */
     connect: function (code, cbs) {
       this.leaveTransport();
       this.code = code;
-      this.peerSid = null;
-      var c = window.PM.NET_CFG || {};
-      this.transport = this.forcedLocal()
-        ? new LocalTransport()
-        : new SupaTransport(c.SUPABASE_URL, c.SUPABASE_KEY);
+      this.peers = [];
+      this.transport = this.newTransport();
       var self = this;
-      this.transport.connect(code, {
+      this.transport.connect('sala:' + code, {
         onOpen: function () { if (cbs.onOpen) cbs.onOpen(); },
         onError: function (m) { if (cbs.onError) cbs.onError(m); },
         onClose: function () { if (self.onclose) self.onclose(); },
         onData: function (name, wrap) {
           if (!wrap || wrap.s === self.sid) return;
-          // con pareja fijada solo se aceptan sus mensajes (y saludos de terceros)
-          if (self.peerSid && wrap.s !== self.peerSid && name !== 'hello') return;
+          if (!self.accepts(wrap.s, name)) return;
           if (self.handler) self.handler(name, wrap.d, wrap.s);
         }
       });
+    },
+
+    /* Con la partida ya cerrada solo se atiende a los suyos; los saludos de
+     * terceros pasan siempre, que alguien tiene que contestarles. */
+    accepts: function (sid, name) {
+      if (!this.peers.length) return true;
+      if (name === 'hello') return true;
+      return this.peers.indexOf(sid) !== -1;
     },
 
     send: function (name, data) {
       if (this.transport) this.transport.send(name, { s: this.sid, d: data });
     },
 
-    lockPeer: function (sid) { this.peerSid = sid; },
+    lockPeer: function (sid) { this.peers = [sid]; },
+    lockPeers: function (sids) { this.peers = (sids || []).slice(); },
+    unlockPeers: function () { this.peers = []; },
 
     leaveTransport: function () {
       if (this.transport) { this.transport.close(); this.transport = null; }
@@ -235,7 +272,7 @@
     leave: function () {
       this.leaveTransport();
       this.code = null;
-      this.peerSid = null;
+      this.peers = [];
       this.handler = null;
       this.onclose = null;
     }

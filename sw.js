@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v3';
+var VERSION = 'pm-v4';
 var SHELL = [
   './',
   './index.html',
@@ -25,6 +25,7 @@ var SHELL = [
   './js/ghost.js',
   './js/net-config.js',
   './js/net.js',
+  './js/party.js',
   './js/badges.js',
   './js/history.js',
   './js/level.js',
