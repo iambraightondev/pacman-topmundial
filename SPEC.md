@@ -19,19 +19,52 @@ travels in the snapshot (`tm`), so the host owns it.
 
 **Amigos** (`PM.Friends`, `CFG.FRIENDS_KEY`): a local list of names —
 add/remove, sanitised like nicknames, no duplicates, cannot add yourself.
-Inviting them and spectating comes with the party rooms.
+Each row can invite them to the party and spectate their game (see Party).
 
 **Pausa**: `Game.canPause()` allows the menu in any in-game state except
 GAME OVER (and while a net notice is up), so `Escape`/`P` also work during a
 death animation or a level change — before, being killed locked you out.
 
+## Party (salas de grupo persistentes) — `PM.Party`
+
+The party and the game share ONE channel (`sala:<code>`), so joining once is
+enough: returning to the menu or finishing a game does **not** disband the
+group (`Game.toMenu()` calls `Party.resume()` instead of `Net.leave()`).
+
+- Membership messages are `p`-prefixed so they never clash with game ones:
+  `phello` (each member beats every 2 s), `proster` (the leader owns and
+  broadcasts the list), `pbye`, `pfull`, `pstart` (leader starts; carries the
+  ordered roster and the host settings). Members not heard from in 7 s drop
+  off the list. Beating pauses while a game is running.
+- `pstart` gives everyone their own index: `order[i].s === Net.sid` →
+  `localIdx`. `Net.lockPeers(others)` then filters the channel, and
+  `Party.indexOf(sid)` is what `Game.idxOfSender` uses with 3 and 4 players.
+- Duplicate colours are re-assigned to `CFG.PLAYER_COLORS[i]` so no two
+  Pac-Men look the same.
+- **Invitations**: every player also listens on a personal channel
+  (`usuario:<nick>`, opened by `Party.listen()` from `showMenu`). An invite is
+  a one-shot channel to the friend's topic carrying the party code; the same
+  topic answers `donde` with `aqui {code, jugando}` for spectating.
+- With **more than two players**, a `bye` or a silent player no longer kills
+  the game: `Game.dropPlayer(i)` benches them (`out`) and the rest keep
+  playing. The host runs a per-player watchdog (`posWatch[]`) because the
+  global one only needs *somebody* to talk.
+
+**Espectador** (`net: 'spec'`, `localIdx = -1`): the host answers a
+`hello {spec:1}` with `svista` (player count, names, colours, skins, settings)
+plus a full snapshot with pellets. The spectator runs the guest loop with no
+Pac-Man of its own: it sends nothing, cannot eat, chat, emote or surrender,
+its pause is local, and the game never counts as its own (no history, no XP,
+no ranking).
+
 ## App instalable (PWA) y pruebas
 
 `manifest.json` + `sw.js` make the game installable and playable offline:
 the shell (HTML, CSS, every `js/`, the streak audio and the icons) is
-precached; navigations are **network-first** so a new deploy shows up at
-once and still works without a connection, everything else is
-stale-while-revalidate, and cross-origin requests (Supabase: rooms and
+precached; **all code** (HTML, CSS, JS, JSON) is **network-first** so a new
+deploy shows up at once and still works without a connection — with the copy
+first you kept seeing the previous version for a whole visit. Media (audio,
+icons) is cache-first, and cross-origin requests (Supabase: rooms and
 ranking) always bypass the worker. Registered only over http(s) — with
 `file://` there is no service worker and the game runs as before. Icons in
 `icons/` are the game's own Pac-Man rendered to PNG.
@@ -39,8 +72,9 @@ ranking) always bypass the worker. Registered only over http(s) — with
 `tests.html` runs `js/tests.js`: a dependency-free suite over the real
 modules, covering what has broken before (per-player death, the `dy`
 keep-alive that once froze the other player, streak voices, the solo/duo
-badge split, ranking guards, history, chat sanitising, pause). Open it from
-a server like the game; results also land in `window.__TESTS`.
+badge split, ranking guards, history, chat sanitising, pause, party rosters,
+big-group drop-outs, spectating). Open it from a server like the game;
+results also land in `window.__TESTS`.
 
 ## Hard constraints
 
@@ -59,10 +93,12 @@ a server like the game; results also land in `window.__TESTS`.
   - `js/ghost.js`   — ghost AI (defines `PM.Ghost`)
   - `js/net-config.js` — Supabase credentials placeholder (defines `PM.NET_CFG`)
   - `js/net.js`     — realtime transport for online mode (defines `PM.Net`)
+  - `js/party.js`   — persistent group rooms and invites (defines `PM.Party`)
   - `js/game.js`    — state machine + fixed-timestep loop (defines `PM.Game`)
-  - `js/ui.js`      — menus, settings panel, online lobby (defines `PM.UI`)
+  - `js/ui.js`      — menus, settings panel, party panel (defines `PM.UI`)
   - Script order in index.html: config, audio, sprites, pacman, ghost,
-    net-config, net, game, ui.
+    net-config, net, party, badges, history, level, friends, ranking,
+    game, ui.
 - Rendering: native resolution 224×288 px (28×36 tiles of 8 px: 3 top rows for
   scores, 31 maze rows, 2 bottom rows for lives/fruits). Integer-scale up (×2.5
   or ×3) with `imageSmoothingEnabled=false` for crisp pixels. Game logic runs in
@@ -362,11 +398,17 @@ Every API takes the mode (`best/earned/top/next/has/claim`), and
 from the record, so nothing can desync; localStorage (`CFG.BADGES_KEY`) only
 stores which ones were already announced, now as `{solo:[], duo:[]}` — an old
 flat array is migrated into both tracks so nothing gets re-announced.
-Beating a record calls `Game.checkBadges()` and a new tier shows an in-game
-banner ("¡MAESTRÍA DE SOLO/DÚO!") with its medal (`Sprites.drawBadge`). The
-MAESTRÍAS panel has an EN SOLO / EN DÚO tab pair, each listing the six tiers
-with that track's record and what is missing for the next one. `Ctrl+Espacio`
-shows the badge of the **mode being played**.
+`Game.checkBadges()` runs on **every score change** and shows the banner
+(`Sprites.drawBadgeBanner`) each time the run crosses a tier — once per tier
+per game, tracked in `Game.badgeRun`. Announcing only the first time in a
+player's life meant anyone holding most tiers never saw it again; the
+lifetime `claim()` now only decides the wording ("¡NUEVA MAESTRÍA DE …!" vs
+"MAESTRÍA DE …!"). The guest also gets it when the snapshot brings the score.
+The MAESTRÍAS panel has an EN SOLO / EN DÚO tab pair, each listing the six
+tiers with that track's record, what is missing for the next one, and a `VER`
+button that plays the banner in the panel (`UI.playBadgeDemo`, which advances
+by a **capped** per-frame delta so a throttled browser slows it down instead
+of skipping it). `Ctrl+Espacio` shows the badge of the **mode being played**.
 
 **Top mundial** (`PM.Ranking`): games are posted to a Supabase table via
 PostgREST with the anon key — no SDK. There are **two separate boards**, told
@@ -593,9 +635,12 @@ OPCIONES. Shared 2-player rules (both modes):
   lives (icons in each player's color, ≤3 shown), a player at 0 becomes a
   spectator, GAME OVER when everyone is out. Any death runs the classic
   full-reset sequence (ghosts home, global dot counter active).
-- **Spawns**: symmetric on the classic row — P1 (11.5, 23) facing LEFT,
-  P2 (15.5, 23) facing RIGHT ("J1"/"J2" labels shown during READY).
-  1-player mode keeps the classic (13.5, 23).
+- **Spawns** (`CFG.STARTS`, indexed by player count): symmetric on the
+  classic row — P1 (11.5, 23) facing LEFT, P2 (15.5, 23) facing RIGHT
+  ("J1"/"J2" labels shown during READY). 1-player keeps the classic
+  (13.5, 23). With **3 and 4** (online party only) the extra players start
+  on the top row (11.5/15.5, 5), never beside you; each gets its own colour
+  from `CFG.PLAYER_COLORS`.
 - **Ghost AI**: each ghost applies its own personality to the nearest alive
   player (euclidean tile distance); Inky still doubles from Blinky's tile;
   Clyde's 8-tile rule uses the chosen player. Players pass through each other.
@@ -605,9 +650,10 @@ OPCIONES. Shared 2-player rules (both modes):
 host's difficulty settings + livesMode + startLevel are imposed):
 
 - Rooms: 4-letter code (alphabet without I/O), shareable link `?sala=CODE`
-  which auto-joins on load. Handshake: guest `hello{v,color,name}` → host
-  `cfg{v,color,name,cfg}` → host `start` → both `newGame`. Third joiner gets
-  `full`. Protocol version `PM.CFG.NET.PROTO` (= 3) must match.
+  which auto-joins on load. The lobby **is the party** (see Party): the
+  leader is J1 and `pstart` hands out the indices; whoever arrives once the
+  game started gets `full` (unless they come to spectate). Protocol version
+  `PM.CFG.NET.PROTO` (= 4) must match.
 - Transport (`PM.Net`): Supabase Realtime broadcast channels over a minimal
   hand-written Phoenix WebSocket client (heartbeat every 25 s; no database
   usage), credentials in `js/net-config.js` (`PM.NET_CFG`). Dev transport
@@ -633,12 +679,17 @@ host's difficulty settings + livesMode + startLevel are imposed):
 
 ### Wire messages (reference)
 
-Every payload travels wrapped as `{s: senderId, d: data}`; after the
-handshake only the locked peer is accepted (plus `hello` from third
-parties, answered with `full`). Cells are indices `row*28+col`.
+Every payload travels wrapped as `{s: senderId, d: data}`; once the game
+starts only the locked peers are accepted (`Net.lockPeers`), plus `hello`
+from third parties. Cells are indices `row*28+col`.
 
-- Lobby: `hello {v, c(olor), n(ame), k(skin)}` → `cfg {v, c, n, k, cfg}` →
-  `start {}`; rejections: `full {to}`.
+- Party (before the game, same channel): `phello {v, n, c, k}` →
+  `proster {v, lider, m:[{s,n,c,k}]}` → `pstart {v, ord:[{s,n,c,k}], cfg}`;
+  leaving is `pbye {lider?}`, rejection `pfull {to}`.
+- Personal channel `usuario:<nick>`: `invite {code, from}` and
+  `donde {}` → `aqui {code, jugando, n}`.
+- Spectator: `hello {v, spec:1}` → `svista {v, to, n, nm[], co[], sk[], cfg}`
+  plus an immediate full `snap`.
 - Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell], dy?}` every 5 ticks,
   sooner on turns or eats; `dy:1` while dying (keep-alive whose position the
   host must ignore); `gevt {t: 'died' |
@@ -649,14 +700,17 @@ parties, answered with `full`). Cells are indices `row*28+col`.
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
   'eatGhost'{g,pts,x,y,w,c:streak} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
   'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
-  'rematch' | 'emote'{w, e} | 'chat'{w, m} | 'badge'{w, b}}`.
-- Both directions: `bye {}` on leaving.
+  'rematch' | 'emote'{w, e} | 'chat'{w, m} | 'badge'{w, b} | 'left'{i}}`.
+- Both directions: `bye {}` on leaving. With 3 and 4 players a `bye` from a
+  guest only benches that player (`left`), it does not end the game.
 - `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`
   (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),
   `fz hg ei` (eat-freeze/hidden ghost/eater), `dl de fa` (dots/fruit),
   `he` (cells eaten since last snap), `lv out` (lives/spectators),
   `pd[i]` (per-player death: `0` or `[phase, ticks]`; the guest ignores its
-  own entry), `p0 {x,y,d,nd}` (host pac), `g[4] {x,y,d,m,f,lp}` (ghosts), `pm?`.
+  own entry), `p0 {x,y,d,nd}` (host pac), `ps[i] {x,y,d,nd}` (every player,
+  needed with 3 and 4 where each only knows its own; each client skips its
+  own entry), `g[4] {x,y,d,m,f,lp}` (ghosts), `tm` (clock), `pm?`.
 
 ## Acceptance checklist (verifiers use this)
 
@@ -686,8 +740,14 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 12. Online: create/join rooms by 4-letter code and `?sala=` link; host
     settings imposed and colors exchanged; guest's own Pac-Man has no input
     lag; dots, fright, ghost eats, fruit, deaths, level changes, pause and
-    game over stay in sync; disconnect/leave notices work; a third joiner
-    is rejected with `full`; version mismatch is reported.
+    game over stay in sync; disconnect/leave notices work; joining a game
+    already running is rejected with `full`; version mismatch is reported.
+12b. Party: the group survives going back to the menu and finishing a game;
+    the leader owns the roster and starts; 3 and 4 players each get their
+    own index, spawn and colour; a member who leaves or goes silent is
+    benched (with more than two) instead of ending everyone's game;
+    invitations reach a friend by name; spectating a friend shows their
+    game live without a Pac-Man and never counts as your own game.
 13. Mobile: crisp scaling; swipe + on-screen D-pads (one centered, or two
     corner pads in local 2-player) and pause button, shown on touch devices
     only and only during a game; panels full-screen on small viewports;

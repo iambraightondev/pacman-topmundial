@@ -2,6 +2,39 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Partys persistentes, hasta 4 jugadores, invitaciones y ver partidas
+
+- **Partys persistentes**: se entra una vez con el código y el grupo **sigue
+  junto** al volver al menú o al acabar la partida. El líder puede echar otra
+  sin volver a pasar el código. El botón del menú avisa con `PARTY (n/4)`.
+  Dentro se ve el código, el enlace, la lista de miembros con su color, y hay
+  botones para invitar, empezar, volver al menú (sin salirse) y salir.
+- **Invitar a un amigo por su nombre**: cada jugador escucha un canal propio,
+  así que se puede invitar a alguien aunque no esté en la party. Al invitado
+  le sale un aviso para entrar o dejarlo. También hay botón `INVITAR` en cada
+  fila de AMIGOS.
+- **Partidas de 3 y 4 jugadores**: cada uno con su salida (los dos primeros
+  abajo, los otros dos arriba), su color y su índice. Los colores repetidos
+  se reparten solos para poder distinguirse.
+- **Ver la partida de un amigo**: desde AMIGOS, `VER PARTIDA` le pregunta
+  dónde está jugando y entra solo a mirar: sin Pac-Man propio, sin chat, sin
+  emotes y sin rendirse. Lo que se ve no cuenta como partida propia (ni
+  historial, ni experiencia, ni ranking). Como el canal de partida es uno,
+  para mirar hay que dejar la party propia, y se avisa antes.
+- **Con más de dos, la caída de uno ya no corta la partida**: quien se va o
+  se queda sin conexión pasa a espectador y los demás siguen. Cada jugador
+  tiene ahora su propio vigilante: antes, con el general, uno mudo se
+  quedaba clavado mientras los otros hablaban.
+- **La maestría vuelve a verse**: el cartel salía **una sola vez en la vida**,
+  así que quien ya tenía casi todas no lo volvía a ver nunca. Ahora se
+  celebra cada vez que se cruza un escalón dentro de la partida (una vez por
+  partida y escalón) y el texto distingue si es nueva o ya conseguida.
+  Además, cada fila del panel MAESTRÍAS tiene `VER` para verlo entero.
+- **Corregido el retraso tras cada despliegue**: el service worker servía el
+  código guardado primero, así que se seguía viendo la versión anterior una
+  visita entera. Ahora el código va a la red primero y la copia es el
+  respaldo.
+
 ## 2026-08-04 · Nivel de jugador, cronómetro, amigos, maestría animada y arreglos
 
 - **Nivel de jugador infinito**: los puntos de todas tus partidas suman
