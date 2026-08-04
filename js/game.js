@@ -1132,7 +1132,9 @@
     sendBadgeTag: function () {
       if (!this.canEmote()) return;
       var who = this.netRole ? this.localIdx : 0;
-      var top = window.PM.Badges && window.PM.Badges.top();
+      // la del modo en curso: en una partida de dúo se enseña la de dúo
+      var B = window.PM.Badges;
+      var top = B && B.top(this.badgeMode());
       var id = top ? top.id : '';
       this.emoteCooldown = CFG.EMOTE_COOLDOWN;
       this.showBadgeTag(who, id);
@@ -1192,12 +1194,22 @@
       }
     },
 
-    /* ---------- Maestrías ---------- */
+    /* ---------- Maestrías ----------
+     * Cada modo tiene su propia ruta: una partida de dúo no entrega
+     * insignias de solo, y al revés. */
+    badgeMode: function () {
+      return (this.playerCount === 2) ? 'duo' : 'solo';
+    },
+
     checkBadges: function () {
-      if (!window.PM.Badges) return;
-      var b = window.PM.Badges.claim(Math.max(this.score, window.PM.Badges.best()));
+      var B = window.PM.Badges;
+      if (!B) return;
+      var mode = this.badgeMode();
+      var b = B.claim(Math.max(this.score, B.best(mode)), mode);
       if (b) {
-        this.badgeNotice = { name: b.name, color: b.color, ticks: 240 };
+        this.badgeNotice = {
+          name: b.name, color: b.color, mode: B.modeName(mode), ticks: 240
+        };
         window.AudioSys && AudioSys.playExtraLife();
       }
     },
@@ -2407,7 +2419,8 @@
         window.PM.Sprites.drawBadge(ctx, 30, by, 8, this.badgeNotice.color, false);
         ctx.font = 'bold 7px monospace';
         ctx.fillStyle = '#ffffff';
-        ctx.fillText('¡MAESTRÍA CONSEGUIDA!', 122, by - 4);
+        ctx.fillText('¡MAESTRÍA DE ' + (this.badgeNotice.mode || 'SOLO') + '!',
+          122, by - 4);
         ctx.font = 'bold 9px monospace';
         ctx.fillStyle = this.badgeNotice.color;
         ctx.fillText(this.badgeNotice.name, 122, by + 6);

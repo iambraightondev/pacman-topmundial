@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Maestrías separadas: en solo y en dúo
+
+- Las maestrías se dividen en **dos rutas independientes** con los mismos
+  seis escalones: **EN SOLO** (tu récord de un jugador) y **EN DÚO** (el
+  récord de equipo). Una gran partida en pareja ya no regala las insignias
+  de solo, ni al revés.
+- El panel MAESTRÍAS tiene ahora las pestañas **EN SOLO** y **EN DÚO**, cada
+  una con su récord, sus insignias conseguidas y lo que falta para la
+  siguiente.
+- El aviso en partida dice de qué ruta es ("¡MAESTRÍA DE DÚO!"), y
+  `Ctrl`+`Espacio` enseña **la del modo que estás jugando**.
+- Lo que ya tuvieras conseguido se conserva: la lista antigua de insignias
+  anunciadas se reparte entre las dos rutas, así que no vuelven a salir
+  avisos de maestrías viejas.
+
 ## 2026-08-04 · Los emotes ahora son caras de Pac-Man
 
 - Los emotes dejan de ser texto: son **caras de Pac-Man dibujadas** —

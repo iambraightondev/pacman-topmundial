@@ -107,9 +107,10 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 - **Emotes**: seis caras de Pac-Man (risa, llanto, enfado, susto, guiño y
   amor) con las teclas `1`–`6`, en el color de tu jugador. Y **chat** (`T`)
   en el modo online.
-- **Maestrías**: seis insignias por récord personal, con aviso al
-  conseguirlas y su propio panel en el menú. Con **`Ctrl`+`Espacio`** (o el
-  botón MI MAESTRÍA) la enseñas sobre tu Pac-Man, y en online la ve tu dúo.
+- **Maestrías**: seis insignias por récord personal, en **dos rutas
+  separadas** —en solo y en dúo—, con aviso al conseguirlas y su propio panel
+  en el menú. Con **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del
+  modo que estés jugando sobre tu Pac-Man, y en online la ve tu dúo.
 - **Top mundial**: clasificación de partidas de dúo compartida entre todos
   (ver más abajo cómo activarla).
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.

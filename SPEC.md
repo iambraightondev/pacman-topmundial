@@ -303,7 +303,8 @@ canvas in the local player's colour). `Game.sendEmote(i)` shows the bubble
 ignores the echo of its own.
 
 **Enseñar la maestría**: `Ctrl+Espacio` (or the MI MAESTRÍA button in the
-emote bar, for touch) puts your highest badge over your own Pac-Man —
+emote bar, for touch) puts your highest badge **of the current mode's track**
+over your own Pac-Man —
 `Sprites.drawBadgeTag`, same bubble as the emotes with the medal and the
 badge colour, sharing the emote slot (`{tag, color, ticks}` instead of `{e}`)
 and cooldown. Badges are per-device, so the wire carries the **id** and the
@@ -311,12 +312,23 @@ receiver looks it up in `CFG.BADGES`: guest `gevt {t:'badge', b}` → host
 `evt {t:'badge', w, b}`, same echo guard. An empty id means "SIN MAESTRÍA",
 which is what a player with no badge yet shows. Works in every mode.
 
-**Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers by personal best
-(APRENDIZ 3 000 → TOP MUNDIAL 100 000). Earned badges are derived from the
-record, so nothing can desync; localStorage (`CFG.BADGES_KEY`) only stores
-which ones were already announced. Beating a record calls `Game.checkBadges()`
-and a new tier shows an in-game banner with its medal (`Sprites.drawBadge`).
-The MAESTRÍAS panel lists all tiers with progress to the next one.
+**Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers (APRENDIZ 3 000 → TOP
+MUNDIAL 100 000) on **two independent tracks**, so a big duo run never hands
+out the solo badges:
+
+- `'solo'` — 1-player record (`Game.highScore1`)
+- `'duo'` — team record (`Game.highScore2`)
+
+Every API takes the mode (`best/earned/top/next/has/claim`), and
+`Game.badgeMode()` derives it from `playerCount`. Earned badges are derived
+from the record, so nothing can desync; localStorage (`CFG.BADGES_KEY`) only
+stores which ones were already announced, now as `{solo:[], duo:[]}` — an old
+flat array is migrated into both tracks so nothing gets re-announced.
+Beating a record calls `Game.checkBadges()` and a new tier shows an in-game
+banner ("¡MAESTRÍA DE SOLO/DÚO!") with its medal (`Sprites.drawBadge`). The
+MAESTRÍAS panel has an EN SOLO / EN DÚO tab pair, each listing the six tiers
+with that track's record and what is missing for the next one. `Ctrl+Espacio`
+shows the badge of the **mode being played**.
 
 **Top mundial** (`PM.Ranking`): 2-player games (local and online) are posted
 to a Supabase table via PostgREST with the anon key — no SDK. Only the host
@@ -620,3 +632,6 @@ parties, answered with `full`). Cells are indices `row*28+col`.
     MUNDIAL panel (host only online, once per game, never in 1-player) and a
     missing table is reported instead of crashing; online chat (`T`) delivers
     sanitised, rate-limited messages and blocks game keys while typing.
+    Badges are tracked separately for solo and duo: a duo record never awards
+    a solo badge, each track announces its own tiers, and the panel shows the
+    two with their own progress.

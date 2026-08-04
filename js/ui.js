@@ -1034,6 +1034,18 @@
       h.textContent = 'MAESTRÍAS';
       o.appendChild(h);
 
+      /* dos rutas independientes: un jugador y dúo */
+      var bar = document.createElement('div');
+      bar.className = 'tab-row';
+      this.badgeTabBtns = {};
+      [['solo', 'EN SOLO'], ['duo', 'EN DÚO']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () { self.showBadgeTab(t[0]); });
+        b.classList.add('tab');
+        self.badgeTabBtns[t[0]] = b;
+        bar.appendChild(b);
+      });
+      o.appendChild(bar);
+
       this.badgesSub = document.createElement('div');
       this.badgesSub.className = 'note';
       o.appendChild(this.badgesSub);
@@ -1046,13 +1058,27 @@
       back.classList.add('btn-primary');
       back.style.marginTop = '14px';
       o.appendChild(back);
+
+      this.badgeTab = 'solo';
+    },
+
+    showBadgeTab: function (mode) {
+      this.badgeTab = (mode === 'duo') ? 'duo' : 'solo';
+      this.refreshBadges();
     },
 
     refreshBadges: function () {
       var B = window.PM.Badges;
-      var best = B ? B.best() : 0;
-      var next = B ? B.next() : null;
-      this.badgesSub.textContent = 'TU MEJOR MARCA: ' + best +
+      var mode = this.badgeTab || 'solo';
+      for (var k in this.badgeTabBtns) {
+        if (this.badgeTabBtns.hasOwnProperty(k)) {
+          this.badgeTabBtns[k].classList.toggle('active', k === mode);
+        }
+      }
+      var best = B ? B.best(mode) : 0;
+      var next = B ? B.next(mode) : null;
+      var label = (mode === 'duo') ? 'RÉCORD DE EQUIPO: ' : 'RÉCORD EN SOLO: ';
+      this.badgesSub.textContent = label + best +
         (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + next.points)
               : '  ·  ¡TODAS CONSEGUIDAS!');
       this.badgesList.innerHTML = '';
