@@ -251,6 +251,55 @@
   CFG.PAC_SWATCHES = ['#ffff00', '#ff0000', '#00ffff', '#00ff00',
                       '#ff69b4', '#ff8c00', '#b19cd9', '#ffffff'];
 
+  /* ---------- Skins (aspecto del Pac-Man, sobre el color elegido) ----------
+   * Todas disponibles desde el principio; se dibujan en sprites.js. */
+  CFG.SKINS = [
+    { id: 'clasico', name: 'CLÁSICO' },
+    { id: 'ojos',    name: 'OJOS' },
+    { id: 'neon',    name: 'NEÓN' },
+    { id: 'aro',     name: 'ARO' },
+    { id: 'pixel',   name: 'PÍXEL' },
+    { id: 'sombra',  name: 'SOMBRA' }
+  ];
+  CFG.SKIN_IDS = ['clasico', 'ojos', 'neon', 'aro', 'pixel', 'sombra'];
+
+  /* ---------- Emotes (mensajes rápidos sobre tu Pac-Man) ----------
+   * icon: dibujo del globo (ver Sprites.drawEmote). */
+  CFG.EMOTES = [
+    { text: '¡HOLA!',    icon: 'pac' },
+    { text: '¡VAMOS!',   icon: 'pac' },
+    { text: '¡CUIDADO!', icon: 'ghost' },
+    { text: '¡BIEN!',    icon: 'dot' },
+    { text: '¡UPS!',     icon: 'dead' },
+    { text: 'GRACIAS',   icon: 'fruit' }
+  ];
+  CFG.EMOTE_TICKS = 150;      // 2.5 s en pantalla
+  CFG.EMOTE_COOLDOWN = 72;    // 1.2 s entre emotes (antispam)
+
+  /* ---------- Maestrías (insignias por récord personal) ---------- */
+  CFG.BADGES = [
+    { id: 'aprendiz', name: 'APRENDIZ',    points: 3000,   color: '#ffffff' },
+    { id: 'cazador',  name: 'CAZADOR',     points: 8000,   color: '#00ffff' },
+    { id: 'experto',  name: 'EXPERTO',     points: 15000,  color: '#00ff00' },
+    { id: 'maestro',  name: 'MAESTRO',     points: 30000,  color: '#ffb8ff' },
+    { id: 'leyenda',  name: 'LEYENDA',     points: 60000,  color: '#ff8c00' },
+    { id: 'mundial',  name: 'TOP MUNDIAL', points: 100000, color: '#ffff00' }
+  ];
+  CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
+
+  /* ---------- Chat (modo online) ---------- */
+  CFG.CHAT_MAX = 40;          // caracteres por mensaje
+  CFG.CHAT_TICKS = 420;       // ~7 s visible
+  CFG.CHAT_KEEP = 3;          // mensajes a la vez en pantalla
+  CFG.CHAT_COOLDOWN = 45;     // 0.75 s entre mensajes
+
+  /* ---------- Ranking mundial (tabla en Supabase) ---------- */
+  CFG.RANKING = {
+    TABLE: 'ranking',
+    LIMIT: 20,
+    MAX_POINTS: 10000000      // descarta envíos absurdos antes de mandarlos
+  };
+
   /* ---------- Ajustes (contrato con ui.js/game.js) ---------- */
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';
   CFG.HIGHSCORE_KEY = 'pacman-topmundial-highscore';
@@ -262,6 +311,8 @@
     nick2: '',                    // nombre del jugador 2 (dos jugadores locales)
     pacColor: '#ffff00',
     pac2Color: '#00ff00',         // color del jugador 2
+    skin1: 'clasico',             // skin del jugador 1 (y propia online)
+    skin2: 'clasico',             // skin del jugador 2
     livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
     ghostSpeedMult: 1.0,          // 0.5–1.2, paso .05
     pacSpeedMult: 1.0,            // 0.8–1.3, paso .05

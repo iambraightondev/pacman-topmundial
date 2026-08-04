@@ -486,6 +486,155 @@ input[type="range"] {
   padding: 9px 10px;
 }
 
+/* ---------- Skins ---------- */
+.skins {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.skin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #000;
+  border: 2px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #888;
+}
+
+.skin canvas { image-rendering: pixelated; display: block; }
+.skin:hover { border-color: #fff; }
+.skin.active { border-color: #fff; color: #fff; box-shadow: 0 0 6px #fff; }
+
+/* ---------- Maestrías ---------- */
+.badge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  width: min(94%, 420px);
+}
+
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border: 1px solid #333;
+  text-align: left;
+}
+
+.badge-row.got { border-color: #2121ff; background: rgba(33, 33, 255, 0.08); }
+.badge-medal { image-rendering: pixelated; flex-shrink: 0; }
+.badge-text { flex: 1; min-width: 0; }
+
+.badge-name {
+  font-size: clamp(12px, 2.2vh, 16px);
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+.badge-state {
+  font-size: clamp(8px, 1.5vh, 10px);
+  letter-spacing: 1px;
+  color: #777;
+}
+
+/* ---------- Top mundial ---------- */
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: min(96%, 460px);
+  margin-top: 6px;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 8px;
+  font-size: clamp(9px, 1.7vh, 12px);
+  letter-spacing: 1px;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.rank-row:nth-child(odd) { background: rgba(255, 255, 255, 0.04); }
+.rank-row.mine { border-color: #ffff00; }
+.rank-pos { color: #888; text-align: right; }
+.rank-who { color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-pts { color: #ffff00; font-weight: bold; }
+.rank-lvl { color: #00ffff; font-size: 0.85em; }
+
+/* ---------- Emotes y chat en partida ---------- */
+#emoteBar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 40px;
+  z-index: 6;
+  display: none;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 96%;
+}
+
+#emoteBar.on { display: flex; }
+
+.emote-btn {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #2121ff;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.emote-btn:hover, .emote-btn:active { background: #2121ff; }
+
+#chatBox {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  z-index: 6;
+  display: none;
+  width: 90%;
+}
+
+#chatBox.on { display: block; }
+
+.chat-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid #ffff00;
+  padding: 7px 9px;
+  outline: none;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 /* ---------- Diálogos en partida (rendición / revancha / game over) ---------- */
 #prompt {
   z-index: 20;

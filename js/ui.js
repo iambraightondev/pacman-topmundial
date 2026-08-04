@@ -56,6 +56,9 @@
     if (key === 'livesMode') {
       return LIVES_MODES.indexOf(value) !== -1 ? value : def;
     }
+    if (key === 'skin1' || key === 'skin2') {
+      return CFG.SKIN_IDS.indexOf(value) !== -1 ? value : def;
+    }
     return def;
   }
 
@@ -104,10 +107,15 @@
       this.els.menu = document.getElementById('menu');
       this.els.options = document.getElementById('options');
       this.els.online = document.getElementById('online');
+      this.els.badges = document.getElementById('badges');
+      this.els.ranking = document.getElementById('ranking');
       this.els.prompt = document.getElementById('prompt');
+      if (window.PM.Badges) window.PM.Badges.syncSeen();
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
+      this.buildBadges();
+      this.buildRanking();
       this.buildGameButtons();
       this.buildDpads();
       this.bindKeyboard();
@@ -210,6 +218,21 @@
         self.resumeAudio();
         self.showOnline();
       }));
+
+      var extras = document.createElement('div');
+      extras.className = 'preset-row';
+      extras.style.marginTop = '2px';
+      extras.appendChild(this.makeButton('TOP MUNDIAL', function () {
+        self.resumeAudio();
+        self.showRanking();
+      }));
+      extras.appendChild(this.makeButton('MAESTRÍAS', function () {
+        self.resumeAudio();
+        self.showBadges();
+      }));
+      extras.childNodes[0].classList.add('btn-preset');
+      extras.childNodes[1].classList.add('btn-preset');
+      m.appendChild(extras);
 
       m.appendChild(this.makeButton('OPCIONES', function () {
         self.resumeAudio();
@@ -333,12 +356,15 @@
       nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
       o.appendChild(nkNote);
 
-      /* --- COLORES --- */
+      /* --- COLORES Y SKINS --- */
       this.colorRows = {};
+      this.skinRows = {};
       o.appendChild(this.sectionTitle('COLOR JUGADOR 1'));
       o.appendChild(this.makeColorRow('pacColor'));
+      o.appendChild(this.makeSkinRow('skin1', 'pacColor'));
       o.appendChild(this.sectionTitle('COLOR JUGADOR 2'));
       o.appendChild(this.makeColorRow('pac2Color'));
+      o.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
 
       /* --- SONIDO --- */
       o.appendChild(this.sectionTitle('SONIDO'));
@@ -433,6 +459,56 @@
         for (var i = 0; i < list.length; i++) {
           if (list[i] === skip || list[i] === document.activeElement) continue;
           list[i].value = s[k] || '';
+        }
+      }
+    },
+
+    /* Fila de skins: cada una se dibuja de verdad en un mini canvas,
+     * con el color elegido para ese jugador (se repinta al cambiarlo). */
+    makeSkinRow: function (key, colorKey) {
+      var self = this;
+      var row = document.createElement('div');
+      row.className = 'skins';
+      var items = [];
+      CFG.SKINS.forEach(function (sk) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'skin';
+        b.title = sk.name;
+        b.setAttribute('aria-label', 'Skin ' + sk.name);
+        var cv = document.createElement('canvas');
+        cv.width = 22; cv.height = 22;
+        b.appendChild(cv);
+        var lab = document.createElement('span');
+        lab.textContent = sk.name;
+        b.appendChild(lab);
+        b.addEventListener('click', function () {
+          window.PM.settings[key] = sk.id;
+          saveSettings();
+          self.refreshOptions();
+        });
+        row.appendChild(b);
+        items.push({ id: sk.id, btn: b, canvas: cv });
+      });
+      this.skinRows[key] = { items: items, colorKey: colorKey };
+      return row;
+    },
+
+    /* Repinta las miniaturas de skins con el color actual */
+    refreshSkins: function () {
+      var s = window.PM.settings;
+      for (var k in this.skinRows) {
+        if (!this.skinRows.hasOwnProperty(k)) continue;
+        var row = this.skinRows[k];
+        var color = s[row.colorKey] || '#ffff00';
+        for (var i = 0; i < row.items.length; i++) {
+          var it = row.items[i];
+          it.btn.classList.toggle('active', s[k] === it.id);
+          var c = it.canvas.getContext('2d');
+          c.setTransform(1, 0, 0, 1, 0, 0);
+          c.clearRect(0, 0, 22, 22);
+          c.imageSmoothingEnabled = false;
+          window.PM.Sprites.drawPacman(c, 11, 11, CFG.DIR.RIGHT, 2, color, it.id);
         }
       }
     },
@@ -555,6 +631,7 @@
         }
         try { cr.input.value = s[k]; } catch (e) { /* color inválido */ }
       }
+      this.refreshSkins();
       this.livesModeBtns.shared.classList.toggle('active', s.livesMode !== 'individual');
       this.livesModeBtns.individual.classList.toggle('active', s.livesMode === 'individual');
       this.soundBtns.si.classList.toggle('active', !s.muted);
@@ -779,11 +856,13 @@
       this.lobby.locked = true;
       this.lobby.peerColor = sanitizeSetting('pac2Color', data.c, '#00ff00');
       this.lobby.peerName = sanitizeNick(data.n);
+      this.lobby.peerSkin = sanitizeSetting('skin2', data.k, 'clasico');
       window.PM.Net.lockPeer(sid);
       window.PM.Net.send('cfg', {
         v: CFG.NET.PROTO,
         c: window.PM.settings.pacColor,
         n: window.PM.settings.nick1,
+        k: window.PM.settings.skin1,
         cfg: this.netCfgSubset()
       });
       this.setLobbyStatus('¡' + (this.lobby.peerName || 'JUGADOR 2') +
@@ -817,7 +896,8 @@
           window.PM.Net.send('hello', {
             v: CFG.NET.PROTO,
             c: window.PM.settings.pac2Color,
-            n: window.PM.settings.nick1
+            n: window.PM.settings.nick1,
+            k: window.PM.settings.skin1
           });
           self.setLobbyStatus('BUSCANDO LA SALA...');
           self.lobby.timer = setTimeout(function () {
@@ -842,6 +922,7 @@
         this.lobby.hostCfg = data.cfg;
         this.lobby.hostColor = sanitizeSetting('pacColor', data.c, '#ffff00');
         this.lobby.hostName = sanitizeNick(data.n);
+        this.lobby.hostSkin = sanitizeSetting('skin1', data.k, 'clasico');
         window.PM.Net.lockPeer(sid);
         this.setLobbyStatus('CON ' + (this.lobby.hostName || 'EL ANFITRIÓN') +
           ' · EMPEZANDO...');
@@ -862,17 +943,21 @@
       this.hideAll();
       this.resumeAudio();
       var me = sanitizeNick(window.PM.settings.nick1);
-      var colors, names, cfg = null;
+      var mySkin = sanitizeSetting('skin1', window.PM.settings.skin1, 'clasico');
+      var colors, names, skins, cfg = null;
       if (role === 'host') {
         colors = [window.PM.settings.pacColor, lb.peerColor || '#00ff00'];
         names = [me || 'J1', lb.peerName || 'J2'];
+        skins = [mySkin, lb.peerSkin || 'clasico'];
       } else {
         colors = [lb.hostColor || '#ffff00', window.PM.settings.pac2Color];
         names = [lb.hostName || 'J1', me || 'J2'];
+        skins = [lb.hostSkin || 'clasico', mySkin];
         cfg = this.sanitizeNetCfg(lb.hostCfg);
       }
       window.PM.Game.newGame({
-        players: 2, net: role, cfg: cfg, colors: colors, names: names
+        players: 2, net: role, cfg: cfg,
+        colors: colors, names: names, skins: skins
       });
     },
 
@@ -894,6 +979,176 @@
     },
 
     /* ------------------------------------------------------
+     * Panel de maestrías (insignias por récord personal)
+     * ------------------------------------------------------ */
+    buildBadges: function () {
+      var self = this;
+      var o = this.els.badges;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'MAESTRÍAS';
+      o.appendChild(h);
+
+      this.badgesSub = document.createElement('div');
+      this.badgesSub.className = 'note';
+      o.appendChild(this.badgesSub);
+
+      this.badgesList = document.createElement('div');
+      this.badgesList.className = 'badge-list';
+      o.appendChild(this.badgesList);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+    },
+
+    refreshBadges: function () {
+      var B = window.PM.Badges;
+      var best = B ? B.best() : 0;
+      var next = B ? B.next() : null;
+      this.badgesSub.textContent = 'TU MEJOR MARCA: ' + best +
+        (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + next.points)
+              : '  ·  ¡TODAS CONSEGUIDAS!');
+      this.badgesList.innerHTML = '';
+      var self = this;
+      CFG.BADGES.forEach(function (b) {
+        var got = best >= b.points;
+        var row = document.createElement('div');
+        row.className = 'badge-row' + (got ? ' got' : '');
+
+        var cv = document.createElement('canvas');
+        cv.width = 34; cv.height = 34;
+        cv.className = 'badge-medal';
+        var c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        window.PM.Sprites.drawBadge(c, 17, 17, 14, b.color, !got);
+        row.appendChild(cv);
+
+        var txt = document.createElement('div');
+        txt.className = 'badge-text';
+        var nm = document.createElement('div');
+        nm.className = 'badge-name';
+        nm.style.color = got ? b.color : '#666';
+        nm.textContent = b.name;
+        txt.appendChild(nm);
+        var st = document.createElement('div');
+        st.className = 'badge-state';
+        st.textContent = got
+          ? ('CONSEGUIDA · ' + b.points + ' PUNTOS')
+          : ('TE FALTAN ' + (b.points - best) + ' PUNTOS');
+        txt.appendChild(st);
+        row.appendChild(txt);
+
+        self.badgesList.appendChild(row);
+      });
+    },
+
+    /* ------------------------------------------------------
+     * Top mundial (ranking de partidas de dúo, desde Supabase)
+     * ------------------------------------------------------ */
+    buildRanking: function () {
+      var self = this;
+      var o = this.els.ranking;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'TOP MUNDIAL';
+      o.appendChild(h);
+
+      var sub = document.createElement('div');
+      sub.className = 'note';
+      sub.textContent = 'MEJORES PARTIDAS DE DOS JUGADORES · PUNTUACIÓN DE EQUIPO';
+      o.appendChild(sub);
+
+      this.rankStatus = document.createElement('div');
+      this.rankStatus.className = 'lobby-status';
+      o.appendChild(this.rankStatus);
+
+      this.rankList = document.createElement('div');
+      this.rankList.className = 'rank-list';
+      o.appendChild(this.rankList);
+
+      var row = document.createElement('div');
+      row.className = 'preset-row';
+      row.style.marginTop = '12px';
+      var reload = this.makeButton('ACTUALIZAR', function () { self.loadRanking(); });
+      reload.classList.add('btn-preset');
+      row.appendChild(reload);
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-preset');
+      row.appendChild(back);
+      o.appendChild(row);
+    },
+
+    loadRanking: function () {
+      var self = this;
+      var R = window.PM.Ranking;
+      this.rankList.innerHTML = '';
+      if (!R || !R.configured()) {
+        this.rankStatus.classList.add('error');
+        this.rankStatus.textContent = 'EL TOP MUNDIAL NECESITA LAS CREDENCIALES DE SUPABASE';
+        return;
+      }
+      this.rankStatus.classList.remove('error');
+      this.rankStatus.textContent = 'CARGANDO...';
+      R.top(function (err, rows) {
+        if (err) {
+          self.rankStatus.classList.add('error');
+          self.rankStatus.textContent = err === 'FALTA LA TABLA EN SUPABASE'
+            ? 'FALTA LA TABLA: EJECUTA supabase/ranking.sql EN TU PROYECTO'
+            : ('NO SE PUDO CARGAR: ' + err);
+          return;
+        }
+        self.rankStatus.classList.remove('error');
+        if (!rows.length) {
+          self.rankStatus.textContent = 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
+          return;
+        }
+        self.rankStatus.textContent = '';
+        self.renderRanking(rows);
+      });
+    },
+
+    renderRanking: function (rows) {
+      var mine = String(window.PM.settings.nick1 || '').toUpperCase();
+      this.rankList.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var n1 = String(r.nombre1 || 'J1').toUpperCase();
+        var n2 = String(r.nombre2 || 'J2').toUpperCase();
+        var row = document.createElement('div');
+        row.className = 'rank-row';
+        if (mine && (n1 === mine || n2 === mine)) row.classList.add('mine');
+
+        var pos = document.createElement('span');
+        pos.className = 'rank-pos';
+        pos.textContent = (i + 1) + '.';
+        row.appendChild(pos);
+
+        var who = document.createElement('span');
+        who.className = 'rank-who';
+        who.textContent = n1 + ' + ' + n2;
+        row.appendChild(who);
+
+        var pts = document.createElement('span');
+        pts.className = 'rank-pts';
+        pts.textContent = String(r.puntos);
+        row.appendChild(pts);
+
+        var lvl = document.createElement('span');
+        lvl.className = 'rank-lvl';
+        lvl.textContent = 'NIV ' + r.nivel + (r.modo === 'online' ? ' · ONLINE' : '');
+        row.appendChild(lvl);
+
+        this.rankList.appendChild(row);
+      }
+    },
+
+    /* ------------------------------------------------------
      * Controles en pantalla: barra de botones y cruceta(s)
      * ------------------------------------------------------ */
     /* Barra superior de la partida: RENDIRSE (siempre) y pausa (táctil) */
@@ -901,6 +1156,32 @@
       var self = this;
       var bar = document.createElement('div');
       bar.id = 'gameBtns';
+
+      var em = document.createElement('button');
+      em.type = 'button';
+      em.id = 'emoteBtn';
+      em.className = 'game-btn';
+      em.textContent = 'EMOTES';
+      em.setAttribute('aria-label', 'Emotes');
+      em.addEventListener('click', function () {
+        self.resumeAudio();
+        self.toggleEmoteBar();
+      });
+      bar.appendChild(em);
+      this.emoteBtn = em;
+
+      var ch = document.createElement('button');
+      ch.type = 'button';
+      ch.id = 'chatBtn';
+      ch.className = 'game-btn';
+      ch.textContent = 'CHAT';
+      ch.setAttribute('aria-label', 'Chat');
+      ch.addEventListener('click', function () {
+        self.resumeAudio();
+        self.openChat();
+      });
+      bar.appendChild(ch);
+      this.chatBtn = ch;
 
       var sur = document.createElement('button');
       sur.type = 'button';
@@ -931,7 +1212,80 @@
       this.gameBtns = bar;
       this.pauseBtn = b;
       this.surrenderBtn = sur;
+      this.buildEmoteBar();
+      this.buildChatInput();
     },
+
+    /* Fila de emotes (se abre con el botón; en teclado van con 1..6) */
+    buildEmoteBar: function () {
+      var self = this;
+      var bar = document.createElement('div');
+      bar.id = 'emoteBar';
+      CFG.EMOTES.forEach(function (e, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'emote-btn';
+        b.textContent = (i + 1) + ' ' + e.text;
+        b.addEventListener('click', function () {
+          self.resumeAudio();
+          window.PM.Game.sendEmote(i);
+          self.toggleEmoteBar(false);
+        });
+        bar.appendChild(b);
+      });
+      document.getElementById('stage').appendChild(bar);
+      this.emoteBar = bar;
+    },
+
+    toggleEmoteBar: function (on) {
+      if (!this.emoteBar) return;
+      var show = (on === undefined) ? !this.emoteBarOpen : !!on;
+      this.emoteBarOpen = show;
+      this.emoteBar.classList.toggle('on', show);
+    },
+
+    /* Entrada de chat (solo online) */
+    buildChatInput: function () {
+      var self = this;
+      var wrap = document.createElement('div');
+      wrap.id = 'chatBox';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'chat-input';
+      input.maxLength = CFG.CHAT_MAX;
+      input.placeholder = 'ESCRIBE Y PULSA ENTER';
+      input.setAttribute('autocomplete', 'off');
+      input.addEventListener('keydown', function (ev) {
+        ev.stopPropagation();          // que no llegue al juego
+        if (ev.key === 'Enter') {
+          window.PM.Game.sendChat(input.value);
+          input.value = '';
+          self.closeChat();
+        } else if (ev.key === 'Escape') {
+          self.closeChat();
+        }
+      });
+      wrap.appendChild(input);
+      document.getElementById('stage').appendChild(wrap);
+      this.chatBox = wrap;
+      this.chatInput = input;
+    },
+
+    openChat: function () {
+      if (!this.chatBox || !window.PM.Game.canChat()) return;
+      this.chatBox.classList.add('on');
+      this.chatOpen = true;
+      this.chatInput.focus();
+    },
+
+    closeChat: function () {
+      if (!this.chatBox) return;
+      this.chatBox.classList.remove('on');
+      this.chatOpen = false;
+      this.chatInput.blur();
+    },
+
+    onChat: function () { /* enganche para futuros avisos de chat */ },
 
     /* ------------------------------------------------------
      * Diálogos sobre la partida: rendición, revancha y GAME OVER.
@@ -1218,6 +1572,16 @@
         !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
       if (this.surrenderBtn) this.surrenderBtn.disabled = !g.canSurrender();
+      if (this.emoteBtn) {
+        this.emoteBtn.style.display = (playable && g.playerCount === 2) ? '' : 'none';
+      }
+      if (this.chatBtn) {
+        this.chatBtn.style.display = (playable && g.netRole) ? '' : 'none';
+      }
+      if (!playable) {
+        this.toggleEmoteBar(false);
+        this.closeChat();
+      }
       if (!this.dpad1) return;
       var show = playable && this.touchDevice;
       var dual = show && g.playerCount === 2 && !g.netRole;
@@ -1229,36 +1593,39 @@
     /* ------------------------------------------------------
      * Visibilidad de paneles
      * ------------------------------------------------------ */
-    showMenu: function () {
+    /* Muestra un solo panel (o ninguno si name es null) */
+    showPanel: function (name) {
       this.hidePrompt();
-      this.refreshNicks();
-      this.els.menu.style.display = 'flex';
-      this.els.options.style.display = 'none';
-      this.els.online.style.display = 'none';
+      var panels = ['menu', 'options', 'online', 'badges', 'ranking'];
+      for (var i = 0; i < panels.length; i++) {
+        var el = this.els[panels[i]];
+        if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
+      }
       this.refreshControls();
+    },
+
+    showMenu: function () {
+      this.refreshNicks();
+      this.showPanel('menu');
     },
     showOptions: function () {
-      this.hidePrompt();
       this.refreshOptions();
-      this.els.menu.style.display = 'none';
-      this.els.options.style.display = 'flex';
-      this.els.online.style.display = 'none';
-      this.refreshControls();
+      this.showPanel('options');
     },
     showOnline: function () {
-      this.hidePrompt();
-      this.els.menu.style.display = 'none';
-      this.els.options.style.display = 'none';
-      this.els.online.style.display = 'flex';
+      this.showPanel('online');
       this.showOnlineIdle();
-      this.refreshControls();
+    },
+    showBadges: function () {
+      this.refreshBadges();
+      this.showPanel('badges');
+    },
+    showRanking: function () {
+      this.showPanel('ranking');
+      this.loadRanking();
     },
     hideAll: function () {
-      this.hidePrompt();
-      this.els.menu.style.display = 'none';
-      this.els.options.style.display = 'none';
-      this.els.online.style.display = 'none';
-      this.refreshControls();   // se actualiza de nuevo al arrancar la partida
+      this.showPanel(null);   // se actualiza de nuevo al arrancar la partida
     },
 
     resumeAudio: function () {
@@ -1291,7 +1658,27 @@
           if (self.handlePromptKey(ev)) ev.preventDefault();
           return;
         }
+        if (self.chatOpen) return;       // escribiendo: lo lleva el propio campo
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
+
+        /* emotes 1..6 (en partidas de dos jugadores) */
+        if (canControl && g.playerCount === 2 && /^[1-9]$/.test(ev.key)) {
+          var ei = parseInt(ev.key, 10) - 1;
+          if (ei < CFG.EMOTES.length) {
+            self.resumeAudio();
+            g.sendEmote(ei);
+            self.toggleEmoteBar(false);
+            ev.preventDefault();
+            return;
+          }
+        }
+        /* chat online con T */
+        if (canControl && (ev.key === 't' || ev.key === 'T') && g.canChat()) {
+          self.openChat();
+          ev.preventDefault();
+          return;
+        }
+
         var isArrow = (ev.key in ARROWS);
         var isWasd = (ev.key in WASD);
         if (isArrow || isWasd) {
@@ -1313,10 +1700,12 @@
             g.requestPause();
             ev.preventDefault();
           } else if (ev.key === 'Escape') {
-            if (self.els.options.style.display !== 'none') {
-              self.showMenu();
-            } else if (self.els.online.style.display !== 'none') {
+            if (self.els.online.style.display !== 'none') {
               self.cancelLobby();
+              self.showMenu();
+            } else if (self.els.options.style.display !== 'none' ||
+                       self.els.badges.style.display !== 'none' ||
+                       self.els.ranking.style.display !== 'none') {
               self.showMenu();
             }
           }

@@ -19,12 +19,9 @@
   /* ------------------------------------------------------------
    * Pac-Man: arco relleno con 3 fases de boca
    * mouthPhase: 0 cerrada, 1 media (40°), 2 abierta (80°)
+   * skin (opcional): id de CFG.SKINS; por defecto 'clasico'
    * ------------------------------------------------------------ */
-  Sprites.drawPacman = function (ctx, x, y, dir, mouthPhase, color) {
-    var r = 6.5;
-    var half = [0, (40 * Math.PI / 180) / 2, (80 * Math.PI / 180) / 2][mouthPhase] || 0;
-    var a = DIR_ANGLE[dir >= 0 ? dir : 3];
-    ctx.fillStyle = color;
+  function pacPath(ctx, x, y, r, a, half) {
     ctx.beginPath();
     if (half <= 0) {
       ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -33,6 +30,172 @@
       ctx.arc(x, y, r, a + half, a - half + Math.PI * 2);
       ctx.closePath();
     }
+  }
+
+  /* ¿el punto (px,py), relativo al centro, cae dentro del cuerpo? */
+  function inPac(px, py, r, a, half) {
+    if (px * px + py * py > r * r) return false;
+    if (half <= 0) return true;
+    var ang = Math.atan2(py, px) - a;          // ángulo respecto a la boca
+    while (ang > Math.PI) ang -= Math.PI * 2;
+    while (ang < -Math.PI) ang += Math.PI * 2;
+    return Math.abs(ang) > half;               // fuera de la cuña = cuerpo
+  }
+
+  Sprites.drawPacman = function (ctx, x, y, dir, mouthPhase, color, skin) {
+    var r = 6.5;
+    var half = [0, (40 * Math.PI / 180) / 2, (80 * Math.PI / 180) / 2][mouthPhase] || 0;
+    var d = (dir >= 0) ? dir : 3;
+    var a = DIR_ANGLE[d];
+    var v = CFG.DIR_V[d];
+
+    if (skin === 'aro') {
+      // solo contorno: un aro con la boca abierta
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      pacPath(ctx, x, y, r - 1, a, half);
+      ctx.stroke();
+      return;
+    }
+
+    if (skin === 'pixel') {
+      // cuerpo reconstruido en bloques de 1.5 px (aire retro)
+      var step = 1.5;
+      ctx.fillStyle = color;
+      for (var py = -r; py <= r; py += step) {
+        for (var px = -r; px <= r; px += step) {
+          if (!inPac(px + step / 2, py + step / 2, r, a, half)) continue;
+          ctx.fillRect(Math.round(x + px), Math.round(y + py), step, step);
+        }
+      }
+      return;
+    }
+
+    if (skin === 'sombra') {
+      // estela sólida por detrás, en el mismo tono
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = color;
+      pacPath(ctx, x - v.x * 3, y - v.y * 3, r - 1, a, half);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    if (skin === 'neon') {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 7;
+      ctx.fillStyle = color;
+      pacPath(ctx, x, y, r, a, half);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = color;
+      pacPath(ctx, x, y, r, a, half);
+      ctx.fill();
+    }
+
+    if (skin === 'ojos') {
+      // un ojo mirando en la dirección de avance
+      var ex = x - v.y * 2.6 + v.x * 1.2;
+      var ey = y + v.x * 2.6 + v.y * 1.2 - (v.y > 0 ? 0 : 1);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1.9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.arc(ex + v.x * 0.7, ey + v.y * 0.7, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+
+  /* ------------------------------------------------------------
+   * Globo de emote sobre un Pac-Man (procedural, sin recursos)
+   * ------------------------------------------------------------ */
+  Sprites.drawEmote = function (ctx, x, y, emoteId, color) {
+    var e = CFG.EMOTES[emoteId];
+    if (!e) return;
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    var tw = ctx.measureText(e.text).width;
+    var padL = 12, padR = 5, h = 12;
+    var w = tw + padL + padR;
+    var bx = Math.round(x - w / 2), by = Math.round(y - h);
+
+    // el globo no se sale del laberinto
+    if (bx < 2) bx = 2;
+    if (bx + w > CFG.NATIVE_W - 2) bx = CFG.NATIVE_W - 2 - w;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(bx, by, w, h);
+    ctx.strokeStyle = color || '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
+    // pico hacia el jugador
+    ctx.fillStyle = color || '#ffffff';
+    ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
+
+    // icono a la izquierda
+    var ix = bx + 6, iy = by + h / 2;
+    if (e.icon === 'pac') {
+      ctx.fillStyle = '#ffff00';
+      ctx.beginPath();
+      ctx.moveTo(ix, iy);
+      ctx.arc(ix, iy, 3.2, 0.5, -0.5 + Math.PI * 2);
+      ctx.closePath();
+      ctx.fill();
+    } else if (e.icon === 'ghost') {
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(ix, iy - 0.5, 3, Math.PI, 0);
+      ctx.lineTo(ix + 3, iy + 3);
+      ctx.lineTo(ix - 3, iy + 3);
+      ctx.closePath();
+      ctx.fill();
+    } else if (e.icon === 'dot') {
+      ctx.fillStyle = CFG.COLORS.pellet;
+      ctx.beginPath();
+      ctx.arc(ix, iy, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (e.icon === 'dead') {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ix - 2.5, iy - 2.5); ctx.lineTo(ix + 2.5, iy + 2.5);
+      ctx.moveTo(ix + 2.5, iy - 2.5); ctx.lineTo(ix - 2.5, iy + 2.5);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(ix - 1.2, iy + 1, 2, 0, Math.PI * 2);
+      ctx.arc(ix + 1.2, iy + 1, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#00aa00';
+      ctx.fillRect(ix - 0.5, iy - 3.5, 1, 2);
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(e.text, bx + padL, by + h / 2 + 0.5);
+  };
+
+  /* Medalla de maestría: disco con el aro del color de la insignia */
+  Sprites.drawBadge = function (ctx, x, y, r, color, locked) {
+    ctx.fillStyle = locked ? '#161616' : '#000000';
+    ctx.strokeStyle = locked ? '#444444' : color;
+    ctx.lineWidth = Math.max(1, r * 0.22);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Pac-Man dentro
+    var pr = r * 0.55;
+    ctx.fillStyle = locked ? '#444444' : color;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, pr, 0.55, -0.55 + Math.PI * 2);
+    ctx.closePath();
     ctx.fill();
   };
 

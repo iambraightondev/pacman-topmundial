@@ -65,6 +65,19 @@ Sin credenciales, el resto del juego funciona igual; solo el botón de crear
 o unirse a salas queda deshabilitado. Para probar el online en local sin
 Supabase, abre dos pestañas con `?red=local` en la URL.
 
+### Activar el TOP MUNDIAL
+
+La clasificación mundial sí necesita una tabla. En el mismo proyecto de
+Supabase: **Dashboard → SQL Editor → New query**, pega el contenido de
+[`supabase/ranking.sql`](supabase/ranking.sql) y pulsa *Run*. Crea la tabla
+`ranking` con lectura e inserción públicas (y sin permiso para modificar ni
+borrar). Hasta que exista, el panel TOP MUNDIAL lo avisa y el resto del juego
+funciona con normalidad.
+
+Las puntuaciones las envía el navegador, así que técnicamente se pueden
+falsear; para un ranking a prueba de trampas habría que validar la partida en
+una Edge Function y reservar el `INSERT` a la clave de servicio.
+
 ## Características
 
 **Fidelidad al arcade original** — mecánicas implementadas según el comportamiento documentado de la máquina de 1980:
@@ -85,6 +98,14 @@ Supabase, abre dos pestañas con `?red=local` en la URL.
   además el del jugador 2 local. Aparecen en el marcador, sobre cada Pac-Man
   al empezar, en la sala online y en el panel de fin de partida.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
+- **Skins**: CLÁSICO, OJOS, NEÓN, ARO, PÍXEL y SOMBRA, todas disponibles
+  desde el principio y combinables con cualquier color.
+- **Emotes** (`1`–`6` o el botón EMOTES) en las partidas de dos jugadores, y
+  **chat** (`T`) en el modo online.
+- **Maestrías**: seis insignias por récord personal, con aviso al
+  conseguirlas y su propio panel en el menú.
+- **Top mundial**: clasificación de partidas de dúo compartida entre todos
+  (ver más abajo cómo activarla).
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - Configuración y récords (1 jugador y equipo) guardados automáticamente en el navegador (localStorage).
 
@@ -112,10 +133,13 @@ js/audio.js       Síntesis de sonido (Web Audio API)
 js/sprites.js     Sprites dibujados por código
 js/pacman.js      Jugador
 js/ghost.js       IA de los fantasmas
-js/net-config.js  Credenciales de Supabase (modo online)
+js/net-config.js  Credenciales de Supabase (online y top mundial)
 js/net.js         Transporte en tiempo real (Supabase Realtime / local)
+js/badges.js      Maestrías (insignias por récord personal)
+js/ranking.js     Top mundial (tabla de Supabase vía REST)
 js/game.js        Bucle principal, máquina de estados y sincronización
-js/ui.js          Menús, opciones, lobby online, controles táctiles
+js/ui.js          Menús, opciones, lobby online, paneles y controles
+supabase/         SQL de la tabla del ranking
 SPEC.md           Especificación técnica completa
 CHANGELOG.md      Historial de cambios
 ```

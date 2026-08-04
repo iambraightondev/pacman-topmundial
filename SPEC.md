@@ -205,6 +205,8 @@ PM.settings = {
   difficultyPreset: 'normal',  // 'facil' | 'normal' | 'dificil' | 'custom'
   nick1: '',             // player 1 name (also the player's own name online)
   nick2: '',             // player 2 name (local 2-player)
+  skin1: 'clasico',      // player 1 skin (also the player's own skin online)
+  skin2: 'clasico',      // player 2 skin
   pacColor: '#ffff00',
   pac2Color: '#00ff00',  // player 2 color (2-player modes)
   livesMode: 'shared',   // 'shared' (team pool, default) | 'individual'
@@ -273,6 +275,45 @@ confirmed), `safeTicks` (respawn grace).
   `CFG.DEATH_CONFIRM_TICKS` the prediction is rolled back. While dying, the
   guest stops sending `pos` (and the host ignores it) so the frozen position
   cannot drag it back after respawning.
+
+## Skins, emotes, maestrías, ranking y chat
+
+**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`): all available from the
+start, drawn procedurally over the chosen colour in
+`Sprites.drawPacman(ctx, x, y, dir, mouth, color, skin)` — `clasico` (plain
+arc), `ojos` (eye looking forward), `neon` (glow), `aro` (ring outline),
+`pixel` (blocky body) and `sombra` (trail behind). Applied to the player, its
+lives icons and the option thumbnails (each thumbnail is a real mini-canvas
+render). Exchanged online in the handshake (`k` field → `Game.netSkins`).
+
+**Emotes** (`CFG.EMOTES`, 6 pac-themed one-liners): keys `1..6` or the
+EMOTES button, only in 2-player modes. `Game.sendEmote(i)` shows a bubble
+(`Sprites.drawEmote`) over that Pac-Man for `EMOTE_TICKS`, with an
+`EMOTE_COOLDOWN` antispam gap. Online: guest `gevt {t:'emote', e}` → host
+re-broadcasts `evt {t:'emote', w, e}`; each side ignores the echo of its own.
+
+**Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers by personal best
+(APRENDIZ 3 000 → TOP MUNDIAL 100 000). Earned badges are derived from the
+record, so nothing can desync; localStorage (`CFG.BADGES_KEY`) only stores
+which ones were already announced. Beating a record calls `Game.checkBadges()`
+and a new tier shows an in-game banner with its medal (`Sprites.drawBadge`).
+The MAESTRÍAS panel lists all tiers with progress to the next one.
+
+**Top mundial** (`PM.Ranking`): 2-player games (local and online) are posted
+to a Supabase table via PostgREST with the anon key — no SDK. Only the host
+submits online, once per game (`Game.rankingSent`), never in 1-player. The
+TOP MUNDIAL panel lists the best `CFG.RANKING.LIMIT` runs and highlights
+rows containing your own nickname. The table lives in `supabase/ranking.sql`
+(public select + insert, no update/delete); if it is missing the panel says
+so instead of failing. Scores are client-submitted and therefore forgeable —
+hardening means validating in an Edge Function.
+
+**Chat** (online only): `T` or the CHAT button opens an input; Enter sends,
+Esc closes. Messages are sanitised (`Game.cleanChat`: no control chars,
+collapsed spaces, `CFG.CHAT_MAX` chars) and rate-limited by
+`CHAT_COOLDOWN`. The last `CHAT_KEEP` messages are drawn over the lower maze
+for `CHAT_TICKS`. Wire: guest `gevt {t:'chat', m}` → host `evt {t:'chat', w, m}`.
+While the chat input has focus the game keyboard is inert.
 
 ## Menú de pausa (P / Esc)
 
@@ -435,17 +476,17 @@ Every payload travels wrapped as `{s: senderId, d: data}`; after the
 handshake only the locked peer is accepted (plus `hello` from third
 parties, answered with `full`). Cells are indices `row*28+col`.
 
-- Lobby: `hello {v, c(olor), n(ame)}` → `cfg {v, c, n, cfg}` → `start {}`;
-  rejections: `full {to}`.
+- Lobby: `hello {v, c(olor), n(ame), k(skin)}` → `cfg {v, c, n, k, cfg}` →
+  `start {}`; rejections: `full {to}`.
 - Guest → host: `pos {x, y, d(ir), nd(nextDir), e:[cell]}` every 5 ticks,
   sooner on turns or eats (not while dying); `gevt {t: 'died' |
-  'ateGhost'{g} | 'ateFruit' | 'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok}}`
-  where `k` is `surrender` | `rematch` | `restart`.
+  'ateGhost'{g} | 'ateFruit' | 'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok} |
+  'emote'{e} | 'chat'{m}}` where `k` is `surrender` | `rematch` | `restart`.
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
   'eatGhost'{g,pts,x,y,w} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
   'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
-  'rematch'}`.
+  'rematch' | 'emote'{w, e} | 'chat'{w, m}}`.
 - Both directions: `bye {}` on leaving.
 - `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`
   (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),
@@ -508,3 +549,10 @@ parties, answered with `full`). Cells are indices `row*28+col`.
     the shortcut printed on each button and working from the keyboard; both
     players see it online; restarting online is a vote and a rejection leaves
     the game paused. Dialog keys never leak into Pac-Man movement.
+20. Skins apply to the player, its lives icons and the options thumbnails,
+    and travel in the online handshake; emotes (`1..6`) appear over the right
+    Pac-Man on both screens exactly once; badges are handed out on new
+    personal records and listed in MAESTRÍAS; 2-player results reach the TOP
+    MUNDIAL panel (host only online, once per game, never in 1-player) and a
+    missing table is reported instead of crashing; online chat (`T`) delivers
+    sanitised, rate-limited messages and blocks game keys while typing.

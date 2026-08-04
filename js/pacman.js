@@ -138,9 +138,9 @@
     return [0, 1, 2, 1][this.mouthPhase];
   };
 
-  Pacman.prototype.draw = function (ctx, color) {
+  Pacman.prototype.draw = function (ctx, color, skin) {
     window.PM.Sprites.drawPacman(ctx, this.x, this.y + CFG.MAZE_Y,
-      this.dir, this.visibleMouth(), color);
+      this.dir, this.visibleMouth(), color, skin);
   };
 
   window.PM.Pacman = Pacman;

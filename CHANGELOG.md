@@ -2,6 +2,34 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Skins, emotes, maestrías, top mundial y chat
+
+- **Skins** (6, todas disponibles desde el principio): CLÁSICO, OJOS, NEÓN,
+  ARO, PÍXEL y SOMBRA. Se eligen en OPCIONES —cada miniatura se dibuja de
+  verdad, con tu color— y se aplican al Pac-Man y a los iconos de vidas. En
+  online cada uno ve la skin del otro (viaja en el saludo de la sala).
+- **Emotes**: seis mensajes rápidos con globo sobre tu Pac-Man
+  (¡HOLA!, ¡VAMOS!, ¡CUIDADO!, ¡BIEN!, ¡UPS!, GRACIAS), con teclas `1`–`6` y
+  botón EMOTES en pantalla. Disponibles en las partidas de dos jugadores, con
+  un pequeño tiempo de espera entre uno y otro para no saturar.
+- **Maestrías**: seis insignias por récord personal (APRENDIZ 3 000, CAZADOR
+  8 000, EXPERTO 15 000, MAESTRO 30 000, LEYENDA 60 000 y TOP MUNDIAL
+  100 000). Al conseguir una sale un aviso con su medalla en plena partida, y
+  el panel MAESTRÍAS del menú las lista con lo que falta para la siguiente.
+- **TOP MUNDIAL**: clasificación de partidas de dos jugadores guardada en
+  Supabase. Las partidas de dúo (locales y online) se suben al terminar —en
+  online solo las sube el anfitrión, una vez por partida— y el panel resalta
+  las tuyas. **Requiere crear la tabla**: ejecuta `supabase/ranking.sql` en el
+  proyecto de Supabase del juego. Mientras no exista, el panel lo avisa y el
+  resto del juego funciona igual.
+- **Chat en el modo online**: se abre con `T` o el botón CHAT; los mensajes
+  salen sobre la parte baja del laberinto unos segundos. Se limpian, se
+  recortan a 40 caracteres y tienen un pequeño tiempo de espera entre envíos;
+  mientras escribes, las teclas no mueven a Pac-Man.
+- Nota: las puntuaciones del top mundial las manda el navegador, así que se
+  pueden falsear. Si algún día molesta, la vía es validarlas en una Edge
+  Function y dejar el `INSERT` solo a la clave de servicio.
+
 ## 2026-08-03 · Menú de pausa con reanudar, reiniciar y salir
 
 - **`P` o `Esc` ya no solo pausan**: abren un **menú de pausa** con tres

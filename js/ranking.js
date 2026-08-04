@@ -1,0 +1,97 @@
+/* ============================================================
+ * PAC-MAN TOP MUNDIAL — js/ranking.js
+ * Top mundial de partidas de dos jugadores.
+ * Define window.PM.Ranking
+ *
+ * Habla directamente con PostgREST (la API REST de Supabase) con
+ * la clave anónima, sin librerías. La tabla y sus permisos están
+ * en supabase/ranking.sql: lectura e inserción públicas, nada de
+ * borrar ni modificar.
+ *
+ * Ojo: al enviarse desde el navegador, una puntuación se puede
+ * falsear. Para el uso de este juego se asume; endurecerlo pide
+ * validar la partida en una Edge Function.
+ * ============================================================ */
+(function () {
+  'use strict';
+  var CFG = window.PM.CFG;
+
+  function cfg() { return window.PM.NET_CFG || {}; }
+
+  function headers() {
+    var k = cfg().SUPABASE_KEY;
+    return {
+      'apikey': k,
+      'Authorization': 'Bearer ' + k,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+  }
+
+  function base() {
+    return String(cfg().SUPABASE_URL || '').replace(/\/+$/, '') +
+      '/rest/v1/' + CFG.RANKING.TABLE;
+  }
+
+  var Ranking = {
+    lastError: null,
+
+    configured: function () {
+      var c = cfg();
+      return !!(c.SUPABASE_URL && c.SUPABASE_KEY && window.fetch);
+    },
+
+    /* Top de puntuaciones. cb(err, filas) */
+    top: function (cb) {
+      var self = this;
+      if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
+      var url = base() +
+        '?select=nombre1,nombre2,puntos,nivel,modo,creado_en' +
+        '&order=puntos.desc,creado_en.asc' +
+        '&limit=' + CFG.RANKING.LIMIT;
+      fetch(url, { method: 'GET', headers: headers() })
+        .then(function (res) {
+          if (!res.ok) {
+            return res.text().then(function (t) {
+              throw new Error(res.status === 404 || /does not exist/i.test(t)
+                ? 'FALTA LA TABLA EN SUPABASE'
+                : 'ERROR ' + res.status);
+            });
+          }
+          return res.json();
+        })
+        .then(function (rows) { self.lastError = null; cb(null, rows || []); })
+        .catch(function (e) {
+          self.lastError = e.message || 'SIN CONEXIÓN';
+          cb(self.lastError, null);
+        });
+    },
+
+    /* Envía una partida terminada. Silencioso: si falla, el juego sigue.
+     * o: { modo, nombre1, nombre2, puntos, nivel } */
+    submit: function (o, cb) {
+      if (!this.configured()) { if (cb) cb('SIN CONFIGURAR'); return; }
+      var pts = Math.floor(o.puntos || 0);
+      if (!(pts > 0) || pts > CFG.RANKING.MAX_POINTS) {
+        if (cb) cb('PUNTUACIÓN NO VÁLIDA');
+        return;
+      }
+      var row = {
+        modo: (o.modo === 'online') ? 'online' : 'local',
+        nombre1: String(o.nombre1 || 'J1').slice(0, CFG.NICK_MAX),
+        nombre2: String(o.nombre2 || 'J2').slice(0, CFG.NICK_MAX),
+        puntos: pts,
+        nivel: Math.max(1, Math.min(999, Math.floor(o.nivel || 1)))
+      };
+      var h = headers();
+      h['Prefer'] = 'return=minimal';
+      fetch(base(), { method: 'POST', headers: h, body: JSON.stringify(row) })
+        .then(function (res) {
+          if (cb) cb(res.ok ? null : 'ERROR ' + res.status);
+        })
+        .catch(function (e) { if (cb) cb(e.message || 'SIN CONEXIÓN'); });
+    }
+  };
+
+  window.PM.Ranking = Ranking;
+})();

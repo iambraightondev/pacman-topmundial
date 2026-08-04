@@ -50,6 +50,7 @@
     netRole: null,     // null | 'host' | 'guest'
     netColors: null,   // colores online [J1, J2]
     netNames: null,    // nombres online [J1, J2]
+    netSkins: null,    // skins online [J1, J2]
     netQueue: [],
     netWatch: 0,
     netNotice: null,   // { text, ticks } — aviso y vuelta al menú
@@ -103,6 +104,14 @@
     readyTicks: 0,
     dyingPhase: 0,
     levelPhase: 0,
+
+    /* emotes, chat y maestrías */
+    emotes: [],          // por jugador: { e: idx, ticks } | null
+    emoteCooldown: 0,
+    chat: [],            // { name, color, text, ticks }
+    chatCooldown: 0,
+    badgeNotice: null,   // { name, color, ticks } — maestría recién ganada
+    rankingSent: false,  // una sola subida por partida
 
     /* rendición y revancha (deben aceptar los dos jugadores) */
     vote: null,          // { kind:'surrender'|'rematch', role:'from'|'to', local, ticks }
@@ -193,6 +202,16 @@
       return (i === 1) ? (s.pac2Color || '#00ff00') : s.pacColor;
     },
 
+    /* Skin del jugador i (online: intercambiadas en el saludo) */
+    skinFor: function (i) {
+      var s = this.netSkins && this.netSkins[i];
+      if (!s) {
+        var st = this.settings();
+        s = (i === 1) ? st.skin2 : st.skin1;
+      }
+      return (CFG.SKIN_IDS.indexOf(s) !== -1) ? s : 'clasico';
+    },
+
     /* Nombre elegido para el jugador i ('' si no ha puesto ninguno).
      * En online los nombres se intercambian en el saludo (netNames). */
     rawName: function (i) {
@@ -236,10 +255,17 @@
       this.localIdx = (this.netRole === 'guest') ? 1 : 0;
       this.netColors = opts.colors || null;
       this.netNames = opts.names || null;
+      this.netSkins = opts.skins || null;
       this.vote = null;
       this.dlgPaused = false;
       this.overIdle = false;
       this.flash = null;
+      this.emotes = [null, null];
+      this.emoteCooldown = 0;
+      this.chat = [];
+      this.chatCooldown = 0;
+      this.badgeNotice = null;
+      this.rankingSent = false;
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -386,8 +412,12 @@
         this.netRole = null;
         this.netColors = null;
         this.netNames = null;
+        this.netSkins = null;
       }
       this.netNotice = null;
+      this.emotes = [null, null];
+      this.chat = [];
+      this.badgeNotice = null;
       this.vote = null;
       this.dlgPaused = false;
       this.overIdle = false;
@@ -500,6 +530,9 @@
       if (this.netRole) this.processNetQueue();
       this.stepVote();
       this.stepFlash();
+      this.stepEmotes();
+      this.stepChat();
+      this.stepBadgeNotice();
 
       /* aviso de red: congela y vuelve al menú */
       if (this.netNotice) {
@@ -989,6 +1022,7 @@
     enterGameOverIdle: function () {
       this.overIdle = true;
       this.stopAllLoops();
+      this.submitRanking();     // partidas de dúo van al top mundial
       this.syncUI();
     },
 
@@ -1028,6 +1062,7 @@
       if (this.score > this.highScore) {
         this.highScore = this.score;
         this.persistHighScore();
+        this.checkBadges();      // récord nuevo: puede entregar una maestría
       }
     },
 
@@ -1045,6 +1080,116 @@
 
     addPopup: function (x, y, text, ticks) {
       this.popups.push({ x: x, y: y, text: text, ticks: ticks });
+    },
+
+    /* =========================================================
+     * EMOTES, CHAT Y MAESTRÍAS
+     * ========================================================= */
+    canEmote: function () {
+      return this.inGame() && this.state !== 'GAME_OVER' &&
+        !this.netNotice && this.emoteCooldown <= 0;
+    },
+
+    /* Emote del jugador local (teclas 1..6 o botones en pantalla) */
+    sendEmote: function (idx) {
+      idx = parseInt(idx, 10);
+      if (!(idx >= 0 && idx < CFG.EMOTES.length)) return;
+      if (!this.canEmote()) return;
+      var who = this.netRole ? this.localIdx : 0;
+      this.emoteCooldown = CFG.EMOTE_COOLDOWN;
+      this.showEmote(who, idx);
+      if (this.netRole === 'guest') this.netSend('gevt', { t: 'emote', e: idx });
+      else this.hostEvt({ t: 'emote', w: who, e: idx });
+    },
+
+    showEmote: function (who, idx) {
+      if (!(idx >= 0 && idx < CFG.EMOTES.length)) return;
+      if (!this.pacs[who]) return;
+      this.emotes[who] = { e: idx, ticks: CFG.EMOTE_TICKS };
+      window.AudioSys && AudioSys.playEmote && AudioSys.playEmote();
+    },
+
+    stepEmotes: function () {
+      if (this.emoteCooldown > 0) this.emoteCooldown--;
+      for (var i = 0; i < this.emotes.length; i++) {
+        var e = this.emotes[i];
+        if (e && --e.ticks <= 0) this.emotes[i] = null;
+      }
+    },
+
+    /* ---------- Chat (solo online) ---------- */
+    canChat: function () {
+      return !!this.netRole && this.inGame() && !this.netNotice;
+    },
+
+    cleanChat: function (text) {
+      return String(text == null ? '' : text)
+        .replace(/[\x00-\x1f\x7f]/g, ' ')
+        .replace(/ +/g, ' ')
+        .replace(/^ +| +$/g, '')
+        .slice(0, CFG.CHAT_MAX);
+    },
+
+    sendChat: function (text) {
+      text = this.cleanChat(text);
+      if (!text || !this.canChat() || this.chatCooldown > 0) return false;
+      this.chatCooldown = CFG.CHAT_COOLDOWN;
+      var who = this.netRole ? this.localIdx : 0;
+      this.addChat(who, text);
+      if (this.netRole === 'guest') this.netSend('gevt', { t: 'chat', m: text });
+      else this.hostEvt({ t: 'chat', w: who, m: text });
+      return true;
+    },
+
+    addChat: function (who, text) {
+      text = this.cleanChat(text);
+      if (!text) return;
+      this.chat.push({
+        name: this.nameFor(who),
+        color: this.colorFor(who),
+        text: text,
+        ticks: CFG.CHAT_TICKS
+      });
+      while (this.chat.length > CFG.CHAT_KEEP) this.chat.shift();
+      if (window.PM.UI && window.PM.UI.onChat) window.PM.UI.onChat();
+    },
+
+    stepChat: function () {
+      if (this.chatCooldown > 0) this.chatCooldown--;
+      for (var i = this.chat.length - 1; i >= 0; i--) {
+        if (--this.chat[i].ticks <= 0) this.chat.splice(i, 1);
+      }
+    },
+
+    /* ---------- Maestrías ---------- */
+    checkBadges: function () {
+      if (!window.PM.Badges) return;
+      var b = window.PM.Badges.claim(Math.max(this.score, window.PM.Badges.best()));
+      if (b) {
+        this.badgeNotice = { name: b.name, color: b.color, ticks: 240 };
+        window.AudioSys && AudioSys.playExtraLife();
+      }
+    },
+
+    stepBadgeNotice: function () {
+      if (!this.badgeNotice) return;
+      if (--this.badgeNotice.ticks <= 0) this.badgeNotice = null;
+    },
+
+    /* ---------- Ranking mundial ---------- */
+    submitRanking: function () {
+      if (this.rankingSent || this.playerCount !== 2) return;
+      if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
+      if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
+      if (!(this.score > 0)) return;
+      this.rankingSent = true;
+      window.PM.Ranking.submit({
+        modo: this.netRole ? 'online' : 'local',
+        nombre1: this.nameFor(0),
+        nombre2: this.nameFor(1),
+        puntos: this.score,
+        nivel: this.level
+      });
     },
 
     /* =========================================================
@@ -1397,6 +1542,14 @@
           break;
         case 'voteRes':
           this.onVoteResult(d.k, !!d.ok);
+          break;
+        case 'emote':
+          this.showEmote(1, d.e);
+          this.hostEvt({ t: 'emote', w: 1, e: d.e });
+          break;
+        case 'chat':
+          this.addChat(1, d.m);
+          this.hostEvt({ t: 'chat', w: 1, m: this.cleanChat(d.m) });
           break;
       }
     },
@@ -1778,6 +1931,12 @@
           this.clearVote();
           this.restartGame();
           break;
+        case 'emote':
+          if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
+          break;
+        case 'chat':
+          if ((e.w || 0) !== this.localIdx) this.addChat(e.w || 0, e.m);
+          break;
       }
     },
 
@@ -2078,7 +2237,7 @@
           if (this.eatFreezeTicks > 0 && i === this.eaterIdx) continue;
           // parpadeo del margen de gracia al reaparecer con la partida en marcha
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
-          pc.draw(ctx, this.colorFor(i));
+          pc.draw(ctx, this.colorFor(i), this.skinFor(i));
         }
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!" */
         if (this.playerCount === 2 && this.state === 'READY') {
@@ -2091,6 +2250,13 @@
             ctx.fillText(this.nameFor(i), this.pacs[i].x,
               this.pacs[i].y + CFG.MAZE_Y - 10);
           }
+        }
+        /* emotes sobre cada jugador */
+        for (i = 0; i < this.pacs.length; i++) {
+          var em = this.emotes[i];
+          if (!em || this.pacs[i].out) continue;
+          window.PM.Sprites.drawEmote(ctx, this.pacs[i].x,
+            this.pacs[i].y + CFG.MAZE_Y - 11, em.e, this.colorFor(i));
         }
       }
 
@@ -2144,15 +2310,16 @@
             var n = Math.min(Math.max(this.pacs[p].lives - 1, 0), 3);
             for (i = 0; i < n; i++) {
               window.PM.Sprites.drawPacman(ctx, 18 + p * 56 + i * 16, 278,
-                D.LEFT, 2, this.colorFor(p));
+                D.LEFT, 2, this.colorFor(p), this.skinFor(p));
             }
           }
         } else {
           // fondo común en 2 jugadores: iconos blancos (vidas del equipo)
           var color = twoP ? '#ffffff' : this.colorFor(0);
+          var skin = twoP ? 'clasico' : this.skinFor(0);
           var livesShown = Math.max(0, this.lives - 1);
           for (i = 0; i < livesShown && i < 5; i++) {
-            window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color);
+            window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color, skin);
           }
         }
       }
@@ -2186,6 +2353,44 @@
         ctx.font = 'bold 8px monospace';
         ctx.fillStyle = CFG.COLORS.popup;
         ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
+      }
+
+      /* maestría recién ganada */
+      if (this.badgeNotice) {
+        var by = 8 * T + CFG.MAZE_Y;
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(16, by - 13, CFG.NATIVE_W - 32, 26);
+        ctx.strokeStyle = this.badgeNotice.color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(16.5, by - 12.5, CFG.NATIVE_W - 33, 25);
+        window.PM.Sprites.drawBadge(ctx, 30, by, 8, this.badgeNotice.color, false);
+        ctx.font = 'bold 7px monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('¡MAESTRÍA CONSEGUIDA!', 122, by - 4);
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = this.badgeNotice.color;
+        ctx.fillText(this.badgeNotice.name, 122, by + 6);
+      }
+
+      /* chat: últimos mensajes sobre la parte baja del laberinto */
+      if (this.chat.length) {
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 7px monospace';
+        var cy = CFG.MAZE_Y + 30 * T - 2;
+        for (var ci = this.chat.length - 1; ci >= 0; ci--) {
+          var m = this.chat[ci];
+          var label = m.name + ': ';
+          var lw = ctx.measureText(label).width;
+          var tw = ctx.measureText(m.text).width;
+          ctx.fillStyle = 'rgba(0,0,0,0.75)';
+          ctx.fillRect(4, cy - 5, Math.min(lw + tw + 6, CFG.NATIVE_W - 8), 10);
+          ctx.fillStyle = m.color;
+          ctx.fillText(label, 7, cy);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(m.text, 7 + lw, cy);
+          cy -= 11;
+        }
+        ctx.textAlign = 'center';
       }
       if (this.paused) {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
