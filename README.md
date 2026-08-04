@@ -126,6 +126,10 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
   puesto (y sin palabrotas) para registrar un récord.
 - **Tus partidas**: historial de las últimas 15 en este navegador, con o sin
   nombre y con o sin conexión.
+- **Nivel de jugador**: los puntos de todas tus partidas suman experiencia;
+  cada nivel cuesta más que el anterior y no hay tope.
+- **Amigos**: lista para guardar con quién sueles jugar.
+- **Cronómetro** en partida, con el tiempo transcurrido.
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - **Volumen por tipo de sonido**: general, música, efectos, ambiente (sirena
   y modo azul) y voces, cada uno por separado en OPCIONES → SONIDO.
@@ -160,6 +164,8 @@ js/net-config.js  Credenciales de Supabase (online y top mundial)
 js/net.js         Transporte en tiempo real (Supabase Realtime / local)
 js/badges.js      Maestrías (insignias por récord personal)
 js/history.js     Historial local de partidas
+js/level.js       Nivel de jugador (experiencia acumulada)
+js/friends.js     Lista de amigos
 js/ranking.js     Top mundial (tabla de Supabase vía REST)
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/ui.js          Menús, opciones, lobby online, paneles y controles

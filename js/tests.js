@@ -349,6 +349,150 @@
   });
 
   // ---------------------------------------------------------------
+  // Cronómetro
+  // ---------------------------------------------------------------
+  test('el cronómetro corre jugando y se para en pausa', function () {
+    partida(1);
+    G.timeTicks = 0;
+    ticks(60);
+    eq(G.timeTicks, 60, 'un segundo de partida');
+    eq(G.clockText(), '00:01');
+    G.setPaused(true);
+    ticks(60);
+    eq(G.timeTicks, 60, 'en pausa no avanza');
+    G.setPaused(false);
+  });
+
+  test('el cronómetro también corre durante la muerte', function () {
+    partida(2);
+    G.timeTicks = 0;
+    G.startDeath(0);
+    ticks(30);
+    ok(G.timeTicks > 0, 'sigue contando mientras uno muere');
+  });
+
+  test('el reloj se formatea en mm:ss', function () {
+    partida(1);
+    G.timeTicks = 60 * 75;      // 1:15
+    eq(G.clockText(), '01:15');
+    G.timeTicks = 60 * 605;     // 10:05
+    eq(G.clockText(), '10:05');
+  });
+
+  // ---------------------------------------------------------------
+  // Pausa durante la animación de muerte (lo que no dejaba dar Escape)
+  // ---------------------------------------------------------------
+  test('se puede pausar mientras mueres', function () {
+    partida(2);
+    G.startDeath(0);
+    ok(G.canPause(), 'con un jugador muriendo');
+    G.requestPause();
+    ok(G.paused);
+    G.requestPause();
+    partida(1);
+    G.startDeath(0);            // parón clásico: estado DYING
+    eq(G.state, 'DYING');
+    ok(G.canPause(), 'también en el parón clásico');
+  });
+
+  test('no se puede pausar en el game over', function () {
+    partida(1);
+    G.state = 'GAME_OVER';
+    ok(!G.canPause());
+  });
+
+  // ---------------------------------------------------------------
+  // Nivel de jugador
+  // ---------------------------------------------------------------
+  test('el nivel de jugador sube y cada escalón cuesta más', function () {
+    var L = window.PM.Level;
+    var previo = L.xp();
+    try {
+      L.reset();
+      eq(L.state().level, 1);
+      ok(L.cost(2) > L.cost(1), 'el segundo escalón pide más');
+      ok(L.cost(10) > L.cost(9));
+      var subida = L.add(L.cost(1));
+      eq(subida, 2, 'con lo justo se sube al 2');
+      eq(L.state().level, 2);
+      ok(L.add(10) === null, 'unos pocos puntos no suben de nivel');
+    } finally {
+      L.reset();
+      if (previo > 0) L.add(previo);
+    }
+  });
+
+  test('el nivel se deduce de la experiencia, sin tope', function () {
+    var L = window.PM.Level;
+    var s = L.stateFor(0);
+    eq(s.level, 1);
+    eq(s.inLevel, 0);
+    ok(L.stateFor(1e9).level > 20, 'con mucha experiencia sigue subiendo');
+    var mid = L.stateFor(L.cost(1) + 100);
+    eq(mid.level, 2);
+    eq(mid.inLevel, 100);
+  });
+
+  test('la partida suma experiencia una sola vez', function () {
+    var L = window.PM.Level, H = window.PM.History;
+    var previo = L.xp(), hist = H.all();
+    try {
+      L.reset(); H.clear();
+      partida(1);
+      G.score = 500; G.rankingSent = false;
+      G.submitRanking();
+      G.submitRanking();          // segunda llamada: no debe contar
+      eq(L.xp(), 500);
+    } finally {
+      L.reset(); if (previo > 0) L.add(previo);
+      H.clear();
+      for (var i = hist.length - 1; i >= 0; i--) {
+        H.add({ jugadores: hist[i].j, modo: hist[i].m, nombre1: hist[i].n1,
+                nombre2: hist[i].n2, puntos: hist[i].p, nivel: hist[i].lv });
+      }
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Amigos
+  // ---------------------------------------------------------------
+  test('se pueden añadir y quitar amigos, sin repetidos', function () {
+    var F = window.PM.Friends;
+    var previo = F.all();
+    var yo = window.PM.settings.nick1;
+    try {
+      F.clear();
+      window.PM.settings.nick1 = 'YO';
+      eq(F.add('goku'), null);
+      ok(F.has('GOKU'), 'se guarda en mayúsculas');
+      ok(F.add('GOKU'), 'no se repite');
+      ok(F.add(''), 'hace falta un nombre');
+      ok(F.add('YO'), 'no puedes añadirte a ti mismo');
+      eq(F.add('MAULIO'), null);
+      eq(F.all().length, 2);
+      F.remove('GOKU');
+      eq(F.all().join(','), 'MAULIO');
+    } finally {
+      F.clear();
+      for (var i = 0; i < previo.length; i++) F.add(previo[i]);
+      window.PM.settings.nick1 = yo;
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Aviso de maestría animado
+  // ---------------------------------------------------------------
+  test('el aviso de maestría dura y se apaga solo', function () {
+    partida(1);
+    G.badgeNotice = { name: 'CAZADOR', color: '#00ffff', mode: 'SOLO',
+                      ticks: CFG.BADGE_ANIM_TICKS, total: CFG.BADGE_ANIM_TICKS };
+    ticks(10);
+    ok(G.badgeNotice, 'sigue en pantalla');
+    ticks(CFG.BADGE_ANIM_TICKS);
+    eq(G.badgeNotice, null, 'termina solo');
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

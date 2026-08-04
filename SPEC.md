@@ -5,6 +5,26 @@ Do NOT copy any original Namco assets (no ripped sprites, no ripped audio). All
 graphics are drawn procedurally on canvas; all audio is synthesized with Web
 Audio API. UI language: **Spanish**.
 
+## Nivel de jugador, cronómetro y amigos
+
+**Nivel** (`PM.Level`, `CFG.LEVEL_*`): every game's score is added as XP; the
+level is **derived** from the total (never stored), so it cannot drift.
+`cost(n) = LEVEL_BASE * n^LEVEL_EXP` — each step costs more and there is no
+cap. XP is granted once per game, next to the history save. Shown on the
+title screen with a progress bar and, on level-up, as an in-game notice.
+
+**Cronómetro**: `Game.timeTicks` advances during `PLAYING` and `DYING` (not
+while paused or stalled), rendered as mm:ss in the bottom HUD row. Online it
+travels in the snapshot (`tm`), so the host owns it.
+
+**Amigos** (`PM.Friends`, `CFG.FRIENDS_KEY`): a local list of names —
+add/remove, sanitised like nicknames, no duplicates, cannot add yourself.
+Inviting them and spectating comes with the party rooms.
+
+**Pausa**: `Game.canPause()` allows the menu in any in-game state except
+GAME OVER (and while a net notice is up), so `Escape`/`P` also work during a
+death animation or a level change — before, being killed locked you out.
+
 ## App instalable (PWA) y pruebas
 
 `manifest.json` + `sw.js` make the game installable and playable offline:

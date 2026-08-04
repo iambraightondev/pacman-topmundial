@@ -575,6 +575,60 @@ input[type="range"] {
 .skin:hover { border-color: #fff; }
 .skin.active { border-color: #fff; color: #fff; box-shadow: 0 0 6px #fff; }
 
+/* ---------- Nivel de jugador (portada) ---------- */
+.level-box {
+  width: min(90%, 240px);
+  margin: 0 0 10px;
+}
+
+.level-label {
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 2px;
+  color: #00ffff;
+  margin-bottom: 3px;
+}
+
+.level-bar {
+  height: 6px;
+  background: #111;
+  border: 1px solid #2121ff;
+}
+
+.level-fill {
+  height: 100%;
+  width: 0;
+  background: #ffff00;
+  transition: width 0.3s;
+}
+
+/* ---------- Amigos ---------- */
+.friend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(94%, 360px);
+  margin-top: 10px;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 10px;
+  border: 1px solid #333;
+}
+
+.friend-name {
+  font-size: clamp(11px, 2vh, 14px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffff00;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- Maestrías ---------- */
 .badge-list {
   display: flex;

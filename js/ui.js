@@ -114,6 +114,7 @@
       this.els.online = document.getElementById('online');
       this.els.badges = document.getElementById('badges');
       this.els.ranking = document.getElementById('ranking');
+      this.els.friends = document.getElementById('friends');
       this.els.prompt = document.getElementById('prompt');
       if (window.PM.Badges) window.PM.Badges.syncSeen();
       this.buildMenu();
@@ -121,6 +122,7 @@
       this.buildOnline();
       this.buildBadges();
       this.buildRanking();
+      this.buildFriends();
       this.buildGameButtons();
       this.buildDpads();
       this.bindKeyboard();
@@ -205,6 +207,20 @@
       /* nombre en la portada, estilo arcade moderno: se escribe y a jugar */
       m.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
 
+      /* nivel de jugador con su barra de progreso */
+      var lvl = document.createElement('div');
+      lvl.className = 'level-box';
+      this.levelLabel = document.createElement('div');
+      this.levelLabel.className = 'level-label';
+      lvl.appendChild(this.levelLabel);
+      var bar = document.createElement('div');
+      bar.className = 'level-bar';
+      this.levelFill = document.createElement('div');
+      this.levelFill.className = 'level-fill';
+      bar.appendChild(this.levelFill);
+      lvl.appendChild(bar);
+      m.appendChild(lvl);
+
       var play = this.makeButton('UN JUGADOR', function () {
         self.resumeAudio();
         self.hideAll();
@@ -235,8 +251,13 @@
         self.resumeAudio();
         self.showBadges();
       }));
-      extras.childNodes[0].classList.add('btn-preset');
-      extras.childNodes[1].classList.add('btn-preset');
+      extras.appendChild(this.makeButton('AMIGOS', function () {
+        self.resumeAudio();
+        self.showFriends();
+      }));
+      for (var e = 0; e < extras.childNodes.length; e++) {
+        extras.childNodes[e].classList.add('btn-preset');
+      }
       m.appendChild(extras);
 
       m.appendChild(this.makeButton('OPCIONES', function () {
@@ -558,7 +579,7 @@
         b.title = sk.name;
         b.setAttribute('aria-label', 'Skin ' + sk.name);
         var cv = document.createElement('canvas');
-        cv.width = 22; cv.height = 22;
+        cv.width = 48; cv.height = 48;       // grandes: a 22 px no se distinguían
         b.appendChild(cv);
         var lab = document.createElement('span');
         lab.textContent = sk.name;
@@ -587,9 +608,12 @@
           it.btn.classList.toggle('active', s[k] === it.id);
           var c = it.canvas.getContext('2d');
           c.setTransform(1, 0, 0, 1, 0, 0);
-          c.clearRect(0, 0, 22, 22);
+          c.clearRect(0, 0, 48, 48);
           c.imageSmoothingEnabled = false;
-          window.PM.Sprites.drawPacman(c, 11, 11, CFG.DIR.RIGHT, 2, color, it.id);
+          // el sprite mide r=6.5; se amplía para que la skin se lea bien
+          c.setTransform(3, 0, 0, 3, 24, 24);
+          window.PM.Sprites.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2, color, it.id);
+          c.setTransform(1, 0, 0, 1, 0, 0);
         }
       }
     },
@@ -1178,6 +1202,102 @@
     },
 
     /* ------------------------------------------------------
+     * Amigos (lista guardada en este navegador)
+     * ------------------------------------------------------ */
+    buildFriends: function () {
+      var self = this;
+      var o = this.els.friends;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'AMIGOS';
+      o.appendChild(h);
+
+      var sub = document.createElement('div');
+      sub.className = 'note';
+      sub.textContent = 'GUARDA AQUÍ CON QUIÉN SUELES JUGAR';
+      o.appendChild(sub);
+
+      var row = document.createElement('div');
+      row.className = 'preset-row';
+      row.style.marginTop = '10px';
+      this.friendInput = document.createElement('input');
+      this.friendInput.type = 'text';
+      this.friendInput.className = 'nick-input';
+      this.friendInput.maxLength = CFG.NICK_MAX;
+      this.friendInput.placeholder = 'NOMBRE';
+      this.friendInput.setAttribute('autocomplete', 'off');
+      this.friendInput.addEventListener('keydown', function (ev) {
+        ev.stopPropagation();
+        if (ev.key === 'Enter') self.addFriend();
+      });
+      row.appendChild(this.friendInput);
+      var add = this.makeButton('AÑADIR', function () { self.addFriend(); });
+      add.classList.add('btn-preset');
+      row.appendChild(add);
+      o.appendChild(row);
+
+      this.friendsMsg = document.createElement('div');
+      this.friendsMsg.className = 'lobby-status';
+      o.appendChild(this.friendsMsg);
+
+      this.friendsList = document.createElement('div');
+      this.friendsList.className = 'friend-list';
+      o.appendChild(this.friendsList);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+    },
+
+    addFriend: function () {
+      var F = window.PM.Friends;
+      if (!F) return;
+      var err = F.add(this.friendInput.value);
+      this.friendsMsg.classList.toggle('error', !!err);
+      this.friendsMsg.textContent = err || '';
+      if (!err) this.friendInput.value = '';
+      this.refreshFriends();
+    },
+
+    refreshFriends: function () {
+      var self = this;
+      var F = window.PM.Friends;
+      if (!this.friendsList || !F) return;
+      var list = F.all();
+      this.friendsList.innerHTML = '';
+      if (!list.length) {
+        var vacio = document.createElement('div');
+        vacio.className = 'note';
+        vacio.textContent = 'TODAVÍA NO HAS AÑADIDO A NADIE';
+        this.friendsList.appendChild(vacio);
+        return;
+      }
+      list.forEach(function (name) {
+        var row = document.createElement('div');
+        row.className = 'friend-row';
+
+        var n = document.createElement('span');
+        n.className = 'friend-name';
+        n.textContent = name;
+        row.appendChild(n);
+
+        var del = self.makeButton('QUITAR', function () {
+          F.remove(name);
+          self.friendsMsg.classList.remove('error');
+          self.friendsMsg.textContent = '';
+          self.refreshFriends();
+        });
+        del.classList.add('btn-preset');
+        row.appendChild(del);
+
+        self.friendsList.appendChild(row);
+      });
+    },
+
+    /* ------------------------------------------------------
      * Top mundial (ranking de partidas de dúo, desde Supabase)
      * ------------------------------------------------------ */
     buildRanking: function () {
@@ -1603,7 +1723,7 @@
      * ------------------------------------------------------ */
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
-      var names = ['menu', 'options', 'online', 'badges', 'ranking'];
+      var names = ['menu', 'options', 'online', 'badges', 'ranking', 'friends'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -1933,7 +2053,7 @@
     /* Muestra un solo panel (o ninguno si name es null) */
     showPanel: function (name) {
       this.hidePrompt();
-      var panels = ['menu', 'options', 'online', 'badges', 'ranking'];
+      var panels = ['menu', 'options', 'online', 'badges', 'ranking', 'friends'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -1943,7 +2063,22 @@
 
     showMenu: function () {
       this.refreshNicks();
+      this.refreshLevel();
       this.showPanel('menu');
+    },
+
+    /* Nivel de jugador en la portada */
+    refreshLevel: function () {
+      if (!this.levelLabel || !window.PM.Level) return;
+      var s = window.PM.Level.state();
+      this.levelLabel.textContent = 'NIVEL ' + s.level + ' · ' +
+        s.inLevel + ' / ' + s.needed;
+      this.levelFill.style.width = Math.round(s.pct * 100) + '%';
+    },
+
+    showFriends: function () {
+      this.refreshFriends();
+      this.showPanel('friends');
     },
     showOptions: function () {
       this.refreshOptions();
@@ -2047,7 +2182,7 @@
           return;
         }
         if (ev.key === 'p' || ev.key === 'P' || ev.key === 'Escape') {
-          if (canControl) {
+          if (g.canPause()) {           // también mientras mueres o cambia el nivel
             g.requestPause();
             ev.preventDefault();
           } else if (ev.key === 'Escape') {
@@ -2056,7 +2191,8 @@
               self.showMenu();
             } else if (self.els.options.style.display !== 'none' ||
                        self.els.badges.style.display !== 'none' ||
-                       self.els.ranking.style.display !== 'none') {
+                       self.els.ranking.style.display !== 'none' ||
+                       self.els.friends.style.display !== 'none') {
               self.showMenu();
             }
           }

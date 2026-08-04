@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Nivel de jugador, cronómetro, amigos, maestría animada y arreglos
+
+- **Nivel de jugador infinito**: los puntos de todas tus partidas suman
+  experiencia. Cada nivel pide más que el anterior y no hay tope. Se ve en la
+  portada con su barra de progreso, y al subir sale un aviso en la partida.
+- **Cronómetro** en la parte de abajo del laberinto, con el tiempo de la
+  partida en mm:ss. Se para en pausa y en online lo lleva el anfitrión, así
+  que los dos ven el mismo.
+- **Amigos**: nueva pantalla para guardar con quién sueles jugar, con añadir
+  y quitar. (Invitarlos y espectar sus partidas llega con las salas de grupo.)
+- **La maestría ahora se celebra**: el cartel entra con rebote, la medalla
+  late con rayos girando detrás, el nombre crece y un destello recorre el
+  cartel antes de irse. Ya no es un simple mensaje.
+- **Skins mucho más grandes** en OPCIONES: se dibujaban a 22 px y no se
+  distinguían; ahora son el triple.
+- **Corregido**: al morir no se podía abrir el menú con `Escape` ni con `P`.
+  Ahora se puede pausar en cualquier momento de la partida, también durante
+  la animación de muerte y el cambio de nivel.
+
 ## 2026-08-04 · Top mundial por jugador, app instalable, filtro de nombres, historial y pruebas
 
 - **Una fila por jugador/dúo en el top mundial**: antes, quien más jugaba

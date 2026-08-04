@@ -110,8 +110,10 @@
     emoteCooldown: 0,
     chat: [],            // { name, color, text, ticks }
     chatCooldown: 0,
-    badgeNotice: null,   // { name, color, ticks } — maestría recién ganada
+    badgeNotice: null,   // { name, color, mode, ticks, total } — maestría ganada
+    levelNotice: null,   // { level, ticks } — nivel de jugador recién subido
     rankingSent: false,  // una sola subida por partida
+    timeTicks: 0,        // cronómetro de la partida (solo mientras se juega)
 
     /* rendición y revancha (deben aceptar los dos jugadores) */
     vote: null,          // { kind:'surrender'|'rematch', role:'from'|'to', local, ticks }
@@ -265,7 +267,9 @@
       this.chat = [];
       this.chatCooldown = 0;
       this.badgeNotice = null;
+      this.levelNotice = null;
       this.rankingSent = false;
+      this.timeTicks = 0;
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -418,6 +422,7 @@
       this.emotes = [null, null];
       this.chat = [];
       this.badgeNotice = null;
+      this.levelNotice = null;
       this.vote = null;
       this.dlgPaused = false;
       this.overIdle = false;
@@ -431,8 +436,15 @@
       if (window.PM.UI) window.PM.UI.showMenu();
     },
 
+    /* Se puede pausar en cualquier momento de la partida, también durante la
+     * animación de muerte o el cambio de nivel: quedarse sin poder abrir el
+     * menú justo cuando te matan era desesperante. */
+    canPause: function () {
+      return this.inGame() && this.state !== 'GAME_OVER' && !this.netNotice;
+    },
+
     togglePause: function () {
-      if (this.state !== 'PLAYING' && this.state !== 'READY') return;
+      if (!this.canPause()) return;
       this.setPaused(!this.paused);
     },
 
@@ -447,7 +459,7 @@
 
     /* Pausa pedida por el jugador local (en online se coordina en red) */
     requestPause: function () {
-      if (this.state !== 'PLAYING' && this.state !== 'READY') return;
+      if (!this.canPause()) return;
       if (this.vote) return;   // hay un diálogo abierto: la pausa la lleva él
       if (this.netRole === 'guest') {
         this.netSend('gevt', { t: 'pauseReq', on: !this.paused });
@@ -546,6 +558,7 @@
 
       var stalled = this.netStalled();
       if (!this.paused && !stalled) {
+        this.stepClock();
         if (this.netRole === 'guest') {
           this.stepGuest();
         } else {
@@ -1217,15 +1230,45 @@
       var b = B.claim(Math.max(this.score, B.best(mode)), mode);
       if (b) {
         this.badgeNotice = {
-          name: b.name, color: b.color, mode: B.modeName(mode), ticks: 240
+          name: b.name, color: b.color, mode: B.modeName(mode),
+          ticks: CFG.BADGE_ANIM_TICKS, total: CFG.BADGE_ANIM_TICKS
         };
         window.AudioSys && AudioSys.playExtraLife();
       }
     },
 
     stepBadgeNotice: function () {
-      if (!this.badgeNotice) return;
-      if (--this.badgeNotice.ticks <= 0) this.badgeNotice = null;
+      if (this.badgeNotice && --this.badgeNotice.ticks <= 0) {
+        this.badgeNotice = null;
+      }
+      if (this.levelNotice && --this.levelNotice.ticks <= 0) {
+        this.levelNotice = null;
+      }
+    },
+
+    /* ---------- Nivel de jugador ----------
+     * La experiencia son los puntos de la partida, así que se suma al
+     * terminar (una vez por partida, junto al historial). */
+    awardLevelXp: function () {
+      if (!window.PM.Level || !(this.score > 0)) return;
+      var nuevo = window.PM.Level.add(this.score);
+      if (nuevo) {
+        this.levelNotice = { level: nuevo, ticks: 260 };
+        window.AudioSys && AudioSys.playExtraLife();
+      }
+    },
+
+    /* ---------- Cronómetro ---------- */
+    stepClock: function () {
+      if (this.state === 'PLAYING' || this.state === 'DYING') this.timeTicks++;
+    },
+
+    /* mm:ss de la partida en curso */
+    clockText: function () {
+      var s = Math.floor(this.timeTicks / 60);
+      var m = Math.floor(s / 60);
+      s = s % 60;
+      return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     },
 
     /* ---------- Ranking mundial ----------
@@ -1249,6 +1292,7 @@
     submitRanking: function () {
       if (this.rankingSent) return;
       this.rankingSent = true;      // una sola vez por partida
+      this.awardLevelXp();          // la experiencia también cuenta una vez
       // el historial local guarda todas las partidas, con nombre o sin él
       if (this.score > 0 && window.PM.History) {
         window.PM.History.add({
@@ -1615,7 +1659,7 @@
           }
           break;
         case 'pauseReq':
-          if ((this.state === 'PLAYING' || this.state === 'READY') && !this.vote) {
+          if (this.canPause() && !this.vote) {
             this.dlgPaused = false;
             this.setPaused(!!d.on);
             this.hostEvt({ t: 'pause', on: this.paused });
@@ -1655,6 +1699,7 @@
         fz: this.eatFreezeTicks, hg: this.hiddenGhost, ei: this.eaterIdx,
         dl: this.dotsLeft, de: this.dotsEaten,
         fa: this.fruitActive ? 1 : 0,
+        tm: this.timeTicks,           // cronómetro: manda el anfitrión
         he: this.snapEaten,
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
         g: []
@@ -2091,6 +2136,7 @@
       this.dotsLeft = s.dl;
       this.dotsEaten = s.de;
       this.fruitActive = !!s.fa;
+      if (typeof s.tm === 'number') this.timeTicks = s.tm;
 
       /* vidas y espectadores */
       if (this.livesMode === 'individual' && s.lv && s.lv.length) {
@@ -2427,6 +2473,99 @@
           x -= 16;
         }
       }
+
+      /* cronómetro, en el hueco central de la fila de abajo */
+      if (this.state !== 'MENU') {
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#00ffff';
+        ctx.fillText(this.clockText(), 112, 279);
+        ctx.textBaseline = 'top';
+      }
+    },
+
+    /* Aviso de maestría con vida propia: el cartel entra desde arriba con un
+     * rebote, la medalla late con rayos girando detrás, el nombre crece y
+     * luego todo se va. Que se note que has conseguido algo. */
+    renderBadgeNotice: function (ctx) {
+      var n = this.badgeNotice;
+      var total = n.total || CFG.BADGE_ANIM_TICKS;
+      var t = 1 - (n.ticks / total);              // 0 al aparecer, 1 al irse
+      var cx = 112, cy = 9 * T + CFG.MAZE_Y;
+      var w = CFG.NATIVE_W - 24, h = 44;
+
+      /* fases: entrada (0-15%), lucimiento, salida (85-100%) */
+      var ent = Math.min(1, t / 0.15);
+      var sal = Math.min(1, (1 - t) / 0.15);
+      var vis = Math.min(ent, sal);
+      if (vis <= 0) return;
+
+      // rebote de entrada: se pasa un poco y vuelve
+      var over = (ent < 1) ? (1 - Math.pow(1 - ent, 3)) : 1;
+      var slide = (1 - over) * -40;
+      var scale = 0.85 + 0.15 * over + (ent >= 1 ? 0 : 0.06 * Math.sin(ent * Math.PI));
+
+      ctx.save();
+      ctx.globalAlpha = vis;
+      ctx.translate(cx, cy + slide);
+      ctx.scale(scale, scale);
+      ctx.translate(-cx, -cy);
+
+      // cartel
+      ctx.fillStyle = 'rgba(0,0,0,0.88)';
+      ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+      ctx.strokeStyle = n.color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2);
+
+      // rayos girando detrás de la medalla
+      var mx = cx - w / 2 + 24, my = cy;
+      var giro = this.tick * 0.04;
+      ctx.save();
+      ctx.globalAlpha = vis * 0.5;
+      ctx.strokeStyle = n.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var i = 0; i < 12; i++) {
+        var a = giro + i * Math.PI / 6;
+        ctx.moveTo(mx + Math.cos(a) * 11, my + Math.sin(a) * 11);
+        ctx.lineTo(mx + Math.cos(a) * 17, my + Math.sin(a) * 17);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // medalla con latido
+      var pulso = 1 + 0.12 * Math.sin(this.tick * 0.18);
+      window.PM.Sprites.drawBadge(ctx, mx, my, 9 * pulso, n.color, false);
+
+      // textos: el nombre entra creciendo un poco después del cartel
+      var tx = cx + 14;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 7px monospace';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('¡MAESTRÍA DE ' + (n.mode || 'SOLO') + '!', tx, cy - 11);
+
+      var nameIn = Math.min(1, Math.max(0, (t - 0.10) / 0.15));
+      ctx.save();
+      ctx.translate(tx, cy + 4);
+      ctx.scale(0.6 + 0.4 * nameIn, 0.6 + 0.4 * nameIn);
+      ctx.globalAlpha = vis * nameIn;
+      ctx.font = 'bold 13px monospace';
+      ctx.fillStyle = n.color;
+      ctx.fillText(n.name, 0, 0);
+      ctx.restore();
+
+      // destello que recorre el cartel una vez
+      var brillo = (t > 0.2 && t < 0.55) ? (t - 0.2) / 0.35 : -1;
+      if (brillo >= 0) {
+        var bx = cx - w / 2 + brillo * w;
+        ctx.globalAlpha = vis * 0.35 * Math.sin(brillo * Math.PI);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(bx - 5, cy - h / 2 + 2, 10, h - 4);
+      }
+      ctx.restore();
     },
 
     renderStateText: function (ctx) {
@@ -2449,22 +2588,24 @@
         ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
       }
 
-      /* maestría recién ganada */
-      if (this.badgeNotice) {
-        var by = 8 * T + CFG.MAZE_Y;
-        ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(16, by - 13, CFG.NATIVE_W - 32, 26);
-        ctx.strokeStyle = this.badgeNotice.color;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(16.5, by - 12.5, CFG.NATIVE_W - 33, 25);
-        window.PM.Sprites.drawBadge(ctx, 30, by, 8, this.badgeNotice.color, false);
+      /* maestría recién ganada: entra, se luce y se va */
+      if (this.badgeNotice) this.renderBadgeNotice(ctx);
+
+      /* nivel de jugador subido */
+      if (this.levelNotice) {
+        var ly = 6 * T + CFG.MAZE_Y;
+        var lt = this.levelNotice.ticks;
+        var lin = Math.min(1, (260 - lt) / 20);          // entrada rápida
+        var lout = Math.min(1, lt / 30);                 // salida suave
+        ctx.save();
+        ctx.globalAlpha = Math.min(lin, lout);
         ctx.font = 'bold 7px monospace';
+        ctx.fillStyle = '#00ffff';
+        ctx.fillText('NIVEL DE JUGADOR', 112, ly - 5);
+        ctx.font = 'bold 12px monospace';
         ctx.fillStyle = '#ffffff';
-        ctx.fillText('¡MAESTRÍA DE ' + (this.badgeNotice.mode || 'SOLO') + '!',
-          122, by - 4);
-        ctx.font = 'bold 9px monospace';
-        ctx.fillStyle = this.badgeNotice.color;
-        ctx.fillText(this.badgeNotice.name, 122, by + 6);
+        ctx.fillText(String(this.levelNotice.level), 112, ly + 7);
+        ctx.restore();
       }
 
       /* chat: últimos mensajes sobre la parte baja del laberinto */

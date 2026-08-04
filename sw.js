@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v1';
+var VERSION = 'pm-v2';
 var SHELL = [
   './',
   './index.html',
@@ -27,6 +27,8 @@ var SHELL = [
   './js/net.js',
   './js/badges.js',
   './js/history.js',
+  './js/level.js',
+  './js/friends.js',
   './js/ranking.js',
   './js/game.js',
   './js/ui.js',

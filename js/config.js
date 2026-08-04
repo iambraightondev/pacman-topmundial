@@ -337,6 +337,20 @@
   CFG.HISTORY_KEY = 'pacman-topmundial-historial';
   CFG.HISTORY_MAX = 15;       // partidas guardadas
 
+  /* ---------- Nivel de jugador (experiencia acumulada) ----------
+   * Sube con los puntos de TODAS las partidas y no tiene tope: cada nivel
+   * pide más que el anterior (crecimiento suave, ni plano ni imposible). */
+  CFG.LEVEL_KEY = 'pacman-topmundial-nivel';
+  CFG.LEVEL_BASE = 4000;      // puntos del nivel 1 al 2
+  CFG.LEVEL_EXP = 1.28;       // cuánto crece cada escalón
+
+  /* ---------- Amigos (lista local) ---------- */
+  CFG.FRIENDS_KEY = 'pacman-topmundial-amigos';
+  CFG.FRIENDS_MAX = 30;
+
+  /* ---------- Aviso de maestría en partida ---------- */
+  CFG.BADGE_ANIM_TICKS = 300;   // 5 s: entrada, lucimiento y salida
+
   /* ---------- Ajustes (contrato con ui.js/game.js) ---------- */
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';
   CFG.HIGHSCORE_KEY = 'pacman-topmundial-highscore';
