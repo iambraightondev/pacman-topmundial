@@ -110,7 +110,8 @@
     emoteCooldown: 0,
     chat: [],            // { name, color, text, ticks }
     chatCooldown: 0,
-    badgeNotice: null,   // { name, color, mode, ticks, total } — maestría ganada
+    badgeNotice: null,   // { name, color, mode, nueva, ticks, total } — maestría
+    badgeRun: [],        // ids de maestría ya celebrados en ESTA partida
     levelNotice: null,   // { level, ticks } — nivel de jugador recién subido
     rankingSent: false,  // una sola subida por partida
     timeTicks: 0,        // cronómetro de la partida (solo mientras se juega)
@@ -197,11 +198,21 @@
       return window.PM.settings || CFG.DEFAULT_SETTINGS;
     },
 
-    /* Color del jugador i (online: colores intercambiados en el saludo) */
+    /* Hueco de emotes con una casilla por jugador */
+    emptyEmotes: function () {
+      var out = [];
+      for (var i = 0; i < CFG.MAX_PLAYERS; i++) out.push(null);
+      return out;
+    },
+
+    /* Color del jugador i (online: colores intercambiados en el saludo).
+     * Los jugadores 3 y 4 usan la paleta por defecto. */
     colorFor: function (i) {
       if (this.netColors && this.netColors[i]) return this.netColors[i];
       var s = this.settings();
-      return (i === 1) ? (s.pac2Color || '#00ff00') : s.pacColor;
+      if (i === 0) return s.pacColor;
+      if (i === 1) return s.pac2Color || CFG.PLAYER_COLORS[1];
+      return CFG.PLAYER_COLORS[i] || '#ffffff';
     },
 
     /* Skin del jugador i (online: intercambiadas en el saludo) */
@@ -220,7 +231,10 @@
       var n = this.netNames && this.netNames[i];
       if (!n) {
         var s = this.settings();
-        n = (i === 1) ? s.nick2 : s.nick1;
+        // en local solo hay nombre propio para J1 y J2; el resto usa J3/J4
+        if (i === 0) n = s.nick1;
+        else if (i === 1) n = s.nick2;
+        else n = '';
       }
       return String(n || '').replace(/^ +| +$/g, '');
     },
@@ -252,9 +266,14 @@
     newGame: function (opts) {
       opts = opts || {};
       this.lastOpts = opts;
-      this.playerCount = (opts.players === 2) ? 2 : 1;
+      var n = parseInt(opts.players, 10);
+      this.playerCount = (n >= 1 && n <= CFG.MAX_PLAYERS) ? n : 1;
       this.netRole = opts.net || null;
-      this.localIdx = (this.netRole === 'guest') ? 1 : 0;
+      // en una sala de grupo cada uno lleva su propio índice; en el dúo
+      // clásico el anfitrión es el 0 y el invitado el 1
+      var li = parseInt(opts.localIdx, 10);
+      this.localIdx = (li >= 0 && li < this.playerCount) ? li
+        : ((this.netRole === 'guest') ? 1 : 0);
       this.netColors = opts.colors || null;
       this.netNames = opts.names || null;
       this.netSkins = opts.skins || null;
@@ -262,11 +281,12 @@
       this.dlgPaused = false;
       this.overIdle = false;
       this.flash = null;
-      this.emotes = [null, null];
+      this.emotes = this.emptyEmotes();
       this.emoteCooldown = 0;
       this.chat = [];
       this.chatCooldown = 0;
       this.badgeNotice = null;
+      this.badgeRun = [];
       this.levelNotice = null;
       this.rankingSent = false;
       this.timeTicks = 0;
@@ -275,22 +295,24 @@
       this.ghostSpeedMult = s.ghostSpeedMult;
       this.pacSpeedMult = s.pacSpeedMult;
       this.frightMult = s.frightMult;
-      this.livesMode = (this.playerCount === 2 && s.livesMode === 'individual')
+      this.livesMode = (this.playerCount > 1 && s.livesMode === 'individual')
         ? 'individual' : 'shared';
       this.level = s.startLevel;
       this.score = 0;
       this.extraLifeAwarded = false;
       this.paused = false;
 
-      this.pacs = [new window.PM.Pacman(0)];
-      if (this.playerCount === 2) this.pacs.push(new window.PM.Pacman(1));
+      this.pacs = [];
+      for (var i = 0; i < this.playerCount; i++) {
+        this.pacs.push(new window.PM.Pacman(i));
+      }
       if (this.livesMode === 'individual') {
-        for (var i = 0; i < this.pacs.length; i++) this.pacs[i].lives = s.startLives;
+        for (i = 0; i < this.pacs.length; i++) this.pacs[i].lives = s.startLives;
         this.lives = 0;
       } else {
         this.lives = s.startLives;
       }
-      this.highScore = (this.playerCount === 2) ? this.highScore2 : this.highScore1;
+      this.highScore = (this.playerCount > 1) ? this.highScore2 : this.highScore1;
 
       /* red */
       this.netQueue = [];
@@ -357,7 +379,9 @@
 
     /* Posición inicial del jugador i según el número de jugadores */
     pacStart: function (i) {
-      return (this.playerCount === 2) ? CFG.START2[i] : CFG.START.pac;
+      var tabla = CFG.STARTS[this.playerCount];
+      if (tabla && tabla[i]) return tabla[i];
+      return CFG.START.pac;
     },
 
     resetActors: function () {
@@ -419,9 +443,10 @@
         this.netSkins = null;
       }
       this.netNotice = null;
-      this.emotes = [null, null];
+      this.emotes = this.emptyEmotes();
       this.chat = [];
       this.badgeNotice = null;
+      this.badgeRun = [];
       this.levelNotice = null;
       this.vote = null;
       this.dlgPaused = false;
@@ -1071,7 +1096,7 @@
       if (!this.extraLifeAwarded && before < CFG.EXTRA_LIFE_AT &&
           this.score >= CFG.EXTRA_LIFE_AT) {
         this.extraLifeAwarded = true;
-        if (this.playerCount === 2 && this.livesMode === 'individual') {
+        if (this.playerCount > 1 && this.livesMode === 'individual') {
           for (var i = 0; i < this.pacs.length; i++) {
             if (!this.pacs[i].out) this.pacs[i].lives++;
           }
@@ -1084,13 +1109,13 @@
       if (this.score > this.highScore) {
         this.highScore = this.score;
         this.persistHighScore();
-        this.checkBadges();      // récord nuevo: puede entregar una maestría
       }
+      this.checkBadges();        // ¿se ha cruzado un escalón de maestría?
     },
 
     persistHighScore: function () {
       try {
-        if (this.playerCount === 2) {
+        if (this.playerCount > 1) {
           if (this.highScore > this.highScore2) this.highScore2 = this.highScore;
           localStorage.setItem(CFG.HIGHSCORE2_KEY, String(this.highScore2));
         } else {
@@ -1220,21 +1245,33 @@
      * Cada modo tiene su propia ruta: una partida de dúo no entrega
      * insignias de solo, y al revés. */
     badgeMode: function () {
-      return (this.playerCount === 2) ? 'duo' : 'solo';
+      return (this.playerCount > 1) ? 'duo' : 'solo';
     },
 
+    /* Cada partida vuelve a celebrar los escalones que se cruzan. Antes el
+     * cartel salía sólo la primera vez de la vida, así que quien ya tenía
+     * casi todas las maestrías no lo volvía a ver nunca. */
     checkBadges: function () {
       var B = window.PM.Badges;
       if (!B) return;
       var mode = this.badgeMode();
-      var b = B.claim(Math.max(this.score, B.best(mode)), mode);
-      if (b) {
-        this.badgeNotice = {
-          name: b.name, color: b.color, mode: B.modeName(mode),
-          ticks: CFG.BADGE_ANIM_TICKS, total: CFG.BADGE_ANIM_TICKS
-        };
-        window.AudioSys && AudioSys.playExtraLife();
+      var got = B.earnedAt(this.score);
+      var fresh = null;
+      for (var i = 0; i < got.length; i++) {
+        if (this.badgeRun.indexOf(got[i].id) === -1) {
+          this.badgeRun.push(got[i].id);
+          fresh = got[i];        // si se cruzan varias de golpe, la más alta
+        }
       }
+      if (!fresh) return;
+      // ¿es la primera vez en la vida? cambia sólo el texto del cartel
+      var nueva = !!B.claim(Math.max(this.score, B.best(mode)), mode);
+      this.badgeNotice = {
+        name: fresh.name, color: fresh.color, mode: B.modeName(mode),
+        nueva: nueva,
+        ticks: CFG.BADGE_ANIM_TICKS, total: CFG.BADGE_ANIM_TICKS
+      };
+      window.AudioSys && AudioSys.playExtraLife();
     },
 
     stepBadgeNotice: function () {
@@ -1276,17 +1313,21 @@
      * rawName() devuelve '' si el jugador no puso ninguno (nameFor() daría
      * el J1/J2 de relleno). */
     missingRankingName: function () {
-      if (!this.rawName(0)) return true;
-      return this.playerCount === 2 && !this.rawName(1);
+      for (var i = 0; i < this.playerCount; i++) {
+        if (!this.rawName(i)) return true;
+      }
+      return false;
     },
 
-    /* ¿el nombre serviría para una clasificación pública? */
+    /* ¿los nombres servirían para una clasificación pública? */
     badRankingName: function () {
       var R = window.PM.Ranking;
       if (!R || !R.nameAllowed) return false;
-      if (this.rawName(0) && !R.nameAllowed(this.rawName(0))) return true;
-      return this.playerCount === 2 && this.rawName(1) &&
-        !R.nameAllowed(this.rawName(1));
+      for (var i = 0; i < this.playerCount; i++) {
+        var n = this.rawName(i);
+        if (n && !R.nameAllowed(n)) return true;
+      }
+      return false;
     },
 
     submitRanking: function () {
@@ -1307,6 +1348,9 @@
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
+      // el top mundial tiene clasificación individual y de dúo; los grupos de
+      // 3 y 4 se quedan de momento en el historial
+      if (this.playerCount > 2) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
       window.PM.Ranking.submit({
         jugadores: this.playerCount,
@@ -1598,10 +1642,22 @@
     /* =========================================================
      * RED — anfitrión
      * ========================================================= */
+    /* Qué jugador es quien manda (con 3 y 4 el mensaje trae su índice) */
+    idxOfSender: function (data, sid) {
+      var i = data && parseInt(data.i, 10);
+      if (i >= 1 && i < this.pacs.length) return i;
+      if (window.PM.Party && window.PM.Party.indexOf) {
+        var pi = window.PM.Party.indexOf(sid);
+        if (pi >= 1 && pi < this.pacs.length) return pi;
+      }
+      return 1;                      // dúo clásico: el invitado es el J2
+    },
+
     hostMsg: function (name, data, sid) {
       switch (name) {
         case 'pos': {
-          var p = this.pacs[1];
+          var idx = this.idxOfSender(data, sid);
+          var p = this.pacs[idx];
           if (!p || !data) return;
           // dy = el invitado está muriendo: el mensaje solo sirve de señal de
           // vida (y para las pastillas), la posición la lleva el anfitrión
@@ -1611,15 +1667,15 @@
           }
           if (data.e && this.state === 'PLAYING') {
             for (var i = 0; i < data.e.length; i++) {
-              var idx = data.e[i];
-              var col = idx % CFG.COLS, row = (idx - col) / CFG.COLS;
+              var cell = data.e[i];
+              var col = cell % CFG.COLS, row = (cell - col) / CFG.COLS;
               this.eatAt(col, row, p);
             }
           }
           break;
         }
         case 'gevt':
-          if (data) this.hostGuestEvent(data);
+          if (data) this.hostGuestEvent(data, this.idxOfSender(data, sid));
           break;
         case 'hello':
           // la sala ya está en juego: no cabe nadie más
@@ -1631,19 +1687,21 @@
       }
     },
 
-    hostGuestEvent: function (d) {
+    /* who: qué jugador manda el evento (1..3 según la sala) */
+    hostGuestEvent: function (d, who) {
+      who = (who >= 1 && who < this.pacs.length) ? who : 1;
       switch (d.t) {
         case 'died':
-          if (this.state === 'PLAYING' && this.pacs[1] &&
-              !this.pacs[1].out && !this.pacs[1].dying) {
-            this.startDeath(1);
+          if (this.state === 'PLAYING' && this.pacs[who] &&
+              !this.pacs[who].out && !this.pacs[who].dying) {
+            this.startDeath(who);
           }
           break;
         case 'ateGhost': {
           var g = this.ghosts[d.g];
           if (this.state === 'PLAYING' && g && g.frightened &&
               (g.mode === 'normal' || g.mode === 'leaving')) {
-            this.eatGhost(g, 1);
+            this.eatGhost(g, who);
           }
           break;
         }
@@ -1654,7 +1712,7 @@
             this.addPopup(CFG.START.fruit.x * T + T / 2,
               CFG.START.fruit.y * T + T / 2,
               this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
-            this.hostEvt({ t: 'fruitEat', pts: this.fruitInfo.points, w: 1 });
+            this.hostEvt({ t: 'fruitEat', pts: this.fruitInfo.points, w: who });
             window.AudioSys && AudioSys.playEatFruit();
           }
           break;
@@ -1672,16 +1730,16 @@
           this.onVoteResult(d.k, !!d.ok);
           break;
         case 'emote':
-          this.showEmote(1, d.e);
-          this.hostEvt({ t: 'emote', w: 1, e: d.e });
+          this.showEmote(who, d.e);
+          this.hostEvt({ t: 'emote', w: who, e: d.e });
           break;
         case 'badge':
-          this.showBadgeTag(1, d.b);
-          this.hostEvt({ t: 'badge', w: 1, b: d.b });
+          this.showBadgeTag(who, d.b);
+          this.hostEvt({ t: 'badge', w: who, b: d.b });
           break;
         case 'chat':
-          this.addChat(1, d.m);
-          this.hostEvt({ t: 'chat', w: 1, m: this.cleanChat(d.m) });
+          this.addChat(who, d.m);
+          this.hostEvt({ t: 'chat', w: who, m: this.cleanChat(d.m) });
           break;
       }
     },
@@ -1702,15 +1760,24 @@
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
         he: this.snapEaten,
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
+        /* posiciones de TODOS los jugadores: con 3 y 4 cada uno solo conoce
+         * la suya, así que el anfitrión reparte las demás. Cada cliente
+         * ignora la propia (la suya la simula él). */
+        ps: [],
         g: []
       };
+      for (i = 0; i < this.pacs.length; i++) {
+        var pp = this.pacs[i];
+        s.ps.push({ x: r1(pp.x), y: r1(pp.y), d: pp.dir, nd: pp.nextDir });
+      }
       for (i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         s.g.push({ x: r1(g.x), y: r1(g.y), d: g.dir, m: g.mode,
           f: g.frightened ? 1 : 0, lp: g.leavePhase });
       }
-      if (this.playerCount === 2 && this.livesMode === 'individual') {
-        s.lv = [this.pacs[0].lives, this.pacs[1].lives];
+      if (this.playerCount > 1 && this.livesMode === 'individual') {
+        s.lv = [];
+        for (i = 0; i < this.pacs.length; i++) s.lv.push(this.pacs[i].lives);
       } else {
         s.lv = this.lives;
       }
@@ -1796,10 +1863,13 @@
       if (this.frightTicks > 0) this.stepFright();
 
       var me = this.pacs[this.localIdx];
-      var host = this.pacs[0];
 
-      /* pac del anfitrión: avanza por estima entre instantáneas */
-      if (!host.out && !host.dying) host.update(this.pacSpeedPx(host));
+      /* los demás jugadores avanzan por estima entre instantáneas */
+      for (i = 0; i < this.pacs.length; i++) {
+        if (i === this.localIdx) continue;
+        var otro = this.pacs[i];
+        if (!otro.out && !otro.dying) otro.update(this.pacSpeedPx(otro));
+      }
 
       /* pac propio: simulación local completa (sin lag de entrada) */
       if (!me.out && !me.dying) {
@@ -1926,7 +1996,8 @@
       this._lastSentNext = me.nextDir;
       var msg = {
         x: r1(me.x), y: r1(me.y), d: me.dir, nd: me.nextDir,
-        e: this.outEaten
+        e: this.outEaten,
+        i: this.localIdx        // con 3 y 4 jugadores hace falta saber quién es
       };
       if (dying) msg.dy = 1;
       this.netSend('pos', msg);
@@ -2118,6 +2189,7 @@
       }
 
       this.score = s.sc;
+      this.checkBadges();        // el invitado también ve su cartel
       this.highScore = Math.max(this.highScore, s.hs || 0, s.sc || 0);
       this.globalMode = s.gm;
       this.elroy = s.el;
@@ -2181,7 +2253,15 @@
       }
 
       /* pac del anfitrión */
-      if (s.p0) {
+      /* jugadores: todos menos el propio, que se simula en local */
+      if (s.ps && s.ps.length) {
+        for (i = 0; i < this.pacs.length && i < s.ps.length; i++) {
+          if (i === this.localIdx) continue;
+          var pd = s.ps[i], pj = this.pacs[i];
+          pj.x = pd.x; pj.y = pd.y;
+          pj.dir = pd.d; pj.nextDir = pd.nd;
+        }
+      } else if (s.p0 && this.localIdx !== 0) {
         var h = this.pacs[0];
         h.x = s.p0.x; h.y = s.p0.y;
         h.dir = s.p0.d; h.nextDir = s.p0.nd;
@@ -2376,7 +2456,7 @@
           pc.draw(ctx, this.colorFor(i), this.skinFor(i));
         }
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!" */
-        if (this.playerCount === 2 && this.state === 'READY') {
+        if (this.playerCount > 1 && this.state === 'READY') {
           ctx.font = 'bold 7px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -2412,13 +2492,13 @@
 
     renderHUD: function (ctx) {
       var i, p;
-      var twoP = (this.playerCount === 2 && this.state !== 'MENU');
+      var team = (this.playerCount > 1 && this.state !== 'MENU');
       ctx.font = 'bold 8px monospace';
       ctx.textBaseline = 'top';
       ctx.fillStyle = CFG.COLORS.text;
 
       ctx.textAlign = 'left';
-      var leftLabel = twoP ? 'EQUIPO'
+      var leftLabel = team ? 'EQUIPO'
         : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
       ctx.fillText(leftLabel, 20, 0);
       ctx.textAlign = 'center';
@@ -2430,33 +2510,50 @@
       ctx.fillText(String(sc || 0), 56, 9);
       ctx.fillText(String(hs || 0), 136, 9);
 
-      /* nombres del dúo, en la tercera línea del marcador */
-      if (twoP) {
+      /* nombres del equipo en la tercera línea: dos a los lados, y con 3 o 4
+       * jugadores repartidos por igual para que quepan todos */
+      if (team) {
         ctx.font = 'bold 7px monospace';
-        ctx.textAlign = 'left';
-        ctx.fillStyle = this.colorFor(0);
-        ctx.fillText(this.nameFor(0), 20, 16);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = this.colorFor(1);
-        ctx.fillText(this.nameFor(1), 204, 16);
+        ctx.textBaseline = 'top';
+        var n = this.pacs.length;
+        if (n === 2) {
+          ctx.textAlign = 'left';
+          ctx.fillStyle = this.colorFor(0);
+          ctx.fillText(this.nameFor(0), 20, 16);
+          ctx.textAlign = 'right';
+          ctx.fillStyle = this.colorFor(1);
+          ctx.fillText(this.nameFor(1), 204, 16);
+        } else {
+          ctx.textAlign = 'center';
+          var ancho = (CFG.NATIVE_W - 16) / n;
+          for (i = 0; i < n; i++) {
+            ctx.fillStyle = this.colorFor(i);
+            ctx.globalAlpha = this.pacs[i].out ? 0.4 : 1;
+            ctx.fillText(this.nameFor(i), 8 + ancho * (i + 0.5), 16);
+          }
+          ctx.globalAlpha = 1;
+        }
         ctx.font = 'bold 8px monospace';
         ctx.fillStyle = CFG.COLORS.text;
       }
 
       /* vidas (mini Pac-Mans) */
       if (this.state !== 'MENU') {
-        if (twoP && this.livesMode === 'individual') {
+        if (team && this.livesMode === 'individual') {
+          // una tira corta por jugador, cada una de su color
+          var hueco = Math.floor(96 / this.pacs.length);
           for (p = 0; p < this.pacs.length; p++) {
-            var n = Math.min(Math.max(this.pacs[p].lives - 1, 0), 3);
-            for (i = 0; i < n; i++) {
-              window.PM.Sprites.drawPacman(ctx, 18 + p * 56 + i * 16, 278,
+            var quedan = Math.min(Math.max(this.pacs[p].lives - 1, 0),
+                                  this.pacs.length > 2 ? 2 : 3);
+            for (i = 0; i < quedan; i++) {
+              window.PM.Sprites.drawPacman(ctx, 18 + p * hueco + i * 11, 278,
                 D.LEFT, 2, this.colorFor(p), this.skinFor(p));
             }
           }
         } else {
-          // fondo común en 2 jugadores: iconos blancos (vidas del equipo)
-          var color = twoP ? '#ffffff' : this.colorFor(0);
-          var skin = twoP ? 'clasico' : this.skinFor(0);
+          // fondo común: iconos blancos (vidas del equipo)
+          var color = team ? '#ffffff' : this.colorFor(0);
+          var skin = team ? 'clasico' : this.skinFor(0);
           var livesShown = Math.max(0, this.lives - 1);
           for (i = 0; i < livesShown && i < 5; i++) {
             window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color, skin);
@@ -2485,87 +2582,13 @@
       }
     },
 
-    /* Aviso de maestría con vida propia: el cartel entra desde arriba con un
-     * rebote, la medalla late con rayos girando detrás, el nombre crece y
-     * luego todo se va. Que se note que has conseguido algo. */
+    /* Aviso de maestría: el dibujo vive en sprites.js para poder enseñarlo
+     * también en el panel MAESTRÍAS, fuera de la partida. */
     renderBadgeNotice: function (ctx) {
       var n = this.badgeNotice;
       var total = n.total || CFG.BADGE_ANIM_TICKS;
-      var t = 1 - (n.ticks / total);              // 0 al aparecer, 1 al irse
-      var cx = 112, cy = 9 * T + CFG.MAZE_Y;
-      var w = CFG.NATIVE_W - 24, h = 44;
-
-      /* fases: entrada (0-15%), lucimiento, salida (85-100%) */
-      var ent = Math.min(1, t / 0.15);
-      var sal = Math.min(1, (1 - t) / 0.15);
-      var vis = Math.min(ent, sal);
-      if (vis <= 0) return;
-
-      // rebote de entrada: se pasa un poco y vuelve
-      var over = (ent < 1) ? (1 - Math.pow(1 - ent, 3)) : 1;
-      var slide = (1 - over) * -40;
-      var scale = 0.85 + 0.15 * over + (ent >= 1 ? 0 : 0.06 * Math.sin(ent * Math.PI));
-
-      ctx.save();
-      ctx.globalAlpha = vis;
-      ctx.translate(cx, cy + slide);
-      ctx.scale(scale, scale);
-      ctx.translate(-cx, -cy);
-
-      // cartel
-      ctx.fillStyle = 'rgba(0,0,0,0.88)';
-      ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-      ctx.strokeStyle = n.color;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2);
-
-      // rayos girando detrás de la medalla
-      var mx = cx - w / 2 + 24, my = cy;
-      var giro = this.tick * 0.04;
-      ctx.save();
-      ctx.globalAlpha = vis * 0.5;
-      ctx.strokeStyle = n.color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (var i = 0; i < 12; i++) {
-        var a = giro + i * Math.PI / 6;
-        ctx.moveTo(mx + Math.cos(a) * 11, my + Math.sin(a) * 11);
-        ctx.lineTo(mx + Math.cos(a) * 17, my + Math.sin(a) * 17);
-      }
-      ctx.stroke();
-      ctx.restore();
-
-      // medalla con latido
-      var pulso = 1 + 0.12 * Math.sin(this.tick * 0.18);
-      window.PM.Sprites.drawBadge(ctx, mx, my, 9 * pulso, n.color, false);
-
-      // textos: el nombre entra creciendo un poco después del cartel
-      var tx = cx + 14;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 7px monospace';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('¡MAESTRÍA DE ' + (n.mode || 'SOLO') + '!', tx, cy - 11);
-
-      var nameIn = Math.min(1, Math.max(0, (t - 0.10) / 0.15));
-      ctx.save();
-      ctx.translate(tx, cy + 4);
-      ctx.scale(0.6 + 0.4 * nameIn, 0.6 + 0.4 * nameIn);
-      ctx.globalAlpha = vis * nameIn;
-      ctx.font = 'bold 13px monospace';
-      ctx.fillStyle = n.color;
-      ctx.fillText(n.name, 0, 0);
-      ctx.restore();
-
-      // destello que recorre el cartel una vez
-      var brillo = (t > 0.2 && t < 0.55) ? (t - 0.2) / 0.35 : -1;
-      if (brillo >= 0) {
-        var bx = cx - w / 2 + brillo * w;
-        ctx.globalAlpha = vis * 0.35 * Math.sin(brillo * Math.PI);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(bx - 5, cy - h / 2 + 2, 10, h - 4);
-      }
-      ctx.restore();
+      window.PM.Sprites.drawBadgeBanner(ctx, 112, 9 * T + CFG.MAZE_Y,
+        CFG.NATIVE_W - 24, 44, 1 - (n.ticks / total), n, this.tick);
     },
 
     renderStateText: function (ctx) {

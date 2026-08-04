@@ -87,6 +87,30 @@
     { x: 15.5, y: 23, dir: 3 }
   ];
 
+  /* Con 3 y 4 jugadores, los que sobran salen ARRIBA (fila 5, el pasillo
+   * largo de la parte superior), no pegados a los de abajo: así el grupo se
+   * reparte por el laberinto en vez de amontonarse. */
+  CFG.MAX_PLAYERS = 4;
+  CFG.STARTS = {
+    1: [{ x: 13.5, y: 23, dir: 1 }],
+    2: CFG.START2,
+    3: [
+      { x: 11.5, y: 23, dir: 1 },
+      { x: 15.5, y: 23, dir: 3 },
+      { x: 13.5, y: 5,  dir: 1 }
+    ],
+    4: [
+      { x: 11.5, y: 23, dir: 1 },
+      { x: 15.5, y: 23, dir: 3 },
+      { x: 11.5, y: 5,  dir: 1 },
+      { x: 15.5, y: 5,  dir: 3 }
+    ]
+  };
+
+  /* Colores por defecto de los jugadores 3 y 4 (los dos primeros salen de
+   * los ajustes de cada uno) */
+  CFG.PLAYER_COLORS = ['#ffff00', '#00ff00', '#00ffff', '#ff8c00'];
+
   /* ---------- Direcciones ---------- */
   CFG.DIR = { UP: 0, LEFT: 1, DOWN: 2, RIGHT: 3, NONE: -1 };
   CFG.DIR_V = [           // vectores, indexados por DIR

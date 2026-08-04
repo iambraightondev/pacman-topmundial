@@ -2,17 +2,17 @@
  * PAC-MAN TOP MUNDIAL — sw.js (service worker)
  *
  * Deja el juego instalable y jugable sin conexión. Estrategia:
- *  - navegaciones (el HTML): red primero, y si falla, la copia
- *    guardada. Así una versión nueva se ve al momento y sin red
- *    se sigue pudiendo jugar.
- *  - resto de archivos del juego: se sirve la copia al instante y
- *    se refresca por detrás (stale-while-revalidate).
+ *  - HTML, CSS y JS: red primero, y si falla, la copia guardada.
+ *    Es lo que cambia en cada despliegue, así que servir la copia
+ *    primero dejaba el juego una visita entera con la versión vieja.
+ *  - audio e iconos: la copia al instante (no cambian nunca) y
+ *    refresco por detrás.
  *  - lo de fuera del dominio (Supabase: salas online y ranking)
  *    no se toca nunca: siempre va a la red.
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v2';
+var VERSION = 'pm-v3';
 var SHELL = [
   './',
   './index.html',
@@ -67,23 +67,31 @@ self.addEventListener('fetch', function (ev) {
   try { url = new URL(req.url); } catch (e) { return; }
   if (url.origin !== self.location.origin) return;   // Supabase y demás
 
-  // El HTML: red primero para no servir una versión vieja del juego
-  if (req.mode === 'navigate') {
+  // Código del juego (HTML, CSS, JS): red primero, copia como respaldo.
+  // Con la copia primero, tras un despliegue seguías viendo la versión
+  // anterior hasta la siguiente visita.
+  var esCodigo = (req.mode === 'navigate') ||
+    /\.(?:html|css|js|json)(?:$|\?)/i.test(url.pathname);
+
+  if (esCodigo) {
     ev.respondWith(
       fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(VERSION).then(function (c) { c.put(req, copy); });
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(VERSION).then(function (c) { c.put(req, copy); });
+        }
         return res;
       }).catch(function () {
         return caches.match(req).then(function (hit) {
-          return hit || caches.match('./index.html');
+          return hit || (req.mode === 'navigate'
+            ? caches.match('./index.html') : undefined);
         });
       })
     );
     return;
   }
 
-  // Resto: copia al instante y actualización por detrás
+  // Audio e iconos: no cambian, así que la copia al instante
   ev.respondWith(
     caches.match(req).then(function (hit) {
       var net = fetch(req).then(function (res) {

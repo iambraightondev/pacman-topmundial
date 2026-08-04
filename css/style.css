@@ -649,6 +649,14 @@ input[type="range"] {
 
 .badge-row.got { border-color: #2121ff; background: rgba(33, 33, 255, 0.08); }
 .badge-medal { image-rendering: pixelated; flex-shrink: 0; }
+
+/* lienzo donde se ve la animación del cartel al pulsar VER */
+.badge-demo {
+  display: block;
+  margin: 6px auto 0;
+  image-rendering: pixelated;
+  max-width: 96%;
+}
 .badge-text { flex: 1; min-width: 0; }
 
 .badge-name {

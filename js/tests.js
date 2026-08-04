@@ -219,6 +219,25 @@
     partida(2); eq(G.badgeMode(), 'duo');
   });
 
+  test('el cartel sale aunque la maestría ya se tuviera, y una vez por partida',
+    function () {
+      var h1 = G.highScore1;
+      try {
+        G.highScore1 = 59430;             // ya las tiene casi todas
+        window.PM.Badges.syncSeen();      // y todas anunciadas
+        partida(1);
+        G.addScore(3000);
+        ok(G.badgeNotice, 'vuelve a celebrarse el escalón');
+        eq(G.badgeNotice.name, 'APRENDIZ');
+        eq(G.badgeNotice.nueva, false, 'marcada como ya conseguida');
+        G.badgeNotice = null;
+        G.addScore(500);                  // sigue en APRENDIZ
+        eq(G.badgeNotice, null, 'no se repite en la misma partida');
+        G.addScore(4500);                 // cruza CAZADOR (8000)
+        ok(G.badgeNotice && G.badgeNotice.name === 'CAZADOR', 'el siguiente sí');
+      } finally { G.highScore1 = h1; }
+    });
+
   // ---------------------------------------------------------------
   // Ranking mundial
   // ---------------------------------------------------------------

@@ -292,6 +292,86 @@
     ctx.fillText(text, bx + padL, by + h / 2 + 0.5);
   };
 
+  /* ------------------------------------------------------------
+   * Cartel animado de maestría. Se dibuja aquí (y no en game.js) para
+   * poder enseñarlo también fuera de la partida, en el panel MAESTRÍAS.
+   *   t    — 0 al aparecer, 1 al terminar
+   *   tick — contador libre, para el latido y el giro de los rayos
+   * ------------------------------------------------------------ */
+  Sprites.drawBadgeBanner = function (ctx, cx, cy, w, h, t, info, tick) {
+    var color = info.color || '#ffffff';
+    var ent = Math.min(1, t / 0.15);            // entrada
+    var sal = Math.min(1, (1 - t) / 0.15);      // salida
+    var vis = Math.min(ent, sal);
+    if (vis <= 0) return;
+
+    // rebote: se pasa un poco y vuelve a su sitio
+    var over = (ent < 1) ? (1 - Math.pow(1 - ent, 3)) : 1;
+    var slide = (1 - over) * -40;
+    var scale = 0.85 + 0.15 * over +
+      (ent >= 1 ? 0 : 0.06 * Math.sin(ent * Math.PI));
+
+    ctx.save();
+    ctx.globalAlpha = vis;
+    ctx.translate(cx, cy + slide);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - w / 2 + 1, cy - h / 2 + 1, w - 2, h - 2);
+
+    // rayos girando detrás de la medalla
+    var mx = cx - w / 2 + 24, my = cy;
+    ctx.save();
+    ctx.globalAlpha = vis * 0.5;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (var i = 0; i < 12; i++) {
+      var a = tick * 0.04 + i * Math.PI / 6;
+      ctx.moveTo(mx + Math.cos(a) * 11, my + Math.sin(a) * 11);
+      ctx.lineTo(mx + Math.cos(a) * 17, my + Math.sin(a) * 17);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // medalla con latido
+    Sprites.drawBadge(ctx, mx, my, 9 * (1 + 0.12 * Math.sin(tick * 0.18)),
+      color, false);
+
+    var tx = cx + 14;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 7px monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(
+      (info.nueva === false ? 'MAESTRÍA DE ' : '¡NUEVA MAESTRÍA DE ') +
+      (info.mode || 'SOLO') + '!', tx, cy - 11);
+
+    // el nombre entra creciendo, un poco después que el cartel
+    var nameIn = Math.min(1, Math.max(0, (t - 0.10) / 0.15));
+    ctx.save();
+    ctx.translate(tx, cy + 4);
+    ctx.scale(0.6 + 0.4 * nameIn, 0.6 + 0.4 * nameIn);
+    ctx.globalAlpha = vis * nameIn;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = color;
+    ctx.fillText(info.name || '', 0, 0);
+    ctx.restore();
+
+    // destello que recorre el cartel una sola vez
+    var brillo = (t > 0.2 && t < 0.55) ? (t - 0.2) / 0.35 : -1;
+    if (brillo >= 0) {
+      ctx.globalAlpha = vis * 0.35 * Math.sin(brillo * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(cx - w / 2 + brillo * w - 5, cy - h / 2 + 2, 10, h - 4);
+    }
+    ctx.restore();
+  };
+
   /* Medalla de maestría: disco con el aro del color de la insignia */
   Sprites.drawBadge = function (ctx, x, y, r, color, locked) {
     ctx.fillStyle = locked ? '#161616' : '#000000';

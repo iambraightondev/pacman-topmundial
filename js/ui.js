@@ -1136,6 +1136,13 @@
       this.badgesSub.className = 'note';
       o.appendChild(this.badgesSub);
 
+      /* lienzo para ver la animación del cartel sin tener que jugar */
+      this.badgeDemo = document.createElement('canvas');
+      this.badgeDemo.width = 220;
+      this.badgeDemo.height = 54;
+      this.badgeDemo.className = 'badge-demo';
+      o.appendChild(this.badgeDemo);
+
       this.badgesList = document.createElement('div');
       this.badgesList.className = 'badge-list';
       o.appendChild(this.badgesList);
@@ -1197,8 +1204,52 @@
         txt.appendChild(st);
         row.appendChild(txt);
 
+        // ver cómo se celebra, sin esperar a conseguirla en partida
+        var ver = self.makeButton('VER', function () {
+          self.playBadgeDemo(b, mode);
+        });
+        ver.classList.add('btn-preset');
+        row.appendChild(ver);
+
         self.badgesList.appendChild(row);
       });
+    },
+
+    /* Reproduce el cartel animado dentro del panel */
+    playBadgeDemo: function (badge, mode) {
+      var self = this;
+      var cv = this.badgeDemo;
+      if (!cv) return;
+      var ctx = cv.getContext('2d');
+      var total = CFG.BADGE_ANIM_TICKS;
+      var B = window.PM.Badges;
+      var info = {
+        name: badge.name, color: badge.color,
+        mode: B ? B.modeName(mode) : 'SOLO',
+        nueva: B ? !B.has(badge.id, mode) : true
+      };
+      this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;
+      var run = this.badgeDemoRun;
+      var prev = null;
+      var ticks = 0;
+
+      function frame(now) {
+        if (self.badgeDemoRun !== run) return;      // otra demo la sustituyó
+        if (prev === null) prev = now;
+        // Avance por frame acotado: si el navegador ralentiza los frames
+        // (pestaña de fondo, equipo lento) el cartel se ve entero igual,
+        // sólo que más despacio, en vez de saltarse la animación.
+        ticks += Math.min(6, (now - prev) / (1000 / 60));
+        prev = now;
+        var t = ticks / total;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        if (t >= 1) return;
+        ctx.setTransform(1, 0, 0, 1, cv.width / 2 - 112, cv.height / 2 - 27);
+        window.PM.Sprites.drawBadgeBanner(ctx, 112, 27, 200, 44, t, info, ticks);
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
     },
 
     /* ------------------------------------------------------
