@@ -28,13 +28,32 @@
     };
   }
 
-  function base() {
+  function base(what) {
     return String(cfg().SUPABASE_URL || '').replace(/\/+$/, '') +
-      '/rest/v1/' + CFG.RANKING.TABLE;
+      '/rest/v1/' + (what || CFG.RANKING.TABLE);
+  }
+
+  /* Nombre normalizado para el filtro: sin espacios ni signos, y con las
+   * sustituciones típicas (0 por O, 3 por E...) para que no se cuele. */
+  function flatten(name) {
+    return String(name || '').toUpperCase()
+      .replace(/[0]/g, 'O').replace(/[1|!]/g, 'I').replace(/[3]/g, 'E')
+      .replace(/[4@]/g, 'A').replace(/[5$]/g, 'S').replace(/[7]/g, 'T')
+      .replace(/[^A-Z]/g, '');
   }
 
   var Ranking = {
     lastError: null,
+
+    /* ¿este nombre puede aparecer en una clasificación pública? */
+    nameAllowed: function (name) {
+      var flat = flatten(name);
+      if (!flat) return false;
+      for (var i = 0; i < CFG.BAD_WORDS.length; i++) {
+        if (flat.indexOf(CFG.BAD_WORDS[i]) !== -1) return false;
+      }
+      return true;
+    },
 
     configured: function () {
       var c = cfg();
@@ -47,7 +66,8 @@
       var self = this;
       if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
       var n = (players === 1) ? 1 : 2;
-      var url = base() +
+      // la vista ya trae solo la mejor marca de cada jugador/dúo
+      var url = base(CFG.RANKING.VIEW) +
         '?select=nombre1,nombre2,puntos,nivel,modo,creado_en' +
         '&jugadores=eq.' + n +
         '&order=puntos.desc,creado_en.asc' +
@@ -85,6 +105,10 @@
       var n2 = String(o.nombre2 == null ? '' : o.nombre2).slice(0, CFG.NICK_MAX);
       if (!n1 || (players === 2 && !n2)) {
         if (cb) cb('SIN NOMBRE');
+        return;
+      }
+      if (!this.nameAllowed(n1) || (players === 2 && !this.nameAllowed(n2))) {
+        if (cb) cb('NOMBRE NO PERMITIDO');
         return;
       }
       var row = {

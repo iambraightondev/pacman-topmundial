@@ -5,6 +5,23 @@ Do NOT copy any original Namco assets (no ripped sprites, no ripped audio). All
 graphics are drawn procedurally on canvas; all audio is synthesized with Web
 Audio API. UI language: **Spanish**.
 
+## App instalable (PWA) y pruebas
+
+`manifest.json` + `sw.js` make the game installable and playable offline:
+the shell (HTML, CSS, every `js/`, the streak audio and the icons) is
+precached; navigations are **network-first** so a new deploy shows up at
+once and still works without a connection, everything else is
+stale-while-revalidate, and cross-origin requests (Supabase: rooms and
+ranking) always bypass the worker. Registered only over http(s) — with
+`file://` there is no service worker and the game runs as before. Icons in
+`icons/` are the game's own Pac-Man rendered to PNG.
+
+`tests.html` runs `js/tests.js`: a dependency-free suite over the real
+modules, covering what has broken before (per-player death, the `dy`
+keep-alive that once froze the other player, streak voices, the solo/duo
+badge split, ranking guards, history, chat sanitising, pause). Open it from
+a server like the game; results also land in `window.__TESTS`.
+
 ## Hard constraints
 
 - Plain JS, **no ES modules** (must run from `file://`). Classic `<script>` tags
@@ -333,10 +350,23 @@ shows the badge of the **mode being played**.
 
 **Top mundial** (`PM.Ranking`): games are posted to a Supabase table via
 PostgREST with the anon key — no SDK. There are **two separate boards**, told
-apart by the `jugadores` column: `1` individual (`nombre2` NULL) and `2` duo;
-the TOP MUNDIAL panel has an INDIVIDUAL / DÚO tab pair and each query filters
-by it. Switching tabs fast is guarded by a request token, so a late reply
+apart by the `jugadores` column: `1` individual (`nombre2` NULL) and `2` duo.
+Reads go to the **`ranking_top` view**, which keeps only each player's/duo's
+best run (`distinct on (jugadores, equipo)`) — otherwise whoever plays most
+fills the whole table with repeats. The panel has INDIVIDUAL / DÚO / TUS
+PARTIDAS tabs; switching fast is guarded by a request token, so a late reply
 from the previous tab cannot overwrite the current list.
+
+**Anti-spam y nombres**: a `before insert` trigger caps 5 rows per name per
+minute (it is not anti-cheat — that would need an Edge Function — but it
+stops flooding). `Ranking.nameAllowed()` rejects `CFG.BAD_WORDS` on a
+normalised name (uppercase, leet digits folded back to letters, symbols
+stripped), so a public board cannot be filled with insults; the GAME OVER
+panel explains it. Local play is unaffected: the filter only gates the board.
+
+**Historial** (`PM.History`, `CFG.HISTORY_KEY`): the last `HISTORY_MAX` games
+of this browser, saved on every game over **regardless of name or network**,
+shown in the TUS PARTIDAS tab (works offline).
 
 **A record needs a name**: `Game.missingRankingName()` checks `rawName()`
 (the real nickname, not the J1/J2 fallback) for every player involved, and

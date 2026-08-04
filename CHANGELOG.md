@@ -2,6 +2,28 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Top mundial por jugador, app instalable, filtro de nombres, historial y pruebas
+
+- **Una fila por jugador/dúo en el top mundial**: antes, quien más jugaba
+  ocupaba toda la tabla con sus repeticiones (había 5 registros de un solo
+  dúo). Ahora la clasificación muestra la **mejor marca de cada uno**, con
+  una vista en Supabase.
+- **Instalable en el móvil (PWA)**: `manifest.json` + service worker. Se
+  añade a la pantalla de inicio como una app, arranca a pantalla completa y
+  **funciona sin conexión** (incluidas las voces de racha). Las salas online
+  y el ranking siempre van a la red, nunca a la caché.
+- **Filtro de nombres y freno de envíos**: la clasificación es pública, así
+  que los nombres con palabrotas no entran (se avisa al terminar la partida)
+  y hay un límite de 5 envíos por nombre y minuto contra el spam. En local se
+  puede seguir jugando con el nombre que se quiera.
+- **TUS PARTIDAS**: tercera pestaña del TOP MUNDIAL con tus últimas 15
+  partidas guardadas en este navegador. Se guardan **todas**, tengan nombre o
+  no y haya red o no.
+- **Pruebas automáticas** en `tests.html`: 24 casos sin dependencias sobre el
+  juego real, centrados en lo que ya se rompió alguna vez (muerte por
+  jugador, la señal de vida online, las rachas, las maestrías por modo, el
+  ranking y el chat).
+
 ## 2026-08-04 · Top mundial separado (individual y dúo) y récords solo con nombre
 
 - El TOP MUNDIAL se divide en **dos clasificaciones**: **INDIVIDUAL** y

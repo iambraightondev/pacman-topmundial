@@ -89,3 +89,47 @@ create policy "ranking insercion publica"
   with check (true);
 
 -- Sin políticas de update/delete: con RLS activo, quedan prohibidos.
+
+-- ============================================================
+-- Mejor marca de cada jugador/dúo
+-- Sin esto, quien más juega ocupa toda la tabla con sus repeticiones.
+-- `equipo` normaliza los nombres para agrupar (mayúsculas y sin espacios).
+-- ============================================================
+create or replace view public.ranking_top as
+select distinct on (jugadores, equipo)
+       jugadores, equipo, nombre1, nombre2, puntos, nivel, modo, creado_en
+from (
+  select r.*,
+         upper(btrim(r.nombre1)) ||
+           coalesce(' + ' || upper(btrim(r.nombre2)), '') as equipo
+  from public.ranking r
+) t
+order by jugadores, equipo, puntos desc, creado_en asc;
+
+-- la vista respeta las políticas de quien consulta, no las del creador
+alter view public.ranking_top set (security_invoker = on);
+grant select on public.ranking_top to anon, authenticated;
+
+-- ============================================================
+-- Freno de envíos: como cualquiera puede insertar con la clave anónima,
+-- se limita a 5 partidas por nombre y minuto. No es anti-trampas (para eso
+-- haría falta validar la partida en una Edge Function), pero corta el spam.
+-- ============================================================
+create or replace function public.ranking_freno()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (select count(*) from public.ranking
+      where upper(btrim(nombre1)) = upper(btrim(new.nombre1))
+        and creado_en > now() - interval '1 minute') >= 5 then
+    raise exception 'demasiados envios seguidos para ese nombre';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists ranking_freno_trg on public.ranking;
+create trigger ranking_freno_trg
+  before insert on public.ranking
+  for each row execute function public.ranking_freno();

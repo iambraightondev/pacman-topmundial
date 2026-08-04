@@ -1194,7 +1194,7 @@
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.rankTabBtns = {};
-      [[1, 'INDIVIDUAL'], [2, 'DÚO']].forEach(function (t) {
+      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [0, 'TUS PARTIDAS']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
         b.classList.add('tab');
         self.rankTabBtns[t[0]] = b;
@@ -1229,23 +1229,37 @@
     },
 
     showRankTab: function (players) {
-      this.rankTab = (players === 2) ? 2 : 1;
+      this.rankTab = (players === 2) ? 2 : (players === 0 ? 0 : 1);
       this.loadRanking();
     },
 
     loadRanking: function () {
       var self = this;
       var R = window.PM.Ranking;
-      var players = this.rankTab || 1;
+      var players = this.rankTab;
+      if (players !== 0 && players !== 2) players = 1;
       for (var k in this.rankTabBtns) {
         if (this.rankTabBtns.hasOwnProperty(k)) {
           this.rankTabBtns[k].classList.toggle('active', +k === players);
         }
       }
-      this.rankSub.textContent = (players === 1)
-        ? 'MEJORES PARTIDAS DE UN JUGADOR'
-        : 'MEJORES PARTIDAS DE DOS JUGADORES · PUNTUACIÓN DE EQUIPO';
+      this.rankSub.textContent = (players === 0)
+        ? 'TUS ÚLTIMAS PARTIDAS EN ESTE NAVEGADOR'
+        : (players === 1
+            ? 'MEJOR MARCA DE CADA JUGADOR'
+            : 'MEJOR MARCA DE CADA DÚO · PUNTUACIÓN DE EQUIPO');
       this.rankList.innerHTML = '';
+      this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
+
+      /* pestaña local: no toca la red */
+      if (players === 0) {
+        var hist = window.PM.History ? window.PM.History.all() : [];
+        this.rankStatus.classList.remove('error');
+        this.rankStatus.textContent = hist.length
+          ? '' : 'AÚN NO HAS JUGADO NINGUNA PARTIDA';
+        this.renderHistory(hist);
+        return;
+      }
       if (!R || !R.configured()) {
         this.rankStatus.classList.add('error');
         this.rankStatus.textContent = 'EL TOP MUNDIAL NECESITA LAS CREDENCIALES DE SUPABASE';
@@ -1274,6 +1288,41 @@
         self.rankStatus.textContent = '';
         self.renderRanking(rows);
       });
+    },
+
+    /* Tus últimas partidas (localStorage), lo más reciente primero */
+    renderHistory: function (list) {
+      var H = window.PM.History;
+      this.rankList.innerHTML = '';
+      for (var i = 0; i < list.length; i++) {
+        var h = list[i];
+        var row = document.createElement('div');
+        row.className = 'rank-row';
+
+        var pos = document.createElement('span');
+        pos.className = 'rank-pos';
+        pos.textContent = H ? H.fmtDate(h.t) : '';
+        pos.style.textAlign = 'left';
+        pos.style.width = 'auto';
+        row.appendChild(pos);
+
+        var who = document.createElement('span');
+        who.className = 'rank-who';
+        who.textContent = (h.j === 2) ? (h.n1 + ' + ' + h.n2) : h.n1;
+        row.appendChild(who);
+
+        var pts = document.createElement('span');
+        pts.className = 'rank-pts';
+        pts.textContent = String(h.p);
+        row.appendChild(pts);
+
+        var lvl = document.createElement('span');
+        lvl.className = 'rank-lvl';
+        lvl.textContent = 'NIV ' + h.lv + (h.m === 'online' ? ' · ONLINE' : '');
+        row.appendChild(lvl);
+
+        this.rankList.appendChild(row);
+      }
     },
 
     renderRanking: function (rows) {
@@ -1783,12 +1832,15 @@
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
       if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
       lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
-      // sin nombre no entra en el top mundial: se dice aquí, no en silencio
-      if (g.score > 0 && g.missingRankingName() &&
-          window.PM.Ranking && window.PM.Ranking.configured()) {
-        lines.push(duo
-          ? 'PARA ENTRAR EN EL TOP MUNDIAL, LOS DOS NECESITÁIS NOMBRE'
-          : 'PON TU NOMBRE PARA ENTRAR EN EL TOP MUNDIAL');
+      // por qué esta partida no entra en el top mundial, si es el caso
+      if (g.score > 0 && window.PM.Ranking && window.PM.Ranking.configured()) {
+        if (g.missingRankingName()) {
+          lines.push(duo
+            ? 'PARA ENTRAR EN EL TOP MUNDIAL, LOS DOS NECESITÁIS NOMBRE'
+            : 'PON TU NOMBRE PARA ENTRAR EN EL TOP MUNDIAL');
+        } else if (g.badRankingName()) {
+          lines.push('ESE NOMBRE NO ENTRA EN EL TOP MUNDIAL: ELIGE OTRO');
+        }
       }
       this.showPrompt({
         title: 'GAME OVER',

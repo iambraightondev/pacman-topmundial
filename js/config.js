@@ -317,10 +317,25 @@
 
   /* ---------- Ranking mundial (tabla en Supabase) ---------- */
   CFG.RANKING = {
-    TABLE: 'ranking',
+    TABLE: 'ranking',         // donde se insertan las partidas
+    VIEW: 'ranking_top',      // mejor marca de cada jugador/dúo (lectura)
     LIMIT: 20,
     MAX_POINTS: 10000000      // descarta envíos absurdos antes de mandarlos
   };
+
+  /* Palabras vetadas en el top mundial: la clasificación es pública, así que
+   * un nombre con esto dentro no se envía (en local se juega igual).
+   * Se compara sobre el nombre en mayúsculas y sin espacios ni signos. */
+  CFG.BAD_WORDS = [
+    'PUTA', 'PUTO', 'MIERDA', 'COÑO', 'CONO', 'JODER', 'GILIPOLL', 'CABRON',
+    'MARICA', 'MARICON', 'POLLA', 'VERGA', 'PENE', 'CULO', 'TETAS', 'ZORRA',
+    'PERRA', 'PENDEJO', 'CHINGA', 'VIOLA', 'NAZI', 'HITLER',
+    'FUCK', 'SHIT', 'BITCH', 'DICK', 'COCK', 'CUNT', 'RAPE', 'NIGG', 'FAG'
+  ];
+
+  /* ---------- Historial personal (solo en este navegador) ---------- */
+  CFG.HISTORY_KEY = 'pacman-topmundial-historial';
+  CFG.HISTORY_MAX = 15;       // partidas guardadas
 
   /* ---------- Ajustes (contrato con ui.js/game.js) ---------- */
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';

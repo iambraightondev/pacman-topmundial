@@ -1237,13 +1237,33 @@
       return this.playerCount === 2 && !this.rawName(1);
     },
 
+    /* ¿el nombre serviría para una clasificación pública? */
+    badRankingName: function () {
+      var R = window.PM.Ranking;
+      if (!R || !R.nameAllowed) return false;
+      if (this.rawName(0) && !R.nameAllowed(this.rawName(0))) return true;
+      return this.playerCount === 2 && this.rawName(1) &&
+        !R.nameAllowed(this.rawName(1));
+    },
+
     submitRanking: function () {
       if (this.rankingSent) return;
+      this.rankingSent = true;      // una sola vez por partida
+      // el historial local guarda todas las partidas, con nombre o sin él
+      if (this.score > 0 && window.PM.History) {
+        window.PM.History.add({
+          jugadores: this.playerCount,
+          modo: this.netRole ? 'online' : 'local',
+          nombre1: this.nameFor(0),
+          nombre2: (this.playerCount === 2) ? this.nameFor(1) : '',
+          puntos: this.score,
+          nivel: this.level
+        });
+      }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
-      this.rankingSent = true;
       window.PM.Ranking.submit({
         jugadores: this.playerCount,
         modo: this.netRole ? 'online' : 'local',

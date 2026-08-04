@@ -9,6 +9,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <title>PAC-MAN · TOP MUNDIAL</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 0a8 8 0 1 0 0 16 8 8 0 0 0 6.9-3.9L8 8l6.9-4.1A8 8 0 0 0 8 0z' fill='%23ffff00'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -31,8 +33,19 @@
   <script src="js/net-config.js"></script>
   <script src="js/net.js"></script>
   <script src="js/badges.js"></script>
+  <script src="js/history.js"></script>
   <script src="js/ranking.js"></script>
   <script src="js/game.js"></script>
   <script src="js/ui.js"></script>
+
+  <!-- Instalable y jugable sin conexión. Con file:// no hay service
+       worker, así que se registra solo cuando se sirve por http(s). -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
 </body>
 </html>

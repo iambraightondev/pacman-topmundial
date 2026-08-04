@@ -11,6 +11,14 @@ máquina** y modo **online** para jugar en equipo contra los fantasmas.
 
 Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
 
+## Instalar en el móvil
+
+Abre <https://pacman-topmundial.vercel.app> y usa **«Añadir a pantalla de
+inicio»** (Chrome: menú ⋮ → Instalar app; iPhone: Compartir → Añadir a
+pantalla de inicio). Se abre a pantalla completa, sin barra del navegador, y
+**funciona sin conexión** — solo las salas online y el top mundial necesitan
+red.
+
 ## Cómo jugar
 
 - **Windows**: doble clic en `jugar.bat` (levanta un servidor local y abre el navegador). Se puede abrir `index.html` directamente, pero entonces el navegador bloquea la lectura de los audios y las **voces de racha no suenan**; el resto del juego funciona igual.
@@ -114,7 +122,10 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
   en el menú. Con **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del
   modo que estés jugando sobre tu Pac-Man, y en online la ve tu dúo.
 - **Top mundial**: dos clasificaciones compartidas entre todos, **individual**
-  y **dúo**. Hace falta tener nombre puesto para registrar un récord.
+  y **dúo**, con la mejor marca de cada jugador. Hace falta tener nombre
+  puesto (y sin palabrotas) para registrar un récord.
+- **Tus partidas**: historial de las últimas 15 en este navegador, con o sin
+  nombre y con o sin conexión.
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - **Volumen por tipo de sonido**: general, música, efectos, ambiente (sirena
   y modo azul) y voces, cada uno por separado en OPCIONES → SONIDO.
@@ -148,10 +159,15 @@ js/ghost.js       IA de los fantasmas
 js/net-config.js  Credenciales de Supabase (online y top mundial)
 js/net.js         Transporte en tiempo real (Supabase Realtime / local)
 js/badges.js      Maestrías (insignias por récord personal)
+js/history.js     Historial local de partidas
 js/ranking.js     Top mundial (tabla de Supabase vía REST)
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/ui.js          Menús, opciones, lobby online, paneles y controles
-supabase/         SQL de la tabla del ranking
+manifest.json     App instalable (PWA)
+sw.js             Service worker: funciona sin conexión
+icons/            Iconos de la app
+tests.html        Pruebas automáticas (ábrelo como el juego)
+supabase/         SQL de la tabla y la vista del ranking
 SPEC.md           Especificación técnica completa
 CHANGELOG.md      Historial de cambios
 ```

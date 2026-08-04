@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pruebas · PAC-MAN TOP MUNDIAL</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #000;
+      color: #ddd;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    h1 { color: #ffff00; font-size: 18px; letter-spacing: 3px; }
+    .aviso { color: #777; font-size: 12px; margin-bottom: 16px; }
+    .resumen {
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      padding: 10px 14px;
+      margin: 14px 0;
+      border: 2px solid;
+    }
+    .resumen.bien { color: #00ff00; border-color: #00ff00; }
+    .resumen.mal  { color: #ff4444; border-color: #ff4444; }
+    .caso.bien { color: #8f8; }
+    .caso.mal  { color: #ff6666; font-weight: bold; }
+    /* el juego necesita su lienzo, pero aquí no hace falta verlo */
+    #stage { position: absolute; left: -9999px; top: 0; }
+  </style>
+</head>
+<body>
+  <h1>PRUEBAS · PAC-MAN TOP MUNDIAL</h1>
+  <div class="aviso">
+    Ábrelo desde un servidor (jugar.bat) igual que el juego.
+    El resultado también queda en <code>window.__TESTS</code>.
+  </div>
+  <div id="salida"></div>
+
+  <!-- El juego, tal cual, para probar los módulos de verdad -->
+  <div id="stage">
+    <canvas id="game" width="672" height="864"></canvas>
+    <div id="menu" class="overlay"></div>
+    <div id="options" class="overlay"></div>
+    <div id="online" class="overlay"></div>
+    <div id="badges" class="overlay"></div>
+    <div id="ranking" class="overlay"></div>
+    <div id="prompt" class="overlay"></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/pacman.js"></script>
+  <script src="js/ghost.js"></script>
+  <script src="js/net-config.js"></script>
+  <script src="js/net.js"></script>
+  <script src="js/badges.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/ranking.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/tests.js"></script>
+</body>
+</html>
