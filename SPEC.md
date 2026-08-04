@@ -341,13 +341,48 @@ label (`.btn-key`):
   accept/reject, 20 s timeout, host executes and broadcasts `rematch`). A
   rejection/timeout keeps the game paused and shows the notice in the menu's
   status line.
-- The canvas "PAUSA" label is skipped while the menu is up (it would show
-  through underneath).
+- The menu is **see-through**: `#prompt` uses `rgba(0,0,0,0.45)` and the
+  canvas drops its own veil to 0.25 while it is up (0.6 otherwise), so the
+  maze stays readable behind it; text gets a shadow and the buttons an opaque
+  background for legibility. The GAME OVER panel opts into `.solid` (0.85) —
+  there is no live game to look at there. The canvas "PAUSA" label is skipped
+  while the menu is up (it would show through underneath).
 - Dialog shortcuts in general: buttons declare `keys: [...]`, `showPrompt()`
   registers them in `UI.promptKeys` and `UI.handlePromptKey(ev)` dispatches
   them. While a dialog is open the keyboard drives *only* the dialog (no
   Pac-Man movement). Vote dialogs: `Enter` accepts, `Esc` rejects. GAME OVER
   panel: `R` plays again, `Q`/`Esc` goes to the menu.
+
+## Navegación con flechas (menús y diálogos)
+
+Every panel and dialog is fully keyboard-operable: arrows move the focus,
+`Enter`/`Space` activate. `UI.handleNavKey(ev)` runs **before** the dialog
+shortcuts and the game input, and only when a panel or a prompt is on screen
+(`UI.visiblePanel()` / `promptOpen`), so in-game arrows still drive Pac-Man.
+
+- `UI.navItems(host)` collects the visible focusable controls in DOM order
+  (buttons, ranges, text and colour inputs); a hidden tab pane has no layout
+  box, so its controls are skipped automatically.
+- Up/Down and Left/Right step through that list and wrap around; the focus
+  ring is an explicit `:focus` outline (programmatic focus does not always
+  count as `:focus-visible`).
+- Exceptions that keep native behaviour: Left/Right inside a text field move
+  the caret, and Left/Right on a focused slider adjust its value (Up/Down
+  still navigate away from it).
+- Opening a dialog focuses its primary button, so `Enter` confirms straight
+  away. In `.prompt-btns` the hover/focus rules set background *and* colour
+  together — setting only one leaves black text on a dark button.
+
+## Pestañas del panel de opciones
+
+OPCIONES is split into three tabs (`UI.tabPanes` / `UI.showOptionsTab`),
+because the single scrolling list had grown unusable:
+
+- **DIFICULTAD** — presets, the five sliders and their note.
+- **JUGADORES** — names, and per player colour + skin.
+- **PARTIDA** — lives mode in 2-player, sound, and the in-game key reminder.
+
+VOLVER stays outside the tabs. Switching tabs resets the panel scroll.
 
 ## Surrender & rematch (both players must accept)
 
@@ -553,7 +588,12 @@ parties, answered with `full`). Cells are indices `row*28+col`.
 19. Pause menu: P/Esc opens REANUDAR / REINICIAR (`R`) / SALIR (`Q`), with
     the shortcut printed on each button and working from the keyboard; both
     players see it online; restarting online is a vote and a rejection leaves
-    the game paused. Dialog keys never leak into Pac-Man movement.
+    the game paused. Dialog keys never leak into Pac-Man movement. The menu
+    is see-through: the maze reads through it.
+21. Arrows navigate every menu and dialog (Enter/Space activate, sliders
+    adjust with Left/Right, text fields keep their caret) without stealing
+    the arrows from Pac-Man during play. OPCIONES is split into the
+    DIFICULTAD / JUGADORES / PARTIDA tabs.
 20. Skins apply to the player, its lives icons and the options thumbnails,
     and travel in the online handshake; emotes (`1..6`) appear over the right
     Pac-Man on both screens exactly once; badges are handed out on new

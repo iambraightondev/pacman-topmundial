@@ -287,8 +287,36 @@
       h.textContent = 'OPCIONES';
       o.appendChild(h);
 
-      /* --- DIFICULTAD --- */
-      o.appendChild(this.sectionTitle('DIFICULTAD'));
+      /* --- pestañas: el panel entero de golpe se veía abarrotado --- */
+      var TABS = [
+        ['dificultad', 'DIFICULTAD'],
+        ['jugadores', 'JUGADORES'],
+        ['partida', 'PARTIDA']
+      ];
+      var bar = document.createElement('div');
+      bar.className = 'tab-row';
+      this.tabBtns = {};
+      this.tabPanes = {};
+      TABS.forEach(function (t) {
+        var b = self.makeButton(t[1], function () { self.showOptionsTab(t[0]); });
+        b.classList.add('tab');
+        self.tabBtns[t[0]] = b;
+        bar.appendChild(b);
+      });
+      o.appendChild(bar);
+      TABS.forEach(function (t) {
+        var pane = document.createElement('div');
+        pane.className = 'tab-pane';
+        self.tabPanes[t[0]] = pane;
+        o.appendChild(pane);
+      });
+
+      var dif = this.tabPanes.dificultad;
+      var jug = this.tabPanes.jugadores;
+      var par = this.tabPanes.partida;
+
+      /* ===== pestaña DIFICULTAD ===== */
+      dif.appendChild(this.sectionTitle('DIFICULTAD'));
       var presetRow = document.createElement('div');
       presetRow.className = 'preset-row';
       var presets = [['facil', 'FÁCIL'], ['normal', 'NORMAL'], ['dificil', 'DIFÍCIL']];
@@ -301,33 +329,50 @@
         self.presetButtons[p[0]] = b;
         presetRow.appendChild(b);
       });
-      o.appendChild(presetRow);
+      dif.appendChild(presetRow);
 
       this.customTag = document.createElement('div');
       this.customTag.className = 'custom-tag';
       this.customTag.textContent = 'PERSONALIZADA';
-      o.appendChild(this.customTag);
+      dif.appendChild(this.customTag);
 
-      /* --- deslizadores --- */
       this.sliders = {};
-      o.appendChild(this.makeSlider('ghostSpeedMult', 'VELOCIDAD FANTASMAS',
+      dif.appendChild(this.makeSlider('ghostSpeedMult', 'VELOCIDAD FANTASMAS',
         0.5, 1.2, 0.05, function (v) { return '×' + v.toFixed(2); }));
-      o.appendChild(this.makeSlider('pacSpeedMult', 'VELOCIDAD PAC-MAN',
+      dif.appendChild(this.makeSlider('pacSpeedMult', 'VELOCIDAD PAC-MAN',
         0.8, 1.3, 0.05, function (v) { return '×' + v.toFixed(2); }));
-      o.appendChild(this.makeSlider('frightMult', 'DURACIÓN POWER PELLET',
+      dif.appendChild(this.makeSlider('frightMult', 'DURACIÓN POWER PELLET',
         0, 2, 0.25, function (v) { return '×' + v.toFixed(2); }));
-      o.appendChild(this.makeSlider('startLives', 'VIDAS',
+      dif.appendChild(this.makeSlider('startLives', 'VIDAS',
         1, 5, 1, function (v) { return String(v); }));
-      o.appendChild(this.makeSlider('startLevel', 'NIVEL INICIAL',
+      dif.appendChild(this.makeSlider('startLevel', 'NIVEL INICIAL',
         1, 21, 1, function (v) { return String(v); }));
 
       var note = document.createElement('div');
       note.className = 'note';
       note.textContent = 'VELOCIDAD, VIDAS Y NIVEL SE APLICAN EN LA PRÓXIMA PARTIDA';
-      o.appendChild(note);
+      dif.appendChild(note);
 
-      /* --- VIDAS EN 2 JUGADORES --- */
-      o.appendChild(this.sectionTitle('VIDAS EN 2 JUGADORES'));
+      /* ===== pestaña JUGADORES ===== */
+      jug.appendChild(this.sectionTitle('NOMBRES'));
+      jug.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
+      jug.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
+      var nkNote = document.createElement('div');
+      nkNote.className = 'note';
+      nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
+      jug.appendChild(nkNote);
+
+      this.colorRows = {};
+      this.skinRows = {};
+      jug.appendChild(this.sectionTitle('JUGADOR 1'));
+      jug.appendChild(this.makeColorRow('pacColor'));
+      jug.appendChild(this.makeSkinRow('skin1', 'pacColor'));
+      jug.appendChild(this.sectionTitle('JUGADOR 2'));
+      jug.appendChild(this.makeColorRow('pac2Color'));
+      jug.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
+
+      /* ===== pestaña PARTIDA ===== */
+      par.appendChild(this.sectionTitle('VIDAS EN 2 JUGADORES'));
       var lmRow = document.createElement('div');
       lmRow.className = 'preset-row';
       this.livesModeBtns = {};
@@ -341,33 +386,13 @@
         self.livesModeBtns[p[0]] = b;
         lmRow.appendChild(b);
       });
-      o.appendChild(lmRow);
+      par.appendChild(lmRow);
       var lmNote = document.createElement('div');
       lmNote.className = 'note';
       lmNote.textContent = 'COMPARTIDAS: UN FONDO COMÚN PARA EL EQUIPO · INDIVIDUALES: QUIEN LAS PIERDE, MIRA';
-      o.appendChild(lmNote);
+      par.appendChild(lmNote);
 
-      /* --- NOMBRES --- */
-      o.appendChild(this.sectionTitle('NOMBRES'));
-      o.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
-      o.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
-      var nkNote = document.createElement('div');
-      nkNote.className = 'note';
-      nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
-      o.appendChild(nkNote);
-
-      /* --- COLORES Y SKINS --- */
-      this.colorRows = {};
-      this.skinRows = {};
-      o.appendChild(this.sectionTitle('COLOR JUGADOR 1'));
-      o.appendChild(this.makeColorRow('pacColor'));
-      o.appendChild(this.makeSkinRow('skin1', 'pacColor'));
-      o.appendChild(this.sectionTitle('COLOR JUGADOR 2'));
-      o.appendChild(this.makeColorRow('pac2Color'));
-      o.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
-
-      /* --- SONIDO --- */
-      o.appendChild(this.sectionTitle('SONIDO'));
+      par.appendChild(this.sectionTitle('SONIDO'));
       var sndRow = document.createElement('div');
       sndRow.className = 'preset-row';
       this.soundBtns = {};
@@ -382,9 +407,14 @@
         self.soundBtns[p[0]] = b;
         sndRow.appendChild(b);
       });
-      o.appendChild(sndRow);
+      par.appendChild(sndRow);
 
-      /* --- VOLVER --- */
+      var ctrlNote = document.createElement('div');
+      ctrlNote.className = 'note';
+      ctrlNote.textContent = 'EN PARTIDA: P O ESC MENÚ DE PAUSA · 1-6 EMOTES · T CHAT (ONLINE)';
+      par.appendChild(ctrlNote);
+
+      /* --- VOLVER (fuera de las pestañas) --- */
       var back = this.makeButton('VOLVER', function () {
         self.showMenu();
       });
@@ -392,7 +422,19 @@
       back.style.marginTop = '14px';
       o.appendChild(back);
 
+      this.showOptionsTab('dificultad');
       this.refreshOptions();
+    },
+
+    showOptionsTab: function (name) {
+      if (!this.tabPanes || !this.tabPanes[name]) return;
+      this.optionsTab = name;
+      for (var k in this.tabPanes) {
+        if (!this.tabPanes.hasOwnProperty(k)) continue;
+        this.tabPanes[k].style.display = (k === name) ? 'flex' : 'none';
+        this.tabBtns[k].classList.toggle('active', k === name);
+      }
+      this.els.options.scrollTop = 0;
     },
 
     sectionTitle: function (text) {
@@ -1340,9 +1382,86 @@
       });
       p.appendChild(row);
 
+      p.classList.toggle('solid', !!o.solid);
       p.style.display = 'flex';
       this.promptOpen = true;
       this.refreshControls();
+      // foco en el botón principal: las flechas y Enter funcionan de inmediato
+      var first = p.querySelector('.btn-primary') || p.querySelector('.btn');
+      if (first) { try { first.focus(); } catch (e) { /* sin foco */ } }
+    },
+
+    /* ------------------------------------------------------
+     * Navegación con flechas por menús y diálogos
+     * ------------------------------------------------------ */
+    /* Panel visible ahora mismo (null si estamos en partida) */
+    visiblePanel: function () {
+      var names = ['menu', 'options', 'online', 'badges', 'ranking'];
+      for (var i = 0; i < names.length; i++) {
+        var el = this.els[names[i]];
+        if (el && el.style.display !== 'none') return el;
+      }
+      return null;
+    },
+
+    /* Controles enfocables del panel/diálogo abierto, en orden de aparición
+     * (los de una pestaña oculta no cuentan: no tienen caja de dibujo) */
+    navItems: function (host) {
+      if (!host) return [];
+      var sel = 'button:not([disabled]), input[type="range"], ' +
+        'input[type="text"]:not([disabled]), input[type="color"]';
+      var all = host.querySelectorAll(sel);
+      var out = [];
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].offsetParent !== null) out.push(all[i]);
+      }
+      return out;
+    },
+
+    navMove: function (host, delta) {
+      var items = this.navItems(host);
+      if (!items.length) return false;
+      var cur = -1;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i] === document.activeElement) { cur = i; break; }
+      }
+      var next = (cur === -1)
+        ? (delta > 0 ? 0 : items.length - 1)
+        : (cur + delta + items.length) % items.length;
+      var el = items[next];
+      try {
+        el.focus();
+        if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+      } catch (e) { /* sin foco */ }
+      return true;
+    },
+
+    /* Devuelve true si la tecla la consume la navegación */
+    handleNavKey: function (ev) {
+      var host = this.promptOpen ? this.els.prompt : this.visiblePanel();
+      if (!host) return false;
+      var ae = document.activeElement;
+      var inHost = ae && host.contains(ae);
+      var tag = ae ? ae.tagName : '';
+      var typing = inHost && tag === 'INPUT' &&
+        (ae.type === 'text' || ae.type === 'color');
+      var k = ev.key;
+
+      if (k === 'Enter' || k === ' ') {
+        if (typing) return false;             // lo gestiona el propio campo
+        if (inHost && tag === 'BUTTON') { ae.click(); return true; }
+        return false;                          // que sigan los atajos del diálogo
+      }
+      if (k !== 'ArrowUp' && k !== 'ArrowDown' &&
+          k !== 'ArrowLeft' && k !== 'ArrowRight') return false;
+
+      var horiz = (k === 'ArrowLeft' || k === 'ArrowRight');
+      // escribiendo: izquierda/derecha mueven el cursor del texto
+      if (typing && horiz) return false;
+      // deslizador enfocado: izquierda/derecha ajustan el valor (nativo)
+      if (inHost && tag === 'INPUT' && ae.type === 'range' && horiz) return false;
+
+      return this.navMove(host, (k === 'ArrowDown' || k === 'ArrowRight') ? 1 : -1);
     },
 
     /* Atajos del diálogo abierto. Devuelve true si la tecla era suya. */
@@ -1508,6 +1627,7 @@
       this.showPrompt({
         title: 'GAME OVER',
         color: '#ff0000',
+        solid: true,
         lines: lines,
         status: g.flash ? g.flash.text : '',
         statusError: !!g.flash,
@@ -1653,12 +1773,16 @@
       };
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
+        if (self.chatOpen) return;       // escribiendo: lo lleva el propio campo
+
+        /* flechas y Enter recorren los menús y diálogos abiertos */
+        if (self.handleNavKey(ev)) { ev.preventDefault(); return; }
+
         /* con un diálogo abierto mandan sus atajos (REANUDAR, R, Q, ...) */
         if (self.promptOpen) {
           if (self.handlePromptKey(ev)) ev.preventDefault();
           return;
         }
-        if (self.chatOpen) return;       // escribiendo: lo lleva el propio campo
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
 
         /* emotes 1..6 (en partidas de dos jugadores) */

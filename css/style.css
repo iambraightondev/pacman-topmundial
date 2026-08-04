@@ -243,6 +243,52 @@ body {
   color: #fff;
 }
 
+/* ---------- Foco de teclado (navegación con flechas) ---------- */
+.btn:focus,
+.swatch:focus,
+.skin:focus,
+.color-input:focus,
+input[type="range"]:focus {
+  outline: 2px solid #ffff00;
+  outline-offset: 2px;
+}
+
+/* ---------- Pestañas del panel de opciones ---------- */
+.tab-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #2121ff;
+  padding-bottom: 8px;
+}
+
+.btn.tab {
+  min-width: 0;
+  padding: 7px 16px;
+  font-size: clamp(10px, 1.9vh, 13px);
+  letter-spacing: 2px;
+  border-color: #333;
+  color: #999;
+}
+
+.btn.tab:hover { background: #111; color: #fff; }
+
+.btn.tab.active {
+  border-color: #ffff00;
+  color: #ffff00;
+  background: #000;
+}
+
+.tab-pane {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
 /* ---------- Panel de opciones ---------- */
 .panel-title {
   color: #ffff00;
@@ -636,11 +682,17 @@ input[type="range"] {
 }
 
 /* ---------- Diálogos en partida (rendición / revancha / game over) ---------- */
+/* Semitransparente: el laberinto se sigue viendo por detrás. La legibilidad
+ * la dan el contorno de los textos y el propio velo que pinta el canvas. */
 #prompt {
   z-index: 20;
   gap: 6px;
-  background: rgba(0, 0, 0, 0.93);
+  background: rgba(0, 0, 0, 0.45);
+  text-shadow: 0 0 4px #000, 0 0 8px #000;
 }
+
+/* el game over sí tapa más: ahí no hay partida que mirar */
+#prompt.solid { background: rgba(0, 0, 0, 0.85); }
 
 .prompt-line {
   color: #ddd;
@@ -669,6 +721,25 @@ input[type="range"] {
   padding: 10px 20px;
   font-size: clamp(11px, 2.1vh, 15px);
   letter-spacing: 2px;
+  background: rgba(0, 0, 0, 0.75);   /* legibles sobre el laberinto */
+  color: #fff;
+  text-shadow: none;
+}
+
+.prompt-btns .btn-primary { color: #ffff00; }
+
+/* Fondo y texto siempre juntos: si no, el resaltado de foco heredaba el
+ * texto negro de .btn-primary sobre el fondo oscuro y desaparecía. */
+.prompt-btns .btn:hover,
+.prompt-btns .btn:focus {
+  background: #2121ff;
+  color: #fff;
+}
+
+.prompt-btns .btn-primary:hover,
+.prompt-btns .btn-primary:focus {
+  background: #ffff00;
+  color: #000;
 }
 
 /* atajo de teclado, bajo la etiqueta del botón */

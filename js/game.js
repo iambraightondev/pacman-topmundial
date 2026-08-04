@@ -2392,10 +2392,12 @@
         ctx.textAlign = 'center';
       }
       if (this.paused) {
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        // con el menú de pausa delante basta con su propio velo: así el
+        // laberinto se sigue viendo y no se oscurece dos veces
+        var menuUp = !!(window.PM.UI && window.PM.UI.promptOpen);
+        ctx.fillStyle = menuUp ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
-        // el rótulo solo si no está el menú de pausa delante (lo repetiría)
-        if (!(window.PM.UI && window.PM.UI.promptOpen)) {
+        if (!menuUp) {
           ctx.font = 'bold 12px monospace';
           ctx.fillStyle = CFG.COLORS.text;
           ctx.fillText('PAUSA', 112, CFG.NATIVE_H / 2);

@@ -2,6 +2,24 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Menú de pausa transparente, navegación con flechas y opciones por pestañas
+
+- **El menú de pausa deja ver el laberinto**: el velo pasa a ser
+  semitransparente y el canvas baja el suyo mientras el menú está delante
+  (antes se oscurecía dos veces). Los textos llevan sombra y los botones
+  fondo propio para que se sigan leyendo. El panel de GAME OVER sí tapa más:
+  ahí no hay partida que mirar.
+- **Todo se maneja con las flechas**: en menús, opciones y diálogos las
+  flechas mueven el foco y `Enter` (o espacio) activa. Los deslizadores se
+  ajustan con izquierda/derecha, los campos de texto conservan el cursor, y
+  al abrir un diálogo el botón principal queda enfocado. **En partida las
+  flechas siguen moviendo a Pac-Man**: la navegación solo actúa con un panel
+  o un diálogo en pantalla.
+- **OPCIONES en tres pestañas** (se veía abarrotado): DIFICULTAD (presets y
+  deslizadores), JUGADORES (nombres, colores y skins) y PARTIDA (vidas en 2
+  jugadores, sonido y recordatorio de teclas). VOLVER queda fuera. En móvil
+  cada pestaña entra en pantalla sin scroll.
+
 ## 2026-08-04 · Corregido: al morir uno, al otro se le congelaba la partida (online)
 
 - En el modo online, cuando un jugador moría **el otro se quedaba clavado
