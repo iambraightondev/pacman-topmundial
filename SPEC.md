@@ -415,6 +415,12 @@ because the single scrolling list had grown unusable:
 
 VOLVER stays outside the tabs. Switching tabs resets the panel scroll.
 
+The header must not move when the tab changes: `#options`/`#badges` drop the
+`::before`/`::after` spacers that vertically centre the overlay (otherwise
+the block re-centres and the title and tabs jump every time the pane below
+changes height) and align to the top instead. The `.tab-row` is `sticky` so
+it also stays visible while scrolling a long pane.
+
 ## Surrender & rematch (both players must accept)
 
 - **Surrender**: `RENDIRSE` button in the in-game top-right bar (all devices;

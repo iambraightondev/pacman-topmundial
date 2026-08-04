@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Las pestañas ya no se mueven al cambiar de una a otra
+
+- En OPCIONES (y en MAESTRÍAS) el título y las pestañas **se quedan quietos**:
+  antes el panel se recentraba en vertical y, como cada pestaña tiene un alto
+  distinto, la fila de pestañas saltaba de sitio a cada clic. Ahora la
+  cabecera va anclada arriba y solo cambia el contenido de debajo.
+- Además, en pantallas donde el contenido no cabe, la fila de pestañas queda
+  **fija arriba al desplazar**, en vez de perderse hacia arriba.
+
 ## 2026-08-04 · Voces de racha al comer fantasmas y volumen por tipo de sonido
 
 - **Racha con voz**: comer fantasmas seguidos con el mismo energizante suelta

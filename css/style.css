@@ -253,15 +253,29 @@ input[type="range"]:focus {
   outline-offset: 2px;
 }
 
-/* ---------- Pestañas del panel de opciones ---------- */
+/* ---------- Paneles con pestañas ----------
+ * Sin los espaciadores que centran verticalmente: si el bloque se recentra,
+ * el título y las pestañas saltan de sitio cada vez que el contenido de
+ * abajo cambia de alto. Así la cabecera se queda quieta y solo cambia lo
+ * que hay debajo. */
+#options::before, #options::after,
+#badges::before, #badges::after { content: none; }
+
+#options, #badges { justify-content: flex-start; }
+
 .tab-row {
+  position: sticky;         /* siguen a la vista en pestañas largas */
+  top: 0;
+  z-index: 2;
   display: flex;
   gap: 6px;
   justify-content: center;
   flex-wrap: wrap;
+  width: 100%;
   margin-bottom: 4px;
   border-bottom: 1px solid #2121ff;
-  padding-bottom: 8px;
+  padding: 4px 0 8px;
+  background: rgba(0, 0, 0, 0.92);
 }
 
 .btn.tab {
