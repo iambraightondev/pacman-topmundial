@@ -7,11 +7,17 @@ Audio API. UI language: **Spanish**.
 
 ## Nivel de jugador, cronómetro y amigos
 
-**Nivel** (`PM.Level`, `CFG.LEVEL_*`): every game's score is added as XP; the
-level is **derived** from the total (never stored), so it cannot drift.
-`cost(n) = LEVEL_BASE * n^LEVEL_EXP` — each step costs more and there is no
-cap. XP is granted once per game, next to the history save. Shown on the
-title screen with a progress bar and, on level-up, as an in-game notice.
+**Nivel** (`PM.Level`, `CFG.LEVEL_*`): the level measures **how much you
+play**, not how good you are — every point of every game is XP, no record and
+no minimum needed. The level is **derived** from the total (never stored), so
+it cannot drift. `cost(n) = LEVEL_BASE * n^LEVEL_EXP` — each step costs more
+and there is no cap. XP is granted **once per run, however the run ends**
+(`Game.closeRun()`, guarded by `xpSent`): game over, surrender, restart from
+the pause menu or walking out to the menu mid-game. Awarding it only at GAME
+OVER meant everything played was thrown away if you left first. Shown on the
+title screen with a progress bar and, on level-up, as an in-game notice — or,
+if the level went up as you left, as a prompt on the menu
+(`Game.pendingLevelUp` → `UI.showLevelUpPrompt`).
 
 **Cronómetro**: `Game.timeTicks` advances during `PLAYING` and `DYING` (not
 while paused or stalled), rendered as mm:ss in the bottom HUD row. Online it

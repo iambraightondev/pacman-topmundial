@@ -2354,6 +2354,31 @@
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');
+      // si el nivel subió justo al salirse de la partida, el aviso no se
+      // llegó a ver: se celebra aquí
+      var g = window.PM.Game;
+      if (g && g.pendingLevelUp) {
+        var lv = g.pendingLevelUp;
+        g.pendingLevelUp = null;
+        this.showLevelUpPrompt(lv);
+      }
+    },
+
+    showLevelUpPrompt: function (lv) {
+      var self = this;
+      var s = window.PM.Level ? window.PM.Level.state() : null;
+      this.showPrompt({
+        title: '¡SUBES DE NIVEL!',
+        color: '#00ffff',
+        lines: [
+          { text: 'NIVEL ' + lv, big: true },
+          s ? ('SIGUIENTE: ' + s.inLevel + ' / ' + s.needed + ' PUNTOS') : ''
+        ],
+        buttons: [
+          { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '],
+            hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+        ]
+      });
     },
 
     /* El botón del menú avisa de si ya estamos en una party */

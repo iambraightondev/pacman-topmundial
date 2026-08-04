@@ -30,6 +30,13 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   celebra cada vez que se cruza un escalón dentro de la partida (una vez por
   partida y escalón) y el texto distingue si es nueva o ya conseguida.
   Además, cada fila del panel MAESTRÍAS tiene `VER` para verlo entero.
+- **La experiencia ya no se pierde si te sales a medias**: solo se sumaba al
+  llegar al GAME OVER, así que salir por el menú de pausa, reiniciar con `R`
+  o rendirse tiraba todo lo jugado. Ahora los puntos cuentan **acabe como
+  acabe la partida** (una sola vez, eso sí). Recordatorio de cómo funciona:
+  el nivel mide **cuánto juegas**, no si haces récord — 500 puntos suman 500,
+  aunque no batas nada. Si subes de nivel justo al salir, el menú te lo
+  celebra con un aviso.
 - **La chapa de maestría en partida también se anima** (`Ctrl+Espacio` o el
   botón MI MAESTRÍA), con una animación distinta a la del panel: la medalla
   sube girando desde encima de tu Pac-Man, la chapa se despliega hacia su

@@ -651,6 +651,69 @@
   });
 
   // ---------------------------------------------------------------
+  // Nivel de jugador: mide cuánto juegas, no si haces récord
+  // ---------------------------------------------------------------
+  test('los puntos suman experiencia aunque no haya récord ni game over',
+    function () {
+      var L = window.PM.Level;
+      var xp0 = L.xp();
+      try {
+        L.reset();
+        G.highScore1 = 999999;        // imposible batir el récord
+        partida(1);
+        G.score = 500;                // una partida floja
+        G.toMenu();                   // te sales a medias
+        eq(L.xp(), 500, 'los 500 puntos cuentan igual');
+      } finally { L.reset(); L.add(xp0); G.highScore1 = 0; }
+    });
+
+  test('la experiencia de una partida se cuenta una sola vez', function () {
+    var L = window.PM.Level;
+    var xp0 = L.xp();
+    try {
+      L.reset();
+      partida(1);
+      G.score = 1200;
+      G.submitRanking();              // fin de partida normal
+      G.toMenu();                     // y luego salir al menú
+      eq(L.xp(), 1200, 'no se suma dos veces');
+    } finally { L.reset(); L.add(xp0); }
+  });
+
+  test('reiniciar a media partida no tira lo jugado', function () {
+    var L = window.PM.Level;
+    var xp0 = L.xp();
+    try {
+      L.reset();
+      partida(1);
+      G.score = 800;
+      G.restartGame();                // R en el menú de pausa
+      eq(L.xp(), 800, 'los 800 de la anterior ya están sumados');
+      G.score = 300;
+      G.toMenu();
+      eq(L.xp(), 1100, 'y la nueva suma los suyos');
+    } finally { L.reset(); L.add(xp0); G.toMenu(); }
+  });
+
+  test('subir de nivel al salirse se avisa en el menú', function () {
+    var L = window.PM.Level;
+    var xp0 = L.xp();
+    try {
+      L.reset();
+      partida(1);
+      G.score = L.cost(1) + 10;       // justo para pasar de nivel
+      G.pendingLevelUp = null;
+      G.toMenu();
+      eq(L.state().level, 2, 'se ha subido de nivel');
+      ok(window.PM.UI.promptOpen, 'el menú lo celebra con un aviso');
+    } finally {
+      L.reset(); L.add(xp0);
+      G.pendingLevelUp = null;
+      window.PM.UI.hidePrompt();
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Chapa de maestría sobre el jugador (Ctrl+Espacio)
   // ---------------------------------------------------------------
   test('la chapa de maestría sale animada, no de golpe', function () {

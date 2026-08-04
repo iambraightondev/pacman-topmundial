@@ -115,6 +115,8 @@
     badgeRun: [],        // ids de maestría ya celebrados en ESTA partida
     levelNotice: null,   // { level, ticks } — nivel de jugador recién subido
     rankingSent: false,  // una sola subida por partida
+    xpSent: false,       // la experiencia de la partida ya está sumada
+    pendingLevelUp: null,// nivel recién subido al salirse: lo celebra el menú
     timeTicks: 0,        // cronómetro de la partida (solo mientras se juega)
 
     /* rendición y revancha (deben aceptar los dos jugadores) */
@@ -291,6 +293,7 @@
       this.badgeRun = [];
       this.levelNotice = null;
       this.rankingSent = false;
+      this.xpSent = false;
       this.timeTicks = 0;
 
       var s = opts.cfg || this.settings();
@@ -437,6 +440,9 @@
     },
 
     toMenu: function () {
+      // salirse a medias no tira lo jugado: la experiencia se lleva igual
+      var subida = this.inGame() ? this.closeRun() : null;
+      if (subida) this.pendingLevelUp = subida;   // lo celebra el menú
       if (this.netRole) {
         try { window.PM.Net.send('bye', {}); } catch (e) { /* canal cerrado */ }
         // Si venimos de una party el canal NO se cierra: el grupo sigue junto
@@ -1296,15 +1302,27 @@
     },
 
     /* ---------- Nivel de jugador ----------
-     * La experiencia son los puntos de la partida, así que se suma al
-     * terminar (una vez por partida, junto al historial). */
+     * El nivel mide CUÁNTO juegas, no lo bueno que eres: todos los puntos
+     * de la partida suman, hagas 500 o 50 000, y no hace falta batir ningún
+     * récord. Devuelve el nivel nuevo si se ha subido. */
     awardLevelXp: function () {
-      if (!window.PM.Level || !(this.score > 0)) return;
+      if (!window.PM.Level || !(this.score > 0)) return null;
       var nuevo = window.PM.Level.add(this.score);
       if (nuevo) {
         this.levelNotice = { level: nuevo, ticks: 260 };
         window.AudioSys && AudioSys.playExtraLife();
       }
+      return nuevo;
+    },
+
+    /* Cierre de partida: la experiencia se lleva UNA vez, acabe como acabe
+     * (game over, rendición, reinicio o salir al menú a medias). Antes solo
+     * contaba al llegar al GAME OVER, así que quien se salía antes no
+     * sumaba nada de lo jugado. */
+    closeRun: function () {
+      if (this.xpSent || this.isSpec()) return null;
+      this.xpSent = true;
+      return this.awardLevelXp();
     },
 
     /* ---------- Cronómetro ---------- */
@@ -1346,7 +1364,7 @@
       if (this.rankingSent) return;
       this.rankingSent = true;      // una sola vez por partida
       if (this.isSpec()) return;    // mirar no da puntos ni historial
-      this.awardLevelXp();          // la experiencia también cuenta una vez
+      this.closeRun();              // la experiencia también cuenta una vez
       // el historial local guarda todas las partidas, con nombre o sin él
       if (this.score > 0 && window.PM.History) {
         window.PM.History.add({
@@ -1514,6 +1532,7 @@
 
     restartGame: function () {
       if (!this.lastOpts) { this.toMenu(); return; }
+      this.closeRun();          // lo jugado hasta aquí también cuenta
       this.newGame(this.lastOpts);
     },
 
