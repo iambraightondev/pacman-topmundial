@@ -655,6 +655,12 @@ input[type="range"] {
 
 .emote-btn:hover, .emote-btn:active { background: #2121ff; }
 
+.emote-btn.badge-emote { border-color: #ffff00; color: #ffff00; }
+.emote-btn.badge-emote:hover, .emote-btn.badge-emote:active {
+  background: #ffff00;
+  color: #000;
+}
+
 #chatBox {
   position: absolute;
   left: 50%;

@@ -180,6 +180,33 @@
     ctx.fillText(e.text, bx + padL, by + h / 2 + 0.5);
   };
 
+  /* Etiqueta de maestría sobre un jugador (Ctrl+Espacio).
+   * Mismo globo que los emotes, con la medalla y el nombre en su color. */
+  Sprites.drawBadgeTag = function (ctx, x, y, name, color) {
+    var text = String(name || '');
+    color = color || '#888888';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    var padL = 15, padR = 6, h = 14;
+    var w = ctx.measureText(text).width + padL + padR;
+    var bx = Math.round(x - w / 2), by = Math.round(y - h);
+    if (bx < 2) bx = 2;
+    if (bx + w > CFG.NATIVE_W - 2) bx = CFG.NATIVE_W - 2 - w;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(bx, by, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
+
+    Sprites.drawBadge(ctx, bx + 8, by + h / 2, 4.5, color, false);
+    ctx.fillStyle = color;
+    ctx.fillText(text, bx + padL, by + h / 2 + 0.5);
+  };
+
   /* Medalla de maestría: disco con el aro del color de la insignia */
   Sprites.drawBadge = function (ctx, x, y, r, color, locked) {
     ctx.fillStyle = locked ? '#161616' : '#000000';

@@ -290,10 +290,19 @@ lives icons and the option thumbnails (each thumbnail is a real mini-canvas
 render). Exchanged online in the handshake (`k` field → `Game.netSkins`).
 
 **Emotes** (`CFG.EMOTES`, 6 pac-themed one-liners): keys `1..6` or the
-EMOTES button, only in 2-player modes. `Game.sendEmote(i)` shows a bubble
-(`Sprites.drawEmote`) over that Pac-Man for `EMOTE_TICKS`, with an
-`EMOTE_COOLDOWN` antispam gap. Online: guest `gevt {t:'emote', e}` → host
-re-broadcasts `evt {t:'emote', w, e}`; each side ignores the echo of its own.
+EMOTES button. `Game.sendEmote(i)` shows a bubble (`Sprites.drawEmote`) over
+that Pac-Man for `EMOTE_TICKS`, with an `EMOTE_COOLDOWN` antispam gap.
+Online: guest `gevt {t:'emote', e}` → host re-broadcasts
+`evt {t:'emote', w, e}`; each side ignores the echo of its own.
+
+**Enseñar la maestría**: `Ctrl+Espacio` (or the MI MAESTRÍA button in the
+emote bar, for touch) puts your highest badge over your own Pac-Man —
+`Sprites.drawBadgeTag`, same bubble as the emotes with the medal and the
+badge colour, sharing the emote slot (`{tag, color, ticks}` instead of `{e}`)
+and cooldown. Badges are per-device, so the wire carries the **id** and the
+receiver looks it up in `CFG.BADGES`: guest `gevt {t:'badge', b}` → host
+`evt {t:'badge', w, b}`, same echo guard. An empty id means "SIN MAESTRÍA",
+which is what a player with no badge yet shows. Works in every mode.
 
 **Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers by personal best
 (APRENDIZ 3 000 → TOP MUNDIAL 100 000). Earned badges are derived from the
@@ -521,12 +530,13 @@ parties, answered with `full`). Cells are indices `row*28+col`.
   sooner on turns or eats; `dy:1` while dying (keep-alive whose position the
   host must ignore); `gevt {t: 'died' |
   'ateGhost'{g} | 'ateFruit' | 'pauseReq'{on} | 'vote'{k} | 'voteRes'{k, ok} |
-  'emote'{e} | 'chat'{m}}` where `k` is `surrender` | `rematch` | `restart`.
+  'emote'{e} | 'chat'{m} | 'badge'{b}}` where `k` is `surrender` | `rematch`
+  | `restart` and `b` is a `CFG.BADGES` id ('' = none yet).
 - Host → guest: `snap {…}` every 5 ticks (every 15th adds `pm`, hex pellet
   bitmap); `evt {t: 'ready'{lvl,full,rt} | 'fright'{tk,fl} |
   'eatGhost'{g,pts,x,y,w} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
   'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
-  'rematch' | 'emote'{w, e} | 'chat'{w, m}}`.
+  'rematch' | 'emote'{w, e} | 'chat'{w, m} | 'badge'{w, b}}`.
 - Both directions: `bye {}` on leaving.
 - `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`
   (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),

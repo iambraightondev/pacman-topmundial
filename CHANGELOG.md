@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Enseñar tu maestría con Ctrl+Espacio
+
+- **`Ctrl`+`Espacio` muestra tu maestría sobre tu Pac-Man**: un globo con la
+  medalla y el nombre de la insignia más alta que tengas, en su color, unos
+  segundos. Si aún no tienes ninguna, sale "SIN MAESTRÍA".
+- En **online el otro jugador también la ve** (viaja el identificador de la
+  insignia, porque el récord es de cada máquina). Comparte el globo y el
+  tiempo de espera de los emotes.
+- Para jugar sin teclado, la barra de EMOTES incluye ahora el botón
+  **MI MAESTRÍA**; esa barra pasa a estar disponible en todos los modos
+  (antes solo en partidas de dos jugadores), y los emotes `1`–`6` también.
+
 ## 2026-08-04 · Menú de pausa transparente, navegación con flechas y opciones por pestañas
 
 - **El menú de pausa deja ver el laberinto**: el velo pasa a ser

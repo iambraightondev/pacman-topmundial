@@ -104,10 +104,10 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
 - **Skins**: CLÁSICO, OJOS, NEÓN, ARO, PÍXEL y SOMBRA, todas disponibles
   desde el principio y combinables con cualquier color.
-- **Emotes** (`1`–`6` o el botón EMOTES) en las partidas de dos jugadores, y
-  **chat** (`T`) en el modo online.
+- **Emotes** (`1`–`6` o el botón EMOTES) y **chat** (`T`) en el modo online.
 - **Maestrías**: seis insignias por récord personal, con aviso al
-  conseguirlas y su propio panel en el menú.
+  conseguirlas y su propio panel en el menú. Con **`Ctrl`+`Espacio`** (o el
+  botón MI MAESTRÍA) la enseñas sobre tu Pac-Man, y en online la ve tu dúo.
 - **Top mundial**: clasificación de partidas de dúo compartida entre todos
   (ver más abajo cómo activarla).
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.

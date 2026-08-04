@@ -411,7 +411,8 @@
 
       var ctrlNote = document.createElement('div');
       ctrlNote.className = 'note';
-      ctrlNote.textContent = 'EN PARTIDA: P O ESC MENÚ DE PAUSA · 1-6 EMOTES · T CHAT (ONLINE)';
+      ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
+        'CTRL+ESPACIO TU MAESTRÍA · T CHAT (ONLINE)';
       par.appendChild(ctrlNote);
 
       /* --- VOLVER (fuera de las pestañas) --- */
@@ -1275,6 +1276,17 @@
         });
         bar.appendChild(b);
       });
+      /* misma acción que Ctrl+Espacio, para quien juega sin teclado */
+      var mb = document.createElement('button');
+      mb.type = 'button';
+      mb.className = 'emote-btn badge-emote';
+      mb.textContent = 'MI MAESTRÍA';
+      mb.addEventListener('click', function () {
+        self.resumeAudio();
+        window.PM.Game.sendBadgeTag();
+        self.toggleEmoteBar(false);
+      });
+      bar.appendChild(mb);
       document.getElementById('stage').appendChild(bar);
       this.emoteBar = bar;
     },
@@ -1447,6 +1459,7 @@
         (ae.type === 'text' || ae.type === 'color');
       var k = ev.key;
 
+      if (ev.ctrlKey || ev.altKey || ev.metaKey) return false;   // combinaciones
       if (k === 'Enter' || k === ' ') {
         if (typing) return false;             // lo gestiona el propio campo
         if (inHost && tag === 'BUTTON') { ae.click(); return true; }
@@ -1692,9 +1705,8 @@
         !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
       if (this.surrenderBtn) this.surrenderBtn.disabled = !g.canSurrender();
-      if (this.emoteBtn) {
-        this.emoteBtn.style.display = (playable && g.playerCount === 2) ? '' : 'none';
-      }
+      // la barra lleva también MI MAESTRÍA, útil en cualquier modo
+      if (this.emoteBtn) this.emoteBtn.style.display = playable ? '' : 'none';
       if (this.chatBtn) {
         this.chatBtn.style.display = (playable && g.netRole) ? '' : 'none';
       }
@@ -1785,8 +1797,18 @@
         }
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
 
-        /* emotes 1..6 (en partidas de dos jugadores) */
-        if (canControl && g.playerCount === 2 && /^[1-9]$/.test(ev.key)) {
+        /* Ctrl+Espacio: enseña tu maestría sobre tu Pac-Man */
+        if (canControl && ev.ctrlKey &&
+            (ev.code === 'Space' || ev.key === ' ' || ev.key === 'Spacebar')) {
+          self.resumeAudio();
+          g.sendBadgeTag();
+          self.toggleEmoteBar(false);
+          ev.preventDefault();
+          return;
+        }
+
+        /* emotes 1..6 */
+        if (canControl && /^[1-9]$/.test(ev.key)) {
           var ei = parseInt(ev.key, 10) - 1;
           if (ei < CFG.EMOTES.length) {
             self.resumeAudio();

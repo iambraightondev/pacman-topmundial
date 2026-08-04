@@ -1109,6 +1109,37 @@
       window.AudioSys && AudioSys.playEmote && AudioSys.playEmote();
     },
 
+    /* ---------- Enseñar la maestría (Ctrl+Espacio) ----------
+     * La insignia es propia de cada máquina (sale del récord local), así que
+     * por red viaja su id y el otro extremo la busca en la tabla. */
+    badgeById: function (id) {
+      for (var i = 0; i < CFG.BADGES.length; i++) {
+        if (CFG.BADGES[i].id === id) return CFG.BADGES[i];
+      }
+      return null;
+    },
+
+    showBadgeTag: function (who, id) {
+      if (!this.pacs[who]) return;
+      var b = this.badgeById(id);
+      this.emotes[who] = {
+        tag: b ? b.name : 'SIN MAESTRÍA',
+        color: b ? b.color : '#888888',
+        ticks: CFG.EMOTE_TICKS
+      };
+    },
+
+    sendBadgeTag: function () {
+      if (!this.canEmote()) return;
+      var who = this.netRole ? this.localIdx : 0;
+      var top = window.PM.Badges && window.PM.Badges.top();
+      var id = top ? top.id : '';
+      this.emoteCooldown = CFG.EMOTE_COOLDOWN;
+      this.showBadgeTag(who, id);
+      if (this.netRole === 'guest') this.netSend('gevt', { t: 'badge', b: id });
+      else this.hostEvt({ t: 'badge', w: who, b: id });
+    },
+
     stepEmotes: function () {
       if (this.emoteCooldown > 0) this.emoteCooldown--;
       for (var i = 0; i < this.emotes.length; i++) {
@@ -1549,6 +1580,10 @@
           this.showEmote(1, d.e);
           this.hostEvt({ t: 'emote', w: 1, e: d.e });
           break;
+        case 'badge':
+          this.showBadgeTag(1, d.b);
+          this.hostEvt({ t: 'badge', w: 1, b: d.b });
+          break;
         case 'chat':
           this.addChat(1, d.m);
           this.hostEvt({ t: 'chat', w: 1, m: this.cleanChat(d.m) });
@@ -1933,6 +1968,9 @@
         case 'emote':
           if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
           break;
+        case 'badge':
+          if ((e.w || 0) !== this.localIdx) this.showBadgeTag(e.w || 0, e.b);
+          break;
         case 'chat':
           if ((e.w || 0) !== this.localIdx) this.addChat(e.w || 0, e.m);
           break;
@@ -2250,12 +2288,16 @@
               this.pacs[i].y + CFG.MAZE_Y - 10);
           }
         }
-        /* emotes sobre cada jugador */
+        /* emotes y maestrías sobre cada jugador */
         for (i = 0; i < this.pacs.length; i++) {
           var em = this.emotes[i];
           if (!em || this.pacs[i].out) continue;
-          window.PM.Sprites.drawEmote(ctx, this.pacs[i].x,
-            this.pacs[i].y + CFG.MAZE_Y - 11, em.e, this.colorFor(i));
+          var ex = this.pacs[i].x, ey = this.pacs[i].y + CFG.MAZE_Y - 11;
+          if (em.tag) {
+            window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color);
+          } else {
+            window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i));
+          }
         }
       }
 
