@@ -2,6 +2,22 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Top mundial separado (individual y dúo) y récords solo con nombre
+
+- El TOP MUNDIAL se divide en **dos clasificaciones**: **INDIVIDUAL** y
+  **DÚO**, con sus pestañas en el panel. Las partidas de un jugador **ya se
+  registran** (antes solo entraban las de dos).
+- **Sin nombre no hay récord**: para entrar en la clasificación hay que tener
+  nombre puesto (los dos, en dúo). Si falta, el panel de fin de partida lo
+  dice —"PON TU NOMBRE PARA ENTRAR EN EL TOP MUNDIAL"— en vez de descartar la
+  partida en silencio.
+- **Limpieza**: se han borrado de la clasificación los registros que entraron
+  sin nombre (los que salían como J1/J2). Las partidas con nombre real se
+  conservan.
+- Corregido de paso: al cambiar de pestaña rápido, la respuesta de la
+  anterior podía llegar más tarde y dejar el mensaje "aún no hay partidas"
+  encima de una lista con resultados.
+
 ## 2026-08-04 · Las pestañas ya no se mueven al cambiar de una a otra
 
 - En OPCIONES (y en MAESTRÍAS) el título y las pestañas **se quedan quietos**:

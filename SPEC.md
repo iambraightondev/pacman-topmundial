@@ -331,11 +331,18 @@ MAESTRÍAS panel has an EN SOLO / EN DÚO tab pair, each listing the six tiers
 with that track's record and what is missing for the next one. `Ctrl+Espacio`
 shows the badge of the **mode being played**.
 
-**Top mundial** (`PM.Ranking`): 2-player games (local and online) are posted
-to a Supabase table via PostgREST with the anon key — no SDK. Only the host
-submits online, once per game (`Game.rankingSent`), never in 1-player. The
-TOP MUNDIAL panel lists the best `CFG.RANKING.LIMIT` runs and highlights
-rows containing your own nickname. The table lives in `supabase/ranking.sql`
+**Top mundial** (`PM.Ranking`): games are posted to a Supabase table via
+PostgREST with the anon key — no SDK. There are **two separate boards**, told
+apart by the `jugadores` column: `1` individual (`nombre2` NULL) and `2` duo;
+the TOP MUNDIAL panel has an INDIVIDUAL / DÚO tab pair and each query filters
+by it. Switching tabs fast is guarded by a request token, so a late reply
+from the previous tab cannot overwrite the current list.
+
+**A record needs a name**: `Game.missingRankingName()` checks `rawName()`
+(the real nickname, not the J1/J2 fallback) for every player involved, and
+without it nothing is submitted — the GAME OVER panel says why instead of
+failing silently. `Ranking.submit()` rejects nameless rows again on its side.
+Only the host submits online, once per game (`Game.rankingSent`). The table lives in `supabase/ranking.sql`
 (public select + insert, no update/delete — note it needs the table-level
 `GRANT ... TO anon` on top of the RLS policies, or PostgREST answers 401);
 if it is missing the panel says so instead of failing. Scores are client-submitted and therefore forgeable —
@@ -667,8 +674,9 @@ parties, answered with `full`). Cells are indices `row*28+col`.
     and travel in the online handshake; emotes (`1..6`) appear over the right
     Pac-Man on both screens exactly once; badges are handed out on new
     personal records and listed in MAESTRÍAS; 2-player results reach the TOP
-    MUNDIAL panel (host only online, once per game, never in 1-player) and a
-    missing table is reported instead of crashing; online chat (`T`) delivers
+    MUNDIAL panel — individual and duo boards kept apart, only with a real
+    name, host only online, once per game — and a missing table is reported
+    instead of crashing; online chat (`T`) delivers
     sanitised, rate-limited messages and blocks game keys while typing.
     Badges are tracked separately for solo and duo: a duo record never awards
     a solo badge, each track announces its own tiers, and the panel shows the

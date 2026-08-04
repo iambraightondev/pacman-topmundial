@@ -1190,10 +1190,21 @@
       h.textContent = 'TOP MUNDIAL';
       o.appendChild(h);
 
-      var sub = document.createElement('div');
-      sub.className = 'note';
-      sub.textContent = 'MEJORES PARTIDAS DE DOS JUGADORES · PUNTUACIÓN DE EQUIPO';
-      o.appendChild(sub);
+      /* dos clasificaciones separadas */
+      var bar = document.createElement('div');
+      bar.className = 'tab-row';
+      this.rankTabBtns = {};
+      [[1, 'INDIVIDUAL'], [2, 'DÚO']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
+        b.classList.add('tab');
+        self.rankTabBtns[t[0]] = b;
+        bar.appendChild(b);
+      });
+      o.appendChild(bar);
+
+      this.rankSub = document.createElement('div');
+      this.rankSub.className = 'note';
+      o.appendChild(this.rankSub);
 
       this.rankStatus = document.createElement('div');
       this.rankStatus.className = 'lobby-status';
@@ -1213,11 +1224,27 @@
       back.classList.add('btn-preset');
       row.appendChild(back);
       o.appendChild(row);
+
+      this.rankTab = 1;
+    },
+
+    showRankTab: function (players) {
+      this.rankTab = (players === 2) ? 2 : 1;
+      this.loadRanking();
     },
 
     loadRanking: function () {
       var self = this;
       var R = window.PM.Ranking;
+      var players = this.rankTab || 1;
+      for (var k in this.rankTabBtns) {
+        if (this.rankTabBtns.hasOwnProperty(k)) {
+          this.rankTabBtns[k].classList.toggle('active', +k === players);
+        }
+      }
+      this.rankSub.textContent = (players === 1)
+        ? 'MEJORES PARTIDAS DE UN JUGADOR'
+        : 'MEJORES PARTIDAS DE DOS JUGADORES · PUNTUACIÓN DE EQUIPO';
       this.rankList.innerHTML = '';
       if (!R || !R.configured()) {
         this.rankStatus.classList.add('error');
@@ -1226,7 +1253,12 @@
       }
       this.rankStatus.classList.remove('error');
       this.rankStatus.textContent = 'CARGANDO...';
-      R.top(function (err, rows) {
+      /* testigo de petición: al cambiar de pestaña rápido, la respuesta de la
+       * anterior puede llegar después y pisar la lista o el mensaje */
+      var req = (this.rankReq || 0) + 1;
+      this.rankReq = req;
+      R.top(players, function (err, rows) {
+        if (self.rankReq !== req) return;      // respuesta caducada
         if (err) {
           self.rankStatus.classList.add('error');
           self.rankStatus.textContent = err === 'FALTA LA TABLA EN SUPABASE'
@@ -1249,8 +1281,8 @@
       this.rankList.innerHTML = '';
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
-        var n1 = String(r.nombre1 || 'J1').toUpperCase();
-        var n2 = String(r.nombre2 || 'J2').toUpperCase();
+        var n1 = String(r.nombre1 || '').toUpperCase();
+        var n2 = String(r.nombre2 || '').toUpperCase();
         var row = document.createElement('div');
         row.className = 'rank-row';
         if (mine && (n1 === mine || n2 === mine)) row.classList.add('mine');
@@ -1262,7 +1294,7 @@
 
         var who = document.createElement('span');
         who.className = 'rank-who';
-        who.textContent = n1 + ' + ' + n2;
+        who.textContent = n2 ? (n1 + ' + ' + n2) : n1;
         row.appendChild(who);
 
         var pts = document.createElement('span');
@@ -1751,6 +1783,13 @@
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
       if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
       lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
+      // sin nombre no entra en el top mundial: se dice aquí, no en silencio
+      if (g.score > 0 && g.missingRankingName() &&
+          window.PM.Ranking && window.PM.Ranking.configured()) {
+        lines.push(duo
+          ? 'PARA ENTRAR EN EL TOP MUNDIAL, LOS DOS NECESITÁIS NOMBRE'
+          : 'PON TU NOMBRE PARA ENTRAR EN EL TOP MUNDIAL');
+      }
       this.showPrompt({
         title: 'GAME OVER',
         color: '#ff0000',

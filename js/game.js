@@ -1228,17 +1228,27 @@
       if (--this.badgeNotice.ticks <= 0) this.badgeNotice = null;
     },
 
-    /* ---------- Ranking mundial ---------- */
+    /* ---------- Ranking mundial ----------
+     * Dos clasificaciones: individual y dúo. Sin nombre no hay récord:
+     * rawName() devuelve '' si el jugador no puso ninguno (nameFor() daría
+     * el J1/J2 de relleno). */
+    missingRankingName: function () {
+      if (!this.rawName(0)) return true;
+      return this.playerCount === 2 && !this.rawName(1);
+    },
+
     submitRanking: function () {
-      if (this.rankingSent || this.playerCount !== 2) return;
+      if (this.rankingSent) return;
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
+      if (this.missingRankingName()) return;    // se avisa en el panel final
       this.rankingSent = true;
       window.PM.Ranking.submit({
+        jugadores: this.playerCount,
         modo: this.netRole ? 'online' : 'local',
-        nombre1: this.nameFor(0),
-        nombre2: this.nameFor(1),
+        nombre1: this.rawName(0),
+        nombre2: (this.playerCount === 2) ? this.rawName(1) : '',
         puntos: this.score,
         nivel: this.level
       });

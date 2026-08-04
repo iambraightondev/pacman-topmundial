@@ -41,12 +41,15 @@
       return !!(c.SUPABASE_URL && c.SUPABASE_KEY && window.fetch);
     },
 
-    /* Top de puntuaciones. cb(err, filas) */
-    top: function (cb) {
+    /* Top de puntuaciones de una clasificación (players: 1 individual,
+     * 2 dúo). cb(err, filas) */
+    top: function (players, cb) {
       var self = this;
       if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
+      var n = (players === 1) ? 1 : 2;
       var url = base() +
         '?select=nombre1,nombre2,puntos,nivel,modo,creado_en' +
+        '&jugadores=eq.' + n +
         '&order=puntos.desc,creado_en.asc' +
         '&limit=' + CFG.RANKING.LIMIT;
       fetch(url, { method: 'GET', headers: headers() })
@@ -68,7 +71,8 @@
     },
 
     /* Envía una partida terminada. Silencioso: si falla, el juego sigue.
-     * o: { modo, nombre1, nombre2, puntos, nivel } */
+     * o: { jugadores, modo, nombre1, nombre2, puntos, nivel }
+     * Sin nombre no hay récord: se descarta antes de mandar nada. */
     submit: function (o, cb) {
       if (!this.configured()) { if (cb) cb('SIN CONFIGURAR'); return; }
       var pts = Math.floor(o.puntos || 0);
@@ -76,10 +80,18 @@
         if (cb) cb('PUNTUACIÓN NO VÁLIDA');
         return;
       }
+      var players = (o.jugadores === 1) ? 1 : 2;
+      var n1 = String(o.nombre1 == null ? '' : o.nombre1).slice(0, CFG.NICK_MAX);
+      var n2 = String(o.nombre2 == null ? '' : o.nombre2).slice(0, CFG.NICK_MAX);
+      if (!n1 || (players === 2 && !n2)) {
+        if (cb) cb('SIN NOMBRE');
+        return;
+      }
       var row = {
+        jugadores: players,
         modo: (o.modo === 'online') ? 'online' : 'local',
-        nombre1: String(o.nombre1 || 'J1').slice(0, CFG.NICK_MAX),
-        nombre2: String(o.nombre2 || 'J2').slice(0, CFG.NICK_MAX),
+        nombre1: n1,
+        nombre2: (players === 2) ? n2 : null,
         puntos: pts,
         nivel: Math.max(1, Math.min(999, Math.floor(o.nivel || 1)))
       };

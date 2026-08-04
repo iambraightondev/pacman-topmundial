@@ -70,13 +70,14 @@ Supabase, abre dos pestañas con `?red=local` en la URL.
 
 ### El TOP MUNDIAL
 
-La clasificación mundial usa la tabla `ranking` del mismo proyecto de
-Supabase, **ya creada y en marcha**. Si alguna vez hay que recrearla (otro
-proyecto, o se borró), el script está en
-[`supabase/ranking.sql`](supabase/ranking.sql): **Dashboard → SQL Editor →
-New query**, pegar y *Run*. Deja lectura e inserción públicas, sin permiso
-para modificar ni borrar. Si la tabla falta, el panel TOP MUNDIAL lo avisa y
-el resto del juego funciona con normalidad.
+Las clasificaciones usan la tabla `ranking` del mismo proyecto de Supabase,
+**ya creada y en marcha**, con la columna `jugadores` para separar individual
+(1) de dúo (2). Si alguna vez hay que recrearla o ponerla al día, el script
+está en [`supabase/ranking.sql`](supabase/ranking.sql): **Dashboard → SQL
+Editor → New query**, pegar y *Run* (se puede ejecutar las veces que haga
+falta). Deja lectura e inserción públicas, sin permiso para modificar ni
+borrar. Si la tabla falta, el panel TOP MUNDIAL lo avisa y el resto del juego
+funciona con normalidad.
 
 Las puntuaciones las envía el navegador, así que técnicamente se pueden
 falsear; para un ranking a prueba de trampas habría que validar la partida en
@@ -112,8 +113,8 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
   separadas** —en solo y en dúo—, con aviso al conseguirlas y su propio panel
   en el menú. Con **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del
   modo que estés jugando sobre tu Pac-Man, y en online la ve tu dúo.
-- **Top mundial**: clasificación de partidas de dúo compartida entre todos
-  (ver más abajo cómo activarla).
+- **Top mundial**: dos clasificaciones compartidas entre todos, **individual**
+  y **dúo**. Hace falta tener nombre puesto para registrar un récord.
 - **Vidas en 2 jugadores**: compartidas (por defecto) o individuales.
 - **Volumen por tipo de sonido**: general, música, efectos, ambiente (sirena
   y modo azul) y voces, cada uno por separado en OPCIONES → SONIDO.
