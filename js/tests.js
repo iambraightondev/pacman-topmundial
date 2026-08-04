@@ -600,6 +600,57 @@
     });
 
   // ---------------------------------------------------------------
+  // Ver la partida de otro (espectador)
+  // ---------------------------------------------------------------
+  function mirando(jugadores) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: jugadores, net: 'spec', localIdx: -1,
+                names: ['UNO', 'DOS'] });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    return G;
+  }
+
+  test('de espectador no se lleva ningún Pac-Man', function () {
+    mirando(2);
+    ok(G.isSpec(), 'el rol es de mirón');
+    eq(G.localIdx, -1);
+    eq(G.pacs.length, 2, 'se ven todos los que juegan');
+    for (var i = 0; i < G.pacs.length; i++) {
+      ok(!G.isLocalAuth(i), 'ningún pac es suyo');
+    }
+    G.toMenu();
+  });
+
+  test('mirando, la partida avanza sin petar y sin mandar nada', function () {
+    mirando(2);
+    var antes = G.pacs[0].x;
+    G.outEaten = [];
+    ticks(30);
+    ok(G.pacs[0].x !== antes, 'los jugadores se mueven por estima');
+    eq(G.outEaten.length, 0, 'el mirón no reporta pastillas');
+    G.toMenu();
+  });
+
+  test('el mirón no puede rendirse, ni chatear, ni poner emotes', function () {
+    mirando(2);
+    ok(!G.canSurrender(), 'rendirse no es cosa suya');
+    ok(!G.canChat(), 'sin chat');
+    ok(!G.canEmote(), 'sin emotes');
+    G.toMenu();
+  });
+
+  test('lo que ve el mirón no cuenta como partida suya', function () {
+    var H = window.PM.History;
+    mirando(2);
+    G.score = 5000;
+    var antes = H.all().length;
+    G.submitRanking();
+    eq(H.all().length, antes, 'no se guarda en su historial');
+    G.toMenu();
+  });
+
+  // ---------------------------------------------------------------
   // Aviso de maestría animado
   // ---------------------------------------------------------------
   test('el aviso de maestría dura y se apaga solo', function () {

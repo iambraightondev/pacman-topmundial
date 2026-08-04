@@ -273,7 +273,8 @@
       // en una sala de grupo cada uno lleva su propio índice; en el dúo
       // clásico el anfitrión es el 0 y el invitado el 1
       var li = parseInt(opts.localIdx, 10);
-      this.localIdx = (li >= 0 && li < this.playerCount) ? li
+      this.localIdx = (this.netRole === 'spec') ? -1        // mirón: ningún pac
+        : (li >= 0 && li < this.playerCount) ? li
         : ((this.netRole === 'guest') ? 1 : 0);
       this.netColors = opts.colors || null;
       this.netNames = opts.names || null;
@@ -488,10 +489,14 @@
       this.syncUI();
     },
 
+    /* Viendo la partida de otro: ni se juega ni se manda nada */
+    isSpec: function () { return this.netRole === 'spec'; },
+
     /* Pausa pedida por el jugador local (en online se coordina en red) */
     requestPause: function () {
       if (!this.canPause()) return;
       if (this.vote) return;   // hay un diálogo abierto: la pausa la lleva él
+      if (this.isSpec()) { this.togglePause(); return; }   // solo su pantalla
       if (this.netRole === 'guest') {
         this.netSend('gevt', { t: 'pauseReq', on: !this.paused });
         return;
@@ -590,7 +595,7 @@
       var stalled = this.netStalled();
       if (!this.paused && !stalled) {
         this.stepClock();
-        if (this.netRole === 'guest') {
+        if (this.netRole === 'guest' || this.isSpec()) {
           this.stepGuest();
         } else {
           switch (this.state) {
@@ -1139,7 +1144,7 @@
      * EMOTES, CHAT Y MAESTRÍAS
      * ========================================================= */
     canEmote: function () {
-      return this.inGame() && this.state !== 'GAME_OVER' &&
+      return this.inGame() && this.state !== 'GAME_OVER' && !this.isSpec() &&
         !this.netNotice && this.emoteCooldown <= 0;
     },
 
@@ -1205,7 +1210,7 @@
 
     /* ---------- Chat (solo online) ---------- */
     canChat: function () {
-      return !!this.netRole && this.inGame() && !this.netNotice;
+      return !!this.netRole && !this.isSpec() && this.inGame() && !this.netNotice;
     },
 
     cleanChat: function (text) {
@@ -1339,6 +1344,7 @@
     submitRanking: function () {
       if (this.rankingSent) return;
       this.rankingSent = true;      // una sola vez por partida
+      if (this.isSpec()) return;    // mirar no da puntos ni historial
       this.awardLevelXp();          // la experiencia también cuenta una vez
       // el historial local guarda todas las partidas, con nombre o sin él
       if (this.score > 0 && window.PM.History) {
@@ -1375,7 +1381,7 @@
      * en local basta con confirmar en el diálogo.
      * ========================================================= */
     canSurrender: function () {
-      return this.inGame() && this.state !== 'GAME_OVER' &&
+      return this.inGame() && this.state !== 'GAME_OVER' && !this.isSpec() &&
         !this.netNotice && !this.vote;
     },
 
@@ -1554,7 +1560,7 @@
           if (quien > 0) this.posWatch[quien] = 0;
         }
         if (this.netRole === 'host') this.hostMsg(q[i][0], q[i][1], q[i][2]);
-        else if (this.netRole === 'guest') this.guestMsg(q[i][0], q[i][1], q[i][2]);
+        else this.guestMsg(q[i][0], q[i][1], q[i][2]);   // invitado o espectador
       }
     },
 
@@ -1727,8 +1733,9 @@
           if (data) this.hostGuestEvent(data, this.idxOfSender(data, sid));
           break;
         case 'hello':
-          // la sala ya está en juego: no cabe nadie más
-          this.netSend('full', { to: sid });
+          // los que vienen a mirar sí caben; a jugar ya no
+          if (data && data.spec) this.sendSpecView(sid);
+          else this.netSend('full', { to: sid });
           break;
         case 'bye':
           this.playerGone(this.idxOfSender(data, sid));
@@ -1793,6 +1800,32 @@
       }
     },
 
+    /* Alguien viene a ver la partida: se le manda el reparto (cuántos son,
+     * nombres, colores y skins) y una instantánea completa con las pastillas,
+     * para que pueda pintar desde el primer momento. */
+    sendSpecView: function (sid) {
+      if (this.netRole !== 'host') return;
+      var nm = [], co = [], sk = [], i;
+      for (i = 0; i < this.pacs.length; i++) {
+        nm.push(this.rawName(i));
+        co.push(this.colorFor(i));
+        sk.push(this.skinFor(i));
+      }
+      this.netSend('svista', {
+        v: CFG.NET.PROTO, to: sid, n: this.pacs.length,
+        nm: nm, co: co, sk: sk,
+        cfg: {
+          ghostSpeedMult: this.ghostSpeedMult,
+          pacSpeedMult: this.pacSpeedMult,
+          frightMult: this.frightMult,
+          livesMode: this.livesMode,
+          startLevel: this.level,
+          startLives: 3
+        }
+      });
+      this.netSend('snap', this.buildSnapshot(true));
+    },
+
     buildSnapshot: function (withPellets) {
       var i;
       var p0 = this.pacs[0];
@@ -1851,6 +1884,7 @@
         case 'snap': if (data) this.applySnapshot(data); break;
         case 'evt':  if (data) this.applyEvt(data); break;
         case 'bye': {
+          if (this.isSpec()) { this.netFail('SE ACABÓ LA PARTIDA'); break; }
           // si se va el anfitrión se acabó; si se va otro invitado, sigue
           var i = this.idxOfSender(data, sid);
           if (i <= 0) this.peerLeft();
@@ -1891,7 +1925,8 @@
       if (this.predictFreeze <= 0) return;
       this.predictFreeze--;
       if (this.predictFreeze > 0) return;
-      var me = this.pacs[this.localIdx];
+      var me = this.pacs[this.localIdx] || null;
+      if (!me) return;
       if (me && me.dying && !me.deathOk) {
         me.dying = false;
         me.deathPhase = 0;
@@ -1917,7 +1952,8 @@
 
       if (this.frightTicks > 0) this.stepFright();
 
-      var me = this.pacs[this.localIdx];
+      // de espectador no hay pac propio: todos van por estima
+      var me = this.pacs[this.localIdx] || null;
 
       /* los demás jugadores avanzan por estima entre instantáneas */
       for (i = 0; i < this.pacs.length; i++) {
@@ -1927,7 +1963,7 @@
       }
 
       /* pac propio: simulación local completa (sin lag de entrada) */
-      if (!me.out && !me.dying) {
+      if (me && !me.out && !me.dying) {
         me.prevTX = me.tileX();
         me.prevTY = me.tileY();
         me.update(this.pacSpeedPx(me));
@@ -1946,7 +1982,7 @@
       }
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
-      if (this.fruitActive && !me.out && !me.dying) {
+      if (this.fruitActive && me && !me.out && !me.dying) {
         if (me.tileY() === CFG.START.fruit.y &&
             (me.tileX() === 13 || me.tileX() === 14)) {
           this.fruitActive = false;               // el evt trae los puntos
@@ -1954,7 +1990,7 @@
         }
       }
 
-      if (!me.out && !me.dying) this.guestCollisions(me);
+      if (me && !me.out && !me.dying) this.guestCollisions(me);
 
       for (i = this.popups.length - 1; i >= 0; i--) {
         if (--this.popups[i].ticks <= 0) this.popups.splice(i, 1);
@@ -2636,6 +2672,12 @@
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#00ffff';
         ctx.fillText(this.clockText(), 112, 279);
+        // de mirón conviene recordar que esta partida no es tuya
+        if (this.isSpec()) {
+          ctx.font = 'bold 6px monospace';
+          ctx.fillStyle = '#7ec8ff';
+          ctx.fillText('VIENDO LA PARTIDA', 112, 270);
+        }
         ctx.textBaseline = 'top';
       }
     },

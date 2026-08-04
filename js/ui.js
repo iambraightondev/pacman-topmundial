@@ -1401,6 +1401,29 @@
         n.textContent = name;
         row.appendChild(n);
 
+        var ver = self.makeButton('VER PARTIDA', function () {
+          self.watchFriend(name);
+        });
+        ver.classList.add('btn-preset');
+        ver.disabled = !window.PM.Net.configured();
+        row.appendChild(ver);
+
+        var inv = self.makeButton('INVITAR', function () {
+          var P = window.PM.Party;
+          if (!P || !P.active()) {
+            self.friendsMsg.classList.add('error');
+            self.friendsMsg.textContent = 'PRIMERO CREA UNA PARTY';
+            return;
+          }
+          P.invite(name, function (ok, msg) {
+            self.friendsMsg.classList.toggle('error', !ok);
+            self.friendsMsg.textContent = msg || '';
+          });
+        });
+        inv.classList.add('btn-preset');
+        inv.disabled = !window.PM.Net.configured();
+        row.appendChild(inv);
+
         var del = self.makeButton('QUITAR', function () {
           F.remove(name);
           self.friendsMsg.classList.remove('error');
@@ -1412,6 +1435,117 @@
 
         self.friendsList.appendChild(row);
       });
+    },
+
+    /* ------------------------------------------------------
+     * Ver la partida de un amigo
+     * Se le pregunta por su canal personal dónde está jugando y se
+     * entra en su sala solo a mirar. Como el canal de partida es uno,
+     * para mirar hay que dejar la party propia (se avisa antes).
+     * ------------------------------------------------------ */
+    watchFriend: function (name) {
+      var self = this;
+      var P = window.PM.Party;
+      if (!P || !window.PM.Net.configured()) return;
+      if (P.inParty()) {
+        this.showPrompt({
+          title: 'VER PARTIDA',
+          lines: ['PARA VER LA PARTIDA DE ' + name,
+                  'TIENES QUE SALIR DE TU PARTY'],
+          buttons: [
+            { label: 'SALIR Y VER', primary: true, onClick: function () {
+              self.hidePrompt();
+              P.leave();
+              self.findAndWatch(name);
+            } },
+            { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+              onClick: function () { self.hidePrompt(); } }
+          ]
+        });
+        return;
+      }
+      this.findAndWatch(name);
+    },
+
+    findAndWatch: function (name) {
+      var self = this;
+      this.friendsMsg.classList.remove('error');
+      this.friendsMsg.textContent = 'BUSCANDO A ' + name + '...';
+      window.PM.Party.locate(name, function (res) {
+        if (!res) {
+          self.friendsMsg.classList.add('error');
+          self.friendsMsg.textContent = name + ' NO ESTÁ CONECTADO';
+          return;
+        }
+        if (!res.code) {
+          self.friendsMsg.classList.add('error');
+          self.friendsMsg.textContent = name + ' NO ESTÁ EN NINGUNA PARTY';
+          return;
+        }
+        if (!res.jugando) {
+          self.friendsMsg.classList.add('error');
+          self.friendsMsg.textContent = name + ' AÚN NO HA EMPEZADO A JUGAR';
+          return;
+        }
+        self.joinAsSpec(res.code, name);
+      });
+    },
+
+    joinAsSpec: function (code, name) {
+      var self = this;
+      this.spec = { code: code, name: name, timer: null };
+      this.friendsMsg.textContent = 'ENTRANDO A VER A ' + name + '...';
+      window.PM.Net.handler = function (n, d, sid) { self.specData(n, d, sid); };
+      window.PM.Net.onclose = function () { self.specFail('SE PERDIÓ LA CONEXIÓN'); };
+      window.PM.Net.connect(code, {
+        onOpen: function () {
+          if (!self.spec) return;
+          window.PM.Net.send('hello', { v: CFG.NET.PROTO, spec: 1 });
+          self.spec.timer = setTimeout(function () {
+            if (self.spec) self.specFail('NO SE PUDO VER LA PARTIDA');
+          }, CFG.NET.HELLO_TIMEOUT_MS);
+        },
+        onError: function (m) { self.specFail(m || 'SIN CONEXIÓN'); }
+      });
+    },
+
+    specData: function (name, d) {
+      if (!this.spec) return;
+      if (name === 'svista') {
+        if (!d || d.to !== window.PM.Net.sid) return;
+        if (d.v !== CFG.NET.PROTO) {
+          this.specFail('TIENE OTRA VERSIÓN DEL JUEGO');
+          return;
+        }
+        clearTimeout(this.spec.timer);
+        this.spec = null;
+        var n = parseInt(d.n, 10);
+        if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) n = 2;
+        var colors = [], names = [], skins = [];
+        for (var i = 0; i < n; i++) {
+          colors.push(sanitizeSetting('pacColor', (d.co || [])[i], CFG.PLAYER_COLORS[i]));
+          names.push(sanitizeNick((d.nm || [])[i]) || ('J' + (i + 1)));
+          skins.push(sanitizeSetting('skin1', (d.sk || [])[i], 'clasico'));
+        }
+        this.hideAll();
+        this.resumeAudio();
+        window.PM.Game.newGame({
+          players: n, net: 'spec', localIdx: -1,
+          cfg: this.sanitizeNetCfg(d.cfg),
+          colors: colors, names: names, skins: skins
+        });
+      } else if (name === 'full') {
+        if (d && d.to === window.PM.Net.sid) this.specFail('LA PARTIDA NO ADMITE MIRONES');
+      }
+    },
+
+    specFail: function (msg) {
+      if (this.spec && this.spec.timer) clearTimeout(this.spec.timer);
+      this.spec = null;
+      window.PM.Net.leave();
+      this.friendsMsg.classList.add('error');
+      this.friendsMsg.textContent = msg;
+      this.showFriends();
     },
 
     /* ------------------------------------------------------
@@ -1987,6 +2121,23 @@
       var self = this;
       var g = window.PM.Game;
       var lines = [];
+      /* de espectador solo se puede seguir viendo o irse: la partida es
+       * de otros y aquí nada de reiniciarla */
+      if (g.isSpec()) {
+        this.showPrompt({
+          title: 'VIENDO LA PARTIDA',
+          color: '#7ec8ff',
+          lines: ['ESTÁS VIENDO LA PARTIDA DE ' + g.nameFor(0) + '.'],
+          buttons: [
+            { label: 'SEGUIR VIENDO', hint: 'P · ESC', primary: true,
+              keys: ['p', 'Escape', 'Enter'],
+              onClick: function () { self.resumeAudio(); g.requestPause(); } },
+            { label: 'SALIR', hint: 'Q', keys: ['q'],
+              onClick: function () { g.toMenu(); } }
+          ]
+        });
+        return;
+      }
       if (g.netRole) {
         lines.push('LA PARTIDA ESTÁ EN PAUSA PARA LOS DOS.');
         lines.push('REINICIAR TIENE QUE ACEPTARLO ' + g.nameFor(g.peerIdx()) + '.');
@@ -2160,7 +2311,8 @@
     /* Botones y crucetas: solo con la partida en marcha y sin diálogos */
     refreshControls: function () {
       var g = window.PM.Game;
-      var playable = g.inGame() && g.state !== 'GAME_OVER' &&
+      // de espectador no se juega: ni crucetas, ni emotes, ni chat
+      var playable = g.inGame() && g.state !== 'GAME_OVER' && !g.isSpec() &&
         !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
       if (this.surrenderBtn) this.surrenderBtn.disabled = !g.canSurrender();
