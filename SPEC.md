@@ -654,6 +654,36 @@ the block re-centres and the title and tabs jump every time the pane below
 changes height) and align to the top instead. The `.tab-row` is `sticky` so
 it also stays visible while scrolling a long pane.
 
+**Desktop layout (`min-width: 601px` / `1000px`).** Panels used to be
+`position: absolute` inside `#stage`, which is exactly the canvas box (784 px
+wide on a 1920×1080 screen, since `fitCanvas` derives the scale from the
+window *height*) — everything piled into one narrow column. From 601 px up,
+`.overlay:not(#prompt)` is `position: fixed` with a solid `#000` background;
+from 1000 px up the content splits into columns. Two breakpoints on purpose:
+601–999 px was the worst case (small canvas, content overflowing), and there
+the window width already suffices.
+
+`#prompt` is excluded from both: its dialogs sit over a live game and the
+translucent veil that keeps the maze visible is the point. `#stage` must keep
+measuring exactly the canvas — `#gameBtns`, `#emoteBar` and `#chatBox` are
+injected into it and positioned against it.
+
+**Never set `display` on `.overlay` or `.tab-pane` from CSS**: `showPanel()`
+and `showOptionsTab()` write it as an inline style, which always wins.
+`flex-direction`, `flex-wrap`, `order` and `gap` are fair game — that is what
+the column layouts use. (`visiblePanel()` and nine other places also identify
+the open panel by `el.style.display !== 'none'`, so moving visibility to a
+class would break arrow-key navigation silently.)
+
+The menu is four blocks (`.menu-head`, `.menu-main`, `.menu-side`,
+`.menu-cast`, in that DOM order) turned into three columns with `order`. DOM
+order stays name → play → side buttons, so arrow keys reach UN JUGADOR first;
+`.menu-cast` is visually leftmost but last in the DOM, which is harmless
+**only because it contains nothing focusable** — putting a button in there
+would make the focus jump across the screen. OPCIONES hides `.tab-row` above
+1000 px and shows all four panes at once as cards in `.options-grid`
+(`display: flex !important` beats the inline `display: none`).
+
 **Scrollbars** are styled to match the cabinet (square blue thumb on a black
 track, yellow while dragged, no arrow buttons) with `::-webkit-scrollbar-*`.
 The standard `scrollbar-width`/`scrollbar-color` pair lives inside

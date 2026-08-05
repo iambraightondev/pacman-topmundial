@@ -2,6 +2,28 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · La portada y OPCIONES dejan de estar aplastadas en el medio
+
+- **Los menús ya no viven dentro del lienzo.** Vivían dentro de la caja del
+  juego, que en un monitor de 1920 mide 784 px: todo caía en una columna
+  estrecha con 570 px de negro muerto a cada lado. Ahora ocupan la ventana
+  entera. El corte está en 601 px —no en 1000— porque entre medias era donde
+  peor estaba: el lienzo pequeño y el contenido sin caber.
+- **Portada de recreativa**: PAC-MAN a lo ancho con su raya azul de lado a
+  lado, y debajo tres columnas —EL REPARTO y los CONTROLES a la izquierda, lo
+  de jugar enmarcado en el centro y TU CUARTEL (top mundial, perfil,
+  maestrías, amigos y opciones) a la derecha—. Los tres renglones de ayuda
+  que cruzaban la pantalla se han recogido en su columna.
+- **OPCIONES sin pestañas en PC**: caben las cuatro secciones a la vez, cada
+  una en su ficha, repartidas en dos columnas. En pantalla estrecha siguen
+  las pestañas de siempre.
+- **Fondo negro de verdad detrás de los menús**: el laberinto se colaba entre
+  los textos y era media suciedad. Los diálogos de la partida (pausa,
+  rendición, GAME OVER) siguen con su velo fino, que ahí sí interesa ver el
+  laberinto por detrás.
+- **Maestrías, logros y amigos, a dos columnas** en pantalla ancha, y el top
+  mundial más ancho.
+
 ## 2026-08-05 · La barra de desplazamiento, del mismo mundo que el juego
 
 - Cuando un panel no cabe en la pantalla hay que desplazarlo, y ahí salía la

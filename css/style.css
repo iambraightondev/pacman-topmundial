@@ -116,6 +116,205 @@ body {
   }
 }
 
+/* ============================================================
+ * PANTALLA ANCHA (escritorio)
+ *
+ * Los paneles vivían dentro de #stage, que mide exactamente lo que el
+ * lienzo del juego: en un monitor de 1920 quedaban 784 px de contenido y
+ * 570 px de negro muerto a cada lado, con todo apilado en una columna
+ * estrecha. En escritorio pasan a ocupar la ventana entera y reparten el
+ * contenido en columnas; el lienzo se sigue viendo por detrás.
+ * ============================================================ */
+/* Desde que se acaba el móvil: el panel deja de vivir dentro del lienzo.
+ * El corte NO es el mismo que el de las columnas (1000px) a propósito: entre
+ * 601 y 999 px es donde peor estaba —el lienzo es pequeño, el panel heredaba
+ * su tamaño y el contenido no cabía— y ahí el ancho de la ventana ya sobra.
+ *
+ * #prompt se queda fuera: sus diálogos (pausa, rendición, GAME OVER) van
+ * encima de la partida, y el velo fino que deja ver el laberinto por detrás
+ * es justo lo que se quiere ahí. */
+@media (min-width: 601px) {
+  .overlay:not(#prompt) {
+    position: fixed;
+    padding: 24px 32px;
+    /* negro del todo: por detrás de un menú no hay partida que mirar, y el
+     * laberinto colándose entre los textos era media suciedad */
+    background: #000;
+  }
+
+  /* la barra de pestañas se pega arriba, y el relleno del panel le dejaba
+   * una franja por la que asomaba el título al desplazar */
+  .overlay:not(#prompt) .tab-row {
+    top: -24px;
+    padding-top: 28px;
+    background: #000;
+  }
+}
+
+/* ---------- Portada ---------- */
+/* Cuatro bloques (cabecera, jugar, paneles, reparto). Estrecho: apilados en
+ * el orden del DOM. Ancho: rejilla de tres columnas, con lo de jugar en el
+ * centro aunque vaya el segundo en el DOM (así las flechas del teclado
+ * llegan a UN JUGADOR antes que a nada). */
+.menu-head,
+.menu-main,
+.menu-side,
+.menu-cast {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+}
+
+.menu-head { gap: 0; }
+
+.menu-extras {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Tres columnas: reparto | jugar | paneles. Va con flex y `order` (y no con
+ * grid) porque showPanel() pone `display:flex` en el estilo del elemento y
+ * eso gana a cualquier `display` que se ponga aquí. El orden del DOM sigue
+ * siendo cabecera → jugar → paneles → reparto: `order` solo cambia dónde se
+ * ven, no por dónde pasa el foco. */
+@media (min-width: 1000px) {
+  #menu {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 18px clamp(16px, 3vw, 56px);
+  }
+
+  /* los espaciadores de centrado, en fila, se comerían el ancho */
+  #menu::before, #menu::after { display: none; }
+
+  .menu-head { flex: 0 0 100%; max-width: none; order: 1; }
+  .menu-cast { order: 2; }
+  .menu-main { order: 3; }
+  .menu-side { order: 4; }
+
+  /* La marquesina, a lo ancho de la recreativa: hay 1900 px, hay que
+   * llenarlos. El espaciado se aplica también DETRÁS de la última letra, de
+   * ahí el margen negativo, que si no el título queda descentrado. */
+  .menu-head {
+    border-bottom: 2px solid #2121ff;
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+  }
+
+  .menu-head .title {
+    font-size: clamp(56px, 6.5vw, 100px);
+    letter-spacing: 12px;
+    margin-right: -12px;
+  }
+
+  .menu-head .subtitle {
+    font-size: clamp(18px, 1.7vw, 26px);
+    letter-spacing: 18px;
+    margin: 6px -18px 0 0;
+  }
+
+  /* El marco ES la jerarquía: lo único enmarcado es la columna de jugar.
+   * Si se enmarcaran las tres, serían tres cajas iguales y ninguna mandaría. */
+  .menu-main {
+    flex: 0 0 clamp(340px, 30vw, 440px);
+    border: 2px solid #2121ff;
+    background: #000;
+    padding: 16px 20px 20px;
+  }
+
+  .menu-cast,
+  .menu-side {
+    flex: 0 1 300px;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* rótulos de las columnas laterales: subrayados, sin caja */
+  .menu-cast .section-title,
+  .menu-side .section-title {
+    margin-top: 0;
+    text-align: left;
+    border-bottom: 1px solid #2121ff;
+    padding-bottom: 5px;
+  }
+
+  .menu-side .btn-preset { width: 100%; min-width: 0; }
+  .menu-extras { flex-direction: column; }
+  .menu-cast .hint { margin-top: 0; text-align: left; line-height: 1.6; }
+  .menu-cast .roster { align-self: start; margin: 4px 0 10px 6px; }
+  .menu-main .btn { width: 100%; }
+  .menu-main .nick-row-menu { margin: 0 0 4px; width: 100%; }
+  .menu-main .nick-input-menu { width: 100%; max-width: none; }
+  .menu-main .level-box { width: 100%; }
+
+  /* ---------- OPCIONES ----------
+   * Con 1900 px de ancho no tiene sentido esconder tres de cuatro secciones
+   * detrás de un clic: se enseñan las cuatro a la vez, cada una en su ficha,
+   * repartidas en dos columnas. Las pestañas se ocultan (y salen solas de la
+   * navegación con flechas, que ignora lo que no se ve). */
+  #options .tab-row { display: none; }
+
+  .options-grid {
+    display: grid;
+    width: min(1180px, 94vw);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px clamp(20px, 2.5vw, 44px);
+    align-items: start;
+  }
+
+  /* !important porque showOptionsTab() escribe display:none/flex en el
+   * estilo del propio elemento, y eso gana a cualquier regla de aquí */
+  #options .tab-pane {
+    display: flex !important;
+    border: 2px solid #2121ff;
+    padding: 12px 18px 18px;
+    gap: 8px;
+  }
+
+  #options .pane-dificultad { grid-area: 1 / 1 / 2 / 2; }
+  #options .pane-jugadores  { grid-area: 1 / 2 / 3 / 3; }  /* la más alta */
+  #options .pane-sonido     { grid-area: 2 / 1 / 3 / 2; }
+  #options .pane-partida    { grid-area: 3 / 1 / 4 / 3; }  /* notas largas */
+
+  /* dentro de una ficha, los grupos son solo separación: nada de marcos
+   * dentro de marcos */
+  #options .opt-group { width: 100%; }
+  #options .opt-group + .opt-group { margin-top: 6px; }
+  #options .tab-pane > .opt-group:first-child > .section-title { margin-top: 0; }
+
+  .panel-title { max-width: 1180px; }
+
+  /* ---------- Las demás listas ----------
+   * Maestrías, logros y amigos seguían en una tira de 420 px por el centro
+   * con setecientos de negro a cada lado. Sus filas son independientes, así
+   * que se leen igual de bien en dos columnas. */
+  /* con .overlay delante: sus reglas base están más abajo en el archivo y a
+   * igual peso ganarían ellas */
+  .overlay .badge-list,
+  .overlay .friend-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 20px;
+    width: min(94vw, 1040px);
+    max-width: none;
+  }
+
+  /* el top mundial se lee como una tabla: una sola columna, pero ancha */
+  .overlay .rank-list { width: min(94vw, 780px); }
+
+  .overlay .perfil-cab { width: min(94vw, 760px); }
+  .overlay .avatares { max-width: 760px; }
+}
+
 .title {
   color: #ffff00;
   font-size: clamp(36px, 9vh, 64px);
@@ -340,6 +539,18 @@ input[type="range"]:focus {
   gap: 6px;
   width: 100%;
 }
+
+/* Ficha de una sección de OPCIONES. En estrecho no se nota (sin marco, una
+ * debajo de otra); en ancho son las columnas en las que se reparte todo. */
+.opt-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.opt-group > .section-title:first-child { margin-top: 0; }
 
 /* ---------- Panel de opciones ---------- */
 .panel-title {

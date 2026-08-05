@@ -194,15 +194,37 @@
       var m = this.els.menu;
       m.innerHTML = '';
 
+      /* La portada se reparte en cuatro bloques. En pantalla ancha van en
+       * rejilla —reparto a la izquierda, lo de jugar en el centro y el resto
+       * de paneles a la derecha— y en estrecha se apilan en este mismo orden.
+       * El orden del DOM manda en la navegación con flechas, así que lo de
+       * jugar va ANTES que los botones secundarios aunque en pantalla queden
+       * a la izquierda: la rejilla los coloca por su nombre de área. */
+      var head = document.createElement('div');
+      head.className = 'menu-head';
+      m.appendChild(head);
+
+      var main = document.createElement('div');
+      main.className = 'menu-main';
+      m.appendChild(main);
+
+      var side = document.createElement('div');
+      side.className = 'menu-side';
+      m.appendChild(side);
+
+      var cast = document.createElement('div');
+      cast.className = 'menu-cast';
+      m.appendChild(cast);
+
       var title = document.createElement('div');
       title.className = 'title';
       title.textContent = 'PAC-MAN';
-      m.appendChild(title);
+      head.appendChild(title);
 
       var sub = document.createElement('div');
       sub.className = 'subtitle';
       sub.textContent = 'TOP MUNDIAL';
-      m.appendChild(sub);
+      head.appendChild(sub);
 
       /* presentación de fantasmas (clásica, opcional) */
       var roster = document.createElement('div');
@@ -226,10 +248,11 @@
         row.appendChild(t);
         roster.appendChild(row);
       }
-      m.appendChild(roster);
+      cast.appendChild(this.sectionTitle('EL REPARTO'));
+      cast.appendChild(roster);
 
       /* nombre en la portada, estilo arcade moderno: se escribe y a jugar */
-      m.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
+      main.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
 
       /* nivel de jugador con su barra de progreso */
       var lvl = document.createElement('div');
@@ -243,7 +266,7 @@
       this.levelFill.className = 'level-fill';
       bar.appendChild(this.levelFill);
       lvl.appendChild(bar);
-      m.appendChild(lvl);
+      main.appendChild(lvl);
 
       var play = this.makeButton('UN JUGADOR', function () {
         self.resumeAudio();
@@ -251,9 +274,9 @@
         window.PM.Game.newGame({ players: 1 });
       });
       play.classList.add('btn-primary');
-      m.appendChild(play);
+      main.appendChild(play);
 
-      m.appendChild(this.makeButton('DOS JUGADORES', function () {
+      main.appendChild(this.makeButton('DOS JUGADORES', function () {
         self.resumeAudio();
         self.hideAll();
         window.PM.Game.newGame({ players: 2 });
@@ -263,11 +286,11 @@
         self.resumeAudio();
         self.showOnline();
       });
-      m.appendChild(this.onlineMenuBtn);
+      main.appendChild(this.onlineMenuBtn);
 
+      side.appendChild(this.sectionTitle('TU CUARTEL'));
       var extras = document.createElement('div');
-      extras.className = 'preset-row';
-      extras.style.marginTop = '2px';
+      extras.className = 'menu-extras';
       extras.appendChild(this.makeButton('TOP MUNDIAL', function () {
         self.resumeAudio();
         self.showRanking();
@@ -284,39 +307,32 @@
         self.resumeAudio();
         self.showFriends();
       }));
-      for (var e = 0; e < extras.childNodes.length; e++) {
-        extras.childNodes[e].classList.add('btn-preset');
-      }
-      m.appendChild(extras);
-
-      m.appendChild(this.makeButton('OPCIONES', function () {
+      extras.appendChild(this.makeButton('OPCIONES', function () {
         self.resumeAudio();
         self.showOptions();
       }));
+      for (var e = 0; e < extras.childNodes.length; e++) {
+        extras.childNodes[e].classList.add('btn-preset');
+      }
+      side.appendChild(extras);
 
-      var hint = document.createElement('div');
-      hint.className = 'hint';
-      hint.textContent = 'J1: FLECHAS O WASD · P O ESC: PAUSA (REANUDAR · REINICIAR R · SALIR Q)';
-      m.appendChild(hint);
-
-      var hint2 = document.createElement('div');
-      hint2.className = 'hint';
-      hint2.style.marginTop = '2px';
-      hint2.textContent = 'DOS JUGADORES: J1 FLECHAS · J2 WASD · EQUIPO CONTRA LOS FANTASMAS';
-      m.appendChild(hint2);
-
-      var hint3 = document.createElement('div');
-      hint3.className = 'hint';
-      hint3.style.marginTop = '2px';
-      hint3.textContent = 'RENDIRSE: BOTÓN ARRIBA A LA DERECHA · EN DÚO LO ACEPTÁIS LOS DOS';
-      m.appendChild(hint3);
-
+      /* Ayuda de controles: en la columna del reparto, que es donde sobra
+       * sitio, en vez de tres renglones cruzando toda la portada. */
+      cast.appendChild(this.sectionTitle('CONTROLES'));
+      var ayudas = [
+        'J1: FLECHAS O WASD',
+        'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
+        'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
+        'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
+      ];
       if (this.touchDevice) {
-        var hint4 = document.createElement('div');
-        hint4.className = 'hint';
-        hint4.style.marginTop = '2px';
-        hint4.textContent = 'TÁCTIL: DESLIZA PARA MOVERTE · EN DOS JUGADORES, CADA UNO SU MITAD';
-        m.appendChild(hint4);
+        ayudas.push('TÁCTIL: DESLIZA PARA MOVERTE · EN DÚO, CADA UNO SU MITAD');
+      }
+      for (var a = 0; a < ayudas.length; a++) {
+        var hint = document.createElement('div');
+        hint.className = 'hint';
+        hint.textContent = ayudas[a];
+        cast.appendChild(hint);
       }
     },
 
@@ -342,12 +358,15 @@
       h.textContent = 'OPCIONES';
       o.appendChild(h);
 
-      /* --- pestañas: el panel entero de golpe se veía abarrotado --- */
+      /* --- pestañas: en una columna estrecha el panel entero de golpe se veía
+       * abarrotado. En pantalla ancha no hacen falta —caben las cuatro
+       * secciones a la vez, repartidas en dos columnas— y el CSS las esconde;
+       * el orden de aquí es el que siguen en esa rejilla. --- */
       var TABS = [
         ['dificultad', 'DIFICULTAD'],
         ['jugadores', 'JUGADORES'],
-        ['partida', 'PARTIDA'],
-        ['sonido', 'SONIDO']
+        ['sonido', 'SONIDO'],
+        ['partida', 'PARTIDA']
       ];
       var bar = document.createElement('div');
       bar.className = 'tab-row';
@@ -360,11 +379,14 @@
         bar.appendChild(b);
       });
       o.appendChild(bar);
+      var grid = document.createElement('div');
+      grid.className = 'options-grid';
+      o.appendChild(grid);
       TABS.forEach(function (t) {
         var pane = document.createElement('div');
-        pane.className = 'tab-pane';
+        pane.className = 'tab-pane pane-' + t[0];
         self.tabPanes[t[0]] = pane;
-        o.appendChild(pane);
+        grid.appendChild(pane);
       });
 
       var dif = this.tabPanes.dificultad;
@@ -373,7 +395,7 @@
       var son = this.tabPanes.sonido;
 
       /* ===== pestaña DIFICULTAD ===== */
-      dif.appendChild(this.sectionTitle('DIFICULTAD'));
+      var difA = this.optGroup(dif, 'DIFICULTAD');
       var presetRow = document.createElement('div');
       presetRow.className = 'preset-row';
       var presets = [['facil', 'FÁCIL'], ['normal', 'NORMAL'], ['dificil', 'DIFÍCIL']];
@@ -386,57 +408,57 @@
         self.presetButtons[p[0]] = b;
         presetRow.appendChild(b);
       });
-      dif.appendChild(presetRow);
+      difA.appendChild(presetRow);
 
       this.customTag = document.createElement('div');
       this.customTag.className = 'custom-tag';
       this.customTag.textContent = 'PERSONALIZADA';
-      dif.appendChild(this.customTag);
+      difA.appendChild(this.customTag);
+      var difNote = document.createElement('div');
+      difNote.className = 'note';
+      difNote.textContent = 'VELOCIDAD, VIDAS Y NIVEL SE APLICAN EN LA PRÓXIMA PARTIDA';
+      difA.appendChild(difNote);
 
+      var difB = this.optGroup(dif, 'A TU MEDIDA');
       this.sliders = {};
-      dif.appendChild(this.makeSlider('ghostSpeedMult', 'VELOCIDAD FANTASMAS',
+      difB.appendChild(this.makeSlider('ghostSpeedMult', 'VELOCIDAD FANTASMAS',
         0.5, 1.2, 0.05, function (v) { return '×' + v.toFixed(2); }));
-      dif.appendChild(this.makeSlider('pacSpeedMult', 'VELOCIDAD PAC-MAN',
+      difB.appendChild(this.makeSlider('pacSpeedMult', 'VELOCIDAD PAC-MAN',
         0.8, 1.3, 0.05, function (v) { return '×' + v.toFixed(2); }));
-      dif.appendChild(this.makeSlider('frightMult', 'DURACIÓN POWER PELLET',
+      difB.appendChild(this.makeSlider('frightMult', 'DURACIÓN POWER PELLET',
         0, 2, 0.25, function (v) { return '×' + v.toFixed(2); }));
-      dif.appendChild(this.makeSlider('startLives', 'VIDAS',
+      difB.appendChild(this.makeSlider('startLives', 'VIDAS',
         1, 5, 1, function (v) { return String(v); }));
-      dif.appendChild(this.makeSlider('startLevel', 'NIVEL INICIAL',
+      difB.appendChild(this.makeSlider('startLevel', 'NIVEL INICIAL',
         1, 21, 1, function (v) { return String(v); }));
 
-      var note = document.createElement('div');
-      note.className = 'note';
-      note.textContent = 'VELOCIDAD, VIDAS Y NIVEL SE APLICAN EN LA PRÓXIMA PARTIDA';
-      dif.appendChild(note);
-
       /* ===== pestaña JUGADORES ===== */
-      jug.appendChild(this.sectionTitle('NOMBRES'));
-      jug.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
-      jug.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
+      var jugN = this.optGroup(jug, 'NOMBRES', true);
+      jugN.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
+      jugN.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
       var nkNote = document.createElement('div');
       nkNote.className = 'note';
       nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
-      jug.appendChild(nkNote);
+      jugN.appendChild(nkNote);
 
       this.colorRows = {};
       this.skinRows = {};
-      jug.appendChild(this.sectionTitle('JUGADOR 1'));
-      jug.appendChild(this.makeColorRow('pacColor'));
-      jug.appendChild(this.makeSkinRow('skin1', 'pacColor'));
-      jug.appendChild(this.sectionTitle('JUGADOR 2'));
-      jug.appendChild(this.makeColorRow('pac2Color'));
-      jug.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
+      var jug1 = this.optGroup(jug, 'JUGADOR 1');
+      jug1.appendChild(this.makeColorRow('pacColor'));
+      jug1.appendChild(this.makeSkinRow('skin1', 'pacColor'));
+      var jug2 = this.optGroup(jug, 'JUGADOR 2');
+      jug2.appendChild(this.makeColorRow('pac2Color'));
+      jug2.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
       var skNote = document.createElement('div');
       skNote.className = 'note';
       skNote.textContent = 'LAS SKINS SE ABREN SUBIENDO DE NIVEL DE JUGADOR';
-      jug.appendChild(skNote);
+      jugN.appendChild(skNote);
       this.optMsgEl = document.createElement('div');
       this.optMsgEl.className = 'lobby-status';
-      jug.appendChild(this.optMsgEl);
+      jugN.appendChild(this.optMsgEl);
 
       /* ===== pestaña PARTIDA ===== */
-      par.appendChild(this.sectionTitle('VIDAS EN 2 JUGADORES'));
+      par = this.optGroup(par, 'VIDAS EN 2 JUGADORES');
       var lmRow = document.createElement('div');
       lmRow.className = 'preset-row';
       this.livesModeBtns = {};
@@ -463,7 +485,7 @@
       par.appendChild(ctrlNote);
 
       /* ===== pestaña SONIDO ===== */
-      son.appendChild(this.sectionTitle('SONIDO'));
+      var sonA = this.optGroup(son, 'SONIDO');
       var sndRow = document.createElement('div');
       sndRow.className = 'preset-row';
       this.soundBtns = {};
@@ -478,22 +500,10 @@
         self.soundBtns[p[0]] = b;
         sndRow.appendChild(b);
       });
-      son.appendChild(sndRow);
-
-      son.appendChild(this.sectionTitle('VOLUMEN POR TIPO'));
-      CFG.SOUND_CATS.forEach(function (c) {
-        son.appendChild(self.makeSlider(c.key, c.name, 0, 1, 0.1,
-          function (v) { return Math.round(v * 100) + '%'; }, true));
-      });
-
-      var volNote = document.createElement('div');
-      volNote.className = 'note';
-      volNote.textContent = 'EFECTOS: WAKA, FANTASMAS, FRUTA... · ' +
-        'AMBIENTE: SIRENA Y MODO AZUL · VOCES: RACHA AL COMER FANTASMAS';
-      son.appendChild(volNote);
+      sonA.appendChild(sndRow);
 
       /* prueba rápida de las voces de racha */
-      son.appendChild(this.sectionTitle('VOCES DE RACHA'));
+      sonA.appendChild(this.sectionTitle('VOCES DE RACHA'));
       var vRow = document.createElement('div');
       vRow.className = 'preset-row';
       CFG.VOICE_NAMES.forEach(function (name, i) {
@@ -504,11 +514,21 @@
         b.classList.add('btn-preset');
         vRow.appendChild(b);
       });
-      son.appendChild(vRow);
-
+      sonA.appendChild(vRow);
       this.voicesNote = document.createElement('div');
       this.voicesNote.className = 'note';
-      son.appendChild(this.voicesNote);
+      sonA.appendChild(this.voicesNote);
+
+      var sonB = this.optGroup(son, 'VOLUMEN POR TIPO');
+      CFG.SOUND_CATS.forEach(function (c) {
+        sonB.appendChild(self.makeSlider(c.key, c.name, 0, 1, 0.1,
+          function (v) { return Math.round(v * 100) + '%'; }, true));
+      });
+      var volNote = document.createElement('div');
+      volNote.className = 'note';
+      volNote.textContent = 'EFECTOS: WAKA, FANTASMAS, FRUTA... · ' +
+        'AMBIENTE: SIRENA Y MODO AZUL · VOCES: RACHA AL COMER FANTASMAS';
+      sonB.appendChild(volNote);
 
       /* --- VOLVER (fuera de las pestañas) --- */
       var back = this.makeButton('VOLVER', function () {
@@ -538,6 +558,17 @@
       d.className = 'section-title';
       d.textContent = text;
       return d;
+    },
+
+    /* Ficha de una sección de OPCIONES: su título y su contenido dentro de un
+     * recuadro. En pantalla ancha las fichas de una pestaña se reparten en
+     * columnas, en vez de irse todas una debajo de otra por el centro. */
+    optGroup: function (pane, titulo, ancha) {
+      var g = document.createElement('div');
+      g.className = 'opt-group' + (ancha ? ' opt-wide' : '');
+      if (titulo) g.appendChild(this.sectionTitle(titulo));
+      pane.appendChild(g);
+      return g;
     },
 
     /* Fila etiqueta + campo de texto para un nombre de jugador.
