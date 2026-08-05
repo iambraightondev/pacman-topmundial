@@ -130,6 +130,7 @@
       this.els.online = document.getElementById('online');
       this.els.badges = document.getElementById('badges');
       this.els.ranking = document.getElementById('ranking');
+      this.els.mazes = document.getElementById('mazes');
       this.els.friends = document.getElementById('friends');
       this.els.profile = document.getElementById('profile');
       this.els.mate = document.getElementById('mate');
@@ -141,6 +142,7 @@
       this.buildOnline();
       this.buildBadges();
       this.buildRanking();
+      this.buildMazes();
       this.buildFriends();
       this.buildProfile();
       this.buildMate();
@@ -280,6 +282,14 @@
       play.classList.add('btn-primary');
       main.appendChild(play);
 
+      /* El reto del día: la misma partida para todo el mundo, un intento.
+       * Va aquí arriba, pegado a UN JUGADOR, porque es de un jugador. */
+      this.retoBtn = this.makeButton('RETO DE HOY', function () {
+        self.resumeAudio();
+        self.showRetoPrompt();
+      });
+      main.appendChild(this.retoBtn);
+
       main.appendChild(this.makeButton('DOS JUGADORES', function () {
         self.resumeAudio();
         self.hideAll();
@@ -302,6 +312,10 @@
       extras.appendChild(this.makeButton('PERFIL', function () {
         self.resumeAudio();
         self.showProfile();
+      }));
+      extras.appendChild(this.makeButton('LABERINTOS', function () {
+        self.resumeAudio();
+        self.showMazes();
       }));
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
@@ -2455,11 +2469,11 @@
       o.appendChild(h);
 
       /* clasificaciones separadas: por puntos (individual y dúo), por tiempo
-       * en despejar el nivel 1, y tus propias partidas */
+       * en despejar el nivel 1, el reto del día y tus propias partidas */
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.rankTabBtns = {};
-      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'NIVEL 1'],
+      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'NIVEL 1'], [4, 'RETO DE HOY'],
        [0, 'TUS PARTIDAS']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
         b.classList.add('tab');
@@ -2467,6 +2481,21 @@
         bar.appendChild(b);
       });
       o.appendChild(bar);
+
+      /* Segunda fila: la temporada. Solo pinta en INDIVIDUAL y DÚO, que son
+       * las dos clasificaciones que se reparten por meses; el resto no tiene
+       * temporada que valga (el reto es de hoy y el nivel 1 es de siempre). */
+      this.seasonRow = document.createElement('div');
+      this.seasonRow.className = 'tab-row';
+      this.seasonBtns = {};
+      [['ahora', 'ESTA TEMPORADA'], ['historico', 'HISTÓRICO']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () { self.showSeasonTab(t[0]); });
+        b.classList.add('tab');
+        self.seasonBtns[t[0]] = b;
+        self.seasonRow.appendChild(b);
+      });
+      o.appendChild(this.seasonRow);
+      this.seasonTab = 'ahora';
 
       this.rankSub = document.createElement('div');
       this.rankSub.className = 'note';
@@ -2495,26 +2524,48 @@
     },
 
     showRankTab: function (players) {
-      this.rankTab = (players === 2 || players === 3 || players === 0)
-        ? players : 1;
+      this.rankTab = ([0, 2, 3, 4].indexOf(players) !== -1) ? players : 1;
+      this.loadRanking();
+    },
+
+    /* ESTA TEMPORADA / HISTÓRICO (solo en INDIVIDUAL y DÚO) */
+    showSeasonTab: function (name) {
+      this.seasonTab = (name === 'historico') ? 'historico' : 'ahora';
       this.loadRanking();
     },
 
     loadRanking: function () {
       var self = this;
       var R = window.PM.Ranking;
+      var S = window.PM.Season;
+      var Rt = window.PM.Reto;
       var players = this.rankTab;
-      if ([0, 2, 3].indexOf(players) === -1) players = 1;
+      if ([0, 2, 3, 4].indexOf(players) === -1) players = 1;
       for (var k in this.rankTabBtns) {
         if (this.rankTabBtns.hasOwnProperty(k)) {
           this.rankTabBtns[k].classList.toggle('active', +k === players);
         }
       }
+      /* la fila de temporada solo tiene sentido en las dos de puntos */
+      var porTemporada = (players === 1 || players === 2);
+      var enTemporada = porTemporada && this.seasonTab === 'ahora' && S;
+      if (this.seasonRow) {
+        this.seasonRow.style.display = porTemporada ? 'flex' : 'none';
+        for (var s in this.seasonBtns) {
+          if (this.seasonBtns.hasOwnProperty(s)) {
+            this.seasonBtns[s].classList.toggle('active', s === this.seasonTab);
+          }
+        }
+      }
+      var temporada = S ? S.nombre(S.actual()) : '';
       this.rankSub.textContent =
         players === 0 ? 'TUS ÚLTIMAS PARTIDAS EN ESTE NAVEGADOR' :
-        players === 1 ? 'MEJOR MARCA DE CADA JUGADOR' :
-        players === 2 ? 'MEJOR MARCA DE CADA DÚO · PUNTUACIÓN DE EQUIPO' :
-        'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE';
+        players === 4 ? ('LA MISMA PARTIDA PARA TODOS · ' +
+          (Rt ? Rt.fmtFecha(Rt.hoy()) : '')) :
+        players === 3 ? 'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE' :
+        (players === 1 ? 'MEJOR MARCA DE CADA JUGADOR' :
+          'MEJOR MARCA DE CADA DÚO · PUNTUACIÓN DE EQUIPO') +
+        (enTemporada ? (' · ' + temporada) : ' · DESDE EL PRINCIPIO');
       this.rankList.innerHTML = '';
       this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
 
@@ -2543,23 +2594,89 @@
         if (err) {
           self.rankStatus.classList.add('error');
           self.rankStatus.textContent = err === 'FALTA LA TABLA EN SUPABASE'
-            ? 'FALTA LA TABLA: EJECUTA supabase/ranking.sql EN TU PROYECTO'
+            ? ('FALTA LA TABLA: EJECUTA supabase/' +
+               (players === 4 ? 'reto.sql'
+                 : enTemporada ? 'temporadas.sql' : 'ranking.sql') +
+               ' EN TU PROYECTO')
             : ('NO SE PUDO CARGAR: ' + err);
+          if (players === 4) self.retoTuMarca();
           return;
         }
         self.rankStatus.classList.remove('error');
         if (!rows.length) {
-          self.rankStatus.textContent = (players === 3)
-            ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!'
-            : 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
+          self.rankStatus.textContent =
+            (players === 4) ? 'AÚN NADIE HA JUGADO EL RETO DE HOY · ¡SÉ EL PRIMERO!' :
+            (players === 3) ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!' :
+            enTemporada ? 'AÚN NO HAY PARTIDAS ESTA TEMPORADA · ¡SÉ EL PRIMERO!'
+                        : 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
+          if (players === 4) self.retoTuMarca();
           return;
         }
         self.rankStatus.textContent = '';
-        if (players === 3) self.renderTimes(rows);
+        if (players === 4) { self.renderReto(rows); self.retoTuMarca(rows); }
+        else if (players === 3) self.renderTimes(rows);
         else self.renderRanking(rows);
       }
-      if (players === 3) R.topTime(llegaron);
+      if (players === 4) {
+        if (!Rt) return;
+        Rt.enviarPendiente();          // por si la marca se hizo sin red
+        Rt.top(Rt.hoy(), llegaron);
+      } else if (players === 3) R.topTime(llegaron);
+      else if (enTemporada) S.top(S.actual(), players, llegaron);
       else R.top(players, llegaron);
+    },
+
+    /* Debajo de la clasificación del reto: tu marca y tu puesto. Se enseña
+     * también cuando no hay red, que es justo cuando más falta hace. */
+    retoTuMarca: function (rows) {
+      var Rt = window.PM.Reto;
+      if (!Rt) return;
+      var m = Rt.marca();
+      var linea = document.createElement('div');
+      linea.className = 'note';
+      if (!m) {
+        linea.textContent = 'HOY AÚN NO LO HAS JUGADO · TIENES UN INTENTO';
+      } else {
+        var puesto = rows ? Rt.puestoEn(rows) : 0;
+        linea.textContent = 'TU MARCA DE HOY: ' + m.p + ' PUNTOS · NIVEL ' + m.n +
+          (puesto ? (' · PUESTO ' + puesto) : (m.e ? '' : ' · SIN ENVIAR'));
+      }
+      this.rankList.appendChild(linea);
+    },
+
+    /* Clasificación del reto del día */
+    renderReto: function (rows) {
+      var mine = String(window.PM.settings.nick1 || '').toUpperCase();
+      this.rankList.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var n1 = String(r.nombre || '').toUpperCase();
+        var row = document.createElement('div');
+        row.className = 'rank-row';
+        if (mine && n1 === mine) row.classList.add('mine');
+
+        var pos = document.createElement('span');
+        pos.className = 'rank-pos';
+        pos.textContent = (i + 1) + '.';
+        row.appendChild(pos);
+
+        var who = document.createElement('span');
+        who.className = 'rank-who';
+        who.textContent = n1;
+        row.appendChild(who);
+
+        var pts = document.createElement('span');
+        pts.className = 'rank-pts';
+        pts.textContent = String(r.puntos);
+        row.appendChild(pts);
+
+        var lvl = document.createElement('span');
+        lvl.className = 'rank-lvl';
+        lvl.textContent = 'NIV ' + r.nivel;
+        row.appendChild(lvl);
+
+        this.rankList.appendChild(row);
+      }
     },
 
     /* Los más rápidos en despejar el nivel 1 */
@@ -2682,6 +2799,98 @@
 
         this.rankList.appendChild(row);
       }
+    },
+
+    /* ------------------------------------------------------
+     * Laberintos alternativos (modo aparte)
+     * ------------------------------------------------------ */
+    buildMazes: function () {
+      var self = this;
+      var o = this.els.mazes;
+      if (!o) return;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'LABERINTOS';
+      o.appendChild(h);
+
+      var nota = document.createElement('div');
+      nota.className = 'note';
+      nota.textContent = 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ES UN MODO ' +
+        'APARTE: EL LABERINTO DE 1980 NO SE TOCA, ASÍ QUE ESTAS PARTIDAS NO ' +
+        'ENTRAN EN EL TOP MUNDIAL — PERO SÍ SUMAN EXPERIENCIA.';
+      o.appendChild(nota);
+
+      var lista = document.createElement('div');
+      lista.className = 'maze-list';
+      var M = window.PM.Mazes;
+      (M ? M.LIST : []).forEach(function (m) {
+        lista.appendChild(self.mazeRow(m));
+      });
+      o.appendChild(lista);
+
+      var row = document.createElement('div');
+      row.className = 'preset-row';
+      row.style.marginTop = '12px';
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-preset');
+      row.appendChild(back);
+      o.appendChild(row);
+    },
+
+    /* Una ficha: el dibujo del laberinto, su nombre y el botón de jugar */
+    mazeRow: function (m) {
+      var self = this;
+      var fila = document.createElement('div');
+      fila.className = 'maze-row';
+
+      var mini = this.mazeThumb(m);
+      if (mini) fila.appendChild(mini);
+
+      var info = document.createElement('div');
+      info.className = 'maze-info';
+      var nm = document.createElement('div');
+      nm.className = 'maze-name';
+      nm.textContent = m.name;
+      info.appendChild(nm);
+      var ds = document.createElement('small');
+      ds.textContent = m.desc + ' · ' + m.pellets + ' PASTILLAS';
+      info.appendChild(ds);
+      fila.appendChild(info);
+
+      var b = this.makeButton('JUGAR', function () {
+        self.resumeAudio();
+        self.hideAll();
+        window.PM.Game.newGame({ players: 1, maze: m.id });
+      });
+      b.classList.add('btn-preset');
+      fila.appendChild(b);
+      return fila;
+    },
+
+    /* Miniatura de los muros. Se dibuja con el mismo código que la partida
+     * (Game.buildMazeCanvas) cambiando CFG.MAZE un momento y devolviéndolo:
+     * así el dibujo del panel no puede desviarse del de verdad. */
+    mazeThumb: function (m) {
+      var G = window.PM.Game;
+      if (!G || !G.buildMazeCanvas) return null;
+      var cv = document.createElement('canvas');
+      cv.width = 112;
+      cv.height = Math.round(CFG.ROWS * CFG.TILE / 2);
+      var c = cv.getContext('2d');
+      if (!c) return null;
+      c.imageSmoothingEnabled = false;
+      var antes = CFG.MAZE;
+      CFG.setMaze(m.rows);
+      var full = G.buildMazeCanvas(CFG.COLORS.wall);
+      CFG.setMaze(antes);
+      c.drawImage(full, 0, 0, cv.width, cv.height);
+      return cv;
+    },
+
+    showMazes: function () {
+      this.showPanel('mazes');
     },
 
     /* ------------------------------------------------------
@@ -2994,7 +3203,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'friends', 'profile', 'mate'];
+                   'mazes', 'friends', 'profile', 'mate'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -3318,7 +3527,10 @@
       var duo = (g.playerCount === 2);
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
       if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
+      if (g.reto) lines.unshift('RETO DE HOY');
       lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
+      // el reto se cierra con la partida: conviene decir dónde mirarlo
+      if (g.reto) lines.push('TU MARCA DEL DÍA QUEDA REGISTRADA · MÍRALA EN TOP MUNDIAL → RETO DE HOY');
       // tiempo del primer nivel, que es lo que corre en su clasificación
       if (g.lvl1Cs > 0 && window.PM.Ranking) {
         lines.push('NIVEL 1 EN ' + window.PM.Ranking.fmtTime(g.lvl1Cs) +
@@ -3429,7 +3641,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'friends', 'profile', 'mate'];
+                    'mazes', 'friends', 'profile', 'mate'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -3441,6 +3653,7 @@
       this.refreshNicks();
       this.refreshLevel();
       this.refreshOnlineBtn();
+      this.refreshReto();
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');
@@ -3469,6 +3682,79 @@
             hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
         ]
       });
+    },
+
+    /* ------------------------------------------------------
+     * Reto de hoy
+     * ------------------------------------------------------ */
+    /* El botón de la portada dice si el de hoy ya está jugado */
+    refreshReto: function () {
+      var R = window.PM.Reto;
+      if (!this.retoBtn || !R) return;
+      var m = R.marca();
+      this.retoBtn.childNodes[0].nodeValue = m
+        ? ('RETO DE HOY · ' + m.p) : 'RETO DE HOY';
+      this.retoBtn.classList.toggle('hecho', !!m);
+      // si la marca se hizo sin conexión, este es buen momento para mandarla
+      if (m && !m.e) R.enviarPendiente();
+    },
+
+    /* Antes de jugarlo se avisa de las reglas: un intento y se acabó. Si ya
+     * está jugado, en vez del aviso sale tu marca y la clasificación. */
+    showRetoPrompt: function () {
+      var self = this;
+      var R = window.PM.Reto;
+      if (!R) return;
+      var m = R.marca();
+      var fecha = R.fmtFecha(R.hoy());
+      if (m) {
+        this.showPrompt({
+          title: 'RETO DE HOY',
+          color: '#00ffff',
+          lines: [
+            fecha,
+            { text: 'TU MARCA ' + m.p, big: true },
+            'LLEGASTE AL NIVEL ' + m.n,
+            'YA HAS GASTADO TU INTENTO · VUELVE MAÑANA CON OTRO LABERINTO DE FANTASMAS'
+          ],
+          status: (m.e || !R.configured()) ? '' : 'TU MARCA AÚN NO ESTÁ EN LA CLASIFICACIÓN: SE MANDARÁ SOLA CUANDO HAYA RED',
+          buttons: [
+            { label: 'VER CLASIFICACIÓN', primary: true, keys: ['Enter'],
+              hint: 'ENTER',
+              onClick: function () { self.hidePrompt(); self.showRanking(4); } },
+            { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+              onClick: function () { self.hidePrompt(); } }
+          ]
+        });
+        return;
+      }
+      this.showPrompt({
+        title: 'RETO DE HOY',
+        color: '#ffff00',
+        lines: [
+          fecha,
+          'LA MISMA PARTIDA PARA TODO EL MUNDO: MISMOS AJUSTES Y LOS MISMOS FANTASMAS, QUE HUYEN IGUAL EN LA PARTIDA DE CUALQUIERA',
+          'UN SOLO INTENTO AL DÍA · CUENTA LO QUE HAGAS, TE RINDAS O TE SALGAS',
+          'SUMA EXPERIENCIA COMO CUALQUIER PARTIDA'
+        ],
+        buttons: [
+          { label: 'JUGAR', primary: true, keys: ['Enter'], hint: 'ENTER',
+            onClick: function () { self.playReto(); } },
+          { label: 'CLASIFICACIÓN', keys: ['c'], hint: 'C',
+            onClick: function () { self.hidePrompt(); self.showRanking(4); } },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    playReto: function () {
+      var R = window.PM.Reto;
+      if (!R) return;
+      this.resumeAudio();
+      this.hidePrompt();
+      this.hideAll();
+      window.PM.Game.newGame(R.opts());
     },
 
     /* El botón del menú avisa de si ya estamos en una party */
@@ -3513,7 +3799,8 @@
       var top = window.PM.Badges ? window.PM.Badges.top(this.badgeTab) : null;
       if (top) this.pickBadge(top.id, true);
     },
-    showRanking: function () {
+    showRanking: function (tab) {
+      if (tab != null) this.rankTab = tab;
       this.showPanel('ranking');
       this.loadRanking();
     },

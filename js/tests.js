@@ -87,6 +87,169 @@
   });
 
   // ---------------------------------------------------------------
+  // Laberintos alternativos (modo aparte)
+  // ---------------------------------------------------------------
+  /* ¿Se puede llegar a esta casilla desde donde sale Pac-Man? El túnel da
+   * la vuelta, así que las columnas se envuelven. */
+  function abiertoEn(rows, c, r) {
+    if (r < 0 || r >= CFG.ROWS) return false;
+    c = CFG.wrapCol(c);
+    var ch = rows[r].charAt(c);
+    return ch !== '#' && ch !== '-';
+  }
+
+  function alcanzables(rows) {
+    var vistos = {}, cola = [[13, 23]];
+    vistos['13,23'] = 1;
+    var pasos = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    while (cola.length) {
+      var p = cola.pop();
+      for (var i = 0; i < 4; i++) {
+        var c = CFG.wrapCol(p[0] + pasos[i][0]), r = p[1] + pasos[i][1];
+        if (!abiertoEn(rows, c, r)) continue;
+        var k = c + ',' + r;
+        if (vistos[k]) continue;
+        vistos[k] = 1;
+        cola.push([c, r]);
+      }
+    }
+    return vistos;
+  }
+
+  test('en los laberintos alternativos se llega a todas las pastillas',
+    function () {
+      var M = window.PM.Mazes;
+      ok(M && M.LIST.length >= 2, 'hay laberintos que probar');
+      M.LIST.forEach(function (m) {
+        var rows = m.rows;
+        eq(rows.length, CFG.ROWS, m.name + ': número de filas');
+        var vistos = alcanzables(rows), n = 0, sueltas = 0;
+        for (var r = 0; r < CFG.ROWS; r++) {
+          eq(rows[r].length, CFG.COLS, m.name + ': ancho de la fila ' + r);
+          for (var c = 0; c < CFG.COLS; c++) {
+            var ch = rows[r].charAt(c);
+            if (ch !== '.' && ch !== 'o') continue;
+            n++;
+            if (!vistos[c + ',' + r]) sueltas++;
+          }
+        }
+        eq(sueltas, 0, m.name + ': pastillas a las que no se llega');
+        eq(n, m.pellets, m.name + ': las pastillas que declara');
+      });
+    });
+
+  test('los laberintos alternativos no tienen callejones', function () {
+    /* Un callejón sin salida rompe la persecución: el fantasma entra, se
+     * da la vuelta (que no puede) y se queda encerrado. La casa de
+     * fantasmas es la única excepción, que para eso tiene puerta. */
+    window.PM.Mazes.LIST.forEach(function (m) {
+      var rows = m.rows;
+      for (var r = 0; r < CFG.ROWS; r++) {
+        for (var c = 0; c < CFG.COLS; c++) {
+          if (!abiertoEn(rows, c, r)) continue;
+          if (c >= 10 && c <= 17 && r >= 12 && r <= 16) continue;   // la casa
+          var salidas = 0;
+          if (abiertoEn(rows, c, r - 1)) salidas++;
+          if (abiertoEn(rows, c, r + 1)) salidas++;
+          if (abiertoEn(rows, c - 1, r)) salidas++;
+          if (abiertoEn(rows, c + 1, r)) salidas++;
+          ok(salidas >= 2,
+             m.name + ': callejón en (' + c + ',' + r + '), salidas ' + salidas);
+        }
+      }
+    });
+  });
+
+  test('los laberintos alternativos respetan casa, túnel y salidas',
+    function () {
+      window.PM.Mazes.LIST.forEach(function (m) {
+        var rows = m.rows, r, c;
+        // el corazón del motor (casa, puerta, túnel y zonas sin subir)
+        for (r = 9; r <= 19; r++) {
+          eq(rows[r], CFG.MAZE_CLASSIC[r], m.name + ': fila ' + r + ' del núcleo');
+        }
+        // simetría izquierda-derecha, que es lo que le da el aire arcade
+        for (r = 0; r < CFG.ROWS; r++) {
+          for (c = 0; c < 14; c++) {
+            eq(rows[r].charAt(c), rows[r].charAt(CFG.COLS - 1 - c),
+               m.name + ': asimetría en la fila ' + r);
+          }
+        }
+        // borde cerrado salvo el túnel, y salidas despejadas
+        for (r = 0; r < CFG.ROWS; r++) {
+          if (r === CFG.TUNNEL_ROW) continue;
+          eq(rows[r].charAt(0), '#', m.name + ': borde izquierdo, fila ' + r);
+          eq(rows[r].charAt(CFG.COLS - 1), '#', m.name + ': borde derecho, fila ' + r);
+        }
+        [[13, 23], [14, 23], [13, 11], [14, 11], [13, 17], [14, 17]]
+          .forEach(function (p) {
+            ok(rows[p[1]].charAt(p[0]) !== '#',
+               m.name + ': salida tapada en (' + p[0] + ',' + p[1] + ')');
+          });
+        // cuatro energizantes, uno por esquina
+        var ener = [];
+        for (r = 0; r < CFG.ROWS; r++) {
+          for (c = 0; c < CFG.COLS; c++) {
+            if (rows[r].charAt(c) === 'o') ener.push([c, r]);
+          }
+        }
+        eq(ener.length, 4, m.name + ': energizantes');
+        ener.forEach(function (e) {
+          ok((e[0] <= 6 || e[0] >= 21) && (e[1] <= 8 || e[1] >= 20),
+             m.name + ': energizante fuera de las esquinas ' + e);
+        });
+      });
+    });
+
+  test('el laberinto de 1980 vuelve solo al salir del modo', function () {
+    var M = window.PM.Mazes;
+    var id = M.LIST[0].id;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, maze: id });
+      ok(CFG.MAZE[1] !== CFG.MAZE_CLASSIC[1], 'en partida manda el alternativo');
+      eq(CFG.PELLET_TOTAL, M.LIST[0].pellets, 'con sus pastillas');
+      eq(G.dotsLeft, M.LIST[0].pellets, 'y repartidas en el laberinto');
+      // y se juega de verdad: unos segundos de partida sin petar
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      G.pacs[0].safeTicks = 999999;
+      ticks(240);
+      ok(G.dotsLeft < M.LIST[0].pellets, 'Pac-Man se abre camino comiendo');
+      G.toMenu();
+      eq(CFG.MAZE.join('|'), CFG.MAZE_CLASSIC.join('|'), 'y al salir, el clásico');
+      eq(CFG.PELLET_TOTAL, 244);
+    } finally {
+      G.toMenu();
+    }
+  });
+
+  test('una partida en otro laberinto no entra en el top mundial', function () {
+    var R = window.PM.Ranking;
+    var orig = R.submit, n = 0;
+    var n1 = window.PM.settings.nick1;
+    R.submit = function () { n++; };
+    window.PM.settings.nick1 = 'ALGUIEN';
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, maze: window.PM.Mazes.LIST[0].id });
+      G.score = 5000; G.rankingSent = false;
+      G.submitRanking();
+      eq(n, 0, 'en otro laberinto no se compara nada');
+      ok(!G.canTimeRecord(), 'ni cuenta el tiempo del nivel 1');
+      G.toMenu();
+      G.newGame({ players: 1 });
+      G.score = 5000; G.rankingSent = false;
+      G.submitRanking();
+      eq(n, 1, 'en el clásico sí');
+    } finally {
+      R.submit = orig;
+      window.PM.settings.nick1 = n1;
+      G.toMenu();
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Fidelidad arcade: sin esto los patrones memorizados no valen
   // ---------------------------------------------------------------
   /* Velocidad real de Pac-Man cruzando un pasillo con puntos. En el arcade
@@ -488,6 +651,178 @@
       R.submit = orig;
       window.PM.settings.nick1 = n1;
     }
+  });
+
+  // ---------------------------------------------------------------
+  // Reto diario
+  // ---------------------------------------------------------------
+  test('el reto del día sale de la fecha en UTC', function () {
+    var R = window.PM.Reto;
+    // 23:30 UTC del 5 sigue siendo el reto del 5 en todo el planeta
+    eq(R.hoy(new Date(Date.UTC(2026, 7, 5, 23, 30))), '2026-08-05');
+    eq(R.hoy(new Date(Date.UTC(2026, 0, 1, 0, 1))), '2026-01-01');
+    eq(R.semilla('2026-08-05'), R.semilla('2026-08-05'), 'misma fecha, misma semilla');
+    ok(R.semilla('2026-08-05') !== R.semilla('2026-08-06'), 'otro día, otra semilla');
+    var s = R.semilla('2026-08-05');
+    ok(s > 0 && s <= 1000000, 'acotada, o Game.seedRnd perdería precisión: ' + s);
+  });
+
+  test('el reto se juega con los ajustes de siempre', function () {
+    var o = window.PM.Reto.opts('2026-08-05');
+    var p = CFG.PRESETS.normal;
+    eq(o.players, 1);
+    ok(o.reto, 'la partida va marcada como reto');
+    ok(o.seed > 0, 'y con la semilla del día');
+    eq(o.cfg.ghostSpeedMult, p.ghostSpeedMult, 'fantasmas');
+    eq(o.cfg.pacSpeedMult, p.pacSpeedMult, 'pac-man');
+    eq(o.cfg.frightMult, p.frightMult, 'energizante');
+    eq(o.cfg.startLives, p.startLives, 'vidas');
+    eq(o.cfg.startLevel, p.startLevel, 'nivel inicial');
+  });
+
+  test('la semilla del día reparte el mismo azar a todo el mundo', function () {
+    function firma(seed) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, seed: seed });
+      var s = '';
+      for (var i = 0; i < 40; i++) s += G.rndDir();
+      return s;
+    }
+    var a = firma(1234), b = firma(1234), c = firma(4321);
+    eq(a, b, 'la misma semilla, la misma tirada');
+    ok(a !== c, 'otra semilla, otra tirada');
+    G.newGame({ players: 1 });
+    eq(G.seedBase, 0, 'una partida normal vuelve al azar de siempre');
+  });
+
+  test('el reto se cierra con la partida, y solo se juega una vez', function () {
+    var R = window.PM.Reto;
+    R.olvidar();
+    try {
+      ok(!R.hecho(), 'hoy aún no está jugado');
+      window.PM.settings.muted = true;
+      G.newGame(R.opts());
+      ok(G.reto, 'la partida sabe que es el reto');
+      G.score = 1234; G.level = 3;
+      G.closeRun();
+      var m = R.marca();
+      ok(m, 'la marca queda guardada aunque no haya red');
+      eq(m.p, 1234, 'puntos');
+      eq(m.n, 3, 'nivel');
+      ok(R.hecho(), 'el intento del día está gastado');
+      // volver a jugarlo el mismo día no puede mejorar la marca
+      G.newGame(R.opts());
+      G.score = 99999;
+      G.closeRun();
+      eq(R.marca().p, 1234, 'un intento y no más');
+    } finally {
+      R.olvidar();
+      G.toMenu();
+    }
+  });
+
+  test('una partida que cruza la medianoche cuenta en su propio día',
+    function () {
+      var R = window.PM.Reto;
+      R.olvidar();
+      try {
+        // empezada ayer y terminada hoy: la marca es de ayer, y el reto de
+        // hoy sigue por jugar (es otro laberinto de fantasmas)
+        R.cerrar(1500, 2, '1999-01-01');
+        ok(!R.hecho(), 'el intento de hoy sigue intacto');
+        R.cerrar(300, 1);
+        eq(R.marca().p, 300, 'y el de hoy se guarda aparte');
+      } finally {
+        R.olvidar();
+      }
+    });
+
+  test('el reto suma experiencia como cualquier partida', function () {
+    var R = window.PM.Reto, L = window.PM.Level;
+    R.olvidar();
+    var antes = L.xp();
+    try {
+      window.PM.settings.muted = true;
+      G.newGame(R.opts());
+      G.score = 800;
+      G.closeRun();
+      eq(L.xp(), antes + 800, 'los puntos del reto también son experiencia');
+    } finally {
+      R.olvidar();
+      G.toMenu();
+    }
+  });
+
+  test('sin nombre la marca del reto se guarda pero no se envía', function () {
+    var R = window.PM.Reto;
+    var n1 = window.PM.settings.nick1;
+    R.olvidar();
+    try {
+      window.PM.settings.nick1 = '';
+      R.cerrar(500, 2);
+      var errs = [];
+      R.enviarPendiente(function (e) { errs.push(e); });
+      eq(errs.length, 1);
+      eq(errs[0], 'SIN NOMBRE');
+      eq(R.marca().p, 500, 'la marca sigue aquí para mandarla luego');
+      eq(R.marca().e, 0, 'y apuntada como no enviada');
+    } finally {
+      window.PM.settings.nick1 = n1;
+      R.olvidar();
+    }
+  });
+
+  test('el envío del reto exige nombre y puntuación válida', function () {
+    var R = window.PM.Reto;
+    var errores = [];
+    var cb = function (e) { errores.push(e); };
+    R.submit({ fecha: '2026-08-05', nombre: '', puntos: 100 }, cb);
+    R.submit({ fecha: '2026-08-05', nombre: 'PUTO', puntos: 100 }, cb);
+    R.submit({ fecha: '2026-08-05', nombre: 'ALGUIEN', puntos: 0 }, cb);
+    eq(errores.length, 3, 'los tres se rechazan antes de salir a la red');
+  });
+
+  test('el botón de la portada dice si el reto ya está jugado', function () {
+    var R = window.PM.Reto, U = window.PM.UI;
+    R.olvidar();
+    try {
+      U.refreshReto();
+      eq(U.retoBtn.textContent, 'RETO DE HOY');
+      R.cerrar(700, 2);
+      U.refreshReto();
+      ok(/700/.test(U.retoBtn.textContent),
+         'con la marca a la vista: ' + U.retoBtn.textContent);
+    } finally {
+      R.olvidar();
+      U.refreshReto();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Temporadas del top mundial
+  // ---------------------------------------------------------------
+  test('la temporada es el mes natural, contado en UTC', function () {
+    var S = window.PM.Season;
+    eq(S.actual(new Date(Date.UTC(2026, 7, 5, 23, 59))), '2026-08');
+    eq(S.actual(new Date(Date.UTC(2026, 0, 1, 0, 0))), '2026-01');
+    eq(S.nombre('2026-08'), 'AGOSTO 2026');
+    eq(S.nombre('2026-12'), 'DICIEMBRE 2026');
+  });
+
+  test('el panel del top mundial tiene reto y temporadas', function () {
+    var U = window.PM.UI;
+    ok(U.rankTabBtns[4], 'está la pestaña del reto');
+    ok(U.seasonBtns.ahora && U.seasonBtns.historico, 'y las dos de temporada');
+    U.showRankTab(1);
+    eq(U.seasonRow.style.display, 'flex', 'en INDIVIDUAL se elige temporada');
+    U.showRankTab(0);
+    eq(U.seasonRow.style.display, 'none', 'en TUS PARTIDAS no hay temporada');
+    U.showRankTab(4);
+    eq(U.seasonRow.style.display, 'none', 'ni en el reto, que es el de hoy');
+    U.showRankTab(1);
+    U.showSeasonTab('historico');
+    eq(U.seasonTab, 'historico');
+    U.showSeasonTab('ahora');
   });
 
   // ---------------------------------------------------------------

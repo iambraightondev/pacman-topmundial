@@ -196,7 +196,7 @@ var doc = {
 doc.body = new El('body');
 doc.documentElement = new El('html');
 ['stage', 'game', 'menu', 'options', 'online', 'badges', 'ranking',
- 'friends', 'profile', 'prompt'].forEach(function (id) {
+ 'mazes', 'friends', 'profile', 'prompt'].forEach(function (id) {
   var el = new El(id === 'game' ? 'canvas' : 'div');
   el.id = id;
   porId[id] = el;
@@ -270,7 +270,8 @@ vm.createContext(sandbox);
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
 var orden = ['config', 'audio', 'sprites', 'pacman', 'ghost', 'net-config',
   'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
-  'achievements', 'account', 'game', 'replay', 'ui'];
+  'temporadas', 'reto', 'mazes', 'achievements', 'account', 'game', 'replay',
+  'ui'];
 
 orden.forEach(function (nombre) {
   var f = path.join(raiz, 'js', nombre + '.js');
