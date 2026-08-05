@@ -463,6 +463,7 @@
    *   motas      chispas que caen desde la chapa
    *   letras     el nombre se escribe letra a letra
    *   escudo     blasón detrás de la medalla, que sale por arriba y por abajo
+   *              (1 liso, 2 más grande, con doble filo y coronado)
    *   corona     corona sobre la medalla
    *   fogonazo   destello blanco que llena el sitio al plantarse
    *   textoOro   brillo que recorre el nombre
@@ -511,6 +512,20 @@
     ctx.closePath();
   }
 
+  /* Blasón donde va montada la medalla en los dos rangos de arriba: hombros
+   * rectos, y desde `eb` cierra en punta hacia el jugador. */
+  function escudoPath(ctx, cx, cy, w, arriba, hombro, punta) {
+    ctx.beginPath();
+    ctx.moveTo(cx - w, cy - arriba);
+    ctx.lineTo(cx + w, cy - arriba);
+    ctx.lineTo(cx + w, cy + hombro);
+    ctx.lineTo(cx + w * 0.53, cy + (hombro + punta) / 2);
+    ctx.lineTo(cx, cy + punta);
+    ctx.lineTo(cx - w * 0.53, cy + (hombro + punta) / 2);
+    ctx.lineTo(cx - w, cy + hombro);
+    ctx.closePath();
+  }
+
   var POMPA = [
     /* APRENDIZ */ { forma: 0, giros: 0, subidon: 1.2, chispa: 0, brillo: false, onda: 0,
                      marco: false, rayos: 0, estrellas: 0, motas: 0,
@@ -530,11 +545,11 @@
                      textoOro: false },
     /* LEYENDA  */ { forma: 3, giros: 4, subidon: 3.4, chispa: 8, brillo: true, onda: 1,
                      marco: true, rayos: 10, estrellas: 3, motas: 4,
-                     letras: true, corona: false, fogonazo: false,
+                     letras: true, escudo: 1, corona: false, fogonazo: false,
                      textoOro: false },
     /* MUNDIAL  */ { forma: 4, giros: 6, subidon: 4, chispa: 12, brillo: true, onda: 2,
                      marco: true, rayos: 14, estrellas: 5, motas: 6,
-                     letras: true, escudo: true, corona: true, fogonazo: true,
+                     letras: true, escudo: 2, corona: true, fogonazo: true,
                      textoOro: true }
   ];
 
@@ -570,7 +585,7 @@
     // del banderín (10) y la punta del pedestal (8) piden sitio de más
     // el blasón es más ancho que la medalla: el nombre tiene que arrancar
     // más allá, o la primera letra se le monta encima
-    var padL = P.escudo ? 20 : 15, h = 14, r = 4.5;
+    var padL = P.escudo ? (P.escudo >= 2 ? 20 : 18) : 15, h = 14, r = 4.5;
     var padR = (P.forma === 3) ? 10 : ((P.forma === 4) ? 8 : 6);
     var w = ctx.measureText(text).width + padL + padR;
     var bx = Math.round(x - w / 2), by = Math.round(y - h);
@@ -650,9 +665,9 @@
         ctx.stroke();
         ctx.restore();
       }
-      // pico hacia el jugador, solo con la chapa ya abierta. El escudo no lo
-      // lleva: su punta de abajo ya apunta al jugador.
-      if (abre > 0.6 && P.forma !== 4) {
+      // pico hacia el jugador, solo con la chapa ya abierta. Con blasón no
+      // hace falta: su punta de abajo ya apunta al jugador.
+      if (abre > 0.6 && !P.escudo) {
         ctx.fillStyle = color;
         ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
       }
@@ -686,24 +701,27 @@
      * escudo que sale por arriba y por abajo de la chapa. Se despliega con
      * ella, así que no aparece de golpe. */
     if (P.escudo && abre > 0.05) {
+      var gordo = (P.escudo >= 2);
+      var ew = gordo ? 8.5 : 7;        // media anchura
+      var eu = gordo ? 9 : 7;          // cuánto sube
+      var eb = gordo ? 3 : 2.5;        // dónde empieza a cerrar
+      var ep = gordo ? 11 : 8.5;       // punta de abajo
       ctx.save();
       ctx.translate(mx, my);
       ctx.scale(abre, abre);
       ctx.translate(-mx, -my);
-      ctx.beginPath();
-      ctx.moveTo(mx - 8.5, my - 9);
-      ctx.lineTo(mx + 8.5, my - 9);
-      ctx.lineTo(mx + 8.5, my + 3);
-      ctx.lineTo(mx + 4.5, my + 8);
-      ctx.lineTo(mx, my + 11);
-      ctx.lineTo(mx - 4.5, my + 8);
-      ctx.lineTo(mx - 8.5, my + 3);
-      ctx.closePath();
+      escudoPath(ctx, mx, my, ew, eu, eb, ep);
       ctx.fillStyle = 'rgba(0,0,0,0.92)';
       ctx.fill();
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.stroke();
+      // el de TOP MUNDIAL lleva doble filo: el de LEYENDA se queda liso
+      if (gordo) {
+        ctx.globalAlpha = vis * 0.55;
+        escudoPath(ctx, mx, my, ew - 2, eu - 2, eb - 1, ep - 2.5);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
@@ -782,7 +800,7 @@
     /* TOP MUNDIAL: corona sobre la medalla */
     if (P.corona && t > SUBE) {
       // con blasón, la corona se sube a rematarlo
-      var cy = P.escudo ? (my - 9) : (my - r - 1.5);
+      var cy = P.escudo ? (my - (P.escudo >= 2 ? 9 : 7)) : (my - r - 1.5);
       ctx.save();
       ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.12);
       ctx.fillStyle = color;

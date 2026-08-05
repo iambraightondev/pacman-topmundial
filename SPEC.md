@@ -575,8 +575,8 @@ to the one below** — never replaces it:
 | CAZADOR | rectangle | one medal flip (edge-on frames draw the plain back) + spark burst |
 | EXPERTO | bevelled corners | double flip + the glint that sweeps the medal (what all six used to get) |
 | MAESTRO | hexagon (a point per end) | shockwave ring + second breathing frame + sparks falling off the plaque |
-| LEYENDA | pennant (point left, swallowtail right) | rotating ray fan behind + stars orbiting the medal + name typed letter by letter + medal halo |
-| TOP MUNDIAL | crowned **shield** behind the medal, with the serrated pennant coming out of it | white flash on landing + more of everything + a shine sweeping the name |
+| LEYENDA | **shield** behind the medal + pennant (swallowtail right) | rotating ray fan behind + stars orbiting the medal + name typed letter by letter + medal halo |
+| TOP MUNDIAL | bigger shield, double edge and crowned, with the serrated pennant coming out of it | white flash on landing + more of everything + a shine sweeping the name |
 
 The silhouette is one path built at the same box, so text and medal never move
 — but the ends that bite inwards need room: `padR` goes 6 → 10 for the
@@ -585,12 +585,14 @@ first letter doesn't climb onto it. The second frame (`marco`) and the stroke
 reuse the same path, and the tips shrink with the plaque (`min(5, w * 0.25)`)
 so the shape holds while it unrolls instead of folding over itself.
 
-TOP MUNDIAL's **shield** (`escudo`) is not part of that path: it is drawn
-after the plaque and before the medal, scaled by the same `abre` so it unfolds
-with the ribbon, and it sticks out above and below the band — that is what
-puts it in a different family instead of being one more pennant. Its tip
-points at the player, so tier 5 skips the little tab the others draw, and the
-crown moves up from the medal to the top of the shield.
+The **shield** (`escudo`: 1 on LEYENDA, 2 on TOP MUNDIAL) is not part of that
+path: it is drawn after the plaque and before the medal, scaled by the same
+`abre` so it unfolds with the ribbon, and it sticks out above and below the
+band — that is what takes the top two out of the "one more band" family. Tier
+5's is bigger, carries a second inner edge and wears the crown (which moves up
+from the medal to the top of the shield); tier 4's is smaller and plain. Its
+tip points at the player, so both skip the little tab the others draw, and
+`padL` grows to 18/20 accordingly.
 
 `Game.badgeRank(id)` turns the badge id into the tier and stores it in the
 emote (`rango`), so it also travels right over the network — the id is what is
