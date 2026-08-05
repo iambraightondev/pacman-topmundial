@@ -205,7 +205,11 @@ Dos maneras de correr la misma batería:
   un escalón** sale el cartel animado, lo tuvieras ya o no. Con
   **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del modo que estés
   jugando sobre tu Pac-Man —con la medalla subiendo y la chapa
-  desplegándose—, y en online la ven los demás.
+  desplegándose—, y en online la ven los demás. **Cuanto más alta es la
+  maestría, más se celebra**: APRENDIZ sube y ya está; CAZADOR gira y suelta
+  chispas; EXPERTO añade el destello; MAESTRO, onda expansiva y chispas
+  cayendo; LEYENDA, rayos girando, estrellas en órbita y el nombre
+  escribiéndose letra a letra; y TOP MUNDIAL, además, fogonazo y corona.
 - **Top mundial**: clasificaciones compartidas entre todos —**individual**,
   **dúo** y **nivel 1** (quién lo despeja en menos tiempo)—, con la mejor
   marca de cada jugador. Hace falta tener nombre puesto (y sin palabrotas)

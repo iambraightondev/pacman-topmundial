@@ -1324,14 +1324,16 @@
 
       /* lienzo para ver la chapa sin tener que jugar: es la misma animación
        * de la partida (Ctrl+Espacio), con tu propio Pac-Man debajo */
-      /* 130 x 50 lógicos a triple escala. El alto no es el de la partida: la
+      /* 130 x 54 lógicos a triple escala. El alto no es el de la partida: la
        * chapa y el jugador viven entre y=30 e y=58, así que se recorta lo de
-       * arriba (badgeTop) en vez de dejar una franja negra muerta. */
+       * arriba (badgeTop) en vez de dejar una franja negra muerta. Lo que se
+       * deja por encima es para los rayos y el fogonazo de los rangos altos,
+       * que se salen de la chapa. */
       this.badgeScale = 3;
-      this.badgeTop = 16;
+      this.badgeTop = 12;
       this.badgeDemo = document.createElement('canvas');
       this.badgeDemo.width = 130 * this.badgeScale;
-      this.badgeDemo.height = 50 * this.badgeScale;
+      this.badgeDemo.height = 54 * this.badgeScale;
       this.badgeDemo.className = 'badge-demo';
       stage.appendChild(this.badgeDemo);
 
@@ -1506,6 +1508,11 @@
       var k = this.badgeScale || 2;
       var ty = -(this.badgeTop || 0) * k;
       var PX = 65, PY = 52;                 // el jugador, en coordenadas lógicas
+      // el escalón manda cuánta pompa gasta la chapa: aquí se ve la de verdad
+      var rango = 0;
+      for (var bi = 0; bi < CFG.BADGES.length; bi++) {
+        if (CFG.BADGES[bi].id === badge.id) rango = bi;
+      }
       this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;
       var run = this.badgeDemoRun;
       var prev = null;
@@ -1532,7 +1539,8 @@
         // al acabar, la medalla se queda puesta: el escenario enseña siempre
         // cuál está elegida
         if (t >= 1) { self.drawBadgeRest(badge, got); return; }
-        S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks);
+        S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks,
+          rango);
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);

@@ -558,11 +558,31 @@ the **mode being played**.
 
 **Showing off the badge in-game** (`Sprites.drawBadgeTag`, `t` from the
 emote's remaining ticks): it has its own animation, deliberately **not** the
-panel banner's — the medal rises **centred over the player** flipping twice
-(edge-on frames draw the plain back), the plaque then **unrolls to its right**
-out of the medal (which slides into its slot) with a spark burst, a glint
-sweeps the medal while it holds, and it shrinks back toward the player to
-leave. Face emotes keep their instant balloon.
+panel banner's — the medal rises **centred over the player**, the plaque then
+**unrolls to its right** out of the medal (which slides into its slot), and it
+shrinks back toward the player to leave. Face emotes keep their instant
+balloon.
+
+**How much pomp depends on the tier** (`rango`, the 8th argument: 0 APRENDIZ …
+5 TOP MUNDIAL, defaulting to 2 so old callers are unchanged). One animation
+for all six meant reaching TOP MUNDIAL looked exactly like APRENDIZ. The
+`POMPA` table in `sprites.js` holds one row per tier and **each step only adds
+to the one below** — never replaces it:
+
+| tier | adds |
+|---|---|
+| APRENDIZ | nothing: the medal rises straight, the plaque unrolls |
+| CAZADOR | one medal flip (edge-on frames draw the plain back) + spark burst |
+| EXPERTO | double flip + the glint that sweeps the medal (what all six used to get) |
+| MAESTRO | shockwave ring + second breathing frame + sparks falling off the plaque |
+| LEYENDA | rotating ray fan behind + stars orbiting the medal + name typed letter by letter + medal halo |
+| TOP MUNDIAL | white flash on landing + crown + more of everything + a shine sweeping the name |
+
+`Game.badgeRank(id)` turns the badge id into the tier and stores it in the
+emote (`rango`), so it also travels right over the network — the id is what is
+sent and each end resolves the tier locally. In the panel, `UI.playBadgeDemo`
+passes the picked tier, which is why the demo canvas leaves room above the
+plaque (`badgeTop`): the rays and the flash spill out of it.
 
 **Top mundial** (`PM.Ranking`): games are posted to a Supabase table via
 PostgREST with the anon key — no SDK. There are **two separate boards**, told

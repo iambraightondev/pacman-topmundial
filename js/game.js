@@ -1301,12 +1301,22 @@
       return null;
     },
 
+    /* Escalón de la maestría (0 la primera … 5 la última). Manda cuánta
+     * pompa gasta la animación de la chapa; sin maestría, la más sobria. */
+    badgeRank: function (id) {
+      for (var i = 0; i < CFG.BADGES.length; i++) {
+        if (CFG.BADGES[i].id === id) return i;
+      }
+      return 0;
+    },
+
     showBadgeTag: function (who, id) {
       if (!this.pacs[who]) return;
       var b = this.badgeById(id);
       this.emotes[who] = {
         tag: b ? b.name : 'SIN MAESTRÍA',
         color: b ? b.color : '#888888',
+        rango: this.badgeRank(id),
         ticks: CFG.EMOTE_TICKS,
         total: CFG.EMOTE_TICKS      // para animar la chapa
       };
@@ -2852,7 +2862,7 @@
           if (em.tag) {
             var et = 1 - (em.ticks / (em.total || CFG.EMOTE_TICKS));
             window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color,
-              et, this.tick);
+              et, this.tick, em.rango);
           } else {
             window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i),
               this.tick);

@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · Cada maestría se celebra según lo que cuesta
+
+- Las seis se celebraban **exactamente igual**, así que llegar a TOP MUNDIAL
+  lucía lo mismo que sacar APRENDIZ. Ahora **cada escalón añade pompa encima
+  del anterior**, sin quitar nada de lo de abajo:
+  - **APRENDIZ**: la medalla sube recta y la chapa se despliega. Y ya.
+  - **CAZADOR**: la medalla **gira** al subir y **salta un chispazo** al
+    plantarse.
+  - **EXPERTO**: doble giro y el **destello** que recorre la medalla (lo que
+    tenían todas hasta ahora).
+  - **MAESTRO**: **onda expansiva**, un segundo marco que respira y **chispas
+    cayendo** de la chapa.
+  - **LEYENDA**: **rayos girando** por detrás, **estrellas en órbita** y el
+    nombre **escribiéndose letra a letra**.
+  - **TOP MUNDIAL**: **fogonazo** blanco al plantarse, **corona** sobre la
+    medalla, más de todo y un brillo que recorre el nombre.
+- Vale igual en partida (`Ctrl`+`Espacio`), en online —viaja el id de la
+  maestría, así que cada extremo sabe qué escalón es— y en el panel.
+
 ## 2026-08-05 · MAESTRÍAS: la lista a un lado y la elegida en grande al otro
 
 - **Vuelve la lista de toda la vida**, ahora a la izquierda, y a la derecha se

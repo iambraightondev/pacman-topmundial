@@ -1168,6 +1168,35 @@
     ok(pinta(1) === 0, 'al terminar no queda nada');
   });
 
+  /* Las seis se celebraban igual, así que subir de escalón no se notaba.
+   * Ahora cada rango añade pompa encima del anterior. */
+  test('cada maestría se celebra con la pompa de su escalón', function () {
+    if (window.__SIN_LIENZO) return;
+    var cv = document.createElement('canvas');
+    cv.width = 224; cv.height = 44;
+    var ctx = cv.getContext('2d');
+    /* mismo nombre y mismo color para todos: lo que se compara es la pompa,
+     * no lo que ocupa el texto (TOP MUNDIAL tiene cuatro letras más) */
+    function pinta(rango, t, tick) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      window.PM.Sprites.drawBadgeTag(ctx, 112, 34, 'MAESTRIA', '#00ff00',
+        t, tick, rango);
+      var d = ctx.getImageData(0, 0, cv.width, cv.height).data, n = 0;
+      for (var i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
+      return n;
+    }
+    var r, lucida = [];
+    for (r = 0; r < CFG.BADGES.length; r++) lucida.push(pinta(r, 0.5, 20));
+    ok(lucida[0] > 0, 'la más sencilla también se ve');
+    ok(lucida[5] > lucida[3] && lucida[3] > lucida[0],
+       'cuanto más alta, más aparato: ' + lucida.join(' · '));
+    ok(pinta(1, 0.22, 20) > pinta(0, 0.22, 20),
+       'el chispazo al plantarse empieza en CAZADOR');
+    for (r = 0; r < CFG.BADGES.length; r++) {
+      eq(pinta(r, 1, 20), 0, 'ninguna deja nada al terminar');
+    }
+  });
+
   // ---------------------------------------------------------------
   // Skin OJOS: el ojo iba a la barbilla mirando a la derecha (y así se
   // veía en la miniatura de OPCIONES, que mira justo hacia ese lado)
