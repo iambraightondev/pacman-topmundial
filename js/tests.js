@@ -1469,8 +1469,14 @@
       UI.refreshFriends();
       eq(pedidas, 1, 'una sola petición por refresco');
       eq(UI.friendsList.children.length, 2, 'salen los dos amigos');
-      eq(UI.friendsList.children[0].querySelectorAll('.friend-btns .btn').length,
-         4, 'cada uno con perfil, ver partida, invitar y quitar');
+      var fila = UI.friendsList.children[0];
+      eq(fila.querySelectorAll('.friend-btns .btn').length, 4,
+         'cada uno con ver perfil, ver partida, invitar y quitar');
+      // de entrada solo se ve el amigo; las opciones se despliegan
+      ok(!fila.classList.contains('open'), 'la ficha empieza plegada');
+      ok(fila.querySelector('.friend-avatar'), 'con su avatar');
+      fila.querySelector('.friend-toggle').click();
+      ok(fila.classList.contains('open'), 'y el botón la despliega');
     } finally {
       Ac.logged = logged0;
       Ac.listFriends = list0;
@@ -1479,6 +1485,23 @@
       UI.showMenu();
     }
   });
+
+  test('tu skin se elige en PERFIL y la del jugador 2 en OPCIONES',
+    function () {
+      var UI = window.PM.UI;
+      UI.showProfile();
+      var enPerfil = UI.els.profile.querySelectorAll('.skins .skin').length;
+      // los avatares también son .skin: la skin propia añade CFG.SKINS.length
+      ok(enPerfil >= CFG.SKINS.length + CFG.AVATARS.length,
+         'en PERFIL están el avatar y la skin propia');
+      UI.showOptions();
+      UI.showOptionsTab('jugadores');
+      var filas = UI.els.options.querySelectorAll('.skins').length;
+      eq(filas, 1, 'en OPCIONES solo queda la fila del jugador 2');
+      ok(UI.skinRows.skin1 && UI.skinRows.skin2,
+         'las dos siguen registradas para repintarse');
+      UI.showMenu();
+    });
 
   test('el perfil de un amigo se pinta con sus contadores', function () {
     var UI = window.PM.UI, Ac = window.PM.Account;

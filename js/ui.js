@@ -358,15 +358,14 @@
       h.textContent = 'OPCIONES';
       o.appendChild(h);
 
-      /* --- pestañas: en una columna estrecha el panel entero de golpe se veía
-       * abarrotado. En pantalla ancha no hacen falta —caben las cuatro
-       * secciones a la vez, repartidas en dos columnas— y el CSS las esconde;
-       * el orden de aquí es el que siguen en esa rejilla. --- */
+      /* --- pestañas: el panel entero de golpe se ve abarrotado, aquí y en
+       * pantalla ancha. Lo que cambia con sitio de sobra es que las secciones
+       * de la pestaña abierta se reparten en columnas (ver .opt-group). --- */
       var TABS = [
         ['dificultad', 'DIFICULTAD'],
         ['jugadores', 'JUGADORES'],
-        ['sonido', 'SONIDO'],
-        ['partida', 'PARTIDA']
+        ['partida', 'PARTIDA'],
+        ['sonido', 'SONIDO']
       ];
       var bar = document.createElement('div');
       bar.className = 'tab-row';
@@ -379,14 +378,11 @@
         bar.appendChild(b);
       });
       o.appendChild(bar);
-      var grid = document.createElement('div');
-      grid.className = 'options-grid';
-      o.appendChild(grid);
       TABS.forEach(function (t) {
         var pane = document.createElement('div');
         pane.className = 'tab-pane pane-' + t[0];
         self.tabPanes[t[0]] = pane;
-        grid.appendChild(pane);
+        o.appendChild(pane);
       });
 
       var dif = this.tabPanes.dificultad;
@@ -441,18 +437,21 @@
       nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
       jugN.appendChild(nkNote);
 
+      /* La skin propia NO está aquí: es cosa de uno, como el avatar, y vive
+       * en PERFIL. Aquí se queda el color (que también hay que elegírselo al
+       * jugador 2 local) y la skin del segundo, que no es de nadie en
+       * concreto: es el aspecto del que se sienta al lado. */
       this.colorRows = {};
       this.skinRows = {};
-      var jug1 = this.optGroup(jug, 'JUGADOR 1');
+      var jug1 = this.optGroup(jug, 'TU COLOR');
       jug1.appendChild(this.makeColorRow('pacColor'));
-      jug1.appendChild(this.makeSkinRow('skin1', 'pacColor'));
-      var jug2 = this.optGroup(jug, 'JUGADOR 2');
-      jug2.appendChild(this.makeColorRow('pac2Color'));
-      jug2.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
       var skNote = document.createElement('div');
       skNote.className = 'note';
-      skNote.textContent = 'LAS SKINS SE ABREN SUBIENDO DE NIVEL DE JUGADOR';
-      jugN.appendChild(skNote);
+      skNote.textContent = 'TU SKIN ESTÁ EN PERFIL, CON TU AVATAR';
+      jug1.appendChild(skNote);
+      var jug2 = this.optGroup(jug, 'JUGADOR 2 (LOCAL)');
+      jug2.appendChild(this.makeColorRow('pac2Color'));
+      jug2.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
       this.optMsgEl = document.createElement('div');
       this.optMsgEl.className = 'lobby-status';
       jugN.appendChild(this.optMsgEl);
@@ -711,13 +710,19 @@
     },
 
     /* Aviso corto dentro de OPCIONES (por ahora, skins bloqueadas) */
+    /* Aviso corto de OPCIONES. Se escribe en los dos sitios que enseñan
+     * skins (OPCIONES y PERFIL) porque el mismo clic puede venir de
+     * cualquiera de ellos y solo se ve el del panel abierto. */
     optionsMsg: function (text) {
-      if (!this.optMsgEl) return;
       var self = this;
-      this.optMsgEl.textContent = text || '';
+      var cajas = [this.optMsgEl, this.profSkinMsg];
+      for (var i = 0; i < cajas.length; i++) {
+        if (cajas[i]) cajas[i].textContent = text || '';
+      }
       if (this.optMsgTimer) clearTimeout(this.optMsgTimer);
       this.optMsgTimer = setTimeout(function () {
         if (self.optMsgEl) self.optMsgEl.textContent = '';
+        if (self.profSkinMsg) self.profSkinMsg.textContent = '';
       }, 3000);
     },
 
@@ -1655,7 +1660,8 @@
       this.profResumen.className = 'note';
       datos.appendChild(this.profResumen);
       cab.appendChild(datos);
-      this.profPane.appendChild(cab);
+      var ficha = this.optGroup(this.profPane, null, true);
+      ficha.appendChild(cab);
 
       /* nombre de invitado: se puede cambiar y sortear */
       this.profGuestRow = document.createElement('div');
@@ -1669,10 +1675,10 @@
       });
       azar.classList.add('btn-preset');
       this.profGuestRow.appendChild(azar);
-      this.profPane.appendChild(this.profGuestRow);
+      ficha.appendChild(this.profGuestRow);
 
       /* avatares */
-      this.profPane.appendChild(this.sectionTitle('TU AVATAR'));
+      var gAvatar = this.optGroup(this.profPane, 'TU AVATAR', true);
       this.profAvatarRow = document.createElement('div');
       this.profAvatarRow.className = 'skins avatares';
       this.avatarItems = [];
@@ -1697,19 +1703,32 @@
         self.profAvatarRow.appendChild(b);
         self.avatarItems.push({ id: av.id, btn: b, canvas: cv });
       });
-      this.profPane.appendChild(this.profAvatarRow);
+      gAvatar.appendChild(this.profAvatarRow);
+
+      /* Tu skin: es tan tuya como el avatar, así que va aquí y no en
+       * OPCIONES (allí solo queda la del jugador 2 local). */
+      var gSkin = this.optGroup(this.profPane, 'TU SKIN');
+      this.skinRows = this.skinRows || {};
+      gSkin.appendChild(this.makeSkinRow('skin1', 'pacColor'));
+      var skinNota = document.createElement('div');
+      skinNota.className = 'note';
+      skinNota.textContent = 'SE ABREN SUBIENDO DE NIVEL DE JUGADOR';
+      gSkin.appendChild(skinNota);
+      this.profSkinMsg = document.createElement('div');
+      this.profSkinMsg.className = 'lobby-status';
+      gSkin.appendChild(this.profSkinMsg);
 
       /* cuenta */
-      this.profPane.appendChild(this.sectionTitle('TU CUENTA'));
+      var gCuenta = this.optGroup(this.profPane, 'TU CUENTA');
       this.profAccountMsg = document.createElement('div');
       this.profAccountMsg.className = 'lobby-status';
-      this.profPane.appendChild(this.profAccountMsg);
+      gCuenta.appendChild(this.profAccountMsg);
       this.profAccountRow = document.createElement('div');
       this.profAccountRow.className = 'preset-row';
-      this.profPane.appendChild(this.profAccountRow);
+      gCuenta.appendChild(this.profAccountRow);
       this.profAccountNote = document.createElement('div');
       this.profAccountNote.className = 'note';
-      this.profPane.appendChild(this.profAccountNote);
+      gCuenta.appendChild(this.profAccountNote);
 
       o.appendChild(this.profPane);
 
@@ -1794,6 +1813,7 @@
         window.PM.Sprites.drawAvatar(c, 20, 20, 16, it.id, s.pacColor);
       }
 
+      this.refreshSkins();          // la skin propia se elige aquí
       this.refreshAccountBox();
       this.refreshAchievements();
     },
@@ -2097,12 +2117,46 @@
       });
     },
 
+    /* Los avatares de la lista: los guarda la cuenta de cada uno, así que se
+     * piden todos de una vez y se pintan cuando llegan. Quien no tenga cuenta
+     * se queda con el Pac-Man de siempre. */
+    pullFriendAvatars: function () {
+      var self = this;
+      var Ac = window.PM.Account;
+      var F = window.PM.Friends;
+      if (!Ac || !Ac.fetchProfiles || !F) return;
+      var lista = F.all();
+      if (!lista.length) return;
+      Ac.fetchProfiles(lista, function (err, mapa) {
+        if (err || !mapa) return;
+        self.friendProfiles = mapa;
+        self.paintFriendAvatars();
+      });
+    },
+
+    paintFriendAvatars: function () {
+      var mapa = this.friendProfiles || {};
+      if (!this.friendAvatars) return;
+      for (var i = 0; i < this.friendAvatars.length; i++) {
+        var it = this.friendAvatars[i];
+        var fila = mapa[it.name];
+        var av = (fila && CFG.AVATAR_IDS.indexOf(fila.avatar) !== -1)
+          ? fila.avatar : 'pac';
+        var c = it.canvas.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, 44, 44);
+        c.imageSmoothingEnabled = false;
+        window.PM.Sprites.drawAvatar(c, 22, 22, 18, av, '#ffff00');
+      }
+    },
+
     renderFriends: function () {
       var self = this;
       var F = window.PM.Friends;
       if (!this.friendsList || !F) return;
       var list = F.all();
       this.friendsList.innerHTML = '';
+      this.friendAvatars = [];
       if (!list.length) {
         var vacio = document.createElement('div');
         vacio.className = 'note';
@@ -2110,20 +2164,41 @@
         this.friendsList.appendChild(vacio);
         return;
       }
-      /* El nombre va en su línea y los botones debajo: los cuatro en la misma
-       * fila que el nombre no cabían y salían aplastados unos contra otros. */
+      /* Cada amigo es una ficha: su avatar, su nombre y un botón que despliega
+       * lo que se puede hacer con él. Antes salían los cuatro botones de
+       * frente, y una lista de amigos parecía una barra de herramientas. */
       list.forEach(function (name) {
         var row = document.createElement('div');
         row.className = 'friend-row';
 
+        var cab = document.createElement('div');
+        cab.className = 'friend-cab';
+        row.appendChild(cab);
+
+        var av = document.createElement('canvas');
+        av.width = 44; av.height = 44;
+        av.className = 'friend-avatar';
+        cab.appendChild(av);
+
         var n = document.createElement('span');
         n.className = 'friend-name';
         n.textContent = name;
-        row.appendChild(n);
+        cab.appendChild(n);
 
         var btns = document.createElement('div');
         btns.className = 'friend-btns';
         row.appendChild(btns);
+
+        var abrir = self.makeButton('OPCIONES ▾', function () {
+          var on = row.classList.toggle('open');
+          abrir.textContent = on ? 'OPCIONES ▴' : 'OPCIONES ▾';
+          abrir.setAttribute('aria-expanded', on ? 'true' : 'false');
+        });
+        abrir.classList.add('btn-preset', 'friend-toggle');
+        abrir.setAttribute('aria-expanded', 'false');
+        cab.appendChild(abrir);
+
+        self.friendAvatars.push({ name: name, canvas: av });
 
         function boton(txt, fn, red) {
           var b = self.makeButton(txt, fn);
@@ -2133,7 +2208,7 @@
           return b;
         }
 
-        boton('PERFIL', function () { self.showFriendProfile(name); });
+        boton('VER PERFIL', function () { self.showFriendProfile(name); });
 
         boton('VER PARTIDA', function () { self.watchFriend(name); }, true);
 
@@ -2164,6 +2239,8 @@
 
         self.friendsList.appendChild(row);
       });
+      this.paintFriendAvatars();     // con lo que ya se sepa
+      this.pullFriendAvatars();      // y se repinta cuando lleguen
     },
 
     /* ------------------------------------------------------

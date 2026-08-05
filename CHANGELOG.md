@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · Amigos como fichas, tu skin al perfil y OPCIONES con pestañas
+
+- **La lista de amigos ya no es una barra de herramientas**: cada uno es una
+  ficha con **su avatar** (el de su cuenta), su nombre y un botón OPCIONES que
+  despliega qué hacer con él —ver perfil, ver partida, invitar, quitar—. Los
+  avatares se piden todos en una sola petición.
+- **Tu skin se elige en PERFIL**, junto a tu avatar, que es donde pega: es
+  tan tuya como él. En OPCIONES se queda tu color y el aspecto del jugador 2
+  local, que ese no es de nadie en concreto.
+- **Vuelven las pestañas de OPCIONES**: enseñarlo todo de golpe se veía
+  desordenado. Lo que se queda del cambio anterior es que las secciones de la
+  pestaña abierta se reparten en columnas en pantalla ancha, en vez de
+  apilarse por el centro. PERFIL hace lo mismo.
+
 ## 2026-08-05 · La portada y OPCIONES dejan de estar aplastadas en el medio
 
 - **Los menús ya no viven dentro del lienzo.** Vivían dentro de la caja del

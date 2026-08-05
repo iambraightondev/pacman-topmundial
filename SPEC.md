@@ -105,10 +105,17 @@ own kills/fruits count.
 `aro` 20, `pixel` 30 — `CFG.SKINS[].level`): gated on
 `PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
 currently worn — a raised requirement must never strip what a player already
-has. Locked ones render greyed in OPCIONES with the level they need.
+has. Locked ones render greyed with the level they need.
+
+**Your own skin lives in PERFIL**, next to the avatar — it is as personal as
+one. OPCIONES → JUGADORES keeps only your colour and the second local
+player's look. Both rows register into the same `UI.skinRows`, so
+`refreshSkins()` repaints them wherever they are, and `optionsMsg()` writes
+the "locked skin" notice into both panels' status lines because the click can
+come from either.
 
 **Perfil** (`#profile`, tabs PERFIL / LOGROS): avatar, name, level bar,
-summary, avatar picker and the account box. Avatars (`CFG.AVATARS`) are drawn
+summary, avatar picker, your skin and the account box. Avatars (`CFG.AVATARS`) are drawn
 by `Sprites.drawAvatar` reusing the game's own sprites (faces, ghosts, fruit,
 badge) scaled from a ~7 px native radius. Guests get a random-name button
 (`CFG.RANDOM_NAMES`).
@@ -680,9 +687,14 @@ The menu is four blocks (`.menu-head`, `.menu-main`, `.menu-side`,
 order stays name → play → side buttons, so arrow keys reach UN JUGADOR first;
 `.menu-cast` is visually leftmost but last in the DOM, which is harmless
 **only because it contains nothing focusable** — putting a button in there
-would make the focus jump across the screen. OPCIONES hides `.tab-row` above
-1000 px and shows all four panes at once as cards in `.options-grid`
-(`display: flex !important` beats the inline `display: none`).
+would make the focus jump across the screen.
+
+Tabbed panels (OPCIONES, PERFIL) **keep their tabs** at every width — showing
+all four panes at once read as clutter. What the width buys is that the
+sections *inside* the open pane spread into columns: each is a `.opt-group`
+card (`UI.optGroup(pane, title, wide)`), and `.tab-pane` becomes a wrapping
+flex row above 1000 px. `.opt-wide` spans the full width for one-line
+sections (NOMBRES, the profile header, the avatar grid).
 
 **Scrollbars** are styled to match the cabinet (square blue thumb on a black
 track, yellow while dragged, no arrow buttons) with `::-webkit-scrollbar-*`.

@@ -327,6 +327,31 @@
         .catch(function () { cb('NO SE PUDO CARGAR EL PERFIL', null); });
     },
 
+    /* Los perfiles de varios de golpe, para la lista de amigos: una sola
+     * petición en vez de una por cabeza. Devuelve { NOMBRE: fila }, sin los
+     * que todavía no tengan cuenta. */
+    fetchProfiles: function (nombres, cb) {
+      var lista = [], i, n;
+      for (i = 0; i < (nombres || []).length; i++) {
+        n = cleanUser(nombres[i]);
+        if (n && lista.indexOf(n) === -1) lista.push(n);
+      }
+      if (!this.configured() || !lista.length) { cb(null, {}); return; }
+      var url = base('/rest/v1/' + AC.TABLE +
+        '?usuario=in.(' + encodeURIComponent(lista.join(',')) + ')' +
+        '&select=usuario,avatar,xp,record1,record2,tiempo1,logros');
+      fetch(url, { headers: authHeaders(this.token) })
+        .then(function (res) { return res.json(); })
+        .then(function (rows) {
+          var out = {};
+          for (var j = 0; j < (rows || []).length; j++) {
+            out[rows[j].usuario] = rows[j];
+          }
+          cb(null, out);
+        })
+        .catch(function () { cb('NO SE PUDIERON CARGAR LOS PERFILES', null); });
+    },
+
     listFriends: function (cb) {
       if (!this.logged()) { cb('NECESITAS UNA CUENTA', null); return; }
       var url = base('/rest/v1/' + AC.FRIENDS_TABLE +

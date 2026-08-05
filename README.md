@@ -69,15 +69,18 @@ red.
   partidas sin volver a pasar el código. El botón del menú indica
   `PARTY (n/4)`. Desde dentro: invitar, empezar, volver al menú sin salirse
   o salir del todo.
+- **La lista de AMIGOS**: cada uno con su avatar y su nombre, y un botón
+  `OPCIONES` que despliega qué hacer con él (ver su perfil, ver su partida,
+  invitarlo o quitarlo).
 - **Invitar a un amigo por su nombre**: aunque no esté en la party, le llega
-  un aviso para entrar. También hay botón `INVITAR` en cada fila de AMIGOS.
-- **Ver la partida de un amigo**: `VER PARTIDA` en AMIGOS le pregunta dónde
+  un aviso para entrar. También está en las opciones de su ficha en AMIGOS.
+- **Ver la partida de un amigo**: `VER PARTIDA` en su ficha le pregunta dónde
   está jugando y entras solo a mirar (sin Pac-Man, sin chat y sin voto); lo
   que veas no cuenta como partida tuya. Vale **juegue como juegue**: en party,
   online o él solo en su casa. **Tu party sigue en pie mientras miras**: se ve
   por un canal aparte, así que no hay que salirse del grupo, y si los tuyos
   arrancan una partida dejas de mirar y entras con ellos.
-- **Ver el perfil de un amigo**: `PERFIL` en su fila enseña su avatar, su
+- **Ver el perfil de un amigo**: `VER PERFIL` en su ficha enseña su avatar, su
   nivel, su experiencia, sus récords y sus 15 logros con el progreso de cada
   uno. Hace falta que tenga cuenta.
 - **Si alguien se cae con 3 o 4 jugadores, la partida no se corta**: quien
@@ -175,12 +178,13 @@ Dos maneras de correr la misma batería:
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
 - **Skins**: CLÁSICO, SOMBRA, OJOS, NEÓN, ARO y PÍXEL, combinables con
   cualquier color. Se **ganan subiendo de nivel de jugador** (3, 7, 12, 20 y
-  30, en ese orden); las que faltan salen apagadas en OPCIONES con el nivel
-  que piden. La que ya llevabas puesta no se te quita nunca.
+  30, en ese orden); las que faltan salen apagadas con el nivel que piden. La
+  que ya llevabas puesta no se te quita nunca. **La tuya se elige en PERFIL**,
+  junto al avatar; en OPCIONES está la del jugador 2 local.
 - **Perfil**: avatar (16, dibujados por código: Pac-Man y sus caras, los
-  cuatro fantasmas, el asustado, los ojos, frutas y la medalla), nombre,
-  nivel con su barra y un resumen de logros, maestría y récord. De invitado
-  hay un botón para **sortear un nombre** al azar.
+  cuatro fantasmas, el asustado, los ojos, frutas y la medalla), tu skin,
+  nombre, nivel con su barra y un resumen de logros, maestría y récord. De
+  invitado hay un botón para **sortear un nombre** al azar.
 - **Logros**: 15, de conseguir un doblete de fantasmas a comerte 1000, pasando
   por despejar niveles sin morir, frutas, partidas jugadas o hacer el nivel 1
   en menos de 1:30. Salen celebrados en la partida y se siguen en PERFIL con
