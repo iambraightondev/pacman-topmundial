@@ -157,6 +157,10 @@
 
       this.partyHooks();
 
+      /* enlace compartido ?rep=<texto>: abre directo la repetición (y si
+       * viene rota, avisa y el juego sigue como si nada) */
+      if (window.PM.Replay && window.PM.Replay.desdeUrl()) return;
+
       /* enlace compartido ?sala=CODE: entrar directo a la party */
       var rc = window.PM.Net && window.PM.Net.roomFromUrl();
       if (rc) {
@@ -2625,8 +2629,24 @@
         lvl.textContent = 'NIV ' + h.lv + (h.m === 'online' ? ' · ONLINE' : '');
         row.appendChild(lvl);
 
+        /* si esa partida dejó repetición guardada, se puede volver a ver */
+        var R = window.PM.Replay;
+        var reg = (R && R.paraPartida) ? R.paraPartida(h) : null;
+        if (reg) row.appendChild(this.makeReplayBtn(reg.id));
+
         this.rankList.appendChild(row);
       }
+    },
+
+    /* Botón VER de una partida con repetición guardada (js/replay.js) */
+    makeReplayBtn: function (id) {
+      var b = this.makeButton('VER', function () {
+        window.PM.Replay.verGuardada(id);
+      });
+      b.classList.add('tab');
+      b.style.padding = '4px 10px';
+      b.style.fontSize = '10px';
+      return b;
     },
 
     renderRanking: function (rows) {
@@ -3116,6 +3136,8 @@
     showPausePrompt: function () {
       var self = this;
       var g = window.PM.Game;
+      /* viendo una repetición: el menú de pausa es el suyo (js/replay.js) */
+      if (g.replaying && window.PM.Replay && window.PM.Replay.pausaPrompt()) return;
       var lines = [];
       /* de espectador solo se puede seguir viendo o irse: la partida es
        * de otros y aquí nada de reiniciarla */
@@ -3291,6 +3313,8 @@
     showGameOverPrompt: function () {
       var self = this;
       var g = window.PM.Game;
+      /* viendo una repetición: el final es el suyo (js/replay.js) */
+      if (g.replaying && window.PM.Replay && window.PM.Replay.finPrompt()) return;
       var duo = (g.playerCount === 2);
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
       if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
@@ -3375,9 +3399,10 @@
     /* Botones y crucetas: solo con la partida en marcha y sin diálogos */
     refreshControls: function () {
       var g = window.PM.Game;
-      // de espectador no se juega: ni crucetas, ni emotes, ni chat
+      // de espectador (o viendo una repetición) no se juega: ni crucetas,
+      // ni emotes, ni chat
       var playable = g.inGame() && g.state !== 'GAME_OVER' && !g.isSpec() &&
-        !this.promptOpen && !g.netNotice;
+        !g.replaying && !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
       if (this.surrenderBtn) this.surrenderBtn.disabled = !g.canSurrender();
       // la barra lleva también MI MAESTRÍA, útil en cualquier modo

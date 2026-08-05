@@ -144,6 +144,7 @@
     overWait: false,     // ...pero aún se están celebrando logros o nivel
     runSummary: null,    // lo que te llevas de la partida (lo enseña el panel)
     lastOpts: null,      // opciones de la partida en curso (para la revancha)
+    replaying: false,    // se está viendo una repetición (js/replay.js): no cuenta para nada
     flash: null,         // { text, ticks } — aviso breve sobre el laberinto
 
     /* varios */
@@ -168,6 +169,7 @@
     /* bucle */
     loopLast: 0,
     loopAcc: 0,
+    timeScale: 1,        // x2 al ver una repetición (js/replay.js)
 
     /* ---------------------------------------------------------
      * Inicialización
@@ -405,6 +407,9 @@
       var rt = Math.round(ms / 1000 * 60);
       this.enterReady(rt);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: rt });
+      // desde aquí se graba la repetición de la partida (o se vuelve a
+      // empezar la que se esté viendo). Ver js/replay.js
+      if (window.PM.Replay) window.PM.Replay.alEmpezar(opts);
       // controles en pantalla: una cruceta o dos según el modo recién arrancado
       this.syncUI();
     },
@@ -579,6 +584,9 @@
     setPacDir: function (idx, d) {
       var p = this.pacs[idx];
       if (!p || p.out) return;
+      /* Aquí es donde la repetición apunta cada giro; y mientras se ve una,
+       * es ella quien los manda y el teclado no pinta nada (js/replay.js). */
+      if (window.PM.Replay && !window.PM.Replay.entrada(idx, d)) return;
       p.setDesiredDir(d);
     },
 
@@ -614,7 +622,9 @@
         var dt = now - self.loopLast;
         self.loopLast = now;
         if (dt > 100) dt = 100;   // pestaña en segundo plano
-        self.loopAcc += dt;
+        // timeScale acelera el reloj sin tocar la simulación: los pasos
+        // siguen siendo de 1/60 s, solo que caben más en cada fotograma
+        self.loopAcc += dt * (self.timeScale || 1);
         while (self.loopAcc >= STEP) {
           self.step();
           self.loopAcc -= STEP;
@@ -640,6 +650,9 @@
 
     step: function () {
       this.tick++;
+      /* repeticiones: lleva su propio reloj y, si se está viendo una, mete
+       * los giros que tocan en este tick antes de simular (js/replay.js) */
+      if (window.PM.Replay) window.PM.Replay.paso();
       this.energizerTicks++;
       if (this.energizerTicks >= 12) {          // parpadeo ~0.2 s
         this.energizerTicks = 0;
@@ -1250,6 +1263,7 @@
     },
 
     persistHighScore: function () {
+      if (this.replaying) return;    // una repetición no vuelve a hacer el récord
       try {
         if (this.playerCount > 1) {
           if (this.highScore > this.highScore2) this.highScore2 = this.highScore;
@@ -1452,6 +1466,8 @@
     closeRun: function () {
       if (this.xpSent || this.isSpec()) return null;
       this.xpSent = true;
+      // la repetición se cierra y se guarda aquí, acabe como acabe la partida
+      if (window.PM.Replay) window.PM.Replay.alAcabar();
       var L = window.PM.Level;
       var antes = L ? L.state() : null;
       // logros de cierre: una partida más y la mejor puntuación
@@ -1497,7 +1513,8 @@
      * nada, y en online solo cuenta lo que hace uno mismo.
      * --------------------------------------------------------- */
     bumpAch: function (o) {
-      if (this.isSpec()) return;
+      // mirar la partida de otro (o ver una repetición ya jugada) no cuenta
+      if (this.isSpec() || this.replaying) return;
       var A = window.PM.Achievements;
       if (!A) return;
       A.recordAll(o);

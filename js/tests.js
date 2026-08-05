@@ -518,6 +518,345 @@
   });
 
   // ---------------------------------------------------------------
+  // Repeticiones de partida
+  // El juego es determinista (seedRnd por nivel), así que una partida
+  // cabe en los ajustes más la lista de giros. La prueba que importa de
+  // verdad es la última: si al reproducir no sale la MISMA puntuación,
+  // el determinismo se ha roto por algún sitio.
+  // ---------------------------------------------------------------
+  /* comparación profunda, que aquí se comparan objetos enteros */
+  function igual(a, b) {
+    if (a === b) return true;
+    if (typeof a !== typeof b) return false;
+    if (a === null || b === null || typeof a !== 'object') return false;
+    var ea = Object.prototype.toString.call(a) === '[object Array]';
+    var eb = Object.prototype.toString.call(b) === '[object Array]';
+    if (ea !== eb) return false;
+    var k;
+    for (k in a) { if (a.hasOwnProperty(k) && !igual(a[k], b[k])) return false; }
+    for (k in b) { if (b.hasOwnProperty(k) && !a.hasOwnProperty(k)) return false; }
+    return true;
+  }
+
+  /* repetición mínima que cumple el contrato de la versión 1 */
+  function repDe(puntos) {
+    return {
+      v: 1, modo: 'solo', semilla: null, nivel: 1, jugadores: 1,
+      ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+      nombres: ['ANA'],
+      fecha: '2026-08-05T18:00:00.000Z',
+      entradas: [[0, 0, 1], [12, 0, 0], [100, 0, 3], [110, 0, 3], [120, 0, 3]],
+      final: { puntos: puntos, nivel: 4, fantasmas: 9, tiempoMs: 185000 }
+    };
+  }
+
+  test('leer(serializar(x)) devuelve exactamente x', function () {
+    var R = window.PM.Replay;
+    var rep = repDe(12340);
+    var texto = R.serializar(rep);
+    ok(texto.length > 0, 'se serializa');
+    ok(texto.indexOf('{') === -1 && texto.indexOf('"') === -1,
+       'el texto no es JSON crudo: tiene que caber en una URL');
+    ok(texto.length < JSON.stringify(rep).length, 'y ocupa menos que el JSON');
+    ok(texto.indexOf('*') !== -1, 'los giros que se repiten igual se resumen');
+    var leido = R.leer(texto);
+    ok(leido, 'el texto se vuelve a leer');
+    ok(igual(leido, rep), 'leer(serializar(x)) tiene que ser x');
+  });
+
+  test('un texto de repetición manipulado no cuela', function () {
+    var R = window.PM.Replay;
+    var bueno = R.serializar(repDe(500));
+    eq(R.leer(''), null);
+    eq(R.leer('basura'), null);
+    eq(R.leer(null), null);
+    eq(R.leer(bueno + '~sobra'), null, 'sobran campos');
+    eq(R.leer(bueno.replace(/^R1/, 'R9')), null, 'otra versión del formato');
+    eq(R.leer(bueno.split('~').slice(0, 5).join('~')), null, 'faltan campos');
+    // la lista de giros con basura por medio tampoco vale
+    var p = bueno.split('~');
+    p[8] = p[8] + '???';
+    eq(R.leer(p.join('~')), null, 'giros con basura');
+  });
+
+  test('el enlace para compartir lleva la repetición en la URL', function () {
+    var R = window.PM.Replay;
+    var url = R.enlace(repDe(700));
+    ok(url.indexOf('?rep=') !== -1, 'el enlace lleva ?rep=');
+    var texto = decodeURIComponent(url.split('?rep=')[1]);
+    ok(R.leer(texto), 'y lo que lleva se puede leer');
+  });
+
+  test('mantener pulsada la misma tecla no engorda la repetición', function () {
+    var R = window.PM.Replay;
+    partida(1);
+    var rep = R.enCurso();
+    ok(rep, 'una partida local se graba sola');
+    var antes = rep.entradas.length;
+    for (var i = 0; i < 20; i++) G.setPacDir(0, CFG.DIR.UP);
+    ok(rep.entradas.length <= antes + 1,
+       'pedir el rumbo que ya estaba pedido no se apunta');
+    var ahora = rep.entradas.length;
+    G.setPacDir(0, CFG.DIR.DOWN);
+    eq(rep.entradas.length, ahora + 1, 'el cambio de rumbo sí se apunta');
+  });
+
+  test('el almacén poda las viejas y nunca suelta la del récord', function () {
+    var R = window.PM.Replay;
+    var previo = null, hs = G.highScore1;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      R.borrarTodo();
+      G.highScore1 = 500000;             // así solo una cuenta como récord
+      var idRecord = R.guardar(repDe(999999)).id;
+      for (var i = 0; i < CFG.REPLAY_MAX + 4; i++) R.guardar(repDe(100 + i));
+      var lista = R.guardadas();
+      ok(lista.length <= CFG.REPLAY_MAX, 'no se guardan más de las que caben');
+      ok(R.porId(idRecord), 'la del mejor récord sigue estando');
+      // y el historial encuentra la suya por puntuación y hora
+      var reg = lista[0];
+      ok(R.paraPartida({ t: reg.t + 200, j: reg.j, p: reg.p }),
+         'la fila del historial encuentra su repetición');
+      eq(R.paraPartida({ t: reg.t, j: reg.j, p: reg.p + 1 }), null);
+    } finally {
+      G.highScore1 = hs;
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('viendo una repetición el teclado no mueve a Pac-Man', function () {
+    var R = window.PM.Replay;
+    try {
+      window.PM.settings.muted = true;
+      ok(R.ver(repDe(1000)), 'la repetición arranca');
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      var antes = G.pacs[0].nextDir;
+      var otra = (antes === CFG.DIR.UP) ? CFG.DIR.DOWN : CFG.DIR.UP;
+      G.setPacDir(0, otra);
+      eq(G.pacs[0].nextDir, antes, 'manda la repetición, no quien mira');
+      ok(G.replaying, 'y la partida se marca como repetición');
+    } finally {
+      R.salir();
+    }
+  });
+
+  test('reproducir una repetición da EXACTAMENTE la misma puntuación', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      /* guion de giros: [tick, dirección]. Con esto Pac-Man recorre medio
+       * laberinto, come, gira en cruces y se cruza con los fantasmas. */
+      var guion = [[5, 1], [40, 0], [95, 3], [150, 2], [210, 1], [260, 0],
+                   [330, 3], [400, 2], [470, 1], [540, 0], [610, 3], [700, 2],
+                   [800, 1], [900, 0], [1000, 3], [1100, 2], [1250, 1],
+                   [1400, 0]];
+      var TOTAL = 1500;
+
+      /* corre TOTAL ticks; conGuion aplica los giros a mano (partida
+       * grabada) y sin él los mete la propia repetición */
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              G.setPacDir(0, guion[k][1]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+
+      G.newGame({ players: 1 });
+      var rep = R.enCurso();
+      ok(rep, 'la partida se graba sola');
+      corre(true);
+      var pts = G.score, niv = G.level, quedan = G.dotsLeft, vidas = G.lives;
+      ok(pts > 0, 'la partida grabada hizo puntos');
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: niv, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+      ok(rep.entradas.length > 0, 'y dejó los giros apuntados');
+
+      /* y ahora, la misma partida desde el texto compartible */
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto y vuelve');
+      ok(R.ver(leida), 'la repetición arranca');
+      corre(false);
+      eq(G.score, pts, 'LA PUNTUACIÓN NO CUADRA: el determinismo está roto');
+      eq(G.level, niv, 'el nivel no cuadra');
+      eq(G.dotsLeft, quedan, 'las pastillas comidas no cuadran');
+      eq(G.lives, vidas, 'las vidas no cuadran');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  /* El reloj de la repetición se para durante el "¡LISTO!" justo por esto:
+   * ese rótulo dura lo que dure la melodía de inicio, que no es siempre lo
+   * mismo. Si los ticks se contaran de corrido, la repetición se desfasaría
+   * en cuanto el audio tardara un pelín más. */
+  test('la repetición cuadra aunque el "¡LISTO!" dure otra cosa', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      /* los giros van por tick SIMULADO: los que se piden mientras sale el
+       * rótulo no cuentan tiempo, porque ahí no se mueve nadie */
+      var guion = [[0, 0], [30, 1], [90, 2], [160, 3], [240, 0], [330, 1],
+                   [420, 2], [520, 3], [640, 0], [760, 1], [880, 2],
+                   [1000, 3], [1150, 0], [1300, 1]];
+
+      function corre(ready, conGuion) {
+        G.readyTicks = ready;
+        var k = 0, jugados = 0;
+        // dos giros pedidos ANTES de empezar, con el rótulo en pantalla
+        if (conGuion) { G.setPacDir(0, CFG.DIR.DOWN); G.setPacDir(0, CFG.DIR.UP); }
+        for (var i = 0; i < ready + 1200; i++) {
+          if (conGuion && G.state === 'PLAYING') {
+            while (k < guion.length && guion[k][0] === jugados) {
+              G.setPacDir(0, guion[k][1]);
+              k++;
+            }
+          }
+          if (G.state === 'PLAYING' || G.state === 'DYING' ||
+              G.state === 'LEVEL_DONE') jugados++;
+          G.step();
+        }
+      }
+
+      G.newGame({ players: 1 });
+      var rep = R.enCurso();
+      ok(rep, 'la partida se graba sola');
+      corre(90, true);                       // rótulo corto al grabar
+      var pts = G.score, quedan = G.dotsLeft, vidas = G.lives;
+      ok(pts > 0, 'la partida grabada hizo puntos');
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: G.level, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+      ok(R.ver(R.leer(R.serializar(rep))), 'la repetición arranca');
+      corre(260, false);                     // rótulo mucho más largo al verla
+      eq(G.score, pts, 'la puntuación se desfasa con el rótulo de inicio');
+      eq(G.dotsLeft, quedan, 'las pastillas no cuadran');
+      eq(G.lives, vidas, 'las vidas no cuadran');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  /* En dúo cada entrada lleva de quién es el giro, y los dos Pac-Man se
+   * mueven a la vez: si el número de jugador se perdiera, la repetición
+   * movería al que no toca. */
+  test('una repetición de dos jugadores mueve a cada uno donde tocaba', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      var guion = [[5, 0, 0], [30, 1, 2], [80, 0, 3], [130, 1, 1], [200, 0, 2],
+                   [260, 1, 3], [340, 0, 1], [420, 1, 0], [500, 0, 0]];
+
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < 700; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              G.setPacDir(guion[k][1], guion[k][2]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+
+      G.newGame({ players: 2 });
+      var rep = R.enCurso();
+      ok(rep, 'el dúo local también se graba');
+      corre(true);
+      var pts = G.score, quedan = G.dotsLeft;
+      ok(rep.entradas.length > 0, 'con giros de los dos jugadores');
+      var deJ2 = 0;
+      for (var i = 0; i < rep.entradas.length; i++) {
+        if (rep.entradas[i][1] === 1) deJ2++;
+      }
+      ok(deJ2 > 0, 'los giros del jugador 2 también se apuntan');
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: G.level, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'el texto de un dúo se lee');
+      eq(leida.modo, 'duo');
+      ok(R.ver(leida), 'la repetición del dúo arranca');
+      eq(G.playerCount, 2, 'se reproduce con dos Pac-Man');
+      corre(false);
+      eq(G.score, pts, 'la puntuación del dúo no cuadra');
+      eq(G.dotsLeft, quedan, 'las pastillas del dúo no cuadran');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('TUS PARTIDAS saca un botón VER en las que tienen repetición', function () {
+    var R = window.PM.Replay, UI = window.PM.UI, H = window.PM.History;
+    var previo = null, hs = G.highScore1;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    var hist = H.all();
+    try {
+      R.borrarTodo();
+      G.highScore1 = 500000;
+      var reg = R.guardar(repDe(4321));
+      ok(reg, 'la repetición se guarda');
+      // dos partidas: una con repetición y otra sin ella
+      UI.renderHistory([
+        { t: reg.t, j: 1, m: 'local', n1: 'ANA', n2: '', p: 4321, lv: 4 },
+        { t: reg.t, j: 1, m: 'local', n1: 'ANA', n2: '', p: 55, lv: 1 }
+      ]);
+      var filas = UI.rankList.children;
+      eq(filas.length, 2, 'dos partidas en la lista');
+      eq(filas[0].querySelectorAll('button').length, 1, 'la grabada tiene VER');
+      eq(filas[1].querySelectorAll('button').length, 0, 'la otra no');
+      eq(filas[0].querySelectorAll('button')[0].textContent, 'VER');
+    } finally {
+      G.highScore1 = hs;
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+      H.clear();
+      for (var i = hist.length - 1; i >= 0; i--) {
+        H.add({ jugadores: hist[i].j, modo: hist[i].m, nombre1: hist[i].n1,
+                nombre2: hist[i].n2, puntos: hist[i].p, nivel: hist[i].lv });
+      }
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Chat y emotes
   // ---------------------------------------------------------------
   test('el chat limpia y recorta los mensajes', function () {
