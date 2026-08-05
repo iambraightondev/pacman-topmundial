@@ -224,6 +224,10 @@ Dashboard → SQL Editor → New query → pegar
 `supabase/ranking-integridad.sql` → Run. Añade `repeticion` y `verificado`,
 le quita el `insert` a `anon` y se lo deja dicho a `service_role`.
 
+Aviso para el futuro: `supabase/ranking.sql` es de antes de esto y vuelve a
+dar el `insert` a `anon`. Si algún día se ejecuta otra vez, hay que ejecutar
+`ranking-integridad.sql` detrás para volver a cerrar la puerta.
+
 Comprobación rápida: `insert` ya no debería salir para `anon`.
 
 ```sql

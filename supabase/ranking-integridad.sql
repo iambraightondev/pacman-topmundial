@@ -28,6 +28,10 @@
 -- vistas; aquí solo se añade y se quitan permisos. Se puede
 -- ejecutar tantas veces como haga falta.
 --
+-- OJO: `ranking.sql` vuelve a dar el insert a `anon` (es de antes
+-- de esto). Si algún día se ejecuta otra vez, hay que ejecutar
+-- este archivo DETRÁS para volver a cerrar la puerta.
+--
 -- Pégalo en el proyecto de Supabase del juego:
 --   Dashboard -> SQL Editor -> New query -> Run
 -- ============================================================
