@@ -2,6 +2,147 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · El TOP MUNDIAL deja de aceptar puntuaciones inventadas
+
+- **El agujero**: la tabla del ranking aceptaba inserciones directas con la
+  clave anónima, o sea que cualquiera podía abrir la consola del navegador y
+  meterse 999999 puntos. El freno que había solo cortaba el spam (5 partidas
+  por nombre y minuto), que no es lo mismo que cortar las trampas. Para un
+  juego que se llama TOP MUNDIAL, era lo que más urgía tapar.
+- **Ahora la partida pasa por un portero**: una Edge Function
+  (`enviar-record`) que la mira antes de guardarla y que es **la única** que
+  puede escribir en la tabla. A la clave anónima se le queda la lectura, que
+  para eso la clasificación es pública.
+- **Qué mira el portero**, con las tablas del propio juego:
+  - **Que los puntos quepan**: cada nivel da como mucho 2600 de pastillas,
+    12000 de fantasmas (cuatro energizantes por una cadena de
+    200+400+800+1600) y dos frutas. Sumado desde el nivel de salida hasta
+    donde se llegó, ese es el techo. Los 999999 de la consola no caben ni de
+    lejos.
+  - **Que el tiempo cuadre**: ni una partida de doce niveles en medio minuto,
+    ni más de 1000 puntos por segundo. Los suelos son generosos a propósito:
+    antes tirar una trampa que la partida de alguien.
+  - **Que los fantasmas cuadren**: como mucho 16 por nivel, y cada uno son
+    200 puntos por lo bajo.
+  - **Que el nombre valga**: el mismo filtro de siempre y las 12 letras de
+    siempre, pero ahora también del lado del servidor.
+  - **Que los ajustes sean los de siempre**: con los fantasmas frenados,
+    Pac-Man acelerado, los energizantes alargados o más de tres vidas, la
+    partida no entra. Es el mismo criterio que ya tenía la marca de velocidad
+    del nivel 1: una marca con el juego rebajado no se puede comparar con la
+    de nadie. Jugar más difícil de lo normal sí entra, faltaría más.
+  - **Y el freno de siempre**: cinco partidas por nombre y minuto.
+- **La repetición de la partida se puede adjuntar**: si viene, se comprueba
+  que cuadre con lo que se manda (versión, ajustes, marcador final y una
+  densidad de órdenes propia de un humano) y la fila queda marcada como
+  `verificado`. Rejugarla de verdad con el motor queda pendiente.
+- **Si el portero no está**, el juego no se entera de nada raro: la partida
+  termina igual y el panel de GAME OVER dice por qué no entró en el top.
+
+## 2026-08-05 · Volver a ver la partida que hiciste
+
+- Cada partida se **graba sola**. No hay botón que pulsar ni nada que
+  configurar: se juega igual que siempre y al acabar la repetición está ahí.
+- **VER en TUS PARTIDAS**: en el panel TOP MUNDIAL, cada partida del
+  historial que tenga repetición guardada sale con su botón `VER`. Se pulsa y
+  la partida vuelve a jugarse sola delante de ti, exactamente igual que
+  salió: los mismos giros, los mismos fantasmas, los mismos puntos.
+- Se puede **pausar, ponerla a x2, empezarla otra vez o salirse** cuando
+  quieras, y arriba queda el cartel de REPETICIÓN para que nadie se
+  confunda con una partida de verdad. Ver una repetición **no cuenta para
+  nada**: ni experiencia, ni logros, ni récord, ni top mundial.
+- **Se comparte por enlace**: la partida entera cabe en la URL
+  (`?rep=...`), así que se manda por WhatsApp y a quien lo abra se le pone
+  el juego a reproducirla. Si el enlace llega roto, se avisa y a seguir
+  jugando.
+- Se guardan las **últimas 8 de este navegador** y, aparte, **la de tu mejor
+  récord**, que no se borra aunque se acumulen partidas nuevas.
+- Esto se puede hacer porque el juego **ya era determinista**: cada nivel se
+  juega siempre igual (es lo que sostiene los patrones memorizados del
+  arcade), así que una partida entera cabe en los ajustes con los que se
+  jugó más la lista de giros con su tick. Ochenta caracteres para medio
+  minuto de partida. Nada de vídeo ni de posiciones.
+- De momento **solo se graban las partidas locales** (uno o dos jugadores en
+  la misma máquina). Online la partida la simula el anfitrión y lo que ve
+  cada uno depende de lo que llegue por la red, así que repetir las teclas en
+  local no reconstruiría la misma partida.
+
+## 2026-08-05 · PAC-MAN VS.: uno de la party lleva un fantasma
+
+- En la sala online hay un selector nuevo, JUGAR COMO FANTASMA: eliges a
+  BLINKY, PINKY, INKY o CLYDE y ese fantasma deja de pensarlo la máquina. Los
+  que ya lleva otro salen apagados, y siempre tiene que quedar alguien de
+  Pac-Man (si no, el líder no puede empezar).
+- El fantasma humano juega con las reglas de siempre: paredes, puerta de la
+  casa, casillas donde no se puede subir, velocidades de cada nivel, el frenazo
+  del túnel y el modo asustado cuando alguien se come un energizante. Tampoco
+  puede darse la vuelta sobre sí mismo, igual que los otros tres. Lo único que
+  cambia es quién decide el giro.
+- Si se lo comen, vuelve a casa hecho ojos y sale por la puerta, como todos.
+- Se le ve: lleva su nombre encima durante el "¡LISTO!" y una marca en punta
+  sobre la cabeza toda la partida, blanca si es el tuyo. En el marcador va con
+  el color de su fantasma y con sus propios puntos al lado.
+- Puntúa cazando: 1000 puntos por cada Pac-Man que se lleva por delante. Al
+  final el panel dice quién gana la ronda: el fantasma si acaba con todas las
+  vidas, y los Pac-Man en cualquier otro caso.
+- Estas partidas NO cuentan para el top mundial, ni para el récord, ni para las
+  maestrías: con un fantasma que piensa, esa puntuación no compite con las
+  demás. Sí cuentan para el nivel de jugador, que mide cuánto juegas: el
+  cazador se lleva de experiencia los puntos que ha cazado.
+- También se puede jugar en el mismo teclado: en OPCIONES · PARTIDA se elige el
+  fantasma del jugador 2 y en DOS JUGADORES lo lleva él con WASD.
+- Por red no viajan posiciones del fantasma, solo hacia dónde quiere ir: si el
+  mensaje tarda, sigue recto un poco más y gira después, que es lo que hace
+  cualquier fantasma. Nada de tirones ni de que aparezca en otro pasillo.
+
+## 2026-08-05 · El RETO DE HOY, las temporadas y los laberintos alternativos
+
+### RETO DE HOY
+
+- **La misma partida para todo el mundo, cada día.** El azar del juego ya
+  era reproducible —los fantasmas azules huyen según un contador, como en
+  la máquina de 1980—, así que ahora se reparte **la misma semilla a todo
+  el planeta**: mismos fantasmas, misma fruta, mismos ajustes. Dos marcas
+  del mismo día se pueden comparar de verdad.
+- **La fecha se cuenta en UTC**, no en el reloj de cada uno: el reto
+  cambia **a la vez** en todo el mundo y nadie lo juega dos veces cruzando
+  su medianoche.
+- **Un intento al día.** La marca se cierra **cuando acaba la partida,
+  acabe como acabe**: game over, rendición o salirte al menú. Salirse al
+  ver que va mal no devuelve el intento. Después ya solo se puede mirar.
+- **Botón RETO DE HOY en la portada**, que enseña tu marca en cuanto lo
+  has jugado, y **pestaña propia en TOP MUNDIAL** con la clasificación del
+  día y tu puesto.
+- **Sin cuenta y sin conexión**. Con el nombre puesto basta, como en el
+  resto del ranking. Y sin red se juega igual: la marca se queda guardada
+  en este navegador y **se manda sola** en cuanto vuelve la conexión.
+- **Suma experiencia** de nivel de jugador como cualquier partida.
+
+### TEMPORADAS DEL TOP MUNDIAL
+
+- El top mundial pasa a repartirse por **temporadas: un mes natural**,
+  sacado de la fecha de la partida. No hay que abrir ni cerrar nada: el
+  día 1 de cada mes empieza sola.
+- **Pestañas ESTA TEMPORADA / HISTÓRICO** en INDIVIDUAL y en DÚO. En la
+  temporada cuenta tu mejor partida del mes; en el histórico, la mejor de
+  siempre.
+- **No se pierde nada de lo que había**: las partidas que ya estaban
+  entran solas en el mes que les tocaba y el histórico se queda
+  exactamente como estaba.
+
+### LABERINTOS
+
+- **Tres trazados nuevos** de 28×31 —**ANILLOS**, **PANAL** y
+  **COLMILLOS**—, cada uno con su túnel, su casa de fantasmas y sus cuatro
+  energizantes en las esquinas. ANILLOS se corre en horizontal; PANAL es
+  todo cruces seguidos; COLMILLOS deja el borde libre y llena el centro de
+  dientes.
+- **Van en un modo aparte**, con su propio botón y su ficha con el dibujo
+  de cada uno. **El laberinto de 1980 no se toca**: es lo que sostiene los
+  patrones memorizados, y por eso estas partidas **no entran en el top
+  mundial** ni en la clasificación de velocidad del nivel 1. Experiencia
+  sí, como todo lo que se juega.
+
 ## 2026-08-05 · Cada maestría se celebra según lo que cuesta
 
 - Las seis se celebraban **exactamente igual**, así que llegar a TOP MUNDIAL

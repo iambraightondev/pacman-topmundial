@@ -410,6 +410,88 @@ localStorage `pacman-topmundial-settings`; high score
 `pacman-topmundial-highscore`. Changes to speed/lives/level apply on next new
 game; color + mute apply live.
 
+`ajustes` maps onto `PM.settings`: `velFantasmas` → `ghostSpeedMult`,
+`velPac` → `pacSpeedMult`, `powerS` → `frightMult` (the frightened-duration
+multiplier), `vidas` → `startLives`. Optional fifth key `vidasModo:
+'individual'` travels only when a 2-player game did not use the default
+shared lives pool — it changes the simulation, so a replay would diverge
+without it. `modo: 'reto'` is accepted by the format but never produced yet.
+
+`PM.Replay.serializar(rep)` returns a compact URL-safe string (`~`-separated
+fields, base36 numbers, tick deltas, one packed letter `G..V` per
+player+direction pair and `*n` run-length for identical repeats) and
+`PM.Replay.leer(texto)` parses it back. `leer(serializar(x))` must deep-equal
+`x` — there is a test for that. `leer` never throws and returns `null` for
+anything malformed: the text can arrive from a URL that went through a chat
+app.
+
+### The replay clock
+
+`Replay.t` is **not** `Game.tick`. It only advances while the game really
+simulates (`PLAYING`, `DYING`, `LEVEL_DONE`) and never during `READY`,
+because the length of the READY banner comes from the intro tune and can
+differ between runs. Nothing moves during READY, so freezing the clock there
+costs nothing and makes the ticks line up every time. It also stops while
+paused.
+
+Ordering matters: on each `Game.step()`, `Replay.paso()` first injects every
+entry with `tick <= t` and only then advances `t`. That places an injected
+turn in exactly the same slot a live key press occupied — a key pressed
+after step *k* lands before the simulation of step *k+1*.
+
+### Hooks in game.js (four calls and nothing else)
+
+| Where | Call | Why |
+|---|---|---|
+| `newGame()` | `Replay.alEmpezar(opts)` | starts a recording, or restarts the replay being watched |
+| `setPacDir()` | `Replay.entrada(idx, d)` | records the turn; returns `false` to swallow the input while a replay is playing |
+| `step()` | `Replay.paso()` | injects turns and advances the replay clock |
+| `closeRun()` | `Replay.alAcabar()` | closes and stores the replay, however the game ended |
+
+Plus `Game.replaying` (guards `bumpAch` and `persistHighScore`) and
+`Game.timeScale` (the fixed-step loop multiplies its accumulator by it, so x2
+means more 1/60 s steps per frame — the simulation is untouched).
+
+Asking for the direction a Pac-Man already wants is a no-op
+(`setDesiredDir` only records the wish), so it is **not** stored. That is
+what keeps a held-down key — which fires `keydown` every few hundredths of a
+second — from filling the replay with identical entries.
+
+### Watching a replay
+
+A replay never counts: `xpSent`, `rankingSent` and `timeSent` are forced true
+at start, `bumpAch` and `persistHighScore` bail out, no history row, no
+world-ranking submission, no showcase channel. The on-screen controls (dpads,
+emotes, surrender) are hidden and the keyboard cannot steer.
+
+`Replay.pausaPrompt()` and `Replay.finPrompt()` replace the pause and GAME
+OVER dialogs (`ui.js` delegates to them when `Game.replaying`), and a fixed
+top bar shows the REPETICIÓN banner plus pause / x2 / restart / exit.
+`REINICIAR` goes through `Game.restartGame()`, which lands back in
+`newGame()` → `alEmpezar()` and simply rewinds the replay.
+
+### Storage
+
+`CFG.REPLAY_KEY` (`pacman-topmundial-repeticiones`) holds a list of
+`{ id, t, j, p, lv, b, s }`, newest first: `s` is the serialised text and
+`b = 1` marks the personal-best replay for that player count, which is never
+pruned while there is anything else to drop. `CFG.REPLAY_MAX` (8),
+`CFG.REPLAY_MAX_CHARS` (24000, one replay) and `CFG.REPLAY_TOTAL_CHARS`
+(90000, all of them) bound the size, and a failed `setItem` drops the oldest
+and retries. `Replay.paraPartida(fila)` matches a `PM.History` row to its
+replay by score, player count and timestamp (both are written in the same
+`closeRun`, milliseconds apart) — that is what puts the `VER` button in
+TOP MUNDIAL → TUS PARTIDAS.
+
+### Sharing and the world ranking
+
+`Replay.enlace(rep|texto)` builds `<base>?rep=<texto>`; `UI.init()` calls
+`Replay.desdeUrl()`, which opens the game straight into the replay and shows
+a dialog (game unaffected) if the text is corrupt.
+
+For the world ranking, which will carry a replay per row, the public entry
+points are already there and need no change to this module:
+
 ## Nombres de jugador (nicknames)
 
 Entered on the **title screen** (agar.io style): a "TU NOMBRE" field right
@@ -636,6 +718,270 @@ collapsed spaces, `CFG.CHAT_MAX` chars) and rate-limited by
 `CHAT_COOLDOWN`. The last `CHAT_KEEP` messages are drawn over the lower maze
 for `CHAT_TICKS`. Wire: guest `gevt {t:'chat', m}` → host `evt {t:'chat', w, m}`.
 While the chat input has focus the game keyboard is inert.
+
+## PAC-MAN VS. (human-controlled ghost)
+
+`js/versus.js` (`window.PM.Versus`) turns one of the four ghosts over to a
+player. The design rule is that the human ghost is *a ghost*: only the choice
+of turn changes hands. Everything else stays in `ghost.js` untouched — walls,
+the house door, no-up tiles, per-level speed tables, tunnel slowdown,
+frightened mode, being eaten and returning home as eyes.
+
+### Assignment
+
+Each party member advertises a ghost id (`g`, 0..3, or -1 for Pac-Man) in
+`phello`; the leader arbitrates in `Party.claim()` and republishes the result in
+`proster`, so two players can never end up on the same ghost. `Party.anyPac()`
+gates `canStart()`: a round with no Pac-Man is not a round.
+
+`Party.gameOrder()` carries `g` per seat. `Game.newGame({ ghosts: [...] })`
+passes it to `Versus.setup()`, which:
+
+* normalises the list (`Versus.clean`): no duplicates, at least one Pac-Man;
+* sets `ghost.human = true` on the claimed ghosts;
+* marks the driver's `Pacman` as `out = true` with `lives = 0`.
+
+Reusing `out` is what keeps the change small: an `out` pac is not drawn, not
+targeted by `pacContextFor`, not collided against, does not consume lives and
+does not count for `anyPlaying()` / GAME OVER. `Game.actorFor(i)` returns the
+ghost instead of the pac for name tags and emotes, and `Game.colorFor(i)`
+returns the ghost's colour.
+
+### Movement rules
+
+`Ghost.decide()` builds the legal-exit list exactly as before (walls, door,
+no-up tiles, no reversal) and only then, for `human && mode === 'normal'`,
+hands over to `Ghost.humanChoice(candidates)`:
+
+1. the requested direction, if legal from here;
+2. otherwise straight on — what a player who is not pressing anything expects;
+3. otherwise the first legal exit in the usual UP > LEFT > DOWN > RIGHT order,
+   because a ghost never stops.
+
+Consequences, all deliberate:
+
+* **No 180° turns.** The requested direction is picked from a list that already
+  excludes `OPP[dir]`, so the human is bound by the same rule as the AI. This is
+  the rule that keeps Pac-Man escapable in a corridor, and it is what makes
+  knowing the maze worth something. The one exception is the one the AI also
+  has: a dead end, where `decide()` returns `backDir`.
+* **No scatter/chase reversal.** `Game.forceReversal()` skips human ghosts:
+  there is no mode to switch for them, and flipping them would take the
+  controls out of the player's hands. The **energizer reversal still applies**
+  (`forceReversalFright()` is untouched) — that is part of frightened mode,
+  which the brief asks to keep as is, and it is the counterweight that makes
+  eating an energizer worth something.
+* **Frightened mode is still driven by the player.** The pseudo-random flee AI
+  is AI; the player keeps the controls and runs away himself, at the slower
+  `ghostFright` speed, and can be eaten.
+* **House.** Modes `house`, `leaving`, `entering` and `eyes` are never
+  player-driven: `decide()` only defers for `mode === 'normal'`. The one
+  concession to playability: `Game.preferredInside()` prefers the human ghost
+  and `Game.houseLimitFor()` returns 0 for it, so the player is not left
+  bouncing inside the house for 60 pellets doing nothing.
+* Cruise Elroy still applies if the human drives Blinky: it is a speed rule
+  tied to the pellets left, not a targeting rule.
+
+### Networking
+
+Host authority is unchanged. The driver sends an **intent**, never a position:
+
+sent immediately on change and re-sent every `CFG.VS.DIR_EVERY` ticks. It is a
+standing intent rather than an event, so a lost message is repaired by the next
+one. It replaces the driver's `pos` messages entirely (`Versus.sendDir()` short
+-circuits `sendGuestUpdates()`) and doubles as his keep-alive: `netWatch` and
+`posWatch` are fed by any message from that seat, and his pac is `out` so the
+per-seat watchdog skips it anyway.
+
+The host applies it in `hostGuestEvent` → `Versus.setWish()`. Snapshots gained
+two fields: `s.vs` (the hunter's score) and `w` per ghost (its wish), so every
+other client simulates the human ghost the same way between snapshots.
+
+On the driver's own screen the ghost is simulated locally with authority, like
+the guest's own Pac-Man: `applySnapshot()` does **not** copy its position unless
+the mode changed (eaten, leaving the house) or the two have drifted more than
+`CFG.VS.RESYNC_PX`. Copying every snapshot would be a visible tug on every
+message, because the host is one network trip behind in applying the intent.
+
+Divergence is bounded, not eliminated: if the intent lands after the host's
+ghost has passed a junction centre, the two take different corridors and the
+driver's screen has to accept the host's version. Measured with two simulated
+browsers, 100 ms one-way lag and a player re-aiming six times a second, that
+is about 4 corrections a minute, the largest around 10 px. The threshold is
+deliberately *below* one tile: with a high threshold the drift compounds until
+the two are in different corridors and the correction becomes a two or three
+tile jump (14 px threshold: same number of corrections, but 19 px each).
+
+`specView` carries `gh` (the ghost assignment) so spectators see who is who.
+
+`CFG.NET.PROTO` goes 4 → 5: the roster, the snapshot and `gevt` all gained
+fields, and an old client would silently play against an AI ghost.
+
+### Scoring, records and player level
+
+* Pac-Men keep the shared team score (`Game.score`).
+* The hunter has his own: `Game.vsScore`, `CFG.VS.CATCH_POINTS` (1000) per
+  Pac-Man caught. `Game.startDeath(who, byGhost)` now takes the ghost that made
+  the catch (the guest reports it in `gevt {t:'died', g}`) and forwards it to
+  `Versus.onCatch()`.
+* `Versus.winner(game)` returns `'ghost'` when every Pac-Man seat is `out`
+  (the hunter ran them out of lives) and `'pacs'` otherwise — surrender,
+  disconnect or quitting all count as a Pac-Man win. The GAME OVER panel leads
+  with it (`UI.versusLines()`).
+* Versus rounds do **not** touch the world ranking (`submitRanking`), the local
+  high scores (`persistHighScore`) or the mastery badges (`checkBadges`): the
+  settings are not comparable.
+* They **do** count for the player level, which measures how much you play.
+  `Game.myPoints()` returns the seat's own points — `vsScore` for a hunter,
+  `score` for a Pac-Man — and `closeRun()` uses it for the XP, the end-of-run
+  summary and the local history.
+
+### On-screen identity
+
+`Versus.drawMarks()` draws a small pulsing triangle above each player-driven
+ghost (white for your own, pale pink for someone else's), skipped while the
+ghost is hidden during an eat freeze. The name tag over the ghost during
+"¡LISTO!" comes for free from `Game.actorFor()`. In the HUD,
+`Game.hudNameFor()` appends the hunter's score to his name.
+
+### Local two-keyboard versus
+
+`setting.vsGhost2` (-1..3, chosen in OPTIONS · PARTIDA) is passed as
+`ghosts: [-1, vsGhost2]` when starting a two-player local game. No extra
+plumbing was needed: `Game.setPacDir()` is the single funnel for keyboard,
+d-pad and swipe input, and `Versus.steer()` intercepts it there.
+
+## Daily challenge, seasons and alternative mazes
+
+**Reto diario** (`PM.Reto`, `CFG.RETO`): one identical run for everybody,
+every day. The engine's randomness was already reproducible
+(`Game.seedRnd`), so the challenge simply hands the **same seed to every
+machine**: `Game.seedBase` is added to every reseed (`resetLevel`,
+`respawn`), which shifts the whole run at once without touching a single
+rule. With `seedBase = 0` the classic game is bit-for-bit what it was.
+
+- The day is `YYYY-MM-DD` in **UTC** (`Reto.hoy()`) on purpose: the
+  challenge must roll over at the same instant everywhere, or a player
+  could get two runs by crossing local midnight. `Reto.semilla(fecha)` is
+  an FNV-style hash of that string **capped at 1 000 000** — `seedRnd`
+  multiplies by 2654435761, and a bigger value would lose precision in a
+  double and stop being reproducible.
+- `Reto.opts()` returns `{players:1, reto:true, seed, cfg}` where `cfg` is
+  `CFG.PRESETS.normal`: nobody plays with slower ghosts or a faster
+  Pac-Man, or the boards would compare nothing.
+- **One attempt a day.** `Game.closeRun()` (which already runs exactly
+  once per run, however the run ends) calls `Reto.cerrar(score, level)`,
+  and `cerrar` is a no-op once the day is closed. Recording only at GAME
+  OVER would let a player walk out of a bad run and start over.
+- Local state is one localStorage row (`CFG.RETO.KEY`):
+  `{f: date, p: points, n: level, e: 1 when uploaded}`. Playing offline is
+  therefore normal, not an error path: the mark is kept and
+  `Reto.enviarPendiente()` uploads it later — it runs from `showMenu` and
+  whenever the RETO DE HOY tab is opened.
+- The board is its own table (`supabase/reto.sql`, read through the
+  `reto_top` view, best row per name per day). It is separate from
+  `ranking` because it is a different game (fixed seed, fixed settings,
+  one attempt); folding it in would have meant filtering it out of every
+  existing query.
+- A challenge run is a **normal 1-player run** for everything else:
+  history, achievements, badges, player XP and the world ranking.
+
+**Temporadas** (`PM.Season`, `CFG.RANKING.VIEW_SEASON`): the world board
+is split by **calendar month**, derived from `creado_en` — nothing to open
+or close by hand. `supabase/temporadas.sql` adds
+`ranking.temporada` as a **generated stored column**
+(`to_char(creado_en at time zone 'UTC', 'YYYY-MM')`), so existing rows are
+filled in automatically and **no row is written or deleted**; the old
+`ranking_top` view is untouched and remains the HISTÓRICO. The new
+`ranking_temporada` view is `ranking_top` grouped by month as well, with
+the same columns so the panel renders both lists with one code path. The
+month is computed in UTC on both ends — a client using its own timezone
+would ask for a different season than the server around month boundaries.
+
+**Laberintos** (`PM.Mazes`, `CFG.MAZE_CLASSIC`, `CFG.setMaze`): a separate
+mode. The 1980 layout is what makes the memorised patterns work, so it is
+kept verbatim in `CFG.MAZE_CLASSIC` and `CFG.setMaze(rows)` swaps
+`CFG.MAZE` (and recounts `CFG.PELLET_TOTAL`, since each maze has its own
+pellet count and level completion is driven by it). `Game.applyMaze(id)`
+does the swap and rebuilds the two prebaked wall canvases, guarded by
+`Game.mazeLoaded` so nothing repaints for nothing; `newGame` applies
+`opts.maze` **before** `resetLevel()` (which deals the pellets) and
+`toMenu` restores the classic **before** `loadPellets()`. A maze run sets
+`Game.mazeId`, which blocks both `submitRanking()` and `canTimeRecord()`:
+scores from another layout compare to nothing. XP still counts.
+
+Each maze is authored as its **left half only** (14 columns) and mirrored,
+which is where the arcade look comes from. Rows 9–19 are **copied from the
+classic**, never retyped: they carry the ghost house, its door, the tunnel
+row and the no-up tiles, and the engine addresses those tile by tile.
+`js/tests.js` enforces the rest: every pellet reachable from Pac-Man's
+spawn (BFS with tunnel wrap), the declared pellet count, **no dead ends**
+(a ghost that enters one is stuck and the chase is over), four energizers
+in the four corners, left-right symmetry, a closed border except the
+tunnel, and the classic coming back when the mode is left.
+
+## Top mundial integrity (only the Edge Function writes)
+
+**Server-side validation** (`supabase/functions/enviar-record/index.ts`):
+submissions no longer go to PostgREST. `Ranking.submit()` POSTs to
+`/functions/v1/enviar-record` with the anon key (the gateway's default JWT
+check is enough — the anon key *is* a JWT), and the function is the only
+writer: `supabase/ranking-integridad.sql` revokes `insert` on `ranking` from
+`anon`/`authenticated` and drops the public insert policy, leaving public
+`select` untouched. The function inserts with `SUPABASE_SERVICE_ROLE_KEY`,
+which bypasses RLS; both env vars are injected by Supabase, no secrets to
+create.
+
+Payload: `{ jugadores, modo, nombre1, nombre2, puntos, nivel, nivelInicio,
+fantasmas, tiempoMs, ajustes:{velFantasmas,velPac,powerS,vidas}, tiempo1?,
+repeticion? }`.
+
+Checks, all mirroring the tables in `js/config.js` (if a scoring table
+changes there, it must change in the function too):
+
+| Check | Rule |
+|---|---|
+| Score ceiling | per level `240*10 + 4*50` pellets `+ 4*(200+400+800+1600)` ghosts `+ 2*fruit(level)`, summed over `nivelInicio..nivel`, `*1.1` slack |
+| Ghosts | `<= 16` per level (4 per energizer, an eaten ghost returns as eyes and cannot be re-eaten in the same fright), and `puntos >= 200*fantasmas` |
+| Time | `>= 12 s` per cleared level and `<= 1000` points per second |
+| Level-1 mark | only for `jugadores === 1`, `nivelInicio === 1` and untouched speed/fright (`CFG.TIME_RULES`); `>= 20 s`, and it cannot exceed the run's own clock. Failing the settings rule drops `tiempo1` to NULL instead of rejecting the row |
+| Settings | rejects anything *easier* than default: `velFantasmas < 1`, `velPac > 1`, `powerS > 1`, `vidas > 3`. Harder settings are fine |
+| Name | `nameAllowed()` reimplemented server-side (same leet-folding + `CFG.BAD_WORDS`), control chars stripped, `NICK_MAX` |
+| Flood | 5 rows per name per minute, counted over the last minute's rows; the `ranking_freno` trigger stays as a second barrier |
+
+Bounds are deliberately loose — the point is to make 999999 impossible, not
+to litigate a great run. Replies are `{ ok, verificado }` on 200 and
+`{ ok:false, error, detalle }` on 4xx, where `error` is a short uppercase
+string the GAME OVER panel prints as-is and `detalle` goes to the console.
+`Ranking.submitError()` maps 404/401/403 (function not deployed yet) to
+`NO ESTÁ DISPONIBLE` and logs the deploy command; **a missing function never
+breaks a run** — the game only flashes the reason.
+
+**Replays** (`repeticion jsonb`, `verificado boolean`): the v1 format is
+`{ v:1, modo, semilla, nivel, jugadores, ajustes, nombres, fecha,
+entradas:[[tick,jugador,dir],…], final:{puntos,nivel,fantasmas,tiempoMs} }`.
+When one is attached, the function checks it is **structurally** coherent —
+version, settings equal to the submitted ones, `final` matching the submitted
+score/level/ghosts/time (500 ms slack on the clock), input density plausible
+(`<= 20` inputs per second, ticks non-decreasing and inside the run at
+60 ticks/s, player index and direction in range) — and sets `verificado`.
+An incoherent replay rejects the whole submission: a replay that contradicts
+its own score is evidence, not noise.
+
+**Pending: real replay verification.** Nothing here re-simulates the game, so
+`verificado` means "the replay does not contradict itself", not "this score
+was really achieved". Doing it properly means running the deterministic core
+(`config.js`, `pacman.js`, `ghost.js` and the step loop of `game.js`, which
+is already seeded and tick-based) inside the function: feed `entradas` at
+their ticks, run to game over and compare the resulting score/level/ghosts
+against `final`. The blocker is packaging — those modules are browser IIFEs
+over `window.PM`, so it needs either a small Deno shim providing a fake
+`window` (cheap, but it pins the function to the game's file layout) or a
+build step that emits an engine module shared by both. Until then the honest
+reading of the column is "worth a look", and the ceiling checks above are
+what actually keeps the board clean.
+
+---
 
 ## Menú de pausa (P / Esc)
 

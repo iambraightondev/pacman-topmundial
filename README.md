@@ -31,6 +31,8 @@ red.
 - **Los menús se manejan con las flechas**: mueven el foco y `Enter` acepta;
   en los deslizadores, izquierda y derecha ajustan el valor.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
+- **Ver una repetición**: `P`/`Esc` la pausa (con velocidad, reiniciar y
+  salir), y arriba hay una barra con los mismos controles a mano.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
   u online) la partida solo termina si **lo aceptan los dos**.
 - **Al terminar**: cuando acaban las celebraciones, el GAME OVER resume lo
@@ -117,9 +119,13 @@ falta). Deja lectura e inserción públicas, sin permiso para modificar ni
 borrar. Si la tabla falta, el panel TOP MUNDIAL lo avisa y el resto del juego
 funciona con normalidad.
 
-Las puntuaciones las envía el navegador, así que técnicamente se pueden
-falsear; para un ranking a prueba de trampas habría que validar la partida en
-una Edge Function y reservar el `INSERT` a la clave de servicio.
+Las puntuaciones **ya no las escribe el navegador**: pasan por la Edge
+Function [`enviar-record`](supabase/functions/enviar-record/index.ts), que
+comprueba que la partida cuadre (techo de puntos del nivel, tiempo, fantasmas,
+nombre y ajustes de siempre) antes de guardarla, y es la única que puede
+escribir en la tabla. El SQL que le quita ese permiso a la clave anónima está
+en [`supabase/ranking-integridad.sql`](supabase/ranking-integridad.sql) y se
+aplica **después** de desplegar la función.
 
 ### Las cuentas
 
@@ -223,6 +229,107 @@ Dos maneras de correr la misma batería:
   frenados o Pac-Man acelerado la marca no sería comparable con la de nadie.
 - **Tus partidas**: historial de las últimas 15 en este navegador, con o sin
   nombre y con o sin conexión.
+- **Repeticiones**: cada partida se graba sola y se puede **volver a ver**
+  desde TOP MUNDIAL → TUS PARTIDAS, con el botón `VER` de cada partida.
+  Sale el cartel de REPETICIÓN y controles para **pausar, ir a x2, empezarla
+  otra vez o salirse**. Ver una repetición no cuenta para nada: ni
+  experiencia, ni logros, ni récord. Y **se comparten por enlace**: la
+  partida entera cabe en la URL, así que se manda por WhatsApp y al otro se
+  le abre el juego reproduciéndola. Se guardan las últimas 8 de este
+  navegador más la de tu mejor récord. Solo se graban las partidas locales
+  (una o dos personas en la misma máquina).
+
+### PAC-MAN VS. — llevar un fantasma
+
+Hasta ahora los cuatro fantasmas los llevaba la máquina. Ahora uno de vosotros
+puede ponerse en su lugar.
+
+**En la party.** Entra en JUGAR ONLINE, crea o únete a una party y, debajo de
+la lista, elige en JUGAR COMO FANTASMA. Puedes coger a BLINKY, PINKY, INKY o
+CLYDE; el que ya lleve otro te sale apagado. Con PAC-MAN vuelves a lo de
+siempre. Alguien tiene que quedarse de Pac-Man: si no, no se puede empezar.
+
+**En el mismo teclado.** En OPCIONES · PARTIDA · PAC-MAN VS. eliges el fantasma
+del jugador 2. Luego, en DOS JUGADORES, él lo lleva con WASD y tú tu Pac-Man con
+las flechas.
+
+**Cómo se juega con un fantasma.** Se mueve como los otros tres: no atraviesa
+paredes, no puede darse la vuelta a mitad de pasillo, hay cruces donde ningún
+fantasma puede subir y en el túnel se arrastra. Cuando alguien se come un
+energizante te toca huir: te pones azul, te pueden comer y vuelves a casa hecho
+ojos hasta que sales otra vez por la puerta. Para que no se te confunda con la
+máquina llevas una punta encima todo el rato, y tu nombre al empezar.
+
+**Quién gana.** Los Pac-Man puntúan como siempre, con su marcador de equipo. Tú
+te llevas 1000 puntos por cada Pac-Man que cazas, y ganas la ronda si te quedas
+con todas sus vidas; si la partida acaba de cualquier otra forma, ganan ellos.
+El panel del final lo dice claro.
+
+**Ojo:** estas partidas no entran en el TOP MUNDIAL ni tocan tu récord ni tus
+maestrías (con un fantasma que piensa no es la misma partida). El NIVEL DE
+JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
+
+- **Reto de hoy** — la misma partida para todo el mundo: mismo azar
+  (fantasmas y fruta salen igual en la de cualquiera) y los ajustes de
+  siempre, para que las marcas se puedan comparar. Cambia cada día a la
+  vez en todo el planeta (se cuenta en UTC) y hay **un intento al día**:
+  la marca se cierra cuando acaba la partida, te rindas o te salgas. Se
+  juega sin cuenta —basta con tener nombre— y **sin conexión**: la marca
+  se guarda y se manda sola cuando vuelve la red. La clasificación del día
+  está en TOP MUNDIAL → RETO DE HOY, con tu puesto.
+- **Laberintos** — dos o tres trazados nuevos de 28×31, con su túnel, su
+  casa de fantasmas y sus energizantes en las cuatro esquinas. Es un modo
+  aparte: **el laberinto original no se toca nunca**, así que estas
+  partidas no entran en el top mundial (experiencia sí).
+- **Top mundial**: clasificaciones compartidas entre todos —**individual**,
+  **dúo**, **nivel 1** (quién lo despeja en menos tiempo) y **reto de
+  hoy**—, con la mejor marca de cada jugador. Individual y dúo se reparten
+  por **temporadas** (el mes natural, calculado de la fecha): pestañas
+  ESTA TEMPORADA e HISTÓRICO, sin perder nada de lo anterior. Hace falta
+  tener nombre puesto (y sin palabrotas) para registrar un récord. La de
+  velocidad se manda **en cuanto despejas el primer nivel**, así que
+  cuenta aunque después te maten o te salgas, y solo vale a un jugador,
+  sin red, en el laberinto clásico y con los ajustes de siempre.
+Hay dos scripts más, que se ejecutan igual (Dashboard → SQL Editor → New
+query → Run) y también se pueden repetir sin miedo:
+
+- [`supabase/temporadas.sql`](supabase/temporadas.sql) — añade la
+  temporada a la tabla `ranking` como columna **calculada** de la fecha y
+  crea la vista por meses. No borra ni modifica ninguna fila: las partidas
+  que ya estaban entran solas en el mes que les tocaba.
+- [`supabase/reto.sql`](supabase/reto.sql) — crea la tabla del **reto
+  diario** y su vista, con lectura e inserción públicas.
+
+Si falta alguna, el panel lo dice y el resto del juego funciona con
+normalidad.
+
+Las partidas **no se escriben directamente en la tabla**: se mandan a una
+Edge Function del proyecto, `enviar-record`, que las revisa antes de
+guardarlas y que es la única con permiso para escribir. Así, una puntuación
+inventada desde la consola del navegador no llega a ninguna parte.
+
+Para que una partida entre en el TOP MUNDIAL:
+
+- Los puntos tienen que ser **alcanzables** para el nivel al que se llegó, los
+  fantasmas comidos y el tiempo jugado.
+- El nombre tiene que ser **de verdad y publicable** (las mismas reglas de
+  siempre, hasta 12 letras).
+- Hay que jugar con **los ajustes de siempre**: con los fantasmas más lentos,
+  Pac-Man más rápido, los energizantes más largos o más de tres vidas, la
+  partida se juega igual, pero no entra en la clasificación mundial. Jugar
+  con el juego más difícil sí cuenta.
+- Y como antes, **cinco partidas por nombre y minuto** como mucho.
+
+Si algo de eso falla, el panel de GAME OVER lo dice y la partida sigue su
+curso: el historial local guarda todas, entren o no.
+
+Para instalarlo en un proyecto nuevo, el orden importa: **primero** se
+despliega la función y **después** se ejecuta
+[`supabase/ranking-integridad.sql`](supabase/ranking-integridad.sql) (los
+pasos exactos están en la cabecera del archivo). Al revés, el ranking se
+queda un rato sin nadie que pueda escribir en él.
+
+---
 - **Nivel de jugador**: mide **cuánto juegas**, no si haces récord. Los
   puntos de todas tus partidas suman experiencia —500 puntos suman 500— y
   cuentan **acabe como acabe la partida**: game over, rendición, reinicio o
@@ -271,7 +378,12 @@ js/history.js     Historial local de partidas
 js/level.js       Nivel de jugador (experiencia acumulada)
 js/friends.js     Lista de amigos
 js/ranking.js     Top mundial (tabla de Supabase vía REST)
+js/temporadas.js  Temporadas del top mundial (mes natural)
+js/reto.js        Reto diario (la misma partida para todos)
+js/mazes.js       Laberintos alternativos (modo aparte)
+js/versus.js      PAC-MAN VS.: el fantasma que lleva un jugador
 js/game.js        Bucle principal, máquina de estados y sincronización
+js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
 js/ui.js          Menús, opciones, panel de party, paneles y controles
 manifest.json     App instalable (PWA)
 sw.js             Service worker: funciona sin conexión
