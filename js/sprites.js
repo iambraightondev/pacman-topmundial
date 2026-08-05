@@ -96,23 +96,31 @@
     }
 
     if (skin === 'ojos') {
-      /* Un ojo mirando en la dirección de avance. Va SIEMPRE en el mismo
-       * sitio respecto a la pantalla: arriba cuando se mueve en horizontal y
-       * al lado izquierdo cuando se mueve en vertical. Antes se usaba la
-       * perpendicular (-v.y, v.x) a secas, que cambia de signo entre ir a la
-       * derecha y a la izquierda: el ojo saltaba de la frente a la barbilla,
-       * y en la miniatura de OPCIONES (que mira a la derecha) salía debajo. */
-      var ox = (v.x !== 0) ? 0 : -1;
+      /* Un ojo en la frente, mirando hacia donde se avanza.
+       *
+       * Va SIEMPRE en el mismo sitio respecto a la pantalla (arriba yendo en
+       * horizontal, a la izquierda yendo en vertical), porque la
+       * perpendicular a secas cambia de signo entre ir a la derecha y a la
+       * izquierda y el ojo saltaba de la frente a la barbilla.
+       *
+       * Y va SEPARADO de la boca: antes quedaba tan cerca del eje de avance
+       * que, con la boca abierta del todo (±40°), parte del blanco caía
+       * dentro de la cuña y el ojo parecía flotar en el hueco de la boca. Se
+       * sube a 3 px de perpendicular y se echa 0,6 px hacia atrás, que deja
+       * unos 10° de margen con el borde de la boca en las cuatro
+       * direcciones, y sigue entrando de sobra en el cuerpo (3,1 + 1,7 de
+       * radio contra los 6,5 del Pac-Man). */
+      var ox = (v.x !== 0) ? 0 : -1;      // perpendicular fija en pantalla
       var oy = (v.x !== 0) ? -1 : 0;
-      var ex = x + ox * 2.4 + v.x * 1.2;
-      var ey = y + oy * 2.4 + v.y * 1.2;
+      var ex = x + ox * 3 - v.x * 0.6;
+      var ey = y + oy * 3 - v.y * 0.6;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(ex, ey, 1.9, 0, Math.PI * 2);
+      ctx.arc(ex, ey, 1.7, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#000000';
       ctx.beginPath();
-      ctx.arc(ex + v.x * 0.7, ey + v.y * 0.7, 1, 0, Math.PI * 2);
+      ctx.arc(ex + v.x * 0.6, ey + v.y * 0.6, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   };

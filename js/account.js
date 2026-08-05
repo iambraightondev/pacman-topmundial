@@ -306,6 +306,27 @@
     },
 
     /* ---------- amigos (solo con cuenta) ---------- */
+    /* Perfil PÚBLICO de cualquier jugador, por su nombre.
+     *
+     * La tabla `perfiles` se puede leer sin sesión (así se puede mirar el
+     * perfil de un amigo o saber si un nombre está cogido); escribir, solo la
+     * fila de uno mismo. Devuelve null si ese nombre no tiene cuenta. */
+    fetchProfile: function (usuario, cb) {
+      var n = cleanUser(usuario);
+      if (!this.configured()) { cb('LAS CUENTAS NECESITAN CONEXIÓN', null); return; }
+      if (!n) { cb('NOMBRE NO VÁLIDO', null); return; }
+      var url = base('/rest/v1/' + AC.TABLE +
+        '?usuario=eq.' + encodeURIComponent(n) +
+        '&select=usuario,avatar,xp,record1,record2,tiempo1,logros,creado_en' +
+        '&limit=1');
+      fetch(url, { headers: authHeaders(this.token) })
+        .then(function (res) { return res.json(); })
+        .then(function (rows) {
+          cb(null, (rows && rows.length) ? rows[0] : null);
+        })
+        .catch(function () { cb('NO SE PUDO CARGAR EL PERFIL', null); });
+    },
+
     listFriends: function (cb) {
       if (!this.logged()) { cb('NECESITAS UNA CUENTA', null); return; }
       var url = base('/rest/v1/' + AC.FRIENDS_TABLE +

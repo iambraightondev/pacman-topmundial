@@ -606,25 +606,38 @@ input[type="range"] {
 .friend-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: min(94%, 360px);
+  gap: 6px;
+  width: min(94%, 460px);
   margin-top: 10px;
 }
 
+/* El nombre arriba y los botones debajo: en una sola fila los cuatro
+ * botones no caben y salen aplastados (y en móvil, ilegibles). */
 .friend-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 5px 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 7px 10px;
   border: 1px solid #333;
 }
+
+.friend-btns {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* dos y dos: cuatro botones seguidos se salen y en 3+1 quedan desparejados */
+.friend-btns .btn { flex: 1 1 42%; }
 
 .friend-name {
   font-size: clamp(11px, 2vh, 14px);
   font-weight: bold;
   letter-spacing: 2px;
   color: #ffff00;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -935,6 +948,20 @@ input[type="range"] {
   flex: 0 0 auto;
   image-rendering: pixelated;
 }
+
+/* Récords del perfil de un amigo: etiqueta a la izquierda, valor a la derecha */
+.mate-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 1px;
+  color: #aaa;
+  text-align: left;
+}
+
+.mate-stat b { color: #ffff00; letter-spacing: 2px; }
 
 .resumen-logro small {
   margin-left: auto;

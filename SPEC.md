@@ -64,9 +64,25 @@ Pac-Man of its own: it sends nothing, cannot eat, chat, emote or surrender,
 its pause is local, and the game never counts as its own (no history, no XP,
 no ranking).
 
+**Escaparate** (local games): a game with no `netRole` has no room, so a
+friend could not watch it at all. `Game.openShowcase()` (called from
+`newGame`, needs `Net.configured()` and a non-empty `rawName(0)`) opens
+`sala:<randomCode>` as an **outbound-only** channel: it answers
+`hello {spec:1}` with `sendShowView` (same `specView` payload as online) and
+`stepShowcase()` pushes `snap` on the normal `SNAP_EVERY` cadence, while
+`hostEvt` mirrors events into it. Nothing else is read from that channel and
+the game never waits on it — on error it just closes (`closeShowcase`, also
+called from `toMenu`). `Party.onUser('donde')` answers with the party code if
+there is one, otherwise with `Game.showCode`, so the watcher's path is
+identical for online and local games.
+
 Watching runs on a **separate channel** (`Net.openView` → `viewCh`,
 `viewHandler`, `viewOnClose`), never the main one, so the watcher's own party
-stays connected the whole time and there is no need to leave the group.
+stays connected the whole time and there is no need to leave the group. The
+handlers must be passed **inside** `openView`'s `cbs` (`onMsg` / `onGone`):
+`openView` starts by calling `closeView()`, which nulls `viewHandler`, so
+assigning them just before the call silently wiped them and nothing ever
+arrived.
 `Game.netSend` funnels through `Net.gameSend`, which picks the view channel
 when there is one; leaving a watched game only calls `Net.closeView()` and
 then `Party.resume()`. If the watcher's own party starts a game, `Party.begin`

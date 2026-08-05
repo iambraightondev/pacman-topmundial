@@ -241,11 +241,19 @@
 
     watching: function () { return !!this.viewCh; },
 
+    /* cbs.onMsg / cbs.onGone son los enganches de la partida que se mira.
+     *
+     * Van AQUÍ y no puestos a mano en Net.viewHandler antes de llamar: como
+     * lo primero que hace esto es closeView(), que los borra, el que los
+     * dejaba puestos justo antes se los encontraba a null y no le llegaba
+     * nunca nada. Es lo que impedía ver la partida de un amigo. */
     openView: function (code, cbs) {
       var self = this;
       this.closeView();
       this.viewCode = code;
       cbs = cbs || {};
+      if (cbs.onMsg) this.viewHandler = cbs.onMsg;
+      if (cbs.onGone) this.viewOnClose = cbs.onGone;
       this.viewCh = this.openChannel('sala:' + code, {
         onOpen: function () { if (cbs.onOpen) cbs.onOpen(); },
         onError: function (m) { if (cbs.onError) cbs.onError(m); },

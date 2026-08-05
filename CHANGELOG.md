@@ -2,6 +2,34 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · Ver la partida de un amigo (juegue como juegue) y su perfil
+
+- **Ya se puede ver la partida de un amigo aunque juegue en local**, solo o
+  con otro en el mismo teclado. Antes solo se podía si estaba en una party,
+  porque hacía falta una sala; ahora, al empezar una partida sin red, el
+  juego abre por su cuenta un canal **solo de salida** con un código al azar y
+  lo reparte a quien pregunte por ti. La partida no depende de él para nada:
+  si falla, se cierra y a seguir jugando.
+- **Y además funcionaba mal para todos**: al abrir la partida de otro se
+  borraban los propios enganches que se acababan de poner, así que no llegaba
+  nunca nada y se quedaba en "ENTRANDO A VER A...". Arreglado.
+- **Los logros ya no tapan la partida**: la banda salía cruzando el centro de
+  la pantalla, justo por la casa de los fantasmas. Ahora sale arriba del todo,
+  sobre el marcador, fuera del laberinto.
+- **Perfil de un amigo**: desde AMIGOS, el botón PERFIL enseña su avatar, su
+  nivel con la barra, su experiencia, sus récords (solo, dúo y el nivel 1 más
+  rápido), fantasmas comidos, partidas y hasta dónde ha llegado, más sus 15
+  logros con la barra de progreso de cada uno.
+- **La lista de amigos ya no parpadea**: pedía la lista, la respuesta volvía a
+  refrescar, y eso volvía a pedirla... sin parar. Los botones se rehacían
+  decenas de veces por segundo y a veces se comían el clic. Ahora se pide una
+  vez y solo se repinta si la lista ha cambiado de verdad. De paso, el nombre
+  va en su línea y los botones debajo de dos en dos, que los cuatro seguidos
+  no cabían.
+- **La skin OJOS, por fin bien**: el ojo quedaba tan pegado a la boca que, con
+  la boca abierta del todo, parte del blanco caía dentro del hueco y parecía
+  flotar. Se ha subido a la frente y echado un poco hacia atrás.
+
 ## 2026-08-04 · Emotes con vida, resumen al acabar y otro orden de skins
 
 - **Los seis emotes se mueven**, cada uno como pide su emoción: la risa

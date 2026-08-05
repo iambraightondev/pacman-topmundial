@@ -922,6 +922,107 @@
   });
 
   // ---------------------------------------------------------------
+  // Ver la partida de un amigo que juega en local (escaparate)
+  // ---------------------------------------------------------------
+  /* Cambia Net.openChannel por uno de mentira: así se comprueba qué canales
+   * se abren y qué se manda por ellos sin tocar la red de verdad. */
+  function conCanalFalso(fn) {
+    var N = window.PM.Net;
+    var orig = N.openChannel;
+    var abiertos = [], enviados = [];
+    N.openChannel = function (topic) {
+      abiertos.push(topic);
+      return {
+        send: function (n, d) { enviados.push({ t: topic, n: n, d: d }); },
+        close: function () { }
+      };
+    };
+    try { fn(abiertos, enviados); } finally { N.openChannel = orig; }
+  }
+
+  test('jugando en local se abre un escaparate para que te puedan mirar',
+    function () {
+      var nick = window.PM.settings.nick1;
+      conCanalFalso(function (abiertos) {
+        try {
+          window.PM.settings.nick1 = 'ALGUIEN';
+          partida(1);
+          ok(G.showCode, 'la partida en local tiene su propio código');
+          ok(abiertos.indexOf('sala:' + G.showCode) !== -1,
+             'y su canal abierto: ' + abiertos.join(' '));
+          // quien viene a mirar recibe el reparto y una foto completa
+          var vistas = [], envio = G.showSend;
+          G.showSend = function (n) { vistas.push(n); };
+          try { G.sendShowView('otro'); } finally { G.showSend = envio; }
+          eq(vistas.join(','), 'svista,snap', 'al mirón se le manda todo');
+          G.toMenu();
+          ok(!G.showCh && !G.showCode, 'y al salir se cierra');
+        } finally {
+          window.PM.settings.nick1 = nick;
+          G.closeShowcase();
+        }
+      });
+    });
+
+  test('sin nombre no hay escaparate: nadie podría encontrarte', function () {
+    var nick = window.PM.settings.nick1;
+    conCanalFalso(function () {
+      try {
+        window.PM.settings.nick1 = '';
+        partida(1);
+        ok(!G.showCh, 'no se abre canal ninguno');
+      } finally {
+        window.PM.settings.nick1 = nick;
+        G.closeShowcase();
+        G.toMenu();
+      }
+    });
+  });
+
+  test('el canal personal reparte el código de la partida en local',
+    function () {
+      var P = window.PM.Party;
+      var nick = window.PM.settings.nick1;
+      var dicho = null;
+      var chFalso = { send: function (n, d) { dicho = { n: n, d: d }; } };
+      var st0 = P.st, ch0 = P.userCh;
+      conCanalFalso(function () {
+        try {
+          window.PM.settings.nick1 = 'ALGUIEN';
+          partida(1);
+          P.st = null;                       // sin party: solo el escaparate
+          P.userCh = chFalso;
+          P.userNick = 'ALGUIEN';
+          P.onUser('donde', {});
+          ok(dicho && dicho.n === 'aqui', 'contesta a quien pregunta');
+          eq(dicho.d.code, G.showCode, 'con el código del escaparate');
+          eq(dicho.d.jugando, 1, 'y diciendo que está jugando');
+        } finally {
+          P.st = st0; P.userCh = ch0;
+          window.PM.settings.nick1 = nick;
+          G.closeShowcase();
+          G.toMenu();
+        }
+      });
+    });
+
+  test('al abrir la partida de otro no se pierden sus enganches', function () {
+    var N = window.PM.Net;
+    conCanalFalso(function () {
+      var visto = 0;
+      N.viewHandler = null;
+      N.openView('ABCD', {
+        onMsg: function () { visto++; },
+        onGone: function () { }
+      });
+      ok(N.viewHandler, 'el manejador sigue puesto después de abrir');
+      N.viewHandler('svista', {}, 'x');
+      eq(visto, 1, 'y es justo el que se pasó (antes lo borraba closeView)');
+      N.closeView();
+    });
+  });
+
+  // ---------------------------------------------------------------
   // Resumen del final de la partida
   // ---------------------------------------------------------------
   test('al acabar se resume lo que te llevas de la partida', function () {
@@ -1101,10 +1202,41 @@
        'a la misma altura hacia un lado y hacia el otro');
     eq(Math.round((der.x - 16) * 10), Math.round((16 - izq.x) * 10),
        'y adelantado lo mismo en los dos sentidos');
-    ok(arr.y < 16 && aba.y > 16, 'en vertical acompaña al morro');
+    ok(arr.x < 16 && aba.x < 16, 'en vertical el ojo se va a un lado');
     eq(Math.round(arr.x * 10), Math.round(aba.x * 10),
-       'y siempre del mismo lado');
+       'y siempre al mismo, suba o baje');
   });
+
+  /* El otro fallo del ojo: quedaba tan pegado al eje de avance que con la
+   * boca abierta del todo parte del blanco caía DENTRO de la cuña de la boca
+   * y parecía flotar en el hueco. Se compara con el cuerpo de la skin
+   * clásica, que es exactamente el mismo: ni un píxel del ojo puede caer
+   * donde el cuerpo no pinta nada. */
+  test('el ojo de la skin OJOS nunca se mete en el hueco de la boca',
+    function () {
+      if (window.__SIN_LIENZO) return;
+      var dirs = [CFG.DIR.RIGHT, CFG.DIR.LEFT, CFG.DIR.UP, CFG.DIR.DOWN];
+      function pinta(skin, dir, fase) {
+        var cv = document.createElement('canvas');
+        cv.width = 32; cv.height = 32;
+        var c = cv.getContext('2d', { willReadFrequently: true });
+        window.PM.Sprites.drawPacman(c, 16, 16, dir, fase, '#ffff00', skin);
+        return c.getImageData(0, 0, 32, 32).data;
+      }
+      var fuera = 0;
+      for (var di = 0; di < dirs.length; di++) {
+        for (var f = 0; f <= 2; f++) {
+          var conOjo = pinta('ojos', dirs[di], f);
+          var cuerpo = pinta('clasico', dirs[di], f);
+          for (var i = 3; i < conOjo.length; i += 4) {
+            // con margen: el borde del cuerpo va suavizado
+            if (conOjo[i] > 128 && cuerpo[i] < 40) fuera++;
+          }
+        }
+      }
+      eq(fuera, 0, 'el ojo cae entero sobre el cuerpo, en las cuatro ' +
+         'direcciones y con la boca en sus tres aperturas');
+    });
 
   // ---------------------------------------------------------------
   // Skins por nivel
@@ -1319,6 +1451,53 @@
       ok(n && n.length > 0 && n.length <= CFG.NICK_MAX, 'sale un nombre válido: ' + n);
     } finally {
       window.PM.settings.nick1 = antes;
+      UI.showMenu();
+    }
+  });
+
+  /* La lista se pedía dentro de refreshFriends() y la respuesta volvía a
+   * llamarlo: pedir → refrescar → pedir, sin parar. Los botones se rehacían
+   * decenas de veces por segundo y se comían los clics. */
+  test('la lista de amigos no se rehace sin parar', function () {
+    var UI = window.PM.UI, Ac = window.PM.Account, F = window.PM.Friends;
+    var logged0 = Ac.logged, list0 = Ac.listFriends, previo = F.all();
+    var pedidas = 0;
+    try {
+      Ac.logged = function () { return true; };
+      Ac.listFriends = function (cb) { pedidas++; cb(null, ['ANA', 'PEPE']); };
+      UI._friendsPulling = false;
+      UI.refreshFriends();
+      eq(pedidas, 1, 'una sola petición por refresco');
+      eq(UI.friendsList.children.length, 2, 'salen los dos amigos');
+      eq(UI.friendsList.children[0].querySelectorAll('.friend-btns .btn').length,
+         4, 'cada uno con perfil, ver partida, invitar y quitar');
+    } finally {
+      Ac.logged = logged0;
+      Ac.listFriends = list0;
+      F.replace(previo);
+      UI._friendsPulling = false;
+      UI.showMenu();
+    }
+  });
+
+  test('el perfil de un amigo se pinta con sus contadores', function () {
+    var UI = window.PM.UI, Ac = window.PM.Account;
+    var fetch0 = Ac.fetchProfile;
+    try {
+      Ac.fetchProfile = function (n, cb) {
+        cb(null, { usuario: 'ANA', avatar: 'pinky', xp: 12000,
+                   record1: 9000, record2: 0, tiempo1: 8800,
+                   logros: { racha: 3, fantasmas: 60, partidas: 5 } });
+      };
+      UI.showFriendProfile('ANA');
+      eq(UI.mateName.textContent, 'ANA', 'sale su nombre');
+      eq(UI.mateAchList.children.length, CFG.ACHIEVEMENTS.length,
+         'con la lista entera de logros');
+      // de sus contadores salen DOBLETE y TRIPLETE (racha 3) y CAZADOR (60)
+      eq(UI.mateAchSub.textContent, 'CONSEGUIDOS 3 DE ' + CFG.ACHIEVEMENTS.length,
+         'el recuento se deduce de sus contadores, no viaja hecho');
+    } finally {
+      Ac.fetchProfile = fetch0;
       UI.showMenu();
     }
   });

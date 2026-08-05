@@ -132,6 +132,7 @@
       this.els.ranking = document.getElementById('ranking');
       this.els.friends = document.getElementById('friends');
       this.els.profile = document.getElementById('profile');
+      this.els.mate = document.getElementById('mate');
       this.els.prompt = document.getElementById('prompt');
       if (window.PM.Badges) window.PM.Badges.syncSeen();
       if (window.PM.Achievements) window.PM.Achievements.syncSeen();
@@ -142,6 +143,7 @@
       this.buildRanking();
       this.buildFriends();
       this.buildProfile();
+      this.buildMate();
       this.accountHooks();
       this.buildGameButtons();
       this.buildDpads();
@@ -1413,6 +1415,165 @@
     /* ======================================================
      * PERFIL: avatar, nombre, nivel, logros y cuenta
      * ====================================================== */
+    /* ------------------------------------------------------
+     * Perfil de un amigo (solo mirar)
+     * La tabla `perfiles` es de lectura pública, así que con el nombre basta
+     * para enseñar su avatar, su nivel, sus récords y sus logros. Los logros
+     * no se guardan como "conseguido sí/no" sino como contadores, y son esos
+     * los que viajan: aquí se vuelven a deducir con las mismas reglas que los
+     * propios, así que la lista sale igualita a la de PERFIL.
+     * ------------------------------------------------------ */
+    buildMate: function () {
+      var self = this;
+      var o = this.els.mate;
+      if (!o) return;
+      o.innerHTML = '';
+
+      this.mateTitle = document.createElement('div');
+      this.mateTitle.className = 'panel-title';
+      this.mateTitle.textContent = 'PERFIL';
+      o.appendChild(this.mateTitle);
+
+      this.mateMsg = document.createElement('div');
+      this.mateMsg.className = 'lobby-status';
+      o.appendChild(this.mateMsg);
+
+      this.mateBody = document.createElement('div');
+      this.mateBody.className = 'tab-pane';
+      o.appendChild(this.mateBody);
+
+      var cab = document.createElement('div');
+      cab.className = 'perfil-cab';
+      this.mateAvatar = document.createElement('canvas');
+      this.mateAvatar.width = 72;
+      this.mateAvatar.height = 72;
+      this.mateAvatar.className = 'perfil-avatar';
+      cab.appendChild(this.mateAvatar);
+      var datos = document.createElement('div');
+      datos.className = 'perfil-datos';
+      this.mateName = document.createElement('div');
+      this.mateName.className = 'perfil-nombre';
+      datos.appendChild(this.mateName);
+      this.mateLevel = document.createElement('div');
+      this.mateLevel.className = 'level-label';
+      datos.appendChild(this.mateLevel);
+      var mbar = document.createElement('div');
+      mbar.className = 'level-bar';
+      this.mateFill = document.createElement('div');
+      this.mateFill.className = 'level-fill';
+      mbar.appendChild(this.mateFill);
+      datos.appendChild(mbar);
+      this.mateResumen = document.createElement('div');
+      this.mateResumen.className = 'note';
+      datos.appendChild(this.mateResumen);
+      cab.appendChild(datos);
+      this.mateBody.appendChild(cab);
+
+      this.mateBody.appendChild(this.sectionTitle('RÉCORDS'));
+      this.mateStats = document.createElement('div');
+      this.mateStats.className = 'resumen';
+      this.mateBody.appendChild(this.mateStats);
+
+      this.mateBody.appendChild(this.sectionTitle('LOGROS'));
+      this.mateAchSub = document.createElement('div');
+      this.mateAchSub.className = 'note';
+      this.mateBody.appendChild(this.mateAchSub);
+      this.mateAchList = document.createElement('div');
+      this.mateAchList.className = 'badge-list';
+      this.mateBody.appendChild(this.mateAchList);
+
+      var back = this.makeButton('VOLVER', function () { self.showFriends(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+    },
+
+    showFriendProfile: function (name) {
+      var self = this;
+      var Ac = window.PM.Account;
+      this.mateWho = String(name || '');
+      this.mateTitle.textContent = this.mateWho;
+      this.mateBody.style.display = 'none';
+      this.mateMsg.classList.remove('error');
+      this.mateMsg.textContent = 'CARGANDO EL PERFIL DE ' + this.mateWho + '...';
+      this.showPanel('mate');
+      if (!Ac) return;
+      Ac.fetchProfile(name, function (err, fila) {
+        if (self.mateWho !== String(name || '')) return;   // ya se pidió otro
+        if (err) {
+          self.mateMsg.classList.add('error');
+          self.mateMsg.textContent = err;
+          return;
+        }
+        if (!fila) {
+          self.mateMsg.classList.add('error');
+          self.mateMsg.textContent = self.mateWho + ' TODAVÍA NO TIENE CUENTA';
+          return;
+        }
+        self.mateMsg.textContent = '';
+        self.mateBody.style.display = 'flex';
+        self.renderMate(fila);
+      });
+    },
+
+    renderMate: function (fila) {
+      var L = window.PM.Level, A = window.PM.Achievements, R = window.PM.Ranking;
+      var st = L ? L.stateFor(fila.xp) : { level: 1, inLevel: 0, needed: 0, pct: 0 };
+
+      var c = this.mateAvatar.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, 72, 72);
+      c.imageSmoothingEnabled = false;
+      var av = fila.avatar;
+      if (CFG.AVATAR_IDS.indexOf(av) === -1) av = 'pac';
+      window.PM.Sprites.drawAvatar(c, 36, 36, 30, av, '#ffff00');
+
+      this.mateName.textContent = fila.usuario || '';
+      this.mateLevel.textContent = 'NIVEL ' + st.level + ' · ' + st.inLevel +
+        ' / ' + st.needed;
+      this.mateFill.style.width = Math.round(st.pct * 100) + '%';
+      this.mateResumen.textContent = 'EXPERIENCIA TOTAL ' + (fila.xp || 0);
+
+      /* récords */
+      var stats = [
+        ['RÉCORD EN SOLO', String(fila.record1 || 0)],
+        ['RÉCORD EN DÚO', String(fila.record2 || 0)],
+        ['NIVEL 1 MÁS RÁPIDO',
+         (fila.tiempo1 > 0 && R) ? R.fmtTime(fila.tiempo1) : '—']
+      ];
+      var cont = fila.logros || {};
+      stats.push(['FANTASMAS COMIDOS', String(cont.fantasmas || 0)]);
+      stats.push(['PARTIDAS JUGADAS', String(cont.partidas || 0)]);
+      stats.push(['NIVEL MÁS LEJOS', String(cont.nivelMax || 0)]);
+      this.mateStats.innerHTML = '';
+      var self2 = this;
+      stats.forEach(function (p) {
+        var row = document.createElement('div');
+        row.className = 'mate-stat';
+        var k = document.createElement('span');
+        k.textContent = p[0];
+        var v = document.createElement('b');
+        v.textContent = p[1];
+        row.appendChild(k);
+        row.appendChild(v);
+        self2.mateStats.appendChild(row);
+      });
+
+      /* logros: se deducen de sus contadores, igual que los propios */
+      this.mateAchList.innerHTML = '';
+      if (!A) return;
+      var hechos = 0;
+      CFG.ACHIEVEMENTS.forEach(function (a) {
+        if (A.progress(a, cont).hecho) hechos++;
+      });
+      this.mateAchSub.textContent = 'CONSEGUIDOS ' + hechos + ' DE ' +
+        CFG.ACHIEVEMENTS.length;
+      CFG.ACHIEVEMENTS.forEach(function (a) {
+        var p = A.progress(a, cont);
+        self2.mateAchList.appendChild(self2.achRow(a, p));
+      });
+    },
+
     buildProfile: function () {
       var self = this;
       var o = this.els.profile;
@@ -1655,65 +1816,60 @@
       }
     },
 
+    /* Una fila de logro con su estrella, su estado y su barra. La usan la
+     * pestaña LOGROS y el perfil de un amigo, que se pinta igual. */
+    achRow: function (a, p) {
+      var R = window.PM.Ranking;
+      var row = document.createElement('div');
+      row.className = 'badge-row' + (p.hecho ? ' got' : '');
+
+      var cv = document.createElement('canvas');
+      cv.width = 34; cv.height = 34;
+      cv.className = 'badge-medal';
+      var c = cv.getContext('2d');
+      c.imageSmoothingEnabled = false;
+      window.PM.Sprites.drawAchStar(c, 17, 17, 15, p.hecho ? a.color : '#333');
+      row.appendChild(cv);
+
+      var txt = document.createElement('div');
+      txt.className = 'badge-text';
+      var nm = document.createElement('div');
+      nm.className = 'badge-name';
+      nm.style.color = p.hecho ? a.color : '#666';
+      nm.textContent = a.name;
+      txt.appendChild(nm);
+      var stt = document.createElement('div');
+      stt.className = 'badge-state';
+      if (p.hecho) {
+        stt.textContent = 'CONSEGUIDO · ' + a.desc;
+      } else if (a.fmt === 'tiempo') {
+        stt.textContent = a.desc +
+          (p.valor > 0 && R ? (' · MEJOR: ' + R.fmtTime(p.valor)) : '');
+      } else {
+        stt.textContent = a.desc + ' · ' + Math.min(p.valor, a.goal) +
+          '/' + a.goal;
+      }
+      txt.appendChild(stt);
+      var barra = document.createElement('div');
+      barra.className = 'level-bar ach-bar';
+      var fill = document.createElement('div');
+      fill.className = 'level-fill';
+      fill.style.width = Math.round(p.pct * 100) + '%';
+      if (p.hecho) fill.style.background = a.color;
+      barra.appendChild(fill);
+      txt.appendChild(barra);
+      row.appendChild(txt);
+      return row;
+    },
+
     refreshAchievements: function () {
       var A = window.PM.Achievements;
       this.achList.innerHTML = '';
       if (!A) return;
       var stats = A.stats();
       this.achSub.textContent = 'CONSEGUIDOS ' + A.count() + ' DE ' + A.total();
-      var R = window.PM.Ranking;
       CFG.ACHIEVEMENTS.forEach(function (a) {
-        var p = A.progress(a, stats);
-        var row = document.createElement('div');
-        row.className = 'badge-row' + (p.hecho ? ' got' : '');
-
-        var cv = document.createElement('canvas');
-        cv.width = 34; cv.height = 34;
-        cv.className = 'badge-medal';
-        var c = cv.getContext('2d');
-        c.imageSmoothingEnabled = false;
-        c.fillStyle = p.hecho ? a.color : '#333';
-        c.beginPath();
-        for (var i = 0; i < 10; i++) {
-          var rr = (i % 2 === 0) ? 15 : 7;
-          var ang = -Math.PI / 2 + i * Math.PI / 5;
-          var px = 17 + Math.cos(ang) * rr, py = 17 + Math.sin(ang) * rr;
-          if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
-        }
-        c.closePath();
-        c.fill();
-        row.appendChild(cv);
-
-        var txt = document.createElement('div');
-        txt.className = 'badge-text';
-        var nm = document.createElement('div');
-        nm.className = 'badge-name';
-        nm.style.color = p.hecho ? a.color : '#666';
-        nm.textContent = a.name;
-        txt.appendChild(nm);
-        var stt = document.createElement('div');
-        stt.className = 'badge-state';
-        if (p.hecho) {
-          stt.textContent = 'CONSEGUIDO · ' + a.desc;
-        } else if (a.fmt === 'tiempo') {
-          stt.textContent = a.desc +
-            (p.valor > 0 && R ? (' · TU MEJOR: ' + R.fmtTime(p.valor)) : '');
-        } else {
-          stt.textContent = a.desc + ' · ' + Math.min(p.valor, a.goal) +
-            '/' + a.goal;
-        }
-        txt.appendChild(stt);
-        var barra = document.createElement('div');
-        barra.className = 'level-bar ach-bar';
-        var fill = document.createElement('div');
-        fill.className = 'level-fill';
-        fill.style.width = Math.round(p.pct * 100) + '%';
-        if (p.hecho) fill.style.background = a.color;
-        barra.appendChild(fill);
-        txt.appendChild(barra);
-        row.appendChild(txt);
-
-        this.achList.appendChild(row);
+        this.achList.appendChild(this.achRow(a, A.progress(a, stats)));
       }, this);
     },
 
@@ -1873,7 +2029,6 @@
     /* La lista vive en la cuenta; aquí se guarda una copia para poder
      * enseñarla al instante y seguir viéndola sin conexión. */
     refreshFriends: function () {
-      var self = this;
       var F = window.PM.Friends;
       var Ac = window.PM.Account;
       var logged = !!(Ac && Ac.logged());
@@ -1883,17 +2038,38 @@
       if (this.friendsBody) this.friendsBody.style.display = logged ? 'flex' : 'none';
       if (!logged) return;
 
-      // se pide la lista de verdad y se refresca cuando llegue
-      if (!this._friendsPulling) {
-        this._friendsPulling = true;
-        Ac.listFriends(function (err, list) {
-          self._friendsPulling = false;
-          if (err || !list) return;
-          F.replace(list);
-          self.refreshFriends();
-        });
-      }
+      this.pullFriends();
+      this.renderFriends();
+    },
 
+    /* Traer la lista de verdad desde la cuenta.
+     *
+     * Antes esto vivía dentro de refreshFriends() y, al llegar la respuesta,
+     * volvía a llamarlo: refrescar pedía la lista, la lista refrescaba, y
+     * vuelta a empezar. La consecuencia era una petición detrás de otra sin
+     * parar y la lista rehaciéndose entera todo el rato, así que los botones
+     * parpadeaban y a veces se comían el clic (el botón que pulsabas ya no
+     * era el que estaba en pantalla al soltar). Ahora la respuesta solo
+     * REPINTA, y solo si la lista ha cambiado de verdad. */
+    pullFriends: function () {
+      var self = this;
+      var Ac = window.PM.Account;
+      var F = window.PM.Friends;
+      if (this._friendsPulling || !Ac || !Ac.logged()) return;
+      this._friendsPulling = true;
+      Ac.listFriends(function (err, list) {
+        self._friendsPulling = false;
+        if (err || !list) return;
+        var antes = F.all().join(',');
+        F.replace(list);
+        if (F.all().join(',') !== antes) self.renderFriends();
+      });
+    },
+
+    renderFriends: function () {
+      var self = this;
+      var F = window.PM.Friends;
+      if (!this.friendsList || !F) return;
       var list = F.all();
       this.friendsList.innerHTML = '';
       if (!list.length) {
@@ -1903,6 +2079,8 @@
         this.friendsList.appendChild(vacio);
         return;
       }
+      /* El nombre va en su línea y los botones debajo: los cuatro en la misma
+       * fila que el nombre no cabían y salían aplastados unos contra otros. */
       list.forEach(function (name) {
         var row = document.createElement('div');
         row.className = 'friend-row';
@@ -1912,14 +2090,23 @@
         n.textContent = name;
         row.appendChild(n);
 
-        var ver = self.makeButton('VER PARTIDA', function () {
-          self.watchFriend(name);
-        });
-        ver.classList.add('btn-preset');
-        ver.disabled = !window.PM.Net.configured();
-        row.appendChild(ver);
+        var btns = document.createElement('div');
+        btns.className = 'friend-btns';
+        row.appendChild(btns);
 
-        var inv = self.makeButton('INVITAR', function () {
+        function boton(txt, fn, red) {
+          var b = self.makeButton(txt, fn);
+          b.classList.add('btn-preset');
+          if (red) b.disabled = !window.PM.Net.configured();
+          btns.appendChild(b);
+          return b;
+        }
+
+        boton('PERFIL', function () { self.showFriendProfile(name); });
+
+        boton('VER PARTIDA', function () { self.watchFriend(name); }, true);
+
+        boton('INVITAR', function () {
           var P = window.PM.Party;
           if (!P || !P.active()) {
             self.friendsMsg.classList.add('error');
@@ -1930,20 +2117,19 @@
             self.friendsMsg.classList.toggle('error', !ok);
             self.friendsMsg.textContent = msg || '';
           });
-        });
-        inv.classList.add('btn-preset');
-        inv.disabled = !window.PM.Net.configured();
-        row.appendChild(inv);
+        }, true);
 
-        var del = self.makeButton('QUITAR', function () {
+        boton('QUITAR', function () {
           F.remove(name);                       // fuera de la copia local
           self.friendsMsg.classList.remove('error');
           self.friendsMsg.textContent = '';
-          if (window.PM.Account) window.PM.Account.removeFriend(name);
-          self.refreshFriends();
+          self.renderFriends();                 // se va de la lista al momento
+          if (window.PM.Account) {
+            window.PM.Account.removeFriend(name, function () {
+              self.refreshFriends();            // y se confirma con la nube
+            });
+          }
         });
-        del.classList.add('btn-preset');
-        row.appendChild(del);
 
         self.friendsList.appendChild(row);
       });
@@ -1970,14 +2156,16 @@
           self.friendsMsg.textContent = name + ' NO ESTÁ CONECTADO';
           return;
         }
-        if (!res.code) {
-          self.friendsMsg.classList.add('error');
-          self.friendsMsg.textContent = name + ' NO ESTÁ EN NINGUNA PARTY';
-          return;
-        }
+        // primero lo de siempre: si no está jugando, no hay nada que ver
         if (!res.jugando) {
           self.friendsMsg.classList.add('error');
           self.friendsMsg.textContent = name + ' AÚN NO HA EMPEZADO A JUGAR';
+          return;
+        }
+        // jugando pero sin canal: se quedó sin nombre o sin conexión
+        if (!res.code) {
+          self.friendsMsg.classList.add('error');
+          self.friendsMsg.textContent = 'NO SE PUEDE VER LA PARTIDA DE ' + name;
           return;
         }
         self.joinAsSpec(res.code, name);
@@ -1988,9 +2176,11 @@
       var self = this;
       this.spec = { code: code, name: name, timer: null };
       this.friendsMsg.textContent = 'ENTRANDO A VER A ' + name + '...';
-      window.PM.Net.viewHandler = function (n, d, sid) { self.specData(n, d, sid); };
-      window.PM.Net.viewOnClose = function () { self.specFail('SE PERDIÓ LA CONEXIÓN'); };
       window.PM.Net.openView(code, {
+        // van dentro: openView empieza cerrando la vista anterior, y eso
+        // borraba estos dos enganches si se ponían antes de llamar
+        onMsg: function (n, d, sid) { self.specData(n, d, sid); },
+        onGone: function () { self.specFail('SE PERDIÓ LA CONEXIÓN'); },
         onOpen: function () {
           if (!self.spec) return;
           window.PM.Net.gameSend('hello', { v: CFG.NET.PROTO, spec: 1 });
@@ -2578,7 +2768,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'friends', 'profile'];
+                   'friends', 'profile', 'mate'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -3008,7 +3198,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'friends', 'profile'];
+                    'friends', 'profile', 'mate'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';

@@ -73,9 +73,13 @@ red.
   un aviso para entrar. También hay botón `INVITAR` en cada fila de AMIGOS.
 - **Ver la partida de un amigo**: `VER PARTIDA` en AMIGOS le pregunta dónde
   está jugando y entras solo a mirar (sin Pac-Man, sin chat y sin voto); lo
-  que veas no cuenta como partida tuya. **Tu party sigue en pie mientras
-  miras**: se ve por un canal aparte, así que no hay que salirse del grupo, y
-  si los tuyos arrancan una partida dejas de mirar y entras con ellos.
+  que veas no cuenta como partida tuya. Vale **juegue como juegue**: en party,
+  online o él solo en su casa. **Tu party sigue en pie mientras miras**: se ve
+  por un canal aparte, así que no hay que salirse del grupo, y si los tuyos
+  arrancan una partida dejas de mirar y entras con ellos.
+- **Ver el perfil de un amigo**: `PERFIL` en su fila enseña su avatar, su
+  nivel, su experiencia, sus récords y sus 15 logros con el progreso de cada
+  uno. Hace falta que tenga cuenta.
 - **Si alguien se cae con 3 o 4 jugadores, la partida no se corta**: quien
   se va o pierde la conexión pasa a espectador y el resto sigue.
 

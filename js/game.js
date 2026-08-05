@@ -53,6 +53,9 @@
     netSkins: null,    // skins online [J1, J2]
     netQueue: [],
     netWatch: 0,
+    showCh: null,      // escaparate: canal para que un amigo mire la partida local
+    showCode: null,    // código de ese canal (lo reparte el canal personal)
+    showTimer: 0, showCount: 0,
     posWatch: [],      // por jugador: ticks sin noticias suyas (anfitrión)
     netNotice: null,   // { text, ticks } — aviso y vuelta al menú
     snapTimer: 0, snapCount: 0, posTimer: 0,
@@ -389,6 +392,7 @@
           window.PM.Net.onclose = cerrado;
         }
       }
+      this.openShowcase();      // sin red: canal para que un amigo pueda mirar
 
       this.resetLevel();
       // melodía de inicio (solo en partida nueva)
@@ -497,6 +501,7 @@
     toMenu: function () {
       // salirse a medias no tira lo jugado: la experiencia se lleva igual
       var subida = this.inGame() ? this.closeRun() : null;
+      this.closeShowcase();
       if (subida) this.pendingLevelUp = subida;   // lo celebra el menú
       if (this.netRole) {
         var mirando = this.isSpec();
@@ -675,6 +680,7 @@
       }
 
       if (this.netRole) this.netMaintain();
+      else this.stepShowcase();       // partida local: se emite para los mirones
     },
 
     stepReady: function () {
@@ -1766,6 +1772,65 @@
 
     hostEvt: function (o) {
       if (this.netRole === 'host') this.netSend('evt', o);
+      else if (this.showCh) this.showSend('evt', o);   // partida local, mirones
+    },
+
+    /* =========================================================
+     * ESCAPARATE — que un amigo pueda ver tu partida en local
+     *
+     * Jugando sin red no hay sala, así que hasta ahora a un amigo le salía
+     * "NO ESTÁ EN NINGUNA PARTY" y no había forma de mirar una partida en
+     * solo (ni de dos en el mismo teclado). Se abre un canal con un código al
+     * azar que va SOLO HACIA FUERA: reparte el mismo saludo y las mismas
+     * instantáneas que el anfitrión de una partida online, pero aquí no se
+     * escucha a nadie —salvo el "hola, vengo a mirar"— y la partida no
+     * depende de él para nada: si el canal falla, se cierra y a seguir
+     * jugando. Quien mira usa exactamente el mismo camino de siempre.
+     * ========================================================= */
+    openShowcase: function () {
+      this.closeShowcase();
+      var N = window.PM.Net;
+      if (this.netRole || !N || !N.configured()) return;
+      if (!this.rawName(0)) return;      // sin nombre nadie puede encontrarte
+      var self = this;
+      this.showCode = N.randomCode();
+      this.showCh = N.openChannel('sala:' + this.showCode, {
+        onData: function (name, d, sid) {
+          if (name === 'hello' && d && d.spec) self.sendShowView(sid);
+        },
+        onError: function () { self.closeShowcase(); }
+      });
+    },
+
+    closeShowcase: function () {
+      if (this.showCh) {
+        try { this.showCh.close(); } catch (e) { /* ya estaba cerrado */ }
+      }
+      this.showCh = null;
+      this.showCode = null;
+      this.showTimer = 0;
+      this.showCount = 0;
+    },
+
+    showSend: function (name, data) {
+      if (!this.showCh) return;
+      try { this.showCh.send(name, data); }
+      catch (e) { this.closeShowcase(); }
+    },
+
+    sendShowView: function (sid) {
+      this.showSend('svista', this.specView(sid));
+      this.showSend('snap', this.buildSnapshot(true));
+    },
+
+    stepShowcase: function () {
+      if (!this.showCh || !this.inGame()) return;
+      this.showTimer++;
+      if (this.showTimer < CFG.NET.SNAP_EVERY) return;
+      this.showTimer = 0;
+      this.showCount++;
+      this.showSend('snap',
+        this.buildSnapshot((this.showCount % CFG.NET.PELLET_SYNC_EVERY) === 0));
     },
 
     processNetQueue: function () {
@@ -2024,13 +2089,21 @@
      * para que pueda pintar desde el primer momento. */
     sendSpecView: function (sid) {
       if (this.netRole !== 'host') return;
+      this.netSend('svista', this.specView(sid));
+      this.netSend('snap', this.buildSnapshot(true));
+    },
+
+    /* El saludo que recibe quien viene a mirar: cuántos son, con qué nombre,
+     * color y skin, y con qué ajustes se está jugando. Lo comparten la
+     * partida online (sendSpecView) y la local (sendShowView). */
+    specView: function (sid) {
       var nm = [], co = [], sk = [], i;
       for (i = 0; i < this.pacs.length; i++) {
         nm.push(this.rawName(i));
         co.push(this.colorFor(i));
         sk.push(this.skinFor(i));
       }
-      this.netSend('svista', {
+      return {
         v: CFG.NET.PROTO, to: sid, n: this.pacs.length,
         nm: nm, co: co, sk: sk,
         cfg: {
@@ -2041,8 +2114,7 @@
           startLevel: this.level,
           startLives: 3
         }
-      });
-      this.netSend('snap', this.buildSnapshot(true));
+      };
     },
 
     buildSnapshot: function (withPellets) {
@@ -2930,10 +3002,14 @@
       /* maestría recién ganada: entra, se luce y se va */
       if (this.badgeNotice) this.renderBadgeNotice(ctx);
 
-      /* logro recién conseguido (debajo de la maestría, no se pisan) */
+      /* Logro recién conseguido. Va ARRIBA DEL TODO, sobre el marcador y
+       * fuera del laberinto: antes cruzaba el centro de la pantalla justo por
+       * la casa de los fantasmas y tapaba la partida durante dos segundos y
+       * medio. Aquí solo esconde la puntuación un momento, que se puede mirar
+       * después, y ni siquiera se cruza con el cartel de maestría. */
       if (this.achNotice) {
         var an = this.achNotice;
-        window.PM.Sprites.drawAchNotice(ctx, 112, 13 * T + CFG.MAZE_Y,
+        window.PM.Sprites.drawAchNotice(ctx, 112, 11,
           CFG.NATIVE_W - 20, 1 - (an.ticks / an.total), an, this.tick);
       }
 

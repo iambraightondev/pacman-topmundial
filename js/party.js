@@ -372,10 +372,15 @@
         if (this.st && this.st.code === code) return;      // ya estamos dentro
         if (this.oninvite) this.oninvite(cleanNick(d && d.from), code);
       } else if (name === 'donde' && this.userCh) {
-        // un amigo pregunta dónde estamos (para ver la partida)
+        /* Un amigo pregunta dónde estamos, para ver la partida. Si hay party,
+         * su sala; si se está jugando en local (solo o dos en el mismo
+         * teclado), el canal de escaparate que abre el propio juego, que es
+         * lo que permite mirar una partida sin red. */
         var G = window.PM.Game;
+        var code = this.st ? this.st.code : '';
+        if (!code && G && G.showCode) code = G.showCode;
         this.userCh.send('aqui', {
-          code: this.st ? this.st.code : '',
+          code: code,
           jugando: (G && G.inGame()) ? 1 : 0,
           n: this.userNick
         });
