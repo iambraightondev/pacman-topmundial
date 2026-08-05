@@ -270,7 +270,7 @@ vm.createContext(sandbox);
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
 var orden = ['config', 'audio', 'sprites', 'pacman', 'ghost', 'net-config',
   'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
-  'achievements', 'account', 'game', 'ui'];
+  'achievements', 'account', 'game', 'replay', 'ui'];
 
 orden.forEach(function (nombre) {
   var f = path.join(raiz, 'js', nombre + '.js');

@@ -457,6 +457,16 @@
   CFG.HISTORY_KEY = 'pacman-topmundial-historial';
   CFG.HISTORY_MAX = 15;       // partidas guardadas
 
+  /* ---------- Repeticiones de partida (solo en este navegador) ----------
+   * Una partida entera cabe en los ajustes más la lista de giros, así que
+   * ocupa muy poco; aun así se poda, que localStorage no da para tanto.
+   * La del mejor récord no se suelta mientras quede otra cosa que soltar. */
+  CFG.REPLAY_KEY = 'pacman-topmundial-repeticiones';
+  CFG.REPLAY_MAX = 8;             // repeticiones guardadas
+  CFG.REPLAY_MAX_CHARS = 24000;   // texto máximo de UNA repetición (tiene que caber en una URL)
+  CFG.REPLAY_TOTAL_CHARS = 90000; // techo de todas juntas
+  CFG.REPLAY_MAX_ENTRADAS = 20000;// giros máximos en una repetición
+
   /* ---------- Nivel de jugador (experiencia acumulada) ----------
    * Sube con los puntos de TODAS las partidas y no tiene tope: cada nivel
    * pide más que el anterior (crecimiento suave, ni plano ni imposible). */
