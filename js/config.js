@@ -290,10 +290,10 @@
   CFG.SKINS = [
     { id: 'clasico', name: 'CLÁSICO', level: 1 },
     { id: 'sombra',  name: 'SOMBRA',  level: 3 },
-    { id: 'neon',    name: 'NEÓN',    level: 7 },
-    { id: 'aro',     name: 'ARO',     level: 12 },
-    { id: 'pixel',   name: 'PÍXEL',   level: 20 },
-    { id: 'ojos',    name: 'OJOS',    level: 30 }
+    { id: 'ojos',    name: 'OJOS',    level: 7 },
+    { id: 'neon',    name: 'NEÓN',    level: 12 },
+    { id: 'aro',     name: 'ARO',     level: 20 },
+    { id: 'pixel',   name: 'PÍXEL',   level: 30 }
   ];
   /* El orden de dibujo en OPCIONES es el de arriba; SKIN_IDS solo sirve para
    * validar lo guardado, así que da igual en qué orden esté. */

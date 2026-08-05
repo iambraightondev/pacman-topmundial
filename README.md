@@ -169,7 +169,7 @@ Dos maneras de correr la misma batería:
   además el del jugador 2 local. Aparecen en el marcador, sobre cada Pac-Man
   al empezar, en la sala online y en el panel de fin de partida.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
-- **Skins**: CLÁSICO, SOMBRA, NEÓN, ARO, PÍXEL y OJOS, combinables con
+- **Skins**: CLÁSICO, SOMBRA, OJOS, NEÓN, ARO y PÍXEL, combinables con
   cualquier color. Se **ganan subiendo de nivel de jugador** (3, 7, 12, 20 y
   30, en ese orden); las que faltan salen apagadas en OPCIONES con el nivel
   que piden. La que ya llevabas puesta no se te quita nunca.

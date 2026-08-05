@@ -18,8 +18,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   nivel de jugador —y si has subido, a qué nivel— y la lista de logros
   conseguidos en esa partida. Antes el panel salía de golpe y tapaba justo
   las animaciones que celebraban todo eso.
-- **Otro orden para ganarse las skins**: CLÁSICO, SOMBRA (nivel 3), NEÓN (7),
-  ARO (12), PÍXEL (20) y OJOS (30).
+- **Otro orden para ganarse las skins**: CLÁSICO, SOMBRA (nivel 3), OJOS (7),
+  NEÓN (12), ARO (20) y PÍXEL (30).
 
 ## 2026-08-04 · Nombres más largos
 

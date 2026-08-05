@@ -85,8 +85,8 @@ returns newly earned ones not yet announced; `Game.bumpAch()` records and
 queues the in-game notice. Spectating records nothing, and online only your
 own kills/fruits count.
 
-**Skins by level** (unlock order `clasico` 1, `sombra` 3, `neon` 7, `aro` 12,
-`pixel` 20, `ojos` 30 — `CFG.SKINS[].level`): gated on
+**Skins by level** (unlock order `clasico` 1, `sombra` 3, `ojos` 7, `neon` 12,
+`aro` 20, `pixel` 30 — `CFG.SKINS[].level`): gated on
 `PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
 currently worn — a raised requirement must never strip what a player already
 has. Locked ones render greyed in OPCIONES with the level they need.
