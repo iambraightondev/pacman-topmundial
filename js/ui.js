@@ -61,6 +61,10 @@
     if (key === 'livesMode') {
       return LIVES_MODES.indexOf(value) !== -1 ? value : def;
     }
+    if (key === 'vsGhost2') {
+      var g = parseInt(value, 10);
+      return (g >= 0 && g < 4) ? g : -1;
+    }
     if (key === 'skin1' || key === 'skin2') {
       return CFG.SKIN_IDS.indexOf(value) !== -1 ? value : def;
     }
@@ -279,7 +283,12 @@
       main.appendChild(this.makeButton('DOS JUGADORES', function () {
         self.resumeAudio();
         self.hideAll();
-        window.PM.Game.newGame({ players: 2 });
+        // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
+        // (se elige en OPCIONES · PARTIDA; -1 = Pac-Man de siempre)
+        window.PM.Game.newGame({
+          players: 2,
+          ghosts: [-1, window.PM.settings.vsGhost2]
+        });
       }));
 
       this.onlineMenuBtn = this.makeButton('JUGAR ONLINE', function () {
@@ -482,6 +491,29 @@
       ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
         'CTRL+ESPACIO TU MAESTRÍA · T CHAT (ONLINE)';
       par.appendChild(ctrlNote);
+
+      /* PAC-MAN VS. en la misma máquina: el jugador 2 lleva un fantasma */
+      var vsg = this.optGroup(this.tabPanes.partida, 'PAC-MAN VS. (MISMO TECLADO)');
+      var vsRowL = document.createElement('div');
+      vsRowL.className = 'preset-row';
+      this.vsLocalBtns = {};
+      this.vsChoices().forEach(function (op) {
+        var b = self.makeButton(op[1], function () {
+          window.PM.settings.vsGhost2 = op[0];
+          saveSettings();
+          self.refreshOptions();
+        });
+        b.classList.add('btn-preset');
+        if (op[0] >= 0) b.style.color = CFG.GHOSTS[op[0]].color;
+        self.vsLocalBtns[op[0]] = b;
+        vsRowL.appendChild(b);
+      });
+      vsg.appendChild(vsRowL);
+      var vsNoteL = document.createElement('div');
+      vsNoteL.className = 'note';
+      vsNoteL.textContent = 'EN DOS JUGADORES, EL J2 (WASD) LLEVA ESE FANTASMA ' +
+        'EN VEZ DE UN PAC-MAN. GANA SI SE QUEDA CON TODAS TUS VIDAS';
+      vsg.appendChild(vsNoteL);
 
       /* ===== pestaña SONIDO ===== */
       var sonA = this.optGroup(son, 'SONIDO');
@@ -865,6 +897,10 @@
       this.refreshSkins();
       this.livesModeBtns.shared.classList.toggle('active', s.livesMode !== 'individual');
       this.livesModeBtns.individual.classList.toggle('active', s.livesMode === 'individual');
+      var vsl = (s.vsGhost2 >= 0 && s.vsGhost2 < 4) ? s.vsGhost2 : -1;
+      for (i = -1; i < 4; i++) {
+        if (this.vsLocalBtns[i]) this.vsLocalBtns[i].classList.toggle('active', i === vsl);
+      }
       this.soundBtns.si.classList.toggle('active', !s.muted);
       this.soundBtns.no.classList.toggle('active', !!s.muted);
       if (this.voicesNote) {
@@ -873,6 +909,14 @@
           ? 'SUENAN AL COMER FANTASMAS SEGUIDOS CON EL MISMO ENERGIZANTE'
           : 'SI NO SUENAN, ABRE EL JUEGO DESDE UN SERVIDOR (JUGAR.BAT), NO CON DOBLE CLIC';
       }
+    },
+
+    /* Opciones del selector de PAC-MAN VS.: Pac-Man y los cuatro fantasmas.
+     * Se usa igual en OPCIONES (local) y en la sala online. */
+    vsChoices: function () {
+      var out = [[-1, 'PAC-MAN']];
+      for (var i = 0; i < 4; i++) out.push([i, CFG.VS.NAMES[i]]);
+      return out;
     },
 
     /* ------------------------------------------------------
@@ -979,6 +1023,31 @@
       this.partyList = document.createElement('div');
       this.partyList.className = 'friend-list';
       room.appendChild(this.partyList);
+
+      /* PAC-MAN VS.: uno de la party puede llevar un fantasma en vez de un
+       * Pac-Man. Los que ya lleva otro salen apagados. */
+      var lab3 = document.createElement('div');
+      lab3.className = 'section-title';
+      lab3.textContent = 'JUGAR COMO FANTASMA';
+      room.appendChild(lab3);
+
+      var vsRow = document.createElement('div');
+      vsRow.className = 'preset-row';
+      this.vsBtns = {};
+      this.vsChoices().forEach(function (op) {
+        var b = self.makeButton(op[1], function () { self.pickVsGhost(op[0]); });
+        b.classList.add('btn-preset');
+        if (op[0] >= 0) b.style.color = CFG.GHOSTS[op[0]].color;
+        self.vsBtns[op[0]] = b;
+        vsRow.appendChild(b);
+      });
+      room.appendChild(vsRow);
+
+      var vsNote = document.createElement('div');
+      vsNote.className = 'note';
+      vsNote.textContent = 'LO LLEVAS TÚ, NO LA MÁQUINA: CAZA A LOS PAC-MAN. ' +
+        'ALGUIEN TIENE QUE QUEDARSE DE PAC-MAN';
+      room.appendChild(vsNote);
 
       this.lobbyStatusEl = document.createElement('div');
       this.lobbyStatusEl.className = 'lobby-status';
@@ -1123,6 +1192,12 @@
       if (P) P.startGame();
     },
 
+    /* PAC-MAN VS.: pedir un fantasma (o volver a Pac-Man con -1) */
+    pickVsGhost: function (gid) {
+      var P = window.PM.Party;
+      if (P) P.setGhost(gid);
+    },
+
     partyError: function (msg) {
       this.showOnlineIdle();
       this.onlineWarn.style.display = 'block';
@@ -1165,7 +1240,26 @@
           (ms[i].s === window.PM.Net.sid ? (i === 0 ? ' · TÚ' : 'TÚ') : '');
         row.appendChild(tag);
 
+        // PAC-MAN VS.: se ve de un vistazo quién lleva fantasma y cuál
+        if (ms[i].g >= 0 && ms[i].g < 4) {
+          var gt = document.createElement('span');
+          gt.className = 'party-tag';
+          gt.style.color = CFG.GHOSTS[ms[i].g].color;
+          gt.textContent = CFG.VS.NAMES[ms[i].g];
+          row.appendChild(gt);
+        }
+
         this.partyList.appendChild(row);
+      }
+
+      /* selector de fantasma: apagados los que ya lleva otro */
+      var mio = P.myGhost();
+      for (var v = -1; v < 4; v++) {
+        var vb = this.vsBtns[v];
+        if (!vb) continue;
+        var duenyo = (v >= 0) ? P.ghostOwner(v) : null;
+        vb.disabled = !!(duenyo && duenyo !== window.PM.Net.sid);
+        vb.classList.toggle('active', v === mio);
       }
 
       var lider = P.isLeader();
@@ -1175,6 +1269,7 @@
       this.inviteBtn.disabled = !P.active();
       this.setLobbyStatus(
         P.connecting() ? 'CONECTANDO...'
+        : !P.anyPac() ? 'ALGUIEN TIENE QUE LLEVAR UN PAC-MAN'
         : lider ? (P.count() < 2 ? 'ESPERANDO A MÁS JUGADORES...'
                                  : 'CUANDO QUIERAS, EMPEZAD')
                 : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
@@ -1260,16 +1355,17 @@
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
-      var colors = [], names = [], skins = [];
+      var colors = [], names = [], skins = [], ghosts = [];
       for (var i = 0; i < order.length; i++) {
         colors.push(sanitizeSetting('pacColor', order[i].c, CFG.PLAYER_COLORS[i]));
         names.push(sanitizeNick(order[i].n) || ('J' + (i + 1)));
         skins.push(sanitizeSetting('skin1', order[i].k, 'clasico'));
+        ghosts.push(sanitizeSetting('vsGhost2', order[i].g, -1));
       }
       window.PM.Game.newGame({
         players: order.length, net: role, localIdx: idx,
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
-        colors: colors, names: names, skins: skins
+        colors: colors, names: names, skins: skins, ghosts: ghosts
       });
     },
 
@@ -2410,18 +2506,20 @@
         this.spec = null;
         var n = parseInt(d.n, 10);
         if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) n = 2;
-        var colors = [], names = [], skins = [];
+        var colors = [], names = [], skins = [], ghosts = [];
         for (var i = 0; i < n; i++) {
           colors.push(sanitizeSetting('pacColor', (d.co || [])[i], CFG.PLAYER_COLORS[i]));
           names.push(sanitizeNick((d.nm || [])[i]) || ('J' + (i + 1)));
           skins.push(sanitizeSetting('skin1', (d.sk || [])[i], 'clasico'));
+          // PAC-MAN VS.: el mirón también tiene que ver quién lleva fantasma
+          ghosts.push(sanitizeSetting('vsGhost2', (d.gh || [])[i], -1));
         }
         this.hideAll();
         this.resumeAudio();
         window.PM.Game.newGame({
           players: n, net: 'spec', localIdx: -1,
           cfg: this.sanitizeNetCfg(d.cfg),
-          colors: colors, names: names, skins: skins
+          colors: colors, names: names, skins: skins, ghosts: ghosts
         });
       } else if (name === 'full') {
         if (d && d.to === window.PM.Net.sid) this.specFail('LA PARTIDA NO ADMITE MIRONES');
@@ -3288,8 +3386,27 @@
       return box;
     },
 
-    showGameOverPrompt: function () {
-      var self = this;
+    /* Panel de PAC-MAN VS.: aquí lo primero es QUIÉN HA GANADO, que si no
+     * la partida no se entiende: hay dos marcadores y no compiten entre sí. */
+    versusLines: function () {
+      var g = window.PM.Game;
+      var V = window.PM.Versus;
+      var cazador = V.ghostName(g);
+      var gana = V.winner(g);
+      // las cazas salen de los puntos: así también cuadran en la pantalla del
+      // invitado, al que solo le llega el marcador del cazador
+      var cazas = Math.round((g.vsScore || 0) / CFG.VS.CATCH_POINTS);
+      return [
+        { text: gana === 'ghost' ? ('¡GANA ' + cazador + '!') : '¡GANAN LOS PAC-MAN!',
+          big: true },
+        'PAC-MAN ' + (g.score || 0) + '  ·  ' + cazador + ' ' + (g.vsScore || 0),
+        cazas === 1 ? '1 PAC-MAN CAZADO' : (cazas + ' PAC-MAN CAZADOS'),
+        'NIVEL ' + g.level + ' · PAC-MAN VS. NO CUENTA PARA EL TOP MUNDIAL'
+      ];
+    },
+
+    /* Panel de siempre: puntuación, récord y por qué no entra en el top */
+    classicOverLines: function () {
       var g = window.PM.Game;
       var duo = (g.playerCount === 2);
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
@@ -3310,8 +3427,17 @@
           lines.push('ESE NOMBRE NO ENTRA EN EL TOP MUNDIAL: ELIGE OTRO');
         }
       }
+      return lines;
+    },
+
+    showGameOverPrompt: function () {
+      var self = this;
+      var g = window.PM.Game;
+      var duo = (g.playerCount === 2);
+      var versus = !!(g.isVersus && g.isVersus() && window.PM.Versus);
+      var lines = versus ? this.versusLines() : this.classicOverLines();
       this.showPrompt({
-        title: 'GAME OVER',
+        title: versus ? 'FIN DE LA RONDA' : 'GAME OVER',
         color: '#ff0000',
         solid: true,
         lines: lines,

@@ -235,6 +235,25 @@
     [12, 11], [15, 11], [12, 23], [15, 23]    // cruces arcade equivalentes
   ];
 
+  /* ---------- PAC-MAN VS.: un jugador lleva un fantasma ----------
+   * El fantasma humano obedece a las teclas y no a la IA, pero juega con las
+   * mismas reglas que la máquina (paredes, zonas sin subir, velocidades,
+   * túnel y modo asustado). Los detalles están en js/versus.js. */
+  CFG.VS = {
+    NAMES: ['BLINKY', 'PINKY', 'INKY', 'CLYDE'],
+    CATCH_POINTS: 1000,   // lo que se lleva el fantasma por cazar un Pac-Man
+    DIR_EVERY: 5,         // ticks entre reenvíos del rumbo (12 Hz, como el resto)
+    /* Separación con el anfitrión que obliga a recolocar el fantasma en la
+     * pantalla de quien lo lleva. Menos de una casilla a propósito: cuanto
+     * antes se corrige, más pequeña es la corrección. Con el umbral alto la
+     * desviación crece hasta que los dos van por pasillos distintos y
+     * entonces el salto es de dos o tres casillas (medido con dos partidas
+     * simuladas y 100 ms de retardo: a 6 px salen 4 correcciones por minuto
+     * de persecución continua, la mayor de 10 px; a 14 px salen las mismas,
+     * pero de 19 px). */
+    RESYNC_PX: 6
+  };
+
   /* ---------- Fantasmas: identidad y esquinas ---------- */
   CFG.GHOSTS = [
     { name: 'blinky', color: '#ff0000', scatter: { x: 25, y: -3 } },
@@ -520,6 +539,7 @@
     skin2: 'clasico',             // skin del jugador 2
     avatar: 'pac',                // avatar del perfil
     livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
+    vsGhost2: -1,                 // PAC-MAN VS. en local: fantasma del J2 (-1 = Pac-Man)
     ghostSpeedMult: 1.0,          // 0.5–1.2, paso .05
     pacSpeedMult: 1.0,            // 0.8–1.3, paso .05
     frightMult: 1.0,              // 0–2, paso .25
@@ -565,7 +585,7 @@
 
   /* ---------- Red (modo online) ---------- */
   CFG.NET = {
-    PROTO: 4,               // versión del protocolo (debe coincidir en ambos)
+    PROTO: 5,               // versión del protocolo (debe coincidir en ambos)
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
