@@ -1380,3 +1380,50 @@ input[type="range"] {
 
 .btn:hover .btn-key,
 .btn:focus-visible .btn-key { color: inherit; }
+
+/* ---------- Laberintos alternativos (modo aparte) ---------- */
+.maze-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(94%, 520px);
+  margin-top: 10px;
+}
+
+/* Ficha de un laberinto: el dibujo de sus muros, lo que es y JUGAR. La
+ * miniatura la pinta el mismo código que la partida, así que enseña
+ * exactamente el laberinto en el que se va a jugar. */
+.maze-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid #333;
+}
+
+.maze-row canvas {
+  flex: 0 0 auto;
+  width: 56px;
+  height: auto;
+  image-rendering: pixelated;
+  border: 1px solid #2121ff;
+}
+
+.maze-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.maze-name {
+  color: #ffff00;
+  letter-spacing: 2px;
+}
+
+.maze-info small {
+  display: block;
+  color: #777;
+  font-size: clamp(7px, 1.2vh, 9px);
+  letter-spacing: 1px;
+  margin-top: 3px;
+}

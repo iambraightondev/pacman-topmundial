@@ -196,7 +196,7 @@ var doc = {
 doc.body = new El('body');
 doc.documentElement = new El('html');
 ['stage', 'game', 'menu', 'options', 'online', 'badges', 'ranking',
- 'friends', 'profile', 'prompt'].forEach(function (id) {
+ 'mazes', 'friends', 'profile', 'prompt'].forEach(function (id) {
   var el = new El(id === 'game' ? 'canvas' : 'div');
   el.id = id;
   porId[id] = el;

@@ -87,6 +87,169 @@
   });
 
   // ---------------------------------------------------------------
+  // Laberintos alternativos (modo aparte)
+  // ---------------------------------------------------------------
+  /* ¿Se puede llegar a esta casilla desde donde sale Pac-Man? El túnel da
+   * la vuelta, así que las columnas se envuelven. */
+  function abiertoEn(rows, c, r) {
+    if (r < 0 || r >= CFG.ROWS) return false;
+    c = CFG.wrapCol(c);
+    var ch = rows[r].charAt(c);
+    return ch !== '#' && ch !== '-';
+  }
+
+  function alcanzables(rows) {
+    var vistos = {}, cola = [[13, 23]];
+    vistos['13,23'] = 1;
+    var pasos = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    while (cola.length) {
+      var p = cola.pop();
+      for (var i = 0; i < 4; i++) {
+        var c = CFG.wrapCol(p[0] + pasos[i][0]), r = p[1] + pasos[i][1];
+        if (!abiertoEn(rows, c, r)) continue;
+        var k = c + ',' + r;
+        if (vistos[k]) continue;
+        vistos[k] = 1;
+        cola.push([c, r]);
+      }
+    }
+    return vistos;
+  }
+
+  test('en los laberintos alternativos se llega a todas las pastillas',
+    function () {
+      var M = window.PM.Mazes;
+      ok(M && M.LIST.length >= 2, 'hay laberintos que probar');
+      M.LIST.forEach(function (m) {
+        var rows = m.rows;
+        eq(rows.length, CFG.ROWS, m.name + ': número de filas');
+        var vistos = alcanzables(rows), n = 0, sueltas = 0;
+        for (var r = 0; r < CFG.ROWS; r++) {
+          eq(rows[r].length, CFG.COLS, m.name + ': ancho de la fila ' + r);
+          for (var c = 0; c < CFG.COLS; c++) {
+            var ch = rows[r].charAt(c);
+            if (ch !== '.' && ch !== 'o') continue;
+            n++;
+            if (!vistos[c + ',' + r]) sueltas++;
+          }
+        }
+        eq(sueltas, 0, m.name + ': pastillas a las que no se llega');
+        eq(n, m.pellets, m.name + ': las pastillas que declara');
+      });
+    });
+
+  test('los laberintos alternativos no tienen callejones', function () {
+    /* Un callejón sin salida rompe la persecución: el fantasma entra, se
+     * da la vuelta (que no puede) y se queda encerrado. La casa de
+     * fantasmas es la única excepción, que para eso tiene puerta. */
+    window.PM.Mazes.LIST.forEach(function (m) {
+      var rows = m.rows;
+      for (var r = 0; r < CFG.ROWS; r++) {
+        for (var c = 0; c < CFG.COLS; c++) {
+          if (!abiertoEn(rows, c, r)) continue;
+          if (c >= 10 && c <= 17 && r >= 12 && r <= 16) continue;   // la casa
+          var salidas = 0;
+          if (abiertoEn(rows, c, r - 1)) salidas++;
+          if (abiertoEn(rows, c, r + 1)) salidas++;
+          if (abiertoEn(rows, c - 1, r)) salidas++;
+          if (abiertoEn(rows, c + 1, r)) salidas++;
+          ok(salidas >= 2,
+             m.name + ': callejón en (' + c + ',' + r + '), salidas ' + salidas);
+        }
+      }
+    });
+  });
+
+  test('los laberintos alternativos respetan casa, túnel y salidas',
+    function () {
+      window.PM.Mazes.LIST.forEach(function (m) {
+        var rows = m.rows, r, c;
+        // el corazón del motor (casa, puerta, túnel y zonas sin subir)
+        for (r = 9; r <= 19; r++) {
+          eq(rows[r], CFG.MAZE_CLASSIC[r], m.name + ': fila ' + r + ' del núcleo');
+        }
+        // simetría izquierda-derecha, que es lo que le da el aire arcade
+        for (r = 0; r < CFG.ROWS; r++) {
+          for (c = 0; c < 14; c++) {
+            eq(rows[r].charAt(c), rows[r].charAt(CFG.COLS - 1 - c),
+               m.name + ': asimetría en la fila ' + r);
+          }
+        }
+        // borde cerrado salvo el túnel, y salidas despejadas
+        for (r = 0; r < CFG.ROWS; r++) {
+          if (r === CFG.TUNNEL_ROW) continue;
+          eq(rows[r].charAt(0), '#', m.name + ': borde izquierdo, fila ' + r);
+          eq(rows[r].charAt(CFG.COLS - 1), '#', m.name + ': borde derecho, fila ' + r);
+        }
+        [[13, 23], [14, 23], [13, 11], [14, 11], [13, 17], [14, 17]]
+          .forEach(function (p) {
+            ok(rows[p[1]].charAt(p[0]) !== '#',
+               m.name + ': salida tapada en (' + p[0] + ',' + p[1] + ')');
+          });
+        // cuatro energizantes, uno por esquina
+        var ener = [];
+        for (r = 0; r < CFG.ROWS; r++) {
+          for (c = 0; c < CFG.COLS; c++) {
+            if (rows[r].charAt(c) === 'o') ener.push([c, r]);
+          }
+        }
+        eq(ener.length, 4, m.name + ': energizantes');
+        ener.forEach(function (e) {
+          ok((e[0] <= 6 || e[0] >= 21) && (e[1] <= 8 || e[1] >= 20),
+             m.name + ': energizante fuera de las esquinas ' + e);
+        });
+      });
+    });
+
+  test('el laberinto de 1980 vuelve solo al salir del modo', function () {
+    var M = window.PM.Mazes;
+    var id = M.LIST[0].id;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, maze: id });
+      ok(CFG.MAZE[1] !== CFG.MAZE_CLASSIC[1], 'en partida manda el alternativo');
+      eq(CFG.PELLET_TOTAL, M.LIST[0].pellets, 'con sus pastillas');
+      eq(G.dotsLeft, M.LIST[0].pellets, 'y repartidas en el laberinto');
+      // y se juega de verdad: unos segundos de partida sin petar
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      G.pacs[0].safeTicks = 999999;
+      ticks(240);
+      ok(G.dotsLeft < M.LIST[0].pellets, 'Pac-Man se abre camino comiendo');
+      G.toMenu();
+      eq(CFG.MAZE.join('|'), CFG.MAZE_CLASSIC.join('|'), 'y al salir, el clásico');
+      eq(CFG.PELLET_TOTAL, 244);
+    } finally {
+      G.toMenu();
+    }
+  });
+
+  test('una partida en otro laberinto no entra en el top mundial', function () {
+    var R = window.PM.Ranking;
+    var orig = R.submit, n = 0;
+    var n1 = window.PM.settings.nick1;
+    R.submit = function () { n++; };
+    window.PM.settings.nick1 = 'ALGUIEN';
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, maze: window.PM.Mazes.LIST[0].id });
+      G.score = 5000; G.rankingSent = false;
+      G.submitRanking();
+      eq(n, 0, 'en otro laberinto no se compara nada');
+      ok(!G.canTimeRecord(), 'ni cuenta el tiempo del nivel 1');
+      G.toMenu();
+      G.newGame({ players: 1 });
+      G.score = 5000; G.rankingSent = false;
+      G.submitRanking();
+      eq(n, 1, 'en el clásico sí');
+    } finally {
+      R.submit = orig;
+      window.PM.settings.nick1 = n1;
+      G.toMenu();
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Fidelidad arcade: sin esto los patrones memorizados no valen
   // ---------------------------------------------------------------
   /* Velocidad real de Pac-Man cruzando un pasillo con puntos. En el arcade

@@ -567,6 +567,8 @@
       this.state = 'MENU';
       this.paused = false;
       this.stopAllLoops();
+      this.mazeId = null;
+      this.applyMaze(null);     // el clásico vuelve antes de repartir puntos
       this.loadPellets();
       if (window.PM.UI) window.PM.UI.showMenu();
     },
@@ -1573,6 +1575,7 @@
      * acelerado la marca no sería comparable con la de nadie. */
     canTimeRecord: function () {
       if (this.playerCount !== 1 || this.netRole) return false;
+      if (this.mazeId) return false;      // otro laberinto, otro tiempo
       var r = CFG.TIME_RULES;
       return this.startLevel === r.startLevel &&
         this.pacSpeedMult === r.pacSpeedMult &&
@@ -1635,6 +1638,8 @@
         });
       }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
+      // el top mundial es del laberinto de 1980: en otro no se compara nada
+      if (this.mazeId) return;
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       // el top mundial tiene clasificación individual y de dúo; los grupos de

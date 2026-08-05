@@ -130,6 +130,7 @@
       this.els.online = document.getElementById('online');
       this.els.badges = document.getElementById('badges');
       this.els.ranking = document.getElementById('ranking');
+      this.els.mazes = document.getElementById('mazes');
       this.els.friends = document.getElementById('friends');
       this.els.profile = document.getElementById('profile');
       this.els.mate = document.getElementById('mate');
@@ -141,6 +142,7 @@
       this.buildOnline();
       this.buildBadges();
       this.buildRanking();
+      this.buildMazes();
       this.buildFriends();
       this.buildProfile();
       this.buildMate();
@@ -306,6 +308,10 @@
       extras.appendChild(this.makeButton('PERFIL', function () {
         self.resumeAudio();
         self.showProfile();
+      }));
+      extras.appendChild(this.makeButton('LABERINTOS', function () {
+        self.resumeAudio();
+        self.showMazes();
       }));
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
@@ -2776,6 +2782,98 @@
     },
 
     /* ------------------------------------------------------
+     * Laberintos alternativos (modo aparte)
+     * ------------------------------------------------------ */
+    buildMazes: function () {
+      var self = this;
+      var o = this.els.mazes;
+      if (!o) return;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'LABERINTOS';
+      o.appendChild(h);
+
+      var nota = document.createElement('div');
+      nota.className = 'note';
+      nota.textContent = 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ES UN MODO ' +
+        'APARTE: EL LABERINTO DE 1980 NO SE TOCA, ASÍ QUE ESTAS PARTIDAS NO ' +
+        'ENTRAN EN EL TOP MUNDIAL — PERO SÍ SUMAN EXPERIENCIA.';
+      o.appendChild(nota);
+
+      var lista = document.createElement('div');
+      lista.className = 'maze-list';
+      var M = window.PM.Mazes;
+      (M ? M.LIST : []).forEach(function (m) {
+        lista.appendChild(self.mazeRow(m));
+      });
+      o.appendChild(lista);
+
+      var row = document.createElement('div');
+      row.className = 'preset-row';
+      row.style.marginTop = '12px';
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-preset');
+      row.appendChild(back);
+      o.appendChild(row);
+    },
+
+    /* Una ficha: el dibujo del laberinto, su nombre y el botón de jugar */
+    mazeRow: function (m) {
+      var self = this;
+      var fila = document.createElement('div');
+      fila.className = 'maze-row';
+
+      var mini = this.mazeThumb(m);
+      if (mini) fila.appendChild(mini);
+
+      var info = document.createElement('div');
+      info.className = 'maze-info';
+      var nm = document.createElement('div');
+      nm.className = 'maze-name';
+      nm.textContent = m.name;
+      info.appendChild(nm);
+      var ds = document.createElement('small');
+      ds.textContent = m.desc + ' · ' + m.pellets + ' PASTILLAS';
+      info.appendChild(ds);
+      fila.appendChild(info);
+
+      var b = this.makeButton('JUGAR', function () {
+        self.resumeAudio();
+        self.hideAll();
+        window.PM.Game.newGame({ players: 1, maze: m.id });
+      });
+      b.classList.add('btn-preset');
+      fila.appendChild(b);
+      return fila;
+    },
+
+    /* Miniatura de los muros. Se dibuja con el mismo código que la partida
+     * (Game.buildMazeCanvas) cambiando CFG.MAZE un momento y devolviéndolo:
+     * así el dibujo del panel no puede desviarse del de verdad. */
+    mazeThumb: function (m) {
+      var G = window.PM.Game;
+      if (!G || !G.buildMazeCanvas) return null;
+      var cv = document.createElement('canvas');
+      cv.width = 112;
+      cv.height = Math.round(CFG.ROWS * CFG.TILE / 2);
+      var c = cv.getContext('2d');
+      if (!c) return null;
+      c.imageSmoothingEnabled = false;
+      var antes = CFG.MAZE;
+      CFG.setMaze(m.rows);
+      var full = G.buildMazeCanvas(CFG.COLORS.wall);
+      CFG.setMaze(antes);
+      c.drawImage(full, 0, 0, cv.width, cv.height);
+      return cv;
+    },
+
+    showMazes: function () {
+      this.showPanel('mazes');
+    },
+
+    /* ------------------------------------------------------
      * Controles en pantalla: barra de botones y cruceta(s)
      * ------------------------------------------------------ */
     /* Barra superior de la partida: RENDIRSE (siempre) y pausa (táctil) */
@@ -3085,7 +3183,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'friends', 'profile', 'mate'];
+                   'mazes', 'friends', 'profile', 'mate'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -3518,7 +3616,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'friends', 'profile', 'mate'];
+                    'mazes', 'friends', 'profile', 'mate'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
