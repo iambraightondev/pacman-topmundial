@@ -654,6 +654,13 @@ the block re-centres and the title and tabs jump every time the pane below
 changes height) and align to the top instead. The `.tab-row` is `sticky` so
 it also stays visible while scrolling a long pane.
 
+**Scrollbars** are styled to match the cabinet (square blue thumb on a black
+track, yellow while dragged, no arrow buttons) with `::-webkit-scrollbar-*`.
+The standard `scrollbar-width`/`scrollbar-color` pair lives inside
+`@supports not selector(::-webkit-scrollbar)` — Chrome ignores every
+`::-webkit-scrollbar-*` rule as soon as it sees those two properties and
+falls back to its own rounded bar, so they must only reach Firefox.
+
 ## Surrender & rematch (both players must accept)
 
 - **Surrender**: `RENDIRSE` button in the in-game top-right bar (all devices;

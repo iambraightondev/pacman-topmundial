@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · La barra de desplazamiento, del mismo mundo que el juego
+
+- Cuando un panel no cabe en la pantalla hay que desplazarlo, y ahí salía la
+  **barra gris del sistema**, con sus flechitas y sus bordes redondeados, en
+  medio del marco del juego. Ahora es **cuadrada, negra y azul** como las
+  paredes del laberinto, y se pone amarilla al agarrarla.
+
 ## 2026-08-05 · Ver la partida de un amigo (juegue como juegue) y su perfil
 
 - **Ya se puede ver la partida de un amigo aunque juegue en local**, solo o

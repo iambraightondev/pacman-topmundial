@@ -69,6 +69,44 @@ body {
   flex-shrink: 0;
 }
 
+/* ---------- Barra de desplazamiento ----------
+ * Los paneles largos (OPCIONES, LOGROS, la lista de amigos...) se desplazan
+ * cuando no caben en la pantalla, y ahí salía la barra gris del sistema, que
+ * en medio del marco del juego cantaba muchísimo. Esta es del mismo mundo:
+ * cuadrada, negra con el carril azul del laberinto y amarilla al agarrarla.
+ * Va en `*` a propósito, para que valga en cualquier caja que se desplace
+ * (paneles, resumen del final, listas) sin tener que acordarse de ponerla. */
+/* Firefox y compañía, que no entienden los ::-webkit-scrollbar. En Chrome NO
+ * se pone: si ve scrollbar-width/scrollbar-color pasa de las reglas de abajo
+ * y pinta su barra estándar (redondeada y con flechitas), justo lo que se
+ * quiere evitar. Por eso va dentro de un @supports que Chrome no cumple. */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2121ff #000;
+  }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+
+/* sin las flechitas de los extremos: son las que delatan la barra del sistema */
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+::-webkit-scrollbar-track {
+  background: #000;
+  border-left: 1px solid #2121ff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2121ff;
+  border: 2px solid #000;                   /* separa el pulgar del carril */
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active { background: #ffff00; }
+
+::-webkit-scrollbar-corner { background: #000; }
+
 /* En pantallas pequeñas los paneles ocupan todo el móvil, no solo el canvas */
 @media (max-width: 600px) {
   .overlay {
