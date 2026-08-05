@@ -302,6 +302,32 @@ body {
     max-width: none;
   }
 
+  /* MAESTRÍAS es la excepción: su lista NO se parte en dos columnas, porque
+   * al lado va el escenario con la elegida en grande. Con .badge-split
+   * delante gana a la regla de arriba sin depender del orden del archivo. */
+  .overlay .badge-split {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(16px, 2vw, 34px);
+    width: min(94vw, 1040px);
+  }
+
+  .overlay .badge-split .badge-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 380px;
+    width: auto;
+    max-width: 480px;
+    margin-top: 10px;
+  }
+
+  .overlay .badge-split .badge-stage {
+    order: 0;                     /* aquí sí va a la derecha, la lista manda */
+    flex: 0 1 470px;
+    width: auto;
+  }
+
   /* el top mundial se lee como una tabla: una sola columna, pero ancha */
   .overlay .rank-list { width: min(94vw, 780px); }
 
@@ -476,6 +502,7 @@ body {
 
 /* ---------- Foco de teclado (navegación con flechas) ---------- */
 .btn:focus,
+.badge-row:focus,
 .swatch:focus,
 .skin:focus,
 .color-input:focus,
@@ -958,6 +985,28 @@ input[type="range"] {
 .badge-row.got { border-color: #2121ff; background: rgba(33, 33, 255, 0.08); }
 .badge-medal { image-rendering: pixelated; flex-shrink: 0; }
 
+/* La fila de MAESTRÍAS es un <button>: se pulsa y se ve en el escenario, sin
+ * botón VER aparte. Hay que deshacer lo que el navegador le pone de serie
+ * (su tipo de letra, su fondo gris, su ancho al contenido). Las filas de
+ * LOGROS son <div> y siguen igual: por eso esto va en .badge-pick. */
+.badge-row.badge-pick {
+  font: inherit;
+  color: inherit;
+  background: #000;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.badge-row.badge-pick.got { background: rgba(33, 33, 255, 0.08); }
+.badge-row.badge-pick:hover { border-color: #2121ff; background: #111; }
+
+/* la elegida: amarilla, como todo lo que está señalado en el juego */
+.badge-row.badge-pick.sel {
+  border-color: #ffff00;
+  background: rgba(255, 255, 0, 0.08);
+}
+
 /* ---------- Perfil ---------- */
 .perfil-cab {
   display: flex;
@@ -998,13 +1047,57 @@ input[type="range"] {
 .skin.locked { opacity: 0.45; border-style: dashed; }
 .skin.locked span { color: #888; }
 
-/* lienzo donde se ve la animación del cartel al pulsar VER */
+/* La lista y el escenario. En estrecho, uno encima de otro (el escenario
+ * arriba, que es lo que se mira); en ancho, lista a la izquierda y la
+ * elegida en grande a la derecha. */
+.badge-split {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.badge-stage {
+  order: -1;                      /* en estrecho, por encima de la lista */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: min(94%, 420px);
+  margin-top: 10px;
+  border: 2px solid #2121ff;
+  background: #000;
+  padding: 10px 12px 12px;
+}
+
+/* lienzo donde la chapa se celebra igual que en partida */
 .badge-demo {
   display: block;
-  margin: 6px auto 0;
+  margin: 0 auto;
   image-rendering: pixelated;
-  max-width: 96%;
+  max-width: 100%;
 }
+
+.badge-stage-name {
+  font-size: clamp(16px, 3vh, 26px);
+  font-weight: bold;
+  letter-spacing: 4px;
+}
+
+.badge-stage-state {
+  font-size: clamp(9px, 1.6vh, 12px);
+  letter-spacing: 2px;
+  color: #7ec8ff;
+}
+
+.badge-stage-hint {
+  font-size: clamp(8px, 1.4vh, 10px);
+  letter-spacing: 1px;
+  color: #666;
+  margin-top: 2px;
+}
+
 .badge-text { flex: 1; min-width: 0; }
 
 .badge-name {

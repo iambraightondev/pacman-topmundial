@@ -199,8 +199,9 @@ Dos maneras de correr la misma batería:
   caen las lágrimas, el enfadado echa humo, el guiño abre el ojo con un
   chispazo, los corazones laten... Y **chat** (`T`) en el modo online.
 - **Maestrías**: seis insignias por récord personal, en **dos rutas
-  separadas** —en solo y en dúo—, con su propio panel en el menú (cada fila
-  tiene `VER` para volver a ver el cartel). En partida, **cada vez que cruzas
+  separadas** —en solo y en dúo—, con su propio panel en el menú: la lista a
+  la izquierda y, a la derecha, **la elegida en grande**. Se pulsa la que
+  quieras y se ve; al entrar sale sola la que tienes. En partida, **cada vez que cruzas
   un escalón** sale el cartel animado, lo tuvieras ya o no. Con
   **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del modo que estés
   jugando sobre tu Pac-Man —con la medalla subiendo y la chapa

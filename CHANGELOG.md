@@ -2,6 +2,23 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · MAESTRÍAS: la lista a un lado y la elegida en grande al otro
+
+- **Vuelve la lista de toda la vida**, ahora a la izquierda, y a la derecha se
+  ve **en grande la maestría elegida**: la chapa se celebra igual que en
+  partida y, al acabar, la medalla se queda puesta con su nombre y su estado
+  debajo (TU MAESTRÍA, CONSEGUIDA o lo que falta para conseguirla).
+- **Fuera el botón VER**: la fila entera es el botón, se pulsa la maestría y
+  ya se ve. Al ser un botón de verdad, las flechas del teclado la alcanzan
+  sola y se marca en amarillo la que está puesta.
+- **Al entrar, la tuya**: sale de entrada la más alta que tengas en esa ruta
+  (o la primera por conseguir si aún no hay ninguna) y se celebra sola.
+- De paso se va **el hueco vertical** que quedaba entre las pestañas y la
+  lista: el lienzo reservaba su sitio siempre y ahora vive en su ficha, al
+  lado. El lienzo se pinta a **triple escala** y sin la franja negra de arriba
+  que no usaba nadie. En pantalla estrecha, la elegida va arriba y la lista
+  debajo.
+
 ## 2026-08-05 · Amigos como fichas, tu skin al perfil y OPCIONES con pestañas
 
 - **La lista de amigos ya no es una barra de herramientas**: cada uno es una

@@ -1307,17 +1307,46 @@
       this.badgesSub.className = 'note';
       o.appendChild(this.badgesSub);
 
-      /* lienzo para ver la chapa sin tener que jugar: es la misma animación
-       * de la partida (Ctrl+Espacio), con tu propio Pac-Man debajo */
-      this.badgeDemo = document.createElement('canvas');
-      this.badgeDemo.width = 260;      // 130 x 64 a doble escala
-      this.badgeDemo.height = 128;
-      this.badgeDemo.className = 'badge-demo';
-      o.appendChild(this.badgeDemo);
+      /* Lista a la izquierda, la elegida en grande a la derecha (en estrecho,
+       * el escenario va arriba y la lista debajo). No hay botón VER: se pulsa
+       * la maestría y ya se ve. */
+      var split = document.createElement('div');
+      split.className = 'badge-split';
+      o.appendChild(split);
 
       this.badgesList = document.createElement('div');
       this.badgesList.className = 'badge-list';
-      o.appendChild(this.badgesList);
+      split.appendChild(this.badgesList);
+
+      var stage = document.createElement('div');
+      stage.className = 'badge-stage';
+      split.appendChild(stage);
+
+      /* lienzo para ver la chapa sin tener que jugar: es la misma animación
+       * de la partida (Ctrl+Espacio), con tu propio Pac-Man debajo */
+      /* 130 x 50 lógicos a triple escala. El alto no es el de la partida: la
+       * chapa y el jugador viven entre y=30 e y=58, así que se recorta lo de
+       * arriba (badgeTop) en vez de dejar una franja negra muerta. */
+      this.badgeScale = 3;
+      this.badgeTop = 16;
+      this.badgeDemo = document.createElement('canvas');
+      this.badgeDemo.width = 130 * this.badgeScale;
+      this.badgeDemo.height = 50 * this.badgeScale;
+      this.badgeDemo.className = 'badge-demo';
+      stage.appendChild(this.badgeDemo);
+
+      this.badgeStageName = document.createElement('div');
+      this.badgeStageName.className = 'badge-stage-name';
+      stage.appendChild(this.badgeStageName);
+
+      this.badgeStageState = document.createElement('div');
+      this.badgeStageState.className = 'badge-stage-state';
+      stage.appendChild(this.badgeStageState);
+
+      var hint = document.createElement('div');
+      hint.className = 'badge-stage-hint';
+      hint.textContent = 'PULSA UNA MAESTRÍA DE LA LISTA PARA VERLA';
+      stage.appendChild(hint);
 
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.classList.add('btn-primary');
@@ -1325,10 +1354,12 @@
       o.appendChild(back);
 
       this.badgeTab = 'solo';
+      this.badgePick = null;
     },
 
     showBadgeTab: function (mode) {
       this.badgeTab = (mode === 'duo') ? 'duo' : 'solo';
+      this.badgePick = null;      // cada ruta empieza por la suya
       this.refreshBadges();
     },
 
@@ -1346,13 +1377,16 @@
       this.badgesSub.textContent = label + best +
         (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + next.points)
               : '  ·  ¡TODAS CONSEGUIDAS!');
-      this.badgeIdle();
       this.badgesList.innerHTML = '';
+      this.badgeRows = {};
       var self = this;
       CFG.BADGES.forEach(function (b) {
         var got = best >= b.points;
-        var row = document.createElement('div');
-        row.className = 'badge-row' + (got ? ' got' : '');
+        /* la fila ES el botón: pulsarla la enseña en el escenario. Siendo
+         * <button> entra sola en la navegación con flechas. */
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'badge-row badge-pick' + (got ? ' got' : '');
 
         var cv = document.createElement('canvas');
         cv.width = 34; cv.height = 34;
@@ -1377,37 +1411,89 @@
         txt.appendChild(st);
         row.appendChild(txt);
 
-        // ver cómo se celebra, sin esperar a conseguirla en partida
-        var ver = self.makeButton('VER', function () {
-          self.playBadgeDemo(b);
-        });
-        ver.classList.add('btn-preset');
-        row.appendChild(ver);
+        // pulsarla es verla: se celebra igual que en partida, sin esperar a
+        // conseguirla
+        row.addEventListener('click', function () { self.pickBadge(b.id, true); });
 
+        self.badgeRows[b.id] = row;
         self.badgesList.appendChild(row);
       });
+
+      /* De entrada, la que tienes: la más alta conseguida en esta ruta. Si
+       * aún no hay ninguna, la primera por conseguir. Al abrir el panel se
+       * celebra sola; al cambiar de pestaña, quieta (no se ha pulsado nada). */
+      var top = B ? B.top(mode) : null;
+      var pick = (this.badgePick && this.badgeRows[this.badgePick])
+        ? this.badgePick
+        : (top ? top.id : CFG.BADGES[0].id);
+      this.pickBadge(pick, false);
     },
 
-    /* Tu Pac-Man quieto en el lienzo: así el hueco de la chapa no se ve
-     * vacío mientras no se pulsa VER */
-    badgeIdle: function () {
+    /* Elige una maestría: la marca en la lista y la enseña en el escenario.
+     * play=true reproduce la chapa; si no, se queda quieta con su medalla. */
+    pickBadge: function (id, play) {
+      var B = window.PM.Badges;
+      var mode = this.badgeTab || 'solo';
+      var badge = null;
+      for (var i = 0; i < CFG.BADGES.length; i++) {
+        if (CFG.BADGES[i].id === id) badge = CFG.BADGES[i];
+      }
+      if (!badge || !this.badgeStageName) return;
+      this.badgePick = badge.id;
+
+      var best = B ? B.best(mode) : 0;
+      var top = B ? B.top(mode) : null;
+      var got = best >= badge.points;
+
+      for (var k in this.badgeRows) {
+        if (this.badgeRows.hasOwnProperty(k)) {
+          var sel = (k === badge.id);
+          this.badgeRows[k].classList.toggle('sel', sel);
+          this.badgeRows[k].setAttribute('aria-pressed', sel ? 'true' : 'false');
+        }
+      }
+
+      this.badgeStageName.textContent = badge.name;
+      this.badgeStageName.style.color = got ? badge.color : '#666';
+      this.badgeStageState.textContent = got
+        ? (((top && top.id === badge.id) ? 'TU MAESTRÍA · ' : 'CONSEGUIDA · ') +
+           badge.points + ' PUNTOS')
+        : ('TE FALTAN ' + (badge.points - best) + ' PUNTOS PARA CONSEGUIRLA');
+
+      if (play) this.playBadgeDemo(badge, got);
+      else this.badgeRest(badge, got);
+    },
+
+    /* Reposo del escenario: tu Pac-Man con la medalla de la elegida flotando
+     * encima (apagada si aún no es tuya). Así el lado derecho siempre enseña
+     * algo, en vez de un hueco vacío hasta que se pulsa. */
+    badgeRest: function (badge, got) {
+      if (!this.badgeDemo) return;
+      this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;   // corta la demo en curso
+      this.drawBadgeRest(badge, got);
+    },
+
+    drawBadgeRest: function (badge, got) {
       var cv = this.badgeDemo;
       if (!cv) return;
-      this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;   // corta la demo en curso
       var ctx = cv.getContext('2d');
+      var k = this.badgeScale || 2;
       var s = window.PM.settings || {};
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.setTransform(2, 0, 0, 2, 0, 0);
+      ctx.setTransform(k, 0, 0, k, 0, -(this.badgeTop || 0) * k);
       window.PM.Sprites.drawPacman(ctx, 65, 52, CFG.DIR.RIGHT, 2,
         s.pacColor || CFG.PLAYER_COLORS[0], s.skin1 || 'clasico');
+      if (badge) {
+        window.PM.Sprites.drawBadge(ctx, 65, 32, 9, badge.color, !got);
+      }
     },
 
     /* Reproduce dentro del panel la MISMA chapa de la partida: la medalla
      * sube girando desde tu Pac-Man, la chapa se despliega con un chispazo
      * y al final se encoge de vuelta. Antes aquí salía el cartel grande, que
      * no es lo que se ve jugando. */
-    playBadgeDemo: function (badge) {
+    playBadgeDemo: function (badge, got) {
       var self = this;
       var cv = this.badgeDemo;
       if (!cv) return;
@@ -1417,6 +1503,8 @@
       var s = window.PM.settings || {};
       var color = s.pacColor || CFG.PLAYER_COLORS[0];
       var skin = s.skin1 || 'clasico';
+      var k = this.badgeScale || 2;
+      var ty = -(this.badgeTop || 0) * k;
       var PX = 65, PY = 52;                 // el jugador, en coordenadas lógicas
       this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;
       var run = this.badgeDemoRun;
@@ -1426,7 +1514,7 @@
       function fondo() {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, cv.width, cv.height);
-        ctx.setTransform(2, 0, 0, 2, 0, 0);    // doble escala, como el juego
+        ctx.setTransform(k, 0, 0, k, 0, ty);  // escalado, como el juego
       }
 
       function frame(now) {
@@ -1441,7 +1529,9 @@
         fondo();
         S.drawPacman(ctx, PX, PY, CFG.DIR.RIGHT,
           [0, 1, 2, 1][Math.floor(ticks / 4) % 4], color, skin);
-        if (t >= 1) return;                        // se queda tu Pac-Man solo
+        // al acabar, la medalla se queda puesta: el escenario enseña siempre
+        // cuál está elegida
+        if (t >= 1) { self.drawBadgeRest(badge, got); return; }
         S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks);
         requestAnimationFrame(frame);
       }
@@ -3383,8 +3473,12 @@
       else this.showOnlineIdle();
     },
     showBadges: function () {
+      this.badgePick = null;          // al entrar, siempre la que tienes
       this.refreshBadges();
       this.showPanel('badges');
+      // y si tienes alguna, se celebra sola al abrir el panel
+      var top = window.PM.Badges ? window.PM.Badges.top(this.badgeTab) : null;
+      if (top) this.pickBadge(top.id, true);
     },
     showRanking: function () {
       this.showPanel('ranking');

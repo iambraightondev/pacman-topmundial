@@ -1435,6 +1435,42 @@
     UI.showMenu();
   });
 
+  /* El panel enseñaba una lista con un botón VER por fila y un lienzo suelto
+   * encima. Ahora la fila entera es el botón y la elegida se ve al lado. */
+  test('MAESTRÍAS: se elige pulsando la fila y empieza por la que tienes',
+    function () {
+      var UI = window.PM.UI;
+      var h1 = G.highScore1, h2 = G.highScore2;
+      try {
+        G.highScore1 = 9000;              // APRENDIZ y CAZADOR conseguidas
+        G.highScore2 = 0;                 // en dúo, ninguna todavía
+        UI.showBadges();
+        eq(UI.badgesList.children.length, CFG.BADGES.length, 'están todas');
+        var fila = UI.badgesList.children[0];
+        eq(fila.tagName, 'BUTTON', 'la fila entera es el botón');
+        eq(fila.querySelectorAll('button').length, 0, 'sin botón VER dentro');
+        eq(UI.badgePick, 'cazador', 'de entrada, tu maestría');
+        eq(UI.badgeStageName.textContent, 'CAZADOR', 'y se ve en grande');
+        ok(UI.badgeRows.cazador.classList.contains('sel'), 'marcada en la lista');
+        ok(UI.badgeStageState.textContent.indexOf('TU MAESTRÍA') === 0,
+           'dice que es la tuya');
+
+        UI.badgeRows.leyenda.click();
+        eq(UI.badgePick, 'leyenda', 'pulsar otra fila la enseña');
+        ok(!UI.badgeRows.cazador.classList.contains('sel'), 'solo una elegida');
+        ok(UI.badgeStageState.textContent.indexOf('TE FALTAN') === 0,
+           'y de una que no tienes, lo que falta');
+
+        UI.showBadgeTab('duo');            // sin récord de equipo: ninguna
+        eq(UI.badgePick, 'aprendiz', 'en dúo empieza por la primera');
+      } finally {
+        G.highScore1 = h1;
+        G.highScore2 = h2;
+        UI.showBadgeTab('solo');
+        UI.showMenu();
+      }
+    });
+
   test('de invitado no hay amigos, y el nombre se puede sortear', function () {
     var UI = window.PM.UI;
     var Ac = window.PM.Account;

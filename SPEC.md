@@ -538,10 +538,23 @@ player's life meant anyone holding most tiers never saw it again; the
 lifetime `claim()` now only decides the wording ("¡NUEVA MAESTRÍA DE …!" vs
 "MAESTRÍA DE …!"). The guest also gets it when the snapshot brings the score.
 The MAESTRÍAS panel has an EN SOLO / EN DÚO tab pair, each listing the six
-tiers with that track's record, what is missing for the next one, and a `VER`
-button that plays the banner in the panel (`UI.playBadgeDemo`, which advances
-by a **capped** per-frame delta so a throttled browser slows it down instead
-of skipping it). `Ctrl+Espacio` shows the badge of the **mode being played**.
+tiers with that track's record and what is missing for the next one. Layout is
+**list + stage**: the six tiers on the left (one column, `.badge-split`
+overrides the two-column rule the other `.badge-list`s get at 1000 px), the
+picked one **large** on the right (`.badge-stage`); narrow screens stack them
+with the stage on top (`order: -1`). There is no `VER` button any more — the
+row **is** a `<button>` (`.badge-pick`), so pressing it picks the tier and
+arrow-key navigation reaches it for free. `UI.pickBadge(id, play)` marks the
+row (`.sel`), writes the stage caption (TU MAESTRÍA / CONSEGUIDA / what is
+missing) and either plays the tag (`UI.playBadgeDemo`, which advances by a
+**capped** per-frame delta so a throttled browser slows it down instead of
+skipping it) or leaves it at rest (`UI.drawBadgeRest`: your Pac-Man with the
+medal floating above, dimmed when the tier isn't yours). The demo canvas is
+130 × 50 logical px at **triple** scale, shifted up by `UI.badgeTop` so the
+empty band above the tag isn't drawn. Opening the panel defaults to the tier
+you hold (`Badges.top(mode)`, or the first one if you hold none) and plays it;
+switching tabs re-defaults without playing. `Ctrl+Espacio` shows the badge of
+the **mode being played**.
 
 **Showing off the badge in-game** (`Sprites.drawBadgeTag`, `t` from the
 emote's remaining ticks): it has its own animation, deliberately **not** the
