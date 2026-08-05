@@ -3,18 +3,24 @@
  * Top mundial de partidas de dos jugadores.
  * Define window.PM.Ranking
  *
- * Habla directamente con PostgREST (la API REST de Supabase) con
- * la clave anónima, sin librerías. La tabla y sus permisos están
- * en supabase/ranking.sql: lectura e inserción públicas, nada de
- * borrar ni modificar.
+ * LEER: habla directamente con PostgREST (la API REST de Supabase)
+ * con la clave anónima, sin librerías. La lectura es pública.
  *
- * Ojo: al enviarse desde el navegador, una puntuación se puede
- * falsear. Para el uso de este juego se asume; endurecerlo pide
- * validar la partida en una Edge Function.
+ * ESCRIBIR: ya NO. Las partidas se mandan a la Edge Function
+ * `enviar-record`, que las valida antes de guardarlas y es la
+ * única que puede escribir en la tabla (supabase/ranking-integridad.sql
+ * le quita el insert a la clave anónima). Antes cualquiera podía
+ * abrir la consola del navegador y meterse 999999 puntos.
+ *
+ * Si la función todavía no está desplegada, el envío falla con un
+ * aviso claro y la partida sigue igual: el top mundial es un extra,
+ * no puede tumbar el juego.
  * ============================================================ */
 (function () {
   'use strict';
   var CFG = window.PM.CFG;
+
+  var FUNCION = 'enviar-record';   // Edge Function que valida y guarda
 
   function cfg() { return window.PM.NET_CFG || {}; }
 
@@ -33,6 +39,37 @@
       '/rest/v1/' + (what || CFG.RANKING.TABLE);
   }
 
+  /* Dirección de una Edge Function del mismo proyecto */
+  function fnUrl(nombre) {
+    return String(cfg().SUPABASE_URL || '').replace(/\/+$/, '') +
+      '/functions/v1/' + nombre;
+  }
+
+  /* ---------- Techo de puntos ----------
+   * Lo máximo que se puede sacar de un nivel, con las tablas de js/config.js:
+   *   240 pastillas de 10 + 4 energizantes de 50            = 2600
+   *   4 energizantes x cadena 200+400+800+1600              = 12000
+   *   2 frutas del nivel (CFG.FRUIT_DOTS son dos apariciones)
+   * Un fantasma comido vuelve a casa como ojos, así que dentro del mismo
+   * energizante no se repite: cuatro como mucho.
+   *
+   * Es la MISMA cuenta que hace la Edge Function. Aquí sirve para no gastar
+   * una petición en un envío que se va a rechazar; quien manda es el servidor.
+   * El margen del 10% es para no tirar nunca una partida jugada de verdad. */
+  var PUNTOS_NIVEL = 240 * 10 + 4 * 50 + 4 * (200 + 400 + 800 + 1600);
+  var MARGEN = 1.1;
+
+  function puntosFruta(nivel) {
+    if (nivel === 1) return 100;
+    if (nivel === 2) return 300;
+    if (nivel <= 4) return 500;
+    if (nivel <= 6) return 700;
+    if (nivel <= 8) return 1000;
+    if (nivel <= 10) return 2000;
+    if (nivel <= 12) return 3000;
+    return 5000;
+  }
+
   /* Nombre normalizado para el filtro: sin espacios ni signos, y con las
    * sustituciones típicas (0 por O, 3 por E...) para que no se cuele. */
   function flatten(name) {
@@ -46,6 +83,7 @@
 
   var Ranking = {
     lastError: null,
+    lastSubmitError: null,     // por qué no entró la última partida enviada
 
     /* Centésimas de segundo -> mm:ss.cc */
     fmtTime: function (cs) {
@@ -62,6 +100,39 @@
         if (flat.indexOf(CFG.BAD_WORDS[i]) !== -1) return false;
       }
       return true;
+    },
+
+    /* Techo de puntos de una partida que empezó en el nivel `desde` (1 si no
+     * se dice) y llegó al `nivel`. Por encima de esto, o hay trampa o hay un
+     * error: en ninguno de los dos casos entra en el top mundial. */
+    maxPuntos: function (nivel, desde) {
+      var hasta = Math.max(1, Math.floor(nivel || 1));
+      var ini = Math.max(1, Math.min(hasta, Math.floor(desde || 1)));
+      var total = 0;
+      for (var n = ini; n <= hasta; n++) {
+        total += PUNTOS_NIVEL + 2 * puntosFruta(n);
+      }
+      return Math.floor(total * MARGEN);
+    },
+
+    /* La respuesta de la función, en cristiano y CORTA: esto se enseña en el
+     * panel del juego, que no da para un párrafo. El porqué largo (el campo
+     * `detalle`) va a la consola, que es donde se mira cuando algo no cuadra.
+     *
+     * Si la función todavía no está desplegada, Supabase contesta 404 (o 401
+     * en la puerta de entrada): se dice claro en vez de soltar un número. */
+    submitError: function (status, cuerpo) {
+      var d = null;
+      try { d = JSON.parse(cuerpo || '{}'); } catch (e) { d = null; }
+      var aviso = (window.console && console.warn)
+        ? function (t) { console.warn('TOP MUNDIAL: ' + t); } : function () {};
+      if (status === 404 || status === 401 || status === 403) {
+        aviso('falta desplegar la Edge Function "' + FUNCION +
+          '" (supabase functions deploy ' + FUNCION + ')');
+        return 'NO ESTÁ DISPONIBLE';
+      }
+      if (d && d.detalle) aviso((d.error || status) + ' — ' + d.detalle);
+      return (d && d.error) || ('ERROR ' + status);
     },
 
     configured: function () {
@@ -126,10 +197,15 @@
         });
     },
 
-    /* Envía una partida terminada. Silencioso: si falla, el juego sigue.
-     * o: { jugadores, modo, nombre1, nombre2, puntos, nivel }
-     * Sin nombre no hay récord: se descarta antes de mandar nada. */
+    /* Envía una partida terminada a la Edge Function, que es quien decide si
+     * entra. Silencioso: si falla, el juego sigue.
+     *   o: { jugadores, modo, nombre1, nombre2, puntos, nivel,
+     *        nivelInicio, fantasmas, tiempoMs, ajustes, tiempo1, repeticion }
+     * Lo que se mira aquí (nombre, puntuación, techo del nivel) se vuelve a
+     * mirar en el servidor: esto solo evita gastar una petición en algo que
+     * ya se sabe que no vale. Sin nombre no hay récord. */
     submit: function (o, cb) {
+      var self = this;
       if (!this.configured()) { if (cb) cb('SIN CONFIGURAR'); return; }
       var pts = Math.floor(o.puntos || 0);
       if (!(pts > 0) || pts > CFG.RANKING.MAX_POINTS) {
@@ -147,26 +223,54 @@
         if (cb) cb('NOMBRE NO PERMITIDO');
         return;
       }
+      var nivel = Math.max(1, Math.min(999, Math.floor(o.nivel || 1)));
+      var ini = Math.max(1, Math.min(nivel, Math.floor(o.nivelInicio || 1)));
+      if (pts > this.maxPuntos(nivel, ini)) {
+        if (cb) cb('PUNTUACIÓN IMPOSIBLE');
+        return;
+      }
       var row = {
         jugadores: players,
         modo: (o.modo === 'online') ? 'online' : 'local',
         nombre1: n1,
         nombre2: (players === 2) ? n2 : null,
         puntos: pts,
-        nivel: Math.max(1, Math.min(999, Math.floor(o.nivel || 1)))
+        nivel: nivel,
+        nivelInicio: ini,
+        // con qué se jugó: la función no admite la partida si los ajustes
+        // hacían el juego más fácil de lo normal
+        ajustes: o.ajustes || null,
+        // para comprobar que la puntuación es alcanzable
+        fantasmas: Math.max(0, Math.floor(o.fantasmas || 0)),
+        tiempoMs: Math.max(0, Math.floor(o.tiempoMs || 0))
       };
       // tiempo del primer nivel (centésimas): opcional, solo en individual
       if (o.tiempo1 != null) {
         var cs = Math.floor(o.tiempo1);
         if (players === 1 && cs > 0 && cs <= CFG.RANKING.MAX_TIME) row.tiempo1 = cs;
       }
-      var h = headers();
-      h['Prefer'] = 'return=minimal';
-      fetch(base(), { method: 'POST', headers: h, body: JSON.stringify(row) })
+      // repetición de la partida (formato v1): opcional; si viene y cuadra,
+      // la fila queda marcada como verificada
+      if (o.repeticion) row.repeticion = o.repeticion;
+
+      fetch(fnUrl(FUNCION), {
+        method: 'POST', headers: headers(), body: JSON.stringify(row)
+      })
         .then(function (res) {
-          if (cb) cb(res.ok ? null : 'ERROR ' + res.status);
+          if (res.ok) {
+            self.lastSubmitError = null;
+            if (cb) cb(null);
+            return null;
+          }
+          return res.text().then(function (t) {
+            self.lastSubmitError = self.submitError(res.status, t);
+            if (cb) cb(self.lastSubmitError);
+          });
         })
-        .catch(function (e) { if (cb) cb(e.message || 'SIN CONEXIÓN'); });
+        .catch(function (e) {
+          self.lastSubmitError = e.message || 'SIN CONEXIÓN';
+          if (cb) cb(self.lastSubmitError);
+        });
     }
   };
 

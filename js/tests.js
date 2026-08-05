@@ -399,6 +399,75 @@
     eq(errores.length, 4, 'los cuatro se rechazan antes de salir a la red');
   });
 
+  test('el techo de puntos por nivel deja fuera lo imposible', function () {
+    var R = window.PM.Ranking;
+    // nivel 1: 2600 de pastillas + 12000 de fantasmas + 200 de dos cerezas
+    eq(R.maxPuntos(1), Math.floor(14800 * 1.1));
+    ok(R.maxPuntos(1) < 999999, 'los 999999 de la consola no caben en el nivel 1');
+    ok(R.maxPuntos(5) > R.maxPuntos(4), 'cuanto más lejos se llega, más cabe');
+    // empezar en el nivel 5 (preajuste DIFÍCIL) no regala los cuatro de antes
+    ok(R.maxPuntos(6, 5) < R.maxPuntos(6, 1), 'el nivel de salida cuenta');
+    // una partida de verdad del nivel 1 entra de sobra
+    ok(R.maxPuntos(1) > 12000, 'una gran partida del nivel 1 sigue entrando');
+  });
+
+  test('una puntuación imposible no llega ni a salir a la red', function () {
+    var R = window.PM.Ranking;
+    var err = null;
+    R.submit({ jugadores: 1, nombre1: 'TRAMPOSO', puntos: 999999, nivel: 1,
+               fantasmas: 0, tiempoMs: 60000 }, function (e) { err = e; });
+    eq(err, 'PUNTUACIÓN IMPOSIBLE');
+  });
+
+  test('la partida se manda a la Edge Function, no a la tabla', function () {
+    var R = window.PM.Ranking;
+    var orig = window.fetch, visto = null;
+    window.fetch = function (url, opts) {
+      visto = { url: String(url), body: JSON.parse(opts.body) };
+      return new Promise(function () {});   // se queda colgada: da igual
+    };
+    try {
+      R.submit({ jugadores: 1, modo: 'local', nombre1: 'BRAI', puntos: 5000,
+                 nivel: 2, nivelInicio: 1, fantasmas: 4, tiempoMs: 120000,
+                 ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 } });
+    } finally {
+      window.fetch = orig;
+    }
+    ok(visto, 'se llamó a la red');
+    ok(visto.url.indexOf('/functions/v1/enviar-record') !== -1,
+       'va por la función, no por /rest/v1/ranking: ' + visto.url);
+    eq(visto.body.puntos, 5000);
+    eq(visto.body.fantasmas, 4, 'los fantasmas comidos viajan para comprobar');
+    eq(visto.body.tiempoMs, 120000, 'y el tiempo jugado también');
+    eq(visto.body.ajustes.velPac, 1, 'y con qué ajustes se jugó');
+  });
+
+  test('si falta la función desplegada, se avisa y no se rompe nada', function () {
+    var R = window.PM.Ranking;
+    var warn = console.warn;
+    console.warn = function () {};      // el aviso de consola aquí sobra
+    try {
+      eq(R.submitError(404, ''), 'NO ESTÁ DISPONIBLE');
+      eq(R.submitError(401, ''), 'NO ESTÁ DISPONIBLE');
+      // lo que conteste la función se enseña tal cual
+      eq(R.submitError(400, '{"error":"AJUSTES NO ESTÁNDAR"}'), 'AJUSTES NO ESTÁNDAR');
+      eq(R.submitError(500, 'vaya'), 'ERROR 500');
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  test('la partida lleva al top mundial los ajustes con los que se jugó', function () {
+    partida(1);
+    var a = G.rankAjustes();
+    eq(a.velFantasmas, G.ghostSpeedMult);
+    eq(a.velPac, G.pacSpeedMult);
+    eq(a.powerS, G.frightMult);
+    eq(a.vidas, G.startLives);
+    G.timeTicks = 600;
+    eq(G.playedMs(), 10000, '600 ticks a 60 por segundo son 10 s');
+  });
+
   test('solo el anfitrión sube la partida en online', function () {
     var R = window.PM.Ranking;
     var orig = R.submit, n = 0;

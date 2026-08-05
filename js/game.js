@@ -347,6 +347,7 @@
       this.pacSpeedMult = s.pacSpeedMult;
       this.frightMult = s.frightMult;
       this.startLevel = s.startLevel;      // para el récord de velocidad
+      this.startLives = s.startLives;      // viaja con la partida al top mundial
       this.livesMode = (this.playerCount > 1 && s.livesMode === 'individual')
         ? 'individual' : 'shared';
       this.level = s.startLevel;
@@ -1550,7 +1551,29 @@
       var nombre = this.rawName(0);
       if (!nombre) return;                // sin nombre no hay récord
       R.submit({ jugadores: 1, modo: 'local', nombre1: nombre,
-                 puntos: this.score, nivel: 1, tiempo1: cs });
+                 puntos: this.score, nivel: 1, tiempo1: cs,
+                 nivelInicio: this.startLevel,
+                 ajustes: this.rankAjustes(),
+                 fantasmas: this.runGhosts,
+                 tiempoMs: this.playedMs() });
+    },
+
+    /* Con qué se jugó, tal como lo esperan el top mundial y las repeticiones
+     * (formato v1). La función de Supabase no admite la partida si esto hace
+     * el juego más fácil de lo normal: es el mismo criterio que ya tenía la
+     * marca de velocidad del nivel 1. */
+    rankAjustes: function () {
+      return {
+        velFantasmas: this.ghostSpeedMult,
+        velPac: this.pacSpeedMult,
+        powerS: this.frightMult,
+        vidas: this.startLives
+      };
+    },
+
+    /* Milisegundos jugados (el cronómetro va a 60 ticks por segundo) */
+    playedMs: function () {
+      return Math.round(this.timeTicks * 1000 / 60);
     },
 
     /* ---------- Ranking mundial ----------
@@ -1598,13 +1621,23 @@
       // 3 y 4 se quedan de momento en el historial
       if (this.playerCount > 2) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
+      var self = this;
       window.PM.Ranking.submit({
         jugadores: this.playerCount,
         modo: this.netRole ? 'online' : 'local',
         nombre1: this.rawName(0),
         nombre2: (this.playerCount === 2) ? this.rawName(1) : '',
         puntos: this.score,
-        nivel: this.level
+        nivel: this.level,
+        // lo que necesita la Edge Function para saber si la partida cuadra
+        nivelInicio: this.startLevel,
+        ajustes: this.rankAjustes(),
+        fantasmas: this.runGhosts,
+        tiempoMs: this.playedMs()
+      }, function (err) {
+        // si no entró, se dice en el panel de GAME OVER, que es donde el
+        // jugador está mirando. La partida ya terminó: no rompe nada.
+        if (err) self.setFlash('TOP MUNDIAL: ' + err);
       });
     },
 
