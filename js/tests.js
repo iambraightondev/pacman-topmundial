@@ -422,6 +422,162 @@
   });
 
   // ---------------------------------------------------------------
+  // Reto diario
+  // ---------------------------------------------------------------
+  test('el reto del día sale de la fecha en UTC', function () {
+    var R = window.PM.Reto;
+    // 23:30 UTC del 5 sigue siendo el reto del 5 en todo el planeta
+    eq(R.hoy(new Date(Date.UTC(2026, 7, 5, 23, 30))), '2026-08-05');
+    eq(R.hoy(new Date(Date.UTC(2026, 0, 1, 0, 1))), '2026-01-01');
+    eq(R.semilla('2026-08-05'), R.semilla('2026-08-05'), 'misma fecha, misma semilla');
+    ok(R.semilla('2026-08-05') !== R.semilla('2026-08-06'), 'otro día, otra semilla');
+    var s = R.semilla('2026-08-05');
+    ok(s > 0 && s <= 1000000, 'acotada, o Game.seedRnd perdería precisión: ' + s);
+  });
+
+  test('el reto se juega con los ajustes de siempre', function () {
+    var o = window.PM.Reto.opts('2026-08-05');
+    var p = CFG.PRESETS.normal;
+    eq(o.players, 1);
+    ok(o.reto, 'la partida va marcada como reto');
+    ok(o.seed > 0, 'y con la semilla del día');
+    eq(o.cfg.ghostSpeedMult, p.ghostSpeedMult, 'fantasmas');
+    eq(o.cfg.pacSpeedMult, p.pacSpeedMult, 'pac-man');
+    eq(o.cfg.frightMult, p.frightMult, 'energizante');
+    eq(o.cfg.startLives, p.startLives, 'vidas');
+    eq(o.cfg.startLevel, p.startLevel, 'nivel inicial');
+  });
+
+  test('la semilla del día reparte el mismo azar a todo el mundo', function () {
+    function firma(seed) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, seed: seed });
+      var s = '';
+      for (var i = 0; i < 40; i++) s += G.rndDir();
+      return s;
+    }
+    var a = firma(1234), b = firma(1234), c = firma(4321);
+    eq(a, b, 'la misma semilla, la misma tirada');
+    ok(a !== c, 'otra semilla, otra tirada');
+    G.newGame({ players: 1 });
+    eq(G.seedBase, 0, 'una partida normal vuelve al azar de siempre');
+  });
+
+  test('el reto se cierra con la partida, y solo se juega una vez', function () {
+    var R = window.PM.Reto;
+    R.olvidar();
+    try {
+      ok(!R.hecho(), 'hoy aún no está jugado');
+      window.PM.settings.muted = true;
+      G.newGame(R.opts());
+      ok(G.reto, 'la partida sabe que es el reto');
+      G.score = 1234; G.level = 3;
+      G.closeRun();
+      var m = R.marca();
+      ok(m, 'la marca queda guardada aunque no haya red');
+      eq(m.p, 1234, 'puntos');
+      eq(m.n, 3, 'nivel');
+      ok(R.hecho(), 'el intento del día está gastado');
+      // volver a jugarlo el mismo día no puede mejorar la marca
+      G.newGame(R.opts());
+      G.score = 99999;
+      G.closeRun();
+      eq(R.marca().p, 1234, 'un intento y no más');
+    } finally {
+      R.olvidar();
+      G.toMenu();
+    }
+  });
+
+  test('el reto suma experiencia como cualquier partida', function () {
+    var R = window.PM.Reto, L = window.PM.Level;
+    R.olvidar();
+    var antes = L.xp();
+    try {
+      window.PM.settings.muted = true;
+      G.newGame(R.opts());
+      G.score = 800;
+      G.closeRun();
+      eq(L.xp(), antes + 800, 'los puntos del reto también son experiencia');
+    } finally {
+      R.olvidar();
+      G.toMenu();
+    }
+  });
+
+  test('sin nombre la marca del reto se guarda pero no se envía', function () {
+    var R = window.PM.Reto;
+    var n1 = window.PM.settings.nick1;
+    R.olvidar();
+    try {
+      window.PM.settings.nick1 = '';
+      R.cerrar(500, 2);
+      var errs = [];
+      R.enviarPendiente(function (e) { errs.push(e); });
+      eq(errs.length, 1);
+      eq(errs[0], 'SIN NOMBRE');
+      eq(R.marca().p, 500, 'la marca sigue aquí para mandarla luego');
+      eq(R.marca().e, 0, 'y apuntada como no enviada');
+    } finally {
+      window.PM.settings.nick1 = n1;
+      R.olvidar();
+    }
+  });
+
+  test('el envío del reto exige nombre y puntuación válida', function () {
+    var R = window.PM.Reto;
+    var errores = [];
+    var cb = function (e) { errores.push(e); };
+    R.submit({ fecha: '2026-08-05', nombre: '', puntos: 100 }, cb);
+    R.submit({ fecha: '2026-08-05', nombre: 'PUTO', puntos: 100 }, cb);
+    R.submit({ fecha: '2026-08-05', nombre: 'ALGUIEN', puntos: 0 }, cb);
+    eq(errores.length, 3, 'los tres se rechazan antes de salir a la red');
+  });
+
+  test('el botón de la portada dice si el reto ya está jugado', function () {
+    var R = window.PM.Reto, U = window.PM.UI;
+    R.olvidar();
+    try {
+      U.refreshReto();
+      eq(U.retoBtn.textContent, 'RETO DE HOY');
+      R.cerrar(700, 2);
+      U.refreshReto();
+      ok(/700/.test(U.retoBtn.textContent),
+         'con la marca a la vista: ' + U.retoBtn.textContent);
+    } finally {
+      R.olvidar();
+      U.refreshReto();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Temporadas del top mundial
+  // ---------------------------------------------------------------
+  test('la temporada es el mes natural, contado en UTC', function () {
+    var S = window.PM.Season;
+    eq(S.actual(new Date(Date.UTC(2026, 7, 5, 23, 59))), '2026-08');
+    eq(S.actual(new Date(Date.UTC(2026, 0, 1, 0, 0))), '2026-01');
+    eq(S.nombre('2026-08'), 'AGOSTO 2026');
+    eq(S.nombre('2026-12'), 'DICIEMBRE 2026');
+  });
+
+  test('el panel del top mundial tiene reto y temporadas', function () {
+    var U = window.PM.UI;
+    ok(U.rankTabBtns[4], 'está la pestaña del reto');
+    ok(U.seasonBtns.ahora && U.seasonBtns.historico, 'y las dos de temporada');
+    U.showRankTab(1);
+    eq(U.seasonRow.style.display, 'flex', 'en INDIVIDUAL se elige temporada');
+    U.showRankTab(0);
+    eq(U.seasonRow.style.display, 'none', 'en TUS PARTIDAS no hay temporada');
+    U.showRankTab(4);
+    eq(U.seasonRow.style.display, 'none', 'ni en el reto, que es el de hoy');
+    U.showRankTab(1);
+    U.showSeasonTab('historico');
+    eq(U.seasonTab, 'historico');
+    U.showSeasonTab('ahora');
+  });
+
+  // ---------------------------------------------------------------
   // Historial local
   // ---------------------------------------------------------------
   test('el historial guarda la partida aunque no haya nombre', function () {

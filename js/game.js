@@ -92,6 +92,13 @@
      * memorizados salen siempre igual. Con Math.random los fantasmas azules
      * huían distinto en cada intento y no había patrón que valiera. */
     rndState: 1,
+    /* Desplazamiento de la semilla, para que una partida se pueda repartir
+     * igual a todo el mundo (RETO DE HOY). A 0 el azar es el de siempre. */
+    seedBase: 0,
+    reto: false,         // ¿esta partida es el reto del día?
+    retoFecha: null,     // ...y de qué día (UTC)
+    mazeId: null,        // laberinto alternativo en juego (null = el clásico)
+    mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
 
     /* casa de fantasmas */
     globalActive: false,
@@ -332,6 +339,15 @@
       this.timeTicks = 0;
       this.timeSent = false;
       this.lvl1Cs = 0;         // centésimas que costó despejar el nivel 1
+      /* reto del día: la semilla viene de fuera, así que la partida sale
+       * igual en todas las máquinas (ver js/reto.js) */
+      this.reto = !!opts.reto;
+      this.retoFecha = opts.retoFecha || null;
+      this.seedBase = (opts.seed | 0) || 0;
+      /* laberinto alternativo (modo LABERINTOS). Se pone ANTES de
+       * resetLevel(), que es quien reparte las pastillas. */
+      this.mazeId = opts.maze || null;
+      this.applyMaze(this.mazeId);
       this.runGhosts = 0;
       this.runFrutas = 0;
       this.runRacha = 0;
@@ -406,6 +422,20 @@
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: rt });
       // controles en pantalla: una cruceta o dos según el modo recién arrancado
       this.syncUI();
+    },
+
+    /* Pone (o quita) un laberinto alternativo. Los muros van precocinados en
+     * dos lienzos, así que al cambiar de laberinto hay que rehacerlos; se
+     * lleva la cuenta de cuál está puesto para no repintarlos por nada. */
+    applyMaze: function (id) {
+      var M = window.PM.Mazes;
+      if (!M) return;
+      id = id || null;
+      if (this.mazeLoaded === id) return;
+      this.mazeLoaded = id;
+      M.apply(id);
+      this.mazeBlue = this.buildMazeCanvas(CFG.COLORS.wall);
+      this.mazeWhite = this.buildMazeCanvas(CFG.COLORS.wallFlash);
     },
 
     /* Refresca los paneles y botones que dependen del estado (ui.js) */
@@ -530,6 +560,9 @@
       this.overWait = false;
       this.flash = null;
       this.lastOpts = null;
+      this.reto = false;
+      this.retoFecha = null;
+      this.seedBase = 0;        // el azar vuelve a ser el de siempre
       this.playerCount = 1;
       this.state = 'MENU';
       this.paused = false;
@@ -973,7 +1006,11 @@
      * Azar reproducible (mismo nivel => misma tirada)
      * --------------------------------------------------------- */
     seedRnd: function (n) {
-      this.rndState = ((n | 0) * 2654435761 + 1013904223) >>> 0 || 1;
+      // seedBase mueve TODAS las tiradas de la partida de golpe: es lo que
+      // permite repartir el mismo azar a todo el mundo en el reto del día
+      // sin tocar ni una regla del juego. A 0 sale lo de siempre.
+      var s = (n | 0) + (this.seedBase | 0);
+      this.rndState = (s * 2654435761 + 1013904223) >>> 0 || 1;
     },
 
     /* entero 0..3, que es lo único que se le pide: hacia dónde huye un
@@ -1471,6 +1508,12 @@
         lvlPide: ahora ? ahora.needed : 0,
         logros: this.runAch.slice()
       };
+      /* El reto del día se cierra aquí, acabe como acabe la partida: un
+       * intento y lo que hayas hecho. Cerrarlo solo en el GAME OVER dejaría
+       * que cualquiera se saliera al ver que la cosa iba mal. */
+      if (this.reto && window.PM.Reto) {
+        window.PM.Reto.cerrar(this.score, this.level);
+      }
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();
       return subida;

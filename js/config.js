@@ -59,6 +59,13 @@
 
   CFG.PELLET_TOTAL = 244;      // 240 puntos + 4 energizantes (se comprueba al cargar)
 
+  /* El laberinto de 1980, guardado aparte y sin tocar NUNCA: el modo
+   * LABERINTOS cambia CFG.MAZE por uno alternativo, y esta copia es la que
+   * devuelve el juego al clásico. La fidelidad al arcade es el valor del
+   * proyecto: los laberintos nuevos son un modo aparte, no un sustituto. */
+  CFG.MAZE_CLASSIC = CFG.MAZE.slice();
+  CFG.PELLET_CLASSIC = CFG.PELLET_TOTAL;
+
   /* ---------- Túnel y casa ---------- */
   CFG.TUNNEL_ROW = 14;
   CFG.TUNNEL_SLOW = [[0, 5], [22, 27]];   // columnas con ralentización (fila 14)
@@ -430,9 +437,21 @@
     TABLE: 'ranking',         // donde se insertan las partidas
     VIEW: 'ranking_top',      // mejor marca de cada jugador/dúo (lectura)
     VIEW_TIME: 'ranking_tiempo',  // mejor tiempo de cada jugador en el nivel 1
+    VIEW_SEASON: 'ranking_temporada',  // lo mismo, pero mes a mes
     LIMIT: 20,
     MAX_POINTS: 10000000,     // descarta envíos absurdos antes de mandarlos
     MAX_TIME: 6000000         // centésimas: 16 h y pico, de sobra
+  };
+
+  /* ---------- Reto diario ----------
+   * Una partida idéntica para todo el mundo cada día: misma semilla (el azar
+   * del juego es reproducible) y los ajustes de siempre. La fecha se saca en
+   * UTC para que el reto cambie a la vez en todo el planeta. */
+  CFG.RETO = {
+    TABLE: 'reto_diario',     // donde se insertan las marcas del día
+    VIEW: 'reto_top',         // mejor marca de cada jugador en cada día
+    LIMIT: 20,
+    KEY: 'pacman-topmundial-reto'   // tu intento de hoy, en este navegador
   };
 
   /* ---------- Récord de velocidad del primer nivel ----------
@@ -539,6 +558,23 @@
   };
 
   /* ---------- Utilidades de laberinto compartidas ---------- */
+  /* Cambia el laberinto en juego (modo LABERINTOS). Sin filas válidas
+   * vuelve al clásico. Recuenta las pastillas: cada laberinto tiene las
+   * suyas y el final de nivel se decide con ese número. Devuelve cuántas. */
+  CFG.setMaze = function (rows) {
+    var ok = rows && rows.length === CFG.ROWS;
+    CFG.MAZE = ok ? rows.slice() : CFG.MAZE_CLASSIC.slice();
+    var n = 0;
+    for (var r = 0; r < CFG.ROWS; r++) {
+      for (var c = 0; c < CFG.COLS; c++) {
+        var ch = CFG.MAZE[r].charAt(c);
+        if (ch === '.' || ch === 'o') n++;
+      }
+    }
+    CFG.PELLET_TOTAL = n;
+    return n;
+  };
+
   CFG.tileChar = function (col, row) {
     if (row < 0 || row >= CFG.ROWS) return '#';
     if (col < 0 || col >= CFG.COLS) return (row === CFG.TUNNEL_ROW) ? ' ' : '#';
