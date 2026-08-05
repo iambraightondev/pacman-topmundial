@@ -1553,6 +1553,315 @@
     });
 
   // ---------------------------------------------------------------
+  // PAC-MAN VS.: un jugador lleva un fantasma
+  // ---------------------------------------------------------------
+  var V = window.PM.Versus;
+
+  /* Partida de versus: el jugador `quien` lleva el fantasma `gid` */
+  function versus(jugadores, gid, quien, net) {
+    window.PM.settings.muted = true;
+    var gh = [], i;
+    for (i = 0; i < jugadores; i++) gh.push(i === quien ? gid : -1);
+    G.newGame({
+      players: jugadores, net: net || null, ghosts: gh,
+      localIdx: (net === 'guest') ? quien : 0,
+      names: ['UNO', 'DOS', 'TRES', 'CUATRO'].slice(0, jugadores)
+    });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+    return G;
+  }
+
+  /* Deja a un fantasma suelto en el cruce de cuatro salidas de la fila 5 */
+  function enElCruce(g, dir) {
+    g.mode = 'normal';
+    g.frightened = false;
+    g.x = 6 * 8 + 4;
+    g.y = 5 * 8 + 4;
+    g.dir = dir;
+    g.clearPlan();
+    return g;
+  }
+
+  test('siempre queda alguien de Pac-Man, y nadie repite fantasma', function () {
+    eq(V.clean([1, 1, 2], 3).join(','), '1,-1,2', 'al repetido se le quita');
+    eq(V.clean([0, 1], 2).join(','), '-1,1', 'sin Pac-Man no hay partida');
+    eq(V.clean([9, null], 2).join(','), '-1,-1', 'lo que no es fantasma, Pac-Man');
+  });
+
+  test('quien lleva fantasma no tiene Pac-Man', function () {
+    versus(2, 2, 1);
+    ok(G.isVersus(), 'la partida es de PAC-MAN VS.');
+    eq(G.vsGhostOf(1), 2);
+    eq(G.vsPlayerOf(2), 1);
+    ok(G.ghosts[2].human, 'Inky lo lleva un jugador');
+    ok(!G.ghosts[0].human, 'los otros tres siguen siendo de la máquina');
+    ok(G.pacs[1].out, 'su Pac-Man no está en juego');
+    ok(!G.pacs[0].out, 'el otro jugador sí juega');
+    eq(G.actorFor(1), G.ghosts[2], 'su ficha visible es el fantasma');
+    eq(G.colorFor(1), CFG.GHOSTS[2].color, 'y va con el color de su fantasma');
+    G.toMenu();
+  });
+
+  test('el fantasma de un jugador va donde le dicen, no a por Pac-Man', function () {
+    versus(2, 1, 1);                       // el J2 lleva a Pinky
+    var g = enElCruce(G.ghosts[1], CFG.DIR.RIGHT);
+    G.setPacDir(1, CFG.DIR.DOWN);          // las teclas del J2
+    eq(g.decide(G), CFG.DIR.DOWN, 'obedece la tecla');
+    G.setPacDir(1, CFG.DIR.UP);
+    eq(g.decide(G), CFG.DIR.UP, 'y cambia de idea cuando se lo dicen');
+    G.setPacDir(1, -1);                    // sin rumbo pedido: sigue recto
+    g.wishDir = -1;
+    eq(g.decide(G), CFG.DIR.RIGHT, 'quien no toca nada sigue de frente');
+    G.toMenu();
+  });
+
+  /* La regla que sostiene todo lo demás: si el fantasma de la máquina no
+   * puede darse la vuelta, el del jugador tampoco. Sin esto, en un pasillo
+   * Pac-Man no tendría escapatoria. */
+  test('el fantasma de un jugador tampoco puede darse la vuelta', function () {
+    versus(2, 1, 1);
+    var g = enElCruce(G.ghosts[1], CFG.DIR.RIGHT);
+    G.setPacDir(1, CFG.DIR.LEFT);          // media vuelta
+    eq(g.decide(G), CFG.DIR.RIGHT, 'la marcha atrás no se le permite');
+    G.toMenu();
+  });
+
+  test('al fantasma de un jugador lo atan las paredes y las zonas sin subir',
+    function () {
+      versus(2, 1, 1);
+      var g = G.ghosts[1];
+      g.mode = 'normal';
+      g.frightened = false;
+      g.x = 12 * 8 + 4; g.y = 23 * 8 + 4;  // casilla donde no se sube nunca
+      g.dir = CFG.DIR.LEFT;
+      g.clearPlan();
+      G.setPacDir(1, CFG.DIR.UP);
+      eq(g.decide(G), CFG.DIR.LEFT, 'ahí no se sube ni con la tecla puesta');
+      G.toMenu();
+    });
+
+  test('el cambio de modo no le da la vuelta al fantasma humano; el energizante sí',
+    function () {
+      versus(2, 0, 1);                     // el J2 lleva a Blinky
+      var g = enElCruce(G.ghosts[0], CFG.DIR.RIGHT);
+      G.forceReversal();
+      eq(g.dir, CFG.DIR.RIGHT, 'dispersión y persecución no van con él');
+      G.forceReversalFright();
+      eq(g.dir, CFG.DIR.LEFT, 'el energizante sí: es parte del modo asustado');
+      G.toMenu();
+    });
+
+  test('al fantasma de un jugador no se le hace esperar en la casa', function () {
+    versus(2, 3, 1);                       // Clyde, que en el nivel 1 pide 60
+    G.level = 1;
+    eq(G.preferredInside(), G.ghosts[3], 'sale antes que Pinky e Inky');
+    eq(G.houseLimitFor(G.ghosts[3]), 0, 'y sin puntos que esperar');
+    ok(G.houseLimitFor(G.ghosts[2]) > 0, 'los de la máquina sí esperan');
+    G.toMenu();
+  });
+
+  test('cazar un Pac-Man le da puntos al fantasma, y al equipo no', function () {
+    versus(2, 0, 1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    p.safeTicks = 0;
+    g.mode = 'normal';
+    g.frightened = false;
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    g.x = p.x; g.y = p.y;
+    G.pellets[5][6] = null;                // sin punto que comer por el camino
+    G.pellets[5][5] = null;
+    var antes = G.score;
+    G.step();
+    eq(G.vsScore, CFG.VS.CATCH_POINTS, 'el cazador cobra');
+    eq(G.vsCatches, 1);
+    eq(G.score, antes, 'el marcador del equipo no se toca');
+    G.toMenu();
+  });
+
+  /* El modo asustado se respeta tal cual: al fantasma del jugador se lo pueden
+   * comer, vuelve a casa hecho ojos y sale por donde salen todos. */
+  test('al fantasma de un jugador se lo comen y vuelve a casa como los demás',
+    function () {
+      versus(2, 0, 1);
+      var g = G.ghosts[0], p = G.pacs[0];
+      G.frightTicks = 600;
+      g.frightened = true;
+      g.mode = 'normal';
+      g.x = 6 * 8 + 4; g.y = 5 * 8 + 4;
+      p.x = g.x; p.y = g.y;
+      p.safeTicks = 0;
+      G.step();
+      eq(g.mode, 'eyes', 'comido: se vuelve a casa hecho ojos');
+      ok(G.score > 0, 'y los puntos son de quien se lo comió');
+      p.safeTicks = 999999;
+      var n = 0;
+      while (g.mode !== 'normal' && n < 1200) { G.step(); n++; }
+      eq(g.mode, 'normal', 'sale otra vez por la puerta de siempre');
+      ok(g.human, 'y sigue siendo del jugador');
+      G.toMenu();
+    });
+
+  test('gana el fantasma si acaba con las vidas; si no, ganan los Pac-Man',
+    function () {
+      versus(2, 0, 1);
+      eq(V.winner(G), 'pacs', 'mientras quede un Pac-Man en pie');
+      eq(V.ghostName(G), G.nameFor(1), 'y el cazador se llama por su nombre');
+      G.pacs[0].out = true;
+      eq(V.winner(G), 'ghost', 'sin Pac-Man vivos, la ronda es suya');
+      G.toMenu();
+    });
+
+  test('PAC-MAN VS. no toca récords ni top mundial, pero sí el nivel de jugador',
+    function () {
+      var L = window.PM.Level, R = window.PM.Ranking;
+      var xp0 = L.xp(), h2 = G.highScore2;
+      var enviados = 0, orig = R.submit;
+      try {
+        L.reset();
+        R.submit = function () { enviados++; };
+        versus(2, 0, 1, 'host');
+        G.localIdx = 1;                    // aquí el cazador soy yo
+        G.score = 7000;
+        G.vsScore = 2500;
+        G.highScore = 50000;
+        G.highScore2 = 0;
+        G.persistHighScore();
+        eq(G.highScore2, 0, 'no se guarda récord de equipo');
+        G.submitRanking();
+        eq(enviados, 0, 'ni se sube al top mundial');
+        eq(L.xp(), 2500, 'la experiencia es la que ha cazado, no la del rival');
+      } finally {
+        R.submit = orig;
+        L.reset(); L.add(xp0);
+        G.highScore2 = h2;
+        G.netRole = null;
+        G.toMenu();
+      }
+    });
+
+  test('el que lleva fantasma manda su rumbo, no su posición', function () {
+    versus(2, 3, 1, 'guest');
+    var salidas = [], orig = G.netSend;
+    G.netSend = function (n, d) { salidas.push({ n: n, d: d }); };
+    try {
+      G.setPacDir(1, CFG.DIR.UP);
+      eq(salidas.length, 1, 'el giro sale al momento');
+      eq(salidas[0].n, 'gevt');
+      eq(salidas[0].d.t, 'gdir');
+      eq(salidas[0].d.d, CFG.DIR.UP);
+      eq(salidas[0].d.i, 1, 'con su índice de jugador');
+      salidas.length = 0;
+      G.sendGuestUpdates();
+      eq(salidas.length, 0, 'sin cambios no se repite cada tick');
+      for (var i = 0; i < CFG.VS.DIR_EVERY; i++) G.sendGuestUpdates();
+      eq(salidas.length, 1, 'se reenvía de vez en cuando, por si se perdió');
+      eq(salidas[0].d.t, 'gdir', 'y nunca sale un pos: no tiene Pac-Man');
+    } finally { G.netSend = orig; G.netRole = null; G.toMenu(); }
+  });
+
+  test('el anfitrión aplica el rumbo que le llega del cazador', function () {
+    versus(3, 3, 2, 'host');                               // el J3 lleva a Clyde
+    G.hostGuestEvent({ t: 'gdir', d: CFG.DIR.LEFT }, 2);
+    eq(G.ghosts[3].wishDir, CFG.DIR.LEFT);
+    G.hostGuestEvent({ t: 'gdir', d: 9 }, 2);              // basura
+    eq(G.ghosts[3].wishDir, -1, 'un rumbo imposible se descarta');
+    G.ghosts[3].wishDir = CFG.DIR.DOWN;
+    G.hostGuestEvent({ t: 'gdir', d: CFG.DIR.UP }, 1);     // ese lleva Pac-Man
+    eq(G.ghosts[3].wishDir, CFG.DIR.DOWN, 'solo manda quien lo lleva');
+    G.netRole = null;
+    G.toMenu();
+  });
+
+  /* El anfitrión va un viaje de red por detrás aplicando el rumbo, así que su
+   * fantasma no está exactamente donde el del cazador. Copiarle la posición
+   * cada instantánea sería un tirón por mensaje. */
+  test('al cazador no se le recoloca el fantasma con cada instantánea', function () {
+    versus(2, 3, 1, 'guest');
+    var g = G.ghosts[3];
+    g.mode = 'normal';
+    g.x = 100; g.y = 100;
+    var s = G.buildSnapshot(false);
+    s.g[3].x = 104;
+    G.applySnapshot(s);
+    eq(g.x, 100, 'una diferencia normal no se corrige');
+    var lejos = 100 + CFG.VS.RESYNC_PX + 6;
+    var s2 = G.buildSnapshot(false);
+    s2.g[3].x = lejos;
+    G.applySnapshot(s2);
+    eq(g.x, lejos, 'si se separan demasiado, manda el anfitrión');
+    G.netRole = null;
+    G.toMenu();
+  });
+
+  test('el fantasma del jugador lleva marca encima todo el rato', function () {
+    versus(2, 1, 1);
+    var puntos = [];
+    var ctx = {
+      fillStyle: '',
+      save: function () {}, restore: function () {},
+      beginPath: function () {}, closePath: function () {}, fill: function () {},
+      moveTo: function (x, y) { puntos.push([x, y]); },
+      lineTo: function (x, y) { puntos.push([x, y]); }
+    };
+    V.drawMarks(G, ctx);
+    eq(puntos.length, 3, 'un triángulo, y solo sobre el fantasma que lleva alguien');
+    ok(puntos[0][1] < G.ghosts[1].y + CFG.MAZE_Y, 'dibujado por encima de él');
+    G.toMenu();
+  });
+
+  test('una partida de PAC-MAN VS. rueda sola y el giro pedido se ejecuta',
+    function () {
+      versus(2, 1, 1);
+      var g = enElCruce(G.ghosts[1], CFG.DIR.RIGHT);
+      G.setPacDir(1, CFG.DIR.DOWN);
+      var vueltas = 0;
+      while (g.dir !== CFG.DIR.DOWN && vueltas < 30) { G.step(); vueltas++; }
+      eq(g.dir, CFG.DIR.DOWN, 'el fantasma acaba bajando, como se le pidió');
+      ticks(120);
+      ok(G.state === 'PLAYING' || G.state === 'DYING', 'y la partida sigue rodando');
+      ok(G.ghosts[1].human, 'sigue siendo suyo después de un rato');
+      G.toMenu();
+    });
+
+  /* PAC-MAN VS. en el mismo teclado: el fantasma del J2 se guarda en OPCIONES
+   * y de ahí lo coge el botón DOS JUGADORES. */
+  test('el fantasma del jugador 2 local se elige en OPCIONES', function () {
+    var U = window.PM.UI;
+    var prev = window.PM.settings.vsGhost2;
+    try {
+      ok(U.vsLocalBtns && U.vsLocalBtns[-1] && U.vsLocalBtns[3],
+         'están Pac-Man y los cuatro fantasmas');
+      U.vsLocalBtns[2].click();
+      eq(window.PM.settings.vsGhost2, 2, 'se guarda el elegido');
+      U.vsLocalBtns[-1].click();
+      eq(window.PM.settings.vsGhost2, -1, 'y se puede volver a Pac-Man');
+    } finally {
+      window.PM.settings.vsGhost2 = prev;
+    }
+  });
+
+  test('en la sala no se lleva dos veces el mismo fantasma', function () {
+    G.toMenu();
+    var P = party(['ANA', 'BENI']);
+    try {
+      P.st.members[0].g = 2;
+      eq(P.claim('sid1', 2), -1, 'ese ya lo lleva otro');
+      eq(P.claim('sid0', 2), 2, 'el dueño lo conserva');
+      eq(P.claim('sid1', 3), 3, 'los libres sí se pueden pedir');
+      eq(P.ghostOwner(2), 'sid0');
+      ok(P.anyPac(), 'de momento queda un Pac-Man');
+      P.st.members[1].g = 3;
+      var ord = P.gameOrder();
+      eq(ord[0].g, 2, 'el reparto viaja en el orden de juego');
+      eq(ord[1].g, 3);
+      ok(!P.anyPac(), 'ahora no queda ningún Pac-Man');
+      ok(!P.canStart(), 'y así no se puede empezar');
+    } finally { P.st = null; P.order = null; P.ghostPick = -1; }
+  });
+
+  // ---------------------------------------------------------------
   // Ver la partida de otro (espectador)
   // ---------------------------------------------------------------
   function mirando(jugadores) {

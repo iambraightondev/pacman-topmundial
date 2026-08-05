@@ -50,6 +50,7 @@
     userCh: null,    // canal personal (invitaciones)
     userNick: null,
     beatTimer: null,
+    ghostPick: -1,   // PAC-MAN VS.: fantasma pedido (-1 = jugar de Pac-Man)
 
     /* la UI se engancha aquí */
     onchange: null,  // la lista o el estado han cambiado
@@ -68,7 +69,7 @@
     full: function () { return this.count() >= CFG.MAX_PLAYERS; },
     canStart: function () {
       return this.active() && this.isLeader() && this.count() >= 2 &&
-        !(window.PM.Game && window.PM.Game.inGame());
+        this.anyPac() && !(window.PM.Game && window.PM.Game.inGame());
     },
 
     me: function () {
@@ -78,8 +79,68 @@
         n: cleanNick(s.nick1) || 'JUGADOR',
         c: s.pacColor || CFG.PLAYER_COLORS[0],
         k: s.skin1 || 'clasico',
+        g: this.ghostPick,
         t: now()
       };
+    },
+
+    /* ---------- PAC-MAN VS.: quién lleva fantasma ----------
+     * El líder es quien reparte: si dos piden el mismo, el segundo se queda
+     * sin él. Así nadie puede acabar con el fantasma de otro. */
+    ghostOwner: function (gid) {
+      if (!this.st) return null;
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (this.st.members[i].g === gid) return this.st.members[i].s;
+      }
+      return null;
+    },
+
+    claim: function (sid, gid) {
+      gid = parseInt(gid, 10);
+      if (!(gid >= 0 && gid < 4)) return -1;
+      var duenyo = this.ghostOwner(gid);
+      return (!duenyo || duenyo === sid) ? gid : -1;
+    },
+
+    /* Sin Pac-Man no hay partida: alguien tiene que dejarse comer */
+    anyPac: function () {
+      if (!this.st) return false;
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (!(this.st.members[i].g >= 0)) return true;
+      }
+      return false;
+    },
+
+    /* El fantasma que me ha quedado DE VERDAD: lo dice la lista del líder,
+     * no lo que yo haya pedido (que puede estar cogido). */
+    myGhost: function () {
+      if (!this.st) return -1;
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (this.st.members[i].s === window.PM.Net.sid) {
+          var g = this.st.members[i].g;
+          return (g >= 0 && g < 4) ? g : -1;
+        }
+      }
+      return -1;
+    },
+
+    /* Elegir fantasma (o volver a Pac-Man con -1) desde la sala */
+    setGhost: function (gid) {
+      gid = parseInt(gid, 10);
+      if (!(gid >= 0 && gid < 4)) gid = -1;
+      this.ghostPick = gid;
+      if (!this.st) return;
+      if (this.st.leader) {
+        for (var i = 0; i < this.st.members.length; i++) {
+          if (this.st.members[i].s === window.PM.Net.sid) {
+            this.st.members[i].g = this.claim(window.PM.Net.sid, gid);
+          }
+        }
+        this.sendRoster();
+      } else {
+        window.PM.Net.send('phello', this.hello());
+      }
+      this.changed();
     },
 
     /* Índice de juego de una sesión (lo consulta game.js con 3 y 4) */
@@ -140,7 +201,7 @@
 
     hello: function () {
       var m = this.me();
-      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k };
+      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, g: m.g };
     },
 
     /* Salir de la party. El líder la disuelve. */
@@ -250,6 +311,7 @@
       m.n = cleanNick(d.n) || 'JUGADOR';
       m.c = d.c;
       m.k = d.k;
+      m.g = this.claim(sid, d.g);      // PAC-MAN VS.: el líder reparte
       m.t = now();
       this.sendRoster();
       this.changed();
@@ -296,7 +358,8 @@
         var c = m.c || CFG.PLAYER_COLORS[i];
         if (usados[c]) c = CFG.PLAYER_COLORS[i];
         usados[c] = 1;
-        out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico' });
+        out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico',
+                   g: (m.g >= 0 && m.g < 4) ? m.g : -1 });
       }
       return out;
     },

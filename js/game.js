@@ -46,6 +46,11 @@
     dyingPlayer: 0,
     eaterIdx: 0,       // quién comió el último fantasma (queda oculto en la pausa)
 
+    /* PAC-MAN VS. (js/versus.js): fantasma que lleva cada jugador (-1 = Pac-Man) */
+    vsGhosts: null,
+    vsScore: 0,        // marcador del que lleva fantasma
+    vsCatches: 0,      // Pac-Man que ha cazado
+
     /* red */
     netRole: null,     // null | 'host' | 'guest'
     netColors: null,   // colores online [J1, J2]
@@ -237,9 +242,50 @@
       return out;
     },
 
+    /* ---------------------------------------------------------
+     * PAC-MAN VS.: quién lleva qué (el resto vive en versus.js)
+     * --------------------------------------------------------- */
+    /* Fantasma que lleva el jugador i (-1 si lleva un Pac-Man) */
+    vsGhostOf: function (i) {
+      if (!this.vsGhosts || !(i >= 0)) return -1;
+      var g = this.vsGhosts[i];
+      return (g >= 0 && g < 4) ? g : -1;
+    },
+
+    /* Jugador que lleva el fantasma g (-1 si lo lleva la máquina) */
+    vsPlayerOf: function (g) {
+      if (!this.vsGhosts) return -1;
+      for (var i = 0; i < this.vsGhosts.length; i++) {
+        if (this.vsGhosts[i] === g) return i;
+      }
+      return -1;
+    },
+
+    isVersus: function () {
+      if (!this.vsGhosts) return false;
+      for (var i = 0; i < this.vsGhosts.length; i++) {
+        if (this.vsGhosts[i] >= 0) return true;
+      }
+      return false;
+    },
+
+    /* Ficha visible del jugador i: su fantasma si lleva uno y si no su
+     * Pac-Man (null si ya no está en juego). La usan el nombre del "¡LISTO!"
+     * y los emotes, que antes daban por hecho que todo el mundo lleva pac. */
+    actorFor: function (i) {
+      var gid = this.vsGhostOf(i);
+      if (gid >= 0) return this.ghosts[gid];
+      var p = this.pacs[i];
+      return (p && !p.out) ? p : null;
+    },
+
     /* Color del jugador i (online: colores intercambiados en el saludo).
      * Los jugadores 3 y 4 usan la paleta por defecto. */
     colorFor: function (i) {
+      // quien lleva un fantasma se identifica con el color de SU fantasma:
+      // el amarillo de su Pac-Man ya no pinta nada en la pantalla
+      var gid = this.vsGhostOf(i);
+      if (gid >= 0) return CFG.GHOSTS[gid].color;
       if (this.netColors && this.netColors[i]) return this.netColors[i];
       var s = this.settings();
       if (i === 0) return s.pacColor;
@@ -274,6 +320,15 @@
     /* Nombre visible, con J1/J2 como respaldo */
     nameFor: function (i) {
       return this.rawName(i) || ('J' + (i + 1));
+    },
+
+    /* Etiqueta del jugador i en el marcador. Quien lleva un fantasma va con
+     * sus propios puntos al lado: el marcador grande es el del equipo
+     * Pac-Man y ahí no tiene nada que hacer. */
+    hudNameFor: function (i) {
+      return (this.vsGhostOf(i) >= 0)
+        ? (this.nameFor(i) + ' ' + (this.vsScore || 0))
+        : this.nameFor(i);
     },
 
     /* Escribe un texto encogiendo la letra hasta que quepa en ancho píxeles.
@@ -377,8 +432,17 @@
       for (var i = 0; i < this.playerCount; i++) {
         this.pacs.push(new window.PM.Pacman(i));
       }
+      /* PAC-MAN VS.: reparto de fantasmas. Va antes de las vidas porque a
+       * quien lleva fantasma se le deja el Pac-Man fuera de juego. */
+      this.vsGhosts = null;
+      this.vsScore = 0;
+      this.vsCatches = 0;
+      if (window.PM.Versus) window.PM.Versus.setup(this, opts.ghosts);
       if (this.livesMode === 'individual') {
-        for (i = 0; i < this.pacs.length; i++) this.pacs[i].lives = s.startLives;
+        // al que lleva fantasma no se le pintan vidas: no tiene Pac-Man
+        for (i = 0; i < this.pacs.length; i++) {
+          this.pacs[i].lives = this.pacs[i].out ? 0 : s.startLives;
+        }
         this.lives = 0;
       } else {
         this.lives = s.startLives;
@@ -570,6 +634,7 @@
       this.retoFecha = null;
       this.seedBase = 0;        // el azar vuelve a ser el de siempre
       this.playerCount = 1;
+      this.vsGhosts = null;      // se acabó el PAC-MAN VS. de esta partida
       this.state = 'MENU';
       this.paused = false;
       this.stopAllLoops();
@@ -616,7 +681,10 @@
       this.hostEvt({ t: 'pause', on: this.paused });
     },
 
+    /* Único embudo de la dirección: teclado, cruceta y deslizamiento pasan por
+     * aquí. En PAC-MAN VS. quien lleva fantasma se queda con la pulsación. */
     setPacDir: function (idx, d) {
+      if (window.PM.Versus && window.PM.Versus.steer(this, idx, d)) return;
       var p = this.pacs[idx];
       if (!p || p.out) return;
       /* Aquí es donde la repetición apunta cada giro; y mientras se ve una,
@@ -772,7 +840,7 @@
       /* salida por contador personal (cubre límites 0) */
       if (!this.globalActive) {
         var p2 = this.preferredInside();
-        if (p2 && p2.dotCounter >= CFG.houseDotLimit(p2.name, this.level)) {
+        if (p2 && p2.dotCounter >= this.houseLimitFor(p2)) {
           this.releaseGhost(p2);
         }
       }
@@ -846,7 +914,7 @@
             this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
-            this.startDeath(i);
+            this.startDeath(i, g.id);        // g.id: por si lo lleva un jugador
             break;                           // el otro jugador sigue a lo suyo
           }
         }
@@ -902,8 +970,14 @@
       }
     },
 
+    /* Al pasar de dispersión a persecución (y al revés) los fantasmas se dan
+     * la vuelta donde estén. Al de un jugador no: para él no hay modos que
+     * cambiar, así que darle la vuelta sería quitarle el mando de las manos.
+     * La inversión del energizante sí le toca (forceReversalFright). */
     forceReversal: function () {
-      for (var i = 0; i < 4; i++) this.ghosts[i].forceReverse();
+      for (var i = 0; i < 4; i++) {
+        if (!this.ghosts[i].human) this.ghosts[i].forceReverse();
+      }
     },
 
     /* ---------------------------------------------------------
@@ -970,11 +1044,23 @@
      * Casa de fantasmas: contadores de puntos
      * --------------------------------------------------------- */
     preferredInside: function () {
+      var i;
+      /* El fantasma de un jugador sale el primero: quedarse sesenta puntos
+       * botando dentro de la casa sin poder hacer nada no es jugar a nada. */
+      for (i = 1; i < 4; i++) {
+        if (this.ghosts[i].human && this.ghosts[i].mode === 'house') return this.ghosts[i];
+      }
       // orden de preferencia: Pinky -> Inky -> Clyde
-      for (var i = 1; i < 4; i++) {
+      for (i = 1; i < 4; i++) {
         if (this.ghosts[i].mode === 'house') return this.ghosts[i];
       }
       return null;
+    },
+
+    /* Puntos que le hacen falta a un fantasma para salir de la casa. Al de un
+     * jugador tampoco se le hace esperar: sale en cuanto le toca el turno. */
+    houseLimitFor: function (g) {
+      return g.human ? 0 : CFG.houseDotLimit(g.name, this.level);
     },
 
     houseDotEaten: function () {
@@ -1114,14 +1200,17 @@
 
     /* Muerte de un jugador. Si queda otro jugando, la partida NO se detiene:
      * solo ese Pac-Man se congela, hace su animación y reaparece. El parón
-     * clásico (con reinicio de fantasmas y "¡LISTO!") es para el último. */
-    startDeath: function (who) {
+     * clásico (con reinicio de fantasmas y "¡LISTO!") es para el último.
+     * byGhost: qué fantasma lo pilló, para apuntarle los puntos si lo lleva
+     * un jugador (PAC-MAN VS.). */
+    startDeath: function (who, byGhost) {
       var i = who || 0;
       var p = this.pacs[i];
       if (!p || p.out || p.dying) return;
       var last = !this.anyPlaying(i);
       // se acabó la racha de niveles limpios (solo cuenta la muerte propia)
       if (!this.netRole || i === this.localIdx) this.limpiosSeguidos = 0;
+      if (window.PM.Versus) window.PM.Versus.onCatch(this, i, byGhost);
       this.startPacDeath(i);
       this.dyingPlayer = i;
       this.hostEvt({ t: 'death', w: i, g: last ? 1 : 0 });
@@ -1301,8 +1390,11 @@
       if (this.state === 'MENU') this.highScore = this.highScore1;
     },
 
+    /* En PAC-MAN VS. no se guarda récord: son otros ajustes (un fantasma que
+     * piensa) y la marca no sería comparable con la de nadie. */
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
+      if (this.isVersus()) return;   // ni una partida contra un fantasma humano
       try {
         if (this.playerCount > 1) {
           if (this.highScore > this.highScore2) this.highScore2 = this.highScore;
@@ -1454,6 +1546,7 @@
     checkBadges: function () {
       var B = window.PM.Badges;
       if (!B) return;
+      if (this.isVersus()) return;   // maestrías = récord: aquí no cuentan
       var mode = this.badgeMode();
       var got = B.earnedAt(this.score);
       var fresh = null;
@@ -1488,9 +1581,18 @@
      * El nivel mide CUÁNTO juegas, no lo bueno que eres: todos los puntos
      * de la partida suman, hagas 500 o 50 000, y no hace falta batir ningún
      * récord. Devuelve el nivel nuevo si se ha subido. */
-    awardLevelXp: function () {
-      if (!window.PM.Level || !(this.score > 0)) return null;
-      var nuevo = window.PM.Level.add(this.score);
+    /* Puntos que se lleva ESTE jugador: el marcador del equipo si lleva un
+     * Pac-Man, y los suyos de cazador si lleva un fantasma. En local manda
+     * el jugador 1, que es de quien es el navegador. */
+    myPoints: function () {
+      var yo = this.netRole ? this.localIdx : 0;
+      return (this.vsGhostOf(yo) >= 0) ? (this.vsScore || 0) : this.score;
+    },
+
+    awardLevelXp: function (pts) {
+      if (pts === undefined) pts = this.score;
+      if (!window.PM.Level || !(pts > 0)) return null;
+      var nuevo = window.PM.Level.add(pts);
       if (nuevo) {
         this.levelNotice = { level: nuevo, ticks: 260 };
         window.AudioSys && AudioSys.playExtraLife();
@@ -1509,17 +1611,19 @@
       if (window.PM.Replay) window.PM.Replay.alAcabar();
       var L = window.PM.Level;
       var antes = L ? L.state() : null;
+      // lo que ha hecho uno mismo: en PAC-MAN VS. el cazador tiene sus puntos
+      var pts = this.myPoints();
       // logros de cierre: una partida más y la mejor puntuación
-      this.bumpAch({ partidas: 1, puntosMax: this.score });
-      var subida = this.awardLevelXp();
+      this.bumpAch({ partidas: 1, puntosMax: pts });
+      var subida = this.awardLevelXp(pts);
       /* Lo que te llevas de la partida, para el aviso del final. Se guarda
        * aquí porque es el único sitio donde se sabe el antes y el después:
        * después de esto la experiencia ya está sumada. */
       var ahora = L ? L.state() : null;
       this.runSummary = {
-        puntos: this.score,
+        puntos: pts,
         nivel: this.level,                          // nivel del laberinto
-        exp: this.score,                            // la experiencia son los puntos
+        exp: pts,                                   // la experiencia son los puntos
         lvlAntes: antes ? antes.level : 0,
         lvl: ahora ? ahora.level : 0,
         lvlPct: ahora ? ahora.pct : 0,
@@ -1670,22 +1774,24 @@
       this.rankingSent = true;      // una sola vez por partida
       if (this.isSpec()) return;    // mirar no da puntos ni historial
       this.closeRun();              // la experiencia también cuenta una vez
-      // el historial local guarda todas las partidas, con nombre o sin él
-      if (this.score > 0 && window.PM.History) {
+      // el historial local guarda todas las partidas, con nombre o sin él.
+      // En PAC-MAN VS. se apuntan los puntos de uno, no los del equipo rival.
+      if (this.myPoints() > 0 && window.PM.History) {
         window.PM.History.add({
           jugadores: this.playerCount,
           modo: this.netRole ? 'online' : 'local',
           nombre1: this.nameFor(0),
           nombre2: (this.playerCount === 2) ? this.nameFor(1) : '',
-          puntos: this.score,
+          puntos: this.myPoints(),
           nivel: this.level
         });
       }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
-      // el top mundial es del laberinto de 1980 y de su azar: en otro
-      // laberinto, o con el azar del reto del día, no se compara nada. El
-      // reto tiene su propia clasificación.
-      if (this.mazeId || this.seedBase) return;
+      // El top mundial es del laberinto de 1980, con su azar y con los cuatro
+      // fantasmas de la máquina. En otro laberinto, con el azar del reto del
+      // día o con un fantasma que piensa, no se compara nada: el reto tiene
+      // su propia clasificación y VS. no compite con nadie.
+      if (this.mazeId || this.seedBase || this.isVersus()) return;
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       // el top mundial tiene clasificación individual y de dúo; los grupos de
@@ -2148,8 +2254,14 @@
         case 'died':
           if (this.state === 'PLAYING' && this.pacs[who] &&
               !this.pacs[who].out && !this.pacs[who].dying) {
-            this.startDeath(who);
+            this.startDeath(who, d.g);       // d.g: el fantasma que lo pilló
           }
+          break;
+        /* PAC-MAN VS.: el rumbo del jugador que lleva un fantasma. Es una
+         * intención permanente, no un evento: si un mensaje se pierde, el
+         * siguiente lo arregla y no se nota. */
+        case 'gdir':
+          if (window.PM.Versus) window.PM.Versus.setWish(this, who, d.d);
           break;
         case 'ateGhost': {
           var g = this.ghosts[d.g];
@@ -2220,6 +2332,7 @@
       return {
         v: CFG.NET.PROTO, to: sid, n: this.pacs.length,
         nm: nm, co: co, sk: sk,
+        gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
         cfg: {
           ghostSpeedMult: this.ghostSpeedMult,
           pacSpeedMult: this.pacSpeedMult,
@@ -2245,6 +2358,7 @@
         dl: this.dotsLeft, de: this.dotsEaten,
         fa: this.fruitActive ? 1 : 0,
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
+        vs: this.vsScore || 0,        // PAC-MAN VS.: marcador del cazador
         he: this.snapEaten,
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
         /* posiciones de TODOS los jugadores: con 3 y 4 cada uno solo conoce
@@ -2260,7 +2374,7 @@
       for (i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         s.g.push({ x: r1(g.x), y: r1(g.y), d: g.dir, m: g.mode,
-          f: g.frightened ? 1 : 0, lp: g.leavePhase });
+          f: g.frightened ? 1 : 0, lp: g.leavePhase, w: g.wishDir });
       }
       if (this.playerCount > 1 && this.livesMode === 'individual') {
         s.lv = [];
@@ -2460,13 +2574,16 @@
             this.dyingPhase = 0;
             this.stopAllLoops();
           }
-          this.netSend('gevt', { t: 'died' });
+          this.netSend('gevt', { t: 'died', g: g.id });
         }
         return;
       }
     },
 
     sendGuestUpdates: function () {
+      /* PAC-MAN VS.: el que lleva fantasma no tiene posición que reportar.
+       * Manda su rumbo, que además vale de señal de vida. */
+      if (window.PM.Versus && window.PM.Versus.sendDir(this)) return;
       var me = this.pacs[this.localIdx];
       if (!me) return;
       /* Mientras muere se sigue enviando al mismo ritmo (si no, el vigilante
@@ -2700,6 +2817,7 @@
       this.dotsEaten = s.de;
       this.fruitActive = !!s.fa;
       if (typeof s.tm === 'number') this.timeTicks = s.tm;
+      if (typeof s.vs === 'number') this.vsScore = s.vs;
 
       /* vidas y espectadores */
       if (this.livesMode === 'individual' && s.lv && s.lv.length) {
@@ -2759,13 +2877,27 @@
       }
 
       /* fantasmas */
+      var V = window.PM.Versus;
       if (s.g) {
         for (i = 0; i < 4 && i < s.g.length; i++) {
           var gd = s.g[i], g = this.ghosts[i];
-          g.x = gd.x; g.y = gd.y; g.dir = gd.d;
+          /* PAC-MAN VS.: el fantasma que lleva uno mismo se simula aquí con
+           * autoridad, igual que el Pac-Man propio. Copiarle la posición cada
+           * instantánea sería un tirón por cada mensaje: el anfitrión va un
+           * viaje de red por detrás. Solo se acepta la suya si cambia de modo
+           * (le han comido, sale de casa...) o si los dos empiezan a separarse
+           * (ver CFG.VS.RESYNC_PX: se corta pronto para que la corrección no
+           * llegue a ser un salto de pasillo a pasillo). */
+          var mio = !!(V && V.drivenHere(this, i));
+          if (!mio || g.mode !== gd.m || V.tooFar(g, gd)) {
+            g.x = gd.x; g.y = gd.y; g.dir = gd.d;
+          }
           g.mode = gd.m;
           g.frightened = protFright ? (g.frightened || !!gd.f) : !!gd.f;
           g.leavePhase = gd.lp || 0;
+          // el rumbo del fantasma ajeno viene del anfitrión: así los demás
+          // clientes lo simulan igual entre instantánea e instantánea
+          if (!mio && typeof gd.w === 'number') g.wishDir = gd.w;
         }
       }
 
@@ -2927,6 +3059,9 @@
             if (this.eatFreezeTicks > 0 && i === this.hiddenGhost) continue;
             this.ghosts[i].draw(ctx, this);
           }
+          /* PAC-MAN VS.: marca sobre el fantasma que lleva un jugador. Sin
+           * ella no hay quien sepa cuál de los cuatro piensa por su cuenta. */
+          if (window.PM.Versus) window.PM.Versus.drawMarks(this, ctx);
         }
         for (i = this.pacs.length - 1; i >= 0; i--) {
           var pc = this.pacs[i];
@@ -2952,17 +3087,20 @@
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           for (i = 0; i < this.pacs.length; i++) {
-            if (this.pacs[i].out) continue;
+            // actorFor: el fantasma de quien lleva uno, si no su Pac-Man
+            var act = this.actorFor(i);
+            if (!act) continue;
             ctx.fillStyle = this.colorFor(i);
-            this.fitText(ctx, this.nameFor(i), this.pacs[i].x,
-              this.pacs[i].y + CFG.MAZE_Y - 10, 64, 7);
+            this.fitText(ctx, this.nameFor(i), act.x,
+              act.y + CFG.MAZE_Y - 10, 64, 7);
           }
         }
         /* emotes y maestrías sobre cada jugador */
         for (i = 0; i < this.pacs.length; i++) {
           var em = this.emotes[i];
-          if (!em || this.pacs[i].out) continue;
-          var ex = this.pacs[i].x, ey = this.pacs[i].y + CFG.MAZE_Y - 11;
+          var ac2 = em ? this.actorFor(i) : null;
+          if (!ac2) continue;
+          var ex = ac2.x, ey = ac2.y + CFG.MAZE_Y - 11;
           if (em.tag) {
             var et = 1 - (em.ticks / (em.total || CFG.EMOTE_TICKS));
             window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color,
@@ -3014,17 +3152,19 @@
         if (n === 2) {
           ctx.textAlign = 'left';
           ctx.fillStyle = this.colorFor(0);
-          this.fitText(ctx, this.nameFor(0), 20, 16, 88, 7);
+          this.fitText(ctx, this.hudNameFor(0), 20, 16, 88, 7);
           ctx.textAlign = 'right';
           ctx.fillStyle = this.colorFor(1);
-          this.fitText(ctx, this.nameFor(1), 204, 16, 88, 7);
+          this.fitText(ctx, this.hudNameFor(1), 204, 16, 88, 7);
         } else {
           ctx.textAlign = 'center';
           var ancho = (CFG.NATIVE_W - 16) / n;
           for (i = 0; i < n; i++) {
             ctx.fillStyle = this.colorFor(i);
-            ctx.globalAlpha = this.pacs[i].out ? 0.4 : 1;
-            this.fitText(ctx, this.nameFor(i), 8 + ancho * (i + 0.5), 16,
+            // el que lleva fantasma tiene el pac fuera de juego a propósito:
+            // ese nombre no va apagado, que sigue jugando
+            ctx.globalAlpha = (this.pacs[i].out && this.vsGhostOf(i) < 0) ? 0.4 : 1;
+            this.fitText(ctx, this.hudNameFor(i), 8 + ancho * (i + 0.5), 16,
               ancho - 3, 7);
           }
           ctx.globalAlpha = 1;

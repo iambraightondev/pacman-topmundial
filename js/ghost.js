@@ -30,6 +30,12 @@
     this.name = CFG.GHOSTS[id].name;
     this.color = CFG.GHOSTS[id].color;
     this.scatter = CFG.GHOSTS[id].scatter;
+    /* PAC-MAN VS.: si lo lleva un jugador, manda su rumbo y no la IA. Van
+     * aparte de resetForLevel a propósito: el reparto es de toda la partida,
+     * no de un nivel, y el rumbo pedido tampoco se olvida al cambiar de
+     * laberinto (si no, habría que volver a pulsar para seguir andando). */
+    this.human = false;
+    this.wishDir = -1;
     this.resetForLevel();
   }
 
@@ -143,6 +149,13 @@
     }
     if (candidates.length === 0) return backDir; // callejón: única salida
 
+    /* PAC-MAN VS.: manda el jugador. Se decide DESPUÉS de montar la lista de
+     * salidas legales, así que las paredes, la puerta, las zonas sin ARRIBA y
+     * la prohibición de invertir le atan exactamente igual que a la máquina.
+     * Solo por los pasillos: dentro de la casa, saliendo de ella o volviendo
+     * hecho ojos, el fantasma hace lo de siempre. */
+    if (this.human && this.mode === 'normal') return this.humanChoice(candidates);
+
     if (isFright) {
       // pseudoaleatorio: prueba una dirección al azar; si no es válida,
       // recorre arriba, izquierda, abajo, derecha. El azar lo lleva la
@@ -168,6 +181,23 @@
       if (dist < bestDist) { bestDist = dist; best = d; }
     }
     return best;
+  };
+
+  /* Salida elegida por un jugador, entre las que ya son legales:
+   *   1) lo que ha pedido, si se puede desde aquí
+   *   2) seguir recto, que es lo que espera quien no toca nada
+   *   3) la primera legal en el orden de siempre — un fantasma nunca se
+   *      para, así que en una curva cerrada gira aunque no se le diga
+   * No hay marcha atrás porque backDir ni siquiera está en la lista: en eso
+   * el fantasma de un jugador está igual de atado que el de la máquina. */
+  Ghost.prototype.humanChoice = function (candidates) {
+    var i;
+    if (candidates.indexOf(this.wishDir) !== -1) return this.wishDir;
+    if (candidates.indexOf(this.dir) !== -1) return this.dir;
+    for (i = 0; i < CFG.DIR_PRIORITY.length; i++) {
+      if (candidates.indexOf(CFG.DIR_PRIORITY[i]) !== -1) return CFG.DIR_PRIORITY[i];
+    }
+    return candidates[0];
   };
 
   /* ---------- Velocidad (px/tick), resuelta con las tablas ---------- */
