@@ -1,2 +1,3 @@
 .playwright-mcp/
 *.local.png
+.claude/worktrees/

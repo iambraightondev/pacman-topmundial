@@ -695,6 +695,39 @@
     eq(G.seedBase, 0, 'una partida normal vuelve al azar de siempre');
   });
 
+  /* El reto tiene su propia clasificación. Colarlo además en el top mundial
+   * mezclaría marcas de azares distintos: los fantasmas azules huyen por otro
+   * lado, así que ni la puntuación ni el tiempo se comparan con los de una
+   * partida normal. Es la misma razón por la que no vale con los ajustes
+   * cambiados. */
+  test('el reto del día no entra en el top mundial ni en el récord de tiempo',
+    function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, seed: 4321 });
+      ok(!G.canTimeRecord(), 'la marca de velocidad no cuenta');
+      var enviadas = 0;
+      var submit0 = window.PM.Ranking.submit;
+      var conf0 = window.PM.Ranking.configured;
+      var nick0 = window.PM.settings.nick1;
+      try {
+        window.PM.settings.nick1 = 'ALGUIEN';    // sin nombre no se manda nada
+        window.PM.Ranking.configured = function () { return true; };
+        window.PM.Ranking.submit = function () { enviadas++; };
+        G.score = 5000;
+        G.submitRanking();
+        eq(enviadas, 0, 'ni la puntuación');
+        G.newGame({ players: 1 });      // partida normal: esa sí
+        G.score = 5000;
+        G.submitRanking();
+        ok(enviadas > 0, 'una partida normal sí se manda');
+      } finally {
+        window.PM.Ranking.submit = submit0;
+        window.PM.Ranking.configured = conf0;
+        window.PM.settings.nick1 = nick0;
+        G.newGame({ players: 1 });
+      }
+    });
+
   test('el reto se cierra con la partida, y solo se juega una vez', function () {
     var R = window.PM.Reto;
     R.olvidar();

@@ -1594,6 +1594,10 @@
     canTimeRecord: function () {
       if (this.playerCount !== 1 || this.netRole) return false;
       if (this.mazeId) return false;      // otro laberinto, otro tiempo
+      // el reto del día mueve el azar entero: los fantasmas azules huyen por
+      // otro lado, así que el patrón es otro y el tiempo no se compara con el
+      // de nadie. Tiene su propia clasificación, que es donde cuenta.
+      if (this.seedBase) return false;
       var r = CFG.TIME_RULES;
       return this.startLevel === r.startLevel &&
         this.pacSpeedMult === r.pacSpeedMult &&
@@ -1678,8 +1682,10 @@
         });
       }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
-      // el top mundial es del laberinto de 1980: en otro no se compara nada
-      if (this.mazeId) return;
+      // el top mundial es del laberinto de 1980 y de su azar: en otro
+      // laberinto, o con el azar del reto del día, no se compara nada. El
+      // reto tiene su propia clasificación.
+      if (this.mazeId || this.seedBase) return;
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       // el top mundial tiene clasificación individual y de dúo; los grupos de
