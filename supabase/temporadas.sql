@@ -21,9 +21,18 @@
 -- El mes se saca en UTC a propósito, igual que en el navegador
 -- (js/temporadas.js): si cada uno lo calculara en su huso, a fin de mes
 -- unos pedirían una temporada y otros otra.
+--
+-- Y se arma con extract + lpad, no con to_char: to_char es STABLE (mira la
+-- configuración de fecha de la sesión) y una columna generada exige una
+-- expresión IMMUTABLE. Con to_char, Postgres responde
+-- «42P17: generation expression is not immutable» y no crea la columna.
 alter table public.ranking
   add column if not exists temporada text
-  generated always as (to_char(creado_en at time zone 'UTC', 'YYYY-MM')) stored;
+  generated always as (
+    lpad(extract(year from (creado_en at time zone 'UTC'))::int::text, 4, '0')
+    || '-' ||
+    lpad(extract(month from (creado_en at time zone 'UTC'))::int::text, 2, '0')
+  ) stored;
 
 comment on column public.ranking.temporada is
   'Mes natural de la partida (AAAA-MM, en UTC). Calculada: no se escribe nunca a mano.';
