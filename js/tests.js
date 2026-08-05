@@ -1604,6 +1604,27 @@
     G.toMenu();
   });
 
+  /* Si eliges fantasma y luego nadie lo toca —empiezas solo, o tu rival no
+   * llega a pulsar—, antes se quedaba dando vueltas por el laberinto sin
+   * perseguir a nadie: parecía un juego roto. Hasta la primera tecla lo lleva
+   * la máquina; a partir de ahí es suyo. */
+  test('el fantasma que nadie ha tocado todavía lo lleva la máquina',
+    function () {
+      versus(2, 1, 1);                       // el J2 lleva a Pinky
+      var g = G.ghosts[1];
+      ok(g.human, 'es de un jugador');
+      ok(!g.taken, 'pero aún no lo ha cogido nadie');
+      // sin dueño decide como la IA: va a por su objetivo, no recto porque sí
+      var comoIA = enElCruce(g, CFG.DIR.RIGHT);
+      var conIA = comoIA.decide(G);
+      g.human = false;                       // la misma casilla, como fantasma normal
+      eq(comoIA.decide(G), conIA, 'decide igual que uno de la máquina');
+      g.human = true;
+      G.setPacDir(1, CFG.DIR.DOWN);          // la primera tecla del J2
+      ok(g.taken, 'a la primera tecla pasa a ser suyo');
+      G.toMenu();
+    });
+
   test('el fantasma de un jugador va donde le dicen, no a por Pac-Man', function () {
     versus(2, 1, 1);                       // el J2 lleva a Pinky
     var g = enElCruce(G.ghosts[1], CFG.DIR.RIGHT);

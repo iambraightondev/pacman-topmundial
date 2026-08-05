@@ -76,6 +76,7 @@
       for (i = 0; i < 4; i++) {
         g.ghosts[i].human = false;
         g.ghosts[i].wishDir = -1;
+        g.ghosts[i].taken = false;
       }
       for (i = 0; i < g.vsGhosts.length; i++) {
         gid = g.vsGhosts[i];
@@ -104,6 +105,7 @@
       // en online solo se lleva el fantasma propio: el de otro no se toca
       if (g.netRole && idx !== g.localIdx) return true;
       var gh = g.ghosts[gid];
+      gh.taken = true;          // a partir de aquí lo lleva él, no la máquina
       if (gh.wishDir === d) return true;
       gh.wishDir = d;
       this.flushDir(g);          // el giro sale hacia el anfitrión al momento
@@ -140,6 +142,7 @@
       var gid = g.vsGhostOf(who);
       if (gid < 0) return;
       g.ghosts[gid].wishDir = (d >= 0 && d < 4) ? d : -1;
+      if (d >= 0 && d < 4) g.ghosts[gid].taken = true;
     },
 
     /* ---------------------------------------------------------

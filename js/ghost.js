@@ -36,6 +36,7 @@
      * laberinto (si no, habría que volver a pulsar para seguir andando). */
     this.human = false;
     this.wishDir = -1;
+    this.taken = false;      // su jugador ya ha pulsado alguna vez
     this.resetForLevel();
   }
 
@@ -154,7 +155,14 @@
      * la prohibición de invertir le atan exactamente igual que a la máquina.
      * Solo por los pasillos: dentro de la casa, saliendo de ella o volviendo
      * hecho ojos, el fantasma hace lo de siempre. */
-    if (this.human && this.mode === 'normal') return this.humanChoice(candidates);
+    /* Un fantasma de jugador que todavía no ha recibido ninguna orden lo
+     * sigue llevando la máquina. Si no, quien empieza una partida sin que su
+     * rival llegue a tocar una tecla ve al fantasma dando vueltas solo por el
+     * laberinto, que parece un fallo del juego y encima no persigue a nadie.
+     * En cuanto pulsa una vez, es suyo para el resto de la partida. */
+    if (this.human && this.taken && this.mode === 'normal') {
+      return this.humanChoice(candidates);
+    }
 
     if (isFright) {
       // pseudoaleatorio: prueba una dirección al azar; si no es válida,

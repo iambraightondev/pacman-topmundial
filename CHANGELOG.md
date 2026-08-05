@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · El fantasma que nadie lleva vuelve a llevarlo la máquina
+
+- Si elegías fantasma y luego **nadie lo tocaba** —empezabas solo, o el otro
+  no llegaba a pulsar—, el fantasma se quedaba **dando vueltas por el
+  laberinto sin perseguir a nadie**. Parecía un juego roto, y encima quitaba
+  a un perseguidor de la partida.
+- Ahora, **hasta la primera tecla lo lleva la máquina**, como si fuera uno de
+  los cuatro de siempre. En cuanto su jugador pulsa una vez, es suyo para el
+  resto de la partida.
+
 ## 2026-08-05 · El TOP MUNDIAL deja de aceptar puntuaciones inventadas
 
 - **El agujero**: la tabla del ranking aceptaba inserciones directas con la
