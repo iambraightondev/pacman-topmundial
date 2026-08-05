@@ -72,6 +72,45 @@ when there is one; leaving a watched game only calls `Net.closeView()` and
 then `Party.resume()`. If the watcher's own party starts a game, `Party.begin`
 closes the view first and the watcher joins as a player.
 
+## Logros, skins por nivel, perfil y cuentas
+
+**Logros** (`PM.Achievements`, `CFG.ACHIEVEMENTS`, `CFG.ACH_KEY`): what is
+stored are COUNTERS, never "unlocked yes/no" — `fantasmas`, `frutas`,
+`partidas` (sum), `racha`, `nivelMax`, `limpios`, `puntosMax` (max) and
+`mejorT1` (min, 0 = none yet). Each achievement declares `stat`, `goal` and
+optionally `menor` (lower is better). This is what makes them recomputable at
+any time — signing into an account merges counters and the achievement list
+falls out of them, with no history of when anything happened. `claim()`
+returns newly earned ones not yet announced; `Game.bumpAch()` records and
+queues the in-game notice. Spectating records nothing, and online only your
+own kills/fruits count.
+
+**Skins by level** (`CFG.SKINS[].level` = 1/3/7/12/20/30): gated on
+`PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
+currently worn — a raised requirement must never strip what a player already
+has. Locked ones render greyed in OPCIONES with the level they need.
+
+**Perfil** (`#profile`, tabs PERFIL / LOGROS): avatar, name, level bar,
+summary, avatar picker and the account box. Avatars (`CFG.AVATARS`) are drawn
+by `Sprites.drawAvatar` reusing the game's own sprites (faces, ghosts, fruit,
+badge) scaled from a ~7 px native radius. Guests get a random-name button
+(`CFG.RANDOM_NAMES`).
+
+**Cuentas** (`PM.Account`, `CFG.ACCOUNT`): Supabase Auth over REST, no SDK.
+The player only ever sees usuario + contraseña; the e-mail Supabase requires
+is composed internally as `<usuario>@<MAIL_DOMAIN>` and never shown. The
+usuario IS the in-game name, so ranking, party, invites and spectating keep
+working off a single name. Tables `perfiles` and `amigos` live in
+`supabase/cuentas.sql` with RLS (public read, owner-only writes). Signing in
+runs `applyRemote` + `push`: cloud and local are MERGED keeping the best of
+each (xp/records/counters never go down), so entering an account can never
+cost progress. Friends require an account; `PM.Friends` is only a local cache
+of the cloud list.
+
+The Supabase project MUST have Email provider on, sign-ups allowed and
+**Confirm email off** — the internal mailbox does not exist, so a confirmation
+link would lock every account out.
+
 ## App instalable (PWA) y pruebas
 
 `manifest.json` + `sw.js` make the game installable and playable offline:
@@ -83,6 +122,13 @@ icons) is cache-first, and cross-origin requests (Supabase: rooms and
 ranking) always bypass the worker. Registered only over http(s) — with
 `file://` there is no service worker and the game runs as before. Icons in
 `icons/` are the game's own Pac-Man rendered to PNG.
+
+Two ways to run the same battery: open `tests.html` from a server like the
+game, or `node pruebas-node.js` (fake DOM, exits non-zero on failure, skips
+only the pixel-counting checks — they guard themselves with
+`window.__SIN_LIENZO`). After editing `js/`, serve `tests.html` on a NEW port
+or the browser's heuristic cache will hand you the previous file and you will
+be testing stale code.
 
 `tests.html` runs `js/tests.js`: a dependency-free suite over the real
 modules, covering what has broken before (per-player death, the `dy`
@@ -109,11 +155,13 @@ results also land in `window.__TESTS`.
   - `js/net-config.js` — Supabase credentials placeholder (defines `PM.NET_CFG`)
   - `js/net.js`     — realtime transport for online mode (defines `PM.Net`)
   - `js/party.js`   — persistent group rooms and invites (defines `PM.Party`)
+  - `js/achievements.js` — achievement counters (defines `PM.Achievements`)
+  - `js/account.js` — Supabase Auth accounts + cloud profile (defines `PM.Account`)
   - `js/game.js`    — state machine + fixed-timestep loop (defines `PM.Game`)
   - `js/ui.js`      — menus, settings panel, party panel (defines `PM.UI`)
   - Script order in index.html: config, audio, sprites, pacman, ghost,
     net-config, net, party, badges, history, level, friends, ranking,
-    game, ui.
+    achievements, account, game, ui.
 - Rendering: native resolution 224×288 px (28×36 tiles of 8 px: 3 top rows for
   scores, 31 maze rows, 2 bottom rows for lives/fruits). Integer-scale up (×2.5
   or ×3) with `imageSmoothingEnabled=false` for crisp pixels. Game logic runs in
@@ -855,3 +903,13 @@ from third parties. Cells are indices `row*28+col`.
 25. A dialog opened on top of a panel (level-up on returning to the menu,
     invites, watch prompts) gets `#prompt.over-panel` and hides what is
     behind it; over the maze it stays translucent on purpose.
+26. Achievements are derived from stored counters (never from a flag), so a
+    fresh device that signs in reproduces exactly the same list. Spectating
+    records nothing; online counts only the local player's kills and fruit.
+27. A skin below its level requirement cannot be selected — except the one
+    already worn, which is never taken away. OPCIONES shows the level needed.
+28. PERFIL renders every avatar in `CFG.AVATARS` without throwing, and an
+    unknown avatar id falls back to the first instead of drawing nothing.
+29. Accounts: usuario + contraseña only (no e-mail typed anywhere), usuario is
+    the in-game name, and signing in MERGES cloud and local keeping the best of
+    each — xp, records and counters never go down. Friends need an account.

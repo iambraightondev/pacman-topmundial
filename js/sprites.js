@@ -96,9 +96,16 @@
     }
 
     if (skin === 'ojos') {
-      // un ojo mirando en la dirección de avance
-      var ex = x - v.y * 2.6 + v.x * 1.2;
-      var ey = y + v.x * 2.6 + v.y * 1.2 - (v.y > 0 ? 0 : 1);
+      /* Un ojo mirando en la dirección de avance. Va SIEMPRE en el mismo
+       * sitio respecto a la pantalla: arriba cuando se mueve en horizontal y
+       * al lado izquierdo cuando se mueve en vertical. Antes se usaba la
+       * perpendicular (-v.y, v.x) a secas, que cambia de signo entre ir a la
+       * derecha y a la izquierda: el ojo saltaba de la frente a la barbilla,
+       * y en la miniatura de OPCIONES (que mira a la derecha) salía debajo. */
+      var ox = (v.x !== 0) ? 0 : -1;
+      var oy = (v.x !== 0) ? -1 : 0;
+      var ex = x + ox * 2.4 + v.x * 1.2;
+      var ey = y + oy * 2.4 + v.y * 1.2;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(ex, ey, 1.9, 0, Math.PI * 2);
@@ -785,6 +792,119 @@
         ctx.fillRect(ox + c, oy + r, 1, 1);
       }
     }
+  };
+
+  /* Estrella de N puntas, para los logros */
+  function star(ctx, x, y, r, puntas) {
+    ctx.beginPath();
+    for (var i = 0; i < puntas * 2; i++) {
+      var rr = (i % 2 === 0) ? r : r * 0.45;
+      var a = -Math.PI / 2 + i * Math.PI / puntas;
+      var px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  /* ------------------------------------------------------------
+   * Aviso de logro conseguido. Deliberadamente distinto del cartel de
+   * maestría: una banda estrecha que entra deslizándose desde la derecha,
+   * con una estrella girando y el nombre + la condición. Así, si caen los
+   * dos a la vez, se distinguen de un vistazo.
+   *   t    — 0 al aparecer, 1 al terminar
+   *   info — { name, desc, color }
+   * ------------------------------------------------------------ */
+  Sprites.drawAchNotice = function (ctx, cx, cy, w, t, info, tick) {
+    var color = info.color || '#ffff00';
+    var h = 20;
+    var ent = Math.min(1, t / 0.14);
+    var sal = Math.min(1, (1 - t) / 0.14);
+    var vis = Math.min(ent, sal);
+    if (vis <= 0) return;
+
+    var desliz = (1 - (1 - Math.pow(1 - ent, 3))) * (w / 2 + 30);
+    var x0 = cx - w / 2 + desliz;
+
+    ctx.save();
+    ctx.globalAlpha = vis;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.9)';
+    ctx.fillRect(x0, cy - h / 2, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
+
+    // estrella girando a la izquierda de la banda
+    var sx = x0 + 13;
+    ctx.save();
+    ctx.translate(sx, cy);
+    ctx.rotate(tick * 0.05);
+    ctx.fillStyle = color;
+    star(ctx, 0, 0, 7, 5);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 6px monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('¡LOGRO!', x0 + 25, cy - 5);
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = color;
+    ctx.fillText(String(info.name || ''), x0 + 25, cy + 4);
+
+    // la condición, a la derecha y pequeñita, si cabe
+    ctx.font = '5px monospace';
+    ctx.fillStyle = '#aaaaaa';
+    ctx.textAlign = 'right';
+    var d = String(info.desc || '');
+    if (ctx.measureText(d).width < w - 110) ctx.fillText(d, x0 + w - 6, cy + 4);
+
+    ctx.restore();
+  };
+
+  /* ------------------------------------------------------------
+   * Avatares del perfil. No hay imágenes: se reaprovechan los propios
+   * sprites del juego (Pac-Man, sus caras, los fantasmas, las frutas y la
+   * medalla), escalados al radio que se pida. Todos miden ~7 px de radio
+   * nativo, así que basta con un factor r/7.
+   *   id    — CFG.AVATARS[].id
+   *   color — color del jugador, para los que lo usan
+   * ------------------------------------------------------------ */
+  Sprites.drawAvatar = function (ctx, x, y, r, id, color) {
+    var info = null;
+    for (var i = 0; i < CFG.AVATARS.length; i++) {
+      if (CFG.AVATARS[i].id === id) { info = CFG.AVATARS[i]; break; }
+    }
+    if (!info) info = CFG.AVATARS[0];
+    color = color || '#ffff00';
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(r / 7, r / 7);
+    switch (info.kind) {
+      case 'face':
+        Sprites.drawPacFace(ctx, 0, 0, 6.5, color, info.arg);
+        break;
+      case 'ghost':
+        Sprites.drawGhost(ctx, 0, 0, CFG.DIR.RIGHT, info.arg, 'normal', 0, false);
+        break;
+      case 'fright':
+        Sprites.drawGhost(ctx, 0, 0, CFG.DIR.RIGHT, 0, 'fright', 0, false);
+        break;
+      case 'eyes':
+        Sprites.drawGhost(ctx, 0, 0, CFG.DIR.RIGHT, 0, 'eyes', 0, false);
+        break;
+      case 'fruit':
+        Sprites.drawFruit(ctx, 0, 0, info.arg);
+        break;
+      case 'badge':
+        Sprites.drawBadge(ctx, 0, 0, 6.5, color, false);
+        break;
+      default:
+        Sprites.drawPacman(ctx, 0, 0, CFG.DIR.RIGHT, 2, color, 'clasico');
+    }
+    ctx.restore();
   };
 
   /* ------------------------------------------------------------

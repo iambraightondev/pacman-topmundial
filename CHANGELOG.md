@@ -2,6 +2,42 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Logros, perfil con avatar, cuentas y skins que se ganan
+
+- **Sistema de logros**: 15, desde el DOBLETE (dos fantasmas con el mismo
+  energizante) hasta AZOTE (1000 fantasmas), pasando por despejar niveles sin
+  morir, frutas, partidas jugadas, llegar lejos y hacer el nivel 1 en menos de
+  1:30. Al conseguir uno sale una banda con su estrella durante la partida, y
+  en PERFIL están todos con su barra de progreso. No se guarda "conseguido
+  sí/no" sino **contadores**, así que se pueden recalcular en cualquier momento
+  (por ejemplo al entrar en una cuenta) sin depender de cuándo pasó cada cosa.
+- **Las skins se ganan subiendo de nivel**: OJOS en el 3, NEÓN en el 7, ARO en
+  el 12, PÍXEL en el 20 y SOMBRA en el 30. Las que aún no tienes salen
+  apagadas en OPCIONES con el nivel que piden. **La que ya llevabas puesta no
+  se te quita nunca**, aunque el requisito la dejara fuera.
+- **Vista PERFIL**: tu avatar, tu nombre, tu nivel con la barra, y un resumen
+  de logros, maestría y récord. Hay **16 avatares** dibujados por código
+  reaprovechando los sprites del juego: Pac-Man y sus caras, los cuatro
+  fantasmas, el asustado, los ojos, frutas y la medalla.
+- **Nombre al azar de invitado**: un botón en PERFIL sortea nombres tipo
+  PACMAN, ZIGZAG o NEORUN, para no tener que inventarse uno.
+- **Cuentas con usuario y contraseña** para quien quiera llevarse sus logros,
+  maestrías, récords y amigos a cualquier sitio. Solo se pide usuario y
+  contraseña: no hay que dar ningún correo. El usuario **es** tu nombre en el
+  juego, así no hay dos nombres que cuadrar. Al entrar, lo de la nube y lo de
+  este navegador **se funden quedándose con lo mejor de cada lado**: nunca se
+  pierde lo jugado de invitado ni lo jugado en otro ordenador.
+- **Los amigos pasan a ir con la cuenta**: de invitado se juega igual, pero la
+  lista de amigos necesita cuenta (así la tienes en cualquier sitio, y no
+  atada a un navegador).
+- **Arreglada la skin OJOS**: el ojo se colocaba con una perpendicular que
+  cambia de signo entre ir a la derecha y a la izquierda, así que saltaba de
+  la frente a la barbilla — y en la miniatura de OPCIONES, que mira a la
+  derecha, salía justo debajo. Ahora va siempre en la frente.
+- **Pruebas sin navegador**: `node pruebas-node.js` corre las mismas 80
+  pruebas de `tests.html` con un DOM de mentira, y sale con error si falla
+  alguna.
+
 ## 2026-08-04 · Los patrones del arcade vuelven a funcionar
 
 - **Pac-Man iba un 10% lento por los pasillos con puntos**, y eso solo ya

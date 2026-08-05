@@ -117,6 +117,14 @@
     emoteCooldown: 0,
     chat: [],            // { name, color, text, ticks }
     chatCooldown: 0,
+    /* logros: contadores de ESTA partida y avisos pendientes de enseñar */
+    runGhosts: 0,        // fantasmas que me he comido yo
+    runFrutas: 0,
+    runRacha: 0,         // mejor racha con un mismo energizante
+    limpiosSeguidos: 0,  // niveles seguidos despejados sin morir
+    achNotices: [],      // cola de logros por celebrar
+    achNotice: null,     // { name, desc, color, ticks, total }
+
     badgeNotice: null,   // { name, color, mode, nueva, ticks, total } — maestría
     badgeRun: [],        // ids de maestría ya celebrados en ESTA partida
     levelNotice: null,   // { level, ticks } — nivel de jugador recién subido
@@ -303,6 +311,12 @@
       this.timeTicks = 0;
       this.timeSent = false;
       this.lvl1Cs = 0;         // centésimas que costó despejar el nivel 1
+      this.runGhosts = 0;
+      this.runFrutas = 0;
+      this.runRacha = 0;
+      this.limpiosSeguidos = 0;
+      this.achNotices = [];
+      this.achNotice = null;
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -720,6 +734,10 @@
             if (p.tileY() === CFG.START.fruit.y &&
                 (p.tileX() === 13 || p.tileX() === 14)) {
               this.fruitActive = false;
+              if (!this.netRole || i === this.localIdx) {
+                this.runFrutas++;
+                this.bumpAch({ frutas: 1 });
+              }
               this.addScore(this.fruitInfo.points);
               this.addPopup(CFG.START.fruit.x * T + T / 2,
                 CFG.START.fruit.y * T + T / 2,
@@ -765,6 +783,8 @@
       /* nivel completado */
       if (this.dotsLeft <= 0) {
         if (this.level === 1) this.submitLevel1Time();
+        this.limpiosSeguidos++;          // despejado, y sin morir por el camino
+        this.bumpAch({ limpios: this.limpiosSeguidos });
         this.state = 'LEVEL_DONE';
         this.levelPhase = 0;
         this.phaseTicks = CFG.LEVEL_FREEZE_TICKS;
@@ -956,6 +976,12 @@
       var streak = Math.min(this.chainIndex, 3);   // 0..3 dentro de la racha
       var pts = CFG.GHOST_CHAIN[streak];
       this.chainIndex++;
+      /* logros: solo los que me como yo (en online, `who` dice quién fue) */
+      if (!this.netRole || (who || 0) === this.localIdx) {
+        this.runGhosts++;
+        this.runRacha = Math.max(this.runRacha, this.chainIndex);
+        this.bumpAch({ fantasmas: 1, racha: this.chainIndex });
+      }
       this.addScore(pts);
       this.addPopup(g.x, g.y, pts, CFG.EAT_FREEZE_TICKS);
       g.eaten();
@@ -1012,6 +1038,8 @@
       var p = this.pacs[i];
       if (!p || p.out || p.dying) return;
       var last = !this.anyPlaying(i);
+      // se acabó la racha de niveles limpios (solo cuenta la muerte propia)
+      if (!this.netRole || i === this.localIdx) this.limpiosSeguidos = 0;
       this.startPacDeath(i);
       this.dyingPlayer = i;
       this.hostEvt({ t: 'death', w: i, g: last ? 1 : 0 });
@@ -1127,6 +1155,7 @@
         return;
       }
       this.level++;
+      this.bumpAch({ nivelMax: this.level });
       this.resetLevel();
       this.enterReady(CFG.READY_TICKS);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: CFG.READY_TICKS });
@@ -1156,6 +1185,18 @@
         this.persistHighScore();
       }
       this.checkBadges();        // ¿se ha cruzado un escalón de maestría?
+    },
+
+    /* Escribe los dos récords tal cual están. Lo usa la cuenta al traerse
+     * marcas mejores de otro sitio (persistHighScore solo sabe guardar el de
+     * la partida en curso). */
+    saveHighScores: function () {
+      try {
+        localStorage.setItem(CFG.HIGHSCORE_KEY, String(this.highScore1 || 0));
+        localStorage.setItem(CFG.HIGHSCORE2_KEY, String(this.highScore2 || 0));
+      } catch (e) { /* sin almacenamiento */ }
+      // si no se está jugando, el marcador de la portada enseña el de 1 jugador
+      if (this.state === 'MENU') this.highScore = this.highScore1;
     },
 
     persistHighScore: function () {
@@ -1327,6 +1368,7 @@
       if (this.levelNotice && --this.levelNotice.ticks <= 0) {
         this.levelNotice = null;
       }
+      this.stepAchNotice();
     },
 
     /* ---------- Nivel de jugador ----------
@@ -1350,7 +1392,12 @@
     closeRun: function () {
       if (this.xpSent || this.isSpec()) return null;
       this.xpSent = true;
-      return this.awardLevelXp();
+      // logros de cierre: una partida más y la mejor puntuación
+      this.bumpAch({ partidas: 1, puntosMax: this.score });
+      var subida = this.awardLevelXp();
+      // la cuenta se queda con lo último, si hay sesión
+      if (window.PM.Account) window.PM.Account.pushQuiet();
+      return subida;
     },
 
     /* ---------- Cronómetro ---------- */
@@ -1364,6 +1411,36 @@
       var m = Math.floor(s / 60);
       s = s % 60;
       return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    },
+
+    /* ---------------------------------------------------------
+     * Logros
+     * Se apuntan contadores según pasan las cosas (no al final), así el
+     * aviso sale en el momento. Mirar la partida de otro no cuenta para
+     * nada, y en online solo cuenta lo que hace uno mismo.
+     * --------------------------------------------------------- */
+    bumpAch: function (o) {
+      if (this.isSpec()) return;
+      var A = window.PM.Achievements;
+      if (!A) return;
+      A.recordAll(o);
+      var fresh = A.claim();
+      for (var i = 0; i < fresh.length; i++) {
+        this.achNotices.push({
+          name: fresh[i].name, desc: fresh[i].desc, color: fresh[i].color,
+          ticks: CFG.ACH_NOTICE_TICKS, total: CFG.ACH_NOTICE_TICKS
+        });
+      }
+      if (fresh.length && window.PM.Account) window.PM.Account.pushQuiet();
+    },
+
+    /* Va sacando los avisos de logro de uno en uno */
+    stepAchNotice: function () {
+      if (!this.achNotice) {
+        if (!this.achNotices.length) return;
+        this.achNotice = this.achNotices.shift();
+      }
+      if (--this.achNotice.ticks <= 0) this.achNotice = null;
     },
 
     /* ---------- Récord de velocidad del primer nivel ----------
@@ -1387,6 +1464,7 @@
       if (!(cs > 0) || cs > CFG.RANKING.MAX_TIME) return;
       this.lvl1Cs = cs;                   // el panel final lo enseña igual
       if (!this.canTimeRecord()) return;
+      this.bumpAch({ mejorT1: cs });      // logro de velocidad, con las mismas reglas
       var R = window.PM.Ranking;
       if (!R || !R.configured()) return;
       var nombre = this.rawName(0);
@@ -2056,6 +2134,8 @@
         if (me.tileY() === CFG.START.fruit.y &&
             (me.tileX() === 13 || me.tileX() === 14)) {
           this.fruitActive = false;               // el evt trae los puntos
+          this.runFrutas++;
+          this.bumpAch({ frutas: 1 });
           this.netSend('gevt', { t: 'ateFruit' });
         }
       }
@@ -2782,6 +2862,13 @@
 
       /* maestría recién ganada: entra, se luce y se va */
       if (this.badgeNotice) this.renderBadgeNotice(ctx);
+
+      /* logro recién conseguido (debajo de la maestría, no se pisan) */
+      if (this.achNotice) {
+        var an = this.achNotice;
+        window.PM.Sprites.drawAchNotice(ctx, 112, 13 * T + CFG.MAZE_Y,
+          CFG.NATIVE_W - 20, 1 - (an.ticks / an.total), an, this.tick);
+      }
 
       /* nivel de jugador subido */
       if (this.levelNotice) {

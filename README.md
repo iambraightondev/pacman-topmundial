@@ -112,6 +112,37 @@ Las puntuaciones las envía el navegador, así que técnicamente se pueden
 falsear; para un ranking a prueba de trampas habría que validar la partida en
 una Edge Function y reservar el `INSERT` a la clave de servicio.
 
+### Las cuentas
+
+Usan **Supabase Auth** por REST, sin librerías. El jugador solo ve usuario y
+contraseña: el correo que Supabase exige se compone por dentro
+(`usuario@cuentas.pacman-topmundial.vercel.app`) y no se enseña en ninguna
+parte. Las tablas (`perfiles` y `amigos`, con RLS: cada uno solo escribe lo
+suyo) están en [`supabase/cuentas.sql`](supabase/cuentas.sql).
+
+**Ajuste obligatorio del proyecto**, que no se puede hacer por SQL —
+*Authentication → Sign In / Providers*:
+
+- **Email**: activado
+- **Allow new users to sign up**: activado
+- **Confirm email**: **apagado**
+
+Con la confirmación encendida el alta no devuelve sesión, y como ese buzón no
+existe, el enlace no llega nunca y nadie puede entrar.
+
+## Pruebas
+
+Dos maneras de correr la misma batería:
+
+- **En el navegador**: abre `tests.html` desde el servidor, igual que el juego.
+  El resultado queda también en `window.__TESTS`. Ojo: tras editar algo de
+  `js/`, levanta el servidor en un **puerto nuevo** o el navegador te servirá
+  la versión anterior del fichero (caché heurística) y estarás probando el
+  código viejo sin enterarte.
+- **Sin navegador**: `node pruebas-node.js`. Monta un DOM de mentira y corre
+  lo mismo; sale con código 1 si falla alguna, así que vale para CI. Lo único
+  que se salta son las comprobaciones que cuentan píxeles dibujados.
+
 ## Características
 
 **Fidelidad al arcade original** — mecánicas implementadas según el comportamiento documentado de la máquina de 1980:
@@ -136,8 +167,23 @@ una Edge Function y reservar el `INSERT` a la clave de servicio.
   además el del jugador 2 local. Aparecen en el marcador, sobre cada Pac-Man
   al empezar, en la sala online y en el panel de fin de partida.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
-- **Skins**: CLÁSICO, OJOS, NEÓN, ARO, PÍXEL y SOMBRA, todas disponibles
-  desde el principio y combinables con cualquier color.
+- **Skins**: CLÁSICO, OJOS, NEÓN, ARO, PÍXEL y SOMBRA, combinables con
+  cualquier color. Se **ganan subiendo de nivel de jugador** (3, 7, 12, 20 y
+  30); las que faltan salen apagadas en OPCIONES con el nivel que piden. La
+  que ya llevabas puesta no se te quita nunca.
+- **Perfil**: avatar (16, dibujados por código: Pac-Man y sus caras, los
+  cuatro fantasmas, el asustado, los ojos, frutas y la medalla), nombre,
+  nivel con su barra y un resumen de logros, maestría y récord. De invitado
+  hay un botón para **sortear un nombre** al azar.
+- **Logros**: 15, de conseguir un doblete de fantasmas a comerte 1000, pasando
+  por despejar niveles sin morir, frutas, partidas jugadas o hacer el nivel 1
+  en menos de 1:30. Salen celebrados en la partida y se siguen en PERFIL con
+  su barra de progreso.
+- **Cuenta con usuario y contraseña** (opcional): guarda nivel, logros,
+  maestrías, récords y amigos, y te los lleva a cualquier sitio. No pide
+  correo. El usuario es también tu nombre en el juego. Al entrar, lo de la
+  nube y lo de este navegador se funden quedándose con lo mejor de cada lado.
+  De invitado se juega igual, pero sin lista de amigos.
 - **Emotes**: seis caras de Pac-Man (risa, llanto, enfado, susto, guiño y
   amor) con las teclas `1`–`6`, en el color de tu jugador. Y **chat** (`T`)
   en el modo online.

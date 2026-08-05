@@ -67,6 +67,17 @@
       return null;
     },
 
+    /* Copia local de la lista de la cuenta (la de verdad vive en la nube) */
+    replace: function (list) {
+      var out = [];
+      for (var i = 0; i < (list || []).length; i++) {
+        var n = clean(list[i]);
+        if (n && out.indexOf(n) === -1) out.push(n);
+      }
+      out.sort();
+      save(out.slice(0, CFG.FRIENDS_MAX));
+    },
+
     remove: function (name) {
       var n = clean(name);
       var list = load(), out = [];

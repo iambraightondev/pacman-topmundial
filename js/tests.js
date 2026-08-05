@@ -932,6 +932,10 @@
     ok(e && e.tag, 'aparece la chapa');
     eq(e.total, CFG.EMOTE_TICKS, 'guarda su duración para poder animarla');
 
+    // el resto cuenta píxeles pintados: sin lienzo de verdad (pruebas-node.js)
+    // no hay nada que medir, así que se queda en lo comprobado hasta aquí
+    if (window.__SIN_LIENZO) return;
+
     var cv = document.createElement('canvas');
     cv.width = 224; cv.height = 44;
     var ctx = cv.getContext('2d');
@@ -947,6 +951,388 @@
     ok(abierta > subiendo * 2, 'después se despliega la chapa con el nombre');
     ok(yendose < abierta, 'y al final se encoge hacia el jugador');
     ok(pinta(1) === 0, 'al terminar no queda nada');
+  });
+
+  // ---------------------------------------------------------------
+  // Skin OJOS: el ojo iba a la barbilla mirando a la derecha (y así se
+  // veía en la miniatura de OPCIONES, que mira justo hacia ese lado)
+  // ---------------------------------------------------------------
+  /* Apunta los arcos que dibuja el sprite; el ojo y su pupila son los
+   * pequeños. Vale con lienzo de verdad y con el de mentira. */
+  function ojoDe(dir) {
+    var cv = document.createElement('canvas');
+    cv.width = 32; cv.height = 32;
+    var ctx = cv.getContext('2d');
+    var arcos = [];
+    var orig = ctx.arc;
+    ctx.arc = function (x, y, r) {
+      arcos.push({ x: x, y: y, r: r });
+      return orig.apply(ctx, arguments);
+    };
+    window.PM.Sprites.drawPacman(ctx, 16, 16, dir, 2, '#ffff00', 'ojos');
+    ctx.arc = orig;
+    for (var i = 0; i < arcos.length; i++) {
+      if (arcos[i].r > 1.5 && arcos[i].r < 3) return arcos[i];   // el blanco
+    }
+    return null;
+  }
+
+  test('la skin OJOS pone el ojo en la frente, mire a donde mire', function () {
+    var der = ojoDe(CFG.DIR.RIGHT), izq = ojoDe(CFG.DIR.LEFT);
+    var arr = ojoDe(CFG.DIR.UP), aba = ojoDe(CFG.DIR.DOWN);
+    ok(der && izq && arr && aba, 'se dibuja el ojo en las cuatro direcciones');
+    ok(der.y < 16, 'mirando a la derecha, el ojo va ARRIBA (era el fallo)');
+    ok(izq.y < 16, 'mirando a la izquierda, también arriba');
+    eq(Math.round(der.y * 10), Math.round(izq.y * 10),
+       'a la misma altura hacia un lado y hacia el otro');
+    eq(Math.round((der.x - 16) * 10), Math.round((16 - izq.x) * 10),
+       'y adelantado lo mismo en los dos sentidos');
+    ok(arr.y < 16 && aba.y > 16, 'en vertical acompaña al morro');
+    eq(Math.round(arr.x * 10), Math.round(aba.x * 10),
+       'y siempre del mismo lado');
+  });
+
+  // ---------------------------------------------------------------
+  // Skins por nivel
+  // ---------------------------------------------------------------
+  test('las skins se abren con el nivel de jugador', function () {
+    var L = window.PM.Level;
+    var previo = L.xp();
+    try {
+      L.reset();
+      eq(L.level(), 1, 'de recién llegado');
+      ok(L.skinUnlocked('clasico'), 'la clásica está desde el principio');
+      ok(!L.skinUnlocked('sombra'), 'la última no');
+      var abiertas = L.skinsAllowed('clasico');
+      eq(abiertas.length, 1, 'al nivel 1 solo hay una');
+      // la que ya llevas puesta no se pierde aunque pida más nivel
+      ok(L.skinsAllowed('sombra').indexOf('sombra') !== -1,
+         'la que ya llevas puesta sigue valiendo');
+      // con nivel de sobra se abren todas: se suma justo lo que cuesta
+      // llegar al nivel de la skin más cara
+      var tope = 1;
+      for (var i = 0; i < CFG.SKINS.length; i++) {
+        tope = Math.max(tope, CFG.SKINS[i].level || 1);
+      }
+      var falta = 0;
+      for (var n = 1; n < tope; n++) falta += L.cost(n);
+      L.add(falta);
+      eq(L.level(), tope, 'con esa experiencia se llega justo al nivel ' + tope);
+      eq(L.skinsAllowed('clasico').length, CFG.SKINS.length, 'ya están todas');
+    } finally {
+      L.reset();
+      if (previo > 0) L.add(previo);
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Logros
+  // ---------------------------------------------------------------
+  function conLogrosLimpios(fn) {
+    var A = window.PM.Achievements;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.ACH_KEY); } catch (e) { /* nada */ }
+    A.reset();
+    try { fn(A); } finally {
+      try {
+        if (previo === null) localStorage.removeItem(CFG.ACH_KEY);
+        else localStorage.setItem(CFG.ACH_KEY, previo);
+      } catch (e) { /* nada */ }
+    }
+  }
+
+  test('los contadores de logros suman, guardan el récord y el mejor tiempo', function () {
+    conLogrosLimpios(function (A) {
+      A.record('fantasmas', 3);
+      A.record('fantasmas', 2);
+      eq(A.stats().fantasmas, 5, 'los fantasmas se suman');
+      A.record('racha', 3);
+      A.record('racha', 2);
+      eq(A.stats().racha, 3, 'la racha se queda con la mejor');
+      A.record('mejorT1', 9000);
+      A.record('mejorT1', 12000);
+      eq(A.stats().mejorT1, 9000, 'el tiempo se queda con el MENOR');
+      A.record('mejorT1', 7000);
+      eq(A.stats().mejorT1, 7000);
+    });
+  });
+
+  test('un logro se consigue al llegar a su meta y se anuncia una vez', function () {
+    conLogrosLimpios(function (A) {
+      A.syncSeen();
+      ok(!A.has('doblete'), 'de entrada no está');
+      A.record('racha', 2);
+      ok(A.has('doblete'), 'con 2 fantasmas del tirón, sí');
+      var fresh = A.claim();
+      var ids = fresh.map(function (a) { return a.id; });
+      ok(ids.indexOf('doblete') !== -1, 'se anuncia');
+      eq(A.claim().length, 0, 'y no se vuelve a anunciar');
+    });
+  });
+
+  test('el logro de velocidad cuenta hacia abajo', function () {
+    conLogrosLimpios(function (A) {
+      A.record('mejorT1', 12000);            // 2:00, todavía lejos
+      ok(!A.has('relampago'));
+      A.record('mejorT1', 8000);             // 1:20
+      ok(A.has('relampago'), 'por debajo de 1:30 se consigue');
+      var p = A.progress({ stat: 'mejorT1', goal: 9000, menor: true });
+      eq(p.hecho, true);
+      eq(p.pct, 1);
+    });
+  });
+
+  test('entrar en una cuenta funde los contadores sin perder nada', function () {
+    conLogrosLimpios(function (A) {
+      A.record('fantasmas', 10);
+      A.record('mejorT1', 9000);
+      A.merge({ fantasmas: 400, racha: 4, mejorT1: 12000 });
+      var c = A.stats();
+      eq(c.fantasmas, 400, 'se queda con el mayor');
+      eq(c.racha, 4, 'lo que aquí no había, entra');
+      eq(c.mejorT1, 9000, 'y el tiempo, con el mejor de los dos');
+    });
+  });
+
+  test('comerse fantasmas y frutas alimenta los logros', function () {
+    conLogrosLimpios(function (A) {
+      partida(1);
+      G.chainIndex = 0;
+      G.eatGhost(G.ghosts[0], 0);
+      G.eatGhost(G.ghosts[1], 0);
+      eq(A.stats().fantasmas, 2, 'dos fantasmas');
+      eq(A.stats().racha, 2, 'racha de dos con el mismo energizante');
+      ok(A.has('doblete'), 'eso ya es un doblete');
+      ok(G.achNotices.length > 0 || G.achNotice, 'y sale su aviso');
+    });
+  });
+
+  test('mirar la partida de otro no da logros', function () {
+    conLogrosLimpios(function (A) {
+      mirando(2);
+      G.bumpAch({ fantasmas: 50 });
+      eq(A.stats().fantasmas, 0, 'de mirón no cuenta nada');
+      G.toMenu();
+    });
+  });
+
+  test('despejar niveles seguidos sin morir sube el contador; morir lo corta',
+    function () {
+      conLogrosLimpios(function (A) {
+        partida(1);
+        despejar();
+        eq(A.stats().limpios, 1, 'un nivel limpio');
+        ok(A.has('impecable'));
+        G.state = 'PLAYING';
+        despejar();
+        eq(A.stats().limpios, 2, 'dos seguidos');
+        G.state = 'PLAYING';
+        G.pacs[0].safeTicks = 0;
+        G.startDeath(0);
+        eq(G.limpiosSeguidos, 0, 'morir corta la racha');
+      });
+    });
+
+  // ---------------------------------------------------------------
+  // Perfil, avatares y cuentas
+  // ---------------------------------------------------------------
+  /* El aviso de logro se dibuja en la partida: que el camino de pintado no
+   * se rompa (es fácil que un cambio en sprites.js lo tire y no se note
+   * hasta que alguien consigue uno jugando). */
+  test('la partida se pinta con un aviso de logro encima', function () {
+    partida(1);
+    G.achNotice = { name: 'FESTÍN', desc: 'LOS 4 FANTASMAS', color: '#ffff00',
+                    ticks: 100, total: CFG.ACH_NOTICE_TICKS };
+    G.badgeNotice = { name: 'CAZADOR', color: '#00ffff', mode: 'SOLO',
+                      nueva: true, ticks: 100, total: CFG.BADGE_ANIM_TICKS };
+    G.render();
+    ok(true, 'pinta sin lanzar');
+    G.achNotice = null;
+    G.badgeNotice = null;
+  });
+
+  test('el aviso de logro se encola y se va solo', function () {
+    partida(1);
+    G.achNotices = [];
+    G.achNotice = null;
+    G.achNotices.push({ name: 'X', desc: 'Y', color: '#fff',
+                        ticks: 3, total: 3 });
+    G.stepAchNotice();
+    ok(G.achNotice, 'sale de la cola');
+    G.stepAchNotice();
+    G.stepAchNotice();
+    eq(G.achNotice, null, 'y se apaga al agotarse');
+  });
+
+  test('todos los avatares se dibujan sin petar', function () {
+    var cv = document.createElement('canvas');
+    cv.width = 40; cv.height = 40;
+    var ctx = cv.getContext('2d');
+    CFG.AVATARS.forEach(function (av) {
+      window.PM.Sprites.drawAvatar(ctx, 20, 20, 16, av.id, '#ffff00');
+    });
+    // un id inventado no debe romper: se cae al primero
+    window.PM.Sprites.drawAvatar(ctx, 20, 20, 16, 'noexiste', '#ffff00');
+    ok(true, 'ninguno lanza');
+  });
+
+  test('el panel PERFIL se monta y se refresca en sus dos pestañas', function () {
+    var UI = window.PM.UI;
+    UI.showProfile();
+    ok(UI.els.profile, 'existe el panel');
+    eq(UI.avatarItems.length, CFG.AVATARS.length, 'están todos los avatares');
+    ok(UI.profName.textContent.length > 0, 'enseña un nombre');
+    UI.showProfileTab('logros');
+    eq(UI.achList.children.length, CFG.ACHIEVEMENTS.length,
+       'la pestaña de logros los lista todos');
+    UI.showProfileTab('perfil');
+    UI.showMenu();
+  });
+
+  test('de invitado no hay amigos, y el nombre se puede sortear', function () {
+    var UI = window.PM.UI;
+    var Ac = window.PM.Account;
+    ok(!Ac.logged(), 'sin sesión');
+    UI.showFriends();
+    eq(UI.friendsGate.style.display, 'flex', 'sale el aviso de que hace falta cuenta');
+    eq(UI.friendsBody.style.display, 'none', 'y no la lista');
+    var antes = window.PM.settings.nick1;
+    try {
+      UI.showProfile();
+      eq(UI.profGuestRow.style.display, 'flex', 'de invitado se puede sortear nombre');
+      UI.profGuestRow.querySelector('.btn').click();
+      var n = window.PM.settings.nick1;
+      ok(n && n.length > 0 && n.length <= CFG.NICK_MAX, 'sale un nombre válido: ' + n);
+    } finally {
+      window.PM.settings.nick1 = antes;
+      UI.showMenu();
+    }
+  });
+
+  test('el usuario de una cuenta se sanea como un nombre del juego', function () {
+    var Ac = window.PM.Account;
+    eq(Ac.cleanUser('  pepe-123 '), 'PEPE123');
+    eq(Ac.cleanUser('muylargodemasiado'), 'MUYLARGO');
+    eq(Ac.cleanUser('¡¡!!'), '');
+  });
+
+  test('sin sesión, la cuenta no deja tocar nada', function () {
+    var Ac = window.PM.Account;
+    var msg = null;
+    Ac.addFriend('PEPE', function (e) { msg = e; });
+    eq(msg, 'NECESITAS UNA CUENTA');
+    Ac.listFriends(function (e) { msg = e; });
+    eq(msg, 'NECESITAS UNA CUENTA');
+  });
+
+  /* La forma de cada petición se comprobó a mano contra Supabase; esto vigila
+   * que el código siga mandando exactamente eso (dirección, método y cuerpo). */
+  test('las llamadas de la cuenta van donde deben', function () {
+    var Ac = window.PM.Account;
+    var origFetch = window.fetch;
+    var origTok = Ac.token, origUser = Ac.user;
+    var vistas = [];
+    window.fetch = function (url, opts) {
+      vistas.push({ url: String(url), opts: opts || {} });
+      return Promise.reject(new Error('cortado a propósito'));
+    };
+    try {
+      Ac.token = null; Ac.user = null;
+      Ac.signIn('PEPE', 'lachiquilla', function () {});
+      var e = vistas[0];
+      ok(/\/auth\/v1\/token\?grant_type=password$/.test(e.url), 'entrar: ' + e.url);
+      eq(e.opts.method, 'POST');
+      var cuerpo = JSON.parse(e.opts.body);
+      eq(cuerpo.email, 'pepe@' + CFG.ACCOUNT.MAIL_DOMAIN,
+         'el correo se compone con el usuario');
+
+      vistas.length = 0;
+      Ac.signUp('PEPE', 'lachiquilla', function () {});
+      ok(/\/auth\/v1\/signup$/.test(vistas[0].url), 'alta: ' + vistas[0].url);
+
+      // con sesión de mentira: guardar el perfil y añadir un amigo
+      vistas.length = 0;
+      Ac.token = 'token-de-prueba';
+      Ac.user = { id: '11111111-1111-1111-1111-111111111111',
+                  usuario: 'PEPE', avatar: 'pac' };
+      Ac.push(true, function () {});
+      var p = vistas[0];
+      ok(/\/rest\/v1\/perfiles$/.test(p.url), 'perfil: ' + p.url);
+      eq(p.opts.method, 'POST');
+      ok(/merge-duplicates/.test(p.opts.headers['Prefer']),
+         'se guarda con upsert, no duplicando filas');
+      eq(p.opts.headers['Authorization'], 'Bearer token-de-prueba',
+         'va firmado con la sesión, no con la clave anónima');
+      var fila = JSON.parse(p.opts.body);
+      eq(fila.usuario, 'PEPE');
+      ok(fila.logros && typeof fila.logros === 'object', 'lleva los logros');
+
+      vistas.length = 0;
+      Ac.addFriend('ANA', function () {});
+      ok(/\/rest\/v1\/amigos$/.test(vistas[0].url), 'amigos: ' + vistas[0].url);
+      eq(JSON.parse(vistas[0].opts.body).amigo, 'ANA');
+    } finally {
+      window.fetch = origFetch;
+      Ac.token = origTok;
+      Ac.user = origUser;
+    }
+  });
+
+  /* Lo importante de entrar en una cuenta: que NUNCA cueste progreso.
+   * Lo de la nube entra si es mejor; lo de aquí se queda si lo es. */
+  test('entrar en la cuenta sube lo que venga mejor y no baja nada', function () {
+    var Ac = window.PM.Account, L = window.PM.Level, A = window.PM.Achievements;
+    var G2 = window.PM.Game;
+    var origUser = Ac.user, origTok = Ac.token;
+    var xp0 = L.xp(), nick0 = window.PM.settings.nick1;
+    var av0 = window.PM.settings.avatar;
+    var r1 = G2.highScore1, r2 = G2.highScore2;
+    conLogrosLimpios(function () {
+      try {
+        Ac.token = 'x';
+        Ac.user = { id: 'id', usuario: '', avatar: 'pac' };
+        L.reset();
+        L.add(1000);
+        G2.highScore1 = 5000;
+        A.record('fantasmas', 10);
+
+        Ac.applyRemote({ usuario: 'PEPE', avatar: 'blinky', xp: 50000,
+                         record1: 99000, record2: 1234,
+                         logros: { fantasmas: 300, racha: 4 } });
+
+        eq(window.PM.settings.nick1, 'PEPE', 'el nombre pasa a ser el de la cuenta');
+        eq(window.PM.settings.avatar, 'blinky', 'y su avatar');
+        // y queda escrito, no solo en memoria
+        var guardado = JSON.parse(localStorage.getItem(CFG.SETTINGS_KEY) || '{}');
+        eq(guardado.nick1, 'PEPE', 'el nombre se persiste');
+        eq(guardado.avatar, 'blinky', 'el avatar también');
+        eq(L.xp(), 50000, 'la experiencia sube');
+        eq(G2.highScore1, 99000, 'el récord de la nube es mejor: entra');
+        eq(A.stats().fantasmas, 300, 'los contadores se funden');
+
+        // ahora una fila PEOR: no debe estropear nada
+        Ac.applyRemote({ usuario: 'PEPE', avatar: 'blinky', xp: 10,
+                         record1: 1, record2: 0, logros: { fantasmas: 1 } });
+        eq(L.xp(), 50000, 'la experiencia no baja');
+        eq(G2.highScore1, 99000, 'el récord tampoco');
+        eq(A.stats().fantasmas, 300, 'ni los contadores');
+      } finally {
+        Ac.user = origUser; Ac.token = origTok;
+        window.PM.settings.nick1 = nick0;
+        window.PM.settings.avatar = av0;
+        G2.highScore1 = r1; G2.highScore2 = r2;
+        L.reset(); if (xp0 > 0) L.add(xp0);
+      }
+    });
+  });
+
+  test('crear cuenta exige usuario y contraseña con un mínimo', function () {
+    var Ac = window.PM.Account;
+    var msg = null;
+    Ac.signUp('AB', 'lachiquilla', function (e) { msg = e; });
+    ok(/USUARIO/.test(msg), 'usuario corto: ' + msg);
+    Ac.signUp('PEPITO', '123', function (e) { msg = e; });
+    ok(/CONTRASEÑA/.test(msg), 'contraseña corta: ' + msg);
   });
 
   // ---------------------------------------------------------------

@@ -67,7 +67,39 @@
       return (ahora > antes) ? ahora : null;
     },
 
-    reset: function () { saveXp(0); }
+    reset: function () { saveXp(0); },
+
+    /* Fija la experiencia sin sumar (al entrar en una cuenta con más que la
+     * de este navegador). Nunca baja: lo jugado aquí no se tira. */
+    setAtLeast: function (xp) {
+      var n = Math.floor(xp || 0);
+      if (n > loadXp()) saveXp(n);
+      return this.state();
+    },
+
+    /* ---------- Skins por nivel ----------
+     * El nivel que pide una skin (1 = desde el principio) */
+    skinLevel: function (id) {
+      for (var i = 0; i < CFG.SKINS.length; i++) {
+        if (CFG.SKINS[i].id === id) return CFG.SKINS[i].level || 1;
+      }
+      return 1;
+    },
+
+    skinUnlocked: function (id) {
+      return this.level() >= this.skinLevel(id);
+    },
+
+    /* Skins que se pueden elegir ahora mismo. `puesta` entra siempre aunque
+     * el requisito la deje fuera: lo que ya llevas no se te quita. */
+    skinsAllowed: function (puesta) {
+      var lvl = this.level(), out = [];
+      for (var i = 0; i < CFG.SKINS.length; i++) {
+        var sk = CFG.SKINS[i];
+        if (lvl >= (sk.level || 1) || sk.id === puesta) out.push(sk.id);
+      }
+      return out;
+    }
   };
 
   window.PM.Level = Level;

@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v4';
+var VERSION = 'pm-v5';
 var SHELL = [
   './',
   './index.html',
@@ -31,6 +31,8 @@ var SHELL = [
   './js/level.js',
   './js/friends.js',
   './js/ranking.js',
+  './js/achievements.js',
+  './js/account.js',
   './js/game.js',
   './js/ui.js',
   './audio/racha1-hueso.m4a',

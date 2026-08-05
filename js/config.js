@@ -284,16 +284,46 @@
                       '#ff69b4', '#ff8c00', '#b19cd9', '#ffffff'];
 
   /* ---------- Skins (aspecto del Pac-Man, sobre el color elegido) ----------
-   * Todas disponibles desde el principio; se dibujan en sprites.js. */
+   * Se desbloquean con el NIVEL DE JUGADOR, que sube jugando. Se dibujan en
+   * sprites.js. La que ya lleves puesta no se te quita nunca, aunque el
+   * requisito suba: ver PM.Skins.allowed(). */
   CFG.SKINS = [
-    { id: 'clasico', name: 'CLÁSICO' },
-    { id: 'ojos',    name: 'OJOS' },
-    { id: 'neon',    name: 'NEÓN' },
-    { id: 'aro',     name: 'ARO' },
-    { id: 'pixel',   name: 'PÍXEL' },
-    { id: 'sombra',  name: 'SOMBRA' }
+    { id: 'clasico', name: 'CLÁSICO', level: 1 },
+    { id: 'ojos',    name: 'OJOS',    level: 3 },
+    { id: 'neon',    name: 'NEÓN',    level: 7 },
+    { id: 'aro',     name: 'ARO',     level: 12 },
+    { id: 'pixel',   name: 'PÍXEL',   level: 20 },
+    { id: 'sombra',  name: 'SOMBRA',  level: 30 }
   ];
   CFG.SKIN_IDS = ['clasico', 'ojos', 'neon', 'aro', 'pixel', 'sombra'];
+
+  /* ---------- Avatares del perfil ----------
+   * Todo dibujado por código reaprovechando los sprites del juego: caras de
+   * Pac-Man, los cuatro fantasmas, el fantasma asustado, frutas y la medalla.
+   * `kind` le dice a Sprites.drawAvatar de dónde sacarlo. */
+  CFG.AVATARS = [
+    { id: 'pac',     name: 'PAC-MAN',  kind: 'pac' },
+    { id: 'risa',    name: 'RISA',     kind: 'face', arg: 'risa' },
+    { id: 'guino',   name: 'GUIÑO',    kind: 'face', arg: 'guino' },
+    { id: 'amor',    name: 'AMOR',     kind: 'face', arg: 'amor' },
+    { id: 'enfado',  name: 'ENFADO',   kind: 'face', arg: 'enfado' },
+    { id: 'susto',   name: 'SUSTO',    kind: 'face', arg: 'susto' },
+    { id: 'blinky',  name: 'BLINKY',   kind: 'ghost', arg: 0 },
+    { id: 'pinky',   name: 'PINKY',    kind: 'ghost', arg: 1 },
+    { id: 'inky',    name: 'INKY',     kind: 'ghost', arg: 2 },
+    { id: 'clyde',   name: 'CLYDE',    kind: 'ghost', arg: 3 },
+    { id: 'azul',    name: 'ASUSTADO', kind: 'fright' },
+    { id: 'ojitos',  name: 'OJOS',     kind: 'eyes' },
+    { id: 'cereza',  name: 'CEREZA',   kind: 'fruit', arg: 0 },
+    { id: 'fresa',   name: 'FRESA',    kind: 'fruit', arg: 1 },
+    { id: 'llave',   name: 'LLAVE',    kind: 'fruit', arg: 7 },
+    { id: 'medalla', name: 'MEDALLA',  kind: 'badge' }
+  ];
+  CFG.AVATAR_IDS = (function () {
+    var out = [];
+    for (var i = 0; i < CFG.AVATARS.length; i++) out.push(CFG.AVATARS[i].id);
+    return out;
+  })();
 
   /* ---------- Emotes: caras de Pac-Man sobre tu jugador ----------
    * El orden es el de las teclas 1..6. id = expresión que dibuja
@@ -319,6 +349,52 @@
     { id: 'mundial',  name: 'TOP MUNDIAL', points: 100000, color: '#ffff00' }
   ];
   CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
+
+  /* ---------- Logros ----------
+   * Todos se resuelven contra un CONTADOR guardado, nunca contra el estado
+   * de la partida: así se pueden recalcular en cualquier momento (al entrar
+   * en una cuenta, por ejemplo) sin depender de cuándo pasó la cosa.
+   *
+   *   stat  — clave del contador (PM.Achievements.stats())
+   *   goal  — a partir de cuánto se consigue
+   *   menor — el contador es un tiempo: cuenta si es MENOR o igual que goal
+   *   fmt   — cómo se enseña el progreso ('n' número, 'tiempo' mm:ss.cc)
+   */
+  CFG.ACH_KEY = 'pacman-topmundial-logros';
+  CFG.ACHIEVEMENTS = [
+    { id: 'doblete',     name: 'DOBLETE',      color: '#ffffff',
+      desc: '2 FANTASMAS CON UN MISMO ENERGIZANTE', stat: 'racha', goal: 2 },
+    { id: 'triplete',    name: 'TRIPLETE',     color: '#00ffff',
+      desc: '3 FANTASMAS CON UN MISMO ENERGIZANTE', stat: 'racha', goal: 3 },
+    { id: 'festin',      name: 'FESTÍN',       color: '#ffff00',
+      desc: 'LOS 4 FANTASMAS CON UN MISMO ENERGIZANTE', stat: 'racha', goal: 4 },
+    { id: 'caza50',      name: 'CAZADOR',      color: '#ffffff',
+      desc: 'CÓMETE 50 FANTASMAS', stat: 'fantasmas', goal: 50 },
+    { id: 'caza250',     name: 'DEPREDADOR',   color: '#00ff00',
+      desc: 'CÓMETE 250 FANTASMAS', stat: 'fantasmas', goal: 250 },
+    { id: 'caza1000',    name: 'AZOTE',        color: '#ff8c00',
+      desc: 'CÓMETE 1000 FANTASMAS', stat: 'fantasmas', goal: 1000 },
+    { id: 'impecable',   name: 'IMPECABLE',    color: '#ffffff',
+      desc: 'DESPEJA UN NIVEL SIN MORIR', stat: 'limpios', goal: 1 },
+    { id: 'intachable',  name: 'INTACHABLE',   color: '#00ffff',
+      desc: '3 NIVELES SEGUIDOS SIN MORIR', stat: 'limpios', goal: 3 },
+    { id: 'inmaculado',  name: 'INMACULADO',   color: '#ffb8ff',
+      desc: '5 NIVELES SEGUIDOS SIN MORIR', stat: 'limpios', goal: 5 },
+    { id: 'frutero',     name: 'FRUTERO',      color: '#ff0000',
+      desc: 'CÓMETE 25 FRUTAS', stat: 'frutas', goal: 25 },
+    { id: 'veterano',    name: 'VETERANO',     color: '#ffb852',
+      desc: 'JUEGA 100 PARTIDAS', stat: 'partidas', goal: 100 },
+    { id: 'explorador',  name: 'EXPLORADOR',   color: '#00ff00',
+      desc: 'LLEGA AL NIVEL 5', stat: 'nivelMax', goal: 5 },
+    { id: 'trotamundos', name: 'TROTAMUNDOS',  color: '#ffb8ff',
+      desc: 'LLEGA AL NIVEL 10', stat: 'nivelMax', goal: 10 },
+    { id: 'centurion',   name: 'CENTURIÓN',    color: '#ffff00',
+      desc: '20.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 20000 },
+    { id: 'relampago',   name: 'RELÁMPAGO',    color: '#00ffff',
+      desc: 'DESPEJA EL NIVEL 1 EN MENOS DE 1:30', stat: 'mejorT1',
+      goal: 9000, menor: true, fmt: 'tiempo' }
+  ];
+  CFG.ACH_NOTICE_TICKS = 220;   // aviso en partida (~3,7 s)
 
   /* ---------- Voces de racha al comer fantasmas ----------
    * Una por fantasma comido con el mismo energizante (1.º, 2.º, 3.º, 4.º).
@@ -390,6 +466,35 @@
   CFG.FRIENDS_KEY = 'pacman-topmundial-amigos';
   CFG.FRIENDS_MAX = 30;
 
+  /* ---------- Cuentas ----------
+   * El jugador solo ve USUARIO y CONTRASEÑA. Por dentro se usa Supabase Auth,
+   * que pide un correo, así que se compone uno interno con el usuario; nadie
+   * lo escribe ni lo ve. El usuario es TAMBIÉN el nombre dentro del juego,
+   * para no tener dos nombres distintos que cuadrar (ranking, party, amigos
+   * y las invitaciones ya van todos por el nombre).
+   *
+   * OJO: en el proyecto de Supabase hay que dejar "Confirm email" APAGADO
+   * (Authentication -> Sign In / Providers -> Email). Si está encendido, el
+   * registro no devuelve sesión y nadie puede entrar, porque ese correo no
+   * existe y el enlace de confirmación no llega a ninguna parte. */
+  CFG.ACCOUNT = {
+    TABLE: 'perfiles',
+    FRIENDS_TABLE: 'amigos',
+    MAIL_DOMAIN: 'cuentas.pacman-topmundial.vercel.app',
+    USER_MIN: 3,
+    PASS_MIN: 6,
+    KEY: 'pacman-topmundial-sesion'   // sesión guardada en este navegador
+  };
+
+  /* Nombres de invitado: se sortean juntando una pareja de estas listas y
+   * recortando a NICK_MAX, para que quepan en el marcador. */
+  CFG.RANDOM_NAMES = {
+    a: ['PAC', 'NEO', 'ZIG', 'TOP', 'BIT', 'RAY', 'MAX', 'ACE', 'JET', 'VIC',
+        'LOK', 'RIO', 'DUX', 'KIR', 'NOX', 'ZAS'],
+    b: ['MAN', 'BOT', 'ZAG', 'KID', 'REX', 'FOX', 'ONE', 'PRO', 'ZAP', 'RUN',
+        'GUM', 'TAP', 'WIN', 'POW', 'MIX', 'JAM']
+  };
+
   /* ---------- Aviso de maestría en partida ---------- */
   CFG.BADGE_ANIM_TICKS = 300;   // 5 s: entrada, lucimiento y salida
 
@@ -406,6 +511,7 @@
     pac2Color: '#00ff00',         // color del jugador 2
     skin1: 'clasico',             // skin del jugador 1 (y propia online)
     skin2: 'clasico',             // skin del jugador 2
+    avatar: 'pac',                // avatar del perfil
     livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
     ghostSpeedMult: 1.0,          // 0.5–1.2, paso .05
     pacSpeedMult: 1.0,            // 0.8–1.3, paso .05

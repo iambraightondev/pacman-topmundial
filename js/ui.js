@@ -64,7 +64,19 @@
     if (key === 'skin1' || key === 'skin2') {
       return CFG.SKIN_IDS.indexOf(value) !== -1 ? value : def;
     }
+    if (key === 'avatar') {
+      return CFG.AVATAR_IDS.indexOf(value) !== -1 ? value : def;
+    }
     return def;
+  }
+
+  /* Nombre de invitado al azar: dos trozos pegados, recortado a lo que
+   * cabe en el marcador. Se usa desde PERFIL. */
+  function randomNick() {
+    var R = CFG.RANDOM_NAMES;
+    var a = R.a[Math.floor(Math.random() * R.a.length)];
+    var b = R.b[Math.floor(Math.random() * R.b.length)];
+    return (a + b).slice(0, CFG.NICK_MAX);
   }
 
   function loadSettings() {
@@ -106,6 +118,10 @@
     lobby: null,        // { mode:'host'|'join', code, locked, peerColor, peerName,
                         //   hostCfg, hostColor, hostName, timer }
 
+    /* Guardar ajustes desde fuera de este módulo (lo usa la cuenta al
+     * traerse el nombre y el avatar de la nube) */
+    saveSettings: saveSettings,
+
     init: function () {
       this.touchDevice = ('ontouchstart' in window) ||
         (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
@@ -115,14 +131,18 @@
       this.els.badges = document.getElementById('badges');
       this.els.ranking = document.getElementById('ranking');
       this.els.friends = document.getElementById('friends');
+      this.els.profile = document.getElementById('profile');
       this.els.prompt = document.getElementById('prompt');
       if (window.PM.Badges) window.PM.Badges.syncSeen();
+      if (window.PM.Achievements) window.PM.Achievements.syncSeen();
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
       this.buildBadges();
       this.buildRanking();
       this.buildFriends();
+      this.buildProfile();
+      this.accountHooks();
       this.buildGameButtons();
       this.buildDpads();
       this.bindKeyboard();
@@ -249,6 +269,10 @@
       extras.appendChild(this.makeButton('TOP MUNDIAL', function () {
         self.resumeAudio();
         self.showRanking();
+      }));
+      extras.appendChild(this.makeButton('PERFIL', function () {
+        self.resumeAudio();
+        self.showProfile();
       }));
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
@@ -401,6 +425,13 @@
       jug.appendChild(this.sectionTitle('JUGADOR 2'));
       jug.appendChild(this.makeColorRow('pac2Color'));
       jug.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
+      var skNote = document.createElement('div');
+      skNote.className = 'note';
+      skNote.textContent = 'LAS SKINS SE ABREN SUBIENDO DE NIVEL DE JUGADOR';
+      jug.appendChild(skNote);
+      this.optMsgEl = document.createElement('div');
+      this.optMsgEl.className = 'lobby-status';
+      jug.appendChild(this.optMsgEl);
 
       /* ===== pestaña PARTIDA ===== */
       par.appendChild(this.sectionTitle('VIDAS EN 2 JUGADORES'));
@@ -555,13 +586,21 @@
       return row;
     },
 
-    /* Refresca los campos de nombre (todos menos el que se está escribiendo) */
+    /* Refresca los campos de nombre (todos menos el que se está escribiendo).
+     * Con la sesión abierta, el nombre del jugador 1 ES el de la cuenta: el
+     * campo se enseña bloqueado para que no haya dos nombres que cuadrar. */
     refreshNicks: function (skip) {
       var s = window.PM.settings;
+      var Ac = window.PM.Account;
+      var fijo = !!(Ac && Ac.logged());
+      if (fijo && Ac.name()) s.nick1 = Ac.name();
       for (var k in this.nickInputs) {
         if (!this.nickInputs.hasOwnProperty(k)) continue;
         var list = this.nickInputs[k];
+        var bloquea = fijo && k === 'nick1';
         for (var i = 0; i < list.length; i++) {
+          list[i].disabled = bloquea;
+          list[i].title = bloquea ? 'TU NOMBRE ES EL DE TU CUENTA' : '';
           if (list[i] === skip || list[i] === document.activeElement) continue;
           list[i].value = s[k] || '';
         }
@@ -588,37 +627,65 @@
         lab.textContent = sk.name;
         b.appendChild(lab);
         b.addEventListener('click', function () {
+          // bloqueada: en vez de no hacer nada, se dice qué falta
+          if (b.classList.contains('locked')) {
+            self.optionsMsg('LA SKIN ' + sk.name + ' SE ABRE EN EL NIVEL ' +
+                            (sk.level || 1));
+            return;
+          }
           window.PM.settings[key] = sk.id;
           saveSettings();
           self.refreshOptions();
         });
         row.appendChild(b);
-        items.push({ id: sk.id, btn: b, canvas: cv });
+        items.push({ id: sk.id, btn: b, canvas: cv, label: lab, info: sk });
       });
       this.skinRows[key] = { items: items, colorKey: colorKey };
       return row;
     },
 
-    /* Repinta las miniaturas de skins con el color actual */
+    /* Repinta las miniaturas de skins con el color actual y marca las que
+     * todavía no están abiertas. La que ya llevas puesta nunca se bloquea:
+     * si el requisito la dejara fuera, se respeta lo que ya tenías. */
     refreshSkins: function () {
       var s = window.PM.settings;
+      var L = window.PM.Level;
+      var lvl = L ? L.level() : 1;
       for (var k in this.skinRows) {
         if (!this.skinRows.hasOwnProperty(k)) continue;
         var row = this.skinRows[k];
         var color = s[row.colorKey] || '#ffff00';
         for (var i = 0; i < row.items.length; i++) {
           var it = row.items[i];
+          var pide = it.info.level || 1;
+          var abierta = (lvl >= pide) || (s[k] === it.id);
           it.btn.classList.toggle('active', s[k] === it.id);
+          it.btn.classList.toggle('locked', !abierta);
+          it.label.textContent = abierta ? it.info.name : ('NIVEL ' + pide);
+          it.btn.title = abierta ? it.info.name
+            : (it.info.name + ' · SE ABRE EN EL NIVEL ' + pide);
           var c = it.canvas.getContext('2d');
           c.setTransform(1, 0, 0, 1, 0, 0);
           c.clearRect(0, 0, 48, 48);
           c.imageSmoothingEnabled = false;
           // el sprite mide r=6.5; se amplía para que la skin se lea bien
           c.setTransform(3, 0, 0, 3, 24, 24);
-          window.PM.Sprites.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2, color, it.id);
+          window.PM.Sprites.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2,
+            abierta ? color : '#3a3a3a', it.id);
           c.setTransform(1, 0, 0, 1, 0, 0);
         }
       }
+    },
+
+    /* Aviso corto dentro de OPCIONES (por ahora, skins bloqueadas) */
+    optionsMsg: function (text) {
+      if (!this.optMsgEl) return;
+      var self = this;
+      this.optMsgEl.textContent = text || '';
+      if (this.optMsgTimer) clearTimeout(this.optMsgTimer);
+      this.optMsgTimer = setTimeout(function () {
+        if (self.optMsgEl) self.optMsgEl.textContent = '';
+      }, 3000);
     },
 
     /* Fila de muestras + selector libre para un ajuste de color */
@@ -1343,6 +1410,377 @@
       requestAnimationFrame(frame);
     },
 
+    /* ======================================================
+     * PERFIL: avatar, nombre, nivel, logros y cuenta
+     * ====================================================== */
+    buildProfile: function () {
+      var self = this;
+      var o = this.els.profile;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'PERFIL';
+      o.appendChild(h);
+
+      var bar = document.createElement('div');
+      bar.className = 'tab-row';
+      this.profTabBtns = {};
+      [['perfil', 'PERFIL'], ['logros', 'LOGROS']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () { self.showProfileTab(t[0]); });
+        b.classList.add('tab');
+        self.profTabBtns[t[0]] = b;
+        bar.appendChild(b);
+      });
+      o.appendChild(bar);
+
+      /* ---- pestaña PERFIL ---- */
+      this.profPane = document.createElement('div');
+      this.profPane.className = 'tab-pane';
+
+      var cab = document.createElement('div');
+      cab.className = 'perfil-cab';
+      this.profAvatar = document.createElement('canvas');
+      this.profAvatar.width = 72;
+      this.profAvatar.height = 72;
+      this.profAvatar.className = 'perfil-avatar';
+      cab.appendChild(this.profAvatar);
+      var datos = document.createElement('div');
+      datos.className = 'perfil-datos';
+      this.profName = document.createElement('div');
+      this.profName.className = 'perfil-nombre';
+      datos.appendChild(this.profName);
+      this.profLevel = document.createElement('div');
+      this.profLevel.className = 'level-label';
+      datos.appendChild(this.profLevel);
+      var barra = document.createElement('div');
+      barra.className = 'level-bar';
+      this.profFill = document.createElement('div');
+      this.profFill.className = 'level-fill';
+      barra.appendChild(this.profFill);
+      datos.appendChild(barra);
+      this.profResumen = document.createElement('div');
+      this.profResumen.className = 'note';
+      datos.appendChild(this.profResumen);
+      cab.appendChild(datos);
+      this.profPane.appendChild(cab);
+
+      /* nombre de invitado: se puede cambiar y sortear */
+      this.profGuestRow = document.createElement('div');
+      this.profGuestRow.className = 'preset-row';
+      var azar = this.makeButton('NOMBRE AL AZAR', function () {
+        var s = window.PM.settings;
+        s.nick1 = randomNick();
+        saveSettings();
+        self.refreshNicks();
+        self.refreshProfile();
+      });
+      azar.classList.add('btn-preset');
+      this.profGuestRow.appendChild(azar);
+      this.profPane.appendChild(this.profGuestRow);
+
+      /* avatares */
+      this.profPane.appendChild(this.sectionTitle('TU AVATAR'));
+      this.profAvatarRow = document.createElement('div');
+      this.profAvatarRow.className = 'skins avatares';
+      this.avatarItems = [];
+      CFG.AVATARS.forEach(function (av) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'skin';
+        b.title = av.name;
+        b.setAttribute('aria-label', 'Avatar ' + av.name);
+        var cv = document.createElement('canvas');
+        cv.width = 40;
+        cv.height = 40;
+        b.appendChild(cv);
+        b.addEventListener('click', function () {
+          window.PM.settings.avatar = av.id;
+          saveSettings();
+          if (window.PM.Account && window.PM.Account.logged()) {
+            window.PM.Account.pushQuiet();
+          }
+          self.refreshProfile();
+        });
+        self.profAvatarRow.appendChild(b);
+        self.avatarItems.push({ id: av.id, btn: b, canvas: cv });
+      });
+      this.profPane.appendChild(this.profAvatarRow);
+
+      /* cuenta */
+      this.profPane.appendChild(this.sectionTitle('TU CUENTA'));
+      this.profAccountMsg = document.createElement('div');
+      this.profAccountMsg.className = 'lobby-status';
+      this.profPane.appendChild(this.profAccountMsg);
+      this.profAccountRow = document.createElement('div');
+      this.profAccountRow.className = 'preset-row';
+      this.profPane.appendChild(this.profAccountRow);
+      this.profAccountNote = document.createElement('div');
+      this.profAccountNote.className = 'note';
+      this.profPane.appendChild(this.profAccountNote);
+
+      o.appendChild(this.profPane);
+
+      /* ---- pestaña LOGROS ---- */
+      this.achPane = document.createElement('div');
+      this.achPane.className = 'tab-pane';
+      this.achSub = document.createElement('div');
+      this.achSub.className = 'note';
+      this.achPane.appendChild(this.achSub);
+      this.achList = document.createElement('div');
+      this.achList.className = 'badge-list';
+      this.achPane.appendChild(this.achList);
+      o.appendChild(this.achPane);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+
+      this.profTab = 'perfil';
+    },
+
+    showProfileTab: function (tab) {
+      this.profTab = (tab === 'logros') ? 'logros' : 'perfil';
+      this.refreshProfile();
+    },
+
+    showProfile: function () {
+      this.refreshProfile();
+      this.showPanel('profile');
+    },
+
+    refreshProfile: function () {
+      var s = window.PM.settings;
+      var A = window.PM.Achievements;
+      var L = window.PM.Level;
+      var Ac = window.PM.Account;
+      var logged = !!(Ac && Ac.logged());
+      var tab = this.profTab || 'perfil';
+
+      for (var k in this.profTabBtns) {
+        if (this.profTabBtns.hasOwnProperty(k)) {
+          this.profTabBtns[k].classList.toggle('active', k === tab);
+        }
+      }
+      this.profPane.style.display = (tab === 'perfil') ? 'flex' : 'none';
+      this.achPane.style.display = (tab === 'logros') ? 'flex' : 'none';
+
+      /* cabecera */
+      var ctx = this.profAvatar.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, 72, 72);
+      ctx.imageSmoothingEnabled = false;
+      window.PM.Sprites.drawAvatar(ctx, 36, 36, 30, s.avatar, s.pacColor);
+
+      this.profName.textContent = sanitizeNick(s.nick1) || 'SIN NOMBRE';
+      this.profName.style.color = logged ? '#ffff00' : '#ddd';
+
+      var st = L ? L.state() : { level: 1, inLevel: 0, needed: 1, pct: 0 };
+      this.profLevel.textContent = 'NIVEL ' + st.level + ' · ' +
+        st.inLevel + ' / ' + st.needed;
+      this.profFill.style.width = Math.round(st.pct * 100) + '%';
+
+      var B = window.PM.Badges;
+      var top = B ? B.top('solo') : null;
+      this.profResumen.textContent =
+        'LOGROS ' + (A ? A.count() : 0) + '/' + (A ? A.total() : 0) +
+        ' · MAESTRÍA ' + (top ? top.name : 'NINGUNA') +
+        ' · RÉCORD ' + ((window.PM.Game && window.PM.Game.highScore1) || 0);
+
+      /* de invitado el nombre se puede sortear; con cuenta, es el usuario */
+      this.profGuestRow.style.display = logged ? 'none' : 'flex';
+
+      /* avatares: el elegido se marca */
+      for (var i = 0; i < this.avatarItems.length; i++) {
+        var it = this.avatarItems[i];
+        it.btn.classList.toggle('active', it.id === s.avatar);
+        var c = it.canvas.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, 40, 40);
+        c.imageSmoothingEnabled = false;
+        window.PM.Sprites.drawAvatar(c, 20, 20, 16, it.id, s.pacColor);
+      }
+
+      this.refreshAccountBox();
+      this.refreshAchievements();
+    },
+
+    refreshAccountBox: function () {
+      var self = this;
+      var Ac = window.PM.Account;
+      var row = this.profAccountRow;
+      row.innerHTML = '';
+      if (!Ac || !Ac.configured()) {
+        this.profAccountMsg.classList.add('error');
+        this.profAccountMsg.textContent = 'LAS CUENTAS NECESITAN CONEXIÓN';
+        this.profAccountNote.textContent = '';
+        return;
+      }
+      this.profAccountMsg.classList.remove('error');
+      if (Ac.logged()) {
+        this.profAccountMsg.textContent = 'SESIÓN DE ' + Ac.name();
+        var guardar = this.makeButton('GUARDAR AHORA', function () {
+          self.profAccountMsg.classList.remove('error');
+          self.profAccountMsg.textContent = 'GUARDANDO...';
+          Ac.push(false, function (err) {
+            self.profAccountMsg.classList.toggle('error', !!err);
+            self.profAccountMsg.textContent = err || 'GUARDADO';
+          });
+        });
+        guardar.classList.add('btn-preset');
+        row.appendChild(guardar);
+        var salir = this.makeButton('CERRAR SESIÓN', function () {
+          Ac.signOut(function () { self.refreshProfile(); });
+        });
+        salir.classList.add('btn-preset');
+        row.appendChild(salir);
+        this.profAccountNote.textContent =
+          'TU NIVEL, LOGROS, MAESTRÍAS, RÉCORDS Y AMIGOS SE GUARDAN EN LA CUENTA';
+      } else {
+        this.profAccountMsg.textContent = 'JUEGAS COMO INVITADO';
+        var entrar = this.makeButton('ENTRAR', function () {
+          self.showAccountPrompt('entrar');
+        });
+        entrar.classList.add('btn-preset');
+        row.appendChild(entrar);
+        var crear = this.makeButton('CREAR CUENTA', function () {
+          self.showAccountPrompt('crear');
+        });
+        crear.classList.add('btn-preset');
+        row.appendChild(crear);
+        this.profAccountNote.textContent =
+          'DE INVITADO JUEGAS IGUAL, PERO TODO SE QUEDA EN ESTE NAVEGADOR ' +
+          'Y NO PUEDES TENER AMIGOS';
+      }
+    },
+
+    refreshAchievements: function () {
+      var A = window.PM.Achievements;
+      this.achList.innerHTML = '';
+      if (!A) return;
+      var stats = A.stats();
+      this.achSub.textContent = 'CONSEGUIDOS ' + A.count() + ' DE ' + A.total();
+      var R = window.PM.Ranking;
+      CFG.ACHIEVEMENTS.forEach(function (a) {
+        var p = A.progress(a, stats);
+        var row = document.createElement('div');
+        row.className = 'badge-row' + (p.hecho ? ' got' : '');
+
+        var cv = document.createElement('canvas');
+        cv.width = 34; cv.height = 34;
+        cv.className = 'badge-medal';
+        var c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        c.fillStyle = p.hecho ? a.color : '#333';
+        c.beginPath();
+        for (var i = 0; i < 10; i++) {
+          var rr = (i % 2 === 0) ? 15 : 7;
+          var ang = -Math.PI / 2 + i * Math.PI / 5;
+          var px = 17 + Math.cos(ang) * rr, py = 17 + Math.sin(ang) * rr;
+          if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+        }
+        c.closePath();
+        c.fill();
+        row.appendChild(cv);
+
+        var txt = document.createElement('div');
+        txt.className = 'badge-text';
+        var nm = document.createElement('div');
+        nm.className = 'badge-name';
+        nm.style.color = p.hecho ? a.color : '#666';
+        nm.textContent = a.name;
+        txt.appendChild(nm);
+        var stt = document.createElement('div');
+        stt.className = 'badge-state';
+        if (p.hecho) {
+          stt.textContent = 'CONSEGUIDO · ' + a.desc;
+        } else if (a.fmt === 'tiempo') {
+          stt.textContent = a.desc +
+            (p.valor > 0 && R ? (' · TU MEJOR: ' + R.fmtTime(p.valor)) : '');
+        } else {
+          stt.textContent = a.desc + ' · ' + Math.min(p.valor, a.goal) +
+            '/' + a.goal;
+        }
+        txt.appendChild(stt);
+        var barra = document.createElement('div');
+        barra.className = 'level-bar ach-bar';
+        var fill = document.createElement('div');
+        fill.className = 'level-fill';
+        fill.style.width = Math.round(p.pct * 100) + '%';
+        if (p.hecho) fill.style.background = a.color;
+        barra.appendChild(fill);
+        txt.appendChild(barra);
+        row.appendChild(txt);
+
+        this.achList.appendChild(row);
+      }, this);
+    },
+
+    /* Diálogo de entrar / crear cuenta */
+    showAccountPrompt: function (modo) {
+      var self = this;
+      var Ac = window.PM.Account;
+      var crear = (modo === 'crear');
+      var usuario = '', pass = '';
+
+      function enviar() {
+        if (!usuario || !pass) {
+          self.setPromptStatus('ESCRIBE USUARIO Y CONTRASEÑA', true);
+          return;
+        }
+        self.setPromptStatus(crear ? 'CREANDO...' : 'ENTRANDO...', false);
+        var fn = crear ? Ac.signUp : Ac.signIn;
+        fn.call(Ac, usuario, pass, function (err) {
+          if (err) { self.setPromptStatus(err, true); return; }
+          self.hidePrompt();
+          self.refreshNicks();
+          self.refreshProfile();
+          self.refreshFriends();
+        });
+      }
+
+      this.showPrompt({
+        title: crear ? 'CREAR CUENTA' : 'ENTRAR',
+        lines: crear
+          ? ['ELIGE UN USUARIO Y UNA CONTRASEÑA',
+             'EL USUARIO SERÁ TU NOMBRE EN EL JUEGO']
+          : ['ENTRA CON TU USUARIO Y CONTRASEÑA'],
+        fields: [
+          { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX,
+            onInput: function (v) { usuario = v; } },
+          { placeholder: 'CONTRASEÑA', password: true, maxLength: 40,
+            onInput: function (v) { pass = v; }, onAccept: enviar }
+        ],
+        status: '',
+        buttons: [
+          { label: crear ? 'CREAR' : 'ENTRAR', primary: true, onClick: enviar },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* La cuenta ha cambiado (entrar, salir, sincronizar) */
+    accountHooks: function () {
+      var self = this;
+      var Ac = window.PM.Account;
+      if (!Ac) return;
+      Ac.onchange = function () {
+        self.refreshNicks();
+        self.refreshLevel();
+        self.refreshSkins();      // el nivel de la cuenta puede abrir skins
+        if (self.els.profile && self.els.profile.style.display !== 'none') {
+          self.refreshProfile();
+        }
+        if (self.els.friends && self.els.friends.style.display !== 'none') {
+          self.refreshFriends();
+        }
+      };
+      // sesión de la última vez: se recupera sola y sin molestar
+      Ac.restore(function () { /* si falla, se sigue de invitado */ });
+    },
+
     /* ------------------------------------------------------
      * Amigos (lista guardada en este navegador)
      * ------------------------------------------------------ */
@@ -1361,6 +1799,26 @@
       sub.textContent = 'GUARDA AQUÍ CON QUIÉN SUELES JUGAR';
       o.appendChild(sub);
 
+      /* de invitado no hay lista: los amigos van con la cuenta */
+      this.friendsGate = document.createElement('div');
+      this.friendsGate.className = 'tab-pane';
+      var gnote = document.createElement('div');
+      gnote.className = 'note';
+      gnote.textContent = 'LOS AMIGOS SE GUARDAN EN TU CUENTA, ASÍ LOS TIENES ' +
+        'EN CUALQUIER SITIO. DE INVITADO NO HAY LISTA.';
+      this.friendsGate.appendChild(gnote);
+      var goProf = this.makeButton('IR A PERFIL', function () {
+        self.showProfile();
+      });
+      goProf.classList.add('btn-primary');
+      goProf.style.marginTop = '10px';
+      this.friendsGate.appendChild(goProf);
+      o.appendChild(this.friendsGate);
+
+      this.friendsBody = document.createElement('div');
+      this.friendsBody.className = 'tab-pane';
+      o.appendChild(this.friendsBody);
+
       var row = document.createElement('div');
       row.className = 'preset-row';
       row.style.marginTop = '10px';
@@ -1378,15 +1836,15 @@
       var add = this.makeButton('AÑADIR', function () { self.addFriend(); });
       add.classList.add('btn-preset');
       row.appendChild(add);
-      o.appendChild(row);
+      this.friendsBody.appendChild(row);
 
       this.friendsMsg = document.createElement('div');
       this.friendsMsg.className = 'lobby-status';
-      o.appendChild(this.friendsMsg);
+      this.friendsBody.appendChild(this.friendsMsg);
 
       this.friendsList = document.createElement('div');
       this.friendsList.className = 'friend-list';
-      o.appendChild(this.friendsList);
+      this.friendsBody.appendChild(this.friendsList);
 
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.classList.add('btn-primary');
@@ -1395,19 +1853,47 @@
     },
 
     addFriend: function () {
-      var F = window.PM.Friends;
-      if (!F) return;
-      var err = F.add(this.friendInput.value);
-      this.friendsMsg.classList.toggle('error', !!err);
-      this.friendsMsg.textContent = err || '';
-      if (!err) this.friendInput.value = '';
-      this.refreshFriends();
+      var self = this;
+      var Ac = window.PM.Account;
+      if (!Ac || !Ac.logged()) return;
+      var nombre = this.friendInput.value;
+      this.friendsMsg.classList.remove('error');
+      this.friendsMsg.textContent = 'AÑADIENDO...';
+      Ac.addFriend(nombre, function (err) {
+        self.friendsMsg.classList.toggle('error', !!err);
+        self.friendsMsg.textContent = err || '';
+        if (!err) {
+          self.friendInput.value = '';
+          if (window.PM.Friends) window.PM.Friends.add(nombre);   // copia local
+        }
+        self.refreshFriends();
+      });
     },
 
+    /* La lista vive en la cuenta; aquí se guarda una copia para poder
+     * enseñarla al instante y seguir viéndola sin conexión. */
     refreshFriends: function () {
       var self = this;
       var F = window.PM.Friends;
+      var Ac = window.PM.Account;
+      var logged = !!(Ac && Ac.logged());
       if (!this.friendsList || !F) return;
+
+      if (this.friendsGate) this.friendsGate.style.display = logged ? 'none' : 'flex';
+      if (this.friendsBody) this.friendsBody.style.display = logged ? 'flex' : 'none';
+      if (!logged) return;
+
+      // se pide la lista de verdad y se refresca cuando llegue
+      if (!this._friendsPulling) {
+        this._friendsPulling = true;
+        Ac.listFriends(function (err, list) {
+          self._friendsPulling = false;
+          if (err || !list) return;
+          F.replace(list);
+          self.refreshFriends();
+        });
+      }
+
       var list = F.all();
       this.friendsList.innerHTML = '';
       if (!list.length) {
@@ -1450,9 +1936,10 @@
         row.appendChild(inv);
 
         var del = self.makeButton('QUITAR', function () {
-          F.remove(name);
+          F.remove(name);                       // fuera de la copia local
           self.friendsMsg.classList.remove('error');
           self.friendsMsg.textContent = '';
+          if (window.PM.Account) window.PM.Account.removeFriend(name);
           self.refreshFriends();
         });
         del.classList.add('btn-preset');
@@ -2000,7 +2487,34 @@
         this.promptInput = inp;
       }
 
+      /* varios campos (usuario + contraseña de las cuentas) */
+      if (o.fields) {
+        o.fields.forEach(function (f) {
+          var el = document.createElement('input');
+          el.type = f.password ? 'password' : 'text';
+          el.className = 'nick-input';
+          el.maxLength = f.maxLength || CFG.NICK_MAX;
+          el.placeholder = f.placeholder || '';
+          el.setAttribute('autocomplete', f.password ? 'current-password' : 'off');
+          el.setAttribute('spellcheck', 'false');
+          el.addEventListener('keydown', function (ev) {
+            ev.stopPropagation();          // escribir no mueve a Pac-Man
+            if (ev.key === 'Enter' && f.onAccept) f.onAccept(el.value);
+          });
+          el.addEventListener('input', function () {
+            // el usuario se filtra como un nombre del juego; la clave, tal cual
+            if (!f.password) {
+              var v = filterNick(el.value).replace(/[^A-Z0-9]/g, '');
+              if (v !== el.value) el.value = v;
+            }
+            if (f.onInput) f.onInput(el.value);
+          });
+          p.appendChild(el);
+        });
+      }
+
       this.promptStatusEl = null;
+      this.promptStatusOwn = false;
       if (typeof o.status === 'string') {
         var st = document.createElement('div');
         st.className = 'lobby-status' + (o.statusError ? ' error' : '');
@@ -2044,7 +2558,8 @@
      * ------------------------------------------------------ */
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
-      var names = ['menu', 'options', 'online', 'badges', 'ranking', 'friends'];
+      var names = ['menu', 'options', 'online', 'badges', 'ranking',
+                   'friends', 'profile'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -2132,8 +2647,18 @@
       this.els.prompt.style.display = 'none';
       this.els.prompt.innerHTML = '';
       this.promptStatusEl = null;
+      this.promptStatusOwn = false;
       this.promptKeys = [];
       this.promptOpen = false;
+    },
+
+    /* Mensaje dentro del diálogo abierto (cuentas: "entrando...", errores) */
+    setPromptStatus: function (text, error) {
+      if (!this.promptStatusEl) return;
+      // este diálogo se encarga de su propio mensaje: que tickPrompt no lo pise
+      this.promptStatusOwn = true;
+      this.promptStatusEl.classList.toggle('error', !!error);
+      this.promptStatusEl.textContent = text || '';
     },
 
     voteStatusText: function (vote) {
@@ -2147,6 +2672,7 @@
     tickPrompt: function () {
       var g = window.PM.Game;
       if (!this.promptOpen || !this.promptStatusEl) return;
+      if (this.promptStatusOwn) return;      // lo lleva el propio diálogo
       this.promptStatusEl.textContent = g.vote
         ? this.voteStatusText(g.vote)
         : (g.flash ? g.flash.text : '');
@@ -2397,7 +2923,8 @@
     /* Muestra un solo panel (o ninguno si name es null) */
     showPanel: function (name) {
       this.hidePrompt();
-      var panels = ['menu', 'options', 'online', 'badges', 'ranking', 'friends'];
+      var panels = ['menu', 'options', 'online', 'badges', 'ranking',
+                    'friends', 'profile'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
