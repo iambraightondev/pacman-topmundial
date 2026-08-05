@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Emotes con vida, resumen al acabar y otro orden de skins
+
+- **Los seis emotes se mueven**, cada uno como pide su emoción: la risa
+  rebota y abre la boca, al que llora le caen las lágrimas por las mejillas,
+  el enfadado tiembla, se pone rojo y echa humo por las orejas, el asustado
+  tirita con las pupilas disparadas y una gota de sudor frío, el guiño abre
+  el ojo de vez en cuando con un chispazo y los corazones laten mientras se
+  le escapan otros hacia arriba. El globo también flota, y lo que se anima no
+  se sale de él. En la barra de EMOTES las caras se mueven igual, así se
+  elige por lo que hace el emote y no por una foto quieta.
+- **Resumen al terminar la partida**: cuando acaban las celebraciones (los
+  logros que acaban de caer y la subida de nivel), el panel de GAME OVER
+  enseña lo que te llevas: los puntos, la experiencia ganada con la barra del
+  nivel de jugador —y si has subido, a qué nivel— y la lista de logros
+  conseguidos en esa partida. Antes el panel salía de golpe y tapaba justo
+  las animaciones que celebraban todo eso.
+- **Otro orden para ganarse las skins**: CLÁSICO, SOMBRA (nivel 3), NEÓN (7),
+  ARO (12), PÍXEL (20) y OJOS (30).
+
 ## 2026-08-04 · Nombres más largos
 
 - **Los nombres pasan de 8 a 12 letras**, en todas partes: portada, OPCIONES,

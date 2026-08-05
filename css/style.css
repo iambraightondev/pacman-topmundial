@@ -883,6 +883,68 @@ input[type="range"] {
   letter-spacing: 3px;
 }
 
+/* ---------- Resumen del final de la partida ---------- */
+/* Lo que te llevas: experiencia con la barra del nivel de jugador y los
+ * logros que han caído en esta partida. Sale dentro del panel GAME OVER,
+ * cuando ya han terminado las celebraciones sobre el laberinto. */
+.resumen {
+  width: min(94%, 420px);
+  border: 1px solid #2121ff;
+  padding: 8px 10px;
+  margin: 2px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 34vh;
+  overflow-y: auto;
+}
+
+.resumen-lvl {
+  font-size: clamp(11px, 2vh, 15px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #00ffff;
+}
+
+.resumen-lvl.sube { color: #ffff00; }
+
+.resumen-exp {
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 1px;
+  color: #aaa;
+}
+
+.resumen-tit {
+  margin-top: 4px;
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 2px;
+  color: #7ec8ff;
+}
+
+.resumen-logro {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: clamp(10px, 1.8vh, 13px);
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-align: left;
+}
+
+.resumen-logro canvas {
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+}
+
+.resumen-logro small {
+  margin-left: auto;
+  font-weight: normal;
+  letter-spacing: 0;
+  font-size: 0.7em;
+  color: #888;
+  text-align: right;
+}
+
 .prompt-btns {
   display: flex;
   gap: 10px;

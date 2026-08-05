@@ -132,11 +132,89 @@
     ctx.fill();
   }
 
-  Sprites.drawPacFace = function (ctx, x, y, r, color, id) {
+  /* Gota: punta arriba y panza abajo. Sirve de lágrima y de sudor frío. */
+  function drop(ctx, x, y, s, color, alpha) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y - s * 1.5);
+    ctx.quadraticCurveTo(x + s, y, x + s * 0.75, y + s * 0.55);
+    ctx.quadraticCurveTo(x, y + s * 1.35, x - s * 0.75, y + s * 0.55);
+    ctx.quadraticCurveTo(x - s, y, x, y - s * 1.5);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* Destello de cuatro puntas (el chispazo del guiño) */
+  function sparkle(ctx, x, y, s, color, alpha) {
+    if (alpha <= 0 || s <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.quadraticCurveTo(x, y, x + s, y);
+    ctx.quadraticCurveTo(x, y, x, y + s);
+    ctx.quadraticCurveTo(x, y, x - s, y);
+    ctx.quadraticCurveTo(x, y, x, y - s);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /* Cara de emote.
+   *
+   * `tick` es un contador libre de fotogramas (60/s). Si se pasa, la cara SE
+   * MUEVE imitando la emoción: la carcajada rebota, al que llora le caen las
+   * lágrimas, el enfadado tiembla y echa humo, el asustado tirita y suda, el
+   * guiño se abre y cierra con un chispazo y los corazones laten y se
+   * escapan hacia arriba. Sin `tick` se pinta la pose quieta de siempre, que
+   * es lo que quieren los avatares del PERFIL y las miniaturas. */
+  Sprites.drawPacFace = function (ctx, x, y, r, color, id, tick) {
     var ink = '#000000';
+    var vivo = (typeof tick === 'number');
+    var t = vivo ? tick : 0;
+    var lw = Math.max(1, r * 0.17);
+
+    /* Meneo del conjunto: cada emoción mueve la cabeza a su manera. Se aplica
+     * como transformación para que rasgos y añadidos vayan todos juntos. */
+    var mx = 0, my = 0, giro = 0, esc = 1;
+    if (vivo) {
+      if (id === 'risa') {                    // carcajada: rebota y se balancea
+        my = -Math.abs(Math.sin(t * 0.26)) * r * 0.16;
+        giro = Math.sin(t * 0.13) * 0.11;
+      } else if (id === 'llanto') {           // hipidos: se hunde y tirita
+        my = r * 0.05 + Math.sin(t * 0.09) * r * 0.09;
+        mx = Math.sin(t * 0.62) * r * 0.03;
+      } else if (id === 'enfado') {           // temblor de rabia, y se hincha
+        mx = Math.sin(t * 1.5) * r * 0.07;
+        my = Math.sin(t * 1.9) * r * 0.04;
+        esc = 1 + Math.sin(t * 0.2) * 0.05;
+      } else if (id === 'susto') {            // tiritona de lado a lado
+        mx = Math.sin(t * 0.85) * r * 0.11;
+        giro = Math.sin(t * 0.85) * 0.06;
+      } else if (id === 'guino') {            // ladeo pícaro
+        giro = Math.sin(t * 0.12) * 0.13;
+        my = Math.sin(t * 0.24) * r * 0.05;
+      } else if (id === 'amor') {             // suspiro: sube y baja despacio
+        my = Math.sin(t * 0.11) * r * 0.11;
+        esc = 1 + Math.sin(t * 0.21) * 0.04;
+      } else {
+        my = Math.sin(t * 0.12) * r * 0.07;
+      }
+    }
+
+    ctx.save();
+    if (mx || my || giro || esc !== 1) {
+      ctx.translate(x + mx, y + my);
+      if (giro) ctx.rotate(giro);
+      if (esc !== 1) ctx.scale(esc, esc);
+      ctx.translate(-x, -y);
+    }
+
     var ex = r * 0.42;              // separación horizontal de los ojos
     var ey = y - r * 0.26;          // altura de los ojos
-    var lw = Math.max(1, r * 0.17);
 
     ctx.fillStyle = color || '#ffff00';
     ctx.beginPath();
@@ -175,10 +253,11 @@
     if (id === 'risa') {
       arcEye(-ex, true);
       arcEye(ex, true);
-      // boca abierta de carcajada: media luna rellena
+      // boca abierta de carcajada: media luna que se abre y se cierra
+      var boca = vivo ? 0.78 + 0.22 * Math.abs(Math.sin(t * 0.26)) : 1;
       ctx.fillStyle = ink;
       ctx.beginPath();
-      ctx.arc(x, y + r * 0.12, r * 0.56, 0, Math.PI);
+      ctx.arc(x, y + r * 0.12, r * 0.56 * boca, 0, Math.PI);
       ctx.closePath();
       ctx.fill();
 
@@ -186,35 +265,65 @@
       arcEye(-ex, false);
       arcEye(ex, false);
       mouthArc(false, false);
-      // lagrimones
-      ctx.fillStyle = '#00ffff';
-      ctx.beginPath();
-      ctx.moveTo(x - ex, ey + r * 0.25);
-      ctx.lineTo(x - ex - r * 0.16, ey + r * 0.72);
-      ctx.lineTo(x - ex + r * 0.16, ey + r * 0.72);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(x + ex, ey + r * 0.25);
-      ctx.lineTo(x + ex - r * 0.16, ey + r * 0.62);
-      ctx.lineTo(x + ex + r * 0.16, ey + r * 0.62);
-      ctx.closePath();
-      ctx.fill();
+      if (!vivo) {
+        // pose quieta: los dos lagrimones colgando de los ojos
+        drop(ctx, x - ex, ey + r * 0.5, r * 0.2, '#00ffff', 1);
+        drop(ctx, x + ex, ey + r * 0.42, r * 0.2, '#00ffff', 1);
+      } else {
+        /* dos chorros por ojo, desfasados, que nacen en el ojo, caen por la
+         * mejilla y se apagan antes de llegar a la barbilla */
+        for (var g = 0; g < 4; g++) {
+          var lado = (g % 2) ? 1 : -1;
+          var ph = ((t * 0.024) + g * 0.27) % 1;
+          drop(ctx, x + lado * (ex + ph * r * 0.14),
+            ey + r * 0.3 + ph * r * 1.05,
+            r * (0.22 - ph * 0.07), '#00ffff', 1 - ph * ph);
+        }
+      }
 
     } else if (id === 'enfado') {
+      // el sofoco le sube a la cara según tiembla
+      if (vivo) {
+        ctx.save();
+        ctx.globalAlpha = 0.25 + 0.25 * Math.abs(Math.sin(t * 0.2));
+        ctx.fillStyle = '#ff2200';
+        ctx.beginPath();
+        ctx.arc(x, y + r * 0.25, r * 0.85, Math.PI, 2 * Math.PI, true);
+        ctx.fill();
+        ctx.restore();
+      }
       dot(-ex);
       dot(ex);
-      // cejas caídas hacia el centro
+      // cejas caídas hacia el centro, que se aprietan a golpes
+      var ceja = vivo ? 1 + 0.35 * Math.max(0, Math.sin(t * 0.2)) : 1;
       ctx.beginPath();
       ctx.moveTo(x - ex - r * 0.3, ey - r * 0.5);
-      ctx.lineTo(x - ex + r * 0.28, ey - r * 0.18);
+      ctx.lineTo(x - ex + r * 0.28, ey - r * 0.18 * ceja);
       ctx.moveTo(x + ex + r * 0.3, ey - r * 0.5);
-      ctx.lineTo(x + ex - r * 0.28, ey - r * 0.18);
+      ctx.lineTo(x + ex - r * 0.28, ey - r * 0.18 * ceja);
       ctx.stroke();
       mouthArc(false, true);
+      // dos humaredas que suben por las orejas y se deshacen
+      if (vivo) {
+        for (var v = 0; v < 4; v++) {
+          var vl = (v % 2) ? 1 : -1;
+          var vp = ((t * 0.022) + v * 0.25) % 1;
+          ctx.save();
+          ctx.globalAlpha = (1 - vp) * 0.6;
+          ctx.fillStyle = '#dddddd';
+          ctx.beginPath();
+          // sube poco: en el globo del emote hay sitio justo por arriba
+          ctx.arc(x + vl * (r * 0.78 + vp * r * 0.3),
+            y - r * 0.45 - vp * r * 0.68, r * (0.1 + vp * 0.15), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
 
     } else if (id === 'susto') {
-      // ojos muy abiertos
+      // ojos muy abiertos, con la pupila disparada de un lado a otro
+      var jx = vivo ? Math.sin(t * 0.55) * r * 0.09 : 0;
+      var jy = vivo ? Math.sin(t * 0.81) * r * 0.06 : 0;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(x - ex, ey, r * 0.27, 0, Math.PI * 2);
@@ -222,40 +331,90 @@
       ctx.beginPath();
       ctx.arc(x + ex, ey, r * 0.27, 0, Math.PI * 2);
       ctx.fill();
-      dot(-ex, r * 0.13);
-      dot(ex, r * 0.13);
-      // boca redonda de sorpresa
       ctx.fillStyle = ink;
       ctx.beginPath();
-      ctx.arc(x, y + r * 0.42, r * 0.22, 0, Math.PI * 2);
+      ctx.arc(x - ex + jx, ey + jy, r * 0.13, 0, Math.PI * 2);
       ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + ex + jx, ey + jy, r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+      // boca redonda de sorpresa, que se abre a golpes
+      var oh = vivo ? 0.8 + 0.35 * Math.abs(Math.sin(t * 0.17)) : 1;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.42, r * 0.22 * oh, 0, Math.PI * 2);
+      ctx.fill();
+      // gota de sudor frío resbalando por la sien
+      if (vivo) {
+        var sp = (t * 0.018) % 1;
+        drop(ctx, x + r * 0.72 + sp * r * 0.1, y - r * 0.55 + sp * r * 1.2,
+          r * (0.2 - sp * 0.06), '#9fe8ff', 1 - sp * sp);
+      }
 
     } else if (id === 'guino') {
+      /* el ojo pasa la mayor parte del tiempo guiñado y se abre un momento;
+       * al volver a cerrarse suelta el chispazo */
+      var ciclo = vivo ? (t % 54) / 54 : 1;
+      var abierto = vivo && ciclo > 0.62 && ciclo < 0.86;
       dot(-ex, r * 0.14);
-      ctx.beginPath();                       // ojo guiñado
-      ctx.moveTo(x + ex - r * 0.25, ey);
-      ctx.lineTo(x + ex + r * 0.25, ey);
-      ctx.stroke();
+      if (abierto) {
+        dot(ex, r * 0.14);
+      } else {
+        ctx.beginPath();                     // ojo guiñado
+        ctx.moveTo(x + ex - r * 0.25, ey);
+        ctx.lineTo(x + ex + r * 0.25, ey);
+        ctx.stroke();
+      }
       mouthArc(true, true);
+      if (vivo) {
+        // el destello nace justo cuando se cierra y se apaga creciendo
+        var chispa = (ciclo >= 0.86) ? (ciclo - 0.86) / 0.14 : -1;
+        if (chispa >= 0) {
+          sparkle(ctx, x + ex + r * 0.55, ey - r * 0.5,
+            r * (0.2 + chispa * 0.35), '#ffffff', 1 - chispa);
+        }
+      }
 
     } else if (id === 'amor') {
-      heart(ctx, x - ex, ey, r * 0.3, '#ff0055');
-      heart(ctx, x + ex, ey, r * 0.3, '#ff0055');
+      // los corazones de los ojos laten, cada uno a su tiempo
+      var l1 = vivo ? 1 + 0.28 * Math.abs(Math.sin(t * 0.2)) : 1;
+      var l2 = vivo ? 1 + 0.28 * Math.abs(Math.sin(t * 0.2 + 0.6)) : 1;
+      heart(ctx, x - ex, ey, r * 0.3 * l1, '#ff0055');
+      heart(ctx, x + ex, ey, r * 0.3 * l2, '#ff0055');
       mouthArc(true, false);
+      // corazoncitos que se le escapan hacia arriba
+      if (vivo) {
+        for (var c = 0; c < 3; c++) {
+          var cp = ((t * 0.016) + c / 3) % 1;
+          ctx.save();
+          ctx.globalAlpha = (1 - cp) * 0.9;
+          // se escapan hacia arriba sin salirse del globo del emote
+          heart(ctx, x + Math.sin(cp * 5 + c * 2) * r * 0.7,
+            y - r * 0.5 - cp * r * 0.62, r * 0.16 * (0.6 + cp * 0.7), '#ff5588');
+          ctx.restore();
+        }
+      }
 
     } else {
       dot(-ex);
       dot(ex);
       mouthArc(true, false);
     }
+    ctx.restore();
   };
 
-  /* Globo de emote sobre un Pac-Man */
-  Sprites.drawEmote = function (ctx, x, y, emoteId, color) {
+  /* Globo de emote sobre un Pac-Man.
+   *
+   * `tick` es el contador de la partida: el globo flota (en píxeles enteros,
+   * que si no se emborrona el borde de 1 px) y la cara de dentro se anima
+   * sola. Lo que se salga del globo se recorta, para que una lágrima o un
+   * corazón no acaben sueltos por el laberinto. */
+  Sprites.drawEmote = function (ctx, x, y, emoteId, color, tick) {
     var e = CFG.EMOTES[emoteId];
     if (!e) return;
     var w = 22, h = 20, r = 7;
-    var bx = Math.round(x - w / 2), by = Math.round(y - h);
+    var vivo = (typeof tick === 'number');
+    var flota = vivo ? Math.round(Math.sin(tick * 0.07) * 1.2) : 0;
+    var bx = Math.round(x - w / 2), by = Math.round(y - h) + flota;
     // el globo no se sale del laberinto
     if (bx < 2) bx = 2;
     if (bx + w > CFG.NATIVE_W - 2) bx = CFG.NATIVE_W - 2 - w;
@@ -265,11 +424,17 @@
     ctx.strokeStyle = color || '#ffffff';
     ctx.lineWidth = 1;
     ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
-    // pico hacia el jugador
+    // pico hacia el jugador, estirándose con la flotación
     ctx.fillStyle = color || '#ffffff';
-    ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
+    ctx.fillRect(Math.round(x) - 1, by + h, 2, 2 - flota);
 
-    Sprites.drawPacFace(ctx, bx + w / 2, by + h / 2, r, color || '#ffff00', e.id);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx + 1, by + 1, w - 2, h - 2);
+    ctx.clip();
+    Sprites.drawPacFace(ctx, bx + w / 2, by + h / 2, r, color || '#ffff00',
+      e.id, vivo ? tick : undefined);
+    ctx.restore();
   };
 
   /* Etiqueta de maestría sobre un jugador (Ctrl+Espacio).
@@ -805,6 +970,13 @@
     }
     ctx.closePath();
   }
+
+  /* La misma estrella, suelta: la usa el resumen del final de la partida */
+  Sprites.drawAchStar = function (ctx, x, y, r, color) {
+    ctx.fillStyle = color || '#ffff00';
+    star(ctx, x, y, r, 5);
+    ctx.fill();
+  };
 
   /* ------------------------------------------------------------
    * Aviso de logro conseguido. Deliberadamente distinto del cartel de

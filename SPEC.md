@@ -85,7 +85,8 @@ returns newly earned ones not yet announced; `Game.bumpAch()` records and
 queues the in-game notice. Spectating records nothing, and online only your
 own kills/fruits count.
 
-**Skins by level** (`CFG.SKINS[].level` = 1/3/7/12/20/30): gated on
+**Skins by level** (unlock order `clasico` 1, `sombra` 3, `neon` 7, `aro` 12,
+`pixel` 20, `ojos` 30 — `CFG.SKINS[].level`): gated on
 `PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
 currently worn — a raised requirement must never strip what a player already
 has. Locked ones render greyed in OPCIONES with the level they need.
@@ -450,8 +451,8 @@ confirmed), `safeTicks` (respawn grace).
 
 ## Skins, emotes, maestrías, ranking y chat
 
-**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`): all available from the
-start, drawn procedurally over the chosen colour in
+**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`): unlocked by player level
+(see above), drawn procedurally over the chosen colour in
 `Sprites.drawPacman(ctx, x, y, dir, mouth, color, skin)` — `clasico` (plain
 arc), `ojos` (eye looking forward), `neon` (glow), `aro` (ring outline),
 `pixel` (blocky body) and `sombra` (trail behind). Applied to the player, its
@@ -467,7 +468,21 @@ order **is** the key order: `1..6` fire the emote at that index (and the
 EMOTES bar shows each face with its number in the corner, drawn on a mini
 canvas in the local player's colour). `Game.sendEmote(i)` shows the bubble
 (`Sprites.drawEmote`) over that Pac-Man for `EMOTE_TICKS`, with an
-`EMOTE_COOLDOWN` antispam gap. Available in every mode. Online: guest
+`EMOTE_COOLDOWN` antispam gap.
+
+Both take an optional `tick` (free-running frame counter) and **animate**:
+the laugh bounces and its mouth opens, the crier drips two staggered tear
+streams, the angry one trembles, flushes red and vents steam, the scared one
+shivers with darting pupils and a cold sweat drop, the wink opens the eye
+now and then with a sparkle, and the love hearts beat while little ones
+escape upwards. `drawEmote` also bobs the balloon by whole pixels (so the
+1 px border stays crisp) and clips its inside, so nothing animated leaks
+into the maze. Passing no `tick` draws the still pose — that is what the
+PERFIL avatars and thumbnails use. The EMOTES bar animates its faces with a
+`requestAnimationFrame` loop that only runs while the bar is open
+(`UI.refreshEmoteFaces` starts it, `UI.drawEmoteFaces(tick)` paints a frame).
+
+Available in every mode. Online: guest
 `gevt {t:'emote', e}` → host re-broadcasts `evt {t:'emote', w, e}`; each side
 ignores the echo of its own.
 
@@ -635,6 +650,19 @@ it also stays visible while scrolling a long pane.
   `Game.lastOpts`); online it is a vote, and on acceptance the host sends
   `rematch` and both call `newGame` with the same options (same duo, same
   colours, names, host settings and lives mode).
+- **Run summary**: closing the run is what awards the last achievements and
+  the player-level XP, and those play as animations over the maze. The panel
+  therefore **waits for them**: `enterGameOverIdle` sets `overWait =
+  celebrating()` (any `achNotice`/`achNotices`/`badgeNotice`/`levelNotice`),
+  `Game.stepOverWait()` — called from `step()`, not `stepGameOver()`, so a
+  pause cannot strand it — clears the flag and re-syncs, and `syncPrompt`
+  only opens the panel when `overIdle && !overWait`. `Game.closeRun()` stores
+  `Game.runSummary = {puntos, nivel, exp, lvlAntes, lvl, lvlPct, lvlEn,
+  lvlPide, logros[]}` (`logros` accumulated in `Game.runAch` by `bumpAch`),
+  and `UI.buildRunSummary()` renders it inside the panel: player level (in
+  yellow with "¡SUBES AL NIVEL...!" when it rose), XP gained with the level
+  bar, and one row per achievement won in that run (star + name + condition),
+  or "SIN LOGROS NUEVOS ESTA VEZ". Spectators get no summary.
 - All three (`surrender`, `rematch`, `restart`) share one mechanism
   (`Game.vote = {kind, role, local, ticks}`; texts in `UI.VOTE_TEXT`):
   requester → `vote{k}` → responder accepts/rejects → `voteRes{k, ok}`. The

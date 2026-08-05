@@ -33,8 +33,10 @@ red.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
   u online) la partida solo termina si **lo aceptan los dos**.
-- **Al terminar**: el GAME OVER ofrece **otra partida con tu mismo dúo** (en
-  online, aceptándolo los dos) sin pasar por el menú ni volver a crear sala.
+- **Al terminar**: cuando acaban las celebraciones, el GAME OVER resume lo
+  que te llevas —puntos, experiencia y nivel de jugador, y los logros de esa
+  partida— y ofrece **otra partida con tu mismo dúo** (en online, aceptándolo
+  los dos) sin pasar por el menú ni volver a crear sala.
 - **Móvil / táctil**: cruceta de botones en pantalla y/o deslizar sobre el
   laberinto — lo que prefieras; botón `❚❚` para pausar. En dos jugadores
   locales hay dos crucetas (esquinas inferiores: izquierda J1, derecha J2)
@@ -167,10 +169,10 @@ Dos maneras de correr la misma batería:
   además el del jugador 2 local. Aparecen en el marcador, sobre cada Pac-Man
   al empezar, en la sala online y en el panel de fin de partida.
 - **Colores de los dos jugadores**: 8 colores rápidos + selector libre por jugador. Se aplican en vivo.
-- **Skins**: CLÁSICO, OJOS, NEÓN, ARO, PÍXEL y SOMBRA, combinables con
+- **Skins**: CLÁSICO, SOMBRA, NEÓN, ARO, PÍXEL y OJOS, combinables con
   cualquier color. Se **ganan subiendo de nivel de jugador** (3, 7, 12, 20 y
-  30); las que faltan salen apagadas en OPCIONES con el nivel que piden. La
-  que ya llevabas puesta no se te quita nunca.
+  30, en ese orden); las que faltan salen apagadas en OPCIONES con el nivel
+  que piden. La que ya llevabas puesta no se te quita nunca.
 - **Perfil**: avatar (16, dibujados por código: Pac-Man y sus caras, los
   cuatro fantasmas, el asustado, los ojos, frutas y la medalla), nombre,
   nivel con su barra y un resumen de logros, maestría y récord. De invitado
@@ -185,8 +187,9 @@ Dos maneras de correr la misma batería:
   nube y lo de este navegador se funden quedándose con lo mejor de cada lado.
   De invitado se juega igual, pero sin lista de amigos.
 - **Emotes**: seis caras de Pac-Man (risa, llanto, enfado, susto, guiño y
-  amor) con las teclas `1`–`6`, en el color de tu jugador. Y **chat** (`T`)
-  en el modo online.
+  amor) con las teclas `1`–`6`, en el color de tu jugador. **Están animadas**:
+  caen las lágrimas, el enfadado echa humo, el guiño abre el ojo con un
+  chispazo, los corazones laten... Y **chat** (`T`) en el modo online.
 - **Maestrías**: seis insignias por récord personal, en **dos rutas
   separadas** —en solo y en dúo—, con su propio panel en el menú (cada fila
   tiene `VER` para volver a ver el cartel). En partida, **cada vez que cruzas

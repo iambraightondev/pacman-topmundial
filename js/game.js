@@ -124,6 +124,7 @@
     limpiosSeguidos: 0,  // niveles seguidos despejados sin morir
     achNotices: [],      // cola de logros por celebrar
     achNotice: null,     // { name, desc, color, ticks, total }
+    runAch: [],          // logros conseguidos en ESTA partida (para el resumen)
 
     badgeNotice: null,   // { name, color, mode, nueva, ticks, total } — maestría
     badgeRun: [],        // ids de maestría ya celebrados en ESTA partida
@@ -137,6 +138,8 @@
     vote: null,          // { kind:'surrender'|'rematch', role:'from'|'to', local, ticks }
     dlgPaused: false,    // la pausa la puso un diálogo, no un jugador
     overIdle: false,     // GAME OVER terminado: panel de revancha en pantalla
+    overWait: false,     // ...pero aún se están celebrando logros o nivel
+    runSummary: null,    // lo que te llevas de la partida (lo enseña el panel)
     lastOpts: null,      // opciones de la partida en curso (para la revancha)
     flash: null,         // { text, ticks } — aviso breve sobre el laberinto
 
@@ -332,6 +335,9 @@
       this.limpiosSeguidos = 0;
       this.achNotices = [];
       this.achNotice = null;
+      this.runAch = [];
+      this.runSummary = null;
+      this.overWait = false;
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -516,6 +522,7 @@
       this.vote = null;
       this.dlgPaused = false;
       this.overIdle = false;
+      this.overWait = false;
       this.flash = null;
       this.lastOpts = null;
       this.playerCount = 1;
@@ -639,6 +646,7 @@
       this.stepEmotes();
       this.stepChat();
       this.stepBadgeNotice();
+      this.stepOverWait();
 
       /* aviso de red: congela y vuelve al menú */
       if (this.netNotice) {
@@ -1154,10 +1162,30 @@
       if (this.phaseTicks <= 0 && !this.overIdle) this.enterGameOverIdle();
     },
 
+    /* El panel del resumen sale cuando ya no queda nada celebrándose. Va en
+     * step(), junto a los propios avisos, y no en stepGameOver: así sigue
+     * saliendo aunque alguien pulse pausa justo en ese momento. */
+    stepOverWait: function () {
+      if (!this.overWait || this.celebrating()) return;
+      this.overWait = false;
+      this.syncUI();
+    },
+
+    /* ¿Hay algo celebrándose encima del laberinto? (logro, maestría o subida
+     * de nivel). El resumen del final espera a que no quede nada. */
+    celebrating: function () {
+      return !!(this.achNotice || this.achNotices.length ||
+                this.badgeNotice || this.levelNotice);
+    },
+
+    /* Cerrar la partida dispara los últimos logros y la subida de nivel, que
+     * salen animados sobre el laberinto. El panel con el resumen no aparece
+     * hasta que acaban: si saliera antes, taparía justo lo que celebra. */
     enterGameOverIdle: function () {
       this.overIdle = true;
       this.stopAllLoops();
       this.submitRanking();     // partidas de dúo van al top mundial
+      this.overWait = this.celebrating();
       this.syncUI();
     },
 
@@ -1407,9 +1435,26 @@
     closeRun: function () {
       if (this.xpSent || this.isSpec()) return null;
       this.xpSent = true;
+      var L = window.PM.Level;
+      var antes = L ? L.state() : null;
       // logros de cierre: una partida más y la mejor puntuación
       this.bumpAch({ partidas: 1, puntosMax: this.score });
       var subida = this.awardLevelXp();
+      /* Lo que te llevas de la partida, para el aviso del final. Se guarda
+       * aquí porque es el único sitio donde se sabe el antes y el después:
+       * después de esto la experiencia ya está sumada. */
+      var ahora = L ? L.state() : null;
+      this.runSummary = {
+        puntos: this.score,
+        nivel: this.level,                          // nivel del laberinto
+        exp: this.score,                            // la experiencia son los puntos
+        lvlAntes: antes ? antes.level : 0,
+        lvl: ahora ? ahora.level : 0,
+        lvlPct: ahora ? ahora.pct : 0,
+        lvlEn: ahora ? ahora.inLevel : 0,
+        lvlPide: ahora ? ahora.needed : 0,
+        logros: this.runAch.slice()
+      };
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();
       return subida;
@@ -1444,6 +1489,10 @@
         this.achNotices.push({
           name: fresh[i].name, desc: fresh[i].desc, color: fresh[i].color,
           ticks: CFG.ACH_NOTICE_TICKS, total: CFG.ACH_NOTICE_TICKS
+        });
+        // y quedan apuntados para el resumen del final de la partida
+        this.runAch.push({
+          name: fresh[i].name, desc: fresh[i].desc, color: fresh[i].color
         });
       }
       if (fresh.length && window.PM.Account) window.PM.Account.pushQuiet();
@@ -2733,7 +2782,8 @@
             window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color,
               et, this.tick);
           } else {
-            window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i));
+            window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i),
+              this.tick);
           }
         }
       }

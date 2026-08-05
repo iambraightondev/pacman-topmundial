@@ -2388,7 +2388,7 @@
     },
 
     /* Las caras de la barra, con el color del jugador local */
-    refreshEmoteFaces: function () {
+    drawEmoteFaces: function (tick) {
       if (!this.emoteFaces) return;
       var g = window.PM.Game;
       var color = g.colorFor(g.netRole ? g.localIdx : 0);
@@ -2397,8 +2397,24 @@
         var c = it.canvas.getContext('2d');
         c.clearRect(0, 0, 26, 26);
         c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawPacFace(c, 13, 13, 10, color, it.id);
+        window.PM.Sprites.drawPacFace(c, 13, 14, 9, color, it.id, tick);
       }
+    },
+
+    /* Con la barra abierta las caras se mueven, igual que se verán sobre el
+     * jugador: así se elige por lo que hace el emote, no por una foto fija.
+     * El bucle se para solo al cerrar la barra. */
+    refreshEmoteFaces: function () {
+      var self = this;
+      if (this.emoteRaf) return;
+      var ms0 = null;
+      var paso = function (ms) {
+        if (!self.emoteBarOpen) { self.emoteRaf = 0; return; }
+        if (ms0 === null) ms0 = ms;
+        self.drawEmoteFaces((ms - ms0) * 0.06);   // 60 pasos por segundo
+        self.emoteRaf = window.requestAnimationFrame(paso);
+      };
+      this.emoteRaf = window.requestAnimationFrame(paso);
     },
 
     /* Entrada de chat (solo online) */
@@ -2469,6 +2485,9 @@
         d.textContent = obj ? line.text : line;
         p.appendChild(d);
       });
+
+      /* resumen de la partida (lo que te llevas al acabar) */
+      if (o.summary) p.appendChild(this.buildRunSummary(o.summary));
 
       /* campo de texto opcional (invitar a alguien por su nombre) */
       this.promptInput = null;
@@ -2687,7 +2706,9 @@
         return;
       }
       if (g.vote) this.showVotePrompt(g.vote);
-      else if (g.overIdle) this.showGameOverPrompt();
+      // g.overWait: aún se están celebrando logros o subida de nivel sobre el
+      // laberinto, y el panel del resumen no debe taparlos
+      else if (g.overIdle && !g.overWait) this.showGameOverPrompt();
       else if (g.paused && g.inGame() && g.state !== 'GAME_OVER') this.showPausePrompt();
       else {
         this.hidePrompt();
@@ -2809,6 +2830,68 @@
       });
     },
 
+    /* Bloque "lo que te llevas" del final de la partida: la experiencia
+     * ganada con la barra del nivel de jugador y los logros conseguidos en
+     * esta partida. Los puntos y el nivel del laberinto ya salen arriba, en
+     * las líneas del panel. */
+    buildRunSummary: function (s) {
+      var box = document.createElement('div');
+      box.className = 'resumen';
+
+      var lvlRow = document.createElement('div');
+      lvlRow.className = 'resumen-lvl';
+      var subio = s.lvl > s.lvlAntes;
+      lvlRow.textContent = subio
+        ? ('¡SUBES AL NIVEL DE JUGADOR ' + s.lvl + '!')
+        : ('NIVEL DE JUGADOR ' + s.lvl);
+      if (subio) lvlRow.classList.add('sube');
+      box.appendChild(lvlRow);
+
+      var exp = document.createElement('div');
+      exp.className = 'resumen-exp';
+      exp.textContent = '+' + (s.exp || 0) + ' DE EXPERIENCIA · TE FALTAN ' +
+        Math.max(0, (s.lvlPide || 0) - (s.lvlEn || 0)) +
+        ' PARA EL NIVEL ' + (s.lvl + 1);
+      box.appendChild(exp);
+
+      var barra = document.createElement('div');
+      barra.className = 'level-bar';
+      var fill = document.createElement('div');
+      fill.className = 'level-fill';
+      fill.style.width = Math.round((s.lvlPct || 0) * 100) + '%';
+      barra.appendChild(fill);
+      box.appendChild(barra);
+
+      var logros = s.logros || [];
+      var tit = document.createElement('div');
+      tit.className = 'resumen-tit';
+      tit.textContent = logros.length
+        ? ('LOGROS DE ESTA PARTIDA (' + logros.length + ')')
+        : 'SIN LOGROS NUEVOS ESTA VEZ';
+      box.appendChild(tit);
+
+      logros.forEach(function (a) {
+        var row = document.createElement('div');
+        row.className = 'resumen-logro';
+        var cv = document.createElement('canvas');
+        cv.width = 18; cv.height = 18;
+        var c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        window.PM.Sprites.drawAchStar(c, 9, 9, 8, a.color);
+        row.appendChild(cv);
+        var nm = document.createElement('span');
+        nm.style.color = a.color || '#ffff00';
+        nm.textContent = a.name;
+        row.appendChild(nm);
+        var ds = document.createElement('small');
+        ds.textContent = a.desc || '';
+        row.appendChild(ds);
+        box.appendChild(row);
+      });
+
+      return box;
+    },
+
     showGameOverPrompt: function () {
       var self = this;
       var g = window.PM.Game;
@@ -2836,6 +2919,7 @@
         color: '#ff0000',
         solid: true,
         lines: lines,
+        summary: g.runSummary,
         status: g.flash ? g.flash.text : '',
         statusError: !!g.flash,
         buttons: [

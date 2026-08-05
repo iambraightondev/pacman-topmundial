@@ -922,6 +922,120 @@
   });
 
   // ---------------------------------------------------------------
+  // Resumen del final de la partida
+  // ---------------------------------------------------------------
+  test('al acabar se resume lo que te llevas de la partida', function () {
+    var L = window.PM.Level, A = window.PM.Achievements;
+    var xp0 = L.xp(), previo = null;
+    try { previo = localStorage.getItem(CFG.ACH_KEY); } catch (e) { /* nada */ }
+    try {
+      L.reset();
+      A.reset();
+      partida(1);
+      // 20 000 puntos: suben de nivel de jugador y cae el logro CENTURIÓN
+      G.score = 20000;
+      G.level = 3;                      // y tres laberintos despejados
+      G.closeRun();
+      var r = G.runSummary;
+      ok(r, 'queda guardado el resumen');
+      eq(r.puntos, 20000, 'los puntos de la partida');
+      eq(r.exp, 20000, 'que son también la experiencia ganada');
+      eq(r.nivel, 3, 'el nivel del laberinto al que llegó');
+      eq(r.lvlAntes, 1, 'el nivel de jugador que tenía');
+      ok(r.lvl > r.lvlAntes, 'y ha pasado a uno más alto: ' + r.lvl);
+      eq(r.lvl, L.state().level, 'el mismo que tiene ahora de verdad');
+      ok(r.logros.length > 0, 'y los logros conseguidos: ' +
+         r.logros.map(function (a) { return a.name; }).join(', '));
+    } finally {
+      L.reset(); L.add(xp0);
+      try {
+        if (previo === null) localStorage.removeItem(CFG.ACH_KEY);
+        else localStorage.setItem(CFG.ACH_KEY, previo);
+      } catch (e) { /* sin almacenamiento */ }
+      G.toMenu();
+      window.PM.UI.hidePrompt();
+    }
+  });
+
+  test('el panel del final espera a que acaben las celebraciones', function () {
+    partida(1);
+    try {
+      G.achNotice = { name: 'X', desc: 'X', color: '#fff', ticks: 3, total: 3 };
+      G.state = 'GAME_OVER';
+      G.phaseTicks = 0;
+      G.overIdle = false;
+      G.enterGameOverIdle();
+      ok(G.overWait, 'con un logro en pantalla, el panel espera');
+      ok(!window.PM.UI.promptOpen, 'y todavía no hay panel');
+      for (var i = 0; i < 10 && G.overWait; i++) G.step();
+      ok(!G.overWait, 'cuando el aviso termina, deja de esperar');
+      ok(window.PM.UI.promptOpen, 'y sale el panel con el resumen');
+    } finally {
+      G.achNotice = null;
+      G.toMenu();
+      window.PM.UI.hidePrompt();
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Caras de emote: cada una se mueve imitando su emoción
+  // ---------------------------------------------------------------
+  test('cada emote se anima, y sin reloj se queda quieto', function () {
+    if (window.__SIN_LIENZO) return;    // hace falta leer píxeles de verdad
+    var S = window.PM.Sprites;
+    var cv = document.createElement('canvas');
+    cv.width = 60; cv.height = 60;
+    var ctx = cv.getContext('2d', { willReadFrequently: true });
+
+    /* Huella de un fotograma: cuántos píxeles se pintan y de qué color, para
+     * notar tanto que la cara se mueve como que le salen lágrimas o humo. */
+    function huella(id, tick) {
+      ctx.clearRect(0, 0, 60, 60);
+      S.drawPacFace(ctx, 30, 30, 14, '#ffff00', id, tick);
+      var d = ctx.getImageData(0, 0, 60, 60).data, s = '';
+      var n = 0, rr = 0, gg = 0, bb = 0;
+      for (var i = 0; i < d.length; i += 4) {
+        if (d[i + 3] === 0) continue;
+        n++; rr += d[i]; gg += d[i + 1]; bb += d[i + 2];
+      }
+      return n + ':' + rr + ':' + gg + ':' + bb + s;
+    }
+
+    CFG.EMOTES.forEach(function (e) {
+      var vistos = {}, distintos = 0;
+      // un ciclo largo: casi 3 s, que es lo que dura el emote en pantalla
+      for (var t = 0; t < 160; t += 8) {
+        var h = huella(e.id, t);
+        if (!vistos[h]) { vistos[h] = 1; distintos++; }
+      }
+      ok(distintos >= 10, e.id + ' cambia a lo largo del emote (' +
+         distintos + ' fotogramas distintos de 20)');
+      eq(huella(e.id, undefined), huella(e.id, undefined),
+         e.id + ' sin reloj se pinta siempre igual (avatares y miniaturas)');
+    });
+  });
+
+  test('el globo del emote no deja escapar nada al laberinto', function () {
+    if (window.__SIN_LIENZO) return;
+    var cv = document.createElement('canvas');
+    cv.width = CFG.NATIVE_W; cv.height = 60;
+    var ctx = cv.getContext('2d', { willReadFrequently: true });
+    var fuera = 0;
+    for (var t = 0; t < 120; t += 4) {
+      ctx.clearRect(0, 0, cv.width, 60);
+      // el globo se pinta con la punta en (112, 44): ocupa de y=24 a y=46
+      window.PM.Sprites.drawEmote(ctx, 112, 44, 1, '#ffff00', t);
+      var d = ctx.getImageData(0, 0, cv.width, 60).data;
+      for (var i = 0; i < d.length; i += 4) {
+        if (d[i + 3] === 0) continue;
+        var px = (i / 4) % cv.width, py = Math.floor((i / 4) / cv.width);
+        if (py < 20 || py > 48 || px < 96 || px > 128) fuera++;
+      }
+    }
+    eq(fuera, 0, 'todo lo que se anima se queda dentro del globo');
+  });
+
+  // ---------------------------------------------------------------
   // Chapa de maestría sobre el jugador (Ctrl+Espacio)
   // ---------------------------------------------------------------
   test('la chapa de maestría sale animada, no de golpe', function () {
