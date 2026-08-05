@@ -1212,9 +1212,27 @@
   test('el usuario de una cuenta se sanea como un nombre del juego', function () {
     var Ac = window.PM.Account;
     eq(Ac.cleanUser('  pepe-123 '), 'PEPE123');
-    eq(Ac.cleanUser('muylargodemasiado'), 'MUYLARGO');
+    eq(Ac.cleanUser('estonombreesdemasiadolargo').length, CFG.NICK_MAX,
+       'se recorta a la longitud máxima');
     eq(Ac.cleanUser('¡¡!!'), '');
   });
+
+  test('un nombre largo se encoge para caber en su hueco del marcador',
+    function () {
+      var G = window.PM.Game;
+      var lienzo = document.createElement('canvas');
+      lienzo.width = CFG.NATIVE_W; lienzo.height = CFG.NATIVE_H;
+      var ctx = lienzo.getContext('2d');
+      var largo = new Array(CFG.NICK_MAX + 1).join('W');   // el peor caso
+
+      G.fitText(ctx, largo, 8, 16, 44, 7);                 // hueco de 4 jugadores
+      var px = parseInt(ctx.font.replace(/^bold /, ''), 10);
+      ok(px < 7, 'baja el cuerpo de la letra: ' + ctx.font);
+      ok(ctx.measureText(largo).width <= 44, 'y así cabe en los 44 px');
+
+      G.fitText(ctx, 'PEPE', 8, 16, 44, 7);
+      eq(ctx.font, 'bold 7px monospace', 'un nombre corto se deja como estaba');
+    });
 
   test('sin sesión, la cuenta no deja tocar nada', function () {
     var Ac = window.PM.Account;

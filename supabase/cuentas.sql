@@ -19,7 +19,7 @@
 -- ---------- perfil de cada cuenta ----------
 create table if not exists public.perfiles (
   id           uuid primary key references auth.users(id) on delete cascade,
-  usuario      text        not null unique check (usuario ~ '^[A-Z0-9]{3,8}$'),
+  usuario      text        not null unique check (usuario ~ '^[A-Z0-9]{3,12}$'),
   avatar       text        not null default 'pac',
   xp           bigint      not null default 0 check (xp >= 0),
   record1      integer     not null default 0 check (record1 >= 0),
@@ -84,7 +84,7 @@ create policy "perfiles cambio propio"
 -- aunque todavía no se haya registrado.
 create table if not exists public.amigos (
   de         uuid        not null references auth.users(id) on delete cascade,
-  amigo      text        not null check (amigo ~ '^[A-Z0-9]{1,8}$'),
+  amigo      text        not null check (amigo ~ '^[A-Z0-9]{1,12}$'),
   creado_en  timestamptz not null default now(),
   primary key (de, amigo)
 );
@@ -101,3 +101,40 @@ create policy "amigos propios"
   to authenticated
   using (de = auth.uid())
   with check (de = auth.uid());
+
+-- ---------- puesta al día: los nombres pasaron de 8 a 12 letras ----------
+-- Las tablas ya creadas se quedaron con el CHECK viejo, y "create table if
+-- not exists" no lo toca. Se busca por el texto de la condición (el nombre
+-- lo puso Postgres solo) y se cambia por uno con nombre propio, para que
+-- volver a lanzar este archivo no duplique nada.
+do $$
+declare c text;
+begin
+  for c in
+    select conname from pg_constraint
+     where conrelid = 'public.perfiles'::regclass and contype = 'c'
+       and pg_get_constraintdef(oid) like '%{3,8}%'
+  loop
+    execute format('alter table public.perfiles drop constraint %I', c);
+  end loop;
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_usuario_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_usuario_chk check (usuario ~ '^[A-Z0-9]{3,12}$');
+  end if;
+
+  for c in
+    select conname from pg_constraint
+     where conrelid = 'public.amigos'::regclass and contype = 'c'
+       and pg_get_constraintdef(oid) like '%{1,8}%'
+  loop
+    execute format('alter table public.amigos drop constraint %I', c);
+  end loop;
+  if not exists (
+    select 1 from pg_constraint where conname = 'amigos_nombre_chk'
+  ) then
+    alter table public.amigos
+      add constraint amigos_nombre_chk check (amigo ~ '^[A-Z0-9]{1,12}$');
+  end if;
+end $$;

@@ -162,7 +162,7 @@ Dos maneras de correr la misma batería:
 **Personalización:**
 
 - **Dificultad**: presets Fácil / Normal / Difícil + ajustes finos (velocidad de fantasmas y de Pac-Man, duración del power pellet, vidas, nivel inicial).
-- **Nombres de jugador** (8 caracteres): se escribe en la propia portada
+- **Nombres de jugador** (12 caracteres): se escribe en la propia portada
   —el tuyo, que es también el que ve tu rival online— y en OPCIONES está
   además el del jugador 2 local. Aparecen en el marcador, sobre cada Pac-Man
   al empezar, en la sala online y en el panel de fin de partida.

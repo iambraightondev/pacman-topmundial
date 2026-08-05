@@ -394,7 +394,7 @@ section "NOMBRES" ("TU NOMBRE (J1 Y ONLINE)" → `nick1`, "JUGADOR 2 (LOCAL)"
 → `nick2`). One setting may have several fields; `UI.nickInputs[key]` is an
 array and `UI.refreshNicks(skip)` keeps them in sync (never overwriting the
 field being typed in). Enter blurs the field. Sanitised to uppercase
-`A-Z0-9 ._-`, collapsed/trimmed spaces, max `CFG.NICK_MAX` (8) chars; the
+`A-Z0-9 ._-`, collapsed/trimmed spaces, max `CFG.NICK_MAX` (12) chars; the
 filter runs on every keystroke, the trim on blur. Empty falls back to
 "J1"/"J2" (`Game.nameFor(i)`; `Game.rawName(i)` returns '' when unset).
 
@@ -404,6 +404,15 @@ player's colour, 7 px), above each Pac-Man during READY (replacing J1/J2),
 the online lobby status, the surrender/rematch dialogs and the GAME OVER
 panel. Online, the two names are exchanged in the handshake (`n` field) and
 kept in `Game.netNames = [J1, J2]`; the guest always sends its own `nick1`.
+
+Everything drawn on the 224 px canvas goes through `Game.fitText(ctx, text,
+x, y, width, size)`, which shrinks the font (down to 4 px) until the name
+fits its slot instead of clipping it: the "1UP" slot, each team header slot
+(halves with 2 players, `(224-16)/n` with 3-4) and the READY labels. The
+in-game chat lines shrink the same way when `name: text` overflows. The
+server-side limit lives in the `CHECK` constraints of `supabase/ranking.sql`
+(`nombre1`/`nombre2`) and `supabase/cuentas.sql` (`perfiles.usuario`,
+`amigos.amigo`) — raising `CFG.NICK_MAX` means re-running both.
 
 ## Muerte por jugador (2 players: the game does not stop)
 

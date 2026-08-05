@@ -23,7 +23,7 @@ create table if not exists public.ranking (
   id          uuid primary key default gen_random_uuid(),
   creado_en   timestamptz not null default now(),
   modo        text        not null check (modo in ('online', 'local')),
-  nombre1     text        not null check (char_length(nombre1) between 1 and 8),
+  nombre1     text        not null check (char_length(nombre1) between 1 and 12),
   nombre2     text,
   puntos      integer     not null check (puntos > 0 and puntos <= 10000000),
   nivel       integer     not null check (nivel between 1 and 999)
@@ -51,7 +51,39 @@ begin
     alter table public.ranking add constraint ranking_nombre2_chk check (
       (jugadores = 1 and nombre2 is null) or
       (jugadores = 2 and nombre2 is not null and
-       char_length(nombre2) between 1 and 8)
+       char_length(nombre2) between 1 and 12)
+    );
+  end if;
+end $$;
+
+-- --- puesta al día: los nombres pasaron de 8 a 12 letras ---
+-- La tabla ya creada conserva los CHECK viejos y "create table if not
+-- exists" no los toca. Se localizan por el texto de la condición y se
+-- vuelven a poner con el límite nuevo.
+do $$
+declare c text;
+begin
+  for c in
+    select conname from pg_constraint
+     where conrelid = 'public.ranking'::regclass and contype = 'c'
+       and pg_get_constraintdef(oid) like '%nombre%'
+       and pg_get_constraintdef(oid) like '%8)%'
+  loop
+    execute format('alter table public.ranking drop constraint %I', c);
+  end loop;
+  if not exists (
+    select 1 from pg_constraint where conname = 'ranking_nombre1_chk'
+  ) then
+    alter table public.ranking add constraint ranking_nombre1_chk
+      check (char_length(nombre1) between 1 and 12);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'ranking_nombre2_chk'
+  ) then
+    alter table public.ranking add constraint ranking_nombre2_chk check (
+      (jugadores = 1 and nombre2 is null) or
+      (jugadores = 2 and nombre2 is not null and
+       char_length(nombre2) between 1 and 12)
     );
   end if;
 end $$;

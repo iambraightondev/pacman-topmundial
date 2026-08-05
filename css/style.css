@@ -515,7 +515,7 @@ input[type="range"] {
   background: #000;
   border: 2px solid #2121ff;
   padding: 6px 8px;
-  width: 160px;
+  width: 200px;   /* caben las 12 letras de CFG.NICK_MAX con este cuerpo */
   outline: none;
   user-select: text;
   -webkit-user-select: text;
@@ -541,7 +541,8 @@ input[type="range"] {
 }
 
 .nick-input-menu {
-  width: 220px;
+  width: 260px;
+  max-width: 88vw;
   font-size: clamp(14px, 2.6vh, 20px);
   padding: 9px 10px;
 }
@@ -698,6 +699,8 @@ input[type="range"] {
   font-weight: bold;
   letter-spacing: 3px;
   margin-bottom: 4px;
+  /* un nombre de 12 letras no debe empujar la ficha fuera del panel */
+  overflow-wrap: anywhere;
 }
 
 /* rejilla de avatares: más apretada que la de skins, que son muchos */

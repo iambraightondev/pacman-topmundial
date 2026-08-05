@@ -261,6 +261,21 @@
       return this.rawName(i) || ('J' + (i + 1));
     },
 
+    /* Escribe un texto encogiendo la letra hasta que quepa en ancho píxeles.
+     * Los nombres pueden llegar a CFG.NICK_MAX letras y el lienzo solo mide
+     * 224: con cuatro jugadores cada nombre tiene poco más de 50 px, así que
+     * en vez de recortarlo (que deja al jugador sin reconocer su nombre) se
+     * baja el cuerpo de la letra hasta 4 px, que sigue leyéndose. */
+    fitText: function (ctx, text, x, y, ancho, cuerpo) {
+      var px = cuerpo;
+      ctx.font = 'bold ' + px + 'px monospace';
+      while (px > 4 && ctx.measureText(text).width > ancho) {
+        px--;
+        ctx.font = 'bold ' + px + 'px monospace';
+      }
+      ctx.fillText(text, x, y);
+    },
+
     /* Índice del otro jugador (modos de dos jugadores) */
     peerIdx: function () {
       return this.localIdx === 1 ? 0 : 1;
@@ -2704,8 +2719,8 @@
           for (i = 0; i < this.pacs.length; i++) {
             if (this.pacs[i].out) continue;
             ctx.fillStyle = this.colorFor(i);
-            ctx.fillText(this.nameFor(i), this.pacs[i].x,
-              this.pacs[i].y + CFG.MAZE_Y - 10);
+            this.fitText(ctx, this.nameFor(i), this.pacs[i].x,
+              this.pacs[i].y + CFG.MAZE_Y - 10, 64, 7);
           }
         }
         /* emotes y maestrías sobre cada jugador */
@@ -2743,7 +2758,9 @@
       ctx.textAlign = 'left';
       var leftLabel = team ? 'EQUIPO'
         : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
-      ctx.fillText(leftLabel, 20, 0);
+      // hasta donde empieza "HIGH SCORE" (centrado en 112, unos 48 px de ancho)
+      this.fitText(ctx, leftLabel, 20, 0, 66, 8);
+      ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('HIGH SCORE', 112, 0);
 
@@ -2756,23 +2773,23 @@
       /* nombres del equipo en la tercera línea: dos a los lados, y con 3 o 4
        * jugadores repartidos por igual para que quepan todos */
       if (team) {
-        ctx.font = 'bold 7px monospace';
         ctx.textBaseline = 'top';
         var n = this.pacs.length;
         if (n === 2) {
           ctx.textAlign = 'left';
           ctx.fillStyle = this.colorFor(0);
-          ctx.fillText(this.nameFor(0), 20, 16);
+          this.fitText(ctx, this.nameFor(0), 20, 16, 88, 7);
           ctx.textAlign = 'right';
           ctx.fillStyle = this.colorFor(1);
-          ctx.fillText(this.nameFor(1), 204, 16);
+          this.fitText(ctx, this.nameFor(1), 204, 16, 88, 7);
         } else {
           ctx.textAlign = 'center';
           var ancho = (CFG.NATIVE_W - 16) / n;
           for (i = 0; i < n; i++) {
             ctx.fillStyle = this.colorFor(i);
             ctx.globalAlpha = this.pacs[i].out ? 0.4 : 1;
-            ctx.fillText(this.nameFor(i), 8 + ancho * (i + 0.5), 16);
+            this.fitText(ctx, this.nameFor(i), 8 + ancho * (i + 0.5), 16,
+              ancho - 3, 7);
           }
           ctx.globalAlpha = 1;
         }
@@ -2895,6 +2912,14 @@
         for (var ci = this.chat.length - 1; ci >= 0; ci--) {
           var m = this.chat[ci];
           var label = m.name + ': ';
+          // nombre largo + frase larga no caben en 224 px: se encoge la línea
+          var cpx = 7;
+          ctx.font = 'bold 7px monospace';
+          while (cpx > 4 &&
+                 ctx.measureText(label + m.text).width > CFG.NATIVE_W - 14) {
+            cpx--;
+            ctx.font = 'bold ' + cpx + 'px monospace';
+          }
           var lw = ctx.measureText(label).width;
           var tw = ctx.measureText(m.text).width;
           ctx.fillStyle = 'rgba(0,0,0,0.75)';

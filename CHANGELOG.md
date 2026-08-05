@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-04 · Nombres más largos
+
+- **Los nombres pasan de 8 a 12 letras**, en todas partes: portada, OPCIONES,
+  usuario de la cuenta, amigos y ranking mundial. Los campos de texto se han
+  ensanchado para que quepan de una pieza.
+- **El marcador encoge la letra en vez de recortar el nombre**: en la línea de
+  equipo cada jugador tiene su hueco (la mitad con dos, un cuarto con cuatro)
+  y el nombre se ajusta a él hasta 4 px, que se sigue leyendo. Igual con el
+  nombre que sustituye a "1UP", con el que sale sobre cada Pac-Man en el
+  "¡LISTO!" y con las líneas del chat en partida.
+- En el servidor se han subido los límites que validaban 8 letras
+  (`ranking`, `perfiles` y `amigos`), así que el récord mundial y las cuentas
+  aceptan los nombres nuevos.
+
 ## 2026-08-04 · Logros, perfil con avatar, cuentas y skins que se ganan
 
 - **Sistema de logros**: 15, desde el DOBLETE (dos fantasmas con el mismo

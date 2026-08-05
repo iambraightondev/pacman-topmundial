@@ -502,7 +502,12 @@
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';
   CFG.HIGHSCORE_KEY = 'pacman-topmundial-highscore';
   CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // récord de equipo (2 jugadores)
-  CFG.NICK_MAX = 8;               // longitud máxima de un nombre de jugador
+  /* Longitud máxima de un nombre de jugador. El marcador de la partida sabe
+   * encoger la letra cuando el nombre no cabe en su hueco (renderHUD), así que
+   * este número lo manda todo: campos de texto, ranking, amigos y cuentas.
+   * Si se sube, hay que subir también los CHECK de supabase/ranking.sql y
+   * supabase/cuentas.sql, que validan lo mismo en el servidor. */
+  CFG.NICK_MAX = 12;
   CFG.DEFAULT_SETTINGS = {
     difficultyPreset: 'normal',   // 'facil' | 'normal' | 'dificil' | 'custom'
     nick1: '',                    // nombre del jugador 1 (y nombre propio online)
