@@ -1514,7 +1514,7 @@
        * intento y lo que hayas hecho. Cerrarlo solo en el GAME OVER dejaría
        * que cualquiera se saliera al ver que la cosa iba mal. */
       if (this.reto && window.PM.Reto) {
-        window.PM.Reto.cerrar(this.score, this.level);
+        window.PM.Reto.cerrar(this.score, this.level, this.retoFecha);
       }
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();

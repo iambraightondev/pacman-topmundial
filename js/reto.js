@@ -128,11 +128,19 @@
 
     /* Cierra el intento del día con lo que se haya hecho. Solo la primera
      * vez: un reto, un intento. Devuelve la marca guardada o null si ya
-     * estaba cerrada. */
-    cerrar: function (puntos, nivel) {
-      if (this.hecho()) return null;
+     * estaba cerrada.
+     *
+     * La fecha es la del RETO QUE SE JUGÓ, no la de ahora mismo: una
+     * partida empezada a las 23:59 UTC termina ya en el día siguiente, y
+     * apuntarla en el de hoy le colgaría al jugador una marca de un
+     * laberinto de fantasmas que no es el de hoy (y le gastaría el
+     * intento). */
+    cerrar: function (puntos, nivel, fecha) {
+      fecha = fecha || this.hoy();
+      var previo = cargar();
+      if (previo && previo.f === fecha) return null;
       var o = {
-        f: this.hoy(),
+        f: fecha,
         p: Math.max(0, Math.floor(puntos || 0)),
         n: Math.max(1, Math.floor(nivel || 1)),
         e: 0

@@ -652,6 +652,22 @@
     }
   });
 
+  test('una partida que cruza la medianoche cuenta en su propio día',
+    function () {
+      var R = window.PM.Reto;
+      R.olvidar();
+      try {
+        // empezada ayer y terminada hoy: la marca es de ayer, y el reto de
+        // hoy sigue por jugar (es otro laberinto de fantasmas)
+        R.cerrar(1500, 2, '1999-01-01');
+        ok(!R.hecho(), 'el intento de hoy sigue intacto');
+        R.cerrar(300, 1);
+        eq(R.marca().p, 300, 'y el de hoy se guarda aparte');
+      } finally {
+        R.olvidar();
+      }
+    });
+
   test('el reto suma experiencia como cualquier partida', function () {
     var R = window.PM.Reto, L = window.PM.Level;
     R.olvidar();
