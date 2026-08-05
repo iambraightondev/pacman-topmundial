@@ -18,9 +18,11 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   - **LEYENDA**: **banderín** con punta a la izquierda y cola de golondrina a
     la derecha, **rayos girando** por detrás, **estrellas en órbita** y el
     nombre **escribiéndose letra a letra**.
-  - **TOP MUNDIAL**: banderín de **punta larga y cola dentada**, **fogonazo**
-    blanco al plantarse, **corona** sobre la medalla, más de todo y un brillo
-    que recorre el nombre.
+  - **TOP MUNDIAL**: la medalla va montada en un **escudo coronado** del que
+    sale la cinta, con la **cola dentada**; **fogonazo** blanco al plantarse,
+    más de todo y un brillo que recorre el nombre. Es el único que no es una
+    chapa a secas: probé con otro banderín más recargado y se confundía con
+    el de LEYENDA.
 - Vale igual en partida (`Ctrl`+`Espacio`), en online —viaja el id de la
   maestría, así que cada extremo sabe qué escalón es— y en el panel.
 

@@ -462,6 +462,7 @@
    *   estrellas  chispas en órbita alrededor de la medalla
    *   motas      chispas que caen desde la chapa
    *   letras     el nombre se escribe letra a letra
+   *   escudo     blasón detrás de la medalla, que sale por arriba y por abajo
    *   corona     corona sobre la medalla
    *   fogonazo   destello blanco que llena el sitio al plantarse
    *   textoOro   brillo que recorre el nombre
@@ -494,7 +495,7 @@
       ctx.lineTo(x + w, y + h); ctx.lineTo(x + p, y + h); ctx.lineTo(x, m);
     } else if (forma === 4) {
       /* banderín con la punta más larga y la cola dentada (dos golondrinas).
-       * A la izquierda no se pone cola: ahí va la medalla y no se vería. */
+       * A la izquierda no se pone cola: ahí va el escudo. */
       ctx.moveTo(x + p * 1.3, y);
       ctx.lineTo(x + w, y);
       ctx.lineTo(x + w - p, y + h * 0.28);
@@ -533,7 +534,7 @@
                      textoOro: false },
     /* MUNDIAL  */ { forma: 4, giros: 6, subidon: 4, chispa: 12, brillo: true, onda: 2,
                      marco: true, rayos: 14, estrellas: 5, motas: 6,
-                     letras: true, corona: true, fogonazo: true,
+                     letras: true, escudo: true, corona: true, fogonazo: true,
                      textoOro: true }
   ];
 
@@ -565,9 +566,12 @@
     ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    // con cola de golondrina hay que dejarle sitio: si no, la muesca de la
-    // derecha se come la última letra
-    var padL = 15, padR = (P.forma >= 3) ? 10 : 6, h = 14, r = 4.5;
+    // hay siluetas que se comen el final de la chapa: la cola de golondrina
+    // del banderín (10) y la punta del pedestal (8) piden sitio de más
+    // el blasón es más ancho que la medalla: el nombre tiene que arrancar
+    // más allá, o la primera letra se le monta encima
+    var padL = P.escudo ? 20 : 15, h = 14, r = 4.5;
+    var padR = (P.forma === 3) ? 10 : ((P.forma === 4) ? 8 : 6);
     var w = ctx.measureText(text).width + padL + padR;
     var bx = Math.round(x - w / 2), by = Math.round(y - h);
     if (bx < 2) bx = 2;
@@ -646,8 +650,9 @@
         ctx.stroke();
         ctx.restore();
       }
-      // pico hacia el jugador, solo con la chapa ya abierta
-      if (abre > 0.6) {
+      // pico hacia el jugador, solo con la chapa ya abierta. El escudo no lo
+      // lleva: su punta de abajo ya apunta al jugador.
+      if (abre > 0.6 && P.forma !== 4) {
         ctx.fillStyle = color;
         ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
       }
@@ -673,6 +678,32 @@
           ctx.fillRect(lx + fo * 2 * (aw + 10) - 5, by, 3, h);
         }
       }
+      ctx.restore();
+    }
+
+    /* TOP MUNDIAL: blasón detrás de la medalla. Es lo que remata la silueta:
+     * el banderín se queda de cinta y la medalla pasa a ir montada en un
+     * escudo que sale por arriba y por abajo de la chapa. Se despliega con
+     * ella, así que no aparece de golpe. */
+    if (P.escudo && abre > 0.05) {
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.scale(abre, abre);
+      ctx.translate(-mx, -my);
+      ctx.beginPath();
+      ctx.moveTo(mx - 8.5, my - 9);
+      ctx.lineTo(mx + 8.5, my - 9);
+      ctx.lineTo(mx + 8.5, my + 3);
+      ctx.lineTo(mx + 4.5, my + 8);
+      ctx.lineTo(mx, my + 11);
+      ctx.lineTo(mx - 4.5, my + 8);
+      ctx.lineTo(mx - 8.5, my + 3);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,0,0,0.92)';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -750,7 +781,8 @@
 
     /* TOP MUNDIAL: corona sobre la medalla */
     if (P.corona && t > SUBE) {
-      var cy = my - r - 1.5;
+      // con blasón, la corona se sube a rematarlo
+      var cy = P.escudo ? (my - 9) : (my - r - 1.5);
       ctx.save();
       ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.12);
       ctx.fillStyle = color;
