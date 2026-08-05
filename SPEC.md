@@ -569,14 +569,20 @@ for all six meant reaching TOP MUNDIAL looked exactly like APRENDIZ. The
 `POMPA` table in `sprites.js` holds one row per tier and **each step only adds
 to the one below** — never replaces it:
 
-| tier | adds |
-|---|---|
-| APRENDIZ | nothing: the medal rises straight, the plaque unrolls |
-| CAZADOR | one medal flip (edge-on frames draw the plain back) + spark burst |
-| EXPERTO | double flip + the glint that sweeps the medal (what all six used to get) |
-| MAESTRO | shockwave ring + second breathing frame + sparks falling off the plaque |
-| LEYENDA | rotating ray fan behind + stars orbiting the medal + name typed letter by letter + medal halo |
-| TOP MUNDIAL | white flash on landing + crown + more of everything + a shine sweeping the name |
+| tier | shape (`chapaPath`) | adds |
+|---|---|---|
+| APRENDIZ | rectangle | nothing: the medal rises straight, the plaque unrolls |
+| CAZADOR | rectangle | one medal flip (edge-on frames draw the plain back) + spark burst |
+| EXPERTO | bevelled corners | double flip + the glint that sweeps the medal (what all six used to get) |
+| MAESTRO | hexagon (a point per end) | shockwave ring + second breathing frame + sparks falling off the plaque |
+| LEYENDA | pennant (point left, swallowtail right) | rotating ray fan behind + stars orbiting the medal + name typed letter by letter + medal halo |
+| TOP MUNDIAL | pennant with a longer point and a serrated double tail | white flash on landing + crown + more of everything + a shine sweeping the name |
+
+The silhouette is one path built at the same box, so text and medal never move
+— but from tier 3 on `padR` grows from 6 to 10 px, or the swallowtail notch
+eats the last letter. The second frame (`marco`) and the stroke reuse the same
+path, and the tips shrink with the plaque (`min(5, w * 0.25)`) so the shape
+holds while it unrolls instead of folding over itself.
 
 `Game.badgeRank(id)` turns the badge id into the tier and stores it in the
 emote (`rango`), so it also travels right over the network — the id is what is

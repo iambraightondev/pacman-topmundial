@@ -1192,6 +1192,28 @@
        'cuanto más alta, más aparato: ' + lucida.join(' · '));
     ok(pinta(1, 0.22, 20) > pinta(0, 0.22, 20),
        'el chispazo al plantarse empieza en CAZADOR');
+
+    /* La silueta también sube de rango: de EXPERTO para arriba la chapa deja
+     * de ser un rectángulo. Se mira la esquina del rótulo: en la cuadrada
+     * está pintada y en la biselada no, porque ahí está el corte. */
+    function esquinaPintada(rango) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      window.PM.Sprites.drawBadgeTag(ctx, 112, 34, 'MAESTRIA', '#00ff00',
+        0.5, 20, rango);
+      var d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+      var x0 = cv.width, y0 = cv.height, x, y;
+      for (y = 0; y < cv.height; y++) {
+        for (x = 0; x < cv.width; x++) {
+          if (d[(y * cv.width + x) * 4 + 3] > 0) {
+            if (x < x0) x0 = x;
+            if (y < y0) y0 = y;
+          }
+        }
+      }
+      return d[(y0 * cv.width + x0) * 4 + 3] > 0;
+    }
+    ok(esquinaPintada(1), 'hasta CAZADOR la chapa es un rectángulo');
+    ok(!esquinaPintada(2), 'EXPERTO ya le corta las esquinas');
     for (r = 0; r < CFG.BADGES.length; r++) {
       eq(pinta(r, 1, 20), 0, 'ninguna deja nada al terminar');
     }

@@ -10,14 +10,17 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   - **APRENDIZ**: la medalla sube recta y la chapa se despliega. Y ya.
   - **CAZADOR**: la medalla **gira** al subir y **salta un chispazo** al
     plantarse.
-  - **EXPERTO**: doble giro y el **destello** que recorre la medalla (lo que
-    tenían todas hasta ahora).
-  - **MAESTRO**: **onda expansiva**, un segundo marco que respira y **chispas
-    cayendo** de la chapa.
-  - **LEYENDA**: **rayos girando** por detrás, **estrellas en órbita** y el
+  - **EXPERTO**: doble giro, el **destello** que recorre la medalla (lo que
+    tenían todas hasta ahora) y, a partir de aquí, **la chapa cambia de
+    forma**: se le cortan las esquinas.
+  - **MAESTRO**: **hexágono** con una punta a cada lado, **onda expansiva**,
+    un segundo marco que respira y **chispas cayendo** de la chapa.
+  - **LEYENDA**: **banderín** con punta a la izquierda y cola de golondrina a
+    la derecha, **rayos girando** por detrás, **estrellas en órbita** y el
     nombre **escribiéndose letra a letra**.
-  - **TOP MUNDIAL**: **fogonazo** blanco al plantarse, **corona** sobre la
-    medalla, más de todo y un brillo que recorre el nombre.
+  - **TOP MUNDIAL**: banderín de **punta larga y cola dentada**, **fogonazo**
+    blanco al plantarse, **corona** sobre la medalla, más de todo y un brillo
+    que recorre el nombre.
 - Vale igual en partida (`Ctrl`+`Espacio`), en online —viaja el id de la
   maestría, así que cada extremo sabe qué escalón es— y en el panel.
 

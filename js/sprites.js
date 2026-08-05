@@ -451,6 +451,7 @@
    * mismos honores que a TOP MUNDIAL, y subir de rango tiene que NOTARSE:
    * cada escalón añade algo encima del anterior, nunca cambia lo de antes.
    *
+   *   forma      silueta de la chapa (ver chapaPath)
    *   giros      medias vueltas de la medalla al subir (0 = sube recta)
    *   subidon    cuánto se pasa de frenada al llegar arriba
    *   chispa     rayos que saltan al plantarse la medalla (0 = ninguno)
@@ -465,28 +466,72 @@
    *   fogonazo   destello blanco que llena el sitio al plantarse
    *   textoOro   brillo que recorre el nombre
    * ------------------------------------------------------------ */
+  /* Silueta de la chapa. A partir de EXPERTO deja de ser un rectángulo: la
+   * forma es lo primero que se reconoce de lejos, así que sube de rango con
+   * todo lo demás. Se dibuja con el mismo alto y ancho, así que el texto y la
+   * medalla no se enteran.
+   *
+   *   0 recto      · un rectángulo de toda la vida
+   *   1 bisel      · esquinas cortadas, como un billete
+   *   2 hexágono   · una punta a cada lado
+   *   3 banderín   · punta a la izquierda y cola de golondrina a la derecha
+   *   4 estandarte · cola de golondrina a los dos lados
+   */
+  function chapaPath(ctx, x, y, w, h, forma) {
+    var m = y + h / 2;
+    var p = Math.min(5, w * 0.25);        // cuánto sale (o entra) la punta
+    var c = Math.min(3.5, w * 0.25);      // cuánto se corta la esquina
+    ctx.beginPath();
+    if (forma === 1) {
+      ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c);
+      ctx.lineTo(x + w, y + h - c); ctx.lineTo(x + w - c, y + h);
+      ctx.lineTo(x + c, y + h); ctx.lineTo(x, y + h - c); ctx.lineTo(x, y + c);
+    } else if (forma === 2) {
+      ctx.moveTo(x + p, y); ctx.lineTo(x + w - p, y); ctx.lineTo(x + w, m);
+      ctx.lineTo(x + w - p, y + h); ctx.lineTo(x + p, y + h); ctx.lineTo(x, m);
+    } else if (forma === 3) {
+      ctx.moveTo(x + p, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - p, m);
+      ctx.lineTo(x + w, y + h); ctx.lineTo(x + p, y + h); ctx.lineTo(x, m);
+    } else if (forma === 4) {
+      /* banderín con la punta más larga y la cola dentada (dos golondrinas).
+       * A la izquierda no se pone cola: ahí va la medalla y no se vería. */
+      ctx.moveTo(x + p * 1.3, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w - p, y + h * 0.28);
+      ctx.lineTo(x + w, m);
+      ctx.lineTo(x + w - p, y + h * 0.72);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x + p * 1.3, y + h);
+      ctx.lineTo(x, m);
+    } else {
+      ctx.rect(x, y, w, h);
+      return;
+    }
+    ctx.closePath();
+  }
+
   var POMPA = [
-    /* APRENDIZ */ { giros: 0, subidon: 1.2, chispa: 0, brillo: false, onda: 0,
+    /* APRENDIZ */ { forma: 0, giros: 0, subidon: 1.2, chispa: 0, brillo: false, onda: 0,
                      marco: false, rayos: 0, estrellas: 0, motas: 0,
                      letras: false, corona: false, fogonazo: false,
                      textoOro: false },
-    /* CAZADOR  */ { giros: 2, subidon: 1.8, chispa: 6, brillo: false, onda: 0,
+    /* CAZADOR  */ { forma: 0, giros: 2, subidon: 1.8, chispa: 6, brillo: false, onda: 0,
                      marco: false, rayos: 0, estrellas: 0, motas: 0,
                      letras: false, corona: false, fogonazo: false,
                      textoOro: false },
-    /* EXPERTO  */ { giros: 4, subidon: 2.5, chispa: 6, brillo: true, onda: 0,
+    /* EXPERTO  */ { forma: 1, giros: 4, subidon: 2.5, chispa: 6, brillo: true, onda: 0,
                      marco: false, rayos: 0, estrellas: 0, motas: 0,
                      letras: false, corona: false, fogonazo: false,
                      textoOro: false },
-    /* MAESTRO  */ { giros: 4, subidon: 3, chispa: 8, brillo: true, onda: 1,
+    /* MAESTRO  */ { forma: 2, giros: 4, subidon: 3, chispa: 8, brillo: true, onda: 1,
                      marco: true, rayos: 0, estrellas: 0, motas: 3,
                      letras: false, corona: false, fogonazo: false,
                      textoOro: false },
-    /* LEYENDA  */ { giros: 4, subidon: 3.4, chispa: 8, brillo: true, onda: 1,
+    /* LEYENDA  */ { forma: 3, giros: 4, subidon: 3.4, chispa: 8, brillo: true, onda: 1,
                      marco: true, rayos: 10, estrellas: 3, motas: 4,
                      letras: true, corona: false, fogonazo: false,
                      textoOro: false },
-    /* MUNDIAL  */ { giros: 6, subidon: 4, chispa: 12, brillo: true, onda: 2,
+    /* MUNDIAL  */ { forma: 4, giros: 6, subidon: 4, chispa: 12, brillo: true, onda: 2,
                      marco: true, rayos: 14, estrellas: 5, motas: 6,
                      letras: true, corona: true, fogonazo: true,
                      textoOro: true }
@@ -520,7 +565,9 @@
     ctx.font = 'bold 7px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    var padL = 15, padR = 6, h = 14, r = 4.5;
+    // con cola de golondrina hay que dejarle sitio: si no, la muesca de la
+    // derecha se come la última letra
+    var padL = 15, padR = (P.forma >= 3) ? 10 : 6, h = 14, r = 4.5;
     var w = ctx.measureText(text).width + padL + padR;
     var bx = Math.round(x - w / 2), by = Math.round(y - h);
     if (bx < 2) bx = 2;
@@ -583,16 +630,20 @@
 
     var aw = Math.round(w * abre);
     if (aw > 2) {
+      chapaPath(ctx, lx, by, aw, h, P.forma);
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
-      ctx.fillRect(lx, by, aw, h);
+      ctx.fill();
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
-      ctx.strokeRect(lx + 0.5, by + 0.5, aw - 1, h - 1);
+      // el medio píxel es lo que deja la línea limpia en pantalla
+      chapaPath(ctx, lx + 0.5, by + 0.5, aw - 1, h - 1, P.forma);
+      ctx.stroke();
       /* de MAESTRO para arriba, un segundo marco que respira */
       if (P.marco && abre > 0.9) {
         ctx.save();
         ctx.globalAlpha = vis * (0.45 + 0.25 * Math.sin(tick * 0.13));
-        ctx.strokeRect(lx - 1.5, by - 1.5, aw + 3, h + 3);
+        chapaPath(ctx, lx - 1.5, by - 1.5, aw + 3, h + 3, P.forma);
+        ctx.stroke();
         ctx.restore();
       }
       // pico hacia el jugador, solo con la chapa ya abierta

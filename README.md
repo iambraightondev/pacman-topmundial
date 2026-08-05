@@ -210,6 +210,9 @@ Dos maneras de correr la misma batería:
   chispas; EXPERTO añade el destello; MAESTRO, onda expansiva y chispas
   cayendo; LEYENDA, rayos girando, estrellas en órbita y el nombre
   escribiéndose letra a letra; y TOP MUNDIAL, además, fogonazo y corona.
+  **Y la chapa cambia de forma**: rectángulo hasta CAZADOR, esquinas cortadas
+  en EXPERTO, hexágono en MAESTRO, banderín en LEYENDA y banderín de punta
+  larga y cola dentada en TOP MUNDIAL.
 - **Top mundial**: clasificaciones compartidas entre todos —**individual**,
   **dúo** y **nivel 1** (quién lo despeja en menos tiempo)—, con la mejor
   marca de cada jugador. Hace falta tener nombre puesto (y sin palabrotas)
