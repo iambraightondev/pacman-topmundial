@@ -10,7 +10,7 @@ con **partys** que no se deshacen entre partida y partida.
 |------|---------|----------------------|-------|
 | ![Menú](capturas/menu.png) | ![Partida](capturas/gameplay.png) | ![Online](capturas/online-2j.png) | ![Móvil](capturas/movil.png) |
 
-Historial de novedades: [CHANGELOG.md](CHANGELOG.md)
+Historial de novedades: [CHANGELOG.md](CHANGELOG.md)  ·  Lo que queda por hacer: [PENDIENTE.md](PENDIENTE.md)
 
 ## Instalar en el móvil
 
@@ -419,6 +419,7 @@ tests.html        Pruebas automáticas (ábrelo como el juego)
 supabase/         SQL de la tabla y la vista del ranking
 SPEC.md           Especificación técnica completa
 CHANGELOG.md      Historial de cambios
+PENDIENTE.md      Lo que queda por hacer, y por qué
 ```
 
 ## Nota legal

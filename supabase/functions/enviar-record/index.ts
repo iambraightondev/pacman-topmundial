@@ -213,8 +213,8 @@ function mal(motivo: string, estado = 400, detalle = ''): Response {
  *
  * OJO: esto NO reproduce la partida, solo mira que lo que cuenta la
  * repetición cuadre con lo que se está enviando. La verificación de
- * verdad (rejugar las entradas con el motor) queda pendiente; está
- * explicada en docs-pendientes/integridad-ranking.md.
+ * verdad (rejugar las entradas con el motor) queda pendiente, y el
+ * porqué de no haberla hecho todavía está en PENDIENTE.md.
  *
  * Devuelve null si todo cuadra, o el motivo si no.
  * ---------------------------------------------------------- */
