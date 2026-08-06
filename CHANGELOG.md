@@ -2,6 +2,73 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-05 · Llevar el fantasma se parece por fin a llevarlo, y las maestrías se ganan por formato
+
+### El fantasma obedece la tecla que acabas de pulsar
+
+- Los fantasmas de la máquina **piensan el giro al entrar en la casilla**, una
+  regla del arcade de 1980 que no se toca. Pero al fantasma de un jugador eso
+  le comía **la media casilla anterior al cruce**: pulsabas justo al llegar,
+  no se miraba, el fantasma **se pasaba el cruce de largo** y encima el rumbo
+  pedido se quedaba puesto y te giraba dos cruces más allá, tú sin saber por
+  qué. Así no hay quien lo lleve.
+- Ahora, **mientras lo lleva un jugador**, vale hasta el último momento: toda
+  la casilla hasta el centro, que es justo el margen que tiene Pac-Man. A los
+  cuatro de la máquina no les cambia nada.
+- De paso se nota en la party: el anfitrión aplica el rumbo que llega por red
+  **en el cruce al que apuntabas**, no en el siguiente, así que hay menos
+  correcciones de las que te devolvían al pasillo de antes.
+
+### Las maestrías dejan de tapar la partida de los demás
+
+- El cartel de maestría cruzaba el centro de la pantalla **cinco segundos**.
+  Jugando solo da igual; en una party es taparle el laberinto a gente que está
+  jugando por una medalla que además no es suya.
+- Con **más de un jugador** se celebra en una **banda estrecha arriba del
+  todo**, fuera del laberinto, como los logros. Jugando solo se queda el
+  cartelón de siempre.
+- Si caen un logro y una maestría a la vez, **se turnan**: comparten esa banda
+  y ninguna se pisa ni se queda a medias.
+
+### Solo se celebra lo que no tenías
+
+- **Una maestría ya conseguida no vuelve a salir.** Se estaba celebrando en
+  cada partida al cruzar el escalón, así que quien las tenía casi todas veía
+  el cartel una y otra vez por algo que ya había hecho hace meses.
+
+### Cuatro ligas de maestrías: solo, dúo, trío y escuadra
+
+- Cada formato pasa a tener **sus propias maestrías y su propio récord**. Lo
+  que consigues con tres no cuenta con dos, ni al revés: son cuatro ligas
+  aparte, con sus cuatro pestañas en el panel (**EN SOLO · EN DÚO · EN TRÍO ·
+  EN ESCUADRA**).
+- Y cada una **pide más puntos cuanta más gente juega**: el escalón de siempre
+  multiplicado por los jugadores. APRENDIZ son 3.000 en solo, 6.000 en dúo,
+  9.000 en trío y 12.000 en escuadra; TOP MUNDIAL, 400.000 en escuadra. El
+  marcador de un equipo **es de todos**, y con cuatro se llega al mismo número
+  con mucho menos mérito de cada uno: cuatro veces las vidas, cuatro bocas
+  comiendo y cuatro fantasmas por energizante.
+- **El récord también se guarda por separado.** Antes cualquier partida de
+  más de uno escribía en el mismo sitio, así que una de escuadra te pisaba el
+  récord de dúo. Ahora el **HIGH SCORE de la partida es el de su formato**: en
+  trío compites contra tu mejor marca de trío.
+- **No se le quita a nadie lo que ya tenía**: el récord de equipo que hubiera
+  se queda donde estaba, en **DÚO**, con sus maestrías. Trío y escuadra
+  empiezan de cero porque antes no existían.
+- **Los cuatro récords van en tu cuenta**, no en el navegador: entras desde el
+  móvil y están tus maestrías de trío y de escuadra tal cual las dejaste. Las
+  insignias no se guardan en ninguna lista —cada ruta se deduce del récord de
+  su formato—, así que llevándose los récords se llevan las maestrías.
+  - **Hay que correr `supabase/cuentas.sql` otra vez** (SQL Editor → Run): la
+    tabla de perfiles se queda con `record3` y `record4`. El archivo se puede
+    lanzar las veces que haga falta.
+  - Y **si no se corre, el juego no se rompe**: si el servidor todavía no
+    tiene esas dos columnas, se guarda lo de siempre y se vuelve a intentar
+    con todo en la siguiente sesión. Antes preferimos guardar de menos que no
+    guardar nada.
+- En el perfil de un amigo salen también **sus récords de trío y escuadra**,
+  si ha jugado alguna.
+
 ## 2026-08-05 · El fantasma que nadie lleva vuelve a llevarlo la máquina
 
 - Si elegías fantasma y luego **nadie lo tocaba** —empezabas solo, o el otro

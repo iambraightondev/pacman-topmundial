@@ -426,7 +426,7 @@
       var j = rep.jugadores;
       /* ¿es la de tu mejor marca? El récord ya está persistido cuando se
        * cierra la partida, así que basta con empatarlo */
-      var tope = (j > 1) ? G.highScore2 : G.highScore1;
+      var tope = G.recordFor(j);
       var esRecord = rep.final.puntos > 0 && rep.final.puntos >= (tope || 0);
       if (esRecord) {
         for (var i = 0; i < lista.length; i++) {

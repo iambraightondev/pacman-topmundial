@@ -3,10 +3,21 @@
  * Maestrías: insignias que se entregan al alcanzar cierta
  * puntuación como récord personal. Define window.PM.Badges
  *
- * Hay DOS rutas independientes con los mismos escalones:
- *   'solo' — récord de un jugador   (Game.highScore1)
- *   'duo'  — récord de equipo       (Game.highScore2)
- * Así una gran partida en dúo no regala las insignias de solo.
+ * Hay CUATRO rutas independientes, una por formato de partida:
+ *   'solo'     — 1 jugador   (Game.highScore1)
+ *   'duo'      — 2 jugadores (Game.highScore2)
+ *   'trio'     — 3 jugadores (Game.highScore3)
+ *   'escuadra' — 4 jugadores (Game.highScore4)
+ * Cada una lleva su propio récord y sus propias insignias: una
+ * gran partida en escuadra no regala las de dúo ni las de solo.
+ *
+ * Y cada ruta pide MÁS puntos cuanta más gente juega: el escalón
+ * de siempre multiplicado por los jugadores (APRENDIZ son 3.000
+ * en solo, 6.000 en dúo, 9.000 en trío y 12.000 en escuadra). El
+ * marcador de un equipo es de todos, y con cuatro se llega al
+ * mismo número con mucho menos mérito de cada uno: cuatro veces
+ * las vidas, cuatro bocas comiendo y cuatro fantasmas por
+ * energizante.
  *
  * Las insignias conseguidas se deducen del récord (no hace falta
  * guardarlas); en localStorage solo se anota cuáles se han
@@ -16,25 +27,41 @@
   'use strict';
   var CFG = window.PM.CFG;
 
+  /* ruta -> [jugadores, nombre] */
+  var RUTAS = {
+    solo:     [1, 'SOLO'],
+    duo:      [2, 'DÚO'],
+    trio:     [3, 'TRÍO'],
+    escuadra: [4, 'ESCUADRA']
+  };
+
   function isArray(v) {
     return Object.prototype.toString.call(v) === '[object Array]';
   }
 
-  function norm(mode) { return (mode === 'duo') ? 'duo' : 'solo'; }
+  function norm(mode) {
+    return RUTAS.hasOwnProperty(mode) ? mode : 'solo';
+  }
 
   function loadSeen() {
+    var out = { solo: [], duo: [], trio: [], escuadra: [] };
     try {
       var raw = localStorage.getItem(CFG.BADGES_KEY);
       var v = raw ? JSON.parse(raw) : null;
-      if (!v) return { solo: [], duo: [] };
-      // formato antiguo (una sola lista): vale para las dos rutas, así no se
-      // vuelve a anunciar nada que ya se hubiera conseguido
-      if (isArray(v)) return { solo: v.slice(), duo: v.slice() };
-      return {
-        solo: isArray(v.solo) ? v.solo : [],
-        duo: isArray(v.duo) ? v.duo : []
-      };
-    } catch (e) { return { solo: [], duo: [] }; }
+      if (!v) return out;
+      /* formato antiguo (una sola lista): vale para solo y dúo, que son las
+       * rutas que existían, así que no se vuelve a anunciar nada que ya se
+       * hubiera conseguido. Trío y escuadra empiezan limpias: son nuevas. */
+      if (isArray(v)) {
+        out.solo = v.slice();
+        out.duo = v.slice();
+        return out;
+      }
+      for (var k in RUTAS) {
+        if (RUTAS.hasOwnProperty(k) && isArray(v[k])) out[k] = v[k];
+      }
+    } catch (e) { /* sin almacenamiento */ }
+    return out;
   }
 
   function saveSeen(seen) {
@@ -43,29 +70,43 @@
   }
 
   var Badges = {
-    MODES: ['solo', 'duo'],
+    MODES: ['solo', 'duo', 'trio', 'escuadra'],
 
-    modeName: function (mode) { return norm(mode) === 'duo' ? 'DÚO' : 'SOLO'; },
+    /* Jugadores de esa ruta (1..4) */
+    players: function (mode) { return RUTAS[norm(mode)][0]; },
 
-    /* Modo de maestría al que cuenta una partida */
-    modeFor: function (players) { return (players === 2) ? 'duo' : 'solo'; },
+    modeName: function (mode) { return RUTAS[norm(mode)][1]; },
+
+    /* Ruta a la que cuenta una partida */
+    modeFor: function (players) {
+      var n = parseInt(players, 10);
+      for (var k in RUTAS) {
+        if (RUTAS.hasOwnProperty(k) && RUTAS[k][0] === n) return k;
+      }
+      return (n > 4) ? 'escuadra' : 'solo';
+    },
+
+    /* Lo que hay que puntuar para esa insignia EN ESA RUTA */
+    goal: function (badge, mode) {
+      return badge.points * this.players(mode);
+    },
 
     /* Mejor marca personal de esa ruta */
     best: function (mode) {
       var g = window.PM.Game;
-      if (!g) return 0;
-      return (norm(mode) === 'duo') ? (g.highScore2 || 0) : (g.highScore1 || 0);
+      if (!g || !g.recordFor) return 0;
+      return g.recordFor(this.players(mode)) || 0;
     },
 
-    earnedAt: function (points) {
+    earnedAt: function (points, mode) {
       var out = [];
       for (var i = 0; i < CFG.BADGES.length; i++) {
-        if (points >= CFG.BADGES[i].points) out.push(CFG.BADGES[i]);
+        if (points >= this.goal(CFG.BADGES[i], mode)) out.push(CFG.BADGES[i]);
       }
       return out;
     },
 
-    earned: function (mode) { return this.earnedAt(this.best(mode)); },
+    earned: function (mode) { return this.earnedAt(this.best(mode), mode); },
 
     /* Insignia más alta de esa ruta (null si aún ninguna) */
     top: function (mode) {
@@ -77,7 +118,7 @@
     next: function (mode) {
       var b = this.best(mode);
       for (var i = 0; i < CFG.BADGES.length; i++) {
-        if (b < CFG.BADGES[i].points) return CFG.BADGES[i];
+        if (b < this.goal(CFG.BADGES[i], mode)) return CFG.BADGES[i];
       }
       return null;
     },
@@ -93,7 +134,7 @@
     claim: function (points, mode) {
       mode = norm(mode);
       var seen = loadSeen();
-      var got = this.earnedAt(points);
+      var got = this.earnedAt(points, mode);
       var fresh = null;
       for (var i = 0; i < got.length; i++) {
         if (seen[mode].indexOf(got[i].id) === -1) {

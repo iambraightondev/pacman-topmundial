@@ -68,6 +68,14 @@
   Ghost.prototype.clearPlan = function () {
     this.planTile = -1;
     this.planDir = -1;
+    this.planWish = -2;      // con qué rumbo pedido se pensó (fantasma de jugador)
+  };
+
+  /* ¿Este fantasma lo está llevando un jugador AHORA MISMO? Dentro de la casa,
+   * saliendo de ella o volviendo hecho ojos hace lo de siempre, aunque sea de
+   * alguien; y hasta la primera tecla lo lleva la máquina. */
+  Ghost.prototype.driven = function () {
+    return this.human && this.taken && this.mode === 'normal';
   };
 
   Ghost.prototype.inTunnelSlow = function () {
@@ -160,7 +168,7 @@
      * rival llegue a tocar una tecla ve al fantasma dando vueltas solo por el
      * laberinto, que parece un fallo del juego y encima no persigue a nadie.
      * En cuanto pulsa una vez, es suyo para el resto de la partida. */
-    if (this.human && this.taken && this.mode === 'normal') {
+    if (this.driven()) {
       return this.humanChoice(candidates);
     }
 
@@ -319,9 +327,19 @@
       var ccx = cx * T + T / 2, ccy = cy * T + T / 2;
       /* recién entrado en esta casilla: se decide YA por dónde saldrá,
        * mirando a Pac-Man medio paso antes del cruce (regla del arcade) */
+      /* El fantasma de un jugador es el único que puede cambiar de idea a
+       * media casilla: pensar el giro al ENTRAR deja media casilla muerta
+       * (unas 4 centésimas antes del cruce) en la que la tecla que acabas de
+       * pulsar ya no se mira, el fantasma se pasa el cruce de largo y encima
+       * el rumbo pedido se queda puesto y te gira dos cruces más allá. Así no
+       * hay quien lo lleve. Volviendo a pensar cuando cambia el rumbo pedido,
+       * vale toda la casilla hasta el centro, que es justo lo que da Pac-Man.
+       * A los de la máquina no les cambia nada: su rumbo pedido nunca cambia. */
       var tid = cy * CFG.COLS + cx;
-      if (this.planTile !== tid) {
+      if (this.planTile !== tid ||
+          (this.driven() && this.planWish !== this.wishDir)) {
         this.planTile = tid;
+        this.planWish = this.wishDir;
         this.planDir = this.decide(game);
       }
       var v = CFG.DIR_V[this.dir];

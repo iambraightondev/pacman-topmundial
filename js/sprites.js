@@ -932,9 +932,7 @@
     ctx.textBaseline = 'middle';
     ctx.font = 'bold 7px monospace';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(
-      (info.nueva === false ? 'MAESTRÍA DE ' : '¡NUEVA MAESTRÍA DE ') +
-      (info.mode || 'SOLO') + '!', tx, cy - 11);
+    ctx.fillText('¡NUEVA MAESTRÍA DE ' + (info.mode || 'SOLO') + '!', tx, cy - 11);
 
     // el nombre entra creciendo, un poco después que el cartel
     var nameIn = Math.min(1, Math.max(0, (t - 0.10) / 0.15));
@@ -954,6 +952,52 @@
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(cx - w / 2 + brillo * w - 5, cy - h / 2 + 2, 10, h - 4);
     }
+    ctx.restore();
+  };
+
+  /* ------------------------------------------------------------
+   * La misma maestría, pero SIN taparle el laberinto a nadie: una banda
+   * estrecha como la de los logros, para las partidas de varios. El cartel
+   * grande cruza el centro de la pantalla cinco segundos, y en una party eso
+   * es taparle la partida a gente que está jugando y que además no ha ganado
+   * nada. Aquí se ve quién eres y qué has sacado, y a seguir.
+   *   t — 0 al aparecer, 1 al terminar
+   * ------------------------------------------------------------ */
+  Sprites.drawBadgeStrip = function (ctx, cx, cy, w, t, info, tick) {
+    var color = info.color || '#ffffff';
+    var h = 20;
+    var ent = Math.min(1, t / 0.14);
+    var sal = Math.min(1, (1 - t) / 0.14);
+    var vis = Math.min(ent, sal);
+    if (vis <= 0) return;
+
+    // entra desde la izquierda: los logros entran por la derecha, así que
+    // aunque caigan seguidos no se confunde uno con otro
+    var desliz = (1 - (1 - Math.pow(1 - ent, 3))) * (w / 2 + 30);
+    var x0 = cx - w / 2 - desliz;
+
+    ctx.save();
+    ctx.globalAlpha = vis;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.9)';
+    ctx.fillRect(x0, cy - h / 2, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
+
+    // medalla con el mismo latido que en el cartel grande
+    Sprites.drawBadge(ctx, x0 + 13, cy, 7 * (1 + 0.12 * Math.sin(tick * 0.18)),
+      color, false);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 6px monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('¡MAESTRÍA DE ' + (info.mode || 'SOLO') + '!', x0 + 25, cy - 5);
+    ctx.font = 'bold 8px monospace';
+    ctx.fillStyle = color;
+    ctx.fillText(String(info.name || ''), x0 + 25, cy + 4);
+
     ctx.restore();
   };
 

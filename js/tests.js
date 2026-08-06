@@ -482,41 +482,113 @@
   // ---------------------------------------------------------------
   // Maestrías: rutas separadas
   // ---------------------------------------------------------------
-  test('las maestrías de solo y dúo van por separado', function () {
-    var B = window.PM.Badges;
-    var h1 = G.highScore1, h2 = G.highScore2;
-    try {
-      G.highScore1 = 9000;      // CAZADOR
-      G.highScore2 = 32000;     // MAESTRO
-      eq(B.top('solo').id, 'cazador');
-      eq(B.top('duo').id, 'maestro');
-      ok(!B.has('experto', 'solo'), 'lo de dúo no cuenta en solo');
-      ok(B.has('experto', 'duo'));
-    } finally { G.highScore1 = h1; G.highScore2 = h2; }
-  });
+  /* Cuatro ligas aparte: solo, dúo, trío y escuadra. Lo que consigues con
+   * tres no cuenta con dos, ni al revés. */
+  test('cada formato tiene sus propias maestrías y su propio récord',
+    function () {
+      var B = window.PM.Badges;
+      var r = [G.highScore1, G.highScore2, G.highScore3, G.highScore4];
+      try {
+        eq(B.MODES.join(','), 'solo,duo,trio,escuadra');
+        G.highScore1 = 9000;      // solo: CAZADOR (8.000)
+        G.highScore2 = 9000;      // dúo: solo APRENDIZ (6.000); CAZADOR pide 16.000
+        G.highScore3 = 0;
+        G.highScore4 = 48000;     // escuadra: EXPERTO (15.000 x 4 = 60.000, no)
+        eq(B.top('solo').id, 'cazador');
+        eq(B.top('duo').id, 'aprendiz', 'la misma marca da menos en dúo');
+        eq(B.top('trio'), null, 'sin partidas de trío, ninguna');
+        eq(B.top('escuadra').id, 'cazador', '48.000 entre cuatro: CAZADOR');
+        ok(!B.has('cazador', 'duo'), 'lo de solo no cuenta en dúo');
+        ok(!B.has('aprendiz', 'trio'), 'ni lo de escuadra en trío');
+        eq(B.best('escuadra'), 48000, 'cada ruta lee el récord de SU formato');
+      } finally {
+        G.highScore1 = r[0]; G.highScore2 = r[1];
+        G.highScore3 = r[2]; G.highScore4 = r[3];
+      }
+    });
 
   test('el modo de maestría sale del número de jugadores', function () {
     partida(1); eq(G.badgeMode(), 'solo');
     partida(2); eq(G.badgeMode(), 'duo');
+    partida(3); eq(G.badgeMode(), 'trio');
+    partida(4); eq(G.badgeMode(), 'escuadra');
+    G.toMenu();
   });
 
-  test('el cartel sale aunque la maestría ya se tuviera, y una vez por partida',
+  /* El marcador de un equipo es de todos: con cuatro se llega al mismo número
+   * con mucho menos mérito de cada uno (cuatro veces las vidas, cuatro bocas
+   * y cuatro fantasmas por energizante). Cada escalón pide los puntos de
+   * siempre multiplicados por los que juegan. */
+  test('el listón de cada maestría sube con la gente que hay en la partida',
     function () {
-      var h1 = G.highScore1;
-      try {
-        G.highScore1 = 59430;             // ya las tiene casi todas
-        window.PM.Badges.syncSeen();      // y todas anunciadas
-        partida(1);
-        G.addScore(3000);
-        ok(G.badgeNotice, 'vuelve a celebrarse el escalón');
-        eq(G.badgeNotice.name, 'APRENDIZ');
-        eq(G.badgeNotice.nueva, false, 'marcada como ya conseguida');
-        G.badgeNotice = null;
-        G.addScore(500);                  // sigue en APRENDIZ
-        eq(G.badgeNotice, null, 'no se repite en la misma partida');
-        G.addScore(4500);                 // cruza CAZADOR (8000)
-        ok(G.badgeNotice && G.badgeNotice.name === 'CAZADOR', 'el siguiente sí');
-      } finally { G.highScore1 = h1; }
+      var B = window.PM.Badges;
+      var aprendiz = CFG.BADGES[0];
+      eq(B.goal(aprendiz, 'solo'), 3000);
+      eq(B.goal(aprendiz, 'duo'), 6000, 'en dúo, el doble');
+      eq(B.goal(aprendiz, 'trio'), 9000, 'en trío, el triple');
+      eq(B.goal(aprendiz, 'escuadra'), 12000, 'en escuadra, el cuádruple');
+      eq(B.players('trio'), 3);
+      eq(B.modeName('escuadra'), 'ESCUADRA');
+    });
+
+  test('el récord de cada formato se guarda por separado', function () {
+    var r = [G.highScore1, G.highScore2, G.highScore3, G.highScore4];
+    try {
+      G.highScore1 = 0; G.highScore2 = 0; G.highScore3 = 0; G.highScore4 = 0;
+      partida(3);
+      G.addScore(5000);
+      eq(G.highScore3, 5000, 'la marca de trío va a la de trío');
+      eq(G.highScore2, 0, 'y no toca la de dúo');
+      eq(G.highScore4, 0, 'ni la de escuadra');
+      partida(2);
+      eq(G.highScore, 0, 'el HIGH SCORE de una partida es el de SU formato');
+      G.toMenu();
+    } finally {
+      G.highScore1 = r[0]; G.highScore2 = r[1];
+      G.highScore3 = r[2]; G.highScore4 = r[3];
+      G.saveHighScores();
+    }
+  });
+
+  test('una maestría ya conseguida no se vuelve a celebrar', function () {
+    var h1 = G.highScore1;
+    try {
+      G.highScore1 = 59430;             // ya las tiene casi todas
+      window.PM.Badges.syncSeen();      // y todas anunciadas
+      partida(1);
+      G.addScore(3000);
+      eq(G.badgeNotice, null, 'APRENDIZ ya la tenía: ni cartel ni ruido');
+      G.addScore(57000);                // 60000: LEYENDA, que sí es nueva
+      ok(G.badgeNotice && G.badgeNotice.name === 'LEYENDA', 'la nueva sí sale');
+      eq(G.badgeNotice.mode, 'SOLO');
+      G.badgeNotice = null;
+      G.addScore(500);
+      eq(G.badgeNotice, null, 'y no se repite en la misma partida');
+    } finally { G.highScore1 = h1; }
+  });
+
+  /* El cartel grande cruza el centro de la pantalla cinco segundos: jugando
+   * solo da igual, pero en una party le tapa el laberinto a gente que está
+   * jugando y que además no ha ganado nada. */
+  test('con más de un jugador la maestría no se celebra encima del laberinto',
+    function () {
+      partida(1); ok(G.bigNotices(), 'en solo, cartelón');
+      partida(2); ok(!G.bigNotices(), 'en dúo, banda estrecha arriba');
+      partida(4); ok(!G.bigNotices(), 'en escuadra, igual');
+      ok(typeof window.PM.Sprites.drawBadgeStrip === 'function',
+         'y existe el dibujo de la banda');
+      /* la banda la comparten logro y maestría: mientras hay un logro en
+       * pantalla, a la maestría no se le gasta el tiempo */
+      G.achNotice = { name: 'X', desc: 'Y', color: '#fff', ticks: 30, total: 30 };
+      G.badgeNotice = { name: 'APRENDIZ', color: '#fff', mode: 'ESCUADRA',
+                        ticks: 50, total: 50 };
+      G.stepBadgeNotice();
+      eq(G.badgeNotice.ticks, 50, 'la maestría espera su turno');
+      G.achNotice = null;
+      G.stepBadgeNotice();
+      eq(G.badgeNotice.ticks, 49, 'y corre cuando se queda sola');
+      G.badgeNotice = null;
+      G.toMenu();
     });
 
   // ---------------------------------------------------------------
@@ -1638,6 +1710,39 @@
     G.toMenu();
   });
 
+  /* Los fantasmas de la máquina piensan el giro AL ENTRAR en la casilla, una
+   * regla del arcade que se queda igual. Pero al de un jugador eso le comía
+   * la media casilla anterior al cruce: pulsabas justo al llegar, no se
+   * miraba, el fantasma se pasaba el cruce de largo y encima el rumbo pedido
+   * se quedaba puesto y giraba dos cruces más allá. Así no hay quien lo lleve.
+   * Ahora, mientras lo lleva un jugador, vale hasta el último momento. */
+  test('el fantasma de un jugador coge el cruce aunque pulses justo al llegar',
+    function () {
+      versus(2, 0, 1);                     // el J2 lleva a BLINKY
+      var g = G.ghosts[0];
+      var T = CFG.TILE;
+      function pruebaDesde(px) {
+        g.mode = 'normal'; g.frightened = false;
+        g.x = 10 * T + T / 2; g.y = 5 * T + T / 2;   // pasillo de la fila 5
+        g.dir = CFG.DIR.LEFT; g.wishDir = -1; g.taken = true; g.clearPlan();
+        var centro = 6 * T + T / 2, pulsado = false;
+        for (var t = 0; t < 200; t++) {
+          if (!pulsado && g.x - centro <= px) {
+            G.setPacDir(1, CFG.DIR.DOWN);
+            pulsado = true;
+          }
+          G.netWatch = 0;
+          G.step();
+          if (g.y > 5 * T + T / 2 + 1) return 'baja';
+          if (g.x < 5 * T) return 'se pasa';
+        }
+        return 'nada';
+      }
+      eq(pruebaDesde(6), 'baja', 'pulsando con media casilla de margen');
+      eq(pruebaDesde(1), 'baja', 'y pulsando a un píxel del cruce');
+      G.toMenu();
+    });
+
   /* La regla que sostiene todo lo demás: si el fantasma de la máquina no
    * puede darse la vuelta, el del jugador tampoco. Sin esto, en un pasillo
    * Pac-Man no tendría escapatoria. */
@@ -2547,9 +2652,15 @@
     G.achNotice = { name: 'FESTÍN', desc: 'LOS 4 FANTASMAS', color: '#ffff00',
                     ticks: 100, total: CFG.ACH_NOTICE_TICKS };
     G.badgeNotice = { name: 'CAZADOR', color: '#00ffff', mode: 'SOLO',
-                      nueva: true, ticks: 100, total: CFG.BADGE_ANIM_TICKS };
+                      ticks: 100, total: CFG.BADGE_ANIM_TICKS };
     G.render();
     ok(true, 'pinta sin lanzar');
+    // y la banda estrecha de las partidas de varios, por el otro camino
+    partida(3);
+    G.badgeNotice = { name: 'CAZADOR', color: '#00ffff', mode: 'TRÍO',
+                      ticks: 100, total: CFG.BADGE_ANIM_TICKS };
+    G.render();
+    ok(true, 'la banda también');
     G.achNotice = null;
     G.badgeNotice = null;
   });
@@ -2597,10 +2708,11 @@
   test('MAESTRÍAS: se elige pulsando la fila y empieza por la que tienes',
     function () {
       var UI = window.PM.UI;
-      var h1 = G.highScore1, h2 = G.highScore2;
+      var h1 = G.highScore1, h2 = G.highScore2, h3 = G.highScore3;
       try {
         G.highScore1 = 9000;              // APRENDIZ y CAZADOR conseguidas
         G.highScore2 = 0;                 // en dúo, ninguna todavía
+        G.highScore3 = 9000;              // en trío, 9.000 solo dan APRENDIZ
         UI.showBadges();
         eq(UI.badgesList.children.length, CFG.BADGES.length, 'están todas');
         var fila = UI.badgesList.children[0];
@@ -2618,11 +2730,21 @@
         ok(UI.badgeStageState.textContent.indexOf('TE FALTAN') === 0,
            'y de una que no tienes, lo que falta');
 
-        UI.showBadgeTab('duo');            // sin récord de equipo: ninguna
+        UI.showBadgeTab('duo');            // sin récord de dúo: ninguna
         eq(UI.badgePick, 'aprendiz', 'en dúo empieza por la primera');
+
+        /* la misma marca, otro formato: en trío el listón es el triple, así
+         * que 9.000 se quedan en la primera */
+        UI.showBadgeTab('trio');
+        eq(UI.badgePick, 'aprendiz', 'en trío, 9.000 solo dan APRENDIZ');
+        ok(UI.badgesSub.textContent.indexOf('RÉCORD EN TRÍO: 9000') === 0,
+           'y el panel lo dice con el récord de trío');
+        ok(UI.badgeRows.cazador.classList.contains('got') === false,
+           'CAZADOR en trío pide 24.000: aún no');
       } finally {
         G.highScore1 = h1;
         G.highScore2 = h2;
+        G.highScore3 = h3;
         UI.showBadgeTab('solo');
         UI.showMenu();
       }
@@ -2814,6 +2936,7 @@
     var xp0 = L.xp(), nick0 = window.PM.settings.nick1;
     var av0 = window.PM.settings.avatar;
     var r1 = G2.highScore1, r2 = G2.highScore2;
+    var r3 = G2.highScore3, r4 = G2.highScore4;
     conLogrosLimpios(function () {
       try {
         Ac.token = 'x';
@@ -2821,10 +2944,13 @@
         L.reset();
         L.add(1000);
         G2.highScore1 = 5000;
+        G2.highScore3 = 7000;      // el trío de aquí es mejor que el de la nube
+        G2.highScore4 = 0;
         A.record('fantasmas', 10);
 
         Ac.applyRemote({ usuario: 'PEPE', avatar: 'blinky', xp: 50000,
                          record1: 99000, record2: 1234,
+                         record3: 100, record4: 40000,
                          logros: { fantasmas: 300, racha: 4 } });
 
         eq(window.PM.settings.nick1, 'PEPE', 'el nombre pasa a ser el de la cuenta');
@@ -2835,19 +2961,42 @@
         eq(guardado.avatar, 'blinky', 'el avatar también');
         eq(L.xp(), 50000, 'la experiencia sube');
         eq(G2.highScore1, 99000, 'el récord de la nube es mejor: entra');
+        eq(G2.highScore4, 40000, 'la escuadra también viaja en la cuenta');
+        eq(G2.highScore3, 7000, 'y el trío de aquí, que era mejor, se queda');
         eq(A.stats().fantasmas, 300, 'los contadores se funden');
 
         // ahora una fila PEOR: no debe estropear nada
         Ac.applyRemote({ usuario: 'PEPE', avatar: 'blinky', xp: 10,
-                         record1: 1, record2: 0, logros: { fantasmas: 1 } });
+                         record1: 1, record2: 0, record3: 0, record4: 0,
+                         logros: { fantasmas: 1 } });
         eq(L.xp(), 50000, 'la experiencia no baja');
         eq(G2.highScore1, 99000, 'el récord tampoco');
+        eq(G2.highScore4, 40000, 'ni el de escuadra');
         eq(A.stats().fantasmas, 300, 'ni los contadores');
+
+        /* Los cuatro salen en lo que se sube, con su columna */
+        var sube = Ac.localState();
+        eq(sube.record1, 99000);
+        eq(sube.record3, 7000);
+        eq(sube.record4, 40000);
+        /* Y si el proyecto de Supabase aún no tiene esas columnas (falta
+         * correr supabase/cuentas.sql), se manda sin ellas antes que no
+         * mandar nada: el récord de siempre no se pierde por eso. */
+        Ac.sinRecordsNuevos = true;
+        var apanyo = Ac.localState();
+        eq(apanyo.record1, 99000, 'los de siempre siguen yendo');
+        eq(apanyo.record3, undefined, 'y los nuevos se quedan fuera');
+        ok(Ac.perfilCols().indexOf('record3') === -1,
+           'tampoco se piden al leer un perfil');
+        Ac.sinRecordsNuevos = false;
+        ok(Ac.perfilCols().indexOf('record4') !== -1, 'con las columnas, sí');
       } finally {
         Ac.user = origUser; Ac.token = origTok;
+        Ac.sinRecordsNuevos = false;
         window.PM.settings.nick1 = nick0;
         window.PM.settings.avatar = av0;
         G2.highScore1 = r1; G2.highScore2 = r2;
+        G2.highScore3 = r3; G2.highScore4 = r4;
         L.reset(); if (xp0 > 0) L.add(xp0);
       }
     });

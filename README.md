@@ -135,6 +135,18 @@ contraseña: el correo que Supabase exige se compone por dentro
 parte. Las tablas (`perfiles` y `amigos`, con RLS: cada uno solo escribe lo
 suyo) están en [`supabase/cuentas.sql`](supabase/cuentas.sql).
 
+En la cuenta viaja **todo lo que se puede perder**: avatar, experiencia, los
+**cuatro récords** (solo, dúo, trío y escuadra), el mejor tiempo del nivel 1 y
+los contadores de los logros. Al entrar se funde con lo del navegador
+quedándose con lo mejor de cada lado, así que entrar nunca cuesta progreso.
+Las maestrías no se guardan en ninguna lista: cada ruta se deduce del récord
+de su formato, así que con los récords viajan las insignias.
+
+> Si vienes de una versión anterior, **vuelve a lanzar `cuentas.sql`**: añade
+> `record3` y `record4` (trío y escuadra). El archivo se puede ejecutar las
+> veces que haga falta. Mientras no se lance, el juego sigue funcionando: se
+> guarda lo de siempre y lo nuevo entra en cuanto estén las columnas.
+
 **Ajuste obligatorio del proyecto**, que no se puede hacer por SQL —
 *Authentication → Sign In / Providers*:
 
@@ -204,11 +216,17 @@ Dos maneras de correr la misma batería:
   amor) con las teclas `1`–`6`, en el color de tu jugador. **Están animadas**:
   caen las lágrimas, el enfadado echa humo, el guiño abre el ojo con un
   chispazo, los corazones laten... Y **chat** (`T`) en el modo online.
-- **Maestrías**: seis insignias por récord personal, en **dos rutas
-  separadas** —en solo y en dúo—, con su propio panel en el menú: la lista a
-  la izquierda y, a la derecha, **la elegida en grande**. Se pulsa la que
-  quieras y se ve; al entrar sale sola la que tienes. En partida, **cada vez que cruzas
-  un escalón** sale el cartel animado, lo tuvieras ya o no. Con
+- **Maestrías**: seis insignias por récord personal, en **cuatro rutas
+  independientes** —en solo, en dúo, en trío y en escuadra—, con su propio
+  panel en el menú: la lista a la izquierda y, a la derecha, **la elegida en
+  grande**. Se pulsa la que quieras y se ve; al entrar sale sola la que
+  tienes. Cada formato lleva **su propio récord y su propio listón**: el
+  escalón de siempre multiplicado por los jugadores (APRENDIZ son 3.000 en
+  solo y 12.000 en escuadra), porque el marcador de un equipo es de todos y
+  con cuatro se llega al mismo número con mucho menos mérito de cada uno. En
+  partida sale el cartel animado **la primera vez que consigues cada una**, no
+  cada vez que cruzas el escalón; y jugando con más gente se celebra en una
+  banda estrecha arriba, sin taparle el laberinto a nadie. Con
   **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del modo que estés
   jugando sobre tu Pac-Man —con la medalla subiendo y la chapa
   desplegándose—, y en online la ven los demás. **Cuanto más alta es la

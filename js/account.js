@@ -12,10 +12,15 @@
  * amigos ya iban todos por el nombre.
  *
  * Qué se guarda en la nube (tabla `perfiles`): avatar, experiencia,
- * los dos récords, el mejor tiempo del nivel 1 y los contadores de
- * los logros. Al entrar se FUNDE con lo de este navegador quedándose
- * con lo mejor de cada lado, así que nunca se pierde lo jugado de
- * invitado ni lo jugado en otro sitio.
+ * los CUATRO récords —solo, dúo, trío y escuadra, uno por formato—,
+ * el mejor tiempo del nivel 1 y los contadores de los logros. Al
+ * entrar se FUNDE con lo de este navegador quedándose con lo mejor
+ * de cada lado, así que nunca se pierde lo jugado de invitado ni lo
+ * jugado en otro sitio.
+ *
+ * De ahí salen también las maestrías: cada ruta se deduce del récord
+ * de su formato, así que llevándose los récords se llevan las
+ * insignias sin guardar ni una lista.
  *
  * IMPORTANTE: el proyecto de Supabase necesita el proveedor Email
  * activo, el alta de usuarios permitida y "Confirm email" APAGADO;
@@ -88,6 +93,32 @@
         return d;
       });
     });
+  }
+
+  /* GET a la tabla de perfiles. `hacerUrl(columnas)` monta la consulta.
+   * Si el proyecto todavía no tiene las columnas de trío y escuadra (falta
+   * correr supabase/cuentas.sql), PostgREST responde 400 nombrándolas: se
+   * apunta y se repite la consulta sin ellas, una sola vez. */
+  function pedirPerfiles(self, hacerUrl, fallo, cb) {
+    function intenta() {
+      fetch(hacerUrl(self.perfilCols()), { headers: authHeaders(self.token) })
+        .then(function (res) {
+          return res.text().then(function (t) {
+            if (!res.ok) {
+              if (!self.sinRecordsNuevos && /record3|record4/i.test(t)) {
+                self.sinRecordsNuevos = true;
+                intenta();
+                return null;
+              }
+              throw new Error(fallo);
+            }
+            return JSON.parse(t);
+          });
+        })
+        .then(function (rows) { if (rows) cb(null, rows); })
+        .catch(function () { cb(fallo, null); });
+    }
+    intenta();
   }
 
   var Account = {
@@ -205,19 +236,45 @@
     },
 
     /* ---------- perfil ---------- */
+    /* Columnas de récord, una por formato (record1..record4) */
+    recordCols: ['record1', 'record2', 'record3', 'record4'],
+
+    /* Proyecto de Supabase sin las columnas de trío y escuadra: se descubre
+     * solo a la primera respuesta que las eche en falta (ver pedirPerfiles y
+     * push). No se guarda en ningún sitio: se vuelve a probar en cada sesión,
+     * así que en cuanto se corra el SQL las columnas vuelven solas. */
+    sinRecordsNuevos: false,
+
+    /* Columnas públicas de un perfil */
+    perfilCols: function () {
+      var c = 'usuario,avatar,xp,record1,record2,tiempo1,logros';
+      return this.sinRecordsNuevos ? c : c + ',record3,record4';
+    },
+
     /* Estado local que viaja a la nube */
     localState: function () {
       var g = window.PM.Game || {};
       var s = window.PM.settings || {};
       var A = window.PM.Achievements;
-      return {
+      var o = {
         avatar: s.avatar || 'pac',
         xp: (window.PM.Level ? window.PM.Level.xp() : 0),
-        record1: g.highScore1 || 0,
-        record2: g.highScore2 || 0,
         tiempo1: (A ? (A.stats().mejorT1 || null) : null) || null,
         logros: A ? A.stats() : {}
       };
+      // los cuatro récords: solo, dúo, trío y escuadra
+      for (var n = 1; n <= this.recordCols.length; n++) {
+        o[this.recordCols[n - 1]] = (g.recordFor ? g.recordFor(n) : 0) || 0;
+      }
+      /* Si este proyecto de Supabase todavía no tiene las columnas de trío y
+       * escuadra (falta correr supabase/cuentas.sql), se mandan sin ellas: más
+       * vale guardar lo de siempre que no guardar nada. Se reintenta en cada
+       * sesión, así que en cuanto el SQL esté puesto vuelven solas. */
+      if (this.sinRecordsNuevos) {
+        delete o.record3;
+        delete o.record4;
+      }
+      return o;
     },
 
     /* Trae el perfil, lo funde con lo de aquí y devuelve lo fundido arriba.
@@ -247,15 +304,17 @@
         s.avatar = fila.avatar;
       }
       if (window.PM.Level) window.PM.Level.setAtLeast(fila.xp);
-      if (g) {
+      if (g && g.recordFor) {
+        /* Los cuatro récords, uno por formato. Se queda el mejor de cada
+         * lado: entrar en la cuenta desde otro navegador nunca cuesta
+         * progreso, y lo de aquí tampoco se pisa. */
         var cambio = false;
-        if ((fila.record1 || 0) > (g.highScore1 || 0)) {
-          g.highScore1 = fila.record1;
-          cambio = true;
-        }
-        if ((fila.record2 || 0) > (g.highScore2 || 0)) {
-          g.highScore2 = fila.record2;
-          cambio = true;
+        for (var n = 1; n <= this.recordCols.length; n++) {
+          var v = parseInt(fila[this.recordCols[n - 1]], 10) || 0;
+          if (v > g.recordFor(n)) {
+            g.setRecordFor(n, v);
+            cambio = true;
+          }
         }
         if (cambio && g.saveHighScores) g.saveHighScores();
         // los récords traídos pueden regalar maestrías: que no se anuncien
@@ -287,6 +346,14 @@
       }).then(function (res) {
         if (!res.ok) {
           return res.text().then(function (t) {
+            /* ¿La tabla es de antes de trío y escuadra? Se apunta y se
+             * reintenta una vez sin esas dos columnas: que falte una puesta
+             * al día del servidor no puede costarle a nadie el récord de
+             * siempre. Al volver a entrar se prueba otra vez con todo. */
+            if (!self.sinRecordsNuevos && /record3|record4/i.test(t)) {
+              self.sinRecordsNuevos = true;
+              return self.push(callado, cb);
+            }
             throw new Error(/duplicate|unique/i.test(t)
               ? 'ESE USUARIO YA EXISTE' : 'NO SE PUDO GUARDAR');
           });
@@ -315,16 +382,14 @@
       var n = cleanUser(usuario);
       if (!this.configured()) { cb('LAS CUENTAS NECESITAN CONEXIÓN', null); return; }
       if (!n) { cb('NOMBRE NO VÁLIDO', null); return; }
-      var url = base('/rest/v1/' + AC.TABLE +
-        '?usuario=eq.' + encodeURIComponent(n) +
-        '&select=usuario,avatar,xp,record1,record2,tiempo1,logros,creado_en' +
-        '&limit=1');
-      fetch(url, { headers: authHeaders(this.token) })
-        .then(function (res) { return res.json(); })
-        .then(function (rows) {
-          cb(null, (rows && rows.length) ? rows[0] : null);
-        })
-        .catch(function () { cb('NO SE PUDO CARGAR EL PERFIL', null); });
+      pedirPerfiles(this, function (cols) {
+        return base('/rest/v1/' + AC.TABLE +
+          '?usuario=eq.' + encodeURIComponent(n) +
+          '&select=' + cols + ',creado_en&limit=1');
+      }, 'NO SE PUDO CARGAR EL PERFIL', function (err, rows) {
+        if (err) { cb(err, null); return; }
+        cb(null, (rows && rows.length) ? rows[0] : null);
+      });
     },
 
     /* Los perfiles de varios de golpe, para la lista de amigos: una sola
@@ -337,19 +402,18 @@
         if (n && lista.indexOf(n) === -1) lista.push(n);
       }
       if (!this.configured() || !lista.length) { cb(null, {}); return; }
-      var url = base('/rest/v1/' + AC.TABLE +
-        '?usuario=in.(' + encodeURIComponent(lista.join(',')) + ')' +
-        '&select=usuario,avatar,xp,record1,record2,tiempo1,logros');
-      fetch(url, { headers: authHeaders(this.token) })
-        .then(function (res) { return res.json(); })
-        .then(function (rows) {
-          var out = {};
-          for (var j = 0; j < (rows || []).length; j++) {
-            out[rows[j].usuario] = rows[j];
-          }
-          cb(null, out);
-        })
-        .catch(function () { cb('NO SE PUDIERON CARGAR LOS PERFILES', null); });
+      pedirPerfiles(this, function (cols) {
+        return base('/rest/v1/' + AC.TABLE +
+          '?usuario=in.(' + encodeURIComponent(lista.join(',')) + ')' +
+          '&select=' + cols);
+      }, 'NO SE PUDIERON CARGAR LOS PERFILES', function (err, rows) {
+        if (err) { cb(err, null); return; }
+        var out = {};
+        for (var j = 0; j < (rows || []).length; j++) {
+          out[rows[j].usuario] = rows[j];
+        }
+        cb(null, out);
+      });
     },
 
     listFriends: function (cb) {

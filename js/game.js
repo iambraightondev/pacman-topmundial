@@ -33,8 +33,12 @@
     level: 1,
     score: 0,
     highScore: 0,      // récord del modo en curso (1 jugador o equipo)
+    /* Un récord por formato: cada uno es su propia liga (y su propia ruta de
+     * maestrías). Se leen y se escriben con recordFor/setRecordFor. */
     highScore1: 0,     // récord persistido de 1 jugador
-    highScore2: 0,     // récord persistido de equipo (2 jugadores)
+    highScore2: 0,     // récord persistido de dúo
+    highScore3: 0,     // récord persistido de trío
+    highScore4: 0,     // récord persistido de escuadra
     lives: 3,          // fondo común (modo 'shared')
     livesMode: 'shared',
     extraLifeAwarded: false,
@@ -141,8 +145,7 @@
     achNotice: null,     // { name, desc, color, ticks, total }
     runAch: [],          // logros conseguidos en ESTA partida (para el resumen)
 
-    badgeNotice: null,   // { name, color, mode, nueva, ticks, total } — maestría
-    badgeRun: [],        // ids de maestría ya celebrados en ESTA partida
+    badgeNotice: null,   // { name, color, mode, ticks, total } — maestría
     levelNotice: null,   // { level, ticks } — nivel de jugador recién subido
     rankingSent: false,  // una sola subida por partida
     xpSent: false,       // la experiencia de la partida ya está sumada
@@ -198,11 +201,13 @@
 
       this.highScore1 = 0;
       this.highScore2 = 0;
+      this.highScore3 = 0;
+      this.highScore4 = 0;
       try {
-        var hs = localStorage.getItem(CFG.HIGHSCORE_KEY);
-        if (hs !== null) this.highScore1 = parseInt(hs, 10) || 0;
-        var hs2 = localStorage.getItem(CFG.HIGHSCORE2_KEY);
-        if (hs2 !== null) this.highScore2 = parseInt(hs2, 10) || 0;
+        for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
+          var v = localStorage.getItem(this.recordKey(n));
+          if (v !== null) this.setRecordFor(n, parseInt(v, 10) || 0);
+        }
       } catch (e) { /* almacenamiento no disponible */ }
       this.highScore = this.highScore1;
 
@@ -389,7 +394,6 @@
       this.chat = [];
       this.chatCooldown = 0;
       this.badgeNotice = null;
-      this.badgeRun = [];
       this.levelNotice = null;
       this.rankingSent = false;
       this.xpSent = false;
@@ -447,7 +451,9 @@
       } else {
         this.lives = s.startLives;
       }
-      this.highScore = (this.playerCount > 1) ? this.highScore2 : this.highScore1;
+      // el HIGH SCORE de la partida es el de SU formato: en trío se compite
+      // contra la mejor marca de trío, no contra la de dúo
+      this.highScore = this.recordFor(this.playerCount);
 
       /* red */
       this.netQueue = [];
@@ -622,7 +628,6 @@
       this.emotes = this.emptyEmotes();
       this.chat = [];
       this.badgeNotice = null;
-      this.badgeRun = [];
       this.levelNotice = null;
       this.vote = null;
       this.dlgPaused = false;
@@ -1378,13 +1383,40 @@
       this.checkBadges();        // ¿se ha cruzado un escalón de maestría?
     },
 
-    /* Escribe los dos récords tal cual están. Lo usa la cuenta al traerse
+    /* ---------- Un récord por formato de partida ----------
+     * Solo, dúo, trío y escuadra son ligas distintas: la misma puntuación no
+     * cuesta lo mismo con una boca que con cuatro. De aquí salen también las
+     * cuatro rutas de maestrías (js/badges.js). */
+    recordKey: function (n) {
+      if (n >= 4) return CFG.HIGHSCORE4_KEY;
+      if (n === 3) return CFG.HIGHSCORE3_KEY;
+      if (n === 2) return CFG.HIGHSCORE2_KEY;
+      return CFG.HIGHSCORE_KEY;
+    },
+
+    recordFor: function (n) {
+      if (n >= 4) return this.highScore4 || 0;
+      if (n === 3) return this.highScore3 || 0;
+      if (n === 2) return this.highScore2 || 0;
+      return this.highScore1 || 0;
+    },
+
+    setRecordFor: function (n, v) {
+      v = parseInt(v, 10) || 0;
+      if (n >= 4) this.highScore4 = v;
+      else if (n === 3) this.highScore3 = v;
+      else if (n === 2) this.highScore2 = v;
+      else this.highScore1 = v;
+    },
+
+    /* Escribe los cuatro récords tal cual están. Lo usa la cuenta al traerse
      * marcas mejores de otro sitio (persistHighScore solo sabe guardar el de
      * la partida en curso). */
     saveHighScores: function () {
       try {
-        localStorage.setItem(CFG.HIGHSCORE_KEY, String(this.highScore1 || 0));
-        localStorage.setItem(CFG.HIGHSCORE2_KEY, String(this.highScore2 || 0));
+        for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
+          localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));
+        }
       } catch (e) { /* sin almacenamiento */ }
       // si no se está jugando, el marcador de la portada enseña el de 1 jugador
       if (this.state === 'MENU') this.highScore = this.highScore1;
@@ -1395,14 +1427,11 @@
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
+      // cada formato guarda el suyo: el récord de escuadra no pisa el de dúo
+      var n = this.playerCount;
+      if (this.highScore > this.recordFor(n)) this.setRecordFor(n, this.highScore);
       try {
-        if (this.playerCount > 1) {
-          if (this.highScore > this.highScore2) this.highScore2 = this.highScore;
-          localStorage.setItem(CFG.HIGHSCORE2_KEY, String(this.highScore2));
-        } else {
-          if (this.highScore > this.highScore1) this.highScore1 = this.highScore;
-          localStorage.setItem(CFG.HIGHSCORE_KEY, String(this.highScore1));
-        }
+        localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));
       } catch (e) { /* sin almacenamiento */ }
     },
 
@@ -1534,41 +1563,40 @@
     },
 
     /* ---------- Maestrías ----------
-     * Cada modo tiene su propia ruta: una partida de dúo no entrega
-     * insignias de solo, y al revés. */
+     * Cada formato tiene su propia ruta —solo, dúo, trío y escuadra—, con su
+     * récord y sus insignias: una gran partida en escuadra no entrega las de
+     * dúo ni las de solo. Y cada ruta pide más puntos cuanta más gente juega
+     * (el escalón por los jugadores), porque el marcador de un equipo es de
+     * todos y con cuatro se llega al mismo número con mucho menos mérito. */
     badgeMode: function () {
-      return (this.playerCount > 1) ? 'duo' : 'solo';
+      var B = window.PM.Badges;
+      return B ? B.modeFor(this.playerCount) : 'solo';
     },
 
-    /* Cada partida vuelve a celebrar los escalones que se cruzan. Antes el
-     * cartel salía sólo la primera vez de la vida, así que quien ya tenía
-     * casi todas las maestrías no lo volvía a ver nunca. */
+    /* Solo se celebra lo que NO se tenía: una maestría ya conseguida no se
+     * vuelve a anunciar partida tras partida (y menos aún en una party, donde
+     * el cartel les tapa el laberinto a todos los de la sala). */
     checkBadges: function () {
       var B = window.PM.Badges;
       if (!B) return;
       if (this.isVersus()) return;   // maestrías = récord: aquí no cuentan
       var mode = this.badgeMode();
-      var got = B.earnedAt(this.score);
-      var fresh = null;
-      for (var i = 0; i < got.length; i++) {
-        if (this.badgeRun.indexOf(got[i].id) === -1) {
-          this.badgeRun.push(got[i].id);
-          fresh = got[i];        // si se cruzan varias de golpe, la más alta
-        }
-      }
+      var fresh = B.claim(this.score, mode);
       if (!fresh) return;
-      // ¿es la primera vez en la vida? cambia sólo el texto del cartel
-      var nueva = !!B.claim(Math.max(this.score, B.best(mode)), mode);
       this.badgeNotice = {
         name: fresh.name, color: fresh.color, mode: B.modeName(mode),
-        nueva: nueva,
         ticks: CFG.BADGE_ANIM_TICKS, total: CFG.BADGE_ANIM_TICKS
       };
       window.AudioSys && AudioSys.playExtraLife();
     },
 
     stepBadgeNotice: function () {
-      if (this.badgeNotice && --this.badgeNotice.ticks <= 0) {
+      /* Con varios jugadores, la maestría y el logro comparten la banda de
+       * arriba (ninguna de las dos entra ya en el laberinto), así que la
+       * maestría espera a que el logro termine en vez de pisarlo. Mientras
+       * espera no se le gasta el tiempo: se ve entera igual. */
+      var espera = !this.bigNotices() && !!this.achNotice;
+      if (this.badgeNotice && !espera && --this.badgeNotice.ticks <= 0) {
         this.badgeNotice = null;
       }
       if (this.levelNotice && --this.levelNotice.ticks <= 0) {
@@ -3224,13 +3252,26 @@
       }
     },
 
+    /* ¿Se puede celebrar a lo grande? Jugando solo, sí: el laberinto es tuyo
+     * y no hay nadie a quien tapárselo. Con más gente (dúo en el mismo teclado
+     * o una party) no: el cartel cruza el centro de la pantalla cinco segundos
+     * y los demás están jugando —y encima la maestría no es suya—. Ahí se
+     * celebra en una banda estrecha, arriba y fuera del laberinto. */
+    bigNotices: function () { return this.playerCount <= 1; },
+
     /* Aviso de maestría: el dibujo vive en sprites.js para poder enseñarlo
      * también en el panel MAESTRÍAS, fuera de la partida. */
     renderBadgeNotice: function (ctx) {
       var n = this.badgeNotice;
       var total = n.total || CFG.BADGE_ANIM_TICKS;
-      window.PM.Sprites.drawBadgeBanner(ctx, 112, 9 * T + CFG.MAZE_Y,
-        CFG.NATIVE_W - 24, 44, 1 - (n.ticks / total), n, this.tick);
+      var t = 1 - (n.ticks / total);
+      if (this.bigNotices()) {
+        window.PM.Sprites.drawBadgeBanner(ctx, 112, 9 * T + CFG.MAZE_Y,
+          CFG.NATIVE_W - 24, 44, t, n, this.tick);
+      } else {
+        window.PM.Sprites.drawBadgeStrip(ctx, 112, 11, CFG.NATIVE_W - 20,
+          t, n, this.tick);
+      }
     },
 
     renderStateText: function (ctx) {
@@ -3253,8 +3294,12 @@
         ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
       }
 
-      /* maestría recién ganada: entra, se luce y se va */
-      if (this.badgeNotice) this.renderBadgeNotice(ctx);
+      /* maestría recién ganada: entra, se luce y se va. Con más jugadores
+       * espera turno detrás del logro (comparten banda), así que mientras haya
+       * uno en pantalla esta no se dibuja. */
+      if (this.badgeNotice && (this.bigNotices() || !this.achNotice)) {
+        this.renderBadgeNotice(ctx);
+      }
 
       /* Logro recién conseguido. Va ARRIBA DEL TODO, sobre el marcador y
        * fuera del laberinto: antes cruzaba el centro de la pantalla justo por

@@ -551,7 +551,11 @@
   /* ---------- Ajustes (contrato con ui.js/game.js) ---------- */
   CFG.SETTINGS_KEY = 'pacman-topmundial-settings';
   CFG.HIGHSCORE_KEY = 'pacman-topmundial-highscore';
-  CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // récord de equipo (2 jugadores)
+  /* Un récord por formato de partida: cada uno es una liga aparte, y de ahí
+   * salen también las cuatro rutas de maestrías (ver js/badges.js). */
+  CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // dúo
+  CFG.HIGHSCORE3_KEY = 'pacman-topmundial-highscore-3p';   // trío
+  CFG.HIGHSCORE4_KEY = 'pacman-topmundial-highscore-4p';   // escuadra
   /* Longitud máxima de un nombre de jugador. El marcador de la partida sabe
    * encoger la letra cuando el nombre no cabe en su hueco (renderHUD), así que
    * este número lo manda todo: campos de texto, ranking, amigos y cuentas.

@@ -22,8 +22,12 @@ create table if not exists public.perfiles (
   usuario      text        not null unique check (usuario ~ '^[A-Z0-9]{3,12}$'),
   avatar       text        not null default 'pac',
   xp           bigint      not null default 0 check (xp >= 0),
-  record1      integer     not null default 0 check (record1 >= 0),
-  record2      integer     not null default 0 check (record2 >= 0),
+  -- un récord por formato de partida: cada uno es su propia liga, y de ahí
+  -- salen las cuatro rutas de maestrías del juego
+  record1      integer     not null default 0 check (record1 >= 0),  -- 1 jugador
+  record2      integer     not null default 0 check (record2 >= 0),  -- dúo
+  record3      integer     not null default 0 check (record3 >= 0),  -- trío
+  record4      integer     not null default 0 check (record4 >= 0),  -- escuadra
   tiempo1      integer     check (tiempo1 is null or
                                   (tiempo1 > 0 and tiempo1 <= 6000000)),
   logros       jsonb       not null default '{}'::jsonb,
@@ -101,6 +105,32 @@ create policy "amigos propios"
   to authenticated
   using (de = auth.uid())
   with check (de = auth.uid());
+
+-- ---------- puesta al día: los récords de trío y escuadra ----------
+-- La tabla ya creada se quedó con record1 y record2, y "create table if not
+-- exists" no añade columnas. Antes cualquier partida de más de uno escribía
+-- en record2, así que lo que haya ahí es lo mejor de dúo, trío y escuadra
+-- mezclado: se queda tal cual en DÚO y los dos formatos nuevos empiezan a 0,
+-- que es como los ve el juego.
+alter table public.perfiles
+  add column if not exists record3 integer not null default 0,
+  add column if not exists record4 integer not null default 0;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_record3_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_record3_chk check (record3 >= 0);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_record4_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_record4_chk check (record4 >= 0);
+  end if;
+end $$;
 
 -- ---------- puesta al día: los nombres pasaron de 8 a 12 letras ----------
 -- Las tablas ya creadas se quedaron con el CHECK viejo, y "create table if

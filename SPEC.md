@@ -128,8 +128,20 @@ working off a single name. Tables `perfiles` and `amigos` live in
 `supabase/cuentas.sql` with RLS (public read, owner-only writes). Signing in
 runs `applyRemote` + `push`: cloud and local are MERGED keeping the best of
 each (xp/records/counters never go down), so entering an account can never
-cost progress. Friends require an account; `PM.Friends` is only a local cache
-of the cloud list.
+cost progress. The profile carries **one record per format** —
+`record1..record4`, driven by `Account.recordCols` against
+`Game.recordFor/setRecordFor` — so the four mastery tracks follow the account
+without storing a single badge list: each track is derived from its format's
+record. Friends require an account; `PM.Friends` is only a local cache of the
+cloud list.
+
+`record3`/`record4` arrived after the table did, so **a project that has not
+re-run `supabase/cuentas.sql` still works**: PostgREST answers 400 naming the
+missing column, `Account.sinRecordsNuevos` is raised and the request is
+retried without those two fields (`push`) or without those two columns in the
+`select` (`pedirPerfiles`, shared by `fetchProfile`/`fetchProfiles`). Losing
+the server migration costs the two new records, never the old ones. The flag
+is memory-only, so the next session tries the full shape again.
 
 The Supabase project MUST have Email provider on, sign-ups allowed and
 **Confirm email off** — the internal mailbox does not exist, so a confirmation
@@ -602,25 +614,54 @@ receiver looks it up in `CFG.BADGES`: guest `gevt {t:'badge', b}` → host
 which is what a player with no badge yet shows. Works in every mode.
 
 **Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers (APRENDIZ 3 000 → TOP
-MUNDIAL 100 000) on **two independent tracks**, so a big duo run never hands
-out the solo badges:
+MUNDIAL 100 000) on **four independent tracks, one per format**, so a big
+squad run never hands out the duo or the solo badges:
 
-- `'solo'` — 1-player record (`Game.highScore1`)
-- `'duo'` — team record (`Game.highScore2`)
+| track | players | record |
+|---|---|---|
+| `'solo'` | 1 | `Game.highScore1` |
+| `'duo'` | 2 | `Game.highScore2` |
+| `'trio'` | 3 | `Game.highScore3` |
+| `'escuadra'` | 4 | `Game.highScore4` |
 
-Every API takes the mode (`best/earned/top/next/has/claim`), and
-`Game.badgeMode()` derives it from `playerCount`. Earned badges are derived
-from the record, so nothing can desync; localStorage (`CFG.BADGES_KEY`) only
-stores which ones were already announced, now as `{solo:[], duo:[]}` — an old
-flat array is migrated into both tracks so nothing gets re-announced.
-`Game.checkBadges()` runs on **every score change** and shows the banner
-(`Sprites.drawBadgeBanner`) each time the run crosses a tier — once per tier
-per game, tracked in `Game.badgeRun`. Announcing only the first time in a
-player's life meant anyone holding most tiers never saw it again; the
-lifetime `claim()` now only decides the wording ("¡NUEVA MAESTRÍA DE …!" vs
-"MAESTRÍA DE …!"). The guest also gets it when the snapshot brings the score.
-The MAESTRÍAS panel has an EN SOLO / EN DÚO tab pair, each listing the six
-tiers with that track's record and what is missing for the next one. Layout is
+**Each record is its own league** — `Game.recordFor(n)` / `setRecordFor(n, v)` /
+`recordKey(n)` resolve them, `persistHighScore` writes only the one for
+`playerCount` (a squad run no longer overwrites the duo record) and `newGame`
+shows that format's record as the in-game HIGH SCORE. The four travel to the
+account as `perfiles.record1..record4`, so the tracks follow the player from
+one device to the next (see **Cuentas**).
+
+**The bar rises with the players**: `Badges.goal(badge, mode)` =
+`badge.points × players`, so APRENDIZ is 3 000 solo, 6 000 duo, 9 000 trio and
+12 000 squad. A team scoreboard belongs to everybody — with four players you
+reach the same number with four times the lives, four mouths eating and four
+ghosts per energiser — so the same figure is worth much less per person.
+
+Every API takes the mode (`best/earned/top/next/has/claim/goal/players/
+modeName`), and `Game.badgeMode()` derives it from `playerCount` via
+`Badges.modeFor`. Earned badges are derived from the record, so nothing can
+desync; localStorage (`CFG.BADGES_KEY`) only stores which ones were already
+announced, now as `{solo:[], duo:[], trio:[], escuadra:[]}` — an old flat array
+is migrated into **solo and duo only** (the two tracks that existed), so
+nothing gets re-announced and the new tracks start clean.
+`Game.checkBadges()` runs on **every score change**
+and announces **only what you did not already hold** (`Badges.claim` returns
+the highest un-announced tier, or nothing): re-celebrating tiers you already
+had meant a banner every single game, and in a party that is five seconds of
+somebody else's maze covered for a medal that isn't theirs.
+
+Where it is drawn depends on how many are playing (`Game.bigNotices()`,
+`playerCount <= 1`): alone, the full banner across the maze
+(`Sprites.drawBadgeBanner`); with anyone else, a narrow strip at the very top,
+outside the maze (`Sprites.drawBadgeStrip`, entering from the **left** so it
+never reads as the achievement band, which enters from the right). Both share
+that top slot, so `stepBadgeNotice` **holds** the badge (its ticks do not run)
+while an `achNotice` is on screen and `renderStateText` skips it. The guest
+also gets it when the snapshot brings the score.
+
+The MAESTRÍAS panel has four tabs — EN SOLO / EN DÚO / EN TRÍO / EN ESCUADRA —
+each listing the six tiers **with that track's own figures**: its record, its
+scaled goal per tier and what is missing for the next one. Layout is
 **list + stage**: the six tiers on the left (one column, `.badge-split`
 overrides the two-column rule the other `.badge-list`s get at 1000 px), the
 picked one **large** on the right (`.badge-stage`); narrow screens stack them
@@ -750,13 +791,24 @@ returns the ghost's colour.
 ### Movement rules
 
 `Ghost.decide()` builds the legal-exit list exactly as before (walls, door,
-no-up tiles, no reversal) and only then, for `human && mode === 'normal'`,
-hands over to `Ghost.humanChoice(candidates)`:
+no-up tiles, no reversal) and only then, for `Ghost.driven()` (`human &&
+taken && mode === 'normal'`), hands over to `Ghost.humanChoice(candidates)`:
 
 1. the requested direction, if legal from here;
 2. otherwise straight on — what a player who is not pressing anything expects;
 3. otherwise the first legal exit in the usual UP > LEFT > DOWN > RIGHT order,
    because a ghost never stops.
+
+**When the exit is chosen.** The AI thinks one tile ahead (decision on tile
+ENTRY, executed at the centre) and that arcade rule stays. For a driven ghost
+it does not: entry-time planning eats the half tile before the junction, so a
+key pressed *as you arrive* was never looked at, the ghost sailed past the
+turn — and, because the intent is standing, it then turned two junctions later
+on its own. `updatePath` therefore re-plans when `driven() && planWish !==
+wishDir`, which gives the player the whole tile up to the centre, exactly the
+window Pac-Man gets. The AI is untouched: its `wishDir` never changes. The
+host re-plans through the same path when a `gdir` lands, so a late intent is
+still applied at the junction the driver aimed at instead of the next one.
 
 Consequences, all deliberate:
 
@@ -1381,9 +1433,12 @@ from third parties. Cells are indices `row*28+col`.
     name, host only online, once per game — and a missing table is reported
     instead of crashing; online chat (`T`) delivers
     sanitised, rate-limited messages and blocks game keys while typing.
-    Badges are tracked separately for solo and duo: a duo record never awards
-    a solo badge, each track announces its own tiers, and the panel shows the
-    two with their own progress.
+    Badges are tracked separately **per format** (solo, duo, trio, squad): a
+    squad record never awards a duo badge, each track keeps its own record and
+    announces its own tiers, and the panel shows the four with their own
+    progress. Each tier costs `points × players`, and it is announced only the
+    first time it is reached — and never across the maze while anyone else is
+    playing.
 22. Ghost decisions are taken on tile ENTRY (executed at the center) and the
     scatter↔chase reversal is immediate; frightened choices and the fruit
     timer come from the seeded generator, so the same level replays

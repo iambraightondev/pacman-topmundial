@@ -1405,11 +1405,12 @@
       h.textContent = 'MAESTRÍAS';
       o.appendChild(h);
 
-      /* dos rutas independientes: un jugador y dúo */
+      /* cuatro rutas independientes, una por formato de partida */
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.badgeTabBtns = {};
-      [['solo', 'EN SOLO'], ['duo', 'EN DÚO']].forEach(function (t) {
+      [['solo', 'EN SOLO'], ['duo', 'EN DÚO'],
+       ['trio', 'EN TRÍO'], ['escuadra', 'EN ESCUADRA']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showBadgeTab(t[0]); });
         b.classList.add('tab');
         self.badgeTabBtns[t[0]] = b;
@@ -1474,7 +1475,8 @@
     },
 
     showBadgeTab: function (mode) {
-      this.badgeTab = (mode === 'duo') ? 'duo' : 'solo';
+      var B = window.PM.Badges;
+      this.badgeTab = (B && B.MODES.indexOf(mode) !== -1) ? mode : 'solo';
       this.badgePick = null;      // cada ruta empieza por la suya
       this.refreshBadges();
     },
@@ -1489,15 +1491,25 @@
       }
       var best = B ? B.best(mode) : 0;
       var next = B ? B.next(mode) : null;
-      var label = (mode === 'duo') ? 'RÉCORD DE EQUIPO: ' : 'RÉCORD EN SOLO: ';
-      this.badgesSub.textContent = label + best +
-        (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + next.points)
-              : '  ·  ¡TODAS CONSEGUIDAS!');
+      /* Cada formato es su propia liga: su récord, sus insignias y su listón.
+       * Cuanta más gente juega, más puntos pide cada escalón (el marcador de
+       * un equipo es de todos, y con cuatro se llega al mismo número con
+       * mucho menos mérito de cada uno). */
+      var meta = function (b) { return B ? B.goal(b, mode) : b.points; };
+      this.badgesSub.textContent =
+        'RÉCORD EN ' + (B ? B.modeName(mode) : 'SOLO') + ': ' + best +
+        (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + meta(next))
+              : '  ·  ¡TODAS CONSEGUIDAS!') +
+        (mode === 'solo'
+          ? ''
+          : '  ·  CADA FORMATO ES UNA LIGA APARTE Y PIDE MÁS PUNTOS CUANTOS ' +
+            'MÁS SEÁIS');
       this.badgesList.innerHTML = '';
       this.badgeRows = {};
       var self = this;
       CFG.BADGES.forEach(function (b) {
-        var got = best >= b.points;
+        var puntos = meta(b);
+        var got = best >= puntos;
         /* la fila ES el botón: pulsarla la enseña en el escenario. Siendo
          * <button> entra sola en la navegación con flechas. */
         var row = document.createElement('button');
@@ -1522,8 +1534,8 @@
         var st = document.createElement('div');
         st.className = 'badge-state';
         st.textContent = got
-          ? ('CONSEGUIDA · ' + b.points + ' PUNTOS')
-          : ('TE FALTAN ' + (b.points - best) + ' PUNTOS');
+          ? ('CONSEGUIDA · ' + puntos + ' PUNTOS')
+          : ('TE FALTAN ' + (puntos - best) + ' PUNTOS');
         txt.appendChild(st);
         row.appendChild(txt);
 
@@ -1559,7 +1571,8 @@
 
       var best = B ? B.best(mode) : 0;
       var top = B ? B.top(mode) : null;
-      var got = best >= badge.points;
+      var puntos = B ? B.goal(badge, mode) : badge.points;
+      var got = best >= puntos;
 
       for (var k in this.badgeRows) {
         if (this.badgeRows.hasOwnProperty(k)) {
@@ -1573,8 +1586,8 @@
       this.badgeStageName.style.color = got ? badge.color : '#666';
       this.badgeStageState.textContent = got
         ? (((top && top.id === badge.id) ? 'TU MAESTRÍA · ' : 'CONSEGUIDA · ') +
-           badge.points + ' PUNTOS')
-        : ('TE FALTAN ' + (badge.points - best) + ' PUNTOS PARA CONSEGUIRLA');
+           puntos + ' PUNTOS')
+        : ('TE FALTAN ' + (puntos - best) + ' PUNTOS PARA CONSEGUIRLA');
 
       if (play) this.playBadgeDemo(badge, got);
       else this.badgeRest(badge, got);
@@ -1782,13 +1795,16 @@
       this.mateFill.style.width = Math.round(st.pct * 100) + '%';
       this.mateResumen.textContent = 'EXPERIENCIA TOTAL ' + (fila.xp || 0);
 
-      /* récords */
+      /* récords: uno por formato. Trío y escuadra solo salen si ha jugado
+       * alguna, que si no son dos ceros que no dicen nada. */
       var stats = [
         ['RÉCORD EN SOLO', String(fila.record1 || 0)],
-        ['RÉCORD EN DÚO', String(fila.record2 || 0)],
-        ['NIVEL 1 MÁS RÁPIDO',
-         (fila.tiempo1 > 0 && R) ? R.fmtTime(fila.tiempo1) : '—']
+        ['RÉCORD EN DÚO', String(fila.record2 || 0)]
       ];
+      if (fila.record3 > 0) stats.push(['RÉCORD EN TRÍO', String(fila.record3)]);
+      if (fila.record4 > 0) stats.push(['RÉCORD EN ESCUADRA', String(fila.record4)]);
+      stats.push(['NIVEL 1 MÁS RÁPIDO',
+        (fila.tiempo1 > 0 && R) ? R.fmtTime(fila.tiempo1) : '—']);
       var cont = fila.logros || {};
       stats.push(['FANTASMAS COMIDOS', String(cont.fantasmas || 0)]);
       stats.push(['PARTIDAS JUGADAS', String(cont.partidas || 0)]);
