@@ -30,13 +30,18 @@
  *   salto de dos o tres casillas.
  *
  * Puntuación
- *   Los Pac-Man puntúan como siempre (marcador de equipo). El
- *   fantasma tiene su propio marcador: CFG.VS.CATCH_POINTS por
- *   cada Pac-Man que caza. Gana la ronda si acaba con las vidas de
- *   todos; si la partida termina de cualquier otra forma, ganan
- *   los Pac-Man. Estas partidas no cuentan para el top mundial ni
- *   para los récords (los ajustes no son comparables), pero sí
- *   para el nivel de jugador, que mide cuánto juegas.
+ *   Los Pac-Man puntúan como siempre (marcador de equipo). Cada
+ *   fantasma tiene EL SUYO PROPIO: CFG.VS.CATCH_POINTS por cada
+ *   Pac-Man que caza, y cobra el que lo caza. Se puede llevar más
+ *   de un fantasma en la misma partida (el reparto lo permite;
+ *   solo exige que quede algún Pac-Man), así que un marcador
+ *   común no valdría: dos cazadores no sabrían quién ha hecho qué
+ *   y el nivel de jugador les daría lo mismo a los dos.
+ *   Ganan la ronda si entre todos acaban con las vidas de todos
+ *   los Pac-Man; si la partida termina de cualquier otra forma,
+ *   ganan los Pac-Man. Estas partidas no cuentan para el top
+ *   mundial ni para los récords (los ajustes no son comparables),
+ *   pero sí para el nivel de jugador, que mide cuánto juegas.
  * ============================================================ */
 (function () {
   'use strict';
@@ -69,8 +74,8 @@
     setup: function (g, list) {
       var i, gid;
       g.vsGhosts = this.clean(list, g.pacs.length);
-      g.vsScore = 0;
-      g.vsCatches = 0;
+      g.vsScores = [];                 // un marcador por jugador (el suyo)
+      for (i = 0; i < g.pacs.length; i++) g.vsScores.push(0);
       g.vsDirTimer = 0;
       g.vsLastDir = -2;
       for (i = 0; i < 4; i++) {
@@ -168,18 +173,36 @@
     /* ---------------------------------------------------------
      * Puntuación y final
      * --------------------------------------------------------- */
-    /* Un fantasma de jugador se ha llevado por delante a un Pac-Man */
+    /* Un fantasma de jugador se ha llevado por delante a un Pac-Man. Cobra
+     * QUIEN LO CAZA, no "los fantasmas": con dos cazadores en la misma
+     * partida, un marcador común no diría quién ha hecho qué. */
     onCatch: function (g, who, byGhost) {
       if (!(byGhost >= 0) || !g.ghosts[byGhost]) return;
       var quien = g.vsPlayerOf(byGhost);
       if (quien < 0 || quien === who) return;
-      g.vsScore += CFG.VS.CATCH_POINTS;
-      g.vsCatches++;
+      g.addVsScore(quien, CFG.VS.CATCH_POINTS);
       g.addPopup(g.ghosts[byGhost].x, g.ghosts[byGhost].y,
         CFG.VS.CATCH_POINTS, CFG.EAT_FREEZE_TICKS);
     },
 
-    /* 'ghost' si el fantasma acabó con las vidas de todos los Pac-Man;
+    /* Pac-Man que ha cazado el jugador i (sale de sus puntos, así que también
+     * cuadra en la pantalla del invitado, que solo recibe el marcador) */
+    catches: function (g, i) {
+      return Math.round(g.vsScoreOf(i) / CFG.VS.CATCH_POINTS);
+    },
+
+    /* Los que llevan fantasma, con lo suyo. En el orden de la party. */
+    hunters: function (g) {
+      var out = [];
+      for (var i = 0; i < g.pacs.length; i++) {
+        if (g.vsGhostOf(i) < 0) continue;
+        out.push({ idx: i, name: g.nameFor(i), ghost: g.vsGhostOf(i),
+                   score: g.vsScoreOf(i), catches: this.catches(g, i) });
+      }
+      return out;
+    },
+
+    /* 'ghost' si los fantasmas acabaron con las vidas de todos los Pac-Man;
      * 'pacs' en cualquier otro final (rendición, desconexión, salirse). */
     winner: function (g) {
       for (var i = 0; i < g.pacs.length; i++) {
@@ -195,6 +218,15 @@
         if (g.vsGhostOf(i) >= 0) return g.nameFor(i);
       }
       return '';
+    },
+
+    /* El que más ha cazado (para el titular del final). Empate: el primero. */
+    topHunter: function (g) {
+      var lista = this.hunters(g), mejor = null;
+      for (var i = 0; i < lista.length; i++) {
+        if (!mejor || lista[i].score > mejor.score) mejor = lista[i];
+      }
+      return mejor;
     },
 
     /* ---------------------------------------------------------

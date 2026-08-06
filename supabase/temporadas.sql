@@ -50,11 +50,16 @@ create index if not exists ranking_temporada_idx
 -- ============================================================
 create or replace view public.ranking_temporada as
 select distinct on (temporada, jugadores, equipo)
-       temporada, jugadores, equipo, nombre1, nombre2, puntos, nivel, modo, creado_en
+       temporada, jugadores, equipo, nombre1, nombre2, puntos, nivel, modo,
+       creado_en,
+       -- al final: create or replace view solo añade columnas por el final
+       nombre3, nombre4
 from (
   select r.*,
          upper(btrim(r.nombre1)) ||
-           coalesce(' + ' || upper(btrim(r.nombre2)), '') as equipo
+           coalesce(' + ' || upper(btrim(r.nombre2)), '') ||
+           coalesce(' + ' || upper(btrim(r.nombre3)), '') ||
+           coalesce(' + ' || upper(btrim(r.nombre4)), '') as equipo
   from public.ranking r
 ) t
 order by temporada, jugadores, equipo, puntos desc, creado_en asc;

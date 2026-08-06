@@ -723,14 +723,34 @@ sent and each end resolves the tier locally. In the panel, `UI.playBadgeDemo`
 passes the picked tier, which is why the demo canvas leaves room above the
 plaque (`badgeTop`): the rays and the flash spill out of it.
 
-**Top mundial** (`PM.Ranking`): games are posted to a Supabase table via
-PostgREST with the anon key — no SDK. There are **two separate boards**, told
-apart by the `jugadores` column: `1` individual (`nombre2` NULL) and `2` duo.
-Reads go to the **`ranking_top` view**, which keeps only each player's/duo's
-best run (`distinct on (jugadores, equipo)`) — otherwise whoever plays most
-fills the whole table with repeats. The panel has INDIVIDUAL / DÚO / TUS
-PARTIDAS tabs; switching fast is guarded by a request token, so a late reply
+**Top mundial** (`PM.Ranking`): games are posted through the `enviar-record`
+Edge Function; reads go to Supabase via PostgREST with the anon key — no SDK.
+There is **one board per format**, told apart by the `jugadores` column: `1`
+individual, `2` duo, `3` trio, `4` squad, with `nombre1..nombre4` and the
+unused ones NULL (`ranking_nombres_chk` enforces exactly as many names as
+players). Trio and squad games used to be dropped on the way out
+(`playerCount > 2` returned early) and the table only allowed 1 and 2, so they
+never left the player's browser; now every format has its own board, matching
+its own record and its own mastery track. Reads go to the **`ranking_top`
+view**, which keeps only each player's/team's best run (`distinct on
+(jugadores, equipo)`, where `equipo` concatenates the names present) —
+otherwise whoever plays most fills the whole table with repeats.
+
+The panel's tab ids are **the player count for `1..4`**, plus `5` NIVEL 1, `6`
+RETO DE HOY and `0` TUS PARTIDAS (local, no network). The season row shows on
+`1..4` only. Switching fast is guarded by a request token, so a late reply
 from the previous tab cannot overwrite the current list.
+
+`Ranking.jugadores(n)` clamps a format, `Ranking.COLS` is the shared column
+list and `Ranking.nombresDe(fila)` returns the names present, so one render
+path draws a solo run and a four-name squad alike.
+
+In the Edge Function the **points ceiling is unchanged** by player count — a
+level holds the same pellets, ghosts and fruit however many mouths are eating
+— but the **time floors are divided by the players** (`MIN_MS_POR_NIVEL /
+jugadores`, `MAX_PUNTOS_POR_S * jugadores`): four Pac-Men clear a level in a
+quarter of the time, and without that a legitimate squad would be rejected as
+`TIEMPO IMPOSIBLE`.
 
 **Anti-spam y nombres**: a `before insert` trigger caps 5 rows per name per
 minute (it is not anti-cheat — that would need an Edge Function — but it
@@ -872,10 +892,19 @@ fields, and an old client would silently play against an AI ghost.
 ### Scoring, records and player level
 
 * Pac-Men keep the shared team score (`Game.score`).
-* The hunter has his own: `Game.vsScore`, `CFG.VS.CATCH_POINTS` (1000) per
-  Pac-Man caught. `Game.startDeath(who, byGhost)` now takes the ghost that made
-  the catch (the guest reports it in `gevt {t:'died', g}`) and forwards it to
-  `Versus.onCatch()`.
+* **Each hunter has his own**: `Game.vsScores` is one score per seat, read with
+  `vsScoreOf(i)` and fed by `addVsScore(i, pts)`, `CFG.VS.CATCH_POINTS` (1000)
+  per Pac-Man caught. The share-out allows **more than one** player-driven
+  ghost (`Versus.clean` only insists that some Pac-Man is left), and a single
+  shared counter could not say who did what — nor split the XP, since
+  `myPoints()` feeds it. `Game.startDeath(who, byGhost)` takes the ghost that
+  made the catch (the guest reports it in `gevt {t:'died', g}`) and forwards it
+  to `Versus.onCatch()`, which pays **the owner of that ghost**.
+  `Versus.hunters(game)` lists them with `{idx, name, ghost, score, catches}`
+  and `topHunter()` picks the headline; catches are derived from the score
+  (`score / CATCH_POINTS`) so they also add up on a guest's screen, which only
+  receives the scores. The snapshot field `vs` is that array — hence
+  `CFG.NET.PROTO` 6.
 * `Versus.winner(game)` returns `'ghost'` when every Pac-Man seat is `out`
   (the hunter ran them out of lives) and `'pacs'` otherwise — surrender,
   disconnect or quitting all count as a Pac-Man win. The GAME OVER panel leads
@@ -884,7 +913,7 @@ fields, and an old client would silently play against an AI ghost.
   high scores (`persistHighScore`) or the mastery badges (`checkBadges`): the
   settings are not comparable.
 * They **do** count for the player level, which measures how much you play.
-  `Game.myPoints()` returns the seat's own points — `vsScore` for a hunter,
+  `Game.myPoints()` returns the seat's own points — `vsScoreOf(seat)` for a hunter,
   `score` for a Pac-Man — and `closeRun()` uses it for the XP, the end-of-run
   summary and the local history.
 
@@ -984,7 +1013,7 @@ writer: `supabase/ranking-integridad.sql` revokes `insert` on `ranking` from
 which bypasses RLS; both env vars are injected by Supabase, no secrets to
 create.
 
-Payload: `{ jugadores, modo, nombre1, nombre2, puntos, nivel, nivelInicio,
+Payload: `{ jugadores (1..4), modo, nombre1..nombre4, puntos, nivel, nivelInicio,
 fantasmas, tiempoMs, ajustes:{velFantasmas,velPac,powerS,vidas}, tiempo1?,
 repeticion? }`.
 
@@ -1428,9 +1457,10 @@ from third parties. Cells are indices `row*28+col`.
 20. Skins apply to the player, its lives icons and the options thumbnails,
     and travel in the online handshake; emotes (`1..6`) appear over the right
     Pac-Man on both screens exactly once; badges are handed out on new
-    personal records and listed in MAESTRÍAS; 2-player results reach the TOP
-    MUNDIAL panel — individual and duo boards kept apart, only with a real
-    name, host only online, once per game — and a missing table is reported
+    personal records and listed in MAESTRÍAS; team results reach the TOP
+    MUNDIAL panel — one board per format (individual, duo, trio, squad), only
+    with a real name for everyone who played, host only online, once per game
+    — and a missing table is reported
     instead of crashing; online chat (`T`) delivers
     sanitised, rate-limited messages and blocks game keys while typing.
     Badges are tracked separately **per format** (solo, duo, trio, squad): a

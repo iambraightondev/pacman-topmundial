@@ -2,6 +2,33 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-06 · Trío y escuadra entran en el TOP MUNDIAL
+
+- Hasta ahora, una partida de **tres o cuatro** se jugaba… y se quedaba en tu
+  navegador. El envío la cortaba (`if (playerCount > 2) return`) y la tabla
+  solo admitía 1 y 2 jugadores. Hacíais 80.000 puntos en escuadra y no lo veía
+  nadie más que vosotros.
+- Ahora hay **una clasificación por formato**: INDIVIDUAL · DÚO · **TRÍO** ·
+  **ESCUADRA**, cada una con su tabla, su temporada y su histórico, igual que
+  ya tenían su récord y sus maestrías.
+- **Entra el equipo entero**: los cuatro nombres viajan con la partida y la
+  clasificación agrupa por equipo. Si cambia uno, es otro equipo. Y sigue
+  haciendo falta que **todos** tengan nombre de verdad: sin nombre no hay
+  récord.
+- **El portero cuenta con vosotros**: el techo de puntos no cambia (un nivel
+  tiene las mismas pastillas, fantasmas y frutas jueguen uno o cuatro), pero
+  los suelos de tiempo **se reparten entre los que juegan**. Cuatro bocas
+  despejan el nivel en la cuarta parte de tiempo; sin esto, una escuadra
+  jugada de verdad se caía con un TIEMPO IMPOSIBLE.
+
+### En PAC-MAN VS., cada cazador tiene su marcador
+
+- Se puede llevar **más de un fantasma** en la misma partida, pero los puntos
+  de caza iban todos al mismo saco: con dos cazadores no se sabía quién había
+  hecho qué, y el nivel de jugador les daba lo mismo a los dos.
+- Ahora **cobra el que caza**, en su propio marcador. El final de la ronda los
+  lista a todos con lo suyo y el titular se lo lleva el que más ha cazado.
+
 ## 2026-08-05 · Llevar el fantasma se parece por fin a llevarlo, y las maestrías se ganan por formato
 
 ### El fantasma obedece la tecla que acabas de pulsar

@@ -24,6 +24,10 @@
 
   function r1(v) { return Math.round(v * 10) / 10; }
 
+  function esLista(v) {
+    return Object.prototype.toString.call(v) === '[object Array]';
+  }
+
   var Game = {
     /* estado general */
     state: 'MENU',    // MENU | READY | PLAYING | DYING | LEVEL_DONE | GAME_OVER
@@ -52,8 +56,7 @@
 
     /* PAC-MAN VS. (js/versus.js): fantasma que lleva cada jugador (-1 = Pac-Man) */
     vsGhosts: null,
-    vsScore: 0,        // marcador del que lleva fantasma
-    vsCatches: 0,      // Pac-Man que ha cazado
+    vsScores: null,    // PAC-MAN VS.: marcador de cada cazador, por jugador
 
     /* red */
     netRole: null,     // null | 'host' | 'guest'
@@ -274,6 +277,18 @@
       return false;
     },
 
+    /* Lo que lleva cazado el jugador i. Cada cazador tiene el suyo: en una
+     * partida con dos fantasmas humanos, un marcador común no diría quién ha
+     * hecho qué (ni al nivel de jugador, que reparte experiencia). */
+    vsScoreOf: function (i) {
+      return (this.vsScores && this.vsScores[i]) || 0;
+    },
+
+    addVsScore: function (i, pts) {
+      if (!this.vsScores || !(i >= 0)) return;
+      this.vsScores[i] = (this.vsScores[i] || 0) + pts;
+    },
+
     /* Ficha visible del jugador i: su fantasma si lleva uno y si no su
      * Pac-Man (null si ya no está en juego). La usan el nombre del "¡LISTO!"
      * y los emotes, que antes daban por hecho que todo el mundo lleva pac. */
@@ -332,7 +347,7 @@
      * Pac-Man y ahí no tiene nada que hacer. */
     hudNameFor: function (i) {
       return (this.vsGhostOf(i) >= 0)
-        ? (this.nameFor(i) + ' ' + (this.vsScore || 0))
+        ? (this.nameFor(i) + ' ' + this.vsScoreOf(i))
         : this.nameFor(i);
     },
 
@@ -439,8 +454,7 @@
       /* PAC-MAN VS.: reparto de fantasmas. Va antes de las vidas porque a
        * quien lleva fantasma se le deja el Pac-Man fuera de juego. */
       this.vsGhosts = null;
-      this.vsScore = 0;
-      this.vsCatches = 0;
+      this.vsScores = null;
       if (window.PM.Versus) window.PM.Versus.setup(this, opts.ghosts);
       if (this.livesMode === 'individual') {
         // al que lleva fantasma no se le pintan vidas: no tiene Pac-Man
@@ -1614,7 +1628,7 @@
      * el jugador 1, que es de quien es el navegador. */
     myPoints: function () {
       var yo = this.netRole ? this.localIdx : 0;
-      return (this.vsGhostOf(yo) >= 0) ? (this.vsScore || 0) : this.score;
+      return (this.vsGhostOf(yo) >= 0) ? this.vsScoreOf(yo) : this.score;
     },
 
     awardLevelXp: function (pts) {
@@ -1822,16 +1836,18 @@
       if (this.mazeId || this.seedBase || this.isVersus()) return;
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
-      // el top mundial tiene clasificación individual y de dúo; los grupos de
-      // 3 y 4 se quedan de momento en el historial
-      if (this.playerCount > 2) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
       var self = this;
+      /* Una clasificación por formato: individual, dúo, trío y escuadra.
+       * Van todos los nombres de los que jugaron, que es lo que identifica
+       * al equipo en la tabla. */
       window.PM.Ranking.submit({
         jugadores: this.playerCount,
         modo: this.netRole ? 'online' : 'local',
         nombre1: this.rawName(0),
-        nombre2: (this.playerCount === 2) ? this.rawName(1) : '',
+        nombre2: (this.playerCount >= 2) ? this.rawName(1) : '',
+        nombre3: (this.playerCount >= 3) ? this.rawName(2) : '',
+        nombre4: (this.playerCount >= 4) ? this.rawName(3) : '',
         puntos: this.score,
         nivel: this.level,
         // lo que necesita la Edge Function para saber si la partida cuadra
@@ -2386,7 +2402,7 @@
         dl: this.dotsLeft, de: this.dotsEaten,
         fa: this.fruitActive ? 1 : 0,
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
-        vs: this.vsScore || 0,        // PAC-MAN VS.: marcador del cazador
+        vs: this.vsScores || null,    // PAC-MAN VS.: marcador de cada cazador
         he: this.snapEaten,
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
         /* posiciones de TODOS los jugadores: con 3 y 4 cada uno solo conoce
@@ -2845,7 +2861,7 @@
       this.dotsEaten = s.de;
       this.fruitActive = !!s.fa;
       if (typeof s.tm === 'number') this.timeTicks = s.tm;
-      if (typeof s.vs === 'number') this.vsScore = s.vs;
+      if (esLista(s.vs)) this.vsScores = s.vs.slice();
 
       /* vidas y espectadores */
       if (this.livesMode === 'individual' && s.lv && s.lv.length) {

@@ -109,8 +109,10 @@ abre dos (o hasta cuatro) pestañas con `?red=local` en la URL.
 ### El TOP MUNDIAL
 
 Las clasificaciones usan la tabla `ranking` del mismo proyecto de Supabase,
-**ya creada y en marcha**, con la columna `jugadores` para separar individual
-(1) de dúo (2) y `tiempo1` para el récord de velocidad del primer nivel (en
+**ya creada y en marcha**, con la columna `jugadores` para separar los cuatro
+formatos —individual (1), dúo (2), trío (3) y escuadra (4), cada uno con su
+tabla y sus nombres en `nombre1..nombre4`— y `tiempo1` para el récord de
+velocidad del primer nivel (en
 centésimas de segundo; va a `null` en las partidas que no cuentan para esa
 clasificación). Si alguna vez hay que recrearla o ponerla al día, el script
 está en [`supabase/ranking.sql`](supabase/ranking.sql): **Dashboard → SQL
@@ -299,9 +301,11 @@ JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
   casa de fantasmas y sus energizantes en las cuatro esquinas. Es un modo
   aparte: **el laberinto original no se toca nunca**, así que estas
   partidas no entran en el top mundial (experiencia sí).
-- **Top mundial**: clasificaciones compartidas entre todos —**individual**,
-  **dúo**, **nivel 1** (quién lo despeja en menos tiempo) y **reto de
-  hoy**—, con la mejor marca de cada jugador. Individual y dúo se reparten
+- **Top mundial**: clasificaciones compartidas entre todos —una **por
+  formato** (individual, dúo, trío y escuadra), **nivel 1** (quién lo
+  despeja en menos tiempo) y **reto de hoy**—, con la mejor marca de cada
+  jugador o equipo; en las de equipo entran todos los nombres, y si cambia
+  uno es otro equipo. Las cuatro de puntos se reparten
   por **temporadas** (el mes natural, calculado de la fecha): pestañas
   ESTA TEMPORADA e HISTÓRICO, sin perder nada de lo anterior. Hace falta
   tener nombre puesto (y sin palabrotas) para registrar un récord. La de

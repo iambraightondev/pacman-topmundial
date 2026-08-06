@@ -60,15 +60,17 @@
       return !!(c.SUPABASE_URL && c.SUPABASE_KEY && window.fetch);
     },
 
-    /* Mejor marca de cada jugador/dúo DENTRO de una temporada.
-     * players: 1 individual, 2 dúo. cb(err, filas) con las mismas columnas
-     * que el top de siempre, para que la lista se pinte igual. */
+    /* Mejor marca de cada jugador o equipo DENTRO de una temporada.
+     * players: 1 individual, 2 dúo, 3 trío, 4 escuadra. cb(err, filas) con
+     * las mismas columnas que el top de siempre, para que la lista se pinte
+     * con el mismo código. */
     top: function (temporada, players, cb) {
       var self = this;
+      var R = window.PM.Ranking;
       if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
-      var n = (players === 1) ? 1 : 2;
+      var n = R ? R.jugadores(players) : 1;
       var url = base(CFG.RANKING.VIEW_SEASON) +
-        '?select=nombre1,nombre2,puntos,nivel,modo,creado_en' +
+        '?select=' + (R ? R.COLS : 'nombre1,nombre2,puntos,nivel,modo,creado_en') +
         '&jugadores=eq.' + n +
         '&temporada=eq.' + encodeURIComponent(temporada || this.actual()) +
         '&order=puntos.desc,creado_en.asc' +

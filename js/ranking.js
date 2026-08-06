@@ -1,6 +1,6 @@
 /* ============================================================
  * PAC-MAN TOP MUNDIAL — js/ranking.js
- * Top mundial de partidas de dos jugadores.
+ * Top mundial: una clasificación por formato (1, 2, 3 y 4 jugadores).
  * Define window.PM.Ranking
  *
  * LEER: habla directamente con PostgREST (la API REST de Supabase)
@@ -85,6 +85,31 @@
     lastError: null,
     lastSubmitError: null,     // por qué no entró la última partida enviada
 
+    /* Columnas de una fila de clasificación. Los nombres son cuatro porque
+     * hay una clasificación por formato: individual, dúo, trío y escuadra. */
+    COLS: 'nombre1,nombre2,nombre3,nombre4,puntos,nivel,modo,creado_en',
+
+    /* Clasificación a la que va una partida (1..4) */
+    jugadores: function (players) {
+      var n = Math.floor(players || 1);
+      return (n >= 1 && n <= CFG.MAX_PLAYERS) ? n : 1;
+    },
+
+    /* Nombre de un formato, para los rótulos */
+    formato: function (players) {
+      return ['INDIVIDUAL', 'DÚO', 'TRÍO', 'ESCUADRA'][this.jugadores(players) - 1];
+    },
+
+    /* Los nombres de una fila, en orden y sin los huecos */
+    nombresDe: function (fila) {
+      var out = [];
+      for (var i = 1; i <= CFG.MAX_PLAYERS; i++) {
+        var n = fila['nombre' + i];
+        if (n) out.push(String(n).toUpperCase());
+      }
+      return out;
+    },
+
     /* Centésimas de segundo -> mm:ss.cc */
     fmtTime: function (cs) {
       cs = Math.max(0, Math.floor(cs || 0));
@@ -141,14 +166,14 @@
     },
 
     /* Top de puntuaciones de una clasificación (players: 1 individual,
-     * 2 dúo). cb(err, filas) */
+     * 2 dúo, 3 trío, 4 escuadra). cb(err, filas) */
     top: function (players, cb) {
       var self = this;
       if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
-      var n = (players === 1) ? 1 : 2;
-      // la vista ya trae solo la mejor marca de cada jugador/dúo
+      var n = this.jugadores(players);
+      // la vista ya trae solo la mejor marca de cada jugador o equipo
       var url = base(CFG.RANKING.VIEW) +
-        '?select=nombre1,nombre2,puntos,nivel,modo,creado_en' +
+        '?select=' + this.COLS +
         '&jugadores=eq.' + n +
         '&order=puntos.desc,creado_en.asc' +
         '&limit=' + CFG.RANKING.LIMIT;
@@ -212,16 +237,16 @@
         if (cb) cb('PUNTUACIÓN NO VÁLIDA');
         return;
       }
-      var players = (o.jugadores === 1) ? 1 : 2;
-      var n1 = String(o.nombre1 == null ? '' : o.nombre1).slice(0, CFG.NICK_MAX);
-      var n2 = String(o.nombre2 == null ? '' : o.nombre2).slice(0, CFG.NICK_MAX);
-      if (!n1 || (players === 2 && !n2)) {
-        if (cb) cb('SIN NOMBRE');
-        return;
-      }
-      if (!this.nameAllowed(n1) || (players === 2 && !this.nameAllowed(n2))) {
-        if (cb) cb('NOMBRE NO PERMITIDO');
-        return;
+      /* Hacen falta tantos nombres como jugadores: una escuadra entra con los
+       * cuatro o no entra. Es lo mismo que mira el portero del servidor. */
+      var players = this.jugadores(o.jugadores);
+      var nombres = [];
+      for (var i = 0; i < players; i++) {
+        var n = String(o['nombre' + (i + 1)] == null ? '' : o['nombre' + (i + 1)])
+          .slice(0, CFG.NICK_MAX);
+        if (!n) { if (cb) cb('SIN NOMBRE'); return; }
+        if (!this.nameAllowed(n)) { if (cb) cb('NOMBRE NO PERMITIDO'); return; }
+        nombres.push(n);
       }
       var nivel = Math.max(1, Math.min(999, Math.floor(o.nivel || 1)));
       var ini = Math.max(1, Math.min(nivel, Math.floor(o.nivelInicio || 1)));
@@ -232,8 +257,10 @@
       var row = {
         jugadores: players,
         modo: (o.modo === 'online') ? 'online' : 'local',
-        nombre1: n1,
-        nombre2: (players === 2) ? n2 : null,
+        nombre1: nombres[0],
+        nombre2: (players >= 2) ? nombres[1] : null,
+        nombre3: (players >= 3) ? nombres[2] : null,
+        nombre4: (players >= 4) ? nombres[3] : null,
         puntos: pts,
         nivel: nivel,
         nivelInicio: ini,

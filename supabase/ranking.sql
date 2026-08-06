@@ -8,10 +8,13 @@
 -- públicas (clave anónima) y sin permiso para modificar ni borrar.
 -- Se puede ejecutar tantas veces como haga falta.
 --
--- Hay dos clasificaciones, separadas por la columna `jugadores`:
---   1 = individual   (nombre2 va a NULL)
---   2 = dúo          (los dos nombres)
--- Solo entran partidas con nombre de verdad: sin nombre no hay récord.
+-- Hay cuatro clasificaciones, separadas por la columna `jugadores`:
+--   1 = individual   (solo nombre1)
+--   2 = dúo          (nombre1 y nombre2)
+--   3 = trío         (hasta nombre3)
+--   4 = escuadra     (los cuatro)
+-- Los nombres que sobran van a NULL. Solo entran partidas con nombre de
+-- verdad en TODOS los que jugaron: sin nombre no hay récord.
 --
 -- Aviso: las puntuaciones las envía el navegador, así que se
 -- pueden falsear. Para el uso normal del juego se asume; si algún
@@ -36,22 +39,48 @@ alter table public.ranking alter column jugadores set default 2;
 alter table public.ranking alter column jugadores set not null;
 alter table public.ranking alter column nombre2 drop not null;
 
+-- --- trío y escuadra: dos nombres más ---
+-- Antes solo entraban las partidas de 1 y 2, así que la tabla se quedó con
+-- nombre1 y nombre2 y con el CHECK que lo exigía. Las partidas de 3 y 4
+-- existían en el juego pero no salían del navegador de cada uno.
+alter table public.ranking add column if not exists nombre3 text;
+alter table public.ranking add column if not exists nombre4 text;
+
 do $$
 begin
+  -- el CHECK viejo solo dejaba pasar 1 y 2: fuera y se pone el nuevo
+  if exists (
+    select 1 from pg_constraint
+     where conname = 'ranking_jugadores_chk'
+       and pg_get_constraintdef(oid) not like '%4%'
+  ) then
+    alter table public.ranking drop constraint ranking_jugadores_chk;
+  end if;
   if not exists (
     select 1 from pg_constraint where conname = 'ranking_jugadores_chk'
   ) then
     alter table public.ranking
-      add constraint ranking_jugadores_chk check (jugadores in (1, 2));
+      add constraint ranking_jugadores_chk check (jugadores in (1, 2, 3, 4));
   end if;
-  -- en individual no hay segundo nombre; en dúo es obligatorio
-  if not exists (
+
+  /* Los nombres que hacen falta, y ni uno más: cada partida trae tantos
+   * nombres como jugadores tuvo. El CHECK viejo (que ataba nombre2 a
+   * jugadores = 2) se sustituye por este, que vale para los cuatro. */
+  if exists (
     select 1 from pg_constraint where conname = 'ranking_nombre2_chk'
   ) then
-    alter table public.ranking add constraint ranking_nombre2_chk check (
-      (jugadores = 1 and nombre2 is null) or
-      (jugadores = 2 and nombre2 is not null and
-       char_length(nombre2) between 1 and 12)
+    alter table public.ranking drop constraint ranking_nombre2_chk;
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'ranking_nombres_chk'
+  ) then
+    alter table public.ranking add constraint ranking_nombres_chk check (
+      (jugadores >= 2) = (nombre2 is not null) and
+      (jugadores >= 3) = (nombre3 is not null) and
+      (jugadores >= 4) = (nombre4 is not null) and
+      (nombre2 is null or char_length(nombre2) between 1 and 12) and
+      (nombre3 is null or char_length(nombre3) between 1 and 12) and
+      (nombre4 is null or char_length(nombre4) between 1 and 12)
     );
   end if;
 end $$;
@@ -77,15 +106,6 @@ begin
     alter table public.ranking add constraint ranking_nombre1_chk
       check (char_length(nombre1) between 1 and 12);
   end if;
-  if not exists (
-    select 1 from pg_constraint where conname = 'ranking_nombre2_chk'
-  ) then
-    alter table public.ranking add constraint ranking_nombre2_chk check (
-      (jugadores = 1 and nombre2 is null) or
-      (jugadores = 2 and nombre2 is not null and
-       char_length(nombre2) between 1 and 12)
-    );
-  end if;
 end $$;
 
 -- --- récord de velocidad del primer nivel ---
@@ -109,14 +129,18 @@ comment on column public.ranking.tiempo1 is
   'Centésimas de segundo en completar el nivel 1 (solo individual); null si no cuenta.';
 
 comment on table public.ranking is
-  'Partidas de Pac-Man Top Mundial: jugadores=1 individual, jugadores=2 dúo.';
+  'Partidas de Pac-Man Top Mundial: jugadores=1 individual, 2 dúo, 3 trío, 4 escuadra.';
 
--- Fuera los registros sin nombre real (los que entraron como J1/J2)
+-- Fuera los registros sin nombre real (los que entraron como J1..J4)
 delete from public.ranking
 where btrim(coalesce(nombre1, '')) = ''
-   or upper(btrim(nombre1)) in ('J1', 'J2')
-   or (jugadores = 2 and (btrim(coalesce(nombre2, '')) = ''
-                          or upper(btrim(nombre2)) in ('J1', 'J2')));
+   or upper(btrim(nombre1)) in ('J1', 'J2', 'J3', 'J4')
+   or (jugadores >= 2 and (btrim(coalesce(nombre2, '')) = ''
+                           or upper(btrim(nombre2)) in ('J1', 'J2', 'J3', 'J4')))
+   or (jugadores >= 3 and (btrim(coalesce(nombre3, '')) = ''
+                           or upper(btrim(nombre3)) in ('J1', 'J2', 'J3', 'J4')))
+   or (jugadores >= 4 and (btrim(coalesce(nombre4, '')) = ''
+                           or upper(btrim(nombre4)) in ('J1', 'J2', 'J3', 'J4')));
 
 -- Orden habitual de consulta: por clasificación y mejores puntuaciones
 create index if not exists ranking_top_idx
@@ -143,17 +167,25 @@ create policy "ranking insercion publica"
 -- Sin políticas de update/delete: con RLS activo, quedan prohibidos.
 
 -- ============================================================
--- Mejor marca de cada jugador/dúo
+-- Mejor marca de cada jugador o equipo
 -- Sin esto, quien más juega ocupa toda la tabla con sus repeticiones.
 -- `equipo` normaliza los nombres para agrupar (mayúsculas y sin espacios).
+-- Con trío y escuadra son los que haya: el mismo equipo con la misma gente
+-- se agrupa igual, y basta con que cambie uno para que sea otro equipo.
 -- ============================================================
 create or replace view public.ranking_top as
 select distinct on (jugadores, equipo)
-       jugadores, equipo, nombre1, nombre2, puntos, nivel, modo, creado_en
+       jugadores, equipo, nombre1, nombre2, puntos, nivel, modo, creado_en,
+       -- los dos nombres nuevos van AL FINAL a propósito: create or replace
+       -- view solo deja añadir columnas por el final, y si se colocan en
+       -- medio, volver a lanzar este archivo falla con un 42P16
+       nombre3, nombre4
 from (
   select r.*,
          upper(btrim(r.nombre1)) ||
-           coalesce(' + ' || upper(btrim(r.nombre2)), '') as equipo
+           coalesce(' + ' || upper(btrim(r.nombre2)), '') ||
+           coalesce(' + ' || upper(btrim(r.nombre3)), '') ||
+           coalesce(' + ' || upper(btrim(r.nombre4)), '') as equipo
   from public.ranking r
 ) t
 order by jugadores, equipo, puntos desc, creado_en asc;

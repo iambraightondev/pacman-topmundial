@@ -2582,13 +2582,15 @@
       h.textContent = 'TOP MUNDIAL';
       o.appendChild(h);
 
-      /* clasificaciones separadas: por puntos (individual y dúo), por tiempo
-       * en despejar el nivel 1, el reto del día y tus propias partidas */
+      /* Clasificaciones separadas. Los identificadores 1..4 son EL NÚMERO DE
+       * JUGADORES (una clasificación por formato, como las maestrías); el 5 y
+       * el 6 son las otras dos tablas y el 0 es tu historial de este
+       * navegador, que no toca la red. */
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.rankTabBtns = {};
-      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'NIVEL 1'], [4, 'RETO DE HOY'],
-       [0, 'TUS PARTIDAS']].forEach(function (t) {
+      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'TRÍO'], [4, 'ESCUADRA'],
+       [5, 'NIVEL 1'], [6, 'RETO DE HOY'], [0, 'TUS PARTIDAS']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
         b.classList.add('tab');
         self.rankTabBtns[t[0]] = b;
@@ -2596,9 +2598,10 @@
       });
       o.appendChild(bar);
 
-      /* Segunda fila: la temporada. Solo pinta en INDIVIDUAL y DÚO, que son
-       * las dos clasificaciones que se reparten por meses; el resto no tiene
-       * temporada que valga (el reto es de hoy y el nivel 1 es de siempre). */
+      /* Segunda fila: la temporada. Solo pinta en las clasificaciones por
+       * puntos (1..4), que son las que se reparten por meses; el resto no
+       * tiene temporada que valga (el reto es de hoy y el nivel 1 es de
+       * siempre). */
       this.seasonRow = document.createElement('div');
       this.seasonRow.className = 'tab-row';
       this.seasonBtns = {};
@@ -2638,11 +2641,11 @@
     },
 
     showRankTab: function (players) {
-      this.rankTab = ([0, 2, 3, 4].indexOf(players) !== -1) ? players : 1;
+      this.rankTab = ([0, 2, 3, 4, 5, 6].indexOf(players) !== -1) ? players : 1;
       this.loadRanking();
     },
 
-    /* ESTA TEMPORADA / HISTÓRICO (solo en INDIVIDUAL y DÚO) */
+    /* ESTA TEMPORADA / HISTÓRICO (solo en las clasificaciones por puntos) */
     showSeasonTab: function (name) {
       this.seasonTab = (name === 'historico') ? 'historico' : 'ahora';
       this.loadRanking();
@@ -2654,14 +2657,14 @@
       var S = window.PM.Season;
       var Rt = window.PM.Reto;
       var players = this.rankTab;
-      if ([0, 2, 3, 4].indexOf(players) === -1) players = 1;
+      if ([0, 2, 3, 4, 5, 6].indexOf(players) === -1) players = 1;
       for (var k in this.rankTabBtns) {
         if (this.rankTabBtns.hasOwnProperty(k)) {
           this.rankTabBtns[k].classList.toggle('active', +k === players);
         }
       }
-      /* la fila de temporada solo tiene sentido en las dos de puntos */
-      var porTemporada = (players === 1 || players === 2);
+      /* la fila de temporada solo tiene sentido en las de puntos (1..4) */
+      var porTemporada = (players >= 1 && players <= 4);
       var enTemporada = porTemporada && this.seasonTab === 'ahora' && S;
       if (this.seasonRow) {
         this.seasonRow.style.display = porTemporada ? 'flex' : 'none';
@@ -2672,13 +2675,15 @@
         }
       }
       var temporada = S ? S.nombre(S.actual()) : '';
+      var EQUIPO = { 2: 'DÚO', 3: 'TRÍO', 4: 'ESCUADRA' };
       this.rankSub.textContent =
         players === 0 ? 'TUS ÚLTIMAS PARTIDAS EN ESTE NAVEGADOR' :
-        players === 4 ? ('LA MISMA PARTIDA PARA TODOS · ' +
+        players === 6 ? ('LA MISMA PARTIDA PARA TODOS · ' +
           (Rt ? Rt.fmtFecha(Rt.hoy()) : '')) :
-        players === 3 ? 'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE' :
-        (players === 1 ? 'MEJOR MARCA DE CADA JUGADOR' :
-          'MEJOR MARCA DE CADA DÚO · PUNTUACIÓN DE EQUIPO') +
+        players === 5 ? 'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE' :
+        (players === 1 ? 'MEJOR MARCA DE CADA JUGADOR'
+          : ('MEJOR MARCA DE CADA ' + EQUIPO[players] +
+             ' · PUNTUACIÓN DE EQUIPO')) +
         (enTemporada ? (' · ' + temporada) : ' · DESDE EL PRINCIPIO');
       this.rankList.innerHTML = '';
       this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
@@ -2709,33 +2714,33 @@
           self.rankStatus.classList.add('error');
           self.rankStatus.textContent = err === 'FALTA LA TABLA EN SUPABASE'
             ? ('FALTA LA TABLA: EJECUTA supabase/' +
-               (players === 4 ? 'reto.sql'
+               (players === 6 ? 'reto.sql'
                  : enTemporada ? 'temporadas.sql' : 'ranking.sql') +
                ' EN TU PROYECTO')
             : ('NO SE PUDO CARGAR: ' + err);
-          if (players === 4) self.retoTuMarca();
+          if (players === 6) self.retoTuMarca();
           return;
         }
         self.rankStatus.classList.remove('error');
         if (!rows.length) {
           self.rankStatus.textContent =
-            (players === 4) ? 'AÚN NADIE HA JUGADO EL RETO DE HOY · ¡SÉ EL PRIMERO!' :
-            (players === 3) ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!' :
+            (players === 6) ? 'AÚN NADIE HA JUGADO EL RETO DE HOY · ¡SÉ EL PRIMERO!' :
+            (players === 5) ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!' :
             enTemporada ? 'AÚN NO HAY PARTIDAS ESTA TEMPORADA · ¡SÉ EL PRIMERO!'
                         : 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
-          if (players === 4) self.retoTuMarca();
+          if (players === 6) self.retoTuMarca();
           return;
         }
         self.rankStatus.textContent = '';
-        if (players === 4) { self.renderReto(rows); self.retoTuMarca(rows); }
-        else if (players === 3) self.renderTimes(rows);
+        if (players === 6) { self.renderReto(rows); self.retoTuMarca(rows); }
+        else if (players === 5) self.renderTimes(rows);
         else self.renderRanking(rows);
       }
-      if (players === 4) {
+      if (players === 6) {
         if (!Rt) return;
         Rt.enviarPendiente();          // por si la marca se hizo sin red
         Rt.top(Rt.hoy(), llegaron);
-      } else if (players === 3) R.topTime(llegaron);
+      } else if (players === 5) R.topTime(llegaron);
       else if (enTemporada) S.top(S.actual(), players, llegaron);
       else R.top(players, llegaron);
     },
@@ -2881,15 +2886,16 @@
     },
 
     renderRanking: function (rows) {
+      var R = window.PM.Ranking;
       var mine = String(window.PM.settings.nick1 || '').toUpperCase();
       this.rankList.innerHTML = '';
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
-        var n1 = String(r.nombre1 || '').toUpperCase();
-        var n2 = String(r.nombre2 || '').toUpperCase();
+        // los que jugaron, sean uno o cuatro
+        var nombres = R ? R.nombresDe(r) : [String(r.nombre1 || '').toUpperCase()];
         var row = document.createElement('div');
         row.className = 'rank-row';
-        if (mine && (n1 === mine || n2 === mine)) row.classList.add('mine');
+        if (mine && nombres.indexOf(mine) !== -1) row.classList.add('mine');
 
         var pos = document.createElement('span');
         pos.className = 'rank-pos';
@@ -2898,7 +2904,7 @@
 
         var who = document.createElement('span');
         who.className = 'rank-who';
-        who.textContent = n2 ? (n1 + ' + ' + n2) : n1;
+        who.textContent = nombres.join(' + ');
         row.appendChild(who);
 
         var pts = document.createElement('span');
@@ -3638,18 +3644,28 @@
     versusLines: function () {
       var g = window.PM.Game;
       var V = window.PM.Versus;
-      var cazador = V.ghostName(g);
       var gana = V.winner(g);
-      // las cazas salen de los puntos: así también cuadran en la pantalla del
-      // invitado, al que solo le llega el marcador del cazador
-      var cazas = Math.round((g.vsScore || 0) / CFG.VS.CATCH_POINTS);
-      return [
-        { text: gana === 'ghost' ? ('¡GANA ' + cazador + '!') : '¡GANAN LOS PAC-MAN!',
+      var cazadores = V.hunters(g);
+      /* Con un solo cazador gana él; con varios, el titular se lo lleva el
+       * que más ha cazado, pero abajo salen todos con lo suyo: cada uno
+       * tiene su marcador, así que el final tiene que decir quién hizo qué. */
+      var mejor = V.topHunter(g);
+      var lines = [
+        { text: gana === 'ghost'
+            ? ('¡GANA ' + (mejor ? mejor.name : V.ghostName(g)) + '!')
+            : '¡GANAN LOS PAC-MAN!',
           big: true },
-        'PAC-MAN ' + (g.score || 0) + '  ·  ' + cazador + ' ' + (g.vsScore || 0),
-        cazas === 1 ? '1 PAC-MAN CAZADO' : (cazas + ' PAC-MAN CAZADOS'),
-        'NIVEL ' + g.level + ' · PAC-MAN VS. NO CUENTA PARA EL TOP MUNDIAL'
+        'PAC-MAN ' + (g.score || 0)
       ];
+      for (var i = 0; i < cazadores.length; i++) {
+        var c = cazadores[i];
+        // las cazas salen de los puntos: así también cuadran en la pantalla
+        // del invitado, al que solo le llegan los marcadores
+        lines.push(c.name + ' ' + c.score + '  ·  ' +
+          (c.catches === 1 ? '1 PAC-MAN CAZADO' : (c.catches + ' PAC-MAN CAZADOS')));
+      }
+      lines.push('NIVEL ' + g.level + ' · PAC-MAN VS. NO CUENTA PARA EL TOP MUNDIAL');
+      return lines;
     },
 
     /* Panel de siempre: puntuación, récord y por qué no entra en el top */
@@ -3657,9 +3673,13 @@
       var g = window.PM.Game;
       /* viendo una repetición: el final es el suyo (js/replay.js) */
       if (g.replaying && window.PM.Replay && window.PM.Replay.finPrompt()) return;
-      var duo = (g.playerCount === 2);
       var lines = [{ text: 'PUNTUACIÓN ' + (g.score || 0), big: true }];
-      if (duo) lines.unshift(g.nameFor(0) + '  +  ' + g.nameFor(1));
+      // el equipo, sea de dos, de tres o de cuatro
+      if (g.playerCount > 1) {
+        var equipo = [];
+        for (var q = 0; q < g.playerCount; q++) equipo.push(g.nameFor(q));
+        lines.unshift(equipo.join('  +  '));
+      }
       if (g.reto) lines.unshift('RETO DE HOY');
       lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
       // el reto se cierra con la partida: conviene decir dónde mirarlo
@@ -3672,8 +3692,8 @@
       // por qué esta partida no entra en el top mundial, si es el caso
       if (g.score > 0 && window.PM.Ranking && window.PM.Ranking.configured()) {
         if (g.missingRankingName()) {
-          lines.push(duo
-            ? 'PARA ENTRAR EN EL TOP MUNDIAL, LOS DOS NECESITÁIS NOMBRE'
+          lines.push(g.playerCount > 1
+            ? 'PARA ENTRAR EN EL TOP MUNDIAL, TODOS NECESITÁIS NOMBRE'
             : 'PON TU NOMBRE PARA ENTRAR EN EL TOP MUNDIAL');
         } else if (g.badRankingName()) {
           lines.push('ESE NOMBRE NO ENTRA EN EL TOP MUNDIAL: ELIGE OTRO');
@@ -3685,7 +3705,7 @@
     showGameOverPrompt: function () {
       var self = this;
       var g = window.PM.Game;
-      var duo = (g.playerCount === 2);
+      var duo = (g.playerCount > 1);      // "otra partida" con la misma gente
       var versus = !!(g.isVersus && g.isVersus() && window.PM.Versus);
       var lines = versus ? this.versusLines() : this.classicOverLines();
       this.showPrompt({
@@ -3863,7 +3883,7 @@
           buttons: [
             { label: 'VER CLASIFICACIÓN', primary: true, keys: ['Enter'],
               hint: 'ENTER',
-              onClick: function () { self.hidePrompt(); self.showRanking(4); } },
+              onClick: function () { self.hidePrompt(); self.showRanking(6); } },
             { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
               onClick: function () { self.hidePrompt(); } }
           ]
@@ -3883,7 +3903,7 @@
           { label: 'JUGAR', primary: true, keys: ['Enter'], hint: 'ENTER',
             onClick: function () { self.playReto(); } },
           { label: 'CLASIFICACIÓN', keys: ['c'], hint: 'C',
-            onClick: function () { self.hidePrompt(); self.showRanking(4); } },
+            onClick: function () { self.hidePrompt(); self.showRanking(6); } },
           { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
         ]

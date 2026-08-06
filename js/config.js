@@ -635,7 +635,10 @@
 
   /* ---------- Red (modo online) ---------- */
   CFG.NET = {
-    PROTO: 5,               // versión del protocolo (debe coincidir en ambos)
+    /* Versión del protocolo (debe coincidir en ambos lados). Sube cuando
+     * cambia la forma de lo que viaja: la 6 pasó el marcador de PAC-MAN VS.
+     * de un número suelto a uno por cazador. */
+    PROTO: 6,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

@@ -68,7 +68,13 @@ const MARGEN = 1.1;
  * medio minuto, así que 12 s por nivel no molesta a nadie honrado. Y 1000
  * puntos por segundo está muy por encima del mejor ritmo real (una cadena
  * de 4 fantasmas son 3000 puntos, pero con 4 segundos de congelación por
- * el medio). */
+ * el medio).
+ *
+ * Los dos se reparten entre los que juegan: cuatro bocas despejan el nivel
+ * en la cuarta parte de tiempo y puntúan cuatro veces más rápido. Sin esto,
+ * una escuadra honrada se llevaría un TIEMPO IMPOSIBLE. El techo de PUNTOS
+ * no se toca: las pastillas, los fantasmas y las frutas de un nivel son los
+ * mismos jueguen uno o cuatro. */
 const MIN_MS_POR_NIVEL = 12000;
 const MAX_PUNTOS_POR_S = 1000;
 
@@ -299,14 +305,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return mal('ENVÍO NO VÁLIDO', 400, 'el cuerpo no es JSON');
   }
 
-  /* ---- nombres ---- */
-  const jugadores = entero(datos.jugadores) === 1 ? 1 : 2;
-  const nombre1 = limpiarNombre(datos.nombre1);
-  const nombre2 = limpiarNombre(datos.nombre2);
-  if (!nombre1 || (jugadores === 2 && !nombre2)) return mal('SIN NOMBRE');
-  if (!nombrePermitido(nombre1) || (jugadores === 2 && !nombrePermitido(nombre2))) {
-    return mal('NOMBRE NO PERMITIDO');
+  /* ---- nombres ----
+   * Una clasificación por formato: 1 individual, 2 dúo, 3 trío, 4 escuadra.
+   * Hacen falta tantos nombres como jugadores, todos de verdad. */
+  let jugadores = entero(datos.jugadores);
+  if (!(jugadores >= 1 && jugadores <= 4)) jugadores = 1;
+  const nombres: string[] = [
+    limpiarNombre(datos.nombre1), limpiarNombre(datos.nombre2),
+    limpiarNombre(datos.nombre3), limpiarNombre(datos.nombre4)
+  ];
+  for (let i = 0; i < jugadores; i++) {
+    if (!nombres[i]) return mal('SIN NOMBRE');
+    if (!nombrePermitido(nombres[i])) return mal('NOMBRE NO PERMITIDO');
   }
+  const nombre1 = nombres[0];
 
   /* ---- lo básico de la partida ---- */
   const puntos = entero(datos.puntos);
@@ -366,16 +378,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       'los ' + puntos + ' puntos no dan para ' + fantasmas + ' fantasmas');
   }
 
+  /* Los suelos de tiempo se reparten entre los que juegan: con cuatro bocas
+   * el nivel se despeja en la cuarta parte y se puntúa cuatro veces más
+   * rápido. Si no, una escuadra jugada de verdad se caería aquí. */
+  const msPorNivel = MIN_MS_POR_NIVEL / jugadores;
+  const puntosPorS = MAX_PUNTOS_POR_S * jugadores;
   const tiempoMs = entero(datos.tiempoMs);
   if (!(tiempoMs > 0)) return mal('FALTA EL TIEMPO JUGADO');
-  if (tiempoMs < (niveles - 1) * MIN_MS_POR_NIVEL) {
+  if (tiempoMs < (niveles - 1) * msPorNivel) {
     return mal('TIEMPO IMPOSIBLE', 400,
-      tiempoMs + ' ms para ' + (niveles - 1) + ' niveles despejados');
+      tiempoMs + ' ms para ' + (niveles - 1) + ' niveles despejados entre ' +
+      jugadores);
   }
-  if (puntos > (tiempoMs / 1000) * MAX_PUNTOS_POR_S) {
+  if (puntos > (tiempoMs / 1000) * puntosPorS) {
     return mal('TIEMPO IMPOSIBLE', 400,
       puntos + ' puntos en ' + tiempoMs + ' ms: pasa de ' +
-      MAX_PUNTOS_POR_S + ' puntos por segundo');
+      puntosPorS + ' puntos por segundo entre ' + jugadores);
   }
 
   /* ---- récord de velocidad del nivel 1 (opcional) ---- */
@@ -449,15 +467,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   /* ---- a la tabla ---- */
+  /* Los nombres que sobran van a NULL, que es lo que pide el CHECK. Las
+   * columnas de trío y escuadra solo se mandan si hacen falta: así una
+   * partida de 1 o 2 sigue entrando en un proyecto al que todavía no se le
+   * haya aplicado la puesta al día de supabase/ranking.sql. */
   const fila: Record<string, unknown> = {
     jugadores: jugadores,
     modo: modo,
     nombre1: nombre1,
-    nombre2: (jugadores === 2) ? nombre2 : null,
+    nombre2: (jugadores >= 2) ? nombres[1] : null,
     puntos: puntos,
     nivel: nivel,
     verificado: verificado
   };
+  if (jugadores >= 3) fila.nombre3 = nombres[2];
+  if (jugadores >= 4) fila.nombre4 = nombres[3];
   if (tiempo1 != null) fila.tiempo1 = tiempo1;
   if (repeticion != null) fila.repeticion = repeticion;
 

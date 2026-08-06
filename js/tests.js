@@ -914,21 +914,86 @@
     eq(S.nombre('2026-12'), 'DICIEMBRE 2026');
   });
 
-  test('el panel del top mundial tiene reto y temporadas', function () {
-    var U = window.PM.UI;
-    ok(U.rankTabBtns[4], 'está la pestaña del reto');
-    ok(U.seasonBtns.ahora && U.seasonBtns.historico, 'y las dos de temporada');
-    U.showRankTab(1);
-    eq(U.seasonRow.style.display, 'flex', 'en INDIVIDUAL se elige temporada');
-    U.showRankTab(0);
-    eq(U.seasonRow.style.display, 'none', 'en TUS PARTIDAS no hay temporada');
-    U.showRankTab(4);
-    eq(U.seasonRow.style.display, 'none', 'ni en el reto, que es el de hoy');
-    U.showRankTab(1);
-    U.showSeasonTab('historico');
-    eq(U.seasonTab, 'historico');
-    U.showSeasonTab('ahora');
-  });
+  test('el panel del top mundial tiene una pestaña por formato, reto y temporadas',
+    function () {
+      var U = window.PM.UI;
+      /* 1..4 son EL NÚMERO DE JUGADORES (una clasificación por formato),
+       * el 5 es el nivel 1, el 6 el reto y el 0 tus partidas */
+      ok(U.rankTabBtns[3] && U.rankTabBtns[4], 'están trío y escuadra');
+      ok(U.rankTabBtns[6], 'está la pestaña del reto');
+      ok(U.seasonBtns.ahora && U.seasonBtns.historico, 'y las dos de temporada');
+      U.showRankTab(1);
+      eq(U.seasonRow.style.display, 'flex', 'en INDIVIDUAL se elige temporada');
+      U.showRankTab(4);
+      eq(U.seasonRow.style.display, 'flex', 'en ESCUADRA también');
+      U.showRankTab(0);
+      eq(U.seasonRow.style.display, 'none', 'en TUS PARTIDAS no hay temporada');
+      U.showRankTab(6);
+      eq(U.seasonRow.style.display, 'none', 'ni en el reto, que es el de hoy');
+      U.showRankTab(5);
+      eq(U.seasonRow.style.display, 'none', 'ni en el nivel 1, que es de siempre');
+      U.showRankTab(1);
+      U.showSeasonTab('historico');
+      eq(U.seasonTab, 'historico');
+      U.showSeasonTab('ahora');
+    });
+
+  /* Las partidas de 3 y 4 se jugaban pero no salían del navegador: el envío
+   * las cortaba y la tabla solo admitía 1 y 2. Ahora cada formato tiene su
+   * clasificación, como sus récords y sus maestrías. */
+  test('trío y escuadra entran en el top mundial, con todos sus nombres',
+    function () {
+      var R = window.PM.Ranking;
+      var enviado = null, orig = R.submit;
+      var nicks = [window.PM.settings.nick1, window.PM.settings.nick2];
+      try {
+        R.submit = function (o) { enviado = o; };
+        window.PM.settings.nick1 = 'ANA';
+        window.PM.settings.nick2 = 'BEA';
+        G.newGame({ players: 4, names: ['ANA', 'BEA', 'CARLOS', 'DANI'] });
+        G.state = 'PLAYING';
+        G.score = 40000;
+        G.level = 7;
+        G.submitRanking();
+        ok(enviado, 'la escuadra se manda');
+        eq(enviado.jugadores, 4);
+        eq(enviado.nombre1 + ',' + enviado.nombre2 + ',' +
+           enviado.nombre3 + ',' + enviado.nombre4, 'ANA,BEA,CARLOS,DANI');
+
+        enviado = null;
+        G.newGame({ players: 3, names: ['ANA', 'BEA', 'CARLOS'] });
+        G.state = 'PLAYING';
+        G.score = 12000;
+        G.submitRanking();
+        eq(enviado.jugadores, 3);
+        eq(enviado.nombre4, '', 'el cuarto no existe en un trío');
+
+        // y si a uno le falta el nombre, no entra: es lo de siempre
+        enviado = null;
+        G.newGame({ players: 3, names: ['ANA', 'BEA', ''] });
+        G.state = 'PLAYING';
+        G.score = 12000;
+        G.submitRanking();
+        eq(enviado, null, 'sin todos los nombres no hay récord');
+      } finally {
+        R.submit = orig;
+        window.PM.settings.nick1 = nicks[0];
+        window.PM.settings.nick2 = nicks[1];
+        G.toMenu();
+      }
+    });
+
+  test('cada formato pide su propia clasificación y sabe cómo se llama',
+    function () {
+      var R = window.PM.Ranking;
+      eq(R.jugadores(3), 3);
+      eq(R.jugadores(9), 1, 'lo que no es un formato cae en individual');
+      eq(R.formato(1), 'INDIVIDUAL');
+      eq(R.formato(4), 'ESCUADRA');
+      eq(R.nombresDe({ nombre1: 'ana', nombre2: 'BEA', nombre3: null }).join('+'),
+         'ANA+BEA', 'los nombres que haya, en orden y en mayúsculas');
+      ok(R.COLS.indexOf('nombre4') !== -1, 'se piden los cuatro nombres');
+    });
 
   // ---------------------------------------------------------------
   // Historial local
@@ -1800,9 +1865,43 @@
     G.pellets[5][5] = null;
     var antes = G.score;
     G.step();
-    eq(G.vsScore, CFG.VS.CATCH_POINTS, 'el cazador cobra');
-    eq(G.vsCatches, 1);
+    eq(G.vsScoreOf(1), CFG.VS.CATCH_POINTS, 'cobra el que caza, en su marcador');
+    eq(V.catches(G, 1), 1);
     eq(G.score, antes, 'el marcador del equipo no se toca');
+    G.toMenu();
+  });
+
+  /* El reparto permite que más de uno lleve fantasma (solo exige que quede
+   * algún Pac-Man). Con un marcador común, dos cazadores no sabrían quién ha
+   * hecho qué, y el nivel de jugador les daría lo mismo a los dos. */
+  test('con dos cazadores, cada uno tiene su propio marcador', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 4, ghosts: [-1, -1, 0, 1],
+                names: ['UNO', 'DOS', 'TRES', 'CUATRO'] });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    eq(G.vsGhostOf(2), 0, 'el J3 lleva a Blinky');
+    eq(G.vsGhostOf(3), 1, 'y el J4 a Pinky');
+
+    V.onCatch(G, 0, 0);                  // Blinky (J3) caza al J1
+    V.onCatch(G, 1, 0);                  // y también al J2
+    V.onCatch(G, 0, 1);                  // Pinky (J4) caza una vez
+    eq(G.vsScoreOf(2), CFG.VS.CATCH_POINTS * 2, 'el J3 cobra sus dos cazas');
+    eq(G.vsScoreOf(3), CFG.VS.CATCH_POINTS, 'el J4 solo la suya');
+    eq(V.catches(G, 2), 2);
+    eq(V.catches(G, 3), 1);
+
+    var lista = V.hunters(G);
+    eq(lista.length, 2, 'los dos salen en el resumen');
+    eq(lista[0].name, 'TRES');
+    eq(V.topHunter(G).name, 'TRES', 'el titular es del que más caza');
+
+    // y cada uno se lleva SU experiencia, no la del otro
+    G.localIdx = 3; G.netRole = 'guest';
+    eq(G.myPoints(), CFG.VS.CATCH_POINTS, 'lo mío es lo que he cazado yo');
+    G.localIdx = 2;
+    eq(G.myPoints(), CFG.VS.CATCH_POINTS * 2);
+    G.netRole = null; G.localIdx = 0;
     G.toMenu();
   });
 
@@ -1850,7 +1949,7 @@
         versus(2, 0, 1, 'host');
         G.localIdx = 1;                    // aquí el cazador soy yo
         G.score = 7000;
-        G.vsScore = 2500;
+        G.vsScores[1] = 2500;
         G.highScore = 50000;
         G.highScore2 = 0;
         G.persistHighScore();
