@@ -97,8 +97,170 @@
     return out;
   }
 
+  /* ============================================================
+   * FORMATO DE RED (v2) — repeticiones de partidas online
+   *
+   * Una repetición local son las TECLAS: el juego es determinista y con eso
+   * se reconstruye la partida entera en unos cientos de bytes. Online eso no
+   * vale: el anfitrión simula, los invitados le mandan POSICIONES, y repetir
+   * las teclas de nadie reconstruye nada.
+   *
+   * Lo que sí hay online es un flujo que ya lo cuenta todo: las instantáneas
+   * y los eventos que el anfitrión reparte doce veces por segundo. Se graban
+   * tal cual, y al verlas el juego se pone de ESPECTADOR de un archivo en vez
+   * de una sala. Reproducir es entonces el mismo camino que mirar la partida
+   * de un amigo, que ya estaba hecho y probado.
+   *
+   * El peso es el único problema: en JSON son ~470 KB por minuto. Cada
+   * instantánea se aplana a una lista de números en orden fijo (sin claves) y
+   * se guarda la DIFERENCIA con la anterior en base 36, con los ceros
+   * agrupados; casi todo lo que hay en una instantánea no cambia de una a la
+   * siguiente. Eso lo deja en ~12 KB por minuto, y se graba 1 de cada
+   * CFG.REPLAY_NET_EVERY (6 Hz): entre instantánea e instantánea, el
+   * espectador ya avanza por estima, igual que en una partida de verdad.
+   * ============================================================ */
+
+  /* Los textos que viajan en una instantánea, como índices */
+  var ESTADOS = ['MENU', 'READY', 'PLAYING', 'DYING', 'LEVEL_DONE', 'GAME_OVER'];
+  var MODOS_G = ['house', 'leaving', 'normal', 'eyes', 'entering'];
+
+  function idx(lista, v, porDefecto) {
+    var i = lista.indexOf(v);
+    return (i === -1) ? porDefecto : i;
+  }
+
+  /* Instantánea -> lista de números. El ORDEN ES EL CONTRATO: si algún día se
+   * añade un campo, va AL FINAL y sube CFG.REPLAY_NET_V. n = jugadores. */
+  function aplanaSnap(s, n) {
+    var v = [
+      idx(ESTADOS, s.st, 2), s.pz ? 1 : 0, s.ph | 0, s.dph | 0, s.lph | 0,
+      s.dp | 0, s.rt | 0, s.lvl | 0, s.sc | 0, s.hs | 0,
+      (s.gm === 'chase') ? 1 : 0, s.el | 0, s.ft | 0, s.ffl | 0, s.ch | 0,
+      s.fz | 0, (s.hg == null ? -1 : s.hg | 0), s.ei | 0, s.dl | 0, s.de | 0,
+      s.fa ? 1 : 0, s.tm | 0
+    ];
+    var i;
+    // vidas: un fondo común o una tira por jugador (siempre n huecos)
+    var lv = esLista(s.lv) ? s.lv : null;
+    v.push(lv ? 1 : 0);
+    for (i = 0; i < n; i++) v.push(lv ? (lv[i] | 0) : (s.lv | 0));
+    // jugadores: posición (x10, como llegan redondeadas), rumbo y siguiente
+    for (i = 0; i < n; i++) {
+      var p = (s.ps && s.ps[i]) || { x: 0, y: 0, d: 0, nd: -1 };
+      v.push(Math.round(p.x * 10), Math.round(p.y * 10), p.d | 0, p.nd | 0);
+    }
+    // fantasmas: siempre cuatro
+    for (i = 0; i < 4; i++) {
+      var g = (s.g && s.g[i]) || { x: 0, y: 0, d: 0, m: 'normal', f: 0, lp: 0 };
+      v.push(Math.round(g.x * 10), Math.round(g.y * 10), g.d | 0,
+             idx(MODOS_G, g.m, 2), g.f ? 1 : 0, g.lp | 0);
+    }
+    // fuera de juego, muerte en curso y marcador de cazador, por jugador
+    for (i = 0; i < n; i++) v.push((s.out && s.out[i]) ? 1 : 0);
+    for (i = 0; i < n; i++) {
+      var pd = s.pd && s.pd[i];
+      v.push(esLista(pd) ? (pd[0] | 0) : 0, esLista(pd) ? Math.round(pd[1]) : -1);
+    }
+    for (i = 0; i < n; i++) v.push((s.vs && s.vs[i]) | 0);
+    return v;
+  }
+
+  /* Y la vuelta: lista de números -> instantánea como la espera applySnapshot */
+  function montaSnap(v, n) {
+    var k = 0, i;
+    function num() { return v[k++] | 0; }
+    var s = {
+      st: ESTADOS[num()] || 'PLAYING', pz: num(), ph: num(), dph: num(),
+      lph: num(), dp: num(), rt: num(), lvl: num(), sc: num(), hs: num(),
+      gm: num() ? 'chase' : 'scatter', el: num(), ft: num(), ffl: num(),
+      ch: num(), fz: num(), hg: num(), ei: num(), dl: num(), de: num(),
+      fa: num(), tm: num()
+    };
+    var porJugador = num();
+    var vidas = [];
+    for (i = 0; i < n; i++) vidas.push(num());
+    s.lv = porJugador ? vidas : vidas[0];
+    s.ps = [];
+    for (i = 0; i < n; i++) {
+      s.ps.push({ x: num() / 10, y: num() / 10, d: num(), nd: num() });
+    }
+    s.p0 = s.ps[0];
+    s.g = [];
+    for (i = 0; i < 4; i++) {
+      s.g.push({ x: num() / 10, y: num() / 10, d: num(),
+                 m: MODOS_G[num()] || 'normal', f: num(), lp: num() });
+    }
+    s.out = [];
+    for (i = 0; i < n; i++) s.out.push(num());
+    s.pd = [];
+    for (i = 0; i < n; i++) {
+      var fase = num(), ticks = num();
+      s.pd.push(ticks < 0 ? 0 : [fase, ticks]);
+    }
+    s.vs = [];
+    for (i = 0; i < n; i++) s.vs.push(num());
+    return s;
+  }
+
+  /* Números con signo en base 36 */
+  function n36(n) {
+    return (n < 0 ? '-' : '') + Math.abs(n).toString(36);
+  }
+  function d36s(t) {
+    var neg = t.charAt(0) === '-';
+    var n = parseInt(neg ? t.slice(1) : t, 36);
+    return isFinite(n) ? (neg ? -n : n) : 0;
+  }
+
+  /* Una lista de números como diferencia con la anterior. Los ceros seguidos
+   * (que son la mayoría: casi nada cambia de una instantánea a la siguiente)
+   * se resumen en '*' o '*<n>'.
+   *
+   * La marca de los ceros NO puede ser una letra: en base 36 un número puede
+   * empezar por cualquiera de ellas —'z' es 35 y 'z0' es 1260—, así que una
+   * marca de letra se confunde con un valor. Por eso '*', que es lo que ya
+   * usa el formato de las repeticiones locales para lo mismo. */
+  function codVector(v, previa) {
+    var trozos = [], ceros = 0;
+    for (var i = 0; i < v.length; i++) {
+      var d = previa ? (v[i] - previa[i]) : v[i];
+      if (d === 0) { ceros++; continue; }
+      if (ceros) { trozos.push(ceros > 1 ? ('*' + n36(ceros)) : '*'); ceros = 0; }
+      trozos.push(n36(d));
+    }
+    if (ceros) trozos.push(ceros > 1 ? ('*' + n36(ceros)) : '*');
+    return trozos.join(',');
+  }
+
+  function decVector(texto, previa, largo) {
+    var v = [], partes = texto ? texto.split(',') : [];
+    for (var i = 0; i < partes.length; i++) {
+      var p = partes[i];
+      if (p.charAt(0) === '*') {
+        var veces = (p.length > 1) ? d36s(p.slice(1)) : 1;
+        if (!(veces >= 1) || v.length + veces > largo) return null;
+        for (var j = 0; j < veces; j++) v.push(previa ? previa[v.length] : 0);
+      } else {
+        if (v.length >= largo) return null;
+        v.push((previa ? previa[v.length] : 0) + d36s(p));
+      }
+    }
+    return (v.length === largo) ? v : null;
+  }
+
   var Replay = {
     V: 1,
+    V_RED: 2,
+
+    /* Las tripas del formato de red, para poder probarlas sueltas: es la
+     * pieza con más riesgo (un campo mal puesto se ve como una repetición
+     * torcida, no como un error), así que las pruebas la atacan directamente
+     * con instantánea -> texto -> instantánea. */
+    _codec: {
+      aplana: aplanaSnap, monta: montaSnap,
+      cod: codVector, dec: decVector,
+      largo: function (n) { return aplanaSnap({ ps: [], g: [] }, n).length; }
+    },
 
     /* estado interno */
     modo: null,          // null | 'grabar' | 'ver'
@@ -245,10 +407,27 @@
     alEmpezar: function (opts) {
       this.t = 0;
       this.cursor = 0;
+      this.cursorEv = 0;
       G.timeScale = 1;
 
       // sin repetición cargada no hay nada que ver: es una partida normal
-      if (this.modo === 'ver' && !this.rep) this.modo = null;
+      if ((this.modo === 'ver' || this.modo === 'verRed') && !this.rep) {
+        this.modo = null;
+      }
+
+      /* Repetición de una partida ONLINE: el juego se pone de espectador y
+       * los cuadros se los da inyectarRed(). Cuenta lo mismo que ver una
+       * local: nada (ni experiencia, ni logros, ni récord). */
+      if (this.modo === 'verRed') {
+        G.replaying = true;
+        G.xpSent = true;
+        G.rankingSent = true;
+        G.timeSent = true;
+        this.redFin = false;
+        G.closeShowcase();
+        this.mostrarBarra(true);
+        return;
+      }
 
       if (this.modo === 'ver') {
         G.replaying = true;
@@ -267,9 +446,10 @@
       this.mostrarBarra(false);
       this.grabando = null;
       this.modo = null;
-      /* Online no se graba: allí la partida la simula el anfitrión y lo que
-       * ve cada uno depende de lo que llegue por la red, así que repetir las
-       * teclas en local no reconstruiría la misma partida. */
+      /* Online se graba de otra manera: no las teclas (que allí no
+       * reconstruyen nada, porque la partida la simula el anfitrión con lo
+       * que le llega por la red), sino lo que el anfitrión ya emite. */
+      this.redEmpezar();
       if (!G || G.netRole || G.isSpec()) return;
       if (!(G.playerCount === 1 || G.playerCount === 2)) return;
 
@@ -326,12 +506,19 @@
     /* Un paso del juego (Game.step). Mete los giros que tocan y adelanta el
      * reloj de la repetición. */
     paso: function () {
-      if (!this.modo) return;
-      if (this.modo === 'ver' && G.state === 'MENU') {   // se ha salido
+      if (!this.modo && !this.red) return;
+      if ((this.modo === 'ver' || this.modo === 'verRed') &&
+          G.state === 'MENU') {                          // se ha salido
         this.salir(true);
         return;
       }
       if (G.paused || G.netNotice) return;               // el tiempo no corre
+      /* Las de red llevan reloj de PARED: se graban y se ven instantáneas que
+       * el anfitrión emite todo el rato, también durante el "¡LISTO!". Las
+       * locales solo cuentan mientras la partida avanza de verdad, porque el
+       * rótulo de inicio dura lo que dure la melodía y puede cambiar. */
+      if (this.modo === 'verRed') { this.t++; this.inyectarRed(); return; }
+      if (this.red) { this.t++; return; }
       if (this.modo === 'ver') this.inyectar();
       var s = G.state;
       if (s === 'PLAYING' || s === 'DYING' || s === 'LEVEL_DONE') this.t++;
@@ -352,10 +539,11 @@
      * guarda. Pasa igual si se acaba en GAME OVER, si te rindes, si
      * reinicias o si te sales al menú a medias. */
     alAcabar: function () {
+      var deRed = this.redAcabar();      // partidas online, si las había
       var rep = this.grabando;
       this.grabando = null;
       this.modo = null;
-      if (!rep) return null;
+      if (!rep) return deRed;
       rep.final = {
         puntos: G.score,
         nivel: G.level,
@@ -368,6 +556,309 @@
 
     /* La repetición que se está grabando ahora mismo (o null) */
     enCurso: function () { return this.grabando; },
+
+    /* =========================================================
+     * PARTIDAS ONLINE — grabar lo que emite el anfitrión
+     * game.js llama a redCuadro() y redEvento(); lo demás vive aquí.
+     * ========================================================= */
+    /* ¿Esta partida se está grabando como repetición de red? */
+    grabandoRed: function () { return !!this.red; },
+
+    redEmpezar: function () {
+      this.red = null;
+      this.redPend = [];
+      this.redSalto = 0;
+      this.redNivelPm = -1;
+      /* Solo el anfitrión: es el único que tiene la partida entera. El
+       * invitado ve lo que le llega, y un mirón ni eso. */
+      if (!G || G.netRole !== 'host') return;
+      var s = G.settings();
+      var nombres = [], colores = [], skins = [], i;
+      for (i = 0; i < G.playerCount; i++) {
+        nombres.push(G.rawName(i));
+        colores.push(G.colorFor(i));
+        skins.push(G.skinFor(i));
+      }
+      var ajustes = {
+        velFantasmas: G.ghostSpeedMult,
+        velPac: G.pacSpeedMult,
+        powerS: G.frightMult,
+        vidas: s.startLives
+      };
+      if (G.livesMode === 'individual') ajustes.vidasModo = 'individual';
+      this.red = {
+        v: this.V_RED,
+        jugadores: G.playerCount,
+        nivel: G.level,
+        maze: G.mazeId || null,
+        ajustes: ajustes,
+        nombres: nombres,
+        colores: colores,
+        skins: skins,
+        ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
+        fecha: new Date().toISOString(),
+        pm: null,              // mapa de pastillas del arranque
+        cuadros: [],           // [tick, vector]
+        eventos: [],           // [tick, evento]
+        final: null
+      };
+    },
+
+    /* Cada instantánea del anfitrión pasa por aquí. Se guarda 1 de cada
+     * CFG.REPLAY_NET_EVERY, pero las pastillas comidas de las que se saltan
+     * NO se pierden: se acumulan y viajan con la siguiente que sí se guarda.
+     * Si no, al verla quedarían puntos en el laberinto que ya nadie se come. */
+    redCuadro: function (s) {
+      if (!this.red || !s) return;
+      var i;
+      if (esLista(s.he)) {
+        for (i = 0; i < s.he.length; i++) this.redPend.push(s.he[i]);
+      }
+      // el mapa completo de pastillas, una vez por nivel: con eso y las
+      // comidas de cada cuadro, el laberinto de la repetición cuadra siempre
+      if (s.pm && this.redNivelPm !== s.lvl) {
+        this.redNivelPm = s.lvl;
+        if (!this.red.pm) this.red.pm = { lvl: s.lvl, hex: s.pm };
+        else this.red.eventos.push([this.t, { t: 'pm', lvl: s.lvl, hex: s.pm }]);
+      }
+      if (++this.redSalto < CFG.REPLAY_NET_EVERY) return;
+      this.redSalto = 0;
+      var copia = aplanaSnap(s, this.red.jugadores);
+      this.red.cuadros.push([this.t, copia, this.redPend]);
+      this.redPend = [];
+      // una partida normal no llega; si alguien la deja corriendo un día
+      // entero, se deja de grabar antes que reventar el almacenamiento
+      if (this.red.cuadros.length > 60000) this.red = null;
+    },
+
+    /* Los eventos del anfitrión (muertes, frutas, subir de nivel, emotes...) */
+    redEvento: function (o) {
+      if (!this.red || !o) return;
+      this.red.eventos.push([this.t, o]);
+      if (this.red.eventos.length > 20000) this.red = null;
+    },
+
+    /* Fin de la partida: se cierra y se guarda en su propio almacén */
+    redAcabar: function () {
+      var rep = this.red;
+      this.red = null;
+      if (!rep || !rep.cuadros.length) return null;
+      rep.final = {
+        puntos: G.score,
+        nivel: G.level,
+        tiempoMs: Math.round(G.timeTicks * 1000 / 60)
+      };
+      if (!(rep.final.puntos > 0)) return null;
+      return this.guardarRed(rep);
+    },
+
+    /* ---------- formato de texto ---------- */
+    serializarRed: function (rep) {
+      if (!rep || !rep.cuadros || !rep.cuadros.length) return null;
+      var cab = {
+        v: this.V_RED, j: rep.jugadores, nv: rep.nivel, mz: rep.maze || null,
+        aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
+        gh: rep.ghosts || null, fe: rep.fecha, pm: rep.pm || null,
+        fin: rep.final
+      };
+      var previa = null, filas = [];
+      for (var i = 0; i < rep.cuadros.length; i++) {
+        var c = rep.cuadros[i];
+        var comidas = c[2] && c[2].length ? c[2].map(b36).join('.') : '';
+        filas.push(c[0] + '|' + codVector(c[1], previa) + '|' + comidas);
+        previa = c[1];
+      }
+      var evs = [];
+      for (i = 0; i < rep.eventos.length; i++) {
+        evs.push(rep.eventos[i][0] + '|' + JSON.stringify(rep.eventos[i][1]));
+      }
+      return JSON.stringify(cab) + '\n' + filas.join(';') + '\n' + evs.join(';');
+    },
+
+    leerRed: function (texto) {
+      try {
+        var partes = String(texto || '').split('\n');
+        if (partes.length < 3) return null;
+        var cab = JSON.parse(partes[0]);
+        if (!cab || cab.v !== this.V_RED) return null;
+        var n = parseInt(cab.j, 10);
+        if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) return null;
+        var largo = aplanaSnap({ ps: [], g: [] }, n).length;
+        var cuadros = [], previa = null;
+        var filas = partes[1] ? partes[1].split(';') : [];
+        for (var i = 0; i < filas.length; i++) {
+          var trozos = filas[i].split('|');
+          var v = decVector(trozos[1], previa, largo);
+          if (!v) return null;
+          var comidas = trozos[2] ? trozos[2].split('.').map(d36) : [];
+          cuadros.push([parseInt(trozos[0], 10) || 0, v, comidas]);
+          previa = v;
+        }
+        if (!cuadros.length) return null;
+        var eventos = [];
+        var evs = partes[2] ? partes[2].split(';') : [];
+        for (i = 0; i < evs.length; i++) {
+          if (!evs[i]) continue;
+          var corte = evs[i].indexOf('|');
+          if (corte < 0) continue;
+          eventos.push([parseInt(evs[i].slice(0, corte), 10) || 0,
+                        JSON.parse(evs[i].slice(corte + 1))]);
+        }
+        return {
+          v: cab.v, jugadores: n, nivel: cab.nv || 1, maze: cab.mz || null,
+          ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
+          skins: cab.sk || [], ghosts: cab.gh || null, fecha: cab.fe || '',
+          pm: cab.pm || null, cuadros: cuadros, eventos: eventos,
+          final: cab.fin || null
+        };
+      } catch (e) { return null; }
+    },
+
+    /* ---------- almacén propio ----------
+     * Aparte de las locales: pesan mucho más (kilobytes por minuto, no por
+     * partida) y no caben en un enlace, así que ni compiten por el hueco ni
+     * se podan con las mismas reglas. */
+    guardadasRed: function () {
+      try {
+        var raw = localStorage.getItem(CFG.REPLAY_NET_KEY);
+        var arr = raw ? JSON.parse(raw) : [];
+        return esLista(arr) ? arr : [];
+      } catch (e) { return []; }
+    },
+
+    guardarRed: function (rep) {
+      var texto = this.serializarRed(rep);
+      if (!texto || texto.length > CFG.REPLAY_NET_MAX_CHARS) return null;
+      var lista = this.guardadasRed();
+      var ahora = Date.now();
+      /* La ficha lleva TUS puntos, no los del equipo: es con lo que la busca
+       * el historial (js/history.js guarda myPoints), y en PAC-MAN VS. el
+       * cazador tiene los suyos. La repetición sí guarda el marcador entero. */
+      var mios = G.myPoints ? G.myPoints() : rep.final.puntos;
+      var reg = {
+        id: 'r' + ahora + '-' + b36(mios),
+        t: ahora, j: rep.jugadores, p: mios,
+        lv: rep.final.nivel, red: 1, s: texto
+      };
+      lista.unshift(reg);
+      var total = function (l) {
+        var n = 0;
+        for (var i = 0; i < l.length; i++) n += (l[i].s || '').length;
+        return n;
+      };
+      while (lista.length > 1 &&
+             (lista.length > CFG.REPLAY_NET_MAX ||
+              total(lista) > CFG.REPLAY_NET_TOTAL_CHARS)) {
+        lista.pop();
+      }
+      for (var intento = 0; intento < 4; intento++) {
+        try {
+          localStorage.setItem(CFG.REPLAY_NET_KEY, JSON.stringify(lista));
+          return reg;
+        } catch (e) {
+          if (lista.length <= 1) return null;
+          lista.pop();
+        }
+      }
+      return null;
+    },
+
+    porIdRed: function (id) {
+      var lista = this.guardadasRed();
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === id) return lista[i];
+      }
+      return null;
+    },
+
+    /* ¿Esta fila del historial es una partida online con repetición? Se
+     * cruzan igual que las locales: por puntuación, jugadores y hora. */
+    paraPartidaRed: function (h) {
+      if (!h) return null;
+      var lista = this.guardadasRed();
+      for (var i = 0; i < lista.length; i++) {
+        var r = lista[i];
+        if (r.p === h.p && r.j === h.j && Math.abs(r.t - h.t) < 15000) return r;
+      }
+      return null;
+    },
+
+    /* ---------- reproducción ----------
+     * Ver una repetición de red es ser ESPECTADOR de un archivo: el juego se
+     * pone en modo mirón (que ya sabe avanzar por estima entre instantánea e
+     * instantánea) y aquí se le van dando los cuadros y los eventos grabados
+     * cuando les toca por reloj. */
+    verRed: function (rep) {
+      if (!rep || !rep.cuadros || !rep.cuadros.length) return false;
+      var UI = window.PM.UI;
+      if (G.inGame()) G.toMenu();
+      this.modo = 'verRed';
+      this.rep = rep;
+      this.cursor = 0;
+      this.cursorEv = 0;
+      this.t = 0;
+      if (UI) {
+        if (UI.resumeAudio) UI.resumeAudio();
+        UI.hideAll();
+      }
+      G.newGame({
+        players: rep.jugadores,
+        net: 'spec',
+        localIdx: -1,
+        cfg: this.cfgDe({ ajustes: rep.ajustes, nivel: rep.nivel }),
+        names: rep.nombres.slice(),
+        colors: rep.colores.slice(),
+        skins: rep.skins.slice(),
+        ghosts: rep.ghosts ? rep.ghosts.slice() : null,
+        maze: rep.maze || null
+      });
+      if (rep.pm && rep.pm.hex && G.applyPelletHex) G.applyPelletHex(rep.pm.hex);
+      return true;
+    },
+
+    verRedGuardada: function (id) {
+      var reg = this.porIdRed(id);
+      if (!reg) { this.avisoRoto(); return false; }
+      var rep = this.leerRed(reg.s);
+      if (!rep) { this.avisoRoto(); return false; }
+      return this.verRed(rep);
+    },
+
+    /* Un tick de reproducción: los cuadros y eventos que ya tocan */
+    inyectarRed: function () {
+      var rep = this.rep;
+      if (!rep) return;
+      /* el vigilante de red daría la partida por caída: aquí no hay red que
+       * vigilar, la "conexión" es el archivo */
+      G.netWatch = 0;
+      var n = rep.jugadores;
+      while (this.cursorEv < rep.eventos.length &&
+             rep.eventos[this.cursorEv][0] <= this.t) {
+        var ev = rep.eventos[this.cursorEv++][1];
+        if (ev && ev.t === 'pm') {
+          if (G.applyPelletHex) G.applyPelletHex(ev.hex);
+        } else {
+          G.applyEvt(ev);
+        }
+      }
+      while (this.cursor < rep.cuadros.length &&
+             rep.cuadros[this.cursor][0] <= this.t) {
+        var c = rep.cuadros[this.cursor++];
+        var s = montaSnap(c[1], n);
+        s.he = c[2] || [];
+        G.applySnapshot(s);
+      }
+      // se acabó la grabación: se queda el final en pantalla
+      if (this.cursor >= rep.cuadros.length &&
+          this.cursorEv >= rep.eventos.length && !this.redFin) {
+        this.redFin = true;
+        if (window.PM.UI && window.PM.UI.showGameOverPrompt &&
+            G.state !== 'GAME_OVER') {
+          G.state = 'GAME_OVER';
+          G.syncUI();
+        }
+      }
+    },
 
     /* =========================================================
      * ALMACÉN — las últimas de este navegador
@@ -552,10 +1043,14 @@
     },
 
     reiniciar: function () {
-      if (this.modo !== 'ver' || !this.rep) return;
+      if (!this.rep) return;
       var rep = this.rep;
       if (window.PM.UI) window.PM.UI.hidePrompt();
       G.paused = false;
+      // la de red se vuelve a montar entera: su reloj y sus cursores van
+      // con la reproducción, no con la partida
+      if (this.modo === 'verRed') { this.verRed(rep); return; }
+      if (this.modo !== 'ver') return;
       if (G.lastOpts) G.restartGame();     // pasa por newGame -> alEmpezar
       else this.ver(rep);
     },
@@ -563,11 +1058,13 @@
     /* yaEnMenu: la partida ya se cerró por su cuenta (SALIR del menú de
      * pausa, por ejemplo) y aquí solo hay que recoger. */
     salir: function (yaEnMenu) {
-      var estaba = (this.modo === 'ver');
+      var estaba = (this.modo === 'ver' || this.modo === 'verRed');
       this.modo = null;
       this.rep = null;
       this.grabando = null;
+      this.red = null;
       this.cursor = 0;
+      this.cursorEv = 0;
       this.t = 0;
       G.replaying = false;
       G.timeScale = 1;

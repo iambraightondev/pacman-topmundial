@@ -2035,8 +2035,13 @@
     },
 
     hostEvt: function (o) {
-      if (this.netRole === 'host') this.netSend('evt', o);
-      else if (this.showCh) this.showSend('evt', o);   // partida local, mirones
+      if (this.netRole === 'host') {
+        this.netSend('evt', o);
+        // va también a la repetición de la partida online, si se está grabando
+        if (window.PM.Replay) window.PM.Replay.redEvento(o);
+      } else if (this.showCh) {
+        this.showSend('evt', o);   // partida local, mirones
+      }
     },
 
     /* =========================================================
@@ -2141,7 +2146,11 @@
           this.snapTimer = 0;
           this.snapCount++;
           var withPellets = (this.snapCount % CFG.NET.PELLET_SYNC_EVERY) === 0;
-          this.netSend('snap', this.buildSnapshot(withPellets));
+          var snap = this.buildSnapshot(withPellets);
+          this.netSend('snap', snap);
+          // y de paso queda grabada: una repetición de partida online es
+          // justo este flujo (js/replay.js)
+          if (window.PM.Replay) window.PM.Replay.redCuadro(snap);
         }
       } else {
         this.sendGuestUpdates();

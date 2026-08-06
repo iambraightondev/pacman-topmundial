@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-06 · Las partidas online también se graban
+
+- Hasta ahora la repetición solo existía **jugando solo o dos en el mismo
+  teclado**, que son justo las partidas que menos apetece enseñar. Las de la
+  party —las divertidas— no se grababan.
+- El motivo era de fondo: una repetición local son **las teclas**, y el juego
+  reconstruye la partida entera con ellas porque es determinista. Online no
+  vale: la partida la simula el anfitrión con las **posiciones** que le llegan
+  de cada uno, así que repetir las teclas de nadie reconstruye nada.
+- Lo que sí hay online es un flujo que ya lo cuenta todo: **lo que el
+  anfitrión reparte** doce veces por segundo. Ahora se graba eso, y al verla
+  el juego **se pone de espectador de un archivo** en vez de una sala — el
+  mismo camino de siempre para mirar la partida de un amigo.
+- Se ven desde **TOP MUNDIAL → TUS PARTIDAS**, con el mismo botón `VER` y los
+  mismos controles (pausa, x2, empezar otra vez, salir).
+- **Las graba quien hace de anfitrión** (es el único que tiene la partida
+  entera), y pesan bastante más que las locales: se guardan **las dos
+  últimas** y, a diferencia de las locales, **no caben en un enlace**.
+
 ## 2026-08-06 · Trío y escuadra entran en el TOP MUNDIAL
 
 - Hasta ahora, una partida de **tres o cuatro** se jugaba… y se quedaba en tu

@@ -2852,7 +2852,9 @@
 
         var who = document.createElement('span');
         who.className = 'rank-who';
-        who.textContent = (h.j === 2) ? (h.n1 + ' + ' + h.n2) : h.n1;
+        // con tres y cuatro no caben todos los nombres: el tuyo y cuántos erais
+        who.textContent = (h.j === 2) ? (h.n1 + ' + ' + h.n2)
+          : (h.j > 2) ? (h.n1 + ' +' + (h.j - 1)) : h.n1;
         row.appendChild(who);
 
         var pts = document.createElement('span');
@@ -2865,19 +2867,26 @@
         lvl.textContent = 'NIV ' + h.lv + (h.m === 'online' ? ' · ONLINE' : '');
         row.appendChild(lvl);
 
-        /* si esa partida dejó repetición guardada, se puede volver a ver */
+        /* si esa partida dejó repetición guardada, se puede volver a ver.
+         * Las de online se graban de otra manera (el flujo del anfitrión) y
+         * viven en su propio almacén, pero desde aquí se ven igual. */
         var R = window.PM.Replay;
         var reg = (R && R.paraPartida) ? R.paraPartida(h) : null;
-        if (reg) row.appendChild(this.makeReplayBtn(reg.id));
+        if (reg) row.appendChild(this.makeReplayBtn(reg.id, false));
+        else {
+          var red = (R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
+          if (red) row.appendChild(this.makeReplayBtn(red.id, true));
+        }
 
         this.rankList.appendChild(row);
       }
     },
 
     /* Botón VER de una partida con repetición guardada (js/replay.js) */
-    makeReplayBtn: function (id) {
+    makeReplayBtn: function (id, deRed) {
       var b = this.makeButton('VER', function () {
-        window.PM.Replay.verGuardada(id);
+        if (deRed) window.PM.Replay.verRedGuardada(id);
+        else window.PM.Replay.verGuardada(id);
       });
       b.classList.add('tab');
       b.style.padding = '4px 10px';

@@ -471,7 +471,7 @@ second — from filling the replay with identical entries.
 
 ### Watching a replay
 
-A replay never counts: `xpSent`, `rankingSent` and `timeSent` are forced true
+A replay never counts (both formats): `xpSent`, `rankingSent` and `timeSent` are forced true
 at start, `bumpAch` and `persistHighScore` bail out, no history row, no
 world-ranking submission, no showcase channel. The on-screen controls (dpads,
 emotes, surrender) are hidden and the keyboard cannot steer.
@@ -495,11 +495,47 @@ replay by score, player count and timestamp (both are written in the same
 `closeRun`, milliseconds apart) — that is what puts the `VER` button in
 TOP MUNDIAL → TUS PARTIDAS.
 
+### Online games: the network format (v2)
+
+Input replays cannot work online. There the host simulates and the guests send
+**positions** (`gevt`/`pos`), not keys, so replaying anybody's keys rebuilds
+nothing. What online *does* have is a stream that already tells the whole
+story: the snapshots and events the host broadcasts. Those are recorded as-is
+(`Replay.redCuadro` from `netMaintain`, `Replay.redEvento` from `hostEvt`,
+**host only** — a guest sees only what reaches it), and watching one puts the
+game in **spectator** mode fed from a file instead of a room, so playback
+reuses the watch-a-friend path that already existed. Between snapshots the
+spectator dead-reckons exactly as in a live game, so 6 Hz still looks smooth.
+
+Size is the whole design constraint: raw JSON is ~470 KB per minute. Each
+snapshot is flattened into a **fixed-order numeric vector** (no keys,
+`aplanaSnap`/`montaSnap` — the order *is* the contract; new fields go at the
+end and bump `CFG.REPLAY_NET_V`) and stored as its **delta against the
+previous one** in base 36 with zero-runs collapsed, since almost nothing
+changes between consecutive snapshots. That plus recording 1 in
+`CFG.REPLAY_NET_EVERY` (6 Hz) leaves it at ~26 KB per minute.
+
+The zero-run marker is `*`, **not a letter**: in base 36 a number can start
+with one (`z` is 35, `z0` is 1260), so a letter marker makes a value of 35
+read as "one zero" and the whole replay drifts. `Replay._codec` exposes the
+pieces so the tests can hit them directly — it is the riskiest part, and a
+wrong field shows up as a crooked replay, not as an error.
+
+Pellets: the skipped snapshots' eaten cells are **accumulated** into the next
+recorded frame (otherwise dots would linger), and the full map (`pm`) is kept
+once per level. These live in their own store (`CFG.REPLAY_NET_KEY`, 2 games,
+`REPLAY_NET_MAX_CHARS`/`REPLAY_NET_TOTAL_CHARS`) so they neither compete with
+the local ones nor get pruned by their rules, and they are **not shareable by
+link** — too big for a URL. `Replay.paraPartidaRed()` puts the `VER` button on
+their history row; the register carries `myPoints()`, like the history row, so
+a PAC-MAN VS. hunter still matches.
+
 ### Sharing and the world ranking
 
 `Replay.enlace(rep|texto)` builds `<base>?rep=<texto>`; `UI.init()` calls
 `Replay.desdeUrl()`, which opens the game straight into the replay and shows
-a dialog (game unaffected) if the text is corrupt.
+a dialog (game unaffected) if the text is corrupt. Only v1 (local) replays fit
+a link.
 
 For the world ranking, which will carry a replay per row, the public entry
 points are already there and need no change to this module:

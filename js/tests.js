@@ -1132,6 +1132,107 @@
     }
   });
 
+  /* ---------------------------------------------------------------
+   * Repeticiones de partidas ONLINE (formato de red, v2)
+   * Online no valen las teclas: la partida la simula el anfitrión con las
+   * posiciones que le llegan. Se graba lo que el anfitrión YA emite y al
+   * verla el juego se pone de espectador de un archivo.
+   * --------------------------------------------------------------- */
+  test('el códec de red: instantánea -> texto -> la misma instantánea',
+    function () {
+      var C = window.PM.Replay._codec;
+      partida(2, 'host');
+      G.score = 1234;
+      var s = G.buildSnapshot(false);
+      var v = C.aplana(s, 2);
+      eq(v.length, C.largo(2), 'el vector mide lo que dice el contrato');
+
+      // primer cuadro: sin anterior con la que comparar
+      var texto = C.cod(v, null);
+      var vuelta = C.dec(texto, null, C.largo(2));
+      ok(vuelta, 'se decodifica');
+      eq(vuelta.join(','), v.join(','), 'y sale el mismo vector');
+
+      /* En base 36 un número puede empezar por letra ('z' es 35), así que la
+       * marca de los ceros no puede serlo: con una letra, un valor de 35 se
+       * leía como "un cero" y la repetición entera se descuadraba. */
+      var conTreintaycinco = [35, 0, 0, 0, 1260, 7];
+      var t2 = C.cod(conTreintaycinco, null);
+      eq((C.dec(t2, null, 6) || []).join(','), '35,0,0,0,1260,7',
+         'un 35 no se confunde con una marca de ceros');
+
+      // y el segundo cuadro, que ya va como diferencia con el primero
+      G.step();
+      var s2 = G.buildSnapshot(false);
+      var v2 = C.aplana(s2, 2);
+      var vuelta2 = C.dec(C.cod(v2, v), v, C.largo(2));
+      ok(vuelta2 && vuelta2.join(',') === v2.join(','), 'el delta también');
+
+      // lo importante: la instantánea reconstruida sirve para pintar
+      var rehecha = C.monta(vuelta, 2);
+      eq(rehecha.sc, s.sc, 'la puntuación');
+      eq(rehecha.st, s.st, 'el estado');
+      eq(rehecha.lvl, s.lvl, 'el nivel');
+      eq(rehecha.g.length, 4, 'los cuatro fantasmas');
+      eq(Math.round(rehecha.g[0].x * 10), Math.round(s.g[0].x * 10),
+         'y cada uno en su sitio');
+      G.toMenu();
+    });
+
+  test('una partida online se graba y se vuelve a ver', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_NET_KEY); }
+    catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      partida(2, 'host');
+      ok(R.grabandoRed(), 'de anfitrión, la partida online se graba');
+      for (var i = 0; i < 120; i++) { G.netWatch = 0; G.step(); }
+      var enCurso = R.red;
+      ok(enCurso.cuadros.length > 0, 'se van guardando cuadros');
+      var puntos = G.score || 10;
+      G.score = puntos;
+      var reg = R.redAcabar();
+      ok(reg, 'al acabar se guarda');
+      eq(reg.j, 2);
+      ok(reg.s.length > 0, 'con su texto');
+
+      var leida = R.leerRed(reg.s);
+      ok(leida, 'y se puede volver a leer');
+      eq(leida.jugadores, 2);
+      eq(leida.cuadros.length, enCurso.cuadros.length, 'con todos los cuadros');
+
+      // el historial la encuentra
+      ok(R.paraPartidaRed({ t: reg.t + 300, j: 2, p: reg.p }),
+         'la fila del historial da con ella');
+
+      // y al verla, el juego se pone de espectador
+      ok(R.verRed(leida), 'arranca la reproducción');
+      ok(G.isSpec(), 'de espectador: aquí no juega nadie');
+      ok(G.replaying, 'marcada como repetición');
+      for (i = 0; i < 130; i++) { G.netWatch = 0; G.step(); }
+      eq(G.score, puntos, 'y al final se ve la misma puntuación');
+    } finally {
+      R.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_NET_KEY);
+        else localStorage.setItem(CFG.REPLAY_NET_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('de invitado o de mirón no se graba nada: la partida no es suya',
+    function () {
+      var R = window.PM.Replay;
+      partida(2, 'guest');
+      ok(!R.grabandoRed(), 'el invitado no graba');
+      partida(1);
+      ok(!R.grabandoRed(), 'y en local se graban las teclas, no esto');
+      ok(R.enCurso(), 'que para eso está la repetición de siempre');
+      G.toMenu();
+    });
+
   test('viendo una repetición el teclado no mueve a Pac-Man', function () {
     var R = window.PM.Replay;
     try {

@@ -256,8 +256,13 @@ Dos maneras de correr la misma batería:
   experiencia, ni logros, ni récord. Y **se comparten por enlace**: la
   partida entera cabe en la URL, así que se manda por WhatsApp y al otro se
   le abre el juego reproduciéndola. Se guardan las últimas 8 de este
-  navegador más la de tu mejor récord. Solo se graban las partidas locales
-  (una o dos personas en la misma máquina).
+  navegador más la de tu mejor récord.
+  **Las partidas online también se graban**, pero de otra manera: allí la
+  partida la simula el anfitrión, así que lo que se guarda es lo que él
+  reparte, y al verla el juego se pone de espectador de un archivo en vez de
+  una sala. Se ven igual desde TUS PARTIDAS —las graba quien hace de
+  anfitrión— pero pesan bastante más, así que se quedan **las dos últimas** y
+  esas **no caben en un enlace**.
 
 ### PAC-MAN VS. — llevar un fantasma
 

@@ -545,6 +545,24 @@
         'GUM', 'TAP', 'WIN', 'POW', 'MIX', 'JAM']
   };
 
+  /* ---------- Repeticiones de partidas ONLINE (formato de red) ----------
+   * Las locales se graban como teclas y caben en una URL. Online no: allí la
+   * partida la simula el anfitrión y lo que ve cada uno depende de lo que
+   * llegue por la red, así que repetir las teclas no reconstruiría nada. Lo
+   * que se graba es LO QUE EL ANFITRIÓN YA EMITE (sus instantáneas y sus
+   * eventos), y al verla el juego se pone de espectador de un archivo en vez
+   * de una sala: el mismo camino que ya existe para mirar una partida ajena.
+   *
+   * Eso pesa más que unas teclas —unos 12 KB por minuto de partida—, así que
+   * tienen su propio almacén y su propia poda: no compiten con las locales ni
+   * caben en un enlace. */
+  CFG.REPLAY_NET_KEY = 'pacman-topmundial-repeticiones-red';
+  CFG.REPLAY_NET_V = 2;            // versión del formato
+  CFG.REPLAY_NET_EVERY = 2;        // 1 de cada N instantáneas (12 Hz -> 6 Hz)
+  CFG.REPLAY_NET_MAX = 2;          // cuántas se guardan
+  CFG.REPLAY_NET_MAX_CHARS = 220000;   // tope de una (unos 15 min de partida)
+  CFG.REPLAY_NET_TOTAL_CHARS = 420000; // tope de todas juntas
+
   /* ---------- Aviso de maestría en partida ---------- */
   CFG.BADGE_ANIM_TICKS = 300;   // 5 s: entrada, lucimiento y salida
 
