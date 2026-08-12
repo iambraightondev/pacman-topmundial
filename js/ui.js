@@ -2676,8 +2676,11 @@
       }
       var temporada = S ? S.nombre(S.actual()) : '';
       var EQUIPO = { 2: 'DÚO', 3: 'TRÍO', 4: 'ESCUADRA' };
+      var H = window.PM.History;
+      var conCuenta = !!(H && H.cuenta && H.cuenta());
       this.rankSub.textContent =
-        players === 0 ? 'TUS ÚLTIMAS PARTIDAS EN ESTE NAVEGADOR' :
+        players === 0 ? ('TUS ÚLTIMAS PARTIDAS · ' + (conCuenta
+          ? 'TAMBIÉN LAS DE OTROS APARATOS' : 'SOLO LAS DE ESTE NAVEGADOR')) :
         players === 6 ? ('LA MISMA PARTIDA PARA TODOS · ' +
           (Rt ? Rt.fmtFecha(Rt.hoy()) : '')) :
         players === 5 ? 'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE' :
@@ -2688,13 +2691,29 @@
       this.rankList.innerHTML = '';
       this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
 
-      /* pestaña local: no toca la red */
+      /* TUS PARTIDAS: primero las de este navegador, que están ya y no
+       * dependen de nada. Con cuenta se piden además las que quedaron en el
+       * top mundial —las que jugaste en otro aparato— y la lista se rehace
+       * con las dos mezcladas. Sin cuenta, ni se intenta: un nombre suelto no
+       * identifica a nadie y traeríamos las partidas de otro. */
       if (players === 0) {
-        var hist = window.PM.History ? window.PM.History.all() : [];
+        var hist = H ? H.all() : [];
+        var reqLocal = this.rankReq;
         this.rankStatus.classList.remove('error');
         this.rankStatus.textContent = hist.length
           ? '' : 'AÚN NO HAS JUGADO NINGUNA PARTIDA';
         this.renderHistory(hist);
+        if (conCuenta && H.configured()) {
+          if (!hist.length) this.rankStatus.textContent = 'CARGANDO...';
+          H.list(function (err, lista) {
+            if (self.rankReq !== reqLocal) return;    // se cambió de pestaña
+            self.renderHistory(lista);
+            self.rankStatus.classList.toggle('error', !!err);
+            self.rankStatus.textContent =
+              err ? ('SOLO LAS DE ESTE NAVEGADOR: ' + err) :
+              lista.length ? '' : 'AÚN NO HAS JUGADO NINGUNA PARTIDA';
+          });
+        }
         return;
       }
       if (!R || !R.configured()) {
@@ -2739,7 +2758,15 @@
       if (players === 6) {
         if (!Rt) return;
         Rt.enviarPendiente();          // por si la marca se hizo sin red
-        Rt.top(Rt.hoy(), llegaron);
+        /* Antes de pintar, saber si el intento de hoy está gastado en otro
+         * aparato: si no, la línea de abajo diría "HOY AÚN NO LO HAS JUGADO"
+         * teniendo tu marca delante, en la propia lista. */
+        var pedirTop = function () {
+          if (Rt.marca()) self.refreshReto();   // y el botón de la portada
+          Rt.top(Rt.hoy(), llegaron);
+        };
+        if (Rt.sincronizar && !Rt.marca()) Rt.sincronizar(pedirTop);
+        else pedirTop();
       } else if (players === 5) R.topTime(llegaron);
       else if (enTemporada) S.top(S.actual(), players, llegaron);
       else R.top(players, llegaron);
@@ -2757,8 +2784,14 @@
         linea.textContent = 'HOY AÚN NO LO HAS JUGADO · TIENES UN INTENTO';
       } else {
         var puesto = rows ? Rt.puestoEn(rows) : 0;
+        /* Sin puesto y sin enviar hay dos motivos muy distintos: que no haya
+         * habido red todavía, o que el hueco de hoy ya estuviera ocupado (la
+         * jugaste en otro aparato). Decirlo evita el "¿y por qué no sale?". */
+        var cola = puesto ? (' · PUESTO ' + puesto)
+          : m.otro ? ' · JUGADA EN OTRO APARATO'
+          : m.e ? '' : ' · SIN ENVIAR';
         linea.textContent = 'TU MARCA DE HOY: ' + m.p + ' PUNTOS · NIVEL ' + m.n +
-          (puesto ? (' · PUESTO ' + puesto) : (m.e ? '' : ' · SIN ENVIAR'));
+          cola;
       }
       this.rankList.appendChild(linea);
     },
@@ -3223,6 +3256,10 @@
       var self = this;
       var p = this.els.prompt;
       p.innerHTML = '';
+      /* De qué es el diálogo que hay puesto. Lo usa quien pregunta algo por
+       * red y quiere rehacerlo al llegar la respuesta, sin pisar otro que
+       * haya salido entretanto. Lo pone quien lo necesita, después de esto. */
+      this.promptTag = null;
 
       var t = document.createElement('div');
       t.className = 'panel-title';
@@ -3419,6 +3456,7 @@
       if (!this.els.prompt) return;
       this.els.prompt.style.display = 'none';
       this.els.prompt.innerHTML = '';
+      this.promptTag = null;
       this.promptStatusEl = null;
       this.promptStatusOwn = false;
       this.promptKeys = [];
@@ -3860,14 +3898,26 @@
      * ------------------------------------------------------ */
     /* El botón de la portada dice si el de hoy ya está jugado */
     refreshReto: function () {
+      var self = this;
       var R = window.PM.Reto;
       if (!this.retoBtn || !R) return;
       var m = R.marca();
       this.retoBtn.childNodes[0].nodeValue = m
         ? ('RETO DE HOY · ' + m.p) : 'RETO DE HOY';
       this.retoBtn.classList.toggle('hecho', !!m);
-      // si la marca se hizo sin conexión, este es buen momento para mandarla
-      if (m && !m.e) R.enviarPendiente();
+      if (m) {
+        // si la marca se hizo sin conexión, este es buen momento para mandarla
+        if (!m.e) R.enviarPendiente();
+        return;
+      }
+      /* Aquí no hay marca, pero el intento de hoy puede estar gastado en otro
+       * aparato: eso lo sabe el servidor. Se pregunta sin bloquear nada y, si
+       * resulta que sí, el botón se pone al día solo. */
+      if (R.sincronizar) {
+        R.sincronizar(function (err, marca) {
+          if (marca) self.refreshReto();
+        });
+      }
     },
 
     /* Antes de jugarlo se avisa de las reglas: un intento y se acabó. Si ya
@@ -3885,7 +3935,8 @@
           lines: [
             fecha,
             { text: 'TU MARCA ' + m.p, big: true },
-            'LLEGASTE AL NIVEL ' + m.n,
+            (m.otro ? 'LA JUGASTE EN OTRO APARATO · EL INTENTO ES UNO PARA TODOS'
+                    : 'LLEGASTE AL NIVEL ' + m.n),
             'YA HAS GASTADO TU INTENTO · VUELVE MAÑANA CON OTRO LABERINTO DE FANTASMAS'
           ],
           status: (m.e || !R.configured()) ? '' : 'TU MARCA AÚN NO ESTÁ EN LA CLASIFICACIÓN: SE MANDARÁ SOLA CUANDO HAYA RED',
@@ -3897,7 +3948,20 @@
               onClick: function () { self.hidePrompt(); } }
           ]
         });
+        this.promptTag = 'reto';
         return;
+      }
+      /* Sin marca aquí, se pregunta al servidor si el intento de hoy ya está
+       * gastado en otro aparato. Mientras tanto el diálogo sale entero: la
+       * respuesta suele llegar antes de que nadie lea las reglas, y si dice
+       * que sí, este mismo diálogo se rehace con la marca de allí. */
+      if (R.sincronizar) {
+        R.sincronizar(function (err, marca) {
+          if (marca && self.promptOpen && self.promptTag === 'reto') {
+            self.showRetoPrompt();
+            self.refreshReto();
+          }
+        });
       }
       this.showPrompt({
         title: 'RETO DE HOY',
@@ -3917,11 +3981,16 @@
             onClick: function () { self.hidePrompt(); } }
         ]
       });
+      this.promptTag = 'reto';
     },
 
     playReto: function () {
       var R = window.PM.Reto;
       if (!R) return;
+      /* Por si el intento se gastó en otro aparato mientras se leían las
+       * reglas: más vale enseñar la marca que dejar jugar una partida que el
+       * servidor no iba a admitir. */
+      if (R.marca()) { this.showRetoPrompt(); return; }
       this.resumeAudio();
       this.hidePrompt();
       this.hideAll();

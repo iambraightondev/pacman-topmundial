@@ -773,8 +773,8 @@ view**, which keeps only each player's/team's best run (`distinct on
 otherwise whoever plays most fills the whole table with repeats.
 
 The panel's tab ids are **the player count for `1..4`**, plus `5` NIVEL 1, `6`
-RETO DE HOY and `0` TUS PARTIDAS (local, no network). The season row shows on
-`1..4` only. Switching fast is guarded by a request token, so a late reply
+RETO DE HOY and `0` TUS PARTIDAS (local first, cloud too when there is an
+account). The season row shows on `1..4` only. Switching fast is guarded by a request token, so a late reply
 from the previous tab cannot overwrite the current list.
 
 `Ranking.jugadores(n)` clamps a format, `Ranking.COLS` is the shared column
@@ -798,6 +798,23 @@ panel explains it. Local play is unaffected: the filter only gates the board.
 **Historial** (`PM.History`, `CFG.HISTORY_KEY`): the last `HISTORY_MAX` games
 of this browser, saved on every game over **regardless of name or network**,
 shown in the TUS PARTIDAS tab (works offline).
+
+**Con cuenta the panel also reads the cloud.** The data was already in
+`ranking`; `History.remote()` fetches it with
+`or=(nombre1.eq.X,…,nombre4.eq.X)` — your games as a party *guest* are in
+`nombre2..4`, since the host submits the team — and `History.list()` merges
+it with the local rows. Only with an account: a bare nickname identifies
+nobody, so fetching by name alone would show you someone else's games.
+
+Merging has no shared id (the local row is written at game over, the
+`ranking` row is stamped by the server a moment later), so `History.misma()`
+pairs them by format and time (2-minute window), plus points **when there is
+one player** — in a team game the local row holds `Game.myPoints()` and the
+board row holds the team's. Ties go to the local row: it has your points and
+the replay (`Replay.paraPartida` cross-matches by points, players and time).
+`History.add` therefore stores the real player count (1..4); it used to clamp
+to 1 or 2, which left a squad's own game looking like a solo run and unable
+to find its replay.
 
 **A record needs a name**: `Game.missingRankingName()` checks `rawName()`
 (the real nickname, not the J1/J2 fallback) for every player involved, and
@@ -990,16 +1007,38 @@ rule. With `seedBase = 0` the classic game is bit-for-bit what it was.
   once per run, however the run ends) calls `Reto.cerrar(score, level)`,
   and `cerrar` is a no-op once the day is closed. Recording only at GAME
   OVER would let a player walk out of a bad run and start over.
+- **The day's slot lives in the database**, not in the browser: a unique
+  index on `(fecha, upper(btrim(nombre)))` means the second mark of the day
+  is rejected (PostgREST answers **409**, which `Reto.submit` reports as
+  `YA TIENES MARCA DE HOY`). Leaving it to `localStorage` made the rule
+  cosmetic — play on the PC, play again on the phone, send the better of
+  the two.
+- To avoid burning a run that the server was going to reject,
+  `Reto.sincronizar()` asks **before playing** (`reto_top` filtered by
+  `jugador` and `fecha`) and copies the remote mark into this browser with
+  `otro: 1`. It runs from `refreshReto()` (portada), `showRetoPrompt()`
+  (which re-renders itself if the answer says the day is spent) and when
+  the RETO DE HOY tab opens; `playReto()` checks once more before starting.
+  It deliberately has **no in-flight lock**: a request that never settles
+  would otherwise disable the check for the rest of the session.
 - Local state is one localStorage row (`CFG.RETO.KEY`):
-  `{f: date, p: points, n: level, e: 1 when uploaded}`. Playing offline is
-  therefore normal, not an error path: the mark is kept and
-  `Reto.enviarPendiente()` uploads it later — it runs from `showMenu` and
-  whenever the RETO DE HOY tab is opened.
+  `{f: date, p: points, n: level, e: 1 when uploaded, otro: 1 when the
+  board's mark was made elsewhere}`. Playing offline is therefore normal,
+  not an error path: the mark is kept and `Reto.enviarPendiente()` uploads
+  it later — it runs from `showMenu` and whenever the RETO DE HOY tab is
+  opened. A `409` there stops the retries (`e = 1`), because the slot is
+  taken and resending will never place it.
 - The board is its own table (`supabase/reto.sql`, read through the
-  `reto_top` view, best row per name per day). It is separate from
+  `reto_top` view, one row per name per day). It is separate from
   `ranking` because it is a different game (fixed seed, fixed settings,
   one attempt); folding it in would have meant filtering it out of every
   existing query.
+- **A registered name belongs to its account.** With one slot per day,
+  anyone could otherwise post 10 points as someone else and leave them
+  without a challenge, so the insert policy requires `auth.uid()` to match
+  when `nombre` exists in `perfiles` — and `Reto` signs its requests with
+  the session token when there is one. Names without an account stay open,
+  as before.
 - A challenge run is a **normal 1-player run** for everything else:
   history, achievements, badges, player XP and the world ranking.
 

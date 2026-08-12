@@ -247,8 +247,11 @@ Dos maneras de correr la misma batería:
   primer nivel**, así que cuenta aunque después te maten o te salgas, y solo
   vale a un jugador, sin red y con los ajustes de siempre: con los fantasmas
   frenados o Pac-Man acelerado la marca no sería comparable con la de nadie.
-- **Tus partidas**: historial de las últimas 15 en este navegador, con o sin
-  nombre y con o sin conexión.
+- **Tus partidas**: historial de las últimas 15, con o sin nombre y con o sin
+  conexión. Lo de este navegador está siempre; **con cuenta**, además, se
+  traen las que quedaron en el top mundial, así que el historial te sigue del
+  ordenador al móvil. Las de otro aparato no traen repetición: esa se graba
+  donde se jugó.
 - **Repeticiones**: cada partida se graba sola y se puede **volver a ver**
   desde TOP MUNDIAL → TUS PARTIDAS, con el botón `VER` de cada partida.
   Sale el cartel de REPETICIÓN y controles para **pausar, ir a x2, empezarla
@@ -298,10 +301,13 @@ JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
   (fantasmas y fruta salen igual en la de cualquiera) y los ajustes de
   siempre, para que las marcas se puedan comparar. Cambia cada día a la
   vez en todo el planeta (se cuenta en UTC) y hay **un intento al día**:
-  la marca se cierra cuando acaba la partida, te rindas o te salgas. Se
-  juega sin cuenta —basta con tener nombre— y **sin conexión**: la marca
-  se guarda y se manda sola cuando vuelve la red. La clasificación del día
-  está en TOP MUNDIAL → RETO DE HOY, con tu puesto.
+  la marca se cierra cuando acaba la partida, te rindas o te salgas. El
+  intento es **uno para todos tus aparatos** —el hueco del día lo guarda el
+  servidor—, así que jugarlo en el móvil después de jugarlo en el PC no vale:
+  el juego lo dice antes de empezar. Se juega sin cuenta —basta con tener
+  nombre— y **sin conexión**: la marca se guarda y se manda sola cuando
+  vuelve la red. La clasificación del día está en TOP MUNDIAL → RETO DE HOY,
+  con tu puesto.
 - **Laberintos** — dos o tres trazados nuevos de 28×31, con su túnel, su
   casa de fantasmas y sus energizantes en las cuatro esquinas. Es un modo
   aparte: **el laberinto original no se toca nunca**, así que estas
@@ -325,10 +331,18 @@ query → Run) y también se pueden repetir sin miedo:
   crea la vista por meses. No borra ni modifica ninguna fila: las partidas
   que ya estaban entran solas en el mes que les tocaba.
 - [`supabase/reto.sql`](supabase/reto.sql) — crea la tabla del **reto
-  diario** y su vista, con lectura e inserción públicas.
+  diario** y su vista, con lectura e inserción públicas, y guarda **un hueco
+  por nombre y día**: el segundo intento del día lo rechaza la base de datos.
 
 Si falta alguna, el panel lo dice y el resto del juego funciona con
 normalidad.
+
+> Si vienes de una versión anterior, **vuelve a lanzar `reto.sql`**: es lo que
+> pone el intento único. Antes lo decidía el navegador, y bastaba con jugar en
+> el PC y otra vez en el móvil para mandar la mejor de las dos. Al ejecutarlo
+> se queda **una marca por nombre y día** —la mejor, que es la que la
+> clasificación ya venía enseñando— y se retira el freno viejo de tres
+> envíos.
 
 Las partidas **no se escriben directamente en la tabla**: se mandan a una
 Edge Function del proyecto, `enviar-record`, que las revisa antes de

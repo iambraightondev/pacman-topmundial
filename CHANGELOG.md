@@ -2,6 +2,32 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-12 · El reto es de verdad uno al día, y TUS PARTIDAS te sigue
+
+- El **un intento al día** lo decidía tu navegador. Bastaba con jugar el reto
+  en el PC y otra vez en el móvil para mandar la mejor de las dos: para una
+  clasificación que presume de ser *la misma partida para todo el mundo*, eso
+  la vaciaba por dentro.
+- Ahora **el hueco del día lo guarda el servidor**: una marca por nombre y
+  día, y la segunda la rechaza la base de datos. Y para no gastarte una
+  partida en balde, el juego **pregunta antes de empezar**: si ya lo jugaste
+  en otro aparato, te lo dice y te enseña tu marca en vez de dejarte jugar.
+- De regalo, **tu nombre es tuyo**: si tienes cuenta, nadie puede firmar el
+  reto con tu nombre (que ahora, con un solo hueco, sería dejarte sin reto).
+  Los nombres sin cuenta siguen abiertos, como siempre.
+- **TUS PARTIDAS deja de ser de este navegador.** Con cuenta se traen también
+  las que quedaron en el top mundial, incluidas las de la party en las que
+  eras invitado, así que el historial te sigue del ordenador al móvil. Lo de
+  aquí manda cuando una partida está en los dos sitios: es la que tiene tus
+  puntos y el botón `VER`.
+- Y una que llevaba tiempo: una partida de **trío o escuadra** se apuntaba en
+  el historial como si fuera individual, así que no encontraba su repetición.
+  Ahora se apunta con los que erais.
+
+> Hay que **volver a lanzar `supabase/reto.sql`** (Dashboard → SQL Editor).
+> Deja una marca por nombre y día —la mejor, que es la que la clasificación ya
+> enseñaba— y retira el freno viejo de tres envíos.
+
 ## 2026-08-06 · Las partidas online también se graban
 
 - Hasta ahora la repetición solo existía **jugando solo o dos en el mismo

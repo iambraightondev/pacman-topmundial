@@ -17,18 +17,46 @@
  * termina (o te sales), y a partir de ahí solo se puede mirar. Sin
  * conexión se juega igual y la marca se queda guardada aquí; se
  * envía sola la próxima vez que haya red.
+ *
+ * QUIÉN GUARDA EL INTENTO. Este navegador se acuerda de lo suyo,
+ * pero el que manda es el SERVIDOR: la tabla tiene un único hueco
+ * por nombre y día (índice único en supabase/reto.sql), así que la
+ * segunda marca del día la rechaza la base de datos. Antes esto se
+ * decidía solo aquí, y bastaba con jugar en el PC y otra vez en el
+ * móvil para mandar la mejor de las dos: para una clasificación que
+ * presume de ser la misma partida para todo el mundo, eso la vacía
+ * por dentro.
+ *
+ * Y para no gastarle a nadie una partida que no iba a contar,
+ * `sincronizar()` pregunta ANTES de jugar si el hueco de hoy ya está
+ * ocupado; si lo está, la marca de allí se copia aquí y el juego se
+ * comporta igual que si se hubiera jugado en este navegador.
  * ============================================================ */
 (function () {
   'use strict';
   var CFG = window.PM.CFG;
 
+  /* Lo que contesta el envío cuando el intento del día ya estaba gastado.
+   * Es un aviso, no un fallo: la marca sigue guardada aquí. */
+  var DUPLICADO = 'YA TIENES MARCA DE HOY';
+
+  /* Y lo que contesta cuando el nombre es de una cuenta y quien manda la marca
+   * no ha entrado en ella. Los nombres sin cuenta no dan este aviso nunca. */
+  var AJENO = 'ESE NOMBRE ES DE UNA CUENTA: ENTRA PARA MANDAR TU MARCA';
+
   function cfg() { return window.PM.NET_CFG || {}; }
 
+  /* Con sesión se habla con el token de la cuenta, no con la clave anónima:
+   * así el servidor sabe QUIÉN manda la marca y puede impedir que alguien
+   * firme con el nombre de otro (y le queme el intento del día). Sin cuenta
+   * se sigue jugando igual, con la clave anónima de siempre. */
   function headers() {
     var k = cfg().SUPABASE_KEY;
+    var A = window.PM.Account;
+    var tok = (A && A.logged && A.logged()) ? A.token : null;
     return {
       'apikey': k,
-      'Authorization': 'Bearer ' + k,
+      'Authorization': 'Bearer ' + (tok || k),
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
@@ -41,8 +69,26 @@
 
   function dos(n) { return (n < 10 ? '0' : '') + n; }
 
+  /* ¿El servidor dice que el hueco de hoy ya estaba ocupado?
+   *
+   * El índice único (fecha, nombre) de supabase/reto.sql lo devuelve PostgREST
+   * como 409. Se mira también el cuerpo: un proyecto que todavía no haya
+   * corrido el SQL nuevo tiene el freno viejo (un trigger que levantaba una
+   * excepción al tercer envío), y ahí el número que llega es otro. */
+  function esDuplicado(status, cuerpo) {
+    var t = String(cuerpo || '');
+    return status === 409 || /23505|duplicate key|ya hay marcas/i.test(t);
+  }
+
+  /* ¿Y el nombre es de una cuenta ajena? La política de RLS lo corta antes de
+   * escribir, y PostgREST lo devuelve como 403 (o 42501 en el cuerpo). */
+  function esAjeno(status, cuerpo) {
+    return status === 403 || /42501|row-level security/i.test(String(cuerpo || ''));
+  }
+
   /* Lo guardado en este navegador: { f: fecha, p: puntos, n: nivel,
-   * e: 1 si ya está en la clasificación del día } */
+   * e: 1 si ya está en la clasificación del día,
+   * otro: 1 si la marca de la clasificación se hizo en otro aparato } */
   function cargar() {
     try {
       var o = JSON.parse(localStorage.getItem(CFG.RETO.KEY));
@@ -179,7 +225,68 @@
       this.submit({ fecha: m.f, nombre: nombre, puntos: m.p, nivel: m.n },
         function (err) {
           if (!err) { m.e = 1; guardar(m); }
+          else if (err === DUPLICADO) {
+            /* El hueco del día ya estaba ocupado: o se jugó en otro aparato,
+             * o es esta misma marca, que llegó y cuyo acuse se perdió. En los
+             * dos casos se deja de reintentar; volver a mandarla no la va a
+             * hacer entrar, y el aviso de "SIN ENVIAR" solo confundiría. */
+            m.e = 1;
+            m.otro = 1;
+            guardar(m);
+          }
           if (cb) cb(err);
+        });
+    },
+
+    /* ---------- Tu intento de hoy, según el servidor ----------
+     *
+     * Un intento al día vale poco si lo decide cada navegador por su cuenta.
+     * El hueco del día lo guarda la base de datos; aquí se pregunta si ya
+     * está ocupado y, si lo está, la marca se copia a este navegador para que
+     * el juego lo sepa antes de dejar jugar (y no gastar una partida que el
+     * servidor iba a rechazar de todos modos).
+     *
+     * Silencioso a propósito: sin red, sin nombre o sin credenciales manda lo
+     * de este navegador, que es como funcionaba antes. cb(err, marca).
+     *
+     * Sin candado de "ya estoy preguntando" a posta: es una consulta de
+     * lectura y repetirla no cuesta nada, mientras que un candado que se
+     * quedara puesto (una petición que no vuelve nunca, que en un móvil pasa)
+     * dejaría el reto sin comprobar el resto de la sesión. */
+    sincronizar: function (cb) {
+      var m = this.marca();
+      if (m) { if (cb) cb(null, m); return; }        // aquí ya se sabe
+      if (!this.configured()) { if (cb) cb('SIN CONFIGURAR', null); return; }
+      var nombre = miNombre().toUpperCase();
+      if (!nombre) { if (cb) cb('SIN NOMBRE', null); return; }
+      var fecha = this.hoy();
+      /* La vista trae el nombre ya normalizado (`jugador`), que es por donde
+       * mira el hueco la base de datos: así ANA y ana son el mismo jugador
+       * aquí y allí. */
+      var url = base(CFG.RETO.VIEW) + '?select=puntos,nivel' +
+        '&fecha=eq.' + encodeURIComponent(fecha) +
+        '&jugador=eq.' + encodeURIComponent(nombre) +
+        '&limit=1';
+      fetch(url, { method: 'GET', headers: headers() })
+        .then(function (res) {
+          if (!res.ok) throw new Error('ERROR ' + res.status);
+          return res.json();
+        })
+        .then(function (rows) {
+          if (!rows || !rows.length) { if (cb) cb(null, null); return; }
+          var r = rows[0];
+          var g = {
+            f: fecha,
+            p: Math.max(0, Math.floor(r.puntos || 0)),
+            n: Math.max(1, Math.floor(r.nivel || 1)),
+            e: 1,        // en la clasificación ya está
+            otro: 1      // pero no se jugó en este navegador
+          };
+          guardar(g);
+          if (cb) cb(null, g);
+        })
+        .catch(function (e) {
+          if (cb) cb(e.message || 'SIN CONEXIÓN', null);
         });
     },
 
@@ -208,9 +315,24 @@
       h['Prefer'] = 'return=minimal';
       fetch(base(CFG.RETO.TABLE),
             { method: 'POST', headers: h, body: JSON.stringify(row) })
-        .then(function (res) { if (cb) cb(res.ok ? null : 'ERROR ' + res.status); })
+        .then(function (res) {
+          if (res.ok) { if (cb) cb(null); return null; }
+          /* El único hueco del día es de quien llegue primero: si ya hay marca
+           * tuya, la base de datos rechaza esta y se dice con todas las letras
+           * en vez de soltar un número. */
+          return res.text().then(function (t) {
+            if (!cb) return;
+            cb(esDuplicado(res.status, t) ? DUPLICADO :
+               esAjeno(res.status, t) ? AJENO :
+               'ERROR ' + res.status);
+          });
+        })
         .catch(function (e) { if (cb) cb(e.message || 'SIN CONEXIÓN'); });
     },
+
+    /* Los dos avisos con nombre, para quien los tenga que comparar */
+    DUPLICADO: DUPLICADO,
+    AJENO: AJENO,
 
     /* Clasificación de un día. cb(err, filas) con
      * { nombre, puntos, nivel, creado_en } */

@@ -7,13 +7,38 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **6 de agosto de 2026**.
+Última puesta al día: **12 de agosto de 2026**.
 
 ---
 
+## Lo que hay que aplicar (12 de agosto)
+
+Lo del 12 de agosto —el intento único del reto y el historial en la nube— está
+en el código pero **no en el servidor**. Falta una cosa, y hay que hacerla
+antes de que el arreglo sirva de algo:
+
+1. **Ejecutar [`supabase/reto.sql`](supabase/reto.sql)** entero (Dashboard →
+   SQL Editor → New query → Run). Es lo que crea el hueco único por nombre y
+   día; sin él, el juego pregunta y avisa, pero la tabla sigue admitiendo la
+   segunda marca. Deja una fila por nombre y día (la mejor, que es la que la
+   clasificación ya enseñaba) y retira el freno viejo de tres envíos.
+2. **Antes, borrar una marca de prueba** que se coló en el reto del **12 de
+   agosto**: `BRAI`, 1200 puntos, nivel 3. La metió una prueba nueva mientras
+   se escribía esto (ya está tapado: el arnés corre sin red, ver `sinRed` en
+   `js/tests.js`), pero si se queda, al ejecutar el SQL se convierte en TU
+   marca de ese día y no habrá forma de mandar otra.
+
+   ```sql
+   delete from public.reto_diario
+    where fecha = '2026-08-12' and upper(btrim(nombre)) = 'BRAI';
+   ```
+
+El historial en la nube **no necesita nada del servidor**: lee la tabla
+`ranking`, que ya estaba y ya era de lectura pública.
+
 ## Lo que está aplicado en producción
 
-No queda nada por desplegar de lo último: se aplicó todo sobre la marcha.
+De lo del 6 de agosto no quedó nada por desplegar: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
@@ -22,6 +47,7 @@ No queda nada por desplegar de lo último: se aplicó todo sobre la marcha.
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
 | Vistas `ranking_top` y `ranking_temporada` | rehechas |
 | Edge Function `enviar-record` | **versión 2** desplegada |
+| `reto_diario`: un hueco por nombre y día | **pendiente** (arriba) |
 
 Dos avisos operativos:
 
@@ -65,24 +91,7 @@ Dos caminos, de menos a más:
   Más cómodo para el jugador, pero obliga a tocar la configuración de auth
   del proyecto y a pedir un dato que hoy no se pide.
 
-### 2. El reto de hoy se controla en el navegador
-
-El "un intento al día" vive en `localStorage` (`js/reto.js`). Se juega en el
-PC, se juega otra vez en el móvil y se manda la mejor marca. Para una
-clasificación que presume de ser *la misma partida para todo el mundo*, eso la
-vacía por dentro.
-
-Dónde taparlo: en el servidor. Un `unique (nombre, fecha)` en la tabla del
-reto y que la función rechace el segundo intento del día.
-
-### 3. TUS PARTIDAS solo mira este navegador
-
-`js/history.js` lee de `localStorage`, así que el historial no te sigue de un
-aparato a otro. **El dato ya está en la nube**: las partidas con nombre están
-en la tabla `ranking`. Sería que el panel lea de ahí cuando hay cuenta, y deje
-lo local como respaldo para las partidas sin nombre o sin conexión.
-
-### 4. Verificar las repeticiones DE VERDAD (descartado por ahora)
+### 2. Verificar las repeticiones DE VERDAD (descartado por ahora)
 
 El portero (`supabase/functions/enviar-record`) comprueba que la repetición
 *cuadre* con lo que se envía, pero no la rejuega con el motor. Rejugarla es lo
@@ -107,7 +116,7 @@ Cuándo retomarlo: si el tablero crece y aparece alguien inventándose marcas
 > `supabase/functions/enviar-record/index.ts` menciona un
 > `docs-pendientes/integridad-ranking.md` que no existe. Es esta sección.
 
-### 5. Repeticiones online por enlace (descartado por ahora)
+### 3. Repeticiones online por enlace (descartado por ahora)
 
 Las de red ya se graban y se ven (desde el 6 de agosto), pero **no caben en
 una URL**: son ~26 KB por minuto de partida frente a los cientos de bytes de

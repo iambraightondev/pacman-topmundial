@@ -56,6 +56,59 @@
 
   function ticks(n) { for (var i = 0; i < n; i++) G.step(); }
 
+  /* ---------- Red de mentira ----------
+   * Estas pruebas son síncronas, así que una promesa de verdad contestaría
+   * cuando ya no hay nadie mirando. `yaEsta` es una promesa que resuelve en el
+   * acto: el código de red va enganchando .then/.catch como siempre, pero todo
+   * ocurre dentro de la propia llamada. */
+  function yaEsta(v) {
+    if (v && typeof v.then === 'function') return v;    // ya es una promesa
+    return {
+      then: function (f) {
+        if (!f) return yaEsta(v);
+        try { return yaEsta(f(v)); } catch (e) { return roto(e); }
+      },
+      catch: function () { return yaEsta(v); }
+    };
+  }
+
+  function roto(e) {
+    return {
+      then: function () { return roto(e); },
+      catch: function (f) { return yaEsta(f(e)); }
+    };
+  }
+
+  /* Una respuesta de fetch con el cuerpo que se le diga */
+  function respuesta(status, cuerpo) {
+    var texto = (typeof cuerpo === 'string') ? cuerpo : JSON.stringify(cuerpo);
+    return yaEsta({
+      ok: status >= 200 && status < 300,
+      status: status,
+      text: function () { return yaEsta(texto); },
+      json: function () { return yaEsta(JSON.parse(texto)); }
+    });
+  }
+
+  /* Cambia window.fetch por `fn` mientras corre `cuerpo`, y apunta lo pedido */
+  function conRed(fn, cuerpo) {
+    var orig = window.fetch, vistas = [];
+    window.fetch = function (url, opts) {
+      vistas.push({ url: String(url), opts: opts || {} });
+      return fn(String(url), opts || {});
+    };
+    try { cuerpo(vistas); } finally { window.fetch = orig; }
+    return vistas;
+  }
+
+  /* Como si no hubiera conexión. Envuelve lo que MANDA cosas de verdad: en
+   * tests.html las credenciales son las buenas, y una prueba que cierre el
+   * reto del día acabaría en la clasificación real. Con un hueco por nombre y
+   * día (supabase/reto.sql), además, le gastaría el intento a quien la corra. */
+  function sinRed(cuerpo) {
+    return conRed(function () { return roto(new Error('SIN CONEXIÓN')); }, cuerpo);
+  }
+
   // ---------------------------------------------------------------
   // Laberinto y arranque
   // ---------------------------------------------------------------
@@ -809,7 +862,7 @@
       G.newGame(R.opts());
       ok(G.reto, 'la partida sabe que es el reto');
       G.score = 1234; G.level = 3;
-      G.closeRun();
+      sinRed(function () { G.closeRun(); });
       var m = R.marca();
       ok(m, 'la marca queda guardada aunque no haya red');
       eq(m.p, 1234, 'puntos');
@@ -818,7 +871,7 @@
       // volver a jugarlo el mismo día no puede mejorar la marca
       G.newGame(R.opts());
       G.score = 99999;
-      G.closeRun();
+      sinRed(function () { G.closeRun(); });
       eq(R.marca().p, 1234, 'un intento y no más');
     } finally {
       R.olvidar();
@@ -833,9 +886,11 @@
       try {
         // empezada ayer y terminada hoy: la marca es de ayer, y el reto de
         // hoy sigue por jugar (es otro laberinto de fantasmas)
-        R.cerrar(1500, 2, '1999-01-01');
-        ok(!R.hecho(), 'el intento de hoy sigue intacto');
-        R.cerrar(300, 1);
+        sinRed(function () {
+          R.cerrar(1500, 2, '1999-01-01');
+          ok(!R.hecho(), 'el intento de hoy sigue intacto');
+          R.cerrar(300, 1);
+        });
         eq(R.marca().p, 300, 'y el de hoy se guarda aparte');
       } finally {
         R.olvidar();
@@ -850,7 +905,7 @@
       window.PM.settings.muted = true;
       G.newGame(R.opts());
       G.score = 800;
-      G.closeRun();
+      sinRed(function () { G.closeRun(); });
       eq(L.xp(), antes + 800, 'los puntos del reto también son experiencia');
     } finally {
       R.olvidar();
@@ -887,19 +942,130 @@
     eq(errores.length, 3, 'los tres se rechazan antes de salir a la red');
   });
 
+  /* El "un intento al día" ya no lo decide este navegador: hay un hueco por
+   * nombre y día en la tabla (supabase/reto.sql). Estas cuatro pruebas cubren
+   * lo que pasa a los dos lados de esa regla. */
+  test('el segundo intento del día lo rechaza el servidor', function () {
+    var R = window.PM.Reto;
+    var n1 = window.PM.settings.nick1;
+    R.olvidar();
+    try {
+      window.PM.settings.nick1 = 'BRAI';
+      var errs = [];
+      /* `cerrar` intenta mandar la marca ahí mismo, así que también va dentro
+       * de la red de mentira: una prueba no puede acabar en la clasificación
+       * de verdad (que es justo lo que pasó la primera vez que se escribió).
+       * Aquí se cierra sin conexión, que además es el caso interesante. */
+      conRed(function () { return roto(new Error('SIN CONEXIÓN')); },
+        function () { R.cerrar(1200, 3); });
+      eq(R.marca().e, 0, 'la marca espera a que haya red');
+      // y cuando la hay, resulta que el hueco de hoy ya estaba ocupado
+      conRed(function () { return respuesta(409, '{"code":"23505"}'); },
+        function () { R.enviarPendiente(function (e) { errs.push(e); }); });
+      eq(errs[0], 'YA TIENES MARCA DE HOY', 'se dice con todas las letras');
+      var m = R.marca();
+      eq(m.p, 1200, 'la marca sigue aquí');
+      eq(m.e, 1, 'y no se reintenta: el hueco de hoy está ocupado');
+      eq(m.otro, 1, 'apuntada como jugada en otro sitio');
+    } finally {
+      window.PM.settings.nick1 = n1;
+      R.olvidar();
+    }
+  });
+
+  test('el intento gastado en otro aparato se trae del servidor', function () {
+    var R = window.PM.Reto;
+    var n1 = window.PM.settings.nick1;
+    R.olvidar();
+    try {
+      window.PM.settings.nick1 = 'BRAI';
+      ok(!R.hecho(), 'en este navegador no hay nada');
+      var m = null;
+      var vistas = conRed(
+        function () { return respuesta(200, [{ puntos: 4500, nivel: 5 }]); },
+        function () { R.sincronizar(function (e, marca) { m = marca; }); });
+      ok(vistas[0].url.indexOf('fecha=eq.' + R.hoy()) !== -1,
+         'se pregunta por el reto de hoy: ' + vistas[0].url);
+      ok(vistas[0].url.indexOf('jugador=eq.BRAI') !== -1,
+         'y por el nombre normalizado: ' + vistas[0].url);
+      ok(m, 'contesta con la marca de allí');
+      eq(m.p, 4500, 'puntos');
+      ok(R.hecho(), 'el intento de hoy está gastado, aunque fuera en el móvil');
+      eq(R.marca().otro, 1, 'y se sabe que no se jugó aquí');
+    } finally {
+      window.PM.settings.nick1 = n1;
+      R.olvidar();
+    }
+  });
+
+  test('sin marca en el servidor, el reto sigue por jugar', function () {
+    var R = window.PM.Reto;
+    var n1 = window.PM.settings.nick1;
+    R.olvidar();
+    try {
+      window.PM.settings.nick1 = 'BRAI';
+      var llamadas = 0;
+      conRed(function () { return respuesta(200, []); },
+        function () { R.sincronizar(function () { llamadas++; }); });
+      eq(llamadas, 1, 'contesta igual');
+      ok(!R.hecho(), 'y no se inventa ninguna marca');
+      // sin red tampoco: lo de este navegador manda
+      conRed(function () { return roto(new Error('SIN CONEXIÓN')); },
+        function () { R.sincronizar(function () {}); });
+      ok(!R.hecho(), 'sin conexión se juega igual');
+    } finally {
+      window.PM.settings.nick1 = n1;
+      R.olvidar();
+    }
+  });
+
+  test('con cuenta, la marca del reto va firmada con la sesión', function () {
+    var R = window.PM.Reto, Ac = window.PM.Account;
+    var tok0 = Ac.token, user0 = Ac.user, n1 = window.PM.settings.nick1;
+    try {
+      window.PM.settings.nick1 = 'BRAI';
+      Ac.token = 'token-de-prueba';
+      Ac.user = { id: '1', usuario: 'BRAI', avatar: 'pac' };
+      var vistas = conRed(function () { return respuesta(201, ''); },
+        function () {
+          R.submit({ fecha: R.hoy(), nombre: 'BRAI', puntos: 900, nivel: 2 },
+                   function () {});
+        });
+      eq(vistas[0].opts.headers['Authorization'], 'Bearer token-de-prueba',
+         'así el servidor sabe que el nombre es tuyo de verdad');
+      // y si el nombre es de otro, el servidor lo corta y se dice en cristiano
+      var err = null;
+      conRed(function () { return respuesta(403, '{"code":"42501"}'); },
+        function () {
+          R.submit({ fecha: R.hoy(), nombre: 'BRAI', puntos: 900, nivel: 2 },
+                   function (e) { err = e; });
+        });
+      eq(err, R.AJENO, 'no es un número suelto: se explica qué hacer');
+    } finally {
+      Ac.token = tok0;
+      Ac.user = user0;
+      window.PM.settings.nick1 = n1;
+    }
+  });
+
   test('el botón de la portada dice si el reto ya está jugado', function () {
     var R = window.PM.Reto, U = window.PM.UI;
     R.olvidar();
     try {
-      U.refreshReto();
-      eq(U.retoBtn.textContent, 'RETO DE HOY');
-      R.cerrar(700, 2);
-      U.refreshReto();
-      ok(/700/.test(U.retoBtn.textContent),
-         'con la marca a la vista: ' + U.retoBtn.textContent);
+      /* sin marca aquí, el botón pregunta al servidor: se le contesta que
+       * tampoco hay nada allí, que es lo que se quiere probar */
+      conRed(function () { return respuesta(200, []); }, function () {
+        U.refreshReto();
+        eq(U.retoBtn.textContent, 'RETO DE HOY');
+        R.cerrar(700, 2);
+        U.refreshReto();
+        ok(/700/.test(U.retoBtn.textContent),
+           'con la marca a la vista: ' + U.retoBtn.textContent);
+      });
     } finally {
       R.olvidar();
-      U.refreshReto();
+      conRed(function () { return respuesta(200, []); },
+             function () { U.refreshReto(); });
     }
   });
 
@@ -1021,6 +1187,107 @@
       window.PM.settings.nick1 = n1;
     }
   });
+
+  test('el historial apunta cuántos erais, también en trío y escuadra',
+    function () {
+      var H = window.PM.History;
+      var previo = H.all();
+      try {
+        H.clear();
+        H.add({ jugadores: 4, modo: 'online', nombre1: 'BRAI', puntos: 900,
+                nivel: 2 });
+        eq(H.all()[0].j, 4, 'una escuadra no es una partida individual');
+      } finally {
+        H.clear();
+        for (var i = previo.length - 1; i >= 0; i--) {
+          H.add({ jugadores: previo[i].j, modo: previo[i].m, nombre1: previo[i].n1,
+                  nombre2: previo[i].n2, puntos: previo[i].p, nivel: previo[i].lv });
+        }
+      }
+    });
+
+  // ---------------------------------------------------------------
+  // Historial en la nube (TUS PARTIDAS con cuenta)
+  // El dato ya estaba en la tabla `ranking`; lo que faltaba era leerlo,
+  // y por eso el historial no seguía al jugador de un aparato a otro.
+  // ---------------------------------------------------------------
+  test('sin cuenta, TUS PARTIDAS no sale a la red', function () {
+    var H = window.PM.History, Ac = window.PM.Account;
+    var tok0 = Ac.token, user0 = Ac.user;
+    try {
+      Ac.token = null; Ac.user = null;
+      var lista = null;
+      var vistas = conRed(function () { return respuesta(200, []); },
+        function () { H.list(function (e, l) { lista = l; }); });
+      eq(vistas.length, 0, 'un nombre suelto no identifica a nadie');
+      ok(lista, 'y aun así se enseña lo de este navegador');
+    } finally {
+      Ac.token = tok0;
+      Ac.user = user0;
+    }
+  });
+
+  test('con cuenta se piden las partidas por los cuatro nombres', function () {
+    var H = window.PM.History, Ac = window.PM.Account;
+    var tok0 = Ac.token, user0 = Ac.user;
+    try {
+      Ac.token = 'token-de-prueba';
+      Ac.user = { id: '1', usuario: 'BRAI', avatar: 'pac' };
+      var lista = null;
+      var vistas = conRed(function () {
+        return respuesta(200, [{
+          creado_en: '2026-08-06T10:00:00Z', jugadores: 4, modo: 'online',
+          nombre1: 'ANA', nombre2: 'BRAI', nombre3: 'LUIS', nombre4: 'EVA',
+          puntos: 30000, nivel: 6
+        }]);
+      }, function () { H.remote(function (e, l) { lista = l; }); });
+      var url = vistas[0].url;
+      ok(url.indexOf('/rest/v1/' + CFG.RANKING.TABLE) !== -1, 'a la tabla: ' + url);
+      for (var i = 1; i <= CFG.MAX_PLAYERS; i++) {
+        ok(url.indexOf('nombre' + i + '.eq.BRAI') !== -1,
+           'las de invitado están en nombre' + i + ': ' + url);
+      }
+      eq(lista.length, 1, 'llega la partida');
+      eq(lista[0].nube, 1, 'marcada como de la nube (aquí no hay repetición)');
+      eq(lista[0].j, 4, 'escuadra');
+      eq(lista[0].p, 30000, 'con la puntuación del equipo, que es la que compite');
+      eq(lista[0].m, 'online', 'y que fue una party');
+    } finally {
+      Ac.token = tok0;
+      Ac.user = user0;
+    }
+  });
+
+  test('una partida que está aquí y en la nube no sale dos veces', function () {
+    var H = window.PM.History;
+    var t = 1770000000000;
+    var local = [{ t: t, j: 1, m: 'local', n1: 'BRAI', n2: '', p: 5000, lv: 4 }];
+    // la fila del ranking se sella un instante después de acabar la partida
+    var nube = [
+      { t: t + 3000, j: 1, m: 'local', n1: 'BRAI', n2: '', p: 5000, lv: 4, nube: 1 },
+      { t: t - 86400000, j: 1, m: 'local', n1: 'BRAI', n2: '', p: 900, lv: 2, nube: 1 }
+    ];
+    var lista = H.mezclar(local, nube);
+    eq(lista.length, 2, 'la repetida se descarta');
+    ok(!lista[0].nube, 'y de las dos manda la de aquí, que tiene la repetición');
+    eq(lista[0].p, 5000);
+    eq(lista[1].p, 900, 'la de otro aparato entra detrás, por fecha');
+  });
+
+  test('dos partidas seguidas con la misma puntuación no se confunden',
+    function () {
+      var H = window.PM.History;
+      var t = 1770000000000;
+      // mismo formato y misma hora, pero puntuaciones distintas: son dos
+      ok(!H.misma({ t: t, j: 1, p: 100 }, { t: t + 1000, j: 1, p: 200 }),
+         'con un jugador manda la puntuación');
+      // en equipo no se puede comparar (aquí van tus puntos, allí los del
+      // equipo), así que se cruzan por hora
+      ok(H.misma({ t: t, j: 3, p: 100 }, { t: t + 1000, j: 3, p: 9000 }),
+         'en trío basta con la hora');
+      ok(!H.misma({ t: t, j: 3, p: 100 }, { t: t + 600000, j: 3, p: 9000 }),
+         'pero diez minutos después ya es otra partida');
+    });
 
   // ---------------------------------------------------------------
   // Repeticiones de partida
