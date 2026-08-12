@@ -1033,9 +1033,14 @@
         });
       eq(vistas[0].opts.headers['Authorization'], 'Bearer token-de-prueba',
          'así el servidor sabe que el nombre es tuyo de verdad');
-      // y si el nombre es de otro, el servidor lo corta y se dice en cristiano
+      /* Y si el nombre es de otro, el servidor lo corta y se dice en
+       * cristiano. La respuesta es la que da Supabase de verdad: 401 con el
+       * texto de la política (comprobado contra el proyecto). */
       var err = null;
-      conRed(function () { return respuesta(403, '{"code":"42501"}'); },
+      conRed(function () {
+        return respuesta(401, '{"code":"42501","message":"new row violates ' +
+          'row-level security policy for table \\"reto_diario\\""}');
+      },
         function () {
           R.submit({ fecha: R.hoy(), nombre: 'BRAI', puntos: 900, nivel: 2 },
                    function (e) { err = e; });

@@ -24,9 +24,10 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   el historial como si fuera individual, así que no encontraba su repetición.
   Ahora se apunta con los que erais.
 
-> Hay que **volver a lanzar `supabase/reto.sql`** (Dashboard → SQL Editor).
-> Deja una marca por nombre y día —la mejor, que es la que la clasificación ya
-> enseñaba— y retira el freno viejo de tres envíos.
+> **Ya aplicado** en el proyecto del juego. Quien monte esto en otro Supabase
+> (o venga de una versión anterior) tiene que **lanzar `supabase/reto.sql`**
+> otra vez: deja una marca por nombre y día —la mejor, que es la que la
+> clasificación ya enseñaba— y retira el freno viejo de tres envíos.
 
 ## 2026-08-06 · Las partidas online también se graban
 

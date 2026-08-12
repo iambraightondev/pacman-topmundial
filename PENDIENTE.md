@@ -11,53 +11,53 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ---
 
-## Lo que hay que aplicar (12 de agosto)
-
-Lo del 12 de agosto —el intento único del reto y el historial en la nube— está
-en el código pero **no en el servidor**. Falta una cosa, y hay que hacerla
-antes de que el arreglo sirva de algo:
-
-1. **Ejecutar [`supabase/reto.sql`](supabase/reto.sql)** entero (Dashboard →
-   SQL Editor → New query → Run). Es lo que crea el hueco único por nombre y
-   día; sin él, el juego pregunta y avisa, pero la tabla sigue admitiendo la
-   segunda marca. Deja una fila por nombre y día (la mejor, que es la que la
-   clasificación ya enseñaba) y retira el freno viejo de tres envíos.
-2. **Antes, borrar una marca de prueba** que se coló en el reto del **12 de
-   agosto**: `BRAI`, 1200 puntos, nivel 3. La metió una prueba nueva mientras
-   se escribía esto (ya está tapado: el arnés corre sin red, ver `sinRed` en
-   `js/tests.js`), pero si se queda, al ejecutar el SQL se convierte en TU
-   marca de ese día y no habrá forma de mandar otra.
-
-   ```sql
-   delete from public.reto_diario
-    where fecha = '2026-08-12' and upper(btrim(nombre)) = 'BRAI';
-   ```
-
-El historial en la nube **no necesita nada del servidor**: lee la tabla
-`ranking`, que ya estaba y ya era de lectura pública.
-
 ## Lo que está aplicado en producción
 
-De lo del 6 de agosto no quedó nada por desplegar: se aplicó sobre la marcha.
+Tampoco del 12 de agosto queda nada por desplegar: `supabase/reto.sql` se
+ejecutó entero ese mismo día. El **hueco único por nombre y día** está puesto
+(`reto_diario_un_intento_idx`), la política de inserción ya protege los
+nombres con cuenta y el freno viejo de tres envíos está retirado. La tabla no
+perdió ni una fila: no había duplicados que deduplicar.
+
+Comprobado contra el servidor, con la clave anónima: el primer intento del día
+entra (201), el segundo con el mismo nombre —aunque cambien las mayúsculas—
+vuelve como **409**, firmar con el nombre de una cuenta ajena da **RLS
+denegado** y un nombre sin cuenta sigue abierto. Las filas de esa comprobación
+se borraron; en el reto solo están las marcas de verdad.
+
+> Se coló una marca de prueba en el reto del 12 de agosto (`BRAI`, 1200) desde
+> el arnés de `tests.html`, que corre con las credenciales buenas. Se borró, y
+> el agujero está tapado: lo que envía va dentro de `sinRed()` (`js/tests.js`).
+> Si alguna vez vuelve a aparecer una marca rara, mirar ahí primero.
+
+El historial en la nube **no necesitaba nada del servidor**: lee la tabla
+`ranking`, que ya estaba y ya era de lectura pública.
+
+De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v21` |
+| Juego (Vercel) | desplegado, service worker `pm-v22` |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
 | Vistas `ranking_top` y `ranking_temporada` | rehechas |
 | Edge Function `enviar-record` | **versión 2** desplegada |
-| `reto_diario`: un hueco por nombre y día | **pendiente** (arriba) |
+| `reto_diario`: un hueco por nombre y día | aplicado (12 de agosto) |
 
 Dos avisos operativos:
 
 - **`CFG.NET.PROTO` está en 6.** Quien tenga una pestaña vieja abierta no
   podrá entrar en una party hasta recargar. Es lo normal al cambiar la forma
   de lo que viaja por red, pero conviene saberlo si alguien se queja.
-- **Hay un token de Supabase que revocar.** En la sesión del 6 de agosto se
-  pegó un *personal access token* (`sbp_…`) en el chat para aplicar las
-  migraciones. Da acceso a **toda la cuenta**, no a un proyecto. Si no se ha
-  hecho ya: <https://supabase.com/dashboard/account/tokens> → borrarlo.
+- **Hay un token de Supabase que revocar, y sigue vivo.** En la sesión del 6
+  de agosto se pegó un *personal access token* (`sbp_…`) en el chat para
+  aplicar las migraciones. Da acceso a **toda la cuenta**, no a un proyecto, y
+  se queda escrito en el historial local de la sesión
+  (`~/.claude/projects/…/*.jsonl`), así que borrar el chat de la pantalla no
+  lo borra. El 12 de agosto se usó otra vez desde ahí para aplicar `reto.sql`:
+  funcionó, o sea que **no está revocado**. Cuando ya no haga falta:
+  <https://supabase.com/dashboard/account/tokens> → borrarlo, y si hace falta
+  otro, mejor por variable de entorno que pegado en el chat.
 
 ### Las cuatro pruebas que "fallan" en Node
 

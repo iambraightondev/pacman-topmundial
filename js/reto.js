@@ -81,9 +81,13 @@
   }
 
   /* ¿Y el nombre es de una cuenta ajena? La política de RLS lo corta antes de
-   * escribir, y PostgREST lo devuelve como 403 (o 42501 en el cuerpo). */
+   * escribir. Se mira por el texto y no por el número: comprobado contra el
+   * servidor, eso llega como 401 con "new row violates row-level security
+   * policy" en el cuerpo. Por el código 42501 a secas no vale: es el mismo que
+   * da un GRANT que falte, y ahí el aviso mandaría al jugador a entrar en una
+   * cuenta que no arreglaría nada. */
   function esAjeno(status, cuerpo) {
-    return status === 403 || /42501|row-level security/i.test(String(cuerpo || ''));
+    return status === 403 || /row-level security/i.test(String(cuerpo || ''));
   }
 
   /* Lo guardado en este navegador: { f: fecha, p: puntos, n: nivel,
