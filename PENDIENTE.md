@@ -11,56 +11,79 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ---
 
-## Lo del 14 de agosto: el modo HABILIDADES
+## Lo del 14 de agosto, de un vistazo
 
-Cuatro poderes en Q, W, E y R sobre el laberinto de siempre. Todo lo suyo
-vive en `js/habilidades.js`; en el resto del juego solo quedan enganches.
-El detalle está en [`SPEC.md`](SPEC.md) ("Modo HABILIDADES") y lo que se
-juega, en [`CHANGELOG.md`](CHANGELOG.md).
+Cuatro cosas, y **todas están ya en producción** (comprobado contra
+<https://pacman-topmundial.vercel.app>: sirve `js/habilidades.js`, el service
+worker es `pm-v23` y las seis rutas de maestría están arriba). El qué está en
+[`CHANGELOG.md`](CHANGELOG.md) y el cómo en [`SPEC.md`](SPEC.md); aquí va solo
+lo que hay que saber **antes de tocar nada de esto**.
 
-**No necesita nada del servidor**: ni tabla, ni migración, ni Edge Function.
-Se despliega subiendo los archivos y ya.
+1. **Modo HABILIDADES** — cuatro poderes en Q/W/E/R (`js/habilidades.js`).
+2. **Logros por modo** — 18 nuevos, 33 en total, todos en la misma lista.
+3. **Maestrías de LABERINTOS y HABILIDADES** — seis rutas en vez de cuatro.
+4. **Portada nueva** — seis tarjetas de modo y un solo `JUGAR`.
 
-Tres decisiones que conviene no volver a discutir desde cero:
+### 1 · Modo HABILIDADES
 
-- **Fuera del top mundial, y también fuera del récord local.** Lo primero
+Todo lo suyo vive en `js/habilidades.js`; en el resto del juego solo hay
+enganches. **No necesita nada del servidor.**
+
+Decisiones que conviene no volver a discutir desde cero:
+
+- **Fuera del top mundial, y también fuera del récord de siempre.** Lo primero
   era evidente; lo segundo no tanto, y es lo que de verdad importaba: el
-  récord de cada formato viaja a `perfiles.recordN` y de ahí salen las
-  maestrías. Sin ese freno, una partida a mordiscos regalaba una insignia
-  que dice otra cosa. Experiencia y logros sí cuentan.
-- **Solo flechas para moverse.** La W era el "arriba" del J2 y de paso un
-  atajo del J1. No hay tecla que haga dos cosas, así que en este modo WASD
-  se apaga entero (dejar la A, la S y la D moviendo sería medio mando). De
-  ahí sale que el modo **no esté** en dos jugadores en el mismo teclado.
+  récord viaja a `perfiles` y de ahí salen las maestrías.
+- **Solo flechas para moverse.** La W era el "arriba" del J2 y un atajo del
+  J1. No hay tecla que haga dos cosas, así que aquí WASD se apaga entero
+  (dejar A/S/D moviendo sería medio mando). De ahí sale que el modo **no esté**
+  en dos jugadores en el mismo teclado.
 - **Tampoco en PAC-MAN VS.** Morder de un toque a un fantasma que lleva una
   persona, sin que pueda hacer nada, no es una pelea.
+- **El alcance del mordisco se mide en PÍXELES, no en casillas.** Con casillas
+  fallaba a cada rato: dos sprites pegados en pantalla pueden caer en casillas
+  que no son vecinas. Si algún día se toca el alcance, que siga en píxeles.
+- **La E salta hacia la última flecha pulsada**, no hacia donde mira Pac-Man.
+  Sale gratis porque el motor ya lo guarda en `nextDir`.
 
-### Los logros por modo (mismo día)
-
-18 logros nuevos, tres por modo, en la misma lista de siempre. Lo que hay
-que saber para tocarlos:
+### 2 · Logros por modo
 
 - **No se escribe ningún contador a mano.** Un logro con `modo` mira la clave
-  `modo:stat`, y `Achievements.STATS` se monta al cargar a partir de
-  `CFG.ACHIEVEMENTS`. Añadir un logro de un modo **crea su contador solo**, y
-  solo se guarda lo que mire alguien: hoy no existe `clasico:fantasmas`
-  porque ningún logro lo pide.
+  `modo:stat`, y `Achievements.STATS` se monta al cargar desde
+  `CFG.ACHIEVEMENTS`. Añadir un logro **crea su contador solo**, y solo se
+  guarda lo que mire alguien: hoy no existe `clasico:fantasmas` porque ningún
+  logro lo pide.
 - **Una partida lleva varias etiquetas** (`Game.achTags`): el formato (`solo`
-  o `party`) y el modo. Una party de habilidades cuenta para las dos. Los
+  o `party`) y el modo. Una party de habilidades cuenta para las dos; los
   modos entre sí no se mezclan.
 - Al añadir un logro de un modo, mirar **quién lo cuenta en online**. Es la
-  trampa de esto: el anfitrión ejecuta también lo que le piden los invitados,
-  y hay cosas que el invitado no llega a saber de sí mismo. Por eso las cazas
-  de VS. se apuntan al cerrar la partida (desde el marcador, que sí viaja) y
-  los mordiscos se apuntan en la máquina de quien pulsa la tecla.
+  trampa: el anfitrión ejecuta también lo que le piden los invitados, y hay
+  cosas que el invitado no llega a saber de sí mismo. Por eso las cazas de VS.
+  se apuntan al cerrar la partida (desde el marcador, que sí viaja) y los
+  mordiscos en la máquina de quien pulsa la tecla.
+- **`Achievements.sembrarModos()` reparte lo jugado ANTES de que esto
+  existiera.** Los contadores por modo nacían a cero y quien llevaba cien
+  partidas veía `0/50`. El clásico se lleva lo global y party solo si hay
+  récord de dúo/trío/escuadra; de los demás no se inventa nada. Se hace una
+  vez (bandera `m`) y otra al entrar en la cuenta. **Ojo si se toca**: si se
+  repitiera en cada arranque, las partidas de party engordarían el contador de
+  clásico para siempre.
 
-> **Lo de `persistHighScore()` ya está arreglado** (ver más abajo): LABERINTOS
-> y HABILIDADES guardan cada uno en su propio récord y tienen su propia ruta
-> de maestrías, así que ya no escriben en el de 1 jugador.
+### 3 · Maestrías de LABERINTOS y HABILIDADES
 
-### Portada con selector de modo (mismo día)
+- El agujero que tapa: una partida en **otro laberinto escribía en
+  `highScore1`**, el récord que viaja a la cuenta y del que salen las
+  maestrías, así que un trazado más cómodo entregaba insignias del laberinto
+  de 1980.
+- **`Game.recordSlot()` es el interruptor**: devuelve `'hab'`, `'lab'` o
+  `null` (formato). Lo usan `persistHighScore`, el HIGH SCORE de la partida y
+  `badgeMode()`. Si algún día hay otro modo aparte, se añade ahí.
+- **El modo manda sobre el formato**: una party de habilidades puntúa en `hab`.
+- `hab` **pide el doble** en cada escalón (`Badges.mult`).
+- **Lo que ya estaba en `record1` se queda.** No hay forma de saber qué parte
+  vino de un laberinto alternativo.
 
-Seis tarjetas y un `JUGAR`. Lo que hay que saber para tocarlo:
+### 4 · Portada con selector de modo
 
 - **La lista está en `MODOS` (arriba de `js/ui.js`)**. Añadir un modo es una
   entrada ahí más su caso en `playPick()`; el icono, en `drawModeIcon`.
@@ -69,31 +92,10 @@ Seis tarjetas y un `JUGAR`. Lo que hay que saber para tocarlo:
 - Las tarjetas son `<button>` a propósito: así entran solas en la navegación
   con flechas.
 - **`refreshReto()` y `refreshOnlineBtn()` ya no tocan botones**: llaman a
-  `refreshModePicker()`. Si algún día vuelve un botón suelto, ojo con eso.
-
-### Maestrías propias de LABERINTOS y HABILIDADES (mismo día)
-
-Seis rutas en vez de cuatro. Lo que hay que saber:
-
-- El agujero que tapa: una partida en **otro laberinto escribía en
-  `highScore1`**, el mismo récord que viaja a la cuenta y del que salen las
-  maestrías, así que un trazado más cómodo entregaba insignias del laberinto
-  de 1980. Ahora cada modo guarda la suya (`Game.recordModo`).
-- **`Game.recordSlot()` es el interruptor**: devuelve `'hab'`, `'lab'` o
-  `null` (formato). Lo usan `persistHighScore`, el HIGH SCORE de la partida y
-  `badgeMode()`. Si algún día hay un modo aparte más, se añade ahí.
-- **El modo manda sobre el formato**: una party de habilidades puntúa en la
-  ruta `hab`, no en la de dúo.
-- `hab` **pide el doble** en cada escalón (`Badges.mult`). Con poderes los
-  puntos son más baratos y la ruta se acababa en dos tardes.
-- **Lo que ya estaba en `record1` se queda.** No hay forma de saber qué parte
-  vino de un laberinto alternativo, así que no se toca.
-
-> **Aplicado en producción**: `perfiles.record_lab` y `perfiles.record_hab`
-> (14 de agosto). Comprobado con la clave anónima que el `select` que manda
-> el juego los devuelve. Quien monte esto en otro Supabase tiene que lanzar
-> `supabase/cuentas.sql`; si no lo hace, el juego levanta la bandera
-> `sinModos` y sigue subiendo lo de siempre sin romperse.
+  `refreshModePicker()`. Si vuelve un botón suelto, ojo con eso.
+- La **maestría se celebra arriba y fuera del laberinto siempre**. El cartelón
+  del centro (`drawBadgeBanner`) se borró: tapaba la partida cinco segundos
+  justo cuando acabas de hacer tu mejor marca y estás a punto de perderla.
 
 ---
 
@@ -123,7 +125,7 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | service worker `pm-v23` — **el modo HABILIDADES está sin desplegar** |
+| Juego (Vercel) | desplegado, service worker `pm-v23` (14 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
@@ -149,14 +151,42 @@ Dos avisos operativos:
 
 ### Las cuatro pruebas que "fallan" en Node
 
-`node pruebas-node.js` termina con **4 fallos** y eso es lo esperado. Son
-límites del DOM de mentira (miden píxeles reales y `offsetParent`), no fallos
-del juego: las mismas pasan en `tests.html`. **La batería buena es la del
-navegador**; la de Node vale para la lógica.
+Hoy hay **207 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
+es lo esperado: son límites del DOM de mentira (miden píxeles reales y
+`offsetParent`), no fallos del juego. Las mismas **pasan en `tests.html`**, que
+es la batería buena; la de Node vale para la lógica.
 
 Si alguien va a perseguirlas, que sea para arreglar el arnés, no el juego.
 
+> Al servir `tests.html` para probar, **usa un puerto nuevo cada vez**. La
+> caché del navegador te devuelve el `js/` anterior y acabas probando código
+> viejo sin enterarte.
+
 ---
+
+## Cabos sueltos de lo del 14 de agosto
+
+Nada de esto rompe nada; son cosas que se quedaron a medias o sin hacer y que
+conviene tener apuntadas antes de que se olviden.
+
+- **Las habilidades no suenan.** `js/habilidades.js` no llama a `AudioSys` ni
+  una vez. La Q suena porque reutiliza el "te has comido un fantasma" y la R
+  porque el modo azul ya trae lo suyo, pero **el turbo y el flash son mudos**,
+  que son justo los dos que no cambian el marcador. Es lo primero que le
+  pediría a este modo: dos sonidos cortos en `AudioSys` y llamarlos desde
+  `turbo()` y `flash()`.
+- **El selector de modo no recuerda tu elección** entre recargas: siempre
+  vuelve a CLÁSICO. Se guarda en `UI.modePick`, que es de la sesión. Meterlo
+  en `PM.settings` es fácil, pero obliga a tocar `DEFAULT_SETTINGS` y su
+  saneado, y por eso se dejó.
+- **`hab`, `lab`, `reto` y `vs` empiezan sus logros a cero para todo el
+  mundo**, y no tiene arreglo: de esos modos no hay ni rastro en los
+  contadores viejos. Solo el clásico y party se pudieron sembrar.
+- **HABILIDADES sigue sin estar en dos jugadores locales ni en PAC-MAN VS.**
+  Fue una decisión (teclas y equilibrio), no un olvido, pero si alguna vez se
+  quiere, lo local pide un segundo juego de teclas para el J2.
+- **Los iconos de las tarjetas se dibujan en cada `buildMenu`**, que solo pasa
+  una vez, así que da igual. Si algún día se rehace el menú a menudo, cachear.
 
 ## Lo que queda, por orden de lo que yo haría
 
@@ -264,3 +294,16 @@ el repo, pero la técnica se rehace en diez minutos:
     ven divergencias que no existen. Costó un rato de investigación.
 - **Playwright** para el juego de verdad en Chromium: teclas reales, la
   batería de `tests.html` con lienzo de verdad y capturas de los paneles.
+  - Para probar una habilidad con el teclado hay que **colocar y pulsar en la
+    misma llamada**: entre dos `evaluate` pasa casi un segundo de partida y
+    los fantasmas ya no están donde los pusiste. Va bien despachar el evento
+    a mano (`document.dispatchEvent(new KeyboardEvent('keydown', …))`), que
+    sigue pasando por el `ui.js` de verdad.
+  - Para una foto, **congelar de verdad**: `G.paused = true` mete el rótulo de
+    PAUSA encima. Lo limpio es dejar el bucle pintando y anular la simulación
+    (`G.step = function () {}`).
+
+El arnés de red del 14 de agosto (dos mundos, party de habilidades) hacía 19
+comprobaciones: que el invitado enseña los dientes al instante pero no mata él
+solo, que el anfitrión ejecuta y reparte, y que el eco no se aplica dos veces.
+Tampoco está en el repo, pero se rehace con lo de arriba.
