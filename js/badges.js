@@ -3,51 +3,82 @@
  * Maestrías: insignias que se entregan al alcanzar cierta
  * puntuación como récord personal. Define window.PM.Badges
  *
- * Hay SEIS rutas independientes. Cuatro por formato de partida:
- *   'solo'     — 1 jugador   (Game.highScore1)
- *   'duo'      — 2 jugadores (Game.highScore2)
- *   'trio'     — 3 jugadores (Game.highScore3)
- *   'escuadra' — 4 jugadores (Game.highScore4)
- * ...y dos por los modos que se juegan con otras reglas:
- *   'lab'      — LABERINTOS   (Game.recordModo('lab'))
- *   'hab'      — HABILIDADES  (Game.recordModo('hab'))
+ * Una ruta por MUNDO y FORMATO. DOCE en total.
  *
- * Cada una lleva su propio récord y sus propias insignias: una
- * gran partida en escuadra no regala las de dúo ni las de solo, y
- * una en otro laberinto no regala las del de 1980. Esto último era
- * un agujero: hasta ahora una partida en LABERINTOS escribía en el
- * récord de 1 jugador, así que un trazado más cómodo entregaba
- * maestrías del laberinto clásico.
+ *   MUNDOS (dónde se juega)
+ *     'clasico' — el laberinto de 1980 (Game.recordFor(n))
+ *     'lab'     — LABERINTOS, otros trazados
+ *     'hab'     — DESATADO, los cuatro poderes
+ *   FORMATOS (cuántos jugáis)
+ *     1 SOLO · 2 DÚO · 3 TRÍO · 4 ESCUADRA
+ *
+ * Cada casilla de esa tabla lleva su propio récord y sus propias
+ * insignias, y no se mezclan: una gran partida en escuadra no
+ * regala las de dúo ni las de solo, y una en otro laberinto no
+ * regala las del de 1980. Antes había seis rutas —los cuatro
+ * formatos, más LABERINTOS y DESATADO enteros— y ahí quedaba un
+ * agujero: un trío de LABERINTOS entregaba las mismas insignias
+ * que una partida en solitario, cuando son tres bocas comiendo.
  *
  * Y cada ruta pide MÁS puntos según lo que se regale: el escalón
- * de siempre multiplicado por su factor. Los formatos multiplican
- * por los jugadores (APRENDIZ son 3.000 en solo, 6.000 en dúo,
- * 9.000 en trío y 12.000 en escuadra), porque el marcador de un
- * equipo es de todos y con cuatro se llega al mismo número con
- * mucho menos mérito de cada uno. HABILIDADES multiplica por dos:
- * morder fantasmas a golpe de tecla da puntos que en el arcade no
- * existen, y sin ese peaje su ruta se acabaría en dos tardes.
+ * de siempre multiplicado por su factor, que es el del formato por
+ * el del mundo.
+ *   · Por FORMATO se multiplica por los jugadores (APRENDIZ son
+ *     3.000 en solo, 6.000 en dúo, 9.000 en trío y 12.000 en
+ *     escuadra), porque el marcador de un equipo es de todos.
+ *   · Por MUNDO, DESATADO multiplica por dos: morder fantasmas a
+ *     golpe de tecla da puntos que en el arcade no existen, y sin
+ *     ese peaje su ruta se acabaría en dos tardes. LABERINTOS no
+ *     multiplica: otro trazado no es más generoso, es distinto.
  *
  * Las insignias conseguidas se deducen del récord (no hace falta
  * guardarlas); en localStorage solo se anota cuáles se han
  * anunciado ya, para no repetir el aviso en cada partida.
+ *
+ * Los IDENTIFICADORES de las rutas se eligieron para no romper lo
+ * ya guardado: los del clásico son los de siempre ('solo', 'duo',
+ * 'trio', 'escuadra') y los de solo de cada mundo aparte se quedan
+ * como estaban ('lab', 'hab'), que es donde casi todo el mundo lo
+ * jugó. Solo son nuevos 'lab2'..'lab4' y 'hab2'..'hab4'.
  * ============================================================ */
 (function () {
   'use strict';
   var CFG = window.PM.CFG;
 
-  /* ruta -> cómo se llama, de dónde sale su récord y cuánto multiplica
-   *   n     jugadores del formato (y su multiplicador)
-   *   slot  modo aparte: el récord sale de Game.recordModo(slot)
-   *   mult  multiplicador del escalón, si no es el de los jugadores */
-  var RUTAS = {
-    solo:     { n: 1, name: 'SOLO' },
-    duo:      { n: 2, name: 'DÚO' },
-    trio:     { n: 3, name: 'TRÍO' },
-    escuadra: { n: 4, name: 'ESCUADRA' },
-    lab:      { n: 1, name: 'LABERINTOS',  slot: 'lab' },
-    hab:      { n: 1, name: 'HABILIDADES', slot: 'hab', mult: 2 }
-  };
+  /* Los tres mundos, en el orden de los botones del panel.
+   *   mult  cuánto multiplica el escalón por ser de ese mundo */
+  var MUNDOS = [
+    { id: 'clasico', name: 'CLÁSICO',    mult: 1, color: '#ffff00' },
+    { id: 'lab',     name: 'LABERINTOS', mult: 1, color: '#ffb852' },
+    { id: 'hab',     name: 'DESATADO',   mult: 2, color: '#ff66cc' }
+  ];
+
+  /* Los cuatro formatos, en el orden de los botones del panel */
+  var FORMATOS = [
+    { n: 1, name: 'SOLO' },
+    { n: 2, name: 'DÚO' },
+    { n: 3, name: 'TRÍO' },
+    { n: 4, name: 'ESCUADRA' }
+  ];
+
+  /* Identificador de una ruta. Los del clásico y los de solo de cada mundo
+   * son los de antes: así lo ya anunciado sigue estándolo. */
+  var CLASICO_IDS = ['solo', 'duo', 'trio', 'escuadra'];
+  function rutaId(mundo, n) {
+    if (mundo === 'clasico') return CLASICO_IDS[n - 1];
+    return (n <= 1) ? mundo : (mundo + n);
+  }
+
+  /* La tabla completa, montada de una vez: id -> { mundo, n } */
+  var RUTAS = {};
+  var ORDEN = [];
+  for (var mi = 0; mi < MUNDOS.length; mi++) {
+    for (var fi = 0; fi < FORMATOS.length; fi++) {
+      var id = rutaId(MUNDOS[mi].id, FORMATOS[fi].n);
+      RUTAS[id] = { mundo: MUNDOS[mi], fmt: FORMATOS[fi] };
+      ORDEN.push(id);
+    }
+  }
 
   function isArray(v) {
     return Object.prototype.toString.call(v) === '[object Array]';
@@ -85,34 +116,48 @@
   }
 
   var Badges = {
-    /* Los cuatro formatos primero y los dos modos aparte después: es el
-     * orden de las pestañas del panel. */
-    MODES: ['solo', 'duo', 'trio', 'escuadra', 'lab', 'hab'],
+    /* Las doce rutas, mundo a mundo y dentro de cada uno por formato */
+    MODES: ORDEN,
+    MUNDOS: MUNDOS,
+    FORMATOS: FORMATOS,
 
-    /* Jugadores de esa ruta (1..4) */
-    players: function (mode) { return RUTAS[norm(mode)].n; },
-
-    modeName: function (mode) { return RUTAS[norm(mode)].name; },
-
-    /* ¿Es una ruta de un modo aparte (LABERINTOS, HABILIDADES)? */
-    slotOf: function (mode) { return RUTAS[norm(mode)].slot || null; },
-
-    /* Ruta a la que cuenta una partida POR SU FORMATO. Los modos aparte no
-     * salen de aquí: los decide Game.badgeMode(), que mira antes si la
-     * partida es de laberintos o de habilidades. */
-    modeFor: function (players) {
-      var n = parseInt(players, 10);
-      for (var k in RUTAS) {
-        if (!RUTAS.hasOwnProperty(k) || RUTAS[k].slot) continue;
-        if (RUTAS[k].n === n) return k;
-      }
-      return (n > 4) ? 'escuadra' : 'solo';
+    /* Ruta a la que cuenta una partida. mundo puede venir como null (el
+     * clásico), que es justo lo que devuelve Game.recordSlot(). */
+    ruta: function (mundo, players) {
+      var n = parseInt(players, 10) || 1;
+      if (n > CFG.MAX_PLAYERS) n = CFG.MAX_PLAYERS;
+      if (n < 1) n = 1;
+      var m = mundo || 'clasico';
+      var id = rutaId((m === 'lab' || m === 'hab') ? m : 'clasico', n);
+      return RUTAS.hasOwnProperty(id) ? id : 'solo';
     },
 
-    /* Cuánto multiplica el escalón esa ruta */
+    /* Jugadores de esa ruta (1..4) */
+    players: function (mode) { return RUTAS[norm(mode)].fmt.n; },
+
+    /* Mundo de esa ruta ('clasico' | 'lab' | 'hab') */
+    mundoDe: function (mode) { return RUTAS[norm(mode)].mundo.id; },
+
+    mundoName: function (mode) { return RUTAS[norm(mode)].mundo.name; },
+    mundoColor: function (mode) { return RUTAS[norm(mode)].mundo.color; },
+    formatoName: function (mode) { return RUTAS[norm(mode)].fmt.name; },
+
+    /* Nombre completo, el que sale en el cartel de la partida y en la chapa.
+     * El clásico no dice su mundo: es el juego de siempre y decir "CLÁSICO ·
+     * SOLO" en vez de "SOLO" solo añade ruido. */
+    modeName: function (mode) {
+      var r = RUTAS[norm(mode)];
+      if (r.mundo.id === 'clasico') return r.fmt.name;
+      return r.mundo.name + ' · ' + r.fmt.name;
+    },
+
+    /* Ruta del CLÁSICO por número de jugadores (lo de siempre) */
+    modeFor: function (players) { return this.ruta(null, players); },
+
+    /* Cuánto multiplica el escalón esa ruta: los jugadores por el mundo */
     mult: function (mode) {
       var r = RUTAS[norm(mode)];
-      return r.mult || r.n;
+      return r.fmt.n * r.mundo.mult;
     },
 
     /* Lo que hay que puntuar para esa insignia EN ESA RUTA */
@@ -124,10 +169,11 @@
     best: function (mode) {
       var g = window.PM.Game;
       if (!g) return 0;
-      var slot = this.slotOf(mode);
-      if (slot) return (g.recordModo ? g.recordModo(slot) : 0) || 0;
-      if (!g.recordFor) return 0;
-      return g.recordFor(this.players(mode)) || 0;
+      var r = RUTAS[norm(mode)];
+      if (r.mundo.id === 'clasico') {
+        return (g.recordFor ? g.recordFor(r.fmt.n) : 0) || 0;
+      }
+      return (g.recordModo ? g.recordModo(r.mundo.id, r.fmt.n) : 0) || 0;
     },
 
     earnedAt: function (points, mode) {

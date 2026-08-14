@@ -135,7 +135,7 @@
     { id: 'duo', name: 'DOS JUGADORES', tag: 'MISMO TECLADO', color: '#00ff00',
       icon: 'duo',
       desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO' },
-    { id: 'hab', name: 'HABILIDADES', tag: 'Q · W · E · R', color: '#ff66cc',
+    { id: 'hab', name: 'DESATADO', tag: 'Q · W · E · R', color: '#ff66cc',
       icon: 'dientes',
       desc: 'CUATRO PODERES CON SU RECARGA. AQUÍ SE MUEVE SOLO CON LAS FLECHAS' },
     { id: 'reto', name: 'RETO DE HOY', tag: 'UN INTENTO', color: '#00ffff',
@@ -232,9 +232,19 @@
     fitCanvas: function () {
       var canvas = document.getElementById('game');
       if (!canvas) return;
+      /* La barra de poderes va pegada BAJO el lienzo y en el flujo, así que su
+       * altura se le descuenta al alto disponible; si no, el conjunto se
+       * saldría por abajo justo en el modo donde hay que mirarla. Solo cuando
+       * está encendida y en su sitio (en táctil flota, y entonces no ocupa). */
+      var alto = window.innerHeight * 0.96;
+      if (this.habBar && this.habBar.classList.contains('on') &&
+          !this.habBar.classList.contains('fija')) {
+        alto -= this.habBar.offsetHeight + 6;
+      }
       var s = Math.min(window.innerWidth * 0.96 / CFG.NATIVE_W,
-                       window.innerHeight * 0.96 / CFG.NATIVE_H);
+                       alto / CFG.NATIVE_H);
       if (s >= 1) s = Math.floor(s * 2) / 2;   // saltos de 0.5 (x2.5, x3, ...)
+      if (s <= 0) s = 0.5;                     // pantalla imposible: algo hay que pintar
       canvas.style.width = Math.floor(CFG.NATIVE_W * s) + 'px';
       canvas.style.height = Math.floor(CFG.NATIVE_H * s) + 'px';
     },
@@ -321,13 +331,13 @@
       lvl.appendChild(bar);
       main.appendChild(lvl);
 
-      /* Elige modo y dale a JUGAR. Todos los modos, a la vista y con el
-       * mismo peso; el botón grande es uno solo. */
+      /* Elige modo y dale a JUGAR. UNO cada vez, en grande, y se pasa de uno
+       * a otro con las flechas de los lados. */
       main.appendChild(this.sectionTitle('ELIGE MODO'));
       main.appendChild(this.buildModeGrid());
 
       /* Lo que hace ese modo, y su recado si tiene (la marca del reto de hoy,
-       * la gente que hay en tu party...). Va debajo de la rejilla y encima
+       * la gente que hay en tu party...). Va debajo del carrusel y encima
        * del botón, que es por donde pasa la mirada camino de JUGAR. */
       this.modeDesc = document.createElement('div');
       this.modeDesc.className = 'mode-desc';
@@ -381,7 +391,7 @@
         'J1: FLECHAS O WASD',
         'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
         'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
-        'HABILIDADES: SOLO FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
+        'DESATADO: SOLO FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
         'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
       ];
       if (this.touchDevice) {
@@ -398,10 +408,36 @@
     /* ------------------------------------------------------
      * Selector de modo de la portada
      * ------------------------------------------------------ */
+    /* UN MODO CADA VEZ, en grande, con flecha a cada lado y los puntitos
+     * debajo. Antes eran seis tarjetas en rejilla: se veía todo de un vistazo,
+     * sí, pero ninguna pesaba más que las otras y elegir modo —que es LA
+     * decisión de la portada— se sentía como marcar una casilla. Con una sola
+     * tarjeta grande, su icono a tamaño de verdad y su nombre, elegir modo se
+     * parece más a plantarse delante de una máquina que a rellenar un
+     * formulario.
+     *
+     * Se conserva todo lo de la rejilla: los mismos iconos dibujados con los
+     * sprites del juego, la misma coletilla y el mismo atajo de "pulsa la que
+     * ya está puesta y arranca". Lo que cambia es que ahora hay que pasar por
+     * ellas, así que las flechas también responden al teclado. */
     buildModeGrid: function () {
       var self = this;
-      var grid = document.createElement('div');
-      grid.className = 'mode-grid';
+      var wrap = document.createElement('div');
+      wrap.className = 'mode-carousel';
+
+      var prev = document.createElement('button');
+      prev.type = 'button';
+      prev.className = 'mode-arrow mode-prev';
+      prev.textContent = '◀';
+      prev.setAttribute('aria-label', 'Modo anterior');
+      prev.addEventListener('click', function () { self.stepMode(-1); });
+      wrap.appendChild(prev);
+
+      /* Las seis viven a la vez en el DOM y solo se enseña la elegida. Se
+       * montan una vez —los iconos son lienzos y repintarlos en cada paso se
+       * notaría— y pasar de modo es encender una y apagar las otras. */
+      var caja = document.createElement('div');
+      caja.className = 'mode-frame';
       this.modeCards = {};
       MODOS.forEach(function (mo) {
         /* La tarjeta ES un <button>: así entra sola en la navegación con
@@ -412,7 +448,7 @@
         b.setAttribute('aria-label', mo.name);
 
         var cv = document.createElement('canvas');
-        cv.width = 44; cv.height = 44;
+        cv.width = 88; cv.height = 88;
         cv.className = 'mode-icon';
         self.drawModeIcon(cv, mo);
         b.appendChild(cv);
@@ -427,19 +463,64 @@
         tg.textContent = mo.tag;
         b.appendChild(tg);
 
-        /* Pulsar la tarjeta la elige. Pulsar la que YA está elegida arranca:
-         * quien lo tiene claro hace dos clics en el mismo sitio en vez de
-         * cruzar la pantalla hasta JUGAR. */
+        /* Pulsar la tarjeta arranca: la que se ve ES la elegida, así que aquí
+         * ya no hay nada que elegir. */
         b.addEventListener('click', function () {
           self.resumeAudio();
-          if (self.modePick === mo.id) self.playPick();
-          else self.pickMode(mo.id);
+          self.playPick();
         });
-        grid.appendChild(b);
+        caja.appendChild(b);
         self.modeCards[mo.id] = { b: b, tag: tg, mo: mo };
       });
+      wrap.appendChild(caja);
+
+      var next = document.createElement('button');
+      next.type = 'button';
+      next.className = 'mode-arrow mode-next';
+      next.textContent = '▶';
+      next.setAttribute('aria-label', 'Modo siguiente');
+      next.addEventListener('click', function () { self.stepMode(1); });
+      wrap.appendChild(next);
+
+      /* Los puntos: cuántos modos hay y por cuál vas. Sin ellos, un carrusel
+       * no dice si quedan dos o veinte. Se pueden pulsar, que es más rápido
+       * que darle cinco veces a la flecha para volver al primero. */
+      var dots = document.createElement('div');
+      dots.className = 'mode-dots';
+      this.modeDots = {};
+      MODOS.forEach(function (mo) {
+        var d = document.createElement('button');
+        d.type = 'button';
+        d.className = 'mode-dot';
+        d.setAttribute('aria-label', mo.name);
+        d.addEventListener('click', function () {
+          self.resumeAudio();
+          self.pickMode(mo.id);
+        });
+        dots.appendChild(d);
+        self.modeDots[mo.id] = d;
+      });
+
+      var caja2 = document.createElement('div');
+      caja2.className = 'mode-picker';
+      caja2.appendChild(wrap);
+      caja2.appendChild(dots);
+
       this.modePick = this.modePick || 'clasico';
-      return grid;
+      return caja2;
+    },
+
+    /* Pasa al modo de al lado. Da la vuelta por los dos extremos: son seis y
+     * volver del último al primero a base de flecha izquierda es un peaje sin
+     * ningún motivo. */
+    stepMode: function (d) {
+      this.resumeAudio();
+      var i = 0;
+      for (var k = 0; k < MODOS.length; k++) {
+        if (MODOS[k].id === this.modePick) { i = k; break; }
+      }
+      i = (i + d + MODOS.length) % MODOS.length;
+      this.pickMode(MODOS[i].id);
     },
 
     /* Icono de un modo. Todo dibujado con los sprites del juego: son los
@@ -451,7 +532,11 @@
       c.clearRect(0, 0, cv.width, cv.height);
       c.save();
       c.translate(cv.width / 2, cv.height / 2);
-      c.scale(2.2, 2.2);          // los sprites son de 13 px: se agrandan
+      /* Los sprites son de 13 px: se agrandan hasta llenar el lienzo, sea del
+       * tamaño que sea. El 20 es el ancho lógico que ocupa el icono más
+       * grande (el de la party, que son dos Pac-Man y un fantasma). */
+      var k = cv.width / 20;
+      c.scale(k, k);
       var D = CFG.DIR;
       if (mo.icon === 'pac') {
         S.drawPacman(c, 0, 0, D.RIGHT, 2, mo.color, 'clasico');
@@ -490,13 +575,21 @@
         if (!this.modeCards.hasOwnProperty(k)) continue;
         var card = this.modeCards[k];
         var sel = (k === id);
+        /* Solo se ve la elegida. Las otras cinco siguen en el DOM (montarlas
+         * una vez sale más barato que repintar iconos a cada paso) pero se
+         * ocultan de verdad —display, no opacidad—, para que no se puedan
+         * pulsar sin querer ni las pille la navegación con flechas. */
+        card.b.style.display = sel ? '' : 'none';
         card.b.classList.toggle('sel', sel);
-        /* El color del modo solo se enciende en el elegido. Con los seis
-         * encendidos a la vez la rejilla parecía un árbol de navidad y no se
-         * veía cuál estaba puesto. */
         card.b.style.borderColor = sel ? card.mo.color : '';
         card.b.style.color = sel ? card.mo.color : '';
         card.tag.textContent = this.modeTag(card.mo);
+        var d = this.modeDots && this.modeDots[k];
+        if (d) {
+          d.classList.toggle('on', sel);
+          d.style.background = sel ? card.mo.color : '';
+          d.style.borderColor = sel ? card.mo.color : '';
+        }
       }
       if (this.modeDesc) {
         this.modeDesc.textContent = mo.desc;
@@ -657,18 +750,17 @@
       nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
       jugN.appendChild(nkNote);
 
-      /* La skin propia NO está aquí: es cosa de uno, como el avatar, y vive
-       * en PERFIL. Aquí se queda el color (que también hay que elegírselo al
-       * jugador 2 local) y la skin del segundo, que no es de nadie en
-       * concreto: es el aspecto del que se sienta al lado. */
+      /* Ni tu color ni tu skin están aquí: son cosa de uno, como el avatar, y
+       * viven en PERFIL, que es donde se elige cómo te ve el resto. Aquí se
+       * queda solo lo del JUGADOR 2 local, que no es de nadie en concreto: es
+       * el aspecto del que se sienta al lado. */
       this.colorRows = {};
       this.skinRows = {};
-      var jug1 = this.optGroup(jug, 'TU COLOR');
-      jug1.appendChild(this.makeColorRow('pacColor'));
+      var jugYo = this.optGroup(jug, 'TU ASPECTO');
       var skNote = document.createElement('div');
       skNote.className = 'note';
-      skNote.textContent = 'TU SKIN ESTÁ EN PERFIL, CON TU AVATAR';
-      jug1.appendChild(skNote);
+      skNote.textContent = 'TU COLOR Y TU SKIN ESTÁN EN PERFIL, CON TU AVATAR';
+      jugYo.appendChild(skNote);
       var jug2 = this.optGroup(jug, 'JUGADOR 2 (LOCAL)');
       jug2.appendChild(this.makeColorRow('pac2Color'));
       jug2.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
@@ -1055,7 +1147,30 @@
     setColor: function (key, hex) {
       window.PM.settings[key] = hex;   // se aplica en vivo (game lee cada frame)
       saveSettings();
-      this.refreshOptions();
+      /* El tuyo vive en PERFIL y tiñe medio panel (el avatar de la cabecera y
+       * las skins), así que hay que repintarlo entero; el del jugador 2 sigue
+       * en OPCIONES. Se refrescan los dos sin mirar cuál se ha tocado: son dos
+       * paneles y uno de ellos ni siquiera está a la vista. */
+      this.refreshColorRows();
+      if (key === 'pacColor' && this.profPane) this.refreshProfile();
+      else this.refreshOptions();
+    },
+
+    /* Marca la muestra elegida en cada fila de color. Las filas viven en dos
+     * paneles distintos (la tuya en PERFIL, la del J2 en OPCIONES) pero se
+     * guardan todas en el mismo sitio, así que esto vale para las dos. */
+    refreshColorRows: function () {
+      var s = window.PM.settings;
+      for (var k in this.colorRows) {
+        if (!this.colorRows.hasOwnProperty(k)) continue;
+        var cr = this.colorRows[k];
+        for (var i = 0; i < cr.swatches.length; i++) {
+          var el = cr.swatches[i];
+          el.classList.toggle('active',
+            el.getAttribute('data-color').toLowerCase() === String(s[k]).toLowerCase());
+        }
+        try { cr.input.value = s[k]; } catch (e) { /* color inválido */ }
+      }
     },
 
     applyMute: function () {
@@ -1095,16 +1210,7 @@
         sl.val.textContent = sl.fmt(parseFloat(s[k]));
       }
       this.refreshNicks();
-      for (k in this.colorRows) {
-        if (!this.colorRows.hasOwnProperty(k)) continue;
-        var cr = this.colorRows[k];
-        for (i = 0; i < cr.swatches.length; i++) {
-          var el = cr.swatches[i];
-          el.classList.toggle('active',
-            el.getAttribute('data-color').toLowerCase() === String(s[k]).toLowerCase());
-        }
-        try { cr.input.value = s[k]; } catch (e) { /* color inválido */ }
-      }
+      this.refreshColorRows();
       this.refreshSkins();
       this.livesModeBtns.shared.classList.toggle('active', s.livesMode !== 'individual');
       this.livesModeBtns.individual.classList.toggle('active', s.livesMode === 'individual');
@@ -1260,11 +1366,11 @@
         'ALGUIEN TIENE QUE QUEDARSE DE PAC-MAN';
       room.appendChild(vsNote);
 
-      /* Modo HABILIDADES para toda la party. Solo lo ve y lo toca quien
+      /* Modo DESATADO para toda la party. Solo lo ve y lo toca quien
        * manda: es una regla de la partida, no un gusto de cada uno, y con
        * medio grupo con poderes no habría partida que valiera. */
       this.habRoomBox = document.createElement('div');
-      this.habRoomBtn = this.makeButton('HABILIDADES: NO', function () {
+      this.habRoomBtn = this.makeButton('DESATADO: NO', function () {
         self.togglePartyHab();
       });
       this.habRoomBtn.classList.add('btn-preset');
@@ -1420,7 +1526,7 @@
       if (P) P.startGame();
     },
 
-    /* Modo HABILIDADES de la party: lo enciende y lo apaga quien manda */
+    /* Modo DESATADO de la party: lo enciende y lo apaga quien manda */
     togglePartyHab: function () {
       var P = window.PM.Party;
       if (!P || !P.isLeader()) return;
@@ -1498,14 +1604,14 @@
       }
 
       var lider = P.isLeader();
-      /* HABILIDADES: el interruptor es solo del líder, pero el estado lo ve
+      /* DESATADO: el interruptor es solo del líder, pero el estado lo ve
        * todo el mundo — entrar a una party y descubrir los poderes al empezar
        * la partida sería una encerrona. */
       if (this.habRoomBox) {
         this.habRoomBtn.disabled = !lider;
         this.habRoomBtn.classList.toggle('active', !!P.habPick);
         this.habRoomBtn.childNodes[0].nodeValue =
-          'HABILIDADES: ' + (P.habPick ? 'SÍ' : 'NO');
+          'DESATADO: ' + (P.habPick ? 'SÍ' : 'NO');
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
@@ -1632,20 +1738,32 @@
       h.textContent = 'MAESTRÍAS';
       o.appendChild(h);
 
-      /* Seis rutas independientes: una por formato de partida y una por cada
-       * modo que se juega con otras reglas (LABERINTOS y HABILIDADES). */
+      /* DOCE rutas independientes, y se eligen por sus dos ejes en vez de con
+       * doce pestañas seguidas: arriba DÓNDE se juega (el laberinto de 1980,
+       * LABERINTOS o DESATADO) y debajo CUÁNTOS jugáis. Tres botones más
+       * cuatro se leen de un vistazo; doce en fila, no. */
+      var B0 = window.PM.Badges;
       var bar = document.createElement('div');
       bar.className = 'tab-row';
-      this.badgeTabBtns = {};
-      [['solo', 'EN SOLO'], ['duo', 'EN DÚO'],
-       ['trio', 'EN TRÍO'], ['escuadra', 'EN ESCUADRA'],
-       ['lab', 'LABERINTOS'], ['hab', 'HABILIDADES']].forEach(function (t) {
-        var b = self.makeButton(t[1], function () { self.showBadgeTab(t[0]); });
+      this.badgeMundoBtns = {};
+      (B0 ? B0.MUNDOS : []).forEach(function (m) {
+        var b = self.makeButton(m.name, function () { self.showBadgeTab(m.id, null); });
         b.classList.add('tab');
-        self.badgeTabBtns[t[0]] = b;
+        self.badgeMundoBtns[m.id] = b;
         bar.appendChild(b);
       });
       o.appendChild(bar);
+
+      var bar2 = document.createElement('div');
+      bar2.className = 'tab-row tab-row-sub';
+      this.badgeFmtBtns = {};
+      (B0 ? B0.FORMATOS : []).forEach(function (f) {
+        var b = self.makeButton(f.name, function () { self.showBadgeTab(null, f.n); });
+        b.classList.add('tab');
+        self.badgeFmtBtns[f.n] = b;
+        bar2.appendChild(b);
+      });
+      o.appendChild(bar2);
 
       this.badgesSub = document.createElement('div');
       this.badgesSub.className = 'note';
@@ -1699,13 +1817,30 @@
       back.style.marginTop = '14px';
       o.appendChild(back);
 
+      this.badgeMundo = 'clasico';
+      this.badgeFmt = 1;
       this.badgeTab = 'solo';
       this.badgePick = null;
     },
 
-    showBadgeTab: function (mode) {
+    /* Cambia uno de los dos ejes (el otro va a null y se queda como estaba) y
+     * recalcula la ruta. Se puede entrar también con una ruta hecha —lo hace
+     * showBadges con la del modo en curso—, y entonces se deshace en sus dos
+     * piezas para que los botones queden marcados donde toca. */
+    showBadgeTab: function (mundo, n) {
       var B = window.PM.Badges;
-      this.badgeTab = (B && B.MODES.indexOf(mode) !== -1) ? mode : 'solo';
+      if (!B) return;
+      if (mundo && B.MODES.indexOf(mundo) !== -1 && n == null) {
+        // ha llegado una ruta entera, no un mundo
+        n = B.players(mundo);
+        mundo = B.mundoDe(mundo);
+      }
+      if (mundo) this.badgeMundo = mundo;
+      if (n) this.badgeFmt = n;
+      this.badgeTab = B.ruta(this.badgeMundo === 'clasico' ? null : this.badgeMundo,
+                             this.badgeFmt);
+      this.badgeMundo = B.mundoDe(this.badgeTab);
+      this.badgeFmt = B.players(this.badgeTab);
       this.badgePick = null;      // cada ruta empieza por la suya
       this.refreshBadges();
     },
@@ -1713,9 +1848,16 @@
     refreshBadges: function () {
       var B = window.PM.Badges;
       var mode = this.badgeTab || 'solo';
-      for (var k in this.badgeTabBtns) {
-        if (this.badgeTabBtns.hasOwnProperty(k)) {
-          this.badgeTabBtns[k].classList.toggle('active', k === mode);
+      var k;
+      for (k in this.badgeMundoBtns) {
+        if (this.badgeMundoBtns.hasOwnProperty(k)) {
+          this.badgeMundoBtns[k].classList.toggle('active', k === this.badgeMundo);
+        }
+      }
+      for (k in this.badgeFmtBtns) {
+        if (this.badgeFmtBtns.hasOwnProperty(k)) {
+          this.badgeFmtBtns[k].classList.toggle('active',
+            parseInt(k, 10) === this.badgeFmt);
         }
       }
       var best = B ? B.best(mode) : 0;
@@ -1726,14 +1868,17 @@
        * mucho menos mérito de cada uno). */
       var meta = function (b) { return B ? B.goal(b, mode) : b.points; };
       /* La coletilla explica POR QUÉ esa ruta pide lo que pide, que si no
-       * los números parecen puestos a dedo. */
+       * los números parecen puestos a dedo. Primero lo del mundo, que es lo
+       * menos evidente, y si el mundo no tiene nada que decir, lo del
+       * formato. */
       var nota = '';
-      if (mode === 'lab') {
+      var mundo = B ? B.mundoDe(mode) : 'clasico';
+      if (mundo === 'lab') {
         nota = '  ·  OTRO TRAZADO, OTRA LIGA: LO DE AQUÍ NO ENTREGA LAS DEL ' +
                'LABERINTO DE 1980';
-      } else if (mode === 'hab') {
-        nota = '  ·  CON PODERES LOS PUNTOS SON MÁS BARATOS, ASÍ QUE ESTA ' +
-               'RUTA PIDE EL DOBLE';
+      } else if (mundo === 'hab') {
+        nota = '  ·  CON PODERES LOS PUNTOS SON MÁS BARATOS, ASÍ QUE ESTE ' +
+               'MUNDO PIDE EL DOBLE';
       } else if (mode !== 'solo') {
         nota = '  ·  CADA FORMATO ES UNA LIGA APARTE Y PIDE MÁS PUNTOS ' +
                'CUANTOS MÁS SEÁIS';
@@ -2171,6 +2316,16 @@
       });
       gAvatar.appendChild(this.profAvatarRow);
 
+      /* Tu color: va antes que la skin porque LA TIÑE (y también el avatar de
+       * arriba y tu Pac-Man en la partida), así que se elige primero y el
+       * resto del panel se repinta con él. Vivía en OPCIONES · JUGADORES, que
+       * es donde estaban los ajustes de la máquina; pero tu color no es un
+       * ajuste de la máquina, es quién eres en la sala. Allí solo queda el del
+       * jugador 2 local, que sí lo es. */
+      var gColor = this.optGroup(this.profPane, 'TU COLOR');
+      this.colorRows = this.colorRows || {};
+      gColor.appendChild(this.makeColorRow('pacColor'));
+
       /* Tu skin: es tan tuya como el avatar, así que va aquí y no en
        * OPCIONES (allí solo queda la del jugador 2 local). */
       var gSkin = this.optGroup(this.profPane, 'TU SKIN');
@@ -2279,6 +2434,7 @@
         window.PM.Sprites.drawAvatar(c, 20, 20, 16, it.id, s.pacColor);
       }
 
+      this.refreshColorRows();      // tu color se elige aquí, y tiñe lo demás
       this.refreshSkins();          // la skin propia se elige aquí
       this.refreshAccountBox();
       this.refreshAchievements();
@@ -3690,6 +3846,18 @@
       if (typing && horiz) return false;
       // deslizador enfocado: izquierda/derecha ajustan el valor (nativo)
       if (inHost && tag === 'INPUT' && ae.type === 'range' && horiz) return false;
+      /* Carrusel de modos: con la tarjeta enfocada, izquierda y derecha pasan
+       * de modo en vez de saltar al botón de al lado. Es lo que se espera de
+       * algo que enseña ◀ y ▶, y deja el carrusel jugable sin ratón. */
+      if (horiz && inHost && ae && ae.classList &&
+          ae.classList.contains('mode-card')) {
+        this.stepMode((k === 'ArrowRight') ? 1 : -1);
+        /* La tarjeta anterior se acaba de ocultar y con ella se iría el foco
+         * al body, así que se lo pasamos a la nueva. */
+        var card = this.modeCards && this.modeCards[this.modePick];
+        if (card) { try { card.b.focus(); } catch (e) { /* sin foco */ } }
+        return true;
+      }
 
       return this.navMove(host, (k === 'ArrowDown' || k === 'ArrowRight') ? 1 : -1);
     },
@@ -4043,7 +4211,7 @@
     },
 
     /* ------------------------------------------------------
-     * Modo HABILIDADES: la barra de Q/W/E/R
+     * Modo DESATADO: la barra de Q/W/E/R
      *
      * Va en el DOM y no en el lienzo porque la fila de abajo del lienzo ya
      * está llena (vidas, cronómetro y frutas) y porque así el mismo trozo
@@ -4084,8 +4252,32 @@
         bar.appendChild(b);
         self.habBtns.push({ b: b, fill: fill, ultimo: -1, listo: null });
       });
-      document.body.appendChild(bar);
+      /* Dentro del ESCENARIO, no del body: así queda pegada bajo el laberinto
+       * y en la misma mirada que la fila de vidas y frutas. Con el ratón, mirar
+       * una recarga ya no obliga a apartar los ojos de la partida.
+       *
+       * En táctil no: ahí abajo manda la cruceta —que va centrada— y la barra
+       * se queda flotando en su esquina, donde llega el otro pulgar. */
+      bar.classList.toggle('fija', !!this.touchDevice);
+      var stage = document.getElementById('stage');
+      (stage || document.body).appendChild(bar);
       this.habBar = bar;
+    },
+
+    /* Le cuenta al escenario que la barra está puesta y cuánto ocupa.
+     *
+     * Hace falta porque hay cosas ANCLADAS AL FONDO del escenario —el chat de
+     * las salas online (#chatBox, bottom: 8px)— y el escenario ya no es solo
+     * el lienzo: si la barra está debajo, el chat se plantaría encima de ella.
+     * Con la altura en una variable de CSS, el chat se sube justo lo que mide.
+     * En táctil la barra flota, así que no ocupa y la variable vuelve a cero. */
+    marcarHabBar: function () {
+      var st = document.getElementById('stage');
+      if (!st || !this.habBar) return;
+      var enFlujo = this.habBarOn && !this.habBar.classList.contains('fija');
+      st.classList.toggle('con-hab', !!enFlujo);
+      st.style.setProperty('--habH',
+        enFlujo ? (this.habBar.offsetHeight + 6) + 'px' : '0px');
     },
 
     /* Refresco por fotograma (lo llama Game.render). Solo toca el DOM cuando
@@ -4097,7 +4289,15 @@
       if (!this.habBar || !this.habBtns) return;
       var ver = !!(g.hab && A && !g.isSpec() && g.inGame() &&
                    g.state !== 'GAME_OVER' && !this.promptOpen);
-      this.habBar.classList.toggle('on', ver);
+      /* Encenderla o apagarla cambia lo que mide el escenario (va bajo el
+       * lienzo y en el flujo), así que hay que rehacer el encaje. Solo cuando
+       * cambia de verdad: esto se llama 60 veces por segundo. */
+      if (ver !== this.habBarOn) {
+        this.habBarOn = ver;
+        this.habBar.classList.toggle('on', ver);
+        this.marcarHabBar();
+        this.fitCanvas();
+      }
       if (!ver) return;
       var idx = g.localIdx;
       for (var k = 0; k < this.habBtns.length; k++) {
@@ -4171,10 +4371,15 @@
         this.toggleEmoteBar(false);
         this.closeChat();
       }
-      /* La barra de habilidades se refresca por fotograma desde Game.render,
+      /* La barra de poderes se refresca por fotograma desde Game.render,
        * pero ese camino solo existe DENTRO del modo: al volver al menú hay
        * que apagarla desde aquí o se quedaría colgada en la pantalla. */
-      if (this.habBar && !(playable && g.hab)) this.habBar.classList.remove('on');
+      if (this.habBar && this.habBarOn && !(playable && g.hab)) {
+        this.habBarOn = false;
+        this.habBar.classList.remove('on');
+        this.marcarHabBar();
+        this.fitCanvas();          // el lienzo recupera lo que ocupaba
+      }
       if (!this.dpad1) return;
       var show = playable && this.touchDevice;
       var dual = show && g.playerCount === 2 && !g.netRole;
@@ -4324,13 +4529,13 @@
     },
 
     /* ------------------------------------------------------
-     * Modo HABILIDADES: reglas y salida a jugar
+     * Modo DESATADO: reglas y salida a jugar
      * ------------------------------------------------------ */
     showHabPrompt: function () {
       var self = this;
       var H = CFG.HAB;
       this.showPrompt({
-        title: 'HABILIDADES',
+        title: 'DESATADO',
         color: '#ff66cc',
         lines: [
           'EL LABERINTO DE SIEMPRE CON CUATRO PODERES. CADA UNO CON SU TECLA Y SU RECARGA',
@@ -4434,7 +4639,7 @@
      * Entrada: teclado y gestos táctiles
      * J1: flechas (y WASD en 1 jugador) · J2: WASD
      *
-     * En el modo HABILIDADES, WASD DEJA DE MOVER: la W es el turbo, y no se
+     * En el modo DESATADO, WASD DEJA DE MOVER: la W es el turbo, y no se
      * puede tener la misma tecla haciendo dos cosas. Se avisa en la portada
      * y en el rótulo del propio modo. Por eso ese modo no se ofrece en dos
      * jugadores en el mismo teclado, que es donde el J2 se quedaría sin
@@ -4493,7 +4698,7 @@
           return;
         }
 
-        /* HABILIDADES: Q/W/E/R. Va ANTES que WASD a propósito, porque en este
+        /* DESATADO: Q/W/E/R. Va ANTES que WASD a propósito, porque en este
          * modo la W es el turbo y no el "arriba" de siempre. */
         if (g.hab && (ev.key in HAB_KEYS)) {
           if (canControl && window.PM.Hab) {
@@ -4505,7 +4710,7 @@
         }
 
         var isArrow = (ev.key in ARROWS);
-        /* En HABILIDADES se mueve SOLO con flechas. Dejar la A, la S y la D
+        /* En DESATADO se mueve SOLO con flechas. Dejar la A, la S y la D
          * moviendo mientras la W hace otra cosa sería el peor de los dos
          * mundos: medio mando que a veces responde y a veces no. */
         var isWasd = !g.hab && (ev.key in WASD);

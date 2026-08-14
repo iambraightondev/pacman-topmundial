@@ -7,11 +7,80 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **14 de agosto de 2026**.
+Última puesta al día: **14 de agosto de 2026** (segunda tanda del día).
 
 ---
 
-## Lo del 14 de agosto, de un vistazo
+## Lo último: DESATADO, la Q en party y la portada nueva
+
+Seis cosas, todas subidas. El qué está en [`CHANGELOG.md`](CHANGELOG.md) y el
+cómo en [`SPEC.md`](SPEC.md); aquí solo lo que hay que saber **antes de tocar
+esto**.
+
+1. **HABILIDADES se llama ahora DESATADO.** Cambió el cartel y nada más:
+   **todos los identificadores siguen siendo `hab`** (ajustes, repeticiones, lo
+   que viaja por red, los contadores de logros y las rutas de maestría), y el
+   archivo sigue siendo `js/habilidades.js`. Si algún día se renombra de
+   verdad, hay que migrar localStorage y subir `CFG.NET.PROTO`; hoy no hace
+   falta y por eso no se hizo.
+
+2. **La Q en party ya no te mata.** El arreglo son dos piezas, y conviene no
+   quitar ninguna sin entender la otra:
+   - **El escudo** (`Hab.protegido`, `CFG.HAB.BITE_GUARD`): el invitado no
+     mata fantasmas, así que tras pulsar la Q el fantasma sigue vivo y pegado
+     —y el mordisco le acaba de girar la cara hacia él—, se metía dentro y
+     moría por haber acertado. Ahora ese fantasma concreto no le hace nada
+     durante 45 ticks. **`guestCollisions` lo salta ENTERO**, no solo la rama
+     de morir: comérselo por las bravas mandaría un `ateGhost` además del
+     mordisco y el anfitrión lo contaría dos veces.
+   - **El margen de red** (`CFG.HAB.BITE_NET_MARGIN`): el anfitrión valida el
+     mordisco que le piden con una casilla de más, porque la posición del
+     invitado le llega a 12 Hz y sus fantasmas los mueve él. **No agranda el
+     alcance**: el invitado solo dispara si en su pantalla estaba a `BITE_PX`.
+   - Y el alcance base subió media casilla (`BITE_MARGIN` 4 → 8): son **dos
+     casillas justas**.
+
+3. **Doce rutas de maestría** (tres mundos por cuatro formatos).
+   - `Game.recordsModo` es `{lab:[4], hab:[4]}`, indexado por jugadores−1.
+   - **La clave de solo NO lleva sufijo** (`CFG.recordModoKey`), y eso es a
+     propósito: lo que ya tuviera guardado alguien cae en su ruta de solo.
+     Lo mismo en la nube (`record_lab` es la de solo; `record_lab2..4` son
+     nuevas). Si se cambiara, todo el mundo perdería su maestría de ahí.
+   - Los ids de ruta también se eligieron para no romper lo anunciado:
+     `solo/duo/trio/escuadra` y `lab`/`hab` son los de antes.
+   - `Account` lleva **dos banderas**: `sinModos` (las dos columnas viejas) y
+     `sinModosFmt` (las seis nuevas). **El orden de comprobación importa**:
+     `record_lab3` también casa con el patrón de `record_lab`, así que lo de
+     formato se mira primero o se dejarían de guardar también las de solo.
+
+4. **Portada en carrusel.** Las seis tarjetas siguen montándose todas a la vez
+   —el icono es un lienzo y repintarlo a cada paso se vería— y se enseña la
+   elegida con `display`, no con opacidad, para que las otras no se puedan
+   pulsar ni las pille la navegación con flechas.
+
+5. **La barra de Q/W/E/R vive dentro de `#stage`**, en el flujo. Eso cambia una
+   regla vieja: **el escenario ya no mide exactamente el lienzo**. Si se añade
+   algo anclado al FONDO del escenario, hay que subirlo con `--habH` (lo hace
+   ya `#chatBox`). `fitCanvas()` le descuenta la altura al lienzo, así que
+   encender el modo achica el laberinto un escalón. En táctil sigue flotando
+   (`.fija`), donde la cruceta no la tapa.
+
+6. **Tu color se elige en PERFIL.** `setColor` repinta el perfil entero cuando
+   es el tuyo, porque tiñe el avatar de la cabecera y las skins.
+
+### Lo que quedó fuera de esta tanda
+
+Nada roto, pero apuntado:
+
+- **El selector de modo sigue sin recordar tu elección** entre recargas. Con
+  el carrusel molesta un poco más que con la rejilla (antes veías las seis).
+- **Las habilidades siguen sin sonar**: el turbo y el flash son mudos.
+- Las **notas de la portada** de LABERINTOS y DESATADO siguen diciendo
+  "MAESTRÍAS PROPIAS" sin contar que ahora también se parten por formato.
+
+---
+
+## Lo del 14 de agosto (primera tanda), de un vistazo
 
 Cuatro cosas, y **todas están ya en producción** (comprobado contra
 <https://pacman-topmundial.vercel.app>: sirve `js/habilidades.js`, el service
@@ -125,7 +194,7 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v23` (14 de agosto) |
+| Juego (Vercel) | desplegado, service worker `pm-v24` (14 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
@@ -151,7 +220,7 @@ Dos avisos operativos:
 
 ### Las cuatro pruebas que "fallan" en Node
 
-Hoy hay **207 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
+Hoy hay **215 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
 es lo esperado: son límites del DOM de mentira (miden píxeles reales y
 `offsetParent`), no fallos del juego. Las mismas **pasan en `tests.html`**, que
 es la batería buena; la de Node vale para la lógica.

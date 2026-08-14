@@ -107,7 +107,7 @@ reads a mode-scoped counter keyed `modo + ':' + stat` (`hab:mordiscos`,
 `Achievements.recordFor(tags, o)` writes each counter twice: once global,
 once per tag. The tags are a list because a run is two things at once — a
 **format** (`solo` / `party`) and a **mode** (`clasico`, `reto`, `lab`,
-`vs`, `hab`); a party of HABILIDADES counts for both. The mode half *is*
+`vs`, `hab`); a party of DESATADO counts for both. The mode half *is*
 exclusive: `clasico` deliberately excludes reto and alternative mazes,
 since each has its own achievements and its own wording.
 
@@ -159,15 +159,19 @@ is the mode name printed in its own colour ahead of the description
 currently worn — a raised requirement must never strip what a player already
 has. Locked ones render greyed with the level they need.
 
-**Your own skin lives in PERFIL**, next to the avatar — it is as personal as
-one. OPCIONES → JUGADORES keeps only your colour and the second local
-player's look. Both rows register into the same `UI.skinRows`, so
-`refreshSkins()` repaints them wherever they are, and `optionsMsg()` writes
-the "locked skin" notice into both panels' status lines because the click can
-come from either.
+**Your whole look lives in PERFIL** — avatar, **colour** and skin. It is who
+you are in the room, not a setting of this machine, which is what OPCIONES is
+for; that panel keeps only the second local player's colour and skin, which
+*is* a setting of this machine. Both colour rows register into the same
+`UI.colorRows` and both skin rows into `UI.skinRows`, so `refreshColorRows()`
+and `refreshSkins()` repaint them wherever they are; `setColor` refreshes the
+whole of PERFIL when it is yours, because your colour tints the header avatar
+and every skin thumbnail. `optionsMsg()` writes the "locked skin" notice into
+both panels' status lines because the click can come from either.
 
 **Perfil** (`#profile`, tabs PERFIL / LOGROS): avatar, name, level bar,
-summary, avatar picker, your skin and the account box. Avatars (`CFG.AVATARS`) are drawn
+summary, avatar picker, your colour, your skin and the account box. Colour
+goes **before** skin: it tints it. Avatars (`CFG.AVATARS`) are drawn
 by `Sprites.drawAvatar` reusing the game's own sprites (faces, ghosts, fruit,
 badge) scaled from a ~7 px native radius. Guests get a random-name button
 (`CFG.RANDOM_NAMES`).
@@ -702,55 +706,70 @@ receiver looks it up in `CFG.BADGES`: guest `gevt {t:'badge', b}` → host
 which is what a player with no badge yet shows. Works in every mode.
 
 **Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers (APRENDIZ 3 000 → TOP
-MUNDIAL 100 000) on **six independent tracks** — one per format, plus one for
-each mode played under different rules — so a big squad run never hands out
-the duo or the solo badges, and neither does a run in another maze:
+MUNDIAL 100 000) on **twelve independent tracks** — a **world** (where you
+play) crossed with a **format** (how many of you play) — so a big squad run
+never hands out the duo or the solo badges, and neither does a run in another
+maze, nor a trio in another maze the badges of a solo one:
 
-| track | ×  | record |
-|---|---|---|
-| `'solo'` | 1 | `Game.highScore1` |
-| `'duo'` | 2 | `Game.highScore2` |
-| `'trio'` | 3 | `Game.highScore3` |
-| `'escuadra'` | 4 | `Game.highScore4` |
-| `'lab'` | 1 | `Game.recordModo('lab')` |
-| `'hab'` | 2 | `Game.recordModo('hab')` |
+| world | × | format | × | record |
+|---|---|---|---|---|
+| `'clasico'` | 1 | `1` SOLO | 1 | `Game.recordFor(n)` |
+| `'lab'` | 1 | `2` DÚO | 2 | `Game.recordModo('lab', n)` |
+| `'hab'` | 2 | `3` TRÍO | 3 | `Game.recordModo('hab', n)` |
+| | | `4` ESCUADRA | 4 | |
+
+Track ids are chosen so nothing already stored breaks: the classic ones are
+the old `'solo' | 'duo' | 'trio' | 'escuadra'`, and each other world's **solo**
+track keeps its old id (`'lab'`, `'hab'`). Only `'lab2'..'lab4'` and
+`'hab2'..'hab4'` are new. `Badges.ruta(world, players)` builds one,
+`mundoDe/players/mundoName/formatoName/modeName` take one apart.
 
 **Each record is its own league** — `Game.recordFor(n)` / `setRecordFor(n, v)` /
-`recordKey(n)` resolve the formats, `recordModo(id)` / `setRecordModo` /
-`recordModoKey` the two modes, and `Game.recordSlot()` says which of the two
-kinds the current run belongs to. `persistHighScore` writes exactly one of
-them and `newGame` shows that league's record as the in-game HIGH SCORE.
-`Game.badgeMode()` picks the track: the mode wins over the format, so a party
-of HABILIDADES scores on the `hab` track, not on `duo`.
+`recordKey(n)` resolve the classic formats; `recordModo(id, n)` /
+`setRecordModo(id, v, n)` / `recordModoKey(id, n)` the other two worlds, backed
+by `Game.recordsModo = {lab:[4], hab:[4]}` and keyed in localStorage by
+`CFG.recordModoKey(id, n)` (**no suffix for solo**, so an existing value lands
+on the solo track — which is where nearly everybody set it). `Game.recordSlot()`
+says which **world** the current run belongs to (`'lab' | 'hab' | null`);
+the format is just `playerCount`. `persistHighScore` writes exactly one cell
+and `newGame` shows that league's record as the in-game HIGH SCORE.
+`Game.badgeMode()` = `Badges.ruta(recordSlot(), playerCount)`.
 
-> This closed a real hole. A LABERINTOS run used to write into
+> This closed two real holes. First, a LABERINTOS run used to write into
 > `highScore1` — the same record that travels to the account and feeds the
-> maestrías — so an easier layout handed out badges for the 1980 maze. Old
-> `record1` values are left alone: there is no way to tell which part came
-> from an alternative maze.
+> maestrías — so an easier layout handed out badges for the 1980 maze. Then,
+> once those worlds had their own record, a **trio** in another maze still
+> handed out the same badges as a solo run, which is three mouths eating for
+> the price of one. Old `record1` values are left alone: there is no way to
+> tell which part came from an alternative maze.
 
-**The bar rises with what the mode gives away**: `Badges.goal(badge, mode)` =
-`badge.points × Badges.mult(mode)`. Formats multiply by their player count
-(APRENDIZ is 3 000 solo, 6 000 duo, 9 000 trio, 12 000 squad) because a team
-scoreboard belongs to everybody — four lives, four mouths, four ghosts per
-energiser — so the same figure is worth much less per person. `hab`
-multiplies by **2**: biting ghosts on a keypress prints points the arcade
-never had, and without that toll the track would be over in an afternoon.
-`lab` keeps the base figures.
+**The bar rises with what the run gives away**: `Badges.goal(badge, mode)` =
+`badge.points × Badges.mult(mode)`, and the multiplier is **the format's times
+the world's**. Formats multiply by their player count (APRENDIZ is 3 000 solo,
+6 000 duo, 9 000 trio, 12 000 squad) because a team scoreboard belongs to
+everybody — four lives, four mouths, four ghosts per energiser — so the same
+figure is worth much less per person. The `hab` world multiplies by **2**:
+biting ghosts on a keypress prints points the arcade never had, and without
+that toll the track would be over in an afternoon. `lab` keeps the base
+figures. The dearest track is a DESATADO squad: ×8.
 
-All six travel to the account (`perfiles.record1..record4`, `record_lab`,
-`record_hab`), so the tracks follow the player from one device to the next
-(see **Cuentas**). A Supabase project without the two newer columns is not a
-failure path: `Account` spots the 400 that names them, raises `sinModos` and
-keeps uploading everything else.
+All twelve travel to the account (`perfiles.record1..record4`, `record_lab`,
+`record_lab2..4`, `record_hab`, `record_hab2..4`), so the tracks follow the
+player from one device to the next (see **Cuentas**). A Supabase project
+missing some of those columns is not a failure path: `Account` spots the 400
+that names them and raises the matching flag — `sinModos` for the two original
+mode columns, `sinModosFmt` for the six per-format ones — and keeps uploading
+everything else. The per-format check runs **first**, because `record_lab3`
+also matches the pattern for `record_lab` and would otherwise raise the wrong
+flag and silently stop saving the solo tracks too.
 
-Every API takes the mode (`best/earned/top/next/has/claim/goal/players/
-modeName`), and `Game.badgeMode()` derives it from `playerCount` via
-`Badges.modeFor`. Earned badges are derived from the record, so nothing can
+Every API takes the track (`best/earned/top/next/has/claim/goal/players/
+mundoDe/modeName`), and `Badges.modeFor(players)` is still there for the
+classic world alone. Earned badges are derived from the record, so nothing can
 desync; localStorage (`CFG.BADGES_KEY`) only stores which ones were already
-announced, now as `{solo:[], duo:[], trio:[], escuadra:[]}` — an old flat array
-is migrated into **solo and duo only** (the two tracks that existed), so
-nothing gets re-announced and the new tracks start clean.
+announced, keyed by track id — an old flat array is migrated into **solo and
+duo only** (the two tracks that existed), so nothing gets re-announced and the
+new tracks start clean.
 `Game.checkBadges()` runs on **every score change**
 and announces **only what you did not already hold** (`Badges.claim` returns
 the highest un-announced tier, or nothing): re-celebrating tiers you already
@@ -768,9 +787,15 @@ that earned it. Badge and achievement share the top slot, so `stepBadgeNotice`
 and `renderStateText` skips it. The guest also gets it when the snapshot
 brings the score.
 
-The MAESTRÍAS panel has six tabs — EN SOLO / EN DÚO / EN TRÍO / EN ESCUADRA /
-LABERINTOS / HABILIDADES —
-each listing the six tiers **with that track's own figures**: its record, its
+The MAESTRÍAS panel picks a track by its **two axes** rather than listing all
+twelve: a `.tab-row` of worlds (CLÁSICO / LABERINTOS / DESATADO) over a
+`.tab-row.tab-row-sub` of formats (SOLO / DÚO / TRÍO / ESCUADRA). Three buttons
+plus four read at a glance; twelve in a row do not. `UI.showBadgeTab(world, n)`
+changes **one** axis (pass `null` for the other) or takes a whole track id and
+splits it, then `UI.badgeTab` holds the resolved track. Only the sub-row is
+sticky-free and carries the divider — the two rows are one decision cut in
+half, not two sections. Each track lists the six tiers **with its own figures**:
+its record, its
 scaled goal per tier and what is missing for the next one. Layout is
 **list + stage**: the six tiers on the left (one column, `.badge-split`
 overrides the two-column rule the other `.badge-list`s get at 1000 px), the
@@ -1150,16 +1175,20 @@ spawn (BFS with tunnel wrap), the declared pellet count, **no dead ends**
 in the four corners, left-right symmetry, a closed border except the
 tunnel, and the classic coming back when the mode is left.
 
-## Modo HABILIDADES (Q/W/E/R)
+## Modo DESATADO (Q/W/E/R)
 
 **`PM.Hab` (`js/habilidades.js`), `CFG.HAB`.** The 1980 maze with four
-MOBA-style powers, each on its own key and its own cooldown. Like
-LABERINTOS it is a **separate mode**: `Game.hab` blocks `submitRanking()`,
-`canTimeRecord()` **and `persistHighScore()`**. That last one matters more
-than it looks — the per-format record is not just a number on screen: it
-travels to the account (`perfiles.recordN`) and the maestrías are derived
-from it, so a score made by biting ghosts would hand out a badge for a
-game the badge does not describe. XP and achievements still count.
+MOBA-style powers, each on its own key and its own cooldown. Named
+HABILIDADES until 2026-08-14 — the old name said what the mode *has* instead
+of what it feels like; **every internal id stays `hab`** (settings, replays,
+the wire, achievement counters, badge tracks), so only the visible strings
+moved. Like LABERINTOS it is a **separate world**: `Game.hab` blocks
+`submitRanking()` and `canTimeRecord()`, and sends the score to its own
+record instead of the classic one. That last one matters more than it looks —
+the record is not just a number on screen: it travels to the account and the
+maestrías are derived from it, so a score made by biting ghosts would hand out
+a badge for a game the badge does not describe. XP and achievements still
+count.
 
 | Key | What it does | Cooldown |
 |---|---|---|
@@ -1187,6 +1216,9 @@ Rules that are deliberate, not incidental:
   then depended on where in the stride the press landed, which is exactly
   what makes a button feel broken. `BITE_PX` is a tile plus `BITE_MARGIN`,
   so "what looks touching, bites", identically in all four directions.
+  `BITE_MARGIN` went from 4 to **8** (half a tile more, so the reach is two
+  clean tiles) because party play still missed too much: the ghost you see
+  glued to you is not exactly there on the host's screen.
 - **Q and E refuse to be wasted.** No ghost in range, or no landable tile
   ahead, and nothing fires and no cooldown starts. A bite at thin air still
   **shows the teeth** briefly: without that, missing and being on cooldown
@@ -1229,6 +1261,26 @@ started: it can only ever give less, never more. The mode itself travels
 in `pstart.hab` (and in `proster.hab`, so nobody discovers the rules when
 the game starts) and in `svista.hab` for spectators. `CFG.NET.PROTO` is
 **7**.
+
+Two corrections that make the bite usable in a party — both are lag
+compensation, and both only ever give the guest what they already saw:
+
+- **The biter does not die with the ghost it bit.** The guest does not kill,
+  so between the keypress and the host's confirmation the ghost is still alive
+  and glued to them — and the bite has just turned Pac-Man to face it
+  (`mirarHacia`). They walked into it and `guestCollisions` killed them for
+  landing the shot. `Hab.mordisco` now sets a per-ghost shield
+  (`estado.guard[ghostId] = CFG.HAB.BITE_GUARD`, 45 ticks) and
+  `Game.guestCollisions` **skips that ghost entirely** while it holds — not
+  just the death branch: eating it locally would send an `ateGhost` on top of
+  the bite and the host would count it twice. The shield expires on its own,
+  so a request the host rejects just leaves the ghost dangerous again.
+- **The host forgives the wire's drift.** `Hab.peticion` validates the bite
+  with `CFG.HAB.BITE_NET_MARGIN` (one tile) added to the reach: the guest's
+  position arrives at 12 Hz and the host moves the ghosts itself, so by the
+  time the request executes neither is where the guest saw them. That is ~6 px
+  nobody caused, and it was eating half the bites. It does **not** widen the
+  reach — the guest only fires when their own screen agreed at `BITE_PX`.
 
 **Replays.** A power is an *input*, like a turn, so a run of this mode
 reconstructs exactly like a classic one. Local replays get mode `'hab'`
@@ -1386,9 +1438,17 @@ from 1000 px up the content splits into columns. Two breakpoints on purpose:
 the window width already suffices.
 
 `#prompt` is excluded from both: its dialogs sit over a live game and the
-translucent veil that keeps the maze visible is the point. `#stage` must keep
-measuring exactly the canvas — `#gameBtns`, `#emoteBar` and `#chatBox` are
-injected into it and positioned against it.
+translucent veil that keeps the maze visible is the point. `#gameBtns`,
+`#emoteBar` and `#chatBox` are injected into `#stage` and positioned against
+it, so **`#stage` is the canvas plus whatever is glued to it**: it is a flex
+column, and in DESATADO the Q/W/E/R bar (`#habBar`) sits in that flow right
+under the maze. `fitCanvas()` subtracts the bar's height from the budget so
+the pair still fits and centres as one, and `UI.marcarHabBar()` publishes that
+height as `--habH` on `#stage` — `#chatBox` is anchored to the **bottom**, so
+without it the chat would land on top of the bar. On touch devices the bar
+keeps its old floating corner (`.fija`): down there the D-pad rules, and a bar
+under the thumb is worse than a bar slightly further away. See **Modo
+DESATADO**.
 
 **Never set `display` on `.overlay` or `.tab-pane` from CSS**: `showPanel()`
 and `showOptionsTab()` write it as an inline style, which always wins.
@@ -1404,20 +1464,28 @@ first; `.menu-cast` is visually leftmost but last in the DOM, which is
 harmless **only because it contains nothing focusable** — putting a button in
 there would make the focus jump across the screen.
 
-**The mode picker** (`UI.MODOS`, `buildModeGrid`, `pickMode`, `playPick`) is
-the whole of `.menu-main`: six equal cards and one big JUGAR. Before, every
-mode lived somewhere else — two started from their own button, the daily
-challenge opened a dialog, LABERINTOS hid among the side panels and ONLINE
-had yet another button — so there was no way to see what you could play.
-Each card is a real `<button>`, which is what puts it in the arrow-key
-sweep for free, and carries its mode's colour, **but only the selected one
-lights up**: six colours at once read as a Christmas tree and hid which was
-picked. `.mode-name` has a fixed two-line box so one-word and two-word names
-keep every icon at the same height, and `.mode-desc` has a fixed height so
-the grid does not jump as you move through it. Clicking the already-selected
-card starts the game, for people who know what they want.
+**The mode picker** (`UI.MODOS`, `buildModeGrid`, `pickMode`, `stepMode`,
+`playPick`) is the whole of `.menu-main`: **one big card at a time** and one
+big JUGAR. Before, every mode lived somewhere else — two started from their own
+button, the daily challenge opened a dialog, LABERINTOS hid among the side
+panels and ONLINE had yet another button — so there was no way to see what you
+could play; then they were six equal cards in a grid, which showed everything
+at once but gave none of them any weight, so *choosing a mode* — the decision
+the front page exists for — felt like ticking a box. Now it is a carousel:
+`.mode-arrow` on each side, `.mode-dots` below (clickable, so you can jump
+instead of pressing ◀ five times) and the card at `88 px` icon size.
 
-`playPick()` splits the six in two: CLÁSICO, DOS JUGADORES and HABILIDADES
+All six cards are built once and live in the DOM together (`drawModeIcon`
+paints a canvas, and repainting on every step would show); `refreshModePicker`
+shows the picked one and sets `display:none` on the rest — really hidden, so
+they cannot be clicked or swept by arrow keys. `.mode-card` has a fixed
+`min-height` so the arrows, the description and JUGAR never move. Clicking the
+card starts the game (the one you see *is* the picked one, so there is nothing
+left to pick there), and `handleNavKey` turns ←/→ into `stepMode` while the
+card holds focus — then re-focuses the new card, since the old one just
+vanished. `stepMode` wraps around at both ends.
+
+`playPick()` splits the six in two: CLÁSICO, DOS JUGADORES and DESATADO
 call `newGame` straight away; RETO, LABERINTOS and ONLINE open their picker
 first, because each needs a choice before there is a game (which maze, which
 room, or confirming you are spending today's single attempt). `modeTag()`

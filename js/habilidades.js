@@ -1,6 +1,6 @@
 /* ============================================================
  * PAC-MAN TOP MUNDIAL — js/habilidades.js
- * Modo HABILIDADES. Define window.PM.Hab
+ * Modo DESATADO. Define window.PM.Hab
  *
  * Cuatro poderes con tecla propia y recarga independiente:
  *
@@ -64,7 +64,10 @@
       /* Hacia dónde fue el último flash. Se guarda porque el rastro se pinta
        * DETRÁS del salto, y el salto puede no ir hacia donde Pac-Man mira. */
       flashDir: -1,
-      chispa: 0           // contador para sembrar las chispas del turbo
+      chispa: 0,          // contador para sembrar las chispas del turbo
+      /* Ticks que le quedan a cada fantasma (por id) de "acabo de morderte y
+       * aún no me lo han confirmado". Solo lo usa el INVITADO: ver mordisco(). */
+      guard: [0, 0, 0, 0]
     };
   }
 
@@ -105,7 +108,7 @@
   }
 
   var Hab = {
-    on: false,       // ¿la partida en curso es de habilidades?
+    on: false,       // ¿la partida en curso es de poderes?
     st: [],          // estado por jugador
 
     /* ---------- ciclo de vida ---------- */
@@ -125,6 +128,7 @@
         this.st[i].dientes = 0;
         this.st[i].flash = 0;
         this.st[i].flashDir = -1;
+        this.st[i].guard = [0, 0, 0, 0];
       }
     },
 
@@ -157,6 +161,26 @@
       return !!s && s.dientes > 0;
     },
 
+    /* ¿Este fantasma acaba de ser mordido por este jugador y aún no ha llegado
+     * la confirmación del anfitrión? Mientras dure, no puede matarlo.
+     *
+     * Es EL arreglo del mordisco en party. El invitado no mata fantasmas —eso
+     * lo decide el anfitrión—, así que tras pulsar la Q el fantasma seguía vivo
+     * y a un pelo de distancia en su pantalla; encima el mordisco le gira la
+     * cara hacia él (mirarHacia). Resultado: se metía dentro del fantasma en
+     * los tres o cuatro ticks que tarda la ida y vuelta, su propia detección de
+     * choques lo mataba, y al jugador le quedaba la sensación de que la Q mata
+     * al que la usa. Ahora ese fantasma concreto —solo ese, y solo un momento—
+     * no le hace nada.
+     *
+     * Si el anfitrión acaba diciendo que no (recarga, o que allí no había nadie
+     * a tiro), el escudo se agota y el fantasma vuelve a ser peligroso. Da de
+     * menos, nunca de más. */
+    protegido: function (idx, ghostId) {
+      var s = this.estado(idx);
+      return !!s && !!s.guard && s.guard[ghostId] > 0;
+    },
+
     /* Alfa del Pac-Man: translúcido justo después de un FLASH */
     alfa: function (idx) {
       var s = this.estado(idx);
@@ -176,6 +200,7 @@
         if (s.dientes > 0) s.dientes--;
         if (s.flash > 0) s.flash--;
         if (!corre) continue;
+        for (var j = 0; j < 4; j++) if (s.guard[j] > 0) s.guard[j]--;
         for (var k = 0; k < 4; k++) if (s.cd[k] > 0) s.cd[k]--;
         if (s.turbo > 0) {
           s.turbo--;
@@ -256,7 +281,12 @@
       if (!this.on) return;
       if (!this.puede(G, who, k)) return;
       var ok;
-      if (k === MORDISCO) ok = this.mordisco(G, who, false);
+      /* El mordisco que llega por red se juzga con un poco de manga ancha
+       * (BITE_NET_MARGIN): la posición del invitado le llega a 12 Hz y sus
+       * fantasmas los mueve esta máquina, así que cuando esto se ejecuta ya no
+       * están donde él los vio. Ese desfase no es culpa suya y se le perdona;
+       * el alcance de verdad lo comprobó él en su pantalla. */
+      if (k === MORDISCO) ok = this.mordisco(G, who, false, H.BITE_NET_MARGIN);
       else if (k === GRITO) ok = this.grito(G, who, false);
       else {
         /* TURBO y FLASH ya se los ha aplicado él en su máquina; aquí solo
@@ -328,9 +358,10 @@
      * "lo que se ve pegado, se muerde". Se compara por ejes (el mayor de los
      * dos, no la diagonal) porque el alcance es un CUADRO de una casilla a la
      * redonda, que es lo que se pidió. */
-    presa: function (G, idx) {
+    presa: function (G, idx, extra) {
       var p = G.pacs[idx];
       if (!p) return null;
+      var alcance = H.BITE_PX + (extra || 0);
       var mejor = null, mejorD = Infinity;
       for (var i = 0; i < 4; i++) {
         var g = G.ghosts[i];
@@ -338,7 +369,7 @@
         if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
         var dx = distX(g.x, p.x);
         var dy = Math.abs(g.y - p.y);
-        if (dx > H.BITE_PX || dy > H.BITE_PX) continue;
+        if (dx > alcance || dy > alcance) continue;
         var d = dx * dx + dy * dy;      // el más pegado, si hay dos a tiro
         if (d < mejorD) { mejorD = d; mejor = g; }
       }
@@ -366,8 +397,8 @@
 
     /* soloVisual: el invitado enseña los dientes al instante y deja que el
      * anfitrión decida de verdad; así no se ven fantasmas que resucitan. */
-    mordisco: function (G, idx, soloVisual) {
-      var g = this.presa(G, idx);
+    mordisco: function (G, idx, soloVisual, extra) {
+      var g = this.presa(G, idx, extra);
       if (!g) {
         /* Dentellada al aire. No gasta recarga, pero SE VE: sin esto, fallar
          * la puntería y tener la tecla en recarga se sienten exactamente
@@ -385,7 +416,15 @@
        * eso su logro no avanzaría nunca (el evento que vuelve no dice si fue
        * un mordisco o una superpastilla). */
       apunta(G, idx, { mordiscos: 1 });
-      if (soloVisual) return true;
+      if (soloVisual) {
+        /* Escudo contra el fantasma que se acaba de morder: aquí no se mata a
+         * nadie (lo hace el anfitrión), así que sigue vivo y pegado, y encima
+         * el mordisco acaba de girar a Pac-Man hacia él. Sin esto, el invitado
+         * se metía dentro y moría por haber acertado el tiro. Ver protegido(). */
+        var s = this.estado(idx);
+        if (s) s.guard[g.id] = H.BITE_GUARD;
+        return true;
+      }
       /* Fuera del modo azul cada mordisco vale lo mismo (200): la escalera
        * de 200-400-800-1600 es de la superpastilla, y encadenarla a golpe
        * de tecla convertiría la partida en una cuenta de puntos regalados.

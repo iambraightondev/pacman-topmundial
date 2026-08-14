@@ -31,8 +31,8 @@ red.
 - **Los menús se manejan con las flechas**: mueven el foco y `Enter` acepta;
   en los deslizadores, izquierda y derecha ajustan el valor.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
-- **Modo HABILIDADES**: solo flechas para moverte, y `Q` `W` `E` `R` para los
-  cuatro poderes (en el móvil, los cuatro botones de abajo a la derecha).
+- **Modo DESATADO**: solo flechas para moverte, y `Q` `W` `E` `R` para los
+  cuatro poderes (bajo el laberinto; en el móvil, en su esquina de abajo).
 - **Ver una repetición**: `P`/`Esc` la pausa (con velocidad, reiniciar y
   salir), y arriba hay una barra con los mismos controles a mano.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
@@ -50,9 +50,10 @@ red.
 
 ## Modos de juego
 
-En la portada están **los seis en una rejilla**: eliges uno y le das a
-`JUGAR`. Cada tarjeta te dice de qué va y lo que conviene saber antes de
-entrar (si el reto de hoy ya está jugado, cuánta gente hay en tu party...).
+En la portada se eligen **de uno en uno, en grande**: pasas con `◀` y `▶` (o
+con los puntitos de debajo, o con las flechas del teclado) y le das a `JUGAR`.
+Cada tarjeta te dice de qué va y lo que conviene saber antes de entrar (si el
+reto de hoy ya está jugado, cuánta gente hay en tu party...).
 
 - **Un jugador** — el arcade clásico.
 - **Dos jugadores (misma máquina)** — cooperativo simultáneo contra los
@@ -69,10 +70,10 @@ entrar (si el reto de hoy ya está jugado, cuánta gente hay en tu party...).
   el enlace directo); los demás se unen. El líder fija la dificultad y decide
   cuándo empezar; cada jugador lleva su propio color. Con 3 y 4, los dos
   jugadores extra salen **arriba** del laberinto, no a tu lado.
-- **HABILIDADES** — el mismo laberinto con cuatro poderes, cada uno con su
+- **DESATADO** — el mismo laberinto con cuatro poderes, cada uno con su
   tecla y su recarga. En solo y en party (en la party lo enciende quien
   manda y vale para todo el grupo).
-  - **Q · MORDISCO** (16 s): te comes al fantasma que tengas a una casilla,
+  - **Q · MORDISCO** (16 s): te comes al fantasma que tengas a dos casillas,
     mires hacia donde mires, y te giras hacia él.
   - **W · TURBO** (24 s): x1.5 de velocidad durante 5 s.
   - **E · FLASH** (32 s): tres casillas **atravesando muros** hacia la última
@@ -231,17 +232,19 @@ Dos maneras de correr la misma batería:
   frutas, partidas o hacer el nivel 1 en menos de 1:30) y los otros 18 son de
   un modo concreto: tres del CLÁSICO, tres de PARTY, tres del RETO DE HOY,
   tres de LABERINTOS, tres de PAC-MAN VS. (cazar Pac-Man llevando un fantasma)
-  y tres de HABILIDADES (mordiscos y muros atravesados con el flash).
+  y tres de DESATADO (mordiscos y muros atravesados con el flash).
   **Salen todos en la misma lista**, y cada uno dice delante en qué modo hay
   que conseguirlo. Se celebran en la partida y se siguen en PERFIL con su
   barra de progreso.
-- **Maestrías**: seis insignias por ruta (de APRENDIZ a TOP MUNDIAL) y **seis
-  rutas independientes**: una por formato (solo, dúo, trío y escuadra) y una
-  para LABERINTOS y otra para HABILIDADES, que se juegan con otras reglas.
-  Cada una lleva su propio récord, así que una gran partida en escuadra no
-  regala las de solo, ni una en otro laberinto las del de 1980. Cuanto más
-  regala el modo, más pide: los formatos multiplican por los jugadores y
-  HABILIDADES pide el doble.
+- **Maestrías**: seis insignias por ruta (de APRENDIZ a TOP MUNDIAL) y **doce
+  rutas independientes**, que salen de cruzar **dónde** juegas (el laberinto
+  de 1980, LABERINTOS o DESATADO) con **cuántos** sois (solo, dúo, trío o
+  escuadra). Cada una lleva su propio récord, así que una gran partida en
+  escuadra no regala las de solo, ni una en otro laberinto las del de 1980,
+  ni un trío en otro laberinto las de jugarlo en solitario. Cuanto más
+  regala la partida, más pide: se multiplica por los jugadores y, en
+  DESATADO, otra vez por dos. En el panel se eligen por sus dos ejes:
+  arriba el mundo y debajo el formato.
 - **Cuenta con usuario y contraseña** (opcional): guarda nivel, logros,
   maestrías, récords y amigos, y te los lleva a cualquier sitio. No pide
   correo. El usuario es también tu nombre en el juego. Al entrar, lo de la
@@ -456,7 +459,7 @@ js/temporadas.js  Temporadas del top mundial (mes natural)
 js/reto.js        Reto diario (la misma partida para todos)
 js/mazes.js       Laberintos alternativos (modo aparte)
 js/versus.js      PAC-MAN VS.: el fantasma que lleva un jugador
-js/habilidades.js modo HABILIDADES: los cuatro poderes de Q, W, E y R
+js/habilidades.js modo DESATADO: los cuatro poderes de Q, W, E y R
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
 js/ui.js          Menús, opciones, panel de party, paneles y controles

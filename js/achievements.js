@@ -34,8 +34,8 @@
     fantasmas: 'suma',
     frutas:    'suma',
     partidas:  'suma',
-    mordiscos: 'suma',   // fantasmas comidos con la Q (modo HABILIDADES)
-    muros:     'suma',   // muros atravesados con la E (modo HABILIDADES)
+    mordiscos: 'suma',   // fantasmas comidos con la Q (modo DESATADO)
+    muros:     'suma',   // muros atravesados con la E (modo DESATADO)
     cazas:     'suma',   // Pac-Man cazados llevando un fantasma (PAC-MAN VS.)
     racha:     'mayor',
     nivelMax:  'mayor',
@@ -156,7 +156,7 @@
 
     /* Lo mismo, pero apuntándolo ADEMÁS en los contadores de cada modo que
      * esté en juego. `tags` es lo que devuelve Game.achTags(): una partida
-     * de habilidades en party cuenta para los dos. Solo se guarda lo que
+     * de poderes en party cuenta para los dos. Solo se guarda lo que
      * algún logro mire, así que esto no engorda el almacén por gusto. */
     recordFor: function (tags, o) {
       if (!o) return;
@@ -233,7 +233,7 @@
      *    dúo, trío o escuadra. Sin esa prueba se queda a cero, que regalar
      *    "JUEGA 20 PARTIDAS ACOMPAÑADO" a quien siempre jugó solo sería
      *    mentira.
-     *  - RETO, LABERINTOS, VS. y HABILIDADES se quedan a cero: de esos no hay
+     *  - RETO, LABERINTOS, VS. y DESATADO se quedan a cero: de esos no hay
      *    ni rastro en los contadores, y no se inventa nada.
      *
      * Se hace UNA vez (bandera `m`), no en cada arranque: si se repitiera,

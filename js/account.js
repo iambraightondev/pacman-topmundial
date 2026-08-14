@@ -103,6 +103,13 @@
     if (!self.sinRecordsNuevos && /record3|record4/i.test(texto)) {
       return 'sinRecordsNuevos';
     }
+    /* Las de mundo aparte POR FORMATO llevan número (record_lab2, record_hab4)
+     * y se miran antes que las de solo, que son el mismo texto sin el número:
+     * al revés, una queja por record_lab3 levantaría la bandera equivocada y
+     * se dejarían de guardar también las de solo, que sí existen. */
+    if (!self.sinModosFmt && /record_(lab|hab)[2-4]/i.test(texto)) {
+      return 'sinModosFmt';
+    }
     if (!self.sinModos && /record_lab|record_hab/i.test(texto)) {
       return 'sinModos';
     }
@@ -254,24 +261,46 @@
     /* Columnas de récord, una por formato (record1..record4) */
     recordCols: ['record1', 'record2', 'record3', 'record4'],
 
-    /* Y una por cada modo que se juega con otras reglas, con su propia ruta
-     * de maestrías: [id en el juego, columna en la tabla] */
-    modoCols: [['lab', 'record_lab'], ['hab', 'record_hab']],
+    /* Y una por cada MUNDO APARTE y FORMATO, que son doce rutas de maestría
+     * en total contando el clásico: [mundo, jugadores, columna]. La de solo
+     * no lleva número —es la columna de siempre—, así que lo ya guardado
+     * cuenta para la ruta de solo sin tocar nada. */
+    modoCols: (function () {
+      var out = [];
+      ['lab', 'hab'].forEach(function (id) {
+        for (var n = 1; n <= 4; n++) {
+          out.push([id, n, 'record_' + id + (n > 1 ? n : '')]);
+        }
+      });
+      return out;
+    })(),
+
+    /* ¿Esa columna es de las que llegaron con el reparto por formato? */
+    esColFmt: function (c) { return /[2-4]$/.test(c); },
 
     /* Proyecto de Supabase sin las columnas de trío y escuadra: se descubre
      * solo a la primera respuesta que las eche en falta (ver pedirPerfiles y
      * push). No se guarda en ningún sitio: se vuelve a probar en cada sesión,
      * así que en cuanto se corra el SQL las columnas vuelven solas. */
     sinRecordsNuevos: false,
-    /* Lo mismo para las de LABERINTOS y HABILIDADES, que llegaron después:
+    /* Lo mismo para las de LABERINTOS y DESATADO, que llegaron después:
      * hay proyectos con unas y sin las otras, así que llevan bandera aparte. */
     sinModos: false,
+    /* Y otra para el reparto de esos dos mundos POR FORMATO (record_lab2 y
+     * compañía), que llegó aún más tarde. */
+    sinModosFmt: false,
 
     /* Columnas públicas de un perfil */
     perfilCols: function () {
       var c = 'usuario,avatar,xp,record1,record2,tiempo1,logros';
       if (!this.sinRecordsNuevos) c += ',record3,record4';
-      if (!this.sinModos) c += ',record_lab,record_hab';
+      if (!this.sinModos) {
+        for (var m = 0; m < this.modoCols.length; m++) {
+          var col = this.modoCols[m][2];
+          if (this.sinModosFmt && this.esColFmt(col)) continue;
+          c += ',' + col;
+        }
+      }
       return c;
     },
 
@@ -290,10 +319,10 @@
       for (var n = 1; n <= this.recordCols.length; n++) {
         o[this.recordCols[n - 1]] = (g.recordFor ? g.recordFor(n) : 0) || 0;
       }
-      // y los de los modos aparte, cada uno con su ruta de maestrías
+      // y los de los mundos aparte, uno por formato: doce rutas en total
       for (var m = 0; m < this.modoCols.length; m++) {
-        o[this.modoCols[m][1]] =
-          (g.recordModo ? g.recordModo(this.modoCols[m][0]) : 0) || 0;
+        o[this.modoCols[m][2]] = (g.recordModo
+          ? g.recordModo(this.modoCols[m][0], this.modoCols[m][1]) : 0) || 0;
       }
       /* Si este proyecto de Supabase todavía no tiene alguna de las columnas
        * nuevas (falta correr supabase/cuentas.sql), se manda sin ellas: más
@@ -303,8 +332,11 @@
         delete o.record3;
         delete o.record4;
       }
-      if (this.sinModos) {
-        for (m = 0; m < this.modoCols.length; m++) delete o[this.modoCols[m][1]];
+      for (m = 0; m < this.modoCols.length; m++) {
+        var col = this.modoCols[m][2];
+        if (this.sinModos || (this.sinModosFmt && this.esColFmt(col))) {
+          delete o[col];
+        }
       }
       return o;
     },
@@ -348,14 +380,15 @@
             cambio = true;
           }
         }
-        /* Y los modos con ruta propia, con la misma regla: se queda el mejor
-         * de los dos lados, así que entrar en la cuenta nunca cuesta una
-         * maestría de laberintos ni de habilidades. */
+        /* Y los mundos aparte, ruta a ruta y con la misma regla: se queda el
+         * mejor de los dos lados, así que entrar en la cuenta nunca cuesta una
+         * maestría de LABERINTOS ni de DESATADO. */
         for (var m = 0; m < this.modoCols.length; m++) {
           var id = this.modoCols[m][0];
-          var rv = parseInt(fila[this.modoCols[m][1]], 10) || 0;
-          if (g.recordModo && rv > g.recordModo(id)) {
-            g.setRecordModo(id, rv);
+          var np = this.modoCols[m][1];
+          var rv = parseInt(fila[this.modoCols[m][2]], 10) || 0;
+          if (g.recordModo && rv > g.recordModo(id, np)) {
+            g.setRecordModo(id, rv, np);
             cambio = true;
           }
         }

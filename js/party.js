@@ -51,7 +51,7 @@
     userNick: null,
     beatTimer: null,
     ghostPick: -1,   // PAC-MAN VS.: fantasma pedido (-1 = jugar de Pac-Man)
-    /* Modo HABILIDADES: lo decide QUIEN MANDA y vale para todo el grupo. No
+    /* Modo DESATADO: lo decide QUIEN MANDA y vale para todo el grupo. No
      * se pregunta uno por uno a propósito: media party con poderes y media
      * sin ellos no es una partida, son dos. */
     habPick: false,
@@ -147,7 +147,7 @@
       this.changed();
     },
 
-    /* Modo HABILIDADES de la party. Solo el líder lo cambia, y el cambio se
+    /* Modo DESATADO de la party. Solo el líder lo cambia, y el cambio se
      * reparte con la lista para que a nadie le pille por sorpresa. */
     setHab: function (on) {
       if (!this.st || !this.st.leader) return;

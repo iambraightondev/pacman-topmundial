@@ -28,10 +28,18 @@ create table if not exists public.perfiles (
   record2      integer     not null default 0 check (record2 >= 0),  -- dúo
   record3      integer     not null default 0 check (record3 >= 0),  -- trío
   record4      integer     not null default 0 check (record4 >= 0),  -- escuadra
-  -- y los modos que se juegan con otras reglas, cada uno con su propia ruta
-  -- de maestrías: una marca de ahí no se compara con la del laberinto de 1980
+  -- y los mundos que se juegan con otras reglas (LABERINTOS y DESATADO),
+  -- partidos TAMBIÉN por formato: son doce rutas de maestría contando el
+  -- clásico, y una marca de ahí no se compara con la del laberinto de 1980.
+  -- La columna sin número es la de solo (la de siempre).
   record_lab   integer     not null default 0 check (record_lab >= 0),
+  record_lab2  integer     not null default 0 check (record_lab2 >= 0),
+  record_lab3  integer     not null default 0 check (record_lab3 >= 0),
+  record_lab4  integer     not null default 0 check (record_lab4 >= 0),
   record_hab   integer     not null default 0 check (record_hab >= 0),
+  record_hab2  integer     not null default 0 check (record_hab2 >= 0),
+  record_hab3  integer     not null default 0 check (record_hab3 >= 0),
+  record_hab4  integer     not null default 0 check (record_hab4 >= 0),
   tiempo1      integer     check (tiempo1 is null or
                                   (tiempo1 > 0 and tiempo1 <= 6000000)),
   logros       jsonb       not null default '{}'::jsonb,
@@ -120,8 +128,8 @@ alter table public.perfiles
   add column if not exists record3 integer not null default 0,
   add column if not exists record4 integer not null default 0;
 
--- ---------- puesta al día: LABERINTOS y HABILIDADES ----------
--- Son modos aparte, con su propia ruta de maestrías, así que llevan su
+-- ---------- puesta al día: LABERINTOS y DESATADO ----------
+-- Son mundos aparte, con su propia ruta de maestrías, así que llevan su
 -- propio récord. Antes una partida en otro laberinto escribía en record1 (el
 -- del laberinto de 1980) y entregaba maestrías que no eran suyas; ahora cada
 -- uno guarda la suya. Lo que ya estuviera en record1 se queda como está: no
@@ -130,20 +138,36 @@ alter table public.perfiles
   add column if not exists record_lab integer not null default 0,
   add column if not exists record_hab integer not null default 0;
 
+-- ---------- puesta al día: esos dos mundos, POR FORMATO ----------
+-- Otro trazado con cuatro bocas tampoco es la misma liga que el mismo trazado
+-- en solitario, así que LABERINTOS y DESATADO se parten también por formato.
+-- La columna SIN número sigue siendo la de solo: lo que ya estuviera guardado
+-- cuenta para la ruta de solo, que es donde casi todo el mundo lo jugó, y no
+-- se pierde nada. Las tres nuevas de cada mundo empiezan a cero.
+alter table public.perfiles
+  add column if not exists record_lab2 integer not null default 0,
+  add column if not exists record_lab3 integer not null default 0,
+  add column if not exists record_lab4 integer not null default 0,
+  add column if not exists record_hab2 integer not null default 0,
+  add column if not exists record_hab3 integer not null default 0,
+  add column if not exists record_hab4 integer not null default 0;
+
 do $$
+declare
+  c text;
 begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'perfiles_record_lab_chk'
-  ) then
-    alter table public.perfiles
-      add constraint perfiles_record_lab_chk check (record_lab >= 0);
-  end if;
-  if not exists (
-    select 1 from pg_constraint where conname = 'perfiles_record_hab_chk'
-  ) then
-    alter table public.perfiles
-      add constraint perfiles_record_hab_chk check (record_hab >= 0);
-  end if;
+  foreach c in array array[
+    'record_lab', 'record_lab2', 'record_lab3', 'record_lab4',
+    'record_hab', 'record_hab2', 'record_hab3', 'record_hab4'
+  ] loop
+    if not exists (
+      select 1 from pg_constraint where conname = 'perfiles_' || c || '_chk'
+    ) then
+      execute format(
+        'alter table public.perfiles add constraint %I check (%I >= 0)',
+        'perfiles_' || c || '_chk', c);
+    end if;
+  end loop;
 end $$;
 
 do $$

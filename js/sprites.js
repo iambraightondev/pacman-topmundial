@@ -126,7 +126,7 @@
   };
 
   /* ============================================================
-   * MODO HABILIDADES — adornos que se pintan ENCIMA del Pac-Man
+   * MODO DESATADO — adornos que se pintan ENCIMA del Pac-Man
    * de siempre. Ninguno cambia drawPacman: el Pac-Man clásico se
    * dibuja igual que siempre y esto se le añade, así que un fallo
    * aquí no puede afear el juego normal. Ver js/habilidades.js.

@@ -5,7 +5,7 @@
  *
  * Modos de juego:
  *  - 1 jugador (clásico).
- *  - HABILIDADES: el mismo juego con cuatro poderes en Q/W/E/R.
+ *  - DESATADO: el mismo juego con cuatro poderes en Q/W/E/R.
  *    Es un modo aparte (como LABERINTOS) y no entra en el top
  *    mundial. Todo lo suyo vive en js/habilidades.js; aquí solo
  *    quedan los enganches.
@@ -33,10 +33,12 @@
   }
 
   var Game = {
-    /* récord de los modos aparte (LABERINTOS y HABILIDADES), cada uno con su
-     * propia ruta de maestrías: ver recordModo() y js/badges.js */
-    highScoreLab: 0,
-    highScoreHab: 0,
+    /* Récords de los mundos aparte (LABERINTOS y DESATADO). Cada mundo lleva
+     * CUATRO, uno por formato de partida —índice 0 = solo, 3 = escuadra—,
+     * porque otro trazado con cuatro bocas tampoco es la misma liga que el
+     * mismo trazado en solitario. De cada casilla sale una ruta de maestrías:
+     * ver recordModo() y js/badges.js. */
+    recordsModo: { lab: [0, 0, 0, 0], hab: [0, 0, 0, 0] },
 
     /* estado general */
     state: 'MENU',    // MENU | READY | PLAYING | DYING | LEVEL_DONE | GAME_OVER
@@ -120,7 +122,7 @@
     retoFecha: null,     // ...y de qué día (UTC)
     mazeId: null,        // laberinto alternativo en juego (null = el clásico)
     mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
-    hab: false,          // ¿esta partida es del modo HABILIDADES?
+    hab: false,          // ¿esta partida es del modo DESATADO?
 
     /* casa de fantasmas */
     globalActive: false,
@@ -216,17 +218,18 @@
       this.highScore2 = 0;
       this.highScore3 = 0;
       this.highScore4 = 0;
-      this.highScoreLab = 0;
-      this.highScoreHab = 0;
+      this.recordsModo = { lab: [0, 0, 0, 0], hab: [0, 0, 0, 0] };
       try {
         for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
           var v = localStorage.getItem(this.recordKey(n));
           if (v !== null) this.setRecordFor(n, parseInt(v, 10) || 0);
         }
-        // y los dos modos aparte, con su propia marca
+        // y los dos mundos aparte, cada uno con su marca por formato
         ['lab', 'hab'].forEach(function (id) {
-          var r = localStorage.getItem(this.recordModoKey(id));
-          if (r !== null) this.setRecordModo(id, parseInt(r, 10) || 0);
+          for (var m = 1; m <= CFG.MAX_PLAYERS; m++) {
+            var r = localStorage.getItem(CFG.recordModoKey(id, m));
+            if (r !== null) this.setRecordModo(id, parseInt(r, 10) || 0, m);
+          }
         }, this);
       } catch (e) { /* almacenamiento no disponible */ }
       this.highScore = this.highScore1;
@@ -458,7 +461,7 @@
        * resetLevel(), que es quien reparte las pastillas. */
       this.mazeId = opts.maze || null;
       this.applyMaze(this.mazeId);
-      /* modo HABILIDADES: Q/W/E/R. Se monta antes que los Pac-Man porque
+      /* modo DESATADO: Q/W/E/R. Se monta antes que los Pac-Man porque
        * reparte un juego de recargas por jugador (js/habilidades.js). */
       this.hab = !!opts.hab;
       if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount);
@@ -503,11 +506,12 @@
       } else {
         this.lives = s.startLives;
       }
-      /* El HIGH SCORE de la partida es el de SU liga: en trío se compite
-       * contra la mejor marca de trío, no contra la de dúo, y en LABERINTOS
-       * o HABILIDADES contra la de ese modo, que es la única comparable. */
+      /* El HIGH SCORE de la partida es el de SU liga, y la liga son las dos
+       * cosas a la vez: el mundo (clásico, LABERINTOS o DESATADO) y cuántos
+       * juegan. En un trío de LABERINTOS se compite contra la mejor marca de
+       * trío EN LABERINTOS, que es la única comparable. */
       var slotHS = this.recordSlot();
-      this.highScore = slotHS ? this.recordModo(slotHS)
+      this.highScore = slotHS ? this.recordModo(slotHS, this.playerCount)
                               : this.recordFor(this.playerCount);
 
       /* red */
@@ -1080,7 +1084,7 @@
       }
     },
 
-    /* segsFijos: el GRITO (R) del modo HABILIDADES asusta lo mismo en el
+    /* segsFijos: el GRITO (R) del modo DESATADO asusta lo mismo en el
      * nivel 1 que en el 18, donde la superpastilla ya no dura nada. Sin eso
      * la habilidad se apagaría sola justo cuando más falta hace. */
     triggerFright: function (segsFijos) {
@@ -1206,7 +1210,7 @@
       var pct = (this.frightTicks > 0) ? row.pacFright : row.pac;
       pct = Math.min(pct * this.pacSpeedMult, CFG.SPEED_CLAMP * 100);
       /* TURBO (W) va DESPUÉS del tope. El tope existe para que las partidas
-       * clásicas se puedan comparar entre sí, y el modo HABILIDADES no
+       * clásicas se puedan comparar entre sí, y el modo DESATADO no
        * compite con nadie: aquí el x1.5 tiene que notarse entero o no vale
        * para nada. */
       if (this.hab && window.PM.Hab && pac) {
@@ -1474,27 +1478,39 @@
       return this.highScore1 || 0;
     },
 
-    /* ---------- Récord de los modos aparte ----------
-     * LABERINTOS y HABILIDADES no compiten con el laberinto de 1980 ni entre
-     * sí: otro trazado o cuatro poderes cambian lo que vale un punto. Cada
-     * uno guarda su mejor marca y de ella sale su propia ruta de maestrías,
-     * igual que cada formato tiene la suya. */
-    recordModoKey: function (id) {
-      return (id === 'hab') ? CFG.HIGHSCORE_HAB_KEY : CFG.HIGHSCORE_LAB_KEY;
+    /* ---------- Récord de los mundos aparte ----------
+     * LABERINTOS y DESATADO no compiten con el laberinto de 1980 ni entre sí:
+     * otro trazado o cuatro poderes cambian lo que vale un punto. Y dentro de
+     * cada uno, tampoco compite un solitario con una escuadra. Así que cada
+     * mundo guarda CUATRO marcas, una por formato, y de cada una sale su
+     * propia ruta de maestrías (js/badges.js).
+     *
+     * n es el número de jugadores (1..4); si no se dice, solo. */
+    recordModoKey: function (id, n) {
+      return CFG.recordModoKey(id, n);
     },
 
-    recordModo: function (id) {
-      return ((id === 'hab') ? this.highScoreHab : this.highScoreLab) || 0;
+    /* Índice del formato dentro de la lista del mundo (0 = solo, 3 = escuadra) */
+    modoIdx: function (n) {
+      n = parseInt(n, 10) || 1;
+      if (n > CFG.MAX_PLAYERS) n = CFG.MAX_PLAYERS;
+      if (n < 1) n = 1;
+      return n - 1;
     },
 
-    setRecordModo: function (id, v) {
-      v = parseInt(v, 10) || 0;
-      if (id === 'hab') this.highScoreHab = v;
-      else this.highScoreLab = v;
+    recordModo: function (id, n) {
+      var l = this.recordsModo[(id === 'hab') ? 'hab' : 'lab'];
+      return (l && l[this.modoIdx(n)]) || 0;
     },
 
-    /* Ruta de maestrías de la partida en curso: los modos aparte primero,
-     * y si no, el formato (solo, dúo, trío o escuadra). */
+    setRecordModo: function (id, v, n) {
+      var l = this.recordsModo[(id === 'hab') ? 'hab' : 'lab'];
+      if (l) l[this.modoIdx(n)] = parseInt(v, 10) || 0;
+    },
+
+    /* MUNDO de la partida en curso: 'hab', 'lab', o null si es el clásico.
+     * El formato (cuántos juegan) va aparte, en playerCount; la ruta de
+     * maestrías la arma badgeMode() juntando los dos. */
     recordSlot: function () {
       if (this.hab) return 'hab';
       if (this.mazeId) return 'lab';
@@ -1517,8 +1533,13 @@
         for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
           localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));
         }
-        localStorage.setItem(this.recordModoKey('lab'), String(this.recordModo('lab')));
-        localStorage.setItem(this.recordModoKey('hab'), String(this.recordModo('hab')));
+        for (var m = 0; m < 2; m++) {
+          var id = m ? 'hab' : 'lab';
+          for (var k = 1; k <= CFG.MAX_PLAYERS; k++) {
+            localStorage.setItem(this.recordModoKey(id, k),
+              String(this.recordModo(id, k)));
+          }
+        }
       } catch (e) { /* sin almacenamiento */ }
       // si no se está jugando, el marcador de la portada enseña el de 1 jugador
       if (this.state === 'MENU') this.highScore = this.highScore1;
@@ -1527,7 +1548,7 @@
     /* En PAC-MAN VS. no se guarda récord: son otros ajustes (un fantasma que
      * piensa) y la marca no sería comparable con la de nadie.
      *
-     * LABERINTOS y HABILIDADES sí guardan, pero CADA UNO EN EL SUYO. Antes,
+     * LABERINTOS y DESATADO sí guardan, pero CADA UNO EN EL SUYO. Antes,
      * una partida en otro laberinto escribía en el récord de 1 jugador —el
      * mismo que viaja a la cuenta y del que salen las maestrías—, así que un
      * trazado más fácil regalaba insignias del laberinto de 1980. Ahora cada
@@ -1537,12 +1558,13 @@
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
       var slot = this.recordSlot();
       if (slot) {
-        if (this.highScore > this.recordModo(slot)) {
-          this.setRecordModo(slot, this.highScore);
+        var np = this.playerCount;
+        if (this.highScore > this.recordModo(slot, np)) {
+          this.setRecordModo(slot, this.highScore, np);
         }
         try {
-          localStorage.setItem(this.recordModoKey(slot),
-            String(this.recordModo(slot)));
+          localStorage.setItem(this.recordModoKey(slot, np),
+            String(this.recordModo(slot, np)));
         } catch (e) { /* sin almacenamiento */ }
         return;
       }
@@ -1682,17 +1704,20 @@
     },
 
     /* ---------- Maestrías ----------
-     * Cada formato tiene su propia ruta —solo, dúo, trío y escuadra—, con su
-     * récord y sus insignias: una gran partida en escuadra no entrega las de
-     * dúo ni las de solo. Y cada ruta pide más puntos cuanta más gente juega
-     * (el escalón por los jugadores), porque el marcador de un equipo es de
-     * todos y con cuatro se llega al mismo número con mucho menos mérito. */
+     * Una ruta por MUNDO y FORMATO: doce en total. El mundo es dónde se juega
+     * (el laberinto de 1980, LABERINTOS o DESATADO) y el formato cuántos sois
+     * (solo, dúo, trío o escuadra). Cada una lleva su récord y sus insignias:
+     * una gran partida en escuadra no entrega las de dúo ni las de solo, y una
+     * en otro trazado no entrega las del laberinto de siempre.
+     *
+     * Y cada ruta pide más puntos cuanto más regala: por los jugadores (el
+     * marcador de un equipo es de todos, y con cuatro se llega al mismo número
+     * con mucho menos mérito de cada uno) y por el mundo (con poderes los
+     * puntos son más baratos). Ver js/badges.js. */
     badgeMode: function () {
       var B = window.PM.Badges;
       if (!B) return 'solo';
-      // LABERINTOS y HABILIDADES tienen ruta propia, no la del formato
-      var slot = this.recordSlot();
-      return slot || B.modeFor(this.playerCount);
+      return B.ruta(this.recordSlot(), this.playerCount);
     },
 
     /* Solo se celebra lo que NO se tenía: una maestría ya conseguida no se
@@ -1819,7 +1844,7 @@
      *
      * Son dos cosas a la vez y por eso es una lista: el FORMATO (solo o
      * acompañado) y el MODO (clásico, reto, laberinto, VS. o habilidades).
-     * Una party de habilidades cuenta para las dos, que es lo que la gente
+     * Una party de poderes cuenta para las dos, que es lo que la gente
      * espera. El modo sí es uno solo: no se pueden mezclar entre ellos.
      *
      * 'clasico' es el laberinto de 1980 sin inventos, y ahí NO entra el reto
@@ -1970,7 +1995,7 @@
       // día o con un fantasma que piensa, no se compara nada: el reto tiene
       // su propia clasificación y VS. no compite con nadie.
       //
-      // Y con HABILIDADES tampoco: morder fantasmas a golpe de tecla regala
+      // Y con DESATADO tampoco: morder fantasmas a golpe de tecla regala
       // puntos que en el arcade no existen, así que una partida así al lado
       // de una clásica no diría nada de nadie. Suma experiencia y logros,
       // que son tuyos, pero la tabla mundial se queda limpia.
@@ -2489,7 +2514,7 @@
         case 'voteRes':
           this.onVoteResult(d.k, !!d.ok);
           break;
-        /* Modo HABILIDADES: un invitado pide un poder. La recarga que vale
+        /* Modo DESATADO: un invitado pide un poder. La recarga que vale
          * es la de aquí —la suya vive en su navegador y no es de fiar—, y
          * lo que toca a los fantasmas (morder, gritar) lo ejecuta el
          * anfitrión. Ver js/habilidades.js. */
@@ -2534,7 +2559,7 @@
         v: CFG.NET.PROTO, to: sid, n: this.pacs.length,
         nm: nm, co: co, sk: sk,
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
-        hab: !!this.hab,            // modo HABILIDADES: el mirón tiene que verlo
+        hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
         cfg: {
           ghostSpeedMult: this.ghostSpeedMult,
           pacSpeedMult: this.pacSpeedMult,
@@ -2751,11 +2776,18 @@
     /* Igual que en el anfitrión: solo cuenta compartir casilla */
     guestCollisions: function (me) {
       var px = me.tileX(), py = me.tileY();
+      var A = window.PM.Hab;
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         if (g.mode === 'house' || g.mode === 'entering') continue;
         if (g.tileX() !== px || g.tileY() !== py) continue;
         if (g.mode === 'eyes') continue;
+        /* Fantasma recién mordido con la Q y aún sin confirmar: aquí no se
+         * mata (lo hace el anfitrión), así que sigue vivo y pegado. Ni mata ni
+         * se come mientras dure el escudo — comerlo por las bravas mandaría un
+         * 'ateGhost' además del mordisco y el anfitrión lo contaría dos veces.
+         * Ver Hab.protegido() en js/habilidades.js. */
+        if (A && A.protegido(me.id, g.id)) continue;
         if (g.frightened) {
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'
           g.eaten();
@@ -3226,7 +3258,7 @@
       return ch !== '#';
     },
 
-    /* Un Pac-Man vivo, con lo que le haya puesto el modo HABILIDADES encima.
+    /* Un Pac-Man vivo, con lo que le haya puesto el modo DESATADO encima.
      * Fuera del modo es exactamente el dibujo de siempre. */
     drawPac: function (ctx, pc, i) {
       var color = this.colorFor(i);
@@ -3470,7 +3502,7 @@
         ctx.textBaseline = 'top';
       }
 
-      /* La barra de habilidades no cabe en el lienzo (la fila de abajo ya la
+      /* La barra de poderes no cabe en el lienzo (la fila de abajo ya la
        * llenan las vidas, el cronómetro y las frutas), así que vive en el DOM
        * junto a las crucetas y se refresca desde aquí. Ver js/ui.js. */
       if (this.hab && window.PM.UI && window.PM.UI.refreshHabBar) {

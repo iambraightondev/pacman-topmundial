@@ -30,7 +30,7 @@
 
   /* ---------- utilidades del formato ---------- */
   var SEP = '~';                       // separador de campos (fuera del juego de caracteres de los nombres)
-  /* 'hab' es el modo HABILIDADES, que solo se juega en solo (en party las
+  /* 'hab' es el modo DESATADO, que solo se juega en solo (en party las
    * repeticiones son las de red). Un texto con 'h' abierto en una versión
    * vieja del juego no cuela como partida normal: MODOS_INV no lo conoce,
    * leer() devuelve null y sale el aviso de repetición rota, que es
@@ -58,7 +58,7 @@
    * G..V que empaqueta jugador y dirección en un solo carácter. Si el mismo
    * giro se repite con la misma separación, se resume con *veces (RLE). */
   /* Una entrada es [tick, jugador, qué]. En `qué`, 0..3 es un giro y 4..7 es
-   * una habilidad del modo HABILIDADES (Q, W, E y R por ese orden).
+   * una habilidad del modo DESATADO (Q, W, E y R por ese orden).
    *
    * Los giros se empaquetan en las letras G..V, que son las 16 parejas de
    * jugador y dirección. Para las habilidades no quedan 16 letras libres, y
@@ -496,7 +496,7 @@
       this.modo = 'grabar';
       this.grabando = {
         v: this.V,
-        // el modo HABILIDADES solo se juega en solo, así que no choca con dúo
+        // el modo DESATADO solo se juega en solo, así que no choca con dúo
         modo: G.hab ? 'hab' : ((G.playerCount === 2) ? 'duo' : 'solo'),
         semilla: null,              // la deriva el propio juego del nivel
         nivel: G.level,
@@ -531,7 +531,7 @@
       return true;
     },
 
-    /* ---------- habilidades (modo HABILIDADES, js/habilidades.js) ----------
+    /* ---------- habilidades (modo DESATADO, js/habilidades.js) ----------
      * Van en las mismas `entradas` que los giros, con el "qué" de 4 a 7. La
      * pareja es como la de los giros pero al revés: primero se pregunta si
      * la tecla vale (viendo una repetición manda ella), y se apunta después,
@@ -650,7 +650,7 @@
         colores: colores,
         skins: skins,
         ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
-        hab: !!G.hab,          // modo HABILIDADES: dientes, chispas y flash
+        hab: !!G.hab,          // modo DESATADO: dientes, chispas y flash
         fecha: new Date().toISOString(),
         pm: null,              // mapa de pastillas del arranque
         cuadros: [],           // [tick, vector]

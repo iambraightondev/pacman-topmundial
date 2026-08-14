@@ -2,6 +2,67 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · DESATADO, la Q en party y una portada que impone
+
+- **HABILIDADES pasa a llamarse DESATADO.** El nombre viejo decía lo que el
+  modo *tiene* (habilidades) en vez de lo que se siente al jugarlo. Cambia el
+  cartel, la portada, los logros y su ruta de maestrías; los contadores y los
+  récords son los mismos de siempre, así que no se pierde nada.
+
+- **La Q ya no te mata en party.** Era el fallo gordo: pulsabas la Q, el
+  fantasma se moría... y tú también. El invitado **no mata fantasmas** —eso lo
+  decide el anfitrión—, así que durante la ida y vuelta de la petición el
+  fantasma seguía vivo y pegado en tu pantalla, y encima el propio mordisco te
+  gira la cara hacia él: te metías dentro y tu propia detección de choques te
+  mataba por haber acertado el tiro. Ahora, el fantasma que acabas de morder
+  **no puede hacerte nada** hasta que llega la confirmación (tres cuartos de
+  segundo, de sobra). Si el anfitrión acaba diciendo que no, el escudo se
+  agota y vuelve a ser peligroso: da de menos, nunca de más.
+- Y **la Q entra mucho más**. Dos cosas: media casilla más de alcance —ahora
+  llega a **dos casillas justas**— y, en party, el anfitrión le **perdona
+  unos píxeles** al mordisco que le piden por red. Esto último no regala
+  alcance: tu posición le llega a 12 veces por segundo y sus fantasmas los
+  mueve él, así que cuando ejecuta tu petición ya no están donde tú los viste.
+  Ese desfase no era culpa tuya y se comía la mitad de los mordiscos.
+
+- **Las maestrías se parten también por formato en LABERINTOS y DESATADO.**
+  Eran seis rutas y ahora son **doce**: tres mundos (CLÁSICO, LABERINTOS,
+  DESATADO) por cuatro formatos (SOLO, DÚO, TRÍO, ESCUADRA). Quedaba un
+  agujero: un trío de laberintos entregaba las mismas insignias que jugar
+  solo, cuando son tres bocas comiendo.
+  - El listón lo marcan **las dos cosas a la vez**: los jugadores por el
+    mundo. APRENDIZ son 3.000 en solo y 24.000 en una escuadra de DESATADO.
+  - En el panel se eligen por sus **dos ejes** —arriba el mundo, debajo el
+    formato— en vez de con doce pestañas seguidas.
+  - **No se pierde nada de lo conseguido**: la marca que ya tuvieras en
+    LABERINTOS o en DESATADO cuenta para su ruta de SOLO, que es donde casi
+    todo el mundo la hizo.
+
+- **La portada elige modo como una máquina, no como un formulario.** Antes
+  eran seis tarjetas en rejilla: se veía todo de golpe, sí, pero ninguna
+  pesaba más que las otras. Ahora hay **un solo recuadro grande** con el logo
+  del modo a tamaño de verdad, **◀ y ▶** a los lados y los puntitos debajo
+  (que también se pulsan). Se conservan los mismos iconos, la misma coletilla
+  con lo que pasa ahora mismo y el mismo atajo: pulsar la tarjeta arranca.
+  Con teclado, las flechas pasan de modo cuando la tarjeta está enfocada.
+
+- **La barra de Q/W/E/R se va a donde puedes mirarla.** Estaba abajo a la
+  derecha de la ventana: en un monitor grande te quedaba a media pantalla del
+  laberinto, así que mirar si tienes la Q cargada te obligaba a apartar los
+  ojos de la partida, que es justo lo que no te puedes permitir. Ahora va
+  **pegada bajo el laberinto**, centrada y en la misma mirada que las vidas y
+  las frutas. En el móvil se queda donde estaba: ahí abajo manda la cruceta.
+
+- **Tu color se elige en PERFIL**, con tu avatar y tu skin. Estaba en
+  OPCIONES · JUGADORES, entre los ajustes de la máquina, y tu color no es un
+  ajuste de la máquina: es quién eres en la sala. En OPCIONES se queda solo el
+  del jugador 2 local, que sí lo es.
+
+> **Ya aplicado** en el proyecto del juego: seis columnas nuevas en
+> `perfiles` (`record_lab2..4` y `record_hab2..4`). Quien monte esto en otro
+> Supabase tiene que lanzar `supabase/cuentas.sql` otra vez; mientras no lo
+> haga, el juego sigue funcionando y guarda lo de siempre.
+
 ## 2026-08-14 · Portada nueva: elige modo y dale a JUGAR
 
 - **Los modos estaban repartidos por toda la pantalla**: dos arrancaban desde

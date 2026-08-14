@@ -542,7 +542,9 @@
       var B = window.PM.Badges;
       var r = [G.highScore1, G.highScore2, G.highScore3, G.highScore4];
       try {
-        eq(B.MODES.join(','), 'solo,duo,trio,escuadra,lab,hab');
+        eq(B.MODES.join(','),
+           'solo,duo,trio,escuadra,lab,lab2,lab3,lab4,hab,hab2,hab3,hab4',
+           'doce rutas: tres mundos por cuatro formatos');
         G.highScore1 = 9000;      // solo: CAZADOR (8.000)
         G.highScore2 = 9000;      // dúo: solo APRENDIZ (6.000); CAZADOR pide 16.000
         G.highScore3 = 0;
@@ -3151,7 +3153,7 @@
         eq(A.stats()['party:partidas'] || 0, 0,
            'pero en party no: no hay prueba de haber jugado acompañado');
         ok(!A.has('pt_companero'), 'y su logro sigue sin caer');
-        eq(A.stats()['hab:mordiscos'] || 0, 0, 'de habilidades no se inventa nada');
+        eq(A.stats()['hab:mordiscos'] || 0, 0, 'de poderes no se inventa nada');
 
         // y no se siembra dos veces: si no, cada partida de party seguiría
         // engordando el contador de clásico para siempre
@@ -3197,7 +3199,7 @@
       G.state = 'PLAYING'; G.readyTicks = 0;
       var tags = G.achTags();
       ok(tags.indexOf('party') !== -1, 'es una party');
-      ok(tags.indexOf('hab') !== -1, 'y es de habilidades');
+      ok(tags.indexOf('hab') !== -1, 'y es de poderes');
       ok(tags.indexOf('clasico') === -1, 'y NO es el clásico');
       G.bumpAch({ fantasmas: 5 });
       eq(A.stats()['party:fantasmas'], 5, 'cuenta en party');
@@ -3468,7 +3470,10 @@
     }
   });
 
-  test('tu skin se elige en PERFIL y la del jugador 2 en OPCIONES',
+  /* Tu aspecto (color, skin, avatar) es quién eres en la sala, no un ajuste
+   * de la máquina: vive entero en PERFIL. En OPCIONES solo queda el jugador 2
+   * local, que sí es un ajuste de esta máquina. */
+  test('tu color y tu skin se eligen en PERFIL, y los del jugador 2 en OPCIONES',
     function () {
       var UI = window.PM.UI;
       UI.showProfile();
@@ -3476,12 +3481,18 @@
       // los avatares también son .skin: la skin propia añade CFG.SKINS.length
       ok(enPerfil >= CFG.SKINS.length + CFG.AVATARS.length,
          'en PERFIL están el avatar y la skin propia');
+      eq(UI.els.profile.querySelectorAll('.swatches').length, 1,
+         'y tu fila de color');
       UI.showOptions();
       UI.showOptionsTab('jugadores');
       var filas = UI.els.options.querySelectorAll('.skins').length;
-      eq(filas, 1, 'en OPCIONES solo queda la fila del jugador 2');
+      eq(filas, 1, 'en OPCIONES solo queda la fila de skin del jugador 2');
+      eq(UI.els.options.querySelectorAll('.swatches').length, 1,
+         'y solo su color');
       ok(UI.skinRows.skin1 && UI.skinRows.skin2,
-         'las dos siguen registradas para repintarse');
+         'las dos skins siguen registradas para repintarse');
+      ok(UI.colorRows.pacColor && UI.colorRows.pac2Color,
+         'y los dos colores también, aunque vivan en paneles distintos');
       UI.showMenu();
     });
 
@@ -3692,12 +3703,12 @@
   });
 
   // ---------------------------------------------------------------
-  // Modo HABILIDADES (js/habilidades.js)
+  // Modo DESATADO (js/habilidades.js)
   // ---------------------------------------------------------------
   var HB = window.PM.Hab;
   var HC = CFG.HAB;
 
-  /* Partida de habilidades a un jugador, con Pac-Man donde se le diga.
+  /* Partida de poderes a un jugador, con Pac-Man donde se le diga.
    * `col`/`fila` en casillas; por defecto se queda donde empieza. */
   function partidaHab(col, fila, dir) {
     window.PM.settings.muted = true;
@@ -3728,7 +3739,7 @@
 
   test('fuera del modo no hay habilidades que valgan', function () {
     partida(1);
-    ok(!G.hab, 'una partida normal no es de habilidades');
+    ok(!G.hab, 'una partida normal no es de poderes');
     eq(HB.estado(0), null, 'no hay estado que consultar');
     eq(HB.pulsar(G, 0, HB.TURBO), false, 'la tecla no hace nada');
   });
@@ -3745,7 +3756,11 @@
     eq(HC.TURBO_MULT, 1.5, 'y corre x1.5');
     eq(HC.SHOUT_SECS, 6, 'el grito asusta 6 s');
     eq(HC.FLASH_TILES, 3, 'el flash salta 3 casillas');
-    eq(HC.BITE_TILES, 1, 'el mordisco alcanza 1 casilla');
+    eq(HC.BITE_TILES, 1, 'el mordisco parte de 1 casilla');
+    /* Media casilla más de lo que era: en party se fallaba demasiado porque el
+     * fantasma que ves pegado no está exactamente ahí en la pantalla del
+     * anfitrión. Dos casillas justas de alcance. */
+    eq(HC.BITE_PX, 2 * CFG.TILE, 'y con el margen llega a dos casillas');
     // la recarga que gasta el juego es la de LIST, no una copia suelta
     for (var k = 0; k < 4; k++) {
       eq(HC.LIST[k].cd, HC.segs(k) * 60, 'la ' + HC.LIST[k].key + ' cuadra');
@@ -3771,12 +3786,104 @@
     ok(!HB.lista(0, HB.MORDISCO), 'y se pone a recargar');
   });
 
-  test('Q no llega a dos casillas, y entonces no se gasta', function () {
+  test('Q no llega a tres casillas, y entonces no se gasta', function () {
     partidaHab(13, 20, CFG.DIR.LEFT);
     fantasmaEn(1, 16, 20);
     eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'no hay a quién morder');
     ok(HB.lista(0, HB.MORDISCO), 'la habilidad sigue cargada');
   });
+
+  /* La media casilla que se le añadió: a dos casillas clavadas ahora entra */
+  test('Q alcanza a dos casillas', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    var g = fantasmaEn(1, 15, 20);
+    ok(HB.pulsar(G, 0, HB.MORDISCO), 'a dos casillas sí llega');
+    eq(g.mode, 'eyes', 'y se lo come');
+  });
+
+  /* ---------- la Q en party ----------
+   * El fallo que se veía jugando: el invitado pulsaba Q, el fantasma se moría
+   * (lo mataba el anfitrión)... y él también. Aquí no se mata a nadie, así que
+   * durante la ida y vuelta de la petición el fantasma seguía vivo y pegado —y
+   * el propio mordisco le acaba de girar la cara hacia él—, así que se metía
+   * dentro y su propia detección de choques lo mataba. */
+  function partidaHabInvitado(col, fila) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+    G.localIdx = 1;
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 0;
+    var p = G.pacs[1];
+    p.x = col * CFG.TILE + CFG.TILE / 2;
+    p.y = fila * CFG.TILE + CFG.TILE / 2;
+    return p;
+  }
+
+  test('el invitado que muerde no muere con el fantasma que ha mordido',
+    function () {
+      var p = partidaHabInvitado(13, 20);
+      var g = fantasmaEn(1, 14, 20);
+      ok(HB.pulsar(G, 1, HB.MORDISCO), 'la Q entra');
+      eq(g.mode, 'normal', 'aquí el fantasma no se mata: eso es del anfitrión');
+      ok(HB.protegido(1, g.id), 'pero queda protegido de él');
+      // se mete dentro, que es justo lo que pasaba al girarse hacia él
+      g.x = p.x; g.y = p.y;
+      G.guestCollisions(p);
+      ok(!p.dying, 'y meterse en él no lo mata');
+    });
+
+  test('el escudo del mordisco se agota y el fantasma vuelve a matar',
+    function () {
+      var p = partidaHabInvitado(13, 20);
+      var g = fantasmaEn(1, 14, 20);
+      HB.pulsar(G, 1, HB.MORDISCO);
+      // el anfitrión no contesta: pasan los ticks y el escudo se acaba
+      ticks(CFG.HAB.BITE_GUARD + 2);
+      ok(!HB.protegido(1, g.id), 'el escudo dura lo justo, no para siempre');
+      p = G.pacs[1];
+      g.x = p.x; g.y = p.y;
+      g.mode = 'normal'; g.frightened = false;
+      G.guestCollisions(p);
+      ok(p.dying, 'y entonces el fantasma vuelve a ser peligroso');
+      G.toMenu();
+    });
+
+  test('el escudo es de ESE fantasma, no de todos', function () {
+    var p = partidaHabInvitado(13, 20);
+    fantasmaEn(1, 14, 20);
+    HB.pulsar(G, 1, HB.MORDISCO);
+    var otro = fantasmaEn(2, 13, 20);   // este no lo ha mordido nadie
+    ok(!HB.protegido(1, otro.id), 'el de al lado no está protegido');
+    G.guestCollisions(p);
+    ok(p.dying, 'y ese sí lo mata');
+    G.toMenu();
+  });
+
+  /* El anfitrión le perdona unos píxeles al mordisco que llega por red: la
+   * posición del invitado le llega a 12 Hz y sus fantasmas los mueve él, así
+   * que cuando la petición se ejecuta ya no están donde el invitado los vio. */
+  test('el anfitrión le perdona el desfase de red al mordisco del invitado',
+    function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'] });
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      var p = G.pacs[1];
+      p.safeTicks = 999999;
+      p.x = 13 * CFG.TILE + CFG.TILE / 2;
+      p.y = 20 * CFG.TILE + CFG.TILE / 2;
+      var g = G.ghosts[1];
+      g.mode = 'normal'; g.frightened = false;
+      g.y = p.y;
+      // fuera del alcance normal, pero dentro del margen que se le perdona
+      g.x = p.x + CFG.HAB.BITE_PX + 2;
+      eq(HB.presa(G, 1), null, 'a esa distancia, de cerca no habría llegado');
+      HB.peticion(G, 1, HB.MORDISCO);
+      eq(g.mode, 'eyes', 'pero la petición de red sí se ejecuta');
+      ok(CFG.HAB.BITE_NET_MARGIN > 0, 'el margen existe y es solo para la red');
+      G.toMenu();
+    });
 
   /* El fallo que se notaba jugando: contando CASILLAS, dos cosas pegadas en
    * pantalla podían caer en casillas no vecinas y el mordisco fallaba sin
@@ -4014,7 +4121,7 @@
     eq(HB.estado(0).cd[HB.TURBO], cd, 'la recarga sigue donde estaba');
   });
 
-  test('una partida de habilidades no toca el top mundial ni el récord', function () {
+  test('una partida de poderes no toca el top mundial ni el récord', function () {
     partidaHab();
     var antes = G.recordFor(1);
     G.score = antes + 100000;
@@ -4024,7 +4131,7 @@
     eq(G.canTimeRecord(), false, 'ni el récord de velocidad del nivel 1');
   });
 
-  /* ---------- maestrías de LABERINTOS y HABILIDADES ---------- */
+  /* ---------- maestrías de LABERINTOS y DESATADO ---------- */
   test('laberintos y habilidades tienen su récord, aparte del de siempre', function () {
     var B = window.PM.Badges;
     var r = [G.highScore1, G.recordModo('lab'), G.recordModo('hab')];
@@ -4043,13 +4150,13 @@
       eq(G.recordFor(1), 0, 'el récord del laberinto de 1980 sigue intacto');
       eq(G.recordModo('lab'), 20000, 'y el de LABERINTOS se queda la marca');
 
-      // una de habilidades tampoco, y va a la suya
+      // una de poderes tampoco, y va a la suya
       G.newGame({ players: 1, hab: true });
       G.score = 30000; G.highScore = 30000;
       G.persistHighScore();
       eq(G.recordFor(1), 0, 'el de 1 jugador sigue sin moverse');
       eq(G.recordModo('lab'), 20000, 'y el de laberintos tampoco');
-      eq(G.recordModo('hab'), 30000, 'HABILIDADES guarda la suya');
+      eq(G.recordModo('hab'), 30000, 'DESATADO guarda la suya');
       G.toMenu();
     } finally {
       G.highScore1 = r[0];
@@ -4066,7 +4173,7 @@
       G.setRecordModo('lab', 9000);    // laberintos: escalón normal
       G.setRecordModo('hab', 9000);    // habilidades: pide el doble
       eq(B.best('lab'), 9000, 'la ruta de laberintos lee su récord');
-      eq(B.best('hab'), 9000, 'y la de habilidades el suyo');
+      eq(B.best('hab'), 9000, 'y la de poderes el suyo');
       eq(B.mult('lab'), 1, 'laberintos usa el escalón de siempre');
       eq(B.mult('hab'), 2, 'habilidades pide el doble');
       eq(B.top('lab').id, 'cazador', '9.000 en laberintos: CAZADOR');
@@ -4120,11 +4227,100 @@
     }
     eq(rutaDe({ players: 1 }), 'solo', 'una normal, a solo');
     eq(rutaDe({ players: 2 }), 'duo', 'la de dos, a dúo');
-    eq(rutaDe({ players: 1, hab: true }), 'hab', 'la de poderes, a habilidades');
-    eq(rutaDe({ players: 2, hab: true }), 'hab',
-       'y una party de poderes también: manda el modo, no el formato');
+    eq(rutaDe({ players: 1, hab: true }), 'hab', 'la de poderes en solo, a DESATADO');
+    /* Aquí está lo nuevo: el mundo Y el formato. Una party de poderes no
+     * cuenta en la misma ruta que jugar solo con poderes, igual que un dúo
+     * clásico no cuenta en la de un jugador. */
+    eq(rutaDe({ players: 2, hab: true }), 'hab2',
+       'una party de poderes va a la de DESATADO en dúo');
+    eq(rutaDe({ players: 4, hab: true }), 'hab4', 'y una de cuatro, a la de escuadra');
     var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
-    if (mz) eq(rutaDe({ players: 1, maze: mz.id }), 'lab', 'la de otro trazado, a laberintos');
+    if (mz) {
+      eq(rutaDe({ players: 1, maze: mz.id }), 'lab', 'otro trazado en solo, a LABERINTOS');
+      eq(rutaDe({ players: 3, maze: mz.id }), 'lab3', 'y en trío, a la de trío');
+    }
+  });
+
+  /* Doce rutas: el listón lo marcan las dos cosas a la vez, los jugadores y el
+   * mundo. Cuatro bocas en DESATADO es lo más caro que hay (x4 por el formato
+   * y x2 por el mundo). */
+  test('el listón de una ruta multiplica el formato por el mundo', function () {
+    var B = window.PM.Badges;
+    var aprendiz = CFG.BADGES[0];
+    eq(B.goal(aprendiz, 'lab'), 3000, 'laberintos en solo: el escalón de siempre');
+    eq(B.goal(aprendiz, 'lab3'), 9000, 'en trío, el triple');
+    eq(B.goal(aprendiz, 'hab'), 6000, 'desatado en solo: el doble');
+    eq(B.goal(aprendiz, 'hab4'), 24000, 'y en escuadra, ocho veces');
+    eq(B.mundoDe('hab3'), 'hab');
+    eq(B.players('hab3'), 3);
+    eq(B.modeName('hab3'), 'DESATADO · TRÍO');
+    eq(B.modeName('duo'), 'DÚO', 'el clásico no repite su nombre');
+  });
+
+  /* Cada casilla de la tabla guarda lo suyo: la marca de un trío de
+   * laberintos no se ve desde la ruta de solo ni desde la de DESATADO. */
+  test('cada mundo aparte guarda su récord por formato', function () {
+    var B = window.PM.Badges;
+    var r = [];
+    var m, n;
+    for (m = 0; m < 2; m++) {
+      for (n = 1; n <= 4; n++) r.push(G.recordModo(m ? 'hab' : 'lab', n));
+    }
+    try {
+      for (m = 0; m < 2; m++) {
+        for (n = 1; n <= 4; n++) G.setRecordModo(m ? 'hab' : 'lab', 0, n);
+      }
+      window.PM.settings.muted = true;
+      var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
+      ok(mz, 'hay laberintos alternativos');
+      G.newGame({ players: 3, maze: mz.id });
+      G.score = 21000; G.highScore = 21000;
+      G.persistHighScore();
+      G.toMenu();
+      eq(G.recordModo('lab', 3), 21000, 'la marca del trío va a la del trío');
+      eq(G.recordModo('lab', 1), 0, 'y no toca la de solo');
+      eq(G.recordModo('hab', 3), 0, 'ni la del otro mundo');
+      eq(B.best('lab3'), 21000, 'la ruta lee su casilla');
+      eq(B.top('lab3').id, 'aprendiz', '21.000 entre tres: solo APRENDIZ (9.000)');
+      eq(B.top('lab'), null, 'y en la de solo, ninguna');
+    } finally {
+      var i = 0;
+      for (m = 0; m < 2; m++) {
+        for (n = 1; n <= 4; n++) G.setRecordModo(m ? 'hab' : 'lab', r[i++], n);
+      }
+    }
+  });
+
+  test('la cuenta sube los récords de las doce rutas', function () {
+    var Ac = window.PM.Account;
+    var r = [G.recordModo('lab', 2), G.recordModo('hab', 4)];
+    var flags = [Ac.sinModos, Ac.sinModosFmt];
+    try {
+      Ac.sinModos = false;
+      Ac.sinModosFmt = false;
+      ok(Ac.perfilCols().indexOf('record_lab2') !== -1, 'se piden al servidor');
+      ok(Ac.perfilCols().indexOf('record_hab4') !== -1);
+      G.setRecordModo('lab', 4321, 2);
+      G.setRecordModo('hab', 8765, 4);
+      var o = Ac.localState();
+      eq(o.record_lab2, 4321, 'y se suben');
+      eq(o.record_hab4, 8765);
+      /* Servidor con las columnas viejas pero sin el reparto por formato: se
+       * mandan las de solo y se callan las otras seis, en vez de no guardar
+       * nada. Es lo que pasa si alguien monta esto en otro Supabase y no ha
+       * vuelto a correr supabase/cuentas.sql. */
+      Ac.sinModosFmt = true;
+      ok(Ac.perfilCols().indexOf('record_lab2') === -1, 'sin la columna, no se pide');
+      ok(Ac.perfilCols().indexOf('record_lab') !== -1, 'pero la de solo sí');
+      var o2 = Ac.localState();
+      ok(!o2.hasOwnProperty('record_lab2'), 'ni se manda');
+      ok(o2.hasOwnProperty('record_lab'), 'y la de solo sigue subiendo');
+    } finally {
+      G.setRecordModo('lab', r[0], 2);
+      G.setRecordModo('hab', r[1], 4);
+      Ac.sinModos = flags[0];
+      Ac.sinModosFmt = flags[1];
+    }
   });
 
   test('la repetición guarda y devuelve las habilidades', function () {
@@ -4150,7 +4346,7 @@
    * pulsadas por el camino, tiene que salir CLAVADA al reproducirla. Es lo
    * que dice que una habilidad es una entrada más y no un capricho que
    * rompe el determinismo del motor. */
-  test('una partida de habilidades se reproduce exacta', function () {
+  test('una partida de poderes se reproduce exacta', function () {
     var R = window.PM.Replay;
     var previo = null;
     try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
@@ -4183,7 +4379,7 @@
       G.newGame({ players: 1, hab: true });
       var rep = R.enCurso();
       ok(rep, 'la partida se graba sola');
-      eq(rep.modo, 'hab', 'y se graba como partida de habilidades');
+      eq(rep.modo, 'hab', 'y se graba como partida de poderes');
       corre(true);
       var pts = G.score, niv = G.level, quedan = G.dotsLeft, vidas = G.lives;
       ok(pts > 0, 'la partida grabada hizo puntos');

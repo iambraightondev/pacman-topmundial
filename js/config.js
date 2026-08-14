@@ -409,7 +409,7 @@
     reto:    { name: 'RETO DE HOY',  color: '#00ffff' },
     lab:     { name: 'LABERINTOS',   color: '#ffb852' },
     vs:      { name: 'PAC-MAN VS.',  color: '#ff0000' },
-    hab:     { name: 'HABILIDADES',  color: '#ff66cc' }
+    hab:     { name: 'DESATADO',     color: '#ff66cc' }
   };
   /* Nombre del modo de un logro, para la interfaz */
   CFG.achModoName = function (a) {
@@ -492,7 +492,7 @@
     { id: 'vs_otrolado', name: 'DEL OTRO LADO', color: '#ff0000', modo: 'vs',
       desc: 'JUEGA 10 PARTIDAS', stat: 'partidas', goal: 10 },
 
-    /* ---- HABILIDADES: Q, W, E y R ---- */
+    /* ---- DESATADO: Q, W, E y R ---- */
     { id: 'hb_dentellada', name: 'DENTELLADA', color: '#ff66cc', modo: 'hab',
       desc: 'CÓMETE 25 FANTASMAS A MORDISCOS (Q)', stat: 'mordiscos', goal: 25 },
     { id: 'hb_parpadeo', name: 'PARPADEO',     color: '#ff66cc', modo: 'hab',
@@ -652,12 +652,26 @@
   CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // dúo
   CFG.HIGHSCORE3_KEY = 'pacman-topmundial-highscore-3p';   // trío
   CFG.HIGHSCORE4_KEY = 'pacman-topmundial-highscore-4p';   // escuadra
-  /* LABERINTOS y HABILIDADES llevan el suyo, aparte de los cuatro formatos:
+  /* LABERINTOS y DESATADO llevan los suyos, aparte de los cuatro formatos:
    * son otras reglas (otro trazado, o cuatro poderes) y una marca de ahí no
-   * se puede comparar con una del laberinto de 1980. Cada uno tiene también
-   * su propia ruta de maestrías. */
+   * se puede comparar con una del laberinto de 1980.
+   *
+   * Y CADA UNO SE PARTE TAMBIÉN POR FORMATO, igual que el clásico: jugar en
+   * otro laberinto con cuatro bocas no es lo mismo que hacerlo solo, así que
+   * tampoco entrega las mismas maestrías. Salen doce rutas en total (tres
+   * mundos por cuatro formatos); ver js/badges.js.
+   *
+   * La clave de solo es la de siempre, sin sufijo: lo que ya tuviera guardado
+   * quien viene de antes se queda donde estaba y cuenta para su ruta de solo,
+   * que es donde casi todo el mundo lo hizo. */
   CFG.HIGHSCORE_LAB_KEY = 'pacman-topmundial-highscore-lab';
   CFG.HIGHSCORE_HAB_KEY = 'pacman-topmundial-highscore-hab';
+  /* Clave del récord de un mundo aparte ('lab' o 'hab') en un formato (1..4) */
+  CFG.recordModoKey = function (id, n) {
+    var base = (id === 'hab') ? CFG.HIGHSCORE_HAB_KEY : CFG.HIGHSCORE_LAB_KEY;
+    n = parseInt(n, 10) || 1;
+    return (n <= 1) ? base : (base + '-' + n + 'p');
+  };
   /* Longitud máxima de un nombre de jugador. El marcador de la partida sabe
    * encoger la letra cuando el nombre no cabe en su hueco (renderHUD), así que
    * este número lo manda todo: campos de texto, ranking, amigos y cuentas.
@@ -735,7 +749,7 @@
     return col;
   };
 
-  /* ---------- Modo HABILIDADES ----------
+  /* ---------- Modo DESATADO ----------
    * Cuatro poderes con tecla propia y recarga independiente, al estilo de un
    * MOBA. Es un MODO APARTE, como LABERINTOS: el laberinto de 1980 se juega
    * con otras reglas, así que estas partidas NO entran en el top mundial
@@ -756,11 +770,27 @@
      * casillas que no son vecinas, y entonces la Q falla sin que se entienda
      * por qué. En píxeles, lo que se ve pegado se muerde. */
     BITE_TILES: 1,
-    /* Margen sobre la casilla, en píxeles. Con 4 el alcance es de casilla y
-     * media: un fantasma a esa distancia tiene el sprite tocando el de
-     * Pac-Man (6,5 y 7 px de radio), así que morderlo se lee como justo. A
-     * dos casillas (16 px) ya no llega. */
-    BITE_MARGIN: 4,
+    /* Margen sobre la casilla, en píxeles. Empezó en 4 (casilla y media) y
+     * subió a 8 —media casilla más— porque en party se fallaba demasiado: el
+     * fantasma que ves pegado en tu pantalla no está exactamente ahí en la del
+     * anfitrión, y esos pocos píxeles se comían la mitad de los mordiscos. Con
+     * 8 el alcance son DOS casillas justas, que sigue siendo "lo que se ve
+     * cerca", y a tres no llega ni de lejos. */
+    BITE_MARGIN: 8,
+    /* Lo que el ANFITRIÓN le perdona a un mordisco que le piden por red.
+     * La posición de un invitado le llega a 12 Hz, así que cuando la petición
+     * se ejecuta su Pac-Man ya no está donde él lo vio y el fantasma tampoco:
+     * son ~6 px de desfase que no son culpa de nadie. Sin este margen el
+     * mordisco del invitado fallaba "sin motivo" cada dos por tres, que es
+     * exactamente lo que se sentía roto. NO agranda el alcance: el invitado
+     * solo dispara si en SU pantalla el fantasma estaba a BITE_PX. */
+    BITE_NET_MARGIN: 8,
+    /* Ticks que un fantasma recién mordido no puede matar a quien lo mordió,
+     * en la pantalla del INVITADO. El invitado no mata (eso es del anfitrión),
+     * así que hasta que llega la confirmación el fantasma sigue vivo ahí y en
+     * la casilla de al lado: se metía solo en él y moría por haber acertado.
+     * 45 ticks (0.75 s) cubren de sobra la ida y vuelta de la petición. */
+    BITE_GUARD: 45,
     /* Los dientes se ven un poco más que el mordisco en sí: es el aviso de
      * que Q ha entrado, y sin él la muerte del fantasma no se entiende. */
     BITE_SHOW: 24,           // 0.4 s con dientes
@@ -791,7 +821,7 @@
   CFG.NET = {
     /* Versión del protocolo (debe coincidir en ambos lados). Sube cuando
      * cambia la forma de lo que viaja: la 6 pasó el marcador de PAC-MAN VS.
-     * de un número suelto a uno por cazador; la 7 trae el modo HABILIDADES
+     * de un número suelto a uno por cazador; la 7 trae el modo DESATADO
      * (el 'hab' del saludo y los eventos de poder). */
     PROTO: 7,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)

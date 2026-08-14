@@ -24,9 +24,16 @@ body {
   justify-content: center;
 }
 
+/* El escenario es el lienzo y lo que va pegado a él. Es columna porque la
+ * barra de poderes (#habBar) va justo debajo del laberinto y en el flujo: así
+ * el conjunto se centra solo y la barra no se sale nunca por abajo. Los
+ * paneles siguen siendo absolutos (inset: 0), así que no les afecta. */
 #stage {
   position: relative;
   line-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 #game {
@@ -179,31 +186,79 @@ body {
 }
 
 /* ---------- Selector de modo de la portada ----------
- * Seis tarjetas iguales y un solo botón grande. Antes cada modo estaba en un
- * sitio distinto (unos botones, el reto en un diálogo, los laberintos
- * escondidos entre los paneles del cuartel) y no había forma de ver de un
- * vistazo a qué se puede jugar.
+ * UN MODO CADA VEZ, en grande, con una flecha a cada lado y los puntitos
+ * debajo. Antes eran seis tarjetas en rejilla; se veía todo de golpe, sí, pero
+ * ninguna pesaba más que las otras y elegir modo —que es LA decisión de la
+ * portada— se sentía como marcar una casilla de un formulario. Un recuadro
+ * grande con su icono a tamaño de verdad se parece más a plantarse delante de
+ * una máquina, que es de lo que va esto.
  *
- * Todas las tarjetas se pintan IGUAL menos la elegida, que es la única que
- * enciende el color de su modo. Con los seis colores a la vez la rejilla
- * parecía un árbol de navidad y no se distinguía cuál estaba puesto. */
-.mode-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+ * El color del modo solo lo enciende la tarjeta que está puesta; el resto ni
+ * se pintan, porque ni se ven. */
+.mode-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
   width: 100%;
+}
+
+.mode-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Las flechas: grandes de pulsar pero sin llegar a la altura de la tarjeta.
+   Estirándolas de arriba abajo parecían dos columnas vacías, no dos botones. */
+.mode-arrow {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 76px;
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: #7a7a7a;
+  background: #000;
+  border: 2px solid #2121ff;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s linear, color 0.12s linear;
+}
+
+.mode-arrow:hover,
+.mode-arrow:focus-visible {
+  background: rgba(33, 33, 255, 0.28);
+  color: #fff;
+  outline: none;
+}
+
+.mode-arrow:active { background: rgba(33, 33, 255, 0.6); }
+
+/* El marco no cambia de tamaño al pasar de modo: las seis tarjetas tienen la
+   misma altura reservada, así que las flechas, la descripción y el botón de
+   JUGAR se quedan quietos. Un carrusel que da saltos se siente roto. */
+.mode-frame {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .mode-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 168px;
   font-family: inherit;
   color: #cfcfcf;
   background: #000;
   border: 2px solid #2121ff;
-  padding: 8px 6px 7px;
+  padding: 12px 10px 11px;
   cursor: pointer;
   touch-action: manipulation;
   transition: background 0.12s linear;
@@ -215,34 +270,52 @@ body {
   outline: none;
 }
 
-/* La elegida: su color en el marco, en la letra y en un halo suave. El halo
-   es lo que la despega de las otras cinco sin tener que agrandarla (agrandar
-   movía la rejilla entera al cambiar de tarjeta). */
+/* La que está puesta —que es la única que se ve— enciende su color en el
+   marco, en la letra y en un halo suave por dentro. */
 .mode-card.sel {
   background: rgba(255, 255, 255, 0.06);
   box-shadow: 0 0 0 1px currentColor inset;
 }
 
 .mode-icon {
-  width: 44px;
-  height: 44px;
+  width: 88px;
+  height: 88px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* Hueco fijo de dos renglones: hay nombres de una línea y de dos, y sin esto
-   las tarjetas de una fila quedaban con el icono a distinta altura que las de
-   al lado. Seis tarjetas iguales o no es una rejilla. */
 .mode-name {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.4em;
-  font-size: clamp(10px, 1.6vh, 12px);
+  font-size: clamp(15px, 2.6vh, 21px);
   font-weight: bold;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   line-height: 1.2;
 }
+
+/* Los puntos: cuántos modos hay y por cuál vas. Se pueden pulsar, que es más
+   rápido que darle cinco veces a la flecha para volver al primero. */
+.mode-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mode-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  background: transparent;
+  border: 2px solid #444;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s linear, border-color 0.12s linear;
+}
+
+.mode-dot:hover,
+.mode-dot:focus-visible { border-color: #fff; outline: none; }
 
 /* La coletilla no coge el color del modo: es un dato (cuántos juegan, si el
    reto ya está gastado), no parte del titular. */
@@ -350,9 +423,11 @@ body {
   .menu-extras { flex-direction: column; }
   .menu-cast .hint { margin-top: 0; text-align: left; line-height: 1.6; }
   .menu-cast .roster { align-self: start; margin: 4px 0 10px 6px; }
+  /* Las flechas del carrusel NO son .btn, pero la regla de arriba no las
+     alcanza igual: se apunta a los botones normales de la columna. */
   .menu-main .btn { width: 100%; }
-  /* En ancho hay sitio para las seis de un vistazo: tres columnas, dos filas */
-  .menu-main .mode-grid { grid-template-columns: repeat(3, 1fr); }
+  /* En ancho sobra alto: la tarjeta del modo respira un poco más */
+  .menu-main .mode-card { min-height: 196px; }
   .menu-main .nick-row-menu { margin: 0 0 4px; width: 100%; }
   .menu-main .nick-input-menu { width: 100%; max-width: none; }
   .menu-main .level-box { width: 100%; }
@@ -540,22 +615,38 @@ body {
 .dpad-down  { grid-column: 2; grid-row: 3; }
 
 /* ------------------------------------------------------------
- * Modo HABILIDADES: la barra de Q/W/E/R
+ * Modo DESATADO: la barra de Q/W/E/R
  *
- * Abajo a la derecha, lejos de la cruceta (que va centrada), para que en el
- * móvil quede un pulgar para cada cosa. En el ordenador es solo un marcador:
- * enseña qué tienes cargado sin quitar sitio al laberinto.
+ * PEGADA BAJO EL LABERINTO, centrada y del ancho del lienzo. Estuvo abajo a la
+ * derecha de la ventana y era un error de bulto: en un monitor grande quedaba
+ * a media pantalla del laberinto, así que mirar si tienes la Q cargada
+ * obligaba a apartar los ojos de la partida —justo lo que no te puedes
+ * permitir con cuatro fantasmas encima—. Aquí entra en la misma mirada que la
+ * fila de vidas y frutas.
+ *
+ * Va EN EL FLUJO, no flotando: así el conjunto lienzo+barra se centra solo y
+ * la barra nunca se sale por abajo. UI.fitCanvas() le descuenta su altura al
+ * lienzo cuando está encendida.
+ *
+ * En táctil se queda donde estaba, flotando abajo a la derecha (.fija): ahí
+ * abajo manda la cruceta, que va centrada, y una barra en medio del pulgar es
+ * peor que una barra un poco lejos.
  * ------------------------------------------------------------ */
 #habBar {
-  position: fixed;
-  right: max(8px, env(safe-area-inset-right));
-  bottom: max(10px, env(safe-area-inset-bottom));
   z-index: 5;
   display: none;
   gap: 5px;
+  margin-top: 6px;
 }
 
 #habBar.on { display: flex; }
+
+#habBar.fija {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  margin-top: 0;
+}
 
 .hab-b {
   position: relative;
@@ -724,6 +815,31 @@ input[type="range"]:focus {
   border-bottom: 1px solid #2121ff;
   padding: 4px 0 8px;
   background: rgba(0, 0, 0, 0.92);
+}
+
+/* Segundo eje del panel de MAESTRÍAS: el formato, debajo del mundo. NO es
+   sticky —dos filas pegadas arriba se solaparían al desplazar— y va un punto
+   más pequeña, porque de las dos manda el mundo. La línea la pone solo ella:
+   las dos son la misma decisión partida en dos, no dos secciones. */
+.tab-row.tab-row-sub,
+.overlay:not(#prompt) .tab-row.tab-row-sub {
+  position: static;
+  top: auto;
+  padding: 0 0 8px;
+  margin-bottom: 6px;
+}
+
+.tab-row-sub + *,
+#badges .tab-row:not(.tab-row-sub) {
+  border-bottom: none;
+}
+
+#badges .tab-row:not(.tab-row-sub) { padding-bottom: 6px; margin-bottom: 0; }
+
+.tab-row-sub .btn.tab {
+  padding: 5px 14px;
+  font-size: clamp(9px, 1.7vh, 12px);
+  letter-spacing: 1px;
 }
 
 .btn.tab {
@@ -1409,6 +1525,11 @@ input[type="range"] {
 }
 
 #chatBox.on { display: block; }
+
+/* El chat va anclado al FONDO del escenario, y el escenario ya no es solo el
+   lienzo: con la barra de poderes debajo, el chat se plantaba encima de ella.
+   --habH la pone UI.marcarHabBar() con lo que mide la barra (0 si no está). */
+#stage.con-hab #chatBox { bottom: calc(8px + var(--habH, 0px)); }
 
 .chat-input {
   width: 100%;
