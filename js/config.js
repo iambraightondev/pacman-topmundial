@@ -387,9 +387,39 @@
    *   goal  — a partir de cuánto se consigue
    *   menor — el contador es un tiempo: cuenta si es MENOR o igual que goal
    *   fmt   — cómo se enseña el progreso ('n' número, 'tiempo' mm:ss.cc)
-   */
+   *   modo  — en qué modo hay que conseguirlo (sin él, en cualquiera)
+   *
+   * LOS MODOS
+   * Cada partida lleva unas ETIQUETAS (Game.achTags) y cada contador se
+   * apunta dos veces: una global y otra por etiqueta, con la clave
+   * `modo:stat`. Así un mismo logro —"cómete 100 fantasmas"— puede existir
+   * suelto y por modo sin escribir nada a mano: el contador de cada modo
+   * sale solo de esta tabla (js/achievements.js).
+   *
+   * Las etiquetas NO son excluyentes entre formato y modo: una party de
+   * habilidades cuenta para las dos. Lo que sí es excluyente es el modo en
+   * sí (o es reto, o es laberinto, o es VS., o es habilidades, o es el
+   * clásico), porque no se pueden mezclar.
+   *
+   * Todos salen en la MISMA lista; lo que cambia es que el modo va delante
+   * de la descripción, para saber dónde hay que buscarlo. */
+  CFG.ACH_MODOS = {
+    clasico: { name: 'CLÁSICO',      color: '#ffff00' },
+    party:   { name: 'PARTY',        color: '#00ff00' },
+    reto:    { name: 'RETO DE HOY',  color: '#00ffff' },
+    lab:     { name: 'LABERINTOS',   color: '#ffb852' },
+    vs:      { name: 'PAC-MAN VS.',  color: '#ff0000' },
+    hab:     { name: 'HABILIDADES',  color: '#ff66cc' }
+  };
+  /* Nombre del modo de un logro, para la interfaz */
+  CFG.achModoName = function (a) {
+    var m = a && a.modo && CFG.ACH_MODOS[a.modo];
+    return m ? m.name : 'CUALQUIER MODO';
+  };
+
   CFG.ACH_KEY = 'pacman-topmundial-logros';
   CFG.ACHIEVEMENTS = [
+    /* ---- de cualquier modo: los de siempre, valen jugando a lo que sea ---- */
     { id: 'doblete',     name: 'DOBLETE',      color: '#ffffff',
       desc: '2 FANTASMAS CON UN MISMO ENERGIZANTE', stat: 'racha', goal: 2 },
     { id: 'triplete',    name: 'TRIPLETE',     color: '#00ffff',
@@ -420,7 +450,55 @@
       desc: '20.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 20000 },
     { id: 'relampago',   name: 'RELÁMPAGO',    color: '#00ffff',
       desc: 'DESPEJA EL NIVEL 1 EN MENOS DE 1:30', stat: 'mejorT1',
-      goal: 9000, menor: true, fmt: 'tiempo' }
+      goal: 9000, menor: true, fmt: 'tiempo' },
+
+    /* ---- CLÁSICO: el laberinto de 1980, sin poderes y sin inventos ---- */
+    { id: 'cl_purista',  name: 'PURISTA',      color: '#ffff00', modo: 'clasico',
+      desc: 'JUEGA 50 PARTIDAS', stat: 'partidas', goal: 50 },
+    { id: 'cl_altovuelo', name: 'ALTO VUELO',  color: '#ffff00', modo: 'clasico',
+      desc: '30.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 30000 },
+    { id: 'cl_maraton',  name: 'MARATÓN',      color: '#ffff00', modo: 'clasico',
+      desc: 'LLEGA AL NIVEL 8', stat: 'nivelMax', goal: 8 },
+
+    /* ---- PARTY: dos, tres o cuatro, en el mismo teclado o por red ---- */
+    { id: 'pt_companero', name: 'COMPAÑERO',   color: '#00ff00', modo: 'party',
+      desc: 'JUEGA 20 PARTIDAS ACOMPAÑADO', stat: 'partidas', goal: 20 },
+    { id: 'pt_batida',   name: 'BATIDA',       color: '#00ff00', modo: 'party',
+      desc: 'CÓMETE 100 FANTASMAS', stat: 'fantasmas', goal: 100 },
+    { id: 'pt_cuadrilla', name: 'CUADRILLA',   color: '#00ff00', modo: 'party',
+      desc: '20.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 20000 },
+
+    /* ---- RETO DE HOY: un intento al día, el mismo para todos ---- */
+    { id: 'rt_constante', name: 'CONSTANTE',   color: '#00ffff', modo: 'reto',
+      desc: 'JUÉGALO 10 DÍAS', stat: 'partidas', goal: 10 },
+    { id: 'rt_pulso',    name: 'PULSO FIRME',  color: '#00ffff', modo: 'reto',
+      desc: '15.000 PUNTOS EN UN INTENTO', stat: 'puntosMax', goal: 15000 },
+    { id: 'rt_redondo',  name: 'DÍA REDONDO',  color: '#00ffff', modo: 'reto',
+      desc: 'LLEGA AL NIVEL 5', stat: 'nivelMax', goal: 5 },
+
+    /* ---- LABERINTOS: otros trazados, los mismos fantasmas ---- */
+    { id: 'lb_turista',  name: 'TURISTA',      color: '#ffb852', modo: 'lab',
+      desc: 'JUEGA 10 PARTIDAS', stat: 'partidas', goal: 10 },
+    { id: 'lb_sinmapa',  name: 'SIN MAPA',     color: '#ffb852', modo: 'lab',
+      desc: 'DESPEJA UN NIVEL SIN MORIR', stat: 'limpios', goal: 1 },
+    { id: 'lb_cartografo', name: 'CARTÓGRAFO', color: '#ffb852', modo: 'lab',
+      desc: '15.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 15000 },
+
+    /* ---- PAC-MAN VS.: los de llevar tú al fantasma ---- */
+    { id: 'vs_caza5',    name: 'A LA CAZA',    color: '#ff0000', modo: 'vs',
+      desc: 'CAZA 5 PAC-MAN LLEVANDO UN FANTASMA', stat: 'cazas', goal: 5 },
+    { id: 'vs_caza25',   name: 'PESADILLA',    color: '#ff0000', modo: 'vs',
+      desc: 'CAZA 25 PAC-MAN LLEVANDO UN FANTASMA', stat: 'cazas', goal: 25 },
+    { id: 'vs_otrolado', name: 'DEL OTRO LADO', color: '#ff0000', modo: 'vs',
+      desc: 'JUEGA 10 PARTIDAS', stat: 'partidas', goal: 10 },
+
+    /* ---- HABILIDADES: Q, W, E y R ---- */
+    { id: 'hb_dentellada', name: 'DENTELLADA', color: '#ff66cc', modo: 'hab',
+      desc: 'CÓMETE 25 FANTASMAS A MORDISCOS (Q)', stat: 'mordiscos', goal: 25 },
+    { id: 'hb_parpadeo', name: 'PARPADEO',     color: '#ff66cc', modo: 'hab',
+      desc: 'ATRAVIESA 50 MUROS CON EL FLASH (E)', stat: 'muros', goal: 50 },
+    { id: 'hb_sobrenatural', name: 'SOBRENATURAL', color: '#ff66cc', modo: 'hab',
+      desc: '25.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 25000 }
   ];
   CFG.ACH_NOTICE_TICKS = 220;   // aviso en partida (~3,7 s)
 

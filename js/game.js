@@ -294,6 +294,23 @@
       this.vsScores[i] = (this.vsScores[i] || 0) + pts;
     },
 
+    /* Pac-Man que ha cazado QUIEN JUEGA AQUÍ en esta partida de VS. (0 si no
+     * es una de VS.). Online es el propio; en local, la suma de los
+     * cazadores, porque los dos están en este teclado y los contadores de
+     * logros son de esta máquina. */
+    myCatches: function () {
+      var V = window.PM.Versus;
+      if (!V || !this.isVersus()) return 0;
+      if (this.netRole) {
+        return (this.localIdx >= 0) ? V.catches(this, this.localIdx) : 0;
+      }
+      var n = 0;
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (this.vsGhostOf(i) >= 0) n += V.catches(this, i);
+      }
+      return n;
+    },
+
     /* Ficha visible del jugador i: su fantasma si lleva uno y si no su
      * Pac-Man (null si ya no está en juego). La usan el nombre del "¡LISTO!"
      * y los emotes, que antes daban por hecho que todo el mundo lleva pac. */
@@ -1687,8 +1704,12 @@
       var antes = L ? L.state() : null;
       // lo que ha hecho uno mismo: en PAC-MAN VS. el cazador tiene sus puntos
       var pts = this.myPoints();
-      // logros de cierre: una partida más y la mejor puntuación
-      this.bumpAch({ partidas: 1, puntosMax: pts });
+      /* Logros de cierre: una partida más, la mejor puntuación y —en
+       * PAC-MAN VS.— los Pac-Man cazados. Los cazados se cuentan AQUÍ y no
+       * al cazar porque el marcador del cazador viaja en las instantáneas:
+       * así le cuadra igual al anfitrión que al invitado, que es quien no se
+       * entera de sus propias cazas (las decide el anfitrión). */
+      this.bumpAch({ partidas: 1, puntosMax: pts, cazas: this.myCatches() });
       var subida = this.awardLevelXp(pts);
       /* Lo que te llevas de la partida, para el aviso del final. Se guarda
        * aquí porque es el único sitio donde se sabe el antes y el después:
@@ -1735,12 +1756,33 @@
      * aviso sale en el momento. Mirar la partida de otro no cuenta para
      * nada, y en online solo cuenta lo que hace uno mismo.
      * --------------------------------------------------------- */
+    /* Etiquetas de la partida en curso, para los logros por modo.
+     *
+     * Son dos cosas a la vez y por eso es una lista: el FORMATO (solo o
+     * acompañado) y el MODO (clásico, reto, laberinto, VS. o habilidades).
+     * Una party de habilidades cuenta para las dos, que es lo que la gente
+     * espera. El modo sí es uno solo: no se pueden mezclar entre ellos.
+     *
+     * 'clasico' es el laberinto de 1980 sin inventos, y ahí NO entra el reto
+     * ni un laberinto alternativo: cada uno tiene sus propios logros y su
+     * propia descripción, así que contarlos dos veces sería mentir en una
+     * de las dos. */
+    achTags: function () {
+      var t = [(this.playerCount > 1) ? 'party' : 'solo'];
+      if (this.hab) t.push('hab');
+      else if (this.isVersus()) t.push('vs');
+      else if (this.mazeId) t.push('lab');
+      else if (this.reto) t.push('reto');
+      else t.push('clasico');
+      return t;
+    },
+
     bumpAch: function (o) {
       // mirar la partida de otro (o ver una repetición ya jugada) no cuenta
       if (this.isSpec() || this.replaying) return;
       var A = window.PM.Achievements;
       if (!A) return;
-      A.recordAll(o);
+      A.recordFor(this.achTags(), o);
       var fresh = A.claim();
       for (var i = 0; i < fresh.length; i++) {
         this.achNotices.push({
@@ -2785,6 +2827,16 @@
           if (!predicted) window.AudioSys && AudioSys.playEatGhost();
           // la racha la lleva el anfitrión: la voz sale con su número
           this.playStreakVoice(e.c || 0);
+          /* Y aquí es donde el INVITADO se apunta sus propios fantasmas.
+           * Se hace con el evento confirmado y no con la predicción, para no
+           * contar uno que el anfitrión acabe rechazando. `e.c` es el escalón
+           * de la cadena empezando en 0, así que la racha es uno más. */
+          if ((e.w || 0) === this.localIdx) {
+            this.runGhosts++;
+            var rch = (e.c | 0) + 1;
+            this.runRacha = Math.max(this.runRacha, rch);
+            this.bumpAch({ fantasmas: 1, racha: rch });
+          }
           break;
         }
         case 'death': {

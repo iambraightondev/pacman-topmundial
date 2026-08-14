@@ -1201,6 +1201,14 @@ input[type="range"] {
   color: #777;
 }
 
+/* El modo de un logro, delante de su descripción. Va en su color y algo más
+   marcado para poder recorrer la lista buscando "los de HABILIDADES" sin
+   leerla entera: los logros de todos los modos comparten una sola vista. */
+.ach-modo {
+  font-weight: bold;
+  color: #8a8a8a;
+}
+
 /* ---------- Top mundial ---------- */
 .rank-list {
   display: flex;

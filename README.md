@@ -100,7 +100,7 @@ red.
   por un canal aparte, así que no hay que salirse del grupo, y si los tuyos
   arrancan una partida dejas de mirar y entras con ellos.
 - **Ver el perfil de un amigo**: `VER PERFIL` en su ficha enseña su avatar, su
-  nivel, su experiencia, sus récords y sus 15 logros con el progreso de cada
+  nivel, su experiencia, sus récords y sus logros con el progreso de cada
   uno. Hace falta que tenga cuenta.
 - **Si alguien se cae con 3 o 4 jugadores, la partida no se corta**: quien
   se va o pierde la conexión pasa a espectador y el resto sigue.
@@ -222,10 +222,15 @@ Dos maneras de correr la misma batería:
   cuatro fantasmas, el asustado, los ojos, frutas y la medalla), tu skin,
   nombre, nivel con su barra y un resumen de logros, maestría y récord. De
   invitado hay un botón para **sortear un nombre** al azar.
-- **Logros**: 15, de conseguir un doblete de fantasmas a comerte 1000, pasando
-  por despejar niveles sin morir, frutas, partidas jugadas o hacer el nivel 1
-  en menos de 1:30. Salen celebrados en la partida y se siguen en PERFIL con
-  su barra de progreso.
+- **Logros**: 33, y **cada modo tiene los suyos**. 15 valen jugando a lo que
+  sea (de un doblete de fantasmas a comerte 1000, despejar niveles sin morir,
+  frutas, partidas o hacer el nivel 1 en menos de 1:30) y los otros 18 son de
+  un modo concreto: tres del CLÁSICO, tres de PARTY, tres del RETO DE HOY,
+  tres de LABERINTOS, tres de PAC-MAN VS. (cazar Pac-Man llevando un fantasma)
+  y tres de HABILIDADES (mordiscos y muros atravesados con el flash).
+  **Salen todos en la misma lista**, y cada uno dice delante en qué modo hay
+  que conseguirlo. Se celebran en la partida y se siguen en PERFIL con su
+  barra de progreso.
 - **Cuenta con usuario y contraseña** (opcional): guarda nivel, logros,
   maestrías, récords y amigos, y te los lleva a cualquier sitio. No pide
   correo. El usuario es también tu nombre en el juego. Al entrar, lo de la

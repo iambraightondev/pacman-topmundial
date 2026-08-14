@@ -3087,6 +3087,143 @@
     });
   });
 
+  /* ---------- logros por modo ---------- */
+  test('cada logro por modo tiene su contador y su etiqueta', function () {
+    var A = window.PM.Achievements;
+    var vistos = {};
+    CFG.ACHIEVEMENTS.forEach(function (a) {
+      ok(!vistos[a.id], 'el id ' + a.id + ' no está repetido');
+      vistos[a.id] = 1;
+      ok(!!a.name && !!a.desc, a.id + ' tiene nombre y descripción');
+      ok(a.goal > 0, a.id + ' tiene meta');
+      if (!a.modo) return;
+      ok(!!CFG.ACH_MODOS[a.modo], a.id + ' apunta a un modo que existe: ' + a.modo);
+      var c = A.claveLogro(a);
+      eq(c, a.modo + ':' + a.stat, a.id + ' mira su contador de modo');
+      ok(A.STATS.hasOwnProperty(c), 'y ese contador se guarda de verdad');
+    });
+    // hay logros de los seis modos
+    var modos = {};
+    CFG.ACHIEVEMENTS.forEach(function (a) { if (a.modo) modos[a.modo] = 1; });
+    ['clasico', 'party', 'reto', 'lab', 'vs', 'hab'].forEach(function (m) {
+      ok(modos[m], 'hay logros del modo ' + m);
+    });
+  });
+
+  test('el contador de un modo no lo llena otro modo', function () {
+    conLogrosLimpios(function (A) {
+      // jugando SOLO al clásico: sube el global y el del clásico, y nada más
+      partida(1);
+      G.bumpAch({ fantasmas: 60, partidas: 1 });
+      eq(A.stats().fantasmas, 60, 'el contador global sube');
+      eq(A.stats()['party:fantasmas'] || 0, 0, 'el de party sigue a cero');
+      eq(A.stats()['clasico:partidas'], 1, 'la partida cuenta en clásico');
+      eq(A.stats()['party:partidas'] || 0, 0, 'y no en party');
+      ok(A.has('caza50'), 'el logro suelto de 50 fantasmas cae');
+      ok(!A.has('pt_batida'), 'pero el de party no, que no se ha jugado');
+      /* Solo se guarda lo que mira algún logro: no hay ningún logro de
+       * "fantasmas en clásico", así que ese contador ni existe. Es a
+       * propósito —el almacén no engorda por gusto— y por eso se comprueba:
+       * si alguien añade ese logro, este contador aparece solo. */
+      eq(A.STATS.hasOwnProperty('clasico:fantasmas'), false,
+         'no se guarda un contador que no mira nadie');
+      G.toMenu();
+    });
+  });
+
+  test('una partida cuenta a la vez para su formato y para su modo', function () {
+    conLogrosLimpios(function (A) {
+      window.PM.settings.muted = true;
+      // party (2 jugadores) Y habilidades: las dos etiquetas
+      G.newGame({ players: 2, hab: true });
+      G.state = 'PLAYING'; G.readyTicks = 0;
+      var tags = G.achTags();
+      ok(tags.indexOf('party') !== -1, 'es una party');
+      ok(tags.indexOf('hab') !== -1, 'y es de habilidades');
+      ok(tags.indexOf('clasico') === -1, 'y NO es el clásico');
+      G.bumpAch({ fantasmas: 5 });
+      eq(A.stats()['party:fantasmas'], 5, 'cuenta en party');
+      eq(A.stats()['clasico:fantasmas'] || 0, 0, 'y no en clásico');
+      G.toMenu();
+    });
+  });
+
+  test('cada modo pone su propia etiqueta', function () {
+    window.PM.settings.muted = true;
+    function tagsDe(opts) {
+      G.newGame(opts);
+      var t = G.achTags();
+      G.toMenu();
+      return t;
+    }
+    ok(tagsDe({ players: 1 }).indexOf('clasico') !== -1, 'una normal es clásica');
+    ok(tagsDe({ players: 1 }).indexOf('solo') !== -1, 'y en solitario');
+    ok(tagsDe({ players: 1, hab: true }).indexOf('hab') !== -1, 'habilidades');
+    ok(tagsDe({ players: 1, reto: true, seed: 5 }).indexOf('reto') !== -1, 'reto');
+    var mz = window.PM.Mazes && window.PM.Mazes.list && window.PM.Mazes.list()[0];
+    if (mz) {
+      ok(tagsDe({ players: 1, maze: mz.id }).indexOf('lab') !== -1, 'laberinto');
+    }
+    ok(tagsDe({ players: 2, ghosts: [-1, 0] }).indexOf('vs') !== -1, 'PAC-MAN VS.');
+  });
+
+  test('los mordiscos y los muros atravesados alimentan sus logros', function () {
+    conLogrosLimpios(function (A) {
+      // el atajo HB se declara más abajo, en la sección del modo
+      var Hb = window.PM.Hab;
+      partidaHab(13, 20, CFG.DIR.LEFT);
+      fantasmaEn(1, 14, 20);
+      Hb.pulsar(G, 0, Hb.MORDISCO);
+      eq(A.stats()['hab:mordiscos'], 1, 'el mordisco se apunta en habilidades');
+      eq(A.stats().mordiscos, 1, 'y en el contador global');
+
+      // un flash que atraviesa pared suma muros; uno por pasillo abierto no
+      G.eatFreezeTicks = 0;
+      Hb.estado(0).cd[Hb.FLASH] = 0;
+      var p = G.pacs[0], col = null;
+      for (var c = 1; c < CFG.COLS - 4; c++) {
+        if (CFG.isOpen(c,20,false) && !CFG.isOpen(c+1,20,false) &&
+            CFG.isOpen(c+3,20,false)) { col = c; break; }
+      }
+      p.x = col*CFG.TILE + CFG.TILE/2; p.y = 20*CFG.TILE + CFG.TILE/2;
+      p.dir = CFG.DIR.RIGHT; p.nextDir = CFG.DIR.RIGHT;
+      Hb.pulsar(G, 0, Hb.FLASH);
+      ok(A.stats()['hab:muros'] > 0, 'atravesar pared suma muros');
+      G.toMenu();
+    });
+  });
+
+  test('las cazas de PAC-MAN VS. se apuntan al cerrar la partida', function () {
+    conLogrosLimpios(function (A) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, ghosts: [-1, 0] });
+      G.state = 'PLAYING'; G.readyTicks = 0;
+      // dos cazas del jugador 2, que es quien lleva el fantasma
+      G.addVsScore(1, CFG.VS.CATCH_POINTS * 2);
+      eq(G.myCatches(), 2, 'en local se cuentan las del que caza');
+      G.score = 500;
+      G.closeRun();
+      eq(A.stats()['vs:cazas'], 2, 'y quedan apuntadas en el modo VS.');
+      eq(A.stats()['clasico:cazas'] || 0, 0, 'no en el clásico');
+      G.toMenu();
+    });
+  });
+
+  test('el invitado se apunta los fantasmas que se come él', function () {
+    conLogrosLimpios(function (A) {
+      partida(2, 'guest');
+      G.localIdx = 1;
+      // el anfitrión confirma que el fantasma se lo comió el jugador 1
+      G.applyEvt({ t: 'eatGhost', g: 0, pts: 200, x: 100, y: 100, w: 1, c: 0 });
+      eq(A.stats().fantasmas, 1, 'el invitado cuenta su fantasma');
+      eq(A.stats()['party:fantasmas'], 1, 'y le cuenta para los de party');
+      // el de otro jugador no es suyo
+      G.applyEvt({ t: 'eatGhost', g: 1, pts: 200, x: 100, y: 100, w: 0, c: 0 });
+      eq(A.stats().fantasmas, 1, 'el del compañero no se lo apunta');
+      G.toMenu();
+    });
+  });
+
   test('mirar la partida de otro no da logros', function () {
     conLogrosLimpios(function (A) {
       mirando(2);

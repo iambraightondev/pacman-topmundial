@@ -2,6 +2,30 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · Logros de cada modo
+
+- Hasta ahora los 15 logros valían jugando a lo que fuera, así que el juego
+  no te daba ni un motivo para probar los modos que no sueles tocar. Ahora
+  hay **18 logros más, tres por modo**: CLÁSICO, PARTY, RETO DE HOY,
+  LABERINTOS, PAC-MAN VS. y HABILIDADES. Son 33 en total.
+- **Salen todos en la misma lista** (PERFIL → LOGROS), y cada uno dice
+  delante en qué modo hay que conseguirlo, con el color de ese modo. Los de
+  siempre se quedan como estaban y ponen `CUALQUIER MODO`.
+- Algunos son cosas que antes no se contaban: los fantasmas que te comes **a
+  mordiscos**, los **muros que atraviesas con el flash** y los **Pac-Man que
+  cazas** llevando un fantasma.
+- Una partida cuenta **para su formato y para su modo a la vez**: una party
+  de habilidades avanza los dos. Lo que no se mezcla son los modos entre sí
+  —el reto y los laberintos no cuentan como clásico—, porque cada uno tiene
+  su propio logro y su propia descripción.
+- Lo que ya tenías **no se toca**: los contadores de siempre siguen donde
+  estaban y los nuevos empiezan de cero.
+
+> De paso se arregló algo que llevaba ahí desde el online: **al invitado no
+> se le contaban los fantasmas que se comía**. Su panel de final decía 0 y
+> los logros de cazar no le avanzaban jugando de invitado. Ahora se le
+> apuntan cuando el anfitrión confirma la comida.
+
 ## 2026-08-14 · HABILIDADES: cuatro poderes en Q, W, E y R
 
 - Modo nuevo, **aparte del de siempre** (como LABERINTOS): el laberinto de

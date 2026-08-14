@@ -91,6 +91,18 @@
     return CFG.isOpen(col, row, false);
   }
 
+  /* ¿El jugador idx es el de ESTA pantalla? Los logros son de quien juega
+   * aquí: el anfitrión ejecuta también los poderes que le piden los
+   * invitados, y esos no son suyos. */
+  function mio(G, idx) {
+    return !G.netRole || idx === G.localIdx;
+  }
+
+  /* Apunta un contador de logros, si la jugada es de quien juega aquí */
+  function apunta(G, idx, o) {
+    if (mio(G, idx) && G.bumpAch) G.bumpAch(o);
+  }
+
   var Hab = {
     on: false,       // ¿la partida en curso es de habilidades?
     st: [],          // estado por jugador
@@ -347,6 +359,11 @@
       var p = G.pacs[idx];
       this.mirarHacia(p, g);
       this.marcarDientes(idx);
+      /* El mordisco se apunta AQUÍ, en la máquina de quien pulsó, y no donde
+       * se ejecuta: al invitado se lo mata el anfitrión, y si esperásemos a
+       * eso su logro no avanzaría nunca (el evento que vuelve no dice si fue
+       * un mordisco o una superpastilla). */
+      apunta(G, idx, { mordiscos: 1 });
       if (soloVisual) return true;
       /* Fuera del modo azul cada mordisco vale lo mismo (200): la escalera
        * de 200-400-800-1600 es de la superpastilla, y encadenarla a golpe
@@ -425,11 +442,16 @@
        * si en medio hay una superpastilla, los fantasmas se asustan ahí
        * mismo, no al aterrizar. Solo cuenta lo que se simula aquí: el
        * Pac-Man ajeno se lo come su dueño y llega por red. */
-      if (G.isLocalAuth(idx)) {
-        for (var n = 1; n <= d.n; n++) {
-          G.eatAt(CFG.wrapCol(cx + v.x * n), cy + v.y * n, p);
-        }
+      var muros = 0;
+      for (var n = 1; n <= d.n; n++) {
+        var col = CFG.wrapCol(cx + v.x * n);
+        var row = cy + v.y * n;
+        if (!CFG.isOpen(col, row, false)) muros++;   // por aquí se ha colado
+        if (G.isLocalAuth(idx)) G.eatAt(col, row, p);
       }
+      // el logro es "atraviesa muros", así que un salto por pasillo abierto
+      // no cuenta: lo que se premia es usarlo para lo que es
+      if (muros > 0) apunta(G, idx, { muros: muros });
       p.x = d.col * T + T / 2;
       p.y = d.row * T + T / 2;
       /* El frenazo de haber comido no se arrastra al otro lado: el flash es

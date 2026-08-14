@@ -35,6 +35,25 @@ Tres decisiones que conviene no volver a discutir desde cero:
 - **Tampoco en PAC-MAN VS.** Morder de un toque a un fantasma que lleva una
   persona, sin que pueda hacer nada, no es una pelea.
 
+### Los logros por modo (mismo día)
+
+18 logros nuevos, tres por modo, en la misma lista de siempre. Lo que hay
+que saber para tocarlos:
+
+- **No se escribe ningún contador a mano.** Un logro con `modo` mira la clave
+  `modo:stat`, y `Achievements.STATS` se monta al cargar a partir de
+  `CFG.ACHIEVEMENTS`. Añadir un logro de un modo **crea su contador solo**, y
+  solo se guarda lo que mire alguien: hoy no existe `clasico:fantasmas`
+  porque ningún logro lo pide.
+- **Una partida lleva varias etiquetas** (`Game.achTags`): el formato (`solo`
+  o `party`) y el modo. Una party de habilidades cuenta para las dos. Los
+  modos entre sí no se mezclan.
+- Al añadir un logro de un modo, mirar **quién lo cuenta en online**. Es la
+  trampa de esto: el anfitrión ejecuta también lo que le piden los invitados,
+  y hay cosas que el invitado no llega a saber de sí mismo. Por eso las cazas
+  de VS. se apuntan al cerrar la partida (desde el marcador, que sí viaja) y
+  los mordiscos se apuntan en la máquina de quien pulsa la tecla.
+
 > **Ojo con `persistHighScore()`**: se frenó para HABILIDADES, pero **las
 > partidas de LABERINTOS sí siguen haciendo récord local** (y por tanto
 > tocan `perfiles.recordN` y las maestrías), aunque el propio panel diga que

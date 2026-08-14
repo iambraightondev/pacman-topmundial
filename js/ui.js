@@ -2162,15 +2162,27 @@
       txt.appendChild(nm);
       var stt = document.createElement('div');
       stt.className = 'badge-state';
+      /* El modo va DELANTE de la descripción, y en su color: la lista es una
+       * sola para todos los modos, así que si no se dice dónde hay que
+       * conseguir cada cosa, media lista no se entiende. */
+      var mi = document.createElement('b');
+      mi.className = 'ach-modo';
+      mi.textContent = CFG.achModoName(a);
+      if (a.modo && CFG.ACH_MODOS[a.modo]) {
+        mi.style.color = p.hecho ? CFG.ACH_MODOS[a.modo].color : '#6a6a6a';
+      }
+      stt.appendChild(mi);
+      var resto = document.createElement('span');
       if (p.hecho) {
-        stt.textContent = 'CONSEGUIDO · ' + a.desc;
+        resto.textContent = ' · CONSEGUIDO · ' + a.desc;
       } else if (a.fmt === 'tiempo') {
-        stt.textContent = a.desc +
+        resto.textContent = ' · ' + a.desc +
           (p.valor > 0 && R ? (' · MEJOR: ' + R.fmtTime(p.valor)) : '');
       } else {
-        stt.textContent = a.desc + ' · ' + Math.min(p.valor, a.goal) +
+        resto.textContent = ' · ' + a.desc + ' · ' + Math.min(p.valor, a.goal) +
           '/' + a.goal;
       }
+      stt.appendChild(resto);
       txt.appendChild(stt);
       var barra = document.createElement('div');
       barra.className = 'level-bar ach-bar';

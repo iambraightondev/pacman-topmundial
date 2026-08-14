@@ -101,6 +101,41 @@ returns newly earned ones not yet announced; `Game.bumpAch()` records and
 queues the in-game notice. Spectating records nothing, and online only your
 own kills/fruits count.
 
+**Per-mode achievements.** An achievement may declare `modo`, and then it
+reads a mode-scoped counter keyed `modo + ':' + stat` (`hab:mordiscos`,
+`party:partidas`, …). Every run carries **tags** (`Game.achTags()`) and
+`Achievements.recordFor(tags, o)` writes each counter twice: once global,
+once per tag. The tags are a list because a run is two things at once — a
+**format** (`solo` / `party`) and a **mode** (`clasico`, `reto`, `lab`,
+`vs`, `hab`); a party of HABILIDADES counts for both. The mode half *is*
+exclusive: `clasico` deliberately excludes reto and alternative mazes,
+since each has its own achievements and its own wording.
+
+Nothing about the scoped keys is written by hand: `Achievements.STATS` is
+built at load from `BASE` plus whatever `CFG.ACHIEVEMENTS` asks for, so
+adding an achievement creates its counter, and **only counters some
+achievement actually reads are stored** — the save file does not grow for
+nothing. Existing saves keep working untouched: their keys are the global
+ones and the scoped ones simply start at zero. The same applies to the
+cloud (`perfiles.logros` is jsonb and `merge()` iterates `STATS`).
+
+Three counters exist only for these: `mordiscos` and `muros` (bumped in
+`habilidades.js`, on the machine of whoever pressed the key — the host also
+*executes* powers requested by guests, and those are not its own) and
+`cazas`, which is bumped once in `closeRun()` from `Game.myCatches()`
+rather than at catch time, because the hunter's score rides in the
+snapshots and that is the only way it adds up the same for host and guest.
+
+All of them live in **one list** in PERFIL → LOGROS; what tells them apart
+is the mode name printed in its own colour ahead of the description
+(`CFG.achModoName`, `.ach-modo`). Global ones read `CUALQUIER MODO`.
+
+> Fixed alongside: an online **guest never counted the ghosts it ate**
+> (`eatGhost` only bumps on the host, and the guest's prediction bumped
+> nothing), so `runGhosts` read 0 in its end-of-run panel and party ghost
+> achievements were host-only. `applyEvt('eatGhost')` now credits the guest
+> off the **confirmed** event, never the prediction.
+
 **Skins by level** (unlock order `clasico` 1, `sombra` 3, `ojos` 7, `neon` 12,
 `aro` 20, `pixel` 30 — `CFG.SKINS[].level`): gated on
 `PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
