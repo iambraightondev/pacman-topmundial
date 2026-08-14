@@ -54,12 +54,33 @@ que saber para tocarlos:
   de VS. se apuntan al cerrar la partida (desde el marcador, que sí viaja) y
   los mordiscos se apuntan en la máquina de quien pulsa la tecla.
 
-> **Ojo con `persistHighScore()`**: se frenó para HABILIDADES, pero **las
-> partidas de LABERINTOS sí siguen haciendo récord local** (y por tanto
-> tocan `perfiles.recordN` y las maestrías), aunque el propio panel diga que
-> ese modo no entra en el top mundial. Es de antes de esto y se dejó como
-> estaba para no cambiar de callado un comportamiento que nadie pidió, pero
-> huele a lo mismo que se acaba de arreglar aquí. Si se toca, es una línea.
+> **Lo de `persistHighScore()` ya está arreglado** (ver más abajo): LABERINTOS
+> y HABILIDADES guardan cada uno en su propio récord y tienen su propia ruta
+> de maestrías, así que ya no escriben en el de 1 jugador.
+
+### Maestrías propias de LABERINTOS y HABILIDADES (mismo día)
+
+Seis rutas en vez de cuatro. Lo que hay que saber:
+
+- El agujero que tapa: una partida en **otro laberinto escribía en
+  `highScore1`**, el mismo récord que viaja a la cuenta y del que salen las
+  maestrías, así que un trazado más cómodo entregaba insignias del laberinto
+  de 1980. Ahora cada modo guarda la suya (`Game.recordModo`).
+- **`Game.recordSlot()` es el interruptor**: devuelve `'hab'`, `'lab'` o
+  `null` (formato). Lo usan `persistHighScore`, el HIGH SCORE de la partida y
+  `badgeMode()`. Si algún día hay un modo aparte más, se añade ahí.
+- **El modo manda sobre el formato**: una party de habilidades puntúa en la
+  ruta `hab`, no en la de dúo.
+- `hab` **pide el doble** en cada escalón (`Badges.mult`). Con poderes los
+  puntos son más baratos y la ruta se acababa en dos tardes.
+- **Lo que ya estaba en `record1` se queda.** No hay forma de saber qué parte
+  vino de un laberinto alternativo, así que no se toca.
+
+> **Aplicado en producción**: `perfiles.record_lab` y `perfiles.record_hab`
+> (14 de agosto). Comprobado con la clave anónima que el `select` que manda
+> el juego los devuelve. Quien monte esto en otro Supabase tiene que lanzar
+> `supabase/cuentas.sql`; si no lo hace, el juego levanta la bandera
+> `sinModos` y sigue subiendo lo de siempre sin romperse.
 
 ---
 
@@ -91,6 +112,7 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 |---|---|
 | Juego (Vercel) | service worker `pm-v23` — **el modo HABILIDADES está sin desplegar** |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
+| `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
 | Vistas `ranking_top` y `ranking_temporada` | rehechas |
 | Edge Function `enviar-record` | **versión 2** desplegada |

@@ -652,6 +652,12 @@
   CFG.HIGHSCORE2_KEY = 'pacman-topmundial-highscore-2p';   // dúo
   CFG.HIGHSCORE3_KEY = 'pacman-topmundial-highscore-3p';   // trío
   CFG.HIGHSCORE4_KEY = 'pacman-topmundial-highscore-4p';   // escuadra
+  /* LABERINTOS y HABILIDADES llevan el suyo, aparte de los cuatro formatos:
+   * son otras reglas (otro trazado, o cuatro poderes) y una marca de ahí no
+   * se puede comparar con una del laberinto de 1980. Cada uno tiene también
+   * su propia ruta de maestrías. */
+  CFG.HIGHSCORE_LAB_KEY = 'pacman-topmundial-highscore-lab';
+  CFG.HIGHSCORE_HAB_KEY = 'pacman-topmundial-highscore-hab';
   /* Longitud máxima de un nombre de jugador. El marcador de la partida sabe
    * encoger la letra cuando el nombre no cabe en su hueco (renderHUD), así que
    * este número lo manda todo: campos de texto, ranking, amigos y cuentas.
@@ -744,10 +750,17 @@
    * Corren solo mientras la partida avanza de verdad (PLAYING y sin pausa):
    * morir o cambiar de nivel no te regala una habilidad. */
   CFG.HAB = {
-    /* Alcance del mordisco, en casillas: 1 = las ocho de alrededor y la
-     * propia. Se mide en casillas, no en píxeles, para que sea igual de
-     * generoso en las cuatro direcciones. */
+    /* Alcance del mordisco: una casilla a la redonda (las ocho de alrededor
+     * y la propia). Se COMPRUEBA EN PÍXELES —BITE_PX, un poco más abajo—,
+     * no contando casillas: dos cosas pegadas en pantalla pueden caer en
+     * casillas que no son vecinas, y entonces la Q falla sin que se entienda
+     * por qué. En píxeles, lo que se ve pegado se muerde. */
     BITE_TILES: 1,
+    /* Margen sobre la casilla, en píxeles. Con 4 el alcance es de casilla y
+     * media: un fantasma a esa distancia tiene el sprite tocando el de
+     * Pac-Man (6,5 y 7 px de radio), así que morderlo se lee como justo. A
+     * dos casillas (16 px) ya no llega. */
+    BITE_MARGIN: 4,
     /* Los dientes se ven un poco más que el mordisco en sí: es el aviso de
      * que Q ha entrado, y sin él la muerte del fantasma no se entiende. */
     BITE_SHOW: 24,           // 0.4 s con dientes
@@ -765,6 +778,9 @@
       { id: 'grito',    key: 'R', name: 'GRITO',    cd: 60 * 60 }
     ]
   };
+  /* Alcance real del mordisco, en píxeles (ver BITE_TILES) */
+  CFG.HAB.BITE_PX = CFG.HAB.BITE_TILES * CFG.TILE + CFG.HAB.BITE_MARGIN;
+
   /* Recarga de una habilidad, en segundos (para los textos de la interfaz) */
   CFG.HAB.segs = function (k) {
     var h = CFG.HAB.LIST[k];

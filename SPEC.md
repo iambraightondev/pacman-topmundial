@@ -685,28 +685,47 @@ receiver looks it up in `CFG.BADGES`: guest `gevt {t:'badge', b}` → host
 which is what a player with no badge yet shows. Works in every mode.
 
 **Maestrías** (`PM.Badges`, `CFG.BADGES`): six tiers (APRENDIZ 3 000 → TOP
-MUNDIAL 100 000) on **four independent tracks, one per format**, so a big
-squad run never hands out the duo or the solo badges:
+MUNDIAL 100 000) on **six independent tracks** — one per format, plus one for
+each mode played under different rules — so a big squad run never hands out
+the duo or the solo badges, and neither does a run in another maze:
 
-| track | players | record |
+| track | ×  | record |
 |---|---|---|
 | `'solo'` | 1 | `Game.highScore1` |
 | `'duo'` | 2 | `Game.highScore2` |
 | `'trio'` | 3 | `Game.highScore3` |
 | `'escuadra'` | 4 | `Game.highScore4` |
+| `'lab'` | 1 | `Game.recordModo('lab')` |
+| `'hab'` | 2 | `Game.recordModo('hab')` |
 
 **Each record is its own league** — `Game.recordFor(n)` / `setRecordFor(n, v)` /
-`recordKey(n)` resolve them, `persistHighScore` writes only the one for
-`playerCount` (a squad run no longer overwrites the duo record) and `newGame`
-shows that format's record as the in-game HIGH SCORE. The four travel to the
-account as `perfiles.record1..record4`, so the tracks follow the player from
-one device to the next (see **Cuentas**).
+`recordKey(n)` resolve the formats, `recordModo(id)` / `setRecordModo` /
+`recordModoKey` the two modes, and `Game.recordSlot()` says which of the two
+kinds the current run belongs to. `persistHighScore` writes exactly one of
+them and `newGame` shows that league's record as the in-game HIGH SCORE.
+`Game.badgeMode()` picks the track: the mode wins over the format, so a party
+of HABILIDADES scores on the `hab` track, not on `duo`.
 
-**The bar rises with the players**: `Badges.goal(badge, mode)` =
-`badge.points × players`, so APRENDIZ is 3 000 solo, 6 000 duo, 9 000 trio and
-12 000 squad. A team scoreboard belongs to everybody — with four players you
-reach the same number with four times the lives, four mouths eating and four
-ghosts per energiser — so the same figure is worth much less per person.
+> This closed a real hole. A LABERINTOS run used to write into
+> `highScore1` — the same record that travels to the account and feeds the
+> maestrías — so an easier layout handed out badges for the 1980 maze. Old
+> `record1` values are left alone: there is no way to tell which part came
+> from an alternative maze.
+
+**The bar rises with what the mode gives away**: `Badges.goal(badge, mode)` =
+`badge.points × Badges.mult(mode)`. Formats multiply by their player count
+(APRENDIZ is 3 000 solo, 6 000 duo, 9 000 trio, 12 000 squad) because a team
+scoreboard belongs to everybody — four lives, four mouths, four ghosts per
+energiser — so the same figure is worth much less per person. `hab`
+multiplies by **2**: biting ghosts on a keypress prints points the arcade
+never had, and without that toll the track would be over in an afternoon.
+`lab` keeps the base figures.
+
+All six travel to the account (`perfiles.record1..record4`, `record_lab`,
+`record_hab`), so the tracks follow the player from one device to the next
+(see **Cuentas**). A Supabase project without the two newer columns is not a
+failure path: `Account` spots the 400 that names them, raises `sinModos` and
+keeps uploading everything else.
 
 Every API takes the mode (`best/earned/top/next/has/claim/goal/players/
 modeName`), and `Game.badgeMode()` derives it from `playerCount` via
@@ -1124,7 +1143,7 @@ game the badge does not describe. XP and achievements still count.
 
 | Key | What it does | Cooldown |
 |---|---|---|
-| **Q** MORDISCO | Eats any ghost within **1 tile** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. | 16 s |
+| **Q** MORDISCO | Eats any ghost within `BITE_PX` **pixels** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. | 16 s |
 | **W** TURBO | ×1.5 speed for 5 s, trailing sparks. | 24 s |
 | **E** FLASH | Jumps **3 tiles through walls toward the last arrow pressed** — not toward where Pac-Man faces — eating dots and energizers on the way, translucent on landing. | 32 s |
 | **R** GRITO | Frightens all four ghosts for a **fixed 6 s** with no energizer. | 60 s |
@@ -1141,8 +1160,17 @@ Rules that are deliberate, not incidental:
   offered in local two-player** (J2 would lose their controls) nor in
   **PAC-MAN VS.** (one-tap killing a ghost a person is driving, with no
   counterplay, is not a fight).
+- **Q's range is measured in pixels, not tiles**, and this matters more than
+  it sounds. With tile counting the bite failed constantly for no visible
+  reason: two sprites can be **nine pixels apart** — visually overlapping —
+  and still sit in non-adjacent tiles, each at the far edge of its own. Range
+  then depended on where in the stride the press landed, which is exactly
+  what makes a button feel broken. `BITE_PX` is a tile plus `BITE_MARGIN`,
+  so "what looks touching, bites", identically in all four directions.
 - **Q and E refuse to be wasted.** No ghost in range, or no landable tile
-  ahead, and nothing fires and no cooldown starts.
+  ahead, and nothing fires and no cooldown starts. A bite at thin air still
+  **shows the teeth** briefly: without that, missing and being on cooldown
+  feel identical (nothing happens) and the key reads as broken.
 - **E aims where the player last pointed, not where Pac-Man faces.** The
   engine already keeps that: `Pacman.nextDir` is "the last requested
   direction" and survives a wall refusing the turn, so `Hab.dirFlash()`

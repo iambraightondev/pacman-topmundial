@@ -33,6 +33,11 @@
   }
 
   var Game = {
+    /* récord de los modos aparte (LABERINTOS y HABILIDADES), cada uno con su
+     * propia ruta de maestrías: ver recordModo() y js/badges.js */
+    highScoreLab: 0,
+    highScoreHab: 0,
+
     /* estado general */
     state: 'MENU',    // MENU | READY | PLAYING | DYING | LEVEL_DONE | GAME_OVER
     paused: false,
@@ -211,11 +216,18 @@
       this.highScore2 = 0;
       this.highScore3 = 0;
       this.highScore4 = 0;
+      this.highScoreLab = 0;
+      this.highScoreHab = 0;
       try {
         for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
           var v = localStorage.getItem(this.recordKey(n));
           if (v !== null) this.setRecordFor(n, parseInt(v, 10) || 0);
         }
+        // y los dos modos aparte, con su propia marca
+        ['lab', 'hab'].forEach(function (id) {
+          var r = localStorage.getItem(this.recordModoKey(id));
+          if (r !== null) this.setRecordModo(id, parseInt(r, 10) || 0);
+        }, this);
       } catch (e) { /* almacenamiento no disponible */ }
       this.highScore = this.highScore1;
 
@@ -491,9 +503,12 @@
       } else {
         this.lives = s.startLives;
       }
-      // el HIGH SCORE de la partida es el de SU formato: en trío se compite
-      // contra la mejor marca de trío, no contra la de dúo
-      this.highScore = this.recordFor(this.playerCount);
+      /* El HIGH SCORE de la partida es el de SU liga: en trío se compite
+       * contra la mejor marca de trío, no contra la de dúo, y en LABERINTOS
+       * o HABILIDADES contra la de ese modo, que es la única comparable. */
+      var slotHS = this.recordSlot();
+      this.highScore = slotHS ? this.recordModo(slotHS)
+                              : this.recordFor(this.playerCount);
 
       /* red */
       this.netQueue = [];
@@ -1459,6 +1474,33 @@
       return this.highScore1 || 0;
     },
 
+    /* ---------- Récord de los modos aparte ----------
+     * LABERINTOS y HABILIDADES no compiten con el laberinto de 1980 ni entre
+     * sí: otro trazado o cuatro poderes cambian lo que vale un punto. Cada
+     * uno guarda su mejor marca y de ella sale su propia ruta de maestrías,
+     * igual que cada formato tiene la suya. */
+    recordModoKey: function (id) {
+      return (id === 'hab') ? CFG.HIGHSCORE_HAB_KEY : CFG.HIGHSCORE_LAB_KEY;
+    },
+
+    recordModo: function (id) {
+      return ((id === 'hab') ? this.highScoreHab : this.highScoreLab) || 0;
+    },
+
+    setRecordModo: function (id, v) {
+      v = parseInt(v, 10) || 0;
+      if (id === 'hab') this.highScoreHab = v;
+      else this.highScoreLab = v;
+    },
+
+    /* Ruta de maestrías de la partida en curso: los modos aparte primero,
+     * y si no, el formato (solo, dúo, trío o escuadra). */
+    recordSlot: function () {
+      if (this.hab) return 'hab';
+      if (this.mazeId) return 'lab';
+      return null;
+    },
+
     setRecordFor: function (n, v) {
       v = parseInt(v, 10) || 0;
       if (n >= 4) this.highScore4 = v;
@@ -1475,21 +1517,35 @@
         for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
           localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));
         }
+        localStorage.setItem(this.recordModoKey('lab'), String(this.recordModo('lab')));
+        localStorage.setItem(this.recordModoKey('hab'), String(this.recordModo('hab')));
       } catch (e) { /* sin almacenamiento */ }
       // si no se está jugando, el marcador de la portada enseña el de 1 jugador
       if (this.state === 'MENU') this.highScore = this.highScore1;
     },
 
     /* En PAC-MAN VS. no se guarda récord: son otros ajustes (un fantasma que
-     * piensa) y la marca no sería comparable con la de nadie. */
+     * piensa) y la marca no sería comparable con la de nadie.
+     *
+     * LABERINTOS y HABILIDADES sí guardan, pero CADA UNO EN EL SUYO. Antes,
+     * una partida en otro laberinto escribía en el récord de 1 jugador —el
+     * mismo que viaja a la cuenta y del que salen las maestrías—, así que un
+     * trazado más fácil regalaba insignias del laberinto de 1980. Ahora cada
+     * modo tiene su marca y su ruta, y no se pisan. */
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
-      /* Ni una de HABILIDADES. El récord de cada formato no es solo un número
-       * en pantalla: viaja a la cuenta (perfiles.recordN) y de él salen las
-       * maestrías. Una marca hecha mordiendo fantasmas daría una insignia que
-       * no se ha ganado en el juego que la insignia dice. */
-      if (this.hab) return;
+      var slot = this.recordSlot();
+      if (slot) {
+        if (this.highScore > this.recordModo(slot)) {
+          this.setRecordModo(slot, this.highScore);
+        }
+        try {
+          localStorage.setItem(this.recordModoKey(slot),
+            String(this.recordModo(slot)));
+        } catch (e) { /* sin almacenamiento */ }
+        return;
+      }
       // cada formato guarda el suyo: el récord de escuadra no pisa el de dúo
       var n = this.playerCount;
       if (this.highScore > this.recordFor(n)) this.setRecordFor(n, this.highScore);
@@ -1633,7 +1689,10 @@
      * todos y con cuatro se llega al mismo número con mucho menos mérito. */
     badgeMode: function () {
       var B = window.PM.Badges;
-      return B ? B.modeFor(this.playerCount) : 'solo';
+      if (!B) return 'solo';
+      // LABERINTOS y HABILIDADES tienen ruta propia, no la del formato
+      var slot = this.recordSlot();
+      return slot || B.modeFor(this.playerCount);
     },
 
     /* Solo se celebra lo que NO se tenía: una maestría ya conseguida no se

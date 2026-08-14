@@ -542,7 +542,7 @@
       var B = window.PM.Badges;
       var r = [G.highScore1, G.highScore2, G.highScore3, G.highScore4];
       try {
-        eq(B.MODES.join(','), 'solo,duo,trio,escuadra');
+        eq(B.MODES.join(','), 'solo,duo,trio,escuadra,lab,hab');
         G.highScore1 = 9000;      // solo: CAZADOR (8.000)
         G.highScore2 = 9000;      // dúo: solo APRENDIZ (6.000); CAZADOR pide 16.000
         G.highScore3 = 0;
@@ -3160,7 +3160,7 @@
     ok(tagsDe({ players: 1 }).indexOf('solo') !== -1, 'y en solitario');
     ok(tagsDe({ players: 1, hab: true }).indexOf('hab') !== -1, 'habilidades');
     ok(tagsDe({ players: 1, reto: true, seed: 5 }).indexOf('reto') !== -1, 'reto');
-    var mz = window.PM.Mazes && window.PM.Mazes.list && window.PM.Mazes.list()[0];
+    var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
     if (mz) {
       ok(tagsDe({ players: 1, maze: mz.id }).indexOf('lab') !== -1, 'laberinto');
     }
@@ -3720,6 +3720,50 @@
     ok(HB.lista(0, HB.MORDISCO), 'la habilidad sigue cargada');
   });
 
+  /* El fallo que se notaba jugando: contando CASILLAS, dos cosas pegadas en
+   * pantalla podían caer en casillas no vecinas y el mordisco fallaba sin
+   * motivo visible. Se mide en píxeles justo por esto. */
+  test('Q muerde lo que se ve pegado, aunque no compartan casilla vecina', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    var T = CFG.TILE;
+    // Pac-Man al final de su casilla y el fantasma al principio de la de dos
+    // más allá: NUEVE píxeles de separación, pero casillas 13 y 15
+    p.x = 13 * T + T - 0.5;      // 111.5 -> casilla 13
+    p.y = 20 * T + T / 2;
+    p.dir = CFG.DIR.RIGHT; p.nextDir = CFG.DIR.RIGHT;
+    var g = G.ghosts[1];
+    g.mode = 'normal'; g.frightened = false;
+    g.x = 15 * T + 0.5;          // 120.5 -> casilla 15
+    g.y = p.y;
+    eq(Math.abs(g.x - p.x), 9, 'están a nueve píxeles');
+    ok(Math.abs(g.tileX() - p.tileX()) > 1, 'y sin embargo a dos casillas');
+    ok(HB.pulsar(G, 0, HB.MORDISCO), 'aun así el mordisco entra');
+    eq(g.mode, 'eyes', 'y se lo come');
+  });
+
+  test('Q no llega más allá de su alcance en píxeles', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    p.x = 13 * CFG.TILE + CFG.TILE / 2;
+    p.y = 20 * CFG.TILE + CFG.TILE / 2;
+    var g = G.ghosts[1];
+    g.mode = 'normal'; g.frightened = false;
+    g.y = p.y;
+    g.x = p.x + CFG.HAB.BITE_PX + 1;        // justo fuera
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'un píxel más allá, no llega');
+    g.x = p.x + CFG.HAB.BITE_PX;            // justo dentro
+    ok(HB.pulsar(G, 0, HB.MORDISCO), 'en el límite justo, sí');
+  });
+
+  test('un mordisco al aire enseña los dientes pero no gasta recarga', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'no muerde a nadie');
+    ok(HB.conDientes(0), 'pero se ve la dentellada: la tecla SÍ entró');
+    ok(HB.lista(0, HB.MORDISCO), 'y la recarga sigue entera');
+  });
+
   test('Q no muerde a los que están en casa ni a los que ya son ojos', function () {
     partidaHab(13, 20, CFG.DIR.LEFT);
     var g = fantasmaEn(1, 13, 20);
@@ -3920,6 +3964,109 @@
     G.persistHighScore();
     eq(G.recordFor(1), antes, 'el récord de 1 jugador no se mueve');
     eq(G.canTimeRecord(), false, 'ni el récord de velocidad del nivel 1');
+  });
+
+  /* ---------- maestrías de LABERINTOS y HABILIDADES ---------- */
+  test('laberintos y habilidades tienen su récord, aparte del de siempre', function () {
+    var B = window.PM.Badges;
+    var r = [G.highScore1, G.recordModo('lab'), G.recordModo('hab')];
+    try {
+      G.highScore1 = 0;
+      G.setRecordModo('lab', 0);
+      G.setRecordModo('hab', 0);
+
+      // una partida en otro laberinto NO toca el récord de 1 jugador
+      var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
+      ok(mz, 'hay laberintos alternativos');
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, maze: mz.id });
+      G.score = 20000; G.highScore = 20000;
+      G.persistHighScore();
+      eq(G.recordFor(1), 0, 'el récord del laberinto de 1980 sigue intacto');
+      eq(G.recordModo('lab'), 20000, 'y el de LABERINTOS se queda la marca');
+
+      // una de habilidades tampoco, y va a la suya
+      G.newGame({ players: 1, hab: true });
+      G.score = 30000; G.highScore = 30000;
+      G.persistHighScore();
+      eq(G.recordFor(1), 0, 'el de 1 jugador sigue sin moverse');
+      eq(G.recordModo('lab'), 20000, 'y el de laberintos tampoco');
+      eq(G.recordModo('hab'), 30000, 'HABILIDADES guarda la suya');
+      G.toMenu();
+    } finally {
+      G.highScore1 = r[0];
+      G.setRecordModo('lab', r[1]);
+      G.setRecordModo('hab', r[2]);
+    }
+  });
+
+  test('cada modo aparte tiene su propia ruta de maestrías', function () {
+    var B = window.PM.Badges;
+    var r = [G.highScore1, G.recordModo('lab'), G.recordModo('hab')];
+    try {
+      G.highScore1 = 0;
+      G.setRecordModo('lab', 9000);    // laberintos: escalón normal
+      G.setRecordModo('hab', 9000);    // habilidades: pide el doble
+      eq(B.best('lab'), 9000, 'la ruta de laberintos lee su récord');
+      eq(B.best('hab'), 9000, 'y la de habilidades el suyo');
+      eq(B.mult('lab'), 1, 'laberintos usa el escalón de siempre');
+      eq(B.mult('hab'), 2, 'habilidades pide el doble');
+      eq(B.top('lab').id, 'cazador', '9.000 en laberintos: CAZADOR');
+      eq(B.top('hab').id, 'aprendiz', 'los mismos 9.000 en habilidades: APRENDIZ');
+      eq(B.top('solo'), null, 'y en solo, ninguna: ahí no se ha jugado');
+      ok(!B.has('cazador', 'hab'), 'lo de laberintos no cuenta en habilidades');
+    } finally {
+      G.highScore1 = r[0];
+      G.setRecordModo('lab', r[1]);
+      G.setRecordModo('hab', r[2]);
+    }
+  });
+
+  test('la cuenta se lleva también los récords de los modos aparte', function () {
+    var Ac = window.PM.Account;
+    var r = [G.recordModo('lab'), G.recordModo('hab')];
+    var flags = [Ac.sinRecordsNuevos, Ac.sinModos];
+    try {
+      Ac.sinRecordsNuevos = false;
+      Ac.sinModos = false;
+      ok(Ac.perfilCols().indexOf('record_lab') !== -1, 'se piden al servidor');
+      ok(Ac.perfilCols().indexOf('record_hab') !== -1);
+      G.setRecordModo('lab', 12345);
+      G.setRecordModo('hab', 6789);
+      var o = Ac.localState();
+      eq(o.record_lab, 12345, 'y se suben');
+      eq(o.record_hab, 6789);
+      /* Servidor sin esas columnas todavía: se mandan sin ellas en vez de
+       * no guardar nada. Es lo que pasa si alguien monta esto en otro
+       * Supabase y no ha corrido supabase/cuentas.sql. */
+      Ac.sinModos = true;
+      ok(Ac.perfilCols().indexOf('record_lab') === -1, 'sin la columna, no se pide');
+      var o2 = Ac.localState();
+      ok(!o2.hasOwnProperty('record_lab'), 'ni se manda');
+      eq(o2.record1 !== undefined, true, 'pero lo de siempre sigue subiendo');
+    } finally {
+      G.setRecordModo('lab', r[0]);
+      G.setRecordModo('hab', r[1]);
+      Ac.sinRecordsNuevos = flags[0];
+      Ac.sinModos = flags[1];
+    }
+  });
+
+  test('la partida sabe a qué ruta de maestrías cuenta', function () {
+    window.PM.settings.muted = true;
+    function rutaDe(opts) {
+      G.newGame(opts);
+      var m = G.badgeMode();
+      G.toMenu();
+      return m;
+    }
+    eq(rutaDe({ players: 1 }), 'solo', 'una normal, a solo');
+    eq(rutaDe({ players: 2 }), 'duo', 'la de dos, a dúo');
+    eq(rutaDe({ players: 1, hab: true }), 'hab', 'la de poderes, a habilidades');
+    eq(rutaDe({ players: 2, hab: true }), 'hab',
+       'y una party de poderes también: manda el modo, no el formato');
+    var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
+    if (mz) eq(rutaDe({ players: 1, maze: mz.id }), 'lab', 'la de otro trazado, a laberintos');
   });
 
   test('la repetición guarda y devuelve las habilidades', function () {

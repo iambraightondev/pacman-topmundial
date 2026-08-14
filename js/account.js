@@ -95,18 +95,33 @@
     });
   }
 
+  /* ¿La respuesta se queja de una columna que este Supabase todavía no
+   * tiene? Devuelve qué bandera hay que levantar, o null. Cada tanda de
+   * columnas nuevas lleva la suya: un proyecto puede tener las de trío y
+   * escuadra y no las de los modos aparte. */
+  function faltaColumna(self, texto) {
+    if (!self.sinRecordsNuevos && /record3|record4/i.test(texto)) {
+      return 'sinRecordsNuevos';
+    }
+    if (!self.sinModos && /record_lab|record_hab/i.test(texto)) {
+      return 'sinModos';
+    }
+    return null;
+  }
+
   /* GET a la tabla de perfiles. `hacerUrl(columnas)` monta la consulta.
-   * Si el proyecto todavía no tiene las columnas de trío y escuadra (falta
-   * correr supabase/cuentas.sql), PostgREST responde 400 nombrándolas: se
-   * apunta y se repite la consulta sin ellas, una sola vez. */
+   * Si el proyecto todavía no tiene alguna de las columnas nuevas (falta
+   * correr supabase/cuentas.sql), PostgREST responde 400 nombrándola: se
+   * apunta y se repite la consulta sin ella. */
   function pedirPerfiles(self, hacerUrl, fallo, cb) {
     function intenta() {
       fetch(hacerUrl(self.perfilCols()), { headers: authHeaders(self.token) })
         .then(function (res) {
           return res.text().then(function (t) {
             if (!res.ok) {
-              if (!self.sinRecordsNuevos && /record3|record4/i.test(t)) {
-                self.sinRecordsNuevos = true;
+              var bandera = faltaColumna(self, t);
+              if (bandera) {
+                self[bandera] = true;
                 intenta();
                 return null;
               }
@@ -239,16 +254,25 @@
     /* Columnas de récord, una por formato (record1..record4) */
     recordCols: ['record1', 'record2', 'record3', 'record4'],
 
+    /* Y una por cada modo que se juega con otras reglas, con su propia ruta
+     * de maestrías: [id en el juego, columna en la tabla] */
+    modoCols: [['lab', 'record_lab'], ['hab', 'record_hab']],
+
     /* Proyecto de Supabase sin las columnas de trío y escuadra: se descubre
      * solo a la primera respuesta que las eche en falta (ver pedirPerfiles y
      * push). No se guarda en ningún sitio: se vuelve a probar en cada sesión,
      * así que en cuanto se corra el SQL las columnas vuelven solas. */
     sinRecordsNuevos: false,
+    /* Lo mismo para las de LABERINTOS y HABILIDADES, que llegaron después:
+     * hay proyectos con unas y sin las otras, así que llevan bandera aparte. */
+    sinModos: false,
 
     /* Columnas públicas de un perfil */
     perfilCols: function () {
       var c = 'usuario,avatar,xp,record1,record2,tiempo1,logros';
-      return this.sinRecordsNuevos ? c : c + ',record3,record4';
+      if (!this.sinRecordsNuevos) c += ',record3,record4';
+      if (!this.sinModos) c += ',record_lab,record_hab';
+      return c;
     },
 
     /* Estado local que viaja a la nube */
@@ -266,13 +290,21 @@
       for (var n = 1; n <= this.recordCols.length; n++) {
         o[this.recordCols[n - 1]] = (g.recordFor ? g.recordFor(n) : 0) || 0;
       }
-      /* Si este proyecto de Supabase todavía no tiene las columnas de trío y
-       * escuadra (falta correr supabase/cuentas.sql), se mandan sin ellas: más
+      // y los de los modos aparte, cada uno con su ruta de maestrías
+      for (var m = 0; m < this.modoCols.length; m++) {
+        o[this.modoCols[m][1]] =
+          (g.recordModo ? g.recordModo(this.modoCols[m][0]) : 0) || 0;
+      }
+      /* Si este proyecto de Supabase todavía no tiene alguna de las columnas
+       * nuevas (falta correr supabase/cuentas.sql), se manda sin ellas: más
        * vale guardar lo de siempre que no guardar nada. Se reintenta en cada
        * sesión, así que en cuanto el SQL esté puesto vuelven solas. */
       if (this.sinRecordsNuevos) {
         delete o.record3;
         delete o.record4;
+      }
+      if (this.sinModos) {
+        for (m = 0; m < this.modoCols.length; m++) delete o[this.modoCols[m][1]];
       }
       return o;
     },
@@ -316,6 +348,17 @@
             cambio = true;
           }
         }
+        /* Y los modos con ruta propia, con la misma regla: se queda el mejor
+         * de los dos lados, así que entrar en la cuenta nunca cuesta una
+         * maestría de laberintos ni de habilidades. */
+        for (var m = 0; m < this.modoCols.length; m++) {
+          var id = this.modoCols[m][0];
+          var rv = parseInt(fila[this.modoCols[m][1]], 10) || 0;
+          if (g.recordModo && rv > g.recordModo(id)) {
+            g.setRecordModo(id, rv);
+            cambio = true;
+          }
+        }
         if (cambio && g.saveHighScores) g.saveHighScores();
         // los récords traídos pueden regalar maestrías: que no se anuncien
         if (cambio && window.PM.Badges) window.PM.Badges.syncSeen();
@@ -346,12 +389,13 @@
       }).then(function (res) {
         if (!res.ok) {
           return res.text().then(function (t) {
-            /* ¿La tabla es de antes de trío y escuadra? Se apunta y se
-             * reintenta una vez sin esas dos columnas: que falte una puesta
-             * al día del servidor no puede costarle a nadie el récord de
-             * siempre. Al volver a entrar se prueba otra vez con todo. */
-            if (!self.sinRecordsNuevos && /record3|record4/i.test(t)) {
-              self.sinRecordsNuevos = true;
+            /* ¿La tabla es de antes de alguna de las columnas nuevas? Se
+             * apunta y se reintenta sin ellas: que falte una puesta al día
+             * del servidor no puede costarle a nadie el récord de siempre.
+             * Al volver a entrar se prueba otra vez con todo. */
+            var bandera = faltaColumna(self, t);
+            if (bandera) {
+              self[bandera] = true;
               return self.push(callado, cb);
             }
             throw new Error(/duplicate|unique/i.test(t)

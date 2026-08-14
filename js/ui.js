@@ -1448,12 +1448,14 @@
       h.textContent = 'MAESTRÍAS';
       o.appendChild(h);
 
-      /* cuatro rutas independientes, una por formato de partida */
+      /* Seis rutas independientes: una por formato de partida y una por cada
+       * modo que se juega con otras reglas (LABERINTOS y HABILIDADES). */
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.badgeTabBtns = {};
       [['solo', 'EN SOLO'], ['duo', 'EN DÚO'],
-       ['trio', 'EN TRÍO'], ['escuadra', 'EN ESCUADRA']].forEach(function (t) {
+       ['trio', 'EN TRÍO'], ['escuadra', 'EN ESCUADRA'],
+       ['lab', 'LABERINTOS'], ['hab', 'HABILIDADES']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showBadgeTab(t[0]); });
         b.classList.add('tab');
         self.badgeTabBtns[t[0]] = b;
@@ -1539,14 +1541,23 @@
        * un equipo es de todos, y con cuatro se llega al mismo número con
        * mucho menos mérito de cada uno). */
       var meta = function (b) { return B ? B.goal(b, mode) : b.points; };
+      /* La coletilla explica POR QUÉ esa ruta pide lo que pide, que si no
+       * los números parecen puestos a dedo. */
+      var nota = '';
+      if (mode === 'lab') {
+        nota = '  ·  OTRO TRAZADO, OTRA LIGA: LO DE AQUÍ NO ENTREGA LAS DEL ' +
+               'LABERINTO DE 1980';
+      } else if (mode === 'hab') {
+        nota = '  ·  CON PODERES LOS PUNTOS SON MÁS BARATOS, ASÍ QUE ESTA ' +
+               'RUTA PIDE EL DOBLE';
+      } else if (mode !== 'solo') {
+        nota = '  ·  CADA FORMATO ES UNA LIGA APARTE Y PIDE MÁS PUNTOS ' +
+               'CUANTOS MÁS SEÁIS';
+      }
       this.badgesSub.textContent =
         'RÉCORD EN ' + (B ? B.modeName(mode) : 'SOLO') + ': ' + best +
         (next ? ('  ·  SIGUIENTE: ' + next.name + ' A ' + meta(next))
-              : '  ·  ¡TODAS CONSEGUIDAS!') +
-        (mode === 'solo'
-          ? ''
-          : '  ·  CADA FORMATO ES UNA LIGA APARTE Y PIDE MÁS PUNTOS CUANTOS ' +
-            'MÁS SEÁIS');
+              : '  ·  ¡TODAS CONSEGUIDAS!') + nota;
       this.badgesList.innerHTML = '';
       this.badgeRows = {};
       var self = this;

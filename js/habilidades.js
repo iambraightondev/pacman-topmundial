@@ -68,12 +68,13 @@
     };
   }
 
-  /* Distancia en casillas por el eje X teniendo en cuenta el túnel: las
-   * columnas 0 y 27 son vecinas en la fila del túnel, y sin esto el
-   * mordisco no llegaría de un extremo al otro aunque se estén tocando. */
-  function distCol(a, b) {
+  /* Distancia horizontal EN PÍXELES teniendo en cuenta el túnel: las
+   * columnas 0 y 27 son vecinas, y sin esto el mordisco no llegaría de un
+   * extremo al otro aunque se estén tocando. */
+  function distX(a, b) {
+    var ancho = CFG.COLS * T;
     var d = Math.abs(a - b);
-    return Math.min(d, CFG.COLS - d);
+    return Math.min(d, ancho - d);
   }
 
   /* ¿Esa casilla es la casa de los fantasmas? El FLASH atraviesa muros, y
@@ -303,9 +304,9 @@
       s.flashDir = (dir >= 0 && dir <= 3) ? dir : -1;
     },
 
-    marcarDientes: function (idx) {
+    marcarDientes: function (idx, ticks) {
       var s = this.estado(idx);
-      if (s) s.dientes = H.BITE_SHOW;
+      if (s) s.dientes = ticks || H.BITE_SHOW;
     },
 
     /* =========================================================
@@ -313,19 +314,31 @@
      * ========================================================= */
     /* El fantasma mordible más cercano, o null. No entran los que están en
      * la casa, los que están saliendo por la puerta ni los que ya son un
-     * par de ojos volviendo: a esos no hay nada que morder. */
+     * par de ojos volviendo: a esos no hay nada que morder.
+     *
+     * SE MIDE EN PÍXELES, no en casillas, y esto importa mucho más de lo que
+     * parece. Contando casillas, el mordisco fallaba a cada rato sin motivo
+     * visible: Pac-Man y el fantasma pueden estar a NUEVE píxeles —pegados en
+     * pantalla, los sprites casi solapados— y aun así caer en casillas que no
+     * son vecinas, porque cada uno está en el borde opuesto de la suya. Con
+     * casillas, morder dependía de en qué punto del recorrido te pillara, que
+     * es justo lo que hace que un botón se sienta roto.
+     *
+     * El alcance va con un margen sobre la casilla (CFG.HAB.BITE_PX) para que
+     * "lo que se ve pegado, se muerde". Se compara por ejes (el mayor de los
+     * dos, no la diagonal) porque el alcance es un CUADRO de una casilla a la
+     * redonda, que es lo que se pidió. */
     presa: function (G, idx) {
       var p = G.pacs[idx];
       if (!p) return null;
-      var px = p.tileX(), py = p.tileY();
       var mejor = null, mejorD = Infinity;
       for (var i = 0; i < 4; i++) {
         var g = G.ghosts[i];
         if (!g) continue;
         if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
-        var dx = distCol(g.tileX(), px);
-        var dy = Math.abs(g.tileY() - py);
-        if (dx > H.BITE_TILES || dy > H.BITE_TILES) continue;
+        var dx = distX(g.x, p.x);
+        var dy = Math.abs(g.y - p.y);
+        if (dx > H.BITE_PX || dy > H.BITE_PX) continue;
         var d = dx * dx + dy * dy;      // el más pegado, si hay dos a tiro
         if (d < mejorD) { mejorD = d; mejor = g; }
       }
@@ -355,7 +368,15 @@
      * anfitrión decida de verdad; así no se ven fantasmas que resucitan. */
     mordisco: function (G, idx, soloVisual) {
       var g = this.presa(G, idx);
-      if (!g) return false;                 // sin nadie a tiro no se gasta
+      if (!g) {
+        /* Dentellada al aire. No gasta recarga, pero SE VE: sin esto, fallar
+         * la puntería y tener la tecla en recarga se sienten exactamente
+         * igual —no pasa nada—, y entonces la Q parece rota aunque funcione.
+         * Con los dientes un instante queda claro que la tecla entró y lo
+         * que falló fue el tiro. */
+        this.marcarDientes(idx, Math.round(H.BITE_SHOW / 2));
+        return false;
+      }
       var p = G.pacs[idx];
       this.mirarHacia(p, g);
       this.marcarDientes(idx);

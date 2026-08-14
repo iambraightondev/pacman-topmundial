@@ -28,6 +28,10 @@ create table if not exists public.perfiles (
   record2      integer     not null default 0 check (record2 >= 0),  -- dúo
   record3      integer     not null default 0 check (record3 >= 0),  -- trío
   record4      integer     not null default 0 check (record4 >= 0),  -- escuadra
+  -- y los modos que se juegan con otras reglas, cada uno con su propia ruta
+  -- de maestrías: una marca de ahí no se compara con la del laberinto de 1980
+  record_lab   integer     not null default 0 check (record_lab >= 0),
+  record_hab   integer     not null default 0 check (record_hab >= 0),
   tiempo1      integer     check (tiempo1 is null or
                                   (tiempo1 > 0 and tiempo1 <= 6000000)),
   logros       jsonb       not null default '{}'::jsonb,
@@ -115,6 +119,32 @@ create policy "amigos propios"
 alter table public.perfiles
   add column if not exists record3 integer not null default 0,
   add column if not exists record4 integer not null default 0;
+
+-- ---------- puesta al día: LABERINTOS y HABILIDADES ----------
+-- Son modos aparte, con su propia ruta de maestrías, así que llevan su
+-- propio récord. Antes una partida en otro laberinto escribía en record1 (el
+-- del laberinto de 1980) y entregaba maestrías que no eran suyas; ahora cada
+-- uno guarda la suya. Lo que ya estuviera en record1 se queda como está: no
+-- hay forma de saber qué parte vino de un laberinto alternativo.
+alter table public.perfiles
+  add column if not exists record_lab integer not null default 0,
+  add column if not exists record_hab integer not null default 0;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_record_lab_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_record_lab_chk check (record_lab >= 0);
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_record_hab_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_record_hab_chk check (record_hab >= 0);
+  end if;
+end $$;
 
 do $$
 begin

@@ -231,6 +231,13 @@ Dos maneras de correr la misma batería:
   **Salen todos en la misma lista**, y cada uno dice delante en qué modo hay
   que conseguirlo. Se celebran en la partida y se siguen en PERFIL con su
   barra de progreso.
+- **Maestrías**: seis insignias por ruta (de APRENDIZ a TOP MUNDIAL) y **seis
+  rutas independientes**: una por formato (solo, dúo, trío y escuadra) y una
+  para LABERINTOS y otra para HABILIDADES, que se juegan con otras reglas.
+  Cada una lleva su propio récord, así que una gran partida en escuadra no
+  regala las de solo, ni una en otro laberinto las del de 1980. Cuanto más
+  regala el modo, más pide: los formatos multiplican por los jugadores y
+  HABILIDADES pide el doble.
 - **Cuenta con usuario y contraseña** (opcional): guarda nivel, logros,
   maestrías, récords y amigos, y te los lleva a cualquier sitio. No pide
   correo. El usuario es también tu nombre en el juego. Al entrar, lo de la

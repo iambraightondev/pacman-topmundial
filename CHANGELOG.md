@@ -2,6 +2,38 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · La Q ya no falla, y laberintos y habilidades tienen maestría propia
+
+- **El mordisco (Q) fallaba a cada rato sin motivo visible.** El alcance se
+  medía **contando casillas**, y dos cosas pegadas en pantalla pueden caer en
+  casillas que no son vecinas: Pac-Man y el fantasma a **nueve píxeles** —los
+  sprites casi solapados— y la Q no entraba, porque cada uno estaba en el
+  borde opuesto de su casilla. Morder dependía de en qué punto del recorrido
+  te pillara, que es justo lo que hace que un botón se sienta roto.
+  **Ahora se mide en píxeles**: lo que se ve pegado, se muerde. Alcance de
+  casilla y media, igual siempre y en las cuatro direcciones.
+- Y si muerdes al aire, **se ve la dentellada**. Antes, fallar la puntería y
+  tener la tecla en recarga se sentían igual —no pasaba nada—, así que la Q
+  parecía rota aunque funcionase. Morder al aire no gasta recarga.
+- **LABERINTOS y HABILIDADES tienen ya su propia ruta de maestrías**, con su
+  propio récord. Son seis rutas: las cuatro de siempre (solo, dúo, trío y
+  escuadra) y estas dos.
+  - Esto tapa un agujero de antes: una partida en **otro laberinto escribía
+    en el récord de 1 jugador**, o sea que un trazado más cómodo entregaba
+    maestrías del laberinto de 1980 (y las subía a tu cuenta). Ya no.
+  - La ruta de **HABILIDADES pide el doble** en cada escalón: con poderes los
+    puntos son más baratos, y sin ese peaje se acababa en dos tardes.
+  - Los dos récords **viajan a tu cuenta** como los otros cuatro, así que las
+    maestrías nuevas te siguen de un aparato a otro.
+
+> **Ya aplicado** en el proyecto del juego (`perfiles.record_lab` y
+> `record_hab`). Quien monte esto en otro Supabase tiene que lanzar
+> `supabase/cuentas.sql` otra vez. Si no lo hace no se rompe nada: el juego
+> detecta que faltan las columnas y sigue subiendo lo de siempre.
+>
+> Lo que ya estuviera en tu récord de 1 jugador **se queda como está**: no hay
+> forma de saber qué parte vino de un laberinto alternativo.
+
 ## 2026-08-14 · Logros de cada modo
 
 - Hasta ahora los 15 logros valían jugando a lo que fuera, así que el juego
