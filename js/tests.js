@@ -169,6 +169,39 @@
     return vistos;
   }
 
+  /* Seis trazados y seis IDEAS distintas. La lista se comprueba entera
+   * porque el valor del modo está justo ahí: si algún día se añade uno que
+   * repita lo que ya hay, esto no lo canta, pero al menos obliga a pasar por
+   * aquí y mirarlos. */
+  test('hay seis laberintos alternativos, cada uno con lo suyo', function () {
+    var M = window.PM.Mazes;
+    eq(M.LIST.map(function (m) { return m.id; }).join(','),
+       'anillos,panal,catedral,serpiente,colmillos,escalera');
+    M.LIST.forEach(function (m) {
+      ok(m.name && m.desc, m.id + ': se presenta');
+      ok(m.pellets > 150, m.id + ': tiene pastillas de sobra');
+    });
+    /* Ninguno es otro disfrazado: las pastillas no bastan como huella, pero
+     * dos trazados iguales sí darían la misma cadena. */
+    var vistos = {};
+    M.LIST.forEach(function (m) {
+      var huella = m.rows.join('');
+      ok(!vistos[huella], m.id + ': trazado repetido');
+      vistos[huella] = 1;
+    });
+  });
+
+  /* Un trazado que ya no existe (o uno rehecho, como los tres que se
+   * redibujaron) deja la repetición sin sentido: se vería a Pac-Man
+   * atravesando muros. Vale más darla por rota. */
+  test('una repetición de red de un laberinto desconocido no se reproduce',
+    function () {
+      var R = window.PM.Replay;
+      ok(window.PM.Mazes.conocido('anillos'), 'los de la lista sí valen');
+      ok(!window.PM.Mazes.conocido('trazado-que-no-existe'));
+      ok(window.PM.Mazes.conocido(null), 'y sin laberinto es el clásico');
+    });
+
   test('en los laberintos alternativos se llega a todas las pastillas',
     function () {
       var M = window.PM.Mazes;

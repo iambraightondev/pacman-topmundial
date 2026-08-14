@@ -750,6 +750,11 @@
           previa = v;
         }
         if (!cuadros.length) return null;
+        /* Laberinto que ya no existe (o uno rehecho): la repetición ya no
+         * cuadra con el trazado y se vería a Pac-Man atravesando muros.
+         * Mejor darla por rota, que es lo que es. */
+        var M = window.PM.Mazes;
+        if (cab.mz && M && !M.conocido(cab.mz)) return null;
         var eventos = [];
         var evs = partes[2] ? partes[2].split(';') : [];
         for (i = 0; i < evs.length; i++) {

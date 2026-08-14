@@ -1175,6 +1175,35 @@ spawn (BFS with tunnel wrap), the declared pellet count, **no dead ends**
 in the four corners, left-right symmetry, a closed border except the
 tunnel, and the classic coming back when the mode is left.
 
+**Six layouts, six ideas.** The first three were rectangle grids separated by
+full-width bands — valid, but interchangeable: whichever you picked, you were
+playing the same shape with the blocks moved. Each one now commits to a single
+structural idea, and the descriptions in `Mazes.LIST` say which:
+
+| id | idea |
+|---|---|
+| `anillos` | four concentric rings; the jumps between them are all on one row |
+| `panal` | cells of two sizes, offset every two rows |
+| `catedral` | tall vertical naves, two crossings, at different heights per side |
+| `serpiente` | full-width corridors with the gaps at opposite ends |
+| `colmillos` | six rows of one-tile fangs, bottom ones offset from the top |
+| `escalera` | diagonal landings; **no row crosses the maze end to end** |
+
+Two constraints do most of the work and are easy to trip over. Row 8 must be
+open at columns 6 and 12, and row 20 at columns 6 and 9: the core's row 9 and
+row 19 have single-tile openings there whose only other neighbour is inside the
+core, so sealing them from above or below creates a dead end **in the copied
+rows**, where it is hardest to see. And an inner region only escapes through a
+tile that the neighbouring core row leaves open — which is why the top rings
+work with the same drawing that leaves the bottom ones sealed.
+
+Redrawing `anillos`, `panal` and `colmillos` **broke old net replays of those
+mazes**: the id still resolves but the layout underneath changed, so playback
+would show Pac-Man walking through walls. `Mazes.conocido(id)` exists for that
+— `Replay.leerRed` rejects a replay whose maze it does not know, which reports
+it as corrupt instead of playing nonsense. Local (URL-shareable) replays never
+carried a maze, so only the two stored net replays are affected.
+
 ## Modo DESATADO (Q/W/E/R)
 
 **`PM.Hab` (`js/habilidades.js`), `CFG.HAB`.** The 1980 maze with four

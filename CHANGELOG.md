@@ -2,6 +2,37 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · Seis laberintos, y cada uno con una idea
+
+- **Los tres laberintos alternativos eran el mismo laberinto tres veces.**
+  Todos estaban hechos igual: rejillas de bloques rectangulares separadas por
+  bandas abiertas de lado a lado. Eran válidos, sí, pero eligieras el que
+  eligieras jugabas la misma forma con los bloques movidos de sitio.
+- **Ahora son seis, y cada uno se compromete con una idea**:
+  - **ANILLOS** — cuatro anillos concéntricos. Se juega dando vueltas y
+    decidiendo cuándo saltar al de dentro; los saltos están contados.
+  - **PANAL** — celdas de dos tamaños que se corren cada dos filas. Nunca hay
+    dos cruces seguidos a la misma distancia.
+  - **CATEDRAL** — naves verticales larguísimas y solo dos pasos entre ellas,
+    a distinta altura en cada lado. Equivocarse de nave cuesta el largo
+    entero.
+  - **SERPIENTE** — pasillos de punta a punta con los huecos a contrapié:
+    para bajar una fila hay que cruzar el laberinto hasta el hueco, y el
+    siguiente está en la otra punta.
+  - **COLMILLOS** — seis filas de dientes de una casilla, sin un mísero
+    atajo. Eliges carril y te aguantas hasta el otro extremo.
+  - **ESCALERA** — rellanos en diagonal y **ni una fila que cruce entera**.
+    El más cerrado de los seis.
+- Todos pasan las mismas comprobaciones de siempre: sin callejones (un
+  fantasma que entra en uno se queda encerrado y se acabó la persecución), sin
+  pastillas a las que no se llegue, simetría, energizantes en las cuatro
+  esquinas y la casa de fantasmas intacta.
+
+> Los tres de antes se han **redibujado**, no renombrado. Si tenías guardada
+> una repetición online de una partida en ANILLOS, PANAL o COLMILLOS, ya no se
+> puede ver: el trazado de debajo es otro y se vería a Pac-Man atravesando
+> muros. El juego lo detecta y te lo dice, en vez de enseñarte un disparate.
+
 ## 2026-08-14 · DESATADO, la Q en party y una portada que impone
 
 - **HABILIDADES pasa a llamarse DESATADO.** El nombre viejo decía lo que el

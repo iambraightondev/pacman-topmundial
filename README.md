@@ -344,10 +344,15 @@ JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
   nombre— y **sin conexión**: la marca se guarda y se manda sola cuando
   vuelve la red. La clasificación del día está en TOP MUNDIAL → RETO DE HOY,
   con tu puesto.
-- **Laberintos** — dos o tres trazados nuevos de 28×31, con su túnel, su
-  casa de fantasmas y sus energizantes en las cuatro esquinas. Es un modo
-  aparte: **el laberinto original no se toca nunca**, así que estas
-  partidas no entran en el top mundial (experiencia sí).
+- **Laberintos** — **seis trazados** de 28×31, con su túnel, su casa de
+  fantasmas y sus energizantes en las cuatro esquinas, y cada uno con una
+  idea distinta: ANILLOS (cuatro anillos concéntricos), PANAL (celdas de dos
+  tamaños a contrapié), CATEDRAL (naves verticales enormes), SERPIENTE
+  (pasillos de punta a punta con los huecos cruzados), COLMILLOS (seis filas
+  de dientes sin atajos) y ESCALERA (rellanos en diagonal, y ni una fila que
+  cruce entera). Es un modo aparte: **el laberinto original no se toca
+  nunca**, así que estas partidas no entran en el top mundial (experiencia
+  sí).
 - **Top mundial**: clasificaciones compartidas entre todos —una **por
   formato** (individual, dúo, trío y escuadra), **nivel 1** (quién lo
   despeja en menos tiempo) y **reto de hoy**—, con la mejor marca de cada
