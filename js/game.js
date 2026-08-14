@@ -3130,7 +3130,9 @@
       // las chispas del turbo van DEBAJO, que son estela y no adorno
       if (st && st.turbo > 0) S.drawTurboSparks(ctx, pc.x, y, pc.dir, color, st.chispa);
       if (st && st.flash > 0) {
-        S.drawFlashTrail(ctx, pc.x, y, pc.dir, color, st.flash / CFG.HAB.FLASH_SHOW);
+        // el rastro va detrás del SALTO, que puede no ir hacia donde se mira
+        var dFl = (st.flashDir >= 0) ? st.flashDir : pc.dir;
+        S.drawFlashTrail(ctx, pc.x, y, dFl, color, st.flash / CFG.HAB.FLASH_SHOW);
       }
       var alfa = A.alfa(i);
       if (alfa < 1) { ctx.save(); ctx.globalAlpha = alfa; }

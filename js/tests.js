@@ -3538,6 +3538,25 @@
     eq(HB.pulsar(G, 0, HB.TURBO), false, 'la tecla no hace nada');
   });
 
+  /* Los números del modo, tal cual se pidieron. Van en una prueba porque son
+   * el equilibrio del modo entero: si alguien los toca sin querer (o los
+   * duplica en otro sitio), aquí se nota. */
+  test('las recargas y duraciones son las acordadas', function () {
+    eq(HC.segs(0), 16, 'MORDISCO recarga en 16 s');
+    eq(HC.segs(1), 24, 'TURBO recarga en 24 s');
+    eq(HC.segs(2), 32, 'FLASH recarga en 32 s');
+    eq(HC.segs(3), 60, 'GRITO recarga en 60 s');
+    eq(HC.TURBO_TICKS / 60, 5, 'el turbo dura 5 s');
+    eq(HC.TURBO_MULT, 1.5, 'y corre x1.5');
+    eq(HC.SHOUT_SECS, 6, 'el grito asusta 6 s');
+    eq(HC.FLASH_TILES, 3, 'el flash salta 3 casillas');
+    eq(HC.BITE_TILES, 1, 'el mordisco alcanza 1 casilla');
+    // la recarga que gasta el juego es la de LIST, no una copia suelta
+    for (var k = 0; k < 4; k++) {
+      eq(HC.LIST[k].cd, HC.segs(k) * 60, 'la ' + HC.LIST[k].key + ' cuadra');
+    }
+  });
+
   test('las cuatro empiezan cargadas', function () {
     partidaHab();
     for (var k = 0; k < 4; k++) {
@@ -3618,6 +3637,50 @@
     ok(HB.pulsar(G, 0, HB.FLASH), 'el flash entra');
     eq(p.tileX(), col + HC.FLASH_TILES, 'aterriza tres casillas más allá');
     eq(p.tileY(), fila, 'sin cambiar de fila');
+  });
+
+  /* Lo que pidió el jugador: la E va hacia LA ÚLTIMA FLECHA PULSADA, no
+   * hacia donde mira Pac-Man. El caso que lo demuestra es el del pasillo
+   * horizontal con muro arriba: pulsas arriba, Pac-Man no puede girar y
+   * sigue de lado, y la E te sube atravesando ese muro. */
+  test('E salta hacia la última flecha, no hacia donde se mira', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    // pasillo horizontal con muro justo encima y hueco tres filas arriba
+    var col = null, fila = null, c, f;
+    for (f = 4; f < CFG.ROWS - 4 && col === null; f++) {
+      for (c = 1; c < CFG.COLS - 1; c++) {
+        if (CFG.isOpen(c, f, false) && CFG.isOpen(c + 1, f, false) &&
+            !CFG.isOpen(c, f - 1, false) && CFG.isOpen(c, f - 3, false)) {
+          col = c; fila = f; break;
+        }
+      }
+    }
+    ok(col !== null, 'hay un pasillo con muro encima y hueco tres arriba');
+    p.x = col * CFG.TILE + CFG.TILE / 2;
+    p.y = fila * CFG.TILE + CFG.TILE / 2;
+    p.dir = CFG.DIR.RIGHT;                 // mirando a la DERECHA
+    G.setPacDir(0, CFG.DIR.UP);            // pero la última flecha es ARRIBA
+    eq(p.dir, CFG.DIR.RIGHT, 'el muro no le deja girar: sigue mirando a la derecha');
+    ok(HB.pulsar(G, 0, HB.FLASH), 'el flash entra');
+    eq(p.tileY(), fila - CFG.HAB.FLASH_TILES, 'sube tres casillas');
+    eq(p.tileX(), col, 'y no se mueve de columna');
+  });
+
+  test('sin flecha nueva, la E sigue yendo hacia donde se avanza', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    var col = null, fila = 20, c;
+    for (c = 1; c < CFG.COLS - CFG.HAB.FLASH_TILES - 1; c++) {
+      if (CFG.isOpen(c, fila, false) &&
+          CFG.isOpen(c + CFG.HAB.FLASH_TILES, fila, false)) { col = c; break; }
+    }
+    p.x = col * CFG.TILE + CFG.TILE / 2;
+    p.y = fila * CFG.TILE + CFG.TILE / 2;
+    p.dir = CFG.DIR.RIGHT;
+    p.nextDir = CFG.DIR.RIGHT;             // nada nuevo pedido
+    ok(HB.pulsar(G, 0, HB.FLASH), 'el flash entra');
+    eq(p.tileX(), col + CFG.HAB.FLASH_TILES, 'va hacia delante, como siempre');
   });
 
   test('E se come lo que pilla por el camino', function () {

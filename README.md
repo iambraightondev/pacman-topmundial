@@ -68,12 +68,13 @@ red.
 - **HABILIDADES** — el mismo laberinto con cuatro poderes, cada uno con su
   tecla y su recarga. En solo y en party (en la party lo enciende quien
   manda y vale para todo el grupo).
-  - **Q · MORDISCO** (8 s): te comes al fantasma que tengas a una casilla,
+  - **Q · MORDISCO** (16 s): te comes al fantasma que tengas a una casilla,
     mires hacia donde mires, y te giras hacia él.
-  - **W · TURBO** (12 s): x1.5 de velocidad durante 5 s.
-  - **E · FLASH** (10 s): tres casillas hacia delante **atravesando muros**,
-    comiéndote lo que haya por el camino.
-  - **R · GRITO** (45 s): los cuatro fantasmas se asustan 4 s sin
+  - **W · TURBO** (24 s): x1.5 de velocidad durante 5 s.
+  - **E · FLASH** (32 s): tres casillas **atravesando muros** hacia la última
+    flecha que pulses —mire Pac-Man hacia donde mire—, comiéndote lo que haya
+    por el camino.
+  - **R · GRITO** (60 s): los cuatro fantasmas se asustan 6 s sin
     superpastilla.
 
   Aquí **se mueve solo con las flechas** (la W es el turbo). Es un modo

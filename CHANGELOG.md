@@ -6,16 +6,22 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 - Modo nuevo, **aparte del de siempre** (como LABERINTOS): el laberinto de
   1980 con cuatro poderes, cada uno con su tecla y su recarga.
-  - **Q · MORDISCO** (8 s): te comes de un bocado al fantasma que tengas a
+  - **Q · MORDISCO** (16 s): te comes de un bocado al fantasma que tengas a
     una casilla, **mires hacia donde mires**, y Pac-Man se gira hacia él.
     Le salen dientes.
-  - **W · TURBO** (12 s): x1.5 de velocidad durante 5 s, echando chispas.
-  - **E · FLASH** (10 s): tres casillas hacia delante **atravesando muros**,
-    comiéndote los puntos y superpastillas del camino. Te quedas
-    translúcido al aterrizar.
-  - **R · GRITO** (45 s): los cuatro fantasmas se asustan 4 s sin haber
+  - **W · TURBO** (24 s): x1.5 de velocidad durante 5 s, echando chispas.
+  - **E · FLASH** (32 s): tres casillas **atravesando muros** hacia **la
+    última flecha que pulses**, mire Pac-Man hacia donde mire: si vas por un
+    pasillo de lado y pulsas arriba, te subes atravesando ese muro. Se come
+    los puntos y superpastillas del camino y te quedas translúcido al
+    aterrizar.
+  - **R · GRITO** (60 s): los cuatro fantasmas se asustan 6 s sin haber
     tocado una superpastilla. Es la definitiva: grita, W para alcanzarlos y
     Q para rematar.
+
+  Las recargas son largas a propósito: son cuatro habilidades, y con
+  recargas cortas siempre tendrías una a mano y el laberinto dejaría de
+  importar. Así hay que elegir cuál gastas.
 - Se juega **solo y en party**. En la party lo enciende quien manda y vale
   para todo el grupo —media party con poderes no sería una partida—, y se ve
   en la sala antes de empezar, que enterarse al arrancar sería una encerrona.

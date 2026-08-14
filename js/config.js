@@ -657,40 +657,40 @@
    * con otras reglas, así que estas partidas NO entran en el top mundial
    * (pero sí suman experiencia y logros). Ver js/habilidades.js.
    *
-   * Por qué estos números:
-   *  - MORDISCO es el que decide peleas, así que es el más corto: 8 s. Aun
-   *    así no te salva de un cerco, porque solo mata a UNO.
-   *  - TURBO y FLASH son movilidad; a 12 y 10 s se alternan sin que nunca
-   *    tengas las dos a mano, que es lo que haría al laberinto irrelevante.
-   *  - GRITO es la definitiva: 45 s. Regala hasta 3.000 puntos con la cadena
-   *    entera, así que tiene que doler esperarlo.
-   * Las recargas corren solo mientras la partida avanza de verdad (PLAYING y
-   * sin pausa): morir o cambiar de nivel no te regala una habilidad. */
+   * Las recargas son largas a propósito: son cuatro, y con recargas cortas
+   * el laberinto deja de importar —siempre tendrías una a mano—. Así hay que
+   * elegir cuál gastas, que es donde está el juego. Van todas en LIST, que es
+   * el único sitio donde se escriben: el diálogo del modo también las lee de
+   * ahí para que no puedan desdecirse.
+   *
+   * Corren solo mientras la partida avanza de verdad (PLAYING y sin pausa):
+   * morir o cambiar de nivel no te regala una habilidad. */
   CFG.HAB = {
     /* Alcance del mordisco, en casillas: 1 = las ocho de alrededor y la
      * propia. Se mide en casillas, no en píxeles, para que sea igual de
      * generoso en las cuatro direcciones. */
     BITE_TILES: 1,
-    BITE_CD: 8 * 60,
     /* Los dientes se ven un poco más que el mordisco en sí: es el aviso de
      * que Q ha entrado, y sin él la muerte del fantasma no se entiende. */
     BITE_SHOW: 24,           // 0.4 s con dientes
-    TURBO_CD: 12 * 60,
-    TURBO_TICKS: 5 * 60,     // 5 s
+    TURBO_TICKS: 5 * 60,     // 5 s de x1.5
     TURBO_MULT: 1.5,
-    FLASH_CD: 10 * 60,
     FLASH_TILES: 3,          // casillas que se recorren, paredes incluidas
     FLASH_SHOW: 15,          // 0.25 s translúcido al aterrizar
-    SHOUT_CD: 45 * 60,
-    SHOUT_SECS: 4,           // segundos de modo azul (independiente del nivel)
+    SHOUT_SECS: 6,           // segundos de modo azul (independiente del nivel)
     /* Orden fijo: es el de las teclas, el del HUD y el que viaja por red y
      * por las repeticiones. No reordenar sin subir CFG.NET.PROTO. */
     LIST: [
-      { id: 'mordisco', key: 'Q', name: 'MORDISCO', cd: 8 * 60 },
-      { id: 'turbo',    key: 'W', name: 'TURBO',    cd: 12 * 60 },
-      { id: 'flash',    key: 'E', name: 'FLASH',    cd: 10 * 60 },
-      { id: 'grito',    key: 'R', name: 'GRITO',    cd: 45 * 60 }
+      { id: 'mordisco', key: 'Q', name: 'MORDISCO', cd: 16 * 60 },
+      { id: 'turbo',    key: 'W', name: 'TURBO',    cd: 24 * 60 },
+      { id: 'flash',    key: 'E', name: 'FLASH',    cd: 32 * 60 },
+      { id: 'grito',    key: 'R', name: 'GRITO',    cd: 60 * 60 }
     ]
+  };
+  /* Recarga de una habilidad, en segundos (para los textos de la interfaz) */
+  CFG.HAB.segs = function (k) {
+    var h = CFG.HAB.LIST[k];
+    return h ? Math.round(h.cd / 60) : 0;
   };
 
   /* ---------- Red (modo online) ---------- */

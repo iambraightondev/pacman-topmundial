@@ -1089,10 +1089,14 @@ game the badge does not describe. XP and achievements still count.
 
 | Key | What it does | Cooldown |
 |---|---|---|
-| **Q** MORDISCO | Eats any ghost within **1 tile** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. | 8 s |
-| **W** TURBO | ×1.5 speed for 5 s, trailing sparks. | 12 s |
-| **E** FLASH | Jumps **3 tiles forward through walls**, eating dots and energizers on the way, translucent on landing. | 10 s |
-| **R** GRITO | Frightens all four ghosts for a **fixed 4 s** with no energizer. | 45 s |
+| **Q** MORDISCO | Eats any ghost within **1 tile** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. | 16 s |
+| **W** TURBO | ×1.5 speed for 5 s, trailing sparks. | 24 s |
+| **E** FLASH | Jumps **3 tiles through walls toward the last arrow pressed** — not toward where Pac-Man faces — eating dots and energizers on the way, translucent on landing. | 32 s |
+| **R** GRITO | Frightens all four ghosts for a **fixed 6 s** with no energizer. | 60 s |
+
+Cooldowns live **only** in `CFG.HAB.LIST[k].cd` (`CFG.HAB.segs(k)` for UI
+text). They are long on purpose: with four powers and short cooldowns the
+maze stops mattering, because something is always available.
 
 Rules that are deliberate, not incidental:
 
@@ -1104,6 +1108,14 @@ Rules that are deliberate, not incidental:
   counterplay, is not a fight).
 - **Q and E refuse to be wasted.** No ghost in range, or no landable tile
   ahead, and nothing fires and no cooldown starts.
+- **E aims where the player last pointed, not where Pac-Man faces.** The
+  engine already keeps that: `Pacman.nextDir` is "the last requested
+  direction" and survives a wall refusing the turn, so `Hab.dirFlash()`
+  just reads it. No extra state, nothing new on the wire, nothing new in
+  replays — and it is identical on every screen because `nextDir` is part
+  of the simulation. As a bonus, after landing Pac-Man carries on in that
+  direction by himself if the corridor allows it. The trail is drawn from
+  `flashDir` (stored per player), since the jump need not match the gaze.
 - **E never lands in the ghost house.** `CFG.isOpen` treats the house
   interior as walkable (it is, for ghosts), so `habilidades.js` guards
   `CFG.HOUSE` explicitly: Pac-Man has no door and would be stuck forever.
@@ -1111,7 +1123,7 @@ Rules that are deliberate, not incidental:
   The 200-400-800-1600 ladder belongs to the energizer; chaining it from a
   keypress would turn the run into free points. With ghosts already blue
   the bite joins whatever chain is running.
-- **The shout is 4 s at every level.** `triggerFright(segsFijos)` bypasses
+- **The shout is 6 s at every level.** `triggerFright(segsFijos)` bypasses
   `CFG.fright(level)`, which by level 18 is zero: the ultimate would
   switch itself off exactly when it is needed.
 - Cooldowns tick only while `state === 'PLAYING'`, unpaused and outside

@@ -7,9 +7,10 @@
  *   Q  MORDISCO  se merienda al fantasma que tenga a una casilla,
  *                mire hacia donde mire, y se gira hacia él.
  *   W  TURBO     x1.5 de velocidad durante 5 s, echando chispas.
- *   E  FLASH     tres casillas hacia delante ATRAVESANDO MUROS,
+ *   E  FLASH     tres casillas ATRAVESANDO MUROS hacia la última
+ *                flecha pulsada —mire Pac-Man hacia donde mire—,
  *                comiéndose lo que haya por el camino.
- *   R  GRITO     los cuatro fantasmas se asustan 4 s, sin haber
+ *   R  GRITO     los cuatro fantasmas se asustan 6 s, sin haber
  *                tocado una superpastilla.
  *
  * Es un MODO APARTE, como LABERINTOS: se juega el laberinto de
@@ -60,6 +61,9 @@
       turbo: 0,           // ticks de turbo que quedan
       dientes: 0,         // ticks con los dientes fuera (MORDISCO)
       flash: 0,           // ticks translúcido (FLASH)
+      /* Hacia dónde fue el último flash. Se guarda porque el rastro se pinta
+       * DETRÁS del salto, y el salto puede no ir hacia donde Pac-Man mira. */
+      flashDir: -1,
       chispa: 0           // contador para sembrar las chispas del turbo
     };
   }
@@ -107,6 +111,7 @@
         this.st[i].turbo = 0;
         this.st[i].dientes = 0;
         this.st[i].flash = 0;
+        this.st[i].flashDir = -1;
       }
     },
 
@@ -276,9 +281,14 @@
       if (s) { s.turbo = H.TURBO_TICKS; s.chispa = 0; }
     },
 
-    marcarFlash: function (idx) {
+    /* dir: hacia dónde fue el salto (para el rastro). Sin ella —el eco de
+     * red, que no sabe la dirección— se usa la de la mirada, que es lo más
+     * parecido que hay. */
+    marcarFlash: function (idx, dir) {
       var s = this.estado(idx);
-      if (s) s.flash = H.FLASH_SHOW;
+      if (!s) return;
+      s.flash = H.FLASH_SHOW;
+      s.flashDir = (dir >= 0 && dir <= 3) ? dir : -1;
     },
 
     marcarDientes: function (idx) {
@@ -365,13 +375,34 @@
     /* =========================================================
      * E — FLASH
      * ========================================================= */
-    /* Casilla de aterrizaje: la más lejana de las FLASH_TILES de delante
-     * que sea pisable. Si ninguna lo es (de cara a la pared del borde, por
-     * ejemplo), devuelve null y la habilidad ni sale ni se gasta. */
+    /* Hacia dónde salta: la ÚLTIMA FLECHA PULSADA, no hacia donde mira
+     * Pac-Man. Si vas por un pasillo horizontal y pulsas arriba, Pac-Man
+     * sigue yendo de lado porque hay muro —pero la E te manda arriba,
+     * atravesándolo.
+     *
+     * Eso ya lo guarda el motor: `nextDir` es "el último rumbo pedido"
+     * (js/pacman.js), lo apunte quien lo apunte —teclado, cruceta, un dedo
+     * deslizando o una repetición—, y se queda ahí aunque el laberinto no
+     * deje girar. Así que no hace falta llevar la cuenta aparte, ni mandar
+     * nada nuevo por red, ni apuntar un dato más en las repeticiones: sale
+     * gratis y sale igual en todas las pantallas.
+     *
+     * De propina, al aterrizar Pac-Man sigue solo en esa dirección si el
+     * pasillo lo permite, porque el rumbo pedido ya era ese. */
+    dirFlash: function (p) {
+      var d = (p.nextDir >= 0 && p.nextDir <= 3) ? p.nextDir : p.dir;
+      return (d >= 0 && d <= 3) ? d : CFG.DIR.LEFT;
+    },
+
+    /* Casilla de aterrizaje: la más lejana de las FLASH_TILES en esa
+     * dirección que sea pisable. Si ninguna lo es (contra el marco del
+     * laberinto, por ejemplo), devuelve null y la habilidad ni sale ni se
+     * gasta. */
     destino: function (G, idx) {
       var p = G.pacs[idx];
       if (!p) return null;
-      var v = CFG.DIR_V[p.dir];
+      var dir = this.dirFlash(p);
+      var v = CFG.DIR_V[dir];
       if (!v) return null;
       var cx = p.tileX(), cy = p.tileY();
       var elegido = null;
@@ -379,7 +410,7 @@
         var col = CFG.wrapCol(cx + v.x * n);
         var row = cy + v.y * n;
         if (row < 0 || row >= CFG.ROWS) break;      // por arriba y por abajo no hay túnel
-        if (aterrizable(col, row)) elegido = { col: col, row: row, n: n };
+        if (aterrizable(col, row)) elegido = { col: col, row: row, n: n, dir: dir };
       }
       return elegido;
     },
@@ -388,7 +419,7 @@
       var d = this.destino(G, idx);
       if (!d) return false;
       var p = G.pacs[idx];
-      var v = CFG.DIR_V[p.dir];
+      var v = CFG.DIR_V[d.dir];
       var cx = p.tileX(), cy = p.tileY();
       /* Se come lo que haya por el camino, casilla a casilla y en orden:
        * si en medio hay una superpastilla, los fantasmas se asustan ahí
@@ -404,7 +435,7 @@
       /* El frenazo de haber comido no se arrastra al otro lado: el flash es
        * un salto, y salir del salto parado se siente roto. */
       p.pauseTicks = 0;
-      this.marcarFlash(idx);
+      this.marcarFlash(idx, d.dir);
       return true;
     },
 
