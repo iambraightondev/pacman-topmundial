@@ -2,6 +2,43 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · HABILIDADES: cuatro poderes en Q, W, E y R
+
+- Modo nuevo, **aparte del de siempre** (como LABERINTOS): el laberinto de
+  1980 con cuatro poderes, cada uno con su tecla y su recarga.
+  - **Q · MORDISCO** (8 s): te comes de un bocado al fantasma que tengas a
+    una casilla, **mires hacia donde mires**, y Pac-Man se gira hacia él.
+    Le salen dientes.
+  - **W · TURBO** (12 s): x1.5 de velocidad durante 5 s, echando chispas.
+  - **E · FLASH** (10 s): tres casillas hacia delante **atravesando muros**,
+    comiéndote los puntos y superpastillas del camino. Te quedas
+    translúcido al aterrizar.
+  - **R · GRITO** (45 s): los cuatro fantasmas se asustan 4 s sin haber
+    tocado una superpastilla. Es la definitiva: grita, W para alcanzarlos y
+    Q para rematar.
+- Se juega **solo y en party**. En la party lo enciende quien manda y vale
+  para todo el grupo —media party con poderes no sería una partida—, y se ve
+  en la sala antes de empezar, que enterarse al arrancar sería una encerrona.
+- **Aquí se mueve solo con las flechas.** La W es el turbo y una tecla no
+  puede hacer dos cosas. Por eso el modo **no está en dos jugadores en el
+  mismo teclado** (el J2 se quedaría sin controles) ni en PAC-MAN VS.
+  (matar de un toque a un fantasma que lleva una persona no es pelear).
+- **No entra en el top mundial, ni hace récord.** No es solo por la tabla: el
+  récord de cada formato viaja a tu cuenta y de él salen las maestrías, así
+  que una marca hecha a mordiscos daría una insignia que no dice la verdad.
+  **La experiencia y los logros sí cuentan**, que son tuyos.
+- Dos detalles que se notan al jugar: **la Q y la E no se gastan en balde**
+  (sin nadie a tiro, o de cara al borde, no salen y no empiezan a recargar), y
+  **fuera del modo azul cada mordisco vale lo mismo** — la escalera de
+  200-400-800-1600 es de la superpastilla, y encadenarla a golpe de tecla
+  convertía la partida en puntos regalados.
+- Las **repeticiones funcionan igual**: una habilidad es una entrada más, como
+  un giro, así que una partida de este modo se reconstruye clavada y se puede
+  compartir por enlace.
+
+> Sube `CFG.NET.PROTO` a **7**: quien tenga una pestaña vieja abierta no podrá
+> entrar en una party hasta recargar.
+
 ## 2026-08-12 · El reto es de verdad uno al día, y TUS PARTIDAS te sigue
 
 - El **un intento al día** lo decidía tu navegador. Bastaba con jugar el reto

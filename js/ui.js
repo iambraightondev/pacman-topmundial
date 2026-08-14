@@ -305,6 +305,14 @@
         });
       }));
 
+      /* HABILIDADES: el mismo laberinto con cuatro poderes. Va debajo de las
+       * partidas normales porque es un modo aparte, no un ajuste de las de
+       * siempre (igual que LABERINTOS). */
+      main.appendChild(this.makeButton('HABILIDADES', function () {
+        self.resumeAudio();
+        self.showHabPrompt();
+      }));
+
       this.onlineMenuBtn = this.makeButton('JUGAR ONLINE', function () {
         self.resumeAudio();
         self.showOnline();
@@ -350,6 +358,7 @@
         'J1: FLECHAS O WASD',
         'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
         'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
+        'HABILIDADES: SOLO FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
         'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
       ];
       if (this.touchDevice) {
@@ -1067,6 +1076,23 @@
         'ALGUIEN TIENE QUE QUEDARSE DE PAC-MAN';
       room.appendChild(vsNote);
 
+      /* Modo HABILIDADES para toda la party. Solo lo ve y lo toca quien
+       * manda: es una regla de la partida, no un gusto de cada uno, y con
+       * medio grupo con poderes no habría partida que valiera. */
+      this.habRoomBox = document.createElement('div');
+      this.habRoomBtn = this.makeButton('HABILIDADES: NO', function () {
+        self.togglePartyHab();
+      });
+      this.habRoomBtn.classList.add('btn-preset');
+      this.habRoomBox.appendChild(this.habRoomBtn);
+      var habNote = document.createElement('div');
+      habNote.className = 'note';
+      habNote.textContent = 'Q MORDISCO · W TURBO · E FLASH · R GRITO. ' +
+        'AQUÍ SE MUEVE SOLO CON LAS FLECHAS, Y ESTAS PARTIDAS NO ENTRAN EN ' +
+        'EL TOP MUNDIAL';
+      this.habRoomBox.appendChild(habNote);
+      room.appendChild(this.habRoomBox);
+
       this.lobbyStatusEl = document.createElement('div');
       this.lobbyStatusEl.className = 'lobby-status';
       room.appendChild(this.lobbyStatusEl);
@@ -1173,8 +1199,8 @@
       };
       P.onerror = function (msg) { self.partyError(msg); };
       P.oninvite = function (from, code) { self.askInvite(from, code); };
-      P.onstart = function (order, idx, cfg, role) {
-        self.startPartyGame(order, idx, cfg, role);
+      P.onstart = function (order, idx, cfg, role, hab) {
+        self.startPartyGame(order, idx, cfg, role, hab);
       };
       P.listen();
     },
@@ -1208,6 +1234,13 @@
     partyStart: function () {
       var P = window.PM.Party;
       if (P) P.startGame();
+    },
+
+    /* Modo HABILIDADES de la party: lo enciende y lo apaga quien manda */
+    togglePartyHab: function () {
+      var P = window.PM.Party;
+      if (!P || !P.isLeader()) return;
+      P.setHab(!P.habPick);      // se reparte a la sala y vuelve por onchange
     },
 
     /* PAC-MAN VS.: pedir un fantasma (o volver a Pac-Man con -1) */
@@ -1281,6 +1314,15 @@
       }
 
       var lider = P.isLeader();
+      /* HABILIDADES: el interruptor es solo del líder, pero el estado lo ve
+       * todo el mundo — entrar a una party y descubrir los poderes al empezar
+       * la partida sería una encerrona. */
+      if (this.habRoomBox) {
+        this.habRoomBtn.disabled = !lider;
+        this.habRoomBtn.classList.toggle('active', !!P.habPick);
+        this.habRoomBtn.childNodes[0].nodeValue =
+          'HABILIDADES: ' + (P.habPick ? 'SÍ' : 'NO');
+      }
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
       this.startPartyBtn.textContent = 'EMPEZAR PARTIDA (' + P.count() + ')';
@@ -1369,7 +1411,7 @@
       });
     },
 
-    startPartyGame: function (order, idx, cfg, role) {
+    startPartyGame: function (order, idx, cfg, role, hab) {
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
@@ -1383,7 +1425,8 @@
       window.PM.Game.newGame({
         players: order.length, net: role, localIdx: idx,
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
-        colors: colors, names: names, skins: skins, ghosts: ghosts
+        colors: colors, names: names, skins: skins, ghosts: ghosts,
+        hab: !!hab            // lo enciende quien manda, y vale para todos
       });
     },
 
@@ -2553,7 +2596,8 @@
         window.PM.Game.newGame({
           players: n, net: 'spec', localIdx: -1,
           cfg: this.sanitizeNetCfg(d.cfg),
-          colors: colors, names: names, skins: skins, ghosts: ghosts
+          colors: colors, names: names, skins: skins, ghosts: ghosts,
+          hab: !!(d && d.hab)   // el mirón tiene que ver dientes y chispas
         });
       } else if (name === 'full') {
         if (d && d.to === window.PM.Net.sid) this.specFail('LA PARTIDA NO ADMITE MIRONES');
@@ -3783,6 +3827,86 @@
     buildDpads: function () {
       this.dpad1 = this.makeDpad('dpad1', 0);
       this.dpad2 = this.makeDpad('dpad2', 1);
+      this.buildHabBar();
+    },
+
+    /* ------------------------------------------------------
+     * Modo HABILIDADES: la barra de Q/W/E/R
+     *
+     * Va en el DOM y no en el lienzo porque la fila de abajo del lienzo ya
+     * está llena (vidas, cronómetro y frutas) y porque así el mismo trozo
+     * sirve de dos cosas: enseña la recarga en el ordenador y se pulsa con
+     * el dedo en el móvil. Ver js/habilidades.js.
+     * ------------------------------------------------------ */
+    buildHabBar: function () {
+      var self = this;
+      var bar = document.createElement('div');
+      bar.id = 'habBar';
+      bar.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+      this.habBtns = [];
+      CFG.HAB.LIST.forEach(function (h, k) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'hab-b';
+        b.setAttribute('aria-label', h.name);
+        /* el relleno es un hijo con altura variable: sube como un vaso que
+         * se llena, y a tope significa "lista" */
+        var fill = document.createElement('span');
+        fill.className = 'hab-fill';
+        b.appendChild(fill);
+        var lab = document.createElement('span');
+        lab.className = 'hab-key';
+        lab.textContent = h.key;
+        b.appendChild(lab);
+        var nom = document.createElement('small');
+        nom.className = 'hab-name';
+        nom.textContent = h.name;
+        b.appendChild(nom);
+        b.addEventListener('pointerdown', function (ev) {
+          ev.preventDefault();
+          self.resumeAudio();
+          var g = window.PM.Game;
+          if (!g.hab || !window.PM.Hab) return;
+          window.PM.Hab.pulsar(g, g.localIdx, k);
+        });
+        bar.appendChild(b);
+        self.habBtns.push({ b: b, fill: fill, ultimo: -1, listo: null });
+      });
+      document.body.appendChild(bar);
+      this.habBar = bar;
+    },
+
+    /* Refresco por fotograma (lo llama Game.render). Solo toca el DOM cuando
+     * el número cambia de verdad: son 60 vueltas por segundo y escribir
+     * estilos a ciegas en cada una se nota en un móvil modesto. */
+    refreshHabBar: function () {
+      var g = window.PM.Game;
+      var A = window.PM.Hab;
+      if (!this.habBar || !this.habBtns) return;
+      var ver = !!(g.hab && A && !g.isSpec() && g.inGame() &&
+                   g.state !== 'GAME_OVER' && !this.promptOpen);
+      this.habBar.classList.toggle('on', ver);
+      if (!ver) return;
+      var idx = g.localIdx;
+      for (var k = 0; k < this.habBtns.length; k++) {
+        var o = this.habBtns[k];
+        var pct = Math.round(A.carga(idx, k) * 100);
+        if (pct !== o.ultimo) {
+          o.fill.style.height = pct + '%';
+          o.ultimo = pct;
+        }
+        var listo = (pct >= 100);
+        if (listo !== o.listo) {
+          o.b.classList.toggle('listo', listo);
+          o.listo = listo;
+        }
+      }
+      // el turbo activo se marca aparte: recargando y encendida son cosas
+      // distintas y en la misma casilla se confundirían
+      var st = A.estado(idx);
+      if (st && this.habBtns[1]) {
+        this.habBtns[1].b.classList.toggle('activa', st.turbo > 0);
+      }
     },
 
     makeDpad: function (id, playerIdx) {
@@ -3835,6 +3959,10 @@
         this.toggleEmoteBar(false);
         this.closeChat();
       }
+      /* La barra de habilidades se refresca por fotograma desde Game.render,
+       * pero ese camino solo existe DENTRO del modo: al volver al menú hay
+       * que apagarla desde aquí o se quedaría colgada en la pantalla. */
+      if (this.habBar && !(playable && g.hab)) this.habBar.classList.remove('on');
       if (!this.dpad1) return;
       var show = playable && this.touchDevice;
       var dual = show && g.playerCount === 2 && !g.netRole;
@@ -3984,6 +4112,45 @@
       this.promptTag = 'reto';
     },
 
+    /* ------------------------------------------------------
+     * Modo HABILIDADES: reglas y salida a jugar
+     * ------------------------------------------------------ */
+    showHabPrompt: function () {
+      var self = this;
+      var H = CFG.HAB;
+      this.showPrompt({
+        title: 'HABILIDADES',
+        color: '#ff66cc',
+        lines: [
+          'EL LABERINTO DE SIEMPRE CON CUATRO PODERES. CADA UNO CON SU TECLA Y SU RECARGA',
+          'Q MORDISCO · TE COMES AL FANTASMA QUE TENGAS PEGADO, MIRES HACIA DONDE MIRES (' +
+            (H.BITE_CD / 60) + 'S)',
+          'W TURBO · X1.5 DE VELOCIDAD DURANTE ' + (H.TURBO_TICKS / 60) +
+            'S (' + (H.TURBO_CD / 60) + 'S)',
+          'E FLASH · ' + H.FLASH_TILES +
+            ' CASILLAS HACIA DELANTE ATRAVESANDO MUROS, COMIENDO LO QUE PILLES (' +
+            (H.FLASH_CD / 60) + 'S)',
+          'R GRITO · LOS CUATRO FANTASMAS SE ASUSTAN ' + H.SHOUT_SECS +
+            'S SIN SUPERPASTILLA (' + (H.SHOUT_CD / 60) + 'S)',
+          'AQUÍ SE MUEVE SOLO CON LAS FLECHAS: LA W ES EL TURBO',
+          'ES UN MODO APARTE, ASÍ QUE ESTAS PARTIDAS NO ENTRAN EN EL TOP MUNDIAL NI HACEN RÉCORD — PERO SÍ SUMAN EXPERIENCIA Y LOGROS',
+          'EN PARTY LO JUEGA TODO EL GRUPO: LO ENCIENDE QUIEN MANDA, EN EL PANEL DE ONLINE'
+        ],
+        buttons: [
+          { label: 'JUGAR SOLO', primary: true, keys: ['Enter'], hint: 'ENTER',
+            onClick: function () {
+              self.resumeAudio();
+              self.hidePrompt();
+              self.hideAll();
+              window.PM.Game.newGame({ players: 1, hab: true });
+            } },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+      this.promptTag = 'hab';
+    },
+
     playReto: function () {
       var R = window.PM.Reto;
       if (!R) return;
@@ -4060,6 +4227,12 @@
     /* ------------------------------------------------------
      * Entrada: teclado y gestos táctiles
      * J1: flechas (y WASD en 1 jugador) · J2: WASD
+     *
+     * En el modo HABILIDADES, WASD DEJA DE MOVER: la W es el turbo, y no se
+     * puede tener la misma tecla haciendo dos cosas. Se avisa en la portada
+     * y en el rótulo del propio modo. Por eso ese modo no se ofrece en dos
+     * jugadores en el mismo teclado, que es donde el J2 se quedaría sin
+     * manera de moverse.
      * ------------------------------------------------------ */
     bindKeyboard: function () {
       var self = this;
@@ -4071,6 +4244,7 @@
         'w': D.UP, 'a': D.LEFT, 's': D.DOWN, 'd': D.RIGHT,
         'W': D.UP, 'A': D.LEFT, 'S': D.DOWN, 'D': D.RIGHT
       };
+      var HAB_KEYS = { q: 0, w: 1, e: 2, r: 3, Q: 0, W: 1, E: 2, R: 3 };
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
         if (self.chatOpen) return;       // escribiendo: lo lleva el propio campo
@@ -4113,8 +4287,22 @@
           return;
         }
 
+        /* HABILIDADES: Q/W/E/R. Va ANTES que WASD a propósito, porque en este
+         * modo la W es el turbo y no el "arriba" de siempre. */
+        if (g.hab && (ev.key in HAB_KEYS)) {
+          if (canControl && window.PM.Hab) {
+            self.resumeAudio();
+            window.PM.Hab.pulsar(g, g.localIdx, HAB_KEYS[ev.key]);
+            ev.preventDefault();
+          }
+          return;
+        }
+
         var isArrow = (ev.key in ARROWS);
-        var isWasd = (ev.key in WASD);
+        /* En HABILIDADES se mueve SOLO con flechas. Dejar la A, la S y la D
+         * moviendo mientras la W hace otra cosa sería el peor de los dos
+         * mundos: medio mando que a veces responde y a veces no. */
+        var isWasd = !g.hab && (ev.key in WASD);
         if (isArrow || isWasd) {
           if (canControl) {
             self.resumeAudio();

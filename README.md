@@ -31,6 +31,8 @@ red.
 - **Los menús se manejan con las flechas**: mueven el foco y `Enter` acepta;
   en los deslizadores, izquierda y derecha ajustan el valor.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
+- **Modo HABILIDADES**: solo flechas para moverte, y `Q` `W` `E` `R` para los
+  cuatro poderes (en el móvil, los cuatro botones de abajo a la derecha).
 - **Ver una repetición**: `P`/`Esc` la pausa (con velocidad, reiniciar y
   salir), y arriba hay una barra con los mismos controles a mano.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
@@ -63,6 +65,20 @@ red.
   el enlace directo); los demás se unen. El líder fija la dificultad y decide
   cuándo empezar; cada jugador lleva su propio color. Con 3 y 4, los dos
   jugadores extra salen **arriba** del laberinto, no a tu lado.
+- **HABILIDADES** — el mismo laberinto con cuatro poderes, cada uno con su
+  tecla y su recarga. En solo y en party (en la party lo enciende quien
+  manda y vale para todo el grupo).
+  - **Q · MORDISCO** (8 s): te comes al fantasma que tengas a una casilla,
+    mires hacia donde mires, y te giras hacia él.
+  - **W · TURBO** (12 s): x1.5 de velocidad durante 5 s.
+  - **E · FLASH** (10 s): tres casillas hacia delante **atravesando muros**,
+    comiéndote lo que haya por el camino.
+  - **R · GRITO** (45 s): los cuatro fantasmas se asustan 4 s sin
+    superpastilla.
+
+  Aquí **se mueve solo con las flechas** (la W es el turbo). Es un modo
+  aparte: estas partidas **no entran en el top mundial ni hacen récord**,
+  pero sí suman experiencia y logros.
 
 ### Partys, amigos y espectar
 
@@ -423,6 +439,7 @@ js/temporadas.js  Temporadas del top mundial (mes natural)
 js/reto.js        Reto diario (la misma partida para todos)
 js/mazes.js       Laberintos alternativos (modo aparte)
 js/versus.js      PAC-MAN VS.: el fantasma que lleva un jugador
+js/habilidades.js modo HABILIDADES: los cuatro poderes de Q, W, E y R
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
 js/ui.js          Menús, opciones, panel de party, paneles y controles

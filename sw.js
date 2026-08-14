@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v22';
+var VERSION = 'pm-v23';
 var SHELL = [
   './',
   './index.html',
@@ -37,6 +37,7 @@ var SHELL = [
   './js/achievements.js',
   './js/account.js',
   './js/versus.js',
+  './js/habilidades.js',
   './js/game.js',
   './js/replay.js',
   './js/ui.js',

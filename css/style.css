@@ -438,6 +438,95 @@ body {
 .dpad-right { grid-column: 3; grid-row: 2; }
 .dpad-down  { grid-column: 2; grid-row: 3; }
 
+/* ------------------------------------------------------------
+ * Modo HABILIDADES: la barra de Q/W/E/R
+ *
+ * Abajo a la derecha, lejos de la cruceta (que va centrada), para que en el
+ * móvil quede un pulgar para cada cosa. En el ordenador es solo un marcador:
+ * enseña qué tienes cargado sin quitar sitio al laberinto.
+ * ------------------------------------------------------------ */
+#habBar {
+  position: fixed;
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 5;
+  display: none;
+  gap: 5px;
+}
+
+#habBar.on { display: flex; }
+
+.hab-b {
+  position: relative;
+  overflow: hidden;
+  width: 46px;
+  height: 46px;
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* El relleno sube desde abajo según se recarga: se lee de un vistazo,
+   sin tener que contar segundos en la cabeza. */
+.hab-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: rgba(255, 102, 204, 0.22);
+  pointer-events: none;
+}
+
+.hab-key {
+  position: relative;
+  display: block;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  padding-top: 9px;
+}
+
+.hab-name {
+  position: relative;
+  display: block;
+  font-size: 7px;
+  letter-spacing: 0.5px;
+  padding-top: 4px;
+  opacity: 0.75;
+}
+
+/* Cargada: se enciende entera. Es el único aviso de "ya puedes". */
+.hab-b.listo {
+  color: #ff66cc;
+  border-color: rgba(255, 102, 204, 0.9);
+}
+
+.hab-b.listo:active { background: rgba(255, 102, 204, 0.35); }
+
+/* Encendida (el turbo mientras dura): distinta de "cargada", que si no no
+   hay forma de saber si te quedan tres segundos o ya se apagó. */
+.hab-b.activa {
+  color: #000;
+  background: #ff66cc;
+  border-color: #ff66cc;
+}
+
+.hab-b.activa .hab-fill { background: rgba(0, 0, 0, 0.2); }
+
+@media (max-width: 480px) {
+  .hab-b { width: 40px; height: 40px; }
+  .hab-key { font-size: 15px; padding-top: 7px; }
+  .hab-name { display: none; }
+}
+
 /* Barra de botones en partida: rendirse (siempre) y pausa (solo táctil) */
 #gameBtns {
   position: absolute;

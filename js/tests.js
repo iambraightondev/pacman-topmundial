@@ -3497,6 +3497,330 @@
   });
 
   // ---------------------------------------------------------------
+  // Modo HABILIDADES (js/habilidades.js)
+  // ---------------------------------------------------------------
+  var HB = window.PM.Hab;
+  var HC = CFG.HAB;
+
+  /* Partida de habilidades a un jugador, con Pac-Man donde se le diga.
+   * `col`/`fila` en casillas; por defecto se queda donde empieza. */
+  function partidaHab(col, fila, dir) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1, hab: true });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    G.pacs[0].safeTicks = 999999;
+    if (col !== undefined) {
+      G.pacs[0].x = col * CFG.TILE + CFG.TILE / 2;
+      G.pacs[0].y = fila * CFG.TILE + CFG.TILE / 2;
+    }
+    if (dir !== undefined) {
+      G.pacs[0].dir = dir;
+      G.pacs[0].nextDir = dir;
+    }
+    return G;
+  }
+
+  /* Deja un fantasma quieto en una casilla, listo para que lo muerdan */
+  function fantasmaEn(gi, col, fila) {
+    var g = G.ghosts[gi];
+    g.mode = 'normal';
+    g.frightened = false;
+    g.x = col * CFG.TILE + CFG.TILE / 2;
+    g.y = fila * CFG.TILE + CFG.TILE / 2;
+    return g;
+  }
+
+  test('fuera del modo no hay habilidades que valgan', function () {
+    partida(1);
+    ok(!G.hab, 'una partida normal no es de habilidades');
+    eq(HB.estado(0), null, 'no hay estado que consultar');
+    eq(HB.pulsar(G, 0, HB.TURBO), false, 'la tecla no hace nada');
+  });
+
+  test('las cuatro empiezan cargadas', function () {
+    partidaHab();
+    for (var k = 0; k < 4; k++) {
+      ok(HB.lista(0, k), 'la ' + HC.LIST[k].key + ' está lista al empezar');
+    }
+  });
+
+  test('Q se come al fantasma de al lado, mire donde mire', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    // el fantasma queda a la DERECHA: justo hacia donde NO se está mirando
+    var g = fantasmaEn(1, 14, 20);
+    var antes = G.score;
+    ok(HB.pulsar(G, 0, HB.MORDISCO), 'el mordisco entra');
+    eq(g.mode, 'eyes', 'el fantasma se va hecho ojos');
+    ok(G.score > antes, 'da puntos');
+    eq(G.pacs[0].dir, CFG.DIR.RIGHT, 'Pac-Man se gira hacia lo que mordió');
+    ok(!HB.lista(0, HB.MORDISCO), 'y se pone a recargar');
+  });
+
+  test('Q no llega a dos casillas, y entonces no se gasta', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    fantasmaEn(1, 16, 20);
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'no hay a quién morder');
+    ok(HB.lista(0, HB.MORDISCO), 'la habilidad sigue cargada');
+  });
+
+  test('Q no muerde a los que están en casa ni a los que ya son ojos', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    var g = fantasmaEn(1, 13, 20);
+    g.mode = 'eyes';
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'a unos ojos no se les muerde');
+    g.mode = 'house';
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'ni al que está en la casa');
+  });
+
+  test('sin modo azul cada mordisco vale lo mismo', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    fantasmaEn(1, 14, 20);
+    var base = G.score;
+    HB.pulsar(G, 0, HB.MORDISCO);
+    var primero = G.score - base;
+    // se recarga a mano y se muerde otra vez: no debe escalar a 400
+    HB.estado(0).cd[HB.MORDISCO] = 0;
+    G.eatFreezeTicks = 0;
+    base = G.score;
+    fantasmaEn(2, 14, 20);
+    HB.pulsar(G, 0, HB.MORDISCO);
+    eq(G.score - base, primero, 'el segundo vale igual que el primero');
+  });
+
+  test('W corre más y se apaga solo', function () {
+    partidaHab();
+    var normal = G.pacSpeedPx(G.pacs[0]);
+    ok(HB.pulsar(G, 0, HB.TURBO), 'el turbo entra');
+    var rapido = G.pacSpeedPx(G.pacs[0]);
+    ok(rapido > normal * 1.4, 'corre bastante más: ' + rapido + ' vs ' + normal);
+    ticks(HC.TURBO_TICKS + 2);
+    eq(HB.conTurbo(0), false, 'se apaga al cabo de los 5 s');
+    eq(G.pacSpeedPx(G.pacs[0]), normal, 'y vuelve a la velocidad de siempre');
+  });
+
+  test('E salta tres casillas atravesando la pared', function () {
+    /* Fila 20, columna 6: pared a la derecha en el laberinto clásico. Se
+     * comprueba contra el propio laberinto para no atarse a una casilla
+     * concreta si algún día se toca. */
+    partidaHab();
+    var p = G.pacs[0];
+    var col = null, fila = 20, c;
+    for (c = 1; c < CFG.COLS - HC.FLASH_TILES - 1; c++) {
+      if (CFG.isOpen(c, fila, false) && !CFG.isOpen(c + 1, fila, false) &&
+          CFG.isOpen(c + HC.FLASH_TILES, fila, false)) { col = c; break; }
+    }
+    ok(col !== null, 'hay una pared que saltar en la fila ' + fila);
+    p.x = col * CFG.TILE + CFG.TILE / 2;
+    p.y = fila * CFG.TILE + CFG.TILE / 2;
+    p.dir = CFG.DIR.RIGHT;
+    p.nextDir = CFG.DIR.RIGHT;
+    ok(HB.pulsar(G, 0, HB.FLASH), 'el flash entra');
+    eq(p.tileX(), col + HC.FLASH_TILES, 'aterriza tres casillas más allá');
+    eq(p.tileY(), fila, 'sin cambiar de fila');
+  });
+
+  test('E se come lo que pilla por el camino', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    // un pasillo recto y con pastillas: la fila de arriba del laberinto
+    var fila = 1, col = 1;
+    p.x = col * CFG.TILE + CFG.TILE / 2;
+    p.y = fila * CFG.TILE + CFG.TILE / 2;
+    p.dir = CFG.DIR.RIGHT;
+    p.nextDir = CFG.DIR.RIGHT;
+    var quedaban = G.dotsLeft;
+    ok(HB.pulsar(G, 0, HB.FLASH), 'el flash entra');
+    ok(G.dotsLeft < quedaban, 'se comió lo que había: ' +
+       (quedaban - G.dotsLeft) + ' pastillas');
+  });
+
+  test('E no aterriza dentro de la casa de los fantasmas', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    var C = CFG.HOUSE;
+    // justo encima de la puerta, mirando hacia abajo
+    p.x = C.doorCols[0] * CFG.TILE + CFG.TILE / 2;
+    p.y = (C.doorRow - 1) * CFG.TILE + CFG.TILE / 2;
+    p.dir = CFG.DIR.DOWN;
+    p.nextDir = CFG.DIR.DOWN;
+    HB.pulsar(G, 0, HB.FLASH);
+    var dentro = (p.tileY() >= C.top && p.tileY() <= C.bottom &&
+                  p.tileX() >= C.left && p.tileX() <= C.right);
+    ok(!dentro, 'no se queda encerrado en la casa');
+  });
+
+  test('E contra el borde no se gasta', function () {
+    partidaHab();
+    var p = G.pacs[0];
+    p.x = 13 * CFG.TILE + CFG.TILE / 2;
+    p.y = 1 * CFG.TILE + CFG.TILE / 2;
+    p.dir = CFG.DIR.UP;          // arriba solo hay marco: no hay dónde caer
+    p.nextDir = CFG.DIR.UP;
+    eq(HB.pulsar(G, 0, HB.FLASH), false, 'no sale');
+    ok(HB.lista(0, HB.FLASH), 'y sigue cargada');
+  });
+
+  test('R asusta a los cuatro sin superpastilla', function () {
+    partidaHab();
+    for (var i = 0; i < 4; i++) {
+      G.ghosts[i].mode = 'normal';
+      G.ghosts[i].frightened = false;
+    }
+    var pastillas = G.dotsLeft;
+    ok(HB.pulsar(G, 0, HB.GRITO), 'el grito entra');
+    eq(G.frightTicks, HC.SHOUT_SECS * 60, 'dura lo suyo, no lo del nivel');
+    for (i = 0; i < 4; i++) ok(G.ghosts[i].frightened, 'el fantasma ' + i + ' se asusta');
+    eq(G.dotsLeft, pastillas, 'sin gastar ninguna superpastilla');
+  });
+
+  test('el grito dura lo mismo en el nivel 18 que en el 1', function () {
+    partidaHab();
+    G.level = 18;
+    G.speedRow = CFG.speedRow(18);
+    HB.pulsar(G, 0, HB.GRITO);
+    eq(G.frightTicks, HC.SHOUT_SECS * 60, 'los 4 s no dependen del nivel');
+  });
+
+  test('la recarga baja jugando y no en pausa', function () {
+    partidaHab();
+    HB.pulsar(G, 0, HB.TURBO);
+    var tras = HB.estado(0).cd[HB.TURBO];
+    ticks(60);
+    var jugando = HB.estado(0).cd[HB.TURBO];
+    eq(jugando, tras - 60, 'baja un segundo por segundo');
+    G.paused = true;
+    ticks(60);
+    eq(HB.estado(0).cd[HB.TURBO], jugando, 'en pausa no baja');
+    G.paused = false;
+  });
+
+  test('recargando, la tecla no hace nada', function () {
+    partidaHab();
+    HB.pulsar(G, 0, HB.TURBO);
+    HB.estado(0).turbo = 0;                 // se apaga el efecto, no la recarga
+    eq(HB.pulsar(G, 0, HB.TURBO), false, 'la segunda no entra');
+  });
+
+  test('morir se lleva el turbo pero no la recarga', function () {
+    partidaHab();
+    HB.pulsar(G, 0, HB.TURBO);
+    ok(HB.conTurbo(0), 'con turbo');
+    var cd = HB.estado(0).cd[HB.TURBO];
+    G.respawn();
+    eq(HB.conTurbo(0), false, 'el turbo se corta al morir');
+    eq(HB.estado(0).cd[HB.TURBO], cd, 'la recarga sigue donde estaba');
+  });
+
+  test('una partida de habilidades no toca el top mundial ni el récord', function () {
+    partidaHab();
+    var antes = G.recordFor(1);
+    G.score = antes + 100000;
+    G.highScore = G.score;
+    G.persistHighScore();
+    eq(G.recordFor(1), antes, 'el récord de 1 jugador no se mueve');
+    eq(G.canTimeRecord(), false, 'ni el récord de velocidad del nivel 1');
+  });
+
+  test('la repetición guarda y devuelve las habilidades', function () {
+    var R = window.PM.Replay;
+    var rep = {
+      v: R.V, modo: 'hab', semilla: null, nivel: 1, jugadores: 1,
+      ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+      nombres: ['YO'], fecha: new Date().toISOString(),
+      entradas: [[10, 0, CFG.DIR.LEFT], [30, 0, 4], [45, 0, 7]],
+      final: { puntos: 1200, nivel: 1, fantasmas: 2, tiempoMs: 9000 }
+    };
+    var texto = R.serializar(rep);
+    ok(texto, 'se serializa');
+    var leida = R.leer(texto);
+    ok(leida, 'y se vuelve a leer');
+    eq(leida.modo, 'hab', 'con su modo');
+    eq(leida.entradas.length, 3, 'con las tres entradas');
+    eq(leida.entradas[1][2], 4, 'la Q sigue siendo la Q');
+    eq(leida.entradas[2][2], 7, 'y la R la R');
+  });
+
+  /* La de verdad: una partida entera del modo, con las cuatro teclas
+   * pulsadas por el camino, tiene que salir CLAVADA al reproducirla. Es lo
+   * que dice que una habilidad es una entrada más y no un capricho que
+   * rompe el determinismo del motor. */
+  test('una partida de habilidades se reproduce exacta', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      // [tick, tipo, valor] — 'd' giro, 'h' habilidad
+      var guion = [[5, 'd', 1], [40, 'h', 1], [70, 'd', 0], [120, 'h', 2],
+                   [160, 'd', 3], [230, 'h', 0], [300, 'd', 2], [380, 'h', 3],
+                   [450, 'd', 1], [520, 'h', 1], [600, 'd', 0], [700, 'h', 2],
+                   [800, 'd', 3], [900, 'h', 0], [1000, 'd', 2], [1150, 'd', 1],
+                   [1300, 'h', 1], [1400, 'd', 0]];
+      var TOTAL = 1500;
+
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              if (guion[k][1] === 'h') HB.pulsar(G, 0, guion[k][2]);
+              else G.setPacDir(0, guion[k][2]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+
+      G.newGame({ players: 1, hab: true });
+      var rep = R.enCurso();
+      ok(rep, 'la partida se graba sola');
+      eq(rep.modo, 'hab', 'y se graba como partida de habilidades');
+      corre(true);
+      var pts = G.score, niv = G.level, quedan = G.dotsLeft, vidas = G.lives;
+      ok(pts > 0, 'la partida grabada hizo puntos');
+      var poderes = rep.entradas.filter(function (e) { return e[2] >= 4; }).length;
+      ok(poderes > 0, 'quedaron habilidades apuntadas: ' + poderes);
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: niv, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto y vuelve');
+      eq(leida.modo, 'hab', 'con su modo intacto');
+      ok(R.ver(leida), 'la repetición arranca');
+      ok(G.hab, 'y arranca EN el modo habilidades');
+      corre(false);
+      eq(G.score, pts, 'LA PUNTUACIÓN NO CUADRA: el determinismo está roto');
+      eq(G.level, niv, 'el nivel no cuadra');
+      eq(G.dotsLeft, quedan, 'las pastillas comidas no cuadran');
+      eq(G.lives, vidas, 'las vidas no cuadran');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('una repetición normal no admite entradas de habilidad', function () {
+    var R = window.PM.Replay;
+    var rep = {
+      v: R.V, modo: 'solo', semilla: null, nivel: 1, jugadores: 1,
+      ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+      nombres: ['YO'], fecha: new Date().toISOString(),
+      entradas: [[10, 0, 5]],
+      final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 900 }
+    };
+    eq(R.serializar(rep), '', 'se rechaza');
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

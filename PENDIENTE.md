@@ -7,7 +7,40 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **12 de agosto de 2026**.
+Última puesta al día: **14 de agosto de 2026**.
+
+---
+
+## Lo del 14 de agosto: el modo HABILIDADES
+
+Cuatro poderes en Q, W, E y R sobre el laberinto de siempre. Todo lo suyo
+vive en `js/habilidades.js`; en el resto del juego solo quedan enganches.
+El detalle está en [`SPEC.md`](SPEC.md) ("Modo HABILIDADES") y lo que se
+juega, en [`CHANGELOG.md`](CHANGELOG.md).
+
+**No necesita nada del servidor**: ni tabla, ni migración, ni Edge Function.
+Se despliega subiendo los archivos y ya.
+
+Tres decisiones que conviene no volver a discutir desde cero:
+
+- **Fuera del top mundial, y también fuera del récord local.** Lo primero
+  era evidente; lo segundo no tanto, y es lo que de verdad importaba: el
+  récord de cada formato viaja a `perfiles.recordN` y de ahí salen las
+  maestrías. Sin ese freno, una partida a mordiscos regalaba una insignia
+  que dice otra cosa. Experiencia y logros sí cuentan.
+- **Solo flechas para moverse.** La W era el "arriba" del J2 y de paso un
+  atajo del J1. No hay tecla que haga dos cosas, así que en este modo WASD
+  se apaga entero (dejar la A, la S y la D moviendo sería medio mando). De
+  ahí sale que el modo **no esté** en dos jugadores en el mismo teclado.
+- **Tampoco en PAC-MAN VS.** Morder de un toque a un fantasma que lleva una
+  persona, sin que pueda hacer nada, no es una pelea.
+
+> **Ojo con `persistHighScore()`**: se frenó para HABILIDADES, pero **las
+> partidas de LABERINTOS sí siguen haciendo récord local** (y por tanto
+> tocan `perfiles.recordN` y las maestrías), aunque el propio panel diga que
+> ese modo no entra en el top mundial. Es de antes de esto y se dejó como
+> estaba para no cambiar de callado un comportamiento que nadie pidió, pero
+> huele a lo mismo que se acaba de arreglar aquí. Si se toca, es una línea.
 
 ---
 
@@ -37,7 +70,7 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v22` |
+| Juego (Vercel) | service worker `pm-v23` — **el modo HABILIDADES está sin desplegar** |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
 | Vistas `ranking_top` y `ranking_temporada` | rehechas |
@@ -46,9 +79,10 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 Dos avisos operativos:
 
-- **`CFG.NET.PROTO` está en 6.** Quien tenga una pestaña vieja abierta no
-  podrá entrar en una party hasta recargar. Es lo normal al cambiar la forma
-  de lo que viaja por red, pero conviene saberlo si alguien se queja.
+- **`CFG.NET.PROTO` está en 7** (subió el 14 de agosto con HABILIDADES).
+  Quien tenga una pestaña vieja abierta no podrá entrar en una party hasta
+  recargar. Es lo normal al cambiar la forma de lo que viaja por red, pero
+  conviene saberlo si alguien se queja.
 - **Hay un token de Supabase que revocar, y sigue vivo.** En la sesión del 6
   de agosto se pegó un *personal access token* (`sbp_…`) en el chat para
   aplicar las migraciones. Da acceso a **toda la cuenta**, no a un proyecto, y

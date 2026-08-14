@@ -30,8 +30,13 @@
 
   /* ---------- utilidades del formato ---------- */
   var SEP = '~';                       // separador de campos (fuera del juego de caracteres de los nombres)
-  var MODOS = { solo: 's', duo: 'd', reto: 'r' };
-  var MODOS_INV = { s: 'solo', d: 'duo', r: 'reto' };
+  /* 'hab' es el modo HABILIDADES, que solo se juega en solo (en party las
+   * repeticiones son las de red). Un texto con 'h' abierto en una versión
+   * vieja del juego no cuela como partida normal: MODOS_INV no lo conoce,
+   * leer() devuelve null y sale el aviso de repetición rota, que es
+   * justamente lo que tiene que pasar. */
+  var MODOS = { solo: 's', duo: 'd', reto: 'r', hab: 'h' };
+  var MODOS_INV = { s: 'solo', d: 'duo', r: 'reto', h: 'hab' };
 
   function b36(n) { return Math.round(n).toString(36); }
   function d36(s) { return parseInt(s, 36); }
@@ -52,12 +57,28 @@
    * el anterior (casi siempre un número pequeño) en base 36, más una letra
    * G..V que empaqueta jugador y dirección en un solo carácter. Si el mismo
    * giro se repite con la misma separación, se resume con *veces (RLE). */
+  /* Una entrada es [tick, jugador, qué]. En `qué`, 0..3 es un giro y 4..7 es
+   * una habilidad del modo HABILIDADES (Q, W, E y R por ese orden).
+   *
+   * Los giros se empaquetan en las letras G..V, que son las 16 parejas de
+   * jugador y dirección. Para las habilidades no quedan 16 letras libres, y
+   * no hacen falta: el modo solo se graba en SOLO (en party manda el formato
+   * de red), así que el jugador es siempre el 0 y con cuatro letras basta.
+   * Son A..D, que ningún texto anterior podía contener. */
+  function codHab(e) {
+    return String.fromCharCode(65 + ((e[2] - 4) & 3));
+  }
+
+  function esHab(e) { return e[2] >= 4; }
+
   function codEntradas(arr) {
     var out = '', prev = 0, i = 0;
     while (i < arr.length) {
       var e = arr[i];
       var delta = e[0] - prev;
-      var code = String.fromCharCode(71 + ((e[1] & 3) << 2) + (e[2] & 3));
+      var code = esHab(e)
+        ? codHab(e)
+        : String.fromCharCode(71 + ((e[1] & 3) << 2) + (e[2] & 3));
       var n = 1;
       while (i + n < arr.length) {
         var f = arr[i + n];
@@ -77,20 +98,24 @@
   function decEntradas(s) {
     var out = [];
     if (s === '') return out;
-    var re = /([0-9a-z]+)([G-V])(?:\*([0-9a-z]+))?/g;
+    var re = /([0-9a-z]+)([A-DG-V])(?:\*([0-9a-z]+))?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
       pos = re.lastIndex;
       var delta = parseInt(m[1], 36);
-      var c = m[2].charCodeAt(0) - 71;
+      var letra = m[2];
       var veces = m[3] ? parseInt(m[3], 36) : 1;
       if (!isFinite(delta) || delta < 0) return null;
       if (!(veces >= 1) || veces > CFG.REPLAY_MAX_ENTRADAS) return null;
       if (out.length + veces > CFG.REPLAY_MAX_ENTRADAS) return null;
+      // A..D: habilidad del jugador 0 (ver codHab). G..V: giro.
+      var esPoder = (letra >= 'A' && letra <= 'D');
+      var c = letra.charCodeAt(0) - (esPoder ? 65 : 71);
       for (var i = 0; i < veces; i++) {
         tick += delta;
-        out.push([tick, (c >> 2) & 3, c & 3]);
+        if (esPoder) out.push([tick, 0, 4 + c]);
+        else out.push([tick, (c >> 2) & 3, c & 3]);
       }
     }
     if (pos !== s.length) return null;
@@ -296,7 +321,9 @@
         if (!esNum(e[0]) || e[0] < 0 || e[0] < t) return false;   // ordenadas por tick
         t = e[0];
         if (!esNum(e[1]) || e[1] < 0 || e[1] >= CFG.MAX_PLAYERS) return false;
-        if (!esNum(e[2]) || e[2] < 0 || e[2] > 3) return false;
+        // 0..3 giro · 4..7 habilidad (solo en el modo 'hab', y del jugador 0)
+        if (!esNum(e[2]) || e[2] < 0 || e[2] > 7) return false;
+        if (e[2] > 3 && (rep.modo !== 'hab' || e[1] !== 0)) return false;
       }
       var f = rep.final;
       if (!f || !esNum(f.puntos) || !esNum(f.nivel) ||
@@ -469,7 +496,8 @@
       this.modo = 'grabar';
       this.grabando = {
         v: this.V,
-        modo: (G.playerCount === 2) ? 'duo' : 'solo',
+        // el modo HABILIDADES solo se juega en solo, así que no choca con dúo
+        modo: G.hab ? 'hab' : ((G.playerCount === 2) ? 'duo' : 'solo'),
         semilla: null,              // la deriva el propio juego del nivel
         nivel: G.level,
         jugadores: G.playerCount,
@@ -503,6 +531,27 @@
       return true;
     },
 
+    /* ---------- habilidades (modo HABILIDADES, js/habilidades.js) ----------
+     * Van en las mismas `entradas` que los giros, con el "qué" de 4 a 7. La
+     * pareja es como la de los giros pero al revés: primero se pregunta si
+     * la tecla vale (viendo una repetición manda ella), y se apunta después,
+     * porque una habilidad puede no llegar a salir. */
+    habBloqueada: function () {
+      return this.modo === 'ver' && !this.enviando;
+    },
+
+    /* Una habilidad que SÍ salió. No hay nada que descartar por repetido:
+     * es un suceso, no una intención que se pueda pedir dos veces (de eso ya
+     * se encarga la recarga). */
+    apuntaHab: function (idx, k) {
+      if (!this.grabando) return;
+      if (idx !== 0 || !(k >= 0 && k < 4)) return;
+      this.grabando.entradas.push([this.t, 0, 4 + k]);
+      if (this.grabando.entradas.length > CFG.REPLAY_MAX_ENTRADAS) {
+        this.grabando = null;
+      }
+    },
+
     /* Un paso del juego (Game.step). Mete los giros que tocan y adelanta el
      * reloj de la repetición. */
     paso: function () {
@@ -530,7 +579,12 @@
       this.enviando = true;
       while (this.cursor < ent.length && ent[this.cursor][0] <= this.t) {
         var e = ent[this.cursor++];
-        G.setPacDir(e[1], e[2]);
+        if (e[2] >= 4) {
+          // habilidad: se relanza igual que la lanzó el jugador aquel día
+          if (window.PM.Hab) window.PM.Hab.pulsar(G, e[1], e[2] - 4);
+        } else {
+          G.setPacDir(e[1], e[2]);
+        }
       }
       this.enviando = false;
     },
@@ -596,6 +650,7 @@
         colores: colores,
         skins: skins,
         ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
+        hab: !!G.hab,          // modo HABILIDADES: dientes, chispas y flash
         fecha: new Date().toISOString(),
         pm: null,              // mapa de pastillas del arranque
         cuadros: [],           // [tick, vector]
@@ -658,7 +713,7 @@
       var cab = {
         v: this.V_RED, j: rep.jugadores, nv: rep.nivel, mz: rep.maze || null,
         aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
-        gh: rep.ghosts || null, fe: rep.fecha, pm: rep.pm || null,
+        gh: rep.ghosts || null, hb: !!rep.hab, fe: rep.fecha, pm: rep.pm || null,
         fin: rep.final
       };
       var previa = null, filas = [];
@@ -707,7 +762,8 @@
         return {
           v: cab.v, jugadores: n, nivel: cab.nv || 1, maze: cab.mz || null,
           ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
-          skins: cab.sk || [], ghosts: cab.gh || null, fecha: cab.fe || '',
+          skins: cab.sk || [], ghosts: cab.gh || null, hab: !!cab.hb,
+          fecha: cab.fe || '',
           pm: cab.pm || null, cuadros: cuadros, eventos: eventos,
           final: cab.fin || null
         };
@@ -810,7 +866,8 @@
         colors: rep.colores.slice(),
         skins: rep.skins.slice(),
         ghosts: rep.ghosts ? rep.ghosts.slice() : null,
-        maze: rep.maze || null
+        maze: rep.maze || null,
+        hab: !!rep.hab
       });
       if (rep.pm && rep.pm.hex && G.applyPelletHex) G.applyPelletHex(rep.pm.hex);
       return true;
@@ -980,7 +1037,9 @@
       G.newGame({
         players: rep.jugadores,
         cfg: this.cfgDe(rep),
-        names: rep.nombres.slice()
+        names: rep.nombres.slice(),
+        // sin esto las habilidades grabadas no tendrían dónde aplicarse
+        hab: rep.modo === 'hab'
       });
       return true;
     },

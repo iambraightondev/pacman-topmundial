@@ -651,12 +651,55 @@
     return col;
   };
 
+  /* ---------- Modo HABILIDADES ----------
+   * Cuatro poderes con tecla propia y recarga independiente, al estilo de un
+   * MOBA. Es un MODO APARTE, como LABERINTOS: el laberinto de 1980 se juega
+   * con otras reglas, así que estas partidas NO entran en el top mundial
+   * (pero sí suman experiencia y logros). Ver js/habilidades.js.
+   *
+   * Por qué estos números:
+   *  - MORDISCO es el que decide peleas, así que es el más corto: 8 s. Aun
+   *    así no te salva de un cerco, porque solo mata a UNO.
+   *  - TURBO y FLASH son movilidad; a 12 y 10 s se alternan sin que nunca
+   *    tengas las dos a mano, que es lo que haría al laberinto irrelevante.
+   *  - GRITO es la definitiva: 45 s. Regala hasta 3.000 puntos con la cadena
+   *    entera, así que tiene que doler esperarlo.
+   * Las recargas corren solo mientras la partida avanza de verdad (PLAYING y
+   * sin pausa): morir o cambiar de nivel no te regala una habilidad. */
+  CFG.HAB = {
+    /* Alcance del mordisco, en casillas: 1 = las ocho de alrededor y la
+     * propia. Se mide en casillas, no en píxeles, para que sea igual de
+     * generoso en las cuatro direcciones. */
+    BITE_TILES: 1,
+    BITE_CD: 8 * 60,
+    /* Los dientes se ven un poco más que el mordisco en sí: es el aviso de
+     * que Q ha entrado, y sin él la muerte del fantasma no se entiende. */
+    BITE_SHOW: 24,           // 0.4 s con dientes
+    TURBO_CD: 12 * 60,
+    TURBO_TICKS: 5 * 60,     // 5 s
+    TURBO_MULT: 1.5,
+    FLASH_CD: 10 * 60,
+    FLASH_TILES: 3,          // casillas que se recorren, paredes incluidas
+    FLASH_SHOW: 15,          // 0.25 s translúcido al aterrizar
+    SHOUT_CD: 45 * 60,
+    SHOUT_SECS: 4,           // segundos de modo azul (independiente del nivel)
+    /* Orden fijo: es el de las teclas, el del HUD y el que viaja por red y
+     * por las repeticiones. No reordenar sin subir CFG.NET.PROTO. */
+    LIST: [
+      { id: 'mordisco', key: 'Q', name: 'MORDISCO', cd: 8 * 60 },
+      { id: 'turbo',    key: 'W', name: 'TURBO',    cd: 12 * 60 },
+      { id: 'flash',    key: 'E', name: 'FLASH',    cd: 10 * 60 },
+      { id: 'grito',    key: 'R', name: 'GRITO',    cd: 45 * 60 }
+    ]
+  };
+
   /* ---------- Red (modo online) ---------- */
   CFG.NET = {
     /* Versión del protocolo (debe coincidir en ambos lados). Sube cuando
      * cambia la forma de lo que viaja: la 6 pasó el marcador de PAC-MAN VS.
-     * de un número suelto a uno por cazador. */
-    PROTO: 6,
+     * de un número suelto a uno por cazador; la 7 trae el modo HABILIDADES
+     * (el 'hab' del saludo y los eventos de poder). */
+    PROTO: 7,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

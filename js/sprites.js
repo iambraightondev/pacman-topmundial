@@ -125,6 +125,93 @@
     }
   };
 
+  /* ============================================================
+   * MODO HABILIDADES — adornos que se pintan ENCIMA del Pac-Man
+   * de siempre. Ninguno cambia drawPacman: el Pac-Man clásico se
+   * dibuja igual que siempre y esto se le añade, así que un fallo
+   * aquí no puede afear el juego normal. Ver js/habilidades.js.
+   * ============================================================ */
+
+  /* Dientes del MORDISCO (Q): una sierra blanca en el borde de la boca,
+   * arriba y abajo. Se dibuja en el sistema de la boca —girado hacia donde
+   * mira— y por eso vale igual en las cuatro direcciones.
+   *
+   * Con la boca cerrada (fase 0) no hay hueco donde meterlos, así que se
+   * abre un mínimo: si no, el mordisco más vistoso del juego se comería un
+   * fantasma sin que se viera un solo diente. */
+  Sprites.drawPacTeeth = function (ctx, x, y, dir, mouthPhase, color) {
+    var r = 6.5;
+    var d = (dir >= 0) ? dir : 3;
+    var a = DIR_ANGLE[d];
+    var abierta = [22, 40, 80][mouthPhase] || 22;    // grados de apertura
+    var half = (abierta * Math.PI / 180) / 2;
+    var n = 3;                                       // dientes por fila
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(a);
+    ctx.fillStyle = '#ffffff';
+    for (var lado = -1; lado <= 1; lado += 2) {
+      /* Cada diente es un triángulo apoyado en el labio, apuntando al
+       * interior de la boca. Se reparten a lo largo del radio, que es donde
+       * hay sitio, en vez de amontonarse en la punta. */
+      for (var i = 0; i < n; i++) {
+        var d0 = r * (0.34 + i * 0.22);              // distancia al centro
+        var w = r * 0.15;                            // media base del diente
+        var alto = r * 0.2 * lado;
+        var bx = Math.cos(half) * d0;
+        var by = Math.sin(half) * d0 * lado;
+        ctx.beginPath();
+        ctx.moveTo(bx - w * Math.sin(half), by - w * Math.cos(half) * lado);
+        ctx.lineTo(bx + w * Math.sin(half), by + w * Math.cos(half) * lado);
+        ctx.lineTo(bx + Math.sin(half) * alto * 0.2, by - alto);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* Chispas del TURBO (W): una estela corta de destellos por detrás.
+   *
+   * Las posiciones salen de `sem` (un contador que avanza con la partida),
+   * no de Math.random: así dos pantallas que ven la misma partida —un mirón,
+   * una repetición— pintan exactamente las mismas chispas. */
+  Sprites.drawTurboSparks = function (ctx, x, y, dir, color, sem) {
+    var d = (dir >= 0) ? dir : 3;
+    var v = CFG.DIR_V[d];
+    var n = 4;
+    for (var i = 0; i < n; i++) {
+      /* hash barato y estable: mezcla el número de chispa con el contador */
+      var h = ((sem + i * 37) * 1103515245 + 12345) & 0x7fffffff;
+      var lejos = 3 + ((h >> 4) % 9);                 // 3..11 px por detrás
+      var lado = (((h >> 9) % 7) - 3) * 0.9;          // -2.7..2.7 px de través
+      var px = x - v.x * lejos - v.y * lado;
+      var py = y - v.y * lejos + v.x * lado;
+      // las de más atrás son más pequeñas y se apagan: da sensación de estela
+      var vida = 1 - lejos / 12;
+      sparkle(ctx, px, py, 1.1 + vida * 1.6, color, 0.25 + vida * 0.65);
+    }
+  };
+
+  /* Rastro del FLASH (E): la silueta de por dónde se ha pasado, apagándose.
+   * Sin esto el salto de tres casillas se lee como un tirón de red. */
+  Sprites.drawFlashTrail = function (ctx, x, y, dir, color, alpha) {
+    if (alpha <= 0) return;
+    var d = (dir >= 0) ? dir : 3;
+    var v = CFG.DIR_V[d];
+    var a = DIR_ANGLE[d];
+    ctx.save();
+    for (var i = 1; i <= 3; i++) {
+      ctx.globalAlpha = alpha * (0.30 - i * 0.07);
+      if (ctx.globalAlpha <= 0) break;
+      ctx.fillStyle = color;
+      pacPath(ctx, x - v.x * i * 8, y - v.y * i * 8, 6.5 - i * 0.6, a,
+        (40 * Math.PI / 180) / 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+
   /* ------------------------------------------------------------
    * Caras de Pac-Man para los emotes (todo dibujado, sin recursos).
    * Cuerpo del color del jugador y rasgos en negro encima, para que

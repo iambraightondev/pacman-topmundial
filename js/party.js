@@ -14,7 +14,7 @@
  *   proster {v,lider,m}  el líder reparte la lista de miembros
  *   pbye    {lider}      alguien se va (o el líder disuelve)
  *   pfull   {to}         no caben más
- *   pstart  {v,cfg,ord}  el líder arranca la partida
+ *   pstart  {v,cfg,ord,hab}  el líder arranca la partida
  *
  * Aparte, cada jugador escucha un canal propio (usuario:<nick>)
  * por donde le llegan invitaciones de sus amigos.
@@ -51,6 +51,10 @@
     userNick: null,
     beatTimer: null,
     ghostPick: -1,   // PAC-MAN VS.: fantasma pedido (-1 = jugar de Pac-Man)
+    /* Modo HABILIDADES: lo decide QUIEN MANDA y vale para todo el grupo. No
+     * se pregunta uno por uno a propósito: media party con poderes y media
+     * sin ellos no es una partida, son dos. */
+    habPick: false,
 
     /* la UI se engancha aquí */
     onchange: null,  // la lista o el estado han cambiado
@@ -143,6 +147,15 @@
       this.changed();
     },
 
+    /* Modo HABILIDADES de la party. Solo el líder lo cambia, y el cambio se
+     * reparte con la lista para que a nadie le pille por sorpresa. */
+    setHab: function (on) {
+      if (!this.st || !this.st.leader) return;
+      this.habPick = !!on;
+      this.sendRoster();
+      this.changed();
+    },
+
     /* Índice de juego de una sesión (lo consulta game.js con 3 y 4) */
     indexOf: function (sid) {
       if (!this.order) return -1;
@@ -218,6 +231,8 @@
       if (this.st && this.st.joinTimer) clearTimeout(this.st.joinTimer);
       this.st = null;
       this.order = null;
+      // el modo era de ESA party: la siguiente empieza como empieza todo
+      this.habPick = false;
       window.PM.Net.leave();
     },
 
@@ -271,7 +286,10 @@
       window.PM.Net.send('proster', {
         v: CFG.NET.PROTO,
         lider: window.PM.Net.sid,
-        m: this.st.members
+        m: this.st.members,
+        // el modo de la partida viaja con la lista: nadie debería enterarse
+        // de que se juega con poderes al arrancar la partida
+        hab: !!this.habPick
       });
     },
 
@@ -328,6 +346,7 @@
       this.st.status = 'dentro';
       this.st.members = d.m;
       this.st.leaderSid = d.lider;
+      this.habPick = !!d.hab;          // lo decide el líder; aquí solo se mira
       this.changed();
     },
 
@@ -368,8 +387,10 @@
       if (!this.canStart()) return;
       var order = this.gameOrder();
       var cfg = window.PM.UI ? window.PM.UI.netCfgSubset() : null;
-      window.PM.Net.send('pstart', { v: CFG.NET.PROTO, ord: order, cfg: cfg });
-      this.begin({ ord: order, cfg: cfg }, true);
+      var hab = !!this.habPick;
+      window.PM.Net.send('pstart',
+        { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab });
+      this.begin({ ord: order, cfg: cfg, hab: hab }, true);
     },
 
     begin: function (d, leader) {
@@ -390,7 +411,8 @@
       window.PM.Net.lockPeers(otros);
       this.stopBeat();
       if (this.onstart) {
-        this.onstart(order, idx, leader ? null : d.cfg, leader ? 'host' : 'guest');
+        this.onstart(order, idx, leader ? null : d.cfg,
+          leader ? 'host' : 'guest', !!d.hab);
       }
     },
 

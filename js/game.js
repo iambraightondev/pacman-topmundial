@@ -5,6 +5,10 @@
  *
  * Modos de juego:
  *  - 1 jugador (clásico).
+ *  - HABILIDADES: el mismo juego con cuatro poderes en Q/W/E/R.
+ *    Es un modo aparte (como LABERINTOS) y no entra en el top
+ *    mundial. Todo lo suyo vive en js/habilidades.js; aquí solo
+ *    quedan los enganches.
  *  - 2 jugadores en la misma máquina (J1 flechas, J2 WASD).
  *  - 2 jugadores online: el anfitrión (J1) simula la partida
  *    completa y emite instantáneas; el invitado (J2) simula su
@@ -111,6 +115,7 @@
     retoFecha: null,     // ...y de qué día (UTC)
     mazeId: null,        // laberinto alternativo en juego (null = el clásico)
     mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
+    hab: false,          // ¿esta partida es del modo HABILIDADES?
 
     /* casa de fantasmas */
     globalActive: false,
@@ -424,6 +429,10 @@
        * resetLevel(), que es quien reparte las pastillas. */
       this.mazeId = opts.maze || null;
       this.applyMaze(this.mazeId);
+      /* modo HABILIDADES: Q/W/E/R. Se monta antes que los Pac-Man porque
+       * reparte un juego de recargas por jugador (js/habilidades.js). */
+      this.hab = !!opts.hab;
+      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount);
       this.runGhosts = 0;
       this.runFrutas = 0;
       this.runRacha = 0;
@@ -544,6 +553,7 @@
       this.globalMode = 'scatter';
       this.frightTicks = 0;
       this.chainIndex = 0;
+      if (window.PM.Hab) window.PM.Hab.limpiarEfectos();
       this.globalActive = false;
       this.globalCounter = 0;
       this.failsafeTicks = 0;
@@ -580,6 +590,9 @@
       for (var i = 0; i < this.pacs.length; i++) {
         this.pacs[i].reset(this.pacStart(i));
       }
+      // el turbo y el rastro del flash no sobreviven a la muerte (las
+      // recargas sí: morir ya es castigo de sobra)
+      if (window.PM.Hab) window.PM.Hab.limpiarEfectos();
       for (var g = 0; g < 4; g++) this.ghosts[g].resetAfterDeath();
       this.schedIndex = 0;
       this.schedTicks = 0;
@@ -658,6 +671,8 @@
       this.paused = false;
       this.stopAllLoops();
       this.mazeId = null;
+      this.hab = false;
+      if (window.PM.Hab) window.PM.Hab.empezar(false, 0);
       this.applyMaze(null);     // el clásico vuelve antes de repartir puntos
       this.loadPellets();
       if (window.PM.UI) window.PM.UI.showMenu();
@@ -788,6 +803,8 @@
       this.stepChat();
       this.stepBadgeNotice();
       this.stepOverWait();
+      // recargas y efectos de las habilidades (no hace nada fuera del modo)
+      if (window.PM.Hab) window.PM.Hab.paso(this);
 
       /* aviso de red: congela y vuelve al menú */
       if (this.netNotice) {
@@ -1031,9 +1048,12 @@
       }
     },
 
-    triggerFright: function () {
+    /* segsFijos: el GRITO (R) del modo HABILIDADES asusta lo mismo en el
+     * nivel 1 que en el 18, donde la superpastilla ya no dura nada. Sin eso
+     * la habilidad se apagaría sola justo cuando más falta hace. */
+    triggerFright: function (segsFijos) {
       var fr = CFG.fright(this.level);
-      var secs = fr.seconds * this.frightMult;
+      var secs = (segsFijos > 0) ? segsFijos : fr.seconds * this.frightMult;
       this.chainIndex = 0;                       // la cadena se reinicia
       this.forceReversalFright();
       if (secs <= 0) {                           // solo inversión, sin modo azul
@@ -1153,6 +1173,13 @@
       var row = this.speedRow;
       var pct = (this.frightTicks > 0) ? row.pacFright : row.pac;
       pct = Math.min(pct * this.pacSpeedMult, CFG.SPEED_CLAMP * 100);
+      /* TURBO (W) va DESPUÉS del tope. El tope existe para que las partidas
+       * clásicas se puedan comparar entre sí, y el modo HABILIDADES no
+       * compite con nadie: aquí el x1.5 tiene que notarse entero o no vale
+       * para nada. */
+      if (this.hab && window.PM.Hab && pac) {
+        pct *= window.PM.Hab.multVel(pac.id | 0);
+      }
       return pct / 100 * CFG.BASE_SPEED;
     },
 
@@ -1441,6 +1468,11 @@
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
+      /* Ni una de HABILIDADES. El récord de cada formato no es solo un número
+       * en pantalla: viaja a la cuenta (perfiles.recordN) y de él salen las
+       * maestrías. Una marca hecha mordiendo fantasmas daría una insignia que
+       * no se ha ganado en el juego que la insignia dice. */
+      if (this.hab) return;
       // cada formato guarda el suyo: el récord de escuadra no pisa el de dúo
       var n = this.playerCount;
       if (this.highScore > this.recordFor(n)) this.setRecordFor(n, this.highScore);
@@ -1740,6 +1772,9 @@
     canTimeRecord: function () {
       if (this.playerCount !== 1 || this.netRole) return false;
       if (this.mazeId) return false;      // otro laberinto, otro tiempo
+      // con FLASH y TURBO el nivel 1 se despeja por otro camino: esa marca no
+      // se puede poner al lado de una hecha corriendo lo que corre Pac-Man
+      if (this.hab) return false;
       // el reto del día mueve el azar entero: los fantasmas azules huyen por
       // otro lado, así que el patrón es otro y el tiempo no se compara con el
       // de nadie. Tiene su propia clasificación, que es donde cuenta.
@@ -1833,7 +1868,12 @@
       // fantasmas de la máquina. En otro laberinto, con el azar del reto del
       // día o con un fantasma que piensa, no se compara nada: el reto tiene
       // su propia clasificación y VS. no compite con nadie.
-      if (this.mazeId || this.seedBase || this.isVersus()) return;
+      //
+      // Y con HABILIDADES tampoco: morder fantasmas a golpe de tecla regala
+      // puntos que en el arcade no existen, así que una partida así al lado
+      // de una clásica no diría nada de nadie. Suma experiencia y logros,
+      // que son tuyos, pero la tabla mundial se queda limpia.
+      if (this.mazeId || this.seedBase || this.isVersus() || this.hab) return;
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
@@ -2348,6 +2388,13 @@
         case 'voteRes':
           this.onVoteResult(d.k, !!d.ok);
           break;
+        /* Modo HABILIDADES: un invitado pide un poder. La recarga que vale
+         * es la de aquí —la suya vive en su navegador y no es de fiar—, y
+         * lo que toca a los fantasmas (morder, gritar) lo ejecuta el
+         * anfitrión. Ver js/habilidades.js. */
+        case 'hab':
+          if (window.PM.Hab) window.PM.Hab.peticion(this, who, d.k | 0);
+          break;
         case 'emote':
           this.showEmote(who, d.e);
           this.hostEvt({ t: 'emote', w: who, e: d.e });
@@ -2386,6 +2433,7 @@
         v: CFG.NET.PROTO, to: sid, n: this.pacs.length,
         nm: nm, co: co, sk: sk,
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
+        hab: !!this.hab,            // modo HABILIDADES: el mirón tiene que verlo
         cfg: {
           ghostSpeedMult: this.ghostSpeedMult,
           pacSpeedMult: this.pacSpeedMult,
@@ -2795,6 +2843,13 @@
           this.clearVote();
           this.restartGame();
           break;
+        /* Habilidad de otro: aquí solo se PINTA (dientes, chispas, el
+         * translúcido del flash). Lo que cambia la partida ya viene por su
+         * propio evento —'eatGhost' para el mordisco, 'fright' para el
+         * grito—, así que aplicarlo otra vez sería contarlo dos veces. */
+        case 'hab':
+          if (window.PM.Hab) window.PM.Hab.evento(this, e.w || 0, e.k | 0);
+          break;
         case 'emote':
           if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
           break;
@@ -3060,6 +3115,32 @@
       return ch !== '#';
     },
 
+    /* Un Pac-Man vivo, con lo que le haya puesto el modo HABILIDADES encima.
+     * Fuera del modo es exactamente el dibujo de siempre. */
+    drawPac: function (ctx, pc, i) {
+      var color = this.colorFor(i);
+      var A = window.PM.Hab;
+      if (!this.hab || !A) {
+        pc.draw(ctx, color, this.skinFor(i));
+        return;
+      }
+      var y = pc.y + CFG.MAZE_Y;
+      var S = window.PM.Sprites;
+      var st = A.estado(i);
+      // las chispas del turbo van DEBAJO, que son estela y no adorno
+      if (st && st.turbo > 0) S.drawTurboSparks(ctx, pc.x, y, pc.dir, color, st.chispa);
+      if (st && st.flash > 0) {
+        S.drawFlashTrail(ctx, pc.x, y, pc.dir, color, st.flash / CFG.HAB.FLASH_SHOW);
+      }
+      var alfa = A.alfa(i);
+      if (alfa < 1) { ctx.save(); ctx.globalAlpha = alfa; }
+      pc.draw(ctx, color, this.skinFor(i));
+      if (st && st.dientes > 0) {
+        S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color);
+      }
+      if (alfa < 1) ctx.restore();
+    },
+
     render: function () {
       var ctx = this.ctx;
       var i;
@@ -3132,7 +3213,7 @@
           if (this.eatFreezeTicks > 0 && i === this.eaterIdx) continue;
           // parpadeo del margen de gracia al reaparecer con la partida en marcha
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
-          pc.draw(ctx, this.colorFor(i), this.skinFor(i));
+          this.drawPac(ctx, pc, i);
         }
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!" */
         if (this.playerCount > 1 && this.state === 'READY') {
@@ -3274,6 +3355,13 @@
           ctx.fillText('VIENDO LA PARTIDA', 112, 270);
         }
         ctx.textBaseline = 'top';
+      }
+
+      /* La barra de habilidades no cabe en el lienzo (la fila de abajo ya la
+       * llenan las vidas, el cronómetro y las frutas), así que vive en el DOM
+       * junto a las crucetas y se refresca desde aquí. Ver js/ui.js. */
+      if (this.hab && window.PM.UI && window.PM.UI.refreshHabBar) {
+        window.PM.UI.refreshHabBar();
       }
     },
 

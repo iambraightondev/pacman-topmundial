@@ -1076,6 +1076,75 @@ spawn (BFS with tunnel wrap), the declared pellet count, **no dead ends**
 in the four corners, left-right symmetry, a closed border except the
 tunnel, and the classic coming back when the mode is left.
 
+## Modo HABILIDADES (Q/W/E/R)
+
+**`PM.Hab` (`js/habilidades.js`), `CFG.HAB`.** The 1980 maze with four
+MOBA-style powers, each on its own key and its own cooldown. Like
+LABERINTOS it is a **separate mode**: `Game.hab` blocks `submitRanking()`,
+`canTimeRecord()` **and `persistHighScore()`**. That last one matters more
+than it looks — the per-format record is not just a number on screen: it
+travels to the account (`perfiles.recordN`) and the maestrías are derived
+from it, so a score made by biting ghosts would hand out a badge for a
+game the badge does not describe. XP and achievements still count.
+
+| Key | What it does | Cooldown |
+|---|---|---|
+| **Q** MORDISCO | Eats any ghost within **1 tile** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. | 8 s |
+| **W** TURBO | ×1.5 speed for 5 s, trailing sparks. | 12 s |
+| **E** FLASH | Jumps **3 tiles forward through walls**, eating dots and energizers on the way, translucent on landing. | 10 s |
+| **R** GRITO | Frightens all four ghosts for a **fixed 4 s** with no energizer. | 45 s |
+
+Rules that are deliberate, not incidental:
+
+- **Movement is arrows only.** `W` is the turbo, so WASD is disabled
+  wholesale in this mode — leaving A/S/D moving while W does something
+  else is the worst of both worlds. That is also why the mode is **not
+  offered in local two-player** (J2 would lose their controls) nor in
+  **PAC-MAN VS.** (one-tap killing a ghost a person is driving, with no
+  counterplay, is not a fight).
+- **Q and E refuse to be wasted.** No ghost in range, or no landable tile
+  ahead, and nothing fires and no cooldown starts.
+- **E never lands in the ghost house.** `CFG.isOpen` treats the house
+  interior as walkable (it is, for ghosts), so `habilidades.js` guards
+  `CFG.HOUSE` explicitly: Pac-Man has no door and would be stuck forever.
+- **Outside fright, every bite is worth the same** (`GHOST_CHAIN[0]`).
+  The 200-400-800-1600 ladder belongs to the energizer; chaining it from a
+  keypress would turn the run into free points. With ghosts already blue
+  the bite joins whatever chain is running.
+- **The shout is 4 s at every level.** `triggerFright(segsFijos)` bypasses
+  `CFG.fright(level)`, which by level 18 is zero: the ultimate would
+  switch itself off exactly when it is needed.
+- Cooldowns tick only while `state === 'PLAYING'`, unpaused and outside
+  the eat-freeze. Dying or changing level clears **effects** but not
+  cooldowns (`Hab.limpiarEfectos()` from `respawn` and `resetLevel`).
+
+**Online authority** mirrors what the netcode already does. Powers that
+only touch your own Pac-Man (TURBO, FLASH) apply locally the instant you
+press — you already simulate your own Pac-Man and its position travels in
+`pos`. Powers that touch the ghosts (MORDISCO, GRITO) are **executed by
+the host**, exactly like eating a blue ghost: the guest sends
+`gevt {t:'hab', k}`, the host validates against **its** copy of the
+cooldown (the guest's lives in their browser and is not trustworthy) and
+runs `eatGhost` / `triggerFright`. The host then broadcasts
+`evt {t:'hab', w, k}`, which is **visual only** for everyone else — the
+state change already arrives in its own `eatGhost` / `fright` event, and
+applying it twice would double-count it. The sender ignores its own echo.
+A rejected request loses the keypress and the local cooldown has already
+started: it can only ever give less, never more. The mode itself travels
+in `pstart.hab` (and in `proster.hab`, so nobody discovers the rules when
+the game starts) and in `svista.hab` for spectators. `CFG.NET.PROTO` is
+**7**.
+
+**Replays.** A power is an *input*, like a turn, so a run of this mode
+reconstructs exactly like a classic one. Local replays get mode `'hab'`
+(letter `h`) and entries `[tick, 0, 4+k]`; since the mode is solo-only
+locally, the player index is always 0 and the four powers encode as
+`A..D`, letters no earlier text could contain (`G..V` still carries the
+sixteen player×direction turns). The entry is written **after** the power
+actually fires, so a bite at thin air does not bloat the file. Old
+clients reject an `h` replay cleanly as corrupt, which is correct. Net
+replays carry `hb` in the header.
+
 ## Top mundial integrity (only the Edge Function writes)
 
 **Server-side validation** (`supabase/functions/enviar-record/index.ts`):
