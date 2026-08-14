@@ -58,6 +58,19 @@ que saber para tocarlos:
 > y HABILIDADES guardan cada uno en su propio récord y tienen su propia ruta
 > de maestrías, así que ya no escriben en el de 1 jugador.
 
+### Portada con selector de modo (mismo día)
+
+Seis tarjetas y un `JUGAR`. Lo que hay que saber para tocarlo:
+
+- **La lista está en `MODOS` (arriba de `js/ui.js`)**. Añadir un modo es una
+  entrada ahí más su caso en `playPick()`; el icono, en `drawModeIcon`.
+- **Tres modos arrancan y tres abren su panel** (laberintos, online y reto),
+  porque necesitan que elijas algo antes de que haya partida.
+- Las tarjetas son `<button>` a propósito: así entran solas en la navegación
+  con flechas.
+- **`refreshReto()` y `refreshOnlineBtn()` ya no tocan botones**: llaman a
+  `refreshModePicker()`. Si algún día vuelve un botón suelto, ojo con eso.
+
 ### Maestrías propias de LABERINTOS y HABILIDADES (mismo día)
 
 Seis rutas en vez de cuatro. Lo que hay que saber:

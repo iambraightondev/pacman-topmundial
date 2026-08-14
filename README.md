@@ -50,6 +50,10 @@ red.
 
 ## Modos de juego
 
+En la portada están **los seis en una rejilla**: eliges uno y le das a
+`JUGAR`. Cada tarjeta te dice de qué va y lo que conviene saber antes de
+entrar (si el reto de hoy ya está jugado, cuánta gente hay en tu party...).
+
 - **Un jugador** — el arcade clásico.
 - **Dos jugadores (misma máquina)** — cooperativo simultáneo contra los
   fantasmas, en el mismo laberinto. Puntuación de equipo (un solo marcador y

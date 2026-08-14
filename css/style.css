@@ -178,6 +178,105 @@ body {
   width: 100%;
 }
 
+/* ---------- Selector de modo de la portada ----------
+ * Seis tarjetas iguales y un solo botón grande. Antes cada modo estaba en un
+ * sitio distinto (unos botones, el reto en un diálogo, los laberintos
+ * escondidos entre los paneles del cuartel) y no había forma de ver de un
+ * vistazo a qué se puede jugar.
+ *
+ * Todas las tarjetas se pintan IGUAL menos la elegida, que es la única que
+ * enciende el color de su modo. Con los seis colores a la vez la rejilla
+ * parecía un árbol de navidad y no se distinguía cuál estaba puesto. */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: inherit;
+  color: #cfcfcf;
+  background: #000;
+  border: 2px solid #2121ff;
+  padding: 8px 6px 7px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s linear;
+}
+
+.mode-card:hover,
+.mode-card:focus-visible {
+  background: rgba(33, 33, 255, 0.28);
+  outline: none;
+}
+
+/* La elegida: su color en el marco, en la letra y en un halo suave. El halo
+   es lo que la despega de las otras cinco sin tener que agrandarla (agrandar
+   movía la rejilla entera al cambiar de tarjeta). */
+.mode-card.sel {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 1px currentColor inset;
+}
+
+.mode-icon {
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Hueco fijo de dos renglones: hay nombres de una línea y de dos, y sin esto
+   las tarjetas de una fila quedaban con el icono a distinta altura que las de
+   al lado. Seis tarjetas iguales o no es una rejilla. */
+.mode-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4em;
+  font-size: clamp(10px, 1.6vh, 12px);
+  font-weight: bold;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+/* La coletilla no coge el color del modo: es un dato (cuántos juegan, si el
+   reto ya está gastado), no parte del titular. */
+.mode-tag {
+  font-size: clamp(7px, 1.2vh, 9px);
+  letter-spacing: 1px;
+  color: #7a7a7a;
+}
+
+.mode-desc {
+  font-size: clamp(9px, 1.5vh, 11px);
+  letter-spacing: 1px;
+  line-height: 1.45;
+  min-height: 2.9em;      /* fijo: si no, la rejilla salta al cambiar de modo */
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+.mode-note {
+  font-size: clamp(8px, 1.3vh, 9px);
+  letter-spacing: 1px;
+  color: #7a7a7a;
+  min-height: 1.4em;
+  margin-top: -4px;
+}
+
+/* JUGAR manda en la portada: es el único botón grande que hay. */
+.btn-play {
+  font-size: clamp(15px, 2.4vh, 20px);
+  letter-spacing: 6px;
+  padding: 12px 18px;
+}
+
 /* Tres columnas: reparto | jugar | paneles. Va con flex y `order` (y no con
  * grid) porque showPanel() pone `display:flex` en el estilo del elemento y
  * eso gana a cualquier `display` que se ponga aquí. El orden del DOM sigue
@@ -252,6 +351,8 @@ body {
   .menu-cast .hint { margin-top: 0; text-align: left; line-height: 1.6; }
   .menu-cast .roster { align-self: start; margin: 4px 0 10px 6px; }
   .menu-main .btn { width: 100%; }
+  /* En ancho hay sitio para las seis de un vistazo: tres columnas, dos filas */
+  .menu-main .mode-grid { grid-template-columns: repeat(3, 1fr); }
   .menu-main .nick-row-menu { margin: 0 0 4px; width: 100%; }
   .menu-main .nick-input-menu { width: 100%; max-width: none; }
   .menu-main .level-box { width: 100%; }

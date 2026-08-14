@@ -2,6 +2,36 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · Portada nueva: elige modo y dale a JUGAR
+
+- **Los modos estaban repartidos por toda la pantalla**: dos arrancaban desde
+  su botón, el reto abría un diálogo, los laberintos vivían escondidos entre
+  los paneles del cuartel y el online tenía otro botón aparte. No había forma
+  de ver de un vistazo a qué se puede jugar.
+- Ahora hay **seis tarjetas iguales y un solo botón grande: JUGAR**. CLÁSICO,
+  DOS JUGADORES, HABILIDADES, RETO DE HOY, LABERINTOS y ONLINE, cada una con
+  su icono dibujado con los sprites del propio juego y el color de su modo.
+  Eliges una —se enciende solo la elegida— y debajo te dice qué es y lo que
+  conviene saber antes de entrar.
+- Las tarjetas **cuentan lo que pasa ahora mismo**: si el reto de hoy ya está
+  jugado (y con cuánto), o cuánta gente hay en tu party.
+- Pulsar la tarjeta que ya está elegida arranca directamente, para quien lo
+  tiene claro. Y las flechas del teclado recorren la rejilla, como el resto
+  del menú.
+- **La maestría ya no se celebra en medio de la pantalla.** Jugando solo
+  salía un cartelón que cruzaba el laberinto cinco segundos justo por encima
+  de la casa de los fantasmas: tapaba la partida en el momento en que acabas
+  de hacer tu mejor marca y estás a punto de perderla. Ahora va arriba y
+  fuera del laberinto siempre, en la misma banda que los logros.
+- Y **los logros por modo ya respetan lo que jugaste antes**. Nacían a cero,
+  así que quien llevaba cien partidas veía "JUEGA 50 PARTIDAS EN CLÁSICO ·
+  0/50". Lo de antes solo existe en los contadores globales, que no dicen de
+  qué modo era, así que se reparte con lo que se puede demostrar: **el
+  clásico se lleva lo global** (es el modo por defecto y el grueso de
+  cualquier historial), **party solo si tienes récord de dúo, trío o
+  escuadra** —la prueba de que jugaste acompañado— y de los demás no se
+  inventa nada. El panel lo dice en su cabecera.
+
 ## 2026-08-14 · La Q ya no falla, y laberintos y habilidades tienen maestría propia
 
 - **El mordisco (Q) fallaba a cada rato sin motivo visible.** El alcance se

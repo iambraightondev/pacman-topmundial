@@ -1713,11 +1713,11 @@
     },
 
     stepBadgeNotice: function () {
-      /* Con varios jugadores, la maestría y el logro comparten la banda de
-       * arriba (ninguna de las dos entra ya en el laberinto), así que la
-       * maestría espera a que el logro termine en vez de pisarlo. Mientras
-       * espera no se le gasta el tiempo: se ve entera igual. */
-      var espera = !this.bigNotices() && !!this.achNotice;
+      /* La maestría y el logro comparten la banda de arriba (ninguna de las
+       * dos entra ya en el laberinto), así que la maestría espera a que el
+       * logro termine en vez de pisarlo. Mientras espera no se le gasta el
+       * tiempo: se ve entera igual. */
+      var espera = !!this.achNotice;
       if (this.badgeNotice && !espera && --this.badgeNotice.ticks <= 0) {
         this.badgeNotice = null;
       }
@@ -3478,26 +3478,20 @@
       }
     },
 
-    /* ¿Se puede celebrar a lo grande? Jugando solo, sí: el laberinto es tuyo
-     * y no hay nadie a quien tapárselo. Con más gente (dúo en el mismo teclado
-     * o una party) no: el cartel cruza el centro de la pantalla cinco segundos
-     * y los demás están jugando —y encima la maestría no es suya—. Ahí se
-     * celebra en una banda estrecha, arriba y fuera del laberinto. */
-    bigNotices: function () { return this.playerCount <= 1; },
-
-    /* Aviso de maestría: el dibujo vive en sprites.js para poder enseñarlo
-     * también en el panel MAESTRÍAS, fuera de la partida. */
+    /* Aviso de maestría, ARRIBA DEL TODO y fuera del laberinto, siempre.
+     *
+     * Jugando solo salía en un cartelón que cruzaba el centro de la pantalla
+     * cinco segundos, justo por encima de la casa de los fantasmas: tapaba la
+     * partida entera en el momento en que uno acaba de hacer su mejor marca y
+     * está a punto de perderla. Celebrar algo no puede costarte la vida que lo
+     * celebra. Ahora va en la misma banda estrecha que el aviso de logro,
+     * donde solo esconde un momento el marcador. */
     renderBadgeNotice: function (ctx) {
       var n = this.badgeNotice;
       var total = n.total || CFG.BADGE_ANIM_TICKS;
       var t = 1 - (n.ticks / total);
-      if (this.bigNotices()) {
-        window.PM.Sprites.drawBadgeBanner(ctx, 112, 9 * T + CFG.MAZE_Y,
-          CFG.NATIVE_W - 24, 44, t, n, this.tick);
-      } else {
-        window.PM.Sprites.drawBadgeStrip(ctx, 112, 11, CFG.NATIVE_W - 20,
-          t, n, this.tick);
-      }
+      window.PM.Sprites.drawBadgeStrip(ctx, 112, 11, CFG.NATIVE_W - 20,
+        t, n, this.tick);
     },
 
     renderStateText: function (ctx) {
@@ -3520,10 +3514,10 @@
         ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
       }
 
-      /* maestría recién ganada: entra, se luce y se va. Con más jugadores
-       * espera turno detrás del logro (comparten banda), así que mientras haya
-       * uno en pantalla esta no se dibuja. */
-      if (this.badgeNotice && (this.bigNotices() || !this.achNotice)) {
+      /* maestría recién ganada: entra, se luce y se va. Espera turno detrás
+       * del logro (comparten banda), así que mientras haya uno en pantalla
+       * esta no se dibuja. */
+      if (this.badgeNotice && !this.achNotice) {
         this.renderBadgeNotice(ctx);
       }
 

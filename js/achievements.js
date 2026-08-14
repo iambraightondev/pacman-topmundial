@@ -87,7 +87,7 @@
   }
 
   function load() {
-    var out = { c: vacio(), v: [] };
+    var out = { c: vacio(), v: [], m: 0 };
     try {
       var raw = localStorage.getItem(CFG.ACH_KEY);
       var d = raw ? JSON.parse(raw) : null;
@@ -99,6 +99,7 @@
         }
       }
       if (d && isArray(d.v)) out.v = d.v.slice();
+      if (d && d.m) out.m = 1;          // los contadores por modo, ya sembrados
     } catch (e) { /* sin almacenamiento */ }
     return out;
   }
@@ -214,8 +215,57 @@
       return fresh;
     },
 
+    /* ---------- lo jugado ANTES de que hubiera logros por modo ----------
+     * Los contadores por modo son nuevos y nacían a cero, así que a quien ya
+     * llevaba cien partidas le salía "JUEGA 50 PARTIDAS EN CLÁSICO · 0/50".
+     * Eso es tirar a la basura lo que esa persona ya había jugado, y no se
+     * puede hacer: los logros son suyos.
+     *
+     * Lo jugado antes solo existe en los contadores GLOBALES, y ahí no consta
+     * en qué modo fue. Así que se reparte con lo único que se puede demostrar:
+     *
+     *  - CLÁSICO se lleva lo global. Es el modo por defecto y el grueso de
+     *    cualquier historial; además el contador de un modo nunca puede ser
+     *    mayor que el global, así que esto como mucho se pasa de generoso,
+     *    nunca se queda corto. Errar a favor del jugador es lo correcto
+     *    cuando el dato se perdió.
+     *  - PARTY solo si hay PRUEBA de haber jugado acompañado: un récord de
+     *    dúo, trío o escuadra. Sin esa prueba se queda a cero, que regalar
+     *    "JUEGA 20 PARTIDAS ACOMPAÑADO" a quien siempre jugó solo sería
+     *    mentira.
+     *  - RETO, LABERINTOS, VS. y HABILIDADES se quedan a cero: de esos no hay
+     *    ni rastro en los contadores, y no se inventa nada.
+     *
+     * Se hace UNA vez (bandera `m`), no en cada arranque: si se repitiera,
+     * las partidas de party seguirían engordando el contador de clásico para
+     * siempre. La única repetición es a propósito: al entrar en una cuenta,
+     * merge() baja la bandera para volver a sembrar con lo que venga de la
+     * nube, que puede ser un historial mucho más largo que el de aquí. */
+    sembrarModos: function () {
+      var d = load();
+      if (d.m) return d.c;
+      d.m = 1;
+      var G = window.PM.Game;
+      var hayParty = !!(G && G.recordFor &&
+        (G.recordFor(2) > 0 || G.recordFor(3) > 0 || G.recordFor(4) > 0));
+      for (var k in STATS) {
+        if (!STATS.hasOwnProperty(k)) continue;
+        var i = String(k).indexOf(':');
+        if (i < 0) continue;                       // este ya es el global
+        var modo = k.slice(0, i), base = k.slice(i + 1);
+        var v = 0;
+        if (modo === 'clasico') v = d.c[base] || 0;
+        else if (modo === 'party' && hayParty) v = d.c[base] || 0;
+        if (v > 0) d.c[k] = Math.max(d.c[k] || 0, v);
+      }
+      save(d);
+      return d.c;
+    },
+
     /* Al arrancar (o al entrar en una cuenta): lo ya conseguido no se anuncia */
     syncSeen: function () {
+      // antes de nada, que lo jugado de antes cuente en su modo
+      this.sembrarModos();
       var d = load();
       var changed = false;
       for (var i = 0; i < CFG.ACHIEVEMENTS.length; i++) {
@@ -243,11 +293,17 @@
         else if (tipo === 'mayor') d.c[k] = Math.max(d.c[k], n);
         else d.c[k] = (d.c[k] > 0) ? Math.min(d.c[k], n) : n;
       }
+      /* Lo que baja de la nube puede ser un historial mucho más largo que el
+       * de este navegador, así que se vuelve a sembrar por modo con él: si no,
+       * entrar en tu cuenta en un aparato nuevo te dejaba los logros por modo
+       * a cero teniendo cien partidas a la espalda. */
+      d.m = 0;
       save(d);
-      return d.c;
+      this.sembrarModos();
+      return this.stats();
     },
 
-    reset: function () { save({ c: vacio(), v: [] }); }
+    reset: function () { save({ c: vacio(), v: [], m: 0 }); }
   };
 
   window.PM.Achievements = Achievements;

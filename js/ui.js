@@ -113,6 +113,49 @@
   var NET_CFG_KEYS = ['ghostSpeedMult', 'pacSpeedMult', 'frightMult',
     'startLives', 'startLevel', 'livesMode'];
 
+  /* ---------- Los modos de la portada ----------
+   * Antes cada modo estaba en un sitio distinto: dos arrancaban desde su
+   * botón, el reto abría un diálogo, los laberintos vivían escondidos entre
+   * los paneles del cuartel y el online tenía su propio botón. No había
+   * forma de ver de un vistazo a QUÉ se puede jugar.
+   *
+   * Ahora son seis tarjetas iguales y un solo botón de JUGAR. Cada una lleva:
+   *   id     el que usa el resto del juego
+   *   name   lo que se lee en la tarjeta
+   *   tag    la coletilla corta de debajo (cuántos juegan)
+   *   desc   la frase que sale al elegirlo
+   *   color  el del modo (el mismo de sus logros, para que todo case)
+   *   icon   cómo se dibuja su icono
+   *   go     qué hace JUGAR: arrancar, o abrir lo que ese modo necesita
+   *          elegir antes (qué laberinto, qué sala, si gastas el intento) */
+  var MODOS = [
+    { id: 'clasico', name: 'CLÁSICO', tag: '1 JUGADOR', color: '#ffff00',
+      icon: 'pac',
+      desc: 'EL ARCADE DE 1980, TAL CUAL. ES EL QUE CUENTA PARA EL TOP MUNDIAL' },
+    { id: 'duo', name: 'DOS JUGADORES', tag: 'MISMO TECLADO', color: '#00ff00',
+      icon: 'duo',
+      desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO' },
+    { id: 'hab', name: 'HABILIDADES', tag: 'Q · W · E · R', color: '#ff66cc',
+      icon: 'dientes',
+      desc: 'CUATRO PODERES CON SU RECARGA. AQUÍ SE MUEVE SOLO CON LAS FLECHAS' },
+    { id: 'reto', name: 'RETO DE HOY', tag: 'UN INTENTO', color: '#00ffff',
+      icon: 'estrella',
+      desc: 'LA MISMA PARTIDA PARA TODO EL MUNDO, UNA VEZ AL DÍA' },
+    { id: 'lab', name: 'LABERINTOS', tag: 'OTROS TRAZADOS', color: '#ffb852',
+      icon: 'maze',
+      desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR' },
+    { id: 'online', name: 'ONLINE', tag: 'HASTA 4', color: '#7ec8ff',
+      icon: 'party',
+      desc: 'DE 2 A 4 JUGADORES CADA UNO EN SU CASA, CON CÓDIGO DE SALA' }
+  ];
+
+  function modoPorId(id) {
+    for (var i = 0; i < MODOS.length; i++) {
+      if (MODOS[i].id === id) return MODOS[i];
+    }
+    return MODOS[0];
+  }
+
   var UI = {
     els: {},
     audioResumed: false,
@@ -278,46 +321,28 @@
       lvl.appendChild(bar);
       main.appendChild(lvl);
 
-      var play = this.makeButton('UN JUGADOR', function () {
-        self.resumeAudio();
-        self.hideAll();
-        window.PM.Game.newGame({ players: 1 });
+      /* Elige modo y dale a JUGAR. Todos los modos, a la vista y con el
+       * mismo peso; el botón grande es uno solo. */
+      main.appendChild(this.sectionTitle('ELIGE MODO'));
+      main.appendChild(this.buildModeGrid());
+
+      /* Lo que hace ese modo, y su recado si tiene (la marca del reto de hoy,
+       * la gente que hay en tu party...). Va debajo de la rejilla y encima
+       * del botón, que es por donde pasa la mirada camino de JUGAR. */
+      this.modeDesc = document.createElement('div');
+      this.modeDesc.className = 'mode-desc';
+      main.appendChild(this.modeDesc);
+
+      this.modeNote = document.createElement('div');
+      this.modeNote.className = 'mode-note';
+      main.appendChild(this.modeNote);
+
+      var play = this.makeButton('JUGAR', function () {
+        self.playPick();
       });
-      play.classList.add('btn-primary');
+      play.classList.add('btn-primary', 'btn-play');
       main.appendChild(play);
-
-      /* El reto del día: la misma partida para todo el mundo, un intento.
-       * Va aquí arriba, pegado a UN JUGADOR, porque es de un jugador. */
-      this.retoBtn = this.makeButton('RETO DE HOY', function () {
-        self.resumeAudio();
-        self.showRetoPrompt();
-      });
-      main.appendChild(this.retoBtn);
-
-      main.appendChild(this.makeButton('DOS JUGADORES', function () {
-        self.resumeAudio();
-        self.hideAll();
-        // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
-        // (se elige en OPCIONES · PARTIDA; -1 = Pac-Man de siempre)
-        window.PM.Game.newGame({
-          players: 2,
-          ghosts: [-1, window.PM.settings.vsGhost2]
-        });
-      }));
-
-      /* HABILIDADES: el mismo laberinto con cuatro poderes. Va debajo de las
-       * partidas normales porque es un modo aparte, no un ajuste de las de
-       * siempre (igual que LABERINTOS). */
-      main.appendChild(this.makeButton('HABILIDADES', function () {
-        self.resumeAudio();
-        self.showHabPrompt();
-      }));
-
-      this.onlineMenuBtn = this.makeButton('JUGAR ONLINE', function () {
-        self.resumeAudio();
-        self.showOnline();
-      });
-      main.appendChild(this.onlineMenuBtn);
+      this.playBtn = play;
 
       side.appendChild(this.sectionTitle('TU CUARTEL'));
       var extras = document.createElement('div');
@@ -330,10 +355,8 @@
         self.resumeAudio();
         self.showProfile();
       }));
-      extras.appendChild(this.makeButton('LABERINTOS', function () {
-        self.resumeAudio();
-        self.showMazes();
-      }));
+      /* LABERINTOS ya no vive aquí: es un modo, y los modos están todos
+       * juntos en la rejilla de arriba. El cuartel es para lo TUYO. */
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
         self.showBadges();
@@ -370,6 +393,167 @@
         hint.textContent = ayudas[a];
         cast.appendChild(hint);
       }
+    },
+
+    /* ------------------------------------------------------
+     * Selector de modo de la portada
+     * ------------------------------------------------------ */
+    buildModeGrid: function () {
+      var self = this;
+      var grid = document.createElement('div');
+      grid.className = 'mode-grid';
+      this.modeCards = {};
+      MODOS.forEach(function (mo) {
+        /* La tarjeta ES un <button>: así entra sola en la navegación con
+         * flechas y responde a Enter, como el resto del menú. */
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mode-card';
+        b.setAttribute('aria-label', mo.name);
+
+        var cv = document.createElement('canvas');
+        cv.width = 44; cv.height = 44;
+        cv.className = 'mode-icon';
+        self.drawModeIcon(cv, mo);
+        b.appendChild(cv);
+
+        var nm = document.createElement('span');
+        nm.className = 'mode-name';
+        nm.textContent = mo.name;
+        b.appendChild(nm);
+
+        var tg = document.createElement('small');
+        tg.className = 'mode-tag';
+        tg.textContent = mo.tag;
+        b.appendChild(tg);
+
+        /* Pulsar la tarjeta la elige. Pulsar la que YA está elegida arranca:
+         * quien lo tiene claro hace dos clics en el mismo sitio en vez de
+         * cruzar la pantalla hasta JUGAR. */
+        b.addEventListener('click', function () {
+          self.resumeAudio();
+          if (self.modePick === mo.id) self.playPick();
+          else self.pickMode(mo.id);
+        });
+        grid.appendChild(b);
+        self.modeCards[mo.id] = { b: b, tag: tg, mo: mo };
+      });
+      this.modePick = this.modePick || 'clasico';
+      return grid;
+    },
+
+    /* Icono de un modo. Todo dibujado con los sprites del juego: son los
+     * mismos Pac-Man y fantasmas de la partida, no dibujos aparte. */
+    drawModeIcon: function (cv, mo) {
+      var S = window.PM.Sprites;
+      var c = cv.getContext('2d');
+      c.imageSmoothingEnabled = false;
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.save();
+      c.translate(cv.width / 2, cv.height / 2);
+      c.scale(2.2, 2.2);          // los sprites son de 13 px: se agrandan
+      var D = CFG.DIR;
+      if (mo.icon === 'pac') {
+        S.drawPacman(c, 0, 0, D.RIGHT, 2, mo.color, 'clasico');
+      } else if (mo.icon === 'duo') {
+        S.drawPacman(c, -4.5, 0, D.RIGHT, 2, '#ffff00', 'clasico');
+        S.drawPacman(c, 5.5, 0, D.RIGHT, 1, '#00ff00', 'clasico');
+      } else if (mo.icon === 'dientes') {
+        S.drawPacman(c, 0, 0, D.RIGHT, 2, mo.color, 'clasico');
+        S.drawPacTeeth(c, 0, 0, D.RIGHT, 2, mo.color);
+      } else if (mo.icon === 'estrella') {
+        S.drawAchStar(c, 0, 0, 8, mo.color);
+      } else if (mo.icon === 'maze') {
+        S.drawMazeGlyph(c, 0, 0, 17, mo.color);
+      } else if (mo.icon === 'party') {
+        // dos Pac-Man y un fantasma: los de la sala son gente, no colores
+        S.drawPacman(c, -6, -3, D.RIGHT, 2, '#ffff00', 'clasico');
+        S.drawPacman(c, 5, -3, D.LEFT, 2, '#00ff00', 'clasico');
+        S.drawGhost(c, 0, 5, D.RIGHT, 0, 'normal', 0, false);
+      }
+      c.restore();
+    },
+
+    pickMode: function (id) {
+      this.modePick = modoPorId(id).id;
+      this.refreshModePicker();
+    },
+
+    /* Pinta el estado del selector: cuál está elegido, su descripción y el
+     * recado de cada modo. Se llama también cuando cambian cosas de fuera
+     * (la marca del reto, la gente de la party). */
+    refreshModePicker: function () {
+      if (!this.modeCards) return;
+      var id = this.modePick || 'clasico';
+      var mo = modoPorId(id);
+      for (var k in this.modeCards) {
+        if (!this.modeCards.hasOwnProperty(k)) continue;
+        var card = this.modeCards[k];
+        var sel = (k === id);
+        card.b.classList.toggle('sel', sel);
+        /* El color del modo solo se enciende en el elegido. Con los seis
+         * encendidos a la vez la rejilla parecía un árbol de navidad y no se
+         * veía cuál estaba puesto. */
+        card.b.style.borderColor = sel ? card.mo.color : '';
+        card.b.style.color = sel ? card.mo.color : '';
+        card.tag.textContent = this.modeTag(card.mo);
+      }
+      if (this.modeDesc) {
+        this.modeDesc.textContent = mo.desc;
+        this.modeDesc.style.color = mo.color;
+      }
+      if (this.modeNote) this.modeNote.textContent = this.modeNota(mo);
+    },
+
+    /* La coletilla de la tarjeta. Casi siempre es fija, pero dos modos
+     * tienen algo que contar ahora mismo. */
+    modeTag: function (mo) {
+      var P = window.PM.Party;
+      var R = window.PM.Reto;
+      if (mo.id === 'online' && P && P.inParty()) {
+        return 'PARTY ' + P.count() + '/' + CFG.MAX_PLAYERS;
+      }
+      if (mo.id === 'reto' && R && R.marca()) return 'YA JUGADO';
+      return mo.tag;
+    },
+
+    /* El renglón de debajo: lo que conviene saber ANTES de darle a JUGAR. */
+    modeNota: function (mo) {
+      var R = window.PM.Reto;
+      var P = window.PM.Party;
+      if (mo.id === 'reto') {
+        var m = R && R.marca();
+        if (m) return 'HOY YA LO JUGASTE: ' + m.p + ' PUNTOS · VUELVE MAÑANA';
+        return 'CUENTA LO QUE HAGAS, TE RINDAS O TE SALGAS';
+      }
+      if (mo.id === 'online') {
+        if (P && P.inParty()) return 'YA ESTÁS EN UNA PARTY: ENTRA Y EMPEZAD';
+        return 'CREA UNA SALA O ENTRA CON UN CÓDIGO DE 4 LETRAS';
+      }
+      if (mo.id === 'lab') return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS';
+      if (mo.id === 'hab') return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS';
+      if (mo.id === 'duo') return 'PUNTUACIÓN DE EQUIPO Y RÉCORD DE DÚO';
+      return 'TU RÉCORD Y TU MAESTRÍA DE SIEMPRE';
+    },
+
+    /* JUGAR. Tres modos arrancan de una; los otros tres necesitan que elijas
+     * algo antes (qué laberinto, qué sala, o confirmar que gastas el intento
+     * de hoy), así que JUGAR abre eso. */
+    playPick: function () {
+      var s = window.PM.settings;
+      var id = this.modePick || 'clasico';
+      this.resumeAudio();
+      if (id === 'reto') { this.showRetoPrompt(); return; }
+      if (id === 'lab') { this.showMazes(); return; }
+      if (id === 'online') { this.showOnline(); return; }
+      this.hideAll();
+      if (id === 'duo') {
+        // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
+        // (se elige en OPCIONES · PARTIDA; -1 = Pac-Man de siempre)
+        window.PM.Game.newGame({ players: 2, ghosts: [-1, s.vsGhost2] });
+        return;
+      }
+      window.PM.Game.newGame({ players: 1, hab: (id === 'hab') });
     },
 
     makeButton: function (label, onClick) {
@@ -2212,7 +2396,12 @@
       this.achList.innerHTML = '';
       if (!A) return;
       var stats = A.stats();
-      this.achSub.textContent = 'CONSEGUIDOS ' + A.count() + ' DE ' + A.total();
+      /* Se dice de dónde sale lo que ya está contado: si alguien ve PURISTA
+       * en 100/50 el primer día que abre esto, tiene derecho a saber por qué
+       * (lo jugado antes de que hubiera logros por modo se apuntó al
+       * clásico). Ver Achievements.sembrarModos. */
+      this.achSub.textContent = 'CONSEGUIDOS ' + A.count() + ' DE ' + A.total() +
+        '  ·  LO QUE JUGASTE ANTES DE QUE HUBIERA LOGROS POR MODO CUENTA COMO CLÁSICO';
       CFG.ACHIEVEMENTS.forEach(function (a) {
         this.achList.appendChild(this.achRow(a, A.progress(a, stats)));
       }, this);
@@ -4051,11 +4240,10 @@
     refreshReto: function () {
       var self = this;
       var R = window.PM.Reto;
-      if (!this.retoBtn || !R) return;
+      if (!R) return;
       var m = R.marca();
-      this.retoBtn.childNodes[0].nodeValue = m
-        ? ('RETO DE HOY · ' + m.p) : 'RETO DE HOY';
-      this.retoBtn.classList.toggle('hecho', !!m);
+      // la tarjeta del reto dice si el intento de hoy ya está gastado
+      this.refreshModePicker();
       if (m) {
         // si la marca se hizo sin conexión, este es buen momento para mandarla
         if (!m.e) R.enviarPendiente();
@@ -4187,15 +4375,10 @@
       window.PM.Game.newGame(R.opts());
     },
 
-    /* El botón del menú avisa de si ya estamos en una party */
+    /* La tarjeta de ONLINE avisa de si ya estamos en una party y de cuántos
+     * sois, sin tener que entrar al panel a mirar. */
     refreshOnlineBtn: function () {
-      var P = window.PM.Party;
-      if (!this.onlineMenuBtn) return;
-      var txt = 'JUGAR ONLINE';
-      if (P && P.inParty()) {
-        txt = 'PARTY (' + P.count() + '/' + CFG.MAX_PLAYERS + ')';
-      }
-      this.onlineMenuBtn.childNodes[0].nodeValue = txt;
+      this.refreshModePicker();
     },
 
     /* Nivel de jugador en la portada */

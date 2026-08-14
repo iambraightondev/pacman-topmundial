@@ -620,16 +620,17 @@
     } finally { G.highScore1 = h1; }
   });
 
-  /* El cartel grande cruza el centro de la pantalla cinco segundos: jugando
-   * solo da igual, pero en una party le tapa el laberinto a gente que está
-   * jugando y que además no ha ganado nada. */
-  test('con más de un jugador la maestría no se celebra encima del laberinto',
+  /* El cartel grande cruzaba el centro de la pantalla cinco segundos, justo
+   * por encima de la casa de los fantasmas, en el momento en que acabas de
+   * hacer tu mejor marca y estás a punto de perderla. Ahora va arriba y
+   * fuera del laberinto SIEMPRE, se juegue solo o acompañado. */
+  test('la maestría se celebra arriba y nunca encima del laberinto',
     function () {
-      partida(1); ok(G.bigNotices(), 'en solo, cartelón');
-      partida(2); ok(!G.bigNotices(), 'en dúo, banda estrecha arriba');
-      partida(4); ok(!G.bigNotices(), 'en escuadra, igual');
       ok(typeof window.PM.Sprites.drawBadgeStrip === 'function',
-         'y existe el dibujo de la banda');
+         'existe el dibujo de la banda de arriba');
+      ok(!window.PM.Sprites.drawBadgeBanner,
+         'y ya no existe el cartelón que tapaba la partida');
+      partida(1);
       /* la banda la comparten logro y maestría: mientras hay un logro en
        * pantalla, a la maestría no se le gasta el tiempo */
       G.achNotice = { name: 'X', desc: 'Y', color: '#fff', ticks: 30, total: 30 };
@@ -1053,19 +1054,21 @@
     }
   });
 
-  test('el botón de la portada dice si el reto ya está jugado', function () {
+  test('la tarjeta de la portada dice si el reto ya está jugado', function () {
     var R = window.PM.Reto, U = window.PM.UI;
     R.olvidar();
     try {
-      /* sin marca aquí, el botón pregunta al servidor: se le contesta que
+      /* sin marca aquí, la tarjeta pregunta al servidor: se le contesta que
        * tampoco hay nada allí, que es lo que se quiere probar */
       conRed(function () { return respuesta(200, []); }, function () {
-        U.refreshReto();
-        eq(U.retoBtn.textContent, 'RETO DE HOY');
+        U.pickMode('reto');
+        var card = U.modeCards.reto;
+        eq(card.tag.textContent, 'UN INTENTO', 'sin marca, la coletilla normal');
         R.cerrar(700, 2);
         U.refreshReto();
-        ok(/700/.test(U.retoBtn.textContent),
-           'con la marca a la vista: ' + U.retoBtn.textContent);
+        eq(card.tag.textContent, 'YA JUGADO', 'con marca, avisa en la tarjeta');
+        ok(/700/.test(U.modeNote.textContent),
+           'y el renglón de abajo enseña la marca: ' + U.modeNote.textContent);
       });
     } finally {
       R.olvidar();
@@ -3128,6 +3131,61 @@
       eq(A.STATS.hasOwnProperty('clasico:fantasmas'), false,
          'no se guarda un contador que no mira nadie');
       G.toMenu();
+    });
+  });
+
+  /* Lo jugado ANTES de que existieran los logros por modo no se puede tirar:
+   * es del jugador. Se reparte con lo único que se puede demostrar. */
+  test('lo jugado de antes cuenta en los logros por modo', function () {
+    conLogrosLimpios(function (A) {
+      var r = [G.highScore2, G.highScore3, G.highScore4];
+      try {
+        // historial de antes: solo contadores globales, sin rastro del modo
+        G.highScore2 = 0; G.highScore3 = 0; G.highScore4 = 0;
+        A.record('partidas', 100);
+        A.record('nivelMax', 9);
+        A.sembrarModos();
+        eq(A.stats()['clasico:partidas'], 100, 'las 100 partidas cuentan en clásico');
+        ok(A.has('cl_purista'), 'así que PURISTA ya está');
+        ok(A.has('cl_maraton'), 'y MARATÓN, que llegó al nivel 9');
+        eq(A.stats()['party:partidas'] || 0, 0,
+           'pero en party no: no hay prueba de haber jugado acompañado');
+        ok(!A.has('pt_companero'), 'y su logro sigue sin caer');
+        eq(A.stats()['hab:mordiscos'] || 0, 0, 'de habilidades no se inventa nada');
+
+        // y no se siembra dos veces: si no, cada partida de party seguiría
+        // engordando el contador de clásico para siempre
+        A.record('partidas', 10);
+        A.sembrarModos();
+        eq(A.stats()['clasico:partidas'], 100, 'la siembra es de una sola vez');
+      } finally {
+        G.highScore2 = r[0]; G.highScore3 = r[1]; G.highScore4 = r[2];
+      }
+    });
+  });
+
+  test('con récord de dúo, lo de antes también cuenta en party', function () {
+    conLogrosLimpios(function (A) {
+      var r = G.highScore2;
+      try {
+        G.highScore2 = 12000;          // la prueba: se jugó acompañado
+        A.record('fantasmas', 150);
+        A.sembrarModos();
+        eq(A.stats()['party:fantasmas'], 150, 'los fantasmas cuentan en party');
+        ok(A.has('pt_batida'), 'y BATIDA cae');
+      } finally { G.highScore2 = r; }
+    });
+  });
+
+  test('entrar en la cuenta vuelve a sembrar con el historial de la nube', function () {
+    conLogrosLimpios(function (A) {
+      A.sembrarModos();                        // se siembra en vacío
+      eq(A.stats()['clasico:partidas'] || 0, 0, 'aquí no había nada');
+      // ahora baja de la nube un historial largo
+      A.merge({ partidas: 80, fantasmas: 400 });
+      eq(A.stats()['clasico:partidas'], 80,
+         'lo de la nube también cuenta en su modo');
+      ok(A.has('cl_purista'), 'y el logro del clásico cae');
     });
   });
 

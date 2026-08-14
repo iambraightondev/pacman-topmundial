@@ -111,6 +111,23 @@ once per tag. The tags are a list because a run is two things at once — a
 exclusive: `clasico` deliberately excludes reto and alternative mazes,
 since each has its own achievements and its own wording.
 
+**History earned before per-mode tracking existed is not thrown away.**
+Scoped counters started at zero, so a player with a hundred runs read
+"JUEGA 50 PARTIDAS EN CLÁSICO · 0/50" — discarding work that is theirs.
+That history only exists in the global counters, which do not record which
+mode it came from, so `Achievements.sembrarModos()` seeds the scoped ones
+from the only evidence available: **`clasico` takes the globals** (it is the
+default mode and the bulk of any history, and a mode counter can never
+legitimately exceed the global, so this can overshoot but never fall short —
+erring in the player's favour is the right side when the data is gone), and
+**`party` only if a duo/trio/squad record proves they played with others**.
+`reto`, `lab`, `vs` and `hab` stay at zero: there is no trace of them, and
+nothing is invented. It runs **once** (flag `m` in the save) — repeating it
+would let party runs keep inflating the classic counter forever — with one
+deliberate exception: `merge()` clears the flag so signing into an account
+re-seeds from the cloud history, which may be far longer than this browser's.
+The LOGROS header says so out loud.
+
 Nothing about the scoped keys is written by hand: `Achievements.STATS` is
 built at load from `BASE` plus whatever `CFG.ACHIEVEMENTS` asks for, so
 adding an achievement creates its counter, and **only counters some
@@ -740,16 +757,19 @@ the highest un-announced tier, or nothing): re-celebrating tiers you already
 had meant a banner every single game, and in a party that is five seconds of
 somebody else's maze covered for a medal that isn't theirs.
 
-Where it is drawn depends on how many are playing (`Game.bigNotices()`,
-`playerCount <= 1`): alone, the full banner across the maze
-(`Sprites.drawBadgeBanner`); with anyone else, a narrow strip at the very top,
-outside the maze (`Sprites.drawBadgeStrip`, entering from the **left** so it
-never reads as the achievement band, which enters from the right). Both share
-that top slot, so `stepBadgeNotice` **holds** the badge (its ticks do not run)
-while an `achNotice` is on screen and `renderStateText` skips it. The guest
-also gets it when the snapshot brings the score.
+It is always drawn as a narrow strip at the very top, outside the maze
+(`Sprites.drawBadgeStrip`, entering from the **left** so it never reads as the
+achievement band, which enters from the right). Playing alone it used to be a
+full banner across the maze; that was dropped — the banner sat over the ghost
+house for five seconds at the exact moment you had just set your best score
+and were about to lose it, and celebrating something must not cost you the run
+that earned it. Badge and achievement share the top slot, so `stepBadgeNotice`
+**holds** the badge (its ticks do not run) while an `achNotice` is on screen
+and `renderStateText` skips it. The guest also gets it when the snapshot
+brings the score.
 
-The MAESTRÍAS panel has four tabs — EN SOLO / EN DÚO / EN TRÍO / EN ESCUADRA —
+The MAESTRÍAS panel has six tabs — EN SOLO / EN DÚO / EN TRÍO / EN ESCUADRA /
+LABERINTOS / HABILIDADES —
 each listing the six tiers **with that track's own figures**: its record, its
 scaled goal per tier and what is missing for the next one. Layout is
 **list + stage**: the six tiers on the left (one column, `.badge-split`
@@ -1379,10 +1399,31 @@ class would break arrow-key navigation silently.)
 
 The menu is four blocks (`.menu-head`, `.menu-main`, `.menu-side`,
 `.menu-cast`, in that DOM order) turned into three columns with `order`. DOM
-order stays name → play → side buttons, so arrow keys reach UN JUGADOR first;
-`.menu-cast` is visually leftmost but last in the DOM, which is harmless
-**only because it contains nothing focusable** — putting a button in there
-would make the focus jump across the screen.
+order stays name → play → side buttons, so arrow keys reach the mode grid
+first; `.menu-cast` is visually leftmost but last in the DOM, which is
+harmless **only because it contains nothing focusable** — putting a button in
+there would make the focus jump across the screen.
+
+**The mode picker** (`UI.MODOS`, `buildModeGrid`, `pickMode`, `playPick`) is
+the whole of `.menu-main`: six equal cards and one big JUGAR. Before, every
+mode lived somewhere else — two started from their own button, the daily
+challenge opened a dialog, LABERINTOS hid among the side panels and ONLINE
+had yet another button — so there was no way to see what you could play.
+Each card is a real `<button>`, which is what puts it in the arrow-key
+sweep for free, and carries its mode's colour, **but only the selected one
+lights up**: six colours at once read as a Christmas tree and hid which was
+picked. `.mode-name` has a fixed two-line box so one-word and two-word names
+keep every icon at the same height, and `.mode-desc` has a fixed height so
+the grid does not jump as you move through it. Clicking the already-selected
+card starts the game, for people who know what they want.
+
+`playPick()` splits the six in two: CLÁSICO, DOS JUGADORES and HABILIDADES
+call `newGame` straight away; RETO, LABERINTOS and ONLINE open their picker
+first, because each needs a choice before there is a game (which maze, which
+room, or confirming you are spending today's single attempt). `modeTag()`
+and `modeNota()` are what make the cards live — today's challenge mark, how
+many are in your party — and `refreshReto()` / `refreshOnlineBtn()` now just
+call `refreshModePicker()`.
 
 Tabbed panels (OPCIONES, PERFIL) **keep their tabs** at every width — showing
 all four panes at once read as clutter. What the width buys is that the
