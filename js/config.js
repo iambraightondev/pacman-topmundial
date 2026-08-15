@@ -406,7 +406,7 @@
   CFG.ACH_MODOS = {
     clasico: { name: 'CLÁSICO',      color: '#ffff00' },
     party:   { name: 'PARTY',        color: '#00ff00' },
-    reto:    { name: 'RETO DE HOY',  color: '#00ffff' },
+    daily:   { name: 'DAILY',        color: '#00ffff' },
     lab:     { name: 'LABERINTOS',   color: '#ffb852' },
     vs:      { name: 'PAC-MAN VS.',  color: '#ff0000' },
     hab:     { name: 'DESATADO',     color: '#ff66cc' }
@@ -468,13 +468,16 @@
     { id: 'pt_cuadrilla', name: 'CUADRILLA',   color: '#00ff00', modo: 'party',
       desc: '20.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 20000 },
 
-    /* ---- RETO DE HOY: un intento al día, el mismo para todos ---- */
-    { id: 'rt_constante', name: 'CONSTANTE',   color: '#00ffff', modo: 'reto',
-      desc: 'JUÉGALO 10 DÍAS', stat: 'partidas', goal: 10 },
-    { id: 'rt_pulso',    name: 'PULSO FIRME',  color: '#00ffff', modo: 'reto',
-      desc: '15.000 PUNTOS EN UN INTENTO', stat: 'puntosMax', goal: 15000 },
-    { id: 'rt_redondo',  name: 'DÍA REDONDO',  color: '#00ffff', modo: 'reto',
-      desc: 'LLEGA AL NIVEL 5', stat: 'nivelMax', goal: 5 },
+    /* ---- DAILY: los siete retos de la semana (js/daily.js) ----
+     * Conservan los identificadores del RETO DE HOY que hubo antes (rt_*): el
+     * modo se retiró, pero quien ya tuviera esos logros no tiene por qué
+     * perderlos, y el contador viejo siembra el nuevo (sembrarDaily). */
+    { id: 'rt_constante', name: 'CONSTANTE',   color: '#00ffff', modo: 'daily',
+      desc: 'CUMPLE 10 RETOS DIARIOS', stat: 'dailyOk', goal: 10 },
+    { id: 'rt_pulso',    name: 'PULSO FIRME',  color: '#00ffff', modo: 'daily',
+      desc: 'CUMPLE RETOS 7 DÍAS SEGUIDOS', stat: 'dailyRacha', goal: 7 },
+    { id: 'rt_redondo',  name: 'SEMANA REDONDA', color: '#00ffff', modo: 'daily',
+      desc: 'CUMPLE LOS 7 RETOS DE UNA SEMANA', stat: 'dailySemana', goal: 1 },
 
     /* ---- LABERINTOS: otros trazados, los mismos fantasmas ---- */
     { id: 'lb_turista',  name: 'TURISTA',      color: '#ffb852', modo: 'lab',
@@ -540,15 +543,111 @@
     MAX_TIME: 6000000         // centésimas: 16 h y pico, de sobra
   };
 
-  /* ---------- Reto diario ----------
-   * Una partida idéntica para todo el mundo cada día: misma semilla (el azar
-   * del juego es reproducible) y los ajustes de siempre. La fecha se saca en
-   * UTC para que el reto cambie a la vez en todo el planeta. */
-  CFG.RETO = {
-    TABLE: 'reto_diario',     // donde se insertan las marcas del día
-    VIEW: 'reto_top',         // mejor marca de cada jugador en cada día
-    LIMIT: 20,
-    KEY: 'pacman-topmundial-reto'   // tu intento de hoy, en este navegador
+  /* ---------- DAILY: siete retos por semana ----------
+   * Un reto para cada día de la semana, y NO es un modo de juego: se cumplen
+   * jugando a lo que se juegue normalmente. Ese era el problema del RETO DE
+   * HOY que había antes —una partida aparte, con su semilla y su
+   * clasificación—: para jugarlo tenías que dejar de jugar a lo tuyo, y si un
+   * día no te apetecía esa partida concreta, no había reto.
+   *
+   * SEMANA CON RECUPERACIÓN. Los siete se ven desde el lunes; cada uno se
+   * abre el día que le toca y se queda abierto hasta que acaba la semana. Así
+   * se premia jugar, no estar presente a diario: quien no puede el martes lo
+   * cumple el jueves. Lo que sí se pierde es la semana entera cuando cambia.
+   *
+   * La semana y el día se sacan en UTC, como la fecha del reto viejo: así
+   * cambian a la vez en todo el planeta y nadie tiene un día de 48 horas
+   * cruzando la medianoche de su huso.
+   *
+   * CINCO LIBRES Y DOS DE MODO. Los de modo son los que hacen que el Daily
+   * enseñe el juego (te asomas a DESATADO o a LABERINTOS porque toca), pero
+   * si la semana entera pidiera modos concretos —o peor, gente— habría
+   * semanas imposibles para quien juega solo. Cinco libres garantizados es el
+   * suelo: siempre hay cinco que se cumplen jugando a lo que sea. */
+  CFG.DAILY = {
+    KEY: 'pacman-topmundial-daily',
+    DIAS: 7,
+    LIBRES_POR_SEMANA: 5,     // los otros dos salen de la lista de modo
+    XP: 400,                  // experiencia por reto cumplido
+    NOTICE_TICKS: 260,        // aviso en partida (~4,3 s)
+    COLOR: '#00ffff',
+    DIA_NOMBRE: ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES',
+                 'SÁBADO', 'DOMINGO'],
+    DIA_CORTO: ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'],
+
+    /* Los retos que se pueden cumplir JUGANDO A CUALQUIER COSA.
+     *   id    estable: viaja en lo guardado, no se renombra nunca
+     *   desc  qué hay que hacer, tal cual sale en pantalla
+     *   stat  contador de PM.Achievements que lo mide (el mismo vocabulario
+     *         que los logros: así no hay que contar nada dos veces)
+     *   goal  cuánto
+     *   menor el contador es un tiempo: cuenta si es MENOR o igual
+     *   fmt   cómo se enseña el progreso ('n' número, 'tiempo' mm:ss.cc)
+     *
+     * Ojo con el tipo de contador (PM.Achievements.BASE): los de 'suma' se
+     * acumulan a lo largo del día y los de 'mayor' se quedan con la mejor
+     * marca de UNA partida. "Cómete 20 fantasmas" vale a lo largo del día;
+     * "12.000 puntos" hay que hacerlos en una sola. */
+    LIBRES: [
+      { id: 'd_doblete',  desc: '3 FANTASMAS CON UN MISMO ENERGIZANTE',
+        stat: 'racha', goal: 3 },
+      { id: 'd_festin',   desc: 'LOS 4 FANTASMAS CON UN MISMO ENERGIZANTE',
+        stat: 'racha', goal: 4 },
+      { id: 'd_batida',   desc: 'CÓMETE 20 FANTASMAS',
+        stat: 'fantasmas', goal: 20 },
+      { id: 'd_cacería',  desc: 'CÓMETE 40 FANTASMAS',
+        stat: 'fantasmas', goal: 40 },
+      { id: 'd_frutero',  desc: 'CÓMETE 3 FRUTAS',
+        stat: 'frutas', goal: 3 },
+      { id: 'd_limpio',   desc: 'DESPEJA UN NIVEL SIN MORIR',
+        stat: 'limpios', goal: 1 },
+      { id: 'd_doslimpios', desc: 'DESPEJA 2 NIVELES SEGUIDOS SIN MORIR',
+        stat: 'limpios', goal: 2 },
+      { id: 'd_marca',    desc: '12.000 PUNTOS EN UNA PARTIDA',
+        stat: 'puntosMax', goal: 12000 },
+      { id: 'd_marcaza',  desc: '20.000 PUNTOS EN UNA PARTIDA',
+        stat: 'puntosMax', goal: 20000 },
+      { id: 'd_nivel4',   desc: 'LLEGA AL NIVEL 4',
+        stat: 'nivelMax', goal: 4 },
+      { id: 'd_nivel6',   desc: 'LLEGA AL NIVEL 6',
+        stat: 'nivelMax', goal: 6 },
+      { id: 'd_tres',     desc: 'JUEGA 3 PARTIDAS',
+        stat: 'partidas', goal: 3 },
+      { id: 'd_rapido',   desc: 'DESPEJA EL NIVEL 1 EN MENOS DE 2:00',
+        stat: 'mejorT1', goal: 12000, menor: true, fmt: 'tiempo' }
+    ],
+
+    /* Y los que piden un modo concreto. `modo` es una etiqueta de las que
+     * devuelve Game.achTags(): el modo ('clasico', 'lab', 'hab', 'vs') o el
+     * formato ('solo', 'party'). Dos por semana como mucho. */
+    MODOS: [
+      { id: 'd_hab_mordisco', modo: 'hab',
+        desc: 'CÓMETE 5 FANTASMAS A MORDISCOS (Q)', stat: 'mordiscos', goal: 5 },
+      { id: 'd_hab_muros', modo: 'hab',
+        desc: 'ATRAVIESA 15 MUROS CON EL FLASH (E)', stat: 'muros', goal: 15 },
+      { id: 'd_hab_marca', modo: 'hab',
+        desc: '15.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 15000 },
+      { id: 'd_lab_marca', modo: 'lab',
+        desc: '8.000 PUNTOS EN OTRO LABERINTO', stat: 'puntosMax', goal: 8000 },
+      { id: 'd_lab_limpio', modo: 'lab',
+        desc: 'DESPEJA UN NIVEL SIN MORIR EN OTRO LABERINTO',
+        stat: 'limpios', goal: 1 },
+      { id: 'd_lab_batida', modo: 'lab',
+        desc: 'CÓMETE 15 FANTASMAS EN OTRO LABERINTO',
+        stat: 'fantasmas', goal: 15 },
+      { id: 'd_cl_marca', modo: 'clasico',
+        desc: '15.000 PUNTOS EN EL LABERINTO DE 1980',
+        stat: 'puntosMax', goal: 15000 },
+      { id: 'd_cl_nivel', modo: 'clasico',
+        desc: 'LLEGA AL NIVEL 5 EN EL LABERINTO DE 1980',
+        stat: 'nivelMax', goal: 5 },
+      { id: 'd_solo_marca', modo: 'solo',
+        desc: '10.000 PUNTOS JUGANDO SOLO', stat: 'puntosMax', goal: 10000 },
+      { id: 'd_party_batida', modo: 'party',
+        desc: 'CÓMETE 15 FANTASMAS ACOMPAÑADO', stat: 'fantasmas', goal: 15 },
+      { id: 'd_vs_caza', modo: 'vs',
+        desc: 'CAZA 2 PAC-MAN LLEVANDO UN FANTASMA', stat: 'cazas', goal: 2 }
+    ]
   };
 
   /* ---------- Récord de velocidad del primer nivel ----------

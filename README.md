@@ -52,8 +52,9 @@ red.
 
 En la portada se eligen **de uno en uno, en grande**: pasas con `◀` y `▶` (o
 con los puntitos de debajo, o con las flechas del teclado) y le das a `JUGAR`.
-Cada tarjeta te dice de qué va y lo que conviene saber antes de entrar (si el
-reto de hoy ya está jugado, cuánta gente hay en tu party...).
+Cada tarjeta te dice de qué va y lo que conviene saber antes de entrar (cuánta
+gente hay en tu party, por ejemplo). Encima está el **reto de hoy**, que se
+cumple juegues a lo que juegues.
 
 - **Un jugador** — el arcade clásico.
 - **Dos jugadores (misma máquina)** — cooperativo simultáneo contra los
@@ -227,10 +228,19 @@ Dos maneras de correr la misma batería:
   cuatro fantasmas, el asustado, los ojos, frutas y la medalla), tu skin,
   nombre, nivel con su barra y un resumen de logros, maestría y récord. De
   invitado hay un botón para **sortear un nombre** al azar.
+- **DAILY**: **siete retos por semana, uno por día**, y no son un modo de
+  juego: se cumplen jugando a lo que ibas a jugar igual («3 fantasmas con un
+  mismo energizante», «despeja un nivel sin morir», «12.000 puntos en una
+  partida»). Los siete se ven desde el lunes; el de cada día se abre ese día
+  y **se queda abierto hasta que acaba la semana**, así que si un día no
+  puedes, lo recuperas. Cinco valen en cualquier modo y dos piden uno
+  concreto (DESATADO, LABERINTOS...), que es la forma de asomarte a lo que no
+  sueles tocar. Cada uno cumplido da experiencia, y llevas una **racha** de
+  días seguidos jugando. Está en la portada, encima de la elección de modo.
 - **Logros**: 33, y **cada modo tiene los suyos**. 15 valen jugando a lo que
   sea (de un doblete de fantasmas a comerte 1000, despejar niveles sin morir,
   frutas, partidas o hacer el nivel 1 en menos de 1:30) y los otros 18 son de
-  un modo concreto: tres del CLÁSICO, tres de PARTY, tres del RETO DE HOY,
+  un modo concreto: tres del CLÁSICO, tres de PARTY, tres del DAILY,
   tres de LABERINTOS, tres de PAC-MAN VS. (cazar Pac-Man llevando un fantasma)
   y tres de DESATADO (mordiscos y muros atravesados con el flash).
   **Salen todos en la misma lista**, y cada uno dice delante en qué modo hay
@@ -333,17 +343,6 @@ El panel del final lo dice claro.
 maestrías (con un fantasma que piensa no es la misma partida). El NIVEL DE
 JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
 
-- **Reto de hoy** — la misma partida para todo el mundo: mismo azar
-  (fantasmas y fruta salen igual en la de cualquiera) y los ajustes de
-  siempre, para que las marcas se puedan comparar. Cambia cada día a la
-  vez en todo el planeta (se cuenta en UTC) y hay **un intento al día**:
-  la marca se cierra cuando acaba la partida, te rindas o te salgas. El
-  intento es **uno para todos tus aparatos** —el hueco del día lo guarda el
-  servidor—, así que jugarlo en el móvil después de jugarlo en el PC no vale:
-  el juego lo dice antes de empezar. Se juega sin cuenta —basta con tener
-  nombre— y **sin conexión**: la marca se guarda y se manda sola cuando
-  vuelve la red. La clasificación del día está en TOP MUNDIAL → RETO DE HOY,
-  con tu puesto.
 - **Laberintos** — **seis trazados** de 28×31, con su túnel, su casa de
   fantasmas y sus energizantes en las cuatro esquinas, y cada uno con una
   idea distinta: ANILLOS (cuatro anillos concéntricos), PANAL (celdas de dos
@@ -354,8 +353,8 @@ JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
   nunca**, así que estas partidas no entran en el top mundial (experiencia
   sí).
 - **Top mundial**: clasificaciones compartidas entre todos —una **por
-  formato** (individual, dúo, trío y escuadra), **nivel 1** (quién lo
-  despeja en menos tiempo) y **reto de hoy**—, con la mejor marca de cada
+  formato** (individual, dúo, trío y escuadra) y **nivel 1** (quién lo
+  despeja en menos tiempo)—, con la mejor marca de cada
   jugador o equipo; en las de equipo entran todos los nombres, y si cambia
   uno es otro equipo. Las cuatro de puntos se reparten
   por **temporadas** (el mes natural, calculado de la fecha): pestañas
@@ -364,26 +363,22 @@ JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
   velocidad se manda **en cuanto despejas el primer nivel**, así que
   cuenta aunque después te maten o te salgas, y solo vale a un jugador,
   sin red, en el laberinto clásico y con los ajustes de siempre.
-Hay dos scripts más, que se ejecutan igual (Dashboard → SQL Editor → New
-query → Run) y también se pueden repetir sin miedo:
+Hay un script más, que se ejecuta igual (Dashboard → SQL Editor → New
+query → Run) y también se puede repetir sin miedo:
 
 - [`supabase/temporadas.sql`](supabase/temporadas.sql) — añade la
   temporada a la tabla `ranking` como columna **calculada** de la fecha y
   crea la vista por meses. No borra ni modifica ninguna fila: las partidas
   que ya estaban entran solas en el mes que les tocaba.
-- [`supabase/reto.sql`](supabase/reto.sql) — crea la tabla del **reto
-  diario** y su vista, con lectura e inserción públicas, y guarda **un hueco
-  por nombre y día**: el segundo intento del día lo rechaza la base de datos.
 
 Si falta alguna, el panel lo dice y el resto del juego funciona con
 normalidad.
 
-> Si vienes de una versión anterior, **vuelve a lanzar `reto.sql`**: es lo que
-> pone el intento único. Antes lo decidía el navegador, y bastaba con jugar en
-> el PC y otra vez en el móvil para mandar la mejor de las dos. Al ejecutarlo
-> se queda **una marca por nombre y día** —la mejor, que es la que la
-> clasificación ya venía enseñando— y se retira el freno viejo de tres
-> envíos.
+> **`reto.sql` ya no está.** Era la tabla del RETO DE HOY, el modo que se
+> retiró en favor del DAILY (siete retos por semana, que se cumplen jugando a
+> lo que sea y no necesitan servidor). Si lo tenías montado, la tabla
+> `reto_diario` sigue en tu proyecto: el juego ya no la toca, y borrarla —con
+> las marcas que hubiera dentro— es cosa tuya.
 
 Las partidas **no se escriben directamente en la tabla**: se mandan a una
 Edge Function del proyecto, `enviar-record`, que las revisa antes de
@@ -461,7 +456,7 @@ js/level.js       Nivel de jugador (experiencia acumulada)
 js/friends.js     Lista de amigos
 js/ranking.js     Top mundial (tabla de Supabase vía REST)
 js/temporadas.js  Temporadas del top mundial (mes natural)
-js/reto.js        Reto diario (la misma partida para todos)
+js/daily.js       DAILY: siete retos por semana, uno por día
 js/mazes.js       Laberintos alternativos (modo aparte)
 js/versus.js      PAC-MAN VS.: el fantasma que lleva un jugador
 js/habilidades.js modo DESATADO: los cuatro poderes de Q, W, E y R

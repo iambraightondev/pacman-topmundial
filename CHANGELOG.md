@@ -2,6 +2,40 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-14 · El DAILY: siete retos por semana, y ya no son un modo
+
+- **El RETO DE HOY tenía un problema de raíz: era un modo de juego.** Una
+  partida aparte, con su semilla, su intento único y su clasificación. Para
+  jugarlo tenías que dejar de jugar a lo tuyo, y si ese día esa partida
+  concreta no te apetecía, sencillamente no había reto.
+- **Ahora hay siete retos por semana, uno por día, y se cumplen jugando a lo
+  que ibas a jugar igual.** «3 fantasmas con un mismo energizante», «despeja
+  un nivel sin morir», «12.000 puntos en una partida». Te salen al paso.
+- **Semana con recuperación.** Los siete se ven desde el lunes; el de cada
+  día se abre ese día y **se queda abierto hasta que acaba la semana**. Si el
+  martes no puedes jugar, lo cumples el jueves. Se premia jugar, no estar
+  presente a diario. Lo que sí caduca es la semana.
+- **Cinco valen en cualquier modo y dos piden uno concreto** (DESATADO,
+  LABERINTOS, party...). Los de modo son los que te asoman a lo que no sueles
+  tocar; los cinco libres son el suelo, para que nunca haya una semana
+  imposible para quien juega solo.
+- **Cada reto cumplido da experiencia**, y llevas una **racha** de días
+  seguidos cumpliendo algo. La racha cuenta días jugando, no retos: ponerte al
+  día de tres el jueves es un jueves, no tres días. Y no se rompe al cambiar
+  de semana.
+- Está **en la portada**, encima de la elección de modo, con su barra de
+  progreso; se pulsa y se ve la semana entera.
+- Los siete de cada semana salen de la propia fecha, así que **son los mismos
+  para todo el mundo** sin necesitar servidor, y la semana que viene son
+  otros.
+
+> **Lo que se ha ido con el modo**: la tarjeta RETO DE HOY de la portada, su
+> clasificación diaria en TOP MUNDIAL y su tabla. Los **tres logros** del reto
+> se quedan —CONSTANTE, PULSO FIRME y ahora SEMANA REDONDA—, y **lo que ya
+> llevabas jugado no se pierde**: cada día que jugaste el reto viejo cuenta
+> como un reto diario cumplido, así que quien tuviera CONSTANTE sigue
+> teniéndolo.
+
 ## 2026-08-14 · Seis laberintos, y cada uno con una idea
 
 - **Los tres laberintos alternativos eran el mismo laberinto tres veces.**

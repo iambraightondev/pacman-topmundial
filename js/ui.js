@@ -138,9 +138,6 @@
     { id: 'hab', name: 'DESATADO', tag: 'Q · W · E · R', color: '#ff66cc',
       icon: 'dientes',
       desc: 'CUATRO PODERES CON SU RECARGA. AQUÍ SE MUEVE SOLO CON LAS FLECHAS' },
-    { id: 'reto', name: 'RETO DE HOY', tag: 'UN INTENTO', color: '#00ffff',
-      icon: 'estrella',
-      desc: 'LA MISMA PARTIDA PARA TODO EL MUNDO, UNA VEZ AL DÍA' },
     { id: 'lab', name: 'LABERINTOS', tag: 'OTROS TRAZADOS', color: '#ffb852',
       icon: 'maze',
       desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR' },
@@ -180,6 +177,7 @@
       this.els.mazes = document.getElementById('mazes');
       this.els.friends = document.getElementById('friends');
       this.els.profile = document.getElementById('profile');
+      this.els.daily = document.getElementById('daily');
       this.els.mate = document.getElementById('mate');
       this.els.prompt = document.getElementById('prompt');
       if (window.PM.Badges) window.PM.Badges.syncSeen();
@@ -192,6 +190,7 @@
       this.buildMazes();
       this.buildFriends();
       this.buildProfile();
+      this.buildDaily();
       this.buildMate();
       this.accountHooks();
       this.buildGameButtons();
@@ -331,14 +330,20 @@
       lvl.appendChild(bar);
       main.appendChild(lvl);
 
+      /* EL RETO DE HOY, encima de la elección de modo y no dentro de ella: no
+       * es un modo, es algo que se cumple jugando a lo que se juegue. Va aquí
+       * para que se lea ANTES de elegir —igual te decides por DESATADO porque
+       * el reto de hoy es de ahí— y se pulsa para ver la semana entera. */
+      main.appendChild(this.buildDailyBox());
+
       /* Elige modo y dale a JUGAR. UNO cada vez, en grande, y se pasa de uno
        * a otro con las flechas de los lados. */
       main.appendChild(this.sectionTitle('ELIGE MODO'));
       main.appendChild(this.buildModeGrid());
 
-      /* Lo que hace ese modo, y su recado si tiene (la marca del reto de hoy,
-       * la gente que hay en tu party...). Va debajo del carrusel y encima
-       * del botón, que es por donde pasa la mirada camino de JUGAR. */
+      /* Lo que hace ese modo, y su recado si tiene (la gente que hay en tu
+       * party...). Va debajo del carrusel y encima del botón, que es por donde
+       * pasa la mirada camino de JUGAR. */
       this.modeDesc = document.createElement('div');
       this.modeDesc.className = 'mode-desc';
       main.appendChild(this.modeDesc);
@@ -403,6 +408,211 @@
         hint.textContent = ayudas[a];
         cast.appendChild(hint);
       }
+    },
+
+    /* ------------------------------------------------------
+     * DAILY: el reto de hoy en la portada
+     *
+     * Un recuadro con el reto que toca, su barra de progreso y cuántos llevas
+     * de la semana. Se pulsa y se abre la semana entera.
+     *
+     * Va en la portada y NO en el cuartel a propósito: el reto es lo que hace
+     * volver mañana, y algo que hay que ir a buscar a un panel deja de
+     * existir. Aquí lo lees de camino a JUGAR, sin buscarlo.
+     * ------------------------------------------------------ */
+    buildDailyBox: function () {
+      var self = this;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'daily-box';
+      b.addEventListener('click', function () {
+        self.resumeAudio();
+        self.showDaily();
+      });
+
+      var cab = document.createElement('div');
+      cab.className = 'daily-head';
+      this.dailyTitle = document.createElement('span');
+      this.dailyTitle.className = 'daily-title';
+      cab.appendChild(this.dailyTitle);
+      this.dailyCount = document.createElement('small');
+      this.dailyCount.className = 'daily-count';
+      cab.appendChild(this.dailyCount);
+      b.appendChild(cab);
+
+      this.dailyDesc = document.createElement('div');
+      this.dailyDesc.className = 'daily-desc';
+      b.appendChild(this.dailyDesc);
+
+      var barra = document.createElement('div');
+      barra.className = 'daily-bar';
+      this.dailyFill = document.createElement('div');
+      this.dailyFill.className = 'daily-fill';
+      barra.appendChild(this.dailyFill);
+      b.appendChild(barra);
+
+      this.dailyFoot = document.createElement('small');
+      this.dailyFoot.className = 'daily-foot';
+      b.appendChild(this.dailyFoot);
+
+      this.dailyBox = b;
+      return b;
+    },
+
+    /* Cómo se lee el progreso de un reto. Los de tiempo van en mm:ss.cc y
+     * al revés (menos es mejor), como en los logros. */
+    dailyValor: function (r, v) {
+      var R = window.PM.Ranking;
+      if (r.fmt === 'tiempo') {
+        var meta = (R && R.fmtTime) ? R.fmtTime(r.goal) : String(r.goal);
+        return (v > 0 && R && R.fmtTime) ? (R.fmtTime(v) + ' / ' + meta)
+                                         : ('— / ' + meta);
+      }
+      return v + ' / ' + r.goal;
+    },
+
+    /* El recuadro de la portada, al día */
+    refreshDaily: function () {
+      var D = window.PM.Daily;
+      if (!this.dailyBox || !D) return;
+      var est = D.leer();
+      var i = D.diaSemana();
+      var p = D.progreso(i, est);
+      var hechos = D.cumplidos(est);
+      var racha = est.racha || 0;
+
+      this.dailyTitle.textContent = 'RETO DE HOY';
+      this.dailyCount.textContent = hechos + '/' + CFG.DAILY.DIAS +
+        (racha > 0 ? ('  ·  RACHA ' + racha) : '');
+
+      if (!p) { this.dailyDesc.textContent = ''; return; }
+      this.dailyDesc.textContent = p.reto.desc;
+      this.dailyDesc.style.color = p.hecho ? '#00ff00' : CFG.DAILY.COLOR;
+      this.dailyFill.style.width = Math.round(p.pct * 100) + '%';
+      this.dailyFill.style.background = p.hecho ? '#00ff00' : CFG.DAILY.COLOR;
+
+      var donde = p.reto.modo ? ('EN ' + this.dailyModoName(p.reto.modo))
+                              : 'EN CUALQUIER MODO';
+      /* Si el de hoy ya está, lo útil no es repetirlo: es decir que quedan
+       * otros abiertos de esta semana, que es de lo que va la recuperación. */
+      var quedan = D.pendientes(est);
+      this.dailyFoot.textContent = p.hecho
+        ? (quedan > 0
+            ? ('CUMPLIDO  ·  TE QUEDAN ' + quedan + ' DE ESTA SEMANA')
+            : 'CUMPLIDO  ·  ESTA SEMANA LOS LLEVAS TODOS')
+        : (donde + '  ·  ' + this.dailyValor(p.reto, p.valor));
+    },
+
+    /* Nombre del modo de un reto, tal cual se enseña */
+    dailyModoName: function (modo) {
+      if (modo === 'solo') return 'SOLO';
+      if (modo === 'party') return 'PARTY';
+      var m = CFG.ACH_MODOS[modo];
+      return m ? m.name : String(modo).toUpperCase();
+    },
+
+    /* ------------------------------------------------------
+     * DAILY: la semana entera
+     * ------------------------------------------------------ */
+    buildDaily: function () {
+      var self = this;
+      var o = this.els.daily;
+      if (!o) return;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'DAILY';
+      o.appendChild(h);
+
+      this.dailySub = document.createElement('div');
+      this.dailySub.className = 'note';
+      o.appendChild(this.dailySub);
+
+      this.dailyList = document.createElement('div');
+      this.dailyList.className = 'badge-list daily-list';
+      o.appendChild(this.dailyList);
+
+      this.dailyRacha = document.createElement('div');
+      this.dailyRacha.className = 'lobby-status';
+      o.appendChild(this.dailyRacha);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+    },
+
+    showDaily: function () {
+      this.refreshDailyPanel();
+      this.showPanel('daily');
+    },
+
+    refreshDailyPanel: function () {
+      var D = window.PM.Daily;
+      if (!this.dailyList || !D) return;
+      var est = D.leer();
+      var hoy = D.diaSemana();
+      var sem = D.semanaId();
+
+      this.dailySub.textContent =
+        'SIETE RETOS, UNO POR DÍA · SE CUMPLEN JUGANDO A LO QUE SEA, NO SON UN ' +
+        'MODO APARTE · EL DE CADA DÍA SE ABRE ESE DÍA Y SE QUEDA ABIERTO HASTA ' +
+        'QUE ACABA LA SEMANA, ASÍ QUE SE PUEDEN RECUPERAR · ' +
+        D.cumplidos(est) + '/' + CFG.DAILY.DIAS + ' CUMPLIDOS';
+
+      this.dailyList.innerHTML = '';
+      for (var i = 0; i < CFG.DAILY.DIAS; i++) {
+        var p = D.progreso(i, est);
+        if (!p) continue;
+        var fila = document.createElement('div');
+        fila.className = 'badge-row daily-row' +
+          (p.hecho ? ' got' : (p.abierto ? '' : ' cerrado')) +
+          (i === hoy ? ' hoy' : '');
+
+        var dia = document.createElement('div');
+        dia.className = 'daily-day';
+        dia.textContent = CFG.DAILY.DIA_CORTO[i];
+        dia.style.color = p.hecho ? '#00ff00'
+          : p.abierto ? CFG.DAILY.COLOR : '#555';
+        fila.appendChild(dia);
+
+        var txt = document.createElement('div');
+        txt.className = 'badge-text';
+
+        var nm = document.createElement('div');
+        nm.className = 'badge-name daily-name';
+        nm.style.color = p.hecho ? '#00ff00' : (p.abierto ? '#ddd' : '#666');
+        nm.textContent = p.reto.desc;
+        txt.appendChild(nm);
+
+        var st = document.createElement('div');
+        st.className = 'badge-state';
+        var donde = p.reto.modo
+          ? (' · EN ' + this.dailyModoName(p.reto.modo)) : '';
+        st.textContent = p.hecho ? ('CUMPLIDO · +' + CFG.DAILY.XP + ' EXP')
+          : p.abierto ? (this.dailyValor(p.reto, p.valor) + donde)
+          : ('SE ABRE EL ' + D.fmtFecha(D.fechaDe(sem, i)) + donde);
+        txt.appendChild(st);
+
+        var barra = document.createElement('div');
+        barra.className = 'daily-bar';
+        var fill = document.createElement('div');
+        fill.className = 'daily-fill';
+        fill.style.width = Math.round((p.abierto ? p.pct : 0) * 100) + '%';
+        fill.style.background = p.hecho ? '#00ff00' : CFG.DAILY.COLOR;
+        barra.appendChild(fill);
+        txt.appendChild(barra);
+
+        fila.appendChild(txt);
+        this.dailyList.appendChild(fila);
+      }
+
+      var racha = est.racha || 0, mejor = est.mejor || 0;
+      this.dailyRacha.textContent =
+        'RACHA: ' + racha + (racha === 1 ? ' DÍA' : ' DÍAS') +
+        '  ·  LA MEJOR: ' + mejor + (mejor === 1 ? ' DÍA' : ' DÍAS') +
+        '  ·  CUENTA UN DÍA POR CADA JORNADA EN LA QUE CUMPLAS ALGO';
     },
 
     /* ------------------------------------------------------
@@ -598,45 +808,36 @@
       if (this.modeNote) this.modeNote.textContent = this.modeNota(mo);
     },
 
-    /* La coletilla de la tarjeta. Casi siempre es fija, pero dos modos
-     * tienen algo que contar ahora mismo. */
+    /* La coletilla de la tarjeta. Casi siempre es fija, pero ONLINE tiene
+     * algo que contar ahora mismo. */
     modeTag: function (mo) {
       var P = window.PM.Party;
-      var R = window.PM.Reto;
       if (mo.id === 'online' && P && P.inParty()) {
         return 'PARTY ' + P.count() + '/' + CFG.MAX_PLAYERS;
       }
-      if (mo.id === 'reto' && R && R.marca()) return 'YA JUGADO';
       return mo.tag;
     },
 
     /* El renglón de debajo: lo que conviene saber ANTES de darle a JUGAR. */
     modeNota: function (mo) {
-      var R = window.PM.Reto;
       var P = window.PM.Party;
-      if (mo.id === 'reto') {
-        var m = R && R.marca();
-        if (m) return 'HOY YA LO JUGASTE: ' + m.p + ' PUNTOS · VUELVE MAÑANA';
-        return 'CUENTA LO QUE HAGAS, TE RINDAS O TE SALGAS';
-      }
       if (mo.id === 'online') {
         if (P && P.inParty()) return 'YA ESTÁS EN UNA PARTY: ENTRA Y EMPEZAD';
         return 'CREA UNA SALA O ENTRA CON UN CÓDIGO DE 4 LETRAS';
       }
-      if (mo.id === 'lab') return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS';
-      if (mo.id === 'hab') return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS';
+      if (mo.id === 'lab' || mo.id === 'hab') {
+        return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS POR FORMATO';
+      }
       if (mo.id === 'duo') return 'PUNTUACIÓN DE EQUIPO Y RÉCORD DE DÚO';
       return 'TU RÉCORD Y TU MAESTRÍA DE SIEMPRE';
     },
 
-    /* JUGAR. Tres modos arrancan de una; los otros tres necesitan que elijas
-     * algo antes (qué laberinto, qué sala, o confirmar que gastas el intento
-     * de hoy), así que JUGAR abre eso. */
+    /* JUGAR. Tres modos arrancan de una; los otros dos necesitan que elijas
+     * algo antes (qué laberinto o qué sala), así que JUGAR abre eso. */
     playPick: function () {
       var s = window.PM.settings;
       var id = this.modePick || 'clasico';
       this.resumeAudio();
-      if (id === 'reto') { this.showRetoPrompt(); return; }
       if (id === 'lab') { this.showMazes(); return; }
       if (id === 'online') { this.showOnline(); return; }
       this.hideAll();
@@ -2995,14 +3196,14 @@
       o.appendChild(h);
 
       /* Clasificaciones separadas. Los identificadores 1..4 son EL NÚMERO DE
-       * JUGADORES (una clasificación por formato, como las maestrías); el 5 y
-       * el 6 son las otras dos tablas y el 0 es tu historial de este
-       * navegador, que no toca la red. */
+       * JUGADORES (una clasificación por formato, como las maestrías); el 5 es
+       * la del nivel 1 y el 0 es tu historial de este navegador, que no toca
+       * la red. El 6 era la del RETO DE HOY, que se retiró con el modo. */
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.rankTabBtns = {};
       [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'TRÍO'], [4, 'ESCUADRA'],
-       [5, 'NIVEL 1'], [6, 'RETO DE HOY'], [0, 'TUS PARTIDAS']].forEach(function (t) {
+       [5, 'NIVEL 1'], [0, 'TUS PARTIDAS']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
         b.classList.add('tab');
         self.rankTabBtns[t[0]] = b;
@@ -3012,8 +3213,7 @@
 
       /* Segunda fila: la temporada. Solo pinta en las clasificaciones por
        * puntos (1..4), que son las que se reparten por meses; el resto no
-       * tiene temporada que valga (el reto es de hoy y el nivel 1 es de
-       * siempre). */
+       * tiene temporada que valga (el nivel 1 es de siempre). */
       this.seasonRow = document.createElement('div');
       this.seasonRow.className = 'tab-row';
       this.seasonBtns = {};
@@ -3053,7 +3253,7 @@
     },
 
     showRankTab: function (players) {
-      this.rankTab = ([0, 2, 3, 4, 5, 6].indexOf(players) !== -1) ? players : 1;
+      this.rankTab = ([0, 2, 3, 4, 5].indexOf(players) !== -1) ? players : 1;
       this.loadRanking();
     },
 
@@ -3067,9 +3267,8 @@
       var self = this;
       var R = window.PM.Ranking;
       var S = window.PM.Season;
-      var Rt = window.PM.Reto;
       var players = this.rankTab;
-      if ([0, 2, 3, 4, 5, 6].indexOf(players) === -1) players = 1;
+      if ([0, 2, 3, 4, 5].indexOf(players) === -1) players = 1;
       for (var k in this.rankTabBtns) {
         if (this.rankTabBtns.hasOwnProperty(k)) {
           this.rankTabBtns[k].classList.toggle('active', +k === players);
@@ -3093,8 +3292,6 @@
       this.rankSub.textContent =
         players === 0 ? ('TUS ÚLTIMAS PARTIDAS · ' + (conCuenta
           ? 'TAMBIÉN LAS DE OTROS APARATOS' : 'SOLO LAS DE ESTE NAVEGADOR')) :
-        players === 6 ? ('LA MISMA PARTIDA PARA TODOS · ' +
-          (Rt ? Rt.fmtFecha(Rt.hoy()) : '')) :
         players === 5 ? 'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE' :
         (players === 1 ? 'MEJOR MARCA DE CADA JUGADOR'
           : ('MEJOR MARCA DE CADA ' + EQUIPO[players] +
@@ -3145,102 +3342,26 @@
           self.rankStatus.classList.add('error');
           self.rankStatus.textContent = err === 'FALTA LA TABLA EN SUPABASE'
             ? ('FALTA LA TABLA: EJECUTA supabase/' +
-               (players === 6 ? 'reto.sql'
-                 : enTemporada ? 'temporadas.sql' : 'ranking.sql') +
+               (enTemporada ? 'temporadas.sql' : 'ranking.sql') +
                ' EN TU PROYECTO')
             : ('NO SE PUDO CARGAR: ' + err);
-          if (players === 6) self.retoTuMarca();
           return;
         }
         self.rankStatus.classList.remove('error');
         if (!rows.length) {
           self.rankStatus.textContent =
-            (players === 6) ? 'AÚN NADIE HA JUGADO EL RETO DE HOY · ¡SÉ EL PRIMERO!' :
             (players === 5) ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!' :
             enTemporada ? 'AÚN NO HAY PARTIDAS ESTA TEMPORADA · ¡SÉ EL PRIMERO!'
                         : 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
-          if (players === 6) self.retoTuMarca();
           return;
         }
         self.rankStatus.textContent = '';
-        if (players === 6) { self.renderReto(rows); self.retoTuMarca(rows); }
-        else if (players === 5) self.renderTimes(rows);
+        if (players === 5) self.renderTimes(rows);
         else self.renderRanking(rows);
       }
-      if (players === 6) {
-        if (!Rt) return;
-        Rt.enviarPendiente();          // por si la marca se hizo sin red
-        /* Antes de pintar, saber si el intento de hoy está gastado en otro
-         * aparato: si no, la línea de abajo diría "HOY AÚN NO LO HAS JUGADO"
-         * teniendo tu marca delante, en la propia lista. */
-        var pedirTop = function () {
-          if (Rt.marca()) self.refreshReto();   // y el botón de la portada
-          Rt.top(Rt.hoy(), llegaron);
-        };
-        if (Rt.sincronizar && !Rt.marca()) Rt.sincronizar(pedirTop);
-        else pedirTop();
-      } else if (players === 5) R.topTime(llegaron);
+      if (players === 5) R.topTime(llegaron);
       else if (enTemporada) S.top(S.actual(), players, llegaron);
       else R.top(players, llegaron);
-    },
-
-    /* Debajo de la clasificación del reto: tu marca y tu puesto. Se enseña
-     * también cuando no hay red, que es justo cuando más falta hace. */
-    retoTuMarca: function (rows) {
-      var Rt = window.PM.Reto;
-      if (!Rt) return;
-      var m = Rt.marca();
-      var linea = document.createElement('div');
-      linea.className = 'note';
-      if (!m) {
-        linea.textContent = 'HOY AÚN NO LO HAS JUGADO · TIENES UN INTENTO';
-      } else {
-        var puesto = rows ? Rt.puestoEn(rows) : 0;
-        /* Sin puesto y sin enviar hay dos motivos muy distintos: que no haya
-         * habido red todavía, o que el hueco de hoy ya estuviera ocupado (la
-         * jugaste en otro aparato). Decirlo evita el "¿y por qué no sale?". */
-        var cola = puesto ? (' · PUESTO ' + puesto)
-          : m.otro ? ' · JUGADA EN OTRO APARATO'
-          : m.e ? '' : ' · SIN ENVIAR';
-        linea.textContent = 'TU MARCA DE HOY: ' + m.p + ' PUNTOS · NIVEL ' + m.n +
-          cola;
-      }
-      this.rankList.appendChild(linea);
-    },
-
-    /* Clasificación del reto del día */
-    renderReto: function (rows) {
-      var mine = String(window.PM.settings.nick1 || '').toUpperCase();
-      this.rankList.innerHTML = '';
-      for (var i = 0; i < rows.length; i++) {
-        var r = rows[i];
-        var n1 = String(r.nombre || '').toUpperCase();
-        var row = document.createElement('div');
-        row.className = 'rank-row';
-        if (mine && n1 === mine) row.classList.add('mine');
-
-        var pos = document.createElement('span');
-        pos.className = 'rank-pos';
-        pos.textContent = (i + 1) + '.';
-        row.appendChild(pos);
-
-        var who = document.createElement('span');
-        who.className = 'rank-who';
-        who.textContent = n1;
-        row.appendChild(who);
-
-        var pts = document.createElement('span');
-        pts.className = 'rank-pts';
-        pts.textContent = String(r.puntos);
-        row.appendChild(pts);
-
-        var lvl = document.createElement('span');
-        lvl.className = 'rank-lvl';
-        lvl.textContent = 'NIV ' + r.nivel;
-        row.appendChild(lvl);
-
-        this.rankList.appendChild(row);
-      }
     },
 
     /* Los más rápidos en despejar el nivel 1 */
@@ -4151,10 +4272,7 @@
         for (var q = 0; q < g.playerCount; q++) equipo.push(g.nameFor(q));
         lines.unshift(equipo.join('  +  '));
       }
-      if (g.reto) lines.unshift('RETO DE HOY');
       lines.push('RÉCORD ' + (g.highScore || 0) + ' · NIVEL ' + g.level);
-      // el reto se cierra con la partida: conviene decir dónde mirarlo
-      if (g.reto) lines.push('TU MARCA DEL DÍA QUEDA REGISTRADA · MÍRALA EN TOP MUNDIAL → RETO DE HOY');
       // tiempo del primer nivel, que es lo que corre en su clasificación
       if (g.lvl1Cs > 0 && window.PM.Ranking) {
         lines.push('NIVEL 1 EN ' + window.PM.Ranking.fmtTime(g.lvl1Cs) +
@@ -4395,7 +4513,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'mazes', 'friends', 'profile', 'mate'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -4407,7 +4525,7 @@
       this.refreshNicks();
       this.refreshLevel();
       this.refreshOnlineBtn();
-      this.refreshReto();
+      this.refreshDaily();
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');
@@ -4436,96 +4554,6 @@
             hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
         ]
       });
-    },
-
-    /* ------------------------------------------------------
-     * Reto de hoy
-     * ------------------------------------------------------ */
-    /* El botón de la portada dice si el de hoy ya está jugado */
-    refreshReto: function () {
-      var self = this;
-      var R = window.PM.Reto;
-      if (!R) return;
-      var m = R.marca();
-      // la tarjeta del reto dice si el intento de hoy ya está gastado
-      this.refreshModePicker();
-      if (m) {
-        // si la marca se hizo sin conexión, este es buen momento para mandarla
-        if (!m.e) R.enviarPendiente();
-        return;
-      }
-      /* Aquí no hay marca, pero el intento de hoy puede estar gastado en otro
-       * aparato: eso lo sabe el servidor. Se pregunta sin bloquear nada y, si
-       * resulta que sí, el botón se pone al día solo. */
-      if (R.sincronizar) {
-        R.sincronizar(function (err, marca) {
-          if (marca) self.refreshReto();
-        });
-      }
-    },
-
-    /* Antes de jugarlo se avisa de las reglas: un intento y se acabó. Si ya
-     * está jugado, en vez del aviso sale tu marca y la clasificación. */
-    showRetoPrompt: function () {
-      var self = this;
-      var R = window.PM.Reto;
-      if (!R) return;
-      var m = R.marca();
-      var fecha = R.fmtFecha(R.hoy());
-      if (m) {
-        this.showPrompt({
-          title: 'RETO DE HOY',
-          color: '#00ffff',
-          lines: [
-            fecha,
-            { text: 'TU MARCA ' + m.p, big: true },
-            (m.otro ? 'LA JUGASTE EN OTRO APARATO · EL INTENTO ES UNO PARA TODOS'
-                    : 'LLEGASTE AL NIVEL ' + m.n),
-            'YA HAS GASTADO TU INTENTO · VUELVE MAÑANA CON OTRO LABERINTO DE FANTASMAS'
-          ],
-          status: (m.e || !R.configured()) ? '' : 'TU MARCA AÚN NO ESTÁ EN LA CLASIFICACIÓN: SE MANDARÁ SOLA CUANDO HAYA RED',
-          buttons: [
-            { label: 'VER CLASIFICACIÓN', primary: true, keys: ['Enter'],
-              hint: 'ENTER',
-              onClick: function () { self.hidePrompt(); self.showRanking(6); } },
-            { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-              onClick: function () { self.hidePrompt(); } }
-          ]
-        });
-        this.promptTag = 'reto';
-        return;
-      }
-      /* Sin marca aquí, se pregunta al servidor si el intento de hoy ya está
-       * gastado en otro aparato. Mientras tanto el diálogo sale entero: la
-       * respuesta suele llegar antes de que nadie lea las reglas, y si dice
-       * que sí, este mismo diálogo se rehace con la marca de allí. */
-      if (R.sincronizar) {
-        R.sincronizar(function (err, marca) {
-          if (marca && self.promptOpen && self.promptTag === 'reto') {
-            self.showRetoPrompt();
-            self.refreshReto();
-          }
-        });
-      }
-      this.showPrompt({
-        title: 'RETO DE HOY',
-        color: '#ffff00',
-        lines: [
-          fecha,
-          'LA MISMA PARTIDA PARA TODO EL MUNDO: MISMOS AJUSTES Y LOS MISMOS FANTASMAS, QUE HUYEN IGUAL EN LA PARTIDA DE CUALQUIERA',
-          'UN SOLO INTENTO AL DÍA · CUENTA LO QUE HAGAS, TE RINDAS O TE SALGAS',
-          'SUMA EXPERIENCIA COMO CUALQUIER PARTIDA'
-        ],
-        buttons: [
-          { label: 'JUGAR', primary: true, keys: ['Enter'], hint: 'ENTER',
-            onClick: function () { self.playReto(); } },
-          { label: 'CLASIFICACIÓN', keys: ['c'], hint: 'C',
-            onClick: function () { self.hidePrompt(); self.showRanking(6); } },
-          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-            onClick: function () { self.hidePrompt(); } }
-        ]
-      });
-      this.promptTag = 'reto';
     },
 
     /* ------------------------------------------------------
@@ -4565,19 +4593,6 @@
         ]
       });
       this.promptTag = 'hab';
-    },
-
-    playReto: function () {
-      var R = window.PM.Reto;
-      if (!R) return;
-      /* Por si el intento se gastó en otro aparato mientras se leían las
-       * reglas: más vale enseñar la marca que dejar jugar una partida que el
-       * servidor no iba a admitir. */
-      if (R.marca()) { this.showRetoPrompt(); return; }
-      this.resumeAudio();
-      this.hidePrompt();
-      this.hideAll();
-      window.PM.Game.newGame(R.opts());
     },
 
     /* La tarjeta de ONLINE avisa de si ya estamos en una party y de cuántos

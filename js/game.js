@@ -118,8 +118,6 @@
     /* Desplazamiento de la semilla, para que una partida se pueda repartir
      * igual a todo el mundo (RETO DE HOY). A 0 el azar es el de siempre. */
     seedBase: 0,
-    reto: false,         // ¿esta partida es el reto del día?
-    retoFecha: null,     // ...y de qué día (UTC)
     mazeId: null,        // laberinto alternativo en juego (null = el clásico)
     mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
     hab: false,          // ¿esta partida es del modo DESATADO?
@@ -452,10 +450,9 @@
       this.timeTicks = 0;
       this.timeSent = false;
       this.lvl1Cs = 0;         // centésimas que costó despejar el nivel 1
-      /* reto del día: la semilla viene de fuera, así que la partida sale
-       * igual en todas las máquinas (ver js/reto.js) */
-      this.reto = !!opts.reto;
-      this.retoFecha = opts.retoFecha || null;
+      /* semilla de fuera: quien la pase reparte el mismo azar a todas las
+       * máquinas. Hoy no la usa nadie del juego; queda para las repeticiones
+       * viejas del RETO DE HOY, que la llevan dentro. */
       this.seedBase = (opts.seed | 0) || 0;
       /* laberinto alternativo (modo LABERINTOS). Se pone ANTES de
        * resetLevel(), que es quien reparte las pastillas. */
@@ -698,8 +695,6 @@
       this.overWait = false;
       this.flash = null;
       this.lastOpts = null;
-      this.reto = false;
-      this.retoFecha = null;
       this.seedBase = 0;        // el azar vuelve a ser el de siempre
       this.playerCount = 1;
       this.vsGhosts = null;      // se acabó el PAC-MAN VS. de esta partida
@@ -1184,7 +1179,7 @@
      * --------------------------------------------------------- */
     seedRnd: function (n) {
       // seedBase mueve TODAS las tiradas de la partida de golpe: es lo que
-      // permite repartir el mismo azar a todo el mundo en el reto del día
+      // permite repartir el mismo azar a todas las máquinas
       // sin tocar ni una regla del juego. A 0 sale lo de siempre.
       var s = (n | 0) + (this.seedBase | 0);
       this.rndState = (s * 2654435761 + 1013904223) >>> 0 || 1;
@@ -1810,12 +1805,6 @@
         lvlPide: ahora ? ahora.needed : 0,
         logros: this.runAch.slice()
       };
-      /* El reto del día se cierra aquí, acabe como acabe la partida: un
-       * intento y lo que hayas hecho. Cerrarlo solo en el GAME OVER dejaría
-       * que cualquiera se saliera al ver que la cosa iba mal. */
-      if (this.reto && window.PM.Reto) {
-        window.PM.Reto.cerrar(this.score, this.level, this.retoFecha);
-      }
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();
       return subida;
@@ -1843,20 +1832,19 @@
     /* Etiquetas de la partida en curso, para los logros por modo.
      *
      * Son dos cosas a la vez y por eso es una lista: el FORMATO (solo o
-     * acompañado) y el MODO (clásico, reto, laberinto, VS. o habilidades).
+     * acompañado) y el MODO (clásico, laberinto, VS. o DESATADO).
      * Una party de poderes cuenta para las dos, que es lo que la gente
      * espera. El modo sí es uno solo: no se pueden mezclar entre ellos.
      *
-     * 'clasico' es el laberinto de 1980 sin inventos, y ahí NO entra el reto
-     * ni un laberinto alternativo: cada uno tiene sus propios logros y su
-     * propia descripción, así que contarlos dos veces sería mentir en una
+     * 'clasico' es el laberinto de 1980 sin inventos, y ahí NO entra un
+     * laberinto alternativo ni DESATADO: cada uno tiene sus propios logros y
+     * su propia descripción, así que contarlos dos veces sería mentir en una
      * de las dos. */
     achTags: function () {
       var t = [(this.playerCount > 1) ? 'party' : 'solo'];
       if (this.hab) t.push('hab');
       else if (this.isVersus()) t.push('vs');
       else if (this.mazeId) t.push('lab');
-      else if (this.reto) t.push('reto');
       else t.push('clasico');
       return t;
     },
@@ -1866,7 +1854,33 @@
       if (this.isSpec() || this.replaying) return;
       var A = window.PM.Achievements;
       if (!A) return;
-      A.recordFor(this.achTags(), o);
+      var tags = this.achTags();
+      A.recordFor(tags, o);
+      /* Los retos del DAILY se miden con estos mismos contadores y por este
+       * mismo embudo: no son un modo de juego, sino algo que se cumple
+       * jugando a lo que sea (js/daily.js). Va ANTES de reclamar los logros
+       * porque cumplir un reto puede entregar uno (CONSTANTE y compañía), y
+       * así los dos avisos salen en la misma jugada. */
+      var Dl = window.PM.Daily;
+      if (Dl) {
+        /* Se celebra por el mismo canal que los logros —la banda de arriba,
+         * fuera del laberinto— en vez de inventar otro aviso: son la misma
+         * clase de cosa para quien juega, y dos bandas peleándose por el
+         * mismo hueco es exactamente lo que se quitó del cartel de maestría. */
+        var hechos = Dl.apunta(tags, o);
+        for (var d = 0; d < hechos.length; d++) {
+          var aviso = {
+            name: 'RETO CUMPLIDO', desc: hechos[d].desc, color: CFG.DAILY.COLOR,
+            ticks: CFG.DAILY.NOTICE_TICKS, total: CFG.DAILY.NOTICE_TICKS
+          };
+          this.achNotices.push(aviso);
+          this.runAch.push({ name: aviso.name, desc: aviso.desc,
+                             color: aviso.color });
+        }
+        if (hechos.length && window.PM.UI && window.PM.UI.refreshDaily) {
+          window.PM.UI.refreshDaily();
+        }
+      }
       var fresh = A.claim();
       for (var i = 0; i < fresh.length; i++) {
         this.achNotices.push({
@@ -1901,9 +1915,9 @@
       // con FLASH y TURBO el nivel 1 se despeja por otro camino: esa marca no
       // se puede poner al lado de una hecha corriendo lo que corre Pac-Man
       if (this.hab) return false;
-      // el reto del día mueve el azar entero: los fantasmas azules huyen por
-      // otro lado, así que el patrón es otro y el tiempo no se compara con el
-      // de nadie. Tiene su propia clasificación, que es donde cuenta.
+      // una semilla de fuera mueve el azar entero: los fantasmas azules huyen
+      // por otro lado, así que el patrón es otro y el tiempo no se compara con
+      // el de nadie.
       if (this.seedBase) return false;
       var r = CFG.TIME_RULES;
       return this.startLevel === r.startLevel &&
@@ -1991,9 +2005,8 @@
       }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
       // El top mundial es del laberinto de 1980, con su azar y con los cuatro
-      // fantasmas de la máquina. En otro laberinto, con el azar del reto del
-      // día o con un fantasma que piensa, no se compara nada: el reto tiene
-      // su propia clasificación y VS. no compite con nadie.
+      // fantasmas de la máquina. En otro laberinto, con un azar traído de
+      // fuera o con un fantasma que piensa, no se compara nada.
       //
       // Y con DESATADO tampoco: morder fantasmas a golpe de tecla regala
       // puntos que en el arcade no existen, así que una partida así al lado

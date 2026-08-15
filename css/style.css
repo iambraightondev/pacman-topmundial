@@ -185,6 +185,107 @@ body {
   width: 100%;
 }
 
+/* ---------- DAILY: el reto de hoy en la portada ----------
+ * Un recuadro pulsable encima de la elección de modo. Está ahí y no en el
+ * cuartel a propósito: el reto es lo que hace volver mañana, y algo que hay
+ * que ir a buscar a un panel deja de existir. Aquí se lee de camino a JUGAR.
+ *
+ * El marco es de su color (cian) y no azul como el resto: es lo único de la
+ * portada que cambia cada día, y si se pinta igual que lo demás no se mira. */
+.daily-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  color: #cfcfcf;
+  background: rgba(0, 255, 255, 0.05);
+  border: 2px solid rgba(0, 255, 255, 0.55);
+  padding: 8px 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s linear;
+}
+
+.daily-box:hover,
+.daily-box:focus-visible {
+  background: rgba(0, 255, 255, 0.16);
+  outline: none;
+}
+
+.daily-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.daily-title {
+  font-size: clamp(9px, 1.5vh, 11px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #00ffff;
+}
+
+.daily-count {
+  font-size: clamp(8px, 1.3vh, 10px);
+  letter-spacing: 1px;
+  color: #7a7a7a;
+}
+
+.daily-desc {
+  font-size: clamp(10px, 1.6vh, 12px);
+  letter-spacing: 1px;
+  line-height: 1.35;
+  min-height: 2.7em;      /* fijo: los hay de una línea y de dos */
+}
+
+/* La barra de progreso, la misma en la portada y en el panel */
+.daily-bar {
+  height: 4px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  margin-top: 3px;
+}
+
+.daily-fill {
+  height: 100%;
+  width: 0;
+  background: #00ffff;
+  transition: width 0.2s linear;
+}
+
+.daily-foot {
+  font-size: clamp(8px, 1.3vh, 10px);
+  letter-spacing: 1px;
+  color: #7a7a7a;
+}
+
+/* ---------- DAILY: la semana entera ---------- */
+.daily-list { width: 100%; }
+
+.daily-row { align-items: center; gap: 10px; }
+
+/* El día de hoy se marca: en una lista de siete, saber cuál es el tuyo de un
+   vistazo es la mitad del trabajo. */
+.daily-row.hoy { border-color: #00ffff; background: rgba(0, 255, 255, 0.06); }
+
+/* Los que aún no se han abierto se apagan, pero se ven: enseñar lo que viene
+   es medio motivo para volver. */
+.daily-row.cerrado { opacity: 0.55; }
+
+.daily-day {
+  flex: 0 0 auto;
+  width: 34px;
+  font-size: clamp(9px, 1.5vh, 11px);
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.daily-name { letter-spacing: 1px; }
+
 /* ---------- Selector de modo de la portada ----------
  * UN MODO CADA VEZ, en grande, con una flecha a cada lado y los puntitos
  * debajo. Antes eran seis tarjetas en rejilla; se veía todo de golpe, sí, pero

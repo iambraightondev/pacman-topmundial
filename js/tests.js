@@ -815,302 +815,236 @@
   });
 
   // ---------------------------------------------------------------
-  // Reto diario
+  // DAILY: siete retos por semana (js/daily.js)
   // ---------------------------------------------------------------
-  test('el reto del día sale de la fecha en UTC', function () {
-    var R = window.PM.Reto;
-    // 23:30 UTC del 5 sigue siendo el reto del 5 en todo el planeta
-    eq(R.hoy(new Date(Date.UTC(2026, 7, 5, 23, 30))), '2026-08-05');
-    eq(R.hoy(new Date(Date.UTC(2026, 0, 1, 0, 1))), '2026-01-01');
-    eq(R.semilla('2026-08-05'), R.semilla('2026-08-05'), 'misma fecha, misma semilla');
-    ok(R.semilla('2026-08-05') !== R.semilla('2026-08-06'), 'otro día, otra semilla');
-    var s = R.semilla('2026-08-05');
-    ok(s > 0 && s <= 1000000, 'acotada, o Game.seedRnd perdería precisión: ' + s);
-  });
+  var DY = window.PM.Daily;
 
-  test('el reto se juega con los ajustes de siempre', function () {
-    var o = window.PM.Reto.opts('2026-08-05');
-    var p = CFG.PRESETS.normal;
-    eq(o.players, 1);
-    ok(o.reto, 'la partida va marcada como reto');
-    ok(o.seed > 0, 'y con la semilla del día');
-    eq(o.cfg.ghostSpeedMult, p.ghostSpeedMult, 'fantasmas');
-    eq(o.cfg.pacSpeedMult, p.pacSpeedMult, 'pac-man');
-    eq(o.cfg.frightMult, p.frightMult, 'energizante');
-    eq(o.cfg.startLives, p.startLives, 'vidas');
-    eq(o.cfg.startLevel, p.startLevel, 'nivel inicial');
-  });
-
-  test('la semilla del día reparte el mismo azar a todo el mundo', function () {
-    function firma(seed) {
-      window.PM.settings.muted = true;
-      G.newGame({ players: 1, seed: seed });
-      var s = '';
-      for (var i = 0; i < 40; i++) s += G.rndDir();
-      return s;
+  /* Deja el DAILY limpio, corre la prueba y lo devuelve como estaba. Toca
+   * experiencia y contadores de logros, así que se aísla como se aísla todo
+   * lo que escribe en el almacén. */
+  function conDaily(fn) {
+    var antes = null;
+    try { antes = localStorage.getItem(CFG.DAILY.KEY); } catch (e) { antes = null; }
+    DY.olvidar();
+    try { fn(DY); }
+    finally {
+      if (antes === null) DY.olvidar();
+      else { try { localStorage.setItem(CFG.DAILY.KEY, antes); } catch (e) {} }
     }
-    var a = firma(1234), b = firma(1234), c = firma(4321);
-    eq(a, b, 'la misma semilla, la misma tirada');
-    ok(a !== c, 'otra semilla, otra tirada');
-    G.newGame({ players: 1 });
-    eq(G.seedBase, 0, 'una partida normal vuelve al azar de siempre');
+  }
+
+  test('la semana empieza en LUNES y se cuenta en UTC', function () {
+    // domingo 9 de agosto de 2026, a las 23:30 UTC: sigue siendo esa semana
+    var dom = new Date(Date.UTC(2026, 7, 9, 23, 30));
+    var lun = new Date(Date.UTC(2026, 7, 10, 0, 30));
+    eq(DY.diaSemana(dom), 6, 'el domingo es el último día, no el primero');
+    eq(DY.diaSemana(lun), 0, 'y el lunes el primero');
+    eq(DY.semanaId(dom), '2026-08-03', 'el domingo cae en la semana anterior');
+    eq(DY.semanaId(lun), '2026-08-10', 'y el lunes ya abre la suya');
+    // cualquier día de la misma semana da el mismo identificador
+    eq(DY.semanaId(new Date(Date.UTC(2026, 7, 13, 5, 0))), '2026-08-10');
+    eq(DY.fechaDe('2026-08-10', 3), '2026-08-13', 'el jueves de esa semana');
   });
 
-  /* El reto tiene su propia clasificación. Colarlo además en el top mundial
-   * mezclaría marcas de azares distintos: los fantasmas azules huyen por otro
-   * lado, así que ni la puntuación ni el tiempo se comparan con los de una
-   * partida normal. Es la misma razón por la que no vale con los ajustes
-   * cambiados. */
-  test('el reto del día no entra en el top mundial ni en el récord de tiempo',
-    function () {
-      window.PM.settings.muted = true;
-      G.newGame({ players: 1, seed: 4321 });
-      ok(!G.canTimeRecord(), 'la marca de velocidad no cuenta');
-      var enviadas = 0;
-      var submit0 = window.PM.Ranking.submit;
-      var conf0 = window.PM.Ranking.configured;
-      var nick0 = window.PM.settings.nick1;
+  test('los siete retos salen de la semana y no se repiten', function () {
+    var a = DY.retosDe('2026-08-10');
+    var b = DY.retosDe('2026-08-10');
+    var c = DY.retosDe('2026-08-17');
+    eq(a.length, CFG.DAILY.DIAS, 'son siete');
+    eq(a.map(function (r) { return r.id; }).join(','),
+       b.map(function (r) { return r.id; }).join(','),
+       'la misma semana da siempre lo mismo (aquí y en cualquier navegador)');
+    ok(a.map(function (r) { return r.id; }).join(',') !==
+       c.map(function (r) { return r.id; }).join(','),
+       'y otra semana da otra cosa');
+    var vistos = {};
+    a.forEach(function (r) {
+      ok(!vistos[r.id], 'sin repetir dentro de la semana: ' + r.id);
+      vistos[r.id] = 1;
+    });
+  });
+
+  /* El suelo del diseño: una semana entera de retos que piden un modo
+   * concreto —o peor, compañía— sería imposible para quien juega solo. */
+  test('cada semana trae al menos cinco retos de cualquier modo', function () {
+    ['2026-08-10', '2026-08-17', '2026-09-07', '2027-01-04'].forEach(function (w) {
+      var libres = 0;
+      DY.retosDe(w).forEach(function (r) { if (!r.modo) libres++; });
+      ok(libres >= CFG.DAILY.LIBRES_POR_SEMANA,
+         w + ': ' + libres + ' libres de ' + CFG.DAILY.DIAS);
+    });
+  });
+
+  test('el reto de un día no se puede cumplir antes de tiempo', function () {
+    var hoy = DY.diaSemana();
+    ok(DY.abierto(hoy), 'el de hoy sí');
+    if (hoy > 0) ok(DY.abierto(hoy - 1), 'y los de días pasados siguen abiertos');
+    if (hoy < 6) ok(!DY.abierto(hoy + 1), 'el de mañana no');
+  });
+
+  test('un reto se cumple jugando, y solo cuenta una vez', function () {
+    conDaily(function (D) {
+      var i = D.diaSemana();
+      var est = D.leer();
+      // se coloca a mano un reto conocido en el día de hoy para no depender
+      // de cuál toque en la semana en la que se corran las pruebas
+      var retos0 = D.retos;
+      D.retos = function () {
+        var l = retos0.call(D).slice();
+        l[i] = { id: 'x_test', desc: 'CÓMETE 5 FANTASMAS',
+                 stat: 'fantasmas', goal: 5 };
+        return l;
+      };
       try {
-        window.PM.settings.nick1 = 'ALGUIEN';    // sin nombre no se manda nada
-        window.PM.Ranking.configured = function () { return true; };
-        window.PM.Ranking.submit = function () { enviadas++; };
-        G.score = 5000;
-        G.submitRanking();
-        eq(enviadas, 0, 'ni la puntuación');
-        G.newGame({ players: 1 });      // partida normal: esa sí
-        G.score = 5000;
-        G.submitRanking();
-        ok(enviadas > 0, 'una partida normal sí se manda');
+        eq(D.apunta(['solo', 'clasico'], { fantasmas: 3 }).length, 0,
+           'a medias no cumple');
+        eq(D.progreso(i).valor, 3, 'pero el progreso se guarda');
+        var hechos = D.apunta(['solo', 'clasico'], { fantasmas: 2 });
+        eq(hechos.length, 1, 'al llegar a la meta, cumplido');
+        eq(hechos[0].id, 'x_test');
+        ok(D.progreso(i).hecho);
+        eq(D.apunta(['solo', 'clasico'], { fantasmas: 9 }).length, 0,
+           'y ya no vuelve a cumplirse');
+        eq(D.cumplidos(), 1);
+      } finally { D.retos = retos0; }
+    });
+  });
+
+  test('un reto de modo solo cuenta en su modo', function () {
+    conDaily(function (D) {
+      var i = D.diaSemana();
+      var retos0 = D.retos;
+      D.retos = function () {
+        var l = retos0.call(D).slice();
+        l[i] = { id: 'x_lab', modo: 'lab', desc: 'CÓMETE 5 EN OTRO LABERINTO',
+                 stat: 'fantasmas', goal: 5 };
+        return l;
+      };
+      try {
+        D.apunta(['solo', 'clasico'], { fantasmas: 9 });
+        eq(D.progreso(i).valor, 0, 'en el clásico no cuenta nada');
+        D.apunta(['solo', 'lab'], { fantasmas: 5 });
+        ok(D.progreso(i).hecho, 'y en laberintos sí');
+      } finally { D.retos = retos0; }
+    });
+  });
+
+  test('cumplir un reto da experiencia y sube la racha', function () {
+    conDaily(function (D) {
+      var L = window.PM.Level;
+      var xp0 = L.xp();
+      var i = D.diaSemana();
+      var retos0 = D.retos;
+      D.retos = function () {
+        var l = retos0.call(D).slice();
+        l[i] = { id: 'x_xp', desc: 'JUEGA 1 PARTIDA', stat: 'partidas', goal: 1 };
+        return l;
+      };
+      try {
+        D.apunta(['solo', 'clasico'], { partidas: 1 });
+        eq(L.xp(), xp0 + CFG.DAILY.XP, 'la experiencia entra');
+        eq(D.racha(), 1, 'y el día cuenta para la racha');
+        ok(D.mejorRacha() >= 1, 'que se apunta también como la mejor');
       } finally {
-        window.PM.Ranking.submit = submit0;
-        window.PM.Ranking.configured = conf0;
-        window.PM.settings.nick1 = nick0;
-        G.newGame({ players: 1 });
+        D.retos = retos0;
+        try { localStorage.setItem(CFG.LEVEL_KEY, String(xp0)); } catch (e) {}
       }
     });
-
-  test('el reto se cierra con la partida, y solo se juega una vez', function () {
-    var R = window.PM.Reto;
-    R.olvidar();
-    try {
-      ok(!R.hecho(), 'hoy aún no está jugado');
-      window.PM.settings.muted = true;
-      G.newGame(R.opts());
-      ok(G.reto, 'la partida sabe que es el reto');
-      G.score = 1234; G.level = 3;
-      sinRed(function () { G.closeRun(); });
-      var m = R.marca();
-      ok(m, 'la marca queda guardada aunque no haya red');
-      eq(m.p, 1234, 'puntos');
-      eq(m.n, 3, 'nivel');
-      ok(R.hecho(), 'el intento del día está gastado');
-      // volver a jugarlo el mismo día no puede mejorar la marca
-      G.newGame(R.opts());
-      G.score = 99999;
-      sinRed(function () { G.closeRun(); });
-      eq(R.marca().p, 1234, 'un intento y no más');
-    } finally {
-      R.olvidar();
-      G.toMenu();
-    }
   });
 
-  test('una partida que cruza la medianoche cuenta en su propio día',
-    function () {
-      var R = window.PM.Reto;
-      R.olvidar();
+  /* La racha es de DÍAS jugando, no de retos: con recuperación, ponerse al día
+   * de tres el jueves es un jueves, no tres días seguidos. */
+  test('la racha cuenta días, no retos cumplidos', function () {
+    conDaily(function (D) {
+      var i = D.diaSemana();
+      var retos0 = D.retos;
+      D.retos = function () {
+        var l = retos0.call(D).slice();
+        for (var k = 0; k <= i; k++) {
+          l[k] = { id: 'x_' + k, desc: 'JUEGA 1 PARTIDA',
+                   stat: 'partidas', goal: 1 };
+        }
+        return l;
+      };
       try {
-        // empezada ayer y terminada hoy: la marca es de ayer, y el reto de
-        // hoy sigue por jugar (es otro laberinto de fantasmas)
-        sinRed(function () {
-          R.cerrar(1500, 2, '1999-01-01');
-          ok(!R.hecho(), 'el intento de hoy sigue intacto');
-          R.cerrar(300, 1);
-        });
-        eq(R.marca().p, 300, 'y el de hoy se guarda aparte');
-      } finally {
-        R.olvidar();
-      }
+        var hechos = D.apunta(['solo', 'clasico'], { partidas: 1 });
+        eq(hechos.length, i + 1, 'se cumplen todos los abiertos de golpe');
+        eq(D.racha(), 1, 'pero la racha sube un solo día');
+      } finally { D.retos = retos0; }
     });
-
-  test('el reto suma experiencia como cualquier partida', function () {
-    var R = window.PM.Reto, L = window.PM.Level;
-    R.olvidar();
-    var antes = L.xp();
-    try {
-      window.PM.settings.muted = true;
-      G.newGame(R.opts());
-      G.score = 800;
-      sinRed(function () { G.closeRun(); });
-      eq(L.xp(), antes + 800, 'los puntos del reto también son experiencia');
-    } finally {
-      R.olvidar();
-      G.toMenu();
-    }
   });
 
-  test('sin nombre la marca del reto se guarda pero no se envía', function () {
-    var R = window.PM.Reto;
-    var n1 = window.PM.settings.nick1;
-    R.olvidar();
-    try {
-      window.PM.settings.nick1 = '';
-      R.cerrar(500, 2);
-      var errs = [];
-      R.enviarPendiente(function (e) { errs.push(e); });
-      eq(errs.length, 1);
-      eq(errs[0], 'SIN NOMBRE');
-      eq(R.marca().p, 500, 'la marca sigue aquí para mandarla luego');
-      eq(R.marca().e, 0, 'y apuntada como no enviada');
-    } finally {
-      window.PM.settings.nick1 = n1;
-      R.olvidar();
-    }
+  test('al cambiar de semana el progreso se va y la racha se queda', function () {
+    conDaily(function (D) {
+      var est = D.vacio('1999-01-04');       // una semana que ya pasó
+      est.p[0] = 5; est.h[0] = 1;
+      est.racha = 9; est.mejor = 12; est.ult = '1999-01-04';
+      D.guardar(est);
+      var ahora = D.leer();
+      eq(ahora.w, D.semanaId(), 'la semana se pone al día sola');
+      eq(D.cumplidos(ahora), 0, 'el progreso de la semana vieja no se arrastra');
+      eq(ahora.racha, 9, 'la racha no se rompe por cambiar de semana');
+      eq(ahora.mejor, 12, 'ni la mejor');
+    });
   });
 
-  test('el envío del reto exige nombre y puntuación válida', function () {
-    var R = window.PM.Reto;
-    var errores = [];
-    var cb = function (e) { errores.push(e); };
-    R.submit({ fecha: '2026-08-05', nombre: '', puntos: 100 }, cb);
-    R.submit({ fecha: '2026-08-05', nombre: 'PUTO', puntos: 100 }, cb);
-    R.submit({ fecha: '2026-08-05', nombre: 'ALGUIEN', puntos: 0 }, cb);
-    eq(errores.length, 3, 'los tres se rechazan antes de salir a la red');
-  });
-
-  /* El "un intento al día" ya no lo decide este navegador: hay un hueco por
-   * nombre y día en la tabla (supabase/reto.sql). Estas cuatro pruebas cubren
-   * lo que pasa a los dos lados de esa regla. */
-  test('el segundo intento del día lo rechaza el servidor', function () {
-    var R = window.PM.Reto;
-    var n1 = window.PM.settings.nick1;
-    R.olvidar();
-    try {
-      window.PM.settings.nick1 = 'BRAI';
-      var errs = [];
-      /* `cerrar` intenta mandar la marca ahí mismo, así que también va dentro
-       * de la red de mentira: una prueba no puede acabar en la clasificación
-       * de verdad (que es justo lo que pasó la primera vez que se escribió).
-       * Aquí se cierra sin conexión, que además es el caso interesante. */
-      conRed(function () { return roto(new Error('SIN CONEXIÓN')); },
-        function () { R.cerrar(1200, 3); });
-      eq(R.marca().e, 0, 'la marca espera a que haya red');
-      // y cuando la hay, resulta que el hueco de hoy ya estaba ocupado
-      conRed(function () { return respuesta(409, '{"code":"23505"}'); },
-        function () { R.enviarPendiente(function (e) { errs.push(e); }); });
-      eq(errs[0], 'YA TIENES MARCA DE HOY', 'se dice con todas las letras');
-      var m = R.marca();
-      eq(m.p, 1200, 'la marca sigue aquí');
-      eq(m.e, 1, 'y no se reintenta: el hueco de hoy está ocupado');
-      eq(m.otro, 1, 'apuntada como jugada en otro sitio');
-    } finally {
-      window.PM.settings.nick1 = n1;
-      R.olvidar();
-    }
-  });
-
-  test('el intento gastado en otro aparato se trae del servidor', function () {
-    var R = window.PM.Reto;
-    var n1 = window.PM.settings.nick1;
-    R.olvidar();
-    try {
-      window.PM.settings.nick1 = 'BRAI';
-      ok(!R.hecho(), 'en este navegador no hay nada');
-      var m = null;
-      var vistas = conRed(
-        function () { return respuesta(200, [{ puntos: 4500, nivel: 5 }]); },
-        function () { R.sincronizar(function (e, marca) { m = marca; }); });
-      ok(vistas[0].url.indexOf('fecha=eq.' + R.hoy()) !== -1,
-         'se pregunta por el reto de hoy: ' + vistas[0].url);
-      ok(vistas[0].url.indexOf('jugador=eq.BRAI') !== -1,
-         'y por el nombre normalizado: ' + vistas[0].url);
-      ok(m, 'contesta con la marca de allí');
-      eq(m.p, 4500, 'puntos');
-      ok(R.hecho(), 'el intento de hoy está gastado, aunque fuera en el móvil');
-      eq(R.marca().otro, 1, 'y se sabe que no se jugó aquí');
-    } finally {
-      window.PM.settings.nick1 = n1;
-      R.olvidar();
-    }
-  });
-
-  test('sin marca en el servidor, el reto sigue por jugar', function () {
-    var R = window.PM.Reto;
-    var n1 = window.PM.settings.nick1;
-    R.olvidar();
-    try {
-      window.PM.settings.nick1 = 'BRAI';
-      var llamadas = 0;
-      conRed(function () { return respuesta(200, []); },
-        function () { R.sincronizar(function () { llamadas++; }); });
-      eq(llamadas, 1, 'contesta igual');
-      ok(!R.hecho(), 'y no se inventa ninguna marca');
-      // sin red tampoco: lo de este navegador manda
-      conRed(function () { return roto(new Error('SIN CONEXIÓN')); },
-        function () { R.sincronizar(function () {}); });
-      ok(!R.hecho(), 'sin conexión se juega igual');
-    } finally {
-      window.PM.settings.nick1 = n1;
-      R.olvidar();
-    }
-  });
-
-  test('con cuenta, la marca del reto va firmada con la sesión', function () {
-    var R = window.PM.Reto, Ac = window.PM.Account;
-    var tok0 = Ac.token, user0 = Ac.user, n1 = window.PM.settings.nick1;
-    try {
-      window.PM.settings.nick1 = 'BRAI';
-      Ac.token = 'token-de-prueba';
-      Ac.user = { id: '1', usuario: 'BRAI', avatar: 'pac' };
-      var vistas = conRed(function () { return respuesta(201, ''); },
-        function () {
-          R.submit({ fecha: R.hoy(), nombre: 'BRAI', puntos: 900, nivel: 2 },
-                   function () {});
-        });
-      eq(vistas[0].opts.headers['Authorization'], 'Bearer token-de-prueba',
-         'así el servidor sabe que el nombre es tuyo de verdad');
-      /* Y si el nombre es de otro, el servidor lo corta y se dice en
-       * cristiano. La respuesta es la que da Supabase de verdad: 401 con el
-       * texto de la política (comprobado contra el proyecto). */
-      var err = null;
-      conRed(function () {
-        return respuesta(401, '{"code":"42501","message":"new row violates ' +
-          'row-level security policy for table \\"reto_diario\\""}');
-      },
-        function () {
-          R.submit({ fecha: R.hoy(), nombre: 'BRAI', puntos: 900, nivel: 2 },
-                   function (e) { err = e; });
-        });
-      eq(err, R.AJENO, 'no es un número suelto: se explica qué hacer');
-    } finally {
-      Ac.token = tok0;
-      Ac.user = user0;
-      window.PM.settings.nick1 = n1;
-    }
-  });
-
-  test('la tarjeta de la portada dice si el reto ya está jugado', function () {
-    var R = window.PM.Reto, U = window.PM.UI;
-    R.olvidar();
-    try {
-      /* sin marca aquí, la tarjeta pregunta al servidor: se le contesta que
-       * tampoco hay nada allí, que es lo que se quiere probar */
-      conRed(function () { return respuesta(200, []); }, function () {
-        U.pickMode('reto');
-        var card = U.modeCards.reto;
-        eq(card.tag.textContent, 'UN INTENTO', 'sin marca, la coletilla normal');
-        R.cerrar(700, 2);
-        U.refreshReto();
-        eq(card.tag.textContent, 'YA JUGADO', 'con marca, avisa en la tarjeta');
-        ok(/700/.test(U.modeNote.textContent),
-           'y el renglón de abajo enseña la marca: ' + U.modeNote.textContent);
+  /* El DAILY no es un modo: se mide con los mismos contadores que los logros y
+   * por el mismo embudo (Game.bumpAch), así que jugar a cualquier cosa lo
+   * mueve sin que el juego tenga que saber que existe. */
+  test('el DAILY avanza jugando, por el mismo embudo que los logros',
+    function () {
+      conDaily(function (D) {
+        var i = D.diaSemana();
+        var retos0 = D.retos;
+        D.retos = function () {
+          var l = retos0.call(D).slice();
+          l[i] = { id: 'x_bump', desc: 'CÓMETE 2 FANTASMAS',
+                   stat: 'fantasmas', goal: 2 };
+          return l;
+        };
+        try {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 1 });
+          G.state = 'PLAYING';
+          G.bumpAch({ fantasmas: 2 });
+          ok(D.progreso(i).hecho, 'una jugada normal cumple el reto');
+          var visto = false;
+          for (var k = 0; k < G.achNotices.length; k++) {
+            if (G.achNotices[k].name === 'RETO CUMPLIDO') visto = true;
+          }
+          ok(visto, 'y se celebra en la banda de arriba');
+          G.toMenu();
+        } finally { D.retos = retos0; }
       });
-    } finally {
-      R.olvidar();
-      conRed(function () { return respuesta(200, []); },
-             function () { U.refreshReto(); });
-    }
-  });
+    });
+
+  /* Lo que se jugó al RETO DE HOY no se tira: cada día jugado era el reto de
+   * ese día cumplido, así que siembra el contador nuevo. */
+  test('lo jugado al RETO DE HOY siembra los retos diarios cumplidos',
+    function () {
+      var A = window.PM.Achievements;
+      var raw = null;
+      try { raw = localStorage.getItem(CFG.ACH_KEY); } catch (e) { raw = null; }
+      try {
+        A.reset();
+        // se escribe a mano la clave retirada, como la tendría quien venga de antes
+        var d = JSON.parse(localStorage.getItem(CFG.ACH_KEY));
+        d.c['reto:partidas'] = 14;
+        d.d = 0;
+        localStorage.setItem(CFG.ACH_KEY, JSON.stringify(d));
+        A.sembrarDaily();
+        eq(A.stats().dailyOk, 14, 'los días jugados pasan a retos cumplidos');
+        eq(A.stats()['daily:dailyOk'], 14, 'también en el contador del DAILY');
+        ok(A.has('rt_constante'), 'así que CONSTANTE no se pierde');
+        // y no se siembra dos veces
+        A.record('dailyOk', 1);
+        A.sembrarDaily();
+        eq(A.stats().dailyOk, 15, 'la siembra es de una sola vez');
+      } finally {
+        if (raw === null) A.reset();
+        else { try { localStorage.setItem(CFG.ACH_KEY, raw); } catch (e) {} }
+      }
+    });
 
   // ---------------------------------------------------------------
   // Temporadas del top mundial
@@ -1123,13 +1057,14 @@
     eq(S.nombre('2026-12'), 'DICIEMBRE 2026');
   });
 
-  test('el panel del top mundial tiene una pestaña por formato, reto y temporadas',
+  test('el panel del top mundial tiene una pestaña por formato y temporadas',
     function () {
       var U = window.PM.UI;
       /* 1..4 son EL NÚMERO DE JUGADORES (una clasificación por formato),
-       * el 5 es el nivel 1, el 6 el reto y el 0 tus partidas */
+       * el 5 es el nivel 1 y el 0 tus partidas. El 6 era el RETO DE HOY, que
+       * se retiró con el modo. */
       ok(U.rankTabBtns[3] && U.rankTabBtns[4], 'están trío y escuadra');
-      ok(U.rankTabBtns[6], 'está la pestaña del reto');
+      ok(!U.rankTabBtns[6], 'y ya no está la del reto');
       ok(U.seasonBtns.ahora && U.seasonBtns.historico, 'y las dos de temporada');
       U.showRankTab(1);
       eq(U.seasonRow.style.display, 'flex', 'en INDIVIDUAL se elige temporada');
@@ -1137,8 +1072,6 @@
       eq(U.seasonRow.style.display, 'flex', 'en ESCUADRA también');
       U.showRankTab(0);
       eq(U.seasonRow.style.display, 'none', 'en TUS PARTIDAS no hay temporada');
-      U.showRankTab(6);
-      eq(U.seasonRow.style.display, 'none', 'ni en el reto, que es el de hoy');
       U.showRankTab(5);
       eq(U.seasonRow.style.display, 'none', 'ni en el nivel 1, que es de siempre');
       U.showRankTab(1);
@@ -3140,10 +3073,12 @@
       eq(c, a.modo + ':' + a.stat, a.id + ' mira su contador de modo');
       ok(A.STATS.hasOwnProperty(c), 'y ese contador se guarda de verdad');
     });
-    // hay logros de los seis modos
+    /* Hay logros de los cinco modos y del DAILY. El DAILY no es un modo de
+     * juego —sus retos se cumplen jugando a lo que sea— pero sus tres logros
+     * usan la misma etiqueta para tener su propio grupo y su color. */
     var modos = {};
     CFG.ACHIEVEMENTS.forEach(function (a) { if (a.modo) modos[a.modo] = 1; });
-    ['clasico', 'party', 'reto', 'lab', 'vs', 'hab'].forEach(function (m) {
+    ['clasico', 'party', 'daily', 'lab', 'vs', 'hab'].forEach(function (m) {
       ok(modos[m], 'hay logros del modo ' + m);
     });
   });
@@ -3252,7 +3187,6 @@
     ok(tagsDe({ players: 1 }).indexOf('clasico') !== -1, 'una normal es clásica');
     ok(tagsDe({ players: 1 }).indexOf('solo') !== -1, 'y en solitario');
     ok(tagsDe({ players: 1, hab: true }).indexOf('hab') !== -1, 'habilidades');
-    ok(tagsDe({ players: 1, reto: true, seed: 5 }).indexOf('reto') !== -1, 'reto');
     var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
     if (mz) {
       ok(tagsDe({ players: 1, maze: mz.id }).indexOf('lab') !== -1, 'laberinto');

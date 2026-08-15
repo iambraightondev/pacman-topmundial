@@ -11,7 +11,52 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ---
 
-## Lo último: DESATADO, la Q en party y la portada nueva
+## Lo último de todo: los laberintos y el DAILY
+
+Dos cosas, las dos subidas.
+
+**Seis laberintos, uno por idea.** Los tres viejos se REDIBUJARON (no se
+renombraron), así que una repetición online guardada de ANILLOS, PANAL o
+COLMILLOS ya no vale: el trazado de debajo es otro. `Mazes.conocido()` lo
+detecta y la repetición se da por rota. Si algún día se rehace otro trazado,
+hay que hacer lo mismo o cambiarle el id.
+
+- Al dibujar uno nuevo, dos trampas que cuestan una tarde: **la fila 8 tiene
+  que estar abierta en las columnas 6 y 12, y la fila 20 en la 6 y la 9.** Las
+  filas 9 y 19 son del núcleo copiado y tienen huecos de una casilla ahí; si
+  se tapan por arriba o por abajo, el callejón sale **en las filas copiadas**,
+  que es donde menos se mira. Y una región interior solo escapa por una
+  casilla que la fila del núcleo deje abierta.
+- El validador de las pruebas (`js/tests.js`) lo canta todo: callejones,
+  pastillas inalcanzables, simetría, borde y energizantes.
+
+**El DAILY sustituye al RETO DE HOY**, que era un modo de juego y por eso no
+funcionaba: para jugarlo había que dejar de jugar a lo tuyo.
+
+- **Se mide por el mismo embudo que los logros** (`Game.bumpAch` →
+  `Daily.apunta`) y con el mismo vocabulario de contadores. Si se añade un
+  contador nuevo a `Achievements.BASE`, sirve para un reto sin tocar nada
+  más. **Ojo con el tipo**: los de `suma` se acumulan a lo largo del día y los
+  de `mayor` se quedan con la mejor marca de UNA partida.
+- **Los siete salen de la fecha de la semana**, no de un sorteo ni de un
+  servidor. Si se toca `retosDe()`, la semana en curso cambia de retos a
+  media semana para todo el mundo.
+- **Cinco libres garantizados** (`LIBRES_POR_SEMANA`). Bajarlo deja semanas
+  imposibles para quien juega solo; hay una prueba que lo vigila.
+- **La racha cuenta DÍAS, no retos**, y sobrevive al cambio de semana.
+- Los tres logros conservan sus ids (`rt_*`) y `sembrarDaily()` los siembra
+  con `reto:partidas`. Esa clave **ya no está en STATS**, así que se lee del
+  almacén en crudo: si algún día se retira otro contador con logros detrás,
+  este es el patrón.
+
+> **La tabla `reto_diario` sigue en Supabase.** El juego ya no la toca, pero
+> tiene marcas de verdad dentro y borrarla no es cosa de un refactor. Cuando
+> se quiera:
+> `drop view if exists public.reto_top; drop table if exists public.reto_diario;`
+
+---
+
+## Lo de antes del mismo día: DESATADO, la Q en party y la portada nueva
 
 Seis cosas, todas subidas. El qué está en [`CHANGELOG.md`](CHANGELOG.md) y el
 cómo en [`SPEC.md`](SPEC.md); aquí solo lo que hay que saber **antes de tocar
@@ -75,8 +120,6 @@ Nada roto, pero apuntado:
 - **El selector de modo sigue sin recordar tu elección** entre recargas. Con
   el carrusel molesta un poco más que con la rejilla (antes veías las seis).
 - **Las habilidades siguen sin sonar**: el turbo y el flash son mudos.
-- Las **notas de la portada** de LABERINTOS y DESATADO siguen diciendo
-  "MAESTRÍAS PROPIAS" sin contar que ahora también se parten por formato.
 
 ---
 
@@ -194,7 +237,7 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v24` (14 de agosto) |
+| Juego (Vercel) | desplegado, service worker `pm-v26` (14 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
@@ -220,7 +263,7 @@ Dos avisos operativos:
 
 ### Las cuatro pruebas que "fallan" en Node
 
-Hoy hay **215 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
+Hoy hay **214 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
 es lo esperado: son límites del DOM de mentira (miden píxeles reales y
 `offsetParent`), no fallos del juego. Las mismas **pasan en `tests.html`**, que
 es la batería buena; la de Node vale para la lógica.

@@ -37,6 +37,9 @@
     mordiscos: 'suma',   // fantasmas comidos con la Q (modo DESATADO)
     muros:     'suma',   // muros atravesados con la E (modo DESATADO)
     cazas:     'suma',   // Pac-Man cazados llevando un fantasma (PAC-MAN VS.)
+    dailyOk:   'suma',   // retos diarios cumplidos (js/daily.js)
+    dailySemana: 'suma', // semanas con los siete cumplidos
+    dailyRacha: 'mayor', // días seguidos cumpliendo alguno
     racha:     'mayor',
     nivelMax:  'mayor',
     limpios:   'mayor',
@@ -87,7 +90,7 @@
   }
 
   function load() {
-    var out = { c: vacio(), v: [], m: 0 };
+    var out = { c: vacio(), v: [], m: 0, d: 0 };
     try {
       var raw = localStorage.getItem(CFG.ACH_KEY);
       var d = raw ? JSON.parse(raw) : null;
@@ -100,8 +103,22 @@
       }
       if (d && isArray(d.v)) out.v = d.v.slice();
       if (d && d.m) out.m = 1;          // los contadores por modo, ya sembrados
+      if (d && d.d) out.d = 1;          // y los del DAILY, sembrados del reto
     } catch (e) { /* sin almacenamiento */ }
     return out;
+  }
+
+  /* Un contador GUARDADO tal cual está en el almacén, esté o no en STATS.
+   * Hace falta para sembrar desde claves retiradas: load() solo se trae las
+   * que algún logro mira hoy, así que lo que se quitó de CFG.ACHIEVEMENTS es
+   * invisible desde ahí (y se pierde en el primer save). */
+  function crudo(key) {
+    try {
+      var raw = localStorage.getItem(CFG.ACH_KEY);
+      var d = raw ? JSON.parse(raw) : null;
+      var n = (d && d.c) ? parseInt(d.c[key], 10) : 0;
+      return (isFinite(n) && n > 0) ? n : 0;
+    } catch (e) { return 0; }
   }
 
   function save(d) {
@@ -262,10 +279,41 @@
       return d.c;
     },
 
+    /* ---------- lo que se jugó al RETO DE HOY, que ya no existe ----------
+     * El reto era un modo aparte (una partida con la misma semilla para todo
+     * el mundo, un intento al día) y se retiró en favor del DAILY, que son
+     * siete retos por semana que se cumplen jugando a lo que sea. Sus tres
+     * logros siguen ahí con el mismo identificador, pero ahora miran
+     * contadores nuevos, así que a quien tenía CONSTANTE se le habría
+     * borrado de un día para otro. Eso no se hace.
+     *
+     * Cada día que se jugaba el reto se cumplía el reto de ese día, así que
+     * `reto:partidas` se traduce uno a uno a retos diarios cumplidos. Los
+     * otros dos (racha y semanas) empiezan a cero: de eso no hay ni rastro y
+     * no se inventa nada.
+     *
+     * Se lee del almacén EN CRUDO porque `reto:partidas` ya no está en STATS
+     * —ningún logro la mira— y load() no se la trae. Una vez (bandera `d`). */
+    sembrarDaily: function () {
+      var d = load();
+      if (d.d) return d.c;
+      d.d = 1;
+      var jugados = crudo('reto:partidas');
+      if (jugados > 0) {
+        d.c.dailyOk = Math.max(d.c.dailyOk || 0, jugados);
+        if (STATS.hasOwnProperty('daily:dailyOk')) {
+          d.c['daily:dailyOk'] = Math.max(d.c['daily:dailyOk'] || 0, jugados);
+        }
+      }
+      save(d);
+      return d.c;
+    },
+
     /* Al arrancar (o al entrar en una cuenta): lo ya conseguido no se anuncia */
     syncSeen: function () {
       // antes de nada, que lo jugado de antes cuente en su modo
       this.sembrarModos();
+      this.sembrarDaily();
       var d = load();
       var changed = false;
       for (var i = 0; i < CFG.ACHIEVEMENTS.length; i++) {
@@ -284,6 +332,17 @@
     merge: function (otros) {
       if (!otros) return this.stats();
       var d = load();
+      /* Lo del RETO DE HOY que venga de la nube: es una clave retirada, así
+       * que el bucle de abajo (que solo mira STATS) la tiraría. Cada día
+       * jugado al reto era un reto de ese día cumplido, y de otro aparato
+       * puede venir un historial que aquí no existe. */
+      var retoNube = Math.floor(otros['reto:partidas'] || 0);
+      if (retoNube > 0) {
+        d.c.dailyOk = Math.max(d.c.dailyOk || 0, retoNube);
+        if (STATS.hasOwnProperty('daily:dailyOk')) {
+          d.c['daily:dailyOk'] = Math.max(d.c['daily:dailyOk'] || 0, retoNube);
+        }
+      }
       for (var k in STATS) {
         if (!STATS.hasOwnProperty(k)) continue;
         var n = Math.floor(otros[k] || 0);
@@ -303,7 +362,7 @@
       return this.stats();
     },
 
-    reset: function () { save({ c: vacio(), v: [], m: 0 }); }
+    reset: function () { save({ c: vacio(), v: [], m: 0, d: 0 }); }
   };
 
   window.PM.Achievements = Achievements;

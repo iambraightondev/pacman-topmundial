@@ -106,10 +106,12 @@ reads a mode-scoped counter keyed `modo + ':' + stat` (`hab:mordiscos`,
 `party:partidas`, …). Every run carries **tags** (`Game.achTags()`) and
 `Achievements.recordFor(tags, o)` writes each counter twice: once global,
 once per tag. The tags are a list because a run is two things at once — a
-**format** (`solo` / `party`) and a **mode** (`clasico`, `reto`, `lab`,
-`vs`, `hab`); a party of DESATADO counts for both. The mode half *is*
-exclusive: `clasico` deliberately excludes reto and alternative mazes,
-since each has its own achievements and its own wording.
+**format** (`solo` / `party`) and a **mode** (`clasico`, `lab`, `vs`,
+`hab`); a party of DESATADO counts for both. The mode half *is* exclusive:
+`clasico` deliberately excludes alternative mazes and DESATADO, since each has
+its own achievements and its own wording. `daily` is also a tag, but it is not
+a mode — `PM.Daily` writes it directly so its three achievements get their own
+group and colour (see **DAILY**).
 
 **History earned before per-mode tracking existed is not thrown away.**
 Scoped counters started at zero, so a player with a hundred runs read
@@ -121,8 +123,8 @@ default mode and the bulk of any history, and a mode counter can never
 legitimately exceed the global, so this can overshoot but never fall short —
 erring in the player's favour is the right side when the data is gone), and
 **`party` only if a duo/trio/squad record proves they played with others**.
-`reto`, `lab`, `vs` and `hab` stay at zero: there is no trace of them, and
-nothing is invented. It runs **once** (flag `m` in the save) — repeating it
+`lab`, `vs` and `hab` stay at zero: there is no trace of them, and nothing is
+invented (the DAILY counters have their own seeding, `sembrarDaily`). It runs **once** (flag `m` in the save) — repeating it
 would let party runs keep inflating the classic counter forever — with one
 deliberate exception: `merge()` clears the flag so signing into an account
 re-seeds from the cloud history, which may be far longer than this browser's.
@@ -483,7 +485,9 @@ game; color + mute apply live.
 multiplier), `vidas` → `startLives`. Optional fifth key `vidasModo:
 'individual'` travels only when a 2-player game did not use the default
 shared lives pool — it changes the simulation, so a replay would diverge
-without it. `modo: 'reto'` is accepted by the format but never produced yet.
+without it. `modo: 'reto'` is still accepted by the format although the mode
+is gone: replays of old challenge runs are shared links that still work, and
+`modo` only changes behaviour for `hab`.
 
 `PM.Replay.serializar(rep)` returns a compact URL-safe string (`~`-separated
 fields, base36 numbers, tick deltas, one packed letter `G..V` per
@@ -871,9 +875,9 @@ view**, which keeps only each player's/team's best run (`distinct on
 (jugadores, equipo)`, where `equipo` concatenates the names present) —
 otherwise whoever plays most fills the whole table with repeats.
 
-The panel's tab ids are **the player count for `1..4`**, plus `5` NIVEL 1, `6`
-RETO DE HOY and `0` TUS PARTIDAS (local first, cloud too when there is an
-account). The season row shows on `1..4` only. Switching fast is guarded by a request token, so a late reply
+The panel's tab ids are **the player count for `1..4`**, plus `5` NIVEL 1 and
+`0` TUS PARTIDAS (local first, cloud too when there is an account). Id `6` was
+RETO DE HOY and went with the mode. The season row shows on `1..4` only. Switching fast is guarded by a request token, so a late reply
 from the previous tab cannot overwrite the current list.
 
 `Ranking.jugadores(n)` clamps a format, `Ranking.COLS` is the shared column
@@ -1086,60 +1090,76 @@ d-pad and swipe input, and `Versus.steer()` intercepts it there.
 
 ## Daily challenge, seasons and alternative mazes
 
-**Reto diario** (`PM.Reto`, `CFG.RETO`): one identical run for everybody,
-every day. The engine's randomness was already reproducible
-(`Game.seedRnd`), so the challenge simply hands the **same seed to every
-machine**: `Game.seedBase` is added to every reseed (`resetLevel`,
-`respawn`), which shifts the whole run at once without touching a single
-rule. With `seedBase = 0` the classic game is bit-for-bit what it was.
+**DAILY** (`PM.Daily`, `CFG.DAILY`, `js/daily.js`): seven challenges a
+week, one per weekday, and **not a game mode** — that is the whole point. It
+replaces RETO DE HOY, which *was* a mode: one identical seeded run for
+everybody, one attempt a day, its own board. To play it you had to stop
+playing what you were playing, and if that particular run did not appeal to
+you that day, there was no challenge at all. A DAILY challenge is an objective
+you meet **while playing whatever you were going to play anyway**.
 
-- The day is `YYYY-MM-DD` in **UTC** (`Reto.hoy()`) on purpose: the
-  challenge must roll over at the same instant everywhere, or a player
-  could get two runs by crossing local midnight. `Reto.semilla(fecha)` is
-  an FNV-style hash of that string **capped at 1 000 000** — `seedRnd`
-  multiplies by 2654435761, and a bigger value would lose precision in a
-  double and stop being reproducible.
-- `Reto.opts()` returns `{players:1, reto:true, seed, cfg}` where `cfg` is
-  `CFG.PRESETS.normal`: nobody plays with slower ghosts or a faster
-  Pac-Man, or the boards would compare nothing.
-- **One attempt a day.** `Game.closeRun()` (which already runs exactly
-  once per run, however the run ends) calls `Reto.cerrar(score, level)`,
-  and `cerrar` is a no-op once the day is closed. Recording only at GAME
-  OVER would let a player walk out of a bad run and start over.
-- **The day's slot lives in the database**, not in the browser: a unique
-  index on `(fecha, upper(btrim(nombre)))` means the second mark of the day
-  is rejected (PostgREST answers **409**, which `Reto.submit` reports as
-  `YA TIENES MARCA DE HOY`). Leaving it to `localStorage` made the rule
-  cosmetic — play on the PC, play again on the phone, send the better of
-  the two.
-- To avoid burning a run that the server was going to reject,
-  `Reto.sincronizar()` asks **before playing** (`reto_top` filtered by
-  `jugador` and `fecha`) and copies the remote mark into this browser with
-  `otro: 1`. It runs from `refreshReto()` (portada), `showRetoPrompt()`
-  (which re-renders itself if the answer says the day is spent) and when
-  the RETO DE HOY tab opens; `playReto()` checks once more before starting.
-  It deliberately has **no in-flight lock**: a request that never settles
-  would otherwise disable the check for the rest of the session.
-- Local state is one localStorage row (`CFG.RETO.KEY`):
-  `{f: date, p: points, n: level, e: 1 when uploaded, otro: 1 when the
-  board's mark was made elsewhere}`. Playing offline is therefore normal,
-  not an error path: the mark is kept and `Reto.enviarPendiente()` uploads
-  it later — it runs from `showMenu` and whenever the RETO DE HOY tab is
-  opened. A `409` there stops the retries (`e = 1`), because the slot is
-  taken and resending will never place it.
-- The board is its own table (`supabase/reto.sql`, read through the
-  `reto_top` view, one row per name per day). It is separate from
-  `ranking` because it is a different game (fixed seed, fixed settings,
-  one attempt); folding it in would have meant filtering it out of every
-  existing query.
-- **A registered name belongs to its account.** With one slot per day,
-  anyone could otherwise post 10 points as someone else and leave them
-  without a challenge, so the insert policy requires `auth.uid()` to match
-  when `nombre` exists in `perfiles` — and `Reto` signs its requests with
-  the session token when there is one. Names without an account stay open,
-  as before.
-- A challenge run is a **normal 1-player run** for everything else:
-  history, achievements, badges, player XP and the world ranking.
+- **A week with catch-up.** All seven are visible from Monday. Each opens on
+  its day (`Daily.abierto(i)` is `i <= diaSemana()`) and **stays open until
+  the week ends**, so somebody who cannot play on Tuesday clears it on
+  Thursday. That rewards playing, not being present daily. The week itself
+  does expire.
+- The week id is **the date of its Monday, in UTC** (`Daily.semanaId()`), and
+  the weekday is Monday-first (`getUTCDay` puts Sunday first, which would be
+  starting the week at the end). UTC for the same reason the old challenge
+  used it: everything must roll over at the same instant everywhere.
+- **The seven come out of the week itself.** `Daily.retosDe(semana)` hashes
+  the week id, shuffles the catalogue with it (Fisher-Yates over a small LCG)
+  and takes **5 from `CFG.DAILY.LIBRES` and 2 from `CFG.DAILY.MODOS`**, then
+  shuffles those seven into day order with a third hash so the mode-specific
+  ones do not land on the same weekdays every week. Deterministic, so no
+  server and no draw is needed: same week, same seven, everywhere.
+- **Five free ones are the floor.** The mode-specific challenges are what make
+  the DAILY show you the game (you look into DESATADO because it is today's),
+  but a whole week of them — or worse, of challenges needing company — would
+  be impossible for somebody who plays alone. `js/tests.js` enforces the floor
+  across several weeks.
+- **Measured with the achievements' own vocabulary, through the same funnel.**
+  A challenge names a `stat` from `PM.Achievements.BASE` and a `goal`, and
+  `Game.bumpAch()` calls `Daily.apunta(tags, o)` before claiming achievements.
+  Nothing is counted twice and the engine gets no new hook. What differs is
+  scope: these counters are **the day's**, not lifetime, so the accumulation
+  type matters — `suma` stats add up across the day ("eat 20 ghosts"), `mayor`
+  stats keep the best **single run** ("12 000 points"), and `menor` (times)
+  keeps the lowest.
+- `modo` on a challenge is one of the tags `Game.achTags()` produces — a mode
+  (`clasico`, `lab`, `hab`, `vs`) or a format (`solo`, `party`) — and the
+  challenge only advances when that tag is present.
+- **Rewards: XP and a streak.** Each clear adds `CFG.DAILY.XP`, and
+  `Daily.premiar` bumps the streak. The streak counts **days on which you
+  cleared something**, not challenges: with catch-up, clearing three on
+  Thursday is one Thursday of playing, not three days in a row. It only moves
+  once per UTC day (`est.ult`), and it **survives the week rolling over** —
+  breaking someone's streak at midnight on Sunday because the calendar turned
+  a page would be punishing the calendar, not the player.
+- Local state is one localStorage row (`CFG.DAILY.KEY`): `{w: week, p: [7]
+  progress, h: [7] cleared, racha, mejor, ult, sem}`. Reading it when the week
+  has changed resets `p`/`h` and keeps the streak. `sem` marks the week as
+  already counted for SEMANA REDONDA, so re-entering after the seventh clear
+  does not count it again.
+- It is celebrated through the **achievement band** (`achNotices`, titled
+  `RETO CUMPLIDO`) rather than a channel of its own: they are the same kind of
+  thing to the player, and two bands fighting over the same slot is exactly
+  what was removed from the mastery banner.
+- **The three RETO achievements survive as DAILY ones**, ids and all
+  (`rt_constante`, `rt_pulso`, `rt_redondo`), now reading `dailyOk`,
+  `dailyRacha` and `dailySemana`. `Achievements.sembrarDaily()` seeds
+  `dailyOk` from the retired `reto:partidas` counter — every day the old
+  challenge was played was that day's challenge met — so nobody loses
+  CONSTANTE overnight. It reads that key **raw** from storage, because
+  `load()` only keeps stats some achievement still names and would drop it;
+  `merge()` does the same for a history arriving from the cloud.
+
+**What went with the mode**: `js/reto.js`, `supabase/reto.sql`, the RETO card
+on the front page, the RETO DE HOY ranking tab (id `6`), `Game.reto` /
+`Game.retoFecha`, and the `reto` achievement tag. `Game.seedBase` stays — the
+engine still accepts a seed from outside, and old shared replays of challenge
+runs carry one. The `reto_diario` table is **not dropped**: the code no longer
+touches it, and deleting real marks is not something a refactor should do.
 
 **Temporadas** (`PM.Season`, `CFG.RANKING.VIEW_SEASON`): the world board
 is split by **calendar month**, derived from `creado_en` — nothing to open
@@ -1504,7 +1524,7 @@ the front page exists for — felt like ticking a box. Now it is a carousel:
 `.mode-arrow` on each side, `.mode-dots` below (clickable, so you can jump
 instead of pressing ◀ five times) and the card at `88 px` icon size.
 
-All six cards are built once and live in the DOM together (`drawModeIcon`
+All five cards are built once and live in the DOM together (`drawModeIcon`
 paints a canvas, and repainting on every step would show); `refreshModePicker`
 shows the picked one and sets `display:none` on the rest — really hidden, so
 they cannot be clicked or swept by arrow keys. `.mode-card` has a fixed
@@ -1514,11 +1534,10 @@ left to pick there), and `handleNavKey` turns ←/→ into `stepMode` while the
 card holds focus — then re-focuses the new card, since the old one just
 vanished. `stepMode` wraps around at both ends.
 
-`playPick()` splits the six in two: CLÁSICO, DOS JUGADORES and DESATADO
-call `newGame` straight away; RETO, LABERINTOS and ONLINE open their picker
-first, because each needs a choice before there is a game (which maze, which
-room, or confirming you are spending today's single attempt). `modeTag()`
-and `modeNota()` are what make the cards live — today's challenge mark, how
+`playPick()` splits the five in two: CLÁSICO, DOS JUGADORES and DESATADO
+call `newGame` straight away; LABERINTOS and ONLINE open their picker first,
+because each needs a choice before there is a game (which maze, which room).
+`modeTag()` and `modeNota()` are what make the cards live — how
 many are in your party — and `refreshReto()` / `refreshOnlineBtn()` now just
 call `refreshModePicker()`.
 
