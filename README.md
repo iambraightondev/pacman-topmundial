@@ -231,9 +231,9 @@ Dos maneras de correr la misma batería:
 - **DAILY**: **siete retos por semana, uno por día**, y no son un modo de
   juego: se cumplen jugando a lo que ibas a jugar igual («3 fantasmas con un
   mismo energizante», «despeja un nivel sin morir», «12.000 puntos en una
-  partida»). Los siete se ven desde el lunes; el de cada día se abre ese día
-  y **se queda abierto hasta que acaba la semana**, así que si un día no
-  puedes, lo recuperas. Cinco valen en cualquier modo y dos piden uno
+  partida»). Los siete se ven desde el lunes, pero **solo cuenta el de hoy**:
+  el de ayer ya pasó y el de mañana aún no está. El día cambia a **tu**
+  medianoche, no a la de Londres. Cinco valen en cualquier modo y dos piden uno
   concreto (DESATADO, LABERINTOS...), que es la forma de asomarte a lo que no
   sueles tocar. Cada uno cumplido da experiencia, y llevas una **racha** de
   días seguidos jugando. Está en la portada, encima de la elección de modo.
@@ -347,9 +347,11 @@ JUGADOR sí sube: cuenta lo que hayas hecho tú, cazando o comiendo.
   fantasmas y sus energizantes en las cuatro esquinas, y cada uno con una
   idea distinta: ANILLOS (cuatro anillos concéntricos), PANAL (celdas de dos
   tamaños a contrapié), CATEDRAL (naves verticales enormes), SERPIENTE
-  (pasillos de punta a punta con los huecos cruzados), COLMILLOS (seis filas
-  de dientes sin atajos) y ESCALERA (rellanos en diagonal, y ni una fila que
-  cruce entera). Es un modo aparte: **el laberinto original no se toca
+  (pasillos de punta a punta con un solo pozo por banda), COLMILLOS (dientes
+  de una casilla sin atajos) y ESCALERA (rellanos cortos a contrapié). Todos
+  respetan **la regla del original: nunca dos filas de comida pegadas sin
+  muro de por medio**, así que los pasillos son de una sola casilla, como
+  debe ser. Es un modo aparte: **el laberinto original no se toca
   nunca**, así que estas partidas no entran en el top mundial (experiencia
   sí).
 - **Top mundial**: clasificaciones compartidas entre todos —una **por

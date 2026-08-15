@@ -10,11 +10,24 @@
  * es un objetivo que se cumple JUGANDO A LO QUE SEA: te sale al
  * paso mientras haces lo que ibas a hacer igual.
  *
- * SEMANA CON RECUPERACIÓN
- * Los siete se ven desde el lunes. El de cada día se abre ese día
- * y se queda abierto hasta que la semana termina, así que quien no
- * puede el martes lo cumple el jueves. Se premia jugar, no estar
- * presente a diario. Lo que sí caduca es la semana entera.
+ * UNO AL DÍA, Y ES EL DE HOY
+ * Los siete de la semana se VEN desde el lunes —saber lo que viene
+ * es medio motivo para volver—, pero solo se puede cumplir el del
+ * día. El de ayer caducó y el de mañana aún no está.
+ *
+ * Se probó con recuperación (que los ya abiertos siguieran abiertos
+ * hasta el domingo) y se quitó: si puedes ponerte al día el sábado,
+ * el reto deja de ser diario y pasa a ser una lista de la compra
+ * semanal. El "hoy" es justo lo que hace volver mañana.
+ *
+ * LA FECHA ES LA DE TU RELOJ, NO UTC
+ * Y esto importa más de lo que parece. El RETO DE HOY viejo iba en
+ * UTC porque tenía una clasificación mundial y todos tenían que
+ * jugar el mismo día a la vez. El DAILY no manda nada a ningún
+ * servidor: es tuyo y de este navegador. En UTC, quien juega en
+ * América veía cambiar el reto a media tarde —en Perú, a las 19:00
+ * del viernes ya le salía el del sábado—, que es sencillamente un
+ * error a los ojos de quien está mirando el reloj.
  *
  * DE DÓNDE SALEN LOS SIETE
  * De la propia semana: un revoltijo de su fecha ordena el catálogo
@@ -34,10 +47,6 @@
  * hay nada que contar dos veces ni un gancho nuevo por el juego.
  * Lo que cambia es el alcance: aquí los contadores son DEL DÍA (o
  * de una partida, según el tipo), no de toda la vida.
- *
- * La semana y el día se sacan en UTC, como hacía el reto viejo: así
- * cambian a la vez en todo el planeta y nadie tiene un día de 48
- * horas cruzando la medianoche de su huso.
  * ============================================================ */
 (function () {
   'use strict';
@@ -46,9 +55,11 @@
 
   function dos(n) { return (n < 10 ? '0' : '') + n; }
 
-  function fechaUTC(d) {
-    return d.getUTCFullYear() + '-' + dos(d.getUTCMonth() + 1) + '-' +
-      dos(d.getUTCDate());
+  /* Fecha en el huso DE QUIEN JUEGA. Aquí no hay nada que sincronizar con
+   * nadie, así que el día tiene que cambiar cuando cambia en su reloj. */
+  function fechaLocal(d) {
+    return d.getFullYear() + '-' + dos(d.getMonth() + 1) + '-' +
+      dos(d.getDate());
   }
 
   /* Revoltijo de un texto (FNV-1a). El mismo de js/reto.js, que ya servía
@@ -90,32 +101,30 @@
   var Daily = {
     /* ---------- el calendario ---------- */
 
-    /* Día de la semana en UTC, con el LUNES como 0 (getUTCDay pone el
-     * domingo el primero, que aquí sería empezar la semana por el final). */
+    /* Día de la semana, con el LUNES como 0 (getDay pone el domingo el
+     * primero, que aquí sería empezar la semana por el final). */
     diaSemana: function (d) {
-      var n = (d || new Date()).getUTCDay();
+      var n = (d || new Date()).getDay();
       return (n + 6) % 7;
     },
 
-    /* Identificador de la semana: la fecha de SU LUNES, en UTC. Sirve de
-     * nombre y de semilla a la vez, y dos fechas de la misma semana dan el
-     * mismo. */
+    /* Identificador de la semana: la fecha de SU LUNES. Sirve de nombre y de
+     * semilla a la vez, y dos fechas de la misma semana dan el mismo. */
     semanaId: function (d) {
       d = d || new Date();
-      var lunes = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(),
-                                    d.getUTCDate()));
-      lunes.setUTCDate(lunes.getUTCDate() - this.diaSemana(d));
-      return fechaUTC(lunes);
+      var lunes = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      lunes.setDate(lunes.getDate() - this.diaSemana(d));
+      return fechaLocal(lunes);
     },
 
-    hoyISO: function (d) { return fechaUTC(d || new Date()); },
+    hoyISO: function (d) { return fechaLocal(d || new Date()); },
 
     /* Fecha del día i de una semana, para la lista */
     fechaDe: function (semana, i) {
       var p = String(semana).split('-');
-      var d = new Date(Date.UTC(+p[0], (+p[1]) - 1, +p[2]));
-      d.setUTCDate(d.getUTCDate() + i);
-      return fechaUTC(d);
+      var d = new Date(+p[0], (+p[1]) - 1, +p[2]);
+      d.setDate(d.getDate() + i);
+      return fechaLocal(d);
     },
 
     /* Cómo se lee una fecha en pantalla (DD/MM) */
@@ -196,9 +205,17 @@
 
     /* ---------- consultas para la interfaz ---------- */
 
-    /* ¿El reto del día i ya se puede cumplir? Los de días pasados siguen
-     * abiertos: es la recuperación. Los de días futuros, no. */
-    abierto: function (i) { return i <= this.diaSemana(); },
+    /* ¿El reto del día i se puede cumplir AHORA? Solo el de hoy. El de ayer
+     * caducó y el de mañana todavía no está: es un reto DIARIO, y dejar los
+     * de atrás abiertos lo convertía en una lista de la compra semanal que se
+     * despacha el sábado. */
+    abierto: function (i) { return i === this.diaSemana(); },
+
+    /* ¿El del día i ya pasó sin cumplirse? (para pintarlo como perdido) */
+    caducado: function (i, est) {
+      est = est || this.leer();
+      return i < this.diaSemana() && !est.h[i];
+    },
 
     /* Progreso del reto del día i */
     progreso: function (i, est) {
@@ -223,13 +240,10 @@
       return n;
     },
 
-    /* ¿Quedan retos abiertos sin cumplir? Es lo que decide si la portada
-     * enseña "te queda algo" o "semana redonda". */
-    pendientes: function (est) {
+    /* ¿El de hoy está por cumplir? */
+    pendiente: function (est) {
       est = est || this.leer();
-      var n = 0;
-      for (var i = 0; i <= this.diaSemana(); i++) if (!est.h[i]) n++;
-      return n;
+      return !est.h[this.diaSemana()];
     },
 
     racha: function () { return this.leer().racha; },
@@ -245,58 +259,50 @@
     apunta: function (tags, o) {
       if (!o) return [];
       var est = this.leer();
-      var retos = this.retos();
-      var tope = this.diaSemana();
-      var nuevos = [];
-      var cambio = false;
-      for (var i = 0; i <= tope && i < retos.length; i++) {
-        if (est.h[i]) continue;                       // ya está cumplido
-        var r = retos[i];
-        // los de modo solo cuentan en el suyo
-        if (r.modo && (!tags || tags.indexOf(r.modo) === -1)) continue;
-        if (!o.hasOwnProperty(r.stat)) continue;
-        var v = Math.floor(o[r.stat] || 0);
-        if (!(v > 0)) continue;
-        var t = tipo(r.stat);
-        var antes = est.p[i] || 0;
-        if (t === 'suma') est.p[i] = antes + v;
-        else if (t === 'mayor') est.p[i] = Math.max(antes, v);
-        else est.p[i] = (antes > 0) ? Math.min(antes, v) : v;
-        if (est.p[i] !== antes) cambio = true;
-        var listo = r.menor ? (est.p[i] > 0 && est.p[i] <= r.goal)
-                            : (est.p[i] >= r.goal);
-        if (listo) {
-          est.h[i] = 1;
-          cambio = true;
-          nuevos.push(r);
-        }
-      }
-      if (!cambio) return [];
-      if (nuevos.length) this.premiar(est, nuevos.length);
+      var i = this.diaSemana();                    // SOLO el de hoy
+      var r = this.retos()[i];
+      if (!r || est.h[i]) return [];               // no hay, o ya está
+      // los de modo solo cuentan en el suyo
+      if (r.modo && (!tags || tags.indexOf(r.modo) === -1)) return [];
+      if (!o.hasOwnProperty(r.stat)) return [];
+      var v = Math.floor(o[r.stat] || 0);
+      if (!(v > 0)) return [];
+      var t = tipo(r.stat);
+      var antes = est.p[i] || 0;
+      if (t === 'suma') est.p[i] = antes + v;
+      else if (t === 'mayor') est.p[i] = Math.max(antes, v);
+      else est.p[i] = (antes > 0) ? Math.min(antes, v) : v;
+      if (est.p[i] === antes) return [];
+      var listo = r.menor ? (est.p[i] > 0 && est.p[i] <= r.goal)
+                          : (est.p[i] >= r.goal);
+      if (!listo) { this.guardar(est); return []; }
+      est.h[i] = 1;
+      this.premiar(est);
       this.guardar(est);
-      return nuevos;
+      return [r];
     },
 
     /* Lo que se lleva quien cumple: experiencia, racha y los contadores de
      * los logros del DAILY. Se hace aquí y no en quien llama para que valga
      * igual venga de donde venga. */
-    premiar: function (est, cuantos) {
+    premiar: function (est) {
       var A = window.PM.Achievements;
       var L = window.PM.Level;
       var hoy = this.hoyISO();
 
-      /* LA RACHA es de DÍAS EN LOS QUE CUMPLES ALGO, no de retos: con
-       * recuperación, ponerse al día de tres el jueves es un jueves jugando,
-       * no tres días seguidos. Se toca una sola vez por día. */
+      /* La racha: días seguidos cumpliendo el del día. Solo puede tocarse una
+       * vez al día porque solo hay un reto al día, pero la guarda se queda
+       * igual: es la que hace que sea idempotente. */
       if (est.ult !== hoy) {
-        var ayer = new Date(Date.now() - 86400000);
-        est.racha = (est.ult === fechaUTC(ayer)) ? (est.racha + 1) : 1;
+        var ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        est.racha = (est.ult === fechaLocal(ayer)) ? (est.racha + 1) : 1;
         est.ult = hoy;
         if (est.racha > est.mejor) est.mejor = est.racha;
         if (A) A.recordFor(['daily'], { dailyRacha: est.racha });
       }
 
-      if (A) A.recordFor(['daily'], { dailyOk: cuantos });
+      if (A) A.recordFor(['daily'], { dailyOk: 1 });
 
       /* Semana redonda: los siete. Se cuenta una vez (bandera `sem`), que si
        * no, cumplir el último y volver a entrar la contaría otra vez. */
@@ -305,7 +311,7 @@
         if (A) A.recordFor(['daily'], { dailySemana: 1 });
       }
 
-      if (L) L.add(CFG.DAILY.XP * cuantos);
+      if (L) L.add(CFG.DAILY.XP);
       if (window.PM.Account) window.PM.Account.pushQuiet();
     },
 

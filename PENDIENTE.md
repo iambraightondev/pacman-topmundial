@@ -7,11 +7,39 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **14 de agosto de 2026** (segunda tanda del día).
+Última puesta al día: **15 de agosto de 2026**.
 
 ---
 
-## Lo último de todo: los laberintos y el DAILY
+## Lo del 15 de agosto: cuatro arreglos de cosas que se vieron jugando
+
+1. **El DAILY iba en UTC y marcaba el día equivocado.** Un viernes a las 19:00
+   en Perú ya ponía SÁBADO. El reto viejo iba en UTC porque tenía
+   clasificación mundial; el DAILY **no manda nada a ningún sitio**, así que
+   ahora va con la fecha local. Si alguna vez se le pone clasificación
+   compartida, esto hay que volver a pensarlo entero.
+2. **Se retiró la recuperación**: solo se puede cumplir el reto de hoy
+   (`Daily.abierto(i)` es `i === diaSemana()`). Los siete se siguen VIENDO.
+   La decisión de antes (recuperar hasta el domingo) está probada y descartada:
+   convertía el reto diario en una lista semanal.
+3. **Los laberintos rompían LA regla del original**: nunca dos filas de comida
+   pegadas sin muro de por medio, o sea ni un cuadro 2×2 transitable. **Los
+   seis están redibujados.** La regla y sus tres trampas (columna 1 abierta,
+   el eje del espejo, filas 8 y 20 de pasillo entero) están explicadas en la
+   cabecera de `js/mazes.js`, y hay una prueba que las vigila —también contra
+   el laberinto de 1980, que es de donde sale la regla—.
+4. **`difficultyPreset` era un rótulo guardado que nadie comprobaba**, y por
+   eso el panel podía decir NORMAL con cinco vidas. Ahora **se deduce** de los
+   valores (`presetDe` en `js/ui.js`). **Si se añade un ajuste a
+   `CFG.PRESETS`, hay que añadirlo a `PRESET_KEYS`**, o dos dificultades
+   distintas pasarían por la misma.
+
+> Lo que **no** es un fallo: el marcador dibuja una vida MENOS de las que
+> tienes, porque la que estás usando no se pinta. Es del arcade de 1980.
+
+---
+
+## Lo de antes: los laberintos y el DAILY
 
 Dos cosas, las dos subidas.
 
@@ -21,14 +49,15 @@ COLMILLOS ya no vale: el trazado de debajo es otro. `Mazes.conocido()` lo
 detecta y la repetición se da por rota. Si algún día se rehace otro trazado,
 hay que hacer lo mismo o cambiarle el id.
 
-- Al dibujar uno nuevo, dos trampas que cuestan una tarde: **la fila 8 tiene
-  que estar abierta en las columnas 6 y 12, y la fila 20 en la 6 y la 9.** Las
-  filas 9 y 19 son del núcleo copiado y tienen huecos de una casilla ahí; si
-  se tapan por arriba o por abajo, el callejón sale **en las filas copiadas**,
-  que es donde menos se mira. Y una región interior solo escapa por una
-  casilla que la fila del núcleo deje abierta.
-- El validador de las pruebas (`js/tests.js`) lo canta todo: callejones,
-  pastillas inalcanzables, simetría, borde y energizantes.
+- Al dibujar uno nuevo, **la regla de las dos filas de comida manda**: nunca
+  dos pegadas sin muro de por medio. De ahí salen las tres trampas, que están
+  contadas en la cabecera de `js/mazes.js`: la columna 1 abierta casi
+  siempre, el eje del espejo, y las filas 8 y 20 de pasillo entero (son las
+  que enchufan cada mitad con los huecos de una casilla del núcleo; si se
+  tapan, el callejón sale **en las filas copiadas**, que es donde menos se
+  mira).
+- El validador de las pruebas (`js/tests.js`) lo canta todo: cuadros de 2x2,
+  callejones, pastillas inalcanzables, simetría, borde y energizantes.
 
 **El DAILY sustituye al RETO DE HOY**, que era un modo de juego y por eso no
 funcionaba: para jugarlo había que dejar de jugar a lo tuyo.
@@ -43,7 +72,7 @@ funcionaba: para jugarlo había que dejar de jugar a lo tuyo.
   media semana para todo el mundo.
 - **Cinco libres garantizados** (`LIBRES_POR_SEMANA`). Bajarlo deja semanas
   imposibles para quien juega solo; hay una prueba que lo vigila.
-- **La racha cuenta DÍAS, no retos**, y sobrevive al cambio de semana.
+- **La racha cuenta días seguidos** y sobrevive al cambio de semana.
 - Los tres logros conservan sus ids (`rt_*`) y `sembrarDaily()` los siembra
   con `reto:partidas`. Esa clave **ya no está en STATS**, así que se lee del
   almacén en crudo: si algún día se retira otro contador con logros detrás,
@@ -237,7 +266,7 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v26` (14 de agosto) |
+| Juego (Vercel) | desplegado, service worker `pm-v27` (15 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
@@ -263,7 +292,7 @@ Dos avisos operativos:
 
 ### Las cuatro pruebas que "fallan" en Node
 
-Hoy hay **214 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
+Hoy hay **219 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
 es lo esperado: son límites del DOM de mentira (miden píxeles reales y
 `offsetParent`), no fallos del juego. Las mismas **pasan en `tests.html`**, que
 es la batería buena; la de Node vale para la lógica.

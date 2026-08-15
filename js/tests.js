@@ -224,6 +224,42 @@
       });
     });
 
+  /* ---------- la regla de oro del arcade ----------
+   * NUNCA dos filas (ni dos columnas) de comida pegadas sin muro de por
+   * medio. Dicho de otra forma: ni un solo cuadro de 2x2 casillas
+   * transitables. El laberinto de 1980 no tiene ninguno, y no es un capricho
+   * estético: con pasillos de una sola casilla, esquivar es elegir una
+   * bifurcación, y los patrones de los fantasmas significan algo. En un
+   * espacio de dos de ancho se les da la vuelta sin más, y el juego se
+   * convierte en otra cosa.
+   *
+   * Los tres primeros laberintos alternativos se hicieron sin esta regla y
+   * tenían bandas de dos filas. De ahí esta prueba, que además comprueba el
+   * clásico: si algún día falla ahí, es que se ha tocado lo que no. */
+  test('ningún laberinto tiene dos filas de comida pegadas', function () {
+    /* La casa de fantasmas y su entorno se saltan: son del núcleo copiado y
+     * ahí el hueco de dos de ancho es del original (es donde botan dentro). */
+    function enCasa(c, r) { return c >= 9 && c <= 18 && r >= 11 && r <= 18; }
+    function cuadros(rows) {
+      var out = [];
+      for (var r = 0; r < CFG.ROWS - 1; r++) {
+        for (var c = 0; c < CFG.COLS - 1; c++) {
+          if (enCasa(c, r) || enCasa(c + 1, r + 1)) continue;
+          if (abiertoEn(rows, c, r) && abiertoEn(rows, c + 1, r) &&
+              abiertoEn(rows, c, r + 1) && abiertoEn(rows, c + 1, r + 1)) {
+            out.push('(' + c + ',' + r + ')');
+          }
+        }
+      }
+      return out;
+    }
+    eq(cuadros(CFG.MAZE_CLASSIC).join(' '), '',
+       'el de 1980 no tiene ni uno, que es de donde sale la regla');
+    window.PM.Mazes.LIST.forEach(function (m) {
+      eq(cuadros(m.rows).join(' '), '', m.name + ': cuadros de 2x2');
+    });
+  });
+
   test('los laberintos alternativos no tienen callejones', function () {
     /* Un callejón sin salida rompe la persecución: el fantasma entra, se
      * da la vuelta (que no puede) y se queda encerrado. La casa de
@@ -293,7 +329,11 @@
     try {
       window.PM.settings.muted = true;
       G.newGame({ players: 1, maze: id });
-      ok(CFG.MAZE[1] !== CFG.MAZE_CLASSIC[1], 'en partida manda el alternativo');
+      /* Se compara el trazado ENTERO, no una fila suelta: con la regla de no
+       * pegar dos filas de comida, la primera de varios alternativos es
+       * igual que la del clásico y la comprobación de antes se lo tragaba. */
+      ok(CFG.MAZE.join('|') !== CFG.MAZE_CLASSIC.join('|'),
+         'en partida manda el alternativo');
       eq(CFG.PELLET_TOTAL, M.LIST[0].pellets, 'con sus pastillas');
       eq(G.dotsLeft, M.LIST[0].pellets, 'y repartidas en el laberinto');
       // y se juega de verdad: unos segundos de partida sin petar
@@ -833,16 +873,24 @@
     }
   }
 
-  test('la semana empieza en LUNES y se cuenta en UTC', function () {
-    // domingo 9 de agosto de 2026, a las 23:30 UTC: sigue siendo esa semana
-    var dom = new Date(Date.UTC(2026, 7, 9, 23, 30));
-    var lun = new Date(Date.UTC(2026, 7, 10, 0, 30));
+  /* El día es el DEL RELOJ DE QUIEN JUEGA, no UTC. Con UTC, quien juega en
+   * América veía cambiar el reto a media tarde: en Perú (UTC-5), a las 19:00
+   * de un viernes ya le salía el reto del sábado. El DAILY no manda nada a
+   * ningún servidor, así que no hay nada que sincronizar con nadie. */
+  test('el día del reto es el del reloj del jugador, no el de UTC', function () {
+    // viernes 14 de agosto de 2026 a las 19:30 en hora local
+    var vie = new Date(2026, 7, 14, 19, 30);
+    eq(DY.diaSemana(vie), 4, 'a las 19:30 de un viernes sigue siendo viernes');
+    eq(CFG.DAILY.DIA_CORTO[DY.diaSemana(vie)], 'VIE');
+    eq(DY.hoyISO(vie), '2026-08-14', 'y la fecha es la de aquí');
+    // y a las 23:59 del domingo todavía no ha empezado la semana siguiente
+    var dom = new Date(2026, 7, 9, 23, 59);
     eq(DY.diaSemana(dom), 6, 'el domingo es el último día, no el primero');
-    eq(DY.diaSemana(lun), 0, 'y el lunes el primero');
     eq(DY.semanaId(dom), '2026-08-03', 'el domingo cae en la semana anterior');
-    eq(DY.semanaId(lun), '2026-08-10', 'y el lunes ya abre la suya');
-    // cualquier día de la misma semana da el mismo identificador
-    eq(DY.semanaId(new Date(Date.UTC(2026, 7, 13, 5, 0))), '2026-08-10');
+    eq(DY.semanaId(new Date(2026, 7, 10, 0, 30)), '2026-08-10',
+       'y el lunes ya abre la suya');
+    eq(DY.semanaId(new Date(2026, 7, 13, 5, 0)), '2026-08-10',
+       'cualquier día de la misma semana da el mismo identificador');
     eq(DY.fechaDe('2026-08-10', 3), '2026-08-13', 'el jueves de esa semana');
   });
 
@@ -875,11 +923,38 @@
     });
   });
 
-  test('el reto de un día no se puede cumplir antes de tiempo', function () {
+  /* SOLO EL DE HOY. Se probó con recuperación (los de días pasados seguían
+   * abiertos hasta el domingo) y se quitó: si te puedes poner al día el
+   * sábado, el reto deja de ser diario y pasa a ser una lista semanal. */
+  test('solo se puede cumplir el reto de hoy', function () {
     var hoy = DY.diaSemana();
     ok(DY.abierto(hoy), 'el de hoy sí');
-    if (hoy > 0) ok(DY.abierto(hoy - 1), 'y los de días pasados siguen abiertos');
-    if (hoy < 6) ok(!DY.abierto(hoy + 1), 'el de mañana no');
+    if (hoy > 0) ok(!DY.abierto(hoy - 1), 'el de ayer ya no');
+    if (hoy < 6) ok(!DY.abierto(hoy + 1), 'y el de mañana todavía no');
+  });
+
+  test('un reto de otro día no avanza ni por casualidad', function () {
+    conDaily(function (D) {
+      var hoy = D.diaSemana();
+      if (hoy === 0) return;               // lunes: no hay días pasados
+      var retos0 = D.retos;
+      D.retos = function () {
+        var l = retos0.call(D).slice();
+        // el de AYER pide justo lo que se va a hacer, y aun así no cuenta
+        l[hoy - 1] = { id: 'x_ayer', desc: 'CÓMETE 1 FANTASMA',
+                       stat: 'fantasmas', goal: 1 };
+        l[hoy] = { id: 'x_hoy', desc: 'CÓMETE 99 FANTASMAS',
+                   stat: 'fantasmas', goal: 99 };
+        return l;
+      };
+      try {
+        eq(D.apunta(['solo', 'clasico'], { fantasmas: 5 }).length, 0);
+        eq(D.progreso(hoy - 1).valor, 0, 'el de ayer se queda a cero');
+        ok(!D.progreso(hoy - 1).hecho, 'y desde luego no se cumple');
+        eq(D.progreso(hoy).valor, 5, 'lo que se juega va al de hoy');
+        ok(D.caducado(hoy - 1), 'el de ayer se marca como pasado');
+      } finally { D.retos = retos0; }
+    });
   });
 
   test('un reto se cumple jugando, y solo cuenta una vez', function () {
@@ -952,24 +1027,21 @@
     });
   });
 
-  /* La racha es de DÍAS jugando, no de retos: con recuperación, ponerse al día
-   * de tres el jueves es un jueves, no tres días seguidos. */
-  test('la racha cuenta días, no retos cumplidos', function () {
+  /* Aunque se juegue media tarde, el día cuenta una sola vez */
+  test('la racha sube un día por día, aunque se siga jugando', function () {
     conDaily(function (D) {
       var i = D.diaSemana();
       var retos0 = D.retos;
       D.retos = function () {
         var l = retos0.call(D).slice();
-        for (var k = 0; k <= i; k++) {
-          l[k] = { id: 'x_' + k, desc: 'JUEGA 1 PARTIDA',
-                   stat: 'partidas', goal: 1 };
-        }
+        l[i] = { id: 'x_r', desc: 'JUEGA 1 PARTIDA', stat: 'partidas', goal: 1 };
         return l;
       };
       try {
-        var hechos = D.apunta(['solo', 'clasico'], { partidas: 1 });
-        eq(hechos.length, i + 1, 'se cumplen todos los abiertos de golpe');
-        eq(D.racha(), 1, 'pero la racha sube un solo día');
+        eq(D.apunta(['solo', 'clasico'], { partidas: 1 }).length, 1);
+        eq(D.racha(), 1);
+        D.apunta(['solo', 'clasico'], { partidas: 5 });
+        eq(D.racha(), 1, 'seguir jugando el mismo día no la sube otra vez');
       } finally { D.retos = retos0; }
     });
   });
@@ -1806,6 +1878,107 @@
     ok(G.lvl1Cs > 0, 'con un tiempo de verdad');
     ok(!G.rankingSent, 'la partida sigue: la puntuación aún no se ha mandado');
   });
+
+  // ---------------------------------------------------------------
+  // Dificultad: la etiqueta sale de los valores
+  // ---------------------------------------------------------------
+  /* El bug que arreglan estas pruebas: el panel decía NORMAL y la partida
+   * empezaba con cinco vidas. `difficultyPreset` era un rótulo GUARDADO que
+   * nadie comprobaba contra los números, así que en cuanto los dos se
+   * separaban —unos ajustes sin etiqueta, una etiqueta que no existe, un
+   * localStorage tocado a mano— el panel mentía y el jugador no tenía forma
+   * de sospecharlo. Ahora la etiqueta se deduce. */
+  function conAjustes(cambios, fn) {
+    var s = window.PM.settings;
+    var antes = {};
+    for (var k in cambios) if (cambios.hasOwnProperty(k)) antes[k] = s[k];
+    for (k in cambios) if (cambios.hasOwnProperty(k)) s[k] = cambios[k];
+    try { fn(); }
+    finally { for (k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k]; }
+  }
+
+  test('la dificultad se deduce de los valores, no de lo que ponga guardado',
+    function () {
+      var U = window.PM.UI;
+      var P = CFG.PRESETS;
+      ['facil', 'normal', 'dificil'].forEach(function (nombre) {
+        var p = P[nombre];
+        conAjustes({
+          ghostSpeedMult: p.ghostSpeedMult, pacSpeedMult: p.pacSpeedMult,
+          frightMult: p.frightMult, startLives: p.startLives,
+          startLevel: p.startLevel, difficultyPreset: 'lo-que-sea'
+        }, function () {
+          eq(U.presetActual(), nombre, 'los valores de ' + nombre + ' son ' + nombre);
+        });
+      });
+      // valores de fácil con la etiqueta NORMAL guardada: manda el valor
+      conAjustes({
+        ghostSpeedMult: P.facil.ghostSpeedMult, pacSpeedMult: P.facil.pacSpeedMult,
+        frightMult: P.facil.frightMult, startLives: P.facil.startLives,
+        startLevel: P.facil.startLevel, difficultyPreset: 'normal'
+      }, function () {
+        eq(U.presetActual(), 'facil', 'la etiqueta guardada no puede mentir');
+      });
+      // y una mezcla que no es ninguna de las tres es PERSONALIZADA
+      conAjustes({
+        ghostSpeedMult: 1, pacSpeedMult: 1, frightMult: 1,
+        startLives: 4, startLevel: 1, difficultyPreset: 'normal'
+      }, function () {
+        eq(U.presetActual(), 'custom', 'cuatro vidas no son NORMAL');
+      });
+    });
+
+  /* Lo que veía el jugador: NORMAL en el panel y cuatro vidas dibujadas (que
+   * son cinco, porque la que estás usando no se pinta — eso es del arcade y
+   * se queda). Ahora el panel dice PERSONALIZADA, que es la verdad. */
+  test('con NORMAL de verdad se empieza con tres vidas y se pintan dos',
+    function () {
+      var U = window.PM.UI;
+      var p = CFG.PRESETS.normal;
+      conAjustes({
+        ghostSpeedMult: p.ghostSpeedMult, pacSpeedMult: p.pacSpeedMult,
+        frightMult: p.frightMult, startLives: p.startLives,
+        startLevel: p.startLevel, difficultyPreset: 'normal'
+      }, function () {
+        partida(1);
+        eq(G.lives, 3, 'NORMAL son tres vidas');
+        eq(Math.max(0, G.lives - 1), 2, 'y se dibujan dos: la de la mano no cuenta');
+        eq(U.presetActual(), 'normal');
+        G.toMenu();
+      });
+      // el caso del amigo: cinco vidas guardadas y NORMAL en la etiqueta
+      conAjustes({
+        ghostSpeedMult: 1, pacSpeedMult: 1, frightMult: 1,
+        startLives: 5, startLevel: 1, difficultyPreset: 'normal'
+      }, function () {
+        partida(1);
+        eq(G.lives, 5, 'la partida empieza con lo que digan los valores');
+        eq(Math.max(0, G.lives - 1), 4, 'que son las cuatro que se veían');
+        eq(U.presetActual(), 'custom', 'y el panel ya no dice NORMAL');
+        G.toMenu();
+      });
+    });
+
+  test('elegir una dificultad deja los cinco valores y su etiqueta cuadrados',
+    function () {
+      var U = window.PM.UI;
+      var s = window.PM.settings;
+      var antes = {
+        ghostSpeedMult: s.ghostSpeedMult, pacSpeedMult: s.pacSpeedMult,
+        frightMult: s.frightMult, startLives: s.startLives,
+        startLevel: s.startLevel, difficultyPreset: s.difficultyPreset
+      };
+      try {
+        ['facil', 'normal', 'dificil'].forEach(function (nombre) {
+          U.applyPreset(nombre);
+          eq(s.difficultyPreset, nombre);
+          eq(U.presetActual(), nombre, nombre + ' cuadra con sus valores');
+          eq(s.startLives, CFG.PRESETS[nombre].startLives);
+        });
+      } finally {
+        for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k];
+      }
+    });
 
   test('la marca de velocidad solo cuenta en condiciones normales', function () {
     partida(1);

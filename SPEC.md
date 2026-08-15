@@ -475,10 +475,27 @@ PM.settings = {
 
 Presets — facil: ghost .85, pac 1.05, fright 1.5, lives 5, level 1;
 normal: 1/1/1/3/1 (arcade exact); dificil: ghost 1.1, pac 1.0, fright .5,
-lives 2, level 5. Editing any slider switches preset to 'custom'. Persist to
-localStorage `pacman-topmundial-settings`; high score
-`pacman-topmundial-highscore`. Changes to speed/lives/level apply on next new
-game; color + mute apply live.
+lives 2, level 5. Persist to localStorage `pacman-topmundial-settings`; high
+score `pacman-topmundial-highscore`. Changes to speed/lives/level apply on next
+new game; color + mute apply live.
+
+**`difficultyPreset` is derived, never trusted.** It used to be a stored label
+that nothing checked against the numbers, and the moment the two drifted apart
+— settings saved without the label, a label that is not one of the four, a
+hand-edited localStorage — the panel said NORMAL while the run started with
+five lives, and the player had no way to suspect it: what they could see said
+NORMAL. `presetDe(s)` (ui.js) now compares the five difficulty values
+(`PRESET_KEYS`) against each preset with a 0.001 tolerance and returns the
+match, or `'custom'`. `loadSettings()` recomputes it on every load, which also
+heals anybody already out of sync; `refreshPresetButtons()` recomputes it
+before lighting a button; `applyPreset` writes the five values and then derives
+the label rather than asserting it. Adding a sixth value to `CFG.PRESETS`
+means adding it to `PRESET_KEYS` too, or two different difficulties would pass
+for the same one. `UI.presetActual()` exposes it for the tests.
+
+Lives drawn on the HUD are `lives - 1`: the one currently in play is not
+shown. That is the arcade convention and is deliberate — NORMAL's three lives
+read as two icons.
 
 `ajustes` maps onto `PM.settings`: `velFantasmas` → `ghostSpeedMult`,
 `velPac` → `pacSpeedMult`, `powerS` → `frightMult` (the frightened-duration
@@ -1098,15 +1115,21 @@ playing what you were playing, and if that particular run did not appeal to
 you that day, there was no challenge at all. A DAILY challenge is an objective
 you meet **while playing whatever you were going to play anyway**.
 
-- **A week with catch-up.** All seven are visible from Monday. Each opens on
-  its day (`Daily.abierto(i)` is `i <= diaSemana()`) and **stays open until
-  the week ends**, so somebody who cannot play on Tuesday clears it on
-  Thursday. That rewards playing, not being present daily. The week itself
-  does expire.
-- The week id is **the date of its Monday, in UTC** (`Daily.semanaId()`), and
-  the weekday is Monday-first (`getUTCDay` puts Sunday first, which would be
-  starting the week at the end). UTC for the same reason the old challenge
-  used it: everything must roll over at the same instant everywhere.
+- **Only today's counts.** All seven are visible from Monday — showing what is
+  coming is half the reason to come back — but `Daily.abierto(i)` is
+  `i === diaSemana()`: yesterday's has expired, tomorrow's is not there yet.
+  A version with catch-up (everything opened stayed open until Sunday) shipped
+  first and was pulled: if you can catch up on Saturday, it stops being a
+  daily challenge and becomes a weekly shopping list, and "today" is precisely
+  what brings somebody back tomorrow.
+- **The date is the player's, not UTC.** The week id is the date of its Monday
+  (`Daily.semanaId()`) and the weekday is Monday-first (`getDay` puts Sunday
+  first, which would start the week at its end) — all in **local time**. The
+  old RETO DE HOY used UTC because it had a worldwide board and everybody had
+  to play the same day at the same instant. The DAILY sends nothing anywhere:
+  it is yours and this browser's. In UTC a player in Peru (UTC-5) saw the
+  challenge flip at 19:00 — Friday evening already showed Saturday's — which
+  is simply wrong to anybody looking at a clock.
 - **The seven come out of the week itself.** `Daily.retosDe(semana)` hashes
   the week id, shuffles the catalogue with it (Fisher-Yates over a small LCG)
   and takes **5 from `CFG.DAILY.LIBRES` and 2 from `CFG.DAILY.MODOS`**, then
@@ -1130,12 +1153,11 @@ you meet **while playing whatever you were going to play anyway**.
   (`clasico`, `lab`, `hab`, `vs`) or a format (`solo`, `party`) — and the
   challenge only advances when that tag is present.
 - **Rewards: XP and a streak.** Each clear adds `CFG.DAILY.XP`, and
-  `Daily.premiar` bumps the streak. The streak counts **days on which you
-  cleared something**, not challenges: with catch-up, clearing three on
-  Thursday is one Thursday of playing, not three days in a row. It only moves
-  once per UTC day (`est.ult`), and it **survives the week rolling over** —
-  breaking someone's streak at midnight on Sunday because the calendar turned
-  a page would be punishing the calendar, not the player.
+  `Daily.premiar` bumps the streak — days in a row clearing your challenge. It
+  only moves once per local day (`est.ult`; there is one challenge a day now,
+  but the guard is what makes it idempotent), and it **survives the week
+  rolling over** — breaking someone's streak at midnight on Sunday because the
+  calendar turned a page would be punishing the calendar, not the player.
 - Local state is one localStorage row (`CFG.DAILY.KEY`): `{w: week, p: [7]
   progress, h: [7] cleared, racha, mejor, ult, sem}`. Reading it when the week
   has changed resets `p`/`h` and keeps the streak. `sem` marks the week as
@@ -1189,11 +1211,32 @@ Each maze is authored as its **left half only** (14 columns) and mirrored,
 which is where the arcade look comes from. Rows 9–19 are **copied from the
 classic**, never retyped: they carry the ghost house, its door, the tunnel
 row and the no-up tiles, and the engine addresses those tile by tile.
-`js/tests.js` enforces the rest: every pellet reachable from Pac-Man's
-spawn (BFS with tunnel wrap), the declared pellet count, **no dead ends**
-(a ghost that enters one is stuck and the chase is over), four energizers
-in the four corners, left-right symmetry, a closed border except the
-tunnel, and the classic coming back when the mode is left.
+`js/tests.js` enforces the rest: **no 2×2 walkable square** (see below), every
+pellet reachable from Pac-Man's spawn (BFS with tunnel wrap), the declared
+pellet count, **no dead ends** (a ghost that enters one is stuck and the chase
+is over), four energizers in the four corners, left-right symmetry, a closed
+border except the tunnel, and the classic coming back when the mode is left.
+
+**The rule that was missing: never two adjacent rows (or columns) of food.**
+Formally, **no 2×2 block of walkable tiles** — the 1980 maze has exactly zero,
+and the test asserts that against the classic too. It is not decoration: with
+one-tile corridors, dodging means choosing a branch and the ghosts' patterns
+mean something; in a two-wide space you just walk around them and the game
+becomes something else. The first six alternative layouts were drawn without
+it and had two-row bands, so all six were redrawn.
+
+The rule forces the original's template: **corridor rows** (open end to end)
+with **wall rows** between them, where a wall row may only have **isolated**
+gaps — never two adjacent — or it forms a square with the corridor beside it.
+Three traps that cost an afternoon each:
+
+- **Column 1 stays open in almost every row** (the border lane). Without it
+  the ends of each corridor row have a single exit and are dead ends.
+- **At the mirror axis** (index 13 of the half) a gap open on two consecutive
+  rows is also a square, because its reflection is the very next column.
+- **Rows 8 and 20 are left as full corridors**: they are what connects each
+  half to the core's single-tile openings, and anything narrower there strands
+  whole regions or produces dead ends inside the copied rows.
 
 **Six layouts, six ideas.** The first three were rectangle grids separated by
 full-width bands — valid, but interchangeable: whichever you picked, you were

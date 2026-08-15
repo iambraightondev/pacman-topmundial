@@ -28,6 +28,39 @@
   var PRESET_NAMES = ['facil', 'normal', 'dificil', 'custom'];
   var LIVES_MODES = ['shared', 'individual'];
 
+  /* Los cinco ajustes que forman una dificultad. El orden da igual; lo que
+   * importa es que estén TODOS: si se añade uno a CFG.PRESETS hay que meterlo
+   * aquí, o dos dificultades distintas pasarían por la misma. */
+  var PRESET_KEYS = ['ghostSpeedMult', 'pacSpeedMult', 'frightMult',
+    'startLives', 'startLevel'];
+
+  /* ---------- Qué dificultad es esta, MIRANDO LOS VALORES ----------
+   * La etiqueta ('facil' | 'normal' | 'dificil' | 'custom') NO se guarda: se
+   * deduce. Guardarla aparte fue un error con consecuencias reales: era un
+   * rótulo que nadie comprobaba contra los números, así que en cuanto los dos
+   * se separaban —unos ajustes guardados sin etiqueta, una etiqueta que no
+   * existe, un localStorage tocado a mano— el panel decía NORMAL mientras la
+   * partida empezaba con cinco vidas. Y el jugador no tiene forma de
+   * sospecharlo: lo que ve dice NORMAL.
+   *
+   * Deduciéndola, el panel no puede mentir, y a quien ya la tuviera
+   * descuadrada se le arregla sola al cargar. */
+  function presetDe(s) {
+    for (var i = 0; i < PRESET_NAMES.length; i++) {
+      var nombre = PRESET_NAMES[i];
+      var p = CFG.PRESETS[nombre];
+      if (!p) continue;                      // 'custom' no tiene tabla
+      var igual = true;
+      for (var k = 0; k < PRESET_KEYS.length; k++) {
+        var key = PRESET_KEYS[k];
+        // los multiplicadores son decimales: se comparan con holgura
+        if (Math.abs((s[key] || 0) - p[key]) > 0.001) { igual = false; break; }
+      }
+      if (igual) return nombre;
+    }
+    return 'custom';
+  }
+
   /* Nombres: mayúsculas, sin acentos raros ni caracteres de control, y
    * recortados a CFG.NICK_MAX para que quepan en el marcador. */
   function filterNick(value) {
@@ -98,6 +131,11 @@
         }
       }
     } catch (e) { /* sin almacenamiento o JSON corrupto */ }
+    /* La etiqueta de dificultad se recalcula SIEMPRE de los valores, se
+     * hubiera guardado o no. Es lo que impide que el panel diga NORMAL
+     * teniendo otras vidas, y lo que arregla solo a quien ya la tuviera
+     * descuadrada. */
+    s.difficultyPreset = presetDe(s);
     return s;
   }
 
@@ -493,13 +531,8 @@
 
       var donde = p.reto.modo ? ('EN ' + this.dailyModoName(p.reto.modo))
                               : 'EN CUALQUIER MODO';
-      /* Si el de hoy ya está, lo útil no es repetirlo: es decir que quedan
-       * otros abiertos de esta semana, que es de lo que va la recuperación. */
-      var quedan = D.pendientes(est);
       this.dailyFoot.textContent = p.hecho
-        ? (quedan > 0
-            ? ('CUMPLIDO  ·  TE QUEDAN ' + quedan + ' DE ESTA SEMANA')
-            : 'CUMPLIDO  ·  ESTA SEMANA LOS LLEVAS TODOS')
+        ? 'CUMPLIDO  ·  MAÑANA HAY OTRO'
         : (donde + '  ·  ' + this.dailyValor(p.reto, p.valor));
     },
 
@@ -557,14 +590,15 @@
 
       this.dailySub.textContent =
         'SIETE RETOS, UNO POR DÍA · SE CUMPLEN JUGANDO A LO QUE SEA, NO SON UN ' +
-        'MODO APARTE · EL DE CADA DÍA SE ABRE ESE DÍA Y SE QUEDA ABIERTO HASTA ' +
-        'QUE ACABA LA SEMANA, ASÍ QUE SE PUEDEN RECUPERAR · ' +
-        D.cumplidos(est) + '/' + CFG.DAILY.DIAS + ' CUMPLIDOS';
+        'MODO APARTE · SOLO CUENTA EL DE HOY: EL DE AYER YA PASÓ Y EL DE MAÑANA ' +
+        'AÚN NO ESTÁ · ' + D.cumplidos(est) + '/' + CFG.DAILY.DIAS +
+        ' CUMPLIDOS ESTA SEMANA';
 
       this.dailyList.innerHTML = '';
       for (var i = 0; i < CFG.DAILY.DIAS; i++) {
         var p = D.progreso(i, est);
         if (!p) continue;
+        var caducado = D.caducado(i, est);
         var fila = document.createElement('div');
         fila.className = 'badge-row daily-row' +
           (p.hecho ? ' got' : (p.abierto ? '' : ' cerrado')) +
@@ -592,6 +626,7 @@
           ? (' · EN ' + this.dailyModoName(p.reto.modo)) : '';
         st.textContent = p.hecho ? ('CUMPLIDO · +' + CFG.DAILY.XP + ' EXP')
           : p.abierto ? (this.dailyValor(p.reto, p.valor) + donde)
+          : caducado ? ('SE PASÓ · ERA EL ' + D.fmtFecha(D.fechaDe(sem, i)) + donde)
           : ('SE ABRE EL ' + D.fmtFecha(D.fechaDe(sem, i)) + donde);
         txt.appendChild(st);
 
@@ -612,7 +647,7 @@
       this.dailyRacha.textContent =
         'RACHA: ' + racha + (racha === 1 ? ' DÍA' : ' DÍAS') +
         '  ·  LA MEJOR: ' + mejor + (mejor === 1 ? ' DÍA' : ' DÍAS') +
-        '  ·  CUENTA UN DÍA POR CADA JORNADA EN LA QUE CUMPLAS ALGO';
+        '  ·  SE ROMPE EL DÍA QUE NO CUMPLAS EL TUYO';
     },
 
     /* ------------------------------------------------------
@@ -1321,7 +1356,9 @@
         if (plain) {
           self.applyVolumes();
         } else {
-          window.PM.settings.difficultyPreset = 'custom';
+          // la etiqueta sale de los valores: mover un deslizador hasta dar
+          // con una dificultad de la casa la vuelve a marcar sola
+          window.PM.settings.difficultyPreset = presetDe(window.PM.settings);
           self.refreshPresetButtons();
         }
         saveSettings();
@@ -1335,15 +1372,15 @@
     applyPreset: function (name) {
       var s = window.PM.settings;
       var p = CFG.PRESETS[name];
-      s.difficultyPreset = name;
-      s.ghostSpeedMult = p.ghostSpeedMult;
-      s.pacSpeedMult = p.pacSpeedMult;
-      s.frightMult = p.frightMult;
-      s.startLives = p.startLives;
-      s.startLevel = p.startLevel;
+      if (!p) return;
+      for (var i = 0; i < PRESET_KEYS.length; i++) s[PRESET_KEYS[i]] = p[PRESET_KEYS[i]];
+      s.difficultyPreset = presetDe(s);   // que salga de los valores, siempre
       saveSettings();
       this.refreshOptions();
     },
+
+    /* Para las pruebas y para quien quiera preguntarlo desde fuera */
+    presetActual: function (s) { return presetDe(s || window.PM.settings); },
 
     setColor: function (key, hex) {
       window.PM.settings[key] = hex;   // se aplica en vivo (game lee cada frame)
@@ -1391,7 +1428,10 @@
     },
 
     refreshPresetButtons: function () {
-      var cur = window.PM.settings.difficultyPreset;
+      /* De los valores, no de lo guardado: es la única forma de que el botón
+       * encendido y las vidas con las que empiezas digan lo mismo. */
+      var cur = presetDe(window.PM.settings);
+      window.PM.settings.difficultyPreset = cur;
       for (var k in this.presetButtons) {
         if (this.presetButtons.hasOwnProperty(k)) {
           this.presetButtons[k].classList.toggle('active', k === cur);

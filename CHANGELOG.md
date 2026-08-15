@@ -2,6 +2,37 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-15 · Cuatro arreglos: el día, el reto, los laberintos y las vidas
+
+- **El DAILY marcaba el día equivocado.** Un viernes por la tarde ya ponía
+  SÁBADO. Iba en UTC —heredado del RETO DE HOY, que sí lo necesitaba porque
+  tenía clasificación mundial— y el DAILY no manda nada a ningún sitio: es
+  tuyo y de tu navegador. Ahora **el día es el de tu reloj**, así que cambia a
+  tu medianoche y no a las 19:00.
+- **Ya no se pueden cumplir retos que no sean el de hoy.** Los siete se
+  siguen viendo desde el lunes —saber lo que viene es medio motivo para
+  volver—, pero solo cuenta el del día: el de ayer ya pasó y el de mañana aún
+  no está. La recuperación hasta el domingo convertía el reto diario en una
+  lista semanal que se despachaba el sábado.
+- **Los laberintos rompían LA regla del Pac-Man original: nunca dos filas de
+  comida pegadas sin muro de por medio.** Cinco de los seis tenían bandas de
+  dos filas. No es cosa estética: con pasillos de una sola casilla, esquivar
+  es elegir bifurcación y los patrones de los fantasmas significan algo; en un
+  hueco de dos de ancho se les da la vuelta y ya. **Los seis están
+  redibujados** con la plantilla del original, y ahora hay una prueba que lo
+  vigila (y que comprueba de paso que el laberinto de 1980 no tiene ni un
+  cuadro de 2×2, que es de donde sale la regla).
+- **La dificultad podía mentir.** Decía NORMAL y la partida empezaba con
+  cinco vidas. La etiqueta se guardaba aparte de los números y nadie las
+  comparaba, así que en cuanto se separaban el panel se quedaba tan ancho.
+  **Ahora la etiqueta se deduce de los valores**: si tienes cinco vidas, el
+  panel dice PERSONALIZADA, y a quien la tuviera descuadrada se le arregla
+  sola al abrir el juego.
+
+> Ojo con una cosa que **no** es un fallo: en el marcador se dibuja **una vida
+> menos de las que tienes**, porque la que estás usando no se pinta. Con
+> NORMAL (tres vidas) se ven dos. Es así en el arcade de 1980 y se queda.
+
 ## 2026-08-14 · El DAILY: siete retos por semana, y ya no son un modo
 
 - **El RETO DE HOY tenía un problema de raíz: era un modo de juego.** Una

@@ -20,12 +20,32 @@
  * Lo demás —filas 0 a 8 y 20 a 30— es terreno libre.
  *
  * Reglas de dibujo (las comprueba js/tests.js):
+ *  - NUNCA dos filas ni dos columnas de comida pegadas sin muro de
+ *    por medio, o sea: ni un solo cuadro de 2x2 transitable. Es LA
+ *    regla del laberinto de 1980 (que no tiene ninguno) y no es
+ *    estética: con pasillos de una casilla, esquivar es elegir
+ *    bifurcación y los patrones de los fantasmas significan algo;
+ *    en un hueco de dos de ancho se les da la vuelta sin más;
  *  - sin casillas inalcanzables: todo se llega desde la salida;
  *  - sin callejones: cada casilla de pasillo tiene al menos dos
  *    salidas, o los fantasmas se quedarían encerrados y la
  *    persecución dejaría de funcionar;
  *  - energizantes en las cuatro esquinas;
  *  - el número de pastillas declarado tiene que cuadrar.
+ *
+ * De la primera regla sale una plantilla, que es la del original:
+ * filas PASILLO (abiertas de lado a lado) y filas MURO entre ellas,
+ * donde una fila muro solo puede tener huecos SUELTOS —nunca dos
+ * seguidos— o hará cuadro con el pasillo de al lado. Tres trampas
+ * que cuestan una tarde:
+ *  - la COLUMNA 1 va abierta casi siempre (el carril del borde):
+ *    sin ella, los extremos de cada pasillo se quedan con una sola
+ *    salida y son callejón;
+ *  - en el EJE DEL ESPEJO (índice 13 de la mitad) un hueco abierto
+ *    en dos filas seguidas también hace cuadro, porque su reflejo
+ *    es la columna de al lado;
+ *  - las filas 8 y 20 se dejan de pasillo entero: son las que
+ *    enchufan cada mitad con los huecos de una casilla del núcleo.
  * ============================================================ */
 (function () {
   'use strict';
@@ -73,26 +93,26 @@
    * tenía nada; ahora hace lo que dice. */
   var ANILLOS = montar([
     '##############',   //  0
-    '#.............',   //  1  anillo exterior
+    '#............#',   //  1
     '#.##########.#',   //  2
-    '#o#........#.#',   //  3  anillo 2
+    '#o#........#.#',   //  3
     '#.#.######.#.#',   //  4
-    '#.#.#....#.#.#',   //  5  anillo 3
-    '#.#.#.##.#.#.#',   //  6  y el corazón, de dos casillas
-    '#.#.#....#.#.#',   //  7
-    '#...#....#...#'    //  8  los saltos entre anillos, todos en esta fila
+    '#.#.#....#.#.#',   //  5
+    '#.#.#.##.#.#.#',   //  6
+    '#.#.#.##.#.#.#',   //  7
+    '#............#'   //  8
   ], [
     '#............#',   // 20
-    '#.##########.#',   // 21
-    '#o#........#.#',   // 22
-    '#.#.######.#. ',   // 23  salida de Pac-Man (13.5, 23)
-    '#.#.#....#.#.#',   // 24
-    '#.#.#.##.#.#.#',   // 25
-    '#.#.#....#.#.#',   // 26
-    '#...#....#...#',   // 27
-    '#.####.#####.#',   // 28  y aquí baja el anillo de dentro
+    '#.#.#.##.#.#.#',   // 21
+    '#.#.#.##.#.#.#',   // 22
+    '#o#.#....#.#. ',   // 23
+    '#.#.######.#.#',   // 24
+    '#.#........#.#',   // 25
+    '#.##########.#',   // 26
+    '#............#',   // 27
+    '#.##########.#',   // 28
     '#............#',   // 29
-    '##############'    // 30
+    '##############'   // 30
   ]);
 
   /* ---------- PANAL ----------
@@ -103,26 +123,26 @@
    * llevar en la cabeza. */
   var PANAL = montar([
     '##############',   //  0
-    '#.............',   //  1
-    '#.##.####.##.#',   //  2
-    '#o##.####.##.#',   //  3
-    '#.............',   //  4
-    '#.####.##.####',   //  5  las celdas se corren media casilla
-    '#.####.##.####',   //  6
-    '#.............',   //  7
-    '#..##..#..##..'    //  8
+    '#............#',   //  1
+    '#.##.##.##.#.#',   //  2
+    '#o##.##.##.#.#',   //  3
+    '#............#',   //  4
+    '#.####.###.#.#',   //  5
+    '#.####.###.#.#',   //  6
+    '#.####.###.#.#',   //  7
+    '#............#'   //  8
   ], [
-    '#.............',   // 20
-    '#.####.##.####',   // 21
-    '#.####.##.####',   // 22
-    '#o........... ',   // 23
-    '#.##.####.##.#',   // 24
-    '#.##.####.##.#',   // 25
-    '#.............',   // 26
-    '#.####.##.####',   // 27
-    '#.####.##.####',   // 28
-    '#.............',   // 29
-    '##############'    // 30
+    '#............#',   // 20
+    '#.####.###.#.#',   // 21
+    '#.####.###.#.#',   // 22
+    '#o..........  ',   // 23
+    '#.##.##.##.#.#',   // 24
+    '#.##.##.##.#.#',   // 25
+    '#............#',   // 26
+    '#.####.###.#.#',   // 27
+    '#.####.###.#.#',   // 28
+    '#............#',   // 29
+    '##############'   // 30
   ]);
 
   /* ---------- COLMILLOS ----------
@@ -133,56 +153,55 @@
    * El más despiadado: aquí se elige el carril como quien elige puerta. */
   var COLMILLOS = montar([
     '##############',   //  0
-    '#.............',   //  1
-    '#.#.#.#.#.#.#.',   //  2
-    '#o#.#.#.#.#.#.',   //  3
-    '#.#.#.#.#.#.#.',   //  4
-    '#.#.#.#.#.#.#.',   //  5
-    '#.#.#.#.#.#.#.',   //  6
-    '#.#.#.#.#.#.#.',   //  7
-    '#.............'    //  8
+    '#............#',   //  1
+    '#o#.#.#.#.##.#',   //  2
+    '#.#.#.#.#.##.#',   //  3
+    '#.#.#.#.#.##.#',   //  4
+    '#.#.#.#.#.##.#',   //  5
+    '#.#.#.#.#.##.#',   //  6
+    '#.#.#.#.#.##.#',   //  7
+    '#............#'   //  8
   ], [
-    '#.............',   // 20
-    '#..#.#.#.#.#.#',   // 21  los de abajo, corridos una casilla
-    '#..#.#.#.#.#.#',   // 22
-    '#o........... ',   // 23
-    '#.#.#.#.#.#.#.',   // 24
-    '#.#.#.#.#.#.#.',   // 25
-    '#.#.#.#.#.#.#.',   // 26
-    '#.#.#.#.#.#.#.',   // 27
-    '#.#.#.#.#.#.#.',   // 28
-    '#.............',   // 29
-    '##############'    // 30
+    '#............#',   // 20
+    '#.##.#.#.#.#.#',   // 21
+    '#.##.#.#.#.#.#',   // 22
+    '#o..........  ',   // 23
+    '#.#.#.#.#.##.#',   // 24
+    '#.#.#.#.#.##.#',   // 25
+    '#.#.#.#.#.##.#',   // 26
+    '#.#.#.#.#.##.#',   // 27
+    '#.#.#.#.#.##.#',   // 28
+    '#............#',   // 29
+    '##############'   // 30
   ]);
 
   /* ---------- ESCALERA ----------
-   * Una escalera: el paso baja en diagonal, un tramo a cada altura, y
-   * arriba y abajo bajan por lados distintos. No hay ni una fila que
-   * cruce el laberinto de lado a lado, así que ir de una esquina a la
-   * otra obliga a hacer todos los rellanos. El más cerrado de los seis
-   * (y el que menos pastillas tiene), pensado para partidas largas. */
+   * Rellanos: tramos horizontales cortos a media altura, uno a cada lado y
+   * a distinta altura, unidos por los dos pozos verticales del centro. Para
+   * cruzar por dentro hay que bajar un rellano, cambiar de lado y bajar el
+   * siguiente. El más cerrado de los seis y el que menos pastillas tiene. */
   var ESCALERA = montar([
     '##############',   //  0
-    '#.............',   //  1
-    '#.##.#########',   //  2
-    '#o##.#########',   //  3
-    '#.##.....#####',   //  4  primer rellano
-    '#.######.#####',   //  5
-    '#.######.#####',   //  6
-    '#........#####',   //  7  segundo rellano
-    '#......#####..'    //  8
+    '#............#',   //  1
+    '#.####.#####.#',   //  2
+    '#o####.#####.#',   //  3
+    '#......#####.#',   //  4
+    '#.####.#####.#',   //  5
+    '#.####.......#',   //  6
+    '#.####.#####.#',   //  7
+    '#............#'   //  8
   ], [
-    '#.............',   // 20
-    '#.###.########',   // 21
-    '#.###.########',   // 22
-    '#o........... ',   // 23
-    '#.#######.####',   // 24
-    '#.#######.####',   // 25
-    '#.......#.####',   // 26
-    '#.#####.#.####',   // 27
-    '#.#####...####',   // 28
-    '#.............',   // 29
-    '##############'    // 30
+    '#............#',   // 20
+    '#.#####.####.#',   // 21
+    '#.......####.#',   // 22
+    '#o#####.####. ',   // 23
+    '#.#####.####.#',   // 24
+    '#.#####......#',   // 25
+    '#.#####.####.#',   // 26
+    '#.......####.#',   // 27
+    '#.#####.####.#',   // 28
+    '#............#',   // 29
+    '##############'   // 30
   ]);
 
   /* ---------- CATEDRAL ----------
@@ -193,56 +212,55 @@
    * el largo entero. */
   var CATEDRAL = montar([
     '##############',   //  0
-    '#.............',   //  1
-    '#.##.#.##.#.##',   //  2
-    '#o##.#.##.#.##',   //  3
-    '#....#.##.#.##',   //  4  crucería de la izquierda
-    '#.##.#....#.##',   //  5  y la del centro, una fila más abajo
-    '#.##.#.##.#.##',   //  6
-    '#.##.#.##.#.##',   //  7
-    '#............#'    //  8
+    '#............#',   //  1
+    '#.##.##.##.#.#',   //  2
+    '#o##.##.##.#.#',   //  3
+    '#....##.##.#.#',   //  4
+    '#.##.##....#.#',   //  5
+    '#.##.##.##.#.#',   //  6
+    '#.##.##.##.#.#',   //  7
+    '#............#'   //  8
   ], [
-    '#...........##',   // 20
-    '#.##.#.##.#.##',   // 21
-    '#.##.#.##.#.##',   // 22
-    '#o........... ',   // 23
-    '#.##.#.##.#.##',   // 24
-    '#.##.#....#.##',   // 25
-    '#....#.##.#.##',   // 26
-    '#.##.#.##.#.##',   // 27
-    '#.##.#.##.#.##',   // 28
-    '#.............',   // 29
-    '##############'    // 30
+    '#............#',   // 20
+    '#.##.##.##.#.#',   // 21
+    '#.##.##.##.#.#',   // 22
+    '#o..........  ',   // 23
+    '#.##.##.##.#.#',   // 24
+    '#.##.##....#.#',   // 25
+    '#....##.##.#.#',   // 26
+    '#.##.##.##.#.#',   // 27
+    '#.##.##.##.#.#',   // 28
+    '#............#',   // 29
+    '##############'   // 30
   ]);
 
   /* ---------- SERPIENTE ----------
-   * Pasillos de lado a lado con los huecos a contrapié: para bajar una
-   * fila hay que cruzar el laberinto entero hasta el hueco, y el
-   * siguiente está en la punta contraria. Se corre como en ningún otro,
-   * pero siempre en la dirección que toca. El pozo del centro de cada
-   * tramo es la única salida rápida, y por eso está donde está. */
+   * Cuatro pasillos que cruzan de lado a lado y, entre ellos, un único
+   * pozo por banda, cada uno en una columna distinta. Por el borde se corre
+   * sin freno; cortar por el centro obliga a hacer eses, porque el pozo de
+   * la banda siguiente nunca está donde te deja el anterior. */
   var SERPIENTE = montar([
     '##############',   //  0
-    '#.............',   //  1
-    '#.#####.######',   //  2
-    '#o............',   //  3
-    '#######.#####.',   //  4  el hueco cambia de punta
-    '#.............',   //  5
-    '#.#####.######',   //  6
-    '#.............',   //  7
-    '#......#####..'    //  8
+    '#............#',   //  1
+    '#.#####.####.#',   //  2
+    '#o#####.####.#',   //  3
+    '#............#',   //  4
+    '#.###.######.#',   //  5
+    '#.###.######.#',   //  6
+    '#.###.######.#',   //  7
+    '#............#'   //  8
   ], [
-    '##............',   // 20
-    '##.##########.',   // 21
-    '#.............',   // 22
-    '#o........... ',   // 23
-    '#.##.#########',   // 24
-    '#.............',   // 25
-    '####.########.',   // 26
-    '#.............',   // 27
-    '#.##.#########',   // 28
-    '#.............',   // 29
-    '##############'    // 30
+    '#............#',   // 20
+    '#.#######.##.#',   // 21
+    '#.#######.##.#',   // 22
+    '#o..........  ',   // 23
+    '#.##.#######.#',   // 24
+    '#.##.#######.#',   // 25
+    '#............#',   // 26
+    '#.######.###.#',   // 27
+    '#.######.###.#',   // 28
+    '#............#',   // 29
+    '##############'   // 30
   ]);
 
   var Mazes = {
@@ -260,13 +278,13 @@
         desc: 'NAVES VERTICALES ENORMES Y DOS PASOS ENTRE ELLAS',
         rows: CATEDRAL, pellets: cuenta(CATEDRAL) },
       { id: 'serpiente', name: 'SERPIENTE',
-        desc: 'PASILLOS DE PUNTA A PUNTA CON LOS HUECOS A CONTRAPIÉ',
+        desc: 'CUATRO PASILLOS DE PUNTA A PUNTA Y UN SOLO POZO POR BANDA',
         rows: SERPIENTE, pellets: cuenta(SERPIENTE) },
       { id: 'colmillos', name: 'COLMILLOS',
-        desc: 'SEIS FILAS DE DIENTES SIN ATAJOS: ELIGES CARRIL Y TE AGUANTAS',
+        desc: 'DIENTES DE UNA CASILLA SIN ATAJOS: ELIGES CARRIL Y TE AGUANTAS',
         rows: COLMILLOS, pellets: cuenta(COLMILLOS) },
       { id: 'escalera', name: 'ESCALERA',
-        desc: 'RELLANOS EN DIAGONAL Y NI UNA FILA QUE CRUCE ENTERA',
+        desc: 'RELLANOS CORTOS A CONTRAPIÉ: CRUZAR POR DENTRO ES BAJAR EN ESES',
         rows: ESCALERA, pellets: cuenta(ESCALERA) }
     ],
 
