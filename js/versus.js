@@ -239,9 +239,15 @@
     drawMarks: function (g, ctx) {
       if (!g.isVersus()) return;
       var yo = g.netRole ? g.localIdx : g.vsPlayerOf(this.firstGhost(g));
+      var A = window.PM.Hab;
       for (var i = 0; i < 4; i++) {
         if (!g.ghosts[i].human) continue;
         if (g.eatFreezeTicks > 0 && i === g.hiddenGhost) continue;
+        /* ACECHO (modo DESATADO): mientras dura, al fantasma se le quita la
+         * marca. Es la mitad que de verdad importa del poder —volverse
+         * translúcido con un triángulo blanco encima no esconde a nadie—, y
+         * quien lo lleva sigue viendo la suya para no perderse a sí mismo. */
+        if (g.hab && A && !A.marcaVisible(g, i)) continue;
         var gh = g.ghosts[i];
         this.mark(ctx, gh.x, gh.y + CFG.MAZE_Y, g.tick, g.vsPlayerOf(i) === yo);
       }

@@ -241,6 +241,14 @@
     }
     var mult = game.ghostSpeedMult;
     pct = Math.min(pct * mult, CFG.SPEED_CLAMP * 100);
+    /* EMBESTIDA (PAC-MAN VS. con poderes) va DESPUÉS del tope, igual que el
+     * TURBO de Pac-Man: el tope existe para que las partidas clásicas se
+     * puedan comparar entre sí, y una de VS. con poderes no compite con nadie.
+     * Aquí el x1.35 tiene que notarse entero o no sirve para cerrar la
+     * distancia, que es lo único que hace. Fuera del modo devuelve 1. */
+    if (game.hab && window.PM.Hab) {
+      pct *= window.PM.Hab.multVelFantasma(game, this.id);
+    }
     return pct / 100 * CFG.BASE_SPEED;
   };
 
@@ -423,8 +431,16 @@
       mode = 'fright';
       flashOn = game.frightFlashOn;
     }
+    /* ACECHO (PAC-MAN VS. con poderes): el fantasma humano se vuelve
+     * translúcido unos segundos. Fuera de ese caso alfa vale 1 y esto no
+     * cuesta nada; se restaura siempre, que un globalAlpha suelto se lleva por
+     * delante todo lo que se pinte después. */
+    var alfa = (game.hab && window.PM.Hab)
+      ? window.PM.Hab.alfaFantasma(game, this.id) : 1;
+    if (alfa < 1) ctx.globalAlpha = alfa;
     window.PM.Sprites.drawGhost(ctx, this.x, this.y + CFG.MAZE_Y,
       this.dir, this.id, mode, this.skirtPhase, flashOn);
+    if (alfa < 1) ctx.globalAlpha = 1;
   };
 
   window.PM.Ghost = Ghost;

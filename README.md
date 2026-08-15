@@ -31,8 +31,12 @@ red.
 - **Los menús se manejan con las flechas**: mueven el foco y `Enter` acepta;
   en los deslizadores, izquierda y derecha ajustan el valor.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
-- **Modo DESATADO**: solo flechas para moverte, y `Q` `W` `E` `R` para los
-  cuatro poderes (bajo el laberinto; en el móvil, en su esquina de abajo).
+- **Modo DESATADO (uno)**: solo flechas para moverte, y `Q` `W` `E` `R` para
+  los cuatro poderes (bajo el laberinto; en el móvil, en su esquina de abajo).
+- **Modo DESATADO (dos en el mismo teclado)**: cada uno tiene una fila para
+  él. **J1** se mueve con las flechas y usa `N` `M` `,` `.`; **J2** se mueve
+  con WASD y usa `Z` `X` `C` `V`. La barra de abajo enseña las dos, con la
+  recarga de cada uno.
 - **Ver una repetición**: `P`/`Esc` la pausa (con velocidad, reiniciar y
   salir), y arriba hay una barra con los mismos controles a mano.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
@@ -72,8 +76,8 @@ cumple juegues a lo que juegues.
   cuándo empezar; cada jugador lleva su propio color. Con 3 y 4, los dos
   jugadores extra salen **arriba** del laberinto, no a tu lado.
 - **DESATADO** — el mismo laberinto con cuatro poderes, cada uno con su
-  tecla y su recarga. En solo y en party (en la party lo enciende quien
-  manda y vale para todo el grupo).
+  tecla y su recarga. Solo, **dos en el mismo teclado** y en party (en la
+  party lo enciende quien manda y vale para todo el grupo).
   - **Q · MORDISCO** (16 s): te comes al fantasma que tengas a dos casillas,
     mires hacia donde mires, y te giras hacia él.
   - **W · TURBO** (24 s): x1.5 de velocidad durante 5 s.
@@ -83,9 +87,17 @@ cumple juegues a lo que juegues.
   - **R · GRITO** (60 s): los cuatro fantasmas se asustan 6 s sin
     superpastilla.
 
-  Aquí **se mueve solo con las flechas** (la W es el turbo). Es un modo
-  aparte: estas partidas **no entran en el top mundial ni hacen récord**,
-  pero sí suman experiencia y logros.
+  Jugando solo **se mueve solo con las flechas** (la W es el turbo); con dos
+  en el mismo teclado, WASD vuelve a mover y los poderes se mudan a `N M , .`
+  (J1) y `Z X C V` (J2). Es un modo aparte: estas partidas **no entran en el
+  top mundial ni hacen récord**, pero sí suman experiencia y logros.
+
+  **Y si alguien lleva un fantasma** (PAC-MAN VS.), tiene los suyos, para que
+  aquello sea una pelea y no un saco de golpes:
+  - **EMBESTIDA** (20 s): x1.35 de velocidad durante 4 s, para cerrar la
+    distancia o para salir corriendo cuando ves venir la Q.
+  - **ACECHO** (30 s): 4 s translúcido y **sin la marca que te delata**
+    encima. Al que no ves venir no le aciertas.
 
 ### Partys, amigos y espectar
 
@@ -171,6 +183,27 @@ de su formato, así que con los récords viajan las insignias.
 > `record3` y `record4` (trío y escuadra). El archivo se puede ejecutar las
 > veces que haga falta. Mientras no se lance, el juego sigue funcionando: se
 > guarda lo de siempre y lo nuevo entra en cuanto estén las columnas.
+
+**Si olvidas la contraseña, tienes el CÓDIGO DE RECUPERACIÓN.** Antes no había
+vuelta atrás —el correo se compone por dentro y ese buzón no existe, así que
+el enlace de recuperación de Supabase no llegaba a ninguna parte— y con la
+cuenta se iban los cuatro récords, la experiencia, los logros y las doce
+maestrías. Ahora al registrarte se te enseña **una vez** un código de 16
+caracteres: lo apuntas, y desde ENTRAR → HE OLVIDADO LA CONTRASEÑA lo escribes
+con una contraseña nueva y entras.
+
+- En el servidor solo se guarda **su huella**, nunca el código: quien mire la
+  base de datos no puede entrar en ninguna cuenta, y quien tenga el papel sí.
+  Ni siquiera tú puedes volver a verlo desde tu propia sesión.
+- **Si ya tenías cuenta, no tienes código todavía**: se crea en PERFIL →
+  CÓDIGO DE RECUPERACIÓN. Mientras no lo tengas, el panel te lo dice.
+- Generar uno nuevo **invalida el anterior** en ese momento. Y al usarlo para
+  recuperar la cuenta se te da otro automáticamente, para que no te quedes sin
+  red la próxima vez.
+- Necesita [`supabase/recuperacion.sql`](supabase/recuperacion.sql) y la
+  función [`supabase/functions/recuperar`](supabase/functions/recuperar), que
+  es la única que puede cambiar una contraseña sin sesión abierta. Se
+  despliega la función **antes** que el SQL.
 
 **Ajuste obligatorio del proyecto**, que no se puede hacer por SQL —
 *Authentication → Sign In / Providers*:
@@ -302,16 +335,20 @@ Dos maneras de correr la misma batería:
   desde TOP MUNDIAL → TUS PARTIDAS, con el botón `VER` de cada partida.
   Sale el cartel de REPETICIÓN y controles para **pausar, ir a x2, empezarla
   otra vez o salirse**. Ver una repetición no cuenta para nada: ni
-  experiencia, ni logros, ni récord. Y **se comparten por enlace**: la
-  partida entera cabe en la URL, así que se manda por WhatsApp y al otro se
-  le abre el juego reproduciéndola. Se guardan las últimas 8 de este
+  experiencia, ni logros, ni récord. Se guardan las últimas 8 de este
   navegador más la de tu mejor récord.
   **Las partidas online también se graban**, pero de otra manera: allí la
   partida la simula el anfitrión, así que lo que se guarda es lo que él
   reparte, y al verla el juego se pone de espectador de un archivo en vez de
   una sala. Se ven igual desde TUS PARTIDAS —las graba quien hace de
-  anfitrión— pero pesan bastante más, así que se quedan **las dos últimas** y
-  esas **no caben en un enlace**.
+  anfitrión— pero pesan bastante más, así que se quedan **las dos últimas**.
+- **Compartir una repetición**: botón `COMPARTIR` al lado de `VER`. Te da un
+  enlace, lo mandas por WhatsApp y al otro se le abre el juego reproduciendo
+  la partida. Las **locales** van enteras dentro del enlace (unos cientos de
+  bytes: funcionan sin servidor y no caducan). Las **online** pesan unos 12 KB
+  por minuto de partida y no caben ahí, así que se suben y el enlace lleva
+  solo un código —`?rn=A3K9XQ7M`—; para quien lo recibe son lo mismo. Volver a
+  darle a COMPARTIR la misma partida devuelve el mismo enlace, no otra copia.
 
 ### PAC-MAN VS. — llevar un fantasma
 
@@ -461,7 +498,7 @@ js/temporadas.js  Temporadas del top mundial (mes natural)
 js/daily.js       DAILY: siete retos por semana, uno por día
 js/mazes.js       Laberintos alternativos (modo aparte)
 js/versus.js      PAC-MAN VS.: el fantasma que lleva un jugador
-js/habilidades.js modo DESATADO: los cuatro poderes de Q, W, E y R
+js/habilidades.js modo DESATADO: los poderes de Pac-Man y los del fantasma
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
 js/ui.js          Menús, opciones, panel de party, paneles y controles
@@ -469,7 +506,8 @@ manifest.json     App instalable (PWA)
 sw.js             Service worker: funciona sin conexión
 icons/            Iconos de la app
 tests.html        Pruebas automáticas (ábrelo como el juego)
-supabase/         SQL de la tabla y la vista del ranking
+supabase/         SQL de las tablas y las funciones del servidor
+                  (ranking, cuentas, recuperación y repeticiones compartidas)
 SPEC.md           Especificación técnica completa
 CHANGELOG.md      Historial de cambios
 PENDIENTE.md      Lo que queda por hacer, y por qué

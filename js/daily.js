@@ -160,10 +160,11 @@
     /* ---------- lo guardado ----------
      * { w: semana, p: [7] progreso, h: [7] cumplidos,
      *   racha: días seguidos, mejor: la mejor racha, ult: último día cumplido,
-     *   sem: 1 si la semana ya se contó como completa } */
+     *   sem: 1 si la semana ya se contó como completa,
+     *   rv: marca del último borrón aplicado (CFG.DAILY.RESET) } */
     vacio: function (semana) {
       var o = { w: semana || this.semanaId(), p: [], h: [],
-                racha: 0, mejor: 0, ult: '', sem: 0 };
+                racha: 0, mejor: 0, ult: '', sem: 0, rv: D.RESET };
       for (var i = 0; i < D.DIAS; i++) { o.p.push(0); o.h.push(0); }
       return o;
     },
@@ -176,6 +177,13 @@
       if (!o || typeof o !== 'object' || !isArray(o.p) || !isArray(o.h)) {
         return this.vacio(sem);
       }
+      /* Borrón y cuenta nueva: lo guardado viene de antes del último reseteo
+       * (CFG.DAILY.RESET), así que se tira ENTERO —semana, racha y mejor
+       * racha— en vez de arrastrar marcas hechas con otro calendario. No hay
+       * nada que escribir aquí: `vacio()` ya lleva la marca nueva y se guarda
+       * sola en cuanto se cumpla el primer reto. Los logros del DAILY viven en
+       * otro sitio (js/achievements.js) y este borrón no los toca. */
+      if (String(o.rv || '') !== String(D.RESET)) return this.vacio(sem);
       /* Semana nueva: el progreso se va, la racha NO. La racha es de días
        * seguidos jugando y no tiene por qué romperse un domingo por la
        * noche solo porque el calendario pase de página. */

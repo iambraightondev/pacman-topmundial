@@ -45,7 +45,14 @@ function El(tag) {
   this.tagName = String(tag || 'div').toUpperCase();
   this.children = [];
   this.childNodes = this.children;
-  this.style = {};
+  /* El estilo es un objeto pelado, pero con los dos métodos que el juego usa
+   * de verdad: las variables de CSS (`--habH`, que le dice al escenario cuánto
+   * ocupa la barra de poderes) van por setProperty, no por asignación. */
+  this.style = {
+    setProperty: function (k, v) { this[k] = v; },
+    getPropertyValue: function (k) { return this[k] || ''; },
+    removeProperty: function (k) { delete this[k]; }
+  };
   this.dataset = {};
   this._attrs = {};
   this._events = {};

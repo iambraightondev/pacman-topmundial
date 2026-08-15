@@ -18,12 +18,24 @@
  * top mundial. Sí suman experiencia y logros, que son tuyos.
  *
  * Dónde se juega
- *   En SOLO y en PARTY (online). En dos jugadores en el mismo
- *   teclado no, y es a propósito: el J2 se mueve con WASD y la W
- *   es el turbo. Antes que dejar a alguien con medio mando, el
- *   modo no se ofrece ahí. Tampoco en PAC-MAN VS.: morder de un
- *   golpe a un fantasma que lleva una persona, sin que pueda
- *   hacer nada, no es una pelea.
+ *   En todas partes: solo, dos en el mismo teclado, party online
+ *   y PAC-MAN VS. Los dos sitios donde no estaba tenían cada uno
+ *   su problema, y cada uno se arregló por su lado:
+ *
+ *   · DOS EN EL MISMO TECLADO. La W era el "arriba" del J2 y el
+ *     turbo del J1, y una tecla no puede hacer dos cosas. Ahora
+ *     cada jugador tiene una fila entera en su mitad del teclado
+ *     (CFG.HAB.KEYS_2P): el J1 mueve con flechas y usa N M , . ,
+ *     y el J2 mueve con WASD y usa Z X C V. En solo y en online
+ *     siguen siendo Q W E R, que es donde está la costumbre.
+ *
+ *   · PAC-MAN VS. Morder de un golpe a un fantasma que lleva una
+ *     persona, sin que pueda hacer nada, no es una pelea. Ahora
+ *     quien lleva fantasma tiene los suyos (CFG.HAB.LIST_G):
+ *     EMBESTIDA para cerrar la distancia y ACECHO para volverse
+ *     translúcido y quitarse la marca que lo delata. Son dos y no
+ *     cuatro porque un fantasma solo persigue: no come, no
+ *     atraviesa muros y no asusta a nadie.
  *
  * Quién manda (online)
  *   Lo que solo te toca a ti —TURBO y FLASH— se aplica en tu
@@ -52,6 +64,10 @@
 
   /* Índices de las cuatro, por si alguien lee esto de arriba abajo */
   var MORDISCO = 0, TURBO = 1, FLASH = 2, GRITO = 3;
+  /* Y los dos de quien lleva un fantasma (PAC-MAN VS.). Comparten los mismos
+   * huecos de recarga que MORDISCO y TURBO: un jugador es una cosa o la otra
+   * durante toda la partida, así que no hacen falta ocho contadores. */
+  var EMBESTIDA = 0, ACECHO = 1;
 
   /* Estado limpio de un jugador. Las recargas empiezan a CERO: la primera
    * de cada partida está lista desde el "¡LISTO!". */
@@ -61,6 +77,8 @@
       turbo: 0,           // ticks de turbo que quedan
       dientes: 0,         // ticks con los dientes fuera (MORDISCO)
       flash: 0,           // ticks translúcido (FLASH)
+      carga: 0,           // ticks de EMBESTIDA (fantasma humano)
+      acecho: 0,          // ticks de ACECHO (fantasma humano)
       /* Hacia dónde fue el último flash. Se guarda porque el rastro se pinta
        * DETRÁS del salto, y el salto puede no ir hacia donde Pac-Man mira. */
       flashDir: -1,
@@ -107,6 +125,21 @@
     if (mio(G, idx) && G.bumpAch) G.bumpAch(o);
   }
 
+  /* Un sonido del sistema de audio, si lo hay. Los poderes eran MUDOS salvo
+   * por lo que arrastraban de rebote (la Q sonaba al comerse el fantasma, la R
+   * porque empezaba el modo azul), y justo los dos que no tocan el marcador
+   * —turbo y flash— no sonaban nada: una tecla con recarga que no suena se
+   * siente como una tecla rota. Cada poder tiene el suyo en js/audio.js.
+   *
+   * Suenan SOLO los de quien juega en esta pantalla (ver mio()). En una party
+   * de cuatro, oír las dieciséis teclas de todo el mundo no informa de nada y
+   * tapa el waka; lo que cambia el tablero —el GRITO— se oye igual porque
+   * arranca el modo azul, que tiene su propio ambiente. */
+  function son(nombre) {
+    var A = window.AudioSys;
+    if (A && A[nombre]) A[nombre]();
+  }
+
   var Hab = {
     on: false,       // ¿la partida en curso es de poderes?
     st: [],          // estado por jugador
@@ -128,6 +161,8 @@
         this.st[i].dientes = 0;
         this.st[i].flash = 0;
         this.st[i].flashDir = -1;
+        this.st[i].carga = 0;
+        this.st[i].acecho = 0;
         this.st[i].guard = [0, 0, 0, 0];
       }
     },
@@ -137,12 +172,27 @@
       return this.st[idx] || null;
     },
 
+    /* ---------- qué poderes le tocan a cada jugador ----------
+     * Quien lleva un fantasma (PAC-MAN VS.) juega otra partida: no tiene
+     * Pac-Man que potenciar, así que tiene su propia lista de dos.
+     *
+     * Se resuelve MIRANDO EL REPARTO cada vez y no guardándolo al empezar,
+     * porque Versus.setup() corre DESPUÉS de Hab.empezar() en Game.newGame:
+     * cuando se montan las recargas todavía no se sabe quién lleva qué. */
+    listaDe: function (G, idx) {
+      return (G && G.vsGhostOf && G.vsGhostOf(idx) >= 0) ? H.LIST_G : H.LIST;
+    },
+
+    /* Cuántos poderes tiene ese jugador (2 llevando fantasma, 4 si no) */
+    cuantas: function (G, idx) { return this.listaDe(G, idx).length; },
+
     /* ---------- consultas para el HUD y el dibujo ---------- */
     /* Fracción de recarga cumplida, 0..1 (1 = lista). */
-    carga: function (idx, k) {
+    carga: function (G, idx, k) {
       var s = this.estado(idx);
       if (!s) return 1;
-      var tot = H.LIST[k] ? H.LIST[k].cd : 1;
+      var lista = this.listaDe(G, idx);
+      var tot = lista[k] ? lista[k].cd : 1;
       return 1 - (s.cd[k] / tot);
     },
 
@@ -159,6 +209,51 @@
     conDientes: function (idx) {
       var s = this.estado(idx);
       return !!s && s.dientes > 0;
+    },
+
+    /* ---------- PAC-MAN VS.: el fantasma con poderes ---------- */
+    conCarga: function (idx) {
+      var s = this.estado(idx);
+      return !!s && s.carga > 0;
+    },
+
+    conAcecho: function (idx) {
+      var s = this.estado(idx);
+      return !!s && s.acecho > 0;
+    },
+
+    /* Multiplicador de velocidad del fantasma `gid` (1 si no hay embestida).
+     * Lo consulta Ghost.speedPx, que es por donde pasan TODOS los fantasmas:
+     * si el fantasma no lo lleva una persona, aquí no hay nada que aplicar. */
+    multVelFantasma: function (G, gid) {
+      if (!this.on || !G || !G.vsPlayerOf) return 1;
+      var quien = G.vsPlayerOf(gid);
+      return (quien >= 0 && this.conCarga(quien)) ? H.CHARGE_MULT : 1;
+    },
+
+    /* Lo poco que se ve un fantasma en pleno ACECHO. Es su respuesta al
+     * MORDISCO: si no lo ves venir, no le aciertas. No se hace invisible del
+     * todo a propósito —eso sería injugable para el otro lado—, pero sí lo
+     * bastante como para perderlo de vista en un cruce. */
+    alfaFantasma: function (G, gid) {
+      if (!this.on || !G || !G.vsPlayerOf) return 1;
+      var quien = G.vsPlayerOf(gid);
+      if (!(quien >= 0) || !this.conAcecho(quien)) return 1;
+      /* Al dueño se le enseña más que al resto: quien lo lleva tiene que poder
+       * ver por dónde va su propio fantasma, y esconderse de uno mismo no es
+       * una habilidad, es un estorbo. */
+      var mio = (!G.netRole || quien === G.localIdx);
+      return mio ? 0.55 : H.STALK_ALPHA;
+    },
+
+    /* ¿Se le puede pintar la marca del jugador encima? Es lo que hoy delata al
+     * fantasma humano desde el otro extremo del laberinto, así que el ACECHO
+     * la quita: sin esto, volverse translúcido no serviría de nada. */
+    marcaVisible: function (G, gid) {
+      if (!this.on || !G || !G.vsPlayerOf) return true;
+      var quien = G.vsPlayerOf(gid);
+      if (!(quien >= 0) || !this.conAcecho(quien)) return true;
+      return (!G.netRole || quien === G.localIdx);
     },
 
     /* ¿Este fantasma acaba de ser mordido por este jugador y aún no ha llegado
@@ -206,21 +301,35 @@
           s.turbo--;
           s.chispa++;
         }
+        // los del fantasma humano (PAC-MAN VS.)
+        if (s.carga > 0) s.carga--;
+        if (s.acecho > 0) s.acecho--;
       }
     },
 
     /* ---------- ¿se puede usar ahora mismo? ---------- */
     puede: function (G, idx, k) {
       if (!this.on) return false;
-      if (!(k >= 0 && k < 4)) return false;
       if (G.state !== 'PLAYING' || G.paused) return false;
       if (G.eatFreezeTicks > 0) return false;
       if (G.netNotice || (G.netStalled && G.netStalled())) return false;
       if (G.isSpec && G.isSpec()) return false;
-      var p = G.pacs[idx];
-      if (!p || p.out || p.dying) return false;
-      // a quien lleva un fantasma no le tocan: no tiene Pac-Man que potenciar
-      if (G.vsGhostOf && G.vsGhostOf(idx) >= 0) return false;
+      /* El tope de poderes es el de SU lista: quien lleva fantasma tiene dos,
+       * y una tecla de más no puede colarse ni desde el teclado ni por red. */
+      if (!(k >= 0 && k < this.cuantas(G, idx))) return false;
+      var gid = G.vsGhostOf ? G.vsGhostOf(idx) : -1;
+      if (gid >= 0) {
+        /* Al fantasma no se le exige Pac-Man vivo (no tiene), sino estar EN EL
+         * LABERINTO: dentro de la casa o volviendo hecho ojos no hay nada que
+         * embestir ni a quien esconderse. */
+        var gh = G.ghosts && G.ghosts[gid];
+        if (!gh) return false;
+        if (gh.mode === 'house' || gh.mode === 'leaving' ||
+            gh.mode === 'eyes' || gh.mode === 'entering') return false;
+      } else {
+        var p = G.pacs[idx];
+        if (!p || p.out || p.dying) return false;
+      }
       return this.lista(idx, k);
     },
 
@@ -248,22 +357,31 @@
     lanzar: function (G, idx, k) {
       var deRed = (G.netRole === 'guest');
       var ok;
-      switch (k) {
-        case MORDISCO: ok = this.mordisco(G, idx, deRed); break;
-        case TURBO:    ok = this.turbo(G, idx); break;
-        case FLASH:    ok = this.flash(G, idx); break;
-        case GRITO:    ok = this.grito(G, idx, deRed); break;
-        default:       ok = false;
+      if (G.vsGhostOf && G.vsGhostOf(idx) >= 0) {
+        // los dos del fantasma humano: se aplican solo a él, aquí y ahora
+        if (k === EMBESTIDA) ok = this.embestida(G, idx);
+        else if (k === ACECHO) ok = this.acechar(G, idx);
+        else ok = false;
+      } else {
+        switch (k) {
+          case MORDISCO: ok = this.mordisco(G, idx, deRed); break;
+          case TURBO:    ok = this.turbo(G, idx); break;
+          case FLASH:    ok = this.flash(G, idx); break;
+          case GRITO:    ok = this.grito(G, idx, deRed); break;
+          default:       ok = false;
+        }
       }
       if (!ok) return false;
-      this.gastar(idx, k);
+      this.gastar(G, idx, k);
       this.avisar(G, idx, k);
       return true;
     },
 
-    gastar: function (idx, k) {
+    gastar: function (G, idx, k) {
       var s = this.estado(idx);
-      if (s) s.cd[k] = H.LIST[k].cd;
+      if (!s) return;
+      var lista = this.listaDe(G, idx);
+      if (lista[k]) s.cd[k] = lista[k].cd;
     },
 
     /* Contarlo al resto de la sala. El invitado pide, el anfitrión reparte;
@@ -281,6 +399,18 @@
       if (!this.on) return;
       if (!this.puede(G, who, k)) return;
       var ok;
+      /* Fantasma humano: sus dos poderes se los aplica él en su máquina (son
+       * suyos y de nadie más), pero el anfitrión TIENE que anotarlos igual,
+       * porque el fantasma lo simula él y la embestida cambia su velocidad.
+       * Sin esto, el invitado correría más en su pantalla que en la del
+       * anfitrión y el resincronizado le daría tirones toda la embestida. */
+      if (G.vsGhostOf && G.vsGhostOf(who) >= 0) {
+        if (k === EMBESTIDA) this.marcarCarga(who);
+        else this.marcarAcecho(who);
+        this.gastar(G, who, k);
+        G.hostEvt({ t: 'hab', w: who, k: k });
+        return;
+      }
       /* El mordisco que llega por red se juzga con un poco de manga ancha
        * (BITE_NET_MARGIN): la posición del invitado le llega a 12 Hz y sus
        * fantasmas los mueve esta máquina, así que cuando esto se ejecuta ya no
@@ -297,7 +427,7 @@
         ok = true;
       }
       if (!ok) return;
-      this.gastar(who, k);
+      this.gastar(G, who, k);
       G.hostEvt({ t: 'hab', w: who, k: k });
     },
 
@@ -308,20 +438,36 @@
     evento: function (G, who, k) {
       if (!this.on) return;
       if (!(who >= 0 && who < this.st.length)) return;
-      if (!(k >= 0 && k < 4)) return;
+      if (!(k >= 0 && k < this.cuantas(G, who))) return;
       if (who === G.localIdx && !G.isSpec()) {
         // es el eco de la mía: ya está aplicada, no se toca
         return;
       }
-      if (k === MORDISCO) this.marcarDientes(who);
+      if (G.vsGhostOf && G.vsGhostOf(who) >= 0) {
+        /* La embestida SÍ se aplica aquí, y no es solo pintura: ese fantasma
+         * lo simula también esta máquina (por estima entre instantáneas), así
+         * que sin la velocidad buena se vería frenar y dar tirones. */
+        if (k === EMBESTIDA) this.marcarCarga(who);
+        else this.marcarAcecho(who);
+      } else if (k === MORDISCO) this.marcarDientes(who);
       else if (k === TURBO) this.marcarTurbo(who);
       else if (k === FLASH) this.marcarFlash(who);
-      this.gastar(who, k);
+      this.gastar(G, who, k);
     },
 
     marcarTurbo: function (idx) {
       var s = this.estado(idx);
       if (s) { s.turbo = H.TURBO_TICKS; s.chispa = 0; }
+    },
+
+    marcarCarga: function (idx) {
+      var s = this.estado(idx);
+      if (s) s.carga = H.CHARGE_TICKS;
+    },
+
+    marcarAcecho: function (idx) {
+      var s = this.estado(idx);
+      if (s) s.acecho = H.STALK_TICKS;
     },
 
     /* dir: hacia dónde fue el salto (para el rastro). Sin ella —el eco de
@@ -406,11 +552,17 @@
          * Con los dientes un instante queda claro que la tecla entró y lo
          * que falló fue el tiro. */
         this.marcarDientes(idx, Math.round(H.BITE_SHOW / 2));
+        if (mio(G, idx)) son('playBiteMiss');
         return false;
       }
       var p = G.pacs[idx];
       this.mirarHacia(p, g);
       this.marcarDientes(idx);
+      /* La dentellada suena SIEMPRE que acierta, y esto importa sobre todo en
+       * el invitado: allí el fantasma no se muere aquí —lo mata el anfitrión—,
+       * así que hasta que vuelve la confirmación este sonido es lo único que
+       * dice que la Q entró. */
+      if (mio(G, idx)) son('playBite');
       /* El mordisco se apunta AQUÍ, en la máquina de quien pulsó, y no donde
        * se ejecuta: al invitado se lo mata el anfitrión, y si esperásemos a
        * eso su logro no avanzaría nunca (el evento que vuelve no dice si fue
@@ -440,6 +592,7 @@
      * ========================================================= */
     turbo: function (G, idx) {
       this.marcarTurbo(idx);
+      if (mio(G, idx)) son('playTurbo');
       return true;
     },
 
@@ -518,6 +671,7 @@
        * un salto, y salir del salto parado se siente roto. */
       p.pauseTicks = 0;
       this.marcarFlash(idx, d.dir);
+      if (mio(G, idx)) son('playFlash');
       return true;
     },
 
@@ -527,6 +681,36 @@
     grito: function (G, idx, soloVisual) {
       if (soloVisual) return true;      // lo reparte el anfitrión
       G.triggerFright(H.SHOUT_SECS);
+      // el rugido, aparte del modo azul que ya trae su propio ambiente
+      if (mio(G, idx)) son('playShout');
+      return true;
+    },
+
+    /* =========================================================
+     * PAC-MAN VS. — los dos del fantasma humano
+     *
+     * Los dos son SUYOS y de nadie más: no tocan a los Pac-Man, no tocan el
+     * marcador y no hay nada que arbitrar. Por eso se aplican en la máquina de
+     * quien pulsa, igual que el TURBO y el FLASH, y el anfitrión solo los
+     * anota (ver peticion). Lo único que no puede faltar es que el anfitrión
+     * los tenga también: el fantasma lo simula él.
+     * ========================================================= */
+    /* Q — EMBESTIDA: x1.35 durante 4 s. Lo aplica Ghost.speedPx a través de
+     * multVelFantasma, así que el fantasma sigue obedeciendo todas las reglas
+     * de siempre (muros, túnel, zonas sin subir): solo va más rápido. */
+    embestida: function (G, idx) {
+      this.marcarCarga(idx);
+      if (mio(G, idx)) son('playCharge');
+      return true;
+    },
+
+    /* W — ACECHO: 4 s translúcido y sin la marca que lo delata.
+     * Se llama `acechar` y no `acecho` porque `conAcecho` ya consulta el
+     * estado y dos nombres tan parecidos para una acción y una consulta se
+     * confunden a la primera lectura. */
+    acechar: function (G, idx) {
+      this.marcarAcecho(idx);
+      if (mio(G, idx)) son('playStealth');
       return true;
     }
   };
@@ -536,6 +720,8 @@
   Hab.TURBO = TURBO;
   Hab.FLASH = FLASH;
   Hab.GRITO = GRITO;
+  Hab.EMBESTIDA = EMBESTIDA;
+  Hab.ACECHO = ACECHO;
 
   window.PM.Hab = Hab;
 })();

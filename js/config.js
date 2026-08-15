@@ -566,6 +566,18 @@
    * suelo: siempre hay cinco que se cumplen jugando a lo que sea. */
   CFG.DAILY = {
     KEY: 'pacman-topmundial-daily',
+    /* BORRÓN Y CUENTA NUEVA DEL PROGRESO.
+     * Cuando esta marca no coincide con la que lleva lo guardado, el progreso
+     * del DAILY se tira entero (la semana en curso, la racha y la mejor racha)
+     * y se vuelve a empezar. Los LOGROS del DAILY no se tocan: son de quien los
+     * hizo y borrarlos sería quitarle algo que ya se ganó.
+     *
+     * Existe porque el DAILY estuvo un tiempo contando mal el día (iba en UTC:
+     * un viernes por la tarde en América ya marcaba sábado), así que hay rachas
+     * y semanas guardadas que se hicieron con otro calendario. Se pone la fecha
+     * del día en que se decide el borrón; para hacer otro, se cambia el texto y
+     * ya está. */
+    RESET: '2026-08-15',
     DIAS: 7,
     LIBRES_POR_SEMANA: 5,     // los otros dos salen de la lista de modo
     XP: 400,                  // experiencia por reto cumplido
@@ -710,7 +722,26 @@
     MAIL_DOMAIN: 'cuentas.pacman-topmundial.vercel.app',
     USER_MIN: 3,
     PASS_MIN: 6,
-    KEY: 'pacman-topmundial-sesion'   // sesión guardada en este navegador
+    KEY: 'pacman-topmundial-sesion',  // sesión guardada en este navegador
+
+    /* ---------- código de recuperación ----------
+     * Quien olvidaba la contraseña PERDÍA LA CUENTA: los cuatro récords, la
+     * experiencia, los logros y las doce maestrías, sin vuelta atrás. El correo
+     * se compone por dentro y ese buzón no existe, así que el enlace de
+     * recuperación de Supabase no llegaba a ninguna parte.
+     *
+     * Ahora al registrarse se enseña UNA VEZ un código de 16 caracteres. En el
+     * servidor solo se guarda su huella (SHA-256), nunca el código: quien mire
+     * la tabla no puede entrar en ninguna cuenta, y quien tenga el papel sí.
+     * Lo comprueba la Edge Function `recuperar`, que es la única que puede
+     * cambiar una contraseña sin sesión abierta. */
+    REC_TABLE: 'recuperacion',
+    REC_FN: 'recuperar',
+    /* Sin I, O, 0 ni 1: el código se copia a mano de un papel, y ahí esas
+     * cuatro son la misma letra. Mismo criterio que los códigos de sala. */
+    CODE_ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+    CODE_LEN: 16,                    // 4 grupos de 4 = 80 bits de azar
+    CODE_GROUP: 4                    // cómo se parte al enseñarlo
   };
 
   /* Nombres de invitado: se sortean juntando una pareja de estas listas y
@@ -739,6 +770,27 @@
   CFG.REPLAY_NET_MAX = 2;          // cuántas se guardan
   CFG.REPLAY_NET_MAX_CHARS = 220000;   // tope de una (unos 15 min de partida)
   CFG.REPLAY_NET_TOTAL_CHARS = 420000; // tope de todas juntas
+
+  /* ---------- Compartir una repetición por enlace ----------
+   * Las LOCALES caben enteras en la URL (?rep=<texto>): son unos cientos de
+   * bytes y el enlace se vale por sí solo, sin servidor ni caducidad.
+   *
+   * Las de RED no, y no es cuestión de comprimir mejor: son ~12 KB por minuto
+   * de partida, así que una de cinco minutos son 60 KB y por un chat no pasa.
+   * Para esas, el enlace lleva un CÓDIGO (?rn=A3K9XQ7M) y la repetición se
+   * sube a la tabla `repeticiones` (supabase/repeticiones.sql). Cambia dónde
+   * vive el contenido, no cómo se ve: al abrirlo se reproduce igual.
+   *
+   * El alfabeto es el de siempre para lo que se copia a mano: sin I, O, 0 ni
+   * 1, que son la misma letra en un papel o dictadas por teléfono. */
+  CFG.REPLAY_SHARE = {
+    TABLE: 'repeticiones',
+    PARAM: 'rn',                 // ?rn=<id> en el enlace
+    ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+    ID_LEN: 8,
+    MAX_CHARS: 260000,           // el mismo tope que el CHECK de la tabla
+    INTENTOS: 4                  // reintentos si el código sorteado ya existe
+  };
 
   /* ---------- Aviso de maestría en partida ---------- */
   CFG.BADGE_ANIM_TICKS = 300;   // 5 s: entrada, lucimiento y salida
@@ -777,8 +829,21 @@
    * Si se sube, hay que subir también los CHECK de supabase/ranking.sql y
    * supabase/cuentas.sql, que validan lo mismo en el servidor. */
   CFG.NICK_MAX = 12;
+  /* Identificadores del selector de modo de la portada. Viven aquí y no en
+   * ui.js porque son un AJUSTE GUARDADO (`modePick`): lo que se elige en el
+   * carrusel se recuerda entre recargas, y el saneado de los ajustes tiene que
+   * poder validarlo sin depender del orden en que carguen los archivos.
+   *
+   * La lista de tarjetas (con su nombre, su color y su icono) sigue en
+   * `MODOS`, arriba de js/ui.js: si se añade un modo hay que tocar los dos
+   * sitios, y una prueba vigila que no se separen. */
+  CFG.MODE_IDS = ['clasico', 'duo', 'hab', 'lab', 'online'];
   CFG.DEFAULT_SETTINGS = {
     difficultyPreset: 'normal',   // 'facil' | 'normal' | 'dificil' | 'custom'
+    /* Modo elegido en la portada. Se guarda porque quien juega casi siempre a
+     * lo mismo tenía que volver a buscarlo en cada recarga: el carrusel
+     * arrancaba en CLÁSICO pasara lo que pasara. */
+    modePick: 'clasico',
     nick1: '',                    // nombre del jugador 1 (y nombre propio online)
     nick2: '',                    // nombre del jugador 2 (dos jugadores locales)
     pacColor: '#ffff00',
@@ -905,7 +970,56 @@
       { id: 'turbo',    key: 'W', name: 'TURBO',    cd: 24 * 60 },
       { id: 'flash',    key: 'E', name: 'FLASH',    cd: 32 * 60 },
       { id: 'grito',    key: 'R', name: 'GRITO',    cd: 60 * 60 }
-    ]
+    ],
+
+    /* ---------- DOS JUGADORES EN EL MISMO TECLADO ----------
+     * Este modo no estaba en dúo local por una razón concreta: el J2 se mueve
+     * con WASD y la W es el TURBO. Una tecla no puede hacer dos cosas, y dejar
+     * al J2 con A/S/D moviendo y sin arriba es medio mando, que es peor que no
+     * ofrecerlo.
+     *
+     * Se arregla dándole a cada jugador UNA FILA ENTERA para él, en su mitad
+     * del teclado y pegada a como ya se mueve:
+     *
+     *   J1  flechas para mover   ·   N M , .   (la fila de al lado de las flechas)
+     *   J2  W A S D para mover   ·   Z X C V   (la fila de justo debajo)
+     *
+     * Nadie invade la mitad del otro y las dos manos caen solas. El precio es
+     * que el J1 pierde el Q W E R de siempre CUANDO JUEGA ACOMPAÑADO; en solo y
+     * en online no cambia nada, que es donde está la costumbre.
+     *
+     * Se miran por `ev.key`, no por posición física: son letras y signos que
+     * existen igual en ANSI y en el teclado español. */
+    KEYS_2P: [
+      ['N', 'M', ',', '.'],
+      ['Z', 'X', 'C', 'V']
+    ],
+
+    /* ---------- PAC-MAN VS.: los poderes del fantasma ----------
+     * Tampoco estaba en VS., y por otra razón: morder de un toque a un fantasma
+     * que lleva una persona, sin que pueda hacer nada, no es una pelea. Es un
+     * saco de golpes con teclas.
+     *
+     * Así que quien lleva fantasma tiene los SUYOS. Son dos y no cuatro a
+     * propósito: un fantasma no come, no atraviesa muros y no asusta a nadie:
+     * solo persigue. Lo único que necesita para que aquello sea una pelea es
+     * poder cerrar una distancia y poder desaparecer un momento.
+     *
+     *   EMBESTIDA  x1.35 durante 4 s. Cierra la distancia o escapa del mordisco.
+     *   ACECHO     4 s translúcido y SIN la marca del jugador encima, que es lo
+     *              que hoy delata al fantasma humano a cien metros. Es la
+     *              respuesta al MORDISCO: al que no ves venir no le acertaste.
+     *
+     * Las recargas son más largas que las de Pac-Man porque el fantasma no
+     * muere: gastar mal un poder le cuesta tiempo, no la partida. */
+    LIST_G: [
+      { id: 'embestida', key: 'Q', name: 'EMBESTIDA', cd: 20 * 60 },
+      { id: 'acecho',    key: 'W', name: 'ACECHO',    cd: 30 * 60 }
+    ],
+    CHARGE_TICKS: 4 * 60,    // 4 s de embestida
+    CHARGE_MULT: 1.35,
+    STALK_TICKS: 4 * 60,     // 4 s de acecho
+    STALK_ALPHA: 0.3         // lo poco que se ve mientras dura
   };
   /* Alcance real del mordisco, en píxeles (ver BITE_TILES) */
   CFG.HAB.BITE_PX = CFG.HAB.BITE_TILES * CFG.TILE + CFG.HAB.BITE_MARGIN;

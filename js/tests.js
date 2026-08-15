@@ -1760,9 +1760,15 @@
       ]);
       var filas = UI.rankList.children;
       eq(filas.length, 2, 'dos partidas en la lista');
-      eq(filas[0].querySelectorAll('button').length, 1, 'la grabada tiene VER');
+      var btns = filas[0].querySelectorAll('button');
+      eq(btns.length, 2, 'la grabada tiene VER y COMPARTIR');
       eq(filas[1].querySelectorAll('button').length, 0, 'la otra no');
-      eq(filas[0].querySelectorAll('button')[0].textContent, 'VER');
+      eq(btns[0].textContent, 'VER');
+      eq(btns[1].textContent, 'COMPARTIR');
+      /* El enlace de una partida LOCAL se hace aquí mismo, sin servidor: la
+       * repetición cabe entera dentro de la URL. */
+      var url = R.enlace(R.porId(reg.id).s);
+      ok(url.indexOf('?rep=') !== -1, 'el enlace lleva la partida dentro');
     } finally {
       G.highScore1 = hs;
       try {
@@ -4549,6 +4555,78 @@
     }
   });
 
+  /* Y la misma prueba con DOS en el mismo teclado, que es donde el formato se
+   * juega algo nuevo: los poderes del J2 se codifican con otras letras
+   * (W..Z frente a A..D), y si esa mitad estuviera mal la partida saldría
+   * distinta al reproducirla en vez de dar un error. */
+  test('una partida de poderes A DOS se reproduce exacta', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      // [tick, jugador, tipo, valor] — 'd' giro, 'h' poder
+      var guion = [
+        [5, 0, 'd', 1], [8, 1, 'd', 3], [40, 0, 'h', 1], [55, 1, 'h', 1],
+        [70, 0, 'd', 0], [90, 1, 'd', 0], [120, 0, 'h', 2], [140, 1, 'h', 2],
+        [160, 0, 'd', 3], [200, 1, 'd', 1], [230, 0, 'h', 0], [260, 1, 'h', 0],
+        [300, 0, 'd', 2], [340, 1, 'd', 2], [380, 0, 'h', 3], [420, 1, 'h', 3],
+        [450, 0, 'd', 1], [500, 1, 'd', 3], [600, 0, 'd', 0], [700, 1, 'd', 0]
+      ];
+      var TOTAL = 900;
+
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              var q = guion[k];
+              if (q[2] === 'h') HB.pulsar(G, q[1], q[3]);
+              else G.setPacDir(q[1], q[3]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+
+      G.newGame({ players: 2, hab: true });
+      var rep = R.enCurso();
+      ok(rep, 'el dúo de poderes también se graba');
+      eq(rep.modo, 'habduo', 'con su modo propio');
+      corre(true);
+      var pts = G.score, niv = G.level, quedan = G.dotsLeft;
+      ok(pts > 0, 'la partida grabada hizo puntos');
+      var deJ2 = rep.entradas.filter(function (e) {
+        return e[2] >= 4 && e[1] === 1;
+      }).length;
+      ok(deJ2 > 0, 'quedaron poderes del J2 apuntados: ' + deJ2);
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: niv, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto y vuelve');
+      eq(leida.modo, 'habduo', 'con su modo intacto');
+      ok(R.ver(leida), 'la repetición arranca');
+      ok(G.hab, 'y arranca EN el modo de poderes');
+      eq(G.playerCount, 2, 'con los dos jugadores');
+      corre(false);
+      eq(G.score, pts, 'LA PUNTUACIÓN NO CUADRA: el determinismo está roto');
+      eq(G.level, niv, 'el nivel no cuadra');
+      eq(G.dotsLeft, quedan, 'las pastillas comidas no cuadran');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('una repetición normal no admite entradas de habilidad', function () {
     var R = window.PM.Replay;
     var rep = {
@@ -4559,6 +4637,469 @@
       final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 900 }
     };
     eq(R.serializar(rep), '', 'se rechaza');
+  });
+
+  // ---------------------------------------------------------------
+  // DESATADO: los sonidos de los poderes (js/audio.js)
+  //
+  // Los cuatro eran MUDOS salvo por lo que arrastraban de rebote, y justo los
+  // dos que no tocan el marcador —turbo y flash— no sonaban nada. Aquí se
+  // vigila que cada uno pida el suyo: no se puede oír en una prueba, pero sí
+  // se puede comprobar que se llama.
+  // ---------------------------------------------------------------
+
+  /* Cambia AudioSys por un espía y devuelve la lista de lo que se pidió */
+  function espiaAudio(fn) {
+    var A = window.AudioSys;
+    if (!A) return [];
+    var pedidos = [];
+    var nombres = ['playBite', 'playBiteMiss', 'playTurbo', 'playFlash',
+                   'playShout', 'playCharge', 'playStealth'];
+    var previos = {};
+    nombres.forEach(function (n) {
+      previos[n] = A[n];
+      A[n] = function () { pedidos.push(n); };
+    });
+    try { fn(); } finally {
+      nombres.forEach(function (n) { A[n] = previos[n]; });
+    }
+    return pedidos;
+  }
+
+  test('AudioSys tiene un sonido por poder', function () {
+    var A = window.AudioSys;
+    ok(A, 'hay sistema de audio');
+    ['playBite', 'playBiteMiss', 'playTurbo', 'playFlash', 'playShout',
+     'playCharge', 'playStealth'].forEach(function (n) {
+      eq(typeof A[n], 'function', n + ' existe');
+    });
+  });
+
+  test('cada poder de DESATADO pide su propio sonido', function () {
+    var oidos = espiaAudio(function () {
+      partidaHab(13, 20, CFG.DIR.LEFT);
+      fantasmaEn(1, 14, 20);
+      HB.pulsar(G, 0, HB.MORDISCO);
+      G.eatFreezeTicks = 0;
+      HB.pulsar(G, 0, HB.TURBO);
+    });
+    ok(oidos.indexOf('playBite') !== -1, 'la Q suena al acertar');
+    ok(oidos.indexOf('playTurbo') !== -1, 'la W ya no es muda');
+  });
+
+  test('el turbo y el flash, que no tocan el marcador, también suenan', function () {
+    var oidos = espiaAudio(function () {
+      partidaHab();
+      var p = G.pacs[0];
+      var col = null, fila = 20, c;
+      for (c = 1; c < CFG.COLS - HC.FLASH_TILES - 1; c++) {
+        if (CFG.isOpen(c, fila, false) &&
+            CFG.isOpen(c + HC.FLASH_TILES, fila, false)) { col = c; break; }
+      }
+      p.x = col * CFG.TILE + CFG.TILE / 2;
+      p.y = fila * CFG.TILE + CFG.TILE / 2;
+      p.dir = CFG.DIR.RIGHT; p.nextDir = CFG.DIR.RIGHT;
+      HB.pulsar(G, 0, HB.FLASH);
+      HB.pulsar(G, 0, HB.GRITO);
+    });
+    ok(oidos.indexOf('playFlash') !== -1, 'la E suena');
+    ok(oidos.indexOf('playShout') !== -1, 'y la R también, aparte del modo azul');
+  });
+
+  test('un mordisco al aire suena DISTINTO al que acierta', function () {
+    var oidos = espiaAudio(function () {
+      partidaHab(13, 20, CFG.DIR.LEFT);
+      for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
+      HB.pulsar(G, 0, HB.MORDISCO);
+    });
+    ok(oidos.indexOf('playBiteMiss') !== -1, 'suena el fallo');
+    ok(oidos.indexOf('playBite') === -1, 'y no el de acertar');
+  });
+
+  // ---------------------------------------------------------------
+  // DESATADO con dos en el mismo teclado
+  //
+  // No estaba porque la W era el "arriba" del J2 y el turbo del J1. Ahora cada
+  // jugador tiene una fila entera en su mitad (CFG.HAB.KEYS_2P).
+  // ---------------------------------------------------------------
+
+  /* Partida de poderes a dos. `ghost2` = fantasma del J2 (-1 = Pac-Man). */
+  function partidaHab2(ghost2) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, ghosts: [-1, ghost2 === undefined ? -1 : ghost2] });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+    return G;
+  }
+
+  test('las teclas de los dos jugadores no se pisan entre ellas ni con WASD',
+    function () {
+      var t = CFG.HAB.KEYS_2P;
+      eq(t.length, 2, 'hay un juego de teclas por jugador');
+      eq(t[0].length, CFG.HAB.LIST.length, 'el J1 tiene una por poder');
+      eq(t[1].length, CFG.HAB.LIST.length, 'y el J2 también');
+      var vistas = {};
+      var wasd = { W: 1, A: 1, S: 1, D: 1 };
+      for (var j = 0; j < 2; j++) {
+        for (var k = 0; k < t[j].length; k++) {
+          var tecla = String(t[j][k]).toUpperCase();
+          ok(!vistas[tecla], 'la tecla ' + tecla + ' no está repetida');
+          vistas[tecla] = 1;
+          /* Lo que rompía el modo en dúo: el J2 se mueve con WASD, así que
+           * ninguna de las ocho puede ser una de esas cuatro. */
+          ok(!wasd[tecla], tecla + ' no choca con el WASD del J2');
+        }
+      }
+    });
+
+  test('la barra enseña un grupo por jugador, y solo cuando hacen falta dos',
+    function () {
+      var UI = window.PM.UI;
+      partidaHab();                     // un jugador
+      UI.refreshHabBar();
+      ok(UI.habGroups && UI.habGroups.length === 2, 'los dos grupos existen');
+      eq(UI.habGroups[1].caja.style.display, 'none', 'el segundo está apagado');
+      eq(UI.habGroups[0].quien.style.display, 'none',
+         'y sin etiqueta J1: con una sola fila no hay nada que distinguir');
+      eq(UI.habIdxDe(0), 0, 'el único grupo es del jugador local');
+
+      partidaHab2();                    // dos en el mismo teclado
+      UI.refreshHabBar();
+      ok(UI.habGroups[1].caja.style.display !== 'none', 'ahora hay dos filas');
+      ok(UI.habGroups[0].quien.style.display !== 'none', 'con su etiqueta');
+      eq(UI.habIdxDe(1), 1, 'el segundo grupo es del J2');
+      eq(UI.habGroups[1].btns[0].key.textContent, CFG.HAB.KEYS_2P[1][0],
+         'y enseña la tecla del J2, no la Q');
+    });
+
+  test('en dúo cada jugador tiene sus cuatro poderes y su propia recarga',
+    function () {
+      partidaHab2();
+      eq(HB.cuantas(G, 0), 4, 'el J1 tiene cuatro');
+      eq(HB.cuantas(G, 1), 4, 'y el J2 también');
+      ok(HB.pulsar(G, 1, HB.TURBO), 'el J2 puede lanzar el suyo');
+      ok(HB.conTurbo(1), 'y le afecta a él');
+      ok(!HB.conTurbo(0), 'no al J1');
+      ok(!HB.lista(1, HB.TURBO), 'el J2 se queda recargando');
+      ok(HB.lista(0, HB.TURBO), 'y el J1 sigue con la suya entera');
+    });
+
+  test('el turbo del J2 acelera al J2, no al J1', function () {
+    partidaHab2();
+    var v0 = G.pacSpeedPx(G.pacs[0]);
+    var v1 = G.pacSpeedPx(G.pacs[1]);
+    HB.pulsar(G, 1, HB.TURBO);
+    eq(G.pacSpeedPx(G.pacs[0]), v0, 'el J1 va igual que antes');
+    ok(G.pacSpeedPx(G.pacs[1]) > v1, 'el J2 corre más');
+  });
+
+  // ---------------------------------------------------------------
+  // PAC-MAN VS. con poderes: el fantasma también tiene los suyos
+  //
+  // Tampoco estaba, y por otro motivo: morder de un toque a un fantasma que
+  // lleva una persona, sin que pueda hacer nada, no es una pelea.
+  // ---------------------------------------------------------------
+
+  test('quien lleva fantasma tiene SU lista de dos, no la de Pac-Man',
+    function () {
+      partidaHab2(0);
+      ok(G.isVersus(), 'es una de VS.');
+      eq(G.vsGhostOf(1), 0, 'el J2 lleva a BLINKY');
+      eq(HB.cuantas(G, 1), 2, 'y tiene dos poderes');
+      eq(HB.cuantas(G, 0), 4, 'el que lleva Pac-Man sigue con cuatro');
+      eq(HB.listaDe(G, 1)[0].name, 'EMBESTIDA');
+      eq(HB.listaDe(G, 1)[1].name, 'ACECHO');
+      /* Y no se le puede colar una tercera, ni desde el teclado ni por red:
+       * es lo que impide que un invitado pida el FLASH llevando un fantasma. */
+      eq(HB.puede(G, 1, 2), false, 'la tercera tecla no existe para él');
+      eq(HB.puede(G, 1, 3), false, 'ni la cuarta');
+    });
+
+  test('la EMBESTIDA acelera al fantasma humano y se apaga sola', function () {
+    partidaHab2(0);
+    var g = G.ghosts[0];
+    g.mode = 'normal';
+    g.frightened = false;
+    var normal = g.speedPx(G);
+    ok(HB.pulsar(G, 1, HB.EMBESTIDA), 'la embestida entra');
+    var rapido = g.speedPx(G);
+    ok(rapido > normal, 'el fantasma corre más: ' + rapido + ' vs ' + normal);
+    eq(Math.round(rapido / normal * 100) / 100, CFG.HAB.CHARGE_MULT,
+       'exactamente lo acordado');
+    ticks(CFG.HAB.CHARGE_TICKS + 2);
+    eq(HB.conCarga(1), false, 'se apaga al cabo de sus segundos');
+    eq(g.speedPx(G), normal, 'y vuelve a la velocidad de siempre');
+  });
+
+  test('la EMBESTIDA de una persona no acelera a los fantasmas de la máquina',
+    function () {
+      partidaHab2(0);
+      var otro = G.ghosts[2];
+      otro.mode = 'normal';
+      otro.frightened = false;
+      var normal = otro.speedPx(G);
+      HB.pulsar(G, 1, HB.EMBESTIDA);
+      eq(otro.speedPx(G), normal, 'el que lleva la máquina va igual');
+    });
+
+  test('el ACECHO esconde al fantasma y le quita la marca', function () {
+    partidaHab2(0);
+    G.ghosts[0].mode = 'normal';
+    eq(HB.alfaFantasma(G, 0), 1, 'de normal se ve entero');
+    ok(HB.marcaVisible(G, 0), 'y con su marca encima');
+    ok(HB.pulsar(G, 1, HB.ACECHO), 'el acecho entra');
+    ok(HB.alfaFantasma(G, 0) < 1, 'ahora se ve a medias');
+    /* En local no hay "jugador propio" —los dos están en este teclado— así que
+     * la marca se queda: esconderse de uno mismo no es una habilidad. Lo que
+     * de verdad cuenta es el caso de red, que va en la prueba siguiente. */
+    ticks(CFG.HAB.STALK_TICKS + 2);
+    eq(HB.conAcecho(1), false, 'y se acaba solo');
+    eq(HB.alfaFantasma(G, 0), 1, 'volviendo a verse entero');
+  });
+
+  test('en online el ACECHO esconde al fantasma del OTRO, no al tuyo',
+    function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'],
+                  ghosts: [-1, 0] });
+      G.localIdx = 0;                 // aquí juega el que lleva Pac-Man
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      G.ghosts[0].mode = 'normal';
+      HB.marcarAcecho(1);             // el otro se pone en acecho
+      ok(HB.alfaFantasma(G, 0) <= CFG.HAB.STALK_ALPHA,
+         'desde aquí casi no se le ve');
+      ok(!HB.marcaVisible(G, 0), 'y sin la marca que lo delataba');
+      G.localIdx = 1;                 // ahora mira quien lo lleva
+      ok(HB.alfaFantasma(G, 0) > CFG.HAB.STALK_ALPHA,
+         'él se ve a sí mismo mejor');
+      ok(HB.marcaVisible(G, 0), 'y conserva su marca para no perderse');
+      G.toMenu();
+    });
+
+  test('los fantasmas de una partida sin poderes no cambian de velocidad',
+    function () {
+      partida(1);
+      var g = G.ghosts[0];
+      g.mode = 'normal';
+      g.frightened = false;
+      var antes = g.speedPx(G);
+      eq(window.PM.Hab.multVelFantasma(G, 0), 1, 'fuera del modo, nada');
+      eq(g.speedPx(G), antes, 'la velocidad es la de siempre');
+    });
+
+  // ---------------------------------------------------------------
+  // Repeticiones: DESATADO a dos y enlaces
+  // ---------------------------------------------------------------
+
+  test('una repetición de DESATADO a dos guarda los poderes de los DOS',
+    function () {
+      var R = window.PM.Replay;
+      var rep = {
+        v: R.V, modo: 'habduo', semilla: null, nivel: 1, jugadores: 2,
+        ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+        nombres: ['UNO', 'DOS'], fecha: new Date().toISOString(),
+        entradas: [[10, 0, 4], [12, 1, 5], [20, 1, 3], [30, 0, 7], [40, 1, 6]],
+        final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 900 }
+      };
+      var texto = R.serializar(rep);
+      ok(texto, 'se serializa');
+      var leida = R.leer(texto);
+      ok(leida, 'y se vuelve a leer');
+      eq(leida.modo, 'habduo', 'con su modo');
+      eq(leida.entradas.length, rep.entradas.length, 'con todas las entradas');
+      for (var i = 0; i < rep.entradas.length; i++) {
+        eq(leida.entradas[i].join(','), rep.entradas[i].join(','),
+           'la entrada ' + i + ' vuelve igual');
+      }
+    });
+
+  test('un DESATADO de UNO no admite poderes del segundo jugador', function () {
+    var R = window.PM.Replay;
+    var rep = {
+      v: R.V, modo: 'hab', semilla: null, nivel: 1, jugadores: 2,
+      ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+      nombres: ['UNO', 'DOS'], fecha: new Date().toISOString(),
+      entradas: [[10, 1, 4]],
+      final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 900 }
+    };
+    eq(R.serializar(rep), '', 'se rechaza');
+  });
+
+  test('PAC-MAN VS. en local no deja repetición, que saldría mentirosa',
+    function () {
+      var R = window.PM.Replay;
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, ghosts: [-1, 0] });
+      eq(R.enCurso(), null,
+         'el rumbo del que lleva fantasma no pasa por setPacDir: no se graba');
+      G.newGame({ players: 2 });
+      ok(R.enCurso(), 'un dúo normal sí se graba');
+      G.toMenu();
+    });
+
+  test('el código de un enlace de repetición no tiene letras que se confundan',
+    function () {
+      var R = window.PM.Replay;
+      var S = CFG.REPLAY_SHARE;
+      ok(S.ALPHABET.indexOf('I') === -1 && S.ALPHABET.indexOf('O') === -1,
+         'sin I ni O');
+      ok(S.ALPHABET.indexOf('0') === -1 && S.ALPHABET.indexOf('1') === -1,
+         'sin cero ni uno');
+      var c = R.codigoNuevo();
+      eq(c.length, S.ID_LEN, 'mide lo que tiene que medir');
+      for (var i = 0; i < c.length; i++) {
+        ok(S.ALPHABET.indexOf(c.charAt(i)) !== -1,
+           'el carácter ' + c.charAt(i) + ' es del alfabeto');
+      }
+      ok(R.enlaceRed('A3K9XQ7M').indexOf('?' + S.PARAM + '=A3K9XQ7M') !== -1,
+         'y el enlace lo lleva');
+    });
+
+  // ---------------------------------------------------------------
+  // El selector de modo se recuerda entre recargas
+  // ---------------------------------------------------------------
+
+  test('el modo elegido en la portada se guarda en los ajustes', function () {
+    var UI = window.PM.UI;
+    var previo = window.PM.settings.modePick;
+    try {
+      UI.pickMode('hab');
+      eq(window.PM.settings.modePick, 'hab', 'se apunta al elegirlo');
+      eq(UI.modePick, 'hab', 'y el selector lo sabe');
+      UI.pickMode('lab');
+      eq(window.PM.settings.modePick, 'lab', 'y cambia al cambiar');
+    } finally {
+      UI.pickMode(previo || 'clasico');
+    }
+  });
+
+  test('un modo inventado en los ajustes no se cuela', function () {
+    var UI = window.PM.UI;
+    var previo = window.PM.settings.modePick;
+    try {
+      UI.pickMode('noexiste');
+      eq(UI.modePick, 'clasico', 'lo que no existe cae en el primero');
+    } finally {
+      UI.pickMode(previo || 'clasico');
+    }
+  });
+
+  test('la lista de modos guardables es la misma que la de la portada',
+    function () {
+      var UI = window.PM.UI;
+      ok(UI.modeCards, 'la portada tiene sus tarjetas');
+      var n = 0;
+      for (var k in UI.modeCards) {
+        if (!UI.modeCards.hasOwnProperty(k)) continue;
+        n++;
+        ok(CFG.MODE_IDS.indexOf(k) !== -1,
+           'el modo ' + k + ' está en CFG.MODE_IDS');
+      }
+      eq(n, CFG.MODE_IDS.length, 'y no sobra ninguno en CFG.MODE_IDS');
+    });
+
+  // ---------------------------------------------------------------
+  // DAILY: el borrón del progreso
+  // ---------------------------------------------------------------
+
+  test('el progreso del DAILY de antes del borrón se tira entero', function () {
+    var D = window.PM.Daily;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.DAILY.KEY); }
+    catch (e) { /* sin almacén */ }
+    try {
+      /* Lo guardado por una versión anterior: sin marca de borrón, con racha
+       * y con la semana a medias. Todo eso se hizo con el calendario viejo
+       * (el DAILY iba en UTC y marcaba el día equivocado), así que se va. */
+      var viejo = D.vacio();
+      viejo.racha = 5;
+      viejo.mejor = 9;
+      viejo.ult = D.hoyISO();
+      viejo.h[0] = 1;
+      viejo.p[0] = 999;
+      delete viejo.rv;
+      localStorage.setItem(CFG.DAILY.KEY, JSON.stringify(viejo));
+      var leido = D.leer();
+      eq(leido.racha, 0, 'la racha se va');
+      eq(leido.mejor, 0, 'la mejor racha también');
+      eq(leido.ult, '', 'y el último día cumplido');
+      eq(D.cumplidos(leido), 0, 'la semana empieza de cero');
+      eq(leido.rv, CFG.DAILY.RESET, 'y queda con la marca nueva');
+
+      /* Y lo guardado DESPUÉS del borrón no se toca: si no, el progreso se
+       * borraría en cada arranque y el DAILY no avanzaría nunca. */
+      var nuevo = D.vacio();
+      nuevo.racha = 3;
+      nuevo.h[D.diaSemana()] = 1;
+      localStorage.setItem(CFG.DAILY.KEY, JSON.stringify(nuevo));
+      leido = D.leer();
+      eq(leido.racha, 3, 'la racha de después se queda');
+      eq(D.cumplidos(leido), 1, 'y lo cumplido también');
+    } finally {
+      try {
+        if (previo === null) localStorage.removeItem(CFG.DAILY.KEY);
+        else localStorage.setItem(CFG.DAILY.KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('el borrón NO toca los logros del DAILY', function () {
+    var A = window.PM.Achievements;
+    ok(A.BASE.dailyOk, 'el contador de retos cumplidos sigue existiendo');
+    ok(A.STATS['daily:dailyOk'], 'y su versión por modo');
+    /* Los tres logros del DAILY se resuelven contra esos contadores, y esos
+     * viven en el almacén de logros, no en el del DAILY: el borrón del
+     * progreso no puede quitarle a nadie un logro que ya se ganó. */
+    ok(CFG.ACH_KEY !== CFG.DAILY.KEY, 'son dos almacenes distintos');
+  });
+
+  // ---------------------------------------------------------------
+  // Cuentas: el código de recuperación
+  //
+  // Sin él, olvidar la contraseña era perder la cuenta entera. Lo que se puede
+  // probar sin servidor es el formato, que es donde se juega la seguridad:
+  // el código tiene que ser copiable a mano y difícil de acertar.
+  // ---------------------------------------------------------------
+
+  test('el código de recuperación se puede copiar de un papel', function () {
+    var AC = CFG.ACCOUNT;
+    var Ac = window.PM.Account;
+    ok(AC.CODE_ALPHABET.indexOf('I') === -1 && AC.CODE_ALPHABET.indexOf('O') === -1,
+       'sin I ni O');
+    ok(AC.CODE_ALPHABET.indexOf('0') === -1 && AC.CODE_ALPHABET.indexOf('1') === -1,
+       'sin cero ni uno');
+    /* 32 letras y 16 posiciones son 80 bits: no hay quien lo acierte a ciegas,
+     * y encima la función de recuperación frena los intentos. */
+    eq(AC.CODE_ALPHABET.length, 32, 'el alfabeto tiene 32');
+    eq(AC.CODE_LEN, 16, 'y el código 16 caracteres');
+    eq(Ac.groupCode('ABCDEFGH23456789'), 'ABCD-EFGH-2345-6789',
+       'se enseña de cuatro en cuatro');
+  });
+
+  test('el código se acepta como lo escribiría una persona', function () {
+    var Ac = window.PM.Account;
+    eq(Ac.cleanCode('abcd-efgh 2345_6789'), 'ABCDEFGH23456789',
+       'minúsculas, guiones y espacios dan igual');
+    eq(Ac.cleanCode('AB!CD'), 'ABCD', 'lo que no es del alfabeto se cae');
+    eq(Ac.cleanCode('IOIO'), '', 'y las letras que no existen, también');
+    eq(Ac.cleanCode(null), '', 'sin código, nada');
+  });
+
+  test('recuperar sin lo mínimo ni siquiera sale a la red', function () {
+    var Ac = window.PM.Account;
+    var errores = [];
+    Ac.recuperar('', 'ABCD-EFGH-2345-6789', 'contraseña',
+      function (e) { errores.push(e); });
+    Ac.recuperar('ALGUIEN', 'CORTO', 'contraseña',
+      function (e) { errores.push(e); });
+    Ac.recuperar('ALGUIEN', 'ABCD-EFGH-2345-6789', '123',
+      function (e) { errores.push(e); });
+    eq(errores.length, 3, 'los tres se paran aquí');
+    ok(/USUARIO/.test(errores[0]), 'falta el usuario');
+    ok(/CÓDIGO/.test(errores[1]), 'el código no tiene buena pinta');
+    ok(/CONTRASEÑA/.test(errores[2]), 'y la contraseña es corta');
   });
 
   // ---------------------------------------------------------------

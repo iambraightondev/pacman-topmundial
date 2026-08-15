@@ -205,6 +205,50 @@ The Supabase project MUST have Email provider on, sign-ups allowed and
 **Confirm email off** — the internal mailbox does not exist, so a confirmation
 link would lock every account out.
 
+### Recovery code (`supabase/recuperacion.sql`, `functions/recuperar`)
+
+That same internal mailbox is why forgetting your password used to **destroy
+the account**: Supabase's own recovery mail goes to an address that does not
+exist. Four records, the XP, the achievements and twelve mastery tracks, gone,
+with no way back. It was the only item on the roadmap that *subtracted* every
+time it happened.
+
+The fix is a **recovery code**: `CODE_LEN` (16) characters from
+`CODE_ALPHABET` — 32 glyphs with no `I`, `O`, `0` or `1`, because it gets
+copied off a piece of paper — shown once at sign-up and re-creatable from
+PERFIL. Only its **fingerprint** is stored: `SHA-256('USUARIO:CODIGO')` hex,
+in a table of its own.
+
+- **Nobody can read the fingerprint from a browser, not even its owner.** RLS
+  filters rows, not columns, so the table also uses **column-level grants**:
+  `authenticated` gets `select (id, creado_en)` only. The owner can therefore
+  learn *that* they have a code (so PERFIL can nag when they don't) and never
+  *which*. A stolen session is not a spare key.
+- **`Account.nuevoCodigo` inserts, and falls back to PATCH on conflict**, not
+  PostgREST upsert: `resolution=merge-duplicates` is an `ON CONFLICT`
+  underneath and Postgres demands table-wide `SELECT` for it — precisely the
+  grant being withheld. Two requests is a fair price.
+- **Changing the password needs the service role**, since Supabase Auth only
+  allows it with an open session (exactly what the person does not have) or
+  through the admin API. Hence the Edge Function `recuperar`, deployed with
+  **`verify_jwt: false`** on purpose: the caller has no session, and what
+  guards the door is the code itself (80 bits) plus a **failed-attempt
+  brake** (`MAX_INTENTOS` 10, then `ESPERA_MIN` 15 minutes).
+- **A wrong code, a user with no code and a user that does not exist all
+  answer identically** (`USUARIO O CÓDIGO INCORRECTOS`), or the endpoint
+  becomes a directory of who has an account. Fingerprints are compared in
+  constant time.
+- **A used code is replaced, not just burnt.** The function mints a new one
+  and returns it: a one-shot code that is not reissued leaves the player
+  without a net the *next* time, which is the problem we came from. If the
+  reissue fails the response still says `ok` with an `aviso` that the old code
+  still stands — the password *has* changed, and lying in either direction
+  here is worse than the truth.
+- `grant select on public.perfiles to service_role` is part of the migration:
+  `cuentas.sql` only granted it to `anon`/`authenticated`, and without it the
+  lookup by name fails and recovery answers "incorrect" forever with no way to
+  guess why.
+
 ## App instalable (PWA) y pruebas
 
 `manifest.json` + `sw.js` make the game installable and playable offline:
@@ -458,6 +502,7 @@ PM.settings = {
   difficultyPreset: 'normal',  // 'facil' | 'normal' | 'dificil' | 'custom'
   nick1: '',             // player 1 name (also the player's own name online)
   nick2: '',             // player 2 name (local 2-player)
+  modePick: 'clasico',   // mode picked on the front page (CFG.MODE_IDS)
   skin1: 'clasico',      // player 1 skin (also the player's own skin online)
   skin2: 'clasico',      // player 2 skin
   pacColor: '#ffff00',
@@ -496,6 +541,16 @@ for the same one. `UI.presetActual()` exposes it for the tests.
 Lives drawn on the HUD are `lives - 1`: the one currently in play is not
 shown. That is the arcade convention and is deliberate — NORMAL's three lives
 read as two icons.
+
+**`modePick` is a setting, not session state.** The front-page carousel used
+to reset to CLÁSICO on every reload: with the old six-card grid you could see
+all of them at once so it barely showed, but a carousel makes it a two-arrow
+toll every time you open the game. It is validated against `CFG.MODE_IDS`,
+which lives in `config.js` precisely because the settings sanitiser has to
+validate it without depending on load order — `MODOS` (the cards, with names,
+colours and icons) stays at the top of `ui.js`, and a test asserts the two
+lists never drift apart. `UI.pickMode()` persists on **pick**, not on play:
+choosing is already the decision.
 
 `ajustes` maps onto `PM.settings`: `velFantasmas` → `ghostSpeedMult`,
 `velPac` → `pacSpeedMult`, `powerS` → `frightMult` (the frightened-duration
@@ -607,12 +662,41 @@ link** — too big for a URL. `Replay.paraPartidaRed()` puts the `VER` button on
 their history row; the register carries `myPoints()`, like the history row, so
 a PAC-MAN VS. hunter still matches.
 
-### Sharing and the world ranking
+### Sharing by link (`supabase/repeticiones.sql`)
 
-`Replay.enlace(rep|texto)` builds `<base>?rep=<texto>`; `UI.init()` calls
-`Replay.desdeUrl()`, which opens the game straight into the replay and shows
-a dialog (game unaffected) if the text is corrupt. Only v1 (local) replays fit
-a link.
+Both kinds are shareable, by two different routes, because only one of them
+fits in a URL.
+
+**Local (v1): the run travels inside the link.** `Replay.enlace(rep|texto)`
+builds `<base>?rep=<texto>` — a few hundred bytes, no server, no expiry.
+
+**Online (v2): the link carries a code.** ~12 KB per minute of play means a
+five-minute game is 60 KB, which no chat app will pass, and compressing harder
+does not change the shape of the problem. So `Replay.compartirRed(id, cb)`
+uploads the serialized replay to the `repeticiones` table and returns
+`<base>?rn=<CODIGO>`, 8 characters from the same no-`I`/`O`/`0`/`1` alphabet
+the room codes use (`CFG.REPLAY_SHARE`). `Replay.verCompartida(codigo)`
+downloads it and hands it to `verRed`, so what the recipient sees is identical
+either way.
+
+- The code is **written back onto the local register** (`reg.rn`), so hitting
+  COMPARTIR twice on the same game returns the *same* link instead of leaving
+  a second copy on the server and two links for one game in the chat.
+- Collisions retry with a fresh code (`INTENTOS`), which with 32⁸ will never
+  happen — but the day it did, the link would show somebody else's game.
+- The table is **public read and public insert**, like `ranking` was before
+  the Edge Function. There is nothing to forge here: a made-up replay fools
+  only itself, it hands out no points and no maestrías. What it does need is
+  to not become a hard drive, and that is the row size `CHECK` plus a
+  20-inserts-per-minute trigger. No update, no delete: a shared replay is not
+  retouched — share another one.
+
+`UI.init()` calls `Replay.desdeUrl()`, which checks `?rn=` **before** `?rep=`
+and opens the game straight into the replay, showing a dialog (game
+unaffected) if the code or the text is broken. `UI.makeShareBtn` puts
+COMPARTIR next to VER in TOP MUNDIAL → TUS PARTIDAS for both kinds.
+
+### The world ranking
 
 For the world ranking, which will carry a replay per row, the public entry
 points are already there and need no change to this module:
@@ -961,6 +1045,12 @@ of turn changes hands. Everything else stays in `ghost.js` untouched — walls,
 the house door, no-up tiles, per-level speed tables, tunnel slowdown,
 frightened mode, being eaten and returning home as eyes.
 
+> The one thing that does change hands is **when DESATADO is on**: then the
+> driver gets two powers of their own (EMBESTIDA and ACECHO — see *Modo
+> DESATADO*), because Pac-Man's Q would otherwise eat them in one tap with no
+> answer. It is still the same ghost: the powers add speed and translucency
+> and touch none of the rules above.
+
 ### Assignment
 
 Each party member advertises a ghost id (`g`, 0..3, or -1 for Pac-Man) in
@@ -1159,10 +1249,20 @@ you meet **while playing whatever you were going to play anyway**.
   rolling over** — breaking someone's streak at midnight on Sunday because the
   calendar turned a page would be punishing the calendar, not the player.
 - Local state is one localStorage row (`CFG.DAILY.KEY`): `{w: week, p: [7]
-  progress, h: [7] cleared, racha, mejor, ult, sem}`. Reading it when the week
-  has changed resets `p`/`h` and keeps the streak. `sem` marks the week as
+  progress, h: [7] cleared, racha, mejor, ult, sem, rv}`. Reading it when the
+  week has changed resets `p`/`h` and keeps the streak. `sem` marks the week as
   already counted for SEMANA REDONDA, so re-entering after the seventh clear
   does not count it again.
+- **`rv` is a wipe marker.** When it does not match `CFG.DAILY.RESET`, `leer()`
+  returns a blank record — week, streak and best streak all gone — and the new
+  marker rides along in `vacio()`, so the wipe applies exactly once and the
+  DAILY carries on normally afterwards. It exists because the mode spent a
+  while counting the wrong day (it ran in UTC: Friday evening in Peru already
+  read SÁBADO), so there are streaks and weeks out there recorded against a
+  different calendar. To wipe again, change the string. **The three DAILY
+  achievements are untouched by it**: those counters live in the achievements
+  store (`CFG.ACH_KEY`), and a progress reset must not take away something
+  already earned.
 - It is celebrated through the **achievement band** (`achNotices`, titled
   `RETO CUMPLIDO`) rather than a channel of its own: they are the same kind of
   thing to the player, and two bands fighting over the same slot is exactly
@@ -1180,8 +1280,8 @@ you meet **while playing whatever you were going to play anyway**.
 on the front page, the RETO DE HOY ranking tab (id `6`), `Game.reto` /
 `Game.retoFecha`, and the `reto` achievement tag. `Game.seedBase` stays — the
 engine still accepts a seed from outside, and old shared replays of challenge
-runs carry one. The `reto_diario` table is **not dropped**: the code no longer
-touches it, and deleting real marks is not something a refactor should do.
+runs carry one. The `reto_diario` table and its `reto_top` view were dropped
+on 2026-08-15, once it was clear nothing read them any more.
 
 **Temporadas** (`PM.Season`, `CFG.RANKING.VIEW_SEASON`): the world board
 is split by **calendar month**, derived from `creado_en` — nothing to open
@@ -1295,12 +1395,24 @@ maze stops mattering, because something is always available.
 
 Rules that are deliberate, not incidental:
 
-- **Movement is arrows only.** `W` is the turbo, so WASD is disabled
-  wholesale in this mode — leaving A/S/D moving while W does something
-  else is the worst of both worlds. That is also why the mode is **not
-  offered in local two-player** (J2 would lose their controls) nor in
-  **PAC-MAN VS.** (one-tap killing a ghost a person is driving, with no
-  counterplay, is not a fight).
+- **Movement is arrows only — when one person plays.** `W` is the turbo, so
+  WASD is disabled wholesale in solo and online: leaving A/S/D moving while W
+  does something else is the worst of both worlds. **With two on one keyboard
+  the opposite holds** and WASD moves again, because the powers move out of
+  the way: each player gets one row in their own half of the keyboard
+  (`CFG.HAB.KEYS_2P`), **J1 on arrows + `N M , .`** and **J2 on WASD +
+  `Z X C V`**. Keys are matched by `ev.key`, not physical position: those
+  eight exist identically on ANSI and on a Spanish ISO layout. The HUD bar
+  grows a group per player (`.hab-grupo`), each labelled and each showing its
+  owner's cooldowns; `UI.habIdxDe(gi)` maps group → player, which is `gi` in
+  local two-player and `Game.localIdx` everywhere else.
+- **Which powers you get depends on what you are driving.** `Hab.listaDe(G, i)`
+  returns `CFG.HAB.LIST` for a Pac-Man and `CFG.HAB.LIST_G` for whoever is
+  driving a ghost in PAC-MAN VS. It is resolved **lazily on every call**, never
+  cached at `empezar()`: `Versus.setup()` runs *after* `Hab.empezar()` in
+  `Game.newGame`, so when the cooldowns are built nobody knows yet who drives
+  what. `Hab.cuantas(G, i)` is the cap `puede()` checks, which is what stops a
+  guest asking for FLASH while carrying a ghost.
 - **Q's range is measured in pixels, not tiles**, and this matters more than
   it sounds. With tile counting the bite failed constantly for no visible
   reason: two sprites can be **nine pixels apart** — visually overlapping —
@@ -1374,15 +1486,62 @@ compensation, and both only ever give the guest what they already saw:
   nobody caused, and it was eating half the bites. It does **not** widen the
   reach — the guest only fires when their own screen agreed at `BITE_PX`.
 
+### PAC-MAN VS. with powers (`CFG.HAB.LIST_G`)
+
+The mode used to be barred from VS. for a real reason: one-tap eating a ghost a
+person is driving, with no counterplay, is not a fight — it is a punching bag
+with keys. It is allowed now because **the ghost driver has their own two**:
+
+| Slot | Power | Effect | Cooldown |
+|---|---|---|---|
+| 0 | **EMBESTIDA** | ×`CHARGE_MULT` (1.35) speed for `CHARGE_TICKS` (4 s). | 20 s |
+| 1 | **ACECHO** | `STALK_TICKS` (4 s) translucent **and with the player marker removed**. | 30 s |
+
+Two and not four on purpose: a ghost does not eat, does not phase through
+walls and frightens nobody — it only chases. All it needs for a fight is to be
+able to close a gap and to be able to disappear for a moment. Cooldowns are
+longer than Pac-Man's because the ghost does not die: a wasted power costs it
+time, not the run.
+
+- **EMBESTIDA is applied in `Ghost.speedPx`, after the clamp**, exactly like
+  TURBO in `pacSpeedPx` and for the same reason: the clamp exists so classic
+  runs stay comparable, and a VS. run with powers competes with nobody. The
+  hook is `Hab.multVelFantasma(game, ghostId)`, which returns 1 outside the
+  mode, so every other game is bit-identical.
+- **ACECHO is half visual and half mechanical, and the mechanical half is the
+  marker.** `Versus.drawMarks` skips a ghost while `Hab.marcaVisible()` is
+  false; going translucent with a white triangle floating over you hides
+  nothing. `Hab.alfaFantasma()` shows the **driver** their own ghost at 0.55
+  and everyone else at `STALK_ALPHA` (0.3): hiding from yourself is not an
+  ability, it is a nuisance. In local two-player there is no "own player", so
+  the marker stays — the case that matters is online, and it is tested there.
+- **Both are self-only**, so they follow the TURBO/FLASH path online: applied
+  locally on press, and the host merely *records* them. Recording them on the
+  host is not optional — the host simulates that ghost, so without the same
+  speed the guest would outrun their own ghost and the resync would jerk for
+  the whole charge. The echo (`evt {t:'hab', w, k}`) applies them too, for the
+  same reason: every screen dead-reckons that ghost between snapshots.
+- `Hab.puede()` asks a ghost driver for a **ghost in the maze** rather than a
+  live Pac-Man (they have none): inside the house, leaving, or returning as
+  eyes there is nothing to charge at and nobody to hide from.
+
 **Replays.** A power is an *input*, like a turn, so a run of this mode
 reconstructs exactly like a classic one. Local replays get mode `'hab'`
-(letter `h`) and entries `[tick, 0, 4+k]`; since the mode is solo-only
-locally, the player index is always 0 and the four powers encode as
-`A..D`, letters no earlier text could contain (`G..V` still carries the
-sixteen player×direction turns). The entry is written **after** the power
-actually fires, so a bite at thin air does not bloat the file. Old
-clients reject an `h` replay cleanly as corrupt, which is correct. Net
+(letter `h`) for one player and `'habduo'` (letter `j`) for two on one
+keyboard, with entries `[tick, player, 4+k]`. Powers encode into the letters
+at both ends of the alphabet, since `G..V` still carries the sixteen
+player×direction turns: **`A..D` for player 1** and **`W..Z` for player 2**.
+Eight combinations is all this format ever needs — from three players up the
+game is online and records the other way. The entry is written **after** the
+power actually fires, so a bite at thin air does not bloat the file. Old
+clients reject an `h`/`j` replay cleanly as corrupt, which is correct. Net
 replays carry `hb` in the header.
+
+**PAC-MAN VS. in local is not recorded at all.** The ghost driver's steering
+goes through `Versus.steer`, which intercepts *before* `Replay.entrada` in
+`Game.setPacDir`, so the file would come out with half the orders and the
+human ghost would wander on its own during playback. `Replay.alEmpezar` bails
+out on `G.isVersus()`: better no replay than one that lies.
 
 ## Top mundial integrity (only the Edge Function writes)
 
@@ -1577,9 +1736,12 @@ left to pick there), and `handleNavKey` turns ←/→ into `stepMode` while the
 card holds focus — then re-focuses the new card, since the old one just
 vanished. `stepMode` wraps around at both ends.
 
-`playPick()` splits the five in two: CLÁSICO, DOS JUGADORES and DESATADO
-call `newGame` straight away; LABERINTOS and ONLINE open their picker first,
-because each needs a choice before there is a game (which maze, which room).
+`playPick()` splits the five in two: CLÁSICO and DOS JUGADORES call `newGame`
+straight away; LABERINTOS, ONLINE and DESATADO open their panel first, because
+each needs a choice before there is a game (which maze, which room, how many
+play). DESATADO joined that half the day it became playable by two: its panel
+is also the only screen where the keys are written down, and they are not the
+same for one player as for two.
 `modeTag()` and `modeNota()` are what make the cards live — how
 many are in your party — and `refreshReto()` / `refreshOnlineBtn()` now just
 call `refreshModePicker()`.
@@ -1711,6 +1873,27 @@ eyes return), `playEatGhost()`, `playEatFruit()`, `playDeath()` (~1.5 s
 descending sweep + sputter), `playExtraLife()`. Only one of
 siren/fright/retreat audible at once (retreat > fright > siren priority).
 game.js must guard every call (`window.AudioSys && AudioSys.playWaka()`).
+
+**DESATADO one-shots** (all on the `sfx` bus, all short — they fire mid-run
+on top of the siren, and a long sound would swallow the waka):
+`playBite()` (two hard, very close snaps), `playBiteMiss()` (the same hit,
+dull and without the second snap), `playTurbo()` (rising sweep with air),
+`playFlash()` (a very short, very bright zap), `playShout()` (descending roar
+with vibrato — the longest of the four, because it is the one that changes the
+whole board), and the ghost's two, deliberately lower so you can tell which
+side a sound came from without looking: `playCharge()` and `playStealth()`.
+
+Two rules about *when* they play, both in `habilidades.js`:
+
+- **Only the local player's own powers make noise** (`mio(G, idx)`). In a
+  four-player party, hearing all sixteen keys informs nobody and buries the
+  waka. What changes the board — the GRITO — is audible anyway because it
+  starts the fright ambience.
+- **A miss sounds different from a hit.** Before this the four powers were
+  mute except for what they dragged in by accident (Q sounded because a ghost
+  died, R because fright started), so the two that never touch the scoreboard
+  were silent and the key read as broken. `playBiteMiss` also separates the
+  two failure modes that used to feel identical: bad aim vs. on cooldown.
 
 ## Multiplayer (2 players, local & online)
 

@@ -7,27 +7,37 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **15 de agosto de 2026**.
+Última puesta al día: **15 de agosto de 2026** (segunda tanda del día).
 
 ---
 
 ## Por dónde iba esto (léase primero)
 
-**Todo lo de las sesiones del 14 y el 15 de agosto está subido y desplegado.**
-Nada a medias, nada sin commitear. Cuatro commits, del más nuevo al más viejo:
+**Todo está subido y desplegado.** Nada a medias, nada sin commitear.
 
 | Commit | Qué |
 |---|---|
+| (esta sesión) | Recuperar la cuenta, DESATADO de a dos y en VS., los poderes suenan y las repeticiones se comparten |
 | `ca8ee5b` | El día correcto, el reto solo de hoy, los laberintos como manda el arcade y una dificultad que no puede mentir |
 | `dce5685` | El DAILY: siete retos por semana, y ya no son un modo de juego |
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v27`**. **219 pruebas**: 0 fallos en `tests.html` y los
+Service worker en **`pm-v28`**. **246 pruebas**: 0 fallos en `tests.html` y los
 4 de siempre en Node (ver más abajo).
+
+> **Lo del servidor YA está aplicado** (tablas, permisos y la función de
+> recuperación, todo comprobado contra el proyecto de verdad). Lo que puede
+> faltar es el `git push`, que es lo que despliega en Vercel: si el juego en
+> producción no enseña el botón de CÓDIGO DE RECUPERACIÓN, es eso.
 
 ### Lo único que hay que hacer a mano
 
+- **Todo el mundo que ya tuviera cuenta debería crearse su CÓDIGO DE
+  RECUPERACIÓN** (PERFIL → CÓDIGO DE RECUPERACIÓN, se enseña una vez y se
+  apunta). Los que ya existen no tienen ninguno, y hasta que no lo tengan
+  siguen exactamente igual que antes: olvidar la contraseña = perder la cuenta.
+  El panel del perfil se lo dice a quien no lo tiene.
 - **Al amigo que tenía "NORMAL" con cinco vidas**: que abra OPCIONES →
   DIFICULTAD y pulse **NORMAL** una vez. El arreglo hace que el panel deje de
   mentir (ahora le dirá PERSONALIZADA, que es la verdad), pero **no le toca los
@@ -46,18 +56,147 @@ Service worker en **`pm-v27`**. **219 pruebas**: 0 fallos en `tests.html` y los
 
 Ninguno rompe nada. Están explicados donde toca; esto es solo la lista:
 
-- **DESATADO no suena**: el turbo y el flash son mudos (`js/habilidades.js` no
-  llama a `AudioSys` ni una vez). Es lo primero que le pediría al modo.
-- **El selector de modo no recuerda tu elección** entre recargas: vuelve a
-  CLÁSICO. Vive en `UI.modePick`, que es de la sesión.
-- **La tabla `reto_diario` sigue en Supabase**, con marcas de verdad dentro. El
-  juego ya no la toca. La línea para tirarla está más abajo.
-- **Hay un token de Supabase que revocar** y sigue vivo (sección «Lo que está
-  aplicado en producción»).
+- **PAC-MAN VS. en local no deja repetición.** Es a propósito desde hoy: el
+  rumbo de quien lleva fantasma no pasa por `Game.setPacDir` —lo intercepta
+  `Versus.steer` antes—, así que la repetición salía con la mitad de las
+  órdenes y el fantasma humano se movía solo al verla. Antes se grababa igual
+  y mentía; ahora directamente no se ofrece. Para arreglarlo de verdad habría
+  que apuntar también el rumbo del fantasma como una entrada más.
 - **`hab`, `lab` y `vs` empiezan sus logros a cero** para todo el mundo, y no
   tiene arreglo: de esos modos no hay rastro en los contadores viejos.
-- **DESATADO sigue sin estar en dos jugadores locales ni en PAC-MAN VS.**, y es
-  una decisión (teclas y equilibrio), no un olvido.
+- **Los iconos de las tarjetas se dibujan en cada `buildMenu`**, que solo pasa
+  una vez. Si algún día se rehace el menú a menudo, cachear.
+
+---
+
+## Lo del 15 de agosto (segunda tanda): la cuenta ya no se pierde y DESATADO se juega entre dos
+
+Seis cosas, todas subidas. El qué está en [`CHANGELOG.md`](CHANGELOG.md) y el
+cómo en [`SPEC.md`](SPEC.md); aquí solo lo que hay que saber **antes de tocar
+esto**.
+
+### 1 · Recuperar la contraseña (lo que era más urgente de la lista)
+
+Era el único punto que **restaba** cada vez que pasaba: quien olvidaba la
+contraseña perdía los cuatro récords, la experiencia, los logros y las doce
+maestrías, sin vuelta atrás.
+
+- **Se eligió el código de recuperación, no el correo real.** El correo obliga
+  a pedir un dato que hoy no se pide y a tocar la configuración de auth del
+  proyecto; el código resuelve el problema entero sin nada de eso. Si algún día
+  se quiere el correo, esto no estorba: pueden convivir.
+- **En el servidor solo vive la HUELLA** (`sha256('USUARIO:CODIGO')`), en la
+  tabla `recuperacion`. Y **nadie puede leerla desde el navegador, ni su
+  dueño**: el RLS filtra FILAS, no columnas, así que además hay permisos POR
+  COLUMNA (`grant select (id, creado_en)`). El dueño puede saber *que* tiene
+  código —para que PERFIL avise a quien no— pero nunca *cuál*.
+- **Por eso `Account.nuevoCodigo` NO usa el upsert de PostgREST.**
+  `resolution=merge-duplicates` es un `ON CONFLICT` por dentro y Postgres pide
+  `SELECT` sobre la tabla entera, que es justo el permiso que no se da. Hace
+  alta y, si ya había, cambia. Dos peticiones a cambio de que la llave de
+  repuesto no salga del servidor.
+- **La contraseña la cambia una Edge Function** (`recuperar`), porque Supabase
+  Auth solo deja cambiarla con sesión abierta —lo que no tiene quien la ha
+  olvidado— o con la API de administración, que pide la service role. Va con
+  **`verify_jwt: false` a propósito**; lo que guarda la puerta es el código (80
+  bits) más un freno de 10 intentos y 15 minutos de castigo.
+- **Ojo con esto si algo falla:** hizo falta `grant select on public.perfiles
+  to service_role`. `cuentas.sql` solo se lo daba a `anon` y `authenticated`, y
+  sin eso la función no encuentra la cuenta por nombre y contesta SIEMPRE
+  «usuario o código incorrectos», sin forma de adivinar por qué. Está dentro de
+  `supabase/recuperacion.sql`.
+- **Usuario que no existe, usuario sin código y código equivocado dan la MISMA
+  respuesta.** Si no, esta puerta sería una lista de qué nombres tienen cuenta.
+- **El código usado se repone**, no solo se quema: uno de un solo uso que no se
+  repone deja al jugador sin red la próxima vez, que es el problema del que
+  venimos. Si la reposición falla, la respuesta dice `ok` igual con un aviso —
+  la contraseña YA se cambió y mentir en cualquiera de las dos direcciones es
+  peor.
+
+### 2 · DESATADO en dos jugadores locales
+
+- **El problema era una sola tecla**: la W. El J2 se mueve con WASD y la W era
+  el turbo. La solución es darle a cada uno **una fila entera en su mitad del
+  teclado** (`CFG.HAB.KEYS_2P`): J1 con flechas y `N M , .`, J2 con WASD y
+  `Z X C V`. En solo y en online **no cambia nada**: siguen siendo Q W E R.
+- Las teclas se miran por `ev.key`, **no por posición física**: esas ocho
+  existen igual en ANSI y en el teclado español.
+- **La barra del HUD tiene ahora un grupo por jugador** (`.hab-grupo`), cada
+  uno con sus teclas y la recarga de su dueño. `UI.habIdxDe(gi)` dice de quién
+  es cada grupo: `gi` en dúo local y `Game.localIdx` en todo lo demás.
+- **DESATADO pasó a abrir panel** en vez de arrancar de una, como LABERINTOS y
+  ONLINE: hay que elegir cuántos juegan, y ese panel es además el único sitio
+  donde están escritas las teclas, que ya no son las mismas.
+
+### 3 · DESATADO en PAC-MAN VS.: el fantasma también tiene poderes
+
+- **Lo que lo tenía prohibido era el equilibrio**, no las teclas: comerse de un
+  mordisco a un fantasma que lleva una persona, sin que pueda hacer nada, no es
+  una pelea. Así que **quien lleva fantasma tiene los suyos**
+  (`CFG.HAB.LIST_G`): **EMBESTIDA** (x1.35 durante 4 s) y **ACECHO** (4 s
+  translúcido y sin la marca encima).
+- **Son dos y no cuatro a propósito**: un fantasma no come, no atraviesa muros
+  y no asusta a nadie, solo persigue. Lo único que necesita es poder cerrar una
+  distancia y poder desaparecer un momento.
+- **La mitad que de verdad importa del ACECHO es quitar la marca.** Volverse
+  translúcido con un triángulo blanco encima no esconde a nadie. Quien lo lleva
+  sigue viendo la suya (0.55 de alfa contra 0.3): esconderse de uno mismo no es
+  una habilidad.
+- **`Hab.listaDe(G, idx)` se resuelve en cada llamada, nunca al empezar.**
+  `Versus.setup()` corre DESPUÉS de `Hab.empezar()` en `Game.newGame`: cuando
+  se montan las recargas todavía no se sabe quién lleva qué. Si algún día se
+  cachea, el fantasma se queda con los poderes de Pac-Man.
+- **La EMBESTIDA se aplica en `Ghost.speedPx` y DESPUÉS del tope**, igual que
+  el turbo en `pacSpeedPx` y por lo mismo. Y el anfitrión tiene que anotarla
+  aunque sea un poder «propio»: el fantasma lo simula él, y sin la velocidad
+  buena el invitado adelanta a su propio fantasma y el resincronizado le da
+  tirones toda la embestida.
+
+### 4 · Los poderes suenan
+
+- Cada uno tiene el suyo en `js/audio.js`, y **suenan solo los de quien juega
+  en esta pantalla** (`mio()` en `habilidades.js`). En una party de cuatro, oír
+  las dieciséis teclas de todo el mundo no informa de nada y tapa el waka.
+- **El mordisco al aire suena DISTINTO al que acierta** (`playBiteMiss`).
+  Fallar la puntería y tener la tecla en recarga se sentían exactamente igual.
+- Los dos del fantasma van más graves a propósito: en una partida donde los dos
+  bandos tienen teclas, la altura es lo único que dice de qué lado vino el
+  sonido sin apartar la vista.
+
+### 5 · Repeticiones por enlace, también las de online
+
+- **Las locales ya cabían en la URL y ya tenían `Replay.enlace()`... pero no
+  había botón en ninguna parte.** Ahora sí: `COMPARTIR`, al lado de `VER`.
+- **Las de red no caben** (~12 KB por minuto), así que **se suben y el enlace
+  lleva solo un código** (`?rn=A3K9XQ7M`, tabla `repeticiones`). Para quien lo
+  recibe son lo mismo.
+- **Se descartó otra vez reescribir el netcode** para que las de red también
+  cupieran en la URL (intención de rumbo en vez de posiciones). El porqué sigue
+  abajo, en la sección de descartados: se paga tocando el núcleo de lo único
+  que hoy va bien.
+- **El código se guarda en la ficha local** (`reg.rn`): darle a COMPARTIR dos
+  veces devuelve el MISMO enlace, no una copia más en el servidor y dos enlaces
+  de la misma partida rodando por el chat.
+- La tabla es de **lectura e inserción públicas**, como el ranking antes de la
+  Edge Function: aquí no hay nada que falsificar (una repetición inventada solo
+  se engaña a sí misma, no da puntos ni maestrías). Lo que sí hay es un tope de
+  tamaño y un freno de 20 inserciones por minuto, para que nadie la use de
+  disco duro.
+
+### 6 · Lo pequeño
+
+- **El selector de modo se recuerda** (`PM.settings.modePick`, validado contra
+  `CFG.MODE_IDS`). La lista de ids vive en `config.js` y no en `ui.js` porque
+  el saneado de los ajustes tiene que poder validarla sin depender del orden de
+  carga; hay una prueba que vigila que las dos listas no se separen.
+- **El progreso del DAILY se borró una vez** (`CFG.DAILY.RESET`, campo `rv` en
+  lo guardado): la semana, la racha y la mejor racha venían de cuando el modo
+  contaba mal el día. **Los tres logros del DAILY no se tocaron**: viven en el
+  almacén de logros y eso ya está ganado. Para volver a borrar, se cambia el
+  texto de `CFG.DAILY.RESET`.
+- **`reto_diario` y su vista `reto_top` están tiradas.** Se guardaron antes las
+  tres marcas que tenían, por si alguna vez hacen falta: `IAMBRAIGHTON` 2150
+  (5/8), `MAULIO` 15330 (6/8) y `MAULIO` 1770 (7/8).
 
 ---
 
@@ -194,11 +333,9 @@ esto**.
 
 ### Lo que quedó fuera de esta tanda
 
-Nada roto, pero apuntado:
-
-- **El selector de modo sigue sin recordar tu elección** entre recargas. Con
-  el carrusel molesta un poco más que con la rejilla (antes veías las seis).
-- **Las habilidades siguen sin sonar**: el turbo y el flash son mudos.
+Las dos que se apuntaron aquí —que el selector de modo no recordaba la
+elección y que las habilidades no sonaban— **están hechas** en la segunda
+tanda del 15 de agosto, arriba.
 
 ---
 
@@ -316,43 +453,53 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v27` (15 de agosto) |
+| Juego (Vercel) | desplegado, service worker `pm-v28` (15 de agosto) |
+| `recuperacion` + `grant select on perfiles to service_role` | aplicado y comprobado (15 de agosto) |
+| Edge Function `recuperar` (`verify_jwt: false`) | desplegada y comprobada de punta a punta (15 de agosto) |
+| `repeticiones` (enlaces de repetición online) | aplicada y comprobada (15 de agosto) |
+| `reto_diario` y su vista `reto_top` | **TIRADAS** (15 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `perfiles.record_lab2..4` y `record_hab2..4` (las doce rutas) | aplicado y comprobado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
 | Vistas `ranking_top` y `ranking_temporada` | rehechas |
 | Edge Function `enviar-record` | **versión 2** desplegada |
-| `reto_diario`: un hueco por nombre y día | aplicado (12 de agosto), **ya no se usa** |
+| `reto_diario`: un hueco por nombre y día | aplicado (12 de agosto), tabla ya tirada |
 
-> Lo de `reto_diario` queda como historia: el RETO DE HOY se retiró el 14 de
-> agosto y `supabase/reto.sql` ya no está en el repo. La tabla sigue viva en
-> Supabase con sus marcas; el juego no la toca.
+> `reto_diario` queda como historia: el RETO DE HOY se retiró el 14 de agosto,
+> `supabase/reto.sql` ya no está en el repo y la tabla (con su vista
+> `reto_top`) se tiró el 15. Sus tres marcas están apuntadas más arriba, en la
+> segunda tanda del 15 de agosto.
 
-Dos avisos operativos:
+Un aviso operativo:
 
-- **`CFG.NET.PROTO` está en 7** (subió el 14 de agosto con HABILIDADES).
-  Quien tenga una pestaña vieja abierta no podrá entrar en una party hasta
-  recargar. Es lo normal al cambiar la forma de lo que viaja por red, pero
-  conviene saberlo si alguien se queja.
-- **Hay un token de Supabase que revocar, y sigue vivo.** En la sesión del 6
-  de agosto se pegó un *personal access token* (`sbp_…`) en el chat para
-  aplicar las migraciones. Da acceso a **toda la cuenta**, no a un proyecto, y
-  se queda escrito en el historial local de la sesión
-  (`~/.claude/projects/…/*.jsonl`), así que borrar el chat de la pantalla no
-  lo borra. El 12 de agosto se usó otra vez desde ahí para aplicar `reto.sql`:
-  funcionó, o sea que **no está revocado**. Cuando ya no haga falta:
-  <https://supabase.com/dashboard/account/tokens> → borrarlo, y si hace falta
-  otro, mejor por variable de entorno que pegado en el chat.
+- **`CFG.NET.PROTO` está en 7** (subió el 14 de agosto con HABILIDADES). Quien
+  tenga una pestaña vieja abierta no podrá entrar en una party hasta recargar.
+  Es lo normal al cambiar la forma de lo que viaja por red, pero conviene
+  saberlo si alguien se queja. **No ha subido con los poderes del fantasma**:
+  viajan por el `hab` que ya existía (`gevt`/`evt` con `k`), solo que ahora `k`
+  puede ser de la otra lista, y quien no la conozca lo descarta sin romper
+  nada.
+
+> El *personal access token* de Supabase (`sbp_…`) que se pegó en el chat el 6
+> de agosto **sigue vivo, y se ha usado en esta sesión** para aplicar el SQL y
+> desplegar la función. Se decidió expresamente no revocarlo por ahora. Da
+> acceso a toda la cuenta y está escrito en el historial local de la sesión
+> (`~/.claude/projects/…/*.jsonl`), así que el día que se quiera cerrar:
+> <https://supabase.com/dashboard/account/tokens>.
 
 ### Las cuatro pruebas que "fallan" en Node
 
-Hoy hay **219 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
+Hoy hay **246 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
 es lo esperado: son límites del DOM de mentira (miden píxeles reales y
 `offsetParent`), no fallos del juego. Las mismas **pasan en `tests.html`**, que
 es la batería buena; la de Node vale para la lógica.
 
-Si alguien va a perseguirlas, que sea para arreglar el arnés, no el juego.
+Si alguien va a perseguirlas, que sea para arreglar el arnés, no el juego. El
+15 de agosto se arregló una pieza de ese arnés: el `style` de mentira no tenía
+`setProperty`, y el juego lo usa de verdad para decirle al escenario cuánto
+ocupa la barra de poderes (`--habH`). Eso ya no falla; las cuatro que quedan
+miden píxeles dibujados y `offsetParent`, que es harina de otro costal.
 
 > Al servir `tests.html` para probar, **usa un puerto nuevo cada vez**. La
 > caché del navegador te devuelve el `js/` anterior y acabas probando código
@@ -365,45 +512,32 @@ Si alguien va a perseguirlas, que sea para arreglar el arnés, no el juego.
 La lista corta está arriba, en «Cabos sueltos, todos juntos». Aquí va el
 porqué de cada uno, que es lo que hace falta para arreglarlos.
 
-- **Las habilidades no suenan.** `js/habilidades.js` no llama a `AudioSys` ni
-  una vez. La Q suena porque reutiliza el "te has comido un fantasma" y la R
-  porque el modo azul ya trae lo suyo, pero **el turbo y el flash son mudos**,
-  que son justo los dos que no cambian el marcador. Es lo primero que le
-  pediría a este modo: dos sonidos cortos en `AudioSys` y llamarlos desde
-  `turbo()` y `flash()`.
-- **El selector de modo no recuerda tu elección** entre recargas: siempre
-  vuelve a CLÁSICO. Se guarda en `UI.modePick`, que es de la sesión. Meterlo
-  en `PM.settings` es fácil, pero obliga a tocar `DEFAULT_SETTINGS` y su
-  saneado, y por eso se dejó.
+De los cinco que había aquí, **tres están hechos** (los sonidos, el selector
+de modo y DESATADO en dúo local y en VS.: ver la segunda tanda del 15 de
+agosto). Quedan los dos que no se arreglan solos:
+
 - **`hab`, `lab` y `vs` empiezan sus logros a cero para todo el
   mundo**, y no tiene arreglo: de esos modos no hay ni rastro en los
   contadores viejos. Solo el clásico y party se pudieron sembrar.
-- **DESATADO sigue sin estar en dos jugadores locales ni en PAC-MAN VS.**
-  Fue una decisión (teclas y equilibrio), no un olvido, pero si alguna vez se
-  quiere, lo local pide un segundo juego de teclas para el J2.
 - **Los iconos de las tarjetas se dibujan en cada `buildMenu`**, que solo pasa
   una vez, así que da igual. Si algún día se rehace el menú a menudo, cachear.
 
 ## Lo que queda, por orden de lo que yo haría
 
-### 1. Recuperar la contraseña (lo más urgente)
+### 1. Que las repeticiones de PAC-MAN VS. en local se puedan grabar
 
-**Hoy, quien olvide su contraseña pierde la cuenta.** No hay camino de vuelta:
-el correo se compone por dentro (`usuario@cuentas.pacman-topmundial.vercel.app`),
-ese buzón no existe y en `js/account.js` no hay ni un `reset`. Se pierden los
-cuatro récords, la experiencia, los logros y las maestrías.
+Es el único cabo que se ha abierto hoy. El rumbo de quien lleva fantasma no
+pasa por `Game.setPacDir` —lo intercepta `Versus.steer` antes de llegar a
+`Replay.entrada`—, así que la repetición salía con la mitad de las órdenes y
+al verla el fantasma humano se movía por su cuenta. Hasta hoy se grababa igual
+y mentía; ahora `Replay.alEmpezar` se planta si `G.isVersus()`.
 
-Es el único punto de esta lista que **resta** cada vez que pasa, y no tiene
-arreglo a posteriori.
-
-Dos caminos, de menos a más:
-
-- **Código de recuperación**: se enseña una vez al registrarse, se guarda
-  hasheado en `perfiles` y sirve para reponer la contraseña. Todo dentro de lo
-  que ya hay.
-- **Correo real opcional** en el perfil, y usar el *recovery* de Supabase.
-  Más cómodo para el jugador, pero obliga a tocar la configuración de auth
-  del proyecto y a pedir un dato que hoy no se pide.
+Para arreglarlo de verdad hay que **apuntar el rumbo del fantasma como una
+entrada más**, con su jugador y su dirección, y reinyectarlo por `Versus.steer`
+al reproducir. Es el mismo patrón que ya tienen los poderes (una entrada con su
+tick), y no toca nada del netcode: es una repetición local. Lo que sí pide es
+una letra nueva en el formato, y las libres quedan justas (ver el mapa de
+letras en `js/replay.js`), así que probablemente toque subir `Replay.V`.
 
 ### 2. Verificar las repeticiones DE VERDAD (descartado por ahora)
 
@@ -430,22 +564,23 @@ Cuándo retomarlo: si el tablero crece y aparece alguien inventándose marcas
 > `supabase/functions/enviar-record/index.ts` menciona un
 > `docs-pendientes/integridad-ranking.md` que no existe. Es esta sección.
 
-### 3. Repeticiones online por enlace (descartado por ahora)
+### 3. El netcode de intención de rumbo (descartado, y ya no urge)
 
-Las de red ya se graban y se ven (desde el 6 de agosto), pero **no caben en
-una URL**: son ~26 KB por minuto de partida frente a los cientos de bytes de
-una local.
-
-Para que se compartieran por enlace habría que cambiar el netcode: que los
-invitados manden **intención de rumbo** en vez de posiciones (como ya hace el
-fantasma de PAC-MAN VS.) y que el anfitrión sea autoridad. Entonces valdría el
-formato de teclas de siempre, con enlace y todo, y de paso el ranking ganaría
-integridad.
+Las repeticiones online **ya se comparten por enlace** desde el 15 de agosto,
+pero por otro camino: se suben y el enlace lleva un código. Lo que sigue
+descartado es lo que se planteaba antes para conseguirlo — que los invitados
+manden **intención de rumbo** en vez de posiciones (como ya hace el fantasma de
+PAC-MAN VS.) y que el anfitrión sea autoridad. Con eso la repetición volvería a
+ser teclas, cabría entera en la URL y de paso el ranking ganaría integridad.
 
 **Se descartó porque se paga tocando el núcleo de lo que hoy funciona bien**:
 el invitado simula su propio Pac-Man en local y por eso no se nota lag.
 Cambiarlo obliga a predicción y reconciliación, y hacerlo regular deja el
-online peor que antes. No compensa por una función secundaria.
+online peor que antes.
+
+Ahora tiene todavía menos prisa: lo que lo pedía —compartir— ya está resuelto.
+Si algún día se retoma será por la INTEGRIDAD del ranking, que es la otra mitad
+del trato, y entonces conviene hacerlo junto con el punto 2.
 
 ---
 
@@ -453,10 +588,12 @@ online peor que antes. No compensa por una función secundaria.
 
 Sin orden de urgencia; ninguna es un arreglo.
 
-- **Retos entre amigos.** Todas las piezas están: repeticiones deterministas
-  que caben en una URL, lista de amigos y canal personal para invitaciones.
-  Mandar "supera esto" con tu partida dentro, y que al abrirla se juegue **la
-  misma semilla**, es lo más pegajoso que se puede montar con lo que ya hay.
+- **Retos entre amigos.** Todas las piezas están, y desde el 15 de agosto
+  también el botón: repeticiones deterministas que caben en una URL, botón de
+  COMPARTIR, lista de amigos y canal personal para invitaciones. Mandar "supera
+  esto" con tu partida dentro, y que al abrirla se juegue **la misma semilla**,
+  es lo más pegajoso que se puede montar con lo que ya hay — y ahora es medio
+  día de trabajo, no dos.
 - **Torneo en la party**: al mejor de N rondas con marcador acumulado y podio.
   Convierte media hora suelta en un evento.
 - **Editor de laberintos**: ya hay `js/mazes.js` y compresión en URL. Con

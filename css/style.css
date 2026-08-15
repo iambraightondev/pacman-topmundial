@@ -736,8 +736,10 @@ body {
 #habBar {
   z-index: 5;
   display: none;
-  gap: 5px;
+  gap: 14px;
   margin-top: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 #habBar.on { display: flex; }
@@ -747,6 +749,21 @@ body {
   right: max(8px, env(safe-area-inset-right));
   bottom: max(10px, env(safe-area-inset-bottom));
   margin-top: 0;
+}
+
+/* Un grupo por jugador. Con dos en el mismo teclado se ven los dos, cada uno
+   con sus teclas; en solo y en online solo hay uno y la etiqueta sobra. */
+.hab-grupo {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hab-quien {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .hab-b {
@@ -1670,6 +1687,10 @@ input[type="range"] {
   font-size: clamp(11px, 2vh, 15px);
   letter-spacing: 1px;
   max-width: min(94%, 420px);
+  /* Hay líneas que son un dato de una pieza y sin espacios donde partir: el
+     enlace de una repetición y el código de recuperación. Sin esto se salen
+     del diálogo por los lados y no se pueden ni leer ni copiar a mano. */
+  overflow-wrap: anywhere;
 }
 
 .prompt-line.big {

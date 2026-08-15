@@ -30,13 +30,16 @@
 
   /* ---------- utilidades del formato ---------- */
   var SEP = '~';                       // separador de campos (fuera del juego de caracteres de los nombres)
-  /* 'hab' es el modo DESATADO, que solo se juega en solo (en party las
-   * repeticiones son las de red). Un texto con 'h' abierto en una versión
-   * vieja del juego no cuela como partida normal: MODOS_INV no lo conoce,
-   * leer() devuelve null y sale el aviso de repetición rota, que es
-   * justamente lo que tiene que pasar. */
-  var MODOS = { solo: 's', duo: 'd', reto: 'r', hab: 'h' };
-  var MODOS_INV = { s: 'solo', d: 'duo', r: 'reto', h: 'hab' };
+  /* 'hab' es el modo DESATADO a un jugador y 'habduo' el mismo con dos en el
+   * mismo teclado (en party las repeticiones son las de red). Un texto con una
+   * letra que una versión vieja del juego no conozca no cuela como partida
+   * normal: MODOS_INV no la tiene, leer() devuelve null y sale el aviso de
+   * repetición rota, que es justamente lo que tiene que pasar. */
+  var MODOS = { solo: 's', duo: 'd', reto: 'r', hab: 'h', habduo: 'j' };
+  var MODOS_INV = { s: 'solo', d: 'duo', r: 'reto', h: 'hab', j: 'habduo' };
+
+  /* ¿Ese modo es DESATADO, juegue uno o dos? */
+  function esDesatado(modo) { return modo === 'hab' || modo === 'habduo'; }
 
   function b36(n) { return Math.round(n).toString(36); }
   function d36(s) { return parseInt(s, 36); }
@@ -58,15 +61,22 @@
    * G..V que empaqueta jugador y dirección en un solo carácter. Si el mismo
    * giro se repite con la misma separación, se resume con *veces (RLE). */
   /* Una entrada es [tick, jugador, qué]. En `qué`, 0..3 es un giro y 4..7 es
-   * una habilidad del modo DESATADO (Q, W, E y R por ese orden).
+   * un poder del modo DESATADO (los cuatro, por su orden en CFG.HAB.LIST).
    *
    * Los giros se empaquetan en las letras G..V, que son las 16 parejas de
-   * jugador y dirección. Para las habilidades no quedan 16 letras libres, y
-   * no hacen falta: el modo solo se graba en SOLO (en party manda el formato
-   * de red), así que el jugador es siempre el 0 y con cuatro letras basta.
-   * Son A..D, que ningún texto anterior podía contener. */
+   * jugador y dirección. A los poderes les quedan las letras de los dos
+   * extremos, y con eso hay de sobra: este formato solo graba partidas de UNO
+   * O DOS en el mismo teclado (en party manda el formato de red), así que son
+   * ocho combinaciones y no dieciséis.
+   *
+   *   A B C D   poderes del jugador 1   (65..68, por debajo de la G)
+   *   W X Y Z   poderes del jugador 2   (87..90, por encima de la V)
+   *
+   * Ninguna de las dos tandas pisa el rango de los giros, así que un texto
+   * grabado antes de que existiera el dúo se sigue leyendo igual. */
   function codHab(e) {
-    return String.fromCharCode(65 + ((e[2] - 4) & 3));
+    var base = (e[1] === 1) ? 87 : 65;      // 'W' para el J2, 'A' para el J1
+    return String.fromCharCode(base + ((e[2] - 4) & 3));
   }
 
   function esHab(e) { return e[2] >= 4; }
@@ -98,7 +108,7 @@
   function decEntradas(s) {
     var out = [];
     if (s === '') return out;
-    var re = /([0-9a-z]+)([A-DG-V])(?:\*([0-9a-z]+))?/g;
+    var re = /([0-9a-z]+)([A-DG-Z])(?:\*([0-9a-z]+))?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
@@ -109,12 +119,13 @@
       if (!isFinite(delta) || delta < 0) return null;
       if (!(veces >= 1) || veces > CFG.REPLAY_MAX_ENTRADAS) return null;
       if (out.length + veces > CFG.REPLAY_MAX_ENTRADAS) return null;
-      // A..D: habilidad del jugador 0 (ver codHab). G..V: giro.
-      var esPoder = (letra >= 'A' && letra <= 'D');
-      var c = letra.charCodeAt(0) - (esPoder ? 65 : 71);
+      /* A..D poder del J1 · W..Z poder del J2 · G..V giro (ver codHab) */
+      var cod = letra.charCodeAt(0);
+      var poderDe = (cod <= 68) ? 0 : ((cod >= 87) ? 1 : -1);
+      var c = cod - (poderDe === 0 ? 65 : (poderDe === 1 ? 87 : 71));
       for (var i = 0; i < veces; i++) {
         tick += delta;
-        if (esPoder) out.push([tick, 0, 4 + c]);
+        if (poderDe >= 0) out.push([tick, poderDe, 4 + c]);
         else out.push([tick, (c >> 2) & 3, c & 3]);
       }
     }
@@ -321,9 +332,13 @@
         if (!esNum(e[0]) || e[0] < 0 || e[0] < t) return false;   // ordenadas por tick
         t = e[0];
         if (!esNum(e[1]) || e[1] < 0 || e[1] >= CFG.MAX_PLAYERS) return false;
-        // 0..3 giro · 4..7 habilidad (solo en el modo 'hab', y del jugador 0)
+        /* 0..3 giro · 4..7 poder. Los poderes solo existen en DESATADO, y solo
+         * de los dos primeros jugadores: es lo único que sabe grabar este
+         * formato (de tres en adelante la partida es de red y se graba de
+         * otra manera). */
         if (!esNum(e[2]) || e[2] < 0 || e[2] > 7) return false;
-        if (e[2] > 3 && (rep.modo !== 'hab' || e[1] !== 0)) return false;
+        if (e[2] > 3 && (!esDesatado(rep.modo) || e[1] > 1)) return false;
+        if (e[2] > 3 && rep.modo === 'hab' && e[1] !== 0) return false;
       }
       var f = rep.final;
       if (!f || !esNum(f.puntos) || !esNum(f.nivel) ||
@@ -413,16 +428,177 @@
       }
     },
 
+    /* Dirección del juego, sin lo que llevara pegado detrás */
+    baseUrl: function () {
+      try {
+        return window.location.href.split('?')[0].split('#')[0];
+      } catch (e) { return 'index.html'; }   // sin location (pruebas)
+    },
+
     /* Enlace para compartir: el juego se abre directo en la repetición */
     enlace: function (repOTexto) {
       var texto = (typeof repOTexto === 'string')
         ? repOTexto : this.serializar(repOTexto);
       if (!texto) return '';
-      var base = 'index.html';
-      try {
-        base = window.location.href.split('?')[0].split('#')[0];
-      } catch (e) { /* sin location (pruebas) */ }
-      return base + '?rep=' + encodeURIComponent(texto);
+      return this.baseUrl() + '?rep=' + encodeURIComponent(texto);
+    },
+
+    /* =========================================================
+     * COMPARTIR UNA PARTIDA ONLINE POR ENLACE
+     *
+     * La local cabe entera en la URL. La de red no —son ~12 KB por minuto de
+     * partida— y comprimirla mejor no arregla nada: a los tres minutos ya no
+     * pasa por un chat. Así que el enlace lleva un CÓDIGO y la repetición se
+     * sube a la tabla `repeticiones` (supabase/repeticiones.sql).
+     *
+     * Cambia dónde vive el contenido, no lo que ve quien abre el enlace: llega,
+     * se descarga y se reproduce por el mismo camino de siempre (espectador de
+     * un archivo en vez de espectador de una sala).
+     * ========================================================= */
+    cfgNet: function () { return window.PM.NET_CFG || {}; },
+
+    compartirConfigurado: function () {
+      var c = this.cfgNet();
+      return !!(c.SUPABASE_URL && c.SUPABASE_KEY && window.fetch);
+    },
+
+    /* Código de 8 caracteres. Con azar de verdad si lo hay: dos partidas
+     * subidas en el mismo segundo no pueden salir con el mismo código. */
+    codigoNuevo: function () {
+      var S = CFG.REPLAY_SHARE;
+      var n = S.ID_LEN, out = '', i;
+      var c = (typeof window !== 'undefined') ? window.crypto : null;
+      if (c && c.getRandomValues) {
+        var bytes = new Uint8Array(n);
+        c.getRandomValues(bytes);
+        for (i = 0; i < n; i++) out += S.ALPHABET.charAt(bytes[i] % S.ALPHABET.length);
+        return out;
+      }
+      for (i = 0; i < n; i++) {
+        out += S.ALPHABET.charAt(Math.floor(Math.random() * S.ALPHABET.length));
+      }
+      return out;
+    },
+
+    restUrl: function (path) {
+      return String(this.cfgNet().SUPABASE_URL || '').replace(/\/+$/, '') + path;
+    },
+
+    restHeaders: function () {
+      var k = this.cfgNet().SUPABASE_KEY;
+      return {
+        'apikey': k,
+        'Authorization': 'Bearer ' + k,
+        'Content-Type': 'application/json'
+      };
+    },
+
+    /* Sube una repetición de red guardada y devuelve su enlace. cb(err, url).
+     *
+     * El código se guarda en la ficha local: volver a darle a COMPARTIR la
+     * misma partida devuelve EL MISMO enlace en vez de subirla otra vez. Sin
+     * esto, compartir dos veces dejaría dos copias en el servidor y dos
+     * enlaces distintos rodando por el chat de la misma partida. */
+    compartirRed: function (id, cb) {
+      var self = this;
+      var reg = this.porIdRed(id);
+      if (!reg || !reg.s) { cb('ESA REPETICIÓN YA NO ESTÁ', null); return; }
+      if (reg.rn) { cb(null, this.enlaceRed(reg.rn)); return; }
+      if (!this.compartirConfigurado()) { cb('COMPARTIR NECESITA CONEXIÓN', null); return; }
+      if (reg.s.length > CFG.REPLAY_SHARE.MAX_CHARS) {
+        cb('ESA PARTIDA ES DEMASIADO LARGA PARA COMPARTIRLA', null);
+        return;
+      }
+      var rep = this.leerRed(reg.s);
+      if (!rep) { cb('ESA REPETICIÓN ESTÁ ROTA', null); return; }
+      var fila = {
+        jugadores: rep.jugadores,
+        puntos: (rep.final && rep.final.puntos) || 0,
+        nivel: (rep.final && rep.final.nivel) || 1,
+        nombres: rep.nombres.join(' + ').slice(0, 64),
+        datos: reg.s
+      };
+      var h = this.restHeaders();
+      h['Prefer'] = 'return=minimal';
+
+      /* Si el código sorteado ya existe (que con 32^8 no va a pasar, pero el
+       * día que pase sería un enlace que enseña la partida de otro), se
+       * sortea otro. Cuatro intentos y a otra cosa. */
+      function intenta(quedan) {
+        var codigo = self.codigoNuevo();
+        fila.id = codigo;
+        fetch(self.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE), {
+          method: 'POST', headers: h, body: JSON.stringify(fila)
+        }).then(function (res) {
+          if (res.ok) {
+            self.apuntarCodigo(id, codigo);
+            cb(null, self.enlaceRed(codigo));
+            return;
+          }
+          return res.text().then(function (t) {
+            if (/duplicate|unique/i.test(t) && quedan > 1) { intenta(quedan - 1); return; }
+            if (/demasiadas repeticiones/i.test(t)) {
+              cb('DEMASIADAS SUBIDAS SEGUIDAS: ESPERA UN MINUTO', null);
+              return;
+            }
+            cb(/relation|does not exist|schema cache/i.test(t)
+              ? 'EL SERVIDOR TODAVÍA NO ADMITE ENLACES DE REPETICIÓN'
+              : 'NO SE PUDO SUBIR LA REPETICIÓN', null);
+          });
+        }).catch(function () { cb('NO SE PUDO SUBIR LA REPETICIÓN', null); });
+      }
+      intenta(CFG.REPLAY_SHARE.INTENTOS);
+    },
+
+    enlaceRed: function (codigo) {
+      return this.baseUrl() + '?' + CFG.REPLAY_SHARE.PARAM + '=' + codigo;
+    },
+
+    /* Deja apuntado en la ficha local que esa partida ya está subida */
+    apuntarCodigo: function (id, codigo) {
+      var lista = this.guardadasRed();
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id !== id) continue;
+        lista[i].rn = codigo;
+        try {
+          localStorage.setItem(CFG.REPLAY_NET_KEY, JSON.stringify(lista));
+        } catch (e) { /* si no cabe, se volverá a subir: no es grave */ }
+        return;
+      }
+    },
+
+    /* Abrir un enlace ?rn=<codigo>: se descarga y se ve. Es asíncrono, así que
+     * devuelve true en cuanto se pone a ello (quien llama tiene que dejar de
+     * hacer otras cosas con la URL) y avisa por pantalla si sale mal. */
+    verCompartida: function (codigo) {
+      var self = this;
+      var UI = window.PM.UI;
+      var c = String(codigo || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!c || !this.compartirConfigurado()) { this.avisoRoto(); return false; }
+      if (UI && UI.showPrompt) {
+        UI.showPrompt({
+          title: 'REPETICIÓN COMPARTIDA',
+          color: '#7ec8ff',
+          lines: ['DESCARGANDO LA PARTIDA...'],
+          buttons: []
+        });
+      }
+      fetch(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
+              '?id=eq.' + encodeURIComponent(c) + '&select=datos&limit=1'),
+            { headers: this.restHeaders() })
+        .then(function (res) {
+          if (!res.ok) throw new Error('no');
+          return res.json();
+        })
+        .then(function (filas) {
+          var texto = (filas && filas.length) ? filas[0].datos : '';
+          var rep = texto ? self.leerRed(texto) : null;
+          if (!rep) { self.avisoRoto(); return; }
+          if (UI && UI.hidePrompt) UI.hidePrompt();
+          self.verRed(rep);
+        })
+        .catch(function () { self.avisoRoto(); });
+      return true;
     },
 
     /* =========================================================
@@ -479,6 +655,12 @@
       this.redEmpezar();
       if (!G || G.netRole || G.isSpec()) return;
       if (!(G.playerCount === 1 || G.playerCount === 2)) return;
+      /* PAC-MAN VS. en local no se graba. El rumbo de quien lleva fantasma no
+       * pasa por Game.setPacDir —lo intercepta Versus.steer antes—, así que la
+       * repetición saldría con la mitad de las órdenes y al verla el fantasma
+       * humano se movería solo por su cuenta. Mejor no ofrecer una repetición
+       * que ofrecer una que miente. */
+      if (G.isVersus && G.isVersus()) return;
 
       var s = (opts && opts.cfg) || G.settings();
       var nombres = [];
@@ -496,8 +678,11 @@
       this.modo = 'grabar';
       this.grabando = {
         v: this.V,
-        // el modo DESATADO solo se juega en solo, así que no choca con dúo
-        modo: G.hab ? 'hab' : ((G.playerCount === 2) ? 'duo' : 'solo'),
+        /* DESATADO tiene su propio modo, y uno por cada número de jugadores:
+         * lo que cambia no es solo la etiqueta, es que en 'habduo' hay poderes
+         * de dos jugadores en las entradas. */
+        modo: G.hab ? ((G.playerCount === 2) ? 'habduo' : 'hab')
+                    : ((G.playerCount === 2) ? 'duo' : 'solo'),
         semilla: null,              // la deriva el propio juego del nivel
         nivel: G.level,
         jugadores: G.playerCount,
@@ -545,8 +730,9 @@
      * se encarga la recarga). */
     apuntaHab: function (idx, k) {
       if (!this.grabando) return;
-      if (idx !== 0 || !(k >= 0 && k < 4)) return;
-      this.grabando.entradas.push([this.t, 0, 4 + k]);
+      // los dos primeros: es lo que sabe codificar codHab (A..D y W..Z)
+      if (!(idx === 0 || idx === 1) || !(k >= 0 && k < 4)) return;
+      this.grabando.entradas.push([this.t, idx, 4 + k]);
       if (this.grabando.entradas.length > CFG.REPLAY_MAX_ENTRADAS) {
         this.grabando = null;
       }
@@ -1044,7 +1230,7 @@
         cfg: this.cfgDe(rep),
         names: rep.nombres.slice(),
         // sin esto las habilidades grabadas no tendrían dónde aplicarse
-        hab: rep.modo === 'hab'
+        hab: esDesatado(rep.modo)
       });
       return true;
     },
@@ -1079,10 +1265,17 @@
       return this.verTexto(String(fila.rep || fila.repeticion || fila.replay));
     },
 
-    /* Enlace ?rep=<texto> compartido: se abre directo en la repetición */
+    /* Enlace compartido: se abre directo en la repetición.
+     *   ?rep=<texto>   la partida entera dentro de la URL (partidas locales)
+     *   ?rn=<codigo>   solo el código; la partida se descarga (online)
+     * Se mira primero el de red porque es el nuevo y el más corto: si alguien
+     * pega los dos, gana el que señala a una partida de verdad. */
     desdeUrl: function () {
       var busca = '';
       try { busca = window.location.search || ''; } catch (e) { busca = ''; }
+      var mr = new RegExp('[?&]' + CFG.REPLAY_SHARE.PARAM + '=([A-Za-z0-9]+)')
+        .exec(busca);
+      if (mr) return this.verCompartida(mr[1]);
       var m = /[?&]rep=([^&#]*)/.exec(busca);
       if (!m) return false;
       var texto = m[1];

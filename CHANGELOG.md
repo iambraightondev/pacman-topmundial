@@ -2,6 +2,63 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-08-15 · Ya no se pierde la cuenta, DESATADO se juega de a dos y el fantasma responde
+
+- **Olvidar la contraseña ya no cuesta la cuenta.** Hasta hoy no había vuelta
+  atrás: el correo de la cuenta se compone por dentro, ese buzón no existe y
+  el enlace de recuperación de Supabase no llegaba a ninguna parte. Con la
+  cuenta se iban los cuatro récords, la experiencia, los logros y las doce
+  maestrías. **Ahora al registrarte se te enseña un CÓDIGO DE RECUPERACIÓN**
+  de 16 caracteres; lo apuntas, y con él vuelves a entrar poniendo una
+  contraseña nueva. En el servidor solo queda su huella, nunca el código.
+  - Quien ya tenía cuenta **no tiene código todavía**: se crea desde PERFIL →
+    CÓDIGO DE RECUPERACIÓN, y el panel avisa mientras no lo tengas.
+  - Se enseña **una sola vez**. Si lo pierdes, se genera otro (y el viejo deja
+    de valer en ese momento). Al usarlo para recuperar la cuenta se repone
+    solo, para que no te quedes otra vez sin red.
+  - «HE OLVIDADO LA CONTRASEÑA» está en el propio diálogo de ENTRAR, que es
+    donde se busca cuando no consigues entrar.
+- **DESATADO ya se juega entre dos en el mismo teclado.** No estaba porque el
+  J2 se mueve con WASD y la W era el turbo: una tecla no puede hacer dos
+  cosas. Ahora cada uno tiene una fila entera en su mitad del teclado — **J1
+  con las flechas y `N M , .`; J2 con WASD y `Z X C V`** — y la barra de
+  poderes enseña las dos, cada una con la recarga de su dueño. En solo y en
+  online no cambia nada: siguen siendo Q W E R.
+- **Y también en PAC-MAN VS., porque ahora el fantasma responde.** Tampoco
+  estaba, y por otro motivo: comerse de un mordisco a un fantasma que lleva
+  una persona, sin que pueda hacer nada, no es una pelea. **Quien lleva
+  fantasma tiene sus dos poderes**:
+  - **EMBESTIDA** — x1.35 de velocidad durante 4 s. Para cerrar la distancia,
+    o para salir corriendo cuando ves venir la Q.
+  - **ACECHO** — 4 s translúcido y **sin la marca del jugador encima**, que es
+    lo que hoy te delata desde el otro extremo del laberinto. Al que no ves
+    venir no le aciertas.
+- **Las habilidades ya suenan.** Los cuatro poderes eran mudos salvo por lo
+  que arrastraban de rebote, y justo los dos que no tocan el marcador —turbo y
+  flash— no sonaban nada, así que la tecla se sentía rota. Ahora cada uno
+  tiene su sonido, incluida la dentellada al aire, que suena **distinta** a la
+  que acierta: fallar la puntería y tener la tecla en recarga ya no se
+  confunden. Los dos del fantasma suenan más graves, para saber de qué lado
+  vino sin apartar la vista.
+- **El selector de modo recuerda tu elección.** Volvía a CLÁSICO en cada
+  recarga; ahora se queda donde lo dejaste.
+- **Las repeticiones se comparten por enlace, también las de online.** Las
+  locales caben enteras en la URL y ya funcionaban así por dentro, pero no
+  había botón; las de red pesan ~12 KB por minuto de partida y no caben, así
+  que **se suben y el enlace lleva solo un código** (`?rn=A3K9XQ7M`). Para
+  quien lo recibe son lo mismo: abre y ve la partida. El botón COMPARTIR está
+  en TUS PARTIDAS, al lado de VER.
+- **El progreso del DAILY empieza de cero.** La semana en curso, la racha y la
+  mejor racha se borran una vez: venían de cuando el DAILY contaba mal el día
+  (iba en UTC) y eran marcas hechas con otro calendario. **Los tres logros del
+  DAILY no se tocan**: eso ya está ganado.
+- Se ha **retirado la tabla `reto_diario`** de Supabase, que era lo último que
+  quedaba del RETO DE HOY. El juego no la tocaba desde el 14 de agosto.
+
+> Lo que **no** cambia: DESATADO sigue sin entrar en el top mundial ni en el
+> récord de siempre, juegue uno o dos. Es un modo aparte y tiene sus propias
+> maestrías, como LABERINTOS.
+
 ## 2026-08-15 · Cuatro arreglos: el día, el reto, los laberintos y las vidas
 
 - **El DAILY marcaba el día equivocado.** Un viernes por la tarde ya ponía

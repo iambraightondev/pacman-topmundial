@@ -94,6 +94,9 @@
     if (key === 'livesMode') {
       return LIVES_MODES.indexOf(value) !== -1 ? value : def;
     }
+    if (key === 'modePick') {
+      return CFG.MODE_IDS.indexOf(value) !== -1 ? value : def;
+    }
     if (key === 'vsGhost2') {
       var g = parseInt(value, 10);
       return (g >= 0 && g < 4) ? g : -1;
@@ -173,9 +176,9 @@
     { id: 'duo', name: 'DOS JUGADORES', tag: 'MISMO TECLADO', color: '#00ff00',
       icon: 'duo',
       desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO' },
-    { id: 'hab', name: 'DESATADO', tag: 'Q · W · E · R', color: '#ff66cc',
+    { id: 'hab', name: 'DESATADO', tag: '1 O 2 JUGADORES', color: '#ff66cc',
       icon: 'dientes',
-      desc: 'CUATRO PODERES CON SU RECARGA. AQUÍ SE MUEVE SOLO CON LAS FLECHAS' },
+      desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY' },
     { id: 'lab', name: 'LABERINTOS', tag: 'OTROS TRAZADOS', color: '#ffb852',
       icon: 'maze',
       desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR' },
@@ -434,7 +437,9 @@
         'J1: FLECHAS O WASD',
         'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
         'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
-        'DESATADO: SOLO FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
+        'DESATADO SOLO: FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
+        'DESATADO EN DOS: J1 FLECHAS Y ' + CFG.HAB.KEYS_2P[0].join(' ') +
+          ' · J2 WASD Y ' + CFG.HAB.KEYS_2P[1].join(' '),
         'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
       ];
       if (this.touchDevice) {
@@ -751,7 +756,11 @@
       caja2.appendChild(wrap);
       caja2.appendChild(dots);
 
-      this.modePick = this.modePick || 'clasico';
+      /* El modo elegido se recuerda entre recargas (ajuste `modePick`). Antes
+       * vivía solo en memoria y el carrusel volvía a CLÁSICO en cada arranque:
+       * con la rejilla vieja se notaba poco —se veían los seis— y con el
+       * carrusel es un peaje de dos flechas cada vez que abres el juego. */
+      this.modePick = modoPorId(window.PM.settings.modePick).id;
       return caja2;
     },
 
@@ -806,6 +815,13 @@
 
     pickMode: function (id) {
       this.modePick = modoPorId(id).id;
+      /* Se guarda al elegir, no al jugar: elegir ya es la decisión, y quien
+       * abre el juego, se asoma a un modo y se va, la próxima vez lo encuentra
+       * donde lo dejó. */
+      if (window.PM.settings.modePick !== this.modePick) {
+        window.PM.settings.modePick = this.modePick;
+        saveSettings();
+      }
       this.refreshModePicker();
     },
 
@@ -875,6 +891,11 @@
       this.resumeAudio();
       if (id === 'lab') { this.showMazes(); return; }
       if (id === 'online') { this.showOnline(); return; }
+      /* DESATADO abre su panel, como LABERINTOS y ONLINE: desde que se puede
+       * jugar acompañado hay algo que elegir antes de que haya partida, y de
+       * paso ahí están escritas las teclas, que ya no son las mismas en solo
+       * que en dos. */
+      if (id === 'hab') { this.showHabPrompt(); return; }
       this.hideAll();
       if (id === 'duo') {
         // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
@@ -882,7 +903,7 @@
         window.PM.Game.newGame({ players: 2, ghosts: [-1, s.vsGhost2] });
         return;
       }
-      window.PM.Game.newGame({ players: 1, hab: (id === 'hab') });
+      window.PM.Game.newGame({ players: 1 });
     },
 
     makeButton: function (label, onClick) {
@@ -2705,6 +2726,15 @@
         });
         guardar.classList.add('btn-preset');
         row.appendChild(guardar);
+        /* La llave de repuesto. Va en el perfil y no escondida en opciones
+         * porque quien se registró ANTES de que esto existiera no tiene
+         * ninguna, y hay que empujarle a crearla: sin código, olvidar la
+         * contraseña sigue costando la cuenta entera. */
+        var codigo = this.makeButton('CÓDIGO DE RECUPERACIÓN', function () {
+          self.showNewCodePrompt();
+        });
+        codigo.classList.add('btn-preset');
+        row.appendChild(codigo);
         var salir = this.makeButton('CERRAR SESIÓN', function () {
           Ac.signOut(function () { self.refreshProfile(); });
         });
@@ -2712,6 +2742,17 @@
         row.appendChild(salir);
         this.profAccountNote.textContent =
           'TU NIVEL, LOGROS, MAESTRÍAS, RÉCORDS Y AMIGOS SE GUARDAN EN LA CUENTA';
+        /* Y se pregunta si la tiene. La respuesta tarda lo que tarde la red,
+         * así que el renglón se escribe cuando llega y solo si el panel sigue
+         * puesto: entretanto se lee lo de siempre, que no es mentira. */
+        Ac.tieneCodigo(function (err, fecha) {
+          if (err || !self.profAccountNote) return;
+          if (!Ac.logged()) return;
+          self.profAccountNote.textContent = fecha
+            ? ('TIENES CÓDIGO DE RECUPERACIÓN · TU PROGRESO SE GUARDA EN LA CUENTA')
+            : ('NO TIENES CÓDIGO DE RECUPERACIÓN: SI OLVIDAS LA CONTRASEÑA, ' +
+               'PIERDES LA CUENTA. CRÉALO AHORA');
+        });
       } else {
         this.profAccountMsg.textContent = 'JUEGAS COMO INVITADO';
         var entrar = this.makeButton('ENTRAR', function () {
@@ -2820,18 +2861,45 @@
         var fn = crear ? Ac.signUp : Ac.signIn;
         fn.call(Ac, usuario, pass, function (err) {
           if (err) { self.setPromptStatus(err, true); return; }
-          self.hidePrompt();
           self.refreshNicks();
           self.refreshProfile();
           self.refreshFriends();
+          /* Cuenta recién creada: lo primero que ve es su código de
+           * recuperación, ANTES de seguir jugando. Es el único momento en que
+           * se puede enseñar (después solo queda su huella en el servidor) y
+           * es la diferencia entre olvidar la contraseña y perder la cuenta.
+           * Si el servidor todavía no tiene la tabla puesta se dice y ya: la
+           * cuenta está creada igual y no se le puede bloquear el juego. */
+          if (!crear) { self.hidePrompt(); return; }
+          self.setPromptStatus('CREANDO TU CÓDIGO DE RECUPERACIÓN...', false);
+          Ac.nuevoCodigo(function (err2, codigo) {
+            if (err2) {
+              self.showCodePrompt('', err2);
+              return;
+            }
+            self.showCodePrompt(codigo, '');
+          });
         });
       }
+
+      var botones = [
+        { label: crear ? 'CREAR' : 'ENTRAR', primary: true, onClick: enviar }
+      ];
+      /* La puerta de vuelta va JUNTO A LA DE ENTRAR, que es donde se busca:
+       * quien no consigue entrar no se va al perfil a mirar opciones. */
+      if (!crear) {
+        botones.push({ label: 'HE OLVIDADO LA CONTRASEÑA',
+          onClick: function () { self.showRecoverPrompt(usuario); } });
+      }
+      botones.push({ label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+        onClick: function () { self.hidePrompt(); } });
 
       this.showPrompt({
         title: crear ? 'CREAR CUENTA' : 'ENTRAR',
         lines: crear
           ? ['ELIGE UN USUARIO Y UNA CONTRASEÑA',
-             'EL USUARIO SERÁ TU NOMBRE EN EL JUEGO']
+             'EL USUARIO SERÁ TU NOMBRE EN EL JUEGO',
+             'AL TERMINAR TE DAMOS UN CÓDIGO DE RECUPERACIÓN: APÚNTALO']
           : ['ENTRA CON TU USUARIO Y CONTRASEÑA'],
         fields: [
           { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX,
@@ -2840,10 +2908,178 @@
             onInput: function (v) { pass = v; }, onAccept: enviar }
         ],
         status: '',
+        buttons: botones
+      });
+    },
+
+    /* ------------------------------------------------------
+     * Código de recuperación
+     *
+     * Antes de esto, olvidar la contraseña era PERDER LA CUENTA: los cuatro
+     * récords, la experiencia, los logros y las doce maestrías, sin vuelta
+     * atrás, porque el correo se compone por dentro y ese buzón no existe.
+     *
+     * El código se enseña UNA VEZ y en el servidor solo queda su huella. Eso
+     * obliga a que esta pantalla sea insistente —no hay un "vuelve a
+     * enseñármelo" en ninguna parte— y a que se pueda copiar de un toque:
+     * copiar y pegar en las notas del móvil es lo que va a hacer la gente.
+     * ------------------------------------------------------ */
+    showCodePrompt: function (codigo, error) {
+      var self = this;
+      var lineas, botones = [];
+      if (codigo) {
+        lineas = [
+          { text: codigo, big: true },
+          'APÚNTALO O CÓPIALO AHORA: NO SE PUEDE VOLVER A VER',
+          'CON ÉL RECUPERAS LA CUENTA SI OLVIDAS LA CONTRASEÑA',
+          'PUEDES GENERAR OTRO CUANDO QUIERAS EN PERFIL (EL VIEJO DEJA DE VALER)'
+        ];
+        botones.push({ label: 'COPIAR', onClick: function () {
+          self.copiarTexto(codigo, 'CÓDIGO COPIADO');
+        } });
+      } else {
+        lineas = [
+          'NO SE HA PODIDO CREAR TU CÓDIGO DE RECUPERACIÓN',
+          error || '',
+          'LA CUENTA ESTÁ CREADA Y FUNCIONA. INTÉNTALO DESDE PERFIL MÁS TARDE'
+        ];
+      }
+      botones.push({ label: codigo ? 'LO HE APUNTADO' : 'SEGUIR', primary: true,
+        keys: ['Enter', 'Escape'], hint: 'ENTER',
+        onClick: function () {
+          self.hidePrompt();
+          self.refreshProfile();
+        } });
+      this.showPrompt({
+        title: codigo ? 'TU CÓDIGO DE RECUPERACIÓN' : 'SIN CÓDIGO',
+        color: codigo ? '#00ffff' : '#ff8c00',
+        solid: true,
+        lines: lineas,
+        status: '',
+        buttons: botones
+      });
+      this.promptTag = 'codigo';
+    },
+
+    /* Copiar al portapapeles con red de seguridad: navigator.clipboard solo
+     * existe en contexto seguro, así que si no está se cae al truco de
+     * siempre (un textarea invisible y execCommand). Si tampoco, se dice. */
+    copiarTexto: function (texto, hecho) {
+      var self = this;
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = texto;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          self.setPromptStatus(ok ? hecho : 'CÓPIALO A MANO', !ok);
+        } catch (e) {
+          self.setPromptStatus('CÓPIALO A MANO', true);
+        }
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto)
+          .then(function () { self.setPromptStatus(hecho, false); })
+          .catch(fallback);
+        return;
+      }
+      fallback();
+    },
+
+    /* Generar uno nuevo desde PERFIL. Avisa de que el anterior deja de valer:
+     * quien lo tenga apuntado en un papel se quedaría con un papel inútil sin
+     * enterarse, y eso es peor que no tener código. */
+    showNewCodePrompt: function () {
+      var self = this;
+      var Ac = window.PM.Account;
+      this.showPrompt({
+        title: 'CÓDIGO DE RECUPERACIÓN',
+        color: '#00ffff',
+        lines: [
+          'SE CREARÁ UN CÓDIGO NUEVO Y SE ENSEÑARÁ UNA SOLA VEZ',
+          'SI YA TENÍAS UNO APUNTADO, DEJARÁ DE VALER EN ESE MOMENTO'
+        ],
+        status: '',
         buttons: [
-          { label: crear ? 'CREAR' : 'ENTRAR', primary: true, onClick: enviar },
+          { label: 'CREAR CÓDIGO', primary: true, onClick: function () {
+            self.setPromptStatus('CREANDO...', false);
+            Ac.nuevoCodigo(function (err, codigo) {
+              if (err) { self.setPromptStatus(err, true); return; }
+              self.showCodePrompt(codigo, '');
+            });
+          } },
           { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* Recuperar la cuenta: usuario + código + contraseña nueva. Al terminar se
+     * entra solo y sale el código NUEVO, porque el usado ya no vale. */
+    showRecoverPrompt: function (usuarioPrevio) {
+      var self = this;
+      var Ac = window.PM.Account;
+      var usuario = usuarioPrevio || '', codigo = '', pass = '';
+
+      /* El código se copia de un papel: se acepta en minúsculas, con espacios
+       * o sin guiones, y se va agrupando de cuatro en cuatro mientras se
+       * escribe para que se pueda cotejar con lo apuntado de un vistazo. */
+      function filtraCodigo(v) {
+        var limpio = Ac.cleanCode(v).slice(0, CFG.ACCOUNT.CODE_LEN);
+        return Ac.groupCode(limpio);
+      }
+
+      function enviar() {
+        self.setPromptStatus('COMPROBANDO...', false);
+        Ac.recuperar(usuario, codigo, pass, function (err, res) {
+          if (err) { self.setPromptStatus(err, true); return; }
+          self.refreshNicks();
+          self.refreshProfile();
+          self.refreshFriends();
+          if (res.codigo) { self.showCodePrompt(res.codigo, ''); return; }
+          /* El servidor cambió la contraseña pero no pudo reponer el código:
+           * se dice, porque el papel viejo SIGUE valiendo y eso hay que
+           * saberlo (aquí no se puede mentir en ninguna de las dos
+           * direcciones). */
+          self.showPrompt({
+            title: 'CONTRASEÑA CAMBIADA',
+            color: '#00ffff',
+            solid: true,
+            lines: ['YA PUEDES JUGAR CON TU CUENTA',
+                    res.aviso || 'GUARDA BIEN TU CÓDIGO'],
+            buttons: [
+              { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape'],
+                hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+            ]
+          });
+        });
+      }
+
+      this.showPrompt({
+        title: 'RECUPERAR CUENTA',
+        color: '#00ffff',
+        lines: [
+          'ESCRIBE TU USUARIO, EL CÓDIGO QUE APUNTASTE Y UNA CONTRASEÑA NUEVA',
+          'SI NO TIENES CÓDIGO, NO HAY OTRA FORMA DE ENTRAR'
+        ],
+        fields: [
+          { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX, value: usuario,
+            onInput: function (v) { usuario = v; } },
+          { placeholder: 'CÓDIGO XXXX-XXXX-XXXX-XXXX', maxLength: 24,
+            filter: filtraCodigo,
+            onInput: function (v) { codigo = v; } },
+          { placeholder: 'CONTRASEÑA NUEVA', password: true, maxLength: 40,
+            onInput: function (v) { pass = v; }, onAccept: enviar }
+        ],
+        status: '',
+        buttons: [
+          { label: 'RECUPERAR', primary: true, onClick: enviar },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.showAccountPrompt('entrar'); } }
         ]
       });
     },
@@ -3478,10 +3714,11 @@
          * viven en su propio almacén, pero desde aquí se ven igual. */
         var R = window.PM.Replay;
         var reg = (R && R.paraPartida) ? R.paraPartida(h) : null;
-        if (reg) row.appendChild(this.makeReplayBtn(reg.id, false));
-        else {
-          var red = (R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
-          if (red) row.appendChild(this.makeReplayBtn(red.id, true));
+        var red = null;
+        if (!reg) red = (R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
+        if (reg || red) {
+          row.appendChild(this.makeReplayBtn((reg || red).id, !reg));
+          row.appendChild(this.makeShareBtn((reg || red).id, !reg));
         }
 
         this.rankList.appendChild(row);
@@ -3494,10 +3731,84 @@
         if (deRed) window.PM.Replay.verRedGuardada(id);
         else window.PM.Replay.verGuardada(id);
       });
+      return this.chico(b);
+    },
+
+    /* Y el de COMPARTIR, que es donde se nota la diferencia entre las dos:
+     * la local cabe entera en la URL y el enlace se hace aquí mismo, sin
+     * servidor; la de red se sube y el enlace lleva solo su código. Para quien
+     * lo recibe son lo mismo, que es de lo que se trata. */
+    makeShareBtn: function (id, deRed) {
+      var self = this;
+      var b = this.makeButton('COMPARTIR', function () {
+        var R = window.PM.Replay;
+        if (!R) return;
+        if (!deRed) {
+          var reg = R.porId(id);
+          var url = reg ? R.enlace(reg.s) : '';
+          if (!url) { self.showShareError('ESA REPETICIÓN YA NO ESTÁ'); return; }
+          self.showSharePrompt(url, false);
+          return;
+        }
+        self.showPrompt({
+          title: 'COMPARTIR REPETICIÓN',
+          color: '#7ec8ff',
+          lines: ['SUBIENDO LA PARTIDA...'],
+          buttons: []
+        });
+        R.compartirRed(id, function (err, url) {
+          if (err) { self.showShareError(err); return; }
+          self.showSharePrompt(url, true);
+        });
+      });
+      return this.chico(b);
+    },
+
+    /* Botón de fila: el mismo estilo para VER y COMPARTIR */
+    chico: function (b) {
       b.classList.add('tab');
       b.style.padding = '4px 10px';
       b.style.fontSize = '10px';
       return b;
+    },
+
+    showShareError: function (msg) {
+      var self = this;
+      this.showPrompt({
+        title: 'NO SE PUDO COMPARTIR',
+        color: '#ff8c00',
+        lines: [msg || 'INTÉNTALO MÁS TARDE'],
+        buttons: [
+          { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape'],
+            hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* El enlace, listo para copiar. Se enseña entero aunque sea largo: si
+     * copiar falla (o el navegador no deja), tiene que poder cogerse a mano. */
+    showSharePrompt: function (url, deRed) {
+      var self = this;
+      this.showPrompt({
+        title: 'ENLACE DE LA REPETICIÓN',
+        color: '#7ec8ff',
+        solid: true,
+        lines: [
+          url,
+          deRed
+            ? 'LA PARTIDA ESTÁ SUBIDA: EL ENLACE VALE PARA CUALQUIERA, DURE LO QUE DURE'
+            : 'LA PARTIDA VA DENTRO DEL ENLACE: FUNCIONA SIN SERVIDOR Y SIN CADUCAR',
+          'QUIEN LO ABRA VERÁ LA PARTIDA. NO CUENTA PARA NADA: NI PUNTOS, NI LOGROS, NI RÉCORD'
+        ],
+        status: '',
+        buttons: [
+          { label: 'COPIAR', primary: true, onClick: function () {
+            self.copiarTexto(url, 'ENLACE COPIADO');
+          } },
+          { label: 'CERRAR', keys: ['Escape', 'Enter'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
     },
 
     renderRanking: function (rows) {
@@ -3878,6 +4189,9 @@
           el.className = 'nick-input';
           el.maxLength = f.maxLength || CFG.NICK_MAX;
           el.placeholder = f.placeholder || '';
+          // arrastrar lo ya escrito de un diálogo al siguiente (el usuario que
+          // se tecleó al intentar entrar sigue puesto al ir a recuperar)
+          if (f.value) el.value = f.value;
           el.setAttribute('autocomplete', f.password ? 'current-password' : 'off');
           el.setAttribute('spellcheck', 'false');
           el.addEventListener('keydown', function (ev) {
@@ -3885,11 +4199,14 @@
             if (ev.key === 'Enter' && f.onAccept) f.onAccept(el.value);
           });
           el.addEventListener('input', function () {
-            // el usuario se filtra como un nombre del juego; la clave, tal cual
-            if (!f.password) {
-              var v = filterNick(el.value).replace(/[^A-Z0-9]/g, '');
-              if (v !== el.value) el.value = v;
-            }
+            /* El usuario se filtra como un nombre del juego y la clave va tal
+             * cual. `f.filter` es para lo que no es ni una cosa ni la otra: el
+             * código de recuperación, que lleva guiones y se copia de un papel
+             * (ver showRecoverPrompt). */
+            var v = el.value;
+            if (f.filter) v = f.filter(v);
+            else if (!f.password) v = filterNick(v).replace(/[^A-Z0-9]/g, '');
+            if (v !== el.value) el.value = v;
             if (f.onInput) f.onInput(el.value);
           });
           p.appendChild(el);
@@ -4377,11 +4694,48 @@
      * el dedo en el móvil. Ver js/habilidades.js.
      * ------------------------------------------------------ */
     buildHabBar: function () {
-      var self = this;
       var bar = document.createElement('div');
       bar.id = 'habBar';
       bar.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
-      this.habBtns = [];
+      /* Un grupo por jugador. En solo y en online solo se usa el primero; con
+       * dos en el mismo teclado se encienden los dos, cada uno con SUS teclas
+       * (CFG.HAB.KEYS_2P) y con la recarga de SU jugador. Se montan los dos
+       * siempre porque montarlos cuesta una vez y encenderlos cuesta nada. */
+      this.habGroups = [];
+      for (var gi = 0; gi < 2; gi++) {
+        var grupo = this.buildHabGroup(gi);
+        bar.appendChild(grupo.caja);
+        this.habGroups.push(grupo);
+      }
+      /* Dentro del ESCENARIO, no del body: así queda pegada bajo el laberinto
+       * y en la misma mirada que la fila de vidas y frutas. Con el ratón, mirar
+       * una recarga ya no obliga a apartar los ojos de la partida.
+       *
+       * En táctil no: ahí abajo manda la cruceta —que va centrada— y la barra
+       * se queda flotando en su esquina, donde llega el otro pulgar. */
+      bar.classList.toggle('fija', !!this.touchDevice);
+      var stage = document.getElementById('stage');
+      (stage || document.body).appendChild(bar);
+      this.habBar = bar;
+    },
+
+    /* Un grupo de poderes. Se montan cuatro botones aunque quien lleva un
+     * fantasma solo use dos: los que sobran se esconden al refrescar, que sale
+     * más barato que rehacer el DOM cada vez que cambia el reparto. */
+    buildHabGroup: function (gi) {
+      var self = this;
+      var caja = document.createElement('div');
+      caja.className = 'hab-grupo';
+
+      /* De quién es esta fila. Solo se ve con dos en el mismo teclado, que es
+       * cuando hay dos filas y hace falta saber cuál mirar. */
+      var quien = document.createElement('span');
+      quien.className = 'hab-quien';
+      quien.textContent = 'J' + (gi + 1);
+      quien.style.display = 'none';   // solo con dos en el mismo teclado
+      caja.appendChild(quien);
+
+      var btns = [];
       CFG.HAB.LIST.forEach(function (h, k) {
         var b = document.createElement('button');
         b.type = 'button';
@@ -4405,21 +4759,22 @@
           self.resumeAudio();
           var g = window.PM.Game;
           if (!g.hab || !window.PM.Hab) return;
-          window.PM.Hab.pulsar(g, g.localIdx, k);
+          window.PM.Hab.pulsar(g, self.habIdxDe(gi), k);
         });
-        bar.appendChild(b);
-        self.habBtns.push({ b: b, fill: fill, ultimo: -1, listo: null });
+        caja.appendChild(b);
+        btns.push({ b: b, fill: fill, key: lab, name: nom,
+                    ultimo: -1, listo: null, tecla: h.key, nombre: h.name,
+                    visible: true });
       });
-      /* Dentro del ESCENARIO, no del body: así queda pegada bajo el laberinto
-       * y en la misma mirada que la fila de vidas y frutas. Con el ratón, mirar
-       * una recarga ya no obliga a apartar los ojos de la partida.
-       *
-       * En táctil no: ahí abajo manda la cruceta —que va centrada— y la barra
-       * se queda flotando en su esquina, donde llega el otro pulgar. */
-      bar.classList.toggle('fija', !!this.touchDevice);
-      var stage = document.getElementById('stage');
-      (stage || document.body).appendChild(bar);
-      this.habBar = bar;
+      return { caja: caja, quien: quien, btns: btns, on: true };
+    },
+
+    /* Qué jugador maneja el grupo `gi`. Con dos en el mismo teclado, cada
+     * grupo es de su jugador; en solo y en online solo hay uno y es el tuyo
+     * (que en online no tiene por qué ser el 0). */
+    habIdxDe: function (gi) {
+      var g = window.PM.Game;
+      return (g.playerCount === 2 && !g.netRole) ? gi : g.localIdx;
     },
 
     /* Le cuenta al escenario que la barra está puesta y cuánto ocupa.
@@ -4444,7 +4799,7 @@
     refreshHabBar: function () {
       var g = window.PM.Game;
       var A = window.PM.Hab;
-      if (!this.habBar || !this.habBtns) return;
+      if (!this.habBar || !this.habGroups) return;
       var ver = !!(g.hab && A && !g.isSpec() && g.inGame() &&
                    g.state !== 'GAME_OVER' && !this.promptOpen);
       /* Encenderla o apagarla cambia lo que mide el escenario (va bajo el
@@ -4457,25 +4812,73 @@
         this.fitCanvas();
       }
       if (!ver) return;
-      var idx = g.localIdx;
-      for (var k = 0; k < this.habBtns.length; k++) {
-        var o = this.habBtns[k];
-        var pct = Math.round(A.carga(idx, k) * 100);
-        if (pct !== o.ultimo) {
-          o.fill.style.height = pct + '%';
-          o.ultimo = pct;
-        }
-        var listo = (pct >= 100);
-        if (listo !== o.listo) {
-          o.b.classList.toggle('listo', listo);
-          o.listo = listo;
+      /* Dos en el mismo teclado: dos grupos, cada uno con su etiqueta. Esto se
+       * llama 60 veces por segundo, así que solo se toca el DOM cuando cambia
+       * de verdad —y encender o apagar un grupo cambia lo que mide el
+       * escenario, que obliga a rehacer el encaje del lienzo. */
+      var dual = (g.playerCount === 2 && !g.netRole);
+      var gi, grupo;
+      if (dual !== this.habDual) {
+        this.habDual = dual;
+        for (gi = 0; gi < this.habGroups.length; gi++) {
+          this.habGroups[gi].quien.style.display = dual ? '' : 'none';
         }
       }
-      // el turbo activo se marca aparte: recargando y encendida son cosas
-      // distintas y en la misma casilla se confundirían
-      var st = A.estado(idx);
-      if (st && this.habBtns[1]) {
-        this.habBtns[1].b.classList.toggle('activa', st.turbo > 0);
+      for (gi = 0; gi < this.habGroups.length; gi++) {
+        grupo = this.habGroups[gi];
+        var activo = (gi === 0) || dual;
+        if (activo !== grupo.on) {
+          grupo.on = activo;
+          grupo.caja.style.display = activo ? '' : 'none';
+          this.marcarHabBar();
+          this.fitCanvas();
+        }
+        if (!activo) continue;
+        var idx = this.habIdxDe(gi);
+        /* Quien lleva un fantasma tiene otra lista (dos poderes en vez de
+         * cuatro) y hasta otros nombres, así que las etiquetas se refrescan
+         * aquí en vez de escribirse al montar: en PAC-MAN VS. el reparto de
+         * fantasmas se decide después de construir la barra. */
+        var lista = A.listaDe(g, idx);
+        var teclas = dual ? CFG.HAB.KEYS_2P[gi] : null;
+        for (var k = 0; k < grupo.btns.length; k++) {
+          var o = grupo.btns[k];
+          var h = lista[k];
+          var visible = !!h;
+          if (visible !== o.visible) {
+            o.visible = visible;
+            o.b.style.display = visible ? '' : 'none';
+          }
+          if (!visible) continue;
+          var tecla = teclas ? teclas[k] : h.key;
+          if (tecla !== o.tecla) { o.tecla = tecla; o.key.textContent = tecla; }
+          if (h.name !== o.nombre) {
+            o.nombre = h.name;
+            o.name.textContent = h.name;
+            o.b.setAttribute('aria-label', h.name);
+          }
+          var pct = Math.round(A.carga(g, idx, k) * 100);
+          if (pct !== o.ultimo) {
+            o.fill.style.height = pct + '%';
+            o.ultimo = pct;
+          }
+          var listo = (pct >= 100);
+          if (listo !== o.listo) {
+            o.b.classList.toggle('listo', listo);
+            o.listo = listo;
+          }
+        }
+        /* Lo que está ENCENDIDO ahora mismo se marca aparte: recargando y
+         * encendida son cosas distintas y en la misma casilla se confundirían.
+         * Del fantasma se encienden sus dos; de Pac-Man, solo el turbo (el
+         * mordisco y el flash duran un parpadeo y no hay nada que marcar). */
+        var st = A.estado(idx);
+        if (st) {
+          var esFantasma = (lista === CFG.HAB.LIST_G);
+          grupo.btns[0].b.classList.toggle('activa', esFantasma && st.carga > 0);
+          grupo.btns[1].b.classList.toggle('activa',
+            esFantasma ? st.acecho > 0 : st.turbo > 0);
+        }
       }
     },
 
@@ -4602,32 +5005,57 @@
     showHabPrompt: function () {
       var self = this;
       var H = CFG.HAB;
+      var s = window.PM.settings;
+      /* ¿El J2 va a llevar un fantasma? Se elige en OPCIONES · PARTIDA y aquí
+       * solo se cuenta, porque cambia por completo lo que hace la segunda
+       * fila de teclas: con fantasma son dos poderes, no cuatro. */
+      var conFantasma = (s.vsGhost2 >= 0 && s.vsGhost2 < 4);
+      var t2 = H.KEYS_2P;
+
+      function arranca(jugadores) {
+        self.resumeAudio();
+        self.hidePrompt();
+        self.hideAll();
+        var opts = { players: jugadores, hab: true };
+        if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
+        window.PM.Game.newGame(opts);
+      }
+
       this.showPrompt({
         title: 'DESATADO',
         color: '#ff66cc',
         lines: [
           'EL LABERINTO DE SIEMPRE CON CUATRO PODERES. CADA UNO CON SU TECLA Y SU RECARGA',
-          'Q MORDISCO · TE COMES AL FANTASMA QUE TENGAS PEGADO, MIRES HACIA DONDE MIRES (' +
+          'MORDISCO · TE COMES AL FANTASMA QUE TENGAS PEGADO, MIRES HACIA DONDE MIRES (' +
             H.segs(0) + 'S)',
-          'W TURBO · X1.5 DE VELOCIDAD DURANTE ' + (H.TURBO_TICKS / 60) +
+          'TURBO · X1.5 DE VELOCIDAD DURANTE ' + (H.TURBO_TICKS / 60) +
             'S (' + H.segs(1) + 'S)',
-          'E FLASH · ' + H.FLASH_TILES +
+          'FLASH · ' + H.FLASH_TILES +
             ' CASILLAS ATRAVESANDO MUROS HACIA LA ÚLTIMA FLECHA QUE PULSES, MIRE PAC-MAN DONDE MIRE, COMIENDO LO QUE PILLES (' +
             H.segs(2) + 'S)',
-          'R GRITO · LOS CUATRO FANTASMAS SE ASUSTAN ' + H.SHOUT_SECS +
+          'GRITO · LOS CUATRO FANTASMAS SE ASUSTAN ' + H.SHOUT_SECS +
             'S SIN SUPERPASTILLA (' + H.segs(3) + 'S)',
-          'AQUÍ SE MUEVE SOLO CON LAS FLECHAS: LA W ES EL TURBO',
+          'SOLO: FLECHAS PARA MOVERTE Y Q W E R PARA LOS PODERES (AQUÍ WASD NO MUEVE: LA W ES EL TURBO)',
+          /* Con dos, las teclas cambian y hay que decirlo ANTES de empezar: es
+           * la única pantalla donde se pueden leer, y una partida en la que no
+           * sabes qué tecla es la tuya dura diez segundos. */
+          'DOS JUGADORES: J1 CON FLECHAS Y ' + t2[0].join(' ') +
+            '  ·  J2 CON WASD Y ' + t2[1].join(' '),
+          conFantasma
+            ? ('EL J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
+               ': SUS DOS PODERES SON ' + t2[1][0] + ' EMBESTIDA (X' +
+               H.CHARGE_MULT + ' ' + (H.CHARGE_TICKS / 60) + 'S) Y ' + t2[1][1] +
+               ' ACECHO (' + (H.STALK_TICKS / 60) +
+               'S TRANSLÚCIDO Y SIN MARCA ENCIMA)')
+            : 'EN OPCIONES · PARTIDA PUEDES PONER AL J2 A LLEVAR UN FANTASMA: ENTONCES TIENE SUS PROPIOS PODERES',
           'ES UN MODO APARTE, ASÍ QUE ESTAS PARTIDAS NO ENTRAN EN EL TOP MUNDIAL NI HACEN RÉCORD — PERO SÍ SUMAN EXPERIENCIA Y LOGROS',
           'EN PARTY LO JUEGA TODO EL GRUPO: LO ENCIENDE QUIEN MANDA, EN EL PANEL DE ONLINE'
         ],
         buttons: [
           { label: 'JUGAR SOLO', primary: true, keys: ['Enter'], hint: 'ENTER',
-            onClick: function () {
-              self.resumeAudio();
-              self.hidePrompt();
-              self.hideAll();
-              window.PM.Game.newGame({ players: 1, hab: true });
-            } },
+            onClick: function () { arranca(1); } },
+          { label: 'DOS JUGADORES', keys: ['2'], hint: '2',
+            onClick: function () { arranca(2); } },
           { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
         ]
@@ -4694,11 +5122,15 @@
      * Entrada: teclado y gestos táctiles
      * J1: flechas (y WASD en 1 jugador) · J2: WASD
      *
-     * En el modo DESATADO, WASD DEJA DE MOVER: la W es el turbo, y no se
-     * puede tener la misma tecla haciendo dos cosas. Se avisa en la portada
-     * y en el rótulo del propio modo. Por eso ese modo no se ofrece en dos
-     * jugadores en el mismo teclado, que es donde el J2 se quedaría sin
-     * manera de moverse.
+     * En el modo DESATADO A UN JUGADOR, WASD DEJA DE MOVER: la W es el turbo,
+     * y no se puede tener la misma tecla haciendo dos cosas. Se avisa en la
+     * portada y en el rótulo del propio modo.
+     *
+     * CON DOS EN EL MISMO TECLADO es al revés: el J2 necesita su WASD, así que
+     * los poderes se mudan a una fila por cabeza (CFG.HAB.KEYS_2P) — N M , .
+     * para el J1 y Z X C V para el J2 — y WASD vuelve a mover. Es la única
+     * forma de que quepan dos juegos de poderes sin que dos jugadores se
+     * peleen por la misma tecla.
      * ------------------------------------------------------ */
     bindKeyboard: function () {
       var self = this;
@@ -4710,7 +5142,22 @@
         'w': D.UP, 'a': D.LEFT, 's': D.DOWN, 'd': D.RIGHT,
         'W': D.UP, 'A': D.LEFT, 'S': D.DOWN, 'D': D.RIGHT
       };
-      var HAB_KEYS = { q: 0, w: 1, e: 2, r: 3, Q: 0, W: 1, E: 2, R: 3 };
+      /* Tecla -> número de poder. Se monta desde CFG para que no puedan
+       * separarse de lo que enseña la barra del HUD, que lee de ahí mismo. */
+      function habMapa(teclas) {
+        var m = {};
+        for (var i = 0; i < teclas.length; i++) {
+          m[teclas[i]] = i;
+          m[String(teclas[i]).toLowerCase()] = i;
+        }
+        return m;
+      }
+      var HAB_KEYS = habMapa((function () {
+        var t = [];
+        for (var i = 0; i < CFG.HAB.LIST.length; i++) t.push(CFG.HAB.LIST[i].key);
+        return t;
+      })());
+      var HAB_2P = [habMapa(CFG.HAB.KEYS_2P[0]), habMapa(CFG.HAB.KEYS_2P[1])];
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
         if (self.chatOpen) return;       // escribiendo: lo lleva el propio campo
@@ -4753,22 +5200,39 @@
           return;
         }
 
-        /* DESATADO: Q/W/E/R. Va ANTES que WASD a propósito, porque en este
-         * modo la W es el turbo y no el "arriba" de siempre. */
-        if (g.hab && (ev.key in HAB_KEYS)) {
-          if (canControl && window.PM.Hab) {
-            self.resumeAudio();
-            window.PM.Hab.pulsar(g, g.localIdx, HAB_KEYS[ev.key]);
-            ev.preventDefault();
+        /* DESATADO. Va ANTES que WASD a propósito: a un jugador la W es el
+         * turbo y no el "arriba" de siempre.
+         *
+         * Con dos en el mismo teclado cada uno tiene su propia fila y hay que
+         * saber DE QUIÉN es la tecla, que es lo que aquí se averigua. */
+        var dosLocal = (g.playerCount === 2 && !g.netRole);
+        if (g.hab) {
+          var quien = -1, cual = -1, j;
+          if (dosLocal) {
+            for (j = 0; j < HAB_2P.length && j < g.playerCount; j++) {
+              if (ev.key in HAB_2P[j]) { quien = j; cual = HAB_2P[j][ev.key]; break; }
+            }
+          } else if (ev.key in HAB_KEYS) {
+            quien = g.localIdx;
+            cual = HAB_KEYS[ev.key];
           }
-          return;
+          if (cual >= 0) {
+            if (canControl && window.PM.Hab) {
+              self.resumeAudio();
+              window.PM.Hab.pulsar(g, quien, cual);
+              ev.preventDefault();
+            }
+            return;
+          }
         }
 
         var isArrow = (ev.key in ARROWS);
-        /* En DESATADO se mueve SOLO con flechas. Dejar la A, la S y la D
-         * moviendo mientras la W hace otra cosa sería el peor de los dos
-         * mundos: medio mando que a veces responde y a veces no. */
-        var isWasd = !g.hab && (ev.key in WASD);
+        /* En DESATADO A UN JUGADOR se mueve SOLO con flechas: dejar la A, la S
+         * y la D moviendo mientras la W hace otra cosa sería el peor de los dos
+         * mundos, medio mando que a veces responde y a veces no. Con dos en el
+         * mismo teclado, WASD vuelve a mover porque los poderes ya no están
+         * ahí (viven en Z X C V y en N M , .). */
+        var isWasd = (!g.hab || dosLocal) && (ev.key in WASD);
         if (isArrow || isWasd) {
           if (canControl) {
             self.resumeAudio();

@@ -388,6 +388,107 @@
       for (var i = 0; i < 8; i++) {
         blip('square', (i % 2 === 0) ? 1568 : 2093, 0, t + i * 0.095, 0.06, 0.28);
       }
+    },
+
+    /* ---- modo DESATADO: un sonido por poder --------------------------------
+     * Los cuatro poderes eran MUDOS salvo por lo que arrastraban de rebote (la
+     * Q sonaba porque se comía un fantasma, la R porque empezaba el modo azul),
+     * y justo los dos que no tocan el marcador —turbo y flash— no sonaban nada.
+     * Una tecla con recarga que no suena se siente como una tecla rota.
+     *
+     * Cada uno tiene su propia forma para que se distingan sin mirar la barra,
+     * y todos son CORTOS: se usan en plena partida, encima de la sirena, y un
+     * sonido largo se comería el waka. Van por el bus de efectos.
+     * ---------------------------------------------------------------------- */
+
+    /* Q · MORDISCO acertado: dos dentelladas secas y muy juntas. Suena ANTES
+     * del "me he comido un fantasma", que llega por su lado; en el invitado,
+     * que no mata (lo hace el anfitrión), esto es lo único que confirma la
+     * tecla hasta que vuelve la confirmación. */
+    playBite: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('square', 640, 150, t, 0.055, 0.42, 0.002);
+      blip('square', 520, 120, t + 0.06, 0.07, 0.38, 0.002);
+      noiseBurst(t, 0.05, 0.22, 1600);
+    },
+
+    /* Q al aire: el mismo golpe, sordo y sin la segunda dentellada. Fallar la
+     * puntería y tener la tecla en recarga tienen que sonar distinto, o la Q
+     * parece rota cuando lo único que pasó es que no había nadie a tiro. */
+    playBiteMiss: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('triangle', 260, 110, t, 0.07, 0.20, 0.002);
+      noiseBurst(t, 0.05, 0.10, 500);
+    },
+
+    /* W · TURBO: barrido ascendente con aire. Es el arranque, no los 5 s: el
+     * turbo ya se ve en la barra encendida y en las chispas. */
+    playTurbo: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('sawtooth', 180, 760, t, 0.30, 0.26, 0.02);
+      blip('square', 360, 1520, t + 0.03, 0.24, 0.12, 0.02);
+      noiseBurst(t + 0.02, 0.22, 0.13, 2600);
+    },
+
+    /* E · FLASH: chispazo muy corto y muy brillante, arriba y abajo en un
+     * suspiro. Es un salto, y un salto no puede sonar a rampa. */
+    playFlash: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('square', 1750, 320, t, 0.075, 0.30, 0.002);
+      blip('square', 420, 2400, t + 0.055, 0.06, 0.22, 0.002);
+    },
+
+    /* R · GRITO: rugido descendente con vibrato. Es el más largo de los cuatro
+     * porque es el que cambia el tablero entero. */
+    playShout: function () {
+      if (!ctx) return;
+      var t = now() + 0.01;
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      var vib = ctx.createOscillator();
+      var vg = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, t);
+      osc.frequency.exponentialRampToValueAtTime(120, t + 0.55);
+      vib.type = 'sine';
+      vib.frequency.setValueAtTime(17, t);
+      vg.gain.setValueAtTime(22, t);
+      vg.gain.linearRampToValueAtTime(60, t + 0.55);
+      vib.connect(vg); vg.connect(osc.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.34, t + 0.03);
+      g.gain.setValueAtTime(0.34, t + 0.4);
+      g.gain.linearRampToValueAtTime(0.0001, t + 0.6);
+      osc.connect(g); g.connect(out('sfx'));
+      osc.start(t); osc.stop(t + 0.63);
+      vib.start(t); vib.stop(t + 0.63);
+      noiseBurst(t, 0.18, 0.16, 700);
+    },
+
+    /* ---- PAC-MAN VS. con poderes: los dos del fantasma ---------------------
+     * Suenan más graves que los de Pac-Man a propósito: en una partida donde
+     * los dos bandos tienen teclas, la altura es lo único que dice de qué lado
+     * vino el sonido sin apartar la vista del laberinto. */
+
+    /* EMBESTIDA: gruñido que sube, como un motor que arranca. */
+    playCharge: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('sawtooth', 90, 300, t, 0.32, 0.30, 0.02);
+      blip('square', 45, 150, t, 0.34, 0.16, 0.02);
+      noiseBurst(t + 0.04, 0.20, 0.12, 900);
+    },
+
+    /* ACECHO: se apaga hacia abajo, como algo que se va. */
+    playStealth: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('triangle', 620, 140, t, 0.34, 0.26, 0.02);
+      blip('sine', 310, 70, t + 0.05, 0.30, 0.18, 0.02);
     }
   };
 
