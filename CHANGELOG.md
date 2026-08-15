@@ -5,17 +5,18 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 ## 2026-08-15 · Ya no se pierde la cuenta, DESATADO se juega de a dos y el fantasma responde
 
 - **Olvidar la contraseña ya no cuesta la cuenta.** Hasta hoy no había vuelta
-  atrás: el correo de la cuenta se compone por dentro, ese buzón no existe y
+  atrás: el correo de la cuenta se componía por dentro, ese buzón no existe y
   el enlace de recuperación de Supabase no llegaba a ninguna parte. Con la
   cuenta se iban los cuatro récords, la experiencia, los logros y las doce
-  maestrías. **Ahora al registrarte se te enseña un CÓDIGO DE RECUPERACIÓN**
-  de 16 caracteres; lo apuntas, y con él vuelves a entrar poniendo una
-  contraseña nueva. En el servidor solo queda su huella, nunca el código.
-  - Quien ya tenía cuenta **no tiene código todavía**: se crea desde PERFIL →
-    CÓDIGO DE RECUPERACIÓN, y el panel avisa mientras no lo tengas.
-  - Se enseña **una sola vez**. Si lo pierdes, se genera otro (y el viejo deja
-    de valer en ese momento). Al usarlo para recuperar la cuenta se repone
-    solo, para que no te quedes otra vez sin red.
+  maestrías. **Ahora al registrarte se te pide tu correo de verdad**, y
+  recuperar la cuenta es lo de siempre: pides el enlace, te llega, lo abres y
+  pones una contraseña nueva.
+  - **Se sigue entrando con USUARIO y contraseña.** El correo no se usa para
+    entrar ni sale en ninguna parte del juego: sirve para una sola cosa, que
+    es devolverte la cuenta.
+  - Quien ya tenía cuenta **no tiene correo todavía**: se pone desde PERFIL →
+    CORREO DE RECUPERACIÓN, y el panel avisa mientras no lo tengas. Entrar,
+    entras igual que siempre.
   - «HE OLVIDADO LA CONTRASEÑA» está en el propio diálogo de ENTRAR, que es
     donde se busca cuando no consigues entrar.
 - **DESATADO ya se juega entre dos en el mismo teclado.** No estaba porque el
@@ -40,6 +41,10 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   que acierta: fallar la puntería y tener la tecla en recarga ya no se
   confunden. Los dos del fantasma suenan más graves, para saber de qué lado
   vino sin apartar la vista.
+  - **Suenan los de todo el mundo**, no solo los tuyos: que a alguien le quede
+    una habilidad menos es información de la partida, y un mordisco se oye
+    venir. Los de los demás entran **al 10%**, de fondo, para que una party de
+    cuatro no sean dieciséis teclas peleándose con el waka.
 - **El selector de modo recuerda tu elección.** Volvía a CLÁSICO en cada
   recarga; ahora se queda donde lo dejaste.
 - **Las repeticiones se comparten por enlace, también las de online.** Las
@@ -55,9 +60,21 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 - Se ha **retirado la tabla `reto_diario`** de Supabase, que era lo último que
   quedaba del RETO DE HOY. El juego no la tocaba desde el 14 de agosto.
 
+- **Y las partidas de PAC-MAN VS. en el mismo teclado ya dejan repetición.**
+  No la dejaban, y salían mintiendo cuando lo intentaban: el rumbo de quien
+  lleva fantasma no pasaba por donde se graban las órdenes, así que al verlas
+  el fantasma humano se movía por su cuenta. Ahora el rumbo del fantasma es
+  una orden más y la partida se reconstruye clavada, poderes incluidos.
+
 > Lo que **no** cambia: DESATADO sigue sin entrar en el top mundial ni en el
 > récord de siempre, juegue uno o dos. Es un modo aparte y tiene sus propias
 > maestrías, como LABERINTOS.
+
+> **Aviso para quien monte esto en su propio Supabase**: el enlace de
+> recuperación lo manda Supabase, y con su remitente de prueba solo salen 2
+> correos por hora y no llegan a gente de fuera. Hace falta configurar un
+> **servidor de correo propio** (Authentication → SMTP Settings) para que la
+> recuperación funcione de verdad.
 
 ## 2026-08-15 · Cuatro arreglos: el día, el reto, los laberintos y las vidas
 

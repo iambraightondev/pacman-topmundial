@@ -35,11 +35,40 @@
    * letra que una versión vieja del juego no conozca no cuela como partida
    * normal: MODOS_INV no la tiene, leer() devuelve null y sale el aviso de
    * repetición rota, que es justamente lo que tiene que pasar. */
-  var MODOS = { solo: 's', duo: 'd', reto: 'r', hab: 'h', habduo: 'j' };
-  var MODOS_INV = { s: 'solo', d: 'duo', r: 'reto', h: 'hab', j: 'habduo' };
+  var MODOS = { solo: 's', duo: 'd', reto: 'r', hab: 'h', habduo: 'j',
+                vs: 'v', habvs: 'k' };
+  var MODOS_INV = { s: 'solo', d: 'duo', r: 'reto', h: 'hab', j: 'habduo',
+                    v: 'vs', k: 'habvs' };
 
-  /* ¿Ese modo es DESATADO, juegue uno o dos? */
-  function esDesatado(modo) { return modo === 'hab' || modo === 'habduo'; }
+  /* ¿Ese modo es DESATADO, juegue quien juegue? */
+  function esDesatado(modo) {
+    return modo === 'hab' || modo === 'habduo' || modo === 'habvs';
+  }
+
+  /* ¿Y de los que llevan un fantasma humano (PAC-MAN VS.)? */
+  function esVersus(modo) { return modo === 'vs' || modo === 'habvs'; }
+
+  /* Reparto de fantasmas -> texto, un carácter por jugador: '-' si lleva
+   * Pac-Man y la cifra del fantasma si lleva uno. 'g-1' es "el J1 con Pac-Man
+   * y el J2 con BLINKY". Va dentro de los ajustes porque es lo que cambia la
+   * simulación, igual que el reparto de vidas. */
+  function codGhosts(lista) {
+    var out = 'g';
+    for (var i = 0; i < lista.length; i++) {
+      var n = parseInt(lista[i], 10);
+      out += (n >= 0 && n < 4) ? String(n) : '-';
+    }
+    return out;
+  }
+
+  function decGhosts(texto) {
+    var out = [];
+    for (var i = 1; i < texto.length; i++) {
+      var c = texto.charAt(i);
+      out.push((c === '-') ? -1 : parseInt(c, 10));
+    }
+    return out;
+  }
 
   function b36(n) { return Math.round(n).toString(36); }
   function d36(s) { return parseInt(s, 36); }
@@ -321,6 +350,20 @@
       var a = rep.ajustes;
       if (!a || !esNum(a.velFantasmas) || !esNum(a.velPac) ||
           !esNum(a.powerS) || !esNum(a.vidas)) return false;
+      /* Reparto de fantasmas: obligatorio en los modos de PAC-MAN VS. (sin él
+       * la repetición no se puede montar) y prohibido en los demás, que no
+       * tienen fantasmas humanos que repartir. */
+      if (esVersus(rep.modo)) {
+        if (!esLista(a.ghosts) || a.ghosts.length !== rep.jugadores) return false;
+        var hayPac = false, hayFantasma = false;
+        for (var gi = 0; gi < a.ghosts.length; gi++) {
+          var gv = a.ghosts[gi];
+          if (!esNum(gv) || gv < -1 || gv > 3) return false;
+          if (gv < 0) hayPac = true; else hayFantasma = true;
+        }
+        // sin Pac-Man no hay partida, y sin fantasma humano no es de VS.
+        if (!hayPac || !hayFantasma) return false;
+      } else if (a.ghosts) return false;
       if (!esLista(rep.nombres) || !rep.nombres.length) return false;
       if (typeof rep.fecha !== 'string' || !rep.fecha) return false;
       if (!esLista(rep.entradas)) return false;
@@ -354,6 +397,7 @@
       var aj = [b36(a.velFantasmas * 100), b36(a.velPac * 100),
                 b36(a.powerS * 100), b36(a.vidas)];
       if (a.vidasModo === 'individual') aj.push('i');
+      if (esLista(a.ghosts)) aj.push(codGhosts(a.ghosts));
       var nombres = [];
       for (i = 0; i < rep.nombres.length; i++) {
         nombres.push(limpiaNombre(rep.nombres[i]));
@@ -395,7 +439,13 @@
           powerS: d36(aj[2]) / 100,
           vidas: d36(aj[3])
         };
-        if (aj[4] === 'i') ajustes.vidasModo = 'individual';
+        /* Lo que va detrás de los cuatro fijos son banderas, y se leen por lo
+         * que son y no por su posición: así se puede añadir otra sin que la de
+         * al lado se descoloque. */
+        for (var b = 4; b < aj.length; b++) {
+          if (aj[b] === 'i') ajustes.vidasModo = 'individual';
+          else if (aj[b].charAt(0) === 'g') ajustes.ghosts = decGhosts(aj[b]);
+        }
 
         var crudos = p[6].split(','), nombres = [];
         for (var i = 0; i < crudos.length; i++) nombres.push(limpiaNombre(crudos[i]));
@@ -655,12 +705,6 @@
       this.redEmpezar();
       if (!G || G.netRole || G.isSpec()) return;
       if (!(G.playerCount === 1 || G.playerCount === 2)) return;
-      /* PAC-MAN VS. en local no se graba. El rumbo de quien lleva fantasma no
-       * pasa por Game.setPacDir —lo intercepta Versus.steer antes—, así que la
-       * repetición saldría con la mitad de las órdenes y al verla el fantasma
-       * humano se movería solo por su cuenta. Mejor no ofrecer una repetición
-       * que ofrecer una que miente. */
-      if (G.isVersus && G.isVersus()) return;
 
       var s = (opts && opts.cfg) || G.settings();
       var nombres = [];
@@ -674,15 +718,22 @@
       // el reparto de vidas cambia la simulación en dúo, así que viaja
       // con los ajustes cuando no es el de siempre
       if (G.livesMode === 'individual') ajustes.vidasModo = 'individual';
+      /* PAC-MAN VS.: quién lleva qué fantasma. Es lo que más cambia la
+       * simulación de todo lo que hay aquí —uno de los cuatro deja de pensar
+       * por su cuenta— así que sin esto la repetición no se puede montar. */
+      var vs = !!(G.isVersus && G.isVersus());
+      if (vs) ajustes.ghosts = G.vsGhosts.slice();
 
       this.modo = 'grabar';
       this.grabando = {
         v: this.V,
-        /* DESATADO tiene su propio modo, y uno por cada número de jugadores:
-         * lo que cambia no es solo la etiqueta, es que en 'habduo' hay poderes
-         * de dos jugadores en las entradas. */
-        modo: G.hab ? ((G.playerCount === 2) ? 'habduo' : 'hab')
-                    : ((G.playerCount === 2) ? 'duo' : 'solo'),
+        /* Cada combinación tiene su propio modo, y no es solo una etiqueta:
+         * en 'habduo' hay poderes de dos jugadores en las entradas, y en los
+         * de VS. hay giros de alguien que no lleva Pac-Man. Una versión vieja
+         * del juego no conoce estas letras y da la repetición por rota, que es
+         * exactamente lo que tiene que pasar. */
+        modo: G.hab ? (vs ? 'habvs' : ((G.playerCount === 2) ? 'habduo' : 'hab'))
+                    : (vs ? 'vs' : ((G.playerCount === 2) ? 'duo' : 'solo')),
         semilla: null,              // la deriva el propio juego del nivel
         nivel: G.level,
         jugadores: G.playerCount,
@@ -694,6 +745,19 @@
       };
     },
 
+    /* Rumbo que ese jugador YA tenía pedido: el de su Pac-Man, o el de su
+     * fantasma si lleva uno (PAC-MAN VS.). null cuando no tiene ficha, y
+     * entonces no hay nada que apuntar. */
+    rumboDe: function (idx) {
+      var gid = G.vsGhostOf ? G.vsGhostOf(idx) : -1;
+      if (gid >= 0) {
+        var gh = G.ghosts && G.ghosts[gid];
+        return gh ? gh.wishDir : null;
+      }
+      var p = G.pacs[idx];
+      return p ? p.nextDir : null;
+    },
+
     /* Cada giro pasa por aquí (Game.setPacDir). Devuelve false cuando el
      * giro NO debe aplicarse: mientras se ve una repetición manda ella y el
      * teclado no pinta nada. */
@@ -701,12 +765,13 @@
       if (this.modo === 'ver') return !!this.enviando;
       if (!this.grabando) return true;
       if (!(idx >= 0 && idx < CFG.MAX_PLAYERS) || !(d >= 0 && d <= 3)) return true;
-      var p = G.pacs[idx];
-      /* Pedir el rumbo que ya estaba pedido no cambia nada (setDesiredDir
-       * solo apunta el deseo), así que no se guarda. Esto es lo que hace que
-       * tener una tecla pulsada —el teclado repite el evento cada pocas
-       * centésimas— deje UNA entrada y no doscientas. */
-      if (!p || p.nextDir === d) return true;
+      /* Pedir el rumbo que ya estaba pedido no cambia nada (ni setDesiredDir
+       * ni el wishDir del fantasma hacen otra cosa que apuntar el deseo), así
+       * que no se guarda. Esto es lo que hace que tener una tecla pulsada —el
+       * teclado repite el evento cada pocas centésimas— deje UNA entrada y no
+       * doscientas. */
+      var actual = this.rumboDe(idx);
+      if (actual === null || actual === d) return true;
       this.grabando.entradas.push([this.t, idx, d]);
       // una partida normal no llega ni de lejos; si alguien lo revienta, se
       // deja de grabar y a jugar tranquilo
@@ -1230,7 +1295,10 @@
         cfg: this.cfgDe(rep),
         names: rep.nombres.slice(),
         // sin esto las habilidades grabadas no tendrían dónde aplicarse
-        hab: esDesatado(rep.modo)
+        hab: esDesatado(rep.modo),
+        // ni los giros del que llevaba fantasma, a quién moverle
+        ghosts: (rep.ajustes && rep.ajustes.ghosts)
+          ? rep.ajustes.ghosts.slice() : null
       });
       return true;
     },

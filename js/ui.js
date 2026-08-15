@@ -2727,14 +2727,16 @@
         guardar.classList.add('btn-preset');
         row.appendChild(guardar);
         /* La llave de repuesto. Va en el perfil y no escondida en opciones
-         * porque quien se registró ANTES de que esto existiera no tiene
-         * ninguna, y hay que empujarle a crearla: sin código, olvidar la
+         * porque quien se registró ANTES de que se pidiera el correo no tiene
+         * ninguno, y hay que empujarle a ponerlo: sin correo, olvidar la
          * contraseña sigue costando la cuenta entera. */
-        var codigo = this.makeButton('CÓDIGO DE RECUPERACIÓN', function () {
-          self.showNewCodePrompt();
+        var correoBtn = this.makeButton('CORREO DE RECUPERACIÓN', function () {
+          Ac.miCorreo(function (err, c) {
+            self.showCorreoPrompt(err ? '' : c);
+          });
         });
-        codigo.classList.add('btn-preset');
-        row.appendChild(codigo);
+        correoBtn.classList.add('btn-preset');
+        row.appendChild(correoBtn);
         var salir = this.makeButton('CERRAR SESIÓN', function () {
           Ac.signOut(function () { self.refreshProfile(); });
         });
@@ -2742,16 +2744,17 @@
         row.appendChild(salir);
         this.profAccountNote.textContent =
           'TU NIVEL, LOGROS, MAESTRÍAS, RÉCORDS Y AMIGOS SE GUARDAN EN LA CUENTA';
-        /* Y se pregunta si la tiene. La respuesta tarda lo que tarde la red,
+        /* Y se pregunta si lo tiene. La respuesta tarda lo que tarde la red,
          * así que el renglón se escribe cuando llega y solo si el panel sigue
          * puesto: entretanto se lee lo de siempre, que no es mentira. */
-        Ac.tieneCodigo(function (err, fecha) {
+        Ac.miCorreo(function (err, c) {
           if (err || !self.profAccountNote) return;
           if (!Ac.logged()) return;
-          self.profAccountNote.textContent = fecha
-            ? ('TIENES CÓDIGO DE RECUPERACIÓN · TU PROGRESO SE GUARDA EN LA CUENTA')
-            : ('NO TIENES CÓDIGO DE RECUPERACIÓN: SI OLVIDAS LA CONTRASEÑA, ' +
-               'PIERDES LA CUENTA. CRÉALO AHORA');
+          self.profAccountNote.textContent = c
+            ? ('RECUPERACIÓN POR CORREO EN ' + c +
+               ' · TU PROGRESO SE GUARDA EN LA CUENTA')
+            : ('TU CUENTA NO TIENE CORREO: SI OLVIDAS LA CONTRASEÑA, LA PIERDES. ' +
+               'PONLO AHORA');
         });
       } else {
         this.profAccountMsg.textContent = 'JUEGAS COMO INVITADO';
@@ -2850,7 +2853,7 @@
       var self = this;
       var Ac = window.PM.Account;
       var crear = (modo === 'crear');
-      var usuario = '', pass = '';
+      var usuario = '', pass = '', correo = '';
 
       function enviar() {
         if (!usuario || !pass) {
@@ -2858,28 +2861,29 @@
           return;
         }
         self.setPromptStatus(crear ? 'CREANDO...' : 'ENTRANDO...', false);
-        var fn = crear ? Ac.signUp : Ac.signIn;
-        fn.call(Ac, usuario, pass, function (err) {
+        function hecho(err) {
           if (err) { self.setPromptStatus(err, true); return; }
+          self.hidePrompt();
           self.refreshNicks();
           self.refreshProfile();
           self.refreshFriends();
-          /* Cuenta recién creada: lo primero que ve es su código de
-           * recuperación, ANTES de seguir jugando. Es el único momento en que
-           * se puede enseñar (después solo queda su huella en el servidor) y
-           * es la diferencia entre olvidar la contraseña y perder la cuenta.
-           * Si el servidor todavía no tiene la tabla puesta se dice y ya: la
-           * cuenta está creada igual y no se le puede bloquear el juego. */
-          if (!crear) { self.hidePrompt(); return; }
-          self.setPromptStatus('CREANDO TU CÓDIGO DE RECUPERACIÓN...', false);
-          Ac.nuevoCodigo(function (err2, codigo) {
-            if (err2) {
-              self.showCodePrompt('', err2);
-              return;
-            }
-            self.showCodePrompt(codigo, '');
-          });
-        });
+        }
+        if (crear) Ac.signUp(usuario, pass, correo, hecho);
+        else Ac.signIn(usuario, pass, hecho);
+      }
+
+      var campos = [
+        { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX,
+          onInput: function (v) { usuario = v; } },
+        { placeholder: 'CONTRASEÑA', password: true, maxLength: 40,
+          onInput: function (v) { pass = v; }, onAccept: enviar }
+      ];
+      /* El correo se pide AL CREAR y solo al crear: no es un dato del perfil,
+       * es lo que te devuelve la cuenta el día que olvides la contraseña. Va
+       * el último para que la pantalla siga leyéndose "usuario, contraseña". */
+      if (crear) {
+        campos.push({ placeholder: 'TU CORREO', maxLength: 64, correo: true,
+          onInput: function (v) { correo = v; }, onAccept: enviar });
       }
 
       var botones = [
@@ -2889,7 +2893,7 @@
        * quien no consigue entrar no se va al perfil a mirar opciones. */
       if (!crear) {
         botones.push({ label: 'HE OLVIDADO LA CONTRASEÑA',
-          onClick: function () { self.showRecoverPrompt(usuario); } });
+          onClick: function () { self.showOlvidePrompt(usuario); } });
       }
       botones.push({ label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
         onClick: function () { self.hidePrompt(); } });
@@ -2899,66 +2903,152 @@
         lines: crear
           ? ['ELIGE UN USUARIO Y UNA CONTRASEÑA',
              'EL USUARIO SERÁ TU NOMBRE EN EL JUEGO',
-             'AL TERMINAR TE DAMOS UN CÓDIGO DE RECUPERACIÓN: APÚNTALO']
+             'EL CORREO SIRVE PARA UNA COSA: RECUPERAR LA CUENTA SI OLVIDAS LA CONTRASEÑA']
           : ['ENTRA CON TU USUARIO Y CONTRASEÑA'],
-        fields: [
-          { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX,
-            onInput: function (v) { usuario = v; } },
-          { placeholder: 'CONTRASEÑA', password: true, maxLength: 40,
-            onInput: function (v) { pass = v; }, onAccept: enviar }
-        ],
+        fields: campos,
         status: '',
         buttons: botones
       });
     },
 
     /* ------------------------------------------------------
-     * Código de recuperación
+     * Recuperar la cuenta por correo
      *
      * Antes de esto, olvidar la contraseña era PERDER LA CUENTA: los cuatro
      * récords, la experiencia, los logros y las doce maestrías, sin vuelta
-     * atrás, porque el correo se compone por dentro y ese buzón no existe.
-     *
-     * El código se enseña UNA VEZ y en el servidor solo queda su huella. Eso
-     * obliga a que esta pantalla sea insistente —no hay un "vuelve a
-     * enseñármelo" en ninguna parte— y a que se pueda copiar de un toque:
-     * copiar y pegar en las notas del móvil es lo que va a hacer la gente.
+     * atrás, porque el correo de la cuenta se componía por dentro y ese buzón
+     * no existía. Ahora el correo es el de verdad y la recuperación es la de
+     * toda la vida: pides el enlace, te llega, y al abrirlo el juego te pide
+     * la contraseña nueva (ver Account.desdeRecuperacion).
      * ------------------------------------------------------ */
-    showCodePrompt: function (codigo, error) {
+    showOlvidePrompt: function (usuarioPrevio) {
       var self = this;
-      var lineas, botones = [];
-      if (codigo) {
-        lineas = [
-          { text: codigo, big: true },
-          'APÚNTALO O CÓPIALO AHORA: NO SE PUEDE VOLVER A VER',
-          'CON ÉL RECUPERAS LA CUENTA SI OLVIDAS LA CONTRASEÑA',
-          'PUEDES GENERAR OTRO CUANDO QUIERAS EN PERFIL (EL VIEJO DEJA DE VALER)'
-        ];
-        botones.push({ label: 'COPIAR', onClick: function () {
-          self.copiarTexto(codigo, 'CÓDIGO COPIADO');
-        } });
-      } else {
-        lineas = [
-          'NO SE HA PODIDO CREAR TU CÓDIGO DE RECUPERACIÓN',
-          error || '',
-          'LA CUENTA ESTÁ CREADA Y FUNCIONA. INTÉNTALO DESDE PERFIL MÁS TARDE'
-        ];
+      var Ac = window.PM.Account;
+      var usuario = usuarioPrevio || '';
+
+      function enviar() {
+        self.setPromptStatus('MANDANDO EL CORREO...', false);
+        Ac.olvide(usuario, function (err, pista) {
+          if (err) { self.setPromptStatus(err, true); return; }
+          self.showPrompt({
+            title: 'MIRA TU CORREO',
+            color: '#00ffff',
+            solid: true,
+            lines: [
+              pista ? ('TE HEMOS MANDADO UN ENLACE A ' + pista) : 'ENLACE ENVIADO',
+              'ÁBRELO Y TE DEJARÁ PONER UNA CONTRASEÑA NUEVA',
+              'SI NO LO VES EN UN MINUTO, MIRA EN CORREO NO DESEADO'
+            ],
+            buttons: [
+              { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape'],
+                hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+            ]
+          });
+        });
       }
-      botones.push({ label: codigo ? 'LO HE APUNTADO' : 'SEGUIR', primary: true,
-        keys: ['Enter', 'Escape'], hint: 'ENTER',
-        onClick: function () {
+
+      this.showPrompt({
+        title: 'RECUPERAR CUENTA',
+        color: '#00ffff',
+        lines: [
+          'ESCRIBE TU USUARIO Y TE MANDAMOS UN ENLACE AL CORREO DE LA CUENTA',
+          'SI TU CUENTA ES DE LAS DE ANTES Y NO TIENE CORREO, ENTRA CON TU CONTRASEÑA Y PONLO EN PERFIL'
+        ],
+        fields: [
+          { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX, value: usuario,
+            onInput: function (v) { usuario = v; }, onAccept: enviar }
+        ],
+        status: '',
+        buttons: [
+          { label: 'MANDAR ENLACE', primary: true, onClick: enviar },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.showAccountPrompt('entrar'); } }
+        ]
+      });
+    },
+
+    /* Al volver del enlace del correo: la sesión ya está abierta (de un solo
+     * uso) y lo único que falta es la contraseña nueva. Sale por encima de
+     * todo nada más abrir el juego. */
+    showPassNuevaPrompt: function () {
+      var self = this;
+      var Ac = window.PM.Account;
+      var pass = '';
+
+      function enviar() {
+        self.setPromptStatus('GUARDANDO...', false);
+        Ac.cambiarPass(pass, function (err) {
+          if (err) { self.setPromptStatus(err, true); return; }
+          self.hidePrompt();
+          self.refreshNicks();
+          self.refreshProfile();
+          self.showPrompt({
+            title: 'LISTO',
+            color: '#00ffff',
+            solid: true,
+            lines: ['YA TIENES CONTRASEÑA NUEVA Y LA SESIÓN ABIERTA',
+                    'TU PROGRESO SIGUE DONDE ESTABA'],
+            buttons: [
+              { label: 'A JUGAR', primary: true, keys: ['Enter', 'Escape'],
+                hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+            ]
+          });
+        });
+      }
+
+      this.showPrompt({
+        title: 'CONTRASEÑA NUEVA',
+        color: '#00ffff',
+        solid: true,
+        lines: ['ESCRIBE LA CONTRASEÑA QUE VAS A USAR A PARTIR DE AHORA'],
+        fields: [
+          { placeholder: 'CONTRASEÑA NUEVA', password: true, maxLength: 40,
+            onInput: function (v) { pass = v; }, onAccept: enviar }
+        ],
+        status: '',
+        buttons: [
+          { label: 'GUARDAR', primary: true, onClick: enviar }
+        ]
+      });
+      this.promptTag = 'passnueva';
+    },
+
+    /* Poner o cambiar el correo de recuperación, desde PERFIL. Es lo que
+     * tienen que hacer las cuentas creadas antes de que se pidiera. */
+    showCorreoPrompt: function (actual) {
+      var self = this;
+      var Ac = window.PM.Account;
+      var correo = '';
+
+      function enviar() {
+        self.setPromptStatus('GUARDANDO...', false);
+        Ac.ponerCorreo(correo, function (err) {
+          if (err) { self.setPromptStatus(err, true); return; }
           self.hidePrompt();
           self.refreshProfile();
-        } });
+        });
+      }
+
       this.showPrompt({
-        title: codigo ? 'TU CÓDIGO DE RECUPERACIÓN' : 'SIN CÓDIGO',
-        color: codigo ? '#00ffff' : '#ff8c00',
-        solid: true,
-        lines: lineas,
+        title: 'CORREO DE RECUPERACIÓN',
+        color: '#00ffff',
+        lines: [
+          actual ? ('AHORA MISMO ES ' + actual)
+                 : 'TU CUENTA NO TIENE CORREO: SIN ÉL, OLVIDAR LA CONTRASEÑA ES PERDERLA',
+          'SIRVE PARA UNA SOLA COSA: MANDARTE EL ENLACE SI OLVIDAS LA CONTRASEÑA',
+          'NO SE ENSEÑA A NADIE NI SALE EN NINGÚN SITIO DEL JUEGO'
+        ],
+        fields: [
+          { placeholder: 'TU CORREO', maxLength: 64, correo: true,
+            onInput: function (v) { correo = v; }, onAccept: enviar }
+        ],
         status: '',
-        buttons: botones
+        buttons: [
+          { label: 'GUARDAR', primary: true, onClick: enviar },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
       });
-      this.promptTag = 'codigo';
     },
 
     /* Copiar al portapapeles con red de seguridad: navigator.clipboard solo
@@ -2990,100 +3080,6 @@
       fallback();
     },
 
-    /* Generar uno nuevo desde PERFIL. Avisa de que el anterior deja de valer:
-     * quien lo tenga apuntado en un papel se quedaría con un papel inútil sin
-     * enterarse, y eso es peor que no tener código. */
-    showNewCodePrompt: function () {
-      var self = this;
-      var Ac = window.PM.Account;
-      this.showPrompt({
-        title: 'CÓDIGO DE RECUPERACIÓN',
-        color: '#00ffff',
-        lines: [
-          'SE CREARÁ UN CÓDIGO NUEVO Y SE ENSEÑARÁ UNA SOLA VEZ',
-          'SI YA TENÍAS UNO APUNTADO, DEJARÁ DE VALER EN ESE MOMENTO'
-        ],
-        status: '',
-        buttons: [
-          { label: 'CREAR CÓDIGO', primary: true, onClick: function () {
-            self.setPromptStatus('CREANDO...', false);
-            Ac.nuevoCodigo(function (err, codigo) {
-              if (err) { self.setPromptStatus(err, true); return; }
-              self.showCodePrompt(codigo, '');
-            });
-          } },
-          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-            onClick: function () { self.hidePrompt(); } }
-        ]
-      });
-    },
-
-    /* Recuperar la cuenta: usuario + código + contraseña nueva. Al terminar se
-     * entra solo y sale el código NUEVO, porque el usado ya no vale. */
-    showRecoverPrompt: function (usuarioPrevio) {
-      var self = this;
-      var Ac = window.PM.Account;
-      var usuario = usuarioPrevio || '', codigo = '', pass = '';
-
-      /* El código se copia de un papel: se acepta en minúsculas, con espacios
-       * o sin guiones, y se va agrupando de cuatro en cuatro mientras se
-       * escribe para que se pueda cotejar con lo apuntado de un vistazo. */
-      function filtraCodigo(v) {
-        var limpio = Ac.cleanCode(v).slice(0, CFG.ACCOUNT.CODE_LEN);
-        return Ac.groupCode(limpio);
-      }
-
-      function enviar() {
-        self.setPromptStatus('COMPROBANDO...', false);
-        Ac.recuperar(usuario, codigo, pass, function (err, res) {
-          if (err) { self.setPromptStatus(err, true); return; }
-          self.refreshNicks();
-          self.refreshProfile();
-          self.refreshFriends();
-          if (res.codigo) { self.showCodePrompt(res.codigo, ''); return; }
-          /* El servidor cambió la contraseña pero no pudo reponer el código:
-           * se dice, porque el papel viejo SIGUE valiendo y eso hay que
-           * saberlo (aquí no se puede mentir en ninguna de las dos
-           * direcciones). */
-          self.showPrompt({
-            title: 'CONTRASEÑA CAMBIADA',
-            color: '#00ffff',
-            solid: true,
-            lines: ['YA PUEDES JUGAR CON TU CUENTA',
-                    res.aviso || 'GUARDA BIEN TU CÓDIGO'],
-            buttons: [
-              { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape'],
-                hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
-            ]
-          });
-        });
-      }
-
-      this.showPrompt({
-        title: 'RECUPERAR CUENTA',
-        color: '#00ffff',
-        lines: [
-          'ESCRIBE TU USUARIO, EL CÓDIGO QUE APUNTASTE Y UNA CONTRASEÑA NUEVA',
-          'SI NO TIENES CÓDIGO, NO HAY OTRA FORMA DE ENTRAR'
-        ],
-        fields: [
-          { placeholder: 'USUARIO', maxLength: CFG.NICK_MAX, value: usuario,
-            onInput: function (v) { usuario = v; } },
-          { placeholder: 'CÓDIGO XXXX-XXXX-XXXX-XXXX', maxLength: 24,
-            filter: filtraCodigo,
-            onInput: function (v) { codigo = v; } },
-          { placeholder: 'CONTRASEÑA NUEVA', password: true, maxLength: 40,
-            onInput: function (v) { pass = v; }, onAccept: enviar }
-        ],
-        status: '',
-        buttons: [
-          { label: 'RECUPERAR', primary: true, onClick: enviar },
-          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-            onClick: function () { self.showAccountPrompt('entrar'); } }
-        ]
-      });
-    },
-
     /* La cuenta ha cambiado (entrar, salir, sincronizar) */
     accountHooks: function () {
       var self = this;
@@ -3100,6 +3096,26 @@
           self.refreshFriends();
         }
       };
+      /* ¿Venimos del enlace del correo? Entonces la sesión ya viene abierta en
+       * el ancla de la URL y lo único que falta es la contraseña nueva. Va
+       * ANTES que restore() porque esta sesión manda sobre la que hubiera
+       * guardada: quien abre el enlace quiere entrar EN ESA cuenta. */
+      if (Ac.desdeRecuperacion(function (err) {
+        if (err) {
+          self.showPrompt({
+            title: 'ENLACE CADUCADO',
+            color: '#ff8c00',
+            lines: ['ESE ENLACE YA SE HA USADO O HA PASADO DEMASIADO TIEMPO',
+                    'PIDE OTRO DESDE ENTRAR · HE OLVIDADO LA CONTRASEÑA'],
+            buttons: [
+              { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape'],
+                hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+            ]
+          });
+          return;
+        }
+        self.showPassNuevaPrompt();
+      })) return;
       // sesión de la última vez: se recupera sola y sin molestar
       Ac.restore(function () { /* si falla, se sigue de invitado */ });
     },
@@ -4185,7 +4201,10 @@
       if (o.fields) {
         o.fields.forEach(function (f) {
           var el = document.createElement('input');
-          el.type = f.password ? 'password' : 'text';
+          /* `email` en vez de `text` para el correo: en el móvil eso cambia el
+           * teclado que sale (con arroba y punto a mano), que es la mitad de
+           * la comodidad de escribir una dirección con el pulgar. */
+          el.type = f.password ? 'password' : (f.correo ? 'email' : 'text');
           el.className = 'nick-input';
           el.maxLength = f.maxLength || CFG.NICK_MAX;
           el.placeholder = f.placeholder || '';
@@ -4199,12 +4218,12 @@
             if (ev.key === 'Enter' && f.onAccept) f.onAccept(el.value);
           });
           el.addEventListener('input', function () {
-            /* El usuario se filtra como un nombre del juego y la clave va tal
-             * cual. `f.filter` es para lo que no es ni una cosa ni la otra: el
-             * código de recuperación, que lleva guiones y se copia de un papel
-             * (ver showRecoverPrompt). */
+            /* El usuario se filtra como un nombre del juego, la clave va tal
+             * cual y el correo solo pierde los espacios (un correo no es un
+             * nombre del juego: lleva arroba, puntos y minúsculas). */
             var v = el.value;
             if (f.filter) v = f.filter(v);
+            else if (f.correo) v = v.replace(/\s+/g, '').toLowerCase();
             else if (!f.password) v = filterNick(v).replace(/[^A-Z0-9]/g, '');
             if (v !== el.value) el.value = v;
             if (f.onInput) f.onInput(el.value);

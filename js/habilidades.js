@@ -131,13 +131,28 @@
    * —turbo y flash— no sonaban nada: una tecla con recarga que no suena se
    * siente como una tecla rota. Cada poder tiene el suyo en js/audio.js.
    *
-   * Suenan SOLO los de quien juega en esta pantalla (ver mio()). En una party
-   * de cuatro, oír las dieciséis teclas de todo el mundo no informa de nada y
-   * tapa el waka; lo que cambia el tablero —el GRITO— se oye igual porque
-   * arranca el modo azul, que tiene su propio ambiente. */
-  function son(nombre) {
+   * Suenan los de TODO EL MUNDO, no solo los tuyos: que a alguien le quede una
+   * habilidad menos es información de la partida, y oír venir un mordisco vale
+   * de aviso. Lo que cambia es el volumen — `ajeno` los baja al 10%
+   * (CFG.HAB.VOL_AJENO), porque a volumen entero una party de cuatro son
+   * dieciséis teclas peleándose con el waka. */
+  function son(nombre, ajeno) {
     var A = window.AudioSys;
-    if (A && A[nombre]) A[nombre]();
+    if (A && A[nombre]) A[nombre](ajeno ? H.VOL_AJENO : 1);
+  }
+
+  /* Lo mismo, pero decidiendo solo si es tuyo o de otro */
+  function sonDe(G, idx, nombre) { son(nombre, !mio(G, idx)); }
+
+  /* Qué sonido le toca al poder k de ese jugador. Son dos listas porque quien
+   * lleva un fantasma tiene otros poderes; el orden es el de CFG.HAB.LIST y
+   * CFG.HAB.LIST_G, que es el mismo que las teclas y el que viaja por red. */
+  var SON_PAC = ['playBite', 'playTurbo', 'playFlash', 'playShout'];
+  var SON_GHOST = ['playCharge', 'playStealth'];
+
+  function sonidoDe(G, idx, k) {
+    var lista = (G.vsGhostOf && G.vsGhostOf(idx) >= 0) ? SON_GHOST : SON_PAC;
+    return lista[k] || '';
   }
 
   var Hab = {
@@ -407,6 +422,9 @@
       if (G.vsGhostOf && G.vsGhostOf(who) >= 0) {
         if (k === EMBESTIDA) this.marcarCarga(who);
         else this.marcarAcecho(who);
+        /* El sonido va aquí porque el efecto no pasa por su función: se oye
+         * bajito, como todo lo que hace otro (ver son()). */
+        son(sonidoDe(G, who, k), true);
         this.gastar(G, who, k);
         G.hostEvt({ t: 'hab', w: who, k: k });
         return;
@@ -424,6 +442,8 @@
          * para llevar su recarga. Su POSICIÓN llega por 'pos' como siempre. */
         if (k === TURBO) this.marcarTurbo(who);
         else this.marcarFlash(who);
+        // y se oye bajito, que aquí el efecto no pasa por su función
+        son(sonidoDe(G, who, k), true);
         ok = true;
       }
       if (!ok) return;
@@ -452,6 +472,9 @@
       } else if (k === MORDISCO) this.marcarDientes(who);
       else if (k === TURBO) this.marcarTurbo(who);
       else if (k === FLASH) this.marcarFlash(who);
+      /* Y se oye. Bajito siempre: por aquí solo pasan los poderes de OTROS —el
+       * eco del tuyo se descarta arriba—, y de un mirón no es ninguno. */
+      son(sonidoDe(G, who, k), true);
       this.gastar(G, who, k);
     },
 
@@ -552,7 +575,7 @@
          * Con los dientes un instante queda claro que la tecla entró y lo
          * que falló fue el tiro. */
         this.marcarDientes(idx, Math.round(H.BITE_SHOW / 2));
-        if (mio(G, idx)) son('playBiteMiss');
+        sonDe(G, idx, 'playBiteMiss');
         return false;
       }
       var p = G.pacs[idx];
@@ -562,7 +585,7 @@
        * el invitado: allí el fantasma no se muere aquí —lo mata el anfitrión—,
        * así que hasta que vuelve la confirmación este sonido es lo único que
        * dice que la Q entró. */
-      if (mio(G, idx)) son('playBite');
+      sonDe(G, idx, 'playBite');
       /* El mordisco se apunta AQUÍ, en la máquina de quien pulsó, y no donde
        * se ejecuta: al invitado se lo mata el anfitrión, y si esperásemos a
        * eso su logro no avanzaría nunca (el evento que vuelve no dice si fue
@@ -592,7 +615,7 @@
      * ========================================================= */
     turbo: function (G, idx) {
       this.marcarTurbo(idx);
-      if (mio(G, idx)) son('playTurbo');
+      sonDe(G, idx, 'playTurbo');
       return true;
     },
 
@@ -671,7 +694,7 @@
        * un salto, y salir del salto parado se siente roto. */
       p.pauseTicks = 0;
       this.marcarFlash(idx, d.dir);
-      if (mio(G, idx)) son('playFlash');
+      sonDe(G, idx, 'playFlash');
       return true;
     },
 
@@ -682,7 +705,7 @@
       if (soloVisual) return true;      // lo reparte el anfitrión
       G.triggerFright(H.SHOUT_SECS);
       // el rugido, aparte del modo azul que ya trae su propio ambiente
-      if (mio(G, idx)) son('playShout');
+      sonDe(G, idx, 'playShout');
       return true;
     },
 
@@ -700,7 +723,7 @@
      * de siempre (muros, túnel, zonas sin subir): solo va más rápido. */
     embestida: function (G, idx) {
       this.marcarCarga(idx);
-      if (mio(G, idx)) son('playCharge');
+      sonDe(G, idx, 'playCharge');
       return true;
     },
 
@@ -710,7 +733,7 @@
      * confunden a la primera lectura. */
     acechar: function (G, idx) {
       this.marcarAcecho(idx);
-      if (mio(G, idx)) son('playStealth');
+      sonDe(G, idx, 'playStealth');
       return true;
     }
   };

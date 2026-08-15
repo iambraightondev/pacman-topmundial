@@ -53,6 +53,16 @@
   /* Bus de salida de un efecto (por defecto, efectos) */
   function out(bus) { return buses[bus] || buses.sfx || master; }
 
+  /* Multiplicador de volumen de un efecto: 1 si no se dice otra cosa. Lo usan
+   * los poderes del modo DESATADO, que suenan enteros cuando son tuyos y muy
+   * bajitos cuando son de otro (ver CFG.HAB.VOL_AJENO). Se acota a 0..1 para
+   * que un valor raro no reviente el nivel general. */
+  function escala(v) {
+    var n = parseFloat(v);
+    if (!isFinite(n)) return 1;
+    return Math.max(0, Math.min(1, n));
+  }
+
   // One enveloped oscillator note. Optional pitch glide f0 -> f1.
   // `bus` elige la categoría de volumen ('sfx' si no se indica).
   function blip(type, f0, f1, t0, dur, vol, attack, bus) {
@@ -399,53 +409,60 @@
      * Cada uno tiene su propia forma para que se distingan sin mirar la barra,
      * y todos son CORTOS: se usan en plena partida, encima de la sirena, y un
      * sonido largo se comería el waka. Van por el bus de efectos.
+     *
+     * TODOS llevan un `esc` opcional (1 por defecto) que multiplica el
+     * volumen. Suenan los poderes de TODO EL MUNDO, no solo los tuyos —saber
+     * que a alguien le queda una habilidad menos es información de la partida—
+     * pero los de los demás entran al 10% (`CFG.HAB.VOL_AJENO`): se oyen de
+     * fondo y no se pelean con el waka ni con lo que estés haciendo tú.
      * ---------------------------------------------------------------------- */
 
     /* Q · MORDISCO acertado: dos dentelladas secas y muy juntas. Suena ANTES
      * del "me he comido un fantasma", que llega por su lado; en el invitado,
      * que no mata (lo hace el anfitrión), esto es lo único que confirma la
      * tecla hasta que vuelve la confirmación. */
-    playBite: function () {
+    playBite: function (esc) {
       if (!ctx) return;
-      var t = now();
-      blip('square', 640, 150, t, 0.055, 0.42, 0.002);
-      blip('square', 520, 120, t + 0.06, 0.07, 0.38, 0.002);
-      noiseBurst(t, 0.05, 0.22, 1600);
+      var k = escala(esc), t = now();
+      blip('square', 640, 150, t, 0.055, 0.42 * k, 0.002);
+      blip('square', 520, 120, t + 0.06, 0.07, 0.38 * k, 0.002);
+      noiseBurst(t, 0.05, 0.22 * k, 1600);
     },
 
     /* Q al aire: el mismo golpe, sordo y sin la segunda dentellada. Fallar la
      * puntería y tener la tecla en recarga tienen que sonar distinto, o la Q
      * parece rota cuando lo único que pasó es que no había nadie a tiro. */
-    playBiteMiss: function () {
+    playBiteMiss: function (esc) {
       if (!ctx) return;
-      var t = now();
-      blip('triangle', 260, 110, t, 0.07, 0.20, 0.002);
-      noiseBurst(t, 0.05, 0.10, 500);
+      var k = escala(esc), t = now();
+      blip('triangle', 260, 110, t, 0.07, 0.20 * k, 0.002);
+      noiseBurst(t, 0.05, 0.10 * k, 500);
     },
 
     /* W · TURBO: barrido ascendente con aire. Es el arranque, no los 5 s: el
      * turbo ya se ve en la barra encendida y en las chispas. */
-    playTurbo: function () {
+    playTurbo: function (esc) {
       if (!ctx) return;
-      var t = now();
-      blip('sawtooth', 180, 760, t, 0.30, 0.26, 0.02);
-      blip('square', 360, 1520, t + 0.03, 0.24, 0.12, 0.02);
-      noiseBurst(t + 0.02, 0.22, 0.13, 2600);
+      var k = escala(esc), t = now();
+      blip('sawtooth', 180, 760, t, 0.30, 0.26 * k, 0.02);
+      blip('square', 360, 1520, t + 0.03, 0.24, 0.12 * k, 0.02);
+      noiseBurst(t + 0.02, 0.22, 0.13 * k, 2600);
     },
 
     /* E · FLASH: chispazo muy corto y muy brillante, arriba y abajo en un
      * suspiro. Es un salto, y un salto no puede sonar a rampa. */
-    playFlash: function () {
+    playFlash: function (esc) {
       if (!ctx) return;
-      var t = now();
-      blip('square', 1750, 320, t, 0.075, 0.30, 0.002);
-      blip('square', 420, 2400, t + 0.055, 0.06, 0.22, 0.002);
+      var k = escala(esc), t = now();
+      blip('square', 1750, 320, t, 0.075, 0.30 * k, 0.002);
+      blip('square', 420, 2400, t + 0.055, 0.06, 0.22 * k, 0.002);
     },
 
     /* R · GRITO: rugido descendente con vibrato. Es el más largo de los cuatro
      * porque es el que cambia el tablero entero. */
-    playShout: function () {
+    playShout: function (esc) {
       if (!ctx) return;
+      var k = escala(esc);
       var t = now() + 0.01;
       var osc = ctx.createOscillator();
       var g = ctx.createGain();
@@ -460,13 +477,13 @@
       vg.gain.linearRampToValueAtTime(60, t + 0.55);
       vib.connect(vg); vg.connect(osc.frequency);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.34, t + 0.03);
-      g.gain.setValueAtTime(0.34, t + 0.4);
+      g.gain.linearRampToValueAtTime(0.34 * k, t + 0.03);
+      g.gain.setValueAtTime(0.34 * k, t + 0.4);
       g.gain.linearRampToValueAtTime(0.0001, t + 0.6);
       osc.connect(g); g.connect(out('sfx'));
       osc.start(t); osc.stop(t + 0.63);
       vib.start(t); vib.stop(t + 0.63);
-      noiseBurst(t, 0.18, 0.16, 700);
+      noiseBurst(t, 0.18, 0.16 * k, 700);
     },
 
     /* ---- PAC-MAN VS. con poderes: los dos del fantasma ---------------------
@@ -475,20 +492,20 @@
      * vino el sonido sin apartar la vista del laberinto. */
 
     /* EMBESTIDA: gruñido que sube, como un motor que arranca. */
-    playCharge: function () {
+    playCharge: function (esc) {
       if (!ctx) return;
-      var t = now();
-      blip('sawtooth', 90, 300, t, 0.32, 0.30, 0.02);
-      blip('square', 45, 150, t, 0.34, 0.16, 0.02);
-      noiseBurst(t + 0.04, 0.20, 0.12, 900);
+      var k = escala(esc), t = now();
+      blip('sawtooth', 90, 300, t, 0.32, 0.30 * k, 0.02);
+      blip('square', 45, 150, t, 0.34, 0.16 * k, 0.02);
+      noiseBurst(t + 0.04, 0.20, 0.12 * k, 900);
     },
 
     /* ACECHO: se apaga hacia abajo, como algo que se va. */
-    playStealth: function () {
+    playStealth: function (esc) {
       if (!ctx) return;
-      var t = now();
-      blip('triangle', 620, 140, t, 0.34, 0.26, 0.02);
-      blip('sine', 310, 70, t + 0.05, 0.30, 0.18, 0.02);
+      var k = escala(esc), t = now();
+      blip('triangle', 620, 140, t, 0.34, 0.26 * k, 0.02);
+      blip('sine', 310, 70, t + 0.05, 0.30, 0.18 * k, 0.02);
     }
   };
 

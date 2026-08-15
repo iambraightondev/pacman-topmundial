@@ -3,13 +3,31 @@
  * Cuentas de jugador. Define window.PM.Account
  *
  * Usa Supabase Auth por REST (sin librerías, como el resto del
- * proyecto). El jugador solo ve USUARIO y CONTRASEÑA: el correo
- * que pide Supabase se compone por dentro con el usuario y un
- * dominio propio, y no se enseña ni se escribe en ninguna parte.
+ * proyecto). Se ENTRA con usuario y contraseña, como siempre.
  *
  * El usuario es TAMBIÉN el nombre dentro del juego. Así no hay dos
  * nombres que cuadrar: el ranking, la party, las invitaciones y los
  * amigos ya iban todos por el nombre.
+ *
+ * EL CORREO, Y POR QUÉ CAMBIÓ
+ * Supabase Auth identifica las cuentas por correo. Durante un tiempo
+ * ese correo se componía por dentro
+ * (usuario@cuentas.pacman-topmundial.vercel.app) y no se le pedía
+ * nada a nadie... con una consecuencia que no se vio venir: ese
+ * buzón no existe, así que el enlace de recuperación de Supabase no
+ * llegaba a ninguna parte y **quien olvidaba la contraseña perdía la
+ * cuenta entera**, con sus cuatro récords, su experiencia, sus
+ * logros y sus doce maestrías.
+ *
+ * Ahora el correo es el DE VERDAD, se pide al registrarse y sirve
+ * exactamente para una cosa: recuperar la cuenta. Y aun así se sigue
+ * entrando con el usuario, porque resolver usuario -> correo lo hace
+ * la Edge Function `cuenta` con la service role: el correo de nadie
+ * baja nunca al navegador (ni el tuyo, salvo enmascarado).
+ *
+ * Las cuentas de antes siguen entrando igual —la función resuelve su
+ * correo interno sin enterarse de nada— pero no pueden recuperar la
+ * contraseña hasta que pongan uno de verdad desde PERFIL.
  *
  * Qué se guarda en la nube (tabla `perfiles`): avatar, experiencia,
  * los CUATRO récords —solo, dúo, trío y escuadra, uno por formato—,
@@ -23,9 +41,11 @@
  * insignias sin guardar ni una lista.
  *
  * IMPORTANTE: el proyecto de Supabase necesita el proveedor Email
- * activo, el alta de usuarios permitida y "Confirm email" APAGADO;
- * si no, el registro no devuelve sesión (el correo es interno y el
- * enlace de confirmación no llega a ninguna parte).
+ * activo, el alta de usuarios permitida, "Confirm email" APAGADO
+ * (el alta la hace la función ya confirmada: el correo se pide para
+ * poder recuperar la cuenta, no para verificar a nadie) y un
+ * SERVIDOR DE CORREO PROPIO. Con el remitente de prueba de Supabase
+ * el enlace de recuperación no le llega a nadie de fuera.
  * ============================================================ */
 (function () {
   'use strict';
@@ -41,58 +61,23 @@
       .slice(0, CFG.NICK_MAX);
   }
 
-  function mailFor(user) {
-    return cleanUser(user).toLowerCase() + '@' + AC.MAIL_DOMAIN;
+  /* Correo, tal como se guarda: sin espacios de más y en minúsculas */
+  function cleanMail(v) {
+    return String(v == null ? '' : v).replace(/^\s+|\s+$/g, '')
+      .toLowerCase().slice(0, AC.MAIL_MAX);
   }
 
-  /* ---------- código de recuperación ----------
-   * El código se escribe a mano desde un papel, así que llega con guiones,
-   * espacios o en minúsculas. Se tira todo lo que no sea del alfabeto y se
-   * compara con lo que quede: 'xxxx xxxx-xxxx xxxx' vale igual. */
-  function cleanCode(v) {
-    var t = String(v == null ? '' : v).toUpperCase();
-    var out = '';
-    for (var i = 0; i < t.length; i++) {
-      if (AC.CODE_ALPHABET.indexOf(t.charAt(i)) !== -1) out += t.charAt(i);
-    }
-    return out;
+  /* Comprobación deliberadamente floja: aquí no se valida un correo —eso solo
+   * lo hace el mensaje que llega o no llega—, se evita un dedazo evidente.
+   * Validar de más solo sirve para rechazar direcciones legítimas. */
+  function mailOk(c) {
+    return /^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(c);
   }
 
-  /* Con guiones cada CODE_GROUP, que es como se enseña y como se apunta */
-  function groupCode(codigo) {
-    var re = new RegExp('.{1,' + AC.CODE_GROUP + '}', 'g');
-    return (String(codigo).match(re) || []).join('-');
-  }
-
-  /* Azar de verdad: Math.random no vale para una llave de repuesto */
-  function makeCode() {
-    var n = AC.CODE_LEN;
-    var bytes = new Uint8Array(n);
-    window.crypto.getRandomValues(bytes);
-    var out = '';
-    for (var i = 0; i < n; i++) {
-      out += AC.CODE_ALPHABET.charAt(bytes[i] % AC.CODE_ALPHABET.length);
-    }
-    return out;
-  }
-
-  /* SHA-256 de 'USUARIO:CODIGO' en hexadecimal. Es lo único que viaja al
-   * servidor; el código no sale nunca de esta pantalla.
-   *
-   * crypto.subtle solo existe en contexto seguro (https o localhost). Abriendo
-   * el juego con file:// no hay, y entonces esto devuelve null en vez de
-   * reventar: sin conexión tampoco habría cuenta que recuperar. */
-  function hashCode(usuario, codigo) {
-    var c = window.crypto;
-    if (!c || !c.subtle || !c.subtle.digest) return Promise.resolve(null);
-    var datos = new TextEncoder().encode(cleanUser(usuario) + ':' + codigo);
-    return c.subtle.digest('SHA-256', datos).then(function (buf) {
-      var b = new Uint8Array(buf), hex = '';
-      for (var i = 0; i < b.length; i++) {
-        hex += (b[i] < 16 ? '0' : '') + b[i].toString(16);
-      }
-      return hex;
-    }).catch(function () { return null; });
+  /* ¿Es uno de los correos internos de antes de que se pidiera el de verdad?
+   * Esas cuentas entran igual, pero no tienen a dónde mandar nada. */
+  function mailInterno(c) {
+    return String(c || '').toLowerCase().indexOf('@' + AC.MAIL_DOMAIN) !== -1;
   }
 
   function authHeaders(token) {
@@ -239,10 +224,40 @@
       });
     },
 
+    /* ---------- la Edge Function de las cuentas ----------
+     * Alta, entrada y "he olvidado la contraseña" pasan por ella porque las
+     * tres necesitan resolver usuario -> correo, y eso solo puede hacerlo el
+     * servidor: si el navegador pudiera preguntar el correo de un usuario,
+     * cualquiera podría sacar la lista entera de correos con los nombres del
+     * ranking. Devuelve cb(err, datos). */
+    fn: function (cuerpo, cb) {
+      if (!this.configured()) { cb('SIN CONEXIÓN', null); return; }
+      var url = String(cfg().SUPABASE_URL || '').replace(/\/+$/, '') +
+        '/functions/v1/' + AC.FN;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': cfg().SUPABASE_KEY,
+          'Authorization': 'Bearer ' + cfg().SUPABASE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cuerpo)
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (d) {
+          if (!res.ok || !d.ok) { cb(d.error || 'NO SE PUDO', null); return; }
+          cb(null, d);
+        });
+      }).catch(function () { cb('NO SE PUDO CONECTAR', null); });
+    },
+
     /* ---------- alta, entrada y salida ---------- */
-    signUp: function (usuario, pass, cb) {
+    /* El correo se pide para UNA cosa: poder recuperar la cuenta. Es
+     * obligatorio a propósito — dejarlo opcional es dejar cuentas que se
+     * pierden para siempre, que es exactamente de donde venimos. */
+    signUp: function (usuario, pass, correo, cb) {
       var self = this;
       var u = cleanUser(usuario);
+      var c = cleanMail(correo);
       if (u.length < AC.USER_MIN) {
         cb('EL USUARIO NECESITA AL MENOS ' + AC.USER_MIN + ' LETRAS');
         return;
@@ -251,21 +266,37 @@
         cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES');
         return;
       }
-      if (!this.configured()) { cb('SIN CONEXIÓN'); return; }
-      post('/auth/v1/signup', { email: mailFor(u), password: String(pass) })
-        .then(function (d) { self.accept(d, u, cb); })
-        .catch(function (e) { cb(e.message); });
+      if (!c) { cb('ESCRIBE TU CORREO: ES LO QUE TE DEVUELVE LA CUENTA'); return; }
+      if (!mailOk(c)) { cb('ESE CORREO NO TIENE BUENA PINTA'); return; }
+      this.fn({ op: 'alta', usuario: u, pass: String(pass), correo: c },
+        function (err, d) {
+          if (err) { cb(err); return; }
+          self.accept(d.sesion, u, cb);
+        });
     },
 
     signIn: function (usuario, pass, cb) {
       var self = this;
       var u = cleanUser(usuario);
       if (!u || !pass) { cb('ESCRIBE USUARIO Y CONTRASEÑA'); return; }
-      if (!this.configured()) { cb('SIN CONEXIÓN'); return; }
-      post('/auth/v1/token?grant_type=password',
-           { email: mailFor(u), password: String(pass) })
-        .then(function (d) { self.accept(d, u, cb); })
-        .catch(function (e) { cb(e.message); });
+      this.fn({ op: 'entrar', usuario: u, pass: String(pass) },
+        function (err, d) {
+          if (err) { cb(err); return; }
+          self.accept(d.sesion, u, cb);
+        });
+    },
+
+    /* "He olvidado la contraseña": Supabase manda SU enlace al correo de esa
+     * cuenta y el juego lo recoge al abrirse (ver desdeRecuperacion).
+     * cb(err, pista) — la pista es el correo tapado, para saber qué buzón
+     * mirar sin que salga entero en la pantalla de cualquiera. */
+    olvide: function (usuario, cb) {
+      var u = cleanUser(usuario);
+      if (!u) { cb('ESCRIBE TU USUARIO', null); return; }
+      this.fn({ op: 'olvide', usuario: u }, function (err, d) {
+        if (err) { cb(err, null); return; }
+        cb(null, (d && d.pista) || '');
+      });
     },
 
     /* Al arrancar: si había sesión guardada, se renueva sin molestar */
@@ -499,128 +530,122 @@
       this.push(true).catch(function () { /* ya se subirá */ });
     },
 
-    /* ---------- código de recuperación ----------
-     * Es la única forma de volver a entrar en una cuenta cuya contraseña se ha
-     * olvidado: el correo se compone por dentro y ese buzón no existe, así que
-     * sin esto la cuenta se pierde entera y para siempre.
-     *
-     * Aquí solo se guarda la HUELLA del código. El código en claro se enseña
-     * una vez, se apunta y no vuelve a estar disponible: si se pierde, se
-     * genera otro desde PERFIL (y el viejo deja de valer en el acto). */
+    /* ---------- el correo de recuperación ----------
+     * Es lo único que hace falta para que olvidar la contraseña deje de costar
+     * la cuenta. Solo se toca con la sesión abierta y solo la tuya. */
 
-    /* Un código nuevo para la cuenta abierta. cb(err, 'XXXX-XXXX-XXXX-XXXX').
-     * Genera SIEMPRE uno nuevo: no hay forma de recuperar el anterior, que es
-     * justamente lo que hace que guardar solo la huella sea seguro. */
-    nuevoCodigo: function (cb) {
-      var self = this;
-      if (!this.logged()) { cb('NECESITAS TENER LA SESIÓN ABIERTA', null); return; }
-      var codigo = makeCode();
-      hashCode(this.user.usuario, codigo).then(function (hash) {
-        if (!hash) {
-          cb('ESTE NAVEGADOR NO PUEDE GENERARLO (HACE FALTA HTTPS)', null);
-          return;
-        }
-        var h = authHeaders(self.token);
-        h['Prefer'] = 'return=minimal';
-        var fila = { id: self.user.id, hash: hash, intentos: 0, ultimo: null };
-
-        function falla(t) {
-          /* Proyecto al que todavía no se le ha aplicado
-           * supabase/recuperacion.sql: se dice claro en vez de dejar al
-           * jugador creyendo que tiene una llave de repuesto que no existe. */
-          cb(/relation|does not exist|schema cache/i.test(t)
-            ? 'EL SERVIDOR TODAVÍA NO TIENE LA RECUPERACIÓN PUESTA'
-            : 'NO SE PUDO GUARDAR EL CÓDIGO', null);
-        }
-
-        /* Se intenta ALTA y, si ya había fila, se CAMBIA. No se usa el upsert
-         * de PostgREST (`resolution=merge-duplicates`) a propósito: por dentro
-         * es un ON CONFLICT y Postgres le pide SELECT sobre la tabla entera,
-         * que es justo lo que no se le da al navegador para que nadie pueda
-         * leerse la huella. Dos peticiones a cambio de que la llave de repuesto
-         * no salga nunca del servidor está bien pagado. */
-        fetch(base('/rest/v1/' + AC.REC_TABLE), {
-          method: 'POST', headers: h, body: JSON.stringify(fila)
-        }).then(function (res) {
-          if (res.ok) { cb(null, groupCode(codigo)); return; }
-          return res.text().then(function (t) {
-            if (!/duplicate|unique|409/i.test(t) && res.status !== 409) {
-              falla(t);
-              return;
-            }
-            // ya tenía uno: se sustituye, y el viejo deja de valer en el acto
-            var cambio = { hash: hash, intentos: 0, ultimo: null,
-                           creado_en: new Date().toISOString() };
-            fetch(base('/rest/v1/' + AC.REC_TABLE + '?id=eq.' + self.user.id), {
-              method: 'PATCH', headers: h, body: JSON.stringify(cambio)
-            }).then(function (r2) {
-              if (r2.ok) { cb(null, groupCode(codigo)); return; }
-              return r2.text().then(falla);
-            }).catch(function () { cb('NO SE PUDO GUARDAR EL CÓDIGO', null); });
-          });
-        }).catch(function () { cb('NO SE PUDO GUARDAR EL CÓDIGO', null); });
-      });
-    },
-
-    /* ¿La cuenta abierta tiene código? cb(err, fecha|null). Solo se puede
-     * saber SI lo hay y de cuándo es: la huella no la lee nadie desde aquí
-     * (el permiso de esa columna no se le da al navegador). */
-    tieneCodigo: function (cb) {
+    /* Tu correo, si la sesión está abierta. cb(err, correo|null): null cuando
+     * la cuenta es de las de antes y lleva el correo interno, que a efectos de
+     * recuperar es lo mismo que no tener ninguno. */
+    miCorreo: function (cb) {
       if (!this.logged()) { cb('SIN SESIÓN', null); return; }
-      fetch(base('/rest/v1/' + AC.REC_TABLE + '?id=eq.' + this.user.id +
-                 '&select=creado_en&limit=1'),
-            { headers: authHeaders(this.token) })
+      fetch(base('/auth/v1/user'), { headers: authHeaders(this.token) })
         .then(function (res) {
           if (!res.ok) throw new Error('no');
           return res.json();
         })
-        .then(function (rows) {
-          cb(null, (rows && rows.length) ? (rows[0].creado_en || '') : null);
+        .then(function (u) {
+          var c = cleanMail(u && u.email);
+          cb(null, (!c || mailInterno(c)) ? null : c);
         })
         .catch(function () { cb('NO SE PUDO COMPROBAR', null); });
     },
 
-    /* Recuperar la cuenta: usuario + código + contraseña nueva. Lo resuelve la
-     * Edge Function `recuperar`, que es la única que puede cambiar una
-     * contraseña sin sesión abierta (necesita la service role, que no sale del
-     * servidor). Si sale bien, se entra en la cuenta al momento y se devuelve
-     * el código NUEVO, porque el que se acaba de usar ya no vale.
-     * cb(err, { codigo, aviso }) */
-    recuperar: function (usuario, codigo, pass, cb) {
+    /* Poner o cambiar tu correo. Esto es lo que tienen que hacer las cuentas
+     * creadas antes de que se pidiera: hasta entonces siguen sin poder
+     * recuperar la contraseña. */
+    ponerCorreo: function (correo, cb) {
       var self = this;
-      var u = cleanUser(usuario);
-      var c = cleanCode(codigo);
-      if (!u) { cb('ESCRIBE TU USUARIO', null); return; }
-      if (c.length !== AC.CODE_LEN) { cb('ESE CÓDIGO NO TIENE BUENA PINTA', null); return; }
-      if (String(pass || '').length < AC.PASS_MIN) {
-        cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES', null);
-        return;
-      }
-      if (!this.configured()) { cb('SIN CONEXIÓN', null); return; }
-      var url = String(cfg().SUPABASE_URL || '').replace(/\/+$/, '') +
-        '/functions/v1/' + AC.REC_FN;
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'apikey': cfg().SUPABASE_KEY,
-          'Authorization': 'Bearer ' + cfg().SUPABASE_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ usuario: u, codigo: c, pass: String(pass) })
+      var c = cleanMail(correo);
+      if (!this.logged()) { cb('NECESITAS TENER LA SESIÓN ABIERTA'); return; }
+      if (!c) { cb('ESCRIBE UN CORREO'); return; }
+      if (!mailOk(c)) { cb('ESE CORREO NO TIENE BUENA PINTA'); return; }
+      if (mailInterno(c)) { cb('ESE CORREO NO VALE'); return; }
+      fetch(base('/auth/v1/user'), {
+        method: 'PUT',
+        headers: authHeaders(this.token),
+        body: JSON.stringify({ email: c })
       }).then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (d) {
-          if (!res.ok || !d.ok) {
-            cb(d.error || 'NO SE PUDO RECUPERAR LA CUENTA', null);
-            return;
-          }
-          /* La contraseña ya es la nueva: se entra en el acto. Si el alta de
-           * sesión fallara (que no debería), el jugador ya puede entrar a mano,
-           * así que el código nuevo se devuelve igualmente. */
-          self.signIn(u, pass, function (err) {
-            cb(null, { codigo: d.codigo || '', aviso: d.aviso || '', entrado: !err });
-          });
+          if (res.ok) { cb(null); return; }
+          var t = JSON.stringify(d);
+          cb(/already|registered|exists/i.test(t)
+            ? 'ESE CORREO YA ES DE OTRA CUENTA'
+            : traduce(d.msg || d.error_description || d.error, d.error_code));
         });
-      }).catch(function () { cb('NO SE PUDO CONECTAR', null); });
+      }).catch(function () { cb('NO SE PUDO GUARDAR EL CORREO'); });
+      // el nombre no cambia, pero el panel sí tiene que repintarse
+      if (this.onchange) setTimeout(function () { self.changed(); }, 0);
+    },
+
+    /* Cambiar la contraseña con la sesión abierta. Lo usa la pantalla que sale
+     * al volver del enlace de recuperación. */
+    cambiarPass: function (pass, cb) {
+      if (!this.logged()) { cb('NECESITAS TENER LA SESIÓN ABIERTA'); return; }
+      if (String(pass || '').length < AC.PASS_MIN) {
+        cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES');
+        return;
+      }
+      fetch(base('/auth/v1/user'), {
+        method: 'PUT',
+        headers: authHeaders(this.token),
+        body: JSON.stringify({ password: String(pass) })
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (d) {
+          cb(res.ok ? null
+                    : traduce(d.msg || d.error_description || d.error, d.error_code));
+        });
+      }).catch(function () { cb('NO SE PUDO CAMBIAR LA CONTRASEÑA'); });
+    },
+
+    /* ¿Venimos del enlace del correo? Supabase devuelve al juego con la sesión
+     * colgada del ANCLA de la URL (#access_token=…&type=recovery). Si es eso,
+     * se abre la sesión y se devuelve true para que la interfaz pida la
+     * contraseña nueva. cb(err) cuando la sesión ya está lista.
+     *
+     * El ancla se limpia en cuanto se lee: no tiene sentido dejar un token
+     * rondando por la barra de direcciones ni que recargar repita el trámite. */
+    desdeRecuperacion: function (cb) {
+      var self = this;
+      var hash = '';
+      try { hash = window.location.hash || ''; } catch (e) { hash = ''; }
+      if (hash.indexOf('access_token=') === -1 ||
+          hash.indexOf('type=recovery') === -1) return false;
+      var lee = function (k) {
+        var m = new RegExp('[#&]' + k + '=([^&]*)').exec(hash);
+        return m ? decodeURIComponent(m[1]) : '';
+      };
+      var access = lee('access_token');
+      var refresh = lee('refresh_token');
+      if (!access) return false;
+      try {
+        window.history.replaceState(null, '',
+          window.location.pathname + window.location.search);
+      } catch (e) { /* navegador antiguo: se queda el ancla y no pasa nada */ }
+
+      this.token = access;
+      this.saveSession(refresh || null);
+      /* Del enlace no viene quién es: se pregunta. El nombre del juego lo
+       * rellena sync() con el perfil, como en restore(). */
+      fetch(base('/auth/v1/user'), { headers: authHeaders(access) })
+        .then(function (res) {
+          if (!res.ok) throw new Error('no');
+          return res.json();
+        })
+        .then(function (u) {
+          self.user = { id: (u && u.id) || '', usuario: '', avatar: 'pac' };
+          self.sync(function (err) {
+            self.changed();
+            if (cb) cb(err || null);
+          });
+        })
+        .catch(function () {
+          self.token = null;
+          self.user = null;
+          self.saveSession(null);
+          if (cb) cb('EL ENLACE HA CADUCADO');
+        });
+      return true;
     },
 
     /* ---------- amigos (solo con cuenta) ---------- */
@@ -711,8 +736,9 @@
     },
 
     cleanUser: cleanUser,
-    cleanCode: cleanCode,
-    groupCode: groupCode
+    cleanMail: cleanMail,
+    mailOk: mailOk,
+    mailInterno: mailInterno
   };
 
   window.PM.Account = Account;

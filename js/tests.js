@@ -3711,17 +3711,32 @@
     };
     try {
       Ac.token = null; Ac.user = null;
+      /* Entrar y crear cuenta pasan por la Edge Function, no por Supabase Auth
+       * directamente: es ella la que resuelve usuario -> correo con la service
+       * role. Si esto se saltara, el navegador tendría que conocer el correo
+       * de cada usuario y cualquiera podría sacar la lista con los nombres del
+       * ranking. */
       Ac.signIn('PEPE', 'lachiquilla', function () {});
       var e = vistas[0];
-      ok(/\/auth\/v1\/token\?grant_type=password$/.test(e.url), 'entrar: ' + e.url);
+      ok(/\/functions\/v1\/cuenta$/.test(e.url), 'entrar: ' + e.url);
       eq(e.opts.method, 'POST');
       var cuerpo = JSON.parse(e.opts.body);
-      eq(cuerpo.email, 'pepe@' + CFG.ACCOUNT.MAIL_DOMAIN,
-         'el correo se compone con el usuario');
+      eq(cuerpo.op, 'entrar');
+      eq(cuerpo.usuario, 'PEPE', 'va el usuario, no un correo');
+      ok(!cuerpo.correo, 'y ningún correo compuesto por dentro');
 
       vistas.length = 0;
-      Ac.signUp('PEPE', 'lachiquilla', function () {});
-      ok(/\/auth\/v1\/signup$/.test(vistas[0].url), 'alta: ' + vistas[0].url);
+      Ac.signUp('PEPE', 'lachiquilla', 'pepe@gmail.com', function () {});
+      ok(/\/functions\/v1\/cuenta$/.test(vistas[0].url), 'alta: ' + vistas[0].url);
+      var alta = JSON.parse(vistas[0].opts.body);
+      eq(alta.op, 'alta');
+      eq(alta.correo, 'pepe@gmail.com', 'con el correo DE VERDAD');
+
+      vistas.length = 0;
+      Ac.olvide('PEPE', function () {});
+      var olv = JSON.parse(vistas[0].opts.body);
+      eq(olv.op, 'olvide');
+      eq(olv.usuario, 'PEPE');
 
       // con sesión de mentira: guardar el perfil y añadir un amigo
       vistas.length = 0;
@@ -3826,13 +3841,17 @@
     });
   });
 
-  test('crear cuenta exige usuario y contraseña con un mínimo', function () {
+  test('crear cuenta exige usuario, contraseña y correo', function () {
     var Ac = window.PM.Account;
     var msg = null;
-    Ac.signUp('AB', 'lachiquilla', function (e) { msg = e; });
+    Ac.signUp('AB', 'lachiquilla', 'a@b.co', function (e) { msg = e; });
     ok(/USUARIO/.test(msg), 'usuario corto: ' + msg);
-    Ac.signUp('PEPITO', '123', function (e) { msg = e; });
+    Ac.signUp('PEPITO', '123', 'a@b.co', function (e) { msg = e; });
     ok(/CONTRASEÑA/.test(msg), 'contraseña corta: ' + msg);
+    /* El correo es obligatorio a propósito: dejarlo opcional es dejar cuentas
+     * que se pierden para siempre, que es de donde venimos. */
+    Ac.signUp('PEPITO', 'lachiquilla', '', function (e) { msg = e; });
+    ok(/CORREO/.test(msg), 'sin correo no se crea: ' + msg);
   });
 
   // ---------------------------------------------------------------
@@ -4648,22 +4667,28 @@
   // se puede comprobar que se llama.
   // ---------------------------------------------------------------
 
-  /* Cambia AudioSys por un espía y devuelve la lista de lo que se pidió */
+  /* Cambia AudioSys por un espía y devuelve la lista de lo que se pidió, con
+   * el volumen de cada uno: los poderes suenan enteros cuando son tuyos y al
+   * 10% cuando son de otro, y eso hay que poder comprobarlo. */
+  var SONIDOS_HAB = ['playBite', 'playBiteMiss', 'playTurbo', 'playFlash',
+                     'playShout', 'playCharge', 'playStealth'];
+
   function espiaAudio(fn) {
     var A = window.AudioSys;
-    if (!A) return [];
-    var pedidos = [];
-    var nombres = ['playBite', 'playBiteMiss', 'playTurbo', 'playFlash',
-                   'playShout', 'playCharge', 'playStealth'];
+    if (!A) return { nombres: [], vol: {} };
+    var pedidos = [], vol = {};
     var previos = {};
-    nombres.forEach(function (n) {
+    SONIDOS_HAB.forEach(function (n) {
       previos[n] = A[n];
-      A[n] = function () { pedidos.push(n); };
+      A[n] = function (esc) {
+        pedidos.push(n);
+        vol[n] = (esc === undefined) ? 1 : esc;
+      };
     });
     try { fn(); } finally {
-      nombres.forEach(function (n) { A[n] = previos[n]; });
+      SONIDOS_HAB.forEach(function (n) { A[n] = previos[n]; });
     }
-    return pedidos;
+    return { nombres: pedidos, vol: vol };
   }
 
   test('AudioSys tiene un sonido por poder', function () {
@@ -4683,8 +4708,9 @@
       G.eatFreezeTicks = 0;
       HB.pulsar(G, 0, HB.TURBO);
     });
-    ok(oidos.indexOf('playBite') !== -1, 'la Q suena al acertar');
-    ok(oidos.indexOf('playTurbo') !== -1, 'la W ya no es muda');
+    ok(oidos.nombres.indexOf('playBite') !== -1, 'la Q suena al acertar');
+    ok(oidos.nombres.indexOf('playTurbo') !== -1, 'la W ya no es muda');
+    eq(oidos.vol.playBite, 1, 'y los tuyos suenan enteros');
   });
 
   test('el turbo y el flash, que no tocan el marcador, también suenan', function () {
@@ -4702,8 +4728,9 @@
       HB.pulsar(G, 0, HB.FLASH);
       HB.pulsar(G, 0, HB.GRITO);
     });
-    ok(oidos.indexOf('playFlash') !== -1, 'la E suena');
-    ok(oidos.indexOf('playShout') !== -1, 'y la R también, aparte del modo azul');
+    ok(oidos.nombres.indexOf('playFlash') !== -1, 'la E suena');
+    ok(oidos.nombres.indexOf('playShout') !== -1,
+       'y la R también, aparte del modo azul');
   });
 
   test('un mordisco al aire suena DISTINTO al que acierta', function () {
@@ -4712,8 +4739,63 @@
       for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
       HB.pulsar(G, 0, HB.MORDISCO);
     });
-    ok(oidos.indexOf('playBiteMiss') !== -1, 'suena el fallo');
-    ok(oidos.indexOf('playBite') === -1, 'y no el de acertar');
+    ok(oidos.nombres.indexOf('playBiteMiss') !== -1, 'suena el fallo');
+    ok(oidos.nombres.indexOf('playBite') === -1, 'y no el de acertar');
+  });
+
+  /* Los poderes de los DEMÁS también se oyen —que a alguien le quede una
+   * habilidad menos es información de la partida— pero bajitos, o una party de
+   * cuatro son dieciséis teclas peleándose con el waka. */
+  test('los poderes de otro jugador suenan, pero al 10%', function () {
+    var oidos = espiaAudio(function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+      G.localIdx = 1;
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      // llega el eco de que el OTRO ha usado el turbo
+      HB.evento(G, 0, HB.TURBO);
+    });
+    ok(oidos.nombres.indexOf('playTurbo') !== -1, 'se oye');
+    eq(oidos.vol.playTurbo, CFG.HAB.VOL_AJENO, 'pero al volumen de los ajenos');
+    G.toMenu();
+  });
+
+  test('el eco de TU propio poder no suena dos veces', function () {
+    var oidos = espiaAudio(function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+      G.localIdx = 1;
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      HB.evento(G, 1, HB.TURBO);      // el eco del mío: ya está aplicado
+    });
+    eq(oidos.nombres.length, 0, 'el eco propio no suena');
+    G.toMenu();
+  });
+
+  test('el anfitrión oye bajito el poder que le pide un invitado', function () {
+    var oidos = espiaAudio(function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'] });
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      G.pacs[1].safeTicks = 999999;
+      HB.peticion(G, 1, HB.FLASH);    // lo pide el invitado
+    });
+    ok(oidos.nombres.indexOf('playFlash') !== -1, 'lo oye');
+    eq(oidos.vol.playFlash, CFG.HAB.VOL_AJENO, 'al volumen de los ajenos');
+    G.toMenu();
+  });
+
+  test('con dos en el mismo teclado los dos suenan enteros', function () {
+    var oidos = espiaAudio(function () {
+      partidaHab2();
+      HB.pulsar(G, 1, HB.TURBO);      // el del J2, que está aquí al lado
+    });
+    ok(oidos.nombres.indexOf('playTurbo') !== -1, 'suena');
+    eq(oidos.vol.playTurbo, 1,
+       'entero: los dos juegan en esta pantalla, no hay "el otro"');
   });
 
   // ---------------------------------------------------------------
@@ -4927,17 +5009,130 @@
     eq(R.serializar(rep), '', 'se rechaza');
   });
 
-  test('PAC-MAN VS. en local no deja repetición, que saldría mentirosa',
+  /* PAC-MAN VS. sí deja repetición, y esta es la prueba que lo sostiene.
+   * Durante un tiempo NO la dejaba: el rumbo de quien lleva fantasma lo
+   * interceptaba `Versus.steer` antes de llegar a `Replay.entrada`, así que la
+   * repetición salía con la mitad de las órdenes y al verla el fantasma humano
+   * se movía por su cuenta. Ahora el rumbo del fantasma es una entrada más. */
+  test('una partida de PAC-MAN VS. se graba y se reproduce exacta', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      // [tick, jugador, dir] — el jugador 1 lleva a BLINKY
+      var guion = [
+        [5, 0, 1], [10, 1, 0], [60, 0, 0], [80, 1, 3], [140, 0, 3],
+        [180, 1, 2], [240, 0, 2], [300, 1, 1], [360, 0, 1], [420, 1, 0],
+        [500, 0, 0], [560, 1, 3], [640, 0, 3], [700, 1, 2]
+      ];
+      var TOTAL = 800;
+
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              G.setPacDir(guion[k][1], guion[k][2]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+
+      G.newGame({ players: 2, ghosts: [-1, 0] });
+      ok(G.isVersus(), 'es una partida de VS.');
+      var rep = R.enCurso();
+      ok(rep, 'y AHORA SÍ se graba');
+      eq(rep.modo, 'vs', 'con su modo propio');
+      eq(rep.ajustes.ghosts.join(','), '-1,0', 'y con el reparto de fantasmas');
+      corre(true);
+      var pts = G.score, quedan = G.dotsLeft;
+      var gx = Math.round(G.ghosts[0].x), gy = Math.round(G.ghosts[0].y);
+      var deFantasma = rep.entradas.filter(function (e) { return e[1] === 1; }).length;
+      ok(deFantasma > 0,
+         'los giros del que lleva fantasma se apuntan: ' + deFantasma);
+      if (!rep.final) {
+        rep.final = { puntos: pts || 1, nivel: G.level, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto y vuelve');
+      eq(leida.modo, 'vs', 'con su modo intacto');
+      eq(leida.ajustes.ghosts.join(','), '-1,0', 'y con el reparto intacto');
+      ok(R.ver(leida), 'la repetición arranca');
+      ok(G.isVersus(), 'y arranca EN modo VS.');
+      eq(G.vsGhostOf(1), 0, 'con el mismo fantasma en las mismas manos');
+      corre(false);
+      eq(G.score, pts, 'LA PUNTUACIÓN NO CUADRA: el determinismo está roto');
+      eq(G.dotsLeft, quedan, 'las pastillas comidas no cuadran');
+      /* Lo que de verdad prueba que el rumbo del fantasma se grabó: si no, el
+       * fantasma humano habría vagado por su cuenta y acabaría en otro sitio. */
+      eq(Math.round(G.ghosts[0].x), gx, 'EL FANTASMA HUMANO ACABA EN OTRO SITIO');
+      eq(Math.round(G.ghosts[0].y), gy, 'el fantasma humano no cuadra en Y');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('VS. con poderes tiene su propio modo, y guarda los poderes del fantasma',
     function () {
       var R = window.PM.Replay;
       window.PM.settings.muted = true;
-      G.newGame({ players: 2, ghosts: [-1, 0] });
-      eq(R.enCurso(), null,
-         'el rumbo del que lleva fantasma no pasa por setPacDir: no se graba');
-      G.newGame({ players: 2 });
-      ok(R.enCurso(), 'un dúo normal sí se graba');
+      G.newGame({ players: 2, hab: true, ghosts: [-1, 0] });
+      var rep = R.enCurso();
+      ok(rep, 'se graba');
+      eq(rep.modo, 'habvs', 'con el modo de VS. con poderes');
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      G.ghosts[0].mode = 'normal';
+      ok(HB.pulsar(G, 1, HB.EMBESTIDA), 'el fantasma usa un poder');
+      var poderes = rep.entradas.filter(function (e) {
+        return e[2] >= 4 && e[1] === 1;
+      }).length;
+      eq(poderes, 1, 'y queda apuntado como entrada');
+      rep.final = { puntos: 10, nivel: 1, fantasmas: 0, tiempoMs: 900 };
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'pasa por el texto y vuelve');
+      eq(leida.modo, 'habvs');
+      eq(leida.entradas[0].join(','), rep.entradas[0].join(','),
+         'con el poder del fantasma intacto');
       G.toMenu();
     });
+
+  test('una repetición de VS. sin reparto de fantasmas se rechaza', function () {
+    var R = window.PM.Replay;
+    function repDeVs(ghosts) {
+      var o = {
+        v: R.V, modo: 'vs', semilla: null, nivel: 1, jugadores: 2,
+        ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+        nombres: ['UNO', 'DOS'], fecha: new Date().toISOString(),
+        entradas: [[10, 1, 2]],
+        final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 900 }
+      };
+      if (ghosts) o.ajustes.ghosts = ghosts;
+      return o;
+    }
+    eq(R.serializar(repDeVs(null)), '', 'sin reparto no se puede montar');
+    eq(R.serializar(repDeVs([-1, -1])), '', 'sin fantasma humano no es de VS.');
+    eq(R.serializar(repDeVs([0, 1])), '', 'y sin Pac-Man no hay partida');
+    eq(R.serializar(repDeVs([-1, 9])), '', 'ni con un fantasma que no existe');
+    ok(R.serializar(repDeVs([-1, 2])) !== '', 'con un reparto bueno, sí');
+
+    /* Y al revés: una repetición normal no puede traer reparto de fantasmas,
+     * que ahí no hay ninguno que repartir. */
+    var normal = repDeVs([-1, 0]);
+    normal.modo = 'duo';
+    eq(R.serializar(normal), '', 'un dúo normal con fantasmas se rechaza');
+  });
 
   test('el código de un enlace de repetición no tiene letras que se confundan',
     function () {
@@ -5056,50 +5251,66 @@
   });
 
   // ---------------------------------------------------------------
-  // Cuentas: el código de recuperación
+  // Cuentas: el correo de recuperación
   //
-  // Sin él, olvidar la contraseña era perder la cuenta entera. Lo que se puede
-  // probar sin servidor es el formato, que es donde se juega la seguridad:
-  // el código tiene que ser copiable a mano y difícil de acertar.
+  // Sin él, olvidar la contraseña era perder la cuenta entera: los cuatro
+  // récords, la experiencia, los logros y las doce maestrías. Lo que se puede
+  // probar sin servidor es el saneado y las guardas de antes de salir a la red.
   // ---------------------------------------------------------------
 
-  test('el código de recuperación se puede copiar de un papel', function () {
-    var AC = CFG.ACCOUNT;
+  test('el correo se sanea, no se valida de más', function () {
     var Ac = window.PM.Account;
-    ok(AC.CODE_ALPHABET.indexOf('I') === -1 && AC.CODE_ALPHABET.indexOf('O') === -1,
-       'sin I ni O');
-    ok(AC.CODE_ALPHABET.indexOf('0') === -1 && AC.CODE_ALPHABET.indexOf('1') === -1,
-       'sin cero ni uno');
-    /* 32 letras y 16 posiciones son 80 bits: no hay quien lo acierte a ciegas,
-     * y encima la función de recuperación frena los intentos. */
-    eq(AC.CODE_ALPHABET.length, 32, 'el alfabeto tiene 32');
-    eq(AC.CODE_LEN, 16, 'y el código 16 caracteres');
-    eq(Ac.groupCode('ABCDEFGH23456789'), 'ABCD-EFGH-2345-6789',
-       'se enseña de cuatro en cuatro');
+    eq(Ac.cleanMail('  MauLio@Gmail.COM  '), 'maulio@gmail.com',
+       'espacios fuera y todo a minúsculas');
+    eq(Ac.cleanMail(null), '', 'sin correo, nada');
+    ok(Ac.mailOk('a@b.co'), 'un correo corto vale');
+    ok(Ac.mailOk('nombre.apellido+juego@midominio.es'), 'y uno con adornos también');
+    ok(!Ac.mailOk('maulio'), 'sin arroba no');
+    ok(!Ac.mailOk('maulio@gmail'), 'ni sin punto en el dominio');
+    ok(!Ac.mailOk('mau lio@gmail.com'), 'ni con un espacio en medio');
   });
 
-  test('el código se acepta como lo escribiría una persona', function () {
+  test('los correos internos de antes no cuentan como correo', function () {
     var Ac = window.PM.Account;
-    eq(Ac.cleanCode('abcd-efgh 2345_6789'), 'ABCDEFGH23456789',
-       'minúsculas, guiones y espacios dan igual');
-    eq(Ac.cleanCode('AB!CD'), 'ABCD', 'lo que no es del alfabeto se cae');
-    eq(Ac.cleanCode('IOIO'), '', 'y las letras que no existen, también');
-    eq(Ac.cleanCode(null), '', 'sin código, nada');
+    /* Las cuentas creadas antes de que se pidiera el correo llevan uno
+     * compuesto por dentro contra un dominio que no existe. Entran igual, pero
+     * a efectos de recuperar la contraseña es como no tener ninguno, y hay que
+     * saber distinguirlo para poder avisar. */
+    ok(Ac.mailInterno('maulio@' + CFG.ACCOUNT.MAIL_DOMAIN), 'ese es interno');
+    ok(!Ac.mailInterno('maulio@gmail.com'), 'y este no');
+    ok(!Ac.mailInterno(''), 'y sin correo, tampoco');
   });
 
-  test('recuperar sin lo mínimo ni siquiera sale a la red', function () {
+  test('crear cuenta sin lo mínimo ni siquiera sale a la red', function () {
     var Ac = window.PM.Account;
     var errores = [];
-    Ac.recuperar('', 'ABCD-EFGH-2345-6789', 'contraseña',
-      function (e) { errores.push(e); });
-    Ac.recuperar('ALGUIEN', 'CORTO', 'contraseña',
-      function (e) { errores.push(e); });
-    Ac.recuperar('ALGUIEN', 'ABCD-EFGH-2345-6789', '123',
-      function (e) { errores.push(e); });
-    eq(errores.length, 3, 'los tres se paran aquí');
-    ok(/USUARIO/.test(errores[0]), 'falta el usuario');
-    ok(/CÓDIGO/.test(errores[1]), 'el código no tiene buena pinta');
-    ok(/CONTRASEÑA/.test(errores[2]), 'y la contraseña es corta');
+    Ac.signUp('AB', 'contraseña', 'a@b.co', function (e) { errores.push(e); });
+    Ac.signUp('ALGUIEN', '123', 'a@b.co', function (e) { errores.push(e); });
+    Ac.signUp('ALGUIEN', 'contraseña', '', function (e) { errores.push(e); });
+    Ac.signUp('ALGUIEN', 'contraseña', 'novale', function (e) { errores.push(e); });
+    eq(errores.length, 4, 'los cuatro se paran aquí');
+    ok(/USUARIO/.test(errores[0]), 'el usuario es corto');
+    ok(/CONTRASEÑA/.test(errores[1]), 'la contraseña es corta');
+    ok(/CORREO/.test(errores[2]), 'falta el correo');
+    ok(/CORREO/.test(errores[3]), 'y ese correo no tiene buena pinta');
+  });
+
+  test('poner un correo sin sesión no hace nada', function () {
+    var Ac = window.PM.Account;
+    var visto = null;
+    Ac.ponerCorreo('a@b.co', function (e) { visto = e; });
+    ok(/SESIÓN/.test(visto || ''), 'hace falta la sesión abierta');
+    visto = null;
+    Ac.cambiarPass('otracosa', function (e) { visto = e; });
+    ok(/SESIÓN/.test(visto || ''), 'y para cambiar la contraseña también');
+  });
+
+  test('sin enlace de recuperación en la URL, no pasa nada', function () {
+    var Ac = window.PM.Account;
+    /* desdeRecuperacion mira el ancla de la dirección. En una carga normal no
+     * hay ninguno, y tiene que decir que no sin tocar la sesión: si dijera que
+     * sí, cada arranque pediría una contraseña nueva. */
+    eq(Ac.desdeRecuperacion(function () {}), false, 'no venimos de ningún enlace');
   });
 
   // ---------------------------------------------------------------

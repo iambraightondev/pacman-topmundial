@@ -724,24 +724,21 @@
     PASS_MIN: 6,
     KEY: 'pacman-topmundial-sesion',  // sesión guardada en este navegador
 
-    /* ---------- código de recuperación ----------
-     * Quien olvidaba la contraseña PERDÍA LA CUENTA: los cuatro récords, la
-     * experiencia, los logros y las doce maestrías, sin vuelta atrás. El correo
-     * se compone por dentro y ese buzón no existe, así que el enlace de
+    /* ---------- recuperar la contraseña ----------
+     * Quien la olvidaba PERDÍA LA CUENTA: los cuatro récords, la experiencia,
+     * los logros y las doce maestrías, sin vuelta atrás. El correo se componía
+     * por dentro con MAIL_DOMAIN y ese buzón no existe, así que el enlace de
      * recuperación de Supabase no llegaba a ninguna parte.
      *
-     * Ahora al registrarse se enseña UNA VEZ un código de 16 caracteres. En el
-     * servidor solo se guarda su huella (SHA-256), nunca el código: quien mire
-     * la tabla no puede entrar en ninguna cuenta, y quien tenga el papel sí.
-     * Lo comprueba la Edge Function `recuperar`, que es la única que puede
-     * cambiar una contraseña sin sesión abierta. */
-    REC_TABLE: 'recuperacion',
-    REC_FN: 'recuperar',
-    /* Sin I, O, 0 ni 1: el código se copia a mano de un papel, y ahí esas
-     * cuatro son la misma letra. Mismo criterio que los códigos de sala. */
-    CODE_ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
-    CODE_LEN: 16,                    // 4 grupos de 4 = 80 bits de azar
-    CODE_GROUP: 4                    // cómo se parte al enseñarlo
+     * Ahora se pide el correo DE VERDAD al registrarse y la recuperación es la
+     * de toda la vida: un enlace al buzón. Se sigue ENTRANDO con el usuario,
+     * porque quien resuelve usuario -> correo es la Edge Function `cuenta`,
+     * con la service role y sin que el correo baje nunca al navegador.
+     *
+     * MAIL_DOMAIN se queda porque las cuentas de antes lo llevan: entran igual,
+     * pero no pueden recuperar la contraseña hasta poner un correo en PERFIL. */
+    FN: 'cuenta',
+    MAIL_MAX: 254                    // lo que permite el estándar
   };
 
   /* Nombres de invitado: se sortean juntando una pareja de estas listas y
@@ -1019,7 +1016,14 @@
     CHARGE_TICKS: 4 * 60,    // 4 s de embestida
     CHARGE_MULT: 1.35,
     STALK_TICKS: 4 * 60,     // 4 s de acecho
-    STALK_ALPHA: 0.3         // lo poco que se ve mientras dura
+    STALK_ALPHA: 0.3,        // lo poco que se ve mientras dura
+
+    /* Volumen al que suenan los poderes DE LOS DEMÁS. Suenan todos —saber que
+     * a alguien le queda una habilidad menos es información de la partida, y
+     * el mordisco de al lado se oye venir— pero al 10%: a volumen entero, una
+     * party de cuatro son dieciséis teclas peleándose con el waka y con lo que
+     * estés haciendo tú. Los tuyos suenan enteros. */
+    VOL_AJENO: 0.1
   };
   /* Alcance real del mordisco, en píxeles (ver BITE_TILES) */
   CFG.HAB.BITE_PX = CFG.HAB.BITE_TILES * CFG.TILE + CFG.HAB.BITE_MARGIN;

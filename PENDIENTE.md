@@ -23,21 +23,38 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v28`**. **246 pruebas**: 0 fallos en `tests.html` y los
+Service worker en **`pm-v29`**. **254 pruebas**: 0 fallos en `tests.html` y los
 4 de siempre en Node (ver más abajo).
 
-> **Lo del servidor YA está aplicado** (tablas, permisos y la función de
-> recuperación, todo comprobado contra el proyecto de verdad). Lo que puede
-> faltar es el `git push`, que es lo que despliega en Vercel: si el juego en
-> producción no enseña el botón de CÓDIGO DE RECUPERACIÓN, es eso.
+> **Lo del servidor YA está aplicado** (tablas, permisos, configuración de auth
+> y la función de cuentas, todo comprobado contra el proyecto de verdad). Lo que
+> puede faltar es el `git push`, que es lo que despliega en Vercel.
 
-### Lo único que hay que hacer a mano
+### LO ÚNICO QUE FALTA PARA QUE LA RECUPERACIÓN FUNCIONE
 
-- **Todo el mundo que ya tuviera cuenta debería crearse su CÓDIGO DE
-  RECUPERACIÓN** (PERFIL → CÓDIGO DE RECUPERACIÓN, se enseña una vez y se
-  apunta). Los que ya existen no tienen ninguno, y hasta que no lo tengan
-  siguen exactamente igual que antes: olvidar la contraseña = perder la cuenta.
-  El panel del perfil se lo dice a quien no lo tiene.
+**Un servidor de correo propio en Supabase.** Todo lo demás está hecho y
+probado: se pide el correo al registrarse, se entra con usuario, «he olvidado
+la contraseña» resuelve el correo y le pide a Supabase que mande su enlace, y
+el juego recoge ese enlace y pide la contraseña nueva.
+
+Lo que no está es **quién manda el mensaje**. Sin `smtp_host` configurado,
+Supabase usa su remitente de prueba: **2 correos por hora en todo el proyecto**
+y pensado solo para desarrollo, no para escribir a gente de fuera. Es decir:
+el enlace se pide bien, se genera bien... y no llega.
+
+Se arregla en *Authentication → SMTP Settings* del panel de Supabase, con
+cualquier proveedor (Resend es gratis hasta 3.000 al mes; también vale un Gmail
+con contraseña de aplicación, o Brevo). En cuanto esté, sube también
+`rate_limit_email_sent`, que ahora está clavado en 2 por eso mismo.
+
+### Lo que hay que hacer a mano
+
+- **Todo el mundo que ya tuviera cuenta debería ponerse su CORREO DE
+  RECUPERACIÓN** (PERFIL → CORREO DE RECUPERACIÓN). Las cuentas de antes
+  llevan el correo interno de mentira, así que entran igual pero **no pueden
+  recuperar la contraseña**: hasta que lo pongan siguen exactamente como antes,
+  olvidar la contraseña = perder la cuenta. El panel del perfil se lo dice a
+  quien no lo tiene.
 - **Al amigo que tenía "NORMAL" con cinco vidas**: que abra OPCIONES →
   DIFICULTAD y pulse **NORMAL** una vez. El arreglo hace que el panel deje de
   mentir (ahora le dirá PERSONALIZADA, que es la verdad), pero **no le toca los
@@ -56,12 +73,6 @@ Service worker en **`pm-v28`**. **246 pruebas**: 0 fallos en `tests.html` y los
 
 Ninguno rompe nada. Están explicados donde toca; esto es solo la lista:
 
-- **PAC-MAN VS. en local no deja repetición.** Es a propósito desde hoy: el
-  rumbo de quien lleva fantasma no pasa por `Game.setPacDir` —lo intercepta
-  `Versus.steer` antes—, así que la repetición salía con la mitad de las
-  órdenes y el fantasma humano se movía solo al verla. Antes se grababa igual
-  y mentía; ahora directamente no se ofrece. Para arreglarlo de verdad habría
-  que apuntar también el rumbo del fantasma como una entrada más.
 - **`hab`, `lab` y `vs` empiezan sus logros a cero** para todo el mundo, y no
   tiene arreglo: de esos modos no hay rastro en los contadores viejos.
 - **Los iconos de las tarjetas se dibujan en cada `buildMenu`**, que solo pasa
@@ -81,37 +92,38 @@ Era el único punto que **restaba** cada vez que pasaba: quien olvidaba la
 contraseña perdía los cuatro récords, la experiencia, los logros y las doce
 maestrías, sin vuelta atrás.
 
-- **Se eligió el código de recuperación, no el correo real.** El correo obliga
-  a pedir un dato que hoy no se pide y a tocar la configuración de auth del
-  proyecto; el código resuelve el problema entero sin nada de eso. Si algún día
-  se quiere el correo, esto no estorba: pueden convivir.
-- **En el servidor solo vive la HUELLA** (`sha256('USUARIO:CODIGO')`), en la
-  tabla `recuperacion`. Y **nadie puede leerla desde el navegador, ni su
-  dueño**: el RLS filtra FILAS, no columnas, así que además hay permisos POR
-  COLUMNA (`grant select (id, creado_en)`). El dueño puede saber *que* tiene
-  código —para que PERFIL avise a quien no— pero nunca *cuál*.
-- **Por eso `Account.nuevoCodigo` NO usa el upsert de PostgREST.**
-  `resolution=merge-duplicates` es un `ON CONFLICT` por dentro y Postgres pide
-  `SELECT` sobre la tabla entera, que es justo el permiso que no se da. Hace
-  alta y, si ya había, cambia. Dos peticiones a cambio de que la llave de
-  repuesto no salga del servidor.
-- **La contraseña la cambia una Edge Function** (`recuperar`), porque Supabase
-  Auth solo deja cambiarla con sesión abierta —lo que no tiene quien la ha
-  olvidado— o con la API de administración, que pide la service role. Va con
-  **`verify_jwt: false` a propósito**; lo que guarda la puerta es el código (80
-  bits) más un freno de 10 intentos y 15 minutos de castigo.
-- **Ojo con esto si algo falla:** hizo falta `grant select on public.perfiles
-  to service_role`. `cuentas.sql` solo se lo daba a `anon` y `authenticated`, y
-  sin eso la función no encuentra la cuenta por nombre y contesta SIEMPRE
-  «usuario o código incorrectos», sin forma de adivinar por qué. Está dentro de
-  `supabase/recuperacion.sql`.
-- **Usuario que no existe, usuario sin código y código equivocado dan la MISMA
-  respuesta.** Si no, esta puerta sería una lista de qué nombres tienen cuenta.
-- **El código usado se repone**, no solo se quema: uno de un solo uso que no se
-  repone deja al jugador sin red la próxima vez, que es el problema del que
-  venimos. Si la reposición falla, la respuesta dice `ok` igual con un aviso —
-  la contraseña YA se cambió y mentir en cualquiera de las dos direcciones es
-  peor.
+- **Se pide el correo DE VERDAD al registrarse** y la recuperación es la de
+  toda la vida: pides el enlace, te llega, y el juego te pide la contraseña
+  nueva. Se probó primero con un código de recuperación de 16 caracteres —se
+  enseñaba una vez y se apuntaba en un papel— y se descartó **por incómodo**:
+  el juego es para jugar con amigos, no para custodiar una llave.
+- **Se sigue entrando con USUARIO**, que es lo que sostiene todo el resto del
+  juego (el ranking, la party, los amigos y las invitaciones van por el
+  nombre). Quien resuelve usuario → correo es la Edge Function `cuenta`, con la
+  service role: **el correo de nadie baja nunca al navegador**. Si el juego
+  pudiera preguntarlo para entrar, cualquiera sacaría la lista de correos con
+  los nombres del ranking.
+- **El alta también pasa por la función**, y no por gusto: si el usuario ya
+  estuviera cogido después de crear la cuenta de auth, quedaría una cuenta
+  huérfana Y el correo de esa persona quemado, sin poder reintentar con otro
+  nombre. La función lo deshace (`DELETE` del usuario) si el perfil no entra.
+- **No hay ninguna tabla nueva.** El correo vive donde ya vivía: en
+  `auth.users`, que no es público. La tabla `recuperacion` del intento
+  anterior se tiró.
+- **Ojo con esto si algo falla:** hizo falta
+  `grant select, insert, update on public.perfiles to service_role`. La service
+  role **se salta el RLS pero NO los permisos de tabla**, y sin eso la función
+  recibe un 42501 pelado y contesta «usuario o contraseña mal» sin ninguna
+  pista. Costó dos vueltas; está en `supabase/cuentas.sql`.
+- **Configuración de auth que hubo que tocar** (por la API de gestión, no por
+  SQL): `site_url` y `uri_allow_list` apuntando al juego —si no, el enlace del
+  correo lleva a `localhost:3000`— y `mailer_secure_email_change_enabled` a
+  **false**, porque con eso encendido cambiar de correo pide confirmación
+  también en el ANTERIOR, que para las cuentas que más lo necesitan es un buzón
+  que no existe.
+- **Usuario que no existe y contraseña mala dan la MISMA respuesta**, aunque
+  los nombres sean públicos: no hay ningún motivo para regalar la lista.
+- **Lo que falta:** el SMTP. Ver arriba, en la primera sección.
 
 ### 2 · DESATADO en dos jugadores locales
 
@@ -154,14 +166,23 @@ maestrías, sin vuelta atrás.
 
 ### 4 · Los poderes suenan
 
-- Cada uno tiene el suyo en `js/audio.js`, y **suenan solo los de quien juega
-  en esta pantalla** (`mio()` en `habilidades.js`). En una party de cuatro, oír
-  las dieciséis teclas de todo el mundo no informa de nada y tapa el waka.
+- Cada uno tiene el suyo en `js/audio.js`, y **suenan los de todo el mundo**:
+  que a alguien le quede una habilidad menos es información de la partida, y un
+  mordisco se oye venir. Los de los demás entran al **10%**
+  (`CFG.HAB.VOL_AJENO`), porque a volumen entero una party de cuatro son
+  dieciséis teclas peleándose con el waka.
+- **Dónde se dispara el sonido de los demás** tiene truco: MORDISCO y GRITO
+  pasan por su propia función también en el anfitrión, así que salen bajitos
+  solos (`sonDe` mira `mio()`); TURBO, FLASH y los dos del fantasma solo se
+  *marcan*, así que hay que sonarlos a mano en `peticion` (anfitrión) y en
+  `evento` (eco). `hostEvt` no se aplica en local, así que nada suena dos veces.
 - **El mordisco al aire suena DISTINTO al que acierta** (`playBiteMiss`).
   Fallar la puntería y tener la tecla en recarga se sentían exactamente igual.
 - Los dos del fantasma van más graves a propósito: en una partida donde los dos
   bandos tienen teclas, la altura es lo único que dice de qué lado vino el
   sonido sin apartar la vista.
+- Con **dos en el mismo teclado los dos suenan enteros**: ahí no hay «el otro»,
+  los dos están mirando la misma pantalla.
 
 ### 5 · Repeticiones por enlace, también las de online
 
@@ -182,6 +203,19 @@ maestrías, sin vuelta atrás.
   se engaña a sí misma, no da puntos ni maestrías). Lo que sí hay es un tope de
   tamaño y un freno de 20 inserciones por minuto, para que nadie la use de
   disco duro.
+- **Y PAC-MAN VS. en local ya deja repetición.** No la dejaba: el rumbo de
+  quien lleva fantasma lo interceptaba `Versus.steer` ANTES de llegar a
+  `Replay.entrada`, así que la repetición salía con la mitad de las órdenes y
+  al verla el fantasma humano se movía por su cuenta. Ahora `Game.setPacDir`
+  **graba primero y reparte después**, para todos por igual, y el reparto de
+  fantasmas viaja dentro de `ajustes.ghosts` (`g-1` = J1 Pac-Man, J2 BLINKY),
+  con dos modos nuevos: `vs` y `habvs`.
+  - Las banderas que van detrás de los cuatro ajustes fijos **se leen por lo
+    que son, no por su posición**: así se puede añadir otra sin descolocar las
+    de al lado.
+  - Lo que prueba de verdad que funciona no es que cuadre la puntuación, sino
+    que **el fantasma humano acabe en la misma casilla**. Eso es lo que mira la
+    prueba.
 
 ### 6 · Lo pequeño
 
@@ -453,11 +487,14 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 
 | Qué | Estado |
 |---|---|
-| Juego (Vercel) | desplegado, service worker `pm-v28` (15 de agosto) |
-| `recuperacion` + `grant select on perfiles to service_role` | aplicado y comprobado (15 de agosto) |
-| Edge Function `recuperar` (`verify_jwt: false`) | desplegada y comprobada de punta a punta (15 de agosto) |
+| Juego (Vercel) | desplegado, service worker `pm-v29` (15 de agosto) |
+| `grant select, insert, update on perfiles to service_role` | aplicado (15 de agosto) |
+| Edge Function `cuenta` (`verify_jwt: false`) | desplegada y comprobada de punta a punta (15 de agosto) |
+| Auth: `site_url`, `uri_allow_list` y cambio de correo sin confirmar el viejo | aplicado (15 de agosto) |
+| **SMTP propio para que el correo llegue** | **PENDIENTE — ver arriba** |
 | `repeticiones` (enlaces de repetición online) | aplicada y comprobada (15 de agosto) |
 | `reto_diario` y su vista `reto_top` | **TIRADAS** (15 de agosto) |
+| `recuperacion` (el intento del código, descartado) | **TIRADA** (15 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
 | `perfiles.record_lab2..4` y `record_hab2..4` (las doce rutas) | aplicado y comprobado (14 de agosto) |
@@ -490,7 +527,7 @@ Un aviso operativo:
 
 ### Las cuatro pruebas que "fallan" en Node
 
-Hoy hay **246 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
+Hoy hay **254 pruebas**. `node pruebas-node.js` termina con **4 fallos** y eso
 es lo esperado: son límites del DOM de mentira (miden píxeles reales y
 `offsetParent`), no fallos del juego. Las mismas **pasan en `tests.html`**, que
 es la batería buena; la de Node vale para la lógica.
@@ -524,20 +561,11 @@ agosto). Quedan los dos que no se arreglan solos:
 
 ## Lo que queda, por orden de lo que yo haría
 
-### 1. Que las repeticiones de PAC-MAN VS. en local se puedan grabar
+### 1. Poner el SMTP (lo único que bloquea algo hoy)
 
-Es el único cabo que se ha abierto hoy. El rumbo de quien lleva fantasma no
-pasa por `Game.setPacDir` —lo intercepta `Versus.steer` antes de llegar a
-`Replay.entrada`—, así que la repetición salía con la mitad de las órdenes y
-al verla el fantasma humano se movía por su cuenta. Hasta hoy se grababa igual
-y mentía; ahora `Replay.alEmpezar` se planta si `G.isVersus()`.
-
-Para arreglarlo de verdad hay que **apuntar el rumbo del fantasma como una
-entrada más**, con su jugador y su dirección, y reinyectarlo por `Versus.steer`
-al reproducir. Es el mismo patrón que ya tienen los poderes (una entrada con su
-tick), y no toca nada del netcode: es una repetición local. Lo que sí pide es
-una letra nueva en el formato, y las libres quedan justas (ver el mapa de
-letras en `js/replay.js`), así que probablemente toque subir `Replay.V`.
+Está explicado arriba del todo. Sin él, la recuperación de contraseña está
+montada, probada y desplegada... y el correo no llega. Es media hora de panel
+de Supabase y ninguna línea de código.
 
 ### 2. Verificar las repeticiones DE VERDAD (descartado por ahora)
 

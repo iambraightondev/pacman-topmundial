@@ -748,13 +748,26 @@
 
     /* Único embudo de la dirección: teclado, cruceta y deslizamiento pasan por
      * aquí. En PAC-MAN VS. quien lleva fantasma se queda con la pulsación. */
+    /* EL embudo de TODO el rumbo pedido: teclado, cruceta, deslizamiento y la
+     * repetición cuando se está viendo una. Da igual que el jugador lleve un
+     * Pac-Man o un fantasma (PAC-MAN VS.): entra por aquí.
+     *
+     * El orden importa. La repetición se entera ANTES de repartir el rumbo, y
+     * eso incluye a quien lleva fantasma: antes `Versus.steer` cortaba primero
+     * y esos giros no se grababan nunca, así que la repetición de una partida
+     * de VS. salía con la mitad de las órdenes y al verla el fantasma humano
+     * se movía por su cuenta. */
     setPacDir: function (idx, d) {
-      if (window.PM.Versus && window.PM.Versus.steer(this, idx, d)) return;
+      var V = window.PM.Versus;
+      var R = window.PM.Replay;
+      if (V && this.vsGhostOf(idx) >= 0) {
+        if (R && !R.entrada(idx, d)) return;
+        V.steer(this, idx, d);
+        return;
+      }
       var p = this.pacs[idx];
       if (!p || p.out) return;
-      /* Aquí es donde la repetición apunta cada giro; y mientras se ve una,
-       * es ella quien los manda y el teclado no pinta nada (js/replay.js). */
-      if (window.PM.Replay && !window.PM.Replay.entrada(idx, d)) return;
+      if (R && !R.entrada(idx, d)) return;
       p.setDesiredDir(d);
     },
 

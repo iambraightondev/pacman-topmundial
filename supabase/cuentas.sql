@@ -73,6 +73,16 @@ alter table public.perfiles enable row level security;
 grant select on public.perfiles to anon, authenticated;
 grant insert, update on public.perfiles to authenticated;
 
+-- Y la service role, que es con la que corre la Edge Function `cuenta`. Le
+-- hace falta para dar de alta el perfil al crear la cuenta y para resolver
+-- usuario -> correo al entrar y al recuperar la contraseña.
+--
+-- OJO: la service role se salta el RLS, pero NO los permisos de tabla, y eso
+-- ha costado dos vueltas: sin este grant la función recibe un 42501 y contesta
+-- "usuario o contraseña mal" sin ninguna pista de por qué. Si algún día una
+-- función no encuentra algo que está ahí, mirar los grant antes que el código.
+grant select, insert, update on public.perfiles to service_role;
+
 drop policy if exists "perfiles lectura publica" on public.perfiles;
 create policy "perfiles lectura publica"
   on public.perfiles for select

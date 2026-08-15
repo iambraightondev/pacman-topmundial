@@ -205,49 +205,68 @@ The Supabase project MUST have Email provider on, sign-ups allowed and
 **Confirm email off** — the internal mailbox does not exist, so a confirmation
 link would lock every account out.
 
-### Recovery code (`supabase/recuperacion.sql`, `functions/recuperar`)
+### The real e-mail, and password recovery (`functions/cuenta`)
 
-That same internal mailbox is why forgetting your password used to **destroy
-the account**: Supabase's own recovery mail goes to an address that does not
-exist. Four records, the XP, the achievements and twelve mastery tracks, gone,
-with no way back. It was the only item on the roadmap that *subtracted* every
-time it happened.
+That internal mailbox is why forgetting your password used to **destroy the
+account**: Supabase's own recovery mail went to an address that does not exist.
+Four records, the XP, the achievements and twelve mastery tracks, gone, with no
+way back. It was the only item on the roadmap that *subtracted* every time it
+happened.
 
-The fix is a **recovery code**: `CODE_LEN` (16) characters from
-`CODE_ALPHABET` — 32 glyphs with no `I`, `O`, `0` or `1`, because it gets
-copied off a piece of paper — shown once at sign-up and re-creatable from
-PERFIL. Only its **fingerprint** is stored: `SHA-256('USUARIO:CODIGO')` hex,
-in a table of its own.
+**The account's e-mail is now the player's real one**, asked for at sign-up,
+and recovery is the ordinary flow: request the link, open it, set a new
+password. It is used for exactly that — never to log in, never shown anywhere
+in the game.
 
-- **Nobody can read the fingerprint from a browser, not even its owner.** RLS
-  filters rows, not columns, so the table also uses **column-level grants**:
-  `authenticated` gets `select (id, creado_en)` only. The owner can therefore
-  learn *that* they have a code (so PERFIL can nag when they don't) and never
-  *which*. A stolen session is not a spare key.
-- **`Account.nuevoCodigo` inserts, and falls back to PATCH on conflict**, not
-  PostgREST upsert: `resolution=merge-duplicates` is an `ON CONFLICT`
-  underneath and Postgres demands table-wide `SELECT` for it — precisely the
-  grant being withheld. Two requests is a fair price.
-- **Changing the password needs the service role**, since Supabase Auth only
-  allows it with an open session (exactly what the person does not have) or
-  through the admin API. Hence the Edge Function `recuperar`, deployed with
-  **`verify_jwt: false`** on purpose: the caller has no session, and what
-  guards the door is the code itself (80 bits) plus a **failed-attempt
-  brake** (`MAX_INTENTOS` 10, then `ESPERA_MIN` 15 minutes).
-- **A wrong code, a user with no code and a user that does not exist all
-  answer identically** (`USUARIO O CÓDIGO INCORRECTOS`), or the endpoint
-  becomes a directory of who has an account. Fingerprints are compared in
-  constant time.
-- **A used code is replaced, not just burnt.** The function mints a new one
-  and returns it: a one-shot code that is not reissued leaves the player
-  without a net the *next* time, which is the problem we came from. If the
-  reissue fails the response still says `ok` with an `aviso` that the old code
-  still stands — the password *has* changed, and lying in either direction
-  here is worse than the truth.
-- `grant select on public.perfiles to service_role` is part of the migration:
-  `cuentas.sql` only granted it to `anon`/`authenticated`, and without it the
-  lookup by name fails and recovery answers "incorrect" forever with no way to
-  guess why.
+**And you still log in with your usuario.** Supabase Auth identifies accounts
+by e-mail, so something has to resolve usuario → e-mail; that something is the
+Edge Function `cuenta`, with the service role. **No e-mail address ever reaches
+a browser** (not even your own, except masked), which is precisely what could
+not be promised if the client had to look one up to sign in — usernames are
+public (they are in the ranking), so that endpoint would be a mailing list.
+
+`cuenta` is deployed with **`verify_jwt: false`** on purpose: everyone who
+calls it is by definition without a session. Three ops:
+
+- **`alta`** {usuario, pass, correo}. Checks the usuario is free, creates the
+  auth user with `email_confirm: true` (the e-mail is for recovery, not for
+  vetting anybody — a confirmation step before you can play buys nothing
+  here), inserts the profile, returns a session. **If the profile insert
+  fails, the auth user is deleted**: otherwise a taken usuario leaves an orphan
+  account *and* burns that person's e-mail address, so they cannot even retry
+  under another name.
+- **`entrar`** {usuario, pass}. Resolves the e-mail and forwards the password
+  grant. A usuario that does not exist and a wrong password answer identically.
+- **`olvide`** {usuario}. Resolves the e-mail and calls `/auth/v1/recover`.
+  Returns the address **masked** (`m****o@g****.com`) so the player knows which
+  inbox to open without it being readable off anyone's screen.
+
+Old accounts keep working untouched — `entrar` resolves their internal address
+without noticing — but `olvide` detects the `MAIL_DOMAIN` suffix and says so
+plainly (`ESA CUENTA NO TIENE CORREO PUESTO`) instead of leaving somebody
+waiting for a message that cannot exist. They set a real one from PERFIL, which
+is a plain `PUT /auth/v1/user` with their own session.
+
+The link returns to the game as `SITE_URL#access_token=…&type=recovery`;
+`Account.desdeRecuperacion()` picks it up **before `restore()`** (whoever opens
+that link wants *that* account), clears the hash so a reload does not repeat
+the trip, and hands over to the "new password" dialog.
+
+Project settings this depends on, all applied via the Management API:
+`site_url` and `uri_allow_list` pointing at the game (otherwise the link goes
+to localhost), and `mailer_secure_email_change_enabled: false` — with it on,
+changing an address needs a confirmation on the **old** one too, which for the
+accounts that need this most is a mailbox that does not exist.
+
+> **The default sender is not enough.** With no `smtp_host` configured Supabase
+> uses its test sender: 2 e-mails an hour, project-wide, and not intended for
+> addresses outside the org. A real SMTP (Resend, Brevo, an app password…) is
+> what makes recovery actually work. Everything else is in place regardless.
+
+`grant select, insert, update on public.perfiles to service_role` is part of
+`cuentas.sql` and is not optional: **the service role bypasses RLS but not
+table grants**, and without it the function gets a bare 42501 and answers
+"usuario o contraseña mal" forever with no way to guess why.
 
 ## App instalable (PWA) y pruebas
 
@@ -1527,21 +1546,40 @@ time, not the run.
 
 **Replays.** A power is an *input*, like a turn, so a run of this mode
 reconstructs exactly like a classic one. Local replays get mode `'hab'`
-(letter `h`) for one player and `'habduo'` (letter `j`) for two on one
-keyboard, with entries `[tick, player, 4+k]`. Powers encode into the letters
-at both ends of the alphabet, since `G..V` still carries the sixteen
-player×direction turns: **`A..D` for player 1** and **`W..Z` for player 2**.
-Eight combinations is all this format ever needs — from three players up the
-game is online and records the other way. The entry is written **after** the
-power actually fires, so a bite at thin air does not bloat the file. Old
-clients reject an `h`/`j` replay cleanly as corrupt, which is correct. Net
-replays carry `hb` in the header.
+(letter `h`) for one player, `'habduo'` (`j`) for two on one keyboard and
+`'habvs'` (`k`) when one of them drives a ghost, with entries
+`[tick, player, 4+k]`. Powers encode into the letters at both ends of the
+alphabet, since `G..V` still carries the sixteen player×direction turns:
+**`A..D` for player 1** and **`W..Z` for player 2**. Eight combinations is all
+this format ever needs — from three players up the game is online and records
+the other way. The entry is written **after** the power actually fires, so a
+bite at thin air does not bloat the file. Old clients reject an `h`/`j`/`k`
+replay cleanly as corrupt, which is correct. Net replays carry `hb` in the
+header.
 
-**PAC-MAN VS. in local is not recorded at all.** The ghost driver's steering
-goes through `Versus.steer`, which intercepts *before* `Replay.entrada` in
-`Game.setPacDir`, so the file would come out with half the orders and the
-human ghost would wander on its own during playback. `Replay.alEmpezar` bails
-out on `G.isVersus()`: better no replay than one that lies.
+### PAC-MAN VS. replays (`'vs'` / `'habvs'`)
+
+For a while these were **not recorded at all**, because they came out lying:
+the ghost driver's steering went through `Versus.steer`, which intercepted
+*before* `Replay.entrada` in `Game.setPacDir`, so the file held half the
+orders and the human ghost wandered off on its own during playback.
+
+`Game.setPacDir` now records **first** and dispatches after, for ghost drivers
+and Pac-Men alike — one funnel, one entry format, `[tick, player, dir]` either
+way. `Replay.rumboDe(idx)` supplies the "already requested" value the dedup
+compares against: `ghosts[gid].wishDir` for a driver, `pacs[idx].nextDir`
+otherwise (without it, a driver's held key would write an entry per frame).
+
+The assignment itself travels in **`ajustes.ghosts`**, serialized as one
+character per player after the fixed four: `g-1` is "P1 on Pac-Man, P2 on
+Blinky". It lives with the settings because that is what it is — the thing
+that changes the simulation, exactly like `vidasModo`. Trailing `ajustes`
+entries are read **by what they are, not by position**, so adding another flag
+later cannot shift this one. `valida()` requires it in VS modes (with at least
+one Pac-Man and at least one human ghost) and forbids it everywhere else.
+
+The proof that any of this works is not the score matching — it is the human
+ghost's **final position** matching, which is what the test asserts.
 
 ## Top mundial integrity (only the Edge Function writes)
 
@@ -1883,12 +1921,20 @@ with vibrato — the longest of the four, because it is the one that changes the
 whole board), and the ghost's two, deliberately lower so you can tell which
 side a sound came from without looking: `playCharge()` and `playStealth()`.
 
-Two rules about *when* they play, both in `habilidades.js`:
+Every one takes an optional `esc` (1 by default) that scales its volume, and
+two rules govern *when* and *how loud*, both in `habilidades.js`:
 
-- **Only the local player's own powers make noise** (`mio(G, idx)`). In a
-  four-player party, hearing all sixteen keys informs nobody and buries the
-  waka. What changes the board — the GRITO — is audible anyway because it
-  starts the fright ambience.
+- **Everybody's powers are audible, but other people's play at 10%**
+  (`CFG.HAB.VOL_AJENO`, applied by `son(nombre, ajeno)` off `mio(G, idx)`).
+  Somebody having one fewer ability is information about the match, and a bite
+  can be heard coming — but at full volume a four-player party is sixteen keys
+  fighting the waka. Two on one keyboard both count as "here": there is no
+  "the other one" when both are on the same screen.
+- Remote powers are voiced where the *effect* lands, which is not always where
+  the ability function runs: MORDISCO and GRITO go through their own function
+  on the host and come out scaled automatically, while TURBO, FLASH and the
+  ghost's two only get *marked* and are voiced explicitly in `peticion` (host)
+  and `evento` (echo). `hostEvt` never applies locally, so nothing plays twice.
 - **A miss sounds different from a hit.** Before this the four powers were
   mute except for what they dragged in by accident (Q sounded because a ghost
   died, R because fright started), so the two that never touch the scoreboard

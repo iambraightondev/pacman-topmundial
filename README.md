@@ -184,26 +184,30 @@ de su formato, así que con los récords viajan las insignias.
 > veces que haga falta. Mientras no se lance, el juego sigue funcionando: se
 > guarda lo de siempre y lo nuevo entra en cuanto estén las columnas.
 
-**Si olvidas la contraseña, tienes el CÓDIGO DE RECUPERACIÓN.** Antes no había
-vuelta atrás —el correo se compone por dentro y ese buzón no existe, así que
-el enlace de recuperación de Supabase no llegaba a ninguna parte— y con la
-cuenta se iban los cuatro récords, la experiencia, los logros y las doce
-maestrías. Ahora al registrarte se te enseña **una vez** un código de 16
-caracteres: lo apuntas, y desde ENTRAR → HE OLVIDADO LA CONTRASEÑA lo escribes
-con una contraseña nueva y entras.
+**Si olvidas la contraseña, te llega un enlace al correo.** Antes no había
+vuelta atrás —el correo de la cuenta se componía por dentro y ese buzón no
+existe, así que el enlace de recuperación de Supabase no llegaba a ninguna
+parte— y con la cuenta se iban los cuatro récords, la experiencia, los logros y
+las doce maestrías. Ahora al registrarte se te pide **tu correo de verdad**, y
+desde ENTRAR → HE OLVIDADO LA CONTRASEÑA pides el enlace, lo abres y pones una
+contraseña nueva.
 
-- En el servidor solo se guarda **su huella**, nunca el código: quien mire la
-  base de datos no puede entrar en ninguna cuenta, y quien tenga el papel sí.
-  Ni siquiera tú puedes volver a verlo desde tu propia sesión.
-- **Si ya tenías cuenta, no tienes código todavía**: se crea en PERFIL →
-  CÓDIGO DE RECUPERACIÓN. Mientras no lo tengas, el panel te lo dice.
-- Generar uno nuevo **invalida el anterior** en ese momento. Y al usarlo para
-  recuperar la cuenta se te da otro automáticamente, para que no te quedes sin
-  red la próxima vez.
-- Necesita [`supabase/recuperacion.sql`](supabase/recuperacion.sql) y la
-  función [`supabase/functions/recuperar`](supabase/functions/recuperar), que
-  es la única que puede cambiar una contraseña sin sesión abierta. Se
-  despliega la función **antes** que el SQL.
+- **Se sigue entrando con usuario y contraseña.** El correo no se usa para
+  entrar ni sale en ninguna parte del juego: sirve para una sola cosa, que es
+  devolverte la cuenta. Ni siquiera baja al navegador — cuando el juego te lo
+  enseña, va tapado (`m****o@g****.com`).
+- **Si ya tenías cuenta, no tienes correo todavía**: se pone en PERFIL →
+  CORREO DE RECUPERACIÓN. Mientras no lo tengas, el panel te lo dice. Entrar,
+  entras igual que siempre.
+- Lo mueve la función [`supabase/functions/cuenta`](supabase/functions/cuenta),
+  que es la que puede resolver usuario → correo sin enseñárselo a nadie. No
+  hace falta ninguna tabla nueva: el correo vive donde ya vivía, en la cuenta
+  de Supabase Auth.
+- **Hace falta un servidor de correo propio.** Con el remitente de prueba de
+  Supabase salen 2 correos por hora y no llegan a gente de fuera: hay que
+  configurar SMTP en *Authentication → SMTP Settings* (Resend, Brevo, un Gmail
+  con contraseña de aplicación...). Sin eso, todo lo demás funciona pero el
+  mensaje no llega.
 
 **Ajuste obligatorio del proyecto**, que no se puede hacer por SQL —
 *Authentication → Sign In / Providers*:
@@ -212,8 +216,9 @@ con una contraseña nueva y entras.
 - **Allow new users to sign up**: activado
 - **Confirm email**: **apagado**
 
-Con la confirmación encendida el alta no devuelve sesión, y como ese buzón no
-existe, el enlace no llega nunca y nadie puede entrar.
+El alta la hace la función ya confirmada: el correo se pide para poder
+recuperar la cuenta, no para verificar a nadie, y obligar a confirmarlo antes
+de jugar es un peaje que aquí no compra nada.
 
 ## Pruebas
 
@@ -342,6 +347,8 @@ Dos maneras de correr la misma batería:
   reparte, y al verla el juego se pone de espectador de un archivo en vez de
   una sala. Se ven igual desde TUS PARTIDAS —las graba quien hace de
   anfitrión— pero pesan bastante más, así que se quedan **las dos últimas**.
+  Las de **PAC-MAN VS. en el mismo teclado** también se graban, con el rumbo
+  del que lleva fantasma incluido: al verla hace exactamente lo que hizo.
 - **Compartir una repetición**: botón `COMPARTIR` al lado de `VER`. Te da un
   enlace, lo mandas por WhatsApp y al otro se le abre el juego reproduciendo
   la partida. Las **locales** van enteras dentro del enlace (unos cientos de
