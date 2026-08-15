@@ -11,6 +11,56 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ---
 
+## Por dónde iba esto (léase primero)
+
+**Todo lo de las sesiones del 14 y el 15 de agosto está subido y desplegado.**
+Nada a medias, nada sin commitear. Cuatro commits, del más nuevo al más viejo:
+
+| Commit | Qué |
+|---|---|
+| `ca8ee5b` | El día correcto, el reto solo de hoy, los laberintos como manda el arcade y una dificultad que no puede mentir |
+| `dce5685` | El DAILY: siete retos por semana, y ya no son un modo de juego |
+| `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
+| `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
+
+Service worker en **`pm-v27`**. **219 pruebas**: 0 fallos en `tests.html` y los
+4 de siempre en Node (ver más abajo).
+
+### Lo único que hay que hacer a mano
+
+- **Al amigo que tenía "NORMAL" con cinco vidas**: que abra OPCIONES →
+  DIFICULTAD y pulse **NORMAL** una vez. El arreglo hace que el panel deje de
+  mentir (ahora le dirá PERSONALIZADA, que es la verdad), pero **no le toca los
+  números a nadie**: cambiarle los ajustes por nuestra cuenta era peor.
+
+### Lo que quedó sin resolver
+
+- **No se encontró CÓMO se le descuadraron los ajustes a esa persona.** Se
+  descartaron el camino del online (`opts.cfg` no escribe en `PM.settings`), el
+  de las repeticiones (`cfgDe` hace una copia) y el de la carga. Lo que sí se
+  hizo fue reproducir el SÍNTOMA a mano y taparlo de raíz, así que el agujero
+  está cerrado venga de donde venga. Si vuelve a pasar con la etiqueta
+  deducida, entonces sí hay un escritor de `startLives` que no conocemos.
+
+### Cabos sueltos, todos juntos
+
+Ninguno rompe nada. Están explicados donde toca; esto es solo la lista:
+
+- **DESATADO no suena**: el turbo y el flash son mudos (`js/habilidades.js` no
+  llama a `AudioSys` ni una vez). Es lo primero que le pediría al modo.
+- **El selector de modo no recuerda tu elección** entre recargas: vuelve a
+  CLÁSICO. Vive en `UI.modePick`, que es de la sesión.
+- **La tabla `reto_diario` sigue en Supabase**, con marcas de verdad dentro. El
+  juego ya no la toca. La línea para tirarla está más abajo.
+- **Hay un token de Supabase que revocar** y sigue vivo (sección «Lo que está
+  aplicado en producción»).
+- **`hab`, `lab` y `vs` empiezan sus logros a cero** para todo el mundo, y no
+  tiene arreglo: de esos modos no hay rastro en los contadores viejos.
+- **DESATADO sigue sin estar en dos jugadores locales ni en PAC-MAN VS.**, y es
+  una decisión (teclas y equilibrio), no un olvido.
+
+---
+
 ## Lo del 15 de agosto: cuatro arreglos de cosas que se vieron jugando
 
 1. **El DAILY iba en UTC y marcaba el día equivocado.** Un viernes a las 19:00
@@ -269,10 +319,15 @@ De lo del 6 de agosto tampoco quedó nada: se aplicó sobre la marcha.
 | Juego (Vercel) | desplegado, service worker `pm-v27` (15 de agosto) |
 | `perfiles.record3` / `record4` (trío y escuadra) | aplicado |
 | `perfiles.record_lab` / `record_hab` (maestrías de los modos aparte) | aplicado (14 de agosto) |
+| `perfiles.record_lab2..4` y `record_hab2..4` (las doce rutas) | aplicado y comprobado (14 de agosto) |
 | `ranking.nombre3` / `nombre4` + CHECK nuevos | aplicado |
 | Vistas `ranking_top` y `ranking_temporada` | rehechas |
 | Edge Function `enviar-record` | **versión 2** desplegada |
-| `reto_diario`: un hueco por nombre y día | aplicado (12 de agosto) |
+| `reto_diario`: un hueco por nombre y día | aplicado (12 de agosto), **ya no se usa** |
+
+> Lo de `reto_diario` queda como historia: el RETO DE HOY se retiró el 14 de
+> agosto y `supabase/reto.sql` ya no está en el repo. La tabla sigue viva en
+> Supabase con sus marcas; el juego no la toca.
 
 Dos avisos operativos:
 
@@ -305,10 +360,10 @@ Si alguien va a perseguirlas, que sea para arreglar el arnés, no el juego.
 
 ---
 
-## Cabos sueltos de lo del 14 de agosto
+## Cabos sueltos de lo del 14 de agosto (con el detalle)
 
-Nada de esto rompe nada; son cosas que se quedaron a medias o sin hacer y que
-conviene tener apuntadas antes de que se olviden.
+La lista corta está arriba, en «Cabos sueltos, todos juntos». Aquí va el
+porqué de cada uno, que es lo que hace falta para arreglarlos.
 
 - **Las habilidades no suenan.** `js/habilidades.js` no llama a `AudioSys` ni
   una vez. La Q suena porque reutiliza el "te has comido un fantasma" y la R
@@ -320,10 +375,10 @@ conviene tener apuntadas antes de que se olviden.
   vuelve a CLÁSICO. Se guarda en `UI.modePick`, que es de la sesión. Meterlo
   en `PM.settings` es fácil, pero obliga a tocar `DEFAULT_SETTINGS` y su
   saneado, y por eso se dejó.
-- **`hab`, `lab`, `reto` y `vs` empiezan sus logros a cero para todo el
+- **`hab`, `lab` y `vs` empiezan sus logros a cero para todo el
   mundo**, y no tiene arreglo: de esos modos no hay ni rastro en los
   contadores viejos. Solo el clásico y party se pudieron sembrar.
-- **HABILIDADES sigue sin estar en dos jugadores locales ni en PAC-MAN VS.**
+- **DESATADO sigue sin estar en dos jugadores locales ni en PAC-MAN VS.**
   Fue una decisión (teclas y equilibrio), no un olvido, pero si alguna vez se
   quiere, lo local pide un segundo juego de teclas para el J2.
 - **Los iconos de las tarjetas se dibujan en cada `buildMenu`**, que solo pasa
