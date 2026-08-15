@@ -205,9 +205,15 @@ contraseña nueva.
   de Supabase Auth.
 - **Hace falta un servidor de correo propio.** Con el remitente de prueba de
   Supabase salen 2 correos por hora y no llegan a gente de fuera: hay que
-  configurar SMTP en *Authentication → SMTP Settings* (Resend, Brevo, un Gmail
-  con contraseña de aplicación...). Sin eso, todo lo demás funciona pero el
-  mensaje no llega.
+  configurar SMTP en *Authentication → SMTP Settings*. Lo más sencillo es un
+  **Gmail con contraseña de aplicación** (`smtp.gmail.com`, puerto 465, tu
+  dirección como usuario y remitente, y la contraseña de 16 letras de
+  <https://myaccount.google.com/apppasswords>, que pide tener la verificación
+  en dos pasos encendida). Sin eso, todo lo demás funciona pero el mensaje no
+  llega.
+- Con el SMTP puesto, `node supabase/correos.js` deja los correos **en español
+  y con la pinta del juego**. Supabase no permite tocar las plantillas mientras
+  se use su remitente de prueba, así que ese es el orden: SMTP y luego esto.
 
 **Ajuste obligatorio del proyecto**, que no se puede hacer por SQL —
 *Authentication → Sign In / Providers*:

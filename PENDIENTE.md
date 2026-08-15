@@ -42,10 +42,29 @@ Supabase usa su remitente de prueba: **2 correos por hora en todo el proyecto**
 y pensado solo para desarrollo, no para escribir a gente de fuera. Es decir:
 el enlace se pide bien, se genera bien... y no llega.
 
-Se arregla en *Authentication → SMTP Settings* del panel de Supabase, con
-cualquier proveedor (Resend es gratis hasta 3.000 al mes; también vale un Gmail
-con contraseña de aplicación, o Brevo). En cuanto esté, sube también
-`rate_limit_email_sent`, que ahora está clavado en 2 por eso mismo.
+Se arregla en *Authentication → SMTP Settings* del panel de Supabase. **La vía
+elegida es el Gmail de siempre con una contraseña de aplicación**, que no
+obliga a registrarse en ningún sitio nuevo (Resend se descartó expresamente):
+
+| Campo | Valor |
+|---|---|
+| Host | `smtp.gmail.com` |
+| Puerto | `465` |
+| Usuario | tu dirección de Gmail |
+| Contraseña | la **contraseña de aplicación** de 16 letras (no la del correo) |
+| Remitente | tu misma dirección de Gmail |
+
+La contraseña de aplicación se saca en <https://myaccount.google.com/apppasswords>,
+y **hace falta tener la verificación en dos pasos encendida** o esa página no
+aparece. Aguanta unos 500 correos al día, que para esto sobra.
+
+En cuanto el SMTP esté puesto quedan **dos cosas más**, las dos de un minuto:
+
+1. Subir `rate_limit_email_sent`, que ahora está clavado en 2 por no haber SMTP.
+2. Lanzar **`node supabase/correos.js`** (con el token en `SBP`), que pone las
+   plantillas de los correos en español y con la pinta del juego. Supabase NO
+   deja tocarlas mientras se use su remitente de prueba, así que este es el
+   orden obligatorio: SMTP primero, plantillas después.
 
 ### Lo que hay que hacer a mano
 
