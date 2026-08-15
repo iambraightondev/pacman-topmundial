@@ -258,10 +258,15 @@ to localhost), and `mailer_secure_email_change_enabled: false` — with it on,
 changing an address needs a confirmation on the **old** one too, which for the
 accounts that need this most is a mailbox that does not exist.
 
-> **The default sender is not enough.** With no `smtp_host` configured Supabase
-> uses its test sender: 2 e-mails an hour, project-wide, and not intended for
-> addresses outside the org. A real SMTP (Resend, Brevo, an app password…) is
-> what makes recovery actually work. Everything else is in place regardless.
+> **The default sender is not enough**, and this is the one piece still
+> missing. With no `smtp_host` configured Supabase uses its test sender: 2
+> e-mails an hour, project-wide, and not intended for addresses outside the
+> org — `/auth/v1/recover` returns 200 and nothing leaves. The chosen fix is
+> Gmail with an app password (`smtp.gmail.com:465`); `supabase/correos.js` then
+> replaces Supabase's English templates with Spanish ones in the game's own
+> style, and **it only works once a custom SMTP exists** — Supabase refuses
+> template edits on the default provider. Everything else is in place
+> regardless; see `PENDIENTE.md`.
 
 `grant select, insert, update on public.perfiles to service_role` is part of
 `cuentas.sql` and is not optional: **the service role bypasses RLS but not

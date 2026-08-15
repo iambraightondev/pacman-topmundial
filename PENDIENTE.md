@@ -11,60 +11,82 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ---
 
-## Por dónde iba esto (léase primero)
+## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**Hay UNA cosa a medias, y no es código: el remitente de correo.**
+
+La recuperación de contraseña está entera, probada contra el servidor de verdad
+y desplegada. Lo único que falta es quién manda el mensaje, y eso son cuatro
+campos en el panel de Supabase. El paso siguiente, en orden:
+
+1. Sacar la **contraseña de aplicación de Gmail** (16 letras) en
+   <https://myaccount.google.com/apppasswords>. Si esa página no aparece, es que
+   falta encender la **verificación en dos pasos**.
+2. Ponerla en Supabase → *Authentication → SMTP Settings* con la tabla de más
+   abajo. (O pasársela a quien esté trabajando en esto, que lo aplica por la
+   API de gestión como todo lo demás.)
+3. Subir `rate_limit_email_sent`, hoy clavado en **2 por hora** justo por no
+   haber SMTP propio.
+4. Lanzar `node supabase/correos.js` con el token en `SBP`: pone los correos en
+   español y con la pinta del juego. **No funciona antes del paso 2**, Supabase
+   lo prohíbe.
+5. Probar de punta a punta con una cuenta de usar y tirar, y borrarla.
+
+Hasta que eso esté, quien olvide la contraseña **sigue perdiendo la cuenta**:
+el enlace se pide bien, se genera bien y no llega a ningún buzón.
+
+> Se descartó **Resend** expresamente. Y antes se descartó el **código de
+> recuperación** de 16 caracteres (se enseñaba una vez y había que apuntarlo)
+> por incómodo: el juego es para jugar con amigos, no para custodiar una llave.
+> No volver a proponer ninguno de los dos sin un motivo nuevo.
+
+---
+
+## Por dónde iba esto
 
 **Todo está subido y desplegado.** Nada a medias, nada sin commitear.
 
 | Commit | Qué |
 |---|---|
-| (esta sesión) | Recuperar la cuenta, DESATADO de a dos y en VS., los poderes suenan y las repeticiones se comparten |
+| `062e6fb` | Deja listos los correos del juego, a la espera del SMTP |
+| `24efd3a` | La cuenta se recupera por correo, los poderes de todos se oyen y VS deja repetición |
+| `6963ec9` | La cuenta ya no se pierde, DESATADO se juega entre dos y el fantasma responde |
 | `ca8ee5b` | El día correcto, el reto solo de hoy, los laberintos como manda el arcade y una dificultad que no puede mentir |
 | `dce5685` | El DAILY: siete retos por semana, y ya no son un modo de juego |
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v29`**. **254 pruebas**: 0 fallos en `tests.html` y los
-4 de siempre en Node (ver más abajo).
+Service worker en **`pm-v29`**, comprobado contra
+<https://pacman-topmundial.vercel.app>. **254 pruebas**: 0 fallos en
+`tests.html` y los 4 de siempre en Node (ver más abajo).
 
-> **Lo del servidor YA está aplicado** (tablas, permisos, configuración de auth
-> y la función de cuentas, todo comprobado contra el proyecto de verdad). Lo que
-> puede faltar es el `git push`, que es lo que despliega en Vercel.
+> Lo del servidor está aplicado y comprobado contra el proyecto de verdad:
+> permisos, configuración de auth, la función `cuenta` y la tabla
+> `repeticiones`. Lo único que le falta al servidor es el SMTP de arriba.
 
-### LO ÚNICO QUE FALTA PARA QUE LA RECUPERACIÓN FUNCIONE
+### El detalle del SMTP
 
-**Un servidor de correo propio en Supabase.** Todo lo demás está hecho y
-probado: se pide el correo al registrarse, se entra con usuario, «he olvidado
-la contraseña» resuelve el correo y le pide a Supabase que mande su enlace, y
-el juego recoge ese enlace y pide la contraseña nueva.
-
-Lo que no está es **quién manda el mensaje**. Sin `smtp_host` configurado,
-Supabase usa su remitente de prueba: **2 correos por hora en todo el proyecto**
-y pensado solo para desarrollo, no para escribir a gente de fuera. Es decir:
-el enlace se pide bien, se genera bien... y no llega.
-
-Se arregla en *Authentication → SMTP Settings* del panel de Supabase. **La vía
-elegida es el Gmail de siempre con una contraseña de aplicación**, que no
-obliga a registrarse en ningún sitio nuevo (Resend se descartó expresamente):
+Los cuatro campos de *Authentication → SMTP Settings*, para no tener que
+buscarlos:
 
 | Campo | Valor |
 |---|---|
 | Host | `smtp.gmail.com` |
 | Puerto | `465` |
-| Usuario | tu dirección de Gmail |
+| Usuario | la dirección de Gmail |
 | Contraseña | la **contraseña de aplicación** de 16 letras (no la del correo) |
-| Remitente | tu misma dirección de Gmail |
+| Remitente | esa misma dirección de Gmail |
 
-La contraseña de aplicación se saca en <https://myaccount.google.com/apppasswords>,
-y **hace falta tener la verificación en dos pasos encendida** o esa página no
-aparece. Aguanta unos 500 correos al día, que para esto sobra.
+Por qué hace falta: sin `smtp_host` configurado, Supabase usa su remitente de
+prueba, que manda **2 correos por hora en todo el proyecto** y está pensado
+solo para desarrollo, no para escribir a gente de fuera. Se comprobó a mano —
+`/auth/v1/recover` devuelve 200 y el mensaje no sale. Gmail aguanta unos 500 al
+día, que para cinco amigos sobra.
 
-En cuanto el SMTP esté puesto quedan **dos cosas más**, las dos de un minuto:
-
-1. Subir `rate_limit_email_sent`, que ahora está clavado en 2 por no haber SMTP.
-2. Lanzar **`node supabase/correos.js`** (con el token en `SBP`), que pone las
-   plantillas de los correos en español y con la pinta del juego. Supabase NO
-   deja tocarlas mientras se use su remitente de prueba, así que este es el
-   orden obligatorio: SMTP primero, plantillas después.
+Lo demás del circuito está hecho y probado contra el servidor de verdad: se
+pide el correo al registrarse, se entra con usuario, «he olvidado la
+contraseña» resuelve el correo y le pide a Supabase que mande su enlace, y el
+juego recoge ese enlace y pide la contraseña nueva.
 
 ### Lo que hay que hacer a mano
 
