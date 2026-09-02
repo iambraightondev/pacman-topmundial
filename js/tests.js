@@ -3966,6 +3966,49 @@
     eq(g.mode, 'eyes', 'y se lo come');
   });
 
+  /* ---------- la Q pulsada un pelo antes ----------
+   * EL fallo que se veía jugando: Pac-Man y un fantasma van de frente, se
+   * pulsa Q para morder... y el que muere es Pac-Man. Yendo de cara los dos se
+   * acercan casi 2 px por tick, así que desde que el fantasma entra en los
+   * 16 px del alcance hasta que pisa su casilla y lo mata pasan cinco o seis
+   * ticks: menos de 100 ms, y nadie reacciona tan rápido. Se pulsaba cuando se
+   * decidía —con el fantasma a tres o cuatro casillas—, la dentellada salía al
+   * aire y el fantasma llegaba igual.
+   *
+   * Ahora la Q pedida pronto se queda ARMADA y muerde sola en cuanto alguien
+   * entra a tiro. No alcanza más lejos: solo deja de exigir puntería de
+   * milisegundo. Ver CFG.HAB.BITE_BUFFER. */
+  test('la Q pedida pronto se queda armada y muerde sola', function () {
+    partidaHab(13, 20, CFG.DIR.RIGHT);
+    var g = fantasmaEn(1, 17, 20);          // a cuatro casillas: no llega
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'todavía no hay a quién morder');
+    ok(HB.lista(0, HB.MORDISCO), 'y no se gasta la recarga');
+    eq(HB.estado(0).pedirQ, CFG.HAB.BITE_BUFFER, 'pero la Q queda armada');
+    g.x = 15 * CFG.TILE + CFG.TILE / 2;     // se acerca a dos casillas
+    ticks(1);
+    eq(g.mode, 'eyes', 'y el mordisco sale solo en cuanto llega a tiro');
+    ok(!HB.lista(0, HB.MORDISCO), 'ahora sí se gasta la recarga');
+    eq(HB.estado(0).pedirQ, 0, 'y la Q armada se consume');
+  });
+
+  test('la Q armada se agota sola y fallar sigue sin costar nada', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
+    eq(HB.pulsar(G, 0, HB.MORDISCO), false, 'no hay nadie a tiro');
+    ticks(CFG.HAB.BITE_BUFFER);
+    eq(HB.estado(0).pedirQ, 0, 'se acabó el margen');
+    ok(HB.lista(0, HB.MORDISCO), 'y la Q sigue cargada');
+  });
+
+  test('la Q armada no sobrevive a la muerte', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
+    HB.pulsar(G, 0, HB.MORDISCO);
+    ok(HB.estado(0).pedirQ > 0, 'queda armada');
+    HB.limpiarEfectos();
+    eq(HB.estado(0).pedirQ, 0, 'y se cae con la vida: nadie apuntó a nada');
+  });
+
   /* ---------- la Q en party ----------
    * El fallo que se veía jugando: el invitado pulsaba Q, el fantasma se moría
    * (lo mataba el anfitrión)... y él también. Aquí no se mata a nadie, así que
@@ -4733,14 +4776,33 @@
        'y la R también, aparte del modo azul');
   });
 
+  /* La dentellada al aire suena EN EL ACTO, aunque la Q se quede armada
+   * después (CFG.HAB.BITE_BUFFER): el golpe ocurre en ese tick y los dientes
+   * salen con él. Esperar al final del margen se notaría —a partir de un
+   * décimo de segundo el sonido se despega de la tecla— y no describiría lo
+   * que se está viendo. */
   test('un mordisco al aire suena DISTINTO al que acierta', function () {
     var oidos = espiaAudio(function () {
       partidaHab(13, 20, CFG.DIR.LEFT);
       for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
       HB.pulsar(G, 0, HB.MORDISCO);
     });
-    ok(oidos.nombres.indexOf('playBiteMiss') !== -1, 'suena el fallo');
+    ok(oidos.nombres.indexOf('playBiteMiss') !== -1, 'suena el fallo, y ya');
     ok(oidos.nombres.indexOf('playBite') === -1, 'y no el de acertar');
+  });
+
+  /* Si la Q armada acaba acertando son DOS dentelladas, y se oyen las dos: el
+   * "chas" sordo del aire y, un instante después, el mordisco bueno. */
+  test('la Q armada que acierta suena a segunda dentellada', function () {
+    var oidos = espiaAudio(function () {
+      partidaHab(13, 20, CFG.DIR.RIGHT);
+      var g = fantasmaEn(1, 17, 20);
+      HB.pulsar(G, 0, HB.MORDISCO);       // al aire: todavía no llega
+      g.x = 15 * CFG.TILE + CFG.TILE / 2;
+      ticks(1);
+    });
+    ok(oidos.nombres.indexOf('playBiteMiss') !== -1, 'primero el aire');
+    ok(oidos.nombres.indexOf('playBite') !== -1, 'y después el mordisco');
   });
 
   /* Los poderes de los DEMÁS también se oyen —que a alguien le quede una

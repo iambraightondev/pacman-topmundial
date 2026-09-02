@@ -1408,7 +1408,7 @@ count.
 
 | Key | What it does | Cooldown |
 |---|---|---|
-| **Q** MORDISCO | Eats any ghost within `BITE_PX` **pixels** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. | 16 s |
+| **Q** MORDISCO | Eats any ghost within `BITE_PX` **pixels** (Chebyshev, tunnel-aware), whatever direction Pac-Man faces, and turns him toward the bite. Teeth for `BITE_SHOW`. Pressed with nobody in range it stays **armed** for `BITE_BUFFER` ticks and bites by itself the moment one arrives. | 16 s |
 | **W** TURBO | ×1.5 speed for 5 s, trailing sparks. | 24 s |
 | **E** FLASH | Jumps **3 tiles through walls toward the last arrow pressed** — not toward where Pac-Man faces — eating dots and energizers on the way, translucent on landing. | 32 s |
 | **R** GRITO | Frightens all four ghosts for a **fixed 6 s** with no energizer. | 60 s |
@@ -1451,6 +1451,26 @@ Rules that are deliberate, not incidental:
   ahead, and nothing fires and no cooldown starts. A bite at thin air still
   **shows the teeth** briefly: without that, missing and being on cooldown
   feel identical (nothing happens) and the key reads as broken.
+- **A Q pressed a hair too early stays armed** for `BITE_BUFFER` (18 ticks,
+  0.3 s) and fires the instant a ghost enters range. Head-on, the honest
+  window to bite is **five or six ticks**: Pac-Man moves ~1 px per tick and a
+  ghost ~0.95, so meeting face to face they close nearly 2 px per tick, and
+  from "ghost enters the 16 px reach" to "ghost shares the tile and kills
+  you" is under 100 ms — a third of human reaction time. Players pressed when
+  they *decided* (ghost three or four tiles away), the bite went to thin air,
+  and the ghost killed them half a second later: from the outside, "I used Q
+  and it killed me anyway". The buffer is the same idea as `nextDir` for
+  turns — a requested action waiting for the world to allow it. It is
+  resolved in `Hab.paso()`, which runs at the top of the tick *before*
+  anything moves, so the bite always lands a tick before a ghost can step
+  onto Pac-Man's tile. It grants **no extra reach**: two tiles still bite,
+  three still do not, and missing still costs no cooldown.
+  - The **thin-air sound fires immediately**, not when the buffer expires:
+    the swipe happens on that tick and the teeth come out with it, and past
+    ~100 ms a sound stops feeling attached to the key. If the armed Q later
+    connects, that is a genuine **second** bite and sounds like one — the
+    dull `playBiteMiss` and then `playBite`. Expiry is silent and invisible:
+    the margin is borrowed aim, not a power of its own.
 - **E aims where the player last pointed, not where Pac-Man faces.** The
   engine already keeps that: `Pacman.nextDir` is "the last requested
   direction" and survives a wall refusing the turn, so `Hab.dirFlash()`

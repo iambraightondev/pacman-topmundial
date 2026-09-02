@@ -2,6 +2,28 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-02 · La Q ya no falla cuando vais de frente
+
+- **El mordisco pulsado un pelo antes ya no se pierde.** Pasaba siempre en la
+  misma situación: Pac-Man y un fantasma van de cara, a toparse, pulsas Q para
+  morder... y el que muere es Pac-Man. No era mala puntería. Yendo de frente
+  los dos se acercan casi **2 píxeles por tick**, así que desde que el fantasma
+  entra en el alcance de la Q hasta que pisa tu casilla y te mata pasan **cinco
+  o seis ticks, menos de una décima de segundo** — la tercera parte de lo que
+  tarda una persona en reaccionar. Se pulsaba cuando se *decidía*, con el
+  fantasma a tres o cuatro casillas, la dentellada salía al aire y el fantasma
+  llegaba igual.
+  - **Ahora la Q pedida pronto se queda armada 0,3 s** y muerde sola en cuanto
+    alguien entra a tiro. Es lo mismo que el juego ya hacía con los giros: el
+    rumbo que pides espera a que el laberinto te deje girar.
+  - **No alcanza más lejos.** Dos casillas siguen siendo dos casillas, a tres
+    sigue sin llegar y fallar sigue sin gastar la recarga. Lo único que deja de
+    exigir es puntería de milisegundo.
+  - **Suena igual de inmediato.** La dentellada al aire se oye en el acto, como
+    siempre; si la Q armada acierta después, es una segunda dentellada de
+    verdad y suena como tal. Agotarse no suena ni se ve: el margen es puntería
+    prestada, no un poder aparte.
+
 ## 2026-08-15 · Ya no se pierde la cuenta, DESATADO se juega de a dos y el fantasma responde
 
 - **Olvidar la contraseña ya no cuesta la cuenta.** Hasta hoy no había vuelta

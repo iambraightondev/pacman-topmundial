@@ -85,7 +85,10 @@
       chispa: 0,          // contador para sembrar las chispas del turbo
       /* Ticks que le quedan a cada fantasma (por id) de "acabo de morderte y
        * aún no me lo han confirmado". Solo lo usa el INVITADO: ver mordisco(). */
-      guard: [0, 0, 0, 0]
+      guard: [0, 0, 0, 0],
+      /* Ticks que le quedan a una Q pedida sin nadie a tiro todavía. Ver
+       * pulsar() y CFG.HAB.BITE_BUFFER. */
+      pedirQ: 0
     };
   }
 
@@ -158,6 +161,10 @@
   var Hab = {
     on: false,       // ¿la partida en curso es de poderes?
     st: [],          // estado por jugador
+    /* Marca que el mordisco que se está lanzando viene de una Q ARMADA y no
+     * de la tecla: sin esto, un reintento que fallase volvería a armarla y la
+     * dentellada pendiente no se agotaría nunca. Ver pulsar() y paso(). */
+    reintento: false,
 
     /* ---------- ciclo de vida ---------- */
     /* Desde Game.newGame. n = cuántos jugadores hay en la mesa. */
@@ -179,6 +186,10 @@
         this.st[i].carga = 0;
         this.st[i].acecho = 0;
         this.st[i].guard = [0, 0, 0, 0];
+        /* Una Q que quedó armada muere con la vida: sin esto, la dentellada
+         * pendiente saldría sola al reaparecer, contra un fantasma al que
+         * nadie apuntó. */
+        this.st[i].pedirQ = 0;
       }
     },
 
@@ -319,6 +330,26 @@
         // los del fantasma humano (PAC-MAN VS.)
         if (s.carga > 0) s.carga--;
         if (s.acecho > 0) s.acecho--;
+        /* La Q que se pidió antes de tiempo: cada tick se vuelve a mirar si
+         * ya hay alguien a tiro. Esto corre AQUÍ, al principio del tick y
+         * antes de que nadie se mueva (Game.step llama a Hab.paso antes de
+         * stepPlaying), así que el mordisco siempre se resuelve un tick
+         * ANTES de que el fantasma pueda pisar la casilla de Pac-Man: con
+         * dos px de acercamiento por tick y dos casillas de alcance, no hay
+         * forma de que un fantasma pase de "fuera de tiro" a "encima" sin
+         * cruzar antes por aquí. Ver CFG.HAB.BITE_BUFFER. */
+        if (s.pedirQ > 0) {
+          s.pedirQ--;
+          if (this.puede(G, i, MORDISCO) && this.presa(G, i)) {
+            s.pedirQ = 0;
+            this.reintento = true;
+            this.pulsar(G, i, MORDISCO);
+            this.reintento = false;
+          }
+          /* Agotarse no suena ni se ve: la dentellada al aire ya sonó al
+           * pulsar (ver mordisco()). Este margen es puntería prestada, no un
+           * poder aparte, y no tiene que anunciarse. */
+        }
       }
     },
 
@@ -358,7 +389,23 @@
       // mientras se ve una repetición manda ella: la tecla del que mira no
       // pinta nada, igual que con los giros (js/replay.js)
       if (R && R.habBloqueada && R.habBloqueada()) return false;
-      if (!this.lanzar(G, idx, k)) return false;
+      if (!this.lanzar(G, idx, k)) {
+        /* MORDISCO al aire: no se tira la tecla, se deja ARMADA un instante
+         * (CFG.HAB.BITE_BUFFER) y muerde sola en cuanto alguien entre a tiro.
+         * Es EL arreglo del "voy de frente contra el fantasma, uso la Q y me
+         * mata igual": de cara solo hay cinco o seis ticks buenos para morder,
+         * y nadie reacciona en 100 ms.
+         *
+         * No entra por aquí ni la Q del fantasma humano (esa es EMBESTIDA y
+         * se gasta al momento) ni el reintento que hace paso(), que si no se
+         * rearmaría solo para siempre. */
+        if (k === MORDISCO && !this.reintento &&
+            !(G.vsGhostOf && G.vsGhostOf(idx) >= 0)) {
+          var s = this.estado(idx);
+          if (s) s.pedirQ = H.BITE_BUFFER;
+        }
+        return false;
+      }
       /* Se apunta DESPUÉS y solo si salió: un mordisco al aire o un flash
        * contra el borde no cambian nada, así que meterlos en la repetición
        * sería engordarla por gusto. */
@@ -573,8 +620,20 @@
          * la puntería y tener la tecla en recarga se sienten exactamente
          * igual —no pasa nada—, y entonces la Q parece rota aunque funcione.
          * Con los dientes un instante queda claro que la tecla entró y lo
-         * que falló fue el tiro. */
+         * que falló fue el tiro.
+         *
+         * El SONIDO de fallo ya no sale de aquí: la Q pulsada desde el
+         * teclado se queda armada un momento (ver pulsar()), así que todavía
+         * no se sabe si ha fallado. Lo suena quien lo sabe — paso(), cuando
+         * se agota el margen sin nadie a tiro. */
         this.marcarDientes(idx, Math.round(H.BITE_SHOW / 2));
+        /* Y SUENA AHORA, no cuando se agote el margen de la Q armada. Retrasar
+         * este golpe 0.3 s se nota —a partir de un décimo de segundo el sonido
+         * deja de sentirse pegado a la tecla— y además sería mentir: la
+         * dentellada al aire ocurre AQUÍ, en este tick, y los dientes salen
+         * con ella. Si la Q armada acierta después, es una SEGUNDA dentellada
+         * y suena como tal: "chas" sordo y, un instante más tarde, el mordisco
+         * bueno. Que es exactamente lo que se ve. */
         sonDe(G, idx, 'playBiteMiss');
         return false;
       }

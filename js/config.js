@@ -955,6 +955,29 @@
     /* Los dientes se ven un poco más que el mordisco en sí: es el aviso de
      * que Q ha entrado, y sin él la muerte del fantasma no se entiende. */
     BITE_SHOW: 24,           // 0.4 s con dientes
+    /* ---------- LA Q QUE SE PULSA UN PELO ANTES ----------
+     * De frente, la ventana real para morder es de CINCO O SEIS TICKS. Pac-Man
+     * va a ~1 px por tick y el fantasma a ~0.95, así que yendo de cara se
+     * cierran casi 2 px por tick: desde que el fantasma entra en los 16 px del
+     * alcance hasta que caen en la misma casilla —y entonces te mata— pasan
+     * menos de 100 ms. El tiempo de reacción de una persona es el triple.
+     *
+     * Resultado: el jugador ve venir al fantasma de frente, pulsa Q cuando lo
+     * tiene a tres casillas —que es cuando se decide, no cuando ya lo tiene
+     * encima—, la dentellada sale al aire porque todavía no llegaba, y medio
+     * segundo después el fantasma se le mete dentro y lo mata. Desde fuera se
+     * ve como "usé la Q y me mató igual", y no había forma humana de acertar
+     * el tiro.
+     *
+     * Así que la Q pedida pronto NO se tira: se queda ARMADA estos ticks y
+     * muerde sola en cuanto alguien entra a tiro. Es lo mismo que ya hace
+     * `nextDir` con los giros —el rumbo pedido espera a que el laberinto
+     * deje— y no regala alcance: el mordisco sigue llegando a dos casillas y
+     * a tres no llega. Lo único que deja de exigir es puntería de milisegundo.
+     *
+     * 18 ticks (0.3 s) cubren pulsar con el fantasma a unas cinco casillas.
+     * Más sería raro: mordiscos que salen solos mucho después de la tecla. */
+    BITE_BUFFER: 18,
     TURBO_TICKS: 5 * 60,     // 5 s de x1.5
     TURBO_MULT: 1.5,
     FLASH_TILES: 3,          // casillas que se recorren, paredes incluidas
