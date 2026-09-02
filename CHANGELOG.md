@@ -2,7 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
-## 2026-09-02 · La Q ya no falla cuando vais de frente, y los fantasmas dejan de darse la vuelta
+## 2026-09-02 · Paredes con esquinas de verdad, la Q que no falla de frente y los fantasmas que dejan de darse la vuelta
+
+- **Las paredes ya no giran en escuadra.** El laberinto del arcade no tiene
+  ni una esquina en ángulo recto: cada cambio de dirección va con una curva, y
+  sin ella el dibujo se veía cortado a cuchillo. Ahora **todas las esquinas
+  del muro son redondeadas**, las de fuera y las de dentro, en el laberinto
+  clásico y en los seis alternativos. El trazo sigue siendo de un píxel y los
+  muros ocupan exactamente lo mismo: cambia solo cómo doblan.
 
 - **Las zonas sin subir vuelven a ser las cuatro del arcade.** En el Pac-Man de
   1980 hay cuatro cruces donde un fantasma **no puede girar hacia arriba**

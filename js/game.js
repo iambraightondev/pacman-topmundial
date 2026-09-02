@@ -3252,28 +3252,90 @@
     },
 
     /* Un lado del muro, retranqueado WALL_INSET px hacia el interior de la
-     * casilla (muros finos, pasillos anchos). Los extremos se recortan en las
-     * esquinas convexas —donde también se dibuja el lado perpendicular— y se
-     * alargan en las cóncavas, donde el contorno gira en la casilla vecina. */
+     * casilla (muros finos, pasillos anchos).
+     *
+     * Los extremos NO son un corte en ángulo recto: donde el contorno cambia
+     * de dirección se recorta WALL_RADIUS y el hueco lo cierra un cuarto de
+     * arco, que es como gira el laberinto del arcade. Hay tres finales
+     * posibles, y salen de mirar dos casillas:
+     *
+     *   CONVEXA  el vecino perpendicular es pasillo — el muro se acaba aquí y
+     *            dobla hacia dentro. El arco va por dentro de esta casilla.
+     *   CÓNCAVA  el vecino perpendicular es muro y la diagonal también — el
+     *            pasillo es el que dobla, y el contorno sigue por la casilla
+     *            de al lado. El arco rodea la esquina, por fuera.
+     *   RECTA    el vecino perpendicular es muro y la diagonal es pasillo —
+     *            el trazo continúa en la casilla vecina, sin esquina.
+     *
+     * Los arcos de las esquinas los dibujan los DOS lados que se juntan en
+     * ellas, cada uno por su cuenta y con la misma geometría, así que el
+     * trazo cae exactamente encima del otro y no se nota. Salía más caro
+     * evitarlo que repetirlo. */
     wallSide: function (ctx, col, row, sx, sy) {
-      var IN = CFG.WALL_INSET;
+      var IN = CFG.WALL_INSET, R = CFG.WALL_RADIUS;
       var x = col * T, y = row * T;
       var horiz = (sy !== 0);            // lado superior/inferior: trazo horizontal
+      /* v: la coordenada FIJA del trazo. inDir: hacia dónde queda el interior
+       * del muro desde él, que es donde se apoyan las esquinas convexas. */
       var v = horiz
         ? (sy < 0 ? y + IN + 0.5 : y + T - IN - 0.5)
         : (sx < 0 ? x + IN + 0.5 : x + T - IN - 0.5);
+      var inDir = horiz ? -sy : -sx;
       var ax = horiz ? -1 : 0, ay = horiz ? 0 : -1;   // hacia el extremo menor
-      var a = (horiz ? x : y);
-      var b = a + T;
-      /* extremo menor */
-      if (this.isPath(col + ax, row + ay)) a += IN;
-      else if (!this.isPath(col + ax + sx, row + ay + sy)) a -= IN + 1;
-      /* extremo mayor */
-      if (this.isPath(col - ax, row - ay)) b -= IN;
-      else if (!this.isPath(col - ax + sx, row - ay + sy)) b += IN + 1;
+      var base = (horiz ? x : y);
+      var a = this.wallEnd(ctx, col, row, sx, sy, ax, ay, base, v, inDir, 1);
+      var b = this.wallEnd(ctx, col, row, sx, sy, -ax, -ay, base, v, inDir, -1);
 
       if (horiz) { ctx.moveTo(a, v); ctx.lineTo(b, v); }
       else { ctx.moveTo(v, a); ctx.lineTo(v, b); }
+    },
+
+    /* Un extremo del trazo: decide dónde termina y, si ahí hay esquina, pinta
+     * su cuarto de arco. Devuelve la coordenada del corte sobre el eje.
+     *   ex,ey  hacia qué vecino mira este extremo
+     *   eDir   +1 el extremo menor del eje, -1 el mayor
+     * La coordenada del trazo PERPENDICULAR con el que se junta: por
+     * dentro de la casilla si la esquina es convexa, por fuera si es cóncava
+     * (allí el contorno gira ya en la casilla de al lado). */
+    wallEnd: function (ctx, col, row, sx, sy, ex, ey, base, v, inDir, eDir) {
+      var IN = CFG.WALL_INSET, R = CFG.WALL_RADIUS;
+      var borde = base + (eDir > 0 ? 0 : T);
+      if (this.isPath(col + ex, row + ey)) {                 // CONVEXA
+        var wc = borde + eDir * (IN + 0.5);
+        this.wallArc(ctx, !(sy !== 0),
+          wc + eDir * R, v + inDir * R,                      // centro
+          wc + eDir * R, v,                                  // sale del trazo
+          wc, v + inDir * R);                                // entra en el otro
+        return wc + eDir * R;
+      }
+      if (!this.isPath(col + ex + sx, row + ey + sy)) {      // CÓNCAVA
+        var wv = borde - eDir * (IN + 0.5);
+        this.wallArc(ctx, !(sy !== 0),
+          wv, v,
+          wv + eDir * R, v,
+          wv, v - inDir * R);
+        return wv + eDir * R;
+      }
+      return borde;                                          // RECTA
+    },
+
+    /* Un cuarto de arco entre dos puntos, dado el centro. Todo llega en
+     * coordenadas (eje, perpendicular) del trazo que lo pide; "gira" dice si
+     * hay que cambiarlas por (x, y), que es lo que pasa con los lados
+     * verticales. Los ángulos se sacan de los propios puntos para no tener
+     * que llevar la cuenta de ocho casos a mano. */
+    wallArc: function (ctx, gira, ce, cp, pe, pp, qe, qp) {
+      var R = CFG.WALL_RADIUS;
+      var cx = gira ? cp : ce, cy = gira ? ce : cp;
+      var px = gira ? pp : pe, py = gira ? pe : pp;
+      var qx = gira ? qp : qe, qy = gira ? qe : qp;
+      var a0 = Math.atan2(py - cy, px - cx);
+      var a1 = Math.atan2(qy - cy, qx - cx);
+      var d = a1 - a0;
+      while (d <= -Math.PI) d += 2 * Math.PI;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      ctx.moveTo(px, py);
+      ctx.arc(cx, cy, R, a0, a1, d < 0);
     },
 
     /* ¿la casilla es pasillo visible? (para dibujar aristas) */

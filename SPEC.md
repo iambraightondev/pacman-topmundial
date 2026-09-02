@@ -380,11 +380,27 @@ or out-of-bounds, `-` ghost house door. EXACT layout (each line 28 chars):
   (11.5, 14), Clyde (15.5, 14) inside house. Fruit spawns at (13.5, 17).
 - Wall rendering: blue (#2121ff) 1px stroke per wall edge that faces a
   corridor, **inset `CFG.WALL_INSET` (2) px into the wall tile** so blocks
-  read thin and corridors wide, as in the arcade (`Game.wallSide()` trims the
-  stroke at convex corners and extends it at concave ones so the outline
-  closes cleanly). Pink door, aligned with the neighbouring inset strokes;
-  black background. Dots 2×2 px, energizers r=4 px blinking (~0.2 s on/off),
-  color #ffb8ae.
+  read thin and corridors wide, as in the arcade. Pink door, aligned with the
+  neighbouring inset strokes; black background. Dots 2×2 px, energizers
+  r=4 px blinking (~0.2 s on/off), color #ffb8ae.
+- **Corners are rounded, not square** — the arcade maze never turns at a
+  right angle. `Game.wallSide()` classifies each end of a stroke from two
+  neighbours and `Game.wallEnd()` trims it by `CFG.WALL_RADIUS` and emits the
+  quarter arc that closes it:
+  - **convex** (perpendicular neighbour is corridor) — the wall ends and
+    turns inward; the arc sits inside this tile;
+  - **concave** (perpendicular neighbour and diagonal are both wall) — the
+    corridor is the one turning; the arc wraps the corner from outside;
+  - **straight** (perpendicular is wall, diagonal is corridor) — the stroke
+    continues into the next tile, no corner.
+
+  Both strokes meeting at a corner emit the same arc with the same geometry,
+  so they land exactly on top of each other — cheaper than coordinating who
+  draws it. `CFG.WALL_RADIUS` is **1.5 px**, which is the most that fits:
+  the shortest wall run is **one tile** with a corner at each end, leaving
+  `TILE - 2*WALL_INSET - 1` = 3 px of stroke for two curves. A bigger radius
+  makes short walls draw inside out. `js/tests.js` checks this against every
+  maze, not just the classic one.
 
 ## Movement & speeds
 

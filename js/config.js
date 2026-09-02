@@ -310,6 +310,17 @@
   /* Retranqueo del trazo de los muros (px dentro de la casilla): los muros
    * se dibujan más finos y los pasillos se ven más anchos, como en el arcade. */
   CFG.WALL_INSET = 2;
+  /* Radio de las esquinas del muro, en píxeles. El laberinto del arcade no
+   * gira en ángulo recto: cada cambio de dirección va con una curva, y sin
+   * ella el dibujo se ve cortado a escuadra.
+   *
+   * 1.5 no es un número suelto: es lo máximo que cabe. El tramo de muro más
+   * corto que existe es de UNA casilla con esquina en los dos extremos, y
+   * ahí el trazo mide T - 2*WALL_INSET - 1 = 3 px, que entre dos curvas son
+   * 1.5 para cada una. Con más, esos muros cortos se quedarían sin recta y
+   * las curvas se comerían unas a otras. Lo comprueba js/tests.js, para
+   * todos los laberintos y no solo para el clásico. */
+  CFG.WALL_RADIUS = 1.5;
 
   /* ---------- Colores ---------- */
   CFG.COLORS = {

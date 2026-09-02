@@ -322,6 +322,51 @@
     });
   });
 
+  /* Cada esquina se come WALL_RADIUS px del trazo recto (Game.wallSide), y en
+   * un tramo de muro con esquina en los dos extremos se los come dos veces.
+   * El tramo más corto que existe es de UNA casilla: T - 2*WALL_INSET - 1 px
+   * de trazo. Si el radio se pasa, las dos curvas se cruzan y el muro se
+   * dibuja del revés. Se mira en TODOS los laberintos, que es donde puede
+   * aparecer mañana un tramo corto nuevo. */
+  test('el radio de las esquinas cabe en el muro más corto', function () {
+    var LADOS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+    var todos = [{ name: 'CLÁSICO', rows: CFG.MAZE_CLASSIC }]
+      .concat(window.PM.Mazes.LIST);
+    todos.forEach(function (m) {
+      function pasillo(c, r) {
+        if (r < 0 || r >= CFG.ROWS) return false;
+        if (c < 0 || c >= CFG.COLS) return r === CFG.TUNNEL_ROW;
+        return m.rows[r].charAt(c) !== '#';
+      }
+      function muro(c, r) {
+        return r >= 0 && r < CFG.ROWS && c >= 0 && c < CFG.COLS && !pasillo(c, r);
+      }
+      var corto = Infinity, donde = '';
+      LADOS.forEach(function (s) {
+        var sx = s[0], sy = s[1], horiz = (sy !== 0), c, r;
+        for (r = 0; r < CFG.ROWS; r++) {
+          for (c = 0; c < CFG.COLS; c++) {
+            if (!muro(c, r) || !pasillo(c + sx, r + sy)) continue;
+            // solo desde el principio del tramo, para no contarlo cuatro veces
+            var pc = horiz ? c - 1 : c, pr = horiz ? r : r - 1;
+            if (muro(pc, pr) && pasillo(pc + sx, pr + sy)) continue;
+            var n = 0, cc = c, rr = r;
+            while (muro(cc, rr) && pasillo(cc + sx, rr + sy)) {
+              n++;
+              if (horiz) cc++; else rr++;
+            }
+            if (n < corto) { corto = n; donde = '(' + c + ',' + r + ')'; }
+          }
+        }
+      });
+      var trazo = corto * CFG.TILE - 2 * CFG.WALL_INSET - 1;
+      ok(trazo >= 2 * CFG.WALL_RADIUS,
+         m.name + ': el tramo de ' + corto + ' casillas en ' + donde +
+         ' deja ' + trazo + ' px y las dos curvas piden ' +
+         (2 * CFG.WALL_RADIUS));
+    });
+  });
+
   test('los laberintos alternativos respetan casa, túnel y salidas',
     function () {
       window.PM.Mazes.LIST.forEach(function (m) {
