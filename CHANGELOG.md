@@ -2,7 +2,27 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
-## 2026-09-02 · La Q ya no falla cuando vais de frente
+## 2026-09-02 · La Q ya no falla cuando vais de frente, y los fantasmas dejan de darse la vuelta
+
+- **Las zonas sin subir vuelven a ser las cuatro del arcade.** En el Pac-Man de
+  1980 hay cuatro cruces donde un fantasma **no puede girar hacia arriba**
+  mientras persigue o dispersa, y por eso esos dos pasillos solo se bajan. Es
+  una de las reglas que sostienen los patrones que uno se aprende de memoria,
+  así que aquí tiene que estar clavada — y estaba **mal convertida**. El arcade
+  las cuenta sobre la pantalla entera (36 filas) y nuestro laberinto empieza
+  tres filas más abajo, las de los marcadores: había que restar **tres** y se
+  restó **uno**, así que arrastrábamos cuatro casillas de más.
+  - **En el laberinto clásico no se notaba** porque las cuatro sobrantes caían
+    en un muro o dentro de la casa de fantasmas: no hacían nada.
+  - **En el modo LABERINTOS sí.** Dos de ellas caían en pleno pasillo recto, y
+    ahí un fantasma que subía se quedaba sin ninguna salida legal — arriba
+    prohibido, los lados muro y dar marcha atrás no está permitido — así que
+    **daba media vuelta en mitad del pasillo**. Un fantasma no se gira nunca
+    salvo al cambiar de modo, de forma que aquello se veía sencillamente roto.
+    Ya no pasa en ninguno de los seis laberintos.
+  - Las pruebas ahora **fijan las cuatro casillas a los valores del arcade** y
+    comprueban que en todos los laberintos siguen siendo un cruce con salida,
+    para que no se vuelva a colar.
 
 - **El mordisco pulsado un pelo antes ya no se pierde.** Pasaba siempre en la
   misma situación: Pac-Man y un fantasma van de cara, a toparse, pulsas Q para

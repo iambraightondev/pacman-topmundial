@@ -233,13 +233,33 @@
   };
 
   /* ---------- Zonas sin subir (persecución/dispersión) ----------
-   * Se incluyen las cuatro casillas del SPEC tal cual y, además, los
-   * cruces clásicos equivalentes del arcade en este laberinto (sobre la
-   * casa de fantasmas, fila 11, y sobre Pac-Man, fila 23), ya que las
-   * casillas literales del SPEC caen en interior de casa / muros. */
+   * Las CUATRO del arcade de 1980, ni una más: en estos cruces un fantasma
+   * en dispersión o persecución no puede elegir ARRIBA, y por eso esos dos
+   * pasillos solo se bajan. Es una de las reglas que sostienen los patrones
+   * memorizados, así que aquí se copia clavada.
+   *
+   * CUIDADO CON LA CONVERSIÓN, que ya se hizo mal una vez. El arcade las
+   * documenta sobre la PANTALLA ENTERA, que son 36 filas: (12,14), (15,14),
+   * (12,26) y (15,26). Este array es solo el LABERINTO (CFG.ROWS = 31), que
+   * empieza tres filas más abajo — CFG.TOP_ROWS, las de los marcadores —, así
+   * que hay que restar TRES, no una: 14-3 = 11 y 26-3 = 23. Se restó uno, y
+   * quedaron cuatro casillas de más en las filas 13 y 25.
+   *
+   * En el clásico esas cuatro no hacían nada (caen en muro o dentro de la
+   * casa de fantasmas), y por eso no se notó. En los laberintos alternativos
+   * sí caían en pasillo, y (12,25)/(15,25) daban en un pasillo recto de
+   * arriba-abajo: allí el fantasma que subía no podía seguir (sin subir), ni
+   * salir de lado (muro), ni invertir (prohibido), y Ghost.decide se quedaba
+   * sin salidas y le daba media vuelta en mitad del pasillo. Un fantasma no
+   * se da la vuelta nunca salvo al cambiar de modo, así que se veía roto.
+   *
+   * Las de la fila 11 están dentro del núcleo que los laberintos alternativos
+   * copian del clásico (filas 9 a 19). Las de la fila 23 NO: van por su
+   * cuenta, y js/tests.js comprueba que en todos los laberintos siguen siendo
+   * un cruce con salida. */
   CFG.NO_UP_TILES = [
-    [12, 13], [15, 13], [12, 25], [15, 25],   // [col, fila] — según SPEC
-    [12, 11], [15, 11], [12, 23], [15, 23]    // cruces arcade equivalentes
+    [12, 11], [15, 11],    // [col, fila] — el cruce sobre la casa  (arcade: fila 14)
+    [12, 23], [15, 23]     //              y el cruce de abajo      (arcade: fila 26)
   ];
 
   /* ---------- PAC-MAN VS.: un jugador lleva un fantasma ----------

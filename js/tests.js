@@ -282,6 +282,46 @@
     });
   });
 
+  /* Las cuatro casillas sin subir son las del arcade, y la conversión tiene
+   * trampa: el original las da sobre la PANTALLA ENTERA (36 filas) y este
+   * array es solo el LABERINTO (31), que empieza CFG.TOP_ROWS más abajo.
+   * Restar uno en vez de tres metió cuatro casillas de más. */
+  test('las zonas sin subir son las cuatro del arcade, bien convertidas',
+    function () {
+      var ARCADE = [[12, 14], [15, 14], [12, 26], [15, 26]];   // sobre la pantalla
+      eq(CFG.NO_UP_TILES.length, 4, 'son cuatro, ni una más');
+      for (var i = 0; i < ARCADE.length; i++) {
+        eq(CFG.NO_UP_TILES[i][0], ARCADE[i][0], 'columna de la ' + i);
+        eq(CFG.NO_UP_TILES[i][1], ARCADE[i][1] - CFG.TOP_ROWS,
+           'fila de la ' + i + ': la del arcade menos las del marcador');
+      }
+    });
+
+  /* Y en TODOS los laberintos tienen que seguir siendo un cruce CON SALIDA.
+   * Si a una se llega subiendo y no tiene salida de lado, el fantasma se
+   * queda sin candidatos —arriba prohibido, atrás prohibido, los lados
+   * muro— y Ghost.decide le da media vuelta en mitad del pasillo, que es lo
+   * único que un fantasma no hace nunca fuera de un cambio de modo. Aquí
+   * cayeron las cuatro casillas mal convertidas. */
+  test('ninguna zona sin subir deja al fantasma sin salida', function () {
+    var todos = [{ name: 'CLÁSICO', rows: CFG.MAZE_CLASSIC }]
+      .concat(window.PM.Mazes.LIST);
+    todos.forEach(function (m) {
+      function libre(c, r) {
+        var ch = (m.rows[r] || '').charAt(c);
+        return !!ch && ch !== '#' && ch !== '-';
+      }
+      CFG.NO_UP_TILES.forEach(function (t) {
+        var col = t[0], fila = t[1];
+        var donde = m.name + ' (' + col + ',' + fila + ')';
+        ok(libre(col, fila), donde + ': tiene que ser pasillo');
+        if (!libre(col, fila + 1)) return;     // no se llega subiendo: da igual
+        ok(libre(col - 1, fila) || libre(col + 1, fila),
+           donde + ': se llega subiendo y no hay salida de lado');
+      });
+    });
+  });
+
   test('los laberintos alternativos respetan casa, túnel y salidas',
     function () {
       window.PM.Mazes.LIST.forEach(function (m) {

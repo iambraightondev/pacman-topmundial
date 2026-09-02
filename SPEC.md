@@ -449,8 +449,23 @@ seeded generator (`Game.rndDir` / `Game.rndUnit`, reseeded from the level in
 draws from it too. `Math.random` anywhere in the simulation means the same
 level plays out differently every run and no pattern can ever be memorised.
 
-**No-up zones**: in chase/scatter, ghosts may NOT choose UP at tiles (12,13),
-(15,13), (12,25), (15,25). (Frightened/eyes ignore this.)
+**No-up zones**: in chase/scatter, ghosts may NOT choose UP at tiles
+**(12,11), (15,11), (12,23), (15,23)** — `CFG.NO_UP_TILES`. Which is why
+those two corridors are only ever ridden downwards. (Frightened/eyes ignore
+this, exactly like the arcade.)
+
+> **Mind the row conversion.** The arcade documents these over the whole
+> **screen** (36 rows): (12,14), (15,14), (12,26), (15,26). `CFG.MAZE` is the
+> **maze only** (`CFG.ROWS` = 31), starting `CFG.TOP_ROWS` = **3** rows lower,
+> so subtract **three**, not one. This spec said 13 and 25 for a while and the
+> code carried both sets: the wrong four are wall or ghost-house interior in
+> the classic maze — inert, which is why nobody noticed — but in the alternate
+> mazes (12,25)/(15,25) landed on a straight vertical corridor, where a ghost
+> coming up has no legal move at all (up forbidden, sides walled, reversing
+> banned) and `Ghost.decide` returned `backDir`: a U-turn mid-corridor, the
+> one thing ghosts never do outside a mode switch. Fixed; `js/tests.js` now
+> pins the four tiles to the arcade values and checks every maze keeps them a
+> junction with a way out.
 
 **Scatter/chase schedule** (seconds; after the last entry chase forever;
 mode switches force direction reversal):
@@ -1334,7 +1349,10 @@ scores from another layout compare to nothing. XP still counts.
 Each maze is authored as its **left half only** (14 columns) and mirrored,
 which is where the arcade look comes from. Rows 9–19 are **copied from the
 classic**, never retyped: they carry the ghost house, its door, the tunnel
-row and the no-up tiles, and the engine addresses those tile by tile.
+row and the **upper** pair of no-up tiles (row 11), and the engine addresses
+those tile by tile. The **lower** pair (row 23) falls outside that band, so
+each maze must keep (12,23) and (15,23) a junction with a lateral way out —
+`js/tests.js` checks it.
 `js/tests.js` enforces the rest: **no 2×2 walkable square** (see below), every
 pellet reachable from Pac-Man's spawn (BFS with tunnel wrap), the declared
 pellet count, **no dead ends** (a ghost that enters one is stuck and the chase
