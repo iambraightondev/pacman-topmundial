@@ -396,11 +396,24 @@ or out-of-bounds, `-` ghost house door. EXACT layout (each line 28 chars):
 
   Both strokes meeting at a corner emit the same arc with the same geometry,
   so they land exactly on top of each other — cheaper than coordinating who
-  draws it. `CFG.WALL_RADIUS` is **1.5 px**, which is the most that fits:
-  the shortest wall run is **one tile** with a corner at each end, leaving
-  `TILE - 2*WALL_INSET - 1` = 3 px of stroke for two curves. A bigger radius
-  makes short walls draw inside out. `js/tests.js` checks this against every
-  maze, not just the classic one.
+  draws it. `CFG.WALL_RADIUS` is **1.5 px**, about the most that fits: the
+  shortest wall run is **one tile** with a corner at each end, leaving
+  `TILE - 2*WALL_INSET` minus one stroke width of straight line for two
+  curves. A bigger radius makes short walls draw inside out; `js/tests.js`
+  checks it against every maze, not just the classic one, and
+  `buildMazeCanvas` clamps it further for whatever scale it is drawing at.
+- **The maze canvas is built at screen scale**, not at native resolution.
+  `Game.buildMazeCanvas(color, scale, lineWidth)` defaults to `CFG.SCALE` and
+  `CFG.WALL_LINE`, draws in native coordinates through a context transform,
+  and is blitted 1:1 (`drawImage` with explicit native width/height), so
+  nothing is ever resampled. This is what allows a stroke **thinner than one
+  native pixel**: `CFG.WALL_LINE` is **2 screen px** where a native pixel is
+  3, and `CFG.WALL_LINE = CFG.SCALE` reproduces the old drawing exactly. Half
+  a stroke — `Game.wallHalf`, in native units — replaces the old 0.5 offset
+  so the stroke lands whole inside the inset instead of straddling two screen
+  pixels. The maze-picker thumbnail calls the same function at
+  `112/NATIVE_W` scale with a 1 px stroke rather than shrinking the game's
+  canvas, which at 1:6 washed the walls out to nothing.
 
 ## Movement & speeds
 

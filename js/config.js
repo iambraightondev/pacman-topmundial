@@ -314,13 +314,29 @@
    * gira en ángulo recto: cada cambio de dirección va con una curva, y sin
    * ella el dibujo se ve cortado a escuadra.
    *
-   * 1.5 no es un número suelto: es lo máximo que cabe. El tramo de muro más
-   * corto que existe es de UNA casilla con esquina en los dos extremos, y
-   * ahí el trazo mide T - 2*WALL_INSET - 1 = 3 px, que entre dos curvas son
-   * 1.5 para cada una. Con más, esos muros cortos se quedarían sin recta y
-   * las curvas se comerían unas a otras. Lo comprueba js/tests.js, para
-   * todos los laberintos y no solo para el clásico. */
+   * 1.5 no es un número suelto: es lo que cabe. El tramo de muro más corto
+   * que existe es de UNA casilla con esquina en los dos extremos, y ahí solo
+   * quedan T - 2*WALL_INSET - (un trazo) px de recta para repartir entre las
+   * dos curvas. Con más, esos muros se quedarían sin recta y las curvas se
+   * comerían unas a otras: el muro saldría dibujado del revés. Lo comprueba
+   * js/tests.js, en todos los laberintos y no solo en el clásico.
+   *
+   * Este es el radio que se PIDE. Game.buildMazeCanvas lo recorta él solo a
+   * lo que quepa en la escala que le toque dibujar, porque a tamaño de
+   * miniatura el trazo ocupa mucho más en unidades de casilla. */
   CFG.WALL_RADIUS = 1.5;
+  /* Grosor del trazo del muro, EN PÍXELES DE PANTALLA (no de los 8 de la
+   * casilla). Un píxel nativo son CFG.SCALE de pantalla, así que el trazo de
+   * toda la vida medía 3 y no había forma de bajar de ahí: en la resolución
+   * nativa no existe medio píxel. Por eso el laberinto se dibuja YA a escala
+   * (ver Game.buildMazeCanvas) y luego se pega uno a uno, sin reescalar nada.
+   * Con 2 el muro se lee más ligero y las curvas de las esquinas ganan, que
+   * a 3 se comían media casilla.
+   *
+   * Con WALL_LINE = CFG.SCALE sale exactamente el dibujo de antes, así que
+   * esto no es una capa nueva encima: es el mismo trazo con un grosor que
+   * ahora se puede elegir. */
+  CFG.WALL_LINE = 2;
 
   /* ---------- Colores ---------- */
   CFG.COLORS = {

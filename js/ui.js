@@ -3942,12 +3942,17 @@
       cv.height = Math.round(CFG.ROWS * CFG.TILE / 2);
       var c = cv.getContext('2d');
       if (!c) return null;
-      c.imageSmoothingEnabled = false;
+      /* Se dibuja DIRECTAMENTE al tamaño del sello, con trazo de un píxel, en
+       * vez de encoger el laberinto de la partida. Encogiéndolo se apagaba:
+       * el dibujo de la partida va a escala de pantalla, meterlo en 112 px es
+       * dividir por seis, y un trazo de CFG.WALL_LINE se disuelve hasta
+       * quedar en nada. Es el mismo código con otra escala, así que el sello
+       * sigue sin poder desviarse de lo que se juega. */
       var antes = CFG.MAZE;
       CFG.setMaze(m.rows);
-      var full = G.buildMazeCanvas(CFG.COLORS.wall);
+      var full = G.buildMazeCanvas(CFG.COLORS.wall, cv.width / CFG.NATIVE_W, 1);
       CFG.setMaze(antes);
-      c.drawImage(full, 0, 0, cv.width, cv.height);
+      c.drawImage(full, 0, 0);
       return cv;
     },
 

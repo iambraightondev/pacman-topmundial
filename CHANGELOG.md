@@ -4,6 +4,18 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-02 · Paredes con esquinas de verdad, la Q que no falla de frente y los fantasmas que dejan de darse la vuelta
 
+- **Y son más delgadas.** El trazo del muro medía un píxel de los de verdad,
+  que en pantalla son tres, y por debajo de eso no se podía bajar: en la
+  resolución del arcade no existe medio píxel. Ahora el laberinto se dibuja
+  ya al tamaño en que se ve —y se pega punto por punto, sin estirar nada—,
+  así que el trazo puede medir **dos**. El muro pesa menos, las curvas de las
+  esquinas se leen mejor y el laberinto respira. La puerta de la casa va al
+  mismo grosor, así que ahora continúa la línea en vez de parecer una barra
+  puesta encima.
+  - De paso, **las miniaturas del panel de LABERINTOS se ven mucho mejor**:
+    antes se encogía el dibujo de la partida y a ese tamaño los muros se
+    apagaban; ahora cada laberinto se dibuja directamente a tamaño de sello.
+
 - **Las paredes ya no giran en escuadra.** El laberinto del arcade no tiene
   ni una esquina en ángulo recto: cada cambio de dirección va con una curva, y
   sin ella el dibujo se veía cortado a cuchillo. Ahora **todas las esquinas

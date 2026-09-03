@@ -3222,15 +3222,35 @@
     /* =========================================================
      * RENDER
      * ========================================================= */
-    buildMazeCanvas: function (wallColor) {
+    /* El laberinto se pinta una vez a un canvas aparte y luego se pega en
+     * cada fotograma. Ese canvas va a ESCALA DE PANTALLA (CFG.SCALE), no a la
+     * resolución nativa: es lo que permite un trazo de menos de un píxel
+     * nativo —CFG.WALL_LINE— sin inventarse resolución en ninguna parte. Se
+     * dibuja en coordenadas nativas de siempre (la transformación hace la
+     * cuenta) y se pega uno a uno, así que no hay reescalado ni suavizado por
+     * el camino: lo que se calcula aquí es exactamente lo que se ve. */
+    buildMazeCanvas: function (wallColor, escala, linea) {
+      var S = escala || CFG.SCALE;
+      var W = linea || CFG.WALL_LINE;
+      /* Medio trazo y radio de esquina EN UNIDADES NATIVAS, para esta escala.
+       * No son constantes porque el dibujo se usa a dos tamaños —la partida y
+       * la miniatura del panel de laberintos— y el trazo no encoge igual que
+       * la casilla: a tamaño de sello el trazo sigue siendo de un píxel, que
+       * en unidades nativas es MUCHO más gordo. El radio se recorta a lo que
+       * quede de trazo recto en el muro más corto (una casilla), o las dos
+       * curvas se cruzarían y ese muro se dibujaría del revés. */
+      this.wallHalf = (W / S) / 2;
+      this.wallR = Math.min(CFG.WALL_RADIUS,
+        (T - 2 * CFG.WALL_INSET - 2 * this.wallHalf) / 2);
       var cv = document.createElement('canvas');
-      cv.width = CFG.NATIVE_W;
-      cv.height = CFG.ROWS * T;
+      cv.width = Math.round(CFG.NATIVE_W * S);
+      cv.height = Math.round(CFG.ROWS * T * S);
       var c = cv.getContext('2d');
       c.fillStyle = '#000000';
       c.fillRect(0, 0, cv.width, cv.height);
+      c.setTransform(S, 0, 0, S, 0, 0);
       c.strokeStyle = wallColor;
-      c.lineWidth = 1;
+      c.lineWidth = W / S;
       c.lineCap = 'butt';
       c.beginPath();
       for (var r = 0; r < CFG.ROWS; r++) {
@@ -3244,10 +3264,13 @@
         }
       }
       c.stroke();
-      /* puerta de la casa (rosa), a la altura del trazo de los muros vecinos */
-      var IN = CFG.WALL_INSET;
+      /* Puerta de la casa (rosa): a la altura EXACTA del trazo de los muros
+       * que tiene a los lados y con su mismo grosor, para que la línea siga
+       * de largo y la puerta se lea como un tramo de otro color y no como
+       * una barra pegada encima. */
+      var IN = CFG.WALL_INSET, G2 = this.wallHalf;
       c.fillStyle = CFG.COLORS.door;
-      c.fillRect(13 * T - IN, 12 * T + T - IN - 1, 2 * T + IN * 2, 2);
+      c.fillRect(13 * T - IN, 12 * T + T - IN - G2 * 2, 2 * T + IN * 2, G2 * 2);
       return cv;
     },
 
@@ -3272,14 +3295,15 @@
      * trazo cae exactamente encima del otro y no se nota. Salía más caro
      * evitarlo que repetirlo. */
     wallSide: function (ctx, col, row, sx, sy) {
-      var IN = CFG.WALL_INSET, R = CFG.WALL_RADIUS;
+      var IN = CFG.WALL_INSET;
       var x = col * T, y = row * T;
       var horiz = (sy !== 0);            // lado superior/inferior: trazo horizontal
       /* v: la coordenada FIJA del trazo. inDir: hacia dónde queda el interior
        * del muro desde él, que es donde se apoyan las esquinas convexas. */
+      var HALF = this.wallHalf;
       var v = horiz
-        ? (sy < 0 ? y + IN + 0.5 : y + T - IN - 0.5)
-        : (sx < 0 ? x + IN + 0.5 : x + T - IN - 0.5);
+        ? (sy < 0 ? y + IN + HALF : y + T - IN - HALF)
+        : (sx < 0 ? x + IN + HALF : x + T - IN - HALF);
       var inDir = horiz ? -sy : -sx;
       var ax = horiz ? -1 : 0, ay = horiz ? 0 : -1;   // hacia el extremo menor
       var base = (horiz ? x : y);
@@ -3298,10 +3322,10 @@
      * dentro de la casilla si la esquina es convexa, por fuera si es cóncava
      * (allí el contorno gira ya en la casilla de al lado). */
     wallEnd: function (ctx, col, row, sx, sy, ex, ey, base, v, inDir, eDir) {
-      var IN = CFG.WALL_INSET, R = CFG.WALL_RADIUS;
+      var IN = CFG.WALL_INSET, R = this.wallR, HALF = this.wallHalf;
       var borde = base + (eDir > 0 ? 0 : T);
       if (this.isPath(col + ex, row + ey)) {                 // CONVEXA
-        var wc = borde + eDir * (IN + 0.5);
+        var wc = borde + eDir * (IN + HALF);
         this.wallArc(ctx, !(sy !== 0),
           wc + eDir * R, v + inDir * R,                      // centro
           wc + eDir * R, v,                                  // sale del trazo
@@ -3309,7 +3333,7 @@
         return wc + eDir * R;
       }
       if (!this.isPath(col + ex + sx, row + ey + sy)) {      // CÓNCAVA
-        var wv = borde - eDir * (IN + 0.5);
+        var wv = borde - eDir * (IN + HALF);
         this.wallArc(ctx, !(sy !== 0),
           wv, v,
           wv + eDir * R, v,
@@ -3325,7 +3349,7 @@
      * verticales. Los ángulos se sacan de los propios puntos para no tener
      * que llevar la cuenta de ocho casos a mano. */
     wallArc: function (ctx, gira, ce, cp, pe, pp, qe, qp) {
-      var R = CFG.WALL_RADIUS;
+      var R = this.wallR;
       var cx = gira ? cp : ce, cy = gira ? ce : cp;
       var px = gira ? pp : pe, py = gira ? pe : pp;
       var qx = gira ? qp : qe, qy = gira ? qe : qp;
@@ -3387,7 +3411,10 @@
         var tt = CFG.LEVEL_FLASH_TICKS - this.phaseTicks;
         if (Math.floor(tt / 15) % 2 === 0) mazeImg = this.mazeWhite;
       }
-      ctx.drawImage(mazeImg, 0, CFG.MAZE_Y);
+      /* El canvas del laberinto va a escala de pantalla, así que hay que
+       * pedirle el tamaño NATIVO: con la transformación del contexto sale
+       * píxel a píxel, sin reescalar. */
+      ctx.drawImage(mazeImg, 0, CFG.MAZE_Y, CFG.NATIVE_W, CFG.ROWS * T);
 
       /* pastillas */
       ctx.fillStyle = CFG.COLORS.pellet;

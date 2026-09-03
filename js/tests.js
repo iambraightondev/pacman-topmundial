@@ -359,7 +359,8 @@
           }
         }
       });
-      var trazo = corto * CFG.TILE - 2 * CFG.WALL_INSET - 1;
+      var medio = (CFG.WALL_LINE / CFG.SCALE) / 2;   // medio trazo, en nativas
+      var trazo = corto * CFG.TILE - 2 * CFG.WALL_INSET - 2 * medio;
       ok(trazo >= 2 * CFG.WALL_RADIUS,
          m.name + ': el tramo de ' + corto + ' casillas en ' + donde +
          ' deja ' + trazo + ' px y las dos curvas piden ' +
