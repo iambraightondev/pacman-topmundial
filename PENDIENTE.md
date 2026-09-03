@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **15 de agosto de 2026** (segunda tanda del día).
+Última puesta al día: **3 de septiembre de 2026**.
 
 ---
 
@@ -40,6 +40,10 @@ el enlace se pide bien, se genera bien y no llega a ningún buzón.
 > por incómodo: el juego es para jugar con amigos, no para custodiar una llave.
 > No volver a proponer ninguno de los dos sin un motivo nuevo.
 
+**Y una cosa pequeña:** `capturas/gameplay.png` es de antes de rehacer el
+laberinto, así que enseña las paredes gordas y con las esquinas en escuadra.
+Regenerarla cuando se toque el README o se enseñe el juego a alguien.
+
 ---
 
 ## Por dónde iba esto
@@ -48,6 +52,17 @@ el enlace se pide bien, se genera bien y no llega a ningún buzón.
 
 | Commit | Qué |
 |---|---|
+| `4721225` | ARO pasa a ser la última skin y PÍXEL la penúltima |
+| `11104fb` | Devuelve la rejilla a la skin PÍXEL, ahora dibujada a propósito |
+| `9a1a195` | La skin PÍXEL vuelve a parecer un Pac-Man |
+| `2d14842` | Los dientes del mordisco se dibujan en el idioma de cada skin |
+| `3fab4a9` | Las recargas viajan en la instantánea, no solo en el aviso de uso |
+| `241367d` | Las recargas se ven en segundos, y también las de los compañeros |
+| `e31f71e` | Paredes más estrechas: Pac-Man ya no comparte píxeles con el muro |
+| `044b181` | Muros más delgados: el laberinto se dibuja a escala de pantalla |
+| `85e9776` | Las paredes del laberinto giran con curva, como el arcade |
+| `0e1d8a6` | Las zonas sin subir vuelven a ser las cuatro del arcade |
+| `c15ab02` | La Q ya no falla cuando Pac-Man y el fantasma van de frente |
 | `062e6fb` | Deja listos los correos del juego, a la espera del SMTP |
 | `24efd3a` | La cuenta se recupera por correo, los poderes de todos se oyen y VS deja repetición |
 | `6963ec9` | La cuenta ya no se pierde, DESATADO se juega entre dos y el fantasma responde |
@@ -56,9 +71,14 @@ el enlace se pide bien, se genera bien y no llega a ningún buzón.
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v29`**, comprobado contra
-<https://pacman-topmundial.vercel.app>. **254 pruebas**: 0 fallos en
+Service worker en **`pm-v37`**, comprobado contra
+<https://pacman-topmundial.vercel.app>. **272 pruebas**: 0 fallos en
 `tests.html` y los 4 de siempre en Node (ver más abajo).
+
+> **Quien ya tuviera el juego abierto necesita RECARGAR** para ver todo esto:
+> el service worker sirve lo que tiene cacheado hasta que se recarga. Pasó
+> durante la sesión —los compañeros no veían un cambio recién subido— y costó
+> un rato entender que no era un fallo del código.
 
 > Lo del servidor está aplicado y comprobado contra el proyecto de verdad:
 > permisos, configuración de auth, la función `cuenta` y la tabla
@@ -346,6 +366,114 @@ funcionaba: para jugarlo había que dejar de jugar a lo tuyo.
 > tiene marcas de verdad dentro y borrarla no es cosa de un refactor. Cuando
 > se quiera:
 > `drop view if exists public.reto_top; drop table if exists public.reto_diario;`
+
+---
+
+## Lo del 3 de septiembre: la Q, el laberinto y las skins
+
+Once commits, todos subidos y desplegados. No queda nada a medias.
+
+### La Q que no acertaba de frente (`c15ab02`)
+
+**El fallo:** Pac-Man y un fantasma van de cara, se pulsa Q y el que muere es
+Pac-Man. No era mala puntería: yendo de frente los dos se acercan casi **2 px
+por tick**, así que desde que el fantasma entra en los 16 px del alcance hasta
+que pisa su casilla pasan **cinco o seis ticks** — menos de 100 ms, la tercera
+parte de lo que tarda una persona en reaccionar. Se pulsaba cuando se decidía,
+con el fantasma a tres o cuatro casillas, y la dentellada salía al aire.
+
+**El arreglo:** la Q pedida pronto se queda ARMADA `CFG.HAB.BITE_BUFFER` (18
+ticks, 0,3 s) y muerde sola en cuanto alguien entra a tiro. Mismo patrón que
+`nextDir` con los giros. Se resuelve en `Hab.paso()`, que corre al principio
+del tick antes de que nadie se mueva, así que el mordisco siempre entra un tick
+antes de que el fantasma pueda pisar la casilla. **No regala alcance**: dos
+casillas siguen mordiendo, tres no, y fallar sigue sin gastar recarga.
+
+> **Descartado:** retrasar el sonido de la dentellada al aire hasta que expire
+> el margen. Se probó y 0,3 s se notan —a partir de un décimo de segundo el
+> sonido se despega de la tecla— y además sería mentir: el golpe ocurre en ese
+> tick. Suena en el acto; si la Q armada acierta después, es una segunda
+> dentellada de verdad y suena como tal.
+
+### Las zonas sin subir estaban mal convertidas (`0e1d8a6`)
+
+El arcade prohíbe girar ARRIBA en cuatro cruces, y las teníamos en las filas
+13 y 25 en vez de 11 y 23: **el original las da sobre la PANTALLA (36 filas) y
+`CFG.MAZE` es solo el laberinto (31), que empieza `CFG.TOP_ROWS` = 3 más
+abajo**. Se restó uno en vez de tres. En el clásico las cuatro sobrantes caían
+en muro y no hacían nada; en los seis laberintos alternativos caían en pasillo
+recto y el fantasma **daba media vuelta en mitad del pasillo**.
+
+### El laberinto, en tres pasos (`85e9776`, `044b181`, `e31f71e`)
+
+1. **Esquinas redondeadas.** El arcade no gira en ángulo recto.
+   `Game.wallEnd()` clasifica cada extremo (convexa / cóncava / recta) y emite
+   el cuarto de arco. Los dos lados que se juntan en una esquina emiten el
+   MISMO arco: sale más barato repetirlo que coordinar quién lo pinta.
+2. **Trazo más fino.** El laberinto se dibuja YA a escala de pantalla y se
+   pega 1:1, que es lo que permite un trazo de menos de un píxel nativo
+   (`CFG.WALL_LINE` = 2 de los 3 que hay). Con `WALL_LINE = CFG.SCALE` sale el
+   dibujo de antes.
+3. **Muros más estrechos.** `CFG.WALL_INSET` 2 → 3. Era una cuenta, no una
+   impresión: **Pac-Man mide 13 px y el pasillo dejaba 12**, así que compartía
+   píxeles con el muro. Ahora el hueco es 14. El radio de esquina pasó a
+   calcularse **por esquina** (`Game.radioEsquina`) porque un tope global
+   habría dejado sin curva a todos los bloques por culpa de los cuatro muros
+   de una casilla.
+
+> El radio de Pac-Man vive ahora en `CFG.PAC_R` (antes suelto en sprites.js)
+> **porque es la mitad de esa cuenta**, y una prueba compara los dos números:
+> ni el muro ni Pac-Man pueden volver a crecer hasta tocarse en silencio.
+
+### El HUD de las recargas (`241367d`, `3fab4a9`)
+
+Cada poder enseña **los segundos que le faltan** (`Hab.restan`, redondeado
+hacia arriba) en el sitio del nombre, y hay **una fila por compañero** con su
+nombre en su color.
+
+**Y el aviso de uso no bastaba.** Se manda una vez y nadie lo confirma —el
+transporte es Supabase Realtime en broadcast, sin acuse— así que el que se
+perdiera dejaba esa casilla mintiendo el resto de la partida. Las recargas van
+ahora también en la instantánea (`hb` en `buildSnapshot`), que sale doce veces
+por segundo: un aviso caído se repara en ~0,2 s. **La propia solo se corrige
+hacia arriba**, o al pulsar se encendería medio parpadeo mientras el aviso
+viaja.
+
+### Los dientes y la skin PÍXEL (`2d14842`, `9a1a195`, `11104fb`)
+
+Los dientes de la Q **salen siempre**, lleve la skin que lleve —son el aviso de
+que la tecla entró— pero se dibujan en el idioma de cada una: bloques en
+PÍXEL, y en ARO metidos hacia dentro de la boca porque encima del labio se
+leían como un brillo.
+
+La skin PÍXEL se rehízo entera: rejilla centrada (antes no tenía eje), bloques
+enteros en la rejilla de pantalla, y la boca comiendo celdas enteras para que
+los labios salgan rectos.
+
+> **Ojo con esto:** la RAYA entre bloque y bloque **es el estilo**, no un
+> defecto. Al rehacerla la quité tomándola por suciedad —en la primera versión
+> salía de rebote, del difuminado— y hubo que devolverla (`PIX_RAYA`, un píxel
+> de pantalla, dibujado a mano). No volver a "limpiarla".
+
+> **Descartado:** dientes en contorno para la skin ARO. El diente mide dos
+> píxeles de base, así que a tamaño de partida el trazo se lo come entero y
+> queda un borrón. Está anotado en el código.
+
+### Las skins cambian de sitio (`4721225`)
+
+**PÍXEL al nivel 20 y ARO al 30.** A quien ya la llevaba PUESTA no le cambia
+nada (`Level.skinsAllowed` siempre deja pasar la puesta), pero **entre el nivel
+20 y el 29 ahora se tiene PÍXEL en vez de ARO**.
+
+### Cómo se miró todo esto
+
+Lo visual, **renderizando a escala de partida y ampliando la imagen ya
+pintada**. Ampliar el dibujo vectorial engorda el trazo y miente: con eso el
+aro parecía correcto cuando no lo era.
+
+Lo de red, con **tres "navegadores" de verdad** cableados entre sí (ver
+`pruebas-node.js` cargado tres veces). Es lo único que demuestra que un aviso
+perdido se repara solo.
 
 ---
 
