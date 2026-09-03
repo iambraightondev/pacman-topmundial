@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-03 · ARO pasa a ser la última skin
+
+- **ARO se gana ahora al nivel 30 y PÍXEL al 20**, al revés que hasta hoy.
+  Son las dos que más se alejan del Pac-Man de siempre, y la de aro —que es
+  solo el contorno— es la que más: tiene más sentido como la última.
+- **La que lleves puesta no se pierde.** El juego siempre te deja seguir con
+  tu skin actual aunque pida más nivel del que tienes, así que a quien ya
+  jugaba con ARO no le cambia nada. Lo que sí cambia: entre el nivel 20 y el
+  29 ahora se tiene PÍXEL en vez de ARO.
+
 ## 2026-09-03 · La skin PIXEL, con forma de verdad
 
 - **El Pac-Man de bloques ahora se parece a un Pac-Man.** La idea estaba bien,

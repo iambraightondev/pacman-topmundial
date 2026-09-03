@@ -186,7 +186,7 @@ scrape the walls again. `js/tests.js` pins the size, the mirror symmetry and
 the absence of seams between blocks.
 
 **Skins by level** (unlock order `clasico` 1, `sombra` 3, `ojos` 7, `neon` 12,
-`aro` 20, `pixel` 30 — `CFG.SKINS[].level`): gated on
+`pixel` 20, `aro` 30 — `CFG.SKINS[].level`): gated on
 `PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
 currently worn — a raised requirement must never strip what a player already
 has. Locked ones render greyed with the level they need.

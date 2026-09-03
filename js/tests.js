@@ -3223,6 +3223,20 @@
   // ---------------------------------------------------------------
   // Skins por nivel
   // ---------------------------------------------------------------
+  /* El orden en que se ganan. ARO es la ÚLTIMA y PÍXEL la penúltima: son las
+   * dos que más se alejan del Pac-Man de siempre, y la de aro —que es solo el
+   * contorno— es la que más. La lista está ordenada por nivel a propósito,
+   * porque ese mismo orden es el que se pinta en el panel de PERFIL. */
+  test('ARO se gana la última y PÍXEL la penúltima', function () {
+    var ids = CFG.SKINS.map(function (sk) { return sk.id; });
+    eq(ids[ids.length - 1], 'aro', 'la última es ARO');
+    eq(ids[ids.length - 2], 'pixel', 'y la penúltima PÍXEL');
+    for (var i = 1; i < CFG.SKINS.length; i++) {
+      ok(CFG.SKINS[i].level > CFG.SKINS[i - 1].level,
+         CFG.SKINS[i].name + ' pide más nivel que ' + CFG.SKINS[i - 1].name);
+    }
+  });
+
   test('las skins se abren con el nivel de jugador', function () {
     var L = window.PM.Level;
     var previo = L.xp();
