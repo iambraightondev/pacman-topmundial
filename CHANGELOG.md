@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-03 · Los dientes del mordisco, con cualquier skin
+
+- **La Q enseña los dientes lleves la skin que lleves** — eso no cambia: son
+  el aviso de que la tecla ha entrado, y sin ellos fallar la puntería y tener
+  la tecla recargando se sienten igual. Lo que cambia es **cómo se dibujan en
+  las dos skins que no pintan un Pac-Man macizo**:
+  - En **PIXEL** cada diente es ahora un bloque, del mismo tamaño y en la
+    misma rejilla que el cuerpo. Unos triángulos suaves sobre un cuerpo de
+    bloques se veían como un fallo del juego.
+  - En **ARO** los dientes se apoyaban justo encima de la línea amarilla de
+    la boca y se leían como un brillo, no como dientes. Ahora se meten un
+    poco hacia dentro, donde hay negro con el que contrastar.
+
 ## 2026-09-03 · Las recargas se ven en segundos, y también las de tus compañeros
 
 - **Ahora se ve cuánto falta, no solo "un poco".** Cada poder enseña **los

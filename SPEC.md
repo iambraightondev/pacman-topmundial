@@ -1534,6 +1534,20 @@ Rules that are deliberate, not incidental:
   `BITE_MARGIN` went from 4 to **8** (half a tile more, so the reach is two
   clean tiles) because party play still missed too much: the ghost you see
   glued to you is not exactly there on the host's screen.
+- **Teeth show under every skin**, because they are the "the key landed"
+  signal — without them a missed shot and a key on cooldown feel identical.
+  What changes is *how* `Sprites.drawPacTeeth(…, skin)` draws them, since two
+  skins do not paint a solid Pac-Man:
+  - **pixel** — one 1.5 px block per tooth, on the same screen grid as the
+    body (rotated by hand, then rounded: the normal path rotates the whole
+    canvas and a `fillRect` under rotation no longer lands on the body's
+    grid). Smooth triangles over a blocky body read as a bug.
+  - **aro** — the lip is not a body edge but a 2.5 px yellow stroke, so teeth
+    resting on it read as a highlight rather than teeth (measured: 22 white
+    pixels, all of them on yellow). They move ~7° into the mouth, where the
+    black is. Drawing them *stroked* was tried first and is worse: a tooth is
+    2 px wide, so at game scale the stroke fills it and yields a shapeless
+    white blob.
 - **Q and E refuse to be wasted.** No ghost in range, or no landable tile
   ahead, and nothing fires and no cooldown starts. A bite at thin air still
   **shows the teeth** briefly: without that, missing and being on cooldown

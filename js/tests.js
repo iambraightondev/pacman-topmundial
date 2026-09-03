@@ -4000,6 +4000,8 @@
     return g;
   }
 
+  var SP = window.PM.Sprites;
+
   test('fuera del modo no hay habilidades que valgan', function () {
     partida(1);
     ok(!G.hab, 'una partida normal no es de poderes');
@@ -4124,6 +4126,58 @@
     HB.aplicarResumen([[0, 0, 0, 0], [0, 30 * 60, 0, 0]], G.localIdx);
     eq(HB.restan(1, HB.TURBO), 30, 'hacia arriba sí se corrige');
     G.toMenu();
+  });
+
+  /* ---------- los dientes con cada skin ----------
+   * Los dientes salen SIEMPRE, lleve la skin que lleve: son el aviso de que
+   * la Q ha entrado, y sin ellos fallar la puntería y tener la tecla en
+   * recarga se sienten igual. Lo que cambia es CÓMO se dibujan, porque dos
+   * skins no pintan un Pac-Man macizo. */
+  function espiaCtx() {
+    var usos = {}, puntos = [];
+    var c = { canvas: null };
+    ['save', 'restore', 'beginPath', 'closePath', 'fill', 'stroke', 'translate',
+     'rotate', 'fillRect', 'arc'].forEach(function (m) {
+      c[m] = function () { usos[m] = (usos[m] || 0) + 1; };
+    });
+    ['moveTo', 'lineTo'].forEach(function (m) {
+      c[m] = function (x, y) {
+        usos[m] = (usos[m] || 0) + 1;
+        puntos.push([x, y]);
+      };
+    });
+    return { c: c, usos: usos, puntos: puntos };
+  }
+
+  test('con la skin PIXEL los dientes son bloques, no triángulos', function () {
+    var px = espiaCtx();
+    SP.drawPacTeeth(px.c, 0, 0, CFG.DIR.RIGHT, 2, '#ffff00', 'pixel');
+    ok(px.usos.fillRect > 0, 'se pintan en bloques, como el cuerpo');
+    ok(!px.usos.lineTo, 'y no con triángulos, que cantarían encima de esa skin');
+
+    var cl = espiaCtx();
+    SP.drawPacTeeth(cl.c, 0, 0, CFG.DIR.RIGHT, 2, '#ffff00', 'clasico');
+    ok(cl.usos.lineTo > 0, 'en las demás siguen siendo triángulos');
+    ok(!cl.usos.fillRect, 'y no bloques');
+  });
+
+  /* En ARO el labio no es el borde de un cuerpo: es una línea amarilla de
+   * 2,5 px. Los dientes se apoyaban justo encima y se leían como un reflejo,
+   * no como dientes. Ahora se meten hacia dentro de la boca, que es donde hay
+   * negro con el que contrastar. */
+  test('con la skin ARO los dientes se meten en la boca', function () {
+    var aro = espiaCtx(), cla = espiaCtx();
+    SP.drawPacTeeth(aro.c, 0, 0, CFG.DIR.RIGHT, 2, '#ffff00', 'aro');
+    SP.drawPacTeeth(cla.c, 0, 0, CFG.DIR.RIGHT, 2, '#ffff00', 'clasico');
+    ok(aro.puntos.length > 0 && aro.puntos.length === cla.puntos.length,
+       'se dibujan los mismos dientes en los dos');
+    function masLejos(pts) {
+      var m = 0;
+      for (var i = 0; i < pts.length; i++) m = Math.max(m, Math.abs(pts[i][1]));
+      return m;
+    }
+    ok(masLejos(aro.puntos) < masLejos(cla.puntos),
+       'pero en ARO quedan más cerca del eje de la boca');
   });
 
   test('Q se come al fantasma de al lado, mire donde mire', function () {

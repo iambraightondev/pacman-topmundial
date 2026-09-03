@@ -139,27 +139,70 @@
    * Con la boca cerrada (fase 0) no hay hueco donde meterlos, así que se
    * abre un mínimo: si no, el mordisco más vistoso del juego se comería un
    * fantasma sin que se viera un solo diente. */
-  Sprites.drawPacTeeth = function (ctx, x, y, dir, mouthPhase, color) {
+  Sprites.drawPacTeeth = function (ctx, x, y, dir, mouthPhase, color, skin) {
     var r = CFG.PAC_R;
     var d = (dir >= 0) ? dir : 3;
     var a = DIR_ANGLE[d];
     var abierta = [22, 40, 80][mouthPhase] || 22;    // grados de apertura
     var half = (abierta * Math.PI / 180) / 2;
+    /* Los dientes se apoyan en el labio. En las skins macizas eso es el borde
+     * del cuerpo amarillo y el diente asoma sobre el negro de la boca, que es
+     * donde se ve. En ARO el labio ES una línea amarilla de 2,5 px, así que
+     * ahí el diente cae ENCIMA de la línea y se lee como un reflejo, no como
+     * un diente (se vio ampliando: 22 píxeles blancos, todos sobre amarillo).
+     * Se meten siete grados hacia dentro de la boca, que es donde hay negro
+     * con el que contrastar. */
+    if (skin === 'aro') half = Math.max(0, half - 0.13);
     var n = 3;                                       // dientes por fila
+    var i, lado, d0, bx, by;
+
+    /* Los dientes salen SIEMPRE, lleve la skin que lleve: son el aviso de
+     * que la Q ha entrado, y sin ellos fallar la puntería y tener la tecla
+     * en recarga se sienten exactamente igual. Lo que cambia con la skin es
+     * CÓMO se dibujan, porque dos de ellas no dibujan un Pac-Man macizo y
+     * unos dientes rellenos encima se leen como un fallo del juego.
+     *
+     * PIXEL: el cuerpo son bloques de 1,5 px cuadrados a la rejilla de la
+     * pantalla, así que aquí cada diente es UN BLOQUE, del mismo tamaño y en
+     * la misma rejilla. Se rota a mano y se redondea después: el camino
+     * normal gira el lienzo entero, y con el lienzo girado un fillRect ya no
+     * cae donde caen los bloques del cuerpo. */
+    if (skin === 'pixel') {
+      var step = 1.5, ca = Math.cos(a), sa = Math.sin(a);
+      ctx.fillStyle = '#ffffff';
+      for (lado = -1; lado <= 1; lado += 2) {
+        for (i = 0; i < n; i++) {
+          d0 = r * (0.34 + i * 0.22);
+          bx = Math.cos(half) * d0;
+          by = Math.sin(half) * d0 * lado;
+          ctx.fillRect(Math.round(x + bx * ca - by * sa - step / 2),
+                       Math.round(y + bx * sa + by * ca - step / 2),
+                       step, step);
+        }
+      }
+      return;
+    }
+
+    /* Las demás van igual: una sierra blanca maciza. Con la skin ARO —que es
+     * solo contorno— se probó a dibujarlos también en contorno, por aquello
+     * de no meter una mancha sólida dentro de una figura hueca, y SALIÓ PEOR:
+     * el diente mide dos píxeles de base, así que a tamaño de partida el
+     * trazo se lo come entero y lo que se ve es un borrón blanco sin forma.
+     * Macizos se leen como sierra, que es de lo que se trata. */
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(a);
     ctx.fillStyle = '#ffffff';
-    for (var lado = -1; lado <= 1; lado += 2) {
+    for (lado = -1; lado <= 1; lado += 2) {
       /* Cada diente es un triángulo apoyado en el labio, apuntando al
        * interior de la boca. Se reparten a lo largo del radio, que es donde
        * hay sitio, en vez de amontonarse en la punta. */
-      for (var i = 0; i < n; i++) {
-        var d0 = r * (0.34 + i * 0.22);              // distancia al centro
+      for (i = 0; i < n; i++) {
+        d0 = r * (0.34 + i * 0.22);                  // distancia al centro
         var w = r * 0.15;                            // media base del diente
         var alto = r * 0.2 * lado;
-        var bx = Math.cos(half) * d0;
-        var by = Math.sin(half) * d0 * lado;
+        bx = Math.cos(half) * d0;
+        by = Math.sin(half) * d0 * lado;
         ctx.beginPath();
         ctx.moveTo(bx - w * Math.sin(half), by - w * Math.cos(half) * lado);
         ctx.lineTo(bx + w * Math.sin(half), by + w * Math.cos(half) * lado);

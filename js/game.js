@@ -3460,7 +3460,8 @@
       if (alfa < 1) { ctx.save(); ctx.globalAlpha = alfa; }
       pc.draw(ctx, color, this.skinFor(i));
       if (st && st.dientes > 0) {
-        S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color);
+        S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color,
+                       this.skinFor(i));
       }
       if (alfa < 1) ctx.restore();
     },
