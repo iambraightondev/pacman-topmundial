@@ -4173,6 +4173,10 @@
     return { x0: x0, y0: y0, ancho: x1 - x0, alto: y1 - y0 };
   }
 
+  /* La raya que separa un bloque del siguiente: es lo que hace que se lean
+   * como píxeles sueltos, y va en píxeles DE PANTALLA. */
+  var RAYA = 1 / CFG.SCALE;
+
   /* Cabe en el pasillo con aire. Siete celdas de dos píxeles darían 14, que
    * es justo lo que deja el pasillo (TILE + 2*WALL_INSET) y volvería a rozar
    * los muros; recortando las del borde al círculo se queda en 12. */
@@ -4181,7 +4185,7 @@
     eq(c.ancho, c.alto, 'es igual de ancha que de alta');
     ok(c.ancho < CFG.TILE + 2 * CFG.WALL_INSET,
        'y cabe en los ' + (CFG.TILE + 2 * CFG.WALL_INSET) + ' px del pasillo');
-    ok(c.ancho >= 2 * CFG.PAC_R - 1,
+    ok(c.ancho + RAYA >= 2 * CFG.PAC_R - 1,
        'sin quedarse enana al lado de las demás skins');
   });
 
@@ -4195,37 +4199,49 @@
      * bloque se cuadra a la rejilla de la pantalla (por eso no tiene
      * costuras), y eso deja el sprite medio píxel a un lado según dónde caiga
      * Pac-Man. Es lo que hace cualquier dibujo de píxeles al moverse. */
-    /* el eje del espejo es la SUMA de los dos bordes de la silueta */
-    var ejeY = c.y0 * 2 + c.alto, ejeX = c.x0 * 2 + c.ancho;
+    /* Se compara con el tamaño LÓGICO de la celda —el dibujado le falta la
+     * raya— y respecto al eje de la silueta, no respecto al cero: el bloque
+     * se cuadra a la rejilla de la pantalla, y eso deja el sprite medio píxel
+     * a un lado según dónde caiga Pac-Man. Es lo que hace cualquier dibujo de
+     * píxeles al moverse. */
+    var ejeY = c.y0 * 2 + c.alto + RAYA, ejeX = c.x0 * 2 + c.ancho + RAYA;
+    /* Las claves van REDONDEADAS. La raya mide un tercio de píxel de casilla,
+     * así que las cuentas salen con cola binaria (5.000000000000001) y una
+     * comparación en crudo diría que no hay espejo cuando lo hay. */
+    function k(a, b) { return a.toFixed(3) + ':' + b.toFixed(3); }
     var clave = {};
-    rects.forEach(function (r) { clave[r[0] + ':' + r[1]] = true; });
+    rects.forEach(function (r) { clave[k(r[0], r[1])] = true; });
     rects.forEach(function (r) {
-      ok(clave[r[0] + ':' + (ejeY - r[1] - r[3])],
+      ok(clave[k(r[0], ejeY - r[1] - r[3] - RAYA)],
          'el bloque de ' + r[0] + ',' + r[1] + ' tiene espejo arriba/abajo');
     });
     /* con la boca cerrada también es simétrico izquierda/derecha */
     rects.forEach(function (r) {
-      ok(clave[(ejeX - r[0] - r[2]) + ':' + r[1]],
+      ok(clave[k(ejeX - r[0] - r[2] - RAYA, r[1])],
          'el bloque de ' + r[0] + ',' + r[1] + ' tiene espejo izq/der');
     });
   });
 
-  /* Y los bloques de una fila se tocan. Con el paso de 1,5 de antes los
-   * bordes caían a medio píxel, el navegador los difuminaba y entre bloque y
-   * bloque quedaban costuras: se veía una malla, no un cuerpo. */
-  test('la skin PIXEL no deja costuras entre bloques', function () {
+  /* Y entre bloque y bloque hay UNA RAYA, siempre la misma y de un píxel de
+   * pantalla: es lo que hace que se lean como píxeles sueltos en vez de como
+   * una mancha con escalones. En la primera versión esa raya salía sola, de
+   * rebote, porque los bloques caían a medio píxel y el navegador los
+   * difuminaba: se veía, pero sucia y de ancho distinto según el bloque. */
+  test('la skin PIXEL deja su raya entre bloques, y siempre igual', function () {
     var rects = bloquesPixel(CFG.DIR.RIGHT, 0);
     var filas = {};
-    rects.forEach(function (r) {
-      (filas[r[1]] = filas[r[1]] || []).push(r);
-    });
+    rects.forEach(function (r) { (filas[r[1]] = filas[r[1]] || []).push(r); });
+    var vistas = 0;
     Object.keys(filas).forEach(function (y) {
       var f = filas[y].slice().sort(function (a, b) { return a[0] - b[0]; });
       for (var i = 1; i < f.length; i++) {
-        eq(f[i][0], f[i - 1][0] + f[i - 1][2],
-           'fila ' + y + ': el bloque ' + i + ' empieza donde acaba el anterior');
+        var hueco = f[i][0] - (f[i - 1][0] + f[i - 1][2]);
+        ok(Math.abs(hueco - RAYA) < 0.001,
+           'fila ' + y + ', bloque ' + i + ': la raya mide ' + hueco);
+        vistas++;
       }
     });
+    ok(vistas > 10, 'y se han mirado unas cuantas (' + vistas + ')');
   });
 
   test('con la skin PIXEL los dientes son bloques, no triángulos', function () {

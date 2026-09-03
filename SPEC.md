@@ -168,6 +168,14 @@ first version, which came out shapeless):
    bottom at +6.5, and `Math.round` sends both the same way: one pixel
    flatter on top than underneath. Snapping first also means the shape never
    changes — it just moves a pixel at a time, like any pixel art.
+   Each block is then shrunk by `PIX_RAYA` (**1 screen pixel**) on its bottom
+   and right edges, which is the **gap that makes the blocks read as separate
+   pixels** — the whole point of the skin. That gap existed in the first
+   version too, but only as a side effect: blocks landed on half-pixels and
+   the browser blurred them, so it came out dirty and a different width per
+   block. Drawn deliberately on snapped blocks it is crisp and constant.
+   Measured in *screen* pixels, not tile units: it is a hairline, and in tile
+   units it would grow with the scale until it ate the block.
 3. **The mouth eats whole cells** — the wedge is tested against each cell's
    centre, so the lips come out straight instead of ragged.
 

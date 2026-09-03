@@ -11,9 +11,12 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
     pasos que no caían simétricos, así que un lado salía distinto del otro y
     la silueta no tenía eje. Ahora hay fila y columna central, y **la espalda
     se lee redonda**.
-  - **Los bloques caen enteros en la rejilla de la pantalla.** Antes quedaban
-    a medio píxel, el navegador los difuminaba y entre bloque y bloque
-    aparecían costuras: se veía una malla, no un cuerpo.
+  - **Los bloques caen enteros en la rejilla de la pantalla**, y la raya que
+    los separa —la que hace que se lean como píxeles sueltos, que es el estilo
+    de esta skin— **se dibuja ahora a propósito**: un píxel de pantalla,
+    siempre igual y limpio. Antes salía sola, de rebote, porque los bloques
+    caían a medio píxel y el navegador los difuminaba: se veía, pero sucia y
+    de un ancho distinto en cada bloque.
   - **La boca se come bloques enteros**, no medios píxeles, y por eso **los
     labios salen rectos**.
 - De propina, los cuatro polos quedan de un píxel, así que el cuerpo se ve

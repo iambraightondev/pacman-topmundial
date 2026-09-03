@@ -39,6 +39,18 @@
    * y aparecen costuras entre bloque y bloque. Con menos celdas el cuerpo se
    * queda en un octógono y deja de leerse como redondo. */
   var PIX_N = 7, PIX_PASO = 2;
+  /* Y la RAYA entre bloque y bloque, que es lo que hace que se lean como
+   * píxeles sueltos y no como una mancha con escalones. Es EL estilo de esta
+   * skin, no un defecto: en la primera versión salía sola, de rebote, porque
+   * los bloques caían a medio píxel y el navegador los difuminaba —de ahí que
+   * se viera sucia y con los bordes borrosos—. Ahora se dibuja a mano: un
+   * píxel DE PANTALLA de separación, que con los bloques cuadrados a la
+   * rejilla cae limpio y no depende de dónde esté Pac-Man.
+   *
+   * Se mide en píxeles de pantalla y no de casilla porque es una raya: si se
+   * midiera en unidades de casilla, a escala grande engordaría hasta comerse
+   * el bloque. */
+  var PIX_RAYA = 1;
 
   function inPac(px, py, r, a, half) {
     if (px * px + py * py > r * r) return false;
@@ -101,6 +113,7 @@
        * forma es SIEMPRE la misma y solo se mueve de píxel en píxel, que es
        * como se mueve cualquier dibujo de píxeles. */
       var paso = PIX_PASO, off = (PIX_N - 1) / 2;
+      var raya = PIX_RAYA / CFG.SCALE;
       var ox = Math.round(x), oy = Math.round(y);
       var ix, iy, cx, cy, x0, x1, y0, y1;
       ctx.fillStyle = color;
@@ -114,7 +127,10 @@
           y0 = Math.ceil(Math.max(cy - paso / 2, -r));
           y1 = Math.floor(Math.min(cy + paso / 2, r));
           if (x1 <= x0 || y1 <= y0) continue;
-          ctx.fillRect(ox + x0, oy + y0, x1 - x0, y1 - y0);
+          /* el bloque se encoge por abajo y por la derecha, que es lo que
+           * deja la raya; el borde de arriba y el de la izquierda no se
+           * mueven, así que la silueta mide lo mismo */
+          ctx.fillRect(ox + x0, oy + y0, x1 - x0 - raya, y1 - y0 - raya);
         }
       }
       return;
@@ -225,6 +241,7 @@
        * que se entienda qué es. Van pegados al labio (media celda hacia
        * dentro) por lo mismo. */
       var step = PIX_PASO, ca = Math.cos(a), sa = Math.sin(a);
+      var raya = PIX_RAYA / CFG.SCALE;
       var ox = Math.round(x), oy = Math.round(y);   // el mismo origen que el cuerpo
       ctx.fillStyle = '#ffffff';
       for (lado = -1; lado <= 1; lado += 2) {
@@ -234,7 +251,7 @@
           by = Math.sin(half) * d0 * lado - (step / 2) * lado;
           ctx.fillRect(ox + Math.round(bx * ca - by * sa - step / 2),
                        oy + Math.round(bx * sa + by * ca - step / 2),
-                       step, step);
+                       step - raya, step - raya);
         }
       }
       return;
