@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-03 · La skin PIXEL, con forma de verdad
+
+- **El Pac-Man de bloques ahora se parece a un Pac-Man.** La idea estaba bien,
+  pero el dibujo no tenía forma: la espalda no era redonda y los labios salían
+  dentados. Eran tres cosas a la vez y las tres están arregladas:
+  - **La rejilla va centrada.** Antes se recorría de un extremo al otro a
+    pasos que no caían simétricos, así que un lado salía distinto del otro y
+    la silueta no tenía eje. Ahora hay fila y columna central, y **la espalda
+    se lee redonda**.
+  - **Los bloques caen enteros en la rejilla de la pantalla.** Antes quedaban
+    a medio píxel, el navegador los difuminaba y entre bloque y bloque
+    aparecían costuras: se veía una malla, no un cuerpo.
+  - **La boca se come bloques enteros**, no medios píxeles, y por eso **los
+    labios salen rectos**.
+- De propina, los cuatro polos quedan de un píxel, así que el cuerpo se ve
+  aún más redondo y **cabe en el pasillo con aire de sobra**.
+- Los dientes de la Q van ahora al mismo tamaño de bloque que el cuerpo, y son
+  dos por labio: con tres, la boca se llenaba de blanco y ya no se leía como
+  una dentadura.
+
 ## 2026-09-03 · Los dientes del mordisco, con cualquier skin
 
 - **La Q enseña los dientes lleves la skin que lleves** — eso no cambia: son

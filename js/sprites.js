@@ -33,6 +33,13 @@
   }
 
   /* ¿el punto (px,py), relativo al centro, cae dentro del cuerpo? */
+  /* Rejilla de la skin PIXEL: 7x7 celdas de 2 px. Impar para que haya fila y
+   * columna central y la silueta tenga eje; de dos píxeles porque el bloque
+   * tiene que caer entero en la rejilla del juego o el navegador lo difumina
+   * y aparecen costuras entre bloque y bloque. Con menos celdas el cuerpo se
+   * queda en un octógono y deja de leerse como redondo. */
+  var PIX_N = 7, PIX_PASO = 2;
+
   function inPac(px, py, r, a, half) {
     if (px * px + py * py > r * r) return false;
     if (half <= 0) return true;
@@ -60,13 +67,54 @@
     }
 
     if (skin === 'pixel') {
-      // cuerpo reconstruido en bloques de 1.5 px (aire retro)
-      var step = 1.5;
+      /* Cuerpo reconstruido en bloques gordos (aire retro).
+       *
+       * TRES COSAS lo hacen parecer un Pac-Man y no una mancha, y las tres
+       * fallaban en la primera versión:
+       *
+       * 1) LA REJILLA VA CENTRADA. Antes se recorría de -r a +r a pasos de
+       *    1,5, que con r = 6,5 no cae simétrico: el lado izquierdo y el
+       *    derecho salían distintos y la silueta no tenía eje. Ahora son
+       *    PIX_N celdas impares alrededor del centro, así que lo de arriba
+       *    es igual que lo de abajo y la espalda sale redonda de verdad.
+       * 2) EL BLOQUE MIDE UN NÚMERO ENTERO de píxeles y se apoya en la
+       *    rejilla del juego. Con 1,5 los bordes caían a medio píxel, el
+       *    navegador los difuminaba y entre bloque y bloque quedaban costuras
+       *    claras: se veía una malla, no un cuerpo.
+       * 3) SE MUERDE LA CELDA, NO EL PÍXEL. Se mira el centro de cada celda
+       *    contra la cuña de la boca, así que la boca se come bloques enteros
+       *    y los labios salen rectos en vez de dentados.
+       *
+       * Siete celdas de dos píxeles medirían 14 y volverían a rozar los muros
+       * (el pasillo deja 14 justos, ver CFG.WALL_INSET), así que la celda se
+       * RECORTA al círculo y el recorte se redondea HACIA DENTRO: las cuatro
+       * celdas de los extremos se quedan en un píxel y el cuerpo mide 12, que
+       * cabe con aire. De propina los polos quedan menos cuadrados y la
+       * espalda se lee aún más redonda.
+       *
+       * Y el sprite se CUADRA ENTERO a la rejilla (Math.round una sola vez,
+       * fuera del bucle) en vez de redondear cada bloque por su cuenta.
+       * Redondeando bloque a bloque, el borde de arriba caía en -6,5 y el de
+       * abajo en +6,5, y Math.round manda los dos al mismo lado: la silueta
+       * salía un píxel más plana por arriba que por abajo. Cuadrando primero,
+       * todos los bloques son enteros respecto al mismo origen, así que la
+       * forma es SIEMPRE la misma y solo se mueve de píxel en píxel, que es
+       * como se mueve cualquier dibujo de píxeles. */
+      var paso = PIX_PASO, off = (PIX_N - 1) / 2;
+      var ox = Math.round(x), oy = Math.round(y);
+      var ix, iy, cx, cy, x0, x1, y0, y1;
       ctx.fillStyle = color;
-      for (var py = -r; py <= r; py += step) {
-        for (var px = -r; px <= r; px += step) {
-          if (!inPac(px + step / 2, py + step / 2, r, a, half)) continue;
-          ctx.fillRect(Math.round(x + px), Math.round(y + py), step, step);
+      for (iy = 0; iy < PIX_N; iy++) {
+        for (ix = 0; ix < PIX_N; ix++) {
+          cx = (ix - off) * paso;
+          cy = (iy - off) * paso;
+          if (!inPac(cx, cy, r, a, half)) continue;
+          x0 = Math.ceil(Math.max(cx - paso / 2, -r));
+          x1 = Math.floor(Math.min(cx + paso / 2, r));
+          y0 = Math.ceil(Math.max(cy - paso / 2, -r));
+          y1 = Math.floor(Math.min(cy + paso / 2, r));
+          if (x1 <= x0 || y1 <= y0) continue;
+          ctx.fillRect(ox + x0, oy + y0, x1 - x0, y1 - y0);
         }
       }
       return;
@@ -168,15 +216,24 @@
      * normal gira el lienzo entero, y con el lienzo girado un fillRect ya no
      * cae donde caen los bloques del cuerpo. */
     if (skin === 'pixel') {
-      var step = 1.5, ca = Math.cos(a), sa = Math.sin(a);
+      /* Del MISMO tamaño que los bloques del cuerpo (PIX_PASO): un diente más
+       * fino se leería como suciedad, no como diente.
+       *
+       * Y son DOS por labio, no tres. Con bloques de dos píxeles, tres
+       * dientes llenaban la boca entera de blanco y lo que se veía era una
+       * boca pintada, no una sierra: hace falta dejar negro entre medias para
+       * que se entienda qué es. Van pegados al labio (media celda hacia
+       * dentro) por lo mismo. */
+      var step = PIX_PASO, ca = Math.cos(a), sa = Math.sin(a);
+      var ox = Math.round(x), oy = Math.round(y);   // el mismo origen que el cuerpo
       ctx.fillStyle = '#ffffff';
       for (lado = -1; lado <= 1; lado += 2) {
-        for (i = 0; i < n; i++) {
-          d0 = r * (0.34 + i * 0.22);
+        for (i = 0; i < 2; i++) {
+          d0 = r * (0.40 + i * 0.34);
           bx = Math.cos(half) * d0;
-          by = Math.sin(half) * d0 * lado;
-          ctx.fillRect(Math.round(x + bx * ca - by * sa - step / 2),
-                       Math.round(y + bx * sa + by * ca - step / 2),
+          by = Math.sin(half) * d0 * lado - (step / 2) * lado;
+          ctx.fillRect(ox + Math.round(bx * ca - by * sa - step / 2),
+                       oy + Math.round(bx * sa + by * ca - step / 2),
                        step, step);
         }
       }

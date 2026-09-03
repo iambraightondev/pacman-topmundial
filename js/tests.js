@@ -4149,6 +4149,85 @@
     return { c: c, usos: usos, puntos: puntos };
   }
 
+  /* ---------- la forma de la skin PIXEL ----------
+   * Los bloques se apuntan con un ctx de mentira y se mide la silueta que
+   * sale. Las tres cosas que hacían que antes no tuviera forma —rejilla
+   * descentrada, bloques a medio píxel y mordisco por píxel en vez de por
+   * celda— dejan rastro en estos tres números. */
+  function bloquesPixel(dir, fase) {
+    var rects = [];
+    var c = { canvas: null };
+    ['save', 'restore', 'beginPath', 'closePath', 'fill', 'stroke', 'translate',
+     'rotate', 'moveTo', 'lineTo', 'arc'].forEach(function (m) { c[m] = function () {}; });
+    c.fillRect = function (x, y, w, h) { rects.push([x, y, w, h]); };
+    window.PM.Sprites.drawPacman(c, 0, 0, dir, fase, '#ffff00', 'pixel');
+    return rects;
+  }
+
+  function caja(rects) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    rects.forEach(function (r) {
+      x0 = Math.min(x0, r[0]); y0 = Math.min(y0, r[1]);
+      x1 = Math.max(x1, r[0] + r[2]); y1 = Math.max(y1, r[1] + r[3]);
+    });
+    return { x0: x0, y0: y0, ancho: x1 - x0, alto: y1 - y0 };
+  }
+
+  /* Cabe en el pasillo con aire. Siete celdas de dos píxeles darían 14, que
+   * es justo lo que deja el pasillo (TILE + 2*WALL_INSET) y volvería a rozar
+   * los muros; recortando las del borde al círculo se queda en 12. */
+  test('la skin PIXEL cabe en el pasillo', function () {
+    var c = caja(bloquesPixel(CFG.DIR.RIGHT, 0));
+    eq(c.ancho, c.alto, 'es igual de ancha que de alta');
+    ok(c.ancho < CFG.TILE + 2 * CFG.WALL_INSET,
+       'y cabe en los ' + (CFG.TILE + 2 * CFG.WALL_INSET) + ' px del pasillo');
+    ok(c.ancho >= 2 * CFG.PAC_R - 1,
+       'sin quedarse enana al lado de las demás skins');
+  });
+
+  /* La rejilla va centrada, que es lo que le da eje a la silueta: antes se
+   * recorría de -r a +r a pasos de 1,5 y con r = 6,5 no caía simétrico, así
+   * que un lado salía distinto del otro y la espalda no se leía redonda. */
+  test('la skin PIXEL es simétrica, que es lo que la hace redonda', function () {
+    var rects = bloquesPixel(CFG.DIR.RIGHT, 0);
+    var c = caja(rects);
+    /* Se mide respecto al centro de la SILUETA y no respecto al cero: el
+     * bloque se cuadra a la rejilla de la pantalla (por eso no tiene
+     * costuras), y eso deja el sprite medio píxel a un lado según dónde caiga
+     * Pac-Man. Es lo que hace cualquier dibujo de píxeles al moverse. */
+    /* el eje del espejo es la SUMA de los dos bordes de la silueta */
+    var ejeY = c.y0 * 2 + c.alto, ejeX = c.x0 * 2 + c.ancho;
+    var clave = {};
+    rects.forEach(function (r) { clave[r[0] + ':' + r[1]] = true; });
+    rects.forEach(function (r) {
+      ok(clave[r[0] + ':' + (ejeY - r[1] - r[3])],
+         'el bloque de ' + r[0] + ',' + r[1] + ' tiene espejo arriba/abajo');
+    });
+    /* con la boca cerrada también es simétrico izquierda/derecha */
+    rects.forEach(function (r) {
+      ok(clave[(ejeX - r[0] - r[2]) + ':' + r[1]],
+         'el bloque de ' + r[0] + ',' + r[1] + ' tiene espejo izq/der');
+    });
+  });
+
+  /* Y los bloques de una fila se tocan. Con el paso de 1,5 de antes los
+   * bordes caían a medio píxel, el navegador los difuminaba y entre bloque y
+   * bloque quedaban costuras: se veía una malla, no un cuerpo. */
+  test('la skin PIXEL no deja costuras entre bloques', function () {
+    var rects = bloquesPixel(CFG.DIR.RIGHT, 0);
+    var filas = {};
+    rects.forEach(function (r) {
+      (filas[r[1]] = filas[r[1]] || []).push(r);
+    });
+    Object.keys(filas).forEach(function (y) {
+      var f = filas[y].slice().sort(function (a, b) { return a[0] - b[0]; });
+      for (var i = 1; i < f.length; i++) {
+        eq(f[i][0], f[i - 1][0] + f[i - 1][2],
+           'fila ' + y + ': el bloque ' + i + ' empieza donde acaba el anterior');
+      }
+    });
+  });
+
   test('con la skin PIXEL los dientes son bloques, no triángulos', function () {
     var px = espiaCtx();
     SP.drawPacTeeth(px.c, 0, 0, CFG.DIR.RIGHT, 2, '#ffff00', 'pixel');

@@ -155,6 +155,28 @@ is the mode name printed in its own colour ahead of the description
 > achievements were host-only. `applyEvt('eatGhost')` now credits the guest
 > off the **confirmed** event, never the prediction.
 
+**The `pixel` skin is a real pixel sprite**, not the vector body sampled on a
+grid. Three rules make it read as a Pac-Man (all three were broken in the
+first version, which came out shapeless):
+1. **The grid is centred** — `PIX_N` (7) odd cells of `PIX_PASO` (2) px around
+   the middle, so there is a centre row and column and the back reads round.
+   Walking `-r` to `+r` in steps of 1.5 is not symmetric at `r` = 6.5: the two
+   sides came out different and the silhouette had no axis.
+2. **Blocks are whole pixels on the game's grid** — the sprite is snapped once
+   (`Math.round` outside the loop) and every block is an integer offset from
+   that origin. Rounding block by block put the top edge at −6.5 and the
+   bottom at +6.5, and `Math.round` sends both the same way: one pixel
+   flatter on top than underneath. Snapping first also means the shape never
+   changes — it just moves a pixel at a time, like any pixel art.
+3. **The mouth eats whole cells** — the wedge is tested against each cell's
+   centre, so the lips come out straight instead of ragged.
+
+Edge cells are clipped to the circle and rounded **inward**, which leaves the
+four poles one pixel tall and the body 12 px across: seven 2 px cells would be
+14, exactly what the corridor gives (`TILE + 2*WALL_INSET`), and it would
+scrape the walls again. `js/tests.js` pins the size, the mirror symmetry and
+the absence of seams between blocks.
+
 **Skins by level** (unlock order `clasico` 1, `sombra` 3, `ojos` 7, `neon` 12,
 `aro` 20, `pixel` 30 — `CFG.SKINS[].level`): gated on
 `PM.Level.level()`. `Level.skinsAllowed(puesta)` always includes the skin
