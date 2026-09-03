@@ -322,13 +322,26 @@
     });
   });
 
-  /* Cada esquina se come WALL_RADIUS px del trazo recto (Game.wallSide), y en
-   * un tramo de muro con esquina en los dos extremos se los come dos veces.
-   * El tramo más corto que existe es de UNA casilla: T - 2*WALL_INSET - 1 px
-   * de trazo. Si el radio se pasa, las dos curvas se cruzan y el muro se
-   * dibuja del revés. Se mira en TODOS los laberintos, que es donde puede
-   * aparecer mañana un tramo corto nuevo. */
-  test('el radio de las esquinas cabe en el muro más corto', function () {
+  /* LA CUENTA DEL PASILLO. Pac-Man mide 13 px de diámetro y la casilla 8, así
+   * que el aire que le queda al pasar sale de lo delgadas que sean las
+   * paredes: entre dos muros que se miran hay TILE + 2*WALL_INSET px de
+   * negro. Con WALL_INSET 2 eran 12 contra 13 y Pac-Man compartía píxeles con
+   * el muro —se veía jugando: al recorrer un pasillo parecía fundirse con la
+   * pared—. Esta prueba es para que no vuelva a pasar sin que nadie se entere
+   * si alguien engorda el muro o a Pac-Man. */
+  test('Pac-Man cabe en el pasillo sin tocar las paredes', function () {
+    var hueco = CFG.TILE + 2 * CFG.WALL_INSET;
+    var pac = 2 * CFG.PAC_R;
+    ok(hueco > pac, 'el pasillo deja ' + hueco + ' px y Pac-Man mide ' + pac);
+  });
+
+  /* Cada esquina se come su radio del trazo recto, y un tramo con esquina en
+   * los dos extremos se lo come dos veces. El tramo más corto es de UNA
+   * casilla: TILE - 2*WALL_INSET - un trazo. Ese trazo tiene que seguir
+   * siendo POSITIVO o el muro se dibuja del revés (el radio ya se ajusta solo
+   * a cada esquina, ver Game.radioEsquina, pero no puede hacer nada si no
+   * queda trazo donde curvar). Se mira en TODOS los laberintos. */
+  test('al muro más corto le queda trazo donde curvar', function () {
     var LADOS = [[0, -1], [0, 1], [-1, 0], [1, 0]];
     var todos = [{ name: 'CLÁSICO', rows: CFG.MAZE_CLASSIC }]
       .concat(window.PM.Mazes.LIST);
@@ -361,10 +374,9 @@
       });
       var medio = (CFG.WALL_LINE / CFG.SCALE) / 2;   // medio trazo, en nativas
       var trazo = corto * CFG.TILE - 2 * CFG.WALL_INSET - 2 * medio;
-      ok(trazo >= 2 * CFG.WALL_RADIUS,
+      ok(trazo > 0,
          m.name + ': el tramo de ' + corto + ' casillas en ' + donde +
-         ' deja ' + trazo + ' px y las dos curvas piden ' +
-         (2 * CFG.WALL_RADIUS));
+         ' se queda sin trazo (' + trazo + ' px)');
     });
   });
 

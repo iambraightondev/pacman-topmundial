@@ -4,7 +4,18 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-02 · Paredes con esquinas de verdad, la Q que no falla de frente y los fantasmas que dejan de darse la vuelta
 
-- **Y son más delgadas.** El trazo del muro medía un píxel de los de verdad,
+- **Y Pac-Man ya no se funde con la pared.** Esto no era una impresión, era
+  una cuenta: **Pac-Man mide 13 píxeles de ancho y el pasillo dejaba 12**, así
+  que su dibujo y el del muro compartían medio píxel por lado. Al recorrer un
+  pasillo parecía que se pegaba a la pared, porque literalmente se tocaban.
+  Ahora **las paredes son más estrechas** y el hueco es de 14: le queda aire a
+  cada lado. Las esquinas siguen curvando igual en los muros grandes —la
+  curva se calcula ahora esquina por esquina, según lo que dé de sí cada
+  pared, en vez de con un tope único que las igualaba a todas por abajo—.
+  Las pruebas comparan los dos números, así que ni el muro ni Pac-Man pueden
+  volver a crecer hasta tocarse sin que salte un aviso.
+
+- **Y el trazo es más delgado.** Medía un píxel de los de verdad,
   que en pantalla son tres, y por debajo de eso no se podía bajar: en la
   resolución del arcade no existe medio píxel. Ahora el laberinto se dibuja
   ya al tamaño en que se ve —y se pega punto por punto, sin estirar nada—,

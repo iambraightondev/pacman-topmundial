@@ -43,7 +43,7 @@
   }
 
   Sprites.drawPacman = function (ctx, x, y, dir, mouthPhase, color, skin) {
-    var r = 6.5;
+    var r = CFG.PAC_R;
     var half = [0, (40 * Math.PI / 180) / 2, (80 * Math.PI / 180) / 2][mouthPhase] || 0;
     var d = (dir >= 0) ? dir : 3;
     var a = DIR_ANGLE[d];
@@ -140,7 +140,7 @@
    * abre un mínimo: si no, el mordisco más vistoso del juego se comería un
    * fantasma sin que se viera un solo diente. */
   Sprites.drawPacTeeth = function (ctx, x, y, dir, mouthPhase, color) {
-    var r = 6.5;
+    var r = CFG.PAC_R;
     var d = (dir >= 0) ? dir : 3;
     var a = DIR_ANGLE[d];
     var abierta = [22, 40, 80][mouthPhase] || 22;    // grados de apertura
@@ -205,7 +205,7 @@
       ctx.globalAlpha = alpha * (0.30 - i * 0.07);
       if (ctx.globalAlpha <= 0) break;
       ctx.fillStyle = color;
-      pacPath(ctx, x - v.x * i * 8, y - v.y * i * 8, 6.5 - i * 0.6, a,
+      pacPath(ctx, x - v.x * i * 8, y - v.y * i * 8, CFG.PAC_R - i * 0.6, a,
         (40 * Math.PI / 180) / 2);
       ctx.fill();
     }
@@ -1057,7 +1057,7 @@
   /* Animación de muerte: la boca se abre más allá de 180° hasta desaparecer.
    * t en [0,1]. */
   Sprites.drawPacmanDeath = function (ctx, x, y, t, color) {
-    var r = 6.5;
+    var r = CFG.PAC_R;
     if (t >= 1) return;
     // la apertura crece de 80° a 360° (mirando hacia arriba)
     var open = (80 + 280 * t) * Math.PI / 180;
@@ -1090,7 +1090,7 @@
    * animPhase: 0|1 (falda), flashOn: true => cuerpo blanco
    * ------------------------------------------------------------ */
   Sprites.drawGhost = function (ctx, x, y, dir, ghostId, mode, animPhase, flashOn) {
-    var r = 6.5;
+    var r = CFG.PAC_R;
     var top = y - r + 1;
     var left = x - r;
     var w = r * 2;

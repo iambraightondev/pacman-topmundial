@@ -378,9 +378,15 @@ or out-of-bounds, `-` ghost house door. EXACT layout (each line 28 chars):
 - Positions (tile coords, x may be x.5 = between tiles): Pac-Man start
   (13.5, 23); Blinky start (13.5, 11) outside; Pinky (13.5, 14), Inky
   (11.5, 14), Clyde (15.5, 14) inside house. Fruit spawns at (13.5, 17).
-- Wall rendering: blue (#2121ff) 1px stroke per wall edge that faces a
-  corridor, **inset `CFG.WALL_INSET` (2) px into the wall tile** so blocks
-  read thin and corridors wide, as in the arcade. Pink door, aligned with the
+- Wall rendering: blue (#2121ff) stroke per wall edge that faces a corridor,
+  **inset `CFG.WALL_INSET` (3) px into the wall tile** so blocks read thin
+  and corridors wide, as in the arcade. That inset is what sets the corridor's
+  breathing room: two facing walls leave `TILE + 2*WALL_INSET` = **14 px** of
+  black, and **Pac-Man is 13 px across** (`CFG.PAC_R` 6.5, same as ghosts).
+  At inset 2 the gap was 12 against 13 and the sprites literally shared pixels
+  with the wall — going down a corridor Pac-Man looked fused to it.
+  `js/tests.js` pins that comparison so neither number can drift into the
+  other. Pink door, aligned with the
   neighbouring inset strokes; black background. Dots 2×2 px, energizers
   r=4 px blinking (~0.2 s on/off), color #ffb8ae.
 - **Corners are rounded, not square** — the arcade maze never turns at a
@@ -396,12 +402,15 @@ or out-of-bounds, `-` ghost house door. EXACT layout (each line 28 chars):
 
   Both strokes meeting at a corner emit the same arc with the same geometry,
   so they land exactly on top of each other — cheaper than coordinating who
-  draws it. `CFG.WALL_RADIUS` is **1.5 px**, about the most that fits: the
-  shortest wall run is **one tile** with a corner at each end, leaving
-  `TILE - 2*WALL_INSET` minus one stroke width of straight line for two
-  curves. A bigger radius makes short walls draw inside out; `js/tests.js`
-  checks it against every maze, not just the classic one, and
-  `buildMazeCanvas` clamps it further for whatever scale it is drawing at.
+  draws it. `CFG.WALL_RADIUS` (1.5 px) is what a corner *asks for*;
+  `Game.radioEsquina()` clamps it **per corner** to half of each of the two
+  runs meeting there (`Game.largoTrazo()`), so a big block curves fully while
+  a one-tile wall curves as much as it can. A global cap would have starved
+  every block to fit the few short ones. Measuring the **whole run** and
+  halving it is what keeps the two sides symmetric: they compute their arc
+  independently, and a disagreement would tear the outline open right at the
+  corner. `js/tests.js` only has to check that the shortest run keeps a
+  positive stroke at all.
 - **The maze canvas is built at screen scale**, not at native resolution.
   `Game.buildMazeCanvas(color, scale, lineWidth)` defaults to `CFG.SCALE` and
   `CFG.WALL_LINE`, draws in native coordinates through a context transform,

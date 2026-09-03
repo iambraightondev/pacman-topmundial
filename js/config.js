@@ -309,7 +309,30 @@
 
   /* Retranqueo del trazo de los muros (px dentro de la casilla): los muros
    * se dibujan más finos y los pasillos se ven más anchos, como en el arcade. */
-  CFG.WALL_INSET = 2;
+  /* Lo que el trazo del muro se mete hacia DENTRO de la casilla de muro. Es
+   * lo que decide de verdad el grosor de las paredes, y con él el aire que
+   * queda en el pasillo: entre dos muros que se miran hay 8 + 2*WALL_INSET px
+   * de negro.
+   *
+   * Subió de 2 a 3 por una cuenta que no admite discusión: PAC-MAN MIDE 13 PX
+   * de diámetro (radio 6.5 en js/sprites.js) y con 2 el hueco era de 12, así
+   * que se solapaba medio píxel por lado con los muros de arriba y de abajo.
+   * No era una impresión: el dibujo de Pac-Man y el del muro compartían
+   * píxeles, y por eso al pasar por un pasillo parecía fundirse con la pared.
+   * Con 3 el hueco es de 14 y le queda medio píxel de aire a cada lado.
+   *
+   * El precio es que el bloque de muro se estrecha, y con él el trazo recto
+   * que queda para las curvas de las esquinas. Por eso el radio se calcula
+   * ahora POR ESQUINA (Game.radioEsquina) y no con un tope global: los muros
+   * grandes siguen curvando entero y solo los de una casilla curvan menos. */
+  CFG.WALL_INSET = 3;
+  /* Radio de Pac-Man, en píxeles. Trece de diámetro, como el del arcade —que
+   * es MÁS ANCHO que la casilla de 8, y por eso el aire del pasillo depende
+   * de lo delgadas que sean las paredes. Vive aquí, y no suelto en el dibujo,
+   * porque es la mitad de la cuenta de WALL_INSET y js/tests.js las compara:
+   * si alguien engorda el muro o a Pac-Man hasta que dejen de caber, salta
+   * una prueba en vez de descubrirse jugando. */
+  CFG.PAC_R = 6.5;
   /* Radio de las esquinas del muro, en píxeles. El laberinto del arcade no
    * gira en ángulo recto: cada cambio de dirección va con una curva, y sin
    * ella el dibujo se ve cortado a escuadra.

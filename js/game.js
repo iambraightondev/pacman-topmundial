@@ -3240,8 +3240,6 @@
        * quede de trazo recto en el muro más corto (una casilla), o las dos
        * curvas se cruzarían y ese muro se dibujaría del revés. */
       this.wallHalf = (W / S) / 2;
-      this.wallR = Math.min(CFG.WALL_RADIUS,
-        (T - 2 * CFG.WALL_INSET - 2 * this.wallHalf) / 2);
       var cv = document.createElement('canvas');
       cv.width = Math.round(CFG.NATIVE_W * S);
       cv.height = Math.round(CFG.ROWS * T * S);
@@ -3322,19 +3320,26 @@
      * dentro de la casilla si la esquina es convexa, por fuera si es cóncava
      * (allí el contorno gira ya en la casilla de al lado). */
     wallEnd: function (ctx, col, row, sx, sy, ex, ey, base, v, inDir, eDir) {
-      var IN = CFG.WALL_INSET, R = this.wallR, HALF = this.wallHalf;
+      var IN = CFG.WALL_INSET, HALF = this.wallHalf;
       var borde = base + (eDir > 0 ? 0 : T);
+      var R;
       if (this.isPath(col + ex, row + ey)) {                 // CONVEXA
+        /* Se junta con el otro lado DE ESTA MISMA casilla */
+        R = this.radioEsquina(col, row, sx, sy, col, row, ex, ey);
         var wc = borde + eDir * (IN + HALF);
-        this.wallArc(ctx, !(sy !== 0),
+        this.wallArc(ctx, !(sy !== 0), R,
           wc + eDir * R, v + inDir * R,                      // centro
           wc + eDir * R, v,                                  // sale del trazo
           wc, v + inDir * R);                                // entra en el otro
         return wc + eDir * R;
       }
       if (!this.isPath(col + ex + sx, row + ey + sy)) {      // CÓNCAVA
+        /* Aquí el contorno ya gira en la casilla de la diagonal, y el trazo
+         * con el que se junta es el del lado contrario al que mira. */
+        R = this.radioEsquina(col, row, sx, sy,
+              col + ex + sx, row + ey + sy, -ex, -ey);
         var wv = borde - eDir * (IN + HALF);
-        this.wallArc(ctx, !(sy !== 0),
+        this.wallArc(ctx, !(sy !== 0), R,
           wv, v,
           wv + eDir * R, v,
           wv, v - inDir * R);
@@ -3348,8 +3353,7 @@
      * hay que cambiarlas por (x, y), que es lo que pasa con los lados
      * verticales. Los ángulos se sacan de los propios puntos para no tener
      * que llevar la cuenta de ocho casos a mano. */
-    wallArc: function (ctx, gira, ce, cp, pe, pp, qe, qp) {
-      var R = this.wallR;
+    wallArc: function (ctx, gira, R, ce, cp, pe, pp, qe, qp) {
       var cx = gira ? cp : ce, cy = gira ? ce : cp;
       var px = gira ? pp : pe, py = gira ? pe : pp;
       var qx = gira ? qp : qe, qy = gira ? qe : qp;
@@ -3360,6 +3364,56 @@
       while (d > Math.PI) d -= 2 * Math.PI;
       ctx.moveTo(px, py);
       ctx.arc(cx, cy, R, a0, a1, d < 0);
+    },
+
+    /* Radio de UNA esquina: el que pide CFG.WALL_RADIUS, recortado a lo que
+     * dejen los DOS trazos que se juntan en ella.
+     *
+     * No vale un tope global. El trazo de un muro de una sola casilla mide
+     * T - 2*WALL_INSET - un trazo, que con muros finos son poco más de un
+     * píxel: si el radio global se ajustara a ESE muro, los bloques grandes
+     * —que son casi todos— se quedarían sin curva por culpa de los cuatro
+     * cortos. Mirando cada esquina, el bloque grande curva de verdad y el
+     * muro corto curva lo que puede.
+     *
+     * Se mide el TRAMO ENTERO de cada lado (no el trozo hasta esta esquina) y
+     * se parte por la mitad, porque el otro extremo tiene su propia curva y
+     * hay que dejarle su parte. Eso lo hace SIMÉTRICO, que es la condición
+     * que no se puede romper: los dos lados que se juntan aquí calculan el
+     * arco por su cuenta, y si no les saliera el mismo número el contorno se
+     * abriría justo en la esquina. */
+    radioEsquina: function (colA, rowA, sxA, syA, colB, rowB, sxB, syB) {
+      return Math.min(CFG.WALL_RADIUS,
+        this.largoTrazo(colA, rowA, sxA, syA) / 2,
+        this.largoTrazo(colB, rowB, sxB, syB) / 2);
+    },
+
+    /* Largo en píxeles del trazo que dibuja el lado (sx,sy) del tramo de muro
+     * que pasa por (col,row): se cuentan las casillas contiguas que dibujan
+     * ESE MISMO lado. Se descuentan los dos retranqueos y un trazo, que es el
+     * peor caso (esquina en los dos extremos); si alguna es cóncava sobra
+     * sitio, y sobrar no rompe nada. */
+    largoTrazo: function (col, row, sx, sy) {
+      var horiz = (sy !== 0);
+      var n = 1, c, r;
+      for (c = col, r = row; ;) {
+        if (horiz) c--; else r--;
+        if (!this.dibujaLado(c, r, sx, sy)) break;
+        n++;
+      }
+      for (c = col, r = row; ;) {
+        if (horiz) c++; else r++;
+        if (!this.dibujaLado(c, r, sx, sy)) break;
+        n++;
+      }
+      return n * T - 2 * CFG.WALL_INSET - 2 * this.wallHalf;
+    },
+
+    /* ¿Esa casilla es muro Y dibuja el lado (sx,sy)? */
+    dibujaLado: function (col, row, sx, sy) {
+      if (row < 0 || row >= CFG.ROWS || col < 0 || col >= CFG.COLS) return false;
+      if (CFG.MAZE[row].charAt(col) !== '#') return false;
+      return this.isPath(col + sx, row + sy);
     },
 
     /* ¿la casilla es pasillo visible? (para dibujar aristas) */
