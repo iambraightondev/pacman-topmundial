@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-03 · Las recargas se ven en segundos, y también las de tus compañeros
+
+- **Ahora se ve cuánto falta, no solo "un poco".** Cada poder enseña **los
+  segundos que le quedan** dentro de su casilla. La barra que se va llenando
+  sigue ahí —dice de un vistazo si queda mucho o poco—, pero el número es lo
+  que hace falta para decidir de verdad: si esperas dos segundos a la Q o
+  tiras ya de la W. El contador ocupa el sitio del nombre del poder mientras
+  cuenta, porque recargando quieres el número y cargada quieres saber cuál es:
+  nunca hacen falta los dos a la vez.
+- **Y se ven las recargas de tus compañeros.** En party sale una fila por cada
+  uno, con su nombre en su color y sus cuatro poderes: la tecla si la tiene
+  lista, los segundos si está recargando. Saber que al de al lado le queda el
+  GRITO cambia lo que haces tú —si va a soltarlo, te guardas la Q para el modo
+  azul—, y hasta hoy eso había que preguntarlo por voz o adivinarlo.
+  - En el móvil las filas se ponen encima de tus botones, lejos de los
+    pulgares.
+  - Con dos en el mismo teclado no cambia nada: ahí los dos ya tenían su fila
+    entera.
+
 ## 2026-09-02 · Paredes con esquinas de verdad, la Q que no falla de frente y los fantasmas que dejan de darse la vuelta
 
 - **Y Pac-Man ya no se funde con la pared.** Esto no era una impresión, era

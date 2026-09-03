@@ -227,6 +227,23 @@
       return !!s && s.cd[k] <= 0;
     },
 
+    /* Segundos que le faltan a esa recarga (0 = lista). Para el HUD.
+     *
+     * Redondea hacia ARRIBA a propósito: mientras quede un solo tick quedan
+     * segundos, y un contador que enseña 0 con la tecla todavía muerta es
+     * peor que no poner contador. Así el 1 se apaga justo cuando se enciende
+     * la casilla, que es cuando de verdad se puede pulsar.
+     *
+     * Vale para CUALQUIER jugador, no solo para el de esta pantalla: las
+     * recargas de los demás se llevan aquí igual que las propias —el uso
+     * ajeno llega por red y pasa por gastar() en evento()— así que el HUD
+     * puede enseñar las de la party sin pedir nada más a nadie. */
+    restan: function (idx, k) {
+      var s = this.estado(idx);
+      if (!s || !(k >= 0 && k < s.cd.length)) return 0;
+      return Math.ceil(s.cd[k] / 60);
+    },
+
     conTurbo: function (idx) {
       var s = this.estado(idx);
       return !!s && s.turbo > 0;

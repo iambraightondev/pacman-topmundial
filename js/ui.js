@@ -4731,6 +4731,22 @@
         bar.appendChild(grupo.caja);
         this.habGroups.push(grupo);
       }
+      /* Y las de los COMPAÑEROS, en pequeño y sin botones. Saber si al de al
+       * lado le queda el GRITO cambia lo que haces tú: si va a soltarlo, te
+       * guardas la Q y aprovechas el modo azul. Sin esto había que preguntar
+       * por voz o adivinarlo.
+       *
+       * No hace falta pedir nada por red: el uso ajeno ya llega (por eso
+       * suenan los poderes de los demás) y Hab.evento lo apunta en la recarga
+       * de su dueño, así que el número ya estaba en esta máquina; solo no se
+       * enseñaba. Tres filas como mucho, que son los tres compañeros de una
+       * party de cuatro. */
+      this.habOtros = [];
+      for (var oi = 0; oi < 3; oi++) {
+        var otro = this.buildHabOtro();
+        bar.appendChild(otro.caja);
+        this.habOtros.push(otro);
+      }
       /* Dentro del ESCENARIO, no del body: así queda pegada bajo el laberinto
        * y en la misma mirada que la fila de vidas y frutas. Con el ratón, mirar
        * una recarga ya no obliga a apartar los ojos de la partida.
@@ -4778,6 +4794,16 @@
         nom.className = 'hab-name';
         nom.textContent = h.name;
         b.appendChild(nom);
+        /* Los segundos que faltan. Van DONDE EL NOMBRE y se turnan con él:
+         * son dos cosas que nunca hacen falta a la vez —recargando quieres
+         * el número, cargada quieres saber cuál es— y en dos casillas
+         * distintas el botón se llenaría de letra pequeña. La barra sigue
+         * estando: dice de un vistazo cuánto queda, y el número dice
+         * cuánto exactamente, que es lo que hace falta para decidir si
+         * esperas o tiras de otra. */
+        var secs = document.createElement('small');
+        secs.className = 'hab-secs';
+        b.appendChild(secs);
         b.addEventListener('pointerdown', function (ev) {
           ev.preventDefault();
           self.resumeAudio();
@@ -4786,11 +4812,42 @@
           window.PM.Hab.pulsar(g, self.habIdxDe(gi), k);
         });
         caja.appendChild(b);
-        btns.push({ b: b, fill: fill, key: lab, name: nom,
+        btns.push({ b: b, fill: fill, key: lab, name: nom, secs: secs,
                     ultimo: -1, listo: null, tecla: h.key, nombre: h.name,
-                    visible: true });
+                    resta: -1, visible: true });
       });
       return { caja: caja, quien: quien, btns: btns, on: true };
+    },
+
+    /* Una fila de compañero: su nombre y cuatro casillas chatas, una por
+     * poder. Se montan las cuatro aunque quien lleva un fantasma solo use
+     * dos; las que sobran se esconden al refrescar, igual que en la barra
+     * grande. No son botones: los poderes de otro no se pulsan desde aquí. */
+    buildHabOtro: function () {
+      var caja = document.createElement('div');
+      caja.className = 'hab-otro';
+      caja.style.display = 'none';
+
+      var nom = document.createElement('span');
+      nom.className = 'hab-otro-nom';
+      caja.appendChild(nom);
+
+      var celdas = [];
+      for (var k = 0; k < CFG.HAB.LIST.length; k++) {
+        var c = document.createElement('span');
+        c.className = 'hab-mini';
+        var fill = document.createElement('i');
+        fill.className = 'hab-mini-fill';
+        c.appendChild(fill);
+        var txt = document.createElement('b');
+        txt.className = 'hab-mini-txt';
+        c.appendChild(txt);
+        caja.appendChild(c);
+        celdas.push({ c: c, fill: fill, txt: txt,
+                      ultimo: -1, listo: null, texto: null, visible: true });
+      }
+      return { caja: caja, nom: nom, celdas: celdas,
+               on: false, quien: -1, color: '', nombre: '' };
     },
 
     /* Qué jugador maneja el grupo `gi`. Con dos en el mismo teclado, cada
@@ -4891,6 +4948,15 @@
             o.b.classList.toggle('listo', listo);
             o.listo = listo;
           }
+          /* Los segundos que faltan. Se escriben solo cuando cambia el
+           * número —una vez por segundo, no sesenta— y la clase 'contando'
+           * es la que aparta el nombre del poder para dejarles el sitio. */
+          var resta = A.restan(idx, k);
+          if (resta !== o.resta) {
+            o.resta = resta;
+            o.secs.textContent = resta > 0 ? resta : '';
+            o.b.classList.toggle('contando', resta > 0);
+          }
         }
         /* Lo que está ENCENDIDO ahora mismo se marca aparte: recargando y
          * encendida son cosas distintas y en la misma casilla se confundirían.
@@ -4902,6 +4968,74 @@
           grupo.btns[0].b.classList.toggle('activa', esFantasma && st.carga > 0);
           grupo.btns[1].b.classList.toggle('activa',
             esFantasma ? st.acecho > 0 : st.turbo > 0);
+        }
+      }
+      this.refreshHabOtros(g, A, dual);
+    },
+
+    /* Las recargas de los COMPAÑEROS. "Compañero" es todo el que juega y no
+     * lleva esta máquina: con dos en el mismo teclado no hay ninguno (los dos
+     * ya tienen su fila grande) y en online son todos menos el tuyo.
+     *
+     * Al mirón no se le enseña nada porque a él ya se le apaga la barra
+     * entera un poco más arriba; el día que se le encienda, esto le sirve
+     * tal cual y sin tocar nada. */
+    refreshHabOtros: function (g, A, dual) {
+      if (!this.habOtros) return;
+      var libres = [], i;
+      if (!dual) {
+        for (i = 0; i < g.playerCount && libres.length < this.habOtros.length; i++) {
+          if (i !== g.localIdx) libres.push(i);
+        }
+      }
+      for (var oi = 0; oi < this.habOtros.length; oi++) {
+        var fila = this.habOtros[oi];
+        var quien = (oi < libres.length) ? libres[oi] : -1;
+        var on = (quien >= 0);
+        /* Encender o apagar una fila cambia lo que mide la barra, y la barra
+         * empuja al lienzo: hay que rehacer el encaje, pero SOLO cuando pasa
+         * de verdad (esto se llama sesenta veces por segundo). */
+        if (on !== fila.on) {
+          fila.on = on;
+          fila.caja.style.display = on ? '' : 'none';
+          this.marcarHabBar();
+          this.fitCanvas();
+        }
+        if (!on) continue;
+        if (quien !== fila.quien) { fila.quien = quien; fila.nombre = ''; fila.color = ''; }
+        /* El nombre va de SU color, que es el mismo con el que se le ve en el
+         * laberinto: con cuatro jugadores es lo único que hace la fila
+         * reconocible de un vistazo. */
+        var nombre = g.nameFor(quien), color = g.colorFor(quien);
+        if (nombre !== fila.nombre) { fila.nombre = nombre; fila.nom.textContent = nombre; }
+        if (color !== fila.color) { fila.color = color; fila.nom.style.color = color; }
+
+        var lista = A.listaDe(g, quien);
+        for (var k = 0; k < fila.celdas.length; k++) {
+          var c = fila.celdas[k];
+          var h = lista[k];
+          var visible = !!h;
+          if (visible !== c.visible) {
+            c.visible = visible;
+            c.c.style.display = visible ? '' : 'none';
+          }
+          if (!visible) continue;
+          var pct = Math.round(A.carga(g, quien, k) * 100);
+          if (pct !== c.ultimo) {
+            c.fill.style.height = pct + '%';
+            c.ultimo = pct;
+          }
+          /* Recargando enseña los segundos; lista, la tecla. Es la misma idea
+           * que en la barra grande: una casilla, dos estados que nunca se
+           * dan a la vez. */
+          var resta = A.restan(quien, k);
+          var texto = (resta > 0) ? String(resta) : h.key;
+          if (texto !== c.texto) { c.texto = texto; c.txt.textContent = texto; }
+          var listo = (resta <= 0);
+          if (listo !== c.listo) {
+            c.c.classList.toggle('listo', listo);
+            c.listo = listo;
+          }
         }
       }
     },

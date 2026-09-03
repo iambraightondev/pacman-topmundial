@@ -813,6 +813,85 @@ body {
   opacity: 0.75;
 }
 
+/* Los segundos que faltan. Ocupan el sitio del nombre del poder, que se
+   aparta mientras tanto: recargando quieres el número y cargada quieres
+   saber cuál es, así que nunca hacen falta los dos a la vez. En el móvil el
+   nombre ya estaba escondido y el número se queda igual, que es justo el
+   sitio donde más falta hace. */
+.hab-secs {
+  position: relative;
+  display: none;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  padding-top: 3px;
+  color: rgba(255, 102, 204, 0.95);
+}
+
+.hab-b.contando .hab-secs { display: block; }
+.hab-b.contando .hab-name { display: none; }
+
+/* ---------- Las recargas de los COMPAÑEROS ----------
+   En pequeño y sin botones: son de otro, no se pulsan. La fila lleva el
+   nombre de su dueño en SU color —el mismo con el que se le ve correr por el
+   laberinto— porque con cuatro jugadores es lo único que la hace reconocible
+   sin pararse a leer. */
+.hab-otro {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.hab-otro-nom {
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  /* El interlineado va PUESTO A MANO. El escenario lleva line-height: 0 para
+     que el lienzo no arrastre el hueco de la línea, y aquí eso se hereda: con
+     el recorte de al lado (overflow) el nombre se quedaba en cero de alto y
+     no se veía ni una letra, aunque estuviera escrito. */
+  line-height: 12px;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 2px;
+}
+
+.hab-mini {
+  position: relative;
+  overflow: hidden;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.hab-mini-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: rgba(255, 102, 204, 0.22);
+}
+
+.hab-mini-txt {
+  position: relative;
+  display: block;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 20px;
+  text-align: center;
+}
+
+.hab-mini.listo {
+  color: #ff66cc;
+  border-color: rgba(255, 102, 204, 0.75);
+}
+
 /* Cargada: se enciende entera. Es el único aviso de "ya puedes". */
 .hab-b.listo {
   color: #ff66cc;
@@ -831,10 +910,24 @@ body {
 
 .hab-b.activa .hab-fill { background: rgba(0, 0, 0, 0.2); }
 
+/* En táctil la barra flota en su esquina, así que los compañeros se ponen
+   ENCIMA de tus botones (order: -1) y no al lado: hacia arriba hay sitio de
+   sobra y hacia el centro está el pulgar. */
+#habBar.fija {
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+#habBar.fija .hab-otro { order: -1; }
+
 @media (max-width: 480px) {
   .hab-b { width: 40px; height: 40px; }
   .hab-key { font-size: 15px; padding-top: 7px; }
   .hab-name { display: none; }
+  .hab-secs { font-size: 11px; }
+  .hab-mini { width: 19px; height: 19px; }
+  .hab-mini-txt { font-size: 9px; line-height: 17px; }
+  .hab-otro-nom { max-width: 44px; }
 }
 
 /* Barra de botones en partida: rendirse (siempre) y pausa (solo táctil) */

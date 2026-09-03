@@ -1486,6 +1486,25 @@ Rules that are deliberate, not incidental:
   grows a group per player (`.hab-grupo`), each labelled and each showing its
   owner's cooldowns; `UI.habIdxDe(gi)` maps group → player, which is `gi` in
   local two-player and `Game.localIdx` everywhere else.
+- **The bar shows seconds, not just the bar.** Each button carries a
+  `.hab-secs` counter fed by `Hab.restan(idx, k)` (`ceil(cd/60)`, 0 when
+  ready — rounding **up** so the counter never reads 0 on a dead key). It
+  takes the slot of the power's name via `.contando`: recharging you want the
+  number, ready you want to know which power it is, so the two never compete
+  for the same 46 px. The fill bar stays — it answers "roughly how long" at a
+  glance, the number answers "exactly how long", which is what decides whether
+  you wait or spend a different key.
+- **Teammates' cooldowns are on screen too** (`.hab-otro` rows, up to three —
+  a four-player party). Each row is a name in that player's colour plus four
+  flat cells showing the key when ready and the seconds when not. They are not
+  buttons: another player's powers are not yours to press. **No new wire
+  traffic was needed** — a remote use already arrives (it is why other
+  players' powers are audible) and `Hab.evento` runs it through `gastar`, so
+  every machine has always tracked everyone's cooldowns; they simply were not
+  drawn. A "teammate" is anyone this machine does not drive: none in local
+  two-player (both already own a full group), everyone but `localIdx` online.
+  On touch the floating bar stacks the rows **above** your own buttons
+  (`order: -1`), away from the thumbs.
 - **Which powers you get depends on what you are driving.** `Hab.listaDe(G, i)`
   returns `CFG.HAB.LIST` for a Pac-Man and `CFG.HAB.LIST_G` for whoever is
   driving a ghost in PAC-MAN VS. It is resolved **lazily on every call**, never

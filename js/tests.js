@@ -4037,6 +4037,53 @@
     }
   });
 
+  /* ---------- el contador de la recarga ---------- */
+  /* La barra dice "queda un poco" y el número dice CUÁNTO, que es lo que hace
+   * falta para decidir si esperas o tiras de otra tecla. Redondea hacia
+   * arriba: un contador que enseña 0 con la tecla todavía muerta es peor que
+   * no ponerlo. */
+  test('los segundos que faltan se cuentan hacia arriba', function () {
+    partidaHab();
+    eq(HB.restan(0, HB.TURBO), 0, 'cargada no cuenta nada');
+    HB.pulsar(G, 0, HB.TURBO);
+    eq(HB.restan(0, HB.TURBO), CFG.HAB.segs(HB.TURBO), 'recién gastada, entera');
+    ticks(59);
+    eq(HB.restan(0, HB.TURBO), CFG.HAB.segs(HB.TURBO),
+       'a falta de 23 segundos y pico, sigue enseñando 24');
+    ticks(1);
+    eq(HB.restan(0, HB.TURBO), CFG.HAB.segs(HB.TURBO) - 1,
+       'y baja al cumplirse el segundo entero');
+    ticks(CFG.HAB.LIST[HB.TURBO].cd - 61);      // hasta el último tick vivo
+    eq(HB.restan(0, HB.TURBO), 1, 'con un tick vivo todavía queda 1');
+    ticks(1);
+    eq(HB.restan(0, HB.TURBO), 0, 'y llega a 0 justo cuando se enciende');
+    ok(HB.lista(0, HB.TURBO), 'que es cuando ya se puede pulsar');
+  });
+
+  /* ---------- las recargas de los COMPAÑEROS ----------
+   * El HUD las enseña sin pedir nada nuevo por red: el uso ajeno ya llegaba
+   * —por eso se oyen los poderes de los demás— y Hab.evento lo apunta en la
+   * recarga de SU dueño. Esta prueba es la que sostiene ese HUD: si algún día
+   * el eco dejara de gastar, las casillas de los compañeros se quedarían
+   * encendidas para siempre y nadie lo notaría mirando la pantalla. */
+  test('el poder de un compañero deja SU recarga contando aquí', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+    G.localIdx = 1;
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    eq(HB.restan(0, HB.GRITO), 0, 'la del otro empieza cargada');
+    HB.evento(G, 0, HB.GRITO);                  // llega el eco del compañero
+    eq(HB.restan(0, HB.GRITO), CFG.HAB.segs(HB.GRITO),
+       'y al usarla se pone a contar en esta pantalla');
+    ok(!HB.lista(0, HB.GRITO), 'para él ya no está lista');
+    ok(HB.lista(1, HB.GRITO), 'y la mía no se ha tocado');
+    ticks(120);
+    eq(HB.restan(0, HB.GRITO), CFG.HAB.segs(HB.GRITO) - 2,
+       'la cuenta del compañero baja sola con la partida');
+    G.toMenu();
+  });
+
   test('Q se come al fantasma de al lado, mire donde mire', function () {
     partidaHab(13, 20, CFG.DIR.LEFT);
     // el fantasma queda a la DERECHA: justo hacia donde NO se está mirando
