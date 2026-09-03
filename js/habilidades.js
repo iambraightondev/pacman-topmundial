@@ -370,6 +370,52 @@
       }
     },
 
+    /* ---------- las recargas por la red ----------
+     * El HUD enseña las recargas de TODO EL MUNDO, y eso no se puede sostener
+     * solo sobre los avisos de uso. El aviso se manda una vez y nadie lo
+     * confirma —Supabase Realtime reparte en broadcast, sin acuse— así que el
+     * que se pierda deja esa casilla mintiendo el resto de la partida: nada
+     * vuelve a mirarla nunca. Es justo el fallo que se vio jugando, y no se
+     * arregla mandando el aviso otra vez, porque el segundo se puede perder
+     * igual.
+     *
+     * Así que las recargas viajan TAMBIÉN en la instantánea del anfitrión,
+     * que sale doce veces por segundo: si un aviso se cae, la foto siguiente
+     * lo arregla y no se nota. El aviso sigue haciendo falta —es el que suena
+     * y el que enseña los dientes en el instante— pero ya no es el único que
+     * sostiene el número.
+     *
+     * Son cuatro enteros por jugador; al lado de las ocho posiciones que ya
+     * lleva la foto, no se nota. */
+    resumen: function () {
+      var out = [];
+      for (var i = 0; i < this.st.length; i++) out.push(this.st[i].cd.slice());
+      return out;
+    },
+
+    /* mio: el jugador de esta pantalla, o -1 si es un mirón (no tiene). */
+    aplicarResumen: function (hb, mio) {
+      if (!this.on || !hb || !hb.length) return;
+      for (var i = 0; i < hb.length && i < this.st.length; i++) {
+        var fila = hb[i], s = this.st[i];
+        if (!fila) continue;
+        for (var k = 0; k < fila.length && k < s.cd.length; k++) {
+          var v = fila[k] | 0;
+          if (i === mio) {
+            /* La TUYA solo se corrige HACIA ARRIBA. El anfitrión se entera de
+             * lo que pulsas un viaje de red más tarde, así que su foto aún te
+             * tiene la tecla cargada: hacerle caso a ciegas encendería la
+             * casilla medio parpadeo justo después de pulsarla, que es lo peor
+             * que puede hacer un indicador de recarga. Hacia arriba sí, que
+             * ahí manda él: si dice que te queda más, te queda más. */
+            if (v > s.cd[k]) s.cd[k] = v;
+          } else {
+            s.cd[k] = v;
+          }
+        }
+      }
+    },
+
     /* ---------- ¿se puede usar ahora mismo? ---------- */
     puede: function (G, idx, k) {
       if (!this.on) return false;

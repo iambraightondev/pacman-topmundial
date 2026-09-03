@@ -11,6 +11,17 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   tiras ya de la W. El contador ocupa el sitio del nombre del poder mientras
   cuenta, porque recargando quieres el número y cargada quieres saber cuál es:
   nunca hacen falta los dos a la vez.
+- **Y ahora se ven de verdad: las recargas viajan en la foto de la partida.**
+  Se apoyaban solo en el aviso de "he usado tal poder", y ese aviso se manda
+  una vez y nadie lo confirma: el que se perdiera por el camino dejaba esa
+  casilla mintiendo el resto de la partida, porque no había nada que volviera
+  a mirarla. Mandarlo dos veces no arregla nada —el segundo se pierde igual—,
+  así que las recargas van también dentro de la instantánea que el anfitrión
+  reparte doce veces por segundo: si un aviso se cae, la foto siguiente lo
+  corrige y no se nota. **Tu propia recarga solo se corrige hacia arriba**,
+  para que al pulsar no se te encienda la casilla medio parpadeo mientras el
+  aviso viaja.
+
 - **Y se ven las recargas de tus compañeros.** En party sale una fila por cada
   uno, con su nombre en su color y sus cuatro poderes: la tecla si la tiene
   lista, los segundos si está recargando. Saber que al de al lado le queda el

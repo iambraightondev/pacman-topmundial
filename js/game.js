@@ -2643,6 +2643,12 @@
         s.out.push(pp.out ? 1 : 0);
         s.pd.push(pp.dying ? [pp.deathPhase, Math.round(pp.deathTicks)] : 0);
       }
+      /* Las recargas de DESATADO. Van en la foto y no solo en el aviso de uso
+       * porque el aviso se manda una vez y nadie lo confirma: el que se
+       * pierda dejaría esa casilla del HUD mintiendo el resto de la partida.
+       * Ver Hab.resumen(). Solo en este modo, que fuera de él no hay nada que
+       * contar y la foto sale doce veces por segundo. */
+      if (this.hab && window.PM.Hab) s.hb = window.PM.Hab.resumen();
       if (withPellets) s.pm = this.pelletHex();
       this.snapEaten = [];
       return s;
@@ -3033,6 +3039,13 @@
 
     applySnapshot: function (s) {
       var i;
+
+      /* Recargas de DESATADO: se corrigen con cada foto, así que un aviso de
+       * uso perdido deja de importar. La propia no se pisa a la baja — ver
+       * Hab.aplicarResumen(). */
+      if (this.hab && window.PM.Hab && s.hb) {
+        window.PM.Hab.aplicarResumen(s.hb, this.isSpec() ? -1 : this.localIdx);
+      }
 
       /* transición de estado */
       if (s.st !== this.state) {

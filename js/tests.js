@@ -4084,6 +4084,48 @@
     G.toMenu();
   });
 
+  /* ---------- la recarga ajena no puede depender de un solo aviso ----------
+   * El aviso de uso se manda UNA vez y nadie lo confirma (el transporte es
+   * broadcast, sin acuse), así que el que se pierda dejaría esa casilla del
+   * HUD mintiendo el resto de la partida: nada volvía a mirarla. Por eso las
+   * recargas viajan también en la instantánea del anfitrión, que sale doce
+   * veces por segundo. Esto es lo que hace que el fallo se cure solo. */
+  test('la instantánea corrige una recarga ajena que se perdió', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+    G.localIdx = 1;
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    // el aviso del compañero NUNCA llegó: aquí su GRITO sigue cargado
+    eq(HB.restan(0, HB.GRITO), 0, 'de partida, aquí la tiene lista');
+    // y llega la foto del anfitrión, que sí sabe la verdad
+    var foto = [[0, 0, 0, 40 * 60], [0, 0, 0, 0]];
+    HB.aplicarResumen(foto, G.localIdx);
+    eq(HB.restan(0, HB.GRITO), 40, 'la foto pone la suya en su sitio');
+    G.toMenu();
+  });
+
+  /* La TUYA es otra cosa: el anfitrión se entera de lo que pulsas un viaje de
+   * red más tarde, así que su foto todavía te la tiene cargada. Hacerle caso
+   * a ciegas encendería tu casilla medio parpadeo justo después de pulsarla,
+   * que es lo peor que puede hacer un indicador de recarga. */
+  test('la instantánea no te enciende la recarga recién gastada', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+    G.localIdx = 1;
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    HB.pulsar(G, 1, HB.TURBO);
+    var mia = HB.restan(1, HB.TURBO);
+    ok(mia > 0, 'acabo de gastarla');
+    HB.aplicarResumen([[0, 0, 0, 0], [0, 0, 0, 0]], G.localIdx);   // él aún no lo sabe
+    eq(HB.restan(1, HB.TURBO), mia, 'la foto atrasada no me la devuelve');
+    // pero si él dice que me queda MÁS, ahí manda él
+    HB.aplicarResumen([[0, 0, 0, 0], [0, 30 * 60, 0, 0]], G.localIdx);
+    eq(HB.restan(1, HB.TURBO), 30, 'hacia arriba sí se corrige');
+    G.toMenu();
+  });
+
   test('Q se come al fantasma de al lado, mire donde mire', function () {
     partidaHab(13, 20, CFG.DIR.LEFT);
     // el fantasma queda a la DERECHA: justo hacia donde NO se está mirando

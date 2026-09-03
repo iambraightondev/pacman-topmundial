@@ -1497,14 +1497,26 @@ Rules that are deliberate, not incidental:
 - **Teammates' cooldowns are on screen too** (`.hab-otro` rows, up to three —
   a four-player party). Each row is a name in that player's colour plus four
   flat cells showing the key when ready and the seconds when not. They are not
-  buttons: another player's powers are not yours to press. **No new wire
-  traffic was needed** — a remote use already arrives (it is why other
-  players' powers are audible) and `Hab.evento` runs it through `gastar`, so
-  every machine has always tracked everyone's cooldowns; they simply were not
-  drawn. A "teammate" is anyone this machine does not drive: none in local
-  two-player (both already own a full group), everyone but `localIdx` online.
-  On touch the floating bar stacks the rows **above** your own buttons
-  (`order: -1`), away from the thumbs.
+  buttons: another player's powers are not yours to press. A "teammate" is
+  anyone this machine does not drive: none in local two-player (both already
+  own a full group), everyone but `localIdx` online. On touch the floating
+  bar stacks the rows **above** your own buttons (`order: -1`), away from the
+  thumbs.
+- **Cooldowns ride the snapshot, not just the use event.** A use is announced
+  once and nothing confirms it — the transport is Supabase Realtime
+  **broadcast, no ack** — so a dropped `hab` event would leave that HUD cell
+  lying for the rest of the run, since nothing ever looked at it again. That
+  is a real failure that showed up in play. Re-sending the event does not fix
+  it (the retry can drop too), so `buildSnapshot` carries `hb` —
+  `Hab.resumen()`, four ints per player — and `applySnapshot` feeds it to
+  `Hab.aplicarResumen(hb, mine)` at 12 Hz: a dropped announcement is repaired
+  within ~0.2 s. The event is still needed (it is what makes the sound and
+  the teeth land on the frame you pressed), it just no longer carries the
+  number alone. **Your own cooldown is only corrected upwards**: the host
+  learns what you pressed a network trip later, so its snapshot still has
+  your key charged, and applying it blindly would re-light your cell for a
+  blink right after you pressed it. Upwards the host is the authority. The
+  field is additive, so an old client just ignores it — no `PROTO` bump.
 - **Which powers you get depends on what you are driving.** `Hab.listaDe(G, i)`
   returns `CFG.HAB.LIST` for a Pac-Man and `CFG.HAB.LIST_G` for whoever is
   driving a ghost in PAC-MAN VS. It is resolved **lazily on every call**, never
