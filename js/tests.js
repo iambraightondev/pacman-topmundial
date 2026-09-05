@@ -562,6 +562,67 @@
     eq(G.state, 'DYING');
   });
 
+  /* ---------- El mordisco es más ancho que la casilla ----------
+   * Los sprites miden 13 px sobre casillas de 8, así que dos en casillas
+   * contiguas ya se solapan medio cuerpo en pantalla. Para COMER cuenta que
+   * las casillas se pisen (menos de 8 px en los dos ejes); para MORIR sigue
+   * haciendo falta compartirla. */
+  function azul(g) {
+    G.frightTicks = 600;
+    g.mode = 'normal';
+    g.frightened = true;
+    g.clearPlan();
+  }
+
+  test('un fantasma azul se come sin llegar a compartir casilla', function () {
+    partida(1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    azul(g);
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    g.x = p.x + 7; g.y = p.y;              // casilla de al lado, encima en pantalla
+    ok(p.tileX() !== g.tileX(), 'están en casillas distintas');
+    ok(G.biteGhost(p, g), 'las casillas se pisan: es mordisco');
+    var antes = G.score;
+    G.step();
+    eq(g.mode, 'eyes', 'se lo ha comido');
+    ok(G.score > antes, 'y ha puntuado');
+  });
+
+  test('cruzarse de frente con un fantasma AZUL sí se lo come', function () {
+    partida(1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    azul(g);
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    p.dir = CFG.DIR.RIGHT; p.nextDir = CFG.DIR.RIGHT;
+    g.x = 7 * 8 + 4; g.y = 5 * 8 + 4;
+    g.dir = CFG.DIR.LEFT;
+    g.human = true; g.taken = true; g.wishDir = CFG.DIR.LEFT;   // que no se desvíe
+    var pasos = 0;
+    while (pasos < 30 && g.mode !== 'eyes' && p.x <= g.x) { G.step(); pasos++; }
+    eq(g.mode, 'eyes', 'no debería habérsele atravesado');
+  });
+
+  test('el mordisco no llega a través de una pared', function () {
+    partida(1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    azul(g);
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    g.x = p.x; g.y = p.y + 8;              // el pasillo de al lado, a una casilla
+    ok(!G.biteGhost(p, g), 'a 8 px justos no se muerde');
+  });
+
+  test('estar al lado de un fantasma que NO está azul no mata', function () {
+    partida(1);
+    var p = G.pacs[0], g = G.ghosts[0];
+    p.safeTicks = 0;
+    g.mode = 'normal';
+    g.frightened = false;
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4;
+    g.x = p.x + 7; g.y = p.y;
+    ok(G.biteGhost(p, g), 'para comer sí valdría');
+    ok(!G.hitGhost(p, g), 'para morir no: no comparten casilla');
+  });
+
   test('el fantasma decide la salida al entrar en la casilla', function () {
     partida(1);
     var g = G.ghosts[0];
@@ -4415,6 +4476,21 @@
     ok(!HB.protegido(1, otro.id), 'el de al lado no está protegido');
     G.guestCollisions(p);
     ok(p.dying, 'y ese sí lo mata');
+    G.toMenu();
+  });
+
+  /* El invitado usa la misma vara ancha que el anfitrión para el mordisco: si
+   * no, en su pantalla el fantasma azul se le escaparía y el anfitrión se lo
+   * daría por comido medio segundo después, de golpe. */
+  test('el invitado también muerde al azul de la casilla de al lado', function () {
+    var p = partidaHabInvitado(13, 20);
+    var g = fantasmaEn(1, 14, 20);
+    G.frightTicks = 600;
+    g.frightened = true;
+    g.x = p.x + 7; g.y = p.y;                 // casillas distintas, pegados
+    ok(p.tileX() !== g.tileX(), 'no comparten casilla');
+    G.guestCollisions(p);
+    eq(g.mode, 'eyes', 'se lo come igual');
     G.toMenu();
   });
 

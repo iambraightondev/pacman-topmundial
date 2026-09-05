@@ -976,24 +976,20 @@
         }
       }
 
-      /* Colisiones con fantasmas (el invitado decide las suyas): MISMA
-       * CASILLA y nada más, como el arcade. Si Pac-Man y un fantasma
-       * intercambian casillas en el mismo tick (cruzarse de frente) se
-       * atraviesan sin tocarse — el original de 1980 hacía exactamente eso, y
-       * aquí se respeta a propósito para no desviarse de sus patrones. */
+      /* Colisiones con fantasmas (el invitado decide las suyas). Comer y morir
+       * ya no usan la misma vara: biteGhost es el mordisco (las casillas de los
+       * dos se pisan) y hitGhost la muerte (compartir casilla, como siempre). */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || p.dying || !this.isLocalAuth(i)) continue;
-        var px = p.tileX(), py = p.tileY();
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
-          if (g.mode === 'house' || g.mode === 'entering') continue;
-          if (g.tileX() !== px || g.tileY() !== py) continue;
-          if (g.mode === 'eyes') continue;
+          if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
           if (g.frightened) {
-            this.eatGhost(g, i);
+            if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
+            if (!this.hitGhost(p, g)) continue;
             this.startDeath(i, g.id);        // g.id: por si lo lleva un jugador
             break;                           // el otro jugador sigue a lo suyo
           }
@@ -1225,6 +1221,48 @@
         pct *= window.PM.Hab.multVel(pac.id | 0);
       }
       return pct / 100 * CFG.BASE_SPEED;
+    },
+
+    /* ---------------------------------------------------------
+     * ¿Se tocan Pac-Man y un fantasma?
+     * ---------------------------------------------------------
+     * Comer y morir NO usan la misma vara, y es a propósito.
+     *
+     * MORIR (hitGhost): compartir casilla, tal cual, como en el arcade. Es
+     * la regla de siempre y no se toca — de ella cuelgan los patrones
+     * memorizados, los récords ya puestos y hasta el que dos que se cruzan
+     * de frente se atraviesen (ver la prueba de tests.js).
+     *
+     * COMER (biteGhost): más ancho. El dibujo y la casilla no miden lo mismo:
+     * Pac-Man y los fantasmas se pintan con 13 px de ancho (CFG.PAC_R) encima
+     * de casillas de 8. Dos que están en casillas contiguas se solapan medio
+     * cuerpo en pantalla sin compartir casilla, y desde el sillón eso parece
+     * exactamente lo que el jugador decía que pasaba: le pasas por encima a un
+     * fantasma azul y no te lo comes. Medido en partida, con la casilla pelada
+     * se perdían 737 ticks de solape por cada 40 partidas de prueba, y en el
+     * peor caso los dos centros llegaron a quedar a MEDIO PÍXEL sin mordisco.
+     *
+     * Así que para el mordisco las casillas se comparan COMO CAJAS: cuenta si
+     * la de uno pisa la del otro (menos de 8 px en los dos ejes). Es la
+     * versión continua de compartir casilla, no depende de en qué píxel caiga
+     * el tick, y por lo mismo tampoco se le escapa el cruce de frente: mucho
+     * antes de intercambiar casillas las cajas ya se pisan. Como todo va
+     * encarrilado a la rejilla de 8, dos separados por una pared quedan justo
+     * a 8 px: nunca se muerde a través de una esquina.
+     *
+     * La manga ancha va SOLO a favor del jugador. Morir sigue igual de
+     * estricto que antes: arreglar los mordiscos no le puede costar una vida
+     * ni descuadrar una marca que ya esté puesta. */
+    hitGhost: function (p, g) {
+      return p.tileX() === g.tileX() && p.tileY() === g.tileY();
+    },
+
+    biteGhost: function (p, g) {
+      var ancho = CFG.COLS * CFG.TILE;
+      var dx = p.x - g.x;
+      if (dx > ancho / 2) dx -= ancho;              // túnel: por el lado corto
+      else if (dx < -ancho / 2) dx += ancho;
+      return Math.abs(dx) < CFG.TILE && Math.abs(p.y - g.y) < CFG.TILE;
     },
 
     /* ---------------------------------------------------------
@@ -2805,15 +2843,13 @@
       this.frightFlashOn = false;
     },
 
-    /* Igual que en el anfitrión: solo cuenta compartir casilla */
+    /* Las mismas dos varas que en el anfitrión: biteGhost para el mordisco,
+     * hitGhost para la muerte. */
     guestCollisions: function (me) {
-      var px = me.tileX(), py = me.tileY();
       var A = window.PM.Hab;
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
-        if (g.mode === 'house' || g.mode === 'entering') continue;
-        if (g.tileX() !== px || g.tileY() !== py) continue;
-        if (g.mode === 'eyes') continue;
+        if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
         /* Fantasma recién mordido con la Q y aún sin confirmar: aquí no se
          * mata (lo hace el anfitrión), así que sigue vivo y pegado. Ni mata ni
          * se come mientras dure el escudo — comerlo por las bravas mandaría un
@@ -2821,6 +2857,7 @@
          * Ver Hab.protegido() en js/habilidades.js. */
         if (A && A.protegido(me.id, g.id)) continue;
         if (g.frightened) {
+          if (!this.biteGhost(me, g)) continue;
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'
           g.eaten();
           this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;
@@ -2831,6 +2868,7 @@
           window.AudioSys && AudioSys.playEatGhost();
         } else {
           if (me.safeTicks > 0) continue;      // margen tras reaparecer
+          if (!this.hitGhost(me, g)) continue;
           /* predicción: se congela este Pac-Man (no la partida) y el
            * anfitrión confirma con 'death'; si es el último, parón clásico */
           this.startPacDeath(me.id);

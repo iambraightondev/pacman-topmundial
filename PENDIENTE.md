@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **3 de septiembre de 2026**.
+Última puesta al día: **5 de septiembre de 2026**.
 
 ---
 
@@ -52,6 +52,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 
 | Commit | Qué |
 |---|---|
+| `1d5b9a1` | Los fantasmas azules ya no se atraviesan sin mordisco |
 | `4721225` | ARO pasa a ser la última skin y PÍXEL la penúltima |
 | `11104fb` | Devuelve la rejilla a la skin PÍXEL, ahora dibujada a propósito |
 | `9a1a195` | La skin PÍXEL vuelve a parecer un Pac-Man |
@@ -71,8 +72,8 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v37`**, comprobado contra
-<https://pacman-topmundial.vercel.app>. **272 pruebas**: 0 fallos en
+Service worker en **`pm-v38`**, comprobado contra
+<https://pacman-topmundial.vercel.app>. **277 pruebas**: 0 fallos en
 `tests.html` y los 4 de siempre en Node (ver más abajo).
 
 > **Quien ya tuviera el juego abierto necesita RECARGAR** para ver todo esto:
@@ -366,6 +367,63 @@ funcionaba: para jugarlo había que dejar de jugar a lo tuyo.
 > tiene marcas de verdad dentro y borrarla no es cosa de un refactor. Cuando
 > se quiera:
 > `drop view if exists public.reto_top; drop table if exists public.reto_diario;`
+
+---
+
+## Lo del 5 de septiembre: los fantasmas azules ya no se atraviesan
+
+Un commit, subido y desplegado. Venía de jugar: *«sigue pasando mucho que
+cuando los fantasmas están en modo azul, los atravieso sin matarlos; lo mismo
+con mis compañeros»*.
+
+**El fallo no era del modo azul.** El juego dibuja a Pac-Man y a los fantasmas
+con **13 px de ancho** (`CFG.PAC_R`) encima de **casillas de 8 px**, y el
+mordisco solo contaba si los dos ocupaban **la misma casilla**. Dos en casillas
+contiguas ya se solapan medio cuerpo en pantalla: se veía el mordisco y no
+había mordisco.
+
+**Medido antes de tocar nada** (40 partidas simuladas de 4.000 ticks, con los
+fantasmas azules siempre y Pac-Man dando tumbos): **737 ticks de solape sin
+mordisco**, y en el peor caso los dos centros llegaron a quedar **a medio
+píxel** el uno del otro sin que contara. Uno de cada diez encuentros pegados se
+perdía así. Después del arreglo: **cero**, y 154 fantasmas comidos donde antes
+123.
+
+**El arreglo:** en `js/game.js` hay ahora dos varas en vez de una.
+
+- **`biteGhost` (comer):** las casillas se comparan **como cajas** — cuenta si
+  la de uno pisa la del otro (menos de 8 px en los dos ejes). Es la versión
+  continua de «compartir casilla»: no depende de en qué píxel caiga el tick y,
+  por lo mismo, tampoco se le escapa el **cruce de frente** (mucho antes de
+  intercambiar casillas las cajas ya se pisan). Como todo va encarrilado a la
+  rejilla de 8, dos separados por una pared quedan **justo a 8 px**: nunca se
+  muerde a través de una esquina.
+- **`hitGhost` (morir):** compartir casilla, tal cual, **sin tocar**.
+
+> **Decisión, para no deshacerla sin querer:** la asimetría es a propósito. Se
+> descartó ensanchar también la muerte. Nadie se quejó de no morir; hacerlo
+> costaría vidas que hoy no se pierden y **descuadraría los récords ya
+> puestos** frente al top mundial. Además, que dos que se cruzan de frente se
+> atraviesen es comportamiento del arcade de 1980, está documentado y **tiene
+> su propia prueba** en `tests.js` («cruzarse de frente con un fantasma deja
+> pasar»). Si algún día se quiere simétrico, es cambiar `hitGhost` por
+> `biteGhost` en la rama de muerte — asumiendo las dos consecuencias de arriba.
+
+Vale igual para los compañeros y para el online: la regla es la misma para
+todos los Pac-Man de la partida, y **el invitado muerde con la misma vara que
+el anfitrión** (`guestCollisions`), que si no se le escaparía en su pantalla
+algo que el anfitrión sí le da por comido medio segundo después.
+
+**Cómo se comprobó:** cinco pruebas nuevas en `tests.js` (mordisco sin
+compartir casilla, cruce de frente contra fantasma azul, que **no** se muerde a
+través de la pared, que estar al lado de uno que no está azul **no** mata, y la
+del invitado). **277 pruebas, 0 fallos** en `tests.html`; en Node los 4 de
+siempre. Y probado además sobre el juego de verdad, no solo sobre las pruebas.
+
+> Ojo con `tests.html`: si se abre **dos veces seguidas sin limpiar
+> `localStorage`**, falla «una maestría ya conseguida no se vuelve a celebrar».
+> No es del código —es que la primera pasada deja la maestría guardada—. Con el
+> almacenamiento limpio pasan las 277.
 
 ---
 

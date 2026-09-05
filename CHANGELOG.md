@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-05 · Los fantasmas azules ya no se atraviesan
+
+- **Si le pasas por encima a un fantasma azul, te lo comes.** Hasta ahora,
+  bastantes veces no. El fallo estaba en que el juego dibuja a Pac-Man y a los
+  fantasmas con 13 px de ancho sobre casillas de 8: **dos que están en
+  casillas contiguas ya se solapan medio cuerpo en pantalla**, pero para el
+  juego seguían siendo dos casillas distintas y no pasaba nada. Se veía el
+  mordisco y no había mordisco.
+- Midiéndolo en partida, **se perdía uno de cada diez encuentros**, y en el
+  peor caso los dos llegaron a quedar **a medio píxel** el uno del otro sin
+  que contara. Ahora, cero.
+- Lo mismo valía para los compañeros: la regla es la misma para todos, en
+  local y en línea, y **el invitado muerde con la misma vara que el anfitrión**
+  para que no se le escape en su pantalla algo que el anfitrión sí le da.
+- **Morir no ha cambiado nada.** Para que un fantasma te mate sigue haciendo
+  falta compartir casilla, con la regla estricta del arcade de siempre. La
+  manga ancha es solo para comer: arreglar los mordiscos no puede costarte una
+  vida ni descuadrar un récord ya puesto.
+
 ## 2026-09-03 · ARO pasa a ser la última skin
 
 - **ARO se gana ahora al nivel 30 y PÍXEL al 20**, al revés que hasta hoy.
