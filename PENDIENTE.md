@@ -52,7 +52,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 
 | Commit | Qué |
 |---|---|
-| `1d5b9a1` | Los fantasmas azules ya no se atraviesan sin mordisco |
+| `2cd70d8` | Los fantasmas azules ya no se atraviesan sin mordisco |
 | `4721225` | ARO pasa a ser la última skin y PÍXEL la penúltima |
 | `11104fb` | Devuelve la rejilla a la skin PÍXEL, ahora dibujada a propósito |
 | `9a1a195` | La skin PÍXEL vuelve a parecer un Pac-Man |
