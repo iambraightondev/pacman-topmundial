@@ -179,6 +179,9 @@
     { id: 'hab', name: 'DESATADO', tag: '1 O 2 JUGADORES', color: '#ff66cc',
       icon: 'dientes',
       desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY' },
+    { id: 'caza', name: 'CACERÍA', tag: 'DE 1 A 4 FANTASMAS', color: '#ffb8ff',
+      icon: 'caza',
+      desc: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA QUE SE VUELVE PELIGROSO CADA POCO' },
     { id: 'lab', name: 'LABERINTOS', tag: 'OTROS TRAZADOS', color: '#ffb852',
       icon: 'maze',
       desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR' },
@@ -800,6 +803,10 @@
       } else if (mo.icon === 'dientes') {
         S.drawPacman(c, 0, 0, D.RIGHT, 2, mo.color, 'clasico');
         S.drawPacTeeth(c, 0, 0, D.RIGHT, 2, mo.color);
+      } else if (mo.icon === 'caza') {
+        // un fantasma pisándole los talones a Pac-Man: aquí el fantasma eres tú
+        S.drawGhost(c, -5.5, 0, D.RIGHT, 1, 'normal', 0, false);
+        S.drawPacman(c, 5.5, 0, D.RIGHT, 1, '#ffff00', 'clasico');
       } else if (mo.icon === 'estrella') {
         S.drawAchStar(c, 0, 0, 8, mo.color);
       } else if (mo.icon === 'maze') {
@@ -879,6 +886,10 @@
       if (mo.id === 'lab' || mo.id === 'hab') {
         return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS POR FORMATO';
       }
+      if (mo.id === 'caza') {
+        return CFG.CAZA.NIVELES + ' RONDAS · CADA CAZA SON ' + CFG.VS.CATCH_POINTS +
+          ' PUNTOS · NO ENTRA EN EL TOP MUNDIAL';
+      }
       if (mo.id === 'duo') return 'PUNTUACIÓN DE EQUIPO Y RÉCORD DE DÚO';
       return 'TU RÉCORD Y TU MAESTRÍA DE SIEMPRE';
     },
@@ -896,6 +907,7 @@
        * paso ahí están escritas las teclas, que ya no son las mismas en solo
        * que en dos. */
       if (id === 'hab') { this.showHabPrompt(); return; }
+      if (id === 'caza') { this.showCazaPrompt(); return; }
       this.hideAll();
       if (id === 'duo') {
         // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
@@ -1645,6 +1657,24 @@
       this.habRoomBox.appendChild(habNote);
       room.appendChild(this.habRoomBox);
 
+      /* Modo CACERÍA para toda la party: todos de fantasma y el Pac-Man de
+       * la máquina. También lo decide quien manda, y con él puesto el
+       * selector de fantasma de arriba se apaga (cada uno lleva el de su
+       * asiento). */
+      this.cazaRoomBox = document.createElement('div');
+      this.cazaRoomBtn = this.makeButton('CACERÍA: NO', function () {
+        self.togglePartyCaza();
+      });
+      this.cazaRoomBtn.classList.add('btn-preset');
+      this.cazaRoomBox.appendChild(this.cazaRoomBtn);
+      var cazaNote = document.createElement('div');
+      cazaNote.className = 'note';
+      cazaNote.textContent = 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA. SIN ' +
+        'SUPERPASTILLAS: SU PODER LLEGA SOLO CADA ' + CFG.CAZA.periodo(0) +
+        'S, CON AVISO. ' + CFG.CAZA.NIVELES + ' RONDAS';
+      this.cazaRoomBox.appendChild(cazaNote);
+      room.appendChild(this.cazaRoomBox);
+
       this.lobbyStatusEl = document.createElement('div');
       this.lobbyStatusEl.className = 'lobby-status';
       room.appendChild(this.lobbyStatusEl);
@@ -1751,8 +1781,8 @@
       };
       P.onerror = function (msg) { self.partyError(msg); };
       P.oninvite = function (from, code) { self.askInvite(from, code); };
-      P.onstart = function (order, idx, cfg, role, hab) {
-        self.startPartyGame(order, idx, cfg, role, hab);
+      P.onstart = function (order, idx, cfg, role, hab, caza) {
+        self.startPartyGame(order, idx, cfg, role, hab, caza);
       };
       P.listen();
     },
@@ -1793,6 +1823,13 @@
       var P = window.PM.Party;
       if (!P || !P.isLeader()) return;
       P.setHab(!P.habPick);      // se reparte a la sala y vuelve por onchange
+    },
+
+    /* Modo CACERÍA de la party: también del que manda */
+    togglePartyCaza: function () {
+      var P = window.PM.Party;
+      if (!P || !P.isLeader()) return;
+      P.setCaza(!P.cazaPick);
     },
 
     /* PAC-MAN VS.: pedir un fantasma (o volver a Pac-Man con -1) */
@@ -1843,29 +1880,38 @@
           (ms[i].s === window.PM.Net.sid ? (i === 0 ? ' · TÚ' : 'TÚ') : '');
         row.appendChild(tag);
 
-        // PAC-MAN VS.: se ve de un vistazo quién lleva fantasma y cuál
-        if (ms[i].g >= 0 && ms[i].g < 4) {
+        // PAC-MAN VS.: se ve de un vistazo quién lleva fantasma y cuál. En
+        // CACERÍA lleva cada uno el de su asiento, y se enseña ese.
+        var gv = P.cazaPick ? Math.min(i, 3) : ms[i].g;
+        if (gv >= 0 && gv < 4) {
           var gt = document.createElement('span');
           gt.className = 'party-tag';
-          gt.style.color = CFG.GHOSTS[ms[i].g].color;
-          gt.textContent = CFG.VS.NAMES[ms[i].g];
+          gt.style.color = CFG.GHOSTS[gv].color;
+          gt.textContent = CFG.VS.NAMES[gv];
           row.appendChild(gt);
         }
 
         this.partyList.appendChild(row);
       }
 
-      /* selector de fantasma: apagados los que ya lleva otro */
+      /* selector de fantasma: apagados los que ya lleva otro (y todos en
+       * CACERÍA, donde el reparto es fijo) */
       var mio = P.myGhost();
       for (var v = -1; v < 4; v++) {
         var vb = this.vsBtns[v];
         if (!vb) continue;
         var duenyo = (v >= 0) ? P.ghostOwner(v) : null;
-        vb.disabled = !!(duenyo && duenyo !== window.PM.Net.sid);
-        vb.classList.toggle('active', v === mio);
+        vb.disabled = !!P.cazaPick || !!(duenyo && duenyo !== window.PM.Net.sid);
+        vb.classList.toggle('active', !P.cazaPick && v === mio);
       }
 
       var lider = P.isLeader();
+      if (this.cazaRoomBox) {
+        this.cazaRoomBtn.disabled = !lider;
+        this.cazaRoomBtn.classList.toggle('active', !!P.cazaPick);
+        this.cazaRoomBtn.childNodes[0].nodeValue =
+          'CACERÍA: ' + (P.cazaPick ? 'SÍ' : 'NO');
+      }
       /* DESATADO: el interruptor es solo del líder, pero el estado lo ve
        * todo el mundo — entrar a una party y descubrir los poderes al empezar
        * la partida sería una encerrona. */
@@ -1881,7 +1927,7 @@
       this.inviteBtn.disabled = !P.active();
       this.setLobbyStatus(
         P.connecting() ? 'CONECTANDO...'
-        : !P.anyPac() ? 'ALGUIEN TIENE QUE LLEVAR UN PAC-MAN'
+        : (!P.anyPac() && !P.cazaPick) ? 'ALGUIEN TIENE QUE LLEVAR UN PAC-MAN'
         : lider ? (P.count() < 2 ? 'ESPERANDO A MÁS JUGADORES...'
                                  : 'CUANDO QUIERAS, EMPEZAD')
                 : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
@@ -1963,7 +2009,7 @@
       });
     },
 
-    startPartyGame: function (order, idx, cfg, role, hab) {
+    startPartyGame: function (order, idx, cfg, role, hab, caza) {
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
@@ -1978,7 +2024,8 @@
         players: order.length, net: role, localIdx: idx,
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
         colors: colors, names: names, skins: skins, ghosts: ghosts,
-        hab: !!hab            // lo enciende quien manda, y vale para todos
+        hab: !!hab,           // lo enciende quien manda, y vale para todos
+        caza: !!caza          // ídem: todos de fantasma contra la máquina
       });
     },
 
@@ -3458,7 +3505,8 @@
           players: n, net: 'spec', localIdx: -1,
           cfg: this.sanitizeNetCfg(d.cfg),
           colors: colors, names: names, skins: skins, ghosts: ghosts,
-          hab: !!(d && d.hab)   // el mirón tiene que ver dientes y chispas
+          hab: !!(d && d.hab),  // el mirón tiene que ver dientes y chispas
+          caza: !!(d && d.caza) // y el Pac-Man de la máquina, con su reloj
         });
       } else if (name === 'full') {
         if (d && d.to === window.PM.Net.sid) this.specFail('LA PARTIDA NO ADMITE MIRONES');
@@ -4623,10 +4671,14 @@
        * que más ha cazado, pero abajo salen todos con lo suyo: cada uno
        * tiene su marcador, así que el final tiene que decir quién hizo qué. */
       var mejor = V.topHunter(g);
+      /* CACERÍA: el Pac-Man es la máquina. Si se quedó sin vidas, gana quien
+       * más veces lo cazó; si despejó todas las rondas (o la partida acabó de
+       * otra forma), gana él. */
+      var caza = !!g.caza;
       var lines = [
         { text: gana === 'ghost'
             ? ('¡GANA ' + (mejor ? mejor.name : V.ghostName(g)) + '!')
-            : '¡GANAN LOS PAC-MAN!',
+            : (caza ? '¡GANA LA MÁQUINA!' : '¡GANAN LOS PAC-MAN!'),
           big: true },
         'PAC-MAN ' + (g.score || 0)
       ];
@@ -4637,7 +4689,14 @@
         lines.push(c.name + ' ' + c.score + '  ·  ' +
           (c.catches === 1 ? '1 PAC-MAN CAZADO' : (c.catches + ' PAC-MAN CAZADOS')));
       }
-      lines.push('NIVEL ' + g.level + ' · PAC-MAN VS. NO CUENTA PARA EL TOP MUNDIAL');
+      if (caza) {
+        // rondas despejadas: las de antes de este nivel, y este si lo acabó
+        var rondas = window.PM.Caza.ronda(g) + (g.dotsLeft <= 0 ? 1 : 0);
+        lines.push('PAC-MAN DESPEJÓ ' + Math.min(rondas, CFG.CAZA.NIVELES) + ' DE ' +
+          CFG.CAZA.NIVELES + ' RONDAS · CACERÍA NO CUENTA PARA EL TOP MUNDIAL');
+      } else {
+        lines.push('NIVEL ' + g.level + ' · PAC-MAN VS. NO CUENTA PARA EL TOP MUNDIAL');
+      }
       return lines;
     },
 
@@ -4679,7 +4738,7 @@
       var versus = !!(g.isVersus && g.isVersus() && window.PM.Versus);
       var lines = versus ? this.versusLines() : this.classicOverLines();
       this.showPrompt({
-        title: versus ? 'FIN DE LA RONDA' : 'GAME OVER',
+        title: g.caza ? 'FIN DE LA CACERÍA' : versus ? 'FIN DE LA RONDA' : 'GAME OVER',
         color: '#ff0000',
         solid: true,
         lines: lines,
@@ -5219,6 +5278,48 @@
         ]
       });
       this.promptTag = 'hab';
+    },
+
+    /* CACERÍA: qué es y con cuántos, antes de empezar. Solo o dos en el
+     * mismo teclado desde aquí; en party lo enciende quien manda. */
+    showCazaPrompt: function () {
+      var self = this;
+      var Z = CFG.CAZA;
+
+      function arranca(jugadores) {
+        self.resumeAudio();
+        self.hidePrompt();
+        self.hideAll();
+        window.PM.Game.newGame({ players: jugadores, caza: true });
+      }
+
+      this.showPrompt({
+        title: 'CACERÍA',
+        color: '#ffb8ff',
+        lines: [
+          'AQUÍ EL FANTASMA ERES TÚ. EL PAC-MAN LO LLEVA LA MÁQUINA: COME, HUYE Y SE DEFIENDE',
+          'NO HAY SUPERPASTILLAS. SU PODER LLEGA SOLO CADA ' + Z.periodo(0) +
+            'S Y DURA ' + Z.duracion(0) + 'S; SE AVISA ' + Z.AVISO +
+            'S ANTES CON UN ARO Y UNA CUENTA ATRÁS: SUELTA LA PRESA Y APÁRTATE',
+          'CADA VEZ QUE LO CAZAS SON ' + CFG.VS.CATCH_POINTS +
+            ' PUNTOS. SI SE QUEDA SIN VIDAS, GANÁIS; SI DESPEJA ' + Z.NIVELES +
+            ' RONDAS, GANA ÉL. CADA RONDA EL PODER DURA MÁS Y LLEGA ANTES',
+          'SOLO: LLEVAS A BLINKY (FLECHAS O WASD) Y LOS OTROS TRES LOS LLEVA LA MÁQUINA',
+          'DOS JUGADORES: J1 BLINKY CON FLECHAS · J2 PINKY CON WASD',
+          'UN FANTASMA NO DA MARCHA ATRÁS: CIÉRRALE EL PASILLO ENTRE VARIOS, QUE CORRIENDO DETRÁS NO SE PILLA',
+          'NO ENTRA EN EL TOP MUNDIAL NI HACE RÉCORD, PERO SUMA EXPERIENCIA Y TIENE SUS LOGROS',
+          'EN PARTY (HASTA 4): LO ENCIENDE QUIEN MANDA, EN EL PANEL DE ONLINE'
+        ],
+        buttons: [
+          { label: 'JUGAR SOLO', primary: true, keys: ['Enter'], hint: 'ENTER',
+            onClick: function () { arranca(1); } },
+          { label: 'DOS JUGADORES', keys: ['2'], hint: '2',
+            onClick: function () { arranca(2); } },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+      this.promptTag = 'caza';
     },
 
     /* La tarjeta de ONLINE avisa de si ya estamos en una party y de cuántos

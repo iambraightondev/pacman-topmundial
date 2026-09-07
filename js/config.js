@@ -262,6 +262,79 @@
     [12, 23], [15, 23]     //              y el cruce de abajo      (arcade: fila 26)
   ];
 
+  /* ---------- CACERÍA: todos de fantasma contra un Pac-Man de máquina ----------
+   * Es PAC-MAN VS. dado la vuelta: de uno a cuatro jugadores llevan cada uno
+   * un fantasma y el Pac-Man lo lleva la máquina (js/caceria.js). En el
+   * laberinto NO hay superpastillas: el poder de Pac-Man llega solo, cada
+   * cierto tiempo, y se avisa unos segundos antes para que dé tiempo a
+   * apartarse. Una partida son NIVELES rondas: si Pac-Man las despeja
+   * todas, gana él; si se queda sin vidas antes, ganan los fantasmas.
+   *
+   * Los tiempos, y por qué estos:
+   *  - PERIODO son los segundos SIN poder entre uno y el siguiente (el
+   *    reloj se para mientras dura el poder). A 75% un fantasma recorre
+   *    unas 7 casillas por segundo, así que 3 s de aviso son unas 20
+   *    casillas: de sobra para salir del pasillo, no para cruzar el mapa.
+   *  - DURACION empieza en los 6 s de la superpastilla del nivel 1 del
+   *    arcade, que es lo que todo el mundo tiene en la mano. En 6 s Pac-Man
+   *    al 90% recorre unas 50 casillas y un fantasma azul al 50% unas 28,
+   *    así que le da para pillar a uno que estuviera a menos de veinte, y
+   *    con suerte a dos. Cada ronda dura un segundo más y llega dos antes:
+   *    en la tercera Pac-Man ya corre al 90% de base y hay que sudar.
+   *  - Los valores son POR RONDA (nivel - nivel de inicio), no por nivel
+   *    absoluto: una partida siempre escala 1 → 2 → 3, empiece donde empiece.
+   *  - La duración se multiplica por el ajuste de superpastilla del
+   *    anfitrión (frightMult), con un suelo de 2 s: sin poder ninguno la
+   *    partida no tiene nada que temer. */
+  CFG.CAZA = {
+    NIVELES: 3,                 // rondas por partida
+    PERIODO: [20, 18, 16],      // s sin poder entre uno y otro, por ronda
+    DURACION: [6, 7, 8],        // s de poder, por ronda
+    AVISO: 3,                   // s de aviso antes de que llegue
+    MIN_DURACION: 2,            // s como poco, pase lo que pase con el ajuste
+    /* La IA de Pac-Man. Una casilla es "segura" si Pac-Man llega a ella
+     * MARGEN casillas antes que el fantasma más cercano; un fantasma azul
+     * deja de contar como presa cuando el poder acaba antes de que Pac-Man
+     * pueda llegar hasta él con AZUL_MARGEN ticks de sobra. */
+    MARGEN: 1,
+    AZUL_MARGEN: 30,
+    /* Con menos casillas seguras que estas, Pac-Man deja de ir a por puntos y
+     * busca espacio: lo están cerrando. */
+    MIN_SEGURAS: 12,
+    /* Ticks que tarda Pac-Man en cruzar una casilla, redondeado para arriba
+     * (8 px a 1.14 px/tick son 7): con esto se mide si le da tiempo. */
+    TICKS_CASILLA: 7,
+    /* Un fantasma que está en la casa o saliendo se cuenta como si ya
+     * estuviera sobre la puerta, pero a estas casillas de distancia: así
+     * Pac-Man no se pasea por encima de la casa como si no hubiera nadie. */
+    CASA_EXTRA: 3,
+    /* Velocidad del Pac-Man de máquina sobre la de la tabla (y sobre el
+     * ajuste del anfitrión). Es EL mando del equilibrio, y por qué 1.1:
+     * al 80% del nivel 1, comiendo puntos (que frenan un tick cada uno),
+     * Pac-Man va de hecho al 71%, por debajo del 75% de los fantasmas; y sin
+     * superpastillas que lo salven, cuatro fantasmas fuera desde el primer
+     * segundo lo acaban en un minuto. Medido contra los cuatro fantasmas de
+     * la máquina (js/caceria.js, simulación en Node): a x1.0 no pasa de la
+     * primera ronda; a x1.1 aguanta unos tres minutos y media una ronda y
+     * pico; a x1.2 gana una de cada tres. Con personas al mando, que
+     * tienden trampas peor que la máquina pero se coordinan mejor, x1.1 es
+     * el punto de partida; subirlo o bajarlo aquí cambia la dificultad
+     * entera del modo. */
+    VEL_PAC: 1.1,
+    NOMBRE_PAC: 'PAC-MAN',
+    COLOR_PAC: '#ffff00'
+  };
+  /* Periodo y duración del poder para la ronda r (0 = la primera); a partir
+   * de la última fila de la tabla se queda ahí. */
+  CFG.CAZA.periodo = function (r) {
+    var t = CFG.CAZA.PERIODO;
+    return t[Math.max(0, Math.min(t.length - 1, r | 0))];
+  };
+  CFG.CAZA.duracion = function (r) {
+    var t = CFG.CAZA.DURACION;
+    return t[Math.max(0, Math.min(t.length - 1, r | 0))];
+  };
+
   /* ---------- PAC-MAN VS.: un jugador lleva un fantasma ----------
    * El fantasma humano obedece a las teclas y no a la IA, pero juega con las
    * mismas reglas que la máquina (paredes, zonas sin subir, velocidades,
@@ -479,7 +552,8 @@
     daily:   { name: 'DAILY',        color: '#00ffff' },
     lab:     { name: 'LABERINTOS',   color: '#ffb852' },
     vs:      { name: 'PAC-MAN VS.',  color: '#ff0000' },
-    hab:     { name: 'DESATADO',     color: '#ff66cc' }
+    hab:     { name: 'DESATADO',     color: '#ff66cc' },
+    caza:    { name: 'CACERÍA',      color: '#ffb8ff' }
   };
   /* Nombre del modo de un logro, para la interfaz */
   CFG.achModoName = function (a) {
@@ -571,7 +645,15 @@
     { id: 'hb_parpadeo', name: 'PARPADEO',     color: '#ff66cc', modo: 'hab',
       desc: 'ATRAVIESA 50 MUROS CON EL FLASH (E)', stat: 'muros', goal: 50 },
     { id: 'hb_sobrenatural', name: 'SOBRENATURAL', color: '#ff66cc', modo: 'hab',
-      desc: '25.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 25000 }
+      desc: '25.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 25000 },
+
+    /* ---- CACERÍA: todos de fantasma contra la máquina ---- */
+    { id: 'cz_jauria',   name: 'JAURÍA',       color: '#ffb8ff', modo: 'caza',
+      desc: 'CAZA 10 VECES AL PAC-MAN DE LA MÁQUINA', stat: 'cazas', goal: 10 },
+    { id: 'cz_letal',    name: 'LETAL',        color: '#ffb8ff', modo: 'caza',
+      desc: 'CÁZALO 3 VECES EN UNA MISMA CACERÍA', stat: 'puntosMax', goal: 3000 },
+    { id: 'cz_manada',   name: 'MANADA',       color: '#ffb8ff', modo: 'caza',
+      desc: 'JUEGA 10 CACERÍAS', stat: 'partidas', goal: 10 }
   ];
   CFG.ACH_NOTICE_TICKS = 220;   // aviso en partida (~3,7 s)
 
@@ -904,7 +986,7 @@
    * La lista de tarjetas (con su nombre, su color y su icono) sigue en
    * `MODOS`, arriba de js/ui.js: si se añade un modo hay que tocar los dos
    * sitios, y una prueba vigila que no se separen. */
-  CFG.MODE_IDS = ['clasico', 'duo', 'hab', 'lab', 'online'];
+  CFG.MODE_IDS = ['clasico', 'duo', 'hab', 'caza', 'lab', 'online'];
   CFG.DEFAULT_SETTINGS = {
     difficultyPreset: 'normal',   // 'facil' | 'normal' | 'dificil' | 'custom'
     /* Modo elegido en la portada. Se guarda porque quien juega casi siempre a
@@ -1132,8 +1214,9 @@
     /* Versión del protocolo (debe coincidir en ambos lados). Sube cuando
      * cambia la forma de lo que viaja: la 6 pasó el marcador de PAC-MAN VS.
      * de un número suelto a uno por cazador; la 7 trae el modo DESATADO
-     * (el 'hab' del saludo y los eventos de poder). */
-    PROTO: 7,
+     * (el 'hab' del saludo y los eventos de poder); la 8, CACERÍA (el
+     * 'caza' de la lista y del arranque, y el reloj del poder en la foto). */
+    PROTO: 8,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

@@ -14,7 +14,7 @@
  *   proster {v,lider,m}  el líder reparte la lista de miembros
  *   pbye    {lider}      alguien se va (o el líder disuelve)
  *   pfull   {to}         no caben más
- *   pstart  {v,cfg,ord,hab}  el líder arranca la partida
+ *   pstart  {v,cfg,ord,hab,caza}  el líder arranca la partida
  *
  * Aparte, cada jugador escucha un canal propio (usuario:<nick>)
  * por donde le llegan invitaciones de sus amigos.
@@ -55,6 +55,10 @@
      * se pregunta uno por uno a propósito: media party con poderes y media
      * sin ellos no es una partida, son dos. */
     habPick: false,
+    /* Modo CACERÍA: igual, lo decide el líder. Con él puesto TODOS llevan
+     * fantasma (el de su asiento) y el Pac-Man lo lleva la máquina, así que
+     * el reparto de fantasmas de PAC-MAN VS. no pinta nada. */
+    cazaPick: false,
 
     /* la UI se engancha aquí */
     onchange: null,  // la lista o el estado han cambiado
@@ -72,8 +76,10 @@
     count: function () { return this.st ? this.st.members.length : 0; },
     full: function () { return this.count() >= CFG.MAX_PLAYERS; },
     canStart: function () {
+      // en CACERÍA nadie lleva Pac-Man: lo lleva la máquina
       return this.active() && this.isLeader() && this.count() >= 2 &&
-        this.anyPac() && !(window.PM.Game && window.PM.Game.inGame());
+        (this.anyPac() || this.cazaPick) &&
+        !(window.PM.Game && window.PM.Game.inGame());
     },
 
     me: function () {
@@ -152,6 +158,16 @@
     setHab: function (on) {
       if (!this.st || !this.st.leader) return;
       this.habPick = !!on;
+      if (this.habPick) this.cazaPick = false;   // o una cosa o la otra
+      this.sendRoster();
+      this.changed();
+    },
+
+    /* Modo CACERÍA de la party. También del líder, y excluye a DESATADO. */
+    setCaza: function (on) {
+      if (!this.st || !this.st.leader) return;
+      this.cazaPick = !!on;
+      if (this.cazaPick) this.habPick = false;
       this.sendRoster();
       this.changed();
     },
@@ -233,6 +249,7 @@
       this.order = null;
       // el modo era de ESA party: la siguiente empieza como empieza todo
       this.habPick = false;
+      this.cazaPick = false;
       window.PM.Net.leave();
     },
 
@@ -289,7 +306,8 @@
         m: this.st.members,
         // el modo de la partida viaja con la lista: nadie debería enterarse
         // de que se juega con poderes al arrancar la partida
-        hab: !!this.habPick
+        hab: !!this.habPick,
+        caza: !!this.cazaPick
       });
     },
 
@@ -347,6 +365,7 @@
       this.st.members = d.m;
       this.st.leaderSid = d.lider;
       this.habPick = !!d.hab;          // lo decide el líder; aquí solo se mira
+      this.cazaPick = !!d.caza;
       this.changed();
     },
 
@@ -387,10 +406,10 @@
       if (!this.canStart()) return;
       var order = this.gameOrder();
       var cfg = window.PM.UI ? window.PM.UI.netCfgSubset() : null;
-      var hab = !!this.habPick;
+      var hab = !!this.habPick, caza = !!this.cazaPick;
       window.PM.Net.send('pstart',
-        { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab });
-      this.begin({ ord: order, cfg: cfg, hab: hab }, true);
+        { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab, caza: caza });
+      this.begin({ ord: order, cfg: cfg, hab: hab, caza: caza }, true);
     },
 
     begin: function (d, leader) {
@@ -412,7 +431,7 @@
       this.stopBeat();
       if (this.onstart) {
         this.onstart(order, idx, leader ? null : d.cfg,
-          leader ? 'host' : 'guest', !!d.hab);
+          leader ? 'host' : 'guest', !!d.hab, !!d.caza);
       }
     },
 

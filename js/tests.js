@@ -5802,6 +5802,285 @@
   });
 
   // ---------------------------------------------------------------
+  // CACERÍA: todos de fantasma contra un Pac-Man de máquina
+  // ---------------------------------------------------------------
+  var Z = window.PM.Caza;
+
+  /* Partida de CACERÍA con `jugadores` cazadores (y la máquina de Pac-Man) */
+  function caceria(jugadores, net, localIdx) {
+    window.PM.settings.muted = true;
+    G.newGame({
+      players: jugadores, net: net || null, caza: true,
+      localIdx: (net === 'guest') ? (localIdx || 1) : 0,
+      names: ['UNO', 'DOS', 'TRES', 'CUATRO'].slice(0, jugadores)
+    });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    return G;
+  }
+
+  /* El bot, a salvo de los fantasmas (para probar lo demás sin que muera) */
+  function botInmortal() {
+    var p = Z.bot(G);
+    p.safeTicks = 999999;
+    return p;
+  }
+
+  /* Deja al bot en el cruce de la fila 5 mirando hacia `dir` */
+  function botEnElCruce(dir) {
+    var p = Z.bot(G);
+    p.x = 6 * 8 + 4;
+    p.y = 5 * 8 + 4;
+    p.dir = dir;
+    p.nextDir = dir;
+    return p;
+  }
+
+  test('en CACERÍA todos llevan fantasma y el Pac-Man es de la máquina', function () {
+    caceria(2);
+    ok(G.caza, 'la partida es de CACERÍA');
+    eq(G.pacs.length, 3, 'dos cazadores y la máquina');
+    eq(G.playerCount, 2, 'pero la gente son dos');
+    ok(G.pacs[2].bot, 'el último asiento es la máquina');
+    eq(G.vsGhostOf(0), 0, 'el J1 lleva a Blinky');
+    eq(G.vsGhostOf(1), 1, 'el J2 a Pinky');
+    eq(G.vsGhostOf(2), -1, 'la máquina no lleva fantasma');
+    ok(G.pacs[0].out && G.pacs[1].out, 'los cazadores no tienen Pac-Man');
+    ok(!G.pacs[2].out, 'la máquina sí');
+    ok(G.isVersus(), 'es una partida con fantasmas humanos');
+    ok(G.ghosts[0].human && G.ghosts[1].human, 'sus fantasmas son suyos');
+    ok(!G.ghosts[2].human && !G.ghosts[3].human, 'los otros dos, de la máquina');
+    eq(G.nameFor(2), CFG.CAZA.NOMBRE_PAC, 'y se llama PAC-MAN');
+    eq(G.colorFor(2), CFG.CAZA.COLOR_PAC, 'de amarillo');
+    eq(G.livesMode, 'shared', 'las vidas son de Pac-Man: fondo común');
+    ok(G.isLocalAuth(2), 'y lo simula esta máquina');
+    eq(G.achTags()[1], 'caza', 'con sus propios logros');
+    G.toMenu();
+    ok(!G.caza, 'al salir se apaga');
+  });
+
+  test('CACERÍA con uno: llevas a Blinky y los otros tres son de la máquina', function () {
+    caceria(1);
+    eq(G.pacs.length, 2);
+    eq(G.vsGhostOf(0), 0);
+    ok(G.ghosts[0].human && !G.ghosts[1].human);
+    G.setPacDir(0, CFG.DIR.DOWN);
+    ok(G.ghosts[0].taken, 'la primera tecla lo hace tuyo');
+    G.toMenu();
+  });
+
+  test('sin superpastillas: las cuatro son puntos normales y siguen siendo 244', function () {
+    caceria(1);
+    var o = 0, n = 0;
+    for (var r = 0; r < CFG.ROWS; r++) {
+      for (var c = 0; c < CFG.COLS; c++) {
+        if (G.pellets[r][c] === 'o') o++;
+        if (G.pellets[r][c]) n++;
+      }
+    }
+    eq(o, 0, 'ni una superpastilla');
+    eq(n, 244, 'pero el nivel sigue teniendo lo suyo');
+    eq(G.dotsLeft, 244);
+    G.toMenu();
+    /* y fuera del modo vuelven */
+    partida(1);
+    eq(G.pellets[3][1], 'o', 'en el clásico la esquina es superpastilla');
+    G.toMenu();
+  });
+
+  test('el poder llega solo, pasado el periodo, y el reloj vuelve a empezar', function () {
+    caceria(1);
+    botInmortal();
+    var periodo = CFG.CAZA.periodo(0) * 60;
+    eq(G.cazaTicks, periodo, 'el reloj arranca con el periodo entero');
+    ticks(periodo - 1);
+    eq(G.frightTicks, 0, 'un tick antes, nada');
+    eq(G.cazaTicks, 1);
+    ticks(1);
+    ok(G.frightTicks > 0, 'y al llegar a cero, poder');
+    eq(G.frightTicks, Math.round(CFG.CAZA.duracion(0) * 60), 'lo que dice la tabla');
+    ok(G.ghosts[0].frightened, 'Blinky se pone azul');
+    eq(G.cazaTicks, periodo, 'el reloj vuelve a empezar');
+    /* mientras dura el poder, el reloj no corre */
+    var n = 0;
+    while (G.frightTicks > 0 && n++ < 2000) G.step();
+    ok(n < 2000, 'el poder se acaba');
+    ok(G.cazaTicks >= periodo - 2 && G.cazaTicks <= periodo,
+       'y el reloj no se ha movido entretanto: ' + G.cazaTicks);
+    G.toMenu();
+  });
+
+  test('el poder escala por ronda, no por nivel absoluto', function () {
+    caceria(1);
+    eq(Z.ronda(G), 0, 'primera ronda');
+    G.level = G.startLevel + 1;
+    eq(Z.ronda(G), 1);
+    eq(Z.duracionSegs(G), CFG.CAZA.duracion(1) * G.frightMult);
+    G.level = G.startLevel + 50;
+    eq(Z.duracionSegs(G), CFG.CAZA.duracion(CFG.CAZA.DURACION.length - 1),
+       'a partir de la tabla se queda en lo último');
+    /* con el ajuste a cero sigue habiendo poder: sin él no hay nada que temer */
+    G.frightMult = 0;
+    eq(Z.duracionSegs(G), CFG.CAZA.MIN_DURACION);
+    G.toMenu();
+  });
+
+  test('sin poder Pac-Man huye del fantasma; con poder va a por él', function () {
+    caceria(1);
+    var p = botEnElCruce(CFG.DIR.RIGHT);
+    var b = G.ghosts[0];
+    b.mode = 'normal'; b.frightened = false;
+    b.x = 9 * 8 + 4; b.y = 5 * 8 + 4; b.dir = CFG.DIR.LEFT;
+    for (var i = 1; i < 4; i++) G.ghosts[i].mode = 'house';
+    G.frightTicks = 0;
+    var d = Z.decidir(G, p);
+    ok(d >= 0, 'decide algo');
+    ok(d !== CFG.DIR.RIGHT, 'y no es hacia el fantasma que tiene delante');
+    /* ahora el fantasma es azul y hay tiempo de sobra: a por él */
+    b.frightened = true;
+    G.frightTicks = 6 * 60;
+    eq(Z.decidir(G, p), CFG.DIR.RIGHT, 'con poder, derecho a por él');
+    /* con el poder a punto de acabarse, ni lo intenta */
+    G.frightTicks = 10;
+    ok(Z.decidir(G, p) !== CFG.DIR.RIGHT, 'sin tiempo, no se arriesga');
+    G.toMenu();
+  });
+
+  test('Pac-Man de máquina se mueve y come solo', function () {
+    caceria(1);
+    var p = botInmortal();
+    var x0 = p.x, y0 = p.y;
+    ticks(120);
+    ok(p.x !== x0 || p.y !== y0, 'se ha movido');
+    ok(G.dotsEaten > 0, 'y ha comido: ' + G.dotsEaten);
+    ok(G.score > 0, 'que son puntos de Pac-Man');
+    G.toMenu();
+  });
+
+  test('lo que come la máquina no es logro de nadie', function () {
+    caceria(1);
+    var antes = G.score;
+    G.frightTicks = 360;
+    G.ghosts[0].frightened = true;
+    G.eatGhost(G.ghosts[0], Z.botIdx(G));
+    eq(G.runGhosts, 0, 'el fantasma comido no se me apunta a mí');
+    eq(G.score, antes + CFG.GHOST_CHAIN[0], 'pero sí puntúa para Pac-Man');
+    eq(G.ghosts[0].mode, 'eyes', 'y el fantasma vuelve a casa');
+    G.toMenu();
+  });
+
+  test('cazar a Pac-Man paga al dueño del fantasma, y sin vidas ganan ellos', function () {
+    caceria(2);
+    G.lives = 1;
+    var bot = Z.botIdx(G);
+    G.startDeath(bot, 1);                       // lo pilla Pinky, del J2
+    eq(G.vsScoreOf(1), CFG.VS.CATCH_POINTS, 'cobra el J2');
+    eq(G.vsScoreOf(0), 0, 'el J1 no');
+    eq(G.state, 'DYING', 'era el único Pac-Man: parón clásico');
+    ticks(CFG.DEATH_FREEZE_TICKS + CFG.DEATH_ANIM_TICKS + 5);
+    eq(G.state, 'GAME_OVER', 'sin vidas, se acabó');
+    eq(V.winner(G), 'ghost', 'ganan los fantasmas');
+    eq(V.topHunter(G).idx, 1, 'y el titular es del que cazó');
+    G.toMenu();
+  });
+
+  test('despejar un nivel pasa de ronda; despejar la última acaba la partida', function () {
+    caceria(1);
+    botInmortal();
+    var inicio = G.startLevel;
+    G.dotsLeft = 0;
+    ticks(1);
+    eq(G.state, 'LEVEL_DONE');
+    ticks(CFG.LEVEL_FREEZE_TICKS + CFG.LEVEL_FLASH_TICKS + 2);
+    eq(G.state, 'READY', 'a la ronda siguiente');
+    eq(G.level, inicio + 1);
+    eq(G.cazaTicks, CFG.CAZA.periodo(1) * 60, 'con el reloj de la segunda ronda');
+    /* la última ronda */
+    G.state = 'PLAYING';
+    G.level = inicio + CFG.CAZA.NIVELES - 1;
+    G.dotsLeft = 0;
+    ticks(1);
+    eq(G.state, 'LEVEL_DONE');
+    ticks(CFG.LEVEL_FREEZE_TICKS + CFG.LEVEL_FLASH_TICKS + 2);
+    eq(G.state, 'GAME_OVER', 'despejada la última, se acabó');
+    eq(V.winner(G), 'pacs', 'y gana la máquina');
+    G.toMenu();
+  });
+
+  test('la instantánea lleva el reloj del poder y el invitado solo lo sigue', function () {
+    caceria(2, 'host');
+    G.cazaTicks = 123;
+    var snap = G.buildSnapshot(false);
+    eq(snap.cz, 123, 'viaja en la foto');
+    eq(snap.ps.length, 3, 'con la posición de la máquina como la de cualquiera');
+    G.toMenu();
+    caceria(2, 'guest', 1);
+    G.applySnapshot(snap);
+    eq(G.cazaTicks, 123, 'el invitado lo coge');
+    ok(!G.isLocalAuth(2), 'y no manda sobre la máquina');
+    G.cazaTicks = 1;
+    G.step();
+    G.step();
+    eq(G.frightTicks, 0, 'el invitado nunca dispara el poder por su cuenta');
+    eq(G.cazaTicks, 0, 'se queda esperando la foto');
+    G.toMenu();
+  });
+
+  test('el mirón recibe el aviso de CACERÍA y monta su propia máquina', function () {
+    caceria(3, 'host');
+    var v = G.specView('x');
+    eq(v.n, 3, 'los asientos de la gente');
+    ok(v.caza, 'y el aviso del modo');
+    eq(v.nm.length, 3);
+    G.toMenu();
+  });
+
+  test('un cazador que se va deja su fantasma a la máquina', function () {
+    caceria(3, 'host');
+    V.setWish(G, 1, CFG.DIR.UP);                // el rumbo del J2 llega por red
+    ok(G.ghosts[1].human && G.ghosts[1].taken);
+    G.dropPlayer(1);
+    ok(!G.ghosts[1].human, 'el fantasma vuelve a la máquina');
+    eq(G.state, 'PLAYING', 'y la partida sigue');
+    G.toMenu();
+  });
+
+  test('la party puede empezar sin Pac-Man si es CACERÍA', function () {
+    G.toMenu();
+    var P = party(['ANA', 'BENI']);
+    try {
+      P.st.members[0].g = 0;
+      P.st.members[1].g = 1;
+      ok(!P.anyPac(), 'nadie lleva Pac-Man');
+      ok(!P.canStart(), 'en VS. eso no arranca');
+      P.cazaPick = true;
+      ok(P.canStart(), 'en CACERÍA sí: lo lleva la máquina');
+      P.habPick = true;              // DESATADO apaga CACERÍA
+      P.setHab(true);
+      ok(!P.cazaPick, 'o una cosa o la otra');
+      P.setCaza(true);
+      ok(!P.habPick && P.cazaPick);
+    } finally { P.st = null; P.order = null; P.cazaPick = false; P.habPick = false; }
+  });
+
+  test('CACERÍA no se graba como repetición local', function () {
+    var R = window.PM.Replay;
+    caceria(1);
+    ok(!R.enCurso(), 'no hay grabación');
+    G.toMenu();
+    partida(1);
+    ok(!!R.enCurso(), 'una clásica sí se graba');
+    G.toMenu();
+  });
+
+  test('CACERÍA excluye a DESATADO', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1, caza: true, hab: true });
+    ok(G.hab && !G.caza, 'con los poderes puestos no hay máquina');
+    G.toMenu();
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

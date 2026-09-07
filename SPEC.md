@@ -1737,6 +1737,84 @@ one Pac-Man and at least one human ghost) and forbids it everywhere else.
 The proof that any of this works is not the score matching — it is the human
 ghost's **final position** matching, which is what the test asserts.
 
+## Modo CACERÍA (everyone is a ghost, the machine is Pac-Man)
+
+**`PM.Caza` (`js/caceria.js`), `CFG.CAZA`.** PAC-MAN VS. turned around: one
+to four players each drive a ghost and Pac-Man is driven by the machine. It
+reuses VS. entirely (human ghosts, `vsGhosts`, hunter scores, `winner()`,
+marks, the `gdir` intent on the wire) and adds three things.
+
+**The bot is a seat.** `Game.newGame({caza: true})` appends one extra
+`Pacman` to `pacs` (index `playerCount`, `bot = true`) and hands
+`Versus.setup()` the fixed assignment `Caza.reparto(n)` = seat *i* drives
+ghost *i* (Blinky first, because he starts outside). Being a seat is what
+keeps game.js untouched: the bot eats, dies, respawns, spends the shared life
+pool, is chased by `pacContextFor`, travels in `ps`/`out`/`pd` of the snapshot
+and pays `Versus.onCatch()` like any Pac-Man. What differs is spelled out per
+call site: `isLocalAuth()` gives it to whoever simulates (host/local),
+`rawName/colorFor/skinFor` return `PAC-MAN`, yellow, classic; the achievement
+bumps for ghosts eaten, fruit, `limpios` and `nivelMax` skip it (`achTags()`
+tags the game `caza`, with its own three achievements); `netMaintain`'s
+per-seat watchdog and `specView` ignore it (the spectator gets `n =
+playerCount` plus `caza: true` and builds its own bot). `livesMode` is forced
+to `'shared'`, the bot runs at `CFG.CAZA.VEL_PAC` (×1.1) on top of the table
+and the host's multiplier, and DESATADO excludes the mode (`caza` is dropped
+when `hab` is on).
+
+**The power.** `loadPellets()` serves the four `o` as `.` (still 244).
+`Game.cazaTicks` counts down while PLAYING and no fright is active
+(`Caza.reloj`): at zero the host calls `triggerFright(Caza.duracionSegs())`
+and reloads the counter. Period and duration are **per round** (`level −
+startLevel`): 20/18/16 s between powers, 6/7/8 s of power, `frightMult`
+applied with a 2 s floor. The last `AVISO` = 3 s ring the bot with a pulsing
+halo and beep once per second (`AudioSys.playPowerWarn`); the HUD's HIGH
+SCORE slot shows `PODER EN Ns` / `¡PODER! Ns` (`Caza.hud`). The counter
+travels in the snapshot as `cz` and the guest runs it locally between
+snapshots for a smooth countdown; it never triggers the fright itself.
+`triggerFright` with fixed seconds now falls back to 5 flashes when the
+level's table has none (also fixes GRITO past level 17).
+
+**Rounds.** `CFG.CAZA.NIVELES` = 3. Clearing the last one goes straight from
+LEVEL_DONE to GAME_OVER (`Caza.partidaGanada`) with `winner() === 'pacs'`;
+losing every life ends it the usual way with `'ghost'` and the top hunter in
+the headline. `UI.versusLines()` says how many rounds Pac-Man cleared.
+
+**How the bot thinks** (`Caza.decidir`, once per tile at the tile centre,
+only among legal exits, fully deterministic — ties go straight-first, then
+UP/LEFT/DOWN/RIGHT, reverse last):
+
+1. *Threat map*: BFS from every ghost that can kill (normal, or frightened
+   with < `AZUL_MARGEN` ticks left; house/leaving ghosts count from the door
+   with `CASA_EXTRA`/1 extra tiles; eyes ignored). A ghost's first step
+   excludes the tile behind it — ghosts do not reverse.
+2. *Safe set*: BFS from the bot that only enters tiles it reaches
+   `MARGEN` tiles before any threat. Everything below runs on that set.
+3. With power: nearest frightened ghost reachable safely before the power
+   ends (`TICKS_CASILLA` per tile + `AZUL_MARGEN`).
+4. Fruit if active and ≤ 12 safe tiles away; else the nearest dot — but only
+   through exits whose safe subtree holds at least `min(MIN_SEGURAS, max)`
+   tiles. That rule is what stopped it from bouncing two tiles back and
+   forth between two closing ghosts, which was how it died most of the time.
+5. Fewer than `MIN_SEGURAS` safe tiles at all: the exit with the most safe
+   tiles behind it. Nothing safe: the exit farthest from the nearest ghost.
+
+Measured in Node against the four machine ghosts (all leaving the house at
+once, no energizers): at ×1.0 speed the bot never left round 1; at ×1.1 games
+last about three minutes and it clears one round and a bit; at ×1.2 it wins
+one in three. `VEL_PAC` is the balance knob.
+
+**Party.** `Party.cazaPick` (leader only, `setCaza`, mutually exclusive with
+`habPick`) travels in `proster` and `pstart` (`caza`) and reaches
+`onstart(order, idx, cfg, role, hab, caza)`. `canStart()` no longer needs a
+Pac-Man seat when it is on; the ghost picker is disabled and the roster shows
+the seat's ghost. Local: the CACERÍA card opens a panel with JUGAR SOLO
+(Blinky, arrows/WASD) and DOS JUGADORES (Blinky/arrows, Pinky/WASD).
+`CFG.NET.PROTO` 7 → 8.
+
+**Replays.** Local replays are not recorded (the entry format has one seat
+per player and there is one more here); network replays carry `caza` (`cz` in
+the header) and rebuild the bot in spectator mode like any other seat.
+
 ## Top mundial integrity (only the Edge Function writes)
 
 **Server-side validation** (`supabase/functions/enviar-record/index.ts`):

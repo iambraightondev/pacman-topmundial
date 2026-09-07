@@ -98,6 +98,13 @@ cumple juegues a lo que juegues.
     distancia o para salir corriendo cuando ves venir la Q.
   - **ACECHO** (30 s): 4 s translúcido y **sin la marca que te delata**
     encima. Al que no ves venir no le aciertas.
+- **CACERÍA** — todos de fantasma y **el Pac-Man lo lleva la máquina**. De uno
+  a cuatro cazadores: solo (llevas a Blinky), dos en el mismo teclado (Blinky
+  con flechas, Pinky con WASD) o en party (lo enciende quien manda). No hay
+  superpastillas: el poder de Pac-Man **llega solo cada 20 s, dura 6 y se
+  avisa 3 s antes** con un aro y una cuenta atrás. Cada caza son 1000 puntos;
+  si se queda sin vidas ganáis, y si despeja **tres rondas** gana él. No entra
+  en el top mundial, pero tiene sus logros y suma experiencia.
 
 ### Partys, amigos y espectar
 
@@ -512,6 +519,7 @@ js/daily.js       DAILY: siete retos por semana, uno por día
 js/mazes.js       Laberintos alternativos (modo aparte)
 js/versus.js      PAC-MAN VS.: el fantasma que lleva un jugador
 js/habilidades.js modo DESATADO: los poderes de Pac-Man y los del fantasma
+js/caceria.js     modo CACERÍA: el Pac-Man de la máquina y su poder periódico
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
 js/ui.js          Menús, opciones, panel de party, paneles y controles

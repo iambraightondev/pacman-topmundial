@@ -9,6 +9,10 @@
  *    Es un modo aparte (como LABERINTOS) y no entra en el top
  *    mundial. Todo lo suyo vive en js/habilidades.js; aquí solo
  *    quedan los enganches.
+ *  - CACERÍA: todos llevan fantasma y el Pac-Man lo lleva la
+ *    máquina, que ocupa el último asiento de `pacs` (bot = true).
+ *    Sin superpastillas: su poder llega solo cada cierto tiempo.
+ *    Lo suyo vive en js/caceria.js; aquí, los enganches.
  *  - 2 jugadores en la misma máquina (J1 flechas, J2 WASD).
  *  - 2 jugadores online: el anfitrión (J1) simula la partida
  *    completa y emite instantáneas; el invitado (J2) simula su
@@ -121,6 +125,8 @@
     mazeId: null,        // laberinto alternativo en juego (null = el clásico)
     mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
     hab: false,          // ¿esta partida es del modo DESATADO?
+    caza: false,         // ¿y de CACERÍA? (js/caceria.js)
+    cazaTicks: 0,        // CACERÍA: ticks que faltan para el poder de Pac-Man
 
     /* casa de fantasmas */
     globalActive: false,
@@ -341,6 +347,7 @@
       // el amarillo de su Pac-Man ya no pinta nada en la pantalla
       var gid = this.vsGhostOf(i);
       if (gid >= 0) return CFG.GHOSTS[gid].color;
+      if (this.pacs[i] && this.pacs[i].bot) return CFG.CAZA.COLOR_PAC;
       if (this.netColors && this.netColors[i]) return this.netColors[i];
       var s = this.settings();
       if (i === 0) return s.pacColor;
@@ -350,6 +357,7 @@
 
     /* Skin del jugador i (online: intercambiadas en el saludo) */
     skinFor: function (i) {
+      if (this.pacs[i] && this.pacs[i].bot) return 'clasico';   // la máquina, de amarillo
       var s = this.netSkins && this.netSkins[i];
       if (!s) {
         var st = this.settings();
@@ -361,6 +369,7 @@
     /* Nombre elegido para el jugador i ('' si no ha puesto ninguno).
      * En online los nombres se intercambian en el saludo (netNames). */
     rawName: function (i) {
+      if (this.pacs[i] && this.pacs[i].bot) return CFG.CAZA.NOMBRE_PAC;
       var n = this.netNames && this.netNames[i];
       if (!n) {
         var s = this.settings();
@@ -408,6 +417,8 @@
 
     /* ¿El jugador i se simula con autoridad en esta máquina? */
     isLocalAuth: function (i) {
+      // el Pac-Man de la máquina (CACERÍA) lo lleva quien simula la partida
+      if (this.pacs[i] && this.pacs[i].bot) return this.netRole !== 'guest' && !this.isSpec();
       return !this.netRole || i === this.localIdx;
     },
 
@@ -462,6 +473,10 @@
        * reparte un juego de recargas por jugador (js/habilidades.js). */
       this.hab = !!opts.hab;
       if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount);
+      /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
+       * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
+      this.caza = !!opts.caza && !this.hab && !!window.PM.Caza;
+      this.cazaTicks = 0;
       this.runGhosts = 0;
       this.runFrutas = 0;
       this.runRacha = 0;
@@ -478,7 +493,8 @@
       this.frightMult = s.frightMult;
       this.startLevel = s.startLevel;      // para el récord de velocidad
       this.startLives = s.startLives;      // viaja con la partida al top mundial
-      this.livesMode = (this.playerCount > 1 && s.livesMode === 'individual')
+      this.livesMode = (this.playerCount > 1 && s.livesMode === 'individual' &&
+                        !this.caza)          // las vidas son de Pac-Man: fondo común
         ? 'individual' : 'shared';
       this.level = s.startLevel;
       this.score = 0;
@@ -489,11 +505,21 @@
       for (var i = 0; i < this.playerCount; i++) {
         this.pacs.push(new window.PM.Pacman(i));
       }
+      /* CACERÍA: el Pac-Man de la máquina es un asiento más, el último. Así
+       * come, muere y reaparece por los mismos caminos que uno de carne, y
+       * el reparto de fantasmas es fijo: cada jugador el de su asiento. */
+      var reparto = opts.ghosts;
+      if (this.caza) {
+        var bot = new window.PM.Pacman(this.playerCount);
+        bot.bot = true;
+        this.pacs.push(bot);
+        reparto = window.PM.Caza.reparto(this.playerCount);
+      }
       /* PAC-MAN VS.: reparto de fantasmas. Va antes de las vidas porque a
        * quien lleva fantasma se le deja el Pac-Man fuera de juego. */
       this.vsGhosts = null;
       this.vsScores = null;
-      if (window.PM.Versus) window.PM.Versus.setup(this, opts.ghosts);
+      if (window.PM.Versus) window.PM.Versus.setup(this, reparto);
       if (this.livesMode === 'individual') {
         // al que lleva fantasma no se le pintan vidas: no tiene Pac-Man
         for (i = 0; i < this.pacs.length; i++) {
@@ -602,6 +628,7 @@
       this.recentEaten = {};
       this.outEaten = [];
       for (var i = 0; i < 4; i++) this.ghosts[i].dotCounter = 0;
+      if (this.caza) window.PM.Caza.reiniciar(this);   // el reloj del poder, de cero
     },
 
     /* Posición inicial del jugador i según el número de jugadores */
@@ -641,6 +668,7 @@
       this.popups = [];
       this.eatFreezeTicks = 0;
       this.hiddenGhost = -1;
+      if (this.caza) window.PM.Caza.reiniciar(this);   // todo vuelve a su sitio, el reloj también
       this.enterReady(CFG.READY_TICKS);
     },
 
@@ -657,6 +685,8 @@
         var row = [];
         for (var c = 0; c < CFG.COLS; c++) {
           var ch = CFG.MAZE[r].charAt(c);
+          // CACERÍA: sin superpastillas; el poder de Pac-Man llega solo
+          if (ch === 'o' && this.caza) ch = '.';
           if (ch === '.' || ch === 'o') { row.push(ch); this.dotsLeft++; }
           else row.push(null);
         }
@@ -703,6 +733,8 @@
       this.stopAllLoops();
       this.mazeId = null;
       this.hab = false;
+      this.caza = false;
+      this.cazaTicks = 0;
       if (window.PM.Hab) window.PM.Hab.empezar(false, 0);
       this.applyMaze(null);     // el clásico vuelve antes de repartir puntos
       this.loadPellets();
@@ -934,6 +966,9 @@
       /* muertes en curso: solo se congela quien muere, la partida sigue */
       this.stepPacDeaths(true);
 
+      /* CACERÍA: el rumbo del Pac-Man de la máquina y el reloj de su poder */
+      if (this.caza) window.PM.Caza.paso(this);
+
       /* jugadores */
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
@@ -960,7 +995,8 @@
             if (p.tileY() === CFG.START.fruit.y &&
                 (p.tileX() === 13 || p.tileX() === 14)) {
               this.fruitActive = false;
-              if (!this.netRole || i === this.localIdx) {
+              // lo que come la máquina (CACERÍA) no es logro de nadie
+              if ((!this.netRole || i === this.localIdx) && !p.bot) {
                 this.runFrutas++;
                 this.bumpAch({ frutas: 1 });
               }
@@ -1005,8 +1041,10 @@
       /* nivel completado */
       if (this.dotsLeft <= 0) {
         if (this.level === 1) this.submitLevel1Time();
-        this.limpiosSeguidos++;          // despejado, y sin morir por el camino
-        this.bumpAch({ limpios: this.limpiosSeguidos });
+        if (!this.caza) {                // en CACERÍA lo despeja la máquina
+          this.limpiosSeguidos++;        // despejado, y sin morir por el camino
+          this.bumpAch({ limpios: this.limpiosSeguidos });
+        }
         this.state = 'LEVEL_DONE';
         this.levelPhase = 0;
         this.phaseTicks = CFG.LEVEL_FREEZE_TICKS;
@@ -1101,7 +1139,9 @@
         return;
       }
       this.frightTicks = Math.round(secs * 60);
-      this.frightFlashes = fr.flashes;
+      /* con segundos fijos (GRITO, CACERÍA) los fantasmas tienen que avisar
+       * de que se acaba aunque el nivel ya no tenga parpadeos en la tabla */
+      this.frightFlashes = (segsFijos > 0 && !fr.flashes) ? 5 : fr.flashes;
       this.frightFlashOn = false;
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
@@ -1212,6 +1252,8 @@
     pacSpeedPx: function (pac) {
       var row = this.speedRow;
       var pct = (this.frightTicks > 0) ? row.pacFright : row.pac;
+      // CACERÍA: el Pac-Man de la máquina corre algo más (ver CFG.CAZA.VEL_PAC)
+      if (pac && pac.bot) pct *= CFG.CAZA.VEL_PAC;
       pct = Math.min(pct * this.pacSpeedMult, CFG.SPEED_CLAMP * 100);
       /* TURBO (W) va DESPUÉS del tope. El tope existe para que las partidas
        * clásicas se puedan comparar entre sí, y el modo DESATADO no
@@ -1272,8 +1314,10 @@
       var streak = Math.min(this.chainIndex, 3);   // 0..3 dentro de la racha
       var pts = CFG.GHOST_CHAIN[streak];
       this.chainIndex++;
-      /* logros: solo los que me como yo (en online, `who` dice quién fue) */
-      if (!this.netRole || (who || 0) === this.localIdx) {
+      /* logros: solo los que me como yo (en online, `who` dice quién fue); lo
+       * que se come el Pac-Man de la máquina (CACERÍA) no es de nadie */
+      var comeBot = !!(this.pacs[who || 0] && this.pacs[who || 0].bot);
+      if ((!this.netRole || (who || 0) === this.localIdx) && !comeBot) {
         this.runGhosts++;
         this.runRacha = Math.max(this.runRacha, this.chainIndex);
         this.bumpAch({ fantasmas: 1, racha: this.chainIndex });
@@ -1473,8 +1517,18 @@
         this.phaseTicks = CFG.LEVEL_FLASH_TICKS;
         return;
       }
+      /* CACERÍA: despejada la última ronda, gana Pac-Man y se acabó */
+      if (this.caza && window.PM.Caza.partidaGanada(this)) {
+        this.state = 'GAME_OVER';
+        this.phaseTicks = CFG.GAMEOVER_TICKS;
+        this.overIdle = false;
+        this.persistHighScore();
+        this.hostEvt({ t: 'gameOver' });
+        this.syncUI();
+        return;
+      }
       this.level++;
-      this.bumpAch({ nivelMax: this.level });
+      if (!this.caza) this.bumpAch({ nivelMax: this.level });   // lo sube la máquina
       this.resetLevel();
       this.enterReady(CFG.READY_TICKS);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: CFG.READY_TICKS });
@@ -1893,7 +1947,8 @@
      * de las dos. */
     achTags: function () {
       var t = [(this.playerCount > 1) ? 'party' : 'solo'];
-      if (this.hab) t.push('hab');
+      if (this.caza) t.push('caza');
+      else if (this.hab) t.push('hab');
       else if (this.isVersus()) t.push('vs');
       else if (this.mazeId) t.push('lab');
       else t.push('clasico');
@@ -2366,7 +2421,7 @@
          * Cada jugador tiene el suyo y al que calla se le deja de espectador. */
         if (this.playerCount > 2) {
           for (var w = 1; w < this.pacs.length; w++) {
-            if (this.pacs[w].out) continue;
+            if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
             this.posWatch[w] = (this.posWatch[w] || 0) + 1;
             if (this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
           }
@@ -2405,7 +2460,21 @@
      * los demás: se queda de espectador y los otros siguen. */
     dropPlayer: function (i) {
       var p = this.pacs[i];
-      if (!p || p.out) return;
+      if (!p) return;
+      /* Quien llevaba un fantasma (PAC-MAN VS., CACERÍA) tiene el pac fuera
+       * de juego desde el principio: lo que hay que soltar es el fantasma,
+       * que si no se queda para siempre con el último rumbo pedido. La
+       * máquina lo recoge y sigue persiguiendo. */
+      var gid = this.vsGhostOf(i);
+      if (gid >= 0 && this.ghosts[gid].human) {
+        this.ghosts[gid].human = false;
+        this.ghosts[gid].taken = false;
+        this.ghosts[gid].wishDir = -1;
+        this.setFlash((this.rawName(i) || ('J' + (i + 1))) + ' SE HA IDO');
+        if (this.netRole === 'host') this.hostEvt({ t: 'left', i: i });
+        return;
+      }
+      if (p.out) return;
       p.out = true;
       p.lives = 0;
       p.dying = false;
@@ -2614,16 +2683,19 @@
      * partida online (sendSpecView) y la local (sendShowView). */
     specView: function (sid) {
       var nm = [], co = [], sk = [], i;
-      for (i = 0; i < this.pacs.length; i++) {
+      // los asientos de la gente: el Pac-Man de la máquina (CACERÍA) se lo
+      // monta el mirón por su cuenta con el aviso `caza`
+      for (i = 0; i < this.playerCount; i++) {
         nm.push(this.rawName(i));
         co.push(this.colorFor(i));
         sk.push(this.skinFor(i));
       }
       return {
-        v: CFG.NET.PROTO, to: sid, n: this.pacs.length,
+        v: CFG.NET.PROTO, to: sid, n: this.playerCount,
         nm: nm, co: co, sk: sk,
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
         hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
+        caza: !!this.caza,          // CACERÍA: sin superpastillas y con bot
         cfg: {
           ghostSpeedMult: this.ghostSpeedMult,
           pacSpeedMult: this.pacSpeedMult,
@@ -2650,6 +2722,7 @@
         fa: this.fruitActive ? 1 : 0,
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
         vs: this.vsScores || null,    // PAC-MAN VS.: marcador de cada cazador
+        cz: this.caza ? this.cazaTicks : undefined,   // CACERÍA: reloj del poder
         he: this.snapEaten,
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
         /* posiciones de TODOS los jugadores: con 3 y 4 cada uno solo conoce
@@ -2767,6 +2840,8 @@
       this.stepPacDeaths(true);
 
       if (this.frightTicks > 0) this.stepFright();
+      // CACERÍA: el reloj del poder corre entre instantáneas (solo se mira)
+      if (this.caza) window.PM.Caza.paso(this);
 
       // de espectador no hay pac propio: todos van por estima
       var me = this.pacs[this.localIdx] || null;
@@ -3146,6 +3221,7 @@
       this.fruitActive = !!s.fa;
       if (typeof s.tm === 'number') this.timeTicks = s.tm;
       if (esLista(s.vs)) this.vsScores = s.vs.slice();
+      if (typeof s.cz === 'number') this.cazaTicks = s.cz;
 
       /* vidas y espectadores */
       if (this.livesMode === 'individual' && s.lv && s.lv.length) {
@@ -3581,8 +3657,11 @@
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
           this.drawPac(ctx, pc, i);
         }
-        /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!" */
-        if (this.playerCount > 1 && this.state === 'READY') {
+        /* CACERÍA: el aro de aviso (y de poder) sobre el Pac-Man de la máquina */
+        if (this.caza) window.PM.Caza.draw(this, ctx);
+        /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!". En
+         * CACERÍA también en solo: hay que saber cuál de los cuatro es el tuyo */
+        if ((this.playerCount > 1 || this.caza) && this.state === 'READY') {
           ctx.font = 'bold 7px monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -3624,31 +3703,41 @@
 
     renderHUD: function (ctx) {
       var i, p;
-      var team = (this.playerCount > 1 && this.state !== 'MENU');
+      /* En CACERÍA el marcador grande es el de Pac-Man (la máquina) y la
+       * fila de nombres es la de los cazadores, también jugando solo. */
+      var caza = (this.caza && this.state !== 'MENU');
+      var team = ((this.playerCount > 1 || caza) && this.state !== 'MENU');
       ctx.font = 'bold 8px monospace';
       ctx.textBaseline = 'top';
       ctx.fillStyle = CFG.COLORS.text;
 
       ctx.textAlign = 'left';
-      var leftLabel = team ? 'EQUIPO'
+      var leftLabel = caza ? CFG.CAZA.NOMBRE_PAC : team ? 'EQUIPO'
         : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
       // hasta donde empieza "HIGH SCORE" (centrado en 112, unos 48 px de ancho)
       this.fitText(ctx, leftLabel, 20, 0, 66, 8);
       ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('HIGH SCORE', 112, 0);
-
       ctx.textAlign = 'right';
       var sc = (this.state === 'MENU') ? 0 : this.score;
       var hs = (this.state === 'MENU') ? this.highScore1 : this.highScore;
       ctx.fillText(String(sc || 0), 56, 9);
-      ctx.fillText(String(hs || 0), 136, 9);
+      if (caza) {
+        // aquí no hay récord que valga: en su hueco, el reloj del poder
+        window.PM.Caza.hud(this, ctx);
+        ctx.fillStyle = CFG.COLORS.text;
+      } else {
+        ctx.textAlign = 'center';
+        ctx.fillText('HIGH SCORE', 112, 0);
+        ctx.textAlign = 'right';
+        ctx.fillText(String(hs || 0), 136, 9);
+      }
 
       /* nombres del equipo en la tercera línea: dos a los lados, y con 3 o 4
        * jugadores repartidos por igual para que quepan todos */
       if (team) {
         ctx.textBaseline = 'top';
-        var n = this.pacs.length;
+        var n = caza ? this.playerCount : this.pacs.length;   // la máquina no va en la fila
         if (n === 2) {
           ctx.textAlign = 'left';
           ctx.fillStyle = this.colorFor(0);
@@ -3687,8 +3776,9 @@
             }
           }
         } else {
-          // fondo común: iconos blancos (vidas del equipo)
-          var color = team ? '#ffffff' : this.colorFor(0);
+          // fondo común: iconos blancos (vidas del equipo); en CACERÍA son
+          // las de Pac-Man, y van de amarillo
+          var color = caza ? CFG.CAZA.COLOR_PAC : team ? '#ffffff' : this.colorFor(0);
           var skin = team ? 'clasico' : this.skinFor(0);
           var livesShown = Math.max(0, this.lives - 1);
           for (i = 0; i < livesShown && i < 5; i++) {
@@ -3755,6 +3845,12 @@
         ctx.font = 'bold 8px monospace';
         ctx.fillStyle = CFG.COLORS.ready;
         ctx.fillText('¡LISTO!', 112, y);
+        // CACERÍA: en qué ronda vamos, que cada una aprieta más
+        if (this.caza) {
+          ctx.fillStyle = '#ffb8ff';
+          ctx.fillText('RONDA ' + (window.PM.Caza.ronda(this) + 1) + ' DE ' +
+            CFG.CAZA.NIVELES, 112, 20 * T + T / 2 + CFG.MAZE_Y);
+        }
       } else if (this.state === 'GAME_OVER') {
         ctx.font = 'bold 8px monospace';
         ctx.fillStyle = CFG.COLORS.gameOver;

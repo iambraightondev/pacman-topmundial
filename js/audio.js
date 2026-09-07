@@ -506,6 +506,24 @@
       var k = escala(esc), t = now();
       blip('triangle', 620, 140, t, 0.34, 0.26 * k, 0.02);
       blip('sine', 310, 70, t + 0.05, 0.30, 0.18 * k, 0.02);
+    },
+
+    /* ---- CACERÍA: el poder de Pac-Man llega solo (js/caceria.js) ----
+     * Un pitido por segundo de aviso, cada vez más agudo: es la cuenta atrás
+     * para soltar la presa y apartarse. `seg` son los segundos que quedan. */
+    playPowerWarn: function (seg) {
+      if (!ctx) return;
+      var t = now(), n = Math.max(1, seg | 0);
+      var f = 660 + (4 - Math.min(n, 4)) * 110;
+      blip('square', f, f, t, 0.08, 0.16, 0.005);
+    },
+
+    /* Y el golpe de cuando llega: un barrido hacia arriba, corto y claro. */
+    playPowerOn: function () {
+      if (!ctx) return;
+      var t = now();
+      blip('square', 220, 880, t, 0.22, 0.22, 0.01);
+      blip('triangle', 440, 1320, t + 0.04, 0.20, 0.14, 0.01);
     }
   };
 

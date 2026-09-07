@@ -2,6 +2,37 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-07 · CACERÍA: todos de fantasma contra un Pac-Man de máquina
+
+- **Modo nuevo en la portada: CACERÍA.** Es PAC-MAN VS. dado la vuelta: de uno
+  a cuatro jugadores llevan cada uno un fantasma y **el Pac-Man lo lleva la
+  máquina**, que come, huye y se defiende sola. Solo (llevas a Blinky y los
+  otros tres son de la máquina), dos en el mismo teclado (Blinky con flechas,
+  Pinky con WASD) y en party de hasta cuatro (lo enciende quien manda, como
+  DESATADO).
+- **Sin superpastillas.** Las cuatro esquinas son puntos normales. El poder de
+  Pac-Man **llega solo cada 20 segundos y dura 6**, y se avisa **3 segundos
+  antes** con un aro alrededor de él y un pitido por segundo: es el momento de
+  soltar la presa y apartarse. El reloj sale arriba, donde estaba el HIGH
+  SCORE (que aquí no pinta nada).
+- **Tres rondas por partida.** Cada vez que lo cazas son 1000 puntos, como en
+  VS. Si se queda sin vidas, ganáis (y el titular es de quien más lo cazó); si
+  despeja las tres rondas, gana él. Cada ronda el poder dura un segundo más y
+  llega dos antes.
+- **El Pac-Man de la máquina sabe huir**: mira por dónde vienen los fantasmas,
+  solo pisa casillas a las que llega antes que ellos, y cuando lo están
+  cerrando deja de comer y busca sitio. No lee intenciones: cuatro que le
+  cierran un pasillo por los dos lados lo pillan; uno corriendo detrás, no.
+  Corre un poco más que Pac-Man (x1.1), porque sin superpastillas y con los
+  cuatro fantasmas fuera desde el primer segundo, al 80% no pasaba del primer
+  minuto.
+- **Tres logros nuevos** (JAURÍA, LETAL, MANADA) y sus propios contadores. No
+  entra en el top mundial ni hace récord, pero suma experiencia.
+- **Un cazador que se va** deja su fantasma a la máquina en vez de dejarlo
+  dando vueltas con el último rumbo (también en PAC-MAN VS.).
+- Quien tuviera el juego abierto tiene que **recargar**: cambia la versión del
+  protocolo de red.
+
 ## 2026-09-05 · Los fantasmas azules ya no se atraviesan
 
 - **Si le pasas por encima a un fantasma azul, te lo comes.** Hasta ahora,

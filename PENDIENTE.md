@@ -7,13 +7,26 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **5 de septiembre de 2026**.
+Última puesta al día: **7 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**Hay UNA cosa a medias, y no es código: el remitente de correo.**
+**Lo nuevo de hoy, CACERÍA, está entero pero SIN PROBAR CON GENTE.** Cuatro
+personas al mando de los fantasmas contra el Pac-Man de la máquina es lo único
+que no se puede simular. Lo que hay que mirar en la primera party de verdad:
+
+1. **¿Se caza o no se caza?** Si Pac-Man se escapa siempre, bajar
+   `CFG.CAZA.VEL_PAC` (hoy 1.1) a 1.05 o 1.0; si cae sin pelea, subirlo. Es
+   el único mando del equilibrio y está explicado en `js/config.js`.
+2. **¿Los 20 s / 6 s / 3 s de aviso se sienten bien?** Están en
+   `CFG.CAZA.PERIODO`, `DURACION` y `AVISO`, por ronda. Medidos solo contra
+   los fantasmas de la máquina (ver más abajo).
+3. **¿Se ve el aro y se oye la cuenta atrás en el móvil?** El aro es de 1.5 px
+   de trazo sobre un Pac-Man de 13.
+
+Detrás de eso sigue lo de siempre: **el remitente de correo.**
 
 La recuperación de contraseña está entera, probada contra el servidor de verdad
 y desplegada. Lo único que falta es quién manda el mensaje, y eso son cuatro
@@ -52,6 +65,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 
 | Commit | Qué |
 |---|---|
+| (hoy) | CACERÍA: todos de fantasma contra un Pac-Man de máquina |
 | `2cd70d8` | Los fantasmas azules ya no se atraviesan sin mordisco |
 | `4721225` | ARO pasa a ser la última skin y PÍXEL la penúltima |
 | `11104fb` | Devuelve la rejilla a la skin PÍXEL, ahora dibujada a propósito |
@@ -72,9 +86,56 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v38`**, comprobado contra
-<https://pacman-topmundial.vercel.app>. **277 pruebas**: 0 fallos en
-`tests.html` y los 4 de siempre en Node (ver más abajo).
+Service worker en **`pm-v39`**. **293 pruebas**: 0 fallos en `tests.html` y
+los 4 de siempre en Node (ver más abajo).
+
+### Lo del 7 de septiembre: CACERÍA
+
+El qué está en `CHANGELOG.md` y el cómo en `SPEC.md` (sección *Modo
+CACERÍA*). Aquí, lo que hay que saber antes de tocarlo:
+
+- **El Pac-Man de la máquina es un ASIENTO MÁS** (`pacs[playerCount]`, con
+  `bot = true`), no una entidad aparte. Es lo que hizo que game.js casi no se
+  tocara: come, muere, reaparece y viaja por la red por los mismos caminos que
+  uno de carne. Todo lo que lo distingue está señalado con `bot` en el sitio
+  (`isLocalAuth`, nombres, colores, logros, vigilante de red, mirón).
+- **Las superpastillas se sirven como puntos** en `loadPellets`, así que el
+  nivel sigue teniendo 244 y el fin de nivel no cambia.
+- **El equilibrio se midió en Node contra los cuatro fantasmas de la máquina**
+  (todos fuera de la casa desde el principio, que es lo que pasa con cuatro
+  personas): a velocidad normal el bot no pasaba del primer minuto. Se
+  arreglaron tres cosas de su IA —un fantasma no da marcha atrás, no ir a por
+  un punto que solo tiene detrás un bolsillo de dos casillas, y no perseguir
+  azules por caminos que cruzan la puerta de la casa (los comidos vuelven a
+  salir SIN estar azules)— y se le dio un x1.1 de velocidad (`VEL_PAC`). Con
+  eso aguanta unos tres minutos y una ronda y pico contra la máquina. **Contra
+  personas no se ha probado**: ver arriba.
+- **Los tiempos son POR RONDA** (nivel − nivel de inicio), no por nivel
+  absoluto, para que una partida escale siempre 1 → 2 → 3.
+- **Las repeticiones locales NO se graban en este modo**: el formato guarda un
+  asiento por jugador y aquí hay uno más. Las de red sí (van por
+  instantáneas). Si algún día se quiere grabar en local, hace falta un modo
+  nuevo en `js/replay.js` (`MODOS`) que sepa que `jugadores + 1` asientos.
+- **`CFG.NET.PROTO` es 8**: quien no recargue no puede entrar en una party
+  con la versión nueva.
+- **Se descartó** que el bot use los poderes de DESATADO: `caza` se apaga si
+  `hab` está puesto. Un bot con Q/W/E/R es otro juego y otra IA.
+
+### Ideas para más adelante (CACERÍA, no hechas)
+
+Ordenadas por lo que cuestan; ninguna está empezada.
+
+- **Laberinto por ronda**: ronda 1 el clásico, 2 y 3 dos de LABERINTOS. La IA
+  del bot ya trabaja sobre `CFG.MAZE` (monta el grafo por trazado), así que lo
+  que falta es que `resetLevel`/`guestReady` cambien de laberinto por nivel y
+  que el mirón lo sepa. Es lo que más cambiaría la partida con menos código.
+- **Sin superpastillas, con fruta que las sustituya**: una fruta que, en vez de
+  puntos, adelante el poder 5 s. Le daría al bot un motivo para arriesgar.
+- **Bonus por acorralar**: si dos cazadores están a dos casillas cuando cae
+  Pac-Man, los dos cobran (hoy cobra solo el que toca). Empujaría a jugar en
+  equipo, que es lo que hace bueno el modo.
+- **Elroy inverso**: con menos de 20 puntos, que el bot corra un 5% más, como
+  Blinky. Hoy el final de ronda es cuando más fácil es cazarlo.
 
 > **Quien ya tuviera el juego abierto necesita RECARGAR** para ver todo esto:
 > el service worker sirve lo que tiene cacheado hasta que se recarga. Pasó

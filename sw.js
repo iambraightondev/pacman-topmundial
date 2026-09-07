@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v38';
+var VERSION = 'pm-v39';
 var SHELL = [
   './',
   './index.html',
@@ -38,6 +38,7 @@ var SHELL = [
   './js/account.js',
   './js/versus.js',
   './js/habilidades.js',
+  './js/caceria.js',
   './js/game.js',
   './js/replay.js',
   './js/ui.js',

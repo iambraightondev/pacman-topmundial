@@ -705,6 +705,10 @@
       this.redEmpezar();
       if (!G || G.netRole || G.isSpec()) return;
       if (!(G.playerCount === 1 || G.playerCount === 2)) return;
+      /* CACERÍA no se graba en local: el formato de entradas guarda un
+       * asiento por jugador y aquí hay uno más (la máquina). Las de red sí,
+       * que van por instantáneas y no necesitan reconstruir nada. */
+      if (G.caza) return;
 
       var s = (opts && opts.cfg) || G.settings();
       var nombres = [];
@@ -902,6 +906,7 @@
         skins: skins,
         ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
         hab: !!G.hab,          // modo DESATADO: dientes, chispas y flash
+        caza: !!G.caza,        // CACERÍA: el Pac-Man de la máquina y su reloj
         fecha: new Date().toISOString(),
         pm: null,              // mapa de pastillas del arranque
         cuadros: [],           // [tick, vector]
@@ -964,7 +969,8 @@
       var cab = {
         v: this.V_RED, j: rep.jugadores, nv: rep.nivel, mz: rep.maze || null,
         aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
-        gh: rep.ghosts || null, hb: !!rep.hab, fe: rep.fecha, pm: rep.pm || null,
+        gh: rep.ghosts || null, hb: !!rep.hab, cz: !!rep.caza,
+        fe: rep.fecha, pm: rep.pm || null,
         fin: rep.final
       };
       var previa = null, filas = [];
@@ -1019,7 +1025,7 @@
           v: cab.v, jugadores: n, nivel: cab.nv || 1, maze: cab.mz || null,
           ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
           skins: cab.sk || [], ghosts: cab.gh || null, hab: !!cab.hb,
-          fecha: cab.fe || '',
+          caza: !!cab.cz, fecha: cab.fe || '',
           pm: cab.pm || null, cuadros: cuadros, eventos: eventos,
           final: cab.fin || null
         };
@@ -1123,7 +1129,8 @@
         skins: rep.skins.slice(),
         ghosts: rep.ghosts ? rep.ghosts.slice() : null,
         maze: rep.maze || null,
-        hab: !!rep.hab
+        hab: !!rep.hab,
+        caza: !!rep.caza
       });
       if (rep.pm && rep.pm.hex && G.applyPelletHex) G.applyPelletHex(rep.pm.hex);
       return true;
