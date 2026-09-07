@@ -65,7 +65,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 
 | Commit | Qué |
 |---|---|
-| (hoy) | CACERÍA: todos de fantasma contra un Pac-Man de máquina |
+| `4101051` | CACERÍA: todos de fantasma contra un Pac-Man de máquina |
 | `2cd70d8` | Los fantasmas azules ya no se atraviesan sin mordisco |
 | `4721225` | ARO pasa a ser la última skin y PÍXEL la penúltima |
 | `11104fb` | Devuelve la rejilla a la skin PÍXEL, ahora dibujada a propósito |
