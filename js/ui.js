@@ -1061,7 +1061,8 @@
       var ctrlNote = document.createElement('div');
       ctrlNote.className = 'note';
       ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
-        'CTRL+ESPACIO TU MAESTRÍA · T CHAT (ONLINE)';
+        'CTRL+ESPACIO TU MAESTRÍA · F1-F4 LA DE SOLO/DÚO/TRÍO/ESCUADRA · ' +
+        'T CHAT (ONLINE)';
       par.appendChild(ctrlNote);
 
       /* PAC-MAN VS. en la misma máquina: el jugador 2 lleva un fantasma */
@@ -2359,7 +2360,7 @@
         // cuál está elegida
         if (t >= 1) { self.drawBadgeRest(badge, got); return; }
         S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks,
-          rango);
+          rango, window.PM.Badges ? window.PM.Badges.formatoName(self.badgeTab) : null);
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
@@ -4104,7 +4105,8 @@
         bar.appendChild(b);
         self.emoteFaces.push({ canvas: cv, id: e.id });
       });
-      /* misma acción que Ctrl+Espacio, para quien juega sin teclado */
+      /* misma acción que Ctrl+Espacio (y F1..F4 abajo), para quien juega sin
+       * teclado */
       var mb = document.createElement('button');
       mb.type = 'button';
       mb.className = 'emote-btn badge-emote';
@@ -4115,6 +4117,25 @@
         self.toggleEmoteBar(false);
       });
       bar.appendChild(mb);
+      /* y las de cada formato (F1..F4 con teclado), juntas para que la fila
+       * no las parta por la mitad */
+      var fmts = document.createElement('span');
+      fmts.className = 'badge-fmts';
+      [['SOLO', 1], ['DÚO', 2], ['TRÍO', 3], ['ESC.', 4]].forEach(function (f) {
+        var fb = document.createElement('button');
+        fb.type = 'button';
+        fb.className = 'emote-btn badge-emote badge-fmt';
+        fb.textContent = f[0];
+        fb.title = 'F' + f[1] + ' · MAESTRÍA DE ' +
+          (window.PM.Badges ? window.PM.Badges.FORMATOS[f[1] - 1].name : f[0]);
+        fb.addEventListener('click', function () {
+          self.resumeAudio();
+          window.PM.Game.sendBadgeTag(f[1]);
+          self.toggleEmoteBar(false);
+        });
+        fmts.appendChild(fb);
+      });
+      bar.appendChild(fmts);
       document.getElementById('stage').appendChild(bar);
       this.emoteBar = bar;
     },
@@ -5436,6 +5457,16 @@
             (ev.code === 'Space' || ev.key === ' ' || ev.key === 'Spacebar')) {
           self.resumeAudio();
           g.sendBadgeTag();
+          self.toggleEmoteBar(false);
+          ev.preventDefault();
+          return;
+        }
+        /* F1..F4: la de SOLO, DÚO, TRÍO o ESCUADRA, del mundo que se juega.
+         * Se corta el efecto del navegador (F1 abre la ayuda, F3 buscar). */
+        var fKey = /^F([1-4])$/.exec(ev.key || '');
+        if (canControl && fKey && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+          self.resumeAudio();
+          g.sendBadgeTag(parseInt(fKey[1], 10));
           self.toggleEmoteBar(false);
           ev.preventDefault();
           return;

@@ -1724,6 +1724,8 @@ input[type="range"] {
   background: #ffff00;
   color: #000;
 }
+.badge-fmts { display: inline-flex; gap: 3px; }
+.emote-btn.badge-fmt { font-size: 8px; padding: 6px 5px; letter-spacing: 0; }
 
 #chatBox {
   position: absolute;

@@ -330,7 +330,10 @@ Dos maneras de correr la misma batería:
   banda estrecha arriba, sin taparle el laberinto a nadie. Con
   **`Ctrl`+`Espacio`** (o el botón MI MAESTRÍA) enseñas la del modo que estés
   jugando sobre tu Pac-Man —con la medalla subiendo y la chapa
-  desplegándose—, y en online la ven los demás. **Cuanto más alta es la
+  desplegándose—, y en online la ven los demás. Con **`F1`**, **`F2`**,
+  **`F3`** y **`F4`** (o los botones SOLO · DÚO · TRÍO · ESC.) enseñas la de
+  solo, dúo, trío o escuadra del mundo que estés jugando, y una pestaña encima
+  de la chapa dice de qué formato es. **Cuanto más alta es la
   maestría, más se celebra**: APRENDIZ sube y ya está; CAZADOR gira y suelta
   chispas; EXPERTO añade el destello; MAESTRO, onda expansiva y chispas
   cayendo; LEYENDA, rayos girando, estrellas en órbita y el nombre

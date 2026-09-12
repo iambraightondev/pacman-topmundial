@@ -1726,29 +1726,43 @@
       return 0;
     },
 
-    showBadgeTag: function (who, id) {
+    /* f = formato de la maestría que se enseña (1 SOLO … 4 ESCUADRA). Sale en
+     * la pestaña de encima de la chapa: con F1..F4 cualquiera puede enseñar
+     * la de otro formato, así que el nombre solo ya no dice de dónde es. Quien
+     * tenga la versión vieja no lo manda, y entonces la chapa va sin pestaña. */
+    showBadgeTag: function (who, id, f) {
       if (!this.pacs[who]) return;
       var b = this.badgeById(id);
+      var n = parseInt(f, 10);
+      var B = window.PM.Badges;
       this.emotes[who] = {
         tag: b ? b.name : 'SIN MAESTRÍA',
         color: b ? b.color : '#888888',
         rango: this.badgeRank(id),
+        formato: (B && n >= 1 && n <= CFG.MAX_PLAYERS)
+          ? B.FORMATOS[n - 1].name : null,
         ticks: CFG.EMOTE_TICKS,
         total: CFG.EMOTE_TICKS      // para animar la chapa
       };
     },
 
-    sendBadgeTag: function () {
+    /* Sin n (Ctrl+Espacio), la del formato de la partida: en una de dúo se
+     * enseña la de dúo. Con n (F1..F4), la de ese formato. El MUNDO es siempre
+     * el que se está jugando: en DESATADO, F2 es DESATADO · DÚO. */
+    sendBadgeTag: function (n) {
       if (!this.canEmote()) return;
       var who = this.netRole ? this.localIdx : 0;
-      // la del modo en curso: en una partida de dúo se enseña la de dúo
+      n = parseInt(n, 10);
+      if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) {
+        n = Math.max(1, Math.min(CFG.MAX_PLAYERS, this.playerCount || 1));
+      }
       var B = window.PM.Badges;
-      var top = B && B.top(this.badgeMode());
+      var top = B && B.top(B.ruta(this.recordSlot(), n));
       var id = top ? top.id : '';
       this.emoteCooldown = CFG.EMOTE_COOLDOWN;
-      this.showBadgeTag(who, id);
-      if (this.netRole === 'guest') this.netSend('gevt', { t: 'badge', b: id });
-      else this.hostEvt({ t: 'badge', w: who, b: id });
+      this.showBadgeTag(who, id, n);
+      if (this.netRole === 'guest') this.netSend('gevt', { t: 'badge', b: id, f: n });
+      else this.hostEvt({ t: 'badge', w: who, b: id, f: n });
     },
 
     stepEmotes: function () {
@@ -2659,8 +2673,8 @@
           this.hostEvt({ t: 'emote', w: who, e: d.e });
           break;
         case 'badge':
-          this.showBadgeTag(who, d.b);
-          this.hostEvt({ t: 'badge', w: who, b: d.b });
+          this.showBadgeTag(who, d.b, d.f);
+          this.hostEvt({ t: 'badge', w: who, b: d.b, f: d.f });
           break;
         case 'chat':
           this.addChat(who, d.m);
@@ -3142,7 +3156,7 @@
           if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
           break;
         case 'badge':
-          if ((e.w || 0) !== this.localIdx) this.showBadgeTag(e.w || 0, e.b);
+          if ((e.w || 0) !== this.localIdx) this.showBadgeTag(e.w || 0, e.b, e.f);
           break;
         case 'chat':
           if ((e.w || 0) !== this.localIdx) this.addChat(e.w || 0, e.m);
@@ -3683,7 +3697,7 @@
           if (em.tag) {
             var et = 1 - (em.ticks / (em.total || CFG.EMOTE_TICKS));
             window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color,
-              et, this.tick, em.rango);
+              et, this.tick, em.rango, em.formato);
           } else {
             window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i),
               this.tick);

@@ -13,7 +13,15 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**Lo de la última sesión (12 de septiembre) está cerrado, subido y desplegado**:
+**Lo último (12 de septiembre, noche): F1–F4 enseñan la maestría de cada
+formato** (Ctrl+Espacio sigue siendo la de la partida). El mundo es siempre el
+que se juega, y la chapa lleva una pestaña encima con SOLO/DÚO/TRÍO/ESCUADRA.
+Viaja por red como un campo `f` más en el aviso `badge`; **no hizo falta subir
+`CFG.NET.PROTO`**: quien no lo conozca pinta la chapa sin pestaña. En móvil,
+cuatro botones al lado de MI MAESTRÍA. Lo único por mirar jugando: si en algún
+teclado de portátil F1–F4 van con `Fn` y a la gente le resulta incómodo.
+
+**Lo de antes el mismo día está cerrado, subido y desplegado**:
 DESATADO dejó de doblar el escalón del arcade y pasó a tener **su propia tabla**
 de maestrías —5.000 / 15.000 / 30.000 / 55.000 / **100.000** (LEYENDA) /
 175.000—, sobre la que el formato sigue multiplicando por los jugadores. Antes
@@ -101,7 +109,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v39`**. **293 pruebas**: 0 fallos en `tests.html` y
+Service worker en **`pm-v40`**. **294 pruebas**: 0 fallos en `tests.html` y
 los 4 de siempre en Node (ver más abajo).
 
 ### Lo del 7 de septiembre: CACERÍA

@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-12 · F1–F4: enseñar la maestría de cualquier formato
+
+- **`Ctrl`+`Espacio` sigue enseñando la de la partida**, y ahora **`F1`,
+  `F2`, `F3` y `F4` enseñan la de SOLO, DÚO, TRÍO y ESCUADRA** del mundo que
+  se esté jugando (en DESATADO, F2 es la de DESATADO · DÚO).
+- **La chapa lleva una pestaña encima con el formato**, para que quien la vea
+  sepa si ese TOP MUNDIAL es de solo o de escuadra. Sale también en el panel
+  MAESTRÍAS.
+- **En móvil**, al lado de MI MAESTRÍA hay cuatro botones pequeños: SOLO · DÚO
+  · TRÍO · ESC.
+- Quien juegue con una pestaña vieja en la party sigue viendo la chapa, solo
+  que sin pestaña.
+
 ## 2026-09-12 · DESATADO tiene sus propios escalones de maestría
 
 - **DESATADO deja de doblar el listón y pasa a tener su propia tabla**:

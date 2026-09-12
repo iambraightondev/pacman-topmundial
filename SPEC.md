@@ -909,7 +909,12 @@ ignores the echo of its own.
 
 **Enseñar la maestría**: `Ctrl+Espacio` (or the MI MAESTRÍA button in the
 emote bar, for touch) puts your highest badge **of the current mode's track**
-over your own Pac-Man —
+over your own Pac-Man. `F1`..`F4` (or the SOLO · DÚO · TRÍO · ESC. buttons)
+do the same for the 1..4-player track **of the world being played**
+(`Game.sendBadgeTag(n)` → `Badges.ruta(recordSlot(), n)`; browser default
+suppressed). The format travels as `f` in `gevt/evt {t:'badge', b, f}` and is
+drawn as a small tab above the tag (`drawBadgeTag`'s 9th arg); an event
+without `f` (older client) draws no tab —
 `Sprites.drawBadgeTag`, same bubble as the emotes with the medal and the
 badge colour, sharing the emote slot (`{tag, color, ticks}` instead of `{e}`)
 and cooldown. Badges are per-device, so the wire carries the **id** and the

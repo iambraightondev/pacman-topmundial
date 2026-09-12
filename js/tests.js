@@ -3160,6 +3160,45 @@
     ok(pinta(1) === 0, 'al terminar no queda nada');
   });
 
+  /* F1..F4 enseñan la maestría de cada formato, y la chapa dice cuál es: el
+   * nombre solo (EXPERTO) no distingue la de solo de la de escuadra. */
+  test('F1..F4 enseñan la maestría de cada formato con su pestaña', function () {
+    partida(2);
+    G.emoteCooldown = 0;
+    G.sendBadgeTag();
+    eq(G.emotes[0].formato, 'DÚO', 'Ctrl+Espacio: la del formato en curso');
+    var nombres = ['SOLO', 'DÚO', 'TRÍO', 'ESCUADRA'];
+    for (var n = 1; n <= 4; n++) {
+      G.emoteCooldown = 0;
+      // en Node no hay KeyboardEvent: ahí se prueba la acción sin la tecla
+      if (typeof KeyboardEvent === 'function') {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'F' + n }));
+      } else {
+        G.sendBadgeTag(n);
+      }
+      ok(G.emotes[0] && G.emotes[0].tag, 'F' + n + ' saca la chapa');
+      eq(G.emotes[0].formato, nombres[n - 1], 'F' + n + ' dice su formato');
+    }
+    // lo que llega por red sin formato (versión vieja) sale sin pestaña
+    G.showBadgeTag(0, '', undefined);
+    eq(G.emotes[0].formato, null, 'sin formato, sin pestaña');
+    G.showBadgeTag(0, '', 9);
+    eq(G.emotes[0].formato, null, 'un formato que no existe se descarta');
+
+    if (window.__SIN_LIENZO) return;
+    var cv = document.createElement('canvas');
+    cv.width = 224; cv.height = 44;
+    var ctx = cv.getContext('2d');
+    function pinta(f) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      window.PM.Sprites.drawBadgeTag(ctx, 112, 34, 'EXPERTO', '#00ff00', 0.5, 20, 2, f);
+      var d = ctx.getImageData(0, 0, cv.width, 20).data, k = 0;
+      for (var i = 3; i < d.length; i += 4) if (d[i] > 0) k++;
+      return k;
+    }
+    ok(pinta('ESCUADRA') > pinta(null), 'la pestaña asoma por encima de la chapa');
+  });
+
   /* Las seis se celebraban igual, así que subir de escalón no se notaba.
    * Ahora cada rango añade pompa encima del anterior. */
   test('cada maestría se celebra con la pompa de su escalón', function () {

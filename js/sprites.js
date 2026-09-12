@@ -794,8 +794,11 @@
    *   tick  — contador libre, para el brillo y la flotación
    *   rango — escalón de la maestría (0 APRENDIZ … 5 TOP MUNDIAL): manda
    *           cuánta pompa se gasta. Si no se pasa, la de EXPERTO.
+   *   formato — 'SOLO', 'DÚO'… : pestaña encima de la chapa que dice de qué
+   *           formato es la maestría (F1..F4 enseñan cualquiera). Sin él, no
+   *           hay pestaña.
    */
-  Sprites.drawBadgeTag = function (ctx, x, y, name, color, t, tick, rango) {
+  Sprites.drawBadgeTag = function (ctx, x, y, name, color, t, tick, rango, formato) {
     var text = String(name || '');
     color = color || '#888888';
     t = (typeof t === 'number') ? Math.max(0, Math.min(1, t)) : 1;
@@ -923,6 +926,33 @@
         }
       }
       ctx.restore();
+
+      /* Pestaña del FORMATO (SOLO, DÚO…) asomando por encima de la chapa. Va
+       * pegada al extremo derecho, lejos de la medalla, que es donde crecen
+       * el blasón, la corona y los rayos; y sale cuando la chapa ya está
+       * abierta, para no competir con la subida. */
+      if (formato && abre > 0.85) {
+        var fa = Math.min(1, (abre - 0.85) / 0.15);
+        ctx.save();
+        ctx.font = 'bold 5px monospace';
+        var th = 7;
+        var tw = Math.ceil(ctx.measureText(formato).width) + 5;
+        var tx = Math.round(lx + aw - padR - tw);
+        if (tx < lx + 4) tx = lx + 4;
+        var ty = by - th + 1 + Math.round((1 - fa) * 3);
+        ctx.globalAlpha = vis * fa;
+        ctx.beginPath();
+        ctx.rect(tx, ty, tw, th);
+        ctx.fillStyle = 'rgba(0,0,0,0.9)';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tx + 0.5, ty + 0.5, tw - 1, th - 1);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = color;
+        ctx.fillText(formato, tx + tw / 2, ty + th / 2 + 0.5);
+        ctx.restore();
+      }
     }
 
     /* TOP MUNDIAL: blasón detrás de la medalla. Es lo que remata la silueta:
