@@ -3167,7 +3167,8 @@
     G.emoteCooldown = 0;
     G.sendBadgeTag();
     eq(G.emotes[0].formato, 'DÚO', 'Ctrl+Espacio: la del formato en curso');
-    var nombres = ['SOLO', 'DÚO', 'TRÍO', 'ESCUADRA'];
+    // la de SOLO es la maestría de siempre: sin pestaña
+    var nombres = [null, 'DÚO', 'TRÍO', 'ESCUADRA'];
     for (var n = 1; n <= 4; n++) {
       G.emoteCooldown = 0;
       // en Node no hay KeyboardEvent: ahí se prueba la acción sin la tecla

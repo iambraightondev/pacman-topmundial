@@ -15,7 +15,7 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 **Lo último (12 de septiembre, noche): F1–F4 enseñan la maestría de cada
 formato** (Ctrl+Espacio sigue siendo la de la partida). El mundo es siempre el
-que se juega, y la chapa lleva una pestaña encima con SOLO/DÚO/TRÍO/ESCUADRA.
+que se juega, y la chapa lleva una pestaña encima con DÚO/TRÍO/ESCUADRA (la de solo, limpia).
 Viaja por red como un campo `f` más en el aviso `badge`; **no hizo falta subir
 `CFG.NET.PROTO`**: quien no lo conozca pinta la chapa sin pestaña. En móvil,
 cuatro botones al lado de MI MAESTRÍA. Lo único por mirar jugando: si en algún

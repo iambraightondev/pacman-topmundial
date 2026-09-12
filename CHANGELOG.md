@@ -8,7 +8,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   `F2`, `F3` y `F4` enseñan la de SOLO, DÚO, TRÍO y ESCUADRA** del mundo que
   se esté jugando (en DESATADO, F2 es la de DESATADO · DÚO).
 - **La chapa lleva una pestaña encima con el formato**, para que quien la vea
-  sepa si ese TOP MUNDIAL es de solo o de escuadra. Sale también en el panel
+  sepa si ese TOP MUNDIAL es de dúo o de escuadra. La de SOLO sale limpia,
+  sin pestaña, como siempre. Sale también en el panel
   MAESTRÍAS.
 - **En móvil**, al lado de MI MAESTRÍA hay cuatro botones pequeños: SOLO · DÚO
   · TRÍO · ESC.

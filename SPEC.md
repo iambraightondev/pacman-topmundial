@@ -913,7 +913,8 @@ over your own Pac-Man. `F1`..`F4` (or the SOLO · DÚO · TRÍO · ESC. buttons)
 do the same for the 1..4-player track **of the world being played**
 (`Game.sendBadgeTag(n)` → `Badges.ruta(recordSlot(), n)`; browser default
 suppressed). The format travels as `f` in `gevt/evt {t:'badge', b, f}` and is
-drawn as a small tab above the tag (`drawBadgeTag`'s 9th arg); an event
+drawn as a small tab above the tag (`drawBadgeTag`'s 9th arg) for 2..4 players
+(the solo badge stays plain); an event
 without `f` (older client) draws no tab —
 `Sprites.drawBadgeTag`, same bubble as the emotes with the medal and the
 badge colour, sharing the emote slot (`{tag, color, ticks}` instead of `{e}`)

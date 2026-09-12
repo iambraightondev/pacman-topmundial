@@ -2360,7 +2360,8 @@
         // cuál está elegida
         if (t >= 1) { self.drawBadgeRest(badge, got); return; }
         S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks,
-          rango, window.PM.Badges ? window.PM.Badges.formatoName(self.badgeTab) : null);
+          rango, (window.PM.Badges && window.PM.Badges.players(self.badgeTab) > 1)
+            ? window.PM.Badges.formatoName(self.badgeTab) : null);
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);

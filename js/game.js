@@ -1729,7 +1729,8 @@
     /* f = formato de la maestría que se enseña (1 SOLO … 4 ESCUADRA). Sale en
      * la pestaña de encima de la chapa: con F1..F4 cualquiera puede enseñar
      * la de otro formato, así que el nombre solo ya no dice de dónde es. Quien
-     * tenga la versión vieja no lo manda, y entonces la chapa va sin pestaña. */
+     * tenga la versión vieja no lo manda, y entonces la chapa va sin pestaña.
+     * La de SOLO tampoco la lleva: es la maestría de siempre, sin apellido. */
     showBadgeTag: function (who, id, f) {
       if (!this.pacs[who]) return;
       var b = this.badgeById(id);
@@ -1739,7 +1740,7 @@
         tag: b ? b.name : 'SIN MAESTRÍA',
         color: b ? b.color : '#888888',
         rango: this.badgeRank(id),
-        formato: (B && n >= 1 && n <= CFG.MAX_PLAYERS)
+        formato: (B && n >= 2 && n <= CFG.MAX_PLAYERS)
           ? B.FORMATOS[n - 1].name : null,
         ticks: CFG.EMOTE_TICKS,
         total: CFG.EMOTE_TICKS      // para animar la chapa
