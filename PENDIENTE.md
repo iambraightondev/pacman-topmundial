@@ -7,13 +7,27 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **7 de septiembre de 2026**.
+Última puesta al día: **12 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**Lo nuevo de hoy, CACERÍA, está entero pero SIN PROBAR CON GENTE.** Cuatro
+**Lo de la última sesión (12 de septiembre) está cerrado, subido y desplegado**:
+DESATADO dejó de doblar el escalón del arcade y pasó a tener **su propia tabla**
+de maestrías —5.000 / 15.000 / 30.000 / 55.000 / **100.000** (LEYENDA) /
+175.000—, sobre la que el formato sigue multiplicando por los jugadores. Antes
+salían de doblar los del arcade (6.000 / 16.000 / … / 120.000 / 200.000), que
+eran cifras heredadas y no elegidas. El listón bajó en todos los escalones, así
+que nadie perdió una insignia ya conseguida. Si algún día otro mundo necesita
+escalones propios, el mecanismo ya está puesto: se le da su tabla en
+`js/badges.js` y `goal` la usa; sin tabla, sigue con la de siempre.
+
+> **Lo único que puede pedir otra vuelta** es el número en sí: si 100.000 se
+> siente alcanzable en una buena partida de DESATADO en solo, o si se queda
+> corto o largo. Eso solo se sabe jugando; cambiarlo es una línea.
+
+**CACERÍA sigue igual de pendiente: está entera pero SIN PROBAR CON GENTE.** Cuatro
 personas al mando de los fantasmas contra el Pac-Man de la máquina es lo único
 que no se puede simular. Lo que hay que mirar en la primera party de verdad:
 
@@ -65,6 +79,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 
 | Commit | Qué |
 |---|---|
+| `b24355c` | DESATADO tiene su propia tabla de escalones de maestría |
 | `4101051` | CACERÍA: todos de fantasma contra un Pac-Man de máquina |
 | `2cd70d8` | Los fantasmas azules ya no se atraviesan sin mordisco |
 | `4721225` | ARO pasa a ser la última skin y PÍXEL la penúltima |
