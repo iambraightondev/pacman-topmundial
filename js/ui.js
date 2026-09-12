@@ -2187,7 +2187,7 @@
                'LABERINTO DE 1980';
       } else if (mundo === 'hab') {
         nota = '  ·  CON PODERES LOS PUNTOS SON MÁS BARATOS, ASÍ QUE ESTE ' +
-               'MUNDO PIDE EL DOBLE';
+               'MUNDO TIENE SUS PROPIOS ESCALONES, MÁS ALTOS';
       } else if (mode !== 'solo') {
         nota = '  ·  CADA FORMATO ES UNA LIGA APARTE Y PIDE MÁS PUNTOS ' +
                'CUANTOS MÁS SEÁIS';

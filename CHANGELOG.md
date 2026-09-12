@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-12 · DESATADO tiene sus propios escalones de maestría
+
+- **DESATADO deja de doblar el listón y pasa a tener su propia tabla**:
+  APRENDIZ 5.000, CAZADOR 15.000, EXPERTO 30.000, MAESTRO 55.000, **LEYENDA
+  100.000** y TOP MUNDIAL 175.000. Antes salían de multiplicar por dos los del
+  arcade (6.000 / 16.000 / 30.000 / 60.000 / 120.000 / 200.000): cifras
+  heredadas, no elegidas. Sigue pidiendo más que el laberinto de 1980 —con
+  poderes los puntos salen baratos— pero ahora los números son redondos.
+- **El formato multiplica igual que siempre** sobre esa tabla: LEYENDA son
+  100.000 en solo, 200.000 en dúo, 300.000 en trío y 400.000 en escuadra.
+- **Nadie pierde nada**: todos los escalones bajan o se quedan igual, así que
+  quien anduviera cerca se encuentra la insignia ya conseguida.
+
 ## 2026-09-07 · CACERÍA: todos de fantasma contra un Pac-Man de máquina
 
 - **Modo nuevo en la portada: CACERÍA.** Es PAC-MAN VS. dado la vuelta: de uno

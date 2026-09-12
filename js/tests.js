@@ -4805,11 +4805,15 @@
     try {
       G.highScore1 = 0;
       G.setRecordModo('lab', 9000);    // laberintos: escalón normal
-      G.setRecordModo('hab', 9000);    // habilidades: pide el doble
+      G.setRecordModo('hab', 9000);    // habilidades: escalones propios
       eq(B.best('lab'), 9000, 'la ruta de laberintos lee su récord');
       eq(B.best('hab'), 9000, 'y la de poderes el suyo');
       eq(B.mult('lab'), 1, 'laberintos usa el escalón de siempre');
-      eq(B.mult('hab'), 2, 'habilidades pide el doble');
+      eq(B.mult('hab'), 1, 'habilidades no multiplica: tiene tabla propia');
+      eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab'), 100000,
+         'LEYENDA en DESATADO son 100.000');
+      eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab2'), 200000,
+         'y en dúo, el doble, como en cualquier ruta');
       eq(B.top('lab').id, 'cazador', '9.000 en laberintos: CAZADOR');
       eq(B.top('hab').id, 'aprendiz', 'los mismos 9.000 en habilidades: APRENDIZ');
       eq(B.top('solo'), null, 'y en solo, ninguna: ahí no se ha jugado');
@@ -4878,13 +4882,13 @@
   /* Doce rutas: el listón lo marcan las dos cosas a la vez, los jugadores y el
    * mundo. Cuatro bocas en DESATADO es lo más caro que hay (x4 por el formato
    * y x2 por el mundo). */
-  test('el listón de una ruta multiplica el formato por el mundo', function () {
+  test('el listón de una ruta cruza el formato con el mundo', function () {
     var B = window.PM.Badges;
     var aprendiz = CFG.BADGES[0];
     eq(B.goal(aprendiz, 'lab'), 3000, 'laberintos en solo: el escalón de siempre');
     eq(B.goal(aprendiz, 'lab3'), 9000, 'en trío, el triple');
-    eq(B.goal(aprendiz, 'hab'), 6000, 'desatado en solo: el doble');
-    eq(B.goal(aprendiz, 'hab4'), 24000, 'y en escuadra, ocho veces');
+    eq(B.goal(aprendiz, 'hab'), 5000, 'desatado en solo: el suyo, más alto');
+    eq(B.goal(aprendiz, 'hab4'), 20000, 'y en escuadra, cuatro veces el suyo');
     eq(B.mundoDe('hab3'), 'hab');
     eq(B.players('hab3'), 3);
     eq(B.modeName('hab3'), 'DESATADO · TRÍO');

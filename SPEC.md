@@ -956,14 +956,18 @@ and `newGame` shows that league's record as the in-game HIGH SCORE.
 > tell which part came from an alternative maze.
 
 **The bar rises with what the run gives away**: `Badges.goal(badge, mode)` =
-`badge.points × Badges.mult(mode)`, and the multiplier is **the format's times
-the world's**. Formats multiply by their player count (APRENDIZ is 3 000 solo,
-6 000 duo, 9 000 trio, 12 000 squad) because a team scoreboard belongs to
+`base × Badges.mult(mode)`, where the base is **the world's own table** when it
+has one and `badge.points` otherwise, and the multiplier is **the format's
+times the world's**. Formats multiply by their player count (APRENDIZ is 3 000
+solo, 6 000 duo, 9 000 trio, 12 000 squad) because a team scoreboard belongs to
 everybody — four lives, four mouths, four ghosts per energiser — so the same
-figure is worth much less per person. The `hab` world multiplies by **2**:
-biting ghosts on a keypress prints points the arcade never had, and without
-that toll the track would be over in an afternoon. `lab` keeps the base
-figures. The dearest track is a DESATADO squad: ×8.
+figure is worth much less per person. The `hab` world does not multiply: it
+carries **its own ladder** — 5 000 / 15 000 / 30 000 / 55 000 / **100 000** /
+175 000 — higher than the arcade's, because biting ghosts on a keypress prints
+points the arcade never had and without that toll the track would be over in an
+afternoon. It is a table rather than a factor so the figures stay round.
+`lab` keeps the base figures. The dearest track is a DESATADO squad (×4 on top
+of its own ladder: TOP MUNDIAL at 700 000).
 
 All twelve travel to the account (`perfiles.record1..record4`, `record_lab`,
 `record_lab2..4`, `record_hab`, `record_hab2..4`), so the tracks follow the

@@ -322,7 +322,9 @@ Dos maneras de correr la misma batería:
   tienes. Cada formato lleva **su propio récord y su propio listón**: el
   escalón de siempre multiplicado por los jugadores (APRENDIZ son 3.000 en
   solo y 12.000 en escuadra), porque el marcador de un equipo es de todos y
-  con cuatro se llega al mismo número con mucho menos mérito de cada uno. En
+  con cuatro se llega al mismo número con mucho menos mérito de cada uno.
+  **DESATADO tiene sus propios escalones**, más altos (LEYENDA son 100.000 y
+  no 60.000), porque con poderes los puntos salen mucho más baratos. En
   partida sale el cartel animado **la primera vez que consigues cada una**, no
   cada vez que cruzas el escalón; y jugando con más gente se celebra en una
   banda estrecha arriba, sin taparle el laberinto a nadie. Con

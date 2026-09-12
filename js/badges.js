@@ -26,10 +26,14 @@
  *   · Por FORMATO se multiplica por los jugadores (APRENDIZ son
  *     3.000 en solo, 6.000 en dúo, 9.000 en trío y 12.000 en
  *     escuadra), porque el marcador de un equipo es de todos.
- *   · Por MUNDO, DESATADO multiplica por dos: morder fantasmas a
- *     golpe de tecla da puntos que en el arcade no existen, y sin
- *     ese peaje su ruta se acabaría en dos tardes. LABERINTOS no
- *     multiplica: otro trazado no es más generoso, es distinto.
+ *   · Por MUNDO, DESATADO no multiplica: tiene SU PROPIA TABLA de
+ *     escalones, más alta que la del arcade (LEYENDA son 100.000 y
+ *     no 60.000), porque morder fantasmas a golpe de tecla da
+ *     puntos que en el arcade no existen y sin ese peaje su ruta se
+ *     acabaría en dos tardes. Es una tabla y no un factor para que
+ *     los números salgan redondos en vez de doblados. LABERINTOS sí
+ *     usa la de siempre: otro trazado no es más generoso, es
+ *     distinto.
  *
  * Las insignias conseguidas se deducen del récord (no hace falta
  * guardarlas); en localStorage solo se anota cuáles se han
@@ -46,11 +50,17 @@
   var CFG = window.PM.CFG;
 
   /* Los tres mundos, en el orden de los botones del panel.
-   *   mult  cuánto multiplica el escalón por ser de ese mundo */
+   *   mult    cuánto multiplica el escalón por ser de ese mundo
+   *   points  escalones propios, por id de insignia (si no los trae, se
+   *           usan los de CFG.BADGES) */
   var MUNDOS = [
     { id: 'clasico', name: 'CLÁSICO',    mult: 1, color: '#ffff00' },
     { id: 'lab',     name: 'LABERINTOS', mult: 1, color: '#ffb852' },
-    { id: 'hab',     name: 'DESATADO',   mult: 2, color: '#ff66cc' }
+    { id: 'hab',     name: 'DESATADO',   mult: 1, color: '#ff66cc',
+      points: {
+        aprendiz: 5000,   cazador: 15000,  experto: 30000,
+        maestro:  55000,  leyenda: 100000, mundial: 175000
+      } }
   ];
 
   /* Los cuatro formatos, en el orden de los botones del panel */
@@ -160,9 +170,13 @@
       return r.fmt.n * r.mundo.mult;
     },
 
-    /* Lo que hay que puntuar para esa insignia EN ESA RUTA */
+    /* Lo que hay que puntuar para esa insignia EN ESA RUTA. El escalón sale
+     * de la tabla del mundo si la tiene (DESATADO la tiene) y, si no, de la
+     * de siempre; después se multiplica por lo que pida la ruta. */
     goal: function (badge, mode) {
-      return badge.points * this.mult(mode);
+      var r = RUTAS[norm(mode)];
+      var base = (r.mundo.points && r.mundo.points[badge.id]) || badge.points;
+      return base * this.mult(mode);
     },
 
     /* Mejor marca personal de esa ruta */
