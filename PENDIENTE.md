@@ -13,15 +13,44 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**Lo último (12 de septiembre, noche): F1–F4 enseñan la maestría de cada
-formato** (Ctrl+Espacio sigue siendo la de la partida). El mundo es siempre el
-que se juega, y la chapa lleva una pestaña encima con DÚO/TRÍO/ESCUADRA (la de solo, limpia).
-Viaja por red como un campo `f` más en el aviso `badge`; **no hizo falta subir
-`CFG.NET.PROTO`**: quien no lo conozca pinta la chapa sin pestaña. En móvil,
-cuatro botones al lado de MI MAESTRÍA. Lo único por mirar jugando: si en algún
-teclado de portátil F1–F4 van con `Fn` y a la gente le resulta incómodo.
+**La sesión del 12 de septiembre (noche) está cerrada, subida y desplegada**
+(service worker `pm-v41`). Dos cosas:
 
-**Lo de antes el mismo día está cerrado, subido y desplegado**:
+**1 · Las maestrías de equipo ya no piden x2 / x3 / x4, sino x1,25 / x1,5 /
+x1,75** (`FORMATOS[].mult` en `js/badges.js`), en los tres mundos. Se decidió
+**con las marcas reales** de `perfiles`, no a ojo:
+
+| Ruta | Mejor marca | Antes | Ahora |
+|---|---|---|---|
+| Clásico · solo | 49.050 | MAESTRO | MAESTRO |
+| Clásico · dúo | 76.290 | MAESTRO | LEYENDA |
+| Clásico · trío | 22.600 | APRENDIZ | EXPERTO |
+| DESATADO · solo | 110.750 | LEYENDA | LEYENDA |
+| DESATADO · dúo | 74.560 | EXPERTO | MAESTRO |
+| DESATADO · trío | 67.930 | CAZADOR | EXPERTO |
+| DESATADO · escuadra | 64.310 | CAZADOR | EXPERTO |
+
+- **El porqué, para no volver a multiplicar por jugadores:** los puntos del
+  laberinto son los mismos lo jueguen uno o cuatro. En equipo solo se gana
+  aguante (vidas, reapariciones), y las marcas de equipo salían **parecidas o
+  más bajas** que las de solo. Con x4 una escuadra no llegaba ni a EXPERTO.
+- **Se compararon tres opciones**: x1,5 fijo para cualquier equipo (la que yo
+  recomendaba), la escalonada suave (**elegida**) y x1 igual que solo
+  (descartada: regalaba LEYENDA de dúo a gente que en solo no pasa de 20.000).
+- Nadie perdió nada: todos los escalones bajaron.
+- **Lo que puede pedir otra vuelta:** si con más partidas de trío y escuadra se
+  ve que siguen siendo difíciles, la siguiente parada natural es x1,5 fijo. Es
+  cambiar dos números.
+
+**2 · F1–F4 enseñan la maestría de cada formato** (Ctrl+Espacio sigue siendo la
+de la partida). El mundo es siempre el que se juega, y la chapa lleva una
+pestaña encima con DÚO/TRÍO/ESCUADRA; **la de solo sale limpia, sin pestaña, a
+petición expresa**. Viaja por red como un campo `f` más en el aviso `badge`;
+**no hizo falta subir `CFG.NET.PROTO`**: quien no lo conozca pinta la chapa sin
+pestaña. En móvil, cuatro botones al lado de MI MAESTRÍA. Por mirar jugando: si
+en algún portátil F1–F4 van con `Fn` y resulta incómodo.
+
+**Lo de antes el mismo día**:
 DESATADO dejó de doblar el escalón del arcade y pasó a tener **su propia tabla**
 de maestrías —5.000 / 15.000 / 30.000 / 55.000 / **100.000** (LEYENDA) /
 175.000—, sobre la que el formato multiplica (hoy x1,25 / x1,5 / x1,75). Antes
@@ -87,6 +116,9 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 
 | Commit | Qué |
 |---|---|
+| `d6ff09f` | Las maestrías de equipo piden x1,25 / x1,5 / x1,75 en vez de x2 / x3 / x4 |
+| `39a898b` | La maestría de SOLO se enseña sin pestaña de formato |
+| `978e8f3` | F1–F4 enseñan la maestría de cada formato, con pestaña en la chapa |
 | `b24355c` | DESATADO tiene su propia tabla de escalones de maestría |
 | `4101051` | CACERÍA: todos de fantasma contra un Pac-Man de máquina |
 | `2cd70d8` | Los fantasmas azules ya no se atraviesan sin mordisco |
