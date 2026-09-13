@@ -23,9 +23,10 @@
  * Y cada ruta pide MÁS puntos según lo que se regale: el escalón
  * de siempre multiplicado por su factor, que es el del formato por
  * el del mundo.
- *   · Por FORMATO se multiplica por los jugadores (APRENDIZ son
- *     3.000 en solo, 6.000 en dúo, 9.000 en trío y 12.000 en
- *     escuadra), porque el marcador de un equipo es de todos.
+ *   · Por FORMATO: x1 solo, x1,25 dúo, x1,5 trío y x1,75 escuadra
+ *     (APRENDIZ son 3.000, 3.750, 4.500 y 5.250). No es por
+ *     jugadores: en equipo no se hacen más puntos, se aguanta más.
+ *     Ver FORMATOS.
  *   · Por MUNDO, DESATADO no multiplica: tiene SU PROPIA TABLA de
  *     escalones, más alta que la del arcade (LEYENDA son 100.000 y
  *     no 60.000), porque morder fantasmas a golpe de tecla da
@@ -63,12 +64,20 @@
       } }
   ];
 
-  /* Los cuatro formatos, en el orden de los botones del panel */
+  /* Los cuatro formatos, en el orden de los botones del panel.
+   *   mult  cuánto multiplica el escalón por jugar en ese formato.
+   *
+   * Antes era el número de jugadores (x2, x3, x4) y se demostró que no tenía
+   * base: los puntos del laberinto son los mismos lo jueguen uno o cuatro, y
+   * las marcas reales de equipo salían PARECIDAS a las de solo (en DESATADO,
+   * 110.000 en solo contra 74.000 / 68.000 / 64.000 en dúo, trío y
+   * escuadra). Lo que sí da un equipo es aguante —más vidas, compañeros que
+   * reaparecen—, y eso es lo que pagan estos cuartos de más. */
   var FORMATOS = [
-    { n: 1, name: 'SOLO' },
-    { n: 2, name: 'DÚO' },
-    { n: 3, name: 'TRÍO' },
-    { n: 4, name: 'ESCUADRA' }
+    { n: 1, name: 'SOLO',     mult: 1 },
+    { n: 2, name: 'DÚO',      mult: 1.25 },
+    { n: 3, name: 'TRÍO',     mult: 1.5 },
+    { n: 4, name: 'ESCUADRA', mult: 1.75 }
   ];
 
   /* Identificador de una ruta. Los del clásico y los de solo de cada mundo
@@ -164,10 +173,10 @@
     /* Ruta del CLÁSICO por número de jugadores (lo de siempre) */
     modeFor: function (players) { return this.ruta(null, players); },
 
-    /* Cuánto multiplica el escalón esa ruta: los jugadores por el mundo */
+    /* Cuánto multiplica el escalón esa ruta: el formato por el mundo */
     mult: function (mode) {
       var r = RUTAS[norm(mode)];
-      return r.fmt.n * r.mundo.mult;
+      return r.fmt.mult * r.mundo.mult;
     },
 
     /* Lo que hay que puntuar para esa insignia EN ESA RUTA. El escalón sale
@@ -176,7 +185,7 @@
     goal: function (badge, mode) {
       var r = RUTAS[norm(mode)];
       var base = (r.mundo.points && r.mundo.points[badge.id]) || badge.points;
-      return base * this.mult(mode);
+      return Math.round(base * this.mult(mode));
     },
 
     /* Mejor marca personal de esa ruta */

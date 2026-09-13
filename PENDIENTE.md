@@ -24,7 +24,7 @@ teclado de portátil F1–F4 van con `Fn` y a la gente le resulta incómodo.
 **Lo de antes el mismo día está cerrado, subido y desplegado**:
 DESATADO dejó de doblar el escalón del arcade y pasó a tener **su propia tabla**
 de maestrías —5.000 / 15.000 / 30.000 / 55.000 / **100.000** (LEYENDA) /
-175.000—, sobre la que el formato sigue multiplicando por los jugadores. Antes
+175.000—, sobre la que el formato multiplica (hoy x1,25 / x1,5 / x1,75). Antes
 salían de doblar los del arcade (6.000 / 16.000 / … / 120.000 / 200.000), que
 eran cifras heredadas y no elegidas. El listón bajó en todos los escalones, así
 que nadie perdió una insignia ya conseguida. Si algún día otro mundo necesita
@@ -109,7 +109,7 @@ Regenerarla cuando se toque el README o se enseñe el juego a alguien.
 | `5d7daec` | Seis laberintos, y cada uno con una idea distinta |
 | `2b9c3c2` | DESATADO, la Q que ya no te mata en party y una portada que impone |
 
-Service worker en **`pm-v40`**. **294 pruebas**: 0 fallos en `tests.html` y
+Service worker en **`pm-v41`**. **294 pruebas**: 0 fallos en `tests.html` y
 los 4 de siempre en Node (ver más abajo).
 
 ### Lo del 7 de septiembre: CACERÍA

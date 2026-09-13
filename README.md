@@ -303,8 +303,9 @@ Dos maneras de correr la misma batería:
   escuadra). Cada una lleva su propio récord, así que una gran partida en
   escuadra no regala las de solo, ni una en otro laberinto las del de 1980,
   ni un trío en otro laberinto las de jugarlo en solitario. Cuanto más
-  regala la partida, más pide: se multiplica por los jugadores y, en
-  DESATADO, otra vez por dos. En el panel se eligen por sus dos ejes:
+  regala la partida, más pide: en equipo, un cuarto más por formato (x1,25
+  dúo, x1,5 trío, x1,75 escuadra), y DESATADO tiene sus escalones propios,
+  más altos. En el panel se eligen por sus dos ejes:
   arriba el mundo y debajo el formato.
 - **Cuenta con usuario y contraseña** (opcional): guarda nivel, logros,
   maestrías, récords y amigos, y te los lleva a cualquier sitio. No pide
@@ -320,9 +321,9 @@ Dos maneras de correr la misma batería:
   panel en el menú: la lista a la izquierda y, a la derecha, **la elegida en
   grande**. Se pulsa la que quieras y se ve; al entrar sale sola la que
   tienes. Cada formato lleva **su propio récord y su propio listón**: el
-  escalón de siempre multiplicado por los jugadores (APRENDIZ son 3.000 en
-  solo y 12.000 en escuadra), porque el marcador de un equipo es de todos y
-  con cuatro se llega al mismo número con mucho menos mérito de cada uno.
+  escalón de siempre por x1 en solo, x1,25 en dúo, x1,5 en trío y x1,75 en
+  escuadra (APRENDIZ son 3.000 en solo y 5.250 en escuadra). En equipo no
+  se hacen más puntos —el laberinto es el mismo—, pero se aguanta más.
   **DESATADO tiene sus propios escalones**, más altos (LEYENDA son 100.000 y
   no 60.000), porque con poderes los puntos salen mucho más baratos. En
   partida sale el cartel animado **la primera vez que consigues cada una**, no

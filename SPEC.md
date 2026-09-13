@@ -964,10 +964,13 @@ and `newGame` shows that league's record as the in-game HIGH SCORE.
 **The bar rises with what the run gives away**: `Badges.goal(badge, mode)` =
 `base × Badges.mult(mode)`, where the base is **the world's own table** when it
 has one and `badge.points` otherwise, and the multiplier is **the format's
-times the world's**. Formats multiply by their player count (APRENDIZ is 3 000
-solo, 6 000 duo, 9 000 trio, 12 000 squad) because a team scoreboard belongs to
-everybody — four lives, four mouths, four ghosts per energiser — so the same
-figure is worth much less per person. The `hab` world does not multiply: it
+times the world's**. Formats multiply by `FORMATOS[].mult` — ×1 solo, ×1.25
+duo, ×1.5 trio, ×1.75 squad (APRENDIZ is 3 000 / 3 750 / 4 500 / 5 250), result
+rounded. It used to be the player count (×2/×3/×4), dropped on 2026-09-12:
+the maze holds the same points however many play, and real team records came
+out close to solo ones (DESATADO: 110k solo vs 74k/68k/64k), so team badges
+were near-unreachable. A team only buys endurance (more lives, respawns),
+which is what the quarter steps pay for. The `hab` world does not multiply: it
 carries **its own ladder** — 5 000 / 15 000 / 30 000 / 55 000 / **100 000** /
 175 000 — higher than the arcade's, because biting ghosts on a keypress prints
 points the arcade never had and without that toll the track would be over in an

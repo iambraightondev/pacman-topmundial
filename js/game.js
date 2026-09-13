@@ -1825,10 +1825,9 @@
      * una gran partida en escuadra no entrega las de dúo ni las de solo, y una
      * en otro trazado no entrega las del laberinto de siempre.
      *
-     * Y cada ruta pide más puntos cuanto más regala: por los jugadores (el
-     * marcador de un equipo es de todos, y con cuatro se llega al mismo número
-     * con mucho menos mérito de cada uno) y por el mundo (con poderes los
-     * puntos son más baratos). Ver js/badges.js. */
+     * Y cada ruta pide más puntos cuanto más regala: por el formato (un cuarto
+     * más por escalón: en equipo se aguanta más) y por el mundo (con poderes
+     * los puntos son más baratos). Ver js/badges.js. */
     badgeMode: function () {
       var B = window.PM.Badges;
       if (!B) return 'solo';

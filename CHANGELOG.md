@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-12 · Las maestrías de dúo, trío y escuadra, mucho más alcanzables
+
+- **El listón de equipo deja de multiplicarse por los jugadores.** Antes dúo
+  pedía el doble que solo, trío el triple y escuadra el cuádruple; ahora
+  **x1,25 en dúo, x1,5 en trío y x1,75 en escuadra**, en los tres mundos.
+- El motivo son las marcas reales: en equipo no se hacen más puntos (el
+  laberinto es el mismo), solo se aguanta más. En DESATADO las mejores eran
+  110.000 en solo y 74.000 / 68.000 / 64.000 en dúo, trío y escuadra.
+- TOP MUNDIAL del clásico pasa a 125.000 en dúo, 150.000 en trío y 175.000
+  en escuadra (antes 200.000 / 300.000 / 400.000). En DESATADO, 218.750 /
+  262.500 / 306.250.
+- **Nadie pierde nada**: todos los escalones bajan. Con las marcas de hoy, el
+  dúo clásico sube a LEYENDA, el trío clásico a EXPERTO, el dúo de DESATADO a
+  MAESTRO y su trío y escuadra a EXPERTO.
+
 ## 2026-09-12 · F1–F4: enseñar la maestría de cualquier formato
 
 - **`Ctrl`+`Espacio` sigue enseñando la de la partida**, y ahora **`F1`,

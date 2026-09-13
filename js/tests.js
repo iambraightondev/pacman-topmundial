@@ -778,13 +778,13 @@
            'solo,duo,trio,escuadra,lab,lab2,lab3,lab4,hab,hab2,hab3,hab4',
            'doce rutas: tres mundos por cuatro formatos');
         G.highScore1 = 9000;      // solo: CAZADOR (8.000)
-        G.highScore2 = 9000;      // dúo: solo APRENDIZ (6.000); CAZADOR pide 16.000
+        G.highScore2 = 9000;      // dúo: solo APRENDIZ (3.750); CAZADOR pide 10.000
         G.highScore3 = 0;
-        G.highScore4 = 48000;     // escuadra: EXPERTO (15.000 x 4 = 60.000, no)
+        G.highScore4 = 48000;     // escuadra: EXPERTO (26.250); MAESTRO pide 52.500
         eq(B.top('solo').id, 'cazador');
         eq(B.top('duo').id, 'aprendiz', 'la misma marca da menos en dúo');
         eq(B.top('trio'), null, 'sin partidas de trío, ninguna');
-        eq(B.top('escuadra').id, 'cazador', '48.000 entre cuatro: CAZADOR');
+        eq(B.top('escuadra').id, 'experto', '48.000 entre cuatro: EXPERTO');
         ok(!B.has('cazador', 'duo'), 'lo de solo no cuenta en dúo');
         ok(!B.has('aprendiz', 'trio'), 'ni lo de escuadra en trío');
         eq(B.best('escuadra'), 48000, 'cada ruta lee el récord de SU formato');
@@ -802,18 +802,18 @@
     G.toMenu();
   });
 
-  /* El marcador de un equipo es de todos: con cuatro se llega al mismo número
-   * con mucho menos mérito de cada uno (cuatro veces las vidas, cuatro bocas
-   * y cuatro fantasmas por energizante). Cada escalón pide los puntos de
-   * siempre multiplicados por los que juegan. */
-  test('el listón de cada maestría sube con la gente que hay en la partida',
+  /* En equipo no se hacen más puntos (el laberinto es el mismo), pero se
+   * aguanta más. Cada escalón sube un cuarto por formato: x1,25 / x1,5 / x1,75.
+   * Antes era x2 / x3 / x4 y las maestrías de equipo eran casi inalcanzables. */
+  test('el listón de cada maestría sube un cuarto por formato',
     function () {
       var B = window.PM.Badges;
       var aprendiz = CFG.BADGES[0];
       eq(B.goal(aprendiz, 'solo'), 3000);
-      eq(B.goal(aprendiz, 'duo'), 6000, 'en dúo, el doble');
-      eq(B.goal(aprendiz, 'trio'), 9000, 'en trío, el triple');
-      eq(B.goal(aprendiz, 'escuadra'), 12000, 'en escuadra, el cuádruple');
+      eq(B.goal(aprendiz, 'duo'), 3750, 'en dúo, x1,25');
+      eq(B.goal(aprendiz, 'trio'), 4500, 'en trío, x1,5');
+      eq(B.goal(aprendiz, 'escuadra'), 5250, 'en escuadra, x1,75');
+      eq(B.goal(CFG.BADGES[5], 'escuadra'), 175000, 'TOP MUNDIAL en escuadra');
       eq(B.players('trio'), 3);
       eq(B.modeName('escuadra'), 'ESCUADRA');
     });
@@ -4852,8 +4852,8 @@
       eq(B.mult('hab'), 1, 'habilidades no multiplica: tiene tabla propia');
       eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab'), 100000,
          'LEYENDA en DESATADO son 100.000');
-      eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab2'), 200000,
-         'y en dúo, el doble, como en cualquier ruta');
+      eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab2'), 125000,
+         'y en dúo, x1,25, como en cualquier ruta');
       eq(B.top('lab').id, 'cazador', '9.000 en laberintos: CAZADOR');
       eq(B.top('hab').id, 'aprendiz', 'los mismos 9.000 en habilidades: APRENDIZ');
       eq(B.top('solo'), null, 'y en solo, ninguna: ahí no se ha jugado');
@@ -4919,16 +4919,15 @@
     }
   });
 
-  /* Doce rutas: el listón lo marcan las dos cosas a la vez, los jugadores y el
-   * mundo. Cuatro bocas en DESATADO es lo más caro que hay (x4 por el formato
-   * y x2 por el mundo). */
+  /* Doce rutas: el listón lo marcan las dos cosas a la vez, el formato y el
+   * mundo. Escuadra en DESATADO es lo más caro que hay (su tabla propia, x1,75). */
   test('el listón de una ruta cruza el formato con el mundo', function () {
     var B = window.PM.Badges;
     var aprendiz = CFG.BADGES[0];
     eq(B.goal(aprendiz, 'lab'), 3000, 'laberintos en solo: el escalón de siempre');
-    eq(B.goal(aprendiz, 'lab3'), 9000, 'en trío, el triple');
+    eq(B.goal(aprendiz, 'lab3'), 4500, 'en trío, x1,5');
     eq(B.goal(aprendiz, 'hab'), 5000, 'desatado en solo: el suyo, más alto');
-    eq(B.goal(aprendiz, 'hab4'), 20000, 'y en escuadra, cuatro veces el suyo');
+    eq(B.goal(aprendiz, 'hab4'), 8750, 'y en escuadra, x1,75 el suyo');
     eq(B.mundoDe('hab3'), 'hab');
     eq(B.players('hab3'), 3);
     eq(B.modeName('hab3'), 'DESATADO · TRÍO');
@@ -4959,7 +4958,7 @@
       eq(G.recordModo('lab', 1), 0, 'y no toca la de solo');
       eq(G.recordModo('hab', 3), 0, 'ni la del otro mundo');
       eq(B.best('lab3'), 21000, 'la ruta lee su casilla');
-      eq(B.top('lab3').id, 'aprendiz', '21.000 entre tres: solo APRENDIZ (9.000)');
+      eq(B.top('lab3').id, 'cazador', '21.000 entre tres: CAZADOR (12.000); EXPERTO pide 22.500');
       eq(B.top('lab'), null, 'y en la de solo, ninguna');
     } finally {
       var i = 0;
