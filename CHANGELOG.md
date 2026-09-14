@@ -2,6 +2,33 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-13 · 26 skins nuevas y la vitrina de SKINS
+
+- **De 6 skins a 32.** Por nivel: MOÑITO, COMETA, HOLOGRAMA, GLITCH, PRISMA,
+  RASTRO y FUEGO, además de las de siempre. Por logro: CEREZA, MEDIO
+  FANTASMA, CORONA, ESCUADRA y DORADO. **Extravagantes**, que dejan la forma
+  de Pac-Man y comen a su manera: HAMBURGUESA, GATO, TIBURÓN, PLANTA
+  CARNÍVORA, ROBOT, T-REX, OVNI, COFRE MÍMICO, DRAGÓN y CALAVERA. De
+  temporada: CALABAZA, NOCHE DE BRUJAS y VAMPIRO (Halloween) y CLAUS-MAN
+  (Navidad).
+- **La escalera de nivel baja**: 1, 2, 4, 6, 8, 10, 12, 15, 18, 22, 26, 30 y
+  34, en el orden elegido en la vitrina. Antes pedía 3 / 7 / 12 / 20 / 30 y
+  solo un jugador pasaba del 30. Nadie pierde ninguna.
+- **Cada skin de logro dice qué pide y cuánto te falta.** Las cifras salen de
+  los contadores reales: 120 frutas, 300 fantasmas, 50 mordiscos con la Q, 5
+  retos del DAILY, llegar al nivel 7, 100 partidas, 30 acompañado, 5
+  cacerías, 10 Pac-Man cazados en CACERÍA, 100.000 puntos, 250 muertes,
+  LEYENDA en clásico solo, MAESTRO en DESATADO, MAESTRO en escuadra y entrar
+  en el top 10.
+- **Lo jugado cuenta.** Las muertes no se contaban: se estiman a 2,5 por
+  partida jugada, a la baja.
+- **Las estelas siguen el camino** (doblan las esquinas con Pac-Man) y
+  **crecen con la velocidad**: con el turbo miden el doble.
+- **Vitrina de SKINS** (TU CUARTEL, o desde PERFIL): cada skin corre por un
+  pasillo a tamaño de partida con lupa al lado, con su progreso y el botón
+  para ponérsela. En PERFIL queda solo la puesta.
+- **Aviso de SKIN NUEVA** en la partida cuando se abre una.
+
 ## 2026-09-12 · Las maestrías de dúo, trío y escuadra, mucho más alcanzables
 
 - **El listón de equipo deja de multiplicarse por los jugadores.** Antes dúo

@@ -481,6 +481,8 @@
         window.PM.Achievements.merge(fila.logros || {});
         window.PM.Achievements.syncSeen();   // lo traído no se celebra
       }
+      // ni las skins que abra lo traído (nivel, contadores, maestrías)
+      if (window.PM.Skins) window.PM.Skins.syncVistas();
       // el nombre del juego pasa a ser el de la cuenta
       s.nick1 = this.user.usuario;
       if (window.PM.UI && window.PM.UI.saveSettings) window.PM.UI.saveSettings();

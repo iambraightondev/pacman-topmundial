@@ -35,6 +35,53 @@
     this.deathTicks = 0;
     this.deathOk = false;          // invitado: el anfitrión confirmó la muerte
     this.safeTicks = 0;            // invulnerable al reaparecer en marcha
+    /* Por dónde ha pasado, para las skins con estela (COMETA, RASTRO,
+     * ESCUADRA): así la estela dobla las esquinas con él en vez de salir
+     * recta hacia atrás. Y la velocidad suavizada, para que la estela crezca
+     * al correr más (turbo, niveles altos) y se recoja al pararse. */
+    this.huella = [];
+    this.velPx = 0;
+  };
+
+  /* Cuánto cabe en la huella: ~1 tick por punto, sobra para la estela más
+   * larga (RASTRO a toda velocidad) */
+  var HUELLA_MAX = 160;
+  /* Un salto de más de esto entre dos ticks no es andar: es el túnel, el
+   * FLASH o una corrección de red. Ahí la huella se tira, que si no la
+   * estela cruzaría el laberinto de lado a lado. */
+  var HUELLA_SALTO = 12;
+
+  Pacman.prototype.anotarHuella = function () {
+    var h = this.huella;
+    var ult = h.length ? h[h.length - 1] : null;
+    if (ult) {
+      var dd = Math.abs(this.x - ult.x) + Math.abs(this.y - ult.y);
+      if (dd > HUELLA_SALTO) h.length = 0;
+      else if (dd < 0.25) { ult.d = this.dir; return; }
+    }
+    h.push({ x: this.x, y: this.y, d: this.dir });
+    if (h.length > HUELLA_MAX) h.shift();
+  };
+
+  /* Punto del camino a `dist` px por detrás (coordenadas del laberinto).
+   * Si la huella no llega tan lejos, se queda en lo más viejo que recuerda:
+   * la estela nace con Pac-Man parado encima (al salir, tras el túnel) y se
+   * va alargando según anda, en vez de aparecer ya estirada hacia la nada. */
+  Pacman.prototype.atras = function (dist) {
+    var h = this.huella;
+    var cx = this.x, cy = this.y, cd = this.dir;
+    var llevo = 0;
+    for (var i = h.length - 1; i >= 0; i--) {
+      var p = h[i];
+      var seg = Math.abs(cx - p.x) + Math.abs(cy - p.y);
+      if (seg > 0 && llevo + seg >= dist) {
+        var k = (dist - llevo) / seg;
+        return { x: cx + (p.x - cx) * k, y: cy + (p.y - cy) * k, d: p.d };
+      }
+      llevo += seg;
+      cx = p.x; cy = p.y; cd = p.d;
+    }
+    return { x: cx, y: cy, d: cd };
   };
 
   Pacman.prototype.tileX = function () { return Math.floor(this.x / T); };
@@ -64,6 +111,11 @@
       this.pauseTicks--;
       return;
     }
+    this.pasoHuella(speedPx);
+  };
+
+  /* El movimiento de verdad; update() lo envuelve para apuntar la huella */
+  Pacman.prototype.mover = function (speedPx) {
     var d = this.dir, nd = this.nextDir;
     var cx = this.tileX(), cy = this.tileY();
     var ccx = centerOf(this.x), ccy = centerOf(this.y);
@@ -133,14 +185,23 @@
     }
   };
 
+  Pacman.prototype.pasoHuella = function (speedPx) {
+    this.mover(speedPx);
+    // velocidad suavizada: al pararse cae a cero poco a poco
+    this.velPx += ((this.moving ? speedPx : 0) - this.velPx) * 0.25;
+    this.anotarHuella();
+  };
+
   /* Fase visible de la boca (0,1,2,1 cíclico) */
   Pacman.prototype.visibleMouth = function () {
     return [0, 1, 2, 1][this.mouthPhase];
   };
 
-  Pacman.prototype.draw = function (ctx, color, skin) {
+  /* extra (opcional): lo que necesitan las skins animadas, ver
+   * Sprites.drawPacman */
+  Pacman.prototype.draw = function (ctx, color, skin, extra) {
     window.PM.Sprites.drawPacman(ctx, this.x, this.y + CFG.MAZE_Y,
-      this.dir, this.visibleMouth(), color, skin);
+      this.dir, this.visibleMouth(), color, skin, extra);
   };
 
   window.PM.Pacman = Pacman;

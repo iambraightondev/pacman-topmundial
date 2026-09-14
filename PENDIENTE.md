@@ -7,11 +7,67 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **12 de septiembre de 2026**.
+Última puesta al día: **13 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**Skins nuevas — SUBIDAS (13 de septiembre).**
+Las 26 del diseño están en el juego (`js/skins.js`, service worker `pm-v42`),
+con la vitrina de SKINS dentro del juego. `tests.html`: 0 fallos en Chromium;
+`pruebas-node.js`: los 4 de siempre. Braighton dio el visto bueno con las
+cifras de la tabla de abajo tal cual.
+Detalle en CHANGELOG y SPEC (*Skins, emotes...*). Lo que hay que saber:
+
+- **Cifras de logro puestas con datos reales** (contadores de `perfiles.logros`
+  el 13 sep), no confirmadas una a una: CEREZA 120 frutas · MEDIO FANTASMA 10
+  cazas en CACERÍA (no hay ruta de maestría de CACERÍA) · CORONA LEYENDA en
+  clásico solo · ESCUADRA MAESTRO en escuadra de cualquier mundo · DORADO top
+  10 · HAMBURGUESA 100 partidas · GATO 30 `party:partidas` (ese contador está
+  sembrado de más: J1 lo tiene igual que el total) · TIBURÓN 300 fantasmas ·
+  PLANTA 50 mordiscos · ROBOT 5 `dailyOk` (`dailyRacha` es la racha actual, no
+  la mejor) · T-REX `nivelMax` 7 · OVNI 5 `caza:partidas` · COFRE 100.000 ·
+  DRAGÓN MAESTRO en DESATADO solo · CALAVERA 250 muertes. Cambiar una es tocar
+  `CFG.SKINS[].pide`.
+- **DORADO se queda aunque te adelanten** (como todo: lo puesto no se quita).
+  Hoy no filtra: los cinco con cuenta están en el top 7 por nombre.
+- Diseño aprobado en la vitrina
+  <https://claude.ai/code/artifact/20184d7f-a037-40fb-913d-feb53f81ef27>; lo
+  de abajo es lo decidido allí.
+
+- **Por nivel** (ordenables): MOÑITO, COMETA, HOLOGRAMA, GLITCH, FUEGO, RASTRO
+  (estilo moto de luz; no se llama TRON porque es marca de Disney), PRISMA. **Por
+  logro** (no dependen del nivel): CORONA, DORADO, MEDIO FANTASMA, CALAVERA,
+  CEREZA, ESCUADRA. **De temporada**: CALABAZA y NOCHE DE BRUJAS (24–31 oct),
+  CLAUS-MAN (20 dic – 6 ene).
+- **CALAVERA: 250 muertes acumuladas** (elegido por Braighton; yo proponía 150).
+  El juego no cuenta muertes: se siembra con `logros.partidas × 2,5` (a la baja:
+  no descuenta abandonos, CACERÍA ni vidas compartidas). Con eso J1 y J3 (justo
+  en 250) la tienen al salir y a los demás les faltan 52–78 partidas; 250 ≈ 100
+  partidas desde cero, lo mismo que el nivel 15. Descartados: 100 (casi todos la
+  tienen el primer día), 150 (se quedaba corto) y 500 (solo uno).
+  La CALAVERA es la única que deja la forma de Pac-Man: mandíbula que se abre
+  al comer y gira entera en vertical.
+- **Escalera de niveles (A, la que se implementó):** 1, 2, 4, 6, 8, 10, 12,
+  15, 18, 22, 26, 30, 34 en vez de 1/3/7/12/20/30, con el orden que Braighton
+  dejó en la vitrina: CLÁSICO, SOMBRA, OJOS, MOÑITO, COMETA, NEÓN, HOLOGRAMA,
+  GLITCH, PRISMA, PÍXEL, ARO, RASTRO, FUEGO. Solo un jugador pasaba del 30. La
+  alternativa B (abaratar la experiencia a la mitad) se desaconsejó.
+- **Extravagantes** (dejan la forma de Pac-Man; el comer es su propio gesto):
+  CALAVERA, TIBURÓN, COFRE MÍMICO, DRAGÓN, PLANTA CARNÍVORA, ROBOT, T-REX,
+  HAMBURGUESA, OVNI, GATO (todas por logro) y VAMPIRO (Halloween). Contadores
+  propuestos, cifras sin decidir: fantasmas, puntosMax 100.000, maestría de
+  DESATADO, mordiscos (no frutas: ya las pide CEREZA), racha del DAILY,
+  nivelMax, partidas, cazas y partidas en equipo. Aviso dado: cuanto menos
+  se parecen a Pac-Man, peor se lee hacia dónde van en una partida rápida.
+- **Estelas proporcionales a la velocidad** (pedido expreso): SOMBRA, COMETA,
+  RASTRO y las llamas de FUEGO se alargan con la velocidad de Pac-Man (turbo,
+  ajustes, nivel). Implementado con la huella real de cada Pac-Man y su
+  velocidad suavizada: la estela dobla esquinas y crece el doble de lo que
+  sube la velocidad.
+- **Las extravagantes no llevan la sierra blanca de la Q**: flotaría fuera de
+  su cara. Con la Q activa abren la boca del todo; es su aviso.
 
 **La sesión del 12 de septiembre (noche) está cerrada, subida y desplegada**
 (service worker `pm-v41`). Dos cosas:

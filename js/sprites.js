@@ -61,7 +61,21 @@
     return Math.abs(ang) > half;               // fuera de la cuña = cuerpo
   }
 
-  Sprites.drawPacman = function (ctx, x, y, dir, mouthPhase, color, skin) {
+  /* extra (opcional) es lo que necesitan las skins animadas de js/skins.js:
+   *   t        segundos de reloj (en partida, el tick: así un mirón y una
+   *            repetición ven lo mismo)
+   *   back(d)  punto del camino d px por detrás {x, y, d} (estelas)
+   *   estira   cuánto se alarga la estela con la velocidad (1 = normal)
+   *   team     colores de los compañeros (ESCUADRA)
+   *   muerde   la Q está activa (las extravagantes abren la boca del todo)
+   *   icono    dibujo quieto de menú o de vidas: sin estelas
+   * Las seis de siempre se dibujan aquí; el resto las registra js/skins.js
+   * en Sprites.ARTE y se desvían antes de tocar nada. */
+  Sprites.drawPacman = function (ctx, x, y, dir, mouthPhase, color, skin, extra) {
+    if (skin && Sprites.ARTE && Sprites.ARTE.hasOwnProperty(skin) && Sprites.dibujarArte) {
+      Sprites.dibujarArte(ctx, x, y, dir, mouthPhase, color, skin, extra);
+      return;
+    }
     var r = CFG.PAC_R;
     var half = [0, (40 * Math.PI / 180) / 2, (80 * Math.PI / 180) / 2][mouthPhase] || 0;
     var d = (dir >= 0) ? dir : 3;
@@ -137,10 +151,11 @@
     }
 
     if (skin === 'sombra') {
-      // estela sólida por detrás, en el mismo tono
+      // estela sólida por detrás, en el mismo tono; más lejos cuanto más corre
+      var lejos = 3 * ((extra && extra.estira > 0 && !extra.icono) ? extra.estira : 1);
       ctx.globalAlpha = 0.35;
       ctx.fillStyle = color;
-      pacPath(ctx, x - v.x * 3, y - v.y * 3, r - 1, a, half);
+      pacPath(ctx, x - v.x * lejos, y - v.y * lejos, r - 1, a, half);
       ctx.fill();
       ctx.globalAlpha = 1;
     }

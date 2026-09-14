@@ -226,6 +226,9 @@
       this.els.prompt = document.getElementById('prompt');
       if (window.PM.Badges) window.PM.Badges.syncSeen();
       if (window.PM.Achievements) window.PM.Achievements.syncSeen();
+      // las skins que ya estaban abiertas al llegar no se anuncian como nuevas
+      if (window.PM.Skins) window.PM.Skins.syncVistas();
+      this.els.skins = document.getElementById('skins');
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
@@ -236,6 +239,7 @@
       this.buildProfile();
       this.buildDaily();
       this.buildMate();
+      this.buildSkins();
       this.accountHooks();
       this.buildGameButtons();
       this.buildDpads();
@@ -413,6 +417,10 @@
       extras.appendChild(this.makeButton('PERFIL', function () {
         self.resumeAudio();
         self.showProfile();
+      }));
+      extras.appendChild(this.makeButton('SKINS', function () {
+        self.resumeAudio();
+        self.showSkins('skin1');
       }));
       /* LABERINTOS ya no vive aquí: es un modo, y los modos están todos
        * juntos en la rejilla de arriba. El cuartel es para lo TUYO. */
@@ -1244,74 +1252,288 @@
       }
     },
 
-    /* Fila de skins: cada una se dibuja de verdad en un mini canvas,
-     * con el color elegido para ese jugador (se repinta al cambiarlo). */
+    /* Tu skin, en PERFIL (y la del jugador 2, en OPCIONES). Con más de
+     * treinta ya no cabía una fila con todas, así que aquí se ve LA PUESTA,
+     * dibujada de verdad con tu color, y todas se miran y se eligen en la
+     * vitrina de SKINS, que enseña además qué pide cada una. */
     makeSkinRow: function (key, colorKey) {
       var self = this;
       var row = document.createElement('div');
-      row.className = 'skins';
-      var items = [];
-      CFG.SKINS.forEach(function (sk) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'skin';
-        b.title = sk.name;
-        b.setAttribute('aria-label', 'Skin ' + sk.name);
-        var cv = document.createElement('canvas');
-        cv.width = 48; cv.height = 48;       // grandes: a 22 px no se distinguían
-        b.appendChild(cv);
-        var lab = document.createElement('span');
-        lab.textContent = sk.name;
-        b.appendChild(lab);
-        b.addEventListener('click', function () {
-          // bloqueada: en vez de no hacer nada, se dice qué falta
-          if (b.classList.contains('locked')) {
-            self.optionsMsg('LA SKIN ' + sk.name + ' SE ABRE EN EL NIVEL ' +
-                            (sk.level || 1));
-            return;
-          }
-          window.PM.settings[key] = sk.id;
-          saveSettings();
-          self.refreshOptions();
-        });
-        row.appendChild(b);
-        items.push({ id: sk.id, btn: b, canvas: cv, label: lab, info: sk });
-      });
-      this.skinRows[key] = { items: items, colorKey: colorKey };
+      row.className = 'skins skin-pick';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'skin active';
+      b.setAttribute('aria-label', 'Ver todas las skins');
+      var cv = document.createElement('canvas');
+      cv.width = 48; cv.height = 48;
+      b.appendChild(cv);
+      var lab = document.createElement('span');
+      b.appendChild(lab);
+      b.addEventListener('click', function () { self.showSkins(key); });
+      row.appendChild(b);
+      var ver = this.makeButton('VER TODAS LAS SKINS', function () { self.showSkins(key); });
+      ver.classList.add('btn-preset');
+      row.appendChild(ver);
+      this.skinRows[key] = { btn: b, canvas: cv, label: lab, colorKey: colorKey, ver: ver };
       return row;
     },
 
-    /* Repinta las miniaturas de skins con el color actual y marca las que
-     * todavía no están abiertas. La que ya llevas puesta nunca se bloquea:
-     * si el requisito la dejara fuera, se respeta lo que ya tenías. */
+    /* Repinta la skin puesta de cada jugador con su color */
     refreshSkins: function () {
       var s = window.PM.settings;
-      var L = window.PM.Level;
-      var lvl = L ? L.level() : 1;
+      var Sk = window.PM.Skins;
       for (var k in this.skinRows) {
         if (!this.skinRows.hasOwnProperty(k)) continue;
         var row = this.skinRows[k];
         var color = s[row.colorKey] || '#ffff00';
-        for (var i = 0; i < row.items.length; i++) {
-          var it = row.items[i];
-          var pide = it.info.level || 1;
-          var abierta = (lvl >= pide) || (s[k] === it.id);
-          it.btn.classList.toggle('active', s[k] === it.id);
-          it.btn.classList.toggle('locked', !abierta);
-          it.label.textContent = abierta ? it.info.name : ('NIVEL ' + pide);
-          it.btn.title = abierta ? it.info.name
-            : (it.info.name + ' · SE ABRE EN EL NIVEL ' + pide);
-          var c = it.canvas.getContext('2d');
-          c.setTransform(1, 0, 0, 1, 0, 0);
-          c.clearRect(0, 0, 48, 48);
-          c.imageSmoothingEnabled = false;
-          // el sprite mide r=6.5; se amplía para que la skin se lea bien
-          c.setTransform(3, 0, 0, 3, 24, 24);
-          window.PM.Sprites.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2,
-            abierta ? color : '#3a3a3a', it.id);
-          c.setTransform(1, 0, 0, 1, 0, 0);
+        var id = (CFG.SKIN_IDS.indexOf(s[k]) !== -1) ? s[k] : 'clasico';
+        var info = Sk ? Sk.info(id) : null;
+        row.label.textContent = info ? info.name : id.toUpperCase();
+        row.btn.title = (info ? info.name : '') + ' · VER TODAS LAS SKINS';
+        if (Sk) {
+          row.ver.textContent = 'VER TODAS LAS SKINS (' + Sk.cuantas() + '/' + CFG.SKINS.length + ')';
         }
+        var c = row.canvas.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, 48, 48);
+        c.imageSmoothingEnabled = false;
+        // el sprite mide r=6.5; se amplía para que la skin se lea bien
+        c.setTransform(3, 0, 0, 3, 24, 24);
+        window.PM.Sprites.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2, color, id, { icono: true });
+        c.setTransform(1, 0, 0, 1, 0, 0);
       }
+    },
+
+    /* ------------------------------------------------------
+     * Vitrina de SKINS
+     *
+     * Cada skin corre por un pasillo del juego a tamaño de partida y al
+     * lado se ve con lupa (el recorte de ese mismo pasillo ampliado x2, sin
+     * suavizar: lo de la lupa es lo que se verá jugando). Debajo, qué la
+     * abre y cuánto te falta. Se diseñó así en la vitrina donde se aprobaron
+     * las skins, y es la misma idea: ver la skin moviéndose antes de
+     * ponérsela, no una miniatura quieta.
+     *
+     * Solo se animan las fichas que están a la vista, y la animación se para
+     * sola al cerrar el panel.
+     * ------------------------------------------------------ */
+    buildSkins: function () {
+      var self = this;
+      var o = this.els.skins;
+      if (!o) return;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'SKINS';
+      o.appendChild(h);
+
+      /* para quién se elige: tu skin o la del jugador 2 local */
+      var para = document.createElement('div');
+      para.className = 'tab-row tab-row-sub skin-para';
+      this.skinsParaBtns = {};
+      [['skin1', 'TU SKIN'], ['skin2', 'JUGADOR 2 (LOCAL)']].forEach(function (p) {
+        var b = self.makeButton(p[1], function () {
+          self.skinsKey = p[0];
+          self.refreshSkinsVitrina();
+        });
+        b.classList.add('tab');
+        self.skinsParaBtns[p[0]] = b;
+        para.appendChild(b);
+      });
+
+      var bar = document.createElement('div');
+      bar.className = 'tab-row';
+      this.skinsTabBtns = {};
+      [['todas', 'TODAS'], ['nivel', 'POR NIVEL'], ['logro', 'POR LOGRO'],
+       ['rara', 'EXTRAVAGANTES'], ['temporada', 'DE TEMPORADA']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () {
+          self.skinsTab = t[0];
+          self.refreshSkinsVitrina();
+          o.scrollTop = 0;
+        });
+        b.classList.add('tab');
+        self.skinsTabBtns[t[0]] = b;
+        bar.appendChild(b);
+      });
+      o.appendChild(bar);
+      o.appendChild(para);
+
+      this.skinsResumen = document.createElement('div');
+      this.skinsResumen.className = 'note skin-resumen';
+      o.appendChild(this.skinsResumen);
+
+      this.skinsGrid = document.createElement('div');
+      this.skinsGrid.className = 'skin-vitrina';
+      o.appendChild(this.skinsGrid);
+
+      this.skinsItems = [];
+      CFG.SKINS.forEach(function (sk, idx) {
+        var card = document.createElement('div');
+        card.className = 'skin-card';
+
+        var head = document.createElement('div');
+        head.className = 'skin-card-head';
+        var nom = document.createElement('span');
+        nom.className = 'skin-card-name';
+        nom.textContent = sk.name;
+        head.appendChild(nom);
+        var chip = document.createElement('span');
+        chip.className = 'skin-chip ' + sk.grupo;
+        head.appendChild(chip);
+        card.appendChild(head);
+
+        var views = document.createElement('div');
+        views.className = 'skin-views';
+        var lupa = document.createElement('canvas');
+        lupa.width = 144; lupa.height = 144;
+        lupa.className = 'skin-lupa';
+        lupa.setAttribute('aria-label', 'Skin ' + sk.name + ' ampliada');
+        var esc = document.createElement('canvas');
+        esc.width = 336; esc.height = 144;
+        esc.className = 'skin-escena';
+        esc.setAttribute('aria-label', 'Skin ' + sk.name + ' corriendo por un pasillo');
+        views.appendChild(lupa);
+        views.appendChild(esc);
+        card.appendChild(views);
+
+        var ve = document.createElement('div');
+        ve.className = 'skin-ve';
+        ve.textContent = sk.ve || '';
+        card.appendChild(ve);
+
+        var prog = document.createElement('div');
+        prog.className = 'skin-prog';
+        var barra = document.createElement('div');
+        barra.className = 'level-bar';
+        var fill = document.createElement('div');
+        fill.className = 'level-fill';
+        barra.appendChild(fill);
+        var ptxt = document.createElement('span');
+        prog.appendChild(barra);
+        prog.appendChild(ptxt);
+        card.appendChild(prog);
+
+        var btn = self.makeButton('PONER', function () {
+          var it = self.skinsItems[idx];
+          if (!it.abierta) return;
+          window.PM.settings[self.skinsKey || 'skin1'] = sk.id;
+          saveSettings();
+          if (window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
+          self.refreshSkinsVitrina();
+          self.refreshSkins();
+        });
+        btn.classList.add('btn-preset', 'skin-poner');
+        card.appendChild(btn);
+
+        self.skinsGrid.appendChild(card);
+        self.skinsItems.push({
+          id: sk.id, info: sk, card: card, chip: chip, lupa: lupa, escena: esc,
+          fill: fill, prog: ptxt, btn: btn, off: idx * 41, abierta: false
+        });
+      });
+
+      var back = this.makeButton('VOLVER', function () { self.closeSkins(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+
+      this.skinsTab = 'todas';
+      this.skinsKey = 'skin1';
+    },
+
+    /* key: 'skin1' (la tuya) o 'skin2' (jugador 2 local). Se vuelve al panel
+     * desde el que se abrió. */
+    showSkins: function (key) {
+      var self = this;
+      var abierto = this.visiblePanel();
+      this.skinsVolver = (abierto === this.els.options) ? 'options'
+        : (abierto === this.els.profile) ? 'profile' : 'menu';
+      this.skinsKey = (key === 'skin2') ? 'skin2' : 'skin1';
+      this.refreshSkinsVitrina();
+      this.showPanel('skins');
+      if (this.els.skins) this.els.skins.scrollTop = 0;
+      this.animarSkins();
+      // DORADO se abre al verse en el top 10: se mira una vez, sin molestar
+      if (window.PM.Skins) {
+        window.PM.Skins.comprobarTop10(function () { self.refreshSkinsVitrina(); });
+      }
+    },
+
+    closeSkins: function () {
+      var v = this.skinsVolver;
+      if (v === 'options') this.showOptions();
+      else if (v === 'profile') this.showProfile();
+      else this.showMenu();
+    },
+
+    refreshSkinsVitrina: function () {
+      var Sk = window.PM.Skins;
+      if (!Sk || !this.skinsItems) return;
+      var s = window.PM.settings;
+      var key = this.skinsKey || 'skin1';
+      var tab = this.skinsTab || 'todas';
+      var puesta = s[key];
+      for (var k in this.skinsParaBtns) {
+        if (this.skinsParaBtns.hasOwnProperty(k)) this.skinsParaBtns[k].classList.toggle('active', k === key);
+      }
+      for (var t in this.skinsTabBtns) {
+        if (this.skinsTabBtns.hasOwnProperty(t)) this.skinsTabBtns[t].classList.toggle('active', t === tab);
+      }
+      var abiertas = 0;
+      for (var i = 0; i < this.skinsItems.length; i++) {
+        var it = this.skinsItems[i];
+        var est = Sk.estado(it.id);
+        var esPuesta = (puesta === it.id);
+        it.abierta = est.abierta || esPuesta;
+        if (est.abierta) abiertas++;
+        var ver = (tab === 'todas') || (tab === 'rara' ? !!it.info.rara
+          : (it.info.grupo === tab && !(tab === 'logro' && it.info.rara)));
+        it.card.style.display = ver ? 'flex' : 'none';
+        it.card.classList.toggle('puesta', esPuesta);
+        it.card.classList.toggle('locked', !it.abierta);
+        it.chip.textContent = est.chip;
+        it.fill.style.width = Math.round((it.abierta ? 1 : est.pct) * 100) + '%';
+        it.prog.textContent = est.abierta ? ('ABIERTA · ' + est.progreso)
+          : esPuesta ? 'PUESTA DE ANTES: NO SE TE QUITA' : est.progreso;
+        it.btn.textContent = esPuesta ? 'PUESTA' : it.abierta ? 'PONER' : 'BLOQUEADA';
+        it.btn.disabled = esPuesta || !it.abierta;
+      }
+      this.skinsResumen.textContent = 'TIENES ' + abiertas + ' DE ' + CFG.SKINS.length +
+        ' · ELIGIENDO ' + (key === 'skin2' ? 'LA DEL JUGADOR 2 LOCAL' : 'LA TUYA');
+    },
+
+    /* Animación de la vitrina: solo mientras está abierta y solo las fichas
+     * visibles. Cada una va a su compás para que no parezcan clonadas. */
+    animarSkins: function () {
+      var self = this;
+      var Sk = window.PM.Skins;
+      if (!Sk || !this.skinsItems || this.skinsAnim) return;
+      var raf = window.requestAnimationFrame;
+      if (!raf) return;
+      var equipoMuestra = ['#ff0000', '#00ffff', '#00ff00', '#ff69b4'];
+      this.skinsAnim = true;
+      function paso() {
+        var panel = self.els.skins;
+        if (!panel || panel.style.display === 'none') { self.skinsAnim = false; return; }
+        var t = Date.now() / 1000;
+        var s = window.PM.settings;
+        var color = s[(self.skinsKey === 'skin2') ? 'pac2Color' : 'pacColor'] || '#ffff00';
+        var equipo = equipoMuestra.filter(function (c) { return c !== color; }).slice(0, 3);
+        var alto = window.innerHeight || 800;
+        for (var i = 0; i < self.skinsItems.length; i++) {
+          var it = self.skinsItems[i];
+          if (it.card.style.display === 'none') continue;
+          var r = it.card.getBoundingClientRect();
+          if (r.bottom < 0 || r.top > alto) continue;
+          var tt = t + it.off * 0.013;
+          var pos = Sk.escena(it.escena, it.id, color, tt * 44 + it.off, tt, { team: equipo });
+          // la cereza cuelga por detrás: la lupa se centra un poco atrás
+          Sk.lupa(it.lupa, it.escena, pos, it.id === 'cereza' ? 4 : 0);
+        }
+        raf(paso);
+      }
+      raf(paso);
     },
 
     /* Aviso corto dentro de OPCIONES (por ahora, skins bloqueadas) */
@@ -2644,7 +2866,7 @@
       gSkin.appendChild(this.makeSkinRow('skin1', 'pacColor'));
       var skinNota = document.createElement('div');
       skinNota.className = 'note';
-      skinNota.textContent = 'SE ABREN SUBIENDO DE NIVEL DE JUGADOR';
+      skinNota.textContent = 'SE ABREN SUBIENDO DE NIVEL, CON LOGROS O JUGANDO EN FECHAS ESPECIALES';
       gSkin.appendChild(skinNota);
       this.profSkinMsg = document.createElement('div');
       this.profSkinMsg.className = 'lobby-status';
@@ -3698,6 +3920,10 @@
           return;
         }
         self.rankStatus.textContent = '';
+        /* verse en el top 10 individual de siempre abre DORADO */
+        if (players === 1 && !enTemporada && window.PM.Skins) {
+          window.PM.Skins.anotarTop10(rows);
+        }
         if (players === 5) self.renderTimes(rows);
         else self.renderRanking(rows);
       }
@@ -4353,7 +4579,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'mazes', 'friends', 'profile', 'mate'];
+                   'mazes', 'friends', 'profile', 'mate', 'skins'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -5195,7 +5421,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'mazes', 'friends', 'profile', 'daily', 'mate'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate', 'skins'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -5545,6 +5771,8 @@
           } else if (ev.key === 'Escape') {
             if (self.els.online.style.display !== 'none') {
               self.showMenu();      // salir del panel no deshace la party
+            } else if (self.els.skins && self.els.skins.style.display !== 'none') {
+              self.closeSkins();    // vuelve a PERFIL u OPCIONES si vino de ahí
             } else if (self.els.options.style.display !== 'none' ||
                        self.els.badges.style.display !== 'none' ||
                        self.els.ranking.style.display !== 'none' ||

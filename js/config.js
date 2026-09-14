@@ -453,20 +453,130 @@
                       '#ff69b4', '#ff8c00', '#b19cd9', '#ffffff'];
 
   /* ---------- Skins (aspecto del Pac-Man, sobre el color elegido) ----------
-   * Se desbloquean con el NIVEL DE JUGADOR, que sube jugando. Se dibujan en
-   * sprites.js. La que ya lleves puesta no se te quita nunca, aunque el
-   * requisito suba: ver PM.Skins.allowed(). */
+   * Cuatro grupos (`grupo`):
+   *   nivel     — se abren con el NIVEL DE JUGADOR (`level`), en este orden.
+   *               Los niveles son la escalera rebajada del 13 de septiembre
+   *               (solo un jugador pasaba del 30) y el ORDEN lo eligió
+   *               Braighton en la vitrina: MOÑITO antes que COMETA, PRISMA a
+   *               media escalera y FUEGO la última.
+   *   logro     — se abren con un contador de logros o una maestría (`pide`),
+   *               jueguen al nivel que jueguen.
+   *   temporada — se abren jugando en unas fechas; ganadas, se quedan.
+   * `rara` son las EXTRAVAGANTES: dejan la forma de Pac-Man y el comer es su
+   * propio gesto (mandíbula, tapa, pan, rayo...). Se dibujan en js/skins.js;
+   * las seis de siempre, en sprites.js. `gana` y `ve` son los textos de la
+   * vitrina de SKINS.
+   *
+   * `pide` (js/skins.js lo interpreta):
+   *   { stat, meta, que }            contador de PM.Achievements >= meta
+   *   { ruta: [...], maestria, que }  maestría >= esa en alguna de esas rutas
+   *   { fecha: 'halloween'|'navidad' } jugar una partida en esas fechas
+   * Las cifras salen de los contadores reales de los jugadores (13 sep):
+   * una o dos personas la tienen al salir y el resto la ve cerca.
+   *
+   * La que ya lleves puesta no se te quita nunca, aunque el requisito suba:
+   * ver PM.Skins.abierta(). */
   CFG.SKINS = [
-    { id: 'clasico', name: 'CLÁSICO', level: 1 },
-    { id: 'sombra',  name: 'SOMBRA',  level: 3 },
-    { id: 'ojos',    name: 'OJOS',    level: 7 },
-    { id: 'neon',    name: 'NEÓN',    level: 12 },
-    { id: 'pixel',   name: 'PÍXEL',   level: 20 },
-    { id: 'aro',     name: 'ARO',     level: 30 }
+    /* --- por nivel --- */
+    { id: 'clasico', name: 'CLÁSICO', grupo: 'nivel', level: 1,
+      ve: 'EL PAC-MAN DE SIEMPRE.' },
+    { id: 'sombra', name: 'SOMBRA', grupo: 'nivel', level: 2,
+      ve: 'UNA SOMBRA TRANSLÚCIDA LE VA PEGADA DETRÁS, MÁS LEJOS CUANTO MÁS CORRE.' },
+    { id: 'ojos', name: 'OJOS', grupo: 'nivel', level: 4,
+      ve: 'UN OJO EN LA FRENTE QUE MIRA HACIA DONDE AVANZA.' },
+    { id: 'mono', name: 'MOÑITO', grupo: 'nivel', level: 6,
+      ve: 'UN MOÑITO ROSADO EN LA CABEZA QUE SE MECE AL CORRER.' },
+    { id: 'cometa', name: 'COMETA', grupo: 'nivel', level: 8,
+      ve: 'UNA ESTELA DE COPIAS QUE SE APAGAN. CUANTO MÁS RÁPIDO, MÁS COPIAS.' },
+    { id: 'neon', name: 'NEÓN', grupo: 'nivel', level: 10,
+      ve: 'BRILLA CON UN HALO DE SU COLOR.' },
+    { id: 'holograma', name: 'HOLOGRAMA', grupo: 'nivel', level: 12,
+      ve: 'UN PROYECTOR SOBRE LA CABEZA FORMA UN CUERPO TRANSLÚCIDO CON INTERFERENCIAS.' },
+    { id: 'glitch', name: 'GLITCH', grupo: 'nivel', level: 15,
+      ve: 'CADA POCO SE DESCUADRA EN ROJO Y CIAN, COMO UNA TELE ROTA.' },
+    { id: 'prisma', name: 'PRISMA', grupo: 'nivel', level: 18,
+      ve: 'RECORRE OCHO COLORES DEL ARCOÍRIS CON UN DESTELLO EN CADA CAMBIO.' },
+    { id: 'pixel', name: 'PÍXEL', grupo: 'nivel', level: 22,
+      ve: 'HECHO DE BLOQUES, COMO EN UNA RECREATIVA.' },
+    { id: 'aro', name: 'ARO', grupo: 'nivel', level: 26,
+      ve: 'SOLO EL CONTORNO, CON LA BOCA ABIERTA.' },
+    { id: 'rastro', name: 'RASTRO', grupo: 'nivel', level: 30,
+      ve: 'MOTO DE LUZ: BORDE DE NEÓN Y UNA ESTELA QUE CRECE CON LA VELOCIDAD.' },
+    { id: 'fuego', name: 'FUEGO', grupo: 'nivel', level: 34,
+      ve: 'PAC-MAN ES LA LLAMA: SE DESHACE HACIA ATRÁS EN LENGUAS DE FUEGO.' },
+
+    /* --- por logro --- */
+    { id: 'cereza', name: 'CEREZA', grupo: 'logro',
+      pide: { stat: 'frutas', meta: 120, que: 'FRUTAS COMIDAS' },
+      ve: 'UN RABITO CON HOJA Y UNA CEREZA QUE CUELGA DETRÁS COMO UNA COLA.' },
+    { id: 'fantasma', name: 'MEDIO FANTASMA', grupo: 'logro',
+      pide: { stat: 'caza:cazas', meta: 10, que: 'PAC-MAN CAZADOS EN CACERÍA' },
+      ve: 'MEDIO PAC-MAN, MEDIO FANTASMA: FALDITA ONDULADA Y OJO DE PUPILA AZUL.' },
+    { id: 'corona', name: 'CORONA', grupo: 'logro',
+      pide: { ruta: ['solo'], maestria: 'leyenda', que: 'LEYENDA EN CLÁSICO SOLO' },
+      ve: 'UNA CORONA DE SU MISMO COLOR CON UNA GEMITA ROJA.' },
+    { id: 'escuadra', name: 'ESCUADRA', grupo: 'logro',
+      pide: { ruta: ['escuadra', 'lab4', 'hab4'], maestria: 'maestro',
+              que: 'MAESTRO EN ESCUADRA' },
+      ve: 'LLEVA DETRÁS UNA CRÍA DE PAC-MAN POR CADA COMPAÑERO, DE SU COLOR.' },
+    { id: 'dorado', name: 'DORADO', grupo: 'logro',
+      pide: { stat: 'top10', meta: 1, que: 'ENTRAR EN EL TOP 10 DEL TOP MUNDIAL' },
+      ve: 'ORO PULIDO CON UN DESTELLO QUE LO CRUZA.' },
+
+    /* --- extravagantes (por logro) --- */
+    { id: 'hamburguesa', name: 'HAMBURGUESA', grupo: 'logro', rara: true,
+      pide: { stat: 'partidas', meta: 100, que: 'PARTIDAS JUGADAS' },
+      ve: 'EL PAN DE ARRIBA ES LA BOCA; AL ABRIRSE SE VE EL QUESO GOTEANDO.' },
+    { id: 'gato', name: 'GATO', grupo: 'logro', rara: true,
+      pide: { stat: 'party:partidas', meta: 30, que: 'PARTIDAS ACOMPAÑADO' },
+      ve: 'GATO DE PERFIL QUE PARPADEA, CON BIGOTES Y LA COLA MOVIÉNDOSE.' },
+    { id: 'tiburon', name: 'TIBURÓN', grupo: 'logro', rara: true,
+      pide: { stat: 'fantasmas', meta: 300, que: 'FANTASMAS COMIDOS' },
+      ve: 'TIBURÓN CON ALETA Y DOS FILAS DE DIENTES QUE NADA MENEÁNDOSE.' },
+    { id: 'planta', name: 'PLANTA CARNÍVORA', grupo: 'logro', rara: true,
+      pide: { stat: 'mordiscos', meta: 50, que: 'MORDISCOS CON LA Q' },
+      ve: 'DOS HOJAS CON PÚAS QUE SE CIERRAN COMO UNA TRAMPA.' },
+    { id: 'robot', name: 'ROBOT', grupo: 'logro', rara: true,
+      pide: { stat: 'dailyOk', meta: 5, que: 'RETOS DEL DAILY CUMPLIDOS' },
+      ve: 'CABEZA DE LATA CON VISOR QUE BARRE, ANTENA Y MANDÍBULA DE BISAGRA.' },
+    { id: 'trex', name: 'T-REX', grupo: 'logro', rara: true,
+      pide: { stat: 'nivelMax', meta: 7, que: 'NIVEL MÁS ALTO EN UNA PARTIDA' },
+      ve: 'CABEZOTA CON CRESTA DE PÚAS, MANDÍBULA ENORME Y UN BRACITO RIDÍCULO.' },
+    { id: 'ovni', name: 'OVNI', grupo: 'logro', rara: true,
+      pide: { stat: 'caza:partidas', meta: 5, que: 'CACERÍAS JUGADAS' },
+      ve: 'PLATILLO CON MARCIANO QUE COME CON UN RAYO TRACTOR.' },
+    { id: 'cofre', name: 'COFRE MÍMICO', grupo: 'logro', rara: true,
+      pide: { stat: 'puntosMax', meta: 100000, que: 'PUNTOS EN UNA PARTIDA' },
+      ve: 'UN COFRE VIVO: LA TAPA ES LA BOCA Y SUELTA MONEDAS.' },
+    { id: 'dragon', name: 'DRAGÓN', grupo: 'logro', rara: true,
+      pide: { ruta: ['hab'], maestria: 'maestro', que: 'MAESTRO EN DESATADO SOLO' },
+      ve: 'CABEZA DE DRAGÓN QUE ECHA HUMO Y, CADA POCO, UNA LLAMARADA.' },
+    { id: 'calavera', name: 'CALAVERA', grupo: 'logro', rara: true,
+      pide: { stat: 'muertes', meta: 250, que: 'MUERTES' },
+      ve: 'CALAVERA DE CARICATURA QUE ABRE LA MANDÍBULA Y BOTA AL CORRER.' },
+
+    /* --- de temporada --- */
+    { id: 'calabaza', name: 'CALABAZA', grupo: 'temporada',
+      pide: { fecha: 'halloween' },
+      ve: 'GAJOS, OJO TALLADO CON LA VELA DENTRO, LABIOS EN PÚAS Y RABITO.' },
+    { id: 'brujas', name: 'NOCHE DE BRUJAS', grupo: 'temporada',
+      pide: { fecha: 'halloween' },
+      ve: 'CARA DE CALAVERA BAJO UN SOMBRERO DE BRUJA.' },
+    { id: 'vampiro', name: 'VAMPIRO', grupo: 'temporada', rara: true,
+      pide: { fecha: 'halloween' },
+      ve: 'COLMILLOS, OJO ROJO Y UNA CAPA QUE ONDEA CON EL FORRO DE SU COLOR.' },
+    { id: 'gorro', name: 'CLAUS-MAN', grupo: 'temporada',
+      pide: { fecha: 'navidad' },
+      ve: 'GORRO ROJO CON BORDE BLANCO Y LA BORLA COLGANDO.' }
   ];
-  /* El orden de dibujo en OPCIONES es el de arriba; SKIN_IDS solo sirve para
-   * validar lo guardado, así que da igual en qué orden esté. */
-  CFG.SKIN_IDS = ['clasico', 'ojos', 'neon', 'aro', 'pixel', 'sombra'];
+  /* Ventanas de las skins de temporada, [mes, día] a [mes, día] incluidos
+   * (mes 1-12). La de Navidad cruza el año. */
+  CFG.SKIN_FECHAS = {
+    halloween: { desde: [10, 24], hasta: [10, 31], que: 'DEL 24 AL 31 DE OCTUBRE' },
+    navidad:   { desde: [12, 20], hasta: [1, 6],   que: 'DEL 20 DE DICIEMBRE AL 6 DE ENERO' }
+  };
+  /* Solo sirve para validar lo guardado; sale de la lista de arriba */
+  CFG.SKIN_IDS = CFG.SKINS.map(function (sk) { return sk.id; });
 
   /* ---------- Avatares del perfil ----------
    * Todo dibujado por código reaprovechando los sprites del juego: caras de

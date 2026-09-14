@@ -1363,6 +1363,108 @@ input[type="range"] {
 .skin:hover { border-color: #fff; }
 .skin.active { border-color: #fff; color: #fff; box-shadow: 0 0 6px #fff; }
 
+/* Tu skin en PERFIL / OPCIONES: la puesta y el botón a la vitrina */
+.skin-pick { align-items: center; gap: 12px; }
+
+/* ---------- Vitrina de SKINS ----------
+ * Fichas con el pasillo a tamaño de partida y la lupa. Mismo idioma que el
+ * laberinto: negro, marco azul de muro, amarillo para lo tuyo. */
+#skins::before, #skins::after { content: none; }
+#skins { justify-content: flex-start; }
+
+.skin-resumen { margin-top: 0; }
+
+.skin-vitrina {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 1500px;
+}
+
+.skin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  background: #000;
+  border: 2px solid #2121ff;
+  border-radius: 10px;
+}
+
+.skin-card.puesta { border-color: #ffff00; box-shadow: 0 0 10px rgba(255, 255, 0, 0.3); }
+.skin-card.locked { border-style: dashed; border-color: #1a1a7a; }
+
+.skin-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.skin-card-name {
+  color: #fff;
+  font-weight: bold;
+  letter-spacing: 3px;
+  font-size: clamp(12px, 2.1vh, 16px);
+}
+
+.skin-card.locked .skin-card-name { color: #aaa; }
+
+.skin-chip {
+  font-size: clamp(8px, 1.4vh, 10px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: #ffff00;
+}
+
+.skin-chip.logro { color: #ffb8ff; }
+.skin-chip.temporada { color: #ffab40; }
+
+.skin-views { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.skin-views canvas {
+  display: block;
+  image-rendering: pixelated;
+  background: #000;
+  border: 1px solid #14146e;
+  border-radius: 4px;
+  max-width: 100%;
+}
+
+.skin-lupa { width: 120px; height: 120px; }
+.skin-escena { width: 336px; height: auto; }
+
+.skin-ve {
+  color: #b9b9df;
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 1px;
+  line-height: 1.45;
+}
+
+.skin-prog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ddd;
+  font-size: clamp(8px, 1.5vh, 10px);
+  letter-spacing: 1px;
+}
+
+.skin-prog .level-bar { flex: 0 0 110px; width: 110px; margin: 0; }
+.skin-card .skin-poner { align-self: flex-start; }
+
+@media (max-width: 600px) {
+  .skin-lupa { width: 84px; height: 84px; }
+  .skin-escena { width: calc(100% - 92px); min-width: 180px; }
+}
+
 /* ---------- Nivel de jugador (portada) ---------- */
 .level-box {
   width: min(90%, 240px);

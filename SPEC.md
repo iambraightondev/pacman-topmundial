@@ -872,13 +872,58 @@ confirmed), `safeTicks` (respawn grace).
 
 ## Skins, emotes, maestrías, ranking y chat
 
-**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`): unlocked by player level
-(see above), drawn procedurally over the chosen colour in
-`Sprites.drawPacman(ctx, x, y, dir, mouth, color, skin)` — `clasico` (plain
-arc), `ojos` (eye looking forward), `neon` (glow), `aro` (ring outline),
-`pixel` (blocky body) and `sombra` (trail behind). Applied to the player, its
-lives icons and the option thumbnails (each thumbnail is a real mini-canvas
-render). Exchanged online in the handshake (`k` field → `Game.netSkins`).
+**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 32 of them in three
+`grupo`s: **nivel** (player level, ladder 1·2·4·6·8·10·12·15·18·22·26·30·34 in
+the order Braighton picked), **logro** (`pide: {stat, meta}` on a
+`PM.Achievements` counter, or `{ruta:[...], maestria}` on a badge track) and
+**temporada** (`pide: {fecha}`; `CFG.SKIN_FECHAS` halloween 24–31 Oct, navidad
+20 Dec–6 Jan). `rara: true` marks the eleven "extravagant" ones that drop the
+Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
+
+- **Drawing.** `Sprites.drawPacman(ctx, x, y, dir, mouth, color, skin, extra)`.
+  The original six (`clasico`, `sombra`, `ojos`, `neon`, `pixel`, `aro`) are
+  still drawn in sprites.js; the other 26 live in **`js/skins.js`**, which
+  registers them in `Sprites.ARTE` and `drawPacman` diverts to
+  `Sprites.dibujarArte` before touching anything. `extra` is optional:
+  `t` (seconds — in game `tick/60 + i·0.37`, so spectators and replays match),
+  `back(dist)` (point of the path behind), `estira` (trail stretch), `team`
+  (teammate colours, ESCUADRA), `muerde` (Q active) and `icono` (menu/lives:
+  no trails). With no `extra` a skin still draws (straight trail, wall-clock).
+- **Trails follow the real path.** `Pacman.huella` records `{x,y,d}` each
+  update (≤160 points; a jump >12 px — tunnel, FLASH, net correction — clears
+  it) and `Pacman.atras(dist)` walks it back, stopping at the oldest point.
+  `Pacman.velPx` is the smoothed speed; `Game.pacExtra` turns it into
+  `estira = 1 + (velPx / (0.8·BASE_SPEED) − 1)·2`, clamped 0.5–3, so turbo
+  doubles a trail. SOMBRA, COMETA (more copies, not wider gaps), RASTRO and
+  FUEGO's flames use it.
+- **Q on extravagant skins.** The white saw of `drawPacTeeth` is skipped for
+  `rara` skins (it would float outside their face); they open fully instead
+  (`extra.muerde`).
+- **Unlocking** is `PM.Skins.estado(id)` → `{abierta, pct, progreso, chip}`;
+  `Level.skinUnlocked/skinsAllowed` delegate non-level skins to it. The worn
+  skin is always allowed. New counters in `Achievements.BASE`: `muertes`
+  (own lives lost — host/local in `startDeath`, guest on the `death` event;
+  seeded once with `floor(partidas × 2.5)`, flag `k`, re-seeded as a max on
+  account merge), `top10` (set by `Skins.anotarTop10` when the individual
+  all-time ranking loads, or once per session when the SKINS panel opens),
+  `halloween` / `navidad` (set in `closeRun` via `Skins.anotarTemporada`).
+  They travel to `perfiles.logros` like every counter.
+- **"SKIN NUEVA" notices.** `Skins.reclamar()` returns skins opened since the
+  last look (`localStorage` list); `Game.anunciarSkins` pushes them to the
+  achievement band after `bumpAch` and after the level XP in `closeRun`.
+  `Skins.syncVistas()` at boot and after an account merge, so nothing old is
+  celebrated.
+- **UI.** PERFIL (and OPCIONES for player 2) shows only the worn skin plus
+  VER TODAS LAS SKINS. The **SKINS panel** (`#skins`, also in TU CUARTEL) is a
+  showcase: filters TODAS · POR NIVEL · POR LOGRO · EXTRAVAGANTES · DE
+  TEMPORADA, a TU SKIN / JUGADOR 2 switch, and one card per skin with a
+  336×144 corridor where it runs at game scale (`Skins.escena`), a ×2
+  pixel-exact magnifier (`Skins.lupa`), its text, a progress bar and
+  PONER / PUESTA / BLOQUEADA. A `requestAnimationFrame` loop animates only
+  visible cards while the panel is open. VOLVER/Esc return to the panel it was
+  opened from.
+- Exchanged online in the handshake (`k` field → `Game.netSkins`); an old
+  client that does not know an id draws `clasico`.
 
 **Emotes** (`CFG.EMOTES`): six **drawn Pac-Man faces**, not words —
 `risa`, `llanto`, `enfado`, `susto`, `guino`, `amor`. `Sprites.drawPacFace`

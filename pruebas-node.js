@@ -33,7 +33,8 @@ function fakeCtx() {
     'arc', 'arcTo', 'rect', 'fill', 'stroke', 'clip', 'fillRect', 'strokeRect',
     'clearRect', 'translate', 'scale', 'rotate', 'setTransform', 'transform',
     'drawImage', 'fillText', 'strokeText', 'quadraticCurveTo', 'bezierCurveTo',
-    'ellipse', 'setLineDash', 'createLinearGradient'];
+    'ellipse', 'setLineDash', 'createLinearGradient', 'createRadialGradient',
+    'addColorStop'];
   nada.forEach(function (m) { ctx[m] = function () { return ctx; }; });
   ctx.measureText = function (t) { return { width: String(t).length * 5 }; };
   ctx.getImageData = function () { return { data: [] }; };
@@ -203,7 +204,7 @@ var doc = {
 doc.body = new El('body');
 doc.documentElement = new El('html');
 ['stage', 'game', 'menu', 'options', 'online', 'badges', 'ranking',
- 'mazes', 'friends', 'profile', 'prompt'].forEach(function (id) {
+ 'mazes', 'friends', 'profile', 'skins', 'prompt'].forEach(function (id) {
   var el = new El(id === 'game' ? 'canvas' : 'div');
   el.id = id;
   porId[id] = el;
@@ -243,7 +244,14 @@ var win = {
    * toca Supabase de verdad. */
   fetch: function () { return Promise.reject(new Error('SIN RED EN LAS PRUEBAS')); },
   BroadcastChannel: undefined,
-  WebSocket: undefined
+  WebSocket: undefined,
+  /* caminos guardados de las skins extravagantes (cabeza y mandíbula juntas):
+   * aquí no se rasteriza, así que basta con que existan sus métodos */
+  Path2D: function () {
+    var p = this;
+    ['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'closePath', 'arc',
+     'ellipse', 'rect', 'addPath'].forEach(function (m) { p[m] = function () {}; });
+  }
 };
 /* aviso para las pruebas que miden píxeles: aquí no se rasteriza nada */
 win.__SIN_LIENZO = true;
@@ -275,7 +283,7 @@ sandbox.decodeURIComponent = decodeURIComponent;
 vm.createContext(sandbox);
 
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
-var orden = ['config', 'audio', 'sprites', 'pacman', 'ghost', 'net-config',
+var orden = ['config', 'audio', 'sprites', 'skins', 'pacman', 'ghost', 'net-config',
   'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
   'temporadas', 'daily', 'mazes', 'achievements', 'account', 'versus',
   'habilidades', 'caceria', 'game', 'replay', 'ui'];

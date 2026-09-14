@@ -44,7 +44,13 @@
     nivelMax:  'mayor',
     limpios:   'mayor',
     puntosMax: 'mayor',
-    mejorT1:   'menor'
+    mejorT1:   'menor',
+    /* Los que piden las skins (js/skins.js). No los mira ningún logro, pero
+     * viven aquí para viajar a la cuenta con los demás (perfiles.logros). */
+    muertes:   'suma',   // vidas perdidas propias (CALAVERA)
+    top10:     'mayor',  // 1 = se vio en el top 10 del TOP MUNDIAL (DORADO)
+    halloween: 'mayor',  // 1 = jugó en Halloween (skins de temporada)
+    navidad:   'mayor'   // 1 = jugó en Navidad
   };
 
   /* Clave de un contador: la global es el nombre pelado, la de un modo va
@@ -90,7 +96,7 @@
   }
 
   function load() {
-    var out = { c: vacio(), v: [], m: 0, d: 0 };
+    var out = { c: vacio(), v: [], m: 0, d: 0, k: 0 };
     try {
       var raw = localStorage.getItem(CFG.ACH_KEY);
       var d = raw ? JSON.parse(raw) : null;
@@ -104,6 +110,7 @@
       if (d && isArray(d.v)) out.v = d.v.slice();
       if (d && d.m) out.m = 1;          // los contadores por modo, ya sembrados
       if (d && d.d) out.d = 1;          // y los del DAILY, sembrados del reto
+      if (d && d.k) out.k = 1;          // y las muertes, sembradas de las partidas
     } catch (e) { /* sin almacenamiento */ }
     return out;
   }
@@ -309,11 +316,33 @@
       return d.c;
     },
 
+    /* ---------- las MUERTES de antes de que se contaran ----------
+     * La skin CALAVERA pide muertes y el juego no las contaba. Lo jugado es
+     * del jugador, así que se estima con lo único que hay: cada partida
+     * acaba perdiendo todas las vidas, 3 de salida y a veces una extra. Se
+     * cuentan 2,5 por partida, a la BAJA a propósito: no descuenta
+     * abandonos, CACERÍA (donde no se muere) ni las vidas compartidas en
+     * equipo, y regalar la skin a quien apenas ha jugado sería mentir.
+     *
+     * Una vez (bandera `k`); al entrar en una cuenta merge() la baja para
+     * volver a mirar con las partidas de la nube. Es un máximo, no una suma,
+     * así que repetirla nunca cuenta dos veces lo mismo. */
+    sembrarMuertes: function () {
+      var d = load();
+      if (d.k) return d.c;
+      d.k = 1;
+      var estimadas = Math.floor((d.c.partidas || 0) * 2.5);
+      if (estimadas > (d.c.muertes || 0)) d.c.muertes = estimadas;
+      save(d);
+      return d.c;
+    },
+
     /* Al arrancar (o al entrar en una cuenta): lo ya conseguido no se anuncia */
     syncSeen: function () {
       // antes de nada, que lo jugado de antes cuente en su modo
       this.sembrarModos();
       this.sembrarDaily();
+      this.sembrarMuertes();
       var d = load();
       var changed = false;
       for (var i = 0; i < CFG.ACHIEVEMENTS.length; i++) {
@@ -357,12 +386,14 @@
        * entrar en tu cuenta en un aparato nuevo te dejaba los logros por modo
        * a cero teniendo cien partidas a la espalda. */
       d.m = 0;
+      d.k = 0;
       save(d);
       this.sembrarModos();
+      this.sembrarMuertes();
       return this.stats();
     },
 
-    reset: function () { save({ c: vacio(), v: [], m: 0, d: 0 }); }
+    reset: function () { save({ c: vacio(), v: [], m: 0, d: 0, k: 0 }); }
   };
 
   window.PM.Achievements = Achievements;

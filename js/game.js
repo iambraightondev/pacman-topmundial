@@ -1382,6 +1382,10 @@
       var last = !this.anyPlaying(i);
       // se acabó la racha de niveles limpios (solo cuenta la muerte propia)
       if (!this.netRole || i === this.localIdx) this.limpiosSeguidos = 0;
+      /* Una vida propia menos: la cuenta la skin CALAVERA. El Pac-Man de la
+       * máquina (CACERÍA) no es de nadie. El invitado se apunta las suyas al
+       * recibir el aviso 'death', que es cuando el anfitrión la da por buena. */
+      if (!p.bot && (!this.netRole || i === this.localIdx)) this.bumpAch({ muertes: 1 });
       if (window.PM.Versus) window.PM.Versus.onCatch(this, i, byGhost);
       this.startPacDeath(i);
       this.dyingPlayer = i;
@@ -1907,8 +1911,12 @@
        * al cazar porque el marcador del cazador viaja en las instantáneas:
        * así le cuadra igual al anfitrión que al invitado, que es quien no se
        * entera de sus propias cazas (las decide el anfitrión). */
+      // en Halloween o Navidad, la partida deja ganadas las skins de temporada
+      if (window.PM.Skins && !this.replaying) window.PM.Skins.anotarTemporada();
       this.bumpAch({ partidas: 1, puntosMax: pts, cazas: this.myCatches() });
       var subida = this.awardLevelXp(pts);
+      // subir de nivel también abre skins: van al resumen del final
+      this.anunciarSkins();
       /* Lo que te llevas de la partida, para el aviso del final. Se guarda
        * aquí porque es el único sitio donde se sabe el antes y el después:
        * después de esto la experiencia ya está sumada. */
@@ -2013,6 +2021,23 @@
         });
       }
       if (fresh.length && window.PM.Account) window.PM.Account.pushQuiet();
+      this.anunciarSkins();
+    },
+
+    /* Skins que se acaban de abrir (por un contador, una maestría o el
+     * nivel): se anuncian una vez, por la misma banda que los logros. */
+    anunciarSkins: function () {
+      var Sk = window.PM.Skins;
+      if (!Sk || this.isSpec() || this.replaying) return;
+      var nuevas = Sk.reclamar();
+      for (var k = 0; k < nuevas.length; k++) {
+        var aviso = {
+          name: 'SKIN NUEVA', desc: nuevas[k].name + ' · PÓNTELA EN PERFIL',
+          color: '#ffff00', ticks: CFG.ACH_NOTICE_TICKS, total: CFG.ACH_NOTICE_TICKS
+        };
+        this.achNotices.push(aviso);
+        this.runAch.push({ name: aviso.name, desc: aviso.desc, color: aviso.color });
+      }
     },
 
     /* Va sacando los avisos de logro de uno en uno */
@@ -3096,7 +3121,10 @@
             if (!pw.dying) this.startPacDeath(w);
             pw.deathOk = true;
           }
-          if (w === this.localIdx) this.predictFreeze = 0;
+          if (w === this.localIdx) {
+            this.predictFreeze = 0;
+            if (pw && !pw.bot) this.bumpAch({ muertes: 1 });   // CALAVERA
+          }
           this.dyingPlayer = w;
           if (e.g) {                 // era el último: parón clásico
             this.state = 'DYING';
@@ -3565,13 +3593,41 @@
       return ch !== '#';
     },
 
+    /* Lo que necesitan las skins animadas para dibujar al jugador i (ver
+     * Sprites.drawPacman): el reloj es el TICK y no la hora, para que un
+     * mirón o una repetición vean la misma animación; la estela sale de la
+     * huella del propio Pac-Man; y se estira con su velocidad, el doble de
+     * lo que sube (a x1,5 de turbo, la estela mide el doble). */
+    pacExtra: function (pc, i) {
+      var ref = CFG.BASE_SPEED * 0.8;              // la del nivel 1, más o menos
+      var ratio = (pc.velPx || 0) / ref;
+      var estira = Math.max(0.5, Math.min(3, 1 + (ratio - 1) * 2));
+      var equipo = [];
+      for (var j = 0; j < this.pacs.length && equipo.length < 3; j++) {
+        var q = this.pacs[j];
+        if (j === i || !q || q.out || q.bot || this.vsGhostOf(j) >= 0) continue;
+        equipo.push(this.colorFor(j));
+      }
+      return {
+        t: this.tick / 60 + i * 0.37,              // cada uno a su compás
+        back: function (dist) {
+          var p = pc.atras(dist);
+          return { x: p.x, y: p.y + CFG.MAZE_Y, d: p.d };
+        },
+        estira: estira,
+        team: equipo
+      };
+    },
+
     /* Un Pac-Man vivo, con lo que le haya puesto el modo DESATADO encima.
      * Fuera del modo es exactamente el dibujo de siempre. */
     drawPac: function (ctx, pc, i) {
       var color = this.colorFor(i);
+      var skin = this.skinFor(i);
+      var extra = this.pacExtra(pc, i);
       var A = window.PM.Hab;
       if (!this.hab || !A) {
-        pc.draw(ctx, color, this.skinFor(i));
+        pc.draw(ctx, color, skin, extra);
         return;
       }
       var y = pc.y + CFG.MAZE_Y;
@@ -3586,10 +3642,14 @@
       }
       var alfa = A.alfa(i);
       if (alfa < 1) { ctx.save(); ctx.globalAlpha = alfa; }
-      pc.draw(ctx, color, this.skinFor(i));
-      if (st && st.dientes > 0) {
-        S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color,
-                       this.skinFor(i));
+      /* Las extravagantes no llevan la sierra blanca de la Q: no tienen la
+       * boca en cuña y los dientes flotarían fuera de la cara. Su aviso de
+       * que la tecla entró es abrir la boca del todo (`muerde`). */
+      var rara = !!(window.PM.Skins && window.PM.Skins.rara(skin));
+      if (st && st.dientes > 0 && rara) extra.muerde = true;
+      pc.draw(ctx, color, skin, extra);
+      if (st && st.dientes > 0 && !rara) {
+        S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color, skin);
       }
       if (alfa < 1) ctx.restore();
     },
@@ -3662,7 +3722,8 @@
               window.PM.Sprites.drawPacmanDeath(ctx, pc.x,
                 pc.y + CFG.MAZE_Y, t, this.colorFor(i));
             } else {
-              pc.draw(ctx, this.colorFor(i));   // congelado antes de la animación
+              // congelado antes de la animación, con su skin (antes salía clásico)
+              pc.draw(ctx, this.colorFor(i), this.skinFor(i), this.pacExtra(pc, i));
             }
             continue;
           }
@@ -3786,7 +3847,8 @@
                                   this.pacs.length > 2 ? 2 : 3);
             for (i = 0; i < quedan; i++) {
               window.PM.Sprites.drawPacman(ctx, 18 + p * hueco + i * 11, 278,
-                D.LEFT, 2, this.colorFor(p), this.skinFor(p));
+                D.LEFT, 2, this.colorFor(p), this.skinFor(p),
+                { t: this.tick / 60, icono: true });
             }
           }
         } else {
@@ -3796,7 +3858,8 @@
           var skin = team ? 'clasico' : this.skinFor(0);
           var livesShown = Math.max(0, this.lives - 1);
           for (i = 0; i < livesShown && i < 5; i++) {
-            window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color, skin);
+            window.PM.Sprites.drawPacman(ctx, 18 + i * 16, 278, D.LEFT, 2, color, skin,
+              { t: this.tick / 60, icono: true });
           }
         }
       }

@@ -3324,48 +3324,199 @@
   // ---------------------------------------------------------------
   // Skins por nivel
   // ---------------------------------------------------------------
-  /* El orden en que se ganan. ARO es la ÚLTIMA y PÍXEL la penúltima: son las
-   * dos que más se alejan del Pac-Man de siempre, y la de aro —que es solo el
-   * contorno— es la que más. La lista está ordenada por nivel a propósito,
-   * porque ese mismo orden es el que se pinta en el panel de PERFIL. */
-  test('ARO se gana la última y PÍXEL la penúltima', function () {
-    var ids = CFG.SKINS.map(function (sk) { return sk.id; });
-    eq(ids[ids.length - 1], 'aro', 'la última es ARO');
-    eq(ids[ids.length - 2], 'pixel', 'y la penúltima PÍXEL');
-    for (var i = 1; i < CFG.SKINS.length; i++) {
-      ok(CFG.SKINS[i].level > CFG.SKINS[i - 1].level,
-         CFG.SKINS[i].name + ' pide más nivel que ' + CFG.SKINS[i - 1].name);
+  /* El orden en que se ganan las de nivel es el que eligió Braighton en la
+   * vitrina (13 de septiembre): la escalera rebajada 1, 2, 4... 34, con
+   * MOÑITO pronto, PRISMA a media escalera y FUEGO la última. La lista va en
+   * ese orden a propósito: es el que pinta la vitrina de SKINS. */
+  function skinsDeNivel() {
+    return CFG.SKINS.filter(function (sk) { return sk.grupo === 'nivel'; });
+  }
+
+  test('las skins de nivel suben de nivel en su orden y FUEGO es la última', function () {
+    var niv = skinsDeNivel();
+    eq(niv[0].id, 'clasico', 'la primera es la clásica');
+    eq(niv[0].level, 1, 'y está desde el nivel 1');
+    eq(niv[niv.length - 1].id, 'fuego', 'la última es FUEGO');
+    eq(niv.map(function (sk) { return sk.level; }).join(','),
+       '1,2,4,6,8,10,12,15,18,22,26,30,34', 'la escalera rebajada');
+    for (var i = 1; i < niv.length; i++) {
+      ok(niv[i].level > niv[i - 1].level,
+         niv[i].name + ' pide más nivel que ' + niv[i - 1].name);
     }
+    // y todas las de nivel van antes que las demás en la lista
+    var primeraNoNivel = -1;
+    for (var j = 0; j < CFG.SKINS.length; j++) {
+      if (CFG.SKINS[j].grupo !== 'nivel') { primeraNoNivel = j; break; }
+    }
+    eq(primeraNoNivel, niv.length, 'las de nivel, primero');
   });
 
-  test('las skins se abren con el nivel de jugador', function () {
+  test('las skins de nivel se abren con el nivel de jugador', function () {
     var L = window.PM.Level;
     var previo = L.xp();
     try {
       L.reset();
       eq(L.level(), 1, 'de recién llegado');
       ok(L.skinUnlocked('clasico'), 'la clásica está desde el principio');
-      ok(!L.skinUnlocked('sombra'), 'la última no');
-      var abiertas = L.skinsAllowed('clasico');
-      eq(abiertas.length, 1, 'al nivel 1 solo hay una');
+      ok(!L.skinUnlocked('sombra'), 'la segunda no');
+      var abiertasNivel = L.skinsAllowed('clasico').filter(function (id) {
+        return window.PM.Skins.grupo(id) === 'nivel';
+      });
+      eq(abiertasNivel.length, 1, 'al nivel 1 solo hay una de nivel');
       // la que ya llevas puesta no se pierde aunque pida más nivel
       ok(L.skinsAllowed('sombra').indexOf('sombra') !== -1,
          'la que ya llevas puesta sigue valiendo');
-      // con nivel de sobra se abren todas: se suma justo lo que cuesta
-      // llegar al nivel de la skin más cara
-      var tope = 1;
-      for (var i = 0; i < CFG.SKINS.length; i++) {
-        tope = Math.max(tope, CFG.SKINS[i].level || 1);
-      }
+      // con nivel de sobra se abren todas las de nivel
+      var niv = skinsDeNivel();
+      var tope = niv[niv.length - 1].level;
       var falta = 0;
       for (var n = 1; n < tope; n++) falta += L.cost(n);
       L.add(falta);
       eq(L.level(), tope, 'con esa experiencia se llega justo al nivel ' + tope);
-      eq(L.skinsAllowed('clasico').length, CFG.SKINS.length, 'ya están todas');
+      for (var i = 0; i < niv.length; i++) ok(L.skinUnlocked(niv[i].id), niv[i].name + ' abierta');
     } finally {
       L.reset();
       if (previo > 0) L.add(previo);
     }
+  });
+
+  test('el catálogo de skins cuadra con su dibujo', function () {
+    var S = window.PM.Sprites, Sk = window.PM.Skins;
+    var legado = ['clasico', 'sombra', 'ojos', 'neon', 'pixel', 'aro'];
+    eq(CFG.SKIN_IDS.length, CFG.SKINS.length, 'SKIN_IDS sale de la lista');
+    CFG.SKINS.forEach(function (sk) {
+      ok(['nivel', 'logro', 'temporada'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
+      if (legado.indexOf(sk.id) === -1) ok(S.ARTE.hasOwnProperty(sk.id), sk.id + ': tiene dibujo');
+      if (sk.grupo !== 'nivel') ok(!!sk.pide, sk.id + ': dice qué pide');
+      if (sk.pide && sk.pide.stat) {
+        ok(window.PM.Achievements.STATS.hasOwnProperty(sk.pide.stat),
+           sk.id + ': su contador (' + sk.pide.stat + ') existe');
+      }
+      ok(!!sk.ve, sk.id + ': tiene texto para la vitrina');
+      ok(typeof Sk.estado(sk.id).abierta === 'boolean', sk.id + ': tiene estado');
+    });
+  });
+
+  /* Todas se dibujan sin romper, en las cuatro direcciones y las tres bocas,
+   * con estela, con la Q y como icono. En node no se rasteriza nada, pero
+   * así se pilla cualquier variable que no exista. */
+  test('todas las skins se dibujan en cualquier postura', function () {
+    var S = window.PM.Sprites;
+    var cv = document.createElement('canvas');
+    cv.width = 72; cv.height = 72;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    CFG.SKINS.forEach(function (sk) {
+      for (var d = 0; d < 4; d++) {
+        for (var m = 0; m < 3; m++) {
+          S.drawPacman(ctx, 12, 12, d, m, '#ff69b4', sk.id, {
+            t: 1.23 + d + m, estira: 1.8, team: ['#ff0000', '#00ffff'],
+            back: function (dist) { return { x: 12 - dist, y: 12, d: 3 }; },
+            muerde: m === 2
+          });
+        }
+      }
+      S.drawPacman(ctx, 12, 12, 3, 2, '#fff', sk.id, { icono: true });
+      S.drawPacman(ctx, 12, 12, 3, 1, '#00ff00', sk.id);
+    });
+    ok(true, 'ninguna rompe');
+  });
+
+  test('CALAVERA pide muertes, y las de antes se estiman con las partidas', function () {
+    conLogrosLimpios(function (A) {
+      var Sk = window.PM.Skins;
+      A.record('partidas', 99);
+      A.sembrarMuertes();
+      eq(A.stats().muertes, 247, '99 partidas a 2,5 (a la baja)');
+      ok(!Sk.estado('calavera').abierta, 'aún no llega a 250');
+      A.sembrarMuertes();
+      eq(A.stats().muertes, 247, 'la siembra es de una vez');
+      A.record('muertes', 3);
+      ok(Sk.estado('calavera').abierta, 'con tres muertes más, abierta');
+      // al entrar en una cuenta con más partidas se vuelve a mirar
+      A.merge({ partidas: 200 });
+      eq(A.stats().muertes, 500, 'la nube trae más partidas: se estima con ellas');
+    });
+  });
+
+  test('las skins de logro miran su contador y dicen cuánto falta', function () {
+    conLogrosLimpios(function (A) {
+      var Sk = window.PM.Skins;
+      A.record('fantasmas', 120);
+      var e = Sk.estado('tiburon');
+      ok(!e.abierta, 'con 120 fantasmas el tiburón no');
+      eq(e.progreso, '120 / 300 FANTASMAS COMIDOS', 'y dice cuánto lleva');
+      ok(Math.abs(e.pct - 0.4) < 1e-9, 'al 40 %');
+      A.record('fantasmas', 180);
+      ok(Sk.estado('tiburon').abierta, 'con 300, abierto');
+      ok(Sk.abierta('robot', 'robot'), 'la que llevas puesta no se cierra');
+    });
+  });
+
+  test('las skins de temporada se ganan jugando en su fecha y se quedan', function () {
+    conLogrosLimpios(function (A) {
+      var Sk = window.PM.Skins;
+      ok(Sk.enTemporada('halloween', new Date(2026, 9, 24)), '24 de octubre, sí');
+      ok(Sk.enTemporada('halloween', new Date(2026, 9, 31)), '31 de octubre, sí');
+      ok(!Sk.enTemporada('halloween', new Date(2026, 10, 1)), '1 de noviembre, no');
+      ok(Sk.enTemporada('navidad', new Date(2026, 11, 25)), 'Navidad cruza el año...');
+      ok(Sk.enTemporada('navidad', new Date(2027, 0, 6)), '...hasta el 6 de enero');
+      ok(!Sk.enTemporada('navidad', new Date(2027, 0, 7)), 'el 7, ya no');
+      Sk.anotarTemporada(new Date(2026, 6, 1));
+      ok(!Sk.estado('calabaza').abierta, 'en julio no se gana nada');
+      Sk.anotarTemporada(new Date(2026, 9, 28));
+      ok(Sk.estado('calabaza').abierta && Sk.estado('brujas').abierta &&
+         Sk.estado('vampiro').abierta, 'en Halloween, las tres de Halloween');
+      ok(!Sk.estado('gorro').abierta, 'y CLAUS-MAN sigue esperando a diciembre');
+    });
+  });
+
+  test('DORADO se abre al verse en el top 10 individual', function () {
+    conLogrosLimpios(function (A) {
+      var Sk = window.PM.Skins, s = window.PM.settings;
+      var nick0 = s.nick1;
+      try {
+        s.nick1 = 'PRUEBAORO';
+        var filas = [];
+        for (var i = 0; i < 12; i++) filas.push({ nombre1: 'OTRO' + i });
+        filas[11].nombre1 = 'pruebaoro';
+        ok(!Sk.anotarTop10(filas), 'el 12.º no cuenta');
+        ok(!Sk.estado('dorado').abierta);
+        filas[9].nombre1 = 'PruebaOro';
+        ok(Sk.anotarTop10(filas), 'el 10.º sí (sin mirar mayúsculas)');
+        ok(Sk.estado('dorado').abierta, 'DORADO abierta');
+      } finally { s.nick1 = nick0; }
+    });
+  });
+
+  test('una skin que se abre jugando se anuncia una sola vez', function () {
+    conLogrosLimpios(function (A) {
+      var Sk = window.PM.Skins;
+      Sk.syncVistas();
+      eq(Sk.reclamar().length, 0, 'lo que ya estaba abierto no se anuncia');
+      A.record('frutas', 120);
+      var nuevas = Sk.reclamar();
+      ok(nuevas.some(function (sk) { return sk.id === 'cereza'; }), 'CEREZA, nueva');
+      eq(Sk.reclamar().length, 0, 'y no se repite');
+    });
+  });
+
+  test('la estela sigue el camino de Pac-Man y se tira en los saltos', function () {
+    var P = window.PM.Pacman;
+    var p = new P(0);
+    p.x = 100; p.y = 100; p.dir = CFG.DIR.RIGHT;
+    p.huella = [];
+    p.anotarHuella();
+    p.x = 110; p.anotarHuella();                 // 10 a la derecha
+    p.dir = CFG.DIR.DOWN; p.y = 108; p.anotarHuella();   // y 8 hacia abajo
+    var a = p.atras(4);
+    ok(a.x === 110 && Math.abs(a.y - 104) < 1e-9, 'a 4 px, sobre el tramo vertical');
+    var b = p.atras(13);
+    ok(Math.abs(b.x - 105) < 1e-9 && b.y === 100, 'a 13 px ya dobló la esquina');
+    var c = p.atras(30);
+    ok(c.x === 100 && c.y === 100, 'más allá de lo recordado, se queda en lo más viejo');
+    p.x = 300; p.anotarHuella();                 // el túnel o un FLASH
+    eq(p.huella.length, 1, 'un salto tira la huella');
   });
 
   // ---------------------------------------------------------------
@@ -3837,8 +3988,9 @@
       var UI = window.PM.UI;
       UI.showProfile();
       var enPerfil = UI.els.profile.querySelectorAll('.skins .skin').length;
-      // los avatares también son .skin: la skin propia añade CFG.SKINS.length
-      ok(enPerfil >= CFG.SKINS.length + CFG.AVATARS.length,
+      // los avatares también son .skin; de la skin propia se ve LA PUESTA
+      // (todas se miran en la vitrina de SKINS)
+      ok(enPerfil >= 1 + CFG.AVATARS.length,
          'en PERFIL están el avatar y la skin propia');
       eq(UI.els.profile.querySelectorAll('.swatches').length, 1,
          'y tu fila de color');
@@ -3853,6 +4005,44 @@
       ok(UI.colorRows.pacColor && UI.colorRows.pac2Color,
          'y los dos colores también, aunque vivan en paneles distintos');
       UI.showMenu();
+    });
+
+  test('la vitrina de SKINS enseña todas, elige para quien toca y vuelve de donde vino',
+    function () {
+      var UI = window.PM.UI, s = window.PM.settings;
+      var skin1 = s.skin1, skin2 = s.skin2;
+      try {
+        eq(UI.skinsItems.length, CFG.SKINS.length, 'una ficha por skin');
+        UI.showProfile();
+        UI.showSkins('skin1');
+        ok(UI.els.skins.style.display !== 'none', 'la vitrina se abre');
+        eq(UI.skinsKey, 'skin1', 'eligiendo la tuya');
+        // una bloqueada no se puede poner; la clásica siempre
+        var cl = UI.skinsItems.filter(function (it) { return it.id === 'clasico'; })[0];
+        s.skin1 = 'sombra';
+        UI.refreshSkinsVitrina();
+        ok(!cl.btn.disabled, 'la clásica se puede poner');
+        cl.btn.click();
+        eq(s.skin1, 'clasico', 'y al pulsar queda puesta');
+        eq(cl.btn.textContent, 'PUESTA');
+        // filtros: extravagantes solo enseña las raras
+        UI.skinsTab = 'rara';
+        UI.refreshSkinsVitrina();
+        var vistas = UI.skinsItems.filter(function (it) { return it.card.style.display !== 'none'; });
+        ok(vistas.length > 0 && vistas.every(function (it) { return it.info.rara; }),
+           'EXTRAVAGANTES solo enseña las extravagantes');
+        UI.skinsTab = 'todas';
+        UI.closeSkins();
+        ok(UI.els.profile.style.display !== 'none', 'VOLVER regresa a PERFIL');
+        UI.showOptions();
+        UI.showSkins('skin2');
+        eq(UI.skinsKey, 'skin2', 'desde OPCIONES, la del jugador 2');
+        UI.closeSkins();
+        ok(UI.els.options.style.display !== 'none', 'y vuelve a OPCIONES');
+      } finally {
+        s.skin1 = skin1; s.skin2 = skin2;
+        UI.showMenu();
+      }
     });
 
   test('el perfil de un amigo se pinta con sus contadores', function () {

@@ -86,17 +86,22 @@
       return 1;
     },
 
+    /* Las de logro y temporada no piden nivel: esas las resuelve js/skins.js
+     * (y si no está cargado, se quedan cerradas en vez de regalarse). */
     skinUnlocked: function (id) {
+      var Sk = window.PM.Skins, info = null;
+      for (var i = 0; i < CFG.SKINS.length; i++) if (CFG.SKINS[i].id === id) info = CFG.SKINS[i];
+      if (info && info.grupo && info.grupo !== 'nivel') return !!(Sk && Sk.estado(id).abierta);
       return this.level() >= this.skinLevel(id);
     },
 
     /* Skins que se pueden elegir ahora mismo. `puesta` entra siempre aunque
      * el requisito la deje fuera: lo que ya llevas no se te quita. */
     skinsAllowed: function (puesta) {
-      var lvl = this.level(), out = [];
+      var out = [];
       for (var i = 0; i < CFG.SKINS.length; i++) {
         var sk = CFG.SKINS[i];
-        if (lvl >= (sk.level || 1) || sk.id === puesta) out.push(sk.id);
+        if (sk.id === puesta || this.skinUnlocked(sk.id)) out.push(sk.id);
       }
       return out;
     }
