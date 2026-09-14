@@ -37,6 +37,43 @@ los 4 de siempre.
   anterior. No es del juego; se arregla limpiando ese estado al empezar.
 - Braighton sigue probando skins jugando: esperar más ajustes de detalle.
 
+**EN STANDBY (14 sep): cobrar por el juego obliga a cambiarle la cara.**
+Braighton preguntó si publicar el juego le traería una demanda. Se investigó y
+se dejó aparcado a petición suya; **no se ha tocado nada del juego**.
+
+- **Lo que se concluyó:** tal cual está, es copia —usa la marca PAC-MAN, el
+  personaje, los cuatro fantasmas con nombres y colores, y el laberinto de
+  1980—, y el aviso de «no afiliado» no protege. Precedentes: *Atari v. Philips*
+  (1982, *K.C. Munchkin* retirado por «aspecto y sensación» aun cambiando
+  colores y detalles) y *Tetris v. Xio* (2012). Bandai Namco **demanda a quien
+  vende** (Philips, AtGames 2019) y a los gratuitos les manda **retirada**
+  (Scratch y Android, 2010); desde el escándalo de Scratch no se le conocen
+  acciones contra aficionados. En Perú, INDECOPI multa hasta 180 UIT.
+- **Riesgo real hoy:** gratis y entre amigos, casi nulo; lo peor sería que
+  Vercel tumbe la web tras un aviso. **Con cobro, anuncios o tiendas de apps
+  hay que cambiar la identidad**, también las skins con forma de Pac-Man. Las
+  extravagantes, los modos, las maestrías y las cuentas son suyos y se quedan.
+- **Nueve identidades propuestas**, con escena dibujada, enemigos, paleta y
+  búsqueda rápida del nombre, en
+  <https://claude.ai/code/artifact/ac42b27b-bfbb-4ac3-a27f-0883ea54f807>.
+  Lejos del original: TRAGALUZ (recomendada: criatura que come luz contra
+  «apagones»), ARCÓN (choca con un juego online ARCON Conquer), OVNÍVORO,
+  GARABATO (hay un juego de mesa GARABATOS), CUYAZO (flojo fuera de Perú) y
+  TORNASOL. Cerca del original, a petición expresa: COMETÓN (recomendada de
+  esa tanda), POLVORÍN y BOCÓN (el límite: es el caso *K.C. Munchkin*).
+- **La línea, aunque se quiera cerca:** fuera el disco amarillo sin cara con
+  boca en cuña, los fantasmas de sábana con faldón, el cuarteto rojo/rosa/
+  cian/naranja, los muros azules, el laberinto de 1980, cualquier «Pac» y
+  también COMECOCOS (el nombre de Pac-Man en España). Se pueden quedar el
+  fondo negro, el neón, puntos y pastillas, un protagonista redondo que come y
+  cuatro perseguidores con personalidades.
+- **Si se retoma, en este orden:** elegir identidad → buscar el nombre en
+  INDECOPI (y EE. UU./Europa si se vende fuera) → registrar marca (clases 9 y
+  41) y dominio → decidir qué pasa con los récords del laberinto de 1980
+  (propuesta: histórico, no se borran) → cambiar el juego → recién ahí cobrar.
+- Descartados al buscar nombre: LENGÜETAZO (juego de mesa y ataque de
+  Pokémon) y PELUSÍN (personaje de una app infantil; hay un juego PELUSITA).
+
 **Skins nuevas — SUBIDAS (13 de septiembre).**
 Las 26 del diseño están en el juego (`js/skins.js`, service worker `pm-v42`),
 con la vitrina de SKINS dentro del juego. `tests.html`: 0 fallos en Chromium;
