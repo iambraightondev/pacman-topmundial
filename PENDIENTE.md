@@ -7,20 +7,35 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **13 de septiembre de 2026**.
+Última puesta al día: **14 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**14 sep, `pm-v44` (sin subir hasta que Braighton lo diga):** DRAGÓN/COFRE/OVNI
-solo lanzan su golpe si la Q acierta (`st.mordio`); humo del dragón animado y
-bufido grave; en DESATADO el que muerde ya no se esconde en el parón de los
-puntos; los discos de RASTRO vuelven a la vitrina (el reloj era `Date.now()`
-en segundos y los arcos perdían precisión).
-Cabo suelto: `tests.html` pasa entero con el almacenamiento limpio, pero una
-segunda vuelta seguida falla en 2 (maestría ya celebrada, skin anunciada una
-vez): se arrastra estado guardado entre vueltas; no es del juego.
+**14 sep — TODO SUBIDO, producción en `pm-v45`.** Tres tandas sobre las skins,
+cada una pedida y aprobada por Braighton tras probarlas jugando:
+
+- `pm-v43`: al morir se anima la skin (no el Pac-Man clásico); sonido propio
+  al comer para las 11 extravagantes y DORADO; la Q propia de DRAGÓN (fuego),
+  COFRE (monedas) y OVNI (rayo); mandíbula del TIBURÓN; hueco a la derecha
+  en la vitrina; miniatura de RASTRO con estela.
+- `pm-v44`: esos tres golpes solo si la Q **acierta** (`st.mordio`); humo del
+  dragón animado (y resoplido si falla); bufido grave del dragón (el de sierra
+  cansaba); en DESATADO el personaje ya no desaparece al morder (el parón
+  arcade de los puntos lo escondía); los discos de RASTRO vuelven a la vitrina
+  (el reloj era `Date.now()` en segundos y los arcos perdían precisión).
+- `pm-v45`: el COFRE suelta 26 monedas (antes 8), con brillo y destellos,
+  naciendo fuera del cofre.
+
+Pruebas: `tests.html` 307/307 con el almacenamiento limpio; `pruebas-node.js`
+los 4 de siempre.
+
+**Cabos sueltos:**
+- Una segunda vuelta seguida de `tests.html` falla en 2 (maestría ya
+  celebrada, skin anunciada una vez): arrastran estado guardado de la vuelta
+  anterior. No es del juego; se arregla limpiando ese estado al empezar.
+- Braighton sigue probando skins jugando: esperar más ajustes de detalle.
 
 **Skins nuevas — SUBIDAS (13 de septiembre).**
 Las 26 del diseño están en el juego (`js/skins.js`, service worker `pm-v42`),

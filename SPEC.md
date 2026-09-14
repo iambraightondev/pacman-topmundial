@@ -887,8 +887,12 @@ Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
   `Sprites.dibujarArte` before touching anything. `extra` is optional:
   `t` (seconds — in game `tick/60 + i·0.37`, so spectators and replays match),
   `back(dist)` (point of the path behind), `estira` (trail stretch), `team`
-  (teammate colours, ESCUADRA), `muerde` (Q active) and `icono` (menu/lives:
-  no trails). With no `extra` a skin still draws (straight trail, wall-clock).
+  (teammate colours, ESCUADRA), `muerde` (Q active), `mordio` (that Q hit
+  something) and `icono` (menu/lives: no trails). With no `extra` a skin still
+  draws (straight trail, clock since skins.js loaded). **Never pass
+  `Date.now()/1000` as `t`**: at ~1.8·10⁹ the canvas loses arc precision and
+  angle-driven arcs vanish (RASTRO's discs did); the showcase counts from when
+  the panel opens.
 - **Trails follow the real path.** `Pacman.huella` records `{x,y,d}` each
   update (≤160 points; a jump >12 px — tunnel, FLASH, net correction — clears
   it) and `Pacman.atras(dist)` walks it back, stopping at the oldest point.
@@ -898,16 +902,23 @@ Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
   FUEGO's flames use it.
 - **Q on extravagant skins.** The white saw of `drawPacTeeth` is skipped for
   `rara` skins (it would float outside their face); they open fully instead
-  (`extra.muerde`). Three have their own Q act and **only** with it: DRAGÓN
-  breathes fire (otherwise smoke), COFRE throws coins around, OVNI turns on
-  the tractor beam. The showcase fakes the Q on those three (`Skins.CON_Q`,
-  1.1 s every 3 s).
+  (`extra.muerde`). Three have their own Q act and **only on a Q that hits**
+  (`Hab` state `mordio`, set by `marcarDientes` without ticks; a miss passes
+  half ticks and leaves it false): DRAGÓN breathes fire (a miss only snorts a
+  smoke puff forward; idle, smoke wisps rise from the nostril), COFRE throws a
+  shower of 26 glowing coins around it (born outside the chest), OVNI turns on
+  the tractor beam. The showcase fakes those three (`Skins.CON_Q`): every 3 s,
+  a hit for 1.1 s and then a miss for 0.7 s.
+- **The eater stays visible in DESATADO.** The arcade hides Pac-Man during the
+  ghost-eaten points freeze; with `Game.hab` it is drawn anyway, since there
+  the Q bite is exactly what must be seen.
 - **Death.** `Game.render` uses `Sprites.drawSkinDeath(ctx,x,y,t,color,skin,dir)`
   for any skin but `clasico` (spin-shrink, flicker, burst of sparks in the
   player's colour); `clasico` keeps `drawPacmanDeath`.
 - **Sounds.** `AudioSys.playWaka(skin)`: the twelve in `WAKAS` (the eleven
   extravagant ones plus DORADO) have their own two-hit chomp, all under
-  ~80 ms (noise bursts, bell partials, formant sweeps); every other skin keeps
+  ~110 ms (noise bursts, bell partials, formant sweeps; DRAGÓN is a deep sine
+  thump with a soft low rumble, no sawtooth); every other skin keeps
   the classic "wa-ka". `eatAt`/`guestEatAt` pass the eater's skin.
   `AudioSys.tieneWaka(skin)` puts an ESCUCHAR button on those cards.
 - **Unlocking** is `PM.Skins.estado(id)` → `{abierta, pct, progreso, chip}`;
