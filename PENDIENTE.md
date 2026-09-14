@@ -13,6 +13,15 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**14 sep, `pm-v44` (sin subir hasta que Braighton lo diga):** DRAGÓN/COFRE/OVNI
+solo lanzan su golpe si la Q acierta (`st.mordio`); humo del dragón animado y
+bufido grave; en DESATADO el que muerde ya no se esconde en el parón de los
+puntos; los discos de RASTRO vuelven a la vitrina (el reloj era `Date.now()`
+en segundos y los arcos perdían precisión).
+Cabo suelto: `tests.html` pasa entero con el almacenamiento limpio, pero una
+segunda vuelta seguida falla en 2 (maestría ya celebrada, skin anunciada una
+vez): se arrastra estado guardado entre vueltas; no es del juego.
+
 **Skins nuevas — SUBIDAS (13 de septiembre).**
 Las 26 del diseño están en el juego (`js/skins.js`, service worker `pm-v42`),
 con la vitrina de SKINS dentro del juego. `tests.html`: 0 fallos en Chromium;

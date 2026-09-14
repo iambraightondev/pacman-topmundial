@@ -3412,7 +3412,7 @@
           S.drawPacman(ctx, 12, 12, d, m, '#ff69b4', sk.id, {
             t: 1.23 + d + m, estira: 1.8, team: ['#ff0000', '#00ffff'],
             back: function (dist) { return { x: 12 - dist, y: 12, d: 3 }; },
-            muerde: m === 2
+            muerde: m >= 1, mordio: m === 2
           });
         }
       }
@@ -4872,6 +4872,41 @@
     fantasmaEn(2, 14, 20);
     HB.pulsar(G, 0, HB.MORDISCO);
     eq(G.score - base, primero, 'el segundo vale igual que el primero');
+  });
+
+  /* El dragón, el cofre y el ovni lanzan su golpe (llamarada, monedas, rayo)
+   * solo si la Q ACIERTA: una Q al aire enseña los dientes y nada más. */
+  test('la Q distingue el mordisco que acierta del que va al aire', function () {
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    for (var i = 0; i < 4; i++) G.ghosts[i].mode = 'house';
+    HB.pulsar(G, 0, HB.MORDISCO);
+    ok(HB.conDientes(0), 'al aire: se ven los dientes');
+    eq(HB.estado(0).mordio, false, 'pero no cuenta como acierto');
+    partidaHab(13, 20, CFG.DIR.LEFT);
+    fantasmaEn(1, 14, 20);
+    ok(HB.pulsar(G, 0, HB.MORDISCO), 'este sí muerde');
+    eq(HB.estado(0).mordio, true, 'y cuenta como acierto');
+  });
+
+  /* Al morder un fantasma el arcade escondía a Pac-Man durante el parón de
+   * los puntos: en DESATADO el personaje desaparecía justo al usar la Q. */
+  test('al morder con la Q el personaje no desaparece', function () {
+    var s = window.PM.settings, skin0 = s.skin1;
+    var viejo = G.drawPac, pintados = [];
+    try {
+      s.skin1 = 'dragon';
+      partidaHab(13, 20, CFG.DIR.LEFT);
+      fantasmaEn(1, 14, 20);
+      ok(HB.pulsar(G, 0, HB.MORDISCO), 'muerde');
+      ok(G.eatFreezeTicks > 0, 'hay parón de puntos');
+      G.pacs[0].safeTicks = 0;             // sin el parpadeo de la gracia
+      G.drawPac = function (c, pc, idx) { pintados.push(idx); };
+      G.render();
+      ok(pintados.indexOf(0) !== -1, 'y aun así se pinta al que ha mordido');
+    } finally {
+      G.drawPac = viejo;
+      s.skin1 = skin0;
+    }
   });
 
   test('W corre más y se apaga solo', function () {

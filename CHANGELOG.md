@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-14 · La Q que falla ya no echa fuego
+
+- **DRAGÓN, COFRE y OVNI solo lanzan su golpe si la Q acierta.** Una Q al
+  aire enseña los dientes y nada más; el dragón, además, resopla una
+  bocanada de humo.
+- **El humo del dragón está vivo**: volutas que salen de la nariz, suben
+  ondulando, se inflan y se deshacen.
+- **El dragón suena más imponente** al comer: un bufido grave, sin el
+  zumbido de sierra que cansaba.
+- **Con la Q el personaje ya no desaparece.** Al morder un fantasma se
+  escondía durante el parón de los puntos, como en el arcade; en DESATADO
+  se queda a la vista.
+- **RASTRO vuelve a enseñar sus discos** en la vitrina: el reloj de la
+  animación era tan grande que los arcos que giran dejaban de pintarse.
+
 ## 2026-09-14 · Las skins mueren, suenan y muerden a su manera
 
 - **Al morir se anima tu skin**, no un Pac-Man normal: gira encogiéndose y

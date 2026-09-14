@@ -1539,10 +1539,14 @@
       if (!raf) return;
       var equipoMuestra = ['#ff0000', '#00ffff', '#00ff00', '#ff69b4'];
       this.skinsAnim = true;
+      /* el reloj cuenta desde que se abre la vitrina: con Date.now() en
+       * segundos (~1.800 millones) los arcos que giran con él perdían toda
+       * la precisión y no se pintaban (los discos de RASTRO) */
+      var origen = Date.now();
       function paso() {
         var panel = self.els.skins;
         if (!panel || panel.style.display === 'none') { self.skinsAnim = false; return; }
-        var t = Date.now() / 1000;
+        var t = (Date.now() - origen) / 1000;
         var s = window.PM.settings;
         var color = s[(self.skinsKey === 'skin2') ? 'pac2Color' : 'pacColor'] || '#ffff00';
         var equipo = equipoMuestra.filter(function (c) { return c !== color; }).slice(0, 3);

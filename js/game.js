@@ -3647,7 +3647,10 @@
        * boca en cuña y los dientes flotarían fuera de la cara. Su aviso de
        * que la tecla entró es abrir la boca del todo (`muerde`). */
       var rara = !!(window.PM.Skins && window.PM.Skins.rara(skin));
-      if (st && st.dientes > 0 && rara) extra.muerde = true;
+      if (st && st.dientes > 0 && rara) {
+        extra.muerde = true;
+        extra.mordio = !!st.mordio;      // al aire no hay llamarada ni monedas
+      }
       pc.draw(ctx, color, skin, extra);
       if (st && st.dientes > 0 && !rara) {
         S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color, skin);
@@ -3735,7 +3738,11 @@
             }
             continue;
           }
-          if (this.eatFreezeTicks > 0 && i === this.eaterIdx) continue;
+          /* Al comerse un fantasma, el arcade esconde a Pac-Man durante el
+           * parón de los puntos. En DESATADO no: ahí se come a mordiscos cada
+           * pocos segundos y el personaje se desvanecía justo al morder, que
+           * es cuando se tiene que ver (los dientes, la llamarada...). */
+          if (this.eatFreezeTicks > 0 && i === this.eaterIdx && !this.hab) continue;
           // parpadeo del margen de gracia al reaparecer con la partida en marcha
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
           this.drawPac(ctx, pc, i);

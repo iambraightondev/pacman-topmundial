@@ -76,6 +76,7 @@
       cd: [0, 0, 0, 0],   // ticks que faltan para cada habilidad
       turbo: 0,           // ticks de turbo que quedan
       dientes: 0,         // ticks con los dientes fuera (MORDISCO)
+      mordio: false,      // y si esos dientes se llevaron un fantasma
       flash: 0,           // ticks translúcido (FLASH)
       carga: 0,           // ticks de EMBESTIDA (fantasma humano)
       acecho: 0,          // ticks de ACECHO (fantasma humano)
@@ -613,9 +614,15 @@
       s.flashDir = (dir >= 0 && dir <= 3) ? dir : -1;
     },
 
+    /* Sin `ticks` es un mordisco que ACIERTA (el propio o el eco de red, que
+     * solo llega de los que gastan recarga); con ticks, la dentellada al aire.
+     * `mordio` lo miran las skins que hacen algo al comer (la llamarada del
+     * DRAGÓN, las monedas del COFRE, el rayo del OVNI): al aire, nada. */
     marcarDientes: function (idx, ticks) {
       var s = this.estado(idx);
-      if (s) s.dientes = ticks || H.BITE_SHOW;
+      if (!s) return;
+      s.dientes = ticks || H.BITE_SHOW;
+      s.mordio = !ticks;
     },
 
     /* =========================================================

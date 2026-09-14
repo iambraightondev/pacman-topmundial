@@ -29,6 +29,7 @@
   var DIR_ANGLE = [-Math.PI / 2, Math.PI, Math.PI / 2, 0];   // UP LEFT DOWN RIGHT
   var DIR_V = [[0, -1], [-1, 0], [0, 1], [1, 0]];
   var HALF = [0, 20 * Math.PI / 180, 40 * Math.PI / 180];
+  var ARRANQUE = Date.now();
 
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -494,7 +495,7 @@
       ctx.clip('evenodd');
       ctx.strokeStyle = mix(o.c, '#ffffff', 0.25);
       ctx.lineWidth = 2 / S;
-      var giro = o.t * 1.6;
+      var giro = (o.t * 1.6) % (Math.PI * 2);
       for (i = 0; i < 3; i++) {
         ctx.beginPath();
         ctx.arc(0, 0, 3.4, giro + i * 2.094, giro + i * 2.094 + 1.35);
@@ -949,7 +950,7 @@
       /* CON LA Q suelta monedas A SU ALREDEDOR: salen de la tapa abierta en
        * todas direcciones, girando (se ven de canto y de cara) y apagándose
        * según se alejan. Sin la Q, ni una. */
-      if (o.muerde) {
+      if (o.muerde && o.mordio) {
         var N = 8;
         for (var k = 0; k < N; k++) {
           var fr = ((t * 1.8) + k / N) % 1;
@@ -971,9 +972,11 @@
 
     dragon: function (ctx, o) {
       var fz = fase(o), t = o.t, k;
-      /* FUEGO SOLO CON LA Q (el mordisco): la boca se abre del todo y sale la
-       * llamarada mientras dura. Sin la Q mastica normal y solo echa humo. */
-      var sopla = !!o.muerde, pf = (t * 1.25) % 1;
+      /* FUEGO SOLO CON UNA Q QUE ACIERTA: la boca se abre del todo y sale la
+       * llamarada mientras dura. Una Q fallada solo suelta una bocanada de
+       * humo; sin la Q mastica normal y humea por la nariz. */
+      var sopla = !!(o.muerde && o.mordio), bufa = !!(o.muerde && !o.mordio);
+      var pf = (t * 1.25) % 1;
       var crece = 1, apaga = 1;
       var ang = (sopla ? 28 : [0, 14, 26][fz]) * Math.PI / 180;
       var esc = hex(mix(o.c, '#3fae5a', 0.4)), escOsc = mix(esc, '#0d2410', 0.45);
@@ -1033,10 +1036,22 @@
       contorno(ctx, 2.2);
       ctx.beginPath(); ctx.moveTo(0.3, 3.3); ctx.lineTo(2.6, 2.9); ctx.stroke();
       ctx.fillStyle = TINTA; ctx.beginPath(); ctx.ellipse(5.5, 1.15, 0.35, 0.22, 0.3, 0, Math.PI * 2); ctx.fill();
-      for (k = 0; k < 2; k++) {
-        var fh = ((t * 1.3) + k * 0.5) % 1;
-        ctx.fillStyle = 'rgba(205,205,205,' + (0.55 * (1 - fh)) + ')';
-        ctx.beginPath(); ctx.arc(5.9 + fh * 1.2, 1.6 + fh * 2.6, 0.4 + fh * 0.9, 0, Math.PI * 2); ctx.fill();
+      /* HUMO: volutas que salen de la nariz, suben ondulando, se inflan y se
+       * deshacen. Con una Q fallada resopla: más bocanadas, más grandes y
+       * más oscuras, empujadas hacia delante. */
+      var nh = bufa ? 6 : 4, vh = bufa ? 2.2 : 0.9;
+      for (k = 0; k < nh; k++) {
+        var fh = ((t * vh) + k / nh) % 1;
+        var onda = Math.sin(t * 5 + k * 2.1 + fh * 6) * (0.35 + fh * 0.9);
+        var hx = 5.8 + fh * (bufa ? 4.2 : 1.6) + onda * 0.35;
+        var hy = 1.5 + fh * (bufa ? 1.8 : 3.4) + onda * 0.25;
+        var hr = (bufa ? 0.55 : 0.35) + fh * (bufa ? 1.6 : 1.05);
+        var ha = (bufa ? 0.7 : 0.5) * (1 - fh) * Math.min(1, fh * 6 + 0.2);
+        var gris = bufa ? 150 : 205;
+        ctx.fillStyle = 'rgba(' + gris + ',' + gris + ',' + (gris + 5) + ',' + ha.toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(240,240,245,' + (ha * 0.55).toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(hx - hr * 0.3, hy + hr * 0.3, hr * 0.5, 0, Math.PI * 2); ctx.fill();
       }
       /* LLAMARADA: sale de dentro de la boca, del hueco entre las dos
        * mandíbulas, y sale recta hacia delante. Núcleo casi blanco pegado a la
@@ -1356,7 +1371,7 @@
       ctx.rotate(-0.12);
       ctx.scale(1.25, 1.25);   // otro 15 % más grande
       /* el rayo abductor, SOLO con la Q: es su forma de comer */
-      if (o.muerde) {
+      if (o.muerde && o.mordio) {
         var al = 0.45 + 0.1 * Math.sin(t * 20);
         var rg = ctx.createLinearGradient(3.0, -1.5, 8.5, -2.5);
         rg.addColorStop(0, mix(o.c, '#ffffff', 0.5, al));
@@ -1574,8 +1589,11 @@
        * este es su aviso de que la tecla entró */
       half: (e.muerde && rara) ? HALF[2] : (HALF[mouthPhase] || 0),
       muerde: !!e.muerde,        // DRAGÓN, COFRE y OVNI tienen su propio golpe de Q
+      mordio: !!e.mordio,        // ...pero solo lo lanzan si la Q acierta
       c: colorLargo(color),
-      t: (typeof e.t === 'number') ? e.t : Date.now() / 1000,
+      /* sin reloj propio, uno que empieza al cargar: Date.now() en segundos
+       * es tan grande que los arcos que giran con él dejan de pintarse */
+      t: (typeof e.t === 'number') ? e.t : (Date.now() - ARRANQUE) / 1000,
       team: equipo,
       vel: (e.estira > 0) ? e.estira : 1,
       estira: (!e.icono && e.estira > 0) ? e.estira : 1,
@@ -1885,8 +1903,10 @@
         estira: o.estira || 1,
         team: o.team || [],
         /* en la vitrina no hay tecla: las que tienen golpe de Q propio lo
-         * enseñan solas, un rato cada tres segundos */
-        muerde: !!(this.CON_Q[id] && (t % 3) < 1.1)
+         * enseñan solas cada tres segundos: primero una Q que acierta y
+         * luego una fallada */
+        muerde: !!(this.CON_Q[id] && ((t % 3) < 1.1 || ((t % 3) >= 1.6 && (t % 3) < 2.3))),
+        mordio: !!(this.CON_Q[id] && (t % 3) < 1.1)
       });
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       return pos;

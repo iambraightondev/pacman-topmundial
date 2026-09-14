@@ -169,10 +169,14 @@
       blip('sine', b ? 280 : 220, b ? 95 : 80, t, 0.06, 0.5, 0.002);
       blip('sine', 520, 1150, t + 0.02, 0.03, 0.14, 0.002);
     },
-    /* soplido de fuego con gruñido */
+    /* bufido grave de dragón */
     dragon: function (t, b) {
-      ruido(t, 0.07, 0.4, 'lowpass', b ? 1300 : 900, 0.8, b ? 500 : 350);
-      blip('sawtooth', b ? 110 : 95, b ? 80 : 70, t, 0.06, 0.12, 0.003);
+      /* bocanada profunda: un golpe de pecho muy grave, un cuerpo suave que
+       * se oye también en altavoces pequeños y un soplo de brasas apagado.
+       * Nada de sierra ni siseo agudo, que cansaban al comer seguido. */
+      blip('sine', b ? 78 : 68, b ? 42 : 36, t, 0.11, 0.6, 0.004);
+      blip('triangle', b ? 156 : 136, b ? 88 : 76, t, 0.08, 0.14, 0.006);
+      ruido(t, 0.1, 0.22, 'lowpass', 220, 0.6, b ? 620 : 520);
     },
     /* chasquido jugoso de hojas que se cierran */
     planta: function (t, b) {
