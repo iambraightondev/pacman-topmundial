@@ -1116,7 +1116,8 @@
         pac.pauseTicks = CFG.ENERGIZER_PAUSE;
         this.triggerFright();
       }
-      window.AudioSys && AudioSys.playWaka();
+      // cada skin extravagante (y DORADO) suena a lo suyo al comer
+      window.AudioSys && AudioSys.playWaka(this.skinFor(pac ? (pac.id | 0) : 0));
 
       /* fruta a los 70 y 170 puntos comidos */
       if (CFG.FRUIT_DOTS.indexOf(this.dotsEaten) !== -1) {
@@ -2936,7 +2937,7 @@
       this.recentEaten[idx] = this.tick;
       pac.pauseTicks = (ch === '.') ? CFG.DOT_PAUSE : CFG.ENERGIZER_PAUSE;
       if (ch === 'o') this.predictFright();
-      window.AudioSys && AudioSys.playWaka();
+      window.AudioSys && AudioSys.playWaka(this.skinFor(pac ? (pac.id | 0) : this.localIdx));
     },
 
     /* Energizante propio: reacción visual inmediata; el anfitrión confirma */
@@ -3719,8 +3720,15 @@
           if (pc.dying) {
             if (pc.deathPhase === 1) {
               var t = 1 - pc.deathTicks / CFG.DEATH_ANIM_TICKS;
-              window.PM.Sprites.drawPacmanDeath(ctx, pc.x,
-                pc.y + CFG.MAZE_Y, t, this.colorFor(i));
+              var skinMuere = this.skinFor(i);
+              // la boca que se abre es la del clásico; con otra skin, muere ella
+              if (skinMuere !== 'clasico' && window.PM.Sprites.drawSkinDeath) {
+                window.PM.Sprites.drawSkinDeath(ctx, pc.x, pc.y + CFG.MAZE_Y, t,
+                  this.colorFor(i), skinMuere, pc.dir);
+              } else {
+                window.PM.Sprites.drawPacmanDeath(ctx, pc.x,
+                  pc.y + CFG.MAZE_Y, t, this.colorFor(i));
+              }
             } else {
               // congelado antes de la animación, con su skin (antes salía clásico)
               pc.draw(ctx, this.colorFor(i), this.skinFor(i), this.pacExtra(pc, i));

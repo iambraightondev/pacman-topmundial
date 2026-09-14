@@ -898,7 +898,18 @@ Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
   FUEGO's flames use it.
 - **Q on extravagant skins.** The white saw of `drawPacTeeth` is skipped for
   `rara` skins (it would float outside their face); they open fully instead
-  (`extra.muerde`).
+  (`extra.muerde`). Three have their own Q act and **only** with it: DRAGÓN
+  breathes fire (otherwise smoke), COFRE throws coins around, OVNI turns on
+  the tractor beam. The showcase fakes the Q on those three (`Skins.CON_Q`,
+  1.1 s every 3 s).
+- **Death.** `Game.render` uses `Sprites.drawSkinDeath(ctx,x,y,t,color,skin,dir)`
+  for any skin but `clasico` (spin-shrink, flicker, burst of sparks in the
+  player's colour); `clasico` keeps `drawPacmanDeath`.
+- **Sounds.** `AudioSys.playWaka(skin)`: the twelve in `WAKAS` (the eleven
+  extravagant ones plus DORADO) have their own two-hit chomp, all under
+  ~80 ms (noise bursts, bell partials, formant sweeps); every other skin keeps
+  the classic "wa-ka". `eatAt`/`guestEatAt` pass the eater's skin.
+  `AudioSys.tieneWaka(skin)` puts an ESCUCHAR button on those cards.
 - **Unlocking** is `PM.Skins.estado(id)` → `{abierta, pct, progreso, chip}`;
   `Level.skinUnlocked/skinsAllowed` delegate non-level skins to it. The worn
   skin is always allowed. New counters in `Achievements.BASE`: `muertes`

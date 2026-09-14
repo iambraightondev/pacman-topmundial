@@ -197,6 +197,9 @@
     return MODOS[0];
   }
 
+  /* Skins cuya gracia es la estela: su miniatura la lleva */
+  var CON_ESTELA = { sombra: 1, cometa: 1, rastro: 1, escuadra: 1 };
+
   var UI = {
     els: {},
     audioResumed: false,
@@ -1299,7 +1302,14 @@
         c.imageSmoothingEnabled = false;
         // el sprite mide r=6.5; se amplía para que la skin se lea bien
         c.setTransform(3, 0, 0, 3, 24, 24);
-        window.PM.Sprites.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2, color, id, { icono: true });
+        /* Las de estela sin estela no se reconocen (RASTRO quedaba en un aro
+         * suelto): se corren a la derecha y llevan un trozo de su estela. */
+        var estela = !!CON_ESTELA[id];
+        window.PM.Sprites.drawPacman(c, estela ? 3 : 0, 0, CFG.DIR.RIGHT, 2, color, id,
+          estela ? {
+            back: function (d) { return { x: 3 - d, y: 0, d: CFG.DIR.RIGHT }; },
+            estira: 0.55, team: ['#ff0000', '#00ffff', '#00ff00']
+          } : { icono: true });
         c.setTransform(1, 0, 0, 1, 0, 0);
       }
     },
@@ -1424,7 +1434,23 @@
           self.refreshSkins();
         });
         btn.classList.add('btn-preset', 'skin-poner');
-        card.appendChild(btn);
+        var botones = document.createElement('div');
+        botones.className = 'skin-botones';
+        botones.appendChild(btn);
+        /* las que suenan a lo suyo al comer se pueden oír aquí: cuatro
+         * pastillas seguidas, con el ritmo del juego */
+        var AS = window.AudioSys;
+        if (AS && AS.tieneWaka && AS.tieneWaka(sk.id)) {
+          var oir = self.makeButton('ESCUCHAR', function () {
+            self.resumeAudio();
+            for (var n = 0; n < 4; n++) {
+              setTimeout(function () { window.AudioSys.playWaka(sk.id); }, n * 135);
+            }
+          });
+          oir.classList.add('btn-preset', 'skin-oir');
+          botones.appendChild(oir);
+        }
+        card.appendChild(botones);
 
         self.skinsGrid.appendChild(card);
         self.skinsItems.push({

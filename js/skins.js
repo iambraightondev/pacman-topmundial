@@ -891,9 +891,12 @@
       [0.2, -0.5, -1.2].forEach(function (f) { ctx.moveTo(f, 1.4); ctx.quadraticCurveTo(f - 0.5, 0.4, f, -0.6); });
       ctx.stroke();
       ctx.restore();
+      /* el vientre de la mandíbula es EL MISMO óvalo que el del cuerpo, girado
+       * con ella: cerrada, las dos franjas blancas casan en una sola; con uno
+       * propio, más estrecho, la mandíbula parecía una pieza pegada debajo */
       ctx.save(); girarSobre(ctx, 0.9, -0.95, -ang); ctx.clip(mand);
       ctx.fillStyle = vientre;
-      ctx.beginPath(); ctx.ellipse(2.6, -2.6, 4.0, 1.2, 0.05, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0.6, -1.6, 6.2, 1.5, 0.05, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
       ctx.save(); girarSobre(ctx, 0.9, -0.95, -ang); dientes(ctx, 1.8, 5.1, -0.95, 5, 0.75); ctx.restore();
       dientes(ctx, 2.0, 5.3, -0.55, 5, -0.75);
@@ -943,14 +946,23 @@
       tapa(); contorno(ctx, 1.6); ctx.stroke();
       dientes(ctx, -4.4, 4.4, -0.5, 7, -0.8);
       ctx.restore();
-      if (fz === 2) {
-        for (var k = 0; k < 2; k++) {
-          var fr = ((t * 2.2) + k * 0.5) % 1;
-          ctx.globalAlpha = 1 - fr;
+      /* CON LA Q suelta monedas A SU ALREDEDOR: salen de la tapa abierta en
+       * todas direcciones, girando (se ven de canto y de cara) y apagándose
+       * según se alejan. Sin la Q, ni una. */
+      if (o.muerde) {
+        var N = 8;
+        for (var k = 0; k < N; k++) {
+          var fr = ((t * 1.8) + k / N) % 1;
+          var angM = k * Math.PI * 2 / N + 0.35;
+          var rad = 2.5 + fr * 7.5;
+          var mx = Math.cos(angM) * rad, my = 0.8 + Math.sin(angM) * rad * 0.85 - fr * fr * 1.5;
+          ctx.globalAlpha = 1 - fr * fr;
           ctx.fillStyle = oro;
           ctx.beginPath();
-          ctx.ellipse(3.4 + k * 1.3 + fr * 1.4, 1.0 + fr * 4.2, 0.8 * Math.abs(Math.cos(t * 12 + k)) + 0.15, 0.8, 0, 0, Math.PI * 2);
+          ctx.ellipse(mx, my, 0.75 * Math.abs(Math.cos(t * 12 + k * 1.7)) + 0.15, 0.75, 0, 0, Math.PI * 2);
           ctx.fill(); contorno(ctx, 1); ctx.stroke();
+          ctx.fillStyle = '#fff6c0';
+          ctx.fillRect(mx - 0.15, my + 0.1, 0.3, 0.3);
         }
         ctx.globalAlpha = 1;
       }
@@ -959,10 +971,10 @@
 
     dragon: function (ctx, o) {
       var fz = fase(o), t = o.t, k;
-      /* cada 2,6 s se para a echar fuego: 0,9 s con la boca abierta del todo
-       * (si siguiera masticando, la llamarada parpadearía con la boca) */
-      var CICLO = 2.6, DURA = 0.9, tf = t % CICLO, sopla = tf < DURA, pf = tf / DURA;
-      var crece = Math.min(1, pf / 0.18), apaga = pf > 0.72 ? (1 - pf) / 0.28 : 1;
+      /* FUEGO SOLO CON LA Q (el mordisco): la boca se abre del todo y sale la
+       * llamarada mientras dura. Sin la Q mastica normal y solo echa humo. */
+      var sopla = !!o.muerde, pf = (t * 1.25) % 1;
+      var crece = 1, apaga = 1;
       var ang = (sopla ? 28 : [0, 14, 26][fz]) * Math.PI / 180;
       var esc = hex(mix(o.c, '#3fae5a', 0.4)), escOsc = mix(esc, '#0d2410', 0.45);
       var vientre = '#f0d27a', cuerno = '#efe6cf';
@@ -1343,8 +1355,9 @@
       ctx.translate(0, 0.6 + Math.sin(t * 4) * 0.4);
       ctx.rotate(-0.12);
       ctx.scale(1.25, 1.25);   // otro 15 % más grande
-      if (fz > 0) {
-        var al = (fz === 1) ? 0.25 : 0.5;
+      /* el rayo abductor, SOLO con la Q: es su forma de comer */
+      if (o.muerde) {
+        var al = 0.45 + 0.1 * Math.sin(t * 20);
         var rg = ctx.createLinearGradient(3.0, -1.5, 8.5, -2.5);
         rg.addColorStop(0, mix(o.c, '#ffffff', 0.5, al));
         rg.addColorStop(1, mix(o.c, o.c, 0, 0));
@@ -1560,6 +1573,7 @@
        * la sierra blanca de las demás (flotaría fuera de su boca), así que
        * este es su aviso de que la tecla entró */
       half: (e.muerde && rara) ? HALF[2] : (HALF[mouthPhase] || 0),
+      muerde: !!e.muerde,        // DRAGÓN, COFRE y OVNI tienen su propio golpe de Q
       c: colorLargo(color),
       t: (typeof e.t === 'number') ? e.t : Date.now() / 1000,
       team: equipo,
@@ -1574,6 +1588,46 @@
     ctx.save();
     try { DRAW[skin](ctx, o); }
     finally { ctx.restore(); }
+  };
+
+  /* ============================================================
+   * Muerte con skin
+   *
+   * La animación de siempre (la boca que se abre hasta desaparecer) es la
+   * del Pac-Man clásico y se queda para la clásica. Con cualquier otra skin
+   * se veía morir a un Pac-Man normal en su lugar, así que aquí muere la
+   * skin: gira encogiéndose sobre sí misma, parpadea al final y estalla en
+   * chispas de su color. t va de 0 a 1 (CFG.DEATH_ANIM_TICKS).
+   * ============================================================ */
+  Sprites.drawSkinDeath = function (ctx, x, y, t, color, skin, dir) {
+    var col = colorLargo(color);
+    var d = (dir >= 0 && dir <= 3) ? dir : 3;
+    var k = Math.max(0, Math.min(1, t / 0.7));
+    var ease = k * k * (3 - 2 * k);
+    var escala = 1 - ease;
+    if (escala > 0.02 && !(t > 0.55 && Math.floor(t * 40) % 2 === 0)) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(ease * Math.PI * 3);
+      ctx.scale(escala, escala);
+      Sprites.drawPacman(ctx, 0, 0, d, [0, 1, 2, 1][Math.floor(t * 20) % 4], col, skin,
+        { t: t * 1.5, icono: true });
+      ctx.restore();
+    }
+    if (t > 0.5) {
+      var u = (t - 0.5) / 0.5;
+      ctx.save();
+      ctx.globalAlpha = 1 - u;
+      ctx.fillStyle = col;
+      for (var i = 0; i < 10; i++) {
+        var a = i * Math.PI * 2 / 10 + 0.2;
+        var r = 2 + u * 11;
+        var tam = Math.max(0.6, 1.8 - u * 1.2);
+        ctx.fillRect(x + Math.cos(a) * r - tam / 2, y + Math.sin(a) * r - tam / 2, tam, tam);
+      }
+      if (u < 0.5) destello(ctx, x, y, 2 + u * 6, 1 - u * 2);
+      ctx.restore();
+    }
   };
 
   /* ============================================================
@@ -1782,6 +1836,8 @@
     ESCENA_W: 336,
     ESCENA_H: 144,
     LUPA_RECORTE: 72,
+    /* las que hacen algo propio con la Q (la vitrina lo enseña en bucle) */
+    CON_Q: { dragon: 1, cofre: 1, ovni: 1 },
 
     caminoEscena: function (s) {
       var X0 = 12, Y0 = 12, X1 = 100, Y1 = 36, PW = X1 - X0, PH = Y1 - Y0, P = 2 * (PW + PH);
@@ -1827,7 +1883,10 @@
         t: t,
         back: function (dist) { return self.caminoEscena(s - dist); },
         estira: o.estira || 1,
-        team: o.team || []
+        team: o.team || [],
+        /* en la vitrina no hay tecla: las que tienen golpe de Q propio lo
+         * enseñan solas, un rato cada tres segundos */
+        muerde: !!(this.CON_Q[id] && (t % 3) < 1.1)
       });
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       return pos;

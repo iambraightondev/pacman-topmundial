@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-14 · Las skins mueren, suenan y muerden a su manera
+
+- **Al morir se anima tu skin**, no un Pac-Man normal: gira encogiéndose y
+  estalla en chispas de tu color. La clásica sigue con la animación de
+  siempre.
+- **Sonidos propios al comer** para las extravagantes y DORADO: huesos que
+  chocan (CALAVERA), metal (ROBOT), un "tin" de oro (DORADO), monedas
+  (COFRE), un "glup" bajo el agua (TIBURÓN), soplido de fuego (DRAGÓN),
+  chasquido de hojas (PLANTA), mandíbula que retumba (T-REX), un "ñam"
+  (HAMBURGUESA), un "uiu" espacial (OVNI), un maullido (GATO) y un chillido
+  de murciélago (VAMPIRO). En la vitrina se oyen con ESCUCHAR.
+- **La Q, a su manera**: el DRAGÓN solo echa fuego con la Q (si no, humo);
+  el COFRE suelta monedas a su alrededor; el OVNI solo enciende el rayo
+  abductor con la Q.
+- La mandíbula del TIBURÓN ya no parece pegada: el vientre blanco sigue
+  de una pieza.
+- Las fichas de la vitrina ya no dejan un hueco a la derecha, y la
+  miniatura de PERFIL de las skins de estela (RASTRO, COMETA, SOMBRA,
+  ESCUADRA) lleva su estela.
+
 ## 2026-09-13 · 26 skins nuevas y la vitrina de SKINS
 
 - **De 6 skins a 32.** Por nivel: MOÑITO, COMETA, HOLOGRAMA, GLITCH, PRISMA,

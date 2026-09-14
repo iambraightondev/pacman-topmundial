@@ -3418,8 +3418,65 @@
       }
       S.drawPacman(ctx, 12, 12, 3, 2, '#fff', sk.id, { icono: true });
       S.drawPacman(ctx, 12, 12, 3, 1, '#00ff00', sk.id);
+      // y su muerte, de principio a fin
+      for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 12, 12, k / 10, '#ffff00', sk.id, 1);
     });
     ok(true, 'ninguna rompe');
+  });
+
+  /* Con una skin puesta se muere ESA skin: la boca que se abre hasta
+   * desaparecer es la animación del clásico y se queda solo para él. */
+  test('al morir con skin se anima la skin y no el Pac-Man clásico', function () {
+    var S = window.PM.Sprites;
+    var viejo = S.drawPacmanDeath, nuevo = S.drawSkinDeath;
+    var llamadas = [];
+    S.drawPacmanDeath = function () { llamadas.push('clasico'); };
+    S.drawSkinDeath = function (c, x, y, t, col, skin) { llamadas.push(skin); };
+    var s = window.PM.settings, skin0 = s.skin1;
+    try {
+      partida(1);
+      G.pacs[0].dying = true;
+      G.pacs[0].deathPhase = 1;
+      G.pacs[0].deathTicks = 40;
+      s.skin1 = 'calavera';
+      G.render();
+      s.skin1 = 'clasico';
+      G.render();
+      ok(llamadas.indexOf('calavera') !== -1, 'con CALAVERA muere la calavera');
+      ok(llamadas.indexOf('clasico') !== -1, 'con la clásica, la animación de siempre');
+    } finally {
+      S.drawPacmanDeath = viejo;
+      S.drawSkinDeath = nuevo;
+      s.skin1 = skin0;
+    }
+  });
+
+  test('las extravagantes y DORADO suenan a lo suyo al comer', function () {
+    var AS = window.AudioSys;
+    ['calavera', 'robot', 'dorado', 'cofre', 'tiburon', 'dragon', 'planta', 'trex',
+     'hamburguesa', 'ovni', 'gato', 'vampiro'].forEach(function (id) {
+      ok(AS.tieneWaka(id), id + ' tiene waka propio');
+    });
+    ok(!AS.tieneWaka('clasico') && !AS.tieneWaka('neon'), 'las de siempre suenan como siempre');
+    var oidas = [];
+    var w0 = AS.playWaka;
+    AS.playWaka = function (skin) { oidas.push(skin); };
+    var s = window.PM.settings, skin0 = s.skin1;
+    try {
+      partida(1);
+      s.skin1 = 'robot';
+      var p = G.pacs[0];
+      var hecho = false;
+      for (var r = 0; r < CFG.ROWS && !hecho; r++) {
+        for (var c = 0; c < CFG.COLS && !hecho; c++) {
+          if (G.pellets[r][c] === '.') { G.eatAt(c, r, p); hecho = true; }
+        }
+      }
+      eq(oidas[0], 'robot', 'al comer, suena el waka de la skin puesta');
+    } finally {
+      AS.playWaka = w0;
+      s.skin1 = skin0;
+    }
   });
 
   test('CALAVERA pide muertes, y las de antes se estiman con las partidas', function () {

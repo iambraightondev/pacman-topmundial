@@ -1374,12 +1374,15 @@ input[type="range"] {
 
 .skin-resumen { margin-top: 0; }
 
+/* Columnas de ancho FIJO (lo que miden la lupa y el pasillo), centradas: con
+ * 1fr las fichas se estiraban y dejaban un hueco negro a la derecha */
 .skin-vitrina {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr));
+  grid-template-columns: repeat(auto-fill, min(100%, 500px));
+  justify-content: center;
   gap: 10px;
   width: 100%;
-  max-width: 1500px;
+  max-width: 1540px;
 }
 
 .skin-card {
@@ -1458,7 +1461,7 @@ input[type="range"] {
 }
 
 .skin-prog .level-bar { flex: 0 0 110px; width: 110px; margin: 0; }
-.skin-card .skin-poner { align-self: flex-start; }
+.skin-botones { display: flex; flex-wrap: wrap; gap: 8px; }
 
 @media (max-width: 600px) {
   .skin-lupa { width: 84px; height: 84px; }

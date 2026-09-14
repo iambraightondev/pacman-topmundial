@@ -100,6 +100,138 @@
     src.stop(t0 + dur + 0.02);
   }
 
+  /* Ruido filtrado con cualquier filtro ('bandpass', 'highpass', 'lowpass'),
+   * con barrido opcional de la frecuencia f0 -> f1. Es la base de casi todos
+   * los wakas de skin: golpes, chasquidos y soplidos son ruido con forma. */
+  function ruido(t0, dur, vol, tipo, f0, q, f1) {
+    var src = ctx.createBufferSource();
+    var g = ctx.createGain();
+    var f = ctx.createBiquadFilter();
+    src.buffer = getNoiseBuffer();
+    f.type = tipo || 'bandpass';
+    f.frequency.setValueAtTime(Math.max(20, f0), t0);
+    if (f1 && f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+    if (q) f.Q.setValueAtTime(q, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(out('sfx'));
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  }
+
+  /* Campanada corta: parciales que se apagan cada uno a su ritmo (metal) */
+  function campana(t0, parciales, dur, vol) {
+    for (var i = 0; i < parciales.length; i++) {
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(parciales[i], t0);
+      var v = vol / (i + 1);
+      var d = dur / (1 + i * 0.35);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.linearRampToValueAtTime(v, t0 + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+      o.connect(g); g.connect(out('sfx'));
+      o.start(t0);
+      o.stop(t0 + d + 0.02);
+    }
+  }
+
+  /* ---------- Wakas de skin ----------
+   * Cada uno alterna entre dos golpes (`b`), como el "wa-ka" de siempre, para
+   * que comer una fila de pastillas tenga ritmo y no suene a metralleta. */
+  var WAKAS = {
+    /* huesos chocando: dos chasquidos secos y huecos, de madera vieja */
+    calavera: function (t, b) {
+      ruido(t, 0.03, 0.55, 'bandpass', b ? 2300 : 1600, 9);
+      blip('triangle', b ? 820 : 600, b ? 640 : 470, t, 0.028, 0.22, 0.001);
+      ruido(t + 0.018, 0.02, 0.3, 'bandpass', b ? 3100 : 2200, 12);
+    },
+    /* metal chocando: un golpe grave con un anillo inarmónico encima */
+    robot: function (t, b) {
+      blip('square', b ? 190 : 150, b ? 160 : 125, t, 0.045, 0.14, 0.001);
+      campana(t, b ? [1330, 2010, 3170] : [1090, 1720, 2690], 0.09, 0.14);
+      ruido(t, 0.015, 0.25, 'highpass', 4500, 0.7);
+    },
+    /* oro: un "tin" limpio de metal fino */
+    dorado: function (t, b) {
+      campana(t, b ? [2093, 4710, 6280] : [1760, 3960, 5280], 0.1, 0.18);
+    },
+    /* monedas: dos tintineos muy juntos, en escalera */
+    cofre: function (t, b) {
+      campana(t, [b ? 2600 : 3500], 0.05, 0.16);
+      campana(t + 0.022, [b ? 3500 : 2600, 5200], 0.06, 0.14);
+      ruido(t, 0.012, 0.18, 'highpass', 6000, 0.7);
+    },
+    /* mordisco bajo el agua: un "glup" que cae y una burbuja que sube */
+    tiburon: function (t, b) {
+      blip('sine', b ? 280 : 220, b ? 95 : 80, t, 0.06, 0.5, 0.002);
+      blip('sine', 520, 1150, t + 0.02, 0.03, 0.14, 0.002);
+    },
+    /* soplido de fuego con gruñido */
+    dragon: function (t, b) {
+      ruido(t, 0.07, 0.4, 'lowpass', b ? 1300 : 900, 0.8, b ? 500 : 350);
+      blip('sawtooth', b ? 110 : 95, b ? 80 : 70, t, 0.06, 0.12, 0.003);
+    },
+    /* chasquido jugoso de hojas que se cierran */
+    planta: function (t, b) {
+      ruido(t, 0.028, 0.4, 'bandpass', 1100, 2.5);
+      blip('sine', b ? 640 : 540, b ? 180 : 150, t + 0.008, 0.045, 0.3, 0.002);
+    },
+    /* mandíbula enorme: un golpe grave que retumba */
+    trex: function (t, b) {
+      blip('sine', b ? 130 : 110, b ? 55 : 48, t, 0.08, 0.55, 0.002);
+      ruido(t, 0.05, 0.28, 'lowpass', 600, 0.7);
+    },
+    /* "ñam": una vocal que se abre y se cierra */
+    hamburguesa: function (t, b) {
+      var o = ctx.createOscillator();
+      var f = ctx.createBiquadFilter();
+      var g = ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(b ? 190 : 165, t);
+      f.type = 'bandpass';
+      f.Q.setValueAtTime(4, t);
+      f.frequency.setValueAtTime(b ? 650 : 1250, t);
+      f.frequency.exponentialRampToValueAtTime(b ? 1250 : 650, t + 0.07);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.5, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
+      o.connect(f); f.connect(g); g.connect(out('sfx'));
+      o.start(t);
+      o.stop(t + 0.1);
+    },
+    /* platillo: un "uiu" de ciencia ficción con temblor */
+    ovni: function (t, b) {
+      var o = ctx.createOscillator();
+      var lfo = ctx.createOscillator();
+      var lg = ctx.createGain();
+      var g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(b ? 700 : 1300, t);
+      o.frequency.exponentialRampToValueAtTime(b ? 1300 : 700, t + 0.07);
+      lfo.frequency.setValueAtTime(38, t);
+      lg.gain.setValueAtTime(60, t);
+      lfo.connect(lg); lg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.2, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
+      o.connect(g); g.connect(out('sfx'));
+      o.start(t); lfo.start(t);
+      o.stop(t + 0.1); lfo.stop(t + 0.1);
+    },
+    /* un maullido diminuto */
+    gato: function (t, b) {
+      blip('triangle', b ? 950 : 1150, b ? 1350 : 780, t, 0.055, 0.24, 0.006);
+    },
+    /* chillido de murciélago sobre un golpe oscuro */
+    vampiro: function (t, b) {
+      blip('sine', b ? 3000 : 3700, b ? 3800 : 2900, t, 0.025, 0.1, 0.002);
+      blip('triangle', b ? 180 : 150, b ? 120 : 100, t + 0.01, 0.05, 0.22, 0.003);
+    }
+  };
+
   // ==========================================================================
   // Looping layer (siren / fright / retreat). Only ONE audible at a time.
   // Priority: retreat > fright > siren.
@@ -324,13 +456,22 @@
     },
 
     // ---- per-dot chomp: alternating down/up chirps ("wa" / "ka") ----------
-    playWaka: function () {
+    /* `skin` (opcional): las skins EXTRAVAGANTES (y DORADO) tienen su propio
+     * waka, que alterna igual entre dos golpes. Todos duran menos de ~80 ms:
+     * suenan en cada pastilla, varias veces por segundo, encima de la
+     * sirena. Las demás skins suenan con el de siempre. */
+    playWaka: function (skin) {
       if (!ctx) return;
       var t = now();
       wakaFlip = !wakaFlip;
+      var propio = skin && WAKAS.hasOwnProperty(skin) ? WAKAS[skin] : null;
+      if (propio) { propio(t, wakaFlip); return; }
       if (wakaFlip) blip('square', 520, 190, t, 0.065, 0.45);
       else          blip('square', 190, 520, t, 0.065, 0.45);
     },
+
+    /* ¿esta skin tiene waka propio? (la vitrina pone ESCUCHAR solo en esas) */
+    tieneWaka: function (skin) { return !!(skin && WAKAS.hasOwnProperty(skin)); },
 
     // ---- loops ------------------------------------------------------------
     startSiren: function (stage) {
