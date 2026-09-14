@@ -949,23 +949,42 @@
       ctx.restore();
       /* CON LA Q suelta monedas A SU ALREDEDOR: salen de la tapa abierta en
        * todas direcciones, girando (se ven de canto y de cara) y apagándose
-       * según se alejan. Sin la Q, ni una. */
+       * según se alejan. Sin la Q, ni una. Una lluvia: muchas, de tamaños y
+       * velocidades distintas, con brillo alrededor y destellos. */
       if (o.muerde && o.mordio) {
-        var N = 8;
+        var N = 26;
+        ctx.shadowColor = 'rgba(255,210,60,.9)';
         for (var k = 0; k < N; k++) {
-          var fr = ((t * 1.8) + k / N) % 1;
-          var angM = k * Math.PI * 2 / N + 0.35;
-          var rad = 2.5 + fr * 7.5;
-          var mx = Math.cos(angM) * rad, my = 0.8 + Math.sin(angM) * rad * 0.85 - fr * fr * 1.5;
-          ctx.globalAlpha = 1 - fr * fr;
+          var azar = ((k * 7919) % 97) / 97;            // fijo por moneda
+          var vel = 1.3 + azar * 1.2;
+          var fr = ((t * vel) + k * 0.618) % 1;
+          var angM = k * 2.39996 + azar * 0.6;        // ángulo áureo: se reparten
+          // nacen ya fuera del cofre, para no taparle la cara
+          var rad = 7.2 + fr * (6 + azar * 5);
+          var mx = Math.cos(angM) * rad;
+          var my = 0.8 + Math.sin(angM) * rad * 0.85 - fr * fr * 2.2;
+          var tam = 0.85 + azar * 0.45;
+          ctx.globalAlpha = Math.min(1, fr * 8) * (1 - fr * fr * fr);
+          ctx.shadowBlur = 6;
           ctx.fillStyle = oro;
           ctx.beginPath();
-          ctx.ellipse(mx, my, 0.75 * Math.abs(Math.cos(t * 12 + k * 1.7)) + 0.15, 0.75, 0, 0, Math.PI * 2);
-          ctx.fill(); contorno(ctx, 1); ctx.stroke();
+          ctx.ellipse(mx, my, tam * Math.abs(Math.cos(t * 12 + k * 1.7)) + 0.18, tam, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          contorno(ctx, 1); ctx.stroke();
           ctx.fillStyle = '#fff6c0';
-          ctx.fillRect(mx - 0.15, my + 0.1, 0.3, 0.3);
+          ctx.fillRect(mx - 0.18, my + 0.12, 0.36, 0.36);
+          // destello en cruz de vez en cuando
+          if (Math.sin(t * 9 + k * 2.3) > 0.8) {
+            ctx.strokeStyle = '#fffbe0'; ctx.lineWidth = 1 / S;
+            ctx.beginPath();
+            ctx.moveTo(mx - tam * 1.6, my); ctx.lineTo(mx + tam * 1.6, my);
+            ctx.moveTo(mx, my - tam * 1.6); ctx.lineTo(mx, my + tam * 1.6);
+            ctx.stroke();
+          }
         }
         ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
       }
       ctx.restore();
     },

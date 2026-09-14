@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-14 · Lluvia de monedas del COFRE
+
+- Con la Q que acierta, el COFRE suelta **26 monedas** (antes 8), de tamaños
+  y velocidades distintas, con brillo dorado y destellos. Salen ya fuera del
+  cofre para no taparle la cara.
+
 ## 2026-09-14 · La Q que falla ya no echa fuego
 
 - **DRAGÓN, COFRE y OVNI solo lanzan su golpe si la Q acierta.** Una Q al
