@@ -1652,14 +1652,251 @@ input[type="range"] {
 .skin:hover { border-color: #fff; }
 .skin.active { border-color: #fff; color: #fff; box-shadow: 0 0 6px #fff; }
 
-/* Tu skin en PERFIL / OPCIONES: la puesta y el botón a la vitrina */
-.skin-pick { align-items: center; gap: 12px; }
+/* ---------- VESTUARIO ----------
+ * Un solo sitio para vestir al personaje. Ancho: el maniquí a la izquierda
+ * (se queda quieto al bajar) y el armario a la derecha. Estrecho: el maniquí
+ * arriba, en pequeño, y el armario debajo. Mismo idioma que el laberinto:
+ * negro, marco azul de muro, amarillo para lo puesto. */
+#vestuario::before, #vestuario::after { content: none; }
+#vestuario { justify-content: flex-start; }
 
-/* ---------- Vitrina de SKINS ----------
- * Fichas con el pasillo a tamaño de partida y la lupa. Mismo idioma que el
- * laberinto: negro, marco azul de muro, amarillo para lo tuyo. */
-#skins::before, #skins::after { content: none; }
-#skins { justify-content: flex-start; }
+.vest {
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 18px;
+  width: 100%;
+  max-width: 1240px;
+  align-items: start;
+  text-align: left;
+}
+
+.vest-maniqui {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid #2121ff;
+  border-radius: 10px;
+  background: #000;
+}
+
+.vest-para { position: static; margin: 0; }
+
+.vest-vistas { display: flex; gap: 8px; align-items: center; }
+.vest-vistas canvas {
+  display: block;
+  image-rendering: pixelated;
+  background: #000;
+  border: 1px solid #14146e;
+  border-radius: 4px;
+}
+.vest-lupa { width: 132px; height: 132px; flex: 0 0 auto; }
+.vest-escena { width: calc(100% - 140px); min-width: 0; height: auto; }
+
+.vest-probando {
+  font-size: clamp(8px, 1.4vh, 10px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #6a6c8e;
+  text-align: center;
+}
+.vest-probando.on { color: #ffb8ff; }
+
+.vest-llevas { display: flex; flex-direction: column; gap: 4px; }
+
+.vest-llevas-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-weight: bold;
+  background: #000;
+  border: 1px solid #1c1c4a;
+  cursor: pointer;
+  text-align: left;
+}
+.vest-llevas-fila .k { font-size: clamp(8px, 1.4vh, 10px); letter-spacing: 2px; color: #6a6c8e; }
+.vest-llevas-fila .v {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(10px, 1.7vh, 13px);
+  letter-spacing: 1px;
+  color: #fff;
+  text-align: right;
+}
+.vest-llevas-fila:hover,
+.vest-llevas-fila:focus-visible { border-color: #fff; outline: none; }
+.vest-llevas-fila.active { border-color: #ffff00; }
+.vest-llevas-fila.active .k { color: #ffff00; }
+.vest-muestra { width: 12px; height: 12px; border: 1px solid #fff; display: inline-block; }
+.vest-nota-acc { font-size: 9px; letter-spacing: 1px; color: #ff6b6b; text-align: center; }
+
+.vest-mini-titulo {
+  font-size: clamp(8px, 1.4vh, 10px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #00ffff;
+  margin-bottom: 6px;
+}
+.vest-teclas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.vest-tecla { position: relative; padding: 4px; }
+.vest-tecla canvas { width: 40px; height: 40px; }
+.vest-tecla.active { border-color: #ffff00; box-shadow: 0 0 6px rgba(255, 255, 0, 0.5); }
+
+.vest-armario { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+/* aquí las pestañas no se pegan arriba: el panel ya tiene su propio orden y,
+   sin fondo, en el móvil quedaban flotando encima de las fichas */
+#vestuario .tab-row.vest-tabs { position: static; top: auto; margin: 0; padding-top: 0; }
+.vest-llevas-fila.prueba { border-color: #ffb8ff; }
+.vest-llevas-fila.prueba .v { color: #ffb8ff; }
+.btn.tab.vest-tab-nueva:not(.active) { color: #ffb8ff; border-color: #6b3b6b; }
+
+.vest-util {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.vest-cuenta {
+  font-size: clamp(9px, 1.5vh, 11px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #8a8cae;
+}
+
+.vest-aviso {
+  min-height: 1.4em;
+  font-size: clamp(9px, 1.5vh, 11px);
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #00ff00;
+}
+.vest-aviso.error { color: #ff6b6b; }
+
+.vest-color { display: flex; flex-direction: column; gap: 8px; }
+.vest-color .swatches { justify-content: flex-start; }
+
+.vest-emote-guia {
+  grid-column: 1 / -1;
+  font-size: clamp(9px, 1.5vh, 11px);
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #00ffff;
+}
+
+/* Las fichas: el dibujo, el nombre y una etiqueta (PUESTO, NUEVO, precio) */
+.vest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.vest-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  font-family: inherit;
+  font-weight: bold;
+  background: #000;
+  border: 2px solid #1c1c4a;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 0;
+}
+.vest-tile canvas {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  display: block;
+}
+.vest-tile-name {
+  font-size: clamp(8px, 1.3vh, 10px);
+  letter-spacing: 1px;
+  line-height: 1.2;
+  color: #cfcfe8;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.vest-tile-tag {
+  min-height: 1.1em;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #6a6c8e;
+}
+.vest-tile:hover,
+.vest-tile:focus-visible { border-color: #fff; outline: none; }
+.vest-tile.puesto { border-color: #ffff00; box-shadow: 0 0 10px rgba(255, 255, 0, 0.3); }
+.vest-tile.puesto .vest-tile-tag { color: #ffff00; }
+.vest-tile.nuevo { border-color: #ffb8ff; }
+.vest-tile.nuevo .vest-tile-tag { color: #ffb8ff; }
+.vest-tile.bloqueado { border-style: dashed; }
+.vest-tile.bloqueado canvas { opacity: 0.45; }
+.vest-tile.bloqueado .vest-tile-name { color: #6a6c8e; }
+.vest-tile.bloqueado .vest-tile-tag { color: #ffd23f; }
+.vest-tile.probando { border-color: #ffb8ff; border-style: solid; box-shadow: 0 0 10px rgba(255, 184, 255, 0.35); }
+.vest-tile.probando canvas { opacity: 1; }
+
+.vest-vacio {
+  grid-column: 1 / -1;
+  padding: 18px 8px;
+  font-size: clamp(9px, 1.6vh, 12px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #6a6c8e;
+  text-align: center;
+  border: 1px dashed #1c1c4a;
+}
+
+.vest-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid #2121ff;
+  border-radius: 10px;
+}
+.vest-ficha-cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; }
+.vest-ficha-nombre { color: #fff; font-weight: bold; letter-spacing: 3px; font-size: clamp(12px, 2.1vh, 16px); }
+.vest-ficha-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.vest-ficha-estado { font-size: clamp(9px, 1.5vh, 11px); font-weight: bold; letter-spacing: 1px; color: #ffff00; }
+
+/* el botón del cuartel, cuando hay cosas sin estrenar */
+.btn.vest-btn-nuevo { border-color: #ffb8ff; color: #ffb8ff; }
+
+/* PERFIL: tu personaje en pequeño, que lleva al vestuario */
+.perfil-personaje { display: flex; align-items: center; gap: 14px; }
+.perfil-personaje-cv { padding: 6px; }
+.perfil-personaje-cv canvas { width: 72px; height: 72px; }
+.perfil-personaje-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+
+@media (max-width: 860px) {
+  .vest { grid-template-columns: 1fr; }
+  .vest-maniqui { position: static; }
+}
+
+@media (max-width: 600px) {
+  .vest-lupa { width: 96px; height: 96px; }
+  .vest-escena { width: calc(100% - 104px); }
+  .vest-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+  .vest-tile canvas { width: 52px; height: 52px; }
+  .vest-tile-name { letter-spacing: 0; overflow-wrap: normal; word-break: normal; }
+  .vest-tecla canvas { width: 32px; height: 32px; }
+  /* el maniquí, más apretado: lo que llevas en dos columnas */
+  .vest-maniqui { padding: 10px; gap: 8px; }
+  .vest-llevas { display: grid; grid-template-columns: 1fr 1fr; }
+  .vest-llevas-fila { flex-direction: column; align-items: flex-start; gap: 2px; padding: 5px 6px; }
+  .vest-llevas-fila .v { text-align: left; font-size: 10px; }
+}
 
 .skin-resumen { margin-top: 0; }
 
@@ -1788,16 +2025,7 @@ input[type="range"] {
 .tienda-regalo[hidden] { display: none; }
 .tienda-gana { max-width: 760px; text-align: center; }
 
-.tienda-teclas {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin: 2px 0 6px;
-}
-
-.tienda-tecla { position: relative; padding: 4px; }
-.tienda-tecla canvas { width: 36px; height: 36px; }
+.tienda-util { width: 100%; max-width: 1540px; }
 .tienda-msg { min-height: 1.4em; text-align: center; }
 .perfil-look { margin-top: 0; }
 

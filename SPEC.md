@@ -959,15 +959,8 @@ Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
   achievement band after `bumpAch` and after the level XP in `closeRun`.
   `Skins.syncVistas()` at boot and after an account merge, so nothing old is
   celebrated.
-- **UI.** PERFIL (and OPCIONES for player 2) shows only the worn skin plus
-  VER TODAS LAS SKINS. The **SKINS panel** (`#skins`, also in TU CUARTEL) is a
-  showcase: filters TODAS · POR NIVEL · POR LOGRO · EXTRAVAGANTES · DE
-  TEMPORADA, a TU SKIN / JUGADOR 2 switch, and one card per skin with a
-  336×144 corridor where it runs at game scale (`Skins.escena`), a ×2
-  pixel-exact magnifier (`Skins.lupa`), its text, a progress bar and
-  PONER / PUESTA / BLOQUEADA. A `requestAnimationFrame` loop animates only
-  visible cards while the panel is open. VOLVER/Esc return to the panel it was
-  opened from.
+- **UI: the VESTUARIO** (`#vestuario`, 15 Sep; it replaced the SKINS panel).
+  See **VESTUARIO** below.
 - Exchanged online in the handshake (`k` field → `Game.netSkins`); an old
   client that does not know an id draws `clasico`.
 
@@ -1022,11 +1015,43 @@ approved 2026-09-15. Coins only, no real money.
   `opts.looks` → `Game.netLooks` → `Game.lookFor(i)`; spectators get `lk` in
   `svista`. Emotes travel as the **face id** (`e: 'chulo'`); an index is still
   accepted and translated (`Game.emoteId`).
-- **UI.** Tabs EMOTES / EFECTOS / ACCESORIOS / SKINS, the balance, one card per
-  item animated with `Skins.escena(..., {efecto, accesorio, emote})` and its
-  magnifier; buying takes two clicks (the first asks). Owned: PONER / QUITAR,
-  or PONER EN LA TECLA N with the six-key row above. The SKINS showcase has a
-  DE TIENDA filter whose button leads to the shop. PERFIL shows TU LOOK.
+- **UI: buying only.** Tabs EMOTES / EFECTOS / ACCESORIOS / SKINS, the
+  balance, one card per item animated with `Skins.escena(..., {efecto,
+  accesorio, emote})` and its magnifier; buying takes two clicks (the first
+  asks). **Owned items are hidden** unless VER LO QUE YA TENGO is on, except
+  the ones bought during this visit (`UI.tiendaRecien`), which stay with
+  PONÉRTELO: `UI.tiendaPonerse` equips (an emote goes to the first key holding
+  a base face, else key 6) and opens the VESTUARIO on that tab. Nothing is
+  equipped or removed from the shop itself any more.
+
+**VESTUARIO** (`#vestuario`, TU CUARTEL button, approved 2026-09-15). The one
+place to dress the character. Before it, colour/avatar/worn skin lived in
+PERFIL, all skins in a SKINS showcase and accessories/effects/emotes were
+equipped from the shop, and none of them listed only what you own.
+
+- **Two rules.** (1) Only what you own is listed; VER LO QUE ME FALTA adds the
+  rest, dimmed, with how to get it. (2) Clicking an owned tile wears it at
+  once; clicking one you do not own **tries it on** (`UI.vestProbando`): the
+  mannequin wears it and the detail card shows the progress or price, with
+  COMPRAR EN LA TIENDA for shop items.
+- **Layout.** Left, the mannequin (`vestEscena` 336×144 + `vestLupa`, animated
+  by `animarVestuario` only while open), the LLEVAS list (each row opens its
+  tab) and the six emote keys. Right, tabs SKIN · COLOR · ACCESORIO · EFECTO ·
+  EMOTES · AVATAR, a grid of tiles (`vestItems(tab, para)` is the single data
+  source) and a detail card. Narrow screens stack them.
+- **Player 2.** The TÚ / JUGADOR 2 switch (`vestPara`) edits `skin2` and
+  `pac2Color`; the other tabs are hidden (player 2 wears no shop items).
+- **NUEVO.** `localStorage` list `pacman-topmundial-vestuario-vistos` of
+  `tab:id`. First run seeds it with everything owned, so only later
+  unlocks/purchases are new. Tiles shown as new are marked seen when leaving
+  the tab or the panel (`vestMarcarVistos`). The cuartel button reads
+  `VESTUARIO · N NUEVOS` (`refreshVestBtn`, on `showMenu`).
+- **Elsewhere.** PERFIL keeps who you are (name, level, account, logros) plus
+  a TU PERSONAJE mini with ABRIR EL VESTUARIO; OPCIONES · JUGADORES has two
+  shortcuts. `showSkins(key)` still works and opens the vestuario. VOLVER/Esc
+  return to the panel it was opened from; shop ↔ vestuario do not bounce.
+  Settings are the same as before (`skin1`, `skin2`, `pacColor`, `pac2Color`,
+  `acc1`, `efx1`, `emotes1`, `avatar`), so nothing is lost.
 
 **Tanda del 14 de septiembre** (in game since 2026-09-15): `bomba` (`vs:cazas`
 3), `abisal` (`nivelMax` 10), `pinata` (`dailySemana` 1), `tostadora`

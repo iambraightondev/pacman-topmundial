@@ -18,6 +18,17 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
+**15 sep (noche) — el VESTUARIO (`pm-v58`).** Braighton: lo del personaje
+estaba repartido (PERFIL, SKINS, TIENDA) y todo salía mezclado, lo tuyo y lo
+que no. Se le dio un plan y lo aprobó tal cual. Hecho: panel VESTUARIO en el
+cuartel (sustituye a SKINS), solo lo tuyo con "VER LO QUE ME FALTA", pulsar
+pone y lo ajeno se prueba en el maniquí, NUEVO con contador, TIENDA solo de
+compra con PONÉRTELO, PERFIL con miniatura. Detalle en SPEC (*VESTUARIO*).
+`tests.html` 325/325. **Node: ahora fallan 2**, no 4 (se arregló su DOM de
+mentira, que no arrancaba desde la cartilla del DAILY por `createTextNode`).
+**Por mirar jugando**: el vestuario en un móvil de verdad (el maniquí va
+arriba y es alto), y si los NUEVO se entienden.
+
 **15 sep (tarde) — la intro ya no suena en pausa (`pm-v56`).** Bug avisado
 por Braighton: la melodía de inicio seguía al pausar o salir. Se programaba
 entera de golpe y no había cómo pararla; ahora va por su propio volumen

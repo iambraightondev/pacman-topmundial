@@ -3976,7 +3976,8 @@
     var UI = window.PM.UI;
     UI.showProfile();
     ok(UI.els.profile, 'existe el panel');
-    eq(UI.avatarItems.length, CFG.AVATARS.length, 'están todos los avatares');
+    ok(UI.profLookCv, 'enseña tu personaje (los avatares están en el vestuario)');
+    eq(UI.vestItems('avatar', 'yo').length, CFG.AVATARS.length, 'donde están todos');
     ok(UI.profName.textContent.length > 0, 'enseña un nombre');
     UI.showProfileTab('logros');
     eq(UI.achList.children.length, CFG.ACHIEVEMENTS.length,
@@ -4083,70 +4084,136 @@
     }
   });
 
-  /* Tu aspecto (color, skin, avatar) es quién eres en la sala, no un ajuste
-   * de la máquina: vive entero en PERFIL. En OPCIONES solo queda el jugador 2
-   * local, que sí es un ajuste de esta máquina. */
-  test('tu color y tu skin se eligen en PERFIL, y los del jugador 2 en OPCIONES',
+  /* Todo lo del personaje se viste en el VESTUARIO (15 sep). PERFIL enseña
+   * tu personaje en pequeño y OPCIONES solo lleva los atajos. */
+  test('el aspecto se elige en el VESTUARIO; PERFIL y OPCIONES solo llevan a él',
     function () {
       var UI = window.PM.UI;
       UI.showProfile();
-      var enPerfil = UI.els.profile.querySelectorAll('.skins .skin').length;
-      // los avatares también son .skin; de la skin propia se ve LA PUESTA
-      // (todas se miran en la vitrina de SKINS)
-      ok(enPerfil >= 1 + CFG.AVATARS.length,
-         'en PERFIL están el avatar y la skin propia');
-      eq(UI.els.profile.querySelectorAll('.swatches').length, 1,
-         'y tu fila de color');
+      eq(UI.els.profile.querySelectorAll('.swatches').length, 0,
+         'en PERFIL ya no hay filas de color');
+      ok(UI.profLookCv && UI.profVestBtn, 'sí tu personaje y el botón al vestuario');
       UI.showOptions();
       UI.showOptionsTab('jugadores');
-      var filas = UI.els.options.querySelectorAll('.skins').length;
-      eq(filas, 1, 'en OPCIONES solo queda la fila de skin del jugador 2');
-      eq(UI.els.options.querySelectorAll('.swatches').length, 1,
-         'y solo su color');
-      ok(UI.skinRows.skin1 && UI.skinRows.skin2,
-         'las dos skins siguen registradas para repintarse');
+      eq(UI.els.options.querySelectorAll('.swatches').length, 0, 'ni en OPCIONES');
       ok(UI.colorRows.pacColor && UI.colorRows.pac2Color,
-         'y los dos colores también, aunque vivan en paneles distintos');
+         'los dos colores viven en el vestuario');
       UI.showMenu();
+      ok(/^VESTUARIO/.test(UI.menuVestBtn.textContent), 'el cuartel tiene su botón');
     });
 
-  test('la vitrina de SKINS enseña todas, elige para quien toca y vuelve de donde vino',
+  test('VESTUARIO: sale lo tuyo, pulsar lo pone y lo que no tienes se prueba',
     function () {
-      var UI = window.PM.UI, s = window.PM.settings;
-      var skin1 = s.skin1, skin2 = s.skin2;
+      var UI = window.PM.UI, s = window.PM.settings, Tn = window.PM.Tienda;
+      var antes = { skin1: s.skin1, skin2: s.skin2, acc1: s.acc1 };
       try {
-        eq(UI.skinsItems.length, CFG.SKINS.length, 'una ficha por skin');
         UI.showProfile();
-        UI.showSkins('skin1');
-        ok(UI.els.skins.style.display !== 'none', 'la vitrina se abre');
-        eq(UI.skinsKey, 'skin1', 'eligiendo la tuya');
-        // una bloqueada no se puede poner; la clásica siempre
-        var cl = UI.skinsItems.filter(function (it) { return it.id === 'clasico'; })[0];
+        UI.showVestuario('skin', 'yo');
+        ok(UI.els.vestuario.style.display !== 'none', 'se abre');
+        // de salida, solo lo tuyo
+        UI.vestFaltan = false;
+        UI.refreshVestuario();
+        ok(UI.vestFichas.length > 0 && UI.vestFichas.every(function (f) { return f.it.tuyo; }),
+           'sin pedirlo, solo sale lo que tienes');
+        var todas = UI.vestItems('skin', 'yo').length;
+        eq(todas, CFG.SKINS.length, 'aunque cuenta con todas');
+        // pulsar la clásica la pone
         s.skin1 = 'sombra';
-        UI.refreshSkinsVitrina();
-        ok(!cl.btn.disabled, 'la clásica se puede poner');
+        UI.refreshVestuario();
+        var cl = UI.vestFichas.filter(function (f) { return f.it.id === 'clasico'; })[0];
+        ok(cl, 'la clásica está');
         cl.btn.click();
-        eq(s.skin1, 'clasico', 'y al pulsar queda puesta');
-        eq(cl.btn.textContent, 'PUESTA');
-        // filtros: extravagantes solo enseña las raras
-        UI.skinsTab = 'rara';
-        UI.refreshSkinsVitrina();
-        var vistas = UI.skinsItems.filter(function (it) { return it.card.style.display !== 'none'; });
-        ok(vistas.length > 0 && vistas.every(function (it) { return it.info.rara; }),
-           'EXTRAVAGANTES solo enseña las extravagantes');
-        UI.skinsTab = 'todas';
-        UI.closeSkins();
+        eq(s.skin1, 'clasico', 'y al pulsarla queda puesta');
+        // lo que falta: se ve si se pide, y pulsarlo solo lo prueba
+        UI.vestFaltan = true;
+        UI.showVestuario('accesorio', 'yo');
+        UI.vestFaltan = true;
+        UI.refreshVestuario();
+        var ajeno = UI.vestFichas.filter(function (f) { return !f.it.tuyo; })[0];
+        if (ajeno) {
+          ajeno.btn.click();
+          eq(UI.vestProbando && UI.vestProbando.id, ajeno.it.id, 'lo que no tienes se prueba');
+          ok(!Tn.tiene(ajeno.it.id) && Tn.accesorio() !== ajeno.it.id, 'pero no se pone');
+          eq(UI.vestLook().accesorio, ajeno.it.id, 'y el maniquí lo lleva');
+        }
+        UI.vestFaltan = false;
+        // el jugador 2 solo tiene skin y color
+        UI.showVestuario('accesorio', 'j2');
+        eq(UI.vestTab, 'skin', 'el jugador 2 no lleva accesorios: va a su skin');
+        UI.refreshVestuario();
+        var ojo = UI.vestFichas.filter(function (f) { return f.it.id === 'clasico'; })[0];
+        ojo.btn.click();
+        eq(s.skin2, 'clasico', 'y se le pone la suya, no la tuya');
+        // VOLVER regresa a donde se abrió
+        UI.closeVestuario();
         ok(UI.els.profile.style.display !== 'none', 'VOLVER regresa a PERFIL');
         UI.showOptions();
         UI.showSkins('skin2');
-        eq(UI.skinsKey, 'skin2', 'desde OPCIONES, la del jugador 2');
-        UI.closeSkins();
+        eq(UI.vestPara, 'j2', 'lo de antes (showSkins) abre el vestuario del jugador 2');
+        UI.closeVestuario();
         ok(UI.els.options.style.display !== 'none', 'y vuelve a OPCIONES');
       } finally {
-        s.skin1 = skin1; s.skin2 = skin2;
+        s.skin1 = antes.skin1; s.skin2 = antes.skin2; s.acc1 = antes.acc1;
+        UI.vestProbando = null;
         UI.showMenu();
       }
     });
+
+  test('VESTUARIO: lo que consigues sale como NUEVO una vez', function () {
+    var UI = window.PM.UI;
+    var key = UI.VEST_VISTOS_KEY, previo = null;
+    try { previo = localStorage.getItem(key); } catch (e) { previo = null; }
+    try {
+      localStorage.removeItem(key);
+      eq(UI.vestNuevos(), 0, 'la primera vez, lo que ya tenías no es nuevo');
+      // se olvida una cosa vista: vuelve a ser nueva
+      var vistos = UI.vestVistos().filter(function (k) { return k !== 'skin:clasico'; });
+      UI.vestGuardarVistos(vistos);
+      eq(UI.vestNuevos(), 1, 'algo tuyo sin ver cuenta como nuevo');
+      UI.refreshVestBtn();
+      ok(/1 NUEVO/.test(UI.menuVestBtn.textContent), 'y el botón del cuartel lo dice');
+      UI.showVestuario('skin', 'yo');
+      UI.closeVestuario();
+      eq(UI.vestNuevos(), 0, 'verlo en su pestaña lo estrena');
+    } finally {
+      try {
+        if (previo === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, previo);
+      } catch (e) { /* nada */ }
+      UI.showMenu();
+    }
+  });
+
+  test('TIENDA: solo sale lo que te falta, y lo recién comprado se pone desde ahí', function () {
+    var UI = window.PM.UI;
+    conTienda(function (Tn) {
+      UI.showTienda('efecto');
+      UI.tiendaTengo = false;
+      UI.refreshTienda();
+      var vistas = UI.tiendaItems.filter(function (r) { return r.card.style.display !== 'none'; });
+      eq(vistas.length, CFG.EFECTOS.length, 'sin nada comprado, salen todos los efectos');
+      var fila = vistas[0];
+      UI.tiendaPulsa(fila.it);                       // pregunta
+      UI.tiendaPulsa(fila.it);                       // compra
+      ok(Tn.tiene(fila.it.id), 'comprado');
+      ok(fila.card.style.display !== 'none', 'lo recién comprado sigue a la vista');
+      eq(fila.btn.textContent, 'PONÉRTELO');
+      UI.tiendaPulsa(fila.it);
+      eq(Tn.efecto(), fila.it.id, 'PONÉRTELO lo pone');
+      ok(UI.els.vestuario.style.display !== 'none', 'y abre el vestuario');
+      eq(UI.vestTab, 'efecto', 'en su pestaña');
+      UI.showTienda('efecto');
+      UI.tiendaRecien = [];
+      UI.refreshTienda();
+      ok(fila.card.style.display === 'none', 'fuera de esa visita, lo tuyo ya no sale');
+      UI.tiendaTengo = true;
+      UI.refreshTienda();
+      ok(fila.card.style.display !== 'none', 'salvo que se pida verlo');
+      UI.tiendaTengo = false;
+      Tn.poner('efecto', '');
+    });
+    UI.showMenu();
+  });
 
   test('el perfil de un amigo se pinta con sus contadores', function () {
     var UI = window.PM.UI, Ac = window.PM.Account;

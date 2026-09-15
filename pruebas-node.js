@@ -195,6 +195,8 @@ var doc = {
   readyState: 'complete',
   activeElement: null,
   createElement: function (tag) { return new El(tag); },
+  // un nodo de texto de mentira: basta con que se pueda colgar y lleve su texto
+  createTextNode: function (txt) { var n = new El('#text'); n.textContent = String(txt); return n; },
   getElementById: function (id) { return porId[id] || null; },
   querySelector: function () { return null; },
   querySelectorAll: function () { return []; },
@@ -204,7 +206,7 @@ var doc = {
 doc.body = new El('body');
 doc.documentElement = new El('html');
 ['stage', 'game', 'menu', 'options', 'online', 'badges', 'ranking',
- 'mazes', 'friends', 'profile', 'skins', 'prompt'].forEach(function (id) {
+ 'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'prompt'].forEach(function (id) {
   var el = new El(id === 'game' ? 'canvas' : 'div');
   el.id = id;
   porId[id] = el;

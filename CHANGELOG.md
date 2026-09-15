@@ -2,6 +2,22 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · El VESTUARIO
+
+- **Todo lo del personaje, en un solo sitio.** El botón SKINS del cuartel pasa
+  a ser **VESTUARIO**: skin, color, accesorio, efecto, emotes y avatar, tuyos y
+  del jugador 2.
+- **Sale solo lo que tienes.** Con "VER LO QUE ME FALTA" aparece el resto,
+  apagado y con cómo se consigue.
+- **Pulsar es ponérselo**, y se ve al momento en tu Pac-Man corriendo. Lo que
+  no tienes te lo puedes **probar** antes de ir a por ello.
+- Lo que consigues sale como **NUEVO**, y el botón del cuartel cuenta cuántas
+  cosas tienes sin estrenar.
+- **La TIENDA ya solo vende**: enseña lo que te falta y, al comprar,
+  "PONÉRTELO" te lo pone y te lleva al vestuario.
+- **PERFIL** se queda con quién eres (nombre, nivel, cuenta y logros) y un
+  acceso directo a tu personaje. No se pierde nada de lo que llevabas puesto.
+
 ## 2026-09-15 · El botín cobrado se ve cobrado
 
 - En el botín del DAILY, las monedas ya ganadas parecían un premio esperando

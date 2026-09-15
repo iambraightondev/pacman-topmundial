@@ -2080,7 +2080,7 @@
       var nuevas = Sk.reclamar();
       for (var k = 0; k < nuevas.length; k++) {
         var aviso = {
-          name: 'SKIN NUEVA', desc: nuevas[k].name + ' · PÓNTELA EN PERFIL',
+          name: 'SKIN NUEVA', desc: nuevas[k].name + ' · PÓNTELA EN EL VESTUARIO',
           color: '#ffff00', ticks: CFG.ACH_NOTICE_TICKS, total: CFG.ACH_NOTICE_TICKS
         };
         this.achNotices.push(aviso);

@@ -250,7 +250,7 @@
       if (window.PM.Achievements) window.PM.Achievements.syncSeen();
       // las skins que ya estaban abiertas al llegar no se anuncian como nuevas
       if (window.PM.Skins) window.PM.Skins.syncVistas();
-      this.els.skins = document.getElementById('skins');
+      this.els.vestuario = document.getElementById('vestuario');
       this.els.tienda = document.getElementById('tienda');
       this.buildMenu();
       this.buildOptions();
@@ -262,8 +262,9 @@
       this.buildProfile();
       this.buildDaily();
       this.buildMate();
-      this.buildSkins();
+      this.buildVestuario();
       this.buildTienda();
+      this.refreshPerfilLook();
       this.accountHooks();
       this.buildGameButtons();
       this.buildDpads();
@@ -442,10 +443,13 @@
         self.resumeAudio();
         self.showProfile();
       }));
-      extras.appendChild(this.makeButton('SKINS', function () {
+      /* VESTUARIO: todo lo que llevas puesto, en un solo sitio (antes era
+       * SKINS, y el resto estaba repartido entre PERFIL y la TIENDA) */
+      this.menuVestBtn = this.makeButton('VESTUARIO', function () {
         self.resumeAudio();
-        self.showSkins('skin1');
-      }));
+        self.showVestuario('skin', 'yo');
+      });
+      extras.appendChild(this.menuVestBtn);
       this.menuTiendaBtn = this.makeButton('TIENDA', function () {
         self.resumeAudio();
         self.showTienda();
@@ -1457,20 +1461,23 @@
       nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
       jugN.appendChild(nkNote);
 
-      /* Ni tu color ni tu skin están aquí: son cosa de uno, como el avatar, y
-       * viven en PERFIL, que es donde se elige cómo te ve el resto. Aquí se
-       * queda solo lo del JUGADOR 2 local, que no es de nadie en concreto: es
-       * el aspecto del que se sienta al lado. */
-      this.colorRows = {};
-      this.skinRows = {};
-      var jugYo = this.optGroup(jug, 'TU ASPECTO');
+      /* El aspecto (el tuyo y el del jugador 2 local) se elige en el
+       * VESTUARIO, que es el único sitio donde se viste a alguien. Aquí solo
+       * queda el atajo para no tener que ir a buscarlo. */
+      var jugYo = this.optGroup(jug, 'ASPECTO');
       var skNote = document.createElement('div');
       skNote.className = 'note';
-      skNote.textContent = 'TU COLOR Y TU SKIN ESTÁN EN PERFIL, CON TU AVATAR';
+      skNote.textContent = 'EL COLOR, LA SKIN Y LO QUE LLEVÁIS PUESTO SE ELIGE EN EL VESTUARIO';
       jugYo.appendChild(skNote);
-      var jug2 = this.optGroup(jug, 'JUGADOR 2 (LOCAL)');
-      jug2.appendChild(this.makeColorRow('pac2Color'));
-      jug2.appendChild(this.makeSkinRow('skin2', 'pac2Color'));
+      var vestRow = document.createElement('div');
+      vestRow.className = 'preset-row';
+      var vYo = this.makeButton('TU ASPECTO', function () { self.showVestuario('skin', 'yo'); });
+      vYo.classList.add('btn-preset');
+      vestRow.appendChild(vYo);
+      var vJ2 = this.makeButton('VESTIR AL JUGADOR 2', function () { self.showVestuario('skin', 'j2'); });
+      vJ2.classList.add('btn-preset');
+      vestRow.appendChild(vJ2);
+      jugYo.appendChild(vestRow);
       this.optMsgEl = document.createElement('div');
       this.optMsgEl.className = 'lobby-status';
       jugN.appendChild(this.optMsgEl);
@@ -1682,319 +1689,780 @@
       }
     },
 
-    /* Tu skin, en PERFIL (y la del jugador 2, en OPCIONES). Con más de
-     * treinta ya no cabía una fila con todas, así que aquí se ve LA PUESTA,
-     * dibujada de verdad con tu color, y todas se miran y se eligen en la
-     * vitrina de SKINS, que enseña además qué pide cada una. */
-    makeSkinRow: function (key, colorKey) {
-      var self = this;
-      var row = document.createElement('div');
-      row.className = 'skins skin-pick';
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'skin active';
-      b.setAttribute('aria-label', 'Ver todas las skins');
-      var cv = document.createElement('canvas');
-      cv.width = 48; cv.height = 48;
-      b.appendChild(cv);
-      var lab = document.createElement('span');
-      b.appendChild(lab);
-      b.addEventListener('click', function () { self.showSkins(key); });
-      row.appendChild(b);
-      var ver = this.makeButton('VER TODAS LAS SKINS', function () { self.showSkins(key); });
-      ver.classList.add('btn-preset');
-      row.appendChild(ver);
-      this.skinRows[key] = { btn: b, canvas: cv, label: lab, colorKey: colorKey, ver: ver };
-      return row;
-    },
-
-    /* Repinta la skin puesta de cada jugador con su color */
-    refreshSkins: function () {
-      var s = window.PM.settings;
-      var Sk = window.PM.Skins;
-      for (var k in this.skinRows) {
-        if (!this.skinRows.hasOwnProperty(k)) continue;
-        var row = this.skinRows[k];
-        var color = s[row.colorKey] || '#ffff00';
-        var id = (CFG.SKIN_IDS.indexOf(s[k]) !== -1) ? s[k] : 'clasico';
-        var info = Sk ? Sk.info(id) : null;
-        row.label.textContent = info ? info.name : id.toUpperCase();
-        row.btn.title = (info ? info.name : '') + ' · VER TODAS LAS SKINS';
-        if (Sk) {
-          row.ver.textContent = 'VER TODAS LAS SKINS (' + Sk.cuantas() + '/' + CFG.SKINS.length + ')';
-        }
-        var c = row.canvas.getContext('2d');
-        c.setTransform(1, 0, 0, 1, 0, 0);
-        c.clearRect(0, 0, 48, 48);
-        c.imageSmoothingEnabled = false;
-        // el sprite mide r=6.5; se amplía para que la skin se lea bien
-        c.setTransform(3, 0, 0, 3, 24, 24);
-        /* Las de estela sin estela no se reconocen (RASTRO quedaba en un aro
-         * suelto): se corren a la derecha y llevan un trozo de su estela. */
-        var estela = !!CON_ESTELA[id];
-        window.PM.Sprites.drawPacman(c, estela ? 3 : 0, 0, CFG.DIR.RIGHT, 2, color, id,
-          estela ? {
-            back: function (d) { return { x: 3 - d, y: 0, d: CFG.DIR.RIGHT }; },
-            estira: 0.55, team: ['#ff0000', '#00ffff', '#00ff00']
-          } : { icono: true });
-        c.setTransform(1, 0, 0, 1, 0, 0);
-      }
-    },
-
     /* ------------------------------------------------------
-     * Vitrina de SKINS
+     * VESTUARIO
      *
-     * Cada skin corre por un pasillo del juego a tamaño de partida y al
-     * lado se ve con lupa (el recorte de ese mismo pasillo ampliado x2, sin
-     * suavizar: lo de la lupa es lo que se verá jugando). Debajo, qué la
-     * abre y cuánto te falta. Se diseñó así en la vitrina donde se aprobaron
-     * las skins, y es la misma idea: ver la skin moviéndose antes de
-     * ponérsela, no una miniatura quieta.
+     * El único sitio donde se viste al personaje. Antes estaba repartido en
+     * tres: el color, el avatar y la skin puesta en PERFIL; todas las skins
+     * en su vitrina; y accesorios, efectos y emotes se ponían en la TIENDA,
+     * mezclado con comprar. Y en ninguno se veía solo lo que ya es tuyo.
      *
-     * Solo se animan las fichas que están a la vista, y la animación se para
-     * sola al cerrar el panel.
+     * Dos reglas (aprobadas el 15 sep):
+     *  1. Sale solo lo que tienes. "VER LO QUE ME FALTA" enseña el resto,
+     *     apagado y con cómo se consigue.
+     *  2. Pulsar es ponérselo. Lo que no es tuyo se PRUEBA: sale en el
+     *     maniquí y en la ficha pone cómo se consigue (o se va a comprarlo).
+     *
+     * A la izquierda, el maniquí: tu Pac-Man corriendo con todo puesto y tus
+     * seis emotes en sus teclas. A la derecha, una pestaña por cosa. La TIENDA
+     * se queda solo para comprar.
      * ------------------------------------------------------ */
-    buildSkins: function () {
+    VEST_TABS: [
+      { id: 'skin', name: 'SKIN', j2: true },
+      { id: 'color', name: 'COLOR', j2: true },
+      { id: 'accesorio', name: 'ACCESORIO' },
+      { id: 'efecto', name: 'EFECTO' },
+      { id: 'emote', name: 'EMOTES' },
+      { id: 'avatar', name: 'AVATAR' }
+    ],
+
+    VEST_VISTOS_KEY: 'pacman-topmundial-vestuario-vistos',
+
+    /* ---------- lo que se ha visto ya (para las marcas de NUEVO) ----------
+     * Una lista de claves "pestaña:id". La primera vez se siembra con todo lo
+     * que ya tenías: quien llega con cuarenta cosas no quiere cuarenta
+     * etiquetas de NUEVO, solo las de lo que consiga a partir de ahora. */
+    vestVistos: function () {
+      var d = null;
+      try { d = JSON.parse(localStorage.getItem(this.VEST_VISTOS_KEY) || 'null'); }
+      catch (e) { d = null; }
+      if (Object.prototype.toString.call(d) === '[object Array]') return d;
+      var todo = this.vestTodoLoTuyo();
+      this.vestGuardarVistos(todo);
+      return todo;
+    },
+
+    vestGuardarVistos: function (v) {
+      try { localStorage.setItem(this.VEST_VISTOS_KEY, JSON.stringify(v)); }
+      catch (e) { /* sin almacenamiento */ }
+    },
+
+    vestTodoLoTuyo: function () {
+      var out = [];
       var self = this;
-      var o = this.els.skins;
+      ['skin', 'accesorio', 'efecto', 'emote'].forEach(function (tab) {
+        self.vestItems(tab, 'yo').forEach(function (it) {
+          if (it.tuyo && it.id) out.push(tab + ':' + it.id);
+        });
+      });
+      return out;
+    },
+
+    /* Lo nuevo de todo el vestuario (el botón del menú lo cuenta) */
+    vestNuevos: function () {
+      var vistos = this.vestVistos();
+      var n = 0;
+      var todo = this.vestTodoLoTuyo();
+      for (var i = 0; i < todo.length; i++) if (vistos.indexOf(todo[i]) === -1) n++;
+      return n;
+    },
+
+    /* Da por vistas las marcadas como NUEVO en la pestaña que se deja */
+    vestMarcarVistos: function () {
+      var p = this.vestPendientes;
+      this.vestPendientes = [];
+      if (!p || !p.length) return;
+      var vistos = this.vestVistos();
+      for (var i = 0; i < p.length; i++) if (vistos.indexOf(p[i]) === -1) vistos.push(p[i]);
+      this.vestGuardarVistos(vistos);
+    },
+
+    /* ---------- qué hay en cada pestaña ----------
+     * Cada cosa: { id, name, ve, tuyo, puesto, como, pct, chip, tienda, precio }
+     * `como` es lo que falta para tenerla (o su precio). */
+    vestItems: function (tab, para) {
+      var s = window.PM.settings;
+      var Sk = window.PM.Skins, Tn = window.PM.Tienda;
+      var out = [];
+      if (tab === 'skin') {
+        var key = (para === 'j2') ? 'skin2' : 'skin1';
+        CFG.SKINS.forEach(function (sk) {
+          var est = Sk ? Sk.estado(sk.id) : { abierta: sk.id === 'clasico', progreso: '', chip: '', pct: 0 };
+          var puesto = (s[key] === sk.id);
+          out.push({
+            id: sk.id, name: sk.name, ve: sk.ve || '', chip: est.chip,
+            tuyo: est.abierta || puesto, puesto: puesto,
+            como: est.abierta ? '' : est.progreso, pct: est.abierta ? 1 : est.pct,
+            tienda: sk.grupo === 'tienda', precio: sk.precio || 0
+          });
+        });
+        if (!out.some(function (it) { return it.puesto; })) {
+          out.forEach(function (it) { if (it.id === 'clasico') it.puesto = true; });
+        }
+      } else if (tab === 'accesorio' || tab === 'efecto') {
+        var lista = (tab === 'accesorio') ? CFG.ACCESORIOS : CFG.EFECTOS;
+        var puesto0 = Tn ? (tab === 'accesorio' ? Tn.accesorio() : Tn.efecto()) : '';
+        out.push({ id: '', name: 'NINGUNO', ve: tab === 'accesorio' ? 'SIN NADA ENCIMA' : 'SIN RASTRO AL PASAR',
+          tuyo: true, puesto: !puesto0, como: '', pct: 1, chip: '' });
+        lista.forEach(function (it) {
+          var tuyo = !!(Tn && Tn.tiene(it.id));
+          out.push({
+            id: it.id, name: it.name, ve: it.ve || '', chip: tuyo ? 'COMPRADO' : 'TIENDA',
+            tuyo: tuyo, puesto: tuyo && puesto0 === it.id,
+            como: tuyo ? '' : ((Tn ? Tn.fmt(it.precio) : it.precio) + ' MONEDAS EN LA TIENDA'),
+            pct: tuyo ? 1 : (Tn ? Math.min(1, Math.max(0, Tn.saldo()) / (it.precio || 1)) : 0),
+            tienda: true, precio: it.precio
+          });
+        });
+      } else if (tab === 'emote') {
+        var tecla = this.vestTecla || 0;
+        var caras = Tn ? Tn.emotes() : [];
+        var base = CFG.EMOTES.map(function (e) { return e.id; });
+        CFG.EMOTES.concat(CFG.EMOTES_TIENDA).forEach(function (e) {
+          var esBase = base.indexOf(e.id) !== -1;
+          var tuyo = esBase || !!(Tn && Tn.tiene(e.id));
+          var enTecla = caras.indexOf(e.id);
+          out.push({
+            id: e.id, name: e.name, ve: e.ve || '', chip: esBase ? 'DE SIEMPRE' : (tuyo ? 'COMPRADO' : 'TIENDA'),
+            tuyo: tuyo, puesto: caras[tecla] === e.id, tecla: enTecla,
+            como: tuyo ? '' : ((Tn ? Tn.fmt(e.precio) : e.precio) + ' MONEDAS EN LA TIENDA'),
+            pct: tuyo ? 1 : 0, tienda: !esBase, precio: e.precio || 0
+          });
+        });
+      } else if (tab === 'avatar') {
+        CFG.AVATARS.forEach(function (av) {
+          out.push({ id: av.id, name: av.name, ve: '', chip: '', tuyo: true,
+            puesto: s.avatar === av.id, como: '', pct: 1 });
+        });
+      }
+      return out;
+    },
+
+    /* ---------- dibujo ---------- */
+    /* La skin en pequeño, con tu color (las de estela llevan un trozo) */
+    pintarSkinIcono: function (cv, id, color) {
+      var c = cv.getContext('2d');
+      var k = cv.width / 16;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.imageSmoothingEnabled = false;
+      c.setTransform(k, 0, 0, k, cv.width / 2, cv.height / 2);
+      var estela = !!CON_ESTELA[id];
+      window.PM.Sprites.drawPacman(c, estela ? 3 : 0, 0, CFG.DIR.RIGHT, 2, color, id,
+        estela ? {
+          back: function (d) { return { x: 3 - d, y: 0, d: CFG.DIR.RIGHT }; },
+          estira: 0.55, team: ['#ff0000', '#00ffff', '#00ff00']
+        } : { icono: true });
+      c.setTransform(1, 0, 0, 1, 0, 0);
+    },
+
+    /* El look que enseña el maniquí: lo puesto, o lo que se está probando */
+    vestLook: function () {
+      var s = window.PM.settings, Tn = window.PM.Tienda;
+      var j2 = (this.vestPara === 'j2');
+      var look = {
+        skin: (CFG.SKIN_IDS.indexOf(s[j2 ? 'skin2' : 'skin1']) !== -1) ? s[j2 ? 'skin2' : 'skin1'] : 'clasico',
+        color: s[j2 ? 'pac2Color' : 'pacColor'] || '#ffff00',
+        accesorio: (!j2 && Tn) ? Tn.accesorio() : '',
+        efecto: (!j2 && Tn) ? Tn.efecto() : ''
+      };
+      var p = this.vestProbando;
+      if (p) {
+        if (p.tab === 'skin') look.skin = p.id;
+        else if (p.tab === 'accesorio') look.accesorio = p.id;
+        else if (p.tab === 'efecto') look.efecto = p.id;
+      }
+      return look;
+    },
+
+    /* Una ficha: el dibujo de esa cosa puesta sobre tu personaje */
+    pintarFichaVest: function (cv, tab, id) {
+      var S = window.PM.Sprites, Sk = window.PM.Skins;
+      var look = this.vestLook();
+      var c = cv.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.imageSmoothingEnabled = false;
+      if (tab === 'skin') { this.pintarSkinIcono(cv, id, look.color); return; }
+      if (tab === 'avatar') { S.drawAvatar(c, cv.width / 2, cv.height / 2, cv.width * 0.4, id, look.color); return; }
+      if (tab === 'emote') {
+        S.drawPacFace(c, cv.width / 2, cv.height / 2 + 1, cv.width * 0.34, look.color, id, 0);
+        return;
+      }
+      if (!Sk) return;
+      /* accesorio y efecto: una foto fija de la escena de la vitrina, con la
+       * lupa encima (así se ve igual que jugando) */
+      if (!this.vestEscenaTmp) {
+        this.vestEscenaTmp = document.createElement('canvas');
+        this.vestEscenaTmp.width = Sk.ESCENA_W;
+        this.vestEscenaTmp.height = Sk.ESCENA_H;
+      }
+      var skin = look.skin;
+      if (tab === 'accesorio' && id && S.admiteAccesorio && !S.admiteAccesorio(skin)) skin = 'clasico';
+      var opts = {
+        accesorio: tab === 'accesorio' ? (id || null) : (look.accesorio || null),
+        efecto: tab === 'efecto' ? (id || null) : null
+      };
+      var t = 1.4;
+      var pos = Sk.escena(this.vestEscenaTmp, skin, look.color, t * 44, t, opts);
+      Sk.lupa(cv, this.vestEscenaTmp, pos, tab === 'efecto' ? 5 : 0, 0);
+    },
+
+    /* ---------- montaje ---------- */
+    buildVestuario: function () {
+      var self = this;
+      var o = this.els.vestuario;
       if (!o) return;
       o.innerHTML = '';
+      this.colorRows = {};
+      this.skinRows = {};           // ya no hay filas sueltas de skin: todo es de aquí
 
       var h = document.createElement('div');
       h.className = 'panel-title';
-      h.textContent = 'SKINS';
+      h.textContent = 'VESTUARIO';
       o.appendChild(h);
 
-      /* para quién se elige: tu skin o la del jugador 2 local */
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'vest';
+      o.appendChild(cuerpo);
+
+      /* ===== el maniquí ===== */
+      var man = document.createElement('div');
+      man.className = 'vest-maniqui';
+      cuerpo.appendChild(man);
+
       var para = document.createElement('div');
-      para.className = 'tab-row tab-row-sub skin-para';
-      this.skinsParaBtns = {};
-      [['skin1', 'TU SKIN'], ['skin2', 'JUGADOR 2 (LOCAL)']].forEach(function (p) {
+      para.className = 'tab-row tab-row-sub vest-para';
+      this.vestParaBtns = {};
+      [['yo', 'TÚ'], ['j2', 'JUGADOR 2 (LOCAL)']].forEach(function (p) {
         var b = self.makeButton(p[1], function () {
-          self.skinsKey = p[0];
-          self.refreshSkinsVitrina();
+          self.vestMarcarVistos();
+          self.vestPara = p[0];
+          self.vestProbando = null;
+          if (p[0] === 'j2' && !self.vestTabDe(self.vestTab).j2) self.vestTab = 'skin';
+          self.refreshVestuario();
         });
         b.classList.add('tab');
-        self.skinsParaBtns[p[0]] = b;
+        self.vestParaBtns[p[0]] = b;
         para.appendChild(b);
       });
+      man.appendChild(para);
+
+      var vistas = document.createElement('div');
+      vistas.className = 'vest-vistas';
+      this.vestLupa = document.createElement('canvas');
+      this.vestLupa.width = 144; this.vestLupa.height = 144;
+      this.vestLupa.className = 'vest-lupa';
+      this.vestLupa.setAttribute('aria-label', 'Tu personaje, ampliado');
+      this.vestEscena = document.createElement('canvas');
+      this.vestEscena.width = 336; this.vestEscena.height = 144;
+      this.vestEscena.className = 'vest-escena';
+      this.vestEscena.setAttribute('aria-label', 'Tu personaje corriendo por un pasillo');
+      vistas.appendChild(this.vestLupa);
+      vistas.appendChild(this.vestEscena);
+      man.appendChild(vistas);
+
+      this.vestProbandoEl = document.createElement('div');
+      this.vestProbandoEl.className = 'vest-probando';
+      man.appendChild(this.vestProbandoEl);
+
+      /* lo que llevas, pulsable: cada renglón abre su pestaña */
+      this.vestLlevas = document.createElement('div');
+      this.vestLlevas.className = 'vest-llevas';
+      man.appendChild(this.vestLlevas);
+
+      /* las seis teclas de emote */
+      this.vestTeclasWrap = document.createElement('div');
+      this.vestTeclasWrap.className = 'vest-teclas-wrap';
+      var tt = document.createElement('div');
+      tt.className = 'vest-mini-titulo';
+      tt.textContent = 'TUS EMOTES · TECLAS 1 A 6';
+      this.vestTeclasWrap.appendChild(tt);
+      var teclas = document.createElement('div');
+      teclas.className = 'vest-teclas';
+      this.vestTeclaBtns = [];
+      for (var k = 0; k < CFG.TIENDA.EMOTE_TECLAS; k++) {
+        (function (n) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'skin vest-tecla';
+          var cv = document.createElement('canvas');
+          cv.width = 40; cv.height = 40;
+          b.appendChild(cv);
+          var num = document.createElement('span');
+          num.className = 'emote-num';
+          num.textContent = String(n + 1);
+          b.appendChild(num);
+          b.addEventListener('click', function () {
+            self.vestMarcarVistos();
+            self.vestTecla = n;
+            self.vestTab = 'emote';
+            self.vestProbando = null;
+            self.refreshVestuario();
+          });
+          teclas.appendChild(b);
+          self.vestTeclaBtns.push({ btn: b, canvas: cv });
+        })(k);
+      }
+      this.vestTeclasWrap.appendChild(teclas);
+      man.appendChild(this.vestTeclasWrap);
+
+      /* ===== el armario ===== */
+      var arm = document.createElement('div');
+      arm.className = 'vest-armario';
+      cuerpo.appendChild(arm);
 
       var bar = document.createElement('div');
-      bar.className = 'tab-row';
-      this.skinsTabBtns = {};
-      [['todas', 'TODAS'], ['nivel', 'POR NIVEL'], ['logro', 'POR LOGRO'],
-       ['rara', 'EXTRAVAGANTES'], ['temporada', 'DE TEMPORADA'], ['tienda', 'DE TIENDA']].forEach(function (t) {
-        var b = self.makeButton(t[1], function () {
-          self.skinsTab = t[0];
-          self.refreshSkinsVitrina();
-          o.scrollTop = 0;
+      bar.className = 'tab-row vest-tabs';
+      this.vestTabBtns = {};
+      this.VEST_TABS.forEach(function (t) {
+        var b = self.makeButton(t.name, function () {
+          self.vestMarcarVistos();
+          self.vestTab = t.id;
+          self.vestProbando = null;
+          self.refreshVestuario();
         });
         b.classList.add('tab');
-        self.skinsTabBtns[t[0]] = b;
+        self.vestTabBtns[t.id] = b;
         bar.appendChild(b);
       });
-      o.appendChild(bar);
-      o.appendChild(para);
+      arm.appendChild(bar);
 
-      this.skinsResumen = document.createElement('div');
-      this.skinsResumen.className = 'note skin-resumen';
-      o.appendChild(this.skinsResumen);
+      var util = document.createElement('div');
+      util.className = 'vest-util';
+      this.vestCuenta = document.createElement('span');
+      this.vestCuenta.className = 'vest-cuenta';
+      util.appendChild(this.vestCuenta);
+      this.vestFaltanBtn = this.makeButton('VER LO QUE ME FALTA', function () {
+        self.vestFaltan = !self.vestFaltan;
+        self.refreshVestuario();
+      });
+      this.vestFaltanBtn.classList.add('btn-preset', 'vest-faltan');
+      util.appendChild(this.vestFaltanBtn);
+      arm.appendChild(util);
 
-      this.skinsGrid = document.createElement('div');
-      this.skinsGrid.className = 'skin-vitrina';
-      o.appendChild(this.skinsGrid);
+      this.vestAviso = document.createElement('div');
+      this.vestAviso.className = 'vest-aviso';
+      arm.appendChild(this.vestAviso);
 
-      this.skinsItems = [];
-      CFG.SKINS.forEach(function (sk, idx) {
-        var card = document.createElement('div');
-        card.className = 'skin-card';
+      /* la pestaña COLOR: las muestras de siempre, una fila por jugador */
+      this.vestColor = document.createElement('div');
+      this.vestColor.className = 'vest-color';
+      this.vestColorYo = this.makeColorRow('pacColor');
+      this.vestColorJ2 = this.makeColorRow('pac2Color');
+      this.vestColor.appendChild(this.vestColorYo);
+      this.vestColor.appendChild(this.vestColorJ2);
+      var cn = document.createElement('div');
+      cn.className = 'note';
+      cn.textContent = 'TIÑE TU PAC-MAN, TU SKIN Y TU AVATAR · EL ÚLTIMO CUADRO ES UN COLOR A TU GUSTO';
+      this.vestColor.appendChild(cn);
+      arm.appendChild(this.vestColor);
 
-        var head = document.createElement('div');
-        head.className = 'skin-card-head';
-        var nom = document.createElement('span');
-        nom.className = 'skin-card-name';
-        nom.textContent = sk.name;
-        head.appendChild(nom);
-        var chip = document.createElement('span');
-        chip.className = 'skin-chip ' + sk.grupo;
-        head.appendChild(chip);
-        card.appendChild(head);
+      this.vestGrid = document.createElement('div');
+      this.vestGrid.className = 'vest-grid';
+      arm.appendChild(this.vestGrid);
 
-        var views = document.createElement('div');
-        views.className = 'skin-views';
-        var lupa = document.createElement('canvas');
-        lupa.width = 144; lupa.height = 144;
-        lupa.className = 'skin-lupa';
-        lupa.setAttribute('aria-label', 'Skin ' + sk.name + ' ampliada');
-        var esc = document.createElement('canvas');
-        esc.width = 336; esc.height = 144;
-        esc.className = 'skin-escena';
-        esc.setAttribute('aria-label', 'Skin ' + sk.name + ' corriendo por un pasillo');
-        views.appendChild(lupa);
-        views.appendChild(esc);
-        card.appendChild(views);
+      /* la ficha de lo último pulsado */
+      this.vestFicha = document.createElement('div');
+      this.vestFicha.className = 'vest-ficha';
+      arm.appendChild(this.vestFicha);
 
+      var back = this.makeButton('VOLVER', function () { self.closeVestuario(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+
+      this.vestTab = 'skin';
+      this.vestPara = 'yo';
+      this.vestTecla = 0;
+      this.vestFaltan = false;
+      this.vestProbando = null;
+      this.vestFoco = null;
+      this.vestPendientes = [];
+    },
+
+    vestTabDe: function (id) {
+      for (var i = 0; i < this.VEST_TABS.length; i++) if (this.VEST_TABS[i].id === id) return this.VEST_TABS[i];
+      return this.VEST_TABS[0];
+    },
+
+    /* tab: 'skin' | 'color' | 'accesorio' | 'efecto' | 'emote' | 'avatar'
+     * para: 'yo' | 'j2'. Se vuelve al panel desde el que se abrió. */
+    showVestuario: function (tab, para, foco) {
+      var self = this;
+      if (!this.els.vestuario) return;
+      var abierto = this.visiblePanel();
+      if (abierto !== this.els.vestuario &&
+          !(abierto === this.els.tienda && this.tiendaVolver === 'vestuario')) {
+        this.vestVolver = (abierto === this.els.options) ? 'options'
+          : (abierto === this.els.profile) ? 'profile'
+          : (abierto === this.els.tienda) ? 'tienda' : 'menu';
+      }
+      this.vestPara = (para === 'j2') ? 'j2' : 'yo';
+      if (tab) this.vestTab = tab;
+      if (this.vestPara === 'j2' && !this.vestTabDe(this.vestTab).j2) this.vestTab = 'skin';
+      this.vestProbando = null;
+      this.vestFoco = foco || null;
+      this.vestAvisa('');
+      this.refreshVestuario();
+      this.showPanel('vestuario');
+      this.els.vestuario.scrollTop = 0;
+      this.animarVestuario();
+      // DORADO se abre al verse en el top 10: se mira una vez, sin molestar
+      if (window.PM.Skins) {
+        window.PM.Skins.comprobarTop10(function () { self.refreshVestuario(); });
+      }
+    },
+
+    closeVestuario: function () {
+      this.vestMarcarVistos();
+      this.vestProbando = null;
+      var v = this.vestVolver;
+      if (v === 'options') this.showOptions();
+      else if (v === 'profile') this.showProfile();
+      else if (v === 'tienda') this.showTienda();
+      else this.showMenu();
+    },
+
+    /* Las de antes siguen funcionando: abren el vestuario en su pestaña */
+    showSkins: function (key) { this.showVestuario('skin', key === 'skin2' ? 'j2' : 'yo'); },
+
+    vestAvisa: function (texto, error) {
+      if (!this.vestAviso) return;
+      this.vestAviso.textContent = texto || '';
+      this.vestAviso.classList.toggle('error', !!error);
+    },
+
+    /* ---------- pulsar una ficha ---------- */
+    vestPulsa: function (tab, it) {
+      var s = window.PM.settings, Tn = window.PM.Tienda;
+      var clave = tab + ':' + it.id;
+      if (this.vestPendientes.indexOf(clave) === -1 && it.id) this.vestPendientes.push(clave);
+      this.vestFoco = it.id;
+      if (!it.tuyo) {
+        /* no es tuyo: se prueba en el maniquí y la ficha dice cómo se consigue */
+        this.vestProbando = { tab: tab, id: it.id };
+        this.vestAvisa('');
+        this.refreshVestuario();
+        return;
+      }
+      this.vestProbando = null;
+      var sync = false;
+      if (tab === 'skin') {
+        s[this.vestPara === 'j2' ? 'skin2' : 'skin1'] = it.id;
+        saveSettings();
+        sync = true;
+        this.vestAvisa((this.vestPara === 'j2' ? 'EL JUGADOR 2 LLEVA ' : 'LLEVAS ') + it.name, false);
+      } else if (tab === 'accesorio' || tab === 'efecto') {
+        Tn.poner(tab, it.id);
+        var aviso = it.id ? ('LLEVAS ' + it.name) : (tab === 'accesorio' ? 'SIN ACCESORIO' : 'SIN EFECTO');
+        if (tab === 'accesorio' && it.id && window.PM.Sprites.admiteAccesorio &&
+            !window.PM.Sprites.admiteAccesorio(s.skin1)) {
+          aviso += ' · CON TU SKIN NO SE VE: PONTE UNA CON FORMA DE PAC-MAN';
+        }
+        this.vestAvisa(aviso, false);
+      } else if (tab === 'emote') {
+        Tn.ponerEmote(this.vestTecla || 0, it.id);
+        this.vestAvisa(it.name + ' VA EN LA TECLA ' + ((this.vestTecla || 0) + 1), false);
+      } else if (tab === 'avatar') {
+        s.avatar = it.id;
+        saveSettings();
+        sync = true;
+        this.vestAvisa('TU AVATAR ES ' + it.name, false);
+      }
+      if (sync && window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
+      this.refreshVestuario();
+      this.refreshPerfilLook();
+    },
+
+    /* ---------- pintar el panel ---------- */
+    refreshVestuario: function () {
+      var self = this;
+      if (!this.vestGrid) return;
+      var s = window.PM.settings, Tn = window.PM.Tienda, Sk = window.PM.Skins;
+      var j2 = (this.vestPara === 'j2');
+      var tab = this.vestTab || 'skin';
+
+      for (var p in this.vestParaBtns) {
+        if (this.vestParaBtns.hasOwnProperty(p)) this.vestParaBtns[p].classList.toggle('active', p === this.vestPara);
+      }
+      var vistos = this.vestVistos();
+      this.VEST_TABS.forEach(function (t) {
+        var b = self.vestTabBtns[t.id];
+        b.style.display = (j2 && !t.j2) ? 'none' : '';
+        b.classList.toggle('active', t.id === tab);
+        // la pestaña con cosas nuevas lleva su punto
+        var nuevas = 0;
+        if (!j2 && t.id !== 'color' && t.id !== 'avatar') {
+          self.vestItems(t.id, 'yo').forEach(function (it) {
+            if (it.tuyo && it.id && vistos.indexOf(t.id + ':' + it.id) === -1) nuevas++;
+          });
+        }
+        b.textContent = t.name + (nuevas ? ' •' : '');
+        b.classList.toggle('vest-tab-nueva', nuevas > 0);
+      });
+
+      /* ----- el maniquí ----- */
+      var look = this.vestLook();
+      this.vestTeclasWrap.style.display = j2 ? 'none' : '';
+      var pr = this.vestProbando;
+      this.vestProbandoEl.textContent = pr ? 'PROBÁNDOTE ALGO QUE AÚN NO TIENES' : (j2 ? 'ASÍ VA EL JUGADOR 2' : 'ASÍ TE VEN');
+      this.vestProbandoEl.classList.toggle('on', !!pr);
+      this.vestLlevas.innerHTML = '';
+      var nombreSkin = Sk && Sk.info(look.skin) ? Sk.info(look.skin).name : look.skin.toUpperCase();
+      var filas = [['skin', 'SKIN', nombreSkin], ['color', 'COLOR', '']];
+      if (!j2) {
+        var nombreDe = function (id) { var x = Tn && Tn.item(id); return x ? x.name : 'NINGUNO'; };
+        filas.push(['accesorio', 'ACCESORIO', nombreDe(look.accesorio)]);
+        filas.push(['efecto', 'EFECTO', nombreDe(look.efecto)]);
+        var av = CFG.AVATARS.filter(function (a) { return a.id === s.avatar; })[0];
+        filas.push(['avatar', 'AVATAR', av ? av.name : '']);
+      }
+      filas.forEach(function (f) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'vest-llevas-fila' + (f[0] === tab ? ' active' : '') +
+          (pr && pr.tab === f[0] ? ' prueba' : '');   // lo que te estás probando, en rosa
+        var k = document.createElement('span');
+        k.className = 'k';
+        k.textContent = f[1];
+        b.appendChild(k);
+        var v = document.createElement('span');
+        v.className = 'v';
+        if (f[0] === 'color') {
+          var m = document.createElement('i');
+          m.className = 'vest-muestra';
+          m.style.background = look.color;
+          v.appendChild(m);
+          v.appendChild(document.createTextNode(String(look.color).toUpperCase()));
+        } else {
+          v.textContent = f[2];
+        }
+        b.appendChild(v);
+        b.addEventListener('click', function () {
+          self.vestMarcarVistos();
+          self.vestTab = f[0];
+          self.vestProbando = null;
+          self.refreshVestuario();
+        });
+        self.vestLlevas.appendChild(b);
+      });
+      if (!j2 && look.accesorio && window.PM.Sprites.admiteAccesorio &&
+          !window.PM.Sprites.admiteAccesorio(look.skin)) {
+        var nota = document.createElement('div');
+        nota.className = 'vest-nota-acc';
+        nota.textContent = 'TU ACCESORIO NO SE VE CON UNA SKIN EXTRAVAGANTE';
+        this.vestLlevas.appendChild(nota);
+      }
+
+      /* ----- el armario ----- */
+      var esColor = (tab === 'color');
+      this.vestColor.style.display = esColor ? '' : 'none';
+      this.vestColorYo.style.display = j2 ? 'none' : '';
+      this.vestColorJ2.style.display = j2 ? '' : 'none';
+      this.refreshColorRows();
+      this.vestGrid.style.display = esColor ? 'none' : '';
+      this.vestFicha.style.display = esColor ? 'none' : '';
+      var conFaltan = (tab === 'skin' || tab === 'accesorio' || tab === 'efecto' || tab === 'emote');
+      this.vestFaltanBtn.style.display = conFaltan ? '' : 'none';
+      this.vestFaltanBtn.classList.toggle('active', !!this.vestFaltan);
+      this.vestFaltanBtn.textContent = this.vestFaltan ? 'SOLO LO QUE TENGO' : 'VER LO QUE ME FALTA';
+
+      this.vestGrid.innerHTML = '';
+      this.vestFichas = [];
+      if (esColor) {
+        this.vestCuenta.textContent = j2 ? 'EL COLOR DEL JUGADOR 2' : 'TU COLOR';
+        return;
+      }
+      if (tab === 'emote') {
+        var tec = document.createElement('div');
+        tec.className = 'vest-emote-guia';
+        tec.textContent = 'ELIGE LA TECLA A LA IZQUIERDA Y LUEGO LA CARA · AHORA: TECLA ' + ((this.vestTecla || 0) + 1);
+        this.vestGrid.appendChild(tec);
+      }
+      var items = this.vestItems(tab, this.vestPara);
+      var tuyos = items.filter(function (it) { return it.tuyo && it.id; }).length;
+      var total = items.filter(function (it) { return it.id; }).length;
+      this.vestCuenta.textContent = (tab === 'avatar') ? (total + ' AVATARES')
+        : ('TIENES ' + tuyos + ' DE ' + total);
+      /* primero lo tuyo; lo que falta, detrás y solo si se pide */
+      var orden = items.filter(function (it) { return it.tuyo; })
+        .concat(this.vestFaltan ? items.filter(function (it) { return !it.tuyo; }) : []);
+      var focoIt = null;
+      orden.forEach(function (it) {
+        var nuevo = !j2 && it.tuyo && it.id && tab !== 'avatar' && vistos.indexOf(tab + ':' + it.id) === -1;
+        if (nuevo && self.vestPendientes.indexOf(tab + ':' + it.id) === -1) self.vestPendientes.push(tab + ':' + it.id);
+        var probando = !!(pr && pr.tab === tab && pr.id === it.id);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'vest-tile' + (it.puesto ? ' puesto' : '') + (!it.tuyo ? ' bloqueado' : '') +
+          (nuevo ? ' nuevo' : '') + (probando ? ' probando' : '');
+        b.title = it.name + (it.ve ? ' · ' + it.ve : '') + (it.como ? ' · ' + it.como : '');
+        b.setAttribute('aria-label', it.name + (it.puesto ? ', puesto' : '') + (!it.tuyo ? ', no lo tienes' : ''));
+        var cv = document.createElement('canvas');
+        cv.width = 96; cv.height = 96;
+        b.appendChild(cv);
+        var nm = document.createElement('span');
+        nm.className = 'vest-tile-name';
+        nm.textContent = it.name;
+        b.appendChild(nm);
+        var tag = document.createElement('span');
+        tag.className = 'vest-tile-tag';
+        tag.textContent = it.puesto ? (tab === 'emote' ? 'TECLA ' + ((self.vestTecla || 0) + 1) : 'PUESTO')
+          : nuevo ? 'NUEVO'
+          : (tab === 'emote' && it.tecla >= 0) ? ('TECLA ' + (it.tecla + 1))
+          : !it.tuyo ? (it.tienda ? (Tn ? Tn.fmt(it.precio) : it.precio) + ' ◎' : 'BLOQUEADA')
+          : '';
+        b.appendChild(tag);
+        b.addEventListener('click', function () { self.vestPulsa(tab, it); });
+        self.vestGrid.appendChild(b);
+        self.pintarFichaVest(cv, tab, it.id);
+        self.vestFichas.push({ it: it, btn: b });
+        if ((self.vestFoco != null && it.id === self.vestFoco) || (!focoIt && it.puesto)) focoIt = it;
+      });
+      if (self.vestFoco != null) {
+        var f = items.filter(function (it) { return it.id === self.vestFoco; })[0];
+        if (f) focoIt = f;
+      }
+      if (!orden.length || (orden.length === 1 && orden[0].id === '' && !this.vestFaltan)) {
+        var vacio = document.createElement('div');
+        vacio.className = 'vest-vacio';
+        vacio.textContent = 'AÚN NO TIENES NINGUNO · PULSA "VER LO QUE ME FALTA" O PASA POR LA TIENDA';
+        this.vestGrid.appendChild(vacio);
+      }
+      this.pintarFichaDetalle(tab, focoIt);
+    },
+
+    /* La ficha de abajo: qué es, si es tuyo y, si no, cómo se consigue */
+    pintarFichaDetalle: function (tab, it) {
+      var self = this;
+      var f = this.vestFicha;
+      f.innerHTML = '';
+      if (!it) { f.style.display = 'none'; return; }
+      f.style.display = '';
+      var cab = document.createElement('div');
+      cab.className = 'vest-ficha-cab';
+      var nm = document.createElement('span');
+      nm.className = 'vest-ficha-nombre';
+      nm.textContent = it.name;
+      cab.appendChild(nm);
+      if (it.chip) {
+        var ch = document.createElement('span');
+        ch.className = 'skin-chip' + (it.tienda ? ' tienda' : '');
+        ch.textContent = it.chip;
+        cab.appendChild(ch);
+      }
+      f.appendChild(cab);
+      if (it.ve) {
         var ve = document.createElement('div');
         ve.className = 'skin-ve';
-        ve.textContent = sk.ve || '';
-        card.appendChild(ve);
-
+        ve.textContent = it.ve;
+        f.appendChild(ve);
+      }
+      var fila = document.createElement('div');
+      fila.className = 'vest-ficha-fila';
+      if (it.tuyo) {
+        var est = document.createElement('span');
+        est.className = 'vest-ficha-estado';
+        est.textContent = it.puesto ? 'LO LLEVAS PUESTO' : 'ES TUYO · PÚLSALO ARRIBA PARA PONÉRTELO';
+        fila.appendChild(est);
+      } else {
         var prog = document.createElement('div');
         prog.className = 'skin-prog';
         var barra = document.createElement('div');
         barra.className = 'level-bar';
         var fill = document.createElement('div');
         fill.className = 'level-fill';
+        fill.style.width = Math.round((it.pct || 0) * 100) + '%';
         barra.appendChild(fill);
-        var ptxt = document.createElement('span');
         prog.appendChild(barra);
-        prog.appendChild(ptxt);
-        card.appendChild(prog);
-
-        var btn = self.makeButton('PONER', function () {
-          var it = self.skinsItems[idx];
-          // las de tienda sin comprar llevan a la TIENDA, donde se compran
-          if (!it.abierta && sk.grupo === 'tienda') { self.showTienda('skin'); return; }
-          if (!it.abierta) return;
-          window.PM.settings[self.skinsKey || 'skin1'] = sk.id;
-          saveSettings();
-          if (window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
-          self.refreshSkinsVitrina();
-          self.refreshSkins();
-        });
-        btn.classList.add('btn-preset', 'skin-poner');
-        var botones = document.createElement('div');
-        botones.className = 'skin-botones';
-        botones.appendChild(btn);
-        /* las que suenan a lo suyo al comer se pueden oír aquí: cuatro
-         * pastillas seguidas, con el ritmo del juego */
-        var AS = window.AudioSys;
-        if (AS && AS.tieneWaka && AS.tieneWaka(sk.id)) {
-          var oir = self.makeButton('ESCUCHAR', function () {
-            self.resumeAudio();
-            for (var n = 0; n < 4; n++) {
-              setTimeout(function () { window.AudioSys.playWaka(sk.id); }, n * 135);
-            }
+        var txt = document.createElement('span');
+        txt.textContent = it.como || 'BLOQUEADA';
+        prog.appendChild(txt);
+        fila.appendChild(prog);
+        if (it.tienda) {
+          var cat = (tab === 'skin') ? 'skin' : tab;
+          var ir = this.makeButton('COMPRAR EN LA TIENDA', function () {
+            self.vestMarcarVistos();
+            self.showTienda(cat);
           });
-          oir.classList.add('btn-preset', 'skin-oir');
-          botones.appendChild(oir);
+          ir.classList.add('btn-preset');
+          fila.appendChild(ir);
         }
-        card.appendChild(botones);
-
-        self.skinsGrid.appendChild(card);
-        self.skinsItems.push({
-          id: sk.id, info: sk, card: card, chip: chip, lupa: lupa, escena: esc,
-          fill: fill, prog: ptxt, btn: btn, off: idx * 41, abierta: false
+      }
+      var AS = window.AudioSys;
+      if (tab === 'skin' && AS && AS.tieneWaka && AS.tieneWaka(it.id)) {
+        var oir = this.makeButton('ESCUCHAR', function () {
+          self.resumeAudio();
+          for (var n = 0; n < 4; n++) {
+            setTimeout(function () { window.AudioSys.playWaka(it.id); }, n * 135);
+          }
         });
-      });
-
-      var back = this.makeButton('VOLVER', function () { self.closeSkins(); });
-      back.classList.add('btn-primary');
-      back.style.marginTop = '14px';
-      o.appendChild(back);
-
-      this.skinsTab = 'todas';
-      this.skinsKey = 'skin1';
+        oir.classList.add('btn-preset');
+        fila.appendChild(oir);
+      }
+      f.appendChild(fila);
     },
 
-    /* key: 'skin1' (la tuya) o 'skin2' (jugador 2 local). Se vuelve al panel
-     * desde el que se abrió. */
-    showSkins: function (key) {
+    /* El maniquí se mueve mientras el vestuario está abierto, y nada más */
+    animarVestuario: function () {
       var self = this;
-      var abierto = this.visiblePanel();
-      this.skinsVolver = (abierto === this.els.options) ? 'options'
-        : (abierto === this.els.profile) ? 'profile' : 'menu';
-      this.skinsKey = (key === 'skin2') ? 'skin2' : 'skin1';
-      this.refreshSkinsVitrina();
-      this.showPanel('skins');
-      if (this.els.skins) this.els.skins.scrollTop = 0;
-      this.animarSkins();
-      // DORADO se abre al verse en el top 10: se mira una vez, sin molestar
-      if (window.PM.Skins) {
-        window.PM.Skins.comprobarTop10(function () { self.refreshSkinsVitrina(); });
-      }
-    },
-
-    closeSkins: function () {
-      var v = this.skinsVolver;
-      if (v === 'options') this.showOptions();
-      else if (v === 'profile') this.showProfile();
-      else this.showMenu();
-    },
-
-    refreshSkinsVitrina: function () {
-      var Sk = window.PM.Skins;
-      if (!Sk || !this.skinsItems) return;
-      var s = window.PM.settings;
-      var key = this.skinsKey || 'skin1';
-      var tab = this.skinsTab || 'todas';
-      var puesta = s[key];
-      for (var k in this.skinsParaBtns) {
-        if (this.skinsParaBtns.hasOwnProperty(k)) this.skinsParaBtns[k].classList.toggle('active', k === key);
-      }
-      for (var t in this.skinsTabBtns) {
-        if (this.skinsTabBtns.hasOwnProperty(t)) this.skinsTabBtns[t].classList.toggle('active', t === tab);
-      }
-      var abiertas = 0;
-      for (var i = 0; i < this.skinsItems.length; i++) {
-        var it = this.skinsItems[i];
-        var est = Sk.estado(it.id);
-        var esPuesta = (puesta === it.id);
-        it.abierta = est.abierta || esPuesta;
-        if (est.abierta) abiertas++;
-        var ver = (tab === 'todas') || (tab === 'rara' ? !!it.info.rara
-          : (it.info.grupo === tab && !(tab === 'logro' && it.info.rara)));
-        it.card.style.display = ver ? 'flex' : 'none';
-        it.card.classList.toggle('puesta', esPuesta);
-        it.card.classList.toggle('locked', !it.abierta);
-        it.chip.textContent = est.chip;
-        it.fill.style.width = Math.round((it.abierta ? 1 : est.pct) * 100) + '%';
-        it.prog.textContent = est.abierta ? ('ABIERTA · ' + est.progreso)
-          : esPuesta ? 'PUESTA DE ANTES: NO SE TE QUITA' : est.progreso;
-        var deTienda = (it.info.grupo === 'tienda');
-        it.btn.textContent = esPuesta ? 'PUESTA' : it.abierta ? 'PONER'
-          : deTienda ? ('A LA TIENDA · ' + fmtMonedas(it.info.precio || 0)) : 'BLOQUEADA';
-        it.btn.disabled = esPuesta || (!it.abierta && !(deTienda && key === 'skin1'));
-      }
-      this.skinsResumen.textContent = 'TIENES ' + abiertas + ' DE ' + CFG.SKINS.length +
-        ' · ELIGIENDO ' + (key === 'skin2' ? 'LA DEL JUGADOR 2 LOCAL' : 'LA TUYA');
-    },
-
-    /* Animación de la vitrina: solo mientras está abierta y solo las fichas
-     * visibles. Todas van SINCRONIZADAS: el mismo reloj y el mismo punto del
-     * pasillo, para compararlas de un vistazo (pedido el 15 sep). */
-    animarSkins: function () {
-      var self = this;
-      var Sk = window.PM.Skins;
-      if (!Sk || !this.skinsItems || this.skinsAnim) return;
+      var Sk = window.PM.Skins, S = window.PM.Sprites, Tn = window.PM.Tienda;
+      if (!Sk || !this.vestEscena || this.vestAnim) return;
       var raf = window.requestAnimationFrame;
       if (!raf) return;
-      var equipoMuestra = ['#ff0000', '#00ffff', '#00ff00', '#ff69b4'];
-      this.skinsAnim = true;
-      /* el reloj cuenta desde que se abre la vitrina: con Date.now() en
-       * segundos (~1.800 millones) los arcos que giran con él perdían toda
-       * la precisión y no se pintaban (los discos de RASTRO) */
+      this.vestAnim = true;
       var origen = Date.now();
       function paso() {
-        var panel = self.els.skins;
-        if (!panel || panel.style.display === 'none') { self.skinsAnim = false; return; }
+        var panel = self.els.vestuario;
+        if (!panel || panel.style.display === 'none') { self.vestAnim = false; return; }
         var t = (Date.now() - origen) / 1000;
-        var s = window.PM.settings;
-        var color = s[(self.skinsKey === 'skin2') ? 'pac2Color' : 'pacColor'] || '#ffff00';
-        var equipo = equipoMuestra.filter(function (c) { return c !== color; }).slice(0, 3);
-        var alto = window.innerHeight || 800;
-        for (var i = 0; i < self.skinsItems.length; i++) {
-          var it = self.skinsItems[i];
-          if (it.card.style.display === 'none') continue;
-          var r = it.card.getBoundingClientRect();
-          if (r.bottom < 0 || r.top > alto) continue;
-          var pos = Sk.escena(it.escena, it.id, color, t * 44, t, { team: equipo });
-          // la cereza cuelga por detrás: la lupa se centra un poco atrás
-          Sk.lupa(it.lupa, it.escena, pos, it.id === 'cereza' ? 4 : 0);
+        var look = self.vestLook();
+        var skin = look.skin;
+        var pos = Sk.escena(self.vestEscena, skin, look.color, t * 44, t, {
+          accesorio: look.accesorio || null,
+          efecto: look.efecto || null,
+          team: ['#ff0000', '#00ffff', '#00ff00']
+        });
+        Sk.lupa(self.vestLupa, self.vestEscena, pos, look.efecto ? 4 : 0);
+        if (self.vestPara !== 'j2' && Tn && self.vestTeclaBtns) {
+          var caras = Tn.emotes();
+          for (var i = 0; i < self.vestTeclaBtns.length; i++) {
+            var tb = self.vestTeclaBtns[i];
+            tb.btn.classList.toggle('active', self.vestTab === 'emote' && i === (self.vestTecla || 0));
+            tb.btn.title = 'TECLA ' + (i + 1) + ' · ' + Tn.nombreEmote(caras[i]);
+            var c = tb.canvas.getContext('2d');
+            c.setTransform(1, 0, 0, 1, 0, 0);
+            c.clearRect(0, 0, 40, 40);
+            c.imageSmoothingEnabled = false;
+            S.drawPacFace(c, 20, 21, 13, look.color, caras[i], t * 60);
+          }
         }
         raf(paso);
       }
       raf(paso);
+    },
+
+    /* PERFIL enseña tu personaje en pequeño y lleva al vestuario */
+    refreshPerfilLook: function () {
+      if (!this.profLookCv) return;
+      var s = window.PM.settings, Tn = window.PM.Tienda, Sk = window.PM.Skins;
+      var skin = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+      this.pintarSkinIcono(this.profLookCv, skin, s.pacColor || '#ffff00');
+      var nombreDe = function (id) { var x = Tn && Tn.item(id); return x ? x.name : 'NINGUNO'; };
+      var info = Sk && Sk.info(skin);
+      this.profLook.textContent = 'SKIN ' + (info ? info.name : skin.toUpperCase()) +
+        ' · ACCESORIO ' + nombreDe(Tn ? Tn.accesorio() : '') +
+        ' · EFECTO ' + nombreDe(Tn ? Tn.efecto() : '');
+      if (this.profVestBtn) {
+        var n = this.vestNuevos();
+        this.profVestBtn.textContent = 'ABRIR EL VESTUARIO' + (n ? ' · ' + n + (n === 1 ? ' NUEVO' : ' NUEVOS') : '');
+      }
+    },
+
+    /* Lo que antes repintaba las filas de skin: ahora es el vestuario y la
+     * miniatura de PERFIL (se llama desde varios sitios al cambiar el nivel) */
+    refreshSkins: function () {
+      this.refreshPerfilLook();
+      if (this.els.vestuario && this.els.vestuario.style.display !== 'none') this.refreshVestuario();
+    },
+
+    /* El botón del cuartel cuenta lo que tienes sin estrenar */
+    refreshVestBtn: function () {
+      if (!this.menuVestBtn) return;
+      var n = this.vestNuevos();
+      this.menuVestBtn.textContent = 'VESTUARIO' + (n ? ' · ' + n + (n === 1 ? ' NUEVO' : ' NUEVOS') : '');
+      this.menuVestBtn.classList.toggle('vest-btn-nuevo', n > 0);
     },
 
     /* ------------------------------------------------------
@@ -2058,35 +2526,31 @@
       });
       o.appendChild(bar);
 
-      this.tiendaNota = document.createElement('div');
-      this.tiendaNota.className = 'note skin-resumen';
-      o.appendChild(this.tiendaNota);
+      /* La tienda es para COMPRAR: de salida solo enseña lo que te falta. Lo
+       * tuyo se viste en el VESTUARIO; aquí se puede mirar, pero hay que
+       * pedirlo. */
+      var util = document.createElement('div');
+      util.className = 'vest-util tienda-util';
+      this.tiendaNota = document.createElement('span');
+      this.tiendaNota.className = 'vest-cuenta';
+      util.appendChild(this.tiendaNota);
+      this.tiendaTengoBtn = this.makeButton('VER LO QUE YA TENGO', function () {
+        self.tiendaTengo = !self.tiendaTengo;
+        self.refreshTienda();
+      });
+      this.tiendaTengoBtn.classList.add('btn-preset');
+      util.appendChild(this.tiendaTengoBtn);
+      var irVest = this.makeButton('IR AL VESTUARIO', function () {
+        self.showVestuario(self.tiendaTab === 'emote' ? 'emote' : (self.tiendaTab || 'skin'), 'yo');
+      });
+      irVest.classList.add('btn-preset');
+      util.appendChild(irVest);
+      o.appendChild(util);
 
-      /* las seis teclas de emote: se elige una y luego la cara que va en ella */
-      this.tiendaTeclas = document.createElement('div');
-      this.tiendaTeclas.className = 'tienda-teclas';
-      this.tiendaTeclaBtns = [];
-      for (var k = 0; k < CFG.TIENDA.EMOTE_TECLAS; k++) {
-        (function (tecla) {
-          var b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'skin tienda-tecla';
-          var cv = document.createElement('canvas');
-          cv.width = 36; cv.height = 36;
-          b.appendChild(cv);
-          var num = document.createElement('span');
-          num.className = 'emote-num';
-          num.textContent = String(tecla + 1);
-          b.appendChild(num);
-          b.addEventListener('click', function () {
-            self.tiendaTecla = tecla;
-            self.refreshTienda();
-          });
-          self.tiendaTeclas.appendChild(b);
-          self.tiendaTeclaBtns.push({ btn: b, canvas: cv });
-        })(k);
-      }
-      o.appendChild(this.tiendaTeclas);
+      this.tiendaVacio = document.createElement('div');
+      this.tiendaVacio.className = 'vest-vacio';
+      this.tiendaVacio.textContent = 'YA TIENES TODO LO DE ESTA SECCIÓN';
+      o.appendChild(this.tiendaVacio);
 
       this.tiendaMsg = document.createElement('div');
       this.tiendaMsg.className = 'lobby-status tienda-msg';
@@ -2136,19 +2600,12 @@
         var btn = self.makeButton('COMPRAR', function () { self.tiendaPulsa(it); });
         btn.classList.add('btn-preset', 'skin-poner');
         botones.appendChild(btn);
-        var quitar = self.makeButton('QUITAR', function () {
-          window.PM.Tienda.poner(it.cat, '');
-          self.tiendaAviso(it.name + ' QUITADO', false);
-          self.refreshTienda();
-        });
-        quitar.classList.add('btn-preset');
-        botones.appendChild(quitar);
         card.appendChild(botones);
 
         self.tiendaGrid.appendChild(card);
         self.tiendaItems.push({
           it: it, card: card, chip: chip, lupa: lupa, escena: esc, btn: btn,
-          quitar: quitar, off: idx * 41
+          off: idx * 41
         });
       });
 
@@ -2158,7 +2615,8 @@
       o.appendChild(back);
 
       this.tiendaTab = 'emote';
-      this.tiendaTecla = 0;
+      this.tiendaTengo = false;
+      this.tiendaRecien = [];
     },
 
     /* la moneda de la tienda, dibujada: disco dorado con canto y brillo */
@@ -2178,8 +2636,14 @@
 
     showTienda: function (tab) {
       var abierto = this.visiblePanel();
-      this.tiendaVolver = (abierto === this.els.profile) ? 'profile'
-        : (abierto === this.els.skins) ? 'skins' : 'menu';
+      /* (si se viene del vestuario que a su vez se abrió desde aquí, se deja
+       * el VOLVER como estaba: si no, los dos se mandarían el uno al otro) */
+      if (abierto !== this.els.tienda &&
+          !(abierto === this.els.vestuario && this.vestVolver === 'tienda')) {
+        this.tiendaVolver = (abierto === this.els.profile) ? 'profile'
+          : (abierto === this.els.vestuario) ? 'vestuario' : 'menu';
+        this.tiendaRecien = [];
+      }
       if (tab) this.tiendaTab = tab;
       this.tiendaConfirma = null;
       if (this.tiendaMsg) this.tiendaMsg.textContent = '';
@@ -2192,7 +2656,7 @@
     closeTienda: function () {
       var v = this.tiendaVolver;
       if (v === 'profile') this.showProfile();
-      else if (v === 'skins') this.showSkins(this.skinsKey || 'skin1');
+      else if (v === 'vestuario') this.showVestuario(null, 'yo');
       else this.showMenu();
     },
 
@@ -2202,10 +2666,37 @@
       this.tiendaMsg.classList.toggle('error', !!error);
     },
 
-    /* El botón de una ficha: comprar (dos clics) o ponerse lo que ya es tuyo */
-    tiendaPulsa: function (it) {
+    /* Ponerse algo recién comprado: lo equipa y abre el vestuario en su
+     * pestaña. Un emote va a la primera tecla que tenga uno de los de
+     * siempre (o a la última), y allí se puede mover a otra. */
+    tiendaPonerse: function (it) {
       var Tn = window.PM.Tienda;
       var s = window.PM.settings;
+      var tab = it.cat;
+      if (it.cat === 'emote') {
+        var caras = Tn.emotes();
+        var base = CFG.EMOTES.map(function (e) { return e.id; });
+        var tecla = caras.length - 1;
+        for (var i = 0; i < caras.length; i++) {
+          if (base.indexOf(caras[i]) !== -1) { tecla = i; break; }
+        }
+        Tn.ponerEmote(tecla, it.id);
+        this.vestTecla = tecla;
+      } else if (it.cat === 'skin') {
+        s.skin1 = it.id;
+        saveSettings();
+        if (window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
+      } else {
+        Tn.poner(it.cat, it.id);
+      }
+      this.showVestuario(tab, 'yo', it.id);
+      this.vestAvisa('LLEVAS ' + it.name + (it.cat === 'emote' ? ' EN LA TECLA ' + (this.vestTecla + 1) : ''), false);
+    },
+
+    /* El botón de una ficha: comprar (dos clics), o ponerse lo recién
+     * comprado. Lo que ya era tuyo se viste en el VESTUARIO. */
+    tiendaPulsa: function (it) {
+      var Tn = window.PM.Tienda;
       if (!Tn.tiene(it.id)) {
         if (this.tiendaConfirma !== it.id) {
           if (Tn.saldo() < it.precio) {
@@ -2223,29 +2714,13 @@
         var r = Tn.comprar(it.id);
         if (!r.ok) { this.tiendaAviso(r.msg, true); this.refreshTienda(); return; }
         if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
-        this.tiendaAviso(r.msg + ' · ¡PÓNTELO!', false);
+        // lo recién comprado se queda a la vista, con su PONÉRTELO
+        if (this.tiendaRecien.indexOf(it.id) === -1) this.tiendaRecien.push(it.id);
+        this.tiendaAviso(r.msg + ' · PULSA PONÉRTELO O VÍSTETE LUEGO EN EL VESTUARIO', false);
         this.refreshTienda();
         return;
       }
-      // ya es tuyo: ponérselo
-      if (it.cat === 'emote') {
-        Tn.ponerEmote(this.tiendaTecla || 0, it.id);
-        this.tiendaAviso(it.name + ' VA EN LA TECLA ' + ((this.tiendaTecla || 0) + 1), false);
-      } else if (it.cat === 'skin') {
-        s.skin1 = it.id;
-        saveSettings();
-        this.refreshSkins();
-        this.tiendaAviso('LLEVAS ' + it.name, false);
-      } else {
-        Tn.poner(it.cat, it.id);
-        var aviso = 'LLEVAS ' + it.name;
-        if (it.cat === 'accesorio' && window.PM.Sprites.admiteAccesorio &&
-            !window.PM.Sprites.admiteAccesorio(s.skin1)) {
-          aviso += ' · CON TU SKIN NO SE VE: PONTE UNA CON FORMA DE PAC-MAN';
-        }
-        this.tiendaAviso(aviso, false);
-      }
-      this.refreshTienda();
+      this.tiendaPonerse(it);
     },
 
     refreshTienda: function () {
@@ -2266,57 +2741,37 @@
       }
       var cat = null;
       for (var c = 0; c < Tn.CATEGORIAS.length; c++) if (Tn.CATEGORIAS[c].id === tab) cat = Tn.CATEGORIAS[c];
-      var mias = 0, total = 0;
+      var mias = 0, total = 0, vistas = 0;
       for (var i = 0; i < this.tiendaItems.length; i++) {
         var row = this.tiendaItems[i], it = row.it;
-        var ver = (it.cat === tab);
+        var tiene = Tn.tiene(it.id), puesto = Tn.puesto(it.id);
+        var recien = this.tiendaRecien.indexOf(it.id) !== -1;
+        if (it.cat === tab) { total++; if (tiene) mias++; }
+        /* lo que ya tienes no sale, salvo que se pida o que se acabe de
+         * comprar (para poder ponérselo sin ir a buscarlo) */
+        var ver = (it.cat === tab) && (!tiene || recien || this.tiendaTengo);
         row.card.style.display = ver ? 'flex' : 'none';
         if (!ver) continue;
-        total++;
-        var tiene = Tn.tiene(it.id), puesto = Tn.puesto(it.id);
-        if (tiene) mias++;
+        vistas++;
         row.card.classList.toggle('puesta', puesto);
         row.card.classList.toggle('locked', !tiene);
-        row.chip.textContent = puesto ? 'PUESTO' : tiene ? 'TUYO' : (fmtMonedas(it.precio) + ' MONEDAS');
-        row.quitar.style.display = (tiene && puesto && (it.cat === 'accesorio' || it.cat === 'efecto')) ? '' : 'none';
+        row.chip.textContent = puesto ? 'PUESTO' : tiene ? (recien ? 'RECIÉN COMPRADO' : 'TUYO')
+          : (fmtMonedas(it.precio) + ' MONEDAS');
         var confirma = (this.tiendaConfirma === it.id);
-        row.btn.classList.toggle('btn-primary', confirma);
+        row.btn.classList.toggle('btn-primary', confirma || (recien && !puesto));
         if (!tiene) {
           row.btn.textContent = confirma ? ('¿COMPRAR POR ' + fmtMonedas(it.precio) + '?')
             : ('COMPRAR · ' + fmtMonedas(it.precio));
           row.btn.disabled = false;
-        } else if (it.cat === 'emote') {
-          var tecla = (this.tiendaTecla || 0);
-          var enEsa = (Tn.emoteDeTecla(tecla) === it.id);
-          row.btn.textContent = enEsa ? ('EN LA TECLA ' + (tecla + 1)) : ('PONER EN LA TECLA ' + (tecla + 1));
-          row.btn.disabled = enEsa;
         } else {
-          row.btn.textContent = puesto ? 'PUESTO' : 'PONER';
-          row.btn.disabled = puesto;
+          row.btn.textContent = puesto ? 'PUESTO · VER EN EL VESTUARIO' : 'PONÉRTELO';
+          row.btn.disabled = false;
         }
       }
-      this.tiendaNota.textContent = (cat ? cat.nota : '') + ' · TIENES ' + mias + ' DE ' + total;
-      /* los seis emotes de base no se venden: la barra de teclas los enseña
-       * junto a los comprados */
-      this.tiendaTeclas.style.display = (tab === 'emote') ? 'flex' : 'none';
-      if (tab === 'emote') this.pintarTeclas(0);
-    },
-
-    pintarTeclas: function (tick) {
-      var Tn = window.PM.Tienda;
-      if (!Tn || !this.tiendaTeclaBtns) return;
-      var caras = Tn.emotes();
-      var color = window.PM.settings.pacColor || '#ffff00';
-      for (var i = 0; i < this.tiendaTeclaBtns.length; i++) {
-        var b = this.tiendaTeclaBtns[i];
-        b.btn.classList.toggle('active', i === (this.tiendaTecla || 0));
-        b.btn.title = 'TECLA ' + (i + 1) + ' · ' + Tn.nombreEmote(caras[i]);
-        var c = b.canvas.getContext('2d');
-        c.setTransform(1, 0, 0, 1, 0, 0);
-        c.clearRect(0, 0, 36, 36);
-        c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawPacFace(c, 18, 19, 12, color, caras[i], tick);
-      }
+      this.tiendaNota.textContent = (cat ? cat.nota + ' · ' : '') + 'TIENES ' + mias + ' DE ' + total;
+      this.tiendaTengoBtn.textContent = this.tiendaTengo ? 'SOLO LO QUE ME FALTA' : 'VER LO QUE YA TENGO';
+      this.tiendaTengoBtn.classList.toggle('active', !!this.tiendaTengo);
+      this.tiendaVacio.style.display = vistas ? 'none' : '';
     },
 
     /* Animación de la tienda: la de la vitrina de SKINS, con lo de cada ficha
@@ -2338,7 +2793,6 @@
         var mia = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
         var conAcc = window.PM.Sprites.admiteAccesorio(mia) ? mia : 'clasico';
         var alto = window.innerHeight || 800;
-        if ((self.tiendaTab || 'emote') === 'emote') self.pintarTeclas(t * 60);
         for (var i = 0; i < self.tiendaItems.length; i++) {
           var row = self.tiendaItems[i], it = row.it;
           if (row.card.style.display === 'none') continue;
@@ -2463,13 +2917,11 @@
     setColor: function (key, hex) {
       window.PM.settings[key] = hex;   // se aplica en vivo (game lee cada frame)
       saveSettings();
-      /* El tuyo vive en PERFIL y tiñe medio panel (el avatar de la cabecera y
-       * las skins), así que hay que repintarlo entero; el del jugador 2 sigue
-       * en OPCIONES. Se refrescan los dos sin mirar cuál se ha tocado: son dos
-       * paneles y uno de ellos ni siquiera está a la vista. */
+      /* Los dos colores se eligen en el VESTUARIO, y tiñen sus fichas y el
+       * maniquí, así que se repinta entero; y la miniatura de PERFIL. */
       this.refreshColorRows();
+      if (this.els.vestuario && this.els.vestuario.style.display !== 'none') this.refreshVestuario();
       if (key === 'pacColor' && this.profPane) this.refreshProfile();
-      else this.refreshOptions();
     },
 
     /* Marca la muestra elegida en cada fila de color. Las filas viven en dos
@@ -3654,68 +4106,35 @@
       this.profGuestRow.appendChild(azar);
       ficha.appendChild(this.profGuestRow);
 
-      /* avatares */
-      var gAvatar = this.optGroup(this.profPane, 'TU AVATAR', true);
-      this.profAvatarRow = document.createElement('div');
-      this.profAvatarRow.className = 'skins avatares';
-      this.avatarItems = [];
-      CFG.AVATARS.forEach(function (av) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'skin';
-        b.title = av.name;
-        b.setAttribute('aria-label', 'Avatar ' + av.name);
-        var cv = document.createElement('canvas');
-        cv.width = 40;
-        cv.height = 40;
-        b.appendChild(cv);
-        b.addEventListener('click', function () {
-          window.PM.settings.avatar = av.id;
-          saveSettings();
-          if (window.PM.Account && window.PM.Account.logged()) {
-            window.PM.Account.pushQuiet();
-          }
-          self.refreshProfile();
-        });
-        self.profAvatarRow.appendChild(b);
-        self.avatarItems.push({ id: av.id, btn: b, canvas: cv });
-      });
-      gAvatar.appendChild(this.profAvatarRow);
-
-      /* Tu color: va antes que la skin porque LA TIÑE (y también el avatar de
-       * arriba y tu Pac-Man en la partida), así que se elige primero y el
-       * resto del panel se repinta con él. Vivía en OPCIONES · JUGADORES, que
-       * es donde estaban los ajustes de la máquina; pero tu color no es un
-       * ajuste de la máquina, es quién eres en la sala. Allí solo queda el del
-       * jugador 2 local, que sí lo es. */
-      var gColor = this.optGroup(this.profPane, 'TU COLOR');
-      this.colorRows = this.colorRows || {};
-      gColor.appendChild(this.makeColorRow('pacColor'));
-
-      /* Tu skin: es tan tuya como el avatar, así que va aquí y no en
-       * OPCIONES (allí solo queda la del jugador 2 local). */
-      var gSkin = this.optGroup(this.profPane, 'TU SKIN');
-      this.skinRows = this.skinRows || {};
-      gSkin.appendChild(this.makeSkinRow('skin1', 'pacColor'));
-      var skinNota = document.createElement('div');
-      skinNota.className = 'note';
-      skinNota.textContent = 'SE ABREN SUBIENDO DE NIVEL, CON LOGROS, JUGANDO EN FECHAS ESPECIALES O EN LA TIENDA';
-      gSkin.appendChild(skinNota);
-      this.profSkinMsg = document.createElement('div');
-      this.profSkinMsg.className = 'lobby-status';
-      gSkin.appendChild(this.profSkinMsg);
-
-      /* Lo de la TIENDA que llevas encima, y las monedas para comprar más */
-      var gLook = this.optGroup(this.profPane, 'TU LOOK · TIENDA');
+      /* Tu personaje, en pequeño. Aquí antes se elegían el avatar, el color y
+       * la skin, y lo de la tienda salía en una línea: todo eso se viste ahora
+       * en el VESTUARIO, y PERFIL se queda con quién eres (nombre, nivel,
+       * cuenta, logros). */
+      var gLook = this.optGroup(this.profPane, 'TU PERSONAJE', true);
+      var lookRow = document.createElement('div');
+      lookRow.className = 'perfil-personaje';
+      var lookBtn = document.createElement('button');
+      lookBtn.type = 'button';
+      lookBtn.className = 'skin active perfil-personaje-cv';
+      lookBtn.setAttribute('aria-label', 'Abrir el vestuario');
+      this.profLookCv = document.createElement('canvas');
+      this.profLookCv.width = 96; this.profLookCv.height = 96;
+      lookBtn.appendChild(this.profLookCv);
+      lookBtn.addEventListener('click', function () { self.showVestuario('skin', 'yo'); });
+      lookRow.appendChild(lookBtn);
+      var lookTxt = document.createElement('div');
+      lookTxt.className = 'perfil-personaje-txt';
       this.profLook = document.createElement('div');
       this.profLook.className = 'note perfil-look';
-      gLook.appendChild(this.profLook);
-      var irTienda = this.makeButton('ABRIR LA TIENDA', function () {
+      lookTxt.appendChild(this.profLook);
+      this.profVestBtn = this.makeButton('ABRIR EL VESTUARIO', function () {
         self.resumeAudio();
-        self.showTienda();
+        self.showVestuario('skin', 'yo');
       });
-      irTienda.classList.add('btn-preset');
-      gLook.appendChild(irTienda);
+      this.profVestBtn.classList.add('btn-preset');
+      lookTxt.appendChild(this.profVestBtn);
+      lookRow.appendChild(lookTxt);
+      gLook.appendChild(lookRow);
 
       /* cuenta */
       var gCuenta = this.optGroup(this.profPane, 'TU CUENTA');
@@ -3801,29 +4220,7 @@
       /* de invitado el nombre se puede sortear; con cuenta, es el usuario */
       this.profGuestRow.style.display = logged ? 'none' : 'flex';
 
-      /* avatares: el elegido se marca */
-      for (var i = 0; i < this.avatarItems.length; i++) {
-        var it = this.avatarItems[i];
-        it.btn.classList.toggle('active', it.id === s.avatar);
-        var c = it.canvas.getContext('2d');
-        c.setTransform(1, 0, 0, 1, 0, 0);
-        c.clearRect(0, 0, 40, 40);
-        c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawAvatar(c, 20, 20, 16, it.id, s.pacColor);
-      }
-
-      var Tn = window.PM.Tienda;
-      if (Tn && this.profLook) {
-        var nombreDe = function (id) { var x = Tn.item(id); return x ? x.name : 'NINGUNO'; };
-        var acc = Tn.accesorio(), efx = Tn.efecto();
-        var nota = (acc && window.PM.Sprites.admiteAccesorio && !window.PM.Sprites.admiteAccesorio(s.skin1))
-          ? ' (NO SE VE CON UNA SKIN EXTRAVAGANTE)' : '';
-        this.profLook.textContent = fmtMonedas(Math.max(0, Tn.saldo())) + ' MONEDAS · ACCESORIO ' +
-          nombreDe(acc) + nota + ' · EFECTO ' + nombreDe(efx) + ' · EMOTES ' +
-          Tn.emotes().map(function (e) { return Tn.nombreEmote(e); }).join(', ');
-      }
-      this.refreshColorRows();      // tu color se elige aquí, y tiñe lo demás
-      this.refreshSkins();          // la skin propia se elige aquí
+      this.refreshPerfilLook();     // tu personaje en pequeño (se viste en el VESTUARIO)
       this.refreshAccountBox();
       this.refreshAchievements();
     },
@@ -5447,7 +5844,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'mazes', 'friends', 'profile', 'mate', 'skins', 'tienda'];
+                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -6300,7 +6697,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'mazes', 'friends', 'profile', 'daily', 'mate', 'skins', 'tienda'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -6313,6 +6710,7 @@
       this.refreshLevel();
       this.refreshOnlineBtn();
       this.refreshDaily();
+      this.refreshVestBtn();     // VESTUARIO · N NUEVOS
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');
@@ -6650,8 +7048,8 @@
           } else if (ev.key === 'Escape') {
             if (self.els.online.style.display !== 'none') {
               self.showMenu();      // salir del panel no deshace la party
-            } else if (self.els.skins && self.els.skins.style.display !== 'none') {
-              self.closeSkins();    // vuelve a PERFIL u OPCIONES si vino de ahí
+            } else if (self.els.vestuario && self.els.vestuario.style.display !== 'none') {
+              self.closeVestuario();  // vuelve a PERFIL, OPCIONES o la TIENDA si vino de ahí
             } else if (self.els.tienda && self.els.tienda.style.display !== 'none') {
               self.closeTienda();   // ídem, a donde se abrió
             } else if (self.els.options.style.display !== 'none' ||
