@@ -13,6 +13,18 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**15 sep (tarde) — el DAILY es LA CARTILLA (`pm-v51`).** Braighton pidió
+rediseñarlo porque "no dan ganas"; se le enseñaron tres propuestas (El
+Pasillo, La Marquesina, La Cartilla) en
+<https://claude.ai/artifact/BzVPosraiSy9EooGJiiMri> y eligió **La Cartilla**.
+Siete casillas con un fantasma por día, sello CAZADO, cuenta atrás hasta
+medianoche en la portada y botín de 290 monedas por dentro. Solo cambia la
+interfaz: la lógica del DAILY y lo guardado no se tocan. Detalle en SPEC
+(*LA CARTILLA*). `tests.html` 320/320. **Descartadas**: El Pasillo (la más
+cara de dibujar) y La Marquesina (informa bien, pero emociona poco).
+**Por mirar jugando**: que el recuadro no empuje JUGAR fuera en pantallas
+bajas, y un día perdido (en gris), que no se pudo ver un martes.
+
 **15 sep (madrugada) — cierre de sesión, TODO SUBIDO (`pm-v50`).** Después de
 la tienda salieron dos cosas más, las dos en producción:
 

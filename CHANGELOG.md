@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · El DAILY es una cartilla
+
+- **La semana es una cartilla de siete casillas**, con un fantasma por día.
+  Cumplir el reto es cazarlo: se pone azul y le cae el sello CAZADO. El de hoy
+  brilla en su color y lo que viene se ve en silueta.
+- **En la portada** salen las siete casillas en pequeño, el reto de hoy, las
+  monedas que da y **cuánto queda hasta medianoche**. Cuando lo cumples,
+  enseña el de mañana.
+- **Por dentro, el botín de la semana**: lo cobrado y lo que queda de las 290
+  monedas en juego (20 por reto y 150 por la semana entera), y la racha en
+  casillas junto a la mejor.
+- En el móvil, las casillas se desplazan de lado y se abren en la de hoy.
+
 ## 2026-09-15 · Las repeticiones de DESATADO se ven como se jugaron
 
 - **La Q pedida antes de tiempo ya no tuerce la repetición.** El mordisco

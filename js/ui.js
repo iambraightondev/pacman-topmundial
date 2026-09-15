@@ -494,15 +494,74 @@
     },
 
     /* ------------------------------------------------------
-     * DAILY: el reto de hoy en la portada
+     * DAILY: LA CARTILLA
      *
-     * Un recuadro con el reto que toca, su barra de progreso y cuántos llevas
-     * de la semana. Se pulsa y se abre la semana entera.
+     * La semana es una cartilla de siete casillas con un fantasma por día.
+     * Cumplir el reto es CAZARLO: se pone azul, como cuando te comes un
+     * energizante, y le cae el sello. Debajo va el botín de la semana, que es
+     * lo que hace que valga la pena volver mañana y no solo jugar hoy.
      *
-     * Va en la portada y NO en el cuartel a propósito: el reto es lo que hace
-     * volver mañana, y algo que hay que ir a buscar a un panel deja de
-     * existir. Aquí lo lees de camino a JUGAR, sin buscarlo.
+     * Antes era una línea de texto gris en la portada y siete filas iguales
+     * en dos columnas por dentro: no se veía ni lo que se ganaba ni cuánto
+     * quedaba, y lo que venía estaba tan apagado que no daba ganas.
+     *
+     * El recuadro va en la portada y NO en el cuartel a propósito: el reto es
+     * lo que hace volver mañana, y algo que hay que ir a buscar a un panel
+     * deja de existir. Aquí lo lees de camino a JUGAR, sin buscarlo.
      * ------------------------------------------------------ */
+
+    /* Cómo está la casilla del día i: 'hecho' (cazado), 'hoy' (el que se
+     * puede cumplir), 'perdido' (pasó sin cumplirse) o 'futuro' */
+    dailyEstado: function (D, est, i) {
+      if (est.h[i]) return 'hecho';
+      if (i === D.diaSemana()) return 'hoy';
+      return (i < D.diaSemana()) ? 'perdido' : 'futuro';
+    },
+
+    /* El fantasma de cada día: los cuatro de siempre, en su orden (BLINKY el
+     * lunes, PINKY el martes...). Dibujado con Sprites.drawGhost, el mismo de
+     * la partida. Cazado va azul; lo que aún no se ha abierto, en silueta; lo
+     * perdido, en gris. */
+    dailyColor: function (i) { return CFG.GHOSTS[i % CFG.GHOSTS.length].color; },
+
+    pintarFantasmaDaily: function (cv, i, estado) {
+      var S = window.PM.Sprites;
+      var c = cv.getContext('2d');
+      if (!c || !S) return;
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.save();
+      c.translate(cv.width / 2, cv.height / 2 + cv.height / 32);
+      var k = cv.width / 16;
+      c.scale(k, k);
+      S.drawGhost(c, 0, 0, CFG.DIR.RIGHT, i % CFG.GHOSTS.length,
+        estado === 'hecho' ? 'fright' : 'normal', 0, false);
+      c.restore();
+      if (estado === 'futuro' || estado === 'perdido') {
+        c.save();
+        c.globalCompositeOperation = 'source-atop';
+        c.fillStyle = estado === 'futuro' ? '#1f2046' : '#333';
+        c.fillRect(0, 0, cv.width, cv.height);
+        c.restore();
+      }
+    },
+
+    /* Un color de la paleta con transparencia (para los brillos del de hoy) */
+    dailyRgba: function (hex, a) {
+      var n = parseInt(String(hex).slice(1), 16);
+      return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' +
+        (n & 255) + ',' + a + ')';
+    },
+
+    /* Lo que queda hasta la medianoche DE TU RELOJ (el DAILY va en hora local) */
+    dailyQueda: function (conSegundos) {
+      var n = new Date(), m = new Date(n.getTime());
+      m.setHours(24, 0, 0, 0);
+      var s = Math.max(0, Math.floor((m - n) / 1000));
+      var dd = function (x) { return (x < 10 ? '0' : '') + x; };
+      return dd(Math.floor(s / 3600)) + ':' + dd(Math.floor(s / 60) % 60) +
+        (conSegundos ? ':' + dd(s % 60) : '');
+    },
+
     buildDailyBox: function () {
       var self = this;
       var b = document.createElement('button');
@@ -513,33 +572,76 @@
         self.showDaily();
       });
 
-      var cab = document.createElement('div');
-      cab.className = 'daily-head';
-      this.dailyTitle = document.createElement('span');
-      this.dailyTitle.className = 'daily-title';
-      cab.appendChild(this.dailyTitle);
-      this.dailyCount = document.createElement('small');
-      this.dailyCount.className = 'daily-count';
-      cab.appendChild(this.dailyCount);
-      b.appendChild(cab);
+      /* las siete casillas en pequeño */
+      var fila = document.createElement('div');
+      fila.className = 'daily-tiles';
+      this.dailyTiles = [];
+      for (var i = 0; i < CFG.DAILY.DIAS; i++) {
+        var t = document.createElement('div');
+        t.className = 'daily-tile';
+        var cv = document.createElement('canvas');
+        cv.width = 40; cv.height = 40;
+        t.appendChild(cv);
+        var lb = document.createElement('span');
+        lb.textContent = CFG.DAILY.DIA_CORTO[i];
+        t.appendChild(lb);
+        var tick = document.createElement('span');
+        tick.className = 'daily-tick';
+        tick.textContent = '✓';
+        t.appendChild(tick);
+        fila.appendChild(t);
+        this.dailyTiles.push({ el: t, cv: cv, estado: '' });
+      }
+      b.appendChild(fila);
 
       this.dailyDesc = document.createElement('div');
       this.dailyDesc.className = 'daily-desc';
       b.appendChild(this.dailyDesc);
 
-      var barra = document.createElement('div');
+      var pie = document.createElement('div');
+      pie.className = 'daily-foot';
+      var barra = document.createElement('span');
       barra.className = 'daily-bar';
-      this.dailyFill = document.createElement('div');
+      this.dailyFill = document.createElement('span');
       this.dailyFill.className = 'daily-fill';
       barra.appendChild(this.dailyFill);
-      b.appendChild(barra);
-
-      this.dailyFoot = document.createElement('small');
-      this.dailyFoot.className = 'daily-foot';
-      b.appendChild(this.dailyFoot);
+      pie.appendChild(barra);
+      this.dailyVal = document.createElement('span');
+      this.dailyVal.className = 'daily-val';
+      pie.appendChild(this.dailyVal);
+      var mon = document.createElement('span');
+      mon.className = 'daily-coin';
+      var mcv = document.createElement('canvas');
+      mcv.width = 24; mcv.height = 24;
+      this.pintarMoneda(mcv);
+      mon.appendChild(mcv);
+      mon.appendChild(document.createTextNode('+' + CFG.TIENDA.POR_RETO));
+      pie.appendChild(mon);
+      this.dailyClock = document.createElement('span');
+      this.dailyClock.className = 'daily-clock';
+      pie.appendChild(this.dailyClock);
+      b.appendChild(pie);
 
       this.dailyBox = b;
+
+      /* La cuenta atrás corre sola mientras se ve la portada, y si el reloj
+       * pasa la medianoche con el juego abierto, la cartilla cambia de día
+       * sin tener que salir y volver a entrar. */
+      if (!this.dailyTimer) {
+        this.dailyTimer = setInterval(function () {
+          if (!self.dailyBox || !self.dailyBox.offsetParent) return;
+          var D = window.PM.Daily;
+          if (D && D.hoyISO() !== self.dailyDia) self.refreshDaily();
+          else self.tickDaily();
+        }, 1000);
+      }
       return b;
+    },
+
+    tickDaily: function () {
+      if (!this.dailyClock) return;
+      this.dailyClock.textContent = (this.dailyHecho ? 'ABRE ' : 'CIERRA ') +
+        this.dailyQueda(false);
     },
 
     /* Cómo se lee el progreso de un reto. Los de tiempo van en mm:ss.cc y
@@ -559,26 +661,46 @@
       var D = window.PM.Daily;
       if (!this.dailyBox || !D) return;
       var est = D.leer();
-      var i = D.diaSemana();
-      var p = D.progreso(i, est);
-      var hechos = D.cumplidos(est);
-      var racha = est.racha || 0;
+      var hoy = D.diaSemana();
+      var p = D.progreso(hoy, est);
+      this.dailyDia = D.hoyISO();
 
-      this.dailyTitle.textContent = 'RETO DE HOY';
-      this.dailyCount.textContent = hechos + '/' + CFG.DAILY.DIAS +
-        (racha > 0 ? ('  ·  RACHA ' + racha) : '');
+      for (var i = 0; i < this.dailyTiles.length; i++) {
+        var t = this.dailyTiles[i];
+        var e = this.dailyEstado(D, est, i);
+        t.el.className = 'daily-tile ' + e + (i === hoy ? ' es-hoy' : '');
+        t.el.style.borderColor = (i === hoy && !est.h[i]) ? this.dailyColor(i) : '';
+        t.el.style.color = (i === hoy && !est.h[i]) ? this.dailyColor(i) : '';
+        t.el.style.background = (i === hoy && !est.h[i])
+          ? this.dailyRgba(this.dailyColor(i), 0.1) : '';
+        if (t.estado !== e) { this.pintarFantasmaDaily(t.cv, i, e); t.estado = e; }
+      }
 
+      var color = this.dailyColor(hoy);
+      this.dailyBox.style.setProperty('--dc', color);
       if (!p) { this.dailyDesc.textContent = ''; return; }
-      this.dailyDesc.textContent = p.reto.desc;
-      this.dailyDesc.style.color = p.hecho ? '#00ff00' : CFG.DAILY.COLOR;
-      this.dailyFill.style.width = Math.round(p.pct * 100) + '%';
-      this.dailyFill.style.background = p.hecho ? '#00ff00' : CFG.DAILY.COLOR;
+      this.dailyHecho = p.hecho;
 
-      var donde = p.reto.modo ? ('EN ' + this.dailyModoName(p.reto.modo))
-                              : 'EN CUALQUIER MODO';
-      this.dailyFoot.textContent = p.hecho
-        ? 'CUMPLIDO  ·  MAÑANA HAY OTRO'
-        : (donde + '  ·  ' + this.dailyValor(p.reto, p.valor));
+      if (p.hecho) {
+        /* Cumplido: lo que toca ahora es enseñar el de mañana, que es lo que
+         * hace volver. El domingo no hay mañana en esta semana. */
+        var man = D.retos()[hoy + 1];
+        this.dailyDesc.textContent = 'CAZADO · ' +
+          (man ? ('MAÑANA: ' + man.desc) : 'EL LUNES, SEMANA NUEVA');
+        this.dailyDesc.style.color = '#00ff00';
+        this.dailyVal.textContent = '+' + CFG.DAILY.XP + ' EXP';
+        this.dailyVal.style.color = '#00ff00';
+      } else {
+        this.dailyDesc.textContent = p.reto.desc;
+        this.dailyDesc.style.color = '';
+        this.dailyVal.textContent = (p.reto.modo
+          ? ('EN ' + this.dailyModoName(p.reto.modo) + ' · ') : '') +
+          this.dailyValor(p.reto, p.valor);
+        this.dailyVal.style.color = '';
+      }
+      this.dailyFill.style.width = Math.round(p.pct * 100) + '%';
+      this.dailyFill.style.background = p.hecho ? '#00ff00' : color;
+      this.tickDaily();
     },
 
     /* Nombre del modo de un reto, tal cual se enseña */
@@ -603,17 +725,41 @@
       h.textContent = 'DAILY';
       o.appendChild(h);
 
+      /* cabecera: la semana y cuántos van, y a la derecha la racha */
+      var cab = document.createElement('div');
+      cab.className = 'daily-cab';
       this.dailySub = document.createElement('div');
-      this.dailySub.className = 'note';
-      o.appendChild(this.dailySub);
-
-      this.dailyList = document.createElement('div');
-      this.dailyList.className = 'badge-list daily-list';
-      o.appendChild(this.dailyList);
-
+      this.dailySub.className = 'daily-sub';
+      cab.appendChild(this.dailySub);
       this.dailyRacha = document.createElement('div');
-      this.dailyRacha.className = 'lobby-status';
-      o.appendChild(this.dailyRacha);
+      this.dailyRacha.className = 'daily-racha';
+      cab.appendChild(this.dailyRacha);
+      o.appendChild(cab);
+
+      /* las siete casillas; en pantallas estrechas se desplazan de lado */
+      this.dailyScroll = document.createElement('div');
+      this.dailyScroll.className = 'daily-scroll';
+      this.dailyList = document.createElement('div');
+      this.dailyList.className = 'daily-grid';
+      this.dailyScroll.appendChild(this.dailyList);
+      o.appendChild(this.dailyScroll);
+
+      /* el botín: siete monedas de reto y el cofre de la semana redonda */
+      var botin = document.createElement('div');
+      botin.className = 'daily-botin';
+      this.dailyBotinCab = document.createElement('div');
+      this.dailyBotinCab.className = 'daily-botin-cab';
+      botin.appendChild(this.dailyBotinCab);
+      this.dailySlots = document.createElement('div');
+      this.dailySlots.className = 'daily-slots';
+      botin.appendChild(this.dailySlots);
+      o.appendChild(botin);
+
+      var regla = document.createElement('div');
+      regla.className = 'note';
+      regla.textContent = 'UNO POR DÍA, JUGANDO A LO QUE SEA · SOLO CUENTA EL DE HOY: ' +
+        'EL DE AYER YA PASÓ Y EL DE MAÑANA AÚN NO ESTÁ · LA RACHA SE ROMPE EL DÍA QUE NO CUMPLAS EL TUYO';
+      o.appendChild(regla);
 
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.classList.add('btn-primary');
@@ -624,6 +770,13 @@
     showDaily: function () {
       this.refreshDailyPanel();
       this.showPanel('daily');
+      /* En pantallas estrechas la cartilla se desplaza de lado: se abre con
+       * la casilla de hoy a la vista, no con el lunes. */
+      var sc = this.dailyScroll, hoyEl = this.dailyHoyCard;
+      if (sc && hoyEl && sc.scrollWidth > sc.clientWidth) {
+        sc.scrollLeft = Math.max(0, hoyEl.offsetLeft -
+          (sc.clientWidth - hoyEl.offsetWidth) / 2);
+      }
     },
 
     refreshDailyPanel: function () {
@@ -632,67 +785,112 @@
       var est = D.leer();
       var hoy = D.diaSemana();
       var sem = D.semanaId();
+      var retos = D.retos();
+      var hechos = D.cumplidos(est);
+      var TC = CFG.TIENDA;
+      var self = this;
+      var mk = function (tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      };
 
-      this.dailySub.textContent =
-        'SIETE RETOS, UNO POR DÍA · SE CUMPLEN JUGANDO A LO QUE SEA, NO SON UN ' +
-        'MODO APARTE · SOLO CUENTA EL DE HOY: EL DE AYER YA PASÓ Y EL DE MAÑANA ' +
-        'AÚN NO ESTÁ · ' + D.cumplidos(est) + '/' + CFG.DAILY.DIAS +
-        ' CUMPLIDOS ESTA SEMANA';
+      this.dailySub.textContent = 'SEMANA DEL ' + D.fmtFecha(D.fechaDe(sem, 0)) +
+        ' AL ' + D.fmtFecha(D.fechaDe(sem, CFG.DAILY.DIAS - 1)) + ' · ' +
+        hechos + ' DE ' + CFG.DAILY.DIAS + (hechos === 1 ? ' CAZADO' : ' CAZADOS');
+
+      /* la racha en casillas: las llenas son la actual, las marcadas llegan
+       * hasta la mejor (hasta siete; más allá se lee en el número) */
+      var racha = est.racha || 0, mejor = est.mejor || 0;
+      this.dailyRacha.innerHTML = '';
+      this.dailyRacha.appendChild(mk('span', null, 'RACHA'));
+      this.dailyRacha.appendChild(mk('b', null, String(racha)));
+      for (var r = 0; r < CFG.DAILY.DIAS; r++) {
+        this.dailyRacha.appendChild(mk('i', 'daily-pip' +
+          (r < racha ? ' on' : (r < mejor ? ' mejor' : ''))));
+      }
+      this.dailyRacha.appendChild(mk('span', 'daily-mejor', 'MEJOR ' + mejor));
 
       this.dailyList.innerHTML = '';
+      this.dailyHoyCard = null;
       for (var i = 0; i < CFG.DAILY.DIAS; i++) {
         var p = D.progreso(i, est);
         if (!p) continue;
-        var caducado = D.caducado(i, est);
-        var fila = document.createElement('div');
-        fila.className = 'badge-row daily-row' +
-          (p.hecho ? ' got' : (p.abierto ? '' : ' cerrado')) +
-          (i === hoy ? ' hoy' : '');
+        var e = this.dailyEstado(D, est, i);
+        var color = this.dailyColor(i);
+        var card = mk('div', 'daily-card ' + e);
+        if (e === 'hoy') {
+          card.style.setProperty('--dc', color);
+          card.style.setProperty('--dg', this.dailyRgba(color, 0.22));
+          card.style.setProperty('--dg2', this.dailyRgba(color, 0.12));
+        }
+        if (i === hoy) this.dailyHoyCard = card;
 
-        var dia = document.createElement('div');
-        dia.className = 'daily-day';
-        dia.textContent = CFG.DAILY.DIA_CORTO[i];
-        dia.style.color = p.hecho ? '#00ff00'
-          : p.abierto ? CFG.DAILY.COLOR : '#555';
-        fila.appendChild(dia);
+        var dia = mk('span', 'daily-card-dia', CFG.DAILY.DIA_CORTO[i]);
+        dia.appendChild(mk('small', null, D.fmtFecha(D.fechaDe(sem, i))));
+        card.appendChild(dia);
 
-        var txt = document.createElement('div');
-        txt.className = 'badge-text';
+        var cv = document.createElement('canvas');
+        cv.width = 104; cv.height = 104;
+        this.pintarFantasmaDaily(cv, i, e);
+        card.appendChild(cv);
 
-        var nm = document.createElement('div');
-        nm.className = 'badge-name daily-name';
-        nm.style.color = p.hecho ? '#00ff00' : (p.abierto ? '#ddd' : '#666');
-        nm.textContent = p.reto.desc;
-        txt.appendChild(nm);
+        card.appendChild(mk('span', 'daily-card-reto', p.reto.desc));
 
-        var st = document.createElement('div');
-        st.className = 'badge-state';
-        var donde = p.reto.modo
-          ? (' · EN ' + this.dailyModoName(p.reto.modo)) : '';
-        st.textContent = p.hecho ? ('CUMPLIDO · +' + CFG.DAILY.XP + ' EXP')
-          : p.abierto ? (this.dailyValor(p.reto, p.valor) + donde)
-          : caducado ? ('SE PASÓ · ERA EL ' + D.fmtFecha(D.fechaDe(sem, i)) + donde)
-          : ('SE ABRE EL ' + D.fmtFecha(D.fechaDe(sem, i)) + donde);
-        txt.appendChild(st);
+        var extra = mk('span', 'daily-card-extra');
+        if (e === 'hoy') {
+          var barra = mk('span', 'daily-bar');
+          var fill = mk('span', 'daily-fill');
+          fill.style.width = Math.round(p.pct * 100) + '%';
+          fill.style.background = color;
+          barra.appendChild(fill);
+          extra.appendChild(barra);
+        } else if (p.reto.modo) {
+          var chip = mk('span', 'daily-chip', 'EN ' + this.dailyModoName(p.reto.modo));
+          var m = CFG.ACH_MODOS[p.reto.modo];
+          chip.style.color = (e === 'perdido') ? '#555' : (m ? m.color : '#00ff00');
+          extra.appendChild(chip);
+        }
+        card.appendChild(extra);
 
-        var barra = document.createElement('div');
-        barra.className = 'daily-bar';
-        var fill = document.createElement('div');
-        fill.className = 'daily-fill';
-        fill.style.width = Math.round((p.abierto ? p.pct : 0) * 100) + '%';
-        fill.style.background = p.hecho ? '#00ff00' : CFG.DAILY.COLOR;
-        barra.appendChild(fill);
-        txt.appendChild(barra);
+        card.appendChild(mk('span', 'daily-card-estado',
+          e === 'hecho' ? ('+' + CFG.DAILY.XP + ' EXP · +' + TC.POR_RETO)
+          : e === 'hoy' ? ((p.reto.modo ? 'EN ' + this.dailyModoName(p.reto.modo) + ' · ' : '') +
+                           this.dailyValor(p.reto, p.valor))
+          : e === 'perdido' ? 'SE PASÓ'
+          : ('ABRE EL ' + CFG.DAILY.DIA_CORTO[i])));
 
-        fila.appendChild(txt);
-        this.dailyList.appendChild(fila);
+        if (e === 'hecho') card.appendChild(mk('span', 'daily-sello', 'CAZADO'));
+        this.dailyList.appendChild(card);
       }
 
-      var racha = est.racha || 0, mejor = est.mejor || 0;
-      this.dailyRacha.textContent =
-        'RACHA: ' + racha + (racha === 1 ? ' DÍA' : ' DÍAS') +
-        '  ·  LA MEJOR: ' + mejor + (mejor === 1 ? ' DÍA' : ' DÍAS') +
-        '  ·  SE ROMPE EL DÍA QUE NO CUMPLAS EL TUYO';
+      /* el botín: lo cobrado y lo que queda en juego esta semana */
+      var total = CFG.DAILY.DIAS * TC.POR_RETO + TC.POR_SEMANA;
+      var cobrado = hechos * TC.POR_RETO + (est.sem ? TC.POR_SEMANA : 0);
+      this.dailyBotinCab.innerHTML = '';
+      this.dailyBotinCab.appendChild(mk('span', null, 'BOTÍN DE LA SEMANA'));
+      var cuenta = mk('span');
+      cuenta.appendChild(mk('b', null, String(cobrado)));
+      cuenta.appendChild(document.createTextNode(' DE ' + total + ' MONEDAS · ' +
+        CFG.DAILY.XP + ' EXP POR CASILLA'));
+      this.dailyBotinCab.appendChild(cuenta);
+
+      this.dailySlots.innerHTML = '';
+      for (var s = 0; s < CFG.DAILY.DIAS; s++) {
+        var es = this.dailyEstado(D, est, s);
+        var slot = mk('div', 'daily-slot' + (es === 'hecho' ? ' lleno' : (es === 'perdido' ? ' perdido' : '')));
+        if (es === 'hecho') {
+          var mcv = document.createElement('canvas');
+          mcv.width = 24; mcv.height = 24;
+          self.pintarMoneda(mcv);
+          slot.appendChild(mcv);
+        }
+        slot.appendChild(document.createTextNode(String(TC.POR_RETO)));
+        this.dailySlots.appendChild(slot);
+      }
+      this.dailySlots.appendChild(mk('div', 'daily-slot cofre' + (est.sem ? ' lleno' : ''),
+        'SEMANA +' + TC.POR_SEMANA));
     },
 
     /* ------------------------------------------------------

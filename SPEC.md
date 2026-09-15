@@ -1531,6 +1531,24 @@ you meet **while playing whatever you were going to play anyway**.
   achievements are untouched by it**: those counters live in the achievements
   store (`CFG.ACH_KEY`), and a progress reset must not take away something
   already earned.
+- **What it looks like: LA CARTILLA** (15 Sep, `UI.buildDailyBox` /
+  `UI.refreshDailyPanel`). The week is a card of seven squares, one ghost per
+  day in `CFG.GHOSTS` order (BLINKY on Monday, PINKY on Tuesday...), drawn with
+  `Sprites.drawGhost` like everything else. A cleared day is the ghost
+  **caught**: frightened blue plus a CAZADO stamp; today's glows in its ghost's
+  colour and bobs; days still to open are dark silhouettes, and missed ones
+  grey. The front-page box shows the seven squares small, today's challenge,
+  its bar, the `+POR_RETO` coins and a countdown to **local** midnight
+  (`CIERRA hh:mm`, or `ABRE hh:mm` once cleared, when the text switches to
+  tomorrow's challenge). Its 1 s timer only works while the box is on screen,
+  and if the date changes under it the card refreshes itself. Inside, below
+  the squares, the **week's loot**: seven `POR_RETO` slots and the
+  `POR_SEMANA` chest, so the 290 coins at stake are visible before they are
+  earned. Before this it was a grey line of text on the front page and seven
+  identical rows in two columns inside — nothing showed what you earn or how
+  long you have. The box may only grow ~25 px: at 1440×900 JUGAR already sits
+  at the bottom edge. On narrow screens the seven cards scroll sideways and
+  open centred on today.
 - It is celebrated through the **achievement band** (`achNotices`, titled
   `RETO CUMPLIDO`) rather than a channel of its own: they are the same kind of
   thing to the player, and two bands fighting over the same slot is exactly
