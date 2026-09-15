@@ -4381,7 +4381,73 @@
    * ============================================================ */
   Sprites.EFECTOS = EFX;
   Sprites.ACCESORIOS = ACC;
-  Sprites.admiteAccesorio = function (skin) { return !(INFO[skin] && INFO[skin].rara); };
+
+  /* ============================================================
+   * CRUCE: accesorios también en las EXTRAVAGANTES (15 sep)
+   *
+   * Los accesorios están dibujados para la cabeza de Pac-Man: un círculo de
+   * radio R en el centro del marco, con el ojo en (1,1; 3,7), la coronilla
+   * arriba y la barbilla abajo. Una extravagante tiene la cabeza en otro
+   * sitio y de otro tamaño, así que para cada una se apunta dónde tiene el
+   * OJO, cuánto mide su cabeza respecto a la de Pac-Man (k) y, si hace falta,
+   * dónde está su CORONILLA y su CUELLO. Con eso cada accesorio se lleva a su
+   * zona: lo de la cara (gafas, parche, mostacho, cinta, auriculares) al ojo;
+   * los sombreros a la coronilla; la pajarita al cuello.
+   *
+   * Medido a ojo sobre cada dibujo, en el marco de la skin (f hacia delante,
+   * s hacia arriba). Una skin sin entrada aquí sigue sin admitir accesorios.
+   * ============================================================ */
+  var CABEZAS = {
+    hamburguesa: { ojo: [3.1, 2.3], k: 0.72, coronilla: [1.2, 5.3], cuello: [1.4, -4.8] },
+    gato:        { ojo: [2.4, 2.2], k: 0.46, coronilla: [1.6, 4.8], cuello: [1.6, -2.4] },
+    tiburon:     { ojo: [4.6, 1.7], k: 0.46, coronilla: [3.4, 3.2], cuello: [2.6, -2.8] },
+    planta:      { ojo: [3.0, 2.2], k: 0.66, coronilla: [1.9, 4.6], cuello: [1.9, -4.4] },
+    robot:       { ojo: [3.6, 2.1], k: 0.72, coronilla: [0.4, 4.6], cuello: [0.4, -5.3] },
+    trex:        { ojo: [1.0, 2.9], k: 0.66, coronilla: [-0.2, 5.6], cuello: [0.8, -4.0] },
+    ovni:        { ojo: [1.2, 3.8], k: 0.50, coronilla: [0.5, 5.2], cuello: [0.5, -2.2] },
+    cofre:       { ojo: [1.5, 2.8], k: 0.70, coronilla: [0.0, 5.2], cuello: [0.0, -4.0] },
+    dragon:      { ojo: [1.7, 2.6], k: 0.66, coronilla: [0.4, 5.2], cuello: [0.6, -4.2] },
+    calavera:    { ojo: [1.4, 2.9], k: 0.76, coronilla: [0.4, 6.3], cuello: [1.4, -4.3] },
+    bomba:       { ojo: [2.7, 1.9], k: 0.80, coronilla: [0.2, 5.4], cuello: [0.6, -5.6] },
+    abisal:      { ojo: [2.0, 2.8], k: 0.68, coronilla: [-0.4, 5.8], cuello: [1.0, -4.8] },
+    pinata:      { ojo: [4.0, 2.3], k: 0.42, coronilla: [3.4, 4.2], cuello: [2.8, -1.8] },
+    tostadora:   { ojo: [2.4, 1.4], k: 0.58, coronilla: [0.6, 3.1], cuello: [0.6, -4.4] },
+    gargola:     { ojo: [2.5, 1.9], k: 0.60, coronilla: [0.8, 4.9], cuello: [1.2, -3.4] },
+    pulpo:       { ojo: [3.1, 1.7], k: 0.64, coronilla: [-0.8, 6.2], cuello: [3.2, -1.8] },
+    momia:       { ojo: [2.7, 2.6], k: 0.66, coronilla: [1.6, 5.3], cuello: [1.6, -3.5] },
+    globo:       { ojo: [2.1, 2.2], k: 0.70, coronilla: [0.0, 4.8], cuello: [0.4, -4.4] },
+    bicefalo:    { ojo: [2.8, 5.4], k: 0.40, coronilla: [2.0, 7.3], cuello: [2.2, -6.4] },
+    cuy:         { ojo: [2.8, 1.2], k: 0.54, coronilla: [2.0, 4.1], cuello: [2.2, -2.4] },
+    llama:       { ojo: [2.1, 2.9], k: 0.38, coronilla: [1.2, 4.8], cuello: [1.0, 0.6] },
+    carro:       { ojo: [-2.2, 3.8], k: 0.60, coronilla: [-0.4, 5.8], cuello: [6.0, -0.4] },
+    oso:         { ojo: [2.0, 3.1], k: 0.70, coronilla: [-0.4, 6.0], cuello: [1.6, -3.3] },
+    galleta:     { ojo: [0.9, 2.9], k: 0.88, coronilla: [0.0, 6.2], cuello: [0.2, -6.0] },
+    vampiro:     { ojo: [2.9, 2.0], k: 0.70, coronilla: [1.4, 5.9], cuello: [1.6, -3.8] },
+    lobo:        { ojo: [-0.4, 4.3], k: 0.60, coronilla: [-1.2, 5.8], cuello: [1.0, -3.3] }
+  };
+  /* dónde va cada accesorio: por defecto, a la cara */
+  var ZONA_ACC = { acc_gorra: 'cabeza', acc_chistera: 'cabeza', acc_vikingo: 'cabeza',
+    acc_helice: 'cabeza', acc_pajarita: 'cuello' };
+  var OJO_PAC = [1.1, 3.7];
+
+  /* { x, y, k }: dónde poner el centro de la "cabeza de Pac-Man" y a qué
+   * escala, para esa skin y ese accesorio; null si va tal cual */
+  function anclaAccesorio(skin, acc) {
+    var c = CABEZAS[skin];
+    if (!c) return null;
+    var k = c.k, zona = ZONA_ACC[acc] || 'cara';
+    if (zona === 'cabeza' && c.coronilla) return { x: c.coronilla[0], y: c.coronilla[1] - k * R, k: k };
+    if (zona === 'cuello' && c.cuello) return { x: c.cuello[0] - k * 0.6, y: c.cuello[1] + k * (R - 0.2), k: k };
+    return { x: c.ojo[0] - k * OJO_PAC[0], y: c.ojo[1] - k * OJO_PAC[1], k: k };
+  }
+  Sprites.CABEZAS = CABEZAS;
+  Sprites.anclaAccesorio = anclaAccesorio;
+
+  /* ¿Se le ve un accesorio a esta skin? Las de forma de Pac-Man, siempre; las
+   * extravagantes, si tienen su cabeza apuntada arriba (todas, desde el 15 sep) */
+  Sprites.admiteAccesorio = function (skin) {
+    return !(INFO[skin] && INFO[skin].rara) || CABEZAS.hasOwnProperty(skin);
+  };
 
   Sprites.dibujarLook = function (ctx, x, y, dir, mouthPhase, color, skin, extra) {
     var e = extra || {};
@@ -4407,6 +4473,9 @@
       if (ac) {
         ctx.save();
         frame(ctx, x, y, d);
+        // en una extravagante, a su cabeza (ver CABEZAS)
+        var an = anclaAccesorio(skin, e.accesorio);
+        if (an) { ctx.translate(an.x, an.y); ctx.scale(an.k, an.k); }
         ac(ctx, o);
         ctx.restore();
       }

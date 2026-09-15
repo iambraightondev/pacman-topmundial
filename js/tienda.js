@@ -65,7 +65,7 @@
     CATEGORIAS: [
       { id: 'emote', name: 'EMOTES', nota: 'SE PONEN EN LAS TECLAS 1 A 6 DE LA PARTIDA' },
       { id: 'efecto', name: 'EFECTOS', nota: 'LO QUE DEJAS AL PASAR. SE LLEVA UNO' },
-      { id: 'accesorio', name: 'ACCESORIOS', nota: 'LO QUE LLEVAS PUESTO. SE LLEVA UNO Y SOLO LUCE EN SKINS CON FORMA DE PAC-MAN' },
+      { id: 'accesorio', name: 'ACCESORIOS', nota: 'LO QUE LLEVAS PUESTO. SE LLEVA UNO Y LUCE CON CUALQUIER SKIN' },
       { id: 'skin', name: 'SKINS', nota: 'EXTRAVAGANTES QUE SOLO SE CONSIGUEN AQUÍ' }
     ],
 

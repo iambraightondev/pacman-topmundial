@@ -18,6 +18,16 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
+**15 sep (noche) — cruce de aspectos (`pm-v60`).** Braighton pidió que todo
+combine con todo. Los efectos ya iban con cualquier skin; lo que faltaba eran
+los accesorios en las 26 extravagantes. Ahora cada una tiene su cabeza
+apuntada en `CABEZAS` (ojo, escala, coronilla, cuello) y cada accesorio va a
+su zona. Ajustado a ojo con hojas de las 26 con los 11 accesorios.
+**Límites conocidos:** el accesorio no sigue el meneo ni la mandíbula propios
+de cada skin, y en cabezas pequeñas (tiburón, llama, bicéfalo) se ve pequeño a
+tamaño de partida. **Si se crea una extravagante nueva, hay que darle su
+entrada en `CABEZAS`** o no llevará accesorio. `tests.html` 327/327.
+
 **15 sep (noche) — vestuario, segunda vuelta (`pm-v59`).** Tras verlo,
 Braighton pidió tres cosas y están hechas: mandíbula del TIBURÓN más fina
 (ahora el interior de la boca sigue a la mandíbula al abrirse), la pestaña

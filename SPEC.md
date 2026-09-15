@@ -1008,8 +1008,19 @@ approved 2026-09-15. Coins only, no real money.
   positions (`extra.s` = `Pacman.recorrido`, `back`), CHISPAS fires on turns
   (`extra.giro` = px since `Pacman.giroEn`), CONFETI on eating a ghost
   (`extra.confeti` = seconds since `Game.confetiTick[i]`). Accessories
-  (`Sprites.ACCESORIOS`) are drawn in the body frame on top, only when
-  `Sprites.admiteAccesorio(skin)` (not `rara`). No effect on icons.
+  (`Sprites.ACCESORIOS`) are drawn in the body frame on top. No effect on
+  icons.
+- **Cross-over** (15 Sep): every skin wears every accessory and effect.
+  Accessories are drawn for Pac-Man's head (circle of radius R at the frame
+  centre, eye at (1.1, 3.7)); each extravagant skin has an entry in
+  `CABEZAS` (in `js/skins.js`): its `ojo`, its head scale `k` and optionally
+  its `coronilla` and `cuello`, measured by eye in the frame (f forward, s up).
+  `anclaAccesorio(skin, acc)` returns the translate/scale for the accessory's
+  zone (`ZONA_ACC`: hats → crown, bow tie → neck, the rest → eye) and
+  `dibujarLook` applies it before drawing. `admiteAccesorio` is true for
+  Pac-Man-shaped skins and for any extravagant one listed in `CABEZAS` (all
+  26 today); a new extravagant skin needs its entry, or it shows no
+  accessory. Accessories do not follow a skin's own bob or jaw.
 - **Network** (`CFG.NET.PROTO` 9): party members carry `a`/`x`
   (`Party.me`), `gameOrder` passes them, `UI.lookDeRed` sanitises them into
   `opts.looks` → `Game.netLooks` → `Game.lookFor(i)`; spectators get `lk` in

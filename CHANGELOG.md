@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Todo combina con todo
+
+- **Las skins extravagantes ya llevan accesorios**: el tiburón con chistera,
+  la calavera con gafas, el carro con gorra... Cada una tiene su cabeza
+  apuntada, así que las gafas caen en su ojo, los sombreros en su coronilla
+  y la pajarita en su cuello.
+- Los efectos ya iban con cualquier skin: ahora se puede combinar skin,
+  color, accesorio y efecto sin ninguna excepción.
+
 ## 2026-09-15 · Vestuario, segunda vuelta
 
 - **Las skins se pueden clasificar por cómo se consiguen**: por nivel, por

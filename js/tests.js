@@ -6746,8 +6746,23 @@
         }
       });
     });
-    ok(S.admiteAccesorio('clasico') && !S.admiteAccesorio('calavera'),
-      'los accesorios solo en skins con forma de Pac-Man');
+    /* CRUCE (15 sep): los accesorios van con cualquier skin. Cada extravagante
+     * tiene apuntada su cabeza, y cada accesorio cae en su zona de ella. */
+    CFG.SKINS.forEach(function (sk) {
+      ok(S.admiteAccesorio(sk.id), sk.id + ' admite accesorios');
+      if (sk.rara) {
+        var c = S.anclaAccesorio(sk.id, 'acc_gafas'),
+            h = S.anclaAccesorio(sk.id, 'acc_chistera'),
+            p = S.anclaAccesorio(sk.id, 'acc_pajarita');
+        ok(c && h && p && c.k > 0 && c.k <= 1, sk.id + ' tiene su cabeza apuntada');
+        // dónde quedan de verdad: el ala del sombrero (R - 1) y el nudo de la pajarita (-R + 0,2)
+        var R = CFG.PAC_R;
+        ok(h.y + h.k * (R - 1) > p.y + p.k * (-R + 0.2),
+           sk.id + ': el sombrero va más arriba que la pajarita');
+      } else {
+        eq(S.anclaAccesorio(sk.id, 'acc_gafas'), null, sk.id + ': con forma de Pac-Man, tal cual');
+      }
+    });
     CFG.EMOTES_TIENDA.forEach(function (e) {
       S.drawEmote(ctx, 12, 20, e.id, '#ffff00', 33);
       S.drawPacFace(ctx, 12, 12, 7, '#ffff00', e.id);
@@ -6814,7 +6829,7 @@
       Tn.ganar(500);
       ok(Tn.comprar('oso').ok);
       ok(Sk.estado('oso').abierta, 'comprada, abierta');
-      ok(!window.PM.Sprites.admiteAccesorio('oso'), 'y es extravagante: sin accesorios');
+      ok(window.PM.Sprites.admiteAccesorio('oso'), 'y aunque es extravagante, admite accesorios');
     });
   });
 
