@@ -69,9 +69,14 @@
    *   team     colores de los compañeros (ESCUADRA)
    *   muerde   la Q está activa (las extravagantes abren la boca del todo)
    *   icono    dibujo quieto de menú o de vidas: sin estelas
+   *   efecto, accesorio   lo puesto de la TIENDA (js/skins.js, dibujarLook)
    * Las seis de siempre se dibujan aquí; el resto las registra js/skins.js
    * en Sprites.ARTE y se desvían antes de tocar nada. */
   Sprites.drawPacman = function (ctx, x, y, dir, mouthPhase, color, skin, extra) {
+    if (extra && (extra.efecto || extra.accesorio) && Sprites.dibujarLook) {
+      Sprites.dibujarLook(ctx, x, y, dir, mouthPhase, color, skin, extra);
+      return;
+    }
     if (skin && Sprites.ARTE && Sprites.ARTE.hasOwnProperty(skin) && Sprites.dibujarArte) {
       Sprites.dibujarArte(ctx, x, y, dir, mouthPhase, color, skin, extra);
       return;
@@ -424,6 +429,11 @@
    * escapan hacia arriba. Sin `tick` se pinta la pose quieta de siempre, que
    * es lo que quieren los avatares del PERFIL y las miniaturas. */
   Sprites.drawPacFace = function (ctx, x, y, r, color, id, tick) {
+    // las caras de los emotes de la TIENDA viven en js/skins.js
+    if (Sprites.CARAS_TIENDA && Sprites.CARAS_TIENDA[id] && Sprites.caraTienda) {
+      Sprites.caraTienda(ctx, x, y, r, color, id, tick);
+      return;
+    }
     var ink = '#000000';
     var vivo = (typeof tick === 'number');
     var t = vivo ? tick : 0;
@@ -661,7 +671,11 @@
    * sola. Lo que se salga del globo se recorta, para que una lágrima o un
    * corazón no acaben sueltos por el laberinto. */
   Sprites.drawEmote = function (ctx, x, y, emoteId, color, tick) {
-    var e = CFG.EMOTES[emoteId];
+    /* emoteId: el id de la cara ('risa', 'chulo'...) o, como antes, el
+     * índice en CFG.EMOTES */
+    var e = (typeof emoteId === 'string')
+      ? (CFG.EMOTE_IDS.indexOf(emoteId) !== -1 ? { id: emoteId } : null)
+      : CFG.EMOTES[emoteId];
     if (!e) return;
     var w = 22, h = 20, r = 7;
     var vivo = (typeof tick === 'number');

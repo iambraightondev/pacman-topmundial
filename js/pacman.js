@@ -41,6 +41,11 @@
      * al correr más (turbo, niveles altos) y se recoja al pararse. */
     this.huella = [];
     this.velPx = 0;
+    /* Lo andado en total y dónde fue el último giro, en la misma medida que
+     * la huella: los EFECTOS de la tienda dejan sus partículas en puntos fijos
+     * del camino (recorrido) y CHISPAS estalla al girar (giroEn). */
+    this.recorrido = 0;
+    this.giroEn = -1;
   };
 
   /* Cuánto cabe en la huella: ~1 tick por punto, sobra para la estela más
@@ -57,7 +62,14 @@
     if (ult) {
       var dd = Math.abs(this.x - ult.x) + Math.abs(this.y - ult.y);
       if (dd > HUELLA_SALTO) h.length = 0;
-      else if (dd < 0.25) { ult.d = this.dir; return; }
+      else if (dd < 0.25) {
+        if (ult.d !== this.dir) this.giroEn = this.recorrido;
+        ult.d = this.dir;
+        return;
+      } else {
+        this.recorrido += dd;
+        if (ult.d !== this.dir) this.giroEn = this.recorrido;
+      }
     }
     h.push({ x: this.x, y: this.y, d: this.dir });
     if (h.length > HUELLA_MAX) h.shift();

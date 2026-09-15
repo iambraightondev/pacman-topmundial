@@ -89,6 +89,9 @@
         n: cleanNick(s.nick1) || 'JUGADOR',
         c: s.pacColor || CFG.PLAYER_COLORS[0],
         k: s.skin1 || 'clasico',
+        // lo puesto de la TIENDA (solo si es tuyo: lo mira PM.Tienda)
+        a: window.PM.Tienda ? window.PM.Tienda.accesorio() : '',
+        x: window.PM.Tienda ? window.PM.Tienda.efecto() : '',
         g: this.ghostPick,
         t: now()
       };
@@ -230,7 +233,7 @@
 
     hello: function () {
       var m = this.me();
-      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, g: m.g };
+      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g };
     },
 
     /* Nombre, color o skin cambiados en PERFIL con la party ya abierta.
@@ -249,7 +252,7 @@
         if (this.st.status === 'dentro') this.sendRoster();
       } else {
         var m = this.selfEntry();
-        if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k) return;
+        if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k && m.a === yo.a && m.x === yo.x) return;
         window.PM.Net.send('phello', this.hello());
       }
       this.changed();
@@ -268,8 +271,8 @@
       var m = this.selfEntry();
       if (!m) return false;
       yo = yo || this.me();
-      var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k;
-      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.t = yo.t;
+      var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k || m.a !== yo.a || m.x !== yo.x;
+      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t;
       return cambia;
     },
 
@@ -389,6 +392,8 @@
       m.n = cleanNick(d.n) || 'JUGADOR';
       m.c = d.c;
       m.k = d.k;
+      m.a = (typeof d.a === 'string') ? d.a : '';
+      m.x = (typeof d.x === 'string') ? d.x : '';
       m.g = this.claim(sid, d.g);      // PAC-MAN VS.: el líder reparte
       m.t = now();
       this.sendRoster();
@@ -439,6 +444,7 @@
         if (usados[c]) c = CFG.PLAYER_COLORS[i];
         usados[c] = 1;
         out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico',
+                   a: m.a || '', x: m.x || '',
                    g: (m.g >= 0 && m.g < 4) ? m.g : -1 });
       }
       return out;

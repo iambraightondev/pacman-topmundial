@@ -2,6 +2,30 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · La TIENDA y quince skins nuevas
+
+- **TIENDA** en el cuartel y en PERFIL. Se compra con **monedas** que se
+  ganan jugando: **todos empiezan con 1.500**; cada partida de al menos un
+  minuto da 5, más 1 por cada 1.000 puntos (hasta 40 por partida); cada reto
+  del DAILY da 20 y la semana entera, 150. Al final de la partida sale lo
+  ganado.
+- **Qué se vende**: 7 **emotes** (150), 10 **efectos** (250), 11
+  **accesorios** (450) y 5 **skins de tienda** (1.500): CUY, LLAMA, CARRO, OSO
+  y GALLETA. Las de nivel, logro y temporada no se venden.
+- **Se lleva a la vez** una skin, un accesorio, un efecto y seis emotes: en
+  la tienda se elige qué cara va en cada tecla del 1 al 6. Los accesorios
+  solo se ven en skins con forma de Pac-Man.
+- **Online se ve lo de cada uno**: el accesorio, el efecto y los emotes
+  comprados. Hace falta recargar para jugar con quien ya tiene la versión
+  nueva.
+- **Diez extravagantes nuevas**, por logro: BOMBA, PEZ ABISAL, PIÑATA,
+  TOSTADORA, GÁRGOLA, PULPO, MOMIA, PEZ GLOBO y BICÉFALO; y HOMBRE LOBO, que
+  se gana jugando una noche de luna llena.
+- **Cada skin nueva muere a su manera** sin cambiar de dibujo (la bomba
+  explota, la galleta se come a mordiscos, la gárgola se desmorona, el pulpo
+  se derrite...) y en DESATADO hace su propia Q cuando acierta.
+- Las compras y las monedas viajan con tu cuenta, igual que los logros.
+
 ## 2026-09-14 · Un corte de conexión ya no acaba la partida
 
 - **El online se reconecta solo.** Antes, un bajón de un instante del Wi-Fi

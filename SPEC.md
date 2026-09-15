@@ -947,6 +947,63 @@ Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
 - Exchanged online in the handshake (`k` field → `Game.netSkins`); an old
   client that does not know an id draws `clasico`.
 
+**TIENDA** (`PM.Tienda`, `js/tienda.js`, `CFG.TIENDA`, panel `#tienda`),
+approved 2026-09-15. Coins only, no real money.
+
+- **Catalogue.** `CFG.EMOTES_TIENDA` (7, 150), `CFG.EFECTOS` (10, 250),
+  `CFG.ACCESORIOS` (11, 450) and the `grupo: 'tienda'` skins of `CFG.SKINS`
+  (5, 1 500: `cuy`, `llama`, `carro`, `oso`, `galleta`). Level, achievement
+  and season skins are never sold.
+- **The balance is never stored.** Two monotonic counters live in
+  `PM.Achievements` (so they reach `perfiles.logros` with no schema change):
+  `monedas` (total earned, `suma`) and one `c_<id>` per item (`mayor`, 1 =
+  bought, generated from the catalogue). `saldo() = INICIALES (1 500) +
+  monedas − Σ price of owned`. Merging accounts keeps the best of each side,
+  so it can neither duplicate coins nor lose a purchase; spending the same
+  coins offline on two devices leaves a negative balance that blocks buying.
+- **Earning.** `closeRun` pays `Tienda.dePartida(myPoints, timeTicks/60)`: 5 if
+  the run lasted ≥ 60 s (restarting must not pay) + 1 per 1 000 points, capped
+  at 40. `Daily.premiar` pays 20 per challenge and 150 for a full week.
+  `runSummary.monedas` is the difference in `ganadas()` since `newGame`, so it
+  includes DAILY coins earned during the run. Replays and spectating pay
+  nothing.
+- **Worn items** are settings of the device, like the skin: `acc1`, `efx1`,
+  `emotes1` (six face ids, keys 1..6). `Tienda.accesorio/efecto/emotes`
+  ignore anything not owned; `ponerEmote` swaps so a face never sits on two
+  keys. Only player 1 wears them locally.
+- **Drawing.** `Sprites.drawPacman` diverts to `Sprites.dibujarLook` when
+  `extra.efecto`/`extra.accesorio` is set: the effect (`Sprites.EFECTOS`) wraps
+  the skin via a `cuerpo()` callback and draws its particles at fixed path
+  positions (`extra.s` = `Pacman.recorrido`, `back`), CHISPAS fires on turns
+  (`extra.giro` = px since `Pacman.giroEn`), CONFETI on eating a ghost
+  (`extra.confeti` = seconds since `Game.confetiTick[i]`). Accessories
+  (`Sprites.ACCESORIOS`) are drawn in the body frame on top, only when
+  `Sprites.admiteAccesorio(skin)` (not `rara`). No effect on icons.
+- **Network** (`CFG.NET.PROTO` 9): party members carry `a`/`x`
+  (`Party.me`), `gameOrder` passes them, `UI.lookDeRed` sanitises them into
+  `opts.looks` → `Game.netLooks` → `Game.lookFor(i)`; spectators get `lk` in
+  `svista`. Emotes travel as the **face id** (`e: 'chulo'`); an index is still
+  accepted and translated (`Game.emoteId`).
+- **UI.** Tabs EMOTES / EFECTOS / ACCESORIOS / SKINS, the balance, one card per
+  item animated with `Skins.escena(..., {efecto, accesorio, emote})` and its
+  magnifier; buying takes two clicks (the first asks). Owned: PONER / QUITAR,
+  or PONER EN LA TECLA N with the six-key row above. The SKINS showcase has a
+  DE TIENDA filter whose button leads to the shop. PERFIL shows TU LOOK.
+
+**Tanda del 14 de septiembre** (in game since 2026-09-15): `bomba` (`vs:cazas`
+3), `abisal` (`nivelMax` 10), `pinata` (`dailySemana` 1), `tostadora`
+(`dailyRacha` 3), `gargola` (`lab:partidas` 5), `pulpo` (`muros` 25), `momia`
+(`limpios` 5), `globo` (`racha` 5), `bicefalo` (MAESTRO on `hab2`) and `lobo`
+(`pide: {luna: true}`: a game played at night, 18:00–06:00 local, within
+`CFG.LUNA.MARGEN_DIAS` of a mean-cycle full moon; `Skins.lunaLlena`, recorded
+as `lunallena` in `anotarTemporada`). Their Q and the shop skins' Q run for
+their own duration off `qDe(o, dura)`, fed by `extra.qSeg` = seconds since the
+last **hitting** Q (`Hab` state `qEdad`). **Own deaths:** `drawSkinDeath` passes
+`o.muerte` (0..1) to the 15 skins in `MUERTE_PROPIA`; `conMuerte()` renders the
+unchanged skin into an offscreen canvas and moves, burns, breaks or erases it
+(`bomba` and `galleta` do it inside their own drawing). The art is the one
+approved in the showcase artifact, extracted verbatim.
+
 **Emotes** (`CFG.EMOTES`): six **drawn Pac-Man faces**, not words —
 `risa`, `llanto`, `enfado`, `susto`, `guino`, `amor`. `Sprites.drawPacFace`
 renders them procedurally: body in the player's own colour plus black

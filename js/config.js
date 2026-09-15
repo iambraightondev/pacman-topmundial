@@ -462,6 +462,7 @@
    *   logro     — se abren con un contador de logros o una maestría (`pide`),
    *               jueguen al nivel que jueguen.
    *   temporada — se abren jugando en unas fechas; ganadas, se quedan.
+   *   tienda    — se compran con monedas (`precio`, js/tienda.js).
    * `rara` son las EXTRAVAGANTES: dejan la forma de Pac-Man y el comer es su
    * propio gesto (mandíbula, tapa, pan, rayo...). Se dibujan en js/skins.js;
    * las seis de siempre, en sprites.js. `gana` y `ve` son los textos de la
@@ -471,6 +472,7 @@
    *   { stat, meta, que }            contador de PM.Achievements >= meta
    *   { ruta: [...], maestria, que }  maestría >= esa en alguna de esas rutas
    *   { fecha: 'halloween'|'navidad' } jugar una partida en esas fechas
+   *   { luna: true }                  jugar una noche de luna llena (CFG.LUNA)
    * Las cifras salen de los contadores reales de los jugadores (13 sep):
    * una o dos personas la tienen al salir y el resto la ve cerca.
    *
@@ -555,6 +557,50 @@
       pide: { stat: 'muertes', meta: 250, que: 'MUERTES' },
       ve: 'CALAVERA DE CARICATURA QUE ABRE LA MANDÍBULA Y BOTA AL CORRER.' },
 
+    /* --- extravagantes de la tanda del 14 de septiembre (por logro) ---
+     * Aprobadas en la vitrina el 15 sep. Las cifras salen de los contadores
+     * reales de ese día. Cada una hace algo propio con una Q que acierta y
+     * tiene su propia muerte (js/skins.js). */
+    { id: 'bomba', name: 'BOMBA', grupo: 'logro', rara: true,
+      pide: { stat: 'vs:cazas', meta: 3, que: 'PAC-MAN CAZADOS LLEVANDO FANTASMA' },
+      ve: 'BOMBA NEGRA CON CARA ENFADADA: LA MEDIA ESFERA DE ABAJO ES LA MANDÍBULA Y LA MECHA CHISPORROTEA. AL MORIR, EXPLOTA.' },
+    { id: 'abisal', name: 'PEZ ABISAL', grupo: 'logro', rara: true,
+      pide: { stat: 'nivelMax', meta: 10, que: 'NIVEL MÁS ALTO EN UNA PARTIDA' },
+      ve: 'PEZ DE LAS PROFUNDIDADES CON COLMILLOS DE AGUJA Y UNA LUCECITA DE SU COLOR QUE MARCA HACIA DÓNDE VA.' },
+    { id: 'pinata', name: 'PIÑATA', grupo: 'logro', rara: true,
+      pide: { stat: 'dailySemana', meta: 1, que: 'SEMANA ENTERA DEL DAILY' },
+      ve: 'BURRITO DE PIÑATA DE PAPEL DE COLORES QUE DA SALTITOS. CON LA Q SUELTA CARAMELOS Y CONFETI.' },
+    { id: 'tostadora', name: 'TOSTADORA', grupo: 'logro', rara: true,
+      pide: { stat: 'dailyRacha', meta: 3, que: 'DÍAS SEGUIDOS CUMPLIENDO EL DAILY' },
+      ve: 'TOSTADORA RETRO DE SU COLOR: LA BOCA ES LA RANURA CON LAS RESISTENCIAS AL ROJO. CON LA Q SALTA UNA TOSTADA.' },
+    { id: 'gargola', name: 'GÁRGOLA', grupo: 'logro', rara: true,
+      pide: { stat: 'lab:partidas', meta: 5, que: 'PARTIDAS EN LABERINTOS' },
+      ve: 'CABEZA DE PIEDRA CON CUERNO, ALA PLEGADA Y UN OJO QUE BRILLA. CON LA Q ESCUPE POLVO Y PIEDRAS.' },
+    { id: 'pulpo', name: 'PULPO', grupo: 'logro', rara: true,
+      pide: { stat: 'muros', meta: 25, que: 'MUROS ATRAVESADOS CON LA E' },
+      ve: 'PULPO CON CUATRO TENTÁCULOS QUE ONDULAN DETRÁS Y UN PICO QUE COME. CON LA Q, CHORRO DE TINTA.' },
+    { id: 'momia', name: 'MOMIA', grupo: 'logro', rara: true,
+      pide: { stat: 'limpios', meta: 5, que: 'NIVELES SEGUIDOS SIN MORIR' },
+      ve: 'CABEZA VENDADA CON UN OJO QUE BRILLA Y DOS VENDAS SUELTAS AL VIENTO. CON LA Q, VENDA COMO LÁTIGO.' },
+    { id: 'globo', name: 'PEZ GLOBO', grupo: 'logro', rara: true,
+      pide: { stat: 'racha', meta: 5, que: 'FANTASMAS CON UN MISMO ENERGIZANTE (EN EQUIPO)' },
+      ve: 'PEZ REDONDO DE OJO ENORME Y LABIOS EN "O". CON LA Q SE INFLA CON LAS PÚAS DE PUNTA.' },
+    { id: 'bicefalo', name: 'BICÉFALO', grupo: 'logro', rara: true,
+      pide: { ruta: ['hab2'], maestria: 'maestro', que: 'MAESTRO EN DESATADO DÚO' },
+      ve: 'DOS CABEZAS DE CARÁCTER OPUESTO, EL LISTO Y EL BOBO, QUE MUERDEN POR TURNOS. CON LA Q, LAS DOS A LA VEZ.' },
+
+    /* --- de la TIENDA (1.500 monedas): extravagantes que no se ganan jugando --- */
+    { id: 'cuy', name: 'CUY', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'CUY REGORDETE CON PAÑUELO DE LUNARES DE SU COLOR. COME ROYENDO; CON LA Q DA UN SALTITO DE ALEGRÍA.' },
+    { id: 'llama', name: 'LLAMA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'LLAMA DE LANA CON BUFANDA DE SU COLOR QUE ONDEA. MASTICA; CON LA Q ESCUPE HACIA DELANTE.' },
+    { id: 'carro', name: 'CARRO', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'COCHECITO DE SU COLOR CON FARO, HUMITO Y RUEDAS QUE GIRAN. NO MUERDE; CON LA Q, ACELERÓN CON NITRO.' },
+    { id: 'oso', name: 'OSO', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'OSO PARDO BONACHÓN QUE BOTA AL CORRER. CON LA Q SACA UN TARRO DE MIEL CON DOS ABEJITAS.' },
+    { id: 'galleta', name: 'GALLETA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'GALLETA CON PEPITAS: LA BOCA ES UN MORDISCO QUE SE ABRE Y SE CIERRA. CON LA Q EXPLOTA EN MIGAS.' },
+
     /* --- de temporada --- */
     { id: 'calabaza', name: 'CALABAZA', grupo: 'temporada',
       pide: { fecha: 'halloween' },
@@ -565,6 +611,9 @@
     { id: 'vampiro', name: 'VAMPIRO', grupo: 'temporada', rara: true,
       pide: { fecha: 'halloween' },
       ve: 'COLMILLOS, OJO ROJO Y UNA CAPA QUE ONDEA CON EL FORRO DE SU COLOR.' },
+    { id: 'lobo', name: 'HOMBRE LOBO', grupo: 'temporada', rara: true,
+      pide: { luna: true },
+      ve: 'CABEZA DE LOBO CON HOCICO LARGO, OJO ÁMBAR Y COLMILLOS. CADA POCO LEVANTA LA CABEZA Y AÚLLA.' },
     { id: 'gorro', name: 'CLAUS-MAN', grupo: 'temporada',
       pide: { fecha: 'navidad' },
       ve: 'GORRO ROJO CON BORDE BLANCO Y LA BORLA COLGANDO.' }
@@ -575,6 +624,10 @@
     halloween: { desde: [10, 24], hasta: [10, 31], que: 'DEL 24 AL 31 DE OCTUBRE' },
     navidad:   { desde: [12, 20], hasta: [1, 6],   que: 'DEL 20 DE DICIEMBRE AL 6 DE ENERO' }
   };
+  /* HOMBRE LOBO: cuándo cuenta como luna llena (js/skins.js, lunaLlena).
+   * Un día y pico a cada lado del instante exacto (el cálculo es de ciclo
+   * medio y se desvía unas horas) y solo de noche, en la hora de quien juega. */
+  CFG.LUNA = { MARGEN_DIAS: 1.2, DESDE_H: 18, HASTA_H: 6 };
   /* Solo sirve para validar lo guardado; sale de la lista de arriba */
   CFG.SKIN_IDS = CFG.SKINS.map(function (sk) { return sk.id; });
 
@@ -619,6 +672,104 @@
   ];
   CFG.EMOTE_TICKS = 150;      // 2.5 s en pantalla
   CFG.EMOTE_COOLDOWN = 72;    // 1.2 s entre emotes (antispam)
+
+  /* ---------- TIENDA (aprobada el 15 de septiembre de 2026) ----------
+   * Se compra con MONEDAS que se ganan jugando. Nada de dinero de verdad.
+   *
+   * Qué se vende, por categoría y no por rareza: EMOTES 150, EFECTOS 250
+   * (lo que deja al pasar), ACCESORIOS 450 (lo que lleva puesto) y SKINS de
+   * tienda 1.500. Las de nivel, logro y temporada NO se venden.
+   *
+   * Todos empiezan con 1.500. Se gana 5 por partida (si dura un minuto: si no,
+   * se ganarían reiniciando) más 1 por cada 1.000 puntos, con un tope de 40 por
+   * partida; 20 por cada reto del DAILY y 150 por la semana entera.
+   *
+   * Se lleva a la vez UNA skin, UN accesorio, UN efecto y SEIS emotes (uno
+   * por tecla del 1 al 6). Los accesorios solo lucen en skins con forma de
+   * Pac-Man: en una extravagante flotarían fuera de su cara.
+   *
+   * Nada de esto es una tabla nueva en la nube: lo ganado y lo comprado son
+   * contadores de PM.Achievements (`monedas` y `c_<id>`), así que viajan a la
+   * cuenta con los logros y se juntan igual (lo mejor de cada lado). El saldo
+   * no se guarda: se calcula (1.500 + ganado − precio de lo comprado). */
+  CFG.TIENDA = {
+    INICIALES: 1500,
+    POR_PARTIDA: 5,
+    PARTIDA_MIN_S: 60,
+    POR_MIL: 1,
+    TOPE_PARTIDA: 40,
+    POR_RETO: 20,
+    POR_SEMANA: 150,
+    EMOTE_TECLAS: 6
+  };
+  /* Emotes de la tienda (las caras están en js/skins.js, caraEmote). Los seis
+   * de CFG.EMOTES son de todos. */
+  CFG.EMOTES_TIENDA = [
+    { id: 'dormido', name: 'DORMIDO', precio: 150,
+      ve: 'SE QUEDA FRITO: OJOS CERRADOS, CABEZA LADEADA Y TRES ZETAS QUE SE ESCAPAN.' },
+    { id: 'burla', name: 'BURLA', precio: 150,
+      ve: 'UN OJO APRETADO DE PÍCARO, LA CEJA ARQUEADA Y UN LENGÜETAZO QUE MENEA DE LADO.' },
+    { id: 'chulo', name: 'CHULO', precio: 150,
+      ve: 'MEWING DE MEME: MANDÍBULA DE ACERO, CEJA LEVANTADA Y EL DEDO EN LOS LABIOS.' },
+    { id: 'mareo', name: 'MAREO', precio: 150,
+      ve: 'OJOS EN ESPIRAL, BOCA ONDULADA Y ESTRELLITAS DANDO VUELTAS.' },
+    { id: 'ko', name: 'K.O.', precio: 150,
+      ve: 'OJOS EN X, LA LENGUA FUERA Y UN FANTASMITA QUE SE LE ESCAPA HACIA ARRIBA.' },
+    { id: 'jajaja', name: 'JAJAJA', precio: 150,
+      ve: 'SE PARTE DE RISA CON LOS OJOS APRETADOS Y LAS LÁGRIMAS SALTANDO.' },
+    { id: 'enserio', name: '¿EN SERIO?', precio: 150,
+      ve: 'PÁRPADOS A MEDIA ASTA, UNA CEJA LEVANTADA Y TRES PUNTITOS.' }
+  ];
+  /* Todas las caras que pueden ir en una tecla de emote (y por la red) */
+  CFG.EMOTE_IDS = CFG.EMOTES.concat(CFG.EMOTES_TIENDA).map(function (e) { return e.id; });
+  CFG.EFECTOS = [
+    { id: 'efx_corazones', name: 'CORAZONES', precio: 250,
+      ve: 'DEJA UNA FILA DE CORAZONCITOS POR SU CAMINO QUE SE ENCOGEN Y SE APAGAN.' },
+    { id: 'efx_notas', name: 'NOTAS', precio: 250,
+      ve: 'UNA FILA DE NOTAS MUSICALES POR DONDE PASA.' },
+    { id: 'efx_burbujas', name: 'BURBUJAS', precio: 250,
+      ve: 'BURBUJAS EN FILA DETRÁS QUE CRECEN Y REVIENTAN.' },
+    { id: 'efx_huellas', name: 'HUELLAS', precio: 250,
+      ve: 'PISADAS DE SU COLOR QUE SE BORRAN POCO A POCO Y DOBLAN LAS ESQUINAS CON ÉL.' },
+    { id: 'efx_chispas', name: 'CHISPAS', precio: 250,
+      ve: 'AL GIRAR EN UNA ESQUINA ESTALLA UN FOGONAZO CON CHISPAS Y ASCUAS. EN UN PASILLO LARGO NO HACE NADA.' },
+    { id: 'efx_confeti', name: 'CONFETI', precio: 250,
+      ve: 'AL COMERSE UN FANTASMA ESTALLA EN PAPELITOS, SERPENTINAS Y DESTELLOS.' },
+    { id: 'efx_estrellas', name: 'ESTRELLAS', precio: 250,
+      ve: 'ESTELA DE ESTRELLAS CON HALO QUE GIRAN Y TITILAN.' },
+    { id: 'efx_hojas', name: 'HOJAS', precio: 250,
+      ve: 'HOJAS DE OTOÑO QUE SE QUEDAN EN FILA GIRANDO.' },
+    { id: 'efx_nieve', name: 'NIEVE', precio: 250,
+      ve: 'COPOS DE NIEVE EN FILA QUE GIRAN Y SE DERRITEN.' },
+    { id: 'efx_rayos', name: 'RAYOS', precio: 250,
+      ve: 'AURA ELÉCTRICA SUAVE Y, DE VEZ EN CUANDO, RAYOS CORTOS QUE SALTAN DEL CUERPO.' }
+  ];
+  CFG.ACCESORIOS = [
+    { id: 'acc_gafas', name: 'GAFAS DE SOL', precio: 450,
+      ve: 'GAFAS DE PASTA CON CRISTAL AHUMADO Y UN REFLEJO QUE LAS CRUZA.' },
+    { id: 'acc_afiladas', name: 'GAFAS AFILADAS', precio: 450,
+      ve: 'GAFAS DE PANDILLA: CRISTAL NEGRO CON LA PUNTA MUY AFILADA Y REFLEJOS LILA.' },
+    { id: 'acc_bigote', name: 'MOSTACHO', precio: 450,
+      ve: 'MOSTACHO FRONDOSO QUE SUBE Y BAJA CON LA BOCA Y SE RETUERCE LAS PUNTAS.' },
+    { id: 'acc_auriculares', name: 'AURICULARES', precio: 450,
+      ve: 'DIADEMA POR ENCIMA DE LA CABEZA Y UN AURICULAR ROJO.' },
+    { id: 'acc_gorra', name: 'GORRA', precio: 450,
+      ve: 'GORRA AZUL CON LA VISERA HACIA DELANTE.' },
+    { id: 'acc_pajarita', name: 'PAJARITA', precio: 450,
+      ve: 'PAJARITA BLANCA DE LUNARES QUE SE MECE AL CORRER.' },
+    { id: 'acc_parche', name: 'PARCHE PIRATA', precio: 450,
+      ve: 'PARCHE NEGRO SOBRE EL OJO CON LA CINTA CRUZANDO LA CABEZA.' },
+    { id: 'acc_chistera', name: 'CHISTERA', precio: 450,
+      ve: 'SOMBRERO DE COPA CON LA CINTA DE SU COLOR.' },
+    { id: 'acc_vikingo', name: 'CASCO VIKINGO', precio: 450,
+      ve: 'CASCO DE METAL CON REMACHES Y DOS CUERNOS.' },
+    { id: 'acc_helice', name: 'GORRO DE HÉLICE', precio: 450,
+      ve: 'GORRITO DE CUATRO COLORES CON UNA HÉLICE QUE NO PARA.' },
+    { id: 'acc_ninja', name: 'CINTA NINJA', precio: 450,
+      ve: 'CINTA ROJA CON PLACA Y LAS PUNTAS ONDEANDO DETRÁS.' }
+  ];
+  CFG.EFECTO_IDS = CFG.EFECTOS.map(function (e) { return e.id; });
+  CFG.ACCESORIO_IDS = CFG.ACCESORIOS.map(function (e) { return e.id; });
 
   /* ---------- Maestrías (insignias por récord personal) ---------- */
   CFG.BADGES = [
@@ -1109,6 +1260,11 @@
     pac2Color: '#00ff00',         // color del jugador 2
     skin1: 'clasico',             // skin del jugador 1 (y propia online)
     skin2: 'clasico',             // skin del jugador 2
+    /* lo puesto de la TIENDA (solo el jugador 1: es lo tuyo). Vacío = nada.
+     * Que esté comprado se mira al usarlo (PM.Tienda), no aquí. */
+    acc1: '',                     // accesorio
+    efx1: '',                     // efecto
+    emotes1: 'risa,llanto,enfado,susto,guino,amor',   // las caras de las teclas 1..6
     avatar: 'pac',                // avatar del perfil
     livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
     vsGhost2: -1,                 // PAC-MAN VS. en local: fantasma del J2 (-1 = Pac-Man)
@@ -1325,8 +1481,10 @@
      * cambia la forma de lo que viaja: la 6 pasó el marcador de PAC-MAN VS.
      * de un número suelto a uno por cazador; la 7 trae el modo DESATADO
      * (el 'hab' del saludo y los eventos de poder); la 8, CACERÍA (el
-     * 'caza' de la lista y del arranque, y el reloj del poder en la foto). */
-    PROTO: 8,
+     * 'caza' de la lista y del arranque, y el reloj del poder en la foto);
+     * la 9, la TIENDA (el emote viaja por su id y no por su posición, y cada
+     * jugador lleva su accesorio y su efecto en el saludo). */
+    PROTO: 9,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

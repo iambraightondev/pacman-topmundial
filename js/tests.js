@@ -3408,9 +3408,10 @@
     var legado = ['clasico', 'sombra', 'ojos', 'neon', 'pixel', 'aro'];
     eq(CFG.SKIN_IDS.length, CFG.SKINS.length, 'SKIN_IDS sale de la lista');
     CFG.SKINS.forEach(function (sk) {
-      ok(['nivel', 'logro', 'temporada'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
+      ok(['nivel', 'logro', 'temporada', 'tienda'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
       if (legado.indexOf(sk.id) === -1) ok(S.ARTE.hasOwnProperty(sk.id), sk.id + ': tiene dibujo');
-      if (sk.grupo !== 'nivel') ok(!!sk.pide, sk.id + ': dice qué pide');
+      if (sk.grupo === 'tienda') ok(sk.precio > 0 && !sk.pide, sk.id + ': se compra, no se gana');
+      else if (sk.grupo !== 'nivel') ok(!!sk.pide, sk.id + ': dice qué pide');
       if (sk.pide && sk.pide.stat) {
         ok(window.PM.Achievements.STATS.hasOwnProperty(sk.pide.stat),
            sk.id + ': su contador (' + sk.pide.stat + ') existe');
@@ -6426,6 +6427,228 @@
     G.newGame({ players: 1, caza: true, hab: true });
     ok(G.hab && !G.caza, 'con los poderes puestos no hay máquina');
     G.toMenu();
+  });
+
+  // ---------------------------------------------------------------
+  // TIENDA (15 sep): monedas, compras, lo puesto y lo que viaja
+  // ---------------------------------------------------------------
+  /* Aísla también los ajustes: la tienda escribe acc1, efx1 y emotes1 */
+  function conTienda(fn) {
+    var s = window.PM.settings;
+    var antes = { acc1: s.acc1, efx1: s.efx1, emotes1: s.emotes1, skin1: s.skin1 };
+    conLogrosLimpios(function (A) {
+      try { fn(window.PM.Tienda, A); }
+      finally { for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k]; }
+    });
+  }
+
+  test('la tienda empieza con 1.500 monedas y cobra lo que vale', function () {
+    conTienda(function (Tn) {
+      eq(Tn.saldo(), 1500, 'saldo inicial');
+      ok(!Tn.tiene('acc_gafas'), 'nada comprado');
+      ok(Tn.tiene('risa'), 'los seis emotes de siempre son de todos');
+      ok(Tn.comprar('acc_gafas').ok, 'se compra');
+      eq(Tn.saldo(), 1050, 'descuenta 450');
+      ok(Tn.tiene('acc_gafas'), 'y es tuyo');
+      ok(!Tn.comprar('acc_gafas').ok, 'no se compra dos veces');
+      eq(Tn.saldo(), 1050, 'ni se cobra dos veces');
+      ok(!Tn.comprar('cuy').ok, 'sin saldo para 1.500 no se compra');
+      ok(!Tn.tiene('cuy'), 'y no queda comprada');
+      ok(!Tn.comprar('clasico').ok, 'lo que no se vende no se compra');
+    });
+  });
+
+  test('las monedas de una partida: minuto, miles y tope', function () {
+    var Tn = window.PM.Tienda;
+    eq(Tn.dePartida(0, 20), 0, 'reiniciar sin jugar no paga');
+    eq(Tn.dePartida(0, 60), 5, 'un minuto: 5');
+    eq(Tn.dePartida(3999, 30), 3, 'corta pero con puntos: 1 por cada 1.000');
+    eq(Tn.dePartida(12500, 300), 17, '5 + 12');
+    eq(Tn.dePartida(999999, 900), 40, 'tope de 40');
+  });
+
+  test('el saldo se calcula: juntar dos aparatos no duplica ni borra compras', function () {
+    conTienda(function (Tn, A) {
+      Tn.ganar(300);
+      Tn.comprar('efx_nieve');                       // 1.800 - 250
+      eq(Tn.saldo(), 1550);
+      // la nube trae menos ganado y otra compra
+      A.merge({ monedas: 100, c_emo_x: 1, c_chulo: 1 });
+      eq(Tn.ganadas(), 300, 'lo ganado se queda con lo mejor, no se suma');
+      ok(Tn.tiene('efx_nieve') && Tn.tiene('chulo'), 'las compras de los dos lados');
+      eq(Tn.saldo(), 1400, '1.500 + 300 - 250 - 150');
+    });
+  });
+
+  test('lo puesto solo vale si es tuyo, y las teclas de emote no repiten cara', function () {
+    conTienda(function (Tn) {
+      var s = window.PM.settings;
+      s.acc1 = 'acc_chistera';
+      eq(Tn.accesorio(), '', 'un accesorio sin comprar no se lleva');
+      Tn.ganar(1000);
+      Tn.comprar('acc_chistera');
+      eq(Tn.accesorio(), 'acc_chistera', 'comprado, sí');
+      ok(!Tn.ponerEmote(0, 'chulo'), 'un emote sin comprar no va a una tecla');
+      Tn.comprar('chulo');
+      ok(Tn.ponerEmote(2, 'chulo'), 'comprado, sí');
+      eq(Tn.emoteDeTecla(2), 'chulo');
+      Tn.ponerEmote(0, 'chulo');                     // pasa de la 3 a la 1
+      var caras = Tn.emotes();
+      eq(caras[0], 'chulo', 'va a la tecla 1');
+      eq(caras[2], 'risa', 'la que había en la 1 pasa a la 3');
+      eq(caras.filter(function (c) { return c === 'chulo'; }).length, 1, 'nunca dos veces');
+      s.emotes1 = 'dormido,dormido,xx,,amor,amor';
+      caras = Tn.emotes();
+      eq(caras.length, 6, 'seis teclas');
+      for (var i = 0; i < caras.length; i++) {
+        ok(Tn.tiene(caras[i]), 'tecla ' + (i + 1) + ': una cara tuya');
+        eq(caras.indexOf(caras[i]), i, 'tecla ' + (i + 1) + ': sin repetir');
+      }
+    });
+  });
+
+  test('el emote viaja por su id y el número de antes sigue valiendo', function () {
+    conTienda(function (Tn) {
+      partida(2, 'guest');
+      G.emotes = [null, null];
+      G.applyEvt({ t: 'emote', w: 0, e: 'chulo' });
+      eq(G.emotes[0] && G.emotes[0].e, 'chulo', 'una cara de la tienda');
+      G.emotes = [null, null];
+      G.applyEvt({ t: 'emote', w: 0, e: 1 });
+      eq(G.emotes[0] && G.emotes[0].e, 'llanto', 'la posición vieja se traduce');
+      G.emotes = [null, null];
+      G.applyEvt({ t: 'emote', w: 0, e: 'noexiste' });
+      eq(G.emotes[0], null, 'lo que no existe no se pinta');
+      G.toMenu();
+      Tn.ganar(500);
+      Tn.comprar('ko');
+      Tn.ponerEmote(3, 'ko');
+      var mandados = [];
+      partida(2, 'guest');
+      var viejo = G.netSend;
+      G.netSend = function (t, d) { mandados.push(d); };
+      try {
+        G.emoteCooldown = 0;
+        G.sendEmote(3);
+      } finally { G.netSend = viejo; }
+      eq(mandados.length && mandados[0].e, 'ko', 'la tecla 4 manda la cara que lleva');
+      G.toMenu();
+    });
+  });
+
+  test('accesorio y efecto viajan en el saludo y se pintan en la partida', function () {
+    conTienda(function (Tn) {
+      Tn.ganar(2000);
+      Tn.comprar('acc_gafas');
+      Tn.comprar('efx_rayos');
+      Tn.poner('accesorio', 'acc_gafas');
+      Tn.poner('efecto', 'efx_rayos');
+      var me = window.PM.Party.me();
+      eq(me.a, 'acc_gafas', 'el accesorio va en el saludo');
+      eq(me.x, 'efx_rayos', 'y el efecto');
+      var UI = window.PM.UI;
+      eq(UI.lookDeRed({ a: 'acc_inventado', x: 'efx_rayos' }).a, '', 'lo desconocido no se pinta');
+      G.newGame({ players: 2, net: 'host', names: ['A', 'B'],
+        looks: [{ a: '', x: '' }, { a: 'acc_gafas', x: 'efx_rayos' }] });
+      var ex = G.pacExtra(G.pacs[1], 1);
+      eq(ex.accesorio, 'acc_gafas');
+      eq(ex.efecto, 'efx_rayos');
+      eq(G.pacExtra(G.pacs[0], 0).accesorio, '', 'cada uno lo suyo');
+      G.toMenu();
+      partida(1);
+      eq(G.pacExtra(G.pacs[0], 0).efecto, 'efx_rayos', 'en local, lo tuyo');
+      G.toMenu();
+    });
+  });
+
+  test('efectos y accesorios se pintan sobre cualquier skin sin romper', function () {
+    var S = window.PM.Sprites;
+    var cv = document.createElement('canvas');
+    cv.width = 72; cv.height = 72;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    ['clasico', 'pixel', 'cometa', 'calavera', 'galleta'].forEach(function (skin) {
+      CFG.EFECTOS.concat(CFG.ACCESORIOS).forEach(function (it) {
+        for (var d = 0; d < 4; d++) {
+          S.drawPacman(ctx, 12, 12, d, d % 3, '#ff69b4', skin, {
+            t: 2 + d, s: 140 + d * 7, giro: d * 9, confeti: d * 0.3,
+            back: function (dist) { return { x: 12 - dist, y: 12, d: 3 }; },
+            efecto: (it.id.indexOf('efx_') === 0) ? it.id : null,
+            accesorio: (it.id.indexOf('acc_') === 0) ? it.id : null
+          });
+        }
+      });
+    });
+    ok(S.admiteAccesorio('clasico') && !S.admiteAccesorio('calavera'),
+      'los accesorios solo en skins con forma de Pac-Man');
+    CFG.EMOTES_TIENDA.forEach(function (e) {
+      S.drawEmote(ctx, 12, 20, e.id, '#ffff00', 33);
+      S.drawPacFace(ctx, 12, 12, 7, '#ffff00', e.id);
+    });
+  });
+
+  test('las skins nuevas hacen su Q y su muerte propia sin romper', function () {
+    var S = window.PM.Sprites;
+    var cv = document.createElement('canvas');
+    cv.width = 72; cv.height = 72;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    ['bomba', 'abisal', 'lobo', 'pinata', 'tostadora', 'gargola', 'pulpo', 'momia', 'globo',
+     'bicefalo', 'cuy', 'llama', 'carro', 'oso', 'galleta'].forEach(function (id) {
+      ok(S.ARTE.hasOwnProperty(id), id + ': tiene dibujo');
+      for (var q = 0; q <= 1.5; q += 0.25) {
+        S.drawPacman(ctx, 12, 12, 3, 2, '#ffff00', id, { t: 3, muerde: q < 0.4, mordio: true, qSeg: q });
+      }
+      for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 12, 12, k / 10, '#ffff00', id, k % 4);
+    });
+  });
+
+  test('HOMBRE LOBO: luna llena, de noche, en la hora de quien juega', function () {
+    var Sk = window.PM.Skins;
+    ok(Sk.lunaLlena(new Date(2026, 8, 26, 22, 0)), 'el 26 de septiembre de 2026 por la noche');
+    ok(!Sk.lunaLlena(new Date(2026, 8, 26, 13, 0)), 'a mediodía no');
+    ok(!Sk.lunaLlena(new Date(2026, 8, 15, 22, 0)), 'el 15 no');
+    var p = Sk.proximaLuna(new Date(2026, 8, 15, 12, 0));
+    eq(p.getMonth(), 8, 'la próxima es en septiembre');
+    ok(p.getDate() >= 25 && p.getDate() <= 27, 'hacia el 26 (' + p.getDate() + ')');
+    conLogrosLimpios(function (A) {
+      ok(!Sk.estado('lobo').abierta, 'cerrada');
+      Sk.anotarTemporada(new Date(2026, 8, 26, 23, 30));
+      ok(Sk.estado('lobo').abierta, 'abierta tras jugar esa noche');
+    });
+  });
+
+  test('una partida y un reto del DAILY dan monedas, y salen en el resumen', function () {
+    conTienda(function (Tn) {
+      partida(1);
+      G.score = 7400;
+      G.timeTicks = 90 * 60;
+      // que el reto de hoy no se cumpla por el camino y sume sus 20
+      var Dl = window.PM.Daily, apunta = Dl.apunta;
+      Dl.apunta = function () { return []; };
+      try { G.closeRun(); } finally { Dl.apunta = apunta; }
+      eq(Tn.ganadas(), 12, '5 + 7');
+      eq(G.runSummary.monedas, 12, 'al resumen');
+      eq(G.runSummary.saldo, 1512);
+      G.toMenu();
+      conDaily(function (Dy) {
+        var antes = Tn.ganadas();
+        Dy.premiar(Dy.leer());
+        eq(Tn.ganadas() - antes, CFG.TIENDA.POR_RETO, '20 por el reto');
+      });
+    });
+  });
+
+  test('las skins de tienda se abren comprándolas', function () {
+    conTienda(function (Tn) {
+      var Sk = window.PM.Skins;
+      ok(!Sk.estado('oso').abierta, 'sin comprar, cerrada');
+      eq(Sk.estado('oso').chip, 'TIENDA');
+      Tn.ganar(500);
+      ok(Tn.comprar('oso').ok);
+      ok(Sk.estado('oso').abierta, 'comprada, abierta');
+      ok(!window.PM.Sprites.admiteAccesorio('oso'), 'y es extravagante: sin accesorios');
+    });
   });
 
   // ---------------------------------------------------------------

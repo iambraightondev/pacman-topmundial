@@ -7,11 +7,32 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **14 de septiembre de 2026**.
+Última puesta al día: **15 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**15 sep — TIENDA y 15 skins nuevas, SUBIDO (`pm-v48`, protocolo de red 9).**
+Braighton aprobó todo lo de la vitrina y pidió lanzarlo. Qué hay y qué mirar:
+
+- **Tienda con monedas** (sin dinero real): 1.500 iniciales; 5 por partida
+  de al menos un minuto + 1 por cada 1.000 puntos (tope 40); 20 por reto del
+  DAILY y 150 por semana. Emotes 150, efectos 250, accesorios 450, skins de
+  tienda 1.500. **Decisión mía, por avisar:** los 5 de la partida solo si dura
+  un minuto; si no, reiniciar sin jugar era la forma más rápida de ganar.
+- **No hay tabla nueva en Supabase**: lo ganado y lo comprado son contadores
+  de logros (`monedas`, `c_<id>`) y el saldo se calcula. Detalle en SPEC
+  (*TIENDA*).
+- **La Q de las skins nuevas solo sale si acierta**, como se decidió para
+  DRAGÓN, COFRE y OVNI.
+- **HOMBRE LOBO**: luna llena calculada por ciclo medio (sin servidor), de
+  noche. La próxima, hacia el 26 de septiembre.
+- **Por mirar jugando**: que los efectos no molesten en partidas de cuatro,
+  que el accesorio se lea a tamaño real, y el equilibrio de precios (con 1.500
+  iniciales se compra una skin de tienda el primer día: aviso ya dado).
+- Pruebas: `tests.html` 319/319 con el almacenamiento limpio; Node, los 4 de
+  siempre.
 
 **14 sep (noche) — producción en `pm-v47`.** Dos arreglos online, subidos:
 
@@ -27,7 +48,8 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
   reproducir (servidor estable 4 min, sin excepciones en partidas simuladas),
   así que la hipótesis es un bajón de red de uno de los dos.
 
-**Pendiente de aprobación en la vitrina**
+**(Ya aprobado y subido el 15 sep; se deja por el historial.) Lo que estaba
+pendiente de aprobación en la vitrina**
 (<https://claude.ai/code/artifact/20184d7f-a037-40fb-913d-feb53f81ef27>):
 las 10 extravagantes nuevas (por logro; HOMBRE LOBO por luna llena) y la
 tienda: 1.500 monedas iniciales para todos, 5 + 1 por cada 1.000 puntos (máx.

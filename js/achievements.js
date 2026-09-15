@@ -50,8 +50,19 @@
     muertes:   'suma',   // vidas perdidas propias (CALAVERA)
     top10:     'mayor',  // 1 = se vio en el top 10 del TOP MUNDIAL (DORADO)
     halloween: 'mayor',  // 1 = jugó en Halloween (skins de temporada)
-    navidad:   'mayor'   // 1 = jugó en Navidad
+    navidad:   'mayor',  // 1 = jugó en Navidad
+    lunallena: 'mayor',  // 1 = jugó una noche de luna llena (HOMBRE LOBO)
+    /* TIENDA (js/tienda.js): monedas GANADAS en total, nunca el saldo. El
+     * saldo se calcula, así que juntar dos aparatos no puede duplicar dinero
+     * ni perder compras. */
+    monedas:   'suma'
   };
+  /* ...y una por cosa comprable: c_<id> = 1 si está comprada. Salen del
+   * catálogo, así que añadir algo a la tienda crea su contador solo. */
+  [CFG.EMOTES_TIENDA, CFG.EFECTOS, CFG.ACCESORIOS,
+   CFG.SKINS.filter(function (sk) { return sk.grupo === 'tienda'; })].forEach(function (lista) {
+    (lista || []).forEach(function (it) { BASE['c_' + it.id] = 'mayor'; });
+  });
 
   /* Clave de un contador: la global es el nombre pelado, la de un modo va
    * con su prefijo. Es la misma cuenta en los dos sitios. */

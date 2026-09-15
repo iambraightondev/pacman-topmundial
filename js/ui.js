@@ -107,7 +107,24 @@
     if (key === 'avatar') {
       return CFG.AVATAR_IDS.indexOf(value) !== -1 ? value : def;
     }
+    /* lo puesto de la TIENDA: aquí solo se mira que exista; que sea tuyo lo
+     * mira PM.Tienda al usarlo */
+    if (key === 'acc1') return (value === '' || CFG.ACCESORIO_IDS.indexOf(value) !== -1) ? value : def;
+    if (key === 'efx1') return (value === '' || CFG.EFECTO_IDS.indexOf(value) !== -1) ? value : def;
+    if (key === 'emotes1') {
+      var caras = String(value == null ? '' : value).split(',').slice(0, CFG.TIENDA.EMOTE_TECLAS);
+      for (var ci = 0; ci < caras.length; ci++) {
+        if (CFG.EMOTE_IDS.indexOf(caras[ci]) === -1) return def;
+      }
+      return caras.length === CFG.TIENDA.EMOTE_TECLAS ? caras.join(',') : def;
+    }
     return def;
+  }
+
+  /* Monedas con el punto de miles también en 1.500 (toLocaleString no lo
+   * pone con cuatro cifras) */
+  function fmtMonedas(n) {
+    return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
   /* Nombre de invitado al azar: dos trozos pegados, recortado a lo que
@@ -234,6 +251,7 @@
       // las skins que ya estaban abiertas al llegar no se anuncian como nuevas
       if (window.PM.Skins) window.PM.Skins.syncVistas();
       this.els.skins = document.getElementById('skins');
+      this.els.tienda = document.getElementById('tienda');
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
@@ -245,6 +263,7 @@
       this.buildDaily();
       this.buildMate();
       this.buildSkins();
+      this.buildTienda();
       this.accountHooks();
       this.buildGameButtons();
       this.buildDpads();
@@ -427,6 +446,11 @@
         self.resumeAudio();
         self.showSkins('skin1');
       }));
+      this.menuTiendaBtn = this.makeButton('TIENDA', function () {
+        self.resumeAudio();
+        self.showTienda();
+      });
+      extras.appendChild(this.menuTiendaBtn);
       /* LABERINTOS ya no vive aquí: es un modo, y los modos están todos
        * juntos en la rejilla de arriba. El cuartel es para lo TUYO. */
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
@@ -1358,7 +1382,7 @@
       bar.className = 'tab-row';
       this.skinsTabBtns = {};
       [['todas', 'TODAS'], ['nivel', 'POR NIVEL'], ['logro', 'POR LOGRO'],
-       ['rara', 'EXTRAVAGANTES'], ['temporada', 'DE TEMPORADA']].forEach(function (t) {
+       ['rara', 'EXTRAVAGANTES'], ['temporada', 'DE TEMPORADA'], ['tienda', 'DE TIENDA']].forEach(function (t) {
         var b = self.makeButton(t[1], function () {
           self.skinsTab = t[0];
           self.refreshSkinsVitrina();
@@ -1428,6 +1452,8 @@
 
         var btn = self.makeButton('PONER', function () {
           var it = self.skinsItems[idx];
+          // las de tienda sin comprar llevan a la TIENDA, donde se compran
+          if (!it.abierta && sk.grupo === 'tienda') { self.showTienda('skin'); return; }
           if (!it.abierta) return;
           window.PM.settings[self.skinsKey || 'skin1'] = sk.id;
           saveSettings();
@@ -1524,8 +1550,10 @@
         it.fill.style.width = Math.round((it.abierta ? 1 : est.pct) * 100) + '%';
         it.prog.textContent = est.abierta ? ('ABIERTA · ' + est.progreso)
           : esPuesta ? 'PUESTA DE ANTES: NO SE TE QUITA' : est.progreso;
-        it.btn.textContent = esPuesta ? 'PUESTA' : it.abierta ? 'PONER' : 'BLOQUEADA';
-        it.btn.disabled = esPuesta || !it.abierta;
+        var deTienda = (it.info.grupo === 'tienda');
+        it.btn.textContent = esPuesta ? 'PUESTA' : it.abierta ? 'PONER'
+          : deTienda ? ('A LA TIENDA · ' + fmtMonedas(it.info.precio || 0)) : 'BLOQUEADA';
+        it.btn.disabled = esPuesta || (!it.abierta && !(deTienda && key === 'skin1'));
       }
       this.skinsResumen.textContent = 'TIENES ' + abiertas + ' DE ' + CFG.SKINS.length +
         ' · ELIGIENDO ' + (key === 'skin2' ? 'LA DEL JUGADOR 2 LOCAL' : 'LA TUYA');
@@ -1562,6 +1590,355 @@
           var pos = Sk.escena(it.escena, it.id, color, tt * 44 + it.off, tt, { team: equipo });
           // la cereza cuelga por detrás: la lupa se centra un poco atrás
           Sk.lupa(it.lupa, it.escena, pos, it.id === 'cereza' ? 4 : 0);
+        }
+        raf(paso);
+      }
+      raf(paso);
+    },
+
+    /* ------------------------------------------------------
+     * TIENDA
+     *
+     * Mismo idioma que la vitrina de SKINS: cada cosa corre por un pasillo a
+     * tamaño de partida con su lupa, porque un efecto o un accesorio se elige
+     * viéndolo moverse. Se paga con dos clics (el primero pregunta), así que
+     * un toque sin querer no se lleva 1.500 monedas.
+     * ------------------------------------------------------ */
+    buildTienda: function () {
+      var self = this;
+      var o = this.els.tienda;
+      var Tn = window.PM.Tienda;
+      if (!o || !Tn) return;
+      o.innerHTML = '';
+
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'TIENDA';
+      o.appendChild(h);
+
+      var caja = document.createElement('div');
+      caja.className = 'tienda-saldo';
+      var moneda = document.createElement('canvas');
+      moneda.width = 24; moneda.height = 24;
+      moneda.className = 'tienda-moneda';
+      caja.appendChild(moneda);
+      this.tiendaSaldo = document.createElement('span');
+      caja.appendChild(this.tiendaSaldo);
+      o.appendChild(caja);
+      this.pintarMoneda(moneda);
+
+      var gana = document.createElement('div');
+      gana.className = 'note tienda-gana';
+      var TC = CFG.TIENDA;
+      gana.textContent = 'SE GANAN JUGANDO: ' + TC.POR_PARTIDA + ' POR PARTIDA DE AL MENOS UN MINUTO + ' +
+        TC.POR_MIL + ' POR CADA 1.000 PUNTOS (HASTA ' + TC.TOPE_PARTIDA + ') · ' +
+        TC.POR_RETO + ' POR CADA RETO DEL DAILY · ' + TC.POR_SEMANA + ' POR LA SEMANA ENTERA';
+      o.appendChild(gana);
+
+      var bar = document.createElement('div');
+      bar.className = 'tab-row';
+      this.tiendaTabBtns = {};
+      Tn.CATEGORIAS.forEach(function (c) {
+        var b = self.makeButton(c.name, function () {
+          self.tiendaTab = c.id;
+          self.tiendaConfirma = null;
+          self.refreshTienda();
+          o.scrollTop = 0;
+        });
+        b.classList.add('tab');
+        self.tiendaTabBtns[c.id] = b;
+        bar.appendChild(b);
+      });
+      o.appendChild(bar);
+
+      this.tiendaNota = document.createElement('div');
+      this.tiendaNota.className = 'note skin-resumen';
+      o.appendChild(this.tiendaNota);
+
+      /* las seis teclas de emote: se elige una y luego la cara que va en ella */
+      this.tiendaTeclas = document.createElement('div');
+      this.tiendaTeclas.className = 'tienda-teclas';
+      this.tiendaTeclaBtns = [];
+      for (var k = 0; k < CFG.TIENDA.EMOTE_TECLAS; k++) {
+        (function (tecla) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'skin tienda-tecla';
+          var cv = document.createElement('canvas');
+          cv.width = 36; cv.height = 36;
+          b.appendChild(cv);
+          var num = document.createElement('span');
+          num.className = 'emote-num';
+          num.textContent = String(tecla + 1);
+          b.appendChild(num);
+          b.addEventListener('click', function () {
+            self.tiendaTecla = tecla;
+            self.refreshTienda();
+          });
+          self.tiendaTeclas.appendChild(b);
+          self.tiendaTeclaBtns.push({ btn: b, canvas: cv });
+        })(k);
+      }
+      o.appendChild(this.tiendaTeclas);
+
+      this.tiendaMsg = document.createElement('div');
+      this.tiendaMsg.className = 'lobby-status tienda-msg';
+      o.appendChild(this.tiendaMsg);
+
+      this.tiendaGrid = document.createElement('div');
+      this.tiendaGrid.className = 'skin-vitrina';
+      o.appendChild(this.tiendaGrid);
+
+      this.tiendaItems = [];
+      Tn.CATALOGO.forEach(function (it, idx) {
+        var card = document.createElement('div');
+        card.className = 'skin-card tienda-card';
+
+        var head = document.createElement('div');
+        head.className = 'skin-card-head';
+        var nom = document.createElement('span');
+        nom.className = 'skin-card-name';
+        nom.textContent = it.name;
+        head.appendChild(nom);
+        var chip = document.createElement('span');
+        chip.className = 'skin-chip tienda';
+        head.appendChild(chip);
+        card.appendChild(head);
+
+        var views = document.createElement('div');
+        views.className = 'skin-views';
+        var lupa = document.createElement('canvas');
+        lupa.width = 144; lupa.height = 144;
+        lupa.className = 'skin-lupa';
+        lupa.setAttribute('aria-label', it.name + ' ampliado');
+        var esc = document.createElement('canvas');
+        esc.width = 336; esc.height = 144;
+        esc.className = 'skin-escena';
+        esc.setAttribute('aria-label', it.name + ' en un pasillo');
+        views.appendChild(lupa);
+        views.appendChild(esc);
+        card.appendChild(views);
+
+        var ve = document.createElement('div');
+        ve.className = 'skin-ve';
+        ve.textContent = it.ve;
+        card.appendChild(ve);
+
+        var botones = document.createElement('div');
+        botones.className = 'skin-botones';
+        var btn = self.makeButton('COMPRAR', function () { self.tiendaPulsa(it); });
+        btn.classList.add('btn-preset', 'skin-poner');
+        botones.appendChild(btn);
+        var quitar = self.makeButton('QUITAR', function () {
+          window.PM.Tienda.poner(it.cat, '');
+          self.tiendaAviso(it.name + ' QUITADO', false);
+          self.refreshTienda();
+        });
+        quitar.classList.add('btn-preset');
+        botones.appendChild(quitar);
+        card.appendChild(botones);
+
+        self.tiendaGrid.appendChild(card);
+        self.tiendaItems.push({
+          it: it, card: card, chip: chip, lupa: lupa, escena: esc, btn: btn,
+          quitar: quitar, off: idx * 41
+        });
+      });
+
+      var back = this.makeButton('VOLVER', function () { self.closeTienda(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+
+      this.tiendaTab = 'emote';
+      this.tiendaTecla = 0;
+    },
+
+    /* la moneda de la tienda, dibujada: disco dorado con canto y brillo */
+    pintarMoneda: function (cv) {
+      var c = cv.getContext('2d');
+      var w = cv.width, r = w / 2 - 2;
+      c.clearRect(0, 0, w, w);
+      c.fillStyle = '#b8860b';
+      c.beginPath(); c.arc(w / 2, w / 2, r, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffd23f';
+      c.beginPath(); c.arc(w / 2 - 1, w / 2 - 1, r - 2, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#b8860b'; c.lineWidth = 1.5;
+      c.beginPath(); c.arc(w / 2 - 1, w / 2 - 1, r - 5, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = '#fff6c0';
+      c.fillRect(w / 2 - 5, w / 2 - 6, 3, 3);
+    },
+
+    showTienda: function (tab) {
+      var abierto = this.visiblePanel();
+      this.tiendaVolver = (abierto === this.els.profile) ? 'profile'
+        : (abierto === this.els.skins) ? 'skins' : 'menu';
+      if (tab) this.tiendaTab = tab;
+      this.tiendaConfirma = null;
+      if (this.tiendaMsg) this.tiendaMsg.textContent = '';
+      this.refreshTienda();
+      this.showPanel('tienda');
+      if (this.els.tienda) this.els.tienda.scrollTop = 0;
+      this.animarTienda();
+    },
+
+    closeTienda: function () {
+      var v = this.tiendaVolver;
+      if (v === 'profile') this.showProfile();
+      else if (v === 'skins') this.showSkins(this.skinsKey || 'skin1');
+      else this.showMenu();
+    },
+
+    tiendaAviso: function (texto, error) {
+      if (!this.tiendaMsg) return;
+      this.tiendaMsg.textContent = texto || '';
+      this.tiendaMsg.classList.toggle('error', !!error);
+    },
+
+    /* El botón de una ficha: comprar (dos clics) o ponerse lo que ya es tuyo */
+    tiendaPulsa: function (it) {
+      var Tn = window.PM.Tienda;
+      var s = window.PM.settings;
+      if (!Tn.tiene(it.id)) {
+        if (this.tiendaConfirma !== it.id) {
+          if (Tn.saldo() < it.precio) {
+            this.tiendaAviso('TE FALTAN ' + fmtMonedas(it.precio - Math.max(0, Tn.saldo())) +
+              ' MONEDAS PARA ' + it.name, true);
+            return;
+          }
+          this.tiendaConfirma = it.id;
+          this.tiendaAviso('PULSA OTRA VEZ PARA COMPRAR ' + it.name + ' POR ' +
+            fmtMonedas(it.precio) + ' MONEDAS', false);
+          this.refreshTienda();
+          return;
+        }
+        this.tiendaConfirma = null;
+        var r = Tn.comprar(it.id);
+        if (!r.ok) { this.tiendaAviso(r.msg, true); this.refreshTienda(); return; }
+        if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
+        this.tiendaAviso(r.msg + ' · ¡PÓNTELO!', false);
+        this.refreshTienda();
+        return;
+      }
+      // ya es tuyo: ponérselo
+      if (it.cat === 'emote') {
+        Tn.ponerEmote(this.tiendaTecla || 0, it.id);
+        this.tiendaAviso(it.name + ' VA EN LA TECLA ' + ((this.tiendaTecla || 0) + 1), false);
+      } else if (it.cat === 'skin') {
+        s.skin1 = it.id;
+        saveSettings();
+        this.refreshSkins();
+        this.tiendaAviso('LLEVAS ' + it.name, false);
+      } else {
+        Tn.poner(it.cat, it.id);
+        var aviso = 'LLEVAS ' + it.name;
+        if (it.cat === 'accesorio' && window.PM.Sprites.admiteAccesorio &&
+            !window.PM.Sprites.admiteAccesorio(s.skin1)) {
+          aviso += ' · CON TU SKIN NO SE VE: PONTE UNA CON FORMA DE PAC-MAN';
+        }
+        this.tiendaAviso(aviso, false);
+      }
+      this.refreshTienda();
+    },
+
+    refreshTienda: function () {
+      var Tn = window.PM.Tienda;
+      if (!Tn || !this.tiendaItems) return;
+      var tab = this.tiendaTab || 'emote';
+      var saldo = Tn.saldo();
+      this.tiendaSaldo.textContent = 'TIENES ' + fmtMonedas(Math.max(0, saldo)) + ' MONEDAS';
+      for (var t in this.tiendaTabBtns) {
+        if (this.tiendaTabBtns.hasOwnProperty(t)) this.tiendaTabBtns[t].classList.toggle('active', t === tab);
+      }
+      var cat = null;
+      for (var c = 0; c < Tn.CATEGORIAS.length; c++) if (Tn.CATEGORIAS[c].id === tab) cat = Tn.CATEGORIAS[c];
+      var mias = 0, total = 0;
+      for (var i = 0; i < this.tiendaItems.length; i++) {
+        var row = this.tiendaItems[i], it = row.it;
+        var ver = (it.cat === tab);
+        row.card.style.display = ver ? 'flex' : 'none';
+        if (!ver) continue;
+        total++;
+        var tiene = Tn.tiene(it.id), puesto = Tn.puesto(it.id);
+        if (tiene) mias++;
+        row.card.classList.toggle('puesta', puesto);
+        row.card.classList.toggle('locked', !tiene);
+        row.chip.textContent = puesto ? 'PUESTO' : tiene ? 'TUYO' : (fmtMonedas(it.precio) + ' MONEDAS');
+        row.quitar.style.display = (tiene && puesto && (it.cat === 'accesorio' || it.cat === 'efecto')) ? '' : 'none';
+        var confirma = (this.tiendaConfirma === it.id);
+        row.btn.classList.toggle('btn-primary', confirma);
+        if (!tiene) {
+          row.btn.textContent = confirma ? ('¿COMPRAR POR ' + fmtMonedas(it.precio) + '?')
+            : ('COMPRAR · ' + fmtMonedas(it.precio));
+          row.btn.disabled = false;
+        } else if (it.cat === 'emote') {
+          var tecla = (this.tiendaTecla || 0);
+          var enEsa = (Tn.emoteDeTecla(tecla) === it.id);
+          row.btn.textContent = enEsa ? ('EN LA TECLA ' + (tecla + 1)) : ('PONER EN LA TECLA ' + (tecla + 1));
+          row.btn.disabled = enEsa;
+        } else {
+          row.btn.textContent = puesto ? 'PUESTO' : 'PONER';
+          row.btn.disabled = puesto;
+        }
+      }
+      this.tiendaNota.textContent = (cat ? cat.nota : '') + ' · TIENES ' + mias + ' DE ' + total;
+      /* los seis emotes de base no se venden: la barra de teclas los enseña
+       * junto a los comprados */
+      this.tiendaTeclas.style.display = (tab === 'emote') ? 'flex' : 'none';
+      if (tab === 'emote') this.pintarTeclas(0);
+    },
+
+    pintarTeclas: function (tick) {
+      var Tn = window.PM.Tienda;
+      if (!Tn || !this.tiendaTeclaBtns) return;
+      var caras = Tn.emotes();
+      var color = window.PM.settings.pacColor || '#ffff00';
+      for (var i = 0; i < this.tiendaTeclaBtns.length; i++) {
+        var b = this.tiendaTeclaBtns[i];
+        b.btn.classList.toggle('active', i === (this.tiendaTecla || 0));
+        b.btn.title = 'TECLA ' + (i + 1) + ' · ' + Tn.nombreEmote(caras[i]);
+        var c = b.canvas.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, 36, 36);
+        c.imageSmoothingEnabled = false;
+        window.PM.Sprites.drawPacFace(c, 18, 19, 12, color, caras[i], tick);
+      }
+    },
+
+    /* Animación de la tienda: la de la vitrina de SKINS, con lo de cada ficha
+     * puesto encima de tu skin (el accesorio, sobre una con forma de Pac-Man) */
+    animarTienda: function () {
+      var self = this;
+      var Sk = window.PM.Skins, Tn = window.PM.Tienda;
+      if (!Sk || !Tn || !this.tiendaItems || this.tiendaAnim) return;
+      var raf = window.requestAnimationFrame;
+      if (!raf) return;
+      this.tiendaAnim = true;
+      var origen = Date.now();
+      function paso() {
+        var panel = self.els.tienda;
+        if (!panel || panel.style.display === 'none') { self.tiendaAnim = false; return; }
+        var t = (Date.now() - origen) / 1000;
+        var s = window.PM.settings;
+        var color = s.pacColor || '#ffff00';
+        var mia = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+        var conAcc = window.PM.Sprites.admiteAccesorio(mia) ? mia : 'clasico';
+        var alto = window.innerHeight || 800;
+        if ((self.tiendaTab || 'emote') === 'emote') self.pintarTeclas(t * 60);
+        for (var i = 0; i < self.tiendaItems.length; i++) {
+          var row = self.tiendaItems[i], it = row.it;
+          if (row.card.style.display === 'none') continue;
+          var r = row.card.getBoundingClientRect();
+          if (r.bottom < 0 || r.top > alto) continue;
+          var tt = t + row.off * 0.013;
+          var skin = (it.cat === 'skin') ? it.id : (it.cat === 'accesorio') ? conAcc : mia;
+          var opts = {
+            efecto: (it.cat === 'efecto') ? it.id : null,
+            accesorio: (it.cat === 'accesorio') ? it.id : null,
+            emote: (it.cat === 'emote') ? it.id : null
+          };
+          var pos = Sk.escena(row.escena, skin, color, tt * 44 + row.off, tt, opts);
+          Sk.lupa(row.lupa, row.escena, pos, it.cat === 'efecto' ? 5 : 0, it.cat === 'emote' ? 19 : 0);
         }
         raf(paso);
       }
@@ -2268,20 +2645,31 @@
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
-      var colors = [], names = [], skins = [], ghosts = [];
+      var colors = [], names = [], skins = [], ghosts = [], looks = [];
       for (var i = 0; i < order.length; i++) {
         colors.push(sanitizeSetting('pacColor', order[i].c, CFG.PLAYER_COLORS[i]));
         names.push(sanitizeNick(order[i].n) || ('J' + (i + 1)));
         skins.push(sanitizeSetting('skin1', order[i].k, 'clasico'));
         ghosts.push(sanitizeSetting('vsGhost2', order[i].g, -1));
+        looks.push(this.lookDeRed(order[i]));
       }
       window.PM.Game.newGame({
         players: order.length, net: role, localIdx: idx,
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
-        colors: colors, names: names, skins: skins, ghosts: ghosts,
+        colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!hab,           // lo enciende quien manda, y vale para todos
         caza: !!caza          // ídem: todos de fantasma contra la máquina
       });
+    },
+
+    /* Accesorio y efecto de otro jugador, tal y como llegan por la red: lo
+     * que no exista en este juego no se pinta (una versión más nueva de la
+     * tienda no rompe a una más vieja). */
+    lookDeRed: function (d) {
+      return {
+        a: sanitizeSetting('acc1', d && d.a, ''),
+        x: sanitizeSetting('efx1', d && d.x, '')
+      };
     },
 
     cancelLobby: function () {
@@ -2898,11 +3286,23 @@
       gSkin.appendChild(this.makeSkinRow('skin1', 'pacColor'));
       var skinNota = document.createElement('div');
       skinNota.className = 'note';
-      skinNota.textContent = 'SE ABREN SUBIENDO DE NIVEL, CON LOGROS O JUGANDO EN FECHAS ESPECIALES';
+      skinNota.textContent = 'SE ABREN SUBIENDO DE NIVEL, CON LOGROS, JUGANDO EN FECHAS ESPECIALES O EN LA TIENDA';
       gSkin.appendChild(skinNota);
       this.profSkinMsg = document.createElement('div');
       this.profSkinMsg.className = 'lobby-status';
       gSkin.appendChild(this.profSkinMsg);
+
+      /* Lo de la TIENDA que llevas encima, y las monedas para comprar más */
+      var gLook = this.optGroup(this.profPane, 'TU LOOK · TIENDA');
+      this.profLook = document.createElement('div');
+      this.profLook.className = 'note perfil-look';
+      gLook.appendChild(this.profLook);
+      var irTienda = this.makeButton('ABRIR LA TIENDA', function () {
+        self.resumeAudio();
+        self.showTienda();
+      });
+      irTienda.classList.add('btn-preset');
+      gLook.appendChild(irTienda);
 
       /* cuenta */
       var gCuenta = this.optGroup(this.profPane, 'TU CUENTA');
@@ -2999,6 +3399,16 @@
         window.PM.Sprites.drawAvatar(c, 20, 20, 16, it.id, s.pacColor);
       }
 
+      var Tn = window.PM.Tienda;
+      if (Tn && this.profLook) {
+        var nombreDe = function (id) { var x = Tn.item(id); return x ? x.name : 'NINGUNO'; };
+        var acc = Tn.accesorio(), efx = Tn.efecto();
+        var nota = (acc && window.PM.Sprites.admiteAccesorio && !window.PM.Sprites.admiteAccesorio(s.skin1))
+          ? ' (NO SE VE CON UNA SKIN EXTRAVAGANTE)' : '';
+        this.profLook.textContent = fmtMonedas(Math.max(0, Tn.saldo())) + ' MONEDAS · ACCESORIO ' +
+          nombreDe(acc) + nota + ' · EFECTO ' + nombreDe(efx) + ' · EMOTES ' +
+          Tn.emotes().map(function (e) { return Tn.nombreEmote(e); }).join(', ');
+      }
       this.refreshColorRows();      // tu color se elige aquí, y tiñe lo demás
       this.refreshSkins();          // la skin propia se elige aquí
       this.refreshAccountBox();
@@ -3747,20 +4157,21 @@
         this.spec = null;
         var n = parseInt(d.n, 10);
         if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) n = 2;
-        var colors = [], names = [], skins = [], ghosts = [];
+        var colors = [], names = [], skins = [], ghosts = [], looks = [];
         for (var i = 0; i < n; i++) {
           colors.push(sanitizeSetting('pacColor', (d.co || [])[i], CFG.PLAYER_COLORS[i]));
           names.push(sanitizeNick((d.nm || [])[i]) || ('J' + (i + 1)));
           skins.push(sanitizeSetting('skin1', (d.sk || [])[i], 'clasico'));
           // PAC-MAN VS.: el mirón también tiene que ver quién lleva fantasma
           ghosts.push(sanitizeSetting('vsGhost2', (d.gh || [])[i], -1));
+          looks.push(this.lookDeRed((d.lk || [])[i]));
         }
         this.hideAll();
         this.resumeAudio();
         window.PM.Game.newGame({
           players: n, net: 'spec', localIdx: -1,
           cfg: this.sanitizeNetCfg(d.cfg),
-          colors: colors, names: names, skins: skins, ghosts: ghosts,
+          colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
           hab: !!(d && d.hab),  // el mirón tiene que ver dientes y chispas
           caza: !!(d && d.caza) // y el Pac-Man de la máquina, con su reloj
         });
@@ -4362,7 +4773,7 @@
           self.toggleEmoteBar(false);
         });
         bar.appendChild(b);
-        self.emoteFaces.push({ canvas: cv, id: e.id });
+        self.emoteFaces.push({ canvas: cv, id: e.id, btn: b });
       });
       /* misma acción que Ctrl+Espacio (y F1..F4 abajo), para quien juega sin
        * teclado */
@@ -4404,7 +4815,15 @@
       var show = (on === undefined) ? !this.emoteBarOpen : !!on;
       this.emoteBarOpen = show;
       this.emoteBar.classList.toggle('on', show);
-      if (show) this.refreshEmoteFaces();
+      if (show) {
+        var Tn = window.PM.Tienda;
+        for (var i = 0; Tn && i < this.emoteFaces.length; i++) {
+          var nombre = Tn.nombreEmote(Tn.emoteDeTecla(i));
+          this.emoteFaces[i].btn.title = (i + 1) + ' · ' + nombre;
+          this.emoteFaces[i].btn.setAttribute('aria-label', 'Emote ' + (i + 1) + ' ' + nombre);
+        }
+        this.refreshEmoteFaces();
+      }
     },
 
     /* Las caras de la barra, con el color del jugador local */
@@ -4412,12 +4831,16 @@
       if (!this.emoteFaces) return;
       var g = window.PM.Game;
       var color = g.colorFor(g.netRole ? g.localIdx : 0);
+      // las caras de cada tecla las elige cada uno en la TIENDA
+      var Tn = window.PM.Tienda;
+      var caras = Tn ? Tn.emotes() : null;
       for (var i = 0; i < this.emoteFaces.length; i++) {
         var it = this.emoteFaces[i];
+        var id = (caras && caras[i]) || it.id;
         var c = it.canvas.getContext('2d');
         c.clearRect(0, 0, 26, 26);
         c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawPacFace(c, 13, 14, 9, color, it.id, tick);
+        window.PM.Sprites.drawPacFace(c, 13, 14, 9, color, id, tick);
       }
     },
 
@@ -4611,7 +5034,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'mazes', 'friends', 'profile', 'mate', 'skins'];
+                   'mazes', 'friends', 'profile', 'mate', 'skins', 'tienda'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -4901,6 +5324,17 @@
         Math.max(0, (s.lvlPide || 0) - (s.lvlEn || 0)) +
         ' PARA EL NIVEL ' + (s.lvl + 1);
       box.appendChild(exp);
+
+      // monedas de la TIENDA ganadas en esta partida (y retos del DAILY)
+      if (typeof s.monedas === 'number') {
+        var mon = document.createElement('div');
+        mon.className = 'resumen-monedas';
+        mon.textContent = s.monedas > 0
+          ? ('+' + s.monedas + ' MONEDAS · TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0)))
+          : ('SIN MONEDAS: LA PARTIDA TIENE QUE DURAR UN MINUTO O LLEGAR A 1.000 PUNTOS · TIENES ' +
+             fmtMonedas(Math.max(0, s.saldo || 0)));
+        box.appendChild(mon);
+      }
 
       var barra = document.createElement('div');
       barra.className = 'level-bar';
@@ -5453,7 +5887,7 @@
     showPanel: function (name) {
       this.hidePrompt();
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'mazes', 'friends', 'profile', 'daily', 'mate', 'skins'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate', 'skins', 'tienda'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -5805,6 +6239,8 @@
               self.showMenu();      // salir del panel no deshace la party
             } else if (self.els.skins && self.els.skins.style.display !== 'none') {
               self.closeSkins();    // vuelve a PERFIL u OPCIONES si vino de ahí
+            } else if (self.els.tienda && self.els.tienda.style.display !== 'none') {
+              self.closeTienda();   // ídem, a donde se abrió
             } else if (self.els.options.style.display !== 'none' ||
                        self.els.badges.style.display !== 'none' ||
                        self.els.ranking.style.display !== 'none' ||

@@ -311,12 +311,16 @@
       }
 
       if (A) A.recordFor(['daily'], { dailyOk: 1 });
+      // y monedas de la TIENDA: 20 por reto y 150 más por la semana entera
+      var Tn = window.PM.Tienda;
+      if (Tn) Tn.ganar(CFG.TIENDA.POR_RETO);
 
       /* Semana redonda: los siete. Se cuenta una vez (bandera `sem`), que si
        * no, cumplir el último y volver a entrar la contaría otra vez. */
       if (!est.sem && this.cumplidos(est) >= CFG.DAILY.DIAS) {
         est.sem = 1;
         if (A) A.recordFor(['daily'], { dailySemana: 1 });
+        if (Tn) Tn.ganar(CFG.TIENDA.POR_SEMANA);
       }
 
       if (L) L.add(CFG.DAILY.XP);

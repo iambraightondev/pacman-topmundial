@@ -77,6 +77,10 @@
       turbo: 0,           // ticks de turbo que quedan
       dientes: 0,         // ticks con los dientes fuera (MORDISCO)
       mordio: false,      // y si esos dientes se llevaron un fantasma
+      /* Ticks desde la última Q que ACERTÓ (-1: ninguna reciente). Las skins de
+       * la tanda del 14 sep y las de tienda hacen su Q entera con esto, que
+       * dura más que los dientes (hasta 1,3 s la PIÑATA). */
+      qEdad: -1,
       flash: 0,           // ticks translúcido (FLASH)
       carga: 0,           // ticks de EMBESTIDA (fantasma humano)
       acecho: 0,          // ticks de ACECHO (fantasma humano)
@@ -182,6 +186,7 @@
       for (var i = 0; i < this.st.length; i++) {
         this.st[i].turbo = 0;
         this.st[i].dientes = 0;
+        this.st[i].qEdad = -1;
         this.st[i].flash = 0;
         this.st[i].flashDir = -1;
         this.st[i].carga = 0;
@@ -337,6 +342,7 @@
       for (var i = 0; i < this.st.length; i++) {
         var s = this.st[i];
         if (s.dientes > 0) s.dientes--;
+        if (s.qEdad >= 0) s.qEdad = (s.qEdad < 120) ? s.qEdad + 1 : -1;
         if (s.flash > 0) s.flash--;
         if (!corre) continue;
         for (var j = 0; j < 4; j++) if (s.guard[j] > 0) s.guard[j]--;
@@ -623,6 +629,7 @@
       if (!s) return;
       s.dientes = ticks || H.BITE_SHOW;
       s.mordio = !ticks;
+      if (!ticks) s.qEdad = 0;
     },
 
     /* =========================================================

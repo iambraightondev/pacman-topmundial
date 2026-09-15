@@ -355,6 +355,21 @@
       return CFG.PLAYER_COLORS[i] || '#ffffff';
     },
 
+    /* Lo puesto de la TIENDA por el jugador i: { a: accesorio, x: efecto }.
+     * Online llega en el saludo (netLooks); en local solo el J1 lleva lo suyo
+     * (es de su cuenta); la máquina y los demás, nada. */
+    lookFor: function (i) {
+      var nada = { a: '', x: '' };
+      if (!this.pacs[i] || this.pacs[i].bot) return nada;
+      if (this.netLooks) {
+        var l = this.netLooks[i];
+        return l ? { a: l.a || '', x: l.x || '' } : nada;
+      }
+      if (this.netRole || i !== 0 || this.replaying) return nada;
+      var Tn = window.PM.Tienda;
+      return Tn ? { a: Tn.accesorio(), x: Tn.efecto() } : nada;
+    },
+
     /* Skin del jugador i (online: intercambiadas en el saludo) */
     skinFor: function (i) {
       if (this.pacs[i] && this.pacs[i].bot) return 'clasico';   // la máquina, de amarillo
@@ -446,6 +461,10 @@
       this.netColors = opts.colors || null;
       this.netNames = opts.names || null;
       this.netSkins = opts.skins || null;
+      this.netLooks = opts.looks || null;
+      this.confetiTick = [];         // tick en que cada jugador se comió un fantasma
+      // lo ganado de la TIENDA se cuenta como diferencia (partida + DAILY)
+      this.monedasAntes = window.PM.Tienda ? window.PM.Tienda.ganadas() : 0;
       this.vote = null;
       this.dlgPaused = false;
       this.overIdle = false;
@@ -713,6 +732,7 @@
         this.netColors = null;
         this.netNames = null;
         this.netSkins = null;
+        this.netLooks = null;
       }
       this.netNotice = null;
       this.emotes = this.emptyEmotes();
@@ -1329,6 +1349,7 @@
       this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;
       this.hiddenGhost = g.id;
       this.eaterIdx = who || 0;
+      if (this.confetiTick) this.confetiTick[this.eaterIdx] = this.tick;   // efecto CONFETI
       this.hostEvt({ t: 'eatGhost', g: g.id, pts: pts,
         x: Math.round(g.x), y: Math.round(g.y), w: this.eaterIdx, c: streak });
       window.AudioSys && AudioSys.playEatGhost();
@@ -1693,22 +1714,34 @@
         !this.netNotice && this.emoteCooldown <= 0;
     },
 
-    /* Emote del jugador local (teclas 1..6 o botones en pantalla) */
+    /* Emote del jugador local (teclas 1..6 o botones en pantalla). La tecla
+     * dice la POSICIÓN; la cara la pone cada uno en la TIENDA, así que lo que
+     * viaja por la red es el id de la cara. */
     sendEmote: function (idx) {
       idx = parseInt(idx, 10);
       if (!(idx >= 0 && idx < CFG.EMOTES.length)) return;
       if (!this.canEmote()) return;
+      var Tn = window.PM.Tienda;
+      var id = (Tn && Tn.emoteDeTecla(idx)) || CFG.EMOTES[idx].id;
       var who = this.netRole ? this.localIdx : 0;
       this.emoteCooldown = CFG.EMOTE_COOLDOWN;
-      this.showEmote(who, idx);
-      if (this.netRole === 'guest') this.netSend('gevt', { t: 'emote', e: idx });
-      else this.hostEvt({ t: 'emote', w: who, e: idx });
+      this.showEmote(who, id);
+      if (this.netRole === 'guest') this.netSend('gevt', { t: 'emote', e: id });
+      else this.hostEvt({ t: 'emote', w: who, e: id });
     },
 
-    showEmote: function (who, idx) {
-      if (!(idx >= 0 && idx < CFG.EMOTES.length)) return;
+    /* e: el id de la cara, o su posición en CFG.EMOTES (lo de antes) */
+    emoteId: function (e) {
+      if (typeof e === 'string') return (CFG.EMOTE_IDS.indexOf(e) !== -1) ? e : '';
+      var n = parseInt(e, 10);
+      return (n >= 0 && n < CFG.EMOTES.length) ? CFG.EMOTES[n].id : '';
+    },
+
+    showEmote: function (who, e) {
+      var id = this.emoteId(e);
+      if (!id) return;
       if (!this.pacs[who]) return;
-      this.emotes[who] = { e: idx, ticks: CFG.EMOTE_TICKS };
+      this.emotes[who] = { e: id, ticks: CFG.EMOTE_TICKS };
       window.AudioSys && AudioSys.playEmote && AudioSys.playEmote();
     },
 
@@ -1915,6 +1948,12 @@
       // en Halloween o Navidad, la partida deja ganadas las skins de temporada
       if (window.PM.Skins && !this.replaying) window.PM.Skins.anotarTemporada();
       this.bumpAch({ partidas: 1, puntosMax: pts, cazas: this.myCatches() });
+      /* Monedas de la TIENDA: las de la partida se cobran aquí, una vez, y
+       * al resumen va todo lo ganado desde que empezó (también los retos del
+       * DAILY cumplidos por el camino). Una repetición no paga. */
+      var Tn = window.PM.Tienda;
+      if (Tn && !this.replaying) Tn.ganarPartida(pts, this.timeTicks / 60);
+      var monedas = (Tn && !this.replaying) ? Math.max(0, Tn.ganadas() - (this.monedasAntes || 0)) : 0;
       var subida = this.awardLevelXp(pts);
       // subir de nivel también abre skins: van al resumen del final
       this.anunciarSkins();
@@ -1931,6 +1970,8 @@
         lvlPct: ahora ? ahora.pct : 0,
         lvlEn: ahora ? ahora.inLevel : 0,
         lvlPide: ahora ? ahora.needed : 0,
+        monedas: monedas,
+        saldo: Tn ? Tn.saldo() : 0,
         logros: this.runAch.slice()
       };
       // la cuenta se queda con lo último, si hay sesión
@@ -2702,8 +2743,9 @@
           if (window.PM.Hab) window.PM.Hab.peticion(this, who, d.k | 0);
           break;
         case 'emote':
+          if (!this.emoteId(d.e)) break;
           this.showEmote(who, d.e);
-          this.hostEvt({ t: 'emote', w: who, e: d.e });
+          this.hostEvt({ t: 'emote', w: who, e: this.emoteId(d.e) });
           break;
         case 'badge':
           this.showBadgeTag(who, d.b, d.f);
@@ -2729,17 +2771,18 @@
      * color y skin, y con qué ajustes se está jugando. Lo comparten la
      * partida online (sendSpecView) y la local (sendShowView). */
     specView: function (sid) {
-      var nm = [], co = [], sk = [], i;
+      var nm = [], co = [], sk = [], lk = [], i;
       // los asientos de la gente: el Pac-Man de la máquina (CACERÍA) se lo
       // monta el mirón por su cuenta con el aviso `caza`
       for (i = 0; i < this.playerCount; i++) {
         nm.push(this.rawName(i));
         co.push(this.colorFor(i));
         sk.push(this.skinFor(i));
+        lk.push(this.lookFor(i));
       }
       return {
         v: CFG.NET.PROTO, to: sid, n: this.playerCount,
-        nm: nm, co: co, sk: sk,
+        nm: nm, co: co, sk: sk, lk: lk,
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
         hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
         caza: !!this.caza,          // CACERÍA: sin superpastillas y con bot
@@ -3106,6 +3149,7 @@
           this.eatFreezeTicks = Math.max(this.eatFreezeTicks, CFG.EAT_FREEZE_TICKS - 10);
           this.hiddenGhost = e.g;
           this.eaterIdx = e.w || 0;
+          if (this.confetiTick) this.confetiTick[this.eaterIdx] = this.tick;   // efecto CONFETI
           this.addPopup(e.x, e.y, e.pts, this.eatFreezeTicks);
           if (!predicted) window.AudioSys && AudioSys.playEatGhost();
           // la racha la lleva el anfitrión: la voz sale con su número
@@ -3616,6 +3660,8 @@
         if (j === i || !q || q.out || q.bot || this.vsGhostOf(j) >= 0) continue;
         equipo.push(this.colorFor(j));
       }
+      var look = this.lookFor(i);
+      var ct = this.confetiTick ? this.confetiTick[i] : undefined;
       return {
         t: this.tick / 60 + i * 0.37,              // cada uno a su compás
         back: function (dist) {
@@ -3623,7 +3669,15 @@
           return { x: p.x, y: p.y + CFG.MAZE_Y, d: p.d };
         },
         estira: estira,
-        team: equipo
+        team: equipo,
+        /* lo de la TIENDA: lo puesto, lo andado (los efectos dejan sus
+         * partículas en puntos fijos del camino), lo andado desde el último
+         * giro (CHISPAS) y los segundos desde el último fantasma (CONFETI) */
+        efecto: look.x,
+        accesorio: look.a,
+        s: pc.recorrido || 0,
+        giro: (pc.giroEn >= 0) ? (pc.recorrido - pc.giroEn) : -1,
+        confeti: (typeof ct === 'number') ? (this.tick - ct) / 60 : -1
       };
     },
 
@@ -3658,6 +3712,8 @@
         extra.muerde = true;
         extra.mordio = !!st.mordio;      // al aire no hay llamarada ni monedas
       }
+      // la Q entera de las extravagantes nuevas, que dura más que los dientes
+      if (st && st.qEdad >= 0) extra.qSeg = st.qEdad / 60;
       pc.draw(ctx, color, skin, extra);
       if (st && st.dientes > 0 && !rara) {
         S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color, skin);

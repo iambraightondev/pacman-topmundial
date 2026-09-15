@@ -1468,6 +1468,47 @@ input[type="range"] {
   .skin-escena { width: calc(100% - 92px); min-width: 180px; }
 }
 
+.skin-chip.tienda { color: #ffd23f; }
+
+/* ---------- TIENDA ----------
+ * Las fichas son las de la vitrina de SKINS; lo propio es el saldo, en oro,
+ * y la fila de las seis teclas de emote. */
+#tienda::before, #tienda::after { content: none; }
+#tienda { justify-content: flex-start; }
+
+.tienda-saldo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffd23f;
+  font-weight: bold;
+  letter-spacing: 3px;
+  font-size: clamp(13px, 2.4vh, 18px);
+  text-shadow: 0 0 8px rgba(255, 210, 63, 0.45);
+}
+
+.tienda-moneda { width: 24px; height: 24px; image-rendering: auto; }
+.tienda-gana { max-width: 760px; text-align: center; }
+
+.tienda-teclas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 2px 0 6px;
+}
+
+.tienda-tecla { position: relative; padding: 4px; }
+.tienda-tecla canvas { width: 36px; height: 36px; }
+.tienda-msg { min-height: 1.4em; text-align: center; }
+.perfil-look { margin-top: 0; }
+
+.resumen-monedas {
+  font-size: clamp(9px, 1.6vh, 11px);
+  letter-spacing: 1px;
+  color: #ffd23f;
+}
+
 /* ---------- Nivel de jugador (portada) ---------- */
 .level-box {
   width: min(90%, 240px);
