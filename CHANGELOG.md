@@ -2,6 +2,11 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · El botín cobrado se ve cobrado
+
+- En el botín del DAILY, las monedas ya ganadas parecían un premio esperando
+  a que lo reclamaras. Ahora van en verde, con ✓ y la palabra COBRADO.
+
 ## 2026-09-15 · La melodía de inicio se calla cuando toca
 
 - **Arreglado:** la música del principio de la partida seguía sonando al

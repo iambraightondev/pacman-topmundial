@@ -881,16 +881,34 @@
         var es = this.dailyEstado(D, est, s);
         var slot = mk('div', 'daily-slot' + (es === 'hecho' ? ' lleno' : (es === 'perdido' ? ' perdido' : '')));
         if (es === 'hecho') {
+          /* Cobrado, y que se lea así: la moneda dorada y brillante parecía
+           * un premio esperando a que lo pulsaras. Va en verde, con su ✓ y
+           * la palabra, como un sello de "ya está". */
+          var fila = mk('span', 'daily-slot-fila');
+          fila.appendChild(mk('span', 'daily-slot-ok', '✓'));
           var mcv = document.createElement('canvas');
           mcv.width = 24; mcv.height = 24;
           self.pintarMoneda(mcv);
-          slot.appendChild(mcv);
+          fila.appendChild(mcv);
+          fila.appendChild(document.createTextNode('+' + TC.POR_RETO));
+          slot.appendChild(fila);
+          slot.appendChild(mk('small', null, 'COBRADO'));
+        } else {
+          slot.appendChild(document.createTextNode(String(TC.POR_RETO)));
         }
-        slot.appendChild(document.createTextNode(String(TC.POR_RETO)));
         this.dailySlots.appendChild(slot);
       }
-      this.dailySlots.appendChild(mk('div', 'daily-slot cofre' + (est.sem ? ' lleno' : ''),
-        'SEMANA +' + TC.POR_SEMANA));
+      var cofre = mk('div', 'daily-slot cofre' + (est.sem ? ' lleno' : ''));
+      if (est.sem) {
+        var fc = mk('span', 'daily-slot-fila');
+        fc.appendChild(mk('span', 'daily-slot-ok', '✓'));
+        fc.appendChild(document.createTextNode('SEMANA +' + TC.POR_SEMANA));
+        cofre.appendChild(fc);
+        cofre.appendChild(mk('small', null, 'COBRADO'));
+      } else {
+        cofre.textContent = 'SEMANA +' + TC.POR_SEMANA;
+      }
+      this.dailySlots.appendChild(cofre);
     },
 
     /* ------------------------------------------------------

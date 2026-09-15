@@ -483,15 +483,32 @@ body {
 }
 .daily-slot canvas { width: 18px; height: 18px; }
 .daily-regla { font-size: clamp(10px, 1.6vh, 12px); max-width: 1000px; }
-.daily-slot.lleno { border: 1px solid #b8860b; background: rgba(255, 210, 63, 0.08); color: #ffd23f; }
+/* Cobrado: verde de "hecho", sin el brillo dorado que pedía pulsarlo */
+.daily-slot.lleno {
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid #145c14;
+  background: rgba(0, 255, 0, 0.04);
+  color: #00ff00;
+}
+.daily-slot.lleno canvas { opacity: 0.6; }
+.daily-slot-fila { display: flex; align-items: center; gap: 5px; line-height: 1; }
+.daily-slot-ok { font-size: 0.9em; }
+.daily-slot.lleno small {
+  font-size: 9px;
+  letter-spacing: 2px;
+  line-height: 1;
+  color: #3a9a3a;
+}
 .daily-slot.perdido { border-style: solid; border-color: #2a2a2a; color: #333; text-decoration: line-through; }
 .daily-slot.cofre { border: 2px solid #ffb852; color: #ffb852; letter-spacing: 1px; }
-.daily-slot.cofre.lleno { background: rgba(255, 184, 82, 0.14); }
+.daily-slot.cofre.lleno { border-color: #145c14; color: #00ff00; background: rgba(0, 255, 0, 0.04); }
 
 @media (max-width: 600px) {
   .daily-slots { grid-template-columns: repeat(7, 1fr); }
   .daily-slot { height: 30px; font-size: 10px; }
   .daily-slot canvas { display: none; }
+  .daily-slot.lleno small { display: none; }   /* no cabe: queda el ✓ en verde */
   .daily-slot.cofre { grid-column: 1 / -1; }
 }
 
