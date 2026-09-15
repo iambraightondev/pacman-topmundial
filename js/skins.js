@@ -4520,6 +4520,8 @@
   var ZONA_ACC = { acc_gorra: 'cabeza', acc_chistera: 'cabeza', acc_vikingo: 'cabeza',
     acc_helice: 'cabeza', acc_pajarita: 'cuello' };
   var OJO_PAC = [1.1, 3.7];
+  /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
+  var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6 };
 
   /* { x, y, k }: dónde poner el centro de la "cabeza de Pac-Man" y a qué
    * escala, para esa skin y ese accesorio; null si va tal cual */
@@ -4527,7 +4529,15 @@
     var c = CABEZAS[skin];
     if (!c) return null;
     var k = c.k, zona = ZONA_ACC[acc] || 'cara';
-    if (zona === 'cabeza' && c.coronilla) return { x: c.coronilla[0], y: c.coronilla[1] - k * R, k: k };
+    /* Un sombrero se apoya en la coronilla con su base un poco hundida (lo
+     * que se hunde la chistera, 1). En Pac-Man la HÉLICE y el VIKINGO bajan
+     * media cabeza porque abrazan la bola; en una extravagante eso los metía
+     * dentro del cuerpo y le tapaba el ojo (calavera, tiburón, pez globo,
+     * carro: 15 sep). */
+    if (zona === 'cabeza' && c.coronilla) {
+      var base = BASE_SOMBRERO.hasOwnProperty(acc) ? BASE_SOMBRERO[acc] : R - 1;
+      return { x: c.coronilla[0], y: c.coronilla[1] - k * (base + 1), k: k };
+    }
     if (zona === 'cuello' && c.cuello) return { x: c.cuello[0] - k * 0.6, y: c.cuello[1] + k * (R - 0.2), k: k };
     return { x: c.ojo[0] - k * OJO_PAC[0], y: c.ojo[1] - k * OJO_PAC[1], k: k };
   }

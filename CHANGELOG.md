@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Sombreros bien puestos
+
+- La **gorra de hélice** y el **casco vikingo** se hundían dentro de algunas
+  extravagantes y les tapaban el ojo (calavera, tiburón, pez globo, carro).
+  Ahora todos los sombreros se apoyan encima de la cabeza.
+
 ## 2026-09-15 · El accesorio va pegado a la skin
 
 - En las skins que abren la boca **subiendo la parte de arriba** (el pan de

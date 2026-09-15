@@ -1016,7 +1016,11 @@ approved 2026-09-15. Coins only, no real money.
   `CABEZAS` (in `js/skins.js`): its `ojo`, its head scale `k` and optionally
   its `coronilla` and `cuello`, measured by eye in the frame (f forward, s up).
   `anclaAccesorio(skin, acc)` returns the translate/scale for the accessory's
-  zone (`ZONA_ACC`: hats → crown, bow tie → neck, the rest → eye) and
+  zone (`ZONA_ACC`: hats → crown, bow tie → neck, the rest → eye). A hat's
+  base (`BASE_SOMBRERO`, in Pac-Man head units: chistera R−1, gorra R−2,
+  vikingo 2.4, hélice 3.6) is set 1 unit below the crown, so hats that hug
+  Pac-Man's ball (hélice, vikingo) rest on top instead of sinking into the
+  body; and
   `dibujarLook` applies it before drawing. `admiteAccesorio` is true for
   Pac-Man-shaped skins and for any extravagant one listed in `CABEZAS` (all
   26 today); a new extravagant skin needs its entry, or it shows no
