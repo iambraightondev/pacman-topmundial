@@ -985,6 +985,20 @@ approved 2026-09-15. Coins only, no real money.
   monedas − Σ price of owned`. Merging accounts keeps the best of each side,
   so it can neither duplicate coins nor lose a purchase; spending the same
   coins offline on two devices leaves a negative balance that blocks buying.
+- **Veteran gift** (`bono`, added 15 Sep, option A chosen by Braighton): a
+  one-off `5 × partidas + 50 × achievements`, uncapped
+  (`CFG.TIENDA.VETERANO_*`), so people who played before the shop do not start
+  level with newcomers. `saldo()` adds `Tienda.regalo()`. It is its own
+  `mayor` counter, not part of `monedas`, so merging devices keeps the larger
+  gift instead of adding them. `Achievements.sembrarBono()` computes it once
+  per device (flag `b`, after the mode/daily/deaths seeding because it counts
+  achievements) and then it is frozen. `merge()` only lowers the flag when the
+  cloud row carries **no** gift, so an account's full history is used the
+  first time; once any device has pushed a gift, it is never recomputed. The
+  TIENDA panel shows the line `REGALO DE VETERANO: +N`. Real accounts on
+  launch: IAMBRAIGHTON 4 930, MAULIO 1 300, SANDROPEPA 890, FREDDY 710,
+  PIEROSENSUAL 690, SANDROPEPAS 355 (counted after mode seeding, so slightly
+  above a raw count of the cloud JSON).
 - **Earning.** `closeRun` pays `Tienda.dePartida(myPoints, timeTicks/60)`: 5 if
   the run lasted ≥ 60 s (restarting must not pay) + 1 per 1 000 points, capped
   at 40. `Daily.premiar` pays 20 per challenge and 150 for a full week.

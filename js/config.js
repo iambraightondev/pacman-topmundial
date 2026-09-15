@@ -700,7 +700,14 @@
     TOPE_PARTIDA: 40,
     POR_RETO: 20,
     POR_SEMANA: 150,
-    EMOTE_TECLAS: 6
+    EMOTE_TECLAS: 6,
+    /* REGALO DE VETERANO (15 de septiembre, opción A elegida por Braighton):
+     * quien ya había jugado antes de la tienda no empieza igual que quien
+     * llega hoy. Una sola vez, con lo que lleves: 5 por partida jugada y 50
+     * por logro conseguido, sin tope. Lo de después se gana como todo el
+     * mundo. */
+    VETERANO_POR_PARTIDA: 5,
+    VETERANO_POR_LOGRO: 50
   };
   /* Emotes de la tienda (las caras están en js/skins.js, caraEmote). Los seis
    * de CFG.EMOTES son de todos. */

@@ -6480,6 +6480,40 @@
     });
   });
 
+  test('el regalo de veterano: 5 por partida y 50 por logro, una vez y sin duplicarse', function () {
+    conTienda(function (Tn, A) {
+      var T = CFG.TIENDA;
+      A.record('partidas', 100);
+      A.record('fantasmas', 1000);                   // algún logro de fantasmas
+      var logros = A.count();
+      A.sembrarBono();
+      var esperado = 100 * T.VETERANO_POR_PARTIDA + logros * T.VETERANO_POR_LOGRO;
+      eq(Tn.regalo(), esperado, 'partidas y logros');
+      eq(Tn.saldo(), T.INICIALES + esperado, 'y entra en el saldo');
+
+      // lo jugado después ya no lo mueve: se calcula una vez
+      A.record('partidas', 50);
+      A.sembrarBono();
+      eq(Tn.regalo(), esperado, 'congelado');
+      eq(Tn.ganadas(), 0, 'y no se mezcla con lo ganado');
+
+      // la nube con su propio regalo: se queda el mayor, no la suma
+      A.merge({ bono: 40, partidas: 10 });
+      eq(Tn.regalo(), esperado, 'juntar aparatos no lo cobra dos veces');
+      A.merge({ bono: esperado + 500 });
+      eq(Tn.regalo(), esperado + 500, 'si el otro aparato calculó más, vale el de allí');
+    });
+  });
+
+  test('una cuenta sin regalo en la nube lo calcula con su historial', function () {
+    conTienda(function (Tn, A) {
+      A.sembrarBono();                               // aparato nuevo: nada jugado
+      eq(Tn.regalo(), 0, 'sin historial no hay regalo');
+      A.merge({ partidas: 200 });                    // la cuenta trae 200 partidas
+      ok(Tn.regalo() >= 200 * CFG.TIENDA.VETERANO_POR_PARTIDA, 'se calcula con lo de la nube');
+    });
+  });
+
   test('lo puesto solo vale si es tuyo, y las teclas de emote no repiten cara', function () {
     conTienda(function (Tn) {
       var s = window.PM.settings;

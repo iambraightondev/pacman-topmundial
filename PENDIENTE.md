@@ -18,15 +18,15 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
-**PENDIENTE DE DECISIÓN — monedas para veteranos.** Pidió sumar monedas a
-quien más ha jugado y más logros tiene. Se le propuso en tablas, con las 6
-cuentas reales (IAMBRAIGHTON 726 partidas/26 logros, MAULIO 100/11, SANDROPEPA
-48/13, FREDDY 22/12, PIEROSENSUAL 28/11, SANDROPEPAS 1/6): A = 5 por partida
-+ 50 por logro sin tope; **B (recomendada) = 5 por partida hasta 200 + 50 por
-logro**; C = 2 por partida hasta 150 + 75 por logro; más 50 por cada logro
-nuevo en adelante. Sin respuesta todavía. Idea de implementación: un regalo
-único sembrado como `sembrarMuertes` (máximo, no suma: no se duplica al juntar
-aparatos) y sumado al saldo aparte de `monedas`.
+**15 sep (tarde) — REGALO DE VETERANO (`pm-v54`).** Pidió sumar monedas a
+quien más ha jugado y más logros tiene. Se le dieron tres opciones en tablas
+con las 6 cuentas reales y **eligió la A** (5 por partida + 50 por logro, sin
+tope), no la B recomendada (tope de 200 partidas). Tampoco pidió los 50 por
+logro nuevo en adelante, así que **no se hizo**: es un regalo único. Queda:
+IAMBRAIGHTON 4.930, MAULIO 1.300, SANDROPEPA 890, FREDDY 710, PIEROSENSUAL
+690, SANDROPEPAS 355. Detalle en SPEC (*Veteran gift*). `tests.html` 322/322.
+**Aviso dado:** con la A, IAMBRAIGHTON puede comprar tres skins de tienda de
+golpe.
 
 **15 sep (tarde) — el DAILY es LA CARTILLA (`pm-v51`).** Braighton pidió
 rediseñarlo porque "no dan ganas"; se le enseñaron tres propuestas (El

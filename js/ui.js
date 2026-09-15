@@ -1872,6 +1872,12 @@
       o.appendChild(caja);
       this.pintarMoneda(moneda);
 
+      /* El regalo de veterano, dicho: si no, quien entra y ve 6.000 monedas
+       * no sabe de dónde han salido. Solo sale si hay regalo. */
+      this.tiendaRegalo = document.createElement('div');
+      this.tiendaRegalo.className = 'tienda-regalo';
+      o.appendChild(this.tiendaRegalo);
+
       var gana = document.createElement('div');
       gana.className = 'note tienda-gana';
       var TC = CFG.TIENDA;
@@ -2092,6 +2098,13 @@
       var tab = this.tiendaTab || 'emote';
       var saldo = Tn.saldo();
       this.tiendaSaldo.textContent = 'TIENES ' + fmtMonedas(Math.max(0, saldo)) + ' MONEDAS';
+      if (this.tiendaRegalo) {
+        var regalo = Tn.regalo ? Tn.regalo() : 0;
+        this.tiendaRegalo.hidden = !(regalo > 0);
+        this.tiendaRegalo.textContent = 'REGALO DE VETERANO: +' + fmtMonedas(regalo) +
+          ' POR LO QUE YA HABÍAS JUGADO (' + CFG.TIENDA.VETERANO_POR_PARTIDA +
+          ' POR PARTIDA Y ' + CFG.TIENDA.VETERANO_POR_LOGRO + ' POR LOGRO)';
+      }
       for (var t in this.tiendaTabBtns) {
         if (this.tiendaTabBtns.hasOwnProperty(t)) this.tiendaTabBtns[t].classList.toggle('active', t === tab);
       }

@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Regalo de veterano en la TIENDA
+
+- **Quien ya había jugado recibe monedas por lo hecho**, además de las 1.500
+  iniciales: 5 por cada partida y 50 por cada logro, sin tope. Es una sola
+  vez; lo que se juegue después se gana como siempre.
+- En la TIENDA se ve cuánto fue el regalo. Con cuenta, vale lo jugado en
+  cualquier aparato y no se cobra dos veces.
+
 ## 2026-09-15 · Elegir modo, como en la recreativa
 
 - **Donde estaban las flechas asoman los modos de al lado**, pequeños y

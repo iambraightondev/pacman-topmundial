@@ -55,7 +55,11 @@
     /* TIENDA (js/tienda.js): monedas GANADAS en total, nunca el saldo. El
      * saldo se calcula, así que juntar dos aparatos no puede duplicar dinero
      * ni perder compras. */
-    monedas:   'suma'
+    monedas:   'suma',
+    /* ...y el REGALO DE VETERANO, aparte de lo ganado: se calcula una vez con
+     * lo jugado hasta entonces (sembrarBono). Es un máximo, no una suma, para
+     * que juntar dos aparatos no lo cobre dos veces. */
+    bono:      'mayor'
   };
   /* ...y una por cosa comprable: c_<id> = 1 si está comprada. Salen del
    * catálogo, así que añadir algo a la tienda crea su contador solo. */
@@ -107,7 +111,7 @@
   }
 
   function load() {
-    var out = { c: vacio(), v: [], m: 0, d: 0, k: 0 };
+    var out = { c: vacio(), v: [], m: 0, d: 0, k: 0, b: 0 };
     try {
       var raw = localStorage.getItem(CFG.ACH_KEY);
       var d = raw ? JSON.parse(raw) : null;
@@ -122,6 +126,7 @@
       if (d && d.m) out.m = 1;          // los contadores por modo, ya sembrados
       if (d && d.d) out.d = 1;          // y los del DAILY, sembrados del reto
       if (d && d.k) out.k = 1;          // y las muertes, sembradas de las partidas
+      if (d && d.b) out.b = 1;          // y el regalo de veterano, ya calculado
     } catch (e) { /* sin almacenamiento */ }
     return out;
   }
@@ -348,12 +353,53 @@
       return d.c;
     },
 
+    /* ---------- el REGALO DE VETERANO ----------
+     * La TIENDA llegó con 1.500 monedas para todos, y quien llevaba cientos de
+     * partidas y media vitrina de logros empezaba igual que quien abría el
+     * juego por primera vez. Eso es tirar lo que ya había hecho. Así que, UNA
+     * vez, se le regala lo que le toca por lo jugado:
+     *
+     *     5 por partida + 50 por logro, sin tope (CFG.TIENDA.VETERANO_*)
+     *
+     * Va en su propio contador (`bono`), no en `monedas`, por dos razones: el
+     * saldo lo enseña aparte, y es un MÁXIMO, así que al juntar dos aparatos se
+     * queda con el mayor en vez de sumarlos.
+     *
+     * Se calcula una vez por aparato (bandera `b`) y a partir de ahí se
+     * congela: lo que se juegue después ya paga por su lado. La excepción es
+     * entrar en una cuenta que NO trae regalo (nadie lo ha calculado aún en
+     * ningún aparato): ahí merge() baja la bandera y se vuelve a calcular con
+     * el historial de la nube, que puede ser mucho más largo que el de aquí.
+     * Si la nube ya lo trae, se respeta y no se recalcula. */
+    regaloDe: function (c) {
+      c = c || load().c;
+      var T = CFG.TIENDA || {};
+      var logros = 0;
+      for (var i = 0; i < CFG.ACHIEVEMENTS.length; i++) {
+        if (cumple(CFG.ACHIEVEMENTS[i], c)) logros++;
+      }
+      return (c.partidas || 0) * (T.VETERANO_POR_PARTIDA || 0) +
+        logros * (T.VETERANO_POR_LOGRO || 0);
+    },
+
+    sembrarBono: function () {
+      var d = load();
+      if (d.b) return d.c;
+      d.b = 1;
+      var v = this.regaloDe(d.c);
+      if (v > (d.c.bono || 0)) d.c.bono = v;
+      save(d);
+      return d.c;
+    },
+
     /* Al arrancar (o al entrar en una cuenta): lo ya conseguido no se anuncia */
     syncSeen: function () {
       // antes de nada, que lo jugado de antes cuente en su modo
       this.sembrarModos();
       this.sembrarDaily();
       this.sembrarMuertes();
+      // y con los contadores ya sembrados, el regalo (cuenta logros)
+      this.sembrarBono();
       var d = load();
       var changed = false;
       for (var i = 0; i < CFG.ACHIEVEMENTS.length; i++) {
@@ -398,13 +444,18 @@
        * a cero teniendo cien partidas a la espalda. */
       d.m = 0;
       d.k = 0;
+      /* El regalo: si la nube no lo trae, nadie lo ha calculado con ese
+       * historial, así que se calcula ahora con lo ya fundido. Si lo trae, ya
+       * se quedó arriba con el máximo y no se toca. */
+      if (!(Math.floor(otros.bono || 0) > 0)) d.b = 0;
       save(d);
       this.sembrarModos();
       this.sembrarMuertes();
+      this.sembrarBono();
       return this.stats();
     },
 
-    reset: function () { save({ c: vacio(), v: [], m: 0, d: 0, k: 0 }); }
+    reset: function () { save({ c: vacio(), v: [], m: 0, d: 0, k: 0, b: 0 }); }
   };
 
   window.PM.Achievements = Achievements;

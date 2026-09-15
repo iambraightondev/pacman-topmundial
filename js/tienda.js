@@ -14,7 +14,7 @@
  * todos los contadores de logros: cuántas monedas has GANADO en total
  * (`monedas`) y qué has comprado (`c_<id>` = 1). El saldo sale de ahí:
  *
- *     1.500 + ganadas − lo que cuesta todo lo comprado
+ *     1.500 + regalo de veterano + ganadas − lo que cuesta todo lo comprado
  *
  * Por eso vive en PM.Achievements y viaja a la cuenta con los logros sin
  * tocar la base de datos, y por eso juntar dos aparatos (Achievements.merge
@@ -87,7 +87,13 @@
       return n;
     },
 
-    saldo: function () { return T.INICIALES + this.ganadas() - this.gastadas(); },
+    /* El regalo de veterano: una vez, por lo jugado antes (ver
+     * Achievements.sembrarBono) */
+    regalo: function () { return stat('bono'); },
+
+    saldo: function () {
+      return T.INICIALES + this.regalo() + this.ganadas() - this.gastadas();
+    },
 
     /* ¿es tuyo? Los seis emotes de siempre son de todo el mundo */
     tiene: function (id) {
