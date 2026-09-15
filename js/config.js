@@ -1331,7 +1331,7 @@
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
     WAIT_TICKS: 90,         // sin datos 1.5 s: aviso "esperando conexión"
-    DROP_TICKS: 480,        // sin datos 8 s: desconexión
+    DROP_TICKS: 600,        // sin datos 10 s: desconexión (lo que insiste net.js en reconectar)
     NOTICE_TICKS: 150,      // aviso en pantalla ~2.5 s antes de volver al menú
     HELLO_TIMEOUT_MS: 6000, // espera de respuesta del anfitrión al unirse
     VOTE_TICKS: 1200,       // 20 s para responder a una votación (rendirse/revancha)

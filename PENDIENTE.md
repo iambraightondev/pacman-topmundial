@@ -13,7 +13,31 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**14 sep — TODO SUBIDO, producción en `pm-v45`.** Tres tandas sobre las skins,
+**14 sep (noche) — producción en `pm-v47`.** Dos arreglos online, subidos:
+
+- `pm-v46`: la skin (y el color y el nombre) cambiada con la party abierta
+  llega a la partida. El líder no refrescaba nunca su propia fila.
+- `pm-v47`: **reconexión automática** del transporte de Realtime. Se probó
+  contra el servidor de verdad con cortes provocados (brusco, 3 s sin red,
+  socket sordo y red caída del todo): vuelve sola, lo enviado durante el
+  corte sale al volver, el socket sordo se repara en ~4 s (el juego pide un
+  latido de comprobación al empezar un silencio) y solo se rinde a los 10 s.
+  `DROP_TICKS` pasó de 480 a 600 para cuadrar con eso. **Por confirmar
+  jugando** con el compañero: el corte que se veía "a cada rato" no se pudo
+  reproducir (servidor estable 4 min, sin excepciones en partidas simuladas),
+  así que la hipótesis es un bajón de red de uno de los dos.
+
+**Pendiente de aprobación en la vitrina**
+(<https://claude.ai/code/artifact/20184d7f-a037-40fb-913d-feb53f81ef27>):
+las 10 extravagantes nuevas (por logro; HOMBRE LOBO por luna llena) y la
+tienda: 1.500 monedas iniciales para todos, 5 + 1 por cada 1.000 puntos (máx.
+40) por partida, 20 por reto del DAILY y 150 por semana; emotes 150, efectos
+250, accesorios 450 (solo con skins de forma de Pac-Man), skins de tienda
+1.500 (CUY y LLAMA, sin diseñar). Se lleva a la vez una skin, un accesorio,
+un efecto y seis emotes. Las de nivel y logro no se venden. Aviso dado: con
+1.500 iniciales cualquiera compra una skin de tienda el primer día.
+
+**Lo de antes el 14 sep, TODO SUBIDO (`pm-v45`).** Tres tandas sobre las skins,
 cada una pedida y aprobada por Braighton tras probarlas jugando:
 
 - `pm-v43`: al morir se anima la skin (no el Pac-Man clásico); sonido propio

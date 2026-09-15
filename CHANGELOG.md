@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-14 · Un corte de conexión ya no acaba la partida
+
+- **El online se reconecta solo.** Antes, un bajón de un instante del Wi-Fi
+  o de los datos sacaba "CONEXIÓN PERDIDA" en el acto. Ahora el juego vuelve
+  a conectar por su cuenta durante 10 segundos; mientras tanto se ve
+  "esperando conexión" y la partida sigue donde estaba.
+- **Lo que mandas durante el corte no se pierde**: sale en orden al volver.
+- **Una conexión que parece viva pero ya no recibe nada** se detecta en unos
+  4 segundos y se repara, en vez de colgar la partida.
+- La desconexión definitiva pasa de 8 a 10 segundos sin datos, lo mismo que
+  se insiste en reconectar.
+
 ## 2026-09-14 · La skin que cambias en la party llega a la partida
 
 - **Cambiar de skin con la party abierta ya se nota en la partida.** El

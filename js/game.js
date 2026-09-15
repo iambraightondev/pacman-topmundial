@@ -2450,6 +2450,13 @@
     netMaintain: function () {
       if (!this.inGame()) return;
       this.netWatch++;
+      /* Silencio: puede que el sordo sea nuestro socket. Se le pide que lo
+       * compruebe al empezar a esperar y cada 4 s mientras dure; si está
+       * medio muerto, net.js reconecta antes de que esto se rinda. */
+      if (this.netWatch === CFG.NET.WAIT_TICKS ||
+          (this.netWatch > CFG.NET.WAIT_TICKS && this.netWatch % 240 === 0)) {
+        if (window.PM.Net && window.PM.Net.sondear) window.PM.Net.sondear();
+      }
       // también durante GAME OVER: ahí se espera la respuesta a la revancha
       if (this.netWatch > CFG.NET.DROP_TICKS) {
         this.netFail('CONEXIÓN PERDIDA');
