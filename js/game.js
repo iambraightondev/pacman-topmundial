@@ -751,6 +751,7 @@
       this.state = 'MENU';
       this.paused = false;
       this.stopAllLoops();
+      this.stopIntro();
       this.mazeId = null;
       this.hab = false;
       this.caza = false;
@@ -778,7 +779,7 @@
       on = !!on;
       if (this.paused === on) return;
       this.paused = on;
-      if (on) this.stopAllLoops();
+      if (on) { this.stopAllLoops(); this.stopIntro(); }
       this.syncUI();
     },
 
@@ -2340,6 +2341,7 @@
         this.paused = true;
         this.dlgPaused = true;
         this.stopAllLoops();
+        this.stopIntro();
         this.hostEvt({ t: 'pause', on: true });
       } else if (this.dlgPaused) {
         this.dlgPaused = false;
@@ -2359,6 +2361,7 @@
       this.overIdle = false;
       this.persistHighScore();
       this.stopAllLoops();
+      this.stopIntro();
       this.hostEvt({ t: 'gameOver' });
       this.syncUI();
     },
@@ -3434,6 +3437,15 @@
       else if (desired === 'fright') AudioSys.startFright();
       else if (desired === 'retreat') AudioSys.startRetreat();
       this.currentLoop = desired;
+    },
+
+    /* La melodía de inicio, cortada. NO va dentro de stopAllLoops: a esa se la
+     * llama también al entrar en ¡LISTO! (justo después de lanzar la intro) y
+     * la dejaría muda. Se corta solo donde el jugador deja de jugar: pausa,
+     * pausa de rendición, rendirse y salir al menú. Antes seguía sonando en
+     * todos esos casos. */
+    stopIntro: function () {
+      if (window.AudioSys && AudioSys.stopIntro) AudioSys.stopIntro();
     },
 
     stopAllLoops: function () {

@@ -1982,6 +1982,28 @@
   // ---------------------------------------------------------------
   // Cronómetro
   // ---------------------------------------------------------------
+  test('la melodía de inicio se corta al pausar, rendirse o salir, y no al empezar', function () {
+    var AS = window.AudioSys;
+    if (!AS || !AS.stopIntro) { ok(true, 'sin sistema de sonido'); return; }
+    var orig = AS.stopIntro, cortes = 0;
+    AS.stopIntro = function () { cortes++; };
+    try {
+      partida(1);
+      cortes = 0;          // lanzar la intro corta la anterior, si la había
+      G.enterReady(60);
+      eq(cortes, 0, 'entrar en ¡LISTO! no la corta (se lanza justo antes)');
+      G.setPaused(true);
+      eq(cortes, 1, 'la pausa la corta');
+      G.setPaused(false);
+      G.surrenderNow();
+      eq(cortes, 2, 'rendirse la corta');
+      G.toMenu();
+      eq(cortes, 3, 'salir al menú la corta');
+    } finally {
+      AS.stopIntro = orig;
+    }
+  });
+
   test('el cronómetro corre jugando y se para en pausa', function () {
     partida(1);
     G.timeTicks = 0;

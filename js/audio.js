@@ -51,7 +51,15 @@
   }
 
   /* Bus de salida de un efecto (por defecto, efectos) */
-  function out(bus) { return buses[bus] || buses.sfx || master; }
+  function out(bus) {
+    if (bus && typeof bus === 'object') return bus;   // un nodo propio (la intro)
+    return buses[bus] || buses.sfx || master;
+  }
+
+  /* La melodía de inicio suena por su propio volumen y guarda sus notas: se
+   * programa entera de golpe (4,2 s), así que sin esto no había forma de
+   * cortarla y seguía sonando con la partida en pausa o ya en el menú. */
+  var intro = null;        // { gain, notas: [osc...] } mientras suena
 
   /* Multiplicador de volumen de un efecto: 1 si no se dice otra cosa. Lo usan
    * los poderes del modo DESATADO, que suenan enteros cuando son tuyos y muy
@@ -426,8 +434,14 @@
     playIntro: function () {
       var DUR = 4200;
       if (!ctx) return DUR;
+      this.stopIntro();            // reiniciar no la pone dos veces encima
       var U = 0.13125;             // one melodic unit; 32 units = 4.2 s
       var t = now() + 0.05;
+      var gIntro = ctx.createGain();
+      gIntro.gain.setValueAtTime(1, now());
+      gIntro.connect(out('music'));
+      var esta = { gain: gIntro, notas: [] };
+      intro = esta;
 
       // Lead voice: perky octave-leap figure stated on C, restated on D,
       // back to C, then a chromatic climb to a held top note.
@@ -450,14 +464,40 @@
         var tt = t;
         for (var i = 0; i < seq.length; i++) {
           var d = seq[i][1] * U;
-          blip('square', mtof(seq[i][0]), 0, tt, d * 0.88, vol, undefined, 'music');
+          esta.notas.push(blip('square', mtof(seq[i][0]), 0, tt, d * 0.88, vol, undefined, gIntro));
           tt += d;
         }
       }
       playPart(lead, 0.30);
       playPart(bass, 0.20);
+      // al acabar sola, se suelta
+      setTimeout(function () { if (intro === esta) intro = null; }, DUR + 300);
       return DUR;
     },
+
+    /* Corta la melodía de inicio si está sonando (pausa, salir, reiniciar).
+     * Un fundido de 30 ms para que no chasque, y las notas pendientes se
+     * cancelan. */
+    stopIntro: function () {
+      if (!ctx || !intro) return;
+      var i = intro;
+      intro = null;
+      var t = now();
+      try {
+        i.gain.gain.cancelScheduledValues(t);
+        i.gain.gain.setValueAtTime(i.gain.gain.value, t);
+        i.gain.gain.linearRampToValueAtTime(0.0001, t + 0.03);
+      } catch (e) { /* nodo ya suelto */ }
+      for (var k = 0; k < i.notas.length; k++) {
+        try { i.notas[k].stop(t + 0.04); } catch (e2) { /* ya parada */ }
+      }
+      setTimeout(function () {
+        try { i.gain.disconnect(); } catch (e3) { /* ya suelto */ }
+      }, 80);
+    },
+
+    /* ¿Está sonando la melodía de inicio? (para las pruebas) */
+    introSonando: function () { return !!intro; },
 
     // ---- per-dot chomp: alternating down/up chirps ("wa" / "ka") ----------
     /* `skin` (opcional): las skins EXTRAVAGANTES (y DORADO) tienen su propio

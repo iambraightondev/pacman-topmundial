@@ -18,6 +18,14 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
+**15 sep (tarde) — la intro ya no suena en pausa (`pm-v56`).** Bug avisado
+por Braighton: la melodía de inicio seguía al pausar o salir. Se programaba
+entera de golpe y no había cómo pararla; ahora va por su propio volumen
+(`AudioSys.stopIntro`) y `Game.stopIntro` la corta en `setPaused(true)`,
+`votePause`, `surrenderNow` y `toMenu`. **Ojo:** NO va en `stopAllLoops`,
+porque `enterReady` la llama justo después de lanzar la intro y la dejaría
+muda (hay prueba de eso). `tests.html` 323/323.
+
 **15 sep (tarde) — cuentas y arrastre de modos (`pm-v55`).**
 
 - **Cuenta SANDROPEPAS BORRADA** a petición de Braighton ("ya no será usada"):

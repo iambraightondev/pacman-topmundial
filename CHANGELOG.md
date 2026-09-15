@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · La melodía de inicio se calla cuando toca
+
+- **Arreglado:** la música del principio de la partida seguía sonando al
+  pausar, al rendirse o al salir al menú. Ahora se corta en los tres casos, y
+  al reiniciar vuelve a sonar una sola vez, sin montarse encima.
+
 ## 2026-09-15 · Los modos se arrastran
 
 - **Los modos de juego se pueden arrastrar** con el ratón o con el dedo: la
