@@ -756,7 +756,7 @@
       o.appendChild(botin);
 
       var regla = document.createElement('div');
-      regla.className = 'note';
+      regla.className = 'note daily-regla';
       regla.textContent = 'UNO POR DÍA, JUGANDO A LO QUE SEA · SOLO CUENTA EL DE HOY: ' +
         'EL DE AYER YA PASÓ Y EL DE MAÑANA AÚN NO ESTÁ · LA RACHA SE ROMPE EL DÍA QUE NO CUMPLAS EL TUYO';
       o.appendChild(regla);
@@ -832,7 +832,7 @@
         card.appendChild(dia);
 
         var cv = document.createElement('canvas');
-        cv.width = 104; cv.height = 104;
+        cv.width = 140; cv.height = 140;
         this.pintarFantasmaDaily(cv, i, e);
         card.appendChild(cv);
 

@@ -309,7 +309,7 @@ body {
 .daily-cab,
 .daily-scroll,
 .daily-botin {
-  width: min(96%, 1000px);
+  width: min(96%, 1240px);
 }
 
 .daily-cab {
@@ -323,7 +323,7 @@ body {
 .daily-sub,
 .daily-racha,
 .daily-botin-cab {
-  font-size: clamp(9px, 1.5vh, 11px);
+  font-size: clamp(11px, 1.8vh, 14px);
   font-weight: bold;
   letter-spacing: 2px;
   color: #6a6c8e;
@@ -339,7 +339,7 @@ body {
 .daily-racha b { color: #fff; margin: 0 6px 0 2px; }
 .daily-mejor { margin-left: 6px; }
 
-.daily-pip { width: 12px; height: 12px; border: 1px solid #2d2d6e; }
+.daily-pip { width: 15px; height: 15px; border: 1px solid #2d2d6e; }
 .daily-pip.on { background: #ffb8ff; border-color: #ffb8ff; }
 .daily-pip.mejor { border-color: #ffb8ff; }
 
@@ -351,17 +351,17 @@ body {
 
 .daily-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(118px, 1fr));
+  grid-template-columns: repeat(7, minmax(146px, 1fr));
   gap: 8px;
 }
 
 .daily-card {
   position: relative;
   display: grid;
-  grid-template-rows: auto 60px auto 1fr auto;
+  grid-template-rows: auto 78px auto 1fr auto;
   justify-items: center;
-  gap: 8px;
-  padding: 10px 8px;
+  gap: 10px;
+  padding: 14px 10px 12px;
   border: 2px solid #1c1c4a;
   background: #04040d;
   font-weight: bold;
@@ -370,23 +370,23 @@ body {
   scroll-snap-align: center;
 }
 
-.daily-card canvas { width: 52px; height: 52px; align-self: center; }
+.daily-card canvas { width: 70px; height: 70px; align-self: center; }
 
 .daily-card-dia {
-  font-size: 12px;
+  font-size: 16px;
   letter-spacing: 2px;
   color: #6a6c8e;
   line-height: 1.2;
 }
 .daily-card-dia small {
   display: block;
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0;
-  color: #44466a;
+  color: #5a5c80;
 }
 
 .daily-card-reto {
-  font-size: clamp(9px, 1.4vh, 11px);
+  font-size: clamp(12px, 1.9vh, 14px);
   letter-spacing: 1px;
   color: #8f91b3;
 }
@@ -397,12 +397,12 @@ body {
   justify-content: center;
   align-items: flex-end;
 }
-.daily-card-extra .daily-bar { flex: 1 1 auto; }
+.daily-card-extra .daily-bar { flex: 1 1 auto; height: 8px; }
 
-.daily-card-estado { font-size: 10px; letter-spacing: 1px; color: #6a6c8e; }
+.daily-card-estado { font-size: 13px; letter-spacing: 1px; color: #6a6c8e; }
 
 .daily-chip {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 1px;
   padding: 1px 5px;
   border: 1px solid currentColor;
@@ -429,22 +429,22 @@ body {
 .daily-card.hecho .daily-card-estado { color: #00ff00; }
 
 /* Lo que viene se ve, apagado: saber lo que viene es medio motivo para volver */
-.daily-card.futuro .daily-card-reto { color: #595b80; }
+.daily-card.futuro .daily-card-reto { color: #7c7ea6; }
 
 .daily-card.perdido { opacity: 0.6; }
 .daily-card.perdido .daily-card-reto { color: #555; text-decoration: line-through; }
 
 .daily-sello {
   position: absolute;
-  top: 88px;
+  top: 112px;
   left: 50%;
   transform: translate(-50%, -50%) rotate(-12deg);
   border: 2px solid #00ff00;
   color: #00ff00;
-  background: rgba(0, 0, 0, 0.55);
-  font-size: 12px;
+  background: rgba(0, 0, 0, 0.88);
+  font-size: 15px;
   letter-spacing: 2px;
-  padding: 2px 7px;
+  padding: 3px 9px;
   pointer-events: none;
 }
 
@@ -475,13 +475,14 @@ body {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 36px;
+  height: 46px;
   border: 1px dashed #2d2d6e;
-  font-size: 11px;
+  font-size: 15px;
   font-weight: bold;
-  color: #44466a;
+  color: #50527a;
 }
-.daily-slot canvas { width: 14px; height: 14px; }
+.daily-slot canvas { width: 18px; height: 18px; }
+.daily-regla { font-size: clamp(10px, 1.6vh, 12px); max-width: 1000px; }
 .daily-slot.lleno { border: 1px solid #b8860b; background: rgba(255, 210, 63, 0.08); color: #ffd23f; }
 .daily-slot.perdido { border-style: solid; border-color: #2a2a2a; color: #333; text-decoration: line-through; }
 .daily-slot.cofre { border: 2px solid #ffb852; color: #ffb852; letter-spacing: 1px; }

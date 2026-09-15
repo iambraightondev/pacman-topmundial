@@ -24,6 +24,8 @@ interfaz: la lógica del DAILY y lo guardado no se tocan. Detalle en SPEC
 cara de dibujar) y La Marquesina (informa bien, pero emociona poco).
 **Por mirar jugando**: que el recuadro no empuje JUGAR fuera en pantallas
 bajas, y un día perdido (en gris), que no se pudo ver un martes.
+`pm-v52`: la cartilla por dentro, más grande (Braighton no la leía bien):
+casillas más anchas, fantasmas de 70 px y textos de 13–16 px.
 
 **15 sep (madrugada) — cierre de sesión, TODO SUBIDO (`pm-v50`).** Después de
 la tienda salieron dos cosas más, las dos en producción:
