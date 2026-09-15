@@ -690,6 +690,30 @@ entry with `tick <= t` and only then advances `t`. That places an injected
 turn in exactly the same slot a live key press occupied — a key pressed
 after step *k* lands before the simulation of step *k+1*.
 
+**The armed Q (2026-09-15).** A Q pressed with nobody in range stays armed
+(`pedirQ`) and bites by itself inside `Hab.paso()` — i.e. *in the middle* of a
+step. Recordings used to store that bite, which the replay applied at the start
+of the *next* step: one tick late, exactly the tick the ghost needs to touch
+Pac-Man (a 93 870-point DESATADO run replayed as a death after a minute). Now
+`Hab.pulsar` records the **press that arms** the Q and never the retry bite,
+the recording carries the flag `q` (`ajustes.qArmada`), and while viewing such
+a replay the retry is allowed (`Replay.reintentoVale`).
+
+Recordings **without** `q` are rebuilt the first time they are opened
+(`Replay.recomponer`, prompt PREPARANDO LA REPETICIÓN): every recorded power
+really went off, so the replay is simulated at full speed (`G.simulandoFuera`
+stops the main loop, sound muted) trying each Q either at its tick or one tick
+earlier right after `Hab.paso` (`Replay.trasHab`, when someone is already in
+range); the first recorded power that fails to fire marks a wrong earlier
+choice, which is flipped (nearest 25 singly, then pairs of the nearest 8)
+until the run ends with the recorded score. The choices (`dq`: index →
+`temprano`/`normal`) are stored in the saved record so it only happens once.
+Validated on the real 93 870 replay: same score and 124 ghosts.
+
+**RLE terminator.** A run count is now closed with `.` (`5A*8.5G`): without it
+`5A*8` followed by `5G` parsed as `5A*85` plus a bare `G`, which broke the text.
+The decoder accepts both forms.
+
 ### Hooks in game.js (four calls and nothing else)
 
 | Where | Call | Why |

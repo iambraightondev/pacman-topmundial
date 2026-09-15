@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Las repeticiones de DESATADO se ven como se jugaron
+
+- **La Q pedida antes de tiempo ya no tuerce la repetición.** El mordisco
+  que sale solo se aplicaba un instante tarde al verla, el fantasma tocaba a
+  Pac-Man y la partida se torcía (una de 93.870 puntos moría al minuto).
+- **Las repeticiones grabadas antes se arreglan solas** la primera vez que
+  se abren: sale "PREPARANDO LA REPETICIÓN" unos segundos y después se ve tal
+  cual fue. Las nuevas se graban bien desde el principio.
+- Arreglado también un caso en que el texto de una repetición salía roto.
+
 ## 2026-09-15 · Vistas previas sincronizadas
 
 - En la vitrina de SKINS y en la TIENDA **todas las fichas se mueven a la vez**:

@@ -13,6 +13,22 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**15 sep (madrugada) — cierre de sesión, TODO SUBIDO (`pm-v50`).** Después de
+la tienda salieron dos cosas más, las dos en producción:
+
+- `pm-v49`: vistas previas de SKINS y TIENDA sincronizadas (todas a la vez).
+  También en la vitrina del artifact.
+- `pm-v50`: **repeticiones de DESATADO con la Q armada**. La de 93.870 de
+  Braighton se veía morir al minuto; ahora se recompone al abrirla y cuadra
+  (93.870 y 124 fantasmas). Detalle en SPEC (*The armed Q*). **Por confirmar**
+  que Braighton la vio bien en su navegador (juega en **Arc**; las
+  repeticiones viven en su localStorage, no en la nube).
+- Cómo se depuró, por si vuelve a hacer falta: se copió el LevelDB del
+  localStorage de Arc (`%LOCALAPPDATA%\Packages\TheBrowserCompany.Arc_…\LocalCache\Local\Arc\User Data\Default\Local Storage\leveldb`)
+  y se leyó con un lector propio (tablas `.ldb` con snappy y el `.log`); la
+  repetición se simuló en el juego servido en local.
+- Tests: `tests.html` 320/320; Node, los 4 de siempre.
+
 **15 sep — TIENDA y 15 skins nuevas, SUBIDO (`pm-v48`, protocolo de red 9).**
 Braighton aprobó todo lo de la vitrina y pidió lanzarlo. Qué hay y qué mirar:
 
