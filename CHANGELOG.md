@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Vestuario, segunda vuelta
+
+- **Las skins se pueden clasificar por cómo se consiguen**: por nivel, por
+  logro, extravagantes, fechas especiales y de tienda, con cuántas tienes de
+  cada grupo. En TODAS salen agrupadas con su título.
+- **El color, en fichas**: tu skin pintada de cada color, con su nombre, y
+  una ficha "A TU GUSTO" que abre el selector.
+- **TIBURÓN**: la mandíbula era más gruesa que la panza y parecía postiza.
+  Ahora es más fina y casa con el cuerpo, abierta y cerrada.
+
 ## 2026-09-15 · El VESTUARIO
 
 - **Todo lo del personaje, en un solo sitio.** El botón SKINS del cuartel pasa

@@ -1039,6 +1039,16 @@ equipped from the shop, and none of them listed only what you own.
   tab) and the six emote keys. Right, tabs SKIN · COLOR · ACCESORIO · EFECTO ·
   EMOTES · AVATAR, a grid of tiles (`vestItems(tab, para)` is the single data
   source) and a detail card. Narrow screens stack them.
+- **Skin classification** (`VEST_FILTROS`, `vestFiltro`): TODAS · POR NIVEL ·
+  POR LOGRO · EXTRAVAGANTES · FECHAS ESPECIALES · DE TIENDA, each with
+  owned/total. The category is `vestItems(...).cat` (`rara` = `logro` + `rara`;
+  otherwise `grupo`, so vampiro/lobo count as FECHAS and the shop skins as
+  TIENDA). TODAS renders the groups with a `.vest-seccion` title.
+- **Colour tab** (`makeColorTiles`): one tile per `CFG.PAC_SWATCHES` colour
+  with the worn skin painted in it (`pintarColorTiles`) and its name
+  (`VEST_COLORES`), plus A TU GUSTO, a tile covered by an invisible
+  `<input type="color">`. The tiles register in `colorRows` like the old
+  swatch rows, so `refreshColorRows`/`setColor` are unchanged.
 - **Player 2.** The TÚ / JUGADOR 2 switch (`vestPara`) edits `skin2` and
   `pac2Color`; the other tabs are hidden (player 2 wears no shop items).
 - **NUEVO.** `localStorage` list `pacman-topmundial-vestuario-vistos` of

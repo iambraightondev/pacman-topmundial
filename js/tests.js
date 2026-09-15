@@ -4159,6 +4159,50 @@
       }
     });
 
+  test('VESTUARIO: las skins se clasifican por cómo se consiguen', function () {
+    var UI = window.PM.UI;
+    try {
+      UI.showVestuario('skin', 'yo');
+      UI.vestFaltan = true;
+      UI.vestFiltro = 'tienda';
+      UI.refreshVestuario();
+      var tienda = CFG.SKINS.filter(function (s) { return s.grupo === 'tienda'; }).length;
+      eq(UI.vestFichas.length, tienda, 'DE TIENDA enseña solo las de tienda');
+      ok(UI.vestFichas.every(function (f) { return f.it.cat === 'tienda'; }), 'y ninguna otra');
+      UI.vestFiltro = 'rara';
+      UI.refreshVestuario();
+      ok(UI.vestFichas.length > 0 && UI.vestFichas.every(function (f) {
+        return window.PM.Skins.rara(f.it.id);
+      }), 'EXTRAVAGANTES solo las extravagantes');
+      UI.vestFiltro = 'todas';
+      UI.refreshVestuario();
+      eq(UI.vestFichas.length, CFG.SKINS.length, 'TODAS las enseña todas');
+      ok(UI.vestGrid.querySelectorAll('.vest-seccion').length >= 4, 'agrupadas con su título');
+    } finally {
+      UI.vestFaltan = false;
+      UI.vestFiltro = 'todas';
+      UI.showMenu();
+    }
+  });
+
+  test('VESTUARIO: el color se elige en fichas, también uno a tu gusto', function () {
+    var UI = window.PM.UI, s = window.PM.settings;
+    var antes = s.pacColor;
+    try {
+      UI.showVestuario('color', 'yo');
+      eq(UI.colorRows.pacColor.swatches.length, CFG.PAC_SWATCHES.length, 'una ficha por color');
+      UI.colorRows.pacColor.swatches[1].click();
+      eq(s.pacColor, CFG.PAC_SWATCHES[1], 'pulsar una lo pone');
+      ok(UI.colorRows.pacColor.swatches[1].classList.contains('active'), 'y queda marcada');
+      UI.setColor('pacColor', '#3366ff');
+      ok(UI.els.vestuario.querySelector('.vest-color-libre').classList.contains('active'),
+         'un color que no está en la lista marca la ficha A TU GUSTO');
+    } finally {
+      s.pacColor = antes;
+      UI.showMenu();
+    }
+  });
+
   test('VESTUARIO: lo que consigues sale como NUEVO una vez', function () {
     var UI = window.PM.UI;
     var key = UI.VEST_VISTOS_KEY, previo = null;

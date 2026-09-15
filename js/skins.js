@@ -927,18 +927,26 @@
       piezaX(ctx, function () {
         ctx.beginPath(); ctx.moveTo(-0.6, -1.6); ctx.lineTo(-3.2, -4.4); ctx.lineTo(-2.4, -1.4); ctx.closePath();
       }, piel, pielOsc, 0.3, 0.3);
+      /* el interior de la boca llega justo hasta donde está la punta de la
+       * mandíbula en cada fotograma: con uno fijo, al adelgazar la mandíbula
+       * asomaba negro por debajo con la boca cerrada */
+      var giro = -ang, pcx = 0.9, pcy = -0.95, qx = 5.6 - pcx, qy = -0.75 - pcy;
+      var puntaX = pcx + qx * Math.cos(giro) - qy * Math.sin(giro);
+      var puntaY = pcy + qx * Math.sin(giro) + qy * Math.cos(giro);
       ctx.fillStyle = '#120a0c';
-      ctx.beginPath(); ctx.moveTo(0.8, -0.9); ctx.lineTo(5.6, -0.5); ctx.lineTo(5.8, -3.4); ctx.lineTo(0.8, -1.2); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0.8, -0.9); ctx.lineTo(5.6, -0.5); ctx.lineTo(puntaX, puntaY - 0.35); ctx.lineTo(0.8, -1.2); ctx.closePath(); ctx.fill();
       var cuerpo = new Path2D();
       cuerpo.moveTo(6.5, 0.2);
       cuerpo.quadraticCurveTo(5.8, 2.7, 2.0, 3.0); cuerpo.quadraticCurveTo(-2.5, 3.2, -5.0, 1.2);
       cuerpo.lineTo(-6.7, 3.5); cuerpo.lineTo(-6.0, 0.0); cuerpo.lineTo(-6.9, -2.9); cuerpo.lineTo(-4.8, -0.9);
-      cuerpo.quadraticCurveTo(-1.5, -2.6, 0.9, -0.95); cuerpo.lineTo(5.5, -0.55);
+      cuerpo.quadraticCurveTo(-1.5, -2.9, 0.9, -0.95); cuerpo.lineTo(5.5, -0.55);
       cuerpo.quadraticCurveTo(6.5, -0.4, 6.5, 0.2); cuerpo.closePath();
-      /* la mandíbula nace por dentro del cuerpo, detrás de la comisura */
+      /* la mandíbula nace por dentro del cuerpo, detrás de la comisura. Más
+       * fina que antes (15 sep): era más gruesa que la panza y parecía un
+       * mentón postizo; ahora baja lo mismo que la barriga de detrás */
       var mand = new Path2D();
       mand.moveTo(-0.6, -0.9); mand.lineTo(5.3, -0.75);
-      mand.quadraticCurveTo(5.5, -2.1, 3.9, -2.6); mand.quadraticCurveTo(1.6, -3.0, -0.6, -1.9); mand.closePath();
+      mand.quadraticCurveTo(5.4, -1.6, 3.9, -1.95); mand.quadraticCurveTo(1.6, -2.25, -0.6, -1.75); mand.closePath();
       rostro(ctx, cuerpo, mand, 0.9, -0.95, ang, piel, piel, 0, 0, 1.6);
       /* el vientre blanco sigue por la mandíbula y se mueve con ella */
       ctx.save(); ctx.clip(cuerpo);

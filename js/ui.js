@@ -1718,6 +1718,16 @@
 
     VEST_VISTOS_KEY: 'pacman-topmundial-vestuario-vistos',
 
+    /* Cómo se consigue cada skin (el `cat` de vestItems) */
+    VEST_FILTROS: [
+      { id: 'todas', name: 'TODAS' },
+      { id: 'nivel', name: 'POR NIVEL', titulo: 'POR NIVEL · SUBIENDO DE NIVEL' },
+      { id: 'logro', name: 'POR LOGRO', titulo: 'POR LOGRO · CON LOGROS Y MAESTRÍAS' },
+      { id: 'rara', name: 'EXTRAVAGANTES', titulo: 'EXTRAVAGANTES · CON LOGROS' },
+      { id: 'temporada', name: 'FECHAS ESPECIALES', titulo: 'FECHAS ESPECIALES · HALLOWEEN, NAVIDAD Y LUNA LLENA' },
+      { id: 'tienda', name: 'DE TIENDA', titulo: 'DE TIENDA · CON MONEDAS' }
+    ],
+
     /* ---------- lo que se ha visto ya (para las marcas de NUEVO) ----------
      * Una lista de claves "pestaña:id". La primera vez se siembra con todo lo
      * que ya tenías: quien llega con cuarenta cosas no quiere cuarenta
@@ -1781,6 +1791,8 @@
           var puesto = (s[key] === sk.id);
           out.push({
             id: sk.id, name: sk.name, ve: sk.ve || '', chip: est.chip,
+            // cómo se consigue (para clasificarlas): nivel, logro, rara, temporada, tienda
+            cat: (sk.rara && sk.grupo === 'logro') ? 'rara' : sk.grupo,
             tuyo: est.abierta || puesto, puesto: puesto,
             como: est.abierta ? '' : est.progreso, pct: est.abierta ? 1 : est.pct,
             tienda: sk.grupo === 'tienda', precio: sk.precio || 0
@@ -2010,6 +2022,7 @@
           self.vestMarcarVistos();
           self.vestTab = t.id;
           self.vestProbando = null;
+          self.vestAvisa('');
           self.refreshVestuario();
         });
         b.classList.add('tab');
@@ -2031,20 +2044,39 @@
       util.appendChild(this.vestFaltanBtn);
       arm.appendChild(util);
 
+      /* SKIN: clasificarlas por cómo se consiguen, para quien no quiera verlas
+       * todas juntas. En TODAS salen agrupadas con su título. */
+      this.vestFiltrosEl = document.createElement('div');
+      this.vestFiltrosEl.className = 'vest-filtros';
+      this.vestFiltroBtns = {};
+      this.VEST_FILTROS.forEach(function (fl) {
+        var b = self.makeButton(fl.name, function () {
+          self.vestFiltro = fl.id;
+          self.vestProbando = null;
+          self.refreshVestuario();
+        });
+        b.classList.add('vest-filtro');
+        self.vestFiltroBtns[fl.id] = b;
+        self.vestFiltrosEl.appendChild(b);
+      });
+      arm.appendChild(this.vestFiltrosEl);
+
       this.vestAviso = document.createElement('div');
       this.vestAviso.className = 'vest-aviso';
       arm.appendChild(this.vestAviso);
 
-      /* la pestaña COLOR: las muestras de siempre, una fila por jugador */
+      /* La pestaña COLOR: una ficha por color con tu skin pintada de ese
+       * color (antes eran ocho cuadraditos sueltos y no se veía qué hacían),
+       * y la última, un color a tu gusto. Una rejilla por jugador. */
       this.vestColor = document.createElement('div');
       this.vestColor.className = 'vest-color';
-      this.vestColorYo = this.makeColorRow('pacColor');
-      this.vestColorJ2 = this.makeColorRow('pac2Color');
+      this.vestColorYo = this.makeColorTiles('pacColor');
+      this.vestColorJ2 = this.makeColorTiles('pac2Color');
       this.vestColor.appendChild(this.vestColorYo);
       this.vestColor.appendChild(this.vestColorJ2);
       var cn = document.createElement('div');
-      cn.className = 'note';
-      cn.textContent = 'TIÑE TU PAC-MAN, TU SKIN Y TU AVATAR · EL ÚLTIMO CUADRO ES UN COLOR A TU GUSTO';
+      cn.className = 'note vest-color-nota';
+      cn.textContent = 'EL COLOR TIÑE TU PAC-MAN, TU SKIN Y TU AVATAR, Y ES EL QUE VE EL RESTO EN LA SALA';
       this.vestColor.appendChild(cn);
       arm.appendChild(this.vestColor);
 
@@ -2066,9 +2098,88 @@
       this.vestPara = 'yo';
       this.vestTecla = 0;
       this.vestFaltan = false;
+      this.vestFiltro = 'todas';
       this.vestProbando = null;
       this.vestFoco = null;
       this.vestPendientes = [];
+    },
+
+    VEST_COLORES: {
+      '#ffff00': 'AMARILLO', '#ff0000': 'ROJO', '#00ffff': 'CIAN', '#00ff00': 'VERDE',
+      '#ff69b4': 'ROSA', '#ff8c00': 'NARANJA', '#b19cd9': 'LAVANDA', '#ffffff': 'BLANCO'
+    },
+
+    /* Las fichas de color de un jugador. Se registran en colorRows como las
+     * filas de muestras de antes (swatches con data-color + el selector
+     * libre), así que refreshColorRows y setColor valen igual. */
+    makeColorTiles: function (key) {
+      var self = this;
+      var grid = document.createElement('div');
+      grid.className = 'vest-grid vest-color-grid';
+      var tiles = [], dibujos = [];
+      CFG.PAC_SWATCHES.forEach(function (hex) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'vest-tile vest-color-tile';
+        b.setAttribute('data-color', hex);
+        var nombre = self.VEST_COLORES[hex] || hex.toUpperCase();
+        b.setAttribute('aria-label', 'Color ' + nombre);
+        var cv = document.createElement('canvas');
+        cv.width = 96; cv.height = 96;
+        b.appendChild(cv);
+        var nm = document.createElement('span');
+        nm.className = 'vest-tile-name';
+        nm.textContent = nombre;
+        b.appendChild(nm);
+        var tag = document.createElement('span');
+        tag.className = 'vest-tile-tag vest-color-muestra';
+        tag.style.background = hex;
+        b.appendChild(tag);
+        b.addEventListener('click', function () { self.setColor(key, hex); });
+        grid.appendChild(b);
+        tiles.push(b);
+        dibujos.push({ hex: hex, cv: cv });
+      });
+      /* el color a tu gusto: la ficha entera abre el selector del sistema */
+      var libre = document.createElement('label');
+      libre.className = 'vest-tile vest-color-tile vest-color-libre';
+      var lcv = document.createElement('canvas');
+      lcv.width = 96; lcv.height = 96;
+      libre.appendChild(lcv);
+      var lnm = document.createElement('span');
+      lnm.className = 'vest-tile-name';
+      lnm.textContent = 'A TU GUSTO';
+      libre.appendChild(lnm);
+      var ltag = document.createElement('span');
+      ltag.className = 'vest-tile-tag';
+      libre.appendChild(ltag);
+      var input = document.createElement('input');
+      input.type = 'color';
+      input.className = 'vest-color-input';
+      input.setAttribute('aria-label', 'Elegir un color a tu gusto');
+      input.addEventListener('input', function () { self.setColor(key, input.value); });
+      libre.appendChild(input);
+      grid.appendChild(libre);
+      this.colorRows[key] = { swatches: tiles, input: input };
+      this.vestColorDibujos = this.vestColorDibujos || {};
+      this.vestColorDibujos[key] = { tiles: dibujos, libre: { el: libre, cv: lcv, tag: ltag } };
+      return grid;
+    },
+
+    /* Repinta las fichas de color con la skin puesta de ese jugador */
+    pintarColorTiles: function (key) {
+      var d = this.vestColorDibujos && this.vestColorDibujos[key];
+      if (!d) return;
+      var s = window.PM.settings;
+      var skinKey = (key === 'pac2Color') ? 'skin2' : 'skin1';
+      var skin = (CFG.SKIN_IDS.indexOf(s[skinKey]) !== -1) ? s[skinKey] : 'clasico';
+      for (var i = 0; i < d.tiles.length; i++) this.pintarSkinIcono(d.tiles[i].cv, skin, d.tiles[i].hex);
+      var actual = String(s[key] || '#ffff00').toLowerCase();
+      var esLibre = CFG.PAC_SWATCHES.indexOf(actual) === -1;
+      this.pintarSkinIcono(d.libre.cv, skin, esLibre ? actual : '#888888');
+      d.libre.el.classList.toggle('active', esLibre);
+      d.libre.tag.textContent = esLibre ? actual.toUpperCase() : 'PULSA Y ELIGE';
+      d.libre.tag.style.color = esLibre ? actual : '';
     },
 
     vestTabDe: function (id) {
@@ -2251,12 +2362,14 @@
       this.vestColorYo.style.display = j2 ? 'none' : '';
       this.vestColorJ2.style.display = j2 ? '' : 'none';
       this.refreshColorRows();
+      if (esColor) this.pintarColorTiles(j2 ? 'pac2Color' : 'pacColor');
       this.vestGrid.style.display = esColor ? 'none' : '';
       this.vestFicha.style.display = esColor ? 'none' : '';
       var conFaltan = (tab === 'skin' || tab === 'accesorio' || tab === 'efecto' || tab === 'emote');
       this.vestFaltanBtn.style.display = conFaltan ? '' : 'none';
       this.vestFaltanBtn.classList.toggle('active', !!this.vestFaltan);
       this.vestFaltanBtn.textContent = this.vestFaltan ? 'SOLO LO QUE TENGO' : 'VER LO QUE ME FALTA';
+      this.vestFiltrosEl.style.display = (tab === 'skin') ? '' : 'none';
 
       this.vestGrid.innerHTML = '';
       this.vestFichas = [];
@@ -2271,15 +2384,52 @@
         this.vestGrid.appendChild(tec);
       }
       var items = this.vestItems(tab, this.vestPara);
+      /* SKIN: la clasificación por cómo se consiguen */
+      var filtro = (tab === 'skin') ? (this.vestFiltro || 'todas') : 'todas';
+      if (tab === 'skin') {
+        var todasSk = items;
+        this.VEST_FILTROS.forEach(function (fl) {
+          var de = (fl.id === 'todas') ? todasSk : todasSk.filter(function (it) { return it.cat === fl.id; });
+          var mias = de.filter(function (it) { return it.tuyo; }).length;
+          var fb = self.vestFiltroBtns[fl.id];
+          fb.textContent = fl.name + ' ' + mias + '/' + de.length;
+          fb.classList.toggle('active', fl.id === filtro);
+        });
+        if (filtro !== 'todas') items = items.filter(function (it) { return it.cat === filtro; });
+      }
       var tuyos = items.filter(function (it) { return it.tuyo && it.id; }).length;
       var total = items.filter(function (it) { return it.id; }).length;
       this.vestCuenta.textContent = (tab === 'avatar') ? (total + ' AVATARES')
         : ('TIENES ' + tuyos + ' DE ' + total);
       /* primero lo tuyo; lo que falta, detrás y solo si se pide */
-      var orden = items.filter(function (it) { return it.tuyo; })
-        .concat(this.vestFaltan ? items.filter(function (it) { return !it.tuyo; }) : []);
+      var ordenar = function (lista) {
+        return lista.filter(function (it) { return it.tuyo; })
+          .concat(self.vestFaltan ? lista.filter(function (it) { return !it.tuyo; }) : []);
+      };
+      var orden;
+      if (tab === 'skin' && filtro === 'todas') {
+        /* todas, pero agrupadas: un título por forma de conseguirlas */
+        orden = [];
+        this.VEST_FILTROS.forEach(function (fl) {
+          if (fl.id === 'todas') return;
+          var de = items.filter(function (it) { return it.cat === fl.id; });
+          var visibles = ordenar(de);
+          if (!visibles.length) return;
+          orden.push({ seccion: fl, mias: de.filter(function (it) { return it.tuyo; }).length, total: de.length });
+          orden = orden.concat(visibles);
+        });
+      } else {
+        orden = ordenar(items);
+      }
       var focoIt = null;
       orden.forEach(function (it) {
+        if (it.seccion) {
+          var sec = document.createElement('div');
+          sec.className = 'vest-seccion';
+          sec.textContent = it.seccion.titulo + ' · ' + it.mias + '/' + it.total;
+          self.vestGrid.appendChild(sec);
+          return;
+        }
         var nuevo = !j2 && it.tuyo && it.id && tab !== 'avatar' && vistos.indexOf(tab + ':' + it.id) === -1;
         if (nuevo && self.vestPendientes.indexOf(tab + ':' + it.id) === -1) self.vestPendientes.push(tab + ':' + it.id);
         var probando = !!(pr && pr.tab === tab && pr.id === it.id);

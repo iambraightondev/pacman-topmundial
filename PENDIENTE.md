@@ -18,6 +18,13 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
+**15 sep (noche) — vestuario, segunda vuelta (`pm-v59`).** Tras verlo,
+Braighton pidió tres cosas y están hechas: mandíbula del TIBURÓN más fina
+(ahora el interior de la boca sigue a la mandíbula al abrirse), la pestaña
+COLOR en fichas con la skin pintada y "A TU GUSTO", y clasificar las skins
+por cómo se consiguen (filtros con contador; TODAS agrupada con títulos).
+`tests.html` 327/327.
+
 **15 sep (noche) — el VESTUARIO (`pm-v58`).** Braighton: lo del personaje
 estaba repartido (PERFIL, SKINS, TIENDA) y todo salía mezclado, lo tuyo y lo
 que no. Se le dio un plan y lo aprobó tal cual. Hecho: panel VESTUARIO en el
