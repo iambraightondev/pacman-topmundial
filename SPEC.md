@@ -1020,7 +1020,14 @@ approved 2026-09-15. Coins only, no real money.
   base (`BASE_SOMBRERO`, in Pac-Man head units: chistera R−1, gorra R−2,
   vikingo 2.4, hélice 3.6) is set 1 unit below the crown, so hats that hug
   Pac-Man's ball (hélice, vikingo) rest on top instead of sinking into the
-  body; and
+  body. Face items are placed by their own reference point (`PUNTO_ACC`) and
+  where it must land relative to the skin's eye (`DESDE_OJO`, in head units):
+  the patch's centre **on** the eye, the headband on the forehead, the
+  moustache below the eye toward the snout and the ear cup behind the eye —
+  in Pac-Man all of them work off one round head, but an elongated one needs
+  each item taken to its own spot (reviewed skin by skin on 15 Sep). A skin
+  can pin an item by hand with `sitios` (CALAVERA's, ROBOT's, LOBO's and
+  CARRO's moustache, CARRO's headphones); and
   `dibujarLook` applies it before drawing. `admiteAccesorio` is true for
   Pac-Man-shaped skins and for any extravagant one listed in `CABEZAS` (all
   26 today); a new extravagant skin needs its entry, or it shows no

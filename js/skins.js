@@ -4402,28 +4402,32 @@
     gato:        { ojo: [2.4, 2.2], k: 0.46, coronilla: [1.6, 4.8], cuello: [1.6, -2.4] },
     tiburon:     { ojo: [4.6, 1.7], k: 0.46, coronilla: [3.4, 3.2], cuello: [2.6, -2.8] },
     planta:      { ojo: [3.0, 2.2], k: 0.66, coronilla: [1.9, 4.6], cuello: [1.9, -4.4] },
-    robot:       { ojo: [3.6, 2.1], k: 0.72, coronilla: [0.4, 4.6], cuello: [0.4, -5.3] },
+    robot:       { ojo: [3.6, 2.1], k: 0.72, coronilla: [0.4, 4.6], cuello: [0.4, -5.3],
+                   sitios: { acc_bigote: [3.0, 0.1] } },
     trex:        { ojo: [1.0, 2.9], k: 0.66, coronilla: [-0.2, 5.6], cuello: [0.8, -4.0] },
     ovni:        { ojo: [1.2, 3.8], k: 0.50, coronilla: [0.5, 5.2], cuello: [0.5, -2.2] },
     cofre:       { ojo: [1.5, 2.8], k: 0.70, coronilla: [0.0, 5.2], cuello: [0.0, -4.0] },
-    dragon:      { ojo: [1.7, 2.6], k: 0.66, coronilla: [0.4, 5.2], cuello: [0.6, -4.2] },
-    calavera:    { ojo: [1.4, 2.9], k: 0.76, coronilla: [0.4, 6.3], cuello: [1.4, -4.3] },
+    dragon:      { ojo: [2.2, 2.6], k: 0.66, coronilla: [0.4, 5.2], cuello: [0.6, -4.2] },
+    calavera:    { ojo: [1.3, 2.9], k: 0.76, coronilla: [-1.2, 6.2], cuello: [1.4, -4.3],
+                   sitios: { acc_bigote: [3.1, -0.7] } },
     bomba:       { ojo: [2.7, 1.9], k: 0.80, coronilla: [0.2, 5.4], cuello: [0.6, -5.6] },
     abisal:      { ojo: [2.0, 2.8], k: 0.68, coronilla: [-0.4, 5.8], cuello: [1.0, -4.8] },
     pinata:      { ojo: [4.0, 2.3], k: 0.42, coronilla: [3.4, 4.2], cuello: [2.8, -1.8] },
     tostadora:   { ojo: [2.4, 1.4], k: 0.58, coronilla: [0.6, 3.1], cuello: [0.6, -4.4] },
     gargola:     { ojo: [2.5, 1.9], k: 0.60, coronilla: [0.8, 4.9], cuello: [1.2, -3.4] },
-    pulpo:       { ojo: [3.1, 1.7], k: 0.64, coronilla: [-0.8, 6.2], cuello: [3.2, -1.8] },
+    pulpo:       { ojo: [3.6, 1.5], k: 0.64, coronilla: [-0.8, 6.2], cuello: [3.2, -1.8] },
     momia:       { ojo: [2.7, 2.6], k: 0.66, coronilla: [1.6, 5.3], cuello: [1.6, -3.5] },
     globo:       { ojo: [2.1, 2.2], k: 0.70, coronilla: [0.0, 4.8], cuello: [0.4, -4.4] },
     bicefalo:    { ojo: [2.8, 5.4], k: 0.40, coronilla: [2.0, 7.3], cuello: [2.2, -6.4] },
     cuy:         { ojo: [2.8, 1.2], k: 0.54, coronilla: [2.0, 4.1], cuello: [2.2, -2.4] },
     llama:       { ojo: [2.1, 2.9], k: 0.38, coronilla: [1.2, 4.8], cuello: [1.0, 0.6] },
-    carro:       { ojo: [-2.2, 3.8], k: 0.60, coronilla: [-0.4, 5.8], cuello: [6.0, -0.4] },
+    carro:       { ojo: [-2.2, 3.8], k: 0.60, coronilla: [-0.4, 5.8], cuello: [6.0, -0.4],
+                   sitios: { acc_bigote: [6.3, 0.4], acc_auriculares: [-4.2, 2.6] } },
     oso:         { ojo: [2.0, 3.1], k: 0.70, coronilla: [-0.4, 6.0], cuello: [1.6, -3.3] },
     galleta:     { ojo: [0.9, 2.9], k: 0.88, coronilla: [0.0, 6.2], cuello: [0.2, -6.0] },
     vampiro:     { ojo: [2.9, 2.0], k: 0.70, coronilla: [1.4, 5.9], cuello: [1.6, -3.8] },
-    lobo:        { ojo: [-0.4, 4.3], k: 0.60, coronilla: [-1.2, 5.8], cuello: [1.0, -3.3] }
+    lobo:        { ojo: [-0.4, 4.3], k: 0.60, coronilla: [-1.2, 5.8], cuello: [1.0, -3.3],
+                   sitios: { acc_bigote: [4.4, 4.4] } }
   };
   /* ---------- el accesorio se MUEVE con la skin ----------
    * Las cabezas de arriba se midieron con la skin quieta en una pose
@@ -4520,6 +4524,26 @@
   var ZONA_ACC = { acc_gorra: 'cabeza', acc_chistera: 'cabeza', acc_vikingo: 'cabeza',
     acc_helice: 'cabeza', acc_pajarita: 'cuello' };
   var OJO_PAC = [1.1, 3.7];
+  /* Revisión del 15 sep, con las 26 y los 11 accesorios: el PARCHE quedaba
+   * detrás del ojo (se seguía viendo), los AURICULARES caían encima del ojo
+   * en vez de en el lado de la cabeza, la CINTA tapaba los ojos en vez de ir
+   * por la frente y el MOSTACHO se salía de la cara. En Pac-Man todo eso
+   * cuadra porque su cabeza es redonda y del mismo tamaño siempre; aquí cada
+   * uno se lleva a su sitio respecto al ojo, en unidades de cabeza (k):
+   *   PUNTO_ACC  el punto del accesorio que manda (en la cabeza de Pac-Man)
+   *   DESDE_OJO  dónde debe caer ese punto, contado desde el ojo de la skin */
+  var PUNTO_ACC = {
+    acc_gafas: [1.1, 3.7], acc_afiladas: [1.1, 3.7],
+    acc_parche: [-0.2, 3.1],          // el centro del parche, sobre el ojo
+    acc_ninja: [1.1, 3.05],           // el centro de la cinta...
+    acc_bigote: [4.5, 0.55],          // el nudo del mostacho...
+    acc_auriculares: [-1.8, 1.6]      // el auricular...
+  };
+  var DESDE_OJO = {
+    acc_ninja: [0, 1.55],             // ...por la frente, encima del ojo
+    acc_bigote: [1.2, -2.4],          // ...bajo el ojo y hacia el hocico
+    acc_auriculares: [-4.2, -2.2]     // ...detrás del ojo, en el lado de la cabeza
+  };
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
   var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6 };
 
@@ -4529,6 +4553,14 @@
     var c = CABEZAS[skin];
     if (!c) return null;
     var k = c.k, zona = ZONA_ACC[acc] || 'cara';
+    if (zona === 'cara') {
+      /* cada accesorio de la cara tiene su punto (PUNTO_ACC) y el sitio donde
+       * debe caer respecto al ojo de la skin (DESDE_OJO); una skin puede
+       * fijar el sitio a mano (sitios) si su cara no sigue la regla */
+      var pu = PUNTO_ACC[acc] || OJO_PAC, de = DESDE_OJO[acc] || [0, 0];
+      var sitio = (c.sitios && c.sitios[acc]) || [c.ojo[0] + k * de[0], c.ojo[1] + k * de[1]];
+      return { x: sitio[0] - k * pu[0], y: sitio[1] - k * pu[1], k: k };
+    }
     /* Un sombrero se apoya en la coronilla con su base un poco hundida (lo
      * que se hunde la chistera, 1). En Pac-Man la HÉLICE y el VIKINGO bajan
      * media cabeza porque abrazan la bola; en una extravagante eso los metía

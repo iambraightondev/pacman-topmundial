@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Accesorios bien centrados
+
+- Revisadas las 47 skins con los 11 accesorios, uno a uno. **El parche ahora
+  tapa el ojo**, los auriculares van al lado de la cabeza, la cinta ninja por
+  la frente y el mostacho bajo la nariz.
+- Arreglados también los que quedaban descentrados en su skin: la calavera
+  (el gorro iba muy adelantado), el dragón, el pulpo, el robot y el lobo.
+
 ## 2026-09-15 · Sombreros bien puestos
 
 - La **gorra de hélice** y el **casco vikingo** se hundían dentro de algunas
