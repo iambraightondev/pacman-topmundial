@@ -125,7 +125,9 @@
         if (f[0] - arr[i + n - 1][0] !== delta) break;
         n++;
       }
-      out += b36(delta) + code + (n > 1 ? '*' + b36(n) : '');
+      /* la cuenta del RLE se cierra con un punto: sin él, '5A*8' seguido de
+       * '5G' se leía '5A*85' y una 'G' sin delta (repetición rota) */
+      out += b36(delta) + code + (n > 1 ? '*' + b36(n) + '.' : '');
       prev = arr[i + n - 1][0];
       i += n;
     }
@@ -137,7 +139,8 @@
   function decEntradas(s) {
     var out = [];
     if (s === '') return out;
-    var re = /([0-9a-z]+)([A-DG-Z])(?:\*([0-9a-z]+))?/g;
+    // el punto que cierra la cuenta es opcional: los textos de antes no lo llevan
+    var re = /([0-9a-z]+)([A-DG-Z])(?:\*([0-9a-z]+)\.?)?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
@@ -398,6 +401,7 @@
                 b36(a.powerS * 100), b36(a.vidas)];
       if (a.vidasModo === 'individual') aj.push('i');
       if (esLista(a.ghosts)) aj.push(codGhosts(a.ghosts));
+      if (a.qArmada) aj.push('q');
       var nombres = [];
       for (i = 0; i < rep.nombres.length; i++) {
         nombres.push(limpiaNombre(rep.nombres[i]));
@@ -445,6 +449,7 @@
         for (var b = 4; b < aj.length; b++) {
           if (aj[b] === 'i') ajustes.vidasModo = 'individual';
           else if (aj[b].charAt(0) === 'g') ajustes.ghosts = decGhosts(aj[b]);
+          else if (aj[b] === 'q') ajustes.qArmada = true;
         }
 
         var crudos = p[6].split(','), nombres = [];
@@ -727,6 +732,10 @@
        * por su cuenta— así que sin esto la repetición no se puede montar. */
       var vs = !!(G.isVersus && G.isVersus());
       if (vs) ajustes.ghosts = G.vsGhosts.slice();
+      /* DESATADO: se graba la pulsación que ARMA la Q y no el mordisco que
+       * sale solo después (js/habilidades.js, pulsar). Las grabadas antes de
+       * esto no llevan la bandera y se recomponen al verlas (recomponer). */
+      if (G.hab) ajustes.qArmada = true;
 
       this.modo = 'grabar';
       this.grabando = {
@@ -831,17 +840,184 @@
     inyectar: function () {
       var ent = this.rep && this.rep.entradas;
       if (!ent) return;
+      var rc = this.recomp;
       this.enviando = true;
       while (this.cursor < ent.length && ent[this.cursor][0] <= this.t) {
-        var e = ent[this.cursor++];
+        var i = this.cursor++, e = ent[i];
         if (e[2] >= 4) {
           // habilidad: se relanza igual que la lanzó el jugador aquel día
-          if (window.PM.Hab) window.PM.Hab.pulsar(G, e[1], e[2] - 4);
+          var ok = window.PM.Hab ? window.PM.Hab.pulsar(G, e[1], e[2] - 4) : true;
+          if (rc) {
+            if (e[2] === 4) rc.elegido[i] = 'normal';
+            // en una grabación vieja todo poder apuntado SALIÓ: si aquí no sale,
+            // la repetición ya se ha torcido
+            if (!ok && rc.fallo < 0) rc.fallo = i;
+          }
         } else {
           G.setPacDir(e[1], e[2]);
         }
       }
       this.enviando = false;
+    },
+
+    /* ---------- la Q armada de las grabaciones VIEJAS ----------
+     * Hasta el 15 sep se grababa el MORDISCO de la Q armada (la que se pide
+     * un poco antes de tiempo y muerde sola en cuanto hay alguien a tiro) en
+     * vez de la pulsación que la armó. Ese mordisco ocurre dentro de
+     * Hab.paso(), a mitad de un tick, y la repetición lo aplicaba al
+     * principio del siguiente: un tick tarde, justo el que tarda el fantasma
+     * en tocar a Pac-Man. Desde entonces se graba la pulsación (bandera
+     * qArmada) y no hace falta nada de esto.
+     *
+     * Para las viejas no hay forma de saber, mirando solo el texto, qué Q fue
+     * de teclado y cuál fue un reintento. Se deduce SIMULANDO: cada Q grabada
+     * se prueba en el tick de antes, justo después de Hab.paso (donde muerde
+     * el reintento), si ahí ya había alguien a tiro. Como todo poder grabado
+     * salió de verdad, en cuanto uno no sale se sabe que una decisión de
+     * antes estaba mal, y se le da la vuelta (recomponer). Lo que se decide
+     * (rep.dq: índice -> 'temprano' | 'normal') se guarda con la repetición
+     * para no volver a buscarlo. Game.step llama a trasHab(). */
+    reintentoVale: function () {
+      return this.modo === 'ver' && !!(this.rep && this.rep.ajustes && this.rep.ajustes.qArmada);
+    },
+
+    necesitaRecomponer: function (rep) {
+      if (!rep || !esDesatado(rep.modo) || (rep.ajustes && rep.ajustes.qArmada)) return false;
+      for (var i = 0; i < rep.entradas.length; i++) if (rep.entradas[i][2] === 4) return true;
+      return false;
+    },
+
+    trasHab: function () {
+      if (this.modo !== 'ver' || !this.rep) return;
+      var rep = this.rep, rc = this.recomp;
+      if (!rc && !rep.dq) return;
+      var e = rep.entradas[this.cursor];
+      if (!e || e[2] !== 4 || e[0] !== this.t) return;
+      var H = window.PM.Hab;
+      if (!H) return;
+      var i = this.cursor;
+      var d = rc ? rc.decision[i] : rep.dq[i];
+      if (d === 'normal') return;
+      if (!d || d === 'auto') {
+        if (!(H.puede(G, e[1], 0) && H.presa(G, e[1]))) return;
+      }
+      this.cursor++;
+      this.enviando = true;
+      var ok = H.pulsar(G, e[1], 0);
+      this.enviando = false;
+      if (rc) {
+        rc.elegido[i] = 'temprano';
+        if (!ok && rc.fallo < 0) rc.fallo = i;
+      }
+    },
+
+    /* Simula la repetición con unas decisiones, a trozos para no congelar la
+     * pantalla. hecho({ fallo, elegido, cuadra }) */
+    simularCon: function (rep, decision, hecho) {
+      var self = this;
+      var tope = Math.round((rep.final.tiempoMs || 0) * 60 / 1000) * 2 + 36000;
+      this.recomp = { decision: decision, elegido: {}, fallo: -1 };
+      G.simulandoFuera = true;
+      this.montar(rep);
+      var pasos = 0;
+      function trozo() {
+        var rc = self.recomp;
+        if (!rc) return;                               // cancelada
+        for (var n = 0; n < 3000; n++) {
+          if (G.state === 'GAME_OVER' || G.state === 'MENU' || rc.fallo >= 0 || pasos > tope) break;
+          G.step();
+          pasos++;
+        }
+        if (G.state === 'GAME_OVER' || G.state === 'MENU' || rc.fallo >= 0 || pasos > tope) {
+          var r = { fallo: rc.fallo, elegido: rc.elegido,
+                    cuadra: rc.fallo < 0 && G.score === rep.final.puntos && G.state === 'GAME_OVER' };
+          hecho(r);
+          return;
+        }
+        if (self.recompProgreso) self.recompProgreso(Math.min(0.99, pasos / (tope / 2)));
+        setTimeout(trozo, 0);
+      }
+      trozo();
+    },
+
+    /* Busca las decisiones que reconstruyen la partida. hecho(dq | null) */
+    recomponer: function (rep, hecho) {
+      var self = this;
+      var decision = {}, intentos = 0, MAX = 160;
+      var mejor = null;
+      var sonido = window.PM.settings ? !!window.PM.settings.muted : false;
+      if (window.AudioSys && AudioSys.setMuted) AudioSys.setMuted(true);
+      function fin(dq) {
+        self.recomp = null;
+        G.simulandoFuera = false;
+        if (window.AudioSys && AudioSys.setMuted) AudioSys.setMuted(sonido);
+        if (G.inGame()) G.toMenu();
+        self.modo = null;
+        self.rep = null;
+        self.mostrarBarra(false);
+        hecho(dq);
+      }
+      function copia(o) { var x = {}; for (var k in o) if (o.hasOwnProperty(k)) x[k] = o[k]; return x; }
+      function voltea(dec, elegido, q) {
+        var x = copia(dec);
+        x[q] = (elegido[q] === 'temprano') ? 'normal' : 'temprano';
+        return x;
+      }
+      function aDq(dec, elegido) {
+        var dq = {};
+        for (var k in elegido) if (elegido.hasOwnProperty(k)) dq[k] = elegido[k];
+        return dq;
+      }
+      /* Ante un fallo se prueba a dar la vuelta a las Q de antes, la más
+       * cercana primero (hasta 25), y si ninguna sola lo arregla, parejas de
+       * las 8 más cercanas. Se acepta el cambio que lleve el fallo más lejos. */
+      function tras(r) {
+        mejor = r;
+        if (r.cuadra) { fin(aDq(decision, r.elegido)); return; }
+        if (r.fallo < 0) { fin(null); return; }
+        var qs = Object.keys(r.elegido).map(Number)
+          .filter(function (i) { return i <= r.fallo; })
+          .sort(function (a, b) { return b - a; });
+        var pruebas = [];
+        qs.slice(0, 25).forEach(function (q) { pruebas.push(voltea(decision, r.elegido, q)); });
+        var cerca = qs.slice(0, 8);
+        for (var a = 0; a < cerca.length; a++) {
+          for (var b = a + 1; b < cerca.length; b++) {
+            pruebas.push(voltea(voltea(decision, r.elegido, cerca[a]), r.elegido, cerca[b]));
+          }
+        }
+        var p = 0;
+        function siguiente() {
+          if (!self.recompVivo) return;
+          if (p >= pruebas.length || intentos >= MAX) { fin(null); return; }
+          var prueba = pruebas[p++];
+          intentos++;
+          self.simularCon(rep, prueba, function (r2) {
+            if (r2.cuadra || r2.fallo < 0 || r2.fallo > r.fallo) {
+              decision = prueba;
+              tras(r2);
+            } else siguiente();
+          });
+        }
+        siguiente();
+      }
+      this.recompVivo = true;
+      this.simularCon(rep, decision, tras);
+    },
+
+    cancelarRecomponer: function () {
+      this.recompVivo = false;
+      if (this.recomp) {
+        this.recomp = null;
+        G.simulandoFuera = false;
+        if (window.AudioSys && AudioSys.setMuted) {
+          AudioSys.setMuted(!!(window.PM.settings && window.PM.settings.muted));
+        }
+        if (G.inGame()) G.toMenu();
+        this.modo = null;
+        this.rep = null;
+        this.mostrarBarra(false);
+      }
     },
 
     /* Fin de la partida (Game.closeRun): se cierra la repetición y se
@@ -1285,8 +1461,31 @@
     /* =========================================================
      * REPRODUCCIÓN
      * ========================================================= */
-    ver: function (rep) {
+    /* reg: el registro guardado de donde sale (para apuntarle lo recompuesto) */
+    ver: function (rep, reg) {
       if (!this.valida(rep)) return false;
+      var self = this, UI = window.PM.UI;
+      /* grabada antes del arreglo de la Q armada: primero se recompone */
+      if (!rep.dq && reg && reg.dq) rep.dq = reg.dq;
+      if (!rep.dq && this.necesitaRecomponer(rep)) {
+        if (G.inGame()) G.toMenu();
+        this.avisoRecomponer(0);
+        this.recompProgreso = function (x) { self.avisoRecomponer(x); };
+        this.recomponer(rep, function (dq) {
+          self.recompProgreso = null;
+          if (UI) UI.hidePrompt();
+          rep.dq = dq || {};                   // sin arreglo, se ve tal cual
+          if (dq && reg) self.apuntarDq(reg.id, dq);
+          self.ver(rep, reg);
+        });
+        return true;
+      }
+      this.montar(rep);
+      return true;
+    },
+
+    /* Pone el juego a reproducir la repetición (sin recomponer nada) */
+    montar: function (rep) {
       var UI = window.PM.UI;
       if (G.inGame()) G.toMenu();      // lo que hubiera se cierra y se guarda
       this.modo = 'ver';
@@ -1307,19 +1506,44 @@
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
           ? rep.ajustes.ghosts.slice() : null
       });
-      return true;
     },
 
-    verTexto: function (texto) {
+    avisoRecomponer: function (x) {
+      var self = this, UI = window.PM.UI;
+      if (!UI || !UI.showPrompt) return;
+      UI.showPrompt({
+        title: 'PREPARANDO LA REPETICIÓN',
+        color: '#7ec8ff',
+        lines: [
+          'ESTA PARTIDA SE GRABÓ ANTES DE UN ARREGLO DE LA Q ARMADA.',
+          'SE ESTÁ RECOMPONIENDO PARA QUE SE VEA TAL CUAL LA JUGASTE. SOLO PASA LA PRIMERA VEZ.',
+          { text: Math.round((x || 0) * 100) + ' %', big: true }
+        ],
+        buttons: [
+          { label: 'CANCELAR', hint: 'ESC', keys: ['Escape'],
+            onClick: function () { self.cancelarRecomponer(); UI.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* Guarda en el registro lo recompuesto, para no volver a buscarlo */
+    apuntarDq: function (id, dq) {
+      var lista = this.guardadas();
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === id) { lista[i].dq = dq; this.escribir(lista); return; }
+      }
+    },
+
+    verTexto: function (texto, reg) {
       var rep = this.leer(texto);
       if (!rep) { this.avisoRoto(); return false; }
-      return this.ver(rep);
+      return this.ver(rep, reg);
     },
 
     verGuardada: function (id) {
       var reg = this.porId(id);
       if (!reg) { this.avisoRoto(); return false; }
-      return this.verTexto(reg.s);
+      return this.verTexto(reg.s, reg);
     },
 
     /* ---------- Puerta para el TOP MUNDIAL ----------
@@ -1384,7 +1608,7 @@
       if (this.modo === 'verRed') { this.verRed(rep); return; }
       if (this.modo !== 'ver') return;
       if (G.lastOpts) G.restartGame();     // pasa por newGame -> alEmpezar
-      else this.ver(rep);
+      else this.montar(rep);
     },
 
     /* yaEnMenu: la partida ya se cerró por su cuenta (SALIR del menú de

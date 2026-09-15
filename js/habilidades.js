@@ -457,8 +457,11 @@
       if (!this.puede(G, idx, k)) return false;
       var R = window.PM.Replay;
       // mientras se ve una repetición manda ella: la tecla del que mira no
-      // pinta nada, igual que con los giros (js/replay.js)
-      if (R && R.habBloqueada && R.habBloqueada()) return false;
+      // pinta nada, igual que con los giros (js/replay.js). La Q ARMADA que
+      // se resuelve sola en paso() sí vale si la repetición grabó la
+      // pulsación que la armó (ver Replay.reintentoVale)
+      if (R && R.habBloqueada && R.habBloqueada() &&
+          !(this.reintento && R.reintentoVale && R.reintentoVale())) return false;
       if (!this.lanzar(G, idx, k)) {
         /* MORDISCO al aire: no se tira la tecla, se deja ARMADA un instante
          * (CFG.HAB.BITE_BUFFER) y muerde sola en cuanto alguien entre a tiro.
@@ -473,13 +476,21 @@
             !(G.vsGhostOf && G.vsGhostOf(idx) >= 0)) {
           var s = this.estado(idx);
           if (s) s.pedirQ = H.BITE_BUFFER;
+          /* La pulsación que ARMA la Q se graba: la repetición la vuelve a
+           * pulsar en el mismo tick, se arma igual y muerde sola en el mismo
+           * paso() que aquel día. Antes se grababa el mordisco del reintento,
+           * que ocurre DENTRO de un paso y la repetición lo aplicaba un tick
+           * tarde: el fantasma llegaba a tocar a Pac-Man y la partida se
+           * torcía (15 sep: una de 93.870 puntos se veía morir al minuto). */
+          if (R && R.apuntaHab) R.apuntaHab(idx, k);
         }
         return false;
       }
       /* Se apunta DESPUÉS y solo si salió: un mordisco al aire o un flash
        * contra el borde no cambian nada, así que meterlos en la repetición
-       * sería engordarla por gusto. */
-      if (R && R.apuntaHab) R.apuntaHab(idx, k);
+       * sería engordarla por gusto. El mordisco del reintento no: lo que se
+       * grabó fue la pulsación que lo armó. */
+      if (R && R.apuntaHab && !this.reintento) R.apuntaHab(idx, k);
       return true;
     },
 

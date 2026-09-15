@@ -854,6 +854,9 @@
       function pump(now, doRender) {
         var dt = now - self.loopLast;
         self.loopLast = now;
+        /* una repetición vieja se está recomponiendo (js/replay.js): la
+         * simula ella a toda velocidad y el bucle no debe meter pasos */
+        if (self.simulandoFuera) { self.loopAcc = 0; return; }
         if (dt > 100) dt = 100;   // pestaña en segundo plano
         // timeScale acelera el reloj sin tocar la simulación: los pasos
         // siguen siendo de 1/60 s, solo que caben más en cada fotograma
@@ -901,6 +904,8 @@
       this.stepOverWait();
       // recargas y efectos de las habilidades (no hace nada fuera del modo)
       if (window.PM.Hab) window.PM.Hab.paso(this);
+      // repeticiones viejas de DESATADO: la Q armada muerde aquí (js/replay.js)
+      if (window.PM.Replay && window.PM.Replay.trasHab) window.PM.Replay.trasHab();
 
       /* aviso de red: congela y vuelve al menú */
       if (this.netNotice) {

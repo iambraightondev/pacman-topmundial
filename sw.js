@@ -1,18 +1,18 @@
-/* ============================================================
- * PAC-MAN TOP MUNDIAL — sw.js (service worker)
+﻿/* ============================================================
+ * PAC-MAN TOP MUNDIAL â€” sw.js (service worker)
  *
- * Deja el juego instalable y jugable sin conexión. Estrategia:
+ * Deja el juego instalable y jugable sin conexiÃ³n. Estrategia:
  *  - HTML, CSS y JS: red primero, y si falla, la copia guardada.
- *    Es lo que cambia en cada despliegue, así que servir la copia
- *    primero dejaba el juego una visita entera con la versión vieja.
+ *    Es lo que cambia en cada despliegue, asÃ­ que servir la copia
+ *    primero dejaba el juego una visita entera con la versiÃ³n vieja.
  *  - audio e iconos: la copia al instante (no cambian nunca) y
- *    refresco por detrás.
+ *    refresco por detrÃ¡s.
  *  - lo de fuera del dominio (Supabase: salas online y ranking)
  *    no se toca nunca: siempre va a la red.
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v49';
+var VERSION = 'pm-v50';
 var SHELL = [
   './',
   './index.html',
@@ -57,7 +57,7 @@ self.addEventListener('install', function (ev) {
     caches.open(VERSION)
       .then(function (c) { return c.addAll(SHELL); })
       .then(function () { return self.skipWaiting(); })
-      .catch(function () { /* si algo no está, se cachea al vuelo */ })
+      .catch(function () { /* si algo no estÃ¡, se cachea al vuelo */ })
   );
 });
 
@@ -77,10 +77,10 @@ self.addEventListener('fetch', function (ev) {
 
   var url;
   try { url = new URL(req.url); } catch (e) { return; }
-  if (url.origin !== self.location.origin) return;   // Supabase y demás
+  if (url.origin !== self.location.origin) return;   // Supabase y demÃ¡s
 
-  // Código del juego (HTML, CSS, JS): red primero, copia como respaldo.
-  // Con la copia primero, tras un despliegue seguías viendo la versión
+  // CÃ³digo del juego (HTML, CSS, JS): red primero, copia como respaldo.
+  // Con la copia primero, tras un despliegue seguÃ­as viendo la versiÃ³n
   // anterior hasta la siguiente visita.
   var esCodigo = (req.mode === 'navigate') ||
     /\.(?:html|css|js|json)(?:$|\?)/i.test(url.pathname);
@@ -103,7 +103,7 @@ self.addEventListener('fetch', function (ev) {
     return;
   }
 
-  // Audio e iconos: no cambian, así que la copia al instante
+  // Audio e iconos: no cambian, asÃ­ que la copia al instante
   ev.respondWith(
     caches.match(req).then(function (hit) {
       var net = fetch(req).then(function (res) {

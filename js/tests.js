@@ -6652,6 +6652,71 @@
   });
 
   // ---------------------------------------------------------------
+  // Repeticiones de DESATADO con la Q armada (15 sep)
+  // ---------------------------------------------------------------
+  /* Una partida de DESATADO jugada "a mano" pidiendo la Q antes de tiempo
+   * tiene que verse igual en la repetición. Antes se grababa el mordisco que
+   * sale solo (dentro de Hab.paso) y la repetición lo aplicaba un tick tarde:
+   * una partida de 93.870 puntos se veía morir al minuto. */
+  test('la repetición de DESATADO con Q armada acaba igual que la partida', function () {
+    var R = window.PM.Replay, H = window.PM.Hab;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { previo = null; }
+    var reintentos = 0, pulsarOrig = H.pulsar;
+    H.pulsar = function (Gx, idx, k) {
+      var ok = pulsarOrig.apply(this, arguments);
+      if (ok && this.reintento) reintentos++;
+      return ok;
+    };
+    try {
+      window.PM.settings.muted = true;
+      if (G.inGame()) G.toMenu();
+      R.salir();                       // que no quede nada de otra prueba
+      G.newGame({ players: 1, hab: true });
+      ok(R.enCurso() && R.enCurso().ajustes.qArmada, 'se graba con la bandera de la Q armada');
+      var tick = 0;
+      for (; tick < 7000 && G.state !== 'GAME_OVER'; tick++) {
+        // lo que haría alguien: girar cada poco y pedir la Q al ver venir un fantasma
+        if (tick % 45 === 0) G.setPacDir(0, (tick / 45) % 4);
+        if (tick % 5 === 0 && G.state === 'PLAYING') {
+          var p = G.pacs[0];
+          for (var gi = 0; gi < 4; gi++) {
+            var g = G.ghosts[gi];
+            if (g.mode === 'house' || g.mode === 'eyes') continue;
+            var dx = Math.abs(g.x - p.x), dy = Math.abs(g.y - p.y);
+            if (dx < 40 && dy < 40 && (dx > CFG.HAB.BITE_PX || dy > CFG.HAB.BITE_PX)) {
+              H.pulsar(G, 0, 0);
+              break;
+            }
+          }
+        }
+        G.step();
+      }
+      var tFin = R.t, puntos = G.score, px = G.pacs[0].x, py = G.pacs[0].y, vidas = G.lives;
+      G.toMenu();
+      ok(reintentos > 0, 'hubo mordiscos de Q armada (' + reintentos + ')');
+      var reg = R.guardadas()[0];
+      ok(reg && reg.p === puntos, 'se guardó la repetición');
+      var rep = R.leer(reg.s);
+      ok(rep && rep.ajustes.qArmada, 'la bandera sobrevive al texto (' + reg.s.slice(0, 30) + ')');
+      ok(!R.necesitaRecomponer(rep), 'y no hace falta recomponerla');
+      H.pulsar = pulsarOrig;
+      R.montar(rep);
+      var n = 0;
+      while (R.t < tFin && G.state !== 'GAME_OVER' && n < 20000) { G.step(); n++; }
+      eq(G.score, puntos, 'los mismos puntos');
+      eq(G.pacs[0].x + ',' + G.pacs[0].y, px + ',' + py, 'Pac-Man en el mismo sitio');
+      G.toMenu();
+    } finally {
+      H.pulsar = pulsarOrig;
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* nada */ }
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();
