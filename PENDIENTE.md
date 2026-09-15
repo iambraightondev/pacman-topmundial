@@ -13,6 +13,29 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**15 sep (noche) — CIERRE DE SESIÓN, TODO SUBIDO (`pm-v63`).** Lo hecho hoy,
+en orden, con su detalle más abajo: el DAILY pasó a ser **LA CARTILLA**
+(`v51`, más grande en `v52`, botín cobrado en verde en `v57`); el selector de
+modo enseña los **modos vecinos** y se arrastra (`v53`, `v55`); **REGALO DE
+VETERANO** en la tienda, opción A (`v54`); la **melodía de inicio** ya no
+suena en pausa (`v56`); el **VESTUARIO** sustituye al panel de SKINS (`v58`,
+afinado en `v59`); y el **cruce de aspectos**: accesorios en las 26
+extravagantes (`v60`), que además acompañan su movimiento (`v61`), con los
+sombreros apoyados (`v62`) y todos los accesorios centrados skin a skin
+(`v63`). También se **borró la cuenta SANDROPEPAS** y se le puso contraseña a
+**SANDROPEPA**. `tests.html` 327/327; Node, 2 fallos de siempre.
+
+**Lo que queda por mirar (nada urgente):**
+- El VESTUARIO y la cartilla del DAILY **en un móvil de verdad**.
+- Que se entiendan las marcas de **NUEVO** del vestuario. Con cuenta en un
+  aparato nuevo, lo que baja de la nube puede salir como NUEVO una vez.
+- El **arrastre de modos con el dedo** (solo probado con ratón simulado).
+- Un **día perdido** del DAILY, en gris (no se pudo ver un martes).
+- Si se añade una extravagante nueva: darle su entrada en `CABEZAS` y en
+  `POSES` (`js/skins.js`), o no llevará accesorio y no acompañará su
+  movimiento. Si se añade un panel: apuntarlo también en `tests.html` y en
+  `pruebas-node.js`.
+
 **15 sep (tarde) — selector de modo con vecinos (`pm-v53`).** Braighton
 pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "tipo
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
