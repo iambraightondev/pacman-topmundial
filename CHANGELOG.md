@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Elegir modo, como en la recreativa
+
+- **Donde estaban las flechas asoman los modos de al lado**, pequeños y
+  apagados, con su icono y su nombre. Se pulsan para pasar a ellos, y la
+  tarjeta nueva entra deslizándose desde ese lado.
+
 ## 2026-09-15 · El DAILY es una cartilla
 
 - **La semana es una cartilla de siete casillas**, con un fantasma por día.

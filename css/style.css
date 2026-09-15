@@ -500,8 +500,8 @@ body {
 }
 
 /* ---------- Selector de modo de la portada ----------
- * UN MODO CADA VEZ, en grande, con una flecha a cada lado y los puntitos
- * debajo. Antes eran seis tarjetas en rejilla; se veía todo de golpe, sí, pero
+ * UN MODO CADA VEZ, en grande, con sus vecinos asomando a los lados y los
+ * puntitos debajo. Antes eran seis tarjetas en rejilla; se veía todo de golpe, sí, pero
  * ninguna pesaba más que las otras y elegir modo —que es LA decisión de la
  * portada— se sentía como marcar una casilla de un formulario. Un recuadro
  * grande con su icono a tamaño de verdad se parece más a plantarse delante de
@@ -523,34 +523,91 @@ body {
   justify-content: center;
   gap: 8px;
   width: 100%;
+  overflow: hidden;     /* la tarjeta que entra deslizándose no se sale */
 }
 
-/* Las flechas: grandes de pulsar pero sin llegar a la altura de la tarjeta.
-   Estirándolas de arriba abajo parecían dos columnas vacías, no dos botones. */
-.mode-arrow {
+/* Los vecinos: el modo de antes y el de después, asomando a los lados como en
+   la selección de una recreativa. Más bajos que la tarjeta del centro y
+   apagados, para que no le disputen el sitio; al pasar por encima se
+   encienden en su color. `--mc` es el color de ese modo. */
+.mode-peek {
+  position: relative;
   flex: 0 0 auto;
-  width: 40px;
-  height: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: clamp(58px, 17%, 76px);
+  height: 132px;
   font-family: inherit;
-  font-size: 20px;
-  line-height: 1;
-  color: #7a7a7a;
+  font-weight: bold;
+  color: var(--mc, #7a7a7a);
   background: #000;
-  border: 2px solid #2121ff;
-  padding: 0;
+  border: 2px solid var(--mc, #2121ff);
+  padding: 8px 2px 16px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.12s linear, color 0.12s linear;
+  opacity: 0.42;
+  filter: saturate(0.7);
+  transition: opacity 0.12s linear, filter 0.12s linear, background 0.12s linear;
 }
 
-.mode-arrow:hover,
-.mode-arrow:focus-visible {
-  background: rgba(33, 33, 255, 0.28);
-  color: #fff;
+.mode-peek:hover,
+.mode-peek:focus-visible {
+  opacity: 1;
+  filter: none;
+  background: rgba(255, 255, 255, 0.05);
   outline: none;
 }
 
-.mode-arrow:active { background: rgba(33, 33, 255, 0.6); }
+.mode-peek:active { background: rgba(255, 255, 255, 0.12); }
+
+.mode-peek-icon {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.mode-peek-name {
+  font-size: clamp(7px, 1.1vh, 9px);
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* la flechita sigue ahí, pequeña y abajo: dice hacia dónde se pasa */
+.mode-peek-arrow {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: #fff;
+  opacity: 0.7;
+}
+
+/* La tarjeta nueva entra desde el lado del vecino que se pulsó */
+.mode-card.entra-der { animation: mode-entra-der 0.16s steps(4) both; }
+.mode-card.entra-izq { animation: mode-entra-izq 0.16s steps(4) both; }
+
+@keyframes mode-entra-der {
+  from { transform: translateX(26%) scale(0.86); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+
+@keyframes mode-entra-izq {
+  from { transform: translateX(-26%) scale(0.86); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-card.entra-der,
+  .mode-card.entra-izq { animation: none; }
+}
 
 /* El marco no cambia de tamaño al pasar de modo: las seis tarjetas tienen la
    misma altura reservada, así que las flechas, la descripción y el botón de
@@ -737,7 +794,7 @@ body {
   .menu-extras { flex-direction: column; }
   .menu-cast .hint { margin-top: 0; text-align: left; line-height: 1.6; }
   .menu-cast .roster { align-self: start; margin: 4px 0 10px 6px; }
-  /* Las flechas del carrusel NO son .btn, pero la regla de arriba no las
+  /* Los vecinos del carrusel NO son .btn, pero la regla de arriba no los
      alcanza igual: se apunta a los botones normales de la columna. */
   .menu-main .btn { width: 100%; }
   /* En ancho sobra alto: la tarjeta del modo respira un poco más */

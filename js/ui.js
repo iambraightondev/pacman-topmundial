@@ -896,8 +896,8 @@
     /* ------------------------------------------------------
      * Selector de modo de la portada
      * ------------------------------------------------------ */
-    /* UN MODO CADA VEZ, en grande, con flecha a cada lado y los puntitos
-     * debajo. Antes eran seis tarjetas en rejilla: se veía todo de un vistazo,
+    /* UN MODO CADA VEZ, en grande, con sus vecinos asomando a los lados y los
+     * puntitos debajo. Antes eran seis tarjetas en rejilla: se veía todo de un vistazo,
      * sí, pero ninguna pesaba más que las otras y elegir modo —que es LA
      * decisión de la portada— se sentía como marcar una casilla. Con una sola
      * tarjeta grande, su icono a tamaño de verdad y su nombre, elegir modo se
@@ -913,13 +913,31 @@
       var wrap = document.createElement('div');
       wrap.className = 'mode-carousel';
 
-      var prev = document.createElement('button');
-      prev.type = 'button';
-      prev.className = 'mode-arrow mode-prev';
-      prev.textContent = '◀';
-      prev.setAttribute('aria-label', 'Modo anterior');
-      prev.addEventListener('click', function () { self.stepMode(-1); });
-      wrap.appendChild(prev);
+      /* A los lados, en vez de flechas, los modos VECINOS asomando: más
+       * pequeños y apagados, como en la pantalla de selección de una
+       * recreativa. Una flecha solo dice "hay más"; el vecino dice QUÉ hay, y
+       * se pulsa igual para pasar a él. */
+      var peek = function (d) {
+        var p = document.createElement('button');
+        p.type = 'button';
+        p.className = 'mode-peek ' + (d < 0 ? 'mode-prev' : 'mode-next');
+        var pcv = document.createElement('canvas');
+        pcv.width = 88; pcv.height = 88;
+        pcv.className = 'mode-peek-icon';
+        p.appendChild(pcv);
+        var pn = document.createElement('span');
+        pn.className = 'mode-peek-name';
+        p.appendChild(pn);
+        var fl = document.createElement('span');
+        fl.className = 'mode-peek-arrow';
+        fl.textContent = d < 0 ? '◀' : '▶';
+        p.appendChild(fl);
+        p.addEventListener('click', function () { self.stepMode(d); });
+        return { b: p, cv: pcv, name: pn, id: '' };
+      };
+      this.modePeekPrev = peek(-1);
+      this.modePeekNext = peek(1);
+      wrap.appendChild(this.modePeekPrev.b);
 
       /* Las seis viven a la vez en el DOM y solo se enseña la elegida. Se
        * montan una vez —los iconos son lienzos y repintarlos en cada paso se
@@ -962,13 +980,7 @@
       });
       wrap.appendChild(caja);
 
-      var next = document.createElement('button');
-      next.type = 'button';
-      next.className = 'mode-arrow mode-next';
-      next.textContent = '▶';
-      next.setAttribute('aria-label', 'Modo siguiente');
-      next.addEventListener('click', function () { self.stepMode(1); });
-      wrap.appendChild(next);
+      wrap.appendChild(this.modePeekNext.b);
 
       /* Los puntos: cuántos modos hay y por cuál vas. Sin ellos, un carrusel
        * no dice si quedan dos o veinte. Se pueden pulsar, que es más rápido
@@ -1012,7 +1024,17 @@
         if (MODOS[k].id === this.modePick) { i = k; break; }
       }
       i = (i + d + MODOS.length) % MODOS.length;
+      this.modeEntra = d;          // de qué lado entra la tarjeta nueva
       this.pickMode(MODOS[i].id);
+    },
+
+    /* El modo que queda a `d` pasos del elegido, dando la vuelta */
+    modoVecino: function (d) {
+      var i = 0;
+      for (var k = 0; k < MODOS.length; k++) {
+        if (MODOS[k].id === this.modePick) { i = k; break; }
+      }
+      return MODOS[(i + d + MODOS.length) % MODOS.length];
     },
 
     /* Icono de un modo. Todo dibujado con los sprites del juego: son los
@@ -1094,6 +1116,31 @@
           d.style.borderColor = sel ? card.mo.color : '';
         }
       }
+      /* Los vecinos: se repintan solo si han cambiado de modo */
+      var self = this;
+      [[this.modePeekPrev, -1], [this.modePeekNext, 1]].forEach(function (par) {
+        var pk = par[0];
+        if (!pk) return;
+        var vm = self.modoVecino(par[1]);
+        if (pk.id !== vm.id) {
+          self.drawModeIcon(pk.cv, vm);
+          pk.name.textContent = vm.name;
+          pk.b.style.setProperty('--mc', vm.color);
+          pk.b.setAttribute('aria-label', (par[1] < 0 ? 'Modo anterior: ' : 'Modo siguiente: ') + vm.name);
+          pk.id = vm.id;
+        }
+      });
+      /* La tarjeta nueva entra deslizándose desde el lado del vecino que se
+       * pulsó: sin eso, el cambio es un parpadeo y no se entiende que el
+       * vecino ha pasado al centro. */
+      var nueva = this.modeCards[id];
+      if (this.modeEntra && nueva) {
+        var cls = this.modeEntra > 0 ? 'entra-der' : 'entra-izq';
+        nueva.b.classList.remove('entra-der', 'entra-izq');
+        void nueva.b.offsetWidth;
+        nueva.b.classList.add(cls);
+      }
+      this.modeEntra = 0;
       if (this.modeDesc) {
         this.modeDesc.textContent = mo.desc;
         this.modeDesc.style.color = mo.color;
