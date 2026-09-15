@@ -233,6 +233,46 @@
       return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, g: m.g };
     },
 
+    /* Nombre, color o skin cambiados en PERFIL con la party ya abierta.
+     * El líder se apunta a sí mismo UNA vez al crearla y onHello solo
+     * refresca a los demás, así que su skin se quedaba en la de entrar y la
+     * partida salía con la vieja. El invitado se enteraba al siguiente latido,
+     * pero si el líder arrancaba antes también salía la vieja. Ahora se
+     * reparte en el acto. En partida no: se verá en la siguiente. */
+    refreshMe: function () {
+      if (!this.st) return;
+      var G = window.PM.Game;
+      if (G && G.inGame() && !G.isSpec()) return;
+      var yo = this.me();
+      if (this.st.leader) {
+        if (!this.updateSelf(yo)) return;
+        if (this.st.status === 'dentro') this.sendRoster();
+      } else {
+        var m = this.selfEntry();
+        if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k) return;
+        window.PM.Net.send('phello', this.hello());
+      }
+      this.changed();
+    },
+
+    selfEntry: function () {
+      if (!this.st) return null;
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (this.st.members[i].s === window.PM.Net.sid) return this.st.members[i];
+      }
+      return null;
+    },
+
+    /* El líder copia sus datos actuales en su propia fila; dice si cambió algo */
+    updateSelf: function (yo) {
+      var m = this.selfEntry();
+      if (!m) return false;
+      yo = yo || this.me();
+      var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k;
+      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.t = yo.t;
+      return cambia;
+    },
+
     /* Salir de la party. El líder la disuelve. */
     leave: function () {
       if (!this.st) return;
@@ -281,7 +321,9 @@
       var G = window.PM.Game;
       if (G && G.inGame() && !G.isSpec()) return;
       if (this.st.leader) {
-        if (this.prune()) this.changed();
+        var cambio = this.prune();
+        if (this.updateSelf()) cambio = true;   // por si cambió sin avisar
+        if (cambio) this.changed();
         this.sendRoster();
       } else {
         window.PM.Net.send('phello', this.hello());
@@ -404,6 +446,7 @@
 
     startGame: function () {
       if (!this.canStart()) return;
+      this.updateSelf();                   // la skin de ahora, no la de entrar
       var order = this.gameOrder();
       var cfg = window.PM.UI ? window.PM.UI.netCfgSubset() : null;
       var hab = !!this.habPick, caza = !!this.cazaPick;

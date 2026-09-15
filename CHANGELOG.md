@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-14 · La skin que cambias en la party llega a la partida
+
+- **Cambiar de skin con la party abierta ya se nota en la partida.** El
+  líder se quedaba con la skin que llevaba al crear la party, y el invitado
+  tardaba unos segundos en avisar, así que si se arrancaba enseguida salía la
+  vieja. Ahora el cambio se reparte en el acto, y lo mismo el color y el
+  nombre.
+
 ## 2026-09-14 · Lluvia de monedas del COFRE
 
 - Con la Q que acierta, el COFRE suelta **26 monedas** (antes 8), de tamaños

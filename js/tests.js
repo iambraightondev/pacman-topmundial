@@ -2313,6 +2313,29 @@
     } finally { P.st = null; P.order = null; G.toMenu(); }
   });
 
+  test('la skin cambiada con la party abierta sale en la partida', function () {
+    G.toMenu();
+    var P = party(['ANA', 'BENI']);
+    var N = window.PM.Net, S = window.PM.settings;
+    var antes = S.skin1, enviar = N.send, mandados = [];
+    P.st.members[0].s = N.sid;              // la primera fila es la del líder
+    N.send = function (n, d) { mandados.push([n, d]); };
+    try {
+      S.skin1 = 'clasico';
+      P.updateSelf();
+      S.skin1 = 'sombra';
+      P.refreshMe();
+      eq(P.gameOrder()[0].k, 'sombra', 'el líder sale con la skin nueva, no con la de entrar');
+      ok(mandados.some(function (m) { return m[0] === 'proster'; }), 'y la reparte en el acto');
+      P.st.leader = false;
+      mandados = [];
+      S.skin1 = 'ojos';
+      P.refreshMe();
+      ok(mandados.some(function (m) { return m[0] === 'phello' && m[1].k === 'ojos'; }),
+        'el invitado avisa al líder sin esperar al latido');
+    } finally { S.skin1 = antes; N.send = enviar; P.st = null; P.order = null; }
+  });
+
   test('cada miembro sabe qué jugador le toca', function () {
     var P = party(['ANA', 'BENI', 'CARLOS', 'DIEGO']);
     try {

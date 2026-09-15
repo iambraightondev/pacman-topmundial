@@ -146,6 +146,8 @@
     try {
       localStorage.setItem(CFG.SETTINGS_KEY, JSON.stringify(window.PM.settings));
     } catch (e) { /* sin almacenamiento */ }
+    // con party abierta, el nombre, el color y la skin nuevos se reparten ya
+    if (window.PM.Party && window.PM.Party.refreshMe) window.PM.Party.refreshMe();
   }
 
   window.PM.settings = loadSettings();
