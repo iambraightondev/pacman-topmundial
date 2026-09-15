@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Vistas previas sincronizadas
+
+- En la vitrina de SKINS y en la TIENDA **todas las fichas se mueven a la vez**:
+  mismo punto del pasillo, misma Q y misma muerte, para compararlas de un
+  vistazo.
+
 ## 2026-09-15 · La TIENDA y quince skins nuevas
 
 - **TIENDA** en el cuartel y en PERFIL. Se compra con **monedas** que se

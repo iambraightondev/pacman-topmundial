@@ -1560,7 +1560,8 @@
     },
 
     /* Animación de la vitrina: solo mientras está abierta y solo las fichas
-     * visibles. Cada una va a su compás para que no parezcan clonadas. */
+     * visibles. Todas van SINCRONIZADAS: el mismo reloj y el mismo punto del
+     * pasillo, para compararlas de un vistazo (pedido el 15 sep). */
     animarSkins: function () {
       var self = this;
       var Sk = window.PM.Skins;
@@ -1586,8 +1587,7 @@
           if (it.card.style.display === 'none') continue;
           var r = it.card.getBoundingClientRect();
           if (r.bottom < 0 || r.top > alto) continue;
-          var tt = t + it.off * 0.013;
-          var pos = Sk.escena(it.escena, it.id, color, tt * 44 + it.off, tt, { team: equipo });
+          var pos = Sk.escena(it.escena, it.id, color, t * 44, t, { team: equipo });
           // la cereza cuelga por detrás: la lupa se centra un poco atrás
           Sk.lupa(it.lupa, it.escena, pos, it.id === 'cereza' ? 4 : 0);
         }
@@ -1930,14 +1930,13 @@
           if (row.card.style.display === 'none') continue;
           var r = row.card.getBoundingClientRect();
           if (r.bottom < 0 || r.top > alto) continue;
-          var tt = t + row.off * 0.013;
           var skin = (it.cat === 'skin') ? it.id : (it.cat === 'accesorio') ? conAcc : mia;
           var opts = {
             efecto: (it.cat === 'efecto') ? it.id : null,
             accesorio: (it.cat === 'accesorio') ? it.id : null,
             emote: (it.cat === 'emote') ? it.id : null
           };
-          var pos = Sk.escena(row.escena, skin, color, tt * 44 + row.off, tt, opts);
+          var pos = Sk.escena(row.escena, skin, color, t * 44, t, opts);
           Sk.lupa(row.lupa, row.escena, pos, it.cat === 'efecto' ? 5 : 0, it.cat === 'emote' ? 19 : 0);
         }
         raf(paso);
