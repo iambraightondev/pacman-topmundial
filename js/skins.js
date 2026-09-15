@@ -4425,6 +4425,97 @@
     vampiro:     { ojo: [2.9, 2.0], k: 0.70, coronilla: [1.4, 5.9], cuello: [1.6, -3.8] },
     lobo:        { ojo: [-0.4, 4.3], k: 0.60, coronilla: [-1.2, 5.8], cuello: [1.0, -3.3] }
   };
+  /* ---------- el accesorio se MUEVE con la skin ----------
+   * Las cabezas de arriba se midieron con la skin quieta en una pose
+   * concreta (POSE_MEDIDA). Pero casi todas botan, se mecen o saltan, y
+   * algunas abren la boca SUBIENDO la parte de arriba (el pan de la
+   * HAMBURGUESA, la tapa del COFRE, la mitad de arriba de la PLANTA) o
+   * levantan la cabeza entera (el LOBO al aullar). Un accesorio quieto se
+   * quedaba flotando donde estaba la cabeza.
+   *
+   * POSES repite, para cada una, las mismas transformaciones que hace su
+   * dibujo con la pieza donde va el accesorio (en DOMMatrix, en el marco de
+   * la skin). Al pintar se aplica la diferencia entre la pose de ahora y la
+   * medida: el accesorio va pegado a su pieza, se mueva como se mueva.
+   * `zona` es 'cara', 'cabeza' o 'cuello': el cuello va con la parte de
+   * abajo, que en las de boca hacia arriba no se levanta. */
+  var POSE_MEDIDA = { t: 0.3, half: 0, qSeg: null };
+  function girarM(m, px, py, rad) { return m.translateSelf(px, py).rotateSelf(rad * 180 / Math.PI).translateSelf(-px, -py); }
+  function botaM(t, vel, amp) { return Math.abs(Math.sin(t * vel)) * amp; }
+  var POSES = {
+    hamburguesa: function (m, o, zona) {
+      m.translateSelf(0, 0.4 + botaM(o.t, 7, 0.3)).scaleSelf(0.94, 0.94);
+      if (zona !== 'cuello') girarM(m, -5.4, -0.5, [0, 13, 24][fase(o)] * Math.PI / 180);
+    },
+    cofre: function (m, o, zona) {
+      m.translateSelf(0, 0.9 + botaM(o.t, 7, 0.3)).scaleSelf(0.98, 0.98);
+      if (zona !== 'cuello') girarM(m, -5, -0.5, [0, 15, 28][fase(o)] * Math.PI / 180);
+    },
+    planta: function (m, o, zona) {
+      m.scaleSelf(1.03, 1.03);
+      girarM(m, -2.8, 0, (zona === 'cuello' ? -1 : 1) * [0, 15, 30][fase(o)] * Math.PI / 180);
+    },
+    lobo: function (m, o) {
+      var tf = o.t % 4.2, pa = tf / 1.3;
+      var alza = (tf < 1.3) ? Math.sin(Math.min(1, pa / 0.25) * Math.PI / 2) * (pa > 0.8 ? (1 - pa) / 0.2 : 1) : 0;
+      girarM(m, -3, -1, alza * 0.5);
+    },
+    tiburon: function (m, o) { m.rotateSelf(Math.sin(o.t * 9) * 0.04 * 180 / Math.PI).scaleSelf(1.22, 1.22); },
+    trex: function (m, o) { m.translateSelf(0, -0.2 + botaM(o.t, 6, 0.5)).scaleSelf(1.01, 1.01); },
+    ovni: function (m, o) {
+      m.translateSelf(0, 0.6 + Math.sin(o.t * 4) * 0.4).rotateSelf(-0.12 * 180 / Math.PI).scaleSelf(1.25, 1.25);
+    },
+    bomba: function (m, o) { m.rotateSelf(Math.sin(o.t * 7) * 0.06 * 180 / Math.PI).translateSelf(0, -0.5); },
+    abisal: function (m, o) { m.translateSelf(-0.6, Math.sin(o.t * 3) * 0.3); },
+    momia: function (m, o) { m.rotateSelf(Math.sin(o.t * 6) * 0.05 * 180 / Math.PI); },
+    tostadora: function (m, o) { m.translateSelf(0, botaM(o.t, 7, 0.35) - 0.6); },
+    globo: function (m, o) { m.translateSelf(0, Math.sin(o.t * 4) * 0.35); },
+    bicefalo: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 7, 0.25) - 0.1);
+      // la cabeza de arriba (A) lleva gafas y sombrero; la de abajo (B), la pajarita
+      var mece = (zona === 'cuello') ? Math.sin(o.t * 6 + 2.2) : Math.sin(o.t * 6);
+      if (zona === 'cuello') m.translateSelf(1.4 + mece * 0.25, -3.3 + mece * 0.3);
+      else m.translateSelf(1.6 + mece * 0.25, 3.4 + mece * 0.35);
+    },
+    pinata: function (m, o) {
+      m.translateSelf(0, botaM(o.t, 7, 0.4) - 0.2).rotateSelf(Math.sin(o.t * 7) * 0.05 * 180 / Math.PI);
+    },
+    calavera: function (m, o) {
+      var alto = Math.abs(Math.sin(o.t * 8));
+      var aplasta = Math.pow(1 - alto, 4) * 0.06 - alto * 0.025;
+      m.translateSelf(0, -5.6 + alto * 0.5).scaleSelf(1 + aplasta, 1 - aplasta)
+        .rotateSelf(Math.sin(o.t * 6.5) * 0.09 * 180 / Math.PI).translateSelf(0.1, 5.3).scaleSelf(0.88, 0.88);
+    },
+    cuy: function (m, o) {
+      var q = qDe(o, 0.6);
+      var salto = q >= 0 ? Math.sin(q * Math.PI) * 3.2 : botaM(o.t, 14, 0.25);
+      m.translateSelf(0, salto - 0.4);
+      if (q >= 0) m.rotateSelf(Math.sin(q * Math.PI * 2) * 0.12 * 180 / Math.PI);
+      m.scaleSelf(0.95, 0.95);
+    },
+    llama: function (m, o) { m.translateSelf(-0.2, botaM(o.t, 8, 0.25) - 0.2).scaleSelf(0.92, 0.92); },
+    carro: function (m, o) {
+      var q = qDe(o, 0.8);
+      m.translateSelf(0, botaM(o.t, 14, 0.22) + 0.3);
+      if (q >= 0) m.rotateSelf(-Math.sin(q * Math.PI) * 0.06 * 180 / Math.PI);
+      m.scaleSelf(1.15, 1.15);
+    },
+    oso: function (m, o) { m.translateSelf(0, botaM(o.t, 7, 0.25) - 0.1).scaleSelf(1.02, 1.02); },
+    galleta: function (m, o) { m.rotateSelf(Math.sin(o.t * 8) * 0.05 * 180 / Math.PI); }
+  };
+
+  /* La diferencia entre la pose de ahora y la medida, lista para
+   * ctx.transform; null si la skin no se mueve o no hay DOMMatrix */
+  function deltaPose(skin, o, zona) {
+    var pose = POSES[skin];
+    if (!pose || typeof DOMMatrix !== 'function') return null;
+    var ahora = new DOMMatrix(), medida = new DOMMatrix();
+    pose(ahora, o, zona);
+    pose(medida, POSE_MEDIDA, zona);
+    return ahora.multiply(medida.inverse());
+  }
+  Sprites.deltaPose = deltaPose;
+
   /* dónde va cada accesorio: por defecto, a la cara */
   var ZONA_ACC = { acc_gorra: 'cabeza', acc_chistera: 'cabeza', acc_vikingo: 'cabeza',
     acc_helice: 'cabeza', acc_pajarita: 'cuello' };
@@ -4473,9 +4564,19 @@
       if (ac) {
         ctx.save();
         frame(ctx, x, y, d);
-        // en una extravagante, a su cabeza (ver CABEZAS)
+        // en una extravagante, a su cabeza (ver CABEZAS), siguiendo lo que se mueva (POSES)
         var an = anclaAccesorio(skin, e.accesorio);
-        if (an) { ctx.translate(an.x, an.y); ctx.scale(an.k, an.k); }
+        if (an) {
+          var rara = !!(INFO[skin] && INFO[skin].rara);
+          var dp = deltaPose(skin, {
+            t: o.t,
+            // con la Q, las extravagantes abren del todo (como en dibujarArte)
+            half: (e.muerde && rara) ? HALF[2] : (HALF[mouthPhase] || 0),
+            qSeg: (typeof e.qSeg === 'number') ? e.qSeg : null
+          }, ZONA_ACC[e.accesorio] || 'cara');
+          if (dp) ctx.transform(dp.a, dp.b, dp.c, dp.d, dp.e, dp.f);
+          ctx.translate(an.x, an.y); ctx.scale(an.k, an.k);
+        }
         ac(ctx, o);
         ctx.restore();
       }

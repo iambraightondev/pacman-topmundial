@@ -1020,7 +1020,18 @@ approved 2026-09-15. Coins only, no real money.
   `dibujarLook` applies it before drawing. `admiteAccesorio` is true for
   Pac-Man-shaped skins and for any extravagant one listed in `CABEZAS` (all
   26 today); a new extravagant skin needs its entry, or it shows no
-  accessory. Accessories do not follow a skin's own bob or jaw.
+  accessory.
+- **The accessory moves with its piece** (`POSES`, `deltaPose`). The heads
+  were measured in one pose (`POSE_MEDIDA`: t 0.3, mouth closed). `POSES`
+  repeats, as a `DOMMatrix`, the transforms each skin's drawing applies to the
+  piece the accessory sits on (bob, sway, hop, the Q jump of CUY/CARRO...),
+  and `dibujarLook` applies `now × measured⁻¹` before the anchor. Skins that
+  open by **lifting the top** rotate the `cara`/`cabeza` zones with it:
+  HAMBURGUESA's top bun, COFRE's lid, PLANTA's upper lobe (the `cuello` zone
+  follows the lower lobe), and LOBO's whole head while howling. The mouth
+  phase uses the same `half` as `dibujarArte` (full open with the Q). A skin
+  whose drawing changes those transforms must change its `POSES` entry too.
+  Without `DOMMatrix` (the Node fake DOM) the accessory is drawn static.
 - **Network** (`CFG.NET.PROTO` 9): party members carry `a`/`x`
   (`Party.me`), `gameOrder` passes them, `UI.lookDeRed` sanitises them into
   `opts.looks` → `Game.netLooks` → `Game.lookFor(i)`; spectators get `lk` in

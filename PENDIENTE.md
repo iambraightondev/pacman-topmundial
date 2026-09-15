@@ -18,6 +18,13 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
+**15 sep (noche) — el accesorio acompaña a la skin (`pm-v61`).** Braighton:
+en las que mueven la mandíbula hacia arriba el accesorio se quedaba quieto.
+Ahora `POSES` repite el movimiento de cada extravagante (bote, vaivén, salto,
+tapa/pan/lóbulo que se levanta, cabeza del lobo) y el accesorio va pegado a
+su pieza. **Ojo al tocar el dibujo de una extravagante:** si cambia cómo se
+mueve, hay que cambiar su entrada en `POSES`. `tests.html` 327/327.
+
 **15 sep (noche) — cruce de aspectos (`pm-v60`).** Braighton pidió que todo
 combine con todo. Los efectos ya iban con cualquier skin; lo que faltaba eran
 los accesorios en las 26 extravagantes. Ahora cada una tiene su cabeza

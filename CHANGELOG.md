@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · El accesorio va pegado a la skin
+
+- En las skins que abren la boca **subiendo la parte de arriba** (el pan de
+  la HAMBURGUESA, la tapa del COFRE, la mitad de arriba de la PLANTA) el
+  accesorio sube y gira con ella, y el del LOBO acompaña su cabeza al aullar.
+- Y en todas las que botan, se mecen o saltan (la calavera, el cuy con su Q,
+  el ovni...), el accesorio se mueve con el cuerpo en vez de quedarse quieto.
+
 ## 2026-09-15 · Todo combina con todo
 
 - **Las skins extravagantes ya llevan accesorios**: el tiburón con chistera,

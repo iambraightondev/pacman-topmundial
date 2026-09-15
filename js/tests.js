@@ -6763,6 +6763,21 @@
         eq(S.anclaAccesorio(sk.id, 'acc_gafas'), null, sk.id + ': con forma de Pac-Man, tal cual');
       }
     });
+    /* y el accesorio acompaña a la pieza que se mueve: la HAMBURGUESA abre
+     * subiendo el pan de arriba, así que el sombrero gira con él, y la
+     * pajarita (abajo) no */
+    if (typeof DOMMatrix === 'function') {
+      var HALF2 = 40 * Math.PI / 180;
+      var quieta = S.deltaPose('hamburguesa', { t: 0.3, half: 0, qSeg: null }, 'cabeza');
+      ok(Math.abs(quieta.b) < 1e-5 && Math.abs(quieta.e) < 1e-5 && Math.abs(quieta.f) < 1e-5,
+         'en la pose medida no se mueve nada');
+      var abierta = S.deltaPose('hamburguesa', { t: 0.3, half: HALF2, qSeg: null }, 'cabeza');
+      ok(Math.abs(abierta.b) > 0.1, 'con la boca abierta, el sombrero gira con el pan');
+      var cuello = S.deltaPose('hamburguesa', { t: 0.3, half: HALF2, qSeg: null }, 'cuello');
+      ok(Math.abs(cuello.b) < 1e-5, 'la pajarita se queda con la parte de abajo');
+      var aulla = S.deltaPose('lobo', { t: 3.0, half: 0, qSeg: null }, 'cabeza');
+      ok(Math.abs(aulla.b) > 0.1, 'el LOBO sin aullar baja la cabeza, y el sombrero con ella');
+    }
     CFG.EMOTES_TIENDA.forEach(function (e) {
       S.drawEmote(ctx, 12, 20, e.id, '#ffff00', 33);
       S.drawPacFace(ctx, 12, 12, 7, '#ffff00', e.id);
