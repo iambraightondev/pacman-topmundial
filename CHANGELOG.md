@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Los modos se arrastran
+
+- **Los modos de juego se pueden arrastrar** con el ratón o con el dedo: la
+  tarjeta sigue al puntero, el vecino hacia el que vas se enciende y al
+  soltar pasa de modo (o vuelve a su sitio si fue poco). Soltar no arranca la
+  partida por error.
+- **El cambio de modo ahora es una cinta**: la tarjeta que se va sale por un
+  lado mientras la nueva entra por el otro, suave y sin saltos.
+
 ## 2026-09-15 · Regalo de veterano en la TIENDA
 
 - **Quien ya había jugado recibe monedas por lo hecho**, además de las 1.500

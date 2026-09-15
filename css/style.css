@@ -590,29 +590,29 @@ body {
   opacity: 0.7;
 }
 
-/* La tarjeta nueva entra desde el lado del vecino que se pulsó */
-.mode-card.entra-der { animation: mode-entra-der 0.16s steps(4) both; }
-.mode-card.entra-izq { animation: mode-entra-izq 0.16s steps(4) both; }
+/* Arrastrar: el navegador se queda con el gesto vertical (desplazar la
+   portada en el móvil) y el horizontal es nuestro. Mientras se arrastra, la
+   mano cerrada y nada de selección de texto. */
+.mode-carousel { touch-action: pan-y; }
+.mode-carousel.arrastrando,
+.mode-carousel.arrastrando * { cursor: grabbing; }
+.mode-carousel.arrastrando .mode-peek { transition: none; }
 
-@keyframes mode-entra-der {
-  from { transform: translateX(26%) scale(0.86); opacity: 0.4; }
-  to   { transform: none; opacity: 1; }
-}
-
-@keyframes mode-entra-izq {
-  from { transform: translateX(-26%) scale(0.86); opacity: 0.4; }
-  to   { transform: none; opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mode-card.entra-der,
-  .mode-card.entra-izq { animation: none; }
+/* La que se va, durante el cambio (UI.animarCambioModo): encima de la nueva
+   en el mismo hueco, sin ocupar sitio ni poder pulsarse. */
+.mode-card.saliendo {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  pointer-events: none;
 }
 
 /* El marco no cambia de tamaño al pasar de modo: las seis tarjetas tienen la
    misma altura reservada, así que las flechas, la descripción y el botón de
    JUGAR se quedan quietos. Un carrusel que da saltos se siente roto. */
 .mode-frame {
+  position: relative;   /* la tarjeta que sale se coloca encima de la nueva */
+  z-index: 1;           /* y al arrastrar pasa por encima de los vecinos */
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -644,7 +644,9 @@ body {
 /* La que está puesta —que es la única que se ve— enciende su color en el
    marco, en la letra y en un halo suave por dentro. */
 .mode-card.sel {
-  background: rgba(255, 255, 255, 0.06);
+  /* opaco (el negro con un 6 % de blanco): al arrastrarla pasa por encima de
+     los vecinos y no se tienen que ver a través */
+  background: #0f0f0f;
   box-shadow: 0 0 0 1px currentColor inset;
 }
 

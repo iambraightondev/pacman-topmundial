@@ -18,6 +18,18 @@ pidió que donde estaban las flechas ◀ ▶ se vieran los modos adyacentes, "ti
 arcade". Ahora asoman el anterior y el siguiente (icono y nombre, apagados; se
 encienden al pasar por encima) y la tarjeta entra deslizándose.
 
+**15 sep (tarde) — cuentas y arrastre de modos (`pm-v55`).**
+
+- **Cuenta SANDROPEPAS BORRADA** a petición de Braighton ("ya no será usada"):
+  usuario de Auth y su perfil (cascada). No tenía marcas, repeticiones ni
+  amigos. Se hizo con la API de administración de Auth.
+- **SANDROPEPA tiene ahora la contraseña `SANDROPEPA`**, puesta por Braighton.
+  Comprobado entrando por la función `cuenta` como lo hace el juego.
+- **Los modos se arrastran** (ratón o dedo; `UI.activarArrastreModos`) y el
+  cambio es una cinta: sale la vieja y entra la nueva a la vez
+  (`UI.animarCambioModo`, Web Animations, respeta "reducir movimiento").
+  Soltar tras arrastrar no dispara el clic de JUGAR. `tests.html` 322/322.
+
 **15 sep (tarde) — REGALO DE VETERANO (`pm-v54`).** Pidió sumar monedas a
 quien más ha jugado y más logros tiene. Se le dieron tres opciones en tablas
 con las 6 cuentas reales y **eligió la A** (5 por partida + 50 por logro, sin

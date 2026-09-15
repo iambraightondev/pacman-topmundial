@@ -981,6 +981,7 @@
       wrap.appendChild(caja);
 
       wrap.appendChild(this.modePeekNext.b);
+      this.activarArrastreModos(wrap, caja);
 
       /* Los puntos: cuántos modos hay y por cuál vas. Sin ellos, un carrusel
        * no dice si quedan dos o veinte. Se pueden pulsar, que es más rápido
@@ -1026,6 +1027,146 @@
       i = (i + d + MODOS.length) % MODOS.length;
       this.modeEntra = d;          // de qué lado entra la tarjeta nueva
       this.pickMode(MODOS[i].id);
+    },
+
+    menosMovimiento: function () {
+      try {
+        return !!(window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      } catch (e) { return false; }
+    },
+
+    /* El paso de un modo a otro, como una cinta: la tarjeta que se va sale por
+     * un lado y la nueva entra por el otro a la vez, con una curva que frena
+     * al llegar. Antes solo entraba la nueva, a saltos, y la vieja
+     * desaparecía de golpe. Si se venía arrastrando, las dos arrancan desde
+     * donde la dejó el dedo (`modeDesde`), así que no hay tirón al soltar. */
+    animarCambioModo: function (id) {
+      var d = this.modeEntra || 0;
+      var desde = this.modeDesde || 0;
+      this.modeEntra = 0;
+      this.modeDesde = 0;
+      var nueva = this.modeCards[id];
+      var previa = this.modeVista;
+      this.modeVista = id;
+      if (!d || !nueva || previa === id || !nueva.b.animate || this.menosMovimiento()) {
+        if (nueva) { nueva.b.style.transform = ''; nueva.b.style.opacity = ''; }
+        return;
+      }
+      var w = (nueva.b.parentNode && nueva.b.parentNode.clientWidth) || 240;
+      var curva = 'cubic-bezier(.22,.9,.25,1)';
+      var dur = 320;
+      nueva.b.style.transform = '';
+      nueva.b.style.opacity = '';
+      nueva.b.animate([
+        { transform: 'translateX(' + Math.round(d * w * 0.85 + desde * 0.35) + 'px) scale(0.9)', opacity: 0.2 },
+        { transform: 'none', opacity: 1 }
+      ], { duration: dur, easing: curva });
+
+      var vieja = previa && this.modeCards[previa];
+      if (!vieja) return;
+      var vb = vieja.b, self = this;
+      vb.style.display = '';
+      vb.style.borderColor = vieja.mo.color;     // que salga con su color
+      vb.style.color = vieja.mo.color;
+      vb.classList.add('saliendo');
+      var a = vb.animate([
+        { transform: 'translateX(' + Math.round(desde) + 'px)', opacity: 1 },
+        { transform: 'translateX(' + Math.round(-d * w * 0.85) + 'px) scale(0.9)', opacity: 0 }
+      ], { duration: dur, easing: curva });
+      var acaba = function () {
+        vb.classList.remove('saliendo');
+        vb.style.transform = '';
+        vb.style.opacity = '';
+        if (self.modePick !== vieja.mo.id) {
+          vb.style.display = 'none';
+          vb.style.borderColor = '';
+          vb.style.color = '';
+        }
+      };
+      a.onfinish = acaba;
+      a.oncancel = acaba;
+    },
+
+    /* ARRASTRAR los modos con el ratón (o el dedo): la tarjeta sigue al
+     * puntero, el vecino hacia el que vas se enciende, y al soltar pasa si
+     * has arrastrado lo bastante —o lanzado rápido—; si no, vuelve a su sitio
+     * con un pequeño rebote. Solo cuenta el arrastre horizontal: el vertical
+     * se deja al navegador, que en el móvil es desplazar la portada.
+     *
+     * Soltar encima de la tarjeta dispararía su clic, que es JUGAR, así que el
+     * clic que llega justo después de un arrastre se descarta. */
+    activarArrastreModos: function (wrap, frame) {
+      var self = this, st = null;
+      var vecinos = function (dx, k) {
+        var pn = self.modePeekNext && self.modePeekNext.b;
+        var pp = self.modePeekPrev && self.modePeekPrev.b;
+        if (pn) pn.style.opacity = dx < 0 ? String(Math.min(1, 0.42 + k * 1.2)) : '';
+        if (pp) pp.style.opacity = dx > 0 ? String(Math.min(1, 0.42 + k * 1.2)) : '';
+      };
+      wrap.addEventListener('pointerdown', function (e) {
+        if (e.button != null && e.button !== 0) return;
+        var card = self.modeCards && self.modeCards[self.modePick];
+        if (!card) return;
+        st = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, v: 0,
+               lx: e.clientX, lt: Date.now(), movido: false, card: card.b,
+               w: frame.clientWidth || 240 };
+      });
+      wrap.addEventListener('pointermove', function (e) {
+        if (!st || e.pointerId !== st.id) return;
+        var dx = e.clientX - st.x, dy = e.clientY - st.y;
+        if (!st.movido) {
+          if (Math.abs(dx) < 6) return;
+          if (Math.abs(dy) > Math.abs(dx)) { st = null; return; }
+          st.movido = true;
+          try { wrap.setPointerCapture(e.pointerId); } catch (er) { /* sin captura */ }
+          wrap.classList.add('arrastrando');
+          self.resumeAudio();
+        }
+        var ahora = Date.now();
+        st.v = (e.clientX - st.lx) / Math.max(1, ahora - st.lt);
+        st.lx = e.clientX;
+        st.lt = ahora;
+        st.dx = dx;
+        var k = Math.min(1, Math.abs(dx) / st.w);
+        st.card.style.transform = 'translateX(' + dx + 'px) rotate(' +
+          (dx < 0 ? -1 : 1) * k * 5 + 'deg) scale(' + (1 - k * 0.08) + ')';
+        st.card.style.opacity = String(1 - k * 0.12);
+        vecinos(dx, k);
+        e.preventDefault();
+      });
+      var suelta = function (e) {
+        if (!st || e.pointerId !== st.id) return;
+        var s = st;
+        st = null;
+        wrap.classList.remove('arrastrando');
+        vecinos(0, 0);
+        if (!s.movido) return;
+        self.modeArrastreFin = Date.now();
+        var lejos = Math.abs(s.dx) > s.w * 0.22;
+        var lanzado = Math.abs(s.v) > 0.45 && Math.abs(s.dx) > 24 &&
+          (s.v < 0) === (s.dx < 0);
+        if (e.type !== 'pointercancel' && (lejos || lanzado)) {
+          self.modeDesde = s.dx;
+          self.stepMode(s.dx < 0 ? 1 : -1);
+          return;
+        }
+        var t0 = s.card.style.transform, o0 = s.card.style.opacity;
+        s.card.style.transform = '';
+        s.card.style.opacity = '';
+        if (s.card.animate && !self.menosMovimiento()) {
+          s.card.animate([{ transform: t0, opacity: o0 }, { transform: 'none', opacity: 1 }],
+            { duration: 260, easing: 'cubic-bezier(.3,1.5,.5,1)' });
+        }
+      };
+      wrap.addEventListener('pointerup', suelta);
+      wrap.addEventListener('pointercancel', suelta);
+      wrap.addEventListener('click', function (e) {
+        if (self.modeArrastreFin && Date.now() - self.modeArrastreFin < 400) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }, true);
     },
 
     /* El modo que queda a `d` pasos del elegido, dando la vuelta */
@@ -1127,20 +1268,17 @@
           pk.name.textContent = vm.name;
           pk.b.style.setProperty('--mc', vm.color);
           pk.b.setAttribute('aria-label', (par[1] < 0 ? 'Modo anterior: ' : 'Modo siguiente: ') + vm.name);
+          // el vecino nuevo asoma desde fuera, no aparece de golpe
+          if (pk.id && self.modeEntra && pk.b.animate && !self.menosMovimiento()) {
+            pk.b.animate([
+              { opacity: 0, transform: 'translateX(' + (par[1] * 18) + 'px)' },
+              { transform: 'none' }
+            ], { duration: 280, easing: 'cubic-bezier(.22,.9,.25,1)' });
+          }
           pk.id = vm.id;
         }
       });
-      /* La tarjeta nueva entra deslizándose desde el lado del vecino que se
-       * pulsó: sin eso, el cambio es un parpadeo y no se entiende que el
-       * vecino ha pasado al centro. */
-      var nueva = this.modeCards[id];
-      if (this.modeEntra && nueva) {
-        var cls = this.modeEntra > 0 ? 'entra-der' : 'entra-izq';
-        nueva.b.classList.remove('entra-der', 'entra-izq');
-        void nueva.b.offsetWidth;
-        nueva.b.classList.add(cls);
-      }
-      this.modeEntra = 0;
+      this.animarCambioModo(id);
       if (this.modeDesc) {
         this.modeDesc.textContent = mo.desc;
         this.modeDesc.style.color = mo.color;
