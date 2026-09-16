@@ -395,22 +395,18 @@
       if (d.e) return d.c;
       d.e = 1;
       var c = d.c;
-      var nivelesMin = Math.max(0, (c.nivelMax || 0) - 1);
-      if (nivelesMin > (c.niveles || 0)) c.niveles = nivelesMin;
-      var pastillasMin = (c.niveles || 0) * 244;
-      if (pastillasMin > (c.pastillas || 0)) c.pastillas = pastillasMin;
-      var superMin = (c.niveles || 0) * 4;
-      if (superMin > (c['super'] || 0)) c['super'] = superMin;
-      var mejor = c.racha || 0;
-      if (mejor >= 2 && !(c.racha2 > 0)) c.racha2 = 1;
-      if (mejor >= 3 && !(c.racha3 > 0)) c.racha3 = 1;
-      if (mejor >= 4 && !(c.racha4 > 0)) c.racha4 = 1;
+      /* La regla, una sola y en un solo sitio: js/stats.js la usa también
+       * para el perfil de otro, que puede no haber sembrado nunca. */
+      var S = window.PM.Stats;
       var L = window.PM.Level;
-      var xp = L ? L.xp() : 0;
-      var segs = Math.round(xp / ((CFG.STATS && CFG.STATS.PTS_POR_SEG) || 33));
-      if (segs > (c.tiempo || 0)) {
-        c.tiempo = segs;
-        d.est = segs;        // cuánto de ese tiempo es estimación
+      if (!S) { save(d); return c; }
+      var co = S.cotas(c, L ? L.xp() : 0);
+      for (var k in co) {
+        if (!co.hasOwnProperty(k)) continue;
+        if (co[k] > (c[k] || 0)) {
+          if (k === 'tiempo') d.est = co[k] - (c[k] || 0);
+          c[k] = co[k];
+        }
       }
       save(d);
       return c;

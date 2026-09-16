@@ -49,6 +49,40 @@
   var Stats = {
 
     /* =========================================================
+     * LAS COTAS
+     * Contadores que llegaron con esta pantalla y que antes no existían. Lo
+     * mínimo que TUVO que pasar para llegar a lo que ya está contado:
+     *
+     *   niveles   — para asomarse al nivel N hay que haber despejado N-1
+     *   pastillas — las 244 de cada uno de esos niveles
+     *   super     — sus cuatro superpastillas
+     *   racha2/3/4— la mejor cadena se hizo al menos una vez
+     *   tiempo    — los puntos de toda la vida al ritmo de PTS_POR_SEG; esta
+     *               es la única que no es una cota sino una ESTIMACIÓN, y
+     *               por eso va aparte y la pantalla la señala
+     *
+     * Vive aquí y no en los logros porque hace falta en dos sitios: al
+     * sembrar los contadores de uno mismo (Achievements.sembrarCifras) y al
+     * leer el perfil de OTRO, que puede no haber abierto el juego desde que
+     * esto existe y tendría toda la pantalla a cero teniendo cientos de
+     * partidas. La regla es la misma en los dos lados; escribirla dos veces
+     * sería tener dos reglas. */
+    cotas: function (c, xp) {
+      c = c || {};
+      var niveles = Math.max(0, num(c.nivelMax) - 1);
+      var mejor = num(c.racha);
+      return {
+        niveles: niveles,
+        pastillas: niveles * 244,
+        'super': niveles * 4,
+        racha2: mejor >= 2 ? 1 : 0,
+        racha3: mejor >= 3 ? 1 : 0,
+        racha4: mejor >= 4 ? 1 : 0,
+        tiempo: Math.round(num(xp) / (CFG.STATS.PTS_POR_SEG || 33))
+      };
+    },
+
+    /* =========================================================
      * FORMATO
      * ========================================================= */
     miles: function (n) {
@@ -85,8 +119,25 @@
      * viven en los contadores sino en columnas propias.
      * ========================================================= */
     de: function (c, xp, records) {
-      c = c || {};
+      /* Se trabaja sobre una COPIA: aquí se rellenan huecos con cotas, y quien
+       * pasa sus contadores no espera que se los toquen. */
+      var orig = c || {}, k0;
+      c = {};
+      for (k0 in orig) { if (orig.hasOwnProperty(k0)) c[k0] = orig[k0]; }
       records = records || {};
+      /* Lo que no esté contado se rellena con su cota por lo bajo. Un perfil
+       * de la nube puede ser de alguien que no ha abierto el juego desde que
+       * estas cifras existen: enseñarle cero horas y cero niveles teniendo
+       * setecientas partidas sería mentir tanto como inflarlo. */
+      var co = this.cotas(c, xp);
+      var estimado = 0;
+      for (var k in co) {
+        if (!co.hasOwnProperty(k)) continue;
+        if (co[k] > cont(c, k)) {
+          if (k === 'tiempo') estimado = co[k] - cont(c, k);
+          c[k] = co[k];
+        }
+      }
       var partidas = cont(c, 'partidas');
       var muertes = cont(c, 'muertes');
       var fantasmas = cont(c, 'fantasmas');
@@ -142,7 +193,9 @@
         /* --- por mundo --- */
         mundos: [],
         /* --- por formato (solo, dúo, trío, escuadra) --- */
-        records: records
+        records: records,
+        /* segundos de los que se enseñan que salen de la estimación */
+        estimado: estimado
       };
 
       /* Exactos, para la pantalla: un cuádruple está contado en los tres */
@@ -154,10 +207,15 @@
         var m = CFG.STATS.MUNDOS[i];
         var p = cont(c, 'partidas', m.id);
         if (p > 0) jugados++;
+        /* DESATADO y LABERINTOS llevan su récord en columna propia desde
+         * antes de que existieran los contadores por modo: si el contador
+         * todavía está a cero, manda el récord, que sí está. */
+        var mejorMundo = cont(c, 'puntosMax', m.id);
+        if (!mejorMundo && records[m.id] > 0) mejorMundo = records[m.id];
         d.mundos.push({
           id: m.id, name: m.name, color: m.color,
           partidas: p,
-          mejor: cont(c, 'puntosMax', m.id),
+          mejor: mejorMundo,
           fantasmas: cont(c, 'fantasmas', m.id),
           tiempo: cont(c, 'tiempo', m.id)
         });
@@ -337,7 +395,7 @@
         ['MEJOR CADENA', d.mejorRacha ? ('X' + d.mejorRacha) : '—'],
         ['DOBLES', S.miles(d.dobles), 'AL MENOS DOS DE UNA SUPERPASTILLA'],
         ['TRIPLES', S.miles(d.triples), 'AL MENOS TRES'],
-        ['CUÁDRUPLES', S.miles(d.cuadruples), 'LOS CUATRO: NO HAY MÁS']
+        ['CUÁDRUPLES', S.miles(d.cuadruples), 'LOS CUATRO DE UNA SUPERPASTILLA']
       ] });
 
       out.push({ titulo: 'EL LABERINTO', filas: [

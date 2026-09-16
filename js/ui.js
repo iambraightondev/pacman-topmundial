@@ -4529,11 +4529,14 @@
       }
 
       /* y lo que hay que decir de dónde salen algunas cifras */
-      var A = window.PM.Achievements;
-      var est = (!otros && A && A.tiempoEstimado) ? A.tiempoEstimado() : 0;
+      /* El tiempo que no se midió (porque no se guardaba) va estimado por los
+       * puntos, y eso se dice: sale igual en el perfil propio que en el de
+       * otro, que también puede llevar cifras estimadas. */
+      var est = d.estimado || 0;
       b.pie.textContent = est
-        ? ('EL TIEMPO DE ANTES DEL 16/09/2026 ESTÁ ESTIMADO POR LOS PUNTOS: NO SE GUARDABA. ' +
-           'DE AHÍ SALEN ' + S.reloj(est) + '.')
+        ? ('ANTES DEL 16/09/2026 NO SE GUARDABAN NI EL TIEMPO NI LOS NIVELES: ' +
+           'DE ESAS HORAS, ' + S.reloj(est) + ' SON UNA ESTIMACIÓN POR LOS PUNTOS, ' +
+           'Y LOS NIVELES, LAS PASTILLAS Y LAS CADENAS DE ENTONCES SON MÍNIMOS.')
         : '';
     },
 

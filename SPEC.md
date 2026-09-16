@@ -339,7 +339,8 @@ funnel (`bumpAch`), so they also split per world for free (`hab:tiempo`,
 in all three — because that is what merges cleanly across devices; the
 screen subtracts to show the exact ones.
 
-**Four is the hard ceiling.** There are four ghosts and none turns blue again
+**Four is the ceiling today**, and the test pins it there rather than trusting
+the claim: there are four ghosts and none turns blue again
 within the same fright: `eaten()` clears `frightened` and only
 `triggerFright` sets it, which also resets the chain — including the
 DESATADO GRITO. The MORDISCO joins an existing chain but cannot invent a

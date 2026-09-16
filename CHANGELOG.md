@@ -18,9 +18,10 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 - **En el perfil de otro jugador salen sus cifras y su polígono encima del
   tuyo**, para compararse de verdad. Sus contadores ya viajaban a la nube; lo
   que faltaba era enseñarlos.
-- **Cuatro es el tope de la cadena**: hay cuatro fantasmas y ninguno vuelve a
-  ponerse azul dentro del mismo susto, ni con el GRITO ni con el MORDISCO. No
-  hay quíntuples, por mucho DESATADO que se juegue.
+- **Cuatro es el tope de la cadena hoy**, y hay una prueba que lo fija: son
+  cuatro fantasmas y ninguno vuelve a ponerse azul dentro del mismo susto, ni
+  con el GRITO ni con el MORDISCO de DESATADO. Si alguien tiene guardada una
+  cadena mayor, viene de una versión de antes: su marca se respeta.
 - Lo nuevo que no estaba contado (tiempo, niveles, pastillas, dobles...) **no
   empieza a cero**: se siembra con lo que ya se sabía de cada uno, siempre por
   lo bajo. El tiempo de antes de hoy es una estimación por los puntos, y la
