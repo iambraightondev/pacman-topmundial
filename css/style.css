@@ -3055,6 +3055,7 @@ input[type="range"] {
 
 @media (min-width: 1000px) {
   .tm-cuerpo { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+  .tm-cuerpo.sin-lado { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tm-hud-c.uno .tm-hud-e, .tm-plaza.p1 .tm-ord, .tm-yo, .tm-coin,

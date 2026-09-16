@@ -6431,6 +6431,7 @@
       /* ---- el cuerpo: podio y tabla a la izquierda, paneles a la derecha ---- */
       var cuerpo = document.createElement('div');
       cuerpo.className = 'tm-cuerpo';
+      this.rankCuerpo = cuerpo;
       tm.appendChild(cuerpo);
       var izq = document.createElement('div');
       izq.className = 'tm-izq';
@@ -6559,6 +6560,7 @@
       this.rankCuentas = [];
       this.rankPodio.style.display = 'none';
       this.rankLado.style.display = 'none';
+      this.rankCuerpo.classList.toggle('sin-lado', this.rankVista !== 'podio' || !(players >= 1 && players <= 4));
       this.pintarHud(null);
       this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
       this.animarRanking();
@@ -6622,7 +6624,8 @@
             : 'NADIE HA JUGADO AQUÍ TODAVÍA · LA PRIMERA PARTIDA SE SUBE AL 1ST';
         }
         self.pintarReto(rows);
-        self.pintarLado(rows, players, mundo);
+        // el rival y el HALL OF FAME son del PODIO: la LISTA es la tabla sola
+        if (self.rankVista === 'podio') self.pintarLado(rows, players, mundo);
         self.pedirAvatares(rows);
         self.sinTildes(self.els.ranking);
       }
