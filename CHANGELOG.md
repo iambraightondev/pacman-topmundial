@@ -4,6 +4,10 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-16 · El TOP MUNDIAL, de recreativa
 
+- **La LISTA es la tabla de la recreativa:** letra de máquina, cabecera RANK ·
+  NAME · SCORE · LEVEL, cada puesto de un color de fantasma y el 1ST en oro con
+  el nombre cambiando de color. La letra va dentro del juego y funciona sin
+  conexión (y, como en las máquinas de entonces, sin tildes).
 - **Pantalla nueva:** la de récords de una máquina de 1980 con podio dentro.
   Líneas de tubo, 1UP y HIGH SCORE, la cuenta atrás de la temporada en el
   marcador, los tres primeros en cajones de oro, plata y bronce con su avatar,

@@ -12,12 +12,13 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v76';
+var VERSION = 'pm-v77';
 var SHELL = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
+  './fonts/press-start-2p.woff2',
   './js/config.js',
   './js/audio.js',
   './js/sprites.js',

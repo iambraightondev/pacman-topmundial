@@ -2878,12 +2878,23 @@ input[type="range"] {
 .rank-pts { color: #ffff00; font-weight: bold; }
 .rank-lvl { color: #00ffff; font-size: 0.85em; }
 
+/* La letra de máquina (Press Start 2P, SIL OFL: fonts/OFL.txt). Va en el
+ * propio juego para que el TOP MUNDIAL se vea igual sin conexión. */
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("../fonts/press-start-2p.woff2") format("woff2");
+  font-display: swap;
+}
 /* ---------- TOP MUNDIAL ----------
  * La pantalla de récords de una máquina de 1980 con el podio dentro: líneas
  * de tubo por encima de todo, marcador arriba, cajones hechos con las paredes
  * del laberinto (doble línea azul) y paneles con el mismo marco. */
 #ranking::before, #ranking::after { content: none; }
 #ranking { justify-content: flex-start; }
+.tm, .tm .btn { font-family: "Press Start 2P", "Courier New", Courier, monospace; }
+.tm .btn.tab { font-size: clamp(8px, 1.4vh, 11px); letter-spacing: 1px; }
+/* la letra de máquina ya es gruesa: en negrita se emborrona */
+#ranking .tm * { font-weight: normal; }
 .tm {
   position: relative;
   width: 100%;
@@ -2980,36 +2991,62 @@ input[type="range"] {
 .tm-plaza.p3 .tm-caja::before { background: #d9894a; }
 .tm-plaza.hueco .tm-caja { border-style: dashed; }
 
-.overlay .rank-list.tm-lista { width: 100%; max-width: 760px; }
-.tm-podio + .tm-lista { border-top: 3px double #2121ff; padding-top: 8px; }
-.rank-row.tm-fila-rank { grid-template-columns: 52px 32px minmax(0, 1fr) auto auto; align-items: center; font-weight: bold; }
-.rank-row.tm-fila-rank .rank-pos { text-align: left; color: #ffb852; }
-.rank-row.tm-fila-rank:nth-child(4n+1) .rank-pos { color: #ff2a2a; }
-.rank-row.tm-fila-rank:nth-child(4n+2) .rank-pos { color: #ffb8ff; }
-.rank-row.tm-fila-rank:nth-child(4n+3) .rank-pos { color: #00ffff; }
+.overlay .rank-list.tm-lista { width: 100%; max-width: 860px; gap: 0; }
+.tm-lista.con-podio { border-top: 3px double #2121ff; padding-top: 12px; }
+
+/* la tabla de récords de la máquina: texto sobre negro, sin marcos */
+.tm-cabecera, .rank-row.tm-fila-rank {
+  display: grid;
+  grid-template-columns: 110px 40px minmax(0, 1fr) 190px 110px;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 14px;
+  text-align: left;
+}
+.tm-cabecera.sin-avatar, .rank-row.tm-fila-rank.sin-avatar { grid-template-columns: 110px minmax(0, 1fr) 190px 110px; }
+.tm-cabecera { color: #00ffff; font-size: clamp(9px, 1.6vh, 12px); letter-spacing: 2px; padding-bottom: 12px; }
+.tm-cabecera span:nth-last-child(2), .tm-cabecera span:last-child { text-align: right; }
+.rank-row.tm-fila-rank {
+  border: 0;
+  background: none;
+  font-size: clamp(12px, 2.3vh, 19px);
+  letter-spacing: 1px;
+  line-height: 1;
+  opacity: 0;
+  transform: translateX(-12px);
+  animation: tm-entra 0.35s ease-out forwards;
+}
+@keyframes tm-entra { to { opacity: 1; transform: none; } }
+.rank-row.tm-fila-rank:nth-child(odd) { background: none; }
+.rank-row.tm-fila-rank .rank-pos { text-align: left; color: inherit; }
+.rank-row.tm-fila-rank .rank-who { color: inherit; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.rank-row.tm-fila-rank .tm-nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-row.tm-fila-rank .rank-pts { color: inherit; font-weight: normal; text-align: right; }
+.rank-row.tm-fila-rank .rank-lvl { color: #8a89a3; font-size: 0.7em; text-align: right; }
 .rank-row.tm-fila-rank .tm-avatar { width: 32px; height: 32px; }
-.rank-row.tm-fila-rank.sin-avatar { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
-.rank-row.tm-fila-rank.p1 { font-size: 1.2em; }
-.rank-row.tm-fila-rank.p1 .rank-pos { animation: tm-ciclo 1.6s steps(4) infinite; }
-.rank-row.tm-fila-rank.p1 .rank-who, .rank-row.tm-fila-rank.p1 .rank-pts { color: #ffd23f; }
-.rank-row.tm-fila-rank.p2 .rank-pos { color: #cfd8e3; }
-.rank-row.tm-fila-rank.p3 .rank-pos { color: #d9894a; }
-.rank-row.tm-fila-rank.mine { border-color: transparent; background: linear-gradient(90deg, transparent, rgba(255, 255, 0, 0.1), transparent); }
-.rank-row.tm-fila-rank.mine .rank-who::after { content: " ◄ TÚ"; color: #ffff00; animation: tm-parpadeo 1s steps(1) infinite; }
-.rank-row.tm-fila-rank:not(.p1):not(.p2):not(.p3) .rank-pts { color: #fff; }
+.rank-row.tm-fila-rank.c0 { color: #ff2a2a; }
+.rank-row.tm-fila-rank.c1 { color: #ffb8ff; }
+.rank-row.tm-fila-rank.c2 { color: #00ffff; }
+.rank-row.tm-fila-rank.c3 { color: #ffb852; }
+.rank-row.tm-fila-rank.p1 { color: #ffd23f; font-size: clamp(14px, 2.9vh, 24px); }
+.rank-row.tm-fila-rank.p1 .tm-nom { animation: tm-ciclo 1.6s steps(4) infinite; }
+.rank-row.tm-fila-rank.mine { background: linear-gradient(90deg, transparent, rgba(255, 255, 0, 0.09), transparent); }
+.tm-tu { flex: none; color: #ffff00; font-size: 10px; animation: tm-parpadeo 1s steps(1) infinite; }
+.tm-reto b { color: #ffff00; font-weight: normal; }
+.tm .rank-row:not(.tm-fila-rank) { font-family: 'Courier New', Courier, monospace; }
 
 .tm-reto { text-align: center; font-weight: bold; letter-spacing: 2px; font-size: clamp(9px, 1.6vh, 12px); color: #fff; line-height: 1.9; }
 .tm-coin { color: #ffb852; animation: tm-parpadeo 1.2s steps(1) infinite; }
 
 .tm-panel { border: 3px double #2121ff; border-radius: 6px; background: rgba(0, 0, 10, 0.85); padding: 12px; text-align: center; }
-.tm-panel-t { color: #ffb8ff; font-weight: bold; letter-spacing: 2px; font-size: clamp(9px, 1.6vh, 12px); margin-bottom: 10px; }
-.tm-panel-txt { font-size: clamp(9px, 1.6vh, 12px); letter-spacing: 1px; color: #ddd; margin-top: 8px; }
+.tm-panel-t { color: #ffb8ff; font-weight: bold; letter-spacing: 1px; font-size: 9px; line-height: 1.6; margin-bottom: 10px; }
+.tm-panel-txt { font-size: 8px; line-height: 1.8; letter-spacing: 0; color: #ddd; margin-top: 8px; }
 .tm-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
 .tm-vs .tm-avatar { width: 48px; height: 48px; margin: 0 auto; display: block; }
-.tm-vs-n { font-size: 10px; font-weight: bold; color: #fff; overflow-wrap: anywhere; margin-top: 2px; }
-.tm-vs-p { font-size: 10px; color: #ffff00; font-weight: bold; }
+.tm-vs-n { font-size: 7px; line-height: 1.6; font-weight: bold; color: #fff; overflow-wrap: anywhere; margin-top: 2px; }
+.tm-vs-p { font-size: 8px; color: #ffff00; font-weight: bold; }
 .tm-vs-x { font-size: 20px; font-weight: bold; color: #ff2a2a; text-shadow: 2px 2px 0 #600; }
-.tm-fama { display: flex; flex-direction: column; gap: 6px; font-size: clamp(9px, 1.5vh, 11px); font-weight: bold; letter-spacing: 1px; }
+.tm-fama { display: flex; flex-direction: column; gap: 8px; font-size: 7px; line-height: 1.7; letter-spacing: 0; }
 .tm-fama-f { display: flex; justify-content: space-between; gap: 10px; text-align: right; }
 .tm-fama-f span { color: #00ffff; text-align: left; }
 .tm-fama-f b { color: #ffd23f; overflow-wrap: anywhere; }
@@ -3017,7 +3054,7 @@ input[type="range"] {
 .tm-desfile { width: 100%; max-width: 1180px; height: auto; image-rendering: pixelated; }
 
 @media (min-width: 1000px) {
-  .tm-cuerpo { grid-template-columns: minmax(0, 1fr) 290px; align-items: start; }
+  .tm-cuerpo { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tm-hud-c.uno .tm-hud-e, .tm-plaza.p1 .tm-ord, .tm-yo, .tm-coin,

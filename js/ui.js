@@ -6562,6 +6562,7 @@
       this.pintarHud(null);
       this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
       this.animarRanking();
+      this.sinTildes(this.els.ranking);
 
       if (players === 0) {
         var hist = H ? H.all() : [];
@@ -6612,6 +6613,7 @@
         self.rankFilas = rows;
         self.pintarHud(rows);
         if (self.rankVista === 'podio') self.renderPodio(rows);
+        self.rankList.classList.toggle('con-podio', self.rankVista === 'podio' && rows.length > 3);
         self.renderRanking(self.rankVista === 'podio' ? rows.slice(3) : rows,
           self.rankVista === 'podio' ? 3 : 0);
         if (!rows.length) {
@@ -6622,6 +6624,7 @@
         self.pintarReto(rows);
         self.pintarLado(rows, players, mundo);
         self.pedirAvatares(rows);
+        self.sinTildes(self.els.ranking);
       }
       if (players === 5) R.topTime(llegaron);
       else if (enTemporada) S.top(S.actual(), players, llegaron, mundo);
@@ -6750,29 +6753,46 @@
       });
     },
 
-    /* La tabla: en PODIO, del 4º en adelante; en LISTA, todos */
+    /* La tabla de récords de la máquina: cabecera RANK · NAME · SCORE · LEVEL
+     * y una fila por puesto, cada una entera de un color de fantasma (el 1ST
+     * en oro y con el nombre cambiando de color). Sin franjas ni marcos: la
+     * de 1980 era texto sobre negro. En PODIO sale del 4º en adelante y con
+     * su avatar; en LISTA, todos y sin avatar, tal cual la recreativa. */
     renderRanking: function (rows, desde) {
       var R = window.PM.Ranking;
       desde = desde || 0;
+      var conAvatar = desde > 0;
       this.rankList.innerHTML = '';
+      if (rows.length) this.rankList.appendChild(this.rankCabecera(['RANK', 'NAME', 'SCORE', 'LEVEL'], conAvatar));
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
         var puesto = desde + i;
         var nombres = R ? R.nombresDe(r) : [String(r.nombre1 || '').toUpperCase()];
         var row = document.createElement('div');
-        row.className = 'rank-row tm-fila-rank' + (puesto < 3 ? ' p' + (puesto + 1) : '');
+        row.className = 'rank-row tm-fila-rank ' + this.rankColor(puesto) +
+          (conAvatar ? '' : ' sin-avatar');
+        row.style.animationDelay = (i * 0.09) + 's';
         if (this.rankEsMia(r)) row.classList.add('mine');
 
         var pos = document.createElement('span');
         pos.className = 'rank-pos';
-        pos.textContent = this.ORDINALES[puesto] || ((puesto + 1) + '.');
+        pos.textContent = this.ORDINALES[puesto] || ((puesto + 1) + 'TH');
         row.appendChild(pos);
 
-        if (this.rankAvatares) row.appendChild(this.rankAvatar(r, 32, puesto));
+        if (conAvatar) row.appendChild(this.rankAvatar(r, 32, puesto));
 
         var who = document.createElement('span');
         who.className = 'rank-who';
-        who.textContent = nombres.join(' + ');
+        var nom = document.createElement('span');
+        nom.className = 'tm-nom';
+        nom.textContent = nombres.join(' + ');
+        who.appendChild(nom);
+        if (this.rankEsMia(r)) {
+          var tu = document.createElement('span');
+          tu.className = 'tm-tu';
+          tu.textContent = '◄ TU';
+          who.appendChild(tu);
+        }
         row.appendChild(who);
 
         var pts = document.createElement('span');
@@ -6782,10 +6802,44 @@
 
         var lvl = document.createElement('span');
         lvl.className = 'rank-lvl';
-        lvl.textContent = 'NIV ' + r.nivel + (r.modo === 'online' ? ' · ONLINE' : '');
+        lvl.textContent = 'LV ' + r.nivel;
         row.appendChild(lvl);
 
         this.rankList.appendChild(row);
+      }
+    },
+
+    /* El color de cada puesto: oro el primero y luego los cuatro fantasmas */
+    rankColor: function (puesto) {
+      return puesto === 0 ? 'p1' : ('c' + ((puesto - 1) % 4));
+    },
+
+    rankCabecera: function (textos, conAvatar) {
+      var cab = document.createElement('div');
+      cab.className = 'tm-cabecera' + (conAvatar ? '' : ' sin-avatar');
+      textos.forEach(function (t, i) {
+        var s = document.createElement('span');
+        s.textContent = t;
+        cab.appendChild(s);
+        if (i === 0 && conAvatar) cab.appendChild(document.createElement('span'));
+      });
+      return cab;
+    },
+
+    /* La letra de máquina no tiene tildes: lo que se escribe con ella va sin
+     * ellas, como en las recreativas de entonces (TRIO, DUO, CLASICO). */
+    sinTildes: function (nodo) {
+      if (!nodo) return;
+      var hijos = nodo.childNodes || nodo.children || [];
+      for (var i = 0; i < hijos.length; i++) {
+        var h = hijos[i];
+        if (h.nodeType === 3) {
+          var v = String(h.nodeValue || '');
+          var limpio = v.normalize ? v.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : v;
+          if (limpio !== v) h.nodeValue = limpio;
+        } else {
+          this.sinTildes(h);
+        }
       }
     },
 
@@ -6802,23 +6856,34 @@
       return { pos: pos, otro: otro };
     },
 
-    /* La línea del reto: defender el 1ST o lo que falta para el de delante */
+    /* La línea del reto: defender el 1ST o lo que falta para el de delante.
+     * El nombre y la cifra van en amarillo, como en la recreativa. */
     pintarReto: function (rows) {
       var R = window.PM.Ranking;
       var el = this.rankReto;
       el.textContent = '';
       var rv = this.rankRival(rows), pos = rv.pos;
       var linea = document.createElement('div');
-      if (pos === 0) {
-        linea.textContent = rv.otro
-          ? ('DEFIENDE EL 1ST · ' + R.nombresDe(rv.otro).join(' + ') + ' ESTÁ A ' +
-             fmtMonedas(rows[0].puntos - rv.otro.puntos) + ' PUNTOS')
-          : 'DEFIENDE EL 1ST · NADIE TE SIGUE TODAVÍA';
+      function trozo(txt, resalta) {
+        var s = document.createElement(resalta ? 'b' : 'span');
+        s.textContent = txt;
+        linea.appendChild(s);
+      }
+      if (pos === 0 && rv.otro) {
+        trozo('DEFIENDE EL 1ST · ');
+        trozo(R.nombresDe(rv.otro).join(' + '), true);
+        trozo(' ESTA A ');
+        trozo(fmtMonedas(rows[0].puntos - rv.otro.puntos), true);
+        trozo(' PUNTOS');
+      } else if (pos === 0) {
+        trozo('DEFIENDE EL 1ST · NADIE TE SIGUE TODAVIA');
       } else if (pos > 0) {
-        linea.textContent = 'TE FALTAN ' + fmtMonedas(rows[pos - 1].puntos - rows[pos].puntos + 10) +
-          ' PUNTOS PARA EL ' + this.ORDINALES[pos - 1];
+        trozo('TE FALTAN ');
+        trozo(fmtMonedas(rows[pos - 1].puntos - rows[pos].puntos + 10), true);
+        trozo(' PUNTOS PARA EL ');
+        trozo(this.ORDINALES[pos - 1], true);
       } else {
-        linea.textContent = rows.length ? 'JUEGA Y ENTRA EN LA TABLA' : 'SÚBETE AL PODIO';
+        trozo(rows.length ? 'JUEGA Y ENTRA EN LA TABLA' : 'SUBETE AL PODIO');
       }
       el.appendChild(linea);
       var coin = document.createElement('div');
@@ -6910,6 +6975,7 @@
           f.appendChild(b);
           fama.appendChild(f);
         }
+        self.sinTildes(fama);
       }
       if (this.rankFama[clave]) { pinta(this.rankFama[clave]); return; }
       var campeones = {}, faltan = 4;
@@ -6933,16 +6999,18 @@
         this.rankStatus.textContent = 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!';
       }
       this.pintarHud(null);
+      if (rows.length) this.rankList.appendChild(this.rankCabecera(['RANK', 'NAME', 'TIME', 'SCORE'], false));
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
         var n1 = String(r.nombre1 || '').toUpperCase();
         var row = document.createElement('div');
-        row.className = 'rank-row tm-fila-rank sin-avatar' + (i < 3 ? ' p' + (i + 1) : '');
+        row.className = 'rank-row tm-fila-rank sin-avatar ' + this.rankColor(i);
+        row.style.animationDelay = (i * 0.09) + 's';
         if (mine && n1 === mine) row.classList.add('mine');
 
         var pos = document.createElement('span');
         pos.className = 'rank-pos';
-        pos.textContent = this.ORDINALES[i] || ((i + 1) + '.');
+        pos.textContent = this.ORDINALES[i] || ((i + 1) + 'TH');
         row.appendChild(pos);
 
         var who = document.createElement('span');
@@ -6958,6 +7026,7 @@
         var pts = document.createElement('span');
         pts.className = 'rank-lvl';
         pts.textContent = r.puntos + ' PTS';
+        this.sinTildes(this.els.ranking);
         row.appendChild(pts);
 
         this.rankList.appendChild(row);
