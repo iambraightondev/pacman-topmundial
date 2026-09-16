@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · El TOP MUNDIAL, de recreativa
+
+- **Pantalla nueva:** la de récords de una máquina de 1980 con podio dentro.
+  Líneas de tubo, 1UP y HIGH SCORE, la cuenta atrás de la temporada en el
+  marcador, los tres primeros en cajones de oro, plata y bronce con su avatar,
+  y Pac-Man persiguiendo fantasmas al pie. Se puede ver como **PODIO** o como
+  **LISTA**.
+- **Tu rival** (HERE COMES A CHALLENGER) y los **campeones del mes pasado**
+  (HALL OF FAME) a un lado.
+- **DESATADO y LABERINTOS tienen su top mundial.** Cada partida va a la tabla
+  de su mundo, y el servidor la valida con las reglas de ese mundo.
+- Se borraron del top las partidas de prueba (SOLOTEST, BRAI y PEPE).
+
 ## 2026-09-16 · La tienda de monedas
 
 - **La ficha respeta las pausas de la partida:** al comerse un fantasma todo

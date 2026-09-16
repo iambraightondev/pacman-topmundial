@@ -1496,7 +1496,7 @@
         return 'CREA UNA SALA O ENTRA CON UN CÓDIGO DE 4 LETRAS';
       }
       if (mo.id === 'lab' || mo.id === 'hab') {
-        return 'NO ENTRA EN EL TOP MUNDIAL · MAESTRÍAS PROPIAS POR FORMATO';
+        return 'TOP MUNDIAL PROPIO · MAESTRÍAS PROPIAS POR FORMATO';
       }
       if (mo.id === 'caza') {
         return CFG.CAZA.NIVELES + ' RONDAS · CADA CAZA SON ' + CFG.VS.CATCH_POINTS +
@@ -6320,24 +6320,78 @@
     },
 
     /* ------------------------------------------------------
-     * Top mundial (ranking de partidas de dúo, desde Supabase)
+     * TOP MUNDIAL
+     *
+     * La pantalla de récords de una máquina de 1980 con un PODIO dentro (se
+     * eligió la "fusión" de <https://claude.ai/artifact/6vMyBK2yBJ1qwPiggg1w8v>):
+     * líneas de tubo, 1UP y HIGH SCORE arriba, la cuenta atrás de la temporada
+     * en el marcador, los tres primeros en cajones hechos con las paredes del
+     * laberinto y, debajo, la tabla con "◄ TÚ". Al lado, el rival (HERE COMES
+     * A CHALLENGER) y los campeones del mes pasado (HALL OF FAME). Y al pie,
+     * Pac-Man persiguiendo fantasmas.
+     *
+     * Se elige el MUNDO (clásico, DESATADO, LABERINTOS: cada uno su tabla,
+     * supabase/mundos.sql), el FORMATO (1..4 jugadores) y cómo verlo: PODIO o
+     * LISTA. El nivel 1 y TUS PARTIDAS son listas siempre.
+     *
+     * Las pestañas de formato conservan sus números de siempre: 1..4 son el
+     * número de jugadores, 5 el nivel 1 y 0 tus partidas.
      * ------------------------------------------------------ */
     buildRanking: function () {
       var self = this;
       var o = this.els.ranking;
       o.innerHTML = '';
 
-      var h = document.createElement('div');
-      h.className = 'panel-title';
-      h.textContent = 'TOP MUNDIAL';
-      o.appendChild(h);
+      var tm = document.createElement('div');
+      tm.className = 'tm';
+      o.appendChild(tm);
 
-      /* Clasificaciones separadas. Los identificadores 1..4 son EL NÚMERO DE
-       * JUGADORES (una clasificación por formato, como las maestrías); el 5 es
-       * la del nivel 1 y el 0 es tu historial de este navegador, que no toca
-       * la red. El 6 era la del RETO DE HOY, que se retiró con el modo. */
+      /* el marcador de arriba */
+      var hud = document.createElement('div');
+      hud.className = 'tm-hud';
+      function casilla(etq, cls) {
+        var c = document.createElement('div');
+        c.className = 'tm-hud-c' + (cls ? ' ' + cls : '');
+        var e = document.createElement('span');
+        e.className = 'tm-hud-e';
+        e.textContent = etq;
+        c.appendChild(e);
+        var v = document.createElement('b');
+        c.appendChild(v);
+        hud.appendChild(c);
+        return { el: c, etq: e, v: v };
+      }
+      this.rankHud = {
+        mio: casilla('1UP', 'uno'),
+        alto: casilla('HIGH SCORE', 'alto'),
+        reloj: casilla('FIN DE TEMPORADA', 'reloj')
+      };
+      tm.appendChild(hud);
+
+      var h = document.createElement('div');
+      h.className = 'panel-title tm-titulo';
+      h.textContent = 'TOP MUNDIAL';
+      tm.appendChild(h);
+
+      this.rankSub = document.createElement('div');
+      this.rankSub.className = 'tm-sub';
+      tm.appendChild(this.rankSub);
+
+      /* ---- los mandos ---- */
+      var R = window.PM.Ranking;
+      this.rankMundoRow = document.createElement('div');
+      this.rankMundoRow.className = 'tab-row tab-row-sub tm-fila';
+      this.rankMundoBtns = {};
+      (R ? R.MUNDOS : [{ id: 'clasico', name: 'CLÁSICO' }]).forEach(function (m) {
+        var b = self.makeButton(m.name, function () { self.showRankMundo(m.id); });
+        b.classList.add('tab');
+        self.rankMundoBtns[m.id] = b;
+        self.rankMundoRow.appendChild(b);
+      });
+      tm.appendChild(this.rankMundoRow);
+
       var bar = document.createElement('div');
-      bar.className = 'tab-row';
+      bar.className = 'tab-row tab-row-sub tm-fila';
       this.rankTabBtns = {};
       [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'TRÍO'], [4, 'ESCUADRA'],
        [5, 'NIVEL 1'], [0, 'TUS PARTIDAS']].forEach(function (t) {
@@ -6346,13 +6400,11 @@
         self.rankTabBtns[t[0]] = b;
         bar.appendChild(b);
       });
-      o.appendChild(bar);
+      tm.appendChild(bar);
 
-      /* Segunda fila: la temporada. Solo pinta en las clasificaciones por
-       * puntos (1..4), que son las que se reparten por meses; el resto no
-       * tiene temporada que valga (el nivel 1 es de siempre). */
+      /* temporada y forma de verlo, en la misma fila */
       this.seasonRow = document.createElement('div');
-      this.seasonRow.className = 'tab-row';
+      this.seasonRow.className = 'tab-row tab-row-sub tm-fila';
       this.seasonBtns = {};
       [['ahora', 'ESTA TEMPORADA'], ['historico', 'HISTÓRICO']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showSeasonTab(t[0]); });
@@ -6360,33 +6412,70 @@
         self.seasonBtns[t[0]] = b;
         self.seasonRow.appendChild(b);
       });
-      o.appendChild(this.seasonRow);
-      this.seasonTab = 'ahora';
-
-      this.rankSub = document.createElement('div');
-      this.rankSub.className = 'note';
-      o.appendChild(this.rankSub);
+      var sep = document.createElement('span');
+      sep.className = 'tm-sep';
+      this.seasonRow.appendChild(sep);
+      this.rankVistaBtns = {};
+      [['podio', 'PODIO'], ['lista', 'LISTA']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () { self.showRankVista(t[0]); });
+        b.classList.add('tab');
+        self.rankVistaBtns[t[0]] = b;
+        self.seasonRow.appendChild(b);
+      });
+      tm.appendChild(this.seasonRow);
 
       this.rankStatus = document.createElement('div');
-      this.rankStatus.className = 'lobby-status';
-      o.appendChild(this.rankStatus);
+      this.rankStatus.className = 'lobby-status tm-estado';
+      tm.appendChild(this.rankStatus);
 
+      /* ---- el cuerpo: podio y tabla a la izquierda, paneles a la derecha ---- */
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'tm-cuerpo';
+      tm.appendChild(cuerpo);
+      var izq = document.createElement('div');
+      izq.className = 'tm-izq';
+      cuerpo.appendChild(izq);
+      this.rankPodio = document.createElement('div');
+      this.rankPodio.className = 'tm-podio';
+      izq.appendChild(this.rankPodio);
       this.rankList = document.createElement('div');
-      this.rankList.className = 'rank-list';
-      o.appendChild(this.rankList);
+      this.rankList.className = 'rank-list tm-lista';
+      izq.appendChild(this.rankList);
+      this.rankReto = document.createElement('div');
+      this.rankReto.className = 'tm-reto';
+      izq.appendChild(this.rankReto);
+      this.rankLado = document.createElement('div');
+      this.rankLado.className = 'tm-lado';
+      cuerpo.appendChild(this.rankLado);
+
+      /* el desfile del pie */
+      this.rankDesfile = document.createElement('canvas');
+      this.rankDesfile.width = 1180; this.rankDesfile.height = 48;
+      this.rankDesfile.className = 'tm-desfile';
+      this.rankDesfile.setAttribute('aria-hidden', 'true');
+      tm.appendChild(this.rankDesfile);
 
       var row = document.createElement('div');
       row.className = 'preset-row';
       row.style.marginTop = '12px';
-      var reload = this.makeButton('ACTUALIZAR', function () { self.loadRanking(); });
+      var reload = this.makeButton('ACTUALIZAR', function () {
+        self.rankFama = {};
+        self.loadRanking();
+      });
       reload.classList.add('btn-preset');
       row.appendChild(reload);
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.classList.add('btn-preset');
       row.appendChild(back);
-      o.appendChild(row);
+      tm.appendChild(row);
 
       this.rankTab = 1;
+      this.rankMundo = 'clasico';
+      this.rankVista = 'podio';
+      this.rankAvatares = {};
+      this.rankFama = {};
+      this.rankDibujos = [];
+      this.rankCuentas = [];
     },
 
     showRankTab: function (players) {
@@ -6400,20 +6489,45 @@
       this.loadRanking();
     },
 
+    showRankMundo: function (id) {
+      var R = window.PM.Ranking;
+      this.rankMundo = R ? R.mundo(id) : 'clasico';
+      this.loadRanking();
+    },
+
+    showRankVista: function (v) {
+      this.rankVista = (v === 'lista') ? 'lista' : 'podio';
+      this.loadRanking();
+    },
+
+    /* ¿Esa fila es tuya? (tu nombre está entre los que jugaron) */
+    rankEsMia: function (r) {
+      var R = window.PM.Ranking;
+      var mine = String(window.PM.settings.nick1 || '').toUpperCase();
+      if (!mine) return false;
+      var nombres = R ? R.nombresDe(r) : [String(r.nombre1 || '').toUpperCase()];
+      return nombres.indexOf(mine) !== -1;
+    },
+
     loadRanking: function () {
       var self = this;
       var R = window.PM.Ranking;
       var S = window.PM.Season;
       var players = this.rankTab;
       if ([0, 2, 3, 4, 5].indexOf(players) === -1) players = 1;
+      var mundo = R ? R.mundo(this.rankMundo) : 'clasico';
       for (var k in this.rankTabBtns) {
         if (this.rankTabBtns.hasOwnProperty(k)) {
           this.rankTabBtns[k].classList.toggle('active', +k === players);
         }
       }
-      /* la fila de temporada solo tiene sentido en las de puntos (1..4) */
       var porTemporada = (players >= 1 && players <= 4);
       var enTemporada = porTemporada && this.seasonTab === 'ahora' && S;
+      /* el mundo solo cuenta en las de puntos: el nivel 1 es del clásico */
+      this.rankMundoRow.style.display = porTemporada ? 'flex' : 'none';
+      for (var m in this.rankMundoBtns) {
+        if (this.rankMundoBtns.hasOwnProperty(m)) this.rankMundoBtns[m].classList.toggle('active', m === mundo);
+      }
       if (this.seasonRow) {
         this.seasonRow.style.display = porTemporada ? 'flex' : 'none';
         for (var s in this.seasonBtns) {
@@ -6421,27 +6535,34 @@
             this.seasonBtns[s].classList.toggle('active', s === this.seasonTab);
           }
         }
+        for (var v in this.rankVistaBtns) {
+          if (this.rankVistaBtns.hasOwnProperty(v)) this.rankVistaBtns[v].classList.toggle('active', v === this.rankVista);
+        }
       }
       var temporada = S ? S.nombre(S.actual()) : '';
-      var EQUIPO = { 2: 'DÚO', 3: 'TRÍO', 4: 'ESCUADRA' };
+      var nombreMundo = '';
+      if (R) R.MUNDOS.forEach(function (x) { if (x.id === mundo) nombreMundo = x.name; });
       var H = window.PM.History;
       var conCuenta = !!(H && H.cuenta && H.cuenta());
       this.rankSub.textContent =
         players === 0 ? ('TUS ÚLTIMAS PARTIDAS · ' + (conCuenta
           ? 'TAMBIÉN LAS DE OTROS APARATOS' : 'SOLO LAS DE ESTE NAVEGADOR')) :
         players === 5 ? 'LO MÁS RÁPIDO EN DESPEJAR EL NIVEL 1 · A UN JUGADOR Y CON LOS AJUSTES DE SIEMPRE' :
-        (players === 1 ? 'MEJOR MARCA DE CADA JUGADOR'
-          : ('MEJOR MARCA DE CADA ' + EQUIPO[players] +
-             ' · PUNTUACIÓN DE EQUIPO')) +
-        (enTemporada ? (' · ' + temporada) : ' · DESDE EL PRINCIPIO');
-      this.rankList.innerHTML = '';
-      this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
+        ('— ' + (enTemporada ? temporada : 'DE SIEMPRE') + ' · ' +
+          (R ? R.formato(players) : '') + ' · ' + nombreMundo + ' —');
 
-      /* TUS PARTIDAS: primero las de este navegador, que están ya y no
-       * dependen de nada. Con cuenta se piden además las que quedaron en el
-       * top mundial —las que jugaste en otro aparato— y la lista se rehace
-       * con las dos mezcladas. Sin cuenta, ni se intenta: un nombre suelto no
-       * identifica a nadie y traeríamos las partidas de otro. */
+      this.rankList.innerHTML = '';
+      this.rankPodio.innerHTML = '';
+      this.rankReto.textContent = '';
+      this.rankLado.innerHTML = '';
+      this.rankDibujos = [];
+      this.rankCuentas = [];
+      this.rankPodio.style.display = 'none';
+      this.rankLado.style.display = 'none';
+      this.pintarHud(null);
+      this.rankReq = (this.rankReq || 0) + 1;   // corta respuestas en vuelo
+      this.animarRanking();
+
       if (players === 0) {
         var hist = H ? H.all() : [];
         var reqLocal = this.rankReq;
@@ -6469,10 +6590,7 @@
       }
       this.rankStatus.classList.remove('error');
       this.rankStatus.textContent = 'CARGANDO...';
-      /* testigo de petición: al cambiar de pestaña rápido, la respuesta de la
-       * anterior puede llegar después y pisar la lista o el mensaje */
-      var req = (this.rankReq || 0) + 1;
-      this.rankReq = req;
+      var req = this.rankReq;
       function llegaron(err, rows) {
         if (self.rankReq !== req) return;      // respuesta caducada
         if (err) {
@@ -6485,24 +6603,325 @@
           return;
         }
         self.rankStatus.classList.remove('error');
-        if (!rows.length) {
-          self.rankStatus.textContent =
-            (players === 5) ? 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!' :
-            enTemporada ? 'AÚN NO HAY PARTIDAS ESTA TEMPORADA · ¡SÉ EL PRIMERO!'
-                        : 'AÚN NO HAY PARTIDAS · ¡SÉ EL PRIMERO!';
-          return;
-        }
         self.rankStatus.textContent = '';
-        /* verse en el top 10 individual de siempre abre DORADO */
-        if (players === 1 && !enTemporada && window.PM.Skins) {
+        /* verse en el top 10 individual de siempre del clásico abre DORADO */
+        if (players === 1 && !enTemporada && mundo === 'clasico' && window.PM.Skins) {
           window.PM.Skins.anotarTop10(rows);
         }
-        if (players === 5) self.renderTimes(rows);
-        else self.renderRanking(rows);
+        if (players === 5) { self.renderTimes(rows); return; }
+        self.rankFilas = rows;
+        self.pintarHud(rows);
+        if (self.rankVista === 'podio') self.renderPodio(rows);
+        self.renderRanking(self.rankVista === 'podio' ? rows.slice(3) : rows,
+          self.rankVista === 'podio' ? 3 : 0);
+        if (!rows.length) {
+          self.rankStatus.textContent = enTemporada
+            ? 'NADIE HA JUGADO AQUÍ ESTA TEMPORADA · LA PRIMERA PARTIDA SE SUBE AL 1ST'
+            : 'NADIE HA JUGADO AQUÍ TODAVÍA · LA PRIMERA PARTIDA SE SUBE AL 1ST';
+        }
+        self.pintarReto(rows);
+        self.pintarLado(rows, players, mundo);
+        self.pedirAvatares(rows);
       }
       if (players === 5) R.topTime(llegaron);
-      else if (enTemporada) S.top(S.actual(), players, llegaron);
-      else R.top(players, llegaron);
+      else if (enTemporada) S.top(S.actual(), players, llegaron, mundo);
+      else R.top(players, llegaron, mundo);
+    },
+
+    /* 1UP (tu marca en esta tabla), HIGH SCORE y la cuenta atrás */
+    pintarHud: function (rows) {
+      var H = this.rankHud;
+      if (!H) return;
+      var mia = null;
+      if (rows) for (var i = 0; i < rows.length; i++) if (this.rankEsMia(rows[i])) { mia = rows[i]; break; }
+      H.mio.v.textContent = mia ? String(mia.puntos) : '00';
+      H.alto.v.textContent = (rows && rows.length) ? String(rows[0].puntos) : '00';
+      this.pintarReloj();
+    },
+
+    /* Lo que le queda a la temporada (van por meses, en hora UTC) */
+    pintarReloj: function () {
+      var H = this.rankHud;
+      if (!H) return;
+      var ahora = new Date();
+      var fin = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1);
+      var s = Math.max(0, Math.floor((fin - ahora.getTime()) / 1000));
+      var dd = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600);
+      var mm = Math.floor((s % 3600) / 60), ss = s % 60;
+      function dos(n) { return (n < 10 ? '0' : '') + n; }
+      H.reloj.v.textContent = dd + 'D ' + dos(hh) + ':' + dos(mm) + ':' + dos(ss);
+    },
+
+    ORDINALES: ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH', '7TH', '8TH', '9TH', '10TH',
+      '11TH', '12TH', '13TH', '14TH', '15TH', '16TH', '17TH', '18TH', '19TH', '20TH'],
+
+    /* Un avatar dibujado con los sprites del juego, que se repinta solo */
+    rankAvatar: function (r, tam, fase) {
+      var cv = document.createElement('canvas');
+      cv.width = tam; cv.height = tam;
+      cv.className = 'tm-avatar';
+      this.rankDibujos.push({ cv: cv, fila: r, fase: fase || 0 });
+      return cv;
+    },
+
+    pintarAvatarRank: function (o, t) {
+      var R = window.PM.Ranking, Sp = window.PM.Sprites;
+      if (!Sp || !Sp.drawAvatar) return;
+      var c = o.cv.getContext('2d'), s = o.cv.width;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, s, s);
+      c.imageSmoothingEnabled = false;
+      var nombres = R ? R.nombresDe(o.fila) : [];
+      var av = this.rankAvatares || {};
+      var n = Math.max(1, nombres.length);
+      var bote = Math.sin(t * 4 + o.fase) * s * 0.03;
+      if (n === 1) {
+        Sp.drawAvatar(c, s / 2, s / 2 + bote, s * 0.4, av[nombres[0]] || 'pac', CFG.PLAYER_COLORS[0]);
+        return;
+      }
+      var paso = s / (n + 1.2);
+      for (var i = 0; i < n; i++) {
+        Sp.drawAvatar(c, s / 2 + (i - (n - 1) / 2) * paso * 1.25,
+          s / 2 + Math.sin(t * 4 + o.fase + i) * s * 0.03, paso * 0.55,
+          av[nombres[i]] || 'pac', CFG.PLAYER_COLORS[i % CFG.PLAYER_COLORS.length]);
+      }
+    },
+
+    /* Los avatares de quienes salen, de sus perfiles (se guardan para no
+     * volver a pedirlos). Quien no tiene cuenta sale con el Pac-Man. */
+    pedirAvatares: function (rows) {
+      var self = this, R = window.PM.Ranking;
+      if (!R || !R.avatares) return;
+      var faltan = [];
+      rows.forEach(function (r) {
+        R.nombresDe(r).forEach(function (n) {
+          if (!self.rankAvatares.hasOwnProperty(n) && faltan.indexOf(n) === -1) faltan.push(n);
+        });
+      });
+      if (!faltan.length) return;
+      faltan.forEach(function (n) { self.rankAvatares[n] = 'pac'; });
+      R.avatares(faltan, function (err, mapa) {
+        if (err || !mapa) return;
+        for (var k in mapa) if (mapa.hasOwnProperty(k)) self.rankAvatares[k] = mapa[k];
+      });
+    },
+
+    /* El podio: 2º, 1º y 3º en sus cajones. Un cajón vacío invita a subirse. */
+    renderPodio: function (rows) {
+      var self = this, R = window.PM.Ranking;
+      var p = this.rankPodio;
+      p.innerHTML = '';
+      p.style.display = '';
+      [1, 0, 2].forEach(function (i) {
+        var r = rows[i];
+        var pl = document.createElement('div');
+        pl.className = 'tm-plaza p' + (i + 1) + (r ? '' : ' hueco');
+        var ord = document.createElement('div');
+        ord.className = 'tm-ord';
+        ord.textContent = self.ORDINALES[i];
+        pl.appendChild(ord);
+        if (r) {
+          pl.appendChild(self.rankAvatar(r, i === 0 ? 96 : 72, i));
+        } else {
+          var hueco = document.createElement('div');
+          hueco.className = 'tm-avatar-hueco';
+          pl.appendChild(hueco);
+        }
+        var nm = document.createElement('div');
+        nm.className = 'tm-nombre';
+        nm.textContent = r ? (R ? R.nombresDe(r).join(' + ') : r.nombre1) : '¿TÚ?';
+        pl.appendChild(nm);
+        var pts = document.createElement('div');
+        pts.className = 'tm-pts';
+        pts.textContent = r ? '0' : '—';
+        if (r) self.rankCuentas.push({ el: pts, hasta: r.puntos, t0: Date.now() });
+        pl.appendChild(pts);
+        var yo = document.createElement('div');
+        yo.className = 'tm-yo';
+        yo.textContent = (r && self.rankEsMia(r)) ? '◄ TÚ ►' : '';
+        pl.appendChild(yo);
+        var caja = document.createElement('div');
+        caja.className = 'tm-caja';
+        var num = document.createElement('span');
+        num.textContent = String(i + 1);
+        caja.appendChild(num);
+        pl.appendChild(caja);
+        p.appendChild(pl);
+      });
+    },
+
+    /* La tabla: en PODIO, del 4º en adelante; en LISTA, todos */
+    renderRanking: function (rows, desde) {
+      var R = window.PM.Ranking;
+      desde = desde || 0;
+      this.rankList.innerHTML = '';
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var puesto = desde + i;
+        var nombres = R ? R.nombresDe(r) : [String(r.nombre1 || '').toUpperCase()];
+        var row = document.createElement('div');
+        row.className = 'rank-row tm-fila-rank' + (puesto < 3 ? ' p' + (puesto + 1) : '');
+        if (this.rankEsMia(r)) row.classList.add('mine');
+
+        var pos = document.createElement('span');
+        pos.className = 'rank-pos';
+        pos.textContent = this.ORDINALES[puesto] || ((puesto + 1) + '.');
+        row.appendChild(pos);
+
+        if (this.rankAvatares) row.appendChild(this.rankAvatar(r, 32, puesto));
+
+        var who = document.createElement('span');
+        who.className = 'rank-who';
+        who.textContent = nombres.join(' + ');
+        row.appendChild(who);
+
+        var pts = document.createElement('span');
+        pts.className = 'rank-pts';
+        pts.textContent = String(r.puntos);
+        row.appendChild(pts);
+
+        var lvl = document.createElement('span');
+        lvl.className = 'rank-lvl';
+        lvl.textContent = 'NIV ' + r.nivel + (r.modo === 'online' ? ' · ONLINE' : '');
+        row.appendChild(lvl);
+
+        this.rankList.appendChild(row);
+      }
+    },
+
+    /* Tu mejor puesto y tu rival: el de delante o, si vas primero, el
+     * primero que te sigue y NO eres tú (en equipo puedes salir varias
+     * veces, con compañeros distintos, y no eres rival de ti mismo). */
+    rankRival: function (rows) {
+      var pos = -1, otro = null, i;
+      for (i = 0; i < rows.length; i++) if (this.rankEsMia(rows[i])) { pos = i; break; }
+      if (pos > 0) otro = rows[pos - 1];
+      else if (pos === 0) {
+        for (i = 1; i < rows.length; i++) if (!this.rankEsMia(rows[i])) { otro = rows[i]; break; }
+      }
+      return { pos: pos, otro: otro };
+    },
+
+    /* La línea del reto: defender el 1ST o lo que falta para el de delante */
+    pintarReto: function (rows) {
+      var R = window.PM.Ranking;
+      var el = this.rankReto;
+      el.textContent = '';
+      var rv = this.rankRival(rows), pos = rv.pos;
+      var linea = document.createElement('div');
+      if (pos === 0) {
+        linea.textContent = rv.otro
+          ? ('DEFIENDE EL 1ST · ' + R.nombresDe(rv.otro).join(' + ') + ' ESTÁ A ' +
+             fmtMonedas(rows[0].puntos - rv.otro.puntos) + ' PUNTOS')
+          : 'DEFIENDE EL 1ST · NADIE TE SIGUE TODAVÍA';
+      } else if (pos > 0) {
+        linea.textContent = 'TE FALTAN ' + fmtMonedas(rows[pos - 1].puntos - rows[pos].puntos + 10) +
+          ' PUNTOS PARA EL ' + this.ORDINALES[pos - 1];
+      } else {
+        linea.textContent = rows.length ? 'JUEGA Y ENTRA EN LA TABLA' : 'SÚBETE AL PODIO';
+      }
+      el.appendChild(linea);
+      var coin = document.createElement('div');
+      coin.className = 'tm-coin';
+      coin.textContent = 'INSERT COIN';
+      el.appendChild(coin);
+    },
+
+    /* Los paneles del lado: tu rival y los campeones del mes pasado */
+    pintarLado: function (rows, players, mundo) {
+      var self = this, R = window.PM.Ranking, S = window.PM.Season;
+      var lado = this.rankLado;
+      lado.innerHTML = '';
+      lado.style.display = '';
+
+      var p1 = document.createElement('div');
+      p1.className = 'tm-panel';
+      var t1 = document.createElement('div');
+      t1.className = 'tm-panel-t';
+      t1.textContent = 'HERE COMES A CHALLENGER';
+      p1.appendChild(t1);
+      var rv = this.rankRival(rows), pos = rv.pos;
+      var txt = document.createElement('div');
+      txt.className = 'tm-panel-txt';
+      if (pos >= 0 && rv.otro) {
+        var otro = rv.otro;
+        var vs = document.createElement('div');
+        vs.className = 'tm-vs';
+        [rows[pos], otro].forEach(function (r, k) {
+          var d = document.createElement('div');
+          d.appendChild(self.rankAvatar(r, 48, 20 + k));
+          var n = document.createElement('div');
+          n.className = 'tm-vs-n';
+          n.textContent = R.nombresDe(r).join(' + ');
+          d.appendChild(n);
+          var p = document.createElement('div');
+          p.className = 'tm-vs-p';
+          p.textContent = fmtMonedas(r.puntos);
+          d.appendChild(p);
+          vs.appendChild(d);
+          if (k === 0) {
+            var x = document.createElement('div');
+            x.className = 'tm-vs-x';
+            x.textContent = 'VS';
+            vs.appendChild(x);
+          }
+        });
+        p1.appendChild(vs);
+        txt.textContent = pos === 0
+          ? (R.nombresDe(otro).join(' + ') + ' ESTÁ A ' + fmtMonedas(rows[0].puntos - otro.puntos) + ' PUNTOS DE QUITARTE EL 1ST')
+          : ('TE FALTAN ' + fmtMonedas(otro.puntos - rows[pos].puntos + 10) + ' PUNTOS PARA PASAR A ' + R.nombresDe(otro).join(' + '));
+      } else if (pos === 0) {
+        txt.textContent = 'ESTÁS SOLO ARRIBA. NADIE TE PERSIGUE… TODAVÍA';
+      } else {
+        txt.textContent = 'AÚN NO ESTÁS EN ESTA TABLA. UNA PARTIDA Y ENTRAS';
+      }
+      p1.appendChild(txt);
+      lado.appendChild(p1);
+
+      /* HALL OF FAME: el primero de cada formato el mes pasado, en este mundo */
+      if (!S) return;
+      var p2 = document.createElement('div');
+      p2.className = 'tm-panel';
+      var ahora = new Date();
+      var pasada = S.actual(new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 1, 15)));
+      var t2 = document.createElement('div');
+      t2.className = 'tm-panel-t';
+      t2.textContent = 'HALL OF FAME · ' + String(S.nombre(pasada)).split(' ')[0];
+      p2.appendChild(t2);
+      var fama = document.createElement('div');
+      fama.className = 'tm-fama';
+      p2.appendChild(fama);
+      lado.appendChild(p2);
+      var clave = pasada + ':' + mundo;
+      var req = this.rankReq;
+      function pinta(campeones) {
+        if (self.rankReq !== req) return;
+        fama.innerHTML = '';
+        for (var n = 1; n <= 4; n++) {
+          var f = document.createElement('div');
+          f.className = 'tm-fama-f';
+          var a = document.createElement('span');
+          a.textContent = R.formato(n);
+          f.appendChild(a);
+          var b = document.createElement('b');
+          var c = campeones[n];
+          b.textContent = c ? R.nombresDe(c).join(' & ') : 'DESIERTO';
+          b.classList.toggle('desierto', !c);
+          f.appendChild(b);
+          fama.appendChild(f);
+        }
+      }
+      if (this.rankFama[clave]) { pinta(this.rankFama[clave]); return; }
+      var campeones = {}, faltan = 4;
+      [1, 2, 3, 4].forEach(function (n) {
+        S.top(pasada, n, function (err, filas) {
+          if (!err && filas && filas.length) campeones[n] = filas[0];
+          if (--faltan === 0) {
+            self.rankFama[clave] = campeones;
+            pinta(campeones);
+          }
+        }, mundo);
+      });
     },
 
     /* Los más rápidos en despejar el nivel 1 */
@@ -6510,16 +6929,20 @@
       var R = window.PM.Ranking;
       var mine = String(window.PM.settings.nick1 || '').toUpperCase();
       this.rankList.innerHTML = '';
+      if (!rows.length) {
+        this.rankStatus.textContent = 'AÚN NADIE HA CRONOMETRADO EL NIVEL 1 · ¡SÉ EL PRIMERO!';
+      }
+      this.pintarHud(null);
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
         var n1 = String(r.nombre1 || '').toUpperCase();
         var row = document.createElement('div');
-        row.className = 'rank-row';
+        row.className = 'rank-row tm-fila-rank sin-avatar' + (i < 3 ? ' p' + (i + 1) : '');
         if (mine && n1 === mine) row.classList.add('mine');
 
         var pos = document.createElement('span');
         pos.className = 'rank-pos';
-        pos.textContent = (i + 1) + '.';
+        pos.textContent = this.ORDINALES[i] || ((i + 1) + '.');
         row.appendChild(pos);
 
         var who = document.createElement('span');
@@ -6539,6 +6962,64 @@
 
         this.rankList.appendChild(row);
       }
+    },
+
+    /* Mientras el panel está abierto: avatares que botan, puntos que suben,
+     * la cuenta atrás y el desfile de Pac-Man y los fantasmas */
+    animarRanking: function () {
+      var self = this;
+      var raf = window.requestAnimationFrame;
+      if (!raf || this.rankAnim) return;
+      this.rankAnim = true;
+      var origen = Date.now(), ultimoReloj = 0;
+      function paso() {
+        var panel = self.els.ranking;
+        if (!panel || panel.style.display === 'none') { self.rankAnim = false; return; }
+        var ahora = Date.now(), t = (ahora - origen) / 1000;
+        var quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        (self.rankCuentas || []).forEach(function (o) {
+          var k = quieto ? 1 : Math.min(1, (ahora - o.t0) / 1100);
+          o.el.textContent = fmtMonedas(o.hasta * (1 - Math.pow(1 - k, 3)));
+        });
+        (self.rankDibujos || []).forEach(function (o) { self.pintarAvatarRank(o, quieto ? 0 : t); });
+        if (ahora - ultimoReloj > 500) { ultimoReloj = ahora; self.pintarReloj(); }
+        self.pintarDesfile(quieto ? 3 : t);
+        raf(paso);
+      }
+      raf(paso);
+    },
+
+    /* Pac-Man se come una pastilla grande y persigue a los cuatro; luego
+     * vuelven ellos a por él. El de la pantalla de espera de la máquina. */
+    pintarDesfile: function (t) {
+      var cv = this.rankDesfile, Sp = window.PM.Sprites;
+      if (!cv || !Sp) return;
+      var c = cv.getContext('2d');
+      var S = 2, W = cv.width / S, H = cv.height / S, y = H / 2;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, cv.width, cv.height);
+      c.imageSmoothingEnabled = false;
+      c.setTransform(S, 0, 0, S, 0, 0);
+      var ciclo = t % 16, ida = ciclo < 8, q = (ciclo % 8) / 8;
+      var boca = [0, 1, 2, 1][Math.floor(t * 14) % 4], anda = Math.floor(t * 8) % 2;
+      c.fillStyle = CFG.COLORS.pellet;
+      if (ida) {
+        var px = -20 + q * (W + 80), grande = W * 0.25;
+        for (var x = 10; x < W; x += 8) if (x > px + 4) c.fillRect(x - 1, y - 1, 2, 2);
+        if (px < grande) { c.beginPath(); c.arc(grande, y, 3, 0, Math.PI * 2); c.fill(); }
+        var huyen = px >= grande;
+        for (var g = 0; g < 4; g++) {
+          Sp.drawGhost(c, px + 30 + g * 16, y, CFG.DIR.RIGHT, g, huyen ? 'fright' : 'chase', anda,
+            huyen && q > 0.8 && Math.floor(t * 6) % 2 === 0);
+        }
+        Sp.drawPacman(c, px, y, CFG.DIR.RIGHT, boca, '#ffff00', 'clasico', {});
+      } else {
+        var qx = W + 20 - q * (W + 80);
+        for (var g2 = 0; g2 < 4; g2++) Sp.drawGhost(c, qx + 26 + g2 * 16, y, CFG.DIR.LEFT, g2, 'chase', anda, false);
+        Sp.drawPacman(c, qx, y, CFG.DIR.LEFT, boca, '#ffff00', 'clasico', {});
+      }
+      c.setTransform(1, 0, 0, 1, 0, 0);
     },
 
     /* Tus últimas partidas (localStorage), lo más reciente primero */
@@ -6676,42 +7157,6 @@
       });
     },
 
-    renderRanking: function (rows) {
-      var R = window.PM.Ranking;
-      var mine = String(window.PM.settings.nick1 || '').toUpperCase();
-      this.rankList.innerHTML = '';
-      for (var i = 0; i < rows.length; i++) {
-        var r = rows[i];
-        // los que jugaron, sean uno o cuatro
-        var nombres = R ? R.nombresDe(r) : [String(r.nombre1 || '').toUpperCase()];
-        var row = document.createElement('div');
-        row.className = 'rank-row';
-        if (mine && nombres.indexOf(mine) !== -1) row.classList.add('mine');
-
-        var pos = document.createElement('span');
-        pos.className = 'rank-pos';
-        pos.textContent = (i + 1) + '.';
-        row.appendChild(pos);
-
-        var who = document.createElement('span');
-        who.className = 'rank-who';
-        who.textContent = nombres.join(' + ');
-        row.appendChild(who);
-
-        var pts = document.createElement('span');
-        pts.className = 'rank-pts';
-        pts.textContent = String(r.puntos);
-        row.appendChild(pts);
-
-        var lvl = document.createElement('span');
-        lvl.className = 'rank-lvl';
-        lvl.textContent = 'NIV ' + r.nivel + (r.modo === 'online' ? ' · ONLINE' : '');
-        row.appendChild(lvl);
-
-        this.rankList.appendChild(row);
-      }
-    },
-
     /* ------------------------------------------------------
      * Laberintos alternativos (modo aparte)
      * ------------------------------------------------------ */
@@ -6729,8 +7174,8 @@
       var nota = document.createElement('div');
       nota.className = 'note';
       nota.textContent = 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ES UN MODO ' +
-        'APARTE: EL LABERINTO DE 1980 NO SE TOCA, ASÍ QUE ESTAS PARTIDAS NO ' +
-        'ENTRAN EN EL TOP MUNDIAL — PERO SÍ SUMAN EXPERIENCIA.';
+        'APARTE: EL LABERINTO DE 1980 NO SE TOCA, ASÍ QUE ESTAS PARTIDAS VAN ' +
+        'A SU PROPIO TOP MUNDIAL — Y TAMBIÉN SUMAN EXPERIENCIA.';
       o.appendChild(nota);
 
       var lista = document.createElement('div');

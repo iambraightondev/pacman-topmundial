@@ -13,6 +13,18 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (tarde) — TOP MUNDIAL de recreativa y un top por mundo (`pm-v76`).**
+Braighton eligió la **fusión recreativa + podio** con opción de **lista**
+(<https://claude.ai/artifact/6vMyBK2yBJ1qwPiggg1w8v>, pestaña D). Hecho en
+`UI.buildRanking`. **DESATADO y LABERINTOS** ya tienen su tabla: columna
+`mundo` en `ranking` y vistas por mundo (`supabase/mundos.sql`, aplicado), y
+`enviar-record` desplegada (v3) con techo por mundo: LABERINTOS con 292
+pastillas y DESATADO sumando mordiscos (16 s) y gritos (60 s) por tiempo. Se
+borraron 9 filas de prueba (SOLOTEST, BRAI, PEPE; copia en %TEMP%).
+**Dudosa y sin tocar:** ANA + BENI, dúo de 120 puntos del 4 de agosto.
+**Por mirar:** la pantalla en un móvil; si el techo de DESATADO deja fuera
+alguna partida real (el aviso sale en el GAME OVER).
+
 **16 sep (tarde) — la tienda de monedas (`pm-v73`).** Braighton eligió la
 propuesta C (ticket) de <https://claude.ai/artifact/N3ojdfCrHSUysT1J54bF4k>, con la
 ficha **como ventana** (no en el sitio, que era la recomendada), con COMPRAR Y

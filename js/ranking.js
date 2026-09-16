@@ -221,6 +221,27 @@
         });
     },
 
+    /* El avatar de cada nombre que tenga cuenta, para pintarlos en el top.
+     * cb(err, { NOMBRE: 'avatar' }). Quien no tiene cuenta no viene. */
+    avatares: function (nombres, cb) {
+      if (!this.configured() || !nombres || !nombres.length) { cb(null, {}); return; }
+      var lista = nombres.slice(0, 60).map(function (n) {
+        return '"' + String(n).replace(/"/g, '') + '"';
+      }).join(',');
+      var url = base('perfiles') + '?select=usuario,avatar&usuario=in.(' +
+        encodeURIComponent(lista) + ')';
+      fetch(url, { method: 'GET', headers: headers() })
+        .then(function (res) { return res.ok ? res.json() : []; })
+        .then(function (filas) {
+          var out = {};
+          (filas || []).forEach(function (f) {
+            if (f && f.usuario && f.avatar) out[String(f.usuario).toUpperCase()] = f.avatar;
+          });
+          cb(null, out);
+        })
+        .catch(function () { cb('SIN CONEXIÓN', null); });
+    },
+
     /* Los más rápidos en despejar el NIVEL 1 (solo individual). cb(err, filas)
      * Cada fila: { nombre1, tiempo1 (centésimas), puntos, creado_en } */
     topTime: function (cb) {

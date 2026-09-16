@@ -1298,6 +1298,33 @@
     eq(S.nombre('2026-12'), 'DICIEMBRE 2026');
   });
 
+  test('TOP MUNDIAL: tu rival nunca eres tú, ni en equipo', function () {
+    var U = window.PM.UI, n1 = window.PM.settings.nick1;
+    try {
+      window.PM.settings.nick1 = 'YO';
+      var filas = [
+        { nombre1: 'YO', nombre2: 'ANA', puntos: 900 },
+        { nombre1: 'YO', nombre2: 'LUIS', puntos: 800 },
+        { nombre1: 'EVA', nombre2: 'PAU', puntos: 700 }
+      ];
+      var rv = U.rankRival(filas);
+      eq(rv.pos, 0, 'vas primero');
+      eq(rv.otro.nombre1, 'EVA', 'y el rival es el primero que no eres tú');
+      rv = U.rankRival([{ nombre1: 'EVA', puntos: 50 }, { nombre1: 'YO', puntos: 40 }]);
+      eq(rv.otro.nombre1, 'EVA', 'si vas detrás, el de delante');
+      eq(U.rankRival([{ nombre1: 'EVA', puntos: 50 }]).pos, -1, 'y si no estás, no hay rival');
+      U.showRankMundo('hab');
+      eq(U.rankMundo, 'hab', 'se elige DESATADO');
+      U.showRankVista('lista');
+      eq(U.rankVista, 'lista', 'y verlo en lista');
+    } finally {
+      window.PM.settings.nick1 = n1;
+      U.rankMundo = 'clasico';
+      U.rankVista = 'podio';
+      U.showMenu();
+    }
+  });
+
   test('el panel del top mundial tiene una pestaña por formato y temporadas',
     function () {
       var U = window.PM.UI;
