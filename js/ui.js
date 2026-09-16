@@ -4554,7 +4554,7 @@
       /* Si hay reparto declarado, se dice de quién es la palabra: es el dato
        * que da quien jugó, no una medición. */
       if (d.reparto) {
-        avisos.push('DE LAS PARTIDAS ANTERIORES A ESA CUENTA, EL ' + d.reparto.pct +
+        avisos.push('DE LAS PARTIDAS ANTERIORES A ESA CUENTA, Y DE SU TIEMPO, EL ' + d.reparto.pct +
           ' % SE HA REPARTIDO A DESATADO PORQUE ASÍ LO DECLARÓ QUIEN LAS JUGÓ (' +
           S.miles(d.reparto.partidas) + ' PARTIDAS). LO MARCADO CON ~ ES APROXIMADO.');
       }

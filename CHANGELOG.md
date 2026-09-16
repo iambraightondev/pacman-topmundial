@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · El tiempo también se reparte
+
+- El reparto declarado de lo viejo (70 % DESATADO) ya se aplicaba a las
+  **partidas**, pero las **horas** seguían todas en CLÁSICO. Ahora el tiempo
+  de aquellas partidas se reparte con el mismo porcentaje, y sale con
+  virgulilla porque es aproximado. Lo jugado después se mide solo.
+
 ## 2026-09-16 · Decir tú el reparto de lo viejo
 
 - De qué modo era cada partida de antes no lo sabe ningún archivo: lo sabe

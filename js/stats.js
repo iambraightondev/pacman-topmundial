@@ -258,10 +258,19 @@
        * tantas por ciento fueron de DESATADO. Se aplica SOLO a esas; lo
        * jugado después ya viene contado en su sitio. */
       var repHab = num(c.repHab), repBase = num(c.repBase);
-      var viejas = 0, aDesatado = 0;
+      var viejas = 0, aDesatado = 0, tDesatado = 0;
       if (repHab > 0 && repBase > 0) {
-        viejas = Math.min(repBase, cont(c, 'partidas', 'clasico'));
+        var pClasico = cont(c, 'partidas', 'clasico');
+        viejas = Math.min(repBase, pClasico);
         aDesatado = Math.round(viejas * repHab / 100);
+        /* Y el TIEMPO de esas mismas partidas, que también se apuntó entero a
+         * CLÁSICO (casi todo es la estimación por los puntos). Cuánto duró
+         * cada una no se guardó, así que se reparte a partes iguales por
+         * partida: la parte de las viejas y, de esa, el mismo porcentaje. */
+        if (pClasico > 0) {
+          tDesatado = Math.round(cont(c, 'tiempo', 'clasico') *
+            (viejas / pClasico) * repHab / 100);
+        }
       }
       d.reparto = aDesatado ? { pct: repHab, partidas: aDesatado } : null;
 
@@ -269,8 +278,9 @@
       for (var i = 0; i < CFG.STATS.MUNDOS.length; i++) {
         var m = CFG.STATS.MUNDOS[i];
         var p = cont(c, 'partidas', m.id);
-        if (m.id === 'clasico') p = Math.max(0, p - aDesatado);
-        else if (m.id === 'hab') p += aDesatado;
+        var t = cont(c, 'tiempo', m.id);
+        if (m.id === 'clasico') { p = Math.max(0, p - aDesatado); t = Math.max(0, t - tDesatado); }
+        else if (m.id === 'hab') { p += aDesatado; t += tDesatado; }
         var rastro = this.rastroDe(c, m.id, records);
         if (rastro) jugados++;
         d.mundos.push({
@@ -280,7 +290,7 @@
           partidas: (p > 0) ? p : (rastro ? -1 : 0),
           mejor: this.mejorDe(c, m.id, records),
           fantasmas: cont(c, 'fantasmas', m.id),
-          tiempo: cont(c, 'tiempo', m.id)
+          tiempo: t
         });
       }
       d.mundosJugados = jugados;
@@ -302,6 +312,7 @@
           if (mm.id !== 'clasico' && mm.id !== 'hab') continue;
           if (mm.partidas < 0) mm.partidas = 0;
           mm.aprox = true;
+          if (tDesatado > 0 && mm.tiempo > 0) mm.tAprox = true;
         }
       }
       return d;
@@ -518,7 +529,7 @@
           partidas: (m.partidas < 0) ? '—'
             : ((m.aprox ? '~' : '') + S.miles(m.partidas)),
           mejor: m.mejor ? S.miles(m.mejor) : '—',
-          tiempo: m.tiempo ? S.reloj(m.tiempo) : '—'
+          tiempo: m.tiempo ? ((m.tAprox ? '~' : '') + S.reloj(m.tiempo)) : '—'
         });
       }
       return filas;

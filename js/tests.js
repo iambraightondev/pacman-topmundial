@@ -7709,6 +7709,7 @@
       var c = {
         partidas: 737, nivelMax: 10, racha: 4, mordiscos: 1000,
         'clasico:partidas': 734, 'hab:puntosMax': 180550,
+        'clasico:tiempo': 200000,
         repHab: 70, repBase: 734
       };
       for (var k in extra) { if (extra.hasOwnProperty(k)) c[k] = extra[k]; }
@@ -7725,6 +7726,9 @@
     eq(t.modos.clasico.partidas, 220, 'y CLÁSICO se queda con el resto');
     ok(t.modos.hab.aprox && t.modos.clasico.aprox,
        'los dos quedan marcados como aproximados: es un reparto, no una cuenta');
+    eq(t.modos.hab.tiempo, 140000, 'el tiempo de lo viejo se reparte igual: 70 % a DESATADO');
+    eq(t.modos.clasico.tiempo, 60000, 'y el resto se queda en CLÁSICO');
+    ok(t.modos.hab.tAprox && t.modos.clasico.tAprox, 'y el tiempo también va con virgulilla');
 
     /* lo que se juegue DESPUÉS se cuenta en su sitio y no se reparte */
     var t2 = tabla({ 'clasico:partidas': 754, 'hab:partidas': 10 });
@@ -7735,6 +7739,7 @@
     var t3 = tabla({ repHab: 0, repBase: 0 });
     eq(t3.reparto, null, 'sin reparto declarado no hay reparto');
     eq(t3.modos.clasico.partidas, 734, 'y los contadores se enseñan tal cual');
+    eq(t3.modos.clasico.tiempo, 200000, 'y el tiempo, también');
   });
 
   test('declarar el reparto se queda con las partidas de ese momento', function () {
