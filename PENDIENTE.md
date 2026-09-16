@@ -13,6 +13,13 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (tarde) — la tienda de monedas (`pm-v73`).** Braighton eligió la
+propuesta C (ticket) de <https://claude.ai/artifact/N3ojdfCrHSUysT1J54bF4k>, con la
+ficha **como ventana** (no en el sitio, que era la recomendada), con COMPRAR Y
+PONÉRMELO y la ficha también en el vestuario. El escenario de la ficha vive en
+`js/ficha.js`; la ventana y la compra, en `UI.abrirFicha`. **Por mirar:** la
+tienda y la ficha en un móvil de verdad (una columna, ventana con scroll).
+
 **16 sep (tarde) — cuentas limpias (`pm-v72`).** Braighton vio que los demás
 no tenían repartido CLÁSICO/DESATADO y que SANDROPEPA tenía máximos inflados.
 - SANDROPEPA tenía **marcas de las pruebas** (99.000 solo, 7.000 trío, 40.000

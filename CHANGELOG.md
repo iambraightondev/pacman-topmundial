@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · La tienda de monedas
+
+- **La tienda se ha rehecho en torno a las monedas.** El precio va siempre con su
+  moneda y comparado con lo que tienes; lo que no alcanza dice cuánto falta.
+- **El ticket:** el + de cada cosa la echa al ticket, que resta a la vista y se
+  paga de una vez. Arriba, una **meta**: lo más barato que aún no puedes pagar
+  y cuántas partidas te faltan.
+- **La ficha:** pulsar una cosa abre una ventana donde se ve en movimiento
+  (corriendo, comiéndose un fantasma, con la Q y muriendo), con lupa, pausa,
+  cámara lenta, otra skin y otro color. Desde ahí se compra y se pone de un
+  golpe. La misma ficha está en el **vestuario** (VERLO EN MOVIMIENTO).
+
 ## 2026-09-16 · Cuentas que ya no se contagian
 
 - **Cerrar sesión deja el navegador limpio.** Antes el progreso del anterior se

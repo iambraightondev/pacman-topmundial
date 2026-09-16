@@ -4321,32 +4321,98 @@
     }
   });
 
-  test('TIENDA: solo sale lo que te falta, y lo recién comprado se pone desde ahí', function () {
+  test('TIENDA: solo sale lo que te falta, el ticket resta y paga todo junto', function () {
     var UI = window.PM.UI;
     conTienda(function (Tn) {
+      UI.tiendaBolsa = [];
       UI.showTienda('efecto');
       UI.tiendaTengo = false;
       UI.refreshTienda();
       var vistas = UI.tiendaItems.filter(function (r) { return r.card.style.display !== 'none'; });
       eq(vistas.length, CFG.EFECTOS.length, 'sin nada comprado, salen todos los efectos');
-      var fila = vistas[0];
-      UI.tiendaPulsa(fila.it);                       // pregunta
-      UI.tiendaPulsa(fila.it);                       // compra
-      ok(Tn.tiene(fila.it.id), 'comprado');
-      ok(fila.card.style.display !== 'none', 'lo recién comprado sigue a la vista');
-      eq(fila.btn.textContent, 'PONÉRTELO');
-      UI.tiendaPulsa(fila.it);
-      eq(Tn.efecto(), fila.it.id, 'PONÉRTELO lo pone');
-      ok(UI.els.vestuario.style.display !== 'none', 'y abre el vestuario');
-      eq(UI.vestTab, 'efecto', 'en su pestaña');
-      UI.showTienda('efecto');
+      var a = vistas[0], b = vistas[1];
+      ok(UI.tiendaAlTicket(a.it.id), 'el + echa al ticket');
+      ok(UI.tiendaAlTicket(b.it.id), 'y otro');
+      eq(UI.tiendaEnTicket(), a.it.precio + b.it.precio, 'el ticket suma lo que lleva');
+      ok(!Tn.tiene(a.it.id), 'echarlo al ticket no es comprarlo');
+      eq(a.mas.textContent, '✓', 'la ficha dice que está en el ticket');
+      eq(UI.tiendaPagar(), 2, 'pagar compra las dos');
+      ok(Tn.tiene(a.it.id) && Tn.tiene(b.it.id), 'y son tuyas');
+      eq(Tn.saldo(), 1500 - a.it.precio - b.it.precio, 'cobradas una vez cada una');
+      eq(UI.tiendaBolsa.length, 0, 'el ticket queda vacío');
+      ok(a.card.style.display !== 'none', 'lo recién comprado sigue a la vista');
+      eq(a.precio.textContent, 'RECIÉN COMPRADO');
       UI.tiendaRecien = [];
       UI.refreshTienda();
-      ok(fila.card.style.display === 'none', 'fuera de esa visita, lo tuyo ya no sale');
+      ok(a.card.style.display === 'none', 'fuera de esa visita, lo tuyo ya no sale');
       UI.tiendaTengo = true;
       UI.refreshTienda();
-      ok(fila.card.style.display !== 'none', 'salvo que se pida verlo');
+      ok(a.card.style.display !== 'none', 'salvo que se pida verlo');
       UI.tiendaTengo = false;
+    });
+    UI.tiendaBolsa = [];
+    UI.showMenu();
+  });
+
+  test('TIENDA: lo que no cabe en el ticket no entra, y se dice cuánto falta', function () {
+    var UI = window.PM.UI;
+    conTienda(function (Tn) {
+      UI.tiendaBolsa = [];
+      UI.showTienda('skin');
+      ok(UI.tiendaAlTicket('cuy'), 'una skin de 1.500 cabe justo');
+      ok(!UI.tiendaAlTicket('acc_gafas'), 'con el ticket lleno, otra cosa no cabe');
+      ok(/TE FALTAN 450/.test(UI.tiendaMsg.textContent), 'y se dice lo que falta');
+      ok(UI.tiendaAlTicket('cuy'), 'pulsar otra vez lo saca del ticket');
+      eq(UI.tiendaEnTicket(), 0, 'y el ticket vuelve a cero');
+      ok(!Tn.tiene('cuy'), 'sin pagar, nada');
+    });
+    UI.tiendaBolsa = [];
+    UI.showMenu();
+  });
+
+  test('FICHA: se abre encima, compra y pone de un golpe, y se cierra', function () {
+    var UI = window.PM.UI;
+    conTienda(function (Tn) {
+      UI.tiendaBolsa = [];
+      UI.showTienda('accesorio');
+      ok(UI.abrirFicha('accesorio', 'acc_gafas', 'tienda'), 'se abre la ficha');
+      ok(UI.ficha && UI.ficha.it.id === 'acc_gafas', 'con esa cosa');
+      ok(UI.els.tienda.style.display !== 'none', 'la tienda sigue detrás');
+      ok(UI.ficha.velo.parentNode === UI.els.tienda, 'la ventana va encima de la tienda');
+      ok(window.PM.Ficha.momentosDe(UI.ficha.it).indexOf('morir') !== -1, 'se puede ver cómo muere');
+      ok(UI.fichaComprar(), 'COMPRAR Y PONÉRMELO');
+      ok(Tn.tiene('acc_gafas'), 'comprado');
+      eq(Tn.accesorio(), 'acc_gafas', 'y puesto');
+      eq(Tn.saldo(), 1050, 'cobrado una vez');
+      ok(!UI.fichaComprar(), 'no se compra dos veces');
+      UI.cerrarFicha();
+      eq(UI.ficha, null, 'se cierra');
+      eq(UI.els.tienda.querySelectorAll('.ficha-velo').length, 0,
+         'y la ventana se va');
+      /* un emote comprado desde la ficha va a una tecla de los de siempre */
+      Tn.ganar(200);
+      UI.abrirFicha('emote', 'mareo', 'tienda');
+      ok(UI.fichaComprar(), 'se compra el emote');
+      ok(Tn.emotes().indexOf('mareo') !== -1, 'y va en una tecla');
+      UI.cerrarFicha();
+      Tn.poner('accesorio', '');
+    });
+    UI.tiendaBolsa = [];
+    UI.showMenu();
+  });
+
+  test('FICHA: también en el vestuario, para ponerse lo que ya es tuyo', function () {
+    var UI = window.PM.UI;
+    conTienda(function (Tn) {
+      ok(Tn.comprar('efx_notas').ok, 'algo comprado');
+      UI.showVestuario('efecto', 'yo');
+      ok(UI.abrirFicha('efecto', 'efx_notas', 'vestuario'), 'se abre desde el vestuario');
+      ok(UI.ficha.velo.parentNode === UI.els.vestuario, 'encima del vestuario');
+      UI.ponerCosa(UI.ficha.it);
+      eq(Tn.efecto(), 'efx_notas', 'PONÉRMELO lo pone');
+      ok(UI.abrirFicha('skin', 'clasico', 'vestuario'), 'y sirve para las skins que no se compran');
+      UI.closeVestuario();
+      eq(UI.ficha, null, 'salir del vestuario cierra la ficha');
       Tn.poner('efecto', '');
     });
     UI.showMenu();

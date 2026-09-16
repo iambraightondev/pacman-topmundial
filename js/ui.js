@@ -2706,6 +2706,15 @@
           fila.appendChild(ir);
         }
       }
+      /* la misma ficha que en la tienda: verlo en movimiento */
+      if (it.id && (tab === 'skin' || tab === 'accesorio' || tab === 'efecto' || tab === 'emote')) {
+        var mov = this.makeButton('VERLO EN MOVIMIENTO', function () {
+          self.vestMarcarVistos();
+          self.abrirFicha(tab, it.id, 'vestuario');
+        });
+        mov.classList.add('btn-preset');
+        fila.appendChild(mov);
+      }
       var AS = window.AudioSys;
       if (tab === 'skin' && AS && AS.tieneWaka && AS.tieneWaka(it.id)) {
         var oir = this.makeButton('ESCUCHAR', function () {
@@ -2794,10 +2803,18 @@
     /* ------------------------------------------------------
      * TIENDA
      *
-     * Mismo idioma que la vitrina de SKINS: cada cosa corre por un pasillo a
-     * tamaño de partida con su lupa, porque un efecto o un accesorio se elige
-     * viéndolo moverse. Se paga con dos clics (el primero pregunta), así que
-     * un toque sin querer no se lleva 1.500 monedas.
+     * Una tienda de MONEDAS: el precio nunca va suelto, siempre con su moneda
+     * y comparado con lo que tienes. Tres columnas en ancho —secciones,
+     * artículos y el TICKET— y una sola en el móvil.
+     *
+     *  - Se compra como en un kiosco: el + de cada ficha la echa al ticket, y
+     *    el ticket resta a la vista (tus monedas, cada cosa, lo que te queda).
+     *    Pagar es un paso aparte, así que un toque sin querer no se lleva
+     *    1.500 monedas.
+     *  - Arriba, una META: lo más barato que aún no puedes pagar, con lo que
+     *    te falta en PARTIDAS, que es lo que se quiere empujar.
+     *  - Pulsar una cosa abre su FICHA (abrirFicha): verla en movimiento,
+     *    añadirla al ticket o comprarla y ponértela de un golpe.
      * ------------------------------------------------------ */
     buildTienda: function () {
       var self = this;
@@ -2806,21 +2823,24 @@
       if (!o || !Tn) return;
       o.innerHTML = '';
 
+      /* ----- cabecera: el monedero ----- */
+      var cab = document.createElement('div');
+      cab.className = 'tn-cab';
       var h = document.createElement('div');
-      h.className = 'panel-title';
+      h.className = 'panel-title tn-titulo';
       h.textContent = 'TIENDA';
-      o.appendChild(h);
-
-      var caja = document.createElement('div');
-      caja.className = 'tienda-saldo';
-      var moneda = document.createElement('canvas');
-      moneda.width = 24; moneda.height = 24;
-      moneda.className = 'tienda-moneda';
-      caja.appendChild(moneda);
-      this.tiendaSaldo = document.createElement('span');
-      caja.appendChild(this.tiendaSaldo);
-      o.appendChild(caja);
-      this.pintarMoneda(moneda);
+      cab.appendChild(h);
+      var cartera = document.createElement('div');
+      cartera.className = 'tn-cartera';
+      cartera.setAttribute('aria-label', 'Tus monedas');
+      cartera.appendChild(this.monedaEl('grande'));
+      this.tiendaSaldo = document.createElement('b');
+      cartera.appendChild(this.tiendaSaldo);
+      cab.appendChild(cartera);
+      this.tiendaRitmo = document.createElement('div');
+      this.tiendaRitmo.className = 'tn-ritmo';
+      cab.appendChild(this.tiendaRitmo);
+      o.appendChild(cab);
 
       /* El regalo de veterano, dicho: si no, quien entra y ve 6.000 monedas
        * no sabe de dónde han salido. Solo sale si hay regalo. */
@@ -2828,33 +2848,43 @@
       this.tiendaRegalo.className = 'tienda-regalo';
       o.appendChild(this.tiendaRegalo);
 
+      var TC = CFG.TIENDA;
       var gana = document.createElement('div');
       gana.className = 'note tienda-gana';
-      var TC = CFG.TIENDA;
       gana.textContent = 'SE GANAN JUGANDO: ' + TC.POR_PARTIDA + ' POR PARTIDA DE AL MENOS UN MINUTO + ' +
         TC.POR_MIL + ' POR CADA 1.000 PUNTOS (HASTA ' + TC.TOPE_PARTIDA + ') · ' +
         TC.POR_RETO + ' POR CADA RETO DEL DAILY · ' + TC.POR_SEMANA + ' POR LA SEMANA ENTERA';
       o.appendChild(gana);
 
-      var bar = document.createElement('div');
-      bar.className = 'tab-row';
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'tn';
+      o.appendChild(cuerpo);
+
+      /* ----- secciones ----- */
+      var nav = document.createElement('div');
+      nav.className = 'tn-nav';
       this.tiendaTabBtns = {};
       Tn.CATEGORIAS.forEach(function (c) {
         var b = self.makeButton(c.name, function () {
           self.tiendaTab = c.id;
-          self.tiendaConfirma = null;
+          self.tiendaAviso('');
           self.refreshTienda();
-          o.scrollTop = 0;
         });
-        b.classList.add('tab');
+        b.classList.add('tab', 'tn-sec');
         self.tiendaTabBtns[c.id] = b;
-        bar.appendChild(b);
+        nav.appendChild(b);
       });
-      o.appendChild(bar);
+      cuerpo.appendChild(nav);
 
-      /* La tienda es para COMPRAR: de salida solo enseña lo que te falta. Lo
-       * tuyo se viste en el VESTUARIO; aquí se puede mirar, pero hay que
-       * pedirlo. */
+      /* ----- centro: meta, utilidades y artículos ----- */
+      var centro = document.createElement('div');
+      centro.className = 'tn-centro';
+      cuerpo.appendChild(centro);
+
+      this.tiendaMeta = document.createElement('div');
+      this.tiendaMeta.className = 'tn-meta';
+      centro.appendChild(this.tiendaMeta);
+
       var util = document.createElement('div');
       util.className = 'vest-util tienda-util';
       this.tiendaNota = document.createElement('span');
@@ -2867,82 +2897,102 @@
       this.tiendaTengoBtn.classList.add('btn-preset');
       util.appendChild(this.tiendaTengoBtn);
       var irVest = this.makeButton('IR AL VESTUARIO', function () {
-        self.showVestuario(self.tiendaTab === 'emote' ? 'emote' : (self.tiendaTab || 'skin'), 'yo');
+        self.showVestuario(self.tiendaTab || 'skin', 'yo');
       });
       irVest.classList.add('btn-preset');
       util.appendChild(irVest);
-      o.appendChild(util);
+      centro.appendChild(util);
 
       this.tiendaVacio = document.createElement('div');
       this.tiendaVacio.className = 'vest-vacio';
       this.tiendaVacio.textContent = 'YA TIENES TODO LO DE ESTA SECCIÓN';
-      o.appendChild(this.tiendaVacio);
-
-      this.tiendaMsg = document.createElement('div');
-      this.tiendaMsg.className = 'lobby-status tienda-msg';
-      o.appendChild(this.tiendaMsg);
+      centro.appendChild(this.tiendaVacio);
 
       this.tiendaGrid = document.createElement('div');
-      this.tiendaGrid.className = 'skin-vitrina';
-      o.appendChild(this.tiendaGrid);
+      this.tiendaGrid.className = 'tn-grid';
+      centro.appendChild(this.tiendaGrid);
 
       this.tiendaItems = [];
-      Tn.CATALOGO.forEach(function (it, idx) {
+      Tn.CATALOGO.forEach(function (it) {
         var card = document.createElement('div');
-        card.className = 'skin-card tienda-card';
-
-        var head = document.createElement('div');
-        head.className = 'skin-card-head';
-        var nom = document.createElement('span');
-        nom.className = 'skin-card-name';
-        nom.textContent = it.name;
-        head.appendChild(nom);
-        var chip = document.createElement('span');
-        chip.className = 'skin-chip tienda';
-        head.appendChild(chip);
-        card.appendChild(head);
-
-        var views = document.createElement('div');
-        views.className = 'skin-views';
+        card.className = 'tn-it';
+        card.setAttribute('role', 'button');
+        card.tabIndex = 0;
+        card.setAttribute('aria-label', 'Ver la ficha de ' + it.name);
         var lupa = document.createElement('canvas');
-        lupa.width = 144; lupa.height = 144;
-        lupa.className = 'skin-lupa';
-        lupa.setAttribute('aria-label', it.name + ' ampliado');
-        var esc = document.createElement('canvas');
-        esc.width = 336; esc.height = 144;
-        esc.className = 'skin-escena';
-        esc.setAttribute('aria-label', it.name + ' en un pasillo');
-        views.appendChild(lupa);
-        views.appendChild(esc);
-        card.appendChild(views);
-
-        var ve = document.createElement('div');
-        ve.className = 'skin-ve';
-        ve.textContent = it.ve;
-        card.appendChild(ve);
-
-        var botones = document.createElement('div');
-        botones.className = 'skin-botones';
-        var btn = self.makeButton('COMPRAR', function () { self.tiendaPulsa(it); });
-        btn.classList.add('btn-preset', 'skin-poner');
-        botones.appendChild(btn);
-        card.appendChild(botones);
-
-        self.tiendaGrid.appendChild(card);
-        self.tiendaItems.push({
-          it: it, card: card, chip: chip, lupa: lupa, escena: esc, btn: btn,
-          off: idx * 41
+        lupa.width = 96; lupa.height = 96;
+        lupa.className = 'tn-lupa';
+        card.appendChild(lupa);
+        var nom = document.createElement('span');
+        nom.className = 'tn-nombre';
+        nom.textContent = it.name;
+        card.appendChild(nom);
+        var precio = document.createElement('span');
+        precio.className = 'tn-precio';
+        card.appendChild(precio);
+        var sub = document.createElement('span');
+        sub.className = 'tn-sub';
+        card.appendChild(sub);
+        var mas = document.createElement('button');
+        mas.type = 'button';
+        mas.className = 'tn-mas';
+        mas.addEventListener('click', function (ev) {
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          self.tiendaAlTicket(it.id);
         });
+        card.appendChild(mas);
+        card.addEventListener('click', function () { self.abrirFicha(it.cat, it.id, 'tienda'); });
+        card.addEventListener('keydown', function (ev) {
+          if (ev.target !== card) return;
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            if (ev.preventDefault) ev.preventDefault();
+            self.abrirFicha(it.cat, it.id, 'tienda');
+          }
+        });
+        self.tiendaGrid.appendChild(card);
+        self.tiendaItems.push({ it: it, card: card, lupa: lupa, precio: precio, sub: sub, mas: mas });
       });
+
+      /* ----- el ticket ----- */
+      var der = document.createElement('div');
+      der.className = 'tn-der';
+      this.tiendaTicket = document.createElement('div');
+      this.tiendaTicket.className = 'tn-ticket';
+      this.tiendaTicket.setAttribute('aria-live', 'polite');
+      der.appendChild(this.tiendaTicket);
+      this.tiendaMsg = document.createElement('div');
+      this.tiendaMsg.className = 'lobby-status tienda-msg';
+      der.appendChild(this.tiendaMsg);
+      cuerpo.appendChild(der);
 
       var back = this.makeButton('VOLVER', function () { self.closeTienda(); });
       back.classList.add('btn-primary');
       back.style.marginTop = '14px';
       o.appendChild(back);
 
-      this.tiendaTab = 'emote';
+      this.tiendaTab = 'skin';
       this.tiendaTengo = false;
       this.tiendaRecien = [];
+      this.tiendaBolsa = [];
+    },
+
+    /* Una moneda de oro, en CSS: va delante de cada precio */
+    monedaEl: function (tam) {
+      var m = document.createElement('i');
+      m.className = 'moneda' + (tam ? ' ' + tam : '');
+      m.setAttribute('aria-hidden', 'true');
+      return m;
+    },
+
+    /* Un precio: la moneda y la cifra, juntas siempre */
+    precioEl: function (n, apagado, signo) {
+      var p = document.createElement('span');
+      p.className = 'precio' + (apagado ? ' apagado' : '');
+      p.appendChild(this.monedaEl());
+      var b = document.createElement('b');
+      b.textContent = (signo || '') + fmtMonedas(n);
+      p.appendChild(b);
+      return p;
     },
 
     /* la moneda de la tienda, dibujada: disco dorado con canto y brillo */
@@ -2970,8 +3020,8 @@
           : (abierto === this.els.vestuario) ? 'vestuario' : 'menu';
         this.tiendaRecien = [];
       }
+      this.cerrarFicha(true);
       if (tab) this.tiendaTab = tab;
-      this.tiendaConfirma = null;
       if (this.tiendaMsg) this.tiendaMsg.textContent = '';
       this.refreshTienda();
       this.showPanel('tienda');
@@ -2980,6 +3030,7 @@
     },
 
     closeTienda: function () {
+      this.cerrarFicha(true);
       var v = this.tiendaVolver;
       if (v === 'profile') this.showProfile();
       else if (v === 'vestuario') this.showVestuario(null, 'yo');
@@ -2992,79 +3043,118 @@
       this.tiendaMsg.classList.toggle('error', !!error);
     },
 
-    /* Ponerse algo recién comprado: lo equipa y abre el vestuario en su
-     * pestaña. Un emote va a la primera tecla que tenga uno de los de
-     * siempre (o a la última), y allí se puede mover a otra. */
-    tiendaPonerse: function (it) {
-      var Tn = window.PM.Tienda;
-      var s = window.PM.settings;
-      var tab = it.cat;
-      if (it.cat === 'emote') {
-        var caras = Tn.emotes();
-        var base = CFG.EMOTES.map(function (e) { return e.id; });
-        var tecla = caras.length - 1;
-        for (var i = 0; i < caras.length; i++) {
-          if (base.indexOf(caras[i]) !== -1) { tecla = i; break; }
-        }
-        Tn.ponerEmote(tecla, it.id);
-        this.vestTecla = tecla;
-      } else if (it.cat === 'skin') {
-        s.skin1 = it.id;
-        saveSettings();
-        if (window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
-      } else {
-        Tn.poner(it.cat, it.id);
-      }
-      this.showVestuario(tab, 'yo', it.id);
-      this.vestAvisa('LLEVAS ' + it.name + (it.cat === 'emote' ? ' EN LA TECLA ' + (this.vestTecla + 1) : ''), false);
+    /* ---------- el ticket ---------- */
+    tiendaEnTicket: function () {
+      var Tn = window.PM.Tienda, n = 0;
+      var b = this.tiendaBolsa || [];
+      for (var i = 0; i < b.length; i++) { var it = Tn.item(b[i]); if (it) n += it.precio; }
+      return n;
     },
 
-    /* El botón de una ficha: comprar (dos clics), o ponerse lo recién
-     * comprado. Lo que ya era tuyo se viste en el VESTUARIO. */
-    tiendaPulsa: function (it) {
+    /* Echar o quitar del ticket. Lo que ya es tuyo no entra, y lo que no
+     * cabe con lo que ya hay en el ticket, tampoco: se dice cuánto falta. */
+    tiendaAlTicket: function (id) {
       var Tn = window.PM.Tienda;
-      if (!Tn.tiene(it.id)) {
-        if (this.tiendaConfirma !== it.id) {
-          if (Tn.saldo() < it.precio) {
-            this.tiendaAviso('TE FALTAN ' + fmtMonedas(it.precio - Math.max(0, Tn.saldo())) +
-              ' MONEDAS PARA ' + it.name, true);
-            return;
-          }
-          this.tiendaConfirma = it.id;
-          this.tiendaAviso('PULSA OTRA VEZ PARA COMPRAR ' + it.name + ' POR ' +
-            fmtMonedas(it.precio) + ' MONEDAS', false);
+      var it = Tn && Tn.item(id);
+      if (!it) return false;
+      this.tiendaBolsa = this.tiendaBolsa || [];
+      var k = this.tiendaBolsa.indexOf(id);
+      if (k !== -1) {
+        this.tiendaBolsa.splice(k, 1);
+        this.tiendaAviso('');
+      } else {
+        if (Tn.tiene(id)) return false;
+        var libre = Tn.saldo() - this.tiendaEnTicket();
+        if (it.precio > libre) {
+          this.tiendaAviso('TE FALTAN ' + fmtMonedas(it.precio - Math.max(0, libre)) +
+            ' MONEDAS PARA AÑADIR ' + it.name, true);
           this.refreshTienda();
-          return;
+          return false;
         }
-        this.tiendaConfirma = null;
-        var r = Tn.comprar(it.id);
-        if (!r.ok) { this.tiendaAviso(r.msg, true); this.refreshTienda(); return; }
-        if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
-        // lo recién comprado se queda a la vista, con su PONÉRTELO
-        if (this.tiendaRecien.indexOf(it.id) === -1) this.tiendaRecien.push(it.id);
-        this.tiendaAviso(r.msg + ' · PULSA PONÉRTELO O VÍSTETE LUEGO EN EL VESTUARIO', false);
-        this.refreshTienda();
-        return;
+        this.tiendaBolsa.push(id);
+        this.tiendaAviso(it.name + ' AL TICKET', false);
       }
-      this.tiendaPonerse(it);
+      this.refreshTienda();
+      this.refreshFicha();
+      return true;
+    },
+
+    /* Pagar el ticket entero. Cada cosa es una compra (Tienda.comprar) y se
+     * para en la primera que no se pueda, sin tocar las demás. */
+    tiendaPagar: function () {
+      var Tn = window.PM.Tienda;
+      var bolsa = (this.tiendaBolsa || []).slice();
+      if (!bolsa.length) return 0;
+      var hechas = 0;
+      for (var i = 0; i < bolsa.length; i++) {
+        var r = Tn.comprar(bolsa[i]);
+        if (!r.ok) { this.tiendaAviso(r.msg, true); break; }
+        hechas++;
+        this.tiendaBolsa.splice(this.tiendaBolsa.indexOf(bolsa[i]), 1);
+        if (this.tiendaRecien.indexOf(bolsa[i]) === -1) this.tiendaRecien.push(bolsa[i]);
+      }
+      if (hechas) {
+        if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
+        if (hechas === bolsa.length) {
+          this.tiendaAviso((hechas === 1 ? '¡UNA COSA NUEVA!' : '¡' + hechas + ' COSAS NUEVAS!') +
+            ' PÓNTELAS DESDE SU FICHA O EN EL VESTUARIO', false);
+        }
+      }
+      this.refreshTienda();
+      return hechas;
+    },
+
+    /* Cuántas monedas da una partida tuya de las de siempre: la media de
+     * puntos y de tiempo pasada por la misma regla que cobra al acabar. */
+    tiendaPorPartida: function () {
+      var Tn = window.PM.Tienda, A = window.PM.Achievements, L = window.PM.Level;
+      var c = A ? A.stats() : {};
+      var p = c.partidas || 0;
+      if (!(p > 0) || !Tn) return CFG.TIENDA.POR_PARTIDA;
+      var xp = L ? L.xp() : 0;
+      return Math.max(1, Tn.dePartida(xp / p, (c.tiempo || 0) / p));
     },
 
     refreshTienda: function () {
+      var self = this;
       var Tn = window.PM.Tienda;
       if (!Tn || !this.tiendaItems) return;
-      var tab = this.tiendaTab || 'emote';
+      var tab = this.tiendaTab || 'skin';
+      this.tiendaBolsa = (this.tiendaBolsa || []).filter(function (id) { return !Tn.tiene(id); });
       var saldo = Tn.saldo();
-      this.tiendaSaldo.textContent = 'TIENES ' + fmtMonedas(Math.max(0, saldo)) + ' MONEDAS';
+      var enTicket = this.tiendaEnTicket();
+      var libre = saldo - enTicket;
+
+      this.tiendaSaldo.textContent = fmtMonedas(Math.max(0, saldo));
+      var TC = CFG.TIENDA;
+      this.tiendaRitmo.textContent = '';
+      var r1 = document.createElement('span');
+      r1.textContent = 'TU PARTIDA MEDIA TE DA +' + this.tiendaPorPartida();
+      var r2 = document.createElement('span');
+      r2.textContent = 'UNA SEMANA ENTERA DEL DAILY, +' + (TC.POR_RETO * 7 + TC.POR_SEMANA);
+      this.tiendaRitmo.appendChild(r1);
+      this.tiendaRitmo.appendChild(r2);
       if (this.tiendaRegalo) {
         var regalo = Tn.regalo ? Tn.regalo() : 0;
         this.tiendaRegalo.hidden = !(regalo > 0);
+        this.tiendaRegalo.style.display = (regalo > 0) ? '' : 'none';
         this.tiendaRegalo.textContent = 'REGALO DE VETERANO: +' + fmtMonedas(regalo) +
-          ' POR LO QUE YA HABÍAS JUGADO (' + CFG.TIENDA.VETERANO_POR_PARTIDA +
-          ' POR PARTIDA Y ' + CFG.TIENDA.VETERANO_POR_LOGRO + ' POR LOGRO)';
+          ' POR LO QUE YA HABÍAS JUGADO (' + TC.VETERANO_POR_PARTIDA +
+          ' POR PARTIDA Y ' + TC.VETERANO_POR_LOGRO + ' POR LOGRO)';
       }
-      for (var t in this.tiendaTabBtns) {
-        if (this.tiendaTabBtns.hasOwnProperty(t)) this.tiendaTabBtns[t].classList.toggle('active', t === tab);
-      }
+
+      /* secciones, con lo que te falta de cada una */
+      Tn.CATEGORIAS.forEach(function (c) {
+        var falta = Tn.CATALOGO.filter(function (it) { return it.cat === c.id && !Tn.tiene(it.id); }).length;
+        var b = self.tiendaTabBtns[c.id];
+        b.textContent = c.name + (falta ? ' · ' + falta : ' · ✓');
+        b.classList.toggle('active', c.id === tab);
+      });
+
+      /* la meta */
+      this.pintarMetaTienda(libre);
+
+      /* los artículos */
       var cat = null;
       for (var c = 0; c < Tn.CATEGORIAS.length; c++) if (Tn.CATEGORIAS[c].id === tab) cat = Tn.CATEGORIAS[c];
       var mias = 0, total = 0, vistas = 0;
@@ -3072,67 +3162,735 @@
         var row = this.tiendaItems[i], it = row.it;
         var tiene = Tn.tiene(it.id), puesto = Tn.puesto(it.id);
         var recien = this.tiendaRecien.indexOf(it.id) !== -1;
+        var dentro = this.tiendaBolsa.indexOf(it.id) !== -1;
         if (it.cat === tab) { total++; if (tiene) mias++; }
         /* lo que ya tienes no sale, salvo que se pida o que se acabe de
          * comprar (para poder ponérselo sin ir a buscarlo) */
         var ver = (it.cat === tab) && (!tiene || recien || this.tiendaTengo);
-        row.card.style.display = ver ? 'flex' : 'none';
+        row.card.style.display = ver ? '' : 'none';
         if (!ver) continue;
         vistas++;
-        row.card.classList.toggle('puesta', puesto);
-        row.card.classList.toggle('locked', !tiene);
-        row.chip.textContent = puesto ? 'PUESTO' : tiene ? (recien ? 'RECIÉN COMPRADO' : 'TUYO')
-          : (fmtMonedas(it.precio) + ' MONEDAS');
-        var confirma = (this.tiendaConfirma === it.id);
-        row.btn.classList.toggle('btn-primary', confirma || (recien && !puesto));
-        if (!tiene) {
-          row.btn.textContent = confirma ? ('¿COMPRAR POR ' + fmtMonedas(it.precio) + '?')
-            : ('COMPRAR · ' + fmtMonedas(it.precio));
-          row.btn.disabled = false;
+        var falta = !tiene && !dentro && it.precio > libre;
+        row.card.classList.toggle('tuyo', tiene);
+        row.card.classList.toggle('puesto', puesto);
+        row.card.classList.toggle('dentro', dentro);
+        row.precio.textContent = '';
+        if (tiene) {
+          row.precio.textContent = puesto ? 'PUESTO' : recien ? 'RECIÉN COMPRADO' : 'TUYO';
+          row.precio.classList.add('tuyo');
         } else {
-          row.btn.textContent = puesto ? 'PUESTO · VER EN EL VESTUARIO' : 'PONÉRTELO';
-          row.btn.disabled = false;
+          row.precio.classList.remove('tuyo');
+          row.precio.appendChild(this.precioEl(it.precio, falta));
         }
+        row.sub.textContent = tiene ? '' : dentro ? 'EN EL TICKET'
+          : falta ? 'TE FALTAN ' + fmtMonedas(it.precio - Math.max(0, libre)) : '';
+        row.sub.classList.toggle('falta', falta);
+        row.mas.style.display = tiene ? 'none' : '';
+        row.mas.textContent = dentro ? '✓' : '+';
+        row.mas.setAttribute('aria-label', (dentro ? 'Quitar del ticket ' : 'Añadir al ticket ') + it.name);
+        row.mas.title = dentro ? 'QUITAR DEL TICKET' : 'AÑADIR AL TICKET';
       }
       this.tiendaNota.textContent = (cat ? cat.nota + ' · ' : '') + 'TIENES ' + mias + ' DE ' + total;
       this.tiendaTengoBtn.textContent = this.tiendaTengo ? 'SOLO LO QUE ME FALTA' : 'VER LO QUE YA TENGO';
       this.tiendaTengoBtn.classList.toggle('active', !!this.tiendaTengo);
       this.tiendaVacio.style.display = vistas ? 'none' : '';
+
+      this.pintarTicket(saldo, enTicket);
     },
 
-    /* Animación de la tienda: la de la vitrina de SKINS, con lo de cada ficha
-     * puesto encima de tu skin (el accesorio, sobre una con forma de Pac-Man) */
+    /* Lo más barato que aún no puedes pagar (contando lo que ya hay en el
+     * ticket), con la barra de lo que llevas y las partidas que faltan. */
+    pintarMetaTienda: function (libre) {
+      var Tn = window.PM.Tienda;
+      var m = this.tiendaMeta;
+      var bolsa = this.tiendaBolsa || [];
+      m.textContent = '';
+      this.tiendaMetaLupa = null;
+      var quedan = Tn.CATALOGO.filter(function (it) { return !Tn.tiene(it.id) && bolsa.indexOf(it.id) === -1; });
+      var meta = quedan.filter(function (it) { return it.precio > libre; })
+        .sort(function (a, b) { return a.precio - b.precio; })[0];
+      if (!meta) {
+        m.classList.add('llena');
+        m.textContent = quedan.length ? 'TE ALCANZA PARA TODO LO QUE QUEDA' : 'LO TIENES TODO';
+        return;
+      }
+      m.classList.remove('llena');
+      var self = this;
+      var cv = document.createElement('canvas');
+      cv.width = 64; cv.height = 64;
+      cv.className = 'tn-meta-lupa';
+      m.appendChild(cv);
+      this.tiendaMetaLupa = { cv: cv, it: meta };
+      var txt = document.createElement('div');
+      txt.className = 'tn-meta-txt';
+      var t1 = document.createElement('div');
+      t1.className = 'tn-meta-t';
+      t1.textContent = 'TU PRÓXIMA META';
+      txt.appendChild(t1);
+      var t2 = document.createElement('button');
+      t2.type = 'button';
+      t2.className = 'tn-meta-n';
+      t2.textContent = meta.name + ' ';
+      t2.appendChild(this.precioEl(meta.precio));
+      t2.addEventListener('click', function () { self.abrirFicha(meta.cat, meta.id, 'tienda'); });
+      txt.appendChild(t2);
+      var barra = document.createElement('div');
+      barra.className = 'tn-barra';
+      var fill = document.createElement('i');
+      fill.style.width = Math.round(Math.max(0, Math.min(1, libre / meta.precio)) * 100) + '%';
+      barra.appendChild(fill);
+      txt.appendChild(barra);
+      var faltan = meta.precio - Math.max(0, libre);
+      var partidas = Math.ceil(faltan / this.tiendaPorPartida());
+      var t3 = document.createElement('div');
+      t3.className = 'tn-meta-sub';
+      t3.textContent = 'TE FALTAN ' + fmtMonedas(faltan) + ' · UNAS ' + partidas +
+        (partidas === 1 ? ' PARTIDA' : ' PARTIDAS');
+      txt.appendChild(t3);
+      m.appendChild(txt);
+    },
+
+    pintarTicket: function (saldo, enTicket) {
+      var self = this;
+      var Tn = window.PM.Tienda;
+      var tk = this.tiendaTicket;
+      tk.textContent = '';
+      var bolsa = this.tiendaBolsa || [];
+      function fila(cls, izq, der) {
+        var f = document.createElement('div');
+        f.className = 'tn-fila' + (cls ? ' ' + cls : '');
+        var a = document.createElement('span');
+        a.textContent = izq;
+        f.appendChild(a);
+        if (der) f.appendChild(der);
+        tk.appendChild(f);
+        return f;
+      }
+      function raya() { var r = document.createElement('div'); r.className = 'tn-raya'; tk.appendChild(r); }
+      var h = document.createElement('div');
+      h.className = 'tn-ticket-t';
+      h.textContent = 'TICKET';
+      tk.appendChild(h);
+      fila('', 'TUS MONEDAS', this.precioEl(Math.max(0, saldo)));
+      raya();
+      if (!bolsa.length) {
+        var v = document.createElement('div');
+        v.className = 'tn-ticket-vacio';
+        v.textContent = 'AÑADE COSAS CON EL + O DESDE SU FICHA';
+        tk.appendChild(v);
+      }
+      bolsa.forEach(function (id) {
+        var it = Tn.item(id);
+        if (!it) return;
+        var q = document.createElement('button');
+        q.type = 'button';
+        q.className = 'tn-quitar';
+        q.textContent = '×';
+        q.title = 'QUITAR ' + it.name;
+        q.setAttribute('aria-label', 'Quitar ' + it.name + ' del ticket');
+        q.addEventListener('click', function () { self.tiendaAlTicket(id); });
+        var f = fila('', it.name, self.precioEl(it.precio, false, '− '));
+        f.insertBefore(q, f.firstChild);
+      });
+      if (bolsa.length > 1) fila('tn-total', 'TOTAL', this.precioEl(enTicket));
+      raya();
+      var resto = saldo - enTicket;
+      fila('tn-resto' + (resto < 0 ? ' neg' : ''), resto < 0 ? 'TE FALTAN' : 'TE QUEDAN',
+        this.precioEl(Math.abs(resto)));
+      var pagar = document.createElement('button');
+      pagar.type = 'button';
+      pagar.className = 'btn tn-pagar';
+      pagar.disabled = !bolsa.length || resto < 0;
+      if (!bolsa.length) pagar.textContent = 'TICKET VACÍO';
+      else if (resto < 0) pagar.textContent = 'NO TE ALCANZA';
+      else {
+        pagar.appendChild(document.createTextNode('PAGAR '));
+        pagar.appendChild(this.precioEl(enTicket));
+      }
+      pagar.addEventListener('click', function () { self.tiendaPagar(); });
+      tk.appendChild(pagar);
+    },
+
+    /* Las lupas de los artículos y de la meta se mueven mientras la tienda
+     * está abierta: cada cosa corre por el pasillo de la vitrina con tu skin */
     animarTienda: function () {
       var self = this;
-      var Sk = window.PM.Skins, Tn = window.PM.Tienda;
-      if (!Sk || !Tn || !this.tiendaItems || this.tiendaAnim) return;
+      var Sk = window.PM.Skins;
+      if (!Sk || !this.tiendaItems || this.tiendaAnim) return;
       var raf = window.requestAnimationFrame;
       if (!raf) return;
       this.tiendaAnim = true;
       var origen = Date.now();
-      function paso() {
-        var panel = self.els.tienda;
-        if (!panel || panel.style.display === 'none') { self.tiendaAnim = false; return; }
-        var t = (Date.now() - origen) / 1000;
+      var tmp = document.createElement('canvas');
+      tmp.width = Sk.ESCENA_W; tmp.height = Sk.ESCENA_H;
+      function pinta(cv, it, t) {
         var s = window.PM.settings;
         var color = s.pacColor || '#ffff00';
         var mia = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
         var conAcc = window.PM.Sprites.admiteAccesorio(mia) ? mia : 'clasico';
+        var skin = (it.cat === 'skin') ? it.id : (it.cat === 'accesorio') ? conAcc : mia;
+        var pos = Sk.escena(tmp, skin, color, t * 44, t, {
+          efecto: (it.cat === 'efecto') ? it.id : null,
+          accesorio: (it.cat === 'accesorio') ? it.id : null,
+          emote: (it.cat === 'emote') ? it.id : null
+        });
+        Sk.lupa(cv, tmp, pos, it.cat === 'efecto' ? 5 : 0, it.cat === 'emote' ? 19 : 0);
+      }
+      function paso() {
+        var panel = self.els.tienda;
+        if (!panel || panel.style.display === 'none') { self.tiendaAnim = false; return; }
+        var t = (Date.now() - origen) / 1000;
         var alto = window.innerHeight || 800;
-        for (var i = 0; i < self.tiendaItems.length; i++) {
-          var row = self.tiendaItems[i], it = row.it;
-          if (row.card.style.display === 'none') continue;
-          var r = row.card.getBoundingClientRect();
-          if (r.bottom < 0 || r.top > alto) continue;
-          var skin = (it.cat === 'skin') ? it.id : (it.cat === 'accesorio') ? conAcc : mia;
-          var opts = {
-            efecto: (it.cat === 'efecto') ? it.id : null,
-            accesorio: (it.cat === 'accesorio') ? it.id : null,
-            emote: (it.cat === 'emote') ? it.id : null
-          };
-          var pos = Sk.escena(row.escena, skin, color, t * 44, t, opts);
-          Sk.lupa(row.lupa, row.escena, pos, it.cat === 'efecto' ? 5 : 0, it.cat === 'emote' ? 19 : 0);
+        /* con la ficha abierta, las de detrás se quedan quietas */
+        if (!self.ficha) {
+          for (var i = 0; i < self.tiendaItems.length; i++) {
+            var row = self.tiendaItems[i];
+            if (row.card.style.display === 'none') continue;
+            var r = row.card.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > alto) continue;
+            pinta(row.lupa, row.it, t + i * 0.37);
+          }
+          if (self.tiendaMetaLupa) pinta(self.tiendaMetaLupa.cv, self.tiendaMetaLupa.it, t);
         }
+        raf(paso);
+      }
+      raf(paso);
+    },
+
+    /* ------------------------------------------------------
+     * LA FICHA
+     *
+     * Una ventana encima de la tienda o del vestuario con UNA cosa en
+     * movimiento (js/ficha.js): sus momentos, una lupa, pausa y cámara lenta,
+     * probarla sobre otra skin y en otro color, qué es y cuándo se nota. Y
+     * abajo, lo que se puede hacer con ella: añadirla al ticket, comprarla y
+     * ponértela de un golpe, o ponértela o quitártela si ya es tuya.
+     *
+     * Se cierra con la X, con ESC o pulsando fuera. Las flechas de la cabecera
+     * pasan a la anterior o la siguiente de la misma lista sin cerrarla.
+     * ------------------------------------------------------ */
+
+    /* Lo que la ficha necesita saber de una cosa, venga de donde venga */
+    fichaItem: function (cat, id) {
+      var Tn = window.PM.Tienda;
+      if (cat === 'skin') {
+        var sk = CFG.SKINS.filter(function (x) { return x.id === id; })[0];
+        if (!sk) return null;
+        return { id: id, name: sk.name, cat: 'skin', ve: sk.ve || '',
+          precio: sk.precio || 0, tienda: sk.grupo === 'tienda' };
+      }
+      if (cat === 'emote') {
+        var e = CFG.EMOTES.concat(CFG.EMOTES_TIENDA).filter(function (x) { return x.id === id; })[0];
+        if (!e) return null;
+        var base = CFG.EMOTES.some(function (x) { return x.id === id; });
+        return { id: id, name: e.name, cat: 'emote', ve: e.ve || '', precio: e.precio || 0, tienda: !base };
+      }
+      var it = Tn && Tn.item(id);
+      if (!it) return null;
+      return { id: id, name: it.name, cat: it.cat, ve: it.ve || '', precio: it.precio, tienda: true };
+    },
+
+    /* ¿Es tuya? Las skins de nivel y de logro no se compran: se abren */
+    fichaTiene: function (it) {
+      if (it.cat === 'skin') {
+        var Sk = window.PM.Skins;
+        return !!(Sk && Sk.estado(it.id).abierta) || window.PM.settings.skin1 === it.id;
+      }
+      var Tn = window.PM.Tienda;
+      return !!(Tn && Tn.tiene(it.id));
+    },
+
+    fichaPuesto: function (it) {
+      var Tn = window.PM.Tienda, s = window.PM.settings;
+      if (it.cat === 'skin') return (s.skin1 || 'clasico') === it.id;
+      return !!(Tn && Tn.puesto(it.id));
+    },
+
+    /* La lista por la que se pasa con las flechas: lo que se ve detrás */
+    fichaLista: function (origen, cat) {
+      if (origen === 'tienda') {
+        return (this.tiendaItems || []).filter(function (r) {
+          return r.it.cat === cat && r.card.style.display !== 'none';
+        }).map(function (r) { return r.it.id; });
+      }
+      var self = this;
+      return this.vestItems(cat, 'yo').filter(function (it) {
+        return it.id && (it.tuyo || self.vestFaltan);
+      }).map(function (it) { return it.id; });
+    },
+
+    abrirFicha: function (cat, id, origen) {
+      var it = this.fichaItem(cat, id);
+      if (!it) return false;
+      var host = (origen === 'vestuario') ? this.els.vestuario : this.els.tienda;
+      if (!host) return false;
+      var s = window.PM.settings;
+      var previa = this.ficha;
+      this.cerrarFicha(true);
+      var Fi = window.PM.Ficha;
+      this.ficha = {
+        it: it, origen: origen === 'vestuario' ? 'vestuario' : 'tienda', host: host,
+        momento: Fi ? Fi.momentosDe(it)[0] : 'correr',
+        base: null,
+        color: (previa && previa.color) || s.pacColor || '#ffff00',
+        pausa: false, lento: previa ? previa.lento : false, reloj: 0,
+        volverFoco: (previa && previa.volverFoco) || document.activeElement
+      };
+      this.montarFicha();
+      this.animarFicha();
+      return true;
+    },
+
+    cerrarFicha: function (sinFoco) {
+      var f = this.ficha;
+      if (!f) return;
+      this.ficha = null;
+      if (f.velo && f.velo.parentNode) f.velo.parentNode.removeChild(f.velo);
+      if (f.origen === 'tienda') this.refreshTienda();
+      else if (this.els.vestuario && this.els.vestuario.style.display !== 'none') this.refreshVestuario();
+      if (!sinFoco && f.volverFoco && f.volverFoco.focus) {
+        try { f.volverFoco.focus(); } catch (e) { /* ya no está */ }
+      }
+    },
+
+    /* La skin sobre la que se prueba un accesorio, un efecto o un emote: la
+     * que se haya elegido, o la tuya (si con la tuya no se ve el accesorio,
+     * la clásica) */
+    fichaBase: function () {
+      var f = this.ficha, s = window.PM.settings;
+      if (f.it.cat === 'skin') return f.it.id;
+      if (f.base) return f.base;
+      var mia = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+      if (f.it.cat === 'accesorio' && window.PM.Sprites.admiteAccesorio &&
+          !window.PM.Sprites.admiteAccesorio(mia)) return 'clasico';
+      return mia;
+    },
+
+    fichaLook: function () {
+      var f = this.ficha, Tn = window.PM.Tienda;
+      var it = f.it;
+      var look = { skin: this.fichaBase(), accesorio: null, efecto: null, emote: null };
+      if (it.cat === 'accesorio') look.accesorio = it.id;
+      else if (it.cat === 'efecto') look.efecto = it.id;
+      else if (it.cat === 'emote') look.emote = it.id;
+      else if (it.cat === 'skin' && Tn) {
+        // una skin se enseña con lo que llevas encima, como la llevarías
+        look.accesorio = Tn.accesorio() || null;
+        look.efecto = Tn.efecto() || null;
+      }
+      return look;
+    },
+
+    montarFicha: function () {
+      var self = this;
+      var f = this.ficha, it = f.it;
+      var Fi = window.PM.Ficha;
+
+      var velo = document.createElement('div');
+      velo.className = 'ficha-velo';
+      velo.addEventListener('click', function (ev) { if (ev.target === velo) self.cerrarFicha(); });
+      var win = document.createElement('div');
+      win.className = 'ficha';
+      win.setAttribute('role', 'dialog');
+      win.setAttribute('aria-modal', 'true');
+      win.setAttribute('aria-label', 'Ficha de ' + it.name);
+      velo.appendChild(win);
+      f.velo = velo;
+      f.win = win;
+
+      /* cabecera */
+      var cab = document.createElement('div');
+      cab.className = 'ficha-cab';
+      var nom = document.createElement('div');
+      nom.className = 'ficha-nombre';
+      nom.textContent = it.name;
+      cab.appendChild(nom);
+      var chip = document.createElement('span');
+      chip.className = 'ficha-chip';
+      chip.textContent = { skin: 'SKIN', accesorio: 'ACCESORIO', efecto: 'EFECTO', emote: 'EMOTE' }[it.cat];
+      cab.appendChild(chip);
+      var lista = this.fichaLista(f.origen, it.cat);
+      var idx = lista.indexOf(it.id);
+      if (lista.length > 1) {
+        var nav = document.createElement('div');
+        nav.className = 'ficha-pasar';
+        [[-1, '‹ '], [1, ' ›']].forEach(function (p) {
+          var otro = lista[(Math.max(0, idx) + p[0] + lista.length) % lista.length];
+          var info = self.fichaItem(it.cat, otro);
+          var b = self.makeButton(p[0] < 0 ? p[1] + info.name : info.name + p[1], function () {
+            var foco = f.volverFoco;
+            self.abrirFicha(it.cat, otro, f.origen);
+            if (self.ficha) self.ficha.volverFoco = foco;
+          });
+          b.classList.add('btn-preset');
+          nav.appendChild(b);
+        });
+        cab.appendChild(nav);
+      }
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'ficha-cerrar';
+      x.textContent = '✕';
+      x.title = 'CERRAR (ESC)';
+      x.setAttribute('aria-label', 'Cerrar la ficha');
+      x.addEventListener('click', function () { self.cerrarFicha(); });
+      cab.appendChild(x);
+      win.appendChild(cab);
+
+      /* escenario y lupa */
+      var main = document.createElement('div');
+      main.className = 'ficha-main';
+      var izq = document.createElement('div');
+      izq.className = 'ficha-izq';
+      var esc = document.createElement('div');
+      esc.className = 'ficha-escena';
+      f.cv = document.createElement('canvas');
+      f.cv.width = Fi ? Fi.ANCHO : 570;
+      f.cv.height = Fi ? Fi.ALTO : 234;
+      f.cv.setAttribute('aria-label', it.name + ' en un pasillo del laberinto');
+      esc.appendChild(f.cv);
+      f.rotulo = document.createElement('span');
+      f.rotulo.className = 'ficha-rotulo';
+      esc.appendChild(f.rotulo);
+      izq.appendChild(esc);
+
+      var fila = document.createElement('div');
+      fila.className = 'ficha-momentos';
+      f.momentoBtns = {};
+      (Fi ? Fi.momentosDe(it) : ['correr']).forEach(function (m) {
+        var b = self.makeButton(Fi ? Fi.MOMENTOS[m].name : m, function () {
+          f.momento = m;
+          f.reloj = 0;
+          self.refreshFicha();
+        });
+        b.classList.add('tab');
+        f.momentoBtns[m] = b;
+        fila.appendChild(b);
+      });
+      var ctrl = document.createElement('div');
+      ctrl.className = 'ficha-ctrl';
+      f.pausaBtn = this.makeButton('❚❚', function () { f.pausa = !f.pausa; self.refreshFicha(); });
+      f.lentoBtn = this.makeButton('½×', function () { f.lento = !f.lento; self.refreshFicha(); });
+      f.lentoBtn.title = 'CÁMARA LENTA';
+      var otraVez = this.makeButton('↺', function () { f.reloj = 0; });
+      otraVez.title = 'DESDE EL PRINCIPIO';
+      [f.pausaBtn, f.lentoBtn, otraVez].forEach(function (b) { b.classList.add('btn-preset'); ctrl.appendChild(b); });
+      fila.appendChild(ctrl);
+      izq.appendChild(fila);
+
+      /* probarlo con otra skin y en otro color */
+      var prueba = document.createElement('div');
+      prueba.className = 'ficha-prueba';
+      f.baseBtns = {};
+      if (it.cat !== 'skin') {
+        var g1 = document.createElement('div');
+        g1.className = 'ficha-grupo';
+        var l1 = document.createElement('span');
+        l1.textContent = 'PROBARLO CON';
+        g1.appendChild(l1);
+        var s = window.PM.settings;
+        var mia = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+        var bases = ['clasico'];
+        if (mia !== 'clasico') bases.push(mia);
+        ['cuy', 'oso', 'galleta'].forEach(function (b) { if (bases.indexOf(b) === -1) bases.push(b); });
+        bases.forEach(function (sk) {
+          if (it.cat === 'accesorio' && window.PM.Sprites.admiteAccesorio &&
+              !window.PM.Sprites.admiteAccesorio(sk)) return;
+          var info = window.PM.Skins && window.PM.Skins.info(sk);
+          var nm = (sk === 'clasico') ? 'CLÁSICA' : (info ? info.name : sk.toUpperCase());
+          if (sk === mia) nm += ' (LA TUYA)';
+          var b = self.makeButton(nm, function () { f.base = sk; self.refreshFicha(); });
+          b.classList.add('btn-preset');
+          f.baseBtns[sk] = b;
+          g1.appendChild(b);
+        });
+        prueba.appendChild(g1);
+      }
+      var g2 = document.createElement('div');
+      g2.className = 'ficha-grupo';
+      var l2 = document.createElement('span');
+      l2.textContent = 'COLOR';
+      g2.appendChild(l2);
+      f.colorBtns = [];
+      var colores = [String(window.PM.settings.pacColor || '#ffff00').toLowerCase()];
+      CFG.PLAYER_COLORS.forEach(function (c) { if (colores.indexOf(c.toLowerCase()) === -1) colores.push(c.toLowerCase()); });
+      colores.forEach(function (hex, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ficha-color';
+        b.style.background = hex;
+        b.setAttribute('aria-label', i === 0 ? 'Tu color' : 'Color ' + hex);
+        b.title = i === 0 ? 'TU COLOR' : hex.toUpperCase();
+        b.addEventListener('click', function () { f.color = hex; self.refreshFicha(); });
+        f.colorBtns.push({ btn: b, hex: hex });
+        g2.appendChild(b);
+      });
+      prueba.appendChild(g2);
+      izq.appendChild(prueba);
+      main.appendChild(izq);
+
+      var der = document.createElement('div');
+      der.className = 'ficha-der';
+      var lupaCaja = document.createElement('div');
+      lupaCaja.className = 'ficha-lupa';
+      f.lupa = document.createElement('canvas');
+      f.lupa.width = 240; f.lupa.height = 240;
+      f.lupa.setAttribute('aria-hidden', 'true');
+      lupaCaja.appendChild(f.lupa);
+      der.appendChild(lupaCaja);
+      var notas = [
+        ['QUÉ ES', this.fichaQueEs(it)],
+        ['CÓMO SE VE', it.ve],
+        ['CUÁNDO SE NOTA', Fi ? Fi.cuando(it) : '']
+      ];
+      notas.forEach(function (n) {
+        if (!n[1]) return;
+        var d = document.createElement('div');
+        d.className = 'ficha-dato';
+        var k = document.createElement('span');
+        k.className = 'k';
+        k.textContent = n[0];
+        d.appendChild(k);
+        var v = document.createElement('span');
+        v.textContent = n[1];
+        d.appendChild(v);
+        der.appendChild(d);
+      });
+      main.appendChild(der);
+      win.appendChild(main);
+
+      /* lo que se puede hacer */
+      f.barra = document.createElement('div');
+      f.barra.className = 'ficha-barra';
+      win.appendChild(f.barra);
+      f.aviso = document.createElement('div');
+      f.aviso.className = 'lobby-status ficha-aviso';
+      win.appendChild(f.aviso);
+
+      f.host.appendChild(velo);
+      this.refreshFicha();
+      try { x.focus(); } catch (e) { /* sin foco */ }
+    },
+
+    fichaQueEs: function (it) {
+      var Tn = window.PM.Tienda;
+      if (it.cat === 'skin') {
+        var Sk = window.PM.Skins, g = Sk ? Sk.grupo(it.id) : '';
+        return g === 'tienda' ? 'SKIN EXTRAVAGANTE: SOLO SE CONSIGUE EN LA TIENDA'
+          : g === 'nivel' ? 'SKIN QUE SE ABRE SUBIENDO DE NIVEL'
+          : g === 'temporada' ? 'SKIN DE FECHA ESPECIAL'
+          : 'SKIN QUE SE ABRE CON LOGROS';
+      }
+      if (it.cat === 'emote' && !it.tienda) return 'EMOTE DE SIEMPRE: LO TIENE TODO EL MUNDO. VA EN LAS TECLAS 1 A 6';
+      var cat = Tn ? Tn.CATEGORIAS.filter(function (c) { return c.id === it.cat; })[0] : null;
+      return cat ? cat.nota : '';
+    },
+
+    fichaAvisa: function (texto, error) {
+      var f = this.ficha;
+      if (!f || !f.aviso) return;
+      f.aviso.textContent = texto || '';
+      f.aviso.classList.toggle('error', !!error);
+    },
+
+    /* Ponerse algo. Devuelve el aviso. Un emote va a la primera tecla que
+     * tenga uno de los de siempre (o a la última) y allí se puede mover. */
+    ponerCosa: function (it) {
+      var Tn = window.PM.Tienda, s = window.PM.settings;
+      if (it.cat === 'emote') {
+        var caras = Tn.emotes();
+        if (caras.indexOf(it.id) !== -1) return it.name + ' YA VA EN LA TECLA ' + (caras.indexOf(it.id) + 1);
+        var base = CFG.EMOTES.map(function (e) { return e.id; });
+        var tecla = caras.length - 1;
+        for (var i = 0; i < caras.length; i++) {
+          if (base.indexOf(caras[i]) !== -1) { tecla = i; break; }
+        }
+        Tn.ponerEmote(tecla, it.id);
+        this.vestTecla = tecla;
+        return it.name + ' VA EN LA TECLA ' + (tecla + 1);
+      }
+      if (it.cat === 'skin') {
+        s.skin1 = it.id;
+        saveSettings();
+        if (window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
+        this.refreshPerfilLook();
+        return 'LLEVAS ' + it.name;
+      }
+      Tn.poner(it.cat, it.id);
+      var aviso = 'LLEVAS ' + it.name;
+      if (it.cat === 'accesorio' && window.PM.Sprites.admiteAccesorio &&
+          !window.PM.Sprites.admiteAccesorio(s.skin1)) {
+        aviso += ' · CON TU SKIN NO SE VE';
+      }
+      this.refreshPerfilLook();
+      return aviso;
+    },
+
+    refreshFicha: function () {
+      var self = this;
+      var f = this.ficha;
+      if (!f || !f.barra) return;
+      var it = f.it, Tn = window.PM.Tienda;
+
+      for (var m in f.momentoBtns) {
+        if (f.momentoBtns.hasOwnProperty(m)) f.momentoBtns[m].classList.toggle('active', m === f.momento);
+      }
+      f.pausaBtn.textContent = f.pausa ? '▶' : '❚❚';
+      f.pausaBtn.title = f.pausa ? 'SEGUIR' : 'PAUSA';
+      f.pausaBtn.classList.toggle('active', f.pausa);
+      f.lentoBtn.classList.toggle('active', f.lento);
+      var base = this.fichaBase();
+      for (var b in f.baseBtns) {
+        if (f.baseBtns.hasOwnProperty(b)) f.baseBtns[b].classList.toggle('active', b === base);
+      }
+      f.colorBtns.forEach(function (c) { c.btn.classList.toggle('active', c.hex === String(f.color).toLowerCase()); });
+
+      /* la barra de abajo */
+      var barra = f.barra;
+      barra.textContent = '';
+      var tiene = this.fichaTiene(it), puesto = tiene && this.fichaPuesto(it);
+      var izq = document.createElement('div');
+      izq.className = 'ficha-precio';
+      var cuenta = document.createElement('div');
+      cuenta.className = 'ficha-cuenta';
+      var btns = document.createElement('div');
+      btns.className = 'ficha-btns';
+      barra.appendChild(izq);
+      barra.appendChild(cuenta);
+      barra.appendChild(btns);
+
+      if (tiene) {
+        izq.textContent = '✓ ES TUYO';
+        izq.classList.add('tuyo');
+        if (it.cat === 'emote') {
+          var tecla = Tn.emotes().indexOf(it.id);
+          cuenta.textContent = tecla !== -1 ? 'VA EN LA TECLA ' + (tecla + 1) + ' DE LA PARTIDA' : 'NO VA EN NINGUNA TECLA';
+        } else {
+          cuenta.textContent = puesto ? 'LO LLEVAS PUESTO' : 'LO TIENES GUARDADO';
+        }
+        if (puesto && (it.cat === 'accesorio' || it.cat === 'efecto')) {
+          var quitar = this.makeButton('QUITÁRMELO', function () {
+            Tn.poner(it.cat, '');
+            self.refreshPerfilLook();
+            self.fichaAvisa(it.name + ' GUARDADO', false);
+            self.refreshFicha();
+          });
+          quitar.classList.add('btn-preset');
+          btns.appendChild(quitar);
+        }
+        var poner = this.makeButton(puesto ? '✓ PUESTO' : 'PONÉRMELO', function () {
+          if (self.fichaPuesto(it)) return;
+          self.fichaAvisa(self.ponerCosa(it), false);
+          self.refreshFicha();
+        });
+        poner.classList.add('ficha-poner');
+        poner.classList.toggle('hecho', puesto);
+        btns.appendChild(poner);
+      } else if (it.tienda && Tn) {
+        var saldo = Tn.saldo();
+        var bolsa = this.tiendaBolsa || [];
+        var dentro = bolsa.indexOf(it.id) !== -1;
+        var libre = saldo - this.tiendaEnTicket() + (dentro ? it.precio : 0);
+        var noCabe = it.precio > libre, noLlega = it.precio > saldo;
+        izq.appendChild(this.precioEl(it.precio, noLlega));
+        var conTicket = bolsa.length && !(bolsa.length === 1 && dentro);
+        if (dentro) {
+          cuenta.textContent = 'ESTÁ EN EL TICKET · TE QUEDARÍAN ' + fmtMonedas(saldo - this.tiendaEnTicket());
+        } else if (noCabe) {
+          var falta = it.precio - Math.max(0, libre);
+          var partidas = Math.ceil(falta / this.tiendaPorPartida());
+          var fx = document.createElement('span');
+          fx.className = 'falta';
+          fx.textContent = 'TE FALTAN ' + fmtMonedas(falta) + (conTicket ? ' CON EL TICKET DE AHORA' : '');
+          cuenta.appendChild(fx);
+          cuenta.appendChild(document.createTextNode(' · UNAS ' + partidas + (partidas === 1 ? ' PARTIDA' : ' PARTIDAS')));
+        } else {
+          cuenta.textContent = 'TE QUEDARÍAN ' + fmtMonedas(libre - it.precio) + (conTicket ? ' CON EL TICKET DE AHORA' : '');
+        }
+        if (f.origen === 'tienda' && bolsa.length) {
+          var mini = document.createElement('div');
+          mini.className = 'ficha-mini';
+          mini.textContent = 'EN EL TICKET: ' + bolsa.length + (bolsa.length === 1 ? ' COSA' : ' COSAS') +
+            ' · ' + fmtMonedas(this.tiendaEnTicket()) + ' MONEDAS';
+          cuenta.appendChild(mini);
+        }
+        if (f.origen === 'tienda') {
+          var al = this.makeButton(dentro ? '✓ EN EL TICKET' : '+ AL TICKET', function () {
+            self.tiendaAlTicket(it.id);
+          });
+          al.classList.add('btn-preset', 'ficha-alticket');
+          al.classList.toggle('active', dentro);
+          if (noCabe && !dentro) al.disabled = true;
+          btns.appendChild(al);
+        }
+        var comprar = document.createElement('button');
+        comprar.type = 'button';
+        comprar.className = 'btn ficha-comprar';
+        comprar.disabled = noLlega;
+        if (noLlega) comprar.textContent = 'NO TE ALCANZA';
+        else {
+          comprar.appendChild(document.createTextNode('COMPRAR Y PONÉRMELO '));
+          comprar.appendChild(this.precioEl(it.precio));
+        }
+        comprar.addEventListener('click', function () { self.fichaComprar(); });
+        btns.appendChild(comprar);
+      } else {
+        /* una skin que no se compra: cómo se abre */
+        var est = window.PM.Skins ? window.PM.Skins.estado(it.id) : { pct: 0, progreso: '' };
+        izq.textContent = 'BLOQUEADA';
+        izq.classList.add('bloqueada');
+        var barraP = document.createElement('div');
+        barraP.className = 'tn-barra';
+        var fill = document.createElement('i');
+        fill.style.width = Math.round((est.pct || 0) * 100) + '%';
+        barraP.appendChild(fill);
+        cuenta.appendChild(barraP);
+        var ptxt = document.createElement('div');
+        ptxt.textContent = est.progreso || '';
+        cuenta.appendChild(ptxt);
+      }
+    },
+
+    /* COMPRAR Y PONÉRMELO: solo esa cosa, sin pasar por el ticket (si estaba
+     * en él, sale de él) */
+    fichaComprar: function () {
+      var f = this.ficha, Tn = window.PM.Tienda;
+      if (!f || !Tn) return false;
+      var it = f.it;
+      var r = Tn.comprar(it.id);
+      if (!r.ok) { this.fichaAvisa(r.msg, true); this.refreshFicha(); return false; }
+      if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
+      this.tiendaBolsa = (this.tiendaBolsa || []).filter(function (id) { return id !== it.id; });
+      if (this.tiendaRecien && this.tiendaRecien.indexOf(it.id) === -1) this.tiendaRecien.push(it.id);
+      var aviso = this.ponerCosa(it);
+      this.fichaAvisa('¡' + it.name + ' ES TUYO! ' + aviso, false);
+      if (f.origen === 'tienda') this.refreshTienda();
+      this.refreshFicha();
+      return true;
+    },
+
+    animarFicha: function () {
+      var self = this;
+      var Fi = window.PM.Ficha;
+      var raf = window.requestAnimationFrame;
+      if (!Fi || !raf || this.fichaAnim) return;
+      this.fichaAnim = true;
+      var antes = Date.now();
+      function paso() {
+        var f = self.ficha;
+        if (!f || !f.cv || !f.host || f.host.style.display === 'none') {
+          self.fichaAnim = false;
+          if (f && f.host && f.host.style.display === 'none') self.cerrarFicha(true);
+          return;
+        }
+        var ahora = Date.now();
+        var dt = Math.min(0.05, (ahora - antes) / 1000);
+        antes = ahora;
+        if (!f.pausa) f.reloj += dt * (f.lento ? 0.5 : 1);
+        var m = Fi.MOMENTOS[f.momento];
+        var pos = Fi.pintar(f.cv, self.fichaLook(), f.momento, f.reloj, f.color);
+        Fi.lupa(f.lupa, f.cv, pos);
+        if (f.rotulo && m) f.rotulo.textContent = m.name + ' · ' + (f.reloj % m.dur).toFixed(1) + ' S';
         raf(paso);
       }
       raf(paso);
@@ -6452,7 +7210,9 @@
 
     /* Devuelve true si la tecla la consume la navegación */
     handleNavKey: function (ev) {
-      var host = this.promptOpen ? this.els.prompt : this.visiblePanel();
+      /* con la ficha abierta, las flechas se quedan dentro de ella */
+      var host = this.promptOpen ? this.els.prompt
+        : (this.ficha && this.ficha.win) ? this.ficha.win : this.visiblePanel();
       if (!host) return false;
       var ae = document.activeElement;
       var inHost = ae && host.contains(ae);
@@ -7282,6 +8042,8 @@
     /* Muestra un solo panel (o ninguno si name es null) */
     showPanel: function (name) {
       this.hidePrompt();
+      // la ficha va encima de un panel: si se cambia de panel, se va con él
+      if (this.ficha && this.ficha.host !== this.els[name]) this.cerrarFicha(true);
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
                     'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda'];
       for (var i = 0; i < panels.length; i++) {
@@ -7648,7 +8410,9 @@
             g.requestPause();
             ev.preventDefault();
           } else if (ev.key === 'Escape') {
-            if (self.els.online.style.display !== 'none') {
+            if (self.ficha) {
+              self.cerrarFicha();     // la ficha va encima: se cierra ella sola
+            } else if (self.els.online.style.display !== 'none') {
               self.showMenu();      // salir del panel no deshace la party
             } else if (self.els.vestuario && self.els.vestuario.style.display !== 'none') {
               self.closeVestuario();  // vuelve a PERFIL, OPCIONES o la TIENDA si vino de ahí
