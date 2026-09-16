@@ -69,7 +69,9 @@
         n1: String(o.nombre1 || ''),
         n2: String(o.nombre2 || ''),
         p: Math.floor(o.puntos),
-        lv: Math.floor(o.nivel || 1)
+        lv: Math.floor(o.nivel || 1),
+        // el mundo (hab, lab) para la etiqueta de TUS PARTIDAS; vacío es el clásico
+        mu: (o.mundo === 'hab' || o.mundo === 'lab') ? o.mundo : ''
       });
       while (list.length > CFG.HISTORY_MAX) list.pop();
       save(list);

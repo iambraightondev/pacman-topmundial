@@ -2001,7 +2001,7 @@
         { t: reg.t, j: 1, m: 'local', n1: 'ANA', n2: '', p: 4321, lv: 4 },
         { t: reg.t, j: 1, m: 'local', n1: 'ANA', n2: '', p: 55, lv: 1 }
       ]);
-      var filas = UI.rankList.children;
+      var filas = UI.rankList.querySelectorAll('.rank-row');   // sin la cabecera
       eq(filas.length, 2, 'dos partidas en la lista');
       var btns = filas[0].querySelectorAll('button');
       eq(btns.length, 2, 'la grabada tiene VER y COMPARTIR');

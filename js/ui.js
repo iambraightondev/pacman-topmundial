@@ -5966,7 +5966,14 @@
         self.showPassNuevaPrompt();
       })) return;
       // sesión de la última vez: se recupera sola y sin molestar
-      Ac.restore(function () { /* si falla, se sigue de invitado */ });
+      Ac.restore(function () {
+        /* con la sesión ya renovada (o sin ella), las repeticiones que aún no
+         * están en la nube se suben y se traen las tuyas de otros aparatos */
+        var Rp = window.PM.Replay;
+        if (Rp && Rp.subirPendientes) {
+          Rp.subirPendientes(function () { if (Rp.traerMias) Rp.traerMias(); });
+        }
+      });
     },
 
     /* ------------------------------------------------------
@@ -7100,27 +7107,57 @@
       c.setTransform(1, 0, 0, 1, 0, 0);
     },
 
-    /* Tus últimas partidas (localStorage), lo más reciente primero */
+    /* TUS PARTIDAS, en la misma tabla de máquina que el top: fecha, quién,
+     * puntos, nivel y, al final, VER y COMPARTIR. La repetición se busca en
+     * este navegador (la local o la online) y, si ya no está, en la nube,
+     * donde se sube sola al acabar cada partida. Las de antes de eso que el
+     * navegador ya soltó lo dicen en vez de callar. */
     renderHistory: function (list) {
-      var H = window.PM.History;
+      var H = window.PM.History, R = window.PM.Replay;
       this.rankList.innerHTML = '';
+      if (list.length) {
+        var cab = document.createElement('div');
+        cab.className = 'tm-cabecera tm-hist';
+        ['FECHA', 'PARTIDA', 'SCORE', 'LEVEL', 'REPLAY'].forEach(function (t) {
+          var s = document.createElement('span');
+          s.textContent = t;
+          cab.appendChild(s);
+        });
+        this.rankList.appendChild(cab);
+      }
+      var MUNDO = { hab: 'DESATADO', lab: 'LABERINTOS' };
       for (var i = 0; i < list.length; i++) {
         var h = list[i];
         var row = document.createElement('div');
-        row.className = 'rank-row';
+        row.className = 'rank-row tm-hist ' + this.rankColor(i + 1);
 
-        var pos = document.createElement('span');
-        pos.className = 'rank-pos';
-        pos.textContent = H ? H.fmtDate(h.t) : '';
-        pos.style.textAlign = 'left';
-        pos.style.width = 'auto';
-        row.appendChild(pos);
+        var fecha = document.createElement('span');
+        fecha.className = 'tm-fecha';
+        var f = H ? H.fmtDate(h.t).split(' ') : ['', ''];
+        var d1 = document.createElement('b');
+        d1.textContent = f[0];
+        var d2 = document.createElement('small');
+        d2.textContent = f[1] || '';
+        fecha.appendChild(d1);
+        fecha.appendChild(d2);
+        row.appendChild(fecha);
 
         var who = document.createElement('span');
         who.className = 'rank-who';
+        var nom = document.createElement('span');
+        nom.className = 'tm-nom';
         // con tres y cuatro no caben todos los nombres: el tuyo y cuántos erais
-        who.textContent = (h.j === 2) ? (h.n1 + ' + ' + h.n2)
+        nom.textContent = (h.j === 2) ? (h.n1 + ' + ' + h.n2)
           : (h.j > 2) ? (h.n1 + ' +' + (h.j - 1)) : h.n1;
+        who.appendChild(nom);
+        var etiqueta = MUNDO[h.mu] || '';
+        if (h.m === 'online') etiqueta += (etiqueta ? ' · ' : '') + 'ONLINE';
+        if (etiqueta) {
+          var tag = document.createElement('small');
+          tag.className = 'tm-etiqueta';
+          tag.textContent = etiqueta;
+          who.appendChild(tag);
+        }
         row.appendChild(who);
 
         var pts = document.createElement('span');
@@ -7130,69 +7167,78 @@
 
         var lvl = document.createElement('span');
         lvl.className = 'rank-lvl';
-        lvl.textContent = 'NIV ' + h.lv + (h.m === 'online' ? ' · ONLINE' : '');
+        lvl.textContent = 'LV ' + h.lv;
         row.appendChild(lvl);
 
-        /* si esa partida dejó repetición guardada, se puede volver a ver.
-         * Las de online se graban de otra manera (el flujo del anfitrión) y
-         * viven en su propio almacén, pero desde aquí se ven igual. */
-        var R = window.PM.Replay;
+        var acc = document.createElement('span');
+        acc.className = 'tm-acciones';
         var reg = (R && R.paraPartida) ? R.paraPartida(h) : null;
-        var red = null;
-        if (!reg) red = (R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
-        if (reg || red) {
-          row.appendChild(this.makeReplayBtn((reg || red).id, !reg));
-          row.appendChild(this.makeShareBtn((reg || red).id, !reg));
+        var red = (!reg && R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
+        var nube = (!reg && !red && R && R.paraPartidaNube) ? R.paraPartidaNube(h) : null;
+        if (reg || red || nube) {
+          var tipo = reg ? 'local' : red ? 'red' : 'nube';
+          var id = reg ? reg.id : red ? red.id : nube.rn;
+          acc.appendChild(this.makeReplayBtn(id, tipo));
+          acc.appendChild(this.makeShareBtn(id, tipo));
+        } else {
+          var sin = document.createElement('small');
+          sin.className = 'tm-sin-rep';
+          sin.textContent = 'SIN REPETICIÓN';
+          sin.title = 'DE ANTES DE QUE LAS REPETICIONES SE GUARDARAN EN LA NUBE';
+          acc.appendChild(sin);
         }
+        row.appendChild(acc);
 
         this.rankList.appendChild(row);
       }
+      this.sinTildes(this.rankList);
     },
 
-    /* Botón VER de una partida con repetición guardada (js/replay.js) */
-    makeReplayBtn: function (id, deRed) {
+    /* Botón VER. tipo: 'local' y 'red' están en este navegador (id de su
+     * ficha); 'nube', solo en la nube (id = su código). Un booleano vale
+     * como antes: true es 'red'. */
+    makeReplayBtn: function (id, tipo) {
+      if (tipo === true) tipo = 'red';
       var b = this.makeButton('VER', function () {
-        if (deRed) window.PM.Replay.verRedGuardada(id);
-        else window.PM.Replay.verGuardada(id);
+        var R = window.PM.Replay;
+        if (tipo === 'red') R.verRedGuardada(id);
+        else if (tipo === 'nube') R.verCompartida(id);
+        else R.verGuardada(id);
       });
+      b.classList.add('tm-ver');
       return this.chico(b);
     },
 
-    /* Y el de COMPARTIR, que es donde se nota la diferencia entre las dos:
-     * la local cabe entera en la URL y el enlace se hace aquí mismo, sin
-     * servidor; la de red se sube y el enlace lleva solo su código. Para quien
-     * lo recibe son lo mismo, que es de lo que se trata. */
-    makeShareBtn: function (id, deRed) {
+    /* Y COMPARTIR: el enlace corto con el código de la nube (se sube si aún
+     * no lo estaba). Una local que no se pueda subir sale con la partida
+     * dentro de la URL, que también vale. */
+    makeShareBtn: function (id, tipo) {
+      if (tipo === true) tipo = 'red';
       var self = this;
       var b = this.makeButton('COMPARTIR', function () {
         var R = window.PM.Replay;
         if (!R) return;
-        if (!deRed) {
-          var reg = R.porId(id);
-          var url = reg ? R.enlace(reg.s) : '';
-          if (!url) { self.showShareError('ESA REPETICIÓN YA NO ESTÁ'); return; }
-          self.showSharePrompt(url, false);
-          return;
-        }
+        if (tipo === 'nube') { self.showSharePrompt(R.enlaceRed(id), true); return; }
         self.showPrompt({
           title: 'COMPARTIR REPETICIÓN',
           color: '#7ec8ff',
-          lines: ['SUBIENDO LA PARTIDA...'],
+          lines: ['PREPARANDO EL ENLACE...'],
           buttons: []
         });
-        R.compartirRed(id, function (err, url) {
+        var hecho = function (err, url) {
           if (err) { self.showShareError(err); return; }
-          self.showSharePrompt(url, true);
-        });
+          self.showSharePrompt(url, url.indexOf('?rep=') === -1);
+        };
+        if (tipo === 'red') R.compartirRed(id, hecho);
+        else R.compartirLocal(id, hecho);
       });
+      b.classList.add('tm-compartir');
       return this.chico(b);
     },
 
     /* Botón de fila: el mismo estilo para VER y COMPARTIR */
     chico: function (b) {
-      b.classList.add('tab');
-      b.style.padding = '4px 10px';
-      b.style.fontSize = '10px';
+      b.classList.add('tab', 'tm-chico');
       return b;
     },
 

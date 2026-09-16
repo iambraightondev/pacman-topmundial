@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Todas las repeticiones, en la nube
+
+- **Cada repetición se sube sola al acabar la partida**, así que todas se pueden
+  ver y compartir, también desde otro aparato con la misma cuenta. Antes el
+  navegador solo guardaba las 8 últimas locales y las 2 últimas online, y las
+  demás se perdían.
+- **TUS PARTIDAS, con la tabla de máquina:** fecha, partida (con DESATADO,
+  LABERINTOS u ONLINE debajo), puntos, nivel y los botones ▶ VER y COMPARTIR.
+  Las viejas que el navegador ya había borrado lo dicen: SIN REPETICIÓN.
+- COMPARTIR da siempre el enlace corto con código.
+
 ## 2026-09-16 · El top mundial es solo para cuentas
 
 - **Para colocar un récord hay que jugar con cuenta.** Quien bate su récord

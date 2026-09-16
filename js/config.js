@@ -1259,6 +1259,9 @@
    * tienen su propio almacén y su propia poda: no compiten con las locales ni
    * caben en un enlace. */
   CFG.REPLAY_NET_KEY = 'pacman-topmundial-repeticiones-red';
+  /* índice de las subidas a la nube (hora, jugadores, puntos y código) */
+  CFG.REPLAY_NUBE_KEY = 'pacman-topmundial-repeticiones-nube';
+  CFG.REPLAY_NUBE_MAX = 300;
   CFG.REPLAY_NET_V = 2;            // versión del formato
   CFG.REPLAY_NET_EVERY = 2;        // 1 de cada N instantáneas (12 Hz -> 6 Hz)
   CFG.REPLAY_NET_MAX = 2;          // cuántas se guardan

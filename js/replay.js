@@ -654,37 +654,96 @@
       };
     },
 
-    /* Sube una repetición de red guardada y devuelve su enlace. cb(err, url).
+    /* =========================================================
+     * TODAS EN LA NUBE
      *
-     * El código se guarda en la ficha local: volver a darle a COMPARTIR la
-     * misma partida devuelve EL MISMO enlace en vez de subirla otra vez. Sin
-     * esto, compartir dos veces dejaría dos copias en el servidor y dos
-     * enlaces distintos rodando por el chat de la misma partida. */
-    compartirRed: function (id, cb) {
-      var self = this;
-      var reg = this.porIdRed(id);
-      if (!reg || !reg.s) { cb('ESA REPETICIÓN YA NO ESTÁ', null); return; }
-      if (reg.rn) { cb(null, this.enlaceRed(reg.rn)); return; }
-      if (!this.compartirConfigurado()) { cb('COMPARTIR NECESITA CONEXIÓN', null); return; }
-      if (reg.s.length > CFG.REPLAY_SHARE.MAX_CHARS) {
-        cb('ESA PARTIDA ES DEMASIADO LARGA PARA COMPARTIRLA', null);
+     * El navegador solo aguanta unas pocas repeticiones (CFG.REPLAY_MAX y
+     * REPLAY_NET_MAX) y las viejas se iban borrando: TUS PARTIDAS enseñaba
+     * filas sin VER ni COMPARTIR. Ahora cada repetición se SUBE SOLA al
+     * acabar la partida a la tabla `repeticiones` (supabase/
+     * repeticiones-todas.sql), con su tipo ('local' o 'red') y, si hay cuenta,
+     * a nombre de esa cuenta. El código que devuelve es a la vez lo que abre
+     * el enlace compartido (?rn=) y lo que permite verla cuando el navegador
+     * ya la soltó.
+     *
+     * Para no perder la pista, se apunta en un índice pequeño aparte
+     * (CFG.REPLAY_NUBE_KEY): hora, jugadores, puntos y código. Ocupa nada, así
+     * que caben cientos. Con cuenta, además, se piden a la nube las tuyas, que
+     * es lo que hace que se vean también las jugadas en otro aparato.
+     * ========================================================= */
+    nubeHeaders: function () {
+      var h = this.restHeaders();
+      var Ac = window.PM.Account;
+      if (Ac && Ac.logged && Ac.logged() && Ac.token) h['Authorization'] = 'Bearer ' + Ac.token;
+      return h;
+    },
+
+    indiceNube: function () {
+      try {
+        var raw = localStorage.getItem(CFG.REPLAY_NUBE_KEY);
+        var arr = raw ? JSON.parse(raw) : [];
+        return esLista(arr) ? arr : [];
+      } catch (e) { return []; }
+    },
+
+    apuntarNube: function (entrada) {
+      var lista = this.indiceNube().filter(function (x) { return x.rn !== entrada.rn; });
+      lista.unshift(entrada);
+      lista.sort(function (a, b) { return b.t - a.t; });
+      while (lista.length > CFG.REPLAY_NUBE_MAX) lista.pop();
+      try { localStorage.setItem(CFG.REPLAY_NUBE_KEY, JSON.stringify(lista)); }
+      catch (e) { /* sin almacenamiento: la próxima vez se vuelven a pedir */ }
+    },
+
+    /* ¿Esta fila del historial tiene repetición en la nube? */
+    paraPartidaNube: function (h) {
+      if (!h) return null;
+      var lista = this.indiceNube();
+      for (var i = 0; i < lista.length; i++) {
+        var r = lista[i];
+        if (r.j === h.j && Math.abs(r.t - h.t) < 15000 && (r.p === h.p || r.tipo === 'red')) return r;
+      }
+      return null;
+    },
+
+    /* Deja apuntado el código en la ficha del navegador (de una lista u otra) */
+    apuntarCodigo: function (id, codigo, tipo) {
+      var clave = (tipo === 'local') ? CFG.REPLAY_KEY : CFG.REPLAY_NET_KEY;
+      var lista = (tipo === 'local') ? this.guardadas() : this.guardadasRed();
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id !== id) continue;
+        lista[i].rn = codigo;
+        try { localStorage.setItem(clave, JSON.stringify(lista)); }
+        catch (e) { /* si no cabe, el índice de la nube ya lo tiene */ }
         return;
       }
-      var rep = this.leerRed(reg.s);
+    },
+
+    /* Sube una ficha guardada. cb(err, codigo). Si ya estaba subida, no se
+     * vuelve a subir: el mismo código de siempre. */
+    subirReg: function (reg, tipo, cb) {
+      var self = this;
+      cb = cb || function () {};
+      if (!reg || !reg.s) { cb('ESA REPETICIÓN YA NO ESTÁ', null); return; }
+      if (reg.rn) { cb(null, reg.rn); return; }
+      if (!this.compartirConfigurado()) { cb('COMPARTIR NECESITA CONEXIÓN', null); return; }
+      if (reg.s.length > CFG.REPLAY_SHARE.MAX_CHARS) {
+        cb('ESA PARTIDA ES DEMASIADO LARGA PARA SUBIRLA', null);
+        return;
+      }
+      var rep = (tipo === 'local') ? this.leer(reg.s) : this.leerRed(reg.s);
       if (!rep) { cb('ESA REPETICIÓN ESTÁ ROTA', null); return; }
       var fila = {
         jugadores: rep.jugadores,
-        puntos: (rep.final && rep.final.puntos) || 0,
-        nivel: (rep.final && rep.final.nivel) || 1,
-        nombres: rep.nombres.join(' + ').slice(0, 64),
-        datos: reg.s
+        puntos: (rep.final && rep.final.puntos) || reg.p || 0,
+        nivel: Math.max(1, (rep.final && rep.final.nivel) || reg.lv || 1),
+        nombres: (rep.nombres || []).join(' + ').slice(0, 64),
+        datos: reg.s,
+        tipo: (tipo === 'local') ? 'local' : 'red',
+        t_partida: reg.t || Date.now()
       };
-      var h = this.restHeaders();
+      var h = this.nubeHeaders();
       h['Prefer'] = 'return=minimal';
-
-      /* Si el código sorteado ya existe (que con 32^8 no va a pasar, pero el
-       * día que pase sería un enlace que enseña la partida de otro), se
-       * sortea otro. Cuatro intentos y a otra cosa. */
       function intenta(quedan) {
         var codigo = self.codigoNuevo();
         fila.id = codigo;
@@ -692,8 +751,10 @@
           method: 'POST', headers: h, body: JSON.stringify(fila)
         }).then(function (res) {
           if (res.ok) {
-            self.apuntarCodigo(id, codigo);
-            cb(null, self.enlaceRed(codigo));
+            reg.rn = codigo;
+            self.apuntarCodigo(reg.id, codigo, fila.tipo);
+            self.apuntarNube({ t: fila.t_partida, j: reg.j, p: reg.p, lv: reg.lv, rn: codigo, tipo: fila.tipo });
+            cb(null, codigo);
             return;
           }
           return res.text().then(function (t) {
@@ -702,30 +763,84 @@
               cb('DEMASIADAS SUBIDAS SEGUIDAS: ESPERA UN MINUTO', null);
               return;
             }
-            cb(/relation|does not exist|schema cache/i.test(t)
-              ? 'EL SERVIDOR TODAVÍA NO ADMITE ENLACES DE REPETICIÓN'
-              : 'NO SE PUDO SUBIR LA REPETICIÓN', null);
+            cb('NO SE PUDO SUBIR LA REPETICIÓN', null);
           });
         }).catch(function () { cb('NO SE PUDO SUBIR LA REPETICIÓN', null); });
       }
       intenta(CFG.REPLAY_SHARE.INTENTOS);
     },
 
-    enlaceRed: function (codigo) {
-      return this.baseUrl() + '?' + CFG.REPLAY_SHARE.PARAM + '=' + codigo;
+    /* Sube, una detrás de otra, las guardadas que aún no están en la nube. Se
+     * llama al acabar cada partida y al arrancar el juego: así se suben
+     * también las que ya había antes de que existiera esto. */
+    subirPendientes: function (cb) {
+      var self = this;
+      // la página de pruebas no sube nada: sus partidas son de mentira
+      if (window.PM_PRUEBAS || this.subiendo || !this.compartirConfigurado()) { if (cb) cb(); return; }
+      var cola = [];
+      this.guardadas().forEach(function (r) { if (!r.rn) cola.push([r, 'local']); });
+      this.guardadasRed().forEach(function (r) { if (!r.rn) cola.push([r, 'red']); });
+      if (!cola.length) { if (cb) cb(); return; }
+      this.subiendo = true;
+      (function siguiente() {
+        var x = cola.shift();
+        if (!x) { self.subiendo = false; if (cb) cb(); return; }
+        self.subirReg(x[0], x[1], function (err) {
+          if (err && /DEMASIADAS|CONEXIÓN/.test(err)) { self.subiendo = false; if (cb) cb(); return; }
+          siguiente();
+        });
+      })();
     },
 
-    /* Deja apuntado en la ficha local que esa partida ya está subida */
-    apuntarCodigo: function (id, codigo) {
-      var lista = this.guardadasRed();
-      for (var i = 0; i < lista.length; i++) {
-        if (lista[i].id !== id) continue;
-        lista[i].rn = codigo;
-        try {
-          localStorage.setItem(CFG.REPLAY_NET_KEY, JSON.stringify(lista));
-        } catch (e) { /* si no cabe, se volverá a subir: no es grave */ }
+    /* Con cuenta: las tuyas que están en la nube, al índice. cb(err) */
+    traerMias: function (cb) {
+      var self = this;
+      var Ac = window.PM.Account;
+      if (!Ac || !Ac.logged || !Ac.logged() || !Ac.user || !this.compartirConfigurado()) {
+        if (cb) cb('SIN CUENTA');
         return;
       }
+      fetch(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
+              '?select=id,jugadores,puntos,nivel,tipo,t_partida,creado_en' +
+              '&dueno=eq.' + encodeURIComponent(Ac.user.id) +
+              '&order=creado_en.desc&limit=' + CFG.REPLAY_NUBE_MAX),
+            { headers: this.nubeHeaders() })
+        .then(function (res) { if (!res.ok) throw new Error('no'); return res.json(); })
+        .then(function (filas) {
+          (filas || []).forEach(function (f) {
+            self.apuntarNube({
+              t: f.t_partida || Date.parse(f.creado_en) || 0,
+              j: f.jugadores, p: f.puntos, lv: f.nivel, rn: f.id, tipo: f.tipo || 'red'
+            });
+          });
+          if (cb) cb(null);
+        })
+        .catch(function () { if (cb) cb('SIN CONEXIÓN'); });
+    },
+
+    /* COMPARTIR una de red: se sube (si no lo estaba) y se da su enlace */
+    compartirRed: function (id, cb) {
+      var self = this;
+      this.subirReg(this.porIdRed(id), 'red', function (err, codigo) {
+        cb(err, err ? null : self.enlaceRed(codigo));
+      });
+    },
+
+    /* COMPARTIR una local: con código si está en la nube (el enlace corto);
+     * si no se puede subir, la de siempre con la partida dentro de la URL. */
+    compartirLocal: function (id, cb) {
+      var self = this;
+      var reg = this.porId(id);
+      if (!reg) { cb('ESA REPETICIÓN YA NO ESTÁ', null); return; }
+      this.subirReg(reg, 'local', function (err, codigo) {
+        if (!err) { cb(null, self.enlaceRed(codigo)); return; }
+        var url = self.enlace(reg.s);
+        cb(url ? null : err, url || null);
+      });
+    },
+
+    enlaceRed: function (codigo) {
+      return this.baseUrl() + '?' + CFG.REPLAY_SHARE.PARAM + '=' + codigo;
     },
 
     /* Abrir un enlace ?rn=<codigo>: se descarga y se ve. Es asíncrono, así que
@@ -745,7 +860,7 @@
         });
       }
       fetch(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
-              '?id=eq.' + encodeURIComponent(c) + '&select=datos&limit=1'),
+              '?id=eq.' + encodeURIComponent(c) + '&select=datos,tipo&limit=1'),
             { headers: this.restHeaders() })
         .then(function (res) {
           if (!res.ok) throw new Error('no');
@@ -753,6 +868,12 @@
         })
         .then(function (filas) {
           var texto = (filas && filas.length) ? filas[0].datos : '';
+          /* las locales se suben tal cual se meten en ?rep=: se ven igual */
+          if (texto && filas[0].tipo === 'local') {
+            if (UI && UI.hidePrompt) UI.hidePrompt();
+            self.verTexto(texto);
+            return;
+          }
           var rep = texto ? self.leerRed(texto) : null;
           if (!rep) { self.avisoRoto(); return; }
           if (UI && UI.hidePrompt) UI.hidePrompt();
@@ -1374,6 +1495,7 @@
       for (var intento = 0; intento < 4; intento++) {
         try {
           localStorage.setItem(CFG.REPLAY_NET_KEY, JSON.stringify(lista));
+          this.subirPendientes();   // a la nube, para que no se pierda al podar
           return reg;
         } catch (e) {
           if (lista.length <= 1) return null;
@@ -1557,6 +1679,7 @@
       lista.unshift(reg);
       this.podar(lista);
       this.escribir(lista);
+      this.subirPendientes();     // a la nube, para que no se pierda al podar
       return reg;
     },
 

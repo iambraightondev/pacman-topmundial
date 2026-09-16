@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (tarde) — todas las repeticiones en la nube (`pm-v80`).** Pedido de
+Braighton: no todas se podían ver o compartir. Causa: el navegador solo guarda
+8 locales y 2 online (`CFG.REPLAY_MAX`, `REPLAY_NET_MAX`). Ahora `Replay.subirReg`
+sube cada una a `repeticiones` (columnas nuevas `tipo`, `dueno`, `t_partida`:
+`supabase/repeticiones-todas.sql`, aplicado) y apunta el código en un índice
+(`CFG.REPLAY_NUBE_KEY`). Al arrancar se suben las pendientes y, con cuenta, se
+traen las tuyas (`traerMias`). **Las que el navegador ya había soltado no se
+pueden recuperar.** Por mirar: cuánto crece la tabla (una online larga son
+~200 KB).
+
 **16 sep (tarde) — top mundial solo con cuenta (`pm-v79`).** Pedido de Braighton.
 `enviar-record` v4 exige token de usuario, que el que envía esté entre los
 nombres y que todos los nombres sean cuentas (`perfiles.usuario`). Sin cuenta,
