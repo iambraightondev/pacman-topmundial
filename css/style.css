@@ -3036,7 +3036,7 @@ input[type="range"] {
 /* TUS PARTIDAS: la misma tabla, con fecha delante y VER · COMPARTIR detrás */
 .tm-cabecera.tm-hist, .rank-row.tm-hist {
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr) 120px 64px 250px;
+  grid-template-columns: 78px minmax(0, 1fr) 120px 64px 290px;
   gap: 14px;
   align-items: center;
   padding: 10px 14px;
@@ -3073,6 +3073,16 @@ input[type="range"] {
 .tm .btn.tm-compartir { color: #00ffff; border-color: #00ffff; background: transparent; }
 .tm .btn.tm-compartir:hover, .tm .btn.tm-compartir:focus-visible { background: #00ffff; color: #000; }
 .tm-sin-rep { font-size: 8px; color: #555; letter-spacing: 1px; text-align: right; }
+.tm-acciones { flex-direction: column; align-items: flex-end; gap: 6px; }
+.tm-botones { display: flex; gap: 8px; }
+.tm .btn.tm-estrella { color: #ffd23f; border-color: #b8860b; background: transparent; font-size: 12px; padding: 5px 8px; }
+.tm .btn.tm-estrella.activa { color: #000; background: #ffd23f; border-color: #ffd23f; }
+.tm .btn.tm-estrella:hover, .tm .btn.tm-estrella:focus-visible { background: #ffd23f; color: #000; }
+.tm-caduca { font-size: 7px; color: #8a89a3; letter-spacing: 1px; }
+.tm-caduca.pronto { color: #ff4d4d; }
+.rank-row.tm-hist.destacada { background: linear-gradient(90deg, rgba(255, 210, 63, 0.08), transparent 70%); }
+.rank-row.tm-hist.destacada:nth-child(odd) { background: linear-gradient(90deg, rgba(255, 210, 63, 0.08), transparent 70%); }
+.tm-titulo-rep { color: #ffd23f; font-size: 0.85em; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 760px) {
   .tm-cabecera.tm-hist { display: none; }
   .rank-row.tm-hist { grid-template-columns: 64px minmax(0, 1fr) auto; }

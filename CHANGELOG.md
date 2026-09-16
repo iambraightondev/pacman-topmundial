@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Partidas destacadas
+
+- **☆ DESTACAR** en TUS PARTIDAS: la repetición se guarda para siempre y se le
+  puede poner nombre. Se ve arriba con ★ y el nombre, y hay filtro ★ DESTACADAS.
+- **Las que no se destacan se borran a los 7 días.** Cada fila dice cuántos
+  días le quedan (en rojo el último).
+- Las destacadas salen en TUS PARTIDAS aunque el historial del navegador ya no
+  las tenga. Destacar necesita cuenta.
+
 ## 2026-09-16 · Todas las repeticiones, en la nube
 
 - **Cada repetición se sube sola al acabar la partida**, así que todas se pueden

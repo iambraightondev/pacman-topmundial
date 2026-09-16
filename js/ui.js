@@ -6437,6 +6437,22 @@
       });
       tm.appendChild(this.seasonRow);
 
+      /* TUS PARTIDAS: todas, o solo las destacadas */
+      this.rankHistRow = document.createElement('div');
+      this.rankHistRow.className = 'tab-row tab-row-sub tm-fila';
+      this.rankHistBtns = {};
+      [['todas', 'TODAS'], ['destacadas', '★ DESTACADAS']].forEach(function (t) {
+        var b = self.makeButton(t[1], function () {
+          self.histFiltro = t[0];
+          self.loadRanking();
+        });
+        b.classList.add('tab');
+        self.rankHistBtns[t[0]] = b;
+        self.rankHistRow.appendChild(b);
+      });
+      tm.appendChild(this.rankHistRow);
+      this.histFiltro = 'todas';
+
       this.rankStatus = document.createElement('div');
       this.rankStatus.className = 'lobby-status tm-estado';
       tm.appendChild(this.rankStatus);
@@ -6539,6 +6555,10 @@
       var enTemporada = porTemporada && this.seasonTab === 'ahora' && S;
       /* el mundo solo cuenta en las de puntos: el nivel 1 es del clásico */
       this.rankMundoRow.style.display = porTemporada ? 'flex' : 'none';
+      this.rankHistRow.style.display = (players === 0) ? 'flex' : 'none';
+      for (var hf in this.rankHistBtns) {
+        if (this.rankHistBtns.hasOwnProperty(hf)) this.rankHistBtns[hf].classList.toggle('active', hf === (this.histFiltro || 'todas'));
+      }
       for (var m in this.rankMundoBtns) {
         if (this.rankMundoBtns.hasOwnProperty(m)) this.rankMundoBtns[m].classList.toggle('active', m === mundo);
       }
@@ -6580,22 +6600,29 @@
       this.sinTildes(this.els.ranking);
 
       if (players === 0) {
-        var hist = H ? H.all() : [];
         var reqLocal = this.rankReq;
+        var vacio = (this.histFiltro === 'destacadas')
+          ? 'AÚN NO HAS DESTACADO NINGUNA · PULSA ☆ EN UNA PARTIDA'
+          : 'AÚN NO HAS JUGADO NINGUNA PARTIDA';
+        var hist = this.historialConDestacadas(H ? H.all() : []);
         this.rankStatus.classList.remove('error');
-        this.rankStatus.textContent = hist.length
-          ? '' : 'AÚN NO HAS JUGADO NINGUNA PARTIDA';
+        this.rankStatus.textContent = hist.length ? '' : vacio;
         this.renderHistory(hist);
+        var Rp = window.PM.Replay;
+        var pinta = function (err, lista) {
+          if (self.rankReq !== reqLocal) return;    // se cambió de pestaña
+          var todo = self.historialConDestacadas(lista);
+          self.renderHistory(todo);
+          self.rankStatus.classList.toggle('error', !!err);
+          self.rankStatus.textContent =
+            err ? ('SOLO LAS DE ESTE NAVEGADOR: ' + err) : todo.length ? '' : vacio;
+        };
         if (conCuenta && H.configured()) {
           if (!hist.length) this.rankStatus.textContent = 'CARGANDO...';
-          H.list(function (err, lista) {
-            if (self.rankReq !== reqLocal) return;    // se cambió de pestaña
-            self.renderHistory(lista);
-            self.rankStatus.classList.toggle('error', !!err);
-            self.rankStatus.textContent =
-              err ? ('SOLO LAS DE ESTE NAVEGADOR: ' + err) :
-              lista.length ? '' : 'AÚN NO HAS JUGADO NINGUNA PARTIDA';
-          });
+          /* primero las repeticiones de tu cuenta (destacadas y de otros
+           * aparatos) y luego el historial de la nube */
+          var sigue = function () { H.list(pinta); };
+          if (Rp && Rp.traerMias) Rp.traerMias(sigue); else sigue();
         }
         return;
       }
@@ -7108,10 +7135,10 @@
     },
 
     /* TUS PARTIDAS, en la misma tabla de máquina que el top: fecha, quién,
-     * puntos, nivel y, al final, VER y COMPARTIR. La repetición se busca en
-     * este navegador (la local o la online) y, si ya no está, en la nube,
-     * donde se sube sola al acabar cada partida. Las de antes de eso que el
-     * navegador ya soltó lo dicen en vez de callar. */
+     * puntos, nivel y, al final, ★ DESTACAR, VER y COMPARTIR. La repetición se
+     * busca en este navegador (la local o la online) y, si ya no está, en la
+     * nube, donde se sube sola al acabar cada partida. Las no destacadas dicen
+     * cuántos días les quedan; las destacadas llevan su nombre y no caducan. */
     renderHistory: function (list) {
       var H = window.PM.History, R = window.PM.Replay;
       this.rankList.innerHTML = '';
@@ -7128,8 +7155,14 @@
       var MUNDO = { hab: 'DESATADO', lab: 'LABERINTOS' };
       for (var i = 0; i < list.length; i++) {
         var h = list[i];
+        var reg = (R && R.paraPartida) ? R.paraPartida(h) : null;
+        var red = (!reg && R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
+        var nube = h.nubeEntrada || ((R && R.paraPartidaNube) ? R.paraPartidaNube(h) : null);
+        var tipo = reg ? 'local' : red ? 'red' : nube ? 'nube' : '';
+        var id = reg ? reg.id : red ? red.id : nube ? nube.rn : '';
+
         var row = document.createElement('div');
-        row.className = 'rank-row tm-hist ' + this.rankColor(i + 1);
+        row.className = 'rank-row tm-hist ' + this.rankColor(i + 1) + ((nube && nube.d) ? ' destacada' : '');
 
         var fecha = document.createElement('span');
         fecha.className = 'tm-fecha';
@@ -7144,10 +7177,17 @@
 
         var who = document.createElement('span');
         who.className = 'rank-who';
+        if (nube && nube.d && nube.ti) {
+          var titulo = document.createElement('span');
+          titulo.className = 'tm-titulo-rep';
+          titulo.textContent = '★ ' + nube.ti;
+          who.appendChild(titulo);
+        }
         var nom = document.createElement('span');
         nom.className = 'tm-nom';
         // con tres y cuatro no caben todos los nombres: el tuyo y cuántos erais
-        nom.textContent = (h.j === 2) ? (h.n1 + ' + ' + h.n2)
+        nom.textContent = h.nombresTexto ? h.nombresTexto
+          : (h.j === 2) ? (h.n1 + ' + ' + h.n2)
           : (h.j > 2) ? (h.n1 + ' +' + (h.j - 1)) : h.n1;
         who.appendChild(nom);
         var etiqueta = MUNDO[h.mu] || '';
@@ -7172,19 +7212,26 @@
 
         var acc = document.createElement('span');
         acc.className = 'tm-acciones';
-        var reg = (R && R.paraPartida) ? R.paraPartida(h) : null;
-        var red = (!reg && R && R.paraPartidaRed) ? R.paraPartidaRed(h) : null;
-        var nube = (!reg && !red && R && R.paraPartidaNube) ? R.paraPartidaNube(h) : null;
-        if (reg || red || nube) {
-          var tipo = reg ? 'local' : red ? 'red' : 'nube';
-          var id = reg ? reg.id : red ? red.id : nube.rn;
-          acc.appendChild(this.makeReplayBtn(id, tipo));
-          acc.appendChild(this.makeShareBtn(id, tipo));
+        if (tipo) {
+          var botones = document.createElement('span');
+          botones.className = 'tm-botones';
+          botones.appendChild(this.makeStarBtn(h, tipo, id, nube));
+          botones.appendChild(this.makeReplayBtn(id, tipo));
+          botones.appendChild(this.makeShareBtn(id, tipo));
+          acc.appendChild(botones);
+          if (nube && !nube.d && R && R.diasQueQuedan) {
+            var dias = R.diasQueQuedan(nube);
+            var cad = document.createElement('small');
+            cad.className = 'tm-caduca' + (dias <= 1 ? ' pronto' : '');
+            cad.textContent = dias === 0 ? 'SE BORRA HOY · DESTÁCALA'
+              : ('SE BORRA EN ' + dias + (dias === 1 ? ' DÍA' : ' DÍAS'));
+            acc.appendChild(cad);
+          }
         } else {
           var sin = document.createElement('small');
           sin.className = 'tm-sin-rep';
           sin.textContent = 'SIN REPETICIÓN';
-          sin.title = 'DE ANTES DE QUE LAS REPETICIONES SE GUARDARAN EN LA NUBE';
+          sin.title = 'DE ANTES DE QUE LAS REPETICIONES SE GUARDARAN EN LA NUBE, O YA CADUCADA';
           acc.appendChild(sin);
         }
         row.appendChild(acc);
@@ -7192,6 +7239,102 @@
         this.rankList.appendChild(row);
       }
       this.sinTildes(this.rankList);
+    },
+
+    /* Lo que enseña TUS PARTIDAS: el historial y, además, las DESTACADAS que
+     * ya no estén en él (el historial del navegador es corto; una destacada
+     * es para siempre). Con el filtro ★, solo las destacadas. */
+    historialConDestacadas: function (list) {
+      var R = window.PM.Replay;
+      var out = (list || []).slice();
+      var dest = (R && R.destacadas) ? R.destacadas() : [];
+      dest.forEach(function (x) {
+        var esta = out.some(function (h) {
+          var e = R.paraPartidaNube(h);
+          return e && e.rn === x.rn;
+        });
+        if (!esta) {
+          out.push({ t: x.t, j: x.j || 1, m: x.tipo === 'red' ? 'online' : 'local',
+            n1: x.n || '', n2: '', nombresTexto: x.n || '', p: x.p || 0, lv: x.lv || 1,
+            nubeEntrada: x });
+        }
+      });
+      out.sort(function (a, b) { return b.t - a.t; });
+      if (this.histFiltro === 'destacadas') {
+        out = out.filter(function (h) {
+          var e = h.nubeEntrada || (R ? R.paraPartidaNube(h) : null);
+          return !!(e && e.d);
+        });
+      }
+      return out;
+    },
+
+    /* ★: destacar (o dejar de destacar) y ponerle nombre */
+    makeStarBtn: function (h, tipo, id, nube) {
+      var self = this;
+      var activa = !!(nube && nube.d);
+      var b = this.makeButton(activa ? '★' : '☆', function () {
+        self.showDestacarPrompt(h, tipo, id, nube);
+      });
+      b.classList.add('tm-estrella');
+      b.classList.toggle('activa', activa);
+      b.title = activa ? 'DESTACADA: SE GUARDA PARA SIEMPRE' : 'DESTACAR: GUARDARLA PARA SIEMPRE Y PONERLE NOMBRE';
+      b.setAttribute('aria-label', activa ? 'Destacada, cambiar' : 'Destacar esta partida');
+      return this.chico(b);
+    },
+
+    showDestacarPrompt: function (h, tipo, id, nube) {
+      var self = this;
+      var Ac = window.PM.Account, R = window.PM.Replay;
+      if (!Ac || !Ac.logged()) {
+        this.showPrompt({
+          title: 'DESTACAR PARTIDA',
+          color: '#ffd23f',
+          solid: true,
+          lines: [
+            'LAS DESTACADAS SE GUARDAN PARA SIEMPRE Y CON NOMBRE; LAS DEMÁS SE BORRAN A LOS ' +
+              CFG.REPLAY_CADUCA_DIAS + ' DÍAS',
+            'PARA DESTACAR NECESITAS UNA CUENTA'
+          ],
+          buttons: [
+            { label: 'CREAR CUENTA', primary: true, keys: ['Enter'], hint: 'ENTER',
+              onClick: function () { self.showAccountPrompt('crear', function () { self.loadRanking(); }); } },
+            { label: 'YA TENGO CUENTA', onClick: function () { self.showAccountPrompt('entrar', function () { self.loadRanking(); }); } },
+            { label: 'VOLVER', keys: ['Escape'], hint: 'ESC', onClick: function () { self.hidePrompt(); } }
+          ]
+        });
+        return;
+      }
+      var activa = !!(nube && nube.d);
+      var titulo = (nube && nube.ti) || '';
+      function guardar(on) {
+        self.setPromptStatus(on ? 'GUARDANDO...' : 'QUITANDO...', false);
+        R.destacarFila(tipo, id, on, titulo, function (err) {
+          if (err) { self.setPromptStatus(err, true); return; }
+          self.hidePrompt();
+          self.loadRanking();
+        });
+      }
+      var botones = [
+        { label: activa ? 'GUARDAR' : '★ DESTACAR', primary: true, onClick: function () { guardar(true); } }
+      ];
+      if (activa) botones.push({ label: 'QUITAR DESTACADA', onClick: function () { guardar(false); } });
+      botones.push({ label: 'VOLVER', keys: ['Escape'], hint: 'ESC', onClick: function () { self.hidePrompt(); } });
+      this.showPrompt({
+        title: activa ? 'PARTIDA DESTACADA' : 'DESTACAR PARTIDA',
+        color: '#ffd23f',
+        lines: [
+          { text: String(h.p) + ' PUNTOS · NIVEL ' + h.lv, big: true },
+          activa ? 'SE GUARDA PARA SIEMPRE. PUEDES CAMBIARLE EL NOMBRE O QUITARLA'
+            : 'SE GUARDA PARA SIEMPRE. SIN DESTACAR, SE BORRA A LOS ' + CFG.REPLAY_CADUCA_DIAS + ' DÍAS'
+        ],
+        fields: [
+          { placeholder: 'NOMBRE (OPCIONAL)', maxLength: CFG.REPLAY_TITULO_MAX, value: titulo,
+            onInput: function (v) { titulo = v; }, onAccept: function () { guardar(true); } }
+        ],
+        status: '',
+        buttons: botones
+      });
     },
 
     /* Botón VER. tipo: 'local' y 'red' están en este navegador (id de su

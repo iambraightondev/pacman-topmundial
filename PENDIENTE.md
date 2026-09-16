@@ -13,6 +13,15 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (noche) — partidas destacadas (`pm-v81`).** Pedido de Braighton.
+`supabase/repeticiones-destacadas.sql` (aplicado): columnas `destacada` y
+`titulo`, función `destacar_repeticion` (solo con cuenta; hace tuya una subida
+sin dueño) y trigger que al subir cualquier repetición borra las no destacadas
+de más de 7 días. **La única de antes de 7 días (YBEVYGCJ, el dúo con
+SANDROPEPA, compartida el 3 sep) se marcó destacada para no romper su enlace.**
+Ojo: un enlace compartido de una partida no destacada deja de funcionar a la
+semana.
+
 **16 sep (tarde) — todas las repeticiones en la nube (`pm-v80`).** Pedido de
 Braighton: no todas se podían ver o compartir. Causa: el navegador solo guarda
 8 locales y 2 online (`CFG.REPLAY_MAX`, `REPLAY_NET_MAX`). Ahora `Replay.subirReg`

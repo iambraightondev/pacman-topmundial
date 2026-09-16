@@ -1262,6 +1262,10 @@
   /* índice de las subidas a la nube (hora, jugadores, puntos y código) */
   CFG.REPLAY_NUBE_KEY = 'pacman-topmundial-repeticiones-nube';
   CFG.REPLAY_NUBE_MAX = 300;
+  /* las que no se DESTACAN se borran de la nube a los tantos días
+   * (supabase/repeticiones-destacadas.sql) */
+  CFG.REPLAY_CADUCA_DIAS = 7;
+  CFG.REPLAY_TITULO_MAX = 32;
   CFG.REPLAY_NET_V = 2;            // versión del formato
   CFG.REPLAY_NET_EVERY = 2;        // 1 de cada N instantáneas (12 Hz -> 6 Hz)
   CFG.REPLAY_NET_MAX = 2;          // cuántas se guardan

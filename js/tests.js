@@ -1986,6 +1986,36 @@
     }
   });
 
+  test('DESTACADAS: no caducan, salen aunque el historial ya no las tenga', function () {
+    var R = window.PM.Replay, UI = window.PM.UI;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_NUBE_KEY); } catch (e) { previo = null; }
+    try {
+      var dia = 86400000, ahora = Date.now();
+      localStorage.setItem(CFG.REPLAY_NUBE_KEY, JSON.stringify([
+        { rn: 'AAAAAAAA', t: ahora - dia, c: ahora - dia, j: 1, p: 500, lv: 2, tipo: 'local', d: false },
+        { rn: 'BBBBBBBB', t: ahora - 30 * dia, c: ahora - 30 * dia, j: 1, p: 900, lv: 4, tipo: 'local', d: true, ti: 'LA BUENA' },
+        { rn: 'CCCCCCCC', t: ahora - 9 * dia, c: ahora - 9 * dia, j: 1, p: 100, lv: 1, tipo: 'local', d: false }
+      ]));
+      eq(R.diasQueQuedan(R.indiceNube()[0]), 6, 'a la de ayer le quedan seis días');
+      eq(R.indiceNube().length, 2, 'la de hace nueve días sin destacar ya no cuenta');
+      eq(R.destacadas().length, 1, 'y hay una destacada');
+      UI.histFiltro = 'todas';
+      var lista = UI.historialConDestacadas([]);
+      eq(lista.length, 1, 'la destacada sale aunque el historial esté vacío');
+      eq(lista[0].nubeEntrada.ti, 'LA BUENA', 'con su nombre');
+      UI.histFiltro = 'destacadas';
+      eq(UI.historialConDestacadas([{ t: ahora - dia, j: 1, p: 500, lv: 2 }]).length, 1,
+         'con el filtro, solo las destacadas');
+    } finally {
+      UI.histFiltro = 'todas';
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_NUBE_KEY);
+        else localStorage.setItem(CFG.REPLAY_NUBE_KEY, previo);
+      } catch (e) { /* nada */ }
+    }
+  });
+
   test('TUS PARTIDAS saca un botón VER en las que tienen repetición', function () {
     var R = window.PM.Replay, UI = window.PM.UI, H = window.PM.History;
     var previo = null, hs = G.highScore1;
@@ -2004,10 +2034,11 @@
       var filas = UI.rankList.querySelectorAll('.rank-row');   // sin la cabecera
       eq(filas.length, 2, 'dos partidas en la lista');
       var btns = filas[0].querySelectorAll('button');
-      eq(btns.length, 2, 'la grabada tiene VER y COMPARTIR');
+      eq(btns.length, 3, 'la grabada tiene DESTACAR, VER y COMPARTIR');
       eq(filas[1].querySelectorAll('button').length, 0, 'la otra no');
-      eq(btns[0].textContent, 'VER');
-      eq(btns[1].textContent, 'COMPARTIR');
+      eq(btns[0].textContent, '☆', 'sin destacar, la estrella vacía');
+      eq(btns[1].textContent, 'VER');
+      eq(btns[2].textContent, 'COMPARTIR');
       /* El enlace de una partida LOCAL se hace aquí mismo, sin servidor: la
        * repetición cabe entera dentro de la URL. */
       var url = R.enlace(R.porId(reg.id).s);

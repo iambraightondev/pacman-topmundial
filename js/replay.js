@@ -678,16 +678,40 @@
       return h;
     },
 
+    /* El índice, sin las que ya caducaron en la nube (no destacadas y de
+     * hace más de CFG.REPLAY_CADUCA_DIAS): esas ya no se pueden ver. */
     indiceNube: function () {
+      var arr;
       try {
         var raw = localStorage.getItem(CFG.REPLAY_NUBE_KEY);
-        var arr = raw ? JSON.parse(raw) : [];
-        return esLista(arr) ? arr : [];
-      } catch (e) { return []; }
+        arr = raw ? JSON.parse(raw) : [];
+      } catch (e) { arr = []; }
+      if (!esLista(arr)) return [];
+      var self = this;
+      return arr.filter(function (x) { return x && x.rn && self.diasQueQuedan(x) >= 0; });
+    },
+
+    /* Días que le quedan en la nube: -1 si ya caducó, Infinity si es destacada */
+    diasQueQuedan: function (x) {
+      if (!x) return -1;
+      if (x.d) return Infinity;
+      var desde = x.c || x.t || 0;
+      var dias = CFG.REPLAY_CADUCA_DIAS - Math.floor((Date.now() - desde) / 86400000);
+      return dias < 0 ? -1 : dias;
     },
 
     apuntarNube: function (entrada) {
-      var lista = this.indiceNube().filter(function (x) { return x.rn !== entrada.rn; });
+      var previa = null;
+      var lista = this.indiceNube().filter(function (x) {
+        if (x.rn === entrada.rn) { previa = x; return false; }
+        return true;
+      });
+      // lo que no traiga la entrada nueva (nombres, título...) se conserva
+      if (previa) {
+        for (var k in previa) {
+          if (previa.hasOwnProperty(k) && entrada[k] === undefined) entrada[k] = previa[k];
+        }
+      }
       lista.unshift(entrada);
       lista.sort(function (a, b) { return b.t - a.t; });
       while (lista.length > CFG.REPLAY_NUBE_MAX) lista.pop();
@@ -753,7 +777,8 @@
           if (res.ok) {
             reg.rn = codigo;
             self.apuntarCodigo(reg.id, codigo, fila.tipo);
-            self.apuntarNube({ t: fila.t_partida, j: reg.j, p: reg.p, lv: reg.lv, rn: codigo, tipo: fila.tipo });
+            self.apuntarNube({ t: fila.t_partida, j: reg.j, p: reg.p, lv: reg.lv, rn: codigo,
+              tipo: fila.tipo, n: fila.nombres, c: Date.now(), d: false });
             cb(null, codigo);
             return;
           }
@@ -801,7 +826,7 @@
         return;
       }
       fetch(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
-              '?select=id,jugadores,puntos,nivel,tipo,t_partida,creado_en' +
+              '?select=id,jugadores,puntos,nivel,tipo,t_partida,creado_en,nombres,destacada,titulo' +
               '&dueno=eq.' + encodeURIComponent(Ac.user.id) +
               '&order=creado_en.desc&limit=' + CFG.REPLAY_NUBE_MAX),
             { headers: this.nubeHeaders() })
@@ -810,12 +835,64 @@
           (filas || []).forEach(function (f) {
             self.apuntarNube({
               t: f.t_partida || Date.parse(f.creado_en) || 0,
-              j: f.jugadores, p: f.puntos, lv: f.nivel, rn: f.id, tipo: f.tipo || 'red'
+              c: Date.parse(f.creado_en) || 0,
+              j: f.jugadores, p: f.puntos, lv: f.nivel, rn: f.id, tipo: f.tipo || 'red',
+              n: f.nombres || '', d: !!f.destacada, ti: f.titulo || ''
             });
           });
           if (cb) cb(null);
         })
         .catch(function () { if (cb) cb('SIN CONEXIÓN'); });
+    },
+
+    /* =========================================================
+     * DESTACADAS: las que se quedan para siempre, con nombre
+     * Solo con cuenta. La función de la base de datos (destacar_repeticion)
+     * solo toca destacada y titulo, y hace tuya una repetición que subiste
+     * antes de entrar. cb(err, entrada del índice)
+     * ========================================================= */
+    destacar: function (codigo, activa, titulo, cb) {
+      var self = this;
+      var Ac = window.PM.Account;
+      cb = cb || function () {};
+      if (!Ac || !Ac.logged || !Ac.logged()) { cb('NECESITAS UNA CUENTA', null); return; }
+      if (!this.compartirConfigurado()) { cb('SIN CONEXIÓN', null); return; }
+      var t = String(titulo || '').toUpperCase().trim().slice(0, CFG.REPLAY_TITULO_MAX);
+      var R = window.PM.Ranking;
+      if (activa && t && R && R.nameAllowed && !R.nameAllowed(t)) { cb('ESE NOMBRE NO VALE', null); return; }
+      fetch(this.restUrl('/rest/v1/rpc/destacar_repeticion'), {
+        method: 'POST', headers: this.nubeHeaders(),
+        body: JSON.stringify({ p_id: codigo, p_destacada: !!activa, p_titulo: activa ? t : null })
+      }).then(function (res) {
+        if (!res.ok) throw new Error(res.status === 401 ? 'NECESITAS UNA CUENTA' : 'NO SE PUDO GUARDAR');
+        return res.json();
+      }).then(function (filas) {
+        if (!filas || !filas.length) { cb('ESA REPETICIÓN NO ES TUYA O YA NO ESTÁ', null); return; }
+        var entrada = null;
+        self.indiceNube().forEach(function (x) { if (x.rn === codigo) entrada = x; });
+        entrada = entrada || { rn: codigo, t: Date.now() };
+        entrada.d = !!filas[0].destacada;
+        entrada.ti = filas[0].titulo || '';
+        self.apuntarNube(entrada);
+        cb(null, entrada);
+      }).catch(function (e) { cb(e.message || 'NO SE PUDO GUARDAR', null); });
+    },
+
+    /* Destacar desde una fila de TUS PARTIDAS: si la repetición aún no está en
+     * la nube (tipo 'local' o 'red' sin código), primero se sube */
+    destacarFila: function (tipo, id, activa, titulo, cb) {
+      var self = this;
+      if (tipo === 'nube') { this.destacar(id, activa, titulo, cb); return; }
+      var reg = (tipo === 'red') ? this.porIdRed(id) : this.porId(id);
+      this.subirReg(reg, tipo, function (err, codigo) {
+        if (err) { cb(err, null); return; }
+        self.destacar(codigo, activa, titulo, cb);
+      });
+    },
+
+    /* Las destacadas del índice, de la más nueva a la más vieja */
+    destacadas: function () {
+      return this.indiceNube().filter(function (x) { return x.d; });
     },
 
     /* COMPARTIR una de red: se sube (si no lo estaba) y se da su enlace */
