@@ -2274,15 +2274,12 @@
         });
       }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión
-      // El top mundial es del laberinto de 1980, con su azar y con los cuatro
-      // fantasmas de la máquina. En otro laberinto, con un azar traído de
-      // fuera o con un fantasma que piensa, no se compara nada.
-      //
-      // Y con DESATADO tampoco: morder fantasmas a golpe de tecla regala
-      // puntos que en el arcade no existen, así que una partida así al lado
-      // de una clásica no diría nada de nadie. Suma experiencia y logros,
-      // que son tuyos, pero la tabla mundial se queda limpia.
-      if (this.mazeId || this.seedBase || this.isVersus() || this.hab) return;
+      // Cada MUNDO tiene su top mundial (supabase/mundos.sql): el laberinto de
+      // 1980, DESATADO y LABERINTOS van cada uno a su tabla, porque morder
+      // fantasmas con la Q u otro laberinto dan otros puntos y ponerlos al
+      // lado no diría nada de nadie. Lo que sigue fuera: una partida con un
+      // azar traído de fuera o con un fantasma que piensa (PAC-MAN VS.).
+      if (this.seedBase || this.isVersus()) return;
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
@@ -2299,6 +2296,7 @@
         nombre4: (this.playerCount >= 4) ? this.rawName(3) : '',
         puntos: this.score,
         nivel: this.level,
+        mundo: this.recordSlot() || 'clasico',
         // lo que necesita la Edge Function para saber si la partida cuadra
         nivelInicio: this.startLevel,
         ajustes: this.rankAjustes(),

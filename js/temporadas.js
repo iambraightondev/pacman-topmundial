@@ -64,7 +64,7 @@
      * players: 1 individual, 2 dúo, 3 trío, 4 escuadra. cb(err, filas) con
      * las mismas columnas que el top de siempre, para que la lista se pinte
      * con el mismo código. */
-    top: function (temporada, players, cb) {
+    top: function (temporada, players, cb, mundo) {
       var self = this;
       var R = window.PM.Ranking;
       if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
@@ -72,6 +72,7 @@
       var url = base(CFG.RANKING.VIEW_SEASON) +
         '?select=' + (R ? R.COLS : 'nombre1,nombre2,puntos,nivel,modo,creado_en') +
         '&jugadores=eq.' + n +
+        '&mundo=eq.' + (R ? R.mundo(mundo) : 'clasico') +
         '&temporada=eq.' + encodeURIComponent(temporada || this.actual()) +
         '&order=puntos.desc,creado_en.asc' +
         '&limit=' + CFG.RANKING.LIMIT;

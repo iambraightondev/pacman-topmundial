@@ -59,6 +59,13 @@
   var PUNTOS_NIVEL = 240 * 10 + 4 * 50 + 4 * (200 + 400 + 800 + 1600);
   var MARGEN = 1.1;
 
+  /* Cada MUNDO tiene su tabla y su techo, igual que en la función:
+   * LABERINTOS tiene más pastillas (el que más, 292 + 4 energizantes) y en
+   * DESATADO el MORDISCO (cada 16 s) y el GRITO (cada 60 s) dan puntos que
+   * dependen del tiempo jugado, no del nivel. */
+  var MUNDOS = ['clasico', 'hab', 'lab'];
+  var PUNTOS_NIVEL_LAB = 292 * 10 + 4 * 50 + 4 * (200 + 400 + 800 + 1600);
+
   function puntosFruta(nivel) {
     if (nivel === 1) return 100;
     if (nivel === 2) return 300;
@@ -130,15 +137,33 @@
     /* Techo de puntos de una partida que empezó en el nivel `desde` (1 si no
      * se dice) y llegó al `nivel`. Por encima de esto, o hay trampa o hay un
      * error: en ninguno de los dos casos entra en el top mundial. */
-    maxPuntos: function (nivel, desde) {
+    maxPuntos: function (nivel, desde, mundo, tiempoMs, jugadores) {
       var hasta = Math.max(1, Math.floor(nivel || 1));
       var ini = Math.max(1, Math.min(hasta, Math.floor(desde || 1)));
+      var m = this.mundo(mundo);
       var total = 0;
       for (var n = ini; n <= hasta; n++) {
-        total += PUNTOS_NIVEL + 2 * puntosFruta(n);
+        total += (m === 'lab' ? PUNTOS_NIVEL_LAB : PUNTOS_NIVEL) + 2 * puntosFruta(n);
+      }
+      if (m === 'hab') {
+        var ms = Math.max(0, Math.floor(tiempoMs || 0));
+        var j = this.jugadores(jugadores);
+        total += (Math.floor(ms / 16000) + 1) * j * 1600 +
+                 (Math.floor(ms / 60000) + 1) * j * 3000;
       }
       return Math.floor(total * MARGEN);
     },
+
+    /* El mundo de una partida o de una tabla: 'clasico', 'hab' o 'lab' */
+    mundo: function (m) {
+      return MUNDOS.indexOf(m) !== -1 ? m : 'clasico';
+    },
+
+    MUNDOS: [
+      { id: 'clasico', name: 'CLÁSICO' },
+      { id: 'hab', name: 'DESATADO' },
+      { id: 'lab', name: 'LABERINTOS' }
+    ],
 
     /* La respuesta de la función, en cristiano y CORTA: esto se enseña en el
      * panel del juego, que no da para un párrafo. El porqué largo (el campo
@@ -167,7 +192,7 @@
 
     /* Top de puntuaciones de una clasificación (players: 1 individual,
      * 2 dúo, 3 trío, 4 escuadra). cb(err, filas) */
-    top: function (players, cb) {
+    top: function (players, cb, mundo) {
       var self = this;
       if (!this.configured()) { cb('SIN CONFIGURAR', null); return; }
       var n = this.jugadores(players);
@@ -175,6 +200,7 @@
       var url = base(CFG.RANKING.VIEW) +
         '?select=' + this.COLS +
         '&jugadores=eq.' + n +
+        '&mundo=eq.' + this.mundo(mundo) +
         '&order=puntos.desc,creado_en.asc' +
         '&limit=' + CFG.RANKING.LIMIT;
       fetch(url, { method: 'GET', headers: headers() })
@@ -250,7 +276,8 @@
       }
       var nivel = Math.max(1, Math.min(999, Math.floor(o.nivel || 1)));
       var ini = Math.max(1, Math.min(nivel, Math.floor(o.nivelInicio || 1)));
-      if (pts > this.maxPuntos(nivel, ini)) {
+      var mundo = this.mundo(o.mundo);
+      if (pts > this.maxPuntos(nivel, ini, mundo, o.tiempoMs, players)) {
         if (cb) cb('PUNTUACIÓN IMPOSIBLE');
         return;
       }
@@ -264,6 +291,7 @@
         puntos: pts,
         nivel: nivel,
         nivelInicio: ini,
+        mundo: mundo,
         // con qué se jugó: la función no admite la partida si los ajustes
         // hacían el juego más fácil de lo normal
         ajustes: o.ajustes || null,

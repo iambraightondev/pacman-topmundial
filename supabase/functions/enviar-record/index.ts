@@ -58,6 +58,25 @@ const MIN_PUNTOS_FANTASMA = 200;              // el primero de cada cadena
 /* Frutas: salen dos por nivel (CFG.FRUIT_DOTS = [70, 170]) */
 const FRUTAS_NIVEL = 2;
 
+/* ---- MUNDOS ----
+ * Cada mundo tiene su tabla (supabase/mundos.sql) y su techo:
+ *
+ *   clasico  el laberinto de 1980, tal cual.
+ *   lab      LABERINTOS: los seis de js/mazes.js tienen MÁS pastillas que el
+ *            de siempre; se toma el que más tiene (COLMILLOS, 292 + 4
+ *            energizantes), que es lo más que puede dar un nivel.
+ *   hab      DESATADO: además de lo del clásico, el MORDISCO (Q) se come un
+ *            fantasma sin energizante cada 16 s como mucho, y el GRITO (R)
+ *            asusta a los cuatro cada 60 s, que es otra cadena entera. Esos
+ *            puntos dependen del TIEMPO, no del nivel, así que se suman por
+ *            lo que duró la partida y por cada jugador (cada uno tiene los
+ *            suyos). Con la cadena a tope, un mordisco vale 1600. */
+const MUNDOS = ['clasico', 'hab', 'lab'];
+const PUNTOS_PASTILLAS_LAB = 292 * 10 + 4 * 50;   // 3120
+const MORDISCO_MS = 16000;                         // CFG.HAB.LIST mordisco
+const GRITO_MS = 60000;                            // CFG.HAB.LIST grito
+const PUNTOS_MORDISCO = 1600;
+
 /* Margen sobre el techo teórico: más vale dejar pasar una partida rarísima
  * que tirar la de alguien que jugó de verdad. Con el 10% sigue habiendo un
  * abismo entre lo posible y los 999999 de turno. */
@@ -179,15 +198,27 @@ function puntosFruta(nivel: number): number {
 }
 
 /* Todo lo que se puede sacar de un nivel: pastillas + fantasmas + frutas */
-function techoNivel(nivel: number): number {
-  return PUNTOS_PASTILLAS + MAX_PUNTOS_FANTASMAS +
-    FRUTAS_NIVEL * puntosFruta(nivel);
+function techoNivel(nivel: number, mundo = 'clasico'): number {
+  return (mundo === 'lab' ? PUNTOS_PASTILLAS_LAB : PUNTOS_PASTILLAS) +
+    MAX_PUNTOS_FANTASMAS + FRUTAS_NIVEL * puntosFruta(nivel);
+}
+
+/* Lo que DESATADO da de más por tiempo: mordiscos y gritos de cada jugador */
+function extraDesatado(tiempoMs: number, jugadores: number) {
+  const mordiscos = (Math.floor(tiempoMs / MORDISCO_MS) + 1) * jugadores;
+  const gritos = (Math.floor(tiempoMs / GRITO_MS) + 1) * jugadores;
+  return {
+    puntos: mordiscos * PUNTOS_MORDISCO + gritos * PUNTOS_CADENA,
+    fantasmas: mordiscos + gritos * 4
+  };
 }
 
 /* Techo de una partida que empezó en `desde` y llegó a `hasta` */
-function techoPartida(desde: number, hasta: number): number {
+function techoPartida(desde: number, hasta: number, mundo = 'clasico',
+    tiempoMs = 0, jugadores = 1): number {
   let total = 0;
-  for (let n = desde; n <= hasta; n++) total += techoNivel(n);
+  for (let n = desde; n <= hasta; n++) total += techoNivel(n, mundo);
+  if (mundo === 'hab') total += extraDesatado(tiempoMs, jugadores).puntos;
   return Math.floor(total * MARGEN);
 }
 
@@ -334,6 +365,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const modo = (datos.modo === 'online') ? 'online' : 'local';
 
+  // el mundo donde se jugó: cada uno tiene su tabla. Sin él, el clásico.
+  const mundo = MUNDOS.indexOf(String(datos.mundo || '')) !== -1
+    ? String(datos.mundo) : 'clasico';
+
   /* ---- ajustes: los de siempre, o la marca no entra ---- */
   const aj = (datos.ajustes || {}) as Record<string, unknown>;
   const ajustes = {
@@ -359,7 +394,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   /* ---- coherencia: puntos, nivel, fantasmas y tiempo ---- */
   const niveles = nivel - nivelInicio + 1;
-  const techo = techoPartida(nivelInicio, nivel);
+  const tiempoJugado = Math.max(0, entero(datos.tiempoMs));
+  const techo = techoPartida(nivelInicio, nivel, mundo, tiempoJugado, jugadores);
   if (puntos > techo) {
     return mal('PUNTUACIÓN IMPOSIBLE', 400,
       puntos + ' puntos con el nivel ' + nivel + ': el techo son ' + techo);
@@ -367,10 +403,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const fantasmas = entero(datos.fantasmas);
   if (fantasmas < 0) return mal('FANTASMAS NO VÁLIDOS');
-  if (fantasmas > MAX_FANTASMAS_NIVEL * niveles) {
+  const topeFantasmas = MAX_FANTASMAS_NIVEL * niveles +
+    (mundo === 'hab' ? extraDesatado(tiempoJugado, jugadores).fantasmas : 0);
+  if (fantasmas > topeFantasmas) {
     return mal('FANTASMAS IMPOSIBLES', 400,
       fantasmas + ' fantasmas en ' + niveles + ' niveles: el tope son ' +
-      (MAX_FANTASMAS_NIVEL * niveles) + ' (4 por energizante)');
+      topeFantasmas + ' (4 por energizante' +
+      (mundo === 'hab' ? ', más mordiscos y gritos' : '') + ')');
   }
   // cada fantasma comido son 200 puntos como poco
   if (puntos < fantasmas * MIN_PUNTOS_FANTASMA) {
@@ -390,7 +429,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       tiempoMs + ' ms para ' + (niveles - 1) + ' niveles despejados entre ' +
       jugadores);
   }
-  if (puntos > (tiempoMs / 1000) * puntosPorS) {
+  /* (en DESATADO el ritmo no se mide así: un mordisco de 1600 en el primer
+   * segundo ya pasaría del tope. Su techo ya cuenta el tiempo.) */
+  if (mundo !== 'hab' && puntos > (tiempoMs / 1000) * puntosPorS) {
     return mal('TIEMPO IMPOSIBLE', 400,
       puntos + ' puntos en ' + tiempoMs + ' ms: pasa de ' +
       puntosPorS + ' puntos por segundo entre ' + jugadores);
@@ -398,7 +439,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   /* ---- récord de velocidad del nivel 1 (opcional) ---- */
   let tiempo1: number | null = null;
-  if (datos.tiempo1 != null) {
+  // la marca del nivel 1 es solo del laberinto de siempre y sin poderes
+  if (datos.tiempo1 != null && mundo === 'clasico') {
     const cs = entero(datos.tiempo1);
     /* La marca de velocidad es más estricta que la de puntos: a un jugador,
      * desde el nivel 1 y con los ajustes tal cual (CFG.TIME_RULES). Si no
@@ -478,7 +520,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     nombre2: (jugadores >= 2) ? nombres[1] : null,
     puntos: puntos,
     nivel: nivel,
-    verificado: verificado
+    verificado: verificado,
+    mundo: mundo
   };
   if (jugadores >= 3) fila.nombre3 = nombres[2];
   if (jugadores >= 4) fila.nombre4 = nombres[3];

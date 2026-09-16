@@ -448,24 +448,34 @@
     }
   });
 
-  test('una partida en otro laberinto no entra en el top mundial', function () {
+  test('cada mundo va a su top mundial: clásico, DESATADO y LABERINTOS', function () {
     var R = window.PM.Ranking;
-    var orig = R.submit, n = 0;
+    var orig = R.submit, envios = [];
     var n1 = window.PM.settings.nick1;
-    R.submit = function () { n++; };
+    R.submit = function (o) { envios.push(o); };
     window.PM.settings.nick1 = 'ALGUIEN';
     try {
       window.PM.settings.muted = true;
       G.newGame({ players: 1, maze: window.PM.Mazes.LIST[0].id });
       G.score = 5000; G.rankingSent = false;
       G.submitRanking();
-      eq(n, 0, 'en otro laberinto no se compara nada');
-      ok(!G.canTimeRecord(), 'ni cuenta el tiempo del nivel 1');
+      eq(envios.length, 1, 'otro laberinto también entra');
+      eq(envios[0].mundo, 'lab', 'pero en la tabla de LABERINTOS');
+      ok(!G.canTimeRecord(), 'y no cuenta el tiempo del nivel 1');
+      G.toMenu();
+      G.newGame({ players: 1, hab: true });
+      G.score = 5000; G.rankingSent = false;
+      G.submitRanking();
+      eq(envios[1].mundo, 'hab', 'DESATADO va a la suya');
       G.toMenu();
       G.newGame({ players: 1 });
       G.score = 5000; G.rankingSent = false;
       G.submitRanking();
-      eq(n, 1, 'en el clásico sí');
+      eq(envios[2].mundo, 'clasico', 'y el de siempre, a la del clásico');
+      /* los techos: lo que es imposible en el clásico cabe en DESATADO */
+      ok(R.maxPuntos(9, 1, 'clasico') < 180550, 'en el clásico, 180.550 al nivel 9 no cabe');
+      ok(R.maxPuntos(9, 1, 'hab', 25 * 60000, 1) > 180550, 'en DESATADO, con 25 minutos, sí');
+      ok(R.maxPuntos(3, 1, 'lab') > R.maxPuntos(3, 1, 'clasico'), 'LABERINTOS tiene más pastillas');
     } finally {
       R.submit = orig;
       window.PM.settings.nick1 = n1;
