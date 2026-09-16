@@ -43,6 +43,11 @@ create table if not exists public.perfiles (
   tiempo1      integer     check (tiempo1 is null or
                                   (tiempo1 > 0 and tiempo1 <= 6000000)),
   logros       jsonb       not null default '{}'::jsonb,
+  -- la partida que se dejó a medias, para poder seguirla en otro aparato.
+  -- Es el texto de su repetición cortada por donde iba (js/guardado.js), no
+  -- una foto del laberinto: unos pocos miles de caracteres, y el tope cubre
+  -- hasta la partida más larga que el juego sabe grabar.
+  partida      text        check (partida is null or char_length(partida) <= 120000),
   creado_en    timestamptz not null default now(),
   actualizado  timestamptz not null default now()
 );
@@ -193,6 +198,26 @@ begin
   ) then
     alter table public.perfiles
       add constraint perfiles_record4_chk check (record4 >= 0);
+  end if;
+end $$;
+
+-- ---------- puesta al día: la partida a medias ----------
+-- Guardar una partida sin terminar es lo que deja seguirla en otro ordenador.
+-- Va aquí y no en una tabla aparte porque es UNA por cuenta: la última que se
+-- dejó a medias. Al terminarla (o al empezar otra) el juego la pone a null.
+-- Se lee en claro como el resto del perfil: dentro solo hay una partida de
+-- Pac-Man, y las repeticiones ya se comparten por enlace.
+alter table public.perfiles
+  add column if not exists partida text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_partida_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_partida_chk
+      check (partida is null or char_length(partida) <= 120000);
   end if;
 end $$;
 

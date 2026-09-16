@@ -409,6 +409,12 @@
        * el reto de hoy es de ahí— y se pulsa para ver la semana entera. */
       main.appendChild(this.buildDailyBox());
 
+      /* CONTINUAR: la partida que se dejó a medias, aquí o en otro aparato
+       * (js/guardado.js). Va ANTES de elegir modo porque quien tiene una a
+       * medias no viene a elegir nada: viene a seguir donde iba. Si no hay
+       * ninguna, el bloque entero no existe. */
+      main.appendChild(this.buildContinuarBox());
+
       /* Elige modo y dale a JUGAR. UNO cada vez, en grande, y se pasa de uno
        * a otro con las flechas de los lados. */
       main.appendChild(this.sectionTitle('ELIGE MODO'));
@@ -564,6 +570,170 @@
       var dd = function (x) { return (x < 10 ? '0' : '') + x; };
       return dd(Math.floor(s / 3600)) + ':' + dd(Math.floor(s / 60) % 60) +
         (conSegundos ? ':' + dd(s % 60) : '');
+    },
+
+    /* ------------------------------------------------------
+     * CONTINUAR LA PARTIDA A MEDIAS (js/guardado.js)
+     * ------------------------------------------------------ */
+    buildContinuarBox: function () {
+      var self = this;
+      var box = document.createElement('div');
+      box.className = 'cont-box';
+      box.style.display = 'none';
+
+      var b = this.makeButton('CONTINUAR', function () {
+        self.resumeAudio();
+        self.continuarPartida();
+      });
+      /* sin `btn-primary`: el amarillo es el de JUGAR y este va en verde
+       * (.btn-cont), que son dos caminos distintos */
+      b.classList.add('btn-play', 'btn-cont');
+      box.appendChild(b);
+
+      this.contLine = document.createElement('div');
+      this.contLine.className = 'cont-line';
+      box.appendChild(this.contLine);
+
+      /* Descartarla sin tener que empezar otra para quitársela de encima */
+      var tirar = this.makeButton('DESCARTARLA', function () {
+        self.resumeAudio();
+        self.descartarPartida();
+      });
+      tirar.classList.add('btn-preset');
+      box.appendChild(tirar);
+
+      this.contBox = box;
+      return box;
+    },
+
+    /* Se llama al volver al menú y cada vez que la partida guardada cambia
+     * (al guardarla, al borrarla y cuando llega una de la nube). */
+    refreshContinuar: function () {
+      if (!this.contBox) return;
+      var Gd = window.PM.Guardado;
+      var s = Gd ? Gd.sobre() : null;
+      this.contBox.style.display = s ? '' : 'none';
+      if (s) {
+        this.contLine.textContent = Gd.titulo(s) + '  ·  ' + Gd.cuando(s);
+      }
+    },
+
+    descartarPartida: function () {
+      var self = this;
+      var Gd = window.PM.Guardado;
+      if (!Gd || !Gd.hay()) return;
+      this.showPrompt({
+        title: '¿DESCARTAR?',
+        color: '#ff8c00',
+        lines: [Gd.titulo(), 'SE PIERDE ESA PARTIDA Y TODO LO QUE LLEVABA HECHO.'],
+        buttons: [
+          { label: 'SÍ, DESCARTARLA', hint: 'ENTER', keys: ['Enter'],
+            onClick: function () {
+              Gd.borrar();
+              self.hidePrompt();
+              self.refreshContinuar();
+            } },
+          { label: 'NO', primary: true, hint: 'ESC', keys: ['Escape'],
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* Retomarla: la partida se vuelve a jugar sola a toda velocidad hasta
+     * donde se dejó. Tarda unos segundos y por eso lleva barra. */
+    continuarPartida: function () {
+      var self = this;
+      var Gd = window.PM.Guardado;
+      if (!Gd || !Gd.hay()) return;
+      this.hideAll();
+      this.avisoRecuperando(0);
+      Gd.retomar(function (x) {
+        self.avisoRecuperando(x);
+      }, function (err) {
+        /* Salió bien: la partida queda en pausa y quien manda en la pantalla
+         * es su menú (ahí se dice de qué partida se trata). Ojo con esconder
+         * el aviso a pelo: se llevaría por delante ese menú. */
+        if (!err) { self.syncPrompt(); return; }
+        self.hidePrompt();
+        self.showMenu();
+        if (err !== 'CANCELADA') self.avisoNoSePudo(err);
+      });
+    },
+
+    avisoRecuperando: function (x) {
+      var self = this;
+      var Gd = window.PM.Guardado;
+      this.showPrompt({
+        title: 'RECUPERANDO TU PARTIDA',
+        color: '#00ff00',
+        lines: [
+          Gd.titulo(),
+          'SE ESTÁ VOLVIENDO A JUGAR A TODA VELOCIDAD HASTA DONDE LA DEJASTE.',
+          { text: Math.round((x || 0) * 100) + ' %', big: true }
+        ],
+        buttons: [
+          { label: 'CANCELAR', hint: 'ESC', keys: ['Escape'],
+            onClick: function () { Gd.cancelar(); self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* No ha salido la misma partida. Pasa si el juego cambió por dentro entre
+     * el día que se guardó y hoy: la partida se rehace paso a paso, así que un
+     * cambio en cómo se mueve un fantasma la descuadra. Se dice tal cual y se
+     * deja decidir, que tirarla por cuenta propia sería peor. */
+    avisoNoSePudo: function (err) {
+      var self = this;
+      var Gd = window.PM.Guardado;
+      this.showPrompt({
+        title: 'NO SE PUDO RECUPERAR',
+        color: '#ff0000',
+        lines: [
+          Gd.titulo(),
+          (err === 'ROTA')
+            ? 'LO GUARDADO NO SE PUEDE LEER.'
+            : 'AL REHACERLA NO HA SALIDO LA MISMA PARTIDA, ASÍ QUE NO SE PUEDE SEGUIR DONDE IBA.',
+          'ESTO PASA CUANDO EL JUEGO HA CAMBIADO POR DENTRO DESDE QUE LA GUARDASTE.'
+        ],
+        buttons: [
+          { label: 'DESCARTARLA', primary: true, hint: 'ENTER', keys: ['Enter'],
+            onClick: function () {
+              Gd.borrar();
+              self.hidePrompt();
+              self.refreshContinuar();
+            } },
+          { label: 'DEJARLA AHÍ', hint: 'ESC', keys: ['Escape'],
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+    },
+
+    /* Empezar una partida nueva tira la que estuviera a medias, así que se
+     * avisa ANTES. Devuelve true si se ha quedado preguntando. */
+    avisaSiHayGuardada: function (sigue) {
+      var self = this;
+      var Gd = window.PM.Guardado;
+      if (!Gd || !Gd.hay()) return false;
+      this.showPrompt({
+        title: 'TIENES UNA PARTIDA A MEDIAS',
+        color: '#ffff00',
+        lines: [Gd.titulo(), 'SI EMPIEZAS OTRA, ESA SE PIERDE.'],
+        buttons: [
+          { label: 'SEGUIR LA DE ANTES', primary: true, hint: 'ENTER',
+            keys: ['Enter'],
+            onClick: function () { self.hidePrompt(); self.continuarPartida(); } },
+          { label: 'EMPEZAR UNA NUEVA', hint: 'N', keys: ['n'],
+            onClick: function () {
+              Gd.borrar();
+              self.hidePrompt();
+              self.refreshContinuar();
+              sigue();
+            } },
+          { label: 'VOLVER', hint: 'ESC', keys: ['Escape'],
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+      return true;
     },
 
     buildDailyBox: function () {
@@ -1350,14 +1520,20 @@
        * que en dos. */
       if (id === 'hab') { this.showHabPrompt(); return; }
       if (id === 'caza') { this.showCazaPrompt(); return; }
-      this.hideAll();
-      if (id === 'duo') {
-        // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
-        // (se elige en OPCIONES · PARTIDA; -1 = Pac-Man de siempre)
-        window.PM.Game.newGame({ players: 2, ghosts: [-1, s.vsGhost2] });
-        return;
+      var self = this;
+      function go() {
+        self.hideAll();
+        if (id === 'duo') {
+          // PAC-MAN VS. en el mismo teclado: el J2 puede llevar un fantasma
+          // (se elige en OPCIONES · PARTIDA; -1 = Pac-Man de siempre)
+          window.PM.Game.newGame({ players: 2, ghosts: [-1, s.vsGhost2] });
+          return;
+        }
+        window.PM.Game.newGame({ players: 1 });
       }
-      window.PM.Game.newGame({ players: 1 });
+      // empezar otra tira la que estuviera a medias: primero se avisa
+      if (this.avisaSiHayGuardada(go)) return;
+      go();
     },
 
     makeButton: function (label, onClick) {
@@ -5602,8 +5778,12 @@
 
       var b = this.makeButton('JUGAR', function () {
         self.resumeAudio();
-        self.hideAll();
-        window.PM.Game.newGame({ players: 1, maze: m.id });
+        function go() {
+          self.hideAll();
+          window.PM.Game.newGame({ players: 1, maze: m.id });
+        }
+        if (self.avisaSiHayGuardada(go)) return;
+        go();
       });
       b.classList.add('btn-preset');
       fila.appendChild(b);
@@ -6175,24 +6355,44 @@
       } else if (g.playerCount === 2) {
         lines.push('REINICIAR EMPIEZA UNA PARTIDA NUEVA PARA LOS DOS.');
       }
+      /* GUARDAR Y SALIR solo sale donde la partida se puede reconstruir
+       * (js/guardado.js): en CACERÍA y en ONLINE no hay nada que guardar y un
+       * botón que no fuera a funcionar es peor que no tenerlo. */
+      /* Recién recuperada: lo primero es decir QUÉ partida es, que quien la
+       * dejó a medias hace dos días no tiene por qué acordarse. */
+      if (g.retomada) lines.unshift('SIGUES TU PARTIDA: ' + g.retomada + '.');
+      var Gd = window.PM.Guardado;
+      var sePuede = !!(Gd && Gd.puedeGuardar());
+      if (sePuede) {
+        lines.push('GUARDAR Y SALIR LA DEJA COMO ESTÁ PARA SEGUIRLA LUEGO, AQUÍ O EN OTRO APARATO.');
+      }
+      var botones = [
+        { label: 'REANUDAR', hint: 'P · ESC', primary: true,
+          keys: ['p', 'Escape', 'Enter'],
+          onClick: function () { self.resumeAudio(); g.requestPause(); } },
+        { label: 'REINICIAR', hint: 'R', keys: ['r'],
+          onClick: function () {
+            self.resumeAudio();
+            if (g.netRole) g.requestVote('restart');
+            else g.restartGame();
+          } }
+      ];
+      if (sePuede) {
+        botones.push({ label: 'GUARDAR Y SALIR', hint: 'G', keys: ['g'],
+          onClick: function () {
+            if (!Gd.guardarYSalir()) return;    // no se pudo: se sigue en pausa
+            self.hidePrompt();
+            self.showMenu();
+          } });
+      }
+      botones.push({ label: 'SALIR', hint: 'Q', keys: ['q'],
+        onClick: function () { g.toMenu(); } });
       this.showPrompt({
         title: 'PAUSA',
         color: '#ffff00',
         lines: lines,
         status: g.flash ? g.flash.text : '',
-        buttons: [
-          { label: 'REANUDAR', hint: 'P · ESC', primary: true,
-            keys: ['p', 'Escape', 'Enter'],
-            onClick: function () { self.resumeAudio(); g.requestPause(); } },
-          { label: 'REINICIAR', hint: 'R', keys: ['r'],
-            onClick: function () {
-              self.resumeAudio();
-              if (g.netRole) g.requestVote('restart');
-              else g.restartGame();
-            } },
-          { label: 'SALIR', hint: 'Q', keys: ['q'],
-            onClick: function () { g.toMenu(); } }
-        ]
+        buttons: botones
       });
     },
 
@@ -6860,6 +7060,7 @@
       this.refreshLevel();
       this.refreshOnlineBtn();
       this.refreshDaily();
+      this.refreshContinuar();   // CONTINUAR, si quedó una partida a medias
       this.refreshVestBtn();     // VESTUARIO · N NUEVOS
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
@@ -6907,10 +7108,14 @@
       function arranca(jugadores) {
         self.resumeAudio();
         self.hidePrompt();
-        self.hideAll();
-        var opts = { players: jugadores, hab: true };
-        if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
-        window.PM.Game.newGame(opts);
+        function go() {
+          self.hideAll();
+          var opts = { players: jugadores, hab: true };
+          if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
+          window.PM.Game.newGame(opts);
+        }
+        if (self.avisaSiHayGuardada(go)) return;
+        go();
       }
 
       this.showPrompt({

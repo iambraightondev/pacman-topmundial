@@ -723,6 +723,11 @@ The decoder accepts both forms.
 | `step()` | `Replay.paso()` | injects turns and advances the replay clock |
 | `closeRun()` | `Replay.alAcabar()` | closes and stores the replay, however the game ended |
 
+The half-played run (`js/guardado.js`) hangs off the same two ends:
+`Guardado.paso()` runs last in `step()` and `Guardado.borrar()` in
+`closeRun()`, right after `alAcabar()` — and only if the run being closed was
+recordable, which `closeRun` asks *before* clearing the recording.
+
 Plus `Game.replaying` (guards `bumpAch` and `persistHighScore`) and
 `Game.timeScale` (the fixed-step loop multiplies its accumulator by it, so x2
 means more 1/60 s steps per frame — the simulation is untouched).
@@ -831,6 +836,129 @@ COMPARTIR next to VER in TOP MUNDIAL → TUS PARTIDAS for both kinds.
 
 For the world ranking, which will carry a replay per row, the public entry
 points are already there and need no change to this module:
+
+## Partida a medias (`js/guardado.js` — `PM.Guardado`)
+
+A run used to exist only while its tab did: closing the page threw it away.
+Now it can be left where it was and picked up later, **on another machine
+included** — which is the whole point, and why it travels with the account.
+
+**What is saved is the replay, cut where the run was.** No snapshot of the
+maze, no ghosts, no pellets, no cooldowns: the game is deterministic
+(`Game.seedRnd(level)`), so the recording that `js/replay.js` already keeps —
+settings, starting level and the list of turns with the tick of each — *is*
+the run. Resuming means replaying it at full speed up to that tick and handing
+the controls back. It costs a few kilobytes (it fits in a Postgres column and
+crosses machines), nothing can be half-serialised, and **a mismatch is
+visible**: the recovery ends by comparing score and pellets against what was
+saved, and refuses if they differ. The price is the wait — a few seconds of
+off-screen simulation with a progress dialog.
+
+`Game.step()` calls `Guardado.paso()` last, which saves every
+`CFG.SAVE_EVERY` ticks (300, 5 s) and uploads every `CFG.SAVE_CLOUD_EVERY`
+(3600, 1 min). The clock is `Replay.t`, so `r.t < ultimo` means a new run
+started and the counters reset — without that, the run after a long one would
+go unsaved for its first minutes.
+
+### What can be continued
+
+Whatever the replay can rebuild: `solo`, `duo`, `hab`, `habduo`, `vs` and
+`habvs` — one or two players on the same keyboard, in the classic maze, an
+alternative one or DESATADO. **CACERÍA is not recorded** (the machine's
+Pac-Man is one seat more than the input format has room for) and **ONLINE is
+simulated by the host**, so neither can be saved; `Guardado.puedeGuardar()`
+returns false and the pause menu drops the button rather than showing one that
+would not work.
+
+### The envelope
+
+`CFG.SAVE_KEY` (`pacman-topmundial-partida`) holds **one** JSON:
+`{ v, rep, t, maze, p, dl, st, lv, j, modo, fecha, quien }`. `rep` is the
+serialised replay with a `final` filled in with *how the run is going* (that
+doubles as the front-page line); `t` is the replay tick to stop at; and
+`p`/`dl`/`st` are the fingerprint the recovery is checked against.
+
+`maze` is there because the replay format has no room for it: a LABERINTOS run
+would otherwise come back in the 1980 maze. `Replay.montar(rep, extra)` takes
+it as `extra.maze` and passes it to `newGame`.
+
+### Never paid twice
+
+A run is cashed in exactly once — XP, coins, record, history, world ranking —
+and that happens in `Game.closeRun()`. Saving and cashing in are mutually
+exclusive **by construction**:
+
+- **GUARDAR Y SALIR** (`Guardado.guardarYSalir`) sets `Game.salvada`, which
+  makes `closeRun` return before doing anything, and leaves the envelope.
+- Closing the tab outright cashes in nothing either: nothing gets to run.
+- Any real ending (GAME OVER, surrender, SALIR, REINICIAR) cashes in **and
+  deletes** the envelope — but only if the run being closed was recordable
+  (`Replay.enCurso()` is asked *before* `alAcabar()` clears it). A CACERÍA or
+  ONLINE game deletes nothing: it is not what was saved.
+
+### Resuming (`Guardado.retomar(avance, hecho)`)
+
+Mutes audio, sets `G.simulandoFuera = true` (the main loop stops stepping),
+mounts the replay and runs `G.step()` in chunks of `CFG.SAVE_MS_TROZO` ms
+until `Replay.t >= t`, reporting progress. Reaching GAME_OVER or MENU first,
+or `CFG.SAVE_MAX_PASOS` steps, is divergence: `'NO CUADRA'`, and **the
+envelope is kept** — throwing away somebody's run on its own is worse than
+asking. Same for `'ROTA'` (unreadable text).
+
+The check is score always, plus `dotsLeft` only when the run was saved in
+`PLAYING` or `DYING`. Saved during a READY banner the recovery stops a hair
+earlier — the replay clock does not run during the banner — so the maze has
+not been dealt yet there; the score cannot have changed in between either way.
+That also means a run saved right after clearing a level comes back showing
+the level-change again, which is correct, not a bug.
+
+Then `Replay.retomarMando()` turns `'ver'` into `'grabar'` with the entries it
+already had, clears `replaying` and puts `xpSent`/`rankingSent`/`timeSent`
+back to false (they were forced true so that *watching* a replay pays
+nothing), and reopens the showcase. The game is left **paused** on purpose —
+coming back in motion, mid-maze, with the ghosts on top of you, is a life lost
+to the reunion — with `Game.retomada` naming the run in the pause menu until
+it is unpaused.
+
+**Achievements and DAILY are not re-counted** during the recovery: they are
+counted as things happen, so the first half was already counted on the machine
+where it was played. Counting them again would inflate them for anybody
+resuming on the same machine, and counting short is less wrong than counting
+double. Points are not lost: the run keeps its score and is cashed in whole
+when it really ends.
+
+### The cloud (`perfiles.partida`)
+
+`Account.guardarPartida(texto, cb)` PATCHes the column on its own, **not
+inside `push()`**: this is the only thing written *during* a run (every
+minute), while `push()` carries the state left after playing — merging them
+would have uploaded records and achievements that have not changed once a
+minute. A 400 naming the column answers `'SIN COLUMNA'` (the project has not
+run `supabase/cuentas.sql`) and the module stops insisting; the run stays
+saved in this browser.
+
+`applyRemote` hands `fila.partida` to `Guardado.desdeNube`, which keeps it
+only if it is **newer** than the local one: somebody who has just played here
+cannot lose it to whatever was in the cloud. `Guardado.sobre()` picks between
+the two by date, except that a local envelope belonging to another account
+never wins. Once resumed, the run is written locally and `deNube` is dropped,
+so it stops showing as pending on the front page.
+
+### On the front page
+
+`UI.buildContinuarBox()` adds a **CONTINUAR** block above ELIGE MODO — in
+green, not the yellow of JUGAR: two different paths, told apart at a glance —
+with the run's line (`Guardado.titulo` + `Guardado.cuando`) and DESCARTARLA.
+It is hidden when there is nothing, and `UI.refreshContinuar()` refreshes it
+on every return to the menu, on every save and when one arrives from the
+cloud. Starting a new run would throw the saved one away, so
+`UI.avisaSiHayGuardada(sigue)` asks first (SEGUIR LA DE ANTES / EMPEZAR UNA
+NUEVA / VOLVER) from the three places a recordable run starts: `playPick`,
+the DESATADO dialog and the LABERINTOS list.
+
+`Guardado.luego(fn)` is how the next chunk is scheduled (`setTimeout` in the
+game). The tests replace it with `function (f) { f(); }` so a recovery happens
+inside the test, where no clock is running.
 
 ## Nombres de jugador (nicknames)
 
@@ -2142,14 +2270,20 @@ what actually keeps the board clean.
 ## Menú de pausa (P / Esc)
 
 Pausing no longer just dims the maze: it opens a menu (the same `#prompt`
-overlay) with three actions, each with a keyboard shortcut shown under the
-label (`.btn-key`):
+overlay) with up to four actions, each with a keyboard shortcut shown under
+the label (`.btn-key`):
 
 | Acción | Tecla | Efecto |
 |---|---|---|
 | REANUDAR | `P`, `Esc`, `Enter` | unpause (online: coordinated as before) |
 | REINICIAR | `R` | new game, same options (`Game.lastOpts`) |
+| GUARDAR Y SALIR | `G` | leaves the run where it is, to be continued later (`js/guardado.js`) |
 | SALIR | `Q` | back to the menu (online: sends `bye`) |
+
+- GUARDAR Y SALIR only appears where the run can be rebuilt
+  (`Guardado.puedeGuardar()`): not in CACERÍA, not online. It is the only exit
+  that does **not** cash the run in. A run just resumed names itself in the
+  menu's first line (`Game.retomada`, cleared on unpause).
 
 - The menu is state-driven: `UI.syncPrompt()` shows it whenever
   `Game.paused` is true in a game, so in online **both** players see it (the
@@ -2638,3 +2772,9 @@ from third parties. Cells are indices `row*28+col`.
 29. Accounts: usuario + contraseña only (no e-mail typed anywhere), usuario is
     the in-game name, and signing in MERGES cloud and local keeping the best of
     each — xp, records and counters never go down. Friends need an account.
+30. A run left half-played can be continued: GUARDAR Y SALIR keeps it without
+    cashing it in, CONTINUAR rebuilds it from its own replay and hands the
+    controls back paused, and signing in on another machine brings it down
+    from `perfiles.partida`. If the rebuild does not land on the same score
+    it says so instead of resuming something else, and the run is cashed in
+    exactly once — when it really ends.

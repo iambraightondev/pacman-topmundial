@@ -334,6 +334,7 @@
     modo: null,          // null | 'grabar' | 'ver'
     grabando: null,      // repetición en construcción
     rep: null,           // repetición que se está viendo
+    montaje: null,       // lo que la repetición no lleva dentro (el laberinto)
     t: 0,                // reloj de la repetición (ticks simulados)
     cursor: 0,           // siguiente entrada por inyectar
     enviando: false,     // el giro lo manda la repetición, no el teclado
@@ -1484,12 +1485,19 @@
       return true;
     },
 
-    /* Pone el juego a reproducir la repetición (sin recomponer nada) */
-    montar: function (rep) {
+    /* Pone el juego a reproducir la repetición (sin recomponer nada).
+     *
+     * `extra` es lo que la repetición NO lleva dentro y aun así cambia la
+     * simulación. Hoy solo el laberinto alternativo (modo LABERINTOS): el
+     * formato no tiene hueco para él, así que quien monta la repetición lo
+     * pasa por aquí si lo sabe. Lo usa js/guardado.js al retomar una partida
+     * a medias, que sí se lo apunta. */
+    montar: function (rep, extra) {
       var UI = window.PM.UI;
       if (G.inGame()) G.toMenu();      // lo que hubiera se cierra y se guarda
       this.modo = 'ver';
       this.rep = rep;
+      this.montaje = extra || null;
       this.cursor = 0;
       this.t = 0;
       if (UI) {
@@ -1504,8 +1512,40 @@
         hab: esDesatado(rep.modo),
         // ni los giros del que llevaba fantasma, a quién moverle
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
-          ? rep.ajustes.ghosts.slice() : null
+          ? rep.ajustes.ghosts.slice() : null,
+        maze: (extra && extra.maze) || null
       });
+    },
+
+    /* ---------- Retomar una partida a medias (js/guardado.js) ----------
+     * La repetición se ha reproducido a toda velocidad hasta donde se dejó
+     * la partida y ahora hay que devolver el mando: lo que era 'ver' pasa a
+     * ser 'grabar' con las entradas que ya tenía, y el juego deja de ser una
+     * repetición para volver a ser una partida de verdad.
+     *
+     * Ojo con las tres banderas de "ya enviado": al montar la repetición se
+     * pusieron a true para que mirar una partida vieja no diera experiencia
+     * ni récord (alEmpezar). Aquí se vuelven atrás, porque esto sí es una
+     * partida que cuenta, y lo que cuente se cobrará UNA vez cuando acabe
+     * de verdad (Game.closeRun). */
+    retomarMando: function () {
+      if (this.modo !== 'ver' || !this.rep) return false;
+      var rep = this.rep;
+      rep.final = null;                  // se rellena cuando termine
+      this.modo = 'grabar';
+      this.grabando = rep;
+      this.rep = null;
+      this.montaje = null;
+      this.cursor = 0;
+      this.recomp = null;
+      this.mostrarBarra(false);
+      G.timeScale = 1;
+      G.replaying = false;
+      G.xpSent = false;
+      G.rankingSent = false;
+      G.timeSent = false;
+      G.openShowcase();     // vuelve a ser una partida en vivo: que puedan mirarla
+      return true;
     },
 
     avisoRecomponer: function (x) {
@@ -1608,7 +1648,7 @@
       if (this.modo === 'verRed') { this.verRed(rep); return; }
       if (this.modo !== 'ver') return;
       if (G.lastOpts) G.restartGame();     // pasa por newGame -> alEmpezar
-      else this.montar(rep);
+      else this.montar(rep, this.montaje);
     },
 
     /* yaEnMenu: la partida ya se cerró por su cuenta (SALIR del menú de
@@ -1617,6 +1657,7 @@
       var estaba = (this.modo === 'ver' || this.modo === 'verRed');
       this.modo = null;
       this.rep = null;
+      this.montaje = null;
       this.grabando = null;
       this.red = null;
       this.cursor = 0;

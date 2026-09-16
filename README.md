@@ -26,8 +26,13 @@ red.
 - **Cualquier sistema**: `python -m http.server 8264` en la carpeta y visita `http://localhost:8264`.
 - **Controles**: flechas o WASD para moverte · `P` o `Esc` abren el **menú de
   pausa** (semitransparente, se sigue viendo el laberinto): REANUDAR
-  (`P`/`Esc`), REINICIAR (`R`) y SALIR (`Q`). Online, reiniciar lo tenéis que
-  aceptar los dos.
+  (`P`/`Esc`), REINICIAR (`R`), GUARDAR Y SALIR (`G`) y SALIR (`Q`). Online,
+  reiniciar lo tenéis que aceptar los dos.
+- **Dejar una partida a medias**: GUARDAR Y SALIR la deja donde iba, y en la
+  portada sale **CONTINUAR** para seguirla. Con cuenta, la partida viaja
+  contigo: la dejas en un ordenador y la sigues en otro. No se puede en
+  CACERÍA ni en ONLINE. Salir sin guardar, rendirse o morir la dan por
+  terminada, con lo que eso cuenta (experiencia, monedas y récord).
 - **Los menús se manejan con las flechas**: mueven el foco y `Enter` acepta;
   en los deslizadores, izquierda y derecha ajustan el valor.
 - **Dos jugadores (local)**: J1 con las flechas, J2 con WASD.
@@ -528,6 +533,7 @@ js/habilidades.js modo DESATADO: los poderes de Pac-Man y los del fantasma
 js/caceria.js     modo CACERÍA: el Pac-Man de la máquina y su poder periódico
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
+js/guardado.js    La partida a medias: guardarla y seguirla luego
 js/ui.js          Menús, opciones, panel de party, paneles y controles
 manifest.json     App instalable (PWA)
 sw.js             Service worker: funciona sin conexión

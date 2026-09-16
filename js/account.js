@@ -483,6 +483,9 @@
       }
       // ni las skins que abra lo traído (nivel, contadores, maestrías)
       if (window.PM.Skins) window.PM.Skins.syncVistas();
+      /* La partida que se dejó a medias en otro aparato. Solo se queda con
+       * ella si es más nueva que la de aquí, que eso lo decide Guardado. */
+      if (window.PM.Guardado) window.PM.Guardado.desdeNube(fila.partida);
       // el nombre del juego pasa a ser el de la cuenta
       s.nick1 = this.user.usuario;
       if (window.PM.UI && window.PM.UI.saveSettings) window.PM.UI.saveSettings();
@@ -530,6 +533,32 @@
     pushQuiet: function () {
       if (!this.logged()) return;
       this.push(true).catch(function () { /* ya se subirá */ });
+    },
+
+    /* ---------- la partida a medias (js/guardado.js) ----------
+     * Va por su cuenta y no dentro de push(): es lo único que se guarda EN
+     * MITAD de una partida (cada minuto), mientras que push() manda el estado
+     * de después de jugar. Mezclarlos habría hecho que cada minuto de partida
+     * subiera también récords y logros que no han cambiado.
+     *
+     * `texto` es el sobre serializado, o null para borrar lo que hubiera.
+     * cb(err): 'SIN COLUMNA' cuando el proyecto todavía no tiene dónde
+     * guardarla (falta correr supabase/cuentas.sql); quien llama deja de
+     * insistir y la partida se queda guardada en este navegador. */
+    guardarPartida: function (texto, cb) {
+      if (!this.logged()) { if (cb) cb('SIN SESIÓN'); return; }
+      var url = base('/rest/v1/' + AC.TABLE + '?id=eq.' + this.user.id);
+      var h = authHeaders(this.token);
+      h['Prefer'] = 'return=minimal';
+      fetch(url, {
+        method: 'PATCH', headers: h,
+        body: JSON.stringify({ partida: texto || null })
+      }).then(function (res) {
+        if (res.ok) { if (cb) cb(null); return; }
+        return res.text().then(function (t) {
+          if (cb) cb(/partida/i.test(t) ? 'SIN COLUMNA' : 'NO SE PUDO');
+        });
+      }).catch(function () { if (cb) cb('NO SE PUDO'); });
     },
 
     /* ---------- el correo de recuperación ----------

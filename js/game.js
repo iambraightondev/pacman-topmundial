@@ -477,6 +477,8 @@
       this.levelNotice = null;
       this.rankingSent = false;
       this.xpSent = false;
+      this.salvada = false;     // partida a medias guardada (js/guardado.js)
+      this.retomada = null;     // y de cuál se viene, si es que se retomó una
       this.timeTicks = 0;
       this.timeSent = false;
       this.lvl1Cs = 0;         // centésimas que costó despejar el nivel 1
@@ -735,6 +737,7 @@
         this.netLooks = null;
       }
       this.netNotice = null;
+      this.retomada = null;
       this.emotes = this.emptyEmotes();
       this.chat = [];
       this.badgeNotice = null;
@@ -779,6 +782,8 @@
       on = !!on;
       if (this.paused === on) return;
       this.paused = on;
+      // al volver a jugar ya no hace falta decir que la partida venía de antes
+      if (!on) this.retomada = null;
       if (on) { this.stopAllLoops(); this.stopIntro(); }
       this.syncUI();
     },
@@ -936,6 +941,9 @@
 
       if (this.netRole) this.netMaintain();
       else this.stepShowcase();       // partida local: se emite para los mirones
+      /* la partida a medias se guarda cada pocos segundos, para poder
+       * seguirla luego (aquí o en otro aparato). Ver js/guardado.js */
+      if (window.PM.Guardado) window.PM.Guardado.paso();
     },
 
     stepReady: function () {
@@ -1938,10 +1946,22 @@
      * contaba al llegar al GAME OVER, así que quien se salía antes no
      * sumaba nada de lo jugado. */
     closeRun: function () {
+      /* GUARDAR Y SALIR (js/guardado.js): la partida se deja a medias para
+       * seguirla luego, así que NO se cierra ni se cobra. Es la única salida
+       * que no pasa por caja, y por eso la bandera se apaga aquí mismo: lo
+       * que venga después es una partida como las demás. */
+      if (this.salvada) { this.salvada = false; return null; }
       if (this.xpSent || this.isSpec()) return null;
       this.xpSent = true;
+      /* ¿Esta partida era de las que se pueden continuar? Se pregunta ANTES
+       * de cerrar la repetición, que es quien lo sabe. Si lo era, lo guardado
+       * se tira: la partida acaba de cobrarse y seguir jugándola sería
+       * cobrarla dos veces. Una de CACERÍA o de ONLINE no borra nada, que no
+       * es lo que había guardado. */
+      var seGuardaba = !!(window.PM.Replay && window.PM.Replay.enCurso());
       // la repetición se cierra y se guarda aquí, acabe como acabe la partida
       if (window.PM.Replay) window.PM.Replay.alAcabar();
+      if (seGuardaba && window.PM.Guardado) window.PM.Guardado.borrar();
       var L = window.PM.Level;
       var antes = L ? L.state() : null;
       // lo que ha hecho uno mismo: en PAC-MAN VS. el cazador tiene sus puntos

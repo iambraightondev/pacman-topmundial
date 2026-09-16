@@ -2,6 +2,31 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-15 · Dejar una partida a medias y seguirla luego
+
+- Hasta ahora una partida solo existía mientras estuviera abierta: cerrar la
+  pestaña la tiraba entera. **Ahora se puede dejar donde iba y seguirla**, en
+  este ordenador o en otro.
+- En el **menú de pausa** hay un botón nuevo, **GUARDAR Y SALIR** (`G`). Y en
+  la **portada** sale **CONTINUAR**, con qué partida es, cuántos puntos
+  llevabas y cuándo la dejaste (o DESCARTARLA, si ya no la quieres).
+- **Con cuenta, la partida viaja contigo.** Se sube cada minuto, así que
+  aunque se cierre el navegador de golpe, al entrar en otro aparato está ahí.
+- Al recuperarla, el juego **se la vuelve a jugar a toda velocidad** hasta
+  donde ibas (unos segundos, con su barra) y te devuelve el mando **en
+  pausa**, para que te sitúes antes de seguir.
+- **No se cobra dos veces**: guardar y salir no da experiencia ni monedas ni
+  récord; eso se cobra entero cuando la partida termina de verdad. Y al
+  terminar, lo guardado se tira.
+- Se puede en CLÁSICO, DOS JUGADORES, DESATADO, PAC-MAN VS. y LABERINTOS. En
+  **CACERÍA y ONLINE no**, y por eso el botón no sale ahí: son las dos que el
+  juego no sabe reconstruir. Jugar a ellas tampoco borra la que tengas
+  guardada.
+- Si el juego cambia por dentro entre que guardas una partida y la retomas,
+  al rehacerla puede no salir la misma. **Se comprueba** (puntos y pastillas)
+  y, si no cuadra, se avisa en vez de meterte en una partida que no es tuya.
+  La guardada no se borra sola: lo decides tú.
+
 ## 2026-09-15 · Accesorios bien centrados
 
 - Revisadas las 47 skins con los 11 accesorios, uno a uno. **El parche ahora

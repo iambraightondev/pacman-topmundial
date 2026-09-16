@@ -6913,6 +6913,285 @@
     }
   });
 
+  /* ===============================================================
+   * LA PARTIDA A MEDIAS (js/guardado.js)
+   *
+   * Lo que se guarda es la repetición cortada por donde iba, así que estas
+   * pruebas atacan lo que puede salir mal de verdad: que al rehacerla no
+   * salga la misma partida, que se cobre dos veces lo mismo, o que jugar a
+   * otra cosa (CACERÍA, ONLINE) se lleve por delante lo guardado.
+   * =============================================================== */
+
+  /* Alrededor de cada prueba: el almacén se deja como estaba y la
+   * recuperación ocurre de un tirón (en el juego va por trozos para no
+   * congelar la pantalla, y aquí no hay reloj que los encadene). */
+  function conGuardado(fn) {
+    var Gd = window.PM.Guardado;
+    var previo = null, previoRep = null;
+    var luego = Gd.luego;
+    try { previo = localStorage.getItem(CFG.SAVE_KEY); } catch (e) { /* sin almacén */ }
+    try { previoRep = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* nada */ }
+    Gd.luego = function (f) { f(); };
+    Gd.deNube = null;
+    /* Se llega aquí con lo que dejara la prueba de antes, y una repetición a
+     * medio ver haría que la partida siguiente NO se grabara (Replay.alEmpezar
+     * no graba mientras se está viendo una). */
+    if (window.PM.Game.inGame()) window.PM.Game.toMenu();
+    window.PM.Replay.salir(true);
+    try { localStorage.removeItem(CFG.SAVE_KEY); } catch (e) { /* nada */ }
+    try {
+      fn(Gd);
+    } finally {
+      Gd.luego = luego;
+      Gd.deNube = null;
+      window.PM.Replay.salir();
+      if (window.PM.Game.inGame()) window.PM.Game.toMenu();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.SAVE_KEY);
+        else localStorage.setItem(CFG.SAVE_KEY, previo);
+        if (previoRep === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previoRep);
+      } catch (e) { /* sin almacén */ }
+    }
+  }
+
+  /* Guion de giros para tener una partida que guardar: Pac-Man come, dobla
+   * esquinas y se cruza con los fantasmas. Los giros van por tick simulado,
+   * igual que en las pruebas de repeticiones. */
+  var GUION_MEDIAS = [[5, 1], [40, 0], [95, 3], [150, 2], [210, 1], [260, 0],
+                      [330, 3], [400, 2], [470, 1], [540, 0], [610, 3],
+                      [700, 2], [800, 1], [900, 0]];
+
+  function juegaGuion(total) {
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    var k = 0;
+    for (var i = 0; i < total; i++) {
+      while (k < GUION_MEDIAS.length && GUION_MEDIAS[k][0] === i) {
+        G.setPacDir(0, GUION_MEDIAS[k][1]);
+        k++;
+      }
+      G.step();
+    }
+  }
+
+  /* Como si se hubiera cerrado la pestaña de golpe: la partida desaparece
+   * sin pasar por ningún cierre, que es justo lo que hay que sobrevivir. */
+  function cierraDeGolpe() {
+    G.state = 'MENU';
+    window.PM.Replay.modo = null;
+    window.PM.Replay.grabando = null;
+    window.PM.Replay.t = 0;
+    G.replaying = false;
+  }
+
+  /* La prueba gorda: la partida recuperada tiene que ser LA MISMA, no una
+   * parecida. Se comparan los puntos, lo que queda por comer, dónde está
+   * cada uno y el reloj. */
+  test('una partida a medias se recupera exactamente donde iba', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(1000);
+      ok(G.score > 0, 'la partida hizo puntos');
+      ok(G.state !== 'GAME_OVER', 'y llegó viva a guardarse');
+
+      var sobre = Gd.guardar(false);
+      ok(sobre, 'la partida se guarda');
+      eq(sobre.p, G.score, 'el sobre lleva la puntuación de ahora');
+      var antes = {
+        p: G.score, dl: G.dotsLeft, lv: G.level, vidas: G.lives,
+        tm: G.timeTicks, gm: G.globalMode, ft: G.frightTicks,
+        px: G.pacs[0].x, py: G.pacs[0].y, pd: G.pacs[0].dir,
+        g0: G.ghosts[0].x + ',' + G.ghosts[0].y + ',' + G.ghosts[0].mode,
+        g3: G.ghosts[3].x + ',' + G.ghosts[3].y + ',' + G.ghosts[3].mode
+      };
+      cierraDeGolpe();
+
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'la partida se recupera');
+      eq(G.score, antes.p, 'LA PUNTUACIÓN NO CUADRA: el determinismo está roto');
+      eq(G.dotsLeft, antes.dl, 'las pastillas que quedan no cuadran');
+      eq(G.level, antes.lv, 'el nivel no cuadra');
+      eq(G.lives, antes.vidas, 'las vidas no cuadran');
+      eq(G.timeTicks, antes.tm, 'el cronómetro no cuadra');
+      eq(G.globalMode, antes.gm, 'la fase de los fantasmas no cuadra');
+      eq(G.frightTicks, antes.ft, 'lo que quedaba de superpastilla no cuadra');
+      eq(G.pacs[0].x + ',' + G.pacs[0].y, antes.px + ',' + antes.py,
+         'Pac-Man no está donde estaba');
+      eq(G.pacs[0].dir, antes.pd, 'Pac-Man no mira a donde miraba');
+      eq(G.ghosts[0].x + ',' + G.ghosts[0].y + ',' + G.ghosts[0].mode, antes.g0,
+         'BLINKY no está donde estaba');
+      eq(G.ghosts[3].x + ',' + G.ghosts[3].y + ',' + G.ghosts[3].mode, antes.g3,
+         'CLYDE no está donde estaba');
+    });
+  });
+
+  test('la partida recuperada vuelve a ser una partida de verdad', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(900);
+      ok(Gd.guardar(false), 'se guarda');
+      cierraDeGolpe();
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'se recupera');
+      /* deja de ser una repetición: vuelve a grabarse y vuelve a contar */
+      eq(window.PM.Replay.modo, 'grabar', 'la partida se sigue grabando');
+      eq(G.replaying, false, 'ya no es una repetición');
+      eq(G.xpSent, false, 'y lo que haga contará al acabar');
+      ok(G.paused, 'se entra en pausa, no en marcha');
+      ok(window.PM.Replay.enCurso().entradas.length > 0,
+         'la grabación conserva los giros de antes');
+    });
+  });
+
+  /* Lo que de verdad no puede pasar: que una partida se cobre dos veces por
+   * haberla dejado a medias y retomado. */
+  test('guardar y salir no cobra, y acabarla después cobra una sola vez', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      var L = window.PM.Level;
+      G.newGame({ players: 1 });
+      juegaGuion(900);
+      var puntos = G.score;
+      var xpAntes = L.xp();
+      ok(Gd.guardarYSalir(), 'guardar y salir funciona');
+      eq(G.state, 'MENU', 'se sale al menú');
+      eq(L.xp(), xpAntes, 'salir guardando NO da experiencia');
+      ok(Gd.hay(), 'y la partida se queda guardada');
+
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'se recupera');
+      eq(G.score, puntos, 'con los mismos puntos');
+      G.toMenu();                       // ahora sí: se acaba de verdad
+      eq(L.xp(), xpAntes + puntos, 'al acabarla se cobra ENTERA y una sola vez');
+      eq(Gd.hay(), false, 'y lo guardado se tira: ya no hay nada que seguir');
+    });
+  });
+
+  test('una partida que al rehacerla no sale igual no se retoma', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(800);
+      var sobre = Gd.guardar(false);
+      ok(sobre, 'se guarda');
+      /* un sobre que dice otra puntuación es lo mismo que le pasaría a una
+       * partida guardada con otra versión del juego: al rehacerla no sale */
+      sobre.p = sobre.p + 10;
+      localStorage.setItem(CFG.SAVE_KEY, JSON.stringify(sobre));
+      cierraDeGolpe();
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, 'NO CUADRA', 'se planta en vez de seguir una partida que no es');
+      eq(G.inGame(), false, 'y no deja una partida a medio montar');
+      ok(Gd.hay(), 'lo guardado NO se tira solo: lo decide quien juega');
+    });
+  });
+
+  test('un guardado ilegible se rechaza sin romper nada', function () {
+    conGuardado(function (Gd) {
+      localStorage.setItem(CFG.SAVE_KEY,
+        '{"v":1,"rep":"esto no es una partida","t":50,"p":100,"modo":"solo"}');
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, 'ROTA', 'se avisa de que no se puede leer');
+    });
+  });
+
+  test('CACERÍA no se puede guardar a medias', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, caza: true });
+      G.state = 'PLAYING';
+      ticks(60);
+      eq(Gd.puedeGuardar(), false, 'CACERÍA no se graba, así que no se guarda');
+      eq(Gd.guardar(false), null, 'y no deja sobre');
+      G.toMenu();
+    });
+  });
+
+  /* Jugar a otra cosa no puede costarle a nadie la partida que dejó a medias:
+   * CACERÍA y ONLINE no guardan, así que tampoco borran. */
+  test('una partida de CACERÍA no se lleva por delante la guardada', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(700);
+      ok(Gd.guardarYSalir(), 'se guarda la de CLÁSICO');
+      var titulo = Gd.titulo();
+      G.newGame({ players: 1, caza: true });
+      G.state = 'PLAYING';
+      ticks(120);
+      G.toMenu();
+      ok(Gd.hay(), 'la partida guardada sigue ahí');
+      eq(Gd.titulo(), titulo, 'y es la misma');
+    });
+  });
+
+  test('empezar otra partida y acabarla sí tira la guardada', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(700);
+      ok(Gd.guardarYSalir(), 'se guarda');
+      G.newGame({ players: 1 });
+      juegaGuion(200);
+      G.toMenu();
+      eq(Gd.hay(), false, 'la de antes ya no está');
+    });
+  });
+
+  /* El laberinto alternativo no cabe en el formato de la repetición, así que
+   * el sobre se lo apunta aparte. Sin esto, una partida de LABERINTOS se
+   * retomaría en el laberinto de 1980 y no cuadraría nada. */
+  test('la partida a medias de LABERINTOS se recupera en SU laberinto', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, maze: 'anillos' });
+      juegaGuion(900);
+      if (G.state === 'GAME_OVER') return;    // ahí no hay nada que guardar
+      var sobre = Gd.guardar(false);
+      ok(sobre, 'se guarda');
+      eq(sobre.maze, 'anillos', 'el sobre se apunta el laberinto');
+      var pts = G.score, quedan = G.dotsLeft;
+      cierraDeGolpe();
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'se recupera');
+      eq(G.mazeId, 'anillos', 'y en el laberinto en el que se jugaba');
+      eq(G.score, pts, 'con los mismos puntos');
+      eq(G.dotsLeft, quedan, 'y lo mismo por comer');
+    });
+  });
+
+  test('de la nube solo se hace caso a la partida más nueva', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(700);
+      var mio = Gd.guardar(false);
+      ok(mio, 'hay una partida guardada aquí');
+      var vieja = JSON.parse(JSON.stringify(mio));
+      vieja.p = 12345;
+      vieja.fecha = mio.fecha - 60000;
+      Gd.desdeNube(JSON.stringify(vieja));
+      eq(Gd.sobre().p, mio.p, 'una de la nube más vieja no pisa la de aquí');
+      var nueva = JSON.parse(JSON.stringify(mio));
+      nueva.p = 54321;
+      nueva.fecha = mio.fecha + 60000;
+      Gd.desdeNube(JSON.stringify(nueva));
+      eq(Gd.sobre().p, 54321, 'una más nueva sí manda');
+      Gd.desdeNube('esto no es un sobre');
+      eq(Gd.sobre().p, mio.p, 'y una ilegible se ignora');
+    });
+  });
+
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------

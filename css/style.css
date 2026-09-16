@@ -733,6 +733,38 @@ body {
   margin-top: -4px;
 }
 
+/* ---------- CONTINUAR: la partida que quedó a medias ----------
+ * Sale encima de ELIGE MODO y solo cuando hay una guardada (js/guardado.js).
+ * Va en verde y no en el amarillo de JUGAR a propósito: son dos caminos
+ * distintos y el ojo tiene que poder separarlos de un vistazo. */
+.cont-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 9px 8px;
+  background: #04120a;
+  border: 2px solid #1f6b3a;
+}
+
+.cont-line {
+  font-size: clamp(9px, 1.5vh, 11px);
+  letter-spacing: 1px;
+  color: #cfcfcf;
+  text-align: center;
+}
+
+.btn-cont {
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.btn-cont:hover, .btn-cont:focus-visible {
+  background: #00ff00;
+  color: #000;
+}
+
 /* JUGAR manda en la portada: es el único botón grande que hay. */
 .btn-play {
   font-size: clamp(15px, 2.4vh, 20px);

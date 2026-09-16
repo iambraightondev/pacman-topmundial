@@ -13,6 +13,44 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**15 sep (noche) — LA PARTIDA A MEDIAS (`pm-v64`).** Braighton dejó una
+partida empezada en otro ordenador y quiso seguirla; no se podía, porque el
+juego no guardaba partidas sin terminar en ningún sitio. Ahora sí: GUARDAR Y
+SALIR en el menú de pausa (`G`) y CONTINUAR en la portada, y **con cuenta la
+partida cruza de aparato** (columna `partida` en `perfiles`, ya aplicada en
+Supabase). Lo que se guarda no es una foto del laberinto sino **la repetición
+cortada por donde iba**: al retomarla se vuelve a jugar sola a toda velocidad
+(25.000 ticks en ~0,2 s) y el mando vuelve en pausa. Detalle en SPEC
+(*Partida a medias*). `tests.html` 337/337; Node, los 2 fallos de siempre.
+
+**Lo importante de este cambio, si se toca algo cerca:**
+- **Guardar y cobrar se excluyen.** GUARDAR Y SALIR no da experiencia ni
+  monedas ni récord (bandera `Game.salvada`); eso se cobra entero cuando la
+  partida termina de verdad, y ahí se borra lo guardado. Si alguien mete otra
+  salida de partida, tiene que caer en uno de los dos lados.
+- **Si cambia cómo se mueve algo del juego** (fantasmas, velocidades, la
+  casa), las partidas guardadas ANTES del cambio ya no se pueden rehacer.
+  No es grave —se comprueba y se avisa— pero conviene saberlo al tocar la
+  simulación.
+- **Si se añade un laberinto o un modo nuevo:** el laberinto va en el sobre
+  (`maze`), no en la repetición. Un modo que la repetición no sepa grabar
+  (como CACERÍA) simplemente no se podrá continuar, y eso está bien.
+
+**Lo que queda por mirar de esto:**
+- **Una partida larga de verdad** (de las de 100.000+): la recuperación
+  debería tardar 1 o 2 segundos, pero solo se ha medido con partidas de
+  pruebas.
+- **En el móvil**, que el bloque CONTINUAR de la portada no empuje el resto.
+- Un guardado hecho **justo al cambiar de nivel** se retoma un pelo antes y se
+  ve otra vez el cambio de nivel. Es correcto, pero si molesta se puede
+  afinar.
+- **Las repeticiones de LABERINTOS estaban rotas de antes** (esto salió al
+  hacer lo anterior): el formato de repetición no guarda en qué laberinto se
+  jugó, así que al ver una de LABERINTOS se reproduce en el laberinto de 1980
+  y no cuadra nada. La partida a medias no lo sufre porque el sobre sí se lo
+  apunta. Arreglarlo del todo pide meter el laberinto en el formato y subirle
+  la versión.
+
 **15 sep (noche) — CIERRE DE SESIÓN, TODO SUBIDO (`pm-v63`).** Lo hecho hoy,
 en orden, con su detalle más abajo: el DAILY pasó a ser **LA CARTILLA**
 (`v51`, más grande en `v52`, botín cobrado en verde en `v57`); el selector de

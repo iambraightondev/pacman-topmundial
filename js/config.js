@@ -1114,6 +1114,34 @@
   CFG.REPLAY_TOTAL_CHARS = 90000; // techo de todas juntas
   CFG.REPLAY_MAX_ENTRADAS = 20000;// giros máximos en una repetición
 
+  /* ---------- Partida a medias (js/guardado.js) ----------
+   * Lo que se guarda NO es una foto del laberinto: es la MISMA repetición
+   * que ya se graba de toda partida (ajustes + giros + el tick de cada uno)
+   * cortada por donde se iba. Al retomarla se vuelve a simular a toda
+   * velocidad hasta ese tick y el mando pasa al jugador. Por eso ocupa lo
+   * mismo que una repetición y viaja a la nube sin problema: es lo que hace
+   * que se pueda dejar una partida en un aparato y seguirla en otro.
+   *
+   * Solo se guarda lo que la repetición sabe reconstruir: CLÁSICO, DÚO,
+   * DESATADO, PAC-MAN VS. y LABERINTOS, de uno o dos en el mismo teclado.
+   * CACERÍA no se graba (lleva un jugador más, el de la máquina) y ONLINE
+   * lo simula el anfitrión, así que ninguno de los dos se puede continuar. */
+  CFG.SAVE_KEY = 'pacman-topmundial-partida';
+  CFG.SAVE_V = 1;                 // versión del sobre guardado
+  CFG.SAVE_EVERY = 300;           // ticks entre guardados (5 s)
+  CFG.SAVE_CLOUD_EVERY = 3600;    // y entre subidas a la nube (1 min)
+  /* Tope del texto guardado. Es más alto que el de una repetición para
+   * compartir (CFG.REPLAY_MAX_CHARS, 24000) porque aquella tiene que caber en
+   * una URL y esta no: va a localStorage y a una columna de texto. Con el
+   * tope de giros de una repetición (REPLAY_MAX_ENTRADAS) no se llega ni de
+   * lejos, así que una partida larga de verdad se guarda entera. */
+  CFG.SAVE_MAX_CHARS = 120000;
+  /* Tope de pasos de la recuperación: si al llegar aquí no se ha alcanzado
+   * el tick guardado, algo va mal y se para en vez de colgar la pestaña.
+   * Son ocho horas de partida, muy por encima de cualquiera de verdad. */
+  CFG.SAVE_MAX_PASOS = 1728000;
+  CFG.SAVE_MS_TROZO = 12;         // ms de simulación seguidos antes de soltar el hilo
+
   /* ---------- Nivel de jugador (experiencia acumulada) ----------
    * Sube con los puntos de TODAS las partidas y no tiene tope: cada nivel
    * pide más que el anterior (crecimiento suave, ni plano ni imposible). */
