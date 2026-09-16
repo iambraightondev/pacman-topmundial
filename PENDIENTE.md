@@ -43,10 +43,11 @@ en SPEC (*Watching one is watching a video*). `tests.html` 343/343; Node, los
 - Una repetición **muy larga** (40 min): debería prepararse en uno o dos
   segundos y ocupar cerca de un mega de fotos. Medido solo con partidas
   cortas y con una simulada de 33 minutos, que iba sobrada.
-- Las repeticiones de **LABERINTOS** siguen rotas de antes: el formato no
-  guarda en cuál se jugó, así que se ven en el laberinto de 1980 y no cuadra
-  nada. Ahora que el aspecto ya viaja en un campo opcional al final, meter
-  ahí el laberinto es el mismo patrón y poco trabajo.
+- **Las repeticiones de LABERINTOS ya están arregladas** (16 sep): el
+  laberinto viaja como una bandera más de los ajustes y se reproduce en el
+  suyo; comprobado en los seis. Las grabadas ANTES de ese arreglo no tienen
+  arreglo posible —no llevan dentro en cuál se jugó— y se seguirán viendo
+  en el laberinto de siempre.
 
 **15 sep (noche) — LA PARTIDA A MEDIAS (`pm-v64`).** Braighton dejó una
 partida empezada en otro ordenador y quiso seguirla; no se podía, porque el

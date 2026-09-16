@@ -447,6 +447,14 @@
         // sin Pac-Man no hay partida, y sin fantasma humano no es de VS.
         if (!hayPac || !hayFantasma) return false;
       } else if (a.ghosts) return false;
+      /* Un laberinto que este juego no conoce —de una versión más nueva, o
+       * uno que se quitó— no se puede reproducir: se vería la partida en un
+       * trazado que no es y nada cuadraría. Es la misma regla que en las
+       * repeticiones de red. */
+      if (a.maze) {
+        var M = window.PM.Mazes;
+        if (typeof a.maze !== 'string' || (M && !M.conocido(a.maze))) return false;
+      }
       if (!esLista(rep.nombres) || !rep.nombres.length) return false;
       /* El aspecto es opcional (las repeticiones de antes no lo traen), pero
        * si viene tiene que ser una lista: lo que lleve dentro ya se sanea al
@@ -486,6 +494,8 @@
       if (a.vidasModo === 'individual') aj.push('i');
       if (esLista(a.ghosts)) aj.push(codGhosts(a.ghosts));
       if (a.qArmada) aj.push('q');
+      // 'm' + el laberinto (los ids no llevan ni comas ni virgulillas)
+      if (a.maze) aj.push('m' + String(a.maze).replace(/[^a-z0-9_-]/gi, ''));
       var nombres = [];
       for (i = 0; i < rep.nombres.length; i++) {
         nombres.push(limpiaNombre(rep.nombres[i]));
@@ -540,6 +550,7 @@
           if (aj[b] === 'i') ajustes.vidasModo = 'individual';
           else if (aj[b].charAt(0) === 'g') ajustes.ghosts = decGhosts(aj[b]);
           else if (aj[b] === 'q') ajustes.qArmada = true;
+          else if (aj[b].charAt(0) === 'm') ajustes.maze = aj[b].slice(1);
         }
 
         var crudos = p[6].split(','), nombres = [];
@@ -829,6 +840,11 @@
       // el reparto de vidas cambia la simulación en dúo, así que viaja
       // con los ajustes cuando no es el de siempre
       if (G.livesMode === 'individual') ajustes.vidasModo = 'individual';
+      /* LABERINTOS: en cuál se jugaba. Es lo que más cambia la simulación de
+       * todo lo que hay aquí —el trazado entero— y hasta ahora no se grababa:
+       * una repetición de un laberinto alternativo se reproducía en el de
+       * 1980 y se veía a Pac-Man atravesando muros. */
+      if (G.mazeId) ajustes.maze = G.mazeId;
       /* PAC-MAN VS.: quién lleva qué fantasma. Es lo que más cambia la
        * simulación de todo lo que hay aquí —uno de los cuatro deja de pensar
        * por su cuenta— así que sin esto la repetición no se puede montar. */
@@ -1837,7 +1853,8 @@
         // ni los giros del que llevaba fantasma, a quién moverle
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
           ? rep.ajustes.ghosts.slice() : null,
-        maze: (extra && extra.maze) || null
+        maze: (extra && extra.maze) ||
+          ((rep.ajustes && rep.ajustes.maze) || null)
       });
     },
 

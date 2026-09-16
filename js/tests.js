@@ -7371,6 +7371,61 @@
   });
 
 
+  /* Las repeticiones de LABERINTOS se veían en el laberinto de 1980 —el
+   * formato no guardaba en cuál se había jugado— y no cuadraba nada: Pac-Man
+   * atravesando muros y una puntuación que no era la de nadie. */
+  test('una repetición de LABERINTOS se reproduce en SU laberinto', function () {
+    conVideo(function (R) {
+      var rep = repetiCorta({ players: 1, maze: 'anillos' }, 1100);
+      eq(rep.ajustes.maze, 'anillos', 'la repetición se apunta el laberinto');
+      var tGrab = R.t;
+      var esperado = G.score + '/' + G.dotsLeft + '/' +
+        G.pacs[0].x + ',' + G.pacs[0].y + '/' + G.ghosts[0].x + ',' + G.ghosts[0].y;
+      ok(G.score > 0, 'la partida hizo puntos');
+
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'el laberinto pasa por el texto');
+      eq(leida.ajustes.maze, 'anillos', 'y vuelve');
+      ok(R.ver(leida), 'la repetición arranca');
+      eq(G.mazeId, 'anillos', 'y se monta en el laberinto en el que se jugó');
+      R.irA(tGrab);
+      eq(G.score + '/' + G.dotsLeft + '/' + G.pacs[0].x + ',' + G.pacs[0].y +
+         '/' + G.ghosts[0].x + ',' + G.ghosts[0].y, esperado,
+         'LA PARTIDA NO SALE IGUAL: el laberinto no llegó');
+    });
+  });
+
+  test('una repetición de un laberinto que no existe se da por rota', function () {
+    var R = window.PM.Replay;
+    var rep = {
+      v: 1, modo: 'solo', semilla: null, nivel: 1, jugadores: 1,
+      ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3,
+                 maze: 'estelaberintonoexiste' },
+      nombres: ['UNO'], fecha: new Date().toISOString(), entradas: [[10, 0, 1]],
+      final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 1000 }
+    };
+    eq(R.valida(rep), false, 'un laberinto desconocido no vale');
+    /* y el mismo texto con un laberinto de los buenos, sí */
+    rep.ajustes.maze = 'anillos';
+    ok(R.valida(rep), 'uno de los que hay, sí');
+    ok(R.leer(R.serializar(rep)), 'y pasa por el texto');
+  });
+
+  test('una repetición del laberinto de siempre no engorda por esto', function () {
+    var R = window.PM.Replay;
+    var rep = {
+      v: 1, modo: 'solo', semilla: null, nivel: 1, jugadores: 1,
+      ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3 },
+      nombres: ['UNO'], fecha: new Date().toISOString(), entradas: [[10, 0, 1]],
+      final: { puntos: 100, nivel: 1, fantasmas: 0, tiempoMs: 1000 }
+    };
+    var ajustes = R.serializar(rep).split('~')[5];
+    eq(ajustes.indexOf('m'), -1, 'sin laberinto no hay bandera de laberinto');
+    var vuelta = R.leer(R.serializar(rep));
+    ok(vuelta && !vuelta.ajustes.maze, 'y al leerla no se inventa ninguno');
+  });
+
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------

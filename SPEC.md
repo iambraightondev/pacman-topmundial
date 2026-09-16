@@ -668,6 +668,18 @@ without it. `modo: 'reto'` is still accepted by the format although the mode
 is gone: replays of old challenge runs are shared links that still work, and
 `modo` only changes behaviour for `hab`.
 
+`maze` carries the alternative maze (LABERINTOS). It was missing until
+2026-09-16, and it is the single setting that changes the simulation most —
+the whole layout — so those replays played back in the 1980 maze with
+Pac-Man walking through walls and a score that matched nothing. It rides as
+an `ajustes` flag (`m` + id) because that part of the format was built to be
+extended: the tail of the settings field is read **by what each flag is**,
+not by its position, so old ten-field replays are unaffected. `valida()`
+rejects a replay whose maze this build does not know (same rule the network
+format already had): better called broken than shown in the wrong layout.
+Replays of LABERINTOS recorded *before* this cannot be fixed — nothing in
+them says which maze it was.
+
 `PM.Replay.serializar(rep)` returns a compact URL-safe string (`~`-separated
 fields — ten of them, plus an optional eleventh carrying the look — base36
 numbers, tick deltas, one packed letter `G..V` per

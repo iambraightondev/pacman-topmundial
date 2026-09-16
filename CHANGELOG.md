@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Arregladas las repeticiones de LABERINTOS
+
+- Una repetición de un laberinto alternativo **se veía en el laberinto de
+  siempre**: Pac-Man atravesando muros, los fantasmas por donde no y una
+  puntuación que no era la de nadie. La grabación nunca guardó en cuál se
+  había jugado.
+- Ahora sí lo guarda, y se reproduce en el suyo. Comprobado en los seis.
+- Si la repetición viene de un laberinto que este juego no conoce, se dice
+  que está rota en vez de enseñarla mal.
+- **Las de LABERINTOS grabadas antes de hoy no se pueden arreglar**: no hay
+  nada dentro de ellas que diga en cuál se jugó.
+
 ## 2026-09-16 · Las repeticiones se ven como un vídeo
 
 - **Barra de tiempo**: se ve por dónde va y cuánto dura, y **se arrastra**
