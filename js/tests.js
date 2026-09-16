@@ -7661,6 +7661,40 @@
   });
 
 
+  /* Los contadores por modo son más nuevos que el juego: al crearlos, lo ya
+   * jugado se apuntó TODO a CLÁSICO. La tabla por modo no puede fiarse de eso
+   * o le dice a quien solo juega a DESATADO que no lo ha jugado nunca, y le
+   * pone a CLÁSICO como mejor marca una partida de DESATADO. */
+  test('la tabla por modo no se cree el reparto viejo de los contadores', function () {
+    var S = window.PM.Stats;
+    /* una cuenta de las de antes: todo apuntado a clásico, y de DESATADO solo
+     * queda el rastro de sus récords y sus mordiscos */
+    var d = S.de({
+      partidas: 737, puntosMax: 180550, nivelMax: 10, racha: 4,
+      mordiscos: 1091, muros: 272,
+      'clasico:partidas': 734, 'clasico:puntosMax': 180550,
+      'hab:puntosMax': 180550, 'hab:mordiscos': 1091,
+      'lab:partidas': 4, 'lab:puntosMax': 12360
+    }, 6685710, { formatos: [49050, 76290, 22600, 0], hab: 180550, lab: 12360 });
+
+    var porId = {};
+    for (var i = 0; i < d.mundos.length; i++) porId[d.mundos[i].id] = d.mundos[i];
+
+    eq(porId.clasico.mejor, 76290,
+       'el mejor del CLÁSICO es su récord del laberinto de siempre, no una partida de DESATADO');
+    eq(porId.hab.mejor, 180550, 'y el de DESATADO, el suyo');
+    eq(porId.lab.mejor, 12360, 'y el de LABERINTOS, el suyo');
+    eq(porId.hab.partidas, -1,
+       'las partidas de DESATADO no se saben: se enseñan como un guion, no como cero');
+    ok(porId.clasico.aprox,
+       'y las de CLÁSICO quedan marcadas como aproximadas, porque llevan las otras dentro');
+    eq(S.porMundo(d)[0].partidas.charAt(0), '~', 'la virgulilla se ve en la tabla');
+    eq(S.porMundo(d)[1].partidas, '—', 'y el guion también');
+    eq(d.mundosJugados, 3,
+       'y para VARIEDAD cuenta que ha jugado a DESATADO aunque su contador esté a cero');
+  });
+
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------

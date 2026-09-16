@@ -49,6 +49,57 @@
   var Stats = {
 
     /* =========================================================
+     * LO QUE LOS CONTADORES POR MODO NO SABEN
+     *
+     * Los contadores por modo (`hab:partidas`, `clasico:puntosMax`...) son
+     * posteriores al juego, y al crearlos hubo que repartir lo ya jugado sin
+     * saber de qué modo era cada partida: se apuntó TODO a CLÁSICO
+     * (Achievements.sembrarModos). Para los logros da igual —solo miran
+     * umbrales— pero para una tabla de estadísticas es sencillamente falso:
+     * deja DESATADO a cero partidas a quien no ha jugado a otra cosa, y le
+     * pone a CLÁSICO como mejor marca una partida de DESATADO.
+     *
+     * Así que la tabla por modo NO se fía de esos dos contadores cuando hay
+     * una fuente mejor:
+     *
+     *   MEJOR    — los RÉCORDS, que sí se guardan por mundo desde siempre:
+     *              los de formato (record1..4) son del laberinto de 1980 y
+     *              DESATADO no entra en ellos; `record_hab` y `record_lab`
+     *              son los suyos. CACERÍA y PAC-MAN VS. no tienen récord
+     *              propio, así que ahí manda su contador.
+     *   PARTIDAS — no hay forma de reconstruirlas. Si el contador dice cero
+     *              pero hay RASTRO de haber jugado a ese modo (su récord, sus
+     *              mordiscos, sus cazas...), se enseña un guion: no se sabe.
+     *              Mentir con un cero es peor que decir que no se sabe.
+     * ========================================================= */
+    /* El mejor de un mundo, de la fuente más fiable que haya */
+    mejorDe: function (c, id, records) {
+      records = records || {};
+      var fmt = records.formatos || [];
+      if (id === 'clasico') {
+        /* el mejor del laberinto de siempre, juegue solo o acompañado */
+        var m = 0;
+        for (var i = 0; i < fmt.length; i++) m = Math.max(m, num(fmt[i]));
+        return m || cont(c, 'puntosMax', id);
+      }
+      if (id === 'hab' || id === 'lab') {
+        return num(records[id]) || cont(c, 'puntosMax', id);
+      }
+      return cont(c, 'puntosMax', id);
+    },
+
+    /* ¿Hay rastro de que haya jugado a ese mundo? */
+    rastroDe: function (c, id, records) {
+      records = records || {};
+      if (cont(c, 'partidas', id) > 0) return true;
+      if (this.mejorDe(c, id, records) > 0) return true;
+      if (id === 'hab') return cont(c, 'mordiscos') > 0 || cont(c, 'muros') > 0;
+      if (id === 'vs') return cont(c, 'cazas') > 0;
+      if (id === 'caza') return cont(c, 'cazas', 'caza') > 0;
+      return false;
+    },
+
+    /* =========================================================
      * LAS COTAS
      * Contadores que llegaron con esta pantalla y que antes no existían. Lo
      * mínimo que TUVO que pasar para llegar a lo que ya está contado:
@@ -206,21 +257,29 @@
       for (var i = 0; i < CFG.STATS.MUNDOS.length; i++) {
         var m = CFG.STATS.MUNDOS[i];
         var p = cont(c, 'partidas', m.id);
-        if (p > 0) jugados++;
-        /* DESATADO y LABERINTOS llevan su récord en columna propia desde
-         * antes de que existieran los contadores por modo: si el contador
-         * todavía está a cero, manda el récord, que sí está. */
-        var mejorMundo = cont(c, 'puntosMax', m.id);
-        if (!mejorMundo && records[m.id] > 0) mejorMundo = records[m.id];
+        var rastro = this.rastroDe(c, m.id, records);
+        if (rastro) jugados++;
         d.mundos.push({
           id: m.id, name: m.name, color: m.color,
-          partidas: p,
-          mejor: mejorMundo,
+          /* -1 = no se sabe: ha jugado, pero de antes de que cada modo
+           * llevara su cuenta. La pantalla lo enseña como un guion. */
+          partidas: (p > 0) ? p : (rastro ? -1 : 0),
+          mejor: this.mejorDe(c, m.id, records),
           fantasmas: cont(c, 'fantasmas', m.id),
           tiempo: cont(c, 'tiempo', m.id)
         });
       }
       d.mundosJugados = jugados;
+      /* Si hay un modo con rastro pero sin cuenta, sus partidas están dentro
+       * de las de CLÁSICO (así se repartió lo viejo), así que ese número es
+       * aproximado y se enseña con su virgulilla en vez de como un dato
+       * exacto que no es. */
+      var dudoso = false, cl = null;
+      for (var w = 0; w < d.mundos.length; w++) {
+        if (d.mundos[w].id === 'clasico') cl = d.mundos[w];
+        else if (d.mundos[w].partidas < 0) dudoso = true;
+      }
+      if (dudoso && cl && cl.partidas > 0) cl.aprox = true;
       return d;
     },
 
@@ -432,7 +491,8 @@
         var m = d.mundos[i];
         filas.push({
           name: m.name, color: m.color,
-          partidas: S.miles(m.partidas),
+          partidas: (m.partidas < 0) ? '—'
+            : ((m.aprox ? '~' : '') + S.miles(m.partidas)),
           mejor: m.mejor ? S.miles(m.mejor) : '—',
           tiempo: m.tiempo ? S.reloj(m.tiempo) : '—'
         });

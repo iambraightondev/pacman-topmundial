@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · La tabla POR MODO, arreglada
+
+- Decía **0 partidas en DESATADO** a quien más lo ha jugado, y le ponía a
+  CLÁSICO como mejor marca una partida de DESATADO. El fallo venía de que los
+  contadores por modo son más nuevos que el juego: al crearlos, lo ya jugado
+  se apuntó todo a CLÁSICO.
+- Ahora la tabla no se fía de eso. **La mejor marca de cada modo sale de su
+  récord**, que sí se guarda por separado desde siempre. Y las partidas que no
+  se pueden saber salen con un **guion** en vez de un cero que miente; las de
+  CLÁSICO, con una virgulilla, porque llevan las otras dentro.
+- Al pie se explica, que una cifra rara sin explicación es peor que la cifra.
+
 ## 2026-09-16 · PERFIL · CIFRAS: todo lo que llevas hecho
 
 - Pestaña nueva en el PERFIL con **todo lo que se sabe de un jugador**:

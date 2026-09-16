@@ -4533,11 +4533,25 @@
        * puntos, y eso se dice: sale igual en el perfil propio que en el de
        * otro, que también puede llevar cifras estimadas. */
       var est = d.estimado || 0;
-      b.pie.textContent = est
-        ? ('ANTES DEL 16/09/2026 NO SE GUARDABAN NI EL TIEMPO NI LOS NIVELES: ' +
-           'DE ESAS HORAS, ' + S.reloj(est) + ' SON UNA ESTIMACIÓN POR LOS PUNTOS, ' +
-           'Y LOS NIVELES, LAS PASTILLAS Y LAS CADENAS DE ENTONCES SON MÍNIMOS.')
-        : '';
+      var avisos = [];
+      if (est) {
+        avisos.push('ANTES DEL 16/09/2026 NO SE GUARDABAN NI EL TIEMPO NI LOS NIVELES: ' +
+          'DE ESAS HORAS, ' + S.reloj(est) + ' SON UNA ESTIMACIÓN POR LOS PUNTOS, ' +
+          'Y LOS NIVELES, LAS PASTILLAS Y LAS CADENAS DE ENTONCES SON MÍNIMOS.');
+      }
+      /* El reparto de partidas por modo es más nuevo que el juego, y lo que
+       * se jugó antes se apuntó todo a CLÁSICO. Donde no se sabe sale un
+       * guion, pero hay que decir por qué. */
+      var dudoso = false;
+      for (var md = 0; md < d.mundos.length; md++) {
+        if (d.mundos[md].partidas < 0) dudoso = true;
+      }
+      if (dudoso) {
+        avisos.push('LAS PARTIDAS DE CADA MODO SE CUENTAN DESDE QUE CADA MODO LLEVA SU ' +
+          'CUENTA: LAS DE ANTES SE APUNTARON TODAS A CLÁSICO, Y DONDE NO SE SABE VA UN GUION. ' +
+          'LAS MEJORES MARCAS SÍ SON LAS DE CADA MODO.');
+      }
+      b.pie.textContent = avisos.join(' ');
     },
 
     cifraCabecera: function (celdas) {
