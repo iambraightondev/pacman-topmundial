@@ -5692,7 +5692,9 @@
     },
 
     /* Diálogo de entrar / crear cuenta */
-    showAccountPrompt: function (modo) {
+    /* alVolver: qué hacer al acabar (entrando o dándole a VOLVER). Sin él,
+     * se cierra el diálogo; desde el aviso del récord, vuelve al GAME OVER. */
+    showAccountPrompt: function (modo, alVolver) {
       var self = this;
       var Ac = window.PM.Account;
       var crear = (modo === 'crear');
@@ -5710,6 +5712,7 @@
           self.refreshNicks();
           self.refreshProfile();
           self.refreshFriends();
+          if (alVolver) alVolver(true);
         }
         if (crear) Ac.signUp(usuario, pass, correo, hecho);
         else Ac.signIn(usuario, pass, hecho);
@@ -5739,7 +5742,10 @@
           onClick: function () { self.showOlvidePrompt(usuario); } });
       }
       botones.push({ label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-        onClick: function () { self.hidePrompt(); } });
+        onClick: function () {
+          self.hidePrompt();
+          if (alVolver) alVolver(false);
+        } });
 
       this.showPrompt({
         title: crear ? 'CREAR CUENTA' : 'ENTRAR',
@@ -8107,7 +8113,9 @@
       }
       // por qué esta partida no entra en el top mundial, si es el caso
       if (g.score > 0 && window.PM.Ranking && window.PM.Ranking.configured()) {
-        if (g.missingRankingName()) {
+        if (g.rankPendiente) {
+          lines.push('SIN CUENTA, ESTA PARTIDA NO ENTRA EN EL TOP MUNDIAL');
+        } else if (g.missingRankingName()) {
           lines.push(g.playerCount > 1
             ? 'PARA ENTRAR EN EL TOP MUNDIAL, TODOS NECESITÁIS NOMBRE'
             : 'PON TU NOMBRE PARA ENTRAR EN EL TOP MUNDIAL');
@@ -8118,9 +8126,46 @@
       return lines;
     },
 
+    /* El récord que no entra: se hizo sin cuenta. Sale ANTES del GAME OVER,
+     * una vez por partida, con las dos puertas a mano. Si entra o crea la
+     * cuenta desde aquí, la partida que esperaba se sube sola. */
+    showAvisoSinCuenta: function () {
+      var self = this;
+      var g = window.PM.Game;
+      g.rankAvisoVisto = true;
+      function volver(entro) {
+        if (entro && g.rankPendiente) {
+          g.subirRankPendiente(function (err) {
+            if (!err) g.setFlash('TU RÉCORD YA ESTÁ EN EL TOP MUNDIAL');
+            self.showGameOverPrompt();
+          });
+          return;
+        }
+        self.showGameOverPrompt();
+      }
+      this.showPrompt({
+        title: '¡NUEVO RÉCORD!',
+        color: '#ffd23f',
+        solid: true,
+        lines: [
+          { text: String(g.score || 0), big: true },
+          'PERO NO VA A APARECER EN EL TOP MUNDIAL: PARA COLOCAR UN RÉCORD HAY QUE JUGAR CON CUENTA',
+          'CREA TU CUENTA O ENTRA AHORA Y ESTA PARTIDA SE SUBE CON TU NOMBRE'
+        ],
+        buttons: [
+          { label: 'CREAR CUENTA', primary: true, keys: ['Enter'], hint: 'ENTER',
+            onClick: function () { self.showAccountPrompt('crear', volver); } },
+          { label: 'YA TENGO CUENTA', onClick: function () { self.showAccountPrompt('entrar', volver); } },
+          { label: 'SEGUIR SIN CUENTA', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { volver(false); } }
+        ]
+      });
+    },
+
     showGameOverPrompt: function () {
       var self = this;
       var g = window.PM.Game;
+      if (g.avisoSinCuenta && g.avisoSinCuenta() && !g.replaying) { this.showAvisoSinCuenta(); return; }
       var duo = (g.playerCount > 1);      // "otra partida" con la misma gente
       var versus = !!(g.isVersus && g.isVersus() && window.PM.Versus);
       var lines = versus ? this.versusLines() : this.classicOverLines();

@@ -27,6 +27,17 @@
   var G = window.PM.Game;
   var casos = [];
 
+  /* Desde el 16 sep solo entra en el top quien juega con cuenta: las pruebas
+   * del envío llevan una sesión de mentira (y nunca la de verdad, PM_PRUEBAS). */
+  function testConCuenta(nombre, fn) {
+    test(nombre, function () {
+      var Ac = window.PM.Account, u0 = Ac.user, t0 = Ac.token;
+      Ac.user = { id: 'id-prueba', usuario: 'PRUEBA', avatar: 'pac' };
+      Ac.token = 'token-de-prueba';
+      try { fn(); } finally { Ac.user = u0; Ac.token = t0; }
+    });
+  }
+
   function test(nombre, fn) {
     var caso = { nombre: nombre, ok: true, error: null };
     try { fn(); } catch (e) { caso.ok = false; caso.error = e.message || String(e); }
@@ -448,7 +459,43 @@
     }
   });
 
-  test('cada mundo va a su top mundial: clásico, DESATADO y LABERINTOS', function () {
+  test('sin cuenta el récord no se sube: se avisa y se sube al entrar', function () {
+    var R = window.PM.Ranking, Ac = window.PM.Account;
+    var orig = R.submit, envios = [], u0 = Ac.user, t0 = Ac.token;
+    var n1 = window.PM.settings.nick1;
+    R.submit = function (o, cb) { envios.push(o); if (cb) cb(null); };
+    window.PM.settings.nick1 = 'INVITADO';
+    try {
+      Ac.user = null; Ac.token = null;
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      G.recordPrevio = 100;
+      G.score = 5000; G.rankingSent = false;
+      G.submitRanking();
+      eq(envios.length, 0, 'sin cuenta no se manda nada');
+      ok(G.rankPendiente, 'la partida queda esperando');
+      ok(G.avisoSinCuenta(), 'y como es récord, se avisa');
+      G.recordPrevio = 9000;
+      ok(!G.avisoSinCuenta(), 'si no supera lo que tenía, no molesta');
+      G.recordPrevio = 100;
+      Ac.user = { id: 'id', usuario: 'CUENTANUEVA', avatar: 'pac' };
+      Ac.token = 'token-de-prueba';
+      G.subirRankPendiente();
+      eq(envios.length, 1, 'al entrar, se sube');
+      eq(envios[0].nombre1, 'CUENTANUEVA', 'con el nombre de la cuenta');
+      eq(G.rankPendiente, null, 'y ya no espera');
+      Ac.user = null; Ac.token = null;
+      var err = null;
+      orig.call(R, { jugadores: 1, nombre1: 'X', puntos: 10, nivel: 1 }, function (e) { err = e; });
+      eq(err, 'NECESITAS UNA CUENTA', 'y el envío en sí tampoco sale sin sesión');
+    } finally {
+      R.submit = orig; Ac.user = u0; Ac.token = t0;
+      window.PM.settings.nick1 = n1;
+      G.toMenu();
+    }
+  });
+
+  testConCuenta('cada mundo va a su top mundial: clásico, DESATADO y LABERINTOS', function () {
     var R = window.PM.Ranking;
     var orig = R.submit, envios = [];
     var n1 = window.PM.settings.nick1;
@@ -944,7 +991,7 @@
     ok(R.maxPuntos(1) > 12000, 'una gran partida del nivel 1 sigue entrando');
   });
 
-  test('una puntuación imposible no llega ni a salir a la red', function () {
+  testConCuenta('una puntuación imposible no llega ni a salir a la red', function () {
     var R = window.PM.Ranking;
     var err = null;
     R.submit({ jugadores: 1, nombre1: 'TRAMPOSO', puntos: 999999, nivel: 1,
@@ -952,7 +999,7 @@
     eq(err, 'PUNTUACIÓN IMPOSIBLE');
   });
 
-  test('la partida se manda a la Edge Function, no a la tabla', function () {
+  testConCuenta('la partida se manda a la Edge Function, no a la tabla', function () {
     var R = window.PM.Ranking;
     var orig = window.fetch, visto = null;
     window.fetch = function (url, opts) {
@@ -1001,7 +1048,7 @@
     eq(G.playedMs(), 10000, '600 ticks a 60 por segundo son 10 s');
   });
 
-  test('solo el anfitrión sube la partida en online', function () {
+  testConCuenta('solo el anfitrión sube la partida en online', function () {
     var R = window.PM.Ranking;
     var orig = R.submit, n = 0;
     var n1 = window.PM.settings.nick1;
@@ -1351,7 +1398,7 @@
   /* Las partidas de 3 y 4 se jugaban pero no salían del navegador: el envío
    * las cortaba y la tabla solo admitía 1 y 2. Ahora cada formato tiene su
    * clasificación, como sus récords y sus maestrías. */
-  test('trío y escuadra entran en el top mundial, con todos sus nombres',
+  testConCuenta('trío y escuadra entran en el top mundial, con todos sus nombres',
     function () {
       var R = window.PM.Ranking;
       var enviado = null, orig = R.submit;

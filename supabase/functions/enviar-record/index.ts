@@ -351,6 +351,65 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const nombre1 = nombres[0];
 
+  /* ---- CUENTAS ----
+   * Desde el 16 de septiembre de 2026 solo entra en el top quien juega con su
+   * cuenta: un nombre suelto lo puede escribir cualquiera, y la tabla se
+   * llenaba de apodos de un día (DANIEL, GOKU, JUGADOR) que nadie podía
+   * reclamar. Así que:
+   *   - quien envía tiene que venir con la sesión abierta (su token, no la
+   *     clave anónima), y ser uno de los que jugaron;
+   *   - y todos los demás nombres de la partida tienen que ser cuentas. */
+  const cabecerasServicio = {
+    'apikey': CLAVE,
+    'Authorization': 'Bearer ' + CLAVE,
+    'Content-Type': 'application/json'
+  };
+  const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  let usuarioId = '';
+  try {
+    const quien = await fetch(URL_BASE + '/auth/v1/user', {
+      headers: { 'apikey': CLAVE, 'Authorization': 'Bearer ' + token }
+    });
+    if (quien.ok) {
+      const u = await quien.json() as { id?: string };
+      usuarioId = String(u && u.id || '');
+    }
+  } catch {
+    /* sin respuesta: se trata como sin sesión */
+  }
+  if (!usuarioId) {
+    return mal('NECESITAS UNA CUENTA', 401,
+      'el top mundial solo admite partidas con la sesión abierta');
+  }
+  const cuentas = new Map<string, string>();   // NOMBRE -> id
+  try {
+    const lista = nombres.slice(0, jugadores)
+      .map((n) => '"' + n.replace(/"/g, '') + '"').join(',');
+    const res = await fetch(URL_BASE + '/rest/v1/perfiles?select=id,usuario&usuario=in.(' +
+      encodeURIComponent(lista) + ')', { headers: cabecerasServicio });
+    if (res.ok) {
+      const filas = await res.json() as Array<{ id: string; usuario: string }>;
+      for (const f of filas) cuentas.set(String(f.usuario).trim().toUpperCase(), f.id);
+    }
+  } catch {
+    return mal('NO SE PUDO COMPROBAR LA CUENTA', 502);
+  }
+  let soyUnoDeEllos = false;
+  const sinCuenta: string[] = [];
+  for (let i = 0; i < jugadores; i++) {
+    const id = cuentas.get(nombres[i].trim().toUpperCase());
+    if (!id) sinCuenta.push(nombres[i]);
+    else if (id === usuarioId) soyUnoDeEllos = true;
+  }
+  if (sinCuenta.length) {
+    return mal(jugadores > 1 ? 'TODOS NECESITAN CUENTA' : 'NECESITAS UNA CUENTA', 403,
+      'sin cuenta: ' + sinCuenta.join(', '));
+  }
+  if (!soyUnoDeEllos) {
+    return mal('ESA PARTIDA NO ES TUYA', 403,
+      'la cuenta que envía no está entre los que jugaron');
+  }
+
   /* ---- lo básico de la partida ---- */
   const puntos = entero(datos.puntos);
   if (!(puntos > 0) || puntos > MAX_PUNTOS) return mal('PUNTUACIÓN NO VÁLIDA');

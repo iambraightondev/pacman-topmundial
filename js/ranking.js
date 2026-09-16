@@ -24,11 +24,13 @@
 
   function cfg() { return window.PM.NET_CFG || {}; }
 
-  function headers() {
+  /* token: el de la sesión del jugador, para lo que exige cuenta (enviar
+   * una partida). Sin él, la clave anónima, que basta para leer. */
+  function headers(token) {
     var k = cfg().SUPABASE_KEY;
     return {
       'apikey': k,
-      'Authorization': 'Bearer ' + k,
+      'Authorization': 'Bearer ' + (token || k),
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
@@ -176,6 +178,11 @@
       try { d = JSON.parse(cuerpo || '{}'); } catch (e) { d = null; }
       var aviso = (window.console && console.warn)
         ? function (t) { console.warn('TOP MUNDIAL: ' + t); } : function () {};
+      // la función dice por qué (sin cuenta, partida ajena...): eso manda
+      if (d && d.error && status !== 404) {
+        if (d.detalle) aviso(d.error + ' — ' + d.detalle);
+        return d.error;
+      }
       if (status === 404 || status === 401 || status === 403) {
         aviso('falta desplegar la Edge Function "' + FUNCION +
           '" (supabase functions deploy ' + FUNCION + ')');
@@ -279,6 +286,10 @@
     submit: function (o, cb) {
       var self = this;
       if (!this.configured()) { if (cb) cb('SIN CONFIGURAR'); return; }
+      /* Solo entra quien juega con su cuenta: el servidor lo exige, y aquí se
+       * corta antes para no gastar la petición. */
+      var Ac = window.PM.Account;
+      if (!Ac || !Ac.logged || !Ac.logged()) { if (cb) cb('NECESITAS UNA CUENTA'); return; }
       var pts = Math.floor(o.puntos || 0);
       if (!(pts > 0) || pts > CFG.RANKING.MAX_POINTS) {
         if (cb) cb('PUNTUACIÓN NO VÁLIDA');
@@ -329,10 +340,21 @@
       // la fila queda marcada como verificada
       if (o.repeticion) row.repeticion = o.repeticion;
 
+      var reintentado = false;
+      function mandar() {
       fetch(fnUrl(FUNCION), {
-        method: 'POST', headers: headers(), body: JSON.stringify(row)
+        method: 'POST', headers: headers(Ac.token), body: JSON.stringify(row)
       })
         .then(function (res) {
+          /* la sesión caduca a la hora: se renueva una vez y se reintenta */
+          if (res.status === 401 && !reintentado && Ac.restore) {
+            reintentado = true;
+            Ac.restore(function (err) {
+              if (err || !Ac.logged()) { if (cb) cb('NECESITAS UNA CUENTA'); return; }
+              mandar();
+            });
+            return null;
+          }
           if (res.ok) {
             self.lastSubmitError = null;
             if (cb) cb(null);
@@ -347,6 +369,8 @@
           self.lastSubmitError = e.message || 'SIN CONEXIÓN';
           if (cb) cb(self.lastSubmitError);
         });
+      }
+      mandar();
     }
   };
 

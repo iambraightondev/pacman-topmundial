@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (tarde) — top mundial solo con cuenta (`pm-v79`).** Pedido de Braighton.
+`enviar-record` v4 exige token de usuario, que el que envía esté entre los
+nombres y que todos los nombres sean cuentas (`perfiles.usuario`). Sin cuenta,
+`Game.rankPendiente` guarda la partida y `UI.showAvisoSinCuenta` sale antes del
+GAME OVER si era récord; al entrar desde ahí, `subirRankPendiente`. Se borraron
+20 filas sin cuenta (copia en %TEMP%), incluido el trío IAMBRAIGHTON + MARTIN +
+JOSEPH. **Ojo:** en online, si un compañero no tiene cuenta, la partida entera no
+entra (se dice en el GAME OVER del anfitrión). El NIVEL 1 sin cuenta tampoco
+entra y no se guarda a la espera.
+
 **16 sep (tarde) — TOP MUNDIAL de recreativa y un top por mundo (`pm-v76`).**
 Braighton eligió la **fusión recreativa + podio** con opción de **lista**
 (<https://claude.ai/artifact/6vMyBK2yBJ1qwPiggg1w8v>, pestaña D). Hecho en

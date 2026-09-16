@@ -527,6 +527,12 @@
       /* modo DESATADO: Q/W/E/R. Se monta antes que los Pac-Man porque
        * reparte un juego de recargas por jugador (js/habilidades.js). */
       this.hab = !!opts.hab;
+      /* Lo que tenías antes de jugar en esta tabla: si lo superas sin cuenta,
+       * se avisa de que ese récord no entra en el top (ver rankPendiente) */
+      this.rankPendiente = null;
+      this.rankAvisoVisto = false;
+      this.recordPrevio = this.mazeId ? this.recordModo('lab', this.playerCount)
+        : this.hab ? this.recordModo('hab', this.playerCount) : this.recordFor(this.playerCount);
       if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount);
       /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
        * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
@@ -2284,10 +2290,11 @@
       if (!(this.score > 0)) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
       var self = this;
+      var Ac = window.PM.Account;
       /* Una clasificación por formato: individual, dúo, trío y escuadra.
        * Van todos los nombres de los que jugaron, que es lo que identifica
        * al equipo en la tabla. */
-      window.PM.Ranking.submit({
+      var envio = {
         jugadores: this.playerCount,
         modo: this.netRole ? 'online' : 'local',
         nombre1: this.rawName(0),
@@ -2302,10 +2309,38 @@
         ajustes: this.rankAjustes(),
         fantasmas: this.runGhosts,
         tiempoMs: this.playedMs()
-      }, function (err) {
+      };
+      /* SIN CUENTA no entra en el top. La partida se guarda aquí y, si era
+       * un récord suyo, el GAME OVER le avisa: si crea la cuenta o entra en
+       * ese momento, se sube sola con su nombre de cuenta. */
+      if (!Ac || !Ac.logged()) {
+        this.rankPendiente = { datos: envio, idx: Math.max(0, this.localIdx) };
+        return;
+      }
+      window.PM.Ranking.submit(envio, function (err) {
         // si no entró, se dice en el panel de GAME OVER, que es donde el
         // jugador está mirando. La partida ya terminó: no rompe nada.
         if (err) self.setFlash('TOP MUNDIAL: ' + err);
+      });
+    },
+
+    /* ¿Hay que avisar de que el récord no entra por no tener cuenta? Solo si
+     * la partida quedó guardada a la espera y supera lo que tenía. */
+    avisoSinCuenta: function () {
+      return !!(this.rankPendiente && !this.rankAvisoVisto &&
+        this.score > (this.recordPrevio || 0));
+    },
+
+    /* Tras crear la cuenta o entrar desde el aviso: la partida que esperaba
+     * se sube, con el nombre de la cuenta en el sitio de quien la jugó aquí. */
+    subirRankPendiente: function (cb) {
+      var p = this.rankPendiente, Ac = window.PM.Account, self = this;
+      if (!p || !Ac || !Ac.logged() || !window.PM.Ranking) { if (cb) cb('NADA QUE SUBIR'); return; }
+      this.rankPendiente = null;
+      p.datos['nombre' + (p.idx + 1)] = Ac.name();
+      window.PM.Ranking.submit(p.datos, function (err) {
+        if (err) self.setFlash('TOP MUNDIAL: ' + err);
+        if (cb) cb(err || null);
       });
     },
 

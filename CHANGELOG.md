@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · El top mundial es solo para cuentas
+
+- **Para colocar un récord hay que jugar con cuenta.** Quien bate su récord
+  sin ella ve un aviso antes del GAME OVER: si crea la cuenta o entra ahí
+  mismo, la partida se sube con su nombre de cuenta.
+- El servidor lo exige: la sesión abierta, que quien envía esté entre los que
+  jugaron y que **todos** los de la partida tengan cuenta.
+- Se borraron del top las 20 partidas con algún nombre sin cuenta (DANIEL,
+  IAMBRAI, GOKU, JUGADOR, ANA, BENI, MARTIN, JOSEPH).
+
 ## 2026-09-16 · El TOP MUNDIAL, de recreativa
 
 - **La LISTA es la tabla de la recreativa:** letra de máquina, cabecera RANK ·
