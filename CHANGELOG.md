@@ -4,6 +4,9 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-16 · La tienda de monedas
 
+- **La ficha respeta las pausas de la partida:** al comerse un fantasma todo
+  se congela un segundo con la puntuación a la vista, y al morir se queda
+  helado un segundo antes de la animación.
 - **La tienda se ha rehecho en torno a las monedas.** El precio va siempre con su
   moneda y comparado con lo que tienes; lo que no alcanza dice cuánto falta.
 - **El ticket:** el + de cada cosa la echa al ticket, que resta a la vista y se

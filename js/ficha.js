@@ -115,55 +115,76 @@
       }
     },
     comer: {
-      name: 'COMIENDO FANTASMA', dur: 6.5,
+      name: 'COMIENDO FANTASMA', dur: 8,
       pinta: function (c, look, t, color) {
-        var s = t * VEL, ENERGIA = 44, COMIDO = 4;
+        /* Como en la partida (Game.eatGhost): al comerlo todo se congela un
+         * segundo (CFG.EAT_FREEZE_TICKS); el fantasma comido y quien se lo
+         * come desaparecen y solo queda la puntuación. Después sigue todo y
+         * los ojos vuelven a casa. El reloj del CONFETI no se para, igual
+         * que el de la partida. */
+        var ENERGIA = 44, COMIDO = 4, HIELO = CFG.EAT_FREEZE_TICKS / 60;
+        var andado = t < COMIDO ? t : (t < COMIDO + HIELO ? COMIDO : t - HIELO);
+        var s = andado * VEL;
+        var congelado = t >= COMIDO && t < COMIDO + HIELO;
         fondo(c, s + 2, s < ENERGIA ? ENERGIA : null);
+        var donde = 100 + 25 * COMIDO;
         if (t < COMIDO) {
           var gp = anillo(100 + 25 * t);
           var azul = s >= ENERGIA;
           Sp().drawGhost(c, gp.x, gp.y, gp.d, 0, azul ? 'fright' : 'chase',
             Math.floor(t * 8) % 2, azul && t > 3 && Math.floor(t * 6) % 2 === 0);
-        } else if (t < COMIDO + 1) {
-          var donde = 100 + 25 * COMIDO;
+        } else if (congelado) {
           var mp = anillo(donde);
-          Sp().drawScorePopup(c, mp.x, mp.y - 10, 200);
-          var ojos = anillo(donde - (t - COMIDO) * 90);
+          Sp().drawScorePopup(c, mp.x, mp.y, 200);
+        } else {
+          var ojos = anillo(donde - (t - COMIDO - HIELO) * 90);
           Sp().drawGhost(c, ojos.x, ojos.y, 1, 0, 'eyes', 0, false);
         }
         var e = t - COMIDO;
+        if (congelado) return anillo(s);
         return pac(c, look, s, t, color, { confeti: (e >= 0 && e < 1.4) ? e : -1 });
       }
     },
     q: {
-      name: 'CON LA Q', dur: 3.4,
+      name: 'CON LA Q', dur: 4.4,
       pinta: function (c, look, t, color) {
-        var s = 20 + t * VEL;
+        /* el MORDISCO de DESATADO: el fantasma mordido también congela un
+         * segundo, pero en DESATADO quien muerde no se esconde (se ve su
+         * golpe de Q mientras tanto) */
+        var BOCADO = 0.35, HIELO = CFG.EAT_FREEZE_TICKS / 60;
+        var andado = t < BOCADO ? t : (t < BOCADO + HIELO ? BOCADO : t - HIELO);
+        var s = 20 + andado * VEL;
         fondo(c, s + 2, null);
-        var gs = 20 + 0.35 * VEL + 11;
-        if (t < 0.4) {
+        var gs = 20 + BOCADO * VEL + 11;
+        if (t < BOCADO) {
           var gp = anillo(gs);
           Sp().drawGhost(c, gp.x, gp.y, 1, 1, 'chase', Math.floor(t * 8) % 2, false);
-        } else if (t < 1.4) {
+        } else if (t < BOCADO + HIELO) {
           var mp = anillo(gs);
-          Sp().drawScorePopup(c, mp.x, mp.y - 10, 200);
+          Sp().drawScorePopup(c, mp.x, mp.y, 200);
         }
-        return pac(c, look, s, t, color, { muerde: t < 0.4, mordio: true, qSeg: t < 1.5 ? t : null });
+        return pac(c, look, s, t, color, {
+          muerde: t < 0.4, mordio: true, qSeg: t < 1.5 ? t : null,
+          quieto: t >= BOCADO && t < BOCADO + HIELO
+        });
       }
     },
     morir: {
-      name: 'MUERTE', dur: 4,
+      name: 'MUERTE', dur: 5,
       pinta: function (c, look, t, color) {
-        /* se cruza con BLINKY, se queda helado medio segundo y muere como
-         * en la partida: la clásica abre la boca, las demás mueren a su
-         * manera (Sprites.drawSkinDeath) */
-        var CHOQUE = 1.6, HIELO = 0.5, ANIM = CFG.DEATH_ANIM_TICKS / 60;
+        /* Como en la partida: al tocarlo, todo se queda helado un segundo
+         * (CFG.DEATH_FREEZE_TICKS) con el fantasma encima; luego los
+         * fantasmas desaparecen y muere. La clásica abre la boca, las demás
+         * mueren a su manera (Sprites.drawSkinDeath). */
+        var CHOQUE = 1.6, HIELO = CFG.DEATH_FREEZE_TICKS / 60, ANIM = CFG.DEATH_ANIM_TICKS / 60;
         var s = Math.min(t, CHOQUE) * VEL;
         fondo(c, s + 2, null);
         if (t < CHOQUE + HIELO) {
-          var gp = anillo(146 - 40 * Math.min(t, CHOQUE));
-          Sp().drawGhost(c, gp.x, gp.y, 1, 0, 'chase', Math.floor(t * 8) % 2, false);
-          return pac(c, look, s, t, color, t >= CHOQUE ? { quieto: true } : {});
+          var quieto = t >= CHOQUE;
+          var gt = Math.min(t, CHOQUE);
+          var gp = anillo(146 - 40 * gt);
+          Sp().drawGhost(c, gp.x, gp.y, 1, 0, 'chase', Math.floor(gt * 8) % 2, false);
+          return pac(c, look, s, quieto ? CHOQUE : t, color, quieto ? { quieto: true } : {});
         }
         var d = (t - CHOQUE - HIELO) / ANIM, p = anillo(s);
         if (d <= 1) {
