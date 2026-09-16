@@ -4257,7 +4257,10 @@
       cab.appendChild(datos);
       this.mateBody.appendChild(cab);
 
-      this.mateBody.appendChild(this.sectionTitle('RÉCORDS'));
+      this.mateBody.appendChild(this.sectionTitle('CIFRAS'));
+      /* El mismo bloque que en el perfil propio: aquí se le pasan además las
+       * cifras de uno mismo, y el polígono sale con los dos. */
+      this.mateCifras = this.buildCifras(this.mateBody);
       this.mateStats = document.createElement('div');
       this.mateStats.className = 'resumen';
       this.mateBody.appendChild(this.mateStats);
@@ -4336,6 +4339,12 @@
       stats.push(['FANTASMAS COMIDOS', String(cont.fantasmas || 0)]);
       stats.push(['PARTIDAS JUGADAS', String(cont.partidas || 0)]);
       stats.push(['NIVEL MÁS LEJOS', String(cont.nivelMax || 0)]);
+      /* todo lo suyo, y de paso lo tuyo debajo para compararse */
+      var S = window.PM.Stats;
+      if (S && this.mateCifras) {
+        this.pintarCifras(this.mateCifras, S.deFila(fila), S.mios(),
+                          [this.mateWho, 'TÚ']);
+      }
       this.mateStats.innerHTML = '';
       var self2 = this;
       stats.forEach(function (p) {
@@ -4365,6 +4374,193 @@
       });
     },
 
+    /* ------------------------------------------------------
+     * CIFRAS — todo lo que se sabe de un jugador (js/stats.js)
+     *
+     * El mismo bloque sirve para el perfil propio y para el de cualquier
+     * otro: se monta una vez con `buildCifras` y se rellena con `pintarCifras`
+     * pasándole unos datos u otros. En el perfil ajeno se le pasan además los
+     * tuyos, y entonces el polígono lleva los dos encima, que es lo que
+     * convierte una vitrina en una comparación.
+     * ------------------------------------------------------ */
+    buildCifras: function (host) {
+      var b = {};
+
+      /* --- el polígono --- */
+      var caja = document.createElement('div');
+      caja.className = 'radar-box';
+      b.canvas = document.createElement('canvas');
+      b.canvas.className = 'radar';
+      caja.appendChild(b.canvas);
+      b.leyenda = document.createElement('div');
+      b.leyenda.className = 'radar-leyenda';
+      caja.appendChild(b.leyenda);
+      host.appendChild(caja);
+
+      /* --- quién es quién, cuando hay dos --- */
+      b.quien = document.createElement('div');
+      b.quien.className = 'radar-quien';
+      host.appendChild(b.quien);
+
+      /* --- las fichas --- */
+      b.grupos = document.createElement('div');
+      b.grupos.className = 'cifras';
+      host.appendChild(b.grupos);
+
+      /* --- por mundo --- */
+      b.tituloMundos = this.sectionTitle('POR MODO');
+      host.appendChild(b.tituloMundos);
+      b.mundos = document.createElement('div');
+      b.mundos.className = 'cifras-tabla';
+      host.appendChild(b.mundos);
+
+      /* --- por formato --- */
+      b.tituloFormatos = this.sectionTitle('RÉCORD POR FORMATO');
+      host.appendChild(b.tituloFormatos);
+      b.formatos = document.createElement('div');
+      b.formatos.className = 'cifras-tabla';
+      host.appendChild(b.formatos);
+
+      b.pie = document.createElement('div');
+      b.pie.className = 'note';
+      host.appendChild(b.pie);
+      return b;
+    },
+
+    /* `d` son los datos de quien se mira; `otros` (opcional) los de quien
+     * mira, para poner los dos polígonos. */
+    pintarCifras: function (b, d, otros, nombres) {
+      var S = window.PM.Stats;
+      if (!b || !S || !d) return;
+      var ejes = S.radar(d);
+      var series = [{ color: '#ffff00', valores: ejes.map(function (e) { return e.valor; }) }];
+      if (otros) {
+        /* el otro va debajo y en azul: el amarillo es siempre de quien se
+         * está mirando */
+        series.unshift({ color: '#7ec8ff',
+          valores: S.radar(otros).map(function (e) { return e.valor; }) });
+      }
+
+      /* el lienzo se dibuja a la resolución de la pantalla, que si no el
+       * polígono sale con los bordes deshilachados */
+      var w = 300, h = 250;
+      var dpr = (window.devicePixelRatio || 1);
+      b.canvas.width = Math.round(w * dpr);
+      b.canvas.height = Math.round(h * dpr);
+      b.canvas.style.width = w + 'px';
+      b.canvas.style.height = h + 'px';
+      var ctx = b.canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      S.dibujarRadar(ctx, w, h, ejes, series);
+
+      b.leyenda.innerHTML = '';
+      for (var i = 0; i < ejes.length; i++) {
+        var fila = document.createElement('div');
+        fila.className = 'radar-eje';
+        var k = document.createElement('span');
+        k.textContent = ejes[i].name;
+        var v = document.createElement('small');
+        v.textContent = ejes[i].texto;
+        fila.appendChild(k);
+        fila.appendChild(v);
+        b.leyenda.appendChild(fila);
+      }
+
+      b.quien.innerHTML = '';
+      b.quien.style.display = otros ? 'flex' : 'none';
+      if (otros) {
+        var quienes = [['#ffff00', (nombres && nombres[0]) || 'ÉL'],
+                       ['#7ec8ff', (nombres && nombres[1]) || 'TÚ']];
+        for (var q = 0; q < quienes.length; q++) {
+          var et = document.createElement('span');
+          et.className = 'radar-tag';
+          et.style.color = quienes[q][0];
+          et.style.borderColor = quienes[q][0];
+          et.textContent = quienes[q][1];
+          b.quien.appendChild(et);
+        }
+      }
+
+      /* fichas */
+      b.grupos.innerHTML = '';
+      var secciones = S.secciones(d);
+      for (var s = 0; s < secciones.length; s++) {
+        var g = document.createElement('div');
+        g.className = 'cifra-grupo';
+        var t = document.createElement('div');
+        t.className = 'cifra-tit';
+        t.textContent = secciones[s].titulo;
+        g.appendChild(t);
+        for (var f = 0; f < secciones[s].filas.length; f++) {
+          var fi = secciones[s].filas[f];
+          var row = document.createElement('div');
+          row.className = 'mate-stat';
+          var kk = document.createElement('span');
+          kk.textContent = fi[0];
+          if (fi[2]) {
+            var nota = document.createElement('small');
+            nota.textContent = fi[2];
+            kk.appendChild(nota);
+          }
+          var vv = document.createElement('b');
+          vv.textContent = fi[1];
+          row.appendChild(kk);
+          row.appendChild(vv);
+          g.appendChild(row);
+        }
+        b.grupos.appendChild(g);
+      }
+
+      /* por mundo */
+      b.mundos.innerHTML = '';
+      var mm = S.porMundo(d);
+      b.mundos.appendChild(this.cifraCabecera(['MODO', 'PARTIDAS', 'MEJOR', 'TIEMPO']));
+      for (var m = 0; m < mm.length; m++) {
+        b.mundos.appendChild(this.cifraFila(
+          [mm[m].name, mm[m].partidas, mm[m].mejor, mm[m].tiempo], mm[m].color));
+      }
+
+      /* por formato */
+      b.formatos.innerHTML = '';
+      b.formatos.appendChild(this.cifraCabecera(['FORMATO', 'RÉCORD']));
+      var ff = S.porFormato(d);
+      for (var x = 0; x < ff.length; x++) {
+        b.formatos.appendChild(this.cifraFila([ff[x].name, ff[x].valor]));
+      }
+
+      /* y lo que hay que decir de dónde salen algunas cifras */
+      var A = window.PM.Achievements;
+      var est = (!otros && A && A.tiempoEstimado) ? A.tiempoEstimado() : 0;
+      b.pie.textContent = est
+        ? ('EL TIEMPO DE ANTES DEL 16/09/2026 ESTÁ ESTIMADO POR LOS PUNTOS: NO SE GUARDABA. ' +
+           'DE AHÍ SALEN ' + S.reloj(est) + '.')
+        : '';
+    },
+
+    cifraCabecera: function (celdas) {
+      var row = document.createElement('div');
+      row.className = 'cifra-fila cabecera';
+      for (var i = 0; i < celdas.length; i++) {
+        var c = document.createElement('span');
+        c.textContent = celdas[i];
+        row.appendChild(c);
+      }
+      return row;
+    },
+
+    /* , si viene, es el del modo y va en la primera celda */
+    cifraFila: function (celdas, color) {
+      var row = document.createElement('div');
+      row.className = 'cifra-fila';
+      for (var i = 0; i < celdas.length; i++) {
+        var c = document.createElement('span');
+        c.textContent = celdas[i];
+        if (i === 0 && color) c.style.color = color;
+        row.appendChild(c);
+      }
+      return row;
+    },
+
     buildProfile: function () {
       var self = this;
       var o = this.els.profile;
@@ -4378,13 +4574,19 @@
       var bar = document.createElement('div');
       bar.className = 'tab-row';
       this.profTabBtns = {};
-      [['perfil', 'PERFIL'], ['logros', 'LOGROS']].forEach(function (t) {
+      [['perfil', 'PERFIL'], ['cifras', 'CIFRAS'], ['logros', 'LOGROS']].forEach(function (t) {
         var b = self.makeButton(t[1], function () { self.showProfileTab(t[0]); });
         b.classList.add('tab');
         self.profTabBtns[t[0]] = b;
         bar.appendChild(b);
       });
       o.appendChild(bar);
+
+      /* ---- pestaña CIFRAS ---- */
+      /* Va delante en el DOM de la de LOGROS y detrás de la de PERFIL, que
+       * es el orden en que se recorren con las flechas. */
+      this.cifrasPane = document.createElement('div');
+      this.cifrasPane.className = 'tab-pane';
 
       /* ---- pestaña PERFIL ---- */
       this.profPane = document.createElement('div');
@@ -4476,6 +4678,10 @@
 
       o.appendChild(this.profPane);
 
+      /* lo de CIFRAS se monta una vez y se rellena al abrir la pestaña */
+      this.cifrasBloque = this.buildCifras(this.cifrasPane);
+      o.appendChild(this.cifrasPane);
+
       /* ---- pestaña LOGROS ---- */
       this.achPane = document.createElement('div');
       this.achPane.className = 'tab-pane';
@@ -4496,7 +4702,7 @@
     },
 
     showProfileTab: function (tab) {
-      this.profTab = (tab === 'logros') ? 'logros' : 'perfil';
+      this.profTab = (tab === 'logros' || tab === 'cifras') ? tab : 'perfil';
       this.refreshProfile();
     },
 
@@ -4519,7 +4725,11 @@
         }
       }
       this.profPane.style.display = (tab === 'perfil') ? 'flex' : 'none';
+      this.cifrasPane.style.display = (tab === 'cifras') ? 'flex' : 'none';
       this.achPane.style.display = (tab === 'logros') ? 'flex' : 'none';
+      if (tab === 'cifras' && window.PM.Stats) {
+        this.pintarCifras(this.cifrasBloque, window.PM.Stats.mios());
+      }
 
       /* cabecera */
       var ctx = this.profAvatar.getContext('2d');

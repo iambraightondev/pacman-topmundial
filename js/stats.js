@@ -1,0 +1,398 @@
+/* ============================================================
+ * PAC-MAN TOP MUNDIAL — js/stats.js
+ * Las CIFRAS de un jugador. Define window.PM.Stats
+ *
+ * Todo lo que se enseña en PERFIL · CIFRAS sale de dos cosas que ya
+ * existían: los CONTADORES de los logros (js/achievements.js, que viajan a la
+ * cuenta en `perfiles.logros`) y la experiencia (js/level.js, que es la suma
+ * de los puntos de todas las partidas). Aquí no se guarda nada: se lee, se
+ * cruza y se calcula.
+ *
+ * Por eso mismo sirve igual para uno mismo que PARA CUALQUIER OTRO: los
+ * contadores de un perfil ajeno se bajan de la nube con la misma forma, así
+ * que `Stats.de(logros, xp)` los mastica igual y se pueden poner dos fichas
+ * lado a lado. Eso es lo que hace competitiva la pantalla: no es tu vitrina,
+ * es la vara de medir contra los demás.
+ *
+ * LO QUE SE PUEDE Y LO QUE NO. Se puede enseñar todo lo que esté contado.
+ * Hay cosas que parecen obvias y no lo están porque nunca se guardaron —el
+ * tiempo jugado es la principal—, y esas se siembran por lo bajo o se
+ * estiman, y se dice. Inventar una cifra bonita es peor que no darla: aquí
+ * se compara gente.
+ *
+ * EL POLÍGONO (`radar`). Seis ejes, cada uno de 0 a 1 contra un tope de
+ * CFG.STATS.EJES. No es una nota: es una FORMA. Lo que se busca es que de un
+ * vistazo se vea en qué es bueno alguien y en qué no, y que dos jugadores
+ * con los mismos puntos se vean distintos.
+ * ============================================================ */
+(function () {
+  'use strict';
+  var CFG = window.PM.CFG;
+
+  function num(v) { return (typeof v === 'number' && isFinite(v) && v > 0) ? v : 0; }
+
+  /* Un contador, global o de un mundo: `cont(c, 'fantasmas')` o
+   * `cont(c, 'fantasmas', 'hab')`. */
+  function cont(c, stat, mundo) {
+    if (!c) return 0;
+    return num(c[mundo ? (mundo + ':' + stat) : stat]);
+  }
+
+  /* a / b, cuidando el cero, con un decimal */
+  function razon(a, b, dec) {
+    if (!(b > 0)) return 0;
+    var d = (dec === undefined) ? 1 : dec;
+    var m = Math.pow(10, d);
+    return Math.round((a / b) * m) / m;
+  }
+
+  var Stats = {
+
+    /* =========================================================
+     * FORMATO
+     * ========================================================= */
+    miles: function (n) {
+      return String(Math.round(num(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+
+    /* Segundos -> '12 H 34 MIN' · '34 MIN' · '45 S'. El tiempo de juego es de
+     * las cifras que más se miran, así que se lee de un golpe y no en
+     * segundos ni en horas con decimales. */
+    reloj: function (segs) {
+      segs = Math.round(num(segs));
+      var h = Math.floor(segs / 3600);
+      var m = Math.floor((segs % 3600) / 60);
+      if (h > 0) return h + ' H' + (m ? ' ' + m + ' MIN' : '');
+      if (m > 0) return m + ' MIN';
+      return segs + ' S';
+    },
+
+    /* mm:ss.cc — para el tiempo del nivel 1, que se guarda en centésimas */
+    cronos: function (cs) {
+      cs = Math.round(num(cs));
+      if (!cs) return '—';
+      var s = Math.floor(cs / 100), c = cs % 100;
+      var m = Math.floor(s / 60);
+      s = s % 60;
+      return m + ':' + (s < 10 ? '0' : '') + s + '.' + (c < 10 ? '0' : '') + c;
+    },
+
+    /* =========================================================
+     * LOS DATOS
+     * `c` son los contadores (Achievements.stats() o los de la nube) y `xp`
+     * la experiencia, que es la suma de los puntos de todas las partidas.
+     * `records` (opcional) son las marcas por formato y por mundo, que no
+     * viven en los contadores sino en columnas propias.
+     * ========================================================= */
+    de: function (c, xp, records) {
+      c = c || {};
+      records = records || {};
+      var partidas = cont(c, 'partidas');
+      var muertes = cont(c, 'muertes');
+      var fantasmas = cont(c, 'fantasmas');
+      var tiempo = cont(c, 'tiempo');
+      var niveles = cont(c, 'niveles');
+
+      var d = {
+        /* --- lo básico --- */
+        partidas: partidas,
+        tiempo: tiempo,
+        puntos: num(xp),                 // la experiencia ES la suma de puntos
+        media: Math.round(razon(num(xp), partidas, 0)),
+        mejor: cont(c, 'puntosMax'),
+        porMinuto: Math.round(razon(num(xp), tiempo / 60, 0)),
+        minutosPorPartida: razon(tiempo / 60, partidas),
+
+        /* --- pelea --- */
+        fantasmas: fantasmas,
+        muertes: muertes,
+        porPartida: razon(fantasmas, partidas),
+        porMuerte: razon(fantasmas, muertes),
+        mejorRacha: cont(c, 'racha'),
+        /* Acumulativos: «al menos dos», «al menos tres»... Restando salen los
+         * exactos, que es como se enseñan. */
+        dobles: cont(c, 'racha2'),
+        triples: cont(c, 'racha3'),
+        cuadruples: cont(c, 'racha4'),
+
+        /* --- laberinto --- */
+        pastillas: cont(c, 'pastillas'),
+        superpastillas: cont(c, 'super'),
+        frutas: cont(c, 'frutas'),
+        niveles: niveles,
+        nivelMax: cont(c, 'nivelMax'),
+        limpios: cont(c, 'limpios'),
+        mejorT1: cont(c, 'mejorT1'),
+
+        /* --- DESATADO --- */
+        mordiscos: cont(c, 'mordiscos'),
+        muros: cont(c, 'muros'),
+
+        /* --- PAC-MAN VS. --- */
+        cazas: cont(c, 'cazas'),
+
+        /* --- constancia --- */
+        dailyOk: cont(c, 'dailyOk'),
+        dailyRacha: cont(c, 'dailyRacha'),
+        dailySemana: cont(c, 'dailySemana'),
+
+        /* --- tienda --- */
+        monedas: cont(c, 'monedas') + cont(c, 'bono'),
+
+        /* --- por mundo --- */
+        mundos: [],
+        /* --- por formato (solo, dúo, trío, escuadra) --- */
+        records: records
+      };
+
+      /* Exactos, para la pantalla: un cuádruple está contado en los tres */
+      d.doblesExactos = Math.max(0, d.dobles - d.triples);
+      d.triplesExactos = Math.max(0, d.triples - d.cuadruples);
+
+      var jugados = 0;
+      for (var i = 0; i < CFG.STATS.MUNDOS.length; i++) {
+        var m = CFG.STATS.MUNDOS[i];
+        var p = cont(c, 'partidas', m.id);
+        if (p > 0) jugados++;
+        d.mundos.push({
+          id: m.id, name: m.name, color: m.color,
+          partidas: p,
+          mejor: cont(c, 'puntosMax', m.id),
+          fantasmas: cont(c, 'fantasmas', m.id),
+          tiempo: cont(c, 'tiempo', m.id)
+        });
+      }
+      d.mundosJugados = jugados;
+      return d;
+    },
+
+    /* Los datos de UNO MISMO, de lo que hay en este navegador */
+    mios: function () {
+      var A = window.PM.Achievements, L = window.PM.Level, G = window.PM.Game;
+      var records = {};
+      if (G && G.recordFor) {
+        records.formatos = [G.recordFor(1), G.recordFor(2), G.recordFor(3), G.recordFor(4)];
+        records.lab = G.recordModo ? G.recordModo('lab', 1) : 0;
+        records.hab = G.recordModo ? G.recordModo('hab', 1) : 0;
+      }
+      return this.de(A ? A.stats() : {}, L ? L.xp() : 0, records);
+    },
+
+    /* Y los de una fila de `perfiles` bajada de la nube (perfil ajeno) */
+    deFila: function (fila) {
+      if (!fila) return null;
+      var records = {
+        formatos: [num(fila.record1), num(fila.record2),
+                   num(fila.record3), num(fila.record4)],
+        lab: num(fila.record_lab),
+        hab: num(fila.record_hab)
+      };
+      return this.de(fila.logros || {}, num(fila.xp), records);
+    },
+
+    /* =========================================================
+     * EL POLÍGONO
+     * Cada eje, de 0 a 1. `texto` es el dato de verdad, que un polígono sin
+     * números es un dibujo bonito y nada más.
+     * ========================================================= */
+    radar: function (d) {
+      var crudos = {
+        ataque: d.porPartida,
+        puntos: d.mejor,
+        aguante: d.limpios,
+        alcance: d.nivelMax,
+        constancia: d.dailyOk,
+        variedad: d.mundosJugados
+      };
+      var textos = {
+        ataque: d.porPartida + ' FANTASMAS POR PARTIDA',
+        puntos: this.miles(d.mejor) + ' EN SU MEJOR PARTIDA',
+        aguante: d.limpios + ' NIVELES SEGUIDOS SIN MORIR',
+        alcance: 'LLEGÓ AL NIVEL ' + d.nivelMax,
+        constancia: d.dailyOk + ' RETOS DEL DAILY CUMPLIDOS',
+        variedad: d.mundosJugados + ' DE ' + CFG.STATS.MUNDOS.length + ' MODOS JUGADOS'
+      };
+      var out = [];
+      for (var i = 0; i < CFG.STATS.EJES.length; i++) {
+        var e = CFG.STATS.EJES[i];
+        var v = num(crudos[e.id]) / e.tope;
+        out.push({
+          id: e.id, name: e.name,
+          valor: Math.max(0, Math.min(1, v)),
+          crudo: crudos[e.id],
+          texto: textos[e.id]
+        });
+      }
+      return out;
+    },
+
+    /* =========================================================
+     * DIBUJAR EL POLÍGONO
+     * `series`: [{ color, valores: [0..1 por eje], nombre }]. Con dos series
+     * se ven los dos jugadores encima, que es de lo que va esto.
+     * ========================================================= */
+    dibujarRadar: function (ctx, w, h, ejes, series) {
+      if (!ctx) return;
+      var n = ejes.length;
+      if (!n) return;
+      var cx = w / 2, cy = h / 2 + 4;
+      var r = Math.min(w, h) / 2 - 34;      // sitio para los nombres de fuera
+      if (r < 10) return;
+      var i, j, a, p;
+
+      function punto(idx, v) {
+        var ang = -Math.PI / 2 + (Math.PI * 2 * idx) / n;
+        return { x: cx + Math.cos(ang) * r * v, y: cy + Math.sin(ang) * r * v };
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineJoin = 'round';
+
+      /* telaraña: cuatro anillos y un radio por eje */
+      ctx.strokeStyle = 'rgba(126, 200, 255, 0.28)';
+      ctx.lineWidth = 1;
+      for (j = 1; j <= 4; j++) {
+        ctx.beginPath();
+        for (i = 0; i <= n; i++) {
+          p = punto(i % n, j / 4);
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+      }
+      for (i = 0; i < n; i++) {
+        p = punto(i, 1);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+
+      /* cada jugador, su polígono */
+      for (var s = 0; s < series.length; s++) {
+        var se = series[s];
+        if (!se || !se.valores) continue;
+        ctx.beginPath();
+        for (i = 0; i <= n; i++) {
+          p = punto(i % n, Math.max(0.02, se.valores[i % n] || 0));
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.globalAlpha = (series.length > 1) ? 0.22 : 0.3;
+        ctx.fillStyle = se.color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = se.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        /* un punto en cada vértice: sin ellos, dos polígonos parecidos se
+         * confunden en cuanto se cruzan */
+        for (i = 0; i < n; i++) {
+          p = punto(i, Math.max(0.02, se.valores[i] || 0));
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = se.color;
+          ctx.fill();
+        }
+      }
+
+      /* los nombres, por fuera */
+      ctx.font = 'bold 9px "Courier New", Courier, monospace';
+      ctx.fillStyle = '#cfcfcf';
+      for (i = 0; i < n; i++) {
+        a = -Math.PI / 2 + (Math.PI * 2 * i) / n;
+        var x = cx + Math.cos(a) * (r + 16);
+        var y = cy + Math.sin(a) * (r + 16);
+        ctx.textAlign = (Math.abs(Math.cos(a)) < 0.3) ? 'center'
+          : (Math.cos(a) > 0 ? 'left' : 'right');
+        ctx.textBaseline = (Math.sin(a) > 0.3) ? 'top'
+          : (Math.sin(a) < -0.3 ? 'bottom' : 'middle');
+        ctx.fillText(ejes[i].name, x, y);
+      }
+    },
+
+    /* =========================================================
+     * LAS FICHAS
+     * Secciones con filas [etiqueta, valor, nota]. La pantalla solo las
+     * pinta: qué se cuenta y cómo se lee se decide aquí.
+     * ========================================================= */
+    secciones: function (d) {
+      var S = this;
+      var out = [];
+
+      out.push({ titulo: 'EN TOTAL', filas: [
+        ['PARTIDAS', S.miles(d.partidas)],
+        ['TIEMPO JUGADO', S.reloj(d.tiempo)],
+        ['PUNTOS DE TODA LA VIDA', S.miles(d.puntos)],
+        ['MEJOR PARTIDA', S.miles(d.mejor)],
+        ['MEDIA POR PARTIDA', S.miles(d.media)],
+        ['PUNTOS POR MINUTO', S.miles(d.porMinuto)],
+        ['DURACIÓN MEDIA', d.minutosPorPartida ? (d.minutosPorPartida + ' MIN') : '—']
+      ] });
+
+      out.push({ titulo: 'CAZA DE FANTASMAS', filas: [
+        ['FANTASMAS COMIDOS', S.miles(d.fantasmas)],
+        ['POR PARTIDA', String(d.porPartida)],
+        ['VIDAS PERDIDAS', S.miles(d.muertes)],
+        ['FANTASMAS POR VIDA', String(d.porMuerte)],
+        ['MEJOR CADENA', d.mejorRacha ? ('X' + d.mejorRacha) : '—'],
+        ['DOBLES', S.miles(d.dobles), 'AL MENOS DOS DE UNA SUPERPASTILLA'],
+        ['TRIPLES', S.miles(d.triples), 'AL MENOS TRES'],
+        ['CUÁDRUPLES', S.miles(d.cuadruples), 'LOS CUATRO: NO HAY MÁS']
+      ] });
+
+      out.push({ titulo: 'EL LABERINTO', filas: [
+        ['PASTILLAS COMIDAS', S.miles(d.pastillas)],
+        ['SUPERPASTILLAS', S.miles(d.superpastillas)],
+        ['FRUTAS', S.miles(d.frutas)],
+        ['NIVELES DESPEJADOS', S.miles(d.niveles)],
+        ['NIVEL MÁS LEJOS', d.nivelMax || '—'],
+        ['SEGUIDOS SIN MORIR', d.limpios || '—'],
+        ['NIVEL 1 MÁS RÁPIDO', S.cronos(d.mejorT1)]
+      ] });
+
+      var pelea = [];
+      if (d.mordiscos) pelea.push(['MORDISCOS', S.miles(d.mordiscos), 'DESATADO']);
+      if (d.muros) pelea.push(['MUROS ATRAVESADOS', S.miles(d.muros), 'DESATADO']);
+      if (d.cazas) pelea.push(['PAC-MAN CAZADOS', S.miles(d.cazas), 'PAC-MAN VS.']);
+      if (pelea.length) out.push({ titulo: 'PODERES', filas: pelea });
+
+      out.push({ titulo: 'CONSTANCIA', filas: [
+        ['RETOS DEL DAILY', S.miles(d.dailyOk)],
+        ['MEJOR RACHA DE DÍAS', d.dailyRacha || '—'],
+        ['SEMANAS COMPLETAS', S.miles(d.dailySemana)],
+        ['MONEDAS GANADAS', S.miles(d.monedas)]
+      ] });
+
+      return out;
+    },
+
+    /* La tabla por mundo: cada uno es su propia liga, así que van sus
+     * partidas, su mejor marca y lo que se le ha echado. */
+    porMundo: function (d) {
+      var S = this, filas = [];
+      for (var i = 0; i < d.mundos.length; i++) {
+        var m = d.mundos[i];
+        filas.push({
+          name: m.name, color: m.color,
+          partidas: S.miles(m.partidas),
+          mejor: m.mejor ? S.miles(m.mejor) : '—',
+          tiempo: m.tiempo ? S.reloj(m.tiempo) : '—'
+        });
+      }
+      return filas;
+    },
+
+    /* Y los cuatro formatos, que tampoco se mezclan entre ellos */
+    porFormato: function (d) {
+      var nombres = ['SOLO', 'DÚO', 'TRÍO', 'ESCUADRA'];
+      var r = (d.records && d.records.formatos) || [];
+      var out = [];
+      for (var i = 0; i < nombres.length; i++) {
+        out.push({ name: nombres[i], valor: r[i] ? this.miles(r[i]) : '—' });
+      }
+      return out;
+    }
+  };
+
+  window.PM.Stats = Stats;
+})();

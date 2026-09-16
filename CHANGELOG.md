@@ -2,6 +2,30 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · PERFIL · CIFRAS: todo lo que llevas hecho
+
+- Pestaña nueva en el PERFIL con **todo lo que se sabe de un jugador**:
+  partidas, **horas de juego**, puntos de toda la vida, media por partida,
+  puntos por minuto, duración media, fantasmas comidos, vidas perdidas,
+  fantasmas por vida, **dobles, triples y cuádruples**, pastillas,
+  superpastillas, frutas, niveles despejados, nivel más lejos, niveles
+  seguidos sin morir, nivel 1 más rápido, mordiscos y muros de DESATADO,
+  Pac-Man cazados, retos del DAILY, monedas... y dos tablas: **por modo** (con
+  sus partidas, su mejor marca y su tiempo) y **por formato**.
+- Y un **polígono de fortalezas** con seis ejes —ATAQUE, PUNTOS, AGUANTE,
+  ALCANCE, CONSTANCIA y VARIEDAD— que enseña de un vistazo en qué es bueno
+  alguien y en qué no. No es una nota: es una forma.
+- **En el perfil de otro jugador salen sus cifras y su polígono encima del
+  tuyo**, para compararse de verdad. Sus contadores ya viajaban a la nube; lo
+  que faltaba era enseñarlos.
+- **Cuatro es el tope de la cadena**: hay cuatro fantasmas y ninguno vuelve a
+  ponerse azul dentro del mismo susto, ni con el GRITO ni con el MORDISCO. No
+  hay quíntuples, por mucho DESATADO que se juegue.
+- Lo nuevo que no estaba contado (tiempo, niveles, pastillas, dobles...) **no
+  empieza a cero**: se siembra con lo que ya se sabía de cada uno, siempre por
+  lo bajo. El tiempo de antes de hoy es una estimación por los puntos, y la
+  pantalla lo dice.
+
 ## 2026-09-16 · Partidas preparadas
 
 - Una partida guardada puede partir ahora de un **punto de partida montado a

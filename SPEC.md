@@ -303,6 +303,66 @@ accounts that need this most is a mailbox that does not exist.
 table grants**, and without it the function gets a bare 42501 and answers
 "usuario o contraseña mal" forever with no way to guess why.
 
+## Las CIFRAS del perfil (`js/stats.js` — `PM.Stats`)
+
+PERFIL has a third tab, CIFRAS, holding everything that is known about a
+player. Nothing new is stored for it: it all comes from the achievement
+COUNTERS (which already travel to the account in `perfiles.logros`) and from
+the experience (`PM.Level`, which *is* the sum of every game's score).
+`Stats.de(contadores, xp, records)` chews them into one object;
+`Stats.mios()` does it for the local player and `Stats.deFila(fila)` for a
+row pulled from the cloud.
+
+That symmetry is the point: **someone else's profile is rendered by the same
+code**, so their figures and their shape can sit next to yours. The friend
+profile passes both and the polygon draws the two on top of each other — the
+visitor in yellow, you in blue. A trophy case is not competitive; a yardstick
+is.
+
+### The polygon (`Stats.radar`, `Stats.dibujarRadar`)
+
+Six axes, each 0..1 against a ceiling in `CFG.STATS.EJES`: ATAQUE (ghosts per
+game), PUNTOS (best game), AGUANTE (levels cleared in a row without dying),
+ALCANCE (deepest level), CONSTANCIA (DAILY challenges met) and VARIEDAD (how
+many of the five worlds have been played). The ceilings were picked against a
+700-game account so the shape has peaks and valleys instead of coming out
+round or pinned at the centre. Every axis also carries its real number
+(`texto`): a polygon with no figures is a drawing, and nobody can argue with
+a drawing.
+
+### Counters added for it
+
+`racha2`/`racha3`/`racha4` (doubles, triples, quadruples), `tiempo`
+(seconds played), `niveles`, `pastillas` and `super`. They ride the usual
+funnel (`bumpAch`), so they also split per world for free (`hab:tiempo`,
+`lab:pastillas`). The chain counters are **cumulative** — a quadruple counts
+in all three — because that is what merges cleanly across devices; the
+screen subtracts to show the exact ones.
+
+**Four is the hard ceiling.** There are four ghosts and none turns blue again
+within the same fright: `eaten()` clears `frightened` and only
+`triggerFright` sets it, which also resets the chain — including the
+DESATADO GRITO. The MORDISCO joins an existing chain but cannot invent a
+fifth ghost. There is a test that eats all four and then asserts no blue
+ghost is left with the fright still running.
+
+Pellets are counted per run (`runPastillas`/`runSuper`) and flushed in
+`closeRun`: calling `bumpAch` on every pellet would run the whole
+achievement and DAILY machinery sixty times a second.
+
+### Seeding, and saying what is estimated
+
+`Achievements.sembrarCifras` (flag `e`, like the other seedings, cleared by
+`merge` so the cloud's longer history re-seeds) fills the new counters with
+what is already known, always as a **lower bound**: `niveles` = `nivelMax` − 1
+(to reach level N you cleared N−1), `pastillas` = those levels × 244,
+`super` = × 4, and the best chain proves that chain happened at least once.
+`tiempo` is the exception and the only estimate: lifetime points over
+`CFG.STATS.PTS_POR_SEG`, because it was never recorded. `tiempoEstimado()`
+returns how much of it came from there and the screen prints it at the
+bottom. Inventing a nicer figure would be worse than giving none — this
+screen is where people compare themselves.
+
 ## App instalable (PWA) y pruebas
 
 `manifest.json` + `sw.js` make the game installable and playable offline:
@@ -2904,3 +2964,8 @@ from third parties. Cells are indices `row*28+col`.
     run is painted with the LOOK OF WHOEVER PLAYED IT — skin, colour,
     accessory and effect ride inside the recording — and replays recorded
     before that still play, with the old look.
+32. PERFIL · CIFRAS shows everything known about a player —time played,
+    doubles/triples/quadruples, per-world and per-format tables— plus a
+    six-axis polygon of strengths, and a rival profile draws their shape over
+    yours. Counters added for it are seeded from what was already known,
+    never from zero, and the one figure that is an estimate says so.

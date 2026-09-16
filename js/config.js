@@ -1130,6 +1130,39 @@
   CFG.REPLAY_PREP_MS = 12;         // ms de simulación seguidos al preparar
   CFG.REPLAY_PREP_MAX = 1728000;   // tope de pasos (8 h): red de seguridad
 
+  /* ---------- Las CIFRAS del perfil (js/stats.js) ----------
+   * Lo que se enseña en PERFIL · CIFRAS y de dónde sale cada eje del
+   * polígono de fortalezas. Los topes son «esto ya es sobresaliente»: el eje
+   * llega al borde y se queda ahí. Se eligieron mirando una cuenta con
+   * setecientas partidas encima, para que el polígono tenga forma —con sus
+   * puntas y sus valles— en vez de salir redondo o clavado en el centro. */
+  CFG.STATS = {
+    /* Puntos por segundo de juego. Solo se usa para ESTIMAR el tiempo de lo
+     * jugado antes de que el tiempo se guardara (Achievements.sembrarCifras):
+     * un nivel entero son unas 244 pastillas, sus fantasmas y su fruta en
+     * torno al minuto y medio, que sale por ahí. La pantalla avisa de que esa
+     * parte es una estimación. */
+    PTS_POR_SEG: 33,
+    /* Los seis ejes del polígono: id, nombre, de dónde sale y su tope. */
+    EJES: [
+      { id: 'ataque',     name: 'ATAQUE',     tope: 10,     dec: 1 },
+      { id: 'puntos',     name: 'PUNTOS',     tope: 150000 },
+      { id: 'aguante',    name: 'AGUANTE',    tope: 5 },
+      { id: 'alcance',    name: 'ALCANCE',    tope: 21 },
+      { id: 'constancia', name: 'CONSTANCIA', tope: 60 },
+      { id: 'variedad',   name: 'VARIEDAD',   tope: 5 }
+    ],
+    /* Los cinco mundos, para la tabla por modo y para el eje de VARIEDAD.
+     * Son los mismos prefijos con los que se guardan los contadores. */
+    MUNDOS: [
+      { id: 'clasico', name: 'CLÁSICO',    color: '#ffff00' },
+      { id: 'hab',     name: 'DESATADO',   color: '#ff66cc' },
+      { id: 'lab',     name: 'LABERINTOS', color: '#ffb852' },
+      { id: 'caza',    name: 'CACERÍA',    color: '#ffb8ff' },
+      { id: 'vs',      name: 'PAC-MAN VS.', color: '#7ec8ff' }
+    ]
+  };
+
   /* ---------- Partida a medias (js/guardado.js) ----------
    * Lo que se guarda NO es una foto del laberinto: es la MISMA repetición
    * que ya se graba de toda partida (ajustes + giros + el tick de cada uno)

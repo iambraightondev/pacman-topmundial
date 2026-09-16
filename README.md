@@ -542,6 +542,7 @@ js/caceria.js     modo CACERÍA: el Pac-Man de la máquina y su poder periódico
 js/game.js        Bucle principal, máquina de estados y sincronización
 js/replay.js      Repeticiones: grabar, reproducir, guardar y compartir
 js/guardado.js    La partida a medias: guardarla y seguirla luego
+js/stats.js       Las CIFRAS del perfil y el polígono de fortalezas
 js/ui.js          Menús, opciones, panel de party, paneles y controles
 manifest.json     App instalable (PWA)
 sw.js             Service worker: funciona sin conexión

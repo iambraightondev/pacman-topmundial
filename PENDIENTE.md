@@ -13,6 +13,37 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (madrugada) — PERFIL · CIFRAS (`pm-v68`).** Braighton pidió una
+pantalla con las estadísticas del jugador, sus dobles y triples, horas de
+juego y un polígono de fortalezas, "toda la data posible", para que el juego
+compita más. Está: pestaña CIFRAS en el PERFIL con todo lo contado, dos tablas
+(por modo y por formato) y el polígono de seis ejes; y en el perfil de un
+amigo, **su polígono encima del tuyo**. Detalle en SPEC (*Las CIFRAS del
+perfil*). `tests.html` 354/354; Node, los 2 fallos de siempre.
+
+**Lo que hay que saber si se toca algo cerca:**
+- **Cuatro es el tope de la cadena** y está comprobado con una prueba: cuatro
+  fantasmas y ninguno vuelve a ponerse azul en el mismo susto, ni con el GRITO
+  (que reinicia la cadena) ni con el MORDISCO. Si algún día se quiere un
+  quíntuple, hay que cambiar el juego, no la pantalla.
+- Los contadores de cadena son **acumulativos** (`racha2` es "al menos dos").
+  Así se pueden sumar al juntar dos aparatos; los exactos se calculan
+  restando, en la pantalla.
+- Las pastillas se cuentan por partida y se vuelcan al cerrarla: apuntarlas
+  una a una haría pasar por los logros y el DAILY sesenta veces por segundo.
+- **El tiempo de antes del 16 sep es una ESTIMACIÓN** (los puntos de toda la
+  vida partidos por CFG.STATS.PTS_POR_SEG) porque nunca se guardó. La pantalla
+  lo dice al pie. Lo demás que se sembró son cotas por lo bajo, no inventos.
+
+**Lo que queda por mirar de esto:**
+- La pantalla **en un móvil de verdad**: son muchas cifras y el polígono mide
+  300 px.
+- Los **topes de los ejes** (`CFG.STATS.EJES`) están puestos a ojo con una
+  cuenta de 731 partidas. Cuando haya más gente con cuenta, mirar si el
+  polígono sigue teniendo forma o se va todo al borde.
+- El perfil de un amigo trae sus cifras de la nube, así que **solo sale
+  completo si esa persona ha entrado con cuenta** desde que esto existe.
+
 **16 sep (madrugada) — LAS REPETICIONES, COMO UN VÍDEO (`pm-v65`).**
 Braighton pidió dos cosas: poder adelantar y retroceder una repetición, y que
 el personaje llevara SU aspecto. Las dos están. La clave es que ahora el juego

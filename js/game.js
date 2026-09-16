@@ -534,6 +534,8 @@
       this.cazaTicks = 0;
       this.runGhosts = 0;
       this.runFrutas = 0;
+      this.runPastillas = 0;   // lo comido del laberinto, para las CIFRAS
+      this.runSuper = 0;
       this.runRacha = 0;
       this.limpiosSeguidos = 0;
       this.achNotices = [];
@@ -1111,7 +1113,7 @@
         if (this.level === 1) this.submitLevel1Time();
         if (!this.caza) {                // en CACERÍA lo despeja la máquina
           this.limpiosSeguidos++;        // despejado, y sin morir por el camino
-          this.bumpAch({ limpios: this.limpiosSeguidos });
+          this.bumpAch({ limpios: this.limpiosSeguidos, niveles: 1 });
         }
         this.state = 'LEVEL_DONE';
         this.levelPhase = 0;
@@ -1176,12 +1178,15 @@
       this.houseDotEaten();
       if (this.netRole === 'host') this.snapEaten.push(row * CFG.COLS + col);
 
+      var mio = !this.netRole || (pac && pac.id === this.localIdx);
       if (ch === '.') {
         this.addScore(CFG.DOT_POINTS);
         pac.pauseTicks = CFG.DOT_PAUSE;
+        if (mio && !(pac && pac.bot)) this.runPastillas++;
       } else {
         this.addScore(CFG.ENERGIZER_POINTS);
         pac.pauseTicks = CFG.ENERGIZER_PAUSE;
+        if (mio && !(pac && pac.bot)) this.runSuper++;
         this.triggerFright();
       }
       // cada skin extravagante (y DORADO) suena a lo suyo al comer
@@ -1389,7 +1394,16 @@
       if ((!this.netRole || (who || 0) === this.localIdx) && !comeBot) {
         this.runGhosts++;
         this.runRacha = Math.max(this.runRacha, this.chainIndex);
-        this.bumpAch({ fantasmas: 1, racha: this.chainIndex });
+        var cuenta = { fantasmas: 1, racha: this.chainIndex };
+        /* Dobles, triples y cuádruples, para las CIFRAS del perfil. Cuentan
+         * «al menos tantos», así que un cuádruple pasa por los tres: al
+         * juntar dos aparatos se suman sin más, y restando en la pantalla
+         * salen los exactos. Más de cuatro no existe: son cuatro fantasmas y
+         * ninguno vuelve a ponerse azul en el mismo susto. */
+        if (this.chainIndex >= 2) cuenta.racha2 = 1;
+        if (this.chainIndex >= 3) cuenta.racha3 = 1;
+        if (this.chainIndex >= 4) cuenta.racha4 = 1;
+        this.bumpAch(cuenta);
       }
       this.addScore(pts);
       this.addPopup(g.x, g.y, pts, CFG.EAT_FREEZE_TICKS);
@@ -2007,7 +2021,16 @@
        * entera de sus propias cazas (las decide el anfitrión). */
       // en Halloween o Navidad, la partida deja ganadas las skins de temporada
       if (window.PM.Skins && !this.replaying) window.PM.Skins.anotarTemporada();
-      this.bumpAch({ partidas: 1, puntosMax: pts, cazas: this.myCatches() });
+      /* Las CIFRAS del perfil (js/stats.js): el tiempo de la partida y lo
+     * comido del laberinto se vuelcan aquí, de una vez. Van por el mismo
+     * embudo que todo lo demás, así que también quedan repartidos por modo
+     * (`hab:tiempo`, `lab:pastillas`...). */
+      this.bumpAch({
+        partidas: 1, puntosMax: pts, cazas: this.myCatches(),
+        tiempo: Math.round(this.timeTicks / 60),
+        pastillas: this.runPastillas || 0,
+        'super': this.runSuper || 0
+      });
       /* Monedas de la TIENDA: las de la partida se cobran aquí, una vez, y
        * al resumen va todo lo ganado desde que empezó (también los retos del
        * DAILY cumplidos por el camino). Una repetición no paga. */

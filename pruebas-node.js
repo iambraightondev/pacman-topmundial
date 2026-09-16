@@ -287,7 +287,7 @@ vm.createContext(sandbox);
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
 var orden = ['config', 'audio', 'sprites', 'skins', 'pacman', 'ghost', 'net-config',
   'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
-  'temporadas', 'daily', 'mazes', 'achievements', 'tienda', 'account', 'versus',
+  'temporadas', 'daily', 'mazes', 'achievements', 'stats', 'tienda', 'account', 'versus',
   'habilidades', 'caceria', 'game', 'replay', 'guardado', 'ui'];
 
 orden.forEach(function (nombre) {

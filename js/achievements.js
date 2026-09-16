@@ -41,6 +41,23 @@
     dailySemana: 'suma', // semanas con los siete cumplidos
     dailyRacha: 'mayor', // días seguidos cumpliendo alguno
     racha:     'mayor',
+    /* Cuántas veces se ha encadenado 2, 3 y 4 fantasmas con una misma
+     * superpastilla. Son ACUMULATIVOS: un cuádruple suma también en dobles y
+     * en triples, porque lo que se pregunta es «cuántas veces he encadenado
+     * al menos tantos». Así se pueden fundir dos aparatos sumando, que es lo
+     * que hace la cuenta, y de paso restando en la pantalla salen los
+     * exactos. CUATRO ES EL TOPE: hay cuatro fantasmas y ninguno vuelve a
+     * ponerse azul dentro del mismo susto, ni siquiera con el GRITO o el
+     * MORDISCO de DESATADO (el GRITO reinicia la cadena). */
+    racha2:    'suma',
+    racha3:    'suma',
+    racha4:    'suma',
+    /* Para las cifras del PERFIL (js/stats.js): el tiempo jugado en
+     * segundos, los niveles despejados y lo comido del laberinto. */
+    tiempo:    'suma',
+    niveles:   'suma',
+    pastillas: 'suma',
+    super:     'suma',   // superpastillas
     nivelMax:  'mayor',
     limpios:   'mayor',
     puntosMax: 'mayor',
@@ -111,7 +128,7 @@
   }
 
   function load() {
-    var out = { c: vacio(), v: [], m: 0, d: 0, k: 0, b: 0 };
+    var out = { c: vacio(), v: [], m: 0, d: 0, k: 0, b: 0, e: 0, est: 0 };
     try {
       var raw = localStorage.getItem(CFG.ACH_KEY);
       var d = raw ? JSON.parse(raw) : null;
@@ -126,6 +143,8 @@
       if (d && d.m) out.m = 1;          // los contadores por modo, ya sembrados
       if (d && d.d) out.d = 1;          // y los del DAILY, sembrados del reto
       if (d && d.k) out.k = 1;          // y las muertes, sembradas de las partidas
+      if (d && d.e) out.e = 1;          // y las cifras del PERFIL
+      if (d && d.est) out.est = Math.floor(d.est) || 0;
       if (d && d.b) out.b = 1;          // y el regalo de veterano, ya calculado
     } catch (e) { /* sin almacenamiento */ }
     return out;
@@ -353,6 +372,55 @@
       return d.c;
     },
 
+    /* ---------- las cifras del PERFIL ----------
+     * Contadores que llegaron con la pantalla de CIFRAS. Empezar de cero a
+     * quien lleva setecientas partidas sería decirle que no ha jugado nunca,
+     * así que se siembran con lo que ya se sabe de él. Todo lo que se siembra
+     * es una COTA POR LO BAJO —lo mínimo que tuvo que pasar para llegar a lo
+     * que ya está contado— salvo el tiempo, que es una estimación declarada:
+     *
+     *   niveles   -> nivelMax - 1: para asomarse al nivel N hay que haber
+     *                despejado N-1, seguro.
+     *   pastillas -> los niveles sembrados por las 244 de cada uno.
+     *   super     -> cuatro por nivel despejado.
+     *   racha2/3/4-> la mejor racha dice que ESA se hizo al menos una vez.
+     *   tiempo    -> los puntos de toda la vida (la experiencia) al ritmo de
+     *                CFG.STATS.PTS_POR_SEG. No es exacto y no puede serlo:
+     *                nunca se guardó. La pantalla lo dice.
+     *
+     * Bandera `e`, como las demás siembras. merge() la baja para volver a
+     * sembrar con lo que venga de la nube, que puede ser mucho más largo. */
+    sembrarCifras: function () {
+      var d = load();
+      if (d.e) return d.c;
+      d.e = 1;
+      var c = d.c;
+      var nivelesMin = Math.max(0, (c.nivelMax || 0) - 1);
+      if (nivelesMin > (c.niveles || 0)) c.niveles = nivelesMin;
+      var pastillasMin = (c.niveles || 0) * 244;
+      if (pastillasMin > (c.pastillas || 0)) c.pastillas = pastillasMin;
+      var superMin = (c.niveles || 0) * 4;
+      if (superMin > (c['super'] || 0)) c['super'] = superMin;
+      var mejor = c.racha || 0;
+      if (mejor >= 2 && !(c.racha2 > 0)) c.racha2 = 1;
+      if (mejor >= 3 && !(c.racha3 > 0)) c.racha3 = 1;
+      if (mejor >= 4 && !(c.racha4 > 0)) c.racha4 = 1;
+      var L = window.PM.Level;
+      var xp = L ? L.xp() : 0;
+      var segs = Math.round(xp / ((CFG.STATS && CFG.STATS.PTS_POR_SEG) || 33));
+      if (segs > (c.tiempo || 0)) {
+        c.tiempo = segs;
+        d.est = segs;        // cuánto de ese tiempo es estimación
+      }
+      save(d);
+      return c;
+    },
+
+    /* Segundos de los que se guardan que vienen de la estimación de arriba.
+     * La pantalla de CIFRAS lo dice al pie en vez de dar por medido algo que
+     * no se midió. */
+    tiempoEstimado: function () { return load().est || 0; },
+
     /* ---------- el REGALO DE VETERANO ----------
      * La TIENDA llegó con 1.500 monedas para todos, y quien llevaba cientos de
      * partidas y media vitrina de logros empezaba igual que quien abría el
@@ -398,6 +466,7 @@
       this.sembrarModos();
       this.sembrarDaily();
       this.sembrarMuertes();
+      this.sembrarCifras();
       // y con los contadores ya sembrados, el regalo (cuenta logros)
       this.sembrarBono();
       var d = load();
@@ -444,6 +513,7 @@
        * a cero teniendo cien partidas a la espalda. */
       d.m = 0;
       d.k = 0;
+      d.e = 0;     // y las cifras, con el historial de la nube
       /* El regalo: si la nube no lo trae, nadie lo ha calculado con ese
        * historial, así que se calcula ahora con lo ya fundido. Si lo trae, ya
        * se quedó arriba con el máximo y no se toca. */

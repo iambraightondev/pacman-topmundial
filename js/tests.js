@@ -7519,6 +7519,148 @@
   });
 
 
+  /* ===============================================================
+   * LAS CIFRAS DEL PERFIL (js/stats.js)
+   *
+   * Aquí se compara gente, así que lo que no puede pasar es que una cifra
+   * mienta: ni por inventada, ni por perder lo que ya estaba contado, ni por
+   * contar dos veces lo mismo.
+   * =============================================================== */
+
+  test('las cifras derivadas salen de los contadores, sin inventar nada', function () {
+    var S = window.PM.Stats;
+    var d = S.de({
+      partidas: 100, fantasmas: 800, muertes: 200, tiempo: 36000,
+      puntosMax: 50000, racha: 4, racha2: 90, racha3: 40, racha4: 12,
+      nivelMax: 7, limpios: 3, dailyOk: 15, 'clasico:partidas': 100
+    }, 500000);
+    eq(d.media, 5000, 'la media por partida');
+    eq(d.porPartida, 8, 'fantasmas por partida');
+    eq(d.porMuerte, 4, 'fantasmas por vida perdida');
+    eq(d.porMinuto, 833, 'puntos por minuto');
+    eq(d.doblesExactos, 50, 'los dobles exactos son los dobles menos los triples');
+    eq(d.triplesExactos, 28, 'y los triples, menos los cuádruples');
+    eq(d.mundosJugados, 1, 'solo ha jugado a un modo');
+    /* sin partidas no se divide por cero ni sale NaN por ninguna parte */
+    var cero = S.de({}, 0);
+    eq(cero.media, 0, 'sin partidas, media cero');
+    eq(cero.porPartida, 0, 'y nada por partida');
+    eq(cero.porMuerte, 0, 'ni por muerte');
+  });
+
+  test('el polígono da seis ejes entre 0 y 1', function () {
+    var S = window.PM.Stats;
+    var ejes = S.radar(S.de({
+      partidas: 10, fantasmas: 1000, puntosMax: 999999, limpios: 99,
+      nivelMax: 99, dailyOk: 999,
+      'clasico:partidas': 1, 'hab:partidas': 1, 'lab:partidas': 1,
+      'caza:partidas': 1, 'vs:partidas': 1
+    }, 100));
+    eq(ejes.length, 6, 'seis ejes');
+    for (var i = 0; i < ejes.length; i++) {
+      ok(ejes[i].valor >= 0 && ejes[i].valor <= 1,
+         'el eje ' + ejes[i].name + ' se queda dentro: ' + ejes[i].valor);
+      ok(ejes[i].texto && ejes[i].texto.length > 0,
+         'y dice su dato de verdad, no solo el dibujo');
+    }
+    /* todo pasado de vueltas = polígono al borde */
+    eq(ejes[1].valor, 1, 'lo que pasa del tope se queda en el tope');
+    var vacio = S.radar(S.de({}, 0));
+    eq(vacio[0].valor, 0, 'y quien no ha jugado tiene el polígono a cero');
+  });
+
+  test('el tiempo jugado se lee en horas y minutos', function () {
+    var S = window.PM.Stats;
+    eq(S.reloj(45), '45 S');
+    eq(S.reloj(600), '10 MIN');
+    eq(S.reloj(3600), '1 H');
+    eq(S.reloj(194000), '53 H 53 MIN');
+    eq(S.cronos(0), '—', 'sin marca no se inventa un tiempo');
+    eq(S.cronos(5837), '0:58.37', 'y el del nivel 1 va en centésimas');
+  });
+
+  /* Lo que se baja de la nube de otro jugador tiene la misma forma que lo de
+   * aquí, que es lo que permite ponerlos lado a lado. */
+  test('el perfil de otro se mastica igual que el propio', function () {
+    var S = window.PM.Stats;
+    var d = S.deFila({
+      xp: 1000000, record1: 40000, record2: 10000, record3: 0, record4: 0,
+      record_hab: 90000, record_lab: 3000,
+      logros: { partidas: 200, fantasmas: 1500, muertes: 400, nivelMax: 12 }
+    });
+    ok(d, 'sale ficha');
+    eq(d.puntos, 1000000, 'con su experiencia');
+    eq(d.partidas, 200, 'y sus partidas');
+    eq(d.porPartida, 7.5, 'y sus cifras derivadas');
+    eq(S.porFormato(d)[0].valor, '40.000', 'y el récord de cada formato');
+    eq(S.deFila(null), null, 'y sin fila, nada');
+  });
+
+  /* La regla de la casa: un contador nuevo no empieza a cero a quien lleva
+   * setecientas partidas. Todo lo que se siembra es una cota POR LO BAJO. */
+  test('las cifras nuevas se siembran con lo que ya estaba contado', function () {
+    var A = window.PM.Achievements;
+    var raw = null;
+    try { raw = localStorage.getItem(CFG.ACH_KEY); } catch (e) { raw = null; }
+    try {
+      A.reset();
+      var d = JSON.parse(localStorage.getItem(CFG.ACH_KEY));
+      d.c.nivelMax = 10;         // llegó al nivel 10...
+      d.c.racha = 4;             // ...y alguna vez encadenó los cuatro
+      d.c.partidas = 731;
+      d.e = 0;
+      localStorage.setItem(CFG.ACH_KEY, JSON.stringify(d));
+      A.sembrarCifras();
+      var c = A.stats();
+      eq(c.niveles, 9, 'para asomarse al nivel 10 hay que haber despejado 9');
+      eq(c.pastillas, 9 * 244, 'y comido las pastillas de esos nueve');
+      eq(c['super'], 36, 'con sus cuatro superpastillas cada uno');
+      eq(c.racha2, 1, 'el cuádruple cuenta como doble');
+      eq(c.racha3, 1, 'y como triple');
+      eq(c.racha4, 1, 'y como cuádruple');
+      ok(c.tiempo > 0, 'y el tiempo se estima de los puntos');
+      ok(A.tiempoEstimado() > 0, 'y se sabe cuánto de él es estimación');
+      /* y no se siembra dos veces ni pisa lo que ya se haya jugado */
+      A.record('niveles', 1);
+      A.sembrarCifras();
+      eq(A.stats().niveles, 10, 'la siembra es de una sola vez');
+    } finally {
+      if (raw === null) A.reset();
+      else { try { localStorage.setItem(CFG.ACH_KEY, raw); } catch (e) { /* nada */ } }
+      A.syncSeen();
+    }
+  });
+
+  /* CUATRO ES EL TOPE, y no por una regla escrita: es que no hay más
+   * fantasmas que comer. Si algún día uno vuelve a ponerse azul dentro del
+   * mismo susto, esta prueba se entera. */
+  test('la cadena de fantasmas no pasa de cuatro', function () {
+    window.PM.settings.muted = true;
+    partida(1);
+    G.triggerFright(30);
+    var p = G.pacs[0], i;
+    for (i = 0; i < 4; i++) {
+      G.ghosts[i].mode = 'normal';
+      G.ghosts[i].frightened = true;
+      G.ghosts[i].x = p.x;
+      G.ghosts[i].y = p.y;
+    }
+    for (var t = 0; t < 400 && G.state === 'PLAYING'; t++) {
+      for (i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (g.frightened && g.mode === 'normal') { g.x = G.pacs[0].x; g.y = G.pacs[0].y; }
+      }
+      G.step();
+    }
+    eq(G.chainIndex, 4, 'se comen los cuatro');
+    ok(G.frightTicks > 0, 'y aún queda susto de sobra');
+    var azules = 0;
+    for (i = 0; i < 4; i++) if (G.ghosts[i].frightened) azules++;
+    eq(azules, 0, 'pero ya no queda ninguno azul: de ahí no se pasa');
+    G.toMenu();
+  });
+
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
