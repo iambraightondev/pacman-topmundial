@@ -13,6 +13,20 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (tarde) — cuentas limpias (`pm-v72`).** Braighton vio que los demás
+no tenían repartido CLÁSICO/DESATADO y que SANDROPEPA tenía máximos inflados.
+- SANDROPEPA tenía **marcas de las pruebas** (99.000 solo, 7.000 trío, 40.000
+  escuadra, 20.000/21.000 laberintos, nivel 1 en 0:00.02): puestas a 190/0 y
+  `purga: 1` en sus logros, que hace que la nube mande sobre sus aparatos.
+  Su **DESATADO solo de 100.600 se dejó**: no se pudo probar que fuera falso.
+- **Contagio entre cuentas**: cerrar sesión no limpiaba el navegador. Ya limpia.
+  Los récords ya contagiados (el 76.290 de dúo en las cinco) **se quedan**: no
+  se pueden separar de los propios.
+- **Reparto estimado por mordiscos** (`repEst: 1`): SANDROPEPA 19 %,
+  PIEROSENSUAL 64 %, FREDDY 9 %. MAULIO nada: **juega sin sesión** desde el
+  14 de agosto (28 partidas esta semana que no llegan a su cuenta).
+- `sembrarModos` le daba a CLÁSICO todo lo global en cada entrada a la cuenta.
+
 **16 sep (madrugada) — CIERRE DE SESIÓN DEL 16, TODO SUBIDO (`pm-v70`).**
 Lo de esta sesión, en orden: **la partida a medias** (guardarla y seguirla en
 otro aparato), **las repeticiones como un vídeo** (barra arrastrable,
