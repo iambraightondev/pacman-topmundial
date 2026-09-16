@@ -4555,7 +4555,9 @@
        * que da quien jugó, no una medición. */
       if (d.reparto) {
         avisos.push('DE LAS PARTIDAS ANTERIORES A ESA CUENTA, Y DE SU TIEMPO, EL ' + d.reparto.pct +
-          ' % SE HA REPARTIDO A DESATADO PORQUE ASÍ LO DECLARÓ QUIEN LAS JUGÓ (' +
+          ' % SE HA REPARTIDO A DESATADO ' + (d.reparto.estimado
+            ? 'ESTIMADO POR SUS MORDISCOS, QUE SOLO EXISTEN EN DESATADO ('
+            : 'PORQUE ASÍ LO DECLARÓ QUIEN LAS JUGÓ (') +
           S.miles(d.reparto.partidas) + ' PARTIDAS). LO MARCADO CON ~ ES APROXIMADO.');
       }
       b.pie.textContent = avisos.join(' ');

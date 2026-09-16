@@ -272,7 +272,8 @@
             (viejas / pClasico) * repHab / 100);
         }
       }
-      d.reparto = aDesatado ? { pct: repHab, partidas: aDesatado } : null;
+      d.reparto = aDesatado
+        ? { pct: repHab, partidas: aDesatado, estimado: num(c.repEst) > 0 } : null;
 
       var jugados = 0;
       for (var i = 0; i < CFG.STATS.MUNDOS.length; i++) {

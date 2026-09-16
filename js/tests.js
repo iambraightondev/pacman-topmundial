@@ -3810,6 +3810,94 @@
     });
   });
 
+  /* merge() vuelve a sembrar en cada entrada a la cuenta. Antes CLÁSICO se
+   * llevaba otra vez todo lo global, también lo jugado después en DESATADO,
+   * y nunca bajaba de la cuenta total. */
+  test('volver a sembrar no le da a CLÁSICO lo jugado en otro mundo', function () {
+    conLogrosLimpios(function (A) {
+      A.merge({ partidas: 100, puntosMax: 30000 });
+      eq(A.stats()['clasico:partidas'], 100, 'lo de antes, a clásico');
+      A.recordFor(['solo', 'hab'], { partidas: 5, puntosMax: 90000 });
+      A.merge({});
+      A.merge({ partidas: 1 });
+      eq(A.stats()['clasico:partidas'], 100, 'las cinco de DESATADO no pasan a clásico');
+      eq(A.stats()['hab:partidas'], 5, 'se quedan en DESATADO');
+      eq(A.stats()['clasico:puntosMax'], 30000,
+         'y la marca de DESATADO tampoco es de clásico');
+    });
+  });
+
+  /* Tras limpiar a mano una cuenta en la nube, lo de aquí no puede volver a
+   * subir lo que se quitó. */
+  test('una purga en la nube manda sobre lo de aquí', function () {
+    var Ac = window.PM.Account;
+    var u0 = Ac.user, t0 = Ac.token;
+    var r1 = G.highScore1, rl = G.recordModo('lab', 1);
+    var nombre0 = window.PM.settings.nick1;
+    conLogrosLimpios(function (A) {
+      try {
+        Ac.token = null;
+        Ac.user = { id: 'id', usuario: '', avatar: 'pac' };
+        G.highScore1 = 99000;
+        G.setRecordModo('lab', 20000, 1);
+        A.record('fantasmas', 300);
+        Ac.applyRemote({ usuario: 'PEPE', record1: 190, record_lab: 0,
+                         logros: { fantasmas: 120, purga: 1 } });
+        eq(G.recordFor(1), 190, 'el récord falso se va');
+        eq(G.recordModo('lab', 1), 0, 'también el de laberintos');
+        eq(A.stats().fantasmas, 120, 'y los contadores son los de la nube');
+        eq(A.stats().purga, 1, 'y la purga queda apuntada');
+        G.highScore1 = 5000;
+        Ac.applyRemote({ usuario: 'PEPE', record1: 190, logros: { fantasmas: 120, purga: 1 } });
+        eq(G.recordFor(1), 5000, 'la misma purga no vuelve a pisar lo jugado después');
+      } finally {
+        Ac.user = u0; Ac.token = t0;
+        window.PM.settings.nick1 = nombre0;
+        G.highScore1 = r1; G.setRecordModo('lab', rl, 1);
+        G.saveHighScores();
+      }
+    });
+  });
+
+  /* Si no, el siguiente que entra en SU cuenta desde este navegador se lleva
+   * el progreso del anterior. */
+  test('cerrar sesión deja el navegador limpio', function () {
+    var Ac = window.PM.Account, L = window.PM.Level;
+    var u0 = Ac.user, t0 = Ac.token;
+    var r2 = G.highScore2, rh = G.recordModo('hab', 1), xp0 = L.xp();
+    var s0 = { nick1: window.PM.settings.nick1, avatar: window.PM.settings.avatar };
+    var guardadas = {};
+    [CFG.BADGES_KEY, CFG.SAVE_KEY, CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas'].forEach(function (k) {
+      try { guardadas[k] = localStorage.getItem(k); } catch (e) { /* nada */ }
+    });
+    conLogrosLimpios(function (A) {
+      try {
+        Ac.token = null;
+        Ac.user = { id: 'id', usuario: 'OTRO', avatar: 'pac' };
+        G.highScore2 = 76290;
+        G.setRecordModo('hab', 180550, 1);
+        L.add(5000);
+        A.record('partidas', 50);
+        Ac.signOut();
+        eq(G.recordFor(2), 0, 'el récord de dúo del anterior no se queda');
+        eq(G.recordModo('hab', 1), 0, 'ni el de DESATADO');
+        eq(L.xp(), 0, 'ni su experiencia');
+        eq(A.stats().partidas || 0, 0, 'ni sus contadores');
+        eq(window.PM.settings.nick1, '', 'ni su nombre');
+      } finally {
+        Ac.user = u0; Ac.token = t0;
+        window.PM.settings.nick1 = s0.nick1;
+        window.PM.settings.avatar = s0.avatar;
+        G.highScore2 = r2; G.setRecordModo('hab', rh, 1);
+        G.saveHighScores();
+        L.reset(); L.add(xp0);
+        for (var k in guardadas) {
+          try { if (guardadas[k] !== null) localStorage.setItem(k, guardadas[k]); } catch (e) { /* nada */ }
+        }
+      }
+    });
+  });
+
   test('una partida cuenta a la vez para su formato y para su modo', function () {
     conLogrosLimpios(function (A) {
       window.PM.settings.muted = true;

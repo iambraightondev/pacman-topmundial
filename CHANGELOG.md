@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Cuentas que ya no se contagian
+
+- **Cerrar sesión deja el navegador limpio.** Antes el progreso del anterior se
+  quedaba y el siguiente que entraba en su cuenta se lo llevaba: por eso las
+  cinco cuentas tenían el mismo récord de dúo.
+- **Las pruebas ya no abren la sesión de verdad.** Habían subido a SANDROPEPA
+  marcas de mentira (99.000 en solo, entre otras); se le han quitado.
+- **Una limpieza en la nube manda** sobre lo que tenga guardado cada aparato,
+  para que lo quitado no vuelva a subir.
+- **CLÁSICO ya no se queda con las partidas de DESATADO.** Cada vez que se
+  entraba en la cuenta, CLÁSICO volvía a llevarse todo lo jugado.
+- A SANDROPEPA, PIEROSENSUAL y FREDDY se les reparte lo viejo entre CLÁSICO y
+  DESATADO **estimado por sus mordiscos**, y la tabla lo dice.
+
 ## 2026-09-16 · El tiempo también se reparte
 
 - El reparto declarado de lo viejo (70 % DESATADO) ya se aplicaba a las

@@ -69,6 +69,12 @@
      * Es un dato DECLARADO, no medido, y la pantalla lo dice. */
     repHab:    'mayor',
     repBase:   'mayor',
+    /* 1 = ese reparto no lo declaró el jugador: se estimó por sus mordiscos,
+     * que solo existen en DESATADO. La pantalla lo dice distinto. */
+    repEst:    'mayor',
+    /* Sube cada vez que se limpia a mano una cuenta en la nube. Si la nube lo
+     * trae más alto que el de aquí, la nube manda (ver Account.applyRemote). */
+    purga:     'mayor',
     /* Para las cifras del PERFIL (js/stats.js): el tiempo jugado en
      * segundos, los niveles despejados y lo comido del laberinto. */
     tiempo:    'suma',
@@ -145,6 +151,9 @@
     }
     return o;
   })();
+
+  /* Los mundos que NO son clásico: cada partida es de uno solo (Game.achTags) */
+  var MUNDOS_EXCL = ['hab', 'lab', 'caza', 'vs'];
 
   function vacio() {
     var o = {};
@@ -342,8 +351,26 @@
         if (i < 0) continue;                       // este ya es el global
         var modo = k.slice(0, i), base = k.slice(i + 1);
         var v = 0;
-        if (modo === 'clasico') v = d.c[base] || 0;
-        else if (modo === 'party' && hayParty) v = d.c[base] || 0;
+        /* Esto corre en CADA entrada a la cuenta (merge baja la bandera), así
+         * que no puede darle a CLÁSICO lo global a secas: se llevaba también
+         * lo jugado después en DESATADO y demás, y nunca bajaba de la cuenta
+         * total. A CLÁSICO va solo lo que no esté ya apuntado en otro mundo;
+         * y una marca que ya tiene otro mundo no es suya. */
+        if (modo === 'clasico') {
+          var otros = 0, suya = true;
+          for (var w = 0; w < MUNDOS_EXCL.length; w++) {
+            var o = d.c[MUNDOS_EXCL[w] + ':' + base] || 0;
+            if (STATS[k] === 'suma') otros += o;
+            else if (o > 0 && (STATS[k] === 'mayor' ? o >= (d.c[base] || 0)
+                                                     : o <= (d.c[base] || 0))) suya = false;
+          }
+          v = (STATS[k] === 'suma') ? (d.c[base] || 0) - otros
+            : (suya ? (d.c[base] || 0) : 0);
+        } else if (modo === 'party' && hayParty && !(d.c[k] > 0)) {
+          /* PARTY se solapa con todos (es el formato, no el mundo) y no hay
+           * con qué restar: se siembra solo si aún no cuenta nada. */
+          v = d.c[base] || 0;
+        }
         if (v > 0) d.c[k] = Math.max(d.c[k] || 0, v);
       }
       save(d);
@@ -524,6 +551,20 @@
     /* ---------- cuentas ---------- */
     /* Junta unos contadores de fuera (los de la cuenta) con los de aquí,
      * quedándose con lo mejor de cada uno. No se pierde nada por entrar. */
+    /* Como merge(), pero la nube manda: tras una limpieza a mano, fundir
+     * quedándose con lo más alto devolvería justo lo que se quitó. */
+    reemplazar: function (otros) {
+      var d = load();
+      d.c = vacio();
+      for (var k in STATS) {
+        if (!STATS.hasOwnProperty(k)) continue;
+        var n = Math.floor((otros && otros[k]) || 0);
+        if (n > 0) d.c[k] = n;
+      }
+      save(d);
+      return this.stats();
+    },
+
     merge: function (otros) {
       if (!otros) return this.stats();
       var d = load();

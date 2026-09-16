@@ -195,6 +195,10 @@
 
     /* ---------- sesión guardada ---------- */
     saveSession: function (refresh) {
+      /* La página de pruebas nunca toca la sesión de verdad: comparte el
+       * almacén con el juego y sus marcas de mentira acabarían en la cuenta
+       * de quien la tuviera abierta (le pasó a SANDROPEPA: 99.000 en solo). */
+      if (window.PM_PRUEBAS) return;
       try {
         if (refresh) localStorage.setItem(AC.KEY, refresh);
         else localStorage.removeItem(AC.KEY);
@@ -202,6 +206,7 @@
     },
 
     savedSession: function () {
+      if (window.PM_PRUEBAS) return null;
       try { return localStorage.getItem(AC.KEY) || null; }
       catch (e) { return null; }
     },
@@ -326,9 +331,16 @@
     signOut: function (cb) {
       var self = this;
       var token = this.token;
+      /* Lo de aquí sube antes de irse (la fila se arma ya, así que limpiar
+       * justo después no la toca) y el navegador queda como nuevo. Si no, el
+       * siguiente que entrara en SU cuenta desde aquí se llevaba el progreso
+       * del anterior: así acabaron las cinco cuentas con el mismo récord de
+       * dúo. */
+      if (this.logged()) this.push(true).catch(function () { /* nada */ });
       this.token = null;
       this.user = null;
       this.saveSession(null);
+      this.limpiarLocal();
       this.changed();
       if (token) {
         fetch(base('/auth/v1/logout'), {
@@ -336,6 +348,39 @@
         }).catch(function () { /* da igual: la sesión local ya se fue */ });
       }
       if (cb) cb(null);
+    },
+
+    /* Todo lo que es de la CUENTA y vive también en este navegador: nivel,
+     * logros y contadores, maestrías vistas, récords, la partida a medias,
+     * amigos y el nombre. El historial y las repeticiones no: son del
+     * aparato y no se funden con ninguna cuenta. */
+    limpiarLocal: function () {
+      var keys = [CFG.LEVEL_KEY, CFG.ACH_KEY, CFG.BADGES_KEY, CFG.SAVE_KEY,
+        CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas'];
+      try {
+        for (var i = 0; i < keys.length; i++) localStorage.removeItem(keys[i]);
+      } catch (e) { /* sin almacenamiento */ }
+      var g = window.PM.Game;
+      if (g && g.setRecordFor) {
+        for (var n = 1; n <= CFG.MAX_PLAYERS; n++) g.setRecordFor(n, 0);
+        for (var m = 0; m < this.modoCols.length; m++) {
+          g.setRecordModo(this.modoCols[m][0], 0, this.modoCols[m][1]);
+        }
+        g.highScore = 0;
+        if (g.saveHighScores) g.saveHighScores();
+      }
+      if (window.PM.Achievements) window.PM.Achievements.reset();
+      if (window.PM.Guardado) {
+        window.PM.Guardado.ultimo = -1;
+        window.PM.Guardado.ultimoNube = -1;
+        window.PM.Guardado.deNube = null;
+      }
+      var s = window.PM.settings;
+      if (s) {
+        s.nick1 = '';
+        s.avatar = 'pac';
+        if (window.PM.UI && window.PM.UI.saveSettings) window.PM.UI.saveSettings();
+      }
     },
 
     /* ---------- perfil ---------- */
@@ -449,6 +494,28 @@
         s.avatar = fila.avatar;
       }
       if (window.PM.Level) window.PM.Level.setAtLeast(fila.xp);
+      /* Una LIMPIEZA hecha a mano en la nube (cifras que nunca se jugaron)
+       * lleva el contador `purga` más alto que el de aquí. Entonces la nube
+       * manda: récords y contadores se toman tal cual en vez de quedarse con
+       * lo mejor de cada lado, que es justo lo que devolvería la basura. */
+      var A0 = window.PM.Achievements;
+      var purga = Math.floor((fila.logros && fila.logros.purga) || 0);
+      if (A0 && purga > (A0.stats().purga || 0)) {
+        if (g && g.setRecordFor) {
+          for (var p = 1; p <= this.recordCols.length; p++) {
+            g.setRecordFor(p, parseInt(fila[this.recordCols[p - 1]], 10) || 0);
+          }
+          for (var q = 0; q < this.modoCols.length; q++) {
+            g.setRecordModo(this.modoCols[q][0],
+              parseInt(fila[this.modoCols[q][2]], 10) || 0, this.modoCols[q][1]);
+          }
+          g.highScore = g.recordFor(1);
+          if (g.saveHighScores) g.saveHighScores();
+          if (window.PM.Badges) window.PM.Badges.syncSeen();
+        }
+        A0.reemplazar(fila.logros);
+        A0.syncSeen();
+      }
       if (g && g.recordFor) {
         /* Los cuatro récords, uno por formato. Se queda el mejor de cada
          * lado: entrar en la cuenta desde otro navegador nunca cuesta
