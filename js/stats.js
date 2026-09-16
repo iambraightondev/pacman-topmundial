@@ -253,10 +253,24 @@
       d.doblesExactos = Math.max(0, d.dobles - d.triples);
       d.triplesExactos = Math.max(0, d.triples - d.cuadruples);
 
+      /* El reparto declarado de lo viejo (ver Achievements.declararReparto):
+       * de las `repBase` partidas que estaban todas apuntadas a CLÁSICO,
+       * tantas por ciento fueron de DESATADO. Se aplica SOLO a esas; lo
+       * jugado después ya viene contado en su sitio. */
+      var repHab = num(c.repHab), repBase = num(c.repBase);
+      var viejas = 0, aDesatado = 0;
+      if (repHab > 0 && repBase > 0) {
+        viejas = Math.min(repBase, cont(c, 'partidas', 'clasico'));
+        aDesatado = Math.round(viejas * repHab / 100);
+      }
+      d.reparto = aDesatado ? { pct: repHab, partidas: aDesatado } : null;
+
       var jugados = 0;
       for (var i = 0; i < CFG.STATS.MUNDOS.length; i++) {
         var m = CFG.STATS.MUNDOS[i];
         var p = cont(c, 'partidas', m.id);
+        if (m.id === 'clasico') p = Math.max(0, p - aDesatado);
+        else if (m.id === 'hab') p += aDesatado;
         var rastro = this.rastroDe(c, m.id, records);
         if (rastro) jugados++;
         d.mundos.push({
@@ -280,6 +294,16 @@
         else if (d.mundos[w].partidas < 0) dudoso = true;
       }
       if (dudoso && cl && cl.partidas > 0) cl.aprox = true;
+      /* Con un reparto declarado ya no hay nada que adivinar: los dos números
+       * son aproximados, pero los dos son un número. */
+      if (aDesatado > 0) {
+        for (var y = 0; y < d.mundos.length; y++) {
+          var mm = d.mundos[y];
+          if (mm.id !== 'clasico' && mm.id !== 'hab') continue;
+          if (mm.partidas < 0) mm.partidas = 0;
+          mm.aprox = true;
+        }
+      }
       return d;
     },
 

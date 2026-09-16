@@ -330,6 +330,37 @@ round or pinned at the centre. Every axis also carries its real number
 (`texto`): a polygon with no figures is a drawing, and nobody can argue with
 a drawing.
 
+### The per-mode table cannot trust the per-mode counters
+
+Per-mode counters came after the game, and seeding them meant filing every
+already-played game under CLÁSICO (`sembrarModos`) — there was no way to know
+which mode each one had been. Fine for achievements, which only test
+thresholds; false for a statistics table, where it tells someone who only
+plays DESATADO that they have never played it, and credits CLÁSICO with a
+DESATADO score.
+
+So the table takes its **best** from the records (per-format records are the
+1980 maze and DESATADO does not enter them; `record_hab`/`record_lab` are
+their own) and, for **games played**, prints a dash where the counter says
+zero but there is a trace of having played that mode (`Stats.rastroDe`: its
+record, its bites, its catches). A lying zero is worse than an honest
+"unknown".
+
+What no file knows, the player does. `Achievements.declararReparto(pct)`
+records that `pct` % of the old games were DESATADO (`repHab`) along with how
+many games there were when it was said (`repBase`), so the split applies to
+**those only** — anything played afterwards is counted properly on its own.
+Both are `mayor` counters so they ride to the account and back (merging keeps
+the higher side, which is exactly what lets a declaration reach a device that
+never made one). Split numbers are shown with a `~` and the footer says whose
+word they are: declared, not measured.
+
+**`hab:partidas` did not exist.** A per-mode counter was only stored if some
+achievement looked at it, and no DESATADO achievement counts games, so that
+mode would have read zero forever. `STATS` now also includes the four figures
+the table shows (`partidas`, `puntosMax`, `fantasmas`, `tiempo`) for the five
+worlds in `CFG.STATS.MUNDOS`.
+
 ### Counters added for it
 
 `racha2`/`racha3`/`racha4` (doubles, triples, quadruples), `tiempo`

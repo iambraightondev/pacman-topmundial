@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Decir tú el reparto de lo viejo
+
+- De qué modo era cada partida de antes no lo sabe ningún archivo: lo sabe
+  quien jugó. Ahora **se puede declarar** ("el 70 % de aquello era DESATADO")
+  y la tabla reparte con esa palabra, solo las partidas anteriores a que cada
+  modo llevara su cuenta. Lo que se juegue después se cuenta solo y no se
+  toca. Los números repartidos se enseñan con una virgulilla y el pie dice de
+  dónde salen.
+- Y algo que estaba roto de raíz: **`hab:partidas` no existía**. Un contador
+  por modo solo se guardaba si algún logro lo miraba, y ningún logro de
+  DESATADO contaba partidas, así que ese modo habría seguido marcando cero
+  para siempre por mucho que se jugara. Ahora los contadores de las cuatro
+  cifras que enseña la tabla (partidas, mejor, fantasmas y tiempo) existen
+  para los cinco modos.
+
 ## 2026-09-16 · La tabla POR MODO, arreglada
 
 - Decía **0 partidas en DESATADO** a quien más lo ha jugado, y le ponía a

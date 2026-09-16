@@ -52,6 +52,23 @@
     racha2:    'suma',
     racha3:    'suma',
     racha4:    'suma',
+    /* ---------- el reparto declarado de lo viejo ----------
+     * Los contadores por modo son posteriores al juego y, al crearlos, lo ya
+     * jugado se apuntó TODO a CLÁSICO: no había forma de saber de qué modo
+     * era cada partida. La hay, en realidad, pero no está en ningún archivo:
+     * la sabe quien jugó. `repHab` es el porcentaje de aquellas partidas que
+     * fueron de DESATADO —lo dice el propio jugador— y `repBase` cuántas
+     * partidas había cuando lo dijo, para que el reparto se aplique SOLO a
+     * esas y no a las que se jueguen después, que ya se cuentan bien.
+     *
+     * Los dos son 'mayor' a propósito: así viajan a la cuenta y vuelven de
+     * ella sin que fundirlas los pierda (los contadores se funden quedándose
+     * con lo más alto de cada lado, que es lo que permite que esto llegue a
+     * un aparato donde no se declaró nada).
+     *
+     * Es un dato DECLARADO, no medido, y la pantalla lo dice. */
+    repHab:    'mayor',
+    repBase:   'mayor',
     /* Para las cifras del PERFIL (js/stats.js): el tiempo jugado en
      * segundos, los niveles despejados y lo comido del laberinto. */
     tiempo:    'suma',
@@ -113,6 +130,18 @@
       if (!a.modo) continue;
       var c = claveLogro(a);
       if (tipoDe(c)) o[c] = tipoDe(c);
+    }
+    /* Y las que pide la pantalla de CIFRAS para su tabla por modo, aunque no
+     * las mire ningún logro. Hasta aquí un contador por modo solo existía si
+     * algún logro lo necesitaba, y de DESATADO no había ninguno que contara
+     * partidas: `hab:partidas` no existía, así que la tabla enseñaba un cero
+     * eterno a quien no juega a otra cosa. Se cuentan las cuatro que se
+     * enseñan, para los cinco mundos. */
+    var M = (CFG.STATS && CFG.STATS.MUNDOS) || [];
+    for (i = 0; i < M.length; i++) {
+      ['partidas', 'puntosMax', 'fantasmas', 'tiempo'].forEach(function (base) {
+        o[M[i].id + ':' + base] = BASE[base];
+      });
     }
     return o;
   })();
@@ -410,6 +439,21 @@
       }
       save(d);
       return c;
+    },
+
+    /* Decir qué parte de lo jugado ANTES de que cada modo llevara su cuenta
+     * fue DESATADO. `pct` es ese porcentaje (0..100); el resto es CLÁSICO.
+     * Se queda con las partidas que hay ahora mismo repartidas entre esos dos
+     * modos como base, así que lo que se juegue a partir de aquí se cuenta
+     * solo, sin que este reparto lo toque. */
+    declararReparto: function (pct) {
+      var d = load();
+      var p = Math.max(0, Math.min(100, Math.round(pct)));
+      var base = (d.c['clasico:partidas'] || 0) + (d.c['hab:partidas'] || 0);
+      d.c.repHab = p;
+      d.c.repBase = base;
+      save(d);
+      return { pct: p, base: base };
     },
 
     /* Segundos de los que se guardan que vienen de la estimación de arriba.

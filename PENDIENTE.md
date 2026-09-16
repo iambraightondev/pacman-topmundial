@@ -13,6 +13,27 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**16 sep (madrugada) — CIERRE DE SESIÓN DEL 16, TODO SUBIDO (`pm-v70`).**
+Lo de esta sesión, en orden: **la partida a medias** (guardarla y seguirla en
+otro aparato), **las repeticiones como un vídeo** (barra arrastrable,
+rebobinado y el aspecto de quien jugó), **las repeticiones de LABERINTOS**
+arregladas, **las partidas preparadas** y **PERFIL · CIFRAS** con su polígono.
+Todo con su detalle más abajo. `tests.html` 357/357; Node, los 2 de siempre.
+
+**POR DÓNDE SEGUIR, lo primero de la próxima sesión:**
+- **Verlo todo en un móvil de verdad.** Tres pantallas nuevas sin probar en un
+  teléfono: la de CIFRAS (son muchas cifras y el polígono mide 300 px), la
+  barra de la repetición (el arrastre solo se ha probado con eventos de
+  puntero simulados) y el bloque CONTINUAR de la portada.
+- **La tabla POR MODO se irá arreglando sola** conforme juegue, ahora que cada
+  modo cuenta de verdad sus partidas. Al cabo de unos días, mirar si el
+  reparto declarado (70/30) sigue haciendo falta o ya sobra.
+- Los **topes de los ejes** del polígono (`CFG.STATS.EJES`) están puestos a
+  ojo con una sola cuenta. Con más gente dentro, mirar si siguen teniendo
+  forma o se van todos al borde.
+- La **partida preparada** de 140.870 sigue en la nube si no se ha jugado;
+  cuando se termine, se cobra como cualquier otra.
+
 **16 sep (madrugada) — PERFIL · CIFRAS (`pm-v68`).** Braighton pidió una
 pantalla con las estadísticas del jugador, sus dobles y triples, horas de
 juego y un polígono de fortalezas, "toda la data posible", para que el juego

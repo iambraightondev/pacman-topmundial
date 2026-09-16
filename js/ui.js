@@ -4551,6 +4551,13 @@
           'CUENTA: LAS DE ANTES SE APUNTARON TODAS A CLÁSICO, Y DONDE NO SE SABE VA UN GUION. ' +
           'LAS MEJORES MARCAS SÍ SON LAS DE CADA MODO.');
       }
+      /* Si hay reparto declarado, se dice de quién es la palabra: es el dato
+       * que da quien jugó, no una medición. */
+      if (d.reparto) {
+        avisos.push('DE LAS PARTIDAS ANTERIORES A ESA CUENTA, EL ' + d.reparto.pct +
+          ' % SE HA REPARTIDO A DESATADO PORQUE ASÍ LO DECLARÓ QUIEN LAS JUGÓ (' +
+          S.miles(d.reparto.partidas) + ' PARTIDAS). LO MARCADO CON ~ ES APROXIMADO.');
+      }
       b.pie.textContent = avisos.join(' ');
     },
 

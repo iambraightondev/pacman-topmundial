@@ -3740,12 +3740,17 @@
       eq(A.stats()['party:partidas'] || 0, 0, 'y no en party');
       ok(A.has('caza50'), 'el logro suelto de 50 fantasmas cae');
       ok(!A.has('pt_batida'), 'pero el de party no, que no se ha jugado');
-      /* Solo se guarda lo que mira algún logro: no hay ningún logro de
-       * "fantasmas en clásico", así que ese contador ni existe. Es a
-       * propósito —el almacén no engorda por gusto— y por eso se comprueba:
-       * si alguien añade ese logro, este contador aparece solo. */
-      eq(A.STATS.hasOwnProperty('clasico:fantasmas'), false,
-         'no se guarda un contador que no mira nadie');
+      /* Qué contadores existen lo deciden sus consumidores: los LOGROS y,
+       * desde la pantalla de CIFRAS, las cuatro cifras que enseña por modo
+       * (partidas, mejor marca, fantasmas y tiempo). `clasico:fantasmas` no
+       * lo mira ningún logro y aun así se guarda, porque la tabla lo enseña.
+       * Lo que sigue sin existir es lo que no mira nadie. */
+      eq(A.stats()['clasico:fantasmas'], 60,
+         'el contador por modo de las CIFRAS se llena con lo suyo');
+      eq(A.stats()['hab:fantasmas'] || 0, 0,
+         'y el de otro modo se queda a cero');
+      eq(A.STATS.hasOwnProperty('clasico:frutas'), false,
+         'y lo que no mira ni un logro ni la pantalla, no se guarda');
       G.toMenu();
     });
   });
@@ -7692,6 +7697,66 @@
     eq(S.porMundo(d)[1].partidas, '—', 'y el guion también');
     eq(d.mundosJugados, 3,
        'y para VARIEDAD cuenta que ha jugado a DESATADO aunque su contador esté a cero');
+  });
+
+
+  /* De qué modo eran las partidas viejas no lo sabe ningún archivo: lo sabe
+   * quien jugó. Si lo dice, se reparte con su palabra — y solo aquellas, que
+   * las de después ya se cuentan bien solas. */
+  test('el reparto declarado solo toca las partidas viejas', function () {
+    var S = window.PM.Stats;
+    function tabla(extra) {
+      var c = {
+        partidas: 737, nivelMax: 10, racha: 4, mordiscos: 1000,
+        'clasico:partidas': 734, 'hab:puntosMax': 180550,
+        repHab: 70, repBase: 734
+      };
+      for (var k in extra) { if (extra.hasOwnProperty(k)) c[k] = extra[k]; }
+      var d = S.de(c, 6685710, { formatos: [49050, 76290, 0, 0], hab: 180550 });
+      var o = {};
+      for (var i = 0; i < d.mundos.length; i++) o[d.mundos[i].id] = d.mundos[i];
+      return { modos: o, reparto: d.reparto };
+    }
+
+    var t = tabla({});
+    eq(t.reparto.pct, 70, 'se sabe qué parte se declaró');
+    eq(t.reparto.partidas, 514, 'y cuántas partidas son');
+    eq(t.modos.hab.partidas, 514, 'DESATADO se lleva el 70 %');
+    eq(t.modos.clasico.partidas, 220, 'y CLÁSICO se queda con el resto');
+    ok(t.modos.hab.aprox && t.modos.clasico.aprox,
+       'los dos quedan marcados como aproximados: es un reparto, no una cuenta');
+
+    /* lo que se juegue DESPUÉS se cuenta en su sitio y no se reparte */
+    var t2 = tabla({ 'clasico:partidas': 754, 'hab:partidas': 10 });
+    eq(t2.modos.clasico.partidas, 240, 'las veinte nuevas de CLÁSICO son suyas');
+    eq(t2.modos.hab.partidas, 524, 'y las diez nuevas de DESATADO, también');
+
+    /* sin declarar nada, nada se mueve */
+    var t3 = tabla({ repHab: 0, repBase: 0 });
+    eq(t3.reparto, null, 'sin reparto declarado no hay reparto');
+    eq(t3.modos.clasico.partidas, 734, 'y los contadores se enseñan tal cual');
+  });
+
+  test('declarar el reparto se queda con las partidas de ese momento', function () {
+    var A = window.PM.Achievements;
+    var raw = null;
+    try { raw = localStorage.getItem(CFG.ACH_KEY); } catch (e) { raw = null; }
+    try {
+      A.reset();
+      var d = JSON.parse(localStorage.getItem(CFG.ACH_KEY));
+      d.c['clasico:partidas'] = 300;
+      d.c['hab:partidas'] = 20;
+      localStorage.setItem(CFG.ACH_KEY, JSON.stringify(d));
+      var r = A.declararReparto(70);
+      eq(r.pct, 70, 'se guarda el porcentaje');
+      eq(r.base, 320, 'y las partidas que había, para no repartir las de mañana');
+      eq(A.stats().repHab, 70, 'y queda en los contadores, que viajan a la cuenta');
+      eq(A.declararReparto(140).pct, 100, 'un porcentaje imposible se recorta');
+    } finally {
+      if (raw === null) A.reset();
+      else { try { localStorage.setItem(CFG.ACH_KEY, raw); } catch (e) { /* nada */ } }
+      A.syncSeen();
+    }
   });
 
 
