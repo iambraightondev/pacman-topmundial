@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Partidas preparadas
+
+- Una partida guardada puede partir ahora de un **punto de partida montado a
+  mano** (marcador y laberinto a medio comer) en vez de del principio. Sirve
+  para dejar el juego en una situación concreta —para probar algo, o para
+  recuperar una partida que se perdió antes de que existiera el guardado— sin
+  tener que jugar hasta ahí.
+- Sale como CONTINUAR igual que cualquier otra, con la coletilla
+  **PREPARADA** para que se sepa lo que es. Desde ahí se juega, se guarda y se
+  cobra como una partida normal: **lo preparado cuenta como jugado**, con su
+  experiencia, sus monedas y su récord.
+- Lo que se juegue después sí se graba con normalidad, así que se puede volver
+  a dejar a medias las veces que haga falta.
+
 ## 2026-09-16 · Arregladas las repeticiones de LABERINTOS
 
 - Una repetición de un laberinto alternativo **se veía en el laberinto de

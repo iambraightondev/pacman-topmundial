@@ -7426,6 +7426,99 @@
   });
 
 
+  /* Una partida PREPARADA: la que no viene del principio de nada, sino de un
+   * punto de partida montado a mano (js/guardado.js, `arranque`). Se retoma
+   * como cualquier otra y, a partir de ahí, se juega y se cobra igual. */
+  test('una partida preparada se retoma en el punto que dice su arranque', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      var R = window.PM.Replay;
+      /* el laberinto tal y como queda al comerse una de cada dos pastillas */
+      G.newGame({ players: 1, hab: true,
+                  cfg: { ghostSpeedMult: 1, pacSpeedMult: 1, frightMult: 1,
+                         startLives: 1, startLevel: 2, livesMode: 'shared' } });
+      var n = 0, quitadas = 0;
+      for (var r = 0; r < CFG.ROWS; r++) {
+        for (var c = 0; c < CFG.COLS; c++) {
+          if (G.pellets[r][c] !== '.') continue;
+          n++;
+          if (n % 2 === 0) { G.pellets[r][c] = null; quitadas++; }
+        }
+      }
+      var hex = G.pelletHex();
+      var quedan = 244 - quitadas;
+      G.toMenu();
+
+      var rep = {
+        v: 1, modo: 'hab', semilla: null, nivel: 2, jugadores: 1,
+        ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 1, qArmada: true },
+        nombres: ['UNO'], fecha: new Date().toISOString(), entradas: [],
+        final: { puntos: 140870, nivel: 2, fantasmas: 0, tiempoMs: 0 }
+      };
+      var sobre = {
+        v: CFG.SAVE_V, rep: R.serializar(rep), t: 0, maze: null,
+        p: 140870, dl: quedan, st: 'PLAYING', lv: 2, j: 1, modo: 'hab',
+        arranque: { puntos: 140870, pellets: hex, comidos: quitadas },
+        fecha: Date.now(), quien: ''
+      };
+      ok(sobre.rep, 'la repetición de una preparada vale igual');
+      localStorage.setItem(CFG.SAVE_KEY, JSON.stringify(sobre));
+
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'se retoma');
+      eq(G.score, 140870, 'con el marcador del arranque');
+      eq(G.level, 2, 'en su nivel');
+      eq(G.lives, 1, 'con las vidas que decía');
+      eq(G.dotsLeft, quedan, 'y el laberinto a medio comer');
+      ok(G.hab, 'y en DESATADO');
+      ok(G.paused, 'en pausa, como cualquier partida retomada');
+      ok(Gd.titulo().indexOf('PREPARADA') !== -1,
+         'y se dice que es una partida preparada');
+    });
+  });
+
+  /* Lo que de verdad importa: que se pueda volver a dejar a medias. El
+   * arranque tiene que viajar con ella o el marcador empezaría de cero. */
+  test('una partida preparada se puede volver a guardar y retomar', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      var R = window.PM.Replay;
+      var rep = {
+        v: 1, modo: 'hab', semilla: null, nivel: 2, jugadores: 1,
+        ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 1, qArmada: true },
+        nombres: ['UNO'], fecha: new Date().toISOString(), entradas: [],
+        final: { puntos: 50000, nivel: 2, fantasmas: 0, tiempoMs: 0 }
+      };
+      localStorage.setItem(CFG.SAVE_KEY, JSON.stringify({
+        v: CFG.SAVE_V, rep: R.serializar(rep), t: 0, maze: null,
+        p: 50000, dl: 244, st: 'PLAYING', lv: 2, j: 1, modo: 'hab',
+        arranque: { puntos: 50000, comidos: 0 },
+        fecha: Date.now(), quien: ''
+      }));
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'se retoma');
+      /* se juega un rato más y se vuelve a dejar */
+      G.setPaused(false);
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      ticks(500);
+      var puntos = G.score;
+      ok(puntos >= 50000, 'el marcador sigue donde estaba');
+      ok(Gd.guardarYSalir(), 'se guarda otra vez');
+      var dos = Gd.sobre();
+      ok(dos.arranque, 'el arranque viaja con ella');
+      eq(dos.arranque.puntos, 50000, 'con su punto de partida');
+
+      err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'y se vuelve a retomar sin perderse');
+      eq(G.score, puntos, 'con todo lo jugado desde el arranque');
+    });
+  });
+
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------

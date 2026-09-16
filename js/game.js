@@ -511,6 +511,7 @@
       this.rankingSent = false;
       this.xpSent = false;
       this.salvada = false;     // partida a medias guardada (js/guardado.js)
+      this.arranque = null;     // ...y de qué punto partía, si no del principio
       this.retomada = null;     // y de cuál se viene, si es que se retomó una
       this.timeTicks = 0;
       this.timeSent = false;

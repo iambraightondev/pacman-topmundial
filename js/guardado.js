@@ -86,6 +86,38 @@
       return !!(rep && MODOS_OK[rep.modo]);
     },
 
+    /* ---------- partidas PREPARADAS ----------
+     * Un sobre normal es una repetición desde el primer tick: se vuelve a
+     * jugar entera y sale la misma partida. Pero hay estados que no vienen de
+     * ahí —una partida montada a mano para probar algo, o para rescatar una
+     * que se perdió— y que tampoco se pueden reconstruir jugando, porque
+     * nunca se jugaron así.
+     *
+     * Para eso está `arranque`: el sobre dice de qué punto se parte (marcador
+     * y laberinto a medio comer) y la repetición cuenta lo jugado DESDE AHÍ.
+     * El resto no cambia: se monta la partida, se aplica el arranque, se
+     * simulan las entradas que haya y al final se comprueba que cuadra, igual
+     * que siempre. Una partida así sigue cobrándose entera cuando termina,
+     * como cualquier otra: lo preparado cuenta como jugado.
+     *
+     * El nivel y las vidas no van aquí: son ajustes de la partida y viajan
+     * donde viajan siempre, en la repetición (`nivel`, `ajustes.vidas`), así
+     * que montarla ya los deja puestos sin tocar los ajustes de nadie. */
+    aplicarArranque: function (a) {
+      var g = G();
+      if (!a) return;
+      if (typeof a.pellets === 'string' && a.pellets) {
+        g.ponerPelletHex(a.pellets);          // recalcula las que quedan
+      }
+      if (typeof a.comidos === 'number') g.dotsEaten = a.comidos;
+      if (typeof a.puntos === 'number') g.score = a.puntos;
+      /* Se queda pegado a la partida para que, si se vuelve a dejar a medias,
+       * el siguiente sobre parta del mismo sitio: sin esto, al retomarla otra
+       * vez el marcador empezaría de cero y no cuadraría nada. */
+      g.arranque = a;
+      g.syncUI();
+    },
+
     /* La partida de ahora mismo, en sobre. null si no hay nada que guardar */
     sobreDeAhora: function () {
       if (!this.puedeGuardar()) return null;
@@ -119,6 +151,8 @@
         lv: g.level,
         j: g.playerCount,
         modo: rep.modo,
+        // de dónde partía, si no partía del principio (partida preparada)
+        arranque: g.arranque || null,
         fecha: Date.now(),
         quien: (A && A.logged()) ? A.name() : ''
       };
@@ -282,6 +316,8 @@
       this.tarea = { vivo: true };
       var tarea = this.tarea;
       r.montar(rep, { maze: sobre.maze || null });
+      // una partida preparada no empieza donde empiezan las demás
+      if (sobre.arranque) this.aplicarArranque(sobre.arranque);
 
       var pasos = 0;
       /* Deja el juego en el menú y suelta la repetición a medio reproducir */
@@ -389,7 +425,8 @@
       sobre = sobre || this.sobre();
       if (!sobre) return '';
       var nombre = sobre.maze ? 'LABERINTOS' : (this.NOMBRES[sobre.modo] || 'PARTIDA');
-      return nombre + ' · ' + this.miles(sobre.p) + ' PUNTOS · NIVEL ' + sobre.lv;
+      return nombre + ' · ' + this.miles(sobre.p) + ' PUNTOS · NIVEL ' + sobre.lv +
+        (sobre.arranque ? ' · PREPARADA' : '');
     },
 
     /* Y cuándo se dejó, en corto: HOY 21:14 · AYER 03:02 · 12/09 19:40 */

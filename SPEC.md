@@ -995,6 +995,27 @@ exclusive **by construction**:
   (`Replay.enCurso()` is asked *before* `alAcabar()` clears it). A CACERÍA or
   ONLINE game deletes nothing: it is not what was saved.
 
+### Prepared runs (`sobre.arranque`)
+
+A normal envelope is a replay from tick zero: replaying it rebuilds the run.
+Some states do not come from there — a position set up by hand to test
+something, or a run rescued from before saving existed — and cannot be
+rebuilt by playing, because they were never played that way.
+
+`arranque` is the starting point the envelope departs from: `{ puntos,
+pellets (hex), comidos }`. `Guardado.aplicarArranque` runs right after
+mounting and before simulating anything, so the recorded entries (if any)
+play out *on top of* it and the usual score/pellet check at the end still
+means what it meant. Level and lives are not in there: they are run settings
+and travel where they always did (`rep.nivel`, `rep.ajustes.vidas`), which
+also means mounting one touches nobody's saved settings.
+
+It sticks to the run (`Game.arranque`) so the next envelope carries it too —
+without that, resuming a prepared run a second time would start the score
+from zero and nothing would add up. `Guardado.titulo` appends PREPARADA, and
+a prepared run is cashed in like any other when it ends: prepared counts as
+played.
+
 ### Resuming (`Guardado.retomar(avance, hecho)`)
 
 Mutes audio, sets `G.simulandoFuera = true` (the main loop stops stepping),
