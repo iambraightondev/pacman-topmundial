@@ -42,8 +42,16 @@ red.
   él. **J1** se mueve con las flechas y usa `N` `M` `,` `.`; **J2** se mueve
   con WASD y usa `Z` `X` `C` `V`. La barra de abajo enseña las dos, con la
   recarga de cada uno.
-- **Ver una repetición**: `P`/`Esc` la pausa (con velocidad, reiniciar y
-  salir), y arriba hay una barra con los mismos controles a mano.
+- **Ver una repetición**: se ve como un vídeo. Arriba hay una **barra de
+  tiempo que se arrastra** para ir a cualquier momento, con botones de ir al
+  principio, saltar 10 segundos atrás o adelante, pausar, cambiar la
+  velocidad (x0.5, x1, x2 y x4) y salir. Con el teclado: flechas para saltar,
+  espacio para pausar, `Home` y `End` para los extremos y `X` para la
+  velocidad. Al abrirla tarda un momento en prepararse: el juego se la juega
+  entera a toda prisa para poder saltar al instante a donde quieras.
+- **El personaje sale con el aspecto de quien jugó** (su skin, su color, su
+  accesorio y su efecto), así que una partida que te comparta un amigo se ve
+  como la jugó él y no con lo tuyo puesto.
 - **Rendirse**: botón `RENDIRSE` arriba a la derecha. En dos jugadores (local
   u online) la partida solo termina si **lo aceptan los dos**.
 - **Al terminar**: cuando acaban las celebraciones, el GAME OVER resume lo

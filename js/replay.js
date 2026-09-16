@@ -70,6 +70,85 @@
     return out;
   }
 
+  /* ---------- el aspecto de quien jugó ----------
+   * Una repetición se ve como SE JUGÓ, así que el aspecto viaja con ella:
+   * skin, color y lo puesto de la TIENDA (accesorio y efecto), por jugador.
+   * Antes se pintaba con lo que llevara puesto QUIEN MIRA, y una partida
+   * ajena salía con tu skin y tu color, que es como ver la grabación de otro
+   * con tu cara puesta.
+   *
+   * Va en un campo aparte y AL FINAL del texto, así que las repeticiones de
+   * antes (diez campos) se siguen leyendo igual: simplemente no traen
+   * aspecto, y entonces se pintan como se pintaban.
+   *
+   * Formato: un jugador por coma, y dentro `skin.color.accesorio.efecto`
+   * (el color en hexadecimal sin la almohadilla). Lo que falte va vacío. */
+  function codAspectos(lista) {
+    var out = [];
+    for (var i = 0; i < lista.length; i++) {
+      var a = lista[i] || {};
+      out.push([
+        String(a.s || '').replace(/[^a-z0-9_-]/gi, ''),
+        String(a.c || '').replace(/[^0-9a-f]/gi, '').slice(0, 6),
+        String(a.a || '').replace(/[^a-z0-9_-]/gi, ''),
+        String(a.x || '').replace(/[^a-z0-9_-]/gi, '')
+      ].join('.'));
+    }
+    return out.join(',');
+  }
+
+  /* Estricto a propósito: cada jugador son CUATRO trozos separados por
+   * puntos, y si el campo no es exactamente eso la repetición se da por rota.
+   * Un texto que llega por una URL puede venir con cualquier cosa pegada
+   * detrás, y pegar basura al final no puede colar como aspecto. */
+  var RE_ASPECTO = /^[a-z0-9_-]*\.[0-9a-f]{0,6}\.[a-z0-9_-]*\.[a-z0-9_-]*$/i;
+
+  function decAspectos(texto) {
+    if (!texto) return null;
+    var trozos = String(texto).split(','), out = [];
+    for (var v = 0; v < trozos.length; v++) {
+      if (!RE_ASPECTO.test(trozos[v])) return false;   // false = viene roto
+    }
+    for (var i = 0; i < trozos.length; i++) {
+      var p = trozos[i].split('.');
+      /* El color vuelve con su almohadilla, que es como lo usa el juego (y
+       * como estaba antes de serializarlo: leer(serializar(x)) tiene que dar
+       * exactamente x, y hay una prueba que lo exige). */
+      var c = /^[0-9a-f]{6}$/i.test(p[1] || '') ? ('#' + p[1]) : '';
+      out.push({ s: p[0] || '', c: c, a: p[2] || '', x: p[3] || '' });
+    }
+    return out;
+  }
+
+  /* Lo que llegue de fuera no se pinta a ciegas: una skin que no existe
+   * (repetición de una versión más nueva, o texto trasteado) sale como el
+   * Pac-Man de siempre en vez de no dibujar nada. */
+  function limpiaAspecto(a) {
+    var out = { s: '', c: '', a: '', x: '' };
+    if (!a) return out;
+    if (CFG.SKIN_IDS.indexOf(a.s) !== -1) out.s = a.s;
+    if (/^#?[0-9a-f]{6}$/i.test(a.c || '')) {
+      out.c = (a.c.charAt(0) === '#') ? a.c : ('#' + a.c);
+    }
+    if (CFG.ACCESORIO_IDS && CFG.ACCESORIO_IDS.indexOf(a.a) !== -1) out.a = a.a;
+    if (CFG.EFECTO_IDS && CFG.EFECTO_IDS.indexOf(a.x) !== -1) out.x = a.x;
+    return out;
+  }
+
+  /* De la repetición a lo que newGame espera: tres listas sueltas */
+  function repartoAspectos(rep) {
+    if (!rep || !esLista(rep.aspectos) || !rep.aspectos.length) return null;
+    var colores = [], skins = [], looks = [], hay = false;
+    for (var i = 0; i < rep.jugadores; i++) {
+      var a = limpiaAspecto(rep.aspectos[i]);
+      colores.push(a.c || null);
+      skins.push(a.s || null);
+      looks.push({ a: a.a, x: a.x });
+      if (a.c || a.s || a.a || a.x) hay = true;
+    }
+    return hay ? { colors: colores, skins: skins, looks: looks } : null;
+  }
+
   function b36(n) { return Math.round(n).toString(36); }
   function d36(s) { return parseInt(s, 36); }
   function esNum(n) { return typeof n === 'number' && isFinite(n); }
@@ -369,6 +448,10 @@
         if (!hayPac || !hayFantasma) return false;
       } else if (a.ghosts) return false;
       if (!esLista(rep.nombres) || !rep.nombres.length) return false;
+      /* El aspecto es opcional (las repeticiones de antes no lo traen), pero
+       * si viene tiene que ser una lista: lo que lleve dentro ya se sanea al
+       * repartirlo, que un accesorio raro no puede tumbar una repetición. */
+      if (rep.aspectos != null && !esLista(rep.aspectos)) return false;
       if (typeof rep.fecha !== 'string' || !rep.fecha) return false;
       if (!esLista(rep.entradas)) return false;
       if (rep.entradas.length > CFG.REPLAY_MAX_ENTRADAS) return false;
@@ -418,7 +501,11 @@
         b36(Date.parse(rep.fecha) || 0),
         codEntradas(rep.entradas),
         [b36(f.puntos), b36(f.nivel), b36(f.fantasmas), b36(f.tiempoMs)].join(',')
-      ].join(SEP);
+      ].join(SEP) +
+        /* El aspecto va al final y solo si lo hay: así el texto de una
+         * repetición vieja sigue siendo exactamente el mismo. */
+        (esLista(rep.aspectos) && rep.aspectos.length
+          ? (SEP + codAspectos(rep.aspectos)) : '');
     },
 
     /* Texto -> repetición, o null si viene rota. Nunca lanza: el texto
@@ -429,7 +516,9 @@
         var t = texto.replace(/^\s+|\s+$/g, '');
         if (!t) return null;
         var p = t.split(SEP);
-        if (p.length !== 10) return null;
+        // once campos desde que el aspecto viaja con la repetición; las de
+        // antes traen diez y se leen igual
+        if (p.length !== 10 && p.length !== 11) return null;
         var mv = /^R(\d+)$/.exec(p[0]);
         if (!mv || parseInt(mv[1], 10) !== this.V) return null;
         var modo = MODOS_INV[p[1]];
@@ -478,6 +567,11 @@
             fantasmas: d36(fin[2]), tiempoMs: d36(fin[3])
           }
         };
+        if (p.length === 11) {
+          var asp = decAspectos(p[10]);
+          if (asp === false || !asp || asp.length !== rep.jugadores) return null;
+          rep.aspectos = asp;
+        }
         return this.valida(rep) ? rep : null;
       } catch (e) {
         return null;
@@ -717,8 +811,15 @@
       if (G.caza) return;
 
       var s = (opts && opts.cfg) || G.settings();
-      var nombres = [];
-      for (var i = 0; i < G.playerCount; i++) nombres.push(G.rawName(i));
+      var nombres = [], aspectos = [];
+      for (var i = 0; i < G.playerCount; i++) {
+        nombres.push(G.rawName(i));
+        /* Cómo iba vestido cada uno: es lo que hace que la repetición se vea
+         * como se jugó y no como vaya vestido quien la abra. */
+        var lk = G.lookFor(i) || {};
+        aspectos.push({ s: G.skinFor(i), c: G.colorFor(i),
+                        a: lk.a || '', x: lk.x || '' });
+      }
       var ajustes = {
         velFantasmas: G.ghostSpeedMult,
         velPac: G.pacSpeedMult,
@@ -753,6 +854,7 @@
         jugadores: G.playerCount,
         ajustes: ajustes,
         nombres: nombres,
+        aspectos: aspectos,
         fecha: new Date().toISOString(),
         entradas: [],
         final: null
@@ -831,11 +933,12 @@
        * el anfitrión emite todo el rato, también durante el "¡LISTO!". Las
        * locales solo cuentan mientras la partida avanza de verdad, porque el
        * rótulo de inicio dura lo que dure la melodía y puede cambiar. */
-      if (this.modo === 'verRed') { this.t++; this.inyectarRed(); return; }
+      if (this.modo === 'verRed') { this.t++; this.inyectarRed(); this.latido(); return; }
       if (this.red) { this.t++; return; }
       if (this.modo === 'ver') this.inyectar();
       var s = G.state;
       if (s === 'PLAYING' || s === 'DYING' || s === 'LEVEL_DONE') this.t++;
+      this.latido();      // la línea de tiempo se mueve sola
     },
 
     inyectar: function () {
@@ -1059,11 +1162,14 @@
        * invitado ve lo que le llega, y un mirón ni eso. */
       if (!G || G.netRole !== 'host') return;
       var s = G.settings();
-      var nombres = [], colores = [], skins = [], i;
+      var nombres = [], colores = [], skins = [], looks = [], i;
       for (i = 0; i < G.playerCount; i++) {
         nombres.push(G.rawName(i));
         colores.push(G.colorFor(i));
         skins.push(G.skinFor(i));
+        // el accesorio y el efecto de cada uno: sin esto la repetición
+        // sale con la skin buena pero sin las gafas ni la estela
+        looks.push(G.lookFor(i));
       }
       var ajustes = {
         velFantasmas: G.ghostSpeedMult,
@@ -1081,6 +1187,7 @@
         nombres: nombres,
         colores: colores,
         skins: skins,
+        looks: looks,
         ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
         hab: !!G.hab,          // modo DESATADO: dientes, chispas y flash
         caza: !!G.caza,        // CACERÍA: el Pac-Man de la máquina y su reloj
@@ -1146,6 +1253,7 @@
       var cab = {
         v: this.V_RED, j: rep.jugadores, nv: rep.nivel, mz: rep.maze || null,
         aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
+        lk: rep.looks || null,
         gh: rep.ghosts || null, hb: !!rep.hab, cz: !!rep.caza,
         fe: rep.fecha, pm: rep.pm || null,
         fin: rep.final
@@ -1201,7 +1309,8 @@
         return {
           v: cab.v, jugadores: n, nivel: cab.nv || 1, maze: cab.mz || null,
           ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
-          skins: cab.sk || [], ghosts: cab.gh || null, hab: !!cab.hb,
+          skins: cab.sk || [], looks: cab.lk || null,
+          ghosts: cab.gh || null, hab: !!cab.hb,
           caza: !!cab.cz, fecha: cab.fe || '',
           pm: cab.pm || null, cuadros: cuadros, eventos: eventos,
           final: cab.fin || null
@@ -1304,12 +1413,14 @@
         names: rep.nombres.slice(),
         colors: rep.colores.slice(),
         skins: rep.skins.slice(),
+        looks: rep.looks ? rep.looks.slice() : null,
         ghosts: rep.ghosts ? rep.ghosts.slice() : null,
         maze: rep.maze || null,
         hab: !!rep.hab,
         caza: !!rep.caza
       });
       if (rep.pm && rep.pm.hex && G.applyPelletHex) G.applyPelletHex(rep.pm.hex);
+      this.prepararConAviso();
       return true;
     },
 
@@ -1460,6 +1571,210 @@
     },
 
     /* =========================================================
+     * VERLA COMO UN VÍDEO — preparar, saltar y rebobinar
+     *
+     * Una repetición no guarda dónde estaba cada uno: guarda los giros (o,
+     * en las de red, las instantáneas) y la partida se vuelve a montar sobre
+     * la marcha. Ir hacia delante es barato —se sigue— pero ir HACIA ATRÁS
+     * obligaría a rehacerla entera cada vez, y arrastrar una barra serían
+     * tirones de un segundo.
+     *
+     * Así que al abrirla se juega una vez a toda velocidad, sin pintar y sin
+     * sonido, dejando una FOTO de la partida (Game.foto) cada pocos segundos.
+     * Con eso se sabe además cuánto dura, que es lo que la barra necesita
+     * para tener un final. A partir de ahí, saltar a cualquier momento es
+     * restaurar la foto de antes y simular lo que falte: nunca más de
+     * CFG.REPLAY_FOTO_CADA pasos, que se hacen en un suspiro.
+     *
+     * Vale para las dos clases de repetición sin distinguirlas: las de
+     * teclas vuelven a simularse y las de red vuelven a aplicarse, pero las
+     * dos avanzan con Game.step() y las dos se fotografían igual.
+     * ========================================================= */
+    fotos: [],           // [{ t, cursor, cursorEv, foto }]
+    tTotal: 0,           // último tick de la repetición (se sabe al prepararla)
+    prep: null,          // preparación en marcha (para poder cancelarla)
+
+    /* Deja la repetición lista para verse como un vídeo. hecho(ok)
+     *
+     * El primer trozo va DIFERIDO, no de corrido: así montar una repetición
+     * sigue dejando el juego exactamente donde lo dejaba antes (en su primer
+     * tick, sin nada simulado por delante) y quien solo quiera reproducirla
+     * a pelo —las pruebas, sin ir más lejos— no se encuentra media partida ya
+     * jugada al volver de aquí. Los pocos milisegundos que tarda en arrancar
+     * no los ve nadie. */
+    preparar: function (hecho) {
+      var self = this;
+      if (this.modo !== 'ver' && this.modo !== 'verRed') { hecho(false); return; }
+      this.fotos = [];
+      this.tTotal = 0;
+      var tarea = { vivo: true };
+      this.prep = tarea;
+      var pasos = 0, avisado = 0, arrancada = false;
+
+      function acabar(ok) {
+        self.prep = null;
+        if (arrancada) {
+          G.simulandoFuera = false;
+          self.mudo(false);
+        }
+        hecho(ok);
+      }
+
+      function trozo() {
+        if (!tarea.vivo) { acabar(false); return; }
+        if (!arrancada) {
+          arrancada = true;
+          self.mudo(true);
+          G.simulandoFuera = true;      // el bucle del juego no mete pasos
+          self.guardaFoto();            // el momento cero, para poder volver
+          if (self.prepProgreso) self.prepProgreso();
+        }
+        var hasta = Date.now() + CFG.REPLAY_PREP_MS;
+        while (pasos < CFG.REPLAY_PREP_MAX) {
+          G.step();
+          pasos++;
+          if (self.acabada()) break;
+          if (self.t - self.ultimaFoto() >= CFG.REPLAY_FOTO_CADA) self.guardaFoto();
+          if ((pasos & 511) === 0 && Date.now() >= hasta) break;
+        }
+        if (self.acabada() || pasos >= CFG.REPLAY_PREP_MAX) {
+          self.tTotal = self.t;
+          self.irA(0);                  // y a verla desde el principio
+          acabar(true);
+          return;
+        }
+        /* El aviso se reescribe como mucho seis veces por segundo: a cada
+         * trozo (12 ms) serían ochenta reconstrucciones del diálogo por
+         * segundo, y eso sí que frena la preparación. */
+        var ahora = Date.now();
+        if (self.prepProgreso && ahora - avisado > 150) {
+          avisado = ahora;
+          self.prepProgreso();
+        }
+        self.luego(trozo);
+      }
+      this.luego(trozo);
+    },
+
+    /* Cómo se encadena el siguiente trozo. Es un método para que las pruebas
+     * puedan prepararla de un tirón (`function (fn) { fn(); }`), que allí no
+     * hay reloj que dispare nada. */
+    luego: function (fn) { setTimeout(fn, 0); },
+
+    cancelarPreparar: function () {
+      if (this.prep) this.prep.vivo = false;
+    },
+
+    /* ¿La repetición ha llegado a su final? */
+    acabada: function () {
+      if (this.modo === 'verRed') return !!this.redFin;
+      return G.state === 'GAME_OVER' || G.state === 'MENU';
+    },
+
+    ultimaFoto: function () {
+      return this.fotos.length ? this.fotos[this.fotos.length - 1].t : -999999;
+    },
+
+    guardaFoto: function () {
+      this.fotos.push({ t: this.t, cursor: this.cursor, cursorEv: this.cursorEv,
+                        redFin: !!this.redFin, foto: G.foto() });
+    },
+
+    /* La foto más cercana por debajo (o igual) de ese tick */
+    fotoPara: function (t) {
+      var mejor = null;
+      for (var i = 0; i < this.fotos.length; i++) {
+        if (this.fotos[i].t <= t) mejor = this.fotos[i];
+        else break;
+      }
+      return mejor || this.fotos[0] || null;
+    },
+
+    /* Saltar a un momento cualquiera. Es lo que usan la barra, los botones de
+     * ±10 s y REINICIAR. */
+    irA: function (destino) {
+      if (this.modo !== 'ver' && this.modo !== 'verRed') return;
+      if (!this.fotos.length) return;
+      destino = Math.round(destino);
+      if (destino < 0) destino = 0;
+      if (this.tTotal && destino > this.tTotal) destino = this.tTotal;
+      var f = this.fotoPara(destino);
+      if (!f) return;
+      var fuera = G.simulandoFuera, mudoYa = !!this.enMudo;
+      G.simulandoFuera = true;
+      if (!mudoYa) this.mudo(true);
+      G.ponerFoto(f.foto);
+      this.t = f.t;
+      this.cursor = f.cursor;
+      this.cursorEv = f.cursorEv;
+      this.redFin = f.redFin;
+      var tope = CFG.REPLAY_FOTO_CADA * 4;       // red de seguridad
+      while (this.t < destino && tope-- > 0 && !this.acabada()) G.step();
+      G.simulandoFuera = fuera;
+      if (!mudoYa) this.mudo(false);
+      /* Los bucles de sonido venían del momento del que se ha saltado: se
+       * cortan y el juego los vuelve a encender solo si tocan. */
+      G.stopAllLoops();
+      G.syncUI();
+      this.pintaBarra();
+    },
+
+    salta: function (ticks) { this.irA(this.t + ticks); },
+
+    /* Silenciar mientras se salta o se prepara: se están jugando minutos en
+     * un segundo y sonaría a ametralladora. Al soltar se deja como lo tenga
+     * puesto quien mira. */
+    mudo: function (on) {
+      if (!window.AudioSys || !AudioSys.setMuted) return;
+      this.enMudo = !!on;
+      var s = window.PM.settings;
+      AudioSys.setMuted(on ? true : !!(s && s.muted));
+    },
+
+    /* Preparar con su aviso en pantalla, que es lo que ve quien abre una
+     * repetición: unos segundos con un contador y un CANCELAR. */
+    prepararConAviso: function () {
+      var self = this, UI = window.PM.UI;
+      this.avisoPreparando();
+      this.prepProgreso = function () { self.avisoPreparando(); };
+      this.preparar(function (ok) {
+        self.prepProgreso = null;
+        if (UI && UI.hidePrompt) UI.hidePrompt();
+        if (!ok) { self.salir(); return; }      // la han cancelado
+        self.mostrarBarra(true);
+        G.syncUI();
+      });
+    },
+
+    avisoPreparando: function () {
+      var self = this, UI = window.PM.UI;
+      if (!UI || !UI.showPrompt) return;
+      UI.showPrompt({
+        title: 'PREPARANDO LA REPETICIÓN',
+        color: '#7ec8ff',
+        lines: [
+          'SE ESTÁ REHACIENDO LA PARTIDA PARA PODER ADELANTARLA Y REBOBINARLA COMO UN VÍDEO.',
+          { text: self.reloj(self.t), big: true }
+        ],
+        buttons: [
+          { label: 'CANCELAR', hint: 'ESC', keys: ['Escape'],
+            onClick: function () { self.cancelarPreparar(); } }
+        ]
+      });
+    },
+
+    /* Ticks -> m:ss. El reloj de la repetición no corre durante el '¡LISTO!',
+     * así que esto es el tiempo de VÍDEO, que es justo lo que hace falta para
+     * una barra: lo que se tarda en verla. */
+    reloj: function (t) {
+      var s = Math.floor(Math.max(0, t) / 60);
+      var m = Math.floor(s / 60);
+      s = s % 60;
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    },
+
+
+    /* =========================================================
      * REPRODUCCIÓN
      * ========================================================= */
     /* reg: el registro guardado de donde sale (para apuntarle lo recompuesto) */
@@ -1482,6 +1797,7 @@
         return true;
       }
       this.montar(rep);
+      this.prepararConAviso();
       return true;
     },
 
@@ -1504,10 +1820,18 @@
         if (UI.resumeAudio) UI.resumeAudio();
         UI.hideAll();
       }
+      /* El aspecto de quien la jugó entra por la misma puerta que en una
+       * partida online (los colores, las skins y lo puesto de la TIENDA
+       * viajan en el saludo), así que no hay que tocar nada del pintado. Una
+       * repetición de antes no lo trae y se pinta como se pintaba. */
+      var look = repartoAspectos(rep);
       G.newGame({
         players: rep.jugadores,
         cfg: this.cfgDe(rep),
         names: rep.nombres.slice(),
+        colors: look ? look.colors : null,
+        skins: look ? look.skins : null,
+        looks: look ? look.looks : null,
         // sin esto las habilidades grabadas no tendrían dónde aplicarse
         hab: esDesatado(rep.modo),
         // ni los giros del que llevaba fantasma, a quién moverle
@@ -1643,6 +1967,9 @@
       var rep = this.rep;
       if (window.PM.UI) window.PM.UI.hidePrompt();
       G.paused = false;
+      /* Con las fotos delante, volver al principio es un salto mas: ni se
+       * vuelve a montar la partida ni se vuelve a preparar nada. */
+      if (this.fotos.length) { this.irA(0); return; }
       // la de red se vuelve a montar entera: su reloj y sus cursores van
       // con la reproducción, no con la partida
       if (this.modo === 'verRed') { this.verRed(rep); return; }
@@ -1660,6 +1987,9 @@
       this.montaje = null;
       this.grabando = null;
       this.red = null;
+      this.cancelarPreparar();
+      this.fotos = [];        // un megabyte largo: no se queda ahi colgado
+      this.tTotal = 0;
       this.cursor = 0;
       this.cursorEv = 0;
       this.t = 0;
@@ -1667,14 +1997,34 @@
       G.timeScale = 1;
       this.mostrarBarra(false);
       if (!estaba) return;
-      // los nombres eran los de la repetición, no los de nadie de aquí
+      /* El nombre y el aspecto eran los de quien la jugó, no los de quien
+       * mira: si se quedaran puestos, la siguiente partida de aquí saldría
+       * con la skin y el color de otro. */
       G.netNames = null;
+      G.netColors = null;
+      G.netSkins = null;
+      G.netLooks = null;
       if (!yaEnMenu && G.inGame()) G.toMenu();
     },
 
+    /* Velocidad de reproducción. Solo se aceptan las de la lista: el bucle
+     * del juego multiplica su acumulador por esto, así que un número
+     * cualquiera saldría del mismo paso fijo de 1/60 s pero con un reparto
+     * raro de pasos por fotograma. */
     velocidad: function (x) {
-      G.timeScale = (x === 2) ? 2 : 1;
+      var lista = CFG.REPLAY_VELOCIDADES;
+      G.timeScale = (lista.indexOf(x) !== -1) ? x : 1;
       this.pintaBarra();
+    },
+
+    /* La siguiente de la lista, dando la vuelta al llegar al final */
+    otraVelocidad: function () {
+      var lista = CFG.REPLAY_VELOCIDADES;
+      var i = lista.indexOf(G.timeScale || 1);
+      this.velocidad(lista[(i + 1) % lista.length]);
+      if (window.PM.UI && window.PM.UI.promptOpen && window.PM.UI.syncPrompt) {
+        window.PM.UI.syncPrompt();
+      }
     },
 
     pausar: function (on) {
@@ -1699,6 +2049,10 @@
       this.pintaBarra();
     },
 
+    /* La barra de mando. Dos filas: arriba de quién es la partida y los
+     * botones; abajo la línea de tiempo, que se puede arrastrar como la de
+     * cualquier vídeo. Los estilos van en línea (ver el comentario de la
+     * sección): esto aparece y desaparece con la repetición. */
     construirBarra: function () {
       if (typeof document === 'undefined' || !document.body) return;
       var self = this;
@@ -1711,11 +2065,9 @@
       st.top = '0';
       st.zIndex = '30';
       st.display = 'none';
-      st.alignItems = 'center';
-      st.justifyContent = 'center';
-      st.flexWrap = 'wrap';
-      st.gap = '6px';
-      st.padding = '5px 8px';
+      st.flexDirection = 'column';
+      st.gap = '5px';
+      st.padding = '6px 10px 7px';
       st.background = 'rgba(0, 0, 0, 0.82)';
       st.borderBottom = '2px solid #7ec8ff';
       st.fontFamily = "'Courier New', Courier, monospace";
@@ -1725,14 +2077,24 @@
       st.color = '#7ec8ff';
       st.lineHeight = '1';
 
+      var fila = document.createElement('div');
+      var fs = fila.style;
+      fs.display = 'flex';
+      fs.alignItems = 'center';
+      fs.justifyContent = 'center';
+      fs.flexWrap = 'wrap';
+      fs.gap = '6px';
+      bar.appendChild(fila);
+
       this.etiqueta = document.createElement('span');
       this.etiqueta.textContent = 'REPETICIÓN';
-      bar.appendChild(this.etiqueta);
+      fila.appendChild(this.etiqueta);
 
-      function boton(texto, fn) {
+      function boton(texto, titulo, fn) {
         var b = document.createElement('button');
         b.type = 'button';
         b.textContent = texto;
+        b.title = titulo || '';
         var s = b.style;
         s.fontFamily = 'inherit';
         s.fontSize = '11px';
@@ -1744,33 +2106,202 @@
         s.borderRadius = '4px';
         s.padding = '6px 9px';
         s.cursor = 'pointer';
+        s.touchAction = 'manipulation';
         b.addEventListener('click', fn);
-        bar.appendChild(b);
+        fila.appendChild(b);
         return b;
       }
 
-      this.btnPausa = boton('PAUSA', function () { self.pausar(); });
-      this.btnVel = boton('x2', function () {
-        self.velocidad(G.timeScale === 2 ? 1 : 2);
-      });
-      boton('REINICIAR', function () { self.reiniciar(); });
-      boton('SALIR', function () { self.salir(); });
+      boton('|<', 'AL PRINCIPIO', function () { self.irA(0); });
+      boton('<<', 'ATRÁS ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S  ·  ←',
+            function () { self.salta(-CFG.REPLAY_SALTO); });
+      this.btnPausa = boton('PAUSA', 'PAUSA  ·  ESPACIO',
+                            function () { self.pausar(); });
+      boton('>>', 'ADELANTE ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S  ·  →',
+            function () { self.salta(CFG.REPLAY_SALTO); });
+      this.btnVel = boton('x1', 'VELOCIDAD', function () { self.otraVelocidad(); });
+      boton('SALIR', 'SALIR  ·  Q', function () { self.salir(); });
+
+      /* ---- línea de tiempo ---- */
+      var linea = document.createElement('div');
+      var ls = linea.style;
+      ls.display = 'flex';
+      ls.alignItems = 'center';
+      ls.gap = '8px';
+      bar.appendChild(linea);
+
+      this.tAhora = document.createElement('span');
+      this.tAhora.textContent = '0:00';
+      this.tAhora.style.minWidth = '38px';
+      this.tAhora.style.textAlign = 'right';
+      linea.appendChild(this.tAhora);
+
+      var pista = document.createElement('div');
+      pista.id = 'replayPista';
+      var ps = pista.style;
+      ps.position = 'relative';
+      ps.flex = '1';
+      ps.height = '14px';
+      ps.display = 'flex';
+      ps.alignItems = 'center';
+      ps.cursor = 'pointer';
+      ps.touchAction = 'none';       // el arrastre es nuestro, no del navegador
+      linea.appendChild(pista);
+
+      var riel = document.createElement('div');
+      var rs = riel.style;
+      rs.position = 'absolute';
+      rs.left = '0';
+      rs.right = '0';
+      rs.height = '4px';
+      rs.background = 'rgba(255, 255, 255, 0.25)';
+      rs.borderRadius = '2px';
+      pista.appendChild(riel);
+
+      this.relleno = document.createElement('div');
+      var fls = this.relleno.style;
+      fls.position = 'absolute';
+      fls.left = '0';
+      fls.width = '0';
+      fls.height = '4px';
+      fls.background = '#7ec8ff';
+      fls.borderRadius = '2px';
+      pista.appendChild(this.relleno);
+
+      this.tirador = document.createElement('div');
+      var ts = this.tirador.style;
+      ts.position = 'absolute';
+      ts.left = '0';
+      ts.width = '12px';
+      ts.height = '12px';
+      ts.marginLeft = '-6px';
+      ts.borderRadius = '50%';
+      ts.background = '#fff';
+      ts.boxShadow = '0 0 0 2px #7ec8ff';
+      pista.appendChild(this.tirador);
+
+      this.tTotalTxt = document.createElement('span');
+      this.tTotalTxt.textContent = '0:00';
+      this.tTotalTxt.style.minWidth = '38px';
+      linea.appendChild(this.tTotalTxt);
+
+      this.pista = pista;
+      this.activarArrastre(pista);
 
       document.body.appendChild(bar);
       this.barra = bar;
     },
 
-    pintaBarra: function () {
+    /* Arrastrar la línea de tiempo. Mientras se arrastra se salta de verdad
+     * —que para eso están las fotos— pero como mucho cada 80 ms: cada salto
+     * cuesta unos cientos de pasos de simulación y a sesenta por segundo se
+     * notaría. Al soltar se va exactamente a donde se dejó el dedo. */
+    activarArrastre: function (pista) {
+      var self = this;
+      var arrastrando = false, ultimo = 0, pendiente = -1;
+
+      function tickDe(ev) {
+        var r = pista.getBoundingClientRect ? pista.getBoundingClientRect() : null;
+        if (!r || !r.width) return 0;
+        var x = (ev.clientX === undefined && ev.touches) ? ev.touches[0].clientX
+                                                         : ev.clientX;
+        var p = (x - r.left) / r.width;
+        if (p < 0) p = 0;
+        if (p > 1) p = 1;
+        return Math.round(p * (self.tTotal || 0));
+      }
+
+      function empieza(ev) {
+        if (!self.fotos.length) return;
+        arrastrando = true;
+        pendiente = tickDe(ev);
+        ultimo = 0;
+        mueve(ev);
+        if (pista.setPointerCapture && ev.pointerId !== undefined) {
+          try { pista.setPointerCapture(ev.pointerId); } catch (e) { /* da igual */ }
+        }
+        if (ev.preventDefault) ev.preventDefault();
+      }
+
+      function mueve(ev) {
+        if (!arrastrando) return;
+        pendiente = tickDe(ev);
+        var ahora = Date.now();
+        if (ahora - ultimo < 80) { self.pintaBarra(pendiente); return; }
+        ultimo = ahora;
+        self.irA(pendiente);
+        pendiente = -1;
+      }
+
+      function suelta(ev) {
+        if (!arrastrando) return;
+        arrastrando = false;
+        if (pendiente >= 0) self.irA(pendiente);
+        pendiente = -1;
+        if (ev && ev.preventDefault) ev.preventDefault();
+      }
+
+      if (typeof window !== 'undefined' && window.PointerEvent) {
+        pista.addEventListener('pointerdown', empieza);
+        pista.addEventListener('pointermove', mueve);
+        pista.addEventListener('pointerup', suelta);
+        pista.addEventListener('pointercancel', suelta);
+      } else {
+        pista.addEventListener('mousedown', empieza);
+        document.addEventListener('mousemove', mueve);
+        document.addEventListener('mouseup', suelta);
+        pista.addEventListener('touchstart', empieza);
+        pista.addEventListener('touchmove', mueve);
+        pista.addEventListener('touchend', suelta);
+      }
+    },
+
+    /* `donde` (opcional) pinta la barra en otro punto sin haber saltado
+     * todavía: es lo que se ve mientras se arrastra entre salto y salto. */
+    pintaBarra: function (donde) {
       if (!this.barra || !this.rep) return;
       var r = this.rep;
-      var quien = r.nombres.join(' + ') || 'ANÓNIMO';
+      var quien = (r.nombres || []).join(' + ') || 'ANÓNIMO';
       var f = new Date(Date.parse(r.fecha) || 0);
       function dd(n) { return (n < 10 ? '0' : '') + n; }
       this.etiqueta.textContent = 'REPETICIÓN · ' + quien + ' · ' +
         (r.final ? r.final.puntos + ' PTS' : '') + ' · ' +
         dd(f.getDate()) + '/' + dd(f.getMonth() + 1);
       if (this.btnPausa) this.btnPausa.textContent = G.paused ? 'SEGUIR' : 'PAUSA';
-      if (this.btnVel) this.btnVel.textContent = (G.timeScale === 2) ? 'x1' : 'x2';
+      if (this.btnVel) this.btnVel.textContent = 'x' + (G.timeScale || 1);
+      var t = (donde >= 0 && donde !== undefined) ? donde : this.t;
+      var total = this.tTotal || 0;
+      var pct = total ? Math.max(0, Math.min(1, t / total)) : 0;
+      if (this.relleno) this.relleno.style.width = (pct * 100) + '%';
+      if (this.tirador) this.tirador.style.left = (pct * 100) + '%';
+      if (this.tAhora) this.tAhora.textContent = this.reloj(t);
+      if (this.tTotalTxt) this.tTotalTxt.textContent = this.reloj(total);
+    },
+
+    /* La barra se repinta sola con el reloj de la repetición: sin esto, el
+     * tirador solo se movería al tocar un botón. Lo llama Replay.paso(). */
+    latido: function () {
+      if (!this.barra || this.barra.style.display === 'none') return;
+      if ((this.t & 7) !== 0) return;      // ~8 veces por segundo, de sobra
+      this.pintaBarra();
+    },
+
+    /* Teclas de vídeo mientras se ve una repetición. Devuelve true si la
+     * tecla era suya (ui.js no la pasa al juego). */
+    teclaVideo: function (ev) {
+      if (this.modo !== 'ver' && this.modo !== 'verRed') return false;
+      if (!this.fotos.length) return false;
+      var k = ev.key;
+      if (k === 'ArrowLeft') { this.salta(-CFG.REPLAY_SALTO); return true; }
+      if (k === 'ArrowRight') { this.salta(CFG.REPLAY_SALTO); return true; }
+      if (k === 'Home') { this.irA(0); return true; }
+      if (k === 'End') { this.irA(this.tTotal); return true; }
+      if (k === ' ' || k === 'Spacebar' || ev.code === 'Space') {
+        this.pausar();
+        return true;
+      }
+      if (k === 'x' || k === 'X') { this.otraVelocidad(); return true; }
+      return false;
     },
 
     /* ---------- diálogos, los pide ui.js ---------- */
@@ -1779,26 +2310,51 @@
       var self = this, UI = window.PM.UI;
       if (this.modo !== 'ver' || !UI || !UI.showPrompt) return false;
       this.pintaBarra();
+      var segs = Math.round(CFG.REPLAY_SALTO / 60);
+      var lineas = ['ESTÁS VIENDO UNA PARTIDA YA JUGADA.',
+                    'NO CUENTA PARA NADA: NI PUNTOS, NI LOGROS, NI RÉCORD.'];
+      /* Con la partida ya rehecha se puede ir a cualquier momento, así que
+       * aquí se dice: en pausa es justo cuando a uno le da por buscar la
+       * jugada que quería volver a ver. */
+      if (this.fotos.length) {
+        lineas.push('VA POR ' + this.reloj(this.t) + ' DE ' + this.reloj(this.tTotal) +
+                    '. CON LAS FLECHAS SALTAS ' + segs + ' S, Y LA BARRA DE ARRIBA SE ARRASTRA.');
+      }
+      var botones = [
+        { label: 'SEGUIR', primary: true, hint: 'P · ESC',
+          keys: ['p', 'Escape', 'Enter'],
+          onClick: function () { self.pausar(false); } }
+      ];
+      if (this.fotos.length) {
+        /* El apuntador de la tecla va con '<' y '>' y no con las flechas de
+         * verdad: la tipografía del juego no tiene ese dibujo y salía un
+         * palote. */
+        botones.push({ label: 'ATRÁS ' + segs + ' S', hint: '<', keys: ['ArrowLeft'],
+          onClick: function () {
+            self.salta(-CFG.REPLAY_SALTO);
+            if (UI.syncPrompt) UI.syncPrompt();
+          } });
+        botones.push({ label: 'ADELANTE ' + segs + ' S', hint: '>', keys: ['ArrowRight'],
+          onClick: function () {
+            self.salta(CFG.REPLAY_SALTO);
+            if (UI.syncPrompt) UI.syncPrompt();
+          } });
+      }
+      botones.push({ label: 'VELOCIDAD x' + (G.timeScale || 1),
+        hint: 'X', keys: ['x'],
+        onClick: function () {
+          self.otraVelocidad();
+          if (UI.syncPrompt) UI.syncPrompt();
+        } });
+      botones.push({ label: 'DESDE EL PRINCIPIO', hint: 'R', keys: ['r'],
+        onClick: function () { self.reiniciar(); } });
+      botones.push({ label: 'SALIR', hint: 'Q', keys: ['q'],
+        onClick: function () { self.salir(); } });
       UI.showPrompt({
         title: 'REPETICIÓN EN PAUSA',
         color: '#7ec8ff',
-        lines: ['ESTÁS VIENDO UNA PARTIDA YA JUGADA.',
-                'NO CUENTA PARA NADA: NI PUNTOS, NI LOGROS, NI RÉCORD.'],
-        buttons: [
-          { label: 'SEGUIR', primary: true, hint: 'P · ESC',
-            keys: ['p', 'Escape', 'Enter'],
-            onClick: function () { self.pausar(false); } },
-          { label: (G.timeScale === 2) ? 'VELOCIDAD x1' : 'VELOCIDAD x2',
-            hint: 'X', keys: ['x'],
-            onClick: function () {
-              self.velocidad(G.timeScale === 2 ? 1 : 2);
-              if (UI.syncPrompt) UI.syncPrompt();
-            } },
-          { label: 'REINICIAR', hint: 'R', keys: ['r'],
-            onClick: function () { self.reiniciar(); } },
-          { label: 'SALIR', hint: 'Q', keys: ['q'],
-            onClick: function () { self.salir(); } }
-        ]
+        lines: lineas,
+        buttons: botones
       });
       return true;
     },
@@ -1821,6 +2377,15 @@
         buttons: [
           { label: 'VER OTRA VEZ', primary: true, hint: 'R', keys: ['r', 'Enter'],
             onClick: function () { self.reiniciar(); } },
+          /* Lo que uno quiere ver otra vez casi siempre es el último medio
+           * minuto, no la partida entera. */
+          { label: 'ATRÁS ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S',
+            hint: '<', keys: ['ArrowLeft'],
+            onClick: function () {
+              if (UI.hidePrompt) UI.hidePrompt();
+              self.salta(-CFG.REPLAY_SALTO);
+              self.pausar(true);
+            } },
           { label: 'SALIR', hint: 'Q · ESC', keys: ['q', 'Escape'],
             onClick: function () { self.salir(); } }
         ]

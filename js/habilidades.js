@@ -179,6 +179,40 @@
       for (var i = 0; i < (n || 0); i++) this.st.push(nuevoEstado());
     },
 
+    /* ---------- fotos para el rebobinado (js/replay.js) ----------
+     * Las recargas y los efectos son parte del estado de la partida, así que
+     * cuando una repetición salta a otro momento hay que devolverlos a como
+     * estaban. Es un objeto plano de números: se copia entero y ya. */
+    foto: function () {
+      var st = [];
+      for (var i = 0; i < this.st.length; i++) {
+        var s = this.st[i], o = {};
+        for (var k in s) {
+          if (!s.hasOwnProperty(k)) continue;
+          o[k] = (Object.prototype.toString.call(s[k]) === '[object Array]')
+            ? s[k].slice() : s[k];
+        }
+        st.push(o);
+      }
+      return { on: this.on, reintento: this.reintento, st: st };
+    },
+
+    ponerFoto: function (f) {
+      if (!f) return;
+      this.on = !!f.on;
+      this.reintento = !!f.reintento;
+      this.st = [];
+      for (var i = 0; i < f.st.length; i++) {
+        var s = f.st[i], o = nuevoEstado();
+        for (var k in s) {
+          if (!s.hasOwnProperty(k)) continue;
+          o[k] = (Object.prototype.toString.call(s[k]) === '[object Array]')
+            ? s[k].slice() : s[k];
+        }
+        this.st.push(o);
+      }
+    },
+
     /* Al morir o al cambiar de nivel se cortan los EFECTOS, pero no las
      * recargas: perder una vida ya es bastante castigo sin encima
      * devolverte las cuatro teclas de golpe. */

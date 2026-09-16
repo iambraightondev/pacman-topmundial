@@ -7192,6 +7192,185 @@
   });
 
 
+  /* ===============================================================
+   * VER UNA REPETICIÓN COMO UN VÍDEO (js/replay.js + Game.foto)
+   *
+   * Dos cosas que pueden salir mal y no se verían como un error, sino como
+   * una repetición que se tuerce: que la FOTO de la partida se deje un campo
+   * (y al rebobinar salga otra partida) y que el aspecto de quien jugó no
+   * llegue (y se vea con la skin de quien mira).
+   * =============================================================== */
+
+  /* Alrededor: la preparación va por trozos encadenados con un reloj que
+   * aquí no corre, así que se hace de un tirón. */
+  function conVideo(fn) {
+    var R = window.PM.Replay;
+    var luego = R.luego;
+    var previoRep = null;
+    try { previoRep = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* nada */ }
+    R.luego = function (f) { f(); };
+    if (G.inGame()) G.toMenu();
+    R.salir(true);
+    try {
+      fn(R);
+    } finally {
+      R.luego = luego;
+      R.salir();
+      if (G.inGame()) G.toMenu();
+      try {
+        if (previoRep === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previoRep);
+      } catch (e) { /* sin almacén */ }
+    }
+  }
+
+  /* Juega una partida corta y devuelve su repetición ya cerrada */
+  function repetiCorta(opts, ticks) {
+    var R = window.PM.Replay;
+    window.PM.settings.muted = true;
+    G.newGame(opts || { players: 1 });
+    var rep = R.enCurso();
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    var guion = [[5, 1], [40, 0], [95, 3], [150, 2], [210, 1], [260, 0],
+                 [330, 3], [400, 2], [470, 1], [540, 0]];
+    var k = 0;
+    for (var i = 0; i < (ticks || 900); i++) {
+      while (k < guion.length && guion[k][0] === i) {
+        G.setPacDir(0, guion[k][1]);
+        k++;
+      }
+      G.step();
+    }
+    rep.final = { puntos: G.score, nivel: G.level, fantasmas: G.runGhosts,
+                  tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+    return rep;
+  }
+
+  /* LA prueba de la foto: si se deja un campo, rebobinar da otra partida.
+   * Se compara la foto ENTERA, no un puñado de valores elegidos a mano. */
+  test('la foto de la partida guarda todo lo que hace falta para rebobinar', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1, hab: true });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    ticks(700);
+    var enMedio = G.foto();
+    ticks(900);
+    var alFinal = JSON.stringify(G.foto());
+    G.ponerFoto(enMedio);
+    eq(JSON.stringify(G.foto()), JSON.stringify(enMedio),
+       'la foto restaurada no es la que se guardó');
+    ticks(900);
+    eq(JSON.stringify(G.foto()), alFinal,
+       'rejugar desde la foto da otra partida: a la foto le falta algo');
+    G.toMenu();
+  });
+
+  test('preparar una repetición deja sus fotos y su duración', function () {
+    conVideo(function (R) {
+      var rep = repetiCorta({ players: 1 }, 900);
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto y vuelve');
+      ok(R.ver(leida), 'la repetición arranca');
+      ok(R.fotos.length > 0, 'quedan fotos para rebobinar');
+      ok(R.tTotal > 0, 'y se sabe cuánto dura');
+      eq(R.t, 0, 'y se empieza desde el principio');
+    });
+  });
+
+  test('saltar a un momento y volver deja la partida igual', function () {
+    conVideo(function (R) {
+      var rep = repetiCorta({ players: 1 }, 900);
+      ok(R.ver(R.leer(R.serializar(rep))), 'arranca');
+      function donde() {
+        return G.score + '/' + G.dotsLeft + '/' + G.pacs[0].x + ',' + G.pacs[0].y +
+               '/' + G.ghosts[0].x + ',' + G.ghosts[0].y + '/' + G.rndState;
+      }
+      var medio = Math.floor(R.tTotal / 2);
+      R.irA(medio);
+      var enMedio = donde();
+      ok(R.t >= medio - 1, 'llega a donde se le pide');
+      R.irA(R.tTotal);
+      R.irA(0);
+      eq(G.score, 0, 'volver al principio devuelve el marcador a cero');
+      R.irA(medio);
+      eq(donde(), enMedio, 'y volver al mismo punto da EXACTAMENTE lo mismo');
+    });
+  });
+
+  test('una repetición se ve con el aspecto de quien la jugó', function () {
+    conVideo(function (R) {
+      var s = window.PM.settings;
+      var antes = { skin: s.skin1, color: s.pacColor, acc: s.acc1, efx: s.efx1 };
+      var tiene = window.PM.Tienda.tiene;
+      try {
+        window.PM.Tienda.tiene = function () { return true; };
+        s.skin1 = 'cometa';
+        s.pacColor = '#ff00aa';
+        s.acc1 = CFG.ACCESORIO_IDS[0];
+        s.efx1 = CFG.EFECTO_IDS[0];
+        var rep = repetiCorta({ players: 1 }, 700);
+        eq(rep.aspectos[0].s, 'cometa', 'la repetición se apunta la skin');
+        eq(rep.aspectos[0].c, '#ff00aa', 'y el color');
+        eq(rep.aspectos[0].a, CFG.ACCESORIO_IDS[0], 'y el accesorio');
+        eq(rep.aspectos[0].x, CFG.EFECTO_IDS[0], 'y el efecto');
+
+        var leida = R.leer(R.serializar(rep));
+        ok(leida, 'el aspecto pasa por el texto');
+        eq(leida.aspectos[0].c, '#ff00aa', 'y vuelve con su color');
+
+        /* quien la mira va vestido de otra manera */
+        s.skin1 = 'clasico';
+        s.pacColor = '#ffff00';
+        s.acc1 = '';
+        s.efx1 = '';
+        ok(R.ver(leida), 'arranca');
+        eq(G.skinFor(0), 'cometa', 'se ve con la skin de quien la jugó');
+        eq(G.colorFor(0), '#ff00aa', 'y con su color');
+        eq(G.lookFor(0).a, CFG.ACCESORIO_IDS[0], 'y con su accesorio');
+        eq(G.lookFor(0).x, CFG.EFECTO_IDS[0], 'y con su efecto');
+        R.salir();
+        eq(G.skinFor(0), 'clasico', 'y al salir se recupera el aspecto propio');
+      } finally {
+        window.PM.Tienda.tiene = tiene;
+        s.skin1 = antes.skin;
+        s.pacColor = antes.color;
+        s.acc1 = antes.acc;
+        s.efx1 = antes.efx;
+      }
+    });
+  });
+
+  test('una repetición de antes del aspecto se sigue viendo', function () {
+    conVideo(function (R) {
+      var rep = repetiCorta({ players: 1 }, 600);
+      var texto = R.serializar(rep);
+      eq(texto.split('~').length, 11, 'las nuevas llevan once campos');
+      /* el texto de siempre, sin el campo del aspecto */
+      var vieja = texto.split('~').slice(0, 10).join('~');
+      var leida = R.leer(vieja);
+      ok(leida, 'una de diez campos se sigue leyendo');
+      ok(!leida.aspectos, 'y simplemente no trae aspecto');
+      ok(R.ver(leida), 'y se ve igual');
+    });
+  });
+
+  test('las teclas de vídeo solo mandan mientras se ve una repetición', function () {
+    conVideo(function (R) {
+      eq(R.teclaVideo({ key: 'ArrowLeft' }), false,
+         'fuera de una repetición las flechas son del juego');
+      var rep = repetiCorta({ players: 1 }, 700);
+      ok(R.ver(R.leer(R.serializar(rep))), 'arranca');
+      R.irA(R.tTotal);
+      var alFinal = R.t;
+      eq(R.teclaVideo({ key: 'ArrowLeft' }), true, 'la flecha es suya');
+      ok(R.t < alFinal, 'y rebobina');
+      eq(R.teclaVideo({ key: 'q' }), false, 'lo que no es suyo, no lo toca');
+    });
+  });
+
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------

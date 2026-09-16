@@ -1114,6 +1114,22 @@
   CFG.REPLAY_TOTAL_CHARS = 90000; // techo de todas juntas
   CFG.REPLAY_MAX_ENTRADAS = 20000;// giros máximos en una repetición
 
+  /* ---------- Ver una repetición como un vídeo ----------
+   * Una repetición no guarda posiciones: guarda los giros y la partida se
+   * vuelve a simular, así que ir hacia atrás costaría rehacerla entera cada
+   * vez. Por eso, al abrirla se juega una vez a toda velocidad y se deja una
+   * FOTO cada pocos segundos (Game.foto); saltar a cualquier punto es
+   * entonces restaurar la foto de antes y simular el resto.
+   *
+   * Cada 10 s: una partida de 40 minutos deja 240 fotos (~1 MB) y ningún
+   * salto pasa de 600 pasos, que es un suspiro. Bajarlo gasta memoria a
+   * cambio de nada; subirlo hace que arrastrar la barra dé tirones. */
+  CFG.REPLAY_FOTO_CADA = 600;      // ticks entre fotos (10 s)
+  CFG.REPLAY_SALTO = 600;          // lo que salta ADELANTE / ATRÁS (10 s)
+  CFG.REPLAY_VELOCIDADES = [0.5, 1, 2, 4];
+  CFG.REPLAY_PREP_MS = 12;         // ms de simulación seguidos al preparar
+  CFG.REPLAY_PREP_MAX = 1728000;   // tope de pasos (8 h): red de seguridad
+
   /* ---------- Partida a medias (js/guardado.js) ----------
    * Lo que se guarda NO es una foto del laberinto: es la MISMA repetición
    * que ya se graba de toda partida (ajustes + giros + el tick de cada uno)

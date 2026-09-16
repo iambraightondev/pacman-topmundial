@@ -669,7 +669,8 @@ is gone: replays of old challenge runs are shared links that still work, and
 `modo` only changes behaviour for `hab`.
 
 `PM.Replay.serializar(rep)` returns a compact URL-safe string (`~`-separated
-fields, base36 numbers, tick deltas, one packed letter `G..V` per
+fields — ten of them, plus an optional eleventh carrying the look — base36
+numbers, tick deltas, one packed letter `G..V` per
 player+direction pair and `*n` run-length for identical repeats) and
 `PM.Replay.leer(texto)` parses it back. `leer(serializar(x))` must deep-equal
 `x` — there is a test for that. `leer` never throws and returns `null` for
@@ -749,6 +750,92 @@ OVER dialogs (`ui.js` delegates to them when `Game.replaying`), and a fixed
 top bar shows the REPETICIÓN banner plus pause / x2 / restart / exit.
 `REINICIAR` goes through `Game.restartGame()`, which lands back in
 `newGame()` → `alEmpezar()` and simply rewinds the replay.
+
+### Watching one is watching a video (`Replay.preparar` / `irA`)
+
+Play, pause and x2 were all a replay had: no seeking, no rewinding, no idea of
+how long it was. Rewinding is the hard one — an input replay has no positions
+to jump to, so going back means rebuilding the run from the start every time,
+and dragging a bar would be a one-second stutter per pixel.
+
+So **opening a replay plays it once, off-screen and at full speed, leaving a
+photo of the game every `CFG.REPLAY_FOTO_CADA` ticks** (10 s). That single
+pass also yields the one thing the bar needs and the format never stored: how
+long the run is (`Replay.tTotal`). From then on, `irA(tick)` restores the
+photo before it and simulates the rest — never more than 600 steps, which is
+instant. A 40-minute run leaves 240 photos (~1 MB) and takes a second or two
+to prepare, behind a PREPARANDO LA REPETICIÓN dialog with a running clock and
+CANCELAR.
+
+The first chunk is **deferred**, not run inline: mounting a replay has to
+leave the game exactly where it left it before (its first tick, nothing
+simulated ahead), or anything that just reproduces a replay — the tests, for
+one — would find half a run already played. `Replay.luego(fn)` is that
+scheduler; the tests replace it with a synchronous one.
+
+Both kinds of replay go through the same machinery: input replays re-simulate
+and network ones re-apply their snapshots, but both advance with `Game.step()`
+and both photograph the same way. A photo stores `t`, the two cursors
+(`cursor`, `cursorEv`) and `Game.foto()`, so restoring one puts the entries
+that had already been injected back where they were.
+
+**The bar** (`replayBar`, inline styles like the rest of the module) is now
+two rows: who played it and the buttons (`|<`, `<<`, PAUSA/SEGUIR, `>>`,
+speed, SALIR) on top, and a draggable timeline below with current and total
+time. Dragging seeks for real — the photos make that cheap — but at most every
+80 ms, and lands exactly where the finger stops. Keyboard, via
+`Replay.teclaVideo(ev)` wired into `ui.js` before the game input (a replay
+ignores steering anyway): `←`/`→` jump `CFG.REPLAY_SALTO` (10 s), `Home`/`End`
+go to the ends, space pauses, `X` cycles the speed
+(`CFG.REPLAY_VELOCIDADES`: 0.5, 1, 2, 4). The pause dialog and the end panel
+carry the same controls.
+
+### `Game.foto()` / `Game.ponerFoto(f)`
+
+The photo is what makes rewinding possible, and it is taken **by exclusion**:
+every own field of `Game` that is data goes in, and only the things that are
+not run state stay out (`FOTO_FUERA`: the canvas and its two pre-rendered
+mazes, the showcase channel, the options the run started with; plus the three
+CFG tables — `speedRow`, `fruitInfo`, `schedule` — which are copied by
+reference because nothing mutates them). Pac-Men and ghosts are photographed
+as plain data and **poured back into the existing instances**, never swapped,
+because other modules hold references to them. Pellets ride as
+`pelletHex()`. Outside `Game`, only DESATADO has state of its own
+(`PM.Hab.foto`/`ponerFoto`); PAC-MAN VS. and CACERÍA keep everything in the
+run itself.
+
+Exclusion, not a whitelist, is deliberate: a list of what *does* go in falls
+behind the first time somebody adds a field, and a missing field does not
+look like a bug — it looks like a replay that drifts when you rewind. The
+test plays, photographs, plays on, restores and replays the same stretch, and
+demands the **entire** photo comes out identical.
+
+### The look travels with the run
+
+A replay used to be painted with whatever **the viewer** was wearing: skin,
+colour and — for shop items — nothing at all, since `lookFor` bailed out
+while `replaying`. Somebody else's shared run showed up in your skin and your
+colour, which is watching a stranger's recording with your own face on.
+
+Now the recording stores, per player, `{ s: skin, c: colour, a: accessory,
+x: effect }` (`rep.aspectos`), and `montar` hands them to `newGame` as
+`colors`/`skins`/`looks` — the same door online games already used for the
+handshake, so nothing in the drawing code changed. `Replay.salir` clears
+those three, or the next local run would be played wearing somebody else's
+skin.
+
+In the text format the look is an **eleventh field at the end**, so replays
+recorded before it (ten fields) still read exactly as they did and simply
+come back without it, painted the old way. The field is strict —
+`skin.colour.accessory.effect` per player, comma-separated, colour in plain
+hex — and anything that does not match the shape makes the whole replay
+invalid, because a link that has been through a chat app can arrive with
+junk glued on the end. What does match is still sanitised against
+`CFG.SKIN_IDS`, `CFG.ACCESORIO_IDS` and `CFG.EFECTO_IDS`: an unknown skin
+falls back to the classic Pac-Man rather than drawing nothing.
+
+Network replays already carried names, colours and skins; they now carry
+`looks` too (`lk` in the JSON header, optional, so old ones still load).
 
 ### Storage
 
@@ -2778,3 +2865,9 @@ from third parties. Cells are indices `row*28+col`.
     from `perfiles.partida`. If the rebuild does not land on the same score
     it says so instead of resuming something else, and the run is cashed in
     exactly once — when it really ends.
+31. A replay plays like a video: a draggable timeline with current and total
+    time, ±10 s jumps, four speeds and rewinding, all instant because opening
+    it plays it once off-screen leaving photos (`Game.foto`) every 10 s. The
+    run is painted with the LOOK OF WHOEVER PLAYED IT — skin, colour,
+    accessory and effect ride inside the recording — and replays recorded
+    before that still play, with the old look.

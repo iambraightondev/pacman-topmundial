@@ -7,11 +7,46 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **15 de septiembre de 2026**.
+Última puesta al día: **16 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**16 sep (madrugada) — LAS REPETICIONES, COMO UN VÍDEO (`pm-v65`).**
+Braighton pidió dos cosas: poder adelantar y retroceder una repetición, y que
+el personaje llevara SU aspecto. Las dos están. La clave es que ahora el juego
+sabe hacerse **fotos** de sí mismo (`Game.foto`): al abrir una repetición se
+juega entera a toda prisa dejando una foto cada 10 s, y con eso saltar a
+cualquier momento es instantáneo. De paso se sabe cuánto dura, que es lo que
+la barra necesitaba. El aspecto (skin, color, accesorio y efecto) viaja dentro
+de la repetición, así que una compartida se ve como la jugó su dueño. Detalle
+en SPEC (*Watching one is watching a video*). `tests.html` 343/343; Node, los
+2 fallos de siempre.
+
+**Lo que hay que saber si se toca algo cerca:**
+- **La foto se hace por descarte**: entra todo lo que sea un dato de `Game`
+  menos lo apuntado en `FOTO_FUERA`. Si se añade un campo NUEVO que sea
+  estado de la partida, entra solo y no hay que hacer nada; si se añade un
+  lienzo o algo que no sea estado, hay que apuntarlo en esa lista. La prueba
+  que juega, fotografía, sigue, restaura y rejuega es la que avisa.
+- Si un módulo nuevo guarda estado de la partida FUERA de `Game` (como hace
+  DESATADO con sus recargas), necesita su propio `foto`/`ponerFoto` y una
+  línea en `Game.foto`.
+- El aspecto es el **campo 11** del texto de una repetición, opcional. Las de
+  diez campos siguen valiendo. Si algún día hace falta otro campo, el sitio
+  es el mismo: al final y opcional.
+
+**Lo que queda por mirar de esto:**
+- **Arrastrar la barra con el dedo** en un móvil de verdad (probado con
+  eventos de puntero simulados).
+- Una repetición **muy larga** (40 min): debería prepararse en uno o dos
+  segundos y ocupar cerca de un mega de fotos. Medido solo con partidas
+  cortas y con una simulada de 33 minutos, que iba sobrada.
+- Las repeticiones de **LABERINTOS** siguen rotas de antes: el formato no
+  guarda en cuál se jugó, así que se ven en el laberinto de 1980 y no cuadra
+  nada. Ahora que el aspecto ya viaja en un campo opcional al final, meter
+  ahí el laberinto es el mismo patrón y poco trabajo.
 
 **15 sep (noche) — LA PARTIDA A MEDIAS (`pm-v64`).** Braighton dejó una
 partida empezada en otro ordenador y quiso seguirla; no se podía, porque el

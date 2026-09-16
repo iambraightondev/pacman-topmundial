@@ -7309,6 +7309,17 @@
           if (self.handlePromptKey(ev)) ev.preventDefault();
           return;
         }
+
+        /* Viendo una repetición el teclado es el de un vídeo: las flechas
+         * saltan diez segundos y el espacio pausa. Aquí no hay a quién mover
+         * (la repetición manda sobre el teclado), así que no se le quita
+         * nada a nadie. */
+        if (window.PM.Replay && window.PM.Replay.teclaVideo &&
+            window.PM.Replay.teclaVideo(ev)) {
+          self.resumeAudio();
+          ev.preventDefault();
+          return;
+        }
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
 
         /* Ctrl+Espacio: enseña tu maestría sobre tu Pac-Man */

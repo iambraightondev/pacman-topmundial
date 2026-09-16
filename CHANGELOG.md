@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-16 · Las repeticiones se ven como un vídeo
+
+- **Barra de tiempo**: se ve por dónde va y cuánto dura, y **se arrastra**
+  para ir a cualquier momento. También con las flechas (saltan 10 segundos),
+  `Home` y `End` para los extremos y el espacio para pausar.
+- **Se puede rebobinar**, que es lo que no había: volver a ver la jugada de
+  hace veinte segundos ya no obliga a empezar la repetición otra vez.
+- **Cuatro velocidades** (x0.5, x1, x2 y x4) en vez de solo x1 y x2.
+- Al abrir una repetición se prepara un momento (unos segundos, con su
+  aviso): el juego se la juega entera a toda prisa para poder saltar a
+  cualquier punto al instante. Es lo que hace posible todo lo de arriba.
+- **El personaje sale con el aspecto de quien jugó**: su skin, su color, su
+  accesorio y su efecto. Antes salía con lo que llevaras puesto TÚ, así que
+  la partida que te compartía un amigo se veía con tu cara. Los accesorios y
+  los efectos, directamente, no se veían.
+- Las repeticiones de antes se siguen viendo igual (las que no llevan
+  aspecto, con el de siempre).
+- En el panel del final hay un **ATRÁS 10 S** para repasar la última jugada
+  sin volver a empezar.
+
 ## 2026-09-15 · Dejar una partida a medias y seguirla luego
 
 - Hasta ahora una partida solo existía mientras estuviera abierta: cerrar la

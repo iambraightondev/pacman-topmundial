@@ -36,6 +36,39 @@
     return Object.prototype.toString.call(v) === '[object Array]';
   }
 
+  /* ---------- copias para las fotos de la partida (Game.foto) ----------
+   * Todo lo que se fotografía son datos: números, textos, listas y objetos
+   * pelados. Se copian a mano y en profundidad porque una foto tiene que
+   * quedarse como estaba aunque la partida siga: compartir una lista con la
+   * partida en marcha haría que el pasado cambiara solo. */
+  function clonaDato(v) {
+    if (v === null || typeof v !== 'object') return v;
+    var i, o;
+    if (esLista(v)) {
+      o = [];
+      for (i = 0; i < v.length; i++) o.push(clonaDato(v[i]));
+      return o;
+    }
+    o = {};
+    for (i in v) { if (v.hasOwnProperty(i)) o[i] = clonaDato(v[i]); }
+    return o;
+  }
+
+  /* Un Pac-Man o un fantasma, en datos. Los métodos viven en su prototipo,
+   * así que no hay nada que copiar de ellos. */
+  function fotoDe(obj) {
+    var o = {};
+    for (var k in obj) {
+      if (!obj.hasOwnProperty(k) || typeof obj[k] === 'function') continue;
+      o[k] = clonaDato(obj[k]);
+    }
+    return o;
+  }
+
+  function volcarEn(obj, f) {
+    for (var k in f) { if (f.hasOwnProperty(k)) obj[k] = clonaDato(f[k]); }
+  }
+
   var Game = {
     /* Récords de los mundos aparte (LABERINTOS y DESATADO). Cada mundo lleva
      * CUATRO, uno por formato de partida —índice 0 = solo, 3 = escuadra—,
@@ -3429,6 +3462,106 @@
 
       if (s.pm) this.applyPelletHex(s.pm);
     },
+
+    /* ---------------------------------------------------------
+     * FOTOS DE LA PARTIDA — lo que hace que una repetición se pueda
+     * rebobinar (js/replay.js)
+     *
+     * Una repetición no guarda posiciones: guarda los giros, y la partida se
+     * vuelve a simular. Ir HACIA DELANTE es barato (se sigue simulando), pero
+     * ir HACIA ATRÁS obligaría a rehacerla desde el principio cada vez. Por
+     * eso, al abrir una repetición se simula entera una vez y se va dejando
+     * una foto cada pocos segundos: saltar a cualquier momento es entonces
+     * restaurar la foto de antes y simular el resto (unos pocos cientos de
+     * pasos), que se hace en un suspiro.
+     *
+     * La foto se copia CAMPO POR CAMPO y por descarte: entra todo lo que sea
+     * un dato, y solo se quedan fuera las cosas que no son estado de la
+     * partida (el lienzo y sus dos laberintos precocinados, el canal del
+     * escaparate, las opciones con las que se arrancó). Se hace así a
+     * propósito: una lista de lo que SÍ entra se queda coja en cuanto alguien
+     * añade un campo nuevo, y un campo que falte no se ve como un error, sino
+     * como una repetición que se tuerce al rebobinar. Hay una prueba que
+     * simula, fotografía, sigue, restaura y vuelve a simular, y exige que
+     * salga exactamente lo mismo.
+     *
+     * Lo que vive fuera de aquí y también hace falta: las recargas y los
+     * efectos del modo DESATADO (PM.Hab.foto). PAC-MAN VS. y CACERÍA no
+     * guardan nada suyo: todo lo que deciden está en esta misma partida.
+     * --------------------------------------------------------- */
+    /* No son estado: el lienzo, los laberintos pintados, el canal de los
+     * mirones y las opciones de arranque (que no cambian en toda la partida) */
+    FOTO_FUERA: {
+      canvas: 1, ctx: 1, mazeBlue: 1, mazeWhite: 1, showCh: 1, lastOpts: 1,
+      pacs: 1, ghosts: 1, pellets: 1,
+      // estos tres son tablas de CFG: no se tocan, así que van por referencia
+      speedRow: 1, fruitInfo: 1, schedule: 1
+    },
+    /* Y estos, siendo estado, se copian tal cual porque son tablas fijas */
+    FOTO_POR_REF: { speedRow: 1, fruitInfo: 1, schedule: 1 },
+
+    foto: function () {
+      var f = { g: {}, ref: {}, pacs: [], ghosts: [], pellets: this.pelletHex() };
+      var k;
+      for (k in this) {
+        if (!this.hasOwnProperty(k)) continue;
+        if (typeof this[k] === 'function') continue;
+        if (this.FOTO_POR_REF[k]) { f.ref[k] = this[k]; continue; }
+        if (this.FOTO_FUERA[k]) continue;
+        f.g[k] = clonaDato(this[k]);
+      }
+      for (var i = 0; i < this.pacs.length; i++) f.pacs.push(fotoDe(this.pacs[i]));
+      for (var j = 0; j < this.ghosts.length; j++) f.ghosts.push(fotoDe(this.ghosts[j]));
+      if (window.PM.Hab) f.hab = window.PM.Hab.foto();
+      return f;
+    },
+
+    ponerFoto: function (f) {
+      if (!f) return;
+      var k, i;
+      for (k in f.g) {
+        if (f.g.hasOwnProperty(k)) this[k] = clonaDato(f.g[k]);
+      }
+      for (k in f.ref) {
+        if (f.ref.hasOwnProperty(k)) this[k] = f.ref[k];
+      }
+      /* Los Pac-Man y los fantasmas se RELLENAN, no se sustituyen: hay quien
+       * se guarda una referencia a ellos (js/versus.js, la interfaz), y
+       * cambiarlos por otros dejaría a esos mirando a un fantasma que ya no
+       * juega. */
+      for (i = 0; i < this.pacs.length && i < f.pacs.length; i++) {
+        volcarEn(this.pacs[i], f.pacs[i]);
+      }
+      for (i = 0; i < this.ghosts.length && i < f.ghosts.length; i++) {
+        volcarEn(this.ghosts[i], f.ghosts[i]);
+      }
+      this.ponerPelletHex(f.pellets);
+      if (window.PM.Hab) window.PM.Hab.ponerFoto(f.hab);
+      /* El laberinto pintado depende del que esté puesto, no de la foto, pero
+       * si la foto viene de otra partida (otro laberinto) hay que rehacerlo. */
+      this.applyMaze(this.mazeId);
+    },
+
+    /* El mapa de pastillas TAL CUAL: sin la conciliación de red de
+     * applyPelletHex, que aquí estorbaría (lo comido hace un momento en el
+     * futuro del que venimos no tiene por qué estar comido en el pasado). */
+    ponerPelletHex: function (hex) {
+      var idx = 0, total = CFG.ROWS * CFG.COLS;
+      this.dotsLeft = 0;
+      for (var r = 0; r < CFG.ROWS; r++) {
+        for (var c = 0; c < CFG.COLS; c++) {
+          var v = parseInt(hex.charAt(idx >> 2) || '0', 16);
+          var hay = (v >> (3 - (idx & 3))) & 1;
+          var ch = CFG.MAZE[r].charAt(c);
+          var vale = (ch === '.' || ch === 'o');
+          if (this.caza && ch === 'o') ch = '.';       // CACERÍA: sin superpastillas
+          this.pellets[r][c] = (hay && vale) ? ch : null;
+          if (this.pellets[r][c]) this.dotsLeft++;
+          idx++;
+        }
+      }
+    },
+
 
     /* ---------------------------------------------------------
      * Sonido: bucles (retirada > asustado > sirena)
