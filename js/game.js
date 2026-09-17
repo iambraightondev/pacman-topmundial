@@ -4610,9 +4610,11 @@
              * no esté quieto del todo, sin robarle el latido a la grande */
             ctx.save();
             ctx.shadowColor = CFG.COLORS.pelletMini;
-            ctx.shadowBlur = 5 + latido * 4;
-            ctx.globalAlpha = 0.88 + latido * 0.12;
+            ctx.shadowBlur = 8 + latido * 7;
+            ctx.globalAlpha = 0.8 + latido * 0.2;
             ctx.fillStyle = CFG.COLORS.pelletMini;
+            /* dos pasadas: el halo de canvas es flojo y así se nota de verdad */
+            ctx.fillRect(cx - 1, cy - 1, 2, 2);
             ctx.fillRect(cx - 1, cy - 1, 2, 2);
             ctx.restore();
           } else {
