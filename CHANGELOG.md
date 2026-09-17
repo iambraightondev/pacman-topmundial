@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Los avisos de la partida guardada
+
+- DESCARTAR, RECUPERANDO y NO SE PUDO usan el marco de recreativa con la ficha
+  de la partida (modo, puntos, nivel y cuándo se guardó): naranja, verde y rojo.
+- Al descartar, el botón grande es ahora **NO, DÉJALA**; descartar se pide con
+  la tecla D. Lo que borra no puede ser lo que se pulsa sin mirar.
+- RECUPERANDO enseña una barra de progreso en vez de un número suelto.
+
 ## 2026-09-17 · El PORTAL: la otra dimensión es EL VACÍO
 
 - Dentro del portal ya no se ve el laberinto teñido: se ve **el vacío**. El

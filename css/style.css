@@ -5679,3 +5679,12 @@ body { font-size-adjust: 0.56; }
 /* las cartas de los poderes miden lo mismo con cualquier rol: se reservan las
  * tres líneas del texto más largo, y así cambiar de rol no mueve la pantalla */
 .brief-desc { min-height: 5.4em; }
+
+/* la ficha de la partida guardada se tiñe del color del aviso */
+.medias-ficha { border-color: var(--fc, #ffff00); box-shadow: 0 0 24px color-mix(in srgb, var(--fc, #ffff00) 25%, transparent), inset 0 0 18px color-mix(in srgb, var(--fc, #ffff00) 8%, transparent); }
+.medias-dato b { color: var(--fc, #ffff00); text-shadow: 0 0 12px color-mix(in srgb, var(--fc, #ffff00) 45%, transparent); }
+.medias-aviso.ok { color: #b9bae6; }
+/* la barra de RECUPERANDO */
+.rec-barra { width: min(520px, 86vw); height: 14px; border: 2px solid #00ff66; background: rgba(0, 0, 0, 0.6); }
+.rec-barra span { display: block; height: 100%; background: #00ff66; box-shadow: 0 0 14px rgba(0, 255, 102, 0.6); transition: width 0.2s; }
+.rec-pct { font-size: clamp(18px, 3.4vh, 30px); letter-spacing: 3px; color: #00ff66; }

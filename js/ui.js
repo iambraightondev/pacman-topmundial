@@ -856,23 +856,64 @@
       }
     },
 
+    /* La FICHA de una partida guardada: el modo, cómo iba y cuándo se dejó.
+     * La usan los tres avisos del guardado (descartar, recuperar y el fallo) y
+     * el de "tienes una partida a medias". */
+    fichaGuardada: function (p, sb, color) {
+      var Gd = window.PM.Guardado;
+      if (!sb) return;
+      var ficha = document.createElement('div');
+      ficha.className = 'medias-ficha';
+      if (color) ficha.style.setProperty('--fc', color);
+      var modo = document.createElement('div');
+      modo.className = 'medias-modo';
+      modo.textContent = sb.maze ? 'LABERINTOS' : (Gd.NOMBRES[sb.modo] || 'PARTIDA');
+      ficha.appendChild(modo);
+      var datos = document.createElement('div');
+      datos.className = 'medias-datos';
+      [['PUNTOS', Gd.miles(sb.p)], ['NIVEL', String(sb.lv)],
+       ['GUARDADA', Gd.cuando(sb)]].forEach(function (d) {
+        var c = document.createElement('div');
+        c.className = 'medias-dato';
+        var v = document.createElement('b');
+        v.textContent = d[1];
+        var k = document.createElement('small');
+        k.textContent = d[0];
+        c.appendChild(v);
+        c.appendChild(k);
+        datos.appendChild(c);
+      });
+      ficha.appendChild(datos);
+      p.appendChild(ficha);
+      return ficha;
+    },
+
     descartarPartida: function () {
       var self = this;
       var Gd = window.PM.Guardado;
       if (!Gd || !Gd.hay()) return;
+      var sb = Gd.sobre();
       this.showPrompt({
-        title: '¿DESCARTAR?',
-        color: '#ff8c00',
-        lines: [Gd.titulo(), 'SE PIERDE ESA PARTIDA Y TODO LO QUE LLEVABA HECHO.'],
+        title: '¿DESCARTARLA?',
+        arcade: true,
+        tono: 'naranja',
+        custom: function (p) {
+          self.fichaGuardada(p, sb, '#ffb852');
+          var aviso = document.createElement('div');
+          aviso.className = 'medias-aviso';
+          aviso.textContent = 'SE PIERDE ESA PARTIDA Y TODO LO QUE LLEVABA HECHO';
+          p.appendChild(aviso);
+        },
         buttons: [
-          { label: 'SÍ, DESCARTARLA', hint: 'ENTER', keys: ['Enter'],
+          /* el botón grande es el que NO rompe nada: descartar se pide aparte */
+          { label: 'NO, DÉJALA', primary: true, hint: 'ESC', keys: ['Escape', 'Enter'],
+            onClick: function () { self.hidePrompt(); } },
+          { label: 'SÍ, DESCARTARLA', hint: 'D', keys: ['d'],
             onClick: function () {
               Gd.borrar();
               self.hidePrompt();
               self.refreshContinuar();
-            } },
-          { label: 'NO', primary: true, hint: 'ESC', keys: ['Escape'],
-            onClick: function () { self.hidePrompt(); } }
+            } }
         ]
       });
     },
@@ -901,14 +942,29 @@
     avisoRecuperando: function (x) {
       var self = this;
       var Gd = window.PM.Guardado;
+      var sb = Gd.sobre();
+      var pct = Math.round((x || 0) * 100);
       this.showPrompt({
-        title: 'RECUPERANDO TU PARTIDA',
-        color: '#00ff00',
-        lines: [
-          Gd.titulo(),
-          'SE ESTÁ VOLVIENDO A JUGAR A TODA VELOCIDAD HASTA DONDE LA DEJASTE.',
-          { text: Math.round((x || 0) * 100) + ' %', big: true }
-        ],
+        title: 'RECUPERANDO',
+        arcade: true,
+        tono: 'verde',
+        custom: function (p) {
+          self.fichaGuardada(p, sb, '#00ff66');
+          var txt = document.createElement('div');
+          txt.className = 'medias-aviso ok';
+          txt.textContent = 'SE ESTÁ VOLVIENDO A JUGAR A TODA VELOCIDAD HASTA DONDE LA DEJASTE';
+          p.appendChild(txt);
+          var barra = document.createElement('div');
+          barra.className = 'rec-barra';
+          var relleno = document.createElement('span');
+          relleno.style.width = pct + '%';
+          barra.appendChild(relleno);
+          p.appendChild(barra);
+          var n = document.createElement('div');
+          n.className = 'rec-pct';
+          n.textContent = pct + ' %';
+          p.appendChild(n);
+        },
         buttons: [
           { label: 'CANCELAR', hint: 'ESC', keys: ['Escape'],
             onClick: function () { Gd.cancelar(); self.hidePrompt(); } }
@@ -923,16 +979,23 @@
     avisoNoSePudo: function (err) {
       var self = this;
       var Gd = window.PM.Guardado;
+      var sb = Gd.sobre();
       this.showPrompt({
-        title: 'NO SE PUDO RECUPERAR',
-        color: '#ff0000',
-        lines: [
-          Gd.titulo(),
-          (err === 'ROTA')
-            ? 'LO GUARDADO NO SE PUEDE LEER.'
-            : 'AL REHACERLA NO HA SALIDO LA MISMA PARTIDA, ASÍ QUE NO SE PUEDE SEGUIR DONDE IBA.',
-          'ESTO PASA CUANDO EL JUEGO HA CAMBIADO POR DENTRO DESDE QUE LA GUARDASTE.'
-        ],
+        title: 'NO SE PUDO',
+        arcade: true,
+        tono: 'rojo',
+        custom: function (p) {
+          self.fichaGuardada(p, sb, '#ff5a5a');
+          [(err === 'ROTA')
+            ? 'LO GUARDADO NO SE PUEDE LEER'
+            : 'AL REHACERLA NO HA SALIDO LA MISMA PARTIDA, ASÍ QUE NO SE PUEDE SEGUIR DONDE IBA',
+           'ESTO PASA CUANDO EL JUEGO HA CAMBIADO POR DENTRO DESDE QUE LA GUARDASTE'].forEach(function (t) {
+            var d = document.createElement('div');
+            d.className = 'medias-aviso';
+            d.textContent = t;
+            p.appendChild(d);
+          });
+        },
         buttons: [
           { label: 'DESCARTARLA', primary: true, hint: 'ENTER', keys: ['Enter'],
             onClick: function () {
