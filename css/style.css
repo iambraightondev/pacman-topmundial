@@ -5223,3 +5223,25 @@ body { font-size-adjust: 0.56; }
 .medias-aviso { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; color: #ff8c00; margin: clamp(4px, 1vh, 10px) 0; }
 /* el título es largo: más pequeño, para que quepa en una línea */
 #prompt.arcade:has(.medias-ficha) .panel-title.go-titulo { font-size: clamp(26px, min(5vw, 8vh), 68px); }
+/* GAME OVER: INSERT COIN y MENÚ del mismo tamaño, uno al lado del otro. MENÚ
+ * va hueco (borde y letra amarillos) para que el principal siga mandando. */
+#prompt.arcade .go-continue .prompt-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 18px 36px; }
+#prompt.arcade .go-continue .prompt-btns .btn:not(.btn-primary) {
+  font-size: clamp(16px, 2.8vh, 22px);
+  letter-spacing: 3px;
+  padding: 16px 28px 12px;
+  color: #ffff00;
+  background: rgba(0, 0, 0, 0.55);
+  border: 3px solid #ffff00;
+  box-shadow: 0 6px 0 #b8860b;
+}
+#prompt.arcade .go-continue .prompt-btns .btn:not(.btn-primary):hover,
+#prompt.arcade .go-continue .prompt-btns .btn:not(.btn-primary):focus-visible {
+  color: #ffff00;
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 #b8860b;
+}
+#prompt.arcade .go-continue .prompt-btns .btn:not(.btn-primary) .btn-key { color: #ffff00; opacity: 0.75; }
+@media (max-width: 560px) {
+  #prompt.arcade .go-continue .prompt-btns { grid-template-columns: minmax(0, 1fr); }
+}

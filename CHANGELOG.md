@@ -2,6 +2,11 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · GAME OVER: botones simétricos
+
+- MENÚ mide lo mismo que INSERT COIN: mismo tamaño y letra, hueco con borde
+  amarillo.
+
 ## 2026-09-17 · PARTIDA A MEDIAS con marco de recreativa
 
 - El aviso de que tienes una partida guardada al empezar otra usa el marco de
