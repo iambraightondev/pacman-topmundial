@@ -5181,84 +5181,86 @@
       var o = this.els.badges;
       o.innerHTML = '';
 
+      /* EL TRONO: arriba el título y la liga (dos desplegables, como en el
+       * ranking); en medio tu maestría en grande, armándose, con tu récord y
+       * lo que falta; abajo el camino de los seis emblemas unidos por una
+       * línea de oro que se llena hasta donde has llegado. */
+      var cab = document.createElement('div');
+      cab.className = 'maes-cab';
       var h = document.createElement('div');
       h.className = 'panel-title';
       h.textContent = 'MAESTRÍAS';
-      o.appendChild(h);
+      cab.appendChild(h);
 
-      /* DOCE rutas independientes, y se eligen por sus dos ejes en vez de con
-       * doce pestañas seguidas: arriba DÓNDE se juega (el laberinto de 1980,
-       * LABERINTOS o DESATADO) y debajo CUÁNTOS jugáis. Tres botones más
-       * cuatro se leen de un vistazo; doce en fila, no. */
+      /* DOCE rutas independientes, elegidas por sus dos ejes: DÓNDE se juega
+       * (el laberinto de 1980, LABERINTOS o DESATADO) y CUÁNTOS jugáis. */
       var B0 = window.PM.Badges;
-      var bar = document.createElement('div');
-      bar.className = 'tab-row';
-      this.badgeMundoBtns = {};
-      (B0 ? B0.MUNDOS : []).forEach(function (m) {
-        var b = self.makeButton(m.name, function () { self.showBadgeTab(m.id, null); });
-        b.classList.add('tab');
-        self.badgeMundoBtns[m.id] = b;
-        bar.appendChild(b);
-      });
-      o.appendChild(bar);
-
-      var bar2 = document.createElement('div');
-      bar2.className = 'tab-row tab-row-sub';
-      this.badgeFmtBtns = {};
-      (B0 ? B0.FORMATOS : []).forEach(function (f) {
-        var b = self.makeButton(f.name, function () { self.showBadgeTab(null, f.n); });
-        b.classList.add('tab');
-        self.badgeFmtBtns[f.n] = b;
-        bar2.appendChild(b);
-      });
-      o.appendChild(bar2);
+      var mandos = document.createElement('div');
+      mandos.className = 'maes-mandos';
+      this.badgeMundoDesp = this.desplegable('MUNDO',
+        (B0 ? B0.MUNDOS : []).map(function (m) { return { id: m.id, name: m.name }; }),
+        function (id) { self.showBadgeTab(id, null); });
+      this.badgeFmtDesp = this.desplegable('FORMATO',
+        (B0 ? B0.FORMATOS : []).map(function (f) { return { id: f.n, name: f.name }; }),
+        function (n) { self.showBadgeTab(null, n); });
+      mandos.appendChild(this.badgeMundoDesp.el);
+      mandos.appendChild(this.badgeFmtDesp.el);
+      cab.appendChild(mandos);
+      o.appendChild(cab);
 
       this.badgesSub = document.createElement('div');
-      this.badgesSub.className = 'note';
+      this.badgesSub.className = 'note maes-nota';
       o.appendChild(this.badgesSub);
 
-      /* Lista a la izquierda, la elegida en grande a la derecha (en estrecho,
-       * el escenario va arriba y la lista debajo). No hay botón VER: se pulsa
-       * la maestría y ya se ve. */
-      var split = document.createElement('div');
-      split.className = 'badge-split';
-      o.appendChild(split);
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'maes-cuerpo';
+      o.appendChild(cuerpo);
 
-      this.badgesList = document.createElement('div');
-      this.badgesList.className = 'badge-list';
-      split.appendChild(this.badgesList);
+      // el emblema en grande: 200x240 lógicos a doble escala
+      this.badgeHero = document.createElement('canvas');
+      this.badgeHero.width = 400;
+      this.badgeHero.height = 480;
+      this.badgeHero.className = 'maes-heroe';
+      cuerpo.appendChild(this.badgeHero);
 
-      var stage = document.createElement('div');
-      stage.className = 'badge-stage';
-      split.appendChild(stage);
+      var info = document.createElement('div');
+      info.className = 'maes-info';
+      cuerpo.appendChild(info);
+      this.badgeInfo = info;
 
-      /* lienzo para ver la chapa sin tener que jugar: es la misma animación
-       * de la partida (Ctrl+Espacio), con tu propio Pac-Man debajo */
-      /* 130 x 54 lógicos a triple escala. El alto no es el de la partida: la
-       * chapa y el jugador viven entre y=30 e y=58, así que se recorta lo de
-       * arriba (badgeTop) en vez de dejar una franja negra muerta. Lo que se
-       * deja por encima es para los rayos y el fogonazo de los rangos altos,
-       * que se salen de la chapa. */
-      this.badgeScale = 3;
-      this.badgeTop = 12;
-      this.badgeDemo = document.createElement('canvas');
-      this.badgeDemo.width = 130 * this.badgeScale;
-      this.badgeDemo.height = 54 * this.badgeScale;
-      this.badgeDemo.className = 'badge-demo';
-      stage.appendChild(this.badgeDemo);
+      this.badgeStageKicker = document.createElement('div');
+      this.badgeStageKicker.className = 'maes-k';
+      info.appendChild(this.badgeStageKicker);
 
       this.badgeStageName = document.createElement('div');
-      this.badgeStageName.className = 'badge-stage-name';
-      stage.appendChild(this.badgeStageName);
+      this.badgeStageName.className = 'maes-nombre';
+      info.appendChild(this.badgeStageName);
 
       this.badgeStageState = document.createElement('div');
-      this.badgeStageState.className = 'badge-stage-state';
-      stage.appendChild(this.badgeStageState);
+      this.badgeStageState.className = 'maes-estado';
+      info.appendChild(this.badgeStageState);
 
-      var hint = document.createElement('div');
-      hint.className = 'badge-stage-hint';
-      hint.textContent = 'PULSA UNA MAESTRÍA DE LA LISTA PARA VERLA';
-      stage.appendChild(hint);
+      this.badgeDatos = document.createElement('div');
+      this.badgeDatos.className = 'maes-datos';
+      info.appendChild(this.badgeDatos);
+
+      this.badgeSig = document.createElement('div');
+      this.badgeSig.className = 'maes-sig';
+      info.appendChild(this.badgeSig);
+
+      // el camino: la lista de los seis (cada paso es un botón)
+      var camino = document.createElement('div');
+      camino.className = 'maes-camino';
+      var linea = document.createElement('div');
+      linea.className = 'maes-linea';
+      this.badgeLleno = document.createElement('div');
+      this.badgeLleno.className = 'maes-lleno';
+      linea.appendChild(this.badgeLleno);
+      camino.appendChild(linea);
+      this.badgesList = document.createElement('div');
+      this.badgesList.className = 'maes-pasos';
+      camino.appendChild(this.badgesList);
+      o.appendChild(camino);
 
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.classList.add('btn-primary');
@@ -5269,12 +5271,13 @@
       this.badgeFmt = 1;
       this.badgeTab = 'solo';
       this.badgePick = null;
+      this.badgeLienzos = [];
     },
 
     /* Cambia uno de los dos ejes (el otro va a null y se queda como estaba) y
      * recalcula la ruta. Se puede entrar también con una ruta hecha —lo hace
      * showBadges con la del modo en curso—, y entonces se deshace en sus dos
-     * piezas para que los botones queden marcados donde toca. */
+     * piezas para que los desplegables queden donde toca. */
     showBadgeTab: function (mundo, n) {
       var B = window.PM.Badges;
       if (!B) return;
@@ -5293,32 +5296,23 @@
       this.refreshBadges();
     },
 
+    /* 42350 -> '42.350' */
+    milesMaes: function (n) {
+      return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+
     refreshBadges: function () {
       var B = window.PM.Badges;
       var mode = this.badgeTab || 'solo';
-      var k;
-      for (k in this.badgeMundoBtns) {
-        if (this.badgeMundoBtns.hasOwnProperty(k)) {
-          this.badgeMundoBtns[k].classList.toggle('active', k === this.badgeMundo);
-        }
-      }
-      for (k in this.badgeFmtBtns) {
-        if (this.badgeFmtBtns.hasOwnProperty(k)) {
-          this.badgeFmtBtns[k].classList.toggle('active',
-            parseInt(k, 10) === this.badgeFmt);
-        }
-      }
+      if (this.badgeMundoDesp) this.badgeMundoDesp.poner(this.badgeMundo);
+      if (this.badgeFmtDesp) this.badgeFmtDesp.poner(this.badgeFmt);
       var best = B ? B.best(mode) : 0;
       var next = B ? B.next(mode) : null;
       /* Cada formato es su propia liga: su récord, sus insignias y su listón.
-       * Cuanta más gente juega, más puntos pide cada escalón (el marcador de
-       * un equipo es de todos, y con cuatro se llega al mismo número con
-       * mucho menos mérito de cada uno). */
+       * Cuanta más gente juega, más puntos pide cada escalón. */
       var meta = function (b) { return B ? B.goal(b, mode) : b.points; };
       /* La coletilla explica POR QUÉ esa ruta pide lo que pide, que si no
-       * los números parecen puestos a dedo. Primero lo del mundo, que es lo
-       * menos evidente, y si el mundo no tiene nada que decir, lo del
-       * formato. */
+       * los números parecen puestos a dedo. */
       var nota = '';
       var mundo = B ? B.mundoDe(mode) : 'clasico';
       if (mundo === 'lab') {
@@ -5337,73 +5331,96 @@
               : '  ·  ¡TODAS CONSEGUIDAS!') + nota;
       this.badgesList.innerHTML = '';
       this.badgeRows = {};
+      this.badgeLienzos = [];
       var self = this;
-      CFG.BADGES.forEach(function (b) {
+      var S = window.PM.Sprites;
+      var gema = (S && S.EMBLEM_GEMA) || [];
+      var lleno = this.badgeLleno;
+      CFG.BADGES.forEach(function (b, i) {
         var puntos = meta(b);
         var got = best >= puntos;
-        /* la fila ES el botón: pulsarla la enseña en el escenario. Siendo
-         * <button> entra sola en la navegación con flechas. */
         var row = document.createElement('button');
         row.type = 'button';
-        row.className = 'badge-row badge-pick' + (got ? ' got' : '');
+        row.className = 'maes-paso' + (got ? ' got' : '');
 
         var cv = document.createElement('canvas');
-        cv.width = 34; cv.height = 34;
-        cv.className = 'badge-medal';
-        var c = cv.getContext('2d');
-        c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawBadge(c, 17, 17, 14, b.color, !got);
+        cv.width = 120; cv.height = 144;
+        cv.className = 'maes-mini';
         row.appendChild(cv);
+        var L = { cv: cv, rango: i, off: !got, a0: Date.now() + 250 + i * 160 };
+        self.badgeLienzos.push(L);
+        // al pasar por encima se vuelve a armar
+        row.addEventListener('mouseenter', function () {
+          if (!L.off && (Date.now() - L.a0) / 1000 > 2.6) L.a0 = Date.now();
+        });
 
-        var txt = document.createElement('div');
-        txt.className = 'badge-text';
-        var nm = document.createElement('div');
-        nm.className = 'badge-name';
-        nm.style.color = got ? b.color : '#666';
+        var nm = document.createElement('b');
+        nm.className = 'maes-paso-nombre';
+        nm.style.color = got ? (gema[i] || b.color) : '#4a4868';
         nm.textContent = b.name;
-        txt.appendChild(nm);
-        var st = document.createElement('div');
-        st.className = 'badge-state';
-        st.textContent = got
-          ? ('CONSEGUIDA · ' + puntos + ' PUNTOS')
-          : ('TE FALTAN ' + (puntos - best) + ' PUNTOS');
-        txt.appendChild(st);
-        row.appendChild(txt);
+        row.appendChild(nm);
+        var pt = document.createElement('small');
+        pt.className = 'maes-paso-puntos';
+        pt.textContent = self.milesMaes(puntos);
+        row.appendChild(pt);
 
-        // pulsarla es verla: se celebra igual que en partida, sin esperar a
-        // conseguirla
         row.addEventListener('click', function () { self.pickBadge(b.id, true); });
 
         self.badgeRows[b.id] = row;
         self.badgesList.appendChild(row);
       });
 
-      /* De entrada, la que tienes: la más alta conseguida en esta ruta. Si
-       * aún no hay ninguna, la primera por conseguir. Al abrir el panel se
-       * celebra sola; al cambiar de pestaña, quieta (no se ha pulsado nada). */
+      /* la línea de oro: hasta la tuya y un tramo proporcional hacia la
+       * siguiente */
       var top = B ? B.top(mode) : null;
+      var tu = -1;
+      for (var k = 0; k < CFG.BADGES.length; k++) if (top && CFG.BADGES[k].id === top.id) tu = k;
+      var frac = 0;
+      if (tu >= 0 && tu < CFG.BADGES.length - 1) {
+        var desde = meta(CFG.BADGES[tu]), hasta = meta(CFG.BADGES[tu + 1]);
+        frac = Math.max(0, Math.min(1, (best - desde) / Math.max(1, hasta - desde)));
+      }
+      var tramo = 100 / (CFG.BADGES.length - 1);
+      lleno.style.width = (tu < 0 ? 0 : Math.min(100, (tu + frac) * tramo)) + '%';
+      if (top && this.badgeRows[top.id]) {
+        var tuya = document.createElement('span');
+        tuya.className = 'maes-tuya';
+        tuya.textContent = 'TUYA';
+        this.badgeRows[top.id].appendChild(tuya);
+      }
+
+      /* De entrada, la que tienes: la más alta conseguida en esta ruta. Si
+       * aún no hay ninguna, la primera por conseguir. */
       var pick = (this.badgePick && this.badgeRows[this.badgePick])
         ? this.badgePick
         : (top ? top.id : CFG.BADGES[0].id);
-      this.pickBadge(pick, false);
+      this.pickBadge(pick, true);
     },
 
-    /* Elige una maestría: la marca en la lista y la enseña en el escenario.
-     * play=true reproduce la chapa; si no, se queda quieta con su medalla. */
+    /* Elige una maestría: la marca en el camino y la enseña en grande.
+     * play=true la vuelve a armar desde cero. */
     pickBadge: function (id, play) {
       var B = window.PM.Badges;
       var mode = this.badgeTab || 'solo';
-      var badge = null;
+      var badge = null, rango = 0;
       for (var i = 0; i < CFG.BADGES.length; i++) {
-        if (CFG.BADGES[i].id === id) badge = CFG.BADGES[i];
+        if (CFG.BADGES[i].id === id) { badge = CFG.BADGES[i]; rango = i; }
       }
       if (!badge || !this.badgeStageName) return;
+      var cambia = this.badgePick !== badge.id;
       this.badgePick = badge.id;
 
       var best = B ? B.best(mode) : 0;
       var top = B ? B.top(mode) : null;
+      var next = B ? B.next(mode) : null;
       var puntos = B ? B.goal(badge, mode) : badge.points;
       var got = best >= puntos;
+      var S = window.PM.Sprites;
+      var gema = (S && S.EMBLEM_GEMA) || [];
+      var color = gema[rango] || badge.color;
+      var mundoDe = B ? B.mundoDe(mode) : 'clasico', donde = '';
+      (B ? B.MUNDOS : []).forEach(function (m) { if (m.id === mundoDe) donde = m.name; });
+      donde += ' · ' + (B && B.formatoName ? B.formatoName(mode) : 'SOLO');
 
       for (var k in this.badgeRows) {
         if (this.badgeRows.hasOwnProperty(k)) {
@@ -5413,96 +5430,106 @@
         }
       }
 
+      var esTuya = got && top && top.id === badge.id;
+      this.badgeInfo.style.setProperty('--c', color);
+      this.badgeInfo.classList.toggle('off', !got);
+      this.badgeStageKicker.textContent =
+        donde;
       this.badgeStageName.textContent = badge.name;
-      this.badgeStageName.style.color = got ? badge.color : '#666';
+      this.badgeStageName.style.color = '';
       this.badgeStageState.textContent = got
-        ? (((top && top.id === badge.id) ? 'TU MAESTRÍA · ' : 'CONSEGUIDA · ') +
-           puntos + ' PUNTOS')
-        : ('TE FALTAN ' + (puntos - best) + ' PUNTOS PARA CONSEGUIRLA');
+        ? ((esTuya ? 'TU MAESTRÍA · ' : 'CONSEGUIDA · ') + this.milesMaes(puntos) + ' PUNTOS')
+        : ('TE FALTAN ' + this.milesMaes(puntos - best) + ' PUNTOS PARA CONSEGUIRLA');
 
-      if (play) this.playBadgeDemo(badge, got);
-      else this.badgeRest(badge, got);
-    },
-
-    /* Reposo del escenario: tu Pac-Man con la medalla de la elegida flotando
-     * encima (apagada si aún no es tuya). Así el lado derecho siempre enseña
-     * algo, en vez de un hueco vacío hasta que se pulsa. */
-    badgeRest: function (badge, got) {
-      if (!this.badgeDemo) return;
-      this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;   // corta la demo en curso
-      this.drawBadgeRest(badge, got);
-    },
-
-    drawBadgeRest: function (badge, got) {
-      var cv = this.badgeDemo;
-      if (!cv) return;
-      var ctx = cv.getContext('2d');
-      var k = this.badgeScale || 2;
-      var s = window.PM.settings || {};
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.setTransform(k, 0, 0, k, 0, -(this.badgeTop || 0) * k);
-      window.PM.Sprites.drawPacman(ctx, 65, 52, CFG.DIR.RIGHT, 2,
-        s.pacColor || CFG.PLAYER_COLORS[0], s.skin1 || 'clasico');
-      if (badge) {
-        window.PM.Sprites.drawBadge(ctx, 65, 32, 9, badge.color, !got);
-      }
-    },
-
-    /* Reproduce dentro del panel la MISMA chapa de la partida: la medalla
-     * sube girando desde tu Pac-Man, la chapa se despliega con un chispazo
-     * y al final se encoge de vuelta. Antes aquí salía el cartel grande, que
-     * no es lo que se ve jugando. */
-    playBadgeDemo: function (badge, got) {
+      var tienes = B ? B.earned(mode).length : 0;
+      this.badgeDatos.innerHTML = '';
       var self = this;
-      var cv = this.badgeDemo;
-      if (!cv) return;
-      var ctx = cv.getContext('2d');
-      var total = CFG.BADGE_ANIM_TICKS;
+      [[this.milesMaes(best), 'TU RÉCORD'], [this.milesMaes(puntos), 'PIDE'],
+       [tienes + ' / ' + CFG.BADGES.length, 'EMBLEMAS']].forEach(function (d) {
+        var c = document.createElement('div');
+        var v = document.createElement('b');
+        v.textContent = d[0];
+        var r = document.createElement('span');
+        r.textContent = d[1];
+        c.appendChild(v);
+        c.appendChild(r);
+        self.badgeDatos.appendChild(c);
+      });
+
+      /* debajo, la barra: de la tuya hacia la siguiente; de una que no
+       * tienes, cuánto llevas de lo que pide */
+      this.badgeSig.innerHTML = '';
+      var fila = document.createElement('div');
+      fila.className = 'maes-sig-fila';
+      var izq = document.createElement('span');
+      var der = document.createElement('span');
+      var pct = 1;
+      if (esTuya && next) {
+        var desde = B.goal(badge, mode), hasta = B.goal(next, mode);
+        pct = Math.max(0, Math.min(1, (best - desde) / Math.max(1, hasta - desde)));
+        izq.appendChild(document.createTextNode('SIGUIENTE: '));
+        var em = document.createElement('em');
+        em.textContent = next.name;
+        for (var j = 0; j < CFG.BADGES.length; j++) {
+          if (CFG.BADGES[j].id === next.id) em.style.color = gema[j] || next.color;
+        }
+        izq.appendChild(em);
+        der.textContent = 'TE FALTAN ' + this.milesMaes(hasta - best);
+      } else if (!got) {
+        pct = Math.max(0, Math.min(1, best / Math.max(1, puntos)));
+        izq.textContent = 'SE FORJA A ' + this.milesMaes(puntos) + ' PUNTOS';
+        der.textContent = Math.floor(pct * 100) + '%';
+      } else if (esTuya) {
+        izq.textContent = 'NO HAY NADA MÁS ARRIBA';
+      } else {
+        izq.textContent = 'YA ES TUYA';
+      }
+      fila.appendChild(izq);
+      fila.appendChild(der);
+      this.badgeSig.appendChild(fila);
+      if (!got || (esTuya && next)) {
+        var barra = document.createElement('div');
+        barra.className = 'maes-barra';
+        var relleno = document.createElement('i');
+        relleno.style.width = (pct * 100).toFixed(1) + '%';
+        barra.appendChild(relleno);
+        this.badgeSig.appendChild(barra);
+      }
+
+      if (play || cambia || !this.badgeHeroL) {
+        this.badgeHeroL = { cv: this.badgeHero, rango: rango, off: !got, a0: Date.now() };
+      }
+      this.animarMaestrias();
+    },
+
+    /* Un solo bucle para el emblema grande y los seis del camino, vivo solo
+     * mientras se ve el panel. */
+    animarMaestrias: function () {
+      var self = this, raf = window.requestAnimationFrame;
       var S = window.PM.Sprites;
-      var s = window.PM.settings || {};
-      var color = s.pacColor || CFG.PLAYER_COLORS[0];
-      var skin = s.skin1 || 'clasico';
-      var k = this.badgeScale || 2;
-      var ty = -(this.badgeTop || 0) * k;
-      var PX = 65, PY = 52;                 // el jugador, en coordenadas lógicas
-      // el escalón manda cuánta pompa gasta la chapa: aquí se ve la de verdad
-      var rango = 0;
-      for (var bi = 0; bi < CFG.BADGES.length; bi++) {
-        if (CFG.BADGES[bi].id === badge.id) rango = bi;
+      if (!raf || this.maesAnim || !S || !S.drawEmblem) return;
+      this.maesAnim = true;
+      var t0 = Date.now();
+      function pinta(L, ahora) {
+        var cv = L.cv, c = cv.getContext && cv.getContext('2d');
+        if (!c) return;
+        if (L.off && L.hecho) return;
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, cv.width, cv.height);
+        if (L.off) { if (!L.hecho) { S.drawEmblemOff(c, L.rango, cv.width, cv.height); L.hecho = true; } return; }
+        var k = cv.width / 200;
+        c.setTransform(k, 0, 0, k, 0, 0);
+        S.drawEmblem(c, L.rango, (ahora - t0) / 1000, (ahora - L.a0) / 1000);
+        c.setTransform(1, 0, 0, 1, 0, 0);
       }
-      this.badgeDemoRun = (this.badgeDemoRun || 0) + 1;
-      var run = this.badgeDemoRun;
-      var prev = null;
-      var ticks = 0;
-
-      function fondo() {
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        ctx.setTransform(k, 0, 0, k, 0, ty);  // escalado, como el juego
-      }
-
-      function frame(now) {
-        if (self.badgeDemoRun !== run) return;      // otra demo la sustituyó
-        if (prev === null) prev = now;
-        // Avance por frame acotado: si el navegador ralentiza los frames
-        // (pestaña de fondo, equipo lento) la chapa se ve entera igual,
-        // sólo que más despacio, en vez de saltarse la animación.
-        ticks += Math.min(6, (now - prev) / (1000 / 60));
-        prev = now;
-        var t = ticks / total;
-        fondo();
-        S.drawPacman(ctx, PX, PY, CFG.DIR.RIGHT,
-          [0, 1, 2, 1][Math.floor(ticks / 4) % 4], color, skin);
-        // al acabar, la medalla se queda puesta: el escenario enseña siempre
-        // cuál está elegida
-        if (t >= 1) { self.drawBadgeRest(badge, got); return; }
-        S.drawBadgeTag(ctx, PX, PY - 11, badge.name, badge.color, t, ticks,
-          rango, (window.PM.Badges && window.PM.Badges.players(self.badgeTab) > 1)
-            ? window.PM.Badges.formatoName(self.badgeTab) : null);
-        requestAnimationFrame(frame);
-      }
-      requestAnimationFrame(frame);
+      raf(function paso() {
+        var p = self.els.badges;
+        if (!p || p.style.display === 'none') { self.maesAnim = false; return; }
+        var ahora = Date.now();
+        if (self.badgeHeroL) pinta(self.badgeHeroL, ahora);
+        (self.badgeLienzos || []).forEach(function (L) { pinta(L, ahora); });
+        raf(paso);
+      });
     },
 
     /* ======================================================
@@ -10297,9 +10324,8 @@
       this.badgePick = null;          // al entrar, siempre la que tienes
       this.refreshBadges();
       this.showPanel('badges');
-      // y si tienes alguna, se celebra sola al abrir el panel
-      var top = window.PM.Badges ? window.PM.Badges.top(this.badgeTab) : null;
-      if (top) this.pickBadge(top.id, true);
+      // el emblema se arma al abrir el panel
+      this.animarMaestrias();
     },
     showRanking: function (tab) {
       if (tab != null) this.rankTab = tab;

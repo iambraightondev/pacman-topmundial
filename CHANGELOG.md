@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · MAESTRÍAS: emblemas de oro y el trono
+
+- Cada maestría tiene su **emblema** de oro con incrustaciones verde azulado y
+  una silueta que evoluciona: pilar, alas, arco y gema, escudo con cuernos y
+  estandarte, anillo con alas bajas, y en TOP MUNDIAL el sol de rayos con la
+  gema tallada en la cima. Se **arman pieza a pieza** al aparecer.
+- La vista MAESTRÍAS es ahora **el trono**: la liga se elige con dos
+  desplegables (mundo y formato), tu maestría sale en grande con tu récord,
+  lo que pide y la barra hacia la siguiente, y abajo el camino de los seis
+  emblemas con una línea de oro hasta donde llegaste. Los que no tienes se ven
+  como silueta apagada; pulsar uno lo enseña en grande.
+
 ## 2026-09-17 · Pósters animados en el carrusel de modos
 
 - Cada modo tiene su **póster** (propuesta Retrato): CLÁSICO comiéndose la
