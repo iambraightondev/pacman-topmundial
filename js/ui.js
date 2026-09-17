@@ -1547,7 +1547,10 @@
       /* Los sprites son de 13 px: se agrandan hasta llenar el lienzo, sea del
        * tamaño que sea. El 20 es el ancho lógico que ocupa el icono más
        * grande (el de la party, que son dos Pac-Man y un fantasma). */
-      var k = cv.width / 20;
+      /* Los de dos o tres sprites se salían de ese ancho y se veían cortados
+       * por arriba y por los lados: esos llevan más margen. */
+      var doble = (mo.icon === 'party' || mo.icon === 'duo' || mo.icon === 'caza');
+      var k = cv.width / (doble ? 26 : 20);
       c.scale(k, k);
       var D = CFG.DIR;
       if (mo.icon === 'pac') {
@@ -1568,9 +1571,9 @@
         S.drawMazeGlyph(c, 0, 0, 17, mo.color);
       } else if (mo.icon === 'party') {
         // dos Pac-Man y un fantasma: los de la sala son gente, no colores
-        S.drawPacman(c, -6, -3, D.RIGHT, 2, '#ffff00', 'clasico');
-        S.drawPacman(c, 5, -3, D.LEFT, 2, '#00ff00', 'clasico');
-        S.drawGhost(c, 0, 5, D.RIGHT, 0, 'normal', 0, false);
+        S.drawPacman(c, -6, -3.5, D.RIGHT, 2, '#ffff00', 'clasico');
+        S.drawPacman(c, 5, -3.5, D.LEFT, 2, '#00ff00', 'clasico');
+        S.drawGhost(c, 0, 4.5, D.RIGHT, 0, 'normal', 0, false);
       }
       c.restore();
     },
