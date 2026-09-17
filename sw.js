@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v82';
+var VERSION = 'pm-v83';
 var SHELL = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ var SHELL = [
   './css/style.css',
   './fonts/press-start-2p.woff2',
   './js/config.js',
+  './js/letra.js',
   './js/audio.js',
   './js/sprites.js',
   './js/skins.js',

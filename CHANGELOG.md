@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Letra de máquina en todo el juego
+
+- **Todo el juego usa la letra del TOP MUNDIAL** (Press Start 2P): menús,
+  paneles, diálogos y lo que se escribe dentro de la partida (marcador,
+  ¡LISTO!, avisos). El marcador queda como el de la recreativa.
+- Como esa letra dibuja mal las vocales MAYÚSCULAS con tilde, en mayúscula
+  van sin ella (CLASICO, TRIO). La Ñ y las minúsculas con tilde se quedan.
+- Ajustados los sitios donde la letra, más ancha, partía o montaba textos.
+
 ## 2026-09-17 · Las repeticiones, como un vídeo
 
 - **Reproductor nuevo:** la partida a pantalla completa con los mandos de un

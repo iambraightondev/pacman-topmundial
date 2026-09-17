@@ -839,7 +839,7 @@
     var ABRE = 0.30;     // hasta aquí: la chapa se despliega
     var CIERRA = 0.86;   // a partir de aquí: se va
 
-    ctx.font = 'bold 7px monospace';
+    ctx.font = window.PM.Letra.lienzo(7);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     // hay siluetas que se comen el final de la chapa: la cola de golondrina
@@ -963,7 +963,7 @@
       if (formato && abre > 0.85) {
         var fa = Math.min(1, (abre - 0.85) / 0.15);
         ctx.save();
-        ctx.font = 'bold 5px monospace';
+        ctx.font = window.PM.Letra.lienzo(5);
         var th = 7;
         var tw = Math.ceil(ctx.measureText(formato).width) + 5;
         var tx = Math.round(lx + aw - padR - tw);
@@ -1201,10 +1201,10 @@
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 6px monospace';
+    ctx.font = window.PM.Letra.lienzo(6);
     ctx.fillStyle = '#ffffff';
     ctx.fillText('¡MAESTRÍA DE ' + (info.mode || 'SOLO') + '!', x0 + 25, cy - 5);
-    ctx.font = 'bold 8px monospace';
+    ctx.font = window.PM.Letra.lienzo(8);
     ctx.fillStyle = color;
     ctx.fillText(String(info.name || ''), x0 + 25, cy + 4);
 
@@ -1568,15 +1568,15 @@
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 6px monospace';
+    ctx.font = window.PM.Letra.lienzo(6);
     ctx.fillStyle = '#ffffff';
     ctx.fillText('¡LOGRO!', x0 + 25, cy - 5);
-    ctx.font = 'bold 8px monospace';
+    ctx.font = window.PM.Letra.lienzo(8);
     ctx.fillStyle = color;
     ctx.fillText(String(info.name || ''), x0 + 25, cy + 4);
 
     // la condición, a la derecha y pequeñita, si cabe
-    ctx.font = '5px monospace';
+    ctx.font = window.PM.Letra.lienzo(5);
     ctx.fillStyle = '#aaaaaa';
     ctx.textAlign = 'right';
     var d = String(info.desc || '');
@@ -1634,7 +1634,7 @@
    * ------------------------------------------------------------ */
   Sprites.drawScorePopup = function (ctx, x, y, text) {
     ctx.fillStyle = CFG.COLORS.popup;
-    ctx.font = 'bold 7px monospace';
+    ctx.font = window.PM.Letra.lienzo(7);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(text), x, y);

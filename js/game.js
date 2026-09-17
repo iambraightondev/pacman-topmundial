@@ -450,10 +450,10 @@
      * baja el cuerpo de la letra hasta 4 px, que sigue leyéndose. */
     fitText: function (ctx, text, x, y, ancho, cuerpo) {
       var px = cuerpo;
-      ctx.font = 'bold ' + px + 'px monospace';
+      ctx.font = window.PM.Letra.lienzo(px);
       while (px > 4 && ctx.measureText(text).width > ancho) {
         px--;
-        ctx.font = 'bold ' + px + 'px monospace';
+        ctx.font = window.PM.Letra.lienzo(px);
       }
       ctx.fillText(text, x, y);
     },
@@ -4043,7 +4043,7 @@
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!". En
          * CACERÍA también en solo: hay que saber cuál de los cuatro es el tuyo */
         if ((this.playerCount > 1 || this.caza) && this.state === 'READY') {
-          ctx.font = 'bold 7px monospace';
+          ctx.font = window.PM.Letra.lienzo(7);
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           for (i = 0; i < this.pacs.length; i++) {
@@ -4088,7 +4088,7 @@
        * fila de nombres es la de los cazadores, también jugando solo. */
       var caza = (this.caza && this.state !== 'MENU');
       var team = ((this.playerCount > 1 || caza) && this.state !== 'MENU');
-      ctx.font = 'bold 8px monospace';
+      ctx.font = window.PM.Letra.lienzo(8);
       ctx.textBaseline = 'top';
       ctx.fillStyle = CFG.COLORS.text;
 
@@ -4097,7 +4097,7 @@
         : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
       // hasta donde empieza "HIGH SCORE" (centrado en 112, unos 48 px de ancho)
       this.fitText(ctx, leftLabel, 20, 0, 66, 8);
-      ctx.font = 'bold 8px monospace';
+      ctx.font = window.PM.Letra.lienzo(8);
       ctx.textAlign = 'center';
       ctx.textAlign = 'right';
       var sc = (this.state === 'MENU') ? 0 : this.score;
@@ -4139,7 +4139,7 @@
           }
           ctx.globalAlpha = 1;
         }
-        ctx.font = 'bold 8px monospace';
+        ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.text;
       }
 
@@ -4182,14 +4182,14 @@
 
       /* cronómetro, en el hueco central de la fila de abajo */
       if (this.state !== 'MENU') {
-        ctx.font = 'bold 8px monospace';
+        ctx.font = window.PM.Letra.lienzo(8);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#00ffff';
         ctx.fillText(this.clockText(), 112, 279);
         // de mirón conviene recordar que esta partida no es tuya
         if (this.isSpec()) {
-          ctx.font = 'bold 6px monospace';
+          ctx.font = window.PM.Letra.lienzo(6);
           ctx.fillStyle = '#7ec8ff';
           ctx.fillText('VIENDO LA PARTIDA', 112, 270);
         }
@@ -4225,7 +4225,7 @@
       ctx.textAlign = 'center';
       var y = 17 * T + T / 2 + CFG.MAZE_Y;   // fila clásica bajo la casa
       if (this.state === 'READY') {
-        ctx.font = 'bold 8px monospace';
+        ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.ready;
         ctx.fillText('¡LISTO!', 112, y);
         // CACERÍA: en qué ronda vamos, que cada una aprieta más
@@ -4235,13 +4235,13 @@
             CFG.CAZA.NIVELES, 112, 20 * T + T / 2 + CFG.MAZE_Y);
         }
       } else if (this.state === 'GAME_OVER') {
-        ctx.font = 'bold 8px monospace';
+        ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.gameOver;
         ctx.fillText('GAME OVER', 112, y);
       }
       /* aviso breve (rendición rechazada, sin respuesta, ...) */
       if (this.flash) {
-        ctx.font = 'bold 8px monospace';
+        ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.popup;
         ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
       }
@@ -4272,10 +4272,10 @@
         var lout = Math.min(1, lt / 30);                 // salida suave
         ctx.save();
         ctx.globalAlpha = Math.min(lin, lout);
-        ctx.font = 'bold 7px monospace';
+        ctx.font = window.PM.Letra.lienzo(7);
         ctx.fillStyle = '#00ffff';
         ctx.fillText('NIVEL DE JUGADOR', 112, ly - 5);
-        ctx.font = 'bold 12px monospace';
+        ctx.font = window.PM.Letra.lienzo(12);
         ctx.fillStyle = '#ffffff';
         ctx.fillText(String(this.levelNotice.level), 112, ly + 7);
         ctx.restore();
@@ -4284,18 +4284,18 @@
       /* chat: últimos mensajes sobre la parte baja del laberinto */
       if (this.chat.length) {
         ctx.textAlign = 'left';
-        ctx.font = 'bold 7px monospace';
+        ctx.font = window.PM.Letra.lienzo(7);
         var cy = CFG.MAZE_Y + 30 * T - 2;
         for (var ci = this.chat.length - 1; ci >= 0; ci--) {
           var m = this.chat[ci];
           var label = m.name + ': ';
           // nombre largo + frase larga no caben en 224 px: se encoge la línea
           var cpx = 7;
-          ctx.font = 'bold 7px monospace';
+          ctx.font = window.PM.Letra.lienzo(7);
           while (cpx > 4 &&
                  ctx.measureText(label + m.text).width > CFG.NATIVE_W - 14) {
             cpx--;
-            ctx.font = 'bold ' + cpx + 'px monospace';
+            ctx.font = window.PM.Letra.lienzo(cpx);
           }
           var lw = ctx.measureText(label).width;
           var tw = ctx.measureText(m.text).width;
@@ -4316,7 +4316,7 @@
         ctx.fillStyle = menuUp ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
         if (!menuUp) {
-          ctx.font = 'bold 12px monospace';
+          ctx.font = window.PM.Letra.lienzo(12);
           ctx.fillStyle = CFG.COLORS.text;
           ctx.fillText('PAUSA', 112, CFG.NATIVE_H / 2);
         }
@@ -4328,7 +4328,7 @@
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
         if (Math.floor(this.tick / 20) % 2 === 0) {
-          ctx.font = 'bold 9px monospace';
+          ctx.font = window.PM.Letra.lienzo(9);
           ctx.fillStyle = CFG.COLORS.text;
           ctx.fillText('ESPERANDO CONEXIÓN...', 112, CFG.NATIVE_H / 2);
         }
@@ -4336,7 +4336,7 @@
       if (this.netNotice) {
         ctx.fillStyle = 'rgba(0,0,0,0.75)';
         ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
-        ctx.font = 'bold 9px monospace';
+        ctx.font = window.PM.Letra.lienzo(9);
         ctx.fillStyle = CFG.COLORS.ready;
         ctx.fillText(this.netNotice.text, 112, CFG.NATIVE_H / 2);
       }

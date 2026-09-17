@@ -449,7 +449,7 @@
       }
 
       /* los nombres, por fuera */
-      ctx.font = 'bold 9px "Courier New", Courier, monospace';
+      ctx.font = window.PM.Letra.lienzo(9);
       ctx.fillStyle = '#cfcfcf';
       for (i = 0; i < n; i++) {
         a = -Math.PI / 2 + (Math.PI * 2 * i) / n;

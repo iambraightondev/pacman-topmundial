@@ -453,7 +453,7 @@
     hud: function (G, ctx) {
       var s = this.segundosPoder(G);
       var poder = G.frightTicks > 0;
-      ctx.font = 'bold 8px monospace';
+      ctx.font = window.PM.Letra.lienzo(8);
       ctx.textBaseline = 'top';
       ctx.textAlign = 'center';
       ctx.fillStyle = poder ? '#ffffff' : (this.avisando(G) ? '#ffb8ff' : CFG.COLORS.text);

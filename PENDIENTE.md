@@ -13,6 +13,13 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep — letra de máquina en todo (`pm-v83`).** Pedido de Braighton. `js/letra.js`
+quita la tilde de las vocales mayúsculas (en la página con un MutationObserver
+y en el lienzo envolviendo fillText/measureText) y da los cuerpos del lienzo
+(`Letra.lienzo(px)`). La página de pruebas no se toca (PM_PRUEBAS). Ajustes
+de conjunto al final de css/style.css. **Por mirar:** paneles no revisados uno
+a uno (amigos, maestrías, online, cifras) por si algo parte mal.
+
 **17 sep — reproductor de vídeo (`pm-v82`).** Braighton eligió la propuesta A
 de <https://claude.ai/artifact/Fb5NwxBBeyFgwRak3GuDRv>. En `js/replay.js`
 ("EL REPRODUCTOR"), estilos `.rv` en css. Momentos detectados al preparar

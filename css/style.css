@@ -8,7 +8,9 @@ html, body {
   height: 100%;
   background: #000;
   color: #fff;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Press Start 2P", 'Courier New', Courier, monospace;
+  /* la letra de máquina ya es gruesa: la negrita inventada la emborrona */
+  font-synthesis: none;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2386,7 +2388,7 @@ input[type="range"] {
   border-radius: 3px;
   background: #1a1500;
   color: #ffd23f;
-  font: bold 16px 'Courier New', Courier, monospace;
+  font: 12px "Press Start 2P", 'Courier New', Courier, monospace;
   line-height: 1;
   cursor: pointer;
 }
@@ -2428,7 +2430,7 @@ input[type="range"] {
   border-radius: 2px;
   background: transparent;
   color: #6d6a58;
-  font: bold 13px 'Courier New', Courier, monospace;
+  font: 10px "Press Start 2P", 'Courier New', Courier, monospace;
   line-height: 1;
   cursor: pointer;
 }
@@ -2499,7 +2501,7 @@ input[type="range"] {
   border-radius: 3px;
   background: #000;
   color: #fff;
-  font: bold 16px 'Courier New', Courier, monospace;
+  font: 12px "Press Start 2P", 'Courier New', Courier, monospace;
   cursor: pointer;
 }
 .ficha-cerrar:hover, .ficha-cerrar:focus-visible { background: #ffff00; color: #000; outline: none; }
@@ -3425,7 +3427,7 @@ input[type="range"] {
   inset: 0;
   z-index: 30;
   pointer-events: none;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: inherit;
   font-weight: bold;
   color: #fff;
   line-height: 1.2;
@@ -3532,7 +3534,7 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
   border-radius: 50%;
   background: transparent;
   color: #fff;
-  font: bold 18px 'Courier New', Courier, monospace;
+  font: 14px "Press Start 2P", 'Courier New', Courier, monospace;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -3542,7 +3544,7 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
 .rv-reloj { margin: 0 8px; font-size: 14px; letter-spacing: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rv-total { color: #aaa; }
 .rv-momento {
-  font: bold 12px 'Courier New', Courier, monospace;
+  font: 9px "Press Start 2P", 'Courier New', Courier, monospace;
   letter-spacing: 1px;
   color: #ddd;
   padding: 6px 12px;
@@ -3558,7 +3560,7 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
 .rv-momento:hover, .rv-momento:focus-visible { background: rgba(255, 255, 255, 0.24); outline: none; }
 .rv-hueco { flex: 1; }
 .rv-vel {
-  font: bold 13px 'Courier New', Courier, monospace;
+  font: 10px "Press Start 2P", 'Courier New', Courier, monospace;
   color: #fff;
   padding: 6px 12px;
   border-radius: 20px;
@@ -3576,3 +3578,23 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
 @media (prefers-reduced-motion: reduce) {
   .rv-grande.pulso { animation: none; }
 }
+
+/* ---------- LETRA DE MÁQUINA: ajustes de conjunto ----------
+ * Press Start 2P (js/letra.js) es más ancha y más alta que la Courier para la
+ * que se midió todo. Sin estos ajustes, lo que parte en dos líneas se monta
+ * encima de la de abajo y algunos botones parten palabras. */
+.overlay { line-height: 1.6; }
+.btn { line-height: 1.4; }
+.note, .tienda-gana, .tienda-regalo, .vest-cuenta, .lobby-status { line-height: 1.7; }
+.menu-side .btn { letter-spacing: 1px; }
+.mode-peek-name { font-size: 7px; letter-spacing: 0; line-height: 1.5; word-break: normal; overflow-wrap: normal; }
+.tn-nav .btn.tab { font-size: clamp(8px, 1.3vh, 10px); letter-spacing: 1px; }
+.btn.tn-pagar { line-height: 1.4; }
+.tm-cabecera, .rank-row.tm-fila-rank, .rank-row.tm-hist { line-height: 1.3; }
+/* los botones de la partida (EMOTES, RENDIRSE) van sobre la esquina del
+ * marcador: con la letra de máquina, más pequeños para no pisar HIGH SCORE */
+.game-btn { font-size: 8px; letter-spacing: 0; padding: 6px 7px; }
+/* el título grande no puede partirse en dos en un móvil: siete letras de
+ * máquina tienen que caber en el ancho */
+.title { white-space: nowrap; font-size: min(clamp(36px, 9vh, 64px), 11vw); letter-spacing: 2px; }
+.subtitle { font-size: min(clamp(14px, 3vh, 26px), 6vw); }
