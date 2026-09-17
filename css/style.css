@@ -5276,4 +5276,4 @@ body { font-size-adjust: 0.56; }
 #prompt.arcade .prompt-btns .btn:not(.btn-primary):disabled { transform: none; }
 /* los secundarios, con letra más pequeña: el texto no compite con el principal
  * (el alto lo siguen igualando por la fila) */
-#prompt.arcade .prompt-btns .btn:not(.btn-primary) { font-size: clamp(12px, 2vh, 16px); letter-spacing: 2px; }
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; }
