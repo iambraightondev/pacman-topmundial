@@ -441,10 +441,10 @@
     wall: '#2121ff',
     wallFlash: '#ffffff',
     door: '#ffb8ff',
-    pellet: '#ffff00',
-    /* Las pastillas normales van en blanco: el amarillo se confundía con el
-     * propio Pac-Man y con las superpastillas. Estas últimas siguen amarillas
-     * (CFG.COLORS.pellet) para que se distingan de un vistazo. */
+    /* Pastillas en blanco, como el arcade original: el amarillo se confundía
+     * con el propio Pac-Man. Las dos medidas comparten color; lo que distingue
+     * a la superpastilla es su tamaño y que respira (js/game.js). */
+    pellet: '#ffffff',
     pelletMini: '#ffffff',
     frightBody: '#2121ff',
     frightFace: '#ffb8ae',

@@ -8192,7 +8192,7 @@
         var px = -20 + q * (W + 80), grande = W * 0.25;
         for (var x = 10; x < W; x += 8) if (x > px + 4) c.fillRect(x - 1, y - 1, 2, 2);
         if (px < grande) {
-          c.fillStyle = CFG.COLORS.pellet;          // la superpastilla, amarilla
+          c.fillStyle = CFG.COLORS.pellet;          // la superpastilla
           c.beginPath(); c.arc(grande, y, 3, 0, Math.PI * 2); c.fill();
         }
         var huyen = px >= grande;
