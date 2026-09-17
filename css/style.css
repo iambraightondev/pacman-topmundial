@@ -5621,3 +5621,7 @@ body { font-size-adjust: 0.56; }
 }
 /* el nombre del póster cabe entero aunque sea largo */
 #online .ol-poster-nombre { font-size: clamp(7px, 1.1vh, 9px); letter-spacing: 1px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+/* las dos columnas de la sala acaban a la misma altura */
+#online .ol-cols { align-items: stretch; }
+#online .ol-cols > .ol-card { height: 100%; box-sizing: border-box; }
+#online .ol-card-sala .ol-plazas { align-content: start; }
