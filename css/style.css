@@ -5248,3 +5248,29 @@ body { font-size-adjust: 0.56; }
 /* ...pero cada uno a lo ancho de su texto: iguales en relleno y alto, no en ancho */
 #prompt.arcade .go-continue .prompt-btns { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; }
 #prompt.arcade .go-continue .prompt-btns .btn { flex: 0 0 auto; }
+/* Todos los diálogos de recreativa (pausa, partida a medias, rendirse...): los
+ * botones secundarios como el MENÚ del GAME OVER — misma letra, alto y relleno
+ * que el principal, huecos con borde del color del marco, cada uno a lo ancho
+ * de su texto. */
+#prompt.arcade { --btn2: #ffff00; --btn2-sombra: #b8860b; }
+#prompt.arcade[data-tono=naranja] { --btn2: #ffb852; --btn2-sombra: #8a4a00; }
+#prompt.arcade .prompt-btns { align-items: stretch; }
+#prompt.arcade .prompt-btns .btn { flex: 0 0 auto; }
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) {
+  font-size: clamp(16px, 2.8vh, 22px);
+  letter-spacing: 3px;
+  padding: 16px 28px 12px;
+  color: var(--btn2);
+  background: rgba(0, 0, 0, 0.55);
+  border: 3px solid var(--btn2);
+  box-shadow: 0 6px 0 var(--btn2-sombra);
+}
+#prompt.arcade .prompt-btns .btn:not(.btn-primary):hover,
+#prompt.arcade .prompt-btns .btn:not(.btn-primary):focus-visible {
+  color: var(--btn2);
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 var(--btn2-sombra);
+}
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) .btn-key { color: var(--btn2); opacity: 0.75; }
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) .btn-ronda { --rc: var(--btn2); }
+#prompt.arcade .prompt-btns .btn:not(.btn-primary):disabled { transform: none; }
