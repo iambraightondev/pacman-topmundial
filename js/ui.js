@@ -655,6 +655,14 @@
       var boca = [0, 1, 2, 1][Math.floor(t * 14) % 4];
       var cv = this.marqCaza;
       if (cv && cv.offsetParent) {
+        /* El lienzo se estira a lo ancho de la portada con una altura tope:
+         * si su ancho interno no sigue la proporción de la caja, los dibujos
+         * salen aplastados (se veía en pantalla completa). Se ajusta para que
+         * cada píxel sea cuadrado con 48 de alto. */
+        if (cv.clientWidth && cv.clientHeight) {
+          var anchoOk = Math.round(cv.clientWidth * 48 / cv.clientHeight);
+          if (Math.abs(cv.width - anchoOk) > 2) { cv.width = anchoOk; cv.height = 48; }
+        }
         var c = cv.getContext('2d');
         c.setTransform(1, 0, 0, 1, 0, 0);
         c.clearRect(0, 0, cv.width, cv.height);

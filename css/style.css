@@ -4628,3 +4628,10 @@ body { font-size-adjust: 0.56; }
 
 /* la nota bajo el carrusel, siempre en una línea (UI.ajustarUnaLinea) */
 .mode-note { white-space: nowrap; overflow: hidden; width: 100%; max-width: 100%; }
+
+/* la persecución bajo el logo: alto fijo, el ancho lo ocupa entero sin deformar */
+@media (min-width: 1000px) {
+  .marq-caza { aspect-ratio: auto; height: 48px; max-height: none; }
+}
+@media (min-width: 1000px) and (max-height: 840px) { .marq-caza { height: 36px; } }
+@media (min-width: 1600px) { .marq-caza { height: clamp(40px, 5vh, 56px); } }
