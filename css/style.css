@@ -5720,3 +5720,6 @@ body { font-size-adjust: 0.56; }
 /* que no pisen el HIGH SCORE: un punto más pequeños */
 .game-btn { font-size: 8px; letter-spacing: 1px; padding: 7px 8px 5px; }
 #pauseBtn { font-size: 10px; }
+/* al señalar RENDIRSE la letra tiene que pasar a negra como en los demás: el
+ * color del id pesaba más que el del hover y el texto desaparecía sobre el rojo */
+#surrenderBtn:hover, #surrenderBtn:focus-visible, #pauseBtn:hover, #pauseBtn:focus-visible { color: #000; }
