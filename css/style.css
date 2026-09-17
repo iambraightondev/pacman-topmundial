@@ -4948,3 +4948,4 @@ body { font-size-adjust: 0.56; }
 }
 .vest-omni-centro { width: 96px; height: 96px; margin: -48px 0 0 -48px; }
 .vest-omni-centro canvas { width: 72px; height: 72px; }
+.vest-omni .vest-tecla, .vest-omni .vest-tecla.active, .vest-omni .vest-tecla:focus, .vest-omni .vest-tecla:focus-visible { outline: none !important; border: 0 !important; box-shadow: none !important; }
