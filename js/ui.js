@@ -2112,12 +2112,12 @@
       var ctl = this.optGroup(this.tabPanes.controles, 'CONTROLES');
       var ayudas = [
         'J1: FLECHAS O WASD',
-        'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
+        'PAUSA: P O ESC (REANUDAR · RENDIRSE R · SALIR Q)',
         'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
         'DESATADO SOLO: FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
         'DESATADO EN DOS: J1 FLECHAS Y ' + CFG.HAB.KEYS_2P[0].join(' ') +
           ' · J2 WASD Y ' + CFG.HAB.KEYS_2P[1].join(' '),
-        'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
+        'RENDIRSE: EN EL MENÚ DE PAUSA, CON R (EN DÚO, LOS DOS)'
       ];
       if (this.touchDevice) {
         ayudas.push('TÁCTIL: DESLIZA PARA MOVERTE · EN DÚO, CADA UNO SU MITAD');
@@ -8603,7 +8603,9 @@
     /* ------------------------------------------------------
      * Controles en pantalla: barra de botones y cruceta(s)
      * ------------------------------------------------------ */
-    /* Barra superior de la partida: RENDIRSE (siempre) y pausa (táctil) */
+    /* Barra superior de la partida: chat (online) y, en táctil, emotes y
+     * pausa. Con teclado no hay botones encima del laberinto: los emotes van
+     * con 1..6 y rendirse está en el menú de pausa (ESC). */
     buildGameButtons: function () {
       var self = this;
       var bar = document.createElement('div');
@@ -8635,18 +8637,6 @@
       bar.appendChild(ch);
       this.chatBtn = ch;
 
-      var sur = document.createElement('button');
-      sur.type = 'button';
-      sur.id = 'surrenderBtn';
-      sur.className = 'game-btn';
-      sur.textContent = 'RENDIRSE';
-      sur.setAttribute('aria-label', 'Rendirse');
-      sur.addEventListener('click', function () {
-        self.resumeAudio();
-        window.PM.Game.requestVote('surrender');
-      });
-      bar.appendChild(sur);
-
       var b = document.createElement('button');
       b.type = 'button';
       b.id = 'pauseBtn';
@@ -8663,7 +8653,6 @@
       document.getElementById('stage').appendChild(bar);
       this.gameBtns = bar;
       this.pauseBtn = b;
-      this.surrenderBtn = sur;
       this.buildEmoteBar();
       this.buildChatInput();
     },
@@ -9147,7 +9136,7 @@
       }
     },
 
-    /* Menú de pausa: reanudar / reiniciar / salir, con atajos de teclado */
+    /* Menú de pausa: reanudar / rendirse / salir, con atajos de teclado */
     showPausePrompt: function () {
       var self = this;
       var g = window.PM.Game;
@@ -9174,9 +9163,9 @@
       }
       if (g.netRole) {
         lines.push('LA PARTIDA ESTÁ EN PAUSA PARA LOS DOS.');
-        lines.push('REINICIAR TIENE QUE ACEPTARLO ' + g.nameFor(g.peerIdx()) + '.');
+        lines.push('RENDIRSE TIENE QUE ACEPTARLO ' + g.nameFor(g.peerIdx()) + '.');
       } else if (g.playerCount === 2) {
-        lines.push('REINICIAR EMPIEZA UNA PARTIDA NUEVA PARA LOS DOS.');
+        lines.push('RENDIRSE TERMINA LA PARTIDA PARA LOS DOS.');
       }
       /* GUARDAR Y SALIR solo sale donde la partida se puede reconstruir
        * (js/guardado.js): en CACERÍA y en ONLINE no hay nada que guardar y un
@@ -9193,11 +9182,15 @@
         { label: 'REANUDAR', hint: 'P · ESC', primary: true,
           keys: ['p', 'Escape', 'Enter'],
           onClick: function () { self.resumeAudio(); g.requestPause(); } },
-        { label: 'REINICIAR', hint: 'R', keys: ['r'],
+        /* Antes aquí se REINICIABA (se tiraba la partida y se empezaba otra).
+         * Ahora este botón es RENDIRSE: la partida termina como termina de
+         * verdad —con su game over, su puntuación y su récord— y desde ahí ya
+         * se puede volver a jugar. En dos jugadores u online sigue siendo una
+         * votación, igual que antes. */
+        { label: 'RENDIRSE', hint: 'R', keys: ['r'],
           onClick: function () {
             self.resumeAudio();
-            if (g.netRole) g.requestVote('restart');
-            else g.restartGame();
+            g.requestVote('surrender');   // el diálogo de la votación releva a este
           } }
       ];
       if (sePuede) {
@@ -10493,9 +10486,11 @@
       var playable = g.inGame() && g.state !== 'GAME_OVER' && !g.isSpec() &&
         !g.replaying && !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
-      if (this.surrenderBtn) this.surrenderBtn.disabled = !g.canSurrender();
-      // la barra lleva también MI MAESTRÍA, útil en cualquier modo
-      if (this.emoteBtn) this.emoteBtn.style.display = playable ? '' : 'none';
+      /* los emotes solo se ofrecen en táctil: con teclado van con 1..6 y el
+       * botón solo tapaba el laberinto */
+      if (this.emoteBtn) {
+        this.emoteBtn.style.display = (playable && this.touchDevice) ? '' : 'none';
+      }
       if (this.chatBtn) {
         this.chatBtn.style.display = (playable && g.netRole) ? '' : 'none';
       }

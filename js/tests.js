@@ -3047,7 +3047,7 @@
       L.reset();
       partida(1);
       G.score = 800;
-      G.restartGame();                // R en el menú de pausa
+      G.restartGame();                // empezar otra sin pasar por el menú
       eq(L.xp(), 800, 'los 800 de la anterior ya están sumados');
       G.score = 300;
       G.toMenu();

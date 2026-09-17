@@ -1420,7 +1420,6 @@ body {
   outline: none;
 }
 
-#surrenderBtn { color: #ff8c00; border-color: rgba(255, 140, 0, 0.6); }
 #pauseBtn { font-size: 13px; }
 
 .btn:hover, .btn:focus-visible {
@@ -3591,7 +3590,7 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
 .tn-nav .btn.tab { font-size: clamp(8px, 1.3vh, 10px); letter-spacing: 1px; }
 .btn.tn-pagar { line-height: 1.4; }
 .tm-cabecera, .rank-row.tm-fila-rank, .rank-row.tm-hist { line-height: 1.3; }
-/* los botones de la partida (EMOTES, RENDIRSE) van sobre la esquina del
+/* los botones de la partida (EMOTES, CHAT, pausa) van sobre la esquina del
  * marcador: con la letra de máquina, más pequeños para no pisar HIGH SCORE */
 .game-btn { font-size: 8px; letter-spacing: 0; padding: 6px 7px; }
 /* el título grande no puede partirse en dos en un móvil: siete letras de
@@ -5715,11 +5714,10 @@ body { font-size-adjust: 0.56; }
   outline: none;
 }
 .game-btn:focus { outline-color: var(--gb); }
-#surrenderBtn { --gb: #ff5a5a; color: var(--gb); border-color: var(--gb); }
 #pauseBtn { --gb: #00ff66; font-size: 11px; }
 /* que no pisen el HIGH SCORE: un punto más pequeños */
 .game-btn { font-size: 8px; letter-spacing: 1px; padding: 7px 8px 5px; }
 #pauseBtn { font-size: 10px; }
-/* al señalar RENDIRSE la letra tiene que pasar a negra como en los demás: el
- * color del id pesaba más que el del hover y el texto desaparecía sobre el rojo */
-#surrenderBtn:hover, #surrenderBtn:focus-visible, #pauseBtn:hover, #pauseBtn:focus-visible { color: #000; }
+/* al señalar la pausa la letra tiene que pasar a negra como en los demás: el
+ * color del id pesaba más que el del hover y el texto desaparecía */
+#pauseBtn:hover, #pauseBtn:focus-visible { color: #000; }
