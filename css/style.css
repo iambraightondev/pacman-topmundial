@@ -4707,3 +4707,178 @@ body { font-size-adjust: 0.56; }
   21% { transform: rotate(-5deg) translateY(-6px); }
 }
 @media (prefers-reduced-motion: reduce) { .daily-titulo { animation: none; } }
+
+/* ---------- DESPLEGABLE de recreativa (UI.desplegable) ---------- */
+.desp { position: relative; display: inline-flex; }
+.btn.desp-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: clamp(9px, 1.4vh, 12px); letter-spacing: 1px; line-height: 1.4;
+  padding: 9px 12px; background: #05050f; border: 2px solid #2d2d6e; color: #fff;
+  white-space: nowrap; min-width: 0;
+}
+.desp-k { color: #7c7ea6; }
+.desp-v { color: #ffff00; }
+.desp-fl { color: #7c7ea6; transition: transform 0.15s; }
+.desp.abierto .desp-fl { transform: rotate(180deg); }
+.btn.desp-btn:hover, .btn.desp-btn:focus-visible, .desp.abierto .btn.desp-btn { border-color: #ffff00; background: #0b0b24; outline: none; }
+.desp-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+  display: none; flex-direction: column; min-width: 100%; width: max-content; max-width: 90vw;
+  padding: 6px; background: #03030d; border: 2px solid #ffff00;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 0, 0.2);
+}
+.desp.abierto .desp-menu { display: flex; }
+.desp-grupo { padding: 8px 8px 4px; font-size: 8px; letter-spacing: 2px; color: #ffb8ff; text-align: left; }
+.btn.desp-op {
+  display: flex; justify-content: space-between; gap: 18px; width: 100%;
+  text-align: left; font-size: clamp(9px, 1.4vh, 12px); letter-spacing: 1px; line-height: 1.4;
+  padding: 8px 10px; background: none; border: 0; color: #cfd0ff; box-shadow: none; min-width: 0;
+}
+.btn.desp-op:hover, .btn.desp-op:focus-visible { color: #000; background: #ffff00; outline: none; }
+.btn.desp-op.active { color: #ffff00; }
+.btn.desp-op.active::before { content: "▸ "; }
+.btn.desp-op.active:hover { color: #000; }
+
+/* ---------- TOP MUNDIAL: una fila de mandos ---------- */
+.tm-mandos { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin: 6px 0 4px; }
+.tm-mandos .desp { display: inline-flex; }
+.tm-vista { display: inline-flex; border: 2px solid #2d2d6e; }
+.btn.tm-vista-b { font-size: clamp(9px, 1.4vh, 12px); letter-spacing: 1px; padding: 9px 12px; border: 0; background: #05050f; color: #7c7ea6; min-width: 0; }
+.btn.tm-vista-b + .tm-vista-b { border-left: 2px solid #2d2d6e; }
+.btn.tm-vista-b.active { color: #000; background: #ffff00; }
+.btn.tm-vista-b:hover:not(.active) { color: #fff; }
+
+/* ---------- PERFIL: la carta del jugador ---------- */
+#profile .perfil-rejilla {
+  display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: clamp(20px, 3vw, 48px);
+  width: 100%; align-items: start;
+}
+@media (max-width: 800px) { #profile .perfil-rejilla { grid-template-columns: 1fr; } }
+.perfil-carta {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 22px 20px 20px; background: linear-gradient(#0b0b28, #03030d);
+  border: 2px solid #ffff00; box-shadow: 0 0 30px rgba(255, 255, 0, 0.15), inset 0 0 40px rgba(33, 33, 255, 0.2);
+  overflow: hidden;
+}
+.perfil-carta::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.12;
+  background: repeating-linear-gradient(135deg, #ffff00 0 14px, transparent 14px 40px);
+}
+.perfil-carta-look {
+  position: relative; width: clamp(150px, 22vh, 220px); aspect-ratio: 1; padding: 0; border: 0; cursor: pointer;
+  background: radial-gradient(circle, rgba(255, 255, 0, 0.18), transparent 65%);
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4), filter 0.15s;
+}
+.perfil-carta-look canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+.perfil-carta-look:hover, .perfil-carta-look:focus-visible { transform: scale(1.06); filter: drop-shadow(0 0 12px rgba(255, 255, 0, 0.6)); outline: none; }
+#profile .perfil-nombre {
+  position: relative; font-size: clamp(18px, 3.2vh, 30px); letter-spacing: 2px; line-height: 1.2; text-align: center;
+  overflow-wrap: anywhere;
+  background: repeating-linear-gradient(180deg, #ffff00 0 0.07em, #c9b600 0.07em 0.1em);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent !important;
+  filter: drop-shadow(0.07em 0.07em 0 #b8860b);
+}
+.perfil-nivel { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; }
+.perfil-nivel-n {
+  flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%;
+  border: 3px double #00ffff; color: #ffff00; font-weight: normal; font-size: 20px;
+  box-shadow: 0 0 16px rgba(0, 255, 255, 0.35);
+}
+.perfil-nivel-datos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.perfil-look { position: relative; text-align: center; line-height: 1.8; }
+.perfil-acciones { position: relative; }
+.perfil-lado { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.perfil-lado .section-title { text-align: left; border-bottom: 1px solid #2121ff; padding-bottom: 6px; margin: 0; }
+.perfil-fichas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 800px) { .perfil-fichas { grid-template-columns: repeat(2, 1fr); } }
+.perfil-ficha {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 12px; text-align: left;
+  background: #05050f; border: 2px solid #1b1b44; border-left: 4px solid var(--fc);
+}
+.perfil-ficha b { font-weight: normal; font-size: clamp(13px, 2.2vh, 20px); color: var(--fc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.perfil-ficha span { font-size: 9px; letter-spacing: 2px; color: #7c7ea6; }
+.btn.perfil-mas { align-self: flex-start; }
+.perfil-cuenta { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; }
+.perfil-cuenta .preset-row { justify-content: flex-start; }
+
+/* ---------- VESTUARIO: desplegables y emotes redondos ---------- */
+.vest-util { flex-wrap: wrap; gap: 10px; }
+.vest-desps { display: flex; flex-wrap: wrap; gap: 10px; }
+.vest-grid.es-emote .vest-tile {
+  border-radius: 50%; aspect-ratio: 1; padding: 10px; justify-content: center;
+}
+.vest-grid.es-emote .vest-tile .vest-tile-name,
+.vest-grid.es-emote .vest-tile .vest-tile-tag { font-size: 8px; letter-spacing: 0; }
+.vest-tecla { border-radius: 50%; }
+
+/* ---------- Portada: el nombre con cuenta se pulsa como el aspecto ---------- */
+.marq .nick-caja .nick-input-menu:disabled {
+  pointer-events: none;
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4), filter 0.15s;
+}
+.marq .nick-caja:has(.nick-input-menu:disabled) { cursor: pointer; }
+.marq .nick-caja:has(.nick-input-menu:disabled):hover .nick-input-menu {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.75));
+}
+
+.btn.desp-op { justify-content: flex-start; }
+.btn.desp-op .desp-cuenta { margin-left: auto; }
+
+/* ---------- VESTUARIO: los emotes del armario vuelven a ser fichas ---------- */
+.vest-grid.es-emote .vest-tile { border-radius: 8px; aspect-ratio: auto; padding: 8px 4px; }
+.vest-grid.es-emote .vest-tile .vest-tile-name,
+.vest-grid.es-emote .vest-tile .vest-tile-tag { font-size: inherit; letter-spacing: inherit; }
+
+/* ---------- el DIAL de las teclas, estilo Omnitrix ---------- */
+@property --giro { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+.vest-teclas.vest-omni {
+  --r: 92px;
+  position: relative; display: block;
+  width: 250px; height: 250px; margin: 8px auto 4px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #0a0a0a 0 36%, #2b2b2b 37% 39%, #111 40% 58%, #1f1f1f 59% 61%, #0b0b0b 62% 100%);
+  box-shadow: 0 0 0 5px #3a3a3a, 0 0 0 8px #0e0e0e, 0 0 0 10px #00d62a, 0 0 28px rgba(0, 255, 60, 0.35), inset 0 6px 18px rgba(255, 255, 255, 0.06);
+  transition: --giro 0.45s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+/* las muescas del bisel */
+.vest-teclas.vest-omni::before {
+  content: ""; position: absolute; inset: 6px; border-radius: 50%; pointer-events: none;
+  background: repeating-conic-gradient(from var(--giro), #00ff3c 0 2deg, transparent 2deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 64%, #000 65% 70%, transparent 71%);
+  mask: radial-gradient(circle, transparent 0 64%, #000 65% 70%, transparent 71%);
+  opacity: 0.55;
+}
+/* el marcador de arriba: la tecla elegida */
+.vest-teclas.vest-omni::after {
+  content: ""; position: absolute; left: 50%; top: -14px; transform: translateX(-50%);
+  border: 9px solid transparent; border-top-color: #00ff3c; filter: drop-shadow(0 0 6px #00ff3c);
+}
+.vest-omni .vest-tecla {
+  position: absolute; left: 50%; top: 50%;
+  width: 52px; height: 52px; margin: -26px 0 0 -26px; padding: 0;
+  display: grid; place-items: center;
+  border-radius: 50%; border: 2px solid #2d2d2d; background: #050505;
+  transform: rotate(calc(var(--i) * 60deg + var(--giro))) translateY(calc(-1 * var(--r))) rotate(calc(-1 * (var(--i) * 60deg + var(--giro))));
+}
+.vest-omni .vest-tecla canvas { width: 38px; height: 38px; }
+.vest-omni .vest-tecla .emote-num { top: -4px; left: -2px; color: #00ff3c; }
+.vest-omni .vest-tecla:hover { border-color: #00ff3c; }
+.vest-omni .vest-tecla.active { border-color: #00ff3c; box-shadow: 0 0 12px rgba(0, 255, 60, 0.7); background: #031a08; }
+/* el centro: reloj de arena verde con la cara grande */
+.vest-omni-centro {
+  position: absolute; left: 50%; top: 50%; width: 110px; height: 110px; margin: -55px 0 0 -55px;
+  border-radius: 50%; display: grid; place-items: center; overflow: hidden;
+  background: #041006; box-shadow: inset 0 0 0 3px #00d62a, 0 0 18px rgba(0, 255, 60, 0.45);
+}
+.vest-omni-centro::before {
+  content: ""; position: absolute; inset: 0;
+  background: #00d62a;
+  clip-path: polygon(8% 0, 92% 0, 58% 50%, 92% 100%, 8% 100%, 42% 50%);
+  opacity: 0.85;
+}
+.vest-omni-centro canvas { position: relative; width: 78px; height: 78px; image-rendering: pixelated; filter: drop-shadow(0 0 4px #000); }
+.vest-omni-num { position: absolute; bottom: 8px; font-size: 9px; color: #000; background: #00ff3c; padding: 2px 5px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .vest-teclas.vest-omni { transition: none; } }
+.vest-teclas.vest-omni { margin-top: 26px; margin-bottom: 14px; }

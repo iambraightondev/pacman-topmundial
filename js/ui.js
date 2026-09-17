@@ -1812,6 +1812,107 @@
       go();
     },
 
+    /* ------------------------------------------------------
+     * DESPLEGABLE de recreativa: un botón que dice lo que hay puesto
+     * ("MUNDO · CLÁSICO ▾") y, al pulsarlo, la lista de opciones (con
+     * cabeceras de grupo si las hay). Devuelve { el, btns, poner(id) }.
+     * Se cierra al elegir, al pulsar fuera o con ESC.
+     * ------------------------------------------------------ */
+    desplegable: function (rotulo, opciones, alElegir) {
+      var self = this;
+      var el = document.createElement('div');
+      el.className = 'desp';
+      var boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'btn desp-btn';
+      boton.setAttribute('aria-haspopup', 'listbox');
+      boton.setAttribute('aria-expanded', 'false');
+      var k = document.createElement('span');
+      k.className = 'desp-k';
+      k.textContent = rotulo;
+      boton.appendChild(k);
+      var v = document.createElement('span');
+      v.className = 'desp-v';
+      boton.appendChild(v);
+      var fl = document.createElement('span');
+      fl.className = 'desp-fl';
+      fl.textContent = '▾';
+      boton.appendChild(fl);
+      el.appendChild(boton);
+
+      var menu = document.createElement('div');
+      menu.className = 'desp-menu';
+      menu.setAttribute('role', 'listbox');
+      el.appendChild(menu);
+      var btns = {}, nombres = {}, grupo = null;
+      function cerrar() {
+        el.classList.remove('abierto');
+        boton.setAttribute('aria-expanded', 'false');
+      }
+      opciones.forEach(function (o) {
+        if (o.grupo && o.grupo !== grupo) {
+          grupo = o.grupo;
+          var g = document.createElement('span');
+          g.className = 'desp-grupo';
+          g.textContent = o.grupo;
+          menu.appendChild(g);
+        }
+        var ob = self.makeButton(o.name, function () {
+          cerrar();
+          alElegir(o.id);
+        });
+        ob.classList.add('desp-op');
+        ob.setAttribute('role', 'option');
+        if (o.cuenta != null) {
+          var c = document.createElement('small');
+          c.className = 'desp-cuenta';
+          c.textContent = o.cuenta;
+          ob.appendChild(c);
+        }
+        btns[o.id] = ob;
+        nombres[o.id] = o.name;
+        menu.appendChild(ob);
+      });
+      boton.addEventListener('click', function (ev) {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        var abrir = !el.classList.contains('abierto');
+        self.cerrarDesplegables();
+        if (abrir) {
+          el.classList.add('abierto');
+          boton.setAttribute('aria-expanded', 'true');
+          var act = menu.querySelector && menu.querySelector('.active');
+          if (act && act.focus) { try { act.focus(); } catch (e) { } }
+        }
+      });
+      if (!this.despEscucha && typeof document !== 'undefined' && document.addEventListener) {
+        this.despEscucha = true;
+        document.addEventListener('click', function (ev) {
+          var abiertos = document.querySelectorAll ? document.querySelectorAll('.desp.abierto') : [];
+          for (var i = 0; i < abiertos.length; i++) {
+            if (!abiertos[i].contains(ev.target)) abiertos[i].classList.remove('abierto');
+          }
+        });
+      }
+      return {
+        el: el, btns: btns, boton: boton,
+        poner: function (id) {
+          for (var key in btns) {
+            if (btns.hasOwnProperty(key)) btns[key].classList.toggle('active', String(key) === String(id));
+          }
+          v.textContent = nombres.hasOwnProperty(id) ? nombres[id] : '';
+        },
+        rotulo: function (txt) { v.textContent = txt; }
+      };
+    },
+
+    /* ¿Hay un desplegable abierto? Se cierra (ESC lo usa antes que salir) */
+    cerrarDesplegables: function () {
+      if (typeof document === 'undefined' || !document.querySelectorAll) return false;
+      var abiertos = document.querySelectorAll('.desp.abierto');
+      for (var i = 0; i < abiertos.length; i++) abiertos[i].classList.remove('abierto');
+      return abiertos.length > 0;
+    },
+
     makeButton: function (label, onClick) {
       var b = document.createElement('button');
       b.type = 'button';
@@ -2174,6 +2275,13 @@
         /* el campo mide lo que el nombre: así aspecto y nombre van juntos y
          * centrados, sea el nombre corto o largo */
         input.addEventListener('input', function () { self.ajustarNickPortada(); });
+        /* con cuenta el nombre no se escribe: pulsarlo lleva al PERFIL (el
+         * campo bloqueado no recibe clics, así que se escucha en la caja) */
+        caja.addEventListener('click', function (ev) {
+          if (ev.target === look || !input.disabled) return;
+          self.resumeAudio();
+          self.showProfile();
+        });
         this.pintarNickLook(0);
       } else {
         row.appendChild(input);
@@ -2186,8 +2294,8 @@
 
     /* Tu Pac-Man junto a tu nombre en la portada, con todo lo que llevas
      * puesto. t: segundos, para la boca y el efecto. */
-    pintarNickLook: function (t) {
-      var cv = this.nickLook, Sp = window.PM.Sprites;
+    pintarNickLook: function (t, otro) {
+      var cv = otro || this.nickLook, Sp = window.PM.Sprites;
       if (!cv || !Sp) return;
       var s = window.PM.settings, Tn = window.PM.Tienda;
       var color = s.pacColor || '#ffff00';
@@ -2211,7 +2319,7 @@
         });
       } catch (e) { /* un dibujo raro no rompe la portada */ }
       c.setTransform(1, 0, 0, 1, 0, 0);
-      if (this.nickLookInput) this.nickLookInput.style.color = color;
+      if (!otro && this.nickLookInput) this.nickLookInput.style.color = color;
     },
 
     /* Ancho del nombre de la portada según lo escrito (o el texto de ayuda) */
@@ -2561,14 +2669,28 @@
       tt.className = 'vest-mini-titulo';
       tt.textContent = 'TUS EMOTES · TECLAS 1 A 6';
       this.vestTeclasWrap.appendChild(tt);
+      /* EL DIAL (17 sep 2026): las seis teclas en círculo, como el Omnitrix
+       * de Ben 10 Omniverse. El dial gira para dejar arriba la tecla elegida
+       * y su cara sale en grande en el centro, sobre el reloj de arena. */
       var teclas = document.createElement('div');
-      teclas.className = 'vest-teclas';
+      teclas.className = 'vest-teclas vest-omni';
+      var centro = document.createElement('div');
+      centro.className = 'vest-omni-centro';
+      this.vestOmniCv = document.createElement('canvas');
+      this.vestOmniCv.width = 96; this.vestOmniCv.height = 96;
+      centro.appendChild(this.vestOmniCv);
+      this.vestOmniNum = document.createElement('span');
+      this.vestOmniNum.className = 'vest-omni-num';
+      centro.appendChild(this.vestOmniNum);
+      teclas.appendChild(centro);
+      this.vestOmni = teclas;
       this.vestTeclaBtns = [];
       for (var k = 0; k < CFG.TIENDA.EMOTE_TECLAS; k++) {
         (function (n) {
           var b = document.createElement('button');
           b.type = 'button';
           b.className = 'skin vest-tecla';
+          b.style.setProperty('--i', String(n));
           var cv = document.createElement('canvas');
           cv.width = 40; cv.height = 40;
           b.appendChild(cv);
@@ -2617,30 +2739,35 @@
       this.vestCuenta = document.createElement('span');
       this.vestCuenta.className = 'vest-cuenta';
       util.appendChild(this.vestCuenta);
-      this.vestFaltanBtn = this.makeButton('VER LO QUE ME FALTA', function () {
-        self.vestFaltan = !self.vestFaltan;
+      /* Los filtros son desplegables: QUÉ SE VE (todo o solo lo tuyo; de
+       * entrada, todo) y, en SKIN, por cómo se consiguen. */
+      var filtros = document.createElement('div');
+      filtros.className = 'vest-desps';
+      util.appendChild(filtros);
+      var dVer = this.desplegable('VER', [
+        { id: 'todo', name: 'TODO' }, { id: 'mio', name: 'SOLO LO QUE TENGO' }
+      ], function (id) {
+        self.vestFaltan = (id === 'todo');
         self.refreshVestuario();
       });
-      this.vestFaltanBtn.classList.add('btn-preset', 'vest-faltan');
-      util.appendChild(this.vestFaltanBtn);
-      arm.appendChild(util);
+      this.vestFaltanBtn = dVer.el;
+      this.vestVerDesp = dVer;
+      filtros.appendChild(dVer.el);
 
-      /* SKIN: clasificarlas por cómo se consiguen, para quien no quiera verlas
-       * todas juntas. En TODAS salen agrupadas con su título. */
-      this.vestFiltrosEl = document.createElement('div');
-      this.vestFiltrosEl.className = 'vest-filtros';
-      this.vestFiltroBtns = {};
-      this.VEST_FILTROS.forEach(function (fl) {
-        var b = self.makeButton(fl.name, function () {
-          self.vestFiltro = fl.id;
-          self.vestProbando = null;
-          self.refreshVestuario();
-        });
-        b.classList.add('vest-filtro');
-        self.vestFiltroBtns[fl.id] = b;
-        self.vestFiltrosEl.appendChild(b);
+      /* SKIN: clasificarlas por cómo se consiguen. En TODAS salen agrupadas
+       * con su título. */
+      var dSkin = this.desplegable('TIPO', this.VEST_FILTROS.map(function (fl) {
+        return { id: fl.id, name: fl.name };
+      }), function (id) {
+        self.vestFiltro = id;
+        self.vestProbando = null;
+        self.refreshVestuario();
       });
-      arm.appendChild(this.vestFiltrosEl);
+      this.vestFiltrosEl = dSkin.el;
+      this.vestFiltroBtns = dSkin.btns;
+      this.vestFiltroDesp = dSkin;
+      filtros.appendChild(dSkin.el);
+      arm.appendChild(util);
 
       this.vestAviso = document.createElement('div');
       this.vestAviso.className = 'vest-aviso';
@@ -2678,7 +2805,7 @@
       this.vestTab = 'skin';
       this.vestPara = 'yo';
       this.vestTecla = 0;
-      this.vestFaltan = false;
+      this.vestFaltan = true;          // de entrada se ve todo, también lo que falta
       this.vestFiltro = 'todas';
       this.vestProbando = null;
       this.vestFoco = null;
@@ -2948,8 +3075,8 @@
       this.vestFicha.style.display = esColor ? 'none' : '';
       var conFaltan = (tab === 'skin' || tab === 'accesorio' || tab === 'efecto' || tab === 'emote');
       this.vestFaltanBtn.style.display = conFaltan ? '' : 'none';
-      this.vestFaltanBtn.classList.toggle('active', !!this.vestFaltan);
-      this.vestFaltanBtn.textContent = this.vestFaltan ? 'SOLO LO QUE TENGO' : 'VER LO QUE ME FALTA';
+      this.vestVerDesp.poner(this.vestFaltan ? 'todo' : 'mio');
+      this.vestGrid.classList.toggle('es-emote', tab === 'emote');
       this.vestFiltrosEl.style.display = (tab === 'skin') ? '' : 'none';
 
       this.vestGrid.innerHTML = '';
@@ -2973,8 +3100,9 @@
           var de = (fl.id === 'todas') ? todasSk : todasSk.filter(function (it) { return it.cat === fl.id; });
           var mias = de.filter(function (it) { return it.tuyo; }).length;
           var fb = self.vestFiltroBtns[fl.id];
-          fb.textContent = fl.name + ' ' + mias + '/' + de.length;
+          fb.textContent = fl.name + ' · ' + mias + '/' + de.length;
           fb.classList.toggle('active', fl.id === filtro);
+          if (fl.id === filtro) self.vestFiltroDesp.rotulo(fl.name + ' · ' + mias + '/' + de.length);
         });
         if (filtro !== 'todas') items = items.filter(function (it) { return it.cat === filtro; });
       }
@@ -3048,7 +3176,7 @@
       if (!orden.length || (orden.length === 1 && orden[0].id === '' && !this.vestFaltan)) {
         var vacio = document.createElement('div');
         vacio.className = 'vest-vacio';
-        vacio.textContent = 'AÚN NO TIENES NINGUNO · PULSA "VER LO QUE ME FALTA" O PASA POR LA TIENDA';
+        vacio.textContent = 'AÚN NO TIENES NINGUNO · EN VER, ELIGE TODO O PASA POR LA TIENDA';
         this.vestGrid.appendChild(vacio);
       }
       this.pintarFichaDetalle(tab, focoIt);
@@ -3167,6 +3295,20 @@
             c.imageSmoothingEnabled = false;
             S.drawPacFace(c, 20, 21, 13, look.color, caras[i], t * 60);
           }
+          /* el dial: gira hasta la tecla elegida y la enseña en el centro */
+          var sel = self.vestTecla || 0;
+          if (self.vestOmni && self.vestOmniSel !== sel) {
+            self.vestOmniSel = sel;
+            self.vestOmni.style.setProperty('--giro', (-sel * 60) + 'deg');
+            self.vestOmniNum.textContent = String(sel + 1);
+          }
+          if (self.vestOmniCv) {
+            var oc = self.vestOmniCv.getContext('2d');
+            oc.setTransform(1, 0, 0, 1, 0, 0);
+            oc.clearRect(0, 0, 96, 96);
+            oc.imageSmoothingEnabled = false;
+            S.drawPacFace(oc, 48, 50, 34, look.color, caras[sel], t * 60);
+          }
         }
         raf(paso);
       }
@@ -3178,7 +3320,7 @@
       if (!this.profLookCv) return;
       var s = window.PM.settings, Tn = window.PM.Tienda, Sk = window.PM.Skins;
       var skin = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
-      this.pintarSkinIcono(this.profLookCv, skin, s.pacColor || '#ffff00');
+      this.pintarNickLook(0, this.profLookCv);
       var nombreDe = function (id) { var x = Tn && Tn.item(id); return x ? x.name : 'NINGUNO'; };
       var info = Sk && Sk.info(skin);
       this.profLook.textContent = 'SKIN ' + (info ? info.name : skin.toUpperCase()) +
@@ -5781,80 +5923,129 @@
       this.profPane = document.createElement('div');
       this.profPane.className = 'tab-pane';
 
-      var cab = document.createElement('div');
-      cab.className = 'perfil-cab';
+      /* LA CARTA DEL JUGADOR (17 sep 2026): a la izquierda tu personaje en
+       * grande, con todo lo puesto y moviéndose, tu nombre con el título de
+       * recreativa y tu nivel; a la derecha tus cifras en fichas y la cuenta. */
+      var rejilla = document.createElement('div');
+      rejilla.className = 'perfil-rejilla';
+      this.profPane.appendChild(rejilla);
+
+      var carta = document.createElement('div');
+      carta.className = 'perfil-carta';
+      rejilla.appendChild(carta);
+
+      var lookBtn = document.createElement('button');
+      lookBtn.type = 'button';
+      lookBtn.className = 'perfil-carta-look';
+      lookBtn.setAttribute('aria-label', 'Tu personaje: abrir el vestuario');
+      this.profLookCv = document.createElement('canvas');
+      this.profLookCv.width = 240; this.profLookCv.height = 240;
+      lookBtn.appendChild(this.profLookCv);
+      lookBtn.addEventListener('click', function () { self.resumeAudio(); self.showVestuario('skin', 'yo'); });
+      carta.appendChild(lookBtn);
+
+      this.profName = document.createElement('div');
+      this.profName.className = 'perfil-nombre';
+      carta.appendChild(this.profName);
+
+      /* el avatar de siempre sigue existiendo (lo usan otros sitios), sin verse */
       this.profAvatar = document.createElement('canvas');
       this.profAvatar.width = 72;
       this.profAvatar.height = 72;
       this.profAvatar.className = 'perfil-avatar';
-      cab.appendChild(this.profAvatar);
-      var datos = document.createElement('div');
-      datos.className = 'perfil-datos';
-      this.profName = document.createElement('div');
-      this.profName.className = 'perfil-nombre';
-      datos.appendChild(this.profName);
+      this.profAvatar.style.display = 'none';
+      carta.appendChild(this.profAvatar);
+
+      var nivel = document.createElement('div');
+      nivel.className = 'perfil-nivel';
+      this.profLevelNum = document.createElement('b');
+      this.profLevelNum.className = 'perfil-nivel-n';
+      nivel.appendChild(this.profLevelNum);
+      var nivDatos = document.createElement('div');
+      nivDatos.className = 'perfil-nivel-datos';
       this.profLevel = document.createElement('div');
       this.profLevel.className = 'level-label';
-      datos.appendChild(this.profLevel);
+      nivDatos.appendChild(this.profLevel);
       var barra = document.createElement('div');
       barra.className = 'level-bar';
       this.profFill = document.createElement('div');
       this.profFill.className = 'level-fill';
       barra.appendChild(this.profFill);
-      datos.appendChild(barra);
-      this.profResumen = document.createElement('div');
-      this.profResumen.className = 'note';
-      datos.appendChild(this.profResumen);
-      cab.appendChild(datos);
-      var ficha = this.optGroup(this.profPane, null, true);
-      ficha.appendChild(cab);
+      nivDatos.appendChild(barra);
+      nivel.appendChild(nivDatos);
+      carta.appendChild(nivel);
 
-      /* nombre de invitado: se puede cambiar y sortear */
+      this.profLook = document.createElement('div');
+      this.profLook.className = 'note perfil-look';
+      carta.appendChild(this.profLook);
+
+      var acciones = document.createElement('div');
+      acciones.className = 'preset-row perfil-acciones';
+      this.profVestBtn = this.makeButton('ABRIR EL VESTUARIO', function () {
+        self.resumeAudio();
+        self.showVestuario('skin', 'yo');
+      });
+      this.profVestBtn.classList.add('btn-preset');
+      acciones.appendChild(this.profVestBtn);
+      carta.appendChild(acciones);
+
+      /* nombre de invitado: se puede sortear */
       this.profGuestRow = document.createElement('div');
       this.profGuestRow.className = 'preset-row';
       var azar = this.makeButton('NOMBRE AL AZAR', function () {
-        var s = window.PM.settings;
-        s.nick1 = randomNick();
+        var st = window.PM.settings;
+        st.nick1 = randomNick();
         saveSettings();
         self.refreshNicks();
         self.refreshProfile();
       });
       azar.classList.add('btn-preset');
       this.profGuestRow.appendChild(azar);
-      ficha.appendChild(this.profGuestRow);
+      carta.appendChild(this.profGuestRow);
 
-      /* Tu personaje, en pequeño. Aquí antes se elegían el avatar, el color y
-       * la skin, y lo de la tienda salía en una línea: todo eso se viste ahora
-       * en el VESTUARIO, y PERFIL se queda con quién eres (nombre, nivel,
-       * cuenta, logros). */
-      var gLook = this.optGroup(this.profPane, 'TU PERSONAJE', true);
-      var lookRow = document.createElement('div');
-      lookRow.className = 'perfil-personaje';
-      var lookBtn = document.createElement('button');
-      lookBtn.type = 'button';
-      lookBtn.className = 'skin active perfil-personaje-cv';
-      lookBtn.setAttribute('aria-label', 'Abrir el vestuario');
-      this.profLookCv = document.createElement('canvas');
-      this.profLookCv.width = 96; this.profLookCv.height = 96;
-      lookBtn.appendChild(this.profLookCv);
-      lookBtn.addEventListener('click', function () { self.showVestuario('skin', 'yo'); });
-      lookRow.appendChild(lookBtn);
-      var lookTxt = document.createElement('div');
-      lookTxt.className = 'perfil-personaje-txt';
-      this.profLook = document.createElement('div');
-      this.profLook.className = 'note perfil-look';
-      lookTxt.appendChild(this.profLook);
-      this.profVestBtn = this.makeButton('ABRIR EL VESTUARIO', function () {
-        self.resumeAudio();
-        self.showVestuario('skin', 'yo');
+      /* la columna de la derecha */
+      var lado = document.createElement('div');
+      lado.className = 'perfil-lado';
+      rejilla.appendChild(lado);
+
+      var tits = document.createElement('div');
+      tits.className = 'section-title';
+      tits.textContent = 'TUS CIFRAS';
+      lado.appendChild(tits);
+      var fichas = document.createElement('div');
+      fichas.className = 'perfil-fichas';
+      lado.appendChild(fichas);
+      this.profFichas = {};
+      [['logros', 'LOGROS', '#ffff00'], ['maestria', 'MAESTRÍA', '#00ffff'], ['record', 'RÉCORD', '#ffb8ff'],
+       ['monedas', 'MONEDAS', '#ffd23f'], ['partidas', 'PARTIDAS', '#00ff00'], ['tiempo', 'JUGADO', '#ffb852']].forEach(function (f) {
+        var d = document.createElement('div');
+        d.className = 'perfil-ficha';
+        d.style.setProperty('--fc', f[2]);
+        var v = document.createElement('b');
+        d.appendChild(v);
+        var k = document.createElement('span');
+        k.textContent = f[1];
+        d.appendChild(k);
+        fichas.appendChild(d);
+        self.profFichas[f[0]] = v;
       });
-      this.profVestBtn.classList.add('btn-preset');
-      lookTxt.appendChild(this.profVestBtn);
-      lookRow.appendChild(lookTxt);
-      gLook.appendChild(lookRow);
+      /* el resumen de antes, que otras partes leen, sin verse */
+      this.profResumen = document.createElement('div');
+      this.profResumen.className = 'note';
+      this.profResumen.style.display = 'none';
+      lado.appendChild(this.profResumen);
+      var masCifras = this.makeButton('VER TODAS LAS CIFRAS ▸', function () { self.showProfileTab('cifras'); });
+      masCifras.classList.add('btn-preset', 'perfil-mas');
+      lado.appendChild(masCifras);
 
       /* cuenta */
-      var gCuenta = this.optGroup(this.profPane, 'TU CUENTA');
+      var gCuenta = document.createElement('div');
+      gCuenta.className = 'perfil-cuenta';
+      var tc = document.createElement('div');
+      tc.className = 'section-title';
+      tc.textContent = 'TU CUENTA';
+      gCuenta.appendChild(tc);
+      lado.appendChild(gCuenta);
       this.profAccountMsg = document.createElement('div');
       this.profAccountMsg.className = 'lobby-status';
       gCuenta.appendChild(this.profAccountMsg);
@@ -5888,6 +6079,20 @@
       o.appendChild(back);
 
       this.profTab = 'perfil';
+    },
+
+    /* tu personaje de la carta, moviéndose mientras el perfil está a la vista */
+    animarPerfil: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.perfilAnim || !this.profLookCv) return;
+      this.perfilAnim = true;
+      var t0 = Date.now();
+      raf(function paso() {
+        var p = self.els.profile;
+        if (!p || p.style.display === 'none' || self.profTab !== 'perfil') { self.perfilAnim = false; return; }
+        self.pintarNickLook((Date.now() - t0) / 1000, self.profLookCv);
+        raf(paso);
+      });
     },
 
     showProfileTab: function (tab) {
@@ -5933,6 +6138,7 @@
       var st = L ? L.state() : { level: 1, inLevel: 0, needed: 1, pct: 0 };
       this.profLevel.textContent = 'NIVEL ' + st.level + ' · ' +
         st.inLevel + ' / ' + st.needed;
+      if (this.profLevelNum) this.profLevelNum.textContent = String(st.level);
       this.profFill.style.width = Math.round(st.pct * 100) + '%';
 
       var B = window.PM.Badges;
@@ -5941,6 +6147,20 @@
         'LOGROS ' + (A ? A.count() : 0) + '/' + (A ? A.total() : 0) +
         ' · MAESTRÍA ' + (top ? top.name : 'NINGUNA') +
         ' · RÉCORD ' + ((window.PM.Game && window.PM.Game.highScore1) || 0);
+
+      if (this.profFichas) {
+        var cs = A && A.stats ? A.stats() : {};
+        var Tn = window.PM.Tienda;
+        var seg = Math.round((cs && cs.tiempo) || 0);
+        this.profFichas.logros.textContent = (A ? A.count() : 0) + '/' + (A ? A.total() : 0);
+        this.profFichas.maestria.textContent = top ? top.name : '—';
+        this.profFichas.record.textContent = fmtMonedas((window.PM.Game && window.PM.Game.highScore1) || 0);
+        this.profFichas.monedas.textContent = fmtMonedas(Tn ? Math.max(0, Tn.saldo()) : 0);
+        this.profFichas.partidas.textContent = fmtMonedas((cs && cs.partidas) || 0);
+        this.profFichas.tiempo.textContent = seg >= 3600 ? (Math.floor(seg / 3600) + 'H ' + Math.floor(seg % 3600 / 60) + 'M')
+          : (Math.floor(seg / 60) + 'M');
+      }
+      this.animarPerfil();
 
       /* de invitado el nombre se puede sortear; con cuenta, es el usuario */
       this.profGuestRow.style.display = logged ? 'none' : 'flex';
@@ -6795,68 +7015,63 @@
       this.rankSub.className = 'tm-sub';
       tm.appendChild(this.rankSub);
 
-      /* ---- los mandos ---- */
+      /* ---- los mandos: una sola fila de desplegables ----
+       * Antes eran cuatro filas de pestañas (mundo, formato, temporada, vista
+       * y, en TUS PARTIDAS, el filtro). Ahora cada cosa es un desplegable que
+       * dice lo que hay puesto, y la vista es un interruptor LISTA | PODIO.
+       * Los mapas de botones (rankTabBtns, seasonBtns...) siguen existiendo:
+       * son las opciones de cada desplegable. */
       var R = window.PM.Ranking;
-      this.rankMundoRow = document.createElement('div');
-      this.rankMundoRow.className = 'tab-row tab-row-sub tm-fila';
-      this.rankMundoBtns = {};
-      (R ? R.MUNDOS : [{ id: 'clasico', name: 'CLÁSICO' }]).forEach(function (m) {
-        var b = self.makeButton(m.name, function () { self.showRankMundo(m.id); });
-        b.classList.add('tab');
-        self.rankMundoBtns[m.id] = b;
-        self.rankMundoRow.appendChild(b);
-      });
-      tm.appendChild(this.rankMundoRow);
+      var mandos = document.createElement('div');
+      mandos.className = 'tm-mandos';
+      tm.appendChild(mandos);
 
-      var bar = document.createElement('div');
-      bar.className = 'tab-row tab-row-sub tm-fila';
-      this.rankTabBtns = {};
-      [[1, 'INDIVIDUAL'], [2, 'DÚO'], [3, 'TRÍO'], [4, 'ESCUADRA'],
-       [5, 'NIVEL 1'], [0, 'TUS PARTIDAS']].forEach(function (t) {
-        var b = self.makeButton(t[1], function () { self.showRankTab(t[0]); });
-        b.classList.add('tab');
-        self.rankTabBtns[t[0]] = b;
-        bar.appendChild(b);
-      });
-      tm.appendChild(bar);
+      var dTabla = this.desplegable('TABLA', [
+        { id: 1, name: 'INDIVIDUAL', grupo: 'POR PUNTOS' }, { id: 2, name: 'DÚO', grupo: 'POR PUNTOS' },
+        { id: 3, name: 'TRÍO', grupo: 'POR PUNTOS' }, { id: 4, name: 'ESCUADRA', grupo: 'POR PUNTOS' },
+        { id: 5, name: 'NIVEL 1 · CONTRARRELOJ', grupo: 'OTRAS' }, { id: 0, name: 'TUS PARTIDAS', grupo: 'OTRAS' }
+      ], function (id) { self.showRankTab(+id); });
+      this.rankTabBtns = dTabla.btns;
+      this.rankTablaDesp = dTabla;
+      mandos.appendChild(dTabla.el);
 
-      /* temporada y forma de verlo, en la misma fila */
-      this.seasonRow = document.createElement('div');
-      this.seasonRow.className = 'tab-row tab-row-sub tm-fila';
-      this.seasonBtns = {};
-      [['ahora', 'ESTA TEMPORADA'], ['historico', 'HISTÓRICO']].forEach(function (t) {
-        var b = self.makeButton(t[1], function () { self.showSeasonTab(t[0]); });
-        b.classList.add('tab');
-        self.seasonBtns[t[0]] = b;
-        self.seasonRow.appendChild(b);
-      });
-      var sep = document.createElement('span');
-      sep.className = 'tm-sep';
-      this.seasonRow.appendChild(sep);
-      this.rankVistaBtns = {};
-      [['podio', 'PODIO'], ['lista', 'LISTA']].forEach(function (t) {
-        var b = self.makeButton(t[1], function () { self.showRankVista(t[0]); });
-        b.classList.add('tab');
-        self.rankVistaBtns[t[0]] = b;
-        self.seasonRow.appendChild(b);
-      });
-      tm.appendChild(this.seasonRow);
+      var dMundo = this.desplegable('MUNDO',
+        (R ? R.MUNDOS : [{ id: 'clasico', name: 'CLÁSICO' }]).map(function (m) { return { id: m.id, name: m.name }; }),
+        function (id) { self.showRankMundo(id); });
+      this.rankMundoRow = dMundo.el;
+      this.rankMundoBtns = dMundo.btns;
+      this.rankMundoDesp = dMundo;
+      mandos.appendChild(dMundo.el);
+
+      var dTemp = this.desplegable('TEMPORADA', [
+        { id: 'ahora', name: 'ESTA TEMPORADA' }, { id: 'historico', name: 'HISTÓRICO' }
+      ], function (id) { self.showSeasonTab(id); });
+      this.seasonRow = dTemp.el;
+      this.seasonBtns = dTemp.btns;
+      this.seasonDesp = dTemp;
+      mandos.appendChild(dTemp.el);
 
       /* TUS PARTIDAS: todas, o solo las destacadas */
-      this.rankHistRow = document.createElement('div');
-      this.rankHistRow.className = 'tab-row tab-row-sub tm-fila';
-      this.rankHistBtns = {};
-      [['todas', 'TODAS'], ['destacadas', '★ DESTACADAS']].forEach(function (t) {
-        var b = self.makeButton(t[1], function () {
-          self.histFiltro = t[0];
-          self.loadRanking();
-        });
-        b.classList.add('tab');
-        self.rankHistBtns[t[0]] = b;
-        self.rankHistRow.appendChild(b);
-      });
-      tm.appendChild(this.rankHistRow);
+      var dHist = this.desplegable('VER', [
+        { id: 'todas', name: 'TODAS' }, { id: 'destacadas', name: '★ DESTACADAS' }
+      ], function (id) { self.histFiltro = id; self.loadRanking(); });
+      this.rankHistRow = dHist.el;
+      this.rankHistBtns = dHist.btns;
+      this.rankHistDesp = dHist;
+      mandos.appendChild(dHist.el);
       this.histFiltro = 'todas';
+
+      /* la forma de verlo: interruptor */
+      this.rankVistaRow = document.createElement('div');
+      this.rankVistaRow.className = 'tm-vista';
+      this.rankVistaBtns = {};
+      [['lista', '☰ LISTA'], ['podio', '▲ PODIO']].forEach(function (t) {
+        var bt = self.makeButton(t[1], function () { self.showRankVista(t[0]); });
+        bt.classList.add('tm-vista-b');
+        self.rankVistaBtns[t[0]] = bt;
+        self.rankVistaRow.appendChild(bt);
+      });
+      mandos.appendChild(this.rankVistaRow);
 
       this.rankStatus = document.createElement('div');
       this.rankStatus.className = 'lobby-status tm-estado';
@@ -6906,7 +7121,7 @@
 
       this.rankTab = 1;
       this.rankMundo = 'clasico';
-      this.rankVista = 'podio';
+      this.rankVista = 'lista';        // la lista, de entrada
       this.rankAvatares = {};
       this.rankFama = {};
       this.rankDibujos = [];
@@ -6977,6 +7192,13 @@
         for (var v in this.rankVistaBtns) {
           if (this.rankVistaBtns.hasOwnProperty(v)) this.rankVistaBtns[v].classList.toggle('active', v === this.rankVista);
         }
+      }
+      if (this.rankVistaRow) this.rankVistaRow.style.display = porTemporada ? 'flex' : 'none';
+      if (this.rankTablaDesp) {
+        this.rankTablaDesp.poner(players);
+        this.rankMundoDesp.poner(mundo);
+        this.seasonDesp.poner(this.seasonTab === 'ahora' ? 'ahora' : 'historico');
+        this.rankHistDesp.poner(this.histFiltro || 'todas');
       }
       var temporada = S ? S.nombre(S.actual()) : '';
       var nombreMundo = '';
@@ -10178,7 +10400,9 @@
             g.requestPause();
             ev.preventDefault();
           } else if (ev.key === 'Escape') {
-            if (self.ficha) {
+            if (self.cerrarDesplegables()) {
+              /* un desplegable abierto se cierra antes que salir del panel */
+            } else if (self.ficha) {
               self.cerrarFicha();     // la ficha va encima: se cierra ella sola
             } else if (self.els.online.style.display !== 'none') {
               self.showMenu();      // salir del panel no deshace la party
@@ -10186,6 +10410,11 @@
               self.closeVestuario();  // vuelve a PERFIL, OPCIONES o la TIENDA si vino de ahí
             } else if (self.els.tienda && self.els.tienda.style.display !== 'none') {
               self.closeTienda();   // ídem, a donde se abrió
+            } else if (self.els.profile && self.els.profile.style.display !== 'none') {
+              /* PERFIL: desde CIFRAS o LOGROS vuelve a la carta; desde la
+               * carta, al menú */
+              if (self.profTab && self.profTab !== 'perfil') self.showProfileTab('perfil');
+              else self.showMenu();
             } else if (self.els.options.style.display !== 'none' ||
                        self.els.badges.style.display !== 'none' ||
                        self.els.ranking.style.display !== 'none' ||
