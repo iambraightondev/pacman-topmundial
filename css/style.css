@@ -5277,3 +5277,6 @@ body { font-size-adjust: 0.56; }
 /* los secundarios, con letra más pequeña: el texto no compite con el principal
  * (el alto lo siguen igualando por la fila) */
 #prompt.arcade .prompt-btns .btn:not(.btn-primary) { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; }
+/* con los secundarios ya con borde, se pueden acercar */
+#prompt.arcade .prompt-btns,
+#prompt.arcade .go-continue .prompt-btns { gap: 16px 20px; }
