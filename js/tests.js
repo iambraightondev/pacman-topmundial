@@ -4577,7 +4577,8 @@
       ok(ctx.measureText(largo).width <= 44, 'y así cabe en los 44 px');
 
       G.fitText(ctx, 'PEPE', 8, 16, 44, 7);
-      eq(ctx.font, 'bold 7px monospace', 'un nombre corto se deja como estaba');
+      eq(ctx.font, window.PM.Letra ? window.PM.Letra.lienzo(7) : 'bold 7px monospace',
+         'un nombre corto se deja como estaba');
     });
 
   test('sin sesión, la cuenta no deja tocar nada', function () {

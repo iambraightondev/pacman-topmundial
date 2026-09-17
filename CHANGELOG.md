@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · La portada es una marquesina
+
+- **Portada nueva, como el frontal de la recreativa:** bombillas en el borde,
+  marcador arriba (tu récord, el HIGH SCORE mundial y el nº 1 del mes), logo
+  latiendo y los fantasmas persiguiendo a Pac-Man bajo el título.
+- Tu ficha (nombre con tu aspecto, nivel y daily) a la izquierda; los modos en
+  carrusel con los vecinos en perspectiva y JUGAR · INSERT COIN en el centro;
+  el cuartel a la derecha con un Pac-Man de cursor y tus monedas.
+- **Cinta de noticias** al pie: el podio del TOP MUNDIAL, quién manda este
+  mes, el reto de hoy y los días que le quedan a la temporada.
+- Los controles y EL REPARTO pasan a **OPCIONES · CONTROLES**.
+
 ## 2026-09-17 · Aire y mismo ancho en todas las vistas
 
 - **Todas las vistas tienen el mismo ancho y margen**: ninguna llega al borde

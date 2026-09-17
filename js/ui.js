@@ -329,27 +329,65 @@
       var m = this.els.menu;
       m.innerHTML = '';
 
-      /* La portada se reparte en cuatro bloques. En pantalla ancha van en
-       * rejilla —reparto a la izquierda, lo de jugar en el centro y el resto
-       * de paneles a la derecha— y en estrecha se apilan en este mismo orden.
-       * El orden del DOM manda en la navegación con flechas, así que lo de
-       * jugar va ANTES que los botones secundarios aunque en pantalla queden
-       * a la izquierda: la rejilla los coloca por su nombre de área. */
+      /* LA MARQUESINA (17 sep 2026): la portada es el frontal encendido de
+       * la recreativa. Arriba el marcador (tu récord, el HIGH SCORE mundial y
+       * el nº 1 del mes), el logo latiendo con los fantasmas corriendo por
+       * debajo; en medio, tu ficha a la izquierda, los modos y JUGAR en el
+       * centro y el cuartel a la derecha con un Pac-Man de cursor; abajo, la
+       * cinta con lo que pasa en el TOP MUNDIAL. Todo va dentro de .marq,
+       * que en pantalla ancha es una rejilla y en estrecha se apila.
+       *
+       * El orden del DOM manda en la navegación con flechas: tu nombre, luego
+       * los modos y JUGAR, y al final el cuartel. Los controles y EL REPARTO
+       * se fueron a OPCIONES · CONTROLES. */
+      var marq = document.createElement('div');
+      marq.className = 'marq';
+      m.appendChild(marq);
+
+      var bombillas = document.createElement('div');
+      bombillas.className = 'marq-bombillas';
+      bombillas.setAttribute('aria-hidden', 'true');
+      marq.appendChild(bombillas);
+
+      /* el marcador de la máquina */
+      var hud = document.createElement('div');
+      hud.className = 'marq-hud';
+      var celda = function (clase, rotulo) {
+        var c = document.createElement('div');
+        c.className = 'marq-hud-celda ' + clase;
+        var k = document.createElement('span');
+        k.className = 'marq-hud-k';
+        k.textContent = rotulo;
+        c.appendChild(k);
+        var v = document.createElement('b');
+        v.textContent = '---';
+        c.appendChild(v);
+        hud.appendChild(c);
+        return { k: k, v: v };
+      };
+      this.marqHud = {
+        yo: celda('izq', '1UP'),
+        high: celda('centro', 'HIGH SCORE'),
+        mes: celda('der', 'Nº 1 DEL MES')
+      };
+      this.marqHud.yo.k.classList.add('parpadeo');
+      marq.appendChild(hud);
+
       var head = document.createElement('div');
       head.className = 'menu-head';
-      m.appendChild(head);
+      marq.appendChild(head);
+
+      var player = document.createElement('div');
+      player.className = 'menu-player';
+      marq.appendChild(player);
 
       var main = document.createElement('div');
       main.className = 'menu-main';
-      m.appendChild(main);
+      marq.appendChild(main);
 
       var side = document.createElement('div');
       side.className = 'menu-side';
-      m.appendChild(side);
-
-      var cast = document.createElement('div');
-      cast.className = 'menu-cast';
-      m.appendChild(cast);
+      marq.appendChild(side);
 
       var title = document.createElement('div');
       title.className = 'title';
@@ -361,33 +399,19 @@
       sub.textContent = 'TOP MUNDIAL';
       head.appendChild(sub);
 
-      /* presentación de fantasmas (clásica, opcional) */
-      var roster = document.createElement('div');
-      roster.className = 'roster';
-      var names = [
-        ['SHADOW', '"BLINKY"', '#ff0000'],
-        ['SPEEDY', '"PINKY"', '#ffb8ff'],
-        ['BASHFUL', '"INKY"', '#00ffff'],
-        ['POKEY', '"CLYDE"', '#ffb852']
-      ];
-      for (var i = 0; i < names.length; i++) {
-        var row = document.createElement('div');
-        row.className = 'roster-row';
-        row.style.color = names[i][2];
-        var dot = document.createElement('span');
-        dot.className = 'roster-ghost';
-        dot.style.background = names[i][2];
-        row.appendChild(dot);
-        var t = document.createElement('span');
-        t.textContent = names[i][0] + '  ' + names[i][1];
-        row.appendChild(t);
-        roster.appendChild(row);
-      }
-      cast.appendChild(this.sectionTitle('EL REPARTO'));
-      cast.appendChild(roster);
+      /* los fantasmas corriendo bajo el logo, como en la demo de la máquina */
+      this.marqCaza = document.createElement('canvas');
+      this.marqCaza.className = 'marq-caza';
+      this.marqCaza.width = 1200;
+      this.marqCaza.height = 48;
+      this.marqCaza.setAttribute('aria-hidden', 'true');
+      head.appendChild(this.marqCaza);
+
+      /* ===== tu ficha: nombre con tu aspecto, nivel, daily, continuar ===== */
+      player.appendChild(this.sectionTitle('JUGADOR 1'));
 
       /* nombre en la portada, estilo arcade moderno: se escribe y a jugar */
-      main.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
+      player.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
 
       /* nivel de jugador con su barra de progreso */
       var lvl = document.createElement('div');
@@ -401,27 +425,23 @@
       this.levelFill.className = 'level-fill';
       bar.appendChild(this.levelFill);
       lvl.appendChild(bar);
-      main.appendChild(lvl);
+      player.appendChild(lvl);
 
-      /* EL RETO DE HOY, encima de la elección de modo y no dentro de ella: no
-       * es un modo, es algo que se cumple jugando a lo que se juegue. Va aquí
-       * para que se lea ANTES de elegir —igual te decides por DESATADO porque
-       * el reto de hoy es de ahí— y se pulsa para ver la semana entera. */
-      main.appendChild(this.buildDailyBox());
+      /* EL RETO DE HOY: se lee ANTES de elegir modo —igual te decides por
+       * DESATADO porque el reto de hoy es de ahí— y se pulsa para ver la
+       * semana entera. */
+      player.appendChild(this.buildDailyBox());
 
-      /* CONTINUAR: la partida que se dejó a medias, aquí o en otro aparato
-       * (js/guardado.js). Va ANTES de elegir modo porque quien tiene una a
-       * medias no viene a elegir nada: viene a seguir donde iba. Si no hay
-       * ninguna, el bloque entero no existe. */
-      main.appendChild(this.buildContinuarBox());
+      /* CONTINUAR: la partida que se dejó a medias (js/guardado.js). Si no
+       * hay ninguna, el bloque entero no existe. */
+      player.appendChild(this.buildContinuarBox());
 
-      /* Elige modo y dale a JUGAR. UNO cada vez, en grande, y se pasa de uno
-       * a otro con las flechas de los lados. */
+      /* ===== el centro: modos en carrusel y JUGAR ===== */
       main.appendChild(this.sectionTitle('ELIGE MODO'));
       main.appendChild(this.buildModeGrid());
 
       /* Lo que hace ese modo, y su recado si tiene (la gente que hay en tu
-       * party...). Va debajo del carrusel y encima del botón, que es por donde
+       * party...). Debajo del carrusel y encima del botón, que es por donde
        * pasa la mirada camino de JUGAR. */
       this.modeDesc = document.createElement('div');
       this.modeDesc.className = 'mode-desc';
@@ -438,6 +458,7 @@
       main.appendChild(play);
       this.playBtn = play;
 
+      /* ===== el cuartel, como menú de recreativa ===== */
       side.appendChild(this.sectionTitle('TU CUARTEL'));
       var extras = document.createElement('div');
       extras.className = 'menu-extras';
@@ -449,8 +470,7 @@
         self.resumeAudio();
         self.showProfile();
       }));
-      /* VESTUARIO: todo lo que llevas puesto, en un solo sitio (antes era
-       * SKINS, y el resto estaba repartido entre PERFIL y la TIENDA) */
+      /* VESTUARIO: todo lo que llevas puesto, en un solo sitio */
       this.menuVestBtn = this.makeButton('VESTUARIO', function () {
         self.resumeAudio();
         self.showVestuario('skin', 'yo');
@@ -461,8 +481,6 @@
         self.showTienda();
       });
       extras.appendChild(this.menuTiendaBtn);
-      /* LABERINTOS ya no vive aquí: es un modo, y los modos están todos
-       * juntos en la rejilla de arriba. El cuartel es para lo TUYO. */
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
         self.showBadges();
@@ -478,28 +496,174 @@
       for (var e = 0; e < extras.childNodes.length; e++) {
         extras.childNodes[e].classList.add('btn-preset');
       }
+
+      /* el Pac-Man que hace de cursor: va a la opción que señalas */
+      this.marqCursor = document.createElement('canvas');
+      this.marqCursor.className = 'marq-cursor';
+      this.marqCursor.width = 48;
+      this.marqCursor.height = 48;
+      this.marqCursor.setAttribute('aria-hidden', 'true');
+      extras.appendChild(this.marqCursor);
+      var apunta = function (ev) {
+        var b = ev.currentTarget;
+        if (self.marqCursor && b.offsetParent) {
+          self.marqCursor.style.top = (b.offsetTop + b.offsetHeight / 2 - 12) + 'px';
+          self.marqCursor.style.opacity = '1';
+        }
+      };
+      for (var e2 = 0; e2 < extras.childNodes.length; e2++) {
+        var eb = extras.childNodes[e2];
+        if (eb === this.marqCursor || !eb.addEventListener) continue;
+        eb.addEventListener('mouseenter', apunta);
+        eb.addEventListener('focus', apunta);
+      }
       side.appendChild(extras);
 
-      /* Ayuda de controles: en la columna del reparto, que es donde sobra
-       * sitio, en vez de tres renglones cruzando toda la portada. */
-      cast.appendChild(this.sectionTitle('CONTROLES'));
-      var ayudas = [
-        'J1: FLECHAS O WASD',
-        'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
-        'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
-        'DESATADO SOLO: FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
-        'DESATADO EN DOS: J1 FLECHAS Y ' + CFG.HAB.KEYS_2P[0].join(' ') +
-          ' · J2 WASD Y ' + CFG.HAB.KEYS_2P[1].join(' '),
-        'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
-      ];
-      if (this.touchDevice) {
-        ayudas.push('TÁCTIL: DESLIZA PARA MOVERTE · EN DÚO, CADA UNO SU MITAD');
+      /* tus monedas, siempre a la vista: pulsarlas lleva a la tienda */
+      this.marqMonedas = document.createElement('button');
+      this.marqMonedas.type = 'button';
+      this.marqMonedas.className = 'marq-monedas';
+      this.marqMonedas.setAttribute('aria-label', 'Tus monedas: abrir la tienda');
+      this.marqMonedas.addEventListener('click', function () {
+        self.resumeAudio();
+        self.showTienda();
+      });
+      side.appendChild(this.marqMonedas);
+
+      /* la cinta de noticias del TOP MUNDIAL */
+      var cinta = document.createElement('div');
+      cinta.className = 'marq-cinta';
+      cinta.setAttribute('aria-hidden', 'true');
+      this.marqCintaTxt = document.createElement('div');
+      this.marqCintaTxt.className = 'marq-cinta-txt';
+      cinta.appendChild(this.marqCintaTxt);
+      marq.appendChild(cinta);
+    },
+
+    /* ------------------------------------------------------
+     * LA MARQUESINA: marcador, monedas y cinta de noticias
+     * ------------------------------------------------------ */
+    refreshMarquesina: function () {
+      var self = this, G = window.PM.Game, Tn = window.PM.Tienda;
+      if (!this.marqHud) return;
+      var mil = function (n) {
+        return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+      this.marqHud.yo.v.textContent = mil(G ? G.highScore1 : 0);
+      if (this.marqMonedas) {
+        this.marqMonedas.innerHTML = '';
+        this.marqMonedas.appendChild(this.monedaEl());
+        var b = document.createElement('b');
+        b.textContent = fmtMonedas(Tn ? Tn.saldo() : 0);
+        this.marqMonedas.appendChild(b);
       }
-      for (var a = 0; a < ayudas.length; a++) {
-        var hint = document.createElement('div');
-        hint.className = 'hint';
-        hint.textContent = ayudas[a];
-        cast.appendChild(hint);
+      this.pintarCinta();
+
+      /* lo de la red, como mucho una vez por minuto */
+      var R = window.PM.Ranking, S = window.PM.Season;
+      if (window.PM_PRUEBAS || !R || !R.configured()) return;
+      var ahora = Date.now();
+      if (this.marqPedido && ahora - this.marqPedido < 60000) return;
+      this.marqPedido = ahora;
+      R.top(1, function (err, filas) {
+        if (err || !filas) return;
+        self.marqTop = filas;
+        if (filas[0]) self.marqHud.high.v.textContent = mil(filas[0].puntos);
+        self.pintarCinta();
+      }, 'clasico');
+      if (S && S.configured()) {
+        S.top(S.actual(), 1, function (err, filas) {
+          if (err || !filas) return;
+          self.marqMes = filas;
+          self.marqHud.mes.v.textContent = filas[0] ? R.nombresDe(filas[0]).join(' + ') : 'VACANTE';
+          self.pintarCinta();
+        }, 'clasico');
+      }
+    },
+
+    /* La cinta: el podio de siempre, quién manda este mes, el reto de hoy y
+     * lo que falta para que acabe la temporada. */
+    pintarCinta: function () {
+      var el = this.marqCintaTxt;
+      if (!el) return;
+      var R = window.PM.Ranking, D = window.PM.Daily;
+      var mil = function (n) {
+        return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+      var grupos = [];      // cada noticia: [[etiqueta, texto], ...]
+      var puestos = ['VA PRIMERO', 'VA SEGUNDO', 'VA TERCERO'];
+      (this.marqTop || []).slice(0, 3).forEach(function (f, i) {
+        grupos.push([['b', R.nombresDe(f).join(' + ')], ['span', ' ' + puestos[i] + ' CON ' + mil(f.puntos)]]);
+      });
+      if (this.marqMes && this.marqMes[0]) {
+        grupos.push([['i', 'ESTE MES MANDA '], ['b', R.nombresDe(this.marqMes[0]).join(' + ')]]);
+      }
+      var hoy = D && D.hoy ? D.hoy() : null;
+      if (hoy && hoy.desc) grupos.push([['i', 'RETO DE HOY: '], ['span', hoy.desc]]);
+      var d = new Date();
+      var finMes = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+      var dias = Math.max(0, Math.ceil((finMes - d.getTime()) / 86400000));
+      grupos.push([['i', 'FIN DE TEMPORADA EN ' + dias + (dias === 1 ? ' DÍA' : ' DÍAS')]]);
+      el.innerHTML = '';
+      grupos.forEach(function (g, i) {
+        if (i) {
+          var s = document.createElement('span');
+          s.className = 'marq-sep';
+          s.textContent = ' · ';
+          el.appendChild(s);
+        }
+        g.forEach(function (t) {
+          var n = document.createElement(t[0]);
+          n.textContent = t[1];
+          el.appendChild(n);
+        });
+      });
+    },
+
+    /* Los fantasmas corriendo bajo el logo y el cursor del cuartel.
+     * t: segundos. */
+    pintarMarquesina: function (t) {
+      var Sp = window.PM.Sprites;
+      if (!Sp) return;
+      var boca = [0, 1, 2, 1][Math.floor(t * 14) % 4];
+      var cv = this.marqCaza;
+      if (cv && cv.offsetParent) {
+        var c = cv.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, cv.width, cv.height);
+        c.imageSmoothingEnabled = false;
+        var S = 3, W = cv.width / S, y = 8;
+        c.setTransform(S, 0, 0, S, 0, 0);
+        var ciclo = t % 16, p = (ciclo % 8) / 8;
+        try {
+          if (ciclo < 8) {
+            /* ida: los fantasmas persiguen a Pac-Man comiéndose las pastillas */
+            var px = -40 + p * (W + 140);
+            c.fillStyle = CFG.COLORS.pellet;
+            for (var x = 12; x < W; x += 8) if (x > px + 5) c.fillRect(x - 1, y - 1, 2, 2);
+            for (var g = 0; g < 4; g++) Sp.drawGhost(c, px - 26 - g * 16, y, 3, g, 'chase', Math.floor(t * 8) % 2, false);
+            Sp.drawPacman(c, px, y, 3, boca, '#ffff00', 'clasico', {});
+          } else {
+            /* vuelta: se han comido la pastilla de poder y huyen */
+            var qx = W + 40 - p * (W + 180);
+            for (var g2 = 0; g2 < 4; g2++) {
+              Sp.drawGhost(c, qx + 30 + g2 * 16, y, 1, g2, 'fright', Math.floor(t * 8) % 2,
+                p > 0.7 && Math.floor(t * 6) % 2 === 0);
+            }
+            Sp.drawPacman(c, qx, y, 1, boca, '#ffff00', 'clasico', {});
+          }
+        } catch (e) { /* un dibujo raro no rompe la portada */ }
+        c.setTransform(1, 0, 0, 1, 0, 0);
+      }
+      var cu = this.marqCursor;
+      if (cu && cu.offsetParent) {
+        var cc = cu.getContext('2d');
+        cc.setTransform(1, 0, 0, 1, 0, 0);
+        cc.clearRect(0, 0, cu.width, cu.height);
+        cc.imageSmoothingEnabled = false;
+        cc.setTransform(cu.width / 20, 0, 0, cu.width / 20, 0, 0);
+        try { Sp.drawPacman(cc, 10, 10, 3, [0, 1, 2, 1][Math.floor(t * 10) % 4], '#ffff00', 'clasico', {}); } catch (e) { }
+        cc.setTransform(1, 0, 0, 1, 0, 0);
       }
     },
 
@@ -1565,7 +1729,8 @@
         ['dificultad', 'DIFICULTAD'],
         ['jugadores', 'JUGADORES'],
         ['partida', 'PARTIDA'],
-        ['sonido', 'SONIDO']
+        ['sonido', 'SONIDO'],
+        ['controles', 'CONTROLES']
       ];
       var bar = document.createElement('div');
       bar.className = 'tab-row';
@@ -1589,6 +1754,45 @@
       var jug = this.tabPanes.jugadores;
       var par = this.tabPanes.partida;
       var son = this.tabPanes.sonido;
+
+      /* ===== pestaña CONTROLES (antes, en la portada) ===== */
+      var ctl = this.optGroup(this.tabPanes.controles, 'CONTROLES');
+      var ayudas = [
+        'J1: FLECHAS O WASD',
+        'PAUSA: P O ESC (REANUDAR · REINICIAR R · SALIR Q)',
+        'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
+        'DESATADO SOLO: FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
+        'DESATADO EN DOS: J1 FLECHAS Y ' + CFG.HAB.KEYS_2P[0].join(' ') +
+          ' · J2 WASD Y ' + CFG.HAB.KEYS_2P[1].join(' '),
+        'RENDIRSE: BOTÓN DE ARRIBA A LA DERECHA (EN DÚO, LOS DOS)'
+      ];
+      if (this.touchDevice) {
+        ayudas.push('TÁCTIL: DESLIZA PARA MOVERTE · EN DÚO, CADA UNO SU MITAD');
+      }
+      for (var a = 0; a < ayudas.length; a++) {
+        var hint = document.createElement('div');
+        hint.className = 'hint';
+        hint.textContent = ayudas[a];
+        ctl.appendChild(hint);
+      }
+      var rep = this.optGroup(this.tabPanes.controles, 'EL REPARTO');
+      var roster = document.createElement('div');
+      roster.className = 'roster';
+      [['SHADOW', '"BLINKY"', '#ff0000'], ['SPEEDY', '"PINKY"', '#ffb8ff'],
+       ['BASHFUL', '"INKY"', '#00ffff'], ['POKEY', '"CLYDE"', '#ffb852']].forEach(function (n) {
+        var row = document.createElement('div');
+        row.className = 'roster-row';
+        row.style.color = n[2];
+        var dot = document.createElement('span');
+        dot.className = 'roster-ghost';
+        dot.style.background = n[2];
+        row.appendChild(dot);
+        var tt = document.createElement('span');
+        tt.textContent = n[0] + '  ' + n[1];
+        row.appendChild(tt);
+        roster.appendChild(row);
+      });
+      rep.appendChild(roster);
 
       /* ===== pestaña DIFICULTAD ===== */
       var difA = this.optGroup(dif, 'DIFICULTAD');
@@ -1902,7 +2106,9 @@
       function paso() {
         var menu = self.els.menu;
         if (!menu || menu.style.display === 'none') { self.nickLookAnim = false; return; }
-        self.pintarNickLook((Date.now() - origen) / 1000);
+        var t = (Date.now() - origen) / 1000;
+        self.pintarNickLook(t);
+        self.pintarMarquesina(t);   // los fantasmas bajo el logo y el cursor
         raf(paso);
       }
       raf(paso);
@@ -8875,6 +9081,7 @@
       this.refreshDaily();
       this.refreshContinuar();   // CONTINUAR, si quedó una partida a medias
       this.refreshVestBtn();     // VESTUARIO · N NUEVOS
+      this.refreshMarquesina();  // marcador, monedas y cinta
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');

@@ -3674,3 +3674,287 @@ body { font-size-adjust: 0.56; }
 /* con la letra al 75 %, nada por debajo de 10 px: si no, no se lee */
 .mode-peek-name, .tm-panel-txt, .emote-num, .vest-tile-tag { font-size: 10px; }
 .tm-fama { font-size: 10px; gap: 10px; }
+
+/* ---------- LA MARQUESINA: la portada ----------
+ * El frontal encendido de la recreativa: marcador arriba, logo latiendo con
+ * los fantasmas corriendo debajo, tu ficha | modos y JUGAR | cuartel, y la
+ * cinta de noticias del TOP MUNDIAL abajo. Todo vive dentro de .marq (una
+ * rejilla en ancho; en estrecho se apila), porque showPanel() pone
+ * display:flex en el propio #menu. */
+#menu {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 26%, #10104a 0, #05051a 45%, #000 80%);
+}
+.marq { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.marq-bombillas, .marq-cinta, .marq-caza, .marq-cursor { display: none; }
+
+.marq-hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.marq-hud-celda { display: flex; flex-direction: column; gap: 6px; min-width: 0; text-align: center; }
+.marq-hud-celda.izq { text-align: left; }
+.marq-hud-celda.der { text-align: right; }
+.marq-hud-k { color: #fff; }
+.marq-hud-celda.izq .marq-hud-k { color: #ff2a2a; }
+.marq-hud-celda.der .marq-hud-k { color: #ffb8ff; }
+.marq-hud b { color: #fff; font-weight: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.parpadeo { animation: marq-parpadeo 1s steps(1) infinite; }
+
+.menu-player { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 460px; }
+
+.marq-monedas {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #ffd23f;
+  background: #000;
+  border: 2px solid #b8860b;
+  border-radius: 30px;
+  padding: 9px 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.marq-monedas b { font-weight: normal; }
+.marq-monedas:hover,
+.marq-monedas:focus-visible { border-color: #ffd23f; box-shadow: 0 0 18px rgba(255, 210, 63, 0.45); outline: none; }
+
+@media (min-width: 1000px) {
+  #menu { padding-top: 34px; padding-bottom: 70px; }
+
+  .marq {
+    display: grid;
+    grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(230px, 290px);
+    grid-template-areas: "hud hud hud" "head head head" "player main side";
+    column-gap: clamp(24px, 3vw, 56px);
+    row-gap: 4px;
+    align-items: start;
+    max-width: 1180px;
+  }
+
+  /* las bombillas del frontal, parpadeando en cadena */
+  .marq-bombillas {
+    display: block;
+    position: fixed;
+    inset: 8px;
+    border-radius: 14px;
+    pointer-events: none;
+    --bombilla: radial-gradient(circle, #ffe46b 0 3px, rgba(255, 228, 107, 0.25) 4px, transparent 6px);
+    background:
+      var(--bombilla) 0 0 / 22px 22px repeat-x,
+      var(--bombilla) 0 100% / 22px 22px repeat-x,
+      var(--bombilla) 0 0 / 22px 22px repeat-y,
+      var(--bombilla) 100% 0 / 22px 22px repeat-y;
+    animation: marq-bombillas 0.5s steps(2) infinite;
+  }
+
+  .marq-hud { grid-area: hud; max-width: none; font-size: 12px; letter-spacing: 2px; }
+  .marq-hud b { font-size: 13px; }
+
+  .marq .menu-head {
+    grid-area: head;
+    order: 0;
+    max-width: none;
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin: -8px 0 0;
+  }
+  .marq .menu-head .title {
+    font-size: clamp(56px, 6vw, 92px);
+    animation: marq-latido 2.4s ease-in-out infinite;
+  }
+  .marq-caza {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1200 / 48;
+    max-height: 48px;
+    margin-top: 6px;
+    image-rendering: pixelated;
+  }
+
+  .marq .menu-player,
+  .marq .menu-main,
+  .marq .menu-side { order: 0; flex: none; max-width: none; }
+
+  .marq .section-title {
+    margin-top: 0;
+    text-align: left;
+    border-bottom: 1px solid #2121ff;
+    padding-bottom: 6px;
+    width: 100%;
+  }
+
+  /* tu ficha, en su recuadro */
+  .marq .menu-player {
+    grid-area: player;
+    align-items: stretch;
+    border: 2px solid #2d2d6e;
+    background: rgba(5, 5, 20, 0.85);
+    padding: 14px 16px 16px;
+  }
+  .marq .menu-player .nick-row-menu { margin: 0; width: 100%; }
+  .marq .menu-player .nick-caja { justify-content: flex-start; }
+  .marq .menu-player .nick-input-menu { width: 100%; max-width: none; }
+  .marq .menu-player .level-box { width: 100%; }
+
+  /* el centro: sin marco, manda el carrusel */
+  .marq .menu-main {
+    grid-area: main;
+    justify-self: center;
+    width: 100%;
+    max-width: 520px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .marq .menu-main .section-title { text-align: center; }
+  .marq .mode-carousel { perspective: 700px; }
+  .marq .mode-peek { height: 176px; width: clamp(70px, 20%, 96px); }
+  .marq .mode-prev { rotate: y 34deg; transform-origin: right center; }
+  .marq .mode-next { rotate: y -34deg; transform-origin: left center; }
+  .marq .mode-card.sel { box-shadow: 0 0 0 1px currentColor inset, 0 0 30px -4px currentColor; }
+  .marq .mode-card { min-height: 210px; }
+
+  /* JUGAR, el botón de la máquina */
+  .marq .btn-play {
+    font-size: clamp(24px, 3.6vh, 32px);
+    letter-spacing: 8px;
+    padding: 16px 18px 12px;
+    color: #000;
+    background: #ffff00;
+    border-color: #ffff00;
+    box-shadow: 0 6px 0 #b8860b, 0 0 40px rgba(255, 255, 0, 0.55);
+    margin-top: 4px;
+  }
+  .marq .btn-play::after {
+    content: "INSERT COIN";
+    display: block;
+    font-size: 9px;
+    letter-spacing: 3px;
+    margin-top: 8px;
+    animation: marq-parpadeo 1s steps(1) infinite;
+  }
+  .marq .btn-play:hover,
+  .marq .btn-play:focus-visible {
+    color: #000;
+    background: #ffff00;
+    transform: translateY(2px);
+    box-shadow: 0 4px 0 #b8860b, 0 0 70px rgba(255, 255, 0, 0.9);
+  }
+
+  /* el cuartel: menú de recreativa con un Pac-Man de cursor */
+  .marq .menu-side { grid-area: side; align-items: stretch; }
+  .marq .menu-extras { position: relative; flex-direction: column; align-items: flex-start; gap: 0; padding-left: 38px; }
+  .marq .menu-extras .btn {
+    width: auto;
+    min-width: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    text-align: left;
+    padding: 9px 0;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: #cfd0ff;
+    transition: color 0.15s, transform 0.15s;
+  }
+  .marq .menu-extras .btn:hover,
+  .marq .menu-extras .btn:focus-visible { color: #ffff00; background: none; transform: translateX(6px); outline: none; }
+  .marq-cursor {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 24px;
+    height: 24px;
+    opacity: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+    transition: top 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.2s;
+  }
+  .marq-monedas { align-self: flex-start; margin: 14px 0 0 38px; font-size: 16px; }
+
+  /* la cinta de noticias, al pie del frontal */
+  .marq-cinta {
+    display: block;
+    position: fixed;
+    left: 24px;
+    right: 24px;
+    bottom: 22px;
+    height: 34px;
+    overflow: hidden;
+    border-top: 1px solid #22225a;
+    background: #02020c;
+  }
+  .marq-cinta-txt {
+    position: absolute;
+    left: 0;
+    top: 10px;
+    padding-left: 100%;
+    white-space: nowrap;
+    font-size: 11px;
+    letter-spacing: 2px;
+    line-height: 1.4;
+    color: #fff;
+    animation: marq-cinta 50s linear infinite;
+  }
+  .marq-cinta b { color: #ffff00; font-weight: normal; }
+  .marq-cinta i { color: #ffb8ff; font-style: normal; }
+  .marq-sep { color: #555; }
+}
+
+@keyframes marq-parpadeo { 50% { opacity: 0; } }
+@keyframes marq-bombillas { 50% { background-position: 11px 0, 11px 100%, 0 11px, 100% 11px; } }
+@keyframes marq-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes marq-cinta { to { transform: translateX(-100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .marq-bombillas, .marq .menu-head .title, .marq-cinta-txt, .parpadeo, .marq .btn-play::after { animation: none; }
+  .marq-cinta-txt { padding-left: 0; }
+}
+
+/* ajustes de la marquesina: el fondo gana al negro de los paneles, la ficha
+ * cabe entera y el cuartel no parte renglones */
+#menu.overlay {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 26%, #10104a 0, #05051a 45%, #000 80%);
+}
+@media (min-width: 1000px) {
+  .marq { grid-template-columns: minmax(310px, 340px) minmax(0, 1fr) minmax(250px, 290px); }
+  .marq .menu-head .title { font-size: clamp(48px, 5.2vw, 84px); }
+  .marq .menu-head .subtitle { font-size: clamp(14px, 1.4vw, 22px); letter-spacing: 14px; margin: 4px -14px 0 0; }
+  .marq .menu-player .nick-label { display: none; }
+  .marq .menu-player .daily-box { padding: 10px; }
+  .marq .menu-player .daily-tiles { gap: 3px; }
+  .marq .menu-player .daily-foot { gap: 6px; font-size: 9px; letter-spacing: 0; }
+  .marq .menu-extras .btn { font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+}
+
+.marq .menu-player .nick-label { display: none; }
+@media (min-width: 1000px) {
+  .marq-cursor { opacity: 1; }
+  .marq .menu-extras { padding-left: 34px; }
+  .marq .menu-extras .btn { letter-spacing: 0; }
+}
+/* pantallas bajas (1366×768): todo un punto más recogido para que JUGAR no
+ * quede debajo de la cinta */
+@media (min-width: 1000px) and (max-height: 840px) {
+  #menu { padding-top: 26px; }
+  .marq .menu-head .title { font-size: clamp(40px, 4.2vw, 64px); }
+  .marq .menu-head .subtitle { margin-top: 0; }
+  .marq-caza { max-height: 36px; margin-top: 0; }
+  .marq .mode-card { min-height: 170px; }
+  .marq .mode-peek { height: 150px; }
+  .marq .btn-play { padding: 12px 18px 10px; }
+  .marq .menu-extras .btn { padding: 7px 0; }
+}
