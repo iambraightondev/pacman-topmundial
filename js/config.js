@@ -378,7 +378,9 @@
   CFG.DEATH_CONFIRM_TICKS = 120;    // invitado: espera de confirmación de su muerte
   CFG.LEVEL_FREEZE_TICKS = 60;      // congelación al completar nivel
   CFG.LEVEL_FLASH_TICKS = 120;      // ~2 s de parpadeo de muros (4 destellos)
-  CFG.GAMEOVER_TICKS = 180;         // GAME OVER ~3 s
+  /* Antes eran 3 s con "GAME OVER" escrito sobre el laberinto. Desde el
+   * GAME OVER de recreativa (17 sep) ese rótulo sobra: el final sale ya. */
+  CFG.GAMEOVER_TICKS = 1;
 
   /* Retranqueo del trazo de los muros (px dentro de la casilla): los muros
    * se dibujan más finos y los pasillos se ven más anchos, como en el arcade. */

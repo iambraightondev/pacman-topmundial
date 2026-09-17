@@ -4484,7 +4484,8 @@
           ctx.fillText('RONDA ' + (window.PM.Caza.ronda(this) + 1) + ' DE ' +
             CFG.CAZA.NIVELES, 112, 20 * T + T / 2 + CFG.MAZE_Y);
         }
-      } else if (this.state === 'GAME_OVER') {
+      } else if (this.state === 'GAME_OVER' && this.replaying) {
+        // viendo una repetición sí: ahí no sale la pantalla de recreativa
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.gameOver;
         ctx.fillText('GAME OVER', 112, y);

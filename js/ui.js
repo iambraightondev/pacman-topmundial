@@ -8311,6 +8311,11 @@
       else if (g.state === 'CONTINUE' && !g.replaying && !g.isSpec()) this.showContinuePrompt();
       else if (g.overIdle && !g.overWait) this.showGameOverPrompt();
       else if (g.paused && g.inGame() && g.state !== 'GAME_OVER') this.showPausePrompt();
+      /* Del CONTINUE? al GAME OVER hay un paso de nada: el diálogo de
+       * recreativa se queda puesto hasta que lo sustituye el final, sin
+       * enseñar el laberinto en medio. */
+      else if (g.state === 'GAME_OVER' && !g.overIdle && this.promptOpen &&
+               this.els.prompt.classList.contains('arcade')) { /* se queda */ }
       else {
         this.hidePrompt();
         this.refreshControls();
