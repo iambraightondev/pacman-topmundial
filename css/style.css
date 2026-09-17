@@ -5674,3 +5674,5 @@ body { font-size-adjust: 0.56; }
 }
 /* el aviso de PRÁCTICA ocupa su sitio siempre: cambiar de rol no mueve nada */
 .rol-aviso { min-height: 1.8em; display: block; }
+/* el renglón del aviso, en verde cuando la partida SÍ cuenta */
+.rol-aviso.ok { color: #2bff88; }

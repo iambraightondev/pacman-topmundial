@@ -10720,12 +10720,13 @@
             }
             /* A uno, con otro rol, la partida es de PRÁCTICA: se dice aquí,
              * antes de jugar, y no en el GAME OVER cuando ya no tiene arreglo */
-            aviso.textContent = roles[0] !== 'asesino'
+            /* Siempre hay renglón: si apareciera y desapareciera, la pantalla
+             * entera daría un salto cada vez que se cambia de rol. */
+            var practica = roles[0] !== 'asesino';
+            aviso.textContent = practica
               ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: NO CUENTA PARA RÉCORDS NI MAESTRÍAS'
-              : '';
-            /* el hueco se queda puesto aunque no haya aviso: si apareciera y
-             * desapareciera, la pantalla entera daría un salto al cambiar de rol */
-            aviso.style.visibility = aviso.textContent ? 'visible' : 'hidden';
+              : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y MAESTRÍAS';
+            aviso.classList.toggle('ok', !practica);
           }
           var aviso = document.createElement('div');
           aviso.className = 'rol-aviso';
