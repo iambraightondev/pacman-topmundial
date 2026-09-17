@@ -1026,6 +1026,15 @@
      * anfitrión decida de verdad; así no se ven fantasmas que resucitan. */
     mordisco: function (G, idx, soloVisual, extra) {
       var g = this.presa(G, idx, extra);
+      /* el REY FANTASMA (js/jefe.js): si no hay fantasma a tiro y él sí */
+      var JF = window.PM.Jefe;
+      if (!g && JF && JF.aTiroMordisco(G, idx, extra)) {
+        this.marcarDientes(idx);
+        sonDe(G, idx, 'playBite');
+        if (soloVisual) return true;              // lo cuenta el anfitrión
+        JF.danar(G, CFG.JEFE.DANO.mordisco, idx, 'mordisco');
+        return true;
+      }
       if (!g) {
         /* Dentellada al aire. No gasta recarga, pero SE VE: sin esto, fallar
          * la puntería y tener la tecla en recarga se sienten exactamente
@@ -1509,6 +1518,15 @@
             this.efecto(bl.t === 'fuego' ? 'humo' : 'escarcha', bl.x, bl.y, 12);
             break;
           }
+          /* el REY FANTASMA: la bola le quita vida, el hielo lo congela */
+          var JB = window.PM.Jefe;
+          if (manda && JB && JB.impactaEn(G, nx, ny)) {
+            if (bl.t === 'fuego') JB.danar(G, CFG.JEFE.DANO.fuego, bl.w, 'fuego');
+            else JB.congelar(G, CFG.JEFE.HIELO);
+            this.efecto(bl.t === 'fuego' ? 'fuego' : 'escarcha', nx, ny, 18);
+            fuera = true;
+            break;
+          }
           bl.x = nx; bl.y = ny;
           if (!manda) continue;
           for (var i = 0; i < 4; i++) {
@@ -1831,6 +1849,16 @@
         if (!this.enLaCalle(g)) continue;
         var d = this.distancia(p.x, p.y, g.x, g.y);
         if (d <= H.TORMENTA_TILES * T && d < mejorD) { mejorD = d; mejor = g; }
+      }
+      /* el REY FANTASMA, si está más cerca que cualquier fantasma */
+      var JR = window.PM.Jefe;
+      if (JR && JR.activo(G)) {
+        var dj = this.distancia(p.x, p.y, G.jefe.x, G.jefe.y);
+        if (dj <= H.TORMENTA_TILES * T && dj < mejorD) {
+          this.efecto('rayo', G.jefe.x, G.jefe.y, 14, p.x, p.y);
+          JR.danar(G, CFG.JEFE.DANO.rayo, idx, 'rayo');
+          return;
+        }
       }
       if (mejor) this.matarMago(G, mejor, idx, 'rayo');
     },

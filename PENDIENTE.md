@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep (tarde) — JEFE y pantalla ONLINE (pedidos por Braighton).** De las
+ideas que le propuse eligió la 1 (JEFE) y la 7 (SUPERVIVENCIA). Hecho el JEFE
+(`js/jefe.js`, `pm-v141`) y la pantalla ONLINE nueva (`pm-v140`). Decidido por
+Jarvis: jefe solo en DESATADO; premio de 3.000 (cabe en el techo del servidor
+sin tocarlo); vida 24 (+12 por jugador, +30 % por cada jefe); el nivel solo
+acaba al tumbarlo; los cuatro fantasmas solo salen si él los invoca. **Por
+mirar:** balance jugándolo; las repeticiones ONLINE no enseñan al jefe (el códec
+de red no lo lleva); logros de jefe (se cuenta `jefes` pero no hay logro).
+**Siguiente: SUPERVIVENCIA.**
+
 **17 sep (día) — MAGO: PORTAL nuevo y RUNA (`pm-v137`), pedidos por Braighton.**
 PORTAL: 1.ª W = entrada + OTRA DIMENSIÓN (8 s máx.; intocable, no come, no usa
 otros poderes, fantasmas y compañeros en gris para él, él translúcido para los

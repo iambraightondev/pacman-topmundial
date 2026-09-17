@@ -2411,6 +2411,21 @@ the key index. `LIST` is the ASESINO (the original kit).
   on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 2 s (`TORMENTA_RAYOS` = 2) on the
   nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
   dies.
+- **REY FANTASMA (`js/jefe.js`, `CFG.JEFE`).** Every `CADA` (5) levels of DESATADO
+  (not VS., not CACERÍA). `Jefe.alNivel` runs at the end of `resetLevel` and
+  keeps all its state in `Game.jefe` (plain data, so rewind photos and saved
+  games carry it). The four ghosts start in the house and `retieneCasa` blocks
+  every normal release (dot counters, failsafe); only INVOCAR releases one.
+  Level ends when `jefe.vivo` is false, not on `dotsLeft`. States: caza (tile
+  pathing toward nearest living pac, provocation first, fleeing while fright),
+  aviso (`AVISO` ticks) → carga (straight at `VEL_CARGA` until a wall), invoca.
+  Damage (`DANO`, then `INV` ticks immune): fright contact once per player per
+  fright, mordisco when no ghost is in reach, fuego bullet, rayo if nearer than
+  any ghost, runa on its tile, apisonadora contact; hielo/placa freeze `HIELO`.
+  Contact otherwise kills (through `salvaDelChoque`). Host/local simulates
+  (`paso`, `colisiones`); snapshot `jf`; guests move it by estimate, decide
+  their own deaths and send `jefeGolpe` for contact hits; events `jefeDano` /
+  `jefeKill`. Network replays do not carry it yet.
 - **Network (PROTO 12; 12 adds `dimension` as the 9th field of each player's role row; 11 adds the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot).** Anything touching ghosts or lives is executed by the
   host (`Hab.peticion(G, who, k, d)`, where the guest sends its arrow `d`,
   tile `c,r` and position `x,y`); self-only effects (ESCUDO, INMUNIDAD, the

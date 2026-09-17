@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · DESATADO: el REY FANTASMA
+
+- Cada **5 niveles** de DESATADO (5, 10, 15...) aparece el **REY FANTASMA**: un
+  fantasma gigante con corona y barra de vida. El nivel **no se acaba** al
+  comerse las pastillas, sino al **tumbarlo** (+3.000 puntos).
+- Los cuatro fantasmas de siempre esperan en la casa y **solo salen cuando él
+  los invoca**. Cada pocos segundos se para, parpadea en rojo y **embiste** en
+  línea recta. A media vida entra en **FURIA**: más rápido y más ataques.
+- Tocarlo mata. Se le quita vida con la **superpastilla** (cada jugador le pega
+  una vez por cada azul), el **mordisco**, la **bola de fuego**, los **rayos**,
+  la **runa** y la **apisonadora**. El **hielo** lo congela un momento.
+- Con más jugadores tiene más vida, y cada jefe es más duro que el anterior.
+
 ## 2026-09-17 · MODO ONLINE con marco de recreativa
 
 - La pantalla ONLINE usa el marco de recreativa en cian. Al entrar, dos cartas:

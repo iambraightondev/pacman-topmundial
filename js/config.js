@@ -1711,6 +1711,37 @@
     return h ? Math.round(h.cd / 60) : 0;
   };
 
+  /* ---------- DESATADO: el REY FANTASMA (js/jefe.js) ----------
+   * Cada CADA niveles. Vida = (VIDA + VIDA_POR_JUGADOR por cada jugador de
+   * más) * (1 + VIDA_POR_TANDA por cada jefe ya pasado). PREMIO va dentro del
+   * techo del servidor (enviar-record: un nivel admite más de 14.000). */
+  CFG.JEFE = {
+    CADA: 5,
+    VIDA: 24,
+    VIDA_POR_JUGADOR: 12,
+    VIDA_POR_TANDA: 0.3,
+    PREMIO: 3000,
+    INICIO: { x: 13, y: 11 },          // casilla sobre la puerta de la casa
+    VEL: 0.85,                         // sobre la de los fantasmas del nivel
+    VEL_FURIA: 1.15,
+    VEL_CARGA: 2.4,
+    RADIO_CHOQUE: 11,                  // px: es el doble de grande
+    RADIO_DIBUJO: 11,
+    CARGA_CADA: 7 * 60,                // embestida
+    CARGA_FURIA: 4 * 60,
+    AVISO: 50,                         // parpadeo en rojo antes de embestir
+    CARGA_MAX: 2 * 60,
+    INVOCA_CADA: 12 * 60,              // suelta un fantasma de la casa
+    INVOCA_FURIA: 8 * 60,
+    INVOCA_PARON: 40,
+    INV: 45,                           // tras un golpe, sin recibir otro
+    HIELO: 60,                         // lo que lo congela el hielo
+    /* lo que quita cada cosa */
+    DANO: { azul: 6, mordisco: 3, fuego: 2, rayo: 2, runa: 4, aplasta: 4 },
+    COLOR: '#d0145a',
+    COLOR_FURIA: '#ff5a00'
+  };
+
   /* ---------- Red (modo online) ---------- */
   CFG.NET = {
     /* Versión del protocolo (debe coincidir en ambos lados). Sube cuando

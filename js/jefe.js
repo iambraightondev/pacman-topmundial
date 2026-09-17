@@ -1,0 +1,632 @@
+/* ============================================================
+ * PAC-MAN TOP MUNDIAL — js/jefe.js
+ * DESATADO: el REY FANTASMA. Define window.PM.Jefe
+ *
+ * Cada CFG.JEFE.CADA niveles de DESATADO (5, 10, 15...) el nivel tiene
+ * jefe: un fantasma gigante con barra de vida que hay que tumbar a golpes.
+ * El nivel no se acaba al comerse las pastillas, sino al tumbarlo. Los
+ * cuatro fantasmas de siempre empiezan dentro de la casa y SOLO salen cuando
+ * el rey los INVOCA.
+ *
+ *   Persigue      al Pac-Man vivo más cercano (o al Tanque que provoca).
+ *   EMBESTIDA     cada pocos segundos se para, parpadea en rojo y sale
+ *                 disparado en línea recta hasta la pared.
+ *   INVOCAR       cada más segundos se para y suelta un fantasma de la casa.
+ *   FURIA         con la mitad de vida va más rápido y ataca más a menudo.
+ *
+ * Tocarlo mata (salvo escudos, inmunidad, la otra dimensión...). Se le hace
+ * daño con:
+ *   · una SUPERPASTILLA (o el GRITO): azul, cada jugador le pega UNA vez por
+ *     cada vez que se pone azul, al tocarlo
+ *   · MORDISCO, BOLA DE FUEGO, RAYO, RUNA y APISONADORA
+ *   · el HIELO (disparo o placa) no le quita vida: lo congela un momento
+ * Tras cada golpe queda un momento sin poder recibir otro.
+ *
+ * Todo su estado vive en Game.jefe como datos planos: así lo guardan solos
+ * la foto del rebobinado y la partida guardada, y la simulación es
+ * determinista (no hay azar). Online lo simula el anfitrión y viaja en la
+ * instantánea ('jf'); el invitado lo mueve por estima entre fotos, decide
+ * sus propias muertes contra él y pide al anfitrión los golpes que da por
+ * contacto ('jefeGolpe').
+ * ============================================================ */
+(function () {
+  'use strict';
+  var CFG = window.PM.CFG;
+  var T = CFG.TILE;
+  var D = CFG.DIR;
+  var J = CFG.JEFE;
+
+  function distX(a, b) {
+    var ancho = CFG.COLS * T, d = Math.abs(a - b);
+    return Math.min(d, ancho - d);
+  }
+
+  function esCasa(col, row) {
+    var C = CFG.HOUSE;
+    return row >= C.top - 1 && row <= C.bottom && col >= C.left && col <= C.right;
+  }
+
+  function libre(col, row) {
+    if (row < 0 || row >= CFG.ROWS) return false;
+    col = CFG.wrapCol(col);
+    if (esCasa(col, row)) return false;
+    return CFG.isOpen(col, row, false);
+  }
+
+  function Hab() { return window.PM.Hab; }
+
+  var Jefe = {
+    /* ---------- ¿hay jefe en este nivel? ---------- */
+    tocaEn: function (G, nivel) {
+      if (!G || !G.hab || G.caza) return false;
+      if (G.isVersus && G.isVersus()) return false;
+      return nivel > 0 && nivel % J.CADA === 0;
+    },
+
+    activo: function (G) {
+      return !!(G && G.jefe && G.jefe.vivo);
+    },
+
+    vidaMax: function (G, nivel) {
+      var jug = 0;
+      for (var i = 0; i < G.pacs.length; i++) if (!G.pacs[i].bot) jug++;
+      jug = Math.max(1, jug);
+      var tanda = Math.max(1, Math.floor(nivel / J.CADA));
+      return Math.round((J.VIDA + J.VIDA_POR_JUGADOR * (jug - 1)) * (1 + J.VIDA_POR_TANDA * (tanda - 1)));
+    },
+
+    /* Al empezar un nivel (Game.resetLevel, después de colocar a todos) */
+    alNivel: function (G) {
+      if (!this.tocaEn(G, G.level)) { G.jefe = null; return; }
+      var max = this.vidaMax(G, G.level);
+      G.jefe = {
+        vivo: true, hp: max, max: max,
+        x: 0, y: 0, dir: D.LEFT,
+        st: 'caza',      // caza | aviso | carga | invoca
+        stT: 0,          // ticks en ese estado
+        tCarga: 0,       // ticks desde la última embestida
+        tInvoca: 0,      // ticks desde la última invocación
+        inv: 0,          // ticks sin poder recibir golpe
+        frz: 0,          // ticks congelado
+        golpeado: 0,     // ticks del destello de golpe (solo se pinta)
+        azulUsado: 0,    // por jugador (bits): ya le pegó en este azul
+        azulTick: -1,    // frightTicks del azul en curso, para saber si es otro
+        plan: -1         // casilla en la que ya decidió
+      };
+      this.colocar(G);
+      this.encerrarFantasmas(G);
+    },
+
+    /* Tras perder la última vida: a su sitio, con la vida que le quede */
+    alMorir: function (G) {
+      if (!this.activo(G)) return;
+      this.colocar(G);
+      this.encerrarFantasmas(G);
+    },
+
+    colocar: function (G) {
+      var j = G.jefe;
+      j.x = J.INICIO.x * T + T / 2;
+      j.y = J.INICIO.y * T + T / 2;
+      j.dir = D.LEFT;
+      j.st = 'caza'; j.stT = 0; j.tCarga = 0; j.tInvoca = 0;
+      j.frz = 0; j.inv = J.INV; j.plan = -1;
+    },
+
+    /* Los cuatro de siempre, dentro de la casa: salen cuando él los llama */
+    encerrarFantasmas: function (G) {
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!g) continue;
+        if (i === 0) {
+          var s = CFG.START.pinky;
+          g.x = s.x * T + T / 2;
+          g.y = s.y * T + T / 2;
+          g.dir = D.UP;
+          g.bobDir = 1;
+          g.leavePhase = 0;
+        }
+        g.mode = 'house';
+        g.frightened = false;
+        g.clearPlan();
+      }
+    },
+
+    /* ¿Se sueltan fantasmas de la casa por su cuenta? Con jefe, no. */
+    retieneCasa: function (G) {
+      return this.activo(G);
+    },
+
+    /* ---------- velocidad ---------- */
+    furia: function (G) {
+      return this.activo(G) && G.jefe.hp <= G.jefe.max / 2;
+    },
+
+    velocidad: function (G) {
+      var j = G.jefe;
+      if (j.frz > 0 || j.st === 'aviso' || j.st === 'invoca') return 0;
+      var pct = G.speedRow.ghost * J.VEL * (this.furia(G) ? J.VEL_FURIA : 1);
+      if (j.st === 'carga') pct *= J.VEL_CARGA;
+      else if (G.frightTicks > 0) pct = G.speedRow.ghostFright;
+      return pct / 100 * CFG.BASE_SPEED;
+    },
+
+    /* ---------- a por quién va ---------- */
+    objetivo: function (G) {
+      var j = G.jefe, A = Hab();
+      if (A && A.objetivo) {
+        var prov = A.objetivo(G, { mode: 'normal', frightened: false, x: j.x, y: j.y });
+        if (prov) return prov;
+      }
+      var mejor = null, mejorD = Infinity;
+      for (var i = 0; i < G.pacs.length; i++) {
+        var p = G.pacs[i];
+        if (!p || p.out || p.dying) continue;
+        if (A && A.enDimension && A.enDimension(i)) continue;
+        var dx = distX(p.x, j.x), dy = p.y - j.y;
+        var d = dx * dx + dy * dy;
+        if (d < mejorD) { mejorD = d; mejor = p; }
+      }
+      if (!mejor) return { x: 13, y: 11 };
+      return { x: mejor.tileX(), y: mejor.tileY() };
+    },
+
+    /* En el centro de una casilla: la salida que más acerca (o que más aleja,
+     * si está azul). Sin volver atrás salvo en un callejón. */
+    decidir: function (G) {
+      var j = G.jefe;
+      var col = Math.floor(j.x / T), row = Math.floor(j.y / T);
+      var obj = this.objetivo(G);
+      var huye = G.frightTicks > 0 && j.st !== 'carga';
+      var orden = [D.UP, D.LEFT, D.DOWN, D.RIGHT];
+      var mejor = -1, mejorD = huye ? -Infinity : Infinity;
+      for (var n = 0; n < 2 && mejor < 0; n++) {
+        for (var k = 0; k < 4; k++) {
+          var d = orden[k];
+          if (n === 0 && d === CFG.OPP[j.dir]) continue;
+          var v = CFG.DIR_V[d];
+          var c = col + v.x, r = row + v.y;
+          if (!libre(c, r)) continue;
+          var dx = CFG.wrapCol(c) - obj.x, dy = r - obj.y;
+          var dist = dx * dx + dy * dy;
+          if (huye ? dist > mejorD : dist < mejorD) { mejorD = dist; mejor = d; }
+        }
+      }
+      return mejor < 0 ? j.dir : mejor;
+    },
+
+    /* Avanza sp píxeles por el laberinto. En la EMBESTIDA no gira: al topar
+     * con pared, se acaba. */
+    mover: function (G, sp) {
+      var j = G.jefe, ancho = CFG.COLS * T;
+      for (var guarda = 0; sp > 0.0001 && guarda < 8; guarda++) {
+        var col = Math.floor(j.x / T), row = Math.floor(j.y / T);
+        var cx = col * T + T / 2, cy = row * T + T / 2;
+        var v = CFG.DIR_V[j.dir];
+        var hasta = v.x ? (cx - j.x) * v.x : (cy - j.y) * v.y;   // >0: el centro está delante
+        if (hasta > 0.0001) {
+          var paso = Math.min(sp, hasta);
+          j.x += v.x * paso; j.y += v.y * paso;
+          sp -= paso;
+          continue;
+        }
+        if (hasta > -0.0001) {
+          /* en el centro: aquí se decide (o se acaba la embestida) */
+          j.x = cx; j.y = cy;
+          var tile = row * CFG.COLS + col;
+          if (j.st === 'carga') {
+            if (!libre(col + v.x, row + v.y)) { this.fin(G); return; }
+          } else if (j.plan !== tile) {
+            j.plan = tile;
+            j.dir = this.decidir(G);
+            v = CFG.DIR_V[j.dir];
+          }
+          if (!libre(col + v.x, row + v.y)) { j.plan = -1; return; }
+          hasta = 0;
+        }
+        /* hacia el centro de la casilla siguiente, encarrilado */
+        if (v.x) j.y = cy; else j.x = cx;
+        var tramo = Math.min(sp, T + hasta);
+        j.x += v.x * tramo; j.y += v.y * tramo;
+        sp -= tramo;
+        if (j.x < 0) j.x += ancho; else if (j.x >= ancho) j.x -= ancho;
+      }
+    },
+
+    fin: function (G) {
+      var j = G.jefe;
+      j.st = 'caza'; j.stT = 0; j.plan = -1;
+    },
+
+    /* ---------- un paso (quien simula: local o anfitrión) ---------- */
+    paso: function (G) {
+      if (!this.activo(G)) return;
+      var j = G.jefe;
+      if (j.inv > 0) j.inv--;
+      if (j.golpeado > 0) j.golpeado--;
+      if (j.frz > 0) j.frz--;
+      /* un azul nuevo deja volver a pegarle a todos */
+      if (G.frightTicks <= 0) j.azulUsado = 0;
+      j.stT++;
+      var furia = this.furia(G);
+      if (j.st === 'caza' && j.frz <= 0) {
+        j.tCarga++; j.tInvoca++;
+        var cadaInv = furia ? J.INVOCA_FURIA : J.INVOCA_CADA;
+        var cadaCar = furia ? J.CARGA_FURIA : J.CARGA_CADA;
+        if (j.tInvoca >= cadaInv && this.hayEnCasa(G)) {
+          j.st = 'invoca'; j.stT = 0; j.tInvoca = 0;
+        } else if (j.tCarga >= cadaCar && G.frightTicks <= 0) {
+          j.st = 'aviso'; j.stT = 0; j.tCarga = 0;
+        }
+      } else if (j.st === 'aviso' && j.stT >= J.AVISO) {
+        /* sale hacia donde esté su presa, por el eje en que más lejos quede */
+        var obj = this.objetivo(G);
+        var col = Math.floor(j.x / T), row = Math.floor(j.y / T);
+        var dx = obj.x - col, dy = obj.y - row;
+        var pref = (Math.abs(dx) >= Math.abs(dy))
+          ? [dx < 0 ? D.LEFT : D.RIGHT, dy < 0 ? D.UP : D.DOWN]
+          : [dy < 0 ? D.UP : D.DOWN, dx < 0 ? D.LEFT : D.RIGHT];
+        var sale = -1;
+        for (var k = 0; k < 2; k++) {
+          var v = CFG.DIR_V[pref[k]];
+          if (libre(col + v.x, row + v.y)) { sale = pref[k]; break; }
+        }
+        if (sale < 0) { this.fin(G); }
+        else {
+          j.x = col * T + T / 2; j.y = row * T + T / 2;
+          j.dir = sale; j.st = 'carga'; j.stT = 0;
+        }
+      } else if (j.st === 'carga' && j.stT >= J.CARGA_MAX) {
+        this.fin(G);
+      } else if (j.st === 'invoca' && j.stT >= J.INVOCA_PARON) {
+        this.soltarUno(G);
+        this.fin(G);
+      }
+      this.mover(G, this.velocidad(G));
+      this.pisaRuna(G);
+    },
+
+    hayEnCasa: function (G) {
+      for (var i = 0; i < 4; i++) if (G.ghosts[i] && G.ghosts[i].mode === 'house') return true;
+      return false;
+    },
+
+    soltarUno: function (G) {
+      var orden = [0, 1, 2, 3];
+      for (var i = 0; i < orden.length; i++) {
+        var g = G.ghosts[orden[i]];
+        if (g && g.mode === 'house') { G.releaseGhost(g); return; }
+      }
+    },
+
+    /* El invitado: entre fotos sigue andando por estima */
+    pasoInvitado: function (G) {
+      if (!this.activo(G)) return;
+      var j = G.jefe;
+      if (j.inv > 0) j.inv--;
+      if (j.golpeado > 0) j.golpeado--;
+      if (j.frz > 0) j.frz--;
+      j.stT++;
+      this.mover(G, this.velocidad(G));
+    },
+
+    /* ---------- tocarse ---------- */
+    toca: function (G, p, margen) {
+      var j = G.jefe;
+      var r = J.RADIO_CHOQUE + (margen || 0);
+      return distX(p.x, j.x) < r && Math.abs(p.y - j.y) < r;
+    },
+
+    vulnerable: function (G) {
+      return this.activo(G) && G.frightTicks > 0 && G.jefe.st !== 'carga';
+    },
+
+    /* ¿Ese Pac-Man muere contra el jefe? (lo mira quien decide sus muertes) */
+    mata: function (G, i) {
+      if (!this.activo(G)) return false;
+      var p = G.pacs[i], j = G.jefe, A = Hab();
+      if (!p || p.out || p.dying || p.safeTicks > 0) return false;
+      if (A && A.enDimension && A.enDimension(i)) return false;
+      if (j.frz > 0 || this.vulnerable(G)) return false;
+      if (!this.toca(G, p)) return false;
+      if (A && A.salvaDelChoque && A.salvaDelChoque(G, i)) return false;
+      return true;
+    },
+
+    /* Contactos de quien simula la partida: golpes con el azul y la
+     * apisonadora, y muertes de los Pac-Man que decide esta máquina */
+    colisiones: function (G) {
+      if (!this.activo(G) || G.state !== 'PLAYING') return;
+      var A = Hab();
+      for (var i = 0; i < G.pacs.length; i++) {
+        var p = G.pacs[i];
+        if (!p || p.out || p.dying) continue;
+        if (A && A.enDimension && A.enDimension(i)) continue;
+        if (!G.isLocalAuth(i)) continue;
+        if (!this.toca(G, p)) continue;
+        if (this.vulnerable(G)) {
+          if (!(G.jefe.azulUsado & (1 << i))) {
+            G.jefe.azulUsado |= (1 << i);
+            this.danar(G, J.DANO.azul, i, 'azul', true);
+          }
+          continue;
+        }
+        if (A && A.arrollando && A.arrollando(i)) {
+          this.danar(G, J.DANO.aplasta, i, 'aplasta');
+          continue;
+        }
+        if (this.mata(G, i)) {
+          G.startDeath(i, -1);
+          if (G.state !== 'PLAYING') return;
+        }
+      }
+    },
+
+    /* El invitado: su propio choque (muerte) y los golpes que pide */
+    colisionesInvitado: function (G, me) {
+      if (!this.activo(G) || !me || me.out || me.dying) return;
+      var A = Hab(), i = me.id | 0, j = G.jefe;
+      if (A && A.enDimension && A.enDimension(i)) return;
+      if (!this.toca(G, me)) return;
+      if (this.vulnerable(G) || (A && A.arrollando && A.arrollando(i))) {
+        if (j.inv <= 0 && !(j.azulUsado & (1 << i))) {
+          j.azulUsado |= (1 << i);
+          G.netSend('gevt', { t: 'jefeGolpe', f: this.vulnerable(G) ? 'azul' : 'aplasta' });
+        }
+        return;
+      }
+      if (this.mata(G, i)) {
+        G.startPacDeath(i);
+        G.predictFreeze = CFG.DEATH_CONFIRM_TICKS;
+        if (!G.anyPlaying(i)) {
+          G.state = 'DYING';
+          G.dyingPhase = 0;
+          G.stopAllLoops();
+        }
+        G.netSend('gevt', { t: 'died', g: -1 });
+      }
+    },
+
+    /* Anfitrión: un invitado dice que le ha pegado por contacto */
+    peticionGolpe: function (G, who, f) {
+      if (!this.activo(G)) return;
+      var p = G.pacs[who], A = Hab();
+      if (!p || p.out || p.dying) return;
+      if (!this.toca(G, p, 2 * T + (CFG.HAB.BITE_NET_MARGIN || 0))) return;
+      if (f === 'azul') {
+        if (G.frightTicks <= 0 || (G.jefe.azulUsado & (1 << who))) return;
+        G.jefe.azulUsado |= (1 << who);
+        this.danar(G, J.DANO.azul, who, 'azul', true);
+      } else if (f === 'aplasta') {
+        var s = A && A.estado(who);
+        if (!s || !(s.arrollaRed > 0 || s.arrolla > 0)) return;
+        this.danar(G, J.DANO.aplasta, who, 'aplasta');
+      }
+    },
+
+    /* ---------- los poderes ---------- */
+    /* MORDISCO: ¿está a tiro? (mismo alcance que un fantasma, más su tamaño) */
+    aTiroMordisco: function (G, idx, extra) {
+      if (!this.activo(G)) return false;
+      var p = G.pacs[idx];
+      if (!p) return false;
+      var alcance = CFG.HAB.BITE_PX + J.RADIO_CHOQUE / 2 + (extra || 0);
+      return distX(p.x, G.jefe.x) <= alcance && Math.abs(p.y - G.jefe.y) <= alcance;
+    },
+
+    /* Un proyectil a esa posición: ¿le da? */
+    impactaEn: function (G, x, y) {
+      if (!this.activo(G)) return false;
+      return distX(x, G.jefe.x) <= J.RADIO_CHOQUE && Math.abs(y - G.jefe.y) <= J.RADIO_CHOQUE;
+    },
+
+    congelar: function (G, ticks) {
+      if (!this.activo(G)) return;
+      G.jefe.frz = Math.max(G.jefe.frz, ticks || J.HIELO);
+      if (G.jefe.st === 'carga' || G.jefe.st === 'aviso') this.fin(G);
+    },
+
+    /* RUNA: si su casilla es la del jefe, le pega y se gasta */
+    pisaRuna: function (G) {
+      var A = Hab();
+      if (!A || !A.runas || !A.manda || !A.manda(G)) return;
+      var col = Math.floor(G.jefe.x / T), row = Math.floor(G.jefe.y / T);
+      for (var i = 0; i < A.runas.length; i++) {
+        var r = A.runas[i];
+        if (!r || r.c !== col || r.r !== row) continue;
+        A.runas[i] = null;
+        this.danar(G, J.DANO.runa, i, 'runa', true);
+        if (!this.activo(G)) return;
+      }
+      /* y las placas de hielo del Soporte lo congelan (una vez cada una) */
+      if (A.placas) {
+        for (i = 0; i < A.placas.length; i++) {
+          var pl = A.placas[i];
+          if (!pl || pl.c !== col || pl.r !== row || (pl.z & 16)) continue;
+          pl.z |= 16;
+          this.congelar(G, J.HIELO);
+        }
+      }
+    },
+
+    /* ---------- el daño ---------- */
+    /* forzar: entra aunque esté en el rato sin golpes (la RUNA y el azul, que
+     * ya tienen su propio límite) */
+    danar: function (G, n, quien, fuente, forzar) {
+      if (!this.activo(G)) return false;
+      var j = G.jefe;
+      if (j.inv > 0 && !forzar) return false;
+      j.hp = Math.max(0, j.hp - n);
+      j.inv = J.INV;
+      j.golpeado = 20;
+      G.addPopup(j.x, j.y - 12, '-' + n, 30);
+      G.hostEvt({ t: 'jefeDano', n: n, f: fuente || '', w: quien });
+      window.AudioSys && AudioSys.playEatGhost && AudioSys.playEatGhost();
+      if (j.hp <= 0) this.morir(G, quien);
+      return true;
+    },
+
+    morir: function (G, quien) {
+      var j = G.jefe;
+      j.vivo = false;
+      G.addScore(J.PREMIO);
+      G.addPopup(j.x, j.y, J.PREMIO, 120);
+      if (!G.netRole || quien === G.localIdx) G.bumpAch && G.bumpAch({ jefes: 1 });
+      G.hostEvt({ t: 'jefeKill', w: quien, x: Math.round(j.x), y: Math.round(j.y) });
+      /* los fantasmas que había fuera vuelven a casa hechos ojos */
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (g && (g.mode === 'normal' || g.mode === 'leaving')) g.eaten();
+      }
+    },
+
+    /* Otra pantalla: el anfitrión cuenta un golpe o la derrota */
+    evento: function (G, e) {
+      if (!G.jefe) return;
+      if (e.t === 'jefeDano') {
+        G.jefe.golpeado = 20;
+        G.addPopup(G.jefe.x, G.jefe.y - 12, '-' + (e.n | 0), 30);
+      } else if (e.t === 'jefeKill') {
+        G.jefe.vivo = false;
+        G.addPopup(e.x, e.y, J.PREMIO, 120);
+        if ((e.w | 0) === G.localIdx && !G.isSpec()) G.bumpAch && G.bumpAch({ jefes: 1 });
+      }
+    },
+
+    /* ---------- la foto de red ---------- */
+    resumen: function (G) {
+      var j = G.jefe;
+      if (!j) return 0;
+      return [j.vivo ? 1 : 0, j.hp, j.max, Math.round(j.x * 10) / 10, Math.round(j.y * 10) / 10, j.dir,
+        ['caza', 'aviso', 'carga', 'invoca'].indexOf(j.st), j.stT, j.inv, j.frz, j.azulUsado];
+    },
+
+    aplicar: function (G, a) {
+      if (!a) { G.jefe = null; return; }
+      var j = G.jefe || {};
+      var mio = G.isSpec && !G.isSpec() ? (j.azulUsado || 0) & (1 << G.localIdx) : 0;
+      j.vivo = !!a[0]; j.hp = a[1]; j.max = a[2]; j.x = a[3]; j.y = a[4]; j.dir = a[5];
+      j.st = ['caza', 'aviso', 'carga', 'invoca'][a[6]] || 'caza';
+      j.stT = a[7]; j.inv = a[8]; j.frz = a[9];
+      j.azulUsado = (a[10] | 0) | mio;
+      if (j.golpeado == null) j.golpeado = 0;
+      j.plan = -1;
+      G.jefe = j;
+    },
+
+    /* =========================================================
+     * EL DIBUJO
+     * ========================================================= */
+    dibujar: function (G, ctx) {
+      if (!this.activo(G)) return;
+      var j = G.jefe, Y = CFG.MAZE_Y, tk = G.tick;
+      var x = j.x, y = j.y + Y, R = J.RADIO_DIBUJO;
+      if (j.inv > 0 && j.golpeado <= 0 && Math.floor(tk / 4) % 2 === 0 && !this.vulnerable(G)) {
+        /* parpadeo del rato sin golpes */
+        ctx.save(); ctx.globalAlpha = 0.55;
+      } else {
+        ctx.save();
+      }
+      var cuerpo = J.COLOR;
+      if (this.vulnerable(G)) {
+        var acaba = G.frightTicks < 120 && Math.floor(tk / 10) % 2 === 0;
+        cuerpo = acaba ? '#ffffff' : '#2121ff';
+      } else if (j.st === 'aviso') {
+        cuerpo = Math.floor(tk / 4) % 2 === 0 ? '#ffffff' : '#ff2020';
+      } else if (j.golpeado > 0 && Math.floor(tk / 3) % 2 === 0) {
+        cuerpo = '#ffffff';
+      } else if (this.furia(G)) {
+        cuerpo = J.COLOR_FURIA;
+      }
+      /* aura */
+      ctx.shadowColor = (j.st === 'carga') ? '#ff3030' : cuerpo;
+      ctx.shadowBlur = (j.st === 'carga') ? 16 : 8;
+      ctx.fillStyle = cuerpo;
+      ctx.beginPath();
+      ctx.arc(x, y - R * 0.15, R, Math.PI, 0);
+      var base = y + R * 0.85, ondas = 6, fase = Math.floor(tk / 8) % 2;
+      ctx.lineTo(x + R, base);
+      for (var k = ondas; k >= 0; k--) {
+        var px = x - R + (2 * R) * (k / ondas);
+        var py = base - ((k + fase) % 2 === 0 ? 0 : R * 0.28);
+        ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      /* corona */
+      ctx.fillStyle = '#ffd400';
+      ctx.beginPath();
+      var cy = y - R * 1.05, cw = R * 0.9;
+      ctx.moveTo(x - cw, cy + 4);
+      ctx.lineTo(x - cw, cy - 3);
+      ctx.lineTo(x - cw / 2, cy + 1);
+      ctx.lineTo(x, cy - 6);
+      ctx.lineTo(x + cw / 2, cy + 1);
+      ctx.lineTo(x + cw, cy - 3);
+      ctx.lineTo(x + cw, cy + 4);
+      ctx.closePath();
+      ctx.fill();
+      /* ojos */
+      var v = CFG.DIR_V[j.dir] || { x: 0, y: 0 };
+      var vul = this.vulnerable(G);
+      for (var s = -1; s <= 1; s += 2) {
+        var ex = x + s * R * 0.4, ey = y - R * 0.25;
+        if (vul) {
+          ctx.fillStyle = '#ffb8ae';
+          ctx.fillRect(ex - 2, ey - 2, 4, 4);
+          continue;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.ellipse(ex, ey, R * 0.26, R * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = (j.st === 'aviso' || j.st === 'carga') ? '#ff0000' : '#1a1aff';
+        ctx.beginPath(); ctx.arc(ex + v.x * R * 0.12, ey + v.y * R * 0.14, R * 0.14, 0, Math.PI * 2); ctx.fill();
+        /* cejas de enfado */
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ex - s * R * 0.3, ey - R * 0.42);
+        ctx.lineTo(ex + s * R * 0.2, ey - R * 0.3);
+        ctx.stroke();
+      }
+      if (j.frz > 0) {
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = '#bff4ff';
+        ctx.beginPath(); ctx.arc(x, y, R * 1.1, 0, Math.PI * 2); ctx.fill();
+      }
+      if (j.st === 'invoca') {
+        ctx.globalAlpha = 0.8;
+        ctx.strokeStyle = '#b36bff';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, R + 4 + (j.stT % 20) / 2, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
+    },
+
+    /* La barra de vida, arriba del laberinto */
+    dibujarBarra: function (G, ctx) {
+      if (!G.jefe) return;
+      var j = G.jefe, W = CFG.COLS * T;
+      var bw = 150, bh = 6, bx = (W - bw) / 2, by = CFG.MAZE_Y + 3;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.fillRect(bx - 3, by - 2, bw + 6, bh + 12);
+      ctx.fillStyle = '#330010';
+      ctx.fillRect(bx, by + 6, bw, bh);
+      var q = j.max > 0 ? j.hp / j.max : 0;
+      ctx.fillStyle = this.furia(G) ? J.COLOR_FURIA : '#ff2f6e';
+      ctx.fillRect(bx, by + 6, Math.round(bw * q), bh);
+      ctx.strokeStyle = '#ffd400';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx - 0.5, by + 5.5, bw + 1, bh + 1);
+      ctx.fillStyle = '#ffd400';
+      ctx.font = window.PM.Letra ? window.PM.Letra.lienzo(5) : '5px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(j.vivo ? (this.furia(G) ? 'REY FANTASMA · FURIA' : 'REY FANTASMA') : 'REY FANTASMA DERROTADO', W / 2, by - 1);
+      ctx.restore();
+    }
+  };
+
+  window.PM.Jefe = Jefe;
+})();

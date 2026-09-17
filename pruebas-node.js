@@ -288,7 +288,7 @@ vm.createContext(sandbox);
 var orden = ['config', 'letra', 'audio', 'sprites', 'skins', 'insignias', 'emblemas', 'portadas', 'pacman', 'ghost', 'net-config',
   'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
   'temporadas', 'daily', 'mazes', 'achievements', 'stats', 'tienda', 'ficha', 'account', 'versus',
-  'habilidades', 'caceria', 'game', 'replay', 'guardado', 'ui'];
+  'habilidades', 'jefe', 'caceria', 'game', 'replay', 'guardado', 'ui'];
 
 orden.forEach(function (nombre) {
   var f = path.join(raiz, 'js', nombre + '.js');

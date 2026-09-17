@@ -9057,6 +9057,213 @@
   });
 
   // ---------------------------------------------------------------
+  // DESATADO: el REY FANTASMA (js/jefe.js)
+  // ---------------------------------------------------------------
+  var JF = window.PM.Jefe, CJ = CFG.JEFE;
+
+  /* Una partida de DESATADO puesta en un nivel de jefe, con los Pac-Man a
+   * salvo del arranque */
+  function nivelJefe(roles, nivel) {
+    partidaRol(roles || ['asesino'], 1, 1, DR.RIGHT);
+    G.level = nivel || CJ.CADA;
+    G.resetLevel();
+    G.state = 'PLAYING';
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 0;
+    return G.jefe;
+  }
+
+  /* El jefe quieto en una casilla (sin ataques en marcha) */
+  function jefeEn(col, fila) {
+    var j = G.jefe;
+    j.x = col * CFG.TILE + CFG.TILE / 2;
+    j.y = fila * CFG.TILE + CFG.TILE / 2;
+    j.st = 'caza'; j.stT = 0; j.tCarga = 0; j.tInvoca = 0; j.inv = 0; j.frz = 0; j.plan = -1;
+    return j;
+  }
+
+  test('JEFE: cada 5 niveles de DESATADO, y solo ahí', function () {
+    partidaRol(['asesino']);
+    G.level = 4; G.resetLevel();
+    eq(G.jefe, null, 'el nivel 4 no tiene');
+    G.level = 5; G.resetLevel();
+    ok(JF.activo(G), 'el 5 sí');
+    eq(G.jefe.max, CJ.VIDA, 'con la vida de uno');
+    G.level = 10; G.resetLevel();
+    eq(G.jefe.max, Math.round(CJ.VIDA * (1 + CJ.VIDA_POR_TANDA)), 'el segundo jefe, más duro');
+    partida(1);
+    G.level = 5; G.resetLevel();
+    eq(G.jefe, null, 'fuera de DESATADO no hay jefe');
+    partidaRol(['asesino', 'mago']);
+    G.level = 5; G.resetLevel();
+    eq(G.jefe.max, CJ.VIDA + CJ.VIDA_POR_JUGADOR, 'a dos, más vida');
+  });
+
+  test('JEFE: los cuatro fantasmas esperan en casa hasta que él los invoca', function () {
+    nivelJefe();
+    G.pacs[0].safeTicks = 999999;
+    var fuera = function () { return G.ghosts.filter(function (g) { return g.mode !== 'house'; }).length; };
+    eq(fuera(), 0, 'empiezan todos dentro');
+    for (var i = 0; i < 200; i++) { G.houseDotEaten(); }
+    G.failsafeTicks = 99999;
+    ticks(5);
+    eq(fuera(), 0, 'ni comer pastillas ni el socorro de la casa los sacan');
+    G.jefe.tInvoca = CJ.INVOCA_CADA - 1;
+    ticks(CJ.INVOCA_PARON + 3);
+    eq(fuera(), 1, 'al invocar sale uno');
+  });
+
+  test('JEFE: tocarlo mata; azul, le pegas una vez por azul', function () {
+    nivelJefe();
+    var p = ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(6, 5);
+    G.step();
+    ok(p.dying, 'tocarlo mata');
+
+    nivelJefe();
+    p = ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(6, 5);
+    G.triggerFright(6);
+    var vida = G.jefe.hp;
+    G.step();
+    ok(!p.dying, 'azul no mata');
+    eq(G.jefe.hp, vida - CJ.DANO.azul, 'y le quita ' + CJ.DANO.azul);
+    G.jefe.inv = 0;
+    ticks(5);
+    eq(G.jefe.hp, vida - CJ.DANO.azul, 'una sola vez por azul');
+  });
+
+  test('JEFE: mordisco, bola de fuego y hielo', function () {
+    nivelJefe(['asesino']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(7, 5);
+    G.jefe.frz = 999;
+    var vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 0), 'la Q muerde al jefe');
+    eq(G.jefe.hp, vida - CJ.DANO.mordisco, 'y le quita ' + CJ.DANO.mordisco);
+    ok(!HB.lista(0, 0), 'gastando la recarga');
+
+    nivelJefe(['mago']);
+    ponPac(0, 2, 5, DR.RIGHT);
+    jefeEn(9, 5);
+    G.jefe.frz = 999;
+    vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 0), 'la bola sale');
+    for (var i = 0; i < 30 && G.jefe.hp === vida; i++) { G.jefe.x = 9 * CFG.TILE + 4; G.jefe.y = 5 * CFG.TILE + 4; G.step(); }
+    eq(G.jefe.hp, vida - CJ.DANO.fuego, 'la bola le quita ' + CJ.DANO.fuego);
+
+    nivelJefe(['soporte']);
+    ponPac(0, 2, 5, DR.RIGHT);
+    jefeEn(9, 5);
+    G.jefe.frz = 0;
+    vida = G.jefe.hp;
+    HB.pulsar(G, 0, 0);
+    for (i = 0; i < 30 && !(G.jefe.frz > 0); i++) { G.jefe.x = 9 * CFG.TILE + 4; G.jefe.y = 5 * CFG.TILE + 4; G.jefe.inv = 0; G.step(); }
+    ok(G.jefe.frz > 0, 'el hielo lo congela');
+    eq(G.jefe.hp, vida, 'sin quitarle vida');
+  });
+
+  test('JEFE: el nivel no se acaba sin él; tumbarlo lo acaba y da el premio', function () {
+    nivelJefe();
+    G.pacs[0].safeTicks = 999999;
+    G.dotsLeft = 0;
+    ticks(3);
+    eq(G.state, 'PLAYING', 'sin pastillas pero con jefe, se sigue');
+    var antes = G.score;
+    G.jefe.hp = 1;
+    JF.danar(G, 5, 0, 'prueba', true);
+    ok(!JF.activo(G), 'tumbado');
+    eq(G.score - antes, CJ.PREMIO, 'con su premio');
+    G.step();
+    eq(G.state, 'LEVEL_DONE', 'y el nivel se acaba');
+  });
+
+  test('JEFE: embestida con aviso, y furia a media vida', function () {
+    nivelJefe();
+    G.pacs[0].safeTicks = 999999;
+    ponPac(0, 1, 5, DR.LEFT);
+    jefeEn(6, 5);
+    G.jefe.tCarga = CJ.CARGA_CADA - 1;
+    G.jefe.tInvoca = -99999;
+    G.step();
+    eq(G.jefe.st, 'aviso', 'primero avisa');
+    ticks(CJ.AVISO + 1);
+    eq(G.jefe.st, 'carga', 'y luego embiste');
+    eq(G.jefe.dir, DR.LEFT, 'hacia su presa');
+    ok(!JF.furia(G), 'con toda la vida, sin furia');
+    G.jefe.hp = Math.floor(G.jefe.max / 2);
+    ok(JF.furia(G), 'a media vida, furia');
+  });
+
+  test('JEFE: viaja en la foto de red y en la del rebobinado', function () {
+    nivelJefe();
+    jefeEn(6, 5);
+    G.jefe.hp = 7;
+    var r = JF.resumen(G);
+    var copia = G.jefe;
+    G.jefe = null;
+    JF.aplicar(G, r);
+    eq(G.jefe.hp, 7, 'la vida llega');
+    eq(Math.round(G.jefe.x), Math.round(copia.x), 'y la posición');
+    var f = G.foto();
+    G.jefe.hp = 1;
+    G.ponerFoto(f);
+    eq(G.jefe.hp, 7, 'el rebobinado lo devuelve como estaba');
+  });
+
+  test('JEFE: una partida con jefe se reproduce exacta', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      var guion = [[5, 'd', 1], [80, 'h', 1], [150, 'd', 0], [260, 'h', 0], [400, 'd', 3],
+                   [520, 'h', 3], [700, 'd', 2], [900, 'h', 0], [1100, 'd', 1]];
+      var TOTAL = 1400;
+      function corre(conGuion) {
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              if (guion[k][1] === 'h') HB.pulsar(G, 0, guion[k][2]);
+              else G.setPacDir(0, guion[k][2]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+      G.newGame({ players: 1, hab: true, roles: ['asesino'] });
+      G.level = 5; G.resetLevel();
+      G.state = 'PLAYING'; G.readyTicks = 0;
+      var rep = R.enCurso();
+      ok(rep, 'se graba');
+      rep.nivel = 5;
+      corre(true);
+      ok(G.jefe, 'con jefe');
+      var pts = G.score, vidaJefe = G.jefe.hp, jx = Math.round(G.jefe.x), jy = Math.round(G.jefe.y), vidas = G.lives;
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: G.level, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'pasa por el texto y vuelve');
+      ok(R.ver(leida), 'arranca');
+      G.state = 'PLAYING'; G.readyTicks = 0;
+      corre(false);
+      eq(G.score, pts, 'los puntos cuadran');
+      eq(G.lives, vidas, 'las vidas cuadran');
+      eq(G.jefe && G.jefe.hp, vidaJefe, 'la vida del jefe cuadra');
+      eq(G.jefe && (Math.round(G.jefe.x) + ',' + Math.round(G.jefe.y)), jx + ',' + jy, 'y acaba donde acabó');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

@@ -532,6 +532,7 @@
       /* modo DESATADO: Q/W/E/R. Se monta antes que los Pac-Man porque
        * reparte un juego de recargas por jugador (js/habilidades.js). */
       this.hab = !!opts.hab;
+      this.jefe = null;          // el REY FANTASMA (js/jefe.js), si el nivel lo trae
       /* Lo que tenías antes de jugar en esta tabla: si lo superas sin cuenta,
        * se avisa de que ese récord no entra en el top (ver rankPendiente) */
       this.rankPendiente = null;
@@ -712,6 +713,8 @@
       this.outEaten = [];
       for (var i = 0; i < 4; i++) this.ghosts[i].dotCounter = 0;
       if (this.caza) window.PM.Caza.reiniciar(this);   // el reloj del poder, de cero
+      /* DESATADO: cada 5 niveles, el REY FANTASMA (encierra a los cuatro) */
+      if (window.PM.Jefe) window.PM.Jefe.alNivel(this);
     },
 
     rolesDe: function (opts) {
@@ -753,6 +756,8 @@
       // recargas sí: morir ya es castigo de sobra)
       if (window.PM.Hab) window.PM.Hab.limpiarEfectos();
       for (var g = 0; g < 4; g++) this.ghosts[g].resetAfterDeath();
+      // el jefe vuelve a su sitio con la vida que le quede, y los cuatro a casa
+      if (window.PM.Jefe) window.PM.Jefe.alMorir(this);
       this.schedIndex = 0;
       this.schedTicks = 0;
       this.globalMode = 'scatter';
@@ -1068,15 +1073,17 @@
         this.stepFright();
       }
 
-      /* temporizador de socorro de la casa */
+      /* temporizador de socorro de la casa (con jefe, solo salen si él llama) */
+      var retiene = !!(window.PM.Jefe && window.PM.Jefe.retieneCasa(this));
       this.failsafeTicks++;
+      if (retiene) this.failsafeTicks = 0;
       if (this.failsafeTicks >= CFG.houseFailsafe(this.level) * 60) {
         this.failsafeTicks = 0;
         var pref = this.preferredInside();
         if (pref) this.releaseGhost(pref);
       }
       /* salida por contador personal (cubre límites 0) */
-      if (!this.globalActive) {
+      if (!this.globalActive && !retiene) {
         var p2 = this.preferredInside();
         if (p2 && p2.dotCounter >= this.houseLimitFor(p2)) {
           this.releaseGhost(p2);
@@ -1178,13 +1185,21 @@
       }
       if (this.state !== 'PLAYING') return;  // el último ha muerto: parón clásico
 
+      /* el REY FANTASMA: anda, ataca y choca */
+      if (window.PM.Jefe && this.jefe) {
+        window.PM.Jefe.paso(this);
+        window.PM.Jefe.colisiones(this);
+        if (this.state !== 'PLAYING') return;
+      }
+
       /* puntuaciones emergentes */
       for (i = this.popups.length - 1; i >= 0; i--) {
         if (--this.popups[i].ticks <= 0) this.popups.splice(i, 1);
       }
 
       /* nivel completado */
-      if (this.dotsLeft <= 0) {
+      /* con jefe, el nivel se acaba al tumbarlo (y no antes) */
+      if (this.jefe ? !this.jefe.vivo : this.dotsLeft <= 0) {
         if (this.level === 1) this.submitLevel1Time();
         if (!this.caza) {                // en CACERÍA lo despeja la máquina
           this.limpiosSeguidos++;        // despejado, y sin morir por el camino
@@ -1334,6 +1349,7 @@
     },
 
     houseDotEaten: function () {
+      if (window.PM.Jefe && window.PM.Jefe.retieneCasa(this)) return;
       if (this.globalActive) {
         this.globalCounter++;
         var pinky = this.ghosts[1], inky = this.ghosts[2], clyde = this.ghosts[3];
@@ -3269,6 +3285,10 @@
         case 'habCome':
           if (window.PM.Hab) window.PM.Hab.peticionCome(this, who, d.g | 0);
           break;
+        /* le ha pegado al jefe por contacto (azul o apisonadora) */
+        case 'jefeGolpe':
+          if (window.PM.Jefe) window.PM.Jefe.peticionGolpe(this, who, d.f);
+          break;
         /* se le rompió el escudo en su máquina (los choques son suyos) */
         case 'habRoto':
           if (window.PM.Hab) {
@@ -3390,6 +3410,7 @@
       if (this.hab && window.PM.Hab) {
         s.hb = window.PM.Hab.resumen();
         s.hx = window.PM.Hab.resumenRoles();   // hielo, portales, runas, escudos...
+        if (window.PM.Jefe) s.jf = window.PM.Jefe.resumen(this);
       }
       if (withPellets) s.pm = this.pelletHex();
       this.snapEaten = [];
@@ -3511,6 +3532,8 @@
       for (i = 0; i < 4; i++) {
         this.ghosts[i].update(this);
       }
+      // el jefe, por estima entre fotos
+      if (window.PM.Jefe && this.jefe) window.PM.Jefe.pasoInvitado(this);
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
       if (this.fruitActive && me && !me.out && !me.dying &&
@@ -3525,6 +3548,7 @@
       }
 
       if (me && !me.out && !me.dying) this.guestCollisions(me);
+      if (window.PM.Jefe && this.jefe && me) window.PM.Jefe.colisionesInvitado(this, me);
 
       for (i = this.popups.length - 1; i >= 0; i--) {
         if (--this.popups[i].ticks <= 0) this.popups.splice(i, 1);
@@ -3860,6 +3884,10 @@
         case 'magoKill':
           if (window.PM.Hab) window.PM.Hab.magoKill(this, e);
           break;
+        case 'jefeDano':
+        case 'jefeKill':
+          if (window.PM.Jefe) window.PM.Jefe.evento(this, e);
+          break;
         case 'habFx':
           if (window.PM.Hab) window.PM.Hab.efecto(e.f, e.x, e.y, 18);
           break;
@@ -3903,6 +3931,7 @@
       if (this.hab && window.PM.Hab && s.hb) {
         window.PM.Hab.aplicarResumen(s.hb, this.isSpec() ? -1 : this.localIdx);
         if (s.hx) window.PM.Hab.aplicarRoles(s.hx, this.isSpec() ? -1 : this.localIdx);
+        if (window.PM.Jefe && s.hasOwnProperty('jf')) window.PM.Jefe.aplicar(this, s.jf);
       }
 
       /* transición de estado */
@@ -4553,6 +4582,7 @@
             if (this.eatFreezeTicks > 0 && i === this.hiddenGhost) continue;
             this.ghosts[i].draw(ctx, this);
           }
+          if (this.jefe && window.PM.Jefe) window.PM.Jefe.dibujar(this, ctx);
           if (dimYo >= 0) ctx.restore();
           /* PAC-MAN VS.: marca sobre el fantasma que lleva un jugador. Sin
            * ella no hay quien sepa cuál de los cuatro piensa por su cuenta. */
@@ -4610,6 +4640,8 @@
         this.dibujarCuerpos(ctx);
         // hielo, proyectiles, rayos y chispazos: encima de todo
         if (this.hab && window.PM.Hab) window.PM.Hab.dibujarAire(this, ctx);
+        // la barra de vida del jefe, arriba del laberinto
+        if (this.jefe && window.PM.Jefe) window.PM.Jefe.dibujarBarra(this, ctx);
         /* CACERÍA: el aro de aviso (y de poder) sobre el Pac-Man de la máquina */
         if (this.caza) window.PM.Caza.draw(this, ctx);
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!". En
