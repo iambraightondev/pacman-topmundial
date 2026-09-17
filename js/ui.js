@@ -521,7 +521,7 @@
       var apunta = function (ev) {
         var b = ev.currentTarget;
         if (self.marqCursor && b.offsetParent) {
-          self.marqCursor.style.top = (b.offsetTop + b.offsetHeight / 2 - 12) + 'px';
+          self.marqCursor.style.top = (b.offsetTop + b.offsetHeight / 2 - self.marqCursor.offsetHeight / 2) + 'px';
           self.marqCursor.style.opacity = '1';
         }
       };

@@ -4047,3 +4047,71 @@ body { font-size-adjust: 0.56; }
   .marq .menu-player .daily-box:focus-visible .daily-tile.es-hoy { animation: marq-salto 0.5s steps(2) infinite; }
 }
 @keyframes marq-salto { 50% { transform: translateY(-3px); } }
+/* LA MARQUESINA EN PANTALLA GRANDE: a partir de 1600 px la portada no se
+ * queda en 1180 como las demás vistas; se abre hasta 1720 y todo crece con
+ * ella, para que no quede un islote en medio de la pantalla */
+@media (min-width: 1600px) {
+  #menu.overlay {
+    padding-left: max(64px, calc((100vw - 1720px) / 2));
+    padding-right: max(64px, calc((100vw - 1720px) / 2));
+  }
+  .marq {
+    max-width: 1720px;
+    grid-template-columns: minmax(300px, 1fr) minmax(560px, 1.45fr) minmax(380px, 1fr);
+    column-gap: clamp(56px, 4.5vw, 110px);
+  }
+  .marq-hud { font-size: 15px; }
+  .marq-hud b { font-size: 17px; }
+  .marq .menu-head .title { font-size: clamp(84px, 6.4vw, 136px); }
+  .marq .menu-head .subtitle { font-size: 24px; }
+  .marq-caza { max-height: 64px; }
+  .marq .section-title { font-size: 16px; padding-bottom: 10px; }
+
+  .marq .menu-extras { padding-left: 46px; }
+  .marq .menu-extras .btn { font-size: 17px; padding: 13px 0; }
+  .marq-cursor { width: 30px; height: 30px; }
+
+  .marq .menu-main { max-width: 700px; }
+  .marq .mode-card { min-height: 290px; }
+  .marq .mode-icon { width: 128px; height: 128px; }
+  .marq .mode-name { font-size: 28px; }
+  .marq .mode-tag { font-size: 12px; }
+  .marq .mode-peek { height: 240px; width: 124px; }
+  .marq .mode-peek-icon { width: 64px; height: 64px; }
+  .marq .mode-peek-name { font-size: 12px; }
+  .marq .mode-desc { font-size: 14px; }
+  .marq .mode-note { font-size: 12px; }
+  .marq .btn-play { font-size: 44px; padding: 24px 18px 18px; }
+  .marq .btn-play::after { font-size: 12px; }
+
+  .marq-monedas { font-size: 18px; }
+  .marq-monedas .moneda { width: 18px; height: 18px; }
+  .marq .nick-look { width: 72px; height: 72px; }
+  .marq .nick-caja .nick-input-menu { font-size: 20px; }
+  .marq .menu-player .level-label { font-size: 14px; }
+  .marq .menu-player .level-bar { height: 8px; }
+  .marq .menu-player .daily-tile { font-size: 12px; padding: 8px 0 6px; }
+  .marq .menu-player .daily-tile canvas { width: 30px; height: 30px; }
+  .marq .menu-player .daily-desc { font-size: 16px; }
+  .marq .menu-player .daily-foot { font-size: 12px; }
+  .marq .menu-player { gap: 16px; }
+
+  .marq-cinta { height: 42px; }
+  .marq-cinta-txt { font-size: 14px; top: 12px; }
+  #menu { padding-bottom: 84px; }
+}
+/* ...pero sin pasarse de alto: lo grande se mide también por la altura de
+ * la ventana, para que JUGAR nunca quede debajo de la cinta */
+@media (min-width: 1600px) {
+  #menu { padding-top: 22px; }
+  .marq .menu-head .title { font-size: clamp(64px, min(6vw, 9.5vh), 130px); line-height: 1.1; }
+  .marq .menu-head .subtitle { margin-top: 0; line-height: 1.3; font-size: clamp(16px, 2.2vh, 24px); }
+  .marq-caza { max-height: min(56px, 5vh); }
+  .marq .mode-card { min-height: clamp(190px, 23vh, 290px); }
+  .marq .mode-icon { width: clamp(88px, 11vh, 128px); height: clamp(88px, 11vh, 128px); }
+  .marq .mode-peek { height: clamp(160px, 19vh, 240px); }
+  .marq .btn-play { font-size: clamp(30px, 3.8vh, 44px); padding: clamp(12px, 1.7vh, 24px) 18px clamp(10px, 1.3vh, 18px); }
+  .marq .menu-extras .btn { padding: clamp(8px, 1.1vh, 13px) 0; }
+  .marq .section-title { padding-bottom: 8px; }
+}
+@media (min-width: 1600px) { .marq .menu-head { margin-top: 10px; } }
