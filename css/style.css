@@ -5641,3 +5641,34 @@ body { font-size-adjust: 0.56; }
 #online .ol-regla { line-height: 1.7; padding-top: 3px; padding-bottom: 3px; }
 #online .ol-ficha { gap: clamp(6px, 1.1vh, 12px); padding: clamp(10px, 1.6vh, 16px) clamp(12px, 1.6vw, 20px); }
 #online .ol-card { gap: clamp(8px, 1.3vh, 14px); }
+
+/* ---------- Señalar un rol (o un personaje, o un póster) ----------
+ * El foco amarillo de la navegación con flechas y el azul de los botones de
+ * siempre no dicen nada aquí: cada chip se enciende de SU color, que es lo
+ * que se está eligiendo. */
+.btn.rol-chip:hover:not(:disabled), .btn.rol-chip:focus-visible {
+  color: var(--rol);
+  background: color-mix(in srgb, var(--rol) 18%, rgba(0, 0, 0, 0.5));
+  border-color: var(--rol);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--rol) 40%, transparent);
+  outline: none;
+}
+.btn.rol-chip.active:hover:not(:disabled), .btn.rol-chip.active:focus-visible {
+  color: #000; background: var(--rol);
+}
+.btn.rol-chip:focus, #online .btn.rol-carta:focus { outline-color: var(--rol); }
+#online .btn.rol-carta:hover:not(:disabled), #online .btn.rol-carta:focus-visible {
+  background: color-mix(in srgb, var(--rol) 16%, rgba(0, 0, 0, 0.5));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--rol) 35%, transparent);
+}
+#online .btn.rol-carta.active:hover:not(:disabled), #online .btn.rol-carta.active:focus-visible {
+  color: #000; background: var(--rol);
+}
+#online .btn.ol-pj:focus { outline-color: var(--pj); }
+#online .btn.ol-pj:hover:not(:disabled), #online .btn.ol-pj:focus-visible {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--pj) 35%, transparent);
+}
+#online .btn.ol-poster:focus { outline-color: var(--mc); }
+#online .btn.ol-poster:hover:not(:disabled), #online .btn.ol-poster:focus-visible {
+  box-shadow: 0 0 24px color-mix(in srgb, var(--mc) 35%, transparent);
+}
