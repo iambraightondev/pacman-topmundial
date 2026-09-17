@@ -4677,3 +4677,8 @@ body { font-size-adjust: 0.56; }
 .daily-box:focus-visible .daily-ronda { opacity: 1; }
 @keyframes daily-ronda { to { stroke-dashoffset: -100; } }
 @media (prefers-reduced-motion: reduce) { .daily-ronda rect { animation: none; stroke-dasharray: none; } }
+
+/* DAILY un poco más abajo; aspecto y nombre separados del borde izquierdo */
+.daily-titulo { margin-top: 18px; }
+.marq .menu-player .nick-caja { padding-left: 26px; }
+@media (min-width: 1600px) { .marq .menu-player .nick-caja { padding-left: 34px; } }
