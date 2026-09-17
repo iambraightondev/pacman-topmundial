@@ -3991,3 +3991,12 @@ body { font-size-adjust: 0.56; }
   .marq .marq-ficha-cab .section-title { border-bottom: 0; padding-bottom: 0; width: auto; }
   .marq-monedas { margin: 0; align-self: auto; font-size: 13px; }
 }
+
+/* TU FICHA sin recuadros, como TU CUARTEL y ELIGE MODO: título subrayado y
+ * el contenido suelto debajo */
+@media (min-width: 1000px) {
+  .marq .menu-player { border: 0; background: transparent; padding: 0; }
+  .marq .menu-player .daily-box { border-color: transparent; background: transparent; padding: 6px 0; }
+  .marq .menu-player .daily-box:hover,
+  .marq .menu-player .daily-box:focus-visible { border-color: transparent; background: rgba(255, 255, 255, 0.04); }
+}
