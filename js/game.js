@@ -683,6 +683,7 @@
       M.apply(id);
       this.mazeBlue = this.buildMazeCanvas(CFG.COLORS.wall);
       this.mazeWhite = this.buildMazeCanvas(CFG.COLORS.wallFlash);
+      this.mazeVacio = null;     // el del PORTAL se rehace cuando haga falta
     },
 
     /* Refresca los paneles y botones que dependen del estado (ui.js) */
@@ -4574,14 +4575,24 @@
         var tt = CFG.LEVEL_FLASH_TICKS - this.phaseTicks;
         if (Math.floor(tt / 15) % 2 === 0) mazeImg = this.mazeWhite;
       }
-      /* El canvas del laberinto va a escala de pantalla, así que hay que
-       * pedirle el tamaño NATIVO: con la transformación del contexto sale
-       * píxel a píxel, sin reescalar. */
-      ctx.drawImage(mazeImg, 0, CFG.MAZE_Y, CFG.NATIVE_W, CFG.ROWS * T);
+      /* PORTAL · LA OTRA DIMENSIÓN (js/habilidades.js): quien está dentro no
+       * ve el laberinto de siempre, sino EL VACÍO — el mapa es solo su
+       * contorno violeta flotando, con su sombra debajo, sobre un abismo con
+       * estrellas. Lo de fuera (pastillas, fantasmas, compañeros) se reduce a
+       * luces: ver Hab.dibujarVacio y el bucle de entidades. */
+      var dimVista = (this.hab && window.PM.Hab) ? window.PM.Hab.miraDesdeDimension(this) : -1;
+      if (dimVista >= 0) {
+        window.PM.Hab.dibujarVacio(this, ctx, this.mazeVacio || (this.mazeVacio = this.buildMazeCanvas(CFG.HAB.VACIO_MURO)));
+      } else {
+        /* El canvas del laberinto va a escala de pantalla, así que hay que
+         * pedirle el tamaño NATIVO: con la transformación del contexto sale
+         * píxel a píxel, sin reescalar. */
+        ctx.drawImage(mazeImg, 0, CFG.MAZE_Y, CFG.NATIVE_W, CFG.ROWS * T);
+      }
 
-      /* pastillas */
+      /* pastillas (en el vacío no hay: no son de esta dimensión) */
       ctx.fillStyle = CFG.COLORS.pellet;
-      for (var r = 0; r < CFG.ROWS; r++) {
+      for (var r = 0; dimVista < 0 && r < CFG.ROWS; r++) {
         for (var c2 = 0; c2 < CFG.COLS; c2++) {
           var ch = this.pellets[r][c2];
           if (!ch) continue;
@@ -4596,8 +4607,8 @@
         }
       }
 
-      /* fruta activa */
-      if (this.fruitActive) {
+      /* fruta activa (en el vacío tampoco) */
+      if (this.fruitActive && dimVista < 0) {
         window.PM.Sprites.drawFruit(ctx,
           CFG.START.fruit.x * T + T / 2,
           CFG.START.fruit.y * T + T / 2 + CFG.MAZE_Y,
@@ -4616,15 +4627,22 @@
         if (this.superv && window.PM.Superv) window.PM.Superv.dibujarSuelo(this, ctx);
         /* PORTAL: quien mira desde la otra dimensión ve lo de fuera en segundo
          * plano, apagado y sin color */
-        var dimYo = (this.hab && window.PM.Hab) ? window.PM.Hab.miraDesdeDimension(this) : -1;
+        var dimYo = dimVista;
         if (!hideGhosts) {
-          if (dimYo >= 0) { ctx.save(); ctx.globalAlpha = 0.3; ctx.filter = 'grayscale(1)'; }
           for (i = 0; i < 4; i++) {
             if (this.eatFreezeTicks > 0 && i === this.hiddenGhost) continue;
+            if (dimYo >= 0) {
+              /* desde el vacío, un fantasma es una luz de su color */
+              var gh = this.ghosts[i];
+              if (gh.mode !== 'house' && gh.mode !== 'entering') {
+                window.PM.Hab.luzLejana(ctx, gh.x, gh.y + CFG.MAZE_Y,
+                  gh.frightened ? '#2121ff' : CFG.GHOSTS[i].color, this.tick + i * 7);
+              }
+              continue;
+            }
             this.ghosts[i].draw(ctx, this);
           }
-          if (this.jefe && window.PM.Jefe) window.PM.Jefe.dibujar(this, ctx);
-          if (dimYo >= 0) ctx.restore();
+          if (this.jefe && window.PM.Jefe && dimYo < 0) window.PM.Jefe.dibujar(this, ctx);
           /* PAC-MAN VS.: marca sobre el fantasma que lleva un jugador. Sin
            * ella no hay quien sepa cuál de los cuatro piensa por su cuenta. */
           if (window.PM.Versus) window.PM.Versus.drawMarks(this, ctx);
@@ -4671,9 +4689,7 @@
           // parpadeo del margen de gracia al reaparecer con la partida en marcha
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
           if (dimYo >= 0 && i !== dimYo) {
-            ctx.save(); ctx.globalAlpha = 0.3; ctx.filter = 'grayscale(1)';
-            this.drawPac(ctx, pc, i);
-            ctx.restore();
+            window.PM.Hab.luzLejana(ctx, pc.x, pc.y + CFG.MAZE_Y, this.colorFor(i), this.tick + i * 11);
             continue;
           }
           this.drawPac(ctx, pc, i);

@@ -1622,6 +1622,10 @@
      * a los PORTAL_ESPERA) deja la salida donde esté y vuelve. Las dos bocas
      * quedan abiertas PORTAL_TICKS para todo el equipo, aunque se pase de
      * nivel. La recarga empieza al poner la salida. */
+    /* EL VACÍO: cómo se ve el mundo desde la otra dimensión (js/habilidades.js) */
+    VACIO_MURO: '#c9a4ff',        // el contorno del laberinto, flotando
+    VACIO_SOMBRA: 'rgba(122, 77, 219, 0.4)',
+    VACIO_ESTRELLAS: 60,
     PORTAL_TICKS: 20 * 60,        // abierto
     PORTAL_ESPERA: 8 * 60,        // en la otra dimensión, como mucho
     /* el anfitrión cierra solo el portal de un invitado que no manda su salida

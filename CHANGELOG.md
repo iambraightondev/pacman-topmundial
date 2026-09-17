@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · El PORTAL: la otra dimensión es EL VACÍO
+
+- Dentro del portal ya no se ve el laberinto teñido: se ve **el vacío**. El
+  mapa queda en su **contorno violeta flotando**, con su sombra un poco más
+  abajo, sobre un abismo con estrellas.
+
+- No hay pastillas ni fruta: no son de esa dimensión.
+- Los fantasmas y tus compañeros se reducen a **una luz de su color**: sabes
+  dónde están, no qué hacen.
+- Tú vas entero y dejas **estela violeta**. Arriba, la barra con lo que te queda.
+
 ## 2026-09-17 · Ajustes del TANQUE y del MAGO
 
 - **TANQUE**: la **Q** ahora es el PISOTÓN y la **E**, PROVOCAR (antes al revés).

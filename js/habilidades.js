@@ -2074,24 +2074,76 @@
     /* =========================================================
      * EL DIBUJO de los roles (lo llama Game.render)
      * ========================================================= */
+    /* ---------- EL VACÍO (la otra dimensión del PORTAL) ----------
+     * Dentro no se ve el laberinto de siempre: se ve SU CONTORNO flotando
+     * sobre un abismo con estrellas, con una sombra un poco más abajo que lo
+     * despega del suelo. Lo pinta Game.render en vez del laberinto normal, y
+     * las pastillas y la fruta no se pintan: no son de esta dimensión.
+     *
+     * Las estrellas son fijas (una cuenta, no azar): así no bailan de un
+     * cuadro a otro ni hacen falta números aleatorios que romperían el
+     * determinismo de las repeticiones. */
+    dibujarVacio: function (G, ctx, mazeImg) {
+      var W = CFG.NATIVE_W, Hh = CFG.ROWS * T, Y = CFG.MAZE_Y, tk = G.tick;
+      ctx.save();
+      /* el abismo */
+      var g = ctx.createRadialGradient(W / 2, Y + Hh * 0.45, 20, W / 2, Y + Hh * 0.45, Hh * 0.8);
+      g.addColorStop(0, '#150b2b');
+      g.addColorStop(1, '#04030a');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, Y + Hh);
+      /* estrellas: posición fija por número y un parpadeo lento */
+      for (var i = 0; i < H.VACIO_ESTRELLAS; i++) {
+        var x = (i * 71) % W, y = Y + ((i * 137) % Hh);
+        var br = 0.5 + 0.4 * Math.sin(tk / 22 + i);
+        ctx.fillStyle = 'rgba(201, 164, 255, ' + br.toFixed(2) + ')';
+        ctx.fillRect(x, y, (i % 7 === 0) ? 2 : 1, (i % 7 === 0) ? 2 : 1);
+      }
+      /* el mapa: su sombra, y encima el contorno */
+      if (mazeImg) {
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(mazeImg, 3, Y + 7, W, Hh);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(mazeImg, 0, Y, W, Hh);
+        ctx.restore();
+      }
+      /* los bordes se oscurecen: el vacío no tiene final */
+      var v = ctx.createRadialGradient(W / 2, Y + Hh * 0.45, Hh * 0.35, W / 2, Y + Hh * 0.45, Hh * 0.85);
+      v.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      v.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, W, Y + Hh);
+      ctx.restore();
+    },
+
+    /* Lo que queda de un fantasma o de un compañero visto desde el vacío: una
+     * luz de su color, sin cara y sin forma. Se sabe dónde está, no qué hace. */
+    luzLejana: function (ctx, x, y, color, tk) {
+      var pul = 6 + Math.sin(tk / 9) * 1.2;
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, pul, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    },
+
     /* Lo que va en el SUELO, debajo de fantasmas y Pac-Man */
     dibujarSuelo: function (G, ctx) {
       if (!this.on) return;
       var Y = CFG.MAZE_Y, tk = G.tick, i;
-      /* la OTRA DIMENSIÓN, vista desde dentro: el laberinto teñido de violeta
-       * con un borde que respira y una barra con lo que queda. Lo de fuera
-       * (fantasmas y compañeros) lo apaga Game.render. */
+      /* Lo que queda en la otra dimensión: la barra de arriba. El abismo, el
+       * contorno del mapa y las luces los pinta Game.render (dibujarVacio). */
       var dentro = this.miraDesdeDimension(G);
       if (dentro >= 0) {
-        var W = CFG.COLS * T, Hh = CFG.ROWS * T;
+        var W = CFG.COLS * T;
         var resta = this.estado(dentro).dimension / H.PORTAL_ESPERA;
         ctx.save();
-        ctx.fillStyle = 'rgba(80, 20, 140, 0.3)';
-        ctx.fillRect(0, Y, W, Hh);
-        ctx.strokeStyle = 'rgba(179, 107, 255, ' + (0.45 + 0.25 * Math.sin(tk / 8)) + ')';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(1.5, Y + 1.5, W - 3, Hh - 3);
-        ctx.fillStyle = '#8b3dff';
+        ctx.fillStyle = 'rgba(139, 61, 255, 0.35)';
+        ctx.fillRect(0, Y, W, 3);
+        ctx.fillStyle = '#c9a4ff';
         ctx.fillRect(0, Y, W * resta, 3);
         ctx.restore();
       }
@@ -2250,6 +2302,21 @@
         ctx.closePath();
         ctx.stroke();
       }
+      /* en el vacío, el Mago va entero y deja estela violeta */
+      if (s.dimension > 0) {
+        ctx.save();
+        for (var e = 1; e <= 4; e++) {
+          var punto = pc.atras ? pc.atras(e * 5) : null;
+          if (!punto) break;
+          ctx.globalAlpha = 0.42 - e * 0.09;
+          ctx.fillStyle = '#8b3dff';
+          ctx.beginPath();
+          ctx.arc(punto.x, punto.y + CFG.MAZE_Y, 5.5 - e * 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       /* la tecla mantenida: un aro cian que se va cerrando; al llenarse, sale */
       var cm = this.cargaMant(G, i);
       if (cm >= 0 && s.mantT > 8) {
