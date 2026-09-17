@@ -4593,19 +4593,35 @@
         ctx.drawImage(mazeImg, 0, CFG.MAZE_Y, CFG.NATIVE_W, CFG.ROWS * T);
       }
 
-      /* pastillas (en el vacío no hay: no son de esta dimensión) */
-      ctx.fillStyle = CFG.COLORS.pellet;
+      /* Pastillas (en el vacío no hay: no son de esta dimensión).
+       *
+       * Las normales dan un poco de luz —una pizca de halo, no un farol— y las
+       * SUPERPASTILLAS ya no parpadean a secas: respiran. Crecen y se encogen
+       * despacio con su halo, que se lee mucho mejor que un encendido y
+       * apagado y no cansa la vista. */
+      var latido = 0.5 + 0.5 * Math.sin(this.tick / 26);       // 0..1, ~2,7 s
       for (var r = 0; dimVista < 0 && r < CFG.ROWS; r++) {
         for (var c2 = 0; c2 < CFG.COLS; c2++) {
           var ch = this.pellets[r][c2];
           if (!ch) continue;
           var cx = c2 * T + T / 2, cy = r * T + T / 2 + CFG.MAZE_Y;
           if (ch === '.') {
+            ctx.save();
+            ctx.shadowColor = CFG.COLORS.pellet;
+            ctx.shadowBlur = 3;
+            ctx.fillStyle = CFG.COLORS.pellet;
             ctx.fillRect(cx - 1, cy - 1, 2, 2);
-          } else if (this.energizerOn) {
+            ctx.restore();
+          } else {
+            ctx.save();
+            ctx.shadowColor = CFG.COLORS.pellet;
+            ctx.shadowBlur = 6 + latido * 10;
+            ctx.globalAlpha = 0.75 + latido * 0.25;
+            ctx.fillStyle = CFG.COLORS.pellet;
             ctx.beginPath();
-            ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 3.4 + latido * 1.2, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
           }
         }
       }
@@ -4905,7 +4921,7 @@
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#00ffff';
+        ctx.fillStyle = '#ffff00';
         ctx.fillText(this.clockText(), 112, 279);
         // de mirón conviene recordar que esta partida no es tuya
         if (this.isSpec()) {

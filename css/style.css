@@ -5688,3 +5688,35 @@ body { font-size-adjust: 0.56; }
 .rec-barra { width: min(520px, 86vw); height: 14px; border: 2px solid #00ff66; background: rgba(0, 0, 0, 0.6); }
 .rec-barra span { display: block; height: 100%; background: #00ff66; box-shadow: 0 0 14px rgba(0, 255, 102, 0.6); transition: width 0.2s; }
 .rec-pct { font-size: clamp(18px, 3.4vh, 30px); letter-spacing: 3px; color: #00ff66; }
+
+/* ---------- EMOTES y RENDIRSE: los botones de dentro de la partida ----------
+ * Eran dos recuadros grises que se perdían sobre el laberinto. Ahora llevan
+ * el mismo aire que los botones de los diálogos: borde de su color, letra de
+ * su color, sombra dura debajo y la línea que recorre el borde al señalarlos. */
+.game-btn {
+  --gb: #ffff00;
+  position: relative;
+  overflow: visible;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--gb);
+  background: rgba(0, 0, 0, 0.72);
+  border: 2px solid var(--gb);
+  border-radius: 0;
+  padding: 8px 10px 6px;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--gb) 45%, #000), 0 0 14px color-mix(in srgb, var(--gb) 22%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--gb) 45%, transparent);
+}
+.game-btn:hover, .game-btn:focus-visible {
+  color: #000;
+  background: var(--gb);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--gb) 45%, #000), 0 0 22px color-mix(in srgb, var(--gb) 50%, transparent);
+  outline: none;
+}
+.game-btn:focus { outline-color: var(--gb); }
+#surrenderBtn { --gb: #ff5a5a; color: var(--gb); border-color: var(--gb); }
+#pauseBtn { --gb: #00ff66; font-size: 11px; }
+/* que no pisen el HIGH SCORE: un punto más pequeños */
+.game-btn { font-size: 8px; letter-spacing: 1px; padding: 7px 8px 5px; }
+#pauseBtn { font-size: 10px; }

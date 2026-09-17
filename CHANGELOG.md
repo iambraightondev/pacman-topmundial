@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · El laberinto, con luz
+
+- Las pastillas normales dan ahora **un poco de luz** en vez de ser un punto plano.
+- Las **superpastillas respiran**: crecen y se encogen despacio con su halo, en
+  vez de encenderse y apagarse a secas.
+- **EMOTES y RENDIRSE** dejan de ser dos recuadros grises: llevan el marco, la
+  letra de su color y la sombra dura de los botones del juego (EMOTES en
+  amarillo, RENDIRSE en rojo).
+- El **reloj de la partida** es amarillo, no cian.
+
 ## 2026-09-17 · DESATADO tiene su propia entradilla
 
 - Al empezar una partida de DESATADO ya no suena la melodía de siempre: suena
