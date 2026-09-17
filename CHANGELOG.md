@@ -13,6 +13,17 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 - El techo del servidor ( v7) se actualizó con las recargas
   nuevas: ya desplegado.
 
+## 2026-09-17 · Ajustes del TANQUE y del MAGO
+
+- **TANQUE**: la **Q** ahora es el PISOTÓN y la **E**, PROVOCAR (antes al revés).
+- **PISOTÓN**: alcanza **15 casillas** (antes 10) y los fantasmas que huyen van
+  al **70 %** de su velocidad.
+- **APISONADORA**: **x1,75** (antes x1,4) y recarga de **46 s** (antes 60).
+- **MAGO**: la TORMENTA recarga en **46 s** (antes 60), y las bocas del PORTAL
+  se plantan en el centro de la casilla, no entre dos.
+- El techo del servidor se actualizó con las recargas nuevas (la función
+  enviar-record, ya desplegada).
+
 ## 2026-09-17 · Colores y orden de los roles
 
 - El **SOPORTE** es **verde** (antes cian), y su ESCUDO ALIADO también.
