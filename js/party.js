@@ -224,6 +224,17 @@
       this.changed();
     },
 
+    /* El modo de la party de una vez (la cartelera de la sala): 'equipo',
+     * 'hab', 'caza' o 'superv'. Excluyentes entre sí. */
+    setModo: function (id) {
+      if (!this.st || !this.st.leader) return;
+      this.habPick = (id === 'hab');
+      this.cazaPick = (id === 'caza');
+      this.supervPick = (id === 'superv');
+      this.sendRoster();
+      this.changed();
+    },
+
     /* Modo SUPERVIVENCIA de la party: del líder, excluye a los otros dos */
     setSuperv: function (on) {
       if (!this.st || !this.st.leader) return;

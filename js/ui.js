@@ -650,6 +650,41 @@
       });
     },
 
+    /* Los pósteres de la sala online: el elegido a su ritmo y los demás
+     * apagados, pero vivos (es lo que los hace parecer una cartelera). */
+    pintarCartelera: function (t) {
+      var Po = window.PM.Portadas;
+      if (!Po || !this.olPosters) return;
+      var modo = this.partyModo(window.PM.Party);
+      for (var id in this.olPosters) {
+        if (!this.olPosters.hasOwnProperty(id)) continue;
+        var p = this.olPosters[id];
+        if (!p.cv || !p.b.offsetParent) continue;
+        Po.pintar(p.cv, id, (id === modo) ? t : t * 0.45 + 2.7, p.estado || (p.estado = {}));
+      }
+      void modo;
+    },
+
+    /* La cartelera se mueve mientras la sala está a la vista, y nada más
+     * (el bucle de la portada no corre con el panel abierto). */
+    animarCartelera: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.carteleraAnim) return;
+      this.carteleraAnim = true;
+      var origen = Date.now();
+      function paso() {
+        var o = self.els.online;
+        if (!o || o.style.display === 'none' || !self.onlineRoom ||
+            self.onlineRoom.style.display === 'none') {
+          self.carteleraAnim = false;
+          return;
+        }
+        self.pintarCartelera((Date.now() - origen) / 1000);
+        raf(paso);
+      }
+      raf(paso);
+    },
+
     /* Los fantasmas corriendo bajo el logo y el cursor del cuartel.
      * t: segundos. */
     pintarMarquesina: function (t) {
@@ -2392,6 +2427,7 @@
         self.pintarNickLook(t);
         self.pintarMarquesina(t);   // los fantasmas bajo el logo y el cursor
         self.pintarPortadas(t);     // los pósters de los modos
+        self.pintarCartelera(t);    // y los de la sala online
         raf(paso);
       }
       raf(paso);
@@ -4797,69 +4833,61 @@
       izq.appendChild(this.partyList);
       cols.appendChild(izq);
 
-      /* ---- derecha: la partida ---- */
+      /* ---- derecha: la cartelera y la ficha del modo elegido ---- */
       var der = el('div', 'ol-card ol-card-partida');
-      der.appendChild(el('div', 'ol-card-titulo', 'MODO DE JUEGO'));
-      this.olModoNota = el('div', 'ol-card-texto ol-solo-lider', 'LO ELIGE EL LÍDER');
+      der.appendChild(el('div', 'ol-card-titulo', 'LA CARTELERA'));
+      this.olModoNota = el('div', 'ol-card-texto ol-solo-lider', 'EL MODO LO ELIGE EL LÍDER');
       der.appendChild(this.olModoNota);
 
-      function interruptor(nombre, color, desc, onClick) {
-        var b = self.makeButton('', onClick);
-        b.classList.add('ol-modo');
-        b.style.setProperty('--modo', color);
-        b.textContent = '';
-        var cab = el('span', 'ol-modo-cab');
-        cab.appendChild(el('span', 'ol-modo-nombre', nombre));
-        var sw = el('span', 'ol-switch');
-        sw.appendChild(el('span', 'ol-switch-bola'));
-        cab.appendChild(sw);
-        b.appendChild(cab);
-        b.appendChild(el('span', 'ol-modo-desc', desc));
-        return b;
+      /* Los cuatro modos como PÓSTERES (los mismos del carrusel de la
+       * portada, js/portadas.js). El encendido se abre abajo en su ficha. */
+      var cartelera = el('div', 'ol-cartelera');
+      this.olPosters = {};
+      this.OL_MODOS.forEach(function (mo) {
+        var b = self.makeButton('', function () { self.pickPartyModo(mo.id); });
+        b.classList.add('ol-poster');
+        b.style.setProperty('--mc', mo.color);
+        b.setAttribute('aria-label', mo.name);
+        var cv = document.createElement('canvas');
+        cv.className = 'ol-poster-cv';
+        cv.width = 180; cv.height = 235;
+        b.appendChild(cv);
+        var pie = el('span', 'ol-poster-pie');
+        pie.appendChild(el('span', 'ol-poster-nombre', mo.name));
+        pie.appendChild(el('small', 'ol-poster-tag', mo.tag));
+        b.appendChild(pie);
+        self.ponRonda(b, 'btn-ronda');
+        self.olPosters[mo.id] = { b: b, cv: cv, mo: mo };
+        cartelera.appendChild(b);
+      });
+      der.appendChild(cartelera);
+
+      /* La ficha: una por modo, se enseña la del elegido */
+      this.olFichas = {};
+      var fichas = el('div', 'ol-fichas');
+
+      function ficha(id, color, titulo, reglas) {
+        var f = el('div', 'ol-ficha');
+        f.style.setProperty('--mc', color);
+        f.style.display = 'none';
+        var cab = el('div', 'ol-ficha-cab');
+        cab.appendChild(el('span', 'ol-ficha-nombre', titulo));
+        f.appendChild(cab);
+        var lista = el('div', 'ol-reglas');
+        reglas.forEach(function (r) { lista.appendChild(el('div', 'ol-regla', r)); });
+        f.appendChild(lista);
+        self.olFichas[id] = f;
+        fichas.appendChild(f);
+        return f;
       }
 
-      /* DESATADO: lo decide quien manda; el rol, cada uno */
-      this.habRoomBox = el('div', 'ol-modo-caja');
-      this.habRoomBtn = interruptor('DESATADO', '#ff66cc',
-        'PODERES EN Q W E R · CADA UNO ELIGE SU ROL · SOLO CABE UN SOPORTE',
-        function () { self.togglePartyHab(); });
-      this.habRoomBox.appendChild(this.habRoomBtn);
-      this.habRolBox = el('div', 'rol-fila ol-roles');
-      this.habRolBtns = {};
-      CFG.HAB.ROL_IDS.forEach(function (id) {
-        var info = CFG.HAB.ROL_INFO[id];
-        var b = self.makeButton(info.name, function () {
-          if (window.PM.Party) window.PM.Party.setRol(id);
-          saveSettings();
-        });
-        b.classList.add('rol-chip');
-        b.style.setProperty('--rol', info.color);
-        self.habRolBtns[id] = b;
-        self.habRolBox.appendChild(b);
-      });
-      this.habRoomBox.appendChild(this.habRolBox);
-      der.appendChild(this.habRoomBox);
-
-      /* CACERÍA */
-      this.cazaRoomBox = el('div', 'ol-modo-caja');
-      this.cazaRoomBtn = interruptor('CACERÍA', '#ff3b3b',
-        'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA · SU PODER CADA ' +
-        CFG.CAZA.periodo(0) + ' S · ' + CFG.CAZA.NIVELES + ' RONDAS',
-        function () { self.togglePartyCaza(); });
-      this.cazaRoomBox.appendChild(this.cazaRoomBtn);
-      der.appendChild(this.cazaRoomBox);
-
-      /* SUPERVIVENCIA */
-      this.svRoomBox = el('div', 'ol-modo-caja');
-      this.svRoomBtn = interruptor('SUPERVIVENCIA', '#ffd400',
-        'TODOS CONTRA TODOS, UNA VIDA · LA SUPERPASTILLA TE DEJA ELIMINAR A LOS DEMÁS · ' +
-        'LA ZONA SE CIERRA · GANA EL ÚLTIMO EN PIE',
-        function () { self.togglePartySuperv(); });
-      this.svRoomBox.appendChild(this.svRoomBtn);
-      der.appendChild(this.svRoomBox);
-
-      /* PAC-MAN VS.: con quién juegas tú */
-      der.appendChild(el('div', 'ol-card-titulo ol-sep', 'TU PERSONAJE'));
+      /* EQUIPO (el clásico de la party): aquí va quién lleva fantasma */
+      var fEquipo = ficha('equipo', '#00ff66', 'EN EQUIPO', [
+        'TODOS A UNA CONTRA LOS FANTASMAS',
+        'LA PUNTUACIÓN ES DEL EQUIPO',
+        'CADA UNO CON SUS VIDAS'
+      ]);
+      fEquipo.appendChild(el('div', 'ol-ficha-sub', 'TU PERSONAJE'));
       var vsRow = el('div', 'ol-personajes');
       this.vsBtns = {};
       this.vsChoices().forEach(function (op) {
@@ -4876,9 +4904,54 @@
         self.vsBtns[op[0]] = b;
         vsRow.appendChild(b);
       });
-      der.appendChild(vsRow);
-      der.appendChild(el('div', 'ol-card-texto', 'CON UN FANTASMA CAZAS TÚ A LOS PAC-MAN. ' +
+      fEquipo.appendChild(vsRow);
+      fEquipo.appendChild(el('div', 'ol-card-texto', 'CON UN FANTASMA CAZAS TÚ A LOS PAC-MAN. ' +
         'ALGUIEN TIENE QUE QUEDARSE DE PAC-MAN'));
+
+      /* DESATADO: el rol lo elige cada uno */
+      var fHab = ficha('hab', '#ff66cc', 'DESATADO', [
+        'CUATRO PODERES EN Q W E R, CON SU RECARGA',
+        'AQUÍ SE MUEVE SOLO CON LAS FLECHAS',
+        'CADA 5 NIVELES, EL REY FANTASMA',
+        'TOP MUNDIAL Y MAESTRÍAS PROPIOS'
+      ]);
+      fHab.appendChild(el('div', 'ol-ficha-sub', 'TU ROL'));
+      this.habRolBox = el('div', 'ol-roles');
+      this.habRolBtns = {};
+      CFG.HAB.ROL_IDS.forEach(function (id) {
+        var info = CFG.HAB.ROL_INFO[id];
+        var b = self.makeButton('', function () {
+          if (window.PM.Party) window.PM.Party.setRol(id);
+          saveSettings();
+        });
+        b.classList.add('rol-carta');
+        b.style.setProperty('--rol', info.color);
+        b.appendChild(el('span', 'rol-carta-nombre', info.name));
+        b.appendChild(el('small', 'rol-carta-lema', info.lema.split(' · ')[0]));
+        self.habRolBtns[id] = b;
+        self.habRolBox.appendChild(b);
+      });
+      fHab.appendChild(this.habRolBox);
+      fHab.appendChild(el('div', 'ol-card-texto', 'SOLO CABE UN SOPORTE: EL PRIMERO QUE LO COGE SE LO QUEDA'));
+
+      /* CACERÍA */
+      var fCaza = ficha('caza', '#ff3b3b', 'CACERÍA', [
+        'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA',
+        'SIN SUPERPASTILLAS: SU PODER LLEGA SOLO CADA ' + CFG.CAZA.periodo(0) + ' S, CON AVISO',
+        CFG.CAZA.NIVELES + ' RONDAS, Y CADA UNA APRIETA MÁS'
+      ]);
+      fCaza.appendChild(el('div', 'ol-card-texto', 'CADA UNO LLEVA EL FANTASMA DE SU ASIENTO: NO HAY NADA QUE ELEGIR'));
+
+      /* SUPERVIVENCIA */
+      var fSv = ficha('superv', '#ffd400', 'SUPERVIVENCIA', [
+        'TODOS CONTRA TODOS, UNA VIDA CADA UNO',
+        'LA SUPERPASTILLA TE DEJA ELIMINAR A LOS DEMÁS UNOS SEGUNDOS',
+        'LA ZONA SE CIERRA: FUERA DE ELLA NO SE AGUANTA',
+        'GANA EL ÚLTIMO EN PIE'
+      ]);
+      fSv.appendChild(el('div', 'ol-card-texto', 'TODOS SALEN DE PAC-MAN · NO CUENTA PARA EL TOP MUNDIAL'));
+
+      der.appendChild(fichas);
       cols.appendChild(der);
       room.appendChild(cols);
 
@@ -5045,25 +5118,29 @@
       if (P) P.startGame();
     },
 
-    /* Modo DESATADO de la party: lo enciende y lo apaga quien manda */
-    togglePartyHab: function () {
-      var P = window.PM.Party;
-      if (!P || !P.isLeader()) return;
-      P.setHab(!P.habPick);      // se reparte a la sala y vuelve por onchange
+    /* Los modos de la party, en el orden de la cartelera. El id es el del
+     * póster (js/portadas.js) y el que se le pide a PM.Party. */
+    OL_MODOS: [
+      { id: 'equipo', name: 'EN EQUIPO', tag: 'CONTRA LOS FANTASMAS', color: '#00ff66' },
+      { id: 'hab', name: 'DESATADO', tag: 'PODERES Y ROLES', color: '#ff66cc' },
+      { id: 'caza', name: 'CACERÍA', tag: 'TODOS DE FANTASMA', color: '#ff3b3b' },
+      { id: 'superv', name: 'SUPERVIVENCIA', tag: 'EL ÚLTIMO EN PIE', color: '#ffd400' }
+    ],
+
+    /* Qué modo tiene puesto la party ahora mismo */
+    partyModo: function (P) {
+      if (!P) return 'equipo';
+      if (P.supervPick) return 'superv';
+      if (P.cazaPick) return 'caza';
+      if (P.habPick) return 'hab';
+      return 'equipo';
     },
 
-    /* Modo SUPERVIVENCIA de la party: del que manda */
-    togglePartySuperv: function () {
+    /* Elegir un póster de la cartelera (solo el líder) */
+    pickPartyModo: function (id) {
       var P = window.PM.Party;
       if (!P || !P.isLeader()) return;
-      P.setSuperv(!P.supervPick);
-    },
-
-    /* Modo CACERÍA de la party: también del que manda */
-    togglePartyCaza: function () {
-      var P = window.PM.Party;
-      if (!P || !P.isLeader()) return;
-      P.setCaza(!P.cazaPick);
+      P.setModo(id);
     },
 
     /* PAC-MAN VS.: pedir un fantasma (o volver a Pac-Man con -1) */
@@ -5088,6 +5165,7 @@
       }
       this.onlineIdle.style.display = 'none';
       this.onlineRoom.style.display = 'flex';
+      this.animarCartelera();
       var code = P.code() || '';
       /* el código, letra a letra en su casilla */
       this.roomCodeEl.innerHTML = '';
@@ -5144,37 +5222,38 @@
         this.partyList.appendChild(row);
       }
 
-      /* selector de personaje: apagados los fantasmas que ya lleva otro (y
-       * todos en CACERÍA, donde el reparto es fijo) */
+      /* selector de personaje: apagados los fantasmas que ya lleva otro */
       var mio = P.myGhost();
       for (var v = -1; v < 4; v++) {
         var vb = this.vsBtns[v];
         if (!vb) continue;
         var duenyo = (v >= 0) ? P.ghostOwner(v) : null;
-        vb.disabled = !!P.cazaPick || !!P.supervPick || !!(duenyo && duenyo !== window.PM.Net.sid);
-        vb.classList.toggle('active', !P.cazaPick && (P.supervPick ? v === -1 : v === mio));
+        vb.disabled = !!(duenyo && duenyo !== window.PM.Net.sid);
+        vb.classList.toggle('active', v === mio);
       }
 
       var lider = P.isLeader();
+      var modo = this.partyModo(P);
       if (this.olModoNota) this.olModoNota.style.display = lider ? 'none' : '';
-      if (this.svRoomBox) {
-        this.svRoomBtn.disabled = !lider;
-        this.svRoomBtn.classList.toggle('active', !!P.supervPick);
-        this.svRoomBtn.setAttribute('aria-pressed', P.supervPick ? 'true' : 'false');
+      /* LA CARTELERA: el póster del modo puesto se enciende, los demás se
+       * apagan; y solo el líder puede cambiarlo (pero todos lo ven). */
+      if (this.olPosters) {
+        for (var pid in this.olPosters) {
+          if (!this.olPosters.hasOwnProperty(pid)) continue;
+          var po = this.olPosters[pid];
+          po.b.classList.toggle('active', pid === modo);
+          po.b.disabled = !lider;
+          po.b.setAttribute('aria-pressed', pid === modo ? 'true' : 'false');
+        }
       }
-      if (this.cazaRoomBox) {
-        this.cazaRoomBtn.disabled = !lider;
-        this.cazaRoomBtn.classList.toggle('active', !!P.cazaPick);
-        this.cazaRoomBtn.setAttribute('aria-pressed', P.cazaPick ? 'true' : 'false');
+      if (this.olFichas) {
+        for (var fid in this.olFichas) {
+          if (!this.olFichas.hasOwnProperty(fid)) continue;
+          this.olFichas[fid].style.display = (fid === modo) ? '' : 'none';
+        }
       }
-      /* DESATADO: el interruptor es solo del líder, pero el estado lo ve
-       * todo el mundo — entrar a una party y descubrir los poderes al empezar
-       * la partida sería una encerrona. */
-      if (this.habRoomBox) {
-        this.habRoomBtn.disabled = !lider;
-        this.habRoomBtn.classList.toggle('active', !!P.habPick);
-        this.habRoomBtn.setAttribute('aria-pressed', P.habPick ? 'true' : 'false');
-        this.habRolBox.style.display = P.habPick ? '' : 'none';
+      /* DESATADO: el rol lo elige cada uno, no el líder */
+      if (this.habRolBtns) {
         var miRol = P.myRol ? P.myRol() : 'asesino';
         var otroSop = P.soporteDeOtro ? P.soporteDeOtro() : false;
         for (var rid in this.habRolBtns) {

@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · La sala online, con cartelera
+
+- Los modos de la party ya no son interruptores: son **pósteres** como los de
+  la portada (EN EQUIPO, DESATADO, CACERÍA, SUPERVIVENCIA), y se mueven.
+- Al encender uno se abre **su ficha** debajo, con sus reglas y lo que hay que
+  elegir: el ROL en DESATADO (cuatro cartas con su lema) y el PERSONAJE en EN
+  EQUIPO (Pac-Man o fantasma). CACERÍA y SUPERVIVENCIA no piden nada.
+- Pósteres nuevos para EN EQUIPO y SUPERVIVENCIA.
+
 ## 2026-09-17 · La barra de poderes, del color de tu rol
 
 - Las casillas de Q W E R van del color del ROL: naranja el Tanque, cian el

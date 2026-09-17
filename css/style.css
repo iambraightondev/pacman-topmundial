@@ -5554,3 +5554,70 @@ body { font-size-adjust: 0.56; }
 @media (max-width: 480px) {
   .hab-b { width: 40px; min-width: 40px; padding: 0; }
 }
+
+/* ---------- LA CARTELERA de la sala online ----------
+ * Los modos son PÓSTERES (los del carrusel de la portada); el encendido abre
+ * su ficha debajo, con las reglas y lo que hay que elegir (el rol en
+ * DESATADO, el personaje en EQUIPO). */
+#online .ol-cartelera { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; }
+#online .btn.ol-poster {
+  --mc: #00ff66;
+  position: relative;
+  display: flex; flex-direction: column; align-items: stretch; gap: 0;
+  min-width: 0; padding: 0;
+  background: #000;
+  border: 2px solid color-mix(in srgb, var(--mc) 40%, transparent);
+  box-shadow: none;
+  opacity: 0.55;
+  overflow: hidden;
+  transition: opacity 0.15s, transform 0.15s;
+}
+#online .btn.ol-poster:hover:not(:disabled), #online .btn.ol-poster:focus-visible { opacity: 0.85; outline: none; }
+#online .btn.ol-poster.active { opacity: 1; border-color: var(--mc); box-shadow: 0 0 26px color-mix(in srgb, var(--mc) 40%, transparent); }
+#online .btn.ol-poster.active::before {
+  content: 'ELEGIDO';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  font-size: 7px; letter-spacing: 2px; color: #000; background: var(--mc); padding: 4px 8px 3px; z-index: 1;
+}
+#online .btn.ol-poster:disabled { cursor: default; }
+#online .ol-poster-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+#online .ol-poster-pie { display: flex; flex-direction: column; gap: 5px; padding: 8px 6px 9px; background: rgba(0, 0, 0, 0.75); }
+#online .ol-poster-nombre { font-size: clamp(8px, 1.3vh, 11px); letter-spacing: 1.5px; color: var(--mc); }
+#online .ol-poster-tag { font-size: 7px; letter-spacing: 1px; color: #8fb9a3; }
+
+#online .ol-fichas { width: 100%; }
+#online .ol-ficha {
+  --mc: #00ff66;
+  display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 14px);
+  padding: clamp(12px, 2vh, 18px) clamp(12px, 1.6vw, 20px);
+  border: 2px solid var(--mc);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mc) 10%, transparent), rgba(0, 0, 0, 0.55));
+  text-align: left;
+}
+#online .ol-ficha-cab { display: flex; align-items: baseline; gap: 12px; }
+#online .ol-ficha-nombre { font-size: clamp(13px, 2.2vh, 18px); letter-spacing: 3px; color: var(--mc); }
+#online .ol-ficha-sub { font-size: 9px; letter-spacing: 3px; color: #00ff66; }
+#online .ol-reglas { display: grid; gap: 6px; }
+#online .ol-regla { font-size: clamp(7px, 1.1vh, 9px); letter-spacing: 1px; line-height: 1.9; color: #dff7e8; border-left: 3px solid color-mix(in srgb, var(--mc) 55%, transparent); padding: 4px 0 4px 10px; }
+#online .ol-roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+#online .btn.rol-carta {
+  --rol: #ff66cc;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  min-width: 0; padding: 10px 10px 9px; text-align: left;
+  color: var(--rol);
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid color-mix(in srgb, var(--rol) 45%, transparent);
+  box-shadow: none;
+}
+#online .btn.rol-carta:hover:not(:disabled), #online .btn.rol-carta:focus-visible { border-color: var(--rol); outline: none; background: rgba(0, 0, 0, 0.5); color: var(--rol); }
+#online .btn.rol-carta.active { color: #000; background: var(--rol); border-color: var(--rol); box-shadow: 0 0 18px color-mix(in srgb, var(--rol) 45%, transparent); }
+#online .btn.rol-carta:disabled { opacity: 0.3; }
+#online .rol-carta-nombre { font-size: clamp(9px, 1.5vh, 12px); letter-spacing: 2px; }
+#online .rol-carta-lema { font-size: 7px; letter-spacing: 0.5px; line-height: 1.7; color: #b7c9bf; }
+#online .btn.rol-carta.active .rol-carta-lema { color: rgba(0, 0, 0, 0.75); }
+@media (max-width: 860px) {
+  #online .ol-cartelera { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #online .ol-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* el nombre del póster cabe entero aunque sea largo */
+#online .ol-poster-nombre { font-size: clamp(7px, 1.1vh, 9px); letter-spacing: 1px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }

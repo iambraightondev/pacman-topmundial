@@ -24,14 +24,17 @@
   };
 
   /* color de cada póster (CACERÍA en el rojo de Blinky) y su frase */
-  var COLOR = { clasico: '#ffff00', duo: '#00ff00', hab: '#ff66cc', caza: '#ff2a2a', lab: '#ffb852', online: '#7ec8ff' };
+  var COLOR = { clasico: '#ffff00', duo: '#00ff00', hab: '#ff66cc', caza: '#ff2a2a', lab: '#ffb852', online: '#7ec8ff',
+    equipo: '#00ff66', superv: '#ffd400' };
   var FRASE = {
     clasico: 'EL ARCADE DE 1980, TAL CUAL. EL QUE CUENTA PARA EL TOP MUNDIAL.',
     duo: 'J1 CON FLECHAS, J2 CON WASD. EL MISMO LABERINTO, A LA VEZ.',
     hab: 'CUATRO PODERES CON SU RECARGA. MUERDE ANTES DE QUE TE MUERDAN.',
     caza: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA.',
     lab: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS.',
-    online: 'DE 2 A 4, CADA UNO EN SU CASA, CON CÓDIGO DE SALA.'
+    online: 'DE 2 A 4, CADA UNO EN SU CASA, CON CÓDIGO DE SALA.',
+    equipo: 'HASTA CUATRO BOCAS EN EL MISMO LABERINTO, A UNA.',
+    superv: 'TODOS CONTRA TODOS. GANA EL ÚLTIMO EN PIE.'
   };
 
   function aTile(c, z, x, y, fn) { c.save(); c.translate(x, y); c.scale(z, z); try { fn(); } catch (e) { } c.restore(); }
@@ -161,6 +164,47 @@
       aTile(c,8,px,py,function(){Sp.drawPacman(c,0,0,dr,[0,1,2,1][Math.floor(t*12)%4],'#ffff00','clasico',{});});
       // número de laberinto
       c.font='10px "Press Start 2P",monospace';c.textAlign='left';c.fillStyle=col;c.fillText('LABERINTO '+(vuelta%cols.length+1)+'/6',18,52);
+    },
+
+    /* P7 · EQUIPO (la party del clásico): los cuatro en fila comiéndose la
+     * misma hilera de pastillas, con un fantasma que se les cruza. */
+    equipo:function(c,m,t,e){
+      var cols=CFG.PLAYER_COLORS, cy=H*0.42, avance=(t*46)%W;
+      c.fillStyle='#ffb8ae';
+      for(var p=0;p<9;p++){var px=(p*44+40-avance*0.35+W)%W;c.beginPath();c.arc(px,cy,5,0,7);c.fill();}
+      for(var i=0;i<4;i++){
+        (function(i){
+          var x=W*0.16+i*W*0.2+Math.sin(t*3+i)*4;
+          aTile(c,7.5,x,cy,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*9+i)%4],cols[i],'clasico',{});});
+        })(i);
+      }
+      aTile(c,6,W*0.86-((t*30)%(W*0.5)),H*0.62,function(){Sp.drawGhost(c,0,0,D.LEFT,0,'fright',Math.floor(t*8)%2,false);});
+      c.font='10px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
+      c.fillStyle='#00ff66';c.fillText('EN EQUIPO',W/2,H*0.62);
+    },
+
+    /* P8 · SUPERVIVENCIA: dos bocas frente a frente dentro del anillo que se
+     * cierra; la que tiene poder (aro rojo) se come a la otra. */
+    superv:function(c,m,t,e){
+      var ciclo=t%3.2, cx=W/2, cy=H*0.42;
+      var r=H*0.34-(ciclo/3.2)*H*0.09;
+      c.save();c.setLineDash([10,8]);c.lineWidth=4;c.strokeStyle='rgba(255,42,42,'+(0.5+0.3*Math.sin(t*6))+')';
+      c.beginPath();c.arc(cx,cy,r,0,7);c.stroke();c.restore();
+      c.fillStyle='rgba(255,42,42,0.10)';c.beginPath();c.arc(cx,cy,r+70,0,7);c.fill();
+      var come=ciclo>2.2;
+      var ax=cx-W*0.14+(come?(ciclo-2.2)*W*0.14:0);
+      var bx=cx+W*0.14;
+      aTile(c,8.5,ax,cy,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*12)%4],'#ffff00','clasico',{});});
+      c.strokeStyle='#ff2a2a';c.lineWidth=3;c.globalAlpha=0.6+0.4*Math.sin(t*10);
+      c.beginPath();c.arc(ax,cy,62,0,7);c.stroke();c.globalAlpha=1;
+      if(!come||ciclo<2.9){
+        aTile(c,8.5,bx,cy,function(){Sp.drawPacman(c,0,0,D.LEFT,[0,1,2,1][Math.floor(t*9+2)%4],'#00ffff','clasico',{});});
+      }else{
+        c.font='14px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
+        c.fillStyle='#ff5a5a';c.fillText('K.O.',bx,cy);
+      }
+      c.font='10px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
+      c.fillStyle='#ffd400';c.fillText('EL ÚLTIMO EN PIE',cx,H*0.66);
     },
 
     /* P6 · ONLINE: el símbolo del wifi cargando. El punto de abajo es un
