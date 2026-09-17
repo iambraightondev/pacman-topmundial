@@ -6299,6 +6299,17 @@
 
     /* Una fila de logro con su estrella, su estado y su barra. La usan la
      * pestaña LOGROS y el perfil de un amigo, que se pinta igual. */
+    /* El logro completo (con su contador) a partir de lo que traiga un aviso */
+    logroDe: function (a) {
+      if (!a) return null;
+      if (a.stat) return a;
+      var lista = CFG.ACHIEVEMENTS || [];
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].id === a.id || lista[i].name === a.name) return lista[i];
+      }
+      return a;
+    },
+
     achRow: function (a, p) {
       var R = window.PM.Ranking;
       var row = document.createElement('div');
@@ -6310,7 +6321,7 @@
       cv.className = 'badge-medal';
       var c = cv.getContext('2d');
       c.imageSmoothingEnabled = false;
-      window.PM.Sprites.drawAchStar(c, 34, 34, 30, p.hecho ? a.color : '#333');
+      window.PM.Sprites.drawAchIcon(c, 34, 34, 32, a, p.hecho);
       row.appendChild(cv);
 
       var txt = document.createElement('div');
@@ -8974,7 +8985,7 @@
         cv.width = 18; cv.height = 18;
         var c = cv.getContext('2d');
         c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawAchStar(c, 9, 9, 8, a.color);
+        window.PM.Sprites.drawAchIcon(c, 9, 9, 9, window.PM.UI.logroDe(a), true);
         row.appendChild(cv);
         var nm = document.createElement('span');
         nm.style.color = a.color || '#ffff00';
@@ -9266,7 +9277,7 @@
             cv.width = 20; cv.height = 20;
             var c = cv.getContext('2d');
             c.imageSmoothingEnabled = false;
-            try { window.PM.Sprites.drawAchStar(c, 10, 10, 9, a.color); } catch (e) { }
+            try { window.PM.Sprites.drawAchIcon(c, 10, 10, 10, window.PM.UI.logroDe(a), true); } catch (e) { }
             st.appendChild(cv);
             var tx = document.createElement('span');
             tx.textContent = 'LOGRO · ' + a.name;
