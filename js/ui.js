@@ -4849,6 +4849,15 @@
       this.cazaRoomBox.appendChild(this.cazaRoomBtn);
       der.appendChild(this.cazaRoomBox);
 
+      /* SUPERVIVENCIA */
+      this.svRoomBox = el('div', 'ol-modo-caja');
+      this.svRoomBtn = interruptor('SUPERVIVENCIA', '#ffd400',
+        'TODOS CONTRA TODOS, UNA VIDA · LA SUPERPASTILLA TE DEJA ELIMINAR A LOS DEMÁS · ' +
+        'LA ZONA SE CIERRA · GANA EL ÚLTIMO EN PIE',
+        function () { self.togglePartySuperv(); });
+      this.svRoomBox.appendChild(this.svRoomBtn);
+      der.appendChild(this.svRoomBox);
+
       /* PAC-MAN VS.: con quién juegas tú */
       der.appendChild(el('div', 'ol-card-titulo ol-sep', 'TU PERSONAJE'));
       var vsRow = el('div', 'ol-personajes');
@@ -4999,8 +5008,8 @@
       };
       P.onerror = function (msg) { self.partyError(msg); };
       P.oninvite = function (from, code) { self.askInvite(from, code); };
-      P.onstart = function (order, idx, cfg, role, hab, caza) {
-        self.startPartyGame(order, idx, cfg, role, hab, caza);
+      P.onstart = function (order, idx, cfg, role, hab, caza, sv) {
+        self.startPartyGame(order, idx, cfg, role, hab, caza, sv);
       };
       P.listen();
     },
@@ -5041,6 +5050,13 @@
       var P = window.PM.Party;
       if (!P || !P.isLeader()) return;
       P.setHab(!P.habPick);      // se reparte a la sala y vuelve por onchange
+    },
+
+    /* Modo SUPERVIVENCIA de la party: del que manda */
+    togglePartySuperv: function () {
+      var P = window.PM.Party;
+      if (!P || !P.isLeader()) return;
+      P.setSuperv(!P.supervPick);
     },
 
     /* Modo CACERÍA de la party: también del que manda */
@@ -5135,12 +5151,17 @@
         var vb = this.vsBtns[v];
         if (!vb) continue;
         var duenyo = (v >= 0) ? P.ghostOwner(v) : null;
-        vb.disabled = !!P.cazaPick || !!(duenyo && duenyo !== window.PM.Net.sid);
-        vb.classList.toggle('active', !P.cazaPick && v === mio);
+        vb.disabled = !!P.cazaPick || !!P.supervPick || !!(duenyo && duenyo !== window.PM.Net.sid);
+        vb.classList.toggle('active', !P.cazaPick && (P.supervPick ? v === -1 : v === mio));
       }
 
       var lider = P.isLeader();
       if (this.olModoNota) this.olModoNota.style.display = lider ? 'none' : '';
+      if (this.svRoomBox) {
+        this.svRoomBtn.disabled = !lider;
+        this.svRoomBtn.classList.toggle('active', !!P.supervPick);
+        this.svRoomBtn.setAttribute('aria-pressed', P.supervPick ? 'true' : 'false');
+      }
       if (this.cazaRoomBox) {
         this.cazaRoomBtn.disabled = !lider;
         this.cazaRoomBtn.classList.toggle('active', !!P.cazaPick);
@@ -5260,7 +5281,7 @@
       });
     },
 
-    startPartyGame: function (order, idx, cfg, role, hab, caza) {
+    startPartyGame: function (order, idx, cfg, role, hab, caza, sv) {
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
@@ -5279,7 +5300,8 @@
         colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!hab,           // lo enciende quien manda, y vale para todos
         roles: roles,         // ...y cada uno con el rol que eligió en la sala
-        caza: !!caza          // ídem: todos de fantasma contra la máquina
+        caza: !!caza,         // ídem: todos de fantasma contra la máquina
+        superv: !!sv          // SUPERVIVENCIA: todos contra todos
       });
     },
 
@@ -7180,7 +7202,8 @@
           colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
           hab: !!(d && d.hab),  // el mirón tiene que ver dientes y chispas
           roles: (d && d.rl) || null,
-          caza: !!(d && d.caza) // y el Pac-Man de la máquina, con su reloj
+          caza: !!(d && d.caza), // y el Pac-Man de la máquina, con su reloj
+          superv: !!(d && d.sv)  // y la zona de SUPERVIVENCIA
         });
       } else if (name === 'full') {
         if (d && d.to === window.PM.Net.sid) this.specFail('LA PARTIDA NO ADMITE MIRONES');
@@ -9273,6 +9296,7 @@
       /* CONTINUE?: el final de recreativa (17 sep 2026). Para las partidas
        * de siempre, con su resumen; PAC-MAN VS. y CACERÍA siguen con el
        * panel que dice quién ha ganado. */
+      if (g.superv && window.PM.Superv) { this.showSupervFin(); return; }
       if (!versus && !g.caza && g.runSummary &&
           !(g.replaying && window.PM.Replay && window.PM.Replay.finPrompt)) {
         this.showGameOverArcade(duo);
@@ -9296,6 +9320,56 @@
               else g.restartGame();
             } },
           { label: 'MENÚ', hint: 'Q · ESC', keys: ['q', 'Escape'],
+            onClick: function () { g.toMenu(); } }
+        ]
+      });
+    },
+
+    /* SUPERVIVENCIA: quién ha ganado y la clasificación */
+    showSupervFin: function () {
+      var self = this;
+      var g = window.PM.Game, SV = window.PM.Superv;
+      var s = g.superv, orden = SV.clasificacion(g);
+      var gana = s.ganador;
+      var titulo = gana >= 0 ? ('¡GANA ' + (g.rawName(gana) || ('J' + (gana + 1))) + '!')
+        : (gana === -1 ? 'EMPATE' : 'FIN DE LA PARTIDA');
+      this.showPrompt({
+        title: titulo,
+        arcade: true,
+        tono: 'amarillo',
+        status: g.flash ? g.flash.text : '',
+        statusError: !!g.flash,
+        custom: function (p) {
+          var tabla = document.createElement('div');
+          tabla.className = 'sv-tabla';
+          for (var k = 0; k < orden.length; k++) {
+            var i = orden[k];
+            var fila = document.createElement('div');
+            fila.className = 'sv-fila' + (i === gana ? ' gana' : '') + (i === g.localIdx || (!g.netRole && i === 0) ? ' yo' : '');
+            fila.style.setProperty('--jc', g.colorFor(i));
+            var pos = document.createElement('span');
+            pos.className = 'sv-pos';
+            pos.textContent = (k + 1) + 'º';
+            var nom = document.createElement('span');
+            nom.className = 'sv-nombre';
+            nom.textContent = g.rawName(i) || ('J' + (i + 1));
+            var ko = document.createElement('span');
+            ko.className = 'sv-bajas';
+            var n = (s.bajas && s.bajas[i]) || 0;
+            ko.textContent = n + (n === 1 ? ' K.O.' : ' K.O.');
+            fila.appendChild(pos); fila.appendChild(nom); fila.appendChild(ko);
+            tabla.appendChild(fila);
+          }
+          p.appendChild(tabla);
+        },
+        buttons: [
+          { label: 'OTRA PARTIDA', primary: true, hint: 'R', keys: ['r', 'Enter'],
+            onClick: function () {
+              self.resumeAudio();
+              if (g.netRole) g.requestVote('rematch');
+              else g.restartGame();
+            } },
+          { label: 'MENÚ', hint: 'ESC', keys: ['q', 'Escape'],
             onClick: function () { g.toMenu(); } }
         ]
       });

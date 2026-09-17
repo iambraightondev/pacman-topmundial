@@ -1711,6 +1711,20 @@
     return h ? Math.round(h.cd / 60) : 0;
   };
 
+  /* ---------- SUPERVIVENCIA (js/supervivencia.js) ----------
+   * Party online, todos contra todos, una vida cada uno. */
+  CFG.SUPERV = {
+    NOMBRE: 'SUPERVIVENCIA',
+    PODER: 6 * 60,          // la superpastilla deja eliminar a otros Pac-Man
+    VUELVE: 20 * 60,        // y vuelve a salir al rato
+    CHOQUE: 9,              // px: lo que tienen que acercarse dos Pac-Man
+    ZONA_INICIO: 45 * 60,   // el primer anillo se cierra a los 45 s
+    ZONA_CADA: 20 * 60,     // y luego uno cada 20 s
+    ZONA_MAX: 11,           // hasta dejar solo el centro
+    ZONA_GRACIA: 2 * 60,    // dentro de la zona roja, 2 s y fuera
+    AVISO: 5 * 60           // el anillo siguiente parpadea los últimos 5 s
+  };
+
   /* ---------- DESATADO: el REY FANTASMA (js/jefe.js) ----------
    * Cada CADA niveles. Vida = (VIDA + VIDA_POR_JUGADOR por cada jugador de
    * más) * (1 + VIDA_POR_TANDA por cada jefe ya pasado). PREMIO va dentro del
@@ -1754,8 +1768,10 @@
      * de DESATADO (el rol en el saludo, el arranque y la foto, con el hielo,
      * los proyectiles, los portales y las runas); la 11, MANTENER PULSADO
      * (la 'm' de la petición de poder y las placas de hielo en la foto); la 12, el
-     * PORTAL con otra dimensión (la 'dimension' de cada jugador en la foto). */
-    PROTO: 12,
+     * PORTAL con otra dimensión (la 'dimension' de cada jugador en la foto); la
+     * 13, el REY FANTASMA ('jf') y SUPERVIVENCIA ('sv' en la foto, la sala y
+     * el arranque). */
+    PROTO: 13,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

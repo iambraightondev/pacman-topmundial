@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Modo SUPERVIVENCIA (party)
+
+- Nuevo modo en la sala ONLINE: **todos contra todos**, una vida cada uno, y
+  **gana el último en pie**.
+- La **superpastilla** ya no solo asusta a los fantasmas: a quien se la come le
+  da **6 s de poder** para eliminar a los demás Pac-Man al tocarlos. Las
+  superpastillas vuelven a salir a los 20 s.
+- **La zona**: a los 45 s el laberinto empieza a cerrarse por fuera, un anillo
+  cada 20 s. Dentro de la zona roja se aguantan 2 s.
+- Las pastillas no se acaban: al comerse todas, vuelven. Los fantasmas de la
+  máquina siguen matando como siempre.
+- Al acabar, la **clasificación** con el ganador y los K.O. de cada uno. No
+  cuenta para el TOP MUNDIAL ni para los récords.
+
 ## 2026-09-17 · DESATADO: el REY FANTASMA
 
 - Cada **5 niveles** de DESATADO (5, 10, 15...) aparece el **REY FANTASMA**: un

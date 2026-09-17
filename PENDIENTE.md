@@ -21,7 +21,15 @@ sin tocarlo); vida 24 (+12 por jugador, +30 % por cada jefe); el nivel solo
 acaba al tumbarlo; los cuatro fantasmas solo salen si él los invoca. **Por
 mirar:** balance jugándolo; las repeticiones ONLINE no enseñan al jefe (el códec
 de red no lo lleva); logros de jefe (se cuenta `jefes` pero no hay logro).
-**Siguiente: SUPERVIVENCIA.**
+**17 sep (tarde) — SUPERVIVENCIA (`pm-v142`).** Modo de party: todos contra
+todos, una vida, la superpastilla deja eliminar a otros Pac-Man 6 s, la zona se
+cierra desde los 45 s y gana el último en pie; clasificación al final. Decidido
+por Jarvis: fuera del TOP MUNDIAL y de los récords; sin continuar ni revivir;
+los fantasmas de la máquina siguen; las pastillas vuelven a salir; solo en
+party (no hay modo local). Probado con una party de tres simulada en Node
+(`scratchpad/red-sv-jefe.js` de la sesión), que valida también el jefe a dos.
+**Por mirar:** balance de la zona y del poder jugándolo con gente; que el modo
+no sale en el carrusel de la portada (solo en la sala online).
 
 **17 sep (día) — MAGO: PORTAL nuevo y RUNA (`pm-v137`), pedidos por Braighton.**
 PORTAL: 1.ª W = entrada + OTRA DIMENSIÓN (8 s máx.; intocable, no come, no usa

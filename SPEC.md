@@ -2411,6 +2411,19 @@ the key index. `LIST` is the ASESINO (the original kit).
   on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 2 s (`TORMENTA_RAYOS` = 2) on the
   nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
   dies.
+- **SUPERVIVENCIA (`js/supervivencia.js`, `CFG.SUPERV`).** Party only (2–4,
+  `opts.superv`; excludes hab/caza/VS, forces `livesMode: 'individual'` with one
+  life each). State in `Game.superv`. Energizer eaten → `poder[i] = PODER` and
+  the tile is queued in `vuelven` to reappear after `VUELVE`; a powered pac
+  touching an unpowered one (`CHOQUE` px) kills it and scores a `bajas` point.
+  The zone closes a ring every `ZONA_CADA` after `ZONA_INICIO` up to
+  `ZONA_MAX`; `anilloDe` is the tile's distance to the border, pellets inside
+  are removed, and standing inside for `ZONA_GRACIA` kills — each machine
+  decides that for its own pacs. Pellets reload instead of finishing the level.
+  `mirarFinal` ends the game when one pac is left (`ganador`, `caidos` for the
+  standings); host sends `svZona`, `svBaja`, `svFin` and the `sv` snapshot
+  block. Excluded from records, ranking, CONTINUE and revive; the game over is
+  `UI.showSupervFin` (standings table).
 - **REY FANTASMA (`js/jefe.js`, `CFG.JEFE`).** Every `CADA` (5) levels of DESATADO
   (not VS., not CACERÍA). `Jefe.alNivel` runs at the end of `resetLevel` and
   keeps all its state in `Game.jefe` (plain data, so rewind photos and saved

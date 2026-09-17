@@ -5477,3 +5477,12 @@ body { font-size-adjust: 0.56; }
 #online .ol-plaza-icono, #online .ol-pj-icono { width: 40px; height: 40px; }
 #online.ol-marco .go-bombillas { position: fixed; }
 #online .prompt-btns.ol-pie .btn-primary { font-size: clamp(13px, 2.2vh, 18px); }
+
+/* ---------- SUPERVIVENCIA: la clasificación del final ---------- */
+.sv-tabla { display: grid; gap: 8px; width: min(520px, 100%); }
+.sv-fila { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 14px; padding: 10px 16px; border: 2px solid color-mix(in srgb, var(--jc, #fff) 45%, transparent); background: rgba(0, 0, 0, 0.55); font-size: clamp(11px, 1.9vh, 15px); letter-spacing: 2px; text-align: left; }
+.sv-fila.gana { border-color: #ffd400; background: rgba(255, 212, 0, 0.12); box-shadow: 0 0 22px rgba(255, 212, 0, 0.35); font-size: clamp(14px, 2.4vh, 20px); }
+.sv-pos { color: #ffd400; }
+.sv-nombre { color: var(--jc, #fff); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-bajas { color: #ff5a5a; font-size: 0.75em; }
+.sv-fila.yo .sv-nombre::after { content: ' · TÚ'; color: #00ffff; font-size: 0.7em; }

@@ -9264,6 +9264,93 @@
   });
 
   // ---------------------------------------------------------------
+  // SUPERVIVENCIA (js/supervivencia.js)
+  // ---------------------------------------------------------------
+  var SV = window.PM.Superv, CS = CFG.SUPERV;
+
+  function supervivencia(n) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: n || 2, superv: true });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 0;
+    for (var g = 0; g < 4; g++) {
+      G.ghosts[g].mode = 'house';
+      G.ghosts[g].x = CFG.HOUSE.exitX;
+      G.ghosts[g].y = CFG.HOUSE.centerY;
+    }
+    return G.superv;
+  }
+
+  test('SUPERVIVENCIA: una vida cada uno, sin continuar ni récords', function () {
+    var s = supervivencia(3);
+    ok(s, 'la partida es de supervivencia');
+    eq(G.livesMode, 'individual', 'vidas de cada uno');
+    eq(G.pacs.map(function (p) { return p.lives; }).join(), '1,1,1', 'una vida');
+    ok(!G.puedeContinuar(), 'sin continuar');
+    ok(!G.puedeRevivir(), 'ni revivir');
+    partida(1);
+    G.newGame({ players: 1, superv: true });
+    eq(G.superv, null, 'a uno no hay supervivencia');
+  });
+
+  test('SUPERVIVENCIA: la superpastilla da poder para eliminar a otro Pac-Man', function () {
+    supervivencia(2);
+    var a = ponPac(0, 6, 5, DR.RIGHT), b = ponPac(1, 6, 5, DR.LEFT);
+    G.step();
+    ok(!a.dying && !b.dying, 'sin poder, se cruzan sin pasar nada');
+    ponPac(1, 20, 5, DR.LEFT);
+    G.pellets[5][6] = 'o';
+    G.eatAt(6, 5, a);
+    eq(G.superv.poder[0], CS.PODER, 'quien se la come tiene poder');
+    ponPac(1, 6, 5, DR.LEFT);
+    G.step();
+    ok(b.dying, 'y al tocar al otro, lo elimina');
+    eq(G.superv.bajas[0], 1, 'apuntándose la baja');
+    ok(G.superv.vuelven.length === 1, 'la superpastilla volverá');
+  });
+
+  test('SUPERVIVENCIA: gana el último en pie', function () {
+    supervivencia(2);
+    G.pacs[0].safeTicks = 999999;
+    G.startDeath(1, -1);
+    for (var i = 0; i < 400 && G.state === 'PLAYING'; i++) G.step();
+    eq(G.state, 'GAME_OVER', 'se acaba');
+    eq(G.superv.ganador, 0, 'y gana el que queda');
+    eq(SV.clasificacion(G).join(), '0,1', 'primero el ganador');
+  });
+
+  test('SUPERVIVENCIA: la zona se cierra y quien se queda dentro cae', function () {
+    supervivencia(2);
+    G.pacs[1].safeTicks = 999999;
+    ponPac(1, 13, 14);
+    G.superv.t = CS.ZONA_INICIO - 1;
+    G.step();
+    eq(G.superv.anillo, 1, 'a su hora se cierra el primer anillo');
+    ok(SV.enZona(G, 0, 14) && !SV.enZona(G, 1, 1), 'solo el de fuera');
+    G.superv.anillo = 3;
+    var p = ponPac(0, 1, 5, DR.LEFT);
+    for (var i = 0; i < CS.ZONA_GRACIA - 2; i++) { ponPac(0, 1, 5); G.step(); }
+    ok(!p.dying, 'dentro, un par de segundos de margen');
+    for (i = 0; i < 4 && !p.dying; i++) { ponPac(0, 1, 5); G.step(); }
+    ok(p.dying, 'y después cae');
+  });
+
+  test('SUPERVIVENCIA: las pastillas no se acaban y todo viaja en la foto', function () {
+    supervivencia(2);
+    G.pacs[0].safeTicks = G.pacs[1].safeTicks = 999999;
+    G.dotsLeft = 0;
+    G.step();
+    eq(G.state, 'PLAYING', 'sin pastillas no se pasa de nivel');
+    ok(G.dotsLeft > 0, 'vuelven a salir');
+    G.superv.anillo = 2; G.superv.poder[1] = 77; G.superv.bajas[0] = 3;
+    var r = SV.resumen(G);
+    G.superv = null;
+    SV.aplicar(G, r);
+    eq(G.superv.anillo + ',' + G.superv.poder[1] + ',' + G.superv.bajas[0], '2,77,3', 'la foto lo devuelve');
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

@@ -551,6 +551,10 @@
       /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
        * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
       this.caza = !!opts.caza && !this.hab && !!window.PM.Caza;
+      /* SUPERVIVENCIA (js/supervivencia.js): party, todos contra todos, una
+       * vida cada uno. No convive con DESATADO, CACERÍA ni PAC-MAN VS. */
+      var sv = !!opts.superv && !this.hab && !this.caza && this.playerCount >= 2 && !!window.PM.Superv;
+      this.superv = null;
       this.cazaTicks = 0;
       this.runGhosts = 0;
       this.runFrutas = 0;
@@ -574,8 +578,8 @@
       this.frightMult = s.frightMult;
       this.startLevel = s.startLevel;      // para el récord de velocidad
       this.startLives = s.startLives;      // viaja con la partida al top mundial
-      this.livesMode = (this.playerCount > 1 && s.livesMode === 'individual' &&
-                        !this.caza)          // las vidas son de Pac-Man: fondo común
+      this.livesMode = ((this.playerCount > 1 && s.livesMode === 'individual' &&
+                        !this.caza) || sv)   // las vidas son de Pac-Man: fondo común
         ? 'individual' : 'shared';
       this.level = s.startLevel;
       this.score = 0;
@@ -589,7 +593,7 @@
       /* CACERÍA: el Pac-Man de la máquina es un asiento más, el último. Así
        * come, muere y reaparece por los mismos caminos que uno de carne, y
        * el reparto de fantasmas es fijo: cada jugador el de su asiento. */
-      var reparto = opts.ghosts;
+      var reparto = sv ? null : opts.ghosts;   // en SUPERVIVENCIA nadie lleva fantasma
       if (this.caza) {
         var bot = new window.PM.Pacman(this.playerCount);
         bot.bot = true;
@@ -609,6 +613,10 @@
         this.lives = 0;
       } else {
         this.lives = s.startLives;
+      }
+      if (sv) {
+        for (i = 0; i < this.pacs.length; i++) this.pacs[i].lives = 1;
+        window.PM.Superv.empezar(this, this.playerCount);
       }
       /* El HIGH SCORE de la partida es el de SU liga, y la liga son las dos
        * cosas a la vez: el mundo (clásico, LABERINTOS o DESATADO) y cuántos
@@ -842,6 +850,8 @@
       this.hab = false;
       this.caza = false;
       this.cazaTicks = 0;
+      this.superv = null;
+      this.jefe = null;
       if (window.PM.Hab) window.PM.Hab.empezar(false, 0);
       this.applyMaze(null);     // el clásico vuelve antes de repartir puntos
       this.loadPellets();
@@ -1191,6 +1201,11 @@
         window.PM.Jefe.colisiones(this);
         if (this.state !== 'PLAYING') return;
       }
+      /* SUPERVIVENCIA: la zona, el poder, los choques y el final */
+      if (this.superv && window.PM.Superv) {
+        window.PM.Superv.paso(this);
+        if (this.state !== 'PLAYING') return;
+      }
 
       /* puntuaciones emergentes */
       for (i = this.popups.length - 1; i >= 0; i--) {
@@ -1199,7 +1214,7 @@
 
       /* nivel completado */
       /* con jefe, el nivel se acaba al tumbarlo (y no antes) */
-      if (this.jefe ? !this.jefe.vivo : this.dotsLeft <= 0) {
+      if (!this.superv && (this.jefe ? !this.jefe.vivo : this.dotsLeft <= 0)) {
         if (this.level === 1) this.submitLevel1Time();
         if (!this.caza) {                // en CACERÍA lo despeja la máquina
           this.limpiosSeguidos++;        // despejado, y sin morir por el camino
@@ -1280,6 +1295,8 @@
         pac.pauseTicks = CFG.ENERGIZER_PAUSE;
         if (mio && !(pac && pac.bot)) this.runSuper++;
         this.triggerFright();
+        // SUPERVIVENCIA: a quien se la come, poder contra los demás Pac-Man
+        if (this.superv && window.PM.Superv) window.PM.Superv.superpastilla(this, pac, row, col);
       }
       // cada skin extravagante (y DORADO) suena a lo suyo al comer
       window.AudioSys && AudioSys.playWaka(this.skinFor(pac ? (pac.id | 0) : 0));
@@ -1628,6 +1645,7 @@
       }
       if (left <= 0) {
         p.out = true;               // sin vidas: de espectador
+        if (this.superv && window.PM.Superv) window.PM.Superv.alCaer(this, i);
         /* su cuerpo se queda donde cayó, para que lo revivan (lo decide
          * quien simula: el invitado lo recibe en la instantánea) */
         if (this.puedeRevivir() && this.anyPlaying(i) &&
@@ -1662,6 +1680,12 @@
 
     /* El GAME OVER de siempre, cuando ya no queda nadie */
     acabarPartida: function () {
+      /* SUPERVIVENCIA: si nadie quedó en pie, empate; y el resultado a todos */
+      if (this.superv && window.PM.Superv) {
+        window.PM.Superv.empate(this);
+        this.hostEvt({ t: 'svFin', ga: this.superv.ganador, ca: this.superv.caidos.slice(),
+                       ba: this.superv.bajas.slice() });
+      }
       this.state = 'GAME_OVER';
       this.phaseTicks = CFG.GAMEOVER_TICKS;
       this.overIdle = false;
@@ -1687,7 +1711,7 @@
      * ========================================================= */
     /* ¿Este modo tiene continuar? */
     puedeContinuar: function () {
-      if (this.caza) return false;
+      if (this.caza || this.superv) return false;
       if (this.isVersus && this.isVersus()) return false;
       return this.inGame();
     },
@@ -1884,7 +1908,7 @@
        * logros van dentro como sellos y la subida de nivel en su renglón.
        * Solo PAC-MAN VS. y CACERÍA, que siguen con el panel de antes, esperan
        * a que acaben las celebraciones sobre el laberinto. */
-      var arcade = !this.caza && !(this.isVersus && this.isVersus()) && !!this.runSummary;
+      var arcade = !this.caza && !this.superv && !(this.isVersus && this.isVersus()) && !!this.runSummary;
       this.overWait = arcade ? false : this.celebrating();
       this.syncUI();
     },
@@ -2150,6 +2174,7 @@
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
       if (this.practica) return;     // DESATADO a uno con otro rol: práctica
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
+      if (this.superv) return;       // ni SUPERVIVENCIA, que no es de puntos
       var slot = this.recordSlot();
       if (slot) {
         var np = this.playerCount;
@@ -2688,7 +2713,7 @@
       // fantasmas con la Q u otro laberinto dan otros puntos y ponerlos al
       // lado no diría nada de nadie. Lo que sigue fuera: una partida con un
       // azar traído de fuera o con un fantasma que piensa (PAC-MAN VS.).
-      if (this.seedBase || this.isVersus()) return;
+      if (this.seedBase || this.isVersus() || this.superv) return;
       if (this.practica) return;               // práctica: no va al top
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
@@ -3342,6 +3367,7 @@
         hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
         rl: this.roles.slice(),     // ...y con qué rol juega cada uno
         caza: !!this.caza,          // CACERÍA: sin superpastillas y con bot
+        sv: !!this.superv,          // SUPERVIVENCIA
         cfg: {
           ghostSpeedMult: this.ghostSpeedMult,
           pacSpeedMult: this.pacSpeedMult,
@@ -3371,6 +3397,7 @@
         cu: this.cuerposSnap(),       // cuerpos tirados: [x, y, ticks, pasadas]
         vs: this.vsScores || null,    // PAC-MAN VS.: marcador de cada cazador
         cz: this.caza ? this.cazaTicks : undefined,   // CACERÍA: reloj del poder
+        sv: (this.superv && window.PM.Superv) ? window.PM.Superv.resumen(this) : undefined,
         he: this.snapEaten,
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
         /* posiciones de TODOS los jugadores: con 3 y 4 cada uno solo conoce
@@ -3534,6 +3561,7 @@
       }
       // el jefe, por estima entre fotos
       if (window.PM.Jefe && this.jefe) window.PM.Jefe.pasoInvitado(this);
+      if (this.superv && window.PM.Superv) window.PM.Superv.pasoInvitado(this);
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
       if (this.fruitActive && me && !me.out && !me.dying &&
@@ -3888,6 +3916,17 @@
         case 'jefeKill':
           if (window.PM.Jefe) window.PM.Jefe.evento(this, e);
           break;
+        case 'svZona':
+        case 'svBaja':
+          if (window.PM.Superv) window.PM.Superv.evento(this, e);
+          break;
+        case 'svFin':
+          if (this.superv) {
+            this.superv.ganador = e.ga;
+            if (e.ca) this.superv.caidos = e.ca.slice();
+            if (e.ba) this.superv.bajas = e.ba.slice();
+          }
+          break;
         case 'habFx':
           if (window.PM.Hab) window.PM.Hab.efecto(e.f, e.x, e.y, 18);
           break;
@@ -4004,6 +4043,7 @@
       }
       if (esLista(s.vs)) this.vsScores = s.vs.slice();
       if (typeof s.cz === 'number') this.cazaTicks = s.cz;
+      if (s.sv && window.PM.Superv) window.PM.Superv.aplicar(this, s.sv);
 
       /* vidas y espectadores */
       if (this.livesMode === 'individual' && s.lv && s.lv.length) {
@@ -4573,6 +4613,7 @@
                          (this.state === 'LEVEL_DONE' && this.levelPhase === 1);
         // runas y bocas de portal van en el suelo
         if (this.hab && window.PM.Hab) window.PM.Hab.dibujarSuelo(this, ctx);
+        if (this.superv && window.PM.Superv) window.PM.Superv.dibujarSuelo(this, ctx);
         /* PORTAL: quien mira desde la otra dimensión ve lo de fuera en segundo
          * plano, apagado y sin color */
         var dimYo = (this.hab && window.PM.Hab) ? window.PM.Hab.miraDesdeDimension(this) : -1;
@@ -4636,12 +4677,14 @@
             continue;
           }
           this.drawPac(ctx, pc, i);
+          if (this.superv && window.PM.Superv) window.PM.Superv.dibujarPac(this, ctx, pc, i);
         }
         this.dibujarCuerpos(ctx);
         // hielo, proyectiles, rayos y chispazos: encima de todo
         if (this.hab && window.PM.Hab) window.PM.Hab.dibujarAire(this, ctx);
         // la barra de vida del jefe, arriba del laberinto
         if (this.jefe && window.PM.Jefe) window.PM.Jefe.dibujarBarra(this, ctx);
+        if (this.superv && window.PM.Superv) window.PM.Superv.dibujarHUD(this, ctx);
         /* CACERÍA: el aro de aviso (y de poder) sobre el Pac-Man de la máquina */
         if (this.caza) window.PM.Caza.draw(this, ctx);
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!". En
@@ -4890,6 +4933,10 @@
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.ready;
         ctx.fillText('¡LISTO!', 112, y);
+        if (this.superv) {
+          ctx.fillStyle = '#ff5a5a';
+          ctx.fillText('EL ÚLTIMO EN PIE GANA', 112, 20 * T + T / 2 + CFG.MAZE_Y);
+        }
         // CACERÍA: en qué ronda vamos, que cada una aprieta más
         if (this.caza) {
           ctx.fillStyle = '#ffb8ff';
