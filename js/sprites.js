@@ -705,194 +705,83 @@
 
   /* ------------------------------------------------------------
    * Cuánta pompa gasta cada maestría, de la más simplona a la más
-   * exagerada. La misma animación para las seis dejaba a APRENDIZ con los
-   * mismos honores que a TOP MUNDIAL, y subir de rango tiene que NOTARSE:
-   * cada escalón añade algo encima del anterior, nunca cambia lo de antes.
+   * exagerada. Subir de rango tiene que NOTARSE: cada escalón añade algo
+   * encima del anterior, nunca cambia lo de antes. El emblema ya crece y
+   * cambia de silueta solo; esto es lo que lo rodea.
    *
-   *   forma      silueta de la chapa (ver chapaPath)
-   *   giros      medias vueltas de la medalla al subir (0 = sube recta)
    *   subidon    cuánto se pasa de frenada al llegar arriba
-   *   chispa     rayos que saltan al plantarse la medalla (0 = ninguno)
-   *   brillo     destello que recorre la medalla cada cierto tiempo
-   *   onda       anillos que se abren al plantarse
-   *   marco      segundo marco alrededor de la chapa
+   *   chispa     rayos que saltan al quedar armado (0 = ninguno)
+   *   onda       anillos que se abren al quedar armado
    *   rayos      abanico de rayos girando por detrás
-   *   estrellas  chispas en órbita alrededor de la medalla
-   *   motas      chispas que caen desde la chapa
-   *   letras     el nombre se escribe letra a letra
-   *   escudo     blasón detrás de la medalla, que sale por arriba y por abajo
-   *              (1 liso, 2 más grande, con doble filo y coronado)
-   *   corona     corona sobre la medalla
-   *   fogonazo   destello blanco que llena el sitio al plantarse
-   *   textoOro   brillo que recorre el nombre
+   *   estrellas  chispas en órbita alrededor del emblema
+   *   motas      chispas que caen desde el emblema
+   *   fogonazo   destello blanco al quedar armado
    * ------------------------------------------------------------ */
-  /* Silueta de la chapa. A partir de EXPERTO deja de ser un rectángulo: la
-   * forma es lo primero que se reconoce de lejos, así que sube de rango con
-   * todo lo demás. Se dibuja con el mismo alto y ancho, así que el texto y la
-   * medalla no se enteran.
-   *
-   *   0 recto      · un rectángulo de toda la vida
-   *   1 bisel      · esquinas cortadas, como un billete
-   *   2 hexágono   · una punta a cada lado
-   *   3 banderín   · punta a la izquierda y cola de golondrina a la derecha
-   *   4 estandarte · cola de golondrina a los dos lados
-   */
-  function chapaPath(ctx, x, y, w, h, forma) {
-    var m = y + h / 2;
-    var p = Math.min(5, w * 0.25);        // cuánto sale (o entra) la punta
-    var c = Math.min(3.5, w * 0.25);      // cuánto se corta la esquina
-    ctx.beginPath();
-    if (forma === 1) {
-      ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c);
-      ctx.lineTo(x + w, y + h - c); ctx.lineTo(x + w - c, y + h);
-      ctx.lineTo(x + c, y + h); ctx.lineTo(x, y + h - c); ctx.lineTo(x, y + c);
-    } else if (forma === 2) {
-      ctx.moveTo(x + p, y); ctx.lineTo(x + w - p, y); ctx.lineTo(x + w, m);
-      ctx.lineTo(x + w - p, y + h); ctx.lineTo(x + p, y + h); ctx.lineTo(x, m);
-    } else if (forma === 3) {
-      ctx.moveTo(x + p, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - p, m);
-      ctx.lineTo(x + w, y + h); ctx.lineTo(x + p, y + h); ctx.lineTo(x, m);
-    } else if (forma === 4) {
-      /* banderín con la punta más larga y la cola dentada (dos golondrinas).
-       * A la izquierda no se pone cola: ahí va el escudo. */
-      ctx.moveTo(x + p * 1.3, y);
-      ctx.lineTo(x + w, y);
-      ctx.lineTo(x + w - p, y + h * 0.28);
-      ctx.lineTo(x + w, m);
-      ctx.lineTo(x + w - p, y + h * 0.72);
-      ctx.lineTo(x + w, y + h);
-      ctx.lineTo(x + p * 1.3, y + h);
-      ctx.lineTo(x, m);
-    } else {
-      ctx.rect(x, y, w, h);
-      return;
-    }
-    ctx.closePath();
-  }
-
-  /* Blasón donde va montada la medalla en los dos rangos de arriba: hombros
-   * rectos, y desde `eb` cierra en punta hacia el jugador. */
-  function escudoPath(ctx, cx, cy, w, arriba, hombro, punta) {
-    ctx.beginPath();
-    ctx.moveTo(cx - w, cy - arriba);
-    ctx.lineTo(cx + w, cy - arriba);
-    ctx.lineTo(cx + w, cy + hombro);
-    ctx.lineTo(cx + w * 0.53, cy + (hombro + punta) / 2);
-    ctx.lineTo(cx, cy + punta);
-    ctx.lineTo(cx - w * 0.53, cy + (hombro + punta) / 2);
-    ctx.lineTo(cx - w, cy + hombro);
-    ctx.closePath();
-  }
-
   var POMPA = [
-    /* APRENDIZ */ { forma: 0, giros: 0, subidon: 1.2, chispa: 0, brillo: false, onda: 0,
-                     marco: false, rayos: 0, estrellas: 0, motas: 0,
-                     letras: false, corona: false, fogonazo: false,
-                     textoOro: false },
-    /* CAZADOR  */ { forma: 0, giros: 2, subidon: 1.8, chispa: 6, brillo: false, onda: 0,
-                     marco: false, rayos: 0, estrellas: 0, motas: 0,
-                     letras: false, corona: false, fogonazo: false,
-                     textoOro: false },
-    /* EXPERTO  */ { forma: 1, giros: 4, subidon: 2.5, chispa: 6, brillo: true, onda: 0,
-                     marco: false, rayos: 0, estrellas: 0, motas: 0,
-                     letras: false, corona: false, fogonazo: false,
-                     textoOro: false },
-    /* MAESTRO  */ { forma: 2, giros: 4, subidon: 3, chispa: 8, brillo: true, onda: 1,
-                     marco: true, rayos: 0, estrellas: 0, motas: 3,
-                     letras: false, corona: false, fogonazo: false,
-                     textoOro: false },
-    /* LEYENDA  */ { forma: 3, giros: 4, subidon: 3.4, chispa: 8, brillo: true, onda: 1,
-                     marco: true, rayos: 10, estrellas: 3, motas: 4,
-                     letras: true, escudo: 1, corona: false, fogonazo: false,
-                     textoOro: false },
-    /* MUNDIAL  */ { forma: 4, giros: 6, subidon: 4, chispa: 12, brillo: true, onda: 2,
-                     marco: true, rayos: 14, estrellas: 5, motas: 6,
-                     letras: true, escudo: 2, corona: true, fogonazo: true,
-                     textoOro: true }
+    /* APRENDIZ */ { subidon: 1.2, chispa: 0,  onda: 0, rayos: 0,  estrellas: 0, motas: 0, fogonazo: false },
+    /* CAZADOR  */ { subidon: 1.8, chispa: 6,  onda: 0, rayos: 0,  estrellas: 0, motas: 0, fogonazo: false },
+    /* EXPERTO  */ { subidon: 2.5, chispa: 6,  onda: 1, rayos: 0,  estrellas: 0, motas: 0, fogonazo: false },
+    /* MAESTRO  */ { subidon: 3,   chispa: 8,  onda: 1, rayos: 0,  estrellas: 0, motas: 3, fogonazo: false },
+    /* LEYENDA  */ { subidon: 3.4, chispa: 8,  onda: 1, rayos: 10, estrellas: 3, motas: 4, fogonazo: false },
+    /* MUNDIAL  */ { subidon: 4,   chispa: 12, onda: 2, rayos: 14, estrellas: 5, motas: 6, fogonazo: true }
   ];
 
-  /* Etiqueta de maestría sobre un jugador (Ctrl+Espacio).
+  /* Maestría sobre un jugador (Ctrl+Espacio, F1..F4).
    *
-   * Tiene su propia animación, a propósito distinta del cartel grande del
-   * panel MAESTRÍAS (que baja de arriba con rayos girando): aquí la medalla
-   * SALE GIRANDO desde la cabeza del jugador, la chapa SE DESPLIEGA hacia su
-   * derecha con un chispazo, la medalla brilla mientras se mantiene y al
-   * final todo se encoge de vuelta hacia el jugador.
+   * SOLO el emblema, sin texto: sale de la cabeza del jugador ARMÁNDOSE pieza
+   * a pieza (js/emblemas.js), se planta flotando encima con la pompa de su
+   * rango y al final se encoge de vuelta hacia el jugador. La silueta ya dice
+   * qué maestría es; un rótulo encima tapaba medio pasillo.
    *
-   *   t     — 0 al aparecer, 1 al terminar (si no se pasa, se pinta quieta)
-   *   tick  — contador libre, para el brillo y la flotación
-   *   rango — escalón de la maestría (0 APRENDIZ … 5 TOP MUNDIAL): manda
-   *           cuánta pompa se gasta. Si no se pasa, la de EXPERTO.
-   *   formato — 'SOLO', 'DÚO'… : pestaña encima de la chapa que dice de qué
-   *           formato es la maestría (F1..F4 enseñan cualquiera). Sin él, no
-   *           hay pestaña.
+   *   t       — 0 al aparecer, 1 al terminar (si no se pasa, se pinta quieta)
+   *   tick    — contador libre, para el brillo y la flotación
+   *   rango   — escalón de la maestría (0 APRENDIZ … 5 TOP MUNDIAL). Si no
+   *             se pasa, EXPERTO.
+   *   name, formato — se aceptan porque la red los manda, pero no se
+   *             escriben.
    */
   Sprites.drawBadgeTag = function (ctx, x, y, name, color, t, tick, rango, formato) {
-    var text = String(name || '');
-    color = color || '#888888';
     t = (typeof t === 'number') ? Math.max(0, Math.min(1, t)) : 1;
     tick = tick || 0;
-    var P = POMPA[(typeof rango === 'number')
-      ? Math.max(0, Math.min(POMPA.length - 1, Math.round(rango))) : 2];
+    var ri = (typeof rango === 'number') ? Math.max(0, Math.min(5, Math.round(rango))) : 2;
+    var P = POMPA[ri];
+    var gemas = Sprites.EMBLEM_GEMA;
+    color = (gemas && gemas[ri]) || color || '#888888';
 
-    var SUBE = 0.16;     // hasta aquí: la medalla sube girando
-    var ABRE = 0.30;     // hasta aquí: la chapa se despliega
+    var SUBE = 0.14;     // hasta aquí: sube desde la cabeza
     var CIERRA = 0.86;   // a partir de aquí: se va
-
-    ctx.font = window.PM.Letra.lienzo(7);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    // hay siluetas que se comen el final de la chapa: la cola de golondrina
-    // del banderín (10) y la punta del pedestal (8) piden sitio de más
-    // el blasón es más ancho que la medalla: el nombre tiene que arrancar
-    // más allá, o la primera letra se le monta encima
-    var padL = P.escudo ? (P.escudo >= 2 ? 20 : 18) : 15, h = 14, r = 4.5;
-    var padR = (P.forma === 3) ? 10 : ((P.forma === 4) ? 8 : 6);
-    var w = ctx.measureText(text).width + padL + padR;
-    var bx = Math.round(x - w / 2), by = Math.round(y - h);
-    if (bx < 2) bx = 2;
-    if (bx + w > CFG.NATIVE_W - 2) bx = CFG.NATIVE_W - 2 - w;
-    // centro de la medalla: empieza sobre el jugador y acaba en su hueco
-    var mx = x, my = by + h / 2;
+    var ALTO = 40;       // caja del emblema (240 lógicos) en píxeles nativos
+    var media = [6, 9, 10, 11, 12, 14][ri];   // media anchura del emblema
+    // armado rápido: entero hacia el 30 % de la animación
+    var arm = t * 8;
+    var armado = t - (Sprites.EMBLEM_FIN ? Sprites.EMBLEM_FIN[ri] : 1.5) / 8;
 
     var salida = (t > CIERRA) ? (t - CIERRA) / (1 - CIERRA) : 0;
     var vis = 1 - salida;
     if (vis <= 0) return;
 
-    /* subida desde el jugador, con un pasito de más al llegar */
     var sube = Math.min(1, t / SUBE);
     var freno = 1 - Math.pow(1 - sube, 3);
-    var dy = (1 - freno) * 14 - Math.sin(sube * Math.PI) * P.subidon +
-      Math.sin(tick * 0.11) * 0.7 + salida * 12;
+    var dy = (1 - freno) * 12 - Math.sin(sube * Math.PI) * P.subidon +
+      Math.sin(tick * 0.11) * 0.7 + salida * 10;
+    var mx = x, my = y - 14;             // centro del emblema, sobre la cabeza
 
     ctx.save();
     ctx.globalAlpha = vis;
     // al irse, se encoge hacia el jugador
     if (salida > 0) {
       ctx.translate(x, y);
-      ctx.scale(1 - salida * 0.5, 1 - salida * 0.5);
+      ctx.scale(1 - salida * 0.6, 1 - salida * 0.6);
       ctx.translate(-x, -y);
     }
-    ctx.translate(0, -dy);
-
-    /* La medalla sube CENTRADA sobre el jugador y se corre a su hueco de la
-     * izquierda mientras la chapa crece a partir de ella. */
-    var abre = (t <= SUBE) ? 0
-      : Math.min(1, (t - SUBE) / (ABRE - SUBE));
-    abre = 1 - Math.pow(1 - abre, 3);
-    mx = Math.round(x + (bx + 8 - x) * abre);
-    var lx = mx - 8;                       // borde izquierdo de la chapa
+    ctx.translate(0, dy);
 
     var i, a;
-    var abierta = (t > ABRE && t < CIERRA);
 
-    /* LEYENDA y TOP MUNDIAL: abanico de rayos girando POR DETRÁS. Va lo
-     * primero para que la chapa (de fondo casi opaco) los tape por delante y
-     * sólo asomen alrededor de la medalla. */
+    /* LEYENDA y TOP MUNDIAL: abanico de rayos girando POR DETRÁS */
     if (P.rayos && t > SUBE) {
-      var fuerza = Math.min(1, (t - SUBE) / 0.2);
       ctx.save();
-      ctx.globalAlpha = vis * fuerza * 0.4;
+      ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.2) * 0.4;
       ctx.fillStyle = color;
       ctx.translate(mx, my);
       ctx.rotate(tick * 0.025);
@@ -900,150 +789,51 @@
         ctx.rotate(Math.PI * 2 / P.rayos);
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(16, -1.3);
-        ctx.lineTo(16, 1.3);
+        ctx.lineTo(media + 12, -1.6);
+        ctx.lineTo(media + 12, 1.6);
         ctx.closePath();
         ctx.fill();
       }
       ctx.restore();
     }
 
-    var aw = Math.round(w * abre);
-    if (aw > 2) {
-      chapaPath(ctx, lx, by, aw, h, P.forma);
-      ctx.fillStyle = 'rgba(0,0,0,0.85)';
-      ctx.fill();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      // el medio píxel es lo que deja la línea limpia en pantalla
-      chapaPath(ctx, lx + 0.5, by + 0.5, aw - 1, h - 1, P.forma);
-      ctx.stroke();
-      /* de MAESTRO para arriba, un segundo marco que respira */
-      if (P.marco && abre > 0.9) {
-        ctx.save();
-        ctx.globalAlpha = vis * (0.45 + 0.25 * Math.sin(tick * 0.13));
-        chapaPath(ctx, lx - 1.5, by - 1.5, aw + 3, h + 3, P.forma);
-        ctx.stroke();
-        ctx.restore();
-      }
-      // pico hacia el jugador, solo con la chapa ya abierta. Con blasón no
-      // hace falta: su punta de abajo ya apunta al jugador.
-      if (abre > 0.6 && !P.escudo) {
-        ctx.fillStyle = color;
-        ctx.fillRect(Math.round(x) - 1, by + h, 2, 2);
-      }
-      // el nombre aparece recortado por el borde de la chapa; de LEYENDA
-      // para arriba, además, se escribe letra a letra
-      var texto = text;
-      if (P.letras) {
-        var esc = Math.max(0, Math.min(1, (t - ABRE) / 0.18));
-        texto = text.slice(0, Math.ceil(text.length * esc));
-      }
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(lx, by, aw - 2, h);
-      ctx.clip();
-      ctx.fillStyle = color;
-      ctx.fillText(texto, lx + padL, my + 0.5);
-      /* TOP MUNDIAL: un brillo recorre el nombre cada tanto */
-      if (P.textoOro && abierta) {
-        var fo = (tick % 70) / 70;
-        if (fo < 0.5) {
-          ctx.globalAlpha = vis * 0.5;
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(lx + fo * 2 * (aw + 10) - 5, by, 3, h);
-        }
-      }
-      ctx.restore();
-
-      /* Pestaña del FORMATO (SOLO, DÚO…) asomando por encima de la chapa. Va
-       * pegada al extremo derecho, lejos de la medalla, que es donde crecen
-       * el blasón, la corona y los rayos; y sale cuando la chapa ya está
-       * abierta, para no competir con la subida. */
-      if (formato && abre > 0.85) {
-        var fa = Math.min(1, (abre - 0.85) / 0.15);
-        ctx.save();
-        ctx.font = window.PM.Letra.lienzo(5);
-        var th = 7;
-        var tw = Math.ceil(ctx.measureText(formato).width) + 5;
-        var tx = Math.round(lx + aw - padR - tw);
-        if (tx < lx + 4) tx = lx + 4;
-        var ty = by - th + 1 + Math.round((1 - fa) * 3);
-        ctx.globalAlpha = vis * fa;
-        ctx.beginPath();
-        ctx.rect(tx, ty, tw, th);
-        ctx.fillStyle = 'rgba(0,0,0,0.9)';
-        ctx.fill();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(tx + 0.5, ty + 0.5, tw - 1, th - 1);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = color;
-        ctx.fillText(formato, tx + tw / 2, ty + th / 2 + 0.5);
-        ctx.restore();
-      }
+    /* el emblema; sin js/emblemas.js, la medalla de siempre */
+    if (!(Sprites.drawEmblemAt &&
+          Sprites.drawEmblemAt(ctx, ri, mx, my + 2, ALTO, tick / 60, arm))) {
+      Sprites.drawBadge(ctx, mx, my, 5, color, false);
     }
 
-    /* TOP MUNDIAL: blasón detrás de la medalla. Es lo que remata la silueta:
-     * el banderín se queda de cinta y la medalla pasa a ir montada en un
-     * escudo que sale por arriba y por abajo de la chapa. Se despliega con
-     * ella, así que no aparece de golpe. */
-    if (P.escudo && abre > 0.05) {
-      var gordo = (P.escudo >= 2);
-      var ew = gordo ? 8.5 : 7;        // media anchura
-      var eu = gordo ? 9 : 7;          // cuánto sube
-      var eb = gordo ? 3 : 2.5;        // dónde empieza a cerrar
-      var ep = gordo ? 11 : 8.5;       // punta de abajo
-      ctx.save();
-      ctx.translate(mx, my);
-      ctx.scale(abre, abre);
-      ctx.translate(-mx, -my);
-      escudoPath(ctx, mx, my, ew, eu, eb, ep);
-      ctx.fillStyle = 'rgba(0,0,0,0.92)';
-      ctx.fill();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      // el de TOP MUNDIAL lleva doble filo: el de LEYENDA se queda liso
-      if (gordo) {
-        ctx.globalAlpha = vis * 0.55;
-        escudoPath(ctx, mx, my, ew - 2, eu - 2, eb - 1, ep - 2.5);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    /* ondas que se abren al plantarse la medalla (de MAESTRO para arriba) */
+    /* ondas que se abren al quedar armado */
     for (i = 0; i < P.onda; i++) {
-      var ot = (t - SUBE - i * 0.07) / 0.3;
+      var ot = (armado - i * 0.07) / 0.3;
       if (ot > 0 && ot < 1) {
         ctx.save();
         ctx.globalAlpha = vis * (1 - ot) * 0.75;
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(mx, my, r + ot * 15, 0, Math.PI * 2);
+        ctx.arc(mx, my, media + ot * 15, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
     }
 
-    /* TOP MUNDIAL: fogonazo blanco en el momento de plantarse */
+    /* TOP MUNDIAL: fogonazo blanco al quedar armado */
     if (P.fogonazo) {
-      var fg = (t - SUBE) / 0.1;
+      var fg = armado / 0.1;
       if (fg > 0 && fg < 1) {
         ctx.save();
-        ctx.globalAlpha = vis * (1 - fg) * 0.85;
+        ctx.globalAlpha = vis * (1 - fg) * 0.7;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(mx, my, 3 + fg * 15, 0, Math.PI * 2);
+        ctx.arc(mx, my, 4 + fg * 16, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
     }
 
-    /* chispazo al plantarse la medalla (APRENDIZ no lo tiene) */
-    var chispa = (t < SUBE) ? 0 : Math.min(1, (t - SUBE) / 0.14);
+    /* chispazo al quedar armado (APRENDIZ no lo tiene) */
+    var chispa = armado / 0.14;
     if (P.chispa && chispa > 0 && chispa < 1) {
       ctx.save();
       ctx.globalAlpha = vis * (1 - chispa);
@@ -1052,7 +842,7 @@
       ctx.beginPath();
       for (i = 0; i < P.chispa; i++) {
         a = i * Math.PI * 2 / P.chispa + 0.4;
-        var r0 = r + 1 + chispa * 5, r1 = r0 + 3;
+        var r0 = media + 1 + chispa * 5, r1 = r0 + 3;
         ctx.moveTo(mx + Math.cos(a) * r0, my + Math.sin(a) * r0);
         ctx.lineTo(mx + Math.cos(a) * r1, my + Math.sin(a) * r1);
       }
@@ -1060,59 +850,14 @@
       ctx.restore();
     }
 
-    /* la medalla: girando mientras sube (cuantos más giros, más rango),
-     * quieta y con brillo después */
-    var giro = (t < SUBE && P.giros)
-      ? Math.cos(sube * Math.PI * P.giros) : 1;
-    var ancho = Math.max(0.18, Math.abs(giro));
-    ctx.save();
-    ctx.translate(mx, my);
-    ctx.scale(ancho, 1);
-    ctx.translate(-mx, -my);
-    // con rayos detrás, la medalla lleva su propio halo para no perderse
-    if (P.rayos) { ctx.shadowColor = color; ctx.shadowBlur = 5; }
-    if (giro < 0) {
-      // de canto se ve el reverso: disco liso, sin el Pac-Man
-      ctx.fillStyle = '#000000';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(1, r * 0.22);
-      ctx.beginPath();
-      ctx.arc(mx, my, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else {
-      Sprites.drawBadge(ctx, mx, my, r, color, false);
-    }
-    ctx.restore();
-
-    /* TOP MUNDIAL: corona sobre la medalla */
-    if (P.corona && t > SUBE) {
-      // con blasón, la corona se sube a rematarlo
-      var cy = P.escudo ? (my - (P.escudo >= 2 ? 9 : 7)) : (my - r - 1.5);
+    /* estrellas en órbita (LEYENDA para arriba) */
+    if (P.estrellas && armado > 0) {
       ctx.save();
-      ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.12);
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(mx - 3.5, cy);
-      ctx.lineTo(mx - 3.5, cy - 3.6);
-      ctx.lineTo(mx - 1.7, cy - 1.8);
-      ctx.lineTo(mx, cy - 4.6);
-      ctx.lineTo(mx + 1.7, cy - 1.8);
-      ctx.lineTo(mx + 3.5, cy - 3.6);
-      ctx.lineTo(mx + 3.5, cy);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-
-    /* estrellas en órbita alrededor de la medalla (LEYENDA para arriba) */
-    if (P.estrellas && t > SUBE) {
-      ctx.save();
-      ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.2);
+      ctx.globalAlpha = vis * Math.min(1, armado / 0.2);
       ctx.fillStyle = '#ffffff';
       for (i = 0; i < P.estrellas; i++) {
         a = tick * 0.06 + i * Math.PI * 2 / P.estrellas;
-        var ex = mx + Math.cos(a) * 8.5, ey2 = my + Math.sin(a) * 3.5;
+        var ex = mx + Math.cos(a) * (media + 5), ey2 = my + Math.sin(a) * 6;
         var es = 0.75 + 0.45 * Math.sin(a);      // más grande la de delante
         ctx.beginPath();
         ctx.moveTo(ex, ey2 - 1.7 * es);
@@ -1130,36 +875,17 @@
       ctx.restore();
     }
 
-    /* chispas que caen desde la chapa (MAESTRO para arriba) */
-    if (P.motas && abierta && aw > 2) {
+    /* chispas que caen desde el emblema (MAESTRO para arriba) */
+    if (P.motas && armado > 0 && t < CIERRA) {
       ctx.save();
       ctx.fillStyle = color;
       for (i = 0; i < P.motas; i++) {
         var ci = ((tick * 0.03) + i / P.motas) % 1;
         ctx.globalAlpha = vis * (1 - ci) * 0.8;
-        ctx.fillRect(lx + ((i + 0.5) / P.motas) * aw, by + h + ci * 9, 1, 1.5);
+        ctx.fillRect(mx - media + ((i + 0.5) / P.motas) * media * 2,
+          my + 8 + ci * 8, 1, 1.5);
       }
       ctx.restore();
-    }
-
-    /* destello que recorre la medalla de vez en cuando */
-    if (P.brillo && abierta) {
-      var fase = (tick % 80) / 80;
-      if (fase < 0.35) {
-        var d = (fase / 0.35) * (r * 4) - r * 2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(mx, my, r - 0.5, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.globalAlpha = vis * 0.7;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(mx + d - 2, my - r);
-        ctx.lineTo(mx + d + 2, my + r);
-        ctx.stroke();
-        ctx.restore();
-      }
     }
 
     ctx.restore();
@@ -1196,8 +922,12 @@
     ctx.strokeRect(x0 + 0.5, cy - h / 2 + 0.5, w - 1, h - 1);
 
     // medalla con el mismo latido que en el cartel grande
-    Sprites.drawBadge(ctx, x0 + 13, cy, 7 * (1 + 0.12 * Math.sin(tick * 0.18)),
-      color, false);
+    var rs = (typeof info.rango === 'number') ? info.rango : -1;
+    if (!(rs >= 0 && Sprites.drawEmblemAt &&
+          Sprites.drawEmblemAt(ctx, rs, x0 + 13, cy + 1, 26, tick / 60, t * 12))) {
+      Sprites.drawBadge(ctx, x0 + 13, cy, 7 * (1 + 0.12 * Math.sin(tick * 0.18)),
+        color, false);
+    }
 
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';

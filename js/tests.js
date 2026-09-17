@@ -3313,7 +3313,7 @@
     }
     var subiendo = pinta(0.05), abierta = pinta(0.5), yendose = pinta(0.99);
     ok(subiendo > 0, 'al empezar ya se ve la medalla subiendo');
-    ok(abierta > subiendo * 2, 'después se despliega la chapa con el nombre');
+    ok(abierta > subiendo * 2, 'después el emblema se arma entero');
     ok(yendose < abierta, 'y al final se encoge hacia el jugador');
     ok(pinta(1) === 0, 'al terminar no queda nada');
   });
@@ -3355,7 +3355,8 @@
       for (var i = 3; i < d.length; i += 4) if (d[i] > 0) k++;
       return k;
     }
-    ok(pinta('ESCUADRA') > pinta(null), 'la pestaña asoma por encima de la chapa');
+    // sobre la cabeza va SOLO el emblema: el formato no añade ningún rótulo
+    eq(pinta('ESCUADRA'), pinta(null), 'sin pestaña ni texto encima');
   });
 
   /* Las seis se celebraban igual, así que subir de escalón no se notaba.
@@ -3381,29 +3382,8 @@
     ok(lucida[5] > lucida[3] && lucida[3] > lucida[0],
        'cuanto más alta, más aparato: ' + lucida.join(' · '));
     ok(pinta(1, 0.22, 20) > pinta(0, 0.22, 20),
-       'el chispazo al plantarse empieza en CAZADOR');
+       'CAZADOR ya luce más que APRENDIZ');
 
-    /* La silueta también sube de rango: de EXPERTO para arriba la chapa deja
-     * de ser un rectángulo. Se mira la esquina del rótulo: en la cuadrada
-     * está pintada y en la biselada no, porque ahí está el corte. */
-    function esquinaPintada(rango) {
-      ctx.clearRect(0, 0, cv.width, cv.height);
-      window.PM.Sprites.drawBadgeTag(ctx, 112, 34, 'MAESTRIA', '#00ff00',
-        0.5, 20, rango);
-      var d = ctx.getImageData(0, 0, cv.width, cv.height).data;
-      var x0 = cv.width, y0 = cv.height, x, y;
-      for (y = 0; y < cv.height; y++) {
-        for (x = 0; x < cv.width; x++) {
-          if (d[(y * cv.width + x) * 4 + 3] > 0) {
-            if (x < x0) x0 = x;
-            if (y < y0) y0 = y;
-          }
-        }
-      }
-      return d[(y0 * cv.width + x0) * 4 + 3] > 0;
-    }
-    ok(esquinaPintada(1), 'hasta CAZADOR la chapa es un rectángulo');
-    ok(!esquinaPintada(2), 'EXPERTO ya le corta las esquinas');
     for (r = 0; r < CFG.BADGES.length; r++) {
       eq(pinta(r, 1, 20), 0, 'ninguna deja nada al terminar');
     }

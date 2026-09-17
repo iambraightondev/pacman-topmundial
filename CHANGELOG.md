@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · La maestría en partida: solo el emblema
+
+- Ctrl+Espacio y F1..F4 ya no sacan la chapa con el nombre: sobre la cabeza
+  sale **solo el emblema de oro**, armándose pieza a pieza mientras sube, con
+  la pompa de su rango (ondas, rayos, estrellas, fogonazo) y se encoge de
+  vuelta al terminar.
+- La franja de «¡MAESTRÍA DE…!» de las partidas de varios lleva también el
+  emblema en lugar de la medalla redonda.
+
 ## 2026-09-17 · MAESTRÍAS: emblemas de oro y el trono
 
 - Cada maestría tiene su **emblema** de oro con incrustaciones verde azulado y

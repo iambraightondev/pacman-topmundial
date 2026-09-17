@@ -2276,6 +2276,7 @@
       if (!fresh) return;
       this.badgeNotice = {
         name: fresh.name, color: fresh.color, mode: B.modeName(mode),
+        rango: CFG.BADGES.indexOf(fresh),
         ticks: CFG.BADGE_ANIM_TICKS, total: CFG.BADGE_ANIM_TICKS
       };
       window.AudioSys && AudioSys.playExtraLife();

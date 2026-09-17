@@ -238,7 +238,7 @@
     var resp=0.5+0.5*Math.sin(t*1.6);
     // sombra en el suelo: crece mientras se arma
     var so=Math.max(0,Math.min(1,ARM/.5));
-    c.fillStyle='rgba(0,0,0,'+(.5*so)+')';c.beginPath();c.ellipse(0,98,(40+i*6)*(.5+.5*so),6,0,0,Math.PI*2);c.fill();
+    if(SOMBRA){c.fillStyle='rgba(0,0,0,'+(.5*so)+')';c.beginPath();c.ellipse(0,98,(40+i*6)*(.5+.5*so),6,0,0,Math.PI*2);c.fill();}
     // el sacudón cuando encaja la última pieza
     var k=ARM-FIN[i];if(k>0&&k<.3){var am=(1-k/.3)*2.2;c.translate(Math.sin(k*90)*am,Math.cos(k*70)*am*.6);}
     SIL[i](c,g,t,resp);
@@ -251,8 +251,35 @@
   }
 
 
-  S.drawEmblem = function (ctx, rango, t, arm) {
+  var SOMBRA = true;
+  S.drawEmblem = function (ctx, rango, t, arm, sinSombra) {
+    SOMBRA = !sinSombra;
     emblema(ctx, Math.max(0, Math.min(5, rango | 0)), t || 0, arm);
+    SOMBRA = true;
+  };
+
+  /* El emblema DENTRO de otro dibujo (la chapa de la partida): se pinta
+   * aparte y se pega, porque su brillo pinta "encima de lo que ya hay" y en
+   * el lienzo del juego eso sería el laberinto. cx, cy es el centro del
+   * emblema y alto lo que mide su caja (240 lógicos) en unidades de ese
+   * lienzo. Se pinta a la resolución real del lienzo para que no pixele. */
+  var suelto = null;
+  S.drawEmblemAt = function (ctx, rango, cx, cy, alto, t, arm) {
+    if (!document.createElement) return false;
+    if (!suelto) suelto = document.createElement('canvas');
+    var x = suelto.getContext && suelto.getContext('2d');
+    if (!x || !ctx.drawImage) return false;
+    var m = ctx.getTransform ? ctx.getTransform() : null;
+    var q = m ? Math.min(4, Math.max(1, Math.sqrt(m.a * m.a + m.b * m.b))) : 1;
+    var k = alto / 240;
+    var W = Math.ceil(200 * k * q), H = Math.ceil(240 * k * q);
+    if (suelto.width !== W || suelto.height !== H) { suelto.width = W; suelto.height = H; }
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.clearRect(0, 0, W, H);
+    x.setTransform(k * q, 0, 0, k * q, 0, 0);
+    S.drawEmblem(x, rango, t, arm, true);
+    ctx.drawImage(suelto, cx - 100 * k, cy - 128 * k, 200 * k, 240 * k);
+    return true;
   };
 
   /* la silueta: el emblema armado, cubierto de metal oscuro */
