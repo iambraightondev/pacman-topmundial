@@ -4,7 +4,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-17 · El laberinto, con luz
 
-- Las pastillas normales dan ahora **un poco de luz** en vez de ser un punto plano.
+- Las pastillas y las superpastillas son **amarillas**, y las normales dan luz
+  en vez de ser un punto plano.
 - Las **superpastillas respiran**: crecen y se encogen despacio con su halo, en
   vez de encenderse y apagarse a secas.
 - **EMOTES y RENDIRSE** dejan de ser dos recuadros grises: llevan el marco, la

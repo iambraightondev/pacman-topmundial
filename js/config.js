@@ -441,7 +441,7 @@
     wall: '#2121ff',
     wallFlash: '#ffffff',
     door: '#ffb8ff',
-    pellet: '#ffb8ae',
+    pellet: '#ffff00',
     frightBody: '#2121ff',
     frightFace: '#ffb8ae',
     flashBody: '#ffffff',

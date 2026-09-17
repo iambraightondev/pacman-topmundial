@@ -4608,7 +4608,7 @@
           if (ch === '.') {
             ctx.save();
             ctx.shadowColor = CFG.COLORS.pellet;
-            ctx.shadowBlur = 3;
+            ctx.shadowBlur = 7;
             ctx.fillStyle = CFG.COLORS.pellet;
             ctx.fillRect(cx - 1, cy - 1, 2, 2);
             ctx.restore();
