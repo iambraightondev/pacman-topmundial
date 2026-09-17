@@ -4606,9 +4606,12 @@
           if (!ch) continue;
           var cx = c2 * T + T / 2, cy = r * T + T / 2 + CFG.MAZE_Y;
           if (ch === '.') {
+            /* también respiran, pero muy poco: lo justo para que el laberinto
+             * no esté quieto del todo, sin robarle el latido a la grande */
             ctx.save();
             ctx.shadowColor = CFG.COLORS.pelletMini;
-            ctx.shadowBlur = 7;
+            ctx.shadowBlur = 5 + latido * 4;
+            ctx.globalAlpha = 0.88 + latido * 0.12;
             ctx.fillStyle = CFG.COLORS.pelletMini;
             ctx.fillRect(cx - 1, cy - 1, 2, 2);
             ctx.restore();

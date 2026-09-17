@@ -8925,6 +8925,7 @@
       (o.buttons || []).forEach(function (b) {
         var el = self.makeButton(b.label, b.onClick);
         if (b.primary) el.classList.add('btn-primary');
+        if (b.cls) el.classList.add(b.cls);      // 'btn-peligro': rendirse, borrar...
         if (b.hint) {
           var k = document.createElement('span');
           k.className = 'btn-key';
@@ -9187,7 +9188,7 @@
          * verdad —con su game over, su puntuación y su récord— y desde ahí ya
          * se puede volver a jugar. En dos jugadores u online sigue siendo una
          * votación, igual que antes. */
-        { label: 'RENDIRSE', hint: 'R', keys: ['r'],
+        { label: 'RENDIRSE', hint: 'R', keys: ['r'], cls: 'btn-peligro',
           onClick: function () {
             self.resumeAudio();
             g.requestVote('surrender');   // el diálogo de la votación releva a este

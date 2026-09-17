@@ -5273,6 +5273,9 @@ body { font-size-adjust: 0.56; }
 #prompt.arcade .prompt-btns .btn:not(.btn-primary) .btn-key { color: var(--btn2); opacity: 0.75; }
 #prompt.arcade .prompt-btns .btn:not(.btn-primary) .btn-ronda { --rc: var(--btn2); }
 #prompt.arcade .prompt-btns .btn:not(.btn-primary):disabled { transform: none; }
+/* lo que no tiene vuelta atrás (RENDIRSE) va en rojo, no en el amarillo de los
+ * demás: el color avisa antes de leer el rótulo */
+#prompt.arcade .prompt-btns .btn.btn-peligro { --btn2: #ff5a5a; --btn2-sombra: #7a1414; }
 /* los secundarios, con letra más pequeña: el texto no compite con el principal
  * (el alto lo siguen igualando por la fila) */
 #prompt.arcade .prompt-btns .btn:not(.btn-primary) { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; }
