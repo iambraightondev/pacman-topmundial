@@ -4657,3 +4657,23 @@ body { font-size-adjust: 0.56; }
   filter: drop-shadow(0.07em 0.07em 0 color-mix(in srgb, var(--dc, #ffb8ff) 35%, #000)) drop-shadow(0 0 0.35em color-mix(in srgb, var(--dc, #ffb8ff) 45%, transparent));
 }
 @media (min-width: 1600px) { .daily-titulo { font-size: 44px; } }
+
+/* el DAILY al señalarlo: sin recuadro; una línea de su color recorre el borde */
+.daily-box { position: relative; }
+.marq .menu-player .daily-box:hover,
+.marq .menu-player .daily-box:focus-visible { outline: none; filter: none; box-shadow: none; }
+.daily-ronda { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); overflow: visible; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+.daily-ronda rect {
+  x: 1px; y: 1px; width: calc(100% - 2px); height: calc(100% - 2px);
+  fill: none;
+  stroke: var(--dc, #ffb8ff);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 22 78;
+  filter: drop-shadow(0 0 4px var(--dc, #ffb8ff));
+  animation: daily-ronda 1.6s linear infinite;
+}
+.daily-box:hover .daily-ronda,
+.daily-box:focus-visible .daily-ronda { opacity: 1; }
+@keyframes daily-ronda { to { stroke-dashoffset: -100; } }
+@media (prefers-reduced-motion: reduce) { .daily-ronda rect { animation: none; stroke-dasharray: none; } }

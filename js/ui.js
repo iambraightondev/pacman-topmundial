@@ -952,6 +952,21 @@
       titulo.textContent = 'DAILY';
       b.appendChild(titulo);
 
+      /* Al señalarlo, en vez de un recuadro, una línea que recorre su borde */
+      var ns = 'http://www.w3.org/2000/svg';
+      if (document.createElementNS) {
+        var svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('class', 'daily-ronda');
+        svg.setAttribute('aria-hidden', 'true');
+        var rect = document.createElementNS(ns, 'rect');
+        rect.setAttribute('x', '1'); rect.setAttribute('y', '1');
+        rect.setAttribute('width', 'calc(100% - 2px)');
+        rect.setAttribute('height', 'calc(100% - 2px)');
+        rect.setAttribute('pathLength', '100');
+        svg.appendChild(rect);
+        b.appendChild(svg);
+      }
+
       /* las siete casillas en pequeño */
       var fila = document.createElement('div');
       fila.className = 'daily-tiles';
