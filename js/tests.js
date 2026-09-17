@@ -8575,6 +8575,7 @@
 
   test('SOPORTE · INMUNIDAD 3 s y ESCUDO ALIADO solo con compañeros', function () {
     eq(HC.INMUNE_TICKS, 3 * 60, 'la inmunidad dura 3 s');
+    eq(HC.ALIADO_TICKS, 8 * 60, 'el escudo aliado dura 8 s');
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];
     p.safeTicks = 0;

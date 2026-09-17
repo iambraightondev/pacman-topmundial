@@ -19,8 +19,10 @@ suelo (8 s, congela a cada fantasma que la pise una vez); E 3 s = escudo a todos
 los compañeros a 2 casillas. La versión corta sale AL SOLTAR. W = 3 s.
 Decidido por Jarvis: las dos versiones comparten recarga; la placa dura 8 s;
 el escudo en área no incluye al propio Soporte; en pausa no carga; al perder
-el foco se suelta sin lanzar. Le propuse subir el ESCUDO ALIADO a 8 s y dar
-escudo a sí mismo jugando solo: **no contestó, se dejó como estaba**.
+el foco se suelta sin lanzar. ESCUDO ALIADO a 8 s (pedido de Braighton); **a solas NO
+sirve al propio Soporte, a propósito**: tiene que sentirse la falta de un
+compañero. Los botones de los diálogos (`.prompt-btns`) llevan la línea que
+recorre el borde del DAILY al señalarlos (`UI.ponRonda`, `pm-v127`).
 Por dónde seguir: MAGO. **Por mirar:** el aro de carga no se llegó a ver en
 pantalla (la lógica sí, con pruebas y en el navegador); probarlo en móvil.
 

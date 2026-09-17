@@ -2374,8 +2374,8 @@ the key index. `LIST` is the ASESINO (the original kit).
 - **SOPORTE.** HIELO: projectile (`PROYECTIL_VEL` px/tick, stops at walls,
   wraps in the tunnel) freezing the first ghost and every ghost on its tile for
   3 s: speed 0, not lethal, still biteable. Always spends. INMUNIDAD: 3 s
-  untouchable. ESCUDO ALIADO: shield to the nearest living teammate; none = not
-  cast.
+  untouchable. ESCUDO ALIADO: shield (`ALIADO_TICKS`, 8 s or one hit) to the
+  nearest living teammate; none = not cast (deliberately useless solo).
   **Hold** (`CFG.HAB.MANTENER`, ticks): Q and E are held abilities. On those
   keys the short version fires on **release** (`Hab.apretar` / `Hab.soltar`,
   from keydown/keyup and the touch buttons' pointerdown/pointerup; key

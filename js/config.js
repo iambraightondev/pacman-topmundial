@@ -1600,7 +1600,9 @@
     HIELO_TICKS: 3 * 60,          // fantasma congelado
     PROYECTIL_VEL: 3,             // px por tick (Pac-Man va a ~1)
     INMUNE_TICKS: 3 * 60,
-    ALIADO_TICKS: 3 * 60,         // escudo que se da al compañero
+    /* escudo que se da al compañero: 8 s o un golpe. A solas no sale: el
+     * Soporte tiene que echar de menos a alguien a quien cuidar. */
+    ALIADO_TICKS: 8 * 60,
     /* MANTENER PULSADO. Dos teclas del Soporte hacen otra cosa si se dejan
      * apretadas (ticks hasta que salta). Comparten recarga con la pulsación
      * corta, y la corta sale al SOLTAR:

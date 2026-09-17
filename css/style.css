@@ -5172,3 +5172,26 @@ body { font-size-adjust: 0.56; }
 #prompt.arcade .brief-cartas, #prompt.arcade .brief-lema { transition: none; }
 
 #prompt.arcade .go-equipo.go-practica { color: #ff66cc; font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; }
+
+/* Botones de los diálogos (pausa, GAME OVER, volver...): al señalarlos, la
+ * línea del DAILY recorre su borde, en vez de rellenar un recuadro. */
+.prompt-btns .btn { position: relative; overflow: visible; }
+.prompt-btns .btn:hover,
+.prompt-btns .btn:focus { background: rgba(0, 0, 0, 0.75); color: #ffff00; }
+.prompt-btns .btn:focus-visible { outline: none; }
+.btn-ronda { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); overflow: visible; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+.btn-ronda rect {
+  x: 1px; y: 1px; width: calc(100% - 2px); height: calc(100% - 2px);
+  fill: none;
+  stroke: var(--rc, #ffff00);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 22 78;
+  filter: drop-shadow(0 0 4px var(--rc, #ffff00));
+  animation: daily-ronda 1.6s linear infinite;
+}
+.prompt-btns .btn:hover .btn-ronda,
+.prompt-btns .btn:focus-visible .btn-ronda { opacity: 1; }
+#prompt.arcade[data-tono=naranja] .prompt-btns .btn-primary { --rc: #ffb852; }
+.prompt-btns .btn:disabled .btn-ronda { display: none; }
+@media (prefers-reduced-motion: reduce) { .btn-ronda rect { animation: none; stroke-dasharray: none; } }

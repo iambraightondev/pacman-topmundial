@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Escudo aliado de 8 s y botones con línea
+
+- El **ESCUDO ALIADO** del Soporte dura **8 s** (o hasta el primer golpe). A
+  solas sigue sin salir: el Soporte necesita compañeros.
+- Los botones de los diálogos (pausa, GAME OVER, VOLVER, elegir jugadores...)
+  ya no se rellenan al señalarlos: una línea recorre su borde, como en el DAILY.
+
 ## 2026-09-17 · SOPORTE: teclas que se mantienen
 
 - **Q**: pulsada y soltada sigue siendo el DISPARO HELADO. **Mantenida 2 s**

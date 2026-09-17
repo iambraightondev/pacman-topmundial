@@ -956,19 +956,7 @@
       b.appendChild(titulo);
 
       /* Al señalarlo, en vez de un recuadro, una línea que recorre su borde */
-      var ns = 'http://www.w3.org/2000/svg';
-      if (document.createElementNS) {
-        var svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('class', 'daily-ronda');
-        svg.setAttribute('aria-hidden', 'true');
-        var rect = document.createElementNS(ns, 'rect');
-        rect.setAttribute('x', '1'); rect.setAttribute('y', '1');
-        rect.setAttribute('width', 'calc(100% - 2px)');
-        rect.setAttribute('height', 'calc(100% - 2px)');
-        rect.setAttribute('pathLength', '100');
-        svg.appendChild(rect);
-        b.appendChild(svg);
-      }
+      this.ponRonda(b, 'daily-ronda');
 
       /* las siete casillas en pequeño */
       var fila = document.createElement('div');
@@ -1914,6 +1902,25 @@
       var abiertos = document.querySelectorAll('.desp.abierto');
       for (var i = 0; i < abiertos.length; i++) abiertos[i].classList.remove('abierto');
       return abiertos.length > 0;
+    },
+
+    /* La línea que recorre el borde al señalar algo (la del DAILY y la de
+     * los botones de los diálogos). Es un SVG con un rectángulo de largo 100
+     * y un trazo discontinuo que se desplaza; el CSS de la clase lo enciende
+     * con :hover y :focus-visible. */
+    ponRonda: function (el, clase) {
+      var ns = 'http://www.w3.org/2000/svg';
+      if (!document.createElementNS) return;
+      var svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('class', clase);
+      svg.setAttribute('aria-hidden', 'true');
+      var rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', '1'); rect.setAttribute('y', '1');
+      rect.setAttribute('width', 'calc(100% - 2px)');
+      rect.setAttribute('height', 'calc(100% - 2px)');
+      rect.setAttribute('pathLength', '100');
+      svg.appendChild(rect);
+      el.appendChild(svg);
     },
 
     makeButton: function (label, onClick) {
@@ -8637,6 +8644,7 @@
           k.textContent = b.hint;
           el.appendChild(k);
         }
+        self.ponRonda(el, 'btn-ronda');
         if (b.keys) self.promptKeys.push({ keys: b.keys, el: el });
         row.appendChild(el);
       });
