@@ -1,4 +1,4 @@
-# Plan · Roles en DESATADO (Atacante, Tanque, Soporte)
+# Plan · Roles en DESATADO (Asesino, Tanque, Soporte, Mago)
 
 Plan para que otra sesión lo implemente sin tener que preguntar. Las
 decisiones de juego **ya están tomadas con Braighton** (17 sep 2026); si algo
@@ -14,13 +14,18 @@ el porqué; los identificadores internos siguen la línea existente.
 ## 1 · Qué se construye
 
 DESATADO deja de tener un único juego de poderes. Cada jugador elige un
-**rol** antes de empezar. El kit actual pasa a ser el Atacante, sin cambios.
+**rol** antes de empezar. El kit actual pasa a ser el Asesino, sin cambios.
 
 | Rol | Q | W | E | R |
 |---|---|---|---|---|
-| **ATACANTE** (el de hoy) | MORDISCO · 16 s | TURBO · 24 s | FLASH · 32 s | GRITO · 60 s |
+| **ASESINO** (el de hoy) | MORDISCO · 16 s | TURBO · 24 s | FLASH · 32 s | GRITO · 60 s |
 | **TANQUE** | PROVOCAR · 16 s | ESCUDO · 24 s | PISOTÓN · 32 s | ARROLLAR · 60 s |
 | **SOPORTE** | DISPARO HELADO · 16 s | INMUNIDAD · 24 s | ESCUDO ALIADO · 32 s | VIDA EXTRA · 300 s |
+| **MAGO** | BOLA DE FUEGO · 20 s | PORTAL · 24 s | RUNA · 32 s | TORMENTA · 60 s |
+
+Identidad de cada uno: el Asesino **puntúa**, el Tanque **protege**, el
+Soporte **cura/controla** y el Mago **mata a distancia** (pero puntúa poco).
+Con cuatro roles, una escuadra puede llevar uno de cada.
 
 ### Tanque
 - **Q · PROVOCAR (3 s).** Todos los fantasmas en modo normal (no en casa, no
@@ -53,7 +58,7 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
   la pared y **gasta la recarga igualmente** (decidido: si no, se dispara sin
   parar).
   - Fantasma congelado: no se mueve, **no mata** a quien lo toque y el
-    Atacante **sí puede morderlo** (Q). Si se congela un fantasma azul, sigue
+    Asesino **sí puede morderlo** (Q). Si se congela un fantasma azul, sigue
     azul y comible. Visual: tinte celeste/escarcha.
   - Un fantasma con jugador humano (VS.) no aplica: ver §2.
 - **W · INMUNIDAD (2 s).** Intocable 2 s: los choques no matan (a diferencia
@@ -73,25 +78,58 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
   - La recarga, como todas, **no se reinicia** al morir ni al cambiar de
     nivel (ya lo garantiza `limpiarEfectos`, que no toca `cd`).
 
+### Mago
+**Regla de puntos del Mago (decidida, es lo que lo equilibra):** todo
+fantasma que mata el Mago (BOLA, RUNA, TORMENTA) vale **200 fijos**, **no
+sube ni reinicia la cadena** de puntos y **no provoca el parón** de comerse un
+fantasma (`eatFreezeTicks`): el fantasma pasa a ojos, sale el "200" flotante y
+el juego sigue. Sin esto el Mago, que mata sin arriesgarse, dejaría al
+Asesino sin sentido. Referencia: la TORMENTA da como mucho 800; el GRITO del
+Asesino con cadena completa, 3.000.
+
+- **Q · BOLA DE FUEGO.** Proyectil en línea recta hacia la última flecha
+  (misma mecánica de vuelo que el DISPARO HELADO: compartir código), se para
+  en pared, atraviesa el túnel. **Mata al primer fantasma** que toca (no ojos,
+  no en casa; azul o no). Sin blanco **gasta recarga** igual.
+- **W · PORTAL.** Primer toque: coloca la **entrada** en la casilla del Mago.
+  Segundo toque: coloca la **salida** en la casilla actual y el portal queda
+  abierto **8 s**. Lo usa **cualquier Pac-Man** del equipo (los fantasmas no):
+  al entrar en una boca sale por la otra, conservando dirección. Tras
+  cruzar, ~0,5 s sin poder volver a cruzar (evita el ping-pong).
+  - La recarga empieza al abrir el portal. Si tras la entrada no se pone la
+    salida en **5 s**, la entrada se deshace y **sí gasta** la recarga.
+  - No se puede poner en la casa de los fantasmas (reutilizar `esCasa`) ni
+    la salida en la misma casilla que la entrada.
+- **E · RUNA.** Trampa en la casilla del Mago durante **10 s**; el **primer
+  fantasma** que la pisa muere (regla de 200 fijos) y la runa desaparece.
+  Una sola runa activa por Mago. Visible para todos.
+- **R · TORMENTA.** Durante **4 s**, **un rayo por segundo** (4 rayos) sobre
+  el fantasma vivo más cercano al Mago a **≤ 6 casillas** (distancia en
+  píxeles, túnel incluido). **Cada rayo mata** a su fantasma (regla de 200);
+  el siguiente rayo busca otro, porque el muerto ya es ojos. **Si en ese
+  segundo no hay ninguno a tiro, ese rayo se pierde.** Si el Mago muere, la
+  tormenta se corta. Sale siempre (no espera blanco) y gasta recarga.
+
 ---
 
 ## 2 · Reglas de juego (decididas)
 
-1. **Solo con Tanque o Soporte = PRÁCTICA.** No entra al TOP MUNDIAL, no
+1. **Solo con Tanque, Soporte o Mago = PRÁCTICA.** No entra al TOP MUNDIAL, no
    actualiza `recordsModo.hab`, no cuenta para maestrías/badges ni récord de
    tiempo. **Sí** da experiencia y logros. Mostrarlo claro: etiqueta
-   `PRÁCTICA` en el HUD y en el GAME OVER. Solo con Atacante = igual que hoy.
+   `PRÁCTICA` en el HUD y en el GAME OVER. Solo con Asesino = igual que hoy.
 2. **En equipo (dúo, trío, escuadra, local u online) los roles cuentan** para
    los récords de DESATADO de su formato, sin tabla aparte.
-3. **Roles repetidos permitidos, salvo el Soporte: máximo uno por partida.**
+3. **Roles repetidos permitidos (Mago incluido), salvo el Soporte: máximo
+   uno por partida.**
    El selector lo bloquea (en party, el primero que lo coge se lo queda) y el
    anfitrión lo valida al arrancar (si llegan dos, el segundo pasa a
-   Atacante).
+   Asesino).
 4. **PAC-MAN VS.:** quien lleva fantasma sigue con `LIST_G`; los Pac-Man de
-   una partida VS. son todos Atacante (sin selector). CACERÍA no cambia.
+   una partida VS. son todos Asesino (sin selector). CACERÍA no cambia.
 5. **Dos en el mismo teclado:** cada jugador elige su rol; las teclas siguen
    siendo las de `KEYS_2P`.
-6. Default de un jugador que no elige: **Atacante**. El último rol elegido se
+6. Default de un jugador que no elige: **Asesino**. El último rol elegido se
    recuerda en `settings`.
 
 ---
@@ -99,14 +137,16 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 ## 3 · Arquitectura (cómo encajarlo en lo que hay)
 
 ### Datos
-- `CFG.HAB.ROLES = { atacante: LIST, tanque: LIST_T, soporte: LIST_S }` con
+- `CFG.HAB.ROLES = { asesino: LIST, tanque: LIST_T, soporte: LIST_S, mago: LIST_M }` con
   el mismo formato `{ id, key, name, cd }`. `LIST` se queda como está
   (lo leen el diálogo y los textos). Constantes nuevas junto a las demás
   (`TAUNT_TICKS`, `ESCUDO_TICKS`, `PISOTON_TICKS`, `PISOTON_TILES`,
   `ARROLLAR_TILES`, `HIELO_TICKS`, `HIELO_VEL`, `INMUNE_TICKS`,
-  `ESCUDO_ALIADO_TICKS`, `VIDA_MAX`). `CFG.HAB.segs(k)` pasa a recibir el rol.
-- `Game.roles`: array por jugador (`'atacante' | 'tanque' | 'soporte'`),
-  fijado en `newGame(opts.roles)`. `Game.practica` = solo + rol ≠ atacante.
+  `ESCUDO_ALIADO_TICKS`, `VIDA_MAX`, `BOLA_VEL`, `PORTAL_TICKS`,
+  `PORTAL_ESPERA`, `PORTAL_CRUCE`, `RUNA_TICKS`, `TORMENTA_RAYOS`,
+  `TORMENTA_CADA`, `TORMENTA_TILES`, `MAGO_PUNTOS = 200`). `CFG.HAB.segs(k)` pasa a recibir el rol.
+- `Game.roles`: array por jugador (`'asesino' | 'tanque' | 'soporte' | 'mago'`),
+  fijado en `newGame(opts.roles)`. `Game.practica` = solo + rol ≠ asesino.
 
 ### `js/habilidades.js`
 - `listaDe(G, idx)`: fantasma humano → `LIST_G`; si no →
@@ -115,16 +155,24 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 - `lanzar`/`peticion`/`evento`: el `switch (k)` actual pasa a despachar por
   **id** de la lista (`lista[k].id`), no por índice fijo.
 - `nuevoEstado()` + `limpiarEfectos()` + `paso()`: nuevos contadores
-  (`provoca`, `escudo`, `pisoton`, `arrolla`, `inmune`). `foto/ponerFoto` ya
+  (`provoca`, `escudo`, `pisoton`, `arrolla`, `inmune`, `tormenta`). `foto/ponerFoto` ya
   copian el objeto entero, así que basta con añadirlos a `nuevoEstado`.
-- Estado que no es de un jugador (proyectiles vivos, congelación por
-  fantasma, "huye de quién" por fantasma) va en el propio `Hab` y **debe
+- Estado que no es de un jugador (proyectiles vivos —hielo y fuego—,
+  congelación por fantasma, "huye de quién" por fantasma, portales y runas) va en el propio `Hab` y **debe
   entrar en `foto()`/`ponerFoto()`** o el rebobinado de las repeticiones se
   desincroniza.
 - **Quién manda (online)**, siguiendo la regla existente:
   - Lo que toca fantasmas o vidas lo ejecuta el **anfitrión**: PROVOCAR,
     PISOTÓN, ARROLLAR (come fantasmas), DISPARO HELADO (el proyectil lo
-    simula el anfitrión), ESCUDO ALIADO, VIDA EXTRA.
+    simula el anfitrión), ESCUDO ALIADO, VIDA EXTRA, y todo el Mago: BOLA,
+    RUNA y TORMENTA matan fantasmas; el PORTAL lo coloca el anfitrión porque
+    lo cruzan otros jugadores.
+  - Cruzar un PORTAL lo simula quien lleva a ese Pac-Man (su posición viaja
+    por `pos` como siempre), con los portales que le llegan en la
+    instantánea.
+  - **Matar de Mago** va por una función propia (no `eatGhost` tal cual):
+    fantasma a ojos, +200 al equipo, sin tocar la cadena ni `eatFreezeTicks`,
+    con su evento de red para el "200" y el sonido en los demás.
   - Lo que solo toca al propio Pac-Man se aplica en local y se anota en el
     anfitrión: ESCUDO propio, INMUNIDAD. Pero **la muerte la decide quien
     simula a ese Pac-Man** (`isLocalAuth` / predicción del invitado en el
@@ -150,7 +198,7 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 - **Subir `CFG.NET.PROTO` a 10**: los roles viajan en el saludo/arranque de
   la party (junto a `hab`, ver `Party` `habPick` y `Game` `hostEvt`), y la
   instantánea necesita: congelaciones, proyectiles, escudos/inmunidad por
-  jugador y objetivos forzados. Añadirlo como campo nuevo en `buildSnapshot`
+  jugador, objetivos forzados, portales, runas y tormentas activas. Añadirlo como campo nuevo en `buildSnapshot`
   / `applySnapshot` como hace `hb`.
 - `Hab.resumen/aplicarResumen` siguen valiendo (4 enteros por jugador; la R
   del Soporte cabe: 18.000 ticks).
@@ -159,7 +207,7 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 - Diálogo de DESATADO (`UI.showHabPrompt`): selector de rol para 1 y 2
   jugadores, con las cuatro habilidades del rol y sus recargas leídas de
   `CFG.HAB.ROLES` (no escribir textos a mano). Aviso visible "PRÁCTICA · NO
-  CUENTA PARA RÉCORDS" cuando solo + no Atacante.
+  CUENTA PARA RÉCORDS" cuando solo + no Asesino.
 - Party online: cada miembro elige su rol en la sala cuando el líder tiene
   DESATADO; el Soporte ocupado sale deshabilitado para el resto.
 - Barra de teclas (`#habBar`, `UI.refreshHabBar`, filas `.hab-otro` de los
@@ -174,8 +222,10 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 - **⚠️ Techo del servidor:** la función `enviar-record` calcula el máximo
   posible de DESATADO sumando mordiscos (cada 16 s) y gritos (cada 60 s) por
   jugador. ARROLLAR también come fantasmas y el hielo facilita mordiscos:
-  una partida de equipo legítima podría ser **rechazada**. Sumar ARROLLAR
-  (cada 60 s, hasta 4 fantasmas) por jugador al techo y **redesplegar la
+  una partida de equipo legítima podría ser **rechazada**. Sumar por jugador
+  ARROLLAR (cada 60 s, hasta 4 fantasmas con cadena) y el Mago (BOLA cada
+  20 s, RUNA cada 32 s, TORMENTA 4 cada 60 s, todo a 200) al techo. Sin
+  saber qué rol llevaba cada uno, sumar al techo el máximo de los roles y **redesplegar la
   función** (Supabase principal del proyecto; el token está en el historial
   local según la memoria del proyecto — no dejar SQL ni pasos para Braighton).
   Enviar los roles con el récord para poder auditar.
@@ -187,7 +237,7 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 ### Repeticiones y partida guardada
 - La cabecera de la repetición guarda `roles` (`js/replay.js`, donde ya va
   `hab`, y el validador que hoy asume `e[2] > 3` solo en `hab`).
-- Las repeticiones viejas sin `roles` = todos Atacante.
+- Las repeticiones viejas sin `roles` = todos Asesino.
 - `js/guardado.js` (partida a medias) guarda y restaura roles y el estado
   nuevo de `Hab`.
 
@@ -207,18 +257,25 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
    el tope y la recarga de 5 min sobrevive a morir y a pasar de nivel.
 4. **Práctica y récords.** Pruebas: solo+Tanque no toca récord, ranking ni
    maestrías pero suma XP; dúo con Soporte sí cuenta.
-5. **Dos en el mismo teclado + regla de un Soporte.**
-6. **Online.** PROTO 10, sala con selector, instantánea. Probar con el arnés
+5. **Mago en solo local.** Pruebas: la BOLA mata al primero y da 200 sin
+   subir la cadena ni parar el juego; sin blanco gasta recarga; el PORTAL
+   teletransporta a cualquier Pac-Man y no a fantasmas, caduca a los 8 s y
+   la entrada sola se deshace a los 5 s; la RUNA mata al primero y
+   desaparece; la TORMENTA lanza 4 rayos, pierde los que no tienen blanco y
+   se corta si el Mago muere.
+6. **Dos en el mismo teclado + regla de un Soporte.**
+7. **Online.** PROTO 10, sala con selector, instantánea. Probar con el arnés
    de varios mundos en Node (cargar `pruebas-node.js` N veces y cablear
-   `PM.Net.gameSend`, entregando mensajes **en orden**): party de 3 con
-   Tanque + Soporte + Atacante, retardo simulado, sin divergencias entre
-   anfitrión e invitados en congelación, escudos y vidas.
-7. **Repeticiones y rebobinado** de una partida con los tres roles: la
+   `PM.Net.gameSend`, entregando mensajes **en orden**): party de 4 con
+   Asesino + Tanque + Soporte + Mago, retardo simulado, sin divergencias entre
+   anfitrión e invitados en congelación, escudos, vidas, portales
+   (un invitado cruzando el portal del anfitrión) y muertes de Mago.
+8. **Repeticiones y rebobinado** de una partida con los cuatro roles: la
    reproducción acaba con la misma puntuación y el rebobinado a mitad de un
-   hielo/escudo coincide.
-8. **Servidor:** techo de `enviar-record` actualizado y desplegado; probar un
-   envío de equipo con muchos ARROLLAR que antes habría sido rechazado.
-9. **UI en móvil** (Playwright a 390 px): selector de rol, barra y filas de
+   hielo, escudo, portal o tormenta coincide.
+9. **Servidor:** techo de `enviar-record` actualizado y desplegado; probar un
+   envío de equipo con muchos ARROLLAR y muertes de Mago que antes habría sido rechazado.
+10. **UI en móvil** (Playwright a 390 px): selector de rol, barra y filas de
    compañeros sin tapar el juego.
 
 Criterio de terminado: `tests.html` con **0 fallos** en Chromium (servir con
@@ -234,6 +291,7 @@ del DOM de mentira.
 - Commit y despliegue solo cuando Braighton lo pida.
 
 ## 6 · Abierto a propósito (no decidir sin Braighton)
-- Balance fino de números (3 s, 4 casillas, tope de 5 vidas) tras jugarlo.
+- Balance fino de números (3 s, 4 casillas, tope de 5 vidas, los 200 fijos
+  del Mago, alcance de la TORMENTA) tras jugarlo.
 - Logros y maestrías propias de cada rol.
 - Iconos/arte de los roles: proponer 2–3 opciones antes de fijarlos.

@@ -707,7 +707,8 @@
    * Cuánta pompa gasta cada maestría, de la más simplona a la más
    * exagerada. Subir de rango tiene que NOTARSE: cada escalón añade algo
    * encima del anterior, nunca cambia lo de antes. El emblema ya crece y
-   * cambia de silueta solo; esto es lo que lo rodea.
+   * cambia de silueta solo; esto es lo que lo rodea, y va SUAVE: el
+   * protagonista es el emblema, no las luces.
    *
    *   subidon    cuánto se pasa de frenada al llegar arriba
    *   chispa     rayos que saltan al quedar armado (0 = ninguno)
@@ -782,7 +783,7 @@
     /* LEYENDA y TOP MUNDIAL: abanico de rayos girando POR DETRÁS */
     if (P.rayos && t > SUBE) {
       ctx.save();
-      ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.2) * 0.4;
+      ctx.globalAlpha = vis * Math.min(1, (t - SUBE) / 0.2) * 0.14;
       ctx.fillStyle = color;
       ctx.translate(mx, my);
       ctx.rotate(tick * 0.025);
@@ -790,8 +791,8 @@
         ctx.rotate(Math.PI * 2 / P.rayos);
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(media + 12, -1.6);
-        ctx.lineTo(media + 12, 1.6);
+        ctx.lineTo(media + 8, -1.2);
+        ctx.lineTo(media + 8, 1.2);
         ctx.closePath();
         ctx.fill();
       }
@@ -809,11 +810,11 @@
       var ot = (armado - i * 0.07) / 0.3;
       if (ot > 0 && ot < 1) {
         ctx.save();
-        ctx.globalAlpha = vis * (1 - ot) * 0.75;
+        ctx.globalAlpha = vis * (1 - ot) * 0.3;
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(mx, my, media + ot * 15, 0, Math.PI * 2);
+        ctx.arc(mx, my, media + ot * 10, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -824,7 +825,7 @@
       var fg = armado / 0.1;
       if (fg > 0 && fg < 1) {
         ctx.save();
-        ctx.globalAlpha = vis * (1 - fg) * 0.7;
+        ctx.globalAlpha = vis * (1 - fg) * 0.22;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(mx, my, 4 + fg * 16, 0, Math.PI * 2);
@@ -837,7 +838,7 @@
     var chispa = armado / 0.14;
     if (P.chispa && chispa > 0 && chispa < 1) {
       ctx.save();
-      ctx.globalAlpha = vis * (1 - chispa);
+      ctx.globalAlpha = vis * (1 - chispa) * 0.45;
       ctx.strokeStyle = color;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -854,12 +855,12 @@
     /* estrellas en órbita (LEYENDA para arriba) */
     if (P.estrellas && armado > 0) {
       ctx.save();
-      ctx.globalAlpha = vis * Math.min(1, armado / 0.2);
+      ctx.globalAlpha = vis * Math.min(1, armado / 0.2) * 0.5;
       ctx.fillStyle = '#ffffff';
       for (i = 0; i < P.estrellas; i++) {
         a = tick * 0.06 + i * Math.PI * 2 / P.estrellas;
         var ex = mx + Math.cos(a) * (media + 5), ey2 = my + Math.sin(a) * 6;
-        var es = 0.75 + 0.45 * Math.sin(a);      // más grande la de delante
+        var es = 0.55 + 0.3 * Math.sin(a);       // más grande la de delante
         ctx.beginPath();
         ctx.moveTo(ex, ey2 - 1.7 * es);
         ctx.lineTo(ex + 0.6 * es, ey2);
@@ -882,7 +883,7 @@
       ctx.fillStyle = color;
       for (i = 0; i < P.motas; i++) {
         var ci = ((tick * 0.03) + i / P.motas) % 1;
-        ctx.globalAlpha = vis * (1 - ci) * 0.8;
+        ctx.globalAlpha = vis * (1 - ci) * 0.35;
         ctx.fillRect(mx - media + ((i + 0.5) / P.motas) * media * 2,
           my + 8 + ci * 8, 1, 1.5);
       }
