@@ -7,7 +7,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 - Ctrl+Espacio y F1..F4 ya no sacan la chapa con el nombre: sobre la cabeza
   sale **solo el emblema de oro**, armándose pieza a pieza mientras sube, con
   la pompa de su rango (ondas, rayos, estrellas, fogonazo) y se encoge de
-  vuelta al terminar.
+  vuelta al terminar. Se arma a su velocidad real y la insignia dura 5,5 s
+  (antes 2,5 s, con el armado acelerado: no se llegaba a ver).
 - La franja de «¡MAESTRÍA DE…!» de las partidas de varios lleva también el
   emblema en lugar de la medalla redonda.
 

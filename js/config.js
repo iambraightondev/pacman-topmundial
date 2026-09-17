@@ -673,6 +673,9 @@
     { id: 'amor',   name: 'AMOR' }
   ];
   CFG.EMOTE_TICKS = 150;      // 2.5 s en pantalla
+  /* la maestría dura más que un emote: su emblema se arma a velocidad real
+   * (TOP MUNDIAL tarda 2,5 s) y luego tiene que verse entero un rato */
+  CFG.BADGE_TAG_TICKS = 330;  // 5.5 s
   CFG.EMOTE_COOLDOWN = 72;    // 1.2 s entre emotes (antispam)
 
   /* ---------- TIENDA (aprobada el 15 de septiembre de 2026) ----------

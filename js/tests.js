@@ -3295,7 +3295,7 @@
     G.sendBadgeTag();
     var e = G.emotes[0];
     ok(e && e.tag, 'aparece la chapa');
-    eq(e.total, CFG.EMOTE_TICKS, 'guarda su duración para poder animarla');
+    eq(e.total, CFG.BADGE_TAG_TICKS, 'guarda su duración para poder animarla');
 
     // el resto cuenta píxeles pintados: sin lienzo de verdad (pruebas-node.js)
     // no hay nada que medir, así que se queda en lo comprobado hasta aquí

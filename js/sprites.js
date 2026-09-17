@@ -748,13 +748,14 @@
     var gemas = Sprites.EMBLEM_GEMA;
     color = (gemas && gemas[ri]) || color || '#888888';
 
-    var SUBE = 0.14;     // hasta aquí: sube desde la cabeza
-    var CIERRA = 0.86;   // a partir de aquí: se va
+    var DURA = (CFG.BADGE_TAG_TICKS || 330) / 60;   // segundos que dura entera
+    var SUBE = 0.12;     // hasta aquí: sube desde la cabeza
+    var CIERRA = 0.88;   // a partir de aquí: se va
     var ALTO = 40;       // caja del emblema (240 lógicos) en píxeles nativos
     var media = [6, 9, 10, 11, 12, 14][ri];   // media anchura del emblema
-    // armado rápido: entero hacia el 30 % de la animación
-    var arm = t * 8;
-    var armado = t - (Sprites.EMBLEM_FIN ? Sprites.EMBLEM_FIN[ri] : 1.5) / 8;
+    // el armado va a su velocidad real, la misma que en el panel MAESTRÍAS
+    var arm = t * DURA;
+    var armado = t - (Sprites.EMBLEM_FIN ? Sprites.EMBLEM_FIN[ri] : 1.5) / DURA;
 
     var salida = (t > CIERRA) ? (t - CIERRA) / (1 - CIERRA) : 0;
     var vis = 1 - salida;

@@ -2172,8 +2172,8 @@
         rango: this.badgeRank(id),
         formato: (B && n >= 2 && n <= CFG.MAX_PLAYERS)
           ? B.FORMATOS[n - 1].name : null,
-        ticks: CFG.EMOTE_TICKS,
-        total: CFG.EMOTE_TICKS      // para animar la chapa
+        ticks: CFG.BADGE_TAG_TICKS,
+        total: CFG.BADGE_TAG_TICKS  // para animar el emblema
       };
     },
 
