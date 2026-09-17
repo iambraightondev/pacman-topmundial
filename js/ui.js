@@ -9661,17 +9661,54 @@
     showLevelUpPrompt: function (lv) {
       var self = this;
       var s = window.PM.Level ? window.PM.Level.state() : null;
+      var nuevos = this.vestNuevos ? this.vestNuevos() : 0;
+      /* Con el marco de recreativa, como el resto de avisos: el nivel en un
+       * sello grande que entra de golpe, la barra hacia el siguiente y, si
+       * subir ha abierto algo, un atajo al vestuario. */
+      var botones = [
+        { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '],
+          hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+      ];
+      if (nuevos > 0) {
+        botones.push({ label: 'VER ' + (nuevos === 1 ? 'LO NUEVO' : 'LOS ' + nuevos + ' NUEVOS'), hint: 'V', keys: ['v'],
+          onClick: function () { self.hidePrompt(); self.showVestuario('skin', 'yo'); } });
+      }
       this.showPrompt({
         title: '¡SUBES DE NIVEL!',
-        color: '#00ffff',
-        lines: [
-          { text: 'NIVEL ' + lv, big: true },
-          s ? ('SIGUIENTE: ' + s.inLevel + ' / ' + s.needed + ' PUNTOS') : ''
-        ],
-        buttons: [
-          { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '],
-            hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
-        ]
+        arcade: true,
+        tono: 'cian',
+        custom: function (p) {
+          var tt = p.querySelector('.panel-title');
+          if (tt) tt.classList.add('lvl-titulo');       // largo: en una línea
+          var sello = document.createElement('div');
+          sello.className = 'lvl-sello';
+          var k = document.createElement('small');
+          k.textContent = 'NIVEL';
+          sello.appendChild(k);
+          var n = document.createElement('b');
+          n.textContent = String(lv);
+          sello.appendChild(n);
+          p.appendChild(sello);
+          if (s) {
+            var barra = document.createElement('div');
+            barra.className = 'lvl-barra';
+            var relleno = document.createElement('i');
+            relleno.style.width = Math.round((s.pct || 0) * 100) + '%';
+            barra.appendChild(relleno);
+            p.appendChild(barra);
+            var sig = document.createElement('div');
+            sig.className = 'lvl-sig';
+            sig.textContent = fmtMonedas(s.inLevel) + ' / ' + fmtMonedas(s.needed) + ' PARA EL NIVEL ' + (lv + 1);
+            p.appendChild(sig);
+          }
+          if (nuevos > 0) {
+            var nv = document.createElement('div');
+            nv.className = 'lvl-nuevo';
+            nv.textContent = nuevos === 1 ? 'HAY ALGO NUEVO EN EL VESTUARIO' : ('HAY ' + nuevos + ' COSAS NUEVAS EN EL VESTUARIO');
+            p.appendChild(nv);
+          }
+        },
+        buttons: botones
       });
     },
 

@@ -4452,3 +4452,38 @@ body { font-size-adjust: 0.56; }
   border-color: #ffb852;
   box-shadow: 0 6px 0 #8a4a00, 0 0 34px rgba(255, 140, 0, 0.5);
 }
+
+/* ---------- ¡SUBES DE NIVEL! ---------- */
+.lvl-sello {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: clamp(150px, 24vh, 220px);
+  height: clamp(150px, 24vh, 220px);
+  border: 4px double #00ffff;
+  border-radius: 50%;
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.35), inset 0 0 30px rgba(0, 255, 255, 0.2);
+  animation: lvl-entra 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.lvl-sello small { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 4px; color: #b9fdfd; }
+.lvl-sello b {
+  font-weight: normal;
+  font-size: clamp(54px, 10vh, 92px);
+  line-height: 1.1;
+  color: #ffff00;
+  text-shadow: 0.06em 0.06em 0 #b8860b, 0 0 20px rgba(255, 255, 0, 0.5);
+}
+@keyframes lvl-entra {
+  from { transform: scale(2.4) rotate(-12deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.lvl-barra { width: min(80%, 420px); height: 10px; background: #0a2a2a; position: relative; overflow: hidden; }
+.lvl-barra i { position: absolute; inset: 0 auto 0 0; background: #00ffff; box-shadow: 0 0 12px #00ffff; animation: lvl-llena 1s 0.4s ease-out both; }
+@keyframes lvl-llena { from { width: 0; } }
+.lvl-sig { font-size: clamp(9px, 1.4vh, 12px); letter-spacing: 2px; color: #b9bae6; }
+.lvl-nuevo { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; color: #ffb8ff; animation: marq-parpadeo 1s steps(1) 4; }
+@media (prefers-reduced-motion: reduce) {
+  .lvl-sello, .lvl-barra i, .lvl-nuevo { animation: none; }
+}
+#prompt.arcade .panel-title.go-titulo.lvl-titulo { font-size: min(4.6vw, 8vh, 72px); white-space: nowrap; }
