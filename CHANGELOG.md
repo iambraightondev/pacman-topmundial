@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · GAME OVER de recreativa: CONTINUE?
+
+- **Nuevo final de partida**, a pantalla completa: GAME OVER en rojo con
+  interferencias, bombillas rojas y tu Pac-Man muriendo en bucle con tu skin.
+- El resultado entra **renglón a renglón**: los puntos suben contando, luego
+  el récord y el nivel, la experiencia y las monedas. Cada logro cae como un
+  sello. Pulsar en cualquier sitio lo acaba de golpe.
+- Abajo, la cuenta atrás de **CONTINUE?** junto a INSERT COIN (jugar otra vez,
+  R) y MENÚ (ESC). La cuenta atrás solo invita: al llegar a cero no pasa nada.
+- PAC-MAN VS. y CACERÍA siguen con su panel de quién ha ganado.
+
 ## 2026-09-17 · La portada es una marquesina
 
 - **Portada nueva, como el frontal de la recreativa:** bombillas en el borde,

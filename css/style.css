@@ -4115,3 +4115,190 @@ body { font-size-adjust: 0.56; }
   .marq .section-title { padding-bottom: 8px; }
 }
 @media (min-width: 1600px) { .marq .menu-head { margin-top: 10px; } }
+
+/* ---------- GAME OVER · CONTINUE? ----------
+ * El final de recreativa: rojo, bombillas rojas, recuento renglón a renglón,
+ * sellos de logro y la cuenta atrás junto a INSERT COIN. */
+#prompt.arcade {
+  justify-content: center;
+  gap: 14px;
+  padding: 34px 24px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 38%, rgba(60, 0, 20, 0.96) 0, rgba(12, 0, 14, 0.97) 45%, #000 80%);
+  text-shadow: none;
+}
+#prompt.arcade::before, #prompt.arcade::after { display: none; }
+.go-bombillas {
+  position: absolute;
+  inset: 8px;
+  border-radius: 12px;
+  pointer-events: none;
+  --bombilla: radial-gradient(circle, #ff5a5a 0 3px, rgba(255, 90, 90, 0.25) 4px, transparent 6px);
+  background:
+    var(--bombilla) 0 0 / 22px 22px repeat-x,
+    var(--bombilla) 0 100% / 22px 22px repeat-x,
+    var(--bombilla) 0 0 / 22px 22px repeat-y,
+    var(--bombilla) 100% 0 / 22px 22px repeat-y;
+  animation: marq-bombillas 0.5s steps(2) infinite;
+}
+#prompt.arcade .panel-title.go-titulo {
+  font-size: clamp(40px, min(8vw, 11vh), 104px);
+  letter-spacing: 0.06em;
+  margin: 0;
+  background: repeating-linear-gradient(180deg, #ff3030 0 0.07em, #a00000 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0.06em 0.06em 0 #5a0000) drop-shadow(0 0 0.4em rgba(255, 0, 0, 0.45));
+  animation: go-glitch 3s steps(1) infinite;
+}
+@keyframes go-glitch {
+  0%, 92%, 100% { transform: none; clip-path: none; }
+  93% { transform: translate(-6px, 2px); clip-path: inset(10% 0 55% 0); }
+  95% { transform: translate(5px, -2px); clip-path: inset(60% 0 5% 0); }
+  97% { transform: translate(-2px, 0); }
+}
+.go-muerte { width: clamp(64px, 10vh, 96px); height: clamp(64px, 10vh, 96px); image-rendering: pixelated; flex: none; }
+.go-equipo { color: #ffb8ff; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; }
+
+.go-cuerpo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+  width: 100%;
+}
+.go-tabla { display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 14px); width: 100%; }
+.go-fila {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 4px 16px;
+  font-size: clamp(11px, 1.9vh, 16px);
+  letter-spacing: 2px;
+  text-align: left;
+  border-bottom: 1px dashed #3a1a3a;
+  padding-bottom: clamp(6px, 1vh, 10px);
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: opacity 0.25s, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+.go-fila.on, .go-aviso.on { opacity: 1; transform: none; }
+.go-fila span { color: #b9bae6; }
+.go-fila b { font-weight: normal; color: #fff; white-space: nowrap; }
+.go-fila small { grid-column: 1 / -1; font-size: clamp(8px, 1.2vh, 10px); letter-spacing: 1px; color: #7c7ea6; }
+.go-fila.grande { font-size: clamp(14px, 2.6vh, 22px); }
+.go-fila.grande b { color: #ffff00; font-size: clamp(22px, 4vh, 34px); text-shadow: 0 0 14px rgba(255, 255, 0, 0.45); }
+.go-fila.sube small { color: #ffff00; }
+.go-monedas { display: inline-flex; align-items: center; gap: 6px; }
+.go-aviso {
+  font-size: clamp(8px, 1.3vh, 10px);
+  letter-spacing: 1px;
+  color: #ffb8ff;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.go-sellos {
+  position: absolute;
+  left: calc(100% + 28px);
+  top: -10px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: max-content;
+}
+.go-sello {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(9px, 1.4vh, 12px);
+  letter-spacing: 1px;
+  border: 3px solid currentColor;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transform: rotate(var(--giro, -10deg)) scale(2.2);
+  transition: transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1), opacity 0.2s;
+}
+.go-sello.on { opacity: 1; transform: rotate(var(--giro, -10deg)) scale(1); }
+.go-sello canvas { width: 18px; height: 18px; image-rendering: pixelated; }
+.go-sello-mas { font-size: 9px; color: #b9bae6; opacity: 0; transition: opacity 0.3s; }
+.go-sello-mas.on { opacity: 1; }
+
+.go-continue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px 36px;
+  margin-top: clamp(4px, 1.5vh, 16px);
+}
+.go-reloj { position: relative; width: clamp(70px, 11vh, 104px); height: clamp(70px, 11vh, 104px); flex: none; }
+.go-reloj svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.go-reloj .go-aro { transition: stroke-dashoffset 0.9s linear; }
+.go-reloj b {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: normal;
+  font-size: clamp(26px, 4.4vh, 40px);
+  color: #ff2a2a;
+  text-shadow: 0 0 16px rgba(255, 0, 0, 0.7);
+}
+.go-reloj.cero b { animation: marq-parpadeo 1s steps(1) infinite; }
+.go-pregunta { font-size: clamp(16px, 3vh, 26px); letter-spacing: 3px; color: #fff; text-align: left; }
+.go-pregunta small { display: block; font-size: clamp(8px, 1.2vh, 10px); color: #ffb8ff; margin-top: 10px; letter-spacing: 2px; }
+
+#prompt.arcade .prompt-btns { gap: 18px; align-items: center; margin: 0; }
+#prompt.arcade .prompt-btns .btn-primary {
+  font-size: clamp(16px, 2.8vh, 22px);
+  letter-spacing: 3px;
+  color: #000;
+  background: #ffff00;
+  border-color: #ffff00;
+  padding: 16px 28px 12px;
+  box-shadow: 0 6px 0 #b8860b, 0 0 34px rgba(255, 255, 0, 0.5);
+}
+#prompt.arcade .prompt-btns .btn-primary:hover,
+#prompt.arcade .prompt-btns .btn-primary:focus-visible {
+  color: #000;
+  background: #ffff00;
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 #b8860b, 0 0 60px rgba(255, 255, 0, 0.85);
+}
+#prompt.arcade .prompt-btns .btn-primary .btn-key { color: #000; opacity: 0.75; }
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: #cfd0ff;
+  padding: 10px 6px;
+}
+#prompt.arcade .prompt-btns .btn:not(.btn-primary):hover,
+#prompt.arcade .prompt-btns .btn:not(.btn-primary):focus-visible { color: #ffff00; outline: none; }
+
+/* sin sitio a la derecha, los sellos van debajo del recuento */
+@media (max-width: 1100px) {
+  .go-sellos { position: static; flex-direction: row; flex-wrap: wrap; justify-content: center; width: auto; margin-top: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .go-bombillas, #prompt.arcade .panel-title.go-titulo, .go-reloj.cero b { animation: none; }
+}
+
+/* el final ocupa la pantalla entera, no solo el hueco del laberinto */
+#prompt.arcade { position: fixed; inset: 0; z-index: 60; overflow-y: auto; }
+#prompt.arcade { z-index: 200; }
+.go-cuerpo { grid-template-columns: 1fr minmax(0, 640px) 1fr; align-items: start; }
+.go-tabla { grid-column: 2; }
+.go-sellos { position: static; grid-column: 3; justify-self: start; padding: 0 0 0 36px; }
+@media (max-width: 1100px) {
+  .go-cuerpo { grid-template-columns: minmax(0, 640px); }
+  .go-tabla, .go-sellos { grid-column: 1; }
+  .go-sellos { justify-self: center; padding: 0; }
+}
+.go-sellos { gap: 30px; padding-top: 14px; }
+.go-sello { font-size: clamp(8px, 1.2vh, 11px); padding: 7px 10px; }
+#prompt.arcade { overflow-x: hidden; }

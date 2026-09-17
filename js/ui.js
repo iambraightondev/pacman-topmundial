@@ -8053,6 +8053,9 @@
       /* resumen de la partida (lo que te llevas al acabar) */
       if (o.summary) p.appendChild(this.buildRunSummary(o.summary));
 
+      /* contenido hecho a mano (el GAME OVER de recreativa) */
+      if (o.custom) o.custom(p);
+
       /* campo de texto opcional (invitar a alguien por su nombre) */
       this.promptInput = null;
       if (o.input) {
@@ -8134,6 +8137,7 @@
       p.appendChild(row);
 
       p.classList.toggle('solid', !!o.solid);
+      p.classList.toggle('arcade', !!o.arcade);
       // sobre un menú el velo tiene que tapar; sobre la partida, no (el
       // laberinto se sigue viendo por detrás a propósito)
       p.classList.toggle('over-panel', !!this.visiblePanel());
@@ -8252,6 +8256,7 @@
       if (!this.els.prompt) return;
       this.els.prompt.style.display = 'none';
       this.els.prompt.innerHTML = '';
+      this.els.prompt.classList.remove('arcade');
       this.promptTag = null;
       this.promptStatusEl = null;
       this.promptStatusOwn = false;
@@ -8628,6 +8633,14 @@
       if (g.avisoSinCuenta && g.avisoSinCuenta() && !g.replaying) { this.showAvisoSinCuenta(); return; }
       var duo = (g.playerCount > 1);      // "otra partida" con la misma gente
       var versus = !!(g.isVersus && g.isVersus() && window.PM.Versus);
+      /* CONTINUE?: el final de recreativa (17 sep 2026). Para las partidas
+       * de siempre, con su resumen; PAC-MAN VS. y CACERÍA siguen con el
+       * panel que dice quién ha ganado. */
+      if (!versus && !g.caza && g.runSummary &&
+          !(g.replaying && window.PM.Replay && window.PM.Replay.finPrompt)) {
+        this.showGameOverArcade(duo);
+        return;
+      }
       var lines = versus ? this.versusLines() : this.classicOverLines();
       this.showPrompt({
         title: g.caza ? 'FIN DE LA CACERÍA' : versus ? 'FIN DE LA RONDA' : 'GAME OVER',
@@ -8648,6 +8661,292 @@
           { label: 'MENÚ', hint: 'Q · ESC', keys: ['q', 'Escape'],
             onClick: function () { g.toMenu(); } }
         ]
+      });
+    },
+
+    /* ------------------------------------------------------
+     * GAME OVER · CONTINUE?
+     *
+     * Como el final de las máquinas: GAME OVER en rojo con interferencias,
+     * tu Pac-Man muriendo en bucle, el recuento renglón a renglón (los puntos
+     * suben contando, luego el récord, la experiencia y las monedas), cada
+     * logro cae como un sello, y abajo la cuenta atrás de CONTINUE? junto a
+     * INSERT COIN. La cuenta atrás no hace nada al llegar a cero: invita.
+     *
+     * El diálogo se rehace a menudo (syncPrompt), así que la animación va
+     * solo la primera vez por partida: después sale ya contado.
+     * ------------------------------------------------------ */
+    showGameOverArcade: function (duo) {
+      var self = this;
+      var g = window.PM.Game;
+      var s = g.runSummary;
+      var anima = this.goVisto !== s && !this.menosMovimiento();
+      this.goVisto = s;
+      var mil = function (n) {
+        return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+
+      /* por qué no entra en el TOP MUNDIAL, si es el caso (lo de siempre) */
+      var avisos = (this.classicOverLines() || []).filter(function (l) {
+        return typeof l === 'string' && /TOP MUNDIAL/.test(l);
+      });
+
+      this.showPrompt({
+        title: 'GAME OVER',
+        arcade: true,
+        solid: true,
+        status: g.flash ? g.flash.text : '',
+        statusError: !!g.flash,
+        custom: function (p) {
+          var titulo = p.querySelector('.panel-title');
+          if (titulo) titulo.classList.add('go-titulo');
+
+          var bomb = document.createElement('div');
+          bomb.className = 'go-bombillas';
+          bomb.setAttribute('aria-hidden', 'true');
+          p.insertBefore(bomb, p.firstChild);
+
+          var muerte = document.createElement('canvas');
+          muerte.className = 'go-muerte';
+          muerte.width = 96; muerte.height = 96;
+          muerte.setAttribute('aria-hidden', 'true');
+          p.appendChild(muerte);
+          self.goMuerte = muerte;
+
+          if (g.playerCount > 1) {
+            var eq = [];
+            for (var q = 0; q < g.playerCount; q++) eq.push(g.nameFor(q));
+            var equipo = document.createElement('div');
+            equipo.className = 'go-equipo';
+            equipo.textContent = eq.join('  +  ');
+            p.appendChild(equipo);
+          }
+
+          var cuerpo = document.createElement('div');
+          cuerpo.className = 'go-cuerpo';
+          p.appendChild(cuerpo);
+
+          var tabla = document.createElement('div');
+          tabla.className = 'go-tabla';
+          cuerpo.appendChild(tabla);
+          var filas = [];
+          var fila = function (clase, rotulo, valor, color, sub) {
+            var f = document.createElement('div');
+            f.className = 'go-fila ' + (clase || '');
+            var k = document.createElement('span');
+            k.textContent = rotulo;
+            f.appendChild(k);
+            var v = document.createElement('b');
+            if (typeof valor === 'string') v.textContent = valor;
+            else v.appendChild(valor);
+            if (color) v.style.color = color;
+            f.appendChild(v);
+            if (sub) {
+              var sb = document.createElement('small');
+              sb.textContent = sub;
+              f.appendChild(sb);
+            }
+            tabla.appendChild(f);
+            filas.push(f);
+            return v;
+          };
+
+          var pts = fila('grande', 'PUNTOS', anima ? '0' : mil(s.puntos));
+          fila('', 'RÉCORD · NIVEL', mil(g.highScore) + ' · ' + (s.nivel || g.level));
+          if (g.lvl1Cs > 0 && window.PM.Ranking) {
+            fila('', 'NIVEL 1 EN', window.PM.Ranking.fmtTime(g.lvl1Cs), '',
+              g.canTimeRecord() ? '' : 'NO CUENTA PARA EL TOP MUNDIAL');
+          }
+          var subio = s.lvl > s.lvlAntes;
+          fila(subio ? 'sube' : '', 'EXPERIENCIA', '+' + mil(s.exp), '#00ffff',
+            subio ? ('¡SUBES AL NIVEL DE JUGADOR ' + s.lvl + '!')
+                  : ('NIVEL DE JUGADOR ' + s.lvl + ' · TE FALTAN ' +
+                     mil(Math.max(0, (s.lvlPide || 0) - (s.lvlEn || 0))) + ' PARA EL ' + (s.lvl + 1)));
+          if (typeof s.monedas === 'number') {
+            var mon = document.createElement('span');
+            mon.className = 'go-monedas';
+            mon.appendChild(self.monedaEl());
+            mon.appendChild(document.createTextNode(' +' + mil(s.monedas)));
+            fila('', 'MONEDAS', mon, '#ffd23f', s.monedas > 0
+              ? ('TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0)))
+              : ('UN MINUTO O 1.000 PUNTOS PARA GANAR · TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0))));
+          }
+          avisos.forEach(function (a) {
+            var d = document.createElement('div');
+            d.className = 'go-aviso';
+            d.textContent = a;
+            tabla.appendChild(d);
+            filas.push(d);
+          });
+
+          /* los logros, como sellos */
+          var sellos = document.createElement('div');
+          sellos.className = 'go-sellos';
+          cuerpo.appendChild(sellos);
+          var logros = s.logros || [];
+          var lista = [];
+          logros.slice(0, 4).forEach(function (a, i) {
+            var st = document.createElement('div');
+            st.className = 'go-sello';
+            st.style.color = a.color || '#ffb852';
+            st.style.setProperty('--giro', ((i % 2 ? 7 : -9) + i) + 'deg');
+            var cv = document.createElement('canvas');
+            cv.width = 20; cv.height = 20;
+            var c = cv.getContext('2d');
+            c.imageSmoothingEnabled = false;
+            try { window.PM.Sprites.drawAchStar(c, 10, 10, 9, a.color); } catch (e) { }
+            st.appendChild(cv);
+            var tx = document.createElement('span');
+            tx.textContent = 'LOGRO · ' + a.name;
+            st.appendChild(tx);
+            sellos.appendChild(st);
+            lista.push(st);
+          });
+          if (logros.length > 4) {
+            var mas = document.createElement('div');
+            mas.className = 'go-sello-mas';
+            mas.textContent = '+' + (logros.length - 4) + ' LOGROS MÁS';
+            sellos.appendChild(mas);
+            lista.push(mas);
+          }
+
+          /* CONTINUE? */
+          var cont = document.createElement('div');
+          cont.className = 'go-continue';
+          var reloj = document.createElement('div');
+          reloj.className = 'go-reloj';
+          reloj.innerHTML = '<svg viewBox="0 0 110 110" aria-hidden="true">' +
+            '<circle cx="55" cy="55" r="48" fill="none" stroke="#2a0a1a" stroke-width="8"/>' +
+            '<circle class="go-aro" cx="55" cy="55" r="48" fill="none" stroke="#ff2a2a" stroke-width="8" stroke-dasharray="301.6" stroke-dashoffset="0"/></svg>';
+          var num = document.createElement('b');
+          num.textContent = '9';
+          reloj.appendChild(num);
+          cont.appendChild(reloj);
+          var preg = document.createElement('div');
+          preg.className = 'go-pregunta';
+          preg.textContent = 'CONTINUE?';
+          var sm = document.createElement('small');
+          sm.textContent = 'R PARA SEGUIR · ESC PARA EL MENÚ';
+          preg.appendChild(sm);
+          cont.appendChild(preg);
+          p.appendChild(cont);
+
+          /* los botones del diálogo se mudan a la fila de CONTINUE? */
+          self.goCont = cont;
+
+          /* la cuenta atrás: sigue donde iba aunque el diálogo se rehaga */
+          if (anima || self.goCuenta == null) self.goCuenta = 9;
+          var aro = reloj.querySelector('.go-aro');
+          var pon = function () {
+            num.textContent = String(self.goCuenta);
+            if (aro) aro.setAttribute('stroke-dashoffset', String(301.6 * (1 - self.goCuenta / 9)));
+            reloj.classList.toggle('cero', self.goCuenta === 0);
+          };
+          pon();
+          if (self.goCuentaT) clearInterval(self.goCuentaT);
+          var cuentaT = self.goCuentaT = setInterval(function () {
+            if (!self.promptOpen || !reloj.isConnected) {
+              clearInterval(cuentaT);
+              if (self.goCuentaT === cuentaT) self.goCuentaT = null;
+              return;
+            }
+            if (self.goCuenta > 0) { self.goCuenta--; pon(); }
+          }, 1000);
+
+          /* el recuento */
+          var todo = filas.concat(lista);
+          if (!anima) {
+            todo.forEach(function (f) { f.classList.add('on'); });
+          } else {
+            var t0 = 350;
+            filas.forEach(function (f, i) {
+              setTimeout(function () {
+                f.classList.add('on');
+                if (i === 0) self.contarGo(pts, s.puntos, 1300);
+              }, t0 + (i === 0 ? 0 : 1500 + (i - 1) * 550));
+            });
+            var tl = t0 + 1500 + filas.length * 550;
+            lista.forEach(function (st, i) {
+              setTimeout(function () { st.classList.add('on'); }, tl + i * 450);
+            });
+            /* pulsar en cualquier sitio lo acaba de golpe */
+            p.addEventListener('pointerdown', function () {
+              todo.forEach(function (f) { f.classList.add('on'); });
+              pts.textContent = mil(s.puntos);
+              self.goContando = false;
+            }, { once: true });
+          }
+          self.animarGoMuerte();
+        },
+        buttons: [
+          { label: 'INSERT COIN', primary: true,
+            hint: (duo ? 'OTRA PARTIDA' : 'JUGAR OTRA VEZ') + ' · R', keys: ['r', 'Enter'],
+            onClick: function () {
+              self.resumeAudio();
+              if (g.netRole) g.requestVote('rematch');
+              else g.restartGame();
+            } },
+          { label: 'MENÚ', hint: 'ESC', keys: ['q', 'Escape'],
+            onClick: function () { g.toMenu(); } }
+        ]
+      });
+
+      /* los botones, al lado de CONTINUE? (y el aviso de estado debajo) */
+      var p = this.els.prompt;
+      var btns = p.querySelector('.prompt-btns');
+      if (btns && this.goCont) this.goCont.appendChild(btns);
+      var estado = p.querySelector('.lobby-status');
+      if (estado) p.appendChild(estado);
+    },
+
+    /* los puntos subiendo, como el contador de la máquina */
+    contarGo: function (el, hasta, ms) {
+      var self = this, raf = window.requestAnimationFrame;
+      var mil = function (n) {
+        return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+      if (!raf) { el.textContent = mil(hasta); return; }
+      var t0 = Date.now();
+      this.goContando = true;
+      (function paso() {
+        if (!self.goContando) return;
+        var k = Math.min(1, (Date.now() - t0) / ms);
+        el.textContent = mil(hasta * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) raf(paso); else self.goContando = false;
+      })();
+    },
+
+    /* tu Pac-Man muriendo en bucle bajo el título, con tu skin y tu color */
+    animarGoMuerte: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.goMuerteAnim) return;
+      this.goMuerteAnim = true;
+      var t0 = Date.now();
+      /* arranca en el siguiente fotograma: al montarse, el diálogo aún no
+       * cuenta como abierto */
+      raf(function paso() {
+        var cv = self.goMuerte;
+        if (!self.promptOpen || !cv || !cv.isConnected) { self.goMuerteAnim = false; return; }
+        var g = window.PM.Game, Sp = window.PM.Sprites;
+        var i = g.localIdx > 0 ? g.localIdx : 0;
+        var color = '#ffff00', skin = 'clasico';
+        try { color = g.colorFor(i) || color; skin = g.skinFor(i) || skin; } catch (e) { /* lo de siempre */ }
+        var t = ((Date.now() - t0) / 1000) % 2.6;
+        var c = cv.getContext('2d');
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, cv.width, cv.height);
+        c.imageSmoothingEnabled = false;
+        c.setTransform(cv.width / 24, 0, 0, cv.width / 24, 0, 0);
+        try {
+          if (t < 0.5) Sp.drawPacman(c, 12, 12, 3, 1, color, skin, {});
+          else if (t < 2) {
+            var d = (t - 0.5) / 1.5;
+            if (skin !== 'clasico' && Sp.drawSkinDeath) Sp.drawSkinDeath(c, 12, 12, d, color, skin, 3);
+            else Sp.drawPacmanDeath(c, 12, 12, d, color);
+          }
+        } catch (e) { /* un dibujo raro no rompe el final */ }
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        raf(paso);
       });
     },
 
