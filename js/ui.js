@@ -1837,11 +1837,75 @@
         saveSettings();
         self.refreshNicks();
       });
-      row.appendChild(input);
+      /* En la portada, tu nombre va CON TU ASPECTO: tu Pac-Man al lado, con
+       * su skin, su color, su accesorio y su efecto, moviéndose; y el nombre
+       * escrito en tu color. Pulsarlo lleva al vestuario. */
+      if (big && key === 'nick1') {
+        var caja = document.createElement('div');
+        caja.className = 'nick-caja';
+        var look = document.createElement('canvas');
+        look.width = 144; look.height = 144;
+        look.className = 'nick-look';
+        look.setAttribute('role', 'button');
+        look.setAttribute('aria-label', 'Tu aspecto: abrir el vestuario');
+        look.title = 'TU ASPECTO · ABRIR EL VESTUARIO';
+        look.addEventListener('click', function () { self.showVestuario('skin', 'yo'); });
+        caja.appendChild(look);
+        caja.appendChild(input);
+        row.appendChild(caja);
+        this.nickLook = look;
+        this.nickLookInput = input;
+        this.pintarNickLook(0);
+      } else {
+        row.appendChild(input);
+      }
 
       if (!this.nickInputs[key]) this.nickInputs[key] = [];
       this.nickInputs[key].push(input);
       return row;
+    },
+
+    /* Tu Pac-Man junto a tu nombre en la portada, con todo lo que llevas
+     * puesto. t: segundos, para la boca y el efecto. */
+    pintarNickLook: function (t) {
+      var cv = this.nickLook, Sp = window.PM.Sprites;
+      if (!cv || !Sp) return;
+      var s = window.PM.settings, Tn = window.PM.Tienda;
+      var color = s.pacColor || '#ffff00';
+      var skin = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+      var acc = Tn ? Tn.accesorio() : '';
+      var efx = Tn ? Tn.efecto() : '';
+      var c = cv.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.imageSmoothingEnabled = false;
+      var k = cv.width / 20;
+      c.setTransform(k, 0, 0, k, 0, 0);
+      var x = efx ? 12.5 : 10, y = acc ? 11.5 : 10;
+      try {
+        Sp.drawPacman(c, x, y, 3, [0, 1, 2, 1][Math.floor(t * 8) % 4], color, skin, {
+          t: t, s: t * 20, giro: (t * 20) % 30, confeti: (t % 3) < 1.4 ? t % 3 : -1,
+          back: function (d) { return { x: x - d, y: y, d: 3 }; },
+          efecto: efx || null, accesorio: acc || null, team: [], estira: 1
+        });
+      } catch (e) { /* un dibujo raro no rompe la portada */ }
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      if (this.nickLookInput) this.nickLookInput.style.color = color;
+    },
+
+    /* Se mueve mientras la portada está a la vista, y nada más */
+    animarNickLook: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.nickLookAnim || !this.nickLook) return;
+      this.nickLookAnim = true;
+      var origen = Date.now();
+      function paso() {
+        var menu = self.els.menu;
+        if (!menu || menu.style.display === 'none') { self.nickLookAnim = false; return; }
+        self.pintarNickLook((Date.now() - origen) / 1000);
+        raf(paso);
+      }
+      raf(paso);
     },
 
     /* Refresca los campos de nombre (todos menos el que se está escribiendo).
@@ -8814,6 +8878,7 @@
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       this.showPanel('menu');
+      this.animarNickLook();     // tu Pac-Man junto a tu nombre
       // si el nivel subió justo al salirse de la partida, el aviso no se
       // llegó a ver: se celebra aquí
       var g = window.PM.Game;

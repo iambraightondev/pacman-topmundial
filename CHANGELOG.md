@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Títulos de recreativa y tu nombre con tu aspecto
+
+- **Todos los títulos** llevan el estilo del TOP MUNDIAL: amarillo con las rayas
+  del tubo, relieve dorado y brillo. El subtítulo va en rosa entre guiones.
+- **En la portada, tu nombre sale con tu aspecto:** tu Pac-Man al lado, con su
+  skin, color, accesorio y efecto, moviéndose, y el nombre en tu color. Pulsarlo
+  abre el vestuario.
+
 ## 2026-09-17 · Letra de máquina en todo el juego
 
 - **Todo el juego usa la letra del TOP MUNDIAL** (Press Start 2P): menús,

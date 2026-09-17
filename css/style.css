@@ -3598,3 +3598,39 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
  * máquina tienen que caber en el ancho */
 .title { white-space: nowrap; font-size: min(clamp(36px, 9vh, 64px), 11vw); letter-spacing: 2px; }
 .subtitle { font-size: min(clamp(14px, 3vh, 26px), 6vw); }
+
+/* ---------- TÍTULOS: el estilo del TOP MUNDIAL en todas las vistas ----------
+ * Amarillo con las rayas del tubo por dentro, relieve dorado y brillo. Las
+ * rayas son un degradado recortado a la letra (no una capa por encima), y el
+ * relieve va con drop-shadow porque la letra es transparente y un text-shadow
+ * se vería a través de ella. */
+.title, .panel-title {
+  color: #ffff00;
+  background: repeating-linear-gradient(180deg, #ffff00 0 0.07em, #c9b600 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0.06em 0.06em 0 #b8860b) drop-shadow(0 0 0.35em rgba(255, 255, 0, 0.3));
+}
+.panel-title { font-size: clamp(26px, 5.5vh, 46px); letter-spacing: 6px; margin: 4px 0 10px; }
+.panel-title.tm-titulo { text-shadow: none; margin-bottom: 0; }
+/* el subtítulo, en rosa y entre guiones: "— TOP MUNDIAL —" */
+.subtitle, .tm-sub { color: #ffb8ff; letter-spacing: 4px; }
+.subtitle::before { content: "— "; }
+.subtitle::after { content: " —"; }
+.subtitle { font-size: min(clamp(11px, 2.2vh, 18px), 4.6vw); margin-top: 6px; }
+
+/* tu nombre con tu aspecto, en la portada */
+.nick-caja { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.nick-look {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  image-rendering: pixelated;
+  border: 2px solid #2121ff;
+  background: #000;
+  cursor: pointer;
+}
+.nick-look:hover { border-color: #ffff00; }
+.nick-caja .nick-input-menu { width: 270px; max-width: calc(92vw - 62px); font-size: clamp(11px, 1.9vh, 14px); letter-spacing: 2px; }
