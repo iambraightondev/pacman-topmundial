@@ -7,7 +7,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 - MENÚ va como INSERT COIN: misma letra, alto y relleno alrededor del texto
   (cada uno a lo ancho de lo suyo), hueco con borde amarillo.
 - Lo mismo en todos los diálogos de recreativa (pausa, partida a medias,
-  rendirse, revancha...): los botones secundarios ya no son texto suelto.
+  rendirse, revancha...): los botones secundarios ya no son texto suelto. Su letra
+  es más pequeña que la del principal, para no competir con él.
 
 ## 2026-09-17 · PARTIDA A MEDIAS con marco de recreativa
 
