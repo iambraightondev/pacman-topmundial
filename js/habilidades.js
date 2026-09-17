@@ -119,7 +119,10 @@
        * (-1: ninguna) y cuántos ticks lleva. Solo existe en la máquina de
        * quien aprieta; lo que viaja y se graba es lo que sale al final. */
       mant: -1,
-      mantT: 0
+      mantT: 0,
+      /* PORTAL (Mago): ticks que le quedan en la OTRA DIMENSIÓN (0: está en
+       * la de todos). Mientras dure, nada lo toca y él no come. */
+      dimension: 0
     };
   }
 
@@ -309,8 +312,31 @@
         this.st[i].pisoton = 0;
         this.st[i].cruce = 0;
         this.st[i].ultTile = -1;
+        this.st[i].dimension = 0;
       }
+      /* Los PORTALES abiertos no son de la vida ni del nivel: siguen hasta que
+       * se les acaba el tiempo. Uno a medio poner ya lo ha cerrado
+       * antesDeRecolocar. */
+      var abiertos = this.portales || [];
       this.limpiarMesa();
+      for (i = 0; i < abiertos.length && i < this.portales.length; i++) {
+        var po = abiertos[i];
+        if (po && po.t > 0) this.portales[i] = po;
+      }
+    },
+
+    /* Antes de devolver a todos a su casilla (se muere o se pasa de nivel):
+     * quien estaba en la otra dimensión deja la salida donde está, como si se
+     * le hubiera acabado el tiempo. Game.resetLevel y Game.respawn. */
+    antesDeRecolocar: function (G) {
+      if (!this.on || !this.portales) return;
+      for (var i = 0; i < this.portales.length; i++) {
+        var po = this.portales[i];
+        if (!po || po.t > 0) continue;
+        po.e = 1;
+        this.cerrarPortal(G, i, this.casillaDe(G, i));
+        this.gastarId(G, i, 'portal');
+      }
     },
 
     estado: function (idx) {
@@ -441,8 +467,11 @@
     },
 
     /* Alfa del Pac-Man: translúcido justo después de un FLASH */
-    alfa: function (idx) {
+    alfa: function (idx, G) {
       var s = this.estado(idx);
+      /* en la otra dimensión, a los demás se les ve como un fantasma; quien
+       * está dentro se ve entero (lo borroso es lo de fuera) */
+      if (s && s.dimension > 0) return (G && this.miraDesdeDimension(G) === idx) ? 1 : 0.35;
       if (!s || s.flash <= 0) return 1;
       // de 0.35 a 1 según se va posando
       return 0.35 + 0.65 * (1 - s.flash / H.FLASH_SHOW);
@@ -568,6 +597,8 @@
       } else {
         var p = G.pacs[idx];
         if (!p || p.out || p.dying) return false;
+        /* en la otra dimensión solo se puede cerrar el portal */
+        if (this.enDimension(idx) && this.idDe(G, idx, k) !== 'portal') return false;
       }
       return this.lista(idx, k);
     },
@@ -1231,7 +1262,7 @@
     salvaDelChoque: function (G, idx) {
       var s = this.estado(idx);
       if (!s) return false;
-      if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0) return true;
+      if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
       /* los dos escudos (el propio del Tanque y el que da el Soporte) se
        * rompen con el primer golpe */
       if (s.coraza > 0 || s.escudo > 0) {
@@ -1681,26 +1712,62 @@
       return p ? { c: p.tileX(), r: p.tileY() } : null;
     },
 
-    /* W — PORTAL. Primera pulsación: la entrada, sin gastar. Segunda: la
-     * salida, y el portal queda abierto 8 s (ahí empieza la recarga). Si la
-     * salida no llega en 5 s, la entrada se deshace y la recarga se gasta. */
+    /* W — PORTAL. Primera pulsación: la entrada donde está el Mago, sin
+     * gastar, y él pasa a la OTRA DIMENSIÓN (CFG.HAB.PORTAL_ESPERA como
+     * mucho). Segunda: la salida donde esté, vuelve, y las dos bocas quedan
+     * abiertas PORTAL_TICKS para todo el equipo (ahí empieza la recarga). Si no
+     * pulsa, la salida se pone sola al acabarse el tiempo (pasoRoles). */
     portal: function (G, idx, d) {
       var c = this.casillaDe(G, idx, d);
       if (!c || !aterrizable(c.c, c.r)) return false;
-      var po = this.portales[idx];
+      var po = this.portales[idx], s = this.estado(idx);
       if (!po) {
         this.portales[idx] = { ec: c.c, er: c.r, sc: -1, sr: -1, t: 0, e: H.PORTAL_ESPERA };
+        if (s) s.dimension = H.PORTAL_ESPERA;
         this.sinGasto = true;
+        this.efecto('boca', c.c * T + T / 2, c.r * T + T / 2, 16);
         sonDe(G, idx, 'playStealth');
         return true;
       }
-      if (po.e > 0) {
+      if (!(po.t > 0)) {
         if (c.c === po.ec && c.r === po.er) return false;
-        po.sc = c.c; po.sr = c.r; po.e = 0; po.t = H.PORTAL_TICKS;
-        sonDe(G, idx, 'playFlash');
+        this.cerrarPortal(G, idx, c);
         return true;
       }
       return false;
+    },
+
+    /* La salida del portal de idx en la casilla c y vuelta a la dimensión de
+     * todos. Sin casilla buena (o encima de la entrada) el portal se deshace. */
+    cerrarPortal: function (G, idx, c) {
+      var po = this.portales[idx], s = this.estado(idx);
+      if (s) s.dimension = 0;
+      if (!po || po.t > 0) return;
+      if (!c || !aterrizable(c.c, c.r) || (c.c === po.ec && c.r === po.er)) {
+        this.portales[idx] = null;
+        return;
+      }
+      po.sc = c.c; po.sr = c.r; po.e = 0; po.t = H.PORTAL_TICKS;
+      /* sale POR la boca: que no la cruce al instante */
+      if (s) { s.ultTile = c.r * CFG.COLS + c.c; s.cruce = H.PORTAL_CRUCE; }
+      this.efecto('boca', c.c * T + T / 2, c.r * T + T / 2, 16);
+      sonDe(G, idx, 'playFlash');
+    },
+
+    /* ¿Ese jugador está en la otra dimensión? */
+    enDimension: function (idx) {
+      var s = this.estado(idx);
+      return !!s && s.dimension > 0;
+    },
+
+    /* Quién mira ESTA pantalla desde la otra dimensión (-1: nadie). Con dos en
+     * el mismo teclado la pantalla es de los dos, así que no se apaga nada. */
+    miraDesdeDimension: function (G) {
+      if (!this.on || !G) return -1;
+      var yo;
+      if (G.netRole) yo = (G.isSpec && G.isSpec()) ? -1 : G.localIdx;
+      else yo = (G.playerCount === 1) ? 0 : -1;
+      return (yo >= 0 && this.enDimension(yo)) ? yo : -1;
     },
 
     /* Cruzar: lo hace quien simula a ese Pac-Man, al ENTRAR en una boca (no
@@ -1708,7 +1775,7 @@
     cruzar: function (G, p) {
       if (!this.on || !p) return;
       var s = this.estado(p.id | 0);
-      if (!s) return;
+      if (!s || s.dimension > 0) return;
       var col = p.tileX(), row = p.tileY();
       var tile = row * CFG.COLS + col;
       if (tile === s.ultTile) return;
@@ -1733,8 +1800,9 @@
       }
     },
 
-    /* E — RUNA: trampa en la casilla del Mago 10 s; el primer fantasma que la
-     * pisa muere. Una por Mago: poner otra quita la anterior. */
+    /* E — RUNA: trampa en la casilla del Mago 10 s; al pisarla mueren TODOS
+     * los fantasmas que estén en esa casilla. Una por Mago: poner otra quita
+     * la anterior. */
     runa: function (G, idx, d) {
       var c = this.casillaDe(G, idx, d);
       if (!c || !aterrizable(c.c, c.r)) return false;
@@ -1795,15 +1863,22 @@
             if (manda && s.tormenta > 0 && s.tormenta % H.TORMENTA_CADA === 0) this.rayo(G, i);
           }
         }
-        /* la entrada de un portal sin salida se deshace, y gasta */
+        if (s.dimension > 0) s.dimension--;
+        /* Se acaba el rato en la otra dimensión: la salida se pone sola donde
+         * esté. La pone quien simula a ese Pac-Man (el invitado se la pide al
+         * anfitrión, como si hubiera pulsado); el anfitrión solo la pone él con
+         * el de un invitado que no ha dicho nada en PORTAL_RED_GRACIA. */
         var po = this.portales[i];
         if (po) {
-          if (po.e > 0) {
-            if (--po.e <= 0) {
-              this.portales[i] = null;
+          if (!(po.t > 0)) {
+            po.e--;
+            var suyo = G.isLocalAuth(i);
+            if ((suyo && po.e === 0) || (!suyo && manda && po.e <= -H.PORTAL_RED_GRACIA)) {
+              this.cerrarPortal(G, i, this.casillaDe(G, i));
               this.gastarId(G, i, 'portal');
+              if (G.netRole === 'guest' && suyo) this.avisar(G, i, this.kDe(G, i, 'portal'));
             }
-          } else if (po.t > 0 && --po.t <= 0) {
+          } else if (--po.t <= 0) {
             this.portales[i] = null;
           }
         }
@@ -1826,8 +1901,7 @@
           var g = G.ghosts[j];
           if (!this.enLaCalle(g) || g.tileX() !== r.c || g.tileY() !== r.r) continue;
           this.runas[i] = null;
-          this.matarMago(G, g, i, 'runa');
-          break;
+          this.matarMago(G, g, i, 'runa');     // y sigue: caen todos los de la casilla
         }
       }
       /* placas de hielo pisadas */
@@ -1847,7 +1921,14 @@
       }
     },
 
-    /* Gasta la recarga de un poder por su id (la entrada del portal caducada) */
+    /* Número de tecla de un poder por su id (-1 si ese jugador no lo tiene) */
+    kDe: function (G, idx, id) {
+      var lista = this.listaDe(G, idx);
+      for (var k = 0; k < lista.length; k++) if (lista[k].id === id) return k;
+      return -1;
+    },
+
+    /* Gasta la recarga de un poder por su id (la salida del portal puesta sola) */
     gastarId: function (G, idx, id) {
       var lista = this.listaDe(G, idx);
       for (var k = 0; k < lista.length; k++) if (lista[k].id === id) this.gastar(G, idx, k);
@@ -1860,6 +1941,7 @@
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
       s.mant = -1; s.mantT = 0;
+      s.dimension = 0;
     },
 
     /* ---------- la foto de red de los roles ----------
@@ -1870,7 +1952,7 @@
       var e = [], i;
       for (i = 0; i < this.st.length; i++) {
         var s = this.st[i];
-        e.push([s.provoca, s.escudo, s.pisoton, s.arrolla, s.inmune, s.tormenta, s.gracia, s.coraza]);
+        e.push([s.provoca, s.escudo, s.pisoton, s.arrolla, s.inmune, s.tormenta, s.gracia, s.coraza, s.dimension]);
       }
       var po = [], ru = [], bl = [], pl = [];
       for (i = 0; i < this.st.length; i++) {
@@ -1890,7 +1972,7 @@
     aplicarRoles: function (hx, mioIdx) {
       if (!this.on || !hx) return;
       var i, k;
-      var CAMPOS = ['provoca', 'escudo', 'pisoton', 'arrolla', 'inmune', 'tormenta', 'gracia', 'coraza'];
+      var CAMPOS = ['provoca', 'escudo', 'pisoton', 'arrolla', 'inmune', 'tormenta', 'gracia', 'coraza', 'dimension'];
       for (i = 0; hx.e && i < hx.e.length && i < this.st.length; i++) {
         var fila = hx.e[i], s = this.st[i];
         if (!fila) continue;
@@ -1899,7 +1981,7 @@
           if (i === mioIdx) {
             /* lo mío que decido yo (escudo, inmunidad, la carrera) no se toca;
              * lo que ejecuta él solo se corrige hacia arriba */
-            if (k === 1 || k === 3 || k === 4 || k === 6 || k === 7) continue;
+            if (k === 1 || k === 3 || k === 4 || k === 6 || k === 7 || k === 8) continue;
             if (v > s[CAMPOS[k]]) s[CAMPOS[k]] = v;
           } else {
             s[CAMPOS[k]] = v;
@@ -1912,7 +1994,12 @@
       if (hx.po) {
         for (i = 0; i < this.st.length; i++) {
           var p = hx.po[i];
-          this.portales[i] = p ? { ec: p[0], er: p[1], sc: p[2], sr: p[3], t: p[4], e: p[5] } : null;
+          var nuevo = p ? { ec: p[0], er: p[1], sc: p[2], sr: p[3], t: p[4], e: p[5] } : null;
+          /* el mío que YA he cerrado aquí y el anfitrión aún no: se queda el
+           * mío (si no, la foto lo volvería a abrir y se cerraría otra vez) */
+          var mioPo = this.portales[i];
+          if (i === mioIdx && mioPo && mioPo.t > 0 && (!nuevo || !(nuevo.t > 0))) continue;
+          this.portales[i] = nuevo;
         }
       }
       if (hx.ru) {
@@ -1943,6 +2030,23 @@
     dibujarSuelo: function (G, ctx) {
       if (!this.on) return;
       var Y = CFG.MAZE_Y, tk = G.tick, i;
+      /* la OTRA DIMENSIÓN, vista desde dentro: el laberinto teñido de violeta
+       * con un borde que respira y una barra con lo que queda. Lo de fuera
+       * (fantasmas y compañeros) lo apaga Game.render. */
+      var dentro = this.miraDesdeDimension(G);
+      if (dentro >= 0) {
+        var W = CFG.COLS * T, Hh = CFG.ROWS * T;
+        var resta = this.estado(dentro).dimension / H.PORTAL_ESPERA;
+        ctx.save();
+        ctx.fillStyle = 'rgba(80, 20, 140, 0.3)';
+        ctx.fillRect(0, Y, W, Hh);
+        ctx.strokeStyle = 'rgba(179, 107, 255, ' + (0.45 + 0.25 * Math.sin(tk / 8)) + ')';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(1.5, Y + 1.5, W - 3, Hh - 3);
+        ctx.fillStyle = '#b36bff';
+        ctx.fillRect(0, Y, W * resta, 3);
+        ctx.restore();
+      }
       for (i = 0; i < this.runas.length; i++) {
         var r = this.runas[i];
         if (!r) continue;

@@ -8794,16 +8794,24 @@
     eq(G.eatFreezeTicks, 0, 'y el juego no se para');
   });
 
-  test('MAGO · PORTAL: entrada, salida, cruce y caducidad', function () {
+  test('MAGO · PORTAL: entrada y otra dimensión, salida, cruce y 20 s abierto', function () {
+    eq(HC.segs(1, 'mago'), 46, 'recarga de 46 s');
+    eq(HC.PORTAL_ESPERA, 8 * 60, '8 s en la otra dimensión');
+    eq(HC.PORTAL_TICKS, 20 * 60, 'y 20 s abierto');
     partidaRol(['mago'], 2, 5, DR.RIGHT);
     ok(HB.pulsar(G, 0, 1), 'la entrada se pone');
     ok(HB.lista(0, 1), 'sin gastar todavía');
+    ok(HB.enDimension(0), 'y el Mago pasa a la otra dimensión');
+    eq(HB.miraDesdeDimension(G), 0, 'y lo ve desde dentro');
+    eq(HB.pulsar(G, 0, 0), false, 'desde ahí no se dispara');
     ponPac(0, 12, 5);
     ok(HB.pulsar(G, 0, 1), 'la salida se pone');
+    ok(!HB.enDimension(0), 'vuelve a la dimensión de todos');
     ok(!HB.lista(0, 1), 'y ahora empieza la recarga');
     ok(HB.portales[0].t > 0, 'el portal está abierto');
     var p = ponPac(0, 1, 5, DR.RIGHT);
     HB.estado(0).ultTile = -1;
+    HB.estado(0).cruce = 0;
     HB.cruzar(G, p);
     eq(p.tileX(), 1, 'fuera de la boca no pasa nada');
     p.x = 2 * CFG.TILE + 4;
@@ -8811,14 +8819,103 @@
     eq(p.tileX(), 12, 'al entrar por una boca sale por la otra');
     HB.cruzar(G, p);
     eq(p.tileX(), 12, 'y no rebota');
-    ticks(HC.PORTAL_TICKS + 2);
-    eq(HB.portales[0], null, 'a los 8 s se cierra');
+    ticks(HC.PORTAL_TICKS - 10);
+    ok(HB.portales[0], 'a punto de los 20 s sigue abierto');
+    ticks(12);
+    eq(HB.portales[0], null, 'a los 20 s se cierra');
+  });
+
+  test('MAGO · PORTAL: a los 8 s la salida se pone sola donde esté', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    ok(HB.pulsar(G, 0, 1), 'la entrada');
+    ticks(HC.PORTAL_ESPERA - 1);
+    ok(HB.enDimension(0), 'a un tick, sigue dentro');
+    ticks(1);
+    ok(!HB.enDimension(0), 'a los 8 s vuelve solo');
+    var po = HB.portales[0];
+    ok(po && po.t > 0, 'con el portal abierto');
+    eq(po.sc + ',' + po.sr, p.tileX() + ',' + p.tileY(), 'y la salida donde estaba');
+    ok(!HB.lista(0, 1), 'gasta la recarga');
+  });
+
+  test('MAGO · OTRA DIMENSIÓN: nada lo mata, no come y los fantasmas no lo persiguen', function () {
+    partidaRol(['mago', 'asesino'], 6, 5, DR.RIGHT);
+    ponPac(1, 20, 29);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    ok(HB.pulsar(G, 0, 1), 'entra');
+    var g = fantasmaEn(0, 6, 5);
+    for (var i = 0; i < 30; i++) { g.x = p.x; g.y = p.y; g.mode = 'normal'; G.step(); }
+    ok(!p.dying, 'un fantasma encima no lo mata');
+    var fila = p.tileY(), col = p.tileX() + 1;
+    G.pellets[fila][col] = '.';
+    var antes = G.score;
+    G.eatAt(col, fila, p);
+    eq(G.pellets[fila][col], '.', 'la pastilla sigue ahí');
+    eq(G.score, antes, 'y no suma');
+    var ctx = G.pacContextFor(g);
+    eq(ctx.tile.x + ',' + ctx.tile.y, G.pacs[1].tileX() + ',' + G.pacs[1].tileY(), 'los fantasmas van a por el compañero');
+    eq(HB.alfa(0, G), 0.35, 'a dos en el mismo teclado se le ve translúcido');
+  });
+
+  test('MAGO · PORTAL: sobrevive a pasar de nivel y a morir', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 1), 'entrada');
+    ponPac(0, 12, 5);
+    ok(HB.pulsar(G, 0, 1), 'salida');
+    G.resetLevel();
+    ok(HB.portales[0] && HB.portales[0].t > 0, 'tras el nivel sigue abierto');
+    G.respawn();
+    ok(HB.portales[0] && HB.portales[0].t > 0, 'y tras morir también');
 
     partidaRol(['mago'], 2, 5, DR.RIGHT);
     ok(HB.pulsar(G, 0, 1), 'otra entrada');
-    ticks(HC.PORTAL_ESPERA + 2);
-    eq(HB.portales[0], null, 'sin salida en 5 s, se deshace');
-    ok(!HB.lista(0, 1), 'y gasta la recarga');
+    ponPac(0, 12, 5);
+    G.resetLevel();
+    ok(!HB.enDimension(0), 'pasar de nivel lo saca de la otra dimensión');
+    var po = HB.portales[0];
+    ok(po && po.t > 0 && po.sc === 12, 'dejando la salida donde estaba');
+  });
+
+  test('MAGO · PORTAL en red: el invitado pide entrada y salida; si calla, el anfitrión la pone', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'], roles: ['asesino', 'mago'] });
+    G.state = 'PLAYING';
+    ponPac(1, 2, 5, DR.RIGHT);
+    HB.peticion(G, 1, 1, { c: 2, r: 5 });
+    ok(HB.enDimension(1), 'el anfitrión lo pone en la otra dimensión');
+    var s = G.buildSnapshot(false);
+    eq(s.hx.e[1][8], HC.PORTAL_ESPERA, 'y la dimensión viaja en la foto');
+    HB.peticion(G, 1, 1, { c: 12, r: 5 });
+    ok(HB.portales[1].t > 0 && HB.portales[1].sc === 12, 'la salida donde dijo el invitado');
+    ok(!HB.lista(1, 1), 'con su recarga');
+
+    G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'], roles: ['asesino', 'mago'] });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+    ponPac(1, 2, 5, DR.RIGHT);
+    HB.peticion(G, 1, 1, { c: 2, r: 5 });
+    for (i = 0; i < HC.PORTAL_ESPERA + 10; i++) HB.pasoRoles(G, true);
+    ok(!(HB.portales[1].t > 0), 'el anfitrión espera a que el invitado mande su salida');
+    ponPac(1, 12, 5);
+    for (i = 0; i < HC.PORTAL_RED_GRACIA; i++) HB.pasoRoles(G, true);
+    ok(HB.portales[1] && HB.portales[1].t > 0, 'y si no llega, la pone él');
+  });
+
+  test('MAGO · RUNA: mata a todos los fantasmas de su casilla', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 2), 'la runa se pone');
+    ponPac(0, 20, 5);
+    filaVacia(5);
+    var antes = G.score;
+    var a = fantasmaEn(0, 2, 5), b = fantasmaEn(1, 2, 5);
+    HB.hielo[0] = HB.hielo[1] = 999;
+    ticks(1);
+    ok(a.mode === 'eyes' && b.mode === 'eyes', 'caen los dos');
+    eq(G.score - antes, 400, '200 cada uno');
+    eq(HB.runas[0], null, 'y la runa se gasta');
   });
 
   test('MAGO · RUNA: mata al primero que la pisa y desaparece', function () {
@@ -8856,8 +8953,8 @@
   /* ---------- rebobinado, red y repeticiones ---------- */
   test('ROLES: la foto del rebobinado se lleva la mesa entera', function () {
     partidaRol(['mago'], 2, 5, DR.RIGHT);
-    HB.pulsar(G, 0, 1);
     HB.pulsar(G, 0, 0);
+    HB.pulsar(G, 0, 1);
     HB.hielo[2] = 77;
     var f = HB.foto();
     HB.empezar(true, 1, ['asesino']);

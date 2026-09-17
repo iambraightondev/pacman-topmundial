@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · MAGO: el portal por otra dimensión
+
+- **W · PORTAL**: al pulsar, la entrada se queda donde estás y pasas a **otra
+  dimensión**: el laberinto se tiñe de violeta y los fantasmas y tus
+  compañeros se ven apagados, en segundo plano. Ahí nada te toca, no comes y
+  no puedes usar otro poder. Vuelve a pulsar W para dejar la salida donde
+  estés; si no, a los **8 s** se pone sola. Las dos bocas quedan abiertas
+  **20 s** para ti y tu equipo, **aunque se pase de nivel**. Recarga: **46 s**.
+- **E · RUNA**: mata a **todos** los fantasmas que estén en su casilla al
+  pisarla, no solo al primero.
+- Hay que actualizar para jugar en party con la versión nueva.
+
 ## 2026-09-17 · GAME OVER: botones simétricos
 
 - MENÚ va como INSERT COIN: misma letra, alto y relleno alrededor del texto

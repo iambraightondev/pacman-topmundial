@@ -2393,14 +2393,25 @@ the key index. `LIST` is the ASESINO (the original kit).
 - **MAGO.** Every kill is `Hab.matarMago`: `MAGO_PUNTOS` (200) flat, **no
   chain change and no eat freeze**, event `magoKill`. FUEGO: same projectile
   as HIELO, kills the first ghost. PORTAL: first press places the entrance
-  without spending; second press opens it (`PORTAL_TICKS`) and spends;
-  entrance alone expires after `PORTAL_ESPERA` and spends. Any Pac-Man
+  without spending and puts the mage in the **other dimension**
+  (`st.dimension`, up to `PORTAL_ESPERA` = 8 s): `salvaDelChoque` always saves
+  him and both collision loops skip him, `eatAt`/`guestEatAt`/fruit ignore him,
+  `pacContextFor` skips him (nobody left → the ghost's scatter corner), `puede`
+  only allows the portal key, and `Game.render` draws ghosts and other players
+  grayscale at 0.3 alpha for the viewer inside (`miraDesdeDimension`; never on a
+  shared two-player screen) while others see him at 0.35. Second press
+  (`cerrarPortal`) places the exit, opens both mouths `PORTAL_TICKS` (20 s) and
+  spends (cd 46 s). If not pressed, the machine that simulates that Pac-Man
+  closes it at 8 s where he stands (a guest then sends the same `hab` request;
+  the host closes a silent guest's after `PORTAL_RED_GRACIA`). Open portals
+  survive `limpiarEfectos` (death and level change); a pending one is closed
+  first by `Hab.antesDeRecolocar` from `resetLevel`/`respawn`. Any Pac-Man
   crosses on **entering** a mouth tile (`Hab.cruzar`), then `PORTAL_CRUCE`
-  ticks without crossing. RUNA: trap on the mage's tile for 10 s, kills the
-  first ghost to step on it. TORMENTA: one bolt per second for 4 s on the
+  ticks without crossing. RUNA: trap on the mage's tile for 10 s; when stepped
+  on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 4 s on the
   nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
   dies.
-- **Network (PROTO 11; 11 adds the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot).** Anything touching ghosts or lives is executed by the
+- **Network (PROTO 12; 12 adds `dimension` as the 9th field of each player's role row; 11 adds the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot).** Anything touching ghosts or lives is executed by the
   host (`Hab.peticion(G, who, k, d)`, where the guest sends its arrow `d`,
   tile `c,r` and position `x,y`); self-only effects (ESCUDO, INMUNIDAD, the
   ARROLLAR run, portal crossing) run on the machine that simulates that Pac-Man,

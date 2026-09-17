@@ -1559,7 +1559,7 @@
     ],
     LIST_M: [
       { id: 'fuego',    key: 'Q', name: 'FUEGO',    largo: 'BOLA DE FUEGO', cd: 20 * 60 },
-      { id: 'portal',   key: 'W', name: 'PORTAL',   cd: 24 * 60 },
+      { id: 'portal',   key: 'W', name: 'PORTAL',   cd: 46 * 60 },
       { id: 'runa',     key: 'E', name: 'RUNA',     cd: 32 * 60 },
       { id: 'tormenta', key: 'R', name: 'TORMENTA', cd: 60 * 60 }
     ],
@@ -1577,8 +1577,8 @@
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#b36bff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
-                 desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS: ENTRAS POR UNA Y SALES POR OTRA',
-                        'TRAMPA QUE MATA AL QUE LA PISE', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
+                 desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'CRUZAS POR OTRA DIMENSIÓN Y DEJAS DOS BOCAS 20 S',
+                        'TRAMPA QUE MATA A LOS QUE LA PISEN', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
     },
 
     /* Tanque */
@@ -1614,8 +1614,17 @@
     ALIADO_AREA_TILES: 2,
     VIDA_MAX: 5,                  // la VIDA no sube a nadie de aquí
     /* Mago */
-    PORTAL_TICKS: 8 * 60,         // abierto
-    PORTAL_ESPERA: 5 * 60,        // para poner la salida tras la entrada
+    /* PORTAL. Al pulsar, la entrada se queda donde está el Mago y él pasa a
+     * OTRA DIMENSIÓN: ve el laberinto con todo lo demás en segundo plano, nada
+     * lo toca, no come y no puede usar otro poder. Al volver a pulsar (o solo,
+     * a los PORTAL_ESPERA) deja la salida donde esté y vuelve. Las dos bocas
+     * quedan abiertas PORTAL_TICKS para todo el equipo, aunque se pase de
+     * nivel. La recarga empieza al poner la salida. */
+    PORTAL_TICKS: 20 * 60,        // abierto
+    PORTAL_ESPERA: 8 * 60,        // en la otra dimensión, como mucho
+    /* el anfitrión cierra solo el portal de un invitado que no manda su salida
+     * (se ha caído, o el aviso se perdió) tras este margen extra */
+    PORTAL_RED_GRACIA: 2 * 60,
     PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
     RUNA_TICKS: 10 * 60,
     TORMENTA_RAYOS: 4,
@@ -1713,8 +1722,9 @@
      * jugador lleva su accesorio y su efecto en el saludo); la 10, los ROLES
      * de DESATADO (el rol en el saludo, el arranque y la foto, con el hielo,
      * los proyectiles, los portales y las runas); la 11, MANTENER PULSADO
-     * (la 'm' de la petición de poder y las placas de hielo en la foto). */
-    PROTO: 11,
+     * (la 'm' de la petición de poder y las placas de hielo en la foto); la 12, el
+     * PORTAL con otra dimensión (la 'dimension' de cada jugador en la foto). */
+    PROTO: 12,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

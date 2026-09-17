@@ -682,6 +682,8 @@
     },
 
     resetLevel: function () {
+      // PORTAL: quien estaba en la otra dimensión deja la salida antes de irse
+      if (window.PM.Hab) window.PM.Hab.antesDeRecolocar(this);
       this.loadPellets();
       this.dotsEaten = 0;
       this.cuerpos = [];
@@ -743,6 +745,7 @@
 
     respawn: function () {
       // tras perder una vida: pastillas intactas, contador global activo
+      if (window.PM.Hab) window.PM.Hab.antesDeRecolocar(this);
       for (var i = 0; i < this.pacs.length; i++) {
         this.pacs[i].reset(this.pacStart(i));
       }
@@ -916,11 +919,18 @@
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
         if (p.out || p.dying) continue;   // a un muerto no se le persigue
+        // ni al Mago en la otra dimensión: para ellos no está
+        if (this.hab && window.PM.Hab && window.PM.Hab.enDimension(i)) continue;
         var dx = p.tileX() - gx, dy = p.tileY() - gy;
         var d2 = dx * dx + dy * dy;
         if (d2 < bd) { bd = d2; best = p; }
       }
-      if (!best) best = this.pacs[0];
+      if (!best) {
+        /* sin nadie a quien perseguir (el único que queda está en la otra
+         * dimensión): a su esquina */
+        if (this.hab && ghost.scatter) return { tile: { x: ghost.scatter.x, y: ghost.scatter.y }, dir: ghost.dir };
+        best = this.pacs[0];
+      }
       return { tile: { x: best.tileX(), y: best.tileY() }, dir: best.dir };
     },
 
@@ -1118,6 +1128,7 @@
           for (i = 0; i < this.pacs.length; i++) {
             p = this.pacs[i];
             if (p.out || p.dying || !this.isLocalAuth(i)) continue;
+            if (this.hab && window.PM.Hab && window.PM.Hab.enDimension(i)) continue;
             if (p.tileY() === CFG.START.fruit.y &&
                 (p.tileX() === 13 || p.tileX() === 14)) {
               this.fruitActive = false;
@@ -1144,6 +1155,8 @@
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || p.dying || !this.isLocalAuth(i)) continue;
+        // en la otra dimensión ni se muere ni se come a nadie
+        if (this.hab && window.PM.Hab && window.PM.Hab.enDimension(i)) continue;
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
           if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
@@ -1231,6 +1244,8 @@
      * --------------------------------------------------------- */
     eatAt: function (col, row, pac) {
       if (row < 0 || row >= CFG.ROWS || col < 0 || col >= CFG.COLS) return;
+      // PORTAL: desde la otra dimensión no se come
+      if (pac && this.hab && window.PM.Hab && window.PM.Hab.enDimension(pac.id | 0)) return;
       var ch = this.pellets[row][col];
       if (!ch) return;
       this.pellets[row][col] = null;
@@ -3498,7 +3513,8 @@
       }
 
       /* fruta: la gestiona el anfitrión; aquí solo la recogida propia */
-      if (this.fruitActive && me && !me.out && !me.dying) {
+      if (this.fruitActive && me && !me.out && !me.dying &&
+          !(this.hab && window.PM.Hab && window.PM.Hab.enDimension(me.id))) {
         if (me.tileY() === CFG.START.fruit.y &&
             (me.tileX() === 13 || me.tileX() === 14)) {
           this.fruitActive = false;               // el evt trae los puntos
@@ -3518,6 +3534,7 @@
     },
 
     guestEatAt: function (pac) {
+      if (this.hab && window.PM.Hab && window.PM.Hab.enDimension(pac.id | 0)) return;
       var col = pac.tileX(), row = pac.tileY();
       if (row < 0 || row >= CFG.ROWS || col < 0 || col >= CFG.COLS) return;
       var ch = this.pellets[row][col];
@@ -3554,6 +3571,7 @@
      * hitGhost para la muerte. */
     guestCollisions: function (me) {
       var A = window.PM.Hab;
+      if (this.hab && A && A.enDimension(me.id)) return;   // en la otra dimensión
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
@@ -4453,7 +4471,7 @@
         var dFl = (st.flashDir >= 0) ? st.flashDir : pc.dir;
         S.drawFlashTrail(ctx, pc.x, y, dFl, color, st.flash / CFG.HAB.FLASH_SHOW);
       }
-      var alfa = A.alfa(i);
+      var alfa = A.alfa(i, this);
       if (alfa < 1) { ctx.save(); ctx.globalAlpha = alfa; }
       /* Las extravagantes no llevan la sierra blanca de la Q: no tienen la
        * boca en cuña y los dientes flotarían fuera de la cara. Su aviso de
@@ -4526,11 +4544,16 @@
                          (this.state === 'LEVEL_DONE' && this.levelPhase === 1);
         // runas y bocas de portal van en el suelo
         if (this.hab && window.PM.Hab) window.PM.Hab.dibujarSuelo(this, ctx);
+        /* PORTAL: quien mira desde la otra dimensión ve lo de fuera en segundo
+         * plano, apagado y sin color */
+        var dimYo = (this.hab && window.PM.Hab) ? window.PM.Hab.miraDesdeDimension(this) : -1;
         if (!hideGhosts) {
+          if (dimYo >= 0) { ctx.save(); ctx.globalAlpha = 0.3; ctx.filter = 'grayscale(1)'; }
           for (i = 0; i < 4; i++) {
             if (this.eatFreezeTicks > 0 && i === this.hiddenGhost) continue;
             this.ghosts[i].draw(ctx, this);
           }
+          if (dimYo >= 0) ctx.restore();
           /* PAC-MAN VS.: marca sobre el fantasma que lleva un jugador. Sin
            * ella no hay quien sepa cuál de los cuatro piensa por su cuenta. */
           if (window.PM.Versus) window.PM.Versus.drawMarks(this, ctx);
@@ -4576,6 +4599,12 @@
           }
           // parpadeo del margen de gracia al reaparecer con la partida en marcha
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
+          if (dimYo >= 0 && i !== dimYo) {
+            ctx.save(); ctx.globalAlpha = 0.3; ctx.filter = 'grayscale(1)';
+            this.drawPac(ctx, pc, i);
+            ctx.restore();
+            continue;
+          }
           this.drawPac(ctx, pc, i);
         }
         this.dibujarCuerpos(ctx);
