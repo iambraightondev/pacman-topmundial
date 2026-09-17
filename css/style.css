@@ -4345,3 +4345,18 @@ body { font-size-adjust: 0.56; }
 }
 #contMini .cont-mini-btn { font-size: 11px; padding: 8px 12px; color: #000; background: #ffff00; border-color: #ffff00; }
 #contMini .cont-mini-btn:disabled { opacity: 0.4; }
+
+/* la barra de emotes, como un panel propio sobre el laberinto y no suelta
+ * encima del marcador */
+#emoteBar {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 8px);
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.92);
+  border: 2px solid #2121ff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
+}

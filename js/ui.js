@@ -7933,6 +7933,13 @@
       this.emoteBarOpen = show;
       this.emoteBar.classList.toggle('on', show);
       if (show) {
+        /* Justo debajo del marcador, donde empieza el laberinto: arriba del
+         * todo tapaba los puntos y el HIGH SCORE. */
+        var cv = document.getElementById('game');
+        if (cv && cv.offsetHeight) {
+          this.emoteBar.style.top = Math.round(cv.offsetTop +
+            cv.offsetHeight * (CFG.MAZE_Y / CFG.NATIVE_H) + 4) + 'px';
+        }
         var Tn = window.PM.Tienda;
         for (var i = 0; Tn && i < this.emoteFaces.length; i++) {
           var nombre = Tn.nombreEmote(Tn.emoteDeTecla(i));

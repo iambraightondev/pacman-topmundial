@@ -455,7 +455,10 @@
         px--;
         ctx.font = window.PM.Letra.lienzo(px);
       }
-      ctx.fillText(text, x, y);
+      /* Si ni con la letra más pequeña cabe, se estrecha al dibujarla: nunca
+       * se sale de su hueco ni pisa lo de al lado. */
+      if (ctx.measureText(text).width > ancho) ctx.fillText(text, x, y, ancho);
+      else ctx.fillText(text, x, y);
     },
 
     /* Índice del otro jugador (modos de dos jugadores) */
@@ -4334,8 +4337,12 @@
       ctx.textAlign = 'left';
       var leftLabel = caza ? CFG.CAZA.NOMBRE_PAC : team ? 'EQUIPO'
         : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
-      // hasta donde empieza "HIGH SCORE" (centrado en 112, unos 48 px de ancho)
-      this.fitText(ctx, leftLabel, 20, 0, 66, 8);
+      /* Hasta donde empieza "HIGH SCORE" (centrado en 112), con aire. Se mide
+       * en vez de dar un número fijo: con la letra de máquina HIGH SCORE mide
+       * 80 px y el hueco de antes (66) hacía que un nombre largo lo pisara. */
+      ctx.font = window.PM.Letra.lienzo(8);
+      var hueco = caza ? 66 : Math.max(24, 112 - ctx.measureText('HIGH SCORE').width / 2 - 6 - 20);
+      this.fitText(ctx, leftLabel, 20, 0, hueco, 8);
       ctx.font = window.PM.Letra.lienzo(8);
       ctx.textAlign = 'center';
       ctx.textAlign = 'right';
