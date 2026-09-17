@@ -5198,3 +5198,6 @@ body { font-size-adjust: 0.56; }
 /* los que ya van rellenos de color (el principal del marco de recreativa) no
  * llevan la línea: ya se distinguen solos */
 #prompt.arcade .prompt-btns .btn-primary .btn-ronda { display: none; }
+/* botones de los diálogos más separados: juntos no se sabía dónde acababa uno */
+.prompt-btns { gap: 18px; }
+#prompt.arcade .prompt-btns { gap: 18px 48px; }

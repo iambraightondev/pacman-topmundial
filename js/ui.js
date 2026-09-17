@@ -8889,7 +8889,7 @@
       var Gd = window.PM.Guardado;
       var sePuede = !!(Gd && Gd.puedeGuardar());
       if (sePuede) {
-        lines.push('GUARDAR Y SALIR LA DEJA COMO ESTÁ PARA SEGUIRLA LUEGO, AQUÍ O EN OTRO APARATO.');
+        lines.push('GUARDAR LA DEJA COMO ESTÁ PARA SEGUIRLA LUEGO, AQUÍ O EN OTRO APARATO.');
       }
       var botones = [
         { label: 'REANUDAR', hint: 'P · ESC', primary: true,
@@ -8903,7 +8903,7 @@
           } }
       ];
       if (sePuede) {
-        botones.push({ label: 'GUARDAR Y SALIR', hint: 'G', keys: ['g'],
+        botones.push({ label: 'GUARDAR', hint: 'G', keys: ['g'],
           onClick: function () {
             if (!Gd.guardarYSalir()) return;    // no se pudo: se sigue en pausa
             self.hidePrompt();

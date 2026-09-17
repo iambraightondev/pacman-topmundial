@@ -9,6 +9,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 - Los botones de los diálogos (pausa, GAME OVER, VOLVER, elegir jugadores...)
   ya no se rellenan al señalarlos: una línea recorre su borde, como en el DAILY.
   Los que ya van rellenos de color (REANUDAR, JUGAR OTRA VEZ...) no la llevan.
+- Los botones de los diálogos van más separados, y en la pausa GUARDAR Y SALIR
+  se llama solo GUARDAR (hace lo mismo: guarda la partida y sale).
 
 ## 2026-09-17 · SOPORTE: teclas que se mantienen
 
