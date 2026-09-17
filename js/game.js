@@ -555,6 +555,7 @@
       this.contTicks = 0;        // CONTINUE?: lo que queda para pagar
       this.contHasta = [];       // hasta qué tick puede volver cada jugador
       this.contPedido = 0;       // invitado: tick en que pidió continuar
+      this.cuerpos = [];         // el cuerpo de quien se quedó sin vidas
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -673,6 +674,7 @@
     resetLevel: function () {
       this.loadPellets();
       this.dotsEaten = 0;
+      this.cuerpos = [];
       this.resetActors();
       this.schedule = CFG.schedule(this.level);
       this.speedRow = CFG.speedRow(this.level);
@@ -818,7 +820,7 @@
      * menú justo cuando te matan era desesperante. */
     canPause: function () {
       return this.inGame() && this.state !== 'GAME_OVER' &&
-        this.state !== 'CONTINUE' && !this.netNotice;
+        this.state !== 'CONTINUE' && this.state !== 'REVIVIR' && !this.netNotice;
     },
 
     togglePause: function () {
@@ -984,6 +986,7 @@
             case 'DYING':      this.stepDying(); break;
             case 'LEVEL_DONE': this.stepLevelDone(); break;
             case 'CONTINUE':   this.stepContinue(); break;
+            case 'REVIVIR':    this.stepRevivir(); break;
             case 'GAME_OVER':  this.stepGameOver(); break;
           }
         }
@@ -1050,6 +1053,7 @@
 
       /* muertes en curso: solo se congela quien muere, la partida sigue */
       this.stepPacDeaths(true);
+      this.stepCuerpos();
 
       /* CACERÍA: el rumbo del Pac-Man de la máquina y el reloj de su poder */
       if (this.caza) window.PM.Caza.paso(this);
@@ -1549,7 +1553,12 @@
       }
       if (left <= 0) {
         p.out = true;               // sin vidas: de espectador
-        if (this.puedeContinuar()) this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
+        /* su cuerpo se queda donde cayó, para que lo revivan (lo decide
+         * quien simula: el invitado lo recibe en la instantánea) */
+        if (this.puedeRevivir() && this.anyPlaying(i) &&
+            this.netRole !== 'guest' && !this.isSpec()) {
+          this.cuerpos[i] = { x: p.x, y: p.y, d: p.dir, t: CFG.REVIVIR.CUERPO_TICKS, n: 0, en: {} };
+        }
       } else {
         p.reset(this.pacStart(i));
         p.safeTicks = CFG.RESPAWN_SAFE_TICKS;
@@ -1622,6 +1631,7 @@
     },
 
     entrarContinue: function () {
+      this.cuerpos = [];
       this.state = 'CONTINUE';
       this.contTicks = CFG.CONTINUAR.TICKS;
       for (var i = 0; i < this.pacs.length; i++) {
@@ -1665,7 +1675,8 @@
       if (!this.puedeContinuar() || this.replaying || this.isSpec()) return false;
       if (this.netNotice || this.state === 'GAME_OVER' || this.state === 'MENU') return false;
       if (this.state === 'CONTINUE') return true;
-      return this.contQuien() !== null;
+      if (this.state === 'REVIVIR') return this.contQuien() !== null;
+      return false;
     },
 
     /* A quién revive un pago ahora mismo: el índice, -1 si son todos los de
@@ -1675,13 +1686,13 @@
       if (this.netRole) {
         var yo = this.pacs[this.localIdx];
         if (!yo || !yo.out) return null;
-        if (this.state !== 'CONTINUE' && !(this.contHasta[this.localIdx] > this.tick)) return null;
+        if (this.state !== 'CONTINUE' && this.state !== 'REVIVIR') return null;
         return this.localIdx;
       }
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
         if (p.bot || !p.out) continue;
-        if (this.state === 'CONTINUE' || this.contHasta[i] > this.tick) return ind ? -1 : -1;
+        if (this.state === 'CONTINUE' || this.state === 'REVIVIR') return -1;
       }
       return null;
     },
@@ -1721,6 +1732,11 @@
         }
       }
       this.hostEvt({ t: 'contOk', w: (quien >= 0 ? quien : -1) });
+      if (this.state === 'REVIVIR') {
+        var quedan = false;
+        for (i = 0; i < this.pacs.length; i++) if (this.pacs[i].out && !this.pacs[i].bot) quedan = true;
+        if (!quedan) this.siguienteNivel();
+      }
       this.syncUI();
       return true;
     },
@@ -1816,11 +1832,124 @@
         this.syncUI();
         return;
       }
+      if (this.ofrecerRevivir()) { this.entrarRevivir(); return; }
+      this.siguienteNivel();
+    },
+
+    siguienteNivel: function () {
+      this.contTicks = 0;
       this.level++;
       if (!this.caza) this.bumpAch({ nivelMax: this.level });   // lo sube la máquina
       this.resetLevel();
       this.enterReady(CFG.READY_TICKS);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: CFG.READY_TICKS });
+    },
+
+    /* =========================================================
+     * REVIVIR AL COMPAÑERO (CFG.REVIVIR)
+     *
+     * 1. Sin vidas y con otros jugando, el cuerpo se queda tirado 30 s. Cada
+     *    vez que un compañero le pasa por encima cuenta una pasada; a las 5,
+     *    vuelve con 1 vida y 5 s de escudo, donde estaba.
+     * 2. Si el cuerpo desaparece, al acabar el nivel sale la vista REVIVIR:
+     *    quien está fuera puede pagar el CONTINUAR para volver en el nivel
+     *    siguiente. Los demás esperan, como mucho, 10 s.
+     *
+     * Solo con vidas propias: con el fondo común nadie se queda fuera a solas.
+     * ========================================================= */
+    puedeRevivir: function () {
+      return this.puedeContinuar() && this.playerCount > 1 && this.livesMode === 'individual';
+    },
+
+    stepCuerpos: function () {
+      if (!this.cuerpos || !this.cuerpos.length) return;
+      var R = CFG.REVIVIR;
+      for (var i = 0; i < this.cuerpos.length; i++) {
+        var c = this.cuerpos[i];
+        if (!c) continue;
+        var dueno = this.pacs[i];
+        if (!dueno || !dueno.out) { this.cuerpos[i] = null; continue; }
+        c.t--;
+        if (c.t <= 0) {
+          this.cuerpos[i] = null;
+          this.hostEvt({ t: 'cuerpoFin', w: i });
+          continue;
+        }
+        for (var j = 0; j < this.pacs.length; j++) {
+          if (j === i) continue;
+          var p = this.pacs[j];
+          var encima = !!(p && !p.out && !p.dying && !p.bot &&
+            Math.abs(p.x - c.x) <= R.TOCA_PX && Math.abs(p.y - c.y) <= R.TOCA_PX);
+          if (encima && !c.en[j]) {
+            c.n++;
+            if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
+          }
+          c.en[j] = encima;
+        }
+        if (c.n >= R.PASADAS) this.revivirCuerpo(i);
+      }
+    },
+
+    revivirCuerpo: function (i) {
+      var c = this.cuerpos[i], p = this.pacs[i];
+      this.cuerpos[i] = null;
+      if (!c || !p) return;
+      p.out = false;
+      p.dying = false;
+      p.lives = CFG.REVIVIR.VIDAS;
+      p.x = c.x; p.y = c.y;
+      p.dir = c.d; p.nextDir = c.d;
+      p.moving = false;
+      p.safeTicks = CFG.REVIVIR.ESCUDO_TICKS;
+      p.escudo = true;
+      this.hostEvt({ t: 'revive', w: i, x: c.x, y: c.y, d: c.d });
+      if (window.AudioSys && AudioSys.playExtraLife) AudioSys.playExtraLife();
+      this.setFlash('¡' + this.hudNameFor(i) + ' HA VUELTO!');
+    },
+
+    /* ¿Se abre REVIVIR al acabar el nivel? */
+    ofrecerRevivir: function () {
+      if (!this.puedeRevivir()) return false;
+      var fuera = false;
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (this.pacs[i].out && !this.pacs[i].bot) fuera = true;
+      }
+      if (!fuera) return false;
+      var R = window.PM.Replay;
+      if (R && R.modo === 'ver') return !!(R.contEnEspera && R.contEnEspera());
+      if (this.replaying) return false;
+      if (this.netRole) return true;
+      var Tn = window.PM.Tienda;
+      return !!(Tn && Tn.llegaContinuar());
+    },
+
+    entrarRevivir: function () {
+      this.state = 'REVIVIR';
+      this.contTicks = CFG.CONTINUAR.TICKS;
+      this.cuerpos = [];
+      this.stopAllLoops();
+      this.hostEvt({ t: 'revAbre', tk: this.contTicks });
+      this.syncUI();
+    },
+
+    stepRevivir: function () {
+      var R = window.PM.Replay;
+      if (R && R.modo === 'ver') {
+        if (!(R.contEnEspera && R.contEnEspera())) this.siguienteNivel();
+        return;
+      }
+      if (this.contTicks > 0) this.contTicks--;
+      if (this.contTicks % 60 === 0 && window.PM.UI && window.PM.UI.tickContinue) {
+        window.PM.UI.tickContinue();
+      }
+      if (this.contTicks <= 0) this.siguienteNivel();
+    },
+
+    /* SIGUIENTE NIVEL sin esperar (sin red: en party se espera a todos) */
+    saltarRevivir: function () {
+      if (this.state !== 'REVIVIR' || this.netRole) return false;
+      this.siguienteNivel();
+      return true;
     },
 
     /* ---------------------------------------------------------
@@ -3054,7 +3183,7 @@
          * que tarde la red). El cobro lo hace él al recibir 'contOk'. */
         case 'contReq': {
           var pq = this.pacs[who];
-          var aTiempo = this.state === 'CONTINUE' ||
+          var aTiempo = this.state === 'CONTINUE' || this.state === 'REVIVIR' ||
             ((this.contHasta[who] || 0) + CFG.CONTINUAR.ESPERA_RED > this.tick);
           if (this.puedeContinuar() && pq && pq.out && !pq.bot && aTiempo &&
               this.state !== 'GAME_OVER') {
@@ -3141,6 +3270,7 @@
         fa: this.fruitActive ? 1 : 0,
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
         ct: this.contTicks,           // CONTINUE?: lo que queda para pagar
+        cu: this.cuerposSnap(),       // cuerpos tirados: [x, y, ticks, pasadas]
         vs: this.vsScores || null,    // PAC-MAN VS.: marcador de cada cazador
         cz: this.caza ? this.cazaTicks : undefined,   // CACERÍA: reloj del poder
         he: this.snapEaten,
@@ -3212,6 +3342,9 @@
           break;
         case 'PLAYING':
           this.stepGuestPlaying();
+          for (var ci = 0; ci < this.cuerpos.length; ci++) {
+            if (this.cuerpos[ci] && this.cuerpos[ci].t > 1) this.cuerpos[ci].t--;
+          }
           break;
         case 'DYING':
           // animación local; el reinicio lo manda el anfitrión ('ready')
@@ -3222,6 +3355,7 @@
           // animaciones suaves entre instantáneas
           if (this.phaseTicks > 0) this.phaseTicks--;
           break;
+        case 'REVIVIR':
         case 'CONTINUE':
           // la cuenta atrás la corrige cada instantánea
           if (this.contTicks > 0) this.contTicks--;
@@ -3558,7 +3692,7 @@
           if (me && (cw === this.localIdx || cw === -1) && me.out) {
             me.out = false;
             me.dying = false;
-            if (this.state !== 'CONTINUE') {
+            if (this.state !== 'CONTINUE' && this.state !== 'REVIVIR') {
               me.reset(this.pacStart(this.localIdx));
               me.safeTicks = CFG.RESPAWN_SAFE_TICKS;
             }
@@ -3566,6 +3700,32 @@
           this.syncUI();
           break;
         }
+        case 'revAbre':
+          this.state = 'REVIVIR';
+          this.contTicks = e.tk || CFG.CONTINUAR.TICKS;
+          this.cuerpos = [];
+          this.stopAllLoops();
+          this.syncUI();
+          break;
+        case 'revive': {
+          var rp = this.pacs[e.w];
+          if (rp) {
+            rp.out = false;
+            rp.dying = false;
+            rp.lives = CFG.REVIVIR.VIDAS;
+            rp.safeTicks = CFG.REVIVIR.ESCUDO_TICKS;
+            rp.escudo = true;
+            if (e.w === this.localIdx) {
+              rp.x = e.x; rp.y = e.y; rp.dir = e.d; rp.nextDir = e.d; rp.moving = false;
+              this.setFlash('¡TE HAN REVIVIDO!');
+            }
+          }
+          if (this.cuerpos) this.cuerpos[e.w] = null;
+          break;
+        }
+        case 'cuerpoFin':
+          if (this.cuerpos) this.cuerpos[e.w] = null;
+          break;
         case 'contNo':
           if (this.contPedido && e.w === this.localIdx) {
             this.contPedido = 0;
@@ -3688,6 +3848,13 @@
       this.fruitActive = !!s.fa;
       if (typeof s.tm === 'number') this.timeTicks = s.tm;
       if (typeof s.ct === 'number') this.contTicks = s.ct;
+      if (esLista(s.cu)) {
+        this.cuerpos = [];
+        for (var cu = 0; cu < s.cu.length; cu++) {
+          var cv = s.cu[cu];
+          this.cuerpos.push(esLista(cv) ? { x: cv[0], y: cv[1], t: cv[2], n: cv[3], en: {} } : null);
+        }
+      }
       if (esLista(s.vs)) this.vsScores = s.vs.slice();
       if (typeof s.cz === 'number') this.cazaTicks = s.cz;
 
@@ -3702,10 +3869,6 @@
       if (s.out) {
         for (i = 0; i < this.pacs.length && i < s.out.length; i++) {
           var fuera = !!s.out[i];
-          if (fuera && !this.pacs[i].out && !(this.contHasta[i] > this.tick) &&
-              this.puedeContinuar()) {
-            this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
-          }
           this.pacs[i].out = fuera;
         }
       }
@@ -4294,10 +4457,24 @@
            * pocos segundos y el personaje se desvanecía justo al morder, que
            * es cuando se tiene que ver (los dientes, la llamarada...). */
           if (this.eatFreezeTicks > 0 && i === this.eaterIdx && !this.hab) continue;
+          /* escudo de quien acaba de ser revivido: un aro que se ve también
+           * en el parpadeo */
+          if (pc.escudo && pc.safeTicks > 0) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 255, 255, ' + (0.5 + 0.4 * Math.sin(this.tick / 5)) + ')';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(pc.x, pc.y + CFG.MAZE_Y, 11, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          } else if (pc.escudo) {
+            pc.escudo = false;
+          }
           // parpadeo del margen de gracia al reaparecer con la partida en marcha
           if (pc.safeTicks > 0 && Math.floor(this.tick / 6) % 2 === 0) continue;
           this.drawPac(ctx, pc, i);
         }
+        this.dibujarCuerpos(ctx);
         /* CACERÍA: el aro de aviso (y de poder) sobre el Pac-Man de la máquina */
         if (this.caza) window.PM.Caza.draw(this, ctx);
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!". En
@@ -4340,6 +4517,45 @@
 
       this.renderHUD(ctx);
       this.renderStateText(ctx);
+    },
+
+    /* Los cuerpos tirados: el Pac-Man apagado, las pasadas que lleva y un
+     * aro que se vacía con el tiempo que le queda. */
+    dibujarCuerpos: function (ctx) {
+      if (!this.cuerpos || !this.cuerpos.length) return;
+      if (this.state !== 'PLAYING' && this.state !== 'READY' && this.state !== 'DYING') return;
+      var R = CFG.REVIVIR, Sp = window.PM.Sprites;
+      for (var i = 0; i < this.cuerpos.length; i++) {
+        var c = this.cuerpos[i];
+        if (!c) continue;
+        var y = c.y + CFG.MAZE_Y;
+        ctx.save();
+        ctx.globalAlpha = 0.45 + 0.25 * Math.sin(this.tick / 8);
+        try { Sp.drawPacman(ctx, c.x, y, c.d || 0, 0, this.colorFor(i), this.skinFor(i), { icono: true }); } catch (e) { }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = this.colorFor(i);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(c.x, y, 10, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0, c.t) / R.CUERPO_TICKS);
+        ctx.stroke();
+        ctx.font = window.PM.Letra.lienzo(6);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText((c.n || 0) + '/' + R.PASADAS, c.x, y - 12);
+        ctx.restore();
+      }
+    },
+
+    cuerposSnap: function () {
+      if (!this.cuerpos || !this.cuerpos.length) return null;
+      var out = [], hay = false;
+      for (var i = 0; i < this.pacs.length; i++) {
+        var c = this.cuerpos[i];
+        if (c) { hay = true; out.push([Math.round(c.x * 10) / 10, Math.round(c.y * 10) / 10, c.t, c.n]); }
+        else out.push(0);
+      }
+      return hay ? out : null;
     },
 
     renderHUD: function (ctx) {

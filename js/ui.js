@@ -8309,6 +8309,7 @@
       // g.overWait: aún se están celebrando logros o subida de nivel sobre el
       // laberinto, y el panel del resumen no debe taparlos
       else if (g.state === 'CONTINUE' && !g.replaying && !g.isSpec()) this.showContinuePrompt();
+      else if (g.state === 'REVIVIR' && !g.replaying && !g.isSpec()) this.showRevivirPrompt();
       else if (g.overIdle && !g.overWait) this.showGameOverPrompt();
       else if (g.paused && g.inGame() && g.state !== 'GAME_OVER') this.showPausePrompt();
       /* Del CONTINUE? al GAME OVER hay un paso de nada: el diálogo de
@@ -8967,10 +8968,110 @@
       this.tickContinue();
     },
 
+    /* ------------------------------------------------------
+     * REVIVIR (CFG.REVIVIR): nivel acabado con alguien fuera. Quien está
+     * fuera puede pagar el CONTINUAR para volver en el nivel siguiente; los
+     * demás esperan, como mucho, la cuenta atrás.
+     * ------------------------------------------------------ */
+    showRevivirPrompt: function () {
+      var self = this;
+      var g = window.PM.Game, Tn = window.PM.Tienda, C = CFG.CONTINUAR;
+      var llega = !!(Tn && Tn.llegaContinuar());
+      var puedo = g.contQuien() !== null;
+      var fuera = [];
+      for (var i = 0; i < g.pacs.length; i++) {
+        if (g.pacs[i].out && !g.pacs[i].bot) fuera.push(i);
+      }
+      var botones = [];
+      if (puedo) {
+        botones.push({ label: 'REVIVIR', primary: true, hint: fmtMonedas(C.PRECIO) + ' · C', keys: ['c', 'Enter'],
+          onClick: function () { self.resumeAudio(); g.pedirContinuar(); } });
+      }
+      if (!g.netRole) {
+        botones.push({ label: 'SIGUIENTE NIVEL', hint: 'S', keys: ['s'],
+          onClick: function () { self.resumeAudio(); g.saltarRevivir(); } });
+      }
+      botones.push({ label: 'MENÚ', hint: 'ESC', keys: ['q', 'Escape'],
+        onClick: function () { g.toMenu(); } });
+
+      this.showPrompt({
+        title: 'REVIVIR',
+        arcade: true,
+        solid: true,
+        status: g.flash ? g.flash.text : '',
+        statusError: !!g.flash,
+        custom: function (p) {
+          var titulo = p.querySelector('.panel-title');
+          if (titulo) titulo.classList.add('go-titulo', 'rev-titulo');
+          var bomb = document.createElement('div');
+          bomb.className = 'go-bombillas';
+          bomb.setAttribute('aria-hidden', 'true');
+          p.insertBefore(bomb, p.firstChild);
+
+          var sub = document.createElement('div');
+          sub.className = 'cont-marcador';
+          sub.textContent = 'NIVEL ' + g.level + ' SUPERADO · PUNTOS ' + fmtMonedas(g.score);
+          p.appendChild(sub);
+
+          var reloj = document.createElement('div');
+          reloj.className = 'go-reloj cont-reloj rev-reloj';
+          reloj.innerHTML = '<svg viewBox="0 0 110 110" aria-hidden="true">' +
+            '<circle cx="55" cy="55" r="48" fill="none" stroke="#0a2a2a" stroke-width="8"/>' +
+            '<circle class="go-aro" cx="55" cy="55" r="48" fill="none" stroke="#00ffff" stroke-width="8" stroke-dasharray="301.6" stroke-dashoffset="0"/></svg>';
+          var num = document.createElement('b');
+          reloj.appendChild(num);
+          p.appendChild(reloj);
+          self.contReloj = { el: reloj, num: num, aro: reloj.querySelector ? reloj.querySelector('.go-aro') : null };
+
+          var quienes = document.createElement('div');
+          quienes.className = 'rev-quienes';
+          fuera.forEach(function (k) {
+            var n = document.createElement('span');
+            n.style.color = g.colorFor(k);
+            n.textContent = g.hudNameFor(k);
+            quienes.appendChild(n);
+          });
+          var q2 = document.createElement('small');
+          q2.textContent = fuera.length === 1 ? 'SE QUEDÓ SIN VIDAS' : 'SE QUEDARON SIN VIDAS';
+          quienes.appendChild(q2);
+          p.appendChild(quienes);
+
+          if (puedo) {
+            var oferta = document.createElement('div');
+            oferta.className = 'cont-oferta';
+            oferta.appendChild(document.createTextNode('VUELVE CON ' + CFG.REVIVIR.VIDAS +
+              (CFG.REVIVIR.VIDAS === 1 ? ' VIDA' : ' VIDAS') + ' POR '));
+            oferta.appendChild(self.precioEl(C.PRECIO));
+            p.appendChild(oferta);
+            var saldo = document.createElement('div');
+            saldo.className = 'cont-saldo' + (llega ? '' : ' falta');
+            saldo.textContent = llega
+              ? ('TIENES ' + fmtMonedas(Tn.saldo()) + ' · TE QUEDAN ' + fmtMonedas(Tn.saldo() - C.PRECIO))
+              : ('TIENES ' + fmtMonedas(Tn ? Tn.saldo() : 0) + ' · TE FALTAN ' + fmtMonedas(C.PRECIO - (Tn ? Tn.saldo() : 0)));
+            p.appendChild(saldo);
+          }
+          if (g.netRole) {
+            var nota = document.createElement('div');
+            nota.className = 'cont-nota';
+            nota.textContent = g.contPedido ? 'ESPERANDO AL ANFITRIÓN...'
+              : (puedo ? 'SI NO PAGAS, SIGUES MIRANDO' : 'ESPERANDO A QUE TUS COMPAÑEROS DECIDAN');
+            p.appendChild(nota);
+          }
+        },
+        buttons: botones
+      });
+      if (puedo) {
+        var btns = this.els.prompt.querySelectorAll('.prompt-btns .btn');
+        if (btns && btns[0]) btns[0].disabled = !llega || !!g.contPedido;
+      }
+      this.contBtnOtra = null;
+      this.tickContinue();
+    },
+
     /* Cada segundo: la cuenta atrás y el candado de JUGAR OTRA VEZ */
     tickContinue: function () {
       var g = window.PM.Game;
-      if (!this.promptOpen || g.state !== 'CONTINUE' || !this.contReloj) return;
+      if (!this.promptOpen || (g.state !== 'CONTINUE' && g.state !== 'REVIVIR') || !this.contReloj) return;
       var seg = Math.max(0, Math.ceil((g.contTicks || 0) / 60));
       this.contReloj.num.textContent = String(seg);
       if (this.contReloj.aro) {

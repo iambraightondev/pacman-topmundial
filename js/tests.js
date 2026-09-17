@@ -7237,6 +7237,149 @@
     });
   });
 
+  // ---------------------------------------------------------------
+  // REVIVIR AL COMPAÑERO (17 sep)
+  // ---------------------------------------------------------------
+  function duoConVidasPropias() {
+    partida(2);
+    G.livesMode = 'individual';
+    G.pacs[0].lives = 3;
+    G.pacs[1].lives = 1;
+    return G;
+  }
+
+  test('sin vidas y con el compañero jugando, el cuerpo se queda tirado', function () {
+    duoConVidasPropias();
+    try {
+      var j2 = G.pacs[1];
+      j2.x = 100; j2.y = 150;
+      G.finishPacDeath(1);
+      ok(j2.out, 'J2 fuera');
+      ok(G.cuerpos[1], 'su cuerpo se queda');
+      eq(G.cuerpos[1].x + ',' + G.cuerpos[1].y, '100,150', 'donde cayó');
+      eq(G.cuerpos[1].t, CFG.REVIVIR.CUERPO_TICKS, '30 segundos');
+      eq(G.state, 'PLAYING', 'y la partida sigue');
+    } finally { G.toMenu(); }
+  });
+
+  test('cinco pasadas por encima lo reviven con 1 vida y escudo', function () {
+    duoConVidasPropias();
+    try {
+      var j1 = G.pacs[0], j2 = G.pacs[1];
+      j2.x = 100; j2.y = 150;
+      G.finishPacDeath(1);
+      for (var v = 0; v < CFG.REVIVIR.PASADAS; v++) {
+        j1.x = 100; j1.y = 150;
+        G.stepCuerpos();
+        if (v < CFG.REVIVIR.PASADAS - 1) {
+          ok(j2.out, 'todavía no (' + (v + 1) + ')');
+          G.stepCuerpos();                        // quedarse encima no cuenta dos veces
+          eq(G.cuerpos[1].n, v + 1, 'una pasada por vez');
+        }
+        j1.x = 60; j1.y = 150;
+        G.stepCuerpos();
+      }
+      ok(!j2.out, 'J2 vuelve');
+      eq(j2.lives, 1, 'con 1 vida');
+      eq(j2.safeTicks, CFG.REVIVIR.ESCUDO_TICKS, 'y 5 s de escudo');
+      eq(j2.x + ',' + j2.y, '100,150', 'donde estaba su cuerpo');
+      ok(!G.cuerpos[1], 'el cuerpo ya no está');
+    } finally { G.toMenu(); }
+  });
+
+  test('a los 30 segundos el cuerpo desaparece', function () {
+    duoConVidasPropias();
+    try {
+      G.finishPacDeath(1);
+      G.cuerpos[1].t = 1;
+      G.pacs[0].x = 10; G.pacs[0].y = 10;
+      G.stepCuerpos();
+      ok(!G.cuerpos[1], 'se fue');
+      ok(G.pacs[1].out, 'y J2 sigue fuera');
+    } finally { G.toMenu(); }
+  });
+
+  test('al acabar el nivel, quien está fuera puede pagar para volver', function () {
+    conTienda(function (Tn) {
+      duoConVidasPropias();
+      try {
+        G.finishPacDeath(1);
+        G.cuerpos = [];
+        var nivel = G.level;
+        G.state = 'LEVEL_DONE'; G.levelPhase = 1; G.phaseTicks = 1;
+        G.stepLevelDone();
+        eq(G.state, 'REVIVIR', 'sale la vista de revivir');
+        ok(G.contDisponible(), 'se puede pagar');
+        ok(G.pedirContinuar(), 'se paga');
+        eq(Tn.saldo(), 500, '1.000 monedas');
+        ok(!G.pacs[1].out, 'J2 vuelve');
+        eq(G.level, nivel + 1, 'y se pasa al nivel siguiente');
+        eq(G.state, 'READY');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('SIGUIENTE NIVEL sin pagar deja al compañero mirando', function () {
+    conTienda(function (Tn) {
+      duoConVidasPropias();
+      try {
+        G.finishPacDeath(1);
+        G.state = 'LEVEL_DONE'; G.levelPhase = 1; G.phaseTicks = 1;
+        G.stepLevelDone();
+        eq(G.state, 'REVIVIR');
+        ok(G.saltarRevivir(), 'se sigue');
+        eq(G.state, 'READY', 'nivel siguiente');
+        ok(G.pacs[1].out, 'J2 sigue fuera');
+        eq(Tn.saldo(), 1500, 'sin cobrar');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('la repetición de un dúo con cuerpo tirado acaba igual', function () {
+    var R = window.PM.Replay;
+    var previo = null, previoSave = null, modoVidas = window.PM.settings.livesMode;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { previo = null; }
+    try { previoSave = localStorage.getItem(CFG.SAVE_KEY); } catch (e) { previoSave = null; }
+    conTienda(function () {
+      try {
+        window.PM.settings.muted = true;
+        window.PM.settings.livesMode = 'individual';
+        if (G.inGame()) G.toMenu();
+        R.salir();
+        G.newGame({ players: 2 });
+        var cuerpos = 0, tick = 0;
+        for (; tick < 80000 && G.state !== 'GAME_OVER'; tick++) {
+          // un reparto de giros con el que uno de los dos cae antes que el otro
+          if (tick % 40 === 0) G.setPacDir(0, (tick / 40) % 4);
+          if (tick % 97 === 0) G.setPacDir(1, ((tick / 97) + 2) % 4);
+          if (G.cuerpos.some(function (c) { return !!c; })) cuerpos++;
+          if (G.state === 'REVIVIR') G.saltarRevivir();
+          G.step();
+        }
+        ok(cuerpos > 0, 'hubo cuerpo tirado');
+        var puntos = G.score, nivel = G.level;
+        G.toMenu();
+        var reg = R.guardadas()[0];
+        ok(reg && reg.p === puntos, 'se guardó');
+        R.montar(R.leer(reg.s));
+        var n = 0;
+        while (G.state !== 'GAME_OVER' && n < 100000) { G.step(); n++; }
+        eq(G.score, puntos, 'los mismos puntos');
+        eq(G.level, nivel, 'el mismo nivel');
+        G.toMenu();
+      } finally {
+        window.PM.settings.livesMode = modoVidas;
+        try {
+          if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+          else localStorage.setItem(CFG.REPLAY_KEY, previo);
+          if (previoSave === null) localStorage.removeItem(CFG.SAVE_KEY);
+          else localStorage.setItem(CFG.SAVE_KEY, previoSave);
+        } catch (e) { /* nada */ }
+        window.PM.UI.hidePrompt();
+      }
+    });
+  });
+
   test('CONTINUAR se guarda en el texto de la repetición', function () {
     var R = window.PM.Replay;
     var rep = repDe(9000);

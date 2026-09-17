@@ -276,7 +276,7 @@
 
   /* Los textos que viajan en una instantánea, como índices */
   // CONTINUE va al final: el orden es el contrato y los de antes no se mueven
-  var ESTADOS = ['MENU', 'READY', 'PLAYING', 'DYING', 'LEVEL_DONE', 'GAME_OVER', 'CONTINUE'];
+  var ESTADOS = ['MENU', 'READY', 'PLAYING', 'DYING', 'LEVEL_DONE', 'GAME_OVER', 'CONTINUE', 'REVIVIR'];
   var MODOS_G = ['house', 'leaving', 'normal', 'eyes', 'entering'];
 
   function idx(lista, v, porDefecto) {

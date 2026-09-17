@@ -4360,3 +4360,14 @@ body { font-size-adjust: 0.56; }
   border: 2px solid #2121ff;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
 }
+
+/* ---------- REVIVIR (fin de nivel con alguien fuera) ---------- */
+#prompt.arcade .panel-title.rev-titulo {
+  background: repeating-linear-gradient(180deg, #00ffff 0 0.07em, #008b8b 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 #004b4b) drop-shadow(0 0 0.4em rgba(0, 255, 255, 0.45));
+}
+.rev-quienes { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 6px 14px; font-size: clamp(14px, 2.4vh, 20px); letter-spacing: 2px; }
+.rev-quienes small { flex-basis: 100%; font-size: clamp(9px, 1.4vh, 11px); color: #b9bae6; }
+#prompt.arcade .rev-reloj b { color: #00ffff; text-shadow: 0 0 16px rgba(0, 255, 255, 0.7); }

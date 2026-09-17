@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep — revivir al compañero (`pm-v98`).** Pedido de Braighton. Solo con
+vidas propias (`livesMode` individual). Cuerpo en `Game.cuerpos` (lo decide
+quien simula, viaja en la instantánea como `cu`), 5 pasadas en 30 s =
+vuelve con 1 vida y 5 s de escudo (`CFG.REVIVIR`). Estado `REVIVIR` al acabar
+el nivel si queda alguien fuera: paga el CONTINUAR (misma entrada 8 en la
+repetición). Decidido por mí, a confirmar: vuelve donde estaba el cuerpo; en
+party se espera 10 s; en local hay SIGUIENTE NIVEL; se quitó el pago a mitad
+de nivel. **Por mirar:** probar en party real (cuerpos y pasadas del invitado
+dependen de las posiciones que manda).
+
 **17 sep — CONTINUAR por 1.000 monedas (`pm-v93`).** Pedido de Braighton.
 Decidido: la partida continuada cuenta ENTERA para el TOP MUNDIAL; se sigue
 con 1 vida en el mismo nivel; en todos los modos con vidas propias (no VS. ni

@@ -706,6 +706,19 @@
     ESPERA_RED: 180      // lo que espera un invitado a que el anfitrión conteste
   };
 
+  /* REVIVIR AL COMPAÑERO (17 sep 2026). Con vidas propias, quien se queda
+   * sin vidas deja su cuerpo en el laberinto: si un compañero le pasa por
+   * encima PASADAS veces antes de CUERPO_TICKS, vuelve con 1 vida y ESCUDO_TICKS
+   * de escudo. Si el cuerpo desaparece, al acabar el nivel puede pagar el
+   * CONTINUAR (CFG.CONTINUAR) para volver en el siguiente. */
+  CFG.REVIVIR = {
+    PASADAS: 5,
+    CUERPO_TICKS: 1800,   // 30 s
+    ESCUDO_TICKS: 300,    // 5 s
+    VIDAS: 1,
+    TOCA_PX: 5            // cuánto hay que acercarse para contar una pasada
+  };
+
   CFG.TIENDA = {
     INICIALES: 1500,
     POR_PARTIDA: 5,
