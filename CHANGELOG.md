@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · PARTIDA A MEDIAS con marco de recreativa
+
+- El aviso de que tienes una partida guardada al empezar otra usa el marco de
+  la pausa: ficha con el modo, los puntos, el nivel y cuándo se guardó, el
+  aviso de que se pierde en naranja y los botones de siempre.
+
 ## 2026-09-17 · Escudo aliado de 8 s y botones con línea
 
 - El **ESCUDO ALIADO** del Soporte dura **8 s** (o hasta el primer golpe). A

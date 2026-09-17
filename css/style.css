@@ -5201,3 +5201,25 @@ body { font-size-adjust: 0.56; }
 /* botones de los diálogos más separados: juntos no se sabía dónde acababa uno */
 .prompt-btns { gap: 18px; }
 #prompt.arcade .prompt-btns { gap: 18px 48px; }
+
+/* ---------- PARTIDA A MEDIAS ----------
+ * Antes de empezar otra: la ficha de la guardada y el aviso. */
+.medias-ficha {
+  border: 2px solid #ffff00;
+  box-shadow: 0 0 24px rgba(255, 255, 0, 0.25), inset 0 0 18px rgba(255, 255, 0, 0.08);
+  background: rgba(0, 0, 0, 0.55);
+  padding: clamp(12px, 2.2vh, 20px) clamp(16px, 3vw, 34px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.8vh, 16px);
+  min-width: min(520px, 86vw);
+}
+.medias-modo { font-size: clamp(12px, 2vh, 16px); letter-spacing: 4px; color: #ffb8ff; }
+.medias-datos { display: flex; justify-content: center; gap: clamp(18px, 4vw, 48px); flex-wrap: wrap; }
+.medias-dato { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.medias-dato b { font-size: clamp(18px, 3.4vh, 28px); letter-spacing: 2px; color: #ffff00; text-shadow: 0 0 12px rgba(255, 255, 0, 0.45); }
+.medias-dato small { font-size: clamp(8px, 1.2vh, 10px); letter-spacing: 2px; color: #b9bae6; }
+.medias-aviso { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; color: #ff8c00; margin: clamp(4px, 1vh, 10px) 0; }
+/* el título es largo: más pequeño, para que quepa en una línea */
+#prompt.arcade:has(.medias-ficha) .panel-title.go-titulo { font-size: clamp(26px, min(5vw, 8vh), 68px); }

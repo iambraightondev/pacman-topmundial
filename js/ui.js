@@ -916,10 +916,41 @@
       var self = this;
       var Gd = window.PM.Guardado;
       if (!Gd || !Gd.hay()) return false;
+      var sb = Gd.sobre();
       this.showPrompt({
-        title: 'TIENES UNA PARTIDA A MEDIAS',
-        color: '#ffff00',
-        lines: [Gd.titulo(), 'SI EMPIEZAS OTRA, ESA SE PIERDE.'],
+        title: 'PARTIDA A MEDIAS',
+        arcade: true,
+        tono: 'amarillo',
+        /* la ficha de la guardada: de qué modo es, cómo iba y cuándo se dejó,
+         * y el aviso de lo que pasa si se empieza otra */
+        custom: function (p) {
+          var ficha = document.createElement('div');
+          ficha.className = 'medias-ficha';
+          var modo = document.createElement('div');
+          modo.className = 'medias-modo';
+          modo.textContent = sb.maze ? 'LABERINTOS' : (Gd.NOMBRES[sb.modo] || 'PARTIDA');
+          ficha.appendChild(modo);
+          var datos = document.createElement('div');
+          datos.className = 'medias-datos';
+          [['PUNTOS', Gd.miles(sb.p)], ['NIVEL', String(sb.lv)],
+           ['GUARDADA', Gd.cuando(sb)]].forEach(function (d) {
+            var c = document.createElement('div');
+            c.className = 'medias-dato';
+            var v = document.createElement('b');
+            v.textContent = d[1];
+            var k = document.createElement('small');
+            k.textContent = d[0];
+            c.appendChild(v);
+            c.appendChild(k);
+            datos.appendChild(c);
+          });
+          ficha.appendChild(datos);
+          p.appendChild(ficha);
+          var aviso = document.createElement('div');
+          aviso.className = 'medias-aviso';
+          aviso.textContent = 'SI EMPIEZAS UNA NUEVA, ESTA SE PIERDE';
+          p.appendChild(aviso);
+        },
         buttons: [
           { label: 'SEGUIR LA DE ANTES', primary: true, hint: 'ENTER',
             keys: ['Enter'],
