@@ -181,21 +181,27 @@
    *   W X Y Z   poderes del jugador 2   (87..90, por encima de la V)
    *
    * Ninguna de las dos tandas pisa el rango de los giros, así que un texto
-   * grabado antes de que existiera el dúo se sigue leyendo igual. */
+   * grabado antes de que existiera el dúo se sigue leyendo igual.
+   *
+   *   E         CONTINUAR pagado (qué = 8; desde el 17 sep 2026)
+   *
+   * La E estaba libre (entre los poderes del J1 y los giros). Una versión
+   * del juego de antes no la conoce y da la repetición por rota, que es lo
+   * que tiene que pasar: sin revivir, la partida no cuadraría. */
   function codHab(e) {
     var base = (e[1] === 1) ? 87 : 65;      // 'W' para el J2, 'A' para el J1
     return String.fromCharCode(base + ((e[2] - 4) & 3));
   }
 
-  function esHab(e) { return e[2] >= 4; }
+  function esHab(e) { return e[2] >= 4 && e[2] <= 7; }
 
   function codEntradas(arr) {
     var out = '', prev = 0, i = 0;
     while (i < arr.length) {
       var e = arr[i];
       var delta = e[0] - prev;
-      var code = esHab(e)
-        ? codHab(e)
+      var code = (e[2] === 8) ? 'E'
+        : esHab(e) ? codHab(e)
         : String.fromCharCode(71 + ((e[1] & 3) << 2) + (e[2] & 3));
       var n = 1;
       while (i + n < arr.length) {
@@ -219,7 +225,7 @@
     var out = [];
     if (s === '') return out;
     // el punto que cierra la cuenta es opcional: los textos de antes no lo llevan
-    var re = /([0-9a-z]+)([A-DG-Z])(?:\*([0-9a-z]+)\.?)?/g;
+    var re = /([0-9a-z]+)([A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
@@ -236,7 +242,8 @@
       var c = cod - (poderDe === 0 ? 65 : (poderDe === 1 ? 87 : 71));
       for (var i = 0; i < veces; i++) {
         tick += delta;
-        if (poderDe >= 0) out.push([tick, poderDe, 4 + c]);
+        if (cod === 69) out.push([tick, 0, 8]);            // E: continuar
+        else if (poderDe >= 0) out.push([tick, poderDe, 4 + c]);
         else out.push([tick, (c >> 2) & 3, c & 3]);
       }
     }
@@ -268,7 +275,8 @@
    * ============================================================ */
 
   /* Los textos que viajan en una instantánea, como índices */
-  var ESTADOS = ['MENU', 'READY', 'PLAYING', 'DYING', 'LEVEL_DONE', 'GAME_OVER'];
+  // CONTINUE va al final: el orden es el contrato y los de antes no se mueven
+  var ESTADOS = ['MENU', 'READY', 'PLAYING', 'DYING', 'LEVEL_DONE', 'GAME_OVER', 'CONTINUE'];
   var MODOS_G = ['house', 'leaving', 'normal', 'eyes', 'entering'];
 
   function idx(lista, v, porDefecto) {
@@ -474,7 +482,13 @@
          * de los dos primeros jugadores: es lo único que sabe grabar este
          * formato (de tres en adelante la partida es de red y se graba de
          * otra manera). */
-        if (!esNum(e[2]) || e[2] < 0 || e[2] > 7) return false;
+        if (!esNum(e[2]) || e[2] < 0 || e[2] > 8) return false;
+        /* 8: CONTINUAR pagado. Siempre del J1 (en local un pago revive al
+         * equipo del teclado) y nunca en PAC-MAN VS., que no tiene continuar. */
+        if (e[2] === 8) {
+          if (e[1] !== 0 || esVersus(rep.modo)) return false;
+          continue;
+        }
         if (e[2] > 3 && (!esDesatado(rep.modo) || e[1] > 1)) return false;
         if (e[2] > 3 && rep.modo === 'hab' && e[1] !== 0) return false;
       }
@@ -1135,6 +1149,24 @@
       }
     },
 
+    /* CONTINUAR pagado (Game.pedirContinuar): se apunta en el tick en que
+     * está parada la partida, y al verla revive en el mismo punto. */
+    apuntaCont: function () {
+      if (!this.grabando) return;
+      this.grabando.entradas.push([this.t, 0, 8]);
+      if (this.grabando.entradas.length > CFG.REPLAY_MAX_ENTRADAS) {
+        this.grabando = null;
+      }
+    },
+
+    /* Viendo una repetición: ¿lo siguiente es un CONTINUAR que ya toca? */
+    contEnEspera: function () {
+      var ent = this.rep && this.rep.entradas;
+      if (this.modo !== 'ver' || !ent) return false;
+      var e = ent[this.cursor];
+      return !!(e && e[2] === 8 && e[0] <= this.t);
+    },
+
     /* Un paso del juego (Game.step). Mete los giros que tocan y adelanta el
      * reloj de la repetición. */
     paso: function () {
@@ -1164,6 +1196,17 @@
       this.enviando = true;
       while (this.cursor < ent.length && ent[this.cursor][0] <= this.t) {
         var i = this.cursor++, e = ent[i];
+        if (e[2] === 8) {
+          /* CONTINUAR: solo cuando hay alguien a quien revivir. Si todavía no
+           * (la muerte no ha acabado), se espera sin gastar la entrada. */
+          var hayFuera = false;
+          for (var pf = 0; pf < G.pacs.length; pf++) {
+            if (G.pacs[pf].out && !G.pacs[pf].bot) hayFuera = true;
+          }
+          if (!hayFuera) { this.cursor--; break; }
+          G.revivir(-1);
+          continue;
+        }
         if (e[2] >= 4) {
           // habilidad: se relanza igual que la lanzó el jugador aquel día
           var ok = window.PM.Hab ? window.PM.Hab.pulsar(G, e[1], e[2] - 4) : true;

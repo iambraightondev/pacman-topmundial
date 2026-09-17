@@ -8301,6 +8301,7 @@
       if (g.vote) this.showVotePrompt(g.vote);
       // g.overWait: aún se están celebrando logros o subida de nivel sobre el
       // laberinto, y el panel del resumen no debe taparlos
+      else if (g.state === 'CONTINUE' && !g.replaying && !g.isSpec()) this.showContinuePrompt();
       else if (g.overIdle && !g.overWait) this.showGameOverPrompt();
       else if (g.paused && g.inGame() && g.state !== 'GAME_OVER') this.showPausePrompt();
       else {
@@ -8811,47 +8812,11 @@
           }
 
           /* CONTINUE? */
+          /* la fila de los botones (la cuenta atrás ya pasó: era el CONTINUE?) */
           var cont = document.createElement('div');
           cont.className = 'go-continue';
-          var reloj = document.createElement('div');
-          reloj.className = 'go-reloj';
-          reloj.innerHTML = '<svg viewBox="0 0 110 110" aria-hidden="true">' +
-            '<circle cx="55" cy="55" r="48" fill="none" stroke="#2a0a1a" stroke-width="8"/>' +
-            '<circle class="go-aro" cx="55" cy="55" r="48" fill="none" stroke="#ff2a2a" stroke-width="8" stroke-dasharray="301.6" stroke-dashoffset="0"/></svg>';
-          var num = document.createElement('b');
-          num.textContent = '9';
-          reloj.appendChild(num);
-          cont.appendChild(reloj);
-          var preg = document.createElement('div');
-          preg.className = 'go-pregunta';
-          preg.textContent = 'CONTINUE?';
-          var sm = document.createElement('small');
-          sm.textContent = 'R PARA SEGUIR · ESC PARA EL MENÚ';
-          preg.appendChild(sm);
-          cont.appendChild(preg);
           p.appendChild(cont);
-
-          /* los botones del diálogo se mudan a la fila de CONTINUE? */
           self.goCont = cont;
-
-          /* la cuenta atrás: sigue donde iba aunque el diálogo se rehaga */
-          if (anima || self.goCuenta == null) self.goCuenta = 9;
-          var aro = reloj.querySelector('.go-aro');
-          var pon = function () {
-            num.textContent = String(self.goCuenta);
-            if (aro) aro.setAttribute('stroke-dashoffset', String(301.6 * (1 - self.goCuenta / 9)));
-            reloj.classList.toggle('cero', self.goCuenta === 0);
-          };
-          pon();
-          if (self.goCuentaT) clearInterval(self.goCuentaT);
-          var cuentaT = self.goCuentaT = setInterval(function () {
-            if (!self.promptOpen || !reloj.isConnected) {
-              clearInterval(cuentaT);
-              if (self.goCuentaT === cuentaT) self.goCuentaT = null;
-              return;
-            }
-            if (self.goCuenta > 0) { self.goCuenta--; pon(); }
-          }, 1000);
 
           /* el recuento */
           var todo = filas.concat(lista);
@@ -8897,6 +8862,156 @@
       if (btns && this.goCont) this.goCont.appendChild(btns);
       var estado = p.querySelector('.lobby-status');
       if (estado) p.appendChild(estado);
+    },
+
+    /* ------------------------------------------------------
+     * CONTINUE? (CFG.CONTINUAR)
+     *
+     * Sin vidas: 10 segundos para pagar 1.000 monedas y seguir con 1 vida en
+     * el mismo nivel. JUGAR OTRA VEZ no se puede pulsar hasta que se acaba la
+     * cuenta atrás (entonces sale el GAME OVER). MENÚ sí: irse es irse.
+     * ------------------------------------------------------ */
+    showContinuePrompt: function () {
+      var self = this;
+      var g = window.PM.Game, Tn = window.PM.Tienda, C = CFG.CONTINUAR;
+      var llega = !!(Tn && Tn.llegaContinuar());
+      var mil = function (n) {
+        return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+      this.showPrompt({
+        title: 'CONTINUE?',
+        arcade: true,
+        solid: true,
+        status: g.flash ? g.flash.text : '',
+        statusError: !!g.flash,
+        custom: function (p) {
+          var titulo = p.querySelector('.panel-title');
+          if (titulo) titulo.classList.add('go-titulo');
+          var bomb = document.createElement('div');
+          bomb.className = 'go-bombillas';
+          bomb.setAttribute('aria-hidden', 'true');
+          p.insertBefore(bomb, p.firstChild);
+
+          var reloj = document.createElement('div');
+          reloj.className = 'go-reloj cont-reloj';
+          reloj.innerHTML = '<svg viewBox="0 0 110 110" aria-hidden="true">' +
+            '<circle cx="55" cy="55" r="48" fill="none" stroke="#2a0a1a" stroke-width="8"/>' +
+            '<circle class="go-aro" cx="55" cy="55" r="48" fill="none" stroke="#ff2a2a" stroke-width="8" stroke-dasharray="301.6" stroke-dashoffset="0"/></svg>';
+          var num = document.createElement('b');
+          reloj.appendChild(num);
+          p.appendChild(reloj);
+          self.contReloj = { el: reloj, num: num, aro: reloj.querySelector ? reloj.querySelector('.go-aro') : null };
+
+          var marcador = document.createElement('div');
+          marcador.className = 'cont-marcador';
+          marcador.textContent = 'PUNTOS ' + mil(g.score) + ' · NIVEL ' + g.level;
+          p.appendChild(marcador);
+
+          var oferta = document.createElement('div');
+          oferta.className = 'cont-oferta';
+          oferta.appendChild(document.createTextNode(C.VIDAS + (C.VIDAS === 1 ? ' VIDA MÁS' : ' VIDAS MÁS') + ' POR '));
+          oferta.appendChild(self.precioEl(C.PRECIO));
+          p.appendChild(oferta);
+
+          var saldo = document.createElement('div');
+          saldo.className = 'cont-saldo' + (llega ? '' : ' falta');
+          saldo.textContent = llega
+            ? ('TIENES ' + fmtMonedas(Tn.saldo()) + ' · TE QUEDAN ' + fmtMonedas(Tn.saldo() - C.PRECIO))
+            : ('TIENES ' + fmtMonedas(Tn ? Tn.saldo() : 0) + ' · TE FALTAN ' + fmtMonedas(C.PRECIO - (Tn ? Tn.saldo() : 0)));
+          p.appendChild(saldo);
+
+          if (g.netRole) {
+            var nota = document.createElement('div');
+            nota.className = 'cont-nota';
+            nota.textContent = g.contPedido ? 'ESPERANDO AL ANFITRIÓN...'
+              : 'CADA UNO PAGA LO SUYO · QUIEN NO PAGUE SE QUEDA MIRANDO';
+            p.appendChild(nota);
+          }
+        },
+        buttons: [
+          { label: 'CONTINUAR', primary: true, hint: fmtMonedas(C.PRECIO) + ' · C', keys: ['c', 'Enter'],
+            onClick: function () { self.resumeAudio(); g.pedirContinuar(); } },
+          { label: 'JUGAR OTRA VEZ', hint: 'EN ' + Math.max(0, Math.ceil((g.contTicks || 0) / 60)), keys: [],
+            onClick: function () { /* se activa en el GAME OVER */ } },
+          { label: 'MENÚ', hint: 'ESC', keys: ['q', 'Escape'],
+            onClick: function () { g.toMenu(); } }
+        ]
+      });
+      var btns = this.els.prompt.querySelectorAll('.prompt-btns .btn');
+      if (btns && btns.length >= 2) {
+        this.contBtnPagar = btns[0];
+        this.contBtnOtra = btns[1];
+        btns[0].disabled = !llega || !!g.contPedido || !g.contDisponible();
+        btns[1].disabled = true;
+        btns[1].classList.add('cont-bloqueado');
+        if (btns[0].disabled && btns[2]) { try { btns[2].focus(); } catch (e) { } }
+      }
+      this.tickContinue();
+    },
+
+    /* Cada segundo: la cuenta atrás y el candado de JUGAR OTRA VEZ */
+    tickContinue: function () {
+      var g = window.PM.Game;
+      if (!this.promptOpen || g.state !== 'CONTINUE' || !this.contReloj) return;
+      var seg = Math.max(0, Math.ceil((g.contTicks || 0) / 60));
+      this.contReloj.num.textContent = String(seg);
+      if (this.contReloj.aro) {
+        this.contReloj.aro.setAttribute('stroke-dashoffset',
+          String(301.6 * (1 - (g.contTicks || 0) / CFG.CONTINUAR.TICKS)));
+      }
+      if (this.contBtnOtra) {
+        var k = this.contBtnOtra.querySelector && this.contBtnOtra.querySelector('.btn-key');
+        if (k) k.textContent = 'EN ' + seg;
+      }
+    },
+
+    /* En medio de la partida (party o dúo con vidas propias): te has quedado
+     * sin vidas y los demás siguen. Un aviso pequeño abajo, sin parar nada. */
+    refreshContMini: function () {
+      var g = window.PM.Game, Tn = window.PM.Tienda;
+      var ver = !!(g.inGame() && g.state !== 'CONTINUE' && !this.promptOpen &&
+                   g.contDisponible && g.contDisponible());
+      if (!ver) {
+        if (this.contMini && this.contMiniOn) {
+          this.contMini.style.display = 'none';
+          this.contMiniOn = false;
+        }
+        return;
+      }
+      var self = this;
+      if (!this.contMini) {
+        var d = document.createElement('div');
+        d.id = 'contMini';
+        var txt = document.createElement('span');
+        txt.className = 'cont-mini-txt';
+        d.appendChild(txt);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-primary cont-mini-btn';
+        b.addEventListener('click', function () { self.resumeAudio(); g.pedirContinuar(); });
+        d.appendChild(b);
+        document.body.appendChild(d);
+        this.contMini = d;
+        this.contMiniTxt = txt;
+        this.contMiniBtn = b;
+      }
+      var i = g.netRole ? g.localIdx : 0;
+      var hasta = g.contHasta[i] || 0;
+      if (!g.netRole) {
+        for (var k = 0; k < g.pacs.length; k++) hasta = Math.max(hasta, g.contHasta[k] || 0);
+      }
+      var seg = Math.max(0, Math.ceil((hasta - g.tick) / 60));
+      var llega = !!(Tn && Tn.llegaContinuar());
+      var texto = g.contPedido ? 'ESPERANDO...' : ('SIN VIDAS · ' + seg + ' S PARA VOLVER');
+      var boton = llega ? ('CONTINUAR · ' + fmtMonedas(CFG.CONTINUAR.PRECIO)) :
+        ('TE FALTAN ' + fmtMonedas(CFG.CONTINUAR.PRECIO - (Tn ? Tn.saldo() : 0)));
+      if (this.contMiniTxt.textContent !== texto) this.contMiniTxt.textContent = texto;
+      if (this.contMiniBtn.textContent !== boton) this.contMiniBtn.textContent = boton;
+      this.contMiniBtn.disabled = !llega || !!g.contPedido;
+      if (!this.contMiniOn) {
+        this.contMini.style.display = 'flex';
+        this.contMiniOn = true;
+      }
     },
 
     /* los puntos subiendo, como el contador de la máquina */
@@ -9642,6 +9757,18 @@
           return;
         }
         var canControl = (g.state === 'PLAYING' || g.state === 'READY');
+
+        /* C: CONTINUAR sin vidas mientras los demás siguen. Con dos en el
+         * mismo teclado en DESATADO la C es un poder del J2, así que ahí solo
+         * vale el botón. */
+        if ((ev.key === 'c' || ev.key === 'C') && !self.promptOpen &&
+            g.contDisponible && g.contDisponible() && g.state !== 'CONTINUE' &&
+            !(g.hab && g.playerCount === 2 && !g.netRole)) {
+          self.resumeAudio();
+          g.pedirContinuar();
+          ev.preventDefault();
+          return;
+        }
 
         /* Ctrl+Espacio: enseña tu maestría sobre tu Pac-Man */
         if (canControl && ev.ctrlKey &&

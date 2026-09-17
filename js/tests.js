@@ -7111,6 +7111,172 @@
     });
   });
 
+  // ---------------------------------------------------------------
+  // CONTINUAR (17 sep): 1.000 monedas por seguir con 1 vida
+  // ---------------------------------------------------------------
+  function sinVidas() {
+    for (var i = 0; i < G.pacs.length; i++) {
+      var p = G.pacs[i];
+      p.dying = false; p.out = true; p.lives = 0;
+    }
+    G.lives = 0;
+    G.state = 'DYING';
+    G.stepDying();
+  }
+
+  test('sin vidas sale el CONTINUE?, y pagar sigue con 1 vida en el mismo nivel', function () {
+    conTienda(function (Tn) {
+      partida(1);
+      try {
+        G.score = 5000;
+        G.level = 3;
+        sinVidas();
+        eq(G.state, 'CONTINUE', 'antes del GAME OVER, la cuenta atrás');
+        eq(G.contTicks, CFG.CONTINUAR.TICKS, '10 segundos');
+        ok(!G.canPause(), 'no se pausa para pensárselo');
+        ok(G.pedirContinuar(), 'se paga');
+        eq(Tn.saldo(), 500, 'cuesta 1.000');
+        eq(G.state, 'READY', 'se sigue');
+        eq(G.level, 3, 'en el mismo nivel');
+        eq(G.lives, 1, 'con 1 vida');
+        ok(!G.pacs[0].out, 'Pac-Man vuelve');
+        eq(G.score, 5000, 'los puntos se quedan');
+        ok(!G.pedirContinuar(), 'ya no hay nada que pagar');
+        eq(Tn.saldo(), 500, 'ni se cobra otra vez');
+        var rep = window.PM.Replay.enCurso();
+        ok(rep && rep.entradas.some(function (e) { return e[2] === 8; }), 'y queda en la repetición');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('si nadie paga en 10 segundos, GAME OVER sin cobrar', function () {
+    conTienda(function (Tn) {
+      partida(1);
+      try {
+        sinVidas();
+        ticks(CFG.CONTINUAR.TICKS - 1);
+        eq(G.state, 'CONTINUE', 'todavía se puede');
+        ticks(2);
+        eq(G.state, 'GAME_OVER', 'se acabó el tiempo');
+        eq(Tn.saldo(), 1500, 'no se cobra nada');
+        ok(!G.pedirContinuar(), 'ya no se puede pagar');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('sin monedas para seguir, el GAME OVER sale directo', function () {
+    conTienda(function (Tn) {
+      ok(Tn.comprar('cuy').ok, 'se gasta todo');
+      partida(1);
+      try {
+        sinVidas();
+        eq(G.state, 'GAME_OVER', 'no hay nada que esperar');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('CACERÍA no tiene continuar', function () {
+    partida(1);
+    try {
+      G.caza = true;
+      ok(!G.puedeContinuar(), 'la vida es de la máquina');
+    } finally { G.caza = false; G.toMenu(); }
+  });
+
+  test('en party, el anfitrión revive solo a quien pagó', function () {
+    partida(2, 'host');
+    try {
+      G.livesMode = 'individual';
+      sinVidas();
+      eq(G.state, 'CONTINUE', 'online siempre se abre: puede pagar cualquiera');
+      G.hostGuestEvent({ t: 'contReq', i: 1 }, 1);
+      eq(G.state, 'READY', 'se sigue');
+      ok(!G.pacs[1].out, 'el que pagó vuelve');
+      eq(G.pacs[1].lives, 1, 'con 1 vida');
+      ok(G.pacs[0].out, 'el que no pagó se queda mirando');
+      ok(G.contHasta[0] > G.tick, 'y aún puede volver');
+    } finally { G.toMenu(); }
+  });
+
+  test('en party, el invitado pide, y se le cobra solo si el anfitrión dice que sí', function () {
+    conTienda(function (Tn) {
+      partida(2, 'guest');
+      var mandados = [], envia = G.netSend;
+      G.netSend = function (n, d) { mandados.push([n, d]); };
+      try {
+        var me = G.pacs[G.localIdx];
+        me.out = true; me.lives = 0;
+        G.applyEvt({ t: 'contAbre', tk: CFG.CONTINUAR.TICKS });
+        eq(G.state, 'CONTINUE', 'le llega la cuenta atrás');
+        ok(G.pedirContinuar(), 'lo pide');
+        ok(mandados.some(function (m) { return m[1] && m[1].t === 'contReq'; }), 'se lo pide al anfitrión');
+        eq(Tn.saldo(), 1500, 'todavía sin cobrar');
+        ok(!G.pedirContinuar(), 'no se pide dos veces');
+        G.applyEvt({ t: 'ready', lvl: G.level, full: false, rt: 60 });
+        G.applyEvt({ t: 'contOk', w: G.localIdx });
+        eq(Tn.saldo(), 500, 'con el sí, se cobra');
+        ok(!me.out, 'y vuelve a jugar');
+        G.applyEvt({ t: 'contOk', w: G.localIdx });
+        eq(Tn.saldo(), 500, 'un sí repetido no cobra otra vez');
+      } finally { G.netSend = envia; G.toMenu(); }
+    });
+  });
+
+  test('CONTINUAR se guarda en el texto de la repetición', function () {
+    var R = window.PM.Replay;
+    var rep = repDe(9000);
+    rep.entradas.push([130, 0, 8]);
+    var leido = R.leer(R.serializar(rep));
+    ok(leido, 'se lee');
+    ok(igual(leido, rep), 'leer(serializar(x)) sigue siendo x');
+    var mal = repDe(10);
+    mal.entradas.push([130, 1, 8]);
+    ok(!R.valida(mal), 'un continuar del J2 no cuela');
+  });
+
+  test('la repetición de una partida continuada acaba igual', function () {
+    var R = window.PM.Replay;
+    var previo = null, previoSave = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { previo = null; }
+    try { previoSave = localStorage.getItem(CFG.SAVE_KEY); } catch (e) { previoSave = null; }
+    conTienda(function () {
+      try {
+        window.PM.settings.muted = true;
+        if (G.inGame()) G.toMenu();
+        R.salir();
+        G.newGame({ players: 1 });
+        var pagados = 0, tick = 0;
+        for (; tick < 60000 && G.state !== 'GAME_OVER'; tick++) {
+          if (tick % 45 === 0) G.setPacDir(0, (tick / 45) % 4);
+          if (G.state === 'CONTINUE' && pagados === 0) { ok(G.pedirContinuar(), 'se paga una vez'); pagados++; }
+          G.step();
+        }
+        eq(pagados, 1, 'se llegó a pagar');
+        eq(G.state, 'GAME_OVER', 'y la segunda vez se dejó acabar');
+        var puntos = G.score, nivel = G.level;
+        G.toMenu();
+        var reg = R.guardadas()[0];
+        ok(reg && reg.p === puntos, 'se guardó la repetición');
+        var rep = R.leer(reg.s);
+        ok(rep, 'se lee');
+        R.montar(rep);
+        var n = 0;
+        while (G.state !== 'GAME_OVER' && n < 80000) { G.step(); n++; }
+        eq(G.score, puntos, 'los mismos puntos');
+        eq(G.level, nivel, 'el mismo nivel');
+        G.toMenu();
+      } finally {
+        try {
+          if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+          else localStorage.setItem(CFG.REPLAY_KEY, previo);
+          if (previoSave === null) localStorage.removeItem(CFG.SAVE_KEY);
+          else localStorage.setItem(CFG.SAVE_KEY, previoSave);
+        } catch (e) { /* nada */ }
+        window.PM.UI.hidePrompt();
+      }
+    });
+  });
+
   test('las skins de tienda se abren comprándolas', function () {
     conTienda(function (Tn) {
       var Sk = window.PM.Skins;

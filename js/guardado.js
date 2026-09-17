@@ -80,7 +80,7 @@
     puedeGuardar: function () {
       var g = G(), r = R();
       if (!g || !r) return false;
-      if (!g.inGame() || g.state === 'GAME_OVER') return false;
+      if (!g.inGame() || g.state === 'GAME_OVER' || g.state === 'CONTINUE') return false;
       if (g.replaying || g.netRole || g.isSpec()) return false;
       var rep = r.enCurso();
       return !!(rep && MODOS_OK[rep.modo]);

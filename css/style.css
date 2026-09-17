@@ -4302,3 +4302,46 @@ body { font-size-adjust: 0.56; }
 .go-sellos { gap: 30px; padding-top: 14px; }
 .go-sello { font-size: clamp(8px, 1.2vh, 11px); padding: 7px 10px; }
 #prompt.arcade { overflow-x: hidden; }
+
+/* ---------- CONTINUE? ----------
+ * Sin vidas: la cuenta atrás grande, lo que cuesta y lo que tienes. */
+#prompt.arcade .cont-reloj { width: clamp(110px, 18vh, 170px); height: clamp(110px, 18vh, 170px); }
+#prompt.arcade .cont-reloj b { font-size: clamp(40px, 7vh, 64px); }
+.cont-marcador { font-size: clamp(12px, 2vh, 16px); letter-spacing: 3px; color: #ffff00; }
+.cont-oferta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(14px, 2.6vh, 22px);
+  letter-spacing: 2px;
+  color: #fff;
+}
+.cont-oferta .precio { font-size: 1.2em; }
+.cont-saldo { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; color: #b9bae6; }
+.cont-saldo.falta { color: #ff5a5a; }
+.cont-nota { font-size: clamp(8px, 1.2vh, 10px); letter-spacing: 1px; color: #ffb8ff; }
+#prompt.arcade .prompt-btns .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+#prompt.arcade .prompt-btns .btn-primary:disabled { box-shadow: none; transform: none; }
+#prompt.arcade .prompt-btns .btn.cont-bloqueado .btn-key { color: #ff5a5a; }
+
+/* el aviso pequeño de en medio de la partida */
+#contMini {
+  position: fixed;
+  left: 50%;
+  bottom: 64px;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: none;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: rgba(20, 0, 10, 0.92);
+  border: 2px solid #ff2a2a;
+  box-shadow: 0 0 24px rgba(255, 0, 0, 0.35);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #fff;
+  white-space: nowrap;
+}
+#contMini .cont-mini-btn { font-size: 11px; padding: 8px 12px; color: #000; background: #ffff00; border-color: #ffff00; }
+#contMini .cont-mini-btn:disabled { opacity: 0.4; }

@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · CONTINUAR por 1.000 monedas
+
+- **Al quedarte sin vidas, 10 segundos para seguir:** CONTINUAR cuesta 1.000
+  monedas y sigues en el mismo nivel, con tus puntos y 1 vida. La partida
+  continuada cuenta entera para el TOP MUNDIAL.
+- **JUGAR OTRA VEZ** está bloqueado mientras corre la cuenta atrás; al
+  acabarse sale el GAME OVER. Si juegas solo y no te llega, GAME OVER directo.
+- **En party** cada uno paga lo suyo. Quien no paga se queda mirando dentro
+  de la sala, y quien se queda sin vidas mientras los demás siguen tiene sus
+  10 segundos para volver (aviso abajo, tecla C).
+- PAC-MAN VS. y CACERÍA no tienen continuar.
+- Las repeticiones graban el continuar y se ven igual que se jugaron.
+
 ## 2026-09-17 · GAME OVER de recreativa: CONTINUE?
 
 - **Nuevo final de partida**, a pantalla completa: GAME OVER en rojo con

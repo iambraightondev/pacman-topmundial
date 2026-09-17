@@ -99,7 +99,10 @@
     /* ...y el REGALO DE VETERANO, aparte de lo ganado: se calcula una vez con
      * lo jugado hasta entonces (sembrarBono). Es un máximo, no una suma, para
      * que juntar dos aparatos no lo cobre dos veces. */
-    bono:      'mayor'
+    bono:      'mayor',
+    /* ...y lo GASTADO en continuar partidas (CFG.CONTINUAR). Suma, como lo
+     * ganado: el saldo sale de restarlo. */
+    gastoCont: 'suma'
   };
   /* ...y una por cosa comprable: c_<id> = 1 si está comprada. Salen del
    * catálogo, así que añadir algo a la tienda crea su contador solo. */

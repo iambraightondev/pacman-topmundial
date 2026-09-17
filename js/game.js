@@ -549,6 +549,9 @@
       this.runAch = [];
       this.runSummary = null;
       this.overWait = false;
+      this.contTicks = 0;        // CONTINUE?: lo que queda para pagar
+      this.contHasta = [];       // hasta qué tick puede volver cada jugador
+      this.contPedido = 0;       // invitado: tick en que pidió continuar
 
       var s = opts.cfg || this.settings();
       this.ghostSpeedMult = s.ghostSpeedMult;
@@ -811,7 +814,8 @@
      * animación de muerte o el cambio de nivel: quedarse sin poder abrir el
      * menú justo cuando te matan era desesperante. */
     canPause: function () {
-      return this.inGame() && this.state !== 'GAME_OVER' && !this.netNotice;
+      return this.inGame() && this.state !== 'GAME_OVER' &&
+        this.state !== 'CONTINUE' && !this.netNotice;
     },
 
     togglePause: function () {
@@ -976,10 +980,12 @@
             case 'PLAYING':    this.stepPlaying(); break;
             case 'DYING':      this.stepDying(); break;
             case 'LEVEL_DONE': this.stepLevelDone(); break;
+            case 'CONTINUE':   this.stepContinue(); break;
             case 'GAME_OVER':  this.stepGameOver(); break;
           }
         }
       }
+      this.stepContPedido();
 
       if (this.netRole) this.netMaintain();
       else this.stepShowcase();       // partida local: se emite para los mirones
@@ -1540,6 +1546,7 @@
       }
       if (left <= 0) {
         p.out = true;               // sin vidas: de espectador
+        if (this.puedeContinuar()) this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
       } else {
         p.reset(this.pacStart(i));
         p.safeTicks = CFG.RESPAWN_SAFE_TICKS;
@@ -1559,14 +1566,181 @@
       if (survivors) {
         this.respawn();
         this.hostEvt({ t: 'ready', lvl: this.level, full: false, rt: CFG.READY_TICKS });
+      } else if (this.ofrecerContinuar()) {
+        this.entrarContinue();
       } else {
-        this.state = 'GAME_OVER';
-        this.phaseTicks = CFG.GAMEOVER_TICKS;
-        this.overIdle = false;
-        this.persistHighScore();
-        this.hostEvt({ t: 'gameOver' });
-        this.syncUI();
+        this.acabarPartida();
       }
+    },
+
+    /* El GAME OVER de siempre, cuando ya no queda nadie */
+    acabarPartida: function () {
+      this.state = 'GAME_OVER';
+      this.phaseTicks = CFG.GAMEOVER_TICKS;
+      this.overIdle = false;
+      this.contTicks = 0;
+      this.persistHighScore();
+      this.hostEvt({ t: 'gameOver' });
+      this.syncUI();
+    },
+
+    /* =========================================================
+     * CONTINUAR (CFG.CONTINUAR)
+     *
+     * Sin vidas, antes del GAME OVER, hay 10 segundos para pagar 1.000
+     * monedas y seguir en el mismo nivel con 1 vida. Si nadie paga, GAME OVER
+     * de siempre (y ahí se cobra la partida y va al TOP, entera).
+     *
+     * En party cada uno paga lo suyo: el anfitrión revive a quien pagó y los
+     * demás se quedan mirando, dentro de la sala. Quien se queda sin vidas
+     * mientras otros siguen tiene también sus 10 segundos para volver.
+     *
+     * Repeticiones: pagar se graba como una entrada más ([tick, 0, 8]), y al
+     * verla se revive en el mismo punto sin cobrar nada.
+     * ========================================================= */
+    /* ¿Este modo tiene continuar? */
+    puedeContinuar: function () {
+      if (this.caza) return false;
+      if (this.isVersus && this.isVersus()) return false;
+      return this.inGame();
+    },
+
+    /* ¿Se abre el CONTINUE? al quedarse todos sin vidas? */
+    ofrecerContinuar: function () {
+      if (!this.puedeContinuar()) return false;
+      var R = window.PM.Replay;
+      // viendo una repetición: solo si aquel día se pagó justo aquí
+      if (R && R.modo === 'ver') return !!(R.contEnEspera && R.contEnEspera());
+      if (this.replaying) return false;
+      // online puede pagar cualquiera; solo, hace falta que llegue
+      if (this.netRole) return true;
+      var Tn = window.PM.Tienda;
+      return !!(Tn && Tn.llegaContinuar());
+    },
+
+    entrarContinue: function () {
+      this.state = 'CONTINUE';
+      this.contTicks = CFG.CONTINUAR.TICKS;
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (this.pacs[i].out && !this.pacs[i].bot) this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
+      }
+      this.stopAllLoops();
+      this.hostEvt({ t: 'contAbre', tk: this.contTicks });
+      this.syncUI();
+    },
+
+    stepContinue: function () {
+      var R = window.PM.Replay;
+      /* viendo una repetición no se espera a nadie: o se pagó (y la entrada
+       * lo revive en el paso siguiente) o se acabó */
+      if (R && R.modo === 'ver') {
+        if (!(R.contEnEspera && R.contEnEspera())) this.acabarPartida();
+        return;
+      }
+      if (this.contTicks > 0) this.contTicks--;
+      if (this.contTicks % 60 === 0 && window.PM.UI && window.PM.UI.tickContinue) {
+        window.PM.UI.tickContinue();
+      }
+      if (this.contTicks <= 0) this.acabarPartida();
+    },
+
+    /* ¿Puede el jugador local pagar ahora mismo? (lo que enseña la UI) */
+    contDisponible: function () {
+      if (!this.puedeContinuar() || this.replaying || this.isSpec()) return false;
+      if (this.netNotice || this.state === 'GAME_OVER' || this.state === 'MENU') return false;
+      if (this.state === 'CONTINUE') return true;
+      return this.contQuien() !== null;
+    },
+
+    /* A quién revive un pago ahora mismo: el índice, -1 si son todos los de
+     * este teclado, o null si no hay nadie a quien revivir. */
+    contQuien: function () {
+      var ind = (this.livesMode === 'individual');
+      if (this.netRole) {
+        var yo = this.pacs[this.localIdx];
+        if (!yo || !yo.out) return null;
+        if (this.state !== 'CONTINUE' && !(this.contHasta[this.localIdx] > this.tick)) return null;
+        return this.localIdx;
+      }
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (p.bot || !p.out) continue;
+        if (this.state === 'CONTINUE' || this.contHasta[i] > this.tick) return ind ? -1 : -1;
+      }
+      return null;
+    },
+
+    /* Revive con CFG.CONTINUAR.VIDAS. quien: índice, o -1 = todos los que
+     * estén fuera (en local, un pago sirve para el equipo del teclado). Con el
+     * fondo común de vidas, vuelven todos. Devuelve true si revivió a alguien. */
+    revivir: function (quien) {
+      var ind = (this.livesMode === 'individual');
+      var lista = [], i, p;
+      for (i = 0; i < this.pacs.length; i++) {
+        p = this.pacs[i];
+        if (p.bot || !p.out) continue;
+        if (ind && quien >= 0 && i !== quien) continue;
+        lista.push(i);
+      }
+      if (!lista.length) return false;
+      if (!ind) this.lives = CFG.CONTINUAR.VIDAS;
+      for (var k = 0; k < lista.length; k++) {
+        p = this.pacs[lista[k]];
+        if (ind) p.lives = CFG.CONTINUAR.VIDAS;
+        p.out = false;
+        p.dying = false;
+        this.contHasta[lista[k]] = 0;
+      }
+      if (this.state === 'CONTINUE') {
+        // todos estaban fuera: parón clásico y "¡LISTO!" como tras una vida
+        this.contTicks = 0;
+        this.respawn();
+        this.hostEvt({ t: 'ready', lvl: this.level, full: false, rt: CFG.READY_TICKS });
+      } else {
+        // la partida sigue: vuelve a su salida con el margen de reaparecer
+        for (k = 0; k < lista.length; k++) {
+          p = this.pacs[lista[k]];
+          p.reset(this.pacStart(lista[k]));
+          p.safeTicks = CFG.RESPAWN_SAFE_TICKS;
+        }
+      }
+      this.hostEvt({ t: 'contOk', w: (quien >= 0 ? quien : -1) });
+      this.syncUI();
+      return true;
+    },
+
+    /* El jugador local paga (botón CONTINUAR o tecla C). */
+    pedirContinuar: function () {
+      if (!this.contDisponible()) return false;
+      var Tn = window.PM.Tienda;
+      if (!Tn || !Tn.llegaContinuar()) {
+        this.setFlash('TE FALTAN ' + Tn.fmt(CFG.CONTINUAR.PRECIO - Tn.saldo()) + ' MONEDAS');
+        return false;
+      }
+      if (this.netRole === 'guest') {
+        // lo decide el anfitrión; se cobra cuando conteste que sí
+        if (this.contPedido) return false;
+        this.contPedido = this.tick || 1;
+        this.netSend('gevt', { t: 'contReq', i: this.localIdx });
+        this.syncUI();
+        return true;
+      }
+      var quien = this.netRole ? this.localIdx : -1;
+      if (quien === null) return false;
+      if (!Tn.gastarContinuar()) { this.setFlash('NO SE PUDO COBRAR'); return false; }
+      if (!this.revivir(quien)) return false;
+      if (!this.netRole && window.PM.Replay && window.PM.Replay.apuntaCont) window.PM.Replay.apuntaCont();
+      this.setFlash('¡SIGUES! ' + CFG.CONTINUAR.VIDAS + (CFG.CONTINUAR.VIDAS === 1 ? ' VIDA' : ' VIDAS'));
+      return true;
+    },
+
+    /* Invitado: si el anfitrión no contesta, se deja de esperar */
+    stepContPedido: function () {
+      if (!this.contPedido) return;
+      if (this.tick - this.contPedido < CFG.CONTINUAR.ESPERA_RED) return;
+      this.contPedido = 0;
+      this.setFlash('SIN RESPUESTA');
+      this.syncUI();
     },
 
     /* Tras el rótulo GAME OVER ya no se vuelve solo al menú: se ofrece
@@ -2854,6 +3028,21 @@
         case 'voteRes':
           this.onVoteResult(d.k, !!d.ok);
           break;
+        /* CONTINUAR: el invitado ya ha mirado que le llega; aquí se mira que
+         * de verdad esté fuera y dentro de su ventana (con un margen por lo
+         * que tarde la red). El cobro lo hace él al recibir 'contOk'. */
+        case 'contReq': {
+          var pq = this.pacs[who];
+          var aTiempo = this.state === 'CONTINUE' ||
+            ((this.contHasta[who] || 0) + CFG.CONTINUAR.ESPERA_RED > this.tick);
+          if (this.puedeContinuar() && pq && pq.out && !pq.bot && aTiempo &&
+              this.state !== 'GAME_OVER') {
+            this.revivir(this.livesMode === 'individual' ? who : -1);
+          } else {
+            this.hostEvt({ t: 'contNo', w: who });
+          }
+          break;
+        }
         /* Modo DESATADO: un invitado pide un poder. La recarga que vale
          * es la de aquí —la suya vive en su navegador y no es de fiar—, y
          * lo que toca a los fantasmas (morder, gritar) lo ejecuta el
@@ -2930,6 +3119,7 @@
         dl: this.dotsLeft, de: this.dotsEaten,
         fa: this.fruitActive ? 1 : 0,
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
+        ct: this.contTicks,           // CONTINUE?: lo que queda para pagar
         vs: this.vsScores || null,    // PAC-MAN VS.: marcador de cada cazador
         cz: this.caza ? this.cazaTicks : undefined,   // CACERÍA: reloj del poder
         he: this.snapEaten,
@@ -3010,6 +3200,13 @@
         case 'LEVEL_DONE':
           // animaciones suaves entre instantáneas
           if (this.phaseTicks > 0) this.phaseTicks--;
+          break;
+        case 'CONTINUE':
+          // la cuenta atrás la corrige cada instantánea
+          if (this.contTicks > 0) this.contTicks--;
+          if (this.contTicks % 60 === 0 && window.PM.UI && window.PM.UI.tickContinue) {
+            window.PM.UI.tickContinue();
+          }
           break;
         case 'GAME_OVER':
           this.stepGameOver();
@@ -3320,7 +3517,43 @@
         case 'extraLife':
           window.AudioSys && AudioSys.playExtraLife();
           break;
+        case 'contAbre':
+          this.clearDeathAnims();
+          this.state = 'CONTINUE';
+          this.contTicks = e.tk || CFG.CONTINUAR.TICKS;
+          this.contHasta[this.localIdx] = this.tick + this.contTicks;
+          this.stopAllLoops();
+          this.syncUI();
+          break;
+        case 'contOk': {
+          var cw = (typeof e.w === 'number') ? e.w : -1;
+          if (this.contPedido && (cw === this.localIdx || cw === -1)) {
+            this.contPedido = 0;
+            var Tc = window.PM.Tienda;
+            if (Tc) Tc.gastarContinuar();
+            this.setFlash('¡SIGUES! ' + CFG.CONTINUAR.VIDAS + (CFG.CONTINUAR.VIDAS === 1 ? ' VIDA' : ' VIDAS'));
+          }
+          var me = this.pacs[this.localIdx];
+          if (me && (cw === this.localIdx || cw === -1) && me.out) {
+            me.out = false;
+            me.dying = false;
+            if (this.state !== 'CONTINUE') {
+              me.reset(this.pacStart(this.localIdx));
+              me.safeTicks = CFG.RESPAWN_SAFE_TICKS;
+            }
+          }
+          this.syncUI();
+          break;
+        }
+        case 'contNo':
+          if (this.contPedido && e.w === this.localIdx) {
+            this.contPedido = 0;
+            this.setFlash('YA NO SE PUEDE CONTINUAR');
+            this.syncUI();
+          }
+          break;
         case 'gameOver':
+          this.contTicks = 0;
           this.clearVote();
           this.clearDeathAnims();
           this.state = 'GAME_OVER';
@@ -3433,6 +3666,7 @@
       this.dotsEaten = s.de;
       this.fruitActive = !!s.fa;
       if (typeof s.tm === 'number') this.timeTicks = s.tm;
+      if (typeof s.ct === 'number') this.contTicks = s.ct;
       if (esLista(s.vs)) this.vsScores = s.vs.slice();
       if (typeof s.cz === 'number') this.cazaTicks = s.cz;
 
@@ -3446,7 +3680,12 @@
       }
       if (s.out) {
         for (i = 0; i < this.pacs.length && i < s.out.length; i++) {
-          this.pacs[i].out = !!s.out[i];
+          var fuera = !!s.out[i];
+          if (fuera && !this.pacs[i].out && !(this.contHasta[i] > this.tick) &&
+              this.puedeContinuar()) {
+            this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
+          }
+          this.pacs[i].out = fuera;
         }
       }
 
@@ -4202,6 +4441,10 @@
       if (this.hab && window.PM.UI && window.PM.UI.refreshHabBar) {
         window.PM.UI.refreshHabBar();
       }
+      /* CONTINUAR sin vidas mientras los demás siguen (en cualquier modo) */
+      if (window.PM.UI && window.PM.UI.refreshContMini) {
+        window.PM.UI.refreshContMini();
+      }
     },
 
     /* Aviso de maestría, ARRIBA DEL TODO y fuera del laberinto, siempre.
@@ -4238,6 +4481,10 @@
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.gameOver;
         ctx.fillText('GAME OVER', 112, y);
+      } else if (this.state === 'CONTINUE') {
+        ctx.font = window.PM.Letra.lienzo(8);
+        ctx.fillStyle = CFG.COLORS.gameOver;
+        ctx.fillText('CONTINUE? ' + Math.ceil((this.contTicks || 0) / 60), 112, y);
       }
       /* aviso breve (rendición rechazada, sin respuesta, ...) */
       if (this.flash) {

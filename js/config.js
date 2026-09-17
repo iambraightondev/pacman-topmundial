@@ -692,6 +692,18 @@
    * contadores de PM.Achievements (`monedas` y `c_<id>`), así que viajan a la
    * cuenta con los logros y se juntan igual (lo mejor de cada lado). El saldo
    * no se guarda: se calcula (1.500 + ganado − precio de lo comprado). */
+  /* CONTINUAR (17 sep 2026): al quedarte sin vidas, 10 segundos para pagar
+   * 1.000 monedas y seguir en el mismo nivel con 1 vida. En todos los modos
+   * con vidas propias (no en PAC-MAN VS. ni en CACERÍA). En party paga cada
+   * uno por sí mismo, y quien no paga se queda mirando sin salirse. La
+   * partida continuada cuenta entera para el TOP MUNDIAL. */
+  CFG.CONTINUAR = {
+    PRECIO: 1000,
+    VIDAS: 1,
+    TICKS: 600,          // 10 s para decidir
+    ESPERA_RED: 180      // lo que espera un invitado a que el anfitrión conteste
+  };
+
   CFG.TIENDA = {
     INICIALES: 1500,
     POR_PARTIDA: 5,

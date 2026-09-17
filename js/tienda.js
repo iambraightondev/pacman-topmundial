@@ -84,7 +84,26 @@
       for (var i = 0; i < CATALOGO.length; i++) {
         if (stat('c_' + CATALOGO[i].id) >= 1) n += CATALOGO[i].precio;
       }
-      return n;
+      return n + stat('gastoCont');      // y lo pagado por continuar partidas
+    },
+
+    /* ---------- continuar ----------
+     * ¿Llega para seguir? */
+    llegaContinuar: function () {
+      return this.saldo() >= CFG.CONTINUAR.PRECIO;
+    },
+
+    /* Cobra un CONTINUAR. false si no llega o no se puede guardar. */
+    gastarContinuar: function () {
+      var Ac = A();
+      if (!Ac || !this.llegaContinuar()) return false;
+      var antes = stat('gastoCont');
+      Ac.record('gastoCont', CFG.CONTINUAR.PRECIO);
+      if (stat('gastoCont') <= antes) return false;
+      if (window.PM.Account && window.PM.Account.logged && window.PM.Account.logged()) {
+        window.PM.Account.pushQuiet();
+      }
+      return true;
     },
 
     /* El regalo de veterano: una vez, por lo jugado antes (ver

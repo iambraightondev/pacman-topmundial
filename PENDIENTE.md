@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep — CONTINUAR por 1.000 monedas (`pm-v93`).** Pedido de Braighton.
+Decidido: la partida continuada cuenta ENTERA para el TOP MUNDIAL; se sigue
+con 1 vida en el mismo nivel; en todos los modos con vidas propias (no VS. ni
+CACERÍA); en party paga cada uno lo suyo y quien no paga se queda mirando sin
+salirse. Estado nuevo `CONTINUE` (10 s, `CFG.CONTINUAR`); JUGAR OTRA VEZ
+bloqueado hasta que acaba. Solo y sin saldo: GAME OVER directo. Lo gastado es
+el contador `gastoCont` (suma). En la repetición local es la entrada qué=8
+(letra `E`). **Por mirar:** probarlo en una party de verdad con dos aparatos
+(solo está probado con la red de mentira de las pruebas).
+
 **17 sep — letra de máquina en todo (`pm-v83`).** Pedido de Braighton. `js/letra.js`
 quita la tilde de las vocales mayúsculas (en la página con un MutationObserver
 y en el lienzo envolviendo fillText/measureText) y da los cuerpos del lienzo
