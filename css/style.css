@@ -5091,3 +5091,63 @@ body { font-size-adjust: 0.56; }
   #badges .maes-nota { text-align: center; }
 }
 #badges .maes-sig { width: 100%; }
+
+/* ---------- Presentación de un modo (DESATADO, CACERÍA) ----------
+ * Marco de recreativa: frase, cartas con su tecla y su recarga, mandos en dos
+ * columnas y una línea al pie. */
+#prompt.arcade[data-tono="rosa"] {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 38%, rgba(60, 0, 44, 0.95) 0, rgba(18, 0, 16, 0.96) 45%, rgba(0, 0, 0, 0.97) 80%);
+}
+#prompt.arcade[data-tono="rosa"] .go-bombillas {
+  --bombilla: radial-gradient(circle, #ff66cc 0 3px, rgba(255, 102, 204, 0.25) 4px, transparent 6px);
+}
+#prompt.arcade .panel-title.go-titulo.tono-rosa {
+  background: repeating-linear-gradient(180deg, #ff66cc 0 0.07em, #a3207a 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 #4a0036) drop-shadow(0 0 0.4em rgba(255, 102, 204, 0.45));
+}
+#prompt.arcade { --brief: #ff5a5a; }
+#prompt.arcade[data-tono="rosa"] { --brief: #ff66cc; }
+.brief-lema { font-size: clamp(11px, 1.9vh, 16px); letter-spacing: 3px; color: #fff; text-align: center; }
+.brief-cartas {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+  width: min(92vw, 1040px); margin-top: clamp(4px, 1vh, 12px);
+}
+.brief-carta {
+  position: relative; display: grid; align-content: start; justify-items: center; gap: 8px; text-align: center;
+  padding: 16px 12px 14px; border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.35));
+  border: 2px solid color-mix(in srgb, var(--brief) 55%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--brief) 18%, transparent) inset;
+}
+.brief-tecla {
+  display: grid; place-items: center; width: clamp(34px, 5vh, 46px); height: clamp(34px, 5vh, 46px);
+  font-size: clamp(14px, 2.4vh, 20px); color: #000; background: var(--brief); border-radius: 6px;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--brief) 45%, #000), 0 0 14px color-mix(in srgb, var(--brief) 45%, transparent);
+}
+.brief-nombre { font-size: clamp(11px, 1.8vh, 15px); letter-spacing: 2px; color: var(--brief); }
+.brief-desc { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1px; line-height: 1.8; color: #d6d6f0; }
+.brief-recarga { margin-top: auto; font-size: 10px; letter-spacing: 1px; color: #8a8cae; }
+.brief-mandos {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: min(92vw, 1040px);
+}
+.brief-mandos > div {
+  display: grid; gap: 6px; padding: 10px 14px; border-left: 3px solid var(--brief); background: rgba(0, 0, 0, 0.35); text-align: left;
+}
+.brief-mandos b { font-size: 10px; letter-spacing: 2px; color: #ffff00; }
+.brief-mandos span { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1px; line-height: 1.8; color: #d6d6f0; }
+.brief-pie { width: min(92vw, 1040px); font-size: 10px; letter-spacing: 1px; line-height: 1.8; color: #8a8cae; text-align: center; }
+@media (max-width: 800px) {
+  .brief-cartas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .brief-mandos { grid-template-columns: 1fr; }
+}
+.brief-carta { display: flex; flex-direction: column; align-items: center; }
+.brief-cartas, .brief-mandos, .brief-pie { width: min(calc(100vw - 64px), 1040px); }
+@media (max-width: 800px) {
+  .brief-carta { padding: 12px 8px; }
+  .brief-desc { font-size: 10px; }
+}
+#prompt.arcade { justify-content: safe center; }

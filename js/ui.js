@@ -10181,6 +10181,65 @@
       });
     },
 
+    /* La presentación de un modo antes de jugar, con el marco de recreativa:
+     * una frase, las cartas de lo que hay que saber (con su tecla o su número
+     * y su recarga), los mandos en dos columnas y una línea al pie. Antes era
+     * un muro de líneas centradas que nadie leía. */
+    briefingModo: function (p, o) {
+      var lema = document.createElement('div');
+      lema.className = 'brief-lema';
+      lema.textContent = o.lema;
+      p.appendChild(lema);
+
+      var cartas = document.createElement('div');
+      cartas.className = 'brief-cartas';
+      (o.cartas || []).forEach(function (c) {
+        var el = document.createElement('div');
+        el.className = 'brief-carta';
+        var k = document.createElement('b');
+        k.className = 'brief-tecla';
+        k.textContent = c.k;
+        el.appendChild(k);
+        var n = document.createElement('div');
+        n.className = 'brief-nombre';
+        n.textContent = c.n;
+        el.appendChild(n);
+        var d = document.createElement('div');
+        d.className = 'brief-desc';
+        d.textContent = c.d;
+        el.appendChild(d);
+        if (c.cd != null) {
+          var cd = document.createElement('div');
+          cd.className = 'brief-recarga';
+          cd.textContent = 'RECARGA ' + c.cd + ' S';
+          el.appendChild(cd);
+        }
+        cartas.appendChild(el);
+      });
+      p.appendChild(cartas);
+
+      var mandos = document.createElement('div');
+      mandos.className = 'brief-mandos';
+      (o.mandos || []).forEach(function (m) {
+        var el = document.createElement('div');
+        var t = document.createElement('b');
+        t.textContent = m.t;
+        el.appendChild(t);
+        var d = document.createElement('span');
+        d.textContent = m.d;
+        el.appendChild(d);
+        mandos.appendChild(el);
+      });
+      p.appendChild(mandos);
+
+      if (o.pie) {
+        var pie = document.createElement('div');
+        pie.className = 'brief-pie';
+        pie.textContent = o.pie;
+        p.appendChild(pie);
+      }
+    },
+
     /* ------------------------------------------------------
      * Modo DESATADO: reglas y salida a jugar
      * ------------------------------------------------------ */
@@ -10207,36 +10266,33 @@
         go();
       }
 
+      var P = H.LIST;
+      var dos = conFantasma
+        ? ('J1 FLECHAS + ' + t2[0].join(' ') + '  ·  J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
+           ': WASD + ' + t2[1][0] + ' EMBESTIDA Y ' + t2[1][1] + ' ACECHO')
+        : ('J1 FLECHAS + ' + t2[0].join(' ') + '  ·  J2 WASD + ' + t2[1].join(' '));
       this.showPrompt({
         title: 'DESATADO',
-        color: '#ff66cc',
-        lines: [
-          'EL LABERINTO DE SIEMPRE CON CUATRO PODERES. CADA UNO CON SU TECLA Y SU RECARGA',
-          'MORDISCO · TE COMES AL FANTASMA QUE TENGAS PEGADO, MIRES HACIA DONDE MIRES (' +
-            H.segs(0) + 'S)',
-          'TURBO · X1.5 DE VELOCIDAD DURANTE ' + (H.TURBO_TICKS / 60) +
-            'S (' + H.segs(1) + 'S)',
-          'FLASH · ' + H.FLASH_TILES +
-            ' CASILLAS ATRAVESANDO MUROS HACIA LA ÚLTIMA FLECHA QUE PULSES, MIRE PAC-MAN DONDE MIRE, COMIENDO LO QUE PILLES (' +
-            H.segs(2) + 'S)',
-          'GRITO · LOS CUATRO FANTASMAS SE ASUSTAN ' + H.SHOUT_SECS +
-            'S SIN SUPERPASTILLA (' + H.segs(3) + 'S)',
-          'SOLO: FLECHAS PARA MOVERTE Y Q W E R PARA LOS PODERES (AQUÍ WASD NO MUEVE: LA W ES EL TURBO)',
-          /* Con dos, las teclas cambian y hay que decirlo ANTES de empezar: es
-           * la única pantalla donde se pueden leer, y una partida en la que no
-           * sabes qué tecla es la tuya dura diez segundos. */
-          'DOS JUGADORES: J1 CON FLECHAS Y ' + t2[0].join(' ') +
-            '  ·  J2 CON WASD Y ' + t2[1].join(' '),
-          conFantasma
-            ? ('EL J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
-               ': SUS DOS PODERES SON ' + t2[1][0] + ' EMBESTIDA (X' +
-               H.CHARGE_MULT + ' ' + (H.CHARGE_TICKS / 60) + 'S) Y ' + t2[1][1] +
-               ' ACECHO (' + (H.STALK_TICKS / 60) +
-               'S TRANSLÚCIDO Y SIN MARCA ENCIMA)')
-            : 'EN OPCIONES · PARTIDA PUEDES PONER AL J2 A LLEVAR UN FANTASMA: ENTONCES TIENE SUS PROPIOS PODERES',
-          'ES UN MODO APARTE, ASÍ QUE ESTAS PARTIDAS NO ENTRAN EN EL TOP MUNDIAL NI HACEN RÉCORD — PERO SÍ SUMAN EXPERIENCIA Y LOGROS',
-          'EN PARTY LO JUEGA TODO EL GRUPO: LO ENCIENDE QUIEN MANDA, EN EL PANEL DE ONLINE'
-        ],
+        arcade: true,
+        tono: 'rosa',
+        custom: function (p) {
+          self.briefingModo(p, {
+            lema: 'EL LABERINTO DE SIEMPRE CON CUATRO PODERES',
+            cartas: [
+              { k: P[0].key, n: P[0].name, d: 'TE COMES AL FANTASMA QUE TENGAS PEGADO, MIRES DONDE MIRES', cd: H.segs(0) },
+              { k: P[1].key, n: P[1].name, d: 'X' + H.TURBO_MULT + ' DE VELOCIDAD DURANTE ' + (H.TURBO_TICKS / 60) + ' S', cd: H.segs(1) },
+              { k: P[2].key, n: P[2].name, d: H.FLASH_TILES + ' CASILLAS ATRAVESANDO MUROS HACIA TU ÚLTIMA FLECHA', cd: H.segs(2) },
+              { k: P[3].key, n: P[3].name, d: 'LOS CUATRO FANTASMAS SE ASUSTAN ' + H.SHOUT_SECS + ' S', cd: H.segs(3) }
+            ],
+            mandos: [
+              { t: 'SOLO', d: 'FLECHAS + Q W E R (WASD NO MUEVE: LA W ES EL TURBO)' },
+              { t: 'DOS JUGADORES', d: dos }
+            ],
+            pie: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON SUS RÉCORDS Y MAESTRÍAS' +
+              (conFantasma ? '' : '  ·  EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA') +
+              '  ·  EN PARTY LO ENCIENDE QUIEN MANDA'
+          });
+        },
         buttons: [
           { label: 'JUGAR SOLO', primary: true, keys: ['Enter'], hint: 'ENTER',
             onClick: function () { arranca(1); } },
@@ -10264,21 +10320,27 @@
 
       this.showPrompt({
         title: 'CACERÍA',
-        color: '#ffb8ff',
-        lines: [
-          'AQUÍ EL FANTASMA ERES TÚ. EL PAC-MAN LO LLEVA LA MÁQUINA: COME, HUYE Y SE DEFIENDE',
-          'NO HAY SUPERPASTILLAS. SU PODER LLEGA SOLO CADA ' + Z.periodo(0) +
-            'S Y DURA ' + Z.duracion(0) + 'S; SE AVISA ' + Z.AVISO +
-            'S ANTES CON UN ARO Y UNA CUENTA ATRÁS: SUELTA LA PRESA Y APÁRTATE',
-          'CADA VEZ QUE LO CAZAS SON ' + CFG.VS.CATCH_POINTS +
-            ' PUNTOS. SI SE QUEDA SIN VIDAS, GANÁIS; SI DESPEJA ' + Z.NIVELES +
-            ' RONDAS, GANA ÉL. CADA RONDA EL PODER DURA MÁS Y LLEGA ANTES',
-          'SOLO: LLEVAS A BLINKY (FLECHAS O WASD) Y LOS OTROS TRES LOS LLEVA LA MÁQUINA',
-          'DOS JUGADORES: J1 BLINKY CON FLECHAS · J2 PINKY CON WASD',
-          'UN FANTASMA NO DA MARCHA ATRÁS: CIÉRRALE EL PASILLO ENTRE VARIOS, QUE CORRIENDO DETRÁS NO SE PILLA',
-          'NO ENTRA EN EL TOP MUNDIAL NI HACE RÉCORD, PERO SUMA EXPERIENCIA Y TIENE SUS LOGROS',
-          'EN PARTY (HASTA 4): LO ENCIENDE QUIEN MANDA, EN EL PANEL DE ONLINE'
-        ],
+        arcade: true,
+        tono: 'rojo',
+        custom: function (p) {
+          self.briefingModo(p, {
+            lema: 'AQUÍ EL FANTASMA ERES TÚ',
+            cartas: [
+              { k: '1', n: 'LA PRESA', d: 'EL PAC-MAN LO LLEVA LA MÁQUINA: COME, HUYE Y SE DEFIENDE' },
+              { k: '2', n: 'SU PODER', d: 'LLEGA CADA ' + Z.periodo(0) + ' S Y DURA ' + Z.duracion(0) +
+                ' S. UN ARO AVISA ' + Z.AVISO + ' S ANTES: APÁRTATE' },
+              { k: '3', n: 'LA CAZA', d: 'CADA CAPTURA SON ' + CFG.VS.CATCH_POINTS +
+                ' PUNTOS. SIN VIDAS GANÁIS; SI DESPEJA ' + Z.NIVELES + ' RONDAS, GANA ÉL' },
+              { k: '4', n: 'EL TRUCO', d: 'UN FANTASMA NO DA MARCHA ATRÁS: CIÉRRALE EL PASILLO ENTRE VARIOS' }
+            ],
+            mandos: [
+              { t: 'SOLO', d: 'LLEVAS A BLINKY (FLECHAS O WASD); LOS OTROS TRES, LA MÁQUINA' },
+              { t: 'DOS JUGADORES', d: 'J1 BLINKY CON FLECHAS  ·  J2 PINKY CON WASD' }
+            ],
+            pie: 'NO ENTRA EN EL TOP MUNDIAL, PERO SUMA EXPERIENCIA Y TIENE SUS LOGROS' +
+              '  ·  EN PARTY (HASTA 4) LO ENCIENDE QUIEN MANDA'
+          });
+        },
         buttons: [
           { label: 'JUGAR SOLO', primary: true, keys: ['Enter'], hint: 'ENTER',
             onClick: function () { arranca(1); } },

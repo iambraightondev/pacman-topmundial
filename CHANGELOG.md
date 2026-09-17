@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Presentación de DESATADO y CACERÍA
+
+- Antes de jugar, en vez del muro de líneas centradas: marco de recreativa
+  con el color del modo, una frase, **cuatro cartas** (los poderes con su
+  tecla y su recarga en DESATADO; presa, poder, caza y truco en CACERÍA), los
+  mandos de solo y de dos jugadores en dos columnas y una línea al pie.
+- DESATADO decía que no entraba en el TOP MUNDIAL: ya tiene su propia liga,
+  con récords y maestrías.
+- Las luces alrededor del emblema de maestría en partida son más suaves.
+
 ## 2026-09-17 · La maestría en partida: solo el emblema
 
 - Ctrl+Espacio y F1..F4 ya no sacan la chapa con el nombre: sobre la cabeza
