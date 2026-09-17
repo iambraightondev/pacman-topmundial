@@ -25,7 +25,7 @@
 
   /* color de cada póster (CACERÍA en el rojo de Blinky) y su frase */
   var COLOR = { clasico: '#ffff00', duo: '#00ff00', hab: '#ff66cc', caza: '#ff2a2a', lab: '#ffb852', online: '#7ec8ff',
-    equipo: '#00ff66', superv: '#ffd400' };
+    superv: '#ffd400' };
   var FRASE = {
     clasico: 'EL ARCADE DE 1980, TAL CUAL. EL QUE CUENTA PARA EL TOP MUNDIAL.',
     duo: 'J1 CON FLECHAS, J2 CON WASD. EL MISMO LABERINTO, A LA VEZ.',
@@ -33,7 +33,6 @@
     caza: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA.',
     lab: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS.',
     online: 'DE 2 A 4, CADA UNO EN SU CASA, CON CÓDIGO DE SALA.',
-    equipo: 'HASTA CUATRO BOCAS EN EL MISMO LABERINTO, A UNA.',
     superv: 'TODOS CONTRA TODOS. GANA EL ÚLTIMO EN PIE.'
   };
 
@@ -164,23 +163,6 @@
       aTile(c,8,px,py,function(){Sp.drawPacman(c,0,0,dr,[0,1,2,1][Math.floor(t*12)%4],'#ffff00','clasico',{});});
       // número de laberinto
       c.font='10px "Press Start 2P",monospace';c.textAlign='left';c.fillStyle=col;c.fillText('LABERINTO '+(vuelta%cols.length+1)+'/6',18,52);
-    },
-
-    /* P7 · EQUIPO (la party del clásico): los cuatro en fila comiéndose la
-     * misma hilera de pastillas, con un fantasma que se les cruza. */
-    equipo:function(c,m,t,e){
-      var cols=CFG.PLAYER_COLORS, cy=H*0.42, avance=(t*46)%W;
-      c.fillStyle='#ffb8ae';
-      for(var p=0;p<9;p++){var px=(p*44+40-avance*0.35+W)%W;c.beginPath();c.arc(px,cy,5,0,7);c.fill();}
-      for(var i=0;i<4;i++){
-        (function(i){
-          var x=W*0.16+i*W*0.2+Math.sin(t*3+i)*4;
-          aTile(c,7.5,x,cy,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*9+i)%4],cols[i],'clasico',{});});
-        })(i);
-      }
-      aTile(c,6,W*0.86-((t*30)%(W*0.5)),H*0.62,function(){Sp.drawGhost(c,0,0,D.LEFT,0,'fright',Math.floor(t*8)%2,false);});
-      c.font='10px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
-      c.fillStyle='#00ff66';c.fillText('EN EQUIPO',W/2,H*0.62);
     },
 
     /* P8 · SUPERVIVENCIA: dos bocas frente a frente dentro del anillo que se

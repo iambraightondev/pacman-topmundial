@@ -660,7 +660,8 @@
         if (!this.olPosters.hasOwnProperty(id)) continue;
         var p = this.olPosters[id];
         if (!p.cv || !p.b.offsetParent) continue;
-        Po.pintar(p.cv, id, (id === modo) ? t : t * 0.45 + 2.7, p.estado || (p.estado = {}));
+        var art = (p.mo && p.mo.poster) || id;
+        Po.pintar(p.cv, art, (id === modo) ? t : t * 0.45 + 2.7, p.estado || (p.estado = {}));
       }
       void modo;
     },
@@ -5121,7 +5122,7 @@
     /* Los modos de la party, en el orden de la cartelera. El id es el del
      * póster (js/portadas.js) y el que se le pide a PM.Party. */
     OL_MODOS: [
-      { id: 'equipo', name: 'EN EQUIPO', tag: 'CONTRA LOS FANTASMAS', color: '#00ff66' },
+      { id: 'equipo', poster: 'clasico', name: 'EN EQUIPO', tag: 'CONTRA LOS FANTASMAS', color: '#ffff00' },
       { id: 'hab', name: 'DESATADO', tag: 'PODERES Y ROLES', color: '#ff66cc' },
       { id: 'caza', name: 'CACERÍA', tag: 'TODOS DE FANTASMA', color: '#ff3b3b' },
       { id: 'superv', name: 'SUPERVIVENCIA', tag: 'EL ÚLTIMO EN PIE', color: '#ffd400' }
