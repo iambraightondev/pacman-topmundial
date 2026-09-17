@@ -1702,7 +1702,26 @@
         this.modeDesc.textContent = mo.desc;
         this.modeDesc.style.color = mo.color;
       }
-      if (this.modeNote) this.modeNote.textContent = this.modeNota(mo);
+      if (this.modeNote) {
+        this.modeNote.textContent = this.modeNota(mo);
+        this.ajustarUnaLinea(this.modeNote);
+      }
+    },
+
+    /* Deja un texto en una sola línea, entero: si no cabe, baja la letra (y,
+     * al límite, junta un poco las letras) hasta que quepa. */
+    ajustarUnaLinea: function (el) {
+      if (!el || !el.style) return;
+      el.style.fontSize = '';
+      el.style.letterSpacing = '';
+      if (!el.clientWidth || !el.textContent) return;
+      var cs = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      var px = cs ? parseFloat(cs.fontSize) : 10;
+      for (var i = 0; i < 12 && el.scrollWidth > el.clientWidth && px > 6; i++) {
+        px -= 0.5;
+        el.style.fontSize = px + 'px';
+        if (px <= 8) el.style.letterSpacing = '0';
+      }
     },
 
     /* La coletilla de la tarjeta. Casi siempre es fija, pero ONLINE tiene

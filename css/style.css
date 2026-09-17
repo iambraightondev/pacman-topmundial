@@ -4625,3 +4625,6 @@ body { font-size-adjust: 0.56; }
 .mode-frame .mode-card.poster:focus-visible .poster-in {
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.7), 0 0 0 3px var(--mc), 0 0 40px color-mix(in srgb, var(--mc) 45%, transparent);
 }
+
+/* la nota bajo el carrusel, siempre en una línea (UI.ajustarUnaLinea) */
+.mode-note { white-space: nowrap; overflow: hidden; width: 100%; max-width: 100%; }
