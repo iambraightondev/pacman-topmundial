@@ -4,8 +4,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-17 · GAME OVER: botones simétricos
 
-- MENÚ mide lo mismo que INSERT COIN: mismo tamaño y letra, hueco con borde
-  amarillo.
+- MENÚ va como INSERT COIN: misma letra, alto y relleno alrededor del texto
+  (cada uno a lo ancho de lo suyo), hueco con borde amarillo.
 
 ## 2026-09-17 · PARTIDA A MEDIAS con marco de recreativa
 
