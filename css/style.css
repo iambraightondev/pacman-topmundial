@@ -4939,3 +4939,12 @@ body { font-size-adjust: 0.56; }
 .vest-omni .vest-tecla.active canvas { filter: drop-shadow(0 0 1px #000); }
 .vest-omni-centro { background: none; box-shadow: none; }
 .vest-omni-num { display: none; }
+
+/* hueco del centro más pequeño: el anillo, más ancho */
+.vest-teclas.vest-omni { --r: 90px; }
+.vest-teclas.vest-omni::before {
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 38%, #000 39% 99%, transparent 100%);
+  mask: radial-gradient(circle closest-side, transparent 0 38%, #000 39% 99%, transparent 100%);
+}
+.vest-omni-centro { width: 96px; height: 96px; margin: -48px 0 0 -48px; }
+.vest-omni-centro canvas { width: 72px; height: 72px; }
