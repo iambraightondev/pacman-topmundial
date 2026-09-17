@@ -8145,6 +8145,25 @@
 
       p.classList.toggle('solid', !!o.solid);
       p.classList.toggle('arcade', !!o.arcade);
+      /* Marco de recreativa (el del GAME OVER): bombillas, título a rayas y
+       * fondo con líneas de tubo. o.tono le da el color: rojo (el final),
+       * amarillo (pausa, revancha), naranja (rendirse), cian (revivir). */
+      if (o.arcade) {
+        p.setAttribute('data-tono', o.tono || 'rojo');
+        if (!p.querySelector('.go-bombillas')) {
+          var bombs = document.createElement('div');
+          bombs.className = 'go-bombillas';
+          bombs.setAttribute('aria-hidden', 'true');
+          p.insertBefore(bombs, p.firstChild);
+        }
+        var tit = p.querySelector('.panel-title');
+        if (tit) {
+          tit.classList.add('go-titulo');
+          if (o.tono) tit.classList.add('tono-' + o.tono);
+        }
+      } else if (p.removeAttribute) {
+        p.removeAttribute('data-tono');
+      }
       // sobre un menú el velo tiene que tapar; sobre la partida, no (el
       // laberinto se sigue viendo por detrás a propósito)
       p.classList.toggle('over-panel', !!this.visiblePanel());
@@ -8335,7 +8354,8 @@
       if (g.isSpec()) {
         this.showPrompt({
           title: 'VIENDO LA PARTIDA',
-          color: '#7ec8ff',
+          arcade: true,
+          tono: 'cian',
           lines: ['ESTÁS VIENDO LA PARTIDA DE ' + g.nameFor(0) + '.'],
           buttons: [
             { label: 'SEGUIR VIENDO', hint: 'P · ESC', primary: true,
@@ -8385,9 +8405,13 @@
       }
       botones.push({ label: 'SALIR', hint: 'Q', keys: ['q'],
         onClick: function () { g.toMenu(); } });
+      /* cómo va la partida, lo primero */
+      lines.unshift({ text: 'PUNTOS ' + fmtMonedas(g.score || 0) + ' · NIVEL ' + g.level +
+        ' · ' + g.clockText(), big: true });
       this.showPrompt({
         title: 'PAUSA',
-        color: '#ffff00',
+        arcade: true,
+        tono: 'amarillo',
         lines: lines,
         status: g.flash ? g.flash.text : '',
         buttons: botones
@@ -8427,7 +8451,8 @@
       if (vote.role === 'from') {
         this.showPrompt({
           title: tx.from,
-          color: tx.color,
+          arcade: true,
+          tono: vote.kind === 'surrender' ? 'naranja' : 'amarillo',
           lines: [tx.mine, 'TIENE QUE ACEPTARLO ' + (peer || 'EL OTRO JUGADOR') + '.'],
           status: this.voteStatusText(vote),
           buttons: []
@@ -8447,7 +8472,8 @@
       }
       this.showPrompt({
         title: tx.ask,
-        color: tx.color,
+        arcade: true,
+        tono: vote.kind === 'surrender' ? 'naranja' : 'amarillo',
         lines: lines,
         status: this.voteStatusText(vote),
         buttons: [
@@ -8624,7 +8650,8 @@
       }
       this.showPrompt({
         title: '¡NUEVO RÉCORD!',
-        color: '#ffd23f',
+        arcade: true,
+        tono: 'amarillo',
         solid: true,
         lines: [
           { text: String(g.score || 0), big: true },
@@ -8997,6 +9024,7 @@
       this.showPrompt({
         title: 'REVIVIR',
         arcade: true,
+        tono: 'cian',
         solid: true,
         status: g.flash ? g.flash.text : '',
         statusError: !!g.flash,

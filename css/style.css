@@ -4371,3 +4371,84 @@ body { font-size-adjust: 0.56; }
 .rev-quienes { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 6px 14px; font-size: clamp(14px, 2.4vh, 20px); letter-spacing: 2px; }
 .rev-quienes small { flex-basis: 100%; font-size: clamp(9px, 1.4vh, 11px); color: #b9bae6; }
 #prompt.arcade .rev-reloj b { color: #00ffff; text-shadow: 0 0 16px rgba(0, 255, 255, 0.7); }
+
+/* ---------- Diálogos de partida con marco de recreativa ----------
+ * Pausa, rendirse, revancha, reiniciar, revivir y el récord sin cuenta llevan
+ * el mismo marco que el GAME OVER; cambia el color (data-tono). */
+#prompt.arcade .prompt-line {
+  max-width: min(92%, 680px);
+  font-size: clamp(10px, 1.7vh, 14px);
+  letter-spacing: 2px;
+  line-height: 1.9;
+  color: #cfd0ff;
+  text-shadow: none;
+}
+#prompt.arcade .prompt-line.big {
+  color: #ffff00;
+  font-size: clamp(13px, 2.4vh, 20px);
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+}
+#prompt.arcade .lobby-status { color: #ffb8ff; letter-spacing: 2px; font-size: clamp(9px, 1.4vh, 12px); }
+#prompt.arcade .prompt-btns { flex-wrap: wrap; justify-content: center; gap: 14px 22px; margin-top: clamp(8px, 2vh, 22px); }
+
+/* amarillo: pausa, revancha, reiniciar, récord */
+#prompt.arcade[data-tono="amarillo"] {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 38%, rgba(16, 16, 74, 0.92) 0, rgba(5, 5, 26, 0.94) 45%, rgba(0, 0, 0, 0.96) 80%);
+}
+#prompt.arcade[data-tono="amarillo"] .go-bombillas {
+  --bombilla: radial-gradient(circle, #ffe46b 0 3px, rgba(255, 228, 107, 0.25) 4px, transparent 6px);
+}
+#prompt.arcade .panel-title.go-titulo.tono-amarillo {
+  background: repeating-linear-gradient(180deg, #ffff00 0 0.07em, #c9b600 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 #b8860b) drop-shadow(0 0 0.35em rgba(255, 255, 0, 0.35));
+  animation: marq-latido 2.4s ease-in-out infinite;
+}
+
+/* naranja: rendirse */
+#prompt.arcade[data-tono="naranja"] {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 38%, rgba(60, 26, 0, 0.94) 0, rgba(20, 8, 0, 0.95) 45%, rgba(0, 0, 0, 0.97) 80%);
+}
+#prompt.arcade[data-tono="naranja"] .go-bombillas {
+  --bombilla: radial-gradient(circle, #ffb852 0 3px, rgba(255, 184, 82, 0.25) 4px, transparent 6px);
+}
+#prompt.arcade .panel-title.go-titulo.tono-naranja {
+  background: repeating-linear-gradient(180deg, #ffb852 0 0.07em, #b8661b 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 #5a2d00) drop-shadow(0 0 0.4em rgba(255, 140, 0, 0.45));
+  animation: none;
+}
+
+/* cian: revivir, viendo la partida */
+#prompt.arcade[data-tono="cian"] {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 38%, rgba(0, 44, 52, 0.94) 0, rgba(0, 14, 20, 0.95) 45%, rgba(0, 0, 0, 0.97) 80%);
+}
+#prompt.arcade[data-tono="cian"] .go-bombillas {
+  --bombilla: radial-gradient(circle, #6bffff 0 3px, rgba(107, 255, 255, 0.25) 4px, transparent 6px);
+}
+#prompt.arcade .panel-title.go-titulo.tono-cian {
+  background: repeating-linear-gradient(180deg, #00ffff 0 0.07em, #008b8b 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0.06em 0.06em 0 #004b4b) drop-shadow(0 0 0.4em rgba(0, 255, 255, 0.45));
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  #prompt.arcade .panel-title.go-titulo.tono-amarillo { animation: none; }
+}
+#prompt.arcade[data-tono=naranja] .prompt-btns .btn-primary,
+#prompt.arcade[data-tono=naranja] .prompt-btns .btn-primary:hover,
+#prompt.arcade[data-tono=naranja] .prompt-btns .btn-primary:focus-visible {
+  background: #ffb852;
+  border-color: #ffb852;
+  box-shadow: 0 6px 0 #8a4a00, 0 0 34px rgba(255, 140, 0, 0.5);
+}
