@@ -2171,6 +2171,9 @@
         row.appendChild(caja);
         this.nickLook = look;
         this.nickLookInput = input;
+        /* el campo mide lo que el nombre: así aspecto y nombre van juntos y
+         * centrados, sea el nombre corto o largo */
+        input.addEventListener('input', function () { self.ajustarNickPortada(); });
         this.pintarNickLook(0);
       } else {
         row.appendChild(input);
@@ -2195,9 +2198,11 @@
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.clearRect(0, 0, cv.width, cv.height);
       c.imageSmoothingEnabled = false;
-      var k = cv.width / 20;
+      /* 30 de lado lógico: sitio de sobra para el rastro del efecto (detrás)
+       * y el accesorio (arriba), que con 20 se cortaban */
+      var k = cv.width / 30;
       c.setTransform(k, 0, 0, k, 0, 0);
-      var x = efx ? 12.5 : 10, y = acc ? 11.5 : 10;
+      var x = efx ? 18.5 : 15, y = acc ? 16.5 : 15;
       try {
         Sp.drawPacman(c, x, y, 3, [0, 1, 2, 1][Math.floor(t * 8) % 4], color, skin, {
           t: t, s: t * 20, giro: (t * 20) % 30, confeti: (t % 3) < 1.4 ? t % 3 : -1,
@@ -2207,6 +2212,22 @@
       } catch (e) { /* un dibujo raro no rompe la portada */ }
       c.setTransform(1, 0, 0, 1, 0, 0);
       if (this.nickLookInput) this.nickLookInput.style.color = color;
+    },
+
+    /* Ancho del nombre de la portada según lo escrito (o el texto de ayuda) */
+    ajustarNickPortada: function () {
+      var inp = this.nickLookInput;
+      if (!inp || !inp.style) return;
+      var n = Math.max(3, String(inp.value || inp.placeholder || '').length);
+      inp.style.fontSize = '';
+      inp.style.width = 'calc(' + (n + 1) + 'ch + ' + (n * 2) + 'px)';
+      /* un nombre muy largo no se corta: la letra baja hasta que quepa */
+      if (!inp.clientWidth || !window.getComputedStyle) return;
+      var px = parseFloat(window.getComputedStyle(inp).fontSize) || 14;
+      for (var i = 0; i < 16 && inp.scrollWidth > inp.clientWidth && px > 7; i++) {
+        px -= 0.5;
+        inp.style.fontSize = px + 'px';
+      }
     },
 
     /* Se mueve mientras la portada está a la vista, y nada más */
@@ -2244,6 +2265,7 @@
           list[i].title = bloquea ? 'TU NOMBRE ES EL DE TU CUENTA' : '';
           if (list[i] === skip || list[i] === document.activeElement) continue;
           list[i].value = s[k] || '';
+          if (list[i] === this.nickLookInput) this.ajustarNickPortada();
         }
       }
     },

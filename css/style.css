@@ -4685,3 +4685,25 @@ body { font-size-adjust: 0.56; }
 
 /* DAILY centrado sobre la semana */
 .daily-titulo { align-self: center; margin-left: 0; transform-origin: center bottom; }
+
+/* aspecto y nombre juntos y centrados; el nombre mide lo que ocupa */
+.marq .menu-player .nick-caja { justify-content: center; padding-left: 0; }
+@media (min-width: 1600px) { .marq .menu-player .nick-caja { padding-left: 0; } }
+.marq .menu-player .nick-caja .nick-input-menu { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 90px); text-align: left; }
+
+/* el aspecto con sitio para el efecto; aspecto y nombre centrados en la ficha */
+.marq .menu-player .nick-caja { width: 100%; gap: 14px; }
+.marq .nick-look { width: 72px; height: 72px; }
+@media (min-width: 1600px) { .marq .nick-look { width: 96px; height: 96px; } }
+.marq .menu-player .nick-caja .nick-input-menu { max-width: calc(100% - 86px); }
+@media (min-width: 1600px) { .marq .menu-player .nick-caja .nick-input-menu { max-width: calc(100% - 110px); } }
+
+/* DAILY llama la atención: dos saltitos cada 3 segundos ("ábreme") */
+.daily-titulo { animation: daily-llama 3s ease-in-out infinite; }
+@keyframes daily-llama {
+  0%, 30%, 100% { transform: rotate(-5deg) translateY(0); }
+  7%  { transform: rotate(-5deg) translateY(-9px); }
+  14% { transform: rotate(-5deg) translateY(0); }
+  21% { transform: rotate(-5deg) translateY(-6px); }
+}
+@media (prefers-reduced-motion: reduce) { .daily-titulo { animation: none; } }
