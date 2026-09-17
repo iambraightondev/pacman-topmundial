@@ -10723,7 +10723,9 @@
             aviso.textContent = roles[0] !== 'asesino'
               ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: NO CUENTA PARA RÉCORDS NI MAESTRÍAS'
               : '';
-            aviso.style.display = aviso.textContent ? '' : 'none';
+            /* el hueco se queda puesto aunque no haya aviso: si apareciera y
+             * desapareciera, la pantalla entera daría un salto al cambiar de rol */
+            aviso.style.visibility = aviso.textContent ? 'visible' : 'hidden';
           }
           var aviso = document.createElement('div');
           aviso.className = 'rol-aviso';

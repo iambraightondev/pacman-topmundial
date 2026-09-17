@@ -5672,3 +5672,5 @@ body { font-size-adjust: 0.56; }
 #online .btn.ol-poster:hover:not(:disabled), #online .btn.ol-poster:focus-visible {
   box-shadow: 0 0 24px color-mix(in srgb, var(--mc) 35%, transparent);
 }
+/* el aviso de PRÁCTICA ocupa su sitio siempre: cambiar de rol no mueve nada */
+.rol-aviso { min-height: 1.8em; display: block; }
