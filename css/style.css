@@ -4000,3 +4000,38 @@ body { font-size-adjust: 0.56; }
   .marq .menu-player .daily-box:hover,
   .marq .menu-player .daily-box:focus-visible { border-color: transparent; background: rgba(255, 255, 255, 0.04); }
 }
+
+/* TU FICHA: aspecto y nombre sin recuadro; lo que se pulsa, con hover */
+.marq .nick-look {
+  border: 0;
+  background: transparent;
+  transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4), filter 0.15s;
+}
+.marq .nick-look:hover,
+.marq .nick-look:focus-visible {
+  transform: scale(1.14);
+  filter: drop-shadow(0 0 8px rgba(255, 255, 0, 0.75));
+  outline: none;
+}
+.marq .nick-caja .nick-input-menu {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  padding-left: 2px;
+}
+/* el nombre solo se escribe sin cuenta: entonces se subraya al señalarlo */
+.marq .nick-caja .nick-input-menu:not(:disabled):hover,
+.marq .nick-caja .nick-input-menu:not(:disabled):focus {
+  box-shadow: inset 0 -2px 0 #ffff00;
+  outline: none;
+}
+.marq .nick-caja .nick-input-menu:disabled { opacity: 1; cursor: default; }
+@media (min-width: 1000px) {
+  .marq .menu-player .daily-box { transition: background 0.15s, transform 0.15s; }
+  .marq .menu-player .daily-box:hover,
+  .marq .menu-player .daily-box:focus-visible {
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.05), -9px 0 0 -3px var(--dc, #ffb8ff);
+  }
+}
