@@ -5012,3 +5012,7 @@ body { font-size-adjust: 0.56; }
 #profile .badge-row.logro .badge-state { font-size: 9px; line-height: 1.8; }
 #profile .badge-row.logro .ach-modo { display: inline-block; font-weight: normal; }
 #profile .badge-row.logro .ach-bar { margin-top: 10px; height: 6px; width: 100%; }
+
+/* los paneles empiezan arriba: el título y las pestañas no cambian de sitio al cambiar de pestaña */
+.overlay:not(#prompt):not(#menu) { justify-content: flex-start; }
+.overlay:not(#prompt):not(#menu)::before, .overlay:not(#prompt):not(#menu)::after { display: none; }
