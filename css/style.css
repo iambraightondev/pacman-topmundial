@@ -5195,3 +5195,6 @@ body { font-size-adjust: 0.56; }
 #prompt.arcade[data-tono=naranja] .prompt-btns .btn-primary { --rc: #ffb852; }
 .prompt-btns .btn:disabled .btn-ronda { display: none; }
 @media (prefers-reduced-motion: reduce) { .btn-ronda rect { animation: none; stroke-dasharray: none; } }
+/* los que ya van rellenos de color (el principal del marco de recreativa) no
+ * llevan la línea: ya se distinguen solos */
+#prompt.arcade .prompt-btns .btn-primary .btn-ronda { display: none; }

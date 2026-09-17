@@ -8,6 +8,7 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   solas sigue sin salir: el Soporte necesita compañeros.
 - Los botones de los diálogos (pausa, GAME OVER, VOLVER, elegir jugadores...)
   ya no se rellenan al señalarlos: una línea recorre su borde, como en el DAILY.
+  Los que ya van rellenos de color (REANUDAR, JUGAR OTRA VEZ...) no la llevan.
 
 ## 2026-09-17 · SOPORTE: teclas que se mantienen
 
