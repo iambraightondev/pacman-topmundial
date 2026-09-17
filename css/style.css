@@ -3415,3 +3415,164 @@ input[type="range"] {
   letter-spacing: 1px;
   margin-top: 3px;
 }
+
+/* ---------- REPRODUCTOR DE REPETICIONES ----------
+ * Como el de cualquier vídeo (js/replay.js, "EL REPRODUCTOR"): la partida
+ * queda a pantalla completa y esto va por encima, con los mandos abajo, el
+ * título arriba y los avisos en el centro. Se esconde solo (.dormido). */
+.rv {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1.2;
+}
+.rv-arriba, .rv-abajo { position: absolute; left: 0; right: 0; pointer-events: auto; transition: opacity 0.25s; }
+.rv-arriba {
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: max(14px, env(safe-area-inset-top)) 18px 44px;
+  background: linear-gradient(rgba(0, 0, 0, 0.8), transparent);
+}
+.rv-textos { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rv-titulo { font-size: clamp(13px, 2.2vh, 18px); letter-spacing: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-sub { font-size: clamp(10px, 1.6vh, 12px); color: #bbb; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-destacada { margin-left: auto; font-size: 11px; letter-spacing: 1px; color: #000; background: #ffd23f; padding: 5px 8px; border-radius: 3px; white-space: nowrap; }
+.rv-cerrar { margin-left: 8px; }
+.rv-destacada[style*="none"] + .rv-cerrar { margin-left: auto; }
+.rv-abajo {
+  bottom: 0;
+  padding: 44px 18px max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
+}
+.rv.dormido .rv-arriba, .rv.dormido .rv-abajo { opacity: 0; pointer-events: none; }
+.rv.dormido { cursor: none; }
+body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
+
+.rv-grande {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 84px;
+  height: 84px;
+  margin: -42px 0 0 -42px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  opacity: 0;
+}
+.rv-grande.pulso { animation: rv-pulso 0.55s ease-out forwards; }
+@keyframes rv-pulso { 0% { opacity: 1; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.45); } }
+.rv-salto {
+  position: absolute;
+  top: 50%;
+  font-size: 14px;
+  letter-spacing: 1px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px 16px;
+  border-radius: 30px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.rv-salto.izq { left: 12%; }
+.rv-salto.der { right: 12%; }
+.rv-salto.ver { opacity: 1; }
+
+.rv-pista { position: relative; height: 24px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
+.rv-riel, .rv-sombra, .rv-relleno { position: absolute; left: 0; height: 4px; border-radius: 2px; transition: height 0.12s; }
+.rv-riel { right: 0; background: rgba(255, 255, 255, 0.22); }
+.rv-sombra { width: 0; background: rgba(255, 255, 255, 0.3); pointer-events: none; }
+.rv-relleno { width: 0; background: #ffff00; }
+.rv-pista.encima .rv-riel, .rv-pista.encima .rv-sombra, .rv-pista.encima .rv-relleno,
+.rv-pista.arrastra .rv-riel, .rv-pista.arrastra .rv-relleno { height: 7px; }
+.rv-tirador {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: #ffff00;
+  box-shadow: 0 0 0 4px rgba(255, 255, 0, 0.2);
+  transform: scale(0);
+  transition: transform 0.12s;
+}
+.rv-pista.encima .rv-tirador, .rv-pista.arrastra .rv-tirador { transform: scale(1); }
+.rv-marcas { position: absolute; inset: 0; pointer-events: none; }
+.rv-marca { position: absolute; top: 50%; width: 4px; height: 12px; margin: -6px 0 0 -2px; border-radius: 2px; }
+.rv-marca.muerte { background: #ff3b3b; }
+.rv-marca.nivel { background: #ffff00; }
+.rv-marca.cadena { background: #00ffff; }
+.rv-previa {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+.rv-pista.encima .rv-previa { display: flex; }
+.rv-previa canvas { width: 132px; height: 170px; border: 2px solid #fff; border-radius: 6px; background: #000; image-rendering: pixelated; }
+.rv-previa-txt { font-size: 12px; letter-spacing: 1px; background: rgba(0, 0, 0, 0.85); padding: 3px 8px; border-radius: 3px; white-space: nowrap; }
+
+.rv-mandos { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.rv-ib {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font: bold 18px 'Courier New', Courier, monospace;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.rv-ib:hover, .rv-ib:focus-visible { background: rgba(255, 255, 255, 0.15); outline: none; }
+.rv-reloj { margin: 0 8px; font-size: 14px; letter-spacing: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rv-total { color: #aaa; }
+.rv-momento {
+  font: bold 12px 'Courier New', Courier, monospace;
+  letter-spacing: 1px;
+  color: #ddd;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.rv-momento:hover, .rv-momento:focus-visible { background: rgba(255, 255, 255, 0.24); outline: none; }
+.rv-hueco { flex: 1; }
+.rv-vel {
+  font: bold 13px 'Courier New', Courier, monospace;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+}
+.rv-vel:hover, .rv-vel:focus-visible { background: rgba(255, 255, 255, 0.15); outline: none; }
+@media (max-width: 600px) {
+  .rv-ib { width: 34px; height: 34px; font-size: 16px; }
+  .rv-reloj { font-size: 12px; margin: 0 4px; }
+  .rv-momento { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-grande.pulso { animation: none; }
+}

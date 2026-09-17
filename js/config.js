@@ -1127,6 +1127,9 @@
   CFG.REPLAY_FOTO_CADA = 600;      // ticks entre fotos (10 s)
   CFG.REPLAY_SALTO = 600;          // lo que salta ADELANTE / ATRÁS (10 s)
   CFG.REPLAY_VELOCIDADES = [0.5, 1, 2, 4];
+  CFG.REPLAY_OCULTAR_MS = 2200;    // los mandos se esconden si no se toca nada
+  CFG.REPLAY_MINI_W = 176;         // miniatura de la vista previa (la del laberinto,
+  CFG.REPLAY_MINI_H = 226;         //   que es vertical)
   CFG.REPLAY_PREP_MS = 12;         // ms de simulación seguidos al preparar
   CFG.REPLAY_PREP_MAX = 1728000;   // tope de pasos (8 h): red de seguridad
 

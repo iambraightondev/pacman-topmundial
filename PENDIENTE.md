@@ -13,6 +13,14 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep — reproductor de vídeo (`pm-v82`).** Braighton eligió la propuesta A
+de <https://claude.ai/artifact/Fb5NwxBBeyFgwRak3GuDRv>. En `js/replay.js`
+("EL REPRODUCTOR"), estilos `.rv` en css. Momentos detectados al preparar
+(`detectaMomento`), miniatura por foto (cada 10 s) para la vista previa, `&t=`
+en el enlace. **Por mirar:** en el móvil los mandos tapan la fila de vidas
+mientras están a la vista; las cadenas en repeticiones ONLINE dependen de que
+el espectador reciba `chainIndex`.
+
 **16 sep (noche) — partidas destacadas (`pm-v81`).** Pedido de Braighton.
 `supabase/repeticiones-destacadas.sql` (aplicado): columnas `destacada` y
 `titulo`, función `destacar_repeticion` (solo con cuenta; hace tuya una subida

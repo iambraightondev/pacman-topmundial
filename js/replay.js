@@ -928,6 +928,8 @@
       var UI = window.PM.UI;
       var c = String(codigo || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!c || !this.compartirConfigurado()) { this.avisoRoto(); return false; }
+      this.origen = null;
+      this.rnActual = c;
       if (UI && UI.showPrompt) {
         UI.showPrompt({
           title: 'REPETICIÓN COMPARTIDA',
@@ -1642,6 +1644,8 @@
     verRedGuardada: function (id) {
       var reg = this.porIdRed(id);
       if (!reg) { this.avisoRoto(); return false; }
+      this.origen = { tipo: 'red', id: id };
+      this.rnActual = reg.rn || null;
       var rep = this.leerRed(reg.s);
       if (!rep) { this.avisoRoto(); return false; }
       return this.verRed(rep);
@@ -1806,7 +1810,8 @@
      * teclas vuelven a simularse y las de red vuelven a aplicarse, pero las
      * dos avanzan con Game.step() y las dos se fotografían igual.
      * ========================================================= */
-    fotos: [],           // [{ t, cursor, cursorEv, foto }]
+    fotos: [],           // [{ t, cursor, cursorEv, foto, mini }]
+    momentos: [],        // [{ t, tipo: 'nivel'|'muerte'|'cadena', label }]
     tTotal: 0,           // último tick de la repetición (se sabe al prepararla)
     prep: null,          // preparación en marcha (para poder cancelarla)
 
@@ -1823,6 +1828,8 @@
       if (this.modo !== 'ver' && this.modo !== 'verRed') { hecho(false); return; }
       this.fotos = [];
       this.tTotal = 0;
+      this.momentos = [];
+      this.det = null;
       var tarea = { vivo: true };
       this.prep = tarea;
       var pasos = 0, avisado = 0, arrancada = false;
@@ -1842,6 +1849,7 @@
           arrancada = true;
           self.mudo(true);
           G.simulandoFuera = true;      // el bucle del juego no mete pasos
+          self.detectaMomento();        // el nivel en que empieza
           self.guardaFoto();            // el momento cero, para poder volver
           if (self.prepProgreso) self.prepProgreso();
         }
@@ -1849,6 +1857,7 @@
         while (pasos < CFG.REPLAY_PREP_MAX) {
           G.step();
           pasos++;
+          self.detectaMomento();
           if (self.acabada()) break;
           if (self.t - self.ultimaFoto() >= CFG.REPLAY_FOTO_CADA) self.guardaFoto();
           if ((pasos & 511) === 0 && Date.now() >= hasta) break;
@@ -1893,7 +1902,8 @@
 
     guardaFoto: function () {
       this.fotos.push({ t: this.t, cursor: this.cursor, cursorEv: this.cursorEv,
-                        redFin: !!this.redFin, foto: G.foto() });
+                        redFin: !!this.redFin, foto: G.foto(),
+                        mini: this.guardaMiniatura() });
     },
 
     /* La foto más cercana por debajo (o igual) de ese tick */
@@ -1957,6 +1967,7 @@
         self.prepProgreso = null;
         if (UI && UI.hidePrompt) UI.hidePrompt();
         if (!ok) { self.salir(); return; }      // la han cancelado
+        if (self.tInicial > 0) { self.irA(self.tInicial * 60); self.tInicial = 0; }
         self.mostrarBarra(true);
         G.syncUI();
       });
@@ -2124,6 +2135,8 @@
     verGuardada: function (id) {
       var reg = this.porId(id);
       if (!reg) { this.avisoRoto(); return false; }
+      this.origen = { tipo: 'local', id: id };
+      this.rnActual = reg.rn || null;
       return this.verTexto(reg.s, reg);
     },
 
@@ -2155,6 +2168,9 @@
       try { busca = window.location.search || ''; } catch (e) { busca = ''; }
       var mr = new RegExp('[?&]' + CFG.REPLAY_SHARE.PARAM + '=([A-Za-z0-9]+)')
         .exec(busca);
+      /* &t=<segundos>: el enlace de "compartir desde este segundo" */
+      var mt = /[?&]t=(\d{1,6})/.exec(busca);
+      this.tInicial = mt ? parseInt(mt[1], 10) : 0;
       if (mr) return this.verCompartida(mr[1]);
       var m = /[?&]rep=([^&#]*)/.exec(busca);
       if (!m) return false;
@@ -2206,6 +2222,9 @@
       this.red = null;
       this.cancelarPreparar();
       this.fotos = [];        // un megabyte largo: no se queda ahi colgado
+      this.momentos = [];
+      this.origen = null;
+      this.rnActual = null;
       this.tTotal = 0;
       this.cursor = 0;
       this.cursorEv = 0;
@@ -2251,9 +2270,22 @@
     },
 
     /* =========================================================
-     * INTERFAZ — cartel y controles
-     * Todo se monta aquí, con estilos en línea, para no tocar la hoja de
-     * estilos ni el HTML: la repetición es un añadido y se quita sola.
+     * EL REPRODUCTOR — como el de cualquier vídeo
+     *
+     * Se eligió la propuesta A de <https://claude.ai/artifact/Fb5NwxBBeyFgwRak3GuDRv>:
+     * la partida a pantalla completa y, por encima, lo de un reproductor de
+     * vídeo de toda la vida:
+     *   - arriba, el título (el nombre si está DESTACADA), quién, puntos y
+     *     fecha, y la X para salir;
+     *   - abajo, la barra con las MARCAS de lo que pasó (rojo muerte, amarillo
+     *     nivel, cian cadena de fantasmas) y, al pasar por ella, la VISTA
+     *     PREVIA de ese momento con su nombre;
+     *   - los mandos: pausa, ±10 s, tiempo, el MOMENTO en que se está (lleva
+     *     al siguiente), velocidad, compartir desde este segundo y pantalla
+     *     completa;
+     *   - pausar y saltar dan su aviso grande, y con la partida en marcha
+     *     todo se esconde a los dos segundos sin mover el ratón.
+     * Los estilos están en css/style.css (#repVideo).
      * ========================================================= */
     mostrarBarra: function (on) {
       if (!on) {
@@ -2262,151 +2294,165 @@
       }
       if (!this.barra) this.construirBarra();
       if (!this.barra) return;
-      this.barra.style.display = 'flex';
+      this.barra.style.display = '';
+      this.marcarMomentos();
+      this.despierta();
       this.pintaBarra();
     },
 
-    /* La barra de mando. Dos filas: arriba de quién es la partida y los
-     * botones; abajo la línea de tiempo, que se puede arrastrar como la de
-     * cualquier vídeo. Los estilos van en línea (ver el comentario de la
-     * sección): esto aparece y desaparece con la repetición. */
     construirBarra: function () {
       if (typeof document === 'undefined' || !document.body) return;
       var self = this;
-      var bar = document.createElement('div');
-      bar.id = 'replayBar';
-      var st = bar.style;
-      st.position = 'fixed';
-      st.left = '0';
-      st.right = '0';
-      st.top = '0';
-      st.zIndex = '30';
-      st.display = 'none';
-      st.flexDirection = 'column';
-      st.gap = '5px';
-      st.padding = '6px 10px 7px';
-      st.background = 'rgba(0, 0, 0, 0.82)';
-      st.borderBottom = '2px solid #7ec8ff';
-      st.fontFamily = "'Courier New', Courier, monospace";
-      st.fontSize = '11px';
-      st.fontWeight = 'bold';
-      st.letterSpacing = '2px';
-      st.color = '#7ec8ff';
-      st.lineHeight = '1';
-
-      var fila = document.createElement('div');
-      var fs = fila.style;
-      fs.display = 'flex';
-      fs.alignItems = 'center';
-      fs.justifyContent = 'center';
-      fs.flexWrap = 'wrap';
-      fs.gap = '6px';
-      bar.appendChild(fila);
-
-      this.etiqueta = document.createElement('span');
-      this.etiqueta.textContent = 'REPETICIÓN';
-      fila.appendChild(this.etiqueta);
-
-      function boton(texto, titulo, fn) {
-        var b = document.createElement('button');
+      function el(tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      }
+      function boton(cls, txt, titulo, fn) {
+        var b = el('button', cls, txt);
         b.type = 'button';
-        b.textContent = texto;
         b.title = titulo || '';
-        var s = b.style;
-        s.fontFamily = 'inherit';
-        s.fontSize = '11px';
-        s.fontWeight = 'bold';
-        s.letterSpacing = '1px';
-        s.color = '#fff';
-        s.background = 'rgba(0, 0, 0, 0.55)';
-        s.border = '1px solid rgba(255, 255, 255, 0.45)';
-        s.borderRadius = '4px';
-        s.padding = '6px 9px';
-        s.cursor = 'pointer';
-        s.touchAction = 'manipulation';
-        b.addEventListener('click', fn);
-        fila.appendChild(b);
+        b.setAttribute('aria-label', titulo || txt);
+        b.addEventListener('click', function (ev) {
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          fn();
+          self.despierta();
+        });
         return b;
       }
+      var raiz = el('div', 'rv');
+      raiz.id = 'repVideo';
+      raiz.style.display = 'none';
 
-      boton('|<', 'AL PRINCIPIO', function () { self.irA(0); });
-      boton('<<', 'ATRÁS ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S  ·  ←',
-            function () { self.salta(-CFG.REPLAY_SALTO); });
-      this.btnPausa = boton('PAUSA', 'PAUSA  ·  ESPACIO',
-                            function () { self.pausar(); });
-      boton('>>', 'ADELANTE ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S  ·  →',
-            function () { self.salta(CFG.REPLAY_SALTO); });
-      this.btnVel = boton('x1', 'VELOCIDAD', function () { self.otraVelocidad(); });
-      boton('SALIR', 'SALIR  ·  Q', function () { self.salir(); });
+      /* ---- arriba ---- */
+      var arriba = el('div', 'rv-arriba');
+      this.rvTitulo = el('div', 'rv-titulo', 'REPETICIÓN');
+      this.rvSub = el('div', 'rv-sub', '');
+      var textos = el('div', 'rv-textos');
+      textos.appendChild(this.rvTitulo);
+      textos.appendChild(this.rvSub);
+      arriba.appendChild(textos);
+      this.rvDestacada = el('span', 'rv-destacada', '★ DESTACADA');
+      arriba.appendChild(this.rvDestacada);
+      arriba.appendChild(boton('rv-ib rv-cerrar', '✕', 'SALIR · Q', function () { self.salir(); }));
+      raiz.appendChild(arriba);
 
-      /* ---- línea de tiempo ---- */
-      var linea = document.createElement('div');
-      var ls = linea.style;
-      ls.display = 'flex';
-      ls.alignItems = 'center';
-      ls.gap = '8px';
-      bar.appendChild(linea);
+      /* ---- avisos del centro ---- */
+      this.rvGrande = el('div', 'rv-grande', '▶');
+      raiz.appendChild(this.rvGrande);
+      this.rvSaltoI = el('div', 'rv-salto izq', '« ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S');
+      this.rvSaltoD = el('div', 'rv-salto der', Math.round(CFG.REPLAY_SALTO / 60) + ' S »');
+      raiz.appendChild(this.rvSaltoI);
+      raiz.appendChild(this.rvSaltoD);
 
-      this.tAhora = document.createElement('span');
-      this.tAhora.textContent = '0:00';
-      this.tAhora.style.minWidth = '38px';
-      this.tAhora.style.textAlign = 'right';
-      linea.appendChild(this.tAhora);
-
-      var pista = document.createElement('div');
+      /* ---- abajo ---- */
+      var abajo = el('div', 'rv-abajo');
+      var pista = el('div', 'rv-pista');
       pista.id = 'replayPista';
-      var ps = pista.style;
-      ps.position = 'relative';
-      ps.flex = '1';
-      ps.height = '14px';
-      ps.display = 'flex';
-      ps.alignItems = 'center';
-      ps.cursor = 'pointer';
-      ps.touchAction = 'none';       // el arrastre es nuestro, no del navegador
-      linea.appendChild(pista);
-
-      var riel = document.createElement('div');
-      var rs = riel.style;
-      rs.position = 'absolute';
-      rs.left = '0';
-      rs.right = '0';
-      rs.height = '4px';
-      rs.background = 'rgba(255, 255, 255, 0.25)';
-      rs.borderRadius = '2px';
-      pista.appendChild(riel);
-
-      this.relleno = document.createElement('div');
-      var fls = this.relleno.style;
-      fls.position = 'absolute';
-      fls.left = '0';
-      fls.width = '0';
-      fls.height = '4px';
-      fls.background = '#7ec8ff';
-      fls.borderRadius = '2px';
+      pista.appendChild(el('div', 'rv-riel'));
+      this.rvSombra = el('div', 'rv-sombra');
+      pista.appendChild(this.rvSombra);
+      this.relleno = el('div', 'rv-relleno');
       pista.appendChild(this.relleno);
-
-      this.tirador = document.createElement('div');
-      var ts = this.tirador.style;
-      ts.position = 'absolute';
-      ts.left = '0';
-      ts.width = '12px';
-      ts.height = '12px';
-      ts.marginLeft = '-6px';
-      ts.borderRadius = '50%';
-      ts.background = '#fff';
-      ts.boxShadow = '0 0 0 2px #7ec8ff';
+      this.rvMarcas = el('div', 'rv-marcas');
+      pista.appendChild(this.rvMarcas);
+      this.tirador = el('div', 'rv-tirador');
       pista.appendChild(this.tirador);
+      this.rvPrevia = el('div', 'rv-previa');
+      this.rvPreviaCv = document.createElement('canvas');
+      this.rvPreviaCv.width = CFG.REPLAY_MINI_W;
+      this.rvPreviaCv.height = CFG.REPLAY_MINI_H;
+      this.rvPrevia.appendChild(this.rvPreviaCv);
+      this.rvPreviaTxt = el('div', 'rv-previa-txt', '');
+      this.rvPrevia.appendChild(this.rvPreviaTxt);
+      pista.appendChild(this.rvPrevia);
+      abajo.appendChild(pista);
 
-      this.tTotalTxt = document.createElement('span');
-      this.tTotalTxt.textContent = '0:00';
-      this.tTotalTxt.style.minWidth = '38px';
-      linea.appendChild(this.tTotalTxt);
+      var mandos = el('div', 'rv-mandos');
+      this.btnPausa = boton('rv-ib', '❚❚', 'PAUSA · ESPACIO', function () { self.pausar(); self.avisoGrande(G.paused ? '❚❚' : '▶'); });
+      mandos.appendChild(this.btnPausa);
+      mandos.appendChild(boton('rv-ib', '↺', 'ATRÁS ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S · ←',
+        function () { self.salta(-CFG.REPLAY_SALTO); self.avisoSalto(-1); }));
+      mandos.appendChild(boton('rv-ib', '↻', 'ADELANTE ' + Math.round(CFG.REPLAY_SALTO / 60) + ' S · →',
+        function () { self.salta(CFG.REPLAY_SALTO); self.avisoSalto(1); }));
+      this.tAhora = el('span', 'rv-tiempo', '0:00');
+      this.tTotalTxt = el('span', 'rv-total', '/ 0:00');
+      var reloj = el('span', 'rv-reloj');
+      reloj.appendChild(this.tAhora);
+      reloj.appendChild(this.tTotalTxt);
+      mandos.appendChild(reloj);
+      this.rvMomento = boton('rv-momento', '', 'IR AL SIGUIENTE MOMENTO', function () { self.siguienteMomento(); });
+      mandos.appendChild(this.rvMomento);
+      mandos.appendChild(el('span', 'rv-hueco'));
+      this.btnVel = boton('rv-vel', '1×', 'VELOCIDAD · X', function () { self.otraVelocidad(); });
+      mandos.appendChild(this.btnVel);
+      mandos.appendChild(boton('rv-ib', '⤴', 'COMPARTIR DESDE ESTE SEGUNDO', function () { self.compartirAqui(); }));
+      mandos.appendChild(boton('rv-ib', '⛶', 'PANTALLA COMPLETA · F', function () { self.pantallaCompleta(); }));
+      abajo.appendChild(mandos);
+      raiz.appendChild(abajo);
+
+      /* moverse despierta los mandos; quedarse quieto los esconde */
+      var despertar = function () { if (raiz.style.display !== 'none') self.despierta(); };
+      document.addEventListener('mousemove', despertar);
+      /* pulsar la partida la pausa, como en un vídeo */
+      var lienzo = document.getElementById('game');
+      if (lienzo) {
+        lienzo.addEventListener('click', function () {
+          if (raiz.style.display === 'none' || !self.fotos.length) return;
+          self.pausar();
+          self.avisoGrande(G.paused ? '❚❚' : '▶');
+          self.despierta();
+        });
+      }
+      document.addEventListener('touchstart', despertar);
 
       this.pista = pista;
       this.activarArrastre(pista);
+      this.activarPrevia(pista);
+      document.body.appendChild(raiz);
+      this.barra = raiz;
+    },
 
-      document.body.appendChild(bar);
-      this.barra = bar;
+    /* Mandos a la vista; se esconden a los CFG.REPLAY_OCULTAR_MS si la
+     * partida va y nadie toca nada. En pausa se quedan. */
+    despierta: function () {
+      if (!this.barra) return;
+      this.rvUltimoToque = Date.now();
+      this.barra.classList.remove('dormido');
+    },
+
+    vigilaDormir: function () {
+      if (!this.barra || this.barra.style.display === 'none') return;
+      var arrastra = this.pista && this.pista.classList.contains('arrastra');
+      var dormir = !G.paused && !arrastra &&
+        Date.now() - (this.rvUltimoToque || 0) > CFG.REPLAY_OCULTAR_MS;
+      this.barra.classList.toggle('dormido', dormir);
+    },
+
+    avisoGrande: function (txt) {
+      var g = this.rvGrande;
+      if (!g) return;
+      g.textContent = txt;
+      g.classList.remove('pulso');
+      void g.offsetWidth;          // reinicia la animación
+      g.classList.add('pulso');
+    },
+
+    avisoSalto: function (lado) {
+      var e = lado < 0 ? this.rvSaltoI : this.rvSaltoD;
+      if (!e) return;
+      e.classList.add('ver');
+      clearTimeout(e._t);
+      e._t = setTimeout(function () { e.classList.remove('ver'); }, 550);
+    },
+
+    pantallaCompleta: function () {
+      var d = document;
+      try {
+        if (d.fullscreenElement) d.exitFullscreen();
+        else if (d.documentElement.requestFullscreen) d.documentElement.requestFullscreen();
+      } catch (e) { /* sin pantalla completa */ }
     },
 
     /* Arrastrar la línea de tiempo. Mientras se arrastra se salta de verdad
@@ -2431,6 +2477,7 @@
       function empieza(ev) {
         if (!self.fotos.length) return;
         arrastrando = true;
+        pista.classList.add('arrastra');
         pendiente = tickDe(ev);
         ultimo = 0;
         mueve(ev);
@@ -2453,6 +2500,7 @@
       function suelta(ev) {
         if (!arrastrando) return;
         arrastrando = false;
+        pista.classList.remove('arrastra');
         if (pendiente >= 0) self.irA(pendiente);
         pendiente = -1;
         if (ev && ev.preventDefault) ev.preventDefault();
@@ -2473,6 +2521,147 @@
       }
     },
 
+    /* ---------- los MOMENTOS ----------
+     * Se apuntan al preparar la repetición (detectaMomento, a cada paso):
+     * cada nivel, cada muerte y cada cadena de dos o más fantasmas (de una
+     * misma cadena se queda la más larga). Son las marcas de la barra, el
+     * nombre de la vista previa y el botón del momento. */
+    detectaMomento: function () {
+      var d = this.det;
+      if (!d) {
+        d = this.det = { nivel: G.level, muertos: [], cadena: 0 };
+        this.momentos.push({ t: this.t, tipo: 'nivel', label: 'NIVEL ' + G.level });
+      }
+      if (G.level > d.nivel) {
+        this.momentos.push({ t: this.t, tipo: 'nivel', label: 'NIVEL ' + G.level });
+      }
+      d.nivel = G.level;
+      for (var i = 0; i < G.pacs.length; i++) {
+        var p = G.pacs[i];
+        var muere = !!(p && p.dying);
+        if (muere && !d.muertos[i]) {
+          this.momentos.push({ t: this.t, tipo: 'muerte',
+            label: G.playerCount > 1 ? ('MUERTE · ' + G.nameFor(i)) : 'MUERTE' });
+        }
+        d.muertos[i] = muere;
+      }
+      var c = G.chainIndex || 0;
+      if (c >= 2 && c > d.cadena) {
+        var ult = this.momentos[this.momentos.length - 1];
+        var etiqueta = 'CADENA ×' + c;
+        if (ult && ult.tipo === 'cadena' && this.t - ult.t < 8 * 60) ult.label = etiqueta;
+        else this.momentos.push({ t: this.t, tipo: 'cadena', label: etiqueta });
+      }
+      d.cadena = c;
+    },
+
+    /* El momento en que se está: el último que ya pasó */
+    momentoEn: function (t) {
+      var m = null;
+      for (var i = 0; i < this.momentos.length; i++) {
+        if (this.momentos[i].t <= t) m = this.momentos[i];
+        else break;
+      }
+      return m;
+    },
+
+    siguienteMomento: function () {
+      for (var i = 0; i < this.momentos.length; i++) {
+        /* un segundo antes, para verlo venir */
+        if (this.momentos[i].t > this.t + 90) { this.irA(this.momentos[i].t - 60); return; }
+      }
+    },
+
+    marcarMomentos: function () {
+      var cont = this.rvMarcas;
+      if (!cont) return;
+      cont.innerHTML = '';
+      var total = this.tTotal || 0;
+      if (!total) return;
+      for (var i = 0; i < this.momentos.length; i++) {
+        var m = this.momentos[i];
+        if (m.t <= 0) continue;
+        var mk = document.createElement('i');
+        mk.className = 'rv-marca ' + m.tipo;
+        mk.style.left = (m.t / total * 100) + '%';
+        cont.appendChild(mk);
+      }
+    },
+
+    /* ---------- la vista previa ----------
+     * Al preparar se guarda una MINIATURA con cada foto (cada 10 s): pintar
+     * la partida entera para cada punto de la barra costaría una simulación
+     * por movimiento del ratón. Aquí se enseña la de antes de ese momento. */
+    guardaMiniatura: function () {
+      if (typeof document === 'undefined' || !G.canvas || !G.render) return null;
+      try {
+        var cv = document.createElement('canvas');
+        cv.width = CFG.REPLAY_MINI_W;
+        cv.height = CFG.REPLAY_MINI_H;
+        G.render();
+        var c = cv.getContext('2d');
+        c.imageSmoothingEnabled = false;
+        c.fillStyle = '#000';
+        c.fillRect(0, 0, cv.width, cv.height);
+        var k = Math.min(cv.width / G.canvas.width, cv.height / G.canvas.height);
+        var w = G.canvas.width * k, h = G.canvas.height * k;
+        c.drawImage(G.canvas, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+        return cv;
+      } catch (e) { return null; }
+    },
+
+    activarPrevia: function (pista) {
+      var self = this;
+      function mueve(ev) {
+        if (!self.tTotal || !pista.getBoundingClientRect) return;
+        var r = pista.getBoundingClientRect();
+        if (!r.width) return;
+        var p = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+        var t = Math.round(p * self.tTotal);
+        var x = Math.max(90, Math.min(r.width - 90, ev.clientX - r.left));
+        self.rvPrevia.style.left = x + 'px';
+        self.rvSombra.style.width = (p * 100) + '%';
+        var f = self.fotoPara(t);
+        var c = self.rvPreviaCv.getContext('2d');
+        c.fillStyle = '#000';
+        c.fillRect(0, 0, self.rvPreviaCv.width, self.rvPreviaCv.height);
+        if (f && f.mini) c.drawImage(f.mini, 0, 0);
+        var m = self.momentoEn(t);
+        self.rvPreviaTxt.textContent = self.reloj(t) + (m ? ' · ' + m.label : '');
+        pista.classList.add('encima');
+      }
+      pista.addEventListener('mousemove', mueve);
+      pista.addEventListener('pointermove', mueve);
+      pista.addEventListener('mouseleave', function () {
+        pista.classList.remove('encima');
+        self.rvSombra.style.width = '0';
+      });
+    },
+
+    /* ---------- compartir desde aquí ----------
+     * El enlace de siempre (?rn=) con el segundo: al abrirlo, la repetición
+     * empieza ahí. Si aún no está en la nube, se sube primero. */
+    compartirAqui: function () {
+      var self = this, UI = window.PM.UI;
+      var seg = Math.floor(this.t / 60);
+      if (G.paused === false && G.canPause()) G.setPaused(true);
+      function listo(err, codigo) {
+        if (err || !codigo) { if (UI && UI.showShareError) UI.showShareError(err || 'NO SE PUDO COMPARTIR'); return; }
+        self.rnActual = codigo;
+        var url = self.enlaceRed(codigo) + (seg > 0 ? '&t=' + seg : '');
+        if (UI && UI.showSharePrompt) UI.showSharePrompt(url, true);
+      }
+      if (this.rnActual) { listo(null, this.rnActual); return; }
+      var o = this.origen;
+      if (!o) { listo('ESTA REPETICIÓN NO SE PUEDE COMPARTIR', null); return; }
+      if (UI && UI.showPrompt) {
+        UI.showPrompt({ title: 'COMPARTIR REPETICIÓN', color: '#7ec8ff',
+          lines: ['PREPARANDO EL ENLACE...'], buttons: [] });
+      }
+      var reg = (o.tipo === 'red') ? this.porIdRed(o.id) : this.porId(o.id);
+      this.subirReg(reg, o.tipo, listo);
+    },
+
     /* `donde` (opcional) pinta la barra en otro punto sin haber saltado
      * todavía: es lo que se ve mientras se arrastra entre salto y salto. */
     pintaBarra: function (donde) {
@@ -2481,18 +2670,35 @@
       var quien = (r.nombres || []).join(' + ') || 'ANÓNIMO';
       var f = new Date(Date.parse(r.fecha) || 0);
       function dd(n) { return (n < 10 ? '0' : '') + n; }
-      this.etiqueta.textContent = 'REPETICIÓN · ' + quien + ' · ' +
-        (r.final ? r.final.puntos + ' PTS' : '') + ' · ' +
-        dd(f.getDate()) + '/' + dd(f.getMonth() + 1);
-      if (this.btnPausa) this.btnPausa.textContent = G.paused ? 'SEGUIR' : 'PAUSA';
-      if (this.btnVel) this.btnVel.textContent = 'x' + (G.timeScale || 1);
+      var puntos = (r.final && r.final.puntos) || (r.final === undefined ? 0 : 0);
+      var nube = null;
+      if (this.rnActual && this.indiceNube) {
+        var idx = this.indiceNube();
+        for (var i = 0; i < idx.length; i++) if (idx[i].rn === this.rnActual) nube = idx[i];
+      }
+      this.rvTitulo.textContent = (nube && nube.d && nube.ti) ? nube.ti : 'REPETICIÓN';
+      this.rvSub.textContent = quien + (puntos ? ' · ' + puntos + ' PUNTOS' : '') +
+        (r.fecha ? ' · ' + dd(f.getDate()) + '/' + dd(f.getMonth() + 1) + '/' + f.getFullYear() : '');
+      this.rvDestacada.style.display = (nube && nube.d) ? '' : 'none';
+      if (this.btnPausa) {
+        this.btnPausa.textContent = G.paused ? '▶' : '❚❚';
+        this.btnPausa.title = G.paused ? 'SEGUIR · ESPACIO' : 'PAUSA · ESPACIO';
+      }
+      var v = G.timeScale || 1;
+      if (this.btnVel) this.btnVel.textContent = (v === 0.5 ? '½' : v) + '×';
       var t = (donde >= 0 && donde !== undefined) ? donde : this.t;
       var total = this.tTotal || 0;
       var pct = total ? Math.max(0, Math.min(1, t / total)) : 0;
       if (this.relleno) this.relleno.style.width = (pct * 100) + '%';
       if (this.tirador) this.tirador.style.left = (pct * 100) + '%';
       if (this.tAhora) this.tAhora.textContent = this.reloj(t);
-      if (this.tTotalTxt) this.tTotalTxt.textContent = this.reloj(total);
+      if (this.tTotalTxt) this.tTotalTxt.textContent = ' / ' + this.reloj(total);
+      if (this.rvMomento) {
+        var m = this.momentoEn(t);
+        this.rvMomento.textContent = m ? (m.label + ' ›') : '';
+        this.rvMomento.style.display = m ? '' : 'none';
+      }
+      this.vigilaDormir();
     },
 
     /* La barra se repinta sola con el reloj de la repetición: sin esto, el
@@ -2509,54 +2715,48 @@
       if (this.modo !== 'ver' && this.modo !== 'verRed') return false;
       if (!this.fotos.length) return false;
       var k = ev.key;
-      if (k === 'ArrowLeft') { this.salta(-CFG.REPLAY_SALTO); return true; }
-      if (k === 'ArrowRight') { this.salta(CFG.REPLAY_SALTO); return true; }
+      this.despierta();
+      if (k === 'ArrowLeft') { this.salta(-CFG.REPLAY_SALTO); this.avisoSalto(-1); return true; }
+      if (k === 'ArrowRight') { this.salta(CFG.REPLAY_SALTO); this.avisoSalto(1); return true; }
       if (k === 'Home') { this.irA(0); return true; }
       if (k === 'End') { this.irA(this.tTotal); return true; }
       if (k === ' ' || k === 'Spacebar' || ev.code === 'Space') {
         this.pausar();
+        this.avisoGrande(G.paused ? '❚❚' : '▶');
         return true;
       }
       if (k === 'x' || k === 'X') { this.otraVelocidad(); return true; }
+      if (k === 'f' || k === 'F') { this.pantallaCompleta(); return true; }
+      if (k === 'm' || k === 'M') { this.siguienteMomento(); return true; }
+      var n = ['1', '2', '3', '4'].indexOf(k);
+      if (n !== -1) { this.velocidad(CFG.REPLAY_VELOCIDADES[n]); return true; }
+      if ((k === 'q' || k === 'Q' || k === 'Escape') && this.barra && this.barra.style.display !== 'none') {
+        this.salir();
+        return true;
+      }
       return false;
     },
 
     /* ---------- diálogos, los pide ui.js ---------- */
-    /* Menú de pausa de una repetición (en vez del de la partida) */
+    /* Pausar una repetición ya preparada NO abre menú: es un vídeo, se para
+     * y se ve el aviso. Sin preparar (en las pruebas) queda el de siempre. */
     pausaPrompt: function () {
       var self = this, UI = window.PM.UI;
       if (this.modo !== 'ver' || !UI || !UI.showPrompt) return false;
+      if (this.barra && this.barra.style.display !== 'none' && this.fotos.length) {
+        if (UI.hidePrompt) UI.hidePrompt();
+        this.pintaBarra();
+        return true;
+      }
       this.pintaBarra();
       var segs = Math.round(CFG.REPLAY_SALTO / 60);
       var lineas = ['ESTÁS VIENDO UNA PARTIDA YA JUGADA.',
                     'NO CUENTA PARA NADA: NI PUNTOS, NI LOGROS, NI RÉCORD.'];
-      /* Con la partida ya rehecha se puede ir a cualquier momento, así que
-       * aquí se dice: en pausa es justo cuando a uno le da por buscar la
-       * jugada que quería volver a ver. */
-      if (this.fotos.length) {
-        lineas.push('VA POR ' + this.reloj(this.t) + ' DE ' + this.reloj(this.tTotal) +
-                    '. CON LAS FLECHAS SALTAS ' + segs + ' S, Y LA BARRA DE ARRIBA SE ARRASTRA.');
-      }
       var botones = [
         { label: 'SEGUIR', primary: true, hint: 'P · ESC',
           keys: ['p', 'Escape', 'Enter'],
           onClick: function () { self.pausar(false); } }
       ];
-      if (this.fotos.length) {
-        /* El apuntador de la tecla va con '<' y '>' y no con las flechas de
-         * verdad: la tipografía del juego no tiene ese dibujo y salía un
-         * palote. */
-        botones.push({ label: 'ATRÁS ' + segs + ' S', hint: '<', keys: ['ArrowLeft'],
-          onClick: function () {
-            self.salta(-CFG.REPLAY_SALTO);
-            if (UI.syncPrompt) UI.syncPrompt();
-          } });
-        botones.push({ label: 'ADELANTE ' + segs + ' S', hint: '>', keys: ['ArrowRight'],
-          onClick: function () {
-            self.salta(CFG.REPLAY_SALTO);
-            if (UI.syncPrompt) UI.syncPrompt();
-          } });
-      }
       botones.push({ label: 'VELOCIDAD x' + (G.timeScale || 1),
         hint: 'X', keys: ['x'],
         onClick: function () {
@@ -2570,7 +2770,7 @@
       UI.showPrompt({
         title: 'REPETICIÓN EN PAUSA',
         color: '#7ec8ff',
-        lines: lineas,
+        lines: lineas.concat(segs ? [] : []),
         buttons: botones
       });
       return true;

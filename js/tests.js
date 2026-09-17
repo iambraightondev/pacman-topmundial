@@ -7640,7 +7640,7 @@
       var alFinal = R.t;
       eq(R.teclaVideo({ key: 'ArrowLeft' }), true, 'la flecha es suya');
       ok(R.t < alFinal, 'y rebobina');
-      eq(R.teclaVideo({ key: 'q' }), false, 'lo que no es suyo, no lo toca');
+      eq(R.teclaVideo({ key: 'z' }), false, 'lo que no es suyo, no lo toca');
     });
   });
 

@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Las repeticiones, como un vídeo
+
+- **Reproductor nuevo:** la partida a pantalla completa con los mandos de un
+  vídeo abajo (pausa, ±10 s, tiempo, velocidad, compartir, pantalla completa) y
+  el título arriba. Todo se esconde solo si no se toca nada.
+- **Marcas en la barra** de lo que pasó (rojo muerte, amarillo nivel, cian
+  cadena de fantasmas) y **vista previa** al pasar el ratón.
+- **Compartir desde este segundo:** el enlace abre la repetición ahí.
+- Pulsar la partida o la barra espaciadora pausa, sin abrir ningún menú. Teclas:
+  ← → 10 s, 1-4 velocidad, M siguiente momento, F pantalla completa, Q salir.
+
 ## 2026-09-16 · Partidas destacadas
 
 - **☆ DESTACAR** en TUS PARTIDAS: la repetición se guarda para siempre y se le
