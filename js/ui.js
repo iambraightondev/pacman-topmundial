@@ -5691,6 +5691,11 @@
     buildCifras: function (host) {
       var b = {};
 
+      /* --- lo grande: cuatro cifras de un vistazo --- */
+      b.heroe = document.createElement('div');
+      b.heroe.className = 'cifras-heroe';
+      host.appendChild(b.heroe);
+
       /* --- el polígono --- */
       var caja = document.createElement('div');
       caja.className = 'radar-box';
@@ -5789,9 +5794,28 @@
       /* fichas */
       b.grupos.innerHTML = '';
       var secciones = S.secciones(d);
+      /* las cuatro primeras de EN TOTAL, en grande */
+      if (b.heroe) {
+        b.heroe.innerHTML = '';
+        var colores = ['#ffff00', '#00ffff', '#ffb8ff', '#00ff00'];
+        var prim = (secciones[0] && secciones[0].filas) || [];
+        for (var hx = 0; hx < prim.length && hx < 4; hx++) {
+          var ht = document.createElement('div');
+          ht.className = 'cifras-heroe-f';
+          ht.style.setProperty('--fc', colores[hx]);
+          var hv = document.createElement('b');
+          hv.textContent = prim[hx][1];
+          var hk = document.createElement('span');
+          hk.textContent = prim[hx][0];
+          ht.appendChild(hv);
+          ht.appendChild(hk);
+          b.heroe.appendChild(ht);
+        }
+      }
       for (var s = 0; s < secciones.length; s++) {
         var g = document.createElement('div');
         g.className = 'cifra-grupo';
+        g.style.setProperty('--gc', ['#ffff00', '#00ffff', '#ffb852', '#ff66cc', '#00ff00', '#7ec8ff'][s % 6]);
         var t = document.createElement('div');
         t.className = 'cifra-tit';
         t.textContent = secciones[s].titulo;
@@ -6065,9 +6089,40 @@
       /* ---- pestaña LOGROS ---- */
       this.achPane = document.createElement('div');
       this.achPane.className = 'tab-pane';
+      /* cabecera: el total en grande, su barra y los filtros */
+      var achCab = document.createElement('div');
+      achCab.className = 'logros-cab';
+      this.achPane.appendChild(achCab);
+      this.achTotal = document.createElement('div');
+      this.achTotal.className = 'logros-total';
+      achCab.appendChild(this.achTotal);
+      var achMedio = document.createElement('div');
+      achMedio.className = 'logros-medio';
+      achCab.appendChild(achMedio);
+      var achBar = document.createElement('div');
+      achBar.className = 'level-bar logros-barra';
+      this.achFill = document.createElement('div');
+      this.achFill.className = 'level-fill';
+      achBar.appendChild(this.achFill);
+      achMedio.appendChild(achBar);
       this.achSub = document.createElement('div');
       this.achSub.className = 'note';
-      this.achPane.appendChild(this.achSub);
+      achMedio.appendChild(this.achSub);
+      var achFiltros = document.createElement('div');
+      achFiltros.className = 'logros-filtros';
+      achCab.appendChild(achFiltros);
+      this.achVer = 'todos';
+      this.achModo = 'todos';
+      this.achVerDesp = this.desplegable('VER', [
+        { id: 'todos', name: 'TODOS' }, { id: 'hechos', name: 'CONSEGUIDOS' }, { id: 'faltan', name: 'POR CONSEGUIR' }
+      ], function (id) { self.achVer = id; self.refreshAchievements(); });
+      achFiltros.appendChild(this.achVerDesp.el);
+      var modosAch = [{ id: 'todos', name: 'TODOS' }, { id: '', name: 'CUALQUIER MODO' }];
+      for (var am in CFG.ACH_MODOS) {
+        if (CFG.ACH_MODOS.hasOwnProperty(am)) modosAch.push({ id: am, name: CFG.ACH_MODOS[am].name });
+      }
+      this.achModoDesp = this.desplegable('MODO', modosAch, function (id) { self.achModo = id; self.refreshAchievements(); });
+      achFiltros.appendChild(this.achModoDesp.el);
       this.achList = document.createElement('div');
       this.achList.className = 'badge-list';
       this.achPane.appendChild(this.achList);
@@ -6247,14 +6302,15 @@
     achRow: function (a, p) {
       var R = window.PM.Ranking;
       var row = document.createElement('div');
-      row.className = 'badge-row' + (p.hecho ? ' got' : '');
+      row.className = 'badge-row logro' + (p.hecho ? ' got' : '');
+      row.style.setProperty('--ac', p.hecho ? (a.color || '#ffff00') : '#2d2d6e');
 
       var cv = document.createElement('canvas');
-      cv.width = 34; cv.height = 34;
+      cv.width = 68; cv.height = 68;
       cv.className = 'badge-medal';
       var c = cv.getContext('2d');
       c.imageSmoothingEnabled = false;
-      window.PM.Sprites.drawAchStar(c, 17, 17, 15, p.hecho ? a.color : '#333');
+      window.PM.Sprites.drawAchStar(c, 34, 34, 30, p.hecho ? a.color : '#333');
       row.appendChild(cv);
 
       var txt = document.createElement('div');
@@ -6309,10 +6365,29 @@
        * en 100/50 el primer día que abre esto, tiene derecho a saber por qué
        * (lo jugado antes de que hubiera logros por modo se apuntó al
        * clásico). Ver Achievements.sembrarModos. */
-      this.achSub.textContent = 'CONSEGUIDOS ' + A.count() + ' DE ' + A.total() +
+      var hechos = A.count(), total = A.total();
+      if (this.achTotal) {
+        this.achTotal.innerHTML = '';
+        var nb = document.createElement('b');
+        nb.textContent = hechos;
+        var nt = document.createElement('span');
+        nt.textContent = '/' + total;
+        this.achTotal.appendChild(nb);
+        this.achTotal.appendChild(nt);
+        this.achFill.style.width = Math.round(hechos / Math.max(1, total) * 100) + '%';
+        this.achVerDesp.poner(this.achVer || 'todos');
+        this.achModoDesp.poner(this.achModo == null ? 'todos' : this.achModo);
+      }
+      this.achSub.textContent = Math.round(hechos / Math.max(1, total) * 100) + ' % CONSEGUIDO' +
         '  ·  LO QUE JUGASTE ANTES DE QUE HUBIERA LOGROS POR MODO CUENTA COMO CLÁSICO';
+      var ver = this.achVer || 'todos', modo = (this.achModo == null) ? 'todos' : this.achModo;
       CFG.ACHIEVEMENTS.forEach(function (a) {
-        this.achList.appendChild(this.achRow(a, A.progress(a, stats)));
+        var p = A.progress(a, stats);
+        var fila = this.achRow(a, p);
+        var sale = (ver === 'todos' || (ver === 'hechos') === !!p.hecho) &&
+          (modo === 'todos' || (a.modo || '') === modo);
+        if (!sale) fila.style.display = 'none';
+        this.achList.appendChild(fila);
       }, this);
     },
 
