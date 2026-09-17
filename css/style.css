@@ -3958,3 +3958,36 @@ body { font-size-adjust: 0.56; }
   .marq .btn-play { padding: 12px 18px 10px; }
   .marq .menu-extras .btn { padding: 7px 0; }
 }
+
+/* la ficha a la derecha y el cuartel a la izquierda; las monedas, sin
+ * cápsula, en la cabecera de la ficha */
+.marq-ficha-cab {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+.marq-ficha-cab .section-title { margin: 0; }
+.marq-monedas {
+  gap: 8px;
+  font-size: 13px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 2px 0;
+  box-shadow: none;
+}
+.marq-monedas .moneda { width: 14px; height: 14px; }
+.marq-monedas:hover,
+.marq-monedas:focus-visible { border: 0; box-shadow: none; color: #fff6a8; text-shadow: 0 0 10px rgba(255, 210, 63, 0.8); }
+@media (min-width: 1000px) {
+  .marq { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr) minmax(310px, 340px); grid-template-areas: "hud hud hud" "head head head" "side main player"; }
+  .marq-ficha-cab {
+    justify-content: space-between;
+    border-bottom: 1px solid #2121ff;
+    padding-bottom: 6px;
+  }
+  .marq .marq-ficha-cab .section-title { border-bottom: 0; padding-bottom: 0; width: auto; }
+  .marq-monedas { margin: 0; align-self: auto; font-size: 13px; }
+}

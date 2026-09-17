@@ -408,7 +408,21 @@
       head.appendChild(this.marqCaza);
 
       /* ===== tu ficha: nombre con tu aspecto, nivel, daily, continuar ===== */
-      player.appendChild(this.sectionTitle('JUGADOR 1'));
+      /* la cabecera de la ficha lleva tus monedas a la derecha, sueltas,
+       * como los créditos de la máquina: pulsarlas lleva a la tienda */
+      var fichaCab = document.createElement('div');
+      fichaCab.className = 'marq-ficha-cab';
+      fichaCab.appendChild(this.sectionTitle('TU FICHA'));
+      this.marqMonedas = document.createElement('button');
+      this.marqMonedas.type = 'button';
+      this.marqMonedas.className = 'marq-monedas';
+      this.marqMonedas.setAttribute('aria-label', 'Tus monedas: abrir la tienda');
+      this.marqMonedas.addEventListener('click', function () {
+        self.resumeAudio();
+        self.showTienda();
+      });
+      fichaCab.appendChild(this.marqMonedas);
+      player.appendChild(fichaCab);
 
       /* nombre en la portada, estilo arcade moderno: se escribe y a jugar */
       player.appendChild(this.makeNickRow('nick1', 'TU NOMBRE', 'menu'));
@@ -518,17 +532,6 @@
         eb.addEventListener('focus', apunta);
       }
       side.appendChild(extras);
-
-      /* tus monedas, siempre a la vista: pulsarlas lleva a la tienda */
-      this.marqMonedas = document.createElement('button');
-      this.marqMonedas.type = 'button';
-      this.marqMonedas.className = 'marq-monedas';
-      this.marqMonedas.setAttribute('aria-label', 'Tus monedas: abrir la tienda');
-      this.marqMonedas.addEventListener('click', function () {
-        self.resumeAudio();
-        self.showTienda();
-      });
-      side.appendChild(this.marqMonedas);
 
       /* la cinta de noticias del TOP MUNDIAL */
       var cinta = document.createElement('div');
@@ -978,7 +981,7 @@
 
     tickDaily: function () {
       if (!this.dailyClock) return;
-      this.dailyClock.textContent = (this.dailyHecho ? 'ABRE ' : 'CIERRA ') +
+      this.dailyClock.textContent = (this.dailyHecho ? 'NUEVO EN ' : 'CIERRA ') +
         this.dailyQueda(false);
     },
 
@@ -1020,11 +1023,9 @@
       this.dailyHecho = p.hecho;
 
       if (p.hecho) {
-        /* Cumplido: lo que toca ahora es enseñar el de mañana, que es lo que
-         * hace volver. El domingo no hay mañana en esta semana. */
-        var man = D.retos()[hoy + 1];
-        this.dailyDesc.textContent = 'CAZADO · ' +
-          (man ? ('MAÑANA: ' + man.desc) : 'EL LUNES, SEMANA NUEVA');
+        /* Cumplido: se queda el de HOY, marcado como cumplido. El de mañana
+         * no se adelanta aquí (está en la cartilla, al pulsar). */
+        this.dailyDesc.textContent = '✓ CUMPLIDO · ' + p.reto.desc;
         this.dailyDesc.style.color = '#00ff00';
         this.dailyVal.textContent = '+' + CFG.DAILY.XP + ' EXP';
         this.dailyVal.style.color = '#00ff00';
