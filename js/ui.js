@@ -8943,8 +8943,12 @@
         buttons: [
           { label: 'CONTINUAR', primary: true, hint: fmtMonedas(C.PRECIO) + ' · C', keys: ['c', 'Enter'],
             onClick: function () { self.resumeAudio(); g.pedirContinuar(); } },
-          { label: 'JUGAR OTRA VEZ', hint: 'EN ' + Math.max(0, Math.ceil((g.contTicks || 0) / 60)), keys: [],
-            onClick: function () { /* se activa en el GAME OVER */ } },
+          /* Se puede empezar otra sin esperar. En party no: los demás pueden
+           * estar pagando, y la revancha se pide en el GAME OVER. */
+          { label: 'JUGAR OTRA VEZ',
+            hint: g.netRole ? ('EN ' + Math.max(0, Math.ceil((g.contTicks || 0) / 60))) : 'R',
+            keys: g.netRole ? [] : ['r'],
+            onClick: function () { self.resumeAudio(); g.otraDesdeContinue(); } },
           { label: 'MENÚ', hint: 'ESC', keys: ['q', 'Escape'],
             onClick: function () { g.toMenu(); } }
         ]
@@ -8954,8 +8958,10 @@
         this.contBtnPagar = btns[0];
         this.contBtnOtra = btns[1];
         btns[0].disabled = !llega || !!g.contPedido || !g.contDisponible();
-        btns[1].disabled = true;
-        btns[1].classList.add('cont-bloqueado');
+        if (g.netRole) {
+          btns[1].disabled = true;
+          btns[1].classList.add('cont-bloqueado');
+        }
         if (btns[0].disabled && btns[2]) { try { btns[2].focus(); } catch (e) { } }
       }
       this.tickContinue();
@@ -8971,7 +8977,7 @@
         this.contReloj.aro.setAttribute('stroke-dashoffset',
           String(301.6 * (1 - (g.contTicks || 0) / CFG.CONTINUAR.TICKS)));
       }
-      if (this.contBtnOtra) {
+      if (this.contBtnOtra && this.contBtnOtra.disabled) {
         var k = this.contBtnOtra.querySelector && this.contBtnOtra.querySelector('.btn-key');
         if (k) k.textContent = 'EN ' + seg;
       }

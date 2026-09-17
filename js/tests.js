@@ -7162,6 +7162,23 @@
     });
   });
 
+  test('JUGAR OTRA VEZ vale también durante la cuenta atrás', function () {
+    conTienda(function (Tn) {
+      partida(1);
+      try {
+        G.score = 2500;
+        sinVidas();
+        eq(G.state, 'CONTINUE');
+        var cerradas = 0, cierra = G.closeRun;
+        G.closeRun = function () { cerradas++; return cierra.apply(this, arguments); };
+        try { ok(G.otraDesdeContinue(), 'empieza otra'); } finally { G.closeRun = cierra; }
+        ok(cerradas >= 1, 'la de antes se cierra y se cobra');
+        eq(G.score, 0, 'partida nueva');
+        ok(Tn.saldo() >= 1500, 'sin pagar el continuar (y con lo ganado en la partida): ' + Tn.saldo());
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
   test('sin monedas para seguir, el GAME OVER sale directo', function () {
     conTienda(function (Tn) {
       ok(Tn.comprar('cuy').ok, 'se gasta todo');

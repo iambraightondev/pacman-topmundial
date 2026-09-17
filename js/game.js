@@ -1647,6 +1647,19 @@
       if (this.contTicks <= 0) this.acabarPartida();
     },
 
+    /* JUGAR OTRA VEZ sin esperar a que acabe la cuenta atrás (sin red). La
+     * partida se cierra como siempre —se cobra y va al TOP MUNDIAL— y empieza
+     * otra. Si hay que avisar de un récord hecho sin cuenta, se enseña el
+     * aviso en vez de empezar: si no, no lo vería nunca. */
+    otraDesdeContinue: function () {
+      if (this.state !== 'CONTINUE' || this.netRole) return false;
+      this.acabarPartida();
+      this.enterGameOverIdle();
+      if (this.avisoSinCuenta && this.avisoSinCuenta()) return false;
+      this.restartGame();
+      return true;
+    },
+
     /* ¿Puede el jugador local pagar ahora mismo? (lo que enseña la UI) */
     contDisponible: function () {
       if (!this.puedeContinuar() || this.replaying || this.isSpec()) return false;
