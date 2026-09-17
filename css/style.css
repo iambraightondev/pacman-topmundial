@@ -4682,3 +4682,6 @@ body { font-size-adjust: 0.56; }
 .daily-titulo { margin-top: 18px; }
 .marq .menu-player .nick-caja { padding-left: 26px; }
 @media (min-width: 1600px) { .marq .menu-player .nick-caja { padding-left: 34px; } }
+
+/* DAILY centrado sobre la semana */
+.daily-titulo { align-self: center; margin-left: 0; transform-origin: center bottom; }
