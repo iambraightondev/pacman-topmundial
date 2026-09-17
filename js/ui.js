@@ -10905,6 +10905,8 @@
       if (window.AudioSys) {
         AudioSys.init();
         AudioSys.resume();
+        // la entradilla de DESATADO se va cargando desde el primer toque
+        if (AudioSys.precargarIntroHab) AudioSys.precargarIntroHab();
         this.applyMute();
       }
       this.audioResumed = true;

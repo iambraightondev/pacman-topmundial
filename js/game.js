@@ -658,7 +658,10 @@
       // melodía de inicio (solo en partida nueva)
       var ms = CFG.INTRO_FALLBACK_MS;
       if (window.AudioSys) {
-        var dur = AudioSys.playIntro();
+        /* DESATADO tiene su propia entradilla (una voz, no la melodía). Si aún
+         * no está cargada, suena la de siempre: nadie se queda sin inicio. */
+        var dur = (this.hab && AudioSys.playIntroHab) ? AudioSys.playIntroHab() : 0;
+        if (!dur) dur = AudioSys.playIntro();
         if (dur) ms = dur;
       }
       var rt = Math.round(ms / 1000 * 60);

@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · DESATADO tiene su propia entradilla
+
+- Al empezar una partida de DESATADO ya no suena la melodía de siempre: suena
+  la voz de bienvenida del modo (3,9 s, lo que dura el ¡LISTO!).
+- Si el archivo no se puede cargar, vuelve a sonar la melodía de siempre.
+
 ## 2026-09-17 · Los avisos de la partida guardada
 
 - DESCARTAR, RECUPERANDO y NO SE PUDO usan el marco de recreativa con la ficha

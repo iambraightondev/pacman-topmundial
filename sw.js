@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v162';
+var VERSION = 'pm-v163';
 var SHELL = [
   './',
   './index.html',
@@ -54,6 +54,7 @@ var SHELL = [
   './js/replay.js',
   './js/guardado.js',
   './js/ui.js',
+  './audio/desatado-intro.mp3',
   './audio/racha1-hueso.m4a',
   './audio/racha2-diablo.m4a',
   './audio/racha3-huesaso.m4a',

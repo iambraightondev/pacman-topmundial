@@ -967,6 +967,11 @@
   ];
   CFG.VOICE_NAMES = ['EL HUESO', 'EL DIABLO', 'EL HUESASO', 'EL DIABLO COÑO'];
 
+  /* La entradilla de DESATADO: en ese modo, en vez de la melodía de siempre,
+   * suena esta voz (js/audio.js, playIntroHab). Si no se puede cargar, suena
+   * la melodía de siempre y nadie se entera. */
+  CFG.INTRO_HAB = 'audio/desatado-intro.mp3';
+
   /* ---------- Categorías de volumen ---------- */
   CFG.SOUND_CATS = [
     { key: 'volMaster', name: 'GENERAL' },

@@ -320,6 +320,26 @@
     return (window.PM && window.PM.CFG && window.PM.CFG.VOICES) || [];
   }
 
+  /* La entradilla de DESATADO (CFG.INTRO_HAB): un archivo, como las voces de
+   * racha. Se pide una sola vez y se guarda decodificada; si no llega a
+   * tiempo o no se puede leer, quien la pida se queda con la melodía de
+   * siempre. */
+  var habBuf = null, habTried = false;
+  function loadIntroHab() {
+    if (!ctx || habBuf || habTried) return;
+    var url = window.PM && window.PM.CFG && window.PM.CFG.INTRO_HAB;
+    if (!url || !window.fetch) return;
+    habTried = true;
+    fetch(url)
+      .then(function (r) { return r.ok ? r.arrayBuffer() : null; })
+      .then(function (ab) {
+        if (!ab) return;
+        ctx.decodeAudioData(ab, function (buf) { habBuf = buf; },
+          function () { /* formato no soportado */ });
+      })
+      .catch(function () { /* sin acceso al archivo */ });
+  }
+
   function loadVoice(i) {
     if (!ctx || voiceBufs[i] || voiceTried[i]) return;
     var url = voiceList()[i];
@@ -425,6 +445,9 @@
     },
 
     /* ¿hay alguna voz cargada? (para avisar en las opciones) */
+    /* Pide la entradilla de DESATADO por si toca (no estorba si no) */
+    precargarIntroHab: function () { loadIntroHab(); },
+
     voicesReady: function () {
       for (var i = 0; i < voiceBufs.length; i++) if (voiceBufs[i]) return true;
       return false;
@@ -471,6 +494,28 @@
       playPart(lead, 0.30);
       playPart(bass, 0.20);
       // al acabar sola, se suelta
+      setTimeout(function () { if (intro === esta) intro = null; }, DUR + 300);
+      return DUR;
+    },
+
+    /* La entradilla de DESATADO. Devuelve lo que dura en ms, o 0 si todavía
+     * no está cargada (entonces quien llama se queda con playIntro). Se para
+     * por el mismo camino que la melodía: stopIntro. */
+    playIntroHab: function () {
+      if (!ctx) return 0;
+      loadIntroHab();
+      if (!habBuf) return 0;
+      this.stopIntro();
+      var gIntro = ctx.createGain();
+      gIntro.gain.setValueAtTime(1, now());
+      gIntro.connect(out('music'));
+      var src = ctx.createBufferSource();
+      src.buffer = habBuf;
+      src.connect(gIntro);
+      var esta = { gain: gIntro, notas: [src] };
+      intro = esta;
+      try { src.start(now() + 0.02); } catch (e) { return 0; }
+      var DUR = Math.round(habBuf.duration * 1000);
       setTimeout(function () { if (intro === esta) intro = null; }, DUR + 300);
       return DUR;
     },
