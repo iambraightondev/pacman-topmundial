@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · DESATADO: cuatro roles
+
+- Antes de jugar DESATADO cada jugador elige **rol**, con sus propios cuatro
+  poderes en Q W E R:
+  - **ASESINO** (el de siempre): mordisco, turbo, flash y grito. Puntúa.
+  - **TANQUE**: PROVOCAR (5 s en los que todos los fantasmas van a por ti e
+    ignoran a tu equipo), ESCUDO (8 s o hasta que un golpe lo rompa),
+    PISOTÓN (6 s en los que los fantasmas a 10 casillas huyen de ti) y la
+    APISONADORA (en línea recta hasta la pared, más rápido e imparable,
+    comiéndote a todo fantasma que toques).
+  - **SOPORTE**: DISPARO HELADO (congela), INMUNIDAD, ESCUDO ALIADO y VIDA
+    EXTRA (cada 5 minutos). Solo uno por partida.
+  - **MAGO**: BOLA DE FUEGO, PORTAL (dos bocas que cruza todo el equipo), RUNA
+    (trampa) y TORMENTA (rayos). Lo que mata vale 200 fijos.
+- A solas con Tanque, Soporte o Mago la partida es de **práctica**: da
+  experiencia y logros, pero no récords, top mundial ni maestrías. En equipo
+  cuenta como siempre.
+- En party cada uno elige su rol en la sala.
+
 ## 2026-09-17 · Presentación de DESATADO y CACERÍA
 
 - Antes de jugar, en vez del muro de líneas centradas: marco de recreativa

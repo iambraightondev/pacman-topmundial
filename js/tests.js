@@ -8340,6 +8340,478 @@
 
 
   // ---------------------------------------------------------------
+  // DESATADO · LOS ROLES (Tanque, Soporte, Mago)
+  // ---------------------------------------------------------------
+  /* Partida de poderes con los roles dados (uno por jugador), el J1 donde se
+   * diga y mirando hacia `dir`. Los fantasmas, a la casa, para que ninguno se
+   * cuele en la prueba sin que se le llame. */
+  function partidaRol(roles, col, fila, dir) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: roles.length, hab: true, roles: roles });
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+    if (col !== undefined) ponPac(0, col, fila, dir);
+    for (var g = 0; g < 4; g++) {
+      G.ghosts[g].mode = 'house';
+      G.ghosts[g].x = CFG.HOUSE.exitX;
+      G.ghosts[g].y = CFG.HOUSE.centerY;
+    }
+    return G;
+  }
+
+  /* Sin pastillas en esa fila: así los puntos que se miden son solo los del poder */
+  function filaVacia(fila) {
+    for (var c = 0; c < CFG.COLS; c++) {
+      if (G.pellets[fila][c]) { G.pellets[fila][c] = null; G.dotsLeft--; }
+    }
+  }
+
+  function ponPac(i, col, fila, dir) {
+    var p = G.pacs[i];
+    p.x = col * CFG.TILE + CFG.TILE / 2;
+    p.y = fila * CFG.TILE + CFG.TILE / 2;
+    if (dir !== undefined) { p.dir = dir; p.nextDir = dir; }
+    return p;
+  }
+
+  var DR = CFG.DIR;
+  function kDe(id, rol) {
+    var l = HC.ROLES[rol];
+    for (var k = 0; k < l.length; k++) if (l[k].id === id) return k;
+    return -1;
+  }
+
+  test('ROLES: cuatro kits, ids únicos y las recargas acordadas', function () {
+    var vistos = {};
+    ['LIST', 'LIST_T', 'LIST_S', 'LIST_M', 'LIST_G'].forEach(function (n) {
+      HC[n].forEach(function (h) {
+        ok(!vistos[h.id], 'el id ' + h.id + ' no se repite entre listas');
+        vistos[h.id] = 1;
+      });
+    });
+    eq(HC.segs(0, 'tanque'), 32, 'PROVOCAR recarga en 32 s');
+    eq(HC.TAUNT_TICKS, 5 * 60, 'y dura 5 s');
+    eq(HC.segs(3, 'tanque'), 60, 'ARROLLAR 60 s');
+    eq(HC.segs(3, 'soporte'), 300, 'VIDA EXTRA 5 min');
+    eq(HC.segs(0, 'mago'), 20, 'BOLA DE FUEGO 20 s');
+    eq(HC.segs(0), 16, 'sin rol, las del Asesino');
+    eq(HC.MAGO_PUNTOS, 200, 'lo del Mago vale 200 fijos');
+  });
+
+  test('ROLES: el rol decide qué hace cada tecla', function () {
+    partidaRol(['tanque']);
+    eq(HB.idDe(G, 0, 0), 'provocar', 'la Q del Tanque provoca');
+    partidaRol(['mago']);
+    eq(HB.idDe(G, 0, 3), 'tormenta', 'la R del Mago es la tormenta');
+    partidaRol(['cualquiera']);
+    eq(G.roles[0], 'asesino', 'un rol que no existe es Asesino');
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1, hab: true });
+    eq(HB.idDe(G, 0, 0), 'mordisco', 'y sin elegir, el de siempre');
+  });
+
+  test('ROLES: un solo Soporte y, en PAC-MAN VS., todos Asesino', function () {
+    partidaRol(['soporte', 'soporte']);
+    eq(G.roles.join(), 'soporte,asesino', 'el segundo Soporte pasa a Asesino');
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, roles: ['tanque', 'mago'], ghosts: [-1, 0] });
+    eq(G.roles.join(), 'asesino,asesino', 'en VS. no hay roles');
+  });
+
+  /* ---------- TANQUE ---------- */
+  test('TANQUE · PROVOCAR: los fantasmas van a por él 5 s', function () {
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var g = fantasmaEn(1, 20, 5);
+    G.globalMode = 'scatter';
+    var antes = g.targetTile(G);
+    ok(HB.pulsar(G, 0, 0), 'la provocación sale');
+    var t = g.targetTile(G);
+    eq(t.x + ',' + t.y, '6,5', 'el objetivo es la casilla del Tanque, aunque se dispersen');
+    HB.estado(0).provoca = 1;
+    ticks(2);
+    var t2 = g.targetTile(G);
+    eq(t2.x + ',' + t2.y, antes.x + ',' + antes.y, 'y al acabarse vuelven a lo suyo');
+  });
+
+  test('TANQUE · PROVOCAR: todo el mapa va a por él e ignora al resto del equipo', function () {
+    partidaRol(['tanque', 'asesino'], 6, 5, DR.RIGHT);
+    var yo = G.pacs[1];
+    ponPac(1, 20, 29, DR.LEFT);
+    yo.safeTicks = 0;
+    G.pacs[0].safeTicks = 0;
+    var lejos = fantasmaEn(2, 21, 29);      // en la otra punta del mapa
+    G.globalMode = 'scatter';
+    ok(HB.pulsar(G, 0, 0), 'el Tanque provoca');
+    var t = lejos.targetTile(G);
+    eq(t.x + ',' + t.y, '6,5', 'hasta el de la otra punta va a por el Tanque');
+    for (var i = 0; i < 20; i++) { lejos.x = yo.x; lejos.y = yo.y; lejos.mode = 'normal'; G.step(); }
+    ok(!yo.dying, 'y atraviesa al compañero sin matarlo');
+    var cerca = fantasmaEn(0, 6, 5);
+    var tq = G.pacs[0];
+    for (i = 0; i < 3 && !tq.dying; i++) { cerca.x = tq.x; cerca.y = tq.y; cerca.mode = 'normal'; G.step(); }
+    ok(tq.dying, 'al Tanque sí lo mata');
+    HB.estado(0).provoca = 0;
+    for (i = 0; i < 3 && !yo.dying; i++) { lejos.x = yo.x; lejos.y = yo.y; lejos.mode = 'normal'; G.step(); }
+    ok(yo.dying, 'acabada la provocación, al compañero vuelven a matarlo');
+  });
+
+  test('TANQUE · ESCUDO: 8 s o hasta que un golpe lo rompa', function () {
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    ok(HB.pulsar(G, 0, 1), 'el escudo sale');
+    ok(HB.activa(G, 0, 1), 'y la W se ve encendida');
+    ticks(HC.ESCUDO_TICKS - 10);
+    eq(HC.ESCUDO_TICKS, 8 * 60, 'dura 8 s');
+    ok(HB.activa(G, 0, 1), 'sin golpes, sigue puesto casi 8 s');
+    var g = fantasmaEn(0, 6, 5);
+    function choca() { g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false; G.step(); }
+    choca();
+    ok(!p.dying, 'el golpe no mata');
+    ok(!HB.activa(G, 0, 1), 'pero se lleva el escudo');
+    ok(g.mode === 'normal', 'y el fantasma ni muere ni se come');
+    for (var i = 0; i < HC.ESCUDO_GRACIA + 2 && !p.dying; i++) choca();
+    ok(p.dying, 'pasado el respiro, el siguiente choque sí mata');
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    HB.pulsar(G, 0, 1);
+    ticks(HC.ESCUDO_TICKS + 1);
+    ok(!HB.activa(G, 0, 1), 'y sin golpes se apaga a los 8 s');
+  });
+
+  test('SOPORTE · ESCUDO ALIADO: se rompe al primer golpe', function () {
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    var p = ponPac(1, 10, 5, DR.LEFT);
+    ok(HB.pulsar(G, 0, 2), 'lo da');
+    p.safeTicks = 0;
+    p.dir = p.nextDir = DR.UP;       // contra la pared, quieto
+    var g = fantasmaEn(0, 10, 5);
+    function choca() { g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false; G.step(); }
+    choca();
+    ok(!p.dying, 'el primer choque no mata');
+    eq(HB.estado(1).escudo, 0, 'y el escudo se gasta');
+    for (var i = 0; i < HC.ESCUDO_GRACIA + 2 && !p.dying; i++) choca();
+    ok(p.dying, 'pasado el respiro, el siguiente sí mata');
+  });
+
+  test('TANQUE · PISOTÓN: huyen, sin ponerse azules; sin nadie cerca no sale', function () {
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    eq(HC.PISOTON_TICKS, 6 * 60, 'dura 6 s');
+    eq(HC.PISOTON_TILES, 10, 'y llega a 10 casillas');
+    eq(HB.pulsar(G, 0, 2), false, 'sin fantasmas cerca no sale');
+    ok(HB.lista(0, 2), 'ni gasta la recarga');
+    var g = fantasmaEn(0, 15, 5);
+    g.dir = DR.LEFT;
+    ok(HB.pulsar(G, 0, 2), 'con uno a 9 casillas, sí');
+    ok(HB.huyeDe(G, g) === G.pacs[0], 'ese fantasma huye del Tanque');
+    ok(!g.frightened, 'y no se pone azul');
+    eq(g.dir, DR.RIGHT, 'el que venía de cara se da la vuelta');
+    eq(G.frightTicks, 0, 'ni empieza el modo azul');
+  });
+
+  test('TANQUE · APISONADORA: recta hasta la pared, imparable, 200 fijos por fantasma', function () {
+    partidaRol(['tanque'], 1, 5, DR.RIGHT);
+    filaVacia(5);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    var g = fantasmaEn(0, 8, 5);
+    HB.hielo[0] = 999;            // quieto, para que no se aparte
+    var antes = G.score;
+    ok(HB.pulsar(G, 0, 3), 'la apisonadora sale');
+    eq(HB.multVel(0), HC.APISONADORA_MULT, 'y va más rápido');
+    ticks(3);
+    p.nextDir = DR.UP;            // en la columna 6 se podría subir: no gira
+    for (var n = 0; n < 40; n++) G.step();
+    eq(p.tileY(), 5, 'sigue en línea recta aunque se pulse otra flecha');
+    eq(g.mode, 'eyes', 'el fantasma que toca muere');
+    eq(G.score - antes, 200, 'por 200 fijos');
+    eq(G.chainIndex, 0, 'sin cadena');
+    eq(G.eatFreezeTicks, 0, 'y sin parar la partida');
+    var otro = fantasmaEn(1, p.tileX(), 5);
+    otro.x = p.x; otro.y = p.y;
+    G.step();
+    ok(!p.dying, 'mientras dura, nada la mata');
+    for (n = 0; n < 1000 && HB.arrollando(0); n++) G.step();
+    eq(HB.arrollando(0), false, 'se acaba');
+    eq(p.tileX(), 26, 'justo al toparse con la pared, sin límite de tiempo');
+
+    // por el túnel da la vuelta y sigue, hasta la pared del otro lado
+    partidaRol(['tanque'], 5, 14, DR.LEFT);
+    ok(HB.pulsar(G, 0, 3), 'sale hacia el túnel');
+    for (n = 0; n < 1000 && HB.arrollando(0); n++) G.step();
+    eq(G.pacs[0].tileY(), 14, 'sigue en su fila');
+    eq(G.pacs[0].tileX(), 18, 'cruza el túnel y para en la pared de enfrente');
+
+    partidaRol(['tanque'], 1, 1, DR.UP);
+    eq(HB.pulsar(G, 0, 3), false, 'sin ni una casilla libre delante, no sale');
+    ok(HB.lista(0, 3), 'ni gasta');
+  });
+
+  /* ---------- SOPORTE ---------- */
+  test('SOPORTE · HIELO: congela al primero y a los de su casilla; congelado no mata', function () {
+    partidaRol(['soporte', 'asesino'], 2, 5, DR.RIGHT);
+    var g0 = fantasmaEn(0, 9, 5), g1 = fantasmaEn(1, 9, 5);
+    ok(HB.pulsar(G, 0, 0), 'el disparo sale');
+    for (var i = 0; i < 20; i++) { g0.x = g1.x = 9 * CFG.TILE + 4; g0.y = g1.y = 5 * CFG.TILE + 4; G.step(); }
+    ok(HB.congelado(0) && HB.congelado(1), 'los dos de esa casilla, congelados');
+    eq(g0.speedPx(G), 0, 'congelado no se mueve');
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    p.x = g0.x; p.y = g0.y;
+    G.step();
+    ok(!p.dying, 'y no mata a quien lo toca');
+    ponPac(1, 8, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 1, 0), 'el Asesino sí lo muerde');
+    ok(g0.mode === 'eyes' || g1.mode === 'eyes', 'y se lo come');
+  });
+
+  test('SOPORTE · HIELO sin blanco gasta la recarga igual', function () {
+    partidaRol(['soporte'], 2, 5, DR.UP);
+    ok(HB.pulsar(G, 0, 0), 'sale contra la pared');
+    ok(!HB.lista(0, 0), 'y gasta');
+    ticks(5);
+    eq(HB.balas.length, 0, 'el proyectil se para en el muro');
+  });
+
+  test('SOPORTE · INMUNIDAD 2 s y ESCUDO ALIADO solo con compañeros', function () {
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    eq(HB.pulsar(G, 0, 2), false, 'a uno, el escudo aliado no sale');
+    ok(HB.lista(0, 2), 'ni gasta');
+    ok(HB.pulsar(G, 0, 1), 'la inmunidad sale');
+    var g = fantasmaEn(0, 6, 5);
+    for (var i = 0; i < HC.INMUNE_TICKS - 2; i++) { g.x = p.x; g.y = p.y; g.mode = 'normal'; G.step(); }
+    ok(!p.dying, 'dos segundos sin que nada mate');
+    for (i = 0; i < 6 && !p.dying; i++) { g.x = p.x; g.y = p.y; g.mode = 'normal'; G.step(); }
+    ok(p.dying, 'y al acabarse, mata');
+
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    ponPac(1, 10, 5, DR.LEFT);
+    ok(HB.pulsar(G, 0, 2), 'con un compañero vivo, sale');
+    ok(HB.estado(1).escudo > 0, 'y el escudo es del compañero');
+  });
+
+  test('SOPORTE · VIDA EXTRA: respeta el tope y su recarga sobrevive a morir y al nivel', function () {
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    var vidas = G.lives;
+    ok(HB.pulsar(G, 0, 3), 'la vida sale');
+    eq(G.lives, vidas + 1, 'una vida más');
+    eq(HB.restan(0, 3), 300, 'y cinco minutos de recarga');
+    G.respawn();
+    G.resetLevel();
+    eq(HB.restan(0, 3), 300, 'ni morir ni cambiar de nivel la devuelven');
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    G.lives = HC.VIDA_MAX;
+    eq(HB.pulsar(G, 0, 3), false, 'con el tope ya puesto no sale');
+    ok(HB.lista(0, 3), 'ni gasta');
+
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, roles: ['soporte', 'mago'], cfg: (function () {
+      var c = {}, b = window.PM.settings; for (var k in b) c[k] = b[k]; c.livesMode = 'individual'; return c;
+    })() });
+    G.state = 'PLAYING';
+    G.pacs[0].lives = 3; G.pacs[1].lives = 1;
+    ok(HB.pulsar(G, 0, 3), 'con vidas propias, también');
+    eq(G.pacs[1].lives, 2, 'y va al que menos tiene');
+  });
+
+  /* ---------- PRÁCTICA ---------- */
+  test('PRÁCTICA: a uno con otro rol no hay récord ni maestrías; en dúo sí cuenta', function () {
+    partidaRol(['tanque']);
+    ok(G.practica, 'solo con Tanque es práctica');
+    var previo = G.recordModo('hab', 1);
+    G.score = previo + 999999;
+    G.highScore = G.score;
+    G.persistHighScore();
+    eq(G.recordModo('hab', 1), previo, 'no toca el récord de DESATADO');
+    G.badgeNotice = null;
+    G.checkBadges();
+    eq(G.badgeNotice, null, 'ni celebra maestrías');
+    partidaRol(['asesino']);
+    ok(!G.practica, 'con Asesino, la partida de siempre');
+    partidaRol(['soporte', 'asesino']);
+    ok(!G.practica, 'en dúo con Soporte cuenta');
+    G.setRecordModo('hab', previo, 1);
+  });
+
+  /* ---------- MAGO ---------- */
+  test('MAGO · FUEGO: mata al primero, 200 fijos, sin cadena ni parón', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    var g = fantasmaEn(0, 9, 5);
+    HB.hielo[0] = 999;
+    var antes = G.score;
+    ok(HB.pulsar(G, 0, 0), 'la bola sale');
+    filaVacia(5);
+    antes = G.score;
+    ticks(20);
+    eq(g.mode, 'eyes', 'el fantasma muere');
+    eq(G.score - antes, 200, 'vale 200 justos');
+    eq(G.chainIndex, 0, 'no sube la cadena');
+    eq(G.eatFreezeTicks, 0, 'y el juego no se para');
+  });
+
+  test('MAGO · PORTAL: entrada, salida, cruce y caducidad', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 1), 'la entrada se pone');
+    ok(HB.lista(0, 1), 'sin gastar todavía');
+    ponPac(0, 12, 5);
+    ok(HB.pulsar(G, 0, 1), 'la salida se pone');
+    ok(!HB.lista(0, 1), 'y ahora empieza la recarga');
+    ok(HB.portales[0].t > 0, 'el portal está abierto');
+    var p = ponPac(0, 1, 5, DR.RIGHT);
+    HB.estado(0).ultTile = -1;
+    HB.cruzar(G, p);
+    eq(p.tileX(), 1, 'fuera de la boca no pasa nada');
+    p.x = 2 * CFG.TILE + 4;
+    HB.cruzar(G, p);
+    eq(p.tileX(), 12, 'al entrar por una boca sale por la otra');
+    HB.cruzar(G, p);
+    eq(p.tileX(), 12, 'y no rebota');
+    ticks(HC.PORTAL_TICKS + 2);
+    eq(HB.portales[0], null, 'a los 8 s se cierra');
+
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 1), 'otra entrada');
+    ticks(HC.PORTAL_ESPERA + 2);
+    eq(HB.portales[0], null, 'sin salida en 5 s, se deshace');
+    ok(!HB.lista(0, 1), 'y gasta la recarga');
+  });
+
+  test('MAGO · RUNA: mata al primero que la pisa y desaparece', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 2), 'la runa se pone');
+    ponPac(0, 20, 5);
+    filaVacia(5);
+    var antes = G.score;
+    var g = fantasmaEn(0, 2, 5);
+    HB.hielo[0] = 999;
+    ticks(1);
+    eq(g.mode, 'eyes', 'el que la pisa muere');
+    eq(HB.runas[0], null, 'y la runa se gasta');
+    eq(G.score - antes, 200, 'con 200 fijos');
+  });
+
+  test('MAGO · TORMENTA: un rayo por segundo, pierde los que no tienen blanco y se corta si muere', function () {
+    partidaRol(['mago'], 6, 5, DR.RIGHT);
+    var a = fantasmaEn(0, 9, 5), b = fantasmaEn(1, 10, 5);
+    HB.hielo[0] = HB.hielo[1] = 9999;
+    ok(HB.pulsar(G, 0, 3), 'la tormenta sale');
+    eq(a.mode, 'eyes', 'el primer rayo cae al momento, en el más cercano');
+    ok(b.mode === 'normal', 'y solo en uno');
+    ticks(HC.TORMENTA_CADA);
+    eq(b.mode, 'eyes', 'al segundo, el siguiente');
+    ticks(HC.TORMENTA_CADA * 3);
+    eq(HB.estado(0).tormenta, 0, 'y a los 4 s se acaba aunque no quede a quién');
+
+    partidaRol(['mago'], 6, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 3), 'otra tormenta');
+    G.startPacDeath(0);
+    eq(HB.estado(0).tormenta, 0, 'si el Mago muere, se corta');
+  });
+
+  /* ---------- rebobinado, red y repeticiones ---------- */
+  test('ROLES: la foto del rebobinado se lleva la mesa entera', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    HB.pulsar(G, 0, 1);
+    HB.pulsar(G, 0, 0);
+    HB.hielo[2] = 77;
+    var f = HB.foto();
+    HB.empezar(true, 1, ['asesino']);
+    HB.ponerFoto(f);
+    eq(HB.rolDe(0), 'mago', 'el rol vuelve');
+    ok(HB.portales[0] && HB.portales[0].e > 0, 'la entrada del portal vuelve');
+    eq(HB.balas.length, 1, 'la bola en vuelo vuelve');
+    eq(HB.hielo[2], 77, 'y el hielo');
+  });
+
+  test('ROLES: el anfitrión dispara hacia donde apuntó el invitado y reparte la mesa', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'], roles: ['asesino', 'mago'] });
+    G.state = 'PLAYING';
+    ponPac(1, 12, 5, DR.LEFT);
+    HB.peticion(G, 1, 0, { d: DR.RIGHT, c: 12, r: 5 });
+    eq(HB.balas.length, 1, 'la bola del invitado la simula el anfitrión');
+    eq(HB.balas[0].d, DR.RIGHT, 'hacia donde él apuntó, no hacia donde mira aquí');
+    HB.peticion(G, 1, 2, { c: 12, r: 5 });
+    ok(HB.runas[1] && HB.runas[1].c === 12, 'la runa, en la casilla que él dijo');
+    var s = G.buildSnapshot(false);
+    ok(s.hx && s.hx.bl.length === 1 && s.hx.ru[1], 'y todo viaja en la foto');
+    HB.empezar(true, 2, ['asesino', 'mago']);
+    HB.aplicarRoles(s.hx, 0);
+    ok(HB.runas[1] && HB.balas.length === 1, 'y se reconstruye al otro lado');
+  });
+
+  test('ROLES: la repetición guarda los roles y se reproduce exacta', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      var guion = [[5, 0, 'd', 1], [30, 0, 'h', 1], [40, 1, 'h', 0], [60, 0, 'h', 0],
+                   [90, 1, 'd', 3], [120, 0, 'h', 2], [150, 1, 'h', 1], [200, 0, 'd', 3],
+                   [260, 1, 'h', 2], [300, 0, 'h', 1], [340, 1, 'h', 3], [400, 0, 'h', 3],
+                   [460, 0, 'd', 0], [520, 1, 'd', 1], [600, 0, 'd', 2]];
+      var TOTAL = 900;
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              var q = guion[k];
+              if (q[2] === 'h') HB.pulsar(G, q[1], q[3]);
+              else G.setPacDir(q[1], q[3]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+      G.newGame({ players: 2, hab: true, roles: ['mago', 'tanque'] });
+      var rep = R.enCurso();
+      ok(rep && rep.ajustes.roles, 'se graba con sus roles');
+      corre(true);
+      var pts = G.score, quedan = G.dotsLeft;
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: G.level, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'pasa por el texto y vuelve');
+      eq(leida.ajustes.roles.join(), 'mago,tanque', 'con los roles intactos');
+      ok(R.ver(leida), 'la repetición arranca');
+      eq(G.roles.join(), 'mago,tanque', 'y arranca con esos roles');
+      corre(false);
+      eq(G.score, pts, 'LA PUNTUACIÓN NO CUADRA con roles');
+      eq(G.dotsLeft, quedan, 'las pastillas no cuadran');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  test('ROLES: la party reparte un solo Soporte', function () {
+    var P = window.PM.Party;
+    var st = P.st;
+    try {
+      P.st = { code: 'ABCD', leader: true, status: 'dentro',
+               members: [{ s: 'yo', n: 'A', r: 'soporte' }, { s: 'otro', n: 'B', r: 'mago' }] };
+      eq(P.claimRol('otro', 'soporte'), 'asesino', 'si ya lo lleva otro, no se lo quita');
+      eq(P.claimRol('yo', 'soporte'), 'soporte', 'el que lo tiene se lo queda');
+      P.st.members[1].r = 'soporte';
+      var ord = P.gameOrder();
+      eq(ord[0].r + ',' + ord[1].r, 'soporte,asesino', 'y al arrancar, el segundo pasa a Asesino');
+    } finally {
+      P.st = st;
+    }
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

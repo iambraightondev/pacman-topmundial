@@ -97,6 +97,9 @@
     if (key === 'modePick') {
       return CFG.MODE_IDS.indexOf(value) !== -1 ? value : def;
     }
+    if (key === 'habRol1' || key === 'habRol2') {
+      return CFG.HAB.ROL_IDS.indexOf(value) !== -1 ? value : def;
+    }
     if (key === 'vsGhost2') {
       var g = parseInt(value, 10);
       return (g >= 0 && g < 4) ? g : -1;
@@ -4779,10 +4782,26 @@
       this.habRoomBox.appendChild(this.habRoomBtn);
       var habNote = document.createElement('div');
       habNote.className = 'note';
-      habNote.textContent = 'Q MORDISCO · W TURBO · E FLASH · R GRITO. ' +
-        'AQUÍ SE MUEVE SOLO CON LAS FLECHAS, Y ESTAS PARTIDAS NO ENTRAN EN ' +
-        'EL TOP MUNDIAL';
+      habNote.textContent = 'CADA UNO ELIGE SU ROL · Q W E R PARA LOS PODERES · ' +
+        'AQUÍ SE MUEVE SOLO CON LAS FLECHAS · SOLO CABE UN SOPORTE';
       this.habRoomBox.appendChild(habNote);
+      /* Tu rol: lo eliges tú, no el líder. El Soporte que ya lleva otro sale
+       * apagado (el primero que lo coge se lo queda). */
+      this.habRolBox = document.createElement('div');
+      this.habRolBox.className = 'rol-fila';
+      this.habRolBtns = {};
+      CFG.HAB.ROL_IDS.forEach(function (id) {
+        var info = CFG.HAB.ROL_INFO[id];
+        var b = self.makeButton(info.name, function () {
+          if (window.PM.Party) window.PM.Party.setRol(id);
+          saveSettings();
+        });
+        b.classList.add('rol-chip');
+        b.style.setProperty('--rol', info.color);
+        self.habRolBtns[id] = b;
+        self.habRolBox.appendChild(b);
+      });
+      this.habRoomBox.appendChild(this.habRolBox);
       room.appendChild(this.habRoomBox);
 
       /* Modo CACERÍA para toda la party: todos de fantasma y el Pac-Man de
@@ -5048,6 +5067,14 @@
         this.habRoomBtn.classList.toggle('active', !!P.habPick);
         this.habRoomBtn.childNodes[0].nodeValue =
           'DESATADO: ' + (P.habPick ? 'SÍ' : 'NO');
+        this.habRolBox.style.display = P.habPick ? '' : 'none';
+        var miRol = P.myRol ? P.myRol() : 'asesino';
+        var otroSop = P.soporteDeOtro ? P.soporteDeOtro() : false;
+        for (var rid in this.habRolBtns) {
+          if (!this.habRolBtns.hasOwnProperty(rid)) continue;
+          this.habRolBtns[rid].classList.toggle('active', rid === miRol);
+          this.habRolBtns[rid].disabled = (rid === 'soporte' && otroSop);
+        }
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
@@ -5141,8 +5168,9 @@
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
-      var colors = [], names = [], skins = [], ghosts = [], looks = [];
+      var colors = [], names = [], skins = [], ghosts = [], looks = [], roles = [];
       for (var i = 0; i < order.length; i++) {
+        roles.push(CFG.HAB.rol(order[i].r));
         colors.push(sanitizeSetting('pacColor', order[i].c, CFG.PLAYER_COLORS[i]));
         names.push(sanitizeNick(order[i].n) || ('J' + (i + 1)));
         skins.push(sanitizeSetting('skin1', order[i].k, 'clasico'));
@@ -5154,6 +5182,7 @@
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
         colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!hab,           // lo enciende quien manda, y vale para todos
+        roles: roles,         // ...y cada uno con el rol que eligió en la sala
         caza: !!caza          // ídem: todos de fantasma contra la máquina
       });
     },
@@ -7054,6 +7083,7 @@
           cfg: this.sanitizeNetCfg(d.cfg),
           colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
           hab: !!(d && d.hab),  // el mirón tiene que ver dientes y chispas
+          roles: (d && d.rl) || null,
           caza: !!(d && d.caza) // y el Pac-Man de la máquina, con su reloj
         });
       } else if (name === 'full') {
@@ -9231,6 +9261,14 @@
             equipo.textContent = eq.join('  +  ');
             p.appendChild(equipo);
           }
+          /* DESATADO a uno con otro rol: que se lea que no contaba */
+          if (g.practica) {
+            var prac = document.createElement('div');
+            prac.className = 'go-equipo go-practica';
+            prac.textContent = 'PRÁCTICA CON ' + CFG.HAB.ROL_INFO[g.roles[0]].name +
+              ' · NO CUENTA PARA RÉCORDS NI MAESTRÍAS';
+            p.appendChild(prac);
+          }
 
           var cuerpo = document.createElement('div');
           cuerpo.className = 'go-cuerpo';
@@ -9943,12 +9981,13 @@
          * encendida son cosas distintas y en la misma casilla se confundirían.
          * Del fantasma se encienden sus dos; de Pac-Man, solo el turbo (el
          * mordisco y el flash duran un parpadeo y no hay nada que marcar). */
-        var st = A.estado(idx);
-        if (st) {
-          var esFantasma = (lista === CFG.HAB.LIST_G);
-          grupo.btns[0].b.classList.toggle('activa', esFantasma && st.carga > 0);
-          grupo.btns[1].b.classList.toggle('activa',
-            esFantasma ? st.acecho > 0 : st.turbo > 0);
+        /* vale para todos los roles: A.activa sabe cuál dura y cuál no */
+        for (var ka = 0; ka < grupo.btns.length && ka < lista.length; ka++) {
+          var on = A.activa(g, idx, ka);
+          if (on !== grupo.btns[ka].activa) {
+            grupo.btns[ka].activa = on;
+            grupo.btns[ka].b.classList.toggle('activa', on);
+          }
         }
       }
       this.refreshHabOtros(g, A, dual);
@@ -10258,7 +10297,7 @@
         self.hidePrompt();
         function go() {
           self.hideAll();
-          var opts = { players: jugadores, hab: true };
+          var opts = { players: jugadores, hab: true, roles: [roles[0], roles[1]] };
           if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
           window.PM.Game.newGame(opts);
         }
@@ -10266,7 +10305,13 @@
         go();
       }
 
-      var P = H.LIST;
+      /* Los ROLES: cada jugador elige el suyo (se recuerda en settings). Las
+       * cartas enseñan los cuatro poderes del rol que se está mirando, leídos
+       * de CFG.HAB.ROLES: ni un texto de recarga escrito a mano. */
+      var roles = [H.rol(s.habRol1), H.rol(s.habRol2)];
+      if (roles[0] === 'soporte' && roles[1] === 'soporte') roles[1] = 'asesino';
+      var mirando = 0;          // de qué jugador son las cartas
+
       var dos = conFantasma
         ? ('J1 FLECHAS + ' + t2[0].join(' ') + '  ·  J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
            ': WASD + ' + t2[1][0] + ' EMBESTIDA Y ' + t2[1][1] + ' ACECHO')
@@ -10276,22 +10321,87 @@
         arcade: true,
         tono: 'rosa',
         custom: function (p) {
+          var filas = document.createElement('div');
+          filas.className = 'rol-filas';
+          var chips = [{}, {}];
+          [0, 1].forEach(function (j) {
+            var fila = document.createElement('div');
+            fila.className = 'rol-fila';
+            var quien = document.createElement('b');
+            quien.className = 'rol-quien';
+            quien.textContent = j ? 'J2' : 'J1';
+            fila.appendChild(quien);
+            if (j === 1 && conFantasma) {
+              var nota = document.createElement('span');
+              nota.className = 'rol-nota';
+              nota.textContent = 'LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] + ' (SIN ROL)';
+              fila.appendChild(nota);
+            } else {
+              H.ROL_IDS.forEach(function (id) {
+                var info = H.ROL_INFO[id];
+                var b = self.makeButton(info.name, function () {
+                  roles[j] = id;
+                  mirando = j;
+                  s['habRol' + (j + 1)] = id;
+                  saveSettings();
+                  pintar();
+                });
+                b.classList.add('rol-chip');
+                b.style.setProperty('--rol', info.color);
+                chips[j][id] = b;
+                fila.appendChild(b);
+              });
+            }
+            filas.appendChild(fila);
+          });
+          p.appendChild(filas);
+
           self.briefingModo(p, {
-            lema: 'EL LABERINTO DE SIEMPRE CON CUATRO PODERES',
-            cartas: [
-              { k: P[0].key, n: P[0].name, d: 'TE COMES AL FANTASMA QUE TENGAS PEGADO, MIRES DONDE MIRES', cd: H.segs(0) },
-              { k: P[1].key, n: P[1].name, d: 'X' + H.TURBO_MULT + ' DE VELOCIDAD DURANTE ' + (H.TURBO_TICKS / 60) + ' S', cd: H.segs(1) },
-              { k: P[2].key, n: P[2].name, d: H.FLASH_TILES + ' CASILLAS ATRAVESANDO MUROS HACIA TU ÚLTIMA FLECHA', cd: H.segs(2) },
-              { k: P[3].key, n: P[3].name, d: 'LOS CUATRO FANTASMAS SE ASUSTAN ' + H.SHOUT_SECS + ' S', cd: H.segs(3) }
-            ],
+            lema: ' ',
+            cartas: [{ k: 'Q', n: '', d: '', cd: 0 }, { k: 'W', n: '', d: '', cd: 0 },
+                     { k: 'E', n: '', d: '', cd: 0 }, { k: 'R', n: '', d: '', cd: 0 }],
             mandos: [
               { t: 'SOLO', d: 'FLECHAS + Q W E R (WASD NO MUEVE: LA W ES EL TURBO)' },
               { t: 'DOS JUGADORES', d: dos }
             ],
             pie: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON SUS RÉCORDS Y MAESTRÍAS' +
               (conFantasma ? '' : '  ·  EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA') +
-              '  ·  EN PARTY LO ENCIENDE QUIEN MANDA'
+              '  ·  EN PARTY CADA UNO ELIGE SU ROL EN LA SALA'
           });
+          var lema = p.querySelector('.brief-lema');
+          var cartas = p.querySelectorAll('.brief-carta');
+
+          function pintar() {
+            // solo un Soporte: el del otro jugador sale apagado
+            [0, 1].forEach(function (j) {
+              for (var id in chips[j]) {
+                if (!chips[j].hasOwnProperty(id)) continue;
+                chips[j][id].classList.toggle('active', roles[j] === id);
+                chips[j][id].classList.toggle('mirando', roles[j] === id && mirando === j);
+                chips[j][id].disabled = (id === 'soporte' && roles[1 - j] === 'soporte' && !conFantasma);
+              }
+            });
+            var rol = roles[mirando], info = H.ROL_INFO[rol], lista = H.ROLES[rol];
+            p.style.setProperty('--brief', info.color);
+            lema.textContent = (mirando ? 'J2 · ' : 'J1 · ') + info.name + ' — ' + info.lema;
+            for (var k = 0; k < cartas.length; k++) {
+              var h = lista[k];
+              cartas[k].querySelector('.brief-tecla').textContent = h.key;
+              cartas[k].querySelector('.brief-nombre').textContent = h.largo || h.name;
+              cartas[k].querySelector('.brief-desc').textContent = info.desc[k];
+              cartas[k].querySelector('.brief-recarga').textContent = 'RECARGA ' + H.segs(k, rol) + ' S';
+            }
+            /* A uno, con otro rol, la partida es de PRÁCTICA: se dice aquí,
+             * antes de jugar, y no en el GAME OVER cuando ya no tiene arreglo */
+            aviso.textContent = roles[0] !== 'asesino'
+              ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: NO CUENTA PARA RÉCORDS NI MAESTRÍAS'
+              : '';
+            aviso.style.display = aviso.textContent ? '' : 'none';
+          }
+          var aviso = document.createElement('div');
+          aviso.className = 'rol-aviso';
+          p.insertBefore(aviso, p.querySelector('.brief-mandos'));
+          pintar();
         },
         buttons: [
           { label: 'JUGAR SOLO', primary: true, keys: ['Enter'], hint: 'ENTER',

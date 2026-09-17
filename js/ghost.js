@@ -95,6 +95,11 @@
     if (this.mode === 'eyes') {
       return { x: 13.5, y: 11 };   // sobre la puerta
     }
+    /* DESATADO · PROVOCAR (Tanque): van a por él, se disperse o persiga */
+    if (game.hab && window.PM.Hab) {
+      var prov = window.PM.Hab.objetivo(game, this);
+      if (prov) return prov;
+    }
     var mode = game.globalMode;
     // Cruise Elroy: Blinky ignora la dispersión
     if (this.id === 0 && game.elroy > 0) mode = 'chase';
@@ -184,6 +189,19 @@
       return candidates[0];
     }
 
+    /* DESATADO · PISOTÓN (Tanque): huye de él. En cada cruce, la salida que
+     * más lo aleja; va antes que la provocación y que la IA de siempre. */
+    var huye = (game.hab && window.PM.Hab) ? window.PM.Hab.huyeDe(game, this) : null;
+    if (huye) {
+      var hx = huye.tileX(), hy = huye.tileY(), lejos = candidates[0], lejosD = -1;
+      for (i = 0; i < candidates.length; i++) {
+        v = CFG.DIR_V[candidates[i]];
+        var ex = cx + v.x - hx, ey = cy + v.y - hy;
+        if (ex * ex + ey * ey > lejosD) { lejosD = ex * ex + ey * ey; lejos = candidates[i]; }
+      }
+      return lejos;
+    }
+
     // Distancia euclídea mínima de la casilla candidata al objetivo;
     // el orden de iteración UP>LEFT>DOWN>RIGHT resuelve los empates.
     var target = this.targetTile(game);
@@ -228,6 +246,8 @@
       pct = CFG.HOUSE_PCT;
       return pct / 100 * CFG.BASE_SPEED;
     }
+    /* DESATADO · HIELO (Soporte): congelado no se mueve */
+    if (game.hab && window.PM.Hab && window.PM.Hab.congelado(this.id)) return 0;
     if (this.inTunnelSlow()) {
       pct = row.ghostTunnel;
     } else if (this.frightened) {

@@ -1392,6 +1392,8 @@
     avatar: 'pac',                // avatar del perfil
     livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
     vsGhost2: -1,                 // PAC-MAN VS. en local: fantasma del J2 (-1 = Pac-Man)
+    habRol1: 'asesino',           // DESATADO: el último rol elegido por el J1
+    habRol2: 'asesino',           // ...y por el J2 (dos en el mismo teclado)
     ghostSpeedMult: 1.0,          // 0.5–1.2, paso .05
     pacSpeedMult: 1.0,            // 0.8–1.3, paso .05
     frightMult: 1.0,              // 0–2, paso .25
@@ -1534,6 +1536,85 @@
       { id: 'grito',    key: 'R', name: 'GRITO',    cd: 60 * 60 }
     ],
 
+    /* ---------- LOS ROLES ----------
+     * Cada jugador elige uno antes de empezar. LIST (arriba) es el ASESINO, el
+     * kit de siempre: puntúa. El TANQUE protege, el SOPORTE cura y controla y
+     * el MAGO mata a distancia (pero puntúa poco: ver MAGO_PUNTOS). Mismo
+     * formato que LIST y el mismo orden de teclas; lo que cambia es el id, y
+     * js/habilidades.js despacha por id, no por la posición.
+     *
+     * Ningún id puede repetirse entre listas: 'embestida' ya es del fantasma
+     * humano (LIST_G), por eso la R del Tanque se llama 'arrollar'. */
+    LIST_T: [
+      { id: 'provocar', key: 'Q', name: 'PROVOCAR', cd: 32 * 60 },
+      { id: 'escudo',   key: 'W', name: 'ESCUDO',   cd: 24 * 60 },
+      { id: 'pisoton',  key: 'E', name: 'PISOTÓN',  cd: 32 * 60 },
+      { id: 'arrollar', key: 'R', name: 'ARROLLAR', largo: 'APISONADORA', cd: 60 * 60 }
+    ],
+    LIST_S: [
+      { id: 'hielo',     key: 'Q', name: 'HIELO',     largo: 'DISPARO HELADO', cd: 16 * 60 },
+      { id: 'inmunidad', key: 'W', name: 'INMUNIDAD', cd: 24 * 60 },
+      { id: 'aliado',    key: 'E', name: 'ALIADO',    largo: 'ESCUDO ALIADO', cd: 32 * 60 },
+      { id: 'vida',      key: 'R', name: 'VIDA',      largo: 'VIDA EXTRA', cd: 300 * 60 }
+    ],
+    LIST_M: [
+      { id: 'fuego',    key: 'Q', name: 'FUEGO',    largo: 'BOLA DE FUEGO', cd: 20 * 60 },
+      { id: 'portal',   key: 'W', name: 'PORTAL',   cd: 24 * 60 },
+      { id: 'runa',     key: 'E', name: 'RUNA',     cd: 32 * 60 },
+      { id: 'tormenta', key: 'R', name: 'TORMENTA', cd: 60 * 60 }
+    ],
+    /* El orden de los roles es el de los selectores y el de la letra con que
+     * viajan (primera letra: a, t, s, m). No reordenar sin subir NET.PROTO. */
+    ROL_IDS: ['asesino', 'tanque', 'soporte', 'mago'],
+    ROL_INFO: {
+      asesino: { name: 'ASESINO', color: '#ff66cc', lema: 'PUNTÚA: MUERDE, CORRE Y ASUSTA',
+                 desc: ['TE COMES AL FANTASMA QUE TENGAS PEGADO', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
+                        'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
+      tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
+                 desc: ['TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', '8 S DE ESCUDO: AGUANTA UN GOLPE',
+                        'LOS FANTASMAS CERCANOS HUYEN DE TI', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
+      soporte: { name: 'SOPORTE', color: '#00ffff', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
+                 desc: ['UN DISPARO QUE CONGELA AL FANTASMA', 'NADIE TE PUEDE TOCAR UN MOMENTO',
+                        'ESCUDO PARA EL COMPAÑERO MÁS CERCANO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
+      mago:    { name: 'MAGO', color: '#b36bff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
+                 desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS: ENTRAS POR UNA Y SALES POR OTRA',
+                        'TRAMPA QUE MATA AL QUE LA PISE', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
+    },
+
+    /* Tanque */
+    TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque
+    ESCUDO_TICKS: 8 * 60,         // ESCUDO del Tanque: 8 s, o hasta que un golpe lo rompa
+    ESCUDO_GRACIA: 30,            // tras romperse un escudo, medio segundo sin morir
+    PISOTON_TICKS: 6 * 60,        // PISOTÓN: los cercanos huyen del Tanque
+    PISOTON_TILES: 10,            // ...a 10 casillas a la redonda
+    /* ARROLLAR (la APISONADORA): en línea recta hacia la última flecha HASTA
+     * LA PARED, sin límite de tiempo, a x1.4, invulnerable, comiéndose a
+     * cualquier fantasma que toque por MAGO_PUNTOS fijos, sin cadena y sin
+     * parar la partida. Por seguridad, nunca más de una vuelta al laberinto. */
+    APISONADORA_MULT: 1.4,
+    /* el anfitrión se cree un "me he comido a este" de la apisonadora de un
+     * invitado durante este rato desde que la pidió (cruzar el laberinto
+     * entero a x1.4 cuesta unos 160 ticks) */
+    APISONADORA_RED: 5 * 60,
+    /* Soporte */
+    HIELO_TICKS: 3 * 60,          // fantasma congelado
+    PROYECTIL_VEL: 3,             // px por tick (Pac-Man va a ~1)
+    INMUNE_TICKS: 2 * 60,
+    ALIADO_TICKS: 3 * 60,         // escudo que se da al compañero
+    VIDA_MAX: 5,                  // la VIDA no sube a nadie de aquí
+    /* Mago */
+    PORTAL_TICKS: 8 * 60,         // abierto
+    PORTAL_ESPERA: 5 * 60,        // para poner la salida tras la entrada
+    PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
+    RUNA_TICKS: 10 * 60,
+    TORMENTA_RAYOS: 4,
+    TORMENTA_CADA: 60,
+    TORMENTA_TILES: 6,
+    /* Lo que vale un fantasma que mata el Mago: fijo, sin tocar la cadena y
+     * sin el parón de comer. Sin esto el Mago, que mata sin arriesgarse,
+     * dejaría al Asesino sin sentido. */
+    MAGO_PUNTOS: 200,
+
     /* ---------- DOS JUGADORES EN EL MISMO TECLADO ----------
      * Este modo no estaba en dúo local por una razón concreta: el J2 se mueve
      * con WASD y la W es el TURBO. Una tecla no puede hacer dos cosas, y dejar
@@ -1593,9 +1674,20 @@
   /* Alcance real del mordisco, en píxeles (ver BITE_TILES) */
   CFG.HAB.BITE_PX = CFG.HAB.BITE_TILES * CFG.TILE + CFG.HAB.BITE_MARGIN;
 
-  /* Recarga de una habilidad, en segundos (para los textos de la interfaz) */
-  CFG.HAB.segs = function (k) {
-    var h = CFG.HAB.LIST[k];
+  /* Las listas por rol, con el mismo formato */
+  CFG.HAB.ROLES = {
+    asesino: CFG.HAB.LIST, tanque: CFG.HAB.LIST_T,
+    soporte: CFG.HAB.LIST_S, mago: CFG.HAB.LIST_M
+  };
+  /* Un rol que no existe (una versión más nueva, un dato roto) es ASESINO */
+  CFG.HAB.rol = function (id) {
+    return CFG.HAB.ROLES.hasOwnProperty(id) ? id : 'asesino';
+  };
+
+  /* Recarga de una habilidad, en segundos (para los textos de la interfaz).
+   * Sin rol, la del ASESINO. */
+  CFG.HAB.segs = function (k, rol) {
+    var h = CFG.HAB.ROLES[CFG.HAB.rol(rol)][k];
     return h ? Math.round(h.cd / 60) : 0;
   };
 
@@ -1607,8 +1699,10 @@
      * (el 'hab' del saludo y los eventos de poder); la 8, CACERÍA (el
      * 'caza' de la lista y del arranque, y el reloj del poder en la foto);
      * la 9, la TIENDA (el emote viaja por su id y no por su posición, y cada
-     * jugador lleva su accesorio y su efecto en el saludo). */
-    PROTO: 9,
+     * jugador lleva su accesorio y su efecto en el saludo); la 10, los ROLES
+     * de DESATADO (el rol en el saludo, el arranque y la foto, con el hielo,
+     * los proyectiles, los portales y las runas). */
+    PROTO: 10,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

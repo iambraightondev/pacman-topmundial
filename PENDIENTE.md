@@ -7,11 +7,49 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **16 de septiembre de 2026**.
+Última puesta al día: **17 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**17 sep (noche) — AJUSTES DEL TANQUE, pedidos por Braighton tras probarlo en
+papel (`pm-v125`, publicado).** Por dónde seguir: ir rol por rol puliendo con
+él; empezó por el Tanque y quedan SOPORTE y MAGO.
+- **R · APISONADORA** (id interno sigue siendo `arrollar`): en línea recta
+  hacia la última flecha **hasta toparse con una pared**, sin tiempo, a x1,4,
+  invulnerable, y todo fantasma que toca muere por 200 fijos sin cadena ni
+  parón. No se dirige. Tope de seguridad: una vuelta al laberinto.
+- **W · ESCUDO**: **8 s** o hasta que un golpe lo rompa (naranja; el ESCUDO
+  ALIADO del Soporte, cian, sigue en 3 s). Ojo: se malinterpretó una vez como
+  "aguanta todos los golpes" — NO: un golpe lo quita.
+- **Q · PROVOCAR**: **5 s**, recarga **32 s**; todos los fantasmas del mapa van
+  a por el Tanque (aunque toque dispersión) **e ignoran al resto del equipo**
+  (lo atraviesan sin matarlo). Al Tanque sí lo matan. Los azules, como siempre.
+- **E · PISOTÓN**: **6 s** y **10 casillas** a la redonda.
+
+**17 sep (noche) — ROLES DE DESATADO IMPLEMENTADOS.** Hecho
+[`PLAN-ROLES.md`](PLAN-ROLES.md) entero: ASESINO, TANQUE, SOPORTE y MAGO,
+práctica a uno, un solo Soporte, red (PROTO 10), repeticiones y techo del
+servidor (`enviar-record` v5, **ya desplegado**: solo sube el tope, no rompe la
+versión en producción). Publicado junto con los ajustes del Tanque (arriba). Verificado con 401 pruebas (navegador y Node) y una party de cuatro
+simulada en Node con los cuatro roles y retardo (`scratchpad/red-roles.js`
+de la sesión). Decidido por Jarvis: nombres cortos en la barra (HIELO, ALIADO,
+VIDA, FUEGO; los largos en la presentación); la bola sale de la posición que
+manda el invitado si está a ≤ 3 casillas de la que ve el anfitrión; al morir
+uno se cortan solo SUS efectos; los portales, runas, hielo y proyectiles se
+limpian al morir todos o al cambiar de nivel. **Por mirar:** balance de números
+tras jugarlo; party real con dos aparatos; iconos de rol (proponer 2–3); logros
+y maestrías por rol; los roles no se guardan todavía en la tabla del ranking
+(se envían, pero la tabla no tiene columna).
+- PLAN-ROLES.md: hecho (ver arriba).
+- [`PLAN-COFRES.md`](PLAN-COFRES.md) — cofres MADERA/PLATA/ORO/LEGENDARIO
+  además de monedas. **Pendiente de diseñar con Braighton: el contenido
+  exclusivo de cofre** (siguiente conversación) y si hay cofres retroactivos
+  para quien ya tiene niveles y maestrías.
+- Decidido por Jarvis sin confirmar expresamente: un solo SOPORTE por
+  partida, tope de 5 vidas, y el LEGENDARIO provisional (skin de tienda + 500
+  monedas) hasta que existan los exclusivos.
 
 **17 sep — revivir al compañero (`pm-v98`).** Pedido de Braighton. Solo con
 vidas propias (`livesMode` individual). Cuerpo en `Game.cuerpos` (lo decide

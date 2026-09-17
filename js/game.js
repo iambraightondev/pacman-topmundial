@@ -158,6 +158,8 @@
     mazeId: null,        // laberinto alternativo en juego (null = el clásico)
     mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
     hab: false,          // ¿esta partida es del modo DESATADO?
+    roles: [],           // DESATADO: el rol de cada jugador ('asesino'...)
+    practica: false,     // a uno, con rol que no es el Asesino: sin récords
     caza: false,         // ¿y de CACERÍA? (js/caceria.js)
     cazaTicks: 0,        // CACERÍA: ticks que faltan para el poder de Pac-Man
 
@@ -536,7 +538,15 @@
       this.rankAvisoVisto = false;
       this.recordPrevio = this.mazeId ? this.recordModo('lab', this.playerCount)
         : this.hab ? this.recordModo('hab', this.playerCount) : this.recordFor(this.playerCount);
-      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount);
+      /* Los ROLES (js/habilidades.js). Reglas que valen igual en todas las
+       * máquinas, porque todas reciben el mismo reparto: un rol que no existe
+       * es Asesino; en PAC-MAN VS. todos los Pac-Man son Asesino; y solo cabe
+       * UN Soporte por partida (el segundo pasa a Asesino). */
+      this.roles = this.rolesDe(opts);
+      /* A uno y con otro rol, PRÁCTICA: da experiencia y logros, pero no toca
+       * récords, top mundial ni maestrías. En equipo sí cuenta. */
+      this.practica = this.hab && this.playerCount === 1 && this.roles[0] !== 'asesino';
+      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount, this.roles);
       /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
        * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
       this.caza = !!opts.caza && !this.hab && !!window.PM.Caza;
@@ -700,6 +710,21 @@
       this.outEaten = [];
       for (var i = 0; i < 4; i++) this.ghosts[i].dotCounter = 0;
       if (this.caza) window.PM.Caza.reiniciar(this);   // el reloj del poder, de cero
+    },
+
+    rolesDe: function (opts) {
+      var H = CFG.HAB, out = [], soporte = false, i;
+      var vs = false;
+      if (opts.ghosts) for (i = 0; i < opts.ghosts.length; i++) if (opts.ghosts[i] >= 0) vs = true;
+      for (i = 0; i < this.playerCount; i++) {
+        var r = (this.hab && !vs) ? H.rol(opts.roles && opts.roles[i]) : 'asesino';
+        if (r === 'soporte') {
+          if (soporte) r = 'asesino';
+          soporte = true;
+        }
+        out.push(r);
+      }
+      return out;
     },
 
     /* Posición inicial del jugador i según el número de jugadores */
@@ -1062,10 +1087,19 @@
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || p.dying) continue;
+        /* ARROLLAR (Tanque): durante la carrera no se anda, se carga */
+        if (this.hab && window.PM.Hab && window.PM.Hab.arrollando(i)) {
+          window.PM.Hab.moverArrolla(this, i);
+          continue;
+        }
         p.update(this.pacSpeedPx(p));
         // el pac remoto (invitado online) avanza por estima; sus puntos
         // comidos llegan por red dentro de los mensajes 'pos'
-        if (this.isLocalAuth(i)) this.eatAt(p.tileX(), p.tileY(), p);
+        if (this.isLocalAuth(i)) {
+          this.eatAt(p.tileX(), p.tileY(), p);
+          // PORTAL (Mago): lo cruza quien simula a ese Pac-Man
+          if (this.hab && window.PM.Hab) window.PM.Hab.cruzar(this, p);
+        }
       }
 
       /* fantasmas */
@@ -1114,7 +1148,13 @@
             if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
+            // DESATADO: un fantasma congelado no mata, ni uno que va a por
+            // el Tanque que provoca (ignora al resto del equipo)
+            if (this.hab && window.PM.Hab && (window.PM.Hab.congelado(g.id) ||
+                window.PM.Hab.ignoraA(this, i, g))) continue;
             if (!this.hitGhost(p, g)) continue;
+            // ...y ESCUDO, INMUNIDAD o la carrera de ARROLLAR salvan el choque
+            if (this.hab && window.PM.Hab && window.PM.Hab.salvaDelChoque(this, i)) continue;
             this.startDeath(i, g.id);        // g.id: por si lo lleva un jugador
             break;                           // el otro jugador sigue a lo suyo
           }
@@ -1509,6 +1549,7 @@
       p.deathTicks = CFG.DEATH_FREEZE_TICKS;
       p.deathOk = false;
       p.safeTicks = 0;
+      if (window.PM.Hab) window.PM.Hab.limpiarJugador(i);
     },
 
     /* Avanza las muertes en curso. finish: si la partida sigue, el jugador
@@ -2073,6 +2114,7 @@
      * modo tiene su marca y su ruta, y no se pisan. */
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
+      if (this.practica) return;     // DESATADO a uno con otro rol: práctica
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
       var slot = this.recordSlot();
       if (slot) {
@@ -2271,6 +2313,7 @@
       var B = window.PM.Badges;
       if (!B) return;
       if (this.isVersus()) return;   // maestrías = récord: aquí no cuentan
+      if (this.practica) return;     // ni en una partida de práctica
       var mode = this.badgeMode();
       var fresh = B.claim(this.score, mode);
       if (!fresh) return;
@@ -2612,6 +2655,7 @@
       // lado no diría nada de nadie. Lo que sigue fuera: una partida con un
       // azar traído de fuera o con un fantasma que piensa (PAC-MAN VS.).
       if (this.seedBase || this.isVersus()) return;
+      if (this.practica) return;               // práctica: no va al top
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
@@ -2633,6 +2677,8 @@
         // lo que necesita la Edge Function para saber si la partida cuadra
         nivelInicio: this.startLevel,
         ajustes: this.rankAjustes(),
+        // DESATADO: con qué rol jugó cada uno, para poder auditar la marca
+        roles: this.hab ? this.roles.join(',') : undefined,
         fantasmas: this.runGhosts,
         tiempoMs: this.playedMs()
       };
@@ -3199,7 +3245,19 @@
          * lo que toca a los fantasmas (morder, gritar) lo ejecuta el
          * anfitrión. Ver js/habilidades.js. */
         case 'hab':
-          if (window.PM.Hab) window.PM.Hab.peticion(this, who, d.k | 0);
+          if (window.PM.Hab) window.PM.Hab.peticion(this, who, d.k | 0, d);
+          break;
+        /* ARROLLAR de un invitado: su carrera ha pillado a un fantasma */
+        case 'habCome':
+          if (window.PM.Hab) window.PM.Hab.peticionCome(this, who, d.g | 0);
+          break;
+        /* se le rompió el escudo en su máquina (los choques son suyos) */
+        case 'habRoto':
+          if (window.PM.Hab) {
+            var sr = window.PM.Hab.estado(who);
+            if (sr) { sr.escudo = 0; sr.coraza = 0; }
+            this.hostEvt({ t: 'habRoto', w: who });
+          }
           break;
         case 'emote':
           if (!this.emoteId(d.e)) break;
@@ -3244,6 +3302,7 @@
         nm: nm, co: co, sk: sk, lk: lk,
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
         hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
+        rl: this.roles.slice(),     // ...y con qué rol juega cada uno
         caza: !!this.caza,          // CACERÍA: sin superpastillas y con bot
         cfg: {
           ghostSpeedMult: this.ghostSpeedMult,
@@ -3310,7 +3369,10 @@
        * pierda dejaría esa casilla del HUD mintiendo el resto de la partida.
        * Ver Hab.resumen(). Solo en este modo, que fuera de él no hay nada que
        * contar y la foto sale doce veces por segundo. */
-      if (this.hab && window.PM.Hab) s.hb = window.PM.Hab.resumen();
+      if (this.hab && window.PM.Hab) {
+        s.hb = window.PM.Hab.resumen();
+        s.hx = window.PM.Hab.resumenRoles();   // hielo, portales, runas, escudos...
+      }
       if (withPellets) s.pm = this.pelletHex();
       this.snapEaten = [];
       return s;
@@ -3417,8 +3479,13 @@
 
       /* pac propio: simulación local completa (sin lag de entrada) */
       if (me && !me.out && !me.dying) {
-        me.update(this.pacSpeedPx(me));
+        if (this.hab && window.PM.Hab && window.PM.Hab.arrollando(me.id)) {
+          window.PM.Hab.moverArrolla(this, me.id);
+        } else {
+          me.update(this.pacSpeedPx(me));
+        }
         this.guestEatAt(me);
+        if (this.hab && window.PM.Hab) window.PM.Hab.cruzar(this, me);
       }
 
       /* fantasmas: simulación local corregida por las instantáneas */
@@ -3505,7 +3572,9 @@
           window.AudioSys && AudioSys.playEatGhost();
         } else {
           if (me.safeTicks > 0) continue;      // margen tras reaparecer
+          if (A && (A.congelado(g.id) || A.ignoraA(this, me.id, g))) continue;
           if (!this.hitGhost(me, g)) continue;
+          if (A && A.salvaDelChoque(this, me.id)) continue;
           /* predicción: se congela este Pac-Man (no la partida) y el
            * anfitrión confirma con 'death'; si es el último, parón clásico */
           this.startPacDeath(me.id);
@@ -3764,7 +3833,33 @@
          * propio evento —'eatGhost' para el mordisco, 'fright' para el
          * grito—, así que aplicarlo otra vez sería contarlo dos veces. */
         case 'hab':
-          if (window.PM.Hab) window.PM.Hab.evento(this, e.w || 0, e.k | 0);
+          if (window.PM.Hab) window.PM.Hab.evento(this, e.w || 0, e.k | 0, e.ng);
+          break;
+        /* los ROLES: lo que ejecuta el anfitrión y aquí se pinta y suena */
+        case 'magoKill':
+          if (window.PM.Hab) window.PM.Hab.magoKill(this, e);
+          break;
+        case 'habFx':
+          if (window.PM.Hab) window.PM.Hab.efecto(e.f, e.x, e.y, 18);
+          break;
+        case 'habEsc':
+          if (window.PM.Hab) {
+            window.PM.Hab.marcarEscudo(e.w | 0, CFG.HAB.ALIADO_TICKS);
+            var pe = this.pacs[e.w | 0];
+            if (pe) window.PM.Hab.efecto('amparo', pe.x, pe.y, 24);
+          }
+          break;
+        case 'habVida': {
+          var pv = this.pacs[e.w | 0];
+          if (pv && window.PM.Hab) {
+            window.PM.Hab.efecto('vida', pv.x, pv.y, 40);
+            this.addPopup(pv.x, pv.y - 6, '1UP', 60);
+          }
+          window.AudioSys && AudioSys.playExtraLife();
+          break;
+        }
+        case 'habRoto':
+          if (window.PM.Hab) window.PM.Hab.escudoRoto(this, e.w | 0);
           break;
         case 'emote':
           if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
@@ -3786,6 +3881,7 @@
        * Hab.aplicarResumen(). */
       if (this.hab && window.PM.Hab && s.hb) {
         window.PM.Hab.aplicarResumen(s.hb, this.isSpec() ? -1 : this.localIdx);
+        if (s.hx) window.PM.Hab.aplicarRoles(s.hx, this.isSpec() ? -1 : this.localIdx);
       }
 
       /* transición de estado */
@@ -4371,6 +4467,8 @@
         S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color, skin);
       }
       if (alfa < 1) ctx.restore();
+      // escudos, inmunidad, provocación, pisotón, carrera y tormenta
+      A.dibujarPac(this, ctx, pc, i);
     },
 
     render: function () {
@@ -4423,6 +4521,8 @@
         // los fantasmas solo desaparecen en el parón clásico del último jugador
         var hideGhosts = (this.state === 'DYING' && this.deathAnimating()) ||
                          (this.state === 'LEVEL_DONE' && this.levelPhase === 1);
+        // runas y bocas de portal van en el suelo
+        if (this.hab && window.PM.Hab) window.PM.Hab.dibujarSuelo(this, ctx);
         if (!hideGhosts) {
           for (i = 0; i < 4; i++) {
             if (this.eatFreezeTicks > 0 && i === this.hiddenGhost) continue;
@@ -4476,6 +4576,8 @@
           this.drawPac(ctx, pc, i);
         }
         this.dibujarCuerpos(ctx);
+        // hielo, proyectiles, rayos y chispazos: encima de todo
+        if (this.hab && window.PM.Hab) window.PM.Hab.dibujarAire(this, ctx);
         /* CACERÍA: el aro de aviso (y de poder) sobre el Pac-Man de la máquina */
         if (this.caza) window.PM.Caza.draw(this, ctx);
         /* nombre (o J1/J2) sobre cada jugador durante el "¡LISTO!". En
@@ -4593,6 +4695,17 @@
         ctx.fillText('HIGH SCORE', 112, 0);
         ctx.textAlign = 'right';
         ctx.fillText(String(hs || 0), 136, 9);
+      }
+      /* PRÁCTICA: que se vea que esta partida no hace récord */
+      if (this.practica && this.state !== 'MENU') {
+        ctx.save();
+        ctx.font = window.PM.Letra.lienzo(6);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ff66cc';
+        ctx.fillText('PRÁCTICA · ' + CFG.HAB.ROL_INFO[this.roles[0]].name, 112, 18);
+        ctx.restore();
+        ctx.font = window.PM.Letra.lienzo(8);
+        ctx.fillStyle = CFG.COLORS.text;
       }
 
       /* nombres del equipo en la tercera línea: dos a los lados, y con 3 o 4

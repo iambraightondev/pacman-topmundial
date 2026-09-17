@@ -2338,6 +2338,72 @@ one Pac-Man and at least one human ghost) and forbids it everywhere else.
 The proof that any of this works is not the score matching — it is the human
 ghost's **final position** matching, which is what the test asserts.
 
+### Roles (`CFG.HAB.ROLES`)
+
+Each player picks a **role** before playing; the four keys stay Q W E R (or the
+`KEYS_2P` rows) and `js/habilidades.js` dispatches by the power **id**, not by
+the key index. `LIST` is the ASESINO (the original kit).
+
+| Role | Q | W | E | R |
+|---|---|---|---|---|
+| **ASESINO** | MORDISCO 16 s | TURBO 24 s | FLASH 32 s | GRITO 60 s |
+| **TANQUE** (`LIST_T`) | PROVOCAR 32 s (5 s active) | ESCUDO 24 s | PISOTÓN 32 s | ARROLLAR 60 s |
+| **SOPORTE** (`LIST_S`) | HIELO 16 s | INMUNIDAD 24 s | ESCUDO ALIADO 32 s | VIDA 300 s |
+| **MAGO** (`LIST_M`) | FUEGO 20 s | PORTAL 24 s | RUNA 32 s | TORMENTA 60 s |
+
+- **Rules** (`Game.rolesDe`, same on every machine): unknown role = asesino;
+  PAC-MAN VS. = everyone asesino; **one SOPORTE per game** (the second becomes
+  asesino; the party leader also enforces it with `Party.claimRol`).
+  `Game.practica` = DESATADO + one player + role ≠ asesino: no record, no
+  ranking, no badges (`persistHighScore`, `checkBadges`, `submitRanking`);
+  XP and achievements still count. HUD and GAME OVER say PRÁCTICA.
+- **TANQUE.** PROVOCAR: `Ghost.targetTile` returns the nearest provoking
+  tank's tile (`Hab.objetivo`) for every normal, non-frightened ghost on the
+  map, even in scatter, and those ghosts **ignore the rest of the team**: they
+  cannot kill anyone but the tank (`Hab.ignoraA`, checked in both collision
+  loops). ESCUDO (`coraza`): lasts 8 s or until the first lethal hit breaks it,
+  then `ESCUDO_GRACIA` ticks of grace (`Hab.salvaDelChoque`). The SOPORTE's
+  ESCUDO ALIADO (`escudo`) works the same; they are drawn orange and cyan. PISOTÓN: ghosts within 10 tiles flee for 6 s
+  (`Hab.huyeDe` → `Ghost.decide` picks the exit farthest from the tank; a
+  ghost heading at the tank is reversed); not blue, not edible; no target = not
+  cast. ARROLLAR (the APISONADORA): straight toward the last arrow at
+  ×`APISONADORA_MULT` (1.4) **until it hits a wall** (no timer; capped at one
+  full lap for tunnel safety), not steerable;
+  invulnerable, and every ghost it touches dies for 200 flat, no chain, no
+  freeze (`matarMago` with `'aplasta'`; `moverArrolla` replaces `p.update`).
+- **SOPORTE.** HIELO: projectile (`PROYECTIL_VEL` px/tick, stops at walls,
+  wraps in the tunnel) freezing the first ghost and every ghost on its tile for
+  3 s: speed 0, not lethal, still biteable. Always spends. INMUNIDAD: 2 s
+  untouchable. ESCUDO ALIADO: shield to the nearest living teammate; none = not
+  cast. VIDA: +1 to the living teammate with fewest lives (tie → nearest; shared
+  lives → the pool), capped at `VIDA_MAX` (5); never revives `out` players.
+- **MAGO.** Every kill is `Hab.matarMago`: `MAGO_PUNTOS` (200) flat, **no
+  chain change and no eat freeze**, event `magoKill`. FUEGO: same projectile
+  as HIELO, kills the first ghost. PORTAL: first press places the entrance
+  without spending; second press opens it (`PORTAL_TICKS`) and spends;
+  entrance alone expires after `PORTAL_ESPERA` and spends. Any Pac-Man
+  crosses on **entering** a mouth tile (`Hab.cruzar`), then `PORTAL_CRUCE`
+  ticks without crossing. RUNA: trap on the mage's tile for 10 s, kills the
+  first ghost to step on it. TORMENTA: one bolt per second for 4 s on the
+  nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
+  dies.
+- **Network (PROTO 10).** Anything touching ghosts or lives is executed by the
+  host (`Hab.peticion(G, who, k, d)`, where the guest sends its arrow `d`,
+  tile `c,r` and position `x,y`); self-only effects (ESCUDO, INMUNIDAD, the
+  ARROLLAR run, portal crossing) run on the machine that simulates that Pac-Man,
+  since that machine decides its deaths — both collision loops consult
+  `congelado` and `salvaDelChoque`. A guest's ARROLLAR asks the host to eat
+  with `habCome` (validated by `arrollaRed` and distance). Snapshot field `hx`
+  (`Hab.resumenRoles`) carries per-player effects, frozen/fleeing ghosts,
+  projectiles, portals and runes. Party members carry `r` (role); `pstart`
+  order carries it too.
+- **Replays.** Local replays store `ajustes.roles` (flag `r` + one letter per
+  player) only when someone is not asesino; online replays store `rl`.
+  `Hab.foto/ponerFoto` include roles and the whole table (`mesa`).
+- **Server.** `enviar-record` adds, per player, the max over roles of what
+  DESATADO can yield by time (asesino points, mago ghosts) and the client sends
+  `roles` for auditing.
+
 ## Modo CACERÍA (everyone is a ghost, the machine is Pac-Man)
 
 **`PM.Caza` (`js/caceria.js`), `CFG.CAZA`.** PAC-MAN VS. turned around: one

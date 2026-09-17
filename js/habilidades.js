@@ -13,9 +13,16 @@
  *   R  GRITO     los cuatro fantasmas se asustan 6 s, sin haber
  *                tocado una superpastilla.
  *
- * Es un MODO APARTE, como LABERINTOS: se juega el laberinto de
- * 1980 con otras reglas, así que estas partidas NO entran en el
- * top mundial. Sí suman experiencia y logros, que son tuyos.
+ * Ese es el kit del ASESINO. Cada jugador elige ROL antes de
+ * empezar (CFG.HAB.ROLES): el TANQUE protege (PROVOCAR, ESCUDO,
+ * PISOTÓN, ARROLLAR), el SOPORTE cura y controla (HIELO,
+ * INMUNIDAD, ESCUDO ALIADO, VIDA) y el MAGO mata a distancia
+ * (FUEGO, PORTAL, RUNA, TORMENTA). Las teclas son las mismas; lo
+ * que se lanza se decide por el id del poder, no por su tecla.
+ *
+ * Tiene su propio top mundial y sus récords. A un jugador, con un
+ * rol que no sea el Asesino, la partida es de PRÁCTICA: da
+ * experiencia y logros, pero no récords ni maestrías.
  *
  * Dónde se juega
  *   En todas partes: solo, dos en el mismo teclado, party online
@@ -93,7 +100,21 @@
       guard: [0, 0, 0, 0],
       /* Ticks que le quedan a una Q pedida sin nadie a tiro todavía. Ver
        * pulsar() y CFG.HAB.BITE_BUFFER. */
-      pedirQ: 0
+      pedirQ: 0,
+      /* ---- los roles ---- */
+      provoca: 0,         // PROVOCAR: ticks atrayendo a los fantasmas
+      coraza: 0,          // ESCUDO del Tanque: 8 s o un choque, lo que llegue antes
+      escudo: 0,          // ESCUDO ALIADO (del Soporte): igual, pero dado por otro
+      gracia: 0,          // tras romperse el escudo, un momento sin morir
+      pisoton: 0,         // la onda del PISOTÓN (solo se pinta)
+      arrolla: 0,         // ticks que le quedan a la carrera de ARROLLAR
+      adir: 0,           // hacia dónde va la apisonadora
+      arecorre: 0,       // y lo que lleva recorrido (tope: una vuelta)
+      arrollaRed: 0,      // anfitrión: la carrera de un invitado, para creerle
+      inmune: 0,          // INMUNIDAD
+      tormenta: 0,        // TORMENTA: ticks que le quedan
+      cruce: 0,           // tras cruzar un portal, sin volver a cruzar
+      ultTile: -1         // casilla del tick anterior (para ENTRAR en una boca)
     };
   }
 
@@ -155,12 +176,17 @@
   /* Qué sonido le toca al poder k de ese jugador. Son dos listas porque quien
    * lleva un fantasma tiene otros poderes; el orden es el de CFG.HAB.LIST y
    * CFG.HAB.LIST_G, que es el mismo que las teclas y el que viaja por red. */
-  var SON_PAC = ['playBite', 'playTurbo', 'playFlash', 'playShout'];
-  var SON_GHOST = ['playCharge', 'playStealth'];
+  var SON = {
+    mordisco: 'playBite', turbo: 'playTurbo', flash: 'playFlash', grito: 'playShout',
+    embestida: 'playCharge', acecho: 'playStealth',
+    provocar: 'playShout', escudo: 'playStealth', pisoton: 'playCharge', arrollar: 'playCharge',
+    hielo: 'playTurbo', inmunidad: 'playTurbo', aliado: 'playStealth', vida: 'playExtraLife',
+    fuego: 'playFlash', portal: 'playStealth', runa: 'playBiteMiss', tormenta: 'playShout'
+  };
 
   function sonidoDe(G, idx, k) {
-    var lista = (G.vsGhostOf && G.vsGhostOf(idx) >= 0) ? SON_GHOST : SON_PAC;
-    return lista[k] || '';
+    var h = window.PM.Hab.listaDe(G, idx)[k];
+    return (h && SON[h.id]) || '';
   }
 
   var Hab = {
@@ -173,10 +199,33 @@
 
     /* ---------- ciclo de vida ---------- */
     /* Desde Game.newGame. n = cuántos jugadores hay en la mesa. */
-    empezar: function (on, n) {
+    empezar: function (on, n, roles) {
       this.on = !!on;
       this.st = [];
-      for (var i = 0; i < (n || 0); i++) this.st.push(nuevoEstado());
+      this.roles = [];
+      for (var i = 0; i < (n || 0); i++) {
+        this.st.push(nuevoEstado());
+        this.roles.push(H.rol(roles && roles[i]));
+      }
+      this.limpiarMesa();
+    },
+
+    /* Lo que no es de un jugador: fantasmas congelados o huyendo,
+     * proyectiles en vuelo, portales, runas y los efectos que se pintan */
+    limpiarMesa: function () {
+      this.hielo = [0, 0, 0, 0];
+      this.huye = [0, 0, 0, 0];
+      this.huyeQuien = [-1, -1, -1, -1];
+      this.balas = [];
+      this.portales = [];
+      this.runas = [];
+      for (var i = 0; i < this.st.length; i++) { this.portales.push(null); this.runas.push(null); }
+      this.fx = [];
+    },
+
+    /* Rol de un jugador ('asesino' si no hay) */
+    rolDe: function (idx) {
+      return H.rol(this.roles && this.roles[idx]);
     },
 
     /* ---------- fotos para el rebobinado (js/replay.js) ----------
@@ -194,7 +243,13 @@
         }
         st.push(o);
       }
-      return { on: this.on, reintento: this.reintento, st: st };
+      return { on: this.on, reintento: this.reintento, st: st,
+        /* la mesa de los roles: objetos pequeños, se copian enteros */
+        roles: (this.roles || []).slice(),
+        mesa: JSON.parse(JSON.stringify({
+          hielo: this.hielo, huye: this.huye, huyeQuien: this.huyeQuien,
+          balas: this.balas, portales: this.portales, runas: this.runas
+        })) };
     },
 
     ponerFoto: function (f) {
@@ -210,6 +265,17 @@
             ? s[k].slice() : s[k];
         }
         this.st.push(o);
+      }
+      this.roles = f.roles ? f.roles.slice() : [];
+      this.limpiarMesa();
+      if (f.mesa) {
+        var m = JSON.parse(JSON.stringify(f.mesa));
+        this.hielo = m.hielo || this.hielo;
+        this.huye = m.huye || this.huye;
+        this.huyeQuien = m.huyeQuien || this.huyeQuien;
+        this.balas = m.balas || [];
+        this.portales = m.portales || this.portales;
+        this.runas = m.runas || this.runas;
       }
     },
 
@@ -230,7 +296,12 @@
          * pendiente saldría sola al reaparecer, contra un fantasma al que
          * nadie apuntó. */
         this.st[i].pedirQ = 0;
+        this.limpiarJugador(i);
+        this.st[i].pisoton = 0;
+        this.st[i].cruce = 0;
+        this.st[i].ultTile = -1;
       }
+      this.limpiarMesa();
     },
 
     estado: function (idx) {
@@ -246,7 +317,8 @@
      * porque Versus.setup() corre DESPUÉS de Hab.empezar() en Game.newGame:
      * cuando se montan las recargas todavía no se sabe quién lleva qué. */
     listaDe: function (G, idx) {
-      return (G && G.vsGhostOf && G.vsGhostOf(idx) >= 0) ? H.LIST_G : H.LIST;
+      if (G && G.vsGhostOf && G.vsGhostOf(idx) >= 0) return H.LIST_G;
+      return H.ROLES[this.rolDe(idx)];
     },
 
     /* Cuántos poderes tiene ese jugador (2 llevando fantasma, 4 si no) */
@@ -398,7 +470,8 @@
          * cruzar antes por aquí. Ver CFG.HAB.BITE_BUFFER. */
         if (s.pedirQ > 0) {
           s.pedirQ--;
-          if (this.puede(G, i, MORDISCO) && this.presa(G, i)) {
+          if (this.idDe(G, i, MORDISCO) === 'mordisco' &&
+              this.puede(G, i, MORDISCO) && this.presa(G, i)) {
             s.pedirQ = 0;
             this.reintento = true;
             this.pulsar(G, i, MORDISCO);
@@ -409,6 +482,13 @@
            * poder aparte, y no tiene que anunciarse. */
         }
       }
+      this.pasoRoles(G, corre);
+    },
+
+    /* Id del poder k de ese jugador ('' si no tiene) */
+    idDe: function (G, idx, k) {
+      var h = this.listaDe(G, idx)[k];
+      return h ? h.id : '';
     },
 
     /* ---------- las recargas por la red ----------
@@ -506,8 +586,7 @@
          * No entra por aquí ni la Q del fantasma humano (esa es EMBESTIDA y
          * se gasta al momento) ni el reintento que hace paso(), que si no se
          * rearmaría solo para siempre. */
-        if (k === MORDISCO && !this.reintento &&
-            !(G.vsGhostOf && G.vsGhostOf(idx) >= 0)) {
+        if (this.idDe(G, idx, k) === 'mordisco' && !this.reintento) {
           var s = this.estado(idx);
           if (s) s.pedirQ = H.BITE_BUFFER;
           /* La pulsación que ARMA la Q se graba: la repetición la vuelve a
@@ -534,23 +613,43 @@
     lanzar: function (G, idx, k) {
       var deRed = (G.netRole === 'guest');
       var ok;
-      if (G.vsGhostOf && G.vsGhostOf(idx) >= 0) {
-        // los dos del fantasma humano: se aplican solo a él, aquí y ahora
-        if (k === EMBESTIDA) ok = this.embestida(G, idx);
-        else if (k === ACECHO) ok = this.acechar(G, idx);
-        else ok = false;
-      } else {
-        switch (k) {
-          case MORDISCO: ok = this.mordisco(G, idx, deRed); break;
-          case TURBO:    ok = this.turbo(G, idx); break;
-          case FLASH:    ok = this.flash(G, idx); break;
-          case GRITO:    ok = this.grito(G, idx, deRed); break;
-          default:       ok = false;
-        }
+      this.sinGasto = false;
+      /* Se despacha por el ID del poder y no por su tecla: la Q es el
+       * MORDISCO del Asesino, pero la PROVOCACIÓN del Tanque. Los dos del
+       * fantasma humano se aplican solo a él, aquí y ahora. */
+      switch (this.idDe(G, idx, k)) {
+        case 'embestida': ok = this.embestida(G, idx); break;
+        case 'acecho':    ok = this.acechar(G, idx); break;
+        case 'mordisco':  ok = this.mordisco(G, idx, deRed); break;
+        case 'turbo':     ok = this.turbo(G, idx); break;
+        case 'flash':     ok = this.flash(G, idx); break;
+        case 'grito':     ok = this.grito(G, idx, deRed); break;
+        case 'provocar':  ok = this.provocar(G, idx); break;
+        case 'escudo':    this.estado(idx).coraza = H.ESCUDO_TICKS; sonDe(G, idx, 'playStealth'); ok = true; break;
+        case 'pisoton':   ok = this.pisoton(G, idx, deRed); break;
+        case 'arrollar':  ok = this.arrollar(G, idx); break;
+        case 'hielo':     ok = this.disparar(G, idx, 'hielo'); break;
+        case 'inmunidad': ok = this.inmunidad(G, idx); break;
+        case 'aliado':    ok = this.aliado(G, idx, deRed); break;
+        case 'vida':      ok = this.vida(G, idx, deRed); break;
+        case 'fuego':     ok = this.disparar(G, idx, 'fuego'); break;
+        case 'portal':    ok = this.portal(G, idx); break;
+        case 'runa':      ok = deRed ? this.puedeRuna(G, idx) : this.runa(G, idx); break;
+        case 'tormenta':  ok = this.tormenta(G, idx); break;
+        default:          ok = false;
       }
       if (!ok) return false;
-      this.gastar(G, idx, k);
+      if (!this.sinGasto) this.gastar(G, idx, k);
       this.avisar(G, idx, k);
+      return true;
+    },
+
+    /* El invitado no pone la runa (la pone el anfitrión), pero sí mira si se
+     * puede, para no gastar una tecla que no va a salir */
+    puedeRuna: function (G, idx) {
+      var c = this.casillaDe(G, idx);
+      if (!c || !aterrizable(c.c, c.r)) return false;
+      sonDe(G, idx, 'playBiteMiss');
       return true;
     },
 
@@ -564,18 +663,30 @@
     /* Contarlo al resto de la sala. El invitado pide, el anfitrión reparte;
      * jugando en local se lo cuenta a los mirones (hostEvt ya lo sabe). */
     avisar: function (G, idx, k) {
-      if (G.netRole === 'guest') G.netSend('gevt', { t: 'hab', k: k });
-      else G.hostEvt({ t: 'hab', w: idx, k: k });
+      if (G.netRole === 'guest') {
+        /* con el rumbo y la casilla de SU pantalla: los proyectiles salen
+         * hacia donde él apuntó y el portal y la runa van donde él estaba */
+        var p = G.pacs[idx];
+        var d = { t: 'hab', k: k };
+        if (p) {
+          d.d = this.dirFlash(p); d.c = p.tileX(); d.r = p.tileY();
+          d.x = Math.round(p.x); d.y = Math.round(p.y);
+        }
+        G.netSend('gevt', d);
+      } else {
+        G.hostEvt({ t: 'hab', w: idx, k: k, ng: this.sinGasto ? 1 : 0 });
+      }
     },
 
     /* ---------- lo que llega de fuera ----------
      * Anfitrión: un invitado pide una habilidad (gevt). Se valida su
      * recarga aquí, que es la copia que no puede tocar nadie desde su
      * navegador, y se ejecuta lo que sea cosa del anfitrión. */
-    peticion: function (G, who, k) {
+    peticion: function (G, who, k, d) {
       if (!this.on) return;
       if (!this.puede(G, who, k)) return;
       var ok;
+      this.sinGasto = false;
       /* Fantasma humano: sus dos poderes se los aplica él en su máquina (son
        * suyos y de nadie más), pero el anfitrión TIENE que anotarlos igual,
        * porque el fantasma lo simula él y la embestida cambia su velocidad.
@@ -596,28 +707,54 @@
        * fantasmas los mueve esta máquina, así que cuando esto se ejecuta ya no
        * están donde él los vio. Ese desfase no es culpa suya y se le perdona;
        * el alcance de verdad lo comprobó él en su pantalla. */
-      if (k === MORDISCO) ok = this.mordisco(G, who, false, H.BITE_NET_MARGIN);
-      else if (k === GRITO) ok = this.grito(G, who, false);
-      else {
-        /* TURBO y FLASH ya se los ha aplicado él en su máquina; aquí solo
-         * se anota para que su Pac-Man se vea con chispas y translúcido, y
-         * para llevar su recarga. Su POSICIÓN llega por 'pos' como siempre. */
-        if (k === TURBO) this.marcarTurbo(who);
-        else this.marcarFlash(who);
-        // y se oye bajito, que aquí el efecto no pasa por su función
-        son(sonidoDe(G, who, k), true);
-        ok = true;
+      var s = this.estado(who);
+      d = d || {};
+      switch (this.idDe(G, who, k)) {
+        case 'mordisco': ok = this.mordisco(G, who, false, H.BITE_NET_MARGIN); break;
+        case 'grito':    ok = this.grito(G, who, false); break;
+        case 'provocar': ok = this.provocar(G, who); break;
+        case 'pisoton':  ok = this.pisoton(G, who, false, H.BITE_NET_MARGIN); break;
+        case 'hielo':    ok = this.disparar(G, who, 'hielo', d.d, d); break;
+        case 'fuego':    ok = this.disparar(G, who, 'fuego', d.d, d); break;
+        case 'aliado':   ok = this.aliado(G, who, false); break;
+        case 'vida':     ok = this.vida(G, who, false); break;
+        case 'portal':   ok = this.portal(G, who, d); break;
+        case 'runa':     ok = this.runa(G, who, d); break;
+        case 'tormenta': ok = this.tormenta(G, who); break;
+        default:
+          /* Lo que solo le toca a él (TURBO, FLASH, ESCUDO, INMUNIDAD, la
+           * carrera de ARROLLAR) ya se lo ha aplicado en su máquina; aquí se
+           * anota para pintarlo, para llevar su recarga y, en la carrera,
+           * para creerle cuando diga que ha arrollado a alguien. Su POSICIÓN
+           * llega por 'pos' como siempre. */
+          switch (this.idDe(G, who, k)) {
+            case 'turbo': this.marcarTurbo(who); break;
+            case 'flash': this.marcarFlash(who); break;
+            case 'escudo': if (s) s.coraza = H.ESCUDO_TICKS; break;
+            case 'inmunidad': if (s) s.inmune = H.INMUNE_TICKS; break;
+            case 'arrollar':
+              if (s) {
+                s.arrollaRed = H.APISONADORA_RED;
+                s.arrolla = 1;
+                s.arecorre = 0;
+                s.adir = (d.d >= 0 && d.d <= 3) ? d.d : (G.pacs[who] ? G.pacs[who].dir : 0);
+              }
+              break;
+          }
+          // y se oye bajito, que aquí el efecto no pasa por su función
+          son(sonidoDe(G, who, k), true);
+          ok = true;
       }
       if (!ok) return;
-      this.gastar(G, who, k);
-      G.hostEvt({ t: 'hab', w: who, k: k });
+      if (!this.sinGasto) this.gastar(G, who, k);
+      G.hostEvt({ t: 'hab', w: who, k: k, ng: this.sinGasto ? 1 : 0 });
     },
 
     /* Cualquiera (invitado o mirón): el anfitrión dice que fulano usó una
      * habilidad. Aquí NO se ejecuta nada que toque a los fantasmas —eso ya
      * llega por sus propios eventos ('eatGhost', 'fright')—, solo se pinta.
      * De lo contrario, quien la lanzó la aplicaría dos veces. */
-    evento: function (G, who, k) {
+    evento: function (G, who, k, ng) {
       if (!this.on) return;
       if (!(who >= 0 && who < this.st.length)) return;
       if (!(k >= 0 && k < this.cuantas(G, who))) return;
@@ -625,19 +762,30 @@
         // es el eco de la mía: ya está aplicada, no se toca
         return;
       }
-      if (G.vsGhostOf && G.vsGhostOf(who) >= 0) {
-        /* La embestida SÍ se aplica aquí, y no es solo pintura: ese fantasma
-         * lo simula también esta máquina (por estima entre instantáneas), así
-         * que sin la velocidad buena se vería frenar y dar tirones. */
-        if (k === EMBESTIDA) this.marcarCarga(who);
-        else this.marcarAcecho(who);
-      } else if (k === MORDISCO) this.marcarDientes(who);
-      else if (k === TURBO) this.marcarTurbo(who);
-      else if (k === FLASH) this.marcarFlash(who);
+      var s = this.estado(who);
+      /* La embestida SÍ se aplica aquí, y no es solo pintura: ese fantasma lo
+       * simula también esta máquina (por estima entre instantáneas), así que
+       * sin la velocidad buena se vería frenar y dar tirones. Lo demás de los
+       * roles que ejecuta el anfitrión llega con la foto; aquí se pinta. */
+      switch (this.idDe(G, who, k)) {
+        case 'embestida': this.marcarCarga(who); break;
+        case 'acecho': this.marcarAcecho(who); break;
+        case 'mordisco': this.marcarDientes(who); break;
+        case 'turbo': this.marcarTurbo(who); break;
+        case 'flash': this.marcarFlash(who); break;
+        case 'provocar': if (s) s.provoca = H.TAUNT_TICKS; break;
+        case 'escudo': if (s) s.coraza = H.ESCUDO_TICKS; break;
+        case 'pisoton': if (s) s.pisoton = 30; break;
+        case 'inmunidad': if (s) s.inmune = H.INMUNE_TICKS; break;
+        case 'arrollar':
+          if (s && G.pacs[who]) { s.arrolla = 1; s.arecorre = 0; s.adir = G.pacs[who].dir; }
+          break;
+        case 'tormenta': if (s) s.tormenta = H.TORMENTA_RAYOS * H.TORMENTA_CADA; break;
+      }
       /* Y se oye. Bajito siempre: por aquí solo pasan los poderes de OTROS —el
        * eco del tuyo se descarta arriba—, y de un mirón no es ninguno. */
       son(sonidoDe(G, who, k), true);
-      this.gastar(G, who, k);
+      if (!ng) this.gastar(G, who, k);
     },
 
     marcarTurbo: function (idx) {
@@ -803,6 +951,7 @@
     /* Multiplicador de velocidad del jugador idx (1 si no hay turbo).
      * Lo consulta Game.pacSpeedPx. */
     multVel: function (idx) {
+      if (this.arrollando(idx)) return H.APISONADORA_MULT;
       return this.conTurbo(idx) ? H.TURBO_MULT : 1;
     },
 
@@ -888,6 +1037,909 @@
       // el rugido, aparte del modo azul que ya trae su propio ambiente
       sonDe(G, idx, 'playShout');
       return true;
+    },
+
+
+    /* =========================================================
+     * LOS ROLES: TANQUE, SOPORTE y MAGO
+     *
+     * Quién manda (online), con la misma regla que el MORDISCO y el GRITO:
+     *   · Lo que toca FANTASMAS o VIDAS lo ejecuta el anfitrión (PROVOCAR,
+     *     PISOTÓN, los proyectiles, ESCUDO ALIADO, VIDA y todo el Mago). El
+     *     invitado lo pide con su rumbo y su casilla, y en su pantalla solo
+     *     se pinta hasta que llega la foto.
+     *   · Lo que solo toca AL PROPIO Pac-Man (ESCUDO, INMUNIDAD, la carrera de
+     *     ARROLLAR, cruzar un PORTAL) lo aplica quien lo simula: la muerte la
+     *     decide él, así que el escudo tiene que estar en SU máquina.
+     * ========================================================= */
+
+    /* ¿Esta máquina decide lo que toca a los fantasmas? Jugando en local y
+     * siendo anfitrión, sí; el invitado y el mirón, no. */
+    manda: function (G) {
+      return !G.netRole || G.netRole === 'host';
+    },
+
+    /* Un fantasma al que se le puede hacer algo: en la calle y entero */
+    enLaCalle: function (g) {
+      return !!g && g.mode !== 'house' && g.mode !== 'leaving' &&
+        g.mode !== 'entering' && g.mode !== 'eyes';
+    },
+
+    /* Distancia en píxeles, con el túnel */
+    distancia: function (ax, ay, bx, by) {
+      var dx = distX(ax, bx), dy = Math.abs(ay - by);
+      return Math.sqrt(dx * dx + dy * dy);
+    },
+
+    /* Pac-Man vivo en el laberinto (ni fuera, ni muriendo, ni de máquina) */
+    vivo: function (G, i) {
+      var p = G.pacs[i];
+      if (!p || p.out || p.dying || p.bot) return false;
+      return !(G.vsGhostOf && G.vsGhostOf(i) >= 0);
+    },
+
+    /* ---------- lo que consulta el motor ---------- */
+    congelado: function (gid) {
+      return this.on && this.hielo[gid] > 0;
+    },
+
+    /* PROVOCAR: la casilla del Tanque más cercano que esté provocando, o null.
+     * Solo a los que persiguen de verdad: ni azules, ni ojos, ni en casa. */
+    objetivo: function (G, g) {
+      if (!this.on || g.mode !== 'normal' || g.frightened) return null;
+      var mejor = null, mejorD = Infinity;
+      for (var i = 0; i < this.st.length; i++) {
+        if (!(this.st[i].provoca > 0) || !this.vivo(G, i)) continue;
+        var p = G.pacs[i];
+        var d = this.distancia(p.x, p.y, g.x, g.y);
+        if (d < mejorD) { mejorD = d; mejor = p; }
+      }
+      return mejor ? { x: mejor.tileX(), y: mejor.tileY() } : null;
+    },
+
+    /* PROVOCAR, la otra mitad: mientras un Tanque provoca, los fantasmas que
+     * lo persiguen IGNORAN al resto del equipo: pasan a través de los demás
+     * Pac-Man sin matarlos. Al Tanque sí lo matan (para eso se ofrece). Los
+     * azules no están provocados: huyen y se comen como siempre. */
+    ignoraA: function (G, idx, g) {
+      if (!this.on || !g || g.mode !== 'normal' || g.frightened) return false;
+      for (var i = 0; i < this.st.length; i++) {
+        if (i !== idx && this.st[i].provoca > 0 && this.vivo(G, i)) return true;
+      }
+      return false;
+    },
+
+    /* PISOTÓN: el Pac-Man del que huye ese fantasma, o null */
+    huyeDe: function (G, g) {
+      if (!this.on || !(this.huye[g.id] > 0) || g.mode !== 'normal') return null;
+      var p = G.pacs[this.huyeQuien[g.id]];
+      return (p && !p.out) ? p : null;
+    },
+
+    /* ¿Ese choque se perdona? INMUNIDAD, la carrera de ARROLLAR y el medio
+     * segundo tras romperse un escudo no mueren; un ESCUDO se gasta aquí. */
+    salvaDelChoque: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s) return false;
+      if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0) return true;
+      /* los dos escudos (el propio del Tanque y el que da el Soporte) se
+       * rompen con el primer golpe */
+      if (s.coraza > 0 || s.escudo > 0) {
+        s.coraza = 0;
+        s.escudo = 0;
+        s.gracia = H.ESCUDO_GRACIA;
+        var p = G.pacs[idx];
+        if (p) this.efecto('roto', p.x, p.y, 20);
+        sonDe(G, idx, 'playBiteMiss');
+        if (G.netRole === 'guest') G.netSend('gevt', { t: 'habRoto' });
+        else G.hostEvt({ t: 'habRoto', w: idx });
+        return true;
+      }
+      return false;
+    },
+
+    /* Un escudo que se rompió en otra máquina (el invitado decide sus choques) */
+    escudoRoto: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s || idx === G.localIdx && !G.isSpec()) return;
+      s.escudo = 0;
+      s.coraza = 0;
+      var p = G.pacs[idx];
+      if (p) this.efecto('roto', p.x, p.y, 20);
+    },
+
+    /* ¿Está encendido ese poder? (la barra lo marca aparte) */
+    activa: function (G, idx, k) {
+      var s = this.estado(idx);
+      if (!s) return false;
+      var h = this.listaDe(G, idx)[k];
+      if (!h) return false;
+      switch (h.id) {
+        case 'turbo': return s.turbo > 0;
+        case 'embestida': return s.carga > 0;
+        case 'acecho': return s.acecho > 0;
+        case 'provocar': return s.provoca > 0;
+        case 'escudo': return s.coraza > 0;
+        case 'arrollar': return s.arrolla > 0;
+        case 'inmunidad': return s.inmune > 0;
+        case 'tormenta': return s.tormenta > 0;
+        case 'portal': return !!this.portales[idx];
+        case 'runa': return !!this.runas[idx];
+      }
+      return false;
+    },
+
+    marcarEscudo: function (idx, ticks) {
+      var s = this.estado(idx);
+      if (s) s.escudo = Math.max(s.escudo, ticks || H.ESCUDO_TICKS);
+    },
+
+    /* Un efecto que solo se pinta (rayo, chispazo de hielo, fogonazo...) */
+    efecto: function (tipo, x, y, ticks, x0, y0) {
+      if (this.fx.length > 24) this.fx.shift();
+      this.fx.push({ t: tipo, x: x, y: y, n: ticks, tot: ticks,
+                     x0: (x0 == null) ? x : x0, y0: (y0 == null) ? y : y0 });
+    },
+
+    /* =========================================================
+     * TANQUE
+     * ========================================================= */
+    /* Q — PROVOCAR: 5 s en que TODOS los fantasmas del mapa persiguen la
+     * casilla del Tanque (aunque tocara dispersarse) e ignoran al resto del
+     * equipo (ver ignoraA). Cambia el objetivo, no el modo: no se asustan y al
+     * Tanque sí lo matan. */
+    provocar: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s) return false;
+      s.provoca = H.TAUNT_TICKS;
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (g && g.mode === 'normal' && !g.driven()) g.clearPlan();   // que lo piensen ya
+      }
+      sonDe(G, idx, 'playShout');
+      return true;
+    },
+
+    /* E — PISOTÓN: los fantasmas a diez casillas huyen del Tanque 6 s.
+     * No se ponen azules ni se pueden comer. Sin nadie cerca, no sale. */
+    pisoton: function (G, idx, soloVisual, extra) {
+      var p = G.pacs[idx], s = this.estado(idx);
+      if (!p || !s) return false;
+      var alcance = H.PISOTON_TILES * T + (extra || 0);
+      var blancos = [];
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!this.enLaCalle(g) || g.driven()) continue;
+        if (this.distancia(p.x, p.y, g.x, g.y) <= alcance) blancos.push(g);
+      }
+      if (!blancos.length) return false;
+      s.pisoton = 30;                       // la onda que se pinta
+      sonDe(G, idx, 'playCharge');
+      if (soloVisual) return true;
+      for (i = 0; i < blancos.length; i++) {
+        var gb = blancos[i];
+        this.huye[gb.id] = H.PISOTON_TICKS;
+        this.huyeQuien[gb.id] = idx;
+        /* el que venía de cara se da la vuelta: en un pasillo no hay cruce
+         * donde decidir huir, y se comería al Tanque antes de llegar a uno */
+        var v = CFG.DIR_V[gb.dir];
+        var hx = p.x - gb.x, ancho = CFG.COLS * T;
+        if (hx > ancho / 2) hx -= ancho; else if (hx < -ancho / 2) hx += ancho;
+        if (v && (v.x * hx + v.y * (p.y - gb.y)) > 0) gb.forceReverse();
+        else gb.clearPlan();
+      }
+      return true;
+    },
+
+    /* R — ARROLLAR, la APISONADORA: en LÍNEA RECTA hacia la última flecha
+     * HASTA TOPARSE CON UNA PARED, a x1.4, invulnerable y comiéndose a
+     * cualquier fantasma que toque (azul o no) por 200 fijos, sin cadena y sin
+     * parar la partida. No se dirige: las flechas no la tuercen. No va por
+     * tiempo; por si el trazado dejara una fila sin paredes (el túnel), se
+     * corta al dar una vuelta entera. La carrera la simula quien
+     * lleva a ese Pac-Man; comerse fantasmas lo decide el que manda.
+     * Sin ni una casilla libre delante, no sale. */
+    libreDelante: function (col, row, dir) {
+      var v = CFG.DIR_V[dir];
+      if (!v) return false;
+      var c = CFG.wrapCol(col + v.x), r = row + v.y;
+      return r >= 0 && r < CFG.ROWS && !esCasa(c, r) && CFG.isOpen(c, r, false);
+    },
+
+    arrollar: function (G, idx) {
+      var p = G.pacs[idx], s = this.estado(idx);
+      if (!p || !s) return false;
+      var dir = this.dirFlash(p);
+      if (!this.libreDelante(p.tileX(), p.tileY(), dir)) return false;
+      // encarrilada por el centro de su pasillo
+      if (CFG.DIR_V[dir].x) p.y = p.tileY() * T + T / 2;
+      else p.x = p.tileX() * T + T / 2;
+      s.adir = dir;
+      s.arrolla = 1;         // encendida: la apaga la pared
+      s.arecorre = 0;
+      p.dir = dir;
+      p.pauseTicks = 0;
+      sonDe(G, idx, 'playCharge');
+      return true;
+    },
+
+    arrollando: function (idx) {
+      var s = this.estado(idx);
+      return !!s && s.arrolla > 0;
+    },
+
+    /* Un tick de la apisonadora (lo llama el motor EN VEZ de mover a Pac-Man) */
+    moverArrolla: function (G, idx) {
+      var p = G.pacs[idx], s = this.estado(idx);
+      if (!p || !s || !(s.arrolla > 0)) return;
+      var v = CFG.DIR_V[s.adir], ancho = CFG.COLS * T;
+      var resto = G.pacSpeedPx(p);
+      s.arecorre = (s.arecorre || 0) + resto;
+      if (s.arecorre > ancho) s.arrolla = 0;    // una vuelta entera: basta
+      p.dir = s.adir;
+      /* se avanza a pasos de centro en centro: al llegar a uno se mira si la
+       * casilla de delante está libre, y si no, se acaba ahí */
+      for (var guarda = 0; resto > 0.0001 && guarda < 8; guarda++) {
+        var cx = p.tileX() * T + T / 2, cy = p.tileY() * T + T / 2;
+        var hasta = v.x ? (cx - p.x) * v.x : (cy - p.y) * v.y;   // >0: el centro está delante
+        if (hasta <= 0.0001) {
+          if (!this.libreDelante(p.tileX(), p.tileY(), s.adir)) {
+            p.x = cx; p.y = cy;
+            s.arrolla = 0;
+            break;
+          }
+          hasta = T;
+        }
+        var paso = Math.min(resto, hasta);
+        p.x += v.x * paso;
+        p.y += v.y * paso;
+        resto -= paso;
+        if (p.x < 0) p.x += ancho; else if (p.x >= ancho) p.x -= ancho;
+      }
+      // el invitado se come lo suyo con guestEatAt, y el anfitrión lo confirma
+      if (this.manda(G) && G.isLocalAuth(idx)) G.eatAt(p.tileX(), p.tileY(), p);
+      p.pauseTicks = 0;
+      /* lo que pilla por el camino */
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!this.enLaCalle(g)) continue;
+        if (distX(g.x, p.x) >= T || Math.abs(g.y - p.y) >= T) continue;
+        if (this.manda(G)) {
+          if (G.isLocalAuth(idx)) this.matarMago(G, g, idx, 'aplasta');
+        } else if (idx === G.localIdx && s.guard[g.id] <= 0) {
+          s.guard[g.id] = H.BITE_GUARD;
+          G.netSend('gevt', { t: 'habCome', g: g.id });
+        }
+      }
+    },
+
+    /* Anfitrión: el invitado dice que su apisonadora ha pillado a un fantasma.
+     * Vale si de verdad la lleva encendida (lo sabe por su petición) y si ese
+     * fantasma está cerca de donde le llega su Pac-Man. */
+    peticionCome: function (G, who, gid) {
+      var s = this.estado(who), p = G.pacs[who], g = G.ghosts[gid | 0];
+      if (!s || !p || !(s.arrollaRed > 0) || !this.enLaCalle(g)) return;
+      var alcance = 2 * T + H.BITE_NET_MARGIN;
+      if (distX(g.x, p.x) > alcance || Math.abs(g.y - p.y) > alcance) return;
+      this.matarMago(G, g, who, 'aplasta');
+    },
+
+    /* =========================================================
+     * SOPORTE
+     * ========================================================= */
+    /* Q — DISPARO HELADO y la Q del Mago (BOLA DE FUEGO): un proyectil en
+     * línea recta hacia la última flecha que se para en la pared. Sin blanco
+     * gasta igual: si no, se dispararía sin parar. Lo simula quien manda. */
+    disparar: function (G, idx, tipo, dir, desde) {
+      var p = G.pacs[idx];
+      if (!p) return false;
+      sonDe(G, idx, tipo === 'fuego' ? 'playFlash' : 'playTurbo');
+      if (!this.manda(G)) return true;
+      var d = (dir >= 0 && dir <= 3) ? dir : this.dirFlash(p);
+      var v = CFG.DIR_V[d];
+      /* Sale de donde estaba quien disparó EN SU PANTALLA: la posición de un
+       * invitado le llega aquí unos ticks tarde, y desde ahí la bola saldría
+       * por detrás de él. Se cree lo que dice solo si está cerca de lo que se
+       * ve aquí (tres casillas), que es lo que puede haber andado entretanto. */
+      var ox = p.x, oy = p.y;
+      if (desde && typeof desde.x === 'number' && typeof desde.y === 'number' &&
+          this.distancia(desde.x, desde.y, p.x, p.y) <= 3 * T) {
+        ox = desde.x; oy = desde.y;
+      }
+      // sale encarrilado por el centro de su pasillo
+      var x = v.x ? ox : Math.floor(ox / T) * T + T / 2;
+      var y = v.y ? oy : Math.floor(oy / T) * T + T / 2;
+      this.balas.push({ t: tipo, x: x, y: y, d: d, w: idx });
+      return true;
+    },
+
+    /* Un tick de los proyectiles. Solo choca quien manda; el invitado solo
+     * los hace avanzar para que no vayan a saltos entre fotos. */
+    pasoBalas: function (G) {
+      var ancho = CFG.COLS * T, manda = this.manda(G);
+      for (var b = this.balas.length - 1; b >= 0; b--) {
+        var bl = this.balas[b], v = CFG.DIR_V[bl.d], fuera = false;
+        for (var px = 0; px < H.PROYECTIL_VEL && !fuera; px++) {
+          var nx = bl.x + v.x, ny = bl.y + v.y;
+          if (nx < 0) nx += ancho; else if (nx >= ancho) nx -= ancho;
+          var col = Math.floor(nx / T), row = Math.floor(ny / T);
+          if (row < 0 || row >= CFG.ROWS || esCasa(col, row) || !CFG.isOpen(col, row, false)) {
+            fuera = true;
+            this.efecto(bl.t === 'fuego' ? 'humo' : 'escarcha', bl.x, bl.y, 12);
+            break;
+          }
+          bl.x = nx; bl.y = ny;
+          if (!manda) continue;
+          for (var i = 0; i < 4; i++) {
+            var g = G.ghosts[i];
+            if (!this.enLaCalle(g)) continue;
+            if (distX(g.x, bl.x) > 6 || Math.abs(g.y - bl.y) > 6) continue;
+            this.impacto(G, bl, g);
+            fuera = true;
+            break;
+          }
+        }
+        if (fuera) this.balas.splice(b, 1);
+      }
+    },
+
+    impacto: function (G, bl, g) {
+      if (bl.t === 'fuego') {
+        this.matarMago(G, g, bl.w, 'fuego');
+        return;
+      }
+      /* el hielo congela al primero y a todos los de su misma casilla */
+      var col = g.tileX(), row = g.tileY();
+      for (var i = 0; i < 4; i++) {
+        var o = G.ghosts[i];
+        if (!this.enLaCalle(o)) continue;
+        if (o === g || (o.tileX() === col && o.tileY() === row)) {
+          this.hielo[o.id] = H.HIELO_TICKS;
+          this.huye[o.id] = 0;
+        }
+      }
+      this.efecto('escarcha', g.x, g.y, 18);
+      G.hostEvt({ t: 'habFx', f: 'escarcha', x: Math.round(g.x), y: Math.round(g.y) });
+      son('playBiteMiss', !mio(G, bl.w));
+    },
+
+    /* W — INMUNIDAD: 2 s intocable; a diferencia del escudo, no se gasta */
+    inmunidad: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s) return false;
+      s.inmune = H.INMUNE_TICKS;
+      sonDe(G, idx, 'playTurbo');
+      return true;
+    },
+
+    /* E — ESCUDO ALIADO: al compañero vivo más cercano. Sin compañeros, no
+     * sale ni gasta. */
+    aliadoDe: function (G, idx) {
+      var p = G.pacs[idx], mejor = -1, mejorD = Infinity;
+      if (!p) return -1;
+      for (var i = 0; i < G.pacs.length; i++) {
+        if (i === idx || !this.vivo(G, i)) continue;
+        var o = G.pacs[i];
+        var d = this.distancia(p.x, p.y, o.x, o.y);
+        if (d < mejorD) { mejorD = d; mejor = i; }
+      }
+      return mejor;
+    },
+
+    aliado: function (G, idx, soloVisual) {
+      var j = this.aliadoDe(G, idx);
+      if (j < 0) return false;
+      sonDe(G, idx, 'playStealth');
+      if (soloVisual) return true;
+      this.marcarEscudo(j, H.ALIADO_TICKS);
+      var o = G.pacs[j];
+      this.efecto('amparo', o.x, o.y, 24);
+      G.hostEvt({ t: 'habEsc', w: j });
+      return true;
+    },
+
+    /* R — VIDA EXTRA: +1 al compañero vivo con menos vidas (empate: el más
+     * cercano, y con todos igual, uno mismo). No revive a quien está fuera y
+     * no sube a nadie de VIDA_MAX. Con vidas compartidas, al fondo común. */
+    destinoVida: function (G, idx) {
+      var ind = (G.playerCount > 1 && G.livesMode === 'individual');
+      if (!ind) return (G.lives < H.VIDA_MAX) ? idx : -1;
+      var p = G.pacs[idx], mejor = -1, mejorV = Infinity, mejorD = Infinity;
+      for (var i = 0; i < G.pacs.length; i++) {
+        if (!this.vivo(G, i)) continue;
+        var o = G.pacs[i];
+        if (o.lives >= H.VIDA_MAX) continue;
+        var d = (i === idx) ? 0 : this.distancia(p.x, p.y, o.x, o.y);
+        if (o.lives < mejorV || (o.lives === mejorV && d < mejorD)) {
+          mejorV = o.lives; mejorD = d; mejor = i;
+        }
+      }
+      return mejor;
+    },
+
+    vida: function (G, idx, soloVisual) {
+      var j = this.destinoVida(G, idx);
+      if (j < 0) return false;
+      if (soloVisual) return true;
+      var ind = (G.playerCount > 1 && G.livesMode === 'individual');
+      if (ind) G.pacs[j].lives++;
+      else G.lives++;
+      var o = G.pacs[j] || G.pacs[idx];
+      this.efecto('vida', o.x, o.y, 40);
+      G.addPopup(o.x, o.y - 6, '1UP', 60);
+      G.hostEvt({ t: 'habVida', w: j });
+      window.AudioSys && AudioSys.playExtraLife();
+      return true;
+    },
+
+    /* =========================================================
+     * MAGO
+     * ========================================================= */
+    /* Lo que mata el Mago (y lo que aplasta la APISONADORA del Tanque) vale
+     * MAGO_PUNTOS fijos, no toca la cadena y no para la partida: el fantasma
+     * pasa a ojos y se sigue jugando. */
+    matarMago: function (G, g, who, como) {
+      var p = G.pacs[who];
+      var ox = p ? p.x : g.x, oy = p ? p.y : g.y;
+      g.eaten();
+      this.hielo[g.id] = 0;
+      this.huye[g.id] = 0;
+      G.addScore(H.MAGO_PUNTOS);
+      G.addPopup(g.x, g.y, H.MAGO_PUNTOS, 45);
+      this.efecto(como, g.x, g.y, como === 'rayo' ? 14 : 18, ox, oy);
+      if (mio(G, who)) {
+        G.runGhosts++;
+        G.bumpAch && G.bumpAch({ fantasmas: 1 });
+      }
+      G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como,
+        x: Math.round(g.x), y: Math.round(g.y), ox: Math.round(ox), oy: Math.round(oy) });
+      window.AudioSys && AudioSys.playEatGhost();
+    },
+
+    /* Lo mismo contado por el anfitrión, en otra pantalla */
+    magoKill: function (G, e) {
+      var g = G.ghosts[e.g | 0];
+      if (!g) return;
+      g.eaten();
+      this.hielo[g.id] = 0;
+      G.addPopup(e.x, e.y, H.MAGO_PUNTOS, 45);
+      this.efecto(e.f || 'fuego', e.x, e.y, e.f === 'rayo' ? 14 : 18, e.ox, e.oy);
+      if ((e.w | 0) === G.localIdx && !G.isSpec()) {
+        G.runGhosts++;
+        G.bumpAch && G.bumpAch({ fantasmas: 1 });
+      }
+      window.AudioSys && AudioSys.playEatGhost();
+    },
+
+    /* La casilla de un poder que se pone en el sitio: la de quien lo pide.
+     * Al anfitrión le llega la que ve el invitado, que es la buena. */
+    casillaDe: function (G, idx, d) {
+      var p = G.pacs[idx];
+      if (d && d.c >= 0 && d.c < CFG.COLS && d.r >= 0 && d.r < CFG.ROWS) {
+        return { c: d.c | 0, r: d.r | 0 };
+      }
+      return p ? { c: p.tileX(), r: p.tileY() } : null;
+    },
+
+    /* W — PORTAL. Primera pulsación: la entrada, sin gastar. Segunda: la
+     * salida, y el portal queda abierto 8 s (ahí empieza la recarga). Si la
+     * salida no llega en 5 s, la entrada se deshace y la recarga se gasta. */
+    portal: function (G, idx, d) {
+      var c = this.casillaDe(G, idx, d);
+      if (!c || !aterrizable(c.c, c.r)) return false;
+      var po = this.portales[idx];
+      if (!po) {
+        this.portales[idx] = { ec: c.c, er: c.r, sc: -1, sr: -1, t: 0, e: H.PORTAL_ESPERA };
+        this.sinGasto = true;
+        sonDe(G, idx, 'playStealth');
+        return true;
+      }
+      if (po.e > 0) {
+        if (c.c === po.ec && c.r === po.er) return false;
+        po.sc = c.c; po.sr = c.r; po.e = 0; po.t = H.PORTAL_TICKS;
+        sonDe(G, idx, 'playFlash');
+        return true;
+      }
+      return false;
+    },
+
+    /* Cruzar: lo hace quien simula a ese Pac-Man, al ENTRAR en una boca (no
+     * por estar encima: el Mago que pone la salida donde está no rebota). */
+    cruzar: function (G, p) {
+      if (!this.on || !p) return;
+      var s = this.estado(p.id | 0);
+      if (!s) return;
+      var col = p.tileX(), row = p.tileY();
+      var tile = row * CFG.COLS + col;
+      if (tile === s.ultTile) return;
+      s.ultTile = tile;
+      if (s.cruce > 0) return;
+      for (var i = 0; i < this.portales.length; i++) {
+        var po = this.portales[i];
+        if (!po || !(po.t > 0)) continue;
+        var dc = -1, dr = -1;
+        if (col === po.ec && row === po.er) { dc = po.sc; dr = po.sr; }
+        else if (col === po.sc && row === po.sr) { dc = po.ec; dr = po.er; }
+        if (dc < 0) continue;
+        var x0 = p.x, y0 = p.y;
+        p.x = dc * T + T / 2;
+        p.y = dr * T + T / 2;
+        s.cruce = H.PORTAL_CRUCE;
+        s.ultTile = dr * CFG.COLS + dc;
+        this.efecto('boca', x0, y0, 16);
+        this.efecto('boca', p.x, p.y, 16);
+        sonDe(G, p.id | 0, 'playFlash');
+        return;
+      }
+    },
+
+    /* E — RUNA: trampa en la casilla del Mago 10 s; el primer fantasma que la
+     * pisa muere. Una por Mago: poner otra quita la anterior. */
+    runa: function (G, idx, d) {
+      var c = this.casillaDe(G, idx, d);
+      if (!c || !aterrizable(c.c, c.r)) return false;
+      this.runas[idx] = { c: c.c, r: c.r, t: H.RUNA_TICKS };
+      sonDe(G, idx, 'playBiteMiss');
+      return true;
+    },
+
+    /* R — TORMENTA: 4 s, un rayo por segundo sobre el fantasma más cercano a
+     * seis casillas. Sin nadie a tiro, ese rayo se pierde. Sale siempre. */
+    tormenta: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s) return false;
+      s.tormenta = H.TORMENTA_RAYOS * H.TORMENTA_CADA;
+      sonDe(G, idx, 'playShout');
+      if (this.manda(G)) this.rayo(G, idx);
+      return true;
+    },
+
+    rayo: function (G, idx) {
+      var p = G.pacs[idx];
+      if (!p) return;
+      var mejor = null, mejorD = Infinity;
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!this.enLaCalle(g)) continue;
+        var d = this.distancia(p.x, p.y, g.x, g.y);
+        if (d <= H.TORMENTA_TILES * T && d < mejorD) { mejorD = d; mejor = g; }
+      }
+      if (mejor) this.matarMago(G, mejor, idx, 'rayo');
+    },
+
+    /* ---------- los relojes de los roles (desde paso) ---------- */
+    pasoRoles: function (G, corre) {
+      var i, s;
+      for (i = this.fx.length - 1; i >= 0; i--) {
+        if (--this.fx[i].n <= 0) this.fx.splice(i, 1);
+      }
+      for (i = 0; i < this.st.length; i++) {
+        s = this.st[i];
+        if (s.pisoton > 0) s.pisoton--;
+      }
+      if (!corre) return;
+      var manda = this.manda(G);
+      for (i = 0; i < this.st.length; i++) {
+        s = this.st[i];
+        if (s.provoca > 0) s.provoca--;
+        if (s.escudo > 0) s.escudo--;
+        if (s.coraza > 0) s.coraza--;
+        if (s.gracia > 0) s.gracia--;
+        if (s.inmune > 0) s.inmune--;
+        if (s.cruce > 0) s.cruce--;
+        if (s.arrollaRed > 0) s.arrollaRed--;
+        if (s.tormenta > 0) {
+          if (!this.vivo(G, i)) { s.tormenta = 0; }
+          else {
+            s.tormenta--;
+            if (manda && s.tormenta > 0 && s.tormenta % H.TORMENTA_CADA === 0) this.rayo(G, i);
+          }
+        }
+        /* la entrada de un portal sin salida se deshace, y gasta */
+        var po = this.portales[i];
+        if (po) {
+          if (po.e > 0) {
+            if (--po.e <= 0) {
+              this.portales[i] = null;
+              this.gastarId(G, i, 'portal');
+            }
+          } else if (po.t > 0 && --po.t <= 0) {
+            this.portales[i] = null;
+          }
+        }
+        var ru = this.runas[i];
+        if (ru && --ru.t <= 0) this.runas[i] = null;
+      }
+      for (var j = 0; j < 4; j++) {
+        if (this.hielo[j] > 0) this.hielo[j]--;
+        if (this.huye[j] > 0) this.huye[j]--;
+      }
+      this.pasoBalas(G);
+      if (!manda) return;
+      /* runas pisadas */
+      for (i = 0; i < this.runas.length; i++) {
+        var r = this.runas[i];
+        if (!r) continue;
+        for (j = 0; j < 4; j++) {
+          var g = G.ghosts[j];
+          if (!this.enLaCalle(g) || g.tileX() !== r.c || g.tileY() !== r.r) continue;
+          this.runas[i] = null;
+          this.matarMago(G, g, i, 'runa');
+          break;
+        }
+      }
+    },
+
+    /* Gasta la recarga de un poder por su id (la entrada del portal caducada) */
+    gastarId: function (G, idx, id) {
+      var lista = this.listaDe(G, idx);
+      for (var k = 0; k < lista.length; k++) if (lista[k].id === id) this.gastar(G, idx, k);
+    },
+
+    /* Al morir UN jugador (la partida sigue): se le cortan sus efectos */
+    limpiarJugador: function (idx) {
+      var s = this.st[idx];
+      if (!s) return;
+      s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
+      s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
+    },
+
+    /* ---------- la foto de red de los roles ----------
+     * Lo que ejecuta el anfitrión (hielo, huidas, proyectiles, portales,
+     * runas) y los efectos de cada jugador, para pintarlos igual en todas
+     * las pantallas. Doce veces por segundo, así que en números cortos. */
+    resumenRoles: function () {
+      var e = [], i;
+      for (i = 0; i < this.st.length; i++) {
+        var s = this.st[i];
+        e.push([s.provoca, s.escudo, s.pisoton, s.arrolla, s.inmune, s.tormenta, s.gracia, s.coraza]);
+      }
+      var po = [], ru = [], bl = [];
+      for (i = 0; i < this.st.length; i++) {
+        var p = this.portales[i], r = this.runas[i];
+        po.push(p ? [p.ec, p.er, p.sc, p.sr, p.t, p.e] : 0);
+        ru.push(r ? [r.c, r.r, r.t] : 0);
+      }
+      for (i = 0; i < this.balas.length; i++) {
+        var b = this.balas[i];
+        bl.push([b.t === 'fuego' ? 1 : 0, Math.round(b.x), Math.round(b.y), b.d, b.w]);
+      }
+      return { e: e, hz: this.hielo.slice(), hu: this.huye.slice(), hq: this.huyeQuien.slice(),
+               po: po, ru: ru, bl: bl };
+    },
+
+    aplicarRoles: function (hx, mioIdx) {
+      if (!this.on || !hx) return;
+      var i, k;
+      var CAMPOS = ['provoca', 'escudo', 'pisoton', 'arrolla', 'inmune', 'tormenta', 'gracia', 'coraza'];
+      for (i = 0; hx.e && i < hx.e.length && i < this.st.length; i++) {
+        var fila = hx.e[i], s = this.st[i];
+        if (!fila) continue;
+        for (k = 0; k < CAMPOS.length; k++) {
+          var v = fila[k] | 0;
+          if (i === mioIdx) {
+            /* lo mío que decido yo (escudo, inmunidad, la carrera) no se toca;
+             * lo que ejecuta él solo se corrige hacia arriba */
+            if (k === 1 || k === 3 || k === 4 || k === 6 || k === 7) continue;
+            if (v > s[CAMPOS[k]]) s[CAMPOS[k]] = v;
+          } else {
+            s[CAMPOS[k]] = v;
+          }
+        }
+      }
+      if (hx.hz) this.hielo = hx.hz.slice(0, 4);
+      if (hx.hu) this.huye = hx.hu.slice(0, 4);
+      if (hx.hq) this.huyeQuien = hx.hq.slice(0, 4);
+      if (hx.po) {
+        for (i = 0; i < this.st.length; i++) {
+          var p = hx.po[i];
+          this.portales[i] = p ? { ec: p[0], er: p[1], sc: p[2], sr: p[3], t: p[4], e: p[5] } : null;
+        }
+      }
+      if (hx.ru) {
+        for (i = 0; i < this.st.length; i++) {
+          var r = hx.ru[i];
+          this.runas[i] = r ? { c: r[0], r: r[1], t: r[2] } : null;
+        }
+      }
+      if (hx.bl) {
+        this.balas = [];
+        for (i = 0; i < hx.bl.length; i++) {
+          var b = hx.bl[i];
+          this.balas.push({ t: b[0] ? 'fuego' : 'hielo', x: b[1], y: b[2], d: b[3], w: b[4] });
+        }
+      }
+    },
+
+    /* =========================================================
+     * EL DIBUJO de los roles (lo llama Game.render)
+     * ========================================================= */
+    /* Lo que va en el SUELO, debajo de fantasmas y Pac-Man */
+    dibujarSuelo: function (G, ctx) {
+      if (!this.on) return;
+      var Y = CFG.MAZE_Y, tk = G.tick, i;
+      for (i = 0; i < this.runas.length; i++) {
+        var r = this.runas[i];
+        if (!r) continue;
+        var rx = r.c * T + T / 2, ry = r.r * T + T / 2 + Y;
+        var pul = 0.55 + 0.35 * Math.sin(tk / 6);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(179, 107, 255, ' + pul + ')';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(rx, ry, 5.5, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath();
+        for (var k = 0; k < 5; k++) {
+          var a = -Math.PI / 2 + k * 4 * Math.PI / 5 + tk / 40;
+          var px = rx + Math.cos(a) * 4.5, py = ry + Math.sin(a) * 4.5;
+          if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+        }
+        ctx.closePath(); ctx.stroke();
+        ctx.restore();
+      }
+      for (i = 0; i < this.portales.length; i++) {
+        var po = this.portales[i];
+        if (!po) continue;
+        this.dibujarBoca(ctx, po.ec, po.er, '#ffb852', po.t > 0 ? 1 : 0.45, tk);
+        if (po.t > 0) this.dibujarBoca(ctx, po.sc, po.sr, '#00c8ff', 1, tk);
+      }
+    },
+
+    dibujarBoca: function (ctx, c, r, color, alfa, tk) {
+      var x = c * T + T / 2, y = r * T + T / 2 + CFG.MAZE_Y;
+      ctx.save();
+      ctx.globalAlpha = alfa;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 5 + Math.sin(tk / 5) * 0.8, 6.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = alfa * 0.35;
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    },
+
+    /* Hielo sobre los fantasmas, proyectiles y efectos: ENCIMA de todo */
+    dibujarAire: function (G, ctx) {
+      if (!this.on) return;
+      var Y = CFG.MAZE_Y, tk = G.tick, i;
+      for (i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!(this.hielo[i] > 0) || !g || g.mode !== 'normal') continue;
+        var fin = this.hielo[i] < 45 && Math.floor(tk / 5) % 2 === 0;
+        ctx.save();
+        ctx.globalAlpha = fin ? 0.25 : 0.55;
+        ctx.fillStyle = '#bff4ff';
+        ctx.beginPath(); ctx.arc(g.x, g.y + Y, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (var k = 0; k < 3; k++) {
+          var a = k * Math.PI / 3;
+          ctx.moveTo(g.x - Math.cos(a) * 3, g.y + Y - Math.sin(a) * 3);
+          ctx.lineTo(g.x + Math.cos(a) * 3, g.y + Y + Math.sin(a) * 3);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      for (i = 0; i < this.balas.length; i++) {
+        var b = this.balas[i], v = CFG.DIR_V[b.d] || { x: 0, y: 0 };
+        var col = (b.t === 'fuego') ? '#ff7a1a' : '#8ff4ff';
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(b.x - v.x * 4, b.y - v.y * 4 + Y, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowColor = col; ctx.shadowBlur = 6;
+        ctx.beginPath(); ctx.arc(b.x, b.y + Y, 2.6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(b.x, b.y + Y, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      for (i = 0; i < this.fx.length; i++) {
+        var f = this.fx[i], q = f.n / f.tot;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, q);
+        if (f.t === 'rayo') {
+          ctx.strokeStyle = '#e8d4ff';
+          ctx.shadowColor = '#b36bff'; ctx.shadowBlur = 8;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(f.x0, f.y0 + Y - 4);
+          var pasos = 5;
+          for (var st = 1; st < pasos; st++) {
+            var mx = f.x0 + (f.x - f.x0) * st / pasos + ((st * 37 + f.tot) % 7 - 3);
+            var my = f.y0 + (f.y - f.y0) * st / pasos + ((st * 53) % 7 - 3);
+            ctx.lineTo(mx, my + Y);
+          }
+          ctx.lineTo(f.x, f.y + Y);
+          ctx.stroke();
+        } else {
+          var colores = { fuego: '#ff7a1a', runa: '#b36bff', escarcha: '#bff4ff', humo: '#ff9a4a',
+                          roto: '#ffb852', aplasta: '#ffb852', amparo: '#00ffff', vida: '#7dff7a', boca: '#00c8ff' };
+          ctx.strokeStyle = colores[f.t] || '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y + Y, 3 + (1 - q) * 10, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    },
+
+    /* Lo que lleva encima cada Pac-Man: aros de escudo e inmunidad, el aviso
+     * de la provocación, la onda del pisotón y el aura de la tormenta */
+    dibujarPac: function (G, ctx, pc, i) {
+      var s = this.estado(i);
+      if (!s) return;
+      var x = pc.x, y = pc.y + CFG.MAZE_Y, tk = G.tick;
+      ctx.save();
+      /* el ESCUDO del Tanque en naranja y el que da el Soporte en cian */
+      var escu = Math.max(s.coraza, s.escudo);
+      if (escu > 0) {
+        var avisa = escu < 60 && Math.floor(tk / 6) % 2 === 0;
+        var rgb = s.coraza > 0 ? '255, 184, 82' : '0, 255, 255';
+        ctx.strokeStyle = 'rgba(' + rgb + ', ' + (avisa ? 0.35 : 0.9) + ')';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (var k = 0; k < 6; k++) {
+          var a = k * Math.PI / 3 + Math.PI / 6;
+          var px = x + Math.cos(a) * 10, py = y + Math.sin(a) * 10;
+          if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      if (s.inmune > 0) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.5 + 0.4 * Math.sin(tk / 3)) + ')';
+        ctx.setLineDash([2, 2]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(x, y, 9.5, tk / 8, tk / 8 + Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (s.provoca > 0) {
+        ctx.fillStyle = '#ff3b3b';
+        var sube = Math.sin(tk / 4) * 1.2;
+        ctx.fillRect(x - 1, y - 16 + sube, 2, 5);
+        ctx.fillRect(x - 1, y - 9.5 + sube, 2, 2);
+        ctx.strokeStyle = 'rgba(255, 59, 59, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, 8 + (tk % 30) / 5, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (s.pisoton > 0) {
+        var q = 1 - s.pisoton / 30;
+        ctx.strokeStyle = 'rgba(255, 184, 82, ' + (1 - q) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 6 + q * H.PISOTON_TILES * T, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (s.arrolla > 0) {
+        var v = CFG.DIR_V[s.adir] || { x: 0, y: 0 };
+        ctx.fillStyle = 'rgba(255, 184, 82, 0.4)';
+        for (var r = 1; r <= 4; r++) {
+          ctx.beginPath();
+          ctx.arc(x - v.x * r * 5 + ((tk * 7 + r * 3) % 3 - 1), y - v.y * r * 5 + ((tk * 5 + r) % 3 - 1),
+                  5.5 - r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(255, 184, 82, 0.95)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + ((tk % 2) - 0.5), y, 9.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (s.tormenta > 0) {
+        ctx.strokeStyle = 'rgba(179, 107, 255, ' + (0.4 + 0.3 * Math.sin(tk / 2)) + ')';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (var c = 0; c < 8; c++) {
+          var an = c * Math.PI / 4 + tk / 10;
+          ctx.moveTo(x + Math.cos(an) * 8, y + Math.sin(an) * 8);
+          ctx.lineTo(x + Math.cos(an + 0.2) * 11, y + Math.sin(an + 0.2) * 11);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
     },
 
     /* =========================================================

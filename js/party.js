@@ -10,7 +10,8 @@
  * que no hace falta reconectar al empezar a jugar. Los mensajes
  * de party van con prefijo p para no chocar con los del juego:
  *
- *   phello  {v,n,c,k}    cada miembro se anuncia y sigue latiendo
+ *   phello  {v,n,c,k,r}  cada miembro se anuncia y sigue latiendo (r: su rol
+ *                        de DESATADO)
  *   proster {v,lider,m}  el líder reparte la lista de miembros
  *   pbye    {lider}      alguien se va (o el líder disuelve)
  *   pfull   {to}         no caben más
@@ -93,8 +94,53 @@
         a: window.PM.Tienda ? window.PM.Tienda.accesorio() : '',
         x: window.PM.Tienda ? window.PM.Tienda.efecto() : '',
         g: this.ghostPick,
+        // el rol de DESATADO que tiene elegido (lo reparte el líder)
+        r: CFG.HAB.rol(s.habRol1),
         t: now()
       };
+    },
+
+    /* ---------- DESATADO: el rol de cada uno ----------
+     * Cada uno elige el suyo; lo único que reparte el líder es el SOPORTE,
+     * que solo cabe uno por partida: el primero que lo coge se lo queda. */
+    claimRol: function (sid, rol) {
+      rol = CFG.HAB.rol(rol);
+      if (rol !== 'soporte' || !this.st) return rol;
+      for (var i = 0; i < this.st.members.length; i++) {
+        var m = this.st.members[i];
+        if (m.s !== sid && m.r === 'soporte') return 'asesino';
+      }
+      return rol;
+    },
+
+    /* ¿Otro de la sala ya lleva el Soporte? (el selector lo apaga) */
+    soporteDeOtro: function () {
+      if (!this.st) return false;
+      for (var i = 0; i < this.st.members.length; i++) {
+        var m = this.st.members[i];
+        if (m.s !== window.PM.Net.sid && m.r === 'soporte') return true;
+      }
+      return false;
+    },
+
+    myRol: function () {
+      var m = this.selfEntry();
+      return m ? CFG.HAB.rol(m.r) : CFG.HAB.rol((window.PM.settings || {}).habRol1);
+    },
+
+    setRol: function (rol) {
+      rol = CFG.HAB.rol(rol);
+      var s = window.PM.settings;
+      if (s) s.habRol1 = rol;
+      if (!this.st) return;
+      if (this.st.leader) {
+        var m = this.selfEntry();
+        if (m) m.r = this.claimRol(window.PM.Net.sid, rol);
+        this.sendRoster();
+      } else {
+        window.PM.Net.send('phello', this.hello());
+      }
+      this.changed();
     },
 
     /* ---------- PAC-MAN VS.: quién lleva fantasma ----------
@@ -233,7 +279,7 @@
 
     hello: function () {
       var m = this.me();
-      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g };
+      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r };
     },
 
     /* Nombre, color o skin cambiados en PERFIL con la party ya abierta.
@@ -252,7 +298,8 @@
         if (this.st.status === 'dentro') this.sendRoster();
       } else {
         var m = this.selfEntry();
-        if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k && m.a === yo.a && m.x === yo.x) return;
+        if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k && m.a === yo.a && m.x === yo.x &&
+            m.r === yo.r) return;
         window.PM.Net.send('phello', this.hello());
       }
       this.changed();
@@ -271,8 +318,10 @@
       var m = this.selfEntry();
       if (!m) return false;
       yo = yo || this.me();
-      var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k || m.a !== yo.a || m.x !== yo.x;
-      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t;
+      var rol = this.claimRol(m.s, yo.r);
+      var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k || m.a !== yo.a || m.x !== yo.x ||
+        m.r !== rol;
+      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t; m.r = rol;
       return cambia;
     },
 
@@ -395,6 +444,7 @@
       m.a = (typeof d.a === 'string') ? d.a : '';
       m.x = (typeof d.x === 'string') ? d.x : '';
       m.g = this.claim(sid, d.g);      // PAC-MAN VS.: el líder reparte
+      m.r = this.claimRol(sid, d.r);   // DESATADO: un solo Soporte
       m.t = now();
       this.sendRoster();
       this.changed();
@@ -437,15 +487,18 @@
     /* Colores repetidos: al segundo se le da el del puesto que ocupa, que si
      * no salen dos Pac-Man idénticos y no hay quien se distinga. */
     gameOrder: function () {
-      var out = [], usados = {}, i;
+      var out = [], usados = {}, i, soporte = false;
       for (i = 0; i < this.st.members.length && i < CFG.MAX_PLAYERS; i++) {
         var m = this.st.members[i];
         var c = m.c || CFG.PLAYER_COLORS[i];
         if (usados[c]) c = CFG.PLAYER_COLORS[i];
         usados[c] = 1;
+        // el Soporte, uno: si por lo que sea llegan dos, el segundo es Asesino
+        var rol = CFG.HAB.rol(m.r);
+        if (rol === 'soporte') { if (soporte) rol = 'asesino'; soporte = true; }
         out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico',
                    a: m.a || '', x: m.x || '',
-                   g: (m.g >= 0 && m.g < 4) ? m.g : -1 });
+                   g: (m.g >= 0 && m.g < 4) ? m.g : -1, r: rol });
       }
       return out;
     },

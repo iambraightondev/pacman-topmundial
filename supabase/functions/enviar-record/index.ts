@@ -70,12 +70,23 @@ const FRUTAS_NIVEL = 2;
  *            asusta a los cuatro cada 60 s, que es otra cadena entera. Esos
  *            puntos dependen del TIEMPO, no del nivel, así que se suman por
  *            lo que duró la partida y por cada jugador (cada uno tiene los
- *            suyos). Con la cadena a tope, un mordisco vale 1600. */
+ *            suyos). Con la cadena a tope, un mordisco vale 1600.
+ *            Desde los ROLES (17 sep 2026) cada jugador elige uno, y los
+ *            otros también ganan por tiempo: la APISONADORA del TANQUE aplasta
+ *            hasta cuatro fantasmas a 200 fijos cada 60 s, y el MAGO mata a 200 con la
+ *            BOLA (cada 20 s), la RUNA (32 s) y la TORMENTA (4 rayos cada
+ *            60 s). Como el rol lo dice el propio jugador, el techo de cada
+ *            uno es el MÁXIMO de los roles, puntos y fantasmas por separado. */
 const MUNDOS = ['clasico', 'hab', 'lab'];
 const PUNTOS_PASTILLAS_LAB = 292 * 10 + 4 * 50;   // 3120
 const MORDISCO_MS = 16000;                         // CFG.HAB.LIST mordisco
 const GRITO_MS = 60000;                            // CFG.HAB.LIST grito
 const PUNTOS_MORDISCO = 1600;
+const ARROLLAR_MS = 60000;                         // CFG.HAB.LIST_T arrollar
+const BOLA_MS = 20000;                             // CFG.HAB.LIST_M fuego
+const RUNA_MS = 32000;                             // CFG.HAB.LIST_M runa
+const TORMENTA_MS = 60000;                         // CFG.HAB.LIST_M tormenta
+const PUNTOS_MAGO = 200;                           // CFG.HAB.MAGO_PUNTOS
 
 /* Margen sobre el techo teórico: más vale dejar pasar una partida rarísima
  * que tirar la de alguien que jugó de verdad. Con el 10% sigue habiendo un
@@ -203,13 +214,25 @@ function techoNivel(nivel: number, mundo = 'clasico'): number {
     MAX_PUNTOS_FANTASMAS + FRUTAS_NIVEL * puntosFruta(nivel);
 }
 
-/* Lo que DESATADO da de más por tiempo: mordiscos y gritos de cada jugador */
+/* Lo que DESATADO da de más por tiempo, por jugador y según su rol. Sin
+ * saber de verdad qué llevaba cada uno, a cada jugador se le da lo más que
+ * puede dar un rol: el Asesino es el que más puntos saca y el Mago el que más
+ * fantasmas mata. */
+function veces(tiempoMs: number, cadaMs: number): number {
+  return Math.floor(tiempoMs / cadaMs) + 1;
+}
+
 function extraDesatado(tiempoMs: number, jugadores: number) {
-  const mordiscos = (Math.floor(tiempoMs / MORDISCO_MS) + 1) * jugadores;
-  const gritos = (Math.floor(tiempoMs / GRITO_MS) + 1) * jugadores;
+  const mordiscos = veces(tiempoMs, MORDISCO_MS), gritos = veces(tiempoMs, GRITO_MS);
+  const asesino = { puntos: mordiscos * PUNTOS_MORDISCO + gritos * PUNTOS_CADENA,
+                    fantasmas: mordiscos + gritos * 4 };
+  const arrollar = veces(tiempoMs, ARROLLAR_MS);
+  const tanque = { puntos: arrollar * 4 * PUNTOS_MAGO, fantasmas: arrollar * 4 };
+  const magias = veces(tiempoMs, BOLA_MS) + veces(tiempoMs, RUNA_MS) + veces(tiempoMs, TORMENTA_MS) * 4;
+  const mago = { puntos: magias * PUNTOS_MAGO, fantasmas: magias };
   return {
-    puntos: mordiscos * PUNTOS_MORDISCO + gritos * PUNTOS_CADENA,
-    fantasmas: mordiscos + gritos * 4
+    puntos: Math.max(asesino.puntos, tanque.puntos, mago.puntos) * jugadores,
+    fantasmas: Math.max(asesino.fantasmas, tanque.fantasmas, mago.fantasmas) * jugadores
   };
 }
 
@@ -468,7 +491,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return mal('FANTASMAS IMPOSIBLES', 400,
       fantasmas + ' fantasmas en ' + niveles + ' niveles: el tope son ' +
       topeFantasmas + ' (4 por energizante' +
-      (mundo === 'hab' ? ', más mordiscos y gritos' : '') + ')');
+      (mundo === 'hab' ? ', más lo de los poderes' : '') + ')');
   }
   // cada fantasma comido son 200 puntos como poco
   if (puntos < fantasmas * MIN_PUNTOS_FANTASMA) {

@@ -61,6 +61,14 @@
     return out;
   }
 
+  /* 'ats' -> ['asesino', 'tanque', 'soporte']. Una letra que no se conoce
+   * (una versión más nueva) se lee como Asesino, que es lo de siempre. */
+  function decRoles(txt) {
+    var L = { a: 'asesino', t: 'tanque', s: 'soporte', m: 'mago' }, out = [];
+    for (var k = 0; k < txt.length && k < CFG.MAX_PLAYERS; k++) out.push(L[txt.charAt(k)] || 'asesino');
+    return out;
+  }
+
   function decGhosts(texto) {
     var out = [];
     for (var i = 1; i < texto.length; i++) {
@@ -508,6 +516,11 @@
       if (a.vidasModo === 'individual') aj.push('i');
       if (esLista(a.ghosts)) aj.push(codGhosts(a.ghosts));
       if (a.qArmada) aj.push('q');
+      /* DESATADO con ROLES: una letra por jugador (a, t, s, m). Solo si alguno
+       * no es Asesino, así las repeticiones de siempre no cambian de texto. */
+      if (esLista(a.roles) && a.roles.length) {
+        aj.push('r' + a.roles.map(function (r) { return String(r).charAt(0); }).join(''));
+      }
       // 'm' + el laberinto (los ids no llevan ni comas ni virgulillas)
       if (a.maze) aj.push('m' + String(a.maze).replace(/[^a-z0-9_-]/gi, ''));
       var nombres = [];
@@ -564,6 +577,7 @@
           if (aj[b] === 'i') ajustes.vidasModo = 'individual';
           else if (aj[b].charAt(0) === 'g') ajustes.ghosts = decGhosts(aj[b]);
           else if (aj[b] === 'q') ajustes.qArmada = true;
+          else if (aj[b].charAt(0) === 'r') ajustes.roles = decRoles(aj[b].slice(1));
           else if (aj[b].charAt(0) === 'm') ajustes.maze = aj[b].slice(1);
         }
 
@@ -1068,6 +1082,11 @@
        * sale solo después (js/habilidades.js, pulsar). Las grabadas antes de
        * esto no llevan la bandera y se recomponen al verlas (recomponer). */
       if (G.hab) ajustes.qArmada = true;
+      /* DESATADO: el rol de cada uno cambia qué hace cada tecla grabada.
+       * Sin roles (las de antes, o todos Asesino) se reproduce como siempre. */
+      if (G.hab && G.roles && G.roles.some(function (r) { return r !== 'asesino'; })) {
+        ajustes.roles = G.roles.slice();
+      }
 
       this.modo = 'grabar';
       this.grabando = {
@@ -1449,6 +1468,7 @@
         looks: looks,
         ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
         hab: !!G.hab,          // modo DESATADO: dientes, chispas y flash
+        roles: G.hab && G.roles ? G.roles.slice() : null,
         caza: !!G.caza,        // CACERÍA: el Pac-Man de la máquina y su reloj
         fecha: new Date().toISOString(),
         pm: null,              // mapa de pastillas del arranque
@@ -1513,7 +1533,7 @@
         v: this.V_RED, j: rep.jugadores, nv: rep.nivel, mz: rep.maze || null,
         aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
         lk: rep.looks || null,
-        gh: rep.ghosts || null, hb: !!rep.hab, cz: !!rep.caza,
+        gh: rep.ghosts || null, hb: !!rep.hab, cz: !!rep.caza, rl: rep.roles || null,
         fe: rep.fecha, pm: rep.pm || null,
         fin: rep.final
       };
@@ -1569,7 +1589,7 @@
           v: cab.v, jugadores: n, nivel: cab.nv || 1, maze: cab.mz || null,
           ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
           skins: cab.sk || [], looks: cab.lk || null,
-          ghosts: cab.gh || null, hab: !!cab.hb,
+          ghosts: cab.gh || null, hab: !!cab.hb, roles: cab.rl || null,
           caza: !!cab.cz, fecha: cab.fe || '',
           pm: cab.pm || null, cuadros: cuadros, eventos: eventos,
           final: cab.fin || null
@@ -1677,6 +1697,7 @@
         ghosts: rep.ghosts ? rep.ghosts.slice() : null,
         maze: rep.maze || null,
         hab: !!rep.hab,
+        roles: rep.roles || null,
         caza: !!rep.caza
       });
       if (rep.pm && rep.pm.hex && G.applyPelletHex) G.applyPelletHex(rep.pm.hex);
@@ -2104,6 +2125,8 @@
         looks: look ? look.looks : null,
         // sin esto las habilidades grabadas no tendrían dónde aplicarse
         hab: esDesatado(rep.modo),
+        // ...ni qué poder era cada tecla
+        roles: (rep.ajustes && rep.ajustes.roles) ? rep.ajustes.roles.slice() : null,
         // ni los giros del que llevaba fantasma, a quién moverle
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
           ? rep.ajustes.ghosts.slice() : null,

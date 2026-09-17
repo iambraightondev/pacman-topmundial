@@ -5151,3 +5151,24 @@ body { font-size-adjust: 0.56; }
   .brief-desc { font-size: 10px; }
 }
 #prompt.arcade { justify-content: safe center; }
+
+/* ---------- DESATADO: el selector de ROL ----------
+ * Una fila de chips por jugador (presentación) o la tuya (sala online). */
+.rol-filas { display: grid; gap: 8px; justify-items: center; }
+.rol-fila { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
+.rol-quien { font-size: 11px; color: #ffff00; letter-spacing: 2px; min-width: 26px; }
+.rol-nota { font-size: 10px; color: #8a8cae; letter-spacing: 1px; }
+.btn.rol-chip {
+  --rol: #ff66cc;
+  font-size: clamp(9px, 1.4vh, 12px); letter-spacing: 2px; padding: 8px 12px; margin: 0;
+  color: var(--rol); background: rgba(0, 0, 0, 0.4); border: 2px solid color-mix(in srgb, var(--rol) 45%, transparent);
+  border-radius: 6px; box-shadow: none; min-width: 0;
+}
+.btn.rol-chip:hover:not(:disabled), .btn.rol-chip:focus-visible { border-color: var(--rol); outline: none; }
+.btn.rol-chip.active { color: #000; background: var(--rol); border-color: var(--rol); box-shadow: 0 0 14px color-mix(in srgb, var(--rol) 45%, transparent); }
+.btn.rol-chip.mirando { transform: translateY(-2px); }
+.btn.rol-chip:disabled { opacity: 0.3; cursor: not-allowed; }
+.rol-aviso { font-size: 10px; letter-spacing: 1px; color: #ff66cc; text-align: center; line-height: 1.8; }
+#prompt.arcade .brief-cartas, #prompt.arcade .brief-lema { transition: none; }
+
+#prompt.arcade .go-equipo.go-practica { color: #ff66cc; font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; }
