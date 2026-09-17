@@ -10155,6 +10155,15 @@
         }
         if (!activo) continue;
         var idx = this.habIdxDe(gi);
+        /* El color de la barra es el del ROL que lleva: el Tanque en naranja,
+         * el Soporte en cian, el Mago en violeta y el Asesino en rosa (y quien
+         * lleva un fantasma, el de su fantasma). Así no hay que leer nada para
+         * saber de quién es la fila. */
+        var colRol = this.colorHabDe(g, A, idx);
+        if (colRol !== grupo.color) {
+          grupo.color = colRol;
+          grupo.caja.style.setProperty('--hb', colRol);
+        }
         /* Quien lleva un fantasma tiene otra lista (dos poderes en vez de
          * cuatro) y hasta otros nombres, así que las etiquetas se refrescan
          * aquí en vez de escribirse al montar: en PAC-MAN VS. el reparto de
@@ -10249,6 +10258,11 @@
         var nombre = g.nameFor(quien), color = g.colorFor(quien);
         if (nombre !== fila.nombre) { fila.nombre = nombre; fila.nom.textContent = nombre; }
         if (color !== fila.color) { fila.color = color; fila.nom.style.color = color; }
+        var colOtro = this.colorHabDe(g, A, quien);
+        if (colOtro !== fila.colRol) {
+          fila.colRol = colOtro;
+          fila.caja.style.setProperty('--hb', colOtro);
+        }
 
         var lista = A.listaDe(g, quien);
         for (var k = 0; k < fila.celdas.length; k++) {
@@ -10278,6 +10292,16 @@
           }
         }
       }
+    },
+
+    /* El color de los poderes de un jugador: el de su rol de DESATADO, o el
+     * de su fantasma si lleva uno (PAC-MAN VS.). */
+    colorHabDe: function (g, A, idx) {
+      var gid = g.vsGhostOf ? g.vsGhostOf(idx) : -1;
+      if (gid >= 0 && CFG.GHOSTS[gid]) return CFG.GHOSTS[gid].color;
+      var rol = A.rolDe ? A.rolDe(idx) : 'asesino';
+      var info = CFG.HAB.ROL_INFO[rol];
+      return (info && info.color) || '#ff66cc';
     },
 
     makeDpad: function (id, playerIdx) {

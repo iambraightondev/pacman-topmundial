@@ -5536,3 +5536,21 @@ body { font-size-adjust: 0.56; }
 #online .lobby-status { color: #00ff66; }
 /* los nombres largos caben en su ficha */
 .inv-rejilla { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* ---------- Barra de poderes: el color es el del ROL ----------
+ * --hb lo pone la interfaz por grupo (refreshHabBar): naranja el Tanque, cian
+ * el Soporte, violeta el Mago, rosa el Asesino. Y el nombre del poder se ve
+ * entero: la casilla crece con la palabra en vez de recortarla. */
+.hab-grupo, .hab-otro { --hb: #ff66cc; }
+.hab-b { width: auto; min-width: 46px; padding: 0 6px; }
+.hab-name { font-size: 7px; letter-spacing: 0.5px; white-space: nowrap; opacity: 0.8; }
+.hab-fill { background: color-mix(in srgb, var(--hb) 22%, transparent); }
+.hab-secs { color: var(--hb); }
+.hab-b.listo { color: var(--hb); border-color: color-mix(in srgb, var(--hb) 90%, transparent); }
+.hab-b.listo:active { background: color-mix(in srgb, var(--hb) 35%, transparent); }
+.hab-b.activa { color: #000; background: var(--hb); border-color: var(--hb); }
+.hab-mini-fill { background: color-mix(in srgb, var(--hb) 22%, transparent); }
+.hab-mini.listo { color: var(--hb); border-color: color-mix(in srgb, var(--hb) 75%, transparent); }
+@media (max-width: 480px) {
+  .hab-b { width: 40px; min-width: 40px; padding: 0; }
+}

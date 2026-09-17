@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · La barra de poderes, del color de tu rol
+
+- Las casillas de Q W E R van del color del ROL: naranja el Tanque, cian el
+  Soporte, violeta el Mago y rosa el Asesino (y el color de su fantasma para
+  quien lleva uno en PAC-MAN VS.). También la fila de los compañeros.
+- El nombre del poder se ve entero (PROVOCAR, ARROLLAR...): la casilla crece
+  con la palabra en vez de recortarla.
+
 ## 2026-09-17 · ONLINE en verde e INVITAR con fichas
 
 - El MODO ONLINE ya no es celeste: va en **verde**, su color.
