@@ -5295,7 +5295,7 @@ body { font-size-adjust: 0.56; }
   --ol: #00ffff;
   --ol-osc: #007f8c;
 }
-#online.ol-marco::before, #online.ol-marco::after { display: none; }
+/* los espaciadores de .overlay se quedan: centran el contenido cuando cabe */
 #online.ol-marco .go-bombillas {
   --bombilla: radial-gradient(circle, #7ff9ff 0 3px, rgba(127, 249, 255, 0.25) 4px, transparent 6px);
 }
@@ -5486,3 +5486,6 @@ body { font-size-adjust: 0.56; }
 .sv-nombre { color: var(--jc, #fff); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sv-bajas { color: #ff5a5a; font-size: 0.75em; }
 .sv-fila.yo .sv-nombre::after { content: ' · TÚ'; color: #00ffff; font-size: 0.7em; }
+
+/* ONLINE centrado en alto: manda el centrado de .overlay (sus espaciadores) */
+#online.ol-marco { justify-content: center; padding-block: clamp(20px, 4vh, 40px); }
