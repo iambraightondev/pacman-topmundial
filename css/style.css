@@ -5487,5 +5487,8 @@ body { font-size-adjust: 0.56; }
 .sv-bajas { color: #ff5a5a; font-size: 0.75em; }
 .sv-fila.yo .sv-nombre::after { content: ' · TÚ'; color: #00ffff; font-size: 0.7em; }
 
-/* ONLINE centrado en alto: manda el centrado de .overlay (sus espaciadores) */
-#online.ol-marco { justify-content: center; padding-block: clamp(20px, 4vh, 40px); }
+/* ONLINE centrado en alto. Los paneles empiezan arriba a propósito
+ * (.overlay:not(#prompt):not(#menu)), pero esta pantalla es corta y centrada
+ * se ve mucho mejor: se vuelven a encender sus espaciadores. */
+#online.ol-marco:not(#prompt) { justify-content: center; padding-block: clamp(20px, 4vh, 40px); }
+#online.ol-marco:not(#prompt)::before, #online.ol-marco:not(#prompt)::after { display: block; content: ''; margin: auto 0; flex-shrink: 0; }
