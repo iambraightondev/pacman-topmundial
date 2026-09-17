@@ -4031,7 +4031,19 @@ body { font-size-adjust: 0.56; }
   .marq .menu-player .daily-box { transition: background 0.15s, transform 0.15s; }
   .marq .menu-player .daily-box:hover,
   .marq .menu-player .daily-box:focus-visible {
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.05), -9px 0 0 -3px var(--dc, #ffb8ff);
+    background: transparent;
+    box-shadow: none;
+    outline: 2px dashed var(--dc, #ffb8ff);
+    outline-offset: 6px;
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--dc, #ffb8ff) 45%, transparent));
   }
 }
+
+/* el nombre separado de su aspecto; el daily, al señalarlo, se enmarca con
+ * trazo discontinuo de su color y la casilla de hoy da un salto */
+.marq .nick-caja { gap: 20px; }
+@media (min-width: 1000px) {
+  .marq .menu-player .daily-box:hover .daily-tile.es-hoy,
+  .marq .menu-player .daily-box:focus-visible .daily-tile.es-hoy { animation: marq-salto 0.5s steps(2) infinite; }
+}
+@keyframes marq-salto { 50% { transform: translateY(-3px); } }
