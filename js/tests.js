@@ -8392,7 +8392,9 @@
     });
     eq(HC.segs(0, 'tanque'), 32, 'PROVOCAR recarga en 32 s');
     eq(HC.TAUNT_TICKS, 5 * 60, 'y dura 5 s');
-    eq(HC.segs(3, 'tanque'), 60, 'ARROLLAR 60 s');
+    eq(HC.segs(3, 'tanque'), 46, 'ARROLLAR 46 s');
+    eq(HC.segs(3, 'mago'), 46, 'TORMENTA 46 s');
+    eq(HC.APISONADORA_MULT, 1.75, 'la apisonadora va a x1,75');
     eq(HC.segs(3, 'soporte'), 300, 'VIDA EXTRA 5 min');
     eq(HC.segs(0, 'mago'), 20, 'BOLA DE FUEGO 20 s');
     eq(HC.segs(0), 16, 'sin rol, las del Asesino');
@@ -8401,7 +8403,8 @@
 
   test('ROLES: el rol decide qué hace cada tecla', function () {
     partidaRol(['tanque']);
-    eq(HB.idDe(G, 0, 0), 'provocar', 'la Q del Tanque provoca');
+    eq(HB.idDe(G, 0, 0), 'pisoton', 'la Q del Tanque pisotea');
+    eq(HB.idDe(G, 0, 2), 'provocar', 'y la E provoca');
     partidaRol(['mago']);
     eq(HB.idDe(G, 0, 3), 'tormenta', 'la R del Mago es la tormenta');
     partidaRol(['cualquiera']);
@@ -8425,7 +8428,7 @@
     var g = fantasmaEn(1, 20, 5);
     G.globalMode = 'scatter';
     var antes = g.targetTile(G);
-    ok(HB.pulsar(G, 0, 0), 'la provocación sale');
+    ok(HB.pulsar(G, 0, 2), 'la provocación sale');
     var t = g.targetTile(G);
     eq(t.x + ',' + t.y, '6,5', 'el objetivo es la casilla del Tanque, aunque se dispersen');
     HB.estado(0).provoca = 1;
@@ -8442,7 +8445,7 @@
     G.pacs[0].safeTicks = 0;
     var lejos = fantasmaEn(2, 21, 29);      // en la otra punta del mapa
     G.globalMode = 'scatter';
-    ok(HB.pulsar(G, 0, 0), 'el Tanque provoca');
+    ok(HB.pulsar(G, 0, 2), 'el Tanque provoca');
     var t = lejos.targetTile(G);
     eq(t.x + ',' + t.y, '6,5', 'hasta el de la otra punta va a por el Tanque');
     for (var i = 0; i < 20; i++) { lejos.x = yo.x; lejos.y = yo.y; lejos.mode = 'normal'; G.step(); }
@@ -8494,19 +8497,23 @@
     ok(p.dying, 'pasado el respiro, el siguiente sí mata');
   });
 
-  test('TANQUE · PISOTÓN: huyen, sin ponerse azules; sin nadie cerca no sale', function () {
+  test('TANQUE · PISOTÓN: huyen más lentos, sin ponerse azules; sin nadie cerca no sale', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     eq(HC.PISOTON_TICKS, 6 * 60, 'dura 6 s');
-    eq(HC.PISOTON_TILES, 10, 'y llega a 10 casillas');
-    eq(HB.pulsar(G, 0, 2), false, 'sin fantasmas cerca no sale');
-    ok(HB.lista(0, 2), 'ni gasta la recarga');
+    eq(HC.PISOTON_TILES, 15, 'y llega a 15 casillas');
+    eq(HB.pulsar(G, 0, 0), false, 'sin fantasmas cerca no sale');
+    ok(HB.lista(0, 0), 'ni gasta la recarga');
     var g = fantasmaEn(0, 15, 5);
     g.dir = DR.LEFT;
-    ok(HB.pulsar(G, 0, 2), 'con uno a 9 casillas, sí');
+    var normal = g.speedPx(G);
+    ok(HB.pulsar(G, 0, 0), 'con uno a 9 casillas, sí');
     ok(HB.huyeDe(G, g) === G.pacs[0], 'ese fantasma huye del Tanque');
     ok(!g.frightened, 'y no se pone azul');
     eq(g.dir, DR.RIGHT, 'el que venía de cara se da la vuelta');
     eq(G.frightTicks, 0, 'ni empieza el modo azul');
+    ok(Math.abs(g.speedPx(G) - normal * HC.PISOTON_LENTO) < 0.01, 'y va al 70% de su velocidad');
+    HB.huye[0] = 0;
+    ok(Math.abs(g.speedPx(G) - normal) < 0.01, 'acabado el pisotón, vuelve a la suya');
   });
 
   test('TANQUE · APISONADORA: recta hasta la pared, imparable, 200 fijos por fantasma', function () {

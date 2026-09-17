@@ -1546,10 +1546,10 @@
      * Ningún id puede repetirse entre listas: 'embestida' ya es del fantasma
      * humano (LIST_G), por eso la R del Tanque se llama 'arrollar'. */
     LIST_T: [
-      { id: 'provocar', key: 'Q', name: 'PROVOCAR', cd: 32 * 60 },
+      { id: 'pisoton',  key: 'Q', name: 'PISOTÓN',  cd: 32 * 60 },
       { id: 'escudo',   key: 'W', name: 'ESCUDO',   cd: 24 * 60 },
-      { id: 'pisoton',  key: 'E', name: 'PISOTÓN',  cd: 32 * 60 },
-      { id: 'arrollar', key: 'R', name: 'ARROLLAR', largo: 'APISONADORA', cd: 60 * 60 }
+      { id: 'provocar', key: 'E', name: 'PROVOCAR', cd: 32 * 60 },
+      { id: 'arrollar', key: 'R', name: 'ARROLLAR', largo: 'APISONADORA', cd: 46 * 60 }
     ],
     LIST_S: [
       { id: 'hielo',     key: 'Q', name: 'HIELO',     largo: 'DISPARO HELADO', cd: 16 * 60 },
@@ -1561,7 +1561,7 @@
       { id: 'fuego',    key: 'Q', name: 'FUEGO',    largo: 'BOLA DE FUEGO', cd: 20 * 60 },
       { id: 'portal',   key: 'W', name: 'PORTAL',   cd: 46 * 60 },
       { id: 'runa',     key: 'E', name: 'RUNA',     cd: 32 * 60 },
-      { id: 'tormenta', key: 'R', name: 'TORMENTA', cd: 60 * 60 }
+      { id: 'tormenta', key: 'R', name: 'TORMENTA', cd: 46 * 60 }
     ],
     /* El orden de esta lista es SOLO el de los selectores: por la red cada
      * rol viaja por su NOMBRE, no por su posición, así que reordenarla no
@@ -1572,8 +1572,8 @@
                  desc: ['TE COMES AL FANTASMA QUE TENGAS PEGADO', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
-                 desc: ['TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', '8 S DE ESCUDO: AGUANTA UN GOLPE',
-                        'LOS FANTASMAS CERCANOS HUYEN DE TI', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
+                 desc: ['LOS FANTASMAS A 15 CASILLAS HUYEN DE TI, Y MÁS LENTOS', '8 S DE ESCUDO: AGUANTA UN GOLPE',
+                        'TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
@@ -1587,15 +1587,16 @@
     ESCUDO_TICKS: 8 * 60,         // ESCUDO del Tanque: 8 s, o hasta que un golpe lo rompa
     ESCUDO_GRACIA: 30,            // tras romperse un escudo, medio segundo sin morir
     PISOTON_TICKS: 6 * 60,        // PISOTÓN: los cercanos huyen del Tanque
-    PISOTON_TILES: 10,            // ...a 10 casillas a la redonda
+    PISOTON_TILES: 15,            // ...a 15 casillas a la redonda
+    PISOTON_LENTO: 0.7,           // y mientras huyen van al 70% de su velocidad
     /* ARROLLAR (la APISONADORA): en línea recta hacia la última flecha HASTA
      * LA PARED, sin límite de tiempo, a x1.4, invulnerable, comiéndose a
      * cualquier fantasma que toque por MAGO_PUNTOS fijos, sin cadena y sin
      * parar la partida. Por seguridad, nunca más de una vuelta al laberinto. */
-    APISONADORA_MULT: 1.4,
+    APISONADORA_MULT: 1.75,
     /* el anfitrión se cree un "me he comido a este" de la apisonadora de un
      * invitado durante este rato desde que la pidió (cruzar el laberinto
-     * entero a x1.4 cuesta unos 160 ticks) */
+     * entero a x1.75 cuesta unos 130 ticks) */
     APISONADORA_RED: 5 * 60,
     /* Soporte */
     HIELO_TICKS: 3 * 60,          // fantasma congelado

@@ -82,10 +82,10 @@ const PUNTOS_PASTILLAS_LAB = 292 * 10 + 4 * 50;   // 3120
 const MORDISCO_MS = 16000;                         // CFG.HAB.LIST mordisco
 const GRITO_MS = 60000;                            // CFG.HAB.LIST grito
 const PUNTOS_MORDISCO = 1600;
-const ARROLLAR_MS = 60000;                         // CFG.HAB.LIST_T arrollar
+const ARROLLAR_MS = 46000;                         // CFG.HAB.LIST_T arrollar
 const BOLA_MS = 20000;                             // CFG.HAB.LIST_M fuego
-const RUNA_MS = 32000;                             // CFG.HAB.LIST_M runa
-const TORMENTA_MS = 60000;                         // CFG.HAB.LIST_M tormenta
+const RUNA_MS = 32000;                             // CFG.HAB.LIST_M runa (dura 15 s)
+const TORMENTA_MS = 46000;                         // CFG.HAB.LIST_M tormenta
 const PUNTOS_MAGO = 200;                           // CFG.HAB.MAGO_PUNTOS
 
 /* Margen sobre el techo teórico: más vale dejar pasar una partida rarísima
@@ -228,7 +228,7 @@ function extraDesatado(tiempoMs: number, jugadores: number) {
                     fantasmas: mordiscos + gritos * 4 };
   const arrollar = veces(tiempoMs, ARROLLAR_MS);
   const tanque = { puntos: arrollar * 4 * PUNTOS_MAGO, fantasmas: arrollar * 4 };
-  const magias = veces(tiempoMs, BOLA_MS) + veces(tiempoMs, RUNA_MS) + veces(tiempoMs, TORMENTA_MS) * 4;
+  const magias = veces(tiempoMs, BOLA_MS) + veces(tiempoMs, RUNA_MS) + veces(tiempoMs, TORMENTA_MS) * 2;
   const mago = { puntos: magias * PUNTOS_MAGO, fantasmas: magias };
   return {
     puntos: Math.max(asesino.puntos, tanque.puntos, mago.puntos) * jugadores,

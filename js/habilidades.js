@@ -416,9 +416,14 @@
      * Lo consulta Ghost.speedPx, que es por donde pasan TODOS los fantasmas:
      * si el fantasma no lo lleva una persona, aquí no hay nada que aplicar. */
     multVelFantasma: function (G, gid) {
-      if (!this.on || !G || !G.vsPlayerOf) return 1;
+      if (!this.on) return 1;
+      var m = 1;
+      /* PISOTÓN (Tanque): mientras huye va más lento, que es media habilidad:
+       * si huyera a su velocidad, alejarlos no daría ni un respiro. */
+      if (this.huye && this.huye[gid] > 0) m *= H.PISOTON_LENTO;
+      if (!G || !G.vsPlayerOf) return m;
       var quien = G.vsPlayerOf(gid);
-      return (quien >= 0 && this.conCarga(quien)) ? H.CHARGE_MULT : 1;
+      return (quien >= 0 && this.conCarga(quien)) ? m * H.CHARGE_MULT : m;
     },
 
     /* Lo poco que se ve un fantasma en pleno ACECHO. Es su respuesta al
@@ -1382,7 +1387,7 @@
     },
 
     /* R — ARROLLAR, la APISONADORA: en LÍNEA RECTA hacia la última flecha
-     * HASTA TOPARSE CON UNA PARED, a x1.4, invulnerable y comiéndose a
+     * HASTA TOPARSE CON UNA PARED, a x1.75, invulnerable y comiéndose a
      * cualquier fantasma que toque (azul o no) por 200 fijos, sin cadena y sin
      * parar la partida. No se dirige: las flechas no la tuercen. No va por
      * tiempo; por si el trazado dejara una fila sin paredes (el túnel), se
@@ -1739,6 +1744,10 @@
       var c = this.casillaDe(G, idx, d);
       if (!c || !aterrizable(c.c, c.r)) return false;
       var po = this.portales[idx], s = this.estado(idx);
+      /* la boca se planta en el CENTRO de la casilla, y el Mago se encarrila
+       * con ella: si no, entrar y salir "entre dos casillas" deja el portal
+       * medio píxel torcido y no se sabe dónde está de verdad */
+      this.encarrilar(G, idx, c);
       if (!po) {
         this.portales[idx] = { ec: c.c, er: c.r, sc: -1, sr: -1, t: 0, e: H.PORTAL_ESPERA };
         if (s) s.dimension = H.PORTAL_ESPERA;
@@ -1765,11 +1774,22 @@
         this.portales[idx] = null;
         return;
       }
+      this.encarrilar(G, idx, c);
       po.sc = c.c; po.sr = c.r; po.e = 0; po.t = H.PORTAL_TICKS;
       /* sale POR la boca: que no la cruce al instante */
       if (s) { s.ultTile = c.r * CFG.COLS + c.c; s.cruce = H.PORTAL_CRUCE; }
       this.efecto('boca', c.c * T + T / 2, c.r * T + T / 2, 16);
       sonDe(G, idx, 'playFlash');
+    },
+
+    /* Pone a ese Pac-Man en el centro exacto de la casilla c (las bocas del
+     * portal se plantan ahí). No toca al de otra máquina. */
+    encarrilar: function (G, idx, c) {
+      var p = G.pacs[idx];
+      if (!p || !c || !G.isLocalAuth(idx)) return;
+      p.x = c.c * T + T / 2;
+      p.y = c.r * T + T / 2;
+      p.pauseTicks = 0;
     },
 
     /* ¿Ese jugador está en la otra dimensión? */
