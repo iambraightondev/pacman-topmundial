@@ -4686,147 +4686,145 @@
       var self = this;
       var o = this.els.online;
       o.innerHTML = '';
+      /* Marco de recreativa (el de la pausa y el GAME OVER), en cian: bombillas,
+       * título a rayas y fondo con líneas de tubo. */
+      o.classList.add('ol-marco');
+      var bombs = document.createElement('div');
+      bombs.className = 'go-bombillas';
+      bombs.setAttribute('aria-hidden', 'true');
+      o.appendChild(bombs);
 
-      var h = document.createElement('div');
-      h.className = 'panel-title';
-      h.textContent = 'MODO ONLINE';
-      o.appendChild(h);
+      function el(tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      }
 
-      var sub = document.createElement('div');
-      sub.className = 'note';
-      sub.textContent = 'HASTA ' + CFG.MAX_PLAYERS +
-        ' JUGADORES CONTRA LOS FANTASMAS · PUNTUACIÓN DE EQUIPO';
-      o.appendChild(sub);
+      o.appendChild(el('div', 'panel-title ol-titulo', 'MODO ONLINE'));
+      o.appendChild(el('div', 'ol-sub', 'HASTA ' + CFG.MAX_PLAYERS +
+        ' JUGADORES EN LA MISMA PARTIDA'));
 
-      /* --- vista inicial --- */
-      var idle = document.createElement('div');
-      idle.className = 'online-view';
+      /* ================= vista inicial ================= */
+      var idle = el('div', 'online-view ol-idle');
       this.onlineIdle = idle;
 
-      this.onlineWarn = document.createElement('div');
-      this.onlineWarn.className = 'online-warn';
+      this.onlineWarn = el('div', 'online-warn');
       this.onlineWarn.style.display = 'none';
       idle.appendChild(this.onlineWarn);
 
-      var create = this.makeButton('CREAR PARTY', function () { self.partyCreate(); });
-      create.classList.add('btn-primary');
+      var cartas = el('div', 'ol-cartas');
+
+      /* CREAR */
+      var cA = el('div', 'ol-card ol-card-crear');
+      cA.appendChild(el('div', 'ol-card-titulo', 'CREAR PARTY'));
+      var escena = document.createElement('canvas');
+      escena.className = 'ol-escena';
+      escena.width = 180; escena.height = 40;
+      this.pintarEscenaOnline(escena);
+      cA.appendChild(escena);
+      cA.appendChild(el('div', 'ol-card-texto', 'TÚ MANDAS: ELIGES EL MODO Y CUÁNDO EMPEZAR'));
+      var create = this.makeButton('CREAR', function () { self.partyCreate(); });
+      create.classList.add('btn-primary', 'ol-btn-grande');
       this.createBtn = create;
-      idle.appendChild(create);
+      cA.appendChild(create);
+      cartas.appendChild(cA);
 
-      var div1 = document.createElement('div');
-      div1.className = 'section-title';
-      div1.textContent = '— O ÚNETE CON UN CÓDIGO —';
-      idle.appendChild(div1);
-
-      var joinRow = document.createElement('div');
-      joinRow.className = 'preset-row';
+      /* UNIRSE */
+      var cB = el('div', 'ol-card ol-card-unirse');
+      cB.appendChild(el('div', 'ol-card-titulo', 'UNIRSE'));
       this.codeInput = document.createElement('input');
       this.codeInput.type = 'text';
-      this.codeInput.className = 'code-input';
+      this.codeInput.className = 'code-input ol-code-input';
       this.codeInput.maxLength = CFG.NET.ROOM_LEN;
-      this.codeInput.placeholder = 'CÓDIGO';
+      this.codeInput.placeholder = '····';
+      this.codeInput.setAttribute('aria-label', 'Código de la party');
       this.codeInput.setAttribute('autocomplete', 'off');
       this.codeInput.setAttribute('spellcheck', 'false');
       this.codeInput.setAttribute('autocapitalize', 'characters');
       this.codeInput.addEventListener('input', function () {
         var v = self.codeInput.value.toUpperCase().replace(/[^A-Z]/g, '');
         if (v !== self.codeInput.value) self.codeInput.value = v;
-        else self.codeInput.value = v;
       });
       this.codeInput.addEventListener('keydown', function (ev) {
         ev.stopPropagation();   // que WASD no mueva el juego mientras se escribe
         if (ev.key === 'Enter') self.partyJoin(self.codeInput.value);
       });
-      joinRow.appendChild(this.codeInput);
+      cB.appendChild(this.codeInput);
+      cB.appendChild(el('div', 'ol-card-texto', 'PÍDELE AL LÍDER SU CÓDIGO DE ' +
+        CFG.NET.ROOM_LEN + ' LETRAS, O ABRE SU ENLACE'));
       this.joinBtn = this.makeButton('UNIRSE', function () {
         self.partyJoin(self.codeInput.value);
       });
-      this.joinBtn.classList.add('btn-preset');
-      joinRow.appendChild(this.joinBtn);
-      idle.appendChild(joinRow);
+      this.joinBtn.classList.add('ol-btn-grande');
+      cB.appendChild(this.joinBtn);
+      cartas.appendChild(cB);
+      idle.appendChild(cartas);
 
+      var pieIdle = el('div', 'prompt-btns ol-pie');
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
-      back.style.marginTop = '14px';
-      idle.appendChild(back);
+      back.appendChild(el('span', 'btn-key', 'ESC'));
+      this.ponRonda(back, 'btn-ronda');
+      pieIdle.appendChild(back);
+      idle.appendChild(pieIdle);
       o.appendChild(idle);
 
-      /* --- vista de sala --- */
-      var room = document.createElement('div');
-      room.className = 'online-view';
+      /* ================= vista de sala ================= */
+      var room = el('div', 'online-view ol-sala');
       room.style.display = 'none';
       this.onlineRoom = room;
+      var cols = el('div', 'ol-cols');
 
-      var lab = document.createElement('div');
-      lab.className = 'section-title';
-      lab.textContent = 'CÓDIGO DE LA PARTY';
-      room.appendChild(lab);
+      /* ---- izquierda: la sala ---- */
+      var izq = el('div', 'ol-card ol-card-sala');
+      izq.appendChild(el('div', 'ol-card-titulo', 'CÓDIGO DE LA PARTY'));
+      this.roomCodeEl = el('div', 'ol-codigo');
+      izq.appendChild(this.roomCodeEl);
+      this.roomLinkEl = el('div', 'online-link');
+      izq.appendChild(this.roomLinkEl);
+      var filaSala = el('div', 'ol-fila');
+      this.copyBtn = this.makeButton('COPIAR ENLACE', function () { self.copyLink(); });
+      this.copyBtn.classList.add('ol-btn-chico');
+      filaSala.appendChild(this.copyBtn);
+      this.inviteBtn = this.makeButton('INVITAR AMIGO', function () { self.askInviteWho(); });
+      this.inviteBtn.classList.add('ol-btn-chico');
+      filaSala.appendChild(this.inviteBtn);
+      izq.appendChild(filaSala);
 
-      this.roomCodeEl = document.createElement('div');
-      this.roomCodeEl.className = 'online-code';
-      room.appendChild(this.roomCodeEl);
+      this.partyCountEl = el('div', 'ol-card-titulo ol-sep', 'JUGADORES');
+      izq.appendChild(this.partyCountEl);
+      this.partyList = el('div', 'ol-plazas');
+      izq.appendChild(this.partyList);
+      cols.appendChild(izq);
 
-      this.roomLinkEl = document.createElement('div');
-      this.roomLinkEl.className = 'online-link';
-      room.appendChild(this.roomLinkEl);
+      /* ---- derecha: la partida ---- */
+      var der = el('div', 'ol-card ol-card-partida');
+      der.appendChild(el('div', 'ol-card-titulo', 'MODO DE JUEGO'));
+      this.olModoNota = el('div', 'ol-card-texto ol-solo-lider', 'LO ELIGE EL LÍDER');
+      der.appendChild(this.olModoNota);
 
-      this.copyBtn = this.makeButton('COPIAR ENLACE', function () {
-        self.copyLink();
-      });
-      this.copyBtn.classList.add('btn-preset');
-      room.appendChild(this.copyBtn);
+      function interruptor(nombre, color, desc, onClick) {
+        var b = self.makeButton('', onClick);
+        b.classList.add('ol-modo');
+        b.style.setProperty('--modo', color);
+        b.textContent = '';
+        var cab = el('span', 'ol-modo-cab');
+        cab.appendChild(el('span', 'ol-modo-nombre', nombre));
+        var sw = el('span', 'ol-switch');
+        sw.appendChild(el('span', 'ol-switch-bola'));
+        cab.appendChild(sw);
+        b.appendChild(cab);
+        b.appendChild(el('span', 'ol-modo-desc', desc));
+        return b;
+      }
 
-      var lab2 = document.createElement('div');
-      lab2.className = 'section-title';
-      lab2.textContent = 'EN LA PARTY';
-      room.appendChild(lab2);
-
-      this.partyList = document.createElement('div');
-      this.partyList.className = 'friend-list';
-      room.appendChild(this.partyList);
-
-      /* PAC-MAN VS.: uno de la party puede llevar un fantasma en vez de un
-       * Pac-Man. Los que ya lleva otro salen apagados. */
-      var lab3 = document.createElement('div');
-      lab3.className = 'section-title';
-      lab3.textContent = 'JUGAR COMO FANTASMA';
-      room.appendChild(lab3);
-
-      var vsRow = document.createElement('div');
-      vsRow.className = 'preset-row';
-      this.vsBtns = {};
-      this.vsChoices().forEach(function (op) {
-        var b = self.makeButton(op[1], function () { self.pickVsGhost(op[0]); });
-        b.classList.add('btn-preset');
-        if (op[0] >= 0) b.style.color = CFG.GHOSTS[op[0]].color;
-        self.vsBtns[op[0]] = b;
-        vsRow.appendChild(b);
-      });
-      room.appendChild(vsRow);
-
-      var vsNote = document.createElement('div');
-      vsNote.className = 'note';
-      vsNote.textContent = 'LO LLEVAS TÚ, NO LA MÁQUINA: CAZA A LOS PAC-MAN. ' +
-        'ALGUIEN TIENE QUE QUEDARSE DE PAC-MAN';
-      room.appendChild(vsNote);
-
-      /* Modo DESATADO para toda la party. Solo lo ve y lo toca quien
-       * manda: es una regla de la partida, no un gusto de cada uno, y con
-       * medio grupo con poderes no habría partida que valiera. */
-      this.habRoomBox = document.createElement('div');
-      this.habRoomBtn = this.makeButton('DESATADO: NO', function () {
-        self.togglePartyHab();
-      });
-      this.habRoomBtn.classList.add('btn-preset');
+      /* DESATADO: lo decide quien manda; el rol, cada uno */
+      this.habRoomBox = el('div', 'ol-modo-caja');
+      this.habRoomBtn = interruptor('DESATADO', '#ff66cc',
+        'PODERES EN Q W E R · CADA UNO ELIGE SU ROL · SOLO CABE UN SOPORTE',
+        function () { self.togglePartyHab(); });
       this.habRoomBox.appendChild(this.habRoomBtn);
-      var habNote = document.createElement('div');
-      habNote.className = 'note';
-      habNote.textContent = 'CADA UNO ELIGE SU ROL · Q W E R PARA LOS PODERES · ' +
-        'AQUÍ SE MUEVE SOLO CON LAS FLECHAS · SOLO CABE UN SOPORTE';
-      this.habRoomBox.appendChild(habNote);
-      /* Tu rol: lo eliges tú, no el líder. El Soporte que ya lleva otro sale
-       * apagado (el primero que lo coge se lo queda). */
-      this.habRolBox = document.createElement('div');
-      this.habRolBox.className = 'rol-fila';
+      this.habRolBox = el('div', 'rol-fila ol-roles');
       this.habRolBtns = {};
       CFG.HAB.ROL_IDS.forEach(function (id) {
         var info = CFG.HAB.ROL_INFO[id];
@@ -4840,53 +4838,88 @@
         self.habRolBox.appendChild(b);
       });
       this.habRoomBox.appendChild(this.habRolBox);
-      room.appendChild(this.habRoomBox);
+      der.appendChild(this.habRoomBox);
 
-      /* Modo CACERÍA para toda la party: todos de fantasma y el Pac-Man de
-       * la máquina. También lo decide quien manda, y con él puesto el
-       * selector de fantasma de arriba se apaga (cada uno lleva el de su
-       * asiento). */
-      this.cazaRoomBox = document.createElement('div');
-      this.cazaRoomBtn = this.makeButton('CACERÍA: NO', function () {
-        self.togglePartyCaza();
-      });
-      this.cazaRoomBtn.classList.add('btn-preset');
+      /* CACERÍA */
+      this.cazaRoomBox = el('div', 'ol-modo-caja');
+      this.cazaRoomBtn = interruptor('CACERÍA', '#ff3b3b',
+        'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA · SU PODER CADA ' +
+        CFG.CAZA.periodo(0) + ' S · ' + CFG.CAZA.NIVELES + ' RONDAS',
+        function () { self.togglePartyCaza(); });
       this.cazaRoomBox.appendChild(this.cazaRoomBtn);
-      var cazaNote = document.createElement('div');
-      cazaNote.className = 'note';
-      cazaNote.textContent = 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA. SIN ' +
-        'SUPERPASTILLAS: SU PODER LLEGA SOLO CADA ' + CFG.CAZA.periodo(0) +
-        'S, CON AVISO. ' + CFG.CAZA.NIVELES + ' RONDAS';
-      this.cazaRoomBox.appendChild(cazaNote);
-      room.appendChild(this.cazaRoomBox);
+      der.appendChild(this.cazaRoomBox);
 
-      this.lobbyStatusEl = document.createElement('div');
-      this.lobbyStatusEl.className = 'lobby-status';
+      /* PAC-MAN VS.: con quién juegas tú */
+      der.appendChild(el('div', 'ol-card-titulo ol-sep', 'TU PERSONAJE'));
+      var vsRow = el('div', 'ol-personajes');
+      this.vsBtns = {};
+      this.vsChoices().forEach(function (op) {
+        var b = self.makeButton('', function () { self.pickVsGhost(op[0]); });
+        b.classList.add('ol-pj');
+        var cv = document.createElement('canvas');
+        cv.width = 40; cv.height = 40;
+        cv.className = 'ol-pj-icono';
+        self.pintarPersonaje(cv, op[0]);
+        b.appendChild(cv);
+        var nom = el('span', 'ol-pj-nombre', op[1]);
+        if (op[0] >= 0) b.style.setProperty('--pj', CFG.GHOSTS[op[0]].color);
+        b.appendChild(nom);
+        self.vsBtns[op[0]] = b;
+        vsRow.appendChild(b);
+      });
+      der.appendChild(vsRow);
+      der.appendChild(el('div', 'ol-card-texto', 'CON UN FANTASMA CAZAS TÚ A LOS PAC-MAN. ' +
+        'ALGUIEN TIENE QUE QUEDARSE DE PAC-MAN'));
+      cols.appendChild(der);
+      room.appendChild(cols);
+
+      this.lobbyStatusEl = el('div', 'lobby-status');
       room.appendChild(this.lobbyStatusEl);
 
-      this.startPartyBtn = this.makeButton('EMPEZAR PARTIDA', function () {
-        self.partyStart();
-      });
+      var pie = el('div', 'prompt-btns ol-pie');
+      this.startPartyBtn = this.makeButton('EMPEZAR PARTIDA', function () { self.partyStart(); });
       this.startPartyBtn.classList.add('btn-primary');
-      room.appendChild(this.startPartyBtn);
-
-      this.inviteBtn = this.makeButton('INVITAR AMIGO', function () {
-        self.askInviteWho();
-      });
-      this.inviteBtn.classList.add('btn-preset');
-      room.appendChild(this.inviteBtn);
-
+      pie.appendChild(this.startPartyBtn);
       var volver = this.makeButton('VOLVER AL MENÚ', function () {
         self.showMenu();      // la party sigue conectada
       });
-      volver.style.marginTop = '10px';
-      room.appendChild(volver);
-
-      var salir = this.makeButton('SALIR DE LA PARTY', function () {
-        self.partyLeave();
-      });
-      room.appendChild(salir);
+      this.ponRonda(volver, 'btn-ronda');
+      pie.appendChild(volver);
+      var salir = this.makeButton('SALIR DE LA PARTY', function () { self.partyLeave(); });
+      this.ponRonda(salir, 'btn-ronda');
+      pie.appendChild(salir);
+      room.appendChild(pie);
       o.appendChild(room);
+    },
+
+    /* Los cuatro Pac-Man de colores detrás de un fantasma azul (la carta de
+     * CREAR PARTY) */
+    pintarEscenaOnline: function (cv) {
+      var Sp = window.PM.Sprites, c = cv.getContext && cv.getContext('2d');
+      if (!Sp || !c) return;
+      try {
+        c.save();
+        c.scale(2, 2);
+        Sp.drawGhost(c, 12, 10, CFG.DIR.RIGHT, 0, 'fright', 0, false);
+        for (var i = 0; i < 4; i++) {
+          Sp.drawPacman(c, 34 + i * 16, 10, CFG.DIR.LEFT, 1, CFG.PLAYER_COLORS[i], 'clasico', {});
+        }
+        c.restore();
+      } catch (e) { /* sin lienzo (pruebas) */ }
+    },
+
+    /* Icono de un personaje de la sala: -1 Pac-Man, 0..3 un fantasma */
+    pintarPersonaje: function (cv, gid, color, skin) {
+      var Sp = window.PM.Sprites, c = cv.getContext && cv.getContext('2d');
+      if (!Sp || !c) return;
+      try {
+        c.clearRect(0, 0, cv.width, cv.height);
+        c.save();
+        c.scale(cv.width / 16, cv.height / 16);
+        if (gid >= 0) Sp.drawGhost(c, 8, 8, CFG.DIR.RIGHT, gid, 'normal', 0, false);
+        else Sp.drawPacman(c, 8, 8, 3, 1, color || '#ffff00', skin || 'clasico', {});
+        c.restore();
+      } catch (e) { /* sin lienzo (pruebas) */ }
     },
 
     setLobbyStatus: function (text, isError) {
@@ -5040,47 +5073,63 @@
       this.onlineIdle.style.display = 'none';
       this.onlineRoom.style.display = 'flex';
       var code = P.code() || '';
-      this.roomCodeEl.textContent = code.split('').join(' ');
+      /* el código, letra a letra en su casilla */
+      this.roomCodeEl.innerHTML = '';
+      for (var ci = 0; ci < code.length; ci++) {
+        var letra = document.createElement('span');
+        letra.className = 'ol-letra';
+        letra.textContent = code.charAt(ci);
+        this.roomCodeEl.appendChild(letra);
+      }
       this.roomLinkEl.textContent = window.PM.Net.roomLink(code);
 
+      /* las plazas: las ocupadas con su Pac-Man (o su fantasma) y las libres */
       var ms = P.members();
+      if (this.partyCountEl) this.partyCountEl.textContent = 'JUGADORES ' + ms.length + '/' + CFG.MAX_PLAYERS;
       this.partyList.innerHTML = '';
-      for (var i = 0; i < ms.length; i++) {
+      for (var i = 0; i < CFG.MAX_PLAYERS; i++) {
         var row = document.createElement('div');
-        row.className = 'party-row';
-
-        var dot = document.createElement('span');
-        dot.className = 'party-dot';
-        dot.style.background = ms[i].c || CFG.PLAYER_COLORS[i];
-        row.appendChild(dot);
-
-        var n = document.createElement('span');
-        n.className = 'friend-name';
-        n.textContent = ms[i].n || ('J' + (i + 1));
-        row.appendChild(n);
-
-        var tag = document.createElement('span');
-        tag.className = 'party-tag';
-        tag.textContent = (i === 0 ? 'LÍDER' : '') +
-          (ms[i].s === window.PM.Net.sid ? (i === 0 ? ' · TÚ' : 'TÚ') : '');
-        row.appendChild(tag);
-
+        var m = ms[i];
+        if (!m) {
+          row.className = 'ol-plaza libre';
+          var hueco = document.createElement('span');
+          hueco.className = 'ol-plaza-nombre';
+          hueco.textContent = 'PLAZA LIBRE';
+          row.appendChild(hueco);
+          this.partyList.appendChild(row);
+          continue;
+        }
+        row.className = 'ol-plaza';
+        var color = m.c || CFG.PLAYER_COLORS[i];
+        row.style.setProperty('--jc', color);
         // PAC-MAN VS.: se ve de un vistazo quién lleva fantasma y cuál. En
         // CACERÍA lleva cada uno el de su asiento, y se enseña ese.
-        var gv = P.cazaPick ? Math.min(i, 3) : ms[i].g;
-        if (gv >= 0 && gv < 4) {
-          var gt = document.createElement('span');
-          gt.className = 'party-tag';
-          gt.style.color = CFG.GHOSTS[gv].color;
-          gt.textContent = CFG.VS.NAMES[gv];
-          row.appendChild(gt);
-        }
+        var gv = P.cazaPick ? Math.min(i, 3) : m.g;
+        var cv = document.createElement('canvas');
+        cv.width = 40; cv.height = 40;
+        cv.className = 'ol-plaza-icono';
+        this.pintarPersonaje(cv, (gv >= 0 && gv < 4) ? gv : -1, color, m.k);
+        row.appendChild(cv);
 
+        var n = document.createElement('span');
+        n.className = 'ol-plaza-nombre';
+        n.textContent = m.n || ('J' + (i + 1));
+        row.appendChild(n);
+
+        var tags = document.createElement('span');
+        tags.className = 'ol-plaza-tags';
+        if (i === 0) tags.appendChild(this.olTag('LÍDER', '#ffff00'));
+        if (m.s === window.PM.Net.sid) tags.appendChild(this.olTag('TÚ', '#00ffff'));
+        if (gv >= 0 && gv < 4) tags.appendChild(this.olTag(CFG.VS.NAMES[gv], CFG.GHOSTS[gv].color));
+        if (P.habPick && m.r && CFG.HAB.ROL_INFO[m.r]) {
+          tags.appendChild(this.olTag(CFG.HAB.ROL_INFO[m.r].name, CFG.HAB.ROL_INFO[m.r].color));
+        }
+        row.appendChild(tags);
         this.partyList.appendChild(row);
       }
 
-      /* selector de fantasma: apagados los que ya lleva otro (y todos en
-       * CACERÍA, donde el reparto es fijo) */
+      /* selector de personaje: apagados los fantasmas que ya lleva otro (y
+       * todos en CACERÍA, donde el reparto es fijo) */
       var mio = P.myGhost();
       for (var v = -1; v < 4; v++) {
         var vb = this.vsBtns[v];
@@ -5091,11 +5140,11 @@
       }
 
       var lider = P.isLeader();
+      if (this.olModoNota) this.olModoNota.style.display = lider ? 'none' : '';
       if (this.cazaRoomBox) {
         this.cazaRoomBtn.disabled = !lider;
         this.cazaRoomBtn.classList.toggle('active', !!P.cazaPick);
-        this.cazaRoomBtn.childNodes[0].nodeValue =
-          'CACERÍA: ' + (P.cazaPick ? 'SÍ' : 'NO');
+        this.cazaRoomBtn.setAttribute('aria-pressed', P.cazaPick ? 'true' : 'false');
       }
       /* DESATADO: el interruptor es solo del líder, pero el estado lo ve
        * todo el mundo — entrar a una party y descubrir los poderes al empezar
@@ -5103,8 +5152,7 @@
       if (this.habRoomBox) {
         this.habRoomBtn.disabled = !lider;
         this.habRoomBtn.classList.toggle('active', !!P.habPick);
-        this.habRoomBtn.childNodes[0].nodeValue =
-          'DESATADO: ' + (P.habPick ? 'SÍ' : 'NO');
+        this.habRoomBtn.setAttribute('aria-pressed', P.habPick ? 'true' : 'false');
         this.habRolBox.style.display = P.habPick ? '' : 'none';
         var miRol = P.myRol ? P.myRol() : 'asesino';
         var otroSop = P.soporteDeOtro ? P.soporteDeOtro() : false;
@@ -5117,6 +5165,7 @@
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
       this.startPartyBtn.textContent = 'EMPEZAR PARTIDA (' + P.count() + ')';
+      this.ponRonda(this.startPartyBtn, 'btn-ronda');
       this.inviteBtn.disabled = !P.active();
       this.setLobbyStatus(
         P.connecting() ? 'CONECTANDO...'
@@ -5124,6 +5173,15 @@
         : lider ? (P.count() < 2 ? 'ESPERANDO A MÁS JUGADORES...'
                                  : 'CUANDO QUIERAS, EMPEZAD')
                 : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
+    },
+
+    /* Una etiqueta de color de la plaza (LÍDER, TÚ, el fantasma, el rol) */
+    olTag: function (txt, color) {
+      var t = document.createElement('span');
+      t.className = 'ol-tag';
+      t.style.setProperty('--tc', color);
+      t.textContent = txt;
+      return t;
     },
 
     /* Invitar: se le manda el código a su canal personal (su nombre) */

@@ -5280,3 +5280,200 @@ body { font-size-adjust: 0.56; }
 /* con los secundarios ya con borde, se pueden acercar */
 #prompt.arcade .prompt-btns,
 #prompt.arcade .go-continue .prompt-btns { gap: 16px 20px; }
+
+/* ---------- MODO ONLINE ----------
+ * El marco de recreativa (bombillas, título a rayas, líneas de tubo) en cian,
+ * con dos cartas para entrar y una sala en dos columnas: la sala y los
+ * jugadores a la izquierda, el modo y tu personaje a la derecha. */
+#online.ol-marco {
+  justify-content: flex-start;
+  gap: clamp(8px, 1.6vh, 16px);
+  padding: clamp(30px, 5vh, 52px) clamp(18px, 4vw, 56px);
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 30%, rgba(0, 40, 60, 0.95) 0, rgba(2, 10, 26, 0.96) 45%, #000 85%);
+  --ol: #00ffff;
+  --ol-osc: #007f8c;
+}
+#online.ol-marco::before, #online.ol-marco::after { display: none; }
+#online.ol-marco .go-bombillas {
+  --bombilla: radial-gradient(circle, #7ff9ff 0 3px, rgba(127, 249, 255, 0.25) 4px, transparent 6px);
+}
+#online .panel-title.ol-titulo {
+  font-size: clamp(34px, min(6vw, 9vh), 80px);
+  letter-spacing: 0.06em;
+  margin: 0;
+  background: repeating-linear-gradient(180deg, #7ff9ff 0 0.07em, #00a7b8 0.07em 0.1em);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0.06em 0.06em 0 #004a55) drop-shadow(0 0 0.35em rgba(0, 255, 255, 0.35));
+  animation: marq-latido 2.4s ease-in-out infinite;
+}
+#online .ol-sub { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 3px; color: #b9bae6; }
+#online .online-view { width: min(1120px, 100%); gap: clamp(10px, 1.8vh, 18px); }
+
+/* cartas */
+#online .ol-cartas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 2.4vw, 28px); width: min(860px, 100%); }
+#online .ol-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(10px, 1.6vh, 16px);
+  padding: clamp(16px, 2.6vh, 26px) clamp(14px, 2vw, 26px);
+  border: 3px solid var(--ol);
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 6px 0 var(--ol-osc), 0 0 26px rgba(0, 255, 255, 0.18), inset 0 0 22px rgba(0, 255, 255, 0.06);
+  min-width: 0;
+}
+#online .ol-card-crear { --ol: #ffff00; --ol-osc: #b8860b; box-shadow: 0 6px 0 #b8860b, 0 0 26px rgba(255, 255, 0, 0.2), inset 0 0 22px rgba(255, 255, 0, 0.06); }
+#online .ol-card-titulo { font-size: clamp(12px, 2vh, 17px); letter-spacing: 4px; color: var(--ol); text-shadow: 0 0 10px color-mix(in srgb, var(--ol) 45%, transparent); }
+#online .ol-card-titulo.ol-sep { margin-top: clamp(4px, 1vh, 10px); padding-top: clamp(10px, 1.6vh, 16px); border-top: 2px dashed color-mix(in srgb, var(--ol) 35%, transparent); width: 100%; }
+#online .ol-card-texto { font-size: clamp(8px, 1.25vh, 10px); letter-spacing: 1.5px; color: #b9bae6; line-height: 1.8; max-width: 40ch; }
+#online .ol-escena { width: 270px; max-width: 100%; height: auto; image-rendering: pixelated; }
+#online .btn.ol-btn-grande { min-width: 0; width: min(280px, 100%); font-size: clamp(14px, 2.4vh, 20px); letter-spacing: 3px; padding: 14px 20px 12px; }
+#online .ol-card-unirse .btn.ol-btn-grande {
+  color: var(--ol); background: rgba(0, 0, 0, 0.55); border: 3px solid var(--ol); box-shadow: 0 6px 0 var(--ol-osc);
+}
+#online .ol-card-unirse .btn.ol-btn-grande:hover:not(:disabled),
+#online .ol-card-unirse .btn.ol-btn-grande:focus-visible { background: rgba(0, 0, 0, 0.55); color: var(--ol); transform: translateY(2px); box-shadow: 0 4px 0 var(--ol-osc); outline: none; }
+#online .ol-card-crear .btn-primary {
+  color: #000; background: #ffff00; border: 3px solid #ffff00; box-shadow: 0 6px 0 #b8860b, 0 0 30px rgba(255, 255, 0, 0.45);
+}
+#online .ol-card-crear .btn-primary:hover:not(:disabled),
+#online .ol-card-crear .btn-primary:focus-visible { color: #000; background: #ffff00; transform: translateY(2px); box-shadow: 0 4px 0 #b8860b, 0 0 50px rgba(255, 255, 0, 0.8); outline: none; }
+
+/* el código a teclear: cuatro casillas dibujadas detrás de las letras */
+#online .code-input.ol-code-input {
+  --celda: clamp(40px, 6vh, 54px);
+  width: calc(var(--celda) * 4 + 3 * 10px);
+  height: calc(var(--celda) * 1.2);
+  font-size: calc(var(--celda) * 0.62);
+  letter-spacing: calc(var(--celda) + 10px - 1em);
+  padding: 0 0 0 calc((var(--celda) - 1em) / 2);
+  text-align: left;
+  color: #ffff00;
+  border: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 255, 255, 0.08) 0 var(--celda), transparent var(--celda) calc(var(--celda) + 10px));
+  box-shadow: none;
+  outline: none;
+  caret-color: #ffff00;
+  text-shadow: 0 0 12px rgba(255, 255, 0, 0.6);
+  border-bottom: 3px solid var(--ol);
+}
+#online .code-input.ol-code-input::placeholder { color: rgba(0, 255, 255, 0.35); }
+#online .code-input.ol-code-input:focus { border-bottom-color: #ffff00; background: repeating-linear-gradient(90deg, rgba(255, 255, 0, 0.1) 0 var(--celda), transparent var(--celda) calc(var(--celda) + 10px)); }
+#online .online-warn { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; }
+
+/* pie con los botones de salida */
+#online .prompt-btns.ol-pie { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 16px 20px; margin: 0; }
+#online .prompt-btns.ol-pie .btn { flex: 0 0 auto; min-width: 0; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; padding: 14px 24px 11px; color: #00ffff; background: rgba(0, 0, 0, 0.55); border: 3px solid #00ffff; box-shadow: 0 6px 0 #007f8c; }
+#online .prompt-btns.ol-pie .btn:hover:not(:disabled),
+#online .prompt-btns.ol-pie .btn:focus-visible { color: #00ffff; background: rgba(0, 0, 0, 0.55); transform: translateY(2px); box-shadow: 0 4px 0 #007f8c; outline: none; }
+#online .prompt-btns.ol-pie .btn .btn-ronda { --rc: #00ffff; }
+#online .prompt-btns.ol-pie .btn-primary { font-size: clamp(15px, 2.6vh, 21px); letter-spacing: 3px; padding: 16px 28px 12px; color: #000; background: #ffff00; border-color: #ffff00; box-shadow: 0 6px 0 #b8860b, 0 0 34px rgba(255, 255, 0, 0.5); }
+#online .prompt-btns.ol-pie .btn-primary:hover:not(:disabled),
+#online .prompt-btns.ol-pie .btn-primary:focus-visible { color: #000; background: #ffff00; box-shadow: 0 4px 0 #b8860b, 0 0 60px rgba(255, 255, 0, 0.85); }
+#online .prompt-btns.ol-pie .btn-primary .btn-ronda { display: none; }
+#online .prompt-btns.ol-pie .btn-primary:disabled { color: #000; opacity: 0.35; box-shadow: none; transform: none; }
+
+/* ---- la sala ---- */
+#online .ol-cols { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(14px, 2.4vw, 28px); width: 100%; align-items: start; }
+#online .ol-codigo { display: flex; gap: 10px; justify-content: center; }
+#online .ol-letra {
+  display: grid; place-items: center;
+  width: clamp(44px, 7vh, 64px); height: clamp(54px, 8.5vh, 78px);
+  font-size: clamp(26px, 4.6vh, 42px);
+  color: #ffff00;
+  background: rgba(255, 255, 0, 0.06);
+  border: 2px solid rgba(255, 255, 0, 0.5);
+  box-shadow: 0 4px 0 #b8860b;
+  text-shadow: 0 0 14px rgba(255, 255, 0, 0.7);
+}
+#online .online-link { font-size: clamp(8px, 1.2vh, 10px); color: #8a8bb8; max-width: 100%; }
+#online .ol-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+#online .btn.ol-btn-chico { min-width: 0; font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1.5px; padding: 10px 14px 8px; color: #00ffff; background: rgba(0, 0, 0, 0.5); border: 2px solid #00ffff; box-shadow: 0 4px 0 #007f8c; }
+#online .btn.ol-btn-chico:hover:not(:disabled),
+#online .btn.ol-btn-chico:focus-visible { color: #ffff00; border-color: #ffff00; background: rgba(0, 0, 0, 0.5); box-shadow: 0 4px 0 #b8860b; outline: none; }
+
+#online .ol-plazas { display: grid; gap: 8px; width: 100%; }
+#online .ol-plaza {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 52px;
+  padding: 6px 12px;
+  border: 2px solid color-mix(in srgb, var(--jc, #00ffff) 60%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--jc, #00ffff) 14%, transparent), rgba(0, 0, 0, 0.4) 70%);
+  text-align: left;
+}
+#online .ol-plaza.libre { border: 2px dashed rgba(185, 186, 230, 0.25); background: none; justify-content: center; }
+#online .ol-plaza.libre .ol-plaza-nombre { color: rgba(185, 186, 230, 0.4); font-size: clamp(8px, 1.2vh, 10px); letter-spacing: 3px; animation: lobby-blink 2.4s step-end infinite; }
+#online .ol-plaza-icono { width: 34px; height: 34px; image-rendering: pixelated; flex: 0 0 auto; }
+#online .ol-plaza-nombre { font-size: clamp(10px, 1.7vh, 13px); letter-spacing: 1.5px; color: var(--jc, #fff); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#online .ol-plaza-tags { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+#online .ol-tag { font-size: 8px; letter-spacing: 1px; padding: 4px 6px 3px; color: var(--tc); border: 1px solid color-mix(in srgb, var(--tc) 60%, transparent); background: color-mix(in srgb, var(--tc) 10%, transparent); }
+
+/* interruptores de modo */
+#online .ol-modo-caja { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+#online .btn.ol-modo {
+  --modo: #ff66cc;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  width: 100%; min-width: 0;
+  padding: 12px 14px 10px;
+  text-align: left;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(185, 186, 230, 0.3);
+  box-shadow: none;
+  letter-spacing: 0;
+}
+#online .btn.ol-modo:hover:not(:disabled),
+#online .btn.ol-modo:focus-visible { background: rgba(0, 0, 0, 0.45); border-color: var(--modo); outline: none; color: #fff; }
+#online .btn.ol-modo.active { border-color: var(--modo); background: color-mix(in srgb, var(--modo) 12%, rgba(0, 0, 0, 0.5)); box-shadow: 0 0 18px color-mix(in srgb, var(--modo) 30%, transparent); }
+#online .btn.ol-modo:disabled { opacity: 1; cursor: default; }
+#online .btn.ol-modo:disabled:not(.active) { opacity: 0.55; }
+#online .ol-modo-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#online .ol-modo-nombre { font-size: clamp(12px, 2vh, 16px); letter-spacing: 3px; color: var(--modo); }
+#online .ol-modo-desc { font-size: clamp(7px, 1.1vh, 9px); letter-spacing: 1px; line-height: 1.8; color: #b9bae6; }
+#online .ol-switch { position: relative; flex: 0 0 auto; width: 46px; height: 22px; border: 2px solid rgba(185, 186, 230, 0.5); background: #000; }
+#online .ol-switch-bola { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: rgba(185, 186, 230, 0.6); transition: left 0.15s, background 0.15s; }
+#online .btn.ol-modo.active .ol-switch { border-color: var(--modo); }
+#online .btn.ol-modo.active .ol-switch-bola { left: 26px; background: var(--modo); box-shadow: 0 0 8px var(--modo); }
+#online .ol-roles { padding: 2px 0 4px; }
+
+/* personaje */
+#online .ol-personajes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: 100%; }
+#online .btn.ol-pj {
+  --pj: #ffff00;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 0; padding: 10px 4px 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(185, 186, 230, 0.25);
+  box-shadow: none;
+}
+#online .btn.ol-pj:hover:not(:disabled),
+#online .btn.ol-pj:focus-visible { background: rgba(0, 0, 0, 0.45); border-color: var(--pj); outline: none; }
+#online .btn.ol-pj.active { border-color: var(--pj); background: color-mix(in srgb, var(--pj) 14%, rgba(0, 0, 0, 0.5)); box-shadow: 0 0 16px color-mix(in srgb, var(--pj) 35%, transparent); }
+#online .btn.ol-pj:disabled { opacity: 0.3; }
+#online .ol-pj-icono { width: 34px; height: 34px; image-rendering: pixelated; }
+#online .ol-pj-nombre { font-size: clamp(7px, 1.1vh, 9px); letter-spacing: 1px; color: var(--pj); }
+
+#online .lobby-status { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 3px; }
+
+@media (max-width: 860px) {
+  #online .ol-cartas, #online .ol-cols { grid-template-columns: minmax(0, 1fr); }
+  #online .ol-personajes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #online .panel-title.ol-titulo, #online .ol-plaza.libre .ol-plaza-nombre { animation: none; }
+}
+/* la sala cabe mejor: título algo menor, fondo que tapa del todo lo de detrás */
+#online.ol-marco { background:
+  repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
+  radial-gradient(ellipse at 50% 30%, #002a3a 0, #020a1a 45%, #000 85%); }
+#online .panel-title.ol-titulo { font-size: clamp(28px, min(5vw, 7.5vh), 68px); }
+#online .ol-plaza { min-height: 46px; }
+#online .ol-plaza-icono, #online .ol-pj-icono { width: 40px; height: 40px; }
+#online.ol-marco .go-bombillas { position: fixed; }
+#online .prompt-btns.ol-pie .btn-primary { font-size: clamp(13px, 2.2vh, 18px); }

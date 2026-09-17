@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · MODO ONLINE con marco de recreativa
+
+- La pantalla ONLINE usa el marco de recreativa en cian. Al entrar, dos cartas:
+  CREAR PARTY y UNIRSE (el código se teclea en cuatro casillas).
+- En la sala: el código letra a letra, copiar enlace e invitar, las cuatro
+  plazas con el Pac-Man o el fantasma de cada uno y sus etiquetas (líder, tú,
+  rol), los modos DESATADO y CACERÍA como interruptores con su explicación, y
+  el personaje elegido con su dibujo.
+
 ## 2026-09-17 · MAGO: el portal por otra dimensión
 
 - **W · PORTAL**: al pulsar, la entrada se queda donde estás y pasas a **otra
