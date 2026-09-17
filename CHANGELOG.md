@@ -17,7 +17,7 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 - **TANQUE**: la **Q** ahora es el PISOTÓN y la **E**, PROVOCAR (antes al revés).
 - **PISOTÓN**: alcanza **15 casillas** (antes 10) y los fantasmas que huyen van
-  al **70 %** de su velocidad.
+  un **40 % más lentos**.
 - **APISONADORA**: **x1,75** (antes x1,4) y recarga de **46 s** (antes 60).
 - **MAGO**: la TORMENTA recarga en **46 s** (antes 60), y las bocas del PORTAL
   se plantan en el centro de la casilla, no entre dos.

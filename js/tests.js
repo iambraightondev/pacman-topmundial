@@ -8511,7 +8511,8 @@
     ok(!g.frightened, 'y no se pone azul');
     eq(g.dir, DR.RIGHT, 'el que venía de cara se da la vuelta');
     eq(G.frightTicks, 0, 'ni empieza el modo azul');
-    ok(Math.abs(g.speedPx(G) - normal * HC.PISOTON_LENTO) < 0.01, 'y va al 70% de su velocidad');
+    eq(HC.PISOTON_LENTO, 0.6, 'los frena un 40%');
+    ok(Math.abs(g.speedPx(G) - normal * HC.PISOTON_LENTO) < 0.01, 'y va al 60% de su velocidad');
     HB.huye[0] = 0;
     ok(Math.abs(g.speedPx(G) - normal) < 0.01, 'acabado el pisotón, vuelve a la suya');
   });

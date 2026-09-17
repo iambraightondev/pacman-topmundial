@@ -1572,7 +1572,7 @@
                  desc: ['TE COMES AL FANTASMA QUE TENGAS PEGADO', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
-                 desc: ['LOS FANTASMAS A 15 CASILLAS HUYEN DE TI, Y MÁS LENTOS', '8 S DE ESCUDO: AGUANTA UN GOLPE',
+                 desc: ['LOS FANTASMAS A 15 CASILLAS HUYEN DE TI, UN 40% MÁS LENTOS', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
@@ -1588,7 +1588,7 @@
     ESCUDO_GRACIA: 30,            // tras romperse un escudo, medio segundo sin morir
     PISOTON_TICKS: 6 * 60,        // PISOTÓN: los cercanos huyen del Tanque
     PISOTON_TILES: 15,            // ...a 15 casillas a la redonda
-    PISOTON_LENTO: 0.7,           // y mientras huyen van al 70% de su velocidad
+    PISOTON_LENTO: 0.6,           // y mientras huyen van al 60% de su velocidad
     /* ARROLLAR (la APISONADORA): en línea recta hacia la última flecha HASTA
      * LA PARED, sin límite de tiempo, a x1.4, invulnerable, comiéndose a
      * cualquier fantasma que toque por MAGO_PUNTOS fijos, sin cadena y sin
