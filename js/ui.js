@@ -713,7 +713,7 @@
           if (ciclo < 8) {
             /* ida: los fantasmas persiguen a Pac-Man comiéndose las pastillas */
             var px = -40 + p * (W + 140);
-            c.fillStyle = CFG.COLORS.pellet;
+            c.fillStyle = CFG.COLORS.pelletMini;
             for (var x = 12; x < W; x += 8) if (x > px + 5) c.fillRect(x - 1, y - 1, 2, 2);
             for (var g = 0; g < 4; g++) Sp.drawGhost(c, px - 26 - g * 16, y, 3, g, 'chase', Math.floor(t * 8) % 2, false);
             Sp.drawPacman(c, px, y, 3, boca, '#ffff00', 'clasico', {});
@@ -8187,11 +8187,14 @@
       c.setTransform(S, 0, 0, S, 0, 0);
       var ciclo = t % 16, ida = ciclo < 8, q = (ciclo % 8) / 8;
       var boca = [0, 1, 2, 1][Math.floor(t * 14) % 4], anda = Math.floor(t * 8) % 2;
-      c.fillStyle = CFG.COLORS.pellet;
+      c.fillStyle = CFG.COLORS.pelletMini;
       if (ida) {
         var px = -20 + q * (W + 80), grande = W * 0.25;
         for (var x = 10; x < W; x += 8) if (x > px + 4) c.fillRect(x - 1, y - 1, 2, 2);
-        if (px < grande) { c.beginPath(); c.arc(grande, y, 3, 0, Math.PI * 2); c.fill(); }
+        if (px < grande) {
+          c.fillStyle = CFG.COLORS.pellet;          // la superpastilla, amarilla
+          c.beginPath(); c.arc(grande, y, 3, 0, Math.PI * 2); c.fill();
+        }
         var huyen = px >= grande;
         for (var g = 0; g < 4; g++) {
           Sp.drawGhost(c, px + 30 + g * 16, y, CFG.DIR.RIGHT, g, huyen ? 'fright' : 'chase', anda,

@@ -4977,7 +4977,7 @@
       /* un emote se enseña con el jugador quieto en el pasillo de abajo, que
        * es donde cabe el globo por encima */
       var quieto = !!o.emote;
-      ctx.fillStyle = CFG.COLORS.pellet;
+      ctx.fillStyle = CFG.COLORS.pelletMini;
       for (var k = 0; k < P / 8; k++) {
         var sp = k * 8 + 4;
         var pp = this.caminoEscena(sp);

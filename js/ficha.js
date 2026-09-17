@@ -69,7 +69,7 @@
     c.stroke();
     redondo(c, X0 + gap, Y0 + gap, PW - 2 * gap, PH - 2 * gap, 1.5);
     c.stroke();
-    c.fillStyle = CFG.COLORS.pellet;
+    c.fillStyle = CFG.COLORS.pelletMini;
     for (var k = 0; k < P / 8; k++) {
       var sp = k * 8 + 4;
       if (sp <= comido) continue;

@@ -4607,9 +4607,9 @@
           var cx = c2 * T + T / 2, cy = r * T + T / 2 + CFG.MAZE_Y;
           if (ch === '.') {
             ctx.save();
-            ctx.shadowColor = CFG.COLORS.pellet;
+            ctx.shadowColor = CFG.COLORS.pelletMini;
             ctx.shadowBlur = 7;
-            ctx.fillStyle = CFG.COLORS.pellet;
+            ctx.fillStyle = CFG.COLORS.pelletMini;
             ctx.fillRect(cx - 1, cy - 1, 2, 2);
             ctx.restore();
           } else {
