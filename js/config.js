@@ -1626,7 +1626,7 @@
      * (se ha caído, o el aviso se perdió) tras este margen extra */
     PORTAL_RED_GRACIA: 2 * 60,
     PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
-    RUNA_TICKS: 10 * 60,
+    RUNA_TICKS: 15 * 60,
     TORMENTA_RAYOS: 2,            // dos rayos: con cuatro barría a todos sin riesgo
     TORMENTA_CADA: 60,
     TORMENTA_TILES: 6,

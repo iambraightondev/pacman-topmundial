@@ -8905,6 +8905,7 @@
   });
 
   test('MAGO · RUNA: mata a todos los fantasmas de su casilla', function () {
+    eq(HC.RUNA_TICKS, 15 * 60, 'dura 15 s');
     partidaRol(['mago'], 2, 5, DR.RIGHT);
     ok(HB.pulsar(G, 0, 2), 'la runa se pone');
     ponPac(0, 20, 5);

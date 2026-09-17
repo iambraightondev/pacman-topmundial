@@ -1800,7 +1800,7 @@
       }
     },
 
-    /* E — RUNA: trampa en la casilla del Mago 10 s; al pisarla mueren TODOS
+    /* E — RUNA: trampa en la casilla del Mago 15 s; al pisarla mueren TODOS
      * los fantasmas que estén en esa casilla. Una por Mago: poner otra quita
      * la anterior. */
     runa: function (G, idx, d) {

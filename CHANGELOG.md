@@ -11,7 +11,7 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   estés; si no, a los **8 s** se pone sola. Las dos bocas quedan abiertas
   **20 s** para ti y tu equipo, **aunque se pase de nivel**. Recarga: **46 s**.
 - **R · TORMENTA**: **2 rayos** (antes 4): ya no barre a los cuatro fantasmas.
-- **E · RUNA**: mata a **todos** los fantasmas que estén en su casilla al
+- **E · RUNA**: dura **15 s** (antes 10) y mata a **todos** los fantasmas que estén en su casilla al
   pisarla, no solo al primero.
 - Hay que actualizar para jugar en party con la versión nueva.
 
