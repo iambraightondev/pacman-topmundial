@@ -1574,8 +1574,8 @@
                  desc: ['TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'LOS FANTASMAS CERCANOS HUYEN DE TI', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
       soporte: { name: 'SOPORTE', color: '#00ffff', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
-                 desc: ['UN DISPARO QUE CONGELA AL FANTASMA', 'NADIE TE PUEDE TOCAR UN MOMENTO',
-                        'ESCUDO PARA EL COMPAÑERO MÁS CERCANO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
+                 desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
+                        'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#b36bff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS: ENTRAS POR UNA Y SALES POR OTRA',
                         'TRAMPA QUE MATA AL QUE LA PISE', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
@@ -1599,8 +1599,17 @@
     /* Soporte */
     HIELO_TICKS: 3 * 60,          // fantasma congelado
     PROYECTIL_VEL: 3,             // px por tick (Pac-Man va a ~1)
-    INMUNE_TICKS: 2 * 60,
+    INMUNE_TICKS: 3 * 60,
     ALIADO_TICKS: 3 * 60,         // escudo que se da al compañero
+    /* MANTENER PULSADO. Dos teclas del Soporte hacen otra cosa si se dejan
+     * apretadas (ticks hasta que salta). Comparten recarga con la pulsación
+     * corta, y la corta sale al SOLTAR:
+     *   Q  HIELO   2 s: una placa de hielo en su casilla que congela a todo
+     *              fantasma que la pise (a cada uno, una vez).
+     *   E  ALIADO  3 s: escudo a TODOS los compañeros a 2 casillas. */
+    MANTENER: { hielo: 2 * 60, aliado: 3 * 60 },
+    PLACA_TICKS: 8 * 60,          // lo que dura la placa de hielo en el suelo
+    ALIADO_AREA_TILES: 2,
     VIDA_MAX: 5,                  // la VIDA no sube a nadie de aquí
     /* Mago */
     PORTAL_TICKS: 8 * 60,         // abierto
@@ -1701,8 +1710,9 @@
      * la 9, la TIENDA (el emote viaja por su id y no por su posición, y cada
      * jugador lleva su accesorio y su efecto en el saludo); la 10, los ROLES
      * de DESATADO (el rol en el saludo, el arranque y la foto, con el hielo,
-     * los proyectiles, los portales y las runas). */
-    PROTO: 10,
+     * los proyectiles, los portales y las runas); la 11, MANTENER PULSADO
+     * (la 'm' de la petición de poder y las placas de hielo en la foto). */
+    PROTO: 11,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

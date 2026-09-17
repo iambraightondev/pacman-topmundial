@@ -13,6 +13,17 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep (día) — AJUSTES DEL SOPORTE, pedidos por Braighton (`pm-v126`).**
+Q y E se pueden MANTENER (`CFG.HAB.MANTENER`): Q 2 s = placa de hielo en el
+suelo (8 s, congela a cada fantasma que la pise una vez); E 3 s = escudo a todos
+los compañeros a 2 casillas. La versión corta sale AL SOLTAR. W = 3 s.
+Decidido por Jarvis: las dos versiones comparten recarga; la placa dura 8 s;
+el escudo en área no incluye al propio Soporte; en pausa no carga; al perder
+el foco se suelta sin lanzar. Le propuse subir el ESCUDO ALIADO a 8 s y dar
+escudo a sí mismo jugando solo: **no contestó, se dejó como estaba**.
+Por dónde seguir: MAGO. **Por mirar:** el aro de carga no se llegó a ver en
+pantalla (la lógica sí, con pruebas y en el navegador); probarlo en móvil.
+
 **17 sep (noche) — AJUSTES DEL TANQUE, pedidos por Braighton tras probarlo en
 papel (`pm-v125`, publicado).** Por dónde seguir: ir rol por rol puliendo con
 él; empezó por el Tanque y quedan SOPORTE y MAGO.

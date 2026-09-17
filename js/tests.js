@@ -8573,7 +8573,8 @@
     eq(HB.balas.length, 0, 'el proyectil se para en el muro');
   });
 
-  test('SOPORTE · INMUNIDAD 2 s y ESCUDO ALIADO solo con compañeros', function () {
+  test('SOPORTE · INMUNIDAD 3 s y ESCUDO ALIADO solo con compañeros', function () {
+    eq(HC.INMUNE_TICKS, 3 * 60, 'la inmunidad dura 3 s');
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];
     p.safeTicks = 0;
@@ -8582,7 +8583,7 @@
     ok(HB.pulsar(G, 0, 1), 'la inmunidad sale');
     var g = fantasmaEn(0, 6, 5);
     for (var i = 0; i < HC.INMUNE_TICKS - 2; i++) { g.x = p.x; g.y = p.y; g.mode = 'normal'; G.step(); }
-    ok(!p.dying, 'dos segundos sin que nada mate');
+    ok(!p.dying, 'tres segundos sin que nada mate');
     for (i = 0; i < 6 && !p.dying; i++) { g.x = p.x; g.y = p.y; g.mode = 'normal'; G.step(); }
     ok(p.dying, 'y al acabarse, mata');
 
@@ -8614,6 +8615,147 @@
     G.pacs[0].lives = 3; G.pacs[1].lives = 1;
     ok(HB.pulsar(G, 0, 3), 'con vidas propias, también');
     eq(G.pacs[1].lives, 2, 'y va al que menos tiene');
+  });
+
+  /* ---------- SOPORTE: MANTENER PULSADO ---------- */
+  test('SOPORTE · Q: pulsada y soltada dispara; mantenida 2 s deja hielo en el suelo', function () {
+    eq(HC.MANTENER.hielo, 2 * 60, 'la Q se mantiene 2 s');
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    ok(HB.apretar(G, 0, 0, false), 'apretar la Q empieza a cargar');
+    ticks(30);
+    eq(HB.balas.length, 0, 'apretada todavía no dispara');
+    ok(HB.lista(0, 0), 'ni gasta');
+    ok(HB.soltar(G, 0, 0), 'al soltar antes de tiempo, dispara');
+    eq(HB.balas.length, 1, 'sale el disparo helado');
+    ok(!HB.lista(0, 0), 'y gasta');
+    ok(!HB.placas[0], 'sin placa');
+
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    HB.apretar(G, 0, 0, false);
+    eq(HB.apretar(G, 0, 0, true), false, 'la autorrepetición del teclado no reinicia la cuenta');
+    ticks(HC.MANTENER.hielo - 1);
+    ok(!HB.placas[0], 'a un tick de los 2 s, nada');
+    G.paused = true;
+    ticks(200);
+    G.paused = false;
+    ok(!HB.placas[0], 'en pausa no carga');
+    ticks(1);
+    var pl = HB.placas[0];
+    ok(pl, 'a los 2 s, la placa en el suelo');
+    eq(pl.c + ',' + pl.r, G.pacs[0].tileX() + ',' + G.pacs[0].tileY(), 'en la casilla del Soporte');
+    eq(HB.balas.length, 0, 'sin disparo');
+    ok(!HB.lista(0, 0), 'comparte recarga con el disparo');
+    eq(HB.soltar(G, 0, 0), false, 'soltar después ya no dispara');
+    eq(HB.balas.length, 0, 'ni una bala');
+
+    ponPac(0, 1, 1, DR.UP);
+    var g0 = fantasmaEn(0, pl.c, pl.r);
+    G.step();
+    ok(HB.congelado(0), 'el fantasma que la pisa se congela');
+    HB.hielo[0] = 0;
+    G.step();
+    ok(!HB.congelado(0), 'y a cada fantasma, una sola vez');
+    var g1 = fantasmaEn(1, pl.c, pl.r);
+    G.step();
+    ok(HB.congelado(1), 'pero congela a todos los que la pisen');
+    ticks(HC.PLACA_TICKS);
+    ok(!HB.placas[0], 'y se deshace a los ' + (HC.PLACA_TICKS / 60) + ' s');
+    ok(g0 && g1, 'fantasmas colocados');
+  });
+
+  test('SOPORTE · Q mantenida se corta al morir; la E corta sigue igual', function () {
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    HB.apretar(G, 0, 0, false);
+    ticks(60);
+    HB.limpiarJugador(0);
+    ticks(HC.MANTENER.hielo);
+    ok(!HB.placas[0], 'morir suelta la tecla sin lanzar nada');
+    ok(HB.lista(0, 0), 'ni gastar');
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    ponPac(1, 12, 5, DR.LEFT);
+    HB.apretar(G, 0, 2, false);
+    ok(HB.soltar(G, 0, 2), 'la E pulsada y soltada da el escudo de siempre');
+    ok(HB.estado(1).escudo > 0, 'al más cercano, aunque esté lejos');
+  });
+
+  test('SOPORTE · E mantenida 3 s: escudo a todos los compañeros a 2 casillas', function () {
+    eq(HC.MANTENER.aliado, 3 * 60, 'la E se mantiene 3 s');
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    HB.apretar(G, 0, 2, false);
+    ticks(HC.MANTENER.aliado);
+    ok(HB.lista(0, 2), 'a uno no sale ni gasta');
+
+    partidaRol(['soporte', 'asesino', 'tanque', 'mago'], 6, 5, DR.RIGHT);
+    HB.apretar(G, 0, 2, false);
+    ticks(HC.MANTENER.aliado - 1);
+    ok(HB.estado(0).mant === 2, 'sigue cargando');
+    ponPac(0, 6, 5); ponPac(1, 8, 5); ponPac(2, 6, 7); ponPac(3, 9, 5);
+    for (var i = 0; i < 4; i++) HB.estado(i).escudo = 0;
+    G.step();
+    ok(HB.estado(1).escudo > 0, 'a 2 casillas en fila, escudo');
+    ok(HB.estado(2).escudo > 0, 'a 2 casillas en columna, escudo');
+    eq(HB.estado(3).escudo, 0, 'a 3 casillas, no');
+    eq(HB.estado(0).escudo, 0, 'el Soporte no se lo da a sí mismo');
+    ok(!HB.lista(0, 2), 'y gasta la recarga de la E');
+  });
+
+  test('SOPORTE · una partida con teclas mantenidas se reproduce exacta', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      // [tick, 'a' apretar | 's' soltar | 'd' giro, valor]
+      var guion = [[5, 'd', 1], [20, 'a', 0], [200, 's', 0], [260, 'd', 0], [300, 'a', 0],
+                   [330, 's', 0], [700, 'd', 3], [1100, 'a', 0], [1180, 'd', 2], [1300, 's', 0],
+                   [1400, 'a', 1], [1410, 's', 1]];
+      var TOTAL = 1700;
+      function corre(conGuion) {
+        G.state = 'PLAYING';
+        G.readyTicks = 0;
+        var k = 0;
+        for (var i = 0; i < TOTAL; i++) {
+          if (conGuion) {
+            while (k < guion.length && guion[k][0] === i) {
+              var q = guion[k];
+              if (q[1] === 'a') HB.apretar(G, 0, q[2], false);
+              else if (q[1] === 's') HB.soltar(G, 0, q[2]);
+              else G.setPacDir(0, q[2]);
+              k++;
+            }
+          }
+          G.step();
+        }
+      }
+      G.newGame({ players: 1, hab: true, roles: ['soporte'] });
+      var rep = R.enCurso();
+      ok(rep, 'la partida se graba');
+      corre(true);
+      var pts = G.score, quedan = G.dotsLeft, vidas = G.lives;
+      var mant = rep.entradas.filter(function (e) { return e[2] >= 9; }).length;
+      ok(mant > 0, 'hay teclas mantenidas en la repetición: ' + mant);
+      var fg = G.ghosts.map(function (g) { return Math.round(g.x) + ':' + Math.round(g.y); }).join();
+      if (!rep.final) {
+        rep.final = { puntos: pts, nivel: G.level, fantasmas: G.runGhosts,
+                      tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      }
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'pasa por el texto y vuelve');
+      eq(leida.entradas.filter(function (e) { return e[2] >= 9; }).length, mant, 'con las mantenidas intactas');
+      ok(R.ver(leida), 'la repetición arranca');
+      corre(false);
+      eq(G.score, pts, 'la puntuación cuadra');
+      eq(G.dotsLeft, quedan, 'las pastillas cuadran');
+      eq(G.lives, vidas, 'las vidas cuadran');
+      eq(G.ghosts.map(function (g) { return Math.round(g.x) + ':' + Math.round(g.y); }).join(), fg,
+         'los fantasmas acaban donde acabaron');
+    } finally {
+      window.PM.Replay.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
   });
 
   /* ---------- PRÁCTICA ---------- */

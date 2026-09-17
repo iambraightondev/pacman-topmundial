@@ -9828,7 +9828,19 @@
           self.resumeAudio();
           var g = window.PM.Game;
           if (!g.hab || !window.PM.Hab) return;
-          window.PM.Hab.pulsar(g, self.habIdxDe(gi), k);
+          /* las que se pueden MANTENER salen al soltar: el dedo se queda
+           * con el botón aunque resbale fuera */
+          try { b.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura */ }
+          window.PM.Hab.apretar(g, self.habIdxDe(gi), k, false);
+        });
+        var soltarBtn = function () {
+          var g = window.PM.Game;
+          if (!g.hab || !window.PM.Hab) return;
+          window.PM.Hab.soltar(g, self.habIdxDe(gi), k);
+        };
+        b.addEventListener('pointerup', soltarBtn);
+        b.addEventListener('pointercancel', function () {
+          if (window.PM.Hab) window.PM.Hab.cancelarMant();
         });
         caja.appendChild(b);
         btns.push({ b: b, fill: fill, key: lab, name: nom, secs: secs,
@@ -10557,6 +10569,25 @@
         return t;
       })());
       var HAB_2P = [habMapa(CFG.HAB.KEYS_2P[0]), habMapa(CFG.HAB.KEYS_2P[1])];
+      /* Soltar un poder. Solo importa en los que se pueden MANTENER (la Q y
+       * la E del Soporte), que salen al soltar si no llegaron a su rato; en
+       * el resto Hab.soltar no hace nada. */
+      document.addEventListener('keyup', function (ev) {
+        var g = window.PM.Game;
+        if (!g || !g.hab || !window.PM.Hab) return;
+        if (g.playerCount === 2 && !g.netRole) {
+          for (var j = 0; j < HAB_2P.length; j++) {
+            if (ev.key in HAB_2P[j]) { window.PM.Hab.soltar(g, j, HAB_2P[j][ev.key]); return; }
+          }
+        } else if (ev.key in HAB_KEYS) {
+          window.PM.Hab.soltar(g, g.localIdx, HAB_KEYS[ev.key]);
+        }
+      });
+      /* sin foco no llega el keyup: lo que se estaba manteniendo se suelta
+       * sin lanzar nada */
+      window.addEventListener('blur', function () {
+        if (window.PM.Hab) window.PM.Hab.cancelarMant();
+      });
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
         if (self.chatOpen) return;       // escribiendo: lo lleva el propio campo
@@ -10651,7 +10682,9 @@
           if (cual >= 0) {
             if (canControl && window.PM.Hab) {
               self.resumeAudio();
-              window.PM.Hab.pulsar(g, quien, cual);
+              /* la autorrepetición del teclado no reinicia una tecla que se
+               * está manteniendo (ver Hab.apretar) */
+              window.PM.Hab.apretar(g, quien, cual, !!ev.repeat);
               ev.preventDefault();
             }
             return;

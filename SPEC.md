@@ -2373,9 +2373,22 @@ the key index. `LIST` is the ASESINO (the original kit).
   freeze (`matarMago` with `'aplasta'`; `moverArrolla` replaces `p.update`).
 - **SOPORTE.** HIELO: projectile (`PROYECTIL_VEL` px/tick, stops at walls,
   wraps in the tunnel) freezing the first ghost and every ghost on its tile for
-  3 s: speed 0, not lethal, still biteable. Always spends. INMUNIDAD: 2 s
+  3 s: speed 0, not lethal, still biteable. Always spends. INMUNIDAD: 3 s
   untouchable. ESCUDO ALIADO: shield to the nearest living teammate; none = not
-  cast. VIDA: +1 to the living teammate with fewest lives (tie → nearest; shared
+  cast.
+  **Hold** (`CFG.HAB.MANTENER`, ticks): Q and E are held abilities. On those
+  keys the short version fires on **release** (`Hab.apretar` / `Hab.soltar`,
+  from keydown/keyup and the touch buttons' pointerdown/pointerup; key
+  auto-repeat is ignored, window blur cancels without firing). `Hab.cargas`
+  counts held ticks only while PLAYING and unpaused, and is called from
+  `Game.step` **before** `Replay.paso`, so the long version is recorded with
+  the same tick at which playback re-injects it. Q held 120 ticks: an ice plate
+  (`placas[idx]`, one per player, `PLACA_TICKS` = 8 s) on the support's tile;
+  every ghost stepping on it freezes `HIELO_TICKS`, once per ghost per plate
+  (bitmask `z`). E held 180 ticks: shield (`ALIADO_TICKS`) to every living
+  teammate within `ALIADO_AREA_TILES` (2) on both axes, not to self; nobody in
+  range = not cast. Both share the short version's cooldown. Replay entries:
+  qué 9..12 = held power 0..3, encoded `F` + digit (player*4 + power). VIDA: +1 to the living teammate with fewest lives (tie → nearest; shared
   lives → the pool), capped at `VIDA_MAX` (5); never revives `out` players.
 - **MAGO.** Every kill is `Hab.matarMago`: `MAGO_PUNTOS` (200) flat, **no
   chain change and no eat freeze**, event `magoKill`. FUEGO: same projectile
@@ -2387,7 +2400,7 @@ the key index. `LIST` is the ASESINO (the original kit).
   first ghost to step on it. TORMENTA: one bolt per second for 4 s on the
   nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
   dies.
-- **Network (PROTO 10).** Anything touching ghosts or lives is executed by the
+- **Network (PROTO 11; 11 adds the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot).** Anything touching ghosts or lives is executed by the
   host (`Hab.peticion(G, who, k, d)`, where the guest sends its arrow `d`,
   tile `c,r` and position `x,y`); self-only effects (ESCUDO, INMUNIDAD, the
   ARROLLAR run, portal crossing) run on the machine that simulates that Pac-Man,

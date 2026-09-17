@@ -192,6 +192,9 @@
    * grabado antes de que existiera el dúo se sigue leyendo igual.
    *
    *   E         CONTINUAR pagado (qué = 8; desde el 17 sep 2026)
+   *   F0..F7    poder MANTENIDO (qué = 9..12; desde el 17 sep 2026): la cifra
+   *             es jugador * 4 + poder. La Q y la E del Soporte hacen otra
+   *             cosa si se dejan apretadas (CFG.HAB.MANTENER).
    *
    * La E estaba libre (entre los poderes del J1 y los giros). Una versión
    * del juego de antes no la conoce y da la repetición por rota, que es lo
@@ -202,6 +205,7 @@
   }
 
   function esHab(e) { return e[2] >= 4 && e[2] <= 7; }
+  function esMant(e) { return e[2] >= 9 && e[2] <= 12; }
 
   function codEntradas(arr) {
     var out = '', prev = 0, i = 0;
@@ -209,6 +213,7 @@
       var e = arr[i];
       var delta = e[0] - prev;
       var code = (e[2] === 8) ? 'E'
+        : esMant(e) ? 'F' + (((e[1] & 1) << 2) + ((e[2] - 9) & 3))
         : esHab(e) ? codHab(e)
         : String.fromCharCode(71 + ((e[1] & 3) << 2) + (e[2] & 3));
       var n = 1;
@@ -233,7 +238,7 @@
     var out = [];
     if (s === '') return out;
     // el punto que cierra la cuenta es opcional: los textos de antes no lo llevan
-    var re = /([0-9a-z]+)([A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
+    var re = /([0-9a-z]+)(F[0-7]|[A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
@@ -251,6 +256,10 @@
       for (var i = 0; i < veces; i++) {
         tick += delta;
         if (cod === 69) out.push([tick, 0, 8]);            // E: continuar
+        else if (cod === 70) {                             // F: poder mantenido
+          var fm = parseInt(letra.charAt(1), 10);
+          out.push([tick, (fm >> 2) & 1, 9 + (fm & 3)]);
+        }
         else if (poderDe >= 0) out.push([tick, poderDe, 4 + c]);
         else out.push([tick, (c >> 2) & 3, c & 3]);
       }
@@ -490,7 +499,7 @@
          * de los dos primeros jugadores: es lo único que sabe grabar este
          * formato (de tres en adelante la partida es de red y se graba de
          * otra manera). */
-        if (!esNum(e[2]) || e[2] < 0 || e[2] > 8) return false;
+        if (!esNum(e[2]) || e[2] < 0 || e[2] > 12) return false;
         /* 8: CONTINUAR pagado. Siempre del J1 (en local un pago revive al
          * equipo del teclado) y nunca en PAC-MAN VS., que no tiene continuar. */
         if (e[2] === 8) {
@@ -1158,11 +1167,11 @@
     /* Una habilidad que SÍ salió. No hay nada que descartar por repetido:
      * es un suceso, no una intención que se pueda pedir dos veces (de eso ya
      * se encarga la recarga). */
-    apuntaHab: function (idx, k) {
+    apuntaHab: function (idx, k, mant) {
       if (!this.grabando) return;
       // los dos primeros: es lo que sabe codificar codHab (A..D y W..Z)
       if (!(idx === 0 || idx === 1) || !(k >= 0 && k < 4)) return;
-      this.grabando.entradas.push([this.t, idx, 4 + k]);
+      this.grabando.entradas.push([this.t, idx, (mant ? 9 : 4) + k]);
       if (this.grabando.entradas.length > CFG.REPLAY_MAX_ENTRADAS) {
         this.grabando = null;
       }
@@ -1224,6 +1233,12 @@
           }
           if (!hayFuera) { this.cursor--; break; }
           G.revivir(-1);
+          continue;
+        }
+        if (e[2] >= 9) {
+          // habilidad MANTENIDA: sale en el mismo tick que aquel día
+          var okm = window.PM.Hab ? window.PM.Hab.pulsar(G, e[1], e[2] - 9, true) : true;
+          if (rc && !okm && rc.fallo < 0) rc.fallo = i;
           continue;
         }
         if (e[2] >= 4) {

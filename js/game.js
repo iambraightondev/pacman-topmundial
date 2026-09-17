@@ -970,6 +970,9 @@
       this.tick++;
       /* repeticiones: lleva su propio reloj y, si se está viendo una, mete
        * los giros que tocan en este tick antes de simular (js/replay.js) */
+      /* DESATADO: las teclas mantenidas que llegan a su rato salen aquí, antes
+       * que la repetición, que es donde ella las vuelve a meter (Hab.cargas) */
+      if (window.PM.Hab && window.PM.Hab.cargas) window.PM.Hab.cargas(this);
       if (window.PM.Replay) window.PM.Replay.paso();
       this.energizerTicks++;
       if (this.energizerTicks >= 12) {          // parpadeo ~0.2 s

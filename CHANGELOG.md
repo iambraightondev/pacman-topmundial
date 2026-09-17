@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · SOPORTE: teclas que se mantienen
+
+- **Q**: pulsada y soltada sigue siendo el DISPARO HELADO. **Mantenida 2 s**
+  deja una **placa de hielo** en el suelo durante 8 s: todo fantasma que la
+  pise (los que te venían persiguiendo) se queda congelado 3 s.
+- **E**: pulsada y soltada, escudo al compañero más cercano. **Mantenida 3 s**,
+  escudo a **todos** los compañeros a 2 casillas a la redonda.
+- Mientras mantienes, un aro cian alrededor del Soporte se va llenando.
+- **W · INMUNIDAD** dura 3 s (antes 2).
+- Las repeticiones graban las teclas mantenidas. Hay que actualizar para
+  jugar en party con alguien que tenga la versión nueva.
+
 ## 2026-09-17 · DESATADO: cuatro roles
 
 - Antes de jugar DESATADO cada jugador elige **rol**, con sus propios cuatro

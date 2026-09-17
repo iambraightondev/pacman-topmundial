@@ -114,7 +114,12 @@
       inmune: 0,          // INMUNIDAD
       tormenta: 0,        // TORMENTA: ticks que le quedan
       cruce: 0,           // tras cruzar un portal, sin volver a cruzar
-      ultTile: -1         // casilla del tick anterior (para ENTRAR en una boca)
+      ultTile: -1,        // casilla del tick anterior (para ENTRAR en una boca)
+      /* MANTENER PULSADO (CFG.HAB.MANTENER): qué tecla se está apretando
+       * (-1: ninguna) y cuántos ticks lleva. Solo existe en la máquina de
+       * quien aprieta; lo que viaja y se graba es lo que sale al final. */
+      mant: -1,
+      mantT: 0
     };
   }
 
@@ -219,7 +224,10 @@
       this.balas = [];
       this.portales = [];
       this.runas = [];
-      for (var i = 0; i < this.st.length; i++) { this.portales.push(null); this.runas.push(null); }
+      this.placas = [];     // placas de hielo del Soporte (Q mantenida), una por jugador
+      for (var i = 0; i < this.st.length; i++) {
+        this.portales.push(null); this.runas.push(null); this.placas.push(null);
+      }
       this.fx = [];
     },
 
@@ -248,7 +256,7 @@
         roles: (this.roles || []).slice(),
         mesa: JSON.parse(JSON.stringify({
           hielo: this.hielo, huye: this.huye, huyeQuien: this.huyeQuien,
-          balas: this.balas, portales: this.portales, runas: this.runas
+          balas: this.balas, portales: this.portales, runas: this.runas, placas: this.placas
         })) };
     },
 
@@ -276,6 +284,7 @@
         this.balas = m.balas || [];
         this.portales = m.portales || this.portales;
         this.runas = m.runas || this.runas;
+        this.placas = m.placas || this.placas;
       }
     },
 
@@ -567,7 +576,7 @@
      * Es el único embudo de la entrada, igual que Game.setPacDir lo es del
      * rumbo: por aquí pasan el teclado, los botones táctiles y la
      * repetición cuando se está viendo una. */
-    pulsar: function (G, idx, k) {
+    pulsar: function (G, idx, k, mant) {
       if (!this.puede(G, idx, k)) return false;
       var R = window.PM.Replay;
       // mientras se ve una repetición manda ella: la tecla del que mira no
@@ -576,6 +585,13 @@
       // pulsación que la armó (ver Replay.reintentoVale)
       if (R && R.habBloqueada && R.habBloqueada() &&
           !(this.reintento && R.reintentoVale && R.reintentoVale())) return false;
+      /* mant: la versión de MANTENER PULSADO (ver apretar). Se graba aparte
+       * porque hace otra cosa con la misma tecla. */
+      if (mant) {
+        if (!this.lanzar(G, idx, k, true)) return false;
+        if (R && R.apuntaHab) R.apuntaHab(idx, k, true);
+        return true;
+      }
       if (!this.lanzar(G, idx, k)) {
         /* MORDISCO al aire: no se tira la tecla, se deja ARMADA un instante
          * (CFG.HAB.BITE_BUFFER) y muerde sola en cuanto alguien entre a tiro.
@@ -607,13 +623,94 @@
       return true;
     },
 
+    /* ---------- MANTENER PULSADO ----------
+     * Algunas teclas (CFG.HAB.MANTENER, hoy la Q y la E del Soporte) hacen
+     * dos cosas: pulsada y soltada, la de siempre; apretada el rato que diga
+     * MANTENER, otra. Por eso en esas la de siempre sale AL SOLTAR y no al
+     * apretar: al apretar todavía no se sabe cuál de las dos quiere.
+     *
+     * El rato se cuenta en ticks de la partida (cargas, desde Game.step) y no
+     * con el reloj: en pausa no avanza, y la versión larga cae en un tick
+     * exacto que la repetición puede volver a poner en el mismo sitio. */
+    mantiene: function (G, idx, k) {
+      var id = this.idDe(G, idx, k);
+      return (H.MANTENER && H.MANTENER.hasOwnProperty(id)) ? H.MANTENER[id] : 0;
+    },
+
+    /* Tecla o botón apretado. repetida: la autorrepetición del teclado, que
+     * en una tecla que se mantiene no puede volver a empezar la cuenta. */
+    apretar: function (G, idx, k, repetida) {
+      if (!this.mantiene(G, idx, k)) return this.pulsar(G, idx, k);
+      if (repetida) return false;
+      var s = this.estado(idx), R = window.PM.Replay;
+      if (!s || !this.puede(G, idx, k)) return false;
+      if (R && R.habBloqueada && R.habBloqueada()) return false;
+      s.mant = k;
+      s.mantT = 0;
+      return true;
+    },
+
+    /* Tecla o botón soltado: si no llegó al rato, la de siempre */
+    soltar: function (G, idx, k) {
+      var s = this.estado(idx);
+      if (!s || s.mant !== k) return false;
+      s.mant = -1;
+      s.mantT = 0;
+      return this.pulsar(G, idx, k);
+    },
+
+    /* Suelta todo sin lanzar nada (la ventana pierde el foco y ya no llegará
+     * el "soltar") */
+    cancelarMant: function () {
+      for (var i = 0; i < this.st.length; i++) { this.st[i].mant = -1; this.st[i].mantT = 0; }
+    },
+
+    /* Un tick de las teclas mantenidas. Game.step lo llama ANTES que a
+     * Replay.paso: la versión larga se apunta con el mismo tick con que la
+     * repetición la vuelve a meter, y en el mismo punto del paso. */
+    cargas: function (G) {
+      if (!this.on) return;
+      for (var i = 0; i < this.st.length; i++) {
+        var s = this.st[i];
+        if (!(s.mant >= 0)) continue;
+        var p = G.pacs[i];
+        if (!p || p.out || p.dying) { s.mant = -1; s.mantT = 0; continue; }
+        if (G.state !== 'PLAYING' || G.paused || G.eatFreezeTicks > 0) continue;
+        var k = s.mant;
+        if (++s.mantT < this.mantiene(G, i, k)) continue;
+        s.mant = -1;
+        s.mantT = 0;
+        this.pulsar(G, i, k, true);
+      }
+    },
+
+    /* Lo que lleva cargado la tecla mantenida, 0..1 (-1: ninguna). Para el
+     * dibujo. */
+    cargaMant: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s || !(s.mant >= 0)) return -1;
+      var tot = this.mantiene(G, idx, s.mant);
+      return tot ? Math.min(1, s.mantT / tot) : -1;
+    },
+
     /* Lanza la habilidad del jugador idx. Devuelve si llegó a salir: hay
      * dos que se niegan a gastarse en balde (MORDISCO sin nadie cerca,
-     * FLASH contra el borde del laberinto). */
-    lanzar: function (G, idx, k) {
+     * FLASH contra el borde del laberinto). mant: la versión de mantener. */
+    lanzar: function (G, idx, k, mant) {
       var deRed = (G.netRole === 'guest');
       var ok;
       this.sinGasto = false;
+      if (mant) {
+        switch (this.idDe(G, idx, k)) {
+          case 'hielo':  ok = deRed ? this.puedePlaca(G, idx) : this.placa(G, idx); break;
+          case 'aliado': ok = this.aliadoArea(G, idx, deRed); break;
+          default:       ok = false;
+        }
+        if (!ok) return false;
+        this.gastar(G, idx, k);
+        this.avisar(G, idx, k, true);
+        return true;
+      }
       /* Se despacha por el ID del poder y no por su tecla: la Q es el
        * MORDISCO del Asesino, pero la PROVOCACIÓN del Tanque. Los dos del
        * fantasma humano se aplican solo a él, aquí y ahora. */
@@ -662,12 +759,13 @@
 
     /* Contarlo al resto de la sala. El invitado pide, el anfitrión reparte;
      * jugando en local se lo cuenta a los mirones (hostEvt ya lo sabe). */
-    avisar: function (G, idx, k) {
+    avisar: function (G, idx, k, mant) {
       if (G.netRole === 'guest') {
         /* con el rumbo y la casilla de SU pantalla: los proyectiles salen
          * hacia donde él apuntó y el portal y la runa van donde él estaba */
         var p = G.pacs[idx];
         var d = { t: 'hab', k: k };
+        if (mant) d.m = 1;
         if (p) {
           d.d = this.dirFlash(p); d.c = p.tileX(); d.r = p.tileY();
           d.x = Math.round(p.x); d.y = Math.round(p.y);
@@ -709,6 +807,18 @@
        * el alcance de verdad lo comprobó él en su pantalla. */
       var s = this.estado(who);
       d = d || {};
+      /* la versión de MANTENER PULSADO: la placa y los escudos los pone él */
+      if (d.m) {
+        switch (this.idDe(G, who, k)) {
+          case 'hielo':  ok = this.placa(G, who, d); break;
+          case 'aliado': ok = this.aliadoArea(G, who, false); break;
+          default:       ok = false;
+        }
+        if (!ok) return;
+        this.gastar(G, who, k);
+        G.hostEvt({ t: 'hab', w: who, k: k, ng: 0 });
+        return;
+      }
       switch (this.idDe(G, who, k)) {
         case 'mordisco': ok = this.mordisco(G, who, false, H.BITE_NET_MARGIN); break;
         case 'grito':    ok = this.grito(G, who, false); break;
@@ -1403,7 +1513,7 @@
       son('playBiteMiss', !mio(G, bl.w));
     },
 
-    /* W — INMUNIDAD: 2 s intocable; a diferencia del escudo, no se gasta */
+    /* W — INMUNIDAD: 3 s intocable; a diferencia del escudo, no se gasta */
     inmunidad: function (G, idx) {
       var s = this.estado(idx);
       if (!s) return false;
@@ -1435,6 +1545,56 @@
       var o = G.pacs[j];
       this.efecto('amparo', o.x, o.y, 24);
       G.hostEvt({ t: 'habEsc', w: j });
+      return true;
+    },
+
+    /* E MANTENIDA 3 s — escudo a TODOS los compañeros vivos a
+     * ALIADO_AREA_TILES casillas (se mide por ejes: un cuadro a la redonda).
+     * Al propio Soporte no. Sin nadie a tiro, ni sale ni gasta. */
+    aliadosCerca: function (G, idx) {
+      var p = G.pacs[idx], out = [];
+      if (!p) return out;
+      var alcance = H.ALIADO_AREA_TILES * T + T / 2;
+      for (var i = 0; i < G.pacs.length; i++) {
+        if (i === idx || !this.vivo(G, i)) continue;
+        var o = G.pacs[i];
+        if (distX(o.x, p.x) <= alcance && Math.abs(o.y - p.y) <= alcance) out.push(i);
+      }
+      return out;
+    },
+
+    aliadoArea: function (G, idx, soloVisual) {
+      var js = this.aliadosCerca(G, idx);
+      if (!js.length) return false;
+      sonDe(G, idx, 'playStealth');
+      if (soloVisual) return true;
+      for (var n = 0; n < js.length; n++) {
+        this.marcarEscudo(js[n], H.ALIADO_TICKS);
+        var o = G.pacs[js[n]];
+        this.efecto('amparo', o.x, o.y, 24);
+        G.hostEvt({ t: 'habEsc', w: js[n] });
+      }
+      return true;
+    },
+
+    /* Q MANTENIDA 2 s — PLACA DE HIELO en la casilla del Soporte durante
+     * PLACA_TICKS: todo fantasma que la pise se congela (a cada uno, una vez
+     * por placa: si no, el que se queda quieto encima no se descongelaría
+     * nunca). Una por Soporte; poner otra quita la anterior. La pone quien
+     * manda, como la runa. */
+    puedePlaca: function (G, idx) {
+      var c = this.casillaDe(G, idx);
+      if (!c || !aterrizable(c.c, c.r)) return false;
+      sonDe(G, idx, 'playTurbo');
+      return true;
+    },
+
+    placa: function (G, idx, d) {
+      var c = this.casillaDe(G, idx, d);
+      if (!c || !aterrizable(c.c, c.r)) return false;
+      this.placas[idx] = { c: c.c, r: c.r, t: H.PLACA_TICKS, z: 0 };
+      this.efecto('escarcha', c.c * T + T / 2, c.r * T + T / 2, 18);
+      sonDe(G, idx, 'playTurbo');
       return true;
     },
 
@@ -1649,6 +1809,8 @@
         }
         var ru = this.runas[i];
         if (ru && --ru.t <= 0) this.runas[i] = null;
+        var pl = this.placas[i];
+        if (pl && --pl.t <= 0) this.placas[i] = null;
       }
       for (var j = 0; j < 4; j++) {
         if (this.hielo[j] > 0) this.hielo[j]--;
@@ -1668,6 +1830,21 @@
           break;
         }
       }
+      /* placas de hielo pisadas */
+      for (i = 0; i < this.placas.length; i++) {
+        var pc = this.placas[i];
+        if (!pc) continue;
+        for (j = 0; j < 4; j++) {
+          var gp = G.ghosts[j];
+          if (pc.z & (1 << j)) continue;
+          if (!this.enLaCalle(gp) || gp.tileX() !== pc.c || gp.tileY() !== pc.r) continue;
+          pc.z |= (1 << j);
+          this.hielo[j] = H.HIELO_TICKS;
+          this.huye[j] = 0;
+          this.efecto('escarcha', gp.x, gp.y, 18);
+          G.hostEvt({ t: 'habFx', f: 'escarcha', x: Math.round(gp.x), y: Math.round(gp.y) });
+        }
+      }
     },
 
     /* Gasta la recarga de un poder por su id (la entrada del portal caducada) */
@@ -1682,6 +1859,7 @@
       if (!s) return;
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
+      s.mant = -1; s.mantT = 0;
     },
 
     /* ---------- la foto de red de los roles ----------
@@ -1694,18 +1872,19 @@
         var s = this.st[i];
         e.push([s.provoca, s.escudo, s.pisoton, s.arrolla, s.inmune, s.tormenta, s.gracia, s.coraza]);
       }
-      var po = [], ru = [], bl = [];
+      var po = [], ru = [], bl = [], pl = [];
       for (i = 0; i < this.st.length; i++) {
-        var p = this.portales[i], r = this.runas[i];
+        var p = this.portales[i], r = this.runas[i], q = this.placas[i];
         po.push(p ? [p.ec, p.er, p.sc, p.sr, p.t, p.e] : 0);
         ru.push(r ? [r.c, r.r, r.t] : 0);
+        pl.push(q ? [q.c, q.r, q.t, q.z] : 0);
       }
       for (i = 0; i < this.balas.length; i++) {
         var b = this.balas[i];
         bl.push([b.t === 'fuego' ? 1 : 0, Math.round(b.x), Math.round(b.y), b.d, b.w]);
       }
       return { e: e, hz: this.hielo.slice(), hu: this.huye.slice(), hq: this.huyeQuien.slice(),
-               po: po, ru: ru, bl: bl };
+               po: po, ru: ru, bl: bl, pl: pl };
     },
 
     aplicarRoles: function (hx, mioIdx) {
@@ -1742,6 +1921,12 @@
           this.runas[i] = r ? { c: r[0], r: r[1], t: r[2] } : null;
         }
       }
+      if (hx.pl) {
+        for (i = 0; i < this.st.length; i++) {
+          var q = hx.pl[i];
+          this.placas[i] = q ? { c: q[0], r: q[1], t: q[2], z: q[3] | 0 } : null;
+        }
+      }
       if (hx.bl) {
         this.balas = [];
         for (i = 0; i < hx.bl.length; i++) {
@@ -1774,6 +1959,28 @@
           if (k) ctx.lineTo(px, py); else ctx.moveTo(px, py);
         }
         ctx.closePath(); ctx.stroke();
+        ctx.restore();
+      }
+      /* placas de hielo: un rombo helado que parpadea el último segundo */
+      for (i = 0; i < this.placas.length; i++) {
+        var pl = this.placas[i];
+        if (!pl) continue;
+        if (pl.t < 60 && Math.floor(tk / 5) % 2 === 0) continue;
+        var hx = pl.c * T + T / 2, hy = pl.r * T + T / 2 + Y;
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#8ff4ff';
+        ctx.beginPath();
+        ctx.moveTo(hx, hy - 6); ctx.lineTo(hx + 6, hy); ctx.lineTo(hx, hy + 6); ctx.lineTo(hx - 6, hy);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 0.6 + 0.3 * Math.sin(tk / 7);
+        ctx.strokeStyle = '#bff4ff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hx - 3, hy); ctx.lineTo(hx + 3, hy);
+        ctx.moveTo(hx, hy - 3); ctx.lineTo(hx, hy + 3);
+        ctx.stroke();
         ctx.restore();
       }
       for (i = 0; i < this.portales.length; i++) {
@@ -1890,6 +2097,15 @@
         }
         ctx.closePath();
         ctx.stroke();
+      }
+      /* la tecla mantenida: un aro cian que se va cerrando; al llenarse, sale */
+      var cm = this.cargaMant(G, i);
+      if (cm >= 0 && s.mantT > 8) {
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#00ffff';
+        ctx.beginPath(); ctx.arc(x, y, 12, -Math.PI / 2, -Math.PI / 2 + cm * Math.PI * 2); ctx.stroke();
       }
       if (s.inmune > 0) {
         ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.5 + 0.4 * Math.sin(tk / 3)) + ')';
