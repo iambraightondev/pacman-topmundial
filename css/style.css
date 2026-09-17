@@ -4882,3 +4882,46 @@ body { font-size-adjust: 0.56; }
 .vest-omni-num { position: absolute; bottom: 8px; font-size: 9px; color: #000; background: #00ff3c; padding: 2px 5px; border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { .vest-teclas.vest-omni { transition: none; } }
 .vest-teclas.vest-omni { margin-top: 26px; margin-bottom: 14px; }
+
+/* el dial, con los colores del juego: sin el reloj de arena ni el verde */
+.vest-teclas.vest-omni {
+  background: radial-gradient(circle, #03030d 0 37%, #10104a 38% 40%, #05051a 41% 58%, #1a1a5a 59% 61%, #02020a 62% 100%);
+  box-shadow: 0 0 0 4px #1b1b44, 0 0 0 7px #000, 0 0 0 9px #2121ff, 0 0 26px rgba(33, 33, 255, 0.45);
+}
+.vest-teclas.vest-omni::before {
+  background: repeating-conic-gradient(from var(--giro), #ffb8ae 0 2deg, transparent 2deg 30deg);
+  opacity: 0.45;
+}
+.vest-teclas.vest-omni::after { border-top-color: #ffff00; filter: drop-shadow(0 0 6px #ffff00); }
+.vest-omni .vest-tecla { border-color: #1b1b44; background: #03030d; }
+.vest-omni .vest-tecla .emote-num { color: #ffff00; }
+.vest-omni .vest-tecla:hover { border-color: #ffff00; }
+.vest-omni .vest-tecla.active { border-color: #ffff00; box-shadow: 0 0 12px rgba(255, 255, 0, 0.6); background: #14140a; }
+.vest-omni-centro { background: radial-gradient(circle, #10104a, #03030d 70%); box-shadow: inset 0 0 0 3px #ffff00, 0 0 18px rgba(255, 255, 0, 0.35); }
+.vest-omni-centro::before { display: none; }
+.vest-omni-num { color: #000; background: #ffff00; }
+
+/* el dial como un anillo ancho partido en seis gajos: cada tecla en su gajo,
+ * y el de arriba (el elegido) encendido */
+.vest-teclas.vest-omni {
+  --r: 100px;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle closest-side, #05051a 0 52%, transparent 53%);
+  box-shadow: none;
+}
+.vest-teclas.vest-omni::before {
+  inset: 0; opacity: 1;
+  background:
+    repeating-conic-gradient(from calc(var(--giro) - 30deg), rgba(0, 0, 0, 0.85) 0 1.6deg, transparent 1.6deg 60deg),
+    conic-gradient(from -30deg, rgba(255, 255, 0, 0.55) 0 60deg, transparent 60deg 360deg),
+    radial-gradient(circle closest-side, #2a2aa8 0 70%, #16165e 71% 100%);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 55%, #000 56% 99%, transparent 100%);
+  mask: radial-gradient(circle closest-side, transparent 0 55%, #000 56% 99%, transparent 100%);
+  box-shadow: none;
+  filter: drop-shadow(0 0 10px rgba(33, 33, 255, 0.6));
+}
+.vest-teclas.vest-omni::after { top: -16px; }
+.vest-omni .vest-tecla { border: 0; background: transparent; box-shadow: none; }
+.vest-omni .vest-tecla:hover { border: 0; filter: drop-shadow(0 0 6px #ffff00); }
+.vest-omni .vest-tecla.active { border: 0; background: transparent; box-shadow: none; transform: rotate(calc(var(--i) * 60deg + var(--giro))) translateY(calc(-1 * var(--r))) rotate(calc(-1 * (var(--i) * 60deg + var(--giro)))) scale(1.15); }
+.vest-omni-centro { box-shadow: inset 0 0 0 2px #2121ff, 0 0 16px rgba(33, 33, 255, 0.4); }

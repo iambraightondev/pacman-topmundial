@@ -2669,9 +2669,9 @@
       tt.className = 'vest-mini-titulo';
       tt.textContent = 'TUS EMOTES · TECLAS 1 A 6';
       this.vestTeclasWrap.appendChild(tt);
-      /* EL DIAL (17 sep 2026): las seis teclas en círculo, como el Omnitrix
-       * de Ben 10 Omniverse. El dial gira para dejar arriba la tecla elegida
-       * y su cara sale en grande en el centro, sobre el reloj de arena. */
+      /* EL DIAL (17 sep 2026): las seis teclas en círculo, en un dial que gira
+       * como una rueda de selección. El dial gira para dejar arriba la tecla elegida
+       * y su cara sale en grande en el centro. */
       var teclas = document.createElement('div');
       teclas.className = 'vest-teclas vest-omni';
       var centro = document.createElement('div');
