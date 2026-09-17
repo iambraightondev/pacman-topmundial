@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · ONLINE en verde e INVITAR con fichas
+
+- El MODO ONLINE ya no es celeste: va en **verde**, su color.
+- **INVITAR A LA PARTY** con marco de recreativa: tus amigos guardados como
+  fichas con su Pac-Man (hasta ocho), el código de la sala a la vista y los
+  botones de OTRO NOMBRE y COPIAR ENLACE.
+- La pantalla ONLINE se centra en la pantalla en vez de quedarse arriba.
+
 ## 2026-09-17 · Modo SUPERVIVENCIA (party)
 
 - Nuevo modo en la sala ONLINE: **todos contra todos**, una vida cada uno, y

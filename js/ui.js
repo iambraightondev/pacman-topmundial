@@ -5135,7 +5135,7 @@
         var tags = document.createElement('span');
         tags.className = 'ol-plaza-tags';
         if (i === 0) tags.appendChild(this.olTag('LÍDER', '#ffff00'));
-        if (m.s === window.PM.Net.sid) tags.appendChild(this.olTag('TÚ', '#00ffff'));
+        if (m.s === window.PM.Net.sid) tags.appendChild(this.olTag('TÚ', '#00ff66'));
         if (gv >= 0 && gv < 4) tags.appendChild(this.olTag(CFG.VS.NAMES[gv], CFG.GHOSTS[gv].color));
         if (P.habPick && m.r && CFG.HAB.ROL_INFO[m.r]) {
           tags.appendChild(this.olTag(CFG.HAB.ROL_INFO[m.r].name, CFG.HAB.ROL_INFO[m.r].color));
@@ -5206,27 +5206,64 @@
     },
 
     /* Invitar: se le manda el código a su canal personal (su nombre) */
+    /* A quién avisar: tus amigos guardados como fichas con su Pac-Man, y el
+     * código de la party a la vista para pasarlo por donde sea. */
     askInviteWho: function () {
       var self = this;
       var F = window.PM.Friends;
-      var list = F ? F.all() : [];
-      var btns = [];
-      list.slice(0, 3).forEach(function (name) {
-        btns.push({
-          label: name,
-          onClick: function () { self.hidePrompt(); self.sendInvite(name); }
-        });
-      });
-      btns.push({
-        label: 'OTRO NOMBRE',
-        onClick: function () { self.hidePrompt(); self.askInviteName(); }
-      });
-      btns.push({ label: 'VOLVER', onClick: function () { self.hidePrompt(); } });
+      var P = window.PM.Party;
+      var list = (F ? F.all() : []).slice(0, 8);
+      var code = (P && P.code()) || '';
       this.showPrompt({
-        title: 'INVITAR A LA PARTY',
-        lines: list.length ? ['ELIGE A QUIÉN AVISAR']
-                           : ['NO TIENES AMIGOS GUARDADOS TODAVÍA'],
-        buttons: btns
+        title: 'INVITAR',
+        arcade: true,
+        tono: 'verde',
+        custom: function (p) {
+          var sub = document.createElement('div');
+          sub.className = 'inv-sub';
+          sub.textContent = list.length ? 'LE LLEGA EL AVISO EN CUANTO ABRA EL JUEGO'
+                                        : 'TODAVÍA NO TIENES AMIGOS GUARDADOS';
+          p.appendChild(sub);
+
+          if (list.length) {
+            var rejilla = document.createElement('div');
+            rejilla.className = 'inv-rejilla';
+            list.forEach(function (name, i) {
+              var b = self.makeButton('', function () {
+                self.hidePrompt();
+                self.sendInvite(name);
+              });
+              b.classList.add('inv-ficha');
+              b.style.setProperty('--ic', CFG.PLAYER_COLORS[i % CFG.PLAYER_COLORS.length]);
+              var cv = document.createElement('canvas');
+              cv.width = 40; cv.height = 40;
+              cv.className = 'inv-icono';
+              self.pintarPersonaje(cv, -1, CFG.PLAYER_COLORS[i % CFG.PLAYER_COLORS.length], 'clasico');
+              b.appendChild(cv);
+              var n = document.createElement('span');
+              n.className = 'inv-nombre';
+              n.textContent = name;
+              b.appendChild(n);
+              self.ponRonda(b, 'btn-ronda');
+              rejilla.appendChild(b);
+            });
+            p.appendChild(rejilla);
+          }
+
+          if (code) {
+            var pie = document.createElement('div');
+            pie.className = 'inv-codigo';
+            pie.textContent = 'O PÁSALE EL CÓDIGO: ' + code.split('').join(' ');
+            p.appendChild(pie);
+          }
+        },
+        buttons: [
+          { label: 'OTRO NOMBRE', primary: true, hint: 'ENTER', keys: ['Enter'],
+            onClick: function () { self.hidePrompt(); self.askInviteName(); } },
+          { label: 'COPIAR ENLACE', onClick: function () { self.copyLink(); } },
+          { label: 'VOLVER', hint: 'ESC', keys: ['Escape'],
+            onClick: function () { self.hidePrompt(); } }
+        ]
       });
     },
 
