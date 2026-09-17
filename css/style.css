@@ -4491,3 +4491,115 @@ body { font-size-adjust: 0.56; }
 .marq .mode-peek-name { font-size: 8px; letter-spacing: 0; white-space: nowrap; max-width: 100%; }
 @media (min-width: 1600px) { .marq .mode-peek-name { font-size: 11px; } }
 @media (max-width: 600px) { .marq .mode-peek-name { font-size: 6px; } }
+
+/* ---------- LOS PÓSTERS DE LOS MODOS (js/portadas.js) ----------
+ * La tarjeta del carrusel es un póster: lienzo animado detrás y, encima,
+ * número, etiqueta, título inclinado y frase. Todo se mide en cqw (ancho de
+ * la tarjeta), así que el póster se ve igual de grande o de pequeño. */
+.mode-carousel { --posterH: clamp(250px, min(40vh, 110vw), 470px); }
+@media (min-width: 1600px) { .mode-carousel { --posterH: clamp(300px, 42vh, 470px); } }
+
+.mode-frame .mode-card.poster {
+  position: relative;
+  display: block;
+  width: min(100%, calc(var(--posterH) * 0.766));
+  aspect-ratio: 360 / 470;
+  height: auto;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  background: #000;
+  border: 0;
+  border-color: var(--mc) !important;
+  color: var(--mc) !important;
+  container-type: inline-size;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 0 2px color-mix(in srgb, var(--mc) 60%, #000);
+  transition: box-shadow 0.3s;
+}
+.mode-frame .mode-card.poster.sel,
+.mode-frame .mode-card.poster:hover,
+.mode-frame .mode-card.poster:focus-visible {
+  background: #000;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.7), 0 0 0 3px var(--mc), 0 0 50px color-mix(in srgb, var(--mc) 45%, transparent);
+  outline: none;
+}
+.poster-in {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out;
+}
+.poster-in::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  left: -40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+.mode-card.poster:hover .poster-in::after { animation: poster-brillo 0.8s ease-out; }
+@keyframes poster-brillo { to { left: 130%; } }
+.poster-cv { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mode-frame .poster-num {
+  position: absolute; top: 4cqw; left: 4cqw;
+  font-size: max(8px, 2.8cqw); letter-spacing: 0.2em; color: #fff; opacity: 0.7;
+}
+.mode-frame .mode-tag.poster-tag {
+  position: absolute; top: 4.4cqw; right: 3.9cqw;
+  font-size: max(7px, 2.5cqw); letter-spacing: 0.15em; line-height: 1.2;
+  color: #000; background: var(--mc); padding: 1.6cqw 2.2cqw;
+}
+.mode-frame .mode-name.poster-ttl {
+  position: absolute; left: 5cqw; right: 3cqw; bottom: 17cqw;
+  display: block; text-align: left;
+  font-size: 8.3cqw; line-height: 1.1; letter-spacing: 0.02em;
+  transform: rotate(-7deg); transform-origin: left bottom;
+  background: repeating-linear-gradient(180deg, var(--mc) 0 0.07em, color-mix(in srgb, var(--mc) 55%, #000) 0.07em 0.1em);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0.07em 0.07em 0 color-mix(in srgb, var(--mc) 35%, #000)) drop-shadow(0 0 0.35em color-mix(in srgb, var(--mc) 45%, transparent));
+}
+.mode-frame .poster-frase {
+  position: absolute; left: 5cqw; right: 5cqw; bottom: 4.4cqw;
+  display: block; text-align: left;
+  font-size: max(7px, 2.3cqw); line-height: 1.9; letter-spacing: 0.06em;
+  color: #fff; text-shadow: 0 2px 0 #000;
+}
+
+/* los vecinos: el póster apagado de fondo, con su nombre encima */
+.mode-peek { overflow: hidden; }
+.mode-peek .mode-peek-icon {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: 0.55; pointer-events: none;
+}
+.mode-peek .mode-peek-name, .mode-peek .mode-peek-arrow { position: relative; z-index: 1; text-shadow: 0 2px 0 #000; }
+.mode-peek .mode-peek-name { margin-top: auto; }
+.marq .mode-peek, .mode-peek { height: calc(var(--posterH) * 0.86); }
+
+/* la frase ya va en el póster: el renglón de abajo sobra */
+.marq .mode-desc { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .mode-card.poster:hover .poster-in::after { animation: none; }
+}
+/* ajustes: el póster cabe con JUGAR a la vista, y el lienzo ocupa la tarjeta
+ * también en pantalla grande (ahí .mode-icon tenía tamaño fijo) */
+.mode-carousel { --posterH: clamp(220px, 33vh, 470px); }
+@media (min-width: 1600px) { .mode-carousel { --posterH: clamp(280px, 37vh, 470px); } }
+@media (max-width: 999px) { .mode-carousel { --posterH: min(470px, 118vw); } }
+.marq .mode-frame .mode-icon.poster-cv,
+.mode-frame .mode-icon.poster-cv { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* póster pequeño (portátiles): sin frase, que no cabe junto al título */
+@container (max-width: 250px) {
+  .mode-frame .poster-frase { display: none; }
+  .mode-frame .mode-name.poster-ttl { bottom: 7cqw; }
+}
+@media (min-width: 1000px) and (max-height: 840px) { .mode-carousel { --posterH: clamp(200px, 31vh, 470px); } }
+@container (max-width: 250px) {
+  .mode-frame .mode-tag.poster-tag { font-size: 6px; letter-spacing: 0.05em; padding: 3px 4px; max-width: 72%; }
+}
+@media (min-width: 1000px) and (max-height: 840px) { .mode-carousel { --posterH: clamp(190px, 27vh, 470px); } }

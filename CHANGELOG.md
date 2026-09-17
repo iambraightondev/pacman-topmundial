@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Pósters animados en el carrusel de modos
+
+- Cada modo tiene su **póster** (propuesta Retrato): CLÁSICO comiéndose la
+  pastilla, DOS JUGADORES rodeados, DESATADO con colmillos, CACERÍA con Blinky
+  en rojo, LABERINTOS girando la esquina y ONLINE con el wifi cargando.
+- Título inclinado, etiqueta y frase encima; se inclina en 3D con el ratón y
+  lo cruza un destello. LABERINTOS y ONLINE tiñen la tarjeta entera al cambiar
+  de color. Los vecinos del carrusel asoman con su póster apagado.
+
 ## 2026-09-17 · Revivir al compañero
 
 - Con **vidas propias**, quien se queda sin vidas deja **su cuerpo tirado**

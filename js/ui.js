@@ -623,6 +623,28 @@
       });
     },
 
+    /* Los pósters del carrusel: el de la tarjeta elegida y los dos vecinos.
+     * Los que cambian de color tiñen su tarjeta entera. */
+    pintarPortadas: function (t) {
+      var Po = window.PM.Portadas;
+      if (!Po || !this.modeCards) return;
+      var card = this.modeCards[this.modePick];
+      if (card && card.cv && card.b.offsetParent) {
+        Po.pintar(card.cv, card.mo.id, t, card.estado);
+        var col = Po.color(card.mo.id, card.estado);
+        if (card.pintado !== col) {
+          card.pintado = col;
+          card.b.style.setProperty('--mc', col);
+        }
+      }
+      [this.modePeekPrev, this.modePeekNext].forEach(function (pk) {
+        if (!pk || !pk.id || !pk.b.offsetParent) return;
+        Po.pintar(pk.cv, pk.id, t + 1.3, pk.estado);
+        var c2 = Po.color(pk.id, pk.estado);
+        if (pk.pintado !== c2) { pk.pintado = c2; pk.b.style.setProperty('--mc', c2); }
+      });
+    },
+
     /* Los fantasmas corriendo bajo el logo y el cursor del cuartel.
      * t: segundos. */
     pintarMarquesina: function (t) {
@@ -1278,8 +1300,9 @@
         var p = document.createElement('button');
         p.type = 'button';
         p.className = 'mode-peek ' + (d < 0 ? 'mode-prev' : 'mode-next');
+        /* el vecino asoma con su póster (js/portadas.js), apagado */
         var pcv = document.createElement('canvas');
-        pcv.width = 88; pcv.height = 88;
+        pcv.width = 180; pcv.height = 235;
         pcv.className = 'mode-peek-icon';
         p.appendChild(pcv);
         var pn = document.createElement('span');
@@ -1290,7 +1313,7 @@
         fl.textContent = d < 0 ? '◀' : '▶';
         p.appendChild(fl);
         p.addEventListener('click', function () { self.stepMode(d); });
-        return { b: p, cv: pcv, name: pn, id: '' };
+        return { b: p, cv: pcv, name: pn, id: '', estado: {} };
       };
       this.modePeekPrev = peek(-1);
       this.modePeekNext = peek(1);
@@ -1307,24 +1330,56 @@
          * flechas y responde a Enter, como el resto del menú. */
         var b = document.createElement('button');
         b.type = 'button';
-        b.className = 'mode-card';
+        b.className = 'mode-card poster';
         b.setAttribute('aria-label', mo.name);
+        var Po = window.PM.Portadas;
+        b.style.setProperty('--mc', Po ? Po.color(mo.id) : mo.color);
+
+        /* EL PÓSTER (17 sep 2026, propuesta B · Retrato): el lienzo animado
+         * de js/portadas.js y, encima, número, etiqueta, título inclinado y
+         * frase. Todo va dentro de .poster-in, que es lo que se inclina en 3D
+         * con el ratón: la tarjeta en sí la mueve el carrusel. */
+        var dentro = document.createElement('span');
+        dentro.className = 'poster-in';
+        b.appendChild(dentro);
 
         var cv = document.createElement('canvas');
-        cv.width = 88; cv.height = 88;
-        cv.className = 'mode-icon';
-        self.drawModeIcon(cv, mo);
-        b.appendChild(cv);
+        cv.width = 360; cv.height = 470;
+        cv.className = 'mode-icon poster-cv';
+        dentro.appendChild(cv);
 
-        var nm = document.createElement('span');
-        nm.className = 'mode-name';
-        nm.textContent = mo.name;
-        b.appendChild(nm);
+        var num = document.createElement('span');
+        num.className = 'poster-num';
+        num.textContent = '0' + (MODOS.indexOf(mo) + 1);
+        dentro.appendChild(num);
 
         var tg = document.createElement('small');
-        tg.className = 'mode-tag';
+        tg.className = 'mode-tag poster-tag';
         tg.textContent = mo.tag;
-        b.appendChild(tg);
+        dentro.appendChild(tg);
+
+        var nm = document.createElement('span');
+        nm.className = 'mode-name poster-ttl';
+        nm.textContent = mo.name;
+        dentro.appendChild(nm);
+
+        var frase = document.createElement('span');
+        frase.className = 'poster-frase';
+        frase.textContent = Po ? Po.frase(mo.id) : mo.desc;
+        dentro.appendChild(frase);
+
+        var estado = {};
+        b.addEventListener('mousemove', function (ev) {
+          var r = b.getBoundingClientRect();
+          if (!r.width) return;
+          var x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5;
+          if (!self.menosMovimiento()) {
+            dentro.style.transform = 'perspective(800px) rotateY(' + (x * 14) + 'deg) rotateX(' + (-y * 14) + 'deg)';
+          }
+          var D = CFG.DIR;
+          estado.dir = Math.abs(x) > Math.abs(y - 0.12) ? (x < 0 ? D.LEFT : D.RIGHT) : (y - 0.12 < 0 ? D.UP : D.DOWN);
+        });
+        b.addEventListener('mouseleave', function () { dentro.style.transform = ''; estado.dir = null; });
 
         /* Pulsar la tarjeta arranca: la que se ve ES la elegida, así que aquí
          * ya no hay nada que elegir. */
@@ -1333,7 +1388,7 @@
           self.playPick();
         });
         caja.appendChild(b);
-        self.modeCards[mo.id] = { b: b, tag: tg, mo: mo };
+        self.modeCards[mo.id] = { b: b, tag: tg, mo: mo, cv: cv, estado: estado };
       });
       wrap.appendChild(caja);
 
@@ -1624,9 +1679,9 @@
         if (!pk) return;
         var vm = self.modoVecino(par[1]);
         if (pk.id !== vm.id) {
-          self.drawModeIcon(pk.cv, vm);
+          pk.estado = {};
           pk.name.textContent = vm.name;
-          pk.b.style.setProperty('--mc', vm.color);
+          pk.b.style.setProperty('--mc', window.PM.Portadas ? window.PM.Portadas.color(vm.id) : vm.color);
           pk.b.setAttribute('aria-label', (par[1] < 0 ? 'Modo anterior: ' : 'Modo siguiente: ') + vm.name);
           // el vecino nuevo asoma desde fuera, no aparece de golpe
           if (pk.id && self.modeEntra && pk.b.animate && !self.menosMovimiento()) {
@@ -2113,6 +2168,7 @@
         var t = (Date.now() - origen) / 1000;
         self.pintarNickLook(t);
         self.pintarMarquesina(t);   // los fantasmas bajo el logo y el cursor
+        self.pintarPortadas(t);     // los pósters de los modos
         raf(paso);
       }
       raf(paso);
