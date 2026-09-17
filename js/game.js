@@ -1776,7 +1776,12 @@
       this.overIdle = true;
       this.stopAllLoops();
       this.submitRanking();     // partidas de dúo van al top mundial
-      this.overWait = this.celebrating();
+      /* El GAME OVER de recreativa sale YA, sin volver al laberinto: los
+       * logros van dentro como sellos y la subida de nivel en su renglón.
+       * Solo PAC-MAN VS. y CACERÍA, que siguen con el panel de antes, esperan
+       * a que acaben las celebraciones sobre el laberinto. */
+      var arcade = !this.caza && !(this.isVersus && this.isVersus()) && !!this.runSummary;
+      this.overWait = arcade ? false : this.celebrating();
       this.syncUI();
     },
 

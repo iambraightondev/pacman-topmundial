@@ -3210,7 +3210,7 @@
     }
   });
 
-  test('el panel del final espera a que acaben las celebraciones', function () {
+  test('el GAME OVER de recreativa sale ya, aunque haya celebraciones', function () {
     partida(1);
     try {
       G.achNotice = { name: 'X', desc: 'X', color: '#fff', ticks: 3, total: 3 };
@@ -3218,11 +3218,9 @@
       G.phaseTicks = 0;
       G.overIdle = false;
       G.enterGameOverIdle();
-      ok(G.overWait, 'con un logro en pantalla, el panel espera');
-      ok(!window.PM.UI.promptOpen, 'y todavía no hay panel');
-      for (var i = 0; i < 10 && G.overWait; i++) G.step();
-      ok(!G.overWait, 'cuando el aviso termina, deja de esperar');
-      ok(window.PM.UI.promptOpen, 'y sale el panel con el resumen');
+      ok(!G.overWait, 'no se vuelve al laberinto a esperar');
+      ok(window.PM.UI.promptOpen, 'el panel con el resumen sale en el acto');
+      ok(window.PM.UI.els.prompt.classList.contains('arcade'), 'y es el de recreativa');
     } finally {
       G.achNotice = null;
       G.toMenu();
