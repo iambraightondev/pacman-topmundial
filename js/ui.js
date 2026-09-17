@@ -635,6 +635,8 @@
         if (card.pintado !== col) {
           card.pintado = col;
           card.b.style.setProperty('--mc', col);
+          var dot = this.modeDots && this.modeDots[card.mo.id];
+          if (dot) { dot.style.background = col; dot.style.borderColor = col; }
         }
       }
       [this.modePeekPrev, this.modePeekNext].forEach(function (pk) {
@@ -1668,8 +1670,10 @@
         var d = this.modeDots && this.modeDots[k];
         if (d) {
           d.classList.toggle('on', sel);
-          d.style.background = sel ? card.mo.color : '';
-          d.style.borderColor = sel ? card.mo.color : '';
+          // el color de su póster (CACERÍA roja, LABERINTOS y ONLINE cambiantes)
+          var dc = window.PM.Portadas ? window.PM.Portadas.color(k, card.estado) : card.mo.color;
+          d.style.background = sel ? dc : '';
+          d.style.borderColor = sel ? dc : '';
         }
       }
       /* Los vecinos: se repintan solo si han cambiado de modo */

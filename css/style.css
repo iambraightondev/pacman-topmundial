@@ -4603,3 +4603,25 @@ body { font-size-adjust: 0.56; }
   .mode-frame .mode-tag.poster-tag { font-size: 6px; letter-spacing: 0.05em; padding: 3px 4px; max-width: 72%; }
 }
 @media (min-width: 1000px) and (max-height: 840px) { .mode-carousel { --posterH: clamp(190px, 27vh, 470px); } }
+
+/* correcciones del póster:
+ * - la que sale durante el cambio va encima, no debajo de la nueva;
+ * - el borde no se recorta arriba y abajo;
+ * - el borde va en la capa que se inclina, así se tuerce con ella */
+.mode-frame .mode-card.poster.saliendo { position: absolute; top: 0; left: 0; right: 0; bottom: auto; margin: 0 auto; }
+.mode-carousel { padding-block: 10px; }
+.mode-frame .mode-card.poster,
+.mode-frame .mode-card.poster.sel,
+.mode-frame .mode-card.poster:hover,
+.mode-frame .mode-card.poster:focus-visible { overflow: visible; background: transparent; box-shadow: none; }
+.mode-frame .mode-card.poster .poster-in {
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 0 2px color-mix(in srgb, var(--mc) 60%, #000);
+  transition: transform 0.15s ease-out, box-shadow 0.3s;
+}
+.mode-frame .mode-card.poster.sel .poster-in,
+.mode-frame .mode-card.poster:hover .poster-in,
+.mode-frame .mode-card.poster:focus-visible .poster-in {
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.7), 0 0 0 3px var(--mc), 0 0 40px color-mix(in srgb, var(--mc) 45%, transparent);
+}
