@@ -3634,3 +3634,43 @@ body:has(.rv.dormido:not([style*="none"])) { cursor: none; }
 }
 .nick-look:hover { border-color: #ffff00; }
 .nick-caja .nick-input-menu { width: 270px; max-width: calc(92vw - 62px); font-size: clamp(11px, 1.9vh, 14px); letter-spacing: 2px; }
+
+/* ---------- AIRE Y ANCHO COMÚN ----------
+ * 1) La letra de máquina llena la casilla entera (sus mayúsculas miden todo
+ *    el cuerpo, las de Courier poco más de la mitad), así que con los tamaños
+ *    de antes todo quedaba apretado. font-size-adjust la encoge en proporción
+ *    en TODAS las vistas de una vez: se queda al 75 %. Los títulos grandes no.
+ * 2) Cada vista tenía su ancho (la tienda y la portada llegaban al borde, el
+ *    resto a 1180). Ahora todas usan el mismo margen: el contenido nunca pasa
+ *    de 1180 px y nunca se pega al borde. */
+body { font-size-adjust: 0.56; }
+.title, .panel-title, .tm-titulo, #game { font-size-adjust: none; }
+@media (min-width: 601px) {
+  .overlay:not(#prompt) {
+    padding-left: max(40px, calc((100vw - 1180px) / 2));
+    padding-right: max(40px, calc((100vw - 1180px) / 2));
+  }
+  .overlay:not(#prompt) > * { max-width: 100%; }
+  .tm, .tn, .tn-cab, .tienda-util, .rank-list.tm-lista { max-width: 100%; }
+}
+.overlay { line-height: 1.75; }
+
+/* ---------- AIRE para la letra de máquina ----------
+ * Press Start 2P llena toda la casilla: con los interlineados y rellenos
+ * pensados para monospace, las líneas y los recuadros se tocan. */
+.daily-box { gap: 10px; padding: 11px 13px 10px; }
+.daily-tiles { gap: 6px; }
+.daily-tile { gap: 4px; padding: 6px 0 5px; line-height: 1.4; }
+.daily-desc { line-height: 1.7; min-height: 3.4em; padding-top: 2px; }
+.daily-foot { gap: 10px; line-height: 1.4; }
+.daily-card-dia { line-height: 1.5; }
+.mode-peek-name, .mode-name { line-height: 1.45; }
+.vest-tile-name { line-height: 1.45; }
+.rank-row.tm-hist { line-height: 1.5; }
+.btn { line-height: 1.5; }
+.btn.btn-preset { letter-spacing: 1px; }
+.tn-sec { padding-left: 12px; padding-right: 12px; white-space: nowrap; }
+.vest-tile-name + *, .vest-tile small { line-height: 1.5; }
+/* con la letra al 75 %, nada por debajo de 10 px: si no, no se lee */
+.mode-peek-name, .tm-panel-txt, .emote-num, .vest-tile-tag { font-size: 10px; }
+.tm-fama { font-size: 10px; gap: 10px; }

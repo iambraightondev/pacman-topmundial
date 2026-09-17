@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Aire y mismo ancho en todas las vistas
+
+- **Todas las vistas tienen el mismo ancho y margen**: ninguna llega al borde
+  ni es más estrecha que otra.
+- **Nada queda aplastado:** la letra de máquina baja al 75 % (los títulos no),
+  con más interlineado y relleno en el daily, botones, vestuario y tienda.
+  Ningún texto baja de 10 px.
+
 ## 2026-09-17 · Títulos de recreativa y tu nombre con tu aspecto
 
 - **Todos los títulos** llevan el estilo del TOP MUNDIAL: amarillo con las rayas
