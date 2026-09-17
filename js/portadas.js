@@ -165,28 +165,44 @@
       c.font='10px "Press Start 2P",monospace';c.textAlign='left';c.fillStyle=col;c.fillText('LABERINTO '+(vuelta%cols.length+1)+'/6',18,52);
     },
 
-    /* P8 · SUPERVIVENCIA: dos bocas frente a frente dentro del anillo que se
-     * cierra; la que tiene poder (aro rojo) se come a la otra. */
+    /* P8 · SUPERVIVENCIA: el último en pie. Uno solo, entero y enorme, con
+     * el anillo de la zona cerrándose sobre él; alrededor, los que ya han
+     * caído, apagados y tachados. */
     superv:function(c,m,t,e){
-      var ciclo=t%3.2, cx=W/2, cy=H*0.42;
-      var r=H*0.34-(ciclo/3.2)*H*0.09;
-      c.save();c.setLineDash([10,8]);c.lineWidth=4;c.strokeStyle='rgba(255,42,42,'+(0.5+0.3*Math.sin(t*6))+')';
-      c.beginPath();c.arc(cx,cy,r,0,7);c.stroke();c.restore();
-      c.fillStyle='rgba(255,42,42,0.10)';c.beginPath();c.arc(cx,cy,r+70,0,7);c.fill();
-      var come=ciclo>2.2;
-      var ax=cx-W*0.14+(come?(ciclo-2.2)*W*0.14:0);
-      var bx=cx+W*0.14;
-      aTile(c,8.5,ax,cy,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*12)%4],'#ffff00','clasico',{});});
-      c.strokeStyle='#ff2a2a';c.lineWidth=3;c.globalAlpha=0.6+0.4*Math.sin(t*10);
-      c.beginPath();c.arc(ax,cy,62,0,7);c.stroke();c.globalAlpha=1;
-      if(!come||ciclo<2.9){
-        aTile(c,8.5,bx,cy,function(){Sp.drawPacman(c,0,0,D.LEFT,[0,1,2,1][Math.floor(t*9+2)%4],'#00ffff','clasico',{});});
-      }else{
-        c.font='14px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
-        c.fillStyle='#ff5a5a';c.fillText('K.O.',bx,cy);
+      var cx=W/2, cy=H*0.42, ciclo=t%4;
+      var r=H*0.40-(ciclo/4)*H*0.10;
+      /* lo que ya es zona: rojo por fuera del anillo */
+      c.save();
+      c.fillStyle='rgba(255,30,30,0.13)';
+      c.beginPath();c.rect(0,0,W,H);c.arc(cx,cy,r,0,7,true);c.fill();
+      c.restore();
+      /* el anillo, girando */
+      c.save();
+      c.translate(cx,cy);c.rotate(t*0.5);
+      c.setLineDash([18,12]);c.lineWidth=6;
+      c.strokeStyle='rgba(255,60,60,'+(0.7+0.3*Math.sin(t*4))+')';
+      c.beginPath();c.arc(0,0,r,0,7);c.stroke();
+      c.restore();
+      /* los tres caídos, fuera del anillo */
+      var fuera=[[0.16,0.16,'#00ffff'],[0.84,0.2,'#00ff00'],[0.2,0.78,'#ff8c00']];
+      for(var i=0;i<3;i++){
+        (function(i){
+          var f=fuera[i], x=W*f[0], y=H*f[1];
+          c.save();c.globalAlpha=0.45;
+          aTile(c,4.5,x,y,function(){Sp.drawPacman(c,0,0,D.RIGHT,0,f[2],'clasico',{});});
+          c.restore();
+          c.save();
+          c.strokeStyle='#ff3030';c.lineWidth=4;
+          c.beginPath();c.moveTo(x-16,y-16);c.lineTo(x+16,y+16);
+          c.moveTo(x+16,y-16);c.lineTo(x-16,y+16);c.stroke();
+          c.restore();
+        })(i);
       }
-      c.font='10px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
-      c.fillStyle='#ffd400';c.fillText('EL ÚLTIMO EN PIE',cx,H*0.66);
+      /* el que sigue en pie, con su aura */
+      var h=c.createRadialGradient(cx,cy,10,cx,cy,150);
+      h.addColorStop(0,'rgba(255,212,0,0.35)');h.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=h;c.fillRect(0,0,W,H);
+      aTile(c,14,cx,cy,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*8)%4],'#ffd400','clasico',{});});
     },
 
     /* P6 · ONLINE: el símbolo del wifi cargando. El punto de abajo es un

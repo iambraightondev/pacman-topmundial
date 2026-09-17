@@ -4870,7 +4870,8 @@
       function ficha(id, color, titulo, reglas) {
         var f = el('div', 'ol-ficha');
         f.style.setProperty('--mc', color);
-        f.style.display = 'none';
+        f.style.visibility = 'hidden';
+        f.setAttribute('aria-hidden', 'true');
         var cab = el('div', 'ol-ficha-cab');
         cab.appendChild(el('span', 'ol-ficha-nombre', titulo));
         f.appendChild(cab);
@@ -5250,7 +5251,9 @@
       if (this.olFichas) {
         for (var fid in this.olFichas) {
           if (!this.olFichas.hasOwnProperty(fid)) continue;
-          this.olFichas[fid].style.display = (fid === modo) ? '' : 'none';
+          var esta = (fid === modo);
+          this.olFichas[fid].style.visibility = esta ? 'visible' : 'hidden';
+          this.olFichas[fid].setAttribute('aria-hidden', esta ? 'false' : 'true');
         }
       }
       /* DESATADO: el rol lo elige cada uno, no el líder */

@@ -1563,9 +1563,10 @@
       { id: 'runa',     key: 'E', name: 'RUNA',     cd: 32 * 60 },
       { id: 'tormenta', key: 'R', name: 'TORMENTA', cd: 60 * 60 }
     ],
-    /* El orden de los roles es el de los selectores y el de la letra con que
-     * viajan (primera letra: a, t, s, m). No reordenar sin subir NET.PROTO. */
-    ROL_IDS: ['asesino', 'tanque', 'soporte', 'mago'],
+    /* El orden de esta lista es SOLO el de los selectores: por la red cada
+     * rol viaja por su NOMBRE, no por su posición, así que reordenarla no
+     * rompe nada (ni hace falta subir NET.PROTO). */
+    ROL_IDS: ['asesino', 'tanque', 'mago', 'soporte'],
     ROL_INFO: {
       asesino: { name: 'ASESINO', color: '#ff66cc', lema: 'PUNTÚA: MUERDE, CORRE Y ASUSTA',
                  desc: ['TE COMES AL FANTASMA QUE TENGAS PEGADO', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
@@ -1573,10 +1574,10 @@
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
                  desc: ['TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'LOS FANTASMAS CERCANOS HUYEN DE TI', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
-      soporte: { name: 'SOPORTE', color: '#00ffff', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
+      soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
-      mago:    { name: 'MAGO', color: '#b36bff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
+      mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'CRUZAS POR OTRA DIMENSIÓN Y DEJAS DOS BOCAS 20 S',
                         'TRAMPA QUE MATA A LOS QUE LA PISEN', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
     },

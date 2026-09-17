@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Colores y orden de los roles
+
+- El **SOPORTE** es **verde** (antes cian), y su ESCUDO ALIADO también.
+- El **MAGO** es **morado** de verdad, ya no tira a rosa.
+- Los roles salen siempre en este orden: ASESINO, TANQUE, MAGO, SOPORTE.
+- El póster de SUPERVIVENCIA es otro: el último en pie dentro del anillo, con
+  los caídos tachados alrededor.
+- La ficha del modo en la sala mide siempre lo mismo (la del más largo), así
+  que cambiar de modo ya no mueve la pantalla.
+
 ## 2026-09-17 · La sala online, con cartelera
 
 - Los modos de la party ya no son interruptores: son **pósteres** como los de

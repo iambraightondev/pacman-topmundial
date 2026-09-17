@@ -5631,3 +5631,13 @@ body { font-size-adjust: 0.56; }
 /* la ficha mide siempre lo mismo: cambiar de modo no encoge ni estira la sala */
 #online .ol-fichas { min-height: clamp(340px, 46vh, 440px); display: flex; }
 #online .ol-ficha { width: 100%; box-sizing: border-box; }
+/* las fichas de los modos, una encima de otra: la caja mide lo que la más
+ * alta, sin hueco de sobra ni saltos al cambiar de modo */
+#online .ol-fichas { display: grid; min-height: 0; }
+#online .ol-ficha { grid-area: 1 / 1; }
+/* que la sala quepa sin desplazar: el póster se queda en su sitio y las
+ * reglas respiran un poco menos */
+#online .ol-poster-cv { max-height: clamp(120px, 21vh, 235px); object-fit: contain; margin: 0 auto; }
+#online .ol-regla { line-height: 1.7; padding-top: 3px; padding-bottom: 3px; }
+#online .ol-ficha { gap: clamp(6px, 1.1vh, 12px); padding: clamp(10px, 1.6vh, 16px) clamp(12px, 1.6vw, 20px); }
+#online .ol-card { gap: clamp(8px, 1.3vh, 14px); }

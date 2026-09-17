@@ -2071,7 +2071,7 @@
         ctx.strokeStyle = 'rgba(179, 107, 255, ' + (0.45 + 0.25 * Math.sin(tk / 8)) + ')';
         ctx.lineWidth = 3;
         ctx.strokeRect(1.5, Y + 1.5, W - 3, Hh - 3);
-        ctx.fillStyle = '#b36bff';
+        ctx.fillStyle = '#8b3dff';
         ctx.fillRect(0, Y, W * resta, 3);
         ctx.restore();
       }
@@ -2081,7 +2081,7 @@
         var rx = r.c * T + T / 2, ry = r.r * T + T / 2 + Y;
         var pul = 0.55 + 0.35 * Math.sin(tk / 6);
         ctx.save();
-        ctx.strokeStyle = 'rgba(179, 107, 255, ' + pul + ')';
+        ctx.strokeStyle = 'rgba(139, 61, 255, ' + pul + ')';
         ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(rx, ry, 5.5, 0, Math.PI * 2); ctx.stroke();
         ctx.beginPath();
@@ -2182,7 +2182,7 @@
         ctx.globalAlpha = Math.max(0, q);
         if (f.t === 'rayo') {
           ctx.strokeStyle = '#e8d4ff';
-          ctx.shadowColor = '#b36bff'; ctx.shadowBlur = 8;
+          ctx.shadowColor = '#8b3dff'; ctx.shadowBlur = 8;
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(f.x0, f.y0 + Y - 4);
@@ -2195,8 +2195,8 @@
           ctx.lineTo(f.x, f.y + Y);
           ctx.stroke();
         } else {
-          var colores = { fuego: '#ff7a1a', runa: '#b36bff', escarcha: '#bff4ff', humo: '#ff9a4a',
-                          roto: '#ffb852', aplasta: '#ffb852', amparo: '#00ffff', vida: '#7dff7a', boca: '#00c8ff' };
+          var colores = { fuego: '#ff7a1a', runa: '#8b3dff', escarcha: '#bff4ff', humo: '#ff9a4a',
+                          roto: '#ffb852', aplasta: '#ffb852', amparo: '#2bff88', vida: '#7dff7a', boca: '#00c8ff' };
           ctx.strokeStyle = colores[f.t] || '#ffffff';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
@@ -2218,7 +2218,7 @@
       var escu = Math.max(s.coraza, s.escudo);
       if (escu > 0) {
         var avisa = escu < 60 && Math.floor(tk / 6) % 2 === 0;
-        var rgb = s.coraza > 0 ? '255, 184, 82' : '0, 255, 255';
+        var rgb = s.coraza > 0 ? '255, 184, 82' : '43, 255, 136';
         ctx.strokeStyle = 'rgba(' + rgb + ', ' + (avisa ? 0.35 : 0.9) + ')';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -2277,7 +2277,7 @@
         ctx.stroke();
       }
       if (s.tormenta > 0) {
-        ctx.strokeStyle = 'rgba(179, 107, 255, ' + (0.4 + 0.3 * Math.sin(tk / 2)) + ')';
+        ctx.strokeStyle = 'rgba(139, 61, 255, ' + (0.4 + 0.3 * Math.sin(tk / 2)) + ')';
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (var c = 0; c < 8; c++) {
