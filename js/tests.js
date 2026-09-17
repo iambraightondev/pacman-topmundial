@@ -8941,8 +8941,12 @@
     ok(b.mode === 'normal', 'y solo en uno');
     ticks(HC.TORMENTA_CADA);
     eq(b.mode, 'eyes', 'al segundo, el siguiente');
+    eq(HC.TORMENTA_RAYOS, 2, 'dos rayos');
+    var c = fantasmaEn(2, 11, 5);
+    HB.hielo[2] = 9999;
     ticks(HC.TORMENTA_CADA * 3);
-    eq(HB.estado(0).tormenta, 0, 'y a los 4 s se acaba aunque no quede a quién');
+    eq(HB.estado(0).tormenta, 0, 'y a los 2 s se acaba');
+    ok(c.mode === 'normal', 'sin tercer rayo');
 
     partidaRol(['mago'], 6, 5, DR.RIGHT);
     ok(HB.pulsar(G, 0, 3), 'otra tormenta');

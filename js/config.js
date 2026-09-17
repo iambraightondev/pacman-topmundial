@@ -1627,7 +1627,7 @@
     PORTAL_RED_GRACIA: 2 * 60,
     PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
     RUNA_TICKS: 10 * 60,
-    TORMENTA_RAYOS: 4,
+    TORMENTA_RAYOS: 2,            // dos rayos: con cuatro barría a todos sin riesgo
     TORMENTA_CADA: 60,
     TORMENTA_TILES: 6,
     /* Lo que vale un fantasma que mata el Mago: fijo, sin tocar la cadena y

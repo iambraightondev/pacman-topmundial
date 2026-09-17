@@ -21,8 +21,8 @@ Bocas abiertas 20 s para todos, sobreviven a pasar de nivel y a morir. Recarga
 46 s desde la salida. RUNA: mata a todos los de su casilla. Decidido por Jarvis:
 en la otra dimensión no se come ni se usan otros poderes; la recarga empieza al
 poner la salida; si la salida cae en la casilla de la entrada, no hay portal.
-Le propuse bajar la TORMENTA (4 muertes seguras en 4 s) y subir la RUNA a 15 s:
-**no contestó, siguen igual**. **Por mirar:** portal en party real.
+TORMENTA bajada a 2 rayos (pedido de Braighton). Le propuse subir la RUNA a
+15 s: **no contestó, sigue en 10 s**. **Por mirar:** portal en party real.
 
 **17 sep (día) — AJUSTES DEL SOPORTE, pedidos por Braighton (`pm-v126`).**
 Q y E se pueden MANTENER (`CFG.HAB.MANTENER`): Q 2 s = placa de hielo en el

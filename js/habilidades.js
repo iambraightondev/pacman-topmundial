@@ -1811,7 +1811,7 @@
       return true;
     },
 
-    /* R — TORMENTA: 4 s, un rayo por segundo sobre el fantasma más cercano a
+    /* R — TORMENTA: 2 s, un rayo por segundo sobre el fantasma más cercano a
      * seis casillas. Sin nadie a tiro, ese rayo se pierde. Sale siempre. */
     tormenta: function (G, idx) {
       var s = this.estado(idx);

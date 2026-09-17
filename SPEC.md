@@ -2408,7 +2408,7 @@ the key index. `LIST` is the ASESINO (the original kit).
   first by `Hab.antesDeRecolocar` from `resetLevel`/`respawn`. Any Pac-Man
   crosses on **entering** a mouth tile (`Hab.cruzar`), then `PORTAL_CRUCE`
   ticks without crossing. RUNA: trap on the mage's tile for 10 s; when stepped
-  on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 4 s on the
+  on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 2 s (`TORMENTA_RAYOS` = 2) on the
   nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
   dies.
 - **Network (PROTO 12; 12 adds `dimension` as the 9th field of each player's role row; 11 adds the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot).** Anything touching ghosts or lives is executed by the
