@@ -945,6 +945,13 @@
         self.showDaily();
       });
 
+      /* El título, estilo póster. En la portada solo va esto y la semana: el
+       * reto, el progreso y el premio se leen dentro de la cartilla. */
+      var titulo = document.createElement('span');
+      titulo.className = 'daily-titulo';
+      titulo.textContent = 'DAILY';
+      b.appendChild(titulo);
+
       /* las siete casillas en pequeño */
       var fila = document.createElement('div');
       fila.className = 'daily-tiles';
