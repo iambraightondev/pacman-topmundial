@@ -1,0 +1,74 @@
+<style>
+  .chip.cofre { color: #ffb852; }
+  .chip.tienda { color: #6fe3ff; }
+</style>
+
+<header class="top wrap">
+  <p class="eyebrow">Pac-Man Top Mundial · vitrina de skins</p>
+  <h1>Tanda extravagante</h1>
+  <p class="lede">Las 26 piezas nuevas del 18 de septiembre, sin nada de lo que ya está en el juego. Las ocho skins son extravagantes: dejan la forma de Pac-Man, cada una convierte el comer en su propio gesto, enseña su Q cada pocos segundos y, un poco después, se ve cómo muere. Todo corre por un pasillo del juego a tamaño real, con lupa al lado. Cambie el color arriba para verlo con el de cualquier jugador.</p>
+  <p class="tally"><b>8</b> skins · <b>7</b> accesorios · <b>6</b> efectos · <b>5</b> emotes · <b>7</b> de ellas solo de cofre</p>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <span class="bar-label" id="color-label">Color del jugador</span>
+    <div class="swatches" role="group" aria-labelledby="color-label" id="swatches"></div>
+    <label class="vel" for="vel"><span class="bar-label">Velocidad</span>
+      <input type="range" id="vel" min="80" max="180" step="10" value="100">
+      <output id="vel-out" for="vel">100 %</output></label>
+    <button class="btn" id="pause" type="button">Pausar</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <section>
+    <div class="sec-head">
+      <h2>Skins · 1.500</h2>
+      <p>Las ocho son extravagantes, como el T-REX o el COFRE MÍMICO: no son un Pac-Man pintado, son otro bicho. Cinco se compran en la tienda y tres solo salen de un cofre. El CÓNDOR sigue el grupo andino que empezaron el CUY y la LLAMA.</p>
+    </div>
+    <div class="grid" id="g-skin"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Accesorios · 450</h2>
+      <p>Lucen con cualquier skin, también sobre las extravagantes. Se ven sobre CLÁSICO para compararlos.</p>
+    </div>
+    <div class="grid" id="g-accesorio"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Efectos · 250</h2>
+      <p>Lo que deja al pasar. Nada que tape el laberinto. Se ven sobre CLÁSICO.</p>
+    </div>
+    <div class="grid" id="g-efecto"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Emotes · 150</h2>
+      <p>Salen en el globo sobre el jugador. Se eligen seis en el vestuario, uno por tecla.</p>
+    </div>
+    <div class="grid" id="g-emote"></div>
+  </section>
+
+  <footer>
+    <p>Dígame cuáles entran, cuáles se retocan y cuáles se descartan. Con eso las paso al juego.</p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }

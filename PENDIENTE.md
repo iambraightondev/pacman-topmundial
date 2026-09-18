@@ -13,6 +13,33 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**18 sep — VESTUARIO EXTRAVAGANTE, 26 piezas, A LA ESPERA DE SU VISTO BUENO.**
+Braighton pidió otra tanda, esta vez con las skins **extravagantes**: nada de
+un Pac-Man pintado, otro bicho —dejan la silueta, cada una convierte el comer
+en su propio gesto y tiene su propia muerte. Salieron 8 skins (CÓNDOR, TORO,
+UNICORNIO de cofre; RANA, PAYASO, RECREATIVA, CANGREJO, CARACOL de tienda),
+7 accesorios, 6 efectos y 5 emotes.
+
+Se le enseñaron en un escaparate animado —rechazó los tableros quietos—,
+**Vitrina de skins Top Mundial**: <https://claude.ai/artifact/4xsGc4bTiqAyNDpZ28B4Rk>.
+Su código vive ahora en [`propuestas/vestuario-2026-09-18/`](propuestas/vestuario-2026-09-18/LEEME.md),
+con su LEEME: qué archivo es cada cosa, cómo mirar una pieza de cerca y cómo
+volver a publicar el escaparate. Se guardó en el repo a propósito: se
+construyó en un directorio temporal que muere con la sesión que lo hizo.
+
+Hubo muchas vueltas de correcciones sobre capturas suyas (el payaso copiando
+el emoji, el cangrejo de frente y minimalista porque de perfil parecía una
+araña, la perspectiva de perfil del chullo y las orejas de gato, el vómito del
+ARCOÍRIS saliendo de verdad de la boca). La última fue el **TORO**: la anilla
+colgando del tabique por un enganche corto en el frente del morro —antes
+parecía llevarla en la boca— y los cuernos cambiados de sitio, el principal
+atrás y el del otro lado por delante cruzándolo.
+
+**LO PRIMERO DE LA PRÓXIMA SESIÓN:** preguntarle qué entra, qué se retoca y
+qué se descarta. Hasta que lo diga NO se toca nada de `js/skins.js`,
+`js/sprites.js`, `js/config.js` ni la tienda: el vestuario del juego sigue
+como estaba.
+
 **17 sep (noche) — VESTUARIO NUEVO, 25 piezas.** Braighton pidió más vestuario
 ANTES de los cofres ("sino no tiene sentido, lo que daremos es muy poco"): el
 bote de premios eran 33 objetos y solo 5 skins comprables. Diseñadas en el
