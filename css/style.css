@@ -4657,13 +4657,17 @@ body { font-size-adjust: 0.56; }
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  /* Borde blanco alrededor de las letras. Va por FUERA, con cuatro sombras
-   * de un píxel, y no con -webkit-text-stroke: el trazo se pinta centrado en
-   * el perfil y en una letra de píxeles se comía medio palo, dejando el
-   * rótulo blanquecino en vez del color del fantasma de hoy. */
+  /* Borde alrededor de las letras, del blanco del JUEGO: el de la cara del
+   * fantasma azul (CFG.COLORS.frightFace). El blanco puro se salía de la
+   * paleta del arcade.
+   *
+   * Va por FUERA, con cuatro sombras de un píxel, y no con
+   * -webkit-text-stroke: el trazo se pinta centrado en el perfil y en una
+   * letra de píxeles se comía medio palo, dejando el rótulo descolorido en
+   * vez del color del fantasma de hoy. */
   filter:
-    drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
-    drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)
+    drop-shadow(1px 0 0 #ffb8ae) drop-shadow(-1px 0 0 #ffb8ae)
+    drop-shadow(0 1px 0 #ffb8ae) drop-shadow(0 -1px 0 #ffb8ae)
     drop-shadow(0.07em 0.07em 0 color-mix(in srgb, var(--dc, #ffb8ff) 35%, #000))
     drop-shadow(0 0 0.35em color-mix(in srgb, var(--dc, #ffb8ff) 45%, transparent));
 }

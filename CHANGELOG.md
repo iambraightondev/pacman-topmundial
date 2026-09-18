@@ -4,7 +4,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-18 · El rótulo DAILY, perfilado y parpadeante
 
-- **Borde blanco** alrededor de las letras, para que despeguen del fondo sin
+- **Borde** alrededor de las letras, del blanco del juego —el de la cara del
+  fantasma azul—, para que despeguen del fondo sin
   perder el color del fantasma del día.
 - **En cada saltito se medio apaga** y vuelve a encenderse al caer, como un
   neón que falla.
