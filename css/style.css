@@ -4661,15 +4661,20 @@ body { font-size-adjust: 0.56; }
    * fantasma azul (CFG.COLORS.frightFace). El blanco puro se salía de la
    * paleta del arcade.
    *
-   * Va por FUERA, con cuatro sombras de un píxel, y no con
-   * -webkit-text-stroke: el trazo se pinta centrado en el perfil y en una
-   * letra de píxeles se comía medio palo, dejando el rótulo descolorido en
-   * vez del color del fantasma de hoy. */
+   * Va por FUERA, con sombras, y no con -webkit-text-stroke: el trazo se
+   * pinta centrado en el perfil y en una letra de píxeles se comía medio
+   * palo, dejando el rótulo descolorido en vez del color del fantasma de hoy.
+   *
+   * Las cuatro sombras se ENCADENAN (cada una tiñe el resultado de la
+   * anterior), así que con medio píxel cada una el perfil sale fino; a un
+   * píxel entero salía el doble de gordo de lo que aparenta. */
   filter:
-    drop-shadow(1px 0 0 #ffb8ae) drop-shadow(-1px 0 0 #ffb8ae)
-    drop-shadow(0 1px 0 #ffb8ae) drop-shadow(0 -1px 0 #ffb8ae)
+    drop-shadow(0.5px 0 0 #ffb8ae) drop-shadow(-0.5px 0 0 #ffb8ae)
+    drop-shadow(0 0.5px 0 #ffb8ae) drop-shadow(0 -0.5px 0 #ffb8ae)
     drop-shadow(0.07em 0.07em 0 color-mix(in srgb, var(--dc, #ffb8ff) 35%, #000))
-    drop-shadow(0 0 0.35em color-mix(in srgb, var(--dc, #ffb8ff) 45%, transparent));
+    drop-shadow(0 0 0.22em color-mix(in srgb, var(--dc, #ffb8ff) 75%, transparent))
+    drop-shadow(0 0 0.6em color-mix(in srgb, var(--dc, #ffb8ff) 55%, transparent))
+    drop-shadow(0 0 1.1em color-mix(in srgb, var(--dc, #ffb8ff) 35%, transparent));
 }
 @media (min-width: 1600px) { .daily-titulo { font-size: 44px; } }
 
