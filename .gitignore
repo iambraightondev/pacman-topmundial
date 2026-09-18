@@ -1,3 +1,6 @@
 .playwright-mcp/
 *.local.png
 .claude/worktrees/
+
+# secretos locales (nunca al repo)
+.env.local
