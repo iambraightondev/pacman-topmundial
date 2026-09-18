@@ -6973,7 +6973,7 @@
       /* las skins de cofre van por el mismo camino */
       var Sk = window.PM.Skins;
       var cofreSkins = CFG.SKINS.filter(function (sk) { return sk.grupo === 'cofre'; });
-      eq(cofreSkins.length, 4, 'las cuatro skins de cofre');
+      eq(cofreSkins.length, 7, 'las siete skins de cofre');
       ok(cofreSkins.some(function (sk) { return sk.legendaria; }), 'una es la del Legendario');
       var sk1 = cofreSkins[0];
       ok(!Sk.estado(sk1.id).abierta, sk1.id + ': cerrada hasta que salga de un cofre');

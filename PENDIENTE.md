@@ -35,10 +35,15 @@ colgando del tabique por un enganche corto en el frente del morro —antes
 parecía llevarla en la boca— y los cuernos cambiados de sitio, el principal
 atrás y el del otro lado por delante cruzándolo.
 
-**LO PRIMERO DE LA PRÓXIMA SESIÓN:** preguntarle qué entra, qué se retoca y
-qué se descarta. Hasta que lo diga NO se toca nada de `js/skins.js`,
-`js/sprites.js`, `js/config.js` ni la tienda: el vestuario del juego sigue
-como estaba.
+**RESUELTO (18 sep, noche):** Braighton dijo que entra TODO ("esas skins y
+todo el desarrollo completo"). Las 26 piezas están ya en el juego: los dibujos
+y las muertes en `js/skins.js`, los catálogos en `js/config.js`, y cada skin
+con su entrada en CABEZAS para que los accesorios le caigan en la cara. Las
+ocho se comprobaron dibujadas en el juego, con accesorios encima y muriéndose.
+
+**Lo que queda por mirar con calma:** los anclajes de los accesorios se
+midieron a ojo sobre el dibujo y se vieron una vez; en CANGREJO y CARACOL el
+sombrero queda algo bajo. Si él lo nota, se afinan sus CABEZAS.
 
 **17 sep (noche) — VESTUARIO NUEVO, 25 piezas.** Braighton pidió más vestuario
 ANTES de los cofres ("sino no tiene sentido, lo que daremos es muy poco"): el

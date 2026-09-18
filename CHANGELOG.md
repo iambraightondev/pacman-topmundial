@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-18 · La tanda EXTRAVAGANTE entra en el juego (26 piezas)
+
+Las skins que llevaban semanas en el escaparate ya se pueden llevar puestas.
+Son **extravagantes**: dejan la silueta de Pac-Man —no son un Pac-Man
+pintado, son otro bicho—, cada una come a su manera, tiene su Q y su propia
+muerte.
+
+- **Ocho skins (1.500)**: **RANA**, **PAYASO**, **RECREATIVA**, **CANGREJO** y
+  **CARACOL** en la tienda; **CÓNDOR**, **TORO** y **UNICORNIO** solo de cofre.
+- **Siete accesorios (450)**: CHULLO, MOHICANO, SOMBRERO VAQUERO, OREJAS DE
+  GATO y GAFAS DE BUCEO en la tienda; MÁSCARA DE LUCHADOR y FLOTADOR DE
+  PATITO de cofre.
+- **Seis efectos (250)**: PÍXELES, ONDAS, MARIPOSAS y FRUTAS en la tienda;
+  FANTASMITAS y OJOS de cofre.
+- **Cinco emotes (150)**: SILBANDO, PLIS, AMBICIOSO, NERVIOS y ARCOÍRIS.
+
+El bote de premios de los cofres sube a **15 piezas** que no se compran con
+monedas.
+
 ## 2026-09-18 · El rótulo DAILY, perfilado y parpadeante
 
 - **Borde fino** alrededor de las letras, del blanco del juego —el de la cara

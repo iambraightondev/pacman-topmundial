@@ -616,6 +616,20 @@
     { id: 'chicle', name: 'CHICLE', grupo: 'tienda', precio: 1500,
       ve: 'GOMA DE MASCAR BLANDA Y BRILLANTE: SE APLASTA AL FRENAR Y CADA POCO HINCHA UN GLOBO QUE LE REVIENTA EN LA CARA.' },
 
+    /* --- EXTRAVAGANTES del 18 sep (1.500): dejan la silueta de Pac-Man,
+     * así que NO admiten accesorios en su cara como las de material. Cada
+     * una come a su manera, tiene su Q y su propia muerte. --- */
+    { id: 'rana', name: 'RANA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'RANA DE CABEZA ANCHA CON DOS OJAZOS SALTONES Y BOCAZA. AL COMER ASOMA LA LENGUA; CON LA Q LA SACA ENTERA DE UN LENGÜETAZO.' },
+    { id: 'payaso', name: 'PAYASO', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL PAYASO DEL EMOJI, DE PERFIL: PELUCA DE RIZOS, NARIZ DE BOLA Y SONRISOTA. CON LA Q LE ESTALLA UNA TARTA DE NATA EN LA CARA.' },
+    { id: 'recreativa', name: 'RECREATIVA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'UN MUEBLE DE SALÓN RECREATIVO CON SU PARTIDA CORRIENDO EN LA PANTALLA; EL PANEL DE MANDOS ES LA MANDÍBULA. CON LA Q, INSERT COIN.' },
+    { id: 'cangrejo', name: 'CANGREJO', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'CANGREJO DE FRENTE QUE CAMINA DE COSTADO: OJOS EN TALLO Y SEIS PATITAS. LA PINZA DE DELANTE ES LA BOCA; CON LA Q, PINZAZO Y BURBUJAS.' },
+    { id: 'caracol', name: 'CARACOL', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'CARACOL CON LA CONCHA DE SU COLOR QUE DEJA RASTRO DE BABA. CON LA Q SE METE DENTRO Y SALE RODANDO A TODA VELOCIDAD.' },
+
     /* --- de COFRE: no se compran, solo salen de un cofre (PLAN-COFRES.md) --- */
     { id: 'plasma', name: 'PLASMA', grupo: 'cofre',
       ve: 'BOLA DE PLASMA: POR DENTRO SALTAN RAYOS QUE BUSCAN EL BORDE, COMO EN LA LÁMPARA DE FERIA.' },
@@ -625,6 +639,14 @@
       ve: 'POR DENTRO ES CIELO ESTRELLADO: UNA NEBULOSA GIRA DESPACIO Y VA SOLTANDO POLVO DE ESTRELLAS.' },
     { id: 'agujero', name: 'AGUJERO NEGRO', grupo: 'cofre', legendaria: true,
       ve: 'UN VACÍO CON ANILLO DE LUZ: LO QUE PASA CERCA SE CURVA HACIA ÉL ANTES DE CAER DENTRO.' },
+
+    /* extravagantes del 18 sep que solo salen de cofre */
+    { id: 'condor', name: 'CÓNDOR', grupo: 'cofre', rara: true,
+      ve: 'CÓNDOR ANDINO DE PERFIL: CABEZA PELADA, GOLILLA DE PLUMÓN BLANCO Y PICO DE GANCHO POR BOCA. CON LA Q ABRE LAS ALAS Y CHILLA.' },
+    { id: 'toro', name: 'TORO', grupo: 'cofre', rara: true,
+      ve: 'CABEZOTA DE TORO BRAVO CON LA ANILLA EN EL MORRO, QUE RESOPLA VAPOR AL CORRER. CON LA Q BAJA LA CABEZA Y EMBISTE.' },
+    { id: 'unicornio', name: 'UNICORNIO', grupo: 'cofre', rara: true,
+      ve: 'CABEZA DE UNICORNIO CON CRIN DE ARCOÍRIS Y CUERNO DE ESPIRAL. CON LA Q DISPARA UN CHORRO DE ARCOÍRIS POR EL CUERNO.' },
 
     /* --- de temporada --- */
     { id: 'calabaza', name: 'CALABAZA', grupo: 'temporada',
@@ -788,7 +810,18 @@
     { id: 'idea', name: 'IDEA', precio: 150,
       ve: 'UNA CEJA LEVANTADA, TRES PUNTITOS Y UNA BOMBILLA QUE SE LE ENCIENDE DE GOLPE.' },
     { id: 'gg', name: 'GG', precio: 150,
-      ve: 'LE CAEN UNAS GAFAS DE SOL SOBRE LOS OJOS Y SALE UN "GG" A UN LADO.' }
+      ve: 'LE CAEN UNAS GAFAS DE SOL SOBRE LOS OJOS Y SALE UN "GG" A UN LADO.' },
+    /* --- tanda del 18 sep --- */
+    { id: 'silbando', name: 'SILBANDO', precio: 150,
+      ve: 'SILBA MIRANDO ARRIBA Y AL LADO CONTRARIO, CON TRES NOTAS QUE SE LE ESCAPAN.' },
+    { id: 'plis', name: 'PLIS', precio: 150,
+      ve: 'OJAZOS DE CACHORRO CON DOS BRILLOS, CEJAS DE PENA Y LA BOCA TEMBLANDO.' },
+    { id: 'ambicioso', name: 'AMBICIOSO', precio: 150,
+      ve: 'LOS OJOS SE LE VUELVEN MONEDAS QUE GIRAN Y SE LE CAE LA BABA.' },
+    { id: 'nervios', name: 'NERVIOS', precio: 150,
+      ve: 'OJOS DE SUSTO, SONRISA FORZADA Y GOTONES DE SUDOR QUE RESBALAN.' },
+    { id: 'arcoiris', name: 'ARCOÍRIS', precio: 150,
+      ve: 'CON CARA DE LOCO, VOMITA UN ARCOÍRIS QUE LE SALE DE LA BOCA.' }
   ];
   /* Todas las caras que pueden ir en una tecla de emote (y por la red) */
   CFG.EMOTE_IDS = CFG.EMOTES.concat(CFG.EMOTES_TIENDA).map(function (e) { return e.id; });
@@ -821,7 +854,20 @@
       ve: 'AL COMERSE UN FANTASMA SALTAN MONEDAS QUE GIRAN Y CAEN. SON DE ADORNO: NO VALEN NADA.' },
     { id: 'efx_humo', name: 'HUMO', precio: 250,
       ve: 'AL ARRANCAR DE PARADO SUELTA BOCANADAS DE HUMO QUE CRECEN Y SE DESHACEN.' },
+    /* --- tanda del 18 sep --- */
+    { id: 'efx_pixeles', name: 'PÍXELES', precio: 250,
+      ve: 'AL PASAR SE VA DESHACIENDO EN BLOQUES DE COLORES QUE CAEN Y SE APAGAN.' },
+    { id: 'efx_ondas', name: 'ONDAS', precio: 250,
+      ve: 'EN CADA GIRO DEJA UN ANILLO DE SU COLOR QUE SE ABRE Y SE DESVANECE.' },
+    { id: 'efx_mariposas', name: 'MARIPOSAS', precio: 250,
+      ve: 'UNA FILA DE MARIPOSAS QUE ALETEAN Y SE VAN SUBIENDO POR DETRÁS.' },
+    { id: 'efx_frutas', name: 'FRUTAS', precio: 250,
+      ve: 'CEREZAS, FRESAS Y NARANJAS QUE VAN BOTANDO POR EL CAMINO.' },
     /* de COFRE: no se compran (PLAN-COFRES.md) */
+    { id: 'efx_fantasmitas', name: 'FANTASMITAS', cofre: true, precio: 0,
+      ve: 'SE LE ESCAPAN FANTASMAS DIMINUTOS DE LOS CUATRO COLORES, QUE SUBEN Y SE APAGAN.' },
+    { id: 'efx_ojos', name: 'OJOS', cofre: true, precio: 0,
+      ve: 'DEJA OJOS ABIERTOS QUE TE SIGUEN CON LA MIRADA Y SE VAN CERRANDO AL APAGARSE.' },
     { id: 'efx_portales', name: 'PORTALES', cofre: true, precio: 0,
       ve: 'SU ESTELA SON PORTALITOS MORADOS QUE SE ABREN Y SE CIERRAN. GUIÑO AL MAGO.' },
     { id: 'efx_constelacion', name: 'CONSTELACIÓN', cofre: true, precio: 0,
@@ -860,7 +906,22 @@
       ve: 'DOS CUERNOS ROJOS CURVADOS. NO DAN NINGUNA VENTAJA, PERO LO PARECEN.' },
     { id: 'acc_obra', name: 'CASCO DE OBRA', precio: 450,
       ve: 'CASCO AMARILLO CON LINTERNA QUE PARPADEA. NO ALUMBRA EL LABERINTO: ES ADORNO.' },
+    /* --- tanda del 18 sep --- */
+    { id: 'acc_chullo', name: 'CHULLO', precio: 450,
+      ve: 'GORRO DE LANA CON ZIGZAG ANDINO, POMPÓN ARRIBA Y LA OREJERA MECIÉNDOSE AL CORRER.' },
+    { id: 'acc_mohicano', name: 'MOHICANO', precio: 450,
+      ve: 'NUEVE PINCHOS RECTOS DE LA FRENTE A LA NUCA, BARRIDOS HACIA ATRÁS Y CON LOS LADOS RAPADOS.' },
+    { id: 'acc_vaquero', name: 'SOMBRERO VAQUERO', precio: 450,
+      ve: 'SOMBRERO DE CUERO CON EL ALA CURVADA, CINTA NEGRA Y UNA CHAPA DORADA.' },
+    { id: 'acc_orejas', name: 'OREJAS DE GATO', precio: 450,
+      ve: 'DOS OREJAS DE GATO, ROSAS POR DENTRO, QUE SE MUEVEN SOLAS CADA POCO.' },
+    { id: 'acc_buceo', name: 'GAFAS DE BUCEO', precio: 450,
+      ve: 'GAFAS DE CRISTAL AZUL CON SU CORREA Y UN TUBO QUE SUELTA BURBUJITAS.' },
     /* de COFRE: no se compran (PLAN-COFRES.md) */
+    { id: 'acc_luchador', name: 'MÁSCARA DE LUCHADOR', cofre: true, precio: 0,
+      ve: 'MÁSCARA DE LUCHA LIBRE: TELA AZUL, LLAMAS DORADAS ALREDEDOR DEL OJO Y LOS CORDONES CRUZADOS DETRÁS.' },
+    { id: 'acc_patito', name: 'FLOTADOR DE PATITO', cofre: true, precio: 0,
+      ve: 'UN FLOTADOR DE PATO DE GOMA A LA CINTURA, CON SU CABEZA DELANTE Y LA COLITA DETRÁS.' },
     { id: 'acc_aureola', name: 'AUREOLA', cofre: true, precio: 0,
       ve: 'UN ARO DE LUZ FLOTANDO SOBRE LA CABEZA QUE SE INCLINA AL GIRAR, COMO SI PESARA.' },
     { id: 'acc_alas', name: 'ALITAS', cofre: true, precio: 0,
