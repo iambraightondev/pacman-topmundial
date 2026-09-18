@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-18 · DESATADO: la Q aturde al jefe, y la R del Soporte a 3 min
+
+- El **MORDISCO** del Asesino, además de quitarle vida al **REY FANTASMA**, lo
+  deja **aturdido 2 segundos**: parado y sin matar al tocarlo. Antes, para
+  morderlo había que pegarse a él, y el golpe salía casi siempre a cambio de
+  una vida.
+- La **VIDA EXTRA** del Soporte (tecla R) recarga en **3 minutos** en vez de 5:
+  a cinco casi nunca daba para usarla dos veces en una partida.
+
 ## 2026-09-17 · Vestuario nuevo: 25 piezas (y las primeras de cofre)
 
 - **Siete skins nuevas de material** (no son disfraces: es de qué está hecho

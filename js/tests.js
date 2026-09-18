@@ -8469,7 +8469,7 @@
     eq(HC.segs(3, 'tanque'), 46, 'ARROLLAR 46 s');
     eq(HC.segs(3, 'mago'), 46, 'TORMENTA 46 s');
     eq(HC.APISONADORA_MULT, 1.75, 'la apisonadora va a x1,75');
-    eq(HC.segs(3, 'soporte'), 300, 'VIDA EXTRA 5 min');
+    eq(HC.segs(3, 'soporte'), 180, 'VIDA EXTRA 3 min');
     eq(HC.segs(0, 'mago'), 20, 'BOLA DE FUEGO 20 s');
     eq(HC.segs(0), 16, 'sin rol, las del Asesino');
     eq(HC.MAGO_PUNTOS, 200, 'lo del Mago vale 200 fijos');
@@ -8681,10 +8681,10 @@
     var vidas = G.lives;
     ok(HB.pulsar(G, 0, 3), 'la vida sale');
     eq(G.lives, vidas + 1, 'una vida más');
-    eq(HB.restan(0, 3), 300, 'y cinco minutos de recarga');
+    eq(HB.restan(0, 3), 180, 'y tres minutos de recarga');
     G.respawn();
     G.resetLevel();
-    eq(HB.restan(0, 3), 300, 'ni morir ni cambiar de nivel la devuelven');
+    eq(HB.restan(0, 3), 180, 'ni morir ni cambiar de nivel la devuelven');
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     G.lives = HC.VIDA_MAX;
     eq(HB.pulsar(G, 0, 3), false, 'con el tope ya puesto no sale');
@@ -9223,6 +9223,16 @@
     ok(HB.pulsar(G, 0, 0), 'la Q muerde al jefe');
     eq(G.jefe.hp, vida - CJ.DANO.mordisco, 'y le quita ' + CJ.DANO.mordisco);
     ok(!HB.lista(0, 0), 'gastando la recarga');
+
+    /* y lo ATURDE 2 s: sin eso, morderlo costaba siempre una vida (18 sep) */
+    nivelJefe(['asesino']);
+    var pm = ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(7, 5);
+    G.jefe.frz = 0;
+    ok(HB.pulsar(G, 0, 0), 'muerde con el jefe suelto');
+    ok(G.jefe.frz >= CJ.ATURDE_MORDISCO, 'lo deja aturdido ' + (CJ.ATURDE_MORDISCO / 60) + ' s');
+    ticks(10);
+    ok(!pm.dying, 'y aturdido no mata al tocarlo');
 
     nivelJefe(['mago']);
     ponPac(0, 2, 5, DR.RIGHT);

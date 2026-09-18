@@ -1621,7 +1621,9 @@
       { id: 'hielo',     key: 'Q', name: 'HIELO',     largo: 'DISPARO HELADO', cd: 16 * 60 },
       { id: 'inmunidad', key: 'W', name: 'INMUNIDAD', cd: 24 * 60 },
       { id: 'aliado',    key: 'E', name: 'ALIADO',    largo: 'ESCUDO ALIADO', cd: 32 * 60 },
-      { id: 'vida',      key: 'R', name: 'VIDA',      largo: 'VIDA EXTRA', cd: 300 * 60 }
+      /* VIDA EXTRA: 3 min (antes 5). A cinco minutos casi nunca llegaba a
+       * usarse dos veces en una partida (18 sep). */
+      { id: 'vida',      key: 'R', name: 'VIDA',      largo: 'VIDA EXTRA', cd: 180 * 60 }
     ],
     LIST_M: [
       { id: 'fuego',    key: 'Q', name: 'FUEGO',    largo: 'BOLA DE FUEGO', cd: 20 * 60 },
@@ -1635,7 +1637,7 @@
     ROL_IDS: ['asesino', 'tanque', 'mago', 'soporte'],
     ROL_INFO: {
       asesino: { name: 'ASESINO', color: '#ff66cc', lema: 'PUNTÚA: MUERDE, CORRE Y ASUSTA',
-                 desc: ['TE COMES AL FANTASMA QUE TENGAS PEGADO', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
+                 desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
                  desc: ['LOS FANTASMAS A 15 CASILLAS HUYEN DE TI, UN 40% MÁS LENTOS', '8 S DE ESCUDO: AGUANTA UN GOLPE',
@@ -1822,6 +1824,12 @@
     INVOCA_PARON: 40,
     INV: 45,                           // tras un golpe, sin recibir otro
     HIELO: 60,                         // lo que lo congela el hielo
+    /* MORDISCO: además del daño, lo ATURDE 2 s (18 sep). Sin esto la Q del
+     * Asesino contra el jefe era un intercambio perdido: para morderlo hay
+     * que pegarse a él, y al hacerlo te mataba en el mismo tick. Aturdido no
+     * se mueve y no mata al tocarlo (ver Jefe.mata), así que da tiempo a
+     * salir. */
+    ATURDE_MORDISCO: 2 * 60,
     /* lo que quita cada cosa */
     DANO: { azul: 6, mordisco: 3, fuego: 2, rayo: 2, runa: 4, aplasta: 4 },
     COLOR: '#d0145a',

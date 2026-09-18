@@ -20,7 +20,7 @@ DESATADO deja de tener un único juego de poderes. Cada jugador elige un
 |---|---|---|---|---|
 | **ASESINO** (el de hoy) | MORDISCO · 16 s | TURBO · 24 s | FLASH · 32 s | GRITO · 60 s |
 | **TANQUE** | PROVOCAR · 16 s | ESCUDO · 24 s | PISOTÓN · 32 s | ARROLLAR · 60 s |
-| **SOPORTE** | DISPARO HELADO · 16 s | INMUNIDAD · 24 s | ESCUDO ALIADO · 32 s | VIDA EXTRA · 300 s |
+| **SOPORTE** | DISPARO HELADO · 16 s | INMUNIDAD · 24 s | ESCUDO ALIADO · 32 s | VIDA EXTRA · 180 s |
 | **MAGO** | BOLA DE FUEGO · 20 s | PORTAL · 24 s | RUNA · 32 s | TORMENTA · 60 s |
 
 Identidad de cada uno: el Asesino **puntúa**, el Tanque **protege**, el
@@ -67,7 +67,7 @@ Con cuatro roles, una escuadra puede llevar uno de cada.
   en píxeles, túnel incluido) un escudo de 3 s con la misma mecánica que el
   W del Tanque (absorbe un golpe). Sin compañeros vivos (solo, o todos
   fuera) no sale y no gasta.
-- **R · VIDA EXTRA (recarga 5 min).** +1 vida.
+- **R · VIDA EXTRA (recarga 3 min).** +1 vida.
   - Destino: el compañero **vivo en el laberinto** con **menos vidas**
     (empate: el más cercano); si todos tienen las mismas o está solo, a sí
     mismo. Con `livesMode === 'shared'`, suma a la vida compartida.
@@ -254,7 +254,7 @@ Asesino con cadena completa, 3.000.
 3. **Soporte en solo local.** Pruebas: el disparo congela al primero y a los
    de su casilla; congelado no mata y se puede morder; sin blanco gasta
    recarga; INMUNIDAD 2 s; ESCUDO ALIADO no sale en solo; VIDA EXTRA respeta
-   el tope y la recarga de 5 min sobrevive a morir y a pasar de nivel.
+   el tope y la recarga de 3 min sobrevive a morir y a pasar de nivel.
 4. **Práctica y récords.** Pruebas: solo+Tanque no toca récord, ranking ni
    maestrías pero suma XP; dúo con Soporte sí cuenta.
 5. **Mago en solo local.** Pruebas: la BOLA mata al primero y da 200 sin

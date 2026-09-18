@@ -2362,7 +2362,7 @@ the key index. `LIST` is the ASESINO (the original kit).
 |---|---|---|---|---|
 | **ASESINO** | MORDISCO 16 s | TURBO 24 s | FLASH 32 s | GRITO 60 s |
 | **TANQUE** (`LIST_T`) | PROVOCAR 32 s (5 s active) | ESCUDO 24 s | PISOTÓN 32 s | ARROLLAR 60 s |
-| **SOPORTE** (`LIST_S`) | HIELO 16 s | INMUNIDAD 24 s | ESCUDO ALIADO 32 s | VIDA 300 s |
+| **SOPORTE** (`LIST_S`) | HIELO 16 s | INMUNIDAD 24 s | ESCUDO ALIADO 32 s | VIDA 180 s |
 | **MAGO** (`LIST_M`) | FUEGO 20 s | PORTAL 24 s | RUNA 32 s | TORMENTA 60 s |
 
 - **Rules** (`Game.rolesDe`, same on every machine): unknown role = asesino;
@@ -2449,6 +2449,8 @@ the key index. `LIST` is the ASESINO (the original kit).
   Damage (`DANO`, then `INV` ticks immune): fright contact once per player per
   fright, mordisco when no ghost is in reach, fuego bullet, rayo if nearer than
   any ghost, runa on its tile, apisonadora contact; hielo/placa freeze `HIELO`.
+  Mordisco also stuns it `ATURDE_MORDISCO` (2 s) through the same `frz`, since
+  biting means touching it and the trade used to cost a life every time.
   Contact otherwise kills (through `salvaDelChoque`). Host/local simulates
   (`paso`, `colisiones`); snapshot `jf`; guests move it by estimate, decide
   their own deaths and send `jefeGolpe` for contact hits; events `jefeDano` /

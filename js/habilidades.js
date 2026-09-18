@@ -1038,6 +1038,9 @@
         sonDe(G, idx, 'playBite');
         if (soloVisual) return true;              // lo cuenta el anfitrión
         JF.danar(G, CFG.JEFE.DANO.mordisco, idx, 'mordisco');
+        /* y lo deja ATURDIDO un momento: morderlo obliga a pegarse a él, y
+         * sin esto el golpe salía siempre a cambio de una vida */
+        JF.congelar(G, CFG.JEFE.ATURDE_MORDISCO);
         return true;
       }
       if (!g) {
