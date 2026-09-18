@@ -225,6 +225,9 @@ body {
   gap: 4px;
 }
 
+/* Los días van SUELTOS (18 sep): antes cada uno iba dentro de su recuadro y
+ * la semana parecía una tabla. Sin marco se lee lo que importa —el fantasma
+ * y el día—, no la cuadrícula. */
 .daily-tile {
   position: relative;
   display: flex;
@@ -232,7 +235,8 @@ body {
   align-items: center;
   gap: 1px;
   padding: 3px 0 2px;
-  border: 1px solid #1a1a44;
+  border: 0;
+  background: none;
   font-size: clamp(7px, 1.1vh, 9px);
   letter-spacing: 1px;
   line-height: 1.1;

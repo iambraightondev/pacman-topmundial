@@ -1185,14 +1185,16 @@
         var t = this.dailyTiles[i];
         var e = this.dailyEstado(D, est, i);
         t.el.className = 'daily-tile ' + e + (i === hoy ? ' es-hoy' : '');
-        t.el.style.borderColor = (i === hoy && !est.h[i]) ? this.dailyColor(i) : '';
+        // sin recuadro: el de hoy se distingue por el color de sus letras
         t.el.style.color = (i === hoy && !est.h[i]) ? this.dailyColor(i) : '';
-        t.el.style.background = (i === hoy && !est.h[i])
-          ? this.dailyRgba(this.dailyColor(i), 0.1) : '';
         if (t.estado !== e) { this.pintarFantasmaDaily(t.cv, i, e); t.estado = e; }
       }
 
-      var color = this.dailyColor(hoy);
+      /* El título DAILY se pinta del color del fantasma de HOY, y cuando se
+       * caza pasa a AZUL con él: el mismo azul del energizante que se ve en
+       * su casilla. Así el título dice de un vistazo si el reto está hecho
+       * sin tener que leer nada (18 sep). */
+      var color = est.h[hoy] ? CFG.COLORS.frightBody : this.dailyColor(hoy);
       this.dailyBox.style.setProperty('--dc', color);
       if (!p) { this.dailyDesc.textContent = ''; return; }
       this.dailyHecho = p.hecho;

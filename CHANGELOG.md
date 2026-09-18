@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-18 · El DAILY de la portada, más limpio
+
+- **Los días de la semana van sueltos**, sin el recuadro que envolvía a cada
+  uno. Así se lee el fantasma y el día, no la cuadrícula.
+- **El título DAILY se pinta del color del fantasma de hoy** —hoy toca rojo,
+  mañana rosa— y **se vuelve azul en cuanto cazas el reto**, igual que el
+  fantasma de su casilla. De un vistazo se sabe si está hecho, sin leer nada.
+
 ## 2026-09-18 · El Soporte levanta de una pasada
 
 - **El SOPORTE revive a un caído pasándole por encima UNA vez** en lugar de
