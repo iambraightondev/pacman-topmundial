@@ -21,11 +21,18 @@ flor y eco; la joya pasó a CHICLE) e implementadas: 7 skins de material, 7
 accesorios, 6 efectos y 5 emotes. El bote pasa a 58 objetos, 8 de ellos **solo
 de cofre** (4 skins —AGUJERO NEGRO es la del Legendario—, 2 accesorios y 2
 efectos), que ya existen en el juego pero se ven cerrados porque **los cofres
-todavía no están hechos**. **Lo siguiente de cofres:** implementar
-`PLAN-COFRES.md` con este vestuario como premio; el contenido exclusivo del
-Legendario ya no está en el aire (AGUJERO NEGRO), queda decidir si los cofres
-son retroactivos (recomendación: regalo de bienvenida de 1 PLATA + 1 ORO y
-contar desde el lanzamiento).
+todavía no están hechos**. Los diseños, con el nombre y el dibujo de cada
+pieza, están en el canvas <https://claude.ai/artifact/CSgcCAFHmoJPUXNNyP6PDB>.
+
+**Lo siguiente de cofres:** implementar `PLAN-COFRES.md` (su §6 bis dice qué
+pieza va a qué cofre y que abrir uno es subir el contador `c_<id>`, nada más).
+Queda una sola decisión de Braighton: si los cofres son **retroactivos**
+(recomendación de Jarvis: regalo de bienvenida de 1 PLATA + 1 ORO y contar
+desde el lanzamiento).
+
+**También pendiente de él:** un token nuevo de Supabase de la cuenta del juego
+—el de los MCP está caducado (401)— para poder darle las 1.000 monedas que
+pidió; las monedas son el contador `monedas` dentro de `perfiles.logros`.
 
 **17 sep (tarde) — JEFE y pantalla ONLINE (pedidos por Braighton).** De las
 ideas que le propuse eligió la 1 (JEFE) y la 7 (SUPERVIVENCIA). Hecho el JEFE

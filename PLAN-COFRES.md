@@ -118,8 +118,31 @@ añadirlo también a la lista de paneles de `pruebas-node.js` y a `tests.html`.
 Versión del service worker, `CHANGELOG.md`, `SPEC.md` y `PENDIENTE.md`.
 Commit y despliegue solo cuando Braighton lo pida.
 
+## 6 bis · El premio ya existe (17 de septiembre de 2026, noche)
+
+Braighton pidió llenar el vestuario ANTES de montar los cofres: con 33 objetos
+en el bote y solo 5 skins comprables, el premio no daba para una economía. Se
+diseñaron en el artifact (canvas `Vestuario nuevo · 25 piezas`,
+<https://claude.ai/artifact/CSgcCAFHmoJPUXNNyP6PDB>) y ya están **hechas y en
+producción** (`pm-v172`): 7 skins de material, 7 accesorios, 6 efectos y 5
+emotes. El bote pasa a **58 objetos**.
+
+Ocho son **exclusivas de cofre** y hoy se ven cerradas porque nada las abre:
+
+| Pieza | Tipo | Para qué cofre |
+|---|---|---|
+| AGUJERO NEGRO | skin | LEGENDARIO (ya no hace falta el premio provisional de §2) |
+| PLASMA, ENJAMBRE, GALAXIA | skins | ORO (la línea de skin del 15 %) |
+| AUREOLA, ALITAS | accesorios | ORO |
+| PORTALES, CONSTELACIÓN | efectos | PLATA |
+
+Cómo está montado (para el paso 2 del orden de trabajo): se poseen por el
+mismo contador `c_<id>` que una compra, así que **abrir un cofre es subir ese
+contador**; `Tienda.VENTA` es lo que se vende y deja fuera lo de cofre;
+`Tienda.esDeCofre(id)` lo distingue; las skins usan `grupo: 'cofre'` y
+`Skins.estado` les pone su etiqueta. Nada más hay que tocar para entregarlas.
+
 ## 7 · Abierto (no decidir sin Braighton)
-- **Contenido exclusivo de cofre** (Legendario y quizá una línea en ORO).
 - **Cofres retroactivos:** quien ya tiene niveles y maestrías, ¿recibe todos
   esos cofres de golpe? Riesgo: decenas de cofres el primer día y la
   economía rota. Recomendación de Jarvis: un **regalo de bienvenida
