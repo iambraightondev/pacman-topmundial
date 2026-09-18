@@ -719,12 +719,13 @@
   });
 
   test('el que muere reaparece con margen de gracia', function () {
+    /* en equipo las vidas son de cada uno desde el 18 sep */
     partida(2);
-    G.lives = 3;
+    G.pacs[0].lives = 3;
     G.startDeath(0);
     ticks(CFG.DEATH_FREEZE_TICKS + CFG.DEATH_ANIM_TICKS + 2);
     ok(!G.pacs[0].dying, 'ha terminado la animación');
-    eq(G.lives, 2);
+    eq(G.pacs[0].lives, 2);
     ok(G.pacs[0].safeTicks > 0, 'reaparece invulnerable un momento');
     eq(G.state, 'PLAYING');
   });
@@ -739,12 +740,31 @@
 
   test('sin vidas, el jugador queda de espectador y el otro sigue', function () {
     partida(2);
-    G.lives = 1;
+    G.pacs[0].lives = 1;
     G.startDeath(0);
     ticks(CFG.DEATH_FREEZE_TICKS + CFG.DEATH_ANIM_TICKS + 2);
     ok(G.pacs[0].out, 'se queda mirando');
     ok(!G.pacs[1].out, 'el compañero sigue');
     eq(G.state, 'PLAYING');
+  });
+
+  /* 18 sep: el fondo común se quitó de las opciones. En equipo, siempre
+   * vidas propias; 'shared' solo queda por dentro (CACERÍA, jugar solo y las
+   * repeticiones viejas, que traen su modo en su ajuste). */
+  test('en equipo las vidas son siempre de cada uno', function () {
+    partida(2);
+    eq(G.livesMode, 'individual', 'el fondo común ya no se ofrece');
+    eq(G.lives, 0, 'y no queda bote que repartir');
+    eq(G.pacs[0].lives, G.pacs[1].lives, 'los dos empiezan igual');
+    /* a quien lo tuviera guardado se le pasa a vidas propias al cargar */
+    eq(window.PM.UI.sanitizeNetCfg({ livesMode: 'shared' }).livesMode,
+       'individual', 'un ajuste viejo se corrige solo');
+    /* una repetición vieja sí puede pedir el fondo común */
+    G.newGame({ players: 2, cfg: (function () {
+      var c = {}, b = window.PM.settings; for (var k in b) c[k] = b[k];
+      c.livesMode = 'shared'; return c;
+    })() });
+    eq(G.livesMode, 'shared', 'las repeticiones viejas siguen funcionando');
   });
 
   test('a un jugador muerto no le persiguen los fantasmas', function () {
@@ -2179,6 +2199,31 @@
     ok(G.timeSent, 'se ha cerrado la marca sin esperar al game over');
     ok(G.lvl1Cs > 0, 'con un tiempo de verdad');
     ok(!G.rankingSent, 'la partida sigue: la puntuación aún no se ha mandado');
+    G.toMenu();
+  });
+
+  /* 18 sep: la puntuación solo subía al llegar al GAME OVER. Quien se salía
+   * al menú con su mejor partida la perdía —le pasó a MAULIO con 28.510—:
+   * quedaba la repetición y el récord de su perfil, pero la tabla no se
+   * enteraba. */
+  test('salirse al menú también manda la puntuación al top mundial', function () {
+    partida(1);
+    try {
+      G.score = 12345;
+      ok(!G.rankingSent, 'aún no');
+      G.toMenu();
+      ok(G.rankingSent, 'al salirse, se manda');
+    } finally { G.toMenu(); }
+  });
+
+  test('GUARDAR Y SALIR no manda nada: la partida sigue viva', function () {
+    partida(1);
+    try {
+      G.score = 9999;
+      G.salvada = true;             // lo que pone js/guardado.js
+      G.toMenu();
+      ok(!G.rankingSent, 'una partida a medias no es una marca');
+    } finally { G.salvada = false; G.toMenu(); }
   });
 
   // ---------------------------------------------------------------
@@ -2508,11 +2553,26 @@
     ok(G.anyPlaying(), 'quedan jugadores');
   });
 
-  test('en dúo, si se va el otro sí se acaba', function () {
+  /* 18 sep: antes, con dos, que se fuera el otro te cortaba la partida.
+   * Ahora se queda de espectador y sigues jugando solo. */
+  test('en dúo, si se va el otro sigues jugando', function () {
     partida(2, 'host');
-    G.playerGone(1);
-    ok(G.netNotice, 'aviso de partida cortada');
-    G.netNotice = null;
+    try {
+      G.playerGone(1);
+      ok(G.pacs[1].out, 'el que se fue queda de espectador');
+      eq(G.netNotice, null, 'sin aviso de partida cortada');
+      eq(G.state, 'PLAYING', 'y la partida sigue');
+      ok(G.anyPlaying(), 'queda alguien');
+    } finally { G.netNotice = null; G.toMenu(); }
+  });
+
+  /* lo único que no se salva: que se vaya QUIEN SIMULA sin dejar el mando */
+  test('si el anfitrión desaparece sin dejar el mando, se acaba', function () {
+    partida(2, 'guest');
+    try {
+      G.guestMsg('bye', { i: 0 }, 'elquefue');
+      ok(G.netNotice, 'aviso de partida cortada');
+    } finally { G.netNotice = null; G.toMenu(); }
   });
 
   test('el que deja de mandar noticias se queda fuera, no congela al resto',
@@ -4562,6 +4622,39 @@
          'un nombre corto se deja como estaba');
     });
 
+  /* 18 sep: la contraseña va SIEMPRE en mayúsculas, se escriba como se
+   * escriba. Las cuentas viejas se arreglan solas al entrar (ver passUp en
+   * js/account.js): Supabase guarda el resumen, no la contraseña, así que
+   * desde fuera no hay forma de pasarlas a mayúsculas. */
+  test('la contraseña se manda siempre en mayúsculas', function () {
+    var Ac = window.PM.Account;
+    var orig = Ac.fn, envios = [], tok = Ac.token, usr = Ac.user;
+    Ac.fn = function (body, cb) { envios.push(body); cb('USUARIO O CONTRASEÑA MAL'); };
+    try {
+      Ac.token = null; Ac.user = null;
+      Ac.signIn('pepe', 'miClave1', function () {});
+      eq(envios[0].usuario, 'PEPE', 'el usuario, saneado');
+      eq(envios[0].pass, 'MICLAVE1', 'y la contraseña en mayúsculas');
+      /* si esa falla, se prueba TAL CUAL: es una cuenta de antes */
+      eq(envios[1].pass, 'miClave1', 'segundo intento: como la escribió');
+      eq(envios.length, 2, 'y no hay un tercero');
+      /* escrita ya en mayúsculas no se reintenta: sería la misma */
+      envios.length = 0;
+      Ac.signIn('pepe', 'MICLAVE1', function () {});
+      eq(envios.length, 1, 'sin segundo intento si ya venía en mayúsculas');
+      /* y un fallo que no sea de contraseña tampoco se reintenta */
+      envios.length = 0;
+      Ac.fn = function (body, cb) { envios.push(body); cb('NO SE PUDO CONECTAR'); };
+      Ac.signIn('pepe', 'miClave1', function () {});
+      eq(envios.length, 1, 'un corte de red no se reintenta');
+      /* el alta también sube en mayúsculas */
+      envios.length = 0;
+      Ac.fn = function (body, cb) { envios.push(body); cb('CORTADO'); };
+      Ac.signUp('pepe', 'miClave1', 'pepe@ejemplo.com', function () {});
+      eq(envios[0].pass, 'MICLAVE1', 'el alta, igual');
+    } finally { Ac.fn = orig; Ac.token = tok; Ac.user = usr; }
+  });
+
   test('sin sesión, la cuenta no deja tocar nada', function () {
     var Ac = window.PM.Account;
     var msg = null;
@@ -5128,7 +5221,9 @@
    * dentro y su propia detección de choques lo mataba. */
   function partidaHabInvitado(col, fila) {
     window.PM.settings.muted = true;
-    G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'] });
+    // el invitado es el que muerde en estas pruebas: el Asesino va al asiento 1
+    G.newGame({ players: 2, hab: true, net: 'guest', names: ['UNO', 'DOS'],
+                roles: ['tanque', 'asesino'] });
     G.localIdx = 1;
     G.state = 'PLAYING';
     G.readyTicks = 0;
@@ -5200,7 +5295,8 @@
   test('el anfitrión le perdona el desfase de red al mordisco del invitado',
     function () {
       window.PM.settings.muted = true;
-      G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'] });
+      G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'],
+                  roles: ['tanque', 'asesino'] });
       G.state = 'PLAYING';
       G.readyTicks = 0;
       var p = G.pacs[1];
@@ -6003,7 +6099,8 @@
   test('el anfitrión oye bajito el poder que le pide un invitado', function () {
     var oidos = espiaAudio(function () {
       window.PM.settings.muted = true;
-      G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'] });
+      G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'],
+                  roles: ['tanque', 'asesino'] });
       G.state = 'PLAYING';
       G.readyTicks = 0;
       G.pacs[1].safeTicks = 999999;
@@ -6016,7 +6113,7 @@
 
   test('con dos en el mismo teclado los dos suenan enteros', function () {
     var oidos = espiaAudio(function () {
-      partidaHab2();
+      partidaHab2(undefined, ['tanque', 'asesino']);
       HB.pulsar(G, 1, HB.TURBO);      // el del J2, que está aquí al lado
     });
     ok(oidos.nombres.indexOf('playTurbo') !== -1, 'suena');
@@ -6032,9 +6129,13 @@
   // ---------------------------------------------------------------
 
   /* Partida de poderes a dos. `ghost2` = fantasma del J2 (-1 = Pac-Man). */
-  function partidaHab2(ghost2) {
+  /* 18 sep: ya no se repiten roles, así que el J2 no puede ser Asesino por
+   * defecto (lo es el J1). Las pruebas que van del kit del J2 le dan el
+   * Asesino a él con roles: ['tanque', 'asesino']. */
+  function partidaHab2(ghost2, roles) {
     window.PM.settings.muted = true;
-    G.newGame({ players: 2, hab: true, ghosts: [-1, ghost2 === undefined ? -1 : ghost2] });
+    G.newGame({ players: 2, hab: true, roles: roles || null,
+                ghosts: [-1, ghost2 === undefined ? -1 : ghost2] });
     G.state = 'PLAYING';
     G.readyTicks = 0;
     for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
@@ -6083,7 +6184,7 @@
 
   test('en dúo cada jugador tiene sus cuatro poderes y su propia recarga',
     function () {
-      partidaHab2();
+      partidaHab2(undefined, ['tanque', 'asesino']);
       eq(HB.cuantas(G, 0), 4, 'el J1 tiene cuatro');
       eq(HB.cuantas(G, 1), 4, 'y el J2 también');
       ok(HB.pulsar(G, 1, HB.TURBO), 'el J2 puede lanzar el suyo');
@@ -6094,7 +6195,7 @@
     });
 
   test('el turbo del J2 acelera al J2, no al J1', function () {
-    partidaHab2();
+    partidaHab2(undefined, ['tanque', 'asesino']);
     var v0 = G.pacSpeedPx(G.pacs[0]);
     var v1 = G.pacSpeedPx(G.pacs[1]);
     HB.pulsar(G, 1, HB.TURBO);
@@ -7291,6 +7392,67 @@
   });
 
   // ---------------------------------------------------------------
+  // PASAR EL MANDO (18 sep)
+  // ---------------------------------------------------------------
+  test('el anfitrión que se va le pasa el mando al siguiente', function () {
+    partida(2, 'host');
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push([n, d]); };
+    try {
+      eq(G.hostIdx, 0, 'manda el primer asiento');
+      eq(G.sucesor(), 1, 'y le tocaría al segundo');
+      ok(G.pasarElMando(), 'el traspaso sale por la red');
+      var m = mandados.filter(function (x) { return x[0] === 'mando'; });
+      eq(m.length, 1, 'uno solo');
+      eq(m[0][1].n, 1, 'para el asiento 1');
+      eq(m[0][1].v, 0, 'y lo deja el 0');
+      ok(m[0][1].s && m[0][1].s.pm, 'con el mapa de pastillas entero');
+      ok(m[0][1].x && typeof m[0][1].x.si === 'number', 'y el reloj de persecuciones');
+      /* solo: no hay a quién dejárselo */
+      G.idos[1] = true;
+      eq(G.sucesor(), -1, 'sin nadie detrás, no hay traspaso');
+      ok(!G.pasarElMando());
+    } finally { G.netSend = envia; G.toMenu(); }
+  });
+
+  test('el que recibe el mando sigue la partida sin el anfitrión', function () {
+    partida(2, 'host');
+    var snap = G.buildSnapshot(true), extra = G.estadoExtra();
+    G.toMenu();
+    partida(2, 'guest');
+    try {
+      eq(G.localIdx, 1, 'era el invitado');
+      G.recibirMando({ n: 1, v: 0, s: snap, x: extra });
+      eq(G.netRole, 'host', 'ahora manda él');
+      eq(G.hostIdx, 1, 'y lo sabe');
+      ok(G.pacs[0].out, 'el que se fue se queda fuera');
+      ok(!G.pacs[1].out, 'y él sigue jugando');
+      ok(!G.netNotice, 'sin aviso de partida acabada');
+      ok(G.idos[0], 'queda apuntado que se fue');
+      G.playerGone(0);
+      ok(!G.netNotice, 'y un adiós tardío suyo ya no acaba la partida');
+    } finally { G.toMenu(); }
+  });
+
+  test('a los demás invitados el traspaso solo les cambia quién manda', function () {
+    partida(3, 'host');
+    var snap = G.buildSnapshot(true), extra = G.estadoExtra();
+    G.toMenu();
+    G.newGame({ players: 3, net: 'guest', localIdx: 2,
+                names: ['UNO', 'DOS', 'TRES'] });
+    G.state = 'PLAYING';
+    try {
+      G.recibirMando({ n: 1, v: 0, s: snap, x: extra });
+      eq(G.netRole, 'guest', 'él sigue de invitado');
+      eq(G.hostIdx, 1, 'pero ahora manda el asiento 1');
+      ok(G.pacs[0].out, 'el que se fue, fuera');
+      eq(G.idxOfSender({}, 'nadie'), 0, 'y el asiento por defecto ya no es el 1');
+      G.guestMsg('bye', { i: 0 }, 'nadie');
+      ok(!G.netNotice, 'el adiós del que ya se fue no acaba nada');
+    } finally { G.toMenu(); }
+  });
+
+  // ---------------------------------------------------------------
   // REVIVIR AL COMPAÑERO (17 sep)
   // ---------------------------------------------------------------
   function duoConVidasPropias() {
@@ -7316,6 +7478,25 @@
     } finally { G.toMenu(); }
   });
 
+  /* 18 sep: si los dos caían en el mismo tick, el que se quedaba sin vidas
+   * no dejaba cuerpo porque su compañero figuraba como 'muriendo'. */
+  test('cayendo los dos a la vez, el que se queda sin vidas deja cuerpo', function () {
+    duoConVidasPropias();
+    try {
+      var j1 = G.pacs[0], j2 = G.pacs[1];
+      j2.x = 100; j2.y = 150;
+      G.startDeath(1);
+      G.startDeath(0);
+      ok(j1.dying && j2.dying, 'los dos muriendo en el mismo tick');
+      G.finishPacDeath(1);          // J2 se queda sin vidas con J1 aún muriendo
+      ok(j2.out, 'J2 fuera');
+      ok(G.cuerpos[1], 'y su cuerpo se queda igual, que J1 va a volver');
+      G.finishPacDeath(0);
+      ok(!j1.out, 'J1 reaparece con las que le quedaban');
+      ok(G.cuerpos[1], 'el cuerpo sigue ahí para levantarlo');
+    } finally { G.toMenu(); }
+  });
+
   test('cinco pasadas por encima lo reviven con 1 vida y escudo', function () {
     duoConVidasPropias();
     try {
@@ -7338,6 +7519,52 @@
       eq(j2.safeTicks, CFG.REVIVIR.ESCUDO_TICKS, 'y 5 s de escudo');
       eq(j2.x + ',' + j2.y, '100,150', 'donde estaba su cuerpo');
       ok(!G.cuerpos[1], 'el cuerpo ya no está');
+    } finally { G.toMenu(); }
+  });
+
+  /* 18 sep: el SOPORTE levanta de una sola pasada. Cinco vueltas sobre un
+   * cuerpo con los fantasmas encima no las da nadie, y levantar es lo suyo. */
+  test('el SOPORTE levanta un cuerpo de una sola pasada', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, roles: ['soporte', 'asesino'] });
+    G.state = 'PLAYING'; G.readyTicks = 0;
+    try {
+      for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+      ok(G.esSoporte(0), 'el J1 lleva el Soporte');
+      ok(!G.esSoporte(1), 'el J2 no');
+      eq(G.pasadasDe(0), 1, 'al Soporte le basta una pasada');
+      eq(G.pasadasDe(1), CFG.REVIVIR.PASADAS, 'a los demás, las de siempre');
+      G.livesMode = 'individual';
+      var j2 = G.pacs[1];
+      j2.lives = 1;
+      j2.x = 100; j2.y = 150;
+      G.finishPacDeath(1);
+      ok(G.cuerpos[1], 'el cuerpo se queda');
+      var sop = G.pacs[0];
+      sop.x = 100; sop.y = 150;              // una pasada por encima
+      G.stepCuerpos();
+      ok(!G.cuerpos[1], 'y con una sola pasada del Soporte, el cuerpo se va');
+      ok(!j2.out, 'el compañero vuelve a jugar');
+      eq(j2.lives, CFG.REVIVIR.VIDAS, 'con lo que da el revivir');
+    } finally { G.toMenu(); }
+  });
+
+  /* y al revés: sin Soporte siguen haciendo falta las cinco */
+  test('sin Soporte, una sola pasada no levanta a nadie', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 2, hab: true, roles: ['tanque', 'asesino'] });
+    G.state = 'PLAYING'; G.readyTicks = 0;
+    try {
+      for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+      G.livesMode = 'individual';
+      var j2 = G.pacs[1];
+      j2.lives = 1; j2.x = 100; j2.y = 150;
+      G.finishPacDeath(1);
+      G.pacs[0].x = 100; G.pacs[0].y = 150;
+      G.stepCuerpos();
+      ok(G.cuerpos[1], 'el cuerpo sigue ahí');
+      eq(G.cuerpos[1].n, 1, 'con una pasada apuntada');
+      ok(j2.out, 'y el compañero sigue fuera');
     } finally { G.toMenu(); }
   });
 
@@ -7369,6 +7596,29 @@
         ok(!G.pacs[1].out, 'J2 vuelve');
         eq(G.level, nivel + 1, 'y se pasa al nivel siguiente');
         eq(G.state, 'READY');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  /* 18 sep: antes la única salida del panel era el MENÚ, y desde el
+   * anfitrión eso cortaba la partida de todos. */
+  test('SEGUIR VIENDO cierra el panel y no vuelve a preguntar', function () {
+    conTienda(function () {
+      duoConVidasPropias();
+      try {
+        G.finishPacDeath(1);
+        G.cuerpos = [];
+        var nivel = G.level;
+        G.state = 'LEVEL_DONE'; G.levelPhase = 1; G.phaseTicks = 1;
+        G.stepLevelDone();
+        eq(G.state, 'REVIVIR', 'sale la vista de revivir');
+        ok(G.renunciarRevivir(), 'dice que prefiere mirar');
+        eq(G.level, nivel + 1, 'y el nivel siguiente arranca sin esperar');
+        ok(G.pacs[1].out, 'J2 sigue fuera, mirando');
+        ok(G.renunciadoLocal(), 'ya no se le pregunta');
+        ok(!G.quedaPorRevivir(), 'no queda nadie por decidir');
+        /* y al acabar el nivel siguiente tampoco vuelve el panel */
+        ok(!G.ofrecerRevivir(), 'el panel no vuelve a salir');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
   });
@@ -8533,6 +8783,19 @@
     ok(yo.dying, 'acabada la provocación, al compañero vuelven a matarlo');
   });
 
+  /* 18 sep: antes solo se les borraba lo pensado, y en un pasillo largo no
+   * hay cruce donde decidir: el grito tardaba segundos en notarse. */
+  test('TANQUE · PROVOCAR: el que le da la espalda se gira en el acto', function () {
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var g = fantasmaEn(1, 20, 5);
+    g.dir = DR.RIGHT;                 // se aleja del Tanque, que está a su izquierda
+    var deFrente = fantasmaEn(2, 21, 5);
+    deFrente.dir = DR.LEFT;           // este ya venía hacia él
+    ok(HB.pulsar(G, 0, 2), 'la provocación sale');
+    eq(g.dir, DR.LEFT, 'el que huía se da la vuelta donde esté');
+    eq(deFrente.dir, DR.LEFT, 'y el que ya venía no se despista');
+  });
+
   test('TANQUE · ESCUDO: 8 s o hasta que un golpe lo rompa', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];
@@ -8894,13 +9157,22 @@
     var p = ponPac(0, 1, 5, DR.RIGHT);
     HB.estado(0).ultTile = -1;
     HB.estado(0).cruce = 0;
+    /* 18 sep: sin el ESPACIO apretado, un portal es solo un dibujo */
+    HB.soltarEspacio();
+    p.x = 2 * CFG.TILE + 4;
+    HB.cruzar(G, p);
+    eq(p.tileX(), 2, 'pisar la boca sin apretar nada no teletransporta');
+    HB.marcarEspacio(0, true);
+    p = ponPac(0, 1, 5, DR.RIGHT);
+    HB.estado(0).ultTile = -1;
     HB.cruzar(G, p);
     eq(p.tileX(), 1, 'fuera de la boca no pasa nada');
     p.x = 2 * CFG.TILE + 4;
     HB.cruzar(G, p);
-    eq(p.tileX(), 12, 'al entrar por una boca sale por la otra');
+    eq(p.tileX(), 12, 'al entrar por una boca con el espacio, sale por la otra');
     HB.cruzar(G, p);
     eq(p.tileX(), 12, 'y no rebota');
+    HB.soltarEspacio();
     ticks(HC.PORTAL_TICKS - 10);
     ok(HB.portales[0], 'a punto de los 20 s sigue abierto');
     ticks(12);
@@ -9122,17 +9394,30 @@
     }
   });
 
-  test('ROLES: la party reparte un solo Soporte', function () {
+  /* 18 sep: ya no es solo el Soporte. NINGÚN rol se repite. */
+  test('ROLES: en la sala no se repite ninguno', function () {
     var P = window.PM.Party;
     var st = P.st;
     try {
       P.st = { code: 'ABCD', leader: true, status: 'dentro',
                members: [{ s: 'yo', n: 'A', r: 'soporte' }, { s: 'otro', n: 'B', r: 'mago' }] };
-      eq(P.claimRol('otro', 'soporte'), 'asesino', 'si ya lo lleva otro, no se lo quita');
       eq(P.claimRol('yo', 'soporte'), 'soporte', 'el que lo tiene se lo queda');
+      eq(P.claimRol('otro', 'mago'), 'mago', 'y cada uno con el suyo');
+      ok(P.rolDeOtro('soporte', 'otro'), 'el Soporte lo lleva otro');
+      ok(!P.rolDeOtro('mago', 'otro'), 'el Mago es suyo');
+      /* pide uno cogido: se queda con el que ya tenía */
+      eq(P.claimRol('otro', 'soporte'), 'mago', 'si el que pide está cogido, sigue con el suyo');
+      /* y si tampoco tenía, el primero libre */
       P.st.members[1].r = 'soporte';
+      eq(P.claimRol('otro', 'soporte'), 'asesino', 'y si no, el primero que quede libre');
       var ord = P.gameOrder();
-      eq(ord[0].r + ',' + ord[1].r, 'soporte,asesino', 'y al arrancar, el segundo pasa a Asesino');
+      eq(ord[0].r + ',' + ord[1].r, 'soporte,asesino', 'al arrancar, tampoco se repiten');
+      /* cuatro plazas, cuatro roles distintos */
+      P.st.members = [{ s: 'a', r: 'mago' }, { s: 'b', r: 'mago' },
+                      { s: 'c', r: 'mago' }, { s: 'd', r: 'mago' }];
+      var r4 = P.gameOrder().map(function (o) { return o.r; });
+      eq(r4.slice().sort().join(','), CFG.HAB.ROL_IDS.slice().sort().join(','),
+         'los cuatro roles, uno por jugador');
     } finally {
       P.st = st;
     }
@@ -9162,6 +9447,58 @@
     j.st = 'caza'; j.stT = 0; j.tCarga = 0; j.tInvoca = 0; j.inv = 0; j.frz = 0; j.plan = -1;
     return j;
   }
+
+  /* 18 sep: los poderes del Tanque no le hacían nada al rey. */
+  test('JEFE · PROVOCAR: acude, se gira y deja de matar al resto', function () {
+    nivelJefe(['tanque', 'asesino']);
+    var j = jefeEn(20, 5);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var yo = G.pacs[1];
+    ponPac(1, 20, 5, DR.LEFT);
+    j.dir = DR.RIGHT;                 // dándole la espalda al Tanque
+    ok(HB.pulsar(G, 0, 2), 'el Tanque grita');
+    eq(j.dir, DR.LEFT, 'el rey se da la vuelta en el acto');
+    var obj = JF.objetivo(G);
+    eq(obj.x + ',' + obj.y, '6,5', 'y va a por el Tanque');
+    yo.x = j.x; yo.y = j.y;
+    ok(!JF.mata(G, 1), 'al compañero lo atraviesa sin matarlo');
+    var tq = G.pacs[0];
+    tq.x = j.x; tq.y = j.y;
+    ok(JF.mata(G, 0), 'al Tanque sí lo mata: para eso se ofrece');
+    HB.estado(0).provoca = 0;
+    ok(JF.mata(G, 1), 'acabado el grito, al compañero vuelven a matarlo');
+  });
+
+  test('JEFE · PISOTÓN: sale por patas y más lento', function () {
+    nivelJefe(['tanque']);
+    var j = jefeEn(8, 5);
+    ponPac(0, 6, 5, DR.RIGHT);
+    j.dir = DR.LEFT;                  // venía hacia el Tanque
+    var normal = JF.velocidad(G);
+    ok(HB.pulsar(G, 0, 0), 'el pisotón sale aunque no haya fantasmas fuera');
+    eq(j.dir, DR.RIGHT, 'el que venía de frente se da la vuelta');
+    ok(j.huye > 0, 'y sale huyendo');
+    ok(JF.velocidad(G) < normal, 'más lento mientras huye');
+    var obj = JF.objetivo(G);
+    ok(obj.x > 8, 'apunta al lado contrario del Tanque');
+    j.huye = 1;
+    JF.paso(G);
+    eq(j.huye, 0, 'y se le acaba');
+  });
+
+  test('JEFE · APISONADORA: le pega y lo deja aturdido 3 s', function () {
+    nivelJefe(['tanque']);
+    var j = jefeEn(6, 5);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var hp = j.hp;
+    HB.estado(0).arrolla = 60;        // en plena carrera
+    j.frz = 0; j.inv = 0;
+    JF.colisiones(G);
+    eq(j.hp, hp - CJ.DANO.aplasta, 'le quita lo suyo');
+    eq(j.frz, CJ.ATURDE_APISONADORA, 'y lo deja parado');
+    eq(CJ.ATURDE_APISONADORA, 3 * 60, 'tres segundos');
+    eq(JF.velocidad(G), 0, 'aturdido no se mueve');
+  });
 
   test('JEFE: cada 5 niveles de DESATADO, y solo ahí', function () {
     partidaRol(['asesino']);

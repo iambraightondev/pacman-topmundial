@@ -54,6 +54,33 @@
 
   function cfg() { return window.PM.NET_CFG || {}; }
 
+  /* LA CONTRASEÑA VA SIEMPRE EN MAYÚSCULAS (18 sep 2026)
+   *
+   * El juego entero se escribe en mayúsculas —el nombre, el marcador, los
+   * paneles— y la gente teclea la contraseña como le sale: con el bloqueo
+   * puesto, sin él, con la primera en mayúscula del móvil. Eso dejaba fuera
+   * a quien la había escrito "bien" pero de otra manera. Así que aquí solo
+   * hay una forma: la de arriba. Se pasa a mayúsculas al darse de alta, al
+   * entrar y al cambiarla, y ni el jugador tiene que pensarlo ni nosotros
+   * guardamos dos versiones de nada.
+   *
+   * LAS DE ANTES no se pueden convertir a mano: Supabase guarda el resumen
+   * (bcrypt), no la contraseña, así que no hay forma de leerla ni de
+   * pasarla a mayúsculas desde fuera. Se arreglan solas al entrar: se
+   * prueba primero en mayúsculas y, si no, TAL CUAL SE ESCRIBIÓ; si entra
+   * así, se le cambia la contraseña a su versión en mayúsculas en ese mismo
+   * momento, con la sesión recién abierta. A la segunda vez ya entra por la
+   * puerta de siempre y nadie se entera de nada. */
+  function passUp(v) {
+    return String(v == null ? '' : v).toUpperCase();
+  }
+
+  /* ¿El fallo de entrar fue de CONTRASEÑA (y no de red o del servidor)? Solo
+   * entonces vale la pena reintentar con lo que escribió el jugador. */
+  function esMala(err) {
+    return /USUARIO O CONTRASEÑA/.test(String(err || ''));
+  }
+
   /* Nombre de usuario: mismo saneado que los nombres del juego */
   function cleanUser(v) {
     return String(v == null ? '' : v).toUpperCase()
@@ -267,13 +294,13 @@
         cb('EL USUARIO NECESITA AL MENOS ' + AC.USER_MIN + ' LETRAS');
         return;
       }
-      if (String(pass || '').length < AC.PASS_MIN) {
+      if (passUp(pass).length < AC.PASS_MIN) {
         cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES');
         return;
       }
       if (!c) { cb('ESCRIBE TU CORREO: ES LO QUE TE DEVUELVE LA CUENTA'); return; }
       if (!mailOk(c)) { cb('ESE CORREO NO TIENE BUENA PINTA'); return; }
-      this.fn({ op: 'alta', usuario: u, pass: String(pass), correo: c },
+      this.fn({ op: 'alta', usuario: u, pass: passUp(pass), correo: c },
         function (err, d) {
           if (err) { cb(err); return; }
           self.accept(d.sesion, u, cb);
@@ -284,10 +311,25 @@
       var self = this;
       var u = cleanUser(usuario);
       if (!u || !pass) { cb('ESCRIBE USUARIO Y CONTRASEÑA'); return; }
-      this.fn({ op: 'entrar', usuario: u, pass: String(pass) },
+      var arriba = passUp(pass), tal = String(pass);
+      function dentro(d) { self.accept(d.sesion, u, cb); }
+      this.fn({ op: 'entrar', usuario: u, pass: arriba },
         function (err, d) {
-          if (err) { cb(err); return; }
-          self.accept(d.sesion, u, cb);
+          if (!err) { dentro(d); return; }
+          /* Cuenta vieja con la contraseña en minúsculas: se prueba tal cual
+           * se escribió y, si entra, se le pasa a mayúsculas en el acto (ver
+           * el comentario de passUp). Solo si el fallo fue de contraseña: un
+           * corte de red no se reintenta dos veces. */
+          if (arriba === tal || !esMala(err)) { cb(err); return; }
+          self.fn({ op: 'entrar', usuario: u, pass: tal },
+            function (err2, d2) {
+              if (err2) { cb(err); return; }      // el error que se enseña es el primero
+              self.accept(d2.sesion, u, function (e3) {
+                if (e3) { cb(e3); return; }
+                // ya dentro: se guarda en mayúsculas para la próxima vez
+                self.cambiarPass(arriba, function () { cb(null); });
+              });
+            });
         });
     },
 
@@ -687,7 +729,7 @@
       fetch(base('/auth/v1/user'), {
         method: 'PUT',
         headers: authHeaders(this.token),
-        body: JSON.stringify({ password: String(pass) })
+        body: JSON.stringify({ password: passUp(pass) })
       }).then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (d) {
           cb(res.ok ? null

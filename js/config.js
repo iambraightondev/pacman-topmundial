@@ -1456,7 +1456,12 @@
     efx1: '',                     // efecto
     emotes1: 'risa,llanto,enfado,susto,guino,amor',   // las caras de las teclas 1..6
     avatar: 'pac',                // avatar del perfil
-    livesMode: 'shared',          // 'shared' (fondo común) | 'individual'
+    /* Las vidas son SIEMPRE de cada uno (18 sep 2026): el fondo común se
+     * quitó de las opciones porque escondía el REVIVIR AL COMPAÑERO, que
+     * solo existe con vidas propias. 'shared' sigue existiendo por dentro
+     * para CACERÍA (las vidas son del Pac-Man, no de quien lo lleva), para
+     * jugar solo y para poder reproducir las repeticiones viejas. */
+    livesMode: 'individual',      // 'individual' | 'shared' (solo por dentro)
     vsGhost2: -1,                 // PAC-MAN VS. en local: fantasma del J2 (-1 = Pac-Man)
     habRol1: 'asesino',           // DESATADO: el último rol elegido por el J1
     habRol2: 'asesino',           // ...y por el J2 (dos en el mismo teclado)
@@ -1640,13 +1645,13 @@
                  desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
-                 desc: ['LOS FANTASMAS A 15 CASILLAS HUYEN DE TI, UN 40% MÁS LENTOS', '8 S DE ESCUDO: AGUANTA UN GOLPE',
-                        'TODOS LOS FANTASMAS VAN A POR TI E IGNORAN A TU EQUIPO', 'EN LÍNEA RECTA HASTA LA PARED: TE COMES LO QUE TOQUES'] },
-      soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · SOLO UNO POR PARTIDA',
+                 desc: ['A 15 CASILLAS HUYEN DE TI, UN 40% MÁS LENTOS · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
+                        'TODOS SE DAN LA VUELTA Y VAN A POR TI · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
+      soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · LEVANTA UN CUERPO DE UNA PASADA',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
-                 desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'CRUZAS POR OTRA DIMENSIÓN Y DEJAS DOS BOCAS 20 S',
+                 desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
                         'TRAMPA QUE MATA A LOS QUE LA PISEN', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
     },
 
@@ -1830,6 +1835,9 @@
      * se mueve y no mata al tocarlo (ver Jefe.mata), así que da tiempo a
      * salir. */
     ATURDE_MORDISCO: 2 * 60,
+    /* La APISONADORA del Tanque, además de su daño, lo deja parado 3 s:
+     * cruzarse el laberinto para embestirlo tiene que valer algo (18 sep). */
+    ATURDE_APISONADORA: 3 * 60,
     /* lo que quita cada cosa */
     DANO: { azul: 6, mordisco: 3, fuego: 2, rayo: 2, runa: 4, aplasta: 4 },
     COLOR: '#d0145a',
@@ -1850,8 +1858,9 @@
      * (la 'm' de la petición de poder y las placas de hielo en la foto); la 12, el
      * PORTAL con otra dimensión (la 'dimension' de cada jugador en la foto); la
      * 13, el REY FANTASMA ('jf') y SUPERVIVENCIA ('sv' en la foto, la sala y
-     * el arranque). */
-    PROTO: 13,
+     * el arranque); la 14, PASAR EL MANDO (el mensaje 'mando', con el que el
+     * anfitrión que se va le deja la partida al siguiente). */
+    PROTO: 14,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

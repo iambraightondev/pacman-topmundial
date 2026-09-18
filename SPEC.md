@@ -267,6 +267,15 @@ calls it is by definition without a session. Three ops:
   under another name.
 - **`entrar`** {usuario, pass}. Resolves the e-mail and forwards the password
   grant. A usuario that does not exist and a wrong password answer identically.
+
+**Passwords are always UPPERCASED** (18 Sep, `passUp` in `js/account.js`), on
+sign-up, sign-in and change. The whole game is written in caps and people typed
+their password however the keyboard felt that day, which locked out accounts
+over nothing. Existing hashes cannot be converted — Supabase stores bcrypt, not
+the password — so `signIn` retries **exactly as typed** when the uppercase
+attempt fails with a credentials error (never on a network error, never when
+both are identical) and, once in, rewrites the password to its uppercase form
+with the fresh session. The second login goes through the normal door.
 - **`olvide`** {usuario}. Resolves the e-mail and calls `/auth/v1/recover`.
   Returns the address **masked** (`m****o@g****.com`) so the player knows which
   inbox to open without it being readable off anyone's screen.
@@ -706,7 +715,7 @@ PM.settings = {
   skin2: 'clasico',      // player 2 skin
   pacColor: '#ffff00',
   pac2Color: '#00ff00',  // player 2 color (2-player modes)
-  livesMode: 'shared',   // 'shared' (team pool, default) | 'individual'
+  livesMode: 'individual', // always: the shared pool is no longer offered
   ghostSpeedMult: 1.0,   // 0.5–1.2, step .05
   pacSpeedMult: 1.0,     // 0.8–1.3, step .05
   frightMult: 1.0,       // 0–2, step .25  (× frightened duration)
@@ -1876,6 +1885,13 @@ fields, and an old client would silently play against an AI ghost.
   (the hunter ran them out of lives) and `'pacs'` otherwise — surrender,
   disconnect or quitting all count as a Pac-Man win. The GAME OVER panel leads
   with it (`UI.versusLines()`).
+> **When the score is uploaded (18 Sep).** `submitRanking` used to run only
+> from `enterGameOverIdle`, so quitting to the menu kept the replay, the XP and
+> the profile record but never created the ranking row — a real best game could
+> vanish that way. `toMenu` now calls it too, except on GUARDAR Y SALIR (the run
+> is still alive) and when the host just handed over the mando (the game goes on
+> without us, so a partial score is not the team's mark).
+
 * Versus rounds do **not** touch the world ranking (`submitRanking`), the local
   high scores (`persistHighScore`) or the mastery badges (`checkBadges`): the
   settings are not comparable.
@@ -2366,8 +2382,12 @@ the key index. `LIST` is the ASESINO (the original kit).
 | **MAGO** (`LIST_M`) | FUEGO 20 s | PORTAL 24 s | RUNA 32 s | TORMENTA 60 s |
 
 - **Rules** (`Game.rolesDe`, same on every machine): unknown role = asesino;
-  PAC-MAN VS. = everyone asesino; **one SOPORTE per game** (the second becomes
-  asesino; the party leader also enforces it with `Party.claimRol`).
+  PAC-MAN VS. = everyone asesino; **no role is ever repeated** (18 Sep): a
+  player asking for a taken role keeps the one they already held, or else gets
+  the first free id in `ROL_IDS`. Enforced in three places — `Game.rolesDe`
+  (the last filter, so nothing repeated enters even from the wire),
+  `Party.claimRol`/`Party.gameOrder` in the lobby, and both role pickers,
+  which grey out whatever another player holds (`Party.rolDeOtro`).
   `Game.practica` = DESATADO + one player + role ≠ asesino: no record, no
   ranking, no badges (`persistHighScore`, `checkBadges`, `submitRanking`);
   XP and achievements still count. HUD and GAME OVER say PRÁCTICA.
@@ -2375,16 +2395,26 @@ the key index. `LIST` is the ASESINO (the original kit).
   tank's tile (`Hab.objetivo`) for every normal, non-frightened ghost on the
   map, even in scatter, and those ghosts **ignore the rest of the team**: they
   cannot kill anyone but the tank (`Hab.ignoraA`, checked in both collision
-  loops). ESCUDO (`coraza`): lasts 8 s or until the first lethal hit breaks it,
+  loops and, since 18 Sep, in `Jefe.mata` too). Every chaser facing away is
+  **reversed on the spot** (`Hab.deEspaldas` + `forceReverse`; the tunnel
+  shortcut only counts when both are on `TUNNEL_ROW`) — without it the shout
+  took seconds to matter in a long corridor. The REY FANTASMA answers too
+  (`Jefe.acude`), except mid-charge or mid-summon. ESCUDO (`coraza`): lasts 8 s or until the first lethal hit breaks it,
   then `ESCUDO_GRACIA` ticks of grace (`Hab.salvaDelChoque`). The SOPORTE's
   ESCUDO ALIADO (`escudo`) works the same; they are drawn orange and cyan. PISOTÓN: ghosts within 10 tiles flee for 6 s
   (`Hab.huyeDe` → `Ghost.decide` picks the exit farthest from the tank; a
   ghost heading at the tank is reversed); not blue, not edible; no target = not
-  cast. ARROLLAR (the APISONADORA): straight toward the last arrow at
+  cast. Since 18 Sep the REY FANTASMA also flees (`Jefe.espanta`: `jefe.huye`
+  ticks, `huyeDe`, target mirrored through its own tile, speed ×
+  `PISOTON_LENTO`; both travel in the snapshot as fields 11-12).
+  ARROLLAR (the APISONADORA): straight toward the last arrow at
   ×`APISONADORA_MULT` (1.4) **until it hits a wall** (no timer; capped at one
   full lap for tunnel safety), not steerable;
   invulnerable, and every ghost it touches dies for 200 flat, no chain, no
   freeze (`matarMago` with `'aplasta'`; `moverArrolla` replaces `p.update`).
+  Against the boss it deals `DANO.aplasta` **and stuns it**
+  `JEFE.ATURDE_APISONADORA` (3 s), on both the host path and the guest's
+  `jefeGolpe` request.
 - **SOPORTE.** HIELO: projectile (`PROYECTIL_VEL` px/tick, stops at walls,
   wraps in the tunnel) freezing the first ghost and every ghost on its tile for
   3 s: speed 0, not lethal, still biteable. Always spends. INMUNIDAD: 3 s
@@ -2420,8 +2450,11 @@ the key index. `LIST` is the ASESINO (the original kit).
   the host closes a silent guest's after `PORTAL_RED_GRACIA`). Open portals
   survive `limpiarEfectos` (death and level change); a pending one is closed
   first by `Hab.antesDeRecolocar` from `resetLevel`/`respawn`. Any Pac-Man
-  crosses on **entering** a mouth tile (`Hab.cruzar`), then `PORTAL_CRUCE`
-  ticks without crossing. RUNA: trap on the mage's tile for 15 s; when stepped
+  crosses on **entering** a mouth tile (`Hab.cruzar`) **while holding SPACE**
+  (18 Sep: `Hab.espacio[idx]`, set by the keydown/keyup pair in `js/ui.js`,
+  cleared on blur; local-only, since each machine crosses its own pacs). The
+  tile is recorded even when not crossing, so releasing and pressing again
+  without moving does nothing. Then `PORTAL_CRUCE` ticks without crossing. RUNA: trap on the mage's tile for 15 s; when stepped
   on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 2 s (`TORMENTA_RAYOS` = 2) on the
   nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
   dies.
@@ -2925,11 +2958,18 @@ OPCIONES. Shared 2-player rules (both modes):
   HUD); ghost-eat chain and fruit go to the team. One extra life at 10 000
   (to the pool in shared mode; +1 to each active player in individual mode).
   Separate persisted high score `pacman-topmundial-highscore-2p`.
-- **Lives** (`livesMode`): `'shared'` (default) = one team pool (the VIDAS
-  slider), lives icons drawn white; `'individual'` = each player gets VIDAS
-  lives (icons in each player's color, ≤3 shown), a player at 0 becomes a
-  spectator, GAME OVER when everyone is out. Any death runs the classic
-  full-reset sequence (ghosts home, global dot counter active).
+- **Lives** (`livesMode`): always `'individual'` in team play (18 Sep) — each
+  player gets VIDAS lives (icons in each player's color, ≤4 shown with 2
+  players, ≤2 with 3–4), a player at 0 becomes a spectator and can be revived
+  — the fallen body sits where it dropped for `REVIVIR.CUERPO_TICKS` (15 s) and
+  `REVIVIR.PASADAS` (5) passes bring it back with 1 life and a shield, except
+  for a **SOPORTE, who needs a single pass** (18 Sep, `Game.esSoporte` /
+  `pasadasDe`: reviving is its job, and five laps over a body with the ghosts
+  on top is not something anyone does). GAME OVER when everyone is out. `'shared'` (one team pool,
+  white icons) survives only for CACERÍA, solo play and old replays, which
+  carry their own `livesMode`; the option is gone from the menu and a saved
+  `'shared'` is rewritten to `'individual'` on load. Any death runs the
+  classic full-reset sequence (ghosts home, global dot counter active).
 - **Spawns** (`CFG.STARTS`, indexed by player count): symmetric on the
   classic row — P1 (11.5, 23) facing LEFT, P2 (15.5, 23) facing RIGHT
   ("J1"/"J2" labels shown during READY). 1-player keeps the classic
@@ -2971,6 +3011,22 @@ host's difficulty settings + livesMode + startLevel are imposed):
   data and drops with "CONEXIÓN PERDIDA" after 8 s; leaving sends `bye`
   ("EL OTRO JUGADOR HA SALIDO" on the other side → menu). A hidden tab
   keeps simulating via a 100 ms interval pump (rAF stops in background).
+- **Host migration (18 Sep, PROTO 14).** Leaving no longer ends anyone
+  else's game. A host on its way out first broadcasts
+  `mando {n, v, s, x}`: `n` = the seat that takes over (lowest live
+  seat, `Game.sucesor()`), `v` = the seat leaving, `s` = a full snapshot
+  **with** the pellet bitmap, `x` = what the snapshot omits but the
+  simulation needs (`schedIndex/schedTicks`, global dot counter, per-ghost
+  `dotCounter`, house failsafe, Elroy block, fruit timer, extra-life flag,
+  `contHasta`). The receiver applies both, flips to `netRole: 'host'` and
+  keeps simulating; everyone else just records the new `Game.hostIdx`
+  (re-announced once as `evt {t:'mando'}` in case the big message was
+  lost). No `bye` is sent when the handover succeeds. Any other player
+  leaving is now `dropPlayer` (spectator) instead of ending the game, also
+  in a duo. The watchdog is muted while `soloEnLaSala()` — otherwise the
+  last player standing would time itself out. **Not covered:** a host that
+  drops off the network without a handover; nobody holds the snapshot, so
+  the game still ends. The new host does not resume replay recording.
 
 ### Wire messages (reference)
 

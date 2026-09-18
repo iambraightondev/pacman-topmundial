@@ -226,6 +226,10 @@
       this.huyeQuien = [-1, -1, -1, -1];
       this.balas = [];
       this.portales = [];
+      /* ESPACIO apretado, por jugador: sin él no se entra en un portal.
+       * Es de esta pantalla y no viaja por la red: cada máquina cruza sus
+       * propios Pac-Man (ver cruzar). */
+      this.espacio = [false, false, false, false];
       this.runas = [];
       this.placas = [];     // placas de hielo del Soporte (Q mantenida), una por jugador
       for (var i = 0; i < this.st.length; i++) {
@@ -1342,20 +1346,49 @@
     /* =========================================================
      * TANQUE
      * ========================================================= */
-    /* Q — PROVOCAR: 5 s en que TODOS los fantasmas del mapa persiguen la
-     * casilla del Tanque (aunque tocara dispersarse) e ignoran al resto del
-     * equipo (ver ignoraA). Cambia el objetivo, no el modo: no se asustan y al
-     * Tanque sí lo matan. */
+    /* E — PROVOCAR: 5 s en que TODOS los fantasmas del mapa (y el REY
+     * FANTASMA) persiguen la casilla del Tanque, aunque tocara dispersarse, e
+     * IGNORAN al resto del equipo: pasan a través de los demás Pac-Man sin
+     * matarlos (ver ignoraA). Cambia el objetivo, no el modo: no se asustan y
+     * al Tanque sí lo matan.
+     *
+     * 18 sep: el que venía de espaldas se DA LA VUELTA EN EL ACTO. Antes solo
+     * se le borraba lo pensado, y en un pasillo largo no hay cruce donde
+     * decidir: el grito tardaba segundos en notarse y para entonces ya había
+     * muerto el compañero al que iba a salvar. */
     provocar: function (G, idx) {
-      var s = this.estado(idx);
-      if (!s) return false;
+      var s = this.estado(idx), p = G.pacs[idx];
+      if (!s || !p) return false;
       s.provoca = H.TAUNT_TICKS;
       for (var i = 0; i < 4; i++) {
         var g = G.ghosts[i];
-        if (g && g.mode === 'normal' && !g.driven()) g.clearPlan();   // que lo piensen ya
+        if (!g || g.mode !== 'normal' || g.driven()) continue;
+        if (this.deEspaldas(p, g)) g.forceReverse();
+        else g.clearPlan();                          // que lo piense ya
+      }
+      // el REY FANTASMA también acude, y también se da la vuelta
+      if (window.PM.Jefe && window.PM.Jefe.activo && window.PM.Jefe.activo(G)) {
+        window.PM.Jefe.acude(G, p);
       }
       sonDe(G, idx, 'playShout');
       return true;
+    },
+
+    /* ¿Ese perseguidor le está dando la espalda al Pac-Man?
+     *
+     * El atajo del túnel SOLO se cuenta si los dos van por la fila del túnel:
+     * dar la vuelta por ahí desde cualquier otra fila no existe, y contarlo
+     * mandaba al revés a todo el que estuviera a más de medio laberinto. */
+    deEspaldas: function (p, g) {
+      var v = CFG.DIR_V[g.dir];
+      if (!v) return false;
+      var ancho = CFG.COLS * T, hx = p.x - g.x;
+      var porElTunel = (Math.floor(g.y / T) === CFG.TUNNEL_ROW &&
+                        Math.floor(p.y / T) === CFG.TUNNEL_ROW);
+      if (porElTunel) {
+        if (hx > ancho / 2) hx -= ancho; else if (hx < -ancho / 2) hx += ancho;
+      }
+      return (v.x * hx + v.y * (p.y - g.y)) < 0;
     },
 
     /* E — PISOTÓN: los fantasmas a diez casillas huyen del Tanque 6 s.
@@ -1370,10 +1403,16 @@
         if (!this.enLaCalle(g) || g.driven()) continue;
         if (this.distancia(p.x, p.y, g.x, g.y) <= alcance) blancos.push(g);
       }
-      if (!blancos.length) return false;
+      /* el REY FANTASMA también sale por patas (18 sep): con jefe, el
+       * laberinto está casi vacío de fantasmas y el poder no salía nunca. */
+      var JF = window.PM.Jefe;
+      var rey = !!(JF && JF.activo && JF.activo(G) &&
+        this.distancia(p.x, p.y, G.jefe.x, G.jefe.y) <= alcance);
+      if (!blancos.length && !rey) return false;
       s.pisoton = 30;                       // la onda que se pinta
       sonDe(G, idx, 'playCharge');
       if (soloVisual) return true;
+      if (rey) JF.espanta(G, p, H.PISOTON_TICKS);
       for (i = 0; i < blancos.length; i++) {
         var gb = blancos[i];
         this.huye[gb.id] = H.PISOTON_TICKS;
@@ -1811,8 +1850,31 @@
       return (yo >= 0 && this.enDimension(yo)) ? yo : -1;
     },
 
+    /* ¿Ese jugador está apretando el ESPACIO ahora mismo? */
+    pisaPortal: function (idx) {
+      return !!(this.espacio && this.espacio[idx | 0]);
+    },
+
+    /* El teclado: el ESPACIO apretado o suelto (lo pone js/ui.js) */
+    marcarEspacio: function (idx, on) {
+      if (!this.espacio) return;
+      idx = idx | 0;
+      if (idx >= 0 && idx < this.espacio.length) this.espacio[idx] = !!on;
+    },
+
+    soltarEspacio: function () {
+      this.espacio = [false, false, false, false];
+    },
+
     /* Cruzar: lo hace quien simula a ese Pac-Man, al ENTRAR en una boca (no
-     * por estar encima: el Mago que pone la salida donde está no rebota). */
+     * por estar encima: el Mago que pone la salida donde está no rebota).
+     *
+     * 18 sep: hace falta tener el ESPACIO APRETADO. Antes se cruzaba por el
+     * mero hecho de pisar la boca, y en un pasillo de paso el portal del Mago
+     * te mandaba al otro lado del laberinto sin comerlo ni beberlo. Ahora el
+     * portal es una puerta: se entra si se quiere entrar. La casilla se
+     * apunta igual aunque no se cruce, para no cruzar al soltar y volver a
+     * apretar sin moverse. */
     cruzar: function (G, p) {
       if (!this.on || !p) return;
       var s = this.estado(p.id | 0);
@@ -1822,6 +1884,7 @@
       if (tile === s.ultTile) return;
       s.ultTile = tile;
       if (s.cruce > 0) return;
+      if (!this.pisaPortal(p.id | 0)) return;
       for (var i = 0; i < this.portales.length; i++) {
         var po = this.portales[i];
         if (!po || !(po.t > 0)) continue;

@@ -104,26 +104,36 @@
     },
 
     /* ---------- DESATADO: el rol de cada uno ----------
-     * Cada uno elige el suyo; lo único que reparte el líder es el SOPORTE,
-     * que solo cabe uno por partida: el primero que lo coge se lo queda. */
-    claimRol: function (sid, rol) {
-      rol = CFG.HAB.rol(rol);
-      if (rol !== 'soporte' || !this.st) return rol;
-      for (var i = 0; i < this.st.members.length; i++) {
-        var m = this.st.members[i];
-        if (m.s !== sid && m.r === 'soporte') return 'asesino';
-      }
-      return rol;
-    },
-
-    /* ¿Otro de la sala ya lleva el Soporte? (el selector lo apaga) */
-    soporteDeOtro: function () {
+     * Cada uno elige el suyo y NINGUNO SE REPITE (18 sep): antes solo el
+     * Soporte era único. El líder arbitra: al que pida uno que ya lleva otro
+     * se le deja el que tuviera, y si tampoco, el primero que quede libre.
+     * Hay cuatro roles y como mucho cuatro plazas, así que siempre sale. */
+    rolDeOtro: function (rol, sid) {
       if (!this.st) return false;
+      sid = sid || window.PM.Net.sid;
+      rol = CFG.HAB.rol(rol);
       for (var i = 0; i < this.st.members.length; i++) {
         var m = this.st.members[i];
-        if (m.s !== window.PM.Net.sid && m.r === 'soporte') return true;
+        if (m.s !== sid && CFG.HAB.rol(m.r) === rol) return true;
       }
       return false;
+    },
+
+    claimRol: function (sid, rol) {
+      rol = CFG.HAB.rol(rol);
+      if (!this.st) return rol;
+      if (!this.rolDeOtro(rol, sid)) return rol;
+      /* el que pide está cogido: se le deja el suyo de antes, si sigue libre */
+      var i, mio = null;
+      for (i = 0; i < this.st.members.length; i++) {
+        if (this.st.members[i].s === sid) { mio = CFG.HAB.rol(this.st.members[i].r); break; }
+      }
+      if (mio && !this.rolDeOtro(mio, sid)) return mio;
+      var ids = CFG.HAB.ROL_IDS;
+      for (i = 0; i < ids.length; i++) {
+        if (!this.rolDeOtro(ids[i], sid)) return ids[i];
+      }
+      return rol;
     },
 
     myRol: function () {
@@ -513,15 +523,20 @@
     /* Colores repetidos: al segundo se le da el del puesto que ocupa, que si
      * no salen dos Pac-Man idénticos y no hay quien se distinga. */
     gameOrder: function () {
-      var out = [], usados = {}, i, soporte = false;
+      var out = [], usados = {}, tomados = {}, i;
       for (i = 0; i < this.st.members.length && i < CFG.MAX_PLAYERS; i++) {
         var m = this.st.members[i];
         var c = m.c || CFG.PLAYER_COLORS[i];
         if (usados[c]) c = CFG.PLAYER_COLORS[i];
         usados[c] = 1;
-        // el Soporte, uno: si por lo que sea llegan dos, el segundo es Asesino
-        var rol = CFG.HAB.rol(m.r);
-        if (rol === 'soporte') { if (soporte) rol = 'asesino'; soporte = true; }
+        // ningún rol repetido: al segundo que lo pida se le da el primero libre
+        var rol = CFG.HAB.rol(m.r), k;
+        if (tomados[rol]) {
+          for (k = 0; k < CFG.HAB.ROL_IDS.length; k++) {
+            if (!tomados[CFG.HAB.ROL_IDS[k]]) { rol = CFG.HAB.ROL_IDS[k]; break; }
+          }
+        }
+        tomados[rol] = 1;
         out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico',
                    a: m.a || '', x: m.x || '',
                    g: (m.g >= 0 && m.g < 4) ? m.g : -1, r: rol });

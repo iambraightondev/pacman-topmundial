@@ -99,6 +99,8 @@
     playerCount: 1,
     pacs: [],
     localIdx: 0,       // índice del jugador local (1 solo para el invitado online)
+    hostIdx: 0,        // qué asiento simula la partida (el mando puede pasar)
+    idos: null,        // quién la ha dejado para siempre
     dyingPlayer: 0,
     eaterIdx: 0,       // quién comió el último fantasma (queda oculto en la pausa)
 
@@ -570,6 +572,7 @@
       this.contTicks = 0;        // CONTINUE?: lo que queda para pagar
       this.contHasta = [];       // hasta qué tick puede volver cada jugador
       this.contPedido = 0;       // invitado: tick en que pidió continuar
+      this.noRevivir = {};       // quien dijo SEGUIR VIENDO: ya no se le pregunta
       this.cuerpos = [];         // el cuerpo de quien se quedó sin vidas
 
       var s = opts.cfg || this.settings();
@@ -578,8 +581,12 @@
       this.frightMult = s.frightMult;
       this.startLevel = s.startLevel;      // para el récord de velocidad
       this.startLives = s.startLives;      // viaja con la partida al top mundial
-      this.livesMode = ((this.playerCount > 1 && s.livesMode === 'individual' &&
-                        !this.caza) || sv)   // las vidas son de Pac-Man: fondo común
+      /* En equipo, cada uno con sus vidas: SIEMPRE (18 sep). El fondo común
+       * ya no se ofrece y solo queda para CACERÍA —donde las vidas son del
+       * Pac-Man, no de quien lo lleva— y para las repeticiones viejas, que
+       * traen su modo en su propio ajuste. */
+      this.livesMode = ((this.playerCount > 1 && s.livesMode !== 'shared' &&
+                        !this.caza) || sv)
         ? 'individual' : 'shared';
       this.level = s.startLevel;
       this.score = 0;
@@ -630,6 +637,8 @@
       this.netQueue = [];
       this.netWatch = 0;
       this.posWatch = [];       // silencio de cada jugador (anfitrión, 3 y 4)
+      this.hostIdx = 0;         // qué asiento simula la partida (puede cambiar)
+      this.idos = {};           // quién ha dejado la partida para siempre
       this.netNotice = null;
       this.snapTimer = 0; this.snapCount = 0; this.posTimer = 0;
       this.outEaten = []; this.recentEaten = {}; this.snapEaten = [];
@@ -729,16 +738,28 @@
       if (window.PM.Jefe) window.PM.Jefe.alNivel(this);
     },
 
+    /* NINGÚN ROL REPETIDO (18 sep). Antes solo el Soporte era único; ahora
+     * cada uno lleva el suyo y no se repite ninguno. Hay cuatro roles y como
+     * mucho cuatro jugadores, así que siempre sale. Al que pida uno ya
+     * cogido se le da el primero que quede libre. Este es el último filtro:
+     * lo miran también la sala (Party.claimRol) y el selector de DESATADO,
+     * pero aquí no entra ni una repetición aunque venga de fuera. */
     rolesDe: function (opts) {
-      var H = CFG.HAB, out = [], soporte = false, i;
+      var H = CFG.HAB, out = [], tomados = {}, i, k;
       var vs = false;
       if (opts.ghosts) for (i = 0; i < opts.ghosts.length; i++) if (opts.ghosts[i] >= 0) vs = true;
       for (i = 0; i < this.playerCount; i++) {
-        var r = (this.hab && !vs) ? H.rol(opts.roles && opts.roles[i]) : 'asesino';
-        if (r === 'soporte') {
-          if (soporte) r = 'asesino';
-          soporte = true;
+        /* fuera de DESATADO (o en VS.) el rol no pinta nada: todos Asesino */
+        if (!this.hab || vs) { out.push('asesino'); continue; }
+        var r = H.rol(opts.roles && opts.roles[i]);
+        if (tomados[r]) {
+          r = null;
+          for (k = 0; k < H.ROL_IDS.length; k++) {
+            if (!tomados[H.ROL_IDS[k]]) { r = H.ROL_IDS[k]; break; }
+          }
+          if (!r) r = 'asesino';        // más jugadores que roles: no pasa
         }
+        tomados[r] = 1;
         out.push(r);
       }
       return out;
@@ -811,13 +832,27 @@
     },
 
     toMenu: function () {
+      /* Anfitrión: el mando pasa al siguiente y la partida sigue sin él. Se
+       * decide LO PRIMERO porque cambia lo que hay que hacer con la
+       * puntuación: si la partida continúa, lo jugado hasta aquí no es una
+       * marca del equipo y no va al top. */
+      var traspasado = this.netRole ? this.pasarElMando() : false;
       // salirse a medias no tira lo jugado: la experiencia se lleva igual
-      var subida = this.inGame() ? this.closeRun() : null;
+      var enPartida = this.inGame();
+      var guardada = this.salvada;      // GUARDAR Y SALIR: la partida sigue viva
+      var subida = enPartida ? this.closeRun() : null;
+      /* ...y la PUNTUACIÓN también va al TOP MUNDIAL (18 sep). Antes solo
+       * subía al llegar al GAME OVER, así que quien se salía al menú con su
+       * mejor partida la perdía: quedaba la repetición y el récord de su
+       * perfil, pero la tabla no se enteraba. */
+      if (enPartida && !guardada && !traspasado) this.submitRanking();
       this.closeShowcase();
       if (subida) this.pendingLevelUp = subida;   // lo celebra el menú
       if (this.netRole) {
         var mirando = this.isSpec();
-        try { window.PM.Net.gameSend('bye', {}); } catch (e) { /* canal cerrado */ }
+        try {
+          if (!traspasado) window.PM.Net.gameSend('bye', { i: this.localIdx });
+        } catch (e) { /* canal cerrado */ }
         // De mirón solo se cierra la sala ajena: la party propia ni se entera.
         if (mirando) window.PM.Net.closeView();
         // Si venimos de una party el canal NO se cierra: el grupo sigue junto
@@ -1568,6 +1603,21 @@
       return false;
     },
 
+    /* Como anyPlaying, pero contando también a quien está muriendo ahora
+     * mismo y le van a quedar vidas. Si dos caen en el mismo tick, el que se
+     * queda sin ninguna tiene que dejar su cuerpo igual: su compañero va a
+     * reaparecer y podrá levantarlo. */
+    alguienSigue: function (exceptIdx) {
+      for (var i = 0; i < this.pacs.length; i++) {
+        if (i === exceptIdx) continue;
+        var p = this.pacs[i];
+        if (p.out) continue;
+        if (!p.dying) return true;
+        if (this.livesMode === 'individual' && p.lives > 1) return true;
+      }
+      return false;
+    },
+
     /* Muerte de un jugador. Si queda otro jugando, la partida NO se detiene:
      * solo ese Pac-Man se congela, hace su animación y reaparece. El parón
      * clásico (con reinicio de fantasmas y "¡LISTO!") es para el último.
@@ -1652,7 +1702,7 @@
         if (this.superv && window.PM.Superv) window.PM.Superv.alCaer(this, i);
         /* su cuerpo se queda donde cayó, para que lo revivan (lo decide
          * quien simula: el invitado lo recibe en la instantánea) */
-        if (this.puedeRevivir() && this.anyPlaying(i) &&
+        if (this.puedeRevivir() && this.alguienSigue(i) &&
             this.netRole !== 'guest' && !this.isSpec()) {
           this.cuerpos[i] = { x: p.x, y: p.y, d: p.dir, t: CFG.REVIVIR.CUERPO_TICKS, n: 0, en: {} };
         }
@@ -1946,6 +1996,7 @@
       this.resetLevel();
       this.enterReady(CFG.READY_TICKS);
       this.hostEvt({ t: 'ready', lvl: this.level, full: true, rt: CFG.READY_TICKS });
+      this.syncUI();      // y se cierra el panel de REVIVIR, si estaba puesto
     },
 
     /* =========================================================
@@ -1962,6 +2013,16 @@
      * ========================================================= */
     puedeRevivir: function () {
       return this.puedeContinuar() && this.playerCount > 1 && this.livesMode === 'individual';
+    },
+
+    /* ¿Ese jugador lleva el SOPORTE? (fuera de DESATADO no hay roles) */
+    esSoporte: function (i) {
+      return !!(this.hab && this.roles && this.roles[i] === 'soporte');
+    },
+
+    /* Pasadas que le hacen falta a ese jugador para levantar un cuerpo */
+    pasadasDe: function (i) {
+      return this.esSoporte(i) ? 1 : CFG.REVIVIR.PASADAS;
     },
 
     stepCuerpos: function () {
@@ -1985,6 +2046,9 @@
             Math.abs(p.x - c.x) <= R.TOCA_PX && Math.abs(p.y - c.y) <= R.TOCA_PX);
           if (encima && !c.en[j]) {
             c.n++;
+            /* El SOPORTE levanta de UNA pasada: es lo suyo, y cinco vueltas
+             * sobre un cuerpo con los fantasmas encima no las da nadie. */
+            if (this.esSoporte(j)) c.n = R.PASADAS;
             if (window.AudioSys && AudioSys.playEatFruit) AudioSys.playEatFruit();
           }
           c.en[j] = encima;
@@ -2013,17 +2077,48 @@
     /* ¿Se abre REVIVIR al acabar el nivel? */
     ofrecerRevivir: function () {
       if (!this.puedeRevivir()) return false;
-      var fuera = false;
-      for (var i = 0; i < this.pacs.length; i++) {
-        if (this.pacs[i].out && !this.pacs[i].bot) fuera = true;
-      }
-      if (!fuera) return false;
+      if (!this.quedaPorRevivir()) return false;
       var R = window.PM.Replay;
       if (R && R.modo === 'ver') return !!(R.contEnEspera && R.contEnEspera());
       if (this.replaying) return false;
       if (this.netRole) return true;
       var Tn = window.PM.Tienda;
       return !!(Tn && Tn.llegaContinuar());
+    },
+
+    /* ¿Queda alguien fuera a quien todavía se le pueda ofrecer volver? */
+    quedaPorRevivir: function () {
+      if (!this.noRevivir) this.noRevivir = {};
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (p.out && !p.bot && !this.noRevivir[i]) return true;
+      }
+      return false;
+    },
+
+    /* SEGUIR VIENDO: quien está fuera renuncia a pagar y vuelve a mirar la
+     * partida de sus compañeros. No se le vuelve a preguntar en lo que queda
+     * de partida, y si ya no queda nadie por decidir, el nivel siguiente
+     * arranca sin agotar la cuenta atrás. Antes la única salida era el MENÚ,
+     * y si la daba el anfitrión se llevaba por delante la partida de todos. */
+    renunciarRevivir: function () {
+      if (this.state !== 'REVIVIR') return false;
+      var i;
+      if (this.netRole) this.noRevivir[this.localIdx] = true;
+      else for (i = 0; i < this.pacs.length; i++) {
+        if (this.pacs[i].out && !this.pacs[i].bot) this.noRevivir[i] = true;
+      }
+      if (this.netRole === 'guest') this.netSend('gevt', { t: 'revNo', i: this.localIdx });
+      if (window.PM.UI && window.PM.UI.hidePrompt) window.PM.UI.hidePrompt();
+      if (this.netRole !== 'guest' && !this.quedaPorRevivir()) this.siguienteNivel();
+      else this.syncUI();
+      return true;
+    },
+
+    /* ¿Ya dijo el jugador de este teclado que prefiere seguir mirando? */
+    renunciadoLocal: function () {
+      if (this.netRole) return !!this.noRevivir[this.localIdx];
+      return !this.quedaPorRevivir();
     },
 
     entrarRevivir: function () {
@@ -3041,8 +3136,24 @@
         this.netWatch > CFG.NET.WAIT_TICKS;
     },
 
+    /* ¿Queda alguien de quien esperar noticias? Tras un traspaso del mando
+     * puede no quedar nadie: el que se queda solo seguiría jugando, y sin
+     * esto su propio vigilante le daría la partida por perdida a los 10 s
+     * de silencio (silencio que ya no es de nadie). */
+    soloEnLaSala: function () {
+      if (this.isSpec()) return false;       // el mirón sí depende de la sala
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (i === this.localIdx || !p || p.bot) continue;
+        if (this.idos && this.idos[i]) continue;
+        return false;
+      }
+      return true;
+    },
+
     netMaintain: function () {
       if (!this.inGame()) return;
+      if (this.soloEnLaSala()) { this.netWatch = 0; return; }
       this.netWatch++;
       /* Silencio: puede que el sordo sea nuestro socket. Se le pide que lo
        * compruebe al empezar a esperar y cada 4 s mientras dure; si está
@@ -3093,6 +3204,118 @@
       this.syncUI();
     },
 
+    /* =========================================================
+     * PASAR EL MANDO (18 sep)
+     *
+     * El anfitrión es quien simula la partida: hasta ahora, si se iba, se
+     * acababa para todos. Braighton se quedó sin vidas en una party y no
+     * tenía más salida que el MENÚ, que le cortaba la partida al otro.
+     *
+     * Ahora, antes de salir, le pasa el mando al siguiente asiento que siga
+     * dentro: le manda una foto COMPLETA (con el mapa de pastillas) y lo
+     * poco que la foto no lleva y hace falta para seguir simulando. Quien
+     * la recibe pasa a anfitrión y los demás le hacen caso a él.
+     *
+     * Solo vale para una salida ORDENADA. Si al anfitrión se le cae la
+     * conexión no hay foto que mandar, y la partida se acaba como antes.
+     * ========================================================= */
+    /* El asiento que NO manda, en el dúo clásico */
+    otroAsiento: function () { return this.hostIdx === 1 ? 0 : 1; },
+
+    /* A quién le tocaría el mando si el anfitrión se fuera ahora (-1: nadie) */
+    sucesor: function () {
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (i === this.hostIdx || !p || p.bot) continue;
+        if (this.idos && this.idos[i]) continue;
+        return i;
+      }
+      return -1;
+    },
+
+    /* Lo que la foto no lleva y el que coge el mando necesita para que la
+     * partida siga igual: el reloj de persecuciones, los contadores de la
+     * casa de los fantasmas, la fruta y poco más. */
+    estadoExtra: function () {
+      var gd = [], i;
+      for (i = 0; i < 4; i++) gd.push(this.ghosts[i].dotCounter);
+      return {
+        si: this.schedIndex, sk: this.schedTicks,
+        ga: this.globalActive ? 1 : 0, gc: this.globalCounter,
+        fs: this.failsafeTicks, eb: this.elroyBlocked ? 1 : 0,
+        ft: this.fruitTicks, ea: this.extraLifeAwarded ? 1 : 0,
+        gd: gd, ch: (this.contHasta || []).slice()
+      };
+    },
+
+    aplicarExtra: function (x) {
+      if (!x) return;
+      var i;
+      if (typeof x.si === 'number') this.schedIndex = x.si;
+      if (typeof x.sk === 'number') this.schedTicks = x.sk;
+      this.globalActive = !!x.ga;
+      if (typeof x.gc === 'number') this.globalCounter = x.gc;
+      if (typeof x.fs === 'number') this.failsafeTicks = x.fs;
+      this.elroyBlocked = !!x.eb;
+      if (typeof x.ft === 'number') this.fruitTicks = x.ft;
+      this.extraLifeAwarded = !!x.ea;
+      if (esLista(x.gd)) {
+        for (i = 0; i < 4 && i < x.gd.length; i++) this.ghosts[i].dotCounter = x.gd[i];
+      }
+      if (esLista(x.ch)) this.contHasta = x.ch.slice();
+    },
+
+    /* El anfitrión se va: le deja el mando al siguiente. Devuelve true si lo
+     * consiguió (y entonces NO hay que mandar el 'bye': el traspaso ya dice
+     * que se va, y un 'bye' encima acabaría la partida del que lo recibe). */
+    pasarElMando: function () {
+      if (this.netRole !== 'host' || this.isSpec() || !this.inGame()) return false;
+      if (this.state === 'GAME_OVER') return false;
+      var n = this.sucesor();
+      if (n < 0) return false;
+      this.netSend('mando', {
+        n: n,                          // quién manda a partir de ahora
+        v: this.hostIdx,               // ...y quién lo deja
+        s: this.buildSnapshot(true),   // foto con el mapa de pastillas entero
+        x: this.estadoExtra()
+      });
+      return true;
+    },
+
+    /* Al otro lado: llega el traspaso. Lo reciben todos, también los mirones
+     * (a ellos solo les cambia de quién viene la foto). */
+    recibirMando: function (d) {
+      if (!d) return;
+      var nuevo = parseInt(d.n, 10), viejo = parseInt(d.v, 10);
+      if (!(nuevo >= 0 && nuevo < this.pacs.length)) return;
+      if (this.netRole === 'host') return;        // ya manda uno aquí
+      if (d.s) this.applySnapshot(d.s);
+      if (d.x) this.aplicarExtra(d.x);
+      this.hostIdx = nuevo;
+      var yo = (!this.isSpec() && nuevo === this.localIdx);
+      if (yo) {
+        this.netRole = 'host';
+        this.netWatch = 0;
+        this.snapTimer = 0;
+        this.snapEaten = [];
+        this.outEaten = [];
+        this.posWatch = [];
+        /* la repetición no se retoma: la tenía entera el que se fue, y una
+         * que empezara a media partida se vería rota al rebobinar */
+      }
+      if (viejo >= 0 && viejo < this.pacs.length) {
+        if (!this.idos) this.idos = {};
+        this.idos[viejo] = true;
+        this.dropPlayer(viejo);
+      }
+      if (yo) {
+        this.setFlash((this.rawName(viejo) || 'EL ANFITRIÓN') + ' SE FUE · MANDAS TÚ');
+        // por si el traspaso no le llegó a algún otro invitado
+        this.hostEvt({ t: 'mando', n: nuevo });
+      }
+      this.syncUI();
+    },
+
     peerLeft: function () {
       this.netFail('EL OTRO JUGADOR HA SALIDO');
     },
@@ -3102,6 +3325,8 @@
     dropPlayer: function (i) {
       var p = this.pacs[i];
       if (!p) return;
+      if (!this.idos) this.idos = {};
+      this.idos[i] = true;          // de aquí sale soloEnLaSala()
       /* Quien llevaba un fantasma (PAC-MAN VS., CACERÍA) tiene el pac fuera
        * de juego desde el principio: lo que hay que soltar es el fantasma,
        * que si no se queda para siempre con el último rumbo pedido. La
@@ -3134,10 +3359,19 @@
       }
     },
 
-    /* Alguien deja la partida: uno menos si el grupo era grande */
+    /* Alguien deja la partida. Se queda de espectador y los demás siguen,
+     * también en el dúo: antes, con dos, que se fuera uno le acababa la
+     * partida al otro (18 sep). Lo único que no se puede salvar es que se
+     * vaya QUIEN SIMULA sin dejar el mando: eso lo ve guestMsg. */
     playerGone: function (i) {
-      if (this.playerCount > 2 && i >= 0 && i < this.pacs.length) this.dropPlayer(i);
-      else this.peerLeft();
+      if (!this.idos) this.idos = {};
+      if (i >= 0 && i < this.pacs.length) {
+        if (this.idos[i]) return;        // ya se despidió (traspaso del mando)
+        this.idos[i] = true;
+        this.dropPlayer(i);
+        return;
+      }
+      this.peerLeft();
     },
 
     onNetClosed: function () {
@@ -3197,18 +3431,19 @@
     /* Qué jugador es quien manda (con 3 y 4 el mensaje trae su índice) */
     idxOfSender: function (data, sid) {
       var i = data && parseInt(data.i, 10);
-      if (i >= 1 && i < this.pacs.length) return i;
+      if (i >= 0 && i < this.pacs.length) return i;
       if (window.PM.Party && window.PM.Party.indexOf) {
         var pi = window.PM.Party.indexOf(sid);
-        if (pi >= 1 && pi < this.pacs.length) return pi;
+        if (pi >= 0 && pi < this.pacs.length) return pi;
       }
-      return 1;                      // dúo clásico: el invitado es el J2
+      return this.otroAsiento();     // dúo clásico: el que no manda
     },
 
     hostMsg: function (name, data, sid) {
       switch (name) {
         case 'pos': {
           var idx = this.idxOfSender(data, sid);
+          if (idx === this.hostIdx) return;    // el suyo lo simula él
           var p = this.pacs[idx];
           if (!p || !data) return;
           // dy = el invitado está muriendo: el mensaje solo sirve de señal de
@@ -3234,16 +3469,26 @@
           if (data && data.spec) this.sendSpecView(sid);
           else this.netSend('full', { to: sid });
           break;
-        case 'bye':
-          this.playerGone(this.idxOfSender(data, sid));
+        case 'bye': {
+          var quien = this.idxOfSender(data, sid);
+          if (quien !== this.hostIdx) this.playerGone(quien);
           break;
+        }
       }
     },
 
     /* who: qué jugador manda el evento (1..3 según la sala) */
     hostGuestEvent: function (d, who) {
-      who = (who >= 1 && who < this.pacs.length) ? who : 1;
+      who = (who >= 0 && who < this.pacs.length && who !== this.hostIdx)
+        ? who : this.otroAsiento();
       switch (d.t) {
+        /* el invitado prefiere seguir mirando: no se le espera más */
+        case 'revNo':
+          if (this.state === 'REVIVIR') {
+            this.noRevivir[who] = true;
+            if (!this.quedaPorRevivir()) this.siguienteNivel();
+          }
+          break;
         case 'died':
           if (this.state === 'PLAYING' && this.pacs[who] &&
               !this.pacs[who].out && !this.pacs[who].dying) {
@@ -3455,11 +3700,13 @@
       switch (name) {
         case 'snap': if (data) this.applySnapshot(data); break;
         case 'evt':  if (data) this.applyEvt(data); break;
+        // el anfitrión se va y deja el mando (ver pasarElMando)
+        case 'mando': this.recibirMando(data); break;
         case 'bye': {
           if (this.isSpec()) { this.netFail('SE ACABÓ LA PARTIDA'); break; }
           // si se va el anfitrión se acabó; si se va otro invitado, sigue
           var i = this.idxOfSender(data, sid);
-          if (i <= 0) this.peerLeft();
+          if (i === this.hostIdx) this.peerLeft();
           else this.playerGone(i);
           break;
         }
@@ -3738,6 +3985,13 @@
           break;
         case 'left':                 // el anfitrión avisa de quién se ha ido
           if (e.i !== this.localIdx) this.dropPlayer(e.i);
+          break;
+        /* Repesca del traspaso del mando: lo manda el nuevo anfitrión por si
+         * el mensaje gordo (con la foto) no le llegó a alguno. */
+        case 'mando':
+          if (e.n >= 0 && e.n < this.pacs.length && this.netRole !== 'host') {
+            this.hostIdx = e.n;
+          }
           break;
         case 'fright':
           this.chainIndex = 0;
@@ -4890,8 +5144,11 @@
           // una tira corta por jugador, cada una de su color
           var hueco = Math.floor(96 / this.pacs.length);
           for (p = 0; p < this.pacs.length; p++) {
+            /* hasta CUATRO iconos por jugador: con la que lleva puesta son
+             * las cinco vidas del tope (18 sep). Con tres o cuatro jugadores
+             * no cabe tanto y se queda en dos. */
             var quedan = Math.min(Math.max(this.pacs[p].lives - 1, 0),
-                                  this.pacs.length > 2 ? 2 : 3);
+                                  this.pacs.length > 2 ? 2 : 4);
             for (i = 0; i < quedan; i++) {
               window.PM.Sprites.drawPacman(ctx, 18 + p * hueco + i * 11, 278,
                 D.LEFT, 2, this.colorFor(p), this.skinFor(p),

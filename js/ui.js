@@ -26,7 +26,6 @@
     volVoices:      { min: 0,   max: 1,   int: false }
   };
   var PRESET_NAMES = ['facil', 'normal', 'dificil', 'custom'];
-  var LIVES_MODES = ['shared', 'individual'];
 
   /* Los cinco ajustes que forman una dificultad. El orden da igual; lo que
    * importa es que estén TODOS: si se añade uno a CFG.PRESETS hay que meterlo
@@ -91,9 +90,10 @@
     if (key === 'difficultyPreset') {
       return PRESET_NAMES.indexOf(value) !== -1 ? value : def;
     }
-    if (key === 'livesMode') {
-      return LIVES_MODES.indexOf(value) !== -1 ? value : def;
-    }
+    /* El fondo común ya no se ofrece: a quien lo tuviera guardado se le pasa
+     * a vidas propias al cargar. Las repeticiones viejas no pasan por aquí:
+     * llevan su modo en el ajuste de la propia repetición. */
+    if (key === 'livesMode') return 'individual';
     if (key === 'modePick') {
       return CFG.MODE_IDS.indexOf(value) !== -1 ? value : def;
     }
@@ -2216,24 +2216,14 @@
       jugN.appendChild(this.optMsgEl);
 
       /* ===== pestaña PARTIDA ===== */
-      par = this.optGroup(par, 'VIDAS EN 2 JUGADORES');
-      var lmRow = document.createElement('div');
-      lmRow.className = 'preset-row';
-      this.livesModeBtns = {};
-      [['shared', 'COMPARTIDAS'], ['individual', 'INDIVIDUALES']].forEach(function (p) {
-        var b = self.makeButton(p[1], function () {
-          window.PM.settings.livesMode = p[0];
-          saveSettings();
-          self.refreshOptions();
-        });
-        b.classList.add('btn-preset');
-        self.livesModeBtns[p[0]] = b;
-        lmRow.appendChild(b);
-      });
-      par.appendChild(lmRow);
+      /* Las vidas compartidas se quitaron el 18 sep: en equipo cada uno lleva
+       * las suyas, siempre. Aquí ya no hay nada que elegir. */
+      par = this.optGroup(par, 'VIDAS EN EQUIPO');
       var lmNote = document.createElement('div');
       lmNote.className = 'note';
-      lmNote.textContent = 'COMPARTIDAS: UN FONDO COMÚN PARA EL EQUIPO · INDIVIDUALES: QUIEN LAS PIERDE, MIRA';
+      lmNote.textContent = 'CADA UNO LLEVA LAS SUYAS. QUIEN SE QUEDA SIN VIDAS DEJA EL CUERPO: ' +
+        'SI UN COMPAÑERO LE PASA POR ENCIMA ' + CFG.REVIVIR.PASADAS + ' VECES EN ' +
+        Math.round(CFG.REVIVIR.CUERPO_TICKS / 60) + ' S, VUELVE (EL SOPORTE, CON UNA)';
       par.appendChild(lmNote);
 
       var ctrlNote = document.createElement('div');
@@ -4761,8 +4751,6 @@
       this.refreshNicks();
       this.refreshColorRows();
       this.refreshSkins();
-      this.livesModeBtns.shared.classList.toggle('active', s.livesMode !== 'individual');
-      this.livesModeBtns.individual.classList.toggle('active', s.livesMode === 'individual');
       var vsl = (s.vsGhost2 >= 0 && s.vsGhost2 < 4) ? s.vsGhost2 : -1;
       for (i = -1; i < 4; i++) {
         if (this.vsLocalBtns[i]) this.vsLocalBtns[i].classList.toggle('active', i === vsl);
@@ -5328,11 +5316,12 @@
       /* DESATADO: el rol lo elige cada uno, no el líder */
       if (this.habRolBtns) {
         var miRol = P.myRol ? P.myRol() : 'asesino';
-        var otroSop = P.soporteDeOtro ? P.soporteDeOtro() : false;
         for (var rid in this.habRolBtns) {
           if (!this.habRolBtns.hasOwnProperty(rid)) continue;
           this.habRolBtns[rid].classList.toggle('active', rid === miRol);
-          this.habRolBtns[rid].disabled = (rid === 'soporte' && otroSop);
+          // ningún rol repetido: el que ya lleva otro sale apagado
+          this.habRolBtns[rid].disabled =
+            (rid !== miRol && !!(P.rolDeOtro && P.rolDeOtro(rid)));
         }
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
@@ -8839,6 +8828,9 @@
        * red y quiere rehacerlo al llegar la respuesta, sin pisar otro que
        * haya salido entretanto. Lo pone quien lo necesita, después de esto. */
       this.promptTag = null;
+      /* Y de qué ESTADO de la partida depende, si depende de alguno: en
+       * cuanto la partida sale de ese estado el panel se cierra solo. */
+      this.promptEstado = null;
 
       var t = document.createElement('div');
       t.className = 'panel-title';
@@ -9085,6 +9077,7 @@
       this.els.prompt.innerHTML = '';
       this.els.prompt.classList.remove('arcade');
       this.promptTag = null;
+      this.promptEstado = null;
       this.promptStatusEl = null;
       this.promptStatusOwn = false;
       this.promptKeys = [];
@@ -9110,7 +9103,17 @@
      * (rehacerlo cada segundo se comería alguna pulsación de los botones) */
     tickPrompt: function () {
       var g = window.PM.Game;
-      if (!this.promptOpen || !this.promptStatusEl) return;
+      if (!this.promptOpen) return;
+      /* CONTINUE? y REVIVIR salen por el estado de la partida. Mientras hay
+       * un panel puesto solo pasa por aquí (rehacerlo cada tick se comería
+       * las pulsaciones), así que el cambio de estado hay que mirarlo: si no,
+       * el panel se quedaba puesto TAPANDO el nivel siguiente cuando el
+       * compañero no pagaba (18 sep). */
+      if (this.promptEstado && g.state !== this.promptEstado) {
+        this.syncPrompt();
+        return;
+      }
+      if (!this.promptStatusEl) return;
       if (this.promptStatusOwn) return;      // lo lleva el propio diálogo
       this.promptStatusEl.textContent = g.vote
         ? this.voteStatusText(g.vote)
@@ -9129,7 +9132,8 @@
       // g.overWait: aún se están celebrando logros o subida de nivel sobre el
       // laberinto, y el panel del resumen no debe taparlos
       else if (g.state === 'CONTINUE' && !g.replaying && !g.isSpec()) this.showContinuePrompt();
-      else if (g.state === 'REVIVIR' && !g.replaying && !g.isSpec()) this.showRevivirPrompt();
+      else if (g.state === 'REVIVIR' && !g.replaying && !g.isSpec() &&
+               !g.renunciadoLocal()) this.showRevivirPrompt();
       else if (g.overIdle && !g.overWait) this.showGameOverPrompt();
       else if (g.paused && g.inGame() && g.state !== 'GAME_OVER') this.showPausePrompt();
       /* Del CONTINUE? al GAME OVER hay un paso de nada: el diálogo de
@@ -9171,6 +9175,11 @@
       if (g.netRole) {
         lines.push('LA PARTIDA ESTÁ EN PAUSA PARA LOS DOS.');
         lines.push('RENDIRSE TIENE QUE ACEPTARLO ' + g.nameFor(g.peerIdx()) + '.');
+        /* Salir ya no corta la partida de nadie: si manda uno y se va, el
+         * mando pasa al siguiente (Game.pasarElMando). */
+        if (g.netRole === 'guest' || g.sucesor() >= 0) {
+          lines.push('SI SALES, LOS DEMÁS SIGUEN JUGANDO.');
+        }
       } else if (g.playerCount === 2) {
         lines.push('RENDIRSE TERMINA LA PARTIDA PARA LOS DOS.');
       }
@@ -9856,6 +9865,7 @@
         }
         if (btns[0].disabled && btns[2]) { try { btns[2].focus(); } catch (e) { } }
       }
+      this.promptEstado = 'CONTINUE';  // se cierra solo al salir del CONTINUE?
       this.tickContinue();
     },
 
@@ -9882,7 +9892,14 @@
         botones.push({ label: 'SIGUIENTE NIVEL', hint: 'S', keys: ['s'],
           onClick: function () { self.resumeAudio(); g.saltarRevivir(); } });
       }
-      botones.push({ label: 'MENÚ', hint: 'ESC', keys: ['q', 'Escape'],
+      /* Quien está fuera puede cerrar el panel y volver a ver la partida de
+       * sus compañeros. ESC era el MENÚ, y desde el anfitrión eso cortaba la
+       * partida de todos: ahora ESC es esto y el MENÚ se queda en Q. */
+      if (puedo && g.netRole) {
+        botones.push({ label: 'SEGUIR VIENDO', hint: 'ESC', keys: ['v', 'Escape'],
+          onClick: function () { g.renunciarRevivir(); } });
+      }
+      botones.push({ label: 'MENÚ', hint: 'Q', keys: ['q'],
         onClick: function () { g.toMenu(); } });
 
       this.showPrompt({
@@ -9946,7 +9963,8 @@
             var nota = document.createElement('div');
             nota.className = 'cont-nota';
             nota.textContent = g.contPedido ? 'ESPERANDO AL ANFITRIÓN...'
-              : (puedo ? 'SI NO PAGAS, SIGUES MIRANDO' : 'ESPERANDO A QUE TUS COMPAÑEROS DECIDAN');
+              : (puedo ? 'SI NO PAGAS, SIGUES MIRANDO SIN GASTAR VIDAS'
+                      : 'ESPERANDO A QUE TUS COMPAÑEROS DECIDAN');
             p.appendChild(nota);
           }
         },
@@ -9957,6 +9975,7 @@
         if (btns && btns[0]) btns[0].disabled = !llega || !!g.contPedido;
       }
       this.contBtnOtra = null;
+      this.promptEstado = 'REVIVIR';   // se cierra solo al empezar el nivel
       this.tickContinue();
     },
 
@@ -10704,7 +10723,12 @@
        * cartas enseñan los cuatro poderes del rol que se está mirando, leídos
        * de CFG.HAB.ROLES: ni un texto de recarga escrito a mano. */
       var roles = [H.rol(s.habRol1), H.rol(s.habRol2)];
-      if (roles[0] === 'soporte' && roles[1] === 'soporte') roles[1] = 'asesino';
+      // ningún rol repetido: si los dos traen el mismo, al J2 se le cambia
+      if (roles[0] === roles[1]) {
+        for (var ri = 0; ri < H.ROL_IDS.length; ri++) {
+          if (H.ROL_IDS[ri] !== roles[0]) { roles[1] = H.ROL_IDS[ri]; break; }
+        }
+      }
       var mirando = 0;          // de qué jugador son las cartas
 
       var dos = conFantasma
@@ -10767,13 +10791,13 @@
           var cartas = p.querySelectorAll('.brief-carta');
 
           function pintar() {
-            // solo un Soporte: el del otro jugador sale apagado
+            // ningún rol repetido: el que lleva el otro jugador sale apagado
             [0, 1].forEach(function (j) {
               for (var id in chips[j]) {
                 if (!chips[j].hasOwnProperty(id)) continue;
                 chips[j][id].classList.toggle('active', roles[j] === id);
                 chips[j][id].classList.toggle('mirando', roles[j] === id && mirando === j);
-                chips[j][id].disabled = (id === 'soporte' && roles[1 - j] === 'soporte' && !conFantasma);
+                chips[j][id].disabled = (roles[1 - j] === id && !conFantasma);
               }
             });
             var rol = roles[mirando], info = H.ROL_INFO[rol], lista = H.ROLES[rol];
@@ -10963,6 +10987,11 @@
       document.addEventListener('keyup', function (ev) {
         var g = window.PM.Game;
         if (!g || !g.hab || !window.PM.Hab) return;
+        // el ESPACIO es la puerta de los portales del Mago: al soltarlo, cerrada
+        if (ev.code === 'Space' || ev.key === ' ' || ev.key === 'Spacebar') {
+          window.PM.Hab.soltarEspacio();
+          return;
+        }
         if (g.playerCount === 2 && !g.netRole) {
           for (var j = 0; j < HAB_2P.length; j++) {
             if (ev.key in HAB_2P[j]) { window.PM.Hab.soltar(g, j, HAB_2P[j][ev.key]); return; }
@@ -10974,7 +11003,10 @@
       /* sin foco no llega el keyup: lo que se estaba manteniendo se suelta
        * sin lanzar nada */
       window.addEventListener('blur', function () {
-        if (window.PM.Hab) window.PM.Hab.cancelarMant();
+        if (window.PM.Hab) {
+          window.PM.Hab.cancelarMant();
+          window.PM.Hab.soltarEspacio();
+        }
       });
       document.addEventListener('keydown', function (ev) {
         var g = window.PM.Game;
@@ -11019,6 +11051,20 @@
           self.resumeAudio();
           g.sendBadgeTag();
           self.toggleEmoteBar(false);
+          ev.preventDefault();
+          return;
+        }
+        /* ESPACIO: la puerta de los portales del Mago. Mientras se tenga
+         * apretado, pisar una boca teletransporta; sin él, no. Con dos en el
+         * mismo teclado vale para los dos: comparten teclado y se hablan. */
+        if (canControl && g.hab && window.PM.Hab && !ev.ctrlKey &&
+            (ev.code === 'Space' || ev.key === ' ' || ev.key === 'Spacebar')) {
+          if (g.playerCount === 2 && !g.netRole) {
+            window.PM.Hab.marcarEspacio(0, true);
+            window.PM.Hab.marcarEspacio(1, true);
+          } else {
+            window.PM.Hab.marcarEspacio(g.localIdx, true);
+          }
           ev.preventDefault();
           return;
         }

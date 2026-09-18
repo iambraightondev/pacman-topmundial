@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **17 de septiembre de 2026**.
+Última puesta al día: **18 de septiembre de 2026**.
 
 ---
 
@@ -122,6 +122,37 @@ y maestrías por rol; los roles no se guardan todavía en la tabla del ranking
 - Decidido por Jarvis sin confirmar expresamente: un solo SOPORTE por
   partida, tope de 5 vidas, y el LEGENDARIO provisional (skin de tienda + 500
   monedas) hasta que existan los exclusivos.
+
+**18 sep — el TOP MUNDIAL se perdía al salirse (`pm-v177`).** MAULIO hizo
+28.510 en clásico a uno y la tabla no se enteró. Investigado a fondo: la fila
+nunca llegó a `ranking`, pero sí quedó la repetición (`JB5KGX67`) y el
+`record1` de su perfil. Causa: `submitRanking()` solo se llamaba desde
+`enterGameOverIdle`, o sea SOLO al llegar al GAME OVER; quien se salía al menú
+—y ese día el panel de REVIVIR no tenía otra salida— perdía la marca. Ya sube
+también desde `toMenu`. **Decidido (18 sep):** las marcas que se perdieron NO
+se meten a mano —"nadie más ha superado sus récord"—, así que la tabla se
+queda como está y el arreglo vale solo de aquí en adelante.
+
+**18 sep — contraseñas en mayúsculas.** No se pueden convertir las que ya hay:
+Supabase guarda bcrypt. Se arreglan solas al entrar (ver `passUp`). La de
+MAULIO se cambió a mano a "MAULIO" a petición suya.
+
+**18 sep — el REVIVIR ya se puede cerrar (`pm-v176`).** Probando en party,
+Braighton se quedó sin vidas y el panel del final de nivel volvía a salirle
+cada nivel, sin más salida que el MENÚ — y como él era el anfitrión, eso
+cortaba la partida del otro. Ahora hay **SEGUIR VIENDO** (ESC; el MENÚ pasa a
+Q): cierra el panel, no se le vuelve a preguntar y el nivel siguiente arranca
+sin esperar si ya no queda nadie por decidir. También se arregló que, al caer
+los dos en el mismo tick, el que se quedaba sin vidas no dejaba cuerpo.
+**Resuelto el mismo día:** PASAR EL MANDO. Al salir, el anfitrión manda
+`mando` con una foto completa (con el mapa de pastillas) y lo que la foto no
+lleva, y el siguiente asiento sigue simulando desde ahí; `PROTO` 14. Que se
+vaya cualquier otro ya solo lo deja de espectador, también en dúo. Probado con
+dos "navegadores" en Node (ver [[varios-mundos-en-node-para-probar-la-red]]):
+el que recoge el mando come, muere, reaparece y los fantasmas siguen su
+horario. **Por mirar:** hacerlo en una party de verdad. Sigue sin cubrirse que
+al anfitrión se le CAIGA la conexión (nadie tiene la foto), y el nuevo
+anfitrión no retoma la grabación de la repetición.
 
 **17 sep — revivir al compañero (`pm-v98`).** Pedido de Braighton. Solo con
 vidas propias (`livesMode` individual). Cuerpo en `Game.cuerpos` (lo decide

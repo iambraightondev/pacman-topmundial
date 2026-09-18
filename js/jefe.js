@@ -91,7 +91,9 @@
         golpeado: 0,     // ticks del destello de golpe (solo se pinta)
         azulUsado: 0,    // por jugador (bits): ya le pegó en este azul
         azulTick: -1,    // frightTicks del azul en curso, para saber si es otro
-        plan: -1         // casilla en la que ya decidió
+        plan: -1,        // casilla en la que ya decidió
+        huye: 0,         // PISOTÓN del Tanque: ticks huyendo de él
+        huyeDe: -1       // ...y de quién
       };
       this.colocar(G);
       this.encerrarFantasmas(G);
@@ -148,12 +150,25 @@
       var pct = G.speedRow.ghost * J.VEL * (this.furia(G) ? J.VEL_FURIA : 1);
       if (j.st === 'carga') pct *= J.VEL_CARGA;
       else if (G.frightTicks > 0) pct = G.speedRow.ghostFright;
+      // PISOTÓN del Tanque: mientras huye va al ritmo del que huye (18 sep)
+      if (j.huye > 0 && j.st !== 'carga') pct *= CFG.HAB.PISOTON_LENTO;
       return pct / 100 * CFG.BASE_SPEED;
     },
 
     /* ---------- a por quién va ---------- */
     objetivo: function (G) {
       var j = G.jefe, A = Hab();
+      /* PISOTÓN del Tanque (18 sep): huye de él, igual que los fantasmas. Se
+       * apunta a la casilla SIMÉTRICA para que la decisión de siempre —la
+       * salida que más acerca al objetivo— acabe alejándolo. */
+      if (j.huye > 0) {
+        var t = G.pacs[j.huyeDe];
+        if (t && !t.out) {
+          return { x: CFG.wrapCol(Math.round(2 * (j.x / T) - t.tileX())),
+                   y: Math.max(0, Math.min(CFG.ROWS - 1,
+                      Math.round(2 * (j.y / T) - t.tileY()))) };
+        }
+      }
       if (A && A.objetivo) {
         var prov = A.objetivo(G, { mode: 'normal', frightened: false, x: j.x, y: j.y });
         if (prov) return prov;
@@ -245,6 +260,7 @@
       if (j.inv > 0) j.inv--;
       if (j.golpeado > 0) j.golpeado--;
       if (j.frz > 0) j.frz--;
+      if (j.huye > 0 && --j.huye <= 0) { j.huyeDe = -1; j.plan = -1; }
       /* un azul nuevo deja volver a pegarle a todos */
       if (G.frightTicks <= 0) j.azulUsado = 0;
       j.stT++;
@@ -330,6 +346,11 @@
       if (j.frz > 0 || this.vulnerable(G)) return false;
       if (!this.toca(G, p)) return false;
       if (A && A.salvaDelChoque && A.salvaDelChoque(G, i)) return false;
+      /* PROVOCAR (18 sep): mientras OTRO grita, el rey va a por él y a este
+       * lo atraviesa sin matarlo, igual que hacen los cuatro fantasmas. */
+      if (A && A.ignoraA && A.ignoraA(G, i, { mode: 'normal', frightened: false })) {
+        return false;
+      }
       return true;
     },
 
@@ -352,7 +373,10 @@
           continue;
         }
         if (A && A.arrollando && A.arrollando(i)) {
-          this.danar(G, J.DANO.aplasta, i, 'aplasta');
+          // y lo deja ATURDIDO: cruzar el laberinto para embestirlo vale algo
+          if (this.danar(G, J.DANO.aplasta, i, 'aplasta')) {
+            this.congelar(G, J.ATURDE_APISONADORA);
+          }
           continue;
         }
         if (this.mata(G, i)) {
@@ -400,7 +424,9 @@
       } else if (f === 'aplasta') {
         var s = A && A.estado(who);
         if (!s || !(s.arrollaRed > 0 || s.arrolla > 0)) return;
-        this.danar(G, J.DANO.aplasta, who, 'aplasta');
+        if (this.danar(G, J.DANO.aplasta, who, 'aplasta')) {
+          this.congelar(G, J.ATURDE_APISONADORA);
+        }
       }
     },
 
@@ -418,6 +444,45 @@
     impactaEn: function (G, x, y) {
       if (!this.activo(G)) return false;
       return distX(x, G.jefe.x) <= J.RADIO_CHOQUE && Math.abs(y - G.jefe.y) <= J.RADIO_CHOQUE;
+    },
+
+    /* PROVOCAR (Tanque): acude a por él y, si le daba la espalda, se da la
+     * vuelta donde esté —como los fantasmas—, que si no el grito tardaba
+     * media eternidad en notarse. En mitad de una embestida o de una
+     * invocación no se le interrumpe: eso ya está lanzado. */
+    acude: function (G, p) {
+      if (!this.activo(G) || !p) return;
+      var j = G.jefe;
+      if (j.st !== 'caza') return;
+      j.huye = 0; j.huyeDe = -1;        // el grito manda sobre el pisotón
+      if (this.deEspaldas(G, p)) j.dir = CFG.OPP[j.dir];
+      j.plan = -1;
+    },
+
+    /* PISOTÓN (Tanque): sale por patas, y si lo tenía de frente se da la
+     * vuelta. Devuelve false si no había a quién espantar. */
+    espanta: function (G, p, ticks) {
+      if (!this.activo(G) || !p) return false;
+      var j = G.jefe;
+      if (j.st !== 'caza') return false;
+      j.huye = ticks;
+      j.huyeDe = p.id | 0;
+      if (!this.deEspaldas(G, p)) j.dir = CFG.OPP[j.dir];
+      j.plan = -1;
+      return true;
+    },
+
+    /* ¿El jefe le está dando la espalda a ese Pac-Man? El atajo del túnel
+     * solo cuenta si los dos van por su fila (ver Hab.deEspaldas). */
+    deEspaldas: function (G, p) {
+      var j = G.jefe, v = CFG.DIR_V[j.dir];
+      if (!v) return false;
+      var ancho = CFG.COLS * T, hx = p.x - j.x;
+      if (Math.floor(j.y / T) === CFG.TUNNEL_ROW &&
+          Math.floor(p.y / T) === CFG.TUNNEL_ROW) {
+        if (hx > ancho / 2) hx -= ancho; else if (hx < -ancho / 2) hx += ancho;
+      }
+      return (v.x * hx + v.y * (p.y - j.y)) < 0;
     },
 
     congelar: function (G, ticks) {
@@ -498,7 +563,8 @@
       var j = G.jefe;
       if (!j) return 0;
       return [j.vivo ? 1 : 0, j.hp, j.max, Math.round(j.x * 10) / 10, Math.round(j.y * 10) / 10, j.dir,
-        ['caza', 'aviso', 'carga', 'invoca'].indexOf(j.st), j.stT, j.inv, j.frz, j.azulUsado];
+        ['caza', 'aviso', 'carga', 'invoca'].indexOf(j.st), j.stT, j.inv, j.frz, j.azulUsado,
+        j.huye || 0, (j.huyeDe == null ? -1 : j.huyeDe)];
     },
 
     aplicar: function (G, a) {
@@ -509,6 +575,8 @@
       j.st = ['caza', 'aviso', 'carga', 'invoca'][a[6]] || 'caza';
       j.stT = a[7]; j.inv = a[8]; j.frz = a[9];
       j.azulUsado = (a[10] | 0) | mio;
+      j.huye = a[11] || 0;
+      j.huyeDe = (a[12] == null) ? -1 : a[12];
       if (j.golpeado == null) j.golpeado = 0;
       j.plan = -1;
       G.jefe = j;

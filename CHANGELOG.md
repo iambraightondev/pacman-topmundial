@@ -2,6 +2,79 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-18 · El Soporte levanta de una pasada
+
+- **El SOPORTE revive a un caído pasándole por encima UNA vez** en lugar de
+  cinco. Dar cinco vueltas sobre un cuerpo con los fantasmas encima no lo hace
+  nadie, y levantar es precisamente lo suyo. Al resto de roles les siguen
+  haciendo falta las cinco pasadas de siempre.
+
+## 2026-09-18 · Roles únicos, el Tanque contra el jefe y el top que se perdía
+
+- **Ningún rol repetido.** Antes solo el Soporte era único; ahora cada uno
+  lleva el suyo. Al que pida uno ya cogido se le da el primero libre, y en los
+  selectores (la sala y DESATADO a dos) el rol del otro sale apagado.
+- **El Tanque, contra el REY FANTASMA:**
+  - **PROVOCAR (E)** hace que los fantasmas —y el rey— **se den la vuelta en
+    el acto** para ir a por él. Antes solo se les borraba lo pensado y en un
+    pasillo largo el grito tardaba segundos en notarse, cuando el compañero al
+    que iba a salvar ya había muerto. Mientras dura, el rey también atraviesa
+    al resto del equipo sin matarlo.
+  - **PISOTÓN (Q)** ahora también espanta al rey: sale por patas y va un 40%
+    más lento. Con jefe casi no hay fantasmas sueltos y el poder no salía.
+  - **APISONADORA (R)** le sigue quitando vida y además lo deja **aturdido
+    3 segundos**.
+- **Los portales del Mago se entran con el ESPACIO apretado.** Eran una
+  trampa para el equipo: pisar una boca de paso te mandaba al otro lado del
+  laberinto sin quererlo. Ahora son una puerta.
+- **Las contraseñas van siempre en MAYÚSCULAS**, se escriban como se
+  escriban, al entrar y al crear la cuenta. Las de antes se arreglan solas la
+  primera vez que se entra.
+- **El panel de REVIVIR ya no se queda pegado.** Si el compañero no pagaba,
+  la vista se quedaba puesta TAPANDO el nivel siguiente.
+- **Salirse al menú también manda la puntuación al TOP MUNDIAL.** Solo subía
+  al llegar al GAME OVER: quien dejaba la partida con su mejor marca la perdía
+  —quedaba la repetición y el récord de su perfil, pero la tabla no se
+  enteraba. GUARDAR Y SALIR sigue sin mandar nada: esa partida no ha acabado.
+
+## 2026-09-18 · Salirse ya no le corta la partida a nadie
+
+- **El mando pasa al siguiente.** El anfitrión es quien lleva la partida por
+  dentro, así que hasta ahora, si se iba, se acababa para todos. Ahora, antes
+  de salir, le pasa la partida entera al siguiente jugador que siga dentro: el
+  otro ve "SE FUE · MANDAS TÚ" y sigue jugando en el mismo punto, con sus
+  puntos, su nivel y el laberinto tal y como estaba.
+- **Y al revés también:** que se vaya un invitado ya no acaba la partida del
+  resto ni siquiera en dúo — se queda de espectador y el otro sigue solo.
+- El menú de pausa lo dice: **SI SALES, LOS DEMÁS SIGUEN JUGANDO.**
+- Lo único que no se salva: que al anfitrión se le **caiga la conexión** de
+  golpe. Ahí nadie tiene la partida y se acaba, como antes.
+
+## 2026-09-18 · Arreglos del REVIVIR
+
+- **SEGUIR VIENDO**: la vista de REVIVIR al acabar el nivel ya se puede
+  cerrar. Quien no quiera pagar vuelve a ver la partida de su compañero en el
+  acto y **no se le vuelve a preguntar** en lo que queda de partida. Además el
+  nivel siguiente arranca sin agotar la cuenta atrás si ya no queda nadie por
+  decidir.
+- **ESC ya no echa a nadie.** En ese panel ESC era el MENÚ, y si lo pulsaba el
+  anfitrión se llevaba por delante la partida de los demás. Ahora ESC es
+  SEGUIR VIENDO y el MENÚ se queda en la tecla Q.
+- **Cayendo los dos a la vez**, el que se quedaba sin vidas no dejaba cuerpo:
+  su compañero figuraba como "muriendo" y el juego lo daba por perdido.
+  Ahora el cuerpo se queda igual y se le puede levantar.
+
+## 2026-09-18 · Se acabaron las vidas compartidas
+
+- En equipo, **cada uno con sus vidas, siempre**. El fondo común (una bolsa
+  para los dos) desaparece del menú: con tres o cuatro en la sala no tenía
+  sentido, y con dos hacía que uno se gastara las vidas del otro. A quien lo
+  tuviera guardado se le pasa solo a vidas propias.
+- El marcador ya enseña **hasta 5 vidas** por jugador en vez de recortar a 4.
+  Con tres o cuatro jugadores sigue mostrando menos, que no hay sitio.
+- Las repeticiones viejas y CACERÍA siguen funcionando con el fondo común:
+  cada repetición lleva su modo dentro.
+
 ## 2026-09-18 · DESATADO: la Q aturde al jefe, y la R del Soporte a 3 min
 
 - El **MORDISCO** del Asesino, además de quitarle vida al **REY FANTASMA**, lo
