@@ -30,6 +30,16 @@ Queda una sola decisión de Braighton: si los cofres son **retroactivos**
 (recomendación de Jarvis: regalo de bienvenida de 1 PLATA + 1 ORO y contar
 desde el lanzamiento).
 
+**17 sep (noche) — REVIVIR AL COMPAÑERO, ventana de 15 s.** Braighton creía
+que se había quitado porque no la veía jugando: está entera, lo que pasa es
+que **solo existe con vidas INDIVIDUALES** (Opciones → Partida) y por defecto
+están las compartidas, donde nadie se queda fuera a solas. Bajado el cuerpo de
+30 a 15 s (`CFG.REVIVIR.CUERPO_TICKS`, `pm-v173`) para que las cinco pasadas
+sean una decisión de verdad. **Pendiente de él:** si las vidas individuales
+pasan a ser las de por defecto en party y en dos jugadores (recomendación de
+Jarvis: sí — con tres o cuatro en la sala el fondo común no tiene sentido y
+así la mecánica se ve sola).
+
 **También pendiente de él:** un token nuevo de Supabase de la cuenta del juego
 —el de los MCP está caducado (401)— para poder darle las 1.000 monedas que
 pidió; las monedas son el contador `monedas` dentro de `perfiles.logros`.
