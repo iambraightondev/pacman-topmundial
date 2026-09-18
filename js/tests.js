@@ -7310,7 +7310,8 @@
       ok(j2.out, 'J2 fuera');
       ok(G.cuerpos[1], 'su cuerpo se queda');
       eq(G.cuerpos[1].x + ',' + G.cuerpos[1].y, '100,150', 'donde cayó');
-      eq(G.cuerpos[1].t, CFG.REVIVIR.CUERPO_TICKS, '30 segundos');
+      eq(G.cuerpos[1].t, CFG.REVIVIR.CUERPO_TICKS, 'el cuerpo aguanta lo que dice CFG');
+      eq(CFG.REVIVIR.CUERPO_TICKS, 900, 'quince segundos para levantarlo');
       eq(G.state, 'PLAYING', 'y la partida sigue');
     } finally { G.toMenu(); }
   });

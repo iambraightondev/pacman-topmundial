@@ -259,7 +259,7 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 - Con **vidas propias**, quien se queda sin vidas deja **su cuerpo tirado**
   donde cayó, con las pasadas que lleva (0/5) y un aro con el tiempo.
-- **Pásale por encima 5 veces en 30 segundos** y vuelve ahí mismo con 1 vida
+- **Pásale por encima 5 veces en 15 segundos** y vuelve ahí mismo con 1 vida
   y 5 segundos de escudo (un aro cian).
 - Si el cuerpo desaparece, **al acabar el nivel sale REVIVIR**: quien está
   fuera puede pagar 1.000 monedas para volver en el nivel siguiente. Se espera

@@ -1951,7 +1951,7 @@
     /* =========================================================
      * REVIVIR AL COMPAÑERO (CFG.REVIVIR)
      *
-     * 1. Sin vidas y con otros jugando, el cuerpo se queda tirado 30 s. Cada
+     * 1. Sin vidas y con otros jugando, el cuerpo se queda tirado 15 s. Cada
      *    vez que un compañero le pasa por encima cuenta una pasada; a las 5,
      *    vuelve con 1 vida y 5 s de escudo, donde estaba.
      * 2. Si el cuerpo desaparece, al acabar el nivel sale la vista REVIVIR:
