@@ -2555,7 +2555,8 @@
       { id: 'logro', name: 'POR LOGRO', titulo: 'POR LOGRO · CON LOGROS Y MAESTRÍAS' },
       { id: 'rara', name: 'EXTRAVAGANTES', titulo: 'EXTRAVAGANTES · CON LOGROS' },
       { id: 'temporada', name: 'FECHAS ESPECIALES', titulo: 'FECHAS ESPECIALES · HALLOWEEN, NAVIDAD Y LUNA LLENA' },
-      { id: 'tienda', name: 'DE TIENDA', titulo: 'DE TIENDA · CON MONEDAS' }
+      { id: 'tienda', name: 'DE TIENDA', titulo: 'DE TIENDA · CON MONEDAS' },
+      { id: 'cofre', name: 'DE COFRE', titulo: 'DE COFRE · NO SE COMPRAN, SE GANAN ABRIENDO UNO' }
     ],
 
     /* ---------- lo que se ha visto ya (para las marcas de NUEVO) ----------
@@ -2638,12 +2639,17 @@
           tuyo: true, puesto: !puesto0, como: '', pct: 1, chip: '' });
         lista.forEach(function (it) {
           var tuyo = !!(Tn && Tn.tiene(it.id));
+          /* lo de cofre no se vende: ni precio ni barra de ahorro */
+          var deCofre = !!it.cofre;
           out.push({
-            id: it.id, name: it.name, ve: it.ve || '', chip: tuyo ? 'COMPRADO' : 'TIENDA',
+            id: it.id, name: it.name, ve: it.ve || '',
+            chip: tuyo ? (deCofre ? 'DE COFRE' : 'COMPRADO') : (deCofre ? 'COFRE' : 'TIENDA'),
             tuyo: tuyo, puesto: tuyo && puesto0 === it.id,
-            como: tuyo ? '' : ((Tn ? Tn.fmt(it.precio) : it.precio) + ' MONEDAS EN LA TIENDA'),
-            pct: tuyo ? 1 : (Tn ? Math.min(1, Math.max(0, Tn.saldo()) / (it.precio || 1)) : 0),
-            tienda: true, precio: it.precio
+            como: tuyo ? '' : deCofre ? 'SOLO SALE DE UN COFRE'
+              : ((Tn ? Tn.fmt(it.precio) : it.precio) + ' MONEDAS EN LA TIENDA'),
+            pct: tuyo ? 1 : deCofre ? 0
+              : (Tn ? Math.min(1, Math.max(0, Tn.saldo()) / (it.precio || 1)) : 0),
+            tienda: !deCofre, precio: deCofre ? 0 : it.precio
           });
         });
       } else if (tab === 'emote') {
@@ -3601,7 +3607,7 @@
       centro.appendChild(this.tiendaGrid);
 
       this.tiendaItems = [];
-      Tn.CATALOGO.forEach(function (it) {
+      Tn.VENTA.forEach(function (it) {
         var card = document.createElement('div');
         card.className = 'tn-it';
         card.setAttribute('role', 'button');
@@ -3833,7 +3839,7 @@
 
       /* secciones, con lo que te falta de cada una */
       Tn.CATEGORIAS.forEach(function (c) {
-        var falta = Tn.CATALOGO.filter(function (it) { return it.cat === c.id && !Tn.tiene(it.id); }).length;
+        var falta = Tn.VENTA.filter(function (it) { return it.cat === c.id && !Tn.tiene(it.id); }).length;
         var b = self.tiendaTabBtns[c.id];
         b.textContent = c.name + (falta ? ' · ' + falta : ' · ✓');
         b.classList.toggle('active', c.id === tab);
@@ -3894,7 +3900,7 @@
       var bolsa = this.tiendaBolsa || [];
       m.textContent = '';
       this.tiendaMetaLupa = null;
-      var quedan = Tn.CATALOGO.filter(function (it) { return !Tn.tiene(it.id) && bolsa.indexOf(it.id) === -1; });
+      var quedan = Tn.VENTA.filter(function (it) { return !Tn.tiene(it.id) && bolsa.indexOf(it.id) === -1; });
       var meta = quedan.filter(function (it) { return it.precio > libre; })
         .sort(function (a, b) { return a.precio - b.precio; })[0];
       if (!meta) {

@@ -27,6 +27,12 @@
  * de este aparato, como la skin (settings acc1, efx1, emotes1). Si lo puesto
  * no está comprado —un ajuste tocado a mano, otra cuenta en el mismo
  * navegador— simplemente no se usa.
+ *
+ * VESTUARIO DE COFRE (17 de septiembre de 2026, PLAN-COFRES.md): hay piezas
+ * que NO se venden y solo salen de un cofre. Están en el catálogo (para poder
+ * tenerlas y ponerlas, por el mismo contador `c_<id>`) pero no en VENTA, no
+ * tienen precio y `comprar()` las rechaza. Mientras los cofres no existan se
+ * ven cerradas, con su etiqueta.
  * ============================================================ */
 (function () {
   'use strict';
@@ -39,7 +45,11 @@
   function meter(lista, cat) {
     for (var i = 0; i < lista.length; i++) {
       var it = lista[i];
-      var item = { id: it.id, name: it.name, cat: cat, precio: it.precio, ve: it.ve || '' };
+      /* `cofre`: existe y es tuyo por el mismo contador que lo comprado, pero
+       * no se vende (PLAN-COFRES.md). Una skin lo dice con su grupo. */
+      var deCofre = !!(it.cofre || it.grupo === 'cofre');
+      var item = { id: it.id, name: it.name, cat: cat, precio: deCofre ? 0 : it.precio,
+        ve: it.ve || '', cofre: deCofre };
       CATALOGO.push(item);
       POR_ID[it.id] = item;
     }
@@ -47,7 +57,9 @@
   meter(CFG.EMOTES_TIENDA, 'emote');
   meter(CFG.EFECTOS, 'efecto');
   meter(CFG.ACCESORIOS, 'accesorio');
-  meter(CFG.SKINS.filter(function (sk) { return sk.grupo === 'tienda'; }), 'skin');
+  meter(CFG.SKINS.filter(function (sk) {
+    return sk.grupo === 'tienda' || sk.grupo === 'cofre';
+  }), 'skin');
 
   var EMOTES_BASE = CFG.EMOTES.map(function (e) { return e.id; });
 
@@ -61,12 +73,15 @@
   function settings() { return window.PM.settings || CFG.DEFAULT_SETTINGS; }
 
   var Tienda = {
+    /* TODO lo que se puede tener (incluye lo de cofre, que es tuyo por el
+     * mismo contador) y, aparte, lo que de verdad se VENDE en la tienda */
     CATALOGO: CATALOGO,
+    VENTA: CATALOGO.filter(function (it) { return !it.cofre; }),
     CATEGORIAS: [
       { id: 'emote', name: 'EMOTES', nota: 'SE PONEN EN LAS TECLAS 1 A 6 DE LA PARTIDA' },
       { id: 'efecto', name: 'EFECTOS', nota: 'LO QUE DEJAS AL PASAR. SE LLEVA UNO' },
       { id: 'accesorio', name: 'ACCESORIOS', nota: 'LO QUE LLEVAS PUESTO. SE LLEVA UNO Y LUCE CON CUALQUIER SKIN' },
-      { id: 'skin', name: 'SKINS', nota: 'EXTRAVAGANTES QUE SOLO SE CONSIGUEN AQUÍ' }
+      { id: 'skin', name: 'SKINS', nota: 'LAS QUE NO SE GANAN JUGANDO: SOLO SE CONSIGUEN AQUÍ' }
     ],
 
     /* 1500 -> '1.500' (toLocaleString no pone el punto con cuatro cifras) */
@@ -121,12 +136,17 @@
       return stat('c_' + id) >= 1;
     },
 
+    /* ¿es de los que solo salen de un cofre? */
+    esDeCofre: function (id) { return !!(POR_ID[id] && POR_ID[id].cofre); },
+
     /* { ok, msg }. No hay nada que confirmar con el servidor: la compra es un
      * contador más y sube a la cuenta con el siguiente guardado. */
     comprar: function (id) {
       var it = this.item(id);
       if (!it) return { ok: false, msg: 'ESO NO ESTÁ EN LA TIENDA' };
       if (this.tiene(id)) return { ok: false, msg: 'YA ES TUYO' };
+      /* lo de cofre no se vende: se gana abriendo uno */
+      if (it.cofre) return { ok: false, msg: 'ESO SOLO SALE DE UN COFRE' };
       var falta = it.precio - this.saldo();
       if (falta > 0) {
         return { ok: false, msg: 'TE FALTAN ' + this.fmt(falta) + ' MONEDAS' };

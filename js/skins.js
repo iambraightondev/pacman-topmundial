@@ -3440,6 +3440,364 @@
 
 
   /* ============================================================
+   * SKINS DE MATERIAL (17 de septiembre de 2026)
+   *
+   * No son disfraces: es de QUÉ está hecho Pac-Man. Todas conservan su
+   * silueta exacta (el cuerpo se recorta con pacPath, así que la boca del
+   * juego sigue siendo la boca) y por eso admiten accesorios sin tener que
+   * apuntarles la cabeza en CABEZAS.
+   *
+   * El dibujo va en coordenadas de PANTALLA, no en el marco del cuerpo: un
+   * material no gira cuando el jugador dobla una esquina — la lava cae
+   * hacia abajo mire a donde mire. Lo único que sigue a la dirección es la
+   * boca, que ya la pone pacPath.
+   * ============================================================ */
+
+  /* el cuerpo recortado, para pintar dentro sin salirse de la silueta */
+  function dentro(ctx, o) {
+    pacPath(ctx, o.x, o.y, R, DIR_ANGLE[o.d], o.half);
+    ctx.clip();
+  }
+  /* el borde de la silueta, del color que se le pida */
+  function borde(ctx, o, col, w) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = (w || 1) / S;
+    ctx.lineJoin = 'round';
+    pacPath(ctx, o.x, o.y, R - 0.4 / S, DIR_ANGLE[o.d], o.half);
+    ctx.stroke();
+  }
+
+  /* LAVA: corteza negra con la lava viva por dentro. Las grietas laten (el
+   * naranja sube y baja) y de vez en cuando sube una ascua desde la de
+   * arriba. La boca sigue siendo la del juego: lo de dentro se recorta. */
+  var LAVA_GRIETAS = [
+    [[-4.6, -2.6], [-2.4, -1.2], [-3.4, 0.4], [-1.2, 1.8], [-2.2, 4.0]],
+    [[-0.4, -5.4], [0.6, -2.8], [-0.8, -1.4], [0.8, 0.6], [0.0, 3.6]],
+    [[3.2, -3.8], [2.0, -1.6], [3.8, 0.0], [2.6, 2.4]]
+  ];
+  DRAW.lava = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t, i, j, g;
+    var latido = 0.55 + 0.45 * Math.sin(t * 2.6);
+    ctx.save();
+    dentro(ctx, o);
+    var f = ctx.createRadialGradient(x - 1.5, y - 2, 1, x, y, R);
+    f.addColorStop(0, '#3a1408');
+    f.addColorStop(1, '#180804');
+    ctx.fillStyle = f;
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    /* las grietas: primero el trazo ancho apagado, encima el hilo vivo */
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (j = 0; j < 2; j++) {
+      ctx.strokeStyle = j ? hex(mix('#ffd24a', '#ffffff', latido * 0.5)) : '#ff5a00';
+      ctx.lineWidth = j ? 0.45 : 1.5;
+      ctx.globalAlpha = j ? 0.7 + latido * 0.3 : 0.55 + latido * 0.45;
+      for (i = 0; i < LAVA_GRIETAS.length; i++) {
+        g = LAVA_GRIETAS[i];
+        ctx.beginPath();
+        ctx.moveTo(x + g[0][0], y + g[0][1]);
+        for (var k = 1; k < g.length; k++) ctx.lineTo(x + g[k][0], y + g[k][1]);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+    /* la costra se cuartea: un par de placas oscuras encima */
+    ctx.fillStyle = 'rgba(0,0,0,.45)';
+    ctx.beginPath();
+    ctx.moveTo(x - 1.6, y - 4.6); ctx.lineTo(x + 2.4, y - 4.0);
+    ctx.lineTo(x + 1.4, y - 1.8); ctx.lineTo(x - 1.2, y - 2.4);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    /* ascuas: suben desde la grieta de arriba y se apagan */
+    for (i = 0; i < 3; i++) {
+      var p = ((t * 0.55) + i * 0.37) % 1;
+      var ax = x - 1 + Math.sin((t + i) * 2.2) * 1.4, ay = y - 3 - p * 6;
+      ctx.globalAlpha = (1 - p) * 0.9;
+      ctx.fillStyle = p < 0.5 ? '#ffd24a' : '#ff5a00';
+      ctx.fillRect(ax, ay, 0.8, 0.8);
+    }
+    ctx.globalAlpha = 1;
+    borde(ctx, o, hex(mix('#ff5a00', '#ffd24a', latido)), 1.2);
+  };
+
+  /* HIELO: un bloque tallado. Vetas por dentro, brillo en la cara de
+   * arriba, dos carámbanos colgando de la barbilla y chispitas de escarcha
+   * que se encienden y se apagan. Lleva un toque del color del jugador
+   * para que en party se sepa quién es quién. */
+  DRAW.hielo = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t, i;
+    var claro = hex(mix('#d6f2ff', o.c, 0.12));
+    var medio = hex(mix('#9fdcf5', o.c, 0.16));
+    var hondo = hex(mix('#5fb4dc', o.c, 0.12));
+    ctx.save();
+    dentro(ctx, o);
+    ctx.fillStyle = medio;
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    /* caras talladas: dos claras arriba y una honda abajo */
+    ctx.fillStyle = claro;
+    ctx.beginPath();
+    ctx.moveTo(x - 6.5, y - 3.4); ctx.lineTo(x + 0.4, y - 6.4);
+    ctx.lineTo(x - 1.6, y - 0.4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = hex(mix(claro, '#ffffff', 0.5));
+    ctx.beginPath();
+    ctx.moveTo(x + 0.4, y - 6.4); ctx.lineTo(x + 5.6, y - 2.6);
+    ctx.lineTo(x - 1.6, y - 0.4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = hondo;
+    ctx.beginPath();
+    ctx.moveTo(x - 6.5, y + 3.0); ctx.lineTo(x - 1.6, y - 0.4);
+    ctx.lineTo(x + 0.8, y + 6.4); ctx.closePath(); ctx.fill();
+    /* los cantos del tallado */
+    ctx.strokeStyle = 'rgba(255,255,255,.75)';
+    ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(x - 6.5, y - 3.4); ctx.lineTo(x - 1.6, y - 0.4); ctx.lineTo(x + 0.4, y - 6.4);
+    ctx.moveTo(x - 1.6, y - 0.4); ctx.lineTo(x + 5.6, y - 2.6);
+    ctx.moveTo(x - 1.6, y - 0.4); ctx.lineTo(x + 0.8, y + 6.4);
+    ctx.stroke();
+    ctx.restore();
+    /* carámbanos: cuelgan de la barbilla, siempre hacia abajo */
+    ctx.fillStyle = hex(mix('#e7f9ff', o.c, 0.1));
+    [[-2.4, 0], [0.6, -0.8]].forEach(function (c) {
+      var bx = x + c[0], by = y + 4.6 + c[1];
+      ctx.beginPath();
+      ctx.moveTo(bx - 0.7, by); ctx.lineTo(bx + 0.7, by);
+      ctx.lineTo(bx, by + 2.6 + c[1] * 0.5);
+      ctx.closePath(); ctx.fill();
+    });
+    /* escarcha: se enciende y se apaga en sitios fijos de la cara */
+    for (i = 0; i < 4; i++) {
+      var br = (Math.sin(t * 2.2 + i * 1.9) + 1) / 2;
+      if (br < 0.45) continue;
+      var ex = x + [-3.6, 1.8, 3.4, -1.4][i], ey = y + [-4.2, -4.6, 1.6, 3.2][i];
+      estrella4(ctx, ex, ey, 0.6 + br * 0.9, '#ffffff', br);
+    }
+    borde(ctx, o, '#e7f9ff', 1);
+  };
+
+  /* CHICLE: goma de mascar. Bola blanda y brillante, con su brillo gordo
+   * arriba a la izquierda y la sombra abajo, que se menea como gelatina; y
+   * cada pocos segundos hincha un globo por la boca que crece, se estira y
+   * le revienta en la cara. */
+  DRAW.chicle = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t;
+    var v = DIR_V[o.d];
+    var rosa = hex(mix('#ff5ab0', o.c, 0.18));
+    ctx.save();
+    /* el meneo de goma: se estira y se encoge un pelín, sin salirse del hueco */
+    var mn = 1 + Math.sin(t * 5.2) * 0.035;
+    ctx.translate(x, y); ctx.scale(mn, 2 - mn); ctx.translate(-x, -y);
+    ctx.save();
+    dentro(ctx, o);
+    var g = ctx.createRadialGradient(x - 2.4, y - 3, 0.5, x, y, R + 1.5);
+    g.addColorStop(0, hex(mix(rosa, '#ffffff', 0.75)));
+    g.addColorStop(0.45, rosa);
+    g.addColorStop(1, hex(mix(rosa, '#000000', 0.45)));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    /* el brillo gordo y su acompañante */
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    ctx.beginPath(); ctx.ellipse(x - 2.3, y - 3.1, 1.9, 1.05, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.beginPath(); ctx.ellipse(x - 4.1, y - 0.9, 0.8, 0.5, -0.5, 0, Math.PI * 2); ctx.fill();
+    /* la sombra de abajo, que le da lo blando */
+    ctx.fillStyle = 'rgba(120,8,70,.35)';
+    ctx.beginPath(); ctx.ellipse(x, y + 5.4, 4.6, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    borde(ctx, o, hex(mix(rosa, '#ffffff', 0.55)), 1);
+    ctx.restore();
+    /* el globo: crece por delante, se pasa de gordo y revienta */
+    var ciclo = (t % 5.2) / 5.2;
+    if (ciclo < 0.62 && o.half > 0) {
+      var k = ciclo / 0.62;
+      var rr = 0.6 + k * k * 3.6;
+      var bx = x + v[0] * (R - 0.8 + rr * 0.8), by = y + v[1] * (R - 0.8 + rr * 0.8);
+      ctx.fillStyle = hex(mix(rosa, '#ffffff', 0.25 + k * 0.1)) ;
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = hex(mix(rosa, '#ffffff', 0.6));
+      ctx.lineWidth = 0.4;
+      ctx.beginPath(); ctx.arc(bx, by, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath();
+      ctx.ellipse(bx - rr * 0.35, by - rr * 0.4, rr * 0.3, rr * 0.18, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (ciclo < 0.72) {
+      /* el reventón: trozos de goma saliendo por delante */
+      var u = (ciclo - 0.62) / 0.1;
+      ctx.globalAlpha = 1 - u;
+      ctx.fillStyle = hex(mix(rosa, '#ffffff', 0.3));
+      for (var i = 0; i < 7; i++) {
+        var a = i * Math.PI * 2 / 7 + 0.3;
+        var d = 2 + u * 5;
+        ctx.fillRect(x + v[0] * (R + 1) + Math.cos(a) * d - 0.4,
+          y + v[1] * (R + 1) + Math.sin(a) * d - 0.4, 0.9, 0.9);
+      }
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  /* PLASMA: la bola de la lámpara de feria. Fondo violeta oscuro, un núcleo
+   * blanco y cuatro rayos que saltan del núcleo al borde y se rehacen cada
+   * poco, siempre igual para el mismo instante (así dos aparatos pintan lo
+   * mismo). */
+  DRAW.plasma = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t, i, j;
+    var tramo = Math.floor(t * 8);             // los rayos cambian 8 veces por segundo
+    ctx.save();
+    dentro(ctx, o);
+    var g = ctx.createRadialGradient(x, y, 0.5, x, y, R);
+    g.addColorStop(0, hex(mix('#3a1a7a', o.c, 0.2)));
+    g.addColorStop(0.75, '#1a0b40');
+    g.addColorStop(1, hex(mix('#4a2aa0', o.c, 0.25)));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (j = 0; j < 2; j++) {
+      ctx.strokeStyle = j ? '#ffffff' : '#66e0ff';
+      ctx.lineWidth = j ? 0.35 : 1.1;
+      ctx.globalAlpha = j ? 1 : 0.5;
+      for (i = 0; i < 4; i++) {
+        var semilla = hash(tramo * 7 + i * 131);
+        var ang = (semilla % 1000) / 1000 * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        for (var p = 1; p <= 3; p++) {
+          var rr = R * p / 3;
+          var des = (((hash(semilla + p * 17) % 1000) / 1000) - 0.5) * 0.9;
+          ctx.lineTo(x + Math.cos(ang + des) * rr, y + Math.sin(ang + des) * rr);
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+    var nucleo = 1.2 + 0.25 * Math.sin(t * 9);
+    ctx.fillStyle = '#d9f4ff';
+    ctx.beginPath(); ctx.arc(x, y, nucleo, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    borde(ctx, o, '#66e0ff', 1);
+  };
+
+  /* ENJAMBRE: no tiene cuerpo. Son pastillas volando en formación con su
+   * silueta; cada una tiembla un poco por su cuenta, las del borde son más
+   * pequeñas, y unas cuantas rezagadas vienen detrás. */
+  DRAW.enjambre = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t, i;
+    var a = DIR_ANGLE[o.d];
+    ctx.save();
+    ctx.fillStyle = o.c;
+    for (var gy = -6.5; gy <= 6.5; gy += 1.45) {
+      for (var gx = -6.5; gx <= 6.5; gx += 1.45) {
+        if (!inPac(gx, gy, R - 0.2, a, o.half)) continue;
+        var n = Math.round((gx + 7) * 31 + (gy + 7) * 17);
+        var fase1 = (hash(n) % 628) / 100;
+        var tx = Math.sin(t * 3.1 + fase1) * 0.28, ty = Math.cos(t * 2.7 + fase1) * 0.28;
+        var d = Math.sqrt(gx * gx + gy * gy) / R;
+        var tam = 0.72 - d * 0.32;
+        ctx.globalAlpha = 1 - d * 0.35;
+        ctx.fillRect(x + gx + tx - tam / 2, y + gy + ty - tam / 2, tam, tam);
+      }
+    }
+    /* las rezagadas, fuera del cuerpo */
+    for (i = 0; i < 5; i++) {
+      var ph = ((t * 0.7) + i * 0.2) % 1;
+      var ang = i * 1.7 + t * 0.6;
+      var rr = R + 1.5 + ph * 3.5;
+      ctx.globalAlpha = (1 - ph) * 0.75;
+      ctx.fillRect(x + Math.cos(ang) * rr - 0.3, y + Math.sin(ang) * rr - 0.3, 0.7, 0.7);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  };
+
+  /* GALAXIA: por dentro no hay cuerpo, hay cielo. Una nebulosa gira
+   * despacio, las estrellas titilan cada una a su ritmo y el borde es un
+   * hilo morado para que la silueta se lea sobre el negro del laberinto. */
+  var GAL_ESTRELLAS = [[-3.2, -2.6], [1.8, -3.8], [-1.4, 2.8], [3.4, 1.6],
+    [-4.4, 0.8], [0.6, -0.6], [2.4, -1.2]];
+  DRAW.galaxia = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t, i;
+    ctx.save();
+    dentro(ctx, o);
+    ctx.fillStyle = '#0a0620';
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(t * 0.55);
+    ctx.fillStyle = 'rgba(139,61,255,.75)';
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 0.95, R * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = hex(mix('#50beff', o.c, 0.25, 0.6));
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 0.62, R * 0.24, 0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    for (i = 0; i < GAL_ESTRELLAS.length; i++) {
+      var br = (Math.sin(t * 2.4 + i * 1.3) + 1) / 2;
+      if (br < 0.25) continue;
+      ctx.globalAlpha = br;
+      var s = 0.35 + br * 0.35;
+      ctx.fillRect(x + GAL_ESTRELLAS[i][0] - s / 2, y + GAL_ESTRELLAS[i][1] - s / 2, s, s);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    borde(ctx, o, '#8b3dff', 1.2);
+    /* polvo de estrellas: se queda flotando alrededor */
+    for (i = 0; i < 4; i++) {
+      var p = ((t * 0.4) + i * 0.25) % 1;
+      var ang2 = i * 2.1 + t * 0.3;
+      ctx.globalAlpha = (1 - p) * 0.8;
+      ctx.fillStyle = '#cbb8ff';
+      ctx.fillRect(x + Math.cos(ang2) * (R + p * 4) - 0.3, y + Math.sin(ang2) * (R + p * 4) - 0.3, 0.6, 0.6);
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  /* AGUJERO NEGRO (la legendaria): el cuerpo es un vacío. Lo que se ve es
+   * el anillo de luz que lo rodea, dos órbitas que giran alrededor y el
+   * polvo que cae en espiral hacia dentro. */
+  DRAW.agujero = function (ctx, o) {
+    var x = o.x, y = o.y, t = o.t, i;
+    /* órbitas, por detrás del cuerpo */
+    ctx.save();
+    ctx.translate(x, y);
+    [[R + 2.6, 1.0, 0.45, '#ffb852'], [R + 1.4, 0.62, -0.7, '#78c8ff']].forEach(function (or, k) {
+      ctx.save();
+      ctx.rotate(t * (k ? -0.8 : 0.55));
+      ctx.strokeStyle = or[3];
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 0.45;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, or[0], or[0] * 0.32, or[2], 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.save();
+    dentro(ctx, o);
+    var g = ctx.createRadialGradient(x, y, R * 0.45, x, y, R);
+    g.addColorStop(0, '#000000');
+    g.addColorStop(0.82, '#150a02');
+    g.addColorStop(1, hex(mix('#7a4a10', o.c, 0.2)));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    /* el polvo que cae: espiral hacia el centro */
+    ctx.fillStyle = '#ffd7a0';
+    for (i = 0; i < 7; i++) {
+      var p = ((t * 0.9) + i / 7) % 1;
+      var rr = R * (1 - p * 0.92);
+      var ang = i * 0.9 + t * 2.2 + p * 5;
+      ctx.globalAlpha = (1 - p) * 0.85;
+      ctx.fillRect(x + Math.cos(ang) * rr - 0.25, y + Math.sin(ang) * rr - 0.25, 0.5, 0.5);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    /* el anillo: lo único que dice dónde está */
+    borde(ctx, o, '#ffb852', 1.6);
+    borde(ctx, o, hex(mix('#ffffff', '#ffb852', 0.4, 0.55)), 0.5);
+  };
+
+  /* ============================================================
    * EFECTOS (tienda, 250): se pintan en coordenadas de pantalla, casi todos
    * como partículas que nacen en puntos FIJOS del camino (rastro()) y se
    * quedan donde nacieron mientras el jugador sigue. `cuerpo()` pinta la
@@ -3730,6 +4088,142 @@
     ctx.restore();
   };
 
+  /* ---------- efectos nuevos (17 de septiembre de 2026) ---------- */
+
+  /* TINTA: un reguero morado que se seca. La mancha nace redonda, se
+   * ensancha un poco y al secarse se le abren grietas y se apaga. */
+  EFX.efx_tinta = function (ctx, o, cuerpo) {
+    rastro(o, 5, 56).forEach(function (q) {
+      var seca = q.edad, rr = 1.1 + seca * 0.7 + (q.n % 3) * 0.15;
+      ctx.globalAlpha = (1 - seca * seca) * 0.65;
+      ctx.fillStyle = hex(mix('#6a3ddb', o.c, 0.12));
+      ctx.beginPath();
+      ctx.ellipse(q.p.x, q.p.y, rr, rr * 0.62, (q.n % 4) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      if (seca > 0.45) {
+        ctx.strokeStyle = 'rgba(185,163,255,.75)';
+        ctx.lineWidth = 0.22;
+        ctx.beginPath();
+        ctx.moveTo(q.p.x - rr * 0.7, q.p.y);
+        ctx.lineTo(q.p.x, q.p.y + rr * 0.3);
+        ctx.lineTo(q.p.x + rr * 0.6, q.p.y - rr * 0.2);
+        ctx.stroke();
+      }
+    });
+    ctx.globalAlpha = 1;
+    cuerpo();
+  };
+
+  /* PÉTALOS: caen girando por donde pasa y se posan. Cada uno gira a su
+   * ritmo y se apaga sin moverse del sitio donde nació. */
+  EFX.efx_petalos = function (ctx, o, cuerpo) {
+    rastro(o, 7, 66).forEach(function (q) {
+      var cae = Math.min(1, q.edad * 2.4);          // primero cae, luego se queda
+      var giro = (q.n % 2 ? 1 : -1) * (q.edad * 5 + q.n);
+      ctx.save();
+      ctx.globalAlpha = 1 - q.edad * q.edad;
+      ctx.translate(q.p.x + Math.sin(q.edad * 6 + q.n) * 1.2, q.p.y + cae * 2.2);
+      ctx.rotate(giro);
+      ctx.fillStyle = (q.n % 3) ? '#ff9ec4' : '#ffc2da';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 1.25, 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(200,60,120,.5)'; ctx.lineWidth = 0.18;
+      ctx.beginPath(); ctx.moveTo(-1.1, 0); ctx.lineTo(1.1, 0); ctx.stroke();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+    cuerpo();
+  };
+
+  /* MONEDAS: al comerse un fantasma saltan monedas que giran en el aire y
+   * caen. Son de adorno: no dan un céntimo. */
+  EFX.efx_monedas = function (ctx, o, cuerpo) {
+    cuerpo();
+    var q = (o.confeti >= 0 && o.confeti < 1.2) ? o.confeti / 1.2 : -1;
+    if (q < 0) return;
+    ctx.save();
+    for (var k = 0; k < 7; k++) {
+      var lado = (k % 2 ? 1 : -1), sep = 1 + (k % 4) * 0.9;
+      var vx = o.x + lado * sep * (0.6 + q * 3.4);
+      var vy = o.y - (q * 13 - q * q * 16) - 2;       // sube y cae
+      var giro = Math.abs(Math.cos(q * 12 + k));       // el canto de la moneda
+      var fade = q < 0.7 ? 1 : (1 - q) / 0.3;
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.fillStyle = '#ffd24a';
+      ctx.beginPath();
+      ctx.ellipse(vx, vy, 1.15 * (0.25 + giro * 0.75), 1.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 0.22; ctx.stroke();
+      if (giro > 0.55) {
+        ctx.fillStyle = '#fff3c4';
+        ctx.fillRect(vx - 0.2, vy - 0.55, 0.4, 1.1);
+      }
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  };
+
+  /* HUMO: bocanadas que salen por detrás, crecen y se deshacen. Nacen del
+   * camino, así que doblan las esquinas con él. */
+  EFX.efx_humo = function (ctx, o, cuerpo) {
+    rastro(o, 6, 62).forEach(function (q) {
+      var rr = 1.1 + q.edad * 3.2;
+      ctx.globalAlpha = (1 - q.edad) * 0.45;
+      ctx.fillStyle = (q.n % 2) ? '#c8cddc' : '#9aa1b4';
+      ctx.beginPath();
+      ctx.arc(q.p.x + Math.sin(q.n + q.edad * 3) * 0.8,
+        q.p.y - q.edad * 1.6, rr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    cuerpo();
+  };
+
+  /* PORTALES (de cofre): la estela son portalitos morados que se abren y se
+   * cierran, con el guiño del MAGO. */
+  EFX.efx_portales = function (ctx, o, cuerpo) {
+    rastro(o, 9, 62).forEach(function (q) {
+      var abre = Math.sin(Math.min(1, q.edad * 1.6) * Math.PI);   // se abre y se cierra
+      if (abre <= 0.02) return;
+      var v = DIR_V[q.p.d];
+      ctx.save();
+      ctx.translate(q.p.x, q.p.y);
+      ctx.rotate(Math.atan2(v[1], v[0]));
+      ctx.globalAlpha = (1 - q.edad * 0.5) * abre;
+      ctx.fillStyle = 'rgba(139,61,255,.35)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.1 * abre, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#8b3dff'; ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.1 * abre, 3.4, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(220,190,255,.9)'; ctx.lineWidth = 0.25;
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.1 * abre, 3.4, 0, 1.1 * Math.PI, 1.6 * Math.PI); ctx.stroke();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+    cuerpo();
+  };
+
+  /* CONSTELACIÓN (de cofre): una estrella cada tanto trecho, unidas por una
+   * línea fina. Como las estrellas nacen del camino, el dibujo dobla las
+   * esquinas con él y queda el recorrido escrito en el cielo. */
+  EFX.efx_constelacion = function (ctx, o, cuerpo) {
+    var ptos = rastro(o, 13, 95);
+    if (ptos.length > 1) {
+      ctx.strokeStyle = 'rgba(159,208,255,.55)';
+      ctx.lineWidth = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(ptos[0].p.x, ptos[0].p.y);
+      for (var i = 1; i < ptos.length; i++) ctx.lineTo(ptos[i].p.x, ptos[i].p.y);
+      ctx.stroke();
+    }
+    ptos.forEach(function (q) {
+      var br = (1 - q.edad) * (0.65 + 0.35 * Math.sin(o.t * 3 + q.n));
+      estrella4(ctx, q.p.x, q.p.y, 0.8 + br * 1.1, '#ffffff', br);
+    });
+    ctx.globalAlpha = 1;
+    cuerpo();
+  };
+
   /* ============================================================
    * ACCESORIOS (tienda, 450): en el marco del cuerpo (f hacia delante, s
    * hacia la coronilla), encima de la skin. Solo en las que tienen forma de
@@ -4009,6 +4503,195 @@
     ctx.beginPath(); ctx.arc(-R + 0.5, 3.0, 0.8, 0, Math.PI * 2); ctx.fill();
   };
 
+  /* ---------- accesorios nuevos (17 de septiembre de 2026) ----------
+   * Mismo marco que los de arriba: +x hacia donde avanza, +y hacia la
+   * coronilla, el ojo en (1,1; 3,7) y la cabeza de radio R. */
+
+  /* CASCO ESPARTANO: cúpula de bronce con remaches, guardanariz por delante
+   * del ojo y cresta roja que se va hacia atrás al correr. */
+  ACC.acc_espartano = function (ctx, o) {
+    var t = o.t, r2 = R + 0.4, a1 = Math.asin(2.6 / r2), k;
+    /* la cresta, por detrás del casco */
+    ctx.beginPath();
+    ctx.moveTo(0.6, r2 - 0.6);
+    ctx.quadraticCurveTo(-1.6, r2 + 2.6 + Math.sin(t * 8) * 0.35, -5.2, r2 + 1.4 + Math.sin(t * 8 + 1) * 0.5);
+    ctx.quadraticCurveTo(-4.2, r2 - 1.4, -5.0, r2 - 3.6 + Math.sin(t * 8 + 2) * 0.4);
+    ctx.quadraticCurveTo(-2.2, r2 - 1.6, 0.4, r2 - 2.2);
+    ctx.closePath();
+    ctx.fillStyle = '#c62828'; ctx.fill();
+    ctx.strokeStyle = '#7a0f0f'; ctx.lineWidth = 0.4; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(0.2, r2 - 1.4);
+    ctx.quadraticCurveTo(-2.0, r2 + 0.8, -4.4, r2 - 0.4);
+    ctx.stroke();
+    /* la cúpula */
+    ctx.beginPath(); ctx.arc(0, 0, r2, a1, Math.PI - a1); ctx.closePath();
+    ctx.fillStyle = '#c98a2b'; ctx.fill();
+    ctx.strokeStyle = '#6f4a0e'; ctx.lineWidth = 0.4; ctx.stroke();
+    ctx.save();
+    ctx.beginPath(); ctx.arc(0, 0, r2, a1, Math.PI - a1); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = 'rgba(255,225,150,.45)';
+    ctx.beginPath(); ctx.ellipse(-1.6, 4.6, 2.2, 1.0, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* el cerco de abajo y los remaches */
+    ctx.fillStyle = '#a6701c';
+    ctx.fillRect(-5.4, 2.4, 10.8, 1.1);
+    ctx.fillStyle = '#e4b45a';
+    for (k = -2; k <= 2; k++) { ctx.beginPath(); ctx.arc(k * 2.1, 2.95, 0.28, 0, Math.PI * 2); ctx.fill(); }
+    /* guardanariz: por delante del ojo, no encima */
+    ctx.fillStyle = '#c98a2b';
+    ctx.beginPath();
+    ctx.moveTo(3.2, 3.4); ctx.lineTo(4.6, 3.2); ctx.lineTo(4.3, -0.4);
+    ctx.quadraticCurveTo(3.8, -1.0, 3.3, -0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#6f4a0e'; ctx.lineWidth = 0.35; ctx.stroke();
+  };
+
+  /* ANTENAS: dos antenas de marciano con su bolita. Rebotan al andar y se
+   * van hacia atrás cuanto más rápido va. */
+  ACC.acc_antenas = function (ctx, o) {
+    var t = o.t;
+    function antena(bx, alto, fase, lado) {
+      var vx = bx + lado * 1.2 + Math.sin(t * 7 + fase) * 0.7;
+      var vy = R - 0.6 + alto;
+      ctx.strokeStyle = '#8fe3b0'; ctx.lineWidth = 0.45; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(bx, R - 2.2);
+      ctx.quadraticCurveTo(bx + lado * 0.2, R + alto * 0.5, vx, vy);
+      ctx.stroke();
+      ctx.fillStyle = '#2bff88';
+      ctx.beginPath(); ctx.arc(vx, vy, 0.95, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.8)';
+      ctx.beginPath(); ctx.arc(vx - 0.3, vy + 0.3, 0.32, 0, Math.PI * 2); ctx.fill();
+    }
+    antena(-1.6, 2.6, 0, -1);
+    antena(1.4, 3.0, 1.7, 1);
+  };
+
+  /* BUFANDA: la vuelta al cuello (la barbilla de Pac-Man) y dos puntas que
+   * ondean hacia atrás. */
+  ACC.acc_bufanda = function (ctx, o) {
+    var t = o.t;
+    ctx.save();
+    /* la vuelta, recortada al cuerpo para que no se salga de la silueta */
+    ctx.save();
+    pacPath(ctx, 0, 0, R, 0, o.half); ctx.clip();
+    ctx.fillStyle = '#d33b3b';
+    ctx.fillRect(-R - 1, -4.6, 2 * R + 2, 2.4);
+    ctx.fillStyle = '#b02a2a';
+    ctx.fillRect(-R - 1, -4.6, 2 * R + 2, 0.5);
+    ctx.fillStyle = '#f2f2f2';
+    [-4.2, -1.4, 1.4, 4.2].forEach(function (f) { ctx.fillRect(f, -4.6, 0.7, 2.4); });
+    ctx.restore();
+    /* las dos puntas, ondeando por detrás del cuello */
+    [0, 1].forEach(function (i) {
+      var on = Math.sin(t * 9 + i * 1.3) * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-3.6, -2.6 - i * 0.7);
+      ctx.quadraticCurveTo(-6.4, -2.2 - i * 0.9 + on, -8.8 - i * 0.8, -3.2 - i * 0.7 + on * 1.3);
+      ctx.lineTo(-8.6 - i * 0.8, -4.8 - i * 0.7 + on * 1.3);
+      ctx.quadraticCurveTo(-6.2, -3.8 - i * 0.9 + on, -3.6, -4.6 - i * 0.7);
+      ctx.closePath();
+      ctx.fillStyle = '#d33b3b'; ctx.fill();
+      ctx.strokeStyle = '#8f1f1f'; ctx.lineWidth = 0.3; ctx.stroke();
+    });
+    ctx.restore();
+  };
+
+  /* CUERNOS: dos cuernos rojos que salen de la coronilla. */
+  ACC.acc_cuernos = function (ctx, o) {
+    function cuerno(lado, alto) {
+      ctx.beginPath();
+      ctx.moveTo(lado * 1.4, R - 1.4);
+      ctx.quadraticCurveTo(lado * 4.6, R - 0.6, lado * 3.8, R + alto);
+      ctx.quadraticCurveTo(lado * 2.6, R - 0.2, lado * 0.6, R - 2.0);
+      ctx.closePath();
+      ctx.fillStyle = '#d33b3b'; ctx.fill();
+      ctx.strokeStyle = '#7a1414'; ctx.lineWidth = 0.35; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,170,150,.7)'; ctx.lineWidth = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(lado * 1.8, R - 1.0);
+      ctx.quadraticCurveTo(lado * 3.6, R - 0.2, lado * 3.4, R + alto * 0.7);
+      ctx.stroke();
+    }
+    cuerno(-1, 3.4);
+    cuerno(1, 3.8);
+  };
+
+  /* CASCO DE OBRA: cúpula amarilla con cresta, ala corta y linterna que
+   * parpadea (solo la luz: el laberinto no se alumbra). */
+  ACC.acc_obra = function (ctx, o) {
+    var r2 = R + 0.2, a1 = Math.asin(2.8 / r2);
+    ctx.beginPath(); ctx.arc(0, 0, r2, a1, Math.PI - a1); ctx.closePath();
+    ctx.fillStyle = '#ffb300'; ctx.fill();
+    ctx.strokeStyle = '#8a5a00'; ctx.lineWidth = 0.4; ctx.stroke();
+    ctx.strokeStyle = '#e09b00'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(-0.2, 3.2); ctx.lineTo(-0.2, r2 - 0.4); ctx.stroke();
+    ctx.fillStyle = '#e09b00';
+    roundRect(ctx, -5.6, 2.2, 11.2, 1.2, 0.5); ctx.fill();
+    /* la linterna, mirando hacia donde avanza */
+    ctx.fillStyle = '#6b7280';
+    roundRect(ctx, 0.9, 4.0, 2.4, 1.5, 0.35); ctx.fill();
+    ctx.strokeStyle = '#3f444d'; ctx.lineWidth = 0.3; ctx.stroke();
+    var enc = (o.t % 1.6) < 1.1;
+    ctx.fillStyle = enc ? '#fff6b0' : '#8a8a6a';
+    ctx.beginPath(); ctx.arc(3.2, 4.75, 0.72, 0, Math.PI * 2); ctx.fill();
+    if (enc) {
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = '#fff6b0';
+      ctx.beginPath();
+      ctx.moveTo(3.5, 4.75); ctx.lineTo(5.9, 5.7); ctx.lineTo(5.9, 3.8);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  /* AUREOLA (de cofre): el aro flota sobre la coronilla, se inclina y sube
+   * y baja despacio, como si pesara. */
+  ACC.acc_aureola = function (ctx, o) {
+    var t = o.t;
+    ctx.save();
+    ctx.translate(-0.2, R + 1.8 + Math.sin(t * 2.2) * 0.35);
+    ctx.rotate(Math.sin(t * 1.7) * 0.18);
+    ctx.strokeStyle = 'rgba(255,240,150,.35)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 1.05, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#ffe680'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 1.05, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 0.35;
+    ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 1.05, 0, 1.05 * Math.PI, 1.55 * Math.PI); ctx.stroke();
+    ctx.restore();
+  };
+
+  /* ALITAS (de cofre): dos alitas a los lados que baten despacio y dan un
+   * aletazo fuerte al comerse un fantasma. */
+  ACC.acc_alas = function (ctx, o) {
+    var t = o.t;
+    /* o.confeti: segundos desde que se comió un fantasma (-1 si no) */
+    var golpe = (o.confeti >= 0 && o.confeti < 0.75) ? (1 - o.confeti / 0.75) : 0;
+    var bat = Math.sin(t * 6) * 0.18 + golpe * Math.sin(o.confeti * 34) * 0.55;
+    function ala(lado) {
+      ctx.save();
+      ctx.translate(-2.2, lado * 2.2);
+      ctx.rotate(lado * (0.25 + bat));
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-3.2, lado * 3.4, -7.0, lado * 2.6);
+      ctx.quadraticCurveTo(-4.6, lado * 1.6, -4.0, lado * 0.2);
+      ctx.quadraticCurveTo(-2.4, lado * 1.0, 0, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#f2f6ff'; ctx.fill();
+      ctx.strokeStyle = '#9fb0cc'; ctx.lineWidth = 0.3; ctx.stroke();
+      ctx.strokeStyle = 'rgba(160,180,210,.8)'; ctx.lineWidth = 0.25;
+      ctx.beginPath();
+      ctx.moveTo(-1.4, lado * 0.9); ctx.quadraticCurveTo(-3.6, lado * 2.2, -6.2, lado * 2.3);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ala(1); ala(-1);
+  };
+
 
   /* Caras de los emotes nuevos, en el idioma de Sprites.drawPacFace:
    * círculo del color del jugador, rasgos en negro y un meneo propio. */
@@ -4024,6 +4707,11 @@
     else if (id === 'jajaja') { mx = Math.sin(t * 1.1) * r * 0.06; my = -Math.abs(Math.sin(t * 0.3)) * r * 0.1; }
     else if (id === 'disimulo') { giro = Math.sin(t * 0.06) * 0.08; mx = Math.sin(t * 0.03) * r * 0.05; }
     else if (id === 'racha') { esc = 1 + Math.sin(t * 0.3) * 0.04; my = r * 0.12; }
+    else if (id === 'lloron') { my = r * 0.06 + Math.sin(t * 0.1) * r * 0.08; mx = Math.sin(t * 0.7) * r * 0.03; }
+    else if (id === 'ardiendo') { mx = Math.sin(t * 1.6) * r * 0.06; esc = 1 + Math.sin(t * 0.22) * 0.05; }
+    else if (id === 'beso') { giro = Math.sin(t * 0.09) * 0.12; my = Math.sin(t * 0.18) * r * 0.05; }
+    else if (id === 'idea') { my = -Math.abs(Math.sin(t * 0.06)) * r * 0.07; giro = Math.sin(t * 0.05) * 0.05; }
+    else if (id === 'gg') { giro = -0.1; my = r * 0.03; }
     ctx.save();
     ctx.translate(x + mx, y + my); ctx.rotate(giro); ctx.scale(esc, esc); ctx.translate(-x, -y);
     var ex = r * 0.42, ey = y - r * 0.26;
@@ -4309,6 +4997,144 @@
       var puntos = Math.floor((t * 0.04) % 4);
       ctx.fillStyle = '#ffffff';
       for (k = 0; k < puntos; k++) ctx.fillRect(x + r * 0.7 + k * r * 0.26, y - r * 0.9, 0.8, 0.8);
+
+    /* ---------- caras nuevas (17 de septiembre de 2026) ---------- */
+
+    } else if (id === 'lloron') {
+      /* dos cataratas que no paran, la boca temblando y el charquito que va
+       * subiendo por abajo */
+      arcoOjo(-ex, false); arcoOjo(ex, false);
+      for (k = 0; k < 2; k++) {
+        var lado2 = k ? 1 : -1;
+        ctx.fillStyle = '#5bc8ff';
+        ctx.beginPath();
+        ctx.moveTo(x + lado2 * ex - r * 0.16, ey + r * 0.14);
+        ctx.lineTo(x + lado2 * ex + r * 0.16, ey + r * 0.14);
+        ctx.lineTo(x + lado2 * ex + r * 0.1, y + r * 0.92);
+        ctx.lineTo(x + lado2 * ex - r * 0.1, y + r * 0.92);
+        ctx.closePath(); ctx.fill();
+        /* gotas sueltas cayendo dentro del chorro */
+        var g2 = ((t * 0.05) + k * 0.5) % 1;
+        ctx.fillStyle = '#d6f2ff';
+        ctx.fillRect(x + lado2 * ex - 0.4, ey + r * 0.2 + g2 * r * 0.7, 0.8, 0.8);
+      }
+      var charco = 0.5 + 0.5 * Math.sin(t * 0.05);
+      ctx.fillStyle = 'rgba(91,200,255,.7)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.98, r * (0.5 + charco * 0.25), r * 0.13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.28, y + r * 0.48 + Math.sin(t * 0.7) * 0.6);
+      ctx.quadraticCurveTo(x, y + r * 0.34, x + r * 0.28, y + r * 0.48 - Math.sin(t * 0.7) * 0.6);
+      ctx.stroke();
+
+    } else if (id === 'ardiendo') {
+      /* cejas de enfado y dos llamas en los ojos que no paran quietas */
+      [-1, 1].forEach(function (lado) {
+        var cx = x + lado * ex;
+        for (var j = 0; j < 2; j++) {
+          var alto = r * (0.52 - j * 0.2) * (1 + 0.18 * Math.sin(t * 0.5 + lado + j));
+          ctx.fillStyle = j ? '#ffd23f' : '#ff6a00';
+          ctx.beginPath();
+          ctx.moveTo(cx - r * (0.2 - j * 0.07), ey + r * 0.2);
+          ctx.quadraticCurveTo(cx - r * 0.24, ey - alto * 0.5,
+            cx + Math.sin(t * 0.4 + j) * r * 0.06, ey + r * 0.2 - alto);
+          ctx.quadraticCurveTo(cx + r * 0.24, ey - alto * 0.5, cx + r * (0.2 - j * 0.07), ey + r * 0.2);
+          ctx.closePath(); ctx.fill();
+        }
+      });
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 1.15;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.72, ey - r * 0.62); ctx.lineTo(x - r * 0.18, ey - r * 0.3);
+      ctx.moveTo(x + r * 0.72, ey - r * 0.62); ctx.lineTo(x + r * 0.18, ey - r * 0.3);
+      ctx.stroke();
+      ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(x - r * 0.3, y + r * 0.5); ctx.lineTo(x + r * 0.3, y + r * 0.5); ctx.stroke();
+
+    } else if (id === 'beso') {
+      /* un ojo guiñado, los labios fruncidos y un corazón que se escapa */
+      arcoOjo(-ex, true);
+      dot(ex, 0, r * 0.14);
+      ctx.fillStyle = '#d33b3b';
+      ctx.beginPath(); ctx.ellipse(x + r * 0.05, y + r * 0.42, r * 0.22, r * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.6;
+      ctx.beginPath(); ctx.ellipse(x + r * 0.05, y + r * 0.42, r * 0.22, r * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
+      for (k = 0; k < 2; k++) {
+        p = ((t * 0.016) + k * 0.5) % 1;
+        ctx.globalAlpha = (p < 0.75 ? 1 : (1 - p) / 0.25) * 0.95;
+        corazon(ctx, x + r * (0.45 + p * 0.55), y + r * (0.3 - p * 1.5),
+          r * (0.16 + p * 0.16), k ? '#ff9ab8' : '#ff2e63');
+      }
+      ctx.globalAlpha = 1;
+
+    } else if (id === 'idea') {
+      /* la ceja levantada, los puntitos... y la bombilla que se enciende */
+      dot(-ex, 0, r * 0.13); dot(ex, 0, r * 0.13);
+      ctx.lineWidth = lw * 0.7;
+      ctx.beginPath(); ctx.arc(x - ex, ey - r * 0.3, r * 0.24, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke();
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.1, r * 0.4, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
+      var ciclo = (t * 0.012) % 1;
+      var encendida = ciclo > 0.55;
+      var bx2 = x + r * 0.78, by2 = y - r * 0.78;
+      if (encendida) {
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#ffe680';
+        ctx.beginPath(); ctx.arc(bx2, by2, r * 0.6, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = encendida ? '#fff6b0' : '#8d8a70';
+      ctx.beginPath(); ctx.arc(bx2, by2, r * 0.27, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.5; ctx.stroke();
+      ctx.fillStyle = '#b8860b';
+      ctx.fillRect(bx2 - r * 0.12, by2 + r * 0.22, r * 0.24, r * 0.18);
+      if (encendida) {
+        ctx.strokeStyle = '#ffe680'; ctx.lineWidth = lw * 0.45;
+        ctx.beginPath();
+        ctx.moveTo(bx2, by2 - r * 0.5); ctx.lineTo(bx2, by2 - r * 0.72);
+        ctx.moveTo(bx2 + r * 0.42, by2 - r * 0.3); ctx.lineTo(bx2 + r * 0.6, by2 - r * 0.44);
+        ctx.moveTo(bx2 - r * 0.42, by2 - r * 0.3); ctx.lineTo(bx2 - r * 0.6, by2 - r * 0.44);
+        ctx.stroke();
+      }
+
+    } else if (id === 'gg') {
+      /* le caen las gafas sobre los ojos y sale el GG */
+      dot(-ex, 0, r * 0.13); dot(ex, 0, r * 0.13);
+      ctx.strokeStyle = ink; ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.1, r * 0.42, 0.18 * Math.PI, 0.82 * Math.PI);
+      ctx.stroke();
+      var cae = (t * 0.01) % 1;
+      var dy2 = (cae < 0.18) ? -r * 2.2 * (1 - cae / 0.18) : 0;
+      ctx.save();
+      ctx.translate(0, dy2);
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(x - r * 0.92, ey - r * 0.26, r * 0.72, r * 0.42);
+      ctx.fillRect(x + r * 0.2, ey - r * 0.26, r * 0.72, r * 0.42);
+      ctx.fillRect(x - r * 0.24, ey - r * 0.12, r * 0.48, r * 0.14);
+      ctx.strokeStyle = '#5bc8ff'; ctx.lineWidth = lw * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.84, ey - r * 0.16); ctx.lineTo(x - r * 0.44, ey - r * 0.16);
+      ctx.moveTo(x + r * 0.28, ey - r * 0.16); ctx.lineTo(x + r * 0.68, ey - r * 0.16);
+      ctx.stroke();
+      ctx.restore();
+      if (cae > 0.22) {
+        ctx.globalAlpha = (cae < 0.8) ? 1 : (1 - cae) / 0.2;
+        ctx.fillStyle = '#2bff88';
+        /* las dos ges, a cuadros: la letra del juego no llega aquí */
+        [[0, 0], [r * 0.52, 0]].forEach(function (g3) {
+          var gx = x + r * 0.5 + g3[0], gy = y - r * 0.95;
+          ctx.fillRect(gx, gy, r * 0.36, r * 0.1);
+          ctx.fillRect(gx, gy, r * 0.1, r * 0.34);
+          ctx.fillRect(gx, gy + r * 0.24, r * 0.36, r * 0.1);
+          ctx.fillRect(gx + r * 0.26, gy + r * 0.14, r * 0.1, r * 0.2);
+          ctx.fillRect(gx + r * 0.16, gy + r * 0.14, r * 0.2, r * 0.08);
+        });
+        ctx.globalAlpha = 1;
+      }
     }
     ctx.restore();
   }
@@ -4522,7 +5348,12 @@
 
   /* dónde va cada accesorio: por defecto, a la cara */
   var ZONA_ACC = { acc_gorra: 'cabeza', acc_chistera: 'cabeza', acc_vikingo: 'cabeza',
-    acc_helice: 'cabeza', acc_pajarita: 'cuello' };
+    acc_helice: 'cabeza', acc_pajarita: 'cuello',
+    /* los nuevos: los que se apoyan en la coronilla, a la cabeza; la bufanda
+     * y las alitas van al cuerpo, como la pajarita */
+    acc_espartano: 'cabeza', acc_antenas: 'cabeza', acc_cuernos: 'cabeza',
+    acc_obra: 'cabeza', acc_aureola: 'cabeza',
+    acc_bufanda: 'cuello', acc_alas: 'cuello' };
   var OJO_PAC = [1.1, 3.7];
   /* Revisión del 15 sep, con las 26 y los 11 accesorios: el PARCHE quedaba
    * detrás del ojo (se seguía viendo), los AURICULARES caían encima del ojo
@@ -4545,7 +5376,9 @@
     acc_auriculares: [-4.2, -2.2]     // ...detrás del ojo, en el lado de la cabeza
   };
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
-  var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6 };
+  var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6,
+    acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
+    acc_aureola: R + 1.8 };
 
   /* { x, y, k }: dónde poner el centro de la "cabeza de Pac-Man" y a qué
    * escala, para esa skin y ese accesorio; null si va tal cual */
@@ -4626,7 +5459,8 @@
   };
 
   /* Las caras de los emotes de la tienda, para Sprites.drawPacFace */
-  Sprites.CARAS_TIENDA = { dormido: 1, burla: 1, chulo: 1, mareo: 1, ko: 1, jajaja: 1, enserio: 1 };
+  Sprites.CARAS_TIENDA = { dormido: 1, burla: 1, chulo: 1, mareo: 1, ko: 1, jajaja: 1, enserio: 1,
+    lloron: 1, ardiendo: 1, beso: 1, idea: 1, gg: 1 };
   Sprites.caraTienda = function (ctx, x, y, r, color, id, tick) {
     caraEmote(ctx, x, y, r, colorLargo(color), id, (typeof tick === 'number') ? tick : 0);
   };
@@ -4747,6 +5581,18 @@
       var sk = INFO[id];
       if (!sk) return { abierta: false, pct: 0, progreso: '', chip: '' };
       var p = sk.pide || {};
+      /* de COFRE: no se compran; son tuyas cuando un cofre las suelta
+       * (PLAN-COFRES.md). Hasta que existan los cofres, se ven cerradas. */
+      if (sk.grupo === 'cofre') {
+        var Tc = window.PM.Tienda;
+        var suya = !!(Tc && Tc.tiene(id));
+        return {
+          abierta: suya,
+          pct: suya ? 1 : 0,
+          progreso: suya ? 'SALIÓ DE UN COFRE' : 'SOLO SALE DE UN COFRE',
+          chip: sk.legendaria ? 'COFRE LEGENDARIO' : 'COFRE'
+        };
+      }
       /* de la TIENDA: se compran con monedas (js/tienda.js) */
       if (sk.grupo === 'tienda') {
         var T = window.PM.Tienda;

@@ -3523,9 +3523,11 @@
     var legado = ['clasico', 'sombra', 'ojos', 'neon', 'pixel', 'aro'];
     eq(CFG.SKIN_IDS.length, CFG.SKINS.length, 'SKIN_IDS sale de la lista');
     CFG.SKINS.forEach(function (sk) {
-      ok(['nivel', 'logro', 'temporada', 'tienda'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
+      ok(['nivel', 'logro', 'temporada', 'tienda', 'cofre'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
       if (legado.indexOf(sk.id) === -1) ok(S.ARTE.hasOwnProperty(sk.id), sk.id + ': tiene dibujo');
       if (sk.grupo === 'tienda') ok(sk.precio > 0 && !sk.pide, sk.id + ': se compra, no se gana');
+      /* las de cofre no se compran ni se piden: salen de un cofre */
+      else if (sk.grupo === 'cofre') ok(!sk.precio && !sk.pide, sk.id + ': ni precio ni requisito');
       else if (sk.grupo !== 'nivel') ok(!!sk.pide, sk.id + ': dice qué pide');
       if (sk.pide && sk.pide.stat) {
         ok(window.PM.Achievements.STATS.hasOwnProperty(sk.pide.stat),
@@ -4422,7 +4424,8 @@
       UI.tiendaTengo = false;
       UI.refreshTienda();
       var vistas = UI.tiendaItems.filter(function (r) { return r.card.style.display !== 'none'; });
-      eq(vistas.length, CFG.EFECTOS.length, 'sin nada comprado, salen todos los efectos');
+      var deVenta = CFG.EFECTOS.filter(function (e) { return !e.cofre; }).length;
+      eq(vistas.length, deVenta, 'sin nada comprado, salen todos los efectos que se venden');
       var a = vistas[0], b = vistas[1];
       ok(UI.tiendaAlTicket(a.it.id), 'el + echa al ticket');
       ok(UI.tiendaAlTicket(b.it.id), 'y otro');
@@ -6841,6 +6844,76 @@
       ok(!Tn.comprar('cuy').ok, 'sin saldo para 1.500 no se compra');
       ok(!Tn.tiene('cuy'), 'y no queda comprada');
       ok(!Tn.comprar('clasico').ok, 'lo que no se vende no se compra');
+    });
+  });
+
+  /* COFRES (17 sep): hay vestuario que NO se vende — solo sale de un cofre.
+   * Existe, se puede tener y se puede poner, pero la tienda no lo enseña ni
+   * lo cobra, y el saldo no se entera. */
+  test('lo de cofre no se compra, pero es tuyo cuando sale', function () {
+    conTienda(function (Tn, A) {
+      var deCofre = Tn.CATALOGO.filter(function (it) { return it.cofre; });
+      ok(deCofre.length >= 8, 'hay vestuario de cofre en el catálogo');
+      ok(Tn.VENTA.every(function (it) { return !it.cofre; }), 'la tienda no lo pone a la venta');
+      ok(deCofre.every(function (it) { return !it.precio; }), 'y no tiene precio');
+
+      var uno = 'efx_portales';
+      ok(Tn.esDeCofre(uno), uno + ' es de cofre');
+      ok(!Tn.tiene(uno), 'todavía no es tuyo');
+      var r = Tn.comprar(uno);
+      ok(!r.ok && /COFRE/.test(r.msg), 'no se puede comprar: ' + r.msg);
+      eq(Tn.saldo(), 1500, 'y no ha tocado el saldo');
+
+      /* lo que hará el cofre: subir su contador, como una compra */
+      A.record('c_' + uno, 1);
+      ok(Tn.tiene(uno), 'después de salir del cofre, es tuyo');
+      eq(Tn.saldo(), 1500, 'y sigue sin costar nada');
+
+      /* las skins de cofre van por el mismo camino */
+      var Sk = window.PM.Skins;
+      var cofreSkins = CFG.SKINS.filter(function (sk) { return sk.grupo === 'cofre'; });
+      eq(cofreSkins.length, 4, 'las cuatro skins de cofre');
+      ok(cofreSkins.some(function (sk) { return sk.legendaria; }), 'una es la del Legendario');
+      var sk1 = cofreSkins[0];
+      ok(!Sk.estado(sk1.id).abierta, sk1.id + ': cerrada hasta que salga de un cofre');
+      eq(Sk.estado(sk1.id).chip.indexOf('COFRE'), 0, sk1.id + ': lo dice su etiqueta');
+      A.record('c_' + sk1.id, 1);
+      ok(Sk.estado(sk1.id).abierta, sk1.id + ': abierta cuando sale');
+      eq(Tn.saldo(), 1500, 'tener skins de cofre no cuesta monedas');
+    });
+  });
+
+  /* El vestuario del 17 de septiembre: las piezas nuevas existen, están
+   * dibujadas y cada una sabe de dónde sale. */
+  test('el vestuario nuevo está entero y bien clasificado', function () {
+    var S = window.PM.Sprites;
+    var SKINS = ['lava', 'hielo', 'chicle', 'plasma', 'enjambre', 'galaxia', 'agujero'];
+    var ACCS = ['acc_espartano', 'acc_antenas', 'acc_bufanda', 'acc_cuernos', 'acc_obra',
+      'acc_aureola', 'acc_alas'];
+    var EFXS = ['efx_tinta', 'efx_petalos', 'efx_monedas', 'efx_humo',
+      'efx_portales', 'efx_constelacion'];
+    var EMOS = ['lloron', 'ardiendo', 'beso', 'idea', 'gg'];
+    SKINS.forEach(function (id) {
+      ok(S.ARTE.hasOwnProperty(id), id + ': tiene dibujo');
+      ok(CFG.SKIN_IDS.indexOf(id) !== -1, id + ': está en el catálogo');
+    });
+    ACCS.forEach(function (id) {
+      ok(S.ACCESORIOS.hasOwnProperty(id), id + ': tiene dibujo');
+      ok(CFG.ACCESORIO_IDS.indexOf(id) !== -1, id + ': está en el catálogo');
+    });
+    EFXS.forEach(function (id) {
+      ok(S.EFECTOS.hasOwnProperty(id), id + ': tiene dibujo');
+      ok(CFG.EFECTO_IDS.indexOf(id) !== -1, id + ': está en el catálogo');
+    });
+    EMOS.forEach(function (id) {
+      ok(S.CARAS_TIENDA[id], id + ': tiene cara');
+      ok(CFG.EMOTE_IDS.indexOf(id) !== -1, id + ': se puede poner en una tecla');
+    });
+    /* las de material conservan la silueta: por eso admiten accesorios sin
+     * tener que apuntarles la cabeza */
+    SKINS.forEach(function (id) {
+      ok(!window.PM.Skins.rara(id), id + ': no es extravagante');
+      eq(S.anclaAccesorio(id, 'acc_gafas'), null, id + ': el accesorio va tal cual');
     });
   });
 

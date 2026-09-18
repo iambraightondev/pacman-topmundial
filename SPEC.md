@@ -1236,13 +1236,27 @@ confirmed), `safeTicks` (respawn grace).
 
 ## Skins, emotes, maestrías, ranking y chat
 
-**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 32 of them in three
+**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 54 of them in five
 `grupo`s: **nivel** (player level, ladder 1·2·4·6·8·10·12·15·18·22·26·30·34 in
 the order Braighton picked), **logro** (`pide: {stat, meta}` on a
-`PM.Achievements` counter, or `{ruta:[...], maestria}` on a badge track) and
+`PM.Achievements` counter, or `{ruta:[...], maestria}` on a badge track),
 **temporada** (`pide: {fecha}`; `CFG.SKIN_FECHAS` halloween 24–31 Oct, navidad
-20 Dec–6 Jan). `rara: true` marks the eleven "extravagant" ones that drop the
-Pac-Man shape (their eating is a jaw, a lid, a bun, a beam).
+20 Dec–6 Jan), **tienda** (coins) and **cofre** (chest-only, see below).
+`rara: true` marks the "extravagant" ones that drop the Pac-Man shape (their
+eating is a jaw, a lid, a bun, a beam); the seven **material** skins added on
+17 Sep (LAVA, HIELO, CHICLE, PLASMA, ENJAMBRE, GALAXIA, AGUJERO NEGRO) are not
+`rara`: they are drawn inside `pacPath` (helpers `dentro()`/`borde()` in
+skins.js) in SCREEN space, so the silhouette and the mouth stay the game's and
+accessories need no `CABEZAS` entry.
+
+- **Chest wardrobe** (17 Sep, `PLAN-COFRES.md`). Items flagged `cofre: true`
+  (or a skin with `grupo: 'cofre'`) are owned through the same `c_<id>`
+  counter as a purchase, but they are not for sale: `Tienda.CATALOGO` holds
+  everything ownable and **`Tienda.VENTA`** (what the shop lists) filters them
+  out, their `precio` is 0, `Tienda.comprar` refuses them and
+  `Tienda.esDeCofre(id)` reports it. `Skins.estado` gives them the chip
+  `COFRE` / `COFRE LEGENDARIO` and the wardrobe has a `cofre` filter. Until
+  chests exist nothing sets those counters, so they simply show locked.
 
 - **Drawing.** `Sprites.drawPacman(ctx, x, y, dir, mouth, color, skin, extra)`.
   The original six (`clasico`, `sombra`, `ojos`, `neon`, `pixel`, `aro`) are

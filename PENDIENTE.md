@@ -13,6 +13,20 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**17 sep (noche) — VESTUARIO NUEVO, 25 piezas.** Braighton pidió más vestuario
+ANTES de los cofres ("sino no tiene sentido, lo que daremos es muy poco"): el
+bote de premios eran 33 objetos y solo 5 skins comprables. Diseñadas en el
+artifact (él descartó astronauta, calavera, sushi, espejo, origami, laurel,
+flor y eco; la joya pasó a CHICLE) e implementadas: 7 skins de material, 7
+accesorios, 6 efectos y 5 emotes. El bote pasa a 58 objetos, 8 de ellos **solo
+de cofre** (4 skins —AGUJERO NEGRO es la del Legendario—, 2 accesorios y 2
+efectos), que ya existen en el juego pero se ven cerrados porque **los cofres
+todavía no están hechos**. **Lo siguiente de cofres:** implementar
+`PLAN-COFRES.md` con este vestuario como premio; el contenido exclusivo del
+Legendario ya no está en el aire (AGUJERO NEGRO), queda decidir si los cofres
+son retroactivos (recomendación: regalo de bienvenida de 1 PLATA + 1 ORO y
+contar desde el lanzamiento).
+
 **17 sep (tarde) — JEFE y pantalla ONLINE (pedidos por Braighton).** De las
 ideas que le propuse eligió la 1 (JEFE) y la 7 (SUPERVIVENCIA). Hecho el JEFE
 (`js/jefe.js`, `pm-v141`) y la pantalla ONLINE nueva (`pm-v140`). Decidido por

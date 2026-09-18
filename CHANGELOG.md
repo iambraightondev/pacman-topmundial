@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-17 · Vestuario nuevo: 25 piezas (y las primeras de cofre)
+
+- **Siete skins nuevas de material** (no son disfraces: es de qué está hecho
+  Pac-Man, así que conservan su silueta y admiten accesorios): **LAVA**,
+  **HIELO** y **CHICLE** en la tienda; **PLASMA**, **ENJAMBRE**, **GALAXIA** y
+  **AGUJERO NEGRO** solo de cofre.
+- **Siete accesorios**: CASCO ESPARTANO, ANTENAS, BUFANDA, CUERNOS y CASCO DE
+  OBRA en la tienda; AUREOLA y ALITAS de cofre.
+- **Seis efectos**: TINTA, PÉTALOS, MONEDAS y HUMO en la tienda; PORTALES y
+  CONSTELACIÓN de cofre.
+- **Cinco emotes** de tienda: LLORÓN, ARDIENDO, BESO, IDEA y GG.
+- Aparece el vestuario **DE COFRE**: no se compra ni tiene precio, se gana
+  abriendo un cofre (los cofres aún no existen: hasta entonces se ve cerrado,
+  con su etiqueta). El vestuario tiene un filtro nuevo para verlo.
+
 ## 2026-09-17 · El laberinto, con luz
 
 - Las pastillas y las superpastillas son **amarillas**, y las normales dan luz

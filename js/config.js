@@ -607,6 +607,25 @@
     { id: 'galleta', name: 'GALLETA', grupo: 'tienda', rara: true, precio: 1500,
       ve: 'GALLETA CON PEPITAS: LA BOCA ES UN MORDISCO QUE SE ABRE Y SE CIERRA. CON LA Q EXPLOTA EN MIGAS.' },
 
+    /* --- de MATERIAL (1.500): no son disfraces, es de qué está hecho.
+     * Mantienen la silueta de Pac-Man, así que admiten accesorios. --- */
+    { id: 'lava', name: 'LAVA', grupo: 'tienda', precio: 1500,
+      ve: 'CORTEZA NEGRA CON LAVA VIVA POR DENTRO: LAS GRIETAS LATEN Y SUELTAN ASCUAS AL CORRER.' },
+    { id: 'hielo', name: 'HIELO', grupo: 'tienda', precio: 1500,
+      ve: 'BLOQUE DE HIELO TALLADO CON VETAS POR DENTRO, DOS CARÁMBANOS COLGANDO Y ESCARCHA POR DONDE PASA.' },
+    { id: 'chicle', name: 'CHICLE', grupo: 'tienda', precio: 1500,
+      ve: 'GOMA DE MASCAR BLANDA Y BRILLANTE: SE APLASTA AL FRENAR Y CADA POCO HINCHA UN GLOBO QUE LE REVIENTA EN LA CARA.' },
+
+    /* --- de COFRE: no se compran, solo salen de un cofre (PLAN-COFRES.md) --- */
+    { id: 'plasma', name: 'PLASMA', grupo: 'cofre',
+      ve: 'BOLA DE PLASMA: POR DENTRO SALTAN RAYOS QUE BUSCAN EL BORDE, COMO EN LA LÁMPARA DE FERIA.' },
+    { id: 'enjambre', name: 'ENJAMBRE', grupo: 'cofre',
+      ve: 'NO TIENE CUERPO: ES UN ENJAMBRE DE PASTILLAS QUE VUELA CON SU FORMA Y SE DESORDENA AL GIRAR.' },
+    { id: 'galaxia', name: 'GALAXIA', grupo: 'cofre',
+      ve: 'POR DENTRO ES CIELO ESTRELLADO: UNA NEBULOSA GIRA DESPACIO Y VA SOLTANDO POLVO DE ESTRELLAS.' },
+    { id: 'agujero', name: 'AGUJERO NEGRO', grupo: 'cofre', legendaria: true,
+      ve: 'UN VACÍO CON ANILLO DE LUZ: LO QUE PASA CERCA SE CURVA HACIA ÉL ANTES DE CAER DENTRO.' },
+
     /* --- de temporada --- */
     { id: 'calabaza', name: 'CALABAZA', grupo: 'temporada',
       pide: { fecha: 'halloween' },
@@ -759,7 +778,17 @@
     { id: 'jajaja', name: 'JAJAJA', precio: 150,
       ve: 'SE PARTE DE RISA CON LOS OJOS APRETADOS Y LAS LÁGRIMAS SALTANDO.' },
     { id: 'enserio', name: '¿EN SERIO?', precio: 150,
-      ve: 'PÁRPADOS A MEDIA ASTA, UNA CEJA LEVANTADA Y TRES PUNTITOS.' }
+      ve: 'PÁRPADOS A MEDIA ASTA, UNA CEJA LEVANTADA Y TRES PUNTITOS.' },
+    { id: 'lloron', name: 'LLORÓN', precio: 150,
+      ve: 'DOS CATARATAS QUE NO PARAN, LA BOCA TEMBLANDO Y UN CHARQUITO QUE SE VA HACIENDO ABAJO.' },
+    { id: 'ardiendo', name: 'ARDIENDO', precio: 150,
+      ve: 'CEJAS DE ENFADO Y DOS LLAMAS EN LOS OJOS QUE NO PARAN DE MOVERSE.' },
+    { id: 'beso', name: 'BESO', precio: 150,
+      ve: 'UN OJO GUIÑADO, LOS LABIOS FRUNCIDOS Y UN CORAZÓN QUE SE ESCAPA HACIA ARRIBA.' },
+    { id: 'idea', name: 'IDEA', precio: 150,
+      ve: 'UNA CEJA LEVANTADA, TRES PUNTITOS Y UNA BOMBILLA QUE SE LE ENCIENDE DE GOLPE.' },
+    { id: 'gg', name: 'GG', precio: 150,
+      ve: 'LE CAEN UNAS GAFAS DE SOL SOBRE LOS OJOS Y SALE UN "GG" A UN LADO.' }
   ];
   /* Todas las caras que pueden ir en una tecla de emote (y por la red) */
   CFG.EMOTE_IDS = CFG.EMOTES.concat(CFG.EMOTES_TIENDA).map(function (e) { return e.id; });
@@ -783,7 +812,20 @@
     { id: 'efx_nieve', name: 'NIEVE', precio: 250,
       ve: 'COPOS DE NIEVE EN FILA QUE GIRAN Y SE DERRITEN.' },
     { id: 'efx_rayos', name: 'RAYOS', precio: 250,
-      ve: 'AURA ELÉCTRICA SUAVE Y, DE VEZ EN CUANDO, RAYOS CORTOS QUE SALTAN DEL CUERPO.' }
+      ve: 'AURA ELÉCTRICA SUAVE Y, DE VEZ EN CUANDO, RAYOS CORTOS QUE SALTAN DEL CUERPO.' },
+    { id: 'efx_tinta', name: 'TINTA', precio: 250,
+      ve: 'UN REGUERO DE TINTA MORADA QUE SE SECA Y SE VA AGRIETANDO DETRÁS DE ÉL.' },
+    { id: 'efx_petalos', name: 'PÉTALOS', precio: 250,
+      ve: 'PÉTALOS ROSAS QUE CAEN GIRANDO POR DONDE PASA Y SE POSAN EN EL SUELO.' },
+    { id: 'efx_monedas', name: 'MONEDAS', precio: 250,
+      ve: 'AL COMERSE UN FANTASMA SALTAN MONEDAS QUE GIRAN Y CAEN. SON DE ADORNO: NO VALEN NADA.' },
+    { id: 'efx_humo', name: 'HUMO', precio: 250,
+      ve: 'AL ARRANCAR DE PARADO SUELTA BOCANADAS DE HUMO QUE CRECEN Y SE DESHACEN.' },
+    /* de COFRE: no se compran (PLAN-COFRES.md) */
+    { id: 'efx_portales', name: 'PORTALES', cofre: true, precio: 0,
+      ve: 'SU ESTELA SON PORTALITOS MORADOS QUE SE ABREN Y SE CIERRAN. GUIÑO AL MAGO.' },
+    { id: 'efx_constelacion', name: 'CONSTELACIÓN', cofre: true, precio: 0,
+      ve: 'DEJA UNA ESTRELLA EN CADA GIRO Y LAS UNE CON UNA LÍNEA: EL CAMINO QUEDA DIBUJADO HASTA QUE SE APAGA.' }
   ];
   CFG.ACCESORIOS = [
     { id: 'acc_gafas', name: 'GAFAS DE SOL', precio: 450,
@@ -807,7 +849,22 @@
     { id: 'acc_helice', name: 'GORRO DE HÉLICE', precio: 450,
       ve: 'GORRITO DE CUATRO COLORES CON UNA HÉLICE QUE NO PARA.' },
     { id: 'acc_ninja', name: 'CINTA NINJA', precio: 450,
-      ve: 'CINTA ROJA CON PLACA Y LAS PUNTAS ONDEANDO DETRÁS.' }
+      ve: 'CINTA ROJA CON PLACA Y LAS PUNTAS ONDEANDO DETRÁS.' },
+    { id: 'acc_espartano', name: 'CASCO ESPARTANO', precio: 450,
+      ve: 'CASCO DE BRONCE CON GUARDANARIZ Y UNA CRESTA ROJA QUE SE VA HACIA ATRÁS AL CORRER.' },
+    { id: 'acc_antenas', name: 'ANTENAS', precio: 450,
+      ve: 'DOS ANTENAS DE MARCIANO CON SU BOLITA, QUE REBOTAN AL CAMBIAR DE DIRECCIÓN.' },
+    { id: 'acc_bufanda', name: 'BUFANDA', precio: 450,
+      ve: 'BUFANDA A RAYAS AL CUELLO: CUANTO MÁS CORRE, MÁS TIESA SE LE PONE DETRÁS.' },
+    { id: 'acc_cuernos', name: 'CUERNOS', precio: 450,
+      ve: 'DOS CUERNOS ROJOS CURVADOS. NO DAN NINGUNA VENTAJA, PERO LO PARECEN.' },
+    { id: 'acc_obra', name: 'CASCO DE OBRA', precio: 450,
+      ve: 'CASCO AMARILLO CON LINTERNA QUE PARPADEA. NO ALUMBRA EL LABERINTO: ES ADORNO.' },
+    /* de COFRE: no se compran (PLAN-COFRES.md) */
+    { id: 'acc_aureola', name: 'AUREOLA', cofre: true, precio: 0,
+      ve: 'UN ARO DE LUZ FLOTANDO SOBRE LA CABEZA QUE SE INCLINA AL GIRAR, COMO SI PESARA.' },
+    { id: 'acc_alas', name: 'ALITAS', cofre: true, precio: 0,
+      ve: 'DOS ALITAS BLANCAS A LOS LADOS QUE BATEN DE GOLPE AL COMERSE UN FANTASMA.' }
   ];
   CFG.EFECTO_IDS = CFG.EFECTOS.map(function (e) { return e.id; });
   CFG.ACCESORIO_IDS = CFG.ACCESORIOS.map(function (e) { return e.id; });
