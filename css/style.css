@@ -4657,7 +4657,15 @@ body { font-size-adjust: 0.56; }
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  filter: drop-shadow(0.07em 0.07em 0 color-mix(in srgb, var(--dc, #ffb8ff) 35%, #000)) drop-shadow(0 0 0.35em color-mix(in srgb, var(--dc, #ffb8ff) 45%, transparent));
+  /* Borde blanco alrededor de las letras. Va por FUERA, con cuatro sombras
+   * de un píxel, y no con -webkit-text-stroke: el trazo se pinta centrado en
+   * el perfil y en una letra de píxeles se comía medio palo, dejando el
+   * rótulo blanquecino en vez del color del fantasma de hoy. */
+  filter:
+    drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff)
+    drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)
+    drop-shadow(0.07em 0.07em 0 color-mix(in srgb, var(--dc, #ffb8ff) 35%, #000))
+    drop-shadow(0 0 0.35em color-mix(in srgb, var(--dc, #ffb8ff) 45%, transparent));
 }
 @media (min-width: 1600px) { .daily-titulo { font-size: 44px; } }
 
@@ -4703,11 +4711,17 @@ body { font-size-adjust: 0.56; }
 
 /* DAILY llama la atención: dos saltitos cada 3 segundos ("ábreme") */
 .daily-titulo { animation: daily-llama 3s ease-in-out infinite; }
+/* Cada salto lleva su parpadeo: arriba el rótulo se medio apaga y al caer
+ * vuelve a encenderse, como un neón que falla. */
 @keyframes daily-llama {
-  0%, 30%, 100% { transform: rotate(-5deg) translateY(0); }
-  7%  { transform: rotate(-5deg) translateY(-9px); }
-  14% { transform: rotate(-5deg) translateY(0); }
-  21% { transform: rotate(-5deg) translateY(-6px); }
+  0%, 30%, 100% { transform: rotate(-5deg) translateY(0); opacity: 1; }
+  5%  { opacity: 0.45; }
+  7%  { transform: rotate(-5deg) translateY(-9px); opacity: 0.45; }
+  11% { opacity: 1; }
+  14% { transform: rotate(-5deg) translateY(0); opacity: 1; }
+  19% { opacity: 0.45; }
+  21% { transform: rotate(-5deg) translateY(-6px); opacity: 0.45; }
+  26% { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .daily-titulo { animation: none; } }
 

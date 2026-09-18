@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-18 · El rótulo DAILY, perfilado y parpadeante
+
+- **Borde blanco** alrededor de las letras, para que despeguen del fondo sin
+  perder el color del fantasma del día.
+- **En cada saltito se medio apaga** y vuelve a encenderse al caer, como un
+  neón que falla.
+
 ## 2026-09-18 · El DAILY de la portada, más limpio
 
 - **Los días de la semana van sueltos**, sin el recuadro que envolvía a cada
