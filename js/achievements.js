@@ -115,6 +115,24 @@
     (lista || []).forEach(function (it) { BASE['c_' + it.id] = 'mayor'; });
   });
 
+  /* ---------- contadores SUELTOS: los del PASE ----------
+   * El pase necesita dos contadores por temporada (px_AAAA-MM con la
+   * experiencia de ese mes, pp_AAAA-MM con el carril de pago). Son uno por
+   * mes y para siempre, así que NO se declaran uno a uno: meter cuatro años
+   * de meses en STATS metía cien claves a cero en el almacén, y el almacén se
+   * lee y se escribe entero miles de veces por partida — medido, encarecía
+   * cada consulta del saldo un 40 % para guardar ceros.
+   *
+   * Se reconocen por su forma y nacen el día que hacen falta. Lo único que
+   * hay que recordar: una clave suelta también tiene que juntarse en merge(),
+   * que va por STATS y por sí solo las tiraría.
+   * -------------------------------------------------------- */
+  function tipoSuelto(key) {
+    if (/^px_[0-9]{4}-(0[1-9]|1[0-2])$/.test(key)) return 'suma';    // experiencia
+    if (/^pp_[0-9]{4}-(0[1-9]|1[0-2])$/.test(key)) return 'mayor';   // carril de pago
+    return null;
+  }
+
   /* Clave de un contador: la global es el nombre pelado, la de un modo va
    * con su prefijo. Es la misma cuenta en los dos sitios. */
   function claveDe(modo, stat) {
@@ -183,6 +201,14 @@
           var n = parseInt(d.c[k], 10);
           if (isFinite(n) && n > 0) out.c[k] = n;
         }
+        /* ...y las SUELTAS, que no están en STATS y por tanto no salen de
+         * vacio(): sin esto se guardarían bien y se perderían en la
+         * siguiente lectura (ver tipoSuelto). */
+        for (var ks in d.c) {
+          if (!d.c.hasOwnProperty(ks) || !tipoSuelto(ks)) continue;
+          var ns = parseInt(d.c[ks], 10);
+          if (isFinite(ns) && ns > 0) out.c[ks] = ns;
+        }
       }
       if (d && isArray(d.v)) out.v = d.v.slice();
       if (d && d.m) out.m = 1;          // los contadores por modo, ya sembrados
@@ -240,12 +266,13 @@
     /* ---------- acumular ---------- */
     /* n puede venir de una partida entera; se ignora lo que no mejore */
     record: function (key, value) {
-      if (!STATS.hasOwnProperty(key)) return;
+      // `tipo` es cómo acumula (suma/mayor/menor), no el modo de juego
+      var tipo = STATS.hasOwnProperty(key) ? STATS[key] : tipoSuelto(key);
+      if (!tipo) return;
       var n = Math.floor(value || 0);
       if (!(n > 0)) return;
       var d = load();
-      // `tipo` es cómo acumula (suma/mayor/menor), no el modo de juego
-      var tipo = STATS[key];
+      if (typeof d.c[key] !== 'number') d.c[key] = 0;   // una suelta, recién nacida
       if (tipo === 'suma') d.c[key] += n;
       else if (tipo === 'mayor') { if (n <= d.c[key]) return; d.c[key] = n; }
       else { if (d.c[key] > 0 && n >= d.c[key]) return; d.c[key] = n; }
@@ -594,6 +621,15 @@
         if (tipo === 'suma') d.c[k] = Math.max(d.c[k], n);
         else if (tipo === 'mayor') d.c[k] = Math.max(d.c[k], n);
         else d.c[k] = (d.c[k] > 0) ? Math.min(d.c[k], n) : n;
+      }
+      /* Las SUELTAS (las del pase) no están en STATS, así que el bucle de
+       * arriba ni las mira: se juntan aquí con la misma regla, lo mejor de
+       * cada lado. Sin esto, entrar en la cuenta desde otro aparato borraría
+       * el camino de la temporada. */
+      for (var ks in otros) {
+        if (!otros.hasOwnProperty(ks) || !tipoSuelto(ks)) continue;
+        var vs = Math.floor(otros[ks] || 0);
+        if (vs > 0) d.c[ks] = Math.max(Math.floor(d.c[ks] || 0), vs);
       }
       /* Lo que baja de la nube puede ser un historial mucho más largo que el
        * de este navegador, así que se vuelve a sembrar por modo con él: si no,

@@ -5983,3 +5983,156 @@ body { font-size-adjust: 0.56; }
 /* al señalar la pausa la letra tiene que pasar a negra como en los demás: el
  * color del id pesaba más que el del hover y el texto desaparecía */
 #pauseBtn:hover, #pauseBtn:focus-visible { color: #000; }
+
+/* ---------- EL PASE DE TEMPORADA: EL CAMINO DEL MES ----------
+ * Dos carriles, uno encima del otro, y el de abajo con candado hasta que se
+ * pueda vender. Van pegados a propósito (sin hueco entre ellos): son el mismo
+ * galón visto dos veces, no dos premios distintos.
+ *
+ * El verde es lo ganado —el mismo que el sello CAZADO del DAILY— y el morado
+ * es lo cerrado. El morado no se usa en ningún otro sitio del juego, así que
+ * "lo que no es mío todavía" se lee de un vistazo y sin leer una palabra. */
+#pase .ps-cab,
+#pase .ps-galon,
+#pase .ps-scroll,
+#pase .ps-pie,
+#pase .ps-dormido {
+  width: min(96%, 1240px);
+  /* el panel es una columna flexible: sin esto, en pantalla baja el camino se
+   * encoge y se come los números de los galones y el Pac-Man */
+  flex: none;
+}
+
+#pase .ps-cab {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
+  gap: 8px 20px;
+}
+#pase .ps-temp {
+  font-size: clamp(12px, 2vh, 16px); letter-spacing: 3px; color: #00ffff;
+}
+#pase .ps-quedan {
+  font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; color: #ff8a3d;
+}
+
+/* el galón y lo que falta para el siguiente */
+#pase .ps-galon {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 4px;
+}
+#pase .ps-galon-num {
+  font-size: clamp(11px, 1.9vh, 15px); letter-spacing: 2px;
+  color: #000; background: #ffd400; padding: 7px 10px 5px;
+  box-shadow: 0 0 14px rgba(255, 212, 0, 0.45);
+  white-space: nowrap;
+}
+#pase .ps-medidor {
+  flex: 1 1 220px; min-width: 160px; height: 14px;
+  background: #04040d; border: 2px solid #1c1c4a; overflow: hidden;
+}
+#pase .ps-medidor-lleno {
+  height: 100%; width: 0;
+  background: linear-gradient(90deg, #ffd400, #ff8a3d);
+  transition: width 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+#pase .ps-medidor-txt {
+  font-size: clamp(10px, 1.5vh, 12px); letter-spacing: 1px; color: #6a6c8e;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+#pase .ps-dormido {
+  font-size: clamp(10px, 1.6vh, 12px); line-height: 1.7; letter-spacing: 1px;
+  color: #ff8a3d; border-left: 3px solid #ff8a3d; padding: 6px 0 6px 12px;
+  text-align: left;
+}
+
+/* el camino, de lado */
+#pase .ps-scroll { overflow-x: auto; padding-bottom: 6px; }
+#pase .ps-camino {
+  position: relative; display: flex; gap: 6px; min-width: max-content;
+  align-items: flex-start; padding-bottom: 36px;
+}
+#pase .ps-celda { width: 92px; display: flex; flex-direction: column; }
+
+#pase .ps-carril {
+  height: 76px; border: 2px solid #1c1c4a; background: #04040d;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 6px 4px; position: relative;
+  font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 1px;
+  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+#pase .ps-gratis { border-bottom: none; }
+#pase .ps-pago { border-top: 2px dashed #1c1c4a; }
+#pase .ps-monto { color: #6a6c8e; font-variant-numeric: tabular-nums; }
+#pase .ps-carril .moneda { opacity: 0.55; }
+#pase .ps-vacio .ps-monto { opacity: 0.25; }
+#pase .ps-vacio .moneda { display: none; }
+
+/* ganado: el verde del sello del DAILY */
+#pase .ps-ganado { background: #0a1408; border-color: #3f6b2e; box-shadow: inset 0 0 18px rgba(120, 255, 80, 0.1); }
+#pase .ps-ganado .ps-monto { color: #9ef26a; }
+#pase .ps-ganado .moneda { opacity: 1; }
+
+/* alcanzado pero cerrado: se ve lo que se está dejando */
+#pase .ps-cerrado { background: #0f0b16; border-color: #3a2d52; }
+#pase .ps-cerrado .ps-monto { color: #8b78c4; }
+
+#pase .ps-candado { position: absolute; top: 3px; right: 5px; font-size: 10px; line-height: 1; }
+#pase .ps-suyo .ps-candado { display: none; }
+
+#pase .ps-num {
+  font-size: clamp(9px, 1.4vh, 11px); text-align: center; padding-top: 5px;
+  color: #6a6c8e; font-variant-numeric: tabular-nums;
+}
+#pase .ps-num.ps-hecho { color: #ffd400; }
+
+/* el Pac-Man que marca por dónde vas, debajo del camino */
+#pase .ps-bicho {
+  position: absolute; bottom: 4px; left: 0; width: 34px; height: 34px;
+  image-rendering: pixelated;
+  transition: left 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
+  filter: drop-shadow(0 0 6px rgba(255, 212, 0, 0.65));
+}
+
+/* el pie: el botón, lo que se queda cerrado y lo que ya pagó el camino */
+#pase .ps-pie {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px 16px; padding-top: 12px; border-top: 2px solid #1c1c4a;
+}
+#pase .ps-oferta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+#pase .ps-btn { font-size: clamp(10px, 1.6vh, 13px); }
+#pase .ps-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+#pase .ps-dejando,
+#pase .ps-saldo {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: clamp(10px, 1.5vh, 12px); letter-spacing: 1px; color: #6a6c8e;
+}
+#pase .ps-regla { width: min(96%, 1240px); margin-top: 10px; }
+
+/* el PASE es una sola cosa, como el DAILY: centrado, no pegado arriba */
+#pase:not(#prompt):not(#menu)::before, #pase:not(#prompt):not(#menu)::after {
+  display: block; content: ''; margin: auto 0; flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pase .ps-bicho, #pase .ps-medidor-lleno { transition: none; }
+}
+
+/* qué es cada carril, en dos chips junto al camino */
+#pase .ps-leyenda {
+  width: min(96%, 1240px);
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1px;
+}
+#pase .ps-ley { padding: 3px 8px 2px; border: 1px solid currentColor; }
+#pase .ps-ley-gratis { color: #9ef26a; }
+#pase .ps-ley-pago { color: #8b78c4; }
+#pase .ps-ley-pago::after { content: " 🔒"; }
+
+/* en pantalla estrecha el camino se aprieta: treinta galones ya se recorren
+ * de lado, así que lo que importa es que quepan más de dos a la vez */
+@media (max-width: 640px) {
+  #pase .ps-celda { width: 74px; }
+  #pase .ps-carril { height: 62px; }
+  #pase .ps-pie { justify-content: center; }
+  #pase .ps-oferta { justify-content: center; }
+}

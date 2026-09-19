@@ -235,6 +235,47 @@ The Supabase project MUST have Email provider on, sign-ups allowed and
 **Confirm email off** — the internal mailbox does not exist, so a confirmation
 link would lock every account out.
 
+### Your look travels with the account (`ajustes` column, 19 Sep 2026)
+
+Buying a skin already travelled — purchases are counters inside `logros` — but
+**wearing it did not**. Opening your account on another computer gave you back
+your records and your wardrobe, then put you in the factory-yellow Pac-Man
+with factory sound. The half nobody sees was in the cloud; the half everybody
+sees stayed in one browser's `localStorage`.
+
+`perfiles.ajustes` (jsonb, ≤4 KB) now carries the keys listed in
+`CFG.AJUSTES_NUBE` — look (`skin1`, `pacColor`, `acc1`, `efx1`, `emotes1`,
+`avatar`), how you play (`modePick`, `habRol1`, the five difficulty values)
+and how it sounds (`muted` + the five buses) — plus a `ts` stamp.
+
+**Who wins is the LAST CHANGE, not the best of each side.** The merge rule the
+rest of the account uses (keep the higher number) is meaningless for a colour:
+there is no better magenta. So `UI.saveSettings()` compares a snapshot of
+those keys on every save and, when one really changed, stamps `ajustesTs` and
+schedules a debounced `pushQuiet` (3 s — dragging a volume slider is fifty
+saves in a row, and each one used to be nothing, not a write). On sign-in,
+`applyRemote` hands the cloud blob to `UI.aplicarAjustesDeNube`, which applies
+it **only if its `ts` is strictly newer**; on a tie or an older stamp it keeps
+what is here and the `push` that follows uploads it. So changing your skin on
+this machine and then signing in does not undo it.
+
+Nothing is taken raw: every value goes through the same `sanitizeSetting` as
+locally stored settings, so a hand-edited row cannot inject a skin that does
+not exist or a volume of 1000. Ownership is still checked at use time by
+`PM.Tienda` (`accesorio`/`efecto`/`emotes`), so carrying a look never grants a
+piece. And because `applyRemote` merges `logros` *before* applying the look, a
+skin unlocked on the other machine is already unlocked here when it is worn.
+
+Signing out clears the look back to factory along with the rest
+(`limpiarLocal`): otherwise the next person to sign in from that computer
+would appear wearing the previous one's skin and accessory, and with a stamp
+that would beat their own account.
+
+Same migration discipline as `record3`/`record4`: a project that has not
+re-run `supabase/cuentas.sql` answers 400 naming `ajustes`,
+`Account.sinAjustes` is raised and the profile is pushed without it. Losing
+the migration costs the travelling look, never the records.
+
 ### The real e-mail, and password recovery (`functions/cuenta`)
 
 That internal mailbox is why forgetting your password used to **destroy the
@@ -1036,6 +1077,120 @@ COMPARTIR next to VER in TOP MUNDIAL → TUS PARTIDAS for both kinds.
 
 For the world ranking, which will carry a replay per row, the public entry
 points are already there and need no change to this module:
+
+## El PASE DE TEMPORADA (`js/pase.js` — `PM.Pase`)
+
+The monetisation scaffold, built 19 Sep 2026 with the paid lane **switched
+off**. Nothing here charges anyone and nothing can until `CFG.PASE.VENTA` is
+turned on, which must not happen before the game has its own identity (see
+PENDIENTE: charging is exactly what turns the Pac-Man legal risk from
+theoretical into real).
+
+### Why two lanes from day one
+The mistake that cannot be undone is shipping a season as a gift and pricing
+it later — that reads as taking something away. So the season ships with both
+lanes visible from the start, the paid one behind a padlock. Turning it on
+later adds a purchase; it removes nothing from anyone.
+
+Whatever accrues on the locked lane is **not lost**: buying that season hands
+over everything already reached, at once (`Pase.conceder`). That is what makes
+it safe to leave off for months.
+
+### The season is the month
+Same calendar as the world ranking (`js/temporadas.js`): a calendar month in
+UTC, nothing to open or close by hand. `CFG.PASE.DESDE` (`2026-10`) is the
+first one, so through September the pass is asleep and changes nothing.
+
+### What is stored: two counters, everything else is derived
+Following the shop's rule — no new table, no saved balance:
+
+    px_AAAA-MM   that season's experience      (suma)
+    pp_AAAA-MM   1 = owns that season's paid lane (mayor)
+
+They are **not** declared one by one. A pair per month, forever, meant a
+hundred keys sitting at zero inside the achievements store — and that store is
+parsed and rebuilt thousands of times a run: measured, it made every
+`Tienda.saldo()` 40 % slower just to carry zeros. Instead `achievements.js`
+recognises them by shape (`tipoSuelto`) and they are born the day they are
+first used. The cost of that: a loose key has to be handled in the three
+places that walk `STATS` — `record`, `load` (which rebuilds `c` from scratch
+and would drop them on the next read) and `merge` (or syncing a device would
+wipe the season). All three do. There is no list to maintain and nothing to
+stretch: `CFG.PASE.DESDE` alone decides when the pass wakes up.
+
+Everything else falls out of those two:
+- **Galón** = experience / `POR_GALON`, capped at `GALONES` (30 × 1 500).
+- **Coins** are never deposited. `Tienda.saldo()` adds `Tienda.delPase()` →
+  `Pase.monedas()`, recomputed from the galón reached, exactly like the
+  veteran gift. So they cannot be banked twice or lost in a merge.
+- **Items** are marked with the same `c_<id>` counter a purchase uses, which
+  is a max: `Pase.sincronizar()` is idempotent and can run any number of
+  times.
+
+The whole point: the same experience always yields exactly the same rewards,
+so two devices can never disagree and reloading never pays out again.
+
+### Experience comes from coins, on purpose
+`Tienda.ganar(n)` calls `Pase.porMonedas(n)`; the rate is
+`CFG.PASE.XP_POR_MONEDA` (5). There is deliberately **no second table** of
+per-action values — one would have to be maintained alongside the shop's, and
+the day someone tunes one and not the other the path silently drifts. Tied to
+coins, balance is tuned in one place and there are never two truths. Today
+that means a normal run (~60 coins) is 300 XP, a DAILY challenge 500, a full
+DAILY week 4 000 — and `POR_GALON` (1 500) is set from that: four runs a day
+plus the challenge is ~1 700 XP, so the 30 galones land at **~27 days**. The
+target is that a daily player finishes brushing the end of the month rather
+than halfway through; at 1 000 it was done in 18 days and the last fortnight
+pushed nobody.
+
+### The path (`CFG.PASE.CAMINO`)
+One entry per rewarded galón, each with a `gratis` and a `pago` side; a galón
+not listed simply pays nothing. Both sides can carry `monedas` and (once they
+exist) an item `id`.
+
+**Still missing: the season-exclusive pieces.** They are not drawn yet, so the
+path currently pays coins only — and a pass with no skin only that month's
+players own does not sell. Filling those holes is art work, not code. Chest
+pieces (PLAN-COFRES.md) and shop pieces must **not** be used for it: each of
+the three economies has to hand out its own things or they cannibalise each
+other.
+
+### The screen (`#pase` in `js/ui.js`)
+
+Reached from TU CUARTEL, where the button carries the galón reached (`PASE ·
+G12`) — while the season is asleep it carries no number, because that would be
+a lie. The panel is the signed-off preview
+(<https://claude.ai/artifact/34gJaSYUf23vDGe78qFHin>) brought into the game's
+own language:
+
+- Header: season name and days left; galón X / 30 with the meter to the next
+  one.
+- The path sideways, thirty cells, each one two lanes stacked with no gap —
+  they are the same galón seen twice, not two different prizes. Won is the
+  green of the DAILY stamp; reached-but-locked is purple, a colour used
+  nowhere else in the game, so "not mine yet" reads without a word.
+- Your own Pac-Man — same drawing as the front screen, so your colour, skin,
+  accessory and trail — slides under the path to the galón reached and chews while
+  the panel is open (`animarPase`, same shape as the online cartelera: it
+  stops itself when the panel closes).
+- Footer: the button (`PASE · PRÓXIMAMENTE` while `VENTA` is false), what is
+  being left on the locked lane, and what the path has paid so far.
+
+**The path is drawn once** and refreshing only swaps classes and text.
+Rebuilding it per refresh loses the sideways scroll position every time you
+come back to the panel, which with thirty galones is exactly what you want
+kept. Two tests guard that.
+
+Asleep-season state: before `CFG.PASE.DESDE` the whole path is visible but a
+warning says what is played now does not count towards it — without it,
+someone would reasonably think they had lost their progress.
+
+### Not built yet
+- The season-exclusive pieces (above): art work, and the reason the path still
+  pays coins only.
+- Any actual payment. `Pase.conceder(temporada)` is the hook the checkout will
+  call the day one exists; nothing in the game reaches it today and the button
+  stays disabled.
 
 ## Partida a medias (`js/guardado.js` — `PM.Guardado`)
 

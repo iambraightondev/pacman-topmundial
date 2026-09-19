@@ -126,7 +126,16 @@
     regalo: function () { return stat('bono'); },
 
     saldo: function () {
-      return T.INICIALES + this.regalo() + this.ganadas() - this.gastadas();
+      return T.INICIALES + this.regalo() + this.ganadas() +
+        this.delPase() - this.gastadas();
+    },
+
+    /* Lo que ha pagado el camino de las temporadas. No está guardado en
+     * ningún sitio: se deduce del galón alcanzado cada vez que se mira, igual
+     * que el regalo de veterano (ver js/pase.js). Por eso no se puede cobrar
+     * dos veces ni perder al juntar dos aparatos. */
+    delPase: function () {
+      return (window.PM.Pase && window.PM.Pase.monedas) ? window.PM.Pase.monedas() : 0;
     },
 
     /* ¿es tuyo? Los seis emotes de siempre son de todo el mundo */
@@ -175,6 +184,10 @@
       n = Math.floor(n || 0);
       if (!(n > 0) || !A()) return 0;
       A().record('monedas', n);
+      /* ...y lo mismo sube el camino de la temporada (CFG.PASE). Va aquí y no
+       * en cada sitio que paga monedas para que las dos cuentas no puedan
+       * separarse nunca: lo que da dinero da experiencia, sin excepciones. */
+      if (window.PM.Pase) window.PM.Pase.porMonedas(n);
       return n;
     },
 

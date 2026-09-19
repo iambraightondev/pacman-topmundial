@@ -784,6 +784,99 @@
     VETERANO_POR_PARTIDA: 5,
     VETERANO_POR_LOGRO: 50
   };
+  /* ============================================================
+   * EL PASE DE TEMPORADA (19 de septiembre de 2026)
+   *
+   * POR QUÉ ASÍ. El día que esto se cobre, el error que no se puede cometer
+   * es montar la temporada como regalo y ponerle precio después: eso se
+   * siente como quitar algo y la gente se enfada con razón. Por eso nace ya
+   * con DOS CARRILES, los dos a la vista desde el primer día —uno gratis y
+   * uno de pago—, y el de pago se queda con su candado hasta que haya
+   * jugadores y haya identidad nueva (sin eso no se puede cobrar nada; ver
+   * PENDIENTE). Cuando llegue el momento no se le quita nada a nadie: se
+   * enciende VENTA y ya está.
+   *
+   * QUÉ NO GUARDA. Ningún saldo y ninguna lista de premios cobrados. Solo dos
+   * contadores por temporada, de los que solo crecen (js/achievements.js):
+   *
+   *   px_AAAA-MM  la experiencia de esa temporada
+   *   pp_AAAA-MM  1 si tiene el carril de pago de esa temporada
+   *
+   * Todo lo demás se DERIVA de ahí: el galón es la experiencia partida por
+   * POR_GALON, las piezas se ponen con el mismo contador que una compra (que
+   * es un máximo, así que volver a ponerlas no hace nada) y las monedas se
+   * suman al saldo en el momento de calcularlo, como ya hace la tienda con el
+   * regalo de veterano. Así juntar dos aparatos no puede duplicar un premio
+   * ni perderlo, y recargar la página tampoco regala nada.
+   *
+   * LA TEMPORADA es el mes natural que ya usa el top mundial
+   * (js/temporadas.js), sin nada que abrir ni cerrar a mano.
+   * ============================================================ */
+  CFG.PASE = {
+    /* EL INTERRUPTOR. En false el carril de pago se ve, con su candado y sus
+     * premios a la vista, pero pone PRÓXIMAMENTE en vez de un precio y no hay
+     * forma de comprarlo. No encender hasta que haya identidad propia:
+     * cobrar con el aspecto de hoy es lo que convierte el riesgo legal en
+     * real (ver PENDIENTE, «cambiar la identidad»). */
+    VENTA: false,
+    /* Lo que costará, para tenerlo escrito. En soles, que es donde se juega. */
+    PRECIO: { moneda: 'PEN', importe: 15 },
+
+    GALONES: 30,        // escalones de una temporada
+    /* Lo que cuesta cada galón. La cuenta que fija este número: quien echa
+     * cuatro partidas de 10.000 puntos al día y hace el reto del DAILY gana
+     * unas 340 monedas, o sea 1.700 de experiencia. A 1.500 por galón, los
+     * treinta le salen en unos 26 días, que es justo lo que se busca: que el
+     * que juega a diario lo termine rozando el final del mes y no a mitad.
+     * Con 1.000 se acababa en 18 días y las dos últimas semanas ya no
+     * empujaban a nada. */
+    POR_GALON: 1500,
+
+    /* DE DÓNDE SALE LA EXPERIENCIA: de las monedas. Cada moneda que se gana
+     * jugando da además esta experiencia de temporada, y no hay más reglas.
+     *
+     * Se hizo así a propósito en vez de una tabla aparte (tanto por partida,
+     * tanto por reto, tanto por maestría): esa tabla habría que mantenerla en
+     * paralelo a la de la tienda, y el día que se toque una sin la otra el
+     * camino se descuadra sin que nadie se entere. Atado a las monedas, el
+     * equilibrio se ajusta en un sitio y nunca hay dos verdades. También
+     * significa que quien ya sabe cuánto paga una partida sabe cuánto sube.
+     *
+     * Con los números de hoy: una partida normal (unos 60) sube 300, el reto
+     * del DAILY 500 y la semana entera 4.000. Quien echa tres o cuatro
+     * partidas al día y hace el reto termina el camino en unas tres semanas;
+     * quien juega una suelta de vez en cuando se queda por el tercio, lo ve,
+     * y esa es justo la sensación que hace que valga la pena seguir. */
+    XP_POR_MONEDA: 5,
+
+    /* CUÁNDO EMPIEZA. Antes de este mes el pase está dormido y no cambia
+     * nada: una temporada que arranca a mitad de mes nace coja. No hay
+     * ninguna lista de meses que mantener — los contadores de cada temporada
+     * nacen solos el día que hacen falta (js/achievements.js, tipoSuelto). */
+    DESDE: '2026-10',
+
+    /* EL CAMINO. Un escalón por galón, y el galón que no aparezca no paga
+     * nada. Cada lado puede llevar monedas y, cuando existan, una pieza del
+     * vestuario (por su id) o un cofre.
+     *
+     * OJO: las piezas EXCLUSIVAS DE TEMPORADA todavía no están dibujadas, así
+     * que de momento el camino solo paga monedas. Rellenar esos huecos es
+     * trabajo de arte, no de código, y hasta que existan NO se deben poner
+     * aquí las de cofre (PLAN-COFRES.md) ni las de la tienda: cada cosa tiene
+     * que salir de su sitio o las tres economías se pisan. */
+    CAMINO: [
+      { g: 1,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
+      { g: 2,  gratis: {},               pago: { monedas: 150 } },
+      { g: 3,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
+      { g: 5,  gratis: { monedas: 100 }, pago: { monedas: 200 } },
+      { g: 10, gratis: { monedas: 150 }, pago: { monedas: 300 } },
+      { g: 15, gratis: { monedas: 150 }, pago: { monedas: 300 } },
+      { g: 20, gratis: { monedas: 200 }, pago: { monedas: 400 } },
+      { g: 25, gratis: { monedas: 200 }, pago: { monedas: 400 } },
+      { g: 30, gratis: { monedas: 300 }, pago: { monedas: 800 } }
+    ]
+  };
+
   /* Emotes de la tienda (las caras están en js/skins.js, caraEmote). Los seis
    * de CFG.EMOTES son de todos. */
   CFG.EMOTES_TIENDA = [
@@ -1512,6 +1605,40 @@
    * `MODOS`, arriba de js/ui.js: si se añade un modo hay que tocar los dos
    * sitios, y una prueba vigila que no se separen. */
   CFG.MODE_IDS = ['clasico', 'duo', 'hab', 'caza', 'lab', 'online'];
+  /* ---------- LO QUE VIAJA CON LA CUENTA (19 de septiembre de 2026) ----------
+   * Entrar en tu cuenta en otro ordenador traía tus récords, tus logros y tus
+   * compras... pero te dejaba con el Pac-Man amarillo de fábrica, sin tu
+   * skin, sin lo que llevas puesto y con el sonido de serie. La compra estaba
+   * en la nube y el HABERLO PUESTO se quedaba en el navegador, que es
+   * exactamente la mitad que no se ve.
+   *
+   * Estas claves de PM.settings viajan a la columna `ajustes` del perfil.
+   *
+   * QUIÉN GANA cuando los dos lados tienen algo: el ÚLTIMO QUE SE CAMBIÓ, no
+   * el mejor de cada lado (que es la regla de los récords y aquí no
+   * significaría nada: no hay un color "mejor"). Por eso viaja con ellos un
+   * sello de tiempo, `ajustesTs`, que solo se toca cuando cambia de verdad
+   * alguna de estas claves. Si en este aparato acabas de ponerte otra skin y
+   * entras en tu cuenta, no se te quita: lo de aquí es más nuevo y es lo que
+   * sube.
+   *
+   * QUÉ NO VIAJA, a propósito:
+   *  - `nick1`, que ya ES el usuario de la cuenta.
+   *  - todo lo del JUGADOR 2 (`nick2`, `skin2`, `pac2Color`, `habRol2`,
+   *    `vsGhost2`): eso es de quien se sienta al lado en ESE teclado, no de
+   *    la persona que entra.
+   *  - `difficultyPreset`, que se recalcula solo de los cinco valores, y
+   *    `livesMode`, que hoy está forzado.
+   * -------------------------------------------------------------------- */
+  CFG.AJUSTES_NUBE = [
+    /* el aspecto: lo que los demás ven de ti */
+    'skin1', 'pacColor', 'acc1', 'efx1', 'emotes1', 'avatar',
+    /* cómo juegas */
+    'modePick', 'habRol1',
+    'ghostSpeedMult', 'pacSpeedMult', 'frightMult', 'startLives', 'startLevel',
+    /* y cómo suena */
+    'muted', 'volMaster', 'volMusic', 'volSfx', 'volLoops', 'volVoices'
+  ];
   CFG.DEFAULT_SETTINGS = {
     difficultyPreset: 'normal',   // 'facil' | 'normal' | 'dificil' | 'custom'
     /* Modo elegido en la portada. Se guarda porque quien juega casi siempre a
@@ -1549,7 +1676,11 @@
     volMusic: 1,
     volSfx: 1,
     volLoops: 0.8,
-    volVoices: 1
+    volVoices: 1,
+    /* Cuándo se cambió por última vez algo de CFG.AJUSTES_NUBE, para saber qué
+     * lado manda al entrar en la cuenta desde otro aparato. No es un ajuste
+     * que se toque a mano: lo pone saveSettings() al ver que algo cambió. */
+    ajustesTs: 0
   };
   CFG.PRESETS = {
     facil:   { ghostSpeedMult: 0.85, pacSpeedMult: 1.05, frightMult: 1.5, startLives: 5, startLevel: 1 },

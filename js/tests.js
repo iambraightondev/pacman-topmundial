@@ -4946,6 +4946,191 @@
     });
   });
 
+  /* ---------- EL ASPECTO VIAJA CON LA CUENTA ----------
+   * La compra ya viajaba (va en los contadores de logros); lo que no viajaba
+   * era HABÉRSELO PUESTO, que es la mitad que se ve. Estas pruebas vigilan
+   * las dos cosas que pueden salir mal: que el aspecto no suba, y que subir
+   * el de un aparato borre el que acabas de ponerte en otro. */
+  function conAspecto(fn) {
+    var s = window.PM.settings;
+    var antes = {};
+    var claves = CFG.AJUSTES_NUBE.concat(['ajustesTs', 'nick2', 'difficultyPreset']);
+    claves.forEach(function (k) { antes[k] = s[k]; });
+    try { fn(window.PM.UI, s); }
+    finally {
+      claves.forEach(function (k) { s[k] = antes[k]; });
+      window.PM.UI.saveSettings();
+    }
+  }
+
+  test('lo que viaja con la cuenta es el aspecto y las preferencias, no el mando de al lado',
+    function () {
+      conAspecto(function (UI, s) {
+        s.skin1 = 'pixel';
+        s.pacColor = '#ff00ff';
+        s.nick2 = 'COMPI';
+        var o = UI.ajustesParaNube();
+        eq(o.skin1, 'pixel', 'la skin sube');
+        eq(o.pacColor, '#ff00ff', 'y el color');
+        ok(o.hasOwnProperty('volMaster'), 'y cómo suena');
+        ok(o.hasOwnProperty('ts'), 'con su sello de tiempo');
+        eq(o.nick2, undefined,
+          'el jugador 2 no: es de quien se sienta en ESE teclado, no de la cuenta');
+        eq(o.nick1, undefined, 'y el nombre propio ya ES el de la cuenta');
+      });
+    });
+
+  test('el sello solo se mueve cuando cambia algo que viaja', function () {
+    conAspecto(function (UI, s) {
+      s.ajustesTs = 1000;
+      s.nick2 = 'OTRO';                 // esto no viaja
+      UI.saveSettings();
+      eq(s.ajustesTs, 1000, 'cambiar lo del jugador 2 no adelanta el sello');
+      s.skin1 = (s.skin1 === 'pixel') ? 'clasico' : 'pixel';
+      UI.saveSettings();
+      ok(s.ajustesTs > 1000, 'cambiar de skin, sí');
+    });
+  });
+
+  test('entrar en otra PC trae el aspecto de la última vez que lo cambiaste',
+    function () {
+      conAspecto(function (UI, s) {
+        s.skin1 = 'clasico';
+        s.pacColor = '#ffff00';
+        s.volMusic = 1;
+        s.ajustesTs = 1000;
+
+        /* lo de la nube es más nuevo: manda */
+        var vino = UI.aplicarAjustesDeNube({
+          ts: 2000, skin1: 'pixel', pacColor: '#ff00ff', volMusic: 0.3
+        });
+        ok(vino, 'se aplica');
+        eq(s.skin1, 'pixel', 'la skin');
+        eq(s.pacColor, '#ff00ff', 'el color');
+        eq(s.volMusic, 0.3, 'y el volumen de la música');
+        eq(s.ajustesTs, 2000,
+          'se queda el sello de allí: copiar no convierte a este aparato en el más nuevo');
+
+        /* y queda escrito, no solo en memoria */
+        var guardado = JSON.parse(localStorage.getItem(CFG.SETTINGS_KEY) || '{}');
+        eq(guardado.skin1, 'pixel', 'se persiste');
+      });
+    });
+
+  test('lo que acabas de ponerte aquí no lo pisa una nube más vieja',
+    function () {
+      conAspecto(function (UI, s) {
+        s.skin1 = 'pixel';
+        s.ajustesTs = 5000;
+        var vino = UI.aplicarAjustesDeNube({ ts: 4999, skin1: 'clasico' });
+        ok(!vino, 'no se aplica');
+        eq(s.skin1, 'pixel', 'se queda lo de aquí, que es más nuevo');
+        /* ni siquiera con el mismo sello: en un empate no hay motivo para
+         * cambiar nada, y cambiar es lo único que se nota */
+        ok(!UI.aplicarAjustesDeNube({ ts: 5000, skin1: 'clasico' }), 'empate: tampoco');
+        eq(s.skin1, 'pixel');
+      });
+    });
+
+  test('lo que baja de la nube se sanea igual que lo guardado aquí',
+    function () {
+      conAspecto(function (UI, s) {
+        s.ajustesTs = 1;
+        UI.aplicarAjustesDeNube({
+          ts: 2, skin1: 'no-existe', pacColor: 'rojo', volSfx: 99,
+          startLives: 500, acc1: 'inventado'
+        });
+        eq(s.skin1, CFG.DEFAULT_SETTINGS.skin1, 'una skin que no existe no entra');
+        eq(s.pacColor, CFG.DEFAULT_SETTINGS.pacColor, 'ni un color que no es un color');
+        eq(s.volSfx, 1, 'los volúmenes se recortan a su tope');
+        eq(s.startLives, 5, 'y las vidas también');
+        eq(s.acc1, CFG.DEFAULT_SETTINGS.acc1, 'ni un accesorio inventado');
+      });
+    });
+
+  test('el aspecto sube con el perfil, y sin columna se manda el resto igual',
+    function () {
+      var Ac = window.PM.Account;
+      conAspecto(function (UI, s) {
+        s.skin1 = 'pixel';
+        s.ajustesTs = 1234;
+        var sube = Ac.localState();
+        ok(sube.ajustes, 'los ajustes van en lo que se sube');
+        eq(sube.ajustes.skin1, 'pixel', 'con la skin puesta');
+        eq(sube.ajustes.ts, 1234, 'y su sello');
+        /* Proyecto de Supabase sin la columna todavía: antes que no guardar
+         * nada, se guarda el resto. */
+        Ac.sinAjustes = true;
+        try {
+          var apanyo = Ac.localState();
+          eq(apanyo.ajustes, undefined, 'sin columna, los ajustes se quedan fuera');
+          ok(apanyo.hasOwnProperty('record1'), 'pero el récord de siempre sube igual');
+        } finally { Ac.sinAjustes = false; }
+      });
+    });
+
+  test('cerrar sesión deja la máquina sin el aspecto del que se fue',
+    function () {
+      var Ac = window.PM.Account, G = window.PM.Game;
+      var r1 = G.highScore1, xp0 = window.PM.Level.xp();
+      conLogrosLimpios(function () {
+        conAspecto(function (UI, s) {
+          try {
+            s.skin1 = 'pixel';
+            s.acc1 = CFG.ACCESORIO_IDS[0];
+            s.pacColor = '#ff00ff';
+            s.avatar = 'blinky';
+            /* GUARDADO de verdad antes de salir, que es como llega esto en el
+             * juego. Sin este paso la prueba no veía el fallo que hubo: al
+             * limpiar, el aspecto CAMBIA (vuelve a fábrica) y el guardado lo
+             * volvía a sellar con la hora de ahora, dejando la máquina como
+             * "la más nueva" y sin devolverle el suyo al siguiente que
+             * entrara. */
+            UI.saveSettings();
+            s.ajustesTs = 7777;
+            Ac.limpiarLocal();
+            eq(s.skin1, CFG.DEFAULT_SETTINGS.skin1, 'la skin se va con la cuenta');
+            eq(s.acc1, '', 'y lo que llevaba puesto');
+            eq(s.pacColor, CFG.DEFAULT_SETTINGS.pacColor, 'y el color');
+            eq(s.avatar, CFG.DEFAULT_SETTINGS.avatar, 'y el avatar');
+            eq(s.ajustesTs, 0,
+              'y el sello, o el siguiente que entre aquí le ganaría a su propia cuenta');
+            /* la prueba de fuego: ahora entra OTRO con su aspecto y su sello,
+             * y tiene que entrar entero por viejo que sea */
+            ok(UI.aplicarAjustesDeNube({ ts: 10, skin1: 'pixel' }),
+              'el aspecto del que entra manda en una máquina recién liberada');
+            eq(s.skin1, 'pixel');
+          } finally {
+            G.highScore1 = r1;
+            window.PM.Level.reset(); if (xp0 > 0) window.PM.Level.add(xp0);
+          }
+        });
+      });
+    });
+
+  test('un aspecto viejo de la nube tampoco cambia el avatar de aquí', function () {
+    var Ac = window.PM.Account;
+    var origUser = Ac.user, origTok = Ac.token;
+    conAspecto(function (UI, s) {
+      try {
+        Ac.token = 'x';
+        Ac.user = { id: 'id', usuario: 'PEPE', avatar: 'pac' };
+        s.avatar = 'clyde';
+        s.ajustesTs = 9000;
+        /* La nube trae otro avatar EN SU COLUMNA y un aspecto más viejo. El
+         * avatar va en las dos partes, así que sin cuidado entraba por la
+         * columna lo que el sello acababa de rechazar. */
+        Ac.applyRemote({ usuario: 'PEPE', avatar: 'blinky', xp: 0,
+                         logros: {}, ajustes: { ts: 100, avatar: 'blinky' } });
+        eq(s.avatar, 'clyde', 'se queda el de aquí, que es más nuevo');
+        /* y una cuenta SIN aspecto (de las de antes) sigue mandando con su
+         * columna, como toda la vida */
+        Ac.applyRemote({ usuario: 'PEPE', avatar: 'blinky', xp: 0, logros: {} });
+        eq(s.avatar, 'blinky', 'sin aspecto en la nube, manda la columna de siempre');
+      } finally { Ac.user = origUser; Ac.token = origTok; }
+    });
+  });
+
   test('crear cuenta exige usuario, contraseña y correo', function () {
     var Ac = window.PM.Account;
     var msg = null;
@@ -7065,11 +7250,237 @@
   function conTienda(fn) {
     var s = window.PM.settings;
     var antes = { acc1: s.acc1, efx1: s.efx1, emotes1: s.emotes1, skin1: s.skin1 };
+    /* El PASE también paga monedas, y desde que empiece su primera temporada
+     * ganar cualquier cosa subiría el camino y descuadraría estas cuentas.
+     * Aquí se mide la tienda, así que se le pone una temporada que no existe
+     * y el pase se queda quieto (ver js/pase.js, cuenta()). */
+    var Pa = window.PM.Pase, temp = Pa && Pa.temporada;
+    if (Pa) Pa.temporada = function () { return '1970-01'; };
     conLogrosLimpios(function (A) {
       try { fn(window.PM.Tienda, A); }
-      finally { for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k]; }
+      finally {
+        for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k];
+        if (Pa) Pa.temporada = temp;
+      }
     });
   }
+
+  /* ---------- EL PASE DE TEMPORADA ----------
+   * El pase vive en su propia temporada, y las pruebas la fijan a mano: si
+   * dependieran del mes de hoy, pasarían en septiembre y fallarían en
+   * octubre. `conPase` fija una que sí cuenta; `conTienda` fija una que no,
+   * para que las pruebas de la tienda sigan midiendo solo la tienda. */
+  function conPase(fn, temporada) {
+    var Pa = window.PM.Pase;
+    var t = temporada || CFG.PASE.DESDE;
+    var antes = Pa.temporada;
+    Pa.temporada = function () { return t; };
+    conLogrosLimpios(function (A) {
+      try { fn(Pa, window.PM.Tienda, A, t); }
+      finally { Pa.temporada = antes; }
+    });
+  }
+
+  test('el pase empieza el mes que dice su configuración y no antes',
+    function () {
+      var Pa = window.PM.Pase;
+      ok(!Pa.cuenta('2026-09'), 'antes del mes de arranque, una temporada no cuenta');
+      ok(Pa.cuenta(CFG.PASE.DESDE), 'la primera sí');
+      ok(Pa.cuenta('2099-01'), 'y las de después también: no hay lista que mantener');
+      ok(!Pa.cuenta('no-es-un-mes'), 'lo que no es un mes, no');
+    });
+
+  test('el carril de pago nace apagado, que sin identidad propia no se cobra',
+    function () {
+      eq(CFG.PASE.VENTA, false, 'no se vende todavía');
+      eq(window.PM.Pase.seVende(), false, 'y el juego lo sabe');
+    });
+
+  test('el galón sale de la experiencia, y no pasa del último', function () {
+    conPase(function (Pa, Tn, A, t) {
+      var paso = CFG.PASE.POR_GALON;
+      eq(Pa.galon(t), 0, 'se empieza a cero');
+      Pa.ganar(paso - 1, t);
+      eq(Pa.galon(t), 0, 'casi no es');
+      Pa.ganar(1, t);
+      eq(Pa.galon(t), 1, 'y con lo justo, sí');
+      eq(Pa.avance(t).falta, paso, 'y ya falta un galón entero para el siguiente');
+      Pa.ganar(paso * 1000, t);
+      eq(Pa.galon(t), CFG.PASE.GALONES, 'por mucho que se juegue, el último es el último');
+      eq(Pa.avance(t).falta, 0, 'y ahí ya no falta nada');
+    });
+  });
+
+  test('antes del mes de arranque el pase está dormido', function () {
+    conPase(function (Pa) {
+      eq(Pa.ganar(5000, '2026-09'), 0, 'no se apunta nada');
+      eq(Pa.galon('2026-09'), 0, 'y se queda a cero');
+      eq(Pa.monedasDe('2026-09'), 0, 'sin premios');
+    });
+  });
+
+  test('las monedas del camino entran en el saldo y no se cobran dos veces',
+    function () {
+      conPase(function (Pa, Tn, A, t) {
+        var base = Tn.saldo();
+        Pa.ganar(CFG.PASE.POR_GALON, t);              // galón 1
+        var g1 = Pa.monedasDe(t);
+        ok(g1 > 0, 'el primer galón paga algo');
+        eq(Tn.saldo(), base + g1, 'y eso está en el saldo');
+        eq(Tn.saldo(), base + g1, 'mirarlo otra vez no lo vuelve a pagar');
+        /* lo importante: no hay ninguna hucha que se pueda llenar dos veces */
+        eq(Tn.ganadas(), 0, 'no se ha ingresado nada en lo ganado');
+      });
+    });
+
+  test('juntar dos aparatos no duplica lo que pagó el camino', function () {
+    conPase(function (Pa, Tn, A, t) {
+      Pa.ganar(CFG.PASE.POR_GALON * 3, t);
+      var antes = Pa.monedasDe(t);
+      var saldo = Tn.saldo();
+      /* la nube trae la misma temporada con menos experiencia... */
+      A.merge((function () { var o = {}; o['px_' + t] = CFG.PASE.POR_GALON; return o; })());
+      eq(Pa.galon(t), 3, 'se queda con lo mejor de los dos lados');
+      eq(Pa.monedasDe(t), antes, 'y los premios no se mueven');
+      eq(Tn.saldo(), saldo, 'ni el saldo');
+    });
+  });
+
+  test('el carril de pago no paga hasta que es tuyo, y entonces paga lo ya andado',
+    function () {
+      conPase(function (Pa, Tn, A, t) {
+        Pa.ganar(CFG.PASE.POR_GALON * 5, t);
+        var soloGratis = Pa.monedasDe(t);
+        var saldo = Tn.saldo();
+        ok(!Pa.tienePago(t), 'todavía no es suyo');
+        ok(Pa.resumen(t).pendientePago > 0,
+          'y se le enseña lo que se está dejando, que es lo que justifica el precio');
+        Pa.conceder(t);
+        ok(Pa.tienePago(t), 'ahora sí');
+        var conPago = Pa.monedasDe(t);
+        ok(conPago > soloGratis, 'y cobra de golpe todo lo que ya había alcanzado');
+        eq(Tn.saldo(), saldo + (conPago - soloGratis), 'en el saldo, sin cobrar nada dos veces');
+        eq(Pa.resumen(t).pendientePago, 0, 'y ya no hay nada pendiente');
+      });
+    });
+
+  test('ganar monedas sube el camino: las dos cuentas no pueden separarse',
+    function () {
+      conPase(function (Pa, Tn, A, t) {
+        eq(Pa.xp(t), 0, 'se empieza sin experiencia');
+        Tn.ganar(100);
+        eq(Pa.xp(t), 100 * CFG.PASE.XP_POR_MONEDA, 'lo que paga la tienda sube el pase');
+        eq(A.stats().monedas, 100, 'y las monedas son las de siempre');
+      });
+    });
+
+  test('el camino está bien escrito: galones dentro de rango y en orden',
+    function () {
+      var c = window.PM.Pase.camino();
+      ok(c.length > 0, 'hay camino');
+      for (var i = 0; i < c.length; i++) {
+        ok(c[i].g >= 1 && c[i].g <= CFG.PASE.GALONES, 'el galón ' + c[i].g + ' cabe');
+        if (i) ok(c[i].g > c[i - 1].g, 'y van en orden, sin repetir');
+        /* las piezas del camino todavía no existen: cuando se dibujen, este
+         * aviso salta si alguna se pone con un id que no está en el vestuario */
+        ['gratis', 'pago'].forEach(function (lado) {
+          var id = c[i][lado] && c[i][lado].id;
+          if (id) ok(!!window.PM.Tienda.item(id), 'la pieza ' + id + ' existe en el vestuario');
+        });
+      }
+      ok(c[c.length - 1].g === CFG.PASE.GALONES, 'el último galón paga algo');
+    });
+
+  /* ---------- LA PANTALLA DEL PASE ----------
+   * El camino se dibuja una vez y refrescar solo cambia clases: estas pruebas
+   * vigilan justo eso, porque el día que alguien lo rehaga entero en cada
+   * refresco se perderá el desplazamiento de lado y nadie lo notará hasta
+   * usarlo con treinta galones delante. */
+  function conPantallaPase(fn, temporada) {
+    conPase(function (Pa, Tn, A, t) {
+      var U = window.PM.UI;
+      U.refreshPase();
+      fn(U, Pa, Tn, A, t);
+    }, temporada);
+  }
+
+  test('la pantalla del pase dibuja el camino entero, una sola vez', function () {
+    conPantallaPase(function (U) {
+      eq(U.psCeldas.length, CFG.PASE.GALONES, 'una celda por galón');
+      var primera = U.psCeldas[0].cel;
+      U.refreshPase();
+      U.refreshPase();
+      eq(U.psCeldas.length, CFG.PASE.GALONES, 'refrescar no añade celdas');
+      eq(U.psCeldas[0].cel, primera, 'ni rehace las que había (se perdería el scroll)');
+    });
+  });
+
+  test('la pantalla marca lo ganado y deja a la vista lo que está cerrado',
+    function () {
+      conPantallaPase(function (U, Pa, Tn, A, t) {
+        var conPremio = null;
+        for (var i = 0; i < U.psCeldas.length; i++) {
+          if (U.psCeldas[i].gr && U.psCeldas[i].pg) { conPremio = U.psCeldas[i]; break; }
+        }
+        ok(conPremio, 'hay algún galón que paga por los dos lados');
+        ok(!conPremio.arriba.classList.contains('ps-ganado'), 'de entrada no hay nada ganado');
+
+        Pa.ganar(CFG.PASE.POR_GALON * conPremio.g, t);
+        U.refreshPase();
+        ok(conPremio.arriba.classList.contains('ps-ganado'), 'el carril de todos, ganado');
+        ok(conPremio.abajo.classList.contains('ps-cerrado'),
+          'y el de pago alcanzado pero cerrado: es lo que se está dejando');
+        ok(!conPremio.abajo.classList.contains('ps-ganado'), 'que no es lo mismo que ganado');
+        ok(conPremio.num.classList.contains('ps-hecho'), 'el número del galón, hecho');
+
+        Pa.conceder(t);
+        U.refreshPase();
+        ok(conPremio.abajo.classList.contains('ps-ganado'), 'al ser suyo, ganado');
+        ok(!conPremio.abajo.classList.contains('ps-cerrado'), 'y ya no está cerrado');
+        ok(conPremio.abajo.classList.contains('ps-suyo'), 'sin candado');
+      });
+    });
+
+  test('el botón del pase no ofrece comprar lo que todavía no se vende',
+    function () {
+      conPantallaPase(function (U, Pa, Tn, A, t) {
+        eq(U.psBtn.disabled, true, 'apagado mientras VENTA sea false');
+        ok(U.psBtn.textContent.indexOf('PRÓXIMAMENTE') !== -1, 'y lo dice');
+        Pa.conceder(t);
+        U.refreshPase();
+        eq(U.psBtn.disabled, true, 'y si ya es suyo, tampoco hay nada que comprar');
+        ok(U.psBtn.textContent.indexOf('TUYO') !== -1, 'lo dice de otra manera');
+      });
+    });
+
+  test('la pantalla avisa cuando la temporada todavía no ha empezado',
+    function () {
+      var antesDe = '2026-09';   // el mes anterior al arranque, a mano
+      conPantallaPase(function (U) {
+        ok(U.psDormido.textContent.length > 0, 'se avisa de que lo jugado no cuenta');
+        eq(U.psDormido.style.display, '', 'y se ve');
+      }, antesDe);
+      conPantallaPase(function (U) {
+        eq(U.psDormido.textContent, '', 'en una temporada que sí cuenta, ni una palabra');
+        eq(U.psDormido.style.display, 'none', 'ni sitio ocupado');
+      });
+    });
+
+  test('el botón del cuartel lleva el galón puesto, y solo si cuenta',
+    function () {
+      conPase(function (Pa, Tn, A, t) {
+        var U = window.PM.UI;
+        Pa.ganar(CFG.PASE.POR_GALON * 4, t);
+        U.refreshPaseBtn();
+        eq(U.menuPaseBtn.textContent, 'PASE · G4', 'el galón, desde el menú');
+      });
+      conPase(function (Pa, Tn, A) {
+        var U = window.PM.UI;
+        U.refreshPaseBtn();
+        eq(U.menuPaseBtn.textContent, 'PASE',
+          'con la temporada dormida no se anuncia ningún número: sería mentira');
+      }, '2026-09');
+    });
 
   test('la tienda empieza con 1.500 monedas y cobra lo que vale', function () {
     conTienda(function (Tn) {

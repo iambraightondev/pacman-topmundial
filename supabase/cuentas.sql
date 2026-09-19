@@ -257,3 +257,29 @@ begin
       add constraint amigos_nombre_chk check (amigo ~ '^[A-Z0-9]{1,12}$');
   end if;
 end $$;
+
+-- ---------- puesta al día: los ajustes del jugador ----------
+-- Tu ASPECTO (skin, color, accesorio, efecto, emotes, avatar) y tus
+-- preferencias de juego y de sonido. Hasta ahora la COMPRA viajaba con la
+-- cuenta pero el habérselo PUESTO se quedaba en el navegador, así que abrir
+-- tu cuenta en otro ordenador te devolvía al Pac-Man amarillo de fábrica.
+--
+-- Dentro va lo listado en CFG.AJUSTES_NUBE (js/config.js) y un sello `ts`:
+-- cuando los dos lados tienen algo, manda el que se cambió más tarde, que es
+-- la única regla que tiene sentido para un color o una skin (no hay uno
+-- "mejor", como sí lo hay en un récord). Se lee en claro como el resto del
+-- perfil; aquí no hay nada privado, solo gustos.
+alter table public.perfiles
+  add column if not exists ajustes jsonb not null default '{}'::jsonb;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'perfiles_ajustes_chk'
+  ) then
+    alter table public.perfiles
+      add constraint perfiles_ajustes_chk
+      check (jsonb_typeof(ajustes) = 'object'
+             and pg_column_size(ajustes) <= 4000);
+  end if;
+end $$;

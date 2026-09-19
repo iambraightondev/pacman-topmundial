@@ -87,6 +87,10 @@
       return (/^#[0-9a-f]{6}$/i).test(String(value)) ? String(value) : def;
     }
     if (key === 'muted') return !!value;
+    if (key === 'ajustesTs') {
+      var ts = parseInt(value, 10);
+      return (isFinite(ts) && ts > 0) ? ts : 0;
+    }
     if (key === 'difficultyPreset') {
       return PRESET_NAMES.indexOf(value) !== -1 ? value : def;
     }
@@ -162,15 +166,58 @@
     return s;
   }
 
+  /* ---------- LOS AJUSTES QUE VIAJAN CON LA CUENTA ----------
+   * La lista y el porqué están en CFG.AJUSTES_NUBE. Aquí solo está el
+   * mecanismo: saber CUÁNDO han cambiado de verdad (para el sello de tiempo
+   * que decide qué lado manda) y empaquetarlos y desempaquetarlos.
+   *
+   * Se mira comparando fotos en vez de tocar el sello en cada sitio que
+   * guarda: guardar ajustes se llama desde veinte sitios —cada deslizador,
+   * cada casilla, cada pieza que te pones— y uno que se olvidara dejaría el
+   * aspecto sin viajar sin que nadie se enterase hasta cambiar de ordenador.
+   * -------------------------------------------------------- */
+  function fotoViajera(s) {
+    var o = {}, L = CFG.AJUSTES_NUBE;
+    for (var i = 0; i < L.length; i++) o[L[i]] = s[L[i]];
+    return JSON.stringify(o);
+  }
+  var ultimaFoto = null;      // se siembra al cargar, abajo
+
+  /* Sube a la nube lo que se acaba de cambiar, pero no en el acto: arrastrar
+   * un deslizador de volumen son cincuenta guardados seguidos, y cada uno era
+   * una escritura en Supabase. Se espera a que pare la mano. */
+  var subidaPendiente = null;
+  function subirAjustesLuego() {
+    var A = window.PM.Account;
+    if (!A || !A.logged()) return;
+    if (subidaPendiente) clearTimeout(subidaPendiente);
+    subidaPendiente = setTimeout(function () {
+      subidaPendiente = null;
+      if (window.PM.Account && window.PM.Account.logged()) window.PM.Account.pushQuiet();
+    }, 3000);
+  }
+
   function saveSettings() {
+    var s = window.PM.settings;
+    /* ¿ha cambiado algo de lo que viaja con la cuenta? Entonces esto es lo
+     * más nuevo que hay de esta persona, y así se apunta. */
+    var foto = fotoViajera(s);
+    if (ultimaFoto !== null && foto !== ultimaFoto) {
+      s.ajustesTs = Date.now();
+      subirAjustesLuego();
+    }
+    ultimaFoto = foto;
     try {
-      localStorage.setItem(CFG.SETTINGS_KEY, JSON.stringify(window.PM.settings));
+      localStorage.setItem(CFG.SETTINGS_KEY, JSON.stringify(s));
     } catch (e) { /* sin almacenamiento */ }
     // con party abierta, el nombre, el color y la skin nuevos se reparten ya
     if (window.PM.Party && window.PM.Party.refreshMe) window.PM.Party.refreshMe();
   }
 
   window.PM.settings = loadSettings();
+  /* La foto de partida: sin ella, el primer guardado de la sesión creería
+   * que ha cambiado todo y adelantaría el sello sin que nadie tocara nada. */
+  ultimaFoto = fotoViajera(window.PM.settings);
 
   /* Subconjunto de ajustes que el anfitrión impone en una partida online */
   var NET_CFG_KEYS = ['ghostSpeedMult', 'pacSpeedMult', 'frightMult',
@@ -235,6 +282,77 @@
      * traerse el nombre y el avatar de la nube) */
     saveSettings: saveSettings,
 
+    /* Devolver el aspecto a lo de fábrica y OLVIDAR el sello: lo llama la
+     * cuenta al cerrar sesión (js/account.js).
+     *
+     * Tiene que ser aquí y no desde fuera por el sello: si se pone a cero y
+     * después se guarda por el camino de siempre, saveSettings ve que el
+     * aspecto ha cambiado —ha cambiado, ha vuelto a fábrica— y lo vuelve a
+     * sellar con la hora de ahora. La máquina quedaba diciendo "lo mío es lo
+     * más nuevo" con el Pac-Man de serie, y el siguiente que entrara en SU
+     * cuenta desde este ordenador no recuperaba su aspecto. */
+    olvidarAspecto: function () {
+      var s = window.PM.settings;
+      if (!s) return;
+      var quita = ['avatar', 'skin1', 'pacColor', 'acc1', 'efx1', 'emotes1'];
+      for (var i = 0; i < quita.length; i++) s[quita[i]] = CFG.DEFAULT_SETTINGS[quita[i]];
+      s.ajustesTs = 0;
+      ultimaFoto = fotoViajera(s);   // que el guardado no lo tome por un cambio
+      saveSettings();
+    },
+
+    /* Lo que viaja con la cuenta, listo para subir (ver CFG.AJUSTES_NUBE).
+     * Va con su sello de tiempo: es lo único que permite decidir después qué
+     * lado manda sin preguntarle nada a nadie. */
+    ajustesParaNube: function () {
+      var s = window.PM.settings || {};
+      var o = { ts: Math.floor(s.ajustesTs || 0) };
+      for (var i = 0; i < CFG.AJUSTES_NUBE.length; i++) {
+        var k = CFG.AJUSTES_NUBE[i];
+        if (s.hasOwnProperty(k)) o[k] = s[k];
+      }
+      return o;
+    },
+
+    /* Y al revés: lo que bajó de la nube entra aquí. Devuelve true si se ha
+     * aplicado.
+     *
+     * Nada se toma tal cual: cada valor pasa por el mismo saneado que lo
+     * guardado en este navegador, así que una fila manipulada a mano no puede
+     * meter una skin que no existe ni un volumen de mil. Y lo que sea de la
+     * TIENDA se sigue comprobando al usarlo (PM.Tienda), que es donde se mira
+     * si es tuyo: traerse el aspecto no regala nada.
+     */
+    aplicarAjustesDeNube: function (o) {
+      var s = window.PM.settings;
+      if (!s || !o || typeof o !== 'object') return false;
+      var ts = Math.floor(o.ts || 0);
+      if (!(ts > Math.floor(s.ajustesTs || 0))) return false;
+
+      var def = CFG.DEFAULT_SETTINGS;
+      for (var i = 0; i < CFG.AJUSTES_NUBE.length; i++) {
+        var k = CFG.AJUSTES_NUBE[i];
+        if (!o.hasOwnProperty(k)) continue;
+        s[k] = sanitizeSetting(k, o[k], def[k]);
+      }
+      /* el sello es el de allí: si no, este aparato se declararía el más
+       * nuevo por haber copiado, y le ganaría al que de verdad cambió algo */
+      s.ajustesTs = ts;
+      s.difficultyPreset = presetDe(s);
+      /* ...y la foto se pone al día a mano ANTES de guardar, para que
+       * saveSettings no lo tome por un cambio de este aparato */
+      ultimaFoto = fotoViajera(s);
+      saveSettings();
+
+      /* que se vea sin tener que recargar */
+      this.applyMute();
+      if (this.sliders) this.refreshOptions();
+      if (this.refreshPerfilLook) this.refreshPerfilLook();
+      if (this.refreshVestBtn) this.refreshVestBtn();
+      /* a la party ya la avisa saveSettings: el aspecto nuevo se reparte solo */
+      return true;
+    },
+
     init: function () {
       this.touchDevice = ('ontouchstart' in window) ||
         (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
@@ -255,6 +373,7 @@
       if (window.PM.Skins) window.PM.Skins.syncVistas();
       this.els.vestuario = document.getElementById('vestuario');
       this.els.tienda = document.getElementById('tienda');
+      this.els.pase = document.getElementById('pase');
       this.buildMenu();
       this.buildOptions();
       this.buildOnline();
@@ -267,6 +386,7 @@
       this.buildMate();
       this.buildVestuario();
       this.buildTienda();
+      this.buildPase();
       this.refreshPerfilLook();
       this.accountHooks();
       this.buildGameButtons();
@@ -498,6 +618,14 @@
         self.showTienda();
       });
       extras.appendChild(this.menuTiendaBtn);
+      /* EL PASE: el camino del mes. Va pegado a la TIENDA porque las dos
+       * reparten monedas, y lleva el galón escrito para que se vea desde el
+       * menú que hay algo que avanza. */
+      this.menuPaseBtn = this.makeButton('PASE', function () {
+        self.resumeAudio();
+        self.showPase();
+      });
+      extras.appendChild(this.menuPaseBtn);
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
         self.showBadges();
@@ -1441,6 +1569,299 @@
         cofre.textContent = 'SEMANA +' + TC.POR_SEMANA;
       }
       this.dailySlots.appendChild(cofre);
+    },
+
+    /* ------------------------------------------------------
+     * EL PASE DE TEMPORADA: el camino del mes
+     *
+     * La pantalla enseña las dos cosas a la vez: lo ganado y lo que se está
+     * quedando en el carril cerrado. Ese segundo número es el que justifica
+     * el precio el día que se venda, así que se enseña desde hoy aunque no se
+     * pueda comprar nada (CFG.PASE.VENTA, ver js/pase.js).
+     *
+     * El camino se dibuja UNA sola vez —treinta galones con dos carriles cada
+     * uno— y refrescar solo cambia clases y textos. Rehacerlo entero en cada
+     * refresco perdía el desplazamiento de lado cada vez que se volvía al
+     * panel, que es justo lo que uno quiere conservar en un camino largo.
+     * ------------------------------------------------------ */
+    buildPase: function () {
+      var self = this;
+      var o = this.els.pase;
+      if (!o) return;
+      var P = window.PM.Pase, CP = CFG.PASE;
+      if (!P || !CP) return;
+      o.innerHTML = '';
+
+      var mk = function (tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      };
+
+      var h = mk('div', 'panel-title', 'PASE');
+      o.appendChild(h);
+
+      /* cabecera: qué temporada es y cuánto le queda */
+      var cab = mk('div', 'ps-cab');
+      this.psTemp = mk('div', 'ps-temp');
+      cab.appendChild(this.psTemp);
+      this.psQuedan = mk('div', 'ps-quedan');
+      cab.appendChild(this.psQuedan);
+      o.appendChild(cab);
+
+      /* el galón alcanzado y lo que falta para el siguiente */
+      var fila = mk('div', 'ps-galon');
+      this.psGalonNum = mk('div', 'ps-galon-num');
+      fila.appendChild(this.psGalonNum);
+      var med = mk('div', 'ps-medidor');
+      med.setAttribute('role', 'progressbar');
+      med.setAttribute('aria-label', 'Avance hacia el siguiente galón');
+      this.psMedidor = med;
+      this.psMedidorLleno = mk('div', 'ps-medidor-lleno');
+      med.appendChild(this.psMedidorLleno);
+      fila.appendChild(med);
+      this.psMedidorTxt = mk('div', 'ps-medidor-txt');
+      fila.appendChild(this.psMedidorTxt);
+      o.appendChild(fila);
+
+      /* Qué es cada carril, junto al camino y no solo en la letra pequeña
+       * del pie: el de arriba y el de abajo se distinguen por el color y el
+       * candado, pero hasta que no se lee una vez nadie sabe cuál es cuál. */
+      var leyenda = mk('div', 'ps-leyenda');
+      leyenda.appendChild(mk('span', 'ps-ley ps-ley-gratis', 'ARRIBA · DE TODOS'));
+      leyenda.appendChild(mk('span', 'ps-ley ps-ley-pago', 'ABAJO · DEL PASE'));
+      o.appendChild(leyenda);
+
+      /* El aviso de temporada dormida. Antes de la primera (CFG.PASE.DESDE)
+       * el camino se ve entero, pero nada de lo que se juegue cuenta todavía:
+       * decirlo evita que alguien crea que ha perdido lo suyo. */
+      this.psDormido = mk('div', 'ps-dormido');
+      o.appendChild(this.psDormido);
+
+      /* el camino, de lado: treinta galones no caben de frente en ninguna
+       * pantalla, así que se desplaza como la cartilla del DAILY */
+      var env = mk('div', 'ps-scroll');
+      this.psScroll = env;
+      var camino = mk('div', 'ps-camino');
+      this.psCamino = camino;
+      this.psCeldas = [];
+
+      var porGalon = {};
+      P.camino().forEach(function (e) { porGalon[e.g] = e; });
+
+      for (var g = 1; g <= CP.GALONES; g++) {
+        var e = porGalon[g] || { gratis: {}, pago: {} };
+        var gr = (e.gratis && e.gratis.monedas) || 0;
+        var pg = (e.pago && e.pago.monedas) || 0;
+
+        var cel = mk('div', 'ps-celda');
+
+        var arriba = mk('div', 'ps-carril ps-gratis' + (gr ? '' : ' ps-vacio'));
+        if (gr) {
+          arriba.appendChild(this.monedaEl());
+          arriba.appendChild(mk('span', 'ps-monto', fmtMonedas(gr)));
+        } else {
+          arriba.appendChild(mk('span', 'ps-monto', '·'));
+        }
+
+        var abajo = mk('div', 'ps-carril ps-pago' + (pg ? '' : ' ps-vacio'));
+        if (pg) {
+          abajo.appendChild(this.monedaEl());
+          abajo.appendChild(mk('span', 'ps-monto', fmtMonedas(pg)));
+          abajo.appendChild(mk('span', 'ps-candado', '🔒'));
+        } else {
+          abajo.appendChild(mk('span', 'ps-monto', '·'));
+        }
+
+        var num = mk('div', 'ps-num', String(g));
+
+        cel.appendChild(arriba);
+        cel.appendChild(abajo);
+        cel.appendChild(num);
+        camino.appendChild(cel);
+        this.psCeldas.push({ g: g, cel: cel, arriba: arriba, abajo: abajo, num: num, gr: gr, pg: pg });
+      }
+      env.appendChild(camino);
+
+      /* el Pac-Man que marca por dónde vas; se mueve al galón alcanzado.
+       * Va suelto dentro del camino (que es quien manda en la posición), no
+       * en una fila propia: así se desliza por debajo de las celdas sin
+       * empujar nada. */
+      this.psBicho = document.createElement('canvas');
+      this.psBicho.className = 'ps-bicho';
+      this.psBicho.width = 48;
+      this.psBicho.height = 48;
+      this.psBicho.setAttribute('aria-hidden', 'true');
+      camino.appendChild(this.psBicho);
+      o.appendChild(env);
+
+      /* el pie: lo que paga el camino, lo que se queda cerrado y el botón */
+      var pie = mk('div', 'ps-pie');
+      var oferta = mk('div', 'ps-oferta');
+      this.psBtn = this.makeButton('PASE · PRÓXIMAMENTE', function () { self.paseComprar(); });
+      this.psBtn.classList.add('ps-btn');
+      oferta.appendChild(this.psBtn);
+      this.psDejando = mk('div', 'ps-dejando');
+      oferta.appendChild(this.psDejando);
+      pie.appendChild(oferta);
+      this.psSaldo = mk('div', 'ps-saldo');
+      pie.appendChild(this.psSaldo);
+      o.appendChild(pie);
+
+      var regla = mk('div', 'note ps-regla');
+      regla.textContent = 'LA EXPERIENCIA SALE DE LAS MONEDAS: CADA MONEDA QUE GANES JUGANDO SUBE ' +
+        CP.XP_POR_MONEDA + ' · LO QUE SE ACUMULA EN EL CARRIL CERRADO NO SE PIERDE: ' +
+        'SE ENTREGA ENTERO EL DÍA QUE ESA TEMPORADA SEA TUYA';
+      o.appendChild(regla);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+    },
+
+    /* Hoy no hay forma de llegar aquí con el botón vivo (VENTA es false y el
+     * botón va apagado). Queda escrito para el día que exista el cobro: el
+     * enganche es Pase.conceder(temporada), y hasta que haya pasarela lo
+     * único honesto que se puede decir es que todavía no se vende. */
+    paseComprar: function () {
+      var P = window.PM.Pase;
+      if (!P || !P.seVende() || P.tienePago()) return;
+      this.psDejando.textContent = 'TODAVÍA NO SE PUEDE COMPRAR.';
+    },
+
+    showPase: function () {
+      this.refreshPase();
+      this.showPanel('pase');
+      /* se abre por donde vas, no por el galón 1: el camino es largo y lo que
+       * importa es el siguiente escalón */
+      var sc = this.psScroll, aqui = this.psAqui;
+      if (sc && aqui && sc.scrollWidth > sc.clientWidth) {
+        sc.scrollLeft = Math.max(0, aqui.offsetLeft -
+          (sc.clientWidth - aqui.offsetWidth) / 2);
+      }
+      this.animarPase();
+    },
+
+    refreshPase: function () {
+      var P = window.PM.Pase;
+      if (!this.psCamino || !P) return;
+      var CP = CFG.PASE;
+      /* Con el pase dormido se enseña la PRIMERA temporada, no el mes de hoy:
+       * poner SEPTIEMBRE en la cabecera de un camino que no cuenta hacía
+       * creer que la temporada ya estaba en marcha y no pagaba. */
+      var r = P.resumen(P.cuenta() ? undefined : CP.DESDE);
+
+      this.psTemp.textContent = 'TEMPORADA · ' + (r.nombre || r.temporada).toUpperCase();
+      this.psQuedan.textContent = P.cuenta()
+        ? ('QUEDAN ' + P.diasRestantes() + (P.diasRestantes() === 1 ? ' DÍA' : ' DÍAS'))
+        : '';
+
+      this.psGalonNum.textContent = 'GALÓN ' + r.galon + ' / ' + r.galones;
+      var pct = r.avance.total ? (r.avance.hecho / r.avance.total) : 0;
+      this.psMedidorLleno.style.width = Math.round(pct * 100) + '%';
+      this.psMedidorTxt.textContent = fmtMonedas(r.avance.hecho) + ' / ' + fmtMonedas(r.avance.total);
+      this.psMedidor.setAttribute('aria-valuemin', '0');
+      this.psMedidor.setAttribute('aria-valuemax', String(r.avance.total));
+      this.psMedidor.setAttribute('aria-valuenow', String(r.avance.hecho));
+
+      /* dormida: el camino se ve, pero lo de hoy no cuenta para él */
+      var enMarcha = P.cuenta();
+      this.psDormido.textContent = enMarcha ? '' :
+        ('EMPIEZA EL 1 DE ' + this.paseMesDe(CP.DESDE) +
+         ': LO QUE JUEGUES HASTA ENTONCES NO SUBE ESTE CAMINO.');
+      this.psDormido.style.display = enMarcha ? 'none' : '';
+
+      this.psAqui = null;
+      for (var i = 0; i < this.psCeldas.length; i++) {
+        var c = this.psCeldas[i];
+        var hecho = c.g <= r.galon;
+        c.arriba.classList.toggle('ps-ganado', hecho && !!c.gr);
+        c.abajo.classList.toggle('ps-ganado', hecho && r.pago && !!c.pg);
+        c.abajo.classList.toggle('ps-cerrado', hecho && !r.pago && !!c.pg);
+        c.abajo.classList.toggle('ps-suyo', r.pago && !!c.pg);
+        c.num.classList.toggle('ps-hecho', hecho);
+        if (c.g === Math.max(1, r.galon)) this.psAqui = c.cel;
+      }
+
+      /* lo que ha pagado ESTA temporada, la que se está mirando: con el pase
+       * dormido la de la pantalla no es la de hoy */
+      var delCamino = P.monedasDe(r.temporada);
+      this.psSaldo.innerHTML = '';
+      this.psSaldo.appendChild(document.createTextNode('DEL CAMINO: '));
+      this.psSaldo.appendChild(this.precioEl(delCamino));
+
+      this.psDejando.innerHTML = '';
+      if (r.pago) {
+        this.psDejando.textContent = 'EL CARRIL DE ABAJO YA ES TUYO.';
+      } else if (r.pendientePago > 0) {
+        this.psDejando.appendChild(document.createTextNode('TE ESTÁS DEJANDO '));
+        this.psDejando.appendChild(this.precioEl(r.pendientePago));
+        this.psDejando.appendChild(document.createTextNode(' DEL CARRIL CERRADO'));
+      } else {
+        this.psDejando.textContent = '';
+      }
+
+      if (r.pago) {
+        this.psBtn.textContent = 'PASE · YA ES TUYO';
+        this.psBtn.disabled = true;
+      } else if (r.seVende) {
+        this.psBtn.textContent = 'CONSEGUIR EL PASE · ' +
+          (r.precio.moneda === 'PEN' ? 'S/ ' : '') + r.precio.importe;
+        this.psBtn.disabled = false;
+      } else {
+        this.psBtn.textContent = 'PASE · PRÓXIMAMENTE';
+        this.psBtn.disabled = true;
+      }
+    },
+
+    /* 'AAAA-MM' -> el mes solo, en palabras. El año va en la cabecera, así
+     * que repetirlo en el aviso solo alarga la frase. */
+    paseMesDe: function (t) {
+      var S = window.PM.Season;
+      var nom = (S && S.nombre) ? S.nombre(t) : String(t);
+      return String(nom).toUpperCase().split(' ')[0];
+    },
+
+    /* Mientras el panel está a la vista: el Pac-Man mastica y se planta sobre
+     * el galón alcanzado. Se para solo al cerrar, como la cartelera. */
+    animarPase: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.paseAnim) return;
+      this.paseAnim = true;
+      var origen = Date.now();
+      function paso() {
+        var panel = self.els.pase;
+        if (!panel || panel.style.display === 'none') { self.paseAnim = false; return; }
+        self.pintarBicho((Date.now() - origen) / 1000);
+        raf(paso);
+      }
+      raf(paso);
+    },
+
+    pintarBicho: function (t) {
+      var cv = this.psBicho;
+      if (!cv || !cv.offsetParent) return;
+      /* dónde se planta: centrado sobre la celda del galón alcanzado (la
+       * primera mientras no haya ninguno) */
+      var aqui = this.psAqui;
+      if (aqui) {
+        var x = aqui.offsetLeft + (aqui.offsetWidth - cv.offsetWidth) / 2;
+        cv.style.left = Math.max(0, Math.round(x)) + 'px';
+      }
+      /* y es TU Pac-Man, con tu color, tu skin y lo que lleves puesto: el
+       * mismo dibujo de la portada. El camino es el tuyo. */
+      this.pintarNickLook(t, cv);
+    },
+
+    /* El botón del cuartel lleva el galón puesto: es lo que hace volver a
+     * mirar. Mientras la temporada está dormida no se anuncia ningún número
+     * (sería mentira), solo la palabra. */
+    refreshPaseBtn: function () {
+      var b = this.menuPaseBtn, P = window.PM.Pase;
+      if (!b || !P) return;
+      b.textContent = P.cuenta() ? ('PASE · G' + P.galon()) : 'PASE';
     },
 
     /* ------------------------------------------------------
@@ -9089,7 +9510,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'ranking',
-                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda'];
+                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'pase'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -10667,7 +11088,7 @@
       // la ficha va encima de un panel: si se cambia de panel, se va con él
       if (this.ficha && this.ficha.host !== this.els[name]) this.cerrarFicha(true);
       var panels = ['menu', 'options', 'online', 'badges', 'ranking',
-                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'pase'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -10682,6 +11103,7 @@
       this.refreshDaily();
       this.refreshContinuar();   // CONTINUAR, si quedó una partida a medias
       this.refreshVestBtn();     // VESTUARIO · N NUEVOS
+      this.refreshPaseBtn();     // PASE · G12
       this.refreshMarquesina();  // marcador, monedas y cinta
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
@@ -11286,6 +11708,7 @@
             } else if (self.els.options.style.display !== 'none' ||
                        self.els.badges.style.display !== 'none' ||
                        self.els.ranking.style.display !== 'none' ||
+                       (self.els.pase && self.els.pase.style.display !== 'none') ||
                        self.els.friends.style.display !== 'none') {
               self.showMenu();
             }

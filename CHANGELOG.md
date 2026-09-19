@@ -2,6 +2,69 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-19 · Tu aspecto viaja contigo: abre tu cuenta en otro ordenador y sigues siendo tú
+
+**Lo que pasaba.** Entrabas en tu cuenta desde otra máquina y volvían tus
+récords, tu experiencia, tus logros y tus compras... pero aparecías con el
+Pac-Man amarillo de fábrica, sin tu skin, sin lo que llevabas puesto, con los
+emotes de serie y el sonido de serie. La skin estaba comprada en la nube; el
+habérsela puesto se había quedado en el navegador de casa. Justo la mitad que
+se ve.
+
+**Ahora viaja todo lo tuyo**: tu skin, tu color, el accesorio, el efecto, las
+seis caras de las teclas, el avatar, el modo que sueles elegir, tu rol de
+DESATADO, la dificultad con la que juegas y los cinco volúmenes. Entras en
+cualquier ordenador y el juego es el tuyo desde el primer segundo.
+
+**Y no se pierde nada si te cambiaste algo aquí.** Cuando los dos lados tienen
+aspecto, manda **el último que se cambió**, no el de la nube por ser la nube:
+si acabas de ponerte otra skin en esta máquina y entras en tu cuenta, no te la
+quita — sube la tuya. (Con los récords la regla sigue siendo la de siempre: se
+queda el mejor de los dos lados.)
+
+**Lo del jugador 2 no viaja**, a propósito: su nombre, su color y su skin son
+de quien se sienta en ese teclado, no de la cuenta que entra.
+
+**Al cerrar sesión, el aspecto se va con la cuenta.** Si no, el siguiente que
+entrara desde ese ordenador aparecería con la skin y el accesorio del anterior
+sin haberlos comprado.
+
+## 2026-09-19 · El pase de temporada: el camino del mes, con el carril de pago cerrado
+
+**Hay un PASE nuevo en el cuartel.** Cada mes es una temporada con un camino
+de **30 galones**, y se sube jugando: cada moneda que se gana da **5 de
+experiencia**, y cada galón cuesta 1.500. Quien eche tres o cuatro partidas
+al día y haga el reto del DAILY termina el camino rozando el final del mes;
+quien juegue suelto se queda por el tercio, lo ve, y esa es justo la
+sensación que hace volver.
+
+La experiencia va atada a las monedas a propósito: así la tienda y el pase
+miden lo mismo y no pueden descuadrarse el día que se toque el equilibrio de
+una sin la otra.
+
+**Dos carriles desde el primer día, y el de abajo con candado.** El de arriba
+lo gana todo el mundo. El de abajo se ve entero —con sus premios y lo que te
+estás dejando— pero **hoy no se vende**: pone PRÓXIMAMENTE y no hay forma de
+comprarlo. Se monta así porque una temporada que nace gratis y a la que se le
+pone precio después se siente como quitar algo; naciendo con el carril
+cerrado a la vista, encenderlo no le quita nada a nadie. Y lo que se acumula
+ahí **no se pierde**: el día que esa temporada sea tuya, se entrega entero de
+golpe.
+
+**La pantalla.** El camino se recorre de lado, con un Pac-Man que se planta
+sobre tu galón y mastica mientras miras. En verde lo ganado, en morado lo que
+está alcanzado pero cerrado, y abajo las dos cifras que importan: lo que te ha
+pagado el camino y lo que te estás dejando. El botón del cuartel lleva el
+galón puesto (`PASE · G12`).
+
+**Empieza en octubre.** En septiembre el pase está dormido: el camino se ve,
+pero la pantalla avisa de que lo que se juegue ahora todavía no cuenta para
+él. Una temporada que arranca a mitad de mes nace coja.
+
+**Lo que falta**, dicho claro: las piezas exclusivas de cada temporada están
+sin dibujar, así que hoy el camino solo paga monedas. Y no hay ninguna forma
+de cobrar, ni la habrá antes del cambio de identidad del juego.
+
 ## 2026-09-19 · Las monedas se ganaban a cuentagotas, y tres pantallas estaban pobres
 
 **Se gana cinco veces más.** Una partida daba 5 monedas por durar un minuto

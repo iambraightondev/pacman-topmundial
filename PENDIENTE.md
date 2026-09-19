@@ -13,6 +13,85 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**19 sep — EL PASE DE TEMPORADA: MONTADO ENTERO Y CON PANTALLA, CARRIL DE
+PAGO CERRADO.**
+
+**Lo que se decidió y por qué.** No se paga por el dibujo de una skin, se paga
+por lo que dice de uno delante de otros; y el vehículo que mejor funciona en
+juegos así es el pase de temporada, no la tienda suelta. Pero **hoy no hay a
+quién venderle nada** (solo juegan sus amigos), así que lo único que tenía
+sentido construir ya es la estructura, por una razón concreta: si la temporada
+nace gratis y se le pone precio después, se siente como quitar algo. Naciendo
+con los dos carriles a la vista —el de pago cerrado—, encenderlo no le quita
+nada a nadie.
+
+Descartado de entrada: **anuncios** (ensucian el juego y con pocos jugadores
+rinden centavos) y **vender lo legendario** (si lo mejor se compra, la tienda
+entera se abarata). Lo mejor se gana; lo que se vende es el atajo y el
+escaparate.
+
+**Qué hay hecho** (`js/pase.js` → `PM.Pase`, `CFG.PASE`, pantalla `#pase` en
+`js/ui.js`, detalle en SPEC → *El PASE DE TEMPORADA*):
+
+- Camino de **30 galones a 1.500 de experiencia**; la experiencia va atada a
+  las monedas (5 por moneda) para que la tienda y el pase no puedan
+  descuadrarse. Ritmo medido: cuatro partidas al día más el reto = ~27 días,
+  o sea que el que juega a diario lo termina rozando el fin de mes.
+- **Nada se guarda**: solo `px_AAAA-MM` (experiencia) y `pp_AAAA-MM` (carril
+  de pago). Los premios se deducen; las monedas se suman en `Tienda.saldo()`
+  como el regalo de veterano, así que juntar dos aparatos no puede
+  duplicarlas ni perderlas.
+- **Empieza en octubre** (`CFG.PASE.DESDE`). En septiembre está dormido: la
+  pantalla enseña ya la temporada de octubre entera y avisa de que lo que se
+  juegue hasta entonces no sube ese camino.
+- `CFG.PASE.VENTA = false`: el carril de pago se ve entero, con candado y
+  «PRÓXIMAMENTE». `Pase.conceder(temporada)` es el enganche que llamará el
+  cobro el día que exista.
+- **La pantalla**, desde TU CUARTEL (el botón lleva el galón puesto): el
+  camino de lado con los dos carriles, un Pac-Man que se planta sobre tu
+  galón, y en el pie las dos cifras que importan —lo que te ha pagado el
+  camino y lo que te estás dejando en el carril cerrado—. El camino se dibuja
+  una vez y refrescar solo cambia clases; quien lo toque, que no lo rehaga
+  entero o se pierde el desplazamiento de lado en cada vuelta.
+- 13 pruebas propias (8 de la cuenta, 5 de la pantalla), todas en verde:
+  **464 pruebas pasan en el navegador**, y en Node fallan las dos de siempre
+  del DOM de mentira.
+
+El escaparate con los números y el deslizador de un mes de partidas sigue en
+<https://claude.ai/artifact/34gJaSYUf23vDGe78qFHin>.
+
+**Cuidado con esto al tocar logros.** Los contadores del pase NO están
+declarados en `STATS`: se reconocen por su forma (`tipoSuelto` en
+`js/achievements.js`) y nacen cuando hacen falta. Declarar un par por mes
+metía cien claves a cero en el almacén y **encarecía un 40 % cada consulta del
+saldo** —que la TIENDA hace una vez por pieza del catálogo—. Una clave suelta
+tiene que atenderse en los **tres** sitios que recorren `STATS`: `record`,
+`load` (que rehace `c` desde cero y si no las tira en la siguiente lectura) y
+`merge` (o entrar en la cuenta desde otro aparato borraría la temporada). Los
+tres lo hacen; quien toque ese módulo que no rompa ninguno.
+
+**Lo que falta, por orden de importancia:**
+
+1. **Las piezas exclusivas de temporada.** Hoy el camino solo paga monedas, y
+   un pase sin una skin que solo tengan los de ese mes no se vende. Es trabajo
+   de dibujo. **No usar las de cofre (PLAN-COFRES.md) ni las de tienda**: cada
+   economía tiene que repartir lo suyo o se canibalizan. En cuanto existan, se
+   cuelgan en `CFG.PASE.CAMINO` por su id y `Pase.sincronizar()` las entrega
+   solo; hay una prueba que avisa si se pone un id que no está en el
+   vestuario.
+2. **La pasarela de cobro**, que no existe ni debe existir antes del cambio de
+   identidad: cobrar con el aspecto de hoy es lo que convierte el riesgo legal
+   de Pac-Man en real.
+
+**La cifra que calibra todo esto**, para no engañarse: en juegos así paga
+entre el 2 % y el 5 % de los jugadores activos, y un pase ronda los 4 dólares.
+Con 200 jugadores son 16-40 dólares al mes; con 1.000, entre 80 y 200; con
+10.000, entre 800 y 2.000. **El trabajo de los próximos meses es conseguir
+jugadores, no afinar precios.** Y el orden acordado sigue siendo: identidad
+nueva → que el juego aguante a quien llega solo (bots, o que el modo en
+solitario valga por sí mismo) → clips desde las repeticiones → publicidad
+orgánica → recién ahí cobrar.
+
 **19 sep — EL LAG DEL ONLINE, ATACADO POR LOS TRES SITIOS. HECHO, FALTA
 PROBARLO JUGANDO.** Braighton dijo que el online "va muy lag" y sospechaba de
 Vercel. Vercel es inocente: solo sirve los archivos una vez y después no vuelve

@@ -175,6 +175,9 @@
     if (!self.sinModos && /record_lab|record_hab/i.test(texto)) {
       return 'sinModos';
     }
+    if (!self.sinAjustes && /ajustes/i.test(texto)) {
+      return 'sinAjustes';
+    }
     return null;
   }
 
@@ -420,8 +423,16 @@
       var s = window.PM.settings;
       if (s) {
         s.nick1 = '';
-        s.avatar = 'pac';
-        if (window.PM.UI && window.PM.UI.saveSettings) window.PM.UI.saveSettings();
+        /* El ASPECTO también es de la cuenta: se queda a lo de fábrica, y sin
+         * sello. Si no, el siguiente que entrase desde este ordenador
+         * aparecería con la skin y el accesorio del anterior —sin haberlos
+         * comprado él—, o peor: esta máquina se creería la más nueva y no le
+         * devolvería el suyo. Lo hace UI, que es quien lleva el sello. */
+        if (window.PM.UI && window.PM.UI.olvidarAspecto) {
+          window.PM.UI.olvidarAspecto();
+        } else if (window.PM.UI && window.PM.UI.saveSettings) {
+          window.PM.UI.saveSettings();
+        }
       }
     },
 
@@ -457,6 +468,10 @@
     /* Y otra para el reparto de esos dos mundos POR FORMATO (record_lab2 y
      * compañía), que llegó aún más tarde. */
     sinModosFmt: false,
+    /* Y la de los AJUSTES (tu aspecto y tus preferencias), la última en
+     * llegar: sin ella se guarda todo lo demás igual y lo único que pasa es
+     * que el aspecto no viaja. */
+    sinAjustes: false,
 
     /* Columnas públicas de un perfil */
     perfilCols: function () {
@@ -481,7 +496,12 @@
         avatar: s.avatar || 'pac',
         xp: (window.PM.Level ? window.PM.Level.xp() : 0),
         tiempo1: (A ? (A.stats().mejorT1 || null) : null) || null,
-        logros: A ? A.stats() : {}
+        logros: A ? A.stats() : {},
+        /* Tu aspecto y tus preferencias (CFG.AJUSTES_NUBE). Van con el resto
+         * del perfil y no por su cuenta: cambian poco, pesan nada, y así cada
+         * push deja la cuenta entera al día de una vez. */
+        ajustes: (window.PM.UI && window.PM.UI.ajustesParaNube)
+          ? window.PM.UI.ajustesParaNube() : null
       };
       // los cuatro récords: solo, dúo, trío y escuadra
       for (var n = 1; n <= this.recordCols.length; n++) {
@@ -500,6 +520,7 @@
         delete o.record3;
         delete o.record4;
       }
+      if (this.sinAjustes || !o.ajustes) delete o.ajustes;
       for (m = 0; m < this.modoCols.length; m++) {
         var col = this.modoCols[m][2];
         if (this.sinModos || (this.sinModosFmt && this.esColFmt(col))) {
@@ -531,6 +552,7 @@
       var s = window.PM.settings || {};
       var g = window.PM.Game;
       this.user.usuario = cleanUser(fila.usuario) || this.user.usuario;
+      var avatarAqui = s.avatar;
       if (fila.avatar && CFG.AVATAR_IDS.indexOf(fila.avatar) !== -1) {
         this.user.avatar = fila.avatar;
         s.avatar = fila.avatar;
@@ -595,6 +617,27 @@
       /* La partida que se dejó a medias en otro aparato. Solo se queda con
        * ella si es más nueva que la de aquí, que eso lo decide Guardado. */
       if (window.PM.Guardado) window.PM.Guardado.desdeNube(fila.partida);
+      /* Tu aspecto y tus preferencias. Aquí NO vale la regla de los récords
+       * —lo mejor de cada lado—, porque no hay un color mejor que otro: manda
+       * el que se cambió más tarde, y eso lo decide UI con el sello que viene
+       * dentro. Si lo de este aparato es más nuevo no se toca nada, y el push
+       * de a continuación lo sube. */
+      if (window.PM.UI && window.PM.UI.aplicarAjustesDeNube) {
+        var vino = window.PM.UI.aplicarAjustesDeNube(fila.ajustes);
+        /* El avatar tiene además su propia columna (es lo que ve un amigo al
+         * mirar tu perfil) y se ha aplicado más arriba. Si la nube TRAÍA
+         * aspecto y perdió por ser más viejo, ese avatar tampoco vale: se
+         * devuelve el de este aparato, que el push de después sube.
+         *
+         * Si no traía ninguno —una cuenta de antes de que el aspecto viajara,
+         * o un proyecto sin la columna— no hay nada que comparar y manda la
+         * columna de siempre, como toda la vida. */
+        var traiaAspecto = !!(fila.ajustes && Math.floor(fila.ajustes.ts || 0) > 0);
+        if (traiaAspecto && !vino && avatarAqui) {
+          s.avatar = avatarAqui;
+          this.user.avatar = avatarAqui;
+        }
+      }
       // el nombre del juego pasa a ser el de la cuenta
       s.nick1 = this.user.usuario;
       if (window.PM.UI && window.PM.UI.saveSettings) window.PM.UI.saveSettings();
