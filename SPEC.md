@@ -2988,13 +2988,44 @@ host's difficulty settings + livesMode + startLevel are imposed):
   which auto-joins on load. The lobby **is the party** (see Party): the
   leader is J1 and `pstart` hands out the indices; whoever arrives once the
   game started gets `full` (unless they come to spectate). Protocol version
-  `PM.CFG.NET.PROTO` (= 4) must match.
+  `PM.CFG.NET.PROTO` (= 15) must match.
 - Transport (`PM.Net`): Supabase Realtime broadcast channels over a minimal
   hand-written Phoenix WebSocket client (heartbeat every 25 s; no database
   usage), credentials in `js/net-config.js` (`PM.NET_CFG`). Dev transport
   via `?red=local` uses BroadcastChannel between two tabs of one browser.
   Every payload is wrapped `{s: senderId, d: data}`; after the handshake
   only the locked peer's messages are accepted.
+- **Direct peer links** (`js/net-directo.js`, `PM.Directo`, 19 Sep): WebRTC
+  data channels laid **on top of** the Supabase channel, which stays as the
+  introducer and the fallback. Measured from Lima, the round trip to Supabase
+  is **84 ms** and every message counts against the monthly quota (2 M on the
+  free plan ≈ a few dozen 10-minute games); a direct link between two homes in
+  one city is 15-25 ms and costs nothing. Mechanics:
+  - Discovery is free: any sid seen on the channel becomes a candidate. The
+    **lower sid offers**, so two peers never collide negotiating.
+  - Signalling rides the channel as the reserved event `~rtc` (`{to, k, …}`,
+    `k` = o/a/i for offer, answer, ICE), intercepted by `Net.entrega` before
+    the game ever sees it. STUN only (public Google servers) — **no TURN**: the
+    ~10 % that cannot link directly simply keep using Supabase, so nothing to
+    pay and nothing to run.
+  - Two channels per link: `sn` (`ordered:false, maxRetransmits:0`) carries
+    `snap`/`pos`, which expire on their own; `ev` (reliable, ordered) carries
+    everything else. A lost snapshot is replaced 83 ms later; retransmitting
+    it would only head-of-line block what comes after.
+  - `Net.send` posts to every live link, and falls back to the channel only
+    if someone is still missing — carrying `x: [sids already served]` so they
+    drop the duplicate. When every known peer is linked, the paid channel goes
+    completely quiet.
+  - **Ordering** (`CADUCAN` = snap/pos/gir): those three are numbered (`q`)
+    and a late one is dropped by `Net.aTiempo`. Needed because the fast
+    channel does not preserve order by design, and because while a link is
+    coming up two paths of very different speed coexist (20 ms vs 84). Nothing
+    else is numbered — events must all arrive.
+  - **Spectators** listen on the channel and have no link with anyone, so the
+    host keeps the channel alive while it knows someone is watching
+    (`Net.mantenCanal`, renewed by the spectator's `hello {spec:1, hb:1}`
+    every 6 s).
+  - `?directo=no` turns the whole thing off, for comparing.
 - Authority: the **host simulates everything** (ghosts, schedule, house
   counters, Elroy, fruit, score, lives, state machine) and broadcasts
   snapshots every 5 ticks (~12 Hz; every 15th carries the full pellet
@@ -3002,6 +3033,22 @@ host's difficulty settings + livesMode + startLevel are imposed):
   Pac-Man** locally (zero input lag), sends `pos {x,y,dir,nextDir,eaten[]}`
   every 5 ticks (sooner on turns/eats), and mirrors everything else from
   snapshots, dead-reckoning the host's pac and the ghosts between them.
+- **Smooth correction** (`Pacman.ponRemoto` / `pasoError`, 19 Sep): a remote
+  pac is guessed between snapshots, so a turn nobody knew about leaves it a
+  corridor ahead — and slamming it back was the "teleport" players complained
+  about. Now `x, y` take the authoritative value immediately (the host's
+  rebroadcast and everything else depend on it) and the difference is parked in
+  `errX/errY`, applied as a canvas translation in `Game.drawPac` so the trail,
+  accessories and effects travel with it. It decays 0.74 per tick — gone in
+  ~8 frames (130 ms). A gap over 3 tiles (`ERR_MAX`) is not a correction but a
+  tunnel, FLASH, portal or respawn: those still snap.
+- **Turns travel alone** (`gir`, 19 Sep): a snapshot leaves 12 times a second,
+  so a turn could sit up to 83 ms inside the host before being passed on —
+  which, with the trip each way, put it 170-250 ms behind for everyone else.
+  The turn is exactly the datum that breaks prediction, so the guest flags its
+  `pos` with `g:1` and the host re-broadcasts `gir {i,x,y,d,nd}` at once (its
+  own too, via `hostAvisaGiro`). Cheap: Pac-Man turns a few times a second,
+  not twelve.
 - Guest prediction (confirmed by host events): eating dots/energizers
   (fright shown immediately), eating frightened ghosts (freeze + hide,
   host validates and replies `eatGhost` with chain points), own death

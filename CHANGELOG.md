@@ -2,6 +2,49 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-19 · Se acabaron los teletransportes: la partida ya no pasa por Estados Unidos
+
+Tres cambios en el modo online, del más visible al más de fondo.
+
+**1. Los compañeros ya no dan saltos.** Entre foto y foto de la red, a los
+demás jugadores se les adivinaba el camino: se les hacía seguir recto con el
+último rumbo que se sabía de ellos. Si el otro había girado, la suposición lo
+dejaba pasillo adelante, y al llegar la foto de verdad aparecía de golpe en su
+sitio. Ahora la posición buena entra igual de rápido —de ella depende todo lo
+demás— pero el muñeco **se desliza hasta ella en unos ocho fotogramas** en vez
+de aparecer allí. Los saltos de verdad (túnel, portal, reaparición) se siguen
+haciendo de golpe: arrastrar a alguien por medio laberinto sería peor.
+
+**2. Los giros salen al instante.** Una foto de la partida sale doce veces por
+segundo, así que un giro podía quedarse hasta 83 ms esperando dentro del
+anfitrión. Sumado al viaje de ida y al de vuelta, eran **entre 170 y 250 ms**
+en los que los demás seguían dibujándote recto por un pasillo que ya habías
+dejado. El giro es justo el dato que rompe la suposición, así que ahora viaja
+solo, sin esperar a nadie.
+
+**3. Los jugadores se conectan directamente entre ellos.** Hasta ahora toda la
+partida pasaba por el servidor de Supabase, que está en Estados Unidos: entre
+dos vecinos de Lima, **cada foto cruzaba el continente y volvía (84 ms
+medidos)**. Ahora los navegadores se hablan directos, como en una videollamada,
+y el servidor solo los presenta al entrar.
+
+- Medido entre dos navegadores de verdad: **de 91 ms a 1-3 ms** en la misma
+  máquina; entre dos casas de una misma ciudad son 15-25 ms.
+- En una partida real de dos, lo que cada uno veía del otro se desviaba
+  **5 px de media (más de media casilla)**. Con enlace directo, **cero**.
+- Quien no consiga enlazar —aproximadamente uno de cada diez, por culpa de su
+  router— **sigue jugando por el camino de siempre sin enterarse**. No hace
+  falta ningún servidor de rebote de pago.
+- De propina, la cuota: cada mensaje que pasa por Supabase se cobra, y doce
+  fotos por segundo y por jugador agotaban el plan gratuito en unas pocas
+  decenas de partidas. Con los enlaces montados, **el servidor se queda
+  completamente callado** durante la partida.
+- Quien esté **mirando** una partida de amigos sigue escuchando por el canal
+  de siempre, así que el anfitrión lo mantiene encendido mientras sepa que hay
+  alguien viendo.
+
+Se puede apagar con `?directo=no` para comparar.
+
 ## 2026-09-18 · La tanda EXTRAVAGANTE entra en el juego (26 piezas)
 
 Las skins que llevaban semanas en el escaparate ya se pueden llevar puestas.

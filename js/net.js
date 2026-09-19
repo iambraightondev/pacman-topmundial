@@ -318,8 +318,34 @@
   /* ------------------------------------------------------------
    * API de alto nivel
    * ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+   * ORDEN DE LO QUE CADUCA
+   *
+   * Fotos, posiciones y giros pueden adelantarse entre sí: el canal rápido
+   * de un enlace directo no guarda el orden a propósito (ver net-directo.js),
+   * y mientras un enlace se está montando conviven dos caminos de velocidades
+   * muy distintas —20 ms por el directo, 84 por el servidor—, así que lo
+   * último puede llegar antes que lo anterior.
+   *
+   * Con estos tres da igual perderse uno, pero no aplicar uno viejo encima de
+   * uno nuevo: sería un salto atrás. Así que van numerados y el que llega
+   * tarde se tira. Los demás mensajes (muertes, niveles, emotes) no se numeran
+   * ni se tiran nunca: esos tienen que llegar todos.
+   * ------------------------------------------------------------ */
+  var CADUCAN = { snap: 1, pos: 1, gir: 1 };
+  /* Un retroceso mayor que esto no es desorden, es alguien que ha vuelto a
+   * empezar (recarga, reconexión): se le acepta y se sigue contando desde ahí. */
+  var SALTO_ATRAS = 1000;
+
   var Net = {
     sid: randomId(),     // identificador de esta sesión
+    seq: 0,              // numerador de lo que caduca
+    /* Hasta cuándo hay que seguir mandando por el canal aunque todos los
+     * jugadores tengan enlace directo. Quien mira una partida escucha por el
+     * canal y no tiene enlace con nadie: si el anfitrión dejara de usarlo, se
+     * le quedaría la pantalla congelada. Ver mantenCanal(). */
+    forzarCanal: 0,
+    ultimoQ: {},         // sid -> último número aplicado
     peers: [],           // sesiones aceptadas ([] = se acepta a cualquiera)
     transport: null,
     code: null,
@@ -394,6 +420,7 @@
      * soltar la propia party (que sigue viva en el canal principal).
      * ---------------------------------------------------------- */
     viewCh: null,
+    viewLatido: null,
     viewCode: null,
     viewHandler: null,   // function(name, data, sid)
     viewOnClose: null,
@@ -414,7 +441,16 @@
       if (cbs.onMsg) this.viewHandler = cbs.onMsg;
       if (cbs.onGone) this.viewOnClose = cbs.onGone;
       this.viewCh = this.openChannel('sala:' + code, {
-        onOpen: function () { if (cbs.onOpen) cbs.onOpen(); },
+        onOpen: function () {
+          /* Recordarle al anfitrión que hay alguien mirando: mientras lo
+           * sepa, seguirá repartiendo la partida por el canal, que es por
+           * donde escucha un mirón (no tiene enlace directo con nadie). */
+          if (self.viewLatido) clearInterval(self.viewLatido);
+          self.viewLatido = setInterval(function () {
+            if (self.viewCh) self.viewCh.send('hello', { v: CFG.NET.PROTO, spec: 1, hb: 1 });
+          }, 6000);
+          if (cbs.onOpen) cbs.onOpen();
+        },
         onError: function (m) { if (cbs.onError) cbs.onError(m); },
         onClose: function () { if (self.viewOnClose) self.viewOnClose(); },
         onData: function (name, d, sid) {
@@ -424,6 +460,7 @@
     },
 
     closeView: function () {
+      if (this.viewLatido) { clearInterval(this.viewLatido); this.viewLatido = null; }
       if (this.viewCh) { this.viewCh.close(); this.viewCh = null; }
       this.viewCode = null;
       this.viewHandler = null;
@@ -445,16 +482,49 @@
       this.peers = [];
       this.transport = this.newTransport();
       var self = this;
+      /* El ENLACE DIRECTO entre jugadores se monta encima de este canal, que
+       * se queda de presentador y de respaldo (js/net-directo.js). */
+      var D = window.PM.Directo;
+      if (D) {
+        D.arranca(this.sid,
+          function (name, data) {
+            if (self.transport) self.transport.send(name, { s: self.sid, d: data });
+          },
+          function (name, wrap) { self.entrega(name, wrap); });
+      }
       this.transport.connect('sala:' + code, {
         onOpen: function () { if (cbs.onOpen) cbs.onOpen(); },
         onError: function (m) { if (cbs.onError) cbs.onError(m); },
         onClose: function () { if (self.onclose) self.onclose(); },
-        onData: function (name, wrap) {
-          if (!wrap || wrap.s === self.sid) return;
-          if (!self.accepts(wrap.s, name)) return;
-          if (self.handler) self.handler(name, wrap.d, wrap.s);
-        }
+        onData: function (name, wrap) { self.entrega(name, wrap); }
       });
+    },
+
+    /* Un mensaje que llega, venga del canal o de un enlace directo. */
+    entrega: function (name, wrap) {
+      if (!wrap || wrap.s === this.sid) return;
+      /* ya llegó por el enlace directo: esta copia del canal sobra */
+      if (wrap.x && wrap.x.indexOf(this.sid) !== -1) return;
+      var D = window.PM.Directo;
+      if (name === '~rtc') {            // presentaciones: no son del juego
+        if (D) D.senal(wrap.d, wrap.s);
+        return;
+      }
+      if (D) D.ve(wrap.s);              // a quien se deja ver se le ofrece enlace
+      if (!this.accepts(wrap.s, name)) return;
+      if (!this.aTiempo(wrap)) return;  // uno viejo que llega tarde (ver CADUCAN)
+      if (this.handler) this.handler(name, wrap.d, wrap.s);
+    },
+
+    /* ¿Este mensaje numerado es más nuevo que el último que se le aplicó? */
+    aTiempo: function (wrap) {
+      if (typeof wrap.q !== 'number') return true;
+      var ult = this.ultimoQ[wrap.s];
+      if (typeof ult === 'number' && wrap.q <= ult && ult - wrap.q < SALTO_ATRAS) {
+        return false;
+      }
+      this.ultimoQ[wrap.s] = wrap.q;
+      return true;
     },
 
     /* Con la partida ya cerrada solo se atiende a los suyos; los saludos de
@@ -466,7 +536,18 @@
     },
 
     send: function (name, data) {
-      if (this.transport) this.transport.send(name, { s: this.sid, d: data });
+      if (!this.transport) return;
+      var wrap = { s: this.sid, d: data };
+      if (CADUCAN[name]) wrap.q = ++this.seq;
+      var D = window.PM.Directo;
+      /* primero por los enlaces directos que haya (ver js/net-directo.js) */
+      var porDirecto = D ? D.manda(name, wrap) : null;
+      /* si a todos les ha llegado por ahí, el canal de pago no se toca...
+       * salvo que haya alguien mirando, que solo escucha por ahí */
+      if (porDirecto && D.todosDirectos() && Date.now() > this.forzarCanal) return;
+      /* si no, sale por el canal, diciendo a quién no hay que repetírselo */
+      if (porDirecto) wrap.x = porDirecto;
+      this.transport.send(name, wrap);
     },
 
     /* El juego avisa de un silencio: que el canal de la partida compruebe
@@ -476,12 +557,25 @@
       else if (this.transport && this.transport.sondear) this.transport.sondear();
     },
 
+    /* "Sigue usando el canal durante estos milisegundos": lo pide el
+     * anfitrión cada vez que sabe de alguien que está mirando la partida. */
+    mantenCanal: function (ms) {
+      var hasta = Date.now() + (ms || 20000);
+      if (hasta > this.forzarCanal) this.forzarCanal = hasta;
+    },
+
     lockPeer: function (sid) { this.peers = [sid]; },
     lockPeers: function (sids) { this.peers = (sids || []).slice(); },
     unlockPeers: function () { this.peers = []; },
 
     leaveTransport: function () {
+      if (window.PM.Directo) window.PM.Directo.corta();
       if (this.transport) { this.transport.close(); this.transport = null; }
+    },
+
+    /* Cuántos compañeros van por enlace directo (para la pantalla ONLINE) */
+    directos: function () {
+      return window.PM.Directo ? window.PM.Directo.cuenta() : 0;
     },
 
     leave: function () {
@@ -489,6 +583,7 @@
       this.leaveTransport();
       this.code = null;
       this.peers = [];
+      this.ultimoQ = {};
       this.handler = null;
       this.onclose = null;
     }

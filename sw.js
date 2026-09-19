@@ -30,6 +30,7 @@ var SHELL = [
   './js/pacman.js',
   './js/ghost.js',
   './js/net-config.js',
+  './js/net-directo.js',
   './js/net.js',
   './js/party.js',
   './js/badges.js',

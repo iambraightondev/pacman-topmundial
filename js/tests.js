@@ -2922,6 +2922,126 @@
     G.toMenu();
   });
 
+  /* ---------- Suavizar lo que llega por la red ---------- */
+
+  test('a un compañero no se le teletransporta: la corrección se desliza',
+    function () {
+      partida(2, 'guest');
+      var ot = 1 - G.localIdx;               // el asiento del compañero
+      var otro = G.pacs[ot];
+      var x0 = otro.x;
+      var s = G.buildSnapshot(false);
+      s.ps[ot].x = x0 + 10;                  // giró, y la suposición se pasó
+      G.applySnapshot(s);
+      eq(otro.x, x0 + 10, 'la partida usa la posición de verdad desde el primer momento');
+      eq(Math.round(otro.x + otro.errX), Math.round(x0),
+        'pero al ojo se le sigue enseñando donde estaba');
+      var antes = Math.abs(otro.errX);
+      otro.pasoError();
+      ok(Math.abs(otro.errX) < antes, 'y va volviendo a su sitio');
+      for (var i = 0; i < 20; i++) otro.pasoError();
+      eq(otro.errX, 0, 'en unos fotogramas ya no queda nada que disimular');
+      G.netRole = null;
+      G.toMenu();
+    });
+
+  test('un salto de verdad (túnel, portal, reaparición) no se arrastra',
+    function () {
+      partida(2, 'guest');
+      var ot = 1 - G.localIdx;
+      var otro = G.pacs[ot];
+      var lejos = otro.x + 5 * CFG.TILE;
+      var s = G.buildSnapshot(false);
+      s.ps[ot].x = lejos;
+      G.applySnapshot(s);
+      eq(otro.x, lejos, 'se le pone donde toca');
+      eq(otro.errX, 0, 'y de golpe: arrastrarlo por medio laberinto sería peor');
+      G.netRole = null;
+      G.toMenu();
+    });
+
+  test('la corrección no toca al Pac-Man propio, que se simula aquí',
+    function () {
+      partida(2, 'guest');
+      var yo = G.pacs[G.localIdx];
+      var x0 = yo.x;
+      var s = G.buildSnapshot(false);
+      s.ps[G.localIdx].x = x0 + 10;
+      G.applySnapshot(s);
+      eq(yo.x, x0, 'el anfitrión no recoloca al jugador local');
+      eq(yo.errX, 0, 'y no hay nada que disimular');
+      G.netRole = null;
+      G.toMenu();
+    });
+
+  test('el giro de un compañero sale al instante, sin esperar a la foto',
+    function () {
+      partida(2, 'host');
+      var ot = 1 - G.hostIdx;                // el asiento del invitado
+      var enviados = [];
+      var orig = G.netSend;
+      G.netSend = function (n, d) { enviados.push({ n: n, d: d }); };
+      try {
+        var p = G.pacs[ot];
+        G.hostMsg('pos', { i: ot, x: p.x, y: p.y, d: CFG.DIR.UP, nd: CFG.DIR.UP,
+                           e: [], g: 1 }, 'sid-de-al-lado');
+        eq(enviados.length, 1, 'el giro se reparte en el acto');
+        eq(enviados[0].n, 'gir', 'y con su propio mensaje');
+        eq(enviados[0].d.i, ot, 'diciendo de quién es');
+        enviados.length = 0;
+        G.hostMsg('pos', { i: ot, x: p.x, y: p.y, d: CFG.DIR.UP, nd: CFG.DIR.UP,
+                           e: [] }, 'sid-de-al-lado');
+        eq(enviados.length, 0, 'las doce posiciones de cada segundo no se repiten');
+      } finally {
+        G.netSend = orig;
+        G.netRole = null;
+        G.toMenu();
+      }
+    });
+
+  test('un giro que llega antes que su foto ya coloca al compañero',
+    function () {
+      partida(2, 'guest');
+      var ot = 1 - G.localIdx;
+      var otro = G.pacs[ot];
+      var x0 = otro.x;
+      G.aplicaGiro({ i: ot, x: x0 + 6, y: otro.y, d: CFG.DIR.UP, nd: CFG.DIR.UP });
+      eq(otro.x, x0 + 6, 'la posición entra');
+      eq(otro.dir, CFG.DIR.UP, 'y el rumbo nuevo, que es lo que rompía la suposición');
+      ok(otro.errX !== 0, 'también sin saltar');
+      G.aplicaGiro({ i: G.localIdx, x: 0, y: 0, d: CFG.DIR.UP, nd: CFG.DIR.UP });
+      ok(G.pacs[G.localIdx].x !== 0, 'el giro propio no se acepta de vuelta');
+      G.netRole = null;
+      G.toMenu();
+    });
+
+  test('una foto que llega tarde se tira; la que llega a tiempo, no',
+    function () {
+      var N = window.PM.Net;
+      var sid = 'sid-de-prueba';
+      var antes = N.ultimoQ[sid];
+      try {
+        delete N.ultimoQ[sid];
+        ok(N.aTiempo({ s: sid, q: 5 }), 'la primera pasa');
+        ok(!N.aTiempo({ s: sid, q: 4 }), 'una anterior se tira: sería un salto atrás');
+        ok(!N.aTiempo({ s: sid, q: 5 }), 'y la repetida también');
+        ok(N.aTiempo({ s: sid, q: 6 }), 'la siguiente pasa');
+        ok(N.aTiempo({ s: sid }), 'lo que no va numerado (muertes, niveles) pasa siempre');
+      } finally {
+        if (antes === undefined) delete N.ultimoQ[sid];
+        else N.ultimoQ[sid] = antes;
+      }
+    });
+
+  test('el enlace directo no se enciende solo si no hay con quién',
+    function () {
+      var D = window.PM.Directo;
+      ok(!!D, 'el módulo está');
+      eq(D.cuenta(), 0, 'sin enlaces montados no hay ninguno directo');
+      eq(D.manda('snap', { s: 'x' }), null, 'y no se manda nada por ahí');
+      eq(D.todosDirectos(), false, 'así que el canal de siempre sigue haciendo el trabajo');
+    });
+
   test('el fantasma del jugador lleva marca encima todo el rato', function () {
     versus(2, 1, 1);
     var puntos = [];

@@ -7,11 +7,44 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **18 de septiembre de 2026**.
+Última puesta al día: **19 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**19 sep — EL LAG DEL ONLINE, ATACADO POR LOS TRES SITIOS. HECHO, FALTA
+PROBARLO JUGANDO.** Braighton dijo que el online "va muy lag" y sospechaba de
+Vercel. Vercel es inocente: solo sirve los archivos una vez y después no vuelve
+a participar. Lo medido desde su máquina:
+
+| Medición | Antes | Ahora |
+| --- | --- | --- |
+| Viaje de una foto de partida | 84-93 ms (servidor en EE. UU.) | 1-3 ms por enlace directo |
+| Ver girar a un compañero | 170-250 ms | ~40-60 ms |
+| Desvío entre lo que ve cada uno del otro | 5 px (media casilla) | 0 px |
+| Mensajes de Supabase por partida | ~28.000 | menos de 10 |
+
+Los tres cambios, en CHANGELOG (19 sep) y en SPEC (*Multiplayer*):
+
+1. **Corrección suave**: el compañero ya no salta a su sitio, se desliza.
+2. **Giros al instante**: no esperan a la siguiente foto del anfitrión.
+3. **Enlace directo entre jugadores** (WebRTC): la partida deja de pasar por
+   Estados Unidos. Quien no pueda enlazar sigue por el camino de siempre.
+
+**Probado**: pruebas de Node al día, y dos navegadores de verdad jugando una
+partida online completa (con y sin enlace directo) sin un error en consola.
+**Falta**: jugarlo con gente de verdad, en redes distintas y en móvil —que es
+donde más routers se resisten al enlace directo. La pantalla de ONLINE no dice
+todavía si vas por enlace directo o por el servidor (el dato está en
+`PM.Net.directos()`); si quiere verlo mientras lo prueban, se pone.
+
+**El aviso que viene de esto:** el plan gratuito de Supabase son 2 millones de
+mensajes al mes. Al ritmo de antes, eso eran unas pocas decenas de partidas de
+diez minutos **en todo el juego**, no por jugador: el día que la publicidad
+funcionara, el juego se caía. Con los enlaces directos el servidor se queda
+callado durante la partida y el problema desaparece, salvo para los que no
+logren enlazar.
 
 **18 sep — VESTUARIO EXTRAVAGANTE, 26 piezas, A LA ESPERA DE SU VISTO BUENO.**
 Braighton pidió otra tanda, esta vez con las skins **extravagantes**: nada de

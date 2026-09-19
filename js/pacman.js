@@ -46,6 +46,55 @@
      * del camino (recorrido) y CHISPAS estalla al girar (giroEn). */
     this.recorrido = 0;
     this.giroEn = -1;
+    /* Corrección suave de los Pac-Man ajenos: ver ponRemoto() */
+    this.errX = 0;
+    this.errY = 0;
+  };
+
+  /* ------------------------------------------------------------
+   * CORRECCIÓN SUAVE (Pac-Man de otro jugador)
+   *
+   * Entre foto y foto de la red, un Pac-Man ajeno se adivina: se le hace
+   * andar con el último rumbo que se supo de él. Cuando llega la foto de
+   * verdad casi siempre coincide, pero si entretanto giró, la suposición lo
+   * dejó pasillo adelante, y ponerlo de golpe en su sitio es el
+   * "teletransporte" de toda la vida.
+   *
+   * Así que no se pone de golpe: la posición de la simulación (x, y) pasa a
+   * ser la buena en el acto —de ella dependen la foto que reparte el anfitrión
+   * y todo lo demás—, y la diferencia se guarda aparte, en errX/errY. Al
+   * dibujar se suma, de modo que el muñeco sigue apareciendo donde estaba y
+   * se desliza hasta su sitio en unos ocho fotogramas. Nada de la partida se
+   * entera; solo el ojo.
+   * ------------------------------------------------------------ */
+  /* Cuánto se reabsorbe en cada tick: 0,74^8 ≈ 0,09, o sea que a los ocho
+   * ticks (~130 ms) no queda nada. Más lento se arrastra; más rápido, salta. */
+  var ERR_DECAE = 0.74;
+  /* Un desvío mayor que esto no es una corrección: es el túnel, un FLASH, un
+   * portal o una reaparición. Ahí se salta como siempre, que arrastrar al
+   * muñeco por medio laberinto sería mucho peor que el salto. */
+  var ERR_MAX = 3 * T;
+
+  /* Coloca a un Pac-Man ajeno donde dice la red, disimulando el salto. */
+  Pacman.prototype.ponRemoto = function (x, y, dir, nextDir) {
+    var ex = this.errX + (this.x - x);
+    var ey = this.errY + (this.y - y);
+    if (Math.abs(ex) > ERR_MAX || Math.abs(ey) > ERR_MAX) { ex = 0; ey = 0; }
+    this.errX = ex;
+    this.errY = ey;
+    this.x = x;
+    this.y = y;
+    if (dir !== undefined) this.dir = dir;
+    if (nextDir !== undefined) this.nextDir = nextDir;
+  };
+
+  /* Un tick de reabsorción. Lo llama game.js para todos los Pac-Man. */
+  Pacman.prototype.pasoError = function () {
+    if (this.errX === 0 && this.errY === 0) return;
+    this.errX *= ERR_DECAE;
+    this.errY *= ERR_DECAE;
+    if (Math.abs(this.errX) < 0.05) this.errX = 0;
+    if (Math.abs(this.errY) < 0.05) this.errY = 0;
   };
 
   /* Cuánto cabe en la huella: ~1 tick por punto, sobra para la estela más

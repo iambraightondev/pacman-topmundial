@@ -773,8 +773,8 @@
     PARTIDA_MIN_S: 60,
     POR_MIL: 4,
     TOPE_PARTIDA: 200,
-    POR_RETO: 60,
-    POR_SEMANA: 400,
+    POR_RETO: 100,
+    POR_SEMANA: 800,
     EMOTE_TECLAS: 6,
     /* REGALO DE VETERANO (15 de septiembre, opción A elegida por Braighton):
      * quien ya había jugado antes de la tienda no empieza igual que quien
@@ -1157,7 +1157,20 @@
     RESET: '2026-08-15',
     DIAS: 7,
     LIBRES_POR_SEMANA: 5,     // los otros dos salen de la lista de modo
-    XP: 400,                  // experiencia por reto cumplido
+    XP: 2500,                 // experiencia por reto cumplido
+
+    /* PREMIOS DE RACHA. La racha se veía en la cartilla y no daba nada:
+     * era un número de adorno. Ahora cada escalón de días seguidos paga,
+     * y se cobra una sola vez por racha (si se rompe y se vuelve a subir,
+     * se vuelve a cobrar: son otros tantos días de volver). */
+    RACHA_PREMIOS: [
+      { dias: 3, monedas: 150 },
+      { dias: 7, monedas: 400 },
+      { dias: 14, monedas: 800 },
+      { dias: 30, monedas: 2000 },
+      { dias: 60, monedas: 3500 },
+      { dias: 100, monedas: 6000 }
+    ],
     NOTICE_TICKS: 260,        // aviso en partida (~4,3 s)
     COLOR: '#00ffff',
     DIA_NOMBRE: ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES',
@@ -1920,8 +1933,9 @@
      * PORTAL con otra dimensión (la 'dimension' de cada jugador en la foto); la
      * 13, el REY FANTASMA ('jf') y SUPERVIVENCIA ('sv' en la foto, la sala y
      * el arranque); la 14, PASAR EL MANDO (el mensaje 'mando', con el que el
-     * anfitrión que se va le deja la partida al siguiente). */
-    PROTO: 14,
+     * anfitrión que se va le deja la partida al siguiente); la 15, los GIROS
+     * AL INSTANTE (el mensaje 'gir' del anfitrión y la 'g' del de posición). */
+    PROTO: 15,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

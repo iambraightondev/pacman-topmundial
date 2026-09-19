@@ -646,6 +646,7 @@
       this.frightPredictTick = -9999;
       this.eatPredictTick = -9999;
       this._lastSentDir = -2; this._lastSentNext = -2;
+      this._hostLastDir = -2; this._hostLastNext = -2;
       this.eaterIdx = 0; this.dyingPlayer = 0;
       if (this.netRole) {
         var self = this;
@@ -1032,6 +1033,10 @@
 
     step: function () {
       this.tick++;
+      /* Corrección suave de los Pac-Man ajenos: se reabsorbe con el reloj de
+       * la partida (en pausa no corre, que nada se mueve). En local no hay
+       * nada que reabsorber y sale por la puerta de al lado. */
+      for (var pe = 0; pe < this.pacs.length; pe++) this.pacs[pe].pasoError();
       /* repeticiones: lleva su propio reloj y, si se está viendo una, mete
        * los giros que tocan en este tick antes de simular (js/replay.js) */
       /* DESATADO: las teclas mantenidas que llegan a su rato salen aquí, antes
@@ -3178,6 +3183,7 @@
             if (this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
           }
         }
+        this.hostAvisaGiro();
         this.snapTimer++;
         if (this.snapTimer >= CFG.NET.SNAP_EVERY) {
           this.snapTimer = 0;
@@ -3449,8 +3455,9 @@
           // dy = el invitado está muriendo: el mensaje solo sirve de señal de
           // vida (y para las pastillas), la posición la lleva el anfitrión
           if (!p.dying && !data.dy) {
-            p.x = data.x; p.y = data.y;
-            p.dir = data.d; p.nextDir = data.nd;
+            p.ponRemoto(data.x, data.y, data.d, data.nd);
+            // un giro no espera a la foto: sale hacia los demás ahora mismo
+            if (data.g) this.avisaGiro(idx, p);
           }
           if (data.e && this.state === 'PLAYING') {
             for (var i = 0; i < data.e.length; i++) {
@@ -3466,8 +3473,14 @@
           break;
         case 'hello':
           // los que vienen a mirar sí caben; a jugar ya no
-          if (data && data.spec) this.sendSpecView(sid);
-          else this.netSend('full', { to: sid });
+          if (data && data.spec) {
+            /* mientras haya quien mire, la partida sigue saliendo también por
+             * el canal: es por donde escuchan (ver Net.mantenCanal) */
+            if (window.PM.Net.mantenCanal) window.PM.Net.mantenCanal(20000);
+            if (!data.hb) this.sendSpecView(sid);   // hb = solo viene a recordarse
+          } else {
+            this.netSend('full', { to: sid });
+          }
           break;
         case 'bye': {
           var quien = this.idxOfSender(data, sid);
@@ -3628,6 +3641,44 @@
       };
     },
 
+    /* ---------------------------------------------------------
+     * GIROS AL INSTANTE
+     *
+     * Una foto sale doce veces por segundo, así que un giro podía esperar
+     * hasta 83 ms dentro del anfitrión antes de salir hacia los demás —y eso,
+     * sumado al viaje de ida y al de vuelta, son entre 170 y 250 ms en los
+     * que el resto seguía dibujando al jugador recto por el pasillo que ya
+     * había dejado. El giro es justo el dato que rompe la predicción, así que
+     * viaja solo y sin esperar a nadie.
+     *
+     * Barato: en Pac-Man se gira unas pocas veces por segundo, no doce, y el
+     * mensaje son cuatro números.
+     * --------------------------------------------------------- */
+    avisaGiro: function (i, p) {
+      if (this.netRole !== 'host') return;
+      this.netSend('gir', { i: i, x: r1(p.x), y: r1(p.y), d: p.dir, nd: p.nextDir });
+    },
+
+    /* El del propio anfitrión, que también iba dentro de la foto */
+    hostAvisaGiro: function () {
+      var me = this.pacs[this.localIdx];
+      if (!me || me.out || me.dying) return;
+      if (me.dir === this._hostLastDir && me.nextDir === this._hostLastNext) return;
+      this._hostLastDir = me.dir;
+      this._hostLastNext = me.nextDir;
+      this.avisaGiro(this.localIdx, me);
+    },
+
+    /* Invitado: un giro ajeno que llega antes que su foto. */
+    aplicaGiro: function (d) {
+      if (!d) return;
+      var i = d.i | 0;
+      if (i === this.localIdx) return;          // el propio se simula aquí
+      var p = this.pacs[i];
+      if (!p || p.out || p.dying) return;
+      p.ponRemoto(d.x, d.y, d.d, d.nd);
+    },
+
     buildSnapshot: function (withPellets) {
       var i;
       var p0 = this.pacs[0];
@@ -3699,6 +3750,8 @@
     guestMsg: function (name, data, sid) {
       switch (name) {
         case 'snap': if (data) this.applySnapshot(data); break;
+        // giro ajeno repartido al instante, sin esperar a la foto
+        case 'gir': this.aplicaGiro(data); break;
         case 'evt':  if (data) this.applyEvt(data); break;
         // el anfitrión se va y deja el mando (ver pasarElMando)
         case 'mando': this.recibirMando(data); break;
@@ -3938,6 +3991,9 @@
         e: this.outEaten,
         i: this.localIdx        // con 3 y 4 jugadores hace falta saber quién es
       };
+      /* el anfitrión reparte los giros en el acto, sin esperar a su foto:
+       * marcarlos evita hacerlo con los doce mensajes de cada segundo */
+      if (turned) msg.g = 1;
       if (dying) msg.dy = 1;
       this.netSend('pos', msg);
       this.outEaten = [];
@@ -4352,13 +4408,13 @@
         for (i = 0; i < this.pacs.length && i < s.ps.length; i++) {
           if (i === this.localIdx) continue;
           var pd = s.ps[i], pj = this.pacs[i];
-          pj.x = pd.x; pj.y = pd.y;
-          pj.dir = pd.d; pj.nextDir = pd.nd;
+          /* sin salto: la posición buena entra ya, pero el muñeco se desliza
+           * hasta ella en unos fotogramas (ver Pacman.ponRemoto) */
+          pj.ponRemoto(pd.x, pd.y, pd.d, pd.nd);
         }
       } else if (s.p0 && this.localIdx !== 0) {
         var h = this.pacs[0];
-        h.x = s.p0.x; h.y = s.p0.y;
-        h.dir = s.p0.d; h.nextDir = s.p0.nd;
+        h.ponRemoto(s.p0.x, s.p0.y, s.p0.d, s.p0.nd);
       }
 
       /* fantasmas */
@@ -4780,6 +4836,21 @@
     /* Un Pac-Man vivo, con lo que le haya puesto el modo DESATADO encima.
      * Fuera del modo es exactamente el dibujo de siempre. */
     drawPac: function (ctx, pc, i) {
+      /* Lo que queda por reabsorber de la última corrección: el muñeco se
+       * pinta donde el ojo lo dejó y vuelve a su sitio deslizándose. Va aquí,
+       * en una traslación, para que la estela, los accesorios y los efectos
+       * viajen con él en vez de quedarse atrás. */
+      if (pc.errX || pc.errY) {
+        ctx.save();
+        ctx.translate(pc.errX, pc.errY);
+        this.drawPacEn(ctx, pc, i);
+        ctx.restore();
+        return;
+      }
+      this.drawPacEn(ctx, pc, i);
+    },
+
+    drawPacEn: function (ctx, pc, i) {
       var color = this.colorFor(i);
       var skin = this.skinFor(i);
       var extra = this.pacExtra(pc, i);
