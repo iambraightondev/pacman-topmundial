@@ -162,9 +162,9 @@
     },
 
     /* ---------- ganar ----------
-     * Cuánto da una partida: 5 si ha durado un minuto (si no, reiniciar sin
-     * jugar sería la mejor forma de ganar dinero) y 1 por cada 1.000 puntos,
-     * con un tope. */
+     * Cuánto da una partida: POR_PARTIDA si ha durado un minuto (si no,
+     * reiniciar sin jugar sería la mejor forma de ganar dinero) y POR_MIL
+     * por cada 1.000 puntos, con un tope. */
     dePartida: function (puntos, segundos) {
       var n = ((segundos || 0) >= T.PARTIDA_MIN_S ? T.POR_PARTIDA : 0) +
         Math.floor(Math.max(0, puntos || 0) / 1000) * T.POR_MIL;

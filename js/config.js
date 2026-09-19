@@ -769,12 +769,12 @@
 
   CFG.TIENDA = {
     INICIALES: 1500,
-    POR_PARTIDA: 5,
+    POR_PARTIDA: 20,
     PARTIDA_MIN_S: 60,
-    POR_MIL: 1,
-    TOPE_PARTIDA: 40,
-    POR_RETO: 20,
-    POR_SEMANA: 150,
+    POR_MIL: 4,
+    TOPE_PARTIDA: 200,
+    POR_RETO: 60,
+    POR_SEMANA: 400,
     EMOTE_TECLAS: 6,
     /* REGALO DE VETERANO (15 de septiembre, opción A elegida por Braighton):
      * quien ya había jugado antes de la tienda no empieza igual que quien

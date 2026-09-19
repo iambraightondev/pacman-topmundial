@@ -7021,10 +7021,10 @@
   test('las monedas de una partida: minuto, miles y tope', function () {
     var Tn = window.PM.Tienda;
     eq(Tn.dePartida(0, 20), 0, 'reiniciar sin jugar no paga');
-    eq(Tn.dePartida(0, 60), 5, 'un minuto: 5');
-    eq(Tn.dePartida(3999, 30), 3, 'corta pero con puntos: 1 por cada 1.000');
-    eq(Tn.dePartida(12500, 300), 17, '5 + 12');
-    eq(Tn.dePartida(999999, 900), 40, 'tope de 40');
+    eq(Tn.dePartida(0, 60), 20, 'un minuto: 20');
+    eq(Tn.dePartida(3999, 30), 12, 'corta pero con puntos: 4 por cada 1.000');
+    eq(Tn.dePartida(12500, 300), 68, '20 + 48');
+    eq(Tn.dePartida(999999, 900), 200, 'tope de 200');
   });
 
   test('el saldo se calcula: juntar dos aparatos no duplica ni borra compras', function () {
@@ -7251,9 +7251,9 @@
       var Dl = window.PM.Daily, apunta = Dl.apunta;
       Dl.apunta = function () { return []; };
       try { G.closeRun(); } finally { Dl.apunta = apunta; }
-      eq(Tn.ganadas(), 12, '5 + 7');
-      eq(G.runSummary.monedas, 12, 'al resumen');
-      eq(G.runSummary.saldo, 1512);
+      eq(Tn.ganadas(), 48, '20 + 28');
+      eq(G.runSummary.monedas, 48, 'al resumen');
+      eq(G.runSummary.saldo, 1548);
       G.toMenu();
       conDaily(function (Dy) {
         var antes = Tn.ganadas();
