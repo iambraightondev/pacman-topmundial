@@ -3390,10 +3390,18 @@ input[type="range"] {
  * detrás. Lo que se toca (los dos campos y ENTRAR) manda; lo que casi nunca
  * se toca baja a una línea de enlaces. */
 #prompt.popup {
+  /* FIJO A LA PANTALLA, no al escenario. Los paneles son absolutos dentro
+   * de #stage, que mide exactamente lo que el lienzo (224x288 escalado), y
+   * con el velo ahí dentro lo que se veía era un RECUADRO negro metido en
+   * el mueble de la recreativa, con las bombillas encendidas alrededor. Un
+   * diálogo del que no se puede salir tiene que tapar la pantalla entera o
+   * no se lee como tal. */
+  position: fixed;
+  inset: 0;
   justify-content: center;
   background:
-    radial-gradient(ellipse at 50% 45%, rgba(10, 10, 60, 0.75) 0, rgba(0, 0, 0, 0.94) 60%),
-    rgba(0, 0, 0, 0.94);
+    radial-gradient(ellipse at 50% 45%, rgba(10, 10, 60, 0.82) 0, rgba(0, 0, 0, 0.95) 65%),
+    rgba(0, 0, 0, 0.95);
 }
 
 .popup-caja {
@@ -3467,6 +3475,18 @@ input[type="range"] {
 
 .popup-caja .nick-input::placeholder { color: #4a4c7e; }
 
+/* Chrome pinta de blanco lo que autorrellena, y ahí se perdía el campo
+ * negro: el truco de siempre es una sombra interior del color que toca,
+ * porque el fondo del autorrelleno no se puede cambiar. */
+.popup-caja .nick-input:-webkit-autofill,
+.popup-caja .nick-input:-webkit-autofill:hover,
+.popup-caja .nick-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffff00;
+  -webkit-box-shadow: 0 0 0 40px #000 inset;
+  box-shadow: 0 0 0 40px #000 inset;
+  caret-color: #ffff00;
+}
+
 .popup-caja .nick-input:focus {
   outline: none;
   border-color: #ffff00;
@@ -3492,6 +3512,8 @@ input[type="range"] {
 .popup-caja .prompt-btns .btn-primary {
   padding: 12px 14px;
   letter-spacing: 5px;
+  /* su sombra de mueble se comía la primera línea de enlaces */
+  margin-bottom: 8px;
 }
 
 /* lo de abajo son enlaces, no botones: sin marco y en gris hasta que se
