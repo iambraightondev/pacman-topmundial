@@ -4340,8 +4340,19 @@
     ok(true, 'ninguno lanza');
   });
 
+  /* El perfil pide cuenta (es la cuenta), así que para mirarlo por dentro
+   * hay que fingir una sesión. */
+  function conSesion(fn) {
+    var Ac = window.PM.Account;
+    var u = Ac.user, tk = Ac.token;
+    Ac.user = u || { id: 'test', usuario: 'TEST' };
+    Ac.token = tk || 'test';
+    try { fn(); } finally { Ac.user = u; Ac.token = tk; }
+  }
+
   test('el panel PERFIL se monta y se refresca en sus dos pestañas', function () {
     var UI = window.PM.UI;
+    conSesion(function () {
     UI.showProfile();
     ok(UI.els.profile, 'existe el panel');
     ok(UI.profLookCv, 'enseña tu personaje (los avatares están en el vestuario)');
@@ -4351,6 +4362,7 @@
     eq(UI.achList.children.length, CFG.ACHIEVEMENTS.length,
        'la pestaña de logros los lista todos');
     UI.showProfileTab('perfil');
+    });
     UI.showMenu();
   });
 
@@ -4401,22 +4413,24 @@
       }
     });
 
-  test('de invitado no hay amigos, y el nombre se puede sortear', function () {
+  test('de invitado no hay amigos ni perfil: el perfil pide cuenta', function () {
     var UI = window.PM.UI;
     var Ac = window.PM.Account;
     ok(!Ac.logged(), 'sin sesión');
     UI.showFriends();
     eq(UI.friendsGate.style.display, 'flex', 'sale el aviso de que hace falta cuenta');
     eq(UI.friendsBody.style.display, 'none', 'y no la lista');
-    var antes = window.PM.settings.nick1;
     try {
       UI.showProfile();
-      eq(UI.profGuestRow.style.display, 'flex', 'de invitado se puede sortear nombre');
-      UI.profGuestRow.querySelector('.btn').click();
-      var n = window.PM.settings.nick1;
-      ok(n && n.length > 0 && n.length <= CFG.NICK_MAX, 'sale un nombre válido: ' + n);
+      eq(UI.els.profile.style.display, 'none', 'el panel no se abre');
+      ok(UI.promptOpen, 'sale la puerta de entrar');
+      ok(UI.els.prompt.classList.contains('popup'), 'y sale en caja, no a pantalla entera');
+      var etiquetas = [].map.call(UI.els.prompt.querySelectorAll('.btn'),
+        function (b) { return b.textContent; }).join(' ');
+      ok(etiquetas.indexOf('CREAR CUENTA') !== -1, 'con la puerta de crear cuenta');
+      ok(etiquetas.indexOf('VOLVER AL MENÚ') !== -1, 'y la única salida es el menú');
     } finally {
-      window.PM.settings.nick1 = antes;
+      UI.hidePrompt();
       UI.showMenu();
     }
   });
@@ -4474,6 +4488,10 @@
     function () {
       var UI = window.PM.UI, s = window.PM.settings, Tn = window.PM.Tienda;
       var antes = { skin1: s.skin1, skin2: s.skin2, acc1: s.acc1 };
+      var Ac = window.PM.Account;
+      var u0 = Ac.user, t0 = Ac.token;
+      Ac.user = u0 || { id: 'test', usuario: 'TEST' };
+      Ac.token = t0 || 'test';
       try {
         UI.showProfile();
         UI.showVestuario('skin', 'yo');
@@ -4523,6 +4541,7 @@
       } finally {
         s.skin1 = antes.skin1; s.skin2 = antes.skin2; s.acc1 = antes.acc1;
         UI.vestProbando = null;
+        Ac.user = u0; Ac.token = t0;
         UI.showMenu();
       }
     });

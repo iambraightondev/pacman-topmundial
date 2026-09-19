@@ -692,7 +692,26 @@
       var Sp = window.PM.Sprites;
       if (!Sp) return;
       var boca = [0, 1, 2, 1][Math.floor(t * 14) % 4];
-      var cv = this.marqCaza;
+      this.pintarCaza(this.marqCaza, t, boca);
+      this.pintarCaza(this.popupCaza, t, boca);
+      var cu = this.marqCursor;
+      if (cu && cu.offsetParent) {
+        var cc = cu.getContext('2d');
+        cc.setTransform(1, 0, 0, 1, 0, 0);
+        cc.clearRect(0, 0, cu.width, cu.height);
+        cc.imageSmoothingEnabled = false;
+        cc.setTransform(cu.width / 20, 0, 0, cu.width / 20, 0, 0);
+        try { Sp.drawPacman(cc, 10, 10, 3, boca, '#ffff00', 'clasico', {}); } catch (e) { }
+        cc.setTransform(1, 0, 0, 1, 0, 0);
+      }
+    },
+
+    /* La persecución de la demo de la máquina, en cualquier lienzo que se le
+     * dé: va bajo el logo de la portada y también dentro del diálogo de la
+     * cuenta, que sin ella era una caja con dos campos. */
+    pintarCaza: function (cv, t, boca) {
+      var Sp = window.PM.Sprites;
+      if (!Sp) return;
       if (cv && cv.offsetParent) {
         /* El lienzo se estira a lo ancho de la portada con una altura tope:
          * si su ancho interno no sigue la proporción de la caja, los dibujos
@@ -728,16 +747,6 @@
           }
         } catch (e) { /* un dibujo raro no rompe la portada */ }
         c.setTransform(1, 0, 0, 1, 0, 0);
-      }
-      var cu = this.marqCursor;
-      if (cu && cu.offsetParent) {
-        var cc = cu.getContext('2d');
-        cc.setTransform(1, 0, 0, 1, 0, 0);
-        cc.clearRect(0, 0, cu.width, cu.height);
-        cc.imageSmoothingEnabled = false;
-        cc.setTransform(cu.width / 20, 0, 0, cu.width / 20, 0, 0);
-        try { Sp.drawPacman(cc, 10, 10, 3, [0, 1, 2, 1][Math.floor(t * 10) % 4], '#ffff00', 'clasico', {}); } catch (e) { }
-        cc.setTransform(1, 0, 0, 1, 0, 0);
       }
     },
 
@@ -1327,6 +1336,13 @@
           (r < racha ? ' on' : (r < mejor ? ' mejor' : ''))));
       }
       this.dailyRacha.appendChild(mk('span', 'daily-mejor', 'MEJOR ' + mejor));
+
+      /* hacia dónde va la racha: el siguiente escalón que paga */
+      var hito = D.proximoHito(est);
+      if (hito) {
+        this.dailyRacha.appendChild(mk('span', 'daily-hito',
+          'DÍA ' + hito.dias + ' +' + hito.monedas));
+      }
 
       this.dailyList.innerHTML = '';
       this.dailyHoyCard = null;
@@ -3067,7 +3083,12 @@
       this.vestProbando = null;
       var v = this.vestVolver;
       if (v === 'options') this.showOptions();
-      else if (v === 'profile') this.showProfile();
+      /* Al perfil solo se vuelve si sigue habiendo sesión: si no, lo que
+       * saldría es la puerta de entrar, y eso no es "volver". */
+      else if (v === 'profile') {
+        var Ac = window.PM.Account;
+        if (Ac && Ac.logged()) this.showProfile(); else this.showMenu();
+      }
       else if (v === 'tienda') this.showTienda();
       else this.showMenu();
     },
@@ -3537,9 +3558,13 @@
       var TC = CFG.TIENDA;
       var gana = document.createElement('div');
       gana.className = 'note tienda-gana';
+      var racha = (CFG.DAILY.RACHA_PREMIOS || []).map(function (h) {
+        return 'DÍA ' + h.dias + ' +' + h.monedas;
+      }).join(', ');
       gana.textContent = 'SE GANAN JUGANDO: ' + TC.POR_PARTIDA + ' POR PARTIDA DE AL MENOS UN MINUTO + ' +
         TC.POR_MIL + ' POR CADA 1.000 PUNTOS (HASTA ' + TC.TOPE_PARTIDA + ') · ' +
-        TC.POR_RETO + ' POR CADA RETO DEL DAILY · ' + TC.POR_SEMANA + ' POR LA SEMANA ENTERA';
+        TC.POR_RETO + ' POR CADA RETO DEL DAILY · ' + TC.POR_SEMANA + ' POR LA SEMANA ENTERA · ' +
+        'Y UN PREMIO EN CADA ESCALÓN DE RACHA (' + racha + ')';
       o.appendChild(gana);
 
       var cuerpo = document.createElement('div');
@@ -6509,9 +6534,23 @@
       this.refreshProfile();
     },
 
+    /* El perfil ES la cuenta: sin sesión no hay nada que enseñar ahí, así
+     * que en vez de un panel vacío sale la puerta de entrar, sin escapatoria
+     * que no sea volverse al menú. Es el sitio donde pedir la cuenta tiene
+     * sentido: has ido a ver lo tuyo. */
     showProfile: function () {
+      var Ac = window.PM.Account;
+      if (!(Ac && Ac.logged())) { this.pedirCuenta(); return; }
       this.refreshProfile();
       this.showPanel('profile');
+    },
+
+    /* La puerta obligatoria: entrar o crear, sin cerrar por fuera. */
+    pedirCuenta: function () {
+      var self = this;
+      this.showAccountPrompt('entrar', function (ok) {
+        if (ok) self.showProfile();
+      }, true);
     },
 
     refreshProfile: function () {
@@ -6759,7 +6798,9 @@
     /* Diálogo de entrar / crear cuenta */
     /* alVolver: qué hacer al acabar (entrando o dándole a VOLVER). Sin él,
      * se cierra el diálogo; desde el aviso del récord, vuelve al GAME OVER. */
-    showAccountPrompt: function (modo, alVolver) {
+    /* obliga: no hay manera de quedarse mirando el panel de detrás sin
+     * cuenta. La única salida es VOLVER, y VOLVER se va al menú. */
+    showAccountPrompt: function (modo, alVolver, obliga) {
       var self = this;
       var Ac = window.PM.Account;
       var crear = (modo === 'crear');
@@ -6803,22 +6844,38 @@
       /* La puerta de vuelta va JUNTO A LA DE ENTRAR, que es donde se busca:
        * quien no consigue entrar no se va al perfil a mirar opciones. */
       if (!crear) {
-        botones.push({ label: 'HE OLVIDADO LA CONTRASEÑA',
+        botones.push({ label: 'HE OLVIDADO LA CONTRASEÑA', cls: 'btn-enlace',
           onClick: function () { self.showOlvidePrompt(usuario); } });
       }
-      botones.push({ label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+      /* Las dos puertas viven en el mismo diálogo: quien llega aquí sin
+       * cuenta no tiene que salirse a buscar dónde se crea una. */
+      botones.push({ label: crear ? 'YA TENGO CUENTA' : 'CREAR CUENTA',
+        cls: 'btn-enlace',
+        onClick: function () {
+          self.showAccountPrompt(crear ? 'entrar' : 'crear', alVolver, obliga);
+        } });
+      /* La puerta de salida. Con `obliga` no cierra el diálogo dejando
+       * detrás un panel que no se puede usar: retrocede al menú, que es lo
+       * único que tiene sentido hacer sin cuenta. */
+      botones.push({ label: obliga ? 'VOLVER AL MENÚ' : 'VOLVER',
+        cls: 'btn-enlace', keys: ['Escape'], hint: 'ESC',
         onClick: function () {
           self.hidePrompt();
+          if (obliga) { self.showMenu(); return; }
           if (alVolver) alVolver(false);
         } });
 
       this.showPrompt({
+        popup: true,
         title: crear ? 'CREAR CUENTA' : 'ENTRAR',
         lines: crear
           ? ['ELIGE UN USUARIO Y UNA CONTRASEÑA',
              'EL USUARIO SERÁ TU NOMBRE EN EL JUEGO',
              'EL CORREO SIRVE PARA UNA COSA: RECUPERAR LA CUENTA SI OLVIDAS LA CONTRASEÑA']
-          : ['ENTRA CON TU USUARIO Y CONTRASEÑA'],
+          : (obliga
+            ? ['EL PERFIL ES TU CUENTA: AHÍ VIVEN TU RÉCORD, TUS MONEDAS Y TUS AMIGOS',
+               'ENTRA O CREA UNA — SE TARDA MENOS QUE UNA PARTIDA']
+            : ['ENTRA CON TU USUARIO Y CONTRASEÑA']),
         fields: campos,
         status: '',
         buttons: botones
@@ -8511,50 +8568,78 @@
       o.appendChild(h);
 
       var nota = document.createElement('div');
-      nota.className = 'note';
+      nota.className = 'note maze-nota';
       nota.textContent = 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ES UN MODO ' +
         'APARTE: EL LABERINTO DE 1980 NO SE TOCA, ASÍ QUE ESTAS PARTIDAS VAN ' +
         'A SU PROPIO TOP MUNDIAL — Y TAMBIÉN SUMAN EXPERIENCIA.';
       o.appendChild(nota);
 
       var lista = document.createElement('div');
-      lista.className = 'maze-list';
+      lista.className = 'maze-grid';
       var M = window.PM.Mazes;
-      (M ? M.LIST : []).forEach(function (m) {
-        lista.appendChild(self.mazeRow(m));
+      (M ? M.LIST : []).forEach(function (m, i) {
+        lista.appendChild(self.mazeCard(m, i));
       });
       o.appendChild(lista);
 
       var row = document.createElement('div');
       row.className = 'preset-row';
-      row.style.marginTop = '12px';
+      row.style.marginTop = '16px';
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
       back.classList.add('btn-preset');
       row.appendChild(back);
       o.appendChild(row);
     },
 
-    /* Una ficha: el dibujo del laberinto, su nombre y el botón de jugar */
-    mazeRow: function (m) {
+    /* Cada laberinto lleva el color de un fantasma, en el orden en que salen
+     * de la casa. No es adorno: seis sellos azules iguales se confunden entre
+     * sí, y el color es lo que hace que uno se acuerde de cuál es cuál. */
+    MAZE_COLORES: ['#ff0000', '#ffb8ff', '#00ffff', '#ffb851', '#00ff00', '#ffff00'],
+
+    /* Una ficha: el laberinto de verdad dibujado en grande y en su color, su
+     * nombre, lo que es y cuántas pastillas tiene. La ficha ENTERA es el
+     * botón —no hay un JUGAR pequeño al que apuntar— y por eso es un <button>
+     * y no un div: se llega con el tabulador y se entra con enter. */
+    mazeCard: function (m, i) {
       var self = this;
-      var fila = document.createElement('div');
-      fila.className = 'maze-row';
+      var col = this.MAZE_COLORES[i % this.MAZE_COLORES.length];
 
-      var mini = this.mazeThumb(m);
-      if (mini) fila.appendChild(mini);
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'maze-card';
+      card.style.setProperty('--mc', col);
 
-      var info = document.createElement('div');
-      info.className = 'maze-info';
+      var marco = document.createElement('div');
+      marco.className = 'maze-sello';
+      var mini = this.mazeThumb(m, col);
+      if (mini) marco.appendChild(mini);
+      card.appendChild(marco);
+
       var nm = document.createElement('div');
       nm.className = 'maze-name';
       nm.textContent = m.name;
-      info.appendChild(nm);
-      var ds = document.createElement('small');
-      ds.textContent = m.desc + ' · ' + m.pellets + ' PASTILLAS';
-      info.appendChild(ds);
-      fila.appendChild(info);
+      card.appendChild(nm);
 
-      var b = this.makeButton('JUGAR', function () {
+      var ds = document.createElement('div');
+      ds.className = 'maze-desc';
+      ds.textContent = m.desc;
+      card.appendChild(ds);
+
+      var pie = document.createElement('div');
+      pie.className = 'maze-pie';
+      var punto = document.createElement('i');
+      punto.className = 'maze-punto';
+      pie.appendChild(punto);
+      var cuantas = document.createElement('span');
+      cuantas.textContent = m.pellets + ' PASTILLAS';
+      pie.appendChild(cuantas);
+      var jugar = document.createElement('span');
+      jugar.className = 'maze-jugar';
+      jugar.textContent = 'JUGAR';
+      pie.appendChild(jugar);
+      card.appendChild(pie);
+
+      card.addEventListener('click', function () {
         self.resumeAudio();
         function go() {
           self.hideAll();
@@ -8563,36 +8648,33 @@
         if (self.avisaSiHayGuardada(go)) return;
         go();
       });
-      b.classList.add('btn-preset');
-      fila.appendChild(b);
-      return fila;
+      return card;
     },
 
     /* Miniatura de los muros. Se dibuja con el mismo código que la partida
      * (Game.buildMazeCanvas) cambiando CFG.MAZE un momento y devolviéndolo:
      * así el dibujo del panel no puede desviarse del de verdad. */
-    mazeThumb: function (m) {
+    mazeThumb: function (m, color) {
       var G = window.PM.Game;
       if (!G || !G.buildMazeCanvas) return null;
       var cv = document.createElement('canvas');
-      cv.width = 112;
-      cv.height = Math.round(CFG.ROWS * CFG.TILE / 2);
+      cv.width = 224;
+      cv.height = Math.round(CFG.ROWS * CFG.TILE * (cv.width / CFG.NATIVE_W));
       var c = cv.getContext('2d');
       if (!c) return null;
       /* Se dibuja DIRECTAMENTE al tamaño del sello, con trazo de un píxel, en
        * vez de encoger el laberinto de la partida. Encogiéndolo se apagaba:
-       * el dibujo de la partida va a escala de pantalla, meterlo en 112 px es
-       * dividir por seis, y un trazo de CFG.WALL_LINE se disuelve hasta
+       * el dibujo de la partida va a escala de pantalla, meterlo aquí es
+       * dividir por tres, y un trazo de CFG.WALL_LINE se disuelve hasta
        * quedar en nada. Es el mismo código con otra escala, así que el sello
        * sigue sin poder desviarse de lo que se juega. */
       var antes = CFG.MAZE;
       CFG.setMaze(m.rows);
-      var full = G.buildMazeCanvas(CFG.COLORS.wall, cv.width / CFG.NATIVE_W, 1);
+      var full = G.buildMazeCanvas(color || CFG.COLORS.wall, cv.width / CFG.NATIVE_W, 1);
       CFG.setMaze(antes);
       c.drawImage(full, 0, 0);
       return cv;
     },
-
     showMazes: function () {
       this.showPanel('mazes');
     },
@@ -8834,11 +8916,41 @@
        * cuanto la partida sale de ese estado el panel se cierra solo. */
       this.promptEstado = null;
 
+      /* EN CAJA (o.popup). Un diálogo suelto sobre el negro no se lee como
+       * un diálogo: se lee como otra pantalla más, y en ENTRAR eso hacía
+       * que la gente no supiera si se había ido del menú. Con marco, fondo
+       * propio y el velo detrás, se ve lo que es: algo que está ENCIMA y de
+       * lo que se sale. Todo lo demás del diálogo no cambia: solo cuelga de
+       * la caja en vez de colgar del velo. */
+      var host = p;
+      this.popupCaza = null;
+      if (o.popup) {
+        host = document.createElement('div');
+        host.className = 'popup-caja';
+        /* las bombillas del mueble, como en el GAME OVER */
+        var luces = document.createElement('div');
+        luces.className = 'popup-luces';
+        luces.setAttribute('aria-hidden', 'true');
+        host.appendChild(luces);
+        p.appendChild(host);
+      }
+
       var t = document.createElement('div');
       t.className = 'panel-title';
       if (o.color) t.style.color = o.color;
       t.textContent = o.title;
-      p.appendChild(t);
+      host.appendChild(t);
+
+      /* La persecución de la demo, debajo del título: es lo que convierte la
+       * caja en una pantalla de la máquina y no en un formulario. */
+      if (o.popup) {
+        var caza = document.createElement('canvas');
+        caza.className = 'popup-caza';
+        caza.width = 600; caza.height = 48;
+        caza.setAttribute('aria-hidden', 'true');
+        host.appendChild(caza);
+        this.popupCaza = caza;
+      }
 
       /* cada línea: texto suelto u objeto { text, big } */
       (o.lines || []).forEach(function (line) {
@@ -8847,11 +8959,11 @@
         var d = document.createElement('div');
         d.className = 'prompt-line' + (obj && line.big ? ' big' : '');
         d.textContent = obj ? line.text : line;
-        p.appendChild(d);
+        host.appendChild(d);
       });
 
       /* resumen de la partida (lo que te llevas al acabar) */
-      if (o.summary) p.appendChild(this.buildRunSummary(o.summary));
+      if (o.summary) host.appendChild(this.buildRunSummary(o.summary));
 
       /* contenido hecho a mano (el GAME OVER de recreativa) */
       if (o.custom) o.custom(p);
@@ -8869,7 +8981,7 @@
           ev.stopPropagation();
           if (ev.key === 'Enter' && o.input.onAccept) o.input.onAccept(inp.value);
         });
-        p.appendChild(inp);
+        host.appendChild(inp);
         this.promptInput = inp;
       }
 
@@ -8904,7 +9016,7 @@
             if (v !== el.value) el.value = v;
             if (f.onInput) f.onInput(el.value);
           });
-          p.appendChild(el);
+          host.appendChild(el);
         });
       }
 
@@ -8914,7 +9026,7 @@
         var st = document.createElement('div');
         st.className = 'lobby-status' + (o.statusError ? ' error' : '');
         st.textContent = o.status;
-        p.appendChild(st);
+        host.appendChild(st);
         this.promptStatusEl = st;
       }
 
@@ -8936,8 +9048,9 @@
         if (b.keys) self.promptKeys.push({ keys: b.keys, el: el });
         row.appendChild(el);
       });
-      p.appendChild(row);
+      host.appendChild(row);
 
+      p.classList.toggle('popup', !!o.popup);
       p.classList.toggle('solid', !!o.solid);
       p.classList.toggle('arcade', !!o.arcade);
       /* Marco de recreativa (el del GAME OVER): bombillas, título a rayas y
@@ -9078,6 +9191,8 @@
       this.els.prompt.style.display = 'none';
       this.els.prompt.innerHTML = '';
       this.els.prompt.classList.remove('arcade');
+      this.els.prompt.classList.remove('popup');
+      this.popupCaza = null;
       this.promptTag = null;
       this.promptEstado = null;
       this.promptStatusEl = null;

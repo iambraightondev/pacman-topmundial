@@ -161,10 +161,11 @@
      * { w: semana, p: [7] progreso, h: [7] cumplidos,
      *   racha: días seguidos, mejor: la mejor racha, ult: último día cumplido,
      *   sem: 1 si la semana ya se contó como completa,
+     *   hito: días del último premio de racha cobrado (0 si ninguno),
      *   rv: marca del último borrón aplicado (CFG.DAILY.RESET) } */
     vacio: function (semana) {
       var o = { w: semana || this.semanaId(), p: [], h: [],
-                racha: 0, mejor: 0, ult: '', sem: 0, rv: D.RESET };
+                racha: 0, mejor: 0, ult: '', sem: 0, hito: 0, rv: D.RESET };
       for (var i = 0; i < D.DIAS; i++) { o.p.push(0); o.h.push(0); }
       return o;
     },
@@ -192,6 +193,7 @@
         n.racha = o.racha || 0;
         n.mejor = o.mejor || 0;
         n.ult = o.ult || '';
+        n.hito = this.hitoDe(o);
         return n;
       }
       var base = this.vacio(sem);
@@ -203,7 +205,34 @@
       base.mejor = Math.max(0, Math.floor(o.mejor || 0));
       base.ult = String(o.ult || '');
       base.sem = o.sem ? 1 : 0;
+      base.hito = this.hitoDe(o);
       return base;
+    },
+
+    /* De dónde arranca el premio de racha en una partida guardada que no lo
+     * lleva (todas las de antes de esto). NO se paga hacia atrás —sería
+     * repartir monedas por algo que ya pasó— pero tampoco se pone a cero:
+     * quien lleva veinte días seguidos no tiene que volver a pasar por el
+     * de tres, cobra el siguiente que le toque. */
+    hitoDe: function (o) {
+      if (o && o.hito != null) return Math.max(0, Math.floor(o.hito));
+      var racha = Math.max(0, Math.floor((o && o.racha) || 0)), n = 0;
+      var lista = D.RACHA_PREMIOS || [];
+      for (var i = 0; i < lista.length; i++) {
+        if (racha >= lista[i].dias) n = lista[i].dias;
+      }
+      return n;
+    },
+
+    /* El próximo escalón de racha que queda por cobrar, o null si ya están
+     * todos. Lo usa la cartilla para enseñar hacia dónde se va. */
+    proximoHito: function (est) {
+      est = est || this.leer();
+      var lista = D.RACHA_PREMIOS || [];
+      for (var i = 0; i < lista.length; i++) {
+        if (lista[i].dias > (est.hito || 0)) return lista[i];
+      }
+      return null;
     },
 
     guardar: function (o) {
@@ -311,9 +340,23 @@
       }
 
       if (A) A.recordFor(['daily'], { dailyOk: 1 });
-      // y monedas de la TIENDA: 20 por reto y 150 más por la semana entera
+      // y monedas de la TIENDA: el reto, la semana entera y los escalones
+      // de racha
       var Tn = window.PM.Tienda;
       if (Tn) Tn.ganar(CFG.TIENDA.POR_RETO);
+
+      /* Escalones de racha. Se cobran todos los que la racha ya haya
+       * pasado —normalmente uno— y se apunta el último para no repetirlo.
+       * Si la racha se rompió y hoy vale 1, el contador vuelve a empezar y
+       * se pueden volver a cobrar: son otra vez los días de volver. */
+      var lista = D.RACHA_PREMIOS || [];
+      if (est.racha <= 1) est.hito = 0;
+      for (var k = 0; k < lista.length; k++) {
+        if (est.racha >= lista[k].dias && (est.hito || 0) < lista[k].dias) {
+          est.hito = lista[k].dias;
+          if (Tn) Tn.ganar(lista[k].monedas);
+        }
+      }
 
       /* Semana redonda: los siete. Se cuenta una vez (bandera `sem`), que si
        * no, cumplir el último y volver a entrar la contaría otra vez. */

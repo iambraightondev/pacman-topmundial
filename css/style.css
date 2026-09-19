@@ -345,6 +345,14 @@ body {
 .daily-racha b { color: #fff; margin: 0 6px 0 2px; }
 .daily-mejor { margin-left: 6px; }
 
+/* el siguiente escalón de racha, en el amarillo de las monedas */
+.daily-hito {
+  margin-left: 10px;
+  padding: 2px 7px;
+  color: #ffcc00;
+  border: 1px solid rgba(255, 204, 0, 0.45);
+}
+
 .daily-pip { width: 15px; height: 15px; border: 1px solid #2d2d6e; }
 .daily-pip.on { background: #ffb8ff; border-color: #ffb8ff; }
 .daily-pip.mejor { border-color: #ffb8ff; }
@@ -3374,51 +3382,244 @@ input[type="range"] {
 .btn:hover .btn-key,
 .btn:focus-visible .btn-key { color: inherit; }
 
-/* ---------- Laberintos alternativos (modo aparte) ---------- */
-.maze-list {
+/* ---------- DIÁLOGO EN CAJA (#prompt.popup) ----------
+ * ENTRAR y CREAR CUENTA salían sueltos sobre el negro, con el título tan
+ * grande como el de un panel: parecían otra pantalla del juego y no algo de
+ * lo que se vuelve. Aquí son el mueble de la máquina en pequeño: bombillas
+ * alrededor, la persecución de la demo bajo el título y el velo oscuro
+ * detrás. Lo que se toca (los dos campos y ENTRAR) manda; lo que casi nunca
+ * se toca baja a una línea de enlaces. */
+#prompt.popup {
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(10, 10, 60, 0.75) 0, rgba(0, 0, 0, 0.94) 60%),
+    rgba(0, 0, 0, 0.94);
+}
+
+.popup-caja {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: min(94%, 520px);
-  margin-top: 10px;
-}
-
-/* Ficha de un laberinto: el dibujo de sus muros, lo que es y JUGAR. La
- * miniatura la pinta el mismo código que la partida, así que enseña
- * exactamente el laberinto en el que se va a jugar. */
-.maze-row {
-  display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 10px;
-  border: 1px solid #333;
+  width: min(92%, 430px);
+  padding: 28px 26px 22px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0 2px, transparent 2px 4px),
+    linear-gradient(170deg, #0d0d33, #05051a 62%, #02020a);
+  border: 2px solid #2121ff;
+  box-shadow:
+    inset 0 0 40px rgba(33, 33, 255, 0.18),
+    0 0 0 5px #000,
+    0 0 30px rgba(33, 33, 255, 0.5),
+    0 20px 46px rgba(0, 0, 0, 0.85);
 }
 
-.maze-row canvas {
-  flex: 0 0 auto;
-  width: 56px;
+/* las bombillas del mueble, en amarillo y parpadeando a contratiempo */
+.popup-luces {
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  --bomb: radial-gradient(circle, #ffe14d 0 2px, rgba(255, 225, 77, 0.22) 3px, transparent 4.5px);
+  background:
+    var(--bomb) 0 0 / 18px 18px repeat-x,
+    var(--bomb) 0 100% / 18px 18px repeat-x,
+    var(--bomb) 0 0 / 18px 18px repeat-y,
+    var(--bomb) 100% 0 / 18px 18px repeat-y;
+  animation: marq-bombillas 0.55s steps(2) infinite;
+}
+
+/* el título de un diálogo no es el de un panel: cabe en la caja */
+.popup-caja .panel-title {
+  font-size: clamp(20px, 3.6vh, 30px);
+  letter-spacing: 7px;
+  margin: 2px -7px 0 0;
+}
+
+.popup-caza {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  aspect-ratio: 600 / 48;
+  margin: -2px 0 2px;
+  image-rendering: pixelated;
+  opacity: 0.9;
+}
+
+.popup-caja .prompt-line {
+  color: #8a8cae;
+  font-size: clamp(8px, 1.3vh, 10px);
+  line-height: 1.9;
+  max-width: 100%;
+}
+
+/* los campos: negros como la pantalla, no blancos de formulario */
+.popup-caja .nick-input {
+  width: 100%;
+  max-width: 290px;
+  color: #ffff00;
+  background: #000;
+  border: 2px solid #2121ff;
+  text-align: center;
+  padding: 9px 10px;
+}
+
+.popup-caja .nick-input::placeholder { color: #4a4c7e; }
+
+.popup-caja .nick-input:focus {
+  outline: none;
+  border-color: #ffff00;
+  box-shadow: 0 0 14px rgba(255, 255, 0, 0.35);
+}
+
+/* el hueco del aviso no se ve hasta que hay aviso */
+.popup-caja .lobby-status:empty { display: none; }
+
+.popup-caja .prompt-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  max-width: 290px;
+  margin-top: 8px;
+}
+
+.popup-caja .prompt-btns .btn { width: 100%; }
+
+/* ENTRAR manda: es lo único amarillo y lo único grande */
+.popup-caja .prompt-btns .btn-primary {
+  padding: 12px 14px;
+  letter-spacing: 5px;
+}
+
+/* lo de abajo son enlaces, no botones: sin marco y en gris hasta que se
+ * pasa por encima. Así la caja tiene UNA cosa que hacer, no cuatro. */
+.popup-caja .prompt-btns .btn-enlace {
+  border-color: transparent;
+  background: none;
+  color: #6a6c8e;
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 2px;
+  padding: 5px 6px;
+}
+
+.popup-caja .prompt-btns .btn-enlace:hover,
+.popup-caja .prompt-btns .btn-enlace:focus-visible {
+  color: #fff;
+  background: none;
+  border-color: transparent;
+  text-decoration: underline;
+}
+
+.popup-caja .prompt-btns .btn-enlace .btn-key { color: #4a4c7e; }
+
+@media (prefers-reduced-motion: reduce) { .popup-luces { animation: none; } }
+
+/* ---------- LABERINTOS: LA VITRINA ----------
+ * Eran seis renglones con un sello de 56 px al lado, y un laberinto de 56 px
+ * no se ve: no se distinguía ANILLOS de PANAL sin leerlo. Ahora cada uno es
+ * una ficha con su laberinto dibujado en grande y en el color de un fantasma,
+ * que es lo que de verdad se elige aquí. La ficha entera es el botón. */
+.maze-nota { max-width: 900px; }
+
+.maze-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  width: min(96%, 860px);
+  margin-top: 16px;
+}
+
+@media (max-width: 860px) { .maze-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .maze-grid { grid-template-columns: 1fr; } }
+
+.maze-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--mc, #2121ff) 10%, #03030f), #03030f 70%);
+  border: 2px solid color-mix(in srgb, var(--mc, #2121ff) 34%, #000);
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+}
+
+.maze-card:hover,
+.maze-card:focus-visible {
+  outline: none;
+  transform: translateY(-2px);
+  border-color: var(--mc, #2121ff);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--mc, #2121ff) 30%, transparent);
+}
+
+/* el sello: el laberinto de verdad, a oscuras y con su propio halo */
+.maze-sello {
+  display: flex;
+  justify-content: center;
+  padding: 8px 6px;
+  background: #000;
+  border: 1px solid color-mix(in srgb, var(--mc, #2121ff) 28%, #000);
+}
+
+.maze-sello canvas {
+  width: 100%;
+  max-width: 190px;
   height: auto;
   image-rendering: pixelated;
-  border: 1px solid #2121ff;
-}
-
-.maze-info {
-  flex: 1 1 auto;
-  min-width: 0;
-  text-align: left;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--mc, #2121ff) 55%, transparent));
 }
 
 .maze-name {
-  color: #ffff00;
-  letter-spacing: 2px;
+  color: var(--mc, #ffff00);
+  letter-spacing: 3px;
+  font-size: clamp(11px, 1.9vh, 15px);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--mc, #2121ff) 45%, transparent);
 }
 
-.maze-info small {
-  display: block;
-  color: #777;
-  font-size: clamp(7px, 1.2vh, 9px);
+.maze-desc {
+  color: #8a8cae;
+  font-size: clamp(8px, 1.3vh, 10px);
   letter-spacing: 1px;
-  margin-top: 3px;
+  line-height: 1.8;
+}
+
+.maze-pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #16163a;
+  color: #6a6c8e;
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 1px;
+}
+
+/* una pastilla de verdad, del tamaño que tiene en el laberinto */
+.maze-punto {
+  flex: 0 0 auto;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+}
+
+.maze-jugar {
+  margin-left: auto;
+  padding: 3px 9px;
+  color: var(--mc, #ffff00);
+  border: 1px solid color-mix(in srgb, var(--mc, #2121ff) 45%, #000);
+}
+
+.maze-card:hover .maze-jugar,
+.maze-card:focus-visible .maze-jugar {
+  color: #000;
+  background: var(--mc, #ffff00);
+  border-color: var(--mc, #ffff00);
 }
 
 /* ---------- REPRODUCTOR DE REPETICIONES ----------
@@ -5042,6 +5243,15 @@ body { font-size-adjust: 0.56; }
 /* los paneles empiezan arriba: el título y las pestañas no cambian de sitio al cambiar de pestaña */
 .overlay:not(#prompt):not(#menu) { justify-content: flex-start; }
 .overlay:not(#prompt):not(#menu)::before, .overlay:not(#prompt):not(#menu)::after { display: none; }
+
+/* El DAILY y LABERINTOS son la excepción: no tienen pestañas que cambien de
+ * alto, son una sola cosa, y pegados arriba dejaban media pantalla en negro.
+ * Se les devuelven los espaciadores para que queden en el centro (y, si un
+ * día no caben, sigan pudiéndose subir hasta el título). */
+#daily:not(#prompt):not(#menu)::before, #daily:not(#prompt):not(#menu)::after,
+#mazes:not(#prompt):not(#menu)::before, #mazes:not(#prompt):not(#menu)::after {
+  display: block; content: ''; margin: auto 0; flex-shrink: 0;
+}
 
 /* ---------- MAESTRÍAS: EL TRONO ----------
  * Arriba el título con la liga (mundo y formato en desplegables), en medio tu
