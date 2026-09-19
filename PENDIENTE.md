@@ -46,6 +46,82 @@ funcionara, el juego se caía. Con los enlaces directos el servidor se queda
 callado durante la partida y el problema desaparece, salvo para los que no
 logren enlazar.
 
+**19 sep — LAS MONEDAS, EL DAILY, LOS LABERINTOS Y LA PUERTA DE LA CUENTA.
+HECHO Y EN PRODUCCIÓN.**
+
+**Las monedas se ganaban a cuentagotas.** Una partida daba 5 por durar un
+minuto y 1 por cada 1.000 puntos, con tope de 40. Con los números REALES de
+sus partidas (mediana de 2.350 puntos en 373 repeticiones) eso son **7**
+monedas: una skin de 1.500 quedaba a 125 partidas. Nadie iba a llegar.
+Ahora son 20 de base y 4 por millar, con tope de 200: la mediana paga 28, una
+buena 48 y una excelente 148. La skin queda en unas 31 partidas.
+
+No se tocaron **INICIALES** ni el **regalo de veterano** a propósito: los dos
+se recalculan desde lo que uno ya tiene (`Tienda.saldo()`), así que subirlos
+reparte dinero hacia atrás a todo el mundo de golpe.
+
+**El DAILY pagaba menos que una partida.** El reto daba 20 monedas y 400 de
+experiencia —400 al lado de una partida que da siete mil no es un premio, es
+un redondeo—. Ahora el reto son **100 monedas y 2.500 de experiencia** y la
+semana entera **1.500**.
+
+Y **la racha por fin paga**. Era un número de adorno en la cartilla: se podía
+ir por el día treinta y el juego no se enteraba. Escalones en
+`CFG.DAILY.RACHA_PREMIOS`: día 3 → 150, 7 → 400, 14 → 800, 30 → 2.000,
+60 → 3.500 y 100 → 6.000. Se cobra **una vez por racha**; si se rompe y se
+vuelve a subir, se vuelve a cobrar, porque son otros tantos días de volver.
+Lo guardado lleva un campo nuevo, `hito` (el último escalón cobrado), que en
+las partidas viejas **no se siembra a cero**: `Daily.hitoDe()` lo deduce de
+la racha actual, así que quien lleva veinte días no vuelve a pasar por el de
+tres ni cobra hacia atrás los que ya pasó.
+
+**Tres pantallas que estaban pobres.**
+
+- **La cartilla del DAILY y LABERINTOS** salían pegados arriba con media
+  pantalla en negro debajo. Los paneles arrancan arriba a propósito (para que
+  el título no baile al cambiar de pestaña, regla al final de `style.css`),
+  pero estos dos no tienen pestañas: se les devolvieron los espaciadores. Ojo
+  con la especificidad — la regla que los apaga usa `:not(#prompt)`, que
+  cuenta como ID, así que `#daily::before` a secas **no gana**.
+- **LABERINTOS** eran seis renglones con un sello de 56 px al lado, y un
+  laberinto de 56 px no es un laberinto: ANILLOS y PANAL se veían iguales.
+  Ahora cada uno es una ficha con su trazado dibujado grande y en el color de
+  un fantasma (`UI.MAZE_COLORES`), tres por fila, y la ficha entera es el
+  botón. El sello lo sigue pintando `Game.buildMazeCanvas`, así que no puede
+  desviarse de lo que se juega.
+- **La puerta de la cuenta** (ENTRAR / CREAR CUENTA) salía suelta sobre el
+  negro con un título de tamaño panel: se leía como otra pantalla del juego.
+  Ahora es un **popup** (`showPrompt({ popup: true })` → `.popup-caja`) con
+  las bombillas del mueble y la persecución de la demo bajo el título; manda
+  un solo botón amarillo y lo demás baja a enlaces.
+
+**El perfil ahora exige cuenta.** Entrar en PERFIL sin sesión abre esa puerta
+y la única salida es entrar, crear cuenta o volverse al menú. Consecuencia
+que hay que decidir: **el sorteo de nombre de invitado vivía dentro del
+perfil y se ha quedado sin sitio**. O se reubica (en el propio popup, o al
+lado del nombre en la portada) o se da por muerto — está preguntado y sin
+responder.
+
+**Dos trampas que costaron rato, por si vuelven:**
+
+1. El velo del diálogo tapaba solo `#stage`, que mide exactamente lo que el
+   lienzo: lo que se veía era un recuadro negro metido en el mueble, con las
+   bombillas encendidas alrededor. `#prompt.popup` va `position: fixed`.
+2. Chrome pinta de blanco lo que autorrellena y se cargaba el campo negro. El
+   fondo del autorrelleno no se puede cambiar; se tapa con una sombra
+   interior (`-webkit-box-shadow ... inset`).
+
+**Probado**: pruebas de Node en verde (450, con los 2 fallos de siempre del
+DOM de mentira). Un aviso para quien retome: una prueba del VESTUARIO dejaba
+puesta una sesión de mentira sin restaurarla y contaminaba las dos pruebas de
+cuenta que venían después. Si vuelven a salir fallos raros de sesión, mirar
+los `finally` antes que el código.
+
+**Se trabajó a la vez que otra sesión** (el pase de temporada). Los commits
+se separaron por trozos con un filtro, no por archivos: `js/config.js`,
+`js/tests.js`, `css/style.css` y `sw.js` tenían cosas de los dos. Si algo
+quedó descolgado, mirar ahí.
+
 **18 sep — VESTUARIO EXTRAVAGANTE, 26 piezas, A LA ESPERA DE SU VISTO BUENO.**
 Braighton pidió otra tanda, esta vez con las skins **extravagantes**: nada de
 un Pac-Man pintado, otro bicho —dejan la silueta, cada una convierte el comer

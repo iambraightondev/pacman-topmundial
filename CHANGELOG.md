@@ -2,6 +2,49 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-19 · Las monedas se ganaban a cuentagotas, y tres pantallas estaban pobres
+
+**Se gana cinco veces más.** Una partida daba 5 monedas por durar un minuto
+y 1 por cada mil puntos, con tope de 40. Con los números de verdad —la
+partida mediana de este juego son 2.350 puntos— eso eran **7 monedas**, así
+que una skin de 1.500 quedaba a ciento veinticinco partidas. Ahora son 20 de
+base y 4 por millar, con tope de 200: la partida mediana paga **28**, una
+buena **48** y una excelente **148**. La skin queda en unas treinta partidas.
+
+El saldo inicial y el regalo de veterano se quedan como estaban: los dos se
+calculan desde lo que uno ya lleva jugado, y subirlos habría repartido dinero
+hacia atrás.
+
+**El DAILY pagaba menos que jugar.** El reto daba 20 monedas y 400 de
+experiencia, que al lado de una partida de siete mil no es un premio. Ahora
+el reto son **100 monedas y 2.500 de experiencia**, y la semana entera
+**1.500**.
+
+**Y la racha por fin sirve para algo.** Era un número de adorno en la
+cartilla: se podía ir por el día treinta y el juego no se enteraba. Ahora
+paga en cada escalón — **día 3: +150, día 7: +400, día 14: +800, día 30:
++2.000, día 60: +3.500 y día 100: +6.000**—. Cada escalón se cobra una vez
+por racha; si se rompe y se vuelve a subir, se vuelve a cobrar, porque son
+otros tantos días de volver. A quien ya lleva días acumulados no se le paga
+hacia atrás, pero tampoco vuelve a empezar: cobra el siguiente que le toque.
+
+**LABERINTOS.** Eran seis renglones con un sello de 56 píxeles al lado, y un
+laberinto de 56 píxeles no es un laberinto: ANILLOS y PANAL se veían iguales.
+Ahora cada uno es una ficha con su trazado dibujado en grande y en el color
+de un fantasma, tres por fila, y la ficha entera es el botón.
+
+**La cartilla del DAILY y esa misma vitrina** salían pegadas arriba con media
+pantalla en negro debajo. Van centradas.
+
+**ENTRAR y CREAR CUENTA.** Salían sueltas sobre el negro con un título de
+tamaño panel: parecían otra pantalla del juego y no algo de lo que se vuelve.
+Ahora son un **popup** con las bombillas del mueble alrededor y la
+persecución de la demo debajo del título; manda un solo botón amarillo y lo
+demás baja a una línea de enlaces.
+
+**El perfil pide cuenta.** Es la cuenta: entrar ahí sin sesión abre esa
+puerta, y la única salida es entrar, crear una o volverse al menú.
+
 ## 2026-09-19 · Se acabaron los teletransportes: la partida ya no pasa por Estados Unidos
 
 Tres cambios en el modo online, del más visible al más de fondo.
