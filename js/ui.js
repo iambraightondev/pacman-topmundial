@@ -1865,24 +1865,15 @@
     showPase: function () {
       this.refreshPase();
       this.showPanel('pase');
-      /* Se abre por donde vas, no por el galón 1 — y SIEMPRE en el borde de
-       * una casilla. Centrando el galón, el desplazamiento caía a mitad de la
-       * casilla anterior y el camino empezaba partido por la mitad, que es lo
-       * primero que se ve al entrar. Se busca el galón alcanzado en la lista y
-       * se alinea el que va dos antes: así queda sitio para ver de dónde
-       * vienes y ninguna casilla sale cortada. */
-      var sc = this.psScroll, aqui = this.psAqui;
-      if (sc && aqui && sc.scrollWidth > sc.clientWidth) {
-        var desde = aqui, i;
-        for (i = 0; i < this.psCeldas.length; i++) {
-          if (this.psCeldas[i].cel === aqui) {
-            desde = this.psCeldas[Math.max(0, i - 2)].cel;
-            break;
-          }
-        }
-        sc.scrollLeft = Math.max(0, desde.offsetLeft);
-        if (this.psScrollAlto) this.psScrollAlto.scrollLeft = sc.scrollLeft;
-      }
+      /* SE ABRE POR EL PRINCIPIO DEL CAMINO, siempre. Antes se abría por el
+       * galón alcanzado, y aunque quedase cuadrado con la casilla, entrar y
+       * encontrarse el camino empezado por la mitad desconcierta: no se ve
+       * dónde empieza lo que se está mirando. Desde el galón 1 se lee el
+       * camino entero de un vistazo y quien quiera llegar a su galón se
+       * desplaza —su Pac-Man está allí esperando—. */
+      var sc = this.psScroll;
+      if (sc) sc.scrollLeft = 0;
+      if (this.psScrollAlto) this.psScrollAlto.scrollLeft = 0;
       this.animarPase();
     },
 
