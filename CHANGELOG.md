@@ -2,6 +2,23 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · La CORAZA del Tanque, recortada
+
+Salió sin caducidad y volviendo a los 25 segundos, y así el Tanque iba
+**prácticamente siempre** con un golpe gratis encima; con el escudo de su W
+además, aguantaba dos casi todo el rato. Se sentía inmortal, y encima parecía
+que los fantasmas no se la podían quitar.
+
+Ahora la coraza **dura 12 segundos** y **vuelve 30 segundos después** de
+perderla, rota o caducada: la lleva puesta un tercio del tiempo en vez de
+siempre. Y el aro parpadea sus dos últimos segundos, para que se vea cerrarse
+la ventana.
+
+**Y se acumula solo con su propia W.** Esas dos son suyas y juntas le dan dos
+golpes para entrar a salvar a alguien. Con el escudo que reparte el Soporte no
+se suma: ese golpe se lleva los dos. Si no, bastaba con que el Soporte pasara
+repartiendo para que el Tanque fuera apilando capas de vida.
+
 ## 2026-09-20 · La E del SOPORTE cubre a todo el equipo
 
 **Mantener la E ahora pone escudo a TODOS**, el propio Soporte incluido y

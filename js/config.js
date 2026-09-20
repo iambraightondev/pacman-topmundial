@@ -1862,7 +1862,7 @@
                  desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
-                 pasiva: 'CORAZA: UN GOLPE GRATIS SIEMPRE PUESTO · VUELVE A LOS 25 S',
+                 pasiva: 'CORAZA: UN GOLPE GRATIS CADA 30 S, Y TE DURA 12 S',
                  desc: ['TODO EL MAPA HUYE DE TI, UN 40% MÁS LENTO · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'TODOS VAN A POR TI, HASTA LOS AZULES · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA',
@@ -1899,11 +1899,22 @@
     BONO_ASESINO: 1.25,
 
     /* CORAZA (pasiva del TANQUE): un escudo de un golpe que se pone solo.
-     * No caduca —esperar quieto a que se gaste sería lo contrario de lo que
-     * hace un tanque—, y cuando se lo rompen tarda esto en volver. Se suma al
-     * ESCUDO de su W: con los dos puestos aguanta dos golpes, que es la
-     * diferencia entre entrar a salvar a alguien y no entrar. */
-    CORAZA_CD: 25 * 60,           // 25 s desde que se la rompen
+     *
+     * Nació sin caducidad y volviendo a los 25 s, y así el Tanque iba
+     * PRÁCTICAMENTE SIEMPRE con un golpe gratis encima; sumado al ESCUDO de
+     * su W, aguantaba dos casi todo el rato y dejaba de jugarse nada. Ahora:
+     *
+     *   · DURA 12 s puesta. Si no te la rompen, se va sola.
+     *   · Vuelve 30 s después de perderla, rota o caducada.
+     *   · Se suma SOLO al ESCUDO de su propia W (los dos son suyos: juntos,
+     *     dos golpes para entrar a salvar a alguien). Con el ESCUDO ALIADO
+     *     del Soporte NO se acumula: ese golpe se los lleva los dos.
+     *
+     * O sea, está puesta menos de un tercio del tiempo: es una ventana para
+     * entrar a salvar a alguien, no una piel. Y como caduca, se ve acabarse,
+     * que era la otra mitad del problema: parecía que no se la podían quitar. */
+    CORAZA_DURA: 12 * 60,         // 12 s puesta
+    CORAZA_CD: 30 * 60,           // y 30 s hasta la siguiente
 
     /* EL OJO (pasiva del MAGO): cuántas casillas por delante se le enseña el
      * camino de cada fantasma. Cinco es lo que se puede leer de un vistazo

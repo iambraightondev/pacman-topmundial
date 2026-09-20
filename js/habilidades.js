@@ -104,9 +104,9 @@
       /* ---- los roles ---- */
       provoca: 0,         // PROVOCAR: ticks atrayendo a los fantasmas
       coraza: 0,          // ESCUDO del Tanque: 8 s o un choque, lo que llegue antes
-      /* CORAZA, la pasiva del Tanque: 1 = la lleva puesta. No es un reloj,
-       * porque no caduca; `corCd` son los ticks que faltan para recuperarla
-       * cuando se la rompen. */
+      /* CORAZA, la pasiva del Tanque: ticks que le quedan PUESTA (0 = no la
+       * lleva), y `corCd`, los que faltan para la siguiente. Caduca a
+       * propósito: sin caducidad el Tanque iba siempre con un golpe gratis. */
       corPas: 0,
       corCd: 0,
       escudo: 0,          // ESCUDO ALIADO (del Soporte): igual, pero dado por otro
@@ -221,7 +221,7 @@
         this.roles.push(H.rol(roles && roles[i]));
         /* el TANQUE empieza con su CORAZA puesta: es una pasiva, tiene que
          * estar desde el primer segundo y no al primer tick de reloj */
-        if (this.roles[i] === 'tanque') this.st[i].corPas = 1;
+        if (this.roles[i] === 'tanque') this.st[i].corPas = H.CORAZA_DURA;
       }
       this.limpiarMesa();
     },
@@ -1312,15 +1312,27 @@
       var s = this.estado(idx);
       if (!s) return false;
       if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
-      /* Los escudos se gastan DE UNO EN UNO, en este orden: primero el que
-       * caduca (el del Soporte), luego el de la W y por último la CORAZA, que
-       * no caduca. Antes un golpe se llevaba todos los que hubiera puestos, y
-       * con la pasiva del Tanque eso significaba que llevar dos escudos no
-       * servía de nada. */
-      if (s.coraza > 0 || s.escudo > 0 || (s.corPas > 0 && this.esRol(G, idx, 'tanque'))) {
-        if (s.escudo > 0) s.escudo = 0;
-        else if (s.coraza > 0) s.coraza = 0;
-        else { s.corPas = 0; s.corCd = H.CORAZA_CD; }
+      /* QUÉ SE LLEVA UN GOLPE. La CORAZA del Tanque se suma SOLO a su
+       * propio ESCUDO (la W): esos dos son suyos, los gana él, y juntos le
+       * dan dos golpes para entrar a salvar a alguien. Con cualquier otro no
+       * se acumula: el ESCUDO ALIADO que reparte el Soporte se lleva la
+       * coraza por delante en el mismo golpe.
+       *
+       * Si no, bastaba con que el Soporte pasara repartiendo para que el
+       * Tanque fuera sumando capas de vida, y un escudo es una oportunidad,
+       * no una capa de vida. */
+      var tieneCoraza = s.corPas > 0 && this.esRol(G, idx, 'tanque');
+      if (s.coraza > 0 || s.escudo > 0 || tieneCoraza) {
+        if (s.escudo > 0) {
+          s.escudo = 0;
+          s.coraza = 0;
+          if (tieneCoraza) { s.corPas = 0; s.corCd = H.CORAZA_CD; }   // no se acumulan
+        } else if (s.coraza > 0) {
+          s.coraza = 0;                                               // y la coraza aguanta el siguiente
+        } else {
+          s.corPas = 0;
+          s.corCd = H.CORAZA_CD;
+        }
         s.gracia = H.ESCUDO_GRACIA;
         var p = G.pacs[idx];
         if (p) this.efecto('roto', p.x, p.y, 20);
@@ -1336,10 +1348,17 @@
     escudoRoto: function (G, idx) {
       var s = this.estado(idx);
       if (!s || idx === G.localIdx && !G.isSpec()) return;
-      /* el mismo orden que en salvaDelChoque: uno por golpe */
-      if (s.escudo > 0) s.escudo = 0;
-      else if (s.coraza > 0) s.coraza = 0;
-      else if (s.corPas > 0) { s.corPas = 0; s.corCd = H.CORAZA_CD; }
+      /* la misma regla que en salvaDelChoque */
+      if (s.escudo > 0) {
+        s.escudo = 0;
+        s.coraza = 0;
+        if (s.corPas > 0) { s.corPas = 0; s.corCd = H.CORAZA_CD; }
+      } else if (s.coraza > 0) {
+        s.coraza = 0;
+      } else if (s.corPas > 0) {
+        s.corPas = 0;
+        s.corCd = H.CORAZA_CD;
+      }
       var p = G.pacs[idx];
       if (p) this.efecto('roto', p.x, p.y, 20);
     },
@@ -2011,15 +2030,20 @@
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.provoca > 0) s.provoca--;
-        /* CORAZA (pasiva del Tanque): si no la lleva puesta, se le repone
-         * sola. El reloj va con la partida (parada, no corre), así que el
-         * cuarto de minuto es de juego, no de reloj de pared. */
-        if (this.esRol(G, i, 'tanque') && !s.corPas) {
-          if (s.corCd > 0) s.corCd--;
-          if (s.corCd <= 0) {
-            s.corPas = 1;
-            var pc = G.pacs[i];
-            if (pc && this.vivo(G, i)) this.efecto('amparo', pc.x, pc.y, 18);
+        /* CORAZA (pasiva del Tanque): dura lo suyo y vuelve sola. Los dos
+         * relojes van con la partida (parada, no corren), así que los
+         * segundos son de juego, no de reloj de pared. */
+        if (this.esRol(G, i, 'tanque')) {
+          if (s.corPas > 0) {
+            s.corPas--;
+            if (s.corPas <= 0) s.corCd = H.CORAZA_CD;   // se fue sola
+          } else if (s.corCd > 0) {
+            s.corCd--;
+            if (s.corCd <= 0) {
+              s.corPas = H.CORAZA_DURA;
+              var pc = G.pacs[i];
+              if (pc && this.vivo(G, i)) this.efecto('amparo', pc.x, pc.y, 18);
+            }
           }
         }
         if (s.escudo > 0) s.escudo--;
@@ -2497,7 +2521,10 @@
       /* LA CORAZA (pasiva del Tanque): un aro fijo, por dentro de los otros
        * escudos, para que se vea que lleva un golpe de más aguantado. */
       if (s.corPas > 0 && G.roles && G.roles[i] === 'tanque') {
-        ctx.strokeStyle = 'rgba(255, 184, 82, 0.5)';
+        /* los dos últimos segundos avisa, igual que el escudo de la W: que se
+         * vea acabarse es lo que hace que se entienda cuándo se puede entrar */
+        var seVa = s.corPas < 120 && Math.floor(tk / 6) % 2 === 0;
+        ctx.strokeStyle = 'rgba(255, 184, 82, ' + (seVa ? 0.15 : 0.5) + ')';
         ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(x, y, 7.5, 0, Math.PI * 2); ctx.stroke();
       }

@@ -2583,14 +2583,21 @@ the key index. `LIST` is the ASESINO (the original kit).
   cannot know whose kill it was. Outside DESATADO it does not exist.
   **SOPORTE** keeps the one it has had since 17 Sep: it lifts a downed
   teammate in a single pass where everyone else needs five
-  (`CFG.REVIVIR.PASADAS`). **TANQUE: CORAZA** — a one-hit shield that is
-  simply always on; it does not expire (waiting around for a timer is the
-  opposite of what a tank does) and comes back `CORAZA_CD` (25 s) after it is
-  broken, dead or alive, so respawning never costs it. It **stacks with its
-  own W**: shields are now spent **one per hit**, in order — the SOPORTE's
-  (which expires), then the W's, then the CORAZA — where before a single hit
-  took every shield you had, which made wearing two pointless. Drawn as a
-  fixed inner ring; it travels in the roles snapshot as two extra fields
+  (`CFG.REVIVIR.PASADAS`). **TANQUE: CORAZA** — a one-hit shield that puts itself
+  on. It lasts `CORAZA_DURA` (12 s) and returns `CORAZA_CD` (30 s) after it
+  is lost, broken or expired, dead or alive, so respawning never costs it —
+  roughly a third of the time, not all of it. It shipped never expiring and
+  back in 25 s, which had the tank wearing a free hit practically always and
+  looking like ghosts could not take it off at all.
+
+  It **stacks with the role's own W and with nothing else**: those two are
+  his, and together they buy the two hits it takes to go in for a teammate.
+  A hit that lands on the SOPORTE's ESCUDO ALIADO takes the coraza with it —
+  otherwise a support walking past handing out shields let the tank pile up
+  layers of life, and a shield is an opening, not a health bar.
+
+  Drawn as an inner ring that blinks its last two seconds, so the closing
+  window is visible; it travels in the roles snapshot as two extra fields
   (`corPas`, `corCd`), and an older snapshot simply does not carry them.
   **MAGO: EL OJO** — **where each ghost is about to go**: the next
   `OJO_PASOS` (5) tiles of its path, dotted on the floor in that ghost's

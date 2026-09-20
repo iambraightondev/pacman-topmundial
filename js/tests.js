@@ -9355,8 +9355,9 @@
     eq(HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]), 200, 'en una partida normal, nada cambia');
   });
 
-  test('TANQUE · PASIVA CORAZA: un golpe gratis siempre puesto, y vuelve a los 25 s', function () {
-    eq(HC.CORAZA_CD, 25 * 60, 'vuelve a los 25 s');
+  test('TANQUE · PASIVA CORAZA: un golpe gratis que dura 12 s y vuelve a los 30', function () {
+    eq(HC.CORAZA_DURA, 12 * 60, 'dura 12 s puesta');
+    eq(HC.CORAZA_CD, 30 * 60, 'y vuelve 30 s después');
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];
     p.safeTicks = 0;
@@ -9373,7 +9374,14 @@
      * no corre y ningún reloj del juego avanza) */
     HB.estado(0).corCd = 1;
     ticks(3);
-    ok(HB.corazaDe(G, 0), 'pasados los 25 s la tiene otra vez');
+    ok(HB.corazaDe(G, 0), 'pasados los 30 s la tiene otra vez');
+
+    /* y CADUCA: sin que nadie la rompa se va sola, que es lo que impide que
+     * el Tanque vaya siempre con un golpe gratis encima */
+    HB.estado(0).corPas = 2;
+    ticks(4);
+    ok(!HB.corazaDe(G, 0), 'a los 12 s se va sola');
+    ok(HB.estado(0).corCd > 0, 'y arranca la espera de la siguiente');
 
     /* y sin ella, el golpe mata */
     HB.estado(0).corPas = 0;
@@ -9382,7 +9390,10 @@
     ok(p.dying, 'sin coraza, el siguiente sí mata');
   });
 
-  test('TANQUE · CORAZA + ESCUDO: dos golpes, no uno', function () {
+  /* La CORAZA se suma SOLO a la W del propio Tanque. Con el escudo que
+   * reparte el Soporte no: si no, bastaba con que pasara repartiendo para ir
+   * sumando capas de vida. */
+  test('TANQUE · CORAZA + su W: dos golpes; con el escudo del Soporte, uno', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];
     p.safeTicks = 0;
@@ -9400,6 +9411,19 @@
     choca();
     ok(!p.dying, 'el segundo tampoco mata');
     ok(!HB.corazaDe(G, 0), 'ahora sí se gasta la coraza');
+
+    /* y con el ESCUDO ALIADO del Soporte NO se acumula */
+    partidaRol(['tanque', 'soporte'], 6, 5, DR.RIGHT);
+    var t2 = G.pacs[0];
+    t2.safeTicks = 0;
+    ok(HB.corazaDe(G, 0), 'el Tanque sale con su coraza');
+    HB.marcarEscudo(0, HC.ALIADO_TICKS);       // el Soporte se lo pone
+    var g2 = fantasmaEn(0, 6, 5);
+    g2.x = t2.x; g2.y = t2.y; g2.mode = 'normal'; g2.frightened = false;
+    G.step();
+    ok(!t2.dying, 'el golpe no mata');
+    eq(HB.estado(0).escudo, 0, 'se lleva el escudo del Soporte');
+    ok(!HB.corazaDe(G, 0), 'y la coraza con él: esos dos no se acumulan');
   });
 
   /* EL OJO del Mago: por dónde VA A PASAR cada fantasma (no su destino: un
