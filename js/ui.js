@@ -1696,6 +1696,7 @@
          * que se recuerda de una temporada es la pinta de lo que dio. */
         if (pieza) {
           var it = Tn ? Tn.item(pieza) : null;
+          car.classList.add('ps-con-pieza');
           cv = document.createElement('canvas');
           cv.className = 'ps-pieza';
           cv.width = 48; cv.height = 48;
@@ -1730,9 +1731,9 @@
         var rejilla = mk('span', 'ps-rejilla');
         rejilla.setAttribute('aria-hidden', 'true');
         abajo.cel.appendChild(rejilla);
-        var candado = mk('span', 'ps-candado');
-        candado.appendChild(this.candadoEl(hito ? 40 : 26));
-        if (hito) candado.appendChild(mk('span', null, 'BAJO LLAVE'));
+        var candado = mk('span', 'ps-candado' + (pgId ? ' ps-candado-pieza' : ''));
+        candado.appendChild(this.candadoEl(hito ? (pgId ? 30 : 40) : 26));
+        if (hito && !pgId) candado.appendChild(mk('span', null, 'BAJO LLAVE'));
         abajo.cel.appendChild(candado);
         var nota = mk('span', 'ps-nota');
         abajo.cel.appendChild(nota);

@@ -6248,7 +6248,7 @@ body { font-size-adjust: 0.56; }
   position: relative;
   overflow: hidden;
 }
-#pase .ps-fila-gratis .ps-carril { height: 108px; border: 2px solid #2a4a20; background: #080d06; }
+#pase .ps-fila-gratis .ps-carril { height: 132px; border: 2px solid #2a4a20; background: #080d06; }
 #pase .ps-fila-pago .ps-carril { height: 178px; }
 
 /* ---- el carril de todos: sobrio ---- */
@@ -6313,7 +6313,7 @@ body { font-size-adjust: 0.56; }
   height: 48px;
   image-rendering: pixelated;
 }
-#pase .ps-fila-pago .ps-pieza { width: 64px; height: 64px; }
+#pase .ps-fila-pago .ps-pieza { width: 56px; height: 56px; }
 #pase .ps-pieza-nom {
   font-size: clamp(8px, 1.3vh, 10px);
   letter-spacing: 1px;
@@ -6377,6 +6377,29 @@ body { font-size-adjust: 0.56; }
   gap: 14px;
   padding-right: 34px;
 }
+
+/* Un hito que reparte PIEZA no cabe en fila: el candado se comía el dibujo y
+ * su nombre. La pieza, su nombre y el importe se apilan en la mitad derecha
+ * y el candado se queda con la izquierda, que es sitio de sobra para decir
+ * lo que dice sin tapar lo que se está enseñando. */
+#pase .ps-fila-pago .ps-bajollave.ps-hito .ps-carril.ps-con-pieza {
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 16px 22px 104px;
+}
+
+/* la pieza es lo que se está enseñando: el cristal que apaga el carril
+   cerrado no puede dejarla hecha una mancha gris */
+#pase .ps-bajollave .ps-pieza { filter: brightness(1.25) saturate(1.3); }
+#pase .ps-candado-pieza { left: 62px; top: 46%; }
+
+/* Con una pieza dentro, la moneda gigante del carril de pago ya no cabe: el
+ * dibujo se salía por arriba de la caja y quedaba descabezado. Manda la
+ * pieza; la moneda y su importe se hacen a un lado. */
+#pase .ps-fila-pago .ps-carril.ps-con-pieza .moneda { width: 26px; height: 26px; }
+#pase .ps-fila-pago .ps-carril.ps-con-pieza .ps-monto { font-size: clamp(11px, 1.9vh, 15px); }
+#pase .ps-fila-pago .ps-carril.ps-con-pieza .ps-pieza { width: 52px; height: 52px; }
 
 /* el estado de cada premio del pase, bajo el pedestal */
 #pase .ps-nota {
