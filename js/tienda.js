@@ -46,10 +46,16 @@
     for (var i = 0; i < lista.length; i++) {
       var it = lista[i];
       /* `cofre`: existe y es tuyo por el mismo contador que lo comprado, pero
-       * no se vende (PLAN-COFRES.md). Una skin lo dice con su grupo. */
+       * no se vende (PLAN-COFRES.md). Una skin lo dice con su grupo.
+       * `pase`: igual, pero lo reparte el camino de la temporada
+       * (js/pase.js). Las dos cosas están en el catálogo para poder tenerlas
+       * y ponerlas; ninguna está en VENTA. */
       var deCofre = !!(it.cofre || it.grupo === 'cofre');
-      var item = { id: it.id, name: it.name, cat: cat, precio: deCofre ? 0 : it.precio,
-        ve: it.ve || '', cofre: deCofre };
+      var dePase = !!(it.pase || it.grupo === 'pase');
+      var item = { id: it.id, name: it.name, cat: cat,
+        precio: (deCofre || dePase) ? 0 : it.precio,
+        ve: it.ve || '', cofre: deCofre, pase: dePase,
+        temporada: it.temporada || null };
       CATALOGO.push(item);
       POR_ID[it.id] = item;
     }
@@ -58,7 +64,7 @@
   meter(CFG.EFECTOS, 'efecto');
   meter(CFG.ACCESORIOS, 'accesorio');
   meter(CFG.SKINS.filter(function (sk) {
-    return sk.grupo === 'tienda' || sk.grupo === 'cofre';
+    return sk.grupo === 'tienda' || sk.grupo === 'cofre' || sk.grupo === 'pase';
   }), 'skin');
 
   var EMOTES_BASE = CFG.EMOTES.map(function (e) { return e.id; });
@@ -76,7 +82,7 @@
     /* TODO lo que se puede tener (incluye lo de cofre, que es tuyo por el
      * mismo contador) y, aparte, lo que de verdad se VENDE en la tienda */
     CATALOGO: CATALOGO,
-    VENTA: CATALOGO.filter(function (it) { return !it.cofre; }),
+    VENTA: CATALOGO.filter(function (it) { return !it.cofre && !it.pase; }),
     CATEGORIAS: [
       { id: 'emote', name: 'EMOTES', nota: 'SE PONEN EN LAS TECLAS 1 A 6 DE LA PARTIDA' },
       { id: 'efecto', name: 'EFECTOS', nota: 'LO QUE DEJAS AL PASAR. SE LLEVA UNO' },
@@ -148,6 +154,9 @@
     /* ¿es de los que solo salen de un cofre? */
     esDeCofre: function (id) { return !!(POR_ID[id] && POR_ID[id].cofre); },
 
+    /* ¿y de las que solo reparte el pase de temporada? */
+    esDePase: function (id) { return !!(POR_ID[id] && POR_ID[id].pase); },
+
     /* { ok, msg }. No hay nada que confirmar con el servidor: la compra es un
      * contador más y sube a la cuenta con el siguiente guardado. */
     comprar: function (id) {
@@ -156,6 +165,8 @@
       if (this.tiene(id)) return { ok: false, msg: 'YA ES TUYO' };
       /* lo de cofre no se vende: se gana abriendo uno */
       if (it.cofre) return { ok: false, msg: 'ESO SOLO SALE DE UN COFRE' };
+      /* y lo del pase tampoco: se gana llegando a su galón, ese mes */
+      if (it.pase) return { ok: false, msg: 'ESO SOLO SE GANA EN EL PASE' };
       var falta = it.precio - this.saldo();
       if (falta > 0) {
         return { ok: false, msg: 'TE FALTAN ' + this.fmt(falta) + ' MONEDAS' };

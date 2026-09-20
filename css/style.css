@@ -6302,6 +6302,32 @@ body { font-size-adjust: 0.56; }
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(255, 212, 0, 0.6)); }
   50% { transform: scale(1.08); filter: drop-shadow(0 0 16px rgba(255, 212, 0, 0.95)); }
 }
+/* ---- LA PIEZA DEL MES ----
+ * En los tres hitos el camino no paga monedas y ya: paga una pieza que solo
+ * se reparte ese mes. Se dibuja de verdad, con el color del jugador, porque
+ * lo que se recuerda de una temporada es la pinta de lo que dio; el nombre
+ * va debajo, pequeño, para poder pedirla por su nombre. */
+#pase .ps-pieza {
+  display: block;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+#pase .ps-fila-pago .ps-pieza { width: 64px; height: 64px; }
+#pase .ps-pieza-nom {
+  font-size: clamp(8px, 1.3vh, 10px);
+  letter-spacing: 1px;
+  line-height: 1.2;
+  max-width: 96%;
+  color: #7a7c9e;
+}
+#pase .ps-fila-gratis .ps-ganado .ps-pieza-nom { color: #8fc47a; }
+#pase .ps-fila-pago .ps-pieza-nom { color: #ffd400; text-shadow: 0 0 10px rgba(255, 212, 0, 0.5); }
+#pase .ps-carril { gap: 6px; }
+/* la nota del carril de pago va pegada abajo: con una pieza dentro, el
+   contenido llegaba hasta ella y se leían los dos encima */
+#pase .ps-fila-pago .ps-cel.ps-hito .ps-carril { padding-bottom: 26px; }
+
 /* el pedestal dorado de cada premio */
 #pase .ps-fila-pago .ps-carril:not(.ps-vacio)::before {
   content: '';

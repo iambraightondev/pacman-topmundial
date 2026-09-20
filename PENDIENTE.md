@@ -13,20 +13,34 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**20 sep (tarde) — LAS PIEZAS DEL PASE, PROPUESTAS Y SIN DECIDIR.**
+**20 sep (noche) — LAS PIEZAS DEL PASE, YA EN EL JUEGO.**
 
-El escaparate de la **temporada de octubre** está publicado y esperando
-respuesta: <https://claude.ai/artifact/GX82VpW7V8MZW7K7nWTCxG>. Cinco piezas
-exclusivas con un tema propio —**cazar fantasmas**, no «halloween»: las de
-halloween ya se ganan gratis esa semana y se pisarían—: el emote GRITO y el
-VISOR DE CAZA en el carril gratis; la MOCHILA DE PROTONES, el ECTOPLASMA y la
-skin TRAMPA en el de pago. El razonamiento del reparto, cómo se monta el
-escaparate y lo que costó dibujarlo están en `propuestas/pase-2026-10/LEEME.md`.
+Las cinco de la temporada de octubre (tema: **cazar fantasmas**) están
+aprobadas y metidas: el emote GRITO y el VISOR DE CAZA en el carril gratis;
+la MOCHILA DE PROTONES, el ECTOPLASMA y la skin TRAMPA en el de pago. El
+camino de los hitos las enseña dibujadas, no en monedas. El escaparate con
+el que se decidió sigue en <https://claude.ai/artifact/GX82VpW7V8MZW7K7nWTCxG>
+y su código en `propuestas/pase-2026-10/`.
 
-**Nada de esto se toca en el juego hasta que se diga qué entra.**
+**Lo primero al retomar: verlas jugando de verdad**, que están medidas en
+solitario y en el navegador. Lo que hay que mirar:
 
-Y de paso, ya desplegado: los diálogos de **DESTACAR PARTIDA** y del **enlace
-de una repetición** pasan a la caja de ENTRAR (ver CHANGELOG).
+1. **La TRAMPA a tamaño de partida.** Mide 13 px de alto: comprobar que la V
+   de las hojas se distingue de un Pac-Man normal en movimiento, y que el
+   rayo de la Q se lee sin tapar el laberinto.
+2. **El VISOR sobre otras skins.** Tapa el ojo, así que conviene mirarlo
+   sobre las que sí tienen cara (CLÁSICO, GATO, ROBOT) antes de darlo por
+   bueno.
+3. **El ECTOPLASMA sobre los muros azules**: es verde y va por el suelo, pero
+   hay que ver que no se confunda con las pastillas.
+
+**Lo que sigue faltando del PASE**: la pasarela de cobro, que no existe ni
+debe existir antes del cambio de identidad. Lo demás ya está entero.
+
+**Y una trampa aprendida**, apuntada también en SPEC: una pieza nueva no se
+entrega si su contador `c_<id>` no está declarado en `js/achievements.js`.
+Las cuatro que no eran skin llegaron solas y la skin no, en silencio, porque
+esa lista filtraba las skins por grupo.
 
 **20 sep — LOS CUATRO ROLES TIENEN PASIVA, Y EL PASE TIENE PANTALLA. TODO
 SUBIDO.**

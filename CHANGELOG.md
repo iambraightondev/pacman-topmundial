@@ -2,6 +2,39 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · El pase de octubre ya reparte piezas: CAZAFANTASMAS
+
+Hasta hoy el camino del pase pagaba **solo monedas**, y un pase sin nada que
+solo tengan los de ese mes no se vende. Los tres galones marcados como hitos
+reparten ya cinco piezas que **no están en la tienda ni salen de un cofre**:
+
+| galón | gratis | de pago |
+| --- | --- | --- |
+| 10 | **GRITO** (emote) | **MOCHILA DE PROTONES** (accesorio) |
+| 20 | — | **ECTOPLASMA** (rastro) |
+| 30 | **VISOR DE CAZA** (accesorio) | **TRAMPA** (skin) |
+
+**El tema es cazar fantasmas, no «halloween».** Las de halloween ya se ganan
+gratis jugando esa semana; si el pase vendiera lo mismo, se estarían pisando
+dos cosas que tienen que convivir todo octubre.
+
+**La TRAMPA** es la caja de cazar fantasmas: las dos hojas del frente son la
+boca, por dentro lleva luz —y el fantasma que ya cazó—, y con la Q dispara un
+rayo que engancha a otro y se lo traga de un tirón mientras la caja da un
+culatazo. Al morir se le sueltan los cierres y se le escapa todo.
+
+**Quien juega gratis no se queda fuera**: termina el mes con dos piezas que se
+ven. Lo que se compra es la skin. Y el galón 20 paga pieza solo en el carril
+cerrado, a la vista y con su candado todo el mes, que es justo donde uno
+decide si pasa por caja.
+
+**Lo que se reparte un mes no vuelve.** Pasado octubre, quien no lo jugara ya
+no puede conseguir esas cinco de ninguna manera; el vestuario dice de qué
+temporada era cada una.
+
+**Y el camino ahora se ve.** Cada hito enseña su pieza dibujada de verdad, con
+tu color, en vez de un montón de monedas iguales.
+
 ## 2026-09-20 · DESTACAR y el enlace de una repetición, en su caja
 
 Los dos diálogos salían **sueltos sobre el negro**, con el título tan grande

@@ -106,11 +106,12 @@
   };
   /* ...y una por cosa comprable: c_<id> = 1 si está comprada. Salen del
    * catálogo, así que añadir algo a la tienda crea su contador solo. */
-  /* (las de COFRE van por el mismo contador: no se compran, pero cuando un
-   * cofre las suelta se guardan igual que una compra) */
+  /* (las de COFRE y las del PASE van por el mismo contador: no se compran,
+   * pero cuando un cofre las suelta —o el camino del mes las entrega— se
+   * guardan igual que una compra) */
   [CFG.EMOTES_TIENDA, CFG.EFECTOS, CFG.ACCESORIOS,
    CFG.SKINS.filter(function (sk) {
-     return sk.grupo === 'tienda' || sk.grupo === 'cofre';
+     return sk.grupo === 'tienda' || sk.grupo === 'cofre' || sk.grupo === 'pase';
    })].forEach(function (lista) {
     (lista || []).forEach(function (it) { BASE['c_' + it.id] = 'mayor'; });
   });

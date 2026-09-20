@@ -1148,12 +1148,44 @@ One entry per rewarded galón, each with a `gratis` and a `pago` side; a galón
 not listed simply pays nothing. Both sides can carry `monedas` and (once they
 exist) an item `id`.
 
-**Still missing: the season-exclusive pieces.** They are not drawn yet, so the
-path currently pays coins only — and a pass with no skin only that month's
-players own does not sell. Filling those holes is art work, not code. Chest
-pieces (PLAN-COFRES.md) and shop pieces must **not** be used for it: each of
-the three economies has to hand out its own things or they cannibalise each
-other.
+### The season-exclusive pieces (20 Sep 2026)
+
+The three `hito` galones hand out pieces that exist nowhere else. October's
+theme is **hunting ghosts**, deliberately not «halloween»: the halloween skins
+are already earned free that week, so selling the same thing would cannibalise
+them. Each of the three economies hands out its own things.
+
+| galón | lane | piece |
+| --- | --- | --- |
+| 10 | free | GRITO (emote) |
+| 10 | pass | MOCHILA DE PROTONES (accessory) |
+| 20 | pass | ECTOPLASMA (trail) |
+| 30 | free | VISOR DE CAZA (accessory) |
+| 30 | pass | TRAMPA (skin, with its own Q and death) |
+
+The free lane ends the month with two pieces that show, so the season does not
+pass a free player by; the paying lane gets the skin, which is the only thing
+actually being bought. Galón 20 pays a piece on the paid side only — visibly
+padlocked all month — because that is where the decision to buy is made.
+
+**How a piece is wired.** Drawings live in `js/skins.js` under *TEMPORADA DE
+OCTUBRE DEL PASE* (skin in `DRAW`, accessory in `ACC`, trail in `EFX`, face in
+`caraEmote`); the piece is declared in `js/config.js` with `pase: true` (a skin
+says it with `grupo: 'pase'` plus the `temporada` it belonged to) and hung on
+`CFG.PASE.CAMINO` by its id. From there everything is automatic:
+`Pase.sincronizar()` marks it with the same `c_<id>` counter as a purchase,
+`js/tienda.js` keeps it out of VENTA and refuses to sell it, and the wardrobe
+shows it under the DEL PASE filter. The path screen draws each piece for real
+in its cell, with the player's colour.
+
+**Careful with one thing**: `c_<id>` has to be declared in
+`js/achievements.js` too — its list of purchasable things filters skins by
+group, and a group missing there means the counter does not exist and the
+piece is never handed over. That exact bug cost the TRAMPA its first delivery:
+the four non-skin pieces arrived and the skin silently did not.
+
+A piece from a past season stays owned forever, and the wardrobe says which
+month it came from; nobody who missed it can get it any more.
 
 ### The screen (`#pase` in `js/ui.js`)
 

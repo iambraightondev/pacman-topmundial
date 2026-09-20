@@ -663,7 +663,13 @@
       ve: 'CABEZA DE LOBO CON HOCICO LARGO, OJO ÁMBAR Y COLMILLOS. CADA POCO LEVANTA LA CABEZA Y AÚLLA.' },
     { id: 'gorro', name: 'CLAUS-MAN', grupo: 'temporada',
       pide: { fecha: 'navidad' },
-      ve: 'GORRO ROJO CON BORDE BLANCO Y LA BORLA COLGANDO.' }
+      ve: 'GORRO ROJO CON BORDE BLANCO Y LA BORLA COLGANDO.' },
+
+    /* --- del PASE DE TEMPORADA: ni se compran ni salen de cofre. Se ganan
+     * llegando a su galón en el mes que las reparte, y quien no jugó ese mes
+     * no las tiene ya nunca. Ver CFG.PASE.CAMINO. --- */
+    { id: 'trampa', name: 'TRAMPA', grupo: 'pase', rara: true, temporada: '2026-10',
+      ve: 'LA CAJA DE CAZAR FANTASMAS: LAS DOS HOJAS DEL FRENTE SON LA BOCA Y POR DENTRO LLEVA LUZ, CON LO QUE YA CAZÓ. CON LA Q DISPARA EL RAYO Y SE TRAGA UN FANTASMA.' }
   ];
   /* Ventanas de las skins de temporada, [mes, día] a [mes, día] incluidos
    * (mes 1-12). La de Navidad cruza el año. */
@@ -873,11 +879,14 @@
       { g: 2,  gratis: {},               pago: { monedas: 150 } },
       { g: 3,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
       { g: 5,  gratis: { monedas: 100 }, pago: { monedas: 200 } },
-      { g: 10, gratis: { monedas: 150 }, pago: { monedas: 300 }, hito: true },
+      { g: 10, gratis: { monedas: 150, id: 'grito' },
+               pago:   { monedas: 300, id: 'acc_mochila' }, hito: true },
       { g: 15, gratis: { monedas: 150 }, pago: { monedas: 300 } },
-      { g: 20, gratis: { monedas: 200 }, pago: { monedas: 400 }, hito: true },
+      { g: 20, gratis: { monedas: 200 },
+               pago:   { monedas: 400, id: 'efx_ecto' }, hito: true },
       { g: 25, gratis: { monedas: 200 }, pago: { monedas: 400 } },
-      { g: 30, gratis: { monedas: 300 }, pago: { monedas: 800 }, hito: true }
+      { g: 30, gratis: { monedas: 300, id: 'acc_visor' },
+               pago:   { monedas: 800, id: 'trampa' }, hito: true }
     ]
   };
 
@@ -918,7 +927,10 @@
     { id: 'nervios', name: 'NERVIOS', precio: 150,
       ve: 'OJOS DE SUSTO, SONRISA FORZADA Y GOTONES DE SUDOR QUE RESBALAN.' },
     { id: 'arcoiris', name: 'ARCOÍRIS', precio: 150,
-      ve: 'CON CARA DE LOCO, VOMITA UN ARCOÍRIS QUE LE SALE DE LA BOCA.' }
+      ve: 'CON CARA DE LOCO, VOMITA UN ARCOÍRIS QUE LE SALE DE LA BOCA.' },
+    /* del PASE: no se vende (ver CFG.PASE.CAMINO) */
+    { id: 'grito', name: 'GRITO', pase: true, precio: 0,
+      ve: 'EL GRITO DEL CUADRO: LAS DOS MANOS EN LA CARA, OJOS DE ESPANTO Y LA BOCA EN UN ÓVALO QUE LATE.' }
   ];
   /* Todas las caras que pueden ir en una tecla de emote (y por la red) */
   CFG.EMOTE_IDS = CFG.EMOTES.concat(CFG.EMOTES_TIENDA).map(function (e) { return e.id; });
@@ -968,7 +980,10 @@
     { id: 'efx_portales', name: 'PORTALES', cofre: true, precio: 0,
       ve: 'SU ESTELA SON PORTALITOS MORADOS QUE SE ABREN Y SE CIERRAN. GUIÑO AL MAGO.' },
     { id: 'efx_constelacion', name: 'CONSTELACIÓN', cofre: true, precio: 0,
-      ve: 'DEJA UNA ESTRELLA EN CADA GIRO Y LAS UNE CON UNA LÍNEA: EL CAMINO QUEDA DIBUJADO HASTA QUE SE APAGA.' }
+      ve: 'DEJA UNA ESTRELLA EN CADA GIRO Y LAS UNE CON UNA LÍNEA: EL CAMINO QUEDA DIBUJADO HASTA QUE SE APAGA.' },
+    /* del PASE: no se vende (ver CFG.PASE.CAMINO) */
+    { id: 'efx_ecto', name: 'ECTOPLASMA', pase: true, precio: 0,
+      ve: 'UN REGUERO DE BABA VERDE FOSFORESCENTE CON BURBUJAS QUE ASOMAN Y REVIENTAN.' }
   ];
   CFG.ACCESORIOS = [
     { id: 'acc_gafas', name: 'GAFAS DE SOL', precio: 450,
@@ -1022,7 +1037,12 @@
     { id: 'acc_aureola', name: 'AUREOLA', cofre: true, precio: 0,
       ve: 'UN ARO DE LUZ FLOTANDO SOBRE LA CABEZA QUE SE INCLINA AL GIRAR, COMO SI PESARA.' },
     { id: 'acc_alas', name: 'ALITAS', cofre: true, precio: 0,
-      ve: 'DOS ALITAS BLANCAS A LOS LADOS QUE BATEN DE GOLPE AL COMERSE UN FANTASMA.' }
+      ve: 'DOS ALITAS BLANCAS A LOS LADOS QUE BATEN DE GOLPE AL COMERSE UN FANTASMA.' },
+    /* del PASE: no se compran ni salen de cofre (ver CFG.PASE.CAMINO) */
+    { id: 'acc_mochila', name: 'MOCHILA DE PROTONES', pase: true, precio: 0,
+      ve: 'EL APARATO A LA ESPALDA: ALETAS DE REFRIGERACIÓN, EL ACELERADOR LATIENDO EN VERDE Y LA MANGUERA QUE DEJA EL CAÑÓN SOBRE LA CORONILLA. VIBRA Y SUELTA VAPOR.' },
+    { id: 'acc_visor', name: 'VISOR DE CAZA', pase: true, precio: 0,
+      ve: 'VISOR DE CRISTAL VERDE CON UN BARRIDO QUE SUBE Y BAJA, Y AL LADO EL MEDIDOR CON TRES BARRITAS QUE SUBEN SOLAS.' }
   ];
   CFG.EFECTO_IDS = CFG.EFECTOS.map(function (e) { return e.id; });
   CFG.ACCESORIO_IDS = CFG.ACCESORIOS.map(function (e) { return e.id; });

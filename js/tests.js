@@ -3703,11 +3703,18 @@
     var legado = ['clasico', 'sombra', 'ojos', 'neon', 'pixel', 'aro'];
     eq(CFG.SKIN_IDS.length, CFG.SKINS.length, 'SKIN_IDS sale de la lista');
     CFG.SKINS.forEach(function (sk) {
-      ok(['nivel', 'logro', 'temporada', 'tienda', 'cofre'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
+      ok(['nivel', 'logro', 'temporada', 'tienda', 'cofre', 'pase'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
       if (legado.indexOf(sk.id) === -1) ok(S.ARTE.hasOwnProperty(sk.id), sk.id + ': tiene dibujo');
       if (sk.grupo === 'tienda') ok(sk.precio > 0 && !sk.pide, sk.id + ': se compra, no se gana');
       /* las de cofre no se compran ni se piden: salen de un cofre */
       else if (sk.grupo === 'cofre') ok(!sk.precio && !sk.pide, sk.id + ': ni precio ni requisito');
+      /* las del pase tampoco: las reparte el camino de SU temporada, y esa
+       * temporada tiene que estar apuntada o el vestuario no sabrá decir de
+       * qué mes era cuando ya no se pueda conseguir */
+      else if (sk.grupo === 'pase') {
+        ok(!sk.precio && !sk.pide, sk.id + ': ni precio ni requisito');
+        ok(/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(sk.temporada || ''), sk.id + ': dice de qué temporada es');
+      }
       else if (sk.grupo !== 'nivel') ok(!!sk.pide, sk.id + ': dice qué pide');
       if (sk.pide && sk.pide.stat) {
         ok(window.PM.Achievements.STATS.hasOwnProperty(sk.pide.stat),
@@ -4623,7 +4630,7 @@
       UI.tiendaTengo = false;
       UI.refreshTienda();
       var vistas = UI.tiendaItems.filter(function (r) { return r.card.style.display !== 'none'; });
-      var deVenta = CFG.EFECTOS.filter(function (e) { return !e.cofre; }).length;
+      var deVenta = CFG.EFECTOS.filter(function (e) { return !e.cofre && !e.pase; }).length;
       eq(vistas.length, deVenta, 'sin nada comprado, salen todos los efectos que se venden');
       var a = vistas[0], b = vistas[1];
       ok(UI.tiendaAlTicket(a.it.id), 'el + echa al ticket');
@@ -7389,6 +7396,79 @@
         });
       }
       ok(c[c.length - 1].g === CFG.PASE.GALONES, 'el último galón paga algo');
+    });
+
+  /* ---------- LAS PIEZAS DE LA TEMPORADA ----------
+   * Desde el 20 de septiembre el camino no paga solo monedas: los tres hitos
+   * reparten piezas que NO están en la tienda ni en los cofres. Lo que se
+   * vigila aquí es justo esa frontera, que es lo que sostiene que el pase
+   * valga algo. */
+  test('lo que reparte el pase no se vende en ninguna parte', function () {
+    var Tn = window.PM.Tienda;
+    var hay = 0;
+    window.PM.Pase.camino().forEach(function (e) {
+      ['gratis', 'pago'].forEach(function (lado) {
+        var id = e[lado] && e[lado].id;
+        if (!id) return;
+        hay++;
+        var it = Tn.item(id);
+        ok(!!it, 'la pieza ' + id + ' está en el vestuario');
+        ok(!!it.pase, id + ' va marcada como del pase');
+        eq(it.precio, 0, id + ' no tiene precio');
+        ok(Tn.VENTA.indexOf(it) === -1, id + ' no sale en la tienda');
+        ok(!Tn.comprar(id).ok, id + ' no se puede comprar');
+      });
+    });
+    ok(hay >= 3, 'y hay piezas que repartir: un pase de solo monedas no se vende');
+  });
+
+  test('cada pieza del camino está dibujada', function () {
+    var Sp = window.PM.Sprites, Tn = window.PM.Tienda;
+    window.PM.Pase.camino().forEach(function (e) {
+      ['gratis', 'pago'].forEach(function (lado) {
+        var id = e[lado] && e[lado].id;
+        if (!id) return;
+        var cat = Tn.item(id).cat;
+        if (cat === 'skin') ok(!!Sp.ARTE[id], id + ' tiene su dibujo de skin');
+        else if (cat === 'accesorio') ok(!!Sp.ACCESORIOS[id], id + ' tiene su dibujo de accesorio');
+        else if (cat === 'efecto') ok(!!Sp.EFECTOS[id], id + ' tiene su rastro');
+        else if (cat === 'emote') ok(!!Sp.CARAS_TIENDA[id], id + ' tiene su cara');
+      });
+    });
+  });
+
+  test('llegar al galón entrega la pieza, y solo una vez', function () {
+    conPase(function (Pa, Tn, A, t) {
+      var hito = null;
+      Pa.camino().forEach(function (e) { if (!hito && e.gratis && e.gratis.id) hito = e; });
+      ok(!!hito, 'hay un galón que paga pieza');
+      var id = hito.gratis.id;
+      ok(!Tn.tiene(id), 'antes de llegar, no es suya');
+      Pa.ganar(CFG.PASE.POR_GALON * hito.g, t);
+      ok(Tn.tiene(id), 'al llegar al galón, sí');
+      var saldo = Tn.saldo();
+      Pa.sincronizar(t);
+      Pa.sincronizar(t);
+      ok(Tn.tiene(id), 'y sigue siendo suya');
+      eq(Tn.saldo(), saldo, 'sincronizar de más no regala monedas');
+    });
+  });
+
+  test('la skin del pase se abre al ganarla, y dice de qué temporada era',
+    function () {
+      conPase(function (Pa, Tn, A, t) {
+        var id = null;
+        Pa.camino().forEach(function (e) {
+          if (e.pago && e.pago.id && Tn.item(e.pago.id).cat === 'skin') id = e.pago.id;
+        });
+        ok(!!id, 'el carril de pago acaba en una skin: es lo que se compra');
+        var antes = window.PM.Skins.estado(id);
+        ok(!antes.abierta, 'sin el pase no está abierta');
+        eq(antes.chip, 'PASE', 'y se ve de dónde sale');
+        Pa.conceder(t);
+        Pa.ganar(CFG.PASE.POR_GALON * CFG.PASE.GALONES, t);
+        ok(window.PM.Skins.estado(id).abierta, 'con el camino andado y el pase, es suya');
+      });
     });
 
   /* ---------- LA PANTALLA DEL PASE ----------

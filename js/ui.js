@@ -1589,7 +1589,7 @@
       var self = this;
       var o = this.els.pase;
       if (!o) return;
-      var P = window.PM.Pase, CP = CFG.PASE;
+      var P = window.PM.Pase, CP = CFG.PASE, Tn = window.PM.Tienda;
       if (!P || !CP) return;
       o.innerHTML = '';
 
@@ -1687,18 +1687,31 @@
       /* una celda del camino: la caja del premio, y encima —solo en el carril
        * del pase— el cristal y el candado, que van FUERA del carril para que
        * el filtro que lo apaga no se los lleve por delante */
-      function celda(cls, monto, hito) {
+      function celda(cls, monto, hito, pieza) {
         var cel = mk('div', 'ps-cel' + (hito ? ' ps-hito' : ''));
-        var car = mk('div', 'ps-carril' + (monto ? '' : ' ps-vacio'));
+        var car = mk('div', 'ps-carril' + (monto || pieza ? '' : ' ps-vacio'));
+        var cv = null;
+        /* LA PIEZA MANDA sobre las monedas: es lo que se viene a buscar. Va
+         * dibujada de verdad —con tu color—, no con su nombre a secas: lo
+         * que se recuerda de una temporada es la pinta de lo que dio. */
+        if (pieza) {
+          var it = Tn ? Tn.item(pieza) : null;
+          cv = document.createElement('canvas');
+          cv.className = 'ps-pieza';
+          cv.width = 48; cv.height = 48;
+          cv.setAttribute('aria-hidden', 'true');
+          car.appendChild(cv);
+          car.appendChild(mk('span', 'ps-pieza-nom', (it && it.name) || ''));
+        }
         if (monto) {
           car.appendChild(self.monedaEl());
           car.appendChild(mk('span', 'ps-monto', fmtMonedas(monto)));
-        } else {
+        } else if (!pieza) {
           car.appendChild(mk('span', 'ps-monto', '·'));
         }
         cel.appendChild(car);
         void cls;
-        return { cel: cel, car: car };
+        return { cel: cel, car: car, cv: cv };
       }
 
       this.psCeldas = [];
@@ -1706,10 +1719,12 @@
         var e = porGalon[g] || { gratis: {}, pago: {} };
         var gr = (e.gratis && e.gratis.monedas) || 0;
         var pg = (e.pago && e.pago.monedas) || 0;
+        var grId = (e.gratis && e.gratis.id) || '';
+        var pgId = (e.pago && e.pago.id) || '';
         var hito = !!e.hito;
 
-        var arriba = celda('gratis', gr, hito);
-        var abajo = celda('pago', pg, hito);
+        var arriba = celda('gratis', gr, hito, grId);
+        var abajo = celda('pago', pg, hito, pgId);
 
         /* el cristal y el candado del carril cerrado */
         var rejilla = mk('span', 'ps-rejilla');
@@ -1733,6 +1748,7 @@
 
         this.psCeldas.push({
           g: g, gr: gr, pg: pg, hito: hito,
+          grId: grId, pgId: pgId, grCv: arriba.cv, pgCv: abajo.cv,
           cel: arriba.cel, celPago: abajo.cel,
           arriba: arriba.car, abajo: abajo.car,
           rejilla: rejilla, candado: candado, nota: nota, num: num
@@ -1932,10 +1948,15 @@
       for (var i = 0; i < this.psCeldas.length; i++) {
         var c = this.psCeldas[i];
         var hecho = c.g <= r.galon;
-        c.arriba.classList.toggle('ps-ganado', hecho && !!c.gr);
-        c.abajo.classList.toggle('ps-ganado', hecho && suyo && !!c.pg);
-        c.abajo.classList.toggle('ps-cerrado', hecho && !suyo && !!c.pg);
-        c.abajo.classList.toggle('ps-suyo', suyo && !!c.pg);
+        var hayGr = !!(c.gr || c.grId), hayPg = !!(c.pg || c.pgId);
+        c.arriba.classList.toggle('ps-ganado', hecho && hayGr);
+        c.abajo.classList.toggle('ps-ganado', hecho && suyo && hayPg);
+        c.abajo.classList.toggle('ps-cerrado', hecho && !suyo && hayPg);
+        c.abajo.classList.toggle('ps-suyo', suyo && hayPg);
+        /* las piezas se dibujan una vez: el camino se refresca a menudo y
+         * repintar cuatro canvas en cada vuelta no pinta nada nuevo */
+        if (c.grCv && !c.grCv.dataset.hecho) { this.pasePintarPieza(c.grCv, c.grId); c.grCv.dataset.hecho = '1'; }
+        if (c.pgCv && !c.pgCv.dataset.hecho) { this.pasePintarPieza(c.pgCv, c.pgId); c.pgCv.dataset.hecho = '1'; }
         /* el cristal y el candado: solo mientras no sea tuyo y haya algo que
          * guardar bajo llave */
         /* el cristal cubre el carril ENTERO mientras no sea tuyo (si no,
@@ -1943,8 +1964,8 @@
          * apagados); el candado solo va donde hay algo bajo llave */
         c.celPago.classList.toggle('ps-bajollave', !suyo);
         c.rejilla.style.display = suyo ? 'none' : '';
-        c.candado.style.display = (!suyo && !!c.pg) ? '' : 'none';
-        c.nota.textContent = !c.pg ? ''
+        c.candado.style.display = (!suyo && hayPg) ? '' : 'none';
+        c.nota.textContent = !hayPg ? ''
           : (suyo ? (hecho ? 'COBRADO' : 'AL LLEGAR')
                   : (hecho ? 'ALCANZADO' : 'TE ESPERA'));
         c.nota.className = 'ps-nota' + (suyo && hecho ? ' cobrado' : (!suyo && hecho ? '' : ' espera'));
@@ -1983,6 +2004,41 @@
         this.psBtn.textContent = 'PASE · PRÓXIMAMENTE';
         this.psBtn.disabled = true;
       }
+    },
+
+    /* Una pieza del camino, dibujada en su cuadro con TU color. Cada familia
+     * se enseña como se lleva: la skin y el accesorio, puestos; el efecto,
+     * dejando su rastro; el emote, en su globo. */
+    pasePintarPieza: function (cv, id) {
+      if (!cv || !id) return;
+      var Tn = window.PM.Tienda, Sp = window.PM.Sprites;
+      var it = Tn ? Tn.item(id) : null;
+      var s = window.PM.settings || {};
+      var color = s.pacColor || '#ffff00';
+      var c = cv.getContext('2d');
+      var k = cv.width / 18;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.imageSmoothingEnabled = false;
+      if (it && it.cat === 'emote') {
+        /* la CARA sola, sin el globo: el globo se recoloca para no salirse
+         * del laberinto (Sprites.drawEmote) y en un cuadro de 48 px eso lo
+         * empujaba a la esquina, cortado */
+        Sp.drawPacFace(c, cv.width / 2, cv.height / 2, cv.width * 0.42, color, id);
+        return;
+      }
+      c.setTransform(k, 0, 0, k, cv.width / 2, cv.height / 2);
+      if (it && it.cat === 'skin') {
+        Sp.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2, color, id, { icono: true });
+      } else if (it && it.cat === 'efecto') {
+        Sp.drawPacman(c, 3, 0, CFG.DIR.RIGHT, 2, color, 'clasico', {
+          efecto: id, estira: 0.55,
+          back: function (d) { return { x: 3 - d, y: 0, d: CFG.DIR.RIGHT }; }
+        });
+      } else {
+        Sp.drawPacman(c, 0, 0, CFG.DIR.RIGHT, 2, color, 'clasico', { accesorio: id, icono: true });
+      }
+      c.setTransform(1, 0, 0, 1, 0, 0);
     },
 
     /* 'AAAA-MM' -> el mes solo, en palabras. El año va en la cabecera, así
@@ -3167,7 +3223,8 @@
       { id: 'rara', name: 'EXTRAVAGANTES', titulo: 'EXTRAVAGANTES · CON LOGROS' },
       { id: 'temporada', name: 'FECHAS ESPECIALES', titulo: 'FECHAS ESPECIALES · HALLOWEEN, NAVIDAD Y LUNA LLENA' },
       { id: 'tienda', name: 'DE TIENDA', titulo: 'DE TIENDA · CON MONEDAS' },
-      { id: 'cofre', name: 'DE COFRE', titulo: 'DE COFRE · NO SE COMPRAN, SE GANAN ABRIENDO UNO' }
+      { id: 'cofre', name: 'DE COFRE', titulo: 'DE COFRE · NO SE COMPRAN, SE GANAN ABRIENDO UNO' },
+      { id: 'pase', name: 'DEL PASE', titulo: 'DEL PASE · SOLO SE REPARTEN EN SU TEMPORADA' }
     ],
 
     /* ---------- lo que se ha visto ya (para las marcas de NUEVO) ----------
@@ -3250,17 +3307,21 @@
           tuyo: true, puesto: !puesto0, como: '', pct: 1, chip: '' });
         lista.forEach(function (it) {
           var tuyo = !!(Tn && Tn.tiene(it.id));
-          /* lo de cofre no se vende: ni precio ni barra de ahorro */
-          var deCofre = !!it.cofre;
+          /* ni lo de cofre ni lo del pase se venden: ni precio ni barra de
+           * ahorro; cada uno dice de dónde sale */
+          var deCofre = !!it.cofre, dePase = !!it.pase;
+          var fuera = deCofre || dePase;
           out.push({
             id: it.id, name: it.name, ve: it.ve || '',
-            chip: tuyo ? (deCofre ? 'DE COFRE' : 'COMPRADO') : (deCofre ? 'COFRE' : 'TIENDA'),
+            chip: tuyo ? (deCofre ? 'DE COFRE' : dePase ? 'DEL PASE' : 'COMPRADO')
+              : (deCofre ? 'COFRE' : dePase ? 'PASE' : 'TIENDA'),
             tuyo: tuyo, puesto: tuyo && puesto0 === it.id,
             como: tuyo ? '' : deCofre ? 'SOLO SALE DE UN COFRE'
+              : dePase ? 'SOLO SE GANA EN EL PASE'
               : ((Tn ? Tn.fmt(it.precio) : it.precio) + ' MONEDAS EN LA TIENDA'),
-            pct: tuyo ? 1 : deCofre ? 0
+            pct: tuyo ? 1 : fuera ? 0
               : (Tn ? Math.min(1, Math.max(0, Tn.saldo()) / (it.precio || 1)) : 0),
-            tienda: !deCofre, precio: deCofre ? 0 : it.precio
+            tienda: !fuera, precio: fuera ? 0 : it.precio
           });
         });
       } else if (tab === 'emote') {
@@ -3271,11 +3332,16 @@
           var esBase = base.indexOf(e.id) !== -1;
           var tuyo = esBase || !!(Tn && Tn.tiene(e.id));
           var enTecla = caras.indexOf(e.id);
+          var dePaseE = !!e.pase;
           out.push({
-            id: e.id, name: e.name, ve: e.ve || '', chip: esBase ? 'DE SIEMPRE' : (tuyo ? 'COMPRADO' : 'TIENDA'),
+            id: e.id, name: e.name, ve: e.ve || '',
+            chip: esBase ? 'DE SIEMPRE'
+              : dePaseE ? (tuyo ? 'DEL PASE' : 'PASE')
+              : (tuyo ? 'COMPRADO' : 'TIENDA'),
             tuyo: tuyo, puesto: caras[tecla] === e.id, tecla: enTecla,
-            como: tuyo ? '' : ((Tn ? Tn.fmt(e.precio) : e.precio) + ' MONEDAS EN LA TIENDA'),
-            pct: tuyo ? 1 : 0, tienda: !esBase, precio: e.precio || 0
+            como: tuyo ? '' : dePaseE ? 'SOLO SE GANA EN EL PASE'
+              : ((Tn ? Tn.fmt(e.precio) : e.precio) + ' MONEDAS EN LA TIENDA'),
+            pct: tuyo ? 1 : 0, tienda: !esBase && !dePaseE, precio: dePaseE ? 0 : (e.precio || 0)
           });
         });
       } else if (tab === 'avatar') {
