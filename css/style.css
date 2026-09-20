@@ -6159,7 +6159,16 @@ body { font-size-adjust: 0.56; }
 /* ---- el tablero: rótulos fijos y el camino desplazable ---- */
 #pase .ps-tablero { display: flex; gap: 9px; align-items: flex-start; }
 #pase .ps-rotulos { width: 108px; flex: none; display: flex; flex-direction: column; gap: 10px; }
-#pase .ps-scroll { flex: 1 1 auto; overflow-x: auto; padding-bottom: 4px; scrollbar-color: #6b47c9 #0b0718; scrollbar-width: thin; }
+#pase .ps-scroll {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-color: #6b47c9 #0b0718;
+  scrollbar-width: thin;
+  /* y al arrastrar tampoco se queda una casilla partida */
+  scroll-snap-type: x proximity;
+}
+#pase .ps-cel { scroll-snap-align: start; }
 #pase .ps-scroll::-webkit-scrollbar { height: 8px; }
 #pase .ps-scroll::-webkit-scrollbar-track { background: #0b0718; }
 #pase .ps-scroll::-webkit-scrollbar-thumb { background: #6b47c9; }

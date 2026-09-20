@@ -1865,11 +1865,23 @@
     showPase: function () {
       this.refreshPase();
       this.showPanel('pase');
-      /* se abre por donde vas, no por el galón 1 */
+      /* Se abre por donde vas, no por el galón 1 — y SIEMPRE en el borde de
+       * una casilla. Centrando el galón, el desplazamiento caía a mitad de la
+       * casilla anterior y el camino empezaba partido por la mitad, que es lo
+       * primero que se ve al entrar. Se busca el galón alcanzado en la lista y
+       * se alinea el que va dos antes: así queda sitio para ver de dónde
+       * vienes y ninguna casilla sale cortada. */
       var sc = this.psScroll, aqui = this.psAqui;
       if (sc && aqui && sc.scrollWidth > sc.clientWidth) {
-        sc.scrollLeft = Math.max(0, aqui.offsetLeft -
-          (sc.clientWidth - aqui.offsetWidth) / 2);
+        var desde = aqui, i;
+        for (i = 0; i < this.psCeldas.length; i++) {
+          if (this.psCeldas[i].cel === aqui) {
+            desde = this.psCeldas[Math.max(0, i - 2)].cel;
+            break;
+          }
+        }
+        sc.scrollLeft = Math.max(0, desde.offsetLeft);
+        if (this.psScrollAlto) this.psScrollAlto.scrollLeft = sc.scrollLeft;
       }
       this.animarPase();
     },
