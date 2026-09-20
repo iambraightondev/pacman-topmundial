@@ -195,6 +195,9 @@ var doc = {
   readyState: 'complete',
   activeElement: null,
   createElement: function (tag) { return new El(tag); },
+  /* los dibujos del juego (el candado del PASE, la ronda de los botones) son
+   * SVG: sin esto, el panel del pase ni se construye aquí */
+  createElementNS: function (ns, tag) { return new El(tag); },
   // un nodo de texto de mentira: basta con que se pueda colgar y lleve su texto
   createTextNode: function (txt) { var n = new El('#text'); n.textContent = String(txt); return n; },
   getElementById: function (id) { return porId[id] || null; },

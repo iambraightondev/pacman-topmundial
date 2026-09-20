@@ -864,16 +864,20 @@
      * trabajo de arte, no de código, y hasta que existan NO se deben poner
      * aquí las de cofre (PLAN-COFRES.md) ni las de la tienda: cada cosa tiene
      * que salir de su sitio o las tres economías se pisan. */
+    /* `hito`: el escalón que rompe la fila y se enseña al doble de ancho.
+     * Va escrito aquí y no lo deduce la pantalla de las cifras, porque lo que
+     * hace grande a un galón es lo que se pone EN él (la pieza del mes, el
+     * cofre, el final), no cuántas monedas paga. */
     CAMINO: [
       { g: 1,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
       { g: 2,  gratis: {},               pago: { monedas: 150 } },
       { g: 3,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
       { g: 5,  gratis: { monedas: 100 }, pago: { monedas: 200 } },
-      { g: 10, gratis: { monedas: 150 }, pago: { monedas: 300 } },
+      { g: 10, gratis: { monedas: 150 }, pago: { monedas: 300 }, hito: true },
       { g: 15, gratis: { monedas: 150 }, pago: { monedas: 300 } },
-      { g: 20, gratis: { monedas: 200 }, pago: { monedas: 400 } },
+      { g: 20, gratis: { monedas: 200 }, pago: { monedas: 400 }, hito: true },
       { g: 25, gratis: { monedas: 200 }, pago: { monedas: 400 } },
-      { g: 30, gratis: { monedas: 300 }, pago: { monedas: 800 } }
+      { g: 30, gratis: { monedas: 300 }, pago: { monedas: 800 }, hito: true }
     ]
   };
 

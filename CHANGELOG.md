@@ -2,6 +2,31 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · La pantalla del pase, como la marquesina de una recreativa
+
+**El camino se ve ahora como lo que es**: un mueble de salón recreativo. Arriba,
+las bombillas parpadeando, el mes en neón y tu galón en la chapa amarilla, con
+la barra que dice cuánto falta para el siguiente —y cuántas monedas es eso,
+que es lo que uno entiende—.
+
+**Los dos carriles se ven por fin como lo que valen.** El de arriba, el de
+todos, va sobrio a propósito: verde apagado y monedas mates. El de abajo, el
+del pase, es más alto y está vestido —terciopelo, filo de oro, una luz que lo
+recorre y un pedestal bajo cada premio—, y las cifras van al doble de tamaño.
+Entre los dos, una cinta que dice a quién pertenece cada uno.
+
+**Y se distingue de un vistazo si es tuyo o no.** Mientras no lo sea, el
+carril de abajo se ve **tras un cristal**: apagado, con su retícula y un
+candado dorado sobre cada premio. Se intuye lo que hay —para eso está—, pero
+no se confunde con algo ya abierto. El día que se abra, se enciende entero:
+sello PASE ACTIVO, la cinta en dorado, los galones pasados marcados COBRADO y
+el botón de compra desaparece.
+
+Cada cinco o diez galones hay un **hito**: ocupa el doble de ancho y es donde
+irán las piezas exclusivas de cada temporada cuando estén dibujadas.
+
+Tu Pac-Man —con tu color y tu skin— va plantado sobre tu galón, masticando.
+
 ## 2026-09-19 · Tu aspecto viaja contigo: abre tu cuenta en otro ordenador y sigues siendo tú
 
 **Lo que pasaba.** Entrabas en tu cuenta desde otra máquina y volvían tus

@@ -7446,10 +7446,36 @@
       conPantallaPase(function (U, Pa, Tn, A, t) {
         eq(U.psBtn.disabled, true, 'apagado mientras VENTA sea false');
         ok(U.psBtn.textContent.indexOf('PRÓXIMAMENTE') !== -1, 'y lo dice');
+        eq(U.psChapa.style.display, 'none', 'y sin el sello de activo');
         Pa.conceder(t);
         U.refreshPase();
-        eq(U.psBtn.disabled, true, 'y si ya es suyo, tampoco hay nada que comprar');
-        ok(U.psBtn.textContent.indexOf('TUYO') !== -1, 'lo dice de otra manera');
+        eq(U.psBtn.style.display, 'none',
+          'con el pase ya en la mano no hay nada que vender: el botón se va');
+        eq(U.psChapa.style.display, '', 'y en su sitio queda el sello');
+      });
+    });
+
+  test('el carril del pase se ve cerrado hasta que es tuyo, y entonces se enciende',
+    function () {
+      conPantallaPase(function (U, Pa, Tn, A, t) {
+        var conPremio = null;
+        for (var i = 0; i < U.psCeldas.length; i++) {
+          if (U.psCeldas[i].pg) { conPremio = U.psCeldas[i]; break; }
+        }
+        ok(conPremio, 'hay algún galón que paga en el carril del pase');
+        ok(conPremio.celPago.classList.contains('ps-bajollave'),
+          'de entrada se ve tras el cristal');
+        eq(conPremio.candado.style.display, '', 'con su candado encima');
+        eq(conPremio.rejilla.style.display, '', 'y la retícula delante');
+        ok(!U.psCinta.classList.contains('abierta'), 'la cinta dice que está cerrado');
+
+        Pa.conceder(t);
+        U.refreshPase();
+        ok(!conPremio.celPago.classList.contains('ps-bajollave'),
+          'al ser suyo se quita el cristal: es lo único que distingue los dos estados');
+        eq(conPremio.candado.style.display, 'none', 'sin candados');
+        eq(conPremio.rejilla.style.display, 'none', 'ni retícula');
+        ok(U.psCinta.classList.contains('abierta'), 'y la cinta se enciende');
       });
     });
 

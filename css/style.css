@@ -5984,155 +5984,471 @@ body { font-size-adjust: 0.56; }
  * color del id pesaba más que el del hover y el texto desaparecía */
 #pauseBtn:hover, #pauseBtn:focus-visible { color: #000; }
 
-/* ---------- EL PASE DE TEMPORADA: EL CAMINO DEL MES ----------
- * Dos carriles, uno encima del otro, y el de abajo con candado hasta que se
- * pueda vender. Van pegados a propósito (sin hueco entre ellos): son el mismo
- * galón visto dos veces, no dos premios distintos.
+/* ---------- EL PASE DE TEMPORADA: LA MARQUESINA ----------
+ * Dos carriles, uno encima del otro y con sus columnas en la MISMA vertical
+ * (de ahí el box-sizing de cada pieza: el carril de arriba lleva borde de 2 y
+ * el de abajo de 3, y sin esto las columnas se corrían).
  *
- * El verde es lo ganado —el mismo que el sello CAZADO del DAILY— y el morado
- * es lo cerrado. El morado no se usa en ningún otro sitio del juego, así que
- * "lo que no es mío todavía" se lee de un vistazo y sin leer una palabra. */
-#pase .ps-cab,
-#pase .ps-galon,
-#pase .ps-scroll,
+ * El de arriba es el de todos y va sobrio a propósito —verde apagado, moneda
+ * mate, sin un solo brillo—. El de abajo es el que se vende, así que es más
+ * alto y está vestido: terciopelo, filo de oro, luz que lo barre y pedestal
+ * bajo cada premio.
+ *
+ * Y LOS DOS ESTADOS TIENEN QUE DISTINGUIRSE A UN METRO DE LA PANTALLA:
+ * mientras el carril de pago no sea tuyo se ve TRAS UN CRISTAL (apagado,
+ * desaturado, con su retícula y un candado encima). El lujo se intuye, que es
+ * lo que hace quererlo, pero nadie puede confundirlo con algo ya abierto. En
+ * cuanto es tuyo, se enciende entero.
+ * -------------------------------------------------------- */
+#pase .ps-marq,
+#pase .ps-tablero,
 #pase .ps-pie,
+#pase .ps-regla,
 #pase .ps-dormido {
   width: min(96%, 1240px);
-  /* el panel es una columna flexible: sin esto, en pantalla baja el camino se
-   * encoge y se come los números de los galones y el Pac-Man */
   flex: none;
+  box-sizing: border-box;
+}
+
+/* ---- la marquesina: bombillas, mes y galón ---- */
+#pase .ps-marq {
+  border-bottom: 3px solid #1c1c4a;
+  padding-bottom: 12px;
+}
+#pase .ps-focos {
+  display: flex;
+  gap: 13px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+#pase .ps-foco {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffd400;
+  animation: ps-bombilla 1s steps(1) infinite;
+}
+#pase .ps-foco.par { animation-name: ps-bombilla2; }
+
+@keyframes ps-bombilla {
+  0%, 49% { opacity: 1; box-shadow: 0 0 10px #ffd400, 0 0 20px rgba(255, 212, 0, 0.6); }
+  50%, 100% { opacity: 0.25; box-shadow: none; }
+}
+@keyframes ps-bombilla2 {
+  0%, 49% { opacity: 0.25; box-shadow: none; }
+  50%, 100% { opacity: 1; box-shadow: 0 0 10px #ffd400, 0 0 20px rgba(255, 212, 0, 0.6); }
 }
 
 #pase .ps-cab {
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
-  gap: 8px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
 }
 #pase .ps-temp {
-  font-size: clamp(12px, 2vh, 16px); letter-spacing: 3px; color: #00ffff;
-}
-#pase .ps-quedan {
-  font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; color: #ff8a3d;
-}
-
-/* el galón y lo que falta para el siguiente */
-#pase .ps-galon {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-top: 4px;
-}
-#pase .ps-galon-num {
-  font-size: clamp(11px, 1.9vh, 15px); letter-spacing: 2px;
-  color: #000; background: #ffd400; padding: 7px 10px 5px;
-  box-shadow: 0 0 14px rgba(255, 212, 0, 0.45);
-  white-space: nowrap;
-}
-#pase .ps-medidor {
-  flex: 1 1 220px; min-width: 160px; height: 14px;
-  background: #04040d; border: 2px solid #1c1c4a; overflow: hidden;
-}
-#pase .ps-medidor-lleno {
-  height: 100%; width: 0;
-  background: linear-gradient(90deg, #ffd400, #ff8a3d);
-  transition: width 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
-}
-#pase .ps-medidor-txt {
-  font-size: clamp(10px, 1.5vh, 12px); letter-spacing: 1px; color: #6a6c8e;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-
-#pase .ps-dormido {
-  font-size: clamp(10px, 1.6vh, 12px); line-height: 1.7; letter-spacing: 1px;
-  color: #ff8a3d; border-left: 3px solid #ff8a3d; padding: 6px 0 6px 12px;
+  font-size: clamp(9px, 1.4vh, 11px);
+  letter-spacing: 5px;
+  color: #00ffff;
+  margin-bottom: 10px;
   text-align: left;
 }
-
-/* el camino, de lado */
-#pase .ps-scroll { overflow-x: auto; padding-bottom: 6px; }
-#pase .ps-camino {
-  position: relative; display: flex; gap: 6px; min-width: max-content;
-  align-items: flex-start; padding-bottom: 36px;
+#pase .ps-mes {
+  font-size: clamp(22px, 4.4vh, 36px);
+  letter-spacing: 4px;
+  color: #ffd400;
+  text-shadow: 0 0 14px rgba(255, 212, 0, 0.65), 0 0 40px rgba(255, 212, 0, 0.28), 4px 4px 0 #7a3f00;
 }
-#pase .ps-celda { width: 92px; display: flex; flex-direction: column; }
+#pase .ps-estado {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+/* el sello de si el carril de pago es tuyo o no */
+#pase .ps-sello {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 2px;
+  padding: 7px 11px;
+  color: #c9a7ff;
+  border: 2px solid #6b47c9;
+  background: rgba(107, 71, 201, 0.15);
+}
+#pase .ps-sello.tuyo {
+  color: #05060a;
+  border-color: #ffd400;
+  background: linear-gradient(90deg, #ffd400, #ffb852);
+  box-shadow: 0 0 18px rgba(255, 212, 0, 0.5);
+}
+#pase .ps-quedan {
+  font-size: clamp(9px, 1.3vh, 11px);
+  letter-spacing: 3px;
+  color: #ff8a3d;
+  animation: ps-destello 1.6s ease-in-out infinite;
+}
+@keyframes ps-destello { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+#pase .ps-galon-num {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: #ffd400;
+  color: #05060a;
+  padding: 10px 14px 8px;
+  box-shadow: 0 0 24px rgba(255, 212, 0, 0.45);
+  animation: ps-latido 2.4s ease-in-out infinite;
+  white-space: nowrap;
+}
+#pase .ps-galon-num b { font-size: clamp(18px, 3.2vh, 26px); }
+#pase .ps-galon-num span { font-size: clamp(9px, 1.3vh, 11px); }
+@keyframes ps-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+/* la barra hasta el siguiente galón */
+#pase .ps-medidor {
+  position: relative;
+  height: 16px;
+  border: 2px solid #1c1c4a;
+  background: #04040d;
+  overflow: hidden;
+  margin-top: 12px;
+}
+#pase .ps-medidor-lleno {
+  position: absolute;
+  inset: 0 100% 0 0;
+  background: linear-gradient(90deg, #ffd400, #ff8a3d);
+  transition: right 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+#pase .ps-medidor::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 64px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: ps-brillo 2.2s linear infinite;
+}
+@keyframes ps-brillo { 0% { transform: translateX(-120%); } 100% { transform: translateX(1200%); } }
+
+#pase .ps-medidor-txt {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 2px;
+  color: #8a8cae;
+  font-variant-numeric: tabular-nums;
+}
+#pase .ps-medidor-txt b { color: #9ef26a; font-weight: normal; }
+
+#pase .ps-dormido {
+  font-size: clamp(9px, 1.4vh, 11px);
+  line-height: 1.7;
+  letter-spacing: 1px;
+  color: #ff8a3d;
+  border-left: 3px solid #ff8a3d;
+  padding: 6px 0 6px 12px;
+  text-align: left;
+  margin-top: 10px;
+}
+
+/* ---- el tablero: rótulos fijos y el camino desplazable ---- */
+#pase .ps-tablero { display: flex; gap: 9px; align-items: flex-start; }
+#pase .ps-rotulos { width: 108px; flex: none; display: flex; flex-direction: column; gap: 10px; }
+#pase .ps-scroll { flex: 1 1 auto; overflow-x: auto; padding-bottom: 4px; scrollbar-color: #6b47c9 #0b0718; scrollbar-width: thin; }
+#pase .ps-scroll::-webkit-scrollbar { height: 8px; }
+#pase .ps-scroll::-webkit-scrollbar-track { background: #0b0718; }
+#pase .ps-scroll::-webkit-scrollbar-thumb { background: #6b47c9; }
+#pase .ps-scroll-alto { scrollbar-width: none; }
+#pase .ps-scroll-alto::-webkit-scrollbar { display: none; }
+#pase .ps-camino { display: flex; flex-direction: column; gap: 10px; min-width: max-content; padding-top: 44px; }
+#pase .ps-camino-bajo { padding-top: 0; }
+#pase .ps-scroll-alto { margin-top: -34px; }
+#pase .ps-fila { display: flex; gap: 9px; }
+
+/* una celda por galón: el ancho manda, y es el mismo en las dos filas */
+#pase .ps-cel { width: 112px; flex: none; position: relative; box-sizing: border-box; }
+#pase .ps-cel.ps-hito { width: 250px; }
 
 #pase .ps-carril {
-  height: 76px; border: 2px solid #1c1c4a; background: #04040d;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; padding: 6px 4px; position: relative;
-  font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 1px;
-  transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
 }
-#pase .ps-gratis { border-bottom: none; }
-#pase .ps-pago { border-top: 2px dashed #1c1c4a; }
-#pase .ps-monto { color: #6a6c8e; font-variant-numeric: tabular-nums; }
-#pase .ps-carril .moneda { opacity: 0.55; }
-#pase .ps-vacio .ps-monto { opacity: 0.25; }
-#pase .ps-vacio .moneda { display: none; }
+#pase .ps-fila-gratis .ps-carril { height: 108px; border: 2px solid #2a4a20; background: #080d06; }
+#pase .ps-fila-pago .ps-carril { height: 178px; }
 
-/* ganado: el verde del sello del DAILY */
-#pase .ps-ganado { background: #0a1408; border-color: #3f6b2e; box-shadow: inset 0 0 18px rgba(120, 255, 80, 0.1); }
-#pase .ps-ganado .ps-monto { color: #9ef26a; }
-#pase .ps-ganado .moneda { opacity: 1; }
+/* ---- el carril de todos: sobrio ---- */
+#pase .ps-fila-gratis .moneda { width: 22px; height: 22px; filter: saturate(0.6) brightness(0.8); }
+#pase .ps-fila-gratis .ps-monto { font-size: clamp(10px, 1.6vh, 13px); color: #7a7c9e; }
+#pase .ps-fila-gratis .ps-ganado { border-color: #3f6b2e; background: linear-gradient(#0e1a0b, #04040d); }
+#pase .ps-fila-gratis .ps-ganado .ps-monto { color: #6f9a58; }
+#pase .ps-vacio .ps-monto { color: #2a4a20; }
 
-/* alcanzado pero cerrado: se ve lo que se está dejando */
-#pase .ps-cerrado { background: #0f0b16; border-color: #3a2d52; }
-#pase .ps-cerrado .ps-monto { color: #8b78c4; }
+/* ---- el carril del pase: terciopelo, oro y luz ---- */
+#pase .ps-fila-pago .ps-carril,
+#pase .ps-rot-pase {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 212, 0, 0.06) 0 2px, transparent 2px 14px),
+    radial-gradient(120% 90% at 50% 0%, rgba(160, 125, 232, 0.3), transparent 62%),
+    linear-gradient(#2a1548, #140a26);
+  background-size: 56px 56px, auto, auto;
+  animation: ps-velo 11s linear infinite;
+  border: 3px solid #c9a7ff;
+  box-shadow: inset 0 0 0 2px rgba(255, 212, 0, 0.35),
+              inset 0 -18px 34px rgba(160, 125, 232, 0.25),
+              0 0 26px rgba(160, 125, 232, 0.35);
+}
+@keyframes ps-velo { 0% { background-position: 0 0; } 100% { background-position: 56px 0; } }
 
-#pase .ps-candado { position: absolute; top: 3px; right: 5px; font-size: 10px; line-height: 1; }
-#pase .ps-suyo .ps-candado { display: none; }
+/* la luz que barre el terciopelo (solo cuando el carril está abierto) */
+#pase .ps-fila-pago .ps-carril::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 60px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  animation: ps-barrido 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ps-barrido {
+  0% { transform: translateX(-140%) skewX(-18deg); }
+  55%, 100% { transform: translateX(900%) skewX(-18deg); }
+}
 
+#pase .ps-fila-pago .moneda { width: 40px; height: 40px; animation: ps-joya 2.6s ease-in-out infinite; }
+#pase .ps-fila-pago .ps-monto {
+  font-size: clamp(14px, 2.6vh, 20px);
+  color: #ffd400;
+  text-shadow: 0 0 12px rgba(255, 212, 0, 0.6);
+}
+#pase .ps-fila-pago .ps-vacio .ps-monto { color: #6b57a0; text-shadow: none; }
+@keyframes ps-joya {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px rgba(255, 212, 0, 0.6)); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 16px rgba(255, 212, 0, 0.95)); }
+}
+/* el pedestal dorado de cada premio */
+#pase .ps-fila-pago .ps-carril:not(.ps-vacio)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: linear-gradient(90deg, transparent, #ffd400, transparent);
+  opacity: 0.85;
+}
+
+/* ---- CERRADO: el mismo lujo, pero tras el cristal ---- */
+#pase .ps-bajollave .ps-carril {
+  filter: saturate(0.55) brightness(0.72) contrast(0.95);
+}
+#pase .ps-bajollave .ps-carril::after { display: none; }
+#pase .ps-rejilla {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.38) 0 2px, transparent 2px 8px),
+    linear-gradient(rgba(5, 6, 10, 0.22), rgba(5, 6, 10, 0.42));
+}
+#pase .ps-candado {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(8px, 1.1vh, 9px);
+  letter-spacing: 2px;
+  color: #ffd400;
+  text-shadow: 0 0 12px rgba(255, 212, 0, 0.9);
+  filter: drop-shadow(0 0 12px rgba(255, 212, 0, 0.85));
+}
+#pase .ps-hito .ps-candado { left: 72px; }
+#pase .ps-fila-pago .ps-bajollave.ps-hito .ps-carril {
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-right: 34px;
+}
+
+/* el estado de cada premio del pase, bajo el pedestal */
+#pase .ps-nota {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  z-index: 3;
+  font-size: clamp(7px, 1vh, 9px);
+  letter-spacing: 1px;
+  color: #a08fd0;
+}
+#pase .ps-nota.cobrado { color: #9ef26a; }
+#pase .ps-nota.espera { color: #ff66cc; text-shadow: 0 0 10px rgba(255, 102, 204, 0.8); }
+
+/* ---- los rótulos de carril, a la izquierda y quietos ---- */
+#pase .ps-rot {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 2px;
+  line-height: 1.7;
+  position: relative;
+}
+#pase .ps-rot-gratis { height: 108px; border: 2px solid #2a4a20; background: #080d06; color: #6f9a58; }
+#pase .ps-rot-pase { height: 178px; color: #ffd400; }
+#pase .ps-rot-pase small { color: #c9a7ff; font-size: 9px; }
+#pase .ps-rot-hueco { height: 30px; }
+#pase .ps-rot-pie { height: 22px; font-size: 8px; color: #4a4a6e; text-align: center; }
+
+/* ---- la cinta que anuncia el carril de abajo ---- */
+#pase .ps-cinta {
+  box-sizing: border-box;
+  width: min(96%, 1240px);
+  flex: none;
+  margin: 8px 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 2px solid #5b4a86;
+  background: linear-gradient(90deg, #140d22, #241639 50%, #140d22);
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 4px;
+  color: #a08fd0;
+}
+#pase .ps-cinta.abierta {
+  border-color: #ffd400;
+  background: linear-gradient(90deg, #2a1548, #4b2a7a 50%, #2a1548);
+  color: #ffd400;
+  text-shadow: 0 0 10px rgba(255, 212, 0, 0.7);
+  box-shadow: 0 0 24px rgba(160, 125, 232, 0.4);
+}
+
+/* ---- los números del camino ---- */
 #pase .ps-num {
-  font-size: clamp(9px, 1.4vh, 11px); text-align: center; padding-top: 5px;
-  color: #6a6c8e; font-variant-numeric: tabular-nums;
+  text-align: center;
+  font-size: clamp(8px, 1.3vh, 10px);
+  color: #6a6c8e;
+  font-variant-numeric: tabular-nums;
 }
-#pase .ps-num.ps-hecho { color: #ffd400; }
+#pase .ps-num.ps-hecho { color: #9ef26a; }
+#pase .ps-num.aqui { color: #ffd400; font-size: clamp(9px, 1.5vh, 12px); }
 
-/* el Pac-Man que marca por dónde vas, debajo del camino */
+/* ---- donde vas: el marco que respira y tu Pac-Man encima ---- */
+#pase .ps-aqui .ps-carril {
+  border: 3px solid #ffd400;
+  background: linear-gradient(#171303, #04040d);
+  animation: ps-marco 1.5s ease-in-out infinite;
+}
+@keyframes ps-marco {
+  0%, 100% { border-color: #ffd400; box-shadow: 0 0 18px rgba(255, 212, 0, 0.45); }
+  50% { border-color: #fff6c0; box-shadow: 0 0 30px rgba(255, 212, 0, 0.8); }
+}
 #pase .ps-bicho {
-  position: absolute; bottom: 4px; left: 0; width: 34px; height: 34px;
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 44px;
   image-rendering: pixelated;
-  transition: left 0.45s cubic-bezier(0.22, 0.9, 0.3, 1);
+  z-index: 4;
   filter: drop-shadow(0 0 6px rgba(255, 212, 0, 0.65));
+  animation: ps-flota 1.2s ease-in-out infinite;
 }
+@keyframes ps-flota { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-7px); } }
 
-/* el pie: el botón, lo que se queda cerrado y lo que ya pagó el camino */
+/* ---- el pie ---- */
 #pase .ps-pie {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-  gap: 12px 16px; padding-top: 12px; border-top: 2px solid #1c1c4a;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  border-top: 2px solid #1c1c4a;
+  padding-top: 14px;
+  margin-top: 12px;
 }
-#pase .ps-oferta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-#pase .ps-btn { font-size: clamp(10px, 1.6vh, 13px); }
-#pase .ps-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
-#pase .ps-dejando,
-#pase .ps-saldo {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  font-size: clamp(10px, 1.5vh, 12px); letter-spacing: 1px; color: #6a6c8e;
+#pase .ps-cuenta { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+#pase .ps-cuenta b {
+  font-size: clamp(9px, 1.5vh, 12px);
+  letter-spacing: 2px;
+  color: #ffd400;
+  font-weight: normal;
 }
-#pase .ps-regla { width: min(96%, 1240px); margin-top: 10px; }
+#pase .ps-cuenta b.tuyo { color: #9ef26a; }
+#pase .ps-cuenta small { font-size: clamp(7px, 1.1vh, 9px); letter-spacing: 2px; color: #6a6c8e; }
+#pase .ps-btn {
+  font-size: clamp(10px, 1.6vh, 13px);
+  border-color: #ffd400;
+  color: #ffd400;
+  background: linear-gradient(90deg, rgba(160, 125, 232, 0.28), rgba(255, 102, 204, 0.22));
+  box-shadow: 0 0 30px rgba(255, 212, 0, 0.4);
+  animation: ps-latido 1.8s ease-in-out infinite;
+}
+#pase .ps-btn[disabled] { opacity: 0.75; cursor: not-allowed; animation: none; }
+#pase .ps-chapa {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border: 3px solid #ffd400;
+  background: linear-gradient(90deg, rgba(255, 212, 0, 0.18), rgba(255, 184, 82, 0.12));
+  color: #ffd400;
+  font-size: clamp(9px, 1.5vh, 12px);
+  letter-spacing: 2px;
+  box-shadow: 0 0 30px rgba(255, 212, 0, 0.35);
+}
+#pase .ps-regla { margin-top: 10px; }
 
 /* el PASE es una sola cosa, como el DAILY: centrado, no pegado arriba */
 #pase:not(#prompt):not(#menu)::before, #pase:not(#prompt):not(#menu)::after {
   display: block; content: ''; margin: auto 0; flex-shrink: 0;
 }
 
+@media (max-width: 760px) {
+  #pase .ps-cel { width: 92px; }
+  #pase .ps-cel.ps-hito { width: 190px; }
+  #pase .ps-rotulos { width: 88px; }
+  #pase .ps-fila-pago .ps-carril { height: 152px; }
+  #pase .ps-rot-pase { height: 152px; }
+  #pase .ps-fila-pago .moneda { width: 32px; height: 32px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  #pase .ps-bicho, #pase .ps-medidor-lleno { transition: none; }
-}
-
-/* qué es cada carril, en dos chips junto al camino */
-#pase .ps-leyenda {
-  width: min(96%, 1240px);
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-  font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1px;
-}
-#pase .ps-ley { padding: 3px 8px 2px; border: 1px solid currentColor; }
-#pase .ps-ley-gratis { color: #9ef26a; }
-#pase .ps-ley-pago { color: #8b78c4; }
-#pase .ps-ley-pago::after { content: " 🔒"; }
-
-/* en pantalla estrecha el camino se aprieta: treinta galones ya se recorren
- * de lado, así que lo que importa es que quepan más de dos a la vez */
-@media (max-width: 640px) {
-  #pase .ps-celda { width: 74px; }
-  #pase .ps-carril { height: 62px; }
-  #pase .ps-pie { justify-content: center; }
-  #pase .ps-oferta { justify-content: center; }
+  #pase .ps-foco,
+  #pase .ps-galon-num,
+  #pase .ps-bicho,
+  #pase .ps-quedan,
+  #pase .ps-btn,
+  #pase .ps-fila-pago .moneda,
+  #pase .ps-aqui .ps-carril,
+  #pase .ps-fila-pago .ps-carril,
+  #pase .ps-rot-pase,
+  #pase .ps-medidor::after,
+  #pase .ps-fila-pago .ps-carril::after { animation: none; }
+  #pase .ps-medidor-lleno { transition: none; }
 }

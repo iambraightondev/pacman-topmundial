@@ -1572,17 +1572,18 @@
     },
 
     /* ------------------------------------------------------
-     * EL PASE DE TEMPORADA: el camino del mes
+     * EL PASE DE TEMPORADA: la marquesina
      *
-     * La pantalla enseña las dos cosas a la vez: lo ganado y lo que se está
-     * quedando en el carril cerrado. Ese segundo número es el que justifica
-     * el precio el día que se venda, así que se enseña desde hoy aunque no se
-     * pueda comprar nada (CFG.PASE.VENTA, ver js/pase.js).
+     * Dos carriles en la misma vertical: arriba el de todos, sobrio; abajo el
+     * del pase, más alto y vestido. Lo que decide el diseño entero es que los
+     * DOS ESTADOS se distingan de un vistazo: mientras el carril de abajo no
+     * sea tuyo se ve tras un cristal —apagado, con retícula y candado—, y en
+     * cuanto lo es, se enciende. Enseñarlo brillando sin tenerlo era lo que
+     * hacía creer que ya estaba abierto.
      *
-     * El camino se dibuja UNA sola vez —treinta galones con dos carriles cada
-     * uno— y refrescar solo cambia clases y textos. Rehacerlo entero en cada
-     * refresco perdía el desplazamiento de lado cada vez que se volvía al
-     * panel, que es justo lo que uno quiere conservar en un camino largo.
+     * El camino se dibuja UNA vez y refrescar solo cambia clases y textos:
+     * rehacerlo perdía el desplazamiento de lado en cada vuelta al panel, que
+     * con treinta galones es justo lo que uno quiere conservar.
      * ------------------------------------------------------ */
     buildPase: function () {
       var self = this;
@@ -1599,114 +1600,203 @@
         return e;
       };
 
-      var h = mk('div', 'panel-title', 'PASE');
-      o.appendChild(h);
+      o.appendChild(mk('div', 'panel-title', 'PASE'));
 
-      /* cabecera: qué temporada es y cuánto le queda */
+      /* ---------- la marquesina ---------- */
+      var marq = mk('div', 'ps-marq');
+      var focos = mk('div', 'ps-focos');
+      focos.setAttribute('aria-hidden', 'true');
+      for (var f = 0; f < 12; f++) focos.appendChild(mk('i', 'ps-foco' + (f % 2 ? ' par' : '')));
+      marq.appendChild(focos);
+
       var cab = mk('div', 'ps-cab');
-      this.psTemp = mk('div', 'ps-temp');
-      cab.appendChild(this.psTemp);
-      this.psQuedan = mk('div', 'ps-quedan');
-      cab.appendChild(this.psQuedan);
-      o.appendChild(cab);
+      var izq = mk('div');
+      izq.appendChild(mk('div', 'ps-temp', 'TEMPORADA'));
+      this.psMes = mk('div', 'ps-mes');
+      izq.appendChild(this.psMes);
+      cab.appendChild(izq);
 
-      /* el galón alcanzado y lo que falta para el siguiente */
-      var fila = mk('div', 'ps-galon');
+      var der = mk('div', 'ps-estado');
+      this.psSello = mk('span', 'ps-sello');
+      der.appendChild(this.psSello);
+      this.psQuedan = mk('span', 'ps-quedan');
+      der.appendChild(this.psQuedan);
       this.psGalonNum = mk('div', 'ps-galon-num');
-      fila.appendChild(this.psGalonNum);
+      this.psGalonNum.appendChild(mk('span', null, 'GALÓN'));
+      this.psGalonB = mk('b');
+      this.psGalonNum.appendChild(this.psGalonB);
+      this.psGalonTot = mk('span');
+      this.psGalonNum.appendChild(this.psGalonTot);
+      der.appendChild(this.psGalonNum);
+      cab.appendChild(der);
+      marq.appendChild(cab);
+
       var med = mk('div', 'ps-medidor');
       med.setAttribute('role', 'progressbar');
       med.setAttribute('aria-label', 'Avance hacia el siguiente galón');
       this.psMedidor = med;
       this.psMedidorLleno = mk('div', 'ps-medidor-lleno');
       med.appendChild(this.psMedidorLleno);
-      fila.appendChild(med);
-      this.psMedidorTxt = mk('div', 'ps-medidor-txt');
-      fila.appendChild(this.psMedidorTxt);
-      o.appendChild(fila);
+      marq.appendChild(med);
 
-      /* Qué es cada carril, junto al camino y no solo en la letra pequeña
-       * del pie: el de arriba y el de abajo se distinguen por el color y el
-       * candado, pero hasta que no se lee una vez nadie sabe cuál es cuál. */
-      var leyenda = mk('div', 'ps-leyenda');
-      leyenda.appendChild(mk('span', 'ps-ley ps-ley-gratis', 'ARRIBA · DE TODOS'));
-      leyenda.appendChild(mk('span', 'ps-ley ps-ley-pago', 'ABAJO · DEL PASE'));
-      o.appendChild(leyenda);
+      var mtxt = mk('div', 'ps-medidor-txt');
+      this.psFalta = mk('span');
+      mtxt.appendChild(this.psFalta);
+      this.psEquivale = mk('b');
+      mtxt.appendChild(this.psEquivale);
+      marq.appendChild(mtxt);
+      o.appendChild(marq);
 
-      /* El aviso de temporada dormida. Antes de la primera (CFG.PASE.DESDE)
-       * el camino se ve entero, pero nada de lo que se juegue cuenta todavía:
-       * decirlo evita que alguien crea que ha perdido lo suyo. */
+      /* Antes de la primera temporada el camino se ve entero, pero lo que se
+       * juegue no cuenta: decirlo evita que alguien crea que perdió lo suyo. */
       this.psDormido = mk('div', 'ps-dormido');
       o.appendChild(this.psDormido);
 
-      /* el camino, de lado: treinta galones no caben de frente en ninguna
-       * pantalla, así que se desplaza como la cartilla del DAILY */
-      var env = mk('div', 'ps-scroll');
-      this.psScroll = env;
+      /* ---------- el tablero ---------- */
+      var tablero = mk('div', 'ps-tablero');
+
+      var rot = mk('div', 'ps-rotulos');
+      var rg = mk('div', 'ps-rot ps-rot-gratis');
+      rg.appendChild(mk('span', null, 'GRATIS'));
+      rg.appendChild(mk('span', null, 'DE TODOS'));
+      rot.appendChild(rg);
+      tablero.appendChild(rot);
+      this.psRotPase = mk('div', 'ps-rot ps-rot-pase');
+      this.psRotPaseTit = mk('span', null, 'EL PASE');
+      this.psRotPase.appendChild(this.psRotPaseTit);
+      this.psRotPasePie = mk('small');
+      this.psRotPase.appendChild(this.psRotPasePie);
+
+      var scroll = mk('div', 'ps-scroll ps-scroll-alto');
+      this.psScrollAlto = scroll;
       var camino = mk('div', 'ps-camino');
       this.psCamino = camino;
-      this.psCeldas = [];
+      var filaG = mk('div', 'ps-fila ps-fila-gratis');
+
+      /* el segundo tablero, el del pase, con su propio desplazamiento */
+      var scroll2 = mk('div', 'ps-scroll');
+      this.psScroll = scroll2;
+      var camino2 = mk('div', 'ps-camino ps-camino-bajo');
+      var filaP = mk('div', 'ps-fila ps-fila-pago');
+      var filaN = mk('div', 'ps-fila ps-fila-nums');
+      this.psCinta = mk('div', 'ps-cinta');
 
       var porGalon = {};
       P.camino().forEach(function (e) { porGalon[e.g] = e; });
 
+      /* una celda del camino: la caja del premio, y encima —solo en el carril
+       * del pase— el cristal y el candado, que van FUERA del carril para que
+       * el filtro que lo apaga no se los lleve por delante */
+      function celda(cls, monto, hito) {
+        var cel = mk('div', 'ps-cel' + (hito ? ' ps-hito' : ''));
+        var car = mk('div', 'ps-carril' + (monto ? '' : ' ps-vacio'));
+        if (monto) {
+          car.appendChild(self.monedaEl());
+          car.appendChild(mk('span', 'ps-monto', fmtMonedas(monto)));
+        } else {
+          car.appendChild(mk('span', 'ps-monto', '·'));
+        }
+        cel.appendChild(car);
+        void cls;
+        return { cel: cel, car: car };
+      }
+
+      this.psCeldas = [];
       for (var g = 1; g <= CP.GALONES; g++) {
         var e = porGalon[g] || { gratis: {}, pago: {} };
         var gr = (e.gratis && e.gratis.monedas) || 0;
         var pg = (e.pago && e.pago.monedas) || 0;
+        var hito = !!e.hito;
 
-        var cel = mk('div', 'ps-celda');
+        var arriba = celda('gratis', gr, hito);
+        var abajo = celda('pago', pg, hito);
 
-        var arriba = mk('div', 'ps-carril ps-gratis' + (gr ? '' : ' ps-vacio'));
-        if (gr) {
-          arriba.appendChild(this.monedaEl());
-          arriba.appendChild(mk('span', 'ps-monto', fmtMonedas(gr)));
-        } else {
-          arriba.appendChild(mk('span', 'ps-monto', '·'));
-        }
+        /* el cristal y el candado del carril cerrado */
+        var rejilla = mk('span', 'ps-rejilla');
+        rejilla.setAttribute('aria-hidden', 'true');
+        abajo.cel.appendChild(rejilla);
+        var candado = mk('span', 'ps-candado');
+        candado.appendChild(this.candadoEl(hito ? 40 : 26));
+        if (hito) candado.appendChild(mk('span', null, 'BAJO LLAVE'));
+        abajo.cel.appendChild(candado);
+        var nota = mk('span', 'ps-nota');
+        abajo.cel.appendChild(nota);
 
-        var abajo = mk('div', 'ps-carril ps-pago' + (pg ? '' : ' ps-vacio'));
-        if (pg) {
-          abajo.appendChild(this.monedaEl());
-          abajo.appendChild(mk('span', 'ps-monto', fmtMonedas(pg)));
-          abajo.appendChild(mk('span', 'ps-candado', '🔒'));
-        } else {
-          abajo.appendChild(mk('span', 'ps-monto', '·'));
-        }
+        var num = mk('div', 'ps-num' + (hito ? ' ps-hito' : ''), String(g));
+        num.className = 'ps-num';
+        var celN = mk('div', 'ps-cel' + (hito ? ' ps-hito' : ''));
+        celN.appendChild(num);
 
-        var num = mk('div', 'ps-num', String(g));
+        filaG.appendChild(arriba.cel);
+        filaP.appendChild(abajo.cel);
+        filaN.appendChild(celN);
 
-        cel.appendChild(arriba);
-        cel.appendChild(abajo);
-        cel.appendChild(num);
-        camino.appendChild(cel);
-        this.psCeldas.push({ g: g, cel: cel, arriba: arriba, abajo: abajo, num: num, gr: gr, pg: pg });
+        this.psCeldas.push({
+          g: g, gr: gr, pg: pg, hito: hito,
+          cel: arriba.cel, celPago: abajo.cel,
+          arriba: arriba.car, abajo: abajo.car,
+          rejilla: rejilla, candado: candado, nota: nota, num: num
+        });
       }
-      env.appendChild(camino);
 
-      /* el Pac-Man que marca por dónde vas; se mueve al galón alcanzado.
-       * Va suelto dentro del camino (que es quien manda en la posición), no
-       * en una fila propia: así se desliza por debajo de las celdas sin
-       * empujar nada. */
+      /* tu Pac-Man, plantado sobre el galón alcanzado */
       this.psBicho = document.createElement('canvas');
       this.psBicho.className = 'ps-bicho';
       this.psBicho.width = 48;
       this.psBicho.height = 48;
       this.psBicho.setAttribute('aria-hidden', 'true');
-      camino.appendChild(this.psBicho);
-      o.appendChild(env);
 
-      /* el pie: lo que paga el camino, lo que se queda cerrado y el botón */
+      camino.appendChild(filaG);
+      scroll.appendChild(camino);
+      tablero.appendChild(scroll);
+      o.appendChild(tablero);
+
+      /* la cinta, a lo ancho del panel y entre los dos carriles */
+      o.appendChild(this.psCinta);
+
+      camino2.appendChild(filaP);
+      camino2.appendChild(filaN);
+      scroll2.appendChild(camino2);
+      var tablero2 = mk('div', 'ps-tablero');
+      var rot2 = mk('div', 'ps-rotulos');
+      rot2.appendChild(this.psRotPase);
+      rot2.appendChild(mk('div', 'ps-rot-pie', 'GALÓN'));
+      tablero2.appendChild(rot2);
+      tablero2.appendChild(scroll2);
+      o.appendChild(tablero2);
+
+      /* los dos carriles se desplazan juntos: si no, las columnas de arriba y
+       * las de abajo dejarían de ser el mismo galón en cuanto se moviera uno */
+      var atado = false;
+      var ata = function (a, b) {
+        a.addEventListener('scroll', function () {
+          if (atado) return;
+          atado = true;
+          b.scrollLeft = a.scrollLeft;
+          atado = false;
+        });
+      };
+      ata(scroll, scroll2);
+      ata(scroll2, scroll);
+
+      /* ---------- el pie ---------- */
       var pie = mk('div', 'ps-pie');
-      var oferta = mk('div', 'ps-oferta');
+      this.psCuenta = mk('div', 'ps-cuenta');
+      this.psCuentaB = mk('b');
+      this.psCuenta.appendChild(this.psCuentaB);
+      this.psCuentaS = mk('small');
+      this.psCuenta.appendChild(this.psCuentaS);
+      pie.appendChild(this.psCuenta);
+
       this.psBtn = this.makeButton('PASE · PRÓXIMAMENTE', function () { self.paseComprar(); });
       this.psBtn.classList.add('ps-btn');
-      oferta.appendChild(this.psBtn);
-      this.psDejando = mk('div', 'ps-dejando');
-      oferta.appendChild(this.psDejando);
-      pie.appendChild(oferta);
-      this.psSaldo = mk('div', 'ps-saldo');
-      pie.appendChild(this.psSaldo);
+      pie.appendChild(this.psBtn);
+
+      this.psChapa = mk('div', 'ps-chapa');
+      this.psChapa.appendChild(this.coronaEl(22));
+      this.psChapa.appendChild(mk('span', null, 'PASE ACTIVO'));
+      this.psChapa.style.display = 'none';
+      pie.appendChild(this.psChapa);
       o.appendChild(pie);
 
       var regla = mk('div', 'note ps-regla');
@@ -1721,6 +1811,47 @@
       o.appendChild(back);
     },
 
+    /* un candado dibujado, del tamaño que se pida. Sin SVG (un navegador
+     * viejo, el DOM de las pruebas) cae a un hueco vacío: el panel se entiende
+     * igual, que para eso cada premio lleva además su palabra. */
+    candadoEl: function (px) {
+      var ns = 'http://www.w3.org/2000/svg';
+      if (!document.createElementNS) return document.createElement('i');
+      var svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('width', px);
+      svg.setAttribute('height', Math.round(px * 18 / 16));
+      svg.setAttribute('viewBox', '0 0 16 18');
+      svg.setAttribute('aria-hidden', 'true');
+      var arco = document.createElementNS(ns, 'path');
+      arco.setAttribute('d', 'M4 8V5.5a4 4 0 0 1 8 0V8');
+      arco.setAttribute('fill', 'none');
+      arco.setAttribute('stroke', '#ffd400');
+      arco.setAttribute('stroke-width', '2');
+      svg.appendChild(arco);
+      var caja = document.createElementNS(ns, 'rect');
+      caja.setAttribute('x', '2'); caja.setAttribute('y', '8');
+      caja.setAttribute('width', '12'); caja.setAttribute('height', '9');
+      caja.setAttribute('fill', '#ffd400');
+      svg.appendChild(caja);
+      return svg;
+    },
+
+    /* la corona del sello de PASE ACTIVO */
+    coronaEl: function (px) {
+      var ns = 'http://www.w3.org/2000/svg';
+      if (!document.createElementNS) return document.createElement('i');
+      var svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('width', px);
+      svg.setAttribute('height', Math.round(px * 16 / 34));
+      svg.setAttribute('viewBox', '0 0 34 16');
+      svg.setAttribute('aria-hidden', 'true');
+      var p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', 'M2 14 L2 2 L9 8 L17 1 L25 8 L32 2 L32 14 Z');
+      p.setAttribute('fill', '#ffd400');
+      svg.appendChild(p);
+      return svg;
+    },
+
     /* Hoy no hay forma de llegar aquí con el botón vivo (VENTA es false y el
      * botón va apagado). Queda escrito para el día que exista el cobro: el
      * enganche es Pase.conceder(temporada), y hasta que haya pasarela lo
@@ -1728,14 +1859,13 @@
     paseComprar: function () {
       var P = window.PM.Pase;
       if (!P || !P.seVende() || P.tienePago()) return;
-      this.psDejando.textContent = 'TODAVÍA NO SE PUEDE COMPRAR.';
+      this.psCuentaS.textContent = 'TODAVÍA NO SE PUEDE COMPRAR.';
     },
 
     showPase: function () {
       this.refreshPase();
       this.showPanel('pase');
-      /* se abre por donde vas, no por el galón 1: el camino es largo y lo que
-       * importa es el siguiente escalón */
+      /* se abre por donde vas, no por el galón 1 */
       var sc = this.psScroll, aqui = this.psAqui;
       if (sc && aqui && sc.scrollWidth > sc.clientWidth) {
         sc.scrollLeft = Math.max(0, aqui.offsetLeft -
@@ -1751,62 +1881,98 @@
       /* Con el pase dormido se enseña la PRIMERA temporada, no el mes de hoy:
        * poner SEPTIEMBRE en la cabecera de un camino que no cuenta hacía
        * creer que la temporada ya estaba en marcha y no pagaba. */
-      var r = P.resumen(P.cuenta() ? undefined : CP.DESDE);
+      var enMarcha = P.cuenta();
+      var r = P.resumen(enMarcha ? undefined : CP.DESDE);
+      var suyo = !!r.pago;
 
-      this.psTemp.textContent = 'TEMPORADA · ' + (r.nombre || r.temporada).toUpperCase();
-      this.psQuedan.textContent = P.cuenta()
-        ? ('QUEDAN ' + P.diasRestantes() + (P.diasRestantes() === 1 ? ' DÍA' : ' DÍAS'))
+      this.psMes.textContent = (r.nombre || r.temporada).toUpperCase();
+      this.psQuedan.textContent = enMarcha
+        ? ('CIERRA EN ' + P.diasRestantes() + (P.diasRestantes() === 1 ? ' DÍA' : ' DÍAS'))
         : '';
 
-      this.psGalonNum.textContent = 'GALÓN ' + r.galon + ' / ' + r.galones;
+      /* el sello: lo primero que se mira para saber en qué estado estás */
+      this.psSello.innerHTML = '';
+      this.psSello.classList.toggle('tuyo', suyo);
+      this.psSello.appendChild(suyo ? this.coronaEl(16) : this.candadoEl(10));
+      this.psSello.appendChild(document.createTextNode(suyo ? 'PASE ACTIVO' : 'SIN EL PASE'));
+
+      this.psGalonB.textContent = (r.galon < 10 ? '0' : '') + r.galon;
+      this.psGalonTot.textContent = '/' + r.galones;
       var pct = r.avance.total ? (r.avance.hecho / r.avance.total) : 0;
-      this.psMedidorLleno.style.width = Math.round(pct * 100) + '%';
-      this.psMedidorTxt.textContent = fmtMonedas(r.avance.hecho) + ' / ' + fmtMonedas(r.avance.total);
+      this.psMedidorLleno.style.right = Math.round((1 - pct) * 100) + '%';
       this.psMedidor.setAttribute('aria-valuemin', '0');
       this.psMedidor.setAttribute('aria-valuemax', String(r.avance.total));
       this.psMedidor.setAttribute('aria-valuenow', String(r.avance.hecho));
+      this.psFalta.textContent = fmtMonedas(r.avance.hecho) + ' / ' + fmtMonedas(r.avance.total) +
+        (r.galon < r.galones ? (' PARA EL GALÓN ' + (r.galon + 1)) : ' · CAMINO COMPLETO');
+      this.psEquivale.textContent = r.galon < r.galones
+        ? ('SON UNAS ' + fmtMonedas(Math.ceil(r.avance.falta / CP.XP_POR_MONEDA)) + ' MONEDAS JUGANDO')
+        : 'NO QUEDA NADA POR ANDAR';
 
-      /* dormida: el camino se ve, pero lo de hoy no cuenta para él */
-      var enMarcha = P.cuenta();
       this.psDormido.textContent = enMarcha ? '' :
         ('EMPIEZA EL 1 DE ' + this.paseMesDe(CP.DESDE) +
          ': LO QUE JUEGUES HASTA ENTONCES NO SUBE ESTE CAMINO.');
       this.psDormido.style.display = enMarcha ? 'none' : '';
+
+      /* el rótulo del carril de abajo y su cinta cambian con el estado */
+      this.psRotPasePie.textContent = suyo ? 'ES TUYO'
+        : (r.seVende ? ((r.precio.moneda === 'PEN' ? 'S/ ' : '') + r.precio.importe) : 'CERRADO');
+      this.psCinta.innerHTML = '';
+      this.psCinta.classList.toggle('abierta', suyo);
+      this.psCinta.appendChild(suyo ? this.coronaEl(18) : this.candadoEl(11));
+      this.psCinta.appendChild(document.createTextNode(suyo
+        ? 'CARRIL DEL PASE · ACTIVO · TODO LO DE ABAJO YA ES TUYO'
+        : 'CARRIL DEL PASE · CERRADO · TODO ESTO SE ENTREGA ENTERO EL DÍA QUE LO ABRAS'));
+      this.psCinta.appendChild(suyo ? this.coronaEl(18) : this.candadoEl(11));
 
       this.psAqui = null;
       for (var i = 0; i < this.psCeldas.length; i++) {
         var c = this.psCeldas[i];
         var hecho = c.g <= r.galon;
         c.arriba.classList.toggle('ps-ganado', hecho && !!c.gr);
-        c.abajo.classList.toggle('ps-ganado', hecho && r.pago && !!c.pg);
-        c.abajo.classList.toggle('ps-cerrado', hecho && !r.pago && !!c.pg);
-        c.abajo.classList.toggle('ps-suyo', r.pago && !!c.pg);
+        c.abajo.classList.toggle('ps-ganado', hecho && suyo && !!c.pg);
+        c.abajo.classList.toggle('ps-cerrado', hecho && !suyo && !!c.pg);
+        c.abajo.classList.toggle('ps-suyo', suyo && !!c.pg);
+        /* el cristal y el candado: solo mientras no sea tuyo y haya algo que
+         * guardar bajo llave */
+        /* el cristal cubre el carril ENTERO mientras no sea tuyo (si no,
+         * los huecos sin premio se verían encendidos al lado de los
+         * apagados); el candado solo va donde hay algo bajo llave */
+        c.celPago.classList.toggle('ps-bajollave', !suyo);
+        c.rejilla.style.display = suyo ? 'none' : '';
+        c.candado.style.display = (!suyo && !!c.pg) ? '' : 'none';
+        c.nota.textContent = !c.pg ? ''
+          : (suyo ? (hecho ? 'COBRADO' : 'AL LLEGAR')
+                  : (hecho ? 'ALCANZADO' : 'TE ESPERA'));
+        c.nota.className = 'ps-nota' + (suyo && hecho ? ' cobrado' : (!suyo && hecho ? '' : ' espera'));
         c.num.classList.toggle('ps-hecho', hecho);
-        if (c.g === Math.max(1, r.galon)) this.psAqui = c.cel;
+        c.num.classList.toggle('aqui', c.g === Math.max(1, r.galon));
+        c.cel.classList.toggle('ps-aqui', c.g === Math.max(1, r.galon));
+        if (c.g === Math.max(1, r.galon)) {
+          this.psAqui = c.cel;
+          if (this.psBicho.parentNode !== c.cel) c.cel.appendChild(this.psBicho);
+        }
       }
 
-      /* lo que ha pagado ESTA temporada, la que se está mirando: con el pase
-       * dormido la de la pantalla no es la de hoy */
+      /* el pie: lo que te estás dejando, o lo que ya te ha pagado */
       var delCamino = P.monedasDe(r.temporada);
-      this.psSaldo.innerHTML = '';
-      this.psSaldo.appendChild(document.createTextNode('DEL CAMINO: '));
-      this.psSaldo.appendChild(this.precioEl(delCamino));
-
-      this.psDejando.innerHTML = '';
-      if (r.pago) {
-        this.psDejando.textContent = 'EL CARRIL DE ABAJO YA ES TUYO.';
-      } else if (r.pendientePago > 0) {
-        this.psDejando.appendChild(document.createTextNode('TE ESTÁS DEJANDO '));
-        this.psDejando.appendChild(this.precioEl(r.pendientePago));
-        this.psDejando.appendChild(document.createTextNode(' DEL CARRIL CERRADO'));
+      if (suyo) {
+        this.psCuentaB.className = 'tuyo';
+        this.psCuentaB.textContent = 'EL CARRIL DEL PASE YA TE HA PAGADO ' +
+          fmtMonedas(delCamino) + ' MONEDAS';
+        this.psCuentaS.textContent = 'LO QUE QUEDA SE COBRA SOLO AL LLEGAR A CADA GALÓN';
       } else {
-        this.psDejando.textContent = '';
+        this.psCuentaB.className = '';
+        this.psCuentaB.textContent = r.pendientePago > 0
+          ? ('TE ESTÁS DEJANDO ' + fmtMonedas(r.pendientePago) + ' MONEDAS DEL CARRIL CERRADO')
+          : 'EL CARRIL DE ABAJO SE ABRE ENTERO EL DÍA QUE SEA TUYO';
+        this.psCuentaS.textContent = 'SE ENTREGA ENTERO EL DÍA QUE SEA TUYO · NO SE PIERDE NADA';
       }
 
-      if (r.pago) {
-        this.psBtn.textContent = 'PASE · YA ES TUYO';
-        this.psBtn.disabled = true;
-      } else if (r.seVende) {
+      /* y el botón, que desaparece en cuanto no hay nada que vender */
+      this.psChapa.style.display = suyo ? '' : 'none';
+      this.psBtn.style.display = suyo ? 'none' : '';
+      if (r.seVende) {
         this.psBtn.textContent = 'CONSEGUIR EL PASE · ' +
           (r.precio.moneda === 'PEN' ? 'S/ ' : '') + r.precio.importe;
         this.psBtn.disabled = false;
@@ -1824,8 +1990,8 @@
       return String(nom).toUpperCase().split(' ')[0];
     },
 
-    /* Mientras el panel está a la vista: el Pac-Man mastica y se planta sobre
-     * el galón alcanzado. Se para solo al cerrar, como la cartelera. */
+    /* Mientras el panel está a la vista, tu Pac-Man mastica sobre tu galón.
+     * Se para solo al cerrar, como la cartelera. */
     animarPase: function () {
       var self = this, raf = window.requestAnimationFrame;
       if (!raf || this.paseAnim) return;
@@ -1841,18 +2007,24 @@
     },
 
     pintarBicho: function (t) {
-      var cv = this.psBicho;
-      if (!cv || !cv.offsetParent) return;
-      /* dónde se planta: centrado sobre la celda del galón alcanzado (la
-       * primera mientras no haya ninguno) */
-      var aqui = this.psAqui;
-      if (aqui) {
-        var x = aqui.offsetLeft + (aqui.offsetWidth - cv.offsetWidth) / 2;
-        cv.style.left = Math.max(0, Math.round(x)) + 'px';
-      }
-      /* y es TU Pac-Man, con tu color, tu skin y lo que lleves puesto: el
-       * mismo dibujo de la portada. El camino es el tuyo. */
-      this.pintarNickLook(t, cv);
+      var cv = this.psBicho, Sp = window.PM.Sprites;
+      if (!cv || !Sp || !cv.offsetParent) return;
+      /* es TU Pac-Man: tu color y tu skin. Se dibuja aquí y no con el de la
+       * portada (pintarNickLook) porque aquel reserva sitio alrededor para el
+       * rastro y el accesorio, y en un lienzo de 30 px eso dejaba al muñeco
+       * del tamaño de una pastilla. */
+      var s = window.PM.settings;
+      var color = s.pacColor || '#ffff00';
+      var skin = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+      var c = cv.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.imageSmoothingEnabled = false;
+      c.setTransform(cv.width / 20, 0, 0, cv.width / 20, 0, 0);
+      try {
+        Sp.drawPacman(c, 10, 10, 3, [0, 1, 2, 1][Math.floor(t * 8) % 4], color, skin, {});
+      } catch (e) { /* un dibujo raro no rompe el panel */ }
+      c.setTransform(1, 0, 0, 1, 0, 0);
     },
 
     /* El botón del cuartel lleva el galón puesto: es lo que hace volver a

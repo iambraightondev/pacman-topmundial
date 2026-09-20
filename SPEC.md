@@ -1159,35 +1159,57 @@ other.
 
 Reached from TU CUARTEL, where the button carries the galón reached (`PASE ·
 G12`) — while the season is asleep it carries no number, because that would be
-a lie. The panel is the signed-off preview
-(<https://claude.ai/artifact/34gJaSYUf23vDGe78qFHin>) brought into the game's
-own language:
+a lie.
 
-- Header: season name and days left; galón X / 30 with the meter to the next
-  one.
-- The path sideways, thirty cells, each one two lanes stacked with no gap —
-  they are the same galón seen twice, not two different prizes. Won is the
-  green of the DAILY stamp; reached-but-locked is purple, a colour used
-  nowhere else in the game, so "not mine yet" reads without a word.
-- Your own Pac-Man — same drawing as the front screen, so your colour, skin,
-  accessory and trail — slides under the path to the galón reached and chews while
-  the panel is open (`animarPase`, same shape as the online cartelera: it
-  stops itself when the panel closes).
-- Footer: the button (`PASE · PRÓXIMAMENTE` while `VENTA` is false), what is
-  being left on the locked lane, and what the path has paid so far.
+**The marquee.** Arcade cabinet header: blinking bulbs, TEMPORADA + the month
+in neon, days left, and the galón in a yellow plate with the meter to the next
+one underneath, which also says what that gap is worth in coins so the number
+means something.
 
-**The path is drawn once** and refreshing only swaps classes and text.
-Rebuilding it per refresh loses the sideways scroll position every time you
-come back to the panel, which with thirty galones is exactly what you want
-kept. Two tests guard that.
+**Two lanes, one above the other, columns in the same vertical.** Every piece
+is `box-sizing: border-box` for exactly that: the free lane's border is 2 px
+and the pass lane's is 3, and without it the columns drifted apart.
+
+- **Free lane** (108 px): deliberately plain — dark green, matte coin, no glow.
+- **Pass lane** (178 px): the one being sold, so it is taller and dressed —
+  velvet weave that drifts, gold inner edge, a light that sweeps across it,
+  gold pedestal under each prize and the amount at double size.
+- Between them a **band** that states what the lower lane is.
+- A galón marked `hito: true` in `CFG.PASE.CAMINO` is drawn at double width.
+  It is written in the config, not inferred from the amounts, because what
+  makes a galón big is what is placed *on* it (the month's piece, a chest, the
+  finish), not how many coins it pays.
+
+**The two states have to be told apart from a metre away.** That is the whole
+design. While the pass is not yours, its lane is shown **behind glass**:
+desaturated and dimmed (`.ps-bajollave`), a fine grid over it, no sweeping
+light, and a gold padlock on each prize (the lock and the grid are siblings of
+the lane box, not children, so the dimming filter does not eat them). The
+luxury still shows — that is what makes it wanted — but nobody can mistake it
+for something already open. Buying it removes the glass, the band lights up,
+past galones read COBRADO and the purchase button is replaced by the PASE
+ACTIVO plate. An earlier version glowed identically in both states and read as
+unlocked; that was the bug worth fixing.
+
+**Two synced scrollers.** Each lane is its own horizontal scroller and they
+mirror each other's `scrollLeft`; the band sits between them at panel width.
+The path is inside the scrollers, which is why the band cannot live in there:
+thirty galones are some 3 600 px wide and its centred text ended up two
+screens off to the right. Both lanes are built **once** and refreshing only
+swaps classes and text — rebuilding loses the sideways position every time you
+come back, which with thirty galones is exactly what you want kept.
+
+Your own Pac-Man (your colour, your skin) chews on top of the galón you are
+on, drawn on a 48 px canvas like the cuartel cursor — at 30 px, on the portrait
+drawing that reserves room for trail and accessory, it came out the size of a
+pellet.
 
 Asleep-season state: before `CFG.PASE.DESDE` the whole path is visible but a
-warning says what is played now does not count towards it — without it,
-someone would reasonably think they had lost their progress.
+warning says what is played now does not count towards it.
 
 ### Not built yet
 - The season-exclusive pieces (above): art work, and the reason the path still
-  pays coins only.
+  pays coins only. The hito slots at 10, 20 and 30 are where they go.
 - Any actual payment. `Pase.conceder(temporada)` is the hook the checkout will
   call the day one exists; nothing in the game reaches it today and the button
   stays disabled.
