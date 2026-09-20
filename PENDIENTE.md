@@ -7,11 +7,60 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **19 de septiembre de 2026**.
+Última puesta al día: **20 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**20 sep — LOS CUATRO ROLES TIENEN PASIVA, Y EL PASE TIENE PANTALLA. TODO
+SUBIDO.**
+
+**Lo primero al retomar: probar DESATADO con gente.** Todo lo de hoy está
+medido en simulación, en solitario y en el navegador, pero **ninguna de las
+pasivas se ha jugado en party de verdad**, que es donde se notan: el grito del
+Tanque tirando de cuatro fantasmas a la vez, el escudo del Soporte llegando al
+que está en la otra punta, el Ojo del Mago con cuatro Pac-Man moviéndose. Y la
+foto de roles viaja con dos campos nuevos (la coraza), así que conviene mirar
+que anfitrión e invitado vean lo mismo.
+
+**Las cuatro pasivas** (`CFG.HAB`, detalle en SPEC → *DESATADO*):
+
+| Rol | Pasiva |
+| --- | --- |
+| ASESINO | Todo lo que mata vale un 25 % más: 250 · 500 · 1.000 · 2.000 |
+| TANQUE | CORAZA: un golpe gratis, dura 12 s y vuelve a los 30 |
+| SOPORTE | Levanta un cuerpo de una sola pasada (los demás, cinco) |
+| MAGO | EL OJO: la ruta de cada fantasma y el modo con su cuenta atrás |
+
+La del Asesino salió a x1,5 y se bajó el mismo día: obligaba a llevar asesino.
+La CORAZA salió sin caducar y volviendo a los 25 s, y hacía al Tanque
+prácticamente inmortal; ahora caduca, y **solo se acumula con su propia W**
+(el escudo del Soporte se la lleva en el mismo golpe). El OJO empezó marcando
+el destino de cada fantasma y no servía: un punto lejano no dice por dónde
+viene.
+
+**Y tres ajustes de habilidades**, por si hay que revisarlos jugando: la E del
+Tanque arrastra a TODOS (azules incluidos) y nada la desvía; su Q ya no tiene
+alcance (huye todo el mapa); la R del Mago son tres rayos a diez casillas con
+el primero al instante; la E mantenida del Soporte cubre a todo el equipo, él
+incluido y sin alcance. Al romper un escudo, el fantasma sale empujado dos
+casillas.
+
+**LA LECCIÓN DEL DÍA, que costó una hora:** el service worker llevaba desde la
+víspera sin subir de versión mientras el JS cambiaba cada rato, y el navegador
+servía una mezcla de archivos viejos y nuevos. Un escudo ya corregido seguía
+pareciendo roto. **Cada cambio de código sube `VERSION` en `sw.js`** (va por
+`pm-vNNN`); si algo se comporta como una versión anterior, eso es lo primero
+que hay que mirar.
+
+**Lo que falta del PASE**, por orden:
+
+1. **Las piezas exclusivas de temporada.** Los galones 10, 20 y 30 están
+   marcados como hitos (`hito: true`) y dibujados al doble de ancho
+   esperándolas. Es trabajo de dibujo; no usar las de cofre ni las de tienda.
+2. **La pasarela de cobro**, que no existe ni debe existir antes del cambio de
+   identidad.
 
 **19 sep — EL PASE DE TEMPORADA: MONTADO ENTERO Y CON PANTALLA, CARRIL DE
 PAGO CERRADO.**
