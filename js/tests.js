@@ -9359,6 +9359,36 @@
     ok(yo.dying, 'acabada la provocación, al compañero vuelven a matarlo');
   });
 
+  /* 20 sep: mientras los azules siguieran a lo suyo, bastaba con que alguien
+   * pisara un energizante para que la provocación se quedara en nada justo
+   * cuando más falta hacía. Ahora el grito manda sobre todo lo demás. */
+  test('TANQUE · PROVOCAR: ni el energizante ni el pisotón desvían el grito', function () {
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var g = fantasmaEn(1, 20, 5);
+    ok(HB.pulsar(G, 0, 2), 'la provocación sale');
+
+    /* AZUL: sigue siendo comestible, pero viene igual */
+    g.frightened = true;
+    var t = HB.objetivo(G, g);
+    ok(t, 'un fantasma azul también está provocado');
+    eq(t.x + ',' + t.y, '6,5', 'y su destino es la casilla del Tanque');
+
+    /* y en el cruce elige la salida que lo acerca, no una al azar */
+    g.dir = DR.LEFT;
+    eq(g.decide(G), DR.LEFT, 'en el cruce tira hacia el Tanque, no al azar');
+
+    /* PISOTÓN: ni huyendo del Tanque deja de ir a por él */
+    HB.huye[g.id] = 60;
+    HB.huyeQuien[g.id] = 0;
+    g.frightened = false;
+    eq(g.decide(G), DR.LEFT, 'y tampoco lo desvía un pisotón');
+    HB.huye[g.id] = 0;
+
+    /* los ojos siguen fuera: esos vuelven a casa, no persiguen a nadie */
+    g.mode = 'eyes';
+    eq(HB.objetivo(G, g), null, 'a los ojos no los provoca nadie');
+  });
+
   /* 18 sep: antes solo se les borraba lo pensado, y en un pasillo largo no
    * hay cruce donde decidir: el grito tardaba segundos en notarse. */
   test('TANQUE · PROVOCAR: el que le da la espalda se gira en el acto', function () {
@@ -9413,14 +9443,17 @@
   test('TANQUE · PISOTÓN: huyen más lentos, sin ponerse azules; sin nadie cerca no sale', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     eq(HC.PISOTON_TICKS, 6 * 60, 'dura 6 s');
-    eq(HC.PISOTON_TILES, 15, 'y llega a 15 casillas');
-    eq(HB.pulsar(G, 0, 0), false, 'sin fantasmas cerca no sale');
+    eq(HB.pulsar(G, 0, 0), false, 'sin ningún fantasma en la calle no sale');
     ok(HB.lista(0, 0), 'ni gasta la recarga');
     var g = fantasmaEn(0, 15, 5);
     g.dir = DR.LEFT;
+    /* 20 sep: SIN ALCANCE. Uno cerca y otro en la otra punta del mapa: el
+     * golpe los coge a los dos, que es lo que hace fiable la jugada. */
+    var lejos = fantasmaEn(1, 26, 29);
     var normal = g.speedPx(G);
-    ok(HB.pulsar(G, 0, 0), 'con uno a 9 casillas, sí');
+    ok(HB.pulsar(G, 0, 0), 'con fantasmas en la calle, sale');
     ok(HB.huyeDe(G, g) === G.pacs[0], 'ese fantasma huye del Tanque');
+    ok(HB.huyeDe(G, lejos) === G.pacs[0], 'y el de la otra punta, también');
     ok(!g.frightened, 'y no se pone azul');
     eq(g.dir, DR.RIGHT, 'el que venía de cara se da la vuelta');
     eq(G.frightTicks, 0, 'ni empieza el modo azul');
@@ -9863,7 +9896,7 @@
     eq(G.score - antes, 200, 'con 200 fijos');
   });
 
-  test('MAGO · TORMENTA: un rayo por segundo, pierde los que no tienen blanco y se corta si muere', function () {
+  test('MAGO · TORMENTA: tres rayos (el primero al instante), pierde los que no tienen blanco y se corta si muere', function () {
     partidaRol(['mago'], 6, 5, DR.RIGHT);
     var a = fantasmaEn(0, 9, 5), b = fantasmaEn(1, 10, 5);
     HB.hielo[0] = HB.hielo[1] = 9999;
@@ -9872,12 +9905,19 @@
     ok(b.mode === 'normal', 'y solo en uno');
     ticks(HC.TORMENTA_CADA);
     eq(b.mode, 'eyes', 'al segundo, el siguiente');
-    eq(HC.TORMENTA_RAYOS, 2, 'dos rayos');
-    var c = fantasmaEn(2, 11, 5);
+    eq(HC.TORMENTA_RAYOS, 3, 'tres rayos');
+    eq(HC.TORMENTA_TILES, 10, 'a diez casillas');
+    /* el tercero, al segundo siguiente: uno que estaría fuera de las seis
+     * casillas de antes y dentro de las diez de ahora */
+    var c = fantasmaEn(2, 14, 5);
     HB.hielo[2] = 9999;
+    ticks(HC.TORMENTA_CADA);
+    eq(c.mode, 'eyes', 'y el tercero cae a ocho casillas, que antes no llegaba');
+    var d = fantasmaEn(3, 12, 5);
+    HB.hielo[3] = 9999;
     ticks(HC.TORMENTA_CADA * 3);
-    eq(HB.estado(0).tormenta, 0, 'y a los 2 s se acaba');
-    ok(c.mode === 'normal', 'sin tercer rayo');
+    eq(HB.estado(0).tormenta, 0, 'y ahí se acaba');
+    ok(d.mode === 'normal', 'sin cuarto rayo');
 
     partidaRol(['mago'], 6, 5, DR.RIGHT);
     ok(HB.pulsar(G, 0, 3), 'otra tormenta');

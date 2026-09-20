@@ -863,7 +863,7 @@
         case 'mordisco': ok = this.mordisco(G, who, false, H.BITE_NET_MARGIN); break;
         case 'grito':    ok = this.grito(G, who, false); break;
         case 'provocar': ok = this.provocar(G, who); break;
-        case 'pisoton':  ok = this.pisoton(G, who, false, H.BITE_NET_MARGIN); break;
+        case 'pisoton':  ok = this.pisoton(G, who, false); break;
         case 'hielo':    ok = this.disparar(G, who, 'hielo', d.d, d); break;
         case 'fuego':    ok = this.disparar(G, who, 'fuego', d.d, d); break;
         case 'aliado':   ok = this.aliado(G, who, false); break;
@@ -1246,9 +1246,18 @@
     },
 
     /* PROVOCAR: la casilla del Tanque más cercano que esté provocando, o null.
-     * Solo a los que persiguen de verdad: ni azules, ni ojos, ni en casa. */
+     *
+     * Vale para TODO el que esté en la calle, AZULES INCLUIDOS (20 sep). El
+     * grito es la jugada con la que el Tanque salva al equipo, y mientras los
+     * azules siguieran a lo suyo bastaba con que alguien pisara un energizante
+     * para que la provocación se quedara en nada justo cuando más falta hacía.
+     * Ahora un azul provocado también viene — y, siendo azul, se lo comen: es
+     * el precio de que el grito no falle nunca.
+     *
+     * Fuera siguen los ojos y los que están en casa: esos no persiguen a
+     * nadie, vuelven a su sitio. */
     objetivo: function (G, g) {
-      if (!this.on || g.mode !== 'normal' || g.frightened) return null;
+      if (!this.on || g.mode !== 'normal') return null;
       var mejor = null, mejorD = Infinity;
       for (var i = 0; i < this.st.length; i++) {
         if (!(this.st[i].provoca > 0) || !this.vivo(G, i)) continue;
@@ -1393,21 +1402,25 @@
 
     /* E — PISOTÓN: los fantasmas a diez casillas huyen del Tanque 6 s.
      * No se ponen azules ni se pueden comer. Sin nadie cerca, no sale. */
-    pisoton: function (G, idx, soloVisual, extra) {
+    pisoton: function (G, idx, soloVisual) {
       var p = G.pacs[idx], s = this.estado(idx);
       if (!p || !s) return false;
-      var alcance = H.PISOTON_TILES * T + (extra || 0);
+      /* SIN ALCANCE (20 sep): huye TODO el que esté en la calle, esté donde
+       * esté. Con un radio, el golpe se sentía a medias —los de la otra punta
+       * seguían viniendo mientras el Tanque se jugaba la vida— y encima
+       * obligaba a perdonar píxeles por la red, porque el fantasma que el
+       * invitado ve justo en el borde no está ahí en la pantalla del
+       * anfitrión. Sin radio, no hay borde que discutir. */
       var blancos = [];
       for (var i = 0; i < 4; i++) {
         var g = G.ghosts[i];
         if (!this.enLaCalle(g) || g.driven()) continue;
-        if (this.distancia(p.x, p.y, g.x, g.y) <= alcance) blancos.push(g);
+        blancos.push(g);
       }
       /* el REY FANTASMA también sale por patas (18 sep): con jefe, el
        * laberinto está casi vacío de fantasmas y el poder no salía nunca. */
       var JF = window.PM.Jefe;
-      var rey = !!(JF && JF.activo && JF.activo(G) &&
-        this.distancia(p.x, p.y, G.jefe.x, G.jefe.y) <= alcance);
+      var rey = !!(JF && JF.activo && JF.activo(G));
       if (!blancos.length && !rey) return false;
       s.pisoton = 30;                       // la onda que se pinta
       sonDe(G, idx, 'playCharge');
@@ -1915,8 +1928,10 @@
       return true;
     },
 
-    /* R — TORMENTA: 2 s, un rayo por segundo sobre el fantasma más cercano a
-     * seis casillas. Sin nadie a tiro, ese rayo se pierde. Sale siempre. */
+    /* R — TORMENTA: TRES rayos sobre el fantasma más cercano a diez casillas
+     * (20 sep; eran dos a seis). El primero cae AL INSTANTE —lo que se pulsa
+     * tiene que verse— y los otros dos, uno por segundo. Sin nadie a tiro, ese
+     * rayo se pierde. Sale siempre. */
     tormenta: function (G, idx) {
       var s = this.estado(idx);
       if (!s) return false;
@@ -2412,7 +2427,7 @@
         var q = 1 - s.pisoton / 30;
         ctx.strokeStyle = 'rgba(255, 184, 82, ' + (1 - q) + ')';
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(x, y, 6 + q * H.PISOTON_TILES * T, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, 6 + q * H.PISOTON_ONDA * T, 0, Math.PI * 2); ctx.stroke();
       }
       if (s.arrolla > 0) {
         var v = CFG.DIR_V[s.adir] || { x: 0, y: 0 };

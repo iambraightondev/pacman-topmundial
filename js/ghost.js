@@ -177,6 +177,24 @@
       return this.humanChoice(candidates);
     }
 
+    /* DESATADO · PROVOCAR (Tanque): manda sobre TODO lo demás. Va antes que
+     * el azar de los azules y antes del PISOTÓN a propósito — es la jugada
+     * con la que el Tanque se ofrece para salvar al equipo, y si un
+     * energizante o cualquier otra habilidad podía desviarla, no se podía
+     * confiar en ella. Lo único que no pisa es un fantasma que lleve una
+     * persona (arriba, driven): a nadie se le quita el mando de las manos. */
+    var prov = (game.hab && window.PM.Hab) ? window.PM.Hab.objetivo(game, this) : null;
+    if (prov) {
+      var pBest = candidates[0], pDist = Infinity;
+      for (i = 0; i < candidates.length; i++) {
+        v = CFG.DIR_V[candidates[i]];
+        var pdx = cx + v.x - prov.x, pdy = cy + v.y - prov.y;
+        var pd2 = pdx * pdx + pdy * pdy;
+        if (pd2 < pDist) { pDist = pd2; pBest = candidates[i]; }
+      }
+      return pBest;
+    }
+
     if (isFright) {
       // pseudoaleatorio: prueba una dirección al azar; si no es válida,
       // recorre arriba, izquierda, abajo, derecha. El azar lo lleva la
@@ -190,7 +208,8 @@
     }
 
     /* DESATADO · PISOTÓN (Tanque): huye de él. En cada cruce, la salida que
-     * más lo aleja; va antes que la provocación y que la IA de siempre. */
+     * más lo aleja. Va después de la provocación: si el mismo Tanque hace las
+     * dos cosas, el grito manda (arriba). */
     var huye = (game.hab && window.PM.Hab) ? window.PM.Hab.huyeDe(game, this) : null;
     if (huye) {
       var hx = huye.tileX(), hy = huye.tileY(), lejos = candidates[0], lejosD = -1;

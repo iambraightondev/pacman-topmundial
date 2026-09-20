@@ -2568,20 +2568,34 @@ the key index. `LIST` is the ASESINO (the original kit).
   `Game.practica` = DESATADO + one player + role ≠ asesino: no record, no
   ranking, no badges (`persistHighScore`, `checkBadges`, `submitRanking`);
   XP and achievements still count. HUD and GAME OVER say PRÁCTICA.
-- **TANQUE.** PROVOCAR: `Ghost.targetTile` returns the nearest provoking
-  tank's tile (`Hab.objetivo`) for every normal, non-frightened ghost on the
-  map, even in scatter, and those ghosts **ignore the rest of the team**: they
-  cannot kill anyone but the tank (`Hab.ignoraA`, checked in both collision
-  loops and, since 18 Sep, in `Jefe.mata` too). Every chaser facing away is
+- **TANQUE.** PROVOCAR: `Hab.objetivo` returns the nearest provoking tank's
+  tile for **every ghost out in the maze**, and since 20 Sep that includes
+  **blue ones**: the shout is how the tank saves the team, and while the
+  frightened ghosts kept doing their own thing, anyone stepping on an
+  energizer cancelled the play exactly when it mattered most. It now decides
+  ahead of the blue random walk *and* ahead of PISOTÓN in `Ghost.decide`, so
+  no other ability can deflect it. The one thing it does not override is a
+  ghost a **person** is driving (`driven()`): nobody gets the controls taken
+  out of their hands. Eyes and ghosts in the house stay out — they are not
+  chasing anyone. The price, deliberately: with an energizer running the blue
+  ghosts walk into the tank and get eaten, so the shout doubles as a feeding
+  tool. Provoked ghosts also **ignore the rest of the team**: they cannot kill
+  anyone but the tank (`Hab.ignoraA`, checked in both collision loops and,
+  since 18 Sep, in `Jefe.mata` too). Every chaser facing away is
   **reversed on the spot** (`Hab.deEspaldas` + `forceReverse`; the tunnel
   shortcut only counts when both are on `TUNNEL_ROW`) — without it the shout
   took seconds to matter in a long corridor. The REY FANTASMA answers too
   (`Jefe.acude`), except mid-charge or mid-summon. ESCUDO (`coraza`): lasts 8 s or until the first lethal hit breaks it,
   then `ESCUDO_GRACIA` ticks of grace (`Hab.salvaDelChoque`). The SOPORTE's
-  ESCUDO ALIADO (`escudo`) works the same; they are drawn orange and cyan. PISOTÓN: ghosts within 10 tiles flee for 6 s
-  (`Hab.huyeDe` → `Ghost.decide` picks the exit farthest from the tank; a
-  ghost heading at the tank is reversed); not blue, not edible; no target = not
-  cast. Since 18 Sep the REY FANTASMA also flees (`Jefe.espanta`: `jefe.huye`
+  ESCUDO ALIADO (`escudo`) works the same; they are drawn orange and cyan. PISOTÓN: **every ghost out in the maze** flees for 6 s — no range at all
+  since 20 Sep (`Hab.huyeDe` → `Ghost.decide` picks the exit farthest from
+  the tank; a ghost heading at the tank is reversed); not blue, not edible; an
+  empty street (all eyes or in the house) = not cast. A radius made the hit
+  feel half-done — the ones across the map kept coming while the tank put
+  itself on the line — and it forced a network fudge factor, because a ghost
+  the guest sees right on the edge is not there on the host's screen. With no
+  edge there is nothing to argue about, so `BITE_NET_MARGIN` no longer applies
+  to it. `PISOTON_ONDA` (15) is now only how far the drawn shockwave grows. Since 18 Sep the REY FANTASMA also flees (`Jefe.espanta`: `jefe.huye`
   ticks, `huyeDe`, target mirrored through its own tile, speed ×
   `PISOTON_LENTO`; both travel in the snapshot as fields 11-12).
   ARROLLAR (the APISONADORA): straight toward the last arrow at
@@ -2632,9 +2646,10 @@ the key index. `LIST` is the ASESINO (the original kit).
   cleared on blur; local-only, since each machine crosses its own pacs). The
   tile is recorded even when not crossing, so releasing and pressing again
   without moving does nothing. Then `PORTAL_CRUCE` ticks without crossing. RUNA: trap on the mage's tile for 15 s; when stepped
-  on, kills **every** ghost on that tile. TORMENTA: one bolt per second for 2 s (`TORMENTA_RAYOS` = 2) on the
-  nearest ghost within 6 tiles; a bolt with no target is lost; cut if the mage
-  dies.
+  on, kills **every** ghost on that tile. TORMENTA: **three** bolts (`TORMENTA_RAYOS` = 3) on the nearest ghost
+  within **10 tiles** (20 Sep; it was two within six). The first falls **the
+  instant it is cast** — what you press has to show — and the other two one per
+  second. A bolt with no target is lost; cut if the mage dies.
 - **SUPERVIVENCIA (`js/supervivencia.js`, `CFG.SUPERV`).** Party only (2–4,
   `opts.superv`; excludes hab/caza/VS, forces `livesMode: 'individual'` with one
   life each). State in `Game.superv`. Energizer eaten → `poder[i] = PODER` and

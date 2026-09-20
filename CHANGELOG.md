@@ -2,6 +2,28 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Tres ajustes de DESATADO: el grito, el pisotón y la tormenta
+
+**El grito del TANQUE (E) ya no lo desvía nada.** Antes, un fantasma azul
+seguía a lo suyo: bastaba con que alguien pisara un energizante para que la
+provocación se quedara en nada justo cuando más falta hacía. Ahora van a por
+él **todos los que estén en el laberinto, azules incluidos**, y ninguna otra
+habilidad los aparta. Siguen fuera los que vuelven hechos ojos —esos van a su
+casa— y el fantasma que lleve una persona en CACERÍA o en PAC-MAN VS.
+
+Lo que eso le regala al Tanque, dicho claro: con un energizante en marcha,
+gritar le sirve a los cuatro en bandeja.
+
+**El pisotón del TANQUE (Q) se siente en todo el mapa.** Tenía quince casillas
+de alcance; ahora huye **todo fantasma que esté en la calle, esté donde esté**.
+Con un radio, el golpe se notaba a medias: los de la otra punta seguían
+viniendo mientras el Tanque se jugaba la vida.
+
+**La tormenta del MAGO (R): tres rayos y más lejos.** Eran dos rayos a seis
+casillas; ahora son **tres a diez**, y el primero cae **al instante** en vez de
+esperarse un segundo. Para lo que cuesta —46 segundos de recarga— se quedaba
+corta.
+
 ## 2026-09-20 · Otra alma para cristo
 
 **Cambia la voz al comerse un fantasma.** Donde antes había cuatro frases que

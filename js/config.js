@@ -1861,22 +1861,25 @@
                  desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
-                 desc: ['A 15 CASILLAS HUYEN DE TI, UN 40% MÁS LENTOS · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
-                        'TODOS SE DAN LA VUELTA Y VAN A POR TI · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
+                 desc: ['TODO EL MAPA HUYE DE TI, UN 40% MÁS LENTO · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
+                        'TODOS VAN A POR TI, HASTA LOS AZULES · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · LEVANTA UN CUERPO DE UNA PASADA',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
-                        'TRAMPA QUE MATA A LOS QUE LA PISEN', 'RAYOS SOBRE LOS FANTASMAS CERCANOS'] }
+                        'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · EL PRIMERO AL INSTANTE'] }
     },
 
     /* Tanque */
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque
     ESCUDO_TICKS: 8 * 60,         // ESCUDO del Tanque: 8 s, o hasta que un golpe lo rompa
     ESCUDO_GRACIA: 30,            // tras romperse un escudo, medio segundo sin morir
-    PISOTON_TICKS: 6 * 60,        // PISOTÓN: los cercanos huyen del Tanque
-    PISOTON_TILES: 15,            // ...a 15 casillas a la redonda
+    PISOTON_TICKS: 6 * 60,        // PISOTÓN: TODO el mapa huye del Tanque
+    /* Ya no hay alcance: el pisotón coge a cuantos fantasmas haya en la
+     * calle, estén donde estén (20 sep). Este número es solo lo que crece la
+     * onda que se pinta, para que se vea el golpe. */
+    PISOTON_ONDA: 15,
     PISOTON_LENTO: 0.6,           // y mientras huyen van al 60% de su velocidad
     /* ARROLLAR (la APISONADORA): en línea recta hacia la última flecha HASTA
      * LA PARED, sin límite de tiempo, a x1.4, invulnerable, comiéndose a
@@ -1922,9 +1925,12 @@
     PORTAL_RED_GRACIA: 2 * 60,
     PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
     RUNA_TICKS: 15 * 60,
-    TORMENTA_RAYOS: 2,            // dos rayos: con cuatro barría a todos sin riesgo
+    /* TRES rayos: el primero al instante y los otros dos, uno por segundo.
+     * Con cuatro barría a todos sin riesgo; con dos se quedaba corta para lo
+     * que cuesta (46 s de recarga). */
+    TORMENTA_RAYOS: 3,
     TORMENTA_CADA: 60,
-    TORMENTA_TILES: 6,
+    TORMENTA_TILES: 10,           // a diez casillas a la redonda
     /* Lo que vale un fantasma que mata el Mago: fijo, sin tocar la cadena y
      * sin el parón de comer. Sin esto el Mago, que mata sin arriesgarse,
      * dejaría al Asesino sin sentido. */
