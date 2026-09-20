@@ -142,6 +142,50 @@
     return CFG.isOpen(col, row, allowDoor);
   };
 
+  /* POR DÓNDE VA A PASAR (pasiva EL OJO del Mago, js/habilidades.js).
+   * Las próximas `pasos` casillas, adelantando sus decisiones con las MISMAS
+   * reglas que usa de verdad: salidas legales, prohibido invertir, zonas sin
+   * ARRIBA y la casilla más cercana a su objetivo.
+   *
+   * Es una previsión de sólo lectura: no toca este fantasma ni la partida, y
+   * por eso no sirve para los AZULES —esos eligen al azar con el contador de
+   * la partida, y adivinarlo aquí significaría gastarlo—. Tampoco para los
+   * ojos, los de casa ni los que lleva una persona.
+   *
+   * Puede equivocarse, y debe: el objetivo se recalcula con Pac-Man donde
+   * esté AHORA. Eso es justamente lo que enseña — hacia dónde tira si nadie
+   * se mueve— y no una promesa. */
+  Ghost.prototype.rutaPrevista = function (game, pasos) {
+    var out = [];
+    if (this.mode !== 'normal' || this.frightened || this.driven()) return out;
+    var cx = this.tileX(), cy = this.tileY(), dir = this.dir;
+    var target = this.targetTile(game);
+    if (!target) return out;
+    for (var n = 0; n < (pasos | 0); n++) {
+      var back = CFG.OPP[dir];
+      var best = -1, bestDist = Infinity;
+      for (var i = 0; i < CFG.DIR_PRIORITY.length; i++) {
+        var d = CFG.DIR_PRIORITY[i];
+        if (d === back) continue;
+        if (d === D.UP && CFG.isNoUpTile(cx, cy)) continue;
+        var v = CFG.DIR_V[d];
+        var nx = CFG.wrapCol(cx + v.x), ny = cy + v.y;
+        if (!this.canEnter(nx, ny)) continue;
+        var ddx = nx - target.x, ddy = ny - target.y;
+        var dist = ddx * ddx + ddy * ddy;
+        if (dist < bestDist) { bestDist = dist; best = d; }
+      }
+      if (best < 0) best = back;                 // callejón: se da la vuelta
+      var vv = CFG.DIR_V[best];
+      if (!vv) break;
+      cx = CFG.wrapCol(cx + vv.x); cy += vv.y;
+      if (cy < 0 || cy >= CFG.ROWS) break;
+      dir = best;
+      out.push({ x: cx, y: cy });
+    }
+    return out;
+  };
+
   /* ---------- Decisión en el centro de casilla ---------- */
   Ghost.prototype.decide = function (game) {
     var cx = this.tileX(), cy = this.tileY();

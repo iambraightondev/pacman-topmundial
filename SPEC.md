@@ -2592,12 +2592,20 @@ the key index. `LIST` is the ASESINO (the original kit).
   took every shield you had, which made wearing two pointless. Drawn as a
   fixed inner ring; it travels in the roles snapshot as two extra fields
   (`corPas`, `corCd`), and an older snapshot simply does not carry them.
-  **MAGO: EL OJO** — the tile each chasing ghost is heading for, marked on the
-  floor in that ghost's colour (`Hab.dibujarOjo`). Only the mage sees it, only
-  for ghosts in `normal` (there is nothing to warn about an eye going home),
-  and it is drawing only: it never touches the game or the network, so each
-  player sees their own. Targets outside the maze (Pinky and Inky aim wide on
-  purpose) are clamped to the edge so the mark stays visible. The role picker
+  **MAGO: EL OJO** — **where each ghost is about to go**: the next
+  `OJO_PASOS` (5) tiles of its path, dotted on the floor in that ghost's
+  colour, plus the ghost mode and its countdown above the maze
+  (`Hab.dibujarOjo` + `avisoDeModo`). It first shipped marking only the target
+  tile and that was useless — a distant dot does not tell you which way it is
+  coming from, which is the only thing you decide when it is on top of you.
+  `Ghost.rutaPrevista` walks the same rules the ghost really uses (legal
+  exits, no reversing, no-UP zones, nearest tile to its target) as a read-only
+  look-ahead: it touches nothing, which is also why **blue ghosts get no
+  path** — those pick at random off the run's counter, and guessing it would
+  mean spending it. Eyes, ghosts in the house and human-driven ones are out
+  too. The prediction can be wrong, and should be: the target is recomputed
+  with Pac-Man where he is *now*. Only the mage sees any of it, and it is
+  drawing only — it never touches the game or the network. The role picker
   shows the line `PASIVA · …` under the motto (`ROL_INFO[].pasiva`), which is
   always there even when empty so the screen does not jump between roles.
 - **TANQUE.** PROVOCAR: `Hab.objetivo` returns the nearest provoking tank's
@@ -2652,9 +2660,13 @@ the key index. `LIST` is the ASESINO (the original kit).
   the same tick at which playback re-injects it. Q held 120 ticks: an ice plate
   (`placas[idx]`, one per player, `PLACA_TICKS` = 8 s) on the support's tile;
   every ghost stepping on it freezes `HIELO_TICKS`, once per ghost per plate
-  (bitmask `z`). E held 180 ticks: shield (`ALIADO_TICKS`) to every living
-  teammate within `ALIADO_AREA_TILES` (2) on both axes, not to self; nobody in
-  range = not cast. Both share the short version's cooldown. Replay entries:
+  (bitmask `z`). E held 180 ticks: shield (`ALIADO_TICKS`) to the **whole
+  team, the support included, at any distance** (20 Sep; it used to reach two
+  tiles and skip himself — the one who hands out shields stayed bare, and the
+  range asked the team to bunch up exactly when spreading out is what saves
+  them). Only a dead player is skipped, so it always casts while he is alive.
+  `ALIADO_AREA_TILES` survives as the radius of the ring drawn when it goes
+  off, and because old replays may carry it. Both share the short version's cooldown. Replay entries:
   qué 9..12 = held power 0..3, encoded `F` + digit (player*4 + power). VIDA: +1 to the living teammate with fewest lives (tie → nearest; shared
   lives → the pool), capped at `VIDA_MAX` (5); never revives `out` players.
 - **MAGO.** Every kill is `Hab.matarMago`: `MAGO_PUNTOS` (200) flat, **no

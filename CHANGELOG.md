@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · La E del SOPORTE cubre a todo el equipo
+
+**Mantener la E ahora pone escudo a TODOS**, el propio Soporte incluido y
+estén donde estén. Antes llegaba a dos casillas y a él no se lo ponía: el que
+reparte escudos se quedaba a pelo, y el alcance obligaba a juntar al equipo
+justo cuando lo que salva es separarse.
+
+Es su jugada grande y cuesta lo mismo de siempre —32 segundos de recarga—,
+así que ahora se nota cuándo se usa bien.
+
 ## 2026-09-20 · Las pasivas del TANQUE y del MAGO
 
 Ya tienen la suya los cuatro roles.
@@ -17,11 +27,18 @@ delante TODOS los escudos que llevaras encima. Ahora se gasta **uno por
 golpe** —primero el que da el Soporte, luego el de la W y por último la
 coraza—, que es lo que cualquiera esperaría.
 
-**MAGO · EL OJO.** Ve **adónde va cada fantasma**: la casilla a la que se
-dirige queda marcada en el suelo con el color de su fantasma. Es lo que
-convierte al Mago en el que avisa — ve la encerrona antes de que se cierre.
-Solo lo ve quien juega de Mago, y solo de los que están persiguiendo: de uno
-que vuelve hecho ojos no hay nada que avisar.
+**MAGO · EL OJO.** Ve **por dónde va a pasar cada fantasma**: las cinco
+casillas siguientes de su camino, punteadas en el suelo con su color. Y
+arriba del laberinto, **en qué modo están y cuánto les queda**: DISPERSIÓN,
+CAZA o los segundos de azul que quedan.
+
+Salió marcando solo la casilla de destino y no servía de nada: un punto
+lejano no dice por dónde va a venir, que es lo único que hay que decidir
+cuando lo tienes encima.
+
+De los azules no se pinta camino, a propósito: esos eligen al azar y
+adivinarlo sería mentir. Tampoco de los que vuelven hechos ojos. Solo lo ve
+quien juega de Mago.
 
 ## 2026-09-20 · La pasiva del ASESINO: sus muertes valen una cuarta parte más
 

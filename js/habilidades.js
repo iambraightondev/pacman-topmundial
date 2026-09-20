@@ -1682,17 +1682,21 @@
       return true;
     },
 
-    /* E MANTENIDA 3 s — escudo a TODOS los compañeros vivos a
-     * ALIADO_AREA_TILES casillas (se mide por ejes: un cuadro a la redonda).
-     * Al propio Soporte no. Sin nadie a tiro, ni sale ni gasta. */
+    /* E MANTENIDA 3 s — escudo a TODO EL EQUIPO: a los compañeros vivos,
+     * estén donde estén, y AL PROPIO SOPORTE (20 sep).
+     *
+     * Antes llegaba a dos casillas y a él no. Las dos cosas sobraban: el
+     * Soporte reparte escudos y se quedaba a pelo, que es lo contrario de lo
+     * que hace mantener pulsado —gastar la habilidad entera de una vez—; y el
+     * alcance obligaba a juntar al equipo justo cuando lo que salva es
+     * separarse. Es su jugada grande: cuesta la misma recarga de 32 s y se
+     * nota. Sin nadie vivo no sale (pero él cuenta, así que basta con estar
+     * vivo). */
     aliadosCerca: function (G, idx) {
-      var p = G.pacs[idx], out = [];
-      if (!p) return out;
-      var alcance = H.ALIADO_AREA_TILES * T + T / 2;
+      var out = [];
+      if (!G.pacs[idx]) return out;
       for (var i = 0; i < G.pacs.length; i++) {
-        if (i === idx || !this.vivo(G, i)) continue;
-        var o = G.pacs[i];
-        if (distX(o.x, p.x) <= alcance && Math.abs(o.y - p.y) <= alcance) out.push(i);
+        if (this.vivo(G, i)) out.push(i);
       }
       return out;
     },
@@ -2416,38 +2420,62 @@
       }
     },
 
-    /* EL OJO (pasiva del MAGO): la casilla a la que va cada fantasma,
-     * marcada en el suelo con su color. Es lo que convierte al Mago en el que
-     * avisa: ve la encerrona antes de que se cierre.
+    /* EL OJO (pasiva del MAGO): POR DÓNDE VA A PASAR cada fantasma —las cinco
+     * casillas siguientes de su camino, en su color— y CUÁNDO CAMBIAN DE
+     * MODO, arriba del todo.
      *
-     * Solo lo ve QUIEN ES MAGO, y solo de los que persiguen de verdad: de los
-     * ojos y de los que están en casa no hay nada que avisar. Es dibujo y
-     * nada más —ni toca la partida ni viaja por la red—, así que cada uno ve
-     * lo suyo sin que nadie más se entere. */
+     * Empezó marcando solo la casilla de destino (20 sep) y no servía: un
+     * punto lejano no dice por dónde va a venir, que es lo único que hay que
+     * decidir cuando lo tienes encima. Con el camino, el Mago es el que avisa:
+     * ve la encerrona antes de que se cierre.
+     *
+     * Solo lo ve QUIEN ES MAGO. Es dibujo y nada más —ni toca la partida ni
+     * viaja por la red—, así que cada uno ve lo suyo. De los azules no se
+     * pinta camino: eligen al azar y adivinarlo sería mentir. */
     dibujarOjo: function (G, ctx, Y, tk) {
-      var yo = G.isSpec && G.isSpec() ? -1 : (G.localIdx | 0);
+      var yo = (G.isSpec && G.isSpec()) ? -1 : (G.localIdx | 0);
       if (yo < 0 || !this.esRol(G, yo, 'mago') || !this.vivo(G, yo)) return;
-      var pul = 0.35 + 0.25 * Math.sin(tk / 9);
       ctx.save();
-      ctx.lineWidth = 1;
       for (var i = 0; i < 4; i++) {
         var g = G.ghosts[i];
-        if (!g || g.mode !== 'normal' || !g.targetTile) continue;
-        var t = null;
-        try { t = g.targetTile(G); } catch (e) { t = null; }
-        if (!t) continue;
-        /* la casilla puede quedar fuera del mapa (Pinky y Inky apuntan
-         * lejos a propósito): se pega al borde para que la marca se vea */
-        var cx = Math.max(0, Math.min(CFG.COLS - 1, Math.round(t.x)));
-        var cy = Math.max(0, Math.min(CFG.ROWS - 1, Math.round(t.y)));
-        var px = cx * T + T / 2, py = cy * T + T / 2 + Y;
-        ctx.strokeStyle = this.rgba(CFG.GHOSTS[i].color, pul);
-        ctx.beginPath();
-        ctx.moveTo(px, py - 3.5); ctx.lineTo(px + 3.5, py);
-        ctx.lineTo(px, py + 3.5); ctx.lineTo(px - 3.5, py);
-        ctx.closePath();
-        ctx.stroke();
+        if (!g || !g.rutaPrevista) continue;
+        var ruta = g.rutaPrevista(G, H.OJO_PASOS);
+        for (var n = 0; n < ruta.length; n++) {
+          /* se va apagando con la distancia: lo de dentro de un paso importa
+           * más que lo de dentro de cinco */
+          var a = 0.55 * (1 - n / (H.OJO_PASOS + 1));
+          var px = ruta[n].x * T + T / 2, py = ruta[n].y * T + T / 2 + Y;
+          ctx.fillStyle = this.rgba(CFG.GHOSTS[i].color, a);
+          ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+        }
       }
+      this.avisoDeModo(G, ctx, Y, tk);
+      ctx.restore();
+    },
+
+    /* La otra mitad del OJO: en qué modo están los fantasmas y cuánto le
+     * queda. Que se dispersen o persigan cambia la partida entera y en el
+     * juego no se dice en ninguna parte; el Mago lo sabe. */
+    avisoDeModo: function (G, ctx, Y, tk) {
+      var txt, col;
+      if (G.frightTicks > 0) {
+        txt = 'AZUL ' + Math.ceil(G.frightTicks / 60) + 'S';
+        col = '#2121ff';
+      } else if (G.schedIndex >= G.schedule.length) {
+        txt = 'CAZA SIN FIN';
+        col = '#ff4444';
+      } else {
+        var quedan = Math.ceil((G.schedule[G.schedIndex] * 60 - G.schedTicks) / 60);
+        txt = (G.globalMode === 'scatter' ? 'DISPERSIÓN' : 'CAZA') + ' ' + quedan + 'S';
+        col = (G.globalMode === 'scatter') ? '#7dff7a' : '#ff4444';
+      }
+      /* parpadea el último segundo: el cambio de modo da la vuelta a todos */
+      var urge = /\b1S$/.test(txt) && Math.floor(tk / 6) % 2 === 0;
+      ctx.save();
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = urge ? '#fff' : col;
+      ctx.fillText(txt, CFG.COLS * T / 2, Y + 8);
       ctx.restore();
     },
 

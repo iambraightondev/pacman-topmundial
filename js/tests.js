@@ -9402,25 +9402,46 @@
     ok(!HB.corazaDe(G, 0), 'ahora sí se gasta la coraza');
   });
 
-  /* EL OJO del Mago es solo dibujo: se comprueba que existe la marca y que no
-   * la pinta nadie más, que es lo que la hace una pasiva y no un añadido. */
-  test('MAGO · PASIVA EL OJO: solo el Mago ve adónde va cada fantasma', function () {
+  /* EL OJO del Mago: por dónde VA A PASAR cada fantasma (no su destino: un
+   * punto lejano no dice por dónde viene) y cuándo cambian de modo. */
+  test('MAGO · PASIVA EL OJO: la ruta de cada fantasma, y solo para el Mago', function () {
+    eq(HC.OJO_PASOS, 5, 'cinco casillas por delante');
     partidaRol(['mago'], 6, 5, DR.RIGHT);
+    var g = fantasmaEn(0, 10, 5);
+    g.dir = DR.LEFT;
+    var ruta = g.rutaPrevista(G, HC.OJO_PASOS);
+    eq(ruta.length, HC.OJO_PASOS, 'devuelve las cinco casillas');
+    /* casillas seguidas: cada paso es vecino del anterior */
+    var ant = { x: g.tileX(), y: g.tileY() };
+    for (var i = 0; i < ruta.length; i++) {
+      var dx = Math.abs(ruta[i].x - ant.x), dy = Math.abs(ruta[i].y - ant.y);
+      ok((dx + dy === 1) || dx === CFG.COLS - 1, 'el paso ' + i + ' es la casilla de al lado');
+      ok(CFG.isOpen(ruta[i].x, ruta[i].y), 'y es pasillo, no pared');
+      ant = ruta[i];
+    }
+    /* de un azul no se adivina el camino: elige al azar */
+    g.frightened = true;
+    eq(g.rutaPrevista(G, HC.OJO_PASOS).length, 0, 'de un azul no se pinta nada');
+    g.frightened = false;
+    g.mode = 'eyes';
+    eq(g.rutaPrevista(G, HC.OJO_PASOS).length, 0, 'ni de unos ojos que vuelven a casa');
+
+    /* y lo ve solo el Mago */
     var pintadas = 0;
     var ctx = { save: function () {}, restore: function () {}, beginPath: function () {},
       moveTo: function () {}, lineTo: function () {}, closePath: function () {},
-      stroke: function () { pintadas++; }, arc: function () {}, fill: function () {},
-      fillRect: function () {}, strokeStyle: '', fillStyle: '', lineWidth: 1 };
+      stroke: function () {}, arc: function () {}, fill: function () {},
+      fillText: function () {}, fillRect: function () { pintadas++; },
+      strokeStyle: '', fillStyle: '', lineWidth: 1, font: '', textAlign: '' };
     fantasmaEn(0, 10, 5);
     fantasmaEn(1, 12, 5);
     HB.dibujarOjo(G, ctx, CFG.MAZE_Y, 0);
-    ok(pintadas >= 2, 'marca la casilla de cada fantasma que persigue: ' + pintadas);
+    ok(pintadas >= 2 * HC.OJO_PASOS, 'pinta el camino de cada uno: ' + pintadas);
 
     var conOjo = pintadas;
     pintadas = 0;
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     fantasmaEn(0, 10, 5);
-    fantasmaEn(1, 12, 5);
     HB.dibujarOjo(G, ctx, CFG.MAZE_Y, 0);
     eq(pintadas, 0, 'el Tanque no ve nada (el Mago veía ' + conOjo + ')');
   });
@@ -9659,6 +9680,25 @@
     ok(HB.estado(1).escudo > 0, 'y el escudo es del compañero');
   });
 
+  /* 20 sep: la E mantenida llegaba a dos casillas y dejaba al Soporte a pelo.
+   * Ahora es su jugada grande: escudo a TODO el equipo, él incluido. */
+  test('SOPORTE · E MANTENIDA: escudo a todo el equipo, él incluido y sin alcance', function () {
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    ponPac(1, 26, 29, DR.LEFT);            // en la otra punta del mapa
+    var todos = HB.aliadosCerca(G, 0);
+    eq(todos.length, 2, 'entran los dos, esté donde esté cada uno');
+    ok(todos.indexOf(0) !== -1, 'el propio Soporte entra');
+
+    ok(HB.aliadoArea(G, 0), 'la E mantenida sale');
+    ok(HB.estado(0).escudo > 0, 'y el Soporte se queda con escudo');
+    ok(HB.estado(1).escudo > 0, 'y el compañero de la otra punta, también');
+
+    /* a uno solo también sale: él cuenta */
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    ok(HB.aliadoArea(G, 0), 'jugando solo, se la pone a él');
+    ok(HB.estado(0).escudo > 0, 'con su escudo puesto');
+  });
+
   test('SOPORTE · VIDA EXTRA: respeta el tope y su recarga sobrevive a morir y al nivel', function () {
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     var vidas = G.lives;
@@ -9744,25 +9784,28 @@
     ok(HB.estado(1).escudo > 0, 'al más cercano, aunque esté lejos');
   });
 
-  test('SOPORTE · E mantenida 3 s: escudo a todos los compañeros a 2 casillas', function () {
+  test('SOPORTE · E mantenida 3 s: escudo a todo el equipo, sin alcance', function () {
     eq(HC.MANTENER.aliado, 3 * 60, 'la E se mantiene 3 s');
-    partidaRol(['soporte'], 6, 5, DR.RIGHT);
-    HB.apretar(G, 0, 2, false);
-    ticks(HC.MANTENER.aliado);
-    ok(HB.lista(0, 2), 'a uno no sale ni gasta');
 
     partidaRol(['soporte', 'asesino', 'tanque', 'mago'], 6, 5, DR.RIGHT);
     HB.apretar(G, 0, 2, false);
     ticks(HC.MANTENER.aliado - 1);
     ok(HB.estado(0).mant === 2, 'sigue cargando');
-    ponPac(0, 6, 5); ponPac(1, 8, 5); ponPac(2, 6, 7); ponPac(3, 9, 5);
+    /* uno pegado, uno a media pantalla y uno en la otra punta */
+    ponPac(0, 6, 5); ponPac(1, 8, 5); ponPac(2, 6, 17); ponPac(3, 26, 29);
     for (var i = 0; i < 4; i++) HB.estado(i).escudo = 0;
     G.step();
-    ok(HB.estado(1).escudo > 0, 'a 2 casillas en fila, escudo');
-    ok(HB.estado(2).escudo > 0, 'a 2 casillas en columna, escudo');
-    eq(HB.estado(3).escudo, 0, 'a 3 casillas, no');
-    eq(HB.estado(0).escudo, 0, 'el Soporte no se lo da a sí mismo');
+    ok(HB.estado(1).escudo > 0, 'al de al lado, escudo');
+    ok(HB.estado(2).escudo > 0, 'al de media pantalla, también');
+    ok(HB.estado(3).escudo > 0, 'y al de la otra punta: ya no hay alcance');
+    ok(HB.estado(0).escudo > 0, 'y el Soporte se lo pone también a sí mismo');
     ok(!HB.lista(0, 2), 'y gasta la recarga de la E');
+
+    /* jugando solo tampoco se desperdicia: él cuenta */
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    HB.apretar(G, 0, 2, false);
+    ticks(HC.MANTENER.aliado + 1);
+    ok(HB.estado(0).escudo > 0, 'a uno, se la queda él');
   });
 
   test('SOPORTE · una partida con teclas mantenidas se reproduce exacta', function () {

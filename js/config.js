@@ -1868,9 +1868,9 @@
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA',
                  pasiva: 'LEVANTAS UN CUERPO DE UNA SOLA PASADA (LOS DEMÁS, CINCO)',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
-                        'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
+                        'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODO EL EQUIPO, TÚ INCLUIDO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
-                 pasiva: 'EL OJO: VES ADÓNDE VA CADA FANTASMA, MARCADO EN EL SUELO',
+                 pasiva: 'EL OJO: VES POR DÓNDE VA A PASAR CADA UNO Y CUÁNDO CAMBIAN DE MODO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
                         'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · EL PRIMERO AL INSTANTE'] }
     },
@@ -1905,6 +1905,12 @@
      * diferencia entre entrar a salvar a alguien y no entrar. */
     CORAZA_CD: 25 * 60,           // 25 s desde que se la rompen
 
+    /* EL OJO (pasiva del MAGO): cuántas casillas por delante se le enseña el
+     * camino de cada fantasma. Cinco es lo que se puede leer de un vistazo
+     * sin que el laberinto se llene de puntos; con dos no daba tiempo a nada
+     * y con diez no se distinguía un fantasma de otro. */
+    OJO_PASOS: 5,
+
     /* Tanque */
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque
     ESCUDO_TICKS: 8 * 60,         // ESCUDO del Tanque: 8 s, o hasta que un golpe lo rompa
@@ -1936,7 +1942,7 @@
      * corta, y la corta sale al SOLTAR:
      *   Q  HIELO   2 s: una placa de hielo en su casilla que congela a todo
      *              fantasma que la pise (a cada uno, una vez).
-     *   E  ALIADO  3 s: escudo a TODOS los compañeros a 2 casillas. */
+     *   E  ALIADO  3 s: escudo a TODO EL EQUIPO, él incluido y sin alcance. */
     MANTENER: { hielo: 2 * 60, aliado: 3 * 60 },
     PLACA_TICKS: 8 * 60,          // lo que dura la placa de hielo en el suelo
     ALIADO_AREA_TILES: 2,
