@@ -1653,7 +1653,7 @@
       o.appendChild(this.psDormido);
 
       /* ---------- el tablero ---------- */
-      var tablero = mk('div', 'ps-tablero');
+      var tablero = mk('div', 'ps-tablero ps-tablero-alto');
 
       var rot = mk('div', 'ps-rotulos');
       var rg = mk('div', 'ps-rot ps-rot-gratis');
@@ -2885,12 +2885,19 @@
       });
       sonA.appendChild(sndRow);
 
-      /* prueba rápida de las voces de racha */
+      /* Prueba rápida de las voces de racha. Cuando las cuatro rachas llevan
+       * la misma voz —hoy la llevan— sale UN solo botón: cuatro botones con
+       * el mismo nombre no dicen nada y hacen creer que suenan cosas
+       * distintas. */
       sonA.appendChild(this.sectionTitle('VOCES DE RACHA'));
       var vRow = document.createElement('div');
       vRow.className = 'preset-row';
-      CFG.VOICE_NAMES.forEach(function (name, i) {
-        var b = self.makeButton((i + 1) + ' ' + name, function () {
+      var unaSola = true;
+      for (var vi = 1; vi < CFG.VOICES.length; vi++) {
+        if (CFG.VOICES[vi] !== CFG.VOICES[0]) { unaSola = false; break; }
+      }
+      (unaSola ? [CFG.VOICE_NAMES[0]] : CFG.VOICE_NAMES).forEach(function (name, i) {
+        var b = self.makeButton(unaSola ? name : ((i + 1) + ' ' + name), function () {
           self.resumeAudio();
           if (window.AudioSys) AudioSys.playVoice(i);
         });

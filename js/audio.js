@@ -340,18 +340,36 @@
       .catch(function () { /* sin acceso al archivo */ });
   }
 
+  /* Lo ya descodificado, POR ARCHIVO: varias rachas pueden compartir la misma
+   * voz (hoy las cuatro lo hacen), y sin esto el mismo audio se pedía y se
+   * descodificaba una vez por racha. `voicePidiendo` cubre el caso de que las
+   * cuatro se pidan a la vez, que es justo lo que hace preloadVoices. */
+  var voicePorUrl = {};
+  var voicePidiendo = {};
+
   function loadVoice(i) {
     if (!ctx || voiceBufs[i] || voiceTried[i]) return;
     var url = voiceList()[i];
     if (!url || !window.fetch) return;
+    if (voicePorUrl[url]) { voiceBufs[i] = voicePorUrl[url]; return; }
+    if (voicePidiendo[url]) return;   // ya viene de camino: al llegar se reparte
+    voicePidiendo[url] = true;
     voiceTried[i] = true;
     fetch(url)
       .then(function (r) { return r.ok ? r.arrayBuffer() : null; })
       .then(function (ab) {
         if (!ab) return;
         // decodeAudioData con callbacks: compatible con navegadores antiguos
-        ctx.decodeAudioData(ab, function (buf) { voiceBufs[i] = buf; },
-          function () { /* formato no soportado */ });
+        ctx.decodeAudioData(ab, function (buf) {
+          voiceBufs[i] = buf;
+          voicePorUrl[url] = buf;
+          voicePidiendo[url] = false;
+          /* y las demás rachas que usen ese mismo archivo se quedan servidas */
+          var lista = voiceList();
+          for (var j = 0; j < lista.length; j++) {
+            if (lista[j] === url && !voiceBufs[j]) voiceBufs[j] = buf;
+          }
+        }, function () { /* formato no soportado */ });
       })
       .catch(function () { /* sin acceso al archivo */ });
   }

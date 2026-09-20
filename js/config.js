@@ -1177,14 +1177,21 @@
   /* ---------- Voces de racha al comer fantasmas ----------
    * Una por fantasma comido con el mismo energizante (1.º, 2.º, 3.º, 4.º).
    * Son los únicos archivos de audio del juego; si no se pueden cargar
-   * (por ejemplo abriendo el juego con file://) el resto suena igual. */
+   * (por ejemplo abriendo el juego con file://) el resto suena igual.
+   *
+   * Hoy las CUATRO son la misma voz (20 de septiembre de 2026). Se deja una
+   * entrada por racha en vez de una sola sirviendo para todas porque así el
+   * día que haya cuatro voces distintas basta con cambiar esta lista, sin
+   * tocar nada de la cuenta de rachas. El audio se descarga y descodifica una
+   * sola vez aunque se repita (js/audio.js, voicePorUrl). */
   CFG.VOICES = [
-    'audio/racha1-hueso.m4a',
-    'audio/racha2-diablo.m4a',
-    'audio/racha3-huesaso.m4a',
-    'audio/racha4-diablocono.m4a'
+    'audio/otra-alma.m4a',
+    'audio/otra-alma.m4a',
+    'audio/otra-alma.m4a',
+    'audio/otra-alma.m4a'
   ];
-  CFG.VOICE_NAMES = ['EL HUESO', 'EL DIABLO', 'EL HUESASO', 'EL DIABLO COÑO'];
+  CFG.VOICE_NAMES = ['OTRA ALMA PARA CRISTO', 'OTRA ALMA PARA CRISTO',
+    'OTRA ALMA PARA CRISTO', 'OTRA ALMA PARA CRISTO'];
 
   /* La entradilla de DESATADO: en ese modo, en vez de la melodía de siempre,
    * suena esta voz (js/audio.js, playIntroHab). Si no se puede cargar, suena

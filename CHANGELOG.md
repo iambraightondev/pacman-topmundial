@@ -2,6 +2,22 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Otra alma para cristo
+
+**Cambia la voz al comerse un fantasma.** Donde antes había cuatro frases que
+iban subiendo con la racha —el hueso, el diablo, el huesaso y la cuarta—,
+ahora suena siempre la misma: **«otra alma para cristo»**.
+
+La cuenta de la racha no cambia en nada: sigue habiendo una voz por fantasma
+encadenado, y el día que haya cuatro frases distintas otra vez es cambiar la
+lista y nada más. En OPCIONES, donde antes había cuatro botones de prueba,
+ahora hay uno: cuatro botones con el mismo nombre solo hacen creer que suenan
+cosas distintas.
+
+**Dos descuadres de la pantalla del pase**, de paso: el recuadro de GRATIS DE
+TODOS quedaba más arriba que sus casillas, y el Pac-Man que marca por dónde
+vas se subía encima del aviso de la temporada.
+
 ## 2026-09-20 · La pantalla del pase, como la marquesina de una recreativa
 
 **El camino se ve ahora como lo que es**: un mueble de salón recreativo. Arriba,

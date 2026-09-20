@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v188';
+var VERSION = 'pm-v189';
 var SHELL = [
   './',
   './index.html',
@@ -57,10 +57,7 @@ var SHELL = [
   './js/guardado.js',
   './js/ui.js',
   './audio/desatado-intro.mp3',
-  './audio/racha1-hueso.m4a',
-  './audio/racha2-diablo.m4a',
-  './audio/racha3-huesaso.m4a',
-  './audio/racha4-diablocono.m4a',
+  './audio/otra-alma.m4a',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

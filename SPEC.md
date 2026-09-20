@@ -3058,9 +3058,17 @@ In-game: "¡LISTO!", "PAUSA", "GAME OVER" (red). Ghost names on title screen
 
 ## Voces de racha (los únicos archivos de audio)
 
-Eating frightened ghosts with the same energizer plays an escalating voice
-line, one per ghost in the chain: **"el hueso" → "el diablo" → "el huesaso"
-→ "el diablo coño"** (`CFG.VOICES` / `CFG.VOICE_NAMES`, files in `audio/`).
+Eating a frightened ghost plays a voice line — today **"otra alma para
+cristo"**, the same one on every kill (20 Sep 2026; it replaced the four
+escalating lines "el hueso → el diablo → el huesaso → el diablo coño").
+
+`CFG.VOICES` still holds **one entry per chain position** rather than a single
+file, so restoring four distinct lines is a config edit and nothing else; all
+four currently point at `audio/otra-alma.m4a`. A file used more than once is
+fetched and decoded **once** (`voicePorUrl` + `voicePidiendo` in
+`js/audio.js`) — without that, `preloadVoices` pulled the same clip four times
+in parallel. OPCIONES shows a single test button while every entry is the same
+file: four buttons with the same name suggest four different sounds.
 
 - The streak index is the chain position (`chainIndex` before its increment,
   clamped to 3), the same counter that drives 200/400/800/1600, so it resets
@@ -3300,9 +3308,10 @@ from third parties. Cells are indices `row*28+col`.
    live to Pac-Man and lives icons.
 8. Sounds: intro, waka, siren stages, fright, eat-ghost, retreat, death,
    fruit, extra life — all synthesized, muteable, and each category
-   (music / sfx / loops / voices) with its own volume. The four streak
-   voices escalate per chained ghost, reset with each energizer, count the
-   team's kills in 2-player and stay in sync online.
+   (music / sfx / loops / voices) with its own volume. The streak voice plays
+   per chained ghost (one entry per chain position, all the same line today),
+   resets with each energizer, counts the team's kills in 2-player and stays
+   in sync online.
 9. Full game loop: menu → ready → play → death/level-up → game over → panel
    (play again / menu); pause works; high score persists.
 10. Spanish UI throughout; crisp pixel rendering at scale.

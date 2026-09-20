@@ -6167,7 +6167,8 @@ body { font-size-adjust: 0.56; }
 #pase .ps-scroll-alto::-webkit-scrollbar { display: none; }
 #pase .ps-camino { display: flex; flex-direction: column; gap: 10px; min-width: max-content; padding-top: 44px; }
 #pase .ps-camino-bajo { padding-top: 0; }
-#pase .ps-scroll-alto { margin-top: -34px; }
+/* el mismo hueco en los rótulos, o la primera caja se sube y se descuadra */
+#pase .ps-tablero-alto .ps-rotulos { padding-top: 44px; }
 #pase .ps-fila { display: flex; gap: 9px; }
 
 /* una celda por galón: el ancho manda, y es el mismo en las dos filas */
@@ -6267,7 +6268,7 @@ body { font-size-adjust: 0.56; }
 }
 #pase .ps-candado {
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 3;
