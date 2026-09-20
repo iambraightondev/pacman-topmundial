@@ -1308,7 +1308,9 @@
 
     /* ¿Ese choque se perdona? INMUNIDAD, la carrera de ARROLLAR y el medio
      * segundo tras romperse un escudo no mueren; un ESCUDO se gasta aquí. */
-    salvaDelChoque: function (G, idx) {
+    /* `g` es el fantasma que ha chocado, cuando lo hay: al romperse el
+     * escudo sale EMPUJADO hacia atrás (ver empujar). */
+    salvaDelChoque: function (G, idx, g) {
       var s = this.estado(idx);
       if (!s) return false;
       if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
@@ -1336,12 +1338,38 @@
         s.gracia = H.ESCUDO_GRACIA;
         var p = G.pacs[idx];
         if (p) this.efecto('roto', p.x, p.y, 20);
+        this.empujar(G, g, H.ESCUDO_EMPUJE);
         sonDe(G, idx, 'playBiteMiss');
         if (G.netRole === 'guest') G.netSend('gevt', { t: 'habRoto' });
         else G.hostEvt({ t: 'habRoto', w: idx });
         return true;
       }
       return false;
+    },
+
+    /* EL EMPUJE: el fantasma que rompe un escudo sale despedido `casillas`
+     * hacia atrás por donde vino. Se va casilla a casilla y se para en la
+     * primera pared, así que nunca acaba dentro del muro ni cruzando al otro
+     * lado del laberinto. Además se da la vuelta: si siguiera con el mismo
+     * rumbo volvería a meterse encima en dos pasos y el empuje no habría
+     * servido de nada. */
+    empujar: function (G, g, casillas) {
+      if (!g || !casillas || g.mode !== 'normal') return false;
+      var v = CFG.DIR_V[g.dir];
+      if (!v) return false;
+      var cx = g.tileX(), cy = g.tileY(), movido = 0;
+      for (var n = 0; n < casillas; n++) {
+        var nx = CFG.wrapCol(cx - v.x), ny = cy - v.y;
+        if (ny < 0 || ny >= CFG.ROWS) break;
+        if (!CFG.isOpen(nx, ny)) break;          // pared: hasta aquí llega
+        cx = nx; cy = ny; movido++;
+      }
+      if (!movido) return false;
+      g.x = cx * T + T / 2;
+      g.y = cy * T + T / 2;
+      g.forceReverse();
+      this.efecto('aplasta', g.x, g.y, 16);
+      return true;
     },
 
     /* Un escudo que se rompió en otra máquina (el invitado decide sus choques) */

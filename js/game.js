@@ -1231,7 +1231,7 @@
                 window.PM.Hab.ignoraA(this, i, g))) continue;
             if (!this.hitGhost(p, g)) continue;
             // ...y ESCUDO, INMUNIDAD o la carrera de ARROLLAR salvan el choque
-            if (this.hab && window.PM.Hab && window.PM.Hab.salvaDelChoque(this, i)) continue;
+            if (this.hab && window.PM.Hab && window.PM.Hab.salvaDelChoque(this, i, g)) continue;
             this.startDeath(i, g.id);        // g.id: por si lo lleva un jugador
             break;                           // el otro jugador sigue a lo suyo
           }

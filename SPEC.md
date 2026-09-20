@@ -2633,7 +2633,12 @@ the key index. `LIST` is the ASESINO (the original kit).
   shortcut only counts when both are on `TUNNEL_ROW`) — without it the shout
   took seconds to matter in a long corridor. The REY FANTASMA answers too
   (`Jefe.acude`), except mid-charge or mid-summon. ESCUDO (`coraza`): lasts 8 s or until the first lethal hit breaks it,
-  then `ESCUDO_GRACIA` ticks of grace (`Hab.salvaDelChoque`). The SOPORTE's
+  then `ESCUDO_GRACIA` ticks of grace, **and the ghost that broke it is
+  shoved `ESCUDO_EMPUJE` (2) tiles back the way it came and reversed**
+  (`Hab.empujar`, 20 Sep). Without the shove the break was invisible: the
+  ghost stayed inside you, the half second of grace was spent on top of it and
+  it looked like nothing had happened. The shove walks tile by tile and stops
+  at the first wall, so it never lands in a muro (`Hab.salvaDelChoque`). The SOPORTE's
   ESCUDO ALIADO (`escudo`) works the same; they are drawn orange and cyan. PISOTÓN: **every ghost out in the maze** flees for 6 s — no range at all
   since 20 Sep (`Hab.huyeDe` → `Ghost.decide` picks the exit farthest from
   the tank; a ghost heading at the tank is reversed); not blue, not edible; an

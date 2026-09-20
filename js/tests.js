@@ -9393,6 +9393,31 @@
   /* La CORAZA se suma SOLO a la W del propio Tanque. Con el escudo que
    * reparte el Soporte no: si no, bastaba con que pasara repartiendo para ir
    * sumando capas de vida. */
+  /* 20 sep: romper un escudo no se veía. El fantasma se quedaba DENTRO de ti,
+   * el medio segundo de gracia pasaba pegado a él y parecía que el golpe no
+   * había existido. Ahora sale empujado dos casillas. */
+  test('ESCUDO: el fantasma que lo rompe sale empujado dos casillas y se da la vuelta', function () {
+    eq(HC.ESCUDO_EMPUJE, 2, 'dos casillas');
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    var g = fantasmaEn(0, 6, 5);
+    g.dir = DR.LEFT;                       // venía hacia la izquierda
+    ok(HB.corazaDe(G, 0), 'el Tanque lleva su coraza');
+    ok(HB.salvaDelChoque(G, 0, g), 'el choque se perdona');
+    ok(!HB.corazaDe(G, 0), 'la coraza se rompe');
+    eq(g.tileX(), 8, 'y el fantasma retrocede dos casillas por donde vino');
+    eq(g.tileY(), 5, 'sin cambiar de fila');
+    eq(g.dir, DR.RIGHT, 'y se da la vuelta, para no volver a metérsele encima');
+
+    /* contra una pared, se queda donde pueda: nunca dentro del muro */
+    partidaRol(['tanque'], 1, 5, DR.RIGHT);
+    var g2 = fantasmaEn(1, 1, 5);
+    g2.dir = DR.RIGHT;                     // detrás tiene la pared del borde
+    HB.salvaDelChoque(G, 0, g2);
+    ok(CFG.isOpen(g2.tileX(), g2.tileY()), 'acaba en pasillo, no en pared');
+  });
+
   test('TANQUE · CORAZA + su W: dos golpes; con el escudo del Soporte, uno', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];

@@ -1926,6 +1926,11 @@
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque
     ESCUDO_TICKS: 8 * 60,         // ESCUDO del Tanque: 8 s, o hasta que un golpe lo rompa
     ESCUDO_GRACIA: 30,            // tras romperse un escudo, medio segundo sin morir
+    /* Y EL FANTASMA SALE EMPUJADO estas casillas (20 sep). Sin esto, romper un
+     * escudo no se veía: el fantasma se quedaba dentro de ti, el medio segundo
+     * de gracia pasaba pegado a él y parecía que el golpe no había existido.
+     * Empujado dos casillas hacia atrás, el golpe se ve y da tiempo a salir. */
+    ESCUDO_EMPUJE: 2,
     PISOTON_TICKS: 6 * 60,        // PISOTÓN: TODO el mapa huye del Tanque
     /* Ya no hay alcance: el pisotón coge a cuantos fantasmas haya en la
      * calle, estén donde estén (20 sep). Este número es solo lo que crece la

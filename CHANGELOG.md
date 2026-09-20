@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Al romper un escudo, el fantasma sale despedido
+
+**Romper un escudo no se veía.** El fantasma se quedaba DENTRO de ti, el medio
+segundo de respiro pasaba pegado a él y parecía que el golpe no hubiera
+existido. Ahora el que rompe un escudo **sale empujado dos casillas** por
+donde vino y se da la vuelta. Si detrás tiene una pared, se queda donde pueda:
+nunca acaba dentro del muro.
+
+**Y una nota de despliegue**: la versión de la copia sin conexión llevaba
+desde ayer sin subir, así que quien tuviera el juego abierto podía estar
+jugando con archivos viejos mezclados con los nuevos —de ahí que un escudo
+recién corregido pareciera seguir roto—. Cada cambio de código sube ya su
+versión.
+
 ## 2026-09-20 · La CORAZA del Tanque, recortada
 
 Salió sin caducidad y volviendo a los 25 segundos, y así el Tanque iba
