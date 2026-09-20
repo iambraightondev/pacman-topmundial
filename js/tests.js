@@ -9326,24 +9326,24 @@
   /* ---------- LAS PASIVAS ---------- */
   /* La del ASESINO es lo que hace que un equipo lo NECESITE: mata igual que
    * los demás, pero cobra la mitad más por cada muerte. */
-  test('ASESINO · PASIVA: sus muertes valen un 50% más, se mate como se mate', function () {
-    eq(HC.BONO_ASESINO, 1.5, 'la mitad más');
+  test('ASESINO · PASIVA: sus muertes valen un 25% más, se mate como se mate', function () {
+    eq(HC.BONO_ASESINO, 1.25, 'la cuarta parte más');
 
     /* la cadena del energizante: 300 · 600 · 1.200 · 2.400 */
     partidaRol(['asesino'], 6, 5, DR.RIGHT);
-    var esperado = [300, 600, 1200, 2400];
+    var esperado = [250, 500, 1000, 2000];
     for (var i = 0; i < 4; i++) {
       eq(HB.puntosDe(G, 0, CFG.GHOST_CHAIN[i]), esperado[i],
         'el ' + (i + 1) + '.º fantasma de la cadena paga ' + esperado[i]);
     }
-    eq(HB.puntosDe(G, 0, HC.MAGO_PUNTOS), 300, 'y una muerte por habilidad, 300');
+    eq(HB.puntosDe(G, 0, HC.MAGO_PUNTOS), 250, 'y una muerte por habilidad, 250');
 
     /* y se cobra de verdad al comer, no solo en la cuenta */
     var g = fantasmaEn(0, 7, 5);
     g.frightened = true;
     var antes = G.score;
     G.eatGhost(g, 0);               // sin dar un paso: un paso se come una pastilla
-    eq(G.score - antes, 300, 'comerse el primero paga 300, no 200');
+    eq(G.score - antes, 250, 'comerse el primero paga 250, no 200');
 
     /* los demás roles cobran lo de siempre */
     partidaRol(['tanque'], 6, 5, DR.RIGHT);

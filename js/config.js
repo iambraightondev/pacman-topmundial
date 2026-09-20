@@ -1858,7 +1858,7 @@
     ROL_IDS: ['asesino', 'tanque', 'mago', 'soporte'],
     ROL_INFO: {
       asesino: { name: 'ASESINO', color: '#ff66cc', lema: 'PUNTÚA: MUERDE, CORRE Y ASUSTA',
-                 pasiva: 'TODO LO QUE MATES VALE UN 50% MÁS · 300 · 600 · 1.200 · 2.400',
+                 pasiva: 'TODO LO QUE MATES VALE UN 25% MÁS · 250 · 500 · 1.000 · 2.000',
                  desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
@@ -1878,9 +1878,14 @@
      * Una por rol, siempre encendida, para que el equipo NECESITE a cada uno
      * y no se elija por gusto. La del ASESINO es la que sostiene su papel:
      * mata igual que los demás, pero sus muertes valen la mitad más, así que
-     * un equipo sin asesino puntúa mucho menos por el mismo trabajo. Con la
-     * cadena de siempre (200/400/800/1600) le sale 300 / 600 / 1.200 / 2.400,
-     * y un cuádruple pasa de 3.000 a 4.500.
+     * un equipo sin asesino puntúa menos por el mismo trabajo. Con la cadena
+     * de siempre (200/400/800/1600) le sale 250 / 500 / 1.000 / 2.000, y un
+     * cuádruple pasa de 3.000 a 3.750.
+     *
+     * Empezó en la mitad más (20 sep) y bajó a la cuarta parte ese mismo día:
+     * a x1,5 el asesino no era necesario, era obligatorio —cualquier otro rol
+     * costaba un tercio del marcador— y eso no es equilibrio, es una casilla
+     * obligatoria en la alineación.
      *
      * Se aplica a TODA forma de matar, no solo al mordisco: cadena del
      * energizante, muertes por habilidad (MAGO_PUNTOS) y el premio del REY
@@ -1889,7 +1894,7 @@
      *
      * La del SOPORTE ya existía desde el 17 de septiembre: levanta un cuerpo
      * de una sola pasada, donde cualquier otro necesita cinco. */
-    BONO_ASESINO: 1.5,
+    BONO_ASESINO: 1.25,
 
     /* Tanque */
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque

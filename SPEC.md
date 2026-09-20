@@ -2569,10 +2569,13 @@ the key index. `LIST` is the ASESINO (the original kit).
   ranking, no badges (`persistHighScore`, `checkBadges`, `submitRanking`);
   XP and achievements still count. HUD and GAME OVER say PRÁCTICA.
 - **PASIVAS (20 Sep).** One per role, always on, so a team *needs* each of
-  them instead of picking by taste. **ASESINO: every kill is worth 50 % more**
-  (`HAB.BONO_ASESINO` = 1.5) — the energizer chain pays 300 / 600 / 1 200 /
-  2 400 (a quadruple goes from 3 000 to 4 500), ability kills pay 300 instead
-  of `MAGO_PUNTOS`, and finishing the REY FANTASMA pays 1.5 × `JEFE.PREMIO`.
+  them instead of picking by taste. **ASESINO: every kill is worth 25 % more**
+  (`HAB.BONO_ASESINO` = 1.25) — the energizer chain pays 250 / 500 / 1 000 /
+  2 000 (a quadruple goes from 3 000 to 3 750), ability kills pay 250 instead
+  of `MAGO_PUNTOS`, and finishing the REY FANTASMA pays 1.25 × `JEFE.PREMIO`.
+  It shipped at 1.5 and was cut the same day: at half again the asesino was
+  not needed, it was compulsory — any other role cost a third of the
+  scoreboard, which is a fixed slot in the line-up, not balance.
   It runs through one place, `Hab.puntosDe(G, who, base)`, called from
   `Game.eatGhost`, `Hab.matarMago` and `Jefe.morir`: the bonus belongs to the
   **role**, not to one way of playing, which is also why it is not limited to
