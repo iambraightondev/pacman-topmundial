@@ -9020,19 +9020,20 @@
       var Ac = window.PM.Account, R = window.PM.Replay;
       if (!Ac || !Ac.logged()) {
         this.showPrompt({
+          popup: true,
           title: 'DESTACAR PARTIDA',
           color: '#ffd23f',
-          solid: true,
           lines: [
-            'LAS DESTACADAS SE GUARDAN PARA SIEMPRE Y CON NOMBRE; LAS DEMÁS SE BORRAN A LOS ' +
-              CFG.REPLAY_CADUCA_DIAS + ' DÍAS',
-            'PARA DESTACAR NECESITAS UNA CUENTA'
+            'UNA DESTACADA SE GUARDA PARA SIEMPRE, Y CON NOMBRE',
+            'LAS DEMÁS SE BORRAN A LOS ' + CFG.REPLAY_CADUCA_DIAS + ' DÍAS',
+            'HACE FALTA UNA CUENTA: AHÍ ES DONDE SE GUARDA'
           ],
           buttons: [
             { label: 'CREAR CUENTA', primary: true, keys: ['Enter'], hint: 'ENTER',
               onClick: function () { self.showAccountPrompt('crear', function () { self.loadRanking(); }); } },
-            { label: 'YA TENGO CUENTA', onClick: function () { self.showAccountPrompt('entrar', function () { self.loadRanking(); }); } },
-            { label: 'VOLVER', keys: ['Escape'], hint: 'ESC', onClick: function () { self.hidePrompt(); } }
+            { label: 'YA TENGO CUENTA', cls: 'btn-enlace',
+              onClick: function () { self.showAccountPrompt('entrar', function () { self.loadRanking(); }); } },
+            { label: 'VOLVER', cls: 'btn-enlace', keys: ['Escape'], hint: 'ESC', onClick: function () { self.hidePrompt(); } }
           ]
         });
         return;
@@ -9050,18 +9051,20 @@
       var botones = [
         { label: activa ? 'GUARDAR' : '★ DESTACAR', primary: true, onClick: function () { guardar(true); } }
       ];
-      if (activa) botones.push({ label: 'QUITAR DESTACADA', onClick: function () { guardar(false); } });
-      botones.push({ label: 'VOLVER', keys: ['Escape'], hint: 'ESC', onClick: function () { self.hidePrompt(); } });
+      if (activa) botones.push({ label: 'QUITAR DESTACADA', cls: 'btn-enlace', onClick: function () { guardar(false); } });
+      botones.push({ label: 'VOLVER', cls: 'btn-enlace', keys: ['Escape'], hint: 'ESC', onClick: function () { self.hidePrompt(); } });
       this.showPrompt({
+        popup: true,
         title: activa ? 'PARTIDA DESTACADA' : 'DESTACAR PARTIDA',
         color: '#ffd23f',
         lines: [
           { text: String(h.p) + ' PUNTOS · NIVEL ' + h.lv, big: true },
           activa ? 'SE GUARDA PARA SIEMPRE. PUEDES CAMBIARLE EL NOMBRE O QUITARLA'
-            : 'SE GUARDA PARA SIEMPRE. SIN DESTACAR, SE BORRA A LOS ' + CFG.REPLAY_CADUCA_DIAS + ' DÍAS'
+            : 'SE GUARDA PARA SIEMPRE. SIN DESTACAR SE BORRA A LOS ' + CFG.REPLAY_CADUCA_DIAS + ' DÍAS'
         ],
         fields: [
-          { placeholder: 'NOMBRE (OPCIONAL)', maxLength: CFG.REPLAY_TITULO_MAX, value: titulo,
+          { label: 'PONLE NOMBRE (OPCIONAL)', placeholder: 'SIN NOMBRE',
+            maxLength: CFG.REPLAY_TITULO_MAX, value: titulo,
             onInput: function (v) { titulo = v; }, onAccept: function () { guardar(true); } }
         ],
         status: '',
@@ -9095,7 +9098,8 @@
         if (!R) return;
         if (tipo === 'nube') { self.showSharePrompt(R.enlaceRed(id), true); return; }
         self.showPrompt({
-          title: 'COMPARTIR REPETICIÓN',
+          popup: true,
+          title: 'COMPARTIR',
           color: '#7ec8ff',
           lines: ['PREPARANDO EL ENLACE...'],
           buttons: []
@@ -9120,6 +9124,7 @@
     showShareError: function (msg) {
       var self = this;
       this.showPrompt({
+        popup: true,
         title: 'NO SE PUDO COMPARTIR',
         color: '#ff8c00',
         lines: [msg || 'INTÉNTALO MÁS TARDE'],
@@ -9135,22 +9140,22 @@
     showSharePrompt: function (url, deRed) {
       var self = this;
       this.showPrompt({
-        title: 'ENLACE DE LA REPETICIÓN',
+        popup: true,
+        title: 'ENLACE LISTO',
         color: '#7ec8ff',
-        solid: true,
         lines: [
-          url,
+          { text: url, code: true },
           deRed
-            ? 'LA PARTIDA ESTÁ SUBIDA: EL ENLACE VALE PARA CUALQUIERA, DURE LO QUE DURE'
-            : 'LA PARTIDA VA DENTRO DEL ENLACE: FUNCIONA SIN SERVIDOR Y SIN CADUCAR',
-          'QUIEN LO ABRA VERÁ LA PARTIDA. NO CUENTA PARA NADA: NI PUNTOS, NI LOGROS, NI RÉCORD'
+            ? 'ESTÁ SUBIDA: EL ENLACE VALE PARA CUALQUIERA, DURE LO QUE DURE'
+            : 'LA PARTIDA VA DENTRO DEL ENLACE: NI SERVIDOR NI CADUCIDAD',
+          'QUIEN LO ABRA LA VERÁ. NO CUENTA PARA NADA: NI PUNTOS, NI LOGROS, NI RÉCORD'
         ],
         status: '',
         buttons: [
-          { label: 'COPIAR', primary: true, onClick: function () {
+          { label: 'COPIAR', primary: true, keys: ['Enter'], hint: 'ENTER', onClick: function () {
             self.copiarTexto(url, 'ENLACE COPIADO');
           } },
-          { label: 'CERRAR', keys: ['Escape', 'Enter'], hint: 'ESC',
+          { label: 'CERRAR', cls: 'btn-enlace', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
         ]
       });
@@ -9560,7 +9565,10 @@
         if (!line) return;
         var obj = (typeof line === 'object');
         var d = document.createElement('div');
-        d.className = 'prompt-line' + (obj && line.big ? ' big' : '');
+        /* 'code': un dato que hay que poder leer y coger a mano (el enlace de
+         * una repetición). Va en su recuadro, no como texto corrido. */
+        d.className = 'prompt-line' + (obj && line.big ? ' big' : '') +
+          (obj && line.code ? ' code' : '');
         d.textContent = obj ? line.text : line;
         host.appendChild(d);
       });
@@ -9569,7 +9577,7 @@
       if (o.summary) host.appendChild(this.buildRunSummary(o.summary));
 
       /* contenido hecho a mano (el GAME OVER de recreativa) */
-      if (o.custom) o.custom(p);
+      if (o.custom) o.custom(host);
 
       /* campo de texto opcional (invitar a alguien por su nombre) */
       this.promptInput = null;
@@ -9604,6 +9612,14 @@
           if (f.value) el.value = f.value;
           el.setAttribute('autocomplete', f.password ? 'current-password' : 'off');
           el.setAttribute('spellcheck', 'false');
+          /* etiqueta encima del campo: un placeholder largo se corta por los
+             lados y deja al jugador sin saber qué se le está pidiendo */
+          if (f.label) {
+            var lab = document.createElement('div');
+            lab.className = 'campo-label';
+            lab.textContent = f.label;
+            host.appendChild(lab);
+          }
           el.addEventListener('keydown', function (ev) {
             ev.stopPropagation();          // escribir no mueve a Pac-Man
             if (ev.key === 'Enter' && f.onAccept) f.onAccept(el.value);

@@ -13,6 +13,21 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**20 sep (tarde) — LAS PIEZAS DEL PASE, PROPUESTAS Y SIN DECIDIR.**
+
+El escaparate de la **temporada de octubre** está publicado y esperando
+respuesta: <https://claude.ai/artifact/GX82VpW7V8MZW7K7nWTCxG>. Cinco piezas
+exclusivas con un tema propio —**cazar fantasmas**, no «halloween»: las de
+halloween ya se ganan gratis esa semana y se pisarían—: el emote GRITO y el
+VISOR DE CAZA en el carril gratis; la MOCHILA DE PROTONES, el ECTOPLASMA y la
+skin TRAMPA en el de pago. El razonamiento del reparto, cómo se monta el
+escaparate y lo que costó dibujarlo están en `propuestas/pase-2026-10/LEEME.md`.
+
+**Nada de esto se toca en el juego hasta que se diga qué entra.**
+
+Y de paso, ya desplegado: los diálogos de **DESTACAR PARTIDA** y del **enlace
+de una repetición** pasan a la caja de ENTRAR (ver CHANGELOG).
+
 **20 sep — LOS CUATRO ROLES TIENEN PASIVA, Y EL PASE TIENE PANTALLA. TODO
 SUBIDO.**
 

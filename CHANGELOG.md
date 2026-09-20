@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · DESTACAR y el enlace de una repetición, en su caja
+
+Los dos diálogos salían **sueltos sobre el negro**, con el título tan grande
+como el de un panel y la lista del historial viéndose por detrás: no se leían
+como algo de lo que se vuelve, sino como otra pantalla del juego. Ahora usan
+la caja que ya estrenaron ENTRAR y CREAR CUENTA —marco, bombillas y el velo
+oscuro detrás—, y dentro manda **una sola cosa**: DESTACAR, o COPIAR. Lo demás
+(volver, quitar la destacada, cerrar) baja a una línea de enlaces.
+
+Tres cosas que además estaban rotas:
+
+- **El nombre de la partida.** El campo pedía «NOMBRE (OPCIONAL)» y el texto
+  se cortaba a media palabra dentro del recuadro. Ahora el rótulo va **encima**
+  del campo, entero, y sigue ahí después de escribir.
+- **Los puntos de la partida** se partían en dos líneas, con el nivel colgando
+  solo debajo. Ya no se parten.
+- **El enlace de la repetición** iba como texto corrido y se rompía por la
+  mitad de la dirección. Ahora va en su propia pantallita negra y se puede
+  seleccionar entero de una pasada, por si copiar falla.
+
 ## 2026-09-20 · Al romper un escudo, el fantasma sale despedido
 
 **Romper un escudo no se veía.** El fantasma se quedaba DENTRO de ti, el medio

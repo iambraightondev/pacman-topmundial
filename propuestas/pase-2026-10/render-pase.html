@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="cv" width="496" height="372"></canvas>
+<script src="../vestuario-2026-09-18/piezas.js"></script>
+<script>
+  function qFase(t, periodo, dura) { var x = t % periodo; return x < dura ? x / dura : -1; }
+  function hash(n) { return ((n * 1103515245 + 12345) & 0x7fffffff); }
+  var DRAW = {};
+</script>
+<script src="p-helpers.js"></script>
+<script src="p-piezas.js"></script>
+<script src="p-muerte.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var id = q.get('id');
+  var t = parseFloat(q.get('t') || '2.0');
+  var K = parseFloat(q.get('k') || '18');
+  var ctx = document.getElementById('cv').getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 496, 372);
+  var o = {
+    x: 0, y: 0, d: 3, half: HALF[parseInt(q.get('f') || '2', 10)], c: q.get('c') || '#ffff00', t: t,
+    s: 400, giro: 40, estira: 1, team: null, vel: 1,
+    back: function (dist) { return { x: -dist, y: 0, d: 3 }; }
+  };
+  ctx.save();
+  ctx.translate(parseFloat(q.get('cx') || '248'), parseFloat(q.get('cy') || '190'));
+  ctx.scale(K, K);
+  if (q.get('acc')) { ctx.save(); ctx.restore(); }
+  DRAW[id](ctx, o);
+  ctx.restore();
+})();
+</script>
+</body>
+</html>

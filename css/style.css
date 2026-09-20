@@ -3462,6 +3462,50 @@ input[type="range"] {
   max-width: 100%;
 }
 
+/* El dato de lo que se está haciendo (los puntos de la partida que se
+ * destaca): manda sobre la letra pequeña de alrededor, pero sin llegar a
+ * competir con el título. */
+.popup-caja .prompt-line.big {
+  color: #ffd23f;
+  font-size: clamp(11px, 2.1vh, 16px);
+  letter-spacing: 2px;
+  line-height: 1.3;
+  margin: -2px 0 2px;
+  /* un dato no se parte: "107200 PUNTOS · NIVEL 5" con el 5 solo en la
+     línea de abajo se lee como dos cosas distintas */
+  white-space: nowrap;
+}
+
+/* UN DATO PARA COGER A MANO (el enlace de una repetición). Va en su propia
+ * pantallita: si copiar falla, o el navegador no deja, el enlace tiene que
+ * poder leerse y seleccionarse entero. */
+.prompt-line.code {
+  color: #7ec8ff;
+  background: #000;
+  border: 1px solid #2121ff;
+  padding: 8px 10px;
+  line-height: 1.5;
+  letter-spacing: 0;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.popup-caja .prompt-line.code {
+  width: 100%;
+  font-size: clamp(9px, 1.5vh, 12px);
+  text-shadow: none;
+}
+
+/* Etiqueta encima de un campo. Un placeholder largo se corta por los lados y
+ * deja al jugador sin saber qué se le pide; el rótulo no se corta y además
+ * sigue ahí después de escribir. */
+.campo-label {
+  color: #6fe3ff;
+  font-size: clamp(8px, 1.3vh, 10px);
+  letter-spacing: 3px;
+  margin-bottom: -4px;
+}
+
 /* los campos: negros como la pantalla, no blancos de formulario */
 .popup-caja .nick-input {
   width: 100%;
