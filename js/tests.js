@@ -9323,6 +9323,38 @@
   });
 
   /* ---------- TANQUE ---------- */
+  /* ---------- LAS PASIVAS ---------- */
+  /* La del ASESINO es lo que hace que un equipo lo NECESITE: mata igual que
+   * los demás, pero cobra la mitad más por cada muerte. */
+  test('ASESINO · PASIVA: sus muertes valen un 50% más, se mate como se mate', function () {
+    eq(HC.BONO_ASESINO, 1.5, 'la mitad más');
+
+    /* la cadena del energizante: 300 · 600 · 1.200 · 2.400 */
+    partidaRol(['asesino'], 6, 5, DR.RIGHT);
+    var esperado = [300, 600, 1200, 2400];
+    for (var i = 0; i < 4; i++) {
+      eq(HB.puntosDe(G, 0, CFG.GHOST_CHAIN[i]), esperado[i],
+        'el ' + (i + 1) + '.º fantasma de la cadena paga ' + esperado[i]);
+    }
+    eq(HB.puntosDe(G, 0, HC.MAGO_PUNTOS), 300, 'y una muerte por habilidad, 300');
+
+    /* y se cobra de verdad al comer, no solo en la cuenta */
+    var g = fantasmaEn(0, 7, 5);
+    g.frightened = true;
+    var antes = G.score;
+    G.eatGhost(g, 0);               // sin dar un paso: un paso se come una pastilla
+    eq(G.score - antes, 300, 'comerse el primero paga 300, no 200');
+
+    /* los demás roles cobran lo de siempre */
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    eq(HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]), 200, 'el Tanque cobra lo de siempre');
+    eq(HB.puntosDe(G, 0, HC.MAGO_PUNTOS), 200, 'y sus muertes por habilidad, también');
+
+    /* fuera de DESATADO no hay pasiva que valga */
+    partida(1);
+    eq(HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]), 200, 'en una partida normal, nada cambia');
+  });
+
   test('TANQUE · PROVOCAR: los fantasmas van a por él 5 s', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var g = fantasmaEn(1, 20, 5);
@@ -10217,7 +10249,8 @@
     G.jefe.hp = 1;
     JF.danar(G, 5, 0, 'prueba', true);
     ok(!JF.activo(G), 'tumbado');
-    eq(G.score - antes, CJ.PREMIO, 'con su premio');
+    eq(G.score - antes, HB.puntosDe(G, 0, CJ.PREMIO),
+      'con su premio, y con la pasiva del Asesino si es quien lo remata');
     G.step();
     eq(G.state, 'LEVEL_DONE', 'y el nivel se acaba');
   });

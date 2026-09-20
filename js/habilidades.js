@@ -1241,6 +1241,17 @@
     },
 
     /* ---------- lo que consulta el motor ---------- */
+    /* PASIVA DEL ASESINO: lo que vale una muerte suya. Pasa por aquí TODO lo
+     * que se cobra por matar —la cadena del energizante, las muertes por
+     * habilidad y el premio del REY FANTASMA—, para que la pasiva sea del ROL
+     * y no de una forma concreta de jugar. Fuera de DESATADO no existe. */
+    puntosDe: function (G, who, base) {
+      base = Math.round(base || 0);
+      if (!this.on || !G || !G.hab) return base;
+      var rol = G.roles && G.roles[who | 0];
+      return (rol === 'asesino') ? Math.round(base * H.BONO_ASESINO) : base;
+    },
+
     congelado: function (gid) {
       return this.on && this.hielo[gid] > 0;
     },
@@ -1753,14 +1764,15 @@
       g.eaten();
       this.hielo[g.id] = 0;
       this.huye[g.id] = 0;
-      G.addScore(H.MAGO_PUNTOS);
-      G.addPopup(g.x, g.y, H.MAGO_PUNTOS, 45);
+      var pts = this.puntosDe(G, who, H.MAGO_PUNTOS);
+      G.addScore(pts);
+      G.addPopup(g.x, g.y, pts, 45);
       this.efecto(como, g.x, g.y, como === 'rayo' ? 14 : 18, ox, oy);
       if (mio(G, who)) {
         G.runGhosts++;
         G.bumpAch && G.bumpAch({ fantasmas: 1 });
       }
-      G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como,
+      G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como, p: pts,
         x: Math.round(g.x), y: Math.round(g.y), ox: Math.round(ox), oy: Math.round(oy) });
       window.AudioSys && AudioSys.playEatGhost();
     },
@@ -1771,7 +1783,9 @@
       if (!g) return;
       g.eaten();
       this.hielo[g.id] = 0;
-      G.addPopup(e.x, e.y, H.MAGO_PUNTOS, 45);
+      /* los puntos vienen en el aviso: aquí no se sabe de quién era la
+       * muerte ni si llevaba la pasiva del Asesino */
+      G.addPopup(e.x, e.y, (e.p | 0) || H.MAGO_PUNTOS, 45);
       this.efecto(e.f || 'fuego', e.x, e.y, e.f === 'rayo' ? 14 : 18, e.ox, e.oy);
       if ((e.w | 0) === G.localIdx && !G.isSpec()) {
         G.runGhosts++;

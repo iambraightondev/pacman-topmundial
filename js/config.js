@@ -1858,18 +1858,38 @@
     ROL_IDS: ['asesino', 'tanque', 'mago', 'soporte'],
     ROL_INFO: {
       asesino: { name: 'ASESINO', color: '#ff66cc', lema: 'PUNTÚA: MUERDE, CORRE Y ASUSTA',
+                 pasiva: 'TODO LO QUE MATES VALE UN 50% MÁS · 300 · 600 · 1.200 · 2.400',
                  desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
                  desc: ['TODO EL MAPA HUYE DE TI, UN 40% MÁS LENTO · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'TODOS VAN A POR TI, HASTA LOS AZULES · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
-      soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA · LEVANTA UN CUERPO DE UNA PASADA',
+      soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA',
+                 pasiva: 'LEVANTAS UN CUERPO DE UNA SOLA PASADA (LOS DEMÁS, CINCO)',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
                         'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · EL PRIMERO AL INSTANTE'] }
     },
+
+    /* LAS PASIVAS DE CADA ROL (20 de septiembre de 2026)
+     *
+     * Una por rol, siempre encendida, para que el equipo NECESITE a cada uno
+     * y no se elija por gusto. La del ASESINO es la que sostiene su papel:
+     * mata igual que los demás, pero sus muertes valen la mitad más, así que
+     * un equipo sin asesino puntúa mucho menos por el mismo trabajo. Con la
+     * cadena de siempre (200/400/800/1600) le sale 300 / 600 / 1.200 / 2.400,
+     * y un cuádruple pasa de 3.000 a 4.500.
+     *
+     * Se aplica a TODA forma de matar, no solo al mordisco: cadena del
+     * energizante, muertes por habilidad (MAGO_PUNTOS) y el premio del REY
+     * FANTASMA cuando es él quien lo remata. Si valiera solo para una, el rol
+     * premiaría una forma de jugar en vez de al rol.
+     *
+     * La del SOPORTE ya existía desde el 17 de septiembre: levanta un cuerpo
+     * de una sola pasada, donde cualquier otro necesita cinco. */
+    BONO_ASESINO: 1.5,
 
     /* Tanque */
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque

@@ -1540,7 +1540,10 @@
      * --------------------------------------------------------- */
     eatGhost: function (g, who) {
       var streak = Math.min(this.chainIndex, 3);   // 0..3 dentro de la racha
-      var pts = CFG.GHOST_CHAIN[streak];
+      /* la pasiva del ASESINO sube lo que vale la muerte (js/habilidades.js) */
+      var pts = (this.hab && window.PM.Hab)
+        ? window.PM.Hab.puntosDe(this, who || 0, CFG.GHOST_CHAIN[streak])
+        : CFG.GHOST_CHAIN[streak];
       this.chainIndex++;
       /* logros: solo los que me como yo (en online, `who` dice quién fue); lo
        * que se come el Pac-Man de la máquina (CACERÍA) no es de nadie */

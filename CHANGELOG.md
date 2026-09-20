@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · La pasiva del ASESINO: sus muertes valen la mitad más
+
+Cada rol va a tener una **pasiva**: algo que trae puesto, sin pulsar nada, y
+que hace que el equipo lo necesite. El SOPORTE ya tenía la suya desde el 17 de
+septiembre (levanta un cuerpo de una sola pasada, donde los demás necesitan
+cinco). Ahora le toca al **ASESINO**.
+
+**Todo lo que mate vale un 50% más.** La cadena del energizante le paga
+**300 · 600 · 1.200 · 2.400** —un cuádruple pasa de 3.000 a 4.500—, sus
+muertes con habilidad **300** en vez de 200, y si es él quien remata al REY
+FANTASMA, el premio también sube la mitad.
+
+Vale para **cualquier forma de matar**, no solo para el mordisco: si valiera
+solo para una, la pasiva premiaría una manera de jugar en vez de al rol. Un
+equipo sin asesino puntúa mucho menos por el mismo trabajo, que es justo lo
+que se buscaba.
+
+El selector de rol lleva ahora un renglón **PASIVA** debajo del lema. El
+TANQUE y el MAGO todavía no tienen la suya.
+
 ## 2026-09-20 · Tres ajustes de DESATADO: el grito, el pisotón y la tormenta
 
 **El grito del TANQUE (E) ya no lo desvía nada.** Antes, un fantasma azul

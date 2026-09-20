@@ -11509,6 +11509,7 @@
               '  ·  EN PARTY CADA UNO ELIGE SU ROL EN LA SALA'
           });
           var lema = p.querySelector('.brief-lema');
+          var pasiva = p.querySelector('.rol-pasiva');
           var cartas = p.querySelectorAll('.brief-carta');
 
           function pintar() {
@@ -11524,6 +11525,12 @@
             var rol = roles[mirando], info = H.ROL_INFO[rol], lista = H.ROLES[rol];
             p.style.setProperty('--brief', info.color);
             lema.textContent = (mirando ? 'J2 · ' : 'J1 · ') + info.name + ' — ' + info.lema;
+            /* LA PASIVA va en su propio renglón y no dentro del lema: es lo
+             * que trae el rol sin pulsar nada, y leída entre las cuatro
+             * teclas se perdía. Siempre ocupa sitio, aunque ese rol no tenga
+             * ninguna todavía, para que la pantalla no dé un salto al
+             * cambiar de rol. */
+            pasiva.textContent = info.pasiva ? ('PASIVA · ' + info.pasiva) : '';
             for (var k = 0; k < cartas.length; k++) {
               var h = lista[k];
               cartas[k].querySelector('.brief-tecla').textContent = h.key;
@@ -11541,6 +11548,10 @@
               : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y MAESTRÍAS';
             aviso.classList.toggle('ok', !practica);
           }
+          var pasiva = document.createElement('div');
+          pasiva.className = 'rol-pasiva';
+          p.appendChild(pasiva);
+
           var aviso = document.createElement('div');
           aviso.className = 'rol-aviso';
           p.insertBefore(aviso, p.querySelector('.brief-mandos'));

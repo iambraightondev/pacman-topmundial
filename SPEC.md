@@ -2568,6 +2568,21 @@ the key index. `LIST` is the ASESINO (the original kit).
   `Game.practica` = DESATADO + one player + role ≠ asesino: no record, no
   ranking, no badges (`persistHighScore`, `checkBadges`, `submitRanking`);
   XP and achievements still count. HUD and GAME OVER say PRÁCTICA.
+- **PASIVAS (20 Sep).** One per role, always on, so a team *needs* each of
+  them instead of picking by taste. **ASESINO: every kill is worth 50 % more**
+  (`HAB.BONO_ASESINO` = 1.5) — the energizer chain pays 300 / 600 / 1 200 /
+  2 400 (a quadruple goes from 3 000 to 4 500), ability kills pay 300 instead
+  of `MAGO_PUNTOS`, and finishing the REY FANTASMA pays 1.5 × `JEFE.PREMIO`.
+  It runs through one place, `Hab.puntosDe(G, who, base)`, called from
+  `Game.eatGhost`, `Hab.matarMago` and `Jefe.morir`: the bonus belongs to the
+  **role**, not to one way of playing, which is also why it is not limited to
+  the bite. Guests get the amount inside the event (`magoKill.p`), since they
+  cannot know whose kill it was. Outside DESATADO it does not exist.
+  **SOPORTE** keeps the one it has had since 17 Sep: it lifts a downed
+  teammate in a single pass where everyone else needs five
+  (`CFG.REVIVIR.PASADAS`). TANQUE and MAGO have none yet. The role picker
+  shows the line `PASIVA · …` under the motto (`ROL_INFO[].pasiva`), which is
+  always there even when empty so the screen does not jump between roles.
 - **TANQUE.** PROVOCAR: `Hab.objetivo` returns the nearest provoking tank's
   tile for **every ghost out in the maze**, and since 20 Sep that includes
   **blue ones**: the shout is how the tank saves the team, and while the

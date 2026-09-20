@@ -5370,6 +5370,15 @@ body { font-size-adjust: 0.56; }
 #prompt.arcade { --brief: #ff5a5a; }
 #prompt.arcade[data-tono="rosa"] { --brief: #ff66cc; }
 .brief-lema { font-size: clamp(11px, 1.9vh, 16px); letter-spacing: 3px; color: #fff; text-align: center; }
+/* LA PASIVA del rol: lo que trae puesto sin pulsar nada. En el color del rol
+ * (--brief), que es lo que ya tiñe su ficha. */
+.rol-pasiva {
+  min-height: 1.4em;
+  font-size: clamp(9px, 1.5vh, 12px);
+  letter-spacing: 2px;
+  text-align: center;
+  color: var(--brief, #ffd400);
+}
 .brief-cartas {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
   width: min(92vw, 1040px); margin-top: clamp(4px, 1vh, 12px);

@@ -534,8 +534,11 @@
     morir: function (G, quien) {
       var j = G.jefe;
       j.vivo = false;
-      G.addScore(J.PREMIO);
-      G.addPopup(j.x, j.y, J.PREMIO, 120);
+      /* rematarlo también es matar: si lo tumba el ASESINO, su pasiva cuenta */
+      var premio = (G.hab && window.PM.Hab)
+        ? window.PM.Hab.puntosDe(G, quien, J.PREMIO) : J.PREMIO;
+      G.addScore(premio);
+      G.addPopup(j.x, j.y, premio, 120);
       if (!G.netRole || quien === G.localIdx) G.bumpAch && G.bumpAch({ jefes: 1 });
       G.hostEvt({ t: 'jefeKill', w: quien, x: Math.round(j.x), y: Math.round(j.y) });
       /* los fantasmas que había fuera vuelven a casa hechos ojos */
