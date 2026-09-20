@@ -2583,7 +2583,21 @@ the key index. `LIST` is the ASESINO (the original kit).
   cannot know whose kill it was. Outside DESATADO it does not exist.
   **SOPORTE** keeps the one it has had since 17 Sep: it lifts a downed
   teammate in a single pass where everyone else needs five
-  (`CFG.REVIVIR.PASADAS`). TANQUE and MAGO have none yet. The role picker
+  (`CFG.REVIVIR.PASADAS`). **TANQUE: CORAZA** — a one-hit shield that is
+  simply always on; it does not expire (waiting around for a timer is the
+  opposite of what a tank does) and comes back `CORAZA_CD` (25 s) after it is
+  broken, dead or alive, so respawning never costs it. It **stacks with its
+  own W**: shields are now spent **one per hit**, in order — the SOPORTE's
+  (which expires), then the W's, then the CORAZA — where before a single hit
+  took every shield you had, which made wearing two pointless. Drawn as a
+  fixed inner ring; it travels in the roles snapshot as two extra fields
+  (`corPas`, `corCd`), and an older snapshot simply does not carry them.
+  **MAGO: EL OJO** — the tile each chasing ghost is heading for, marked on the
+  floor in that ghost's colour (`Hab.dibujarOjo`). Only the mage sees it, only
+  for ghosts in `normal` (there is nothing to warn about an eye going home),
+  and it is drawing only: it never touches the game or the network, so each
+  player sees their own. Targets outside the maze (Pinky and Inky aim wide on
+  purpose) are clamped to the edge so the mark stays visible. The role picker
   shows the line `PASIVA · …` under the motto (`ROL_INFO[].pasiva`), which is
   always there even when empty so the screen does not jump between roles.
 - **TANQUE.** PROVOCAR: `Hab.objetivo` returns the nearest provoking tank's

@@ -2,6 +2,27 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Las pasivas del TANQUE y del MAGO
+
+Ya tienen la suya los cuatro roles.
+
+**TANQUE · LA CORAZA.** Lleva siempre puesto un escudo de un golpe. No caduca
+—esperar quieto a que se gaste sería lo contrario de lo que hace un tanque— y
+cuando se lo rompen le vuelve **a los 25 segundos**, esté vivo o muerto: a
+nadie se le quita su pasiva por haber muerto.
+
+Y **se suma al ESCUDO de su W**: con los dos puestos aguanta dos golpes. Para
+eso hubo que arreglar algo que estaba mal de antes: un golpe se llevaba por
+delante TODOS los escudos que llevaras encima. Ahora se gasta **uno por
+golpe** —primero el que da el Soporte, luego el de la W y por último la
+coraza—, que es lo que cualquiera esperaría.
+
+**MAGO · EL OJO.** Ve **adónde va cada fantasma**: la casilla a la que se
+dirige queda marcada en el suelo con el color de su fantasma. Es lo que
+convierte al Mago en el que avisa — ve la encerrona antes de que se cierre.
+Solo lo ve quien juega de Mago, y solo de los que están persiguiendo: de uno
+que vuelve hecho ojos no hay nada que avisar.
+
 ## 2026-09-20 · La pasiva del ASESINO: sus muertes valen una cuarta parte más
 
 Cada rol va a tener una **pasiva**: algo que trae puesto, sin pulsar nada, y

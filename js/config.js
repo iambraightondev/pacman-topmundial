@@ -1862,6 +1862,7 @@
                  desc: ['TE COMES AL FANTASMA PEGADO · AL JEFE LE PEGA Y LO ATURDE 2 S', 'VELOCIDAD X1.5 UNOS SEGUNDOS',
                         'SALTAS CASILLAS ATRAVESANDO MUROS', 'LOS CUATRO FANTASMAS SE ASUSTAN'] },
       tanque:  { name: 'TANQUE', color: '#ffb852', lema: 'PROTEGE: ATRAE, AGUANTA Y EMPUJA',
+                 pasiva: 'CORAZA: UN GOLPE GRATIS SIEMPRE PUESTO · VUELVE A LOS 25 S',
                  desc: ['TODO EL MAPA HUYE DE TI, UN 40% MÁS LENTO · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'TODOS VAN A POR TI, HASTA LOS AZULES · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA',
@@ -1869,6 +1870,7 @@
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODOS A 2 CASILLAS', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
+                 pasiva: 'EL OJO: VES ADÓNDE VA CADA FANTASMA, MARCADO EN EL SUELO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
                         'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · EL PRIMERO AL INSTANTE'] }
     },
@@ -1895,6 +1897,13 @@
      * La del SOPORTE ya existía desde el 17 de septiembre: levanta un cuerpo
      * de una sola pasada, donde cualquier otro necesita cinco. */
     BONO_ASESINO: 1.25,
+
+    /* CORAZA (pasiva del TANQUE): un escudo de un golpe que se pone solo.
+     * No caduca —esperar quieto a que se gaste sería lo contrario de lo que
+     * hace un tanque—, y cuando se lo rompen tarda esto en volver. Se suma al
+     * ESCUDO de su W: con los dos puestos aguanta dos golpes, que es la
+     * diferencia entre entrar a salvar a alguien y no entrar. */
+    CORAZA_CD: 25 * 60,           // 25 s desde que se la rompen
 
     /* Tanque */
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque

@@ -9355,6 +9355,76 @@
     eq(HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]), 200, 'en una partida normal, nada cambia');
   });
 
+  test('TANQUE · PASIVA CORAZA: un golpe gratis siempre puesto, y vuelve a los 25 s', function () {
+    eq(HC.CORAZA_CD, 25 * 60, 'vuelve a los 25 s');
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    ok(HB.corazaDe(G, 0), 'el Tanque sale ya con la coraza puesta');
+
+    var g = fantasmaEn(0, 6, 5);
+    function choca() { g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false; G.step(); }
+    choca();
+    ok(!p.dying, 'el primer golpe se lo come la coraza');
+    ok(!HB.corazaDe(G, 0), 'que se gasta');
+    eq(HB.estado(0).corCd, HC.CORAZA_CD, 'y arranca su cuenta atrás');
+
+    /* vuelve sola, sin pulsar nada (se mide con él vivo: muerto, la partida
+     * no corre y ningún reloj del juego avanza) */
+    HB.estado(0).corCd = 1;
+    ticks(3);
+    ok(HB.corazaDe(G, 0), 'pasados los 25 s la tiene otra vez');
+
+    /* y sin ella, el golpe mata */
+    HB.estado(0).corPas = 0;
+    HB.estado(0).gracia = 0;
+    for (var i = 0; i < HC.ESCUDO_GRACIA + 4 && !p.dying; i++) choca();
+    ok(p.dying, 'sin coraza, el siguiente sí mata');
+  });
+
+  test('TANQUE · CORAZA + ESCUDO: dos golpes, no uno', function () {
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    ok(HB.pulsar(G, 0, 1), 'se pone además el ESCUDO de la W');
+    ok(HB.corazaDe(G, 0), 'con la coraza ya puesta');
+    var g = fantasmaEn(0, 6, 5);
+    function choca() { g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false; G.step(); }
+
+    choca();
+    ok(!p.dying, 'el primer golpe no mata');
+    eq(HB.estado(0).coraza, 0, 'y se lleva el escudo de la W');
+    ok(HB.corazaDe(G, 0), 'pero la coraza sigue puesta: se gastan de uno en uno');
+
+    HB.estado(0).gracia = 0;
+    choca();
+    ok(!p.dying, 'el segundo tampoco mata');
+    ok(!HB.corazaDe(G, 0), 'ahora sí se gasta la coraza');
+  });
+
+  /* EL OJO del Mago es solo dibujo: se comprueba que existe la marca y que no
+   * la pinta nadie más, que es lo que la hace una pasiva y no un añadido. */
+  test('MAGO · PASIVA EL OJO: solo el Mago ve adónde va cada fantasma', function () {
+    partidaRol(['mago'], 6, 5, DR.RIGHT);
+    var pintadas = 0;
+    var ctx = { save: function () {}, restore: function () {}, beginPath: function () {},
+      moveTo: function () {}, lineTo: function () {}, closePath: function () {},
+      stroke: function () { pintadas++; }, arc: function () {}, fill: function () {},
+      fillRect: function () {}, strokeStyle: '', fillStyle: '', lineWidth: 1 };
+    fantasmaEn(0, 10, 5);
+    fantasmaEn(1, 12, 5);
+    HB.dibujarOjo(G, ctx, CFG.MAZE_Y, 0);
+    ok(pintadas >= 2, 'marca la casilla de cada fantasma que persigue: ' + pintadas);
+
+    var conOjo = pintadas;
+    pintadas = 0;
+    partidaRol(['tanque'], 6, 5, DR.RIGHT);
+    fantasmaEn(0, 10, 5);
+    fantasmaEn(1, 12, 5);
+    HB.dibujarOjo(G, ctx, CFG.MAZE_Y, 0);
+    eq(pintadas, 0, 'el Tanque no ve nada (el Mago veía ' + conOjo + ')');
+  });
+
   test('TANQUE · PROVOCAR: los fantasmas van a por él 5 s', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var g = fantasmaEn(1, 20, 5);
@@ -9384,7 +9454,11 @@
     ok(!yo.dying, 'y atraviesa al compañero sin matarlo');
     var cerca = fantasmaEn(0, 6, 5);
     var tq = G.pacs[0];
-    for (i = 0; i < 3 && !tq.dying; i++) { cerca.x = tq.x; cerca.y = tq.y; cerca.mode = 'normal'; G.step(); }
+    /* le quitamos la CORAZA a mano: aquí se mide la provocación, no la pasiva
+     * (con ella puesta, el primer golpe se lo come el escudo) */
+    HB.estado(0).corPas = 0;
+    HB.estado(0).gracia = 0;
+    for (i = 0; i < HC.ESCUDO_GRACIA + 4 && !tq.dying; i++) { cerca.x = tq.x; cerca.y = tq.y; cerca.mode = 'normal'; G.step(); }
     ok(tq.dying, 'al Tanque sí lo mata');
     HB.estado(0).provoca = 0;
     for (i = 0; i < 3 && !yo.dying; i++) { lejos.x = yo.x; lejos.y = yo.y; lejos.mode = 'normal'; G.step(); }
@@ -9449,6 +9523,11 @@
     ok(!p.dying, 'el golpe no mata');
     ok(!HB.activa(G, 0, 1), 'pero se lleva el escudo');
     ok(g.mode === 'normal', 'y el fantasma ni muere ni se come');
+    /* y por debajo del escudo de la W queda su CORAZA, que aguanta otro */
+    HB.estado(0).gracia = 0;
+    choca();
+    ok(!p.dying, 'la coraza se come el segundo golpe');
+    ok(!HB.corazaDe(G, 0), 'y se gasta');
     for (var i = 0; i < HC.ESCUDO_GRACIA + 2 && !p.dying; i++) choca();
     ok(p.dying, 'pasado el respiro, el siguiente choque sí mata');
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
@@ -10112,6 +10191,7 @@
     ok(!JF.mata(G, 1), 'al compañero lo atraviesa sin matarlo');
     var tq = G.pacs[0];
     tq.x = j.x; tq.y = j.y;
+    HB.estado(0).corPas = 0;          // aquí se mide el jefe, no la CORAZA
     ok(JF.mata(G, 0), 'al Tanque sí lo mata: para eso se ofrece');
     HB.estado(0).provoca = 0;
     ok(JF.mata(G, 1), 'acabado el grito, al compañero vuelven a matarlo');

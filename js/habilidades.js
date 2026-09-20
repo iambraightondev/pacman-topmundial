@@ -104,6 +104,11 @@
       /* ---- los roles ---- */
       provoca: 0,         // PROVOCAR: ticks atrayendo a los fantasmas
       coraza: 0,          // ESCUDO del Tanque: 8 s o un choque, lo que llegue antes
+      /* CORAZA, la pasiva del Tanque: 1 = la lleva puesta. No es un reloj,
+       * porque no caduca; `corCd` son los ticks que faltan para recuperarla
+       * cuando se la rompen. */
+      corPas: 0,
+      corCd: 0,
       escudo: 0,          // ESCUDO ALIADO (del Soporte): igual, pero dado por otro
       gracia: 0,          // tras romperse el escudo, un momento sin morir
       pisoton: 0,         // la onda del PISOTÓN (solo se pinta)
@@ -214,6 +219,9 @@
       for (var i = 0; i < (n || 0); i++) {
         this.st.push(nuevoEstado());
         this.roles.push(H.rol(roles && roles[i]));
+        /* el TANQUE empieza con su CORAZA puesta: es una pasiva, tiene que
+         * estar desde el primer segundo y no al primer tick de reloj */
+        if (this.roles[i] === 'tanque') this.st[i].corPas = 1;
       }
       this.limpiarMesa();
     },
@@ -1304,11 +1312,15 @@
       var s = this.estado(idx);
       if (!s) return false;
       if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
-      /* los dos escudos (el propio del Tanque y el que da el Soporte) se
-       * rompen con el primer golpe */
-      if (s.coraza > 0 || s.escudo > 0) {
-        s.coraza = 0;
-        s.escudo = 0;
+      /* Los escudos se gastan DE UNO EN UNO, en este orden: primero el que
+       * caduca (el del Soporte), luego el de la W y por último la CORAZA, que
+       * no caduca. Antes un golpe se llevaba todos los que hubiera puestos, y
+       * con la pasiva del Tanque eso significaba que llevar dos escudos no
+       * servía de nada. */
+      if (s.coraza > 0 || s.escudo > 0 || (s.corPas > 0 && this.esRol(G, idx, 'tanque'))) {
+        if (s.escudo > 0) s.escudo = 0;
+        else if (s.coraza > 0) s.coraza = 0;
+        else { s.corPas = 0; s.corCd = H.CORAZA_CD; }
         s.gracia = H.ESCUDO_GRACIA;
         var p = G.pacs[idx];
         if (p) this.efecto('roto', p.x, p.y, 20);
@@ -1324,8 +1336,10 @@
     escudoRoto: function (G, idx) {
       var s = this.estado(idx);
       if (!s || idx === G.localIdx && !G.isSpec()) return;
-      s.escudo = 0;
-      s.coraza = 0;
+      /* el mismo orden que en salvaDelChoque: uno por golpe */
+      if (s.escudo > 0) s.escudo = 0;
+      else if (s.coraza > 0) s.coraza = 0;
+      else if (s.corPas > 0) { s.corPas = 0; s.corCd = H.CORAZA_CD; }
       var p = G.pacs[idx];
       if (p) this.efecto('roto', p.x, p.y, 20);
     },
@@ -1993,6 +2007,17 @@
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.provoca > 0) s.provoca--;
+        /* CORAZA (pasiva del Tanque): si no la lleva puesta, se le repone
+         * sola. El reloj va con la partida (parada, no corre), así que el
+         * cuarto de minuto es de juego, no de reloj de pared. */
+        if (this.esRol(G, i, 'tanque') && !s.corPas) {
+          if (s.corCd > 0) s.corCd--;
+          if (s.corCd <= 0) {
+            s.corPas = 1;
+            var pc = G.pacs[i];
+            if (pc && this.vivo(G, i)) this.efecto('amparo', pc.x, pc.y, 18);
+          }
+        }
         if (s.escudo > 0) s.escudo--;
         if (s.coraza > 0) s.coraza--;
         if (s.gracia > 0) s.gracia--;
@@ -2077,7 +2102,9 @@
       for (var k = 0; k < lista.length; k++) if (lista[k].id === id) this.gastar(G, idx, k);
     },
 
-    /* Al morir UN jugador (la partida sigue): se le cortan sus efectos */
+    /* Al morir UN jugador (la partida sigue): se le cortan sus efectos.
+     * La CORAZA no: es lo que trae puesto el Tanque, y volver a la vida sin
+     * ella sería empezar castigado por haber muerto. */
     limpiarJugador: function (idx) {
       var s = this.st[idx];
       if (!s) return;
@@ -2085,6 +2112,16 @@
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
       s.mant = -1; s.mantT = 0;
       s.dimension = 0;
+    },
+
+    /* ¿Ese jugador lleva la CORAZA puesta? (pasiva del Tanque) */
+    corazaDe: function (G, idx) {
+      var s = this.estado(idx);
+      return !!(s && s.corPas > 0 && this.esRol(G, idx, 'tanque'));
+    },
+
+    esRol: function (G, idx, rol) {
+      return !!(G && G.roles && G.roles[idx | 0] === rol);
     },
 
     /* ---------- la foto de red de los roles ----------
@@ -2095,7 +2132,8 @@
       var e = [], i;
       for (i = 0; i < this.st.length; i++) {
         var s = this.st[i];
-        e.push([s.provoca, s.escudo, s.pisoton, s.arrolla, s.inmune, s.tormenta, s.gracia, s.coraza, s.dimension]);
+        e.push([s.provoca, s.escudo, s.pisoton, s.arrolla, s.inmune, s.tormenta, s.gracia, s.coraza, s.dimension,
+                s.corPas, s.corCd]);
       }
       var po = [], ru = [], bl = [], pl = [];
       for (i = 0; i < this.st.length; i++) {
@@ -2115,7 +2153,10 @@
     aplicarRoles: function (hx, mioIdx) {
       if (!this.on || !hx) return;
       var i, k;
-      var CAMPOS = ['provoca', 'escudo', 'pisoton', 'arrolla', 'inmune', 'tormenta', 'gracia', 'coraza', 'dimension'];
+      /* los dos últimos llegaron con la CORAZA (20 sep): una foto vieja
+       * simplemente no los trae y se quedan como están */
+      var CAMPOS = ['provoca', 'escudo', 'pisoton', 'arrolla', 'inmune', 'tormenta', 'gracia', 'coraza', 'dimension',
+        'corPas', 'corCd'];
       for (i = 0; hx.e && i < hx.e.length && i < this.st.length; i++) {
         var fila = hx.e[i], s = this.st[i];
         if (!fila) continue;
@@ -2229,6 +2270,7 @@
     dibujarSuelo: function (G, ctx) {
       if (!this.on) return;
       var Y = CFG.MAZE_Y, tk = G.tick, i;
+      this.dibujarOjo(G, ctx, Y, tk);
       /* Lo que queda en la otra dimensión: la barra de arriba. El abismo, el
        * contorno del mapa y las luces los pinta Game.render (dibujarVacio). */
       var dentro = this.miraDesdeDimension(G);
@@ -2374,6 +2416,49 @@
       }
     },
 
+    /* EL OJO (pasiva del MAGO): la casilla a la que va cada fantasma,
+     * marcada en el suelo con su color. Es lo que convierte al Mago en el que
+     * avisa: ve la encerrona antes de que se cierre.
+     *
+     * Solo lo ve QUIEN ES MAGO, y solo de los que persiguen de verdad: de los
+     * ojos y de los que están en casa no hay nada que avisar. Es dibujo y
+     * nada más —ni toca la partida ni viaja por la red—, así que cada uno ve
+     * lo suyo sin que nadie más se entere. */
+    dibujarOjo: function (G, ctx, Y, tk) {
+      var yo = G.isSpec && G.isSpec() ? -1 : (G.localIdx | 0);
+      if (yo < 0 || !this.esRol(G, yo, 'mago') || !this.vivo(G, yo)) return;
+      var pul = 0.35 + 0.25 * Math.sin(tk / 9);
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!g || g.mode !== 'normal' || !g.targetTile) continue;
+        var t = null;
+        try { t = g.targetTile(G); } catch (e) { t = null; }
+        if (!t) continue;
+        /* la casilla puede quedar fuera del mapa (Pinky y Inky apuntan
+         * lejos a propósito): se pega al borde para que la marca se vea */
+        var cx = Math.max(0, Math.min(CFG.COLS - 1, Math.round(t.x)));
+        var cy = Math.max(0, Math.min(CFG.ROWS - 1, Math.round(t.y)));
+        var px = cx * T + T / 2, py = cy * T + T / 2 + Y;
+        ctx.strokeStyle = this.rgba(CFG.GHOSTS[i].color, pul);
+        ctx.beginPath();
+        ctx.moveTo(px, py - 3.5); ctx.lineTo(px + 3.5, py);
+        ctx.lineTo(px, py + 3.5); ctx.lineTo(px - 3.5, py);
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+
+    /* un color del juego con transparencia */
+    rgba: function (hex, a) {
+      var h = String(hex || '#ffffff').replace('#', '');
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      var n = parseInt(h, 16);
+      return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
+    },
+
     /* Lo que lleva encima cada Pac-Man: aros de escudo e inmunidad, el aviso
      * de la provocación, la onda del pisotón y el aura de la tormenta */
     dibujarPac: function (G, ctx, pc, i) {
@@ -2381,6 +2466,13 @@
       if (!s) return;
       var x = pc.x, y = pc.y + CFG.MAZE_Y, tk = G.tick;
       ctx.save();
+      /* LA CORAZA (pasiva del Tanque): un aro fijo, por dentro de los otros
+       * escudos, para que se vea que lleva un golpe de más aguantado. */
+      if (s.corPas > 0 && G.roles && G.roles[i] === 'tanque') {
+        ctx.strokeStyle = 'rgba(255, 184, 82, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, 7.5, 0, Math.PI * 2); ctx.stroke();
+      }
       /* el ESCUDO del Tanque en naranja y el que da el Soporte en cian */
       var escu = Math.max(s.coraza, s.escudo);
       if (escu > 0) {
