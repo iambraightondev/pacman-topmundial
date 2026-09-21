@@ -2502,12 +2502,18 @@
         if (!g || !g.rutaPrevista) continue;
         var ruta = g.rutaPrevista(G, H.OJO_PASOS);
         for (var n = 0; n < ruta.length; n++) {
-          /* se va apagando con la distancia: lo de dentro de un paso importa
-           * más que lo de dentro de cinco */
-          var a = 0.55 * (1 - n / (H.OJO_PASOS + 1));
+          /* Se va apagando con la distancia —lo de dentro de un paso
+           * importa más que lo de dentro de siete— pero SIN llegar a
+           * apagarse: a media tinta se confundía con las pastillas del
+           * laberinto, que son puntos del mismo tamaño. Va a color entero,
+           * más grande y con un hueco negro alrededor que lo despega del
+           * suelo. */
+          var a = 1 - 0.45 * (n / H.OJO_PASOS);
           var px = ruta[n].x * T + T / 2, py = ruta[n].y * T + T / 2 + Y;
+          ctx.fillStyle = 'rgba(0, 0, 0, ' + (0.75 * a) + ')';
+          ctx.fillRect(px - 3, py - 3, 6, 6);
           ctx.fillStyle = this.rgba(CFG.GHOSTS[i].color, a);
-          ctx.fillRect(px - 1.5, py - 1.5, 3, 3);
+          ctx.fillRect(px - 2, py - 2, 4, 4);
         }
       }
       this.avisoDeModo(G, ctx, Y, tk);

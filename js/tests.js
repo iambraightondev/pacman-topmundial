@@ -7288,6 +7288,21 @@
     });
   }
 
+  test('la foto del anfitrión lleva el reloj de CAZA y DISPERSIÓN', function () {
+    /* Sin esto, el aviso del OJO del Mago se le quedaba clavado al invitado:
+     * el modo cambiaba, pero los segundos que faltaban no bajaban nunca. */
+    G.schedIndex = 2;
+    G.schedTicks = 77;
+    var foto = G.buildSnapshot(false);
+    eq(foto.si, 2, 'el tramo del reloj viaja');
+    eq(foto.sk, 77, 'y los ticks que lleva');
+    G.schedIndex = 0;
+    G.schedTicks = 0;
+    G.applySnapshot(foto);
+    eq(G.schedIndex, 2, 'y al aplicarla, el invitado queda en el mismo tramo');
+    eq(G.schedTicks, 77, 'con los mismos ticks');
+  });
+
   test('el pase empieza el mes que dice su configuración y no antes',
     function () {
       var Pa = window.PM.Pase;
@@ -9559,7 +9574,7 @@
   /* EL OJO del Mago: por dónde VA A PASAR cada fantasma (no su destino: un
    * punto lejano no dice por dónde viene) y cuándo cambian de modo. */
   test('MAGO · PASIVA EL OJO: la ruta de cada fantasma, y solo para el Mago', function () {
-    eq(HC.OJO_PASOS, 5, 'cinco casillas por delante');
+    eq(HC.OJO_PASOS, 7, 'siete casillas por delante: con cinco no daba tiempo a reaccionar');
     partidaRol(['mago'], 6, 5, DR.RIGHT);
     var g = fantasmaEn(0, 10, 5);
     g.dir = DR.LEFT;
@@ -10424,6 +10439,51 @@
     eq(CJ.ATURDE_APISONADORA, 3 * 60, 'tres segundos');
     eq(JF.velocidad(G), 0, 'aturdido no se mueve');
   });
+
+  test('JEFE · APISONADORA de un INVITADO: pide golpe tantas veces como pase',
+    function () {
+      /* EL FALLO QUE ARREGLA (20 sep): el invitado marcaba su golpe de
+       * apisonadora en el mismo bit que el del azul, y ese bit solo se limpia
+       * cuando empieza otro energizante. Resultado: en party, arrollar al rey
+       * le pegaba UNA vez en toda la partida —y ninguna si antes le había
+       * pegado de azul—. */
+      nivelJefe(['tanque']);
+      var j = jefeEn(6, 5);
+      var me = ponPac(0, 6, 5, DR.RIGHT);
+      HB.estado(0).arrolla = 60;
+      j.frz = 0; j.inv = 0; j.pidoAplasta = 0;
+      G.frightTicks = 0;
+
+      var pedidos = [];
+      var antes = G.netSend;
+      G.netSend = function (k, e) { if (e && e.t === 'jefeGolpe') pedidos.push(e.f); };
+      try {
+        JF.colisionesInvitado(G, me);
+        eq(pedidos.length, 1, 'pide el golpe al pasarle por encima');
+        JF.colisionesInvitado(G, me);
+        eq(pedidos.length, 1, 'y no lo repite en el tick siguiente');
+        j.pidoAplasta = 0;                 // pasado el respiro
+        JF.colisionesInvitado(G, me);
+        eq(pedidos.length, 2, 'pero la SIGUIENTE pasada vuelve a pedirlo');
+        eq(j.azulUsado, 0, 'sin gastar el bit del azul, que no es suyo');
+      } finally { G.netSend = antes; }
+    });
+
+  test('JEFE · el anfitrión acepta cada golpe de apisonadora que le piden',
+    function () {
+      nivelJefe(['tanque']);
+      var j = jefeEn(6, 5);
+      ponPac(0, 6, 5, DR.RIGHT);
+      HB.estado(0).arrolla = 60;
+      var hp = j.hp;
+      j.inv = 0; j.frz = 0;
+      JF.peticionGolpe(G, 0, 'aplasta');
+      eq(j.hp, hp - CJ.DANO.aplasta, 'le quita vida');
+      eq(j.frz, CJ.ATURDE_APISONADORA, 'y lo aturde tres segundos');
+      j.inv = 0;
+      JF.peticionGolpe(G, 0, 'aplasta');
+      eq(j.hp, hp - 2 * CJ.DANO.aplasta, 'y otra pasada, otro golpe');
+    });
 
   test('JEFE: cada 5 niveles de DESATADO, y solo ahí', function () {
     partidaRol(['asesino']);

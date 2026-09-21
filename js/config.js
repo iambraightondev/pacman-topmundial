@@ -1914,7 +1914,7 @@
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  pasiva: 'EL OJO: VES POR DÓNDE VA A PASAR CADA UNO Y CUÁNDO CAMBIAN DE MODO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
-                        'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · EL PRIMERO AL INSTANTE'] }
+                        'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · UNO CADA MEDIO SEGUNDO'] }
     },
 
     /* LAS PASIVAS DE CADA ROL (20 de septiembre de 2026)
@@ -1959,10 +1959,10 @@
     CORAZA_CD: 30 * 60,           // y 30 s hasta la siguiente
 
     /* EL OJO (pasiva del MAGO): cuántas casillas por delante se le enseña el
-     * camino de cada fantasma. Cinco es lo que se puede leer de un vistazo
-     * sin que el laberinto se llene de puntos; con dos no daba tiempo a nada
-     * y con diez no se distinguía un fantasma de otro. */
-    OJO_PASOS: 5,
+     * camino de cada fantasma. Siete (20 sep): con cinco se veía venir la
+     * encerrona justo cuando ya no daba tiempo a nada. Con diez no se
+     * distinguía un fantasma de otro. */
+    OJO_PASOS: 7,
 
     /* Tanque */
     TAUNT_TICKS: 5 * 60,          // PROVOCAR: los fantasmas van a por el Tanque
@@ -2023,11 +2023,12 @@
     PORTAL_RED_GRACIA: 2 * 60,
     PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
     RUNA_TICKS: 15 * 60,
-    /* TRES rayos: el primero al instante y los otros dos, uno por segundo.
-     * Con cuatro barría a todos sin riesgo; con dos se quedaba corta para lo
-     * que cuesta (46 s de recarga). */
+    /* TRES rayos: el primero al instante y los otros dos, uno cada MEDIO
+     * segundo (20 sep). A un segundo, el segundo y el tercero llegaban tarde:
+     * lo que había debajo ya se había ido y la R se sentía floja para lo que
+     * cuesta (46 s de recarga). Con cuatro barría a todos sin riesgo. */
     TORMENTA_RAYOS: 3,
-    TORMENTA_CADA: 60,
+    TORMENTA_CADA: 30,
     TORMENTA_TILES: 10,           // a diez casillas a la redonda
     /* Lo que vale un fantasma que mata el Mago: fijo, sin tocar la cadena y
      * sin el parón de comer. Sin esto el Mago, que mata sin arriesgarse,

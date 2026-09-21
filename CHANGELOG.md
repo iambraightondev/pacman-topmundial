@@ -2,6 +2,40 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Repaso de DESATADO: el Mago, el rey y el sitio de los poderes
+
+**La R del MAGO dispara más seguido.** Los tres rayos caían uno por segundo,
+y el segundo y el tercero llegaban tarde: lo que había debajo ya se había
+ido. Ahora cae uno cada medio segundo.
+
+**EL OJO se ve y se ve antes.** El camino de cada fantasma llega dos
+casillas más lejos (siete), y va a color entero y con un hueco negro
+alrededor: a media tinta se confundía con las pastillas, que son puntos del
+mismo tamaño.
+
+**Y el reloj del OJO ya corre en party.** Al invitado se le quedaba clavado
+el aviso de CAZA / DISPERSIÓN —el modo cambiaba, pero los segundos no
+bajaban— porque ese reloj solo corría en el anfitrión y no viajaba en la
+foto. Ahora viaja.
+
+**La APISONADORA del Tanque vuelve a pegarle al REY FANTASMA.** En party, el
+invitado marcaba su golpe en el mismo sitio que el del azul, y ese sitio
+solo se limpia cuando empieza otro energizante: arrollar al rey le pegaba
+UNA vez en toda la partida, y ninguna si antes le había pegado de azul. Cada
+pasada vuelve a contar, con su daño y sus tres segundos de aturdimiento.
+
+**La barra de vida del rey deja de tapar el mapa.** Estaba sobre las dos
+primeras filas del laberinto, justo donde salen los fantasmas de casa. Se va
+abajo, a la franja de las vidas: mientras el rey esté en pie esa fila es
+suya, las frutas de nivel se apartan (son adorno) y el cronómetro se sube al
+marcador.
+
+**Y los poderes se mudan al lado derecho.** Con ratón y ventana ancha, la
+barra de Q/W/E/R —con sus recargas y el nombre de cada jugador— va pegada al
+borde derecho, a la altura de los ojos. El laberinto deja de pagarle su
+altura y se ve más grande, que en DESATADO es lo que importa. En el móvil
+sigue donde estaba.
+
 ## 2026-09-20 · En party, el Tanque era inmortal
 
 La CORAZA se rompía contra el fantasma... y medio parpadeo después volvía a

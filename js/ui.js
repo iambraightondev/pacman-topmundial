@@ -436,8 +436,10 @@
        * saldría por abajo justo en el modo donde hay que mirarla. Solo cuando
        * está encendida y en su sitio (en táctil flota, y entonces no ocupa). */
       var alto = window.innerHeight * 0.96;
+      this.colocarHabBar();
       if (this.habBar && this.habBar.classList.contains('on') &&
-          !this.habBar.classList.contains('fija')) {
+          !this.habBar.classList.contains('fija') &&
+          !this.habBar.classList.contains('lateral')) {
         alto -= this.habBar.offsetHeight + 6;
       }
       var s = Math.min(window.innerWidth * 0.96 / CFG.NATIVE_W,
@@ -10961,6 +10963,7 @@
        * En táctil no: ahí abajo manda la cruceta —que va centrada— y la barra
        * se queda flotando en su esquina, donde llega el otro pulgar. */
       bar.classList.toggle('fija', !!this.touchDevice);
+      this.colocarHabBar();
       var stage = document.getElementById('stage');
       (stage || document.body).appendChild(bar);
       this.habBar = bar;
@@ -11084,10 +11087,25 @@
      * el lienzo: si la barra está debajo, el chat se plantaría encima de ella.
      * Con la altura en una variable de CSS, el chat se sube justo lo que mide.
      * En táctil la barra flota, así que no ocupa y la variable vuelve a cero. */
+    /* AL LADO, NO DEBAJO (20 sep). En un monitor ancho sobra sitio a la
+     * derecha del laberinto y debajo no: la barra le estaba robando alto al
+     * lienzo, que es lo que de verdad se mira. Pegada al borde derecho, a la
+     * altura de los ojos, el laberinto recupera ese alto entero.
+     *
+     * Solo con ratón y con ancho de sobra. En táctil sigue flotando en su
+     * esquina (.fija) porque abajo manda la cruceta, y en una ventana
+     * estrecha vuelve debajo del lienzo, que es donde cabe. */
+    colocarHabBar: function () {
+      if (!this.habBar || this.touchDevice) return;
+      var hueco = (window.innerWidth - (CFG.NATIVE_W * 2)) / 2;   // a cada lado
+      this.habBar.classList.toggle('lateral', window.innerWidth >= 1000 && hueco >= 150);
+    },
+
     marcarHabBar: function () {
       var st = document.getElementById('stage');
       if (!st || !this.habBar) return;
-      var enFlujo = this.habBarOn && !this.habBar.classList.contains('fija');
+      var enFlujo = this.habBarOn && !this.habBar.classList.contains('fija') &&
+        !this.habBar.classList.contains('lateral');
       st.classList.toggle('con-hab', !!enFlujo);
       st.style.setProperty('--habH',
         enFlujo ? (this.habBar.offsetHeight + 6) + 'px' : '0px');

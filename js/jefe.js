@@ -322,6 +322,7 @@
       if (j.inv > 0) j.inv--;
       if (j.golpeado > 0) j.golpeado--;
       if (j.frz > 0) j.frz--;
+      if (j.pidoAplasta > 0) j.pidoAplasta--;   // respiro entre golpes pedidos
       j.stT++;
       this.mover(G, this.velocidad(G));
     },
@@ -392,10 +393,23 @@
       var A = Hab(), i = me.id | 0, j = G.jefe;
       if (A && A.enDimension && A.enDimension(i)) return;
       if (!this.toca(G, me)) return;
-      if (this.vulnerable(G) || (A && A.arrollando && A.arrollando(i))) {
-        if (j.inv <= 0 && !(j.azulUsado & (1 << i))) {
-          j.azulUsado |= (1 << i);
-          G.netSend('gevt', { t: 'jefeGolpe', f: this.vulnerable(G) ? 'azul' : 'aplasta' });
+      var esAzul = this.vulnerable(G);
+      if (esAzul || (A && A.arrollando && A.arrollando(i))) {
+        if (esAzul) {
+          /* el azul: UNA vez por cada energizante, como el anfitrión */
+          if (j.inv <= 0 && !(j.azulUsado & (1 << i))) {
+            j.azulUsado |= (1 << i);
+            G.netSend('gevt', { t: 'jefeGolpe', f: 'azul' });
+          }
+        } else if (j.inv <= 0 && !(j.pidoAplasta > 0)) {
+          /* LA APISONADORA NO GASTA EL BIT DEL AZUL (20 sep). Lo hacía, y
+           * como ese bit solo se limpia al empezar otro energizante, un
+           * invitado que arrollara al rey le pegaba UNA vez en toda la
+           * partida —y ninguna si antes le había pegado de azul—. Su freno
+           * es un respiro corto, solo para no mandar el mismo golpe en cada
+           * tick mientras lo cruza. */
+          j.pidoAplasta = J.INV;
+          G.netSend('gevt', { t: 'jefeGolpe', f: 'aplasta' });
         }
         return;
       }
@@ -674,26 +688,36 @@
       ctx.restore();
     },
 
-    /* La barra de vida, arriba del laberinto */
+    /* LA BARRA DE VIDA, EN LA FRANJA DE ABAJO (20 sep)
+     *
+     * Vivía sobre las dos primeras filas del laberinto y tapaba pasillo de
+     * verdad: justo donde salen los fantasmas de casa. Abajo hay una franja
+     * que no es laberinto (CFG.BOTTOM_ROWS, la de las vidas y las frutas) y
+     * su centro está libre, porque las vidas van a la izquierda y las frutas
+     * a la derecha. Ahí no tapa nada que se juegue. */
     dibujarBarra: function (G, ctx) {
       if (!G.jefe) return;
       var j = G.jefe, W = CFG.COLS * T;
-      var bw = 150, bh = 6, bx = (W - bw) / 2, by = CFG.MAZE_Y + 3;
+      var bw = 104, bh = 5;
+      var bx = (W - bw) / 2;
+      /* la franja de abajo: el rótulo arriba y la barra debajo */
+      var base = CFG.MAZE_Y + CFG.ROWS * T;
+      var by = base + 4;
       ctx.save();
       ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      ctx.fillRect(bx - 3, by - 2, bw + 6, bh + 12);
+      ctx.fillRect(bx - 3, by - 6, bw + 6, bh + 9);
       ctx.fillStyle = '#330010';
-      ctx.fillRect(bx, by + 6, bw, bh);
+      ctx.fillRect(bx, by, bw, bh);
       var q = j.max > 0 ? j.hp / j.max : 0;
       ctx.fillStyle = this.furia(G) ? J.COLOR_FURIA : '#ff2f6e';
-      ctx.fillRect(bx, by + 6, Math.round(bw * q), bh);
+      ctx.fillRect(bx, by, Math.round(bw * q), bh);
       ctx.strokeStyle = '#ffd400';
       ctx.lineWidth = 1;
-      ctx.strokeRect(bx - 0.5, by + 5.5, bw + 1, bh + 1);
+      ctx.strokeRect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
       ctx.fillStyle = '#ffd400';
-      ctx.font = window.PM.Letra ? window.PM.Letra.lienzo(5) : '5px monospace';
+      ctx.font = window.PM.Letra ? window.PM.Letra.lienzo(4) : '4px monospace';
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
+      ctx.textBaseline = 'bottom';
       ctx.fillText(j.vivo ? (this.furia(G) ? 'REY FANTASMA · FURIA' : 'REY FANTASMA') : 'REY FANTASMA DERROTADO', W / 2, by - 1);
       ctx.restore();
     }

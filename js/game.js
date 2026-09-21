@@ -3691,6 +3691,9 @@
         dp: this.dyingPlayer, rt: this.readyTicks,
         lvl: this.level, sc: this.score, hs: this.highScore,
         gm: this.globalMode, el: this.elroy,
+        /* el reloj de CAZA/DISPERSIÓN: sin esto, al invitado se le quedaba
+         * clavado el aviso del OJO del Mago (los segundos no bajaban nunca) */
+        si: this.schedIndex, sk: this.schedTicks,
         ft: this.frightTicks, ffl: this.frightFlashes, ch: this.chainIndex,
         fz: this.eatFreezeTicks, hg: this.hiddenGhost, ei: this.eaterIdx,
         dl: this.dotsLeft, de: this.dotsEaten,
@@ -4334,6 +4337,12 @@
       this.highScore = Math.max(this.highScore, s.hs || 0, s.sc || 0);
       this.globalMode = s.gm;
       this.elroy = s.el;
+      /* El reloj de CAZA/DISPERSIÓN. Sin esto, al invitado se le quedaba
+       * clavado el aviso del OJO del Mago: el modo cambiaba, pero los
+       * segundos que faltaban no bajaban nunca porque ese reloj solo corría
+       * en el anfitrión y no viajaba en la foto. */
+      if (typeof s.si === 'number') this.schedIndex = s.si;
+      if (typeof s.sk === 'number') this.schedTicks = s.sk;
 
       /* ventanas de protección para no pisar las predicciones locales */
       var protFright = (this.tick - this.frightPredictTick) < 60;
@@ -5050,7 +5059,7 @@
         this.dibujarCuerpos(ctx);
         // hielo, proyectiles, rayos y chispazos: encima de todo
         if (this.hab && window.PM.Hab) window.PM.Hab.dibujarAire(this, ctx);
-        // la barra de vida del jefe, arriba del laberinto
+        // la barra de vida del jefe, en la franja de abajo
         if (this.jefe && window.PM.Jefe) window.PM.Jefe.dibujarBarra(this, ctx);
         if (this.superv && window.PM.Superv) window.PM.Superv.dibujarHUD(this, ctx);
         /* CACERÍA: el aro de aviso (y de poder) sobre el Pac-Man de la máquina */
@@ -5246,19 +5255,25 @@
       if (this.state !== 'MENU') {
         var first = Math.max(1, this.level - 6);
         var x = CFG.NATIVE_W - 12;
-        for (i = this.level; i >= first; i--) {
+        /* con el REY FANTASMA en pie, la fila de abajo es para su barra de
+         * vida: las frutas de nivel son adorno y ceden el sitio */
+        var reyEnPie = !!(this.jefe && this.jefe.vivo);
+        for (i = this.level; i >= first && !reyEnPie; i--) {
           window.PM.Sprites.drawFruit(ctx, x, 278, CFG.fruitForLevel(i).id);
           x -= 16;
         }
       }
 
-      /* cronómetro, en el hueco central de la fila de abajo */
+      /* cronómetro, en el hueco central de la fila de abajo... salvo con el
+       * REY FANTASMA delante: ahí abajo va su barra de vida, y el reloj se
+       * sube al marcador, a la derecha, donde no molesta a nadie */
       if (this.state !== 'MENU') {
-        ctx.font = window.PM.Letra.lienzo(8);
-        ctx.textAlign = 'center';
+        var reyVivo = !!(this.jefe && this.jefe.vivo);
+        ctx.font = window.PM.Letra.lienzo(reyVivo ? 6 : 8);
+        ctx.textAlign = reyVivo ? 'right' : 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ffff00';
-        ctx.fillText(this.clockText(), 112, 279);
+        ctx.fillText(this.clockText(), reyVivo ? 216 : 112, reyVivo ? 9 : 279);
         // de mirón conviene recordar que esta partida no es tuya
         if (this.isSpec()) {
           ctx.font = window.PM.Letra.lienzo(6);
