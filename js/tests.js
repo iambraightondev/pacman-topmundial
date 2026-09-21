@@ -9498,6 +9498,31 @@
     ok(CFG.isOpen(g2.tileX(), g2.tileY()), 'acaba en pasillo, no en pared');
   });
 
+  test('TANQUE · la foto del anfitrión no le devuelve la coraza que acaba de romper',
+    function () {
+      /* EL FALLO QUE ARREGLA (20 sep): en party, la foto de roles llega doce
+       * veces por segundo y corregía "hacia arriba" todo lo que no estuviera
+       * excluido. La coraza no lo estaba: al romperla contra un fantasma, el
+       * siguiente paquete del anfitrión —que todavía me creía con ella— me la
+       * devolvía, y así los doce segundos enteros. El Tanque no se moría. */
+      partidaRol(['tanque'], 6, 5, DR.RIGHT);
+      var p = G.pacs[0];
+      p.safeTicks = 0;
+      var g = fantasmaEn(0, 6, 5);
+      var foto = HB.resumenRoles();          // la foto de cuando aún la tenía
+      ok(HB.corazaDe(G, 0), 'el Tanque sale con su coraza');
+      HB.salvaDelChoque(G, 0, g);
+      ok(!HB.corazaDe(G, 0), 'y la rompe contra el fantasma');
+
+      HB.aplicarRoles(foto, 0);              // llega la foto vieja, y soy yo
+      ok(!HB.corazaDe(G, 0), 'la foto del anfitrión NO me la devuelve');
+      ok(HB.estado(0).corCd > 0, 'y la recarga sigue corriendo');
+
+      /* a los demás sí se les pinta lo que diga el anfitrión */
+      HB.aplicarRoles(foto, 1);
+      ok(HB.estado(0).corPas > 0, 'la de OTRO jugador sí se copia de la foto');
+    });
+
   test('TANQUE · CORAZA + su W: dos golpes; con el escudo del Soporte, uno', function () {
     partidaRol(['tanque'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];

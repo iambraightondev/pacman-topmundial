@@ -2,6 +2,27 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · En party, el Tanque era inmortal
+
+La CORAZA se rompía contra el fantasma... y medio parpadeo después volvía a
+estar puesta. Y otra vez, y otra: mientras duraban sus doce segundos, al
+Tanque no lo mataba nadie.
+
+No era la regla, era la red. La foto que manda el anfitrión doce veces por
+segundo corregía "hacia arriba" todo lo que no estuviera expresamente
+excluido, y la coraza no lo estaba: cada paquete —que aún me creía con
+ella— me la devolvía. Ahora la coraza y su recarga las decide tu propia
+máquina, como el escudo y la inmunidad; que se rompió lo cuenta el aviso de
+siempre. Jugando solo nunca pasó: ahí no hay foto que llegue.
+
+## 2026-09-20 · Las pantallas, encogidas hasta que de verdad caben
+
+El encaje de esta mañana medía una vez y encogía una vez, y eso no basta: al
+encoger, el contenido se remaqueta —los textos dejan de partirse igual, las
+columnas caben de otra forma— y puede seguir saliéndose. La sala ONLINE con
+la party abierta encogía a 0,86 y aún dejaba fuera los tres botones de
+abajo. Ahora se comprueba después de encoger y se corrige hasta que cabe.
+
 ## 2026-09-20 · Las pantallas se encogen para caber en la ventana
 
 En cuanto la ventana baja de unos 800 px de alto —cualquier portátil con la

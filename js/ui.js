@@ -11399,11 +11399,22 @@
       el.style.zoom = '';
       /* con el zoom quitado, esto es lo que mide el contenido de verdad */
       var dentro = el.scrollHeight, hueco = el.clientHeight;
-      var k = 1;
       if (hueco && dentro > hueco + 1) {
-        k = Math.max(min, Math.floor((hueco / dentro) * 100) / 100);
+        var k = Math.max(min, Math.floor((hueco / dentro) * 100) / 100);
+        el.style.zoom = k;
+        /* Y SE COMPRUEBA, que una vez no basta: al encoger, el contenido se
+         * REMAQUETA —los textos dejan de partirse igual, las columnas caben
+         * de otra forma— y puede seguir sin caber. Le pasaba a la sala
+         * ONLINE con la party abierta: encogía a 0,86 y aún se le salían los
+         * botones de abajo. Se corrige hasta que cabe, con tope de vueltas
+         * para no quedarse dando vueltas si el contenido no colabora. */
+        for (var n = 0; n < 4 && k > min; n++) {
+          dentro = el.scrollHeight; hueco = el.clientHeight;
+          if (dentro <= hueco + 1) break;
+          k = Math.max(min, Math.floor(k * (hueco / dentro) * 100) / 100);
+          el.style.zoom = k;
+        }
       }
-      if (k < 1) el.style.zoom = k;
       this._encajando = false;
     },
 

@@ -2219,9 +2219,18 @@
         for (k = 0; k < CAMPOS.length; k++) {
           var v = fila[k] | 0;
           if (i === mioIdx) {
-            /* lo mío que decido yo (escudo, inmunidad, la carrera) no se toca;
-             * lo que ejecuta él solo se corrige hacia arriba */
-            if (k === 1 || k === 3 || k === 4 || k === 6 || k === 7 || k === 8) continue;
+            /* LO MÍO QUE DECIDO YO no se toca: el escudo, la inmunidad, la
+             * carrera... y la CORAZA con su recarga (9 y 10). Esos dos
+             * faltaban, y era un agujero serio: al romper yo la coraza
+             * contra un fantasma, la foto del anfitrión —que todavía me
+             * creía con ella— me la volvía a poner, y como sigue llegando
+             * doce veces por segundo mientras dura, en party el Tanque no
+             * se moría nunca. Su reloj corre igual en las dos máquinas y lo
+             * roto viaja por su propio aviso (escudoRoto).
+             *
+             * Lo que ejecuta el anfitrión solo se corrige hacia arriba. */
+            if (k === 1 || k === 3 || k === 4 || k === 6 || k === 7 || k === 8 ||
+                k === 9 || k === 10) continue;
             if (v > s[CAMPOS[k]]) s[CAMPOS[k]] = v;
           } else {
             s[CAMPOS[k]] = v;
