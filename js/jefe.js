@@ -152,6 +152,8 @@
       else if (G.frightTicks > 0) pct = G.speedRow.ghostFright;
       // PISOTÓN del Tanque: mientras huye va al ritmo del que huye (18 sep)
       if (j.huye > 0 && j.st !== 'carga') pct *= CFG.HAB.PISOTON_LENTO;
+      var A = Hab();
+      if (A && A.multVelJefe) pct *= A.multVelJefe(G);
       return pct / 100 * CFG.BASE_SPEED;
     },
 
@@ -177,6 +179,7 @@
       for (var i = 0; i < G.pacs.length; i++) {
         var p = G.pacs[i];
         if (!p || p.out || p.dying) continue;
+        if (A && A.oculto && A.oculto(i)) continue;
         if (A && A.enDimension && A.enDimension(i)) continue;
         var dx = distX(p.x, j.x), dy = p.y - j.y;
         var d = dx * dx + dy * dy;

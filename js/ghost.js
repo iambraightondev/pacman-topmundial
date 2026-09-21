@@ -139,6 +139,8 @@
       if (row === CFG.TUNNEL_ROW) col = CFG.wrapCol(col);
       else return false;
     }
+    if (window.PM.Hab && window.PM.Hab.bloqueaFantasma &&
+        window.PM.Hab.bloqueaFantasma(col, row)) return false;
     return CFG.isOpen(col, row, allowDoor);
   };
 

@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-21 · El catálogo de habilidades ya se juega y se ve
+
+**Las habilidades nuevas dejaron de ser estados a medias.** SHURIKEN lanza
+tres proyectiles y se recarga al acertar los tres; BOMBA da 150 exactos;
+SOMBRA oculta y prepara el mordisco doble; FRENESÍ acelera con cada baja;
+MARCA duplica la muerte y enseña la ruta; GANCHO INVERSO lleva al Asesino
+hasta un fantasma azul; MISIL recorre los cuatro objetivos; y CACERÍA permite
+que solo su Asesino coma los fantasmas señalados.
+
+**Tanque, Soporte y Mago también resuelven la habilidad completa.** Puente y
+Estela benefician al equipo, Cadena comparte puntos y absorbe el golpe,
+Yunque exige quedarse quieto, Rebote se consume en el primer contacto,
+Gravedad atrae de verdad, Chispa salta entre objetivos, Clon camina y explota,
+Tótem y Bola Guiada disparan proyectiles, y Meteoro deja su zona de fuego.
+
+**Todas las nuevas tienen lectura visual propia:** proyectiles, trayectorias,
+zonas, auras, enlaces, estados sobre Pac-Man y señales sobre los fantasmas.
+Las regresiones históricas y las pruebas funcionales nuevas se ejecutan en
+navegador con Playwright.
+
 ## 2026-09-20 · La party: el LISTO, el CONTINUE de todos y la pausa del muerto
 
 **Hay que decir que estás listo.** El líder no puede arrancar hasta que los

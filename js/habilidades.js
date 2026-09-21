@@ -131,13 +131,18 @@
       /* ---------- estado del catálogo ---------- */
       bomba: null,          // { c, r, t }
       sombra: 0,
+      sombraGolpe: false,   // el primer MORDISCO al salir vale doble
       frenesi: 0,
       frenesiMult: 1,
       carroña: 0,
       marca: 0,
       ganchoInv: 0,
+      shuriken: null,       // { id, pendientes, aciertos }
+      misil: null,          // proyectil en cadena del Asesino
       caceria: 0,
       estela: 0,
+      estelaBuff: 0,
+      estelaRastro: [],
       puente: 0,
       cadena: 0,
       cadenaCon: -1,
@@ -146,11 +151,14 @@
       campo: 0,
       hospital: 0,
       yunque: 0,
+      yunqueX: 0,
+      yunqueY: 0,
       pielPiedra: 0,
       rebote: 0,
       fortaleza: 0,
       terremoto: 0,
       meteoro: null,
+      fuegoMeteoro: null,
       eclipse: 0,
       totem: null
     };
@@ -280,6 +288,8 @@
       this.caceriaQuien = [-1, -1, -1, -1];
       this.marcaGhost = [-1, -1, -1, -1];
       this.joyas = [];
+      this.proyectilesCat = [];
+      this.rafagaId = 0;
       this.terremotoTicks = 0;
       this.eclipseTicks = 0;
       this.balas = [];
@@ -326,7 +336,8 @@
           ciego: this.ciego, azulCatalogo: this.azulCatalogo,
           azulCatTicks: this.azulCatTicks, terremotoTicks: this.terremotoTicks, eclipseTicks: this.eclipseTicks,
           caceriaQuien: this.caceriaQuien, marcaGhost: this.marcaGhost,
-          joyas: this.joyas, balas: this.balas, portales: this.portales,
+          joyas: this.joyas, proyectilesCat: this.proyectilesCat,
+          rafagaId: this.rafagaId, balas: this.balas, portales: this.portales,
           runas: this.runas, placas: this.placas
         })) };
     },
@@ -366,6 +377,8 @@
         this.caceriaQuien = m.caceriaQuien || this.caceriaQuien;
         this.marcaGhost = m.marcaGhost || this.marcaGhost;
         this.joyas = m.joyas || [];
+        this.proyectilesCat = m.proyectilesCat || [];
+        this.rafagaId = m.rafagaId | 0;
         this.balas = m.balas || [];
         this.portales = m.portales || this.portales;
         this.runas = m.runas || this.runas;
@@ -518,6 +531,10 @@
       if (!this.on) return false;
       var caz = this.caceriaQuien && this.caceriaQuien[gid];
       if (caz >= 0 && caz !== (who | 0)) return false;
+      /* El círculo de CACERÍA es la autorización del Asesino. Antes se
+       * comprobaba el dueño pero después se exigía igualmente modo azul, de
+       * modo que el propio Asesino moría al atravesar al marcado. */
+      if (caz === (who | 0)) return true;
       if (this.azulCatalogo && this.azulCatalogo[gid]) return true;
       return !!(G && G.frightTicks > 0);
     },
@@ -533,8 +550,9 @@
       if (this.huye && this.huye[gid] > 0) m *= H.PISOTON_LENTO;
       if (this.lento && this.lento[gid] > 0) m *= this.lentoMult[gid] || 1;
       if (this.aturdido && this.aturdido[gid] > 0) return 0;
-      if (this.ciego && this.ciego[gid] > 0) m *= 0.6;
+      /* ECLIPSE ya incluye ceguera: no se acumula con el 0,6 de NIEBLA. */
       if (this.eclipseTicks > 0) m *= 0.5;
+      else if (this.ciego && this.ciego[gid] > 0) m *= 0.6;
       if (!G || !G.vsPlayerOf) return m;
       var quien = G.vsPlayerOf(gid);
       return (quien >= 0 && this.conCarga(quien)) ? m * H.CHARGE_MULT : m;
@@ -591,6 +609,7 @@
       /* en la otra dimensión, a los demás se les ve como un fantasma; quien
        * está dentro se ve entero (lo borroso es lo de fuera) */
       if (s && s.dimension > 0) return (G && this.miraDesdeDimension(G) === idx) ? 1 : 0.35;
+      if (s && s.sombra > 0) return 0.2 + 0.08 * (1 + Math.sin(((G && G.tick) || 0) / 4));
       if (!s || s.flash <= 0) return 1;
       // de 0.35 a 1 según se va posando
       return 0.35 + 0.65 * (1 - s.flash / H.FLASH_SHOW);
@@ -1033,7 +1052,7 @@
         case 'caceria': ok = this.caceria(G, who); break;
         case 'misil': ok = this.misil(G, who); break;
         case 'ejecucion': ok = this.ejecucion(G, who); break;
-        case 'empujon': ok = this.empujon(G, who); break;
+        case 'empujon': ok = this.empujon(G, who, d); break;
         case 'grito_guerra': ok = this.gritoGuerra(G, who); break;
         case 'yunque': ok = this.yunque(G, who); break;
         case 'piel_piedra': ok = this.pielPiedra(G, who); break;
@@ -1042,13 +1061,13 @@
         case 'fortaleza': ok = this.fortaleza(G, who); break;
         case 'mina': ok = this.mina(G, who, d); break;
         case 'gancho': ok = this.gancho(G, who, d); break;
-        case 'telarana': ok = this.telarana(G, who); break;
+        case 'telarana': ok = this.telarana(G, who, d); break;
         case 'estela': ok = this.estela(G, who); break;
         case 'puente': ok = this.puente(G, who); break;
         case 'cadena': ok = this.cadena(G, who); break;
         case 'muro': ok = this.muro(G, who, d); break;
         case 'relevo': ok = this.relevo(G, who); break;
-        case 'faro': ok = this.faro(G, who); break;
+        case 'faro': ok = this.faro(G, who, d); break;
         case 'sirena': ok = this.sirena(G, who, d); break;
         case 'campo': ok = this.campo(G, who); break;
         case 'resurreccion': ok = this.resurreccion(G, who); break;
@@ -1056,10 +1075,10 @@
         case 'bola_guiada': ok = this.bolaGuiada(G, who, d); break;
         case 'toque_arcano': ok = this.toqueArcano(G, who); break;
         case 'chispa': ok = this.chispa(G, who); break;
-        case 'clon': ok = this.clon(G, who); break;
-        case 'totem': ok = this.totem(G, who); break;
+        case 'clon': ok = this.clon(G, who, d); break;
+        case 'totem': ok = this.totem(G, who, d); break;
         case 'gravedad': ok = this.gravedad(G, who); break;
-        case 'niebla': ok = this.niebla(G, who); break;
+        case 'niebla': ok = this.niebla(G, who, d); break;
         case 'meteoro': ok = this.meteoro(G, who, d); break;
         case 'eclipse': ok = this.eclipse(G, who); break;
         default:
@@ -1123,6 +1142,10 @@
           if (s && G.pacs[who]) { s.arrolla = 1; s.arecorre = 0; s.adir = G.pacs[who].dir; }
           break;
         case 'tormenta': if (s) s.tormenta = H.TORMENTA_RAYOS * H.TORMENTA_CADA; break;
+      }
+      var ecoId = this.idDe(G, who, k), ecoPac = G.pacs[who];
+      if (ecoPac && /^(shuriken|bomba|sombra|frenesi|carrona|marca|gancho_inverso|caceria|misil|ejecucion|empujon|grito_guerra|yunque|piel_piedra|rebote|terremoto|fortaleza|mina|gancho|telarana|estela|puente|cadena|muro|relevo|faro|sirena|campo|resurreccion|hospital|bola_guiada|toque_arcano|chispa|clon|totem|gravedad|niebla|meteoro|eclipse)$/.test(ecoId)) {
+        this.efecto(ecoId, ecoPac.x, ecoPac.y, 24);
       }
       /* Y se oye. Bajito siempre: por aquí solo pasan los poderes de OTROS —el
        * eco del tuyo se descarta arriba—, y de un mirón no es ninguno. */
@@ -1290,7 +1313,7 @@
        * Con los fantasmas ya azules, el mordisco entra en la cadena que
        * hubiera, que para eso te has ganado la superpastilla. */
       if (G.frightTicks <= 0) G.chainIndex = 0;
-      G.eatGhost(g, idx);
+      G.eatGhost(g, idx, 'mordisco');
       return true;
     },
 
@@ -1309,15 +1332,17 @@
       if (this.arrollando(idx)) return H.APISONADORA_MULT;
       var s = this.estado(idx), m = this.conTurbo(idx) ? H.TURBO_MULT : 1;
       if (s && s.frenesi > 0) m *= s.frenesiMult || 1;
-      if (s && s.pielPiedra > 0) m *= 0.8;
+      if (s && s.pielPiedra > 0) m *= 0.5;
       if (s && s.estela > 0) m *= H.ESTELA_MULT;
+      else if (s && s.estelaBuff > 0) m *= H.ESTELA_RASTRO_MULT;
       if (this.terremotoTicks > 0) m *= H.TERREMOTO_SLOW;
       return m;
     },
 
     puenteActivo: function (idx) {
-      var s = this.estado(idx);
-      return !!(s && s.puente > 0);
+      if (!this.on) return false;
+      for (var i = 0; i < this.st.length; i++) if (this.st[i].puente > 0) return true;
+      return false;
     },
 
     oculto: function (idx) {
@@ -1327,6 +1352,16 @@
 
     ciegoDe: function (gid) {
       return !!(this.eclipseTicks > 0 || (this.ciego && this.ciego[gid] > 0));
+    },
+
+    multVelJefe: function (G) {
+      if (!this.on || !G || !G.jefe) return 1;
+      var m = this.eclipseTicks > 0 ? 0.5 : 1;
+      for (var i = 0; i < this.st.length; i++) {
+        var z = this.st[i].telarana;
+        if (z && this.distancia(G.jefe.x, G.jefe.y, z.c * T + T / 2, z.r * T + T / 2) <= 1.5 * T) m *= H.TELARANA_MULT;
+      }
+      return m;
     },
 
     /* =========================================================
@@ -1464,6 +1499,58 @@
       return (rol === 'asesino') ? Math.round(base * H.BONO_ASESINO) : base;
     },
 
+    /* Bonos que dependen de QUÉ fantasma se ha comido y de cómo. Marca y el
+     * golpe de salida de Sombra tienen que pasar también por las muertes
+     * normales de Game.eatGhost; antes solo afectaban a matarCatalogo y por
+     * eso parecían no hacer nada con MORDISCO o CACERÍA. */
+    puntosFantasma: function (G, who, g, base, como, exacto) {
+      var s = this.estado(who), mult = 1;
+      if (!exacto && g && this.marcaGhost[g.id] === who && s && s.marca > 0) mult *= 2;
+      if (!exacto && como === 'mordisco' && s && s.sombraGolpe) {
+        mult *= 2;
+        s.sombraGolpe = false;
+        this.efecto('sombra_golpe', g.x, g.y, 28, G.pacs[who].x, G.pacs[who].y);
+      }
+      return exacto ? Math.round(base || 0) : this.puntosDe(G, who, Math.round((base || 0) * mult));
+    },
+
+    /* Todo fantasma cobrado alimenta Frenesí y Carroña, venga de MORDISCO,
+     * de CACERÍA o de otra habilidad. Antes solo lo hacían las muertes del
+     * catálogo y el aumento de velocidad era casi imposible de percibir. */
+    alMatar: function (G, who, g, x, y) {
+      var s = this.estado(who);
+      if (!s) return;
+      x = (x == null && g) ? g.x : x; y = (y == null && g) ? g.y : y;
+      if (s.frenesi > 0) {
+        s.frenesiMult = Math.min(H.FRENESI_MAX, (s.frenesiMult || 1) + H.FRENESI_PASO);
+        this.efecto('frenesi', x, y, 26);
+        if (G.addPopup) G.addPopup(x, y - 7, '×' + s.frenesiMult.toFixed(2), 35);
+      }
+      if (s.carrona > 0) this.joyas.push({ x: x, y: y, t: H.CARROÑA_JOYA, w: who });
+      if (g && this.marcaGhost[g.id] >= 0) {
+        var duenoMarca = this.marcaGhost[g.id];
+        this.marcaGhost[g.id] = -1;
+        if (this.st[duenoMarca]) this.st[duenoMarca].marca = 0;
+      }
+    },
+
+    /* CADENA duplica en el marcador común lo que puntúe cualquiera de sus
+     * dos extremos. Devuelve el extra para que quien originó los puntos lo
+     * pueda enseñar en el mismo sitio. */
+    bonoCadena: function (G, who, pts, x, y) {
+      if (!this.on || !(pts > 0)) return 0;
+      for (var i = 0; i < this.st.length; i++) {
+        var s = this.st[i];
+        if (s.cadena > 0 && (i === who || s.cadenaCon === who)) {
+          G.addScore(pts);
+          if (G.addPopup && x != null) G.addPopup(x, y - 7, '+' + pts, 30);
+          this.efecto('cadena', x == null ? 0 : x, y == null ? 0 : y, 20);
+          return pts;
+        }
+      }
+      return 0;
+    },
+
     congelado: function (gid) {
       return this.on && this.hielo[gid] > 0;
     },
@@ -1524,16 +1611,30 @@
       var s = this.estado(idx);
       if (!s) return false;
       var p = G.pacs[idx], j;
+      if (s.rebote > 0 && g) {
+        s.rebote = 0;
+        if (this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote');
+        return true;
+      }
       if (s.yunque > 0 || s.pielPiedra > 0) { if (g) this.empujar(G, g, 1); return true; }
+      /* El golpe del compañero enlazado lo absorbe el Soporte y consume la
+       * cadena. Antes solo se miraba la cadena del jugador golpeado. */
       for (j = 0; j < this.st.length; j++) {
-        var fs = this.st[j], fp = G.pacs[j];
-        if (fs.campo > 0 || (fs.fortaleza > 0 && fp && p && this.distancia(fp.x, fp.y, p.x, p.y) <= H.FORTALEZA_RADIO * T)) {
-          if (fs.rebote > 0 && g && this.manda(G)) this.matarCatalogo(G, g, j, H.MAGO_PUNTOS, 'rebote');
-          else if (g) this.empujar(G, g, 1);
+        var enl = this.st[j];
+        if (enl.cadena > 0 && enl.cadenaCon === idx) {
+          enl.cadena = 0; enl.cadenaCon = -1;
+          if (g) this.empujar(G, g, 1);
+          if (p && G.pacs[j]) this.efecto('cadena_rota', p.x, p.y, 26, G.pacs[j].x, G.pacs[j].y);
           return true;
         }
       }
-      if (s.rebote > 0) { if (g && this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote'); return true; }
+      for (j = 0; j < this.st.length; j++) {
+        var fs = this.st[j], fp = G.pacs[j];
+        if (fs.campo > 0 || (fs.fortaleza > 0 && fp && p && this.distancia(fp.x, fp.y, p.x, p.y) <= H.FORTALEZA_RADIO * T)) {
+          if (g) this.empujar(G, g, 1);
+          return true;
+        }
+      }
       if (s.cadena > 0) { s.cadena = 0; s.cadenaCon = -1; if (g) this.empujar(G, g, 1); return true; }
       if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
       /* QUÉ SE LLEVA UN GOLPE. La CORAZA del Tanque se suma SOLO a su
@@ -1637,6 +1738,14 @@
         case 'sombra': return s.sombra > 0;
         case 'frenesi': return s.frenesi > 0;
         case 'carrona': return s.carrona > 0;
+        case 'marca': return s.marca > 0;
+        case 'gancho_inverso': return s.ganchoInv > 0;
+        case 'shuriken': return !!s.shuriken;
+        case 'misil':
+        case 'bola_guiada':
+          for (var pi = 0; pi < this.proyectilesCat.length; pi++) if (this.proyectilesCat[pi].w === idx &&
+              (this.proyectilesCat[pi].tipo === (h.id === 'misil' ? 'misil' : 'guiada'))) return true;
+          return false;
         case 'caceria': return s.caceria > 0;
         case 'yunque': return s.yunque > 0;
         case 'piel_piedra': return s.pielPiedra > 0;
@@ -2083,8 +2192,10 @@
       this.huye[g.id] = 0;
       var pts = this.puntosDe(G, who, H.MAGO_PUNTOS);
       G.addScore(pts);
+      this.bonoCadena(G, who, pts, g.x, g.y);
       G.addPopup(g.x, g.y, pts, 45);
       this.efecto(como, g.x, g.y, como === 'rayo' ? 14 : 18, ox, oy);
+      this.alMatar(G, who, g, g.x, g.y);
       if (mio(G, who)) {
         G.runGhosts++;
         G.bumpAch && G.bumpAch({ fantasmas: 1 });
@@ -2352,41 +2463,94 @@
       return out;
     },
 
-    matarCatalogo: function (G, g, who, pts, como, mult, sinBono) {
+    /* Primer fantasma realmente situado en la línea de tiro. Las habilidades
+     * de línea dejaron de elegir "el más cercano en círculo", que hacía que
+     * GANCHO y EMPUJÓN alcanzaran cosas detrás del jugador. */
+    ghostEnLinea: function (G, idx, max, d) {
+      var p = G.pacs[idx], dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p);
+      var v = CFG.DIR_V[dir];
+      if (!p || !v) return null;
+      for (var n = 1; n <= max; n++) {
+        var c = CFG.wrapCol(p.tileX() + v.x * n), r = p.tileY() + v.y * n;
+        if (r < 0 || r >= CFG.ROWS || !CFG.isOpen(c, r, false)) break;
+        for (var i = 0; i < 4; i++) {
+          var g = G.ghosts[i];
+          if (this.enLaCalle(g) && g.tileX() === c && g.tileY() === r) return g;
+        }
+      }
+      return null;
+    },
+
+    extremoLinea: function (G, idx, max, d) {
+      var p = G.pacs[idx], c = this.casillaAdelante(G, idx, max, d);
+      return c || (p ? { c: p.tileX(), r: p.tileY(), d: this.dirFlash(p) } : null);
+    },
+
+    matarCatalogo: function (G, g, who, pts, como, mult, exacto) {
       if (!g || !this.enLaCalle(g)) return false;
-      var s = this.estado(who), bonus = 1;
-      if (this.marcaGhost[g.id] === who && s && s.marca > 0) bonus *= 2;
-      pts = Math.round((pts || H.MAGO_PUNTOS) * bonus * (mult || 1));
       var x = g.x, y = g.y, p = G.pacs[who];
+      pts = this.puntosFantasma(G, who, g,
+        Math.round((pts || H.MAGO_PUNTOS) * (mult || 1)), como, !!exacto);
       g.eaten();
       this.hielo[g.id] = 0; this.huye[g.id] = 0;
       this.azulCatalogo[g.id] = 0; this.azulCatTicks[g.id] = 0; this.caceriaQuien[g.id] = -1;
-      this.marcaGhost[g.id] = -1;
-      var total = sinBono ? pts : this.puntosDe(G, who, pts);
-      G.addScore(total);
-      G.addPopup(x, y, total, 45);
+      G.addScore(pts);
+      this.bonoCadena(G, who, pts, x, y);
+      G.addPopup(x, y, pts, 45);
       this.efecto(como || 'fuego', x, y, 18, p ? p.x : x, p ? p.y : y);
-      if (s && s.frenesi > 0) s.frenesiMult = Math.min(H.FRENESI_MAX, (s.frenesiMult || 1) + H.FRENESI_PASO);
-      if (s && s.carrona > 0) this.joyas.push({ x: x, y: y, t: H.CARROÑA_JOYA, w: who });
+      this.alMatar(G, who, g, x, y);
       if (mio(G, who)) { G.runGhosts++; G.bumpAch && G.bumpAch({ fantasmas: 1 }); }
-      G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como || 'fuego', p: total,
+      G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como || 'fuego', p: pts,
         x: Math.round(x), y: Math.round(y), ox: p ? Math.round(p.x) : Math.round(x), oy: p ? Math.round(p.y) : Math.round(y) });
       window.AudioSys && AudioSys.playEatGhost();
       return true;
     },
 
-    shuriken: function (G, idx, d) {
-      var p = G.pacs[idx], dir = this.dirFlash(p), v = CFG.DIR_V[dir], kills = 0;
-      if (!p || !v) return false;
-      sonDe(G, idx, 'playFlash');
-      if (!this.manda(G)) return true;
-      for (var n = 1; n <= H.SHURIKEN_TILES; n++) {
-        var c = CFG.wrapCol(p.tileX() + v.x * n), r = p.tileY() + v.y * n;
-        for (var i = 0; i < 4; i++) {
-          var g = G.ghosts[i];
-          if (g && this.enLaCalle(g) && g.tileX() === c && g.tileY() === r && this.matarCatalogo(G, g, idx, H.SHURIKEN_PUNTOS, 'shuriken')) { kills++; break; }
-        }
+    /* GRAVEDAD mueve de verdad hacia el centro, casilla a casilla y sin
+     * atravesar paredes. `empujar` usaba el rumbo del fantasma y podía
+     * mandarlo justo en la dirección contraria. */
+    atraerFantasma: function (G, g, tc, tr, casillas) {
+      if (!g || g.mode !== 'normal') return false;
+      var c = g.tileX(), r = g.tileY(), movido = 0;
+      for (var n = 0; n < casillas; n++) {
+        var dc = tc - c, dr = tr - r, opciones = [];
+        if (Math.abs(dc) >= Math.abs(dr) && dc) opciones.push({ c: CFG.wrapCol(c + (dc > 0 ? 1 : -1)), r: r });
+        if (dr) opciones.push({ c: c, r: r + (dr > 0 ? 1 : -1) });
+        if (Math.abs(dc) < Math.abs(dr) && dc) opciones.push({ c: CFG.wrapCol(c + (dc > 0 ? 1 : -1)), r: r });
+        var paso = null;
+        for (var k = 0; k < opciones.length; k++) if (opciones[k].r >= 0 && opciones[k].r < CFG.ROWS && CFG.isOpen(opciones[k].c, opciones[k].r, false)) { paso = opciones[k]; break; }
+        if (!paso) break;
+        c = paso.c; r = paso.r; movido++;
+        if (c === tc && r === tr) break;
       }
+      if (!movido) return false;
+      g.x = c * T + T / 2; g.y = r * T + T / 2; g.clearPlan();
+      return true;
+    },
+
+    /* MURO ocupa una casilla solo para los fantasmas. Pac-Man la atraviesa
+     * porque el laberinto real sigue abierto. */
+    bloqueaFantasma: function (c, r) {
+      if (!this.on) return false;
+      for (var i = 0; i < this.st.length; i++) {
+        var m = this.st[i].muro;
+        if (m && m.c === c && m.r === r) return true;
+      }
+      return false;
+    },
+
+    shuriken: function (G, idx, d) {
+      var p = G.pacs[idx], s = this.estado(idx);
+      var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
+      if (!p || !s || !v) return false;
+      var id = ++this.rafagaId;
+      s.shuriken = { id: id, pendientes: H.SHURIKEN_CANT, aciertos: 0 };
+      for (var n = 0; n < H.SHURIKEN_CANT; n++) this.proyectilesCat.push({
+        tipo: 'shuriken', x: p.x, y: p.y, d: dir, w: idx,
+        espera: n * H.SHURIKEN_SEPARA, viaja: 0, max: H.SHURIKEN_TILES * T, grupo: id
+      });
+      this.efecto('shuriken_salida', p.x, p.y, 18);
+      sonDe(G, idx, 'playFlash');
       return true;
     },
 
@@ -2395,108 +2559,272 @@
       if (!s || !c) return false;
       if (!s.bomba) {
         s.bomba = { c: c.c, r: c.r, t: H.BOMBA_TICKS };
-        this.sinGasto = true; sonDe(G, idx, 'playShout'); return true;
+        this.sinGasto = true;
+        this.efecto('bomba_planta', c.c * T + T / 2, c.r * T + T / 2, 24);
+        sonDe(G, idx, 'playShout'); return true;
       }
       var b = s.bomba, blancos = this.ghostsEn(G, b.c, b.r, H.BOMBA_RADIO);
       s.bomba = null;
-      if (this.manda(G)) for (var i = 0; i < blancos.length; i++) this.matarCatalogo(G, blancos[i], idx, H.BOMBA_PUNTOS, 'bomba');
+      if (this.manda(G)) for (var i = 0; i < blancos.length; i++)
+        this.matarCatalogo(G, blancos[i], idx, H.BOMBA_PUNTOS, 'bomba', 1, true);
       this.efecto('bomba', b.c * T + T / 2, b.r * T + T / 2, 24);
       sonDe(G, idx, 'playShout'); return true;
     },
 
-    sombra: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.sombra = H.SOMBRA_TICKS; sonDe(G, idx, 'playStealth'); return true; },
-    frenesi: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.frenesi = H.FRENESI_TICKS; s.frenesiMult = 1; sonDe(G, idx, 'playTurbo'); return true; },
-    carrona: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.carrona = H.CARROÑA_TICKS; sonDe(G, idx, 'playExtraLife'); return true; },
+    sombra: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.sombra = H.SOMBRA_TICKS; s.sombraGolpe = false; this.efecto('sombra', p.x, p.y, 30); sonDe(G, idx, 'playStealth'); return true; },
+    frenesi: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.frenesi = H.FRENESI_TICKS; s.frenesiMult = 1; this.efecto('frenesi', p.x, p.y, 30); sonDe(G, idx, 'playTurbo'); return true; },
+    carrona: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.carrona = H.CARROÑA_TICKS; this.efecto('carrona', p.x, p.y, 30); sonDe(G, idx, 'playExtraLife'); return true; },
     marca: function (G, idx) {
       var g = this.ghostCercano(G, idx, 8), s = this.estado(idx);
       if (!g || !s) return false;
-      this.marcaGhost[g.id] = idx; s.marca = H.MARCA_TICKS; this.efecto('marca', g.x, g.y, 24); sonDe(G, idx, 'playShout'); return true;
+      this.marcaGhost[g.id] = idx; s.marca = H.MARCA_TICKS;
+      this.efecto('marca', g.x, g.y, 30, G.pacs[idx].x, G.pacs[idx].y);
+      sonDe(G, idx, 'playShout'); return true;
     },
     ganchoInverso: function (G, idx, d) {
       var g = this.ghostCercano(G, idx, H.GANCHO_INVERSO_TILES), p = G.pacs[idx], s = this.estado(idx);
       if (!g || !p || !s) return false;
-      if (G.isLocalAuth(idx)) {
-        var v = CFG.DIR_V[g.dir] || { x: 1, y: 0 }, c = CFG.wrapCol(g.tileX() - v.x), r = g.tileY() - v.y;
-        if (r >= 0 && r < CFG.ROWS && CFG.isOpen(c, r, false)) { p.x = c * T + T / 2; p.y = r * T + T / 2; }
-      }
-      this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_INVERSO_TILES * 60; s.ganchoInv = H.GANCHO_INVERSO_TILES * 60;
-      this.efecto('gancho', g.x, g.y, 22, p.x, p.y); sonDe(G, idx, 'playCharge'); return true;
+      var ox = p.x, oy = p.y;
+      this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_AZUL_TICKS;
+      s.ganchoInv = H.GANCHO_AZUL_TICKS;
+      if (G.isLocalAuth(idx)) { p.x = g.x; p.y = g.y; p.pauseTicks = 0; }
+      this.efecto('gancho', g.x, g.y, 30, ox, oy); sonDe(G, idx, 'playCharge'); return true;
     },
     caceria: function (G, idx) {
       var s = this.estado(idx); if (!s) return false;
       s.caceria = H.CACERIA_TICKS;
-      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) this.caceriaQuien[i] = idx;
+      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
+        this.caceriaQuien[i] = idx;
+        this.efecto('caceria', G.ghosts[i].x, G.ghosts[i].y, 30);
+      }
       sonDe(G, idx, 'playShout'); return true;
     },
     misil: function (G, idx) {
       var p = G.pacs[idx], blancos = [];
+      if (!p) return false;
       for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) blancos.push(G.ghosts[i]);
       blancos.sort(function (a, b) { return this.distancia(p.x, p.y, a.x, a.y) - this.distancia(p.x, p.y, b.x, b.y); }.bind(this));
-      if (this.manda(G) && blancos.length) this.matarCatalogo(G, blancos[0], idx, H.MAGO_PUNTOS, 'misil', 2.5);
+      if (!blancos.length) return false;
+      this.proyectilesCat.push({ tipo: 'misil', x: p.x, y: p.y, w: idx,
+        objetivo: blancos[0].id, cola: blancos.slice(1).map(function (g) { return g.id; }), golpe: 0 });
+      this.efecto('misil_salida', p.x, p.y, 26);
       sonDe(G, idx, 'playFlash'); return true;
     },
     ejecucion: function (G, idx) {
       var g = this.ghostCercano(G, idx, 10); if (!g) return false;
       if (this.manda(G)) this.matarCatalogo(G, g, idx, H.EJECUCION_PUNTOS, 'ejecucion', 1, true);
+      this.efecto('ejecucion', g.x, g.y, 36, G.pacs[idx].x, G.pacs[idx].y);
       sonDe(G, idx, 'playShout'); return true;
     },
 
-    empujon: function (G, idx) {
-      var g = this.ghostCercano(G, idx, H.EMPUJON_TILES); if (!g) return false;
-      this.aturdido[g.id] = H.EMPUJON_STUN; if (this.manda(G)) this.empujar(G, g, 2);
+    empujon: function (G, idx, d) {
+      var g = this.ghostEnLinea(G, idx, H.EMPUJON_TILES, d); if (!g) return false;
+      this.aturdido[g.id] = H.EMPUJON_STUN;
+      if (this.manda(G)) this.empujar(G, g, H.EMPUJON_TILES);
+      this.efecto('empujon', g.x, g.y, 24, G.pacs[idx].x, G.pacs[idx].y);
       sonDe(G, idx, 'playCharge'); return true;
     },
     gritoGuerra: function (G, idx) {
       var p = G.pacs[idx]; if (!p) return false;
-      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i]) && this.distancia(p.x, p.y, G.ghosts[i].x, G.ghosts[i].y) <= 5 * T) this.aturdido[i] = H.GRITO_GUERRA_TICKS;
+      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i]) && this.distancia(p.x, p.y, G.ghosts[i].x, G.ghosts[i].y) <= 5 * T) {
+        this.aturdido[i] = H.GRITO_GUERRA_TICKS;
+        this.efecto('grito_guerra', G.ghosts[i].x, G.ghosts[i].y, 24, p.x, p.y);
+      }
       sonDe(G, idx, 'playShout'); return true;
     },
-    yunque: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.yunque = H.YUNQUE_TICKS; sonDe(G, idx, 'playStealth'); return true; },
-    pielPiedra: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.pielPiedra = H.PIEL_PIEDRA_TICKS; sonDe(G, idx, 'playStealth'); return true; },
-    rebote: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.rebote = H.REBOTE_TICKS; sonDe(G, idx, 'playCharge'); return true; },
+    yunque: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.yunque = H.YUNQUE_TICKS; s.yunqueX = p.x; s.yunqueY = p.y; this.efecto('yunque', p.x, p.y, 26); sonDe(G, idx, 'playStealth'); return true; },
+    pielPiedra: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.pielPiedra = H.PIEL_PIEDRA_TICKS; this.efecto('piel_piedra', p.x, p.y, 28); sonDe(G, idx, 'playStealth'); return true; },
+    rebote: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.rebote = H.REBOTE_TICKS; this.efecto('rebote', p.x, p.y, 28); sonDe(G, idx, 'playCharge'); return true; },
     terremoto: function (G, idx) {
       var s = this.estado(idx); if (!s) return false;
       this.terremotoTicks = H.TERREMOTO_TICKS; s.terremoto = H.TERREMOTO_TICKS;
       if (this.manda(G)) for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
-        var g = G.ghosts[i]; G.addScore(H.TERREMOTO_PUNTOS); G.addPopup(g.x, g.y, H.TERREMOTO_PUNTOS, 35); g.eaten();
+        var g = G.ghosts[i];
+        this.matarCatalogo(G, g, idx, H.TERREMOTO_PUNTOS, 'terremoto', 1, true);
       }
+      if (G.pacs[idx]) this.efecto('terremoto_onda', G.pacs[idx].x, G.pacs[idx].y, 50);
       sonDe(G, idx, 'playShout'); return true;
     },
-    fortaleza: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.fortaleza = H.FORTALEZA_TICKS; sonDe(G, idx, 'playStealth'); return true; },
+    fortaleza: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.fortaleza = H.FORTALEZA_TICKS; this.efecto('fortaleza', p.x, p.y, 36); sonDe(G, idx, 'playStealth'); return true; },
 
-    mina: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.mina = { c: c.c, r: c.r, t: H.BOMBA_TICKS }; sonDe(G, idx, 'playBiteMiss'); return true; },
-    gancho: function (G, idx) { var g = this.ghostCercano(G, idx, 6); if (!g) return false; this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_INVERSO_TILES * 60; this.efecto('gancho', g.x, g.y, 20); sonDe(G, idx, 'playCharge'); return true; },
-    telarana: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.telarana = { c: c.c, r: c.r, t: H.TELARANA_TICKS }; sonDe(G, idx, 'playBiteMiss'); return true; },
-    estela: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.estela = H.ESTELA_TICKS; sonDe(G, idx, 'playTurbo'); return true; },
-    puente: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.puente = H.PUENTE_TICKS; sonDe(G, idx, 'playFlash'); return true; },
-    cadena: function (G, idx) { var s = this.estado(idx), j = this.aliadoDe(G, idx); if (!s || j < 0) return false; s.cadena = H.CADENA_TICKS; s.cadenaCon = j; sonDe(G, idx, 'playStealth'); return true; },
-    muro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 1, d); if (!s || !c) return false; s.muro = { c: c.c, r: c.r, t: H.MURO_TICKS }; sonDe(G, idx, 'playCharge'); return true; },
+    mina: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.mina = { c: c.c, r: c.r, t: H.MINA_TICKS }; this.efecto('mina', c.c * T + T / 2, c.r * T + T / 2, 22); sonDe(G, idx, 'playBiteMiss'); return true; },
+    gancho: function (G, idx, d) {
+      var p = G.pacs[idx], g = this.ghostEnLinea(G, idx, 6, d), fin = this.extremoLinea(G, idx, 6, d);
+      if (!p || !fin) return false;
+      if (g) { this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_AZUL_TICKS; }
+      this.efecto('gancho', g ? g.x : fin.c * T + T / 2, g ? g.y : fin.r * T + T / 2, 24, p.x, p.y);
+      sonDe(G, idx, 'playCharge'); return true;
+    },
+    telarana: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.telarana = { c: c.c, r: c.r, t: H.TELARANA_TICKS }; this.efecto('telarana', c.c * T + T / 2, c.r * T + T / 2, 24); sonDe(G, idx, 'playBiteMiss'); return true; },
+    estela: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.estela = H.ESTELA_TICKS; s.estelaRastro = []; this.efecto('estela', p.x, p.y, 24); sonDe(G, idx, 'playTurbo'); return true; },
+    puente: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.puente = H.PUENTE_TICKS; this.efecto('puente', p.x, p.y, 30); sonDe(G, idx, 'playFlash'); return true; },
+    cadena: function (G, idx) { var s = this.estado(idx), j = this.aliadoDe(G, idx); if (!s || j < 0) return false; s.cadena = H.CADENA_TICKS; s.cadenaCon = j; this.efecto('cadena', G.pacs[j].x, G.pacs[j].y, 28, G.pacs[idx].x, G.pacs[idx].y); sonDe(G, idx, 'playStealth'); return true; },
+    muro: function (G, idx, d) {
+      var s = this.estado(idx), p = G.pacs[idx], dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p);
+      if (!s || !p) return false;
+      var v = CFG.DIR_V[(dir + 2) % 4], c = CFG.wrapCol(p.tileX() + v.x), r = p.tileY() + v.y;
+      if (r < 0 || r >= CFG.ROWS || !CFG.isOpen(c, r, false)) return false;
+      s.muro = { c: c, r: r, t: H.MURO_TICKS };
+      this.efecto('muro', c * T + T / 2, r * T + T / 2, 24); sonDe(G, idx, 'playCharge'); return true;
+    },
     relevo: function (G, idx) {
       var p = G.pacs[idx], j = this.aliadoDe(G, idx); if (!p || j < 0 || this.distancia(p.x, p.y, G.pacs[j].x, G.pacs[j].y) > 6 * T) return false;
-      if (G.isLocalAuth(j)) { G.pacs[j].x = p.x; G.pacs[j].y = p.y; G.pacs[j].dir = p.dir; G.pacs[j].nextDir = p.dir; }
+      var ox = G.pacs[j].x, oy = G.pacs[j].y;
+      if (G.isLocalAuth(j) || this.manda(G)) { G.pacs[j].x = p.x; G.pacs[j].y = p.y; G.pacs[j].dir = p.dir; G.pacs[j].nextDir = p.dir; }
+      this.efecto('relevo', p.x, p.y, 30, ox, oy);
       sonDe(G, idx, 'playFlash'); return true;
     },
-    faro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.faro = { c: c.c, r: c.r, t: H.FARO_TICKS }; sonDe(G, idx, 'playShout'); return true; },
-    sirena: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d) || this.casillaDe(G, idx, d); if (!s || !c) return false; s.sirena = { c: c.c, r: c.r, t: H.FARO_TICKS }; sonDe(G, idx, 'playShout'); return true; },
-    campo: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.campo = H.CAMPO_TICKS; sonDe(G, idx, 'playStealth'); return true; },
-    resurreccion: function (G, idx) { var target = -1; for (var i = 0; i < G.cuerpos.length; i++) if (G.cuerpos[i]) { target = i; break; } if (target < 0) return false; if (this.manda(G)) G.revivirCuerpo(target); sonDe(G, idx, 'playExtraLife'); return true; },
-    hospital: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.hospital = H.HOSPITAL_TICKS; sonDe(G, idx, 'playExtraLife'); return true; },
+    faro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.faro = { c: c.c, r: c.r, t: H.FARO_TICKS }; this.efecto('faro', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
+    sirena: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d) || this.casillaDe(G, idx, d); if (!s || !c) return false; s.sirena = { c: c.c, r: c.r, t: H.FARO_TICKS }; this.efecto('sirena', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
+    campo: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.campo = H.CAMPO_TICKS; this.efecto('campo', p.x, p.y, 34); sonDe(G, idx, 'playStealth'); return true; },
+    resurreccion: function (G, idx) {
+      var target = -1, i;
+      for (i = 0; i < G.pacs.length; i++) if (i !== idx && G.pacs[i] && G.pacs[i].out) { target = i; break; }
+      if (target < 0) return false;
+      if (this.manda(G)) {
+        if (!G.cuerpos[target]) G.cuerpos[target] = { x: G.pacs[target].x, y: G.pacs[target].y,
+          d: G.pacs[target].dir, t: 1, n: 0, en: {}, quien: {} };
+        G.cuerpos[target].quien[idx] = 1;
+        G.revivirCuerpo(target);
+      }
+      this.efecto('resurreccion', G.pacs[target].x, G.pacs[target].y, 48);
+      sonDe(G, idx, 'playExtraLife'); return true;
+    },
+    hospital: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.hospital = H.HOSPITAL_TICKS; this.efecto('hospital', p.x, p.y, 36); sonDe(G, idx, 'playExtraLife'); return true; },
 
     bolaGuiada: function (G, idx) {
       /* GUIADA no depende de que el fantasma esté alineado ni a una distancia
        * concreta: si queda alguno en la calle, el proyectil encuentra al más
        * cercano. Por eso la habilidad no falla por puntería. */
-      var g = this.ghostCercano(G, idx, 999); if (this.manda(G) && g) this.matarCatalogo(G, g, idx, H.BOLA_GUIADA_PUNTOS, 'bola', 1, true);
+      var p = G.pacs[idx], g = this.ghostCercano(G, idx, 999);
+      if (!p) return false;
+      if (g) this.proyectilesCat.push({ tipo: 'guiada', x: p.x, y: p.y, w: idx, objetivo: g.id });
+      this.efecto('guiada_salida', p.x, p.y, 24);
       sonDe(G, idx, 'playFlash'); return true;
     },
-    toqueArcano: function (G, idx) { var g = this.ghostCercano(G, idx, 3); if (!g) return false; this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.TOQUE_ARCANO_TICKS; this.efecto('arcano', g.x, g.y, 18); sonDe(G, idx, 'playBiteMiss'); return true; },
-    chispa: function (G, idx) { var g = this.ghostCercano(G, idx, 3), p = G.pacs[idx]; if (!g || !p) return false; this.aturdido[g.id] = H.CHISPA_TICKS; this.efecto('chispa', g.x, g.y, 18, p.x, p.y); sonDe(G, idx, 'playCharge'); return true; },
-    clon: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 1, d) || this.casillaDe(G, idx, d); if (!s || !c) return false; s.clon = { c: c.c, r: c.r, t: H.TOTEM_TICKS }; sonDe(G, idx, 'playStealth'); return true; },
-    totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0 }; sonDe(G, idx, 'playShout'); return true; },
-    gravedad: function (G, idx) { var p = G.pacs[idx], blancos; if (!p) return false; blancos = this.ghostsEn(G, p.tileX(), p.tileY(), 3); for (var i = 0; i < blancos.length; i++) { this.aturdido[blancos[i].id] = H.GRAVEDAD_TICKS; this.empujar(G, blancos[i], 1); } sonDe(G, idx, 'playCharge'); return true; },
-    niebla: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.niebla = { c: c.c, r: c.r, t: H.NIEBLA_TICKS }; sonDe(G, idx, 'playStealth'); return true; },
-    meteoro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d); if (!s || !c) return false; s.meteoro = { c: c.c, r: c.r, t: H.METEORO_AVISO }; sonDe(G, idx, 'playShout'); return true; },
-    eclipse: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.eclipse = H.ECLIPSE_TICKS; this.eclipseTicks = H.ECLIPSE_TICKS; for (var i = 0; i < 4; i++) this.ciego[i] = H.ECLIPSE_TICKS; sonDe(G, idx, 'playShout'); return true; },
+    toqueArcano: function (G, idx) { var g = this.ghostCercano(G, idx, 3); if (!g) return false; this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.TOQUE_ARCANO_TICKS; this.efecto('arcano', g.x, g.y, 28, G.pacs[idx].x, G.pacs[idx].y); sonDe(G, idx, 'playBiteMiss'); return true; },
+    chispa: function (G, idx) {
+      var p = G.pacs[idx], primero = this.ghostCercano(G, idx, 3), usados = {}, actual = primero;
+      if (!p || !primero) return false;
+      var ox = p.x, oy = p.y;
+      while (actual) {
+        usados[actual.id] = 1; this.aturdido[actual.id] = H.CHISPA_TICKS;
+        this.efecto('chispa', actual.x, actual.y, 24, ox, oy); ox = actual.x; oy = actual.y;
+        var sig = null, sd = Infinity;
+        for (var i = 0; i < 4; i++) {
+          var g = G.ghosts[i]; if (!this.enLaCalle(g) || usados[g.id]) continue;
+          var dd = this.distancia(actual.x, actual.y, g.x, g.y);
+          if (dd <= 3 * T && dd < sd) { sd = dd; sig = g; }
+        }
+        actual = sig;
+      }
+      sonDe(G, idx, 'playCharge'); return true;
+    },
+    clon: function (G, idx, d) {
+      var s = this.estado(idx), p = G.pacs[idx], dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p);
+      if (!s || !p || !this.libreDelante(p.tileX(), p.tileY(), dir)) return false;
+      s.clon = { c: p.tileX(), r: p.tileY(), x: p.x, y: p.y, d: dir, t: H.CLON_TICKS };
+      this.efecto('clon', p.x, p.y, 28); sonDe(G, idx, 'playStealth'); return true;
+    },
+    totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0 }; this.efecto('totem', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
+    gravedad: function (G, idx) {
+      var p = G.pacs[idx], blancos; if (!p) return false;
+      blancos = this.ghostsEn(G, p.tileX(), p.tileY(), 3);
+      for (var i = 0; i < blancos.length; i++) {
+        var g = blancos[i], ox = g.x, oy = g.y;
+        if (this.manda(G)) this.atraerFantasma(G, g, p.tileX(), p.tileY(), 3);
+        this.aturdido[g.id] = H.GRAVEDAD_TICKS;
+        this.efecto('gravedad', g.x, g.y, 28, ox, oy);
+      }
+      this.efecto('gravedad_centro', p.x, p.y, 32); sonDe(G, idx, 'playCharge'); return true;
+    },
+    niebla: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.niebla = { c: c.c, r: c.r, t: H.NIEBLA_TICKS }; this.efecto('niebla', c.c * T + T / 2, c.r * T + T / 2, 26); sonDe(G, idx, 'playStealth'); return true; },
+    meteoro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d); if (!s || !c) return false; s.meteoro = { c: c.c, r: c.r, t: H.METEORO_AVISO }; s.fuegoMeteoro = null; this.efecto('meteoro_aviso', c.c * T + T / 2, c.r * T + T / 2, 30); sonDe(G, idx, 'playShout'); return true; },
+    eclipse: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s) return false; s.eclipse = H.ECLIPSE_TICKS; this.eclipseTicks = H.ECLIPSE_TICKS; for (var i = 0; i < 4; i++) this.ciego[i] = H.ECLIPSE_TICKS; if (p) this.efecto('eclipse', p.x, p.y, 40); sonDe(G, idx, 'playShout'); return true; },
+
+    finShuriken: function (G, b, acerto) {
+      var s = this.estado(b.w);
+      if (!s || !s.shuriken || s.shuriken.id !== b.grupo) return;
+      s.shuriken.pendientes--;
+      if (acerto) s.shuriken.aciertos++;
+      if (s.shuriken.pendientes <= 0) {
+        if (s.shuriken.aciertos === H.SHURIKEN_CANT) {
+          var k = this.kDe(G, b.w, 'shuriken');
+          if (k >= 0) s.cd[k] = 0;
+          var p = G.pacs[b.w];
+          if (p) { G.addPopup(p.x, p.y - 8, 'RECARGADO', 45); this.efecto('shuriken_recarga', p.x, p.y, 28); }
+        }
+        s.shuriken = null;
+      }
+    },
+
+    /* Proyectiles visibles del catálogo. Aquí se resuelven tanto la ráfaga
+     * de tres shuriken como la bola que no falla, el misil encadenado y los
+     * disparos del tótem. El anfitrión decide los impactos; las demás
+     * pantallas reciben las posiciones por la foto de red. */
+    pasoProyectilesCat: function (G, manda) {
+      var ancho = CFG.COLS * T;
+      for (var i = this.proyectilesCat.length - 1; i >= 0; i--) {
+        var b = this.proyectilesCat[i];
+        if (b.espera > 0) { b.espera--; continue; }
+        if (b.tipo === 'shuriken') {
+          var v = CFG.DIR_V[b.d], nx = b.x + v.x * H.SHURIKEN_VEL, ny = b.y + v.y * H.SHURIKEN_VEL;
+          if (nx < 0) nx += ancho; else if (nx >= ancho) nx -= ancho;
+          var cc = Math.floor(nx / T), rr = Math.floor(ny / T);
+          b.viaja += H.SHURIKEN_VEL;
+          if (rr < 0 || rr >= CFG.ROWS || !CFG.isOpen(cc, rr, false) || b.viaja > b.max) {
+            this.finShuriken(G, b, false); this.proyectilesCat.splice(i, 1); continue;
+          }
+          b.x = nx; b.y = ny;
+          if (manda) {
+            var tocado = null;
+            for (var j = 0; j < 4; j++) {
+              var sg = G.ghosts[j];
+              if (this.enLaCalle(sg) && this.distancia(b.x, b.y, sg.x, sg.y) <= T * 0.75) { tocado = sg; break; }
+            }
+            if (tocado) {
+              this.matarCatalogo(G, tocado, b.w, H.SHURIKEN_PUNTOS, 'shuriken', 1, true);
+              this.finShuriken(G, b, true); this.proyectilesCat.splice(i, 1); continue;
+            }
+          }
+          continue;
+        }
+
+        var target = G.ghosts[b.objetivo | 0];
+        if (!this.enLaCalle(target)) {
+          if (b.tipo === 'misil') {
+            while (b.cola && b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
+            if (b.cola && b.cola.length) { b.objetivo = b.cola.shift(); target = G.ghosts[b.objetivo]; }
+          } else {
+            target = this.ghostCercanoAt(G, Math.floor(b.x / T), Math.floor(b.y / T), 999);
+            if (target) b.objetivo = target.id;
+          }
+        }
+        if (!this.enLaCalle(target)) { this.proyectilesCat.splice(i, 1); continue; }
+        var dx = target.x - b.x;
+        if (dx > ancho / 2) dx -= ancho; else if (dx < -ancho / 2) dx += ancho;
+        var dy = target.y - b.y, dis = Math.sqrt(dx * dx + dy * dy) || 1;
+        var vel = b.tipo === 'misil' ? H.MISIL_VEL : (b.tipo === 'totem' ? H.TOTEM_BALA_VEL : H.BOLA_GUIADA_VEL);
+        if (dis <= vel + 3) {
+          b.x = target.x; b.y = target.y;
+          if (manda) {
+            if (b.tipo === 'guiada') this.matarCatalogo(G, target, b.w, H.BOLA_GUIADA_PUNTOS, 'bola_guiada', 1, true);
+            else if (b.tipo === 'totem') this.matarCatalogo(G, target, b.w, H.MAGO_PUNTOS, 'totem');
+            else {
+              this.matarCatalogo(G, target, b.w, CFG.GHOST_CHAIN[Math.min(b.golpe, 3)], 'misil');
+              b.golpe++;
+            }
+          }
+          if (b.tipo === 'misil' && b.cola && b.cola.length) {
+            while (b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
+            if (b.cola.length) { b.objetivo = b.cola.shift(); continue; }
+          }
+          this.proyectilesCat.splice(i, 1); continue;
+        }
+        b.x += dx / dis * vel; b.y += dy / dis * vel;
+        if (b.x < 0) b.x += ancho; else if (b.x >= ancho) b.x -= ancho;
+      }
+    },
 
     /* ---------- los relojes de los roles (desde paso) ---------- */
     pasoRoles: function (G, corre) {
@@ -2510,6 +2838,7 @@
       }
       if (!corre) return;
       var manda = this.manda(G);
+      this.pasoProyectilesCat(G, manda);
       if (this.terremotoTicks > 0) this.terremotoTicks--;
       if (this.eclipseTicks > 0) this.eclipseTicks--;
       for (j = 0; j < 4; j++) {
@@ -2541,23 +2870,45 @@
         if (s.coraza > 0) s.coraza--;
         if (s.gracia > 0) s.gracia--;
         if (s.inmune > 0) s.inmune--;
-        if (s.sombra > 0) s.sombra--;
+        if (s.sombra > 0 && --s.sombra <= 0) {
+          s.sombraGolpe = true;
+          var sp = G.pacs[i];
+          if (sp) { this.efecto('sombra_sale', sp.x, sp.y, 28); G.addPopup(sp.x, sp.y - 7, '×2 Q', 35); }
+        }
         if (s.frenesi > 0) s.frenesi--; else s.frenesiMult = 1;
         if (s.carrona > 0) s.carrona--;
-        if (s.marca > 0) s.marca--;
+        if (s.marca > 0 && --s.marca <= 0) for (j = 0; j < 4; j++) if (this.marcaGhost[j] === i) this.marcaGhost[j] = -1;
         if (s.ganchoInv > 0) s.ganchoInv--;
         if (s.caceria > 0) s.caceria--; else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
-        if (s.estela > 0) s.estela--;
+        if (s.estelaBuff > 0) s.estelaBuff--;
+        if (!s.estelaRastro) s.estelaRastro = [];
+        if (s.estela > 0) {
+          s.estela--;
+          var ep = G.pacs[i];
+          if (ep && (G.tick % 5 === 0)) s.estelaRastro.push({ x: ep.x, y: ep.y, t: H.ESTELA_RASTRO_TICKS });
+        }
+        for (j = s.estelaRastro.length - 1; j >= 0; j--) {
+          var er = s.estelaRastro[j];
+          if (--er.t <= 0) { s.estelaRastro.splice(j, 1); continue; }
+          for (var ej = 0; ej < G.pacs.length; ej++) if (ej !== i && this.vivo(G, ej) &&
+              this.distancia(G.pacs[ej].x, G.pacs[ej].y, er.x, er.y) <= T) this.st[ej].estelaBuff = 15;
+        }
         if (s.puente > 0) s.puente--;
         if (s.cadena > 0) s.cadena--; else s.cadenaCon = -1;
         if (s.campo > 0) s.campo--;
         if (s.hospital > 0) s.hospital--;
-        if (s.yunque > 0) s.yunque--;
+        if (s.yunque > 0) {
+          var yp = G.pacs[i];
+          if (!yp || this.distancia(yp.x, yp.y, s.yunqueX, s.yunqueY) > 1) {
+            s.yunque = 0;
+            if (yp) this.efecto('yunque_roto', yp.x, yp.y, 18);
+          } else s.yunque--;
+        }
         if (s.pielPiedra > 0) s.pielPiedra--;
         if (s.rebote > 0) s.rebote--;
         if (s.terremoto > 0) s.terremoto--;
         if (s.eclipse > 0) s.eclipse--;
-        if (s.bomba && --s.bomba.t <= 0) s.bomba = null;
+        if (s.bomba && s.bomba.t > 0 && --s.bomba.t <= 0) s.bomba = null;
         if (s.mina && --s.mina.t <= 0) s.mina = null;
         if (s.telarana && --s.telarana.t <= 0) s.telarana = null;
         if (s.muro && --s.muro.t <= 0) s.muro = null;
@@ -2566,6 +2917,7 @@
         if (s.niebla && --s.niebla.t <= 0) s.niebla = null;
         if (s.clon && --s.clon.t <= 0) s.clon = null;
         if (s.meteoro && s.meteoro.t > 0) s.meteoro.t--;
+        if (s.fuegoMeteoro && --s.fuegoMeteoro.t <= 0) s.fuegoMeteoro = null;
         if (s.totem && s.totem.t > 0) s.totem.t--;
         if (s.cruce > 0) s.cruce--;
         if (s.arrollaRed > 0) s.arrollaRed--;
@@ -2623,29 +2975,61 @@
         }
         if (s.mina) {
           var mina = this.ghostsEn(G, s.mina.c, s.mina.r, 0.6);
-          if (mina.length) { for (j = 0; j < mina.length; j++) this.matarCatalogo(G, mina[j], i, H.BOMBA_PUNTOS, 'mina'); s.mina = null; }
+          if (mina.length) {
+            for (j = 0; j < mina.length; j++) this.matarCatalogo(G, mina[j], i, H.MAGO_PUNTOS, 'mina');
+            s.escudo = Math.max(s.escudo, H.ALIADO_TICKS);
+            var mp = G.pacs[i]; if (mp) this.efecto('amparo', mp.x, mp.y, 28);
+            s.mina = null;
+          }
         }
         if (s.faro) {
           for (j = 0; j < G.pacs.length; j++) if (j !== i && this.vivo(G, j) && G.pacs[j].tileX() === s.faro.c && G.pacs[j].tileY() === s.faro.r) {
-            var rr = this.listaDe(G, j)[3]; if (rr) this.st[j].cd[3] = Math.floor(this.st[j].cd[3] * 0.5); s.faro = null; break;
+            var rr = this.listaDe(G, j)[3];
+            if (rr) this.st[j].cd[3] = Math.floor(this.st[j].cd[3] * 0.5);
+            this.efecto('faro_toca', G.pacs[j].x, G.pacs[j].y, 30); s.faro = null; break;
           }
         }
         if (s.totem && s.totem.cd-- <= 0) {
           var tg = this.ghostCercanoAt(G, s.totem.c, s.totem.r, 10);
-          if (tg) this.matarCatalogo(G, tg, i, H.MAGO_PUNTOS, 'totem');
+          if (tg) this.proyectilesCat.push({ tipo: 'totem', x: s.totem.c * T + T / 2,
+            y: s.totem.r * T + T / 2, w: i, objetivo: tg.id });
           s.totem.cd = H.TOTEM_CADA;
+        }
+        if (s.clon) {
+          var cv = CFG.DIR_V[s.clon.d] || { x: 0, y: 0 };
+          var cnx = s.clon.x + cv.x * 1.1, cny = s.clon.y + cv.y * 1.1;
+          var cnc = Math.floor(cnx / T), cnr = Math.floor(cny / T);
+          if (cnx < 0) cnx += CFG.COLS * T; else if (cnx >= CFG.COLS * T) cnx -= CFG.COLS * T;
+          if (cnr < 0 || cnr >= CFG.ROWS || !CFG.isOpen(CFG.wrapCol(cnc), cnr, false)) {
+            s.clon.d = (s.clon.d + 2) % 4;
+          } else {
+            s.clon.x = cnx; s.clon.y = cny; s.clon.c = Math.floor(cnx / T); s.clon.r = Math.floor(cny / T);
+          }
+          var cercaClon = this.ghostsEn(G, s.clon.c, s.clon.r, 0.7);
+          if (cercaClon.length) {
+            for (j = 0; j < cercaClon.length; j++) this.aturdido[cercaClon[j].id] = Math.max(this.aturdido[cercaClon[j].id], 60);
+            this.efecto('clon_explota', s.clon.x, s.clon.y, 34); s.clon = null;
+          }
         }
         if (s.meteoro && s.meteoro.t <= 0) {
           var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO);
           for (j = 0; j < mm.length; j++) this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro');
-          this.efecto('meteoro', s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, 28); s.meteoro = null;
+          this.efecto('meteoro', s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, 42);
+          s.fuegoMeteoro = { c: s.meteoro.c, r: s.meteoro.r, t: H.METEORO_FUEGO };
+          s.meteoro = null;
+        }
+        if (s.fuegoMeteoro) {
+          var fm = this.ghostsEn(G, s.fuegoMeteoro.c, s.fuegoMeteoro.r, H.METEORO_RADIO);
+          for (j = 0; j < fm.length; j++) this.matarCatalogo(G, fm[j], i, H.MAGO_PUNTOS, 'meteoro_fuego');
         }
         if (s.totem && s.totem.t <= 0) s.totem = null;
       }
       for (i = this.joyas.length - 1; i >= 0; i--) {
         var joya = this.joyas[i]; if (--joya.t <= 0) { this.joyas.splice(i, 1); continue; }
-        for (j = 0; j < G.pacs.length; j++) if (this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
-          G.addScore(this.puntosDe(G, joya.w, 300)); G.addPopup(joya.x, joya.y, 300, 30); this.joyas.splice(i, 1); break;
+        for (j = 0; j < G.pacs.length; j++) if (j === joya.w && this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
+          G.addScore(300); this.bonoCadena(G, joya.w, 300, joya.x, joya.y);
+          G.addPopup(joya.x, joya.y, 300, 30); this.efecto('joya', joya.x, joya.y, 24);
+          this.joyas.splice(i, 1); break;
         }
       }
       /* runas pisadas */
@@ -2697,11 +3081,12 @@
       if (!s) return;
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
-      s.sombra = 0; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
-      s.ganchoInv = 0; s.caceria = 0; s.estela = 0; s.puente = 0; s.cadena = 0;
+      s.sombra = 0; s.sombraGolpe = false; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
+      s.ganchoInv = 0; s.shuriken = null; s.misil = null; s.caceria = 0;
+      s.estela = 0; s.estelaBuff = 0; s.estelaRastro = []; s.puente = 0; s.cadena = 0;
       s.campo = 0; s.hospital = 0; s.yunque = 0; s.pielPiedra = 0; s.rebote = 0;
       s.fortaleza = 0; s.terremoto = 0; s.eclipse = 0;
-      s.bomba = s.mina = s.telarana = s.muro = s.faro = s.sirena = s.niebla = s.clon = s.meteoro = s.totem = null;
+      s.bomba = s.mina = s.telarana = s.muro = s.faro = s.sirena = s.niebla = s.clon = s.meteoro = s.fuegoMeteoro = s.totem = null;
       s.mant = -1; s.mantT = 0;
       s.dimension = 0;
     },
@@ -2741,12 +3126,17 @@
       var ct = { lento: this.lento.slice(), lentoMult: this.lentoMult.slice(), aturdido: this.aturdido.slice(),
         ciego: this.ciego.slice(), azul: this.azulCatalogo.slice(), azulT: this.azulCatTicks.slice(),
         caceria: this.caceriaQuien.slice(), marca: this.marcaGhost.slice(), joyas: this.joyas,
+        proyectiles: this.proyectilesCat,
         terremoto: this.terremotoTicks, eclipse: this.eclipseTicks, st: [] };
       for (i = 0; i < this.st.length; i++) {
         var cs = this.st[i];
         ct.st.push({ bomba: cs.bomba, mina: cs.mina, telarana: cs.telarana, muro: cs.muro, faro: cs.faro,
-          sirena: cs.sirena, niebla: cs.niebla, clon: cs.clon, meteoro: cs.meteoro, totem: cs.totem,
-          frenesi: cs.frenesi, frenesiMult: cs.frenesiMult, caceria: cs.caceria, campo: cs.campo,
+          sirena: cs.sirena, niebla: cs.niebla, clon: cs.clon, meteoro: cs.meteoro,
+          fuegoMeteoro: cs.fuegoMeteoro, totem: cs.totem,
+          sombra: cs.sombra, sombraGolpe: cs.sombraGolpe, frenesi: cs.frenesi,
+          frenesiMult: cs.frenesiMult, caceria: cs.caceria, estela: cs.estela,
+          estelaBuff: cs.estelaBuff, estelaRastro: cs.estelaRastro, puente: cs.puente,
+          cadena: cs.cadena, cadenaCon: cs.cadenaCon, campo: cs.campo,
           hospital: cs.hospital, yunque: cs.yunque, pielPiedra: cs.pielPiedra, rebote: cs.rebote,
           fortaleza: cs.fortaleza, eclipse: cs.eclipse });
       }
@@ -2799,6 +3189,7 @@
         if (ct.caceria) this.caceriaQuien = ct.caceria.slice(0, 4);
         if (ct.marca) this.marcaGhost = ct.marca.slice(0, 4);
         if (ct.joyas) this.joyas = ct.joyas;
+        if (ct.proyectiles) this.proyectilesCat = ct.proyectiles;
         this.terremotoTicks = ct.terremoto | 0; this.eclipseTicks = ct.eclipse | 0;
         for (i = 0; ct.st && i < ct.st.length && i < this.st.length; i++) {
           var cs = ct.st[i], ds = this.st[i];
@@ -2902,6 +3293,26 @@
       if (!this.on) return;
       var Y = CFG.MAZE_Y, tk = G.tick, i;
       this.dibujarOjo(G, ctx, Y, tk);
+      /* MARCA enseña la ruta del objetivo aunque el jugador no sea Mago. */
+      for (i = 0; i < 4; i++) if (this.marcaGhost[i] >= 0 && G.ghosts[i] && G.ghosts[i].rutaPrevista) {
+        var mruta = G.ghosts[i].rutaPrevista(G, H.OJO_PASOS);
+        ctx.save(); ctx.fillStyle = '#ff66cc';
+        for (var mi = 0; mi < mruta.length; mi++) {
+          ctx.globalAlpha = 0.85 - mi * 0.08;
+          ctx.fillRect(mruta[mi].x * T + T / 2 - 1, mruta[mi].y * T + T / 2 + Y - 1, 3, 3);
+        }
+        ctx.restore();
+      }
+      if (this.eclipseTicks > 0) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(18, 5, 35, ' + (0.28 + 0.08 * Math.sin(tk / 7)) + ')';
+        ctx.fillRect(0, Y, CFG.COLS * T, CFG.ROWS * T);
+        ctx.strokeStyle = 'rgba(180, 105, 255, 0.45)'; ctx.lineWidth = 1;
+        for (var ec = 0; ec < 6; ec++) {
+          ctx.beginPath(); ctx.arc((ec * 47 + tk) % (CFG.COLS * T), Y + (ec * 61) % (CFG.ROWS * T), 3 + ec, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.restore();
+      }
       /* Lo que queda en la otra dimensión: la barra de arriba. El abismo, el
        * contorno del mapa y las luces los pinta Game.render (dibujarVacio). */
       var dentro = this.miraDesdeDimension(G);
@@ -2965,10 +3376,10 @@
        * que fantasmas y Pac-Man pasen por encima sin ocultar la señal. */
       for (i = 0; i < this.st.length; i++) {
         var ds = this.st[i], zonas = [
-          [ds.mina, '#ffb852', 0.8], [ds.telarana, '#c77dff', 1.3],
+          [ds.bomba, '#ff4058', H.BOMBA_RADIO], [ds.mina, '#ffb852', 0.8], [ds.telarana, '#c77dff', 1.5],
           [ds.muro, '#00c8ff', 0.45], [ds.faro, '#ffe66d', 0.8],
           [ds.sirena, '#ff5577', 0.8], [ds.niebla, '#b6c8d9', 1.8],
-          [ds.totem, '#ff7a1a', 0.7]
+          [ds.totem, '#ff7a1a', 0.7], [ds.fuegoMeteoro, '#ff5a1f', H.METEORO_RADIO]
         ];
         for (var zi = 0; zi < zonas.length; zi++) {
           var z = zonas[zi][0]; if (!z) continue;
@@ -2980,6 +3391,19 @@
           ctx.strokeRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
             zonas[zi][2] * T * 2, zonas[zi][2] * T * 2); ctx.restore();
         }
+        var rastros = ds.estelaRastro || [];
+        for (var ei = 0; ei < rastros.length; ei++) {
+          var eh = rastros[ei];
+          ctx.save(); ctx.globalAlpha = Math.max(0.12, eh.t / H.ESTELA_RASTRO_TICKS * 0.55);
+          ctx.fillStyle = '#2bff88'; ctx.beginPath(); ctx.arc(eh.x, eh.y + Y, 3 + Math.sin((tk + ei) / 4), 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        }
+        if (ds.clon) {
+          var clx = ds.clon.x == null ? ds.clon.c * T + T / 2 : ds.clon.x;
+          var cly = ds.clon.y == null ? ds.clon.r * T + T / 2 : ds.clon.y;
+          ctx.save(); ctx.globalAlpha = 0.5 + 0.2 * Math.sin(tk / 4); ctx.fillStyle = '#c9a4ff';
+          ctx.beginPath(); ctx.arc(clx, cly + Y, 6, 0.2, Math.PI * 1.8); ctx.lineTo(clx, cly + Y); ctx.fill();
+          ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.arc(clx, cly + Y, 8 + Math.sin(tk / 3), 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        }
         if (ds.meteoro) {
           var mx = ds.meteoro.c * T + T / 2, my = ds.meteoro.r * T + T / 2 + Y;
           ctx.save(); ctx.globalAlpha = 0.45 + 0.35 * Math.sin(tk / 4);
@@ -2987,6 +3411,12 @@
           ctx.beginPath(); ctx.arc(mx, my, H.METEORO_RADIO * T, 0, Math.PI * 2); ctx.stroke();
           ctx.setLineDash([]); ctx.restore();
         }
+      }
+      for (i = 0; i < this.joyas.length; i++) {
+        var jo = this.joyas[i], js = 3 + 0.7 * Math.sin((tk + i * 9) / 3);
+        ctx.save(); ctx.fillStyle = '#ffe66d'; ctx.shadowColor = '#ff9f1c'; ctx.shadowBlur = 7;
+        ctx.translate(jo.x, jo.y + Y); ctx.rotate(tk / 18 + i);
+        ctx.fillRect(-js, -js, js * 2, js * 2); ctx.restore();
       }
     },
 
@@ -3037,11 +3467,45 @@
           ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 8, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
         }
         if (this.caceriaQuien[i] >= 0) {
-          var colorCaza = (G.roles && G.roles[this.caceriaQuien[i]] === 'asesino') ? '#ff4058' : '#ff4058';
-          ctx.save(); ctx.strokeStyle = colorCaza; ctx.lineWidth = 1;
-          ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 10, 0, Math.PI * 2); ctx.stroke();
+          var colorCaza = (H.ROL_INFO && H.ROL_INFO.asesino && H.ROL_INFO.asesino.color) || '#ff66cc';
+          ctx.save(); ctx.strokeStyle = colorCaza; ctx.shadowColor = colorCaza; ctx.shadowBlur = 8; ctx.lineWidth = 2;
+          ctx.setLineDash([3, 2]); ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 10 + Math.sin(tk / 3), tk / 15, tk / 15 + Math.PI * 2); ctx.stroke();
           ctx.setLineDash([]); ctx.restore();
         }
+        if (this.marcaGhost[i] >= 0) {
+          ctx.save(); ctx.strokeStyle = '#ff66cc'; ctx.shadowColor = '#ff66cc'; ctx.shadowBlur = 6; ctx.lineWidth = 1.5;
+          var mr = 10 + Math.sin(tk / 3);
+          ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, mr, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cg.x - 13, cg.y + Y); ctx.lineTo(cg.x - 6, cg.y + Y);
+          ctx.moveTo(cg.x + 6, cg.y + Y); ctx.lineTo(cg.x + 13, cg.y + Y);
+          ctx.moveTo(cg.x, cg.y + Y - 13); ctx.lineTo(cg.x, cg.y + Y - 6); ctx.stroke(); ctx.restore();
+        }
+        if (this.aturdido[i] > 0) {
+          ctx.save(); ctx.fillStyle = '#ffe66d';
+          for (var es = 0; es < 3; es++) { var ea = tk / 5 + es * Math.PI * 2 / 3; ctx.fillRect(cg.x + Math.cos(ea) * 9 - 1, cg.y + Y - 8 + Math.sin(ea) * 3 - 1, 2, 2); }
+          ctx.restore();
+        }
+        if (this.ciegoDe(i)) {
+          ctx.save(); ctx.strokeStyle = '#c9a4ff'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(cg.x - 5, cg.y + Y - 2); ctx.lineTo(cg.x - 1, cg.y + Y + 2);
+          ctx.moveTo(cg.x - 1, cg.y + Y - 2); ctx.lineTo(cg.x - 5, cg.y + Y + 2);
+          ctx.moveTo(cg.x + 1, cg.y + Y - 2); ctx.lineTo(cg.x + 5, cg.y + Y + 2);
+          ctx.moveTo(cg.x + 5, cg.y + Y - 2); ctx.lineTo(cg.x + 1, cg.y + Y + 2); ctx.stroke(); ctx.restore();
+        }
+      }
+      for (i = 0; i < this.proyectilesCat.length; i++) {
+        var cp = this.proyectilesCat[i]; if (cp.espera > 0) continue;
+        ctx.save();
+        if (cp.tipo === 'shuriken') {
+          ctx.translate(cp.x, cp.y + Y); ctx.rotate(tk / 2 + i); ctx.strokeStyle = '#f4f7ff'; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(5, 0); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.stroke();
+        } else {
+          var pcCol = cp.tipo === 'misil' ? '#ff4058' : (cp.tipo === 'totem' ? '#ff9f1c' : '#8b3dff');
+          ctx.fillStyle = pcCol; ctx.shadowColor = pcCol; ctx.shadowBlur = 9;
+          ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, cp.tipo === 'misil' ? 4 : 3, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, 7 + Math.sin(tk / 3), 0, Math.PI * 2); ctx.strokeStyle = pcCol; ctx.stroke();
+        }
+        ctx.restore();
       }
       for (i = 0; i < this.balas.length; i++) {
         var b = this.balas[i], v = CFG.DIR_V[b.d] || { x: 0, y: 0 };
@@ -3061,10 +3525,14 @@
         var f = this.fx[i], q = f.n / f.tot;
         ctx.save();
         ctx.globalAlpha = Math.max(0, q);
-        if (f.t === 'rayo') {
-          ctx.strokeStyle = '#e8d4ff';
-          ctx.shadowColor = '#8b3dff'; ctx.shadowBlur = 8;
-          ctx.lineWidth = 1.5;
+        if (f.t === 'rayo' || f.t === 'chispa' || f.t === 'gancho' || f.t === 'cadena' ||
+            f.t === 'cadena_rota' || f.t === 'relevo' || f.t === 'ejecucion' || f.t === 'gravedad' ||
+            f.t === 'empujon' || f.t === 'grito_guerra') {
+          var lineCol = f.t === 'gancho' ? '#2bff88' : (f.t === 'cadena' || f.t === 'cadena_rota' ? '#00ffff' :
+            (f.t === 'ejecucion' || f.t === 'empujon' || f.t === 'grito_guerra' ? '#ff4058' : '#e8d4ff'));
+          ctx.strokeStyle = lineCol;
+          ctx.shadowColor = lineCol; ctx.shadowBlur = 8;
+          ctx.lineWidth = f.t === 'gancho' ? 2 : 1.5;
           ctx.beginPath();
           ctx.moveTo(f.x0, f.y0 + Y - 4);
           var pasos = 5;
@@ -3077,7 +3545,18 @@
           ctx.stroke();
         } else {
           var colores = { fuego: '#ff7a1a', runa: '#8b3dff', escarcha: '#bff4ff', humo: '#ff9a4a',
-                          roto: '#ffb852', aplasta: '#ffb852', amparo: '#2bff88', vida: '#7dff7a', boca: '#00c8ff' };
+            roto: '#ffb852', aplasta: '#ffb852', amparo: '#2bff88', vida: '#7dff7a', boca: '#00c8ff',
+            shuriken: '#f4f7ff', shuriken_salida: '#f4f7ff', shuriken_recarga: '#ffe66d', bomba: '#ff4058',
+            bomba_planta: '#ff4058', sombra: '#7e57c2', sombra_sale: '#c9a4ff', sombra_golpe: '#ff66cc',
+            frenesi: '#ff4058', carrona: '#ffe66d', marca: '#ff66cc', caceria: '#ff4058',
+            misil: '#ff4058', misil_salida: '#ff4058', yunque: '#ffb852', yunque_roto: '#ffb852',
+            piel_piedra: '#9aa4ad', rebote: '#ffb852', terremoto: '#ffb852', terremoto_onda: '#ffb852',
+            fortaleza: '#ffb852', mina: '#2bff88', telarana: '#c77dff', estela: '#2bff88', puente: '#00c8ff',
+            muro: '#00c8ff', faro: '#ffe66d', faro_toca: '#ffe66d', sirena: '#ff5577', campo: '#2bff88',
+            resurreccion: '#ffffff', hospital: '#2bff88', bola_guiada: '#8b3dff', guiada_salida: '#8b3dff',
+            arcano: '#8b3dff', clon: '#c9a4ff', clon_explota: '#c9a4ff', totem: '#ff9f1c',
+            gravedad_centro: '#8b3dff', niebla: '#b6c8d9', meteoro_aviso: '#ff3030', meteoro: '#ff5a1f',
+            meteoro_fuego: '#ff5a1f', eclipse: '#8b3dff', joya: '#ffe66d' };
           ctx.strokeStyle = colores[f.t] || '#ffffff';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
@@ -3265,6 +3744,62 @@
           ctx.lineTo(x + Math.cos(an + 0.2) * 11, y + Math.sin(an + 0.2) * 11);
         }
         ctx.stroke();
+      }
+      /* Catálogo: cada estado sostenido tiene una silueta propia. Así no se
+       * confunde "la tecla entró" con un sonido ni con un aro blanco común. */
+      if (s.sombra > 0) {
+        ctx.strokeStyle = 'rgba(201,164,255,0.65)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, 10 + Math.sin(tk / 4), tk / 12, tk / 12 + Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (s.sombraGolpe) {
+        ctx.fillStyle = '#ff66cc'; ctx.font = '5px monospace'; ctx.textAlign = 'center'; ctx.fillText('×2', x, y - 11);
+      }
+      if (s.frenesi > 0) {
+        ctx.strokeStyle = '#ff4058'; ctx.lineWidth = 2;
+        for (var fr = 0; fr < 3; fr++) { ctx.beginPath(); ctx.arc(x, y, 9 + fr * 2, tk / 8 + fr * 2, tk / 8 + fr * 2 + 1.1); ctx.stroke(); }
+        ctx.fillStyle = '#ffffff'; ctx.font = '4px monospace'; ctx.textAlign = 'center'; ctx.fillText('×' + (s.frenesiMult || 1).toFixed(2), x, y - 13);
+      }
+      if (s.carrona > 0) {
+        ctx.fillStyle = '#ffe66d';
+        for (var ca = 0; ca < 3; ca++) { var aa = tk / 7 + ca * Math.PI * 2 / 3; ctx.fillRect(x + Math.cos(aa) * 10 - 1, y + Math.sin(aa) * 10 - 1, 2, 2); }
+      }
+      if (s.estela > 0 || s.estelaBuff > 0) {
+        ctx.strokeStyle = s.estela > 0 ? '#2bff88' : '#8fffc0'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, 9 + Math.sin(tk / 4), 0, Math.PI * 2); ctx.stroke();
+      }
+      if (this.puenteActivo(i)) {
+        ctx.strokeStyle = 'rgba(0,200,255,0.8)'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1;
+        ctx.strokeRect(x - 8 - Math.sin(tk / 5), y - 8, 16 + Math.sin(tk / 5) * 2, 16); ctx.setLineDash([]);
+      }
+      if (s.cadena > 0 && s.cadenaCon >= 0 && G.pacs[s.cadenaCon]) {
+        ctx.strokeStyle = 'rgba(0,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(G.pacs[s.cadenaCon].x, G.pacs[s.cadenaCon].y + CFG.MAZE_Y); ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (s.yunque > 0) {
+        ctx.fillStyle = 'rgba(255,184,82,0.35)'; ctx.fillRect(x - 8, y - 8, 16, 16);
+        ctx.strokeStyle = '#ffb852'; ctx.lineWidth = 2; ctx.strokeRect(x - 9, y - 9, 18, 18);
+      }
+      if (s.pielPiedra > 0) {
+        ctx.strokeStyle = '#9aa4ad'; ctx.lineWidth = 2;
+        for (var pi = 0; pi < 7; pi++) { var pa = pi * Math.PI * 2 / 7; ctx.beginPath(); ctx.moveTo(x + Math.cos(pa) * 7, y + Math.sin(pa) * 7); ctx.lineTo(x + Math.cos(pa) * 11, y + Math.sin(pa) * 11); ctx.stroke(); }
+      }
+      if (s.rebote > 0) {
+        ctx.strokeStyle = '#ffb852'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(x, y, 10 + (tk % 18) / 3, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (s.terremoto > 0) {
+        ctx.strokeStyle = 'rgba(255,184,82,0.55)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(x, y + 7, 8 + (tk % 20), 3 + (tk % 20) / 4, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (s.fortaleza > 0) {
+        ctx.strokeStyle = 'rgba(255,184,82,0.55)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(x, y, H.FORTALEZA_RADIO * T, tk / 20, tk / 20 + Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (s.campo > 0 || s.hospital > 0) {
+        var au = s.hospital > 0 ? '#ffffff' : '#2bff88';
+        ctx.strokeStyle = au; ctx.globalAlpha = 0.45 + 0.25 * Math.sin(tk / 4); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.stroke();
+        if (s.hospital > 0) { ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4); ctx.stroke(); }
       }
       ctx.restore();
     },

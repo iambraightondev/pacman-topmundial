@@ -1245,6 +1245,8 @@
                 this.bumpAch({ frutas: 1 });
               }
               this.addScore(this.fruitInfo.points);
+              if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this, i,
+                this.fruitInfo.points, p.x, p.y);
               this.addPopup(CFG.START.fruit.x * T + T / 2,
                 CFG.START.fruit.y * T + T / 2,
                 this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
@@ -1381,10 +1383,14 @@
       var mio = !this.netRole || (pac && pac.id === this.localIdx);
       if (ch === '.') {
         this.addScore(CFG.DOT_POINTS);
+        if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this,
+          pac ? (pac.id | 0) : 0, CFG.DOT_POINTS, pac && pac.x, pac && pac.y);
         pac.pauseTicks = CFG.DOT_PAUSE;
         if (mio && !(pac && pac.bot)) this.runPastillas++;
       } else {
         this.addScore(CFG.ENERGIZER_POINTS);
+        if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this,
+          pac ? (pac.id | 0) : 0, CFG.ENERGIZER_POINTS, pac && pac.x, pac && pac.y);
         pac.pauseTicks = CFG.ENERGIZER_PAUSE;
         if (mio && !(pac && pac.bot)) this.runSuper++;
         this.triggerFright();
@@ -1587,12 +1593,12 @@
     /* ---------------------------------------------------------
      * Comer fantasmas / morir
      * --------------------------------------------------------- */
-    eatGhost: function (g, who) {
+    eatGhost: function (g, who, como) {
       this.marca(who || 0, 'kills');
       var streak = Math.min(this.chainIndex, 3);   // 0..3 dentro de la racha
       /* la pasiva del ASESINO sube lo que vale la muerte (js/habilidades.js) */
       var pts = (this.hab && window.PM.Hab)
-        ? window.PM.Hab.puntosDe(this, who || 0, CFG.GHOST_CHAIN[streak])
+        ? window.PM.Hab.puntosFantasma(this, who || 0, g, CFG.GHOST_CHAIN[streak], como || 'contacto', false)
         : CFG.GHOST_CHAIN[streak];
       this.chainIndex++;
       /* logros: solo los que me como yo (en online, `who` dice quién fue); lo
@@ -1613,6 +1619,10 @@
         this.bumpAch(cuenta);
       }
       this.addScore(pts);
+      if (this.hab && window.PM.Hab) {
+        window.PM.Hab.bonoCadena(this, who || 0, pts, g.x, g.y);
+        window.PM.Hab.alMatar(this, who || 0, g, g.x, g.y);
+      }
       this.addPopup(g.x, g.y, pts, CFG.EAT_FREEZE_TICKS);
       g.eaten();
       this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;

@@ -10940,7 +10940,43 @@
     G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
     var base = G.score;
     ok(H.bolaGuiada(G, 0), 'sale aunque el blanco no esté perfectamente alineado');
+    ok(H.proyectilesCat.some(function (b) { return b.tipo === 'guiada'; }), 'la bola se ve viajar');
+    for (var i = 0; i < 60 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
     eq(G.score - base, 150, 'premio fijo');
+  });
+
+  test('CATÁLOGO: Bomba da 150 exactos y Cacería solo deja comer al Asesino dueño', function () {
+    var H = window.PM.Hab;
+    partida(2);
+    G.hab = true;
+    H.empezar(true, 2, ['asesino', 'asesino'],
+      ['bomba,turbo,flash,caceria', 'mordisco,turbo,flash,grito']);
+    G.roles = ['asesino', 'asesino'];
+    var p = G.pacs[0], g = G.ghosts[0];
+    g.mode = 'normal'; g.x = p.x + CFG.TILE; g.y = p.y;
+    var base = G.score;
+    ok(H.bomba(G, 0), 'la primera pulsación planta');
+    ok(H.bomba(G, 0), 'la segunda detona');
+    eq(G.score - base, 150, 'sin bono oculto del Asesino');
+    g.mode = 'normal'; g.x = p.x + CFG.TILE; g.y = p.y;
+    ok(H.caceria(G, 0), 'sale Cacería');
+    ok(H.puedeComer(G, 0, 0), 'el dueño puede comer al marcado');
+    ok(!H.puedeComer(G, 0, 1), 'su compañero no puede');
+  });
+
+  test('CATÁLOGO: Misil recorre los cuatro blancos y conserva la racha del Asesino', function () {
+    var H = window.PM.Hab;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,misil']); G.roles = ['asesino'];
+    var p = G.pacs[0];
+    for (var j = 0; j < 4; j++) {
+      G.ghosts[j].mode = 'normal'; G.ghosts[j].x = p.x + CFG.TILE; G.ghosts[j].y = p.y;
+    }
+    var base = G.score;
+    ok(H.misil(G, 0), 'sale el misil');
+    for (var i = 0; i < 120 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
+    eq(G.score - base, 3750, '250 + 500 + 1.000 + 2.000');
+    eq(G.ghosts.filter(function (g) { return g.mode === 'eyes'; }).length, 4, 'mata a los cuatro');
   });
 
   test('CATÁLOGO: Meteoro fija el aviso en la dirección de la última flecha', function () {
