@@ -4480,6 +4480,67 @@ body { font-size-adjust: 0.56; }
 .go-muerte { width: clamp(64px, 10vh, 96px); height: clamp(64px, 10vh, 96px); image-rendering: pixelated; flex: none; }
 .go-equipo { color: #ffb8ff; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; }
 
+/* Las dos vistas del final de una party: la de siempre y la del equipo. */
+.go-vistas {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 2px 0 4px;
+}
+
+.go-vista {
+  font-family: inherit;
+  font-size: clamp(8px, 1.3vh, 10px);
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #6a6c8e;
+  background: none;
+  border: 2px solid #2b2b52;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.go-vista.on {
+  color: #ffd23f;
+  border-color: #ffd23f;
+  box-shadow: 0 0 12px rgba(255, 210, 63, 0.35);
+}
+
+.go-vista:hover { color: #fff; }
+
+.go-equipo-tabla {
+  width: min(94%, 520px);
+  margin: 0 auto;
+  font-size: clamp(9px, 1.5vh, 12px);
+  letter-spacing: 1px;
+}
+
+.goe-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px;
+  padding: 5px 4px;
+  border-bottom: 1px solid #1c1c3a;
+  text-align: right;
+}
+
+.goe-fila.goe-cab {
+  font-size: clamp(7px, 1.1vh, 9px);
+  color: #6a6c8e;
+  border-bottom-color: #2b2b52;
+}
+
+.goe-nom {
+  text-align: left;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goe-fila b { color: #fff; font-weight: bold; }
+
 .go-cuerpo {
   position: relative;
   display: grid;
@@ -4610,6 +4671,8 @@ body { font-size-adjust: 0.56; }
 #prompt.arcade { position: fixed; inset: 0; z-index: 60; overflow-y: auto; }
 #prompt.arcade { z-index: 200; }
 .go-cuerpo { grid-template-columns: 1fr minmax(0, 640px) 1fr; align-items: start; }
+  /* la tabla del equipo va en la columna de en medio, como la de siempre */
+  .go-cuerpo > .go-equipo-tabla { grid-column: 2; }
 .go-tabla { grid-column: 2; }
 .go-sellos { position: static; grid-column: 3; justify-self: start; padding: 0 0 0 36px; }
 @media (max-width: 1100px) {
@@ -5653,24 +5716,32 @@ body { font-size-adjust: 0.56; }
   padding: clamp(30px, 5vh, 52px) clamp(18px, 4vw, 56px);
   background:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 2px, transparent 2px 4px),
-    radial-gradient(ellipse at 50% 30%, rgba(0, 48, 26, 0.95) 0, rgba(2, 10, 26, 0.96) 45%, #000 85%);
+    radial-gradient(ellipse at 50% 30%,
+      color-mix(in srgb, var(--ol-sombra) 85%, #000) 0, rgba(2, 10, 26, 0.96) 45%, #000 85%);
   --ol: #00ff66;
   --ol-osc: #007a33;
+  /* LA PALETA DE LA SALA. Es verde por defecto y la cambia el ROL elegido en
+     DESATADO (UI.paletaDeRol): el sitio donde uno elige quién va a ser se
+     viste de ese quién, que es media gracia de elegirlo. */
+  --ol-claro: #7dffb0;
+  --ol-sombra: #00381f;
+  --ol-medio: #00a04a;
 }
 /* los espaciadores de .overlay se quedan: centran el contenido cuando cabe */
 #online.ol-marco .go-bombillas {
-  --bombilla: radial-gradient(circle, #7dffb0 0 3px, rgba(125, 255, 176, 0.25) 4px, transparent 6px);
+  --bombilla: radial-gradient(circle, var(--ol-claro) 0 3px, color-mix(in srgb, var(--ol-claro) 25%, transparent) 4px, transparent 6px);
 }
 #online .panel-title.ol-titulo {
   font-size: clamp(34px, min(6vw, 9vh), 80px);
   letter-spacing: 0.06em;
   margin: 0;
-  background: repeating-linear-gradient(180deg, #7dffb0 0 0.07em, #00a04a 0.07em 0.1em);
+  background: repeating-linear-gradient(180deg, var(--ol-claro) 0 0.07em, var(--ol-medio) 0.07em 0.1em);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  filter: drop-shadow(0.06em 0.06em 0 #00381f) drop-shadow(0 0 0.35em rgba(0, 255, 102, 0.35));
+  filter: drop-shadow(0.06em 0.06em 0 var(--ol-sombra))
+          drop-shadow(0 0 0.35em color-mix(in srgb, var(--ol) 35%, transparent));
   animation: marq-latido 2.4s ease-in-out infinite;
 }
 #online .ol-sub { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 3px; color: #b9bae6; }
@@ -5686,7 +5757,7 @@ body { font-size-adjust: 0.56; }
   padding: clamp(16px, 2.6vh, 26px) clamp(14px, 2vw, 26px);
   border: 3px solid var(--ol);
   background: rgba(0, 0, 0, 0.6);
-  box-shadow: 0 6px 0 var(--ol-osc), 0 0 26px rgba(0, 255, 102, 0.18), inset 0 0 22px rgba(0, 255, 102, 0.06);
+  box-shadow: 0 6px 0 var(--ol-osc), 0 0 26px color-mix(in srgb, var(--ol) 18%, transparent), inset 0 0 22px color-mix(in srgb, var(--ol) 6%, transparent);
   min-width: 0;
 }
 #online .ol-card-crear { --ol: #ffff00; --ol-osc: #b8860b; box-shadow: 0 6px 0 #b8860b, 0 0 26px rgba(255, 255, 0, 0.2), inset 0 0 22px rgba(255, 255, 0, 0.06); }
@@ -5718,23 +5789,23 @@ body { font-size-adjust: 0.56; }
   color: #ffff00;
   border: 0;
   background:
-    repeating-linear-gradient(90deg, rgba(0, 255, 102, 0.08) 0 var(--celda), transparent var(--celda) calc(var(--celda) + 10px));
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--ol) 8%, transparent) 0 var(--celda), transparent var(--celda) calc(var(--celda) + 10px));
   box-shadow: none;
   outline: none;
   caret-color: #ffff00;
   text-shadow: 0 0 12px rgba(255, 255, 0, 0.6);
   border-bottom: 3px solid var(--ol);
 }
-#online .code-input.ol-code-input::placeholder { color: rgba(0, 255, 102, 0.35); }
+#online .code-input.ol-code-input::placeholder { color: color-mix(in srgb, var(--ol) 35%, transparent); }
 #online .code-input.ol-code-input:focus { border-bottom-color: #ffff00; background: repeating-linear-gradient(90deg, rgba(255, 255, 0, 0.1) 0 var(--celda), transparent var(--celda) calc(var(--celda) + 10px)); }
 #online .online-warn { font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 2px; }
 
 /* pie con los botones de salida */
 #online .prompt-btns.ol-pie { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 16px 20px; margin: 0; }
-#online .prompt-btns.ol-pie .btn { flex: 0 0 auto; min-width: 0; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; padding: 14px 24px 11px; color: #00ff66; background: rgba(0, 0, 0, 0.55); border: 3px solid #00ff66; box-shadow: 0 6px 0 #007a33; }
+#online .prompt-btns.ol-pie .btn { flex: 0 0 auto; min-width: 0; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; padding: 14px 24px 11px; color: var(--ol); background: rgba(0, 0, 0, 0.55); border: 3px solid var(--ol); box-shadow: 0 6px 0 var(--ol-osc); }
 #online .prompt-btns.ol-pie .btn:hover:not(:disabled),
-#online .prompt-btns.ol-pie .btn:focus-visible { color: #00ff66; background: rgba(0, 0, 0, 0.55); transform: translateY(2px); box-shadow: 0 4px 0 #007a33; outline: none; }
-#online .prompt-btns.ol-pie .btn .btn-ronda { --rc: #00ff66; }
+#online .prompt-btns.ol-pie .btn:focus-visible { color: var(--ol); background: rgba(0, 0, 0, 0.55); transform: translateY(2px); box-shadow: 0 4px 0 var(--ol-osc); outline: none; }
+#online .prompt-btns.ol-pie .btn .btn-ronda { --rc: var(--ol); }
 #online .prompt-btns.ol-pie .btn-primary { font-size: clamp(15px, 2.6vh, 21px); letter-spacing: 3px; padding: 16px 28px 12px; color: #000; background: #ffff00; border-color: #ffff00; box-shadow: 0 6px 0 #b8860b, 0 0 34px rgba(255, 255, 0, 0.5); }
 #online .prompt-btns.ol-pie .btn-primary:hover:not(:disabled),
 #online .prompt-btns.ol-pie .btn-primary:focus-visible { color: #000; background: #ffff00; box-shadow: 0 4px 0 #b8860b, 0 0 60px rgba(255, 255, 0, 0.85); }
@@ -5756,7 +5827,7 @@ body { font-size-adjust: 0.56; }
 }
 #online .online-link { font-size: clamp(8px, 1.2vh, 10px); color: #8a8bb8; max-width: 100%; }
 #online .ol-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-#online .btn.ol-btn-chico { min-width: 0; font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1.5px; padding: 10px 14px 8px; color: #00ff66; background: rgba(0, 0, 0, 0.5); border: 2px solid #00ff66; box-shadow: 0 4px 0 #007a33; }
+#online .btn.ol-btn-chico { min-width: 0; font-size: clamp(9px, 1.4vh, 11px); letter-spacing: 1.5px; padding: 10px 14px 8px; color: var(--ol); background: rgba(0, 0, 0, 0.5); border: 2px solid var(--ol); box-shadow: 0 4px 0 var(--ol-osc); }
 #online .btn.ol-btn-chico:hover:not(:disabled),
 #online .btn.ol-btn-chico:focus-visible { color: #ffff00; border-color: #ffff00; background: rgba(0, 0, 0, 0.5); box-shadow: 0 4px 0 #b8860b; outline: none; }
 
@@ -5882,15 +5953,16 @@ body { font-size-adjust: 0.56; }
     radial-gradient(ellipse at 50% 38%, rgba(0, 48, 26, 0.95) 0, rgba(2, 18, 10, 0.96) 45%, #000 85%);
 }
 #prompt.arcade[data-tono="verde"] .go-bombillas {
-  --bombilla: radial-gradient(circle, #7dffb0 0 3px, rgba(125, 255, 176, 0.25) 4px, transparent 6px);
+  --bombilla: radial-gradient(circle, var(--ol-claro) 0 3px, color-mix(in srgb, var(--ol-claro) 25%, transparent) 4px, transparent 6px);
 }
 #prompt.arcade[data-tono="verde"] .panel-title.go-titulo {
-  background: repeating-linear-gradient(180deg, #7dffb0 0 0.07em, #00a04a 0.07em 0.1em);
+  background: repeating-linear-gradient(180deg, var(--ol-claro) 0 0.07em, var(--ol-medio) 0.07em 0.1em);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  filter: drop-shadow(0.06em 0.06em 0 #00381f) drop-shadow(0 0 0.35em rgba(0, 255, 102, 0.35));
+  filter: drop-shadow(0.06em 0.06em 0 var(--ol-sombra))
+          drop-shadow(0 0 0.35em color-mix(in srgb, var(--ol) 35%, transparent));
   animation: marq-latido 2.4s ease-in-out infinite;
 }
 #prompt.arcade[data-tono="verde"] { --btn2: #00ff66; --btn2-sombra: #007a33; }

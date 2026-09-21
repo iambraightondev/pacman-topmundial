@@ -1340,8 +1340,13 @@
         if (p) this.efecto('roto', p.x, p.y, 20);
         this.empujar(G, g, H.ESCUDO_EMPUJE);
         sonDe(G, idx, 'playBiteMiss');
-        if (G.netRole === 'guest') G.netSend('gevt', { t: 'habRoto' });
-        else G.hostEvt({ t: 'habRoto', w: idx });
+        /* CONTRA QUIÉN. Va en el aviso porque LOS FANTASMAS LOS MUEVE EL
+         * ANFITRIÓN: si el invitado empuja en su pantalla, la siguiente foto
+         * le devuelve el fantasma a donde estaba y el empujón no llega a
+         * verse. Quien lo tiene que dar es el anfitrión. */
+        var gid = (g && typeof g.id === 'number') ? g.id : -1;
+        if (G.netRole === 'guest') G.netSend('gevt', { t: 'habRoto', g: gid });
+        else G.hostEvt({ t: 'habRoto', w: idx, g: gid });
         return true;
       }
       return false;

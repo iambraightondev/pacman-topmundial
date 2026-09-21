@@ -5911,6 +5911,42 @@
       if (P) P.setGhost(gid);
     },
 
+    /* LA SALA SE VISTE DEL ROL (20 sep). Elegir TANQUE y que todo siga verde
+     * era desperdiciar el momento: el sitio donde uno decide quién va a ser
+     * se pone de su color. Con `rol` a null vuelve el verde de siempre. */
+    paletaDeRol: function (rol) {
+      var o = this.els.online;
+      if (!o) return;
+      var info = rol && CFG.HAB.ROL_INFO[rol];
+      if (!info) {
+        ['--ol', '--ol-osc', '--ol-claro', '--ol-sombra', '--ol-medio'].forEach(function (v) {
+          o.style.removeProperty(v);
+        });
+        return;
+      }
+      var c = info.color;
+      o.style.setProperty('--ol', c);
+      o.style.setProperty('--ol-claro', this.mezclaHex(c, '#ffffff', 0.45));
+      o.style.setProperty('--ol-medio', this.mezclaHex(c, '#000000', 0.35));
+      o.style.setProperty('--ol-osc', this.mezclaHex(c, '#000000', 0.55));
+      o.style.setProperty('--ol-sombra', this.mezclaHex(c, '#000000', 0.78));
+    },
+
+    /* dos colores mezclados, k de 0 a 1 hacia el segundo */
+    mezclaHex: function (a, b, k) {
+      function tres(h) {
+        h = String(h).replace('#', '');
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      }
+      var x = tres(a), y = tres(b), out = '#';
+      for (var i = 0; i < 3; i++) {
+        var v = Math.round(x[i] * (1 - k) + y[i] * k);
+        out += ('0' + Math.max(0, Math.min(255, v)).toString(16)).slice(-2);
+      }
+      return out;
+    },
+
     partyError: function (msg) {
       this.showOnlineIdle();
       this.onlineWarn.style.display = 'block';
@@ -6019,6 +6055,7 @@
       /* DESATADO: el rol lo elige cada uno, no el líder */
       if (this.habRolBtns) {
         var miRol = P.myRol ? P.myRol() : 'asesino';
+        this.paletaDeRol(this.partyModo(P) === 'hab' ? miRol : null);
         for (var rid in this.habRolBtns) {
           if (!this.habRolBtns.hasOwnProperty(rid)) continue;
           this.habRolBtns[rid].classList.toggle('active', rid === miRol);
@@ -10450,6 +10487,19 @@
             p.appendChild(prac);
           }
 
+          /* LAS DOS VISTAS DEL FINAL (20 sep). Con gente, el resumen de
+           * siempre —puntos, experiencia, monedas— no cuenta lo que quiere
+           * saber una party: quién se comió a quién. La segunda pestaña lo
+           * dice por jugador, y se pasa SOLA a los tres segundos: si hubiera
+           * que pulsarla, casi nadie la vería. Pulsar cualquiera de las dos
+           * corta el cambio automático y manda la mano. */
+          var vistas = null;
+          if (g.playerCount > 1) {
+            vistas = document.createElement('div');
+            vistas.className = 'go-vistas';
+            p.appendChild(vistas);
+          }
+
           var cuerpo = document.createElement('div');
           cuerpo.className = 'go-cuerpo';
           p.appendChild(cuerpo);
@@ -10568,6 +10618,37 @@
               self.goContando = false;
             }, { once: true });
           }
+          /* la tabla por jugador, que vive al lado de la de siempre */
+          if (vistas) {
+            var equipoTabla = self.buildGoEquipo(g);
+            cuerpo.appendChild(equipoTabla);
+            var pon = function (cual) {
+              self.goVista = cual;
+              tabla.style.display = (cual === 0) ? '' : 'none';
+              sellos.style.display = (cual === 0) ? '' : 'none';
+              equipoTabla.style.display = (cual === 1) ? '' : 'none';
+              Array.prototype.forEach.call(vistas.children, function (b, i) {
+                b.classList.toggle('on', i === cual);
+              });
+            };
+            [['LA PARTIDA', 0], ['EL EQUIPO', 1]].forEach(function (par) {
+              var b = document.createElement('button');
+              b.type = 'button';
+              b.className = 'go-vista';
+              b.textContent = par[0];
+              b.addEventListener('click', function () {
+                if (self.goVistaTimer) { clearTimeout(self.goVistaTimer); self.goVistaTimer = 0; }
+                pon(par[1]);
+              });
+              vistas.appendChild(b);
+            });
+            pon(0);
+            if (self.goVistaTimer) clearTimeout(self.goVistaTimer);
+            self.goVistaTimer = setTimeout(function () {
+              self.goVistaTimer = 0;
+              if (self.goVista === 0) pon(1);
+            }, 3000);
+          }
           self.animarGoMuerte();
         },
         buttons: [
@@ -10589,6 +10670,45 @@
       if (btns && this.goCont) this.goCont.appendChild(btns);
       var estado = p.querySelector('.lobby-status');
       if (estado) p.appendChild(estado);
+    },
+
+    /* LA TABLA DEL EQUIPO: una fila por jugador con lo que hizo. El tiempo es
+     * el que estuvo EN PIE —el rato de cadáver no cuenta—, que es lo que hace
+     * que el número diga algo. */
+    buildGoEquipo: function (g) {
+      var caja = document.createElement('div');
+      caja.className = 'go-equipo-tabla';
+      caja.style.display = 'none';
+
+      var cab = document.createElement('div');
+      cab.className = 'goe-fila goe-cab';
+      ['', 'MATÓ', 'CAYÓ', 'FRUTA', 'SALVÓ', 'EN PIE'].forEach(function (t) {
+        var c = document.createElement('span');
+        c.textContent = t;
+        cab.appendChild(c);
+      });
+      caja.appendChild(cab);
+
+      var mm = g.marcador || [];
+      for (var i = 0; i < g.playerCount; i++) {
+        var m = mm[i] || { kills: 0, muertes: 0, frutas: 0, rescates: 0, vivo: 0 };
+        var f = document.createElement('div');
+        f.className = 'goe-fila';
+        var nom = document.createElement('span');
+        nom.className = 'goe-nom';
+        nom.textContent = g.nameFor(i);
+        nom.style.color = g.colorFor(i);
+        f.appendChild(nom);
+        var seg = Math.round(m.vivo / 60);
+        [m.kills, m.muertes, m.frutas, m.rescates,
+         Math.floor(seg / 60) + ':' + (seg % 60 < 10 ? '0' : '') + (seg % 60)].forEach(function (v) {
+          var c = document.createElement('b');
+          c.textContent = String(v);
+          f.appendChild(c);
+        });
+        caja.appendChild(f);
+      }
+      return caja;
     },
 
     /* ------------------------------------------------------

@@ -486,9 +486,45 @@
      *         colors: ['#..','#..'], names: ['..','..'] en online }
      * Se guarda en lastOpts para poder repetir la partida (revancha).
      * --------------------------------------------------------- */
+    /* ---------------------------------------------------------
+     * LA LIBRETA DE LA PARTIDA (20 sep)
+     *
+     * Lo que hizo cada jugador, para el marcador del final en party: a
+     * cuántos se comió, cuántas veces cayó, cuántas frutas pilló, a cuántos
+     * compañeros levantó y cuánto tiempo estuvo EN PIE (el rato de cadáver no
+     * cuenta: eso es lo que hace que el número signifique algo).
+     *
+     * Cada máquina la lleva con lo que ve, que es lo mismo en todas: las
+     * muertes, las comidas y los rescates viajan como eventos. El anfitrión
+     * la manda con la foto del final para que nadie acabe con dos versiones.
+     * --------------------------------------------------------- */
+    marcaNueva: function () {
+      var m = [];
+      for (var i = 0; i < CFG.MAX_PLAYERS; i++) {
+        m.push({ kills: 0, muertes: 0, frutas: 0, rescates: 0, vivo: 0 });
+      }
+      return m;
+    },
+
+    marca: function (i, campo, n) {
+      if (!this.marcador) this.marcador = this.marcaNueva();
+      var m = this.marcador[i | 0];
+      if (m && m.hasOwnProperty(campo)) m[campo] += (n == null ? 1 : n);
+    },
+
+    /* Un tick de vida por cada jugador que esté en pie */
+    marcaTiempo: function () {
+      if (this.state !== 'PLAYING' || !this.marcador) return;
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (p && !p.out && !p.dying && !p.bot) this.marcador[i].vivo++;
+      }
+    },
+
     newGame: function (opts) {
       opts = opts || {};
       this.lastOpts = opts;
+      this.marcador = this.marcaNueva();
       var n = parseInt(opts.players, 10);
       this.playerCount = (n >= 1 && n <= CFG.MAX_PLAYERS) ? n : 1;
       this.netRole = opts.net || null;
@@ -1193,6 +1229,7 @@
             if (p.tileY() === CFG.START.fruit.y &&
                 (p.tileX() === 13 || p.tileX() === 14)) {
               this.fruitActive = false;
+              if (!p.bot) this.marca(i, 'frutas');
               // lo que come la máquina (CACERÍA) no es logro de nadie
               if ((!this.netRole || i === this.localIdx) && !p.bot) {
                 this.runFrutas++;
@@ -1539,6 +1576,7 @@
      * Comer fantasmas / morir
      * --------------------------------------------------------- */
     eatGhost: function (g, who) {
+      this.marca(who || 0, 'kills');
       var streak = Math.min(this.chainIndex, 3);   // 0..3 dentro de la racha
       /* la pasiva del ASESINO sube lo que vale la muerte (js/habilidades.js) */
       var pts = (this.hab && window.PM.Hab)
@@ -1657,6 +1695,7 @@
     startPacDeath: function (i) {
       var p = this.pacs[i];
       if (!p || p.dying) return;
+      if (!p.bot) this.marca(i, 'muertes');
       p.dying = true;
       p.deathPhase = 0;
       p.deathTicks = CFG.DEATH_FREEZE_TICKS;
@@ -2054,6 +2093,8 @@
             Math.abs(p.x - c.x) <= R.TOCA_PX && Math.abs(p.y - c.y) <= R.TOCA_PX);
           if (encima && !c.en[j]) {
             c.n++;
+            if (!c.quien) c.quien = {};
+            c.quien[j] = 1;                 // este ha puesto de su parte
             /* El SOPORTE levanta de UNA pasada: es lo suyo, y cinco vueltas
              * sobre un cuerpo con los fantasmas encima no las da nadie. */
             if (this.esSoporte(j)) c.n = R.PASADAS;
@@ -2069,6 +2110,9 @@
       var c = this.cuerpos[i], p = this.pacs[i];
       this.cuerpos[i] = null;
       if (!c || !p) return;
+      /* el rescate se lo apunta TODO el que dio alguna pasada: levantar a uno
+       * entre dos es de los dos */
+      for (var q in (c.quien || {})) if (c.quien.hasOwnProperty(q)) this.marca(q | 0, 'rescates');
       p.out = false;
       p.dying = false;
       p.lives = CFG.REVIVIR.VIDAS;
@@ -2605,6 +2649,7 @@
     /* ---------- Cronómetro ---------- */
     stepClock: function () {
       if (this.state === 'PLAYING' || this.state === 'DYING') this.timeTicks++;
+      this.marcaTiempo();
     },
 
     /* mm:ss de la partida en curso */
@@ -3590,7 +3635,10 @@
              * decide el anfitrión —el rey, los choques que simula él— se la
              * seguía comiendo. */
             window.PM.Hab.escudoRoto(this, who);
-            this.hostEvt({ t: 'habRoto', w: who });
+            /* y el empujón lo da él, que es quien mueve a los fantasmas */
+            var gr = this.ghosts[d.g | 0];
+            if (d.g >= 0 && gr) window.PM.Hab.empujar(this, gr, CFG.HAB.ESCUDO_EMPUJE);
+            this.hostEvt({ t: 'habRoto', w: who, g: (d.g >= 0 ? d.g : -1) });
           }
           break;
         case 'emote':
@@ -3705,6 +3753,11 @@
         dl: this.dotsLeft, de: this.dotsEaten,
         fa: this.fruitActive ? 1 : 0,
         tm: this.timeTicks,           // cronómetro: manda el anfitrión
+        /* la libreta del marcador, solo al acabar: es cuando se mira, y así
+         * no va en las mil fotos de una partida entera */
+        mk: (this.state === 'GAME_OVER' || this.state === 'DYING')
+          ? this.marcador.map(function (m) { return [m.kills, m.muertes, m.frutas, m.rescates, m.vivo]; })
+          : null,
         ct: this.contTicks,           // CONTINUE?: lo que queda para pagar
         cu: this.cuerposSnap(),       // cuerpos tirados: [x, y, ticks, pasadas]
         vs: this.vsScores || null,    // PAC-MAN VS.: marcador de cada cazador
@@ -3963,7 +4016,7 @@
           if (me.safeTicks > 0) continue;      // margen tras reaparecer
           if (A && (A.congelado(g.id) || A.ignoraA(this, me.id, g))) continue;
           if (!this.hitGhost(me, g)) continue;
-          if (A && A.salvaDelChoque(this, me.id)) continue;
+          if (A && A.salvaDelChoque(this, me.id, g)) continue;
           /* predicción: se congela este Pac-Man (no la partida) y el
            * anfitrión confirma con 'death'; si es el último, parón clásico */
           this.startPacDeath(me.id);
@@ -4365,6 +4418,14 @@
       this.dotsEaten = s.de;
       this.fruitActive = !!s.fa;
       if (typeof s.tm === 'number') this.timeTicks = s.tm;
+      if (s.mk && s.mk.length) {
+        for (var mi = 0; mi < s.mk.length && mi < this.marcador.length; mi++) {
+          var f = s.mk[mi];
+          if (!f) continue;
+          this.marcador[mi] = { kills: f[0] | 0, muertes: f[1] | 0, frutas: f[2] | 0,
+                                rescates: f[3] | 0, vivo: f[4] | 0 };
+        }
+      }
       if (typeof s.ct === 'number') this.contTicks = s.ct;
       if (esLista(s.cu)) {
         this.cuerpos = [];

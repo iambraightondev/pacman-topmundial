@@ -2,6 +2,27 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · El empujón en party, la sala de tu color y el marcador del equipo
+
+**El fantasma que rompe la coraza vuelve a salir empujado, también en**
+**party.** El empujón lo tiene que dar el anfitrión, que es quien mueve a los
+fantasmas: el invitado lo daba en su pantalla y la foto siguiente devolvía al
+fantasma a donde estaba, así que no se veía. Ahora el aviso dice contra qué
+fantasma se rompió y el empujón lo da quien puede darlo.
+
+**La sala se viste del rol que elijas.** En DESATADO, elegir TANQUE y que
+todo siguiera verde era desperdiciar el momento: el sitio donde uno decide
+quién va a ser se pone de su color —título, bombillas, marcos y botones—, y
+cambia en el acto al cambiar de rol.
+
+**Y al acabar una party hay dos vistas.** Entre el título y los datos salen
+dos botones: LA PARTIDA, que es el resumen de siempre, y EL EQUIPO, con una
+fila por jugador —a cuántos se comió, cuántas veces cayó, cuántas frutas
+pilló, a cuántos levantó y cuánto tiempo estuvo EN PIE (el rato de cadáver no
+cuenta)—. Se pasa sola a la segunda a los tres segundos, porque si hubiera
+que pulsarla no la vería casi nadie; pulsar cualquiera de las dos corta el
+cambio y manda la mano.
+
 ## 2026-09-20 · La coraza del Tanque, rota también para el anfitrión
 
 Quedaba la otra mitad del fallo de esta mañana, y era la que de verdad lo

@@ -9513,6 +9513,26 @@
     ok(CFG.isOpen(g2.tileX(), g2.tileY()), 'acaba en pasillo, no en pared');
   });
 
+  test('TANQUE · el anfitrión da el empujón del escudo roto del invitado',
+    function () {
+      /* El empujón lo tiene que dar el ANFITRIÓN: los fantasmas los mueve él,
+       * así que si el invitado empuja en su pantalla, la siguiente foto se lo
+       * devuelve a donde estaba y el golpe no se ve. Por eso el aviso dice
+       * contra qué fantasma se rompió. */
+      partidaRol(['mago', 'tanque'], 6, 5, DR.RIGHT);
+      var rolAntes = G.netRole, idxAntes = G.localIdx;
+      G.netRole = 'host';
+      G.localIdx = 0;
+      try {
+        HB.estado(1).corPas = CFG.HAB.CORAZA_DURA;
+        var g = fantasmaEn(0, 9, 5);
+        g.dir = DR.LEFT;                    // venía hacia la izquierda
+        G.hostMsg('gevt', { t: 'habRoto', i: 1, g: 0 }, 'sid');
+        eq(g.tileX(), 11, 'el fantasma retrocede sus dos casillas');
+        eq(g.dir, DR.RIGHT, 'y se da la vuelta');
+      } finally { G.netRole = rolAntes; G.localIdx = idxAntes; }
+    });
+
   test('TANQUE · al anfitrión también se le rompe la coraza del invitado',
     function () {
       /* LA OTRA MITAD DEL MISMO FALLO (20 sep). Los choques son de quien los
