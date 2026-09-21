@@ -966,6 +966,12 @@
       if (!this.canPause()) return;
       if (this.vote) return;   // hay un diálogo abierto: la pausa la lleva él
       if (this.isSpec()) { this.togglePause(); return; }   // solo su pantalla
+      /* MUERTO DEL TODO: la pausa es solo tuya. Estabas fuera de la partida y
+       * pausabas a los demás para poder salir al menú, que es lo único que te
+       * queda por hacer; ellos seguían jugando y se les paraba la pantalla
+       * sin comerlo ni beberlo. */
+      var yoPac = this.pacs[this.localIdx];
+      if (this.netRole && yoPac && yoPac.out) { this.togglePause(); return; }
       if (this.netRole === 'guest') {
         this.netSend('gevt', { t: 'pauseReq', on: !this.paused });
         return;
@@ -1833,6 +1839,7 @@
     entrarContinue: function () {
       this.cuerpos = [];
       this.state = 'CONTINUE';
+      this.contPagado = [];          // quién ha pagado ya su vuelta
       this.contTicks = CFG.CONTINUAR.TICKS;
       for (var i = 0; i < this.pacs.length; i++) {
         if (this.pacs[i].out && !this.pacs[i].bot) this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
@@ -1854,7 +1861,11 @@
       if (this.contTicks % 60 === 0 && window.PM.UI && window.PM.UI.tickContinue) {
         window.PM.UI.tickContinue();
       }
-      if (this.contTicks <= 0) this.acabarPartida();
+      if (this.contTicks <= 0) {
+        /* con alguien que pagó, vuelven; si no pagó nadie, se acabó */
+        if (this.netRole && this.contPagado && this.contPagado.length) this.contVolverTodos();
+        else this.acabarPartida();
+      }
     },
 
     /* JUGAR OTRA VEZ sin esperar a que acabe la cuenta atrás (sin red). La
@@ -1910,6 +1921,24 @@
         lista.push(i);
       }
       if (!lista.length) return false;
+      /* EN PARTY, EL PRIMERO QUE PAGA NO CIERRA LA PUERTA (20 sep).
+       *
+       * Antes, pagar revivía y reanudaba la partida en el acto, así que los
+       * demás —que estaban mirando su propia cuenta atrás— se quedaban sin
+       * poder pagar la suya: el más rápido decidía por todos. Ahora el pago
+       * se APUNTA y se espera a que acabe la cuenta atrás; si para entonces
+       * han pagado todos los que estaban fuera, no se espera más y vuelven
+       * juntos.
+       *
+       * En local no cambia nada: ahí un pago es del teclado entero. */
+      if (this.state === 'CONTINUE' && this.netRole && this.contTicks > 0 && !this.contVuelta) {
+        if (!this.contPagado) this.contPagado = [];
+        for (var q = 0; q < lista.length; q++) this.contPagado[lista[q]] = true;
+        this.hostEvt({ t: 'contPago', w: (quien >= 0 ? quien : -1) });
+        this.syncUI();
+        if (!this.contFaltaAlguien()) this.contVolverTodos();
+        return true;
+      }
       if (!ind) this.lives = CFG.CONTINUAR.VIDAS;
       for (var k = 0; k < lista.length; k++) {
         p = this.pacs[lista[k]];
@@ -1937,6 +1966,46 @@
         for (i = 0; i < this.pacs.length; i++) if (this.pacs[i].out && !this.pacs[i].bot) quedan = true;
         if (!quedan) this.siguienteNivel();
       }
+      this.syncUI();
+      return true;
+    },
+
+    /* ¿Queda alguien fuera que todavía no haya pagado? */
+    contFaltaAlguien: function () {
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (!p || p.bot || !p.out) continue;
+        if (!(this.contPagado && this.contPagado[i])) return true;
+      }
+      return false;
+    },
+
+    /* Se acabó la espera: vuelven TODOS los que pagaron, a la vez. Si no pagó
+     * nadie, la partida se acaba como siempre. */
+    contVolverTodos: function () {
+      var hay = false, i;
+      for (i = 0; i < this.pacs.length; i++) {
+        if (this.contPagado && this.contPagado[i] && this.pacs[i] && this.pacs[i].out) hay = true;
+      }
+      if (!hay) { this.acabarPartida(); return false; }
+      this.contVuelta = true;        // para que revivir() ya no vuelva a esperar
+      var ind = (this.livesMode === 'individual');
+      if (!ind) this.lives = CFG.CONTINUAR.VIDAS;
+      for (i = 0; i < this.pacs.length; i++) {
+        if (!(this.contPagado && this.contPagado[i])) continue;
+        var p = this.pacs[i];
+        if (!p || !p.out) continue;
+        if (ind) p.lives = CFG.CONTINUAR.VIDAS;
+        p.out = false;
+        p.dying = false;
+        this.contHasta[i] = 0;
+      }
+      this.contTicks = 0;
+      this.contPagado = [];
+      this.respawn();
+      this.hostEvt({ t: 'ready', lvl: this.level, full: false, rt: CFG.READY_TICKS });
+      this.hostEvt({ t: 'contOk', w: -1 });
+      this.contVuelta = false;
       this.syncUI();
       return true;
     },
@@ -4200,6 +4269,8 @@
           window.AudioSys && AudioSys.playExtraLife();
           break;
         case 'contAbre':
+          this.contPagado = [];
+          this.contPagueYo = false;
           this.clearDeathAnims();
           this.state = 'CONTINUE';
           this.contTicks = e.tk || CFG.CONTINUAR.TICKS;
@@ -4207,6 +4278,22 @@
           this.stopAllLoops();
           this.syncUI();
           break;
+        /* el anfitrión ha aceptado el pago, pero la vuelta es de todos a
+         * la vez cuando acabe la cuenta: de momento, cobrado y a esperar */
+        case 'contPago': {
+          var pw = (typeof e.w === 'number') ? e.w : -1;
+          if (!this.contPagado) this.contPagado = [];
+          if (pw >= 0) this.contPagado[pw] = true;
+          if (this.contPedido && (pw === this.localIdx || pw === -1)) {
+            this.contPedido = 0;
+            var Tp = window.PM.Tienda;
+            if (Tp) Tp.gastarContinuar();
+            this.contPagueYo = true;
+            this.setFlash('PAGADO · ESPERANDO A LOS DEMÁS');
+          }
+          this.syncUI();
+          break;
+        }
         case 'contOk': {
           var cw = (typeof e.w === 'number') ? e.w : -1;
           if (this.contPedido && (cw === this.localIdx || cw === -1)) {

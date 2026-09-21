@@ -2,6 +2,32 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · La party: el LISTO, el CONTINUE de todos y la pausa del muerto
+
+**Hay que decir que estás listo.** El líder no puede arrancar hasta que los
+demás pulsen ESTOY LISTO; su etiqueta sale en la lista de jugadores y el
+botón de empezar lleva la cuenta (2/3). De paso arregla lo de arrancar con
+alguien que ni estaba mirando la pantalla.
+
+**Y si aun así se pierde la salida, se recupera.** A quien tuviera la
+pestaña dormida no le llegaba el aviso de empezar: los demás lo veían como
+AFK y él, al volver, se encontraba solo en la sala con la partida ya en
+marcha. Ahora, al volver a la ventana, pregunta; si había partida, el líder
+le repite la salida y entra donde le tocaba.
+
+**El CONTINUE ya no lo decide el más rápido.** Cuando caían todos, el
+primero que pagaba revivía y la partida seguía en el acto, dejando a los
+demás con la cuenta atrás en la mano y sin poder pagar. Ahora el pago se
+apunta y se espera: al acabar los diez segundos vuelven todos los que
+pagaron, a la vez. Si pagan todos antes, no se espera nada.
+
+**La pausa de un muerto es solo suya.** Estabas fuera de la partida y
+pausabas para poder salir al menú —lo único que te quedaba por hacer—, y con
+ello les parabas la pantalla a los que seguían jugando.
+
+**Y el resumen del final cambia de vista a los cinco segundos**, no a los
+tres: daba tiempo justo a leer la primera.
+
 ## 2026-09-20 · El marcador del equipo, afinado; y la invitación, en su caja
 
 **Las frutas de los demás salían a cero.** El marcador del final lo manda el

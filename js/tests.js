@@ -2486,7 +2486,9 @@
       ok(!P.canStart(), 'con uno no');
       P.st.members.push({ s: 'sid1', n: 'BENI', c: '#00ff00', k: 'clasico',
                           t: new Date().getTime() });
-      ok(P.canStart(), 'con dos sí');
+      ok(!P.canStart(), 'con dos pero sin su LISTO, tampoco');
+      P.st.members[1].l = 1;
+      ok(P.canStart(), 'con dos y el LISTO puesto, sí');
       P.st.leader = false;
       ok(!P.canStart(), 'solo el líder empieza');
       P.st.leader = true;
@@ -7216,11 +7218,13 @@
   });
 
   test('la party puede empezar sin Pac-Man si es CACERÍA', function () {
+    /* (desde el 20 sep hace falta además que todos digan LISTO) */
     G.toMenu();
     var P = party(['ANA', 'BENI']);
     try {
       P.st.members[0].g = 0;
       P.st.members[1].g = 1;
+      P.st.members[1].l = 1;          // su LISTO, que desde el 20 sep hace falta
       ok(!P.anyPac(), 'nadie lleva Pac-Man');
       ok(!P.canStart(), 'en VS. eso no arranca');
       P.cazaPick = true;
@@ -8023,18 +8027,57 @@
     } finally { G.caza = false; G.toMenu(); }
   });
 
-  test('en party, el anfitrión revive solo a quien pagó', function () {
+  test('en party, pagar el CONTINUE no deja fuera a los demás', function () {
+    /* Antes, el primero que pagaba revivía y reanudaba la partida en el acto,
+     * y los demás se quedaban sin poder pagar la suya: el más rápido decidía
+     * por todos. Ahora el pago se apunta y se espera a la cuenta atrás. */
     partida(2, 'host');
     try {
       G.livesMode = 'individual';
       sinVidas();
       eq(G.state, 'CONTINUE', 'online siempre se abre: puede pagar cualquiera');
       G.hostGuestEvent({ t: 'contReq', i: 1 }, 1);
-      eq(G.state, 'READY', 'se sigue');
+      eq(G.state, 'CONTINUE', 'con uno pagado, se sigue esperando');
+      ok(G.pacs[1].out, 'todavía no ha vuelto');
+      ok(G.contPagado[1], 'pero su pago está apuntado');
+      ok(G.contHasta[0] > G.tick, 'y al otro aún le queda su turno');
+
+      /* se acaba la cuenta: vuelve el que pagó, el otro no */
+      G.contTicks = 1;
+      G.stepContinue();
+      eq(G.state, 'READY', 'al acabarse, se sigue');
       ok(!G.pacs[1].out, 'el que pagó vuelve');
       eq(G.pacs[1].lives, 1, 'con 1 vida');
       ok(G.pacs[0].out, 'el que no pagó se queda mirando');
-      ok(G.contHasta[0] > G.tick, 'y aún puede volver');
+    } finally { G.toMenu(); }
+  });
+
+  test('en party, si pagan TODOS no se espera a la cuenta atrás', function () {
+    partida(2, 'host');
+    try {
+      G.livesMode = 'individual';
+      sinVidas();
+      eq(G.state, 'CONTINUE', 'se abre');
+      G.hostGuestEvent({ t: 'contReq', i: 1 }, 1);
+      eq(G.state, 'CONTINUE', 'con uno, se espera');
+      G.revivir(0);                       // paga el anfitrión
+      eq(G.state, 'READY', 'con todos pagados, se sigue en el acto');
+      ok(!G.pacs[0].out && !G.pacs[1].out, 'y vuelven los dos');
+    } finally { G.toMenu(); }
+  });
+
+  test('muerto del todo, la pausa es solo tuya', function () {
+    partida(2, 'guest');
+    try {
+      var yo = G.pacs[G.localIdx];
+      yo.out = true;
+      var mandados = [], envia = G.netSend;
+      G.netSend = function (n, d) { mandados.push([n, d]); };
+      try {
+        G.requestPause();
+        ok(G.paused, 'se pausa tu pantalla');
+        eq(mandados.length, 0, 'y no se le pide nada a nadie: los demás siguen');
+      } finally { G.netSend = envia; G.setPaused(false); }
     } finally { G.toMenu(); }
   });
 

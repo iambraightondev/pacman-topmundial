@@ -401,6 +401,11 @@
         self.encajarPanel();
       });
       this.vigilarEncaje();
+      /* al volver a la ventana, la party pregunta si se perdió la salida */
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') return;
+        if (window.PM.Party && window.PM.Party.alVolver) window.PM.Party.alVolver();
+      });
       this.showMenu();
 
       this.partyHooks();
@@ -5724,6 +5729,15 @@
       this.startPartyBtn = this.makeButton('EMPEZAR PARTIDA', function () { self.partyStart(); });
       this.startPartyBtn.classList.add('btn-primary');
       pie.appendChild(this.startPartyBtn);
+
+      /* EL LISTO: el que no es líder dice cuándo está. Sin esto, el líder
+       * arrancaba con gente que ni estaba mirando la pantalla. */
+      this.listoBtn = this.makeButton('ESTOY LISTO', function () {
+        var P2 = window.PM.Party;
+        if (P2) P2.setListo(!P2.estoyListo());
+      });
+      this.listoBtn.classList.add('btn-primary', 'ol-listo');
+      pie.appendChild(this.listoBtn);
       var volver = this.makeButton('VOLVER AL MENÚ', function () {
         self.showMenu();      // la party sigue conectada
       });
@@ -6013,6 +6027,10 @@
         if (i === 0) tags.appendChild(this.olTag('LÍDER', '#ffff00'));
         if (m.s === window.PM.Net.sid) tags.appendChild(this.olTag('TÚ', '#00ff66'));
         if (gv >= 0 && gv < 4) tags.appendChild(this.olTag(CFG.VS.NAMES[gv], CFG.GHOSTS[gv].color));
+        /* quién ha dicho ya que está listo (el líder, siempre) */
+        if (m.l || (P.esLider && P.esLider(m))) {
+          tags.appendChild(this.olTag('LISTO', '#00ff66'));
+        }
         if (P.habPick && m.r && CFG.HAB.ROL_INFO[m.r]) {
           tags.appendChild(this.olTag(CFG.HAB.ROL_INFO[m.r].name, CFG.HAB.ROL_INFO[m.r].color));
         }
@@ -6066,13 +6084,25 @@
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
-      this.startPartyBtn.textContent = 'EMPEZAR PARTIDA (' + P.count() + ')';
+      this.startPartyBtn.textContent = 'EMPEZAR PARTIDA (' +
+        (P.cuantosListos ? (P.cuantosListos() + '/' + P.count()) : P.count()) + ')';
       this.ponRonda(this.startPartyBtn, 'btn-ronda');
+
+      /* el LISTO solo lo pulsa quien no manda */
+      if (this.listoBtn) {
+        var listo = !!(P.estoyListo && P.estoyListo());
+        this.listoBtn.style.display = lider ? 'none' : '';
+        this.listoBtn.textContent = listo ? 'LISTO · ESPERANDO' : 'ESTOY LISTO';
+        this.listoBtn.classList.toggle('puesto', listo);
+        this.ponRonda(this.listoBtn, 'btn-ronda');
+      }
       this.inviteBtn.disabled = !P.active();
       this.setLobbyStatus(
         P.connecting() ? 'CONECTANDO...'
         : (!P.anyPac() && !P.cazaPick) ? 'ALGUIEN TIENE QUE LLEVAR UN PAC-MAN'
         : lider ? (P.count() < 2 ? 'ESPERANDO A MÁS JUGADORES...'
+          : !P.todosListos() ? ('FALTA QUE DIGAN QUE ESTÁN LISTOS (' +
+              P.cuantosListos() + '/' + P.count() + ')')
                                  : 'CUANDO QUIERAS, EMPEZAD')
                 : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
     },
@@ -10676,7 +10706,7 @@
             self.goVistaTimer = setTimeout(function () {
               self.goVistaTimer = 0;
               if (self.goVista === 0) pon(1);
-            }, 3000);
+            }, 5000);
           }
           self.animarGoMuerte();
         },
@@ -10882,7 +10912,9 @@
       if (btns && btns.length >= 2) {
         this.contBtnPagar = btns[0];
         this.contBtnOtra = btns[1];
-        btns[0].disabled = !llega || !!g.contPedido || !g.contDisponible();
+        /* ya pagado: el botón se queda apagado y dice a qué se espera */
+        btns[0].disabled = !llega || !!g.contPedido || !!g.contPagueYo || !g.contDisponible();
+        if (g.contPagueYo) btns[0].textContent = 'PAGADO · ESPERANDO';
         if (g.netRole) {
           btns[1].disabled = true;
           btns[1].classList.add('cont-bloqueado');
@@ -11012,6 +11044,11 @@
       if (this.contReloj.aro) {
         this.contReloj.aro.setAttribute('stroke-dashoffset',
           String(301.6 * (1 - (g.contTicks || 0) / CFG.CONTINUAR.TICKS)));
+      }
+      /* mientras se espera a los demás, el reloj dice para qué */
+      if (this.contBtnPagar && window.PM.Game.contPagueYo) {
+        this.contBtnPagar.disabled = true;
+        this.contBtnPagar.textContent = 'PAGADO · ESPERANDO';
       }
       if (this.contBtnOtra && this.contBtnOtra.disabled) {
         var k = this.contBtnOtra.querySelector && this.contBtnOtra.querySelector('.btn-key');

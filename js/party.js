@@ -75,6 +75,22 @@
     connecting: function () { return !!(this.st && this.st.status === 'conectando'); },
     inParty: function () { return !!this.st; },
     isLeader: function () { return !!(this.st && this.st.leader); },
+    /* el sid del líder: el mío si lo soy, el que diga la lista si no */
+    sidLider: function () {
+      if (!this.st) return null;
+      return this.st.leader ? window.PM.Net.sid : this.st.leaderSid;
+    },
+
+    /* ¿Ese miembro es el que manda? El líder no tiene que decir que está
+     * listo: es quien da la salida. Si la lista todavía no dice quién es
+     * (recién creada), el líder es el primero, que es como se arma. */
+    esLider: function (m) {
+      if (!m || !this.st) return false;
+      var sid = this.sidLider();
+      if (sid && m.s === sid) return true;
+      if (!this.st.leaderSid && this.st.members.length) return this.st.members[0].s === m.s;
+      return false;
+    },
     code: function () { return this.st ? this.st.code : null; },
     members: function () { return this.st ? this.st.members.slice() : []; },
     count: function () { return this.st ? this.st.members.length : 0; },
@@ -83,6 +99,7 @@
       // en CACERÍA nadie lleva Pac-Man: lo lleva la máquina
       return this.active() && this.isLeader() && this.count() >= 2 &&
         (this.anyPac() || this.cazaPick || this.supervPick) &&
+        this.todosListos() &&
         !(window.PM.Game && window.PM.Game.inGame());
     },
 
@@ -312,7 +329,52 @@
 
     hello: function () {
       var m = this.me();
-      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r };
+      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r,
+               l: this.listo ? 1 : 0 };
+    },
+
+    /* ---------- EL LISTO (20 sep) ----------
+     * El líder no puede arrancar hasta que todos lo digan. Sirve para dos
+     * cosas: que nadie entre a una partida que no vio empezar —pasaba con
+     * quien tenía la pestaña en segundo plano: salía de AFK y se quedaba solo
+     * en la sala— y que se pueda elegir rol con calma sin que te arranquen.
+     * El líder cuenta como listo siempre: es quien da la salida. */
+    estoyListo: function () {
+      if (!this.st) return false;
+      if (this.st.leader) return true;
+      var m = this.selfEntry();
+      return !!(m && m.l);
+    },
+
+    setListo: function (v) {
+      this.listo = !!v;
+      if (!this.st) return;
+      var m = this.selfEntry();
+      if (m) m.l = this.listo ? 1 : 0;
+      if (this.st.leader) this.sendRoster();
+      else window.PM.Net.send('phello', this.hello());
+      this.changed();
+    },
+
+    /* ¿Están todos los que no son el líder? */
+    todosListos: function () {
+      if (!this.st) return false;
+      for (var i = 0; i < this.st.members.length; i++) {
+        var m = this.st.members[i];
+        if (this.esLider(m)) continue;
+        if (!m.l) return false;
+      }
+      return true;
+    },
+
+    /* Cuántos lo han dicho ya (el líder incluido) */
+    cuantosListos: function () {
+      if (!this.st) return 0;
+      var n = 0;
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (this.st.members[i].l || this.esLider(this.st.members[i])) n++;
+      }
+      return n;
     },
 
     /* Nombre, color o skin cambiados en PERFIL con la party ya abierta.
@@ -452,6 +514,12 @@
         case 'pstart':
           if (!this.st.leader) this.begin(d, false);
           break;
+        /* «¿me he perdido algo?»: lo manda quien vuelve al juego después de
+         * tener la pestaña dormida. Si había partida, se le repite la salida
+         * y entra; si no, no pasa nada. */
+        case 'pwho':
+          if (this.st.leader && this.salida) window.PM.Net.send('pstart', this.salida);
+          break;
       }
     },
 
@@ -480,6 +548,7 @@
       m.x = (typeof d.x === 'string') ? d.x : '';
       m.g = this.claim(sid, d.g);      // PAC-MAN VS.: el líder reparte
       m.r = this.claimRol(sid, d.r);   // DESATADO: un solo Soporte
+      m.l = d.l ? 1 : 0;               // ¿ha dicho que está listo?
       m.t = now();
       this.sendRoster();
       this.changed();
@@ -495,6 +564,11 @@
       if (this.st.joinTimer) { clearTimeout(this.st.joinTimer); this.st.joinTimer = null; }
       this.st.status = 'dentro';
       this.st.members = d.m;
+      /* lo que diga la lista del líder manda, también sobre mi propio LISTO:
+       * si él aún no se ha enterado, el botón vuelve a su sitio solo */
+      var mio = null;
+      for (i = 0; i < d.m.length; i++) if (d.m[i].s === window.PM.Net.sid) mio = d.m[i];
+      this.listo = !!(mio && mio.l);
       this.st.leaderSid = d.lider;
       this.habPick = !!d.hab;          // lo decide el líder; aquí solo se mira
       this.cazaPick = !!d.caza;
@@ -550,8 +624,13 @@
       var order = this.gameOrder();
       var cfg = window.PM.UI ? window.PM.UI.netCfgSubset() : null;
       var hab = !!this.habPick, caza = !!this.cazaPick, sv = !!this.supervPick;
-      window.PM.Net.send('pstart',
-        { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab, caza: caza, sv: sv });
+      var salida = { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab, caza: caza, sv: sv };
+      /* SE GUARDA LA SALIDA. A quien tuviera la pestaña dormida no le llegaba
+       * el aviso: los demás lo veían entrar y salir como AFK y él, al volver,
+       * se encontraba solo en la sala con la partida ya empezada. Ahora la
+       * puede pedir otra vez (ver 'pwho') y entra donde tocaba. */
+      this.salida = salida;
+      window.PM.Net.send('pstart', salida);
       this.begin({ ord: order, cfg: cfg, hab: hab, caza: caza, sv: sv }, true);
     },
 
@@ -583,6 +662,11 @@
       var self = this;
       if (!this.st) return;
       this.order = null;
+      this.salida = null;         // esa partida ya acabó
+      this.listo = false;         // y para la siguiente hay que volver a decirlo
+      if (this.st.leader) {
+        for (var q = 0; q < this.st.members.length; q++) this.st.members[q].l = 0;
+      }
       window.PM.Net.unlockPeers();
       window.PM.Net.handler = function (n, d, sid) { self.onData(n, d, sid); };
       window.PM.Net.onclose = function () { self.fail('SE PERDIÓ LA CONEXIÓN'); };
@@ -592,6 +676,15 @@
       }
       this.startBeat();
       this.changed();
+    },
+
+    /* AL VOLVER A LA VENTANA. Si estoy en una sala, no soy el líder y no
+     * estoy en partida, pregunto por si la salida se dio mientras la pestaña
+     * dormía. Cuesta un mensaje y ahorra quedarse tirado en el lobby. */
+    alVolver: function () {
+      if (!this.st || this.st.leader) return;
+      if (window.PM.Game && window.PM.Game.inGame()) return;
+      try { window.PM.Net.send('pwho', { s: window.PM.Net.sid }); } catch (e) { /* sin canal */ }
     },
 
     /* ---------- canal personal: invitaciones ---------- */
