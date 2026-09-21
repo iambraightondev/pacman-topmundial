@@ -10982,6 +10982,14 @@
     for (t = 0; t < V; t++) H.pasoRoles(G, true);
     eq(H.st[0].shuriken, null, 'la tercera no llegó: la ráfaga se cierra');
     eq(H.st[0].cd[0], 20 * 60, 'y la Q se va a recargar entera');
+
+    /* Morir a media ráfaga tampoco devuelve las cargas */
+    H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
+    ok(H.lanzar(G, 0, 0), 'sale una carga antes de morir');
+    eq(H.st[0].cd[0], 0, 'todavía sin recarga');
+    G.startPacDeath(0);
+    eq(H.st[0].shuriken, null, 'la ráfaga muere con él');
+    eq(H.st[0].cd[0], 20 * 60, 'y resucita con la Q recargando, no con las tres');
   });
 
   test('CATÁLOGO: Sombra, Frenesí, Gancho y Cacería respetan sus nuevas reglas', function () {

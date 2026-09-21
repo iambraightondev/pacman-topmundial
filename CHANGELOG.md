@@ -11,6 +11,12 @@ siguiente; si se pasa el tiempo, lo que quede de ráfaga se pierde y la
 recarga empieza ahí mismo. Salir con los tres y acertar los tres sigue
 devolviendo la Q al instante.
 
+**Y morir a media ráfaga ya no la devuelve entera.** Se tiraba una carga,
+se moría y se volvía a la vida con los tres shurikens y la Q sin recargar:
+morir salía barato. Ahora la Q se va a recargar como si se hubiera pasado
+el tiempo, que es la regla de siempre —una vida perdida no devuelve las
+teclas.
+
 **El GANCHO INVERSO llega tres casillas más lejos** (de cinco a ocho).
 
 **Y el MISIL vuela a ×2.** Iba a casi cuatro veces la velocidad de un

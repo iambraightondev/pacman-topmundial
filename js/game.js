@@ -1738,7 +1738,7 @@
       p.deathTicks = CFG.DEATH_FREEZE_TICKS;
       p.deathOk = false;
       p.safeTicks = 0;
-      if (window.PM.Hab) window.PM.Hab.limpiarJugador(i);
+      if (window.PM.Hab) window.PM.Hab.limpiarJugador(i, this);
     },
 
     /* Avanza las muertes en curso. finish: si la partida sigue, el jugador

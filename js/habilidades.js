@@ -3224,9 +3224,17 @@
     /* Al morir UN jugador (la partida sigue): se le cortan sus efectos.
      * La CORAZA no: es lo que trae puesto el Tanque, y volver a la vida sin
      * ella sería empezar castigado por haber muerto. */
-    limpiarJugador: function (idx) {
+    limpiarJugador: function (idx, G) {
       var s = this.st[idx];
       if (!s) return;
+      /* SHURIKEN: morir a media ráfaga no devuelve las cargas. Si quedaba
+       * alguna por tirar, la Q se va a recargar igual que si se hubiera
+       * pasado la ventana; sin esto, morir era la forma barata de empezar
+       * la ráfaga otra vez. */
+      if (s.shuriken && G) {
+        var ks = this.kDe(G, idx, 'shuriken');
+        if (ks >= 0 && !(s.cd[ks] > 0)) this.gastar(G, idx, ks);
+      }
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
       s.sombra = 0; s.sombraGolpe = false; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
