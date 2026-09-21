@@ -9513,6 +9513,30 @@
     ok(CFG.isOpen(g2.tileX(), g2.tileY()), 'acaba en pasillo, no en pared');
   });
 
+  test('TANQUE · al anfitrión también se le rompe la coraza del invitado',
+    function () {
+      /* LA OTRA MITAD DEL MISMO FALLO (20 sep). Los choques son de quien los
+       * sufre: el invitado rompe su coraza y lo cuenta con 'habRoto'. El
+       * anfitrión, al recibirlo, borraba el escudo y la coraza de la W pero
+       * NO la pasiva, así que en su copia el Tanque invitado seguía con ella
+       * para siempre: el aro no se apagaba y todo lo que decide el anfitrión
+       * —el rey, los choques que simula él— se la seguía comiendo. */
+      partidaRol(['mago', 'tanque'], 6, 5, DR.RIGHT);
+      var rolAntes = G.netRole, idxAntes = G.localIdx;
+      G.netRole = 'host';
+      G.localIdx = 0;
+      try {
+        var s = HB.estado(1);
+        s.corPas = CFG.HAB.CORAZA_DURA;
+        s.corCd = 0;
+        s.escudo = 0;
+        ok(HB.corazaDe(G, 1), 'el invitado lleva su coraza');
+        G.hostMsg('gevt', { t: 'habRoto', i: 1 }, 'sid');
+        ok(!HB.corazaDe(G, 1), 'y al llegar su aviso, el anfitrión la da por rota');
+        ok(s.corCd > 0, 'con su recarga en marcha, como en su máquina');
+      } finally { G.netRole = rolAntes; G.localIdx = idxAntes; }
+    });
+
   test('TANQUE · la foto del anfitrión no le devuelve la coraza que acaba de romper',
     function () {
       /* EL FALLO QUE ARREGLA (20 sep): en party, la foto de roles llega doce

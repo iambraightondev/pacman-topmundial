@@ -2,6 +2,25 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · La coraza del Tanque, rota también para el anfitrión
+
+Quedaba la otra mitad del fallo de esta mañana, y era la que de verdad lo
+sostenía. Los choques son de quien los sufre: el invitado rompe su coraza y
+lo cuenta. El anfitrión, al recibir ese aviso, borraba el escudo de la W...
+pero no la pasiva. En su copia, el Tanque invitado se quedaba con la coraza
+puesta para siempre: el aro no se le apagaba nunca y todo lo que decide el
+anfitrión —el rey fantasma, los choques que simula él— se la seguía comiendo.
+
+Ahora aplica exactamente la misma regla que la máquina donde se rompió. Se
+comprobó montando una party de verdad (anfitrión + invitado, con el invitado
+de Tanque): se rompe en las dos copias y a la cuarta pasada muere, como debe.
+
+**Y dos ajustes de DESATADO**: la R del Mago lanza un rayo cada 0,75 s, y la
+barra de poderes pasa a enseñar **un bloque por jugador** —su nombre encima
+y las cuatro teclas en fila— pegada al borde del laberinto, no al de la
+ventana. En columna se comía media pantalla de alto y, contra el borde de un
+monitor ancho, miraba uno a medio metro de la partida.
+
 ## 2026-09-20 · Repaso de DESATADO: el Mago, el rey y el sitio de los poderes
 
 **La R del MAGO dispara más seguido.** Los tres rayos caían uno por segundo,

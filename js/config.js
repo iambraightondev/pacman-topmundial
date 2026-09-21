@@ -1914,7 +1914,7 @@
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  pasiva: 'EL OJO: VES POR DÓNDE VA A PASAR CADA UNO Y CUÁNDO CAMBIAN DE MODO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
-                        'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · UNO CADA MEDIO SEGUNDO'] }
+                        'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · UNO CADA 0,75 S'] }
     },
 
     /* LAS PASIVAS DE CADA ROL (20 de septiembre de 2026)
@@ -2023,12 +2023,12 @@
     PORTAL_RED_GRACIA: 2 * 60,
     PORTAL_CRUCE: 30,             // tras cruzar, sin volver a cruzar
     RUNA_TICKS: 15 * 60,
-    /* TRES rayos: el primero al instante y los otros dos, uno cada MEDIO
-     * segundo (20 sep). A un segundo, el segundo y el tercero llegaban tarde:
+    /* TRES rayos: el primero al instante y los otros dos, uno cada TRES CUARTOS
+     * de segundo (20 sep). A un segundo, el segundo y el tercero llegaban tarde:
      * lo que había debajo ya se había ido y la R se sentía floja para lo que
      * cuesta (46 s de recarga). Con cuatro barría a todos sin riesgo. */
     TORMENTA_RAYOS: 3,
-    TORMENTA_CADA: 30,
+    TORMENTA_CADA: 45,
     TORMENTA_TILES: 10,           // a diez casillas a la redonda
     /* Lo que vale un fantasma que mata el Mago: fijo, sin tocar la cadena y
      * sin el parón de comer. Sin esto el Mago, que mata sin arriesgarse,

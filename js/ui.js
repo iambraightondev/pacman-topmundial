@@ -11097,8 +11097,17 @@
      * estrecha vuelve debajo del lienzo, que es donde cabe. */
     colocarHabBar: function () {
       if (!this.habBar || this.touchDevice) return;
-      var hueco = (window.innerWidth - (CFG.NATIVE_W * 2)) / 2;   // a cada lado
-      this.habBar.classList.toggle('lateral', window.innerWidth >= 1000 && hueco >= 150);
+      var cv = document.getElementById('game');
+      var r = cv ? cv.getBoundingClientRect() : null;
+      /* cuánto queda libre a la derecha del lienzo */
+      var hueco = r ? (window.innerWidth - r.right) : 0;
+      var lateral = window.innerWidth >= 1000 && hueco >= 190;
+      this.habBar.classList.toggle('lateral', lateral);
+      /* PEGADA AL MAPA, no al borde de la ventana: en un monitor ancho el
+       * borde queda a medio metro del laberinto y mirar si tienes la Q
+       * cargada obligaba a apartar los ojos de la partida. */
+      this.habBar.style.left = lateral ? (Math.round(r.right) + 14) + 'px' : '';
+      this.habBar.style.right = lateral ? 'auto' : '';
     },
 
     marcarHabBar: function () {

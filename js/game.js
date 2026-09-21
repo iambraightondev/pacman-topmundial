@@ -3582,8 +3582,14 @@
         /* se le rompió el escudo en su máquina (los choques son suyos) */
         case 'habRoto':
           if (window.PM.Hab) {
-            var sr = window.PM.Hab.estado(who);
-            if (sr) { sr.escudo = 0; sr.coraza = 0; }
+            /* La MISMA regla que aplica quien lo rompe (Hab.escudoRoto):
+             * escudo, coraza de la W... y la CORAZA PASIVA del Tanque con su
+             * recarga. Aquí se borraban solo las dos primeras, así que en la
+             * copia del anfitrión el Tanque invitado se quedaba con su coraza
+             * para siempre: el aro no se le apagaba nunca y todo lo que
+             * decide el anfitrión —el rey, los choques que simula él— se la
+             * seguía comiendo. */
+            window.PM.Hab.escudoRoto(this, who);
             this.hostEvt({ t: 'habRoto', w: who });
           }
           break;

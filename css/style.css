@@ -1235,19 +1235,38 @@ body {
   flex-wrap: nowrap;
 }
 
-/* cada jugador, su bloque: el nombre encima de sus cuatro teclas */
+/* CADA JUGADOR, UN BLOQUE: su nombre encima y sus cuatro teclas EN FILA,
+   uno debajo de otro. Se hace con una rejilla de cuatro columnas donde el
+   nombre ocupa la fila entera; en columna simple los poderes salían uno
+   bajo otro y la barra se comía media pantalla de alto. */
 #habBar.lateral .hab-grupo {
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-items: center;
+  align-items: center;
+  gap: 3px 7px;
 }
 
 #habBar.lateral .hab-quien {
-  align-self: flex-end;
-  color: rgba(255, 255, 255, 0.75);
+  grid-column: 1 / -1;
+  justify-self: start;
+  color: rgba(255, 255, 255, 0.8);
 }
 
-#habBar.lateral .hab-otro { align-items: flex-end; }
+#habBar.lateral .hab-otro {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-items: center;
+  align-items: center;
+  gap: 2px 5px;
+}
+
+#habBar.lateral .hab-otro-nom {
+  grid-column: 1 / -1;
+  justify-self: start;
+  max-width: none;
+  margin-right: 0;
+}
 
 /* Un grupo por jugador. Con dos en el mismo teclado se ven los dos, cada uno
    con sus teclas; en solo y en online solo hay uno y la etiqueta sobra. */
