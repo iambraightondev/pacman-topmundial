@@ -1687,7 +1687,7 @@
     /* el aspecto: lo que los demás ven de ti */
     'skin1', 'pacColor', 'acc1', 'efx1', 'emotes1', 'avatar',
     /* cómo juegas */
-    'modePick', 'habRol1',
+    'modePick', 'habRol1', 'habLoadout1',
     'ghostSpeedMult', 'pacSpeedMult', 'frightMult', 'startLives', 'startLevel',
     /* y cómo suena */
     'muted', 'volMaster', 'volMusic', 'volSfx', 'volLoops', 'volVoices'
@@ -1719,6 +1719,11 @@
     vsGhost2: -1,                 // PAC-MAN VS. en local: fantasma del J2 (-1 = Pac-Man)
     habRol1: 'asesino',           // DESATADO: el último rol elegido por el J1
     habRol2: 'asesino',           // ...y por el J2 (dos en el mismo teclado)
+    /* armamento DESATADO: una habilidad por ranura, separadas por comas.
+     * Se conserva el kit antiguo como valor inicial para que las partidas y
+     * las repeticiones de antes sigan arrancando igual. */
+    habLoadout1: 'mordisco,turbo,flash,grito',
+    habLoadout2: 'mordisco,turbo,flash,grito',
     ghostSpeedMult: 1.0,          // 0.5–1.2, paso .05
     pacSpeedMult: 1.0,            // 0.8–1.3, paso .05
     frightMult: 1.0,              // 0–2, paso .25
@@ -2035,6 +2040,56 @@
      * dejaría al Asesino sin sentido. */
     MAGO_PUNTOS: 200,
 
+    /* ---------- poderes del catálogo ---------- */
+    SHURIKEN_TILES: 3,
+    SHURIKEN_PUNTOS: 200,
+    BOMBA_TICKS: 5 * 60,
+    BOMBA_RADIO: 2,
+    BOMBA_PUNTOS: 150,
+    SOMBRA_TICKS: 4 * 60,
+    FRENESI_TICKS: 6 * 60,
+    FRENESI_MAX: 1.6,
+    FRENESI_PASO: 0.15,
+    CARROÑA_TICKS: 6 * 60,
+    CARROÑA_JOYA: 3 * 60,
+    MARCA_TICKS: 8 * 60,
+    GANCHO_INVERSO_TILES: 5,
+    CACERIA_TICKS: 6 * 60,
+    EMPUJON_TILES: 3,
+    EMPUJON_STUN: 60,
+    GRITO_GUERRA_TICKS: 90,
+    YUNQUE_TICKS: 120,
+    PIEL_PIEDRA_TICKS: 5 * 60,
+    REBOTE_TICKS: 5 * 60,
+    TELARANA_TICKS: 6 * 60,
+    TELARANA_MULT: 0.5,
+    ESTELA_TICKS: 8 * 60,
+    ESTELA_MULT: 1.25,
+    ESTELA_RASTRO_MULT: 1.2,
+    PUENTE_TICKS: 8 * 60,
+    CADENA_TICKS: 6 * 60,
+    FARO_TICKS: 6 * 60,
+    MURO_TICKS: 5 * 60,
+    CAMPO_TICKS: 5 * 60,
+    HOSPITAL_TICKS: 10 * 60,
+    BOLA_GUIADA_PUNTOS: 150,
+    TOQUE_ARCANO_TICKS: 4 * 60,
+    CHISPA_TICKS: 2 * 60,
+    TOTEM_TICKS: 8 * 60,
+    TOTEM_CADA: 2 * 60,
+    GRAVEDAD_TICKS: 60,
+    NIEBLA_TICKS: 5 * 60,
+    METEORO_AVISO: 90,
+    METEORO_RADIO: 2,
+    METEORO_FUEGO: 4 * 60,
+    ECLIPSE_TICKS: 10 * 60,
+    TERREMOTO_PUNTOS: 100,
+    TERREMOTO_SLOW: 0.8,
+    TERREMOTO_TICKS: 6 * 60,
+    FORTALEZA_TICKS: 6 * 60,
+    FORTALEZA_RADIO: 5,
+    EJECUCION_PUNTOS: 5000,
+
     /* ---------- DOS JUGADORES EN EL MISMO TECLADO ----------
      * Este modo no estaba en dúo local por una razón concreta: el J2 se mueve
      * con WASD y la W es el TURBO. Una tecla no puede hacer dos cosas, y dejar
@@ -2099,6 +2154,96 @@
     asesino: CFG.HAB.LIST, tanque: CFG.HAB.LIST_T,
     soporte: CFG.HAB.LIST_S, mago: CFG.HAB.LIST_M
   };
+
+  /* ---------- CATÁLOGO DESATADO ----------
+   * Cada fila es Q/W/E/R y contiene las armas que se pueden escoger para esa
+   * ranura. El motor sigue recibiendo una lista de cuatro objetos —una por
+   * tecla—, así que una habilidad elegida no cambia de posición al viajar por
+   * red ni al entrar en una repetición. Los kits antiguos están dentro del
+   * catálogo como primera opción; eso hace que una partida sin elección nueva
+   * conserve exactamente su comportamiento anterior. */
+  (function () {
+    function h(id, key, name, cd, desc) {
+      return { id: id, key: key, name: name, cd: cd * 60, desc: desc || '' };
+    }
+    CFG.HAB.CATALOGO = {
+      asesino: [
+        [h('mordisco', 'Q', 'MORDISCO', 16, 'Come al fantasma cercano.'),
+         h('shuriken', 'Q', 'SHURIKEN', 20, 'Tres proyectiles en línea.'),
+         h('bomba', 'Q', 'BOMBA', 24, 'Coloca y detona una bomba.')],
+        [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 5 s.'),
+         h('sombra', 'W', 'SOMBRA', 26, 'Invisible durante 4 s.'),
+         h('frenesi', 'W', 'FRENESÍ', 26, 'Gana velocidad al matar.'),
+         h('carrona', 'W', 'CARROÑA', 24, 'Deja joyas al matar.')],
+        [h('flash', 'E', 'FLASH', 32, 'Salta tres casillas atravesando muros.'),
+         h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar doble.'),
+         h('gancho_inverso', 'E', 'GANCHO INVERSO', 32, 'Se lanza y vuelve azul al fantasma.')],
+        [h('grito', 'R', 'GRITO', 60, 'Asusta a los cuatro fantasmas.'),
+         h('misil', 'R', 'MISIL', 80, 'Mata en cadena al más cercano.'),
+         h('ejecucion', 'R', 'EJECUCIÓN', 80, 'Una muerte por 5.000 puntos.'),
+         h('caceria', 'R', 'CACERÍA', 60, 'Solo el Asesino puede matar a los marcados.')]
+      ],
+      tanque: [
+        [h('pisoton', 'Q', 'PISOTÓN', 32, 'Todos huyen del Tanque.'),
+         h('empujon', 'Q', 'EMPUJÓN', 18, 'Empuja y aturde a un fantasma.'),
+         h('grito_guerra', 'Q', 'GRITO DE GUERRA', 24, 'Clava a los fantasmas cercanos.'),
+         h('rebote', 'Q', 'REBOTE', 30, 'El primer contacto mata al fantasma.')],
+        [h('escudo', 'W', 'ESCUDO', 24, 'Aguanta un golpe.'),
+         h('yunque', 'W', 'YUNQUE', 20, 'Quieto, eres intocable y rebotas fantasmas.'),
+         h('piel_piedra', 'W', 'PIEL DE PIEDRA', 28, 'Inmune, pero lento, durante 5 s.')],
+        [h('provocar', 'E', 'PROVOCAR', 32, 'Todos van a por el Tanque.')],
+        [h('arrollar', 'R', 'APISONADORA', 46, 'Corre en línea recta hasta la pared.'),
+         h('terremoto', 'R', 'TERREMOTO', 70, 'Devuelve a los fantasmas y ralentiza al equipo.'),
+         h('fortaleza', 'R', 'FORTALEZA', 90, 'Protege un radio de 5 casillas.')]
+      ],
+      soporte: [
+        [h('hielo', 'Q', 'DISPARO HELADO', 16, 'Congela al primer fantasma.'),
+         h('mina', 'Q', 'MINA', 20, 'Trampa que mata y deja escudo.'),
+         h('gancho', 'Q', 'GANCHO', 18, 'Vuelve azul a un fantasma en línea.'),
+         h('telarana', 'Q', 'TELARAÑA', 30, 'Zona que ralentiza a los fantasmas.')],
+        [h('inmunidad', 'W', 'INMUNIDAD', 24, 'No puede tocarte nada durante 3 s.'),
+         h('estela', 'W', 'ESTELA', 24, 'Acelera al equipo con un rastro.'),
+         h('puente', 'W', 'PUENTE', 32, 'El equipo atraviesa paredes durante 8 s.'),
+         h('cadena', 'W', 'CADENA', 28, 'Comparte puntos y absorbe un golpe.')],
+        [h('aliado', 'E', 'ESCUDO ALIADO', 32, 'Da escudo al compañero.'),
+         h('muro', 'E', 'MURO', 32, 'Pared que hace retroceder fantasmas.'),
+         h('relevo', 'E', 'RELEVO', 26, 'Teletransporta al compañero cercano.'),
+         h('faro', 'E', 'FARO', 30, 'Reduce la recarga de la R de un aliado.'),
+         h('sirena', 'E', 'SIRENA', 34, 'Atrae fantasmas a un punto.')],
+        [h('vida', 'R', 'VIDA EXTRA', 180, 'Da una vida al compañero que menos tiene.'),
+         h('resurreccion', 'R', 'RESURRECCIÓN', 180, 'Levanta un cadáver caducado.'),
+         h('campo', 'R', 'CAMPO', 150, 'Nadie del equipo muere durante 5 s.'),
+         h('hospital', 'R', 'HOSPITAL', 150, 'Los caídos vuelven durante 10 s.')]
+      ],
+      mago: [
+        [h('fuego', 'Q', 'BOLA DE FUEGO', 20, 'Mata al primer fantasma.'),
+         h('bola_guiada', 'Q', 'BOLA GUIADA', 22, 'No falla y da 150 puntos.'),
+         h('toque_arcano', 'Q', 'TOQUE ARCANO', 18, 'Vuelve azul a un fantasma cercano.'),
+         h('chispa', 'Q', 'CHISPA', 20, 'Aturde dos segundos.')],
+        [h('portal', 'W', 'PORTAL', 46, 'Abre un paso entre dos bocas.'),
+         h('clon', 'W', 'CLON', 30, 'Los fantasmas persiguen al doble.'),
+         h('totem', 'W', 'TÓTEM', 34, 'Torre que dispara automáticamente.')],
+        [h('runa', 'E', 'RUNA', 32, 'Trampa que mata en una casilla.'),
+         h('gravedad', 'E', 'GRAVEDAD', 32, 'Agrupa y detiene fantasmas.'),
+         h('niebla', 'E', 'NIEBLA', 30, 'Hace caminar al azar.')],
+        [h('tormenta', 'R', 'TORMENTA', 46, 'Tres rayos a distancia.'),
+         h('meteoro', 'R', 'METEORO', 60, 'Explosión señalada con aviso.'),
+         h('eclipse', 'R', 'ECLIPSE', 60, 'Ceguera y ralentización global.')]
+      ]
+    };
+    CFG.HAB.catalogoDe = function (rol) {
+      return CFG.HAB.CATALOGO[CFG.HAB.rol(rol)] || CFG.HAB.CATALOGO.asesino;
+    };
+    CFG.HAB.loadoutValido = function (rol, raw) {
+      var cat = CFG.HAB.catalogoDe(rol), ids = String(raw == null ? '' : raw).split(','), out = [];
+      for (var k = 0; k < 4; k++) {
+        var id = ids[k], fila = cat[k], ok = null, i;
+        for (i = 0; i < fila.length; i++) if (fila[i].id === id) { ok = id; break; }
+        out.push(ok || fila[0].id);
+      }
+      return out.join(',');
+    };
+  })();
   /* Un rol que no existe (una versión más nueva, un dato roto) es ASESINO */
   CFG.HAB.rol = function (id) {
     return CFG.HAB.ROLES.hasOwnProperty(id) ? id : 'asesino';

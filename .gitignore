@@ -1,6 +1,9 @@
 .playwright-mcp/
 *.local.png
 .claude/worktrees/
+node_modules/
+test-results/
+playwright-report/
 
 # secretos locales (nunca al repo)
 .env.local

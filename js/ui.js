@@ -104,6 +104,21 @@
     if (key === 'habRol1' || key === 'habRol2') {
       return CFG.HAB.ROL_IDS.indexOf(value) !== -1 ? value : def;
     }
+    if (key === 'habLoadout1' || key === 'habLoadout2') {
+      var idsCarga = String(value == null ? '' : value).split(','), outCarga = [];
+      for (var kc = 0; kc < 4; kc++) {
+        var idCarga = idsCarga[kc] || '';
+        var validoCarga = false;
+        for (var rc = 0; rc < CFG.HAB.ROL_IDS.length && !validoCarga; rc++) {
+          var filasCarga = CFG.HAB.catalogoDe(CFG.HAB.ROL_IDS[rc]);
+          for (var fc = 0; fc < filasCarga[kc].length; fc++) {
+            if (filasCarga[kc][fc].id === idCarga) { validoCarga = true; break; }
+          }
+        }
+        outCarga.push(validoCarga ? idCarga : CFG.HAB.ROLES.asesino[kc].id);
+      }
+      return outCarga.join(',');
+    }
     if (key === 'vsGhost2') {
       var g = parseInt(value, 10);
       return (g >= 0 && g < 4) ? g : -1;
@@ -6262,9 +6277,11 @@
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
-      var colors = [], names = [], skins = [], ghosts = [], looks = [], roles = [];
+      var colors = [], names = [], skins = [], ghosts = [], looks = [], roles = [], loadouts = [];
       for (var i = 0; i < order.length; i++) {
         roles.push(CFG.HAB.rol(order[i].r));
+        loadouts.push(CFG.HAB.loadoutValido(roles[i], order[i].h ||
+          CFG.HAB.ROLES[roles[i]].map(function (x) { return x.id; }).join(',')));
         colors.push(sanitizeSetting('pacColor', order[i].c, CFG.PLAYER_COLORS[i]));
         names.push(sanitizeNick(order[i].n) || ('J' + (i + 1)));
         skins.push(sanitizeSetting('skin1', order[i].k, 'clasico'));
@@ -6277,6 +6294,7 @@
         colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!hab,           // lo enciende quien manda, y vale para todos
         roles: roles,         // ...y cada uno con el rol que eligió en la sala
+        loadouts: loadouts,
         caza: !!caza,         // ídem: todos de fantasma contra la máquina
         superv: !!sv          // SUPERVIVENCIA: todos contra todos
       });
@@ -8211,6 +8229,7 @@
           colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
           hab: !!(d && d.hab),  // el mirón tiene que ver dientes y chispas
           roles: (d && d.rl) || null,
+          loadouts: (d && d.lo) || null,
           caza: !!(d && d.caza), // y el Pac-Man de la máquina, con su reloj
           superv: !!(d && d.sv)  // y la zona de SUPERVIVENCIA
         });
@@ -11911,7 +11930,8 @@
         self.hidePrompt();
         function go() {
           self.hideAll();
-          var opts = { players: jugadores, hab: true, roles: [roles[0], roles[1]] };
+          var opts = { players: jugadores, hab: true, roles: [roles[0], roles[1]],
+            loadouts: [cargas[0].join(','), cargas[1].join(',')] };
           if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
           window.PM.Game.newGame(opts);
         }
@@ -11930,6 +11950,26 @@
         }
       }
       var mirando = 0;          // de qué jugador son las cartas
+      var cargas = [
+        cargaDe(roles[0], s.habLoadout1),
+        cargaDe(roles[1], s.habLoadout2)
+      ];
+
+      function cargaDe(rol, raw) {
+        var cat = H.catalogoDe(rol), ids = String(raw || '').split(','), out = [];
+        for (var ci = 0; ci < 4; ci++) {
+          var elegido = null;
+          for (var cj = 0; cj < cat[ci].length; cj++) {
+            if (cat[ci][cj].id === ids[ci]) { elegido = ids[ci]; break; }
+          }
+          if (!elegido) {
+            var vieja = H.ROLES[rol][ci];
+            elegido = vieja ? vieja.id : cat[ci][0].id;
+          }
+          out.push(elegido);
+        }
+        return out;
+      }
 
       var dos = conFantasma
         ? ('J1 FLECHAS + ' + t2[0].join(' ') + '  ·  J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
@@ -11961,7 +12001,9 @@
                 var b = self.makeButton(info.name, function () {
                   roles[j] = id;
                   mirando = j;
+                  cargas[j] = cargaDe(id, cargas[j].join(','));
                   s['habRol' + (j + 1)] = id;
+                  s['habLoadout' + (j + 1)] = cargas[j].join(',');
                   saveSettings();
                   pintar();
                 });
@@ -11974,6 +12016,41 @@
             filas.appendChild(fila);
           });
           p.appendChild(filas);
+
+          var arm = document.createElement('div');
+          arm.className = 'hab-armamento';
+          p.appendChild(arm);
+
+          function pintarArmamento() {
+            arm.innerHTML = '';
+            var catArm = H.catalogoDe(roles[mirando]);
+            var tituloArm = document.createElement('div');
+            tituloArm.className = 'hab-armamento-titulo';
+            tituloArm.textContent = 'ARMAMENTO · ' + (mirando ? 'J2' : 'J1');
+            arm.appendChild(tituloArm);
+            for (var ak = 0; ak < 4; ak++) {
+              var filaArm = document.createElement('div');
+              filaArm.className = 'hab-armamento-fila';
+              var teclaArm = document.createElement('b');
+              teclaArm.textContent = ['Q', 'W', 'E', 'R'][ak];
+              filaArm.appendChild(teclaArm);
+              for (var ai = 0; ai < catArm[ak].length; ai++) {
+                (function (slot, hab) {
+                  var botonArm = self.makeButton(hab.name, function () {
+                    cargas[mirando][slot] = hab.id;
+                    s['habLoadout' + (mirando + 1)] = cargas[mirando].join(',');
+                    saveSettings();
+                    pintar();
+                  });
+                  botonArm.classList.add('hab-arma-opcion');
+                  botonArm.classList.toggle('active', cargas[mirando][slot] === hab.id);
+                  botonArm.setAttribute('aria-label', ['Q', 'W', 'E', 'R'][slot] + ' ' + hab.name);
+                  filaArm.appendChild(botonArm);
+                })(ak, catArm[ak][ai]);
+              }
+              arm.appendChild(filaArm);
+            }
+          }
 
           self.briefingModo(p, {
             lema: ' ',
@@ -12001,7 +12078,13 @@
                 chips[j][id].disabled = (roles[1 - j] === id && !conFantasma);
               }
             });
-            var rol = roles[mirando], info = H.ROL_INFO[rol], lista = H.ROLES[rol];
+            var rol = roles[mirando], info = H.ROL_INFO[rol], cat = H.catalogoDe(rol), lista = [];
+            for (var lk = 0; lk < 4; lk++) {
+              for (var li = 0; li < cat[lk].length; li++) {
+                if (cat[lk][li].id === cargas[mirando][lk]) { lista.push(cat[lk][li]); break; }
+              }
+              if (!lista[lk]) lista.push(cat[lk][0]);
+            }
             p.style.setProperty('--brief', info.color);
             lema.textContent = (mirando ? 'J2 · ' : 'J1 · ') + info.name + ' — ' + info.lema;
             /* LA PASIVA va en su propio renglón y no dentro del lema: es lo
@@ -12014,9 +12097,10 @@
               var h = lista[k];
               cartas[k].querySelector('.brief-tecla').textContent = h.key;
               cartas[k].querySelector('.brief-nombre').textContent = h.largo || h.name;
-              cartas[k].querySelector('.brief-desc').textContent = info.desc[k];
-              cartas[k].querySelector('.brief-recarga').textContent = 'RECARGA ' + H.segs(k, rol) + ' S';
+              cartas[k].querySelector('.brief-desc').textContent = h.desc || info.desc[k];
+              cartas[k].querySelector('.brief-recarga').textContent = 'RECARGA ' + Math.round(h.cd / 60) + ' S';
             }
+            pintarArmamento();
             /* A uno, con otro rol, la partida es de PRÁCTICA: se dice aquí,
              * antes de jugar, y no en el GAME OVER cuando ya no tiene arreglo */
             /* Siempre hay renglón: si apareciera y desapareciera, la pantalla

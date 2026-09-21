@@ -116,6 +116,7 @@
         g: this.ghostPick,
         // el rol de DESATADO que tiene elegido (lo reparte el líder)
         r: CFG.HAB.rol(s.habRol1),
+        h: CFG.HAB.loadoutValido(CFG.HAB.rol(s.habRol1), s.habLoadout1),
         t: now()
       };
     },
@@ -548,6 +549,7 @@
       m.x = (typeof d.x === 'string') ? d.x : '';
       m.g = this.claim(sid, d.g);      // PAC-MAN VS.: el líder reparte
       m.r = this.claimRol(sid, d.r);   // DESATADO: un solo Soporte
+      m.h = CFG.HAB.loadoutValido(m.r, d.h);
       m.l = d.l ? 1 : 0;               // ¿ha dicho que está listo?
       m.t = now();
       this.sendRoster();
@@ -613,7 +615,8 @@
         tomados[rol] = 1;
         out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico',
                    a: m.a || '', x: m.x || '',
-                   g: (m.g >= 0 && m.g < 4) ? m.g : -1, r: rol });
+                   g: (m.g >= 0 && m.g < 4) ? m.g : -1, r: rol,
+                   h: CFG.HAB.loadoutValido(rol, m.h || CFG.HAB.ROLES[rol].map(function (x) { return x.id; }).join(',')) });
       }
       return out;
     },

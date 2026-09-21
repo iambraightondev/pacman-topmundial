@@ -10886,6 +10886,79 @@
   });
 
   // ---------------------------------------------------------------
+  // Catálogo DESATADO
+  // ---------------------------------------------------------------
+  test('CATÁLOGO: las opciones descartadas no vuelven y las nuevas ocupan su ranura', function () {
+    var C = CFG.HAB.CATALOGO;
+    ok(!JSON.stringify(C).match(/intercambio|destierro|ancla|estaca|bastion/i), 'no hay habilidades descartadas');
+    eq(C.soporte[0].filter(function (h) { return h.id === 'telarana'; }).length, 1, 'telaraña es Q');
+    eq(C.soporte[1].filter(function (h) { return h.id === 'puente'; }).length, 1, 'puente es W');
+    eq(C.soporte[2].filter(function (h) { return h.id === 'relevo'; }).length, 1, 'relevo es E');
+    eq(C.tanque[1].filter(function (h) { return h.id === 'yunque'; }).length, 1, 'yunque es W');
+    eq(C.tanque[0].filter(function (h) { return h.id === 'rebote'; }).length, 1, 'rebote es Q');
+    eq(C.mago[0].filter(function (h) { return h.id === 'chispa'; }).length, 1, 'chispa es Q');
+    eq(C.asesino[3].filter(function (h) { return h.id === 'ejecucion'; }).length, 1, 'ejecución es R');
+  });
+
+  test('CATÁLOGO: el loadout conserva una elección válida por cada tecla', function () {
+    var H = window.PM.Hab, carga = H.normalizarCarga('soporte', 'telarana,puente,relevo,hospital');
+    eq(carga.map(function (h) { return h.id; }).join(','), 'telarana,puente,relevo,hospital', 'loadout completo');
+    eq(H.normalizarCarga('tanque', 'ancla,estaca,provocar,bastion').map(function (h) { return h.id; }).join(','), 'pisoton,escudo,provocar,arrollar', 'fallback antiguo por rol');
+  });
+
+  test('CATÁLOGO: Relevo teletransporta al compañero cercano sin intercambiarlo', function () {
+    var H = window.PM.Hab;
+    partida(2);
+    G.hab = true; H.empezar(true, 2, ['soporte', 'asesino'], ['mordisco,turbo,relevo,vida', 'mordisco,turbo,flash,grito']);
+    G.roles = ['soporte', 'asesino'];
+    G.pacs[0].x = 10 * CFG.TILE + 4; G.pacs[0].y = 5 * CFG.TILE + 4;
+    G.pacs[1].x = 12 * CFG.TILE + 4; G.pacs[1].y = 5 * CFG.TILE + 4;
+    var antes = G.pacs[0].x;
+    ok(H.relevo(G, 0), 'sale relevo');
+    eq(G.pacs[1].x, G.pacs[0].x, 'el compañero llega a la posición del soporte');
+    eq(G.pacs[0].x, antes, 'el soporte no se mueve');
+  });
+
+  test('CATÁLOGO: Chispa aturde 2 s y Terremoto ralentiza al equipo', function () {
+    var H = window.PM.Hab;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['mago'], ['fuego,portal,runa,chispa']); G.roles = ['mago'];
+    G.pacs[0].x = 13 * CFG.TILE + 4; G.pacs[0].y = 20 * CFG.TILE + 4;
+    G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
+    ok(H.chispa(G, 0), 'sale chispa'); eq(H.aturdido[0], 120, 'aturdimiento de 2 segundos');
+    G.roles[0] = 'tanque'; H.empezar(true, 1, ['tanque'], ['pisoton,escudo,provocar,terremoto']); G.roles = ['tanque'];
+    G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
+    ok(H.terremoto(G, 0), 'sale terremoto'); eq(H.terremotoTicks, CFG.HAB.TERREMOTO_TICKS, 'dura seis segundos');
+    eq(H.multVel(0), CFG.HAB.TERREMOTO_SLOW, 'ralentiza también al tanque');
+  });
+
+  test('CATÁLOGO: Bola Guiada no falla y puntúa exactamente 150', function () {
+    var H = window.PM.Hab;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['mago'], ['bola_guiada,portal,runa,tormenta']); G.roles = ['mago'];
+    G.pacs[0].x = 13 * CFG.TILE + 4; G.pacs[0].y = 20 * CFG.TILE + 4;
+    G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
+    var base = G.score;
+    ok(H.bolaGuiada(G, 0), 'sale aunque el blanco no esté perfectamente alineado');
+    eq(G.score - base, 150, 'premio fijo');
+  });
+
+  test('CATÁLOGO: Meteoro fija el aviso en la dirección de la última flecha', function () {
+    var H = window.PM.Hab;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['mago'], ['fuego,portal,runa,meteoro']); G.roles = ['mago'];
+    G.pacs[0].x = 13 * CFG.TILE + 4; G.pacs[0].y = 20 * CFG.TILE + 4;
+    var sale = false;
+    for (var d = 0; d < 4; d++) {
+      G.pacs[0].nextDir = d;
+      if (H.casillaAdelante(G, 0, 6, d)) { sale = H.meteoro(G, 0); break; }
+    }
+    ok(sale, 'señala el meteoro');
+    ok(H.st[0].meteoro, 'hay una casilla objetivo válida');
+    eq(H.st[0].meteoro.t, CFG.HAB.METEORO_AVISO, 'aviso antes de explotar');
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

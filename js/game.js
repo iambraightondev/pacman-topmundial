@@ -538,6 +538,7 @@
       this.netNames = opts.names || null;
       this.netSkins = opts.skins || null;
       this.netLooks = opts.looks || null;
+      this.loadouts = opts.loadouts || null;
       this.confetiTick = [];         // tick en que cada jugador se comió un fantasma
       // lo ganado de la TIENDA se cuenta como diferencia (partida + DAILY)
       this.monedasAntes = window.PM.Tienda ? window.PM.Tienda.ganadas() : 0;
@@ -585,7 +586,7 @@
       /* A uno y con otro rol, PRÁCTICA: da experiencia y logros, pero no toca
        * récords, top mundial ni maestrías. En equipo sí cuenta. */
       this.practica = this.hab && this.playerCount === 1 && this.roles[0] !== 'asesino';
-      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount, this.roles);
+      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount, this.roles, this.loadouts);
       /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
        * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
       this.caza = !!opts.caza && !this.hab && !!window.PM.Caza;
@@ -924,6 +925,7 @@
       this.stopIntro();
       this.mazeId = null;
       this.hab = false;
+      this.loadouts = null;
       this.caza = false;
       this.cazaTicks = 0;
       this.superv = null;
@@ -1016,6 +1018,7 @@
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
         if (p.out || p.dying) continue;   // a un muerto no se le persigue
+        if (this.hab && window.PM.Hab && window.PM.Hab.oculto && window.PM.Hab.oculto(i)) continue;
         // ni al Mago en la otra dimensión: para ellos no está
         if (this.hab && window.PM.Hab && window.PM.Hab.enDimension(i)) continue;
         var dx = p.tileX() - gx, dy = p.tileY() - gy;
@@ -1264,7 +1267,10 @@
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
           if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
-          if (g.frightened) {
+          if ((g.frightened && !(this.hab && window.PM.Hab &&
+              window.PM.Hab.caceriaQuien && window.PM.Hab.caceriaQuien[g.id] >= 0 &&
+              window.PM.Hab.caceriaQuien[g.id] !== i)) ||
+              (this.hab && window.PM.Hab && window.PM.Hab.puedeComer(this, g.id, i))) {
             if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
@@ -1679,6 +1685,21 @@
       var i = who || 0;
       var p = this.pacs[i];
       if (!p || p.out || p.dying) return;
+      /* HOSPITAL: la primera caída durante la ventana se convierte en una
+       * reanimación inmediata. Solo la autoridad local puede consumirlo. */
+      if (this.hab && window.PM.Hab && this.isLocalAuth(i)) {
+        for (var hi = 0; hi < window.PM.Hab.st.length; hi++) {
+          var hs = window.PM.Hab.st[hi];
+          if (hs && hs.hospital > 0) {
+            hs.hospital = 0;
+            p.safeTicks = CFG.REVIVIR.ESCUDO_TICKS;
+            p.pauseTicks = 0;
+            this.addPopup(p.x, p.y, 'HOSPITAL', 60);
+            this.hostEvt({ t: 'hospital', w: i, by: hi });
+            return;
+          }
+        }
+      }
       var last = !this.anyPlaying(i);
       // se acabó la racha de niveles limpios (solo cuenta la muerte propia)
       if (!this.netRole || i === this.localIdx) this.limpiosSeguidos = 0;
@@ -3759,6 +3780,9 @@
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
         hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
         rl: this.roles.slice(),     // ...y con qué rol juega cada uno
+        lo: this.loadouts ? this.loadouts.map(function (x) {
+          return x instanceof Array ? x.map(function (h) { return h.id || h; }).join(',') : x;
+        }) : null,
         caza: !!this.caza,          // CACERÍA: sin superpastillas y con bot
         sv: !!this.superv,          // SUPERVIVENCIA
         cfg: {

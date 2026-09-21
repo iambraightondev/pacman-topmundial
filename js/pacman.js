@@ -152,14 +152,15 @@
   function centerOf(v) { return Math.floor(v / T) * T + T / 2; }
 
   /* ¿Puede avanzar desde la casilla (cx,cy) en la dirección d? */
-  function canGo(cx, cy, d) {
+  function canGo(cx, cy, d, owner) {
     var v = CFG.DIR_V[d];
     var nx = cx + v.x, ny = cy + v.y;
     if (nx < 0 || nx >= CFG.COLS) {
       if (cy === CFG.TUNNEL_ROW) nx = CFG.wrapCol(nx);   // túnel: envolver
       else return false;
     }
-    return CFG.isOpen(nx, ny, false);
+    if (CFG.isOpen(nx, ny, false)) return true;
+    return !!(window.PM.Hab && window.PM.Hab.puenteActivo && window.PM.Hab.puenteActivo(owner));
   }
 
   Pacman.prototype.setDesiredDir = function (d) {
@@ -189,7 +190,7 @@
         // marcha atrás: siempre permitida al instante
         this.dir = nd;
         d = nd;
-      } else if (canGo(cx, cy, nd)) {
+      } else if (canGo(cx, cy, nd, this.id)) {
         // giro perpendicular: legal en el centro; anticipado hasta 4 px antes
         var axisPos = (d === CFG.DIR.LEFT || d === CFG.DIR.RIGHT) ? this.x : this.y;
         var axisCtr = (d === CFG.DIR.LEFT || d === CFG.DIR.RIGHT) ? ccx : ccy;
@@ -209,7 +210,7 @@
     // --- Avance ---
     var vv = CFG.DIR_V[d];
     var blocked = false;
-    if (!canGo(cx, cy, d)) {
+    if (!canGo(cx, cy, d, this.id)) {
       // no cruzar el centro de la casilla hacia un muro
       var pos = (d === CFG.DIR.LEFT || d === CFG.DIR.RIGHT) ? this.x : this.y;
       var ctr = (d === CFG.DIR.LEFT || d === CFG.DIR.RIGHT) ? ccx : ccy;

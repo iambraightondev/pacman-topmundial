@@ -6055,6 +6055,16 @@ body { font-size-adjust: 0.56; }
 .hab-b.activa { color: #000; background: var(--hb); border-color: var(--hb); }
 .hab-mini-fill { background: color-mix(in srgb, var(--hb) 22%, transparent); }
 .hab-mini.listo { color: var(--hb); border-color: color-mix(in srgb, var(--hb) 75%, transparent); }
+
+/* Selector de armamento del briefing de DESATADO. Cada fila es una ranura y
+   cada botón una alternativa del catálogo; se mantiene compacto porque el
+   mismo panel también se usa en móvil. */
+.hab-armamento { width: min(96vw, 1040px); margin: 12px auto 4px; display: grid; gap: 5px; }
+.hab-armamento-titulo { color: var(--brief, #ff66cc); font-size: 11px; letter-spacing: 2px; text-align: center; }
+.hab-armamento-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 5px; }
+.hab-armamento-fila > b { width: 22px; color: var(--brief, #ff66cc); font-size: 13px; }
+.hab-arma-opcion { min-height: 25px; padding: 3px 7px; border: 1px solid rgba(255,255,255,.22); background: rgba(0,0,0,.4); color: #d6d6f0; font: inherit; font-size: 9px; letter-spacing: .5px; cursor: pointer; }
+.hab-arma-opcion.active { color: #000; background: var(--brief, #ff66cc); border-color: var(--brief, #ff66cc); }
 @media (max-width: 480px) {
   .hab-b { width: 40px; min-width: 40px; padding: 0; }
 }

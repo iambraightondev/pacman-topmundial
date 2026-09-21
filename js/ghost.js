@@ -221,6 +221,15 @@
       return this.humanChoice(candidates);
     }
 
+    /* ECLIPSE, NIEBLA y GRAVEDAD rompen la lectura normal del objetivo: el
+     * fantasma sigue avanzando, pero elige una salida legal pseudoaleatoria
+     * en vez de perseguir una posición conocida. */
+    if (game.hab && window.PM.Hab && window.PM.Hab.ciegoDe && window.PM.Hab.ciegoDe(this.id)) {
+      var cegado = game.rndDir ? game.rndDir() : Math.floor(Math.random() * 4);
+      if (candidates.indexOf(cegado) !== -1) return cegado;
+      return candidates[0];
+    }
+
     /* DESATADO · PROVOCAR (Tanque): manda sobre TODO lo demás. Va antes que
      * el azar de los azules y antes del PISOTÓN a propósito — es la jugada
      * con la que el Tanque se ofrece para salvar al equipo, y si un

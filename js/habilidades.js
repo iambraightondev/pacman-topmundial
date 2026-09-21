@@ -127,7 +127,32 @@
       mantT: 0,
       /* PORTAL (Mago): ticks que le quedan en la OTRA DIMENSIÓN (0: está en
        * la de todos). Mientras dure, nada lo toca y él no come. */
-      dimension: 0
+      dimension: 0,
+      /* ---------- estado del catálogo ---------- */
+      bomba: null,          // { c, r, t }
+      sombra: 0,
+      frenesi: 0,
+      frenesiMult: 1,
+      carroña: 0,
+      marca: 0,
+      ganchoInv: 0,
+      caceria: 0,
+      estela: 0,
+      puente: 0,
+      cadena: 0,
+      cadenaCon: -1,
+      faro: null,
+      muro: null,
+      campo: 0,
+      hospital: 0,
+      yunque: 0,
+      pielPiedra: 0,
+      rebote: 0,
+      fortaleza: 0,
+      terremoto: 0,
+      meteoro: null,
+      eclipse: 0,
+      totem: null
     };
   }
 
@@ -194,7 +219,17 @@
     embestida: 'playCharge', acecho: 'playStealth',
     provocar: 'playShout', escudo: 'playStealth', pisoton: 'playCharge', arrollar: 'playCharge',
     hielo: 'playTurbo', inmunidad: 'playTurbo', aliado: 'playStealth', vida: 'playExtraLife',
-    fuego: 'playFlash', portal: 'playStealth', runa: 'playBiteMiss', tormenta: 'playShout'
+    fuego: 'playFlash', portal: 'playStealth', runa: 'playBiteMiss', tormenta: 'playShout',
+    shuriken: 'playFlash', bomba: 'playShout', sombra: 'playStealth', frenesi: 'playTurbo',
+    carrona: 'playExtraLife', marca: 'playShout', gancho_inverso: 'playCharge', caceria: 'playShout',
+    misil: 'playFlash', ejecucion: 'playShout', empujon: 'playCharge', grito_guerra: 'playShout',
+    yunque: 'playStealth', piel_piedra: 'playStealth', rebote: 'playCharge', terremoto: 'playShout',
+    fortaleza: 'playStealth', mina: 'playBiteMiss', gancho: 'playCharge', telarana: 'playBiteMiss',
+    estela: 'playTurbo', puente: 'playFlash', cadena: 'playStealth', muro: 'playCharge',
+    relevo: 'playFlash', faro: 'playShout', sirena: 'playShout', campo: 'playStealth',
+    resurreccion: 'playExtraLife', hospital: 'playExtraLife', bola_guiada: 'playFlash',
+    toque_arcano: 'playBiteMiss', chispa: 'playCharge', clon: 'playStealth', totem: 'playShout',
+    gravedad: 'playCharge', niebla: 'playStealth', meteoro: 'playShout', eclipse: 'playShout'
   };
 
   function sonidoDe(G, idx, k) {
@@ -212,13 +247,17 @@
 
     /* ---------- ciclo de vida ---------- */
     /* Desde Game.newGame. n = cuántos jugadores hay en la mesa. */
-    empezar: function (on, n, roles) {
+    empezar: function (on, n, roles, loadouts) {
       this.on = !!on;
       this.st = [];
       this.roles = [];
+      this.loadouts = [];
       for (var i = 0; i < (n || 0); i++) {
         this.st.push(nuevoEstado());
         this.roles.push(H.rol(roles && roles[i]));
+        var rol = this.roles[i];
+        var crudo = loadouts && loadouts[i];
+        this.loadouts.push(this.normalizarCarga(rol, crudo));
         /* el TANQUE empieza con su CORAZA puesta: es una pasiva, tiene que
          * estar desde el primer segundo y no al primer tick de reloj */
         if (this.roles[i] === 'tanque') this.st[i].corPas = H.CORAZA_DURA;
@@ -232,6 +271,17 @@
       this.hielo = [0, 0, 0, 0];
       this.huye = [0, 0, 0, 0];
       this.huyeQuien = [-1, -1, -1, -1];
+      this.lento = [0, 0, 0, 0];
+      this.lentoMult = [1, 1, 1, 1];
+      this.aturdido = [0, 0, 0, 0];
+      this.ciego = [0, 0, 0, 0];
+      this.azulCatalogo = [0, 0, 0, 0];
+      this.azulCatTicks = [0, 0, 0, 0];
+      this.caceriaQuien = [-1, -1, -1, -1];
+      this.marcaGhost = [-1, -1, -1, -1];
+      this.joyas = [];
+      this.terremotoTicks = 0;
+      this.eclipseTicks = 0;
       this.balas = [];
       this.portales = [];
       /* ESPACIO apretado, por jugador: sin él no se entra en un portal.
@@ -269,9 +319,15 @@
       return { on: this.on, reintento: this.reintento, st: st,
         /* la mesa de los roles: objetos pequeños, se copian enteros */
         roles: (this.roles || []).slice(),
+        loadouts: (this.loadouts || []).map(function (x) { return x ? x.slice() : null; }),
         mesa: JSON.parse(JSON.stringify({
           hielo: this.hielo, huye: this.huye, huyeQuien: this.huyeQuien,
-          balas: this.balas, portales: this.portales, runas: this.runas, placas: this.placas
+          lento: this.lento, lentoMult: this.lentoMult, aturdido: this.aturdido,
+          ciego: this.ciego, azulCatalogo: this.azulCatalogo,
+          azulCatTicks: this.azulCatTicks, terremotoTicks: this.terremotoTicks, eclipseTicks: this.eclipseTicks,
+          caceriaQuien: this.caceriaQuien, marcaGhost: this.marcaGhost,
+          joyas: this.joyas, balas: this.balas, portales: this.portales,
+          runas: this.runas, placas: this.placas
         })) };
     },
 
@@ -290,12 +346,26 @@
         this.st.push(o);
       }
       this.roles = f.roles ? f.roles.slice() : [];
+      this.loadouts = f.loadouts ? f.loadouts.map(function (x, i) {
+        return this.normalizarCarga(this.roles[i], x);
+      }, this) : [];
       this.limpiarMesa();
       if (f.mesa) {
         var m = JSON.parse(JSON.stringify(f.mesa));
         this.hielo = m.hielo || this.hielo;
         this.huye = m.huye || this.huye;
         this.huyeQuien = m.huyeQuien || this.huyeQuien;
+        this.lento = m.lento || this.lento;
+        this.lentoMult = m.lentoMult || this.lentoMult;
+        this.aturdido = m.aturdido || this.aturdido;
+        this.ciego = m.ciego || this.ciego;
+        this.azulCatalogo = m.azulCatalogo || this.azulCatalogo;
+        this.azulCatTicks = m.azulCatTicks || this.azulCatTicks;
+        this.terremotoTicks = m.terremotoTicks || 0;
+        this.eclipseTicks = m.eclipseTicks || 0;
+        this.caceriaQuien = m.caceriaQuien || this.caceriaQuien;
+        this.marcaGhost = m.marcaGhost || this.marcaGhost;
+        this.joyas = m.joyas || [];
         this.balas = m.balas || [];
         this.portales = m.portales || this.portales;
         this.runas = m.runas || this.runas;
@@ -363,9 +433,26 @@
      * Se resuelve MIRANDO EL REPARTO cada vez y no guardándolo al empezar,
      * porque Versus.setup() corre DESPUÉS de Hab.empezar() en Game.newGame:
      * cuando se montan las recargas todavía no se sabe quién lleva qué. */
+    normalizarCarga: function (rol, raw) {
+      var cat = H.catalogoDe(rol), ids = raw instanceof Array ? raw : String(raw || '').split(','), out = [];
+      for (var k = 0; k < 4; k++) {
+        var id = ids[k], fila = cat[k], ok = null;
+        for (var i = 0; i < fila.length; i++) if (fila[i].id === id) { ok = fila[i]; break; }
+        if (!ok) {
+          /* Una partida antigua no trae carga: conserva el kit fijo de antes
+           * si sigue existiendo; si no, cae en la primera opción del catálogo. */
+          var vieja = H.ROLES[H.rol(rol)][k];
+          for (var j = 0; j < fila.length; j++) if (vieja && fila[j].id === vieja.id) { ok = fila[j]; break; }
+        }
+        out.push(ok || fila[0]);
+      }
+      return out;
+    },
+
     listaDe: function (G, idx) {
       if (G && G.vsGhostOf && G.vsGhostOf(idx) >= 0) return H.LIST_G;
-      return H.ROLES[this.rolDe(idx)];
+      var carga = this.loadouts && this.loadouts[idx];
+      return carga && carga.length === 4 ? carga : H.ROLES[this.rolDe(idx)];
     },
 
     /* Cuántos poderes tiene ese jugador (2 llevando fantasma, 4 si no) */
@@ -424,6 +511,17 @@
       return !!s && s.acecho > 0;
     },
 
+    /* Un fantasma puede quedar azul por una habilidad aunque no haya
+     * energizante activo. Cacería añade una restricción: solo el Asesino que
+     * la lanzó puede cobrar esas muertes. */
+    puedeComer: function (G, gid, who) {
+      if (!this.on) return false;
+      var caz = this.caceriaQuien && this.caceriaQuien[gid];
+      if (caz >= 0 && caz !== (who | 0)) return false;
+      if (this.azulCatalogo && this.azulCatalogo[gid]) return true;
+      return !!(G && G.frightTicks > 0);
+    },
+
     /* Multiplicador de velocidad del fantasma `gid` (1 si no hay embestida).
      * Lo consulta Ghost.speedPx, que es por donde pasan TODOS los fantasmas:
      * si el fantasma no lo lleva una persona, aquí no hay nada que aplicar. */
@@ -433,6 +531,10 @@
       /* PISOTÓN (Tanque): mientras huye va más lento, que es media habilidad:
        * si huyera a su velocidad, alejarlos no daría ni un respiro. */
       if (this.huye && this.huye[gid] > 0) m *= H.PISOTON_LENTO;
+      if (this.lento && this.lento[gid] > 0) m *= this.lentoMult[gid] || 1;
+      if (this.aturdido && this.aturdido[gid] > 0) return 0;
+      if (this.ciego && this.ciego[gid] > 0) m *= 0.6;
+      if (this.eclipseTicks > 0) m *= 0.5;
       if (!G || !G.vsPlayerOf) return m;
       var quien = G.vsPlayerOf(gid);
       return (quien >= 0 && this.conCarga(quien)) ? m * H.CHARGE_MULT : m;
@@ -748,6 +850,7 @@
       var deRed = (G.netRole === 'guest');
       var ok;
       this.sinGasto = false;
+      this.catalogoReset = false;
       if (mant) {
         switch (this.idDe(G, idx, k)) {
           case 'hielo':  ok = deRed ? this.puedePlaca(G, idx) : this.placa(G, idx); break;
@@ -781,10 +884,50 @@
         case 'portal':    ok = this.portal(G, idx); break;
         case 'runa':      ok = deRed ? this.puedeRuna(G, idx) : this.runa(G, idx); break;
         case 'tormenta':  ok = this.tormenta(G, idx); break;
+        case 'shuriken': ok = this.shuriken(G, idx); break;
+        case 'bomba': ok = this.bomba(G, idx); break;
+        case 'sombra': ok = this.sombra(G, idx); break;
+        case 'frenesi': ok = this.frenesi(G, idx); break;
+        case 'carrona': ok = this.carrona(G, idx); break;
+        case 'marca': ok = this.marca(G, idx); break;
+        case 'gancho_inverso': ok = this.ganchoInverso(G, idx); break;
+        case 'caceria': ok = this.caceria(G, idx); break;
+        case 'misil': ok = this.misil(G, idx); break;
+        case 'ejecucion': ok = this.ejecucion(G, idx); break;
+        case 'empujon': ok = this.empujon(G, idx); break;
+        case 'grito_guerra': ok = this.gritoGuerra(G, idx); break;
+        case 'yunque': ok = this.yunque(G, idx); break;
+        case 'piel_piedra': ok = this.pielPiedra(G, idx); break;
+        case 'rebote': ok = this.rebote(G, idx); break;
+        case 'terremoto': ok = this.terremoto(G, idx); break;
+        case 'fortaleza': ok = this.fortaleza(G, idx); break;
+        case 'mina': ok = this.mina(G, idx); break;
+        case 'gancho': ok = this.gancho(G, idx); break;
+        case 'telarana': ok = this.telarana(G, idx); break;
+        case 'estela': ok = this.estela(G, idx); break;
+        case 'puente': ok = this.puente(G, idx); break;
+        case 'cadena': ok = this.cadena(G, idx); break;
+        case 'muro': ok = this.muro(G, idx); break;
+        case 'relevo': ok = this.relevo(G, idx); break;
+        case 'faro': ok = this.faro(G, idx); break;
+        case 'sirena': ok = this.sirena(G, idx); break;
+        case 'campo': ok = this.campo(G, idx); break;
+        case 'resurreccion': ok = this.resurreccion(G, idx); break;
+        case 'hospital': ok = this.hospital(G, idx); break;
+        case 'bola_guiada': ok = this.bolaGuiada(G, idx); break;
+        case 'toque_arcano': ok = this.toqueArcano(G, idx); break;
+        case 'chispa': ok = this.chispa(G, idx); break;
+        case 'clon': ok = this.clon(G, idx); break;
+        case 'totem': ok = this.totem(G, idx); break;
+        case 'gravedad': ok = this.gravedad(G, idx); break;
+        case 'niebla': ok = this.niebla(G, idx); break;
+        case 'meteoro': ok = this.meteoro(G, idx); break;
+        case 'eclipse': ok = this.eclipse(G, idx); break;
         default:          ok = false;
       }
       if (!ok) return false;
       if (!this.sinGasto) this.gastar(G, idx, k);
+      if (this.catalogoReset) this.estado(idx).cd[k] = 0;
       this.avisar(G, idx, k);
       return true;
     },
@@ -855,6 +998,7 @@
        * el alcance de verdad lo comprobó él en su pantalla. */
       var s = this.estado(who);
       d = d || {};
+      this.catalogoReset = false;
       /* la versión de MANTENER PULSADO: la placa y los escudos los pone él */
       if (d.m) {
         switch (this.idDe(G, who, k)) {
@@ -879,6 +1023,45 @@
         case 'portal':   ok = this.portal(G, who, d); break;
         case 'runa':     ok = this.runa(G, who, d); break;
         case 'tormenta': ok = this.tormenta(G, who); break;
+        case 'shuriken': ok = this.shuriken(G, who, d); break;
+        case 'bomba': ok = this.bomba(G, who, d); break;
+        case 'sombra': ok = this.sombra(G, who); break;
+        case 'frenesi': ok = this.frenesi(G, who); break;
+        case 'carrona': ok = this.carrona(G, who); break;
+        case 'marca': ok = this.marca(G, who); break;
+        case 'gancho_inverso': ok = this.ganchoInverso(G, who, d); break;
+        case 'caceria': ok = this.caceria(G, who); break;
+        case 'misil': ok = this.misil(G, who); break;
+        case 'ejecucion': ok = this.ejecucion(G, who); break;
+        case 'empujon': ok = this.empujon(G, who); break;
+        case 'grito_guerra': ok = this.gritoGuerra(G, who); break;
+        case 'yunque': ok = this.yunque(G, who); break;
+        case 'piel_piedra': ok = this.pielPiedra(G, who); break;
+        case 'rebote': ok = this.rebote(G, who); break;
+        case 'terremoto': ok = this.terremoto(G, who); break;
+        case 'fortaleza': ok = this.fortaleza(G, who); break;
+        case 'mina': ok = this.mina(G, who, d); break;
+        case 'gancho': ok = this.gancho(G, who, d); break;
+        case 'telarana': ok = this.telarana(G, who); break;
+        case 'estela': ok = this.estela(G, who); break;
+        case 'puente': ok = this.puente(G, who); break;
+        case 'cadena': ok = this.cadena(G, who); break;
+        case 'muro': ok = this.muro(G, who, d); break;
+        case 'relevo': ok = this.relevo(G, who); break;
+        case 'faro': ok = this.faro(G, who); break;
+        case 'sirena': ok = this.sirena(G, who, d); break;
+        case 'campo': ok = this.campo(G, who); break;
+        case 'resurreccion': ok = this.resurreccion(G, who); break;
+        case 'hospital': ok = this.hospital(G, who); break;
+        case 'bola_guiada': ok = this.bolaGuiada(G, who, d); break;
+        case 'toque_arcano': ok = this.toqueArcano(G, who); break;
+        case 'chispa': ok = this.chispa(G, who); break;
+        case 'clon': ok = this.clon(G, who); break;
+        case 'totem': ok = this.totem(G, who); break;
+        case 'gravedad': ok = this.gravedad(G, who); break;
+        case 'niebla': ok = this.niebla(G, who); break;
+        case 'meteoro': ok = this.meteoro(G, who, d); break;
+        case 'eclipse': ok = this.eclipse(G, who); break;
         default:
           /* Lo que solo le toca a él (TURBO, FLASH, ESCUDO, INMUNIDAD, la
            * carrera de ARROLLAR) ya se lo ha aplicado en su máquina; aquí se
@@ -905,6 +1088,7 @@
       }
       if (!ok) return;
       if (!this.sinGasto) this.gastar(G, who, k);
+      if (this.catalogoReset) this.estado(who).cd[k] = 0;
       G.hostEvt({ t: 'hab', w: who, k: k, ng: this.sinGasto ? 1 : 0 });
     },
 
@@ -1011,6 +1195,7 @@
         var g = G.ghosts[i];
         if (!g) continue;
         if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
+        if (this.caceriaQuien[g.id] >= 0 && this.caceriaQuien[g.id] !== idx) continue;
         var dx = distX(g.x, p.x);
         var dy = Math.abs(g.y - p.y);
         if (dx > alcance || dy > alcance) continue;
@@ -1122,7 +1307,26 @@
      * Lo consulta Game.pacSpeedPx. */
     multVel: function (idx) {
       if (this.arrollando(idx)) return H.APISONADORA_MULT;
-      return this.conTurbo(idx) ? H.TURBO_MULT : 1;
+      var s = this.estado(idx), m = this.conTurbo(idx) ? H.TURBO_MULT : 1;
+      if (s && s.frenesi > 0) m *= s.frenesiMult || 1;
+      if (s && s.pielPiedra > 0) m *= 0.8;
+      if (s && s.estela > 0) m *= H.ESTELA_MULT;
+      if (this.terremotoTicks > 0) m *= H.TERREMOTO_SLOW;
+      return m;
+    },
+
+    puenteActivo: function (idx) {
+      var s = this.estado(idx);
+      return !!(s && s.puente > 0);
+    },
+
+    oculto: function (idx) {
+      var s = this.estado(idx);
+      return !!(s && s.sombra > 0);
+    },
+
+    ciegoDe: function (gid) {
+      return !!(this.eclipseTicks > 0 || (this.ciego && this.ciego[gid] > 0));
     },
 
     /* =========================================================
@@ -1277,9 +1481,15 @@
      * nadie, vuelven a su sitio. */
     objetivo: function (G, g) {
       if (!this.on || g.mode !== 'normal') return null;
+      if (this.ciego && this.ciego[g.id] > 0) return null;
+      for (var cidx = 0; cidx < this.st.length; cidx++) {
+        var cs = this.st[cidx];
+        if (cs.clon && this.vivo(G, cidx)) return { x: cs.clon.c, y: cs.clon.r };
+        if (cs.sirena) return { x: cs.sirena.c, y: cs.sirena.r };
+      }
       var mejor = null, mejorD = Infinity;
       for (var i = 0; i < this.st.length; i++) {
-        if (!(this.st[i].provoca > 0) || !this.vivo(G, i)) continue;
+        if (!(this.st[i].provoca > 0) || this.st[i].sombra > 0 || !this.vivo(G, i)) continue;
         var p = G.pacs[i];
         var d = this.distancia(p.x, p.y, g.x, g.y);
         if (d < mejorD) { mejorD = d; mejor = p; }
@@ -1313,6 +1523,18 @@
     salvaDelChoque: function (G, idx, g) {
       var s = this.estado(idx);
       if (!s) return false;
+      var p = G.pacs[idx], j;
+      if (s.yunque > 0 || s.pielPiedra > 0) { if (g) this.empujar(G, g, 1); return true; }
+      for (j = 0; j < this.st.length; j++) {
+        var fs = this.st[j], fp = G.pacs[j];
+        if (fs.campo > 0 || (fs.fortaleza > 0 && fp && p && this.distancia(fp.x, fp.y, p.x, p.y) <= H.FORTALEZA_RADIO * T)) {
+          if (fs.rebote > 0 && g && this.manda(G)) this.matarCatalogo(G, g, j, H.MAGO_PUNTOS, 'rebote');
+          else if (g) this.empujar(G, g, 1);
+          return true;
+        }
+      }
+      if (s.rebote > 0) { if (g && this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote'); return true; }
+      if (s.cadena > 0) { s.cadena = 0; s.cadenaCon = -1; if (g) this.empujar(G, g, 1); return true; }
       if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
       /* QUÉ SE LLEVA UN GOLPE. La CORAZA del Tanque se suma SOLO a su
        * propio ESCUDO (la W): esos dos son suyos, los gana él, y juntos le
@@ -1336,7 +1558,6 @@
           s.corCd = H.CORAZA_CD;
         }
         s.gracia = H.ESCUDO_GRACIA;
-        var p = G.pacs[idx];
         if (p) this.efecto('roto', p.x, p.y, 20);
         this.empujar(G, g, H.ESCUDO_EMPUJE);
         sonDe(G, idx, 'playBiteMiss');
@@ -1413,6 +1634,32 @@
         case 'tormenta': return s.tormenta > 0;
         case 'portal': return !!this.portales[idx];
         case 'runa': return !!this.runas[idx];
+        case 'sombra': return s.sombra > 0;
+        case 'frenesi': return s.frenesi > 0;
+        case 'carrona': return s.carrona > 0;
+        case 'caceria': return s.caceria > 0;
+        case 'yunque': return s.yunque > 0;
+        case 'piel_piedra': return s.pielPiedra > 0;
+        case 'rebote': return s.rebote > 0;
+        case 'terremoto': return s.terremoto > 0;
+        case 'fortaleza': return s.fortaleza > 0;
+        case 'estela': return s.estela > 0;
+        case 'puente': return s.puente > 0;
+        case 'cadena': return s.cadena > 0;
+        case 'campo': return s.campo > 0;
+        case 'hospital': return s.hospital > 0;
+        case 'eclipse': return s.eclipse > 0;
+        case 'portal': return !!this.portales[idx];
+        case 'bomba': return !!s.bomba;
+        case 'mina': return !!s.mina;
+        case 'telarana': return !!s.telarana;
+        case 'muro': return !!s.muro;
+        case 'faro': return !!s.faro;
+        case 'sirena': return !!s.sirena;
+        case 'niebla': return !!s.niebla;
+        case 'clon': return !!s.clon;
+        case 'totem': return !!s.totem;
+        case 'meteoro': return !!s.meteoro;
       }
       return false;
     },
@@ -2048,6 +2295,209 @@
       if (mejor) this.matarMago(G, mejor, idx, 'rayo');
     },
 
+    /* =========================================================
+     * CATÁLOGO DESATADO
+     *
+     * Las habilidades nuevas comparten tres reglas: las posiciones se
+     * expresan en casillas para que sean deterministas, el anfitrión decide
+     * las interacciones con fantasmas y los puntos especiales no entran en la
+     * cadena clásica de la superpastilla.
+     * ========================================================= */
+    ghostCercanoAt: function (G, c, r, radio) {
+      var mejor = null, d0 = Infinity;
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!this.enLaCalle(g)) continue;
+        var dx = Math.abs(g.tileX() - c), dy = Math.abs(g.tileY() - r);
+        dx = Math.min(dx, CFG.COLS - dx);
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d <= radio && d < d0) { d0 = d; mejor = g; }
+      }
+      return mejor;
+    },
+
+    ghostCercano: function (G, idx, radio) {
+      var p = G.pacs[idx], mejor = null, d0 = Infinity;
+      if (!p) return null;
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!this.enLaCalle(g) || g.driven && g.driven()) continue;
+        var d = this.distancia(p.x, p.y, g.x, g.y);
+        if (d <= radio * T && d < d0) { d0 = d; mejor = g; }
+      }
+      return mejor;
+    },
+
+    ghostsEn: function (G, c, r, radio) {
+      var out = [];
+      for (var i = 0; i < 4; i++) {
+        var g = G.ghosts[i];
+        if (!this.enLaCalle(g)) continue;
+        var dx = Math.abs(g.tileX() - c), dy = Math.abs(g.tileY() - r);
+        dx = Math.min(dx, CFG.COLS - dx);
+        if (Math.sqrt(dx * dx + dy * dy) <= radio) out.push(g);
+      }
+      return out;
+    },
+
+    casillaAdelante: function (G, idx, max, d) {
+      var p = G.pacs[idx], dir = (d >= 0 && d <= 3) ? d : (p && this.dirFlash(p));
+      if (!p || dir == null) return null;
+      var v = CFG.DIR_V[dir], c = p.tileX(), r = p.tileY(), out = null;
+      for (var n = 1; n <= max; n++) {
+        var nc = CFG.wrapCol(c + v.x * n), nr = r + v.y * n;
+        if (nr < 0 || nr >= CFG.ROWS || !CFG.isOpen(nc, nr, false)) break;
+        out = { c: nc, r: nr, d: dir };
+      }
+      return out;
+    },
+
+    matarCatalogo: function (G, g, who, pts, como, mult, sinBono) {
+      if (!g || !this.enLaCalle(g)) return false;
+      var s = this.estado(who), bonus = 1;
+      if (this.marcaGhost[g.id] === who && s && s.marca > 0) bonus *= 2;
+      pts = Math.round((pts || H.MAGO_PUNTOS) * bonus * (mult || 1));
+      var x = g.x, y = g.y, p = G.pacs[who];
+      g.eaten();
+      this.hielo[g.id] = 0; this.huye[g.id] = 0;
+      this.azulCatalogo[g.id] = 0; this.azulCatTicks[g.id] = 0; this.caceriaQuien[g.id] = -1;
+      this.marcaGhost[g.id] = -1;
+      var total = sinBono ? pts : this.puntosDe(G, who, pts);
+      G.addScore(total);
+      G.addPopup(x, y, total, 45);
+      this.efecto(como || 'fuego', x, y, 18, p ? p.x : x, p ? p.y : y);
+      if (s && s.frenesi > 0) s.frenesiMult = Math.min(H.FRENESI_MAX, (s.frenesiMult || 1) + H.FRENESI_PASO);
+      if (s && s.carrona > 0) this.joyas.push({ x: x, y: y, t: H.CARROÑA_JOYA, w: who });
+      if (mio(G, who)) { G.runGhosts++; G.bumpAch && G.bumpAch({ fantasmas: 1 }); }
+      G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como || 'fuego', p: total,
+        x: Math.round(x), y: Math.round(y), ox: p ? Math.round(p.x) : Math.round(x), oy: p ? Math.round(p.y) : Math.round(y) });
+      window.AudioSys && AudioSys.playEatGhost();
+      return true;
+    },
+
+    shuriken: function (G, idx, d) {
+      var p = G.pacs[idx], dir = this.dirFlash(p), v = CFG.DIR_V[dir], kills = 0;
+      if (!p || !v) return false;
+      sonDe(G, idx, 'playFlash');
+      if (!this.manda(G)) return true;
+      for (var n = 1; n <= H.SHURIKEN_TILES; n++) {
+        var c = CFG.wrapCol(p.tileX() + v.x * n), r = p.tileY() + v.y * n;
+        for (var i = 0; i < 4; i++) {
+          var g = G.ghosts[i];
+          if (g && this.enLaCalle(g) && g.tileX() === c && g.tileY() === r && this.matarCatalogo(G, g, idx, H.SHURIKEN_PUNTOS, 'shuriken')) { kills++; break; }
+        }
+      }
+      return true;
+    },
+
+    bomba: function (G, idx, d) {
+      var s = this.estado(idx), c = this.casillaDe(G, idx, d);
+      if (!s || !c) return false;
+      if (!s.bomba) {
+        s.bomba = { c: c.c, r: c.r, t: H.BOMBA_TICKS };
+        this.sinGasto = true; sonDe(G, idx, 'playShout'); return true;
+      }
+      var b = s.bomba, blancos = this.ghostsEn(G, b.c, b.r, H.BOMBA_RADIO);
+      s.bomba = null;
+      if (this.manda(G)) for (var i = 0; i < blancos.length; i++) this.matarCatalogo(G, blancos[i], idx, H.BOMBA_PUNTOS, 'bomba');
+      this.efecto('bomba', b.c * T + T / 2, b.r * T + T / 2, 24);
+      sonDe(G, idx, 'playShout'); return true;
+    },
+
+    sombra: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.sombra = H.SOMBRA_TICKS; sonDe(G, idx, 'playStealth'); return true; },
+    frenesi: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.frenesi = H.FRENESI_TICKS; s.frenesiMult = 1; sonDe(G, idx, 'playTurbo'); return true; },
+    carrona: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.carrona = H.CARROÑA_TICKS; sonDe(G, idx, 'playExtraLife'); return true; },
+    marca: function (G, idx) {
+      var g = this.ghostCercano(G, idx, 8), s = this.estado(idx);
+      if (!g || !s) return false;
+      this.marcaGhost[g.id] = idx; s.marca = H.MARCA_TICKS; this.efecto('marca', g.x, g.y, 24); sonDe(G, idx, 'playShout'); return true;
+    },
+    ganchoInverso: function (G, idx, d) {
+      var g = this.ghostCercano(G, idx, H.GANCHO_INVERSO_TILES), p = G.pacs[idx], s = this.estado(idx);
+      if (!g || !p || !s) return false;
+      if (G.isLocalAuth(idx)) {
+        var v = CFG.DIR_V[g.dir] || { x: 1, y: 0 }, c = CFG.wrapCol(g.tileX() - v.x), r = g.tileY() - v.y;
+        if (r >= 0 && r < CFG.ROWS && CFG.isOpen(c, r, false)) { p.x = c * T + T / 2; p.y = r * T + T / 2; }
+      }
+      this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_INVERSO_TILES * 60; s.ganchoInv = H.GANCHO_INVERSO_TILES * 60;
+      this.efecto('gancho', g.x, g.y, 22, p.x, p.y); sonDe(G, idx, 'playCharge'); return true;
+    },
+    caceria: function (G, idx) {
+      var s = this.estado(idx); if (!s) return false;
+      s.caceria = H.CACERIA_TICKS;
+      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) this.caceriaQuien[i] = idx;
+      sonDe(G, idx, 'playShout'); return true;
+    },
+    misil: function (G, idx) {
+      var p = G.pacs[idx], blancos = [];
+      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) blancos.push(G.ghosts[i]);
+      blancos.sort(function (a, b) { return this.distancia(p.x, p.y, a.x, a.y) - this.distancia(p.x, p.y, b.x, b.y); }.bind(this));
+      if (this.manda(G) && blancos.length) this.matarCatalogo(G, blancos[0], idx, H.MAGO_PUNTOS, 'misil', 2.5);
+      sonDe(G, idx, 'playFlash'); return true;
+    },
+    ejecucion: function (G, idx) {
+      var g = this.ghostCercano(G, idx, 10); if (!g) return false;
+      if (this.manda(G)) this.matarCatalogo(G, g, idx, H.EJECUCION_PUNTOS, 'ejecucion', 1, true);
+      sonDe(G, idx, 'playShout'); return true;
+    },
+
+    empujon: function (G, idx) {
+      var g = this.ghostCercano(G, idx, H.EMPUJON_TILES); if (!g) return false;
+      this.aturdido[g.id] = H.EMPUJON_STUN; if (this.manda(G)) this.empujar(G, g, 2);
+      sonDe(G, idx, 'playCharge'); return true;
+    },
+    gritoGuerra: function (G, idx) {
+      var p = G.pacs[idx]; if (!p) return false;
+      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i]) && this.distancia(p.x, p.y, G.ghosts[i].x, G.ghosts[i].y) <= 5 * T) this.aturdido[i] = H.GRITO_GUERRA_TICKS;
+      sonDe(G, idx, 'playShout'); return true;
+    },
+    yunque: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.yunque = H.YUNQUE_TICKS; sonDe(G, idx, 'playStealth'); return true; },
+    pielPiedra: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.pielPiedra = H.PIEL_PIEDRA_TICKS; sonDe(G, idx, 'playStealth'); return true; },
+    rebote: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.rebote = H.REBOTE_TICKS; sonDe(G, idx, 'playCharge'); return true; },
+    terremoto: function (G, idx) {
+      var s = this.estado(idx); if (!s) return false;
+      this.terremotoTicks = H.TERREMOTO_TICKS; s.terremoto = H.TERREMOTO_TICKS;
+      if (this.manda(G)) for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
+        var g = G.ghosts[i]; G.addScore(H.TERREMOTO_PUNTOS); G.addPopup(g.x, g.y, H.TERREMOTO_PUNTOS, 35); g.eaten();
+      }
+      sonDe(G, idx, 'playShout'); return true;
+    },
+    fortaleza: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.fortaleza = H.FORTALEZA_TICKS; sonDe(G, idx, 'playStealth'); return true; },
+
+    mina: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.mina = { c: c.c, r: c.r, t: H.BOMBA_TICKS }; sonDe(G, idx, 'playBiteMiss'); return true; },
+    gancho: function (G, idx) { var g = this.ghostCercano(G, idx, 6); if (!g) return false; this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_INVERSO_TILES * 60; this.efecto('gancho', g.x, g.y, 20); sonDe(G, idx, 'playCharge'); return true; },
+    telarana: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.telarana = { c: c.c, r: c.r, t: H.TELARANA_TICKS }; sonDe(G, idx, 'playBiteMiss'); return true; },
+    estela: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.estela = H.ESTELA_TICKS; sonDe(G, idx, 'playTurbo'); return true; },
+    puente: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.puente = H.PUENTE_TICKS; sonDe(G, idx, 'playFlash'); return true; },
+    cadena: function (G, idx) { var s = this.estado(idx), j = this.aliadoDe(G, idx); if (!s || j < 0) return false; s.cadena = H.CADENA_TICKS; s.cadenaCon = j; sonDe(G, idx, 'playStealth'); return true; },
+    muro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 1, d); if (!s || !c) return false; s.muro = { c: c.c, r: c.r, t: H.MURO_TICKS }; sonDe(G, idx, 'playCharge'); return true; },
+    relevo: function (G, idx) {
+      var p = G.pacs[idx], j = this.aliadoDe(G, idx); if (!p || j < 0 || this.distancia(p.x, p.y, G.pacs[j].x, G.pacs[j].y) > 6 * T) return false;
+      if (G.isLocalAuth(j)) { G.pacs[j].x = p.x; G.pacs[j].y = p.y; G.pacs[j].dir = p.dir; G.pacs[j].nextDir = p.dir; }
+      sonDe(G, idx, 'playFlash'); return true;
+    },
+    faro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.faro = { c: c.c, r: c.r, t: H.FARO_TICKS }; sonDe(G, idx, 'playShout'); return true; },
+    sirena: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d) || this.casillaDe(G, idx, d); if (!s || !c) return false; s.sirena = { c: c.c, r: c.r, t: H.FARO_TICKS }; sonDe(G, idx, 'playShout'); return true; },
+    campo: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.campo = H.CAMPO_TICKS; sonDe(G, idx, 'playStealth'); return true; },
+    resurreccion: function (G, idx) { var target = -1; for (var i = 0; i < G.cuerpos.length; i++) if (G.cuerpos[i]) { target = i; break; } if (target < 0) return false; if (this.manda(G)) G.revivirCuerpo(target); sonDe(G, idx, 'playExtraLife'); return true; },
+    hospital: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.hospital = H.HOSPITAL_TICKS; sonDe(G, idx, 'playExtraLife'); return true; },
+
+    bolaGuiada: function (G, idx) {
+      /* GUIADA no depende de que el fantasma esté alineado ni a una distancia
+       * concreta: si queda alguno en la calle, el proyectil encuentra al más
+       * cercano. Por eso la habilidad no falla por puntería. */
+      var g = this.ghostCercano(G, idx, 999); if (this.manda(G) && g) this.matarCatalogo(G, g, idx, H.BOLA_GUIADA_PUNTOS, 'bola', 1, true);
+      sonDe(G, idx, 'playFlash'); return true;
+    },
+    toqueArcano: function (G, idx) { var g = this.ghostCercano(G, idx, 3); if (!g) return false; this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.TOQUE_ARCANO_TICKS; this.efecto('arcano', g.x, g.y, 18); sonDe(G, idx, 'playBiteMiss'); return true; },
+    chispa: function (G, idx) { var g = this.ghostCercano(G, idx, 3), p = G.pacs[idx]; if (!g || !p) return false; this.aturdido[g.id] = H.CHISPA_TICKS; this.efecto('chispa', g.x, g.y, 18, p.x, p.y); sonDe(G, idx, 'playCharge'); return true; },
+    clon: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 1, d) || this.casillaDe(G, idx, d); if (!s || !c) return false; s.clon = { c: c.c, r: c.r, t: H.TOTEM_TICKS }; sonDe(G, idx, 'playStealth'); return true; },
+    totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0 }; sonDe(G, idx, 'playShout'); return true; },
+    gravedad: function (G, idx) { var p = G.pacs[idx], blancos; if (!p) return false; blancos = this.ghostsEn(G, p.tileX(), p.tileY(), 3); for (var i = 0; i < blancos.length; i++) { this.aturdido[blancos[i].id] = H.GRAVEDAD_TICKS; this.empujar(G, blancos[i], 1); } sonDe(G, idx, 'playCharge'); return true; },
+    niebla: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.niebla = { c: c.c, r: c.r, t: H.NIEBLA_TICKS }; sonDe(G, idx, 'playStealth'); return true; },
+    meteoro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d); if (!s || !c) return false; s.meteoro = { c: c.c, r: c.r, t: H.METEORO_AVISO }; sonDe(G, idx, 'playShout'); return true; },
+    eclipse: function (G, idx) { var s = this.estado(idx); if (!s) return false; s.eclipse = H.ECLIPSE_TICKS; this.eclipseTicks = H.ECLIPSE_TICKS; for (var i = 0; i < 4; i++) this.ciego[i] = H.ECLIPSE_TICKS; sonDe(G, idx, 'playShout'); return true; },
+
     /* ---------- los relojes de los roles (desde paso) ---------- */
     pasoRoles: function (G, corre) {
       var i, s;
@@ -2060,6 +2510,14 @@
       }
       if (!corre) return;
       var manda = this.manda(G);
+      if (this.terremotoTicks > 0) this.terremotoTicks--;
+      if (this.eclipseTicks > 0) this.eclipseTicks--;
+      for (j = 0; j < 4; j++) {
+        if (this.lento[j] > 0) this.lento[j]--;
+        if (this.aturdido[j] > 0) this.aturdido[j]--;
+        if (this.ciego[j] > 0) this.ciego[j]--;
+        if (this.azulCatTicks[j] > 0 && --this.azulCatTicks[j] <= 0) this.azulCatalogo[j] = 0;
+      }
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.provoca > 0) s.provoca--;
@@ -2083,6 +2541,32 @@
         if (s.coraza > 0) s.coraza--;
         if (s.gracia > 0) s.gracia--;
         if (s.inmune > 0) s.inmune--;
+        if (s.sombra > 0) s.sombra--;
+        if (s.frenesi > 0) s.frenesi--; else s.frenesiMult = 1;
+        if (s.carrona > 0) s.carrona--;
+        if (s.marca > 0) s.marca--;
+        if (s.ganchoInv > 0) s.ganchoInv--;
+        if (s.caceria > 0) s.caceria--; else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
+        if (s.estela > 0) s.estela--;
+        if (s.puente > 0) s.puente--;
+        if (s.cadena > 0) s.cadena--; else s.cadenaCon = -1;
+        if (s.campo > 0) s.campo--;
+        if (s.hospital > 0) s.hospital--;
+        if (s.yunque > 0) s.yunque--;
+        if (s.pielPiedra > 0) s.pielPiedra--;
+        if (s.rebote > 0) s.rebote--;
+        if (s.terremoto > 0) s.terremoto--;
+        if (s.eclipse > 0) s.eclipse--;
+        if (s.bomba && --s.bomba.t <= 0) s.bomba = null;
+        if (s.mina && --s.mina.t <= 0) s.mina = null;
+        if (s.telarana && --s.telarana.t <= 0) s.telarana = null;
+        if (s.muro && --s.muro.t <= 0) s.muro = null;
+        if (s.faro && --s.faro.t <= 0) s.faro = null;
+        if (s.sirena && --s.sirena.t <= 0) s.sirena = null;
+        if (s.niebla && --s.niebla.t <= 0) s.niebla = null;
+        if (s.clon && --s.clon.t <= 0) s.clon = null;
+        if (s.meteoro && s.meteoro.t > 0) s.meteoro.t--;
+        if (s.totem && s.totem.t > 0) s.totem.t--;
         if (s.cruce > 0) s.cruce--;
         if (s.arrollaRed > 0) s.arrollaRed--;
         if (s.tormenta > 0) {
@@ -2122,6 +2606,48 @@
       }
       this.pasoBalas(G);
       if (!manda) return;
+      /* Las zonas se recalculan sobre la posición actual de los fantasmas. */
+      for (i = 0; i < this.st.length; i++) {
+        s = this.st[i];
+        if (s.telarana) {
+          var red = this.ghostsEn(G, s.telarana.c, s.telarana.r, 1.5);
+          for (j = 0; j < red.length; j++) { this.lento[red[j].id] = 2; this.lentoMult[red[j].id] = H.TELARANA_MULT; }
+        }
+        if (s.niebla) {
+          var bruma = this.ghostsEn(G, s.niebla.c, s.niebla.r, 2);
+          for (j = 0; j < bruma.length; j++) this.ciego[bruma[j].id] = Math.max(this.ciego[bruma[j].id], 2);
+        }
+        if (s.muro) {
+          var pared = this.ghostsEn(G, s.muro.c, s.muro.r, 0.8);
+          for (j = 0; j < pared.length; j++) this.empujar(G, pared[j], 1);
+        }
+        if (s.mina) {
+          var mina = this.ghostsEn(G, s.mina.c, s.mina.r, 0.6);
+          if (mina.length) { for (j = 0; j < mina.length; j++) this.matarCatalogo(G, mina[j], i, H.BOMBA_PUNTOS, 'mina'); s.mina = null; }
+        }
+        if (s.faro) {
+          for (j = 0; j < G.pacs.length; j++) if (j !== i && this.vivo(G, j) && G.pacs[j].tileX() === s.faro.c && G.pacs[j].tileY() === s.faro.r) {
+            var rr = this.listaDe(G, j)[3]; if (rr) this.st[j].cd[3] = Math.floor(this.st[j].cd[3] * 0.5); s.faro = null; break;
+          }
+        }
+        if (s.totem && s.totem.cd-- <= 0) {
+          var tg = this.ghostCercanoAt(G, s.totem.c, s.totem.r, 10);
+          if (tg) this.matarCatalogo(G, tg, i, H.MAGO_PUNTOS, 'totem');
+          s.totem.cd = H.TOTEM_CADA;
+        }
+        if (s.meteoro && s.meteoro.t <= 0) {
+          var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO);
+          for (j = 0; j < mm.length; j++) this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro');
+          this.efecto('meteoro', s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, 28); s.meteoro = null;
+        }
+        if (s.totem && s.totem.t <= 0) s.totem = null;
+      }
+      for (i = this.joyas.length - 1; i >= 0; i--) {
+        var joya = this.joyas[i]; if (--joya.t <= 0) { this.joyas.splice(i, 1); continue; }
+        for (j = 0; j < G.pacs.length; j++) if (this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
+          G.addScore(this.puntosDe(G, joya.w, 300)); G.addPopup(joya.x, joya.y, 300, 30); this.joyas.splice(i, 1); break;
+        }
+      }
       /* runas pisadas */
       for (i = 0; i < this.runas.length; i++) {
         var r = this.runas[i];
@@ -2171,6 +2697,11 @@
       if (!s) return;
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
+      s.sombra = 0; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
+      s.ganchoInv = 0; s.caceria = 0; s.estela = 0; s.puente = 0; s.cadena = 0;
+      s.campo = 0; s.hospital = 0; s.yunque = 0; s.pielPiedra = 0; s.rebote = 0;
+      s.fortaleza = 0; s.terremoto = 0; s.eclipse = 0;
+      s.bomba = s.mina = s.telarana = s.muro = s.faro = s.sirena = s.niebla = s.clon = s.meteoro = s.totem = null;
       s.mant = -1; s.mantT = 0;
       s.dimension = 0;
     },
@@ -2207,8 +2738,20 @@
         var b = this.balas[i];
         bl.push([b.t === 'fuego' ? 1 : 0, Math.round(b.x), Math.round(b.y), b.d, b.w]);
       }
+      var ct = { lento: this.lento.slice(), lentoMult: this.lentoMult.slice(), aturdido: this.aturdido.slice(),
+        ciego: this.ciego.slice(), azul: this.azulCatalogo.slice(), azulT: this.azulCatTicks.slice(),
+        caceria: this.caceriaQuien.slice(), marca: this.marcaGhost.slice(), joyas: this.joyas,
+        terremoto: this.terremotoTicks, eclipse: this.eclipseTicks, st: [] };
+      for (i = 0; i < this.st.length; i++) {
+        var cs = this.st[i];
+        ct.st.push({ bomba: cs.bomba, mina: cs.mina, telarana: cs.telarana, muro: cs.muro, faro: cs.faro,
+          sirena: cs.sirena, niebla: cs.niebla, clon: cs.clon, meteoro: cs.meteoro, totem: cs.totem,
+          frenesi: cs.frenesi, frenesiMult: cs.frenesiMult, caceria: cs.caceria, campo: cs.campo,
+          hospital: cs.hospital, yunque: cs.yunque, pielPiedra: cs.pielPiedra, rebote: cs.rebote,
+          fortaleza: cs.fortaleza, eclipse: cs.eclipse });
+      }
       return { e: e, hz: this.hielo.slice(), hu: this.huye.slice(), hq: this.huyeQuien.slice(),
-               po: po, ru: ru, bl: bl, pl: pl };
+               po: po, ru: ru, bl: bl, pl: pl, ct: ct };
     },
 
     aplicarRoles: function (hx, mioIdx) {
@@ -2245,6 +2788,24 @@
       if (hx.hz) this.hielo = hx.hz.slice(0, 4);
       if (hx.hu) this.huye = hx.hu.slice(0, 4);
       if (hx.hq) this.huyeQuien = hx.hq.slice(0, 4);
+      if (hx.ct) {
+        var ct = hx.ct;
+        if (ct.lento) this.lento = ct.lento.slice(0, 4);
+        if (ct.lentoMult) this.lentoMult = ct.lentoMult.slice(0, 4);
+        if (ct.aturdido) this.aturdido = ct.aturdido.slice(0, 4);
+        if (ct.ciego) this.ciego = ct.ciego.slice(0, 4);
+        if (ct.azul) this.azulCatalogo = ct.azul.slice(0, 4);
+        if (ct.azulT) this.azulCatTicks = ct.azulT.slice(0, 4);
+        if (ct.caceria) this.caceriaQuien = ct.caceria.slice(0, 4);
+        if (ct.marca) this.marcaGhost = ct.marca.slice(0, 4);
+        if (ct.joyas) this.joyas = ct.joyas;
+        this.terremotoTicks = ct.terremoto | 0; this.eclipseTicks = ct.eclipse | 0;
+        for (i = 0; ct.st && i < ct.st.length && i < this.st.length; i++) {
+          var cs = ct.st[i], ds = this.st[i];
+          if (i === mioIdx) continue;
+          for (var ck in cs) if (cs.hasOwnProperty(ck)) ds[ck] = cs[ck];
+        }
+      }
       if (hx.po) {
         for (i = 0; i < this.st.length; i++) {
           var p = hx.po[i];
@@ -2400,6 +2961,33 @@
         this.dibujarBoca(ctx, po.ec, po.er, '#ffb852', po.t > 0 ? 1 : 0.45, tk);
         if (po.t > 0) this.dibujarBoca(ctx, po.sc, po.sr, '#00c8ff', 1, tk);
       }
+      /* Trampas, zonas y objetivos del catálogo. Se dibujan en el suelo para
+       * que fantasmas y Pac-Man pasen por encima sin ocultar la señal. */
+      for (i = 0; i < this.st.length; i++) {
+        var ds = this.st[i], zonas = [
+          [ds.mina, '#ffb852', 0.8], [ds.telarana, '#c77dff', 1.3],
+          [ds.muro, '#00c8ff', 0.45], [ds.faro, '#ffe66d', 0.8],
+          [ds.sirena, '#ff5577', 0.8], [ds.niebla, '#b6c8d9', 1.8],
+          [ds.totem, '#ff7a1a', 0.7]
+        ];
+        for (var zi = 0; zi < zonas.length; zi++) {
+          var z = zonas[zi][0]; if (!z) continue;
+          var zx = z.c * T + T / 2, zy = z.r * T + T / 2 + Y;
+          ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = zonas[zi][1];
+          ctx.fillRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
+            zonas[zi][2] * T * 2, zonas[zi][2] * T * 2);
+          ctx.globalAlpha = 0.75; ctx.strokeStyle = zonas[zi][1]; ctx.lineWidth = 1;
+          ctx.strokeRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
+            zonas[zi][2] * T * 2, zonas[zi][2] * T * 2); ctx.restore();
+        }
+        if (ds.meteoro) {
+          var mx = ds.meteoro.c * T + T / 2, my = ds.meteoro.r * T + T / 2 + Y;
+          ctx.save(); ctx.globalAlpha = 0.45 + 0.35 * Math.sin(tk / 4);
+          ctx.strokeStyle = '#ff3030'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(mx, my, H.METEORO_RADIO * T, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]); ctx.restore();
+        }
+      }
     },
 
     dibujarBoca: function (ctx, c, r, color, alfa, tk) {
@@ -2440,6 +3028,20 @@
         }
         ctx.stroke();
         ctx.restore();
+      }
+      for (i = 0; i < 4; i++) {
+        var cg = G.ghosts[i];
+        if (!cg || cg.mode !== 'normal') continue;
+        if (this.azulCatalogo[i]) {
+          ctx.save(); ctx.strokeStyle = '#2121ff'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 8, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        }
+        if (this.caceriaQuien[i] >= 0) {
+          var colorCaza = (G.roles && G.roles[this.caceriaQuien[i]] === 'asesino') ? '#ff4058' : '#ff4058';
+          ctx.save(); ctx.strokeStyle = colorCaza; ctx.lineWidth = 1;
+          ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 10, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]); ctx.restore();
+        }
       }
       for (i = 0; i < this.balas.length; i++) {
         var b = this.balas[i], v = CFG.DIR_V[b.d] || { x: 0, y: 0 };
