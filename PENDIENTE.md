@@ -13,6 +13,19 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**21 sep — EL CATÁLOGO DE HABILIDADES, EN DISEÑO (nada construido).**
+
+La idea: que cada ranura (Q, W, E, R) de cada rol ofrezca dos habilidades
+y uno se arme antes de la partida. Todo lo hablado —lo elegido, lo
+descartado con su motivo y lo que queda por decidir— vive en
+`PLAN-CATALOGO.md`. **No se toca una línea del juego hasta que el catálogo
+esté cerrado entero**: cada habilidad es dibujo, aviso de red, hueco en la
+foto, pantalla de selección y sus pruebas.
+
+Lo cerrado hoy: las dos Q del Asesino (SHURIKEN, BOMBA) y las dos del
+Soporte (MINA, GANCHO). Lo demás son candidatas.
+
+
 **20 sep (noche) — LAS PIEZAS DEL PASE, YA EN EL JUEGO.**
 
 Las cinco de la temporada de octubre (tema: **cazar fantasmas**) están
