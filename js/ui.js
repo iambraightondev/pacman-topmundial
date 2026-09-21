@@ -396,7 +396,11 @@
       this.applyMute();
       this.fitCanvas();
       var self = this;
-      window.addEventListener('resize', function () { self.fitCanvas(); });
+      window.addEventListener('resize', function () {
+        self.fitCanvas();
+        self.encajarPanel();
+      });
+      this.vigilarEncaje();
       this.showMenu();
 
       this.partyHooks();
@@ -9764,6 +9768,10 @@
       p.style.display = 'flex';
       this.promptOpen = true;
       this.refreshControls();
+      /* un diálogo tampoco puede dejar su botón principal fuera de la
+       * pantalla: DESATADO, con sus cuatro cartas de poderes, era el que
+       * más se salía */
+      this.encajar(p, this.ENCAJE_SUELO.prompt);
       // foco en el botón principal: las flechas y Enter funcionan de inmediato
       var first = p.querySelector('.btn-primary') || p.querySelector('.btn');
       if (first) { try { first.focus(); } catch (e) { /* sin foco */ } }
@@ -9873,6 +9881,7 @@
     },
 
     hidePrompt: function () {
+      if (this.els.prompt) this.els.prompt.style.zoom = '';
       if (!this.els.prompt) return;
       this.els.prompt.style.display = 'none';
       this.els.prompt.innerHTML = '';
@@ -11348,6 +11357,99 @@
      * Visibilidad de paneles
      * ------------------------------------------------------ */
     /* Muestra un solo panel (o ninguno si name es null) */
+    /* ------------------------------------------------------
+     * QUE QUEPA EN LA PANTALLA (20 de septiembre de 2026)
+     *
+     * Los paneles se escribieron para una ventana alta y, en cuanto la
+     * ventana baja de unos 800 px —que es cualquier portátil con la barra
+     * del navegador puesta—, lo de abajo se salía: en DESATADO quedaban los
+     * botones de JUGAR cortados, y en la sala ONLINE el título y el botón de
+     * empezar a la vez. Se podía hacer scroll, pero un menú del que hay que
+     * hacer scroll para ver el botón principal está roto.
+     *
+     * En vez de repasar cada medida de cada panel a mano, el panel se ENCOGE
+     * lo justo para caber. Se usa zoom y no transform: scale a propósito:
+     * el zoom rehace la maquetación de verdad (el contenido se reparte y el
+     * panel deja de desbordar), mientras que scale solo estira el dibujo y
+     * deja la caja del mismo tamaño, con lo que el scroll seguiría ahí.
+     *
+     * Hay un SUELO por panel: encoger sin límite haría ilegible lo que no
+     * cabe por ser una lista larga (el vestuario tiene ochenta piezas). En
+     * esos, se encoge un poco y el resto se sigue desplazando, que es lo
+     * correcto: una galería se recorre, no se mira de un vistazo.
+     * ------------------------------------------------------ */
+    /* cuánto se deja encoger cada panel */
+    ENCAJE_SUELO: {
+      /* los que son UNA VISTA: tienen que caber enteros */
+      pase: 0.5, mazes: 0.5, online: 0.5, badges: 0.55, daily: 0.6,
+      profile: 0.55, mate: 0.6, options: 0.55, menu: 0.6, friends: 0.6,
+      prompt: 0.5,
+      /* los que son una LISTA: se encogen un poco y lo demás se recorre */
+      vestuario: 0.85, tienda: 0.85, ranking: 0.85
+    },
+
+    encajar: function (el, suelo) {
+      if (!el || el.style.display === 'none') return;
+      /* En MÓVIL no: ahí el panel ocupa la pantalla entera y desplazarse es
+       * lo natural; encoger dejaría la letra diminuta en la pantalla más
+       * pequeña, que es justo donde menos sobra. */
+      if (window.innerWidth <= 600) { el.style.zoom = ''; return; }
+      var min = (typeof suelo === 'number') ? suelo : 0.6;
+      this._encajando = true;
+      el.style.zoom = '';
+      /* con el zoom quitado, esto es lo que mide el contenido de verdad */
+      var dentro = el.scrollHeight, hueco = el.clientHeight;
+      var k = 1;
+      if (hueco && dentro > hueco + 1) {
+        k = Math.max(min, Math.floor((hueco / dentro) * 100) / 100);
+      }
+      if (k < 1) el.style.zoom = k;
+      this._encajando = false;
+    },
+
+    /* Vigila los paneles para reencajarlos cuando su contenido cambia solo:
+     * la sala online se llena cuando contesta el servidor, el TOP MUNDIAL
+     * cuando llegan las marcas y el vestuario al cambiar de pestaña. Sin
+     * esto, el panel se medía vacío y el encaje se quedaba corto. */
+    vigilarEncaje: function () {
+      var self = this;
+      if (!window.MutationObserver || this._obsEncaje) return;
+      var espera = 0;
+      this._obsEncaje = new window.MutationObserver(function () {
+        /* lo que cambia el zoom es esta misma clase: no se muerde la cola.
+         * Y se espera un poco: un panel que se rehace entero son cientos de
+         * cambios seguidos y no hace falta medir en cada uno. */
+        if (self._encajando) return;
+        if (espera) clearTimeout(espera);
+        espera = setTimeout(function () {
+          espera = 0;
+          self.encajarPanel();
+        }, 120);
+      });
+      var names = ['menu', 'options', 'online', 'badges', 'ranking',
+                   'mazes', 'friends', 'profile', 'daily', 'mate',
+                   'vestuario', 'tienda', 'pase', 'prompt'];
+      names.forEach(function (n) {
+        var el = self.els[n];
+        if (el) self._obsEncaje.observe(el, { childList: true, subtree: true, characterData: true });
+      });
+    },
+
+    /* El panel que esté puesto ahora. Se llama al abrirlo, al refrescarlo y
+     * cuando cambia el tamaño de la ventana. */
+    encajarPanel: function () {
+      var self = this;
+      var names = ['menu', 'options', 'online', 'badges', 'ranking',
+                   'mazes', 'friends', 'profile', 'daily', 'mate',
+                   'vestuario', 'tienda', 'pase'];
+      names.forEach(function (n) {
+        var el = self.els[n];
+        if (el && el.style.display !== 'none') self.encajar(el, self.ENCAJE_SUELO[n]);
+      });
+      var pr = this.els.prompt;
+      if (pr && pr.style.display !== 'none') this.encajar(pr, this.ENCAJE_SUELO.prompt);
+    },
+
     showPanel: function (name) {
       this.hidePrompt();
       // la ficha va encima de un panel: si se cambia de panel, se va con él
@@ -11357,8 +11459,17 @@
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
+        if (el && panels[i] !== name) el.style.zoom = '';
       }
       this.refreshControls();
+      /* el panel ya está puesto y medido: ahora se encoge si no cabe */
+      var self = this;
+      this.encajarPanel();
+      /* y otra vez en el siguiente fotograma, para lo que se pinta después
+       * (canvas que se rellenan, listas que llegan de la nube) */
+      if (window.requestAnimationFrame) {
+        window.requestAnimationFrame(function () { self.encajarPanel(); });
+      }
     },
 
     showMenu: function () {

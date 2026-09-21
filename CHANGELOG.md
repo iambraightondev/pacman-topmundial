@@ -2,6 +2,24 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Las pantallas se encogen para caber en la ventana
+
+En cuanto la ventana baja de unos 800 px de alto —cualquier portátil con la
+barra del navegador puesta— había pantallas que se salían por abajo: en
+DESATADO quedaban cortados los botones de JUGAR, y en la sala ONLINE el título
+y el botón de empezar a la vez. Se podía hacer scroll, pero un menú del que
+hay que desplazarse para ver el botón principal está roto.
+
+Ahora **la pantalla se encoge lo justo para caber**, sola, y se reajusta
+cuando cambia la ventana o cuando el contenido cambia (la sala al llenarse, el
+TOP MUNDIAL al llegar las marcas). Afectaba a LABERINTOS, LOGROS, el PASE y el
+diálogo de DESATADO, que ya caben enteros.
+
+**Dos cosas siguen desplazándose a propósito**: el VESTUARIO y la TIENDA, que
+son galerías de ochenta piezas —eso se recorre, no se mira de un vistazo—; ahí
+solo se encogen un poco. Y en el móvil no se encoge nada: es la pantalla donde
+menos sobra y desplazarse es lo natural.
+
 ## 2026-09-20 · Todos los galones del pase pagan algo
 
 De los treinta escalones del camino solo pagaban **nueve**. Los otros

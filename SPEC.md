@@ -3138,6 +3138,34 @@ Settings panel offers preset swatches: #ffff00 (clásico), #ff0000, #00ffff,
 #00ff00, #ff69b4, #ff8c00, #b19cd9, #ffffff — plus `<input type="color">`.
 Applies to Pac-Man body, death animation and lives icons.
 
+## Panels that fit the window (`UI.encajar`, 20 Sep 2026)
+
+Panels were written for a tall window, and below roughly 800 px of height —
+any laptop with the browser chrome on — the bottom fell off the screen:
+DESATADO lost its JUGAR buttons, the ONLINE room lost its title and its start
+button at once. Scrolling worked, but a menu you have to scroll to reach its
+main button is broken.
+
+Rather than re-tuning every measurement in every panel, **the panel shrinks
+just enough to fit**. It uses CSS `zoom`, not `transform: scale`: zoom
+genuinely re-lays-out the content (so the overflow goes away), while scale
+only stretches the painting and leaves the box — and the scrollbar — as they
+were.
+
+- `UI.ENCAJE_SUELO` sets a floor per panel. Single-view panels (PASE,
+  LABERINTOS, ONLINE, LOGROS, dialogs) go down to 0.5–0.6; list panels
+  (VESTUARIO, TIENDA, TOP MUNDIAL) stop at 0.85 and keep scrolling, because a
+  gallery of eighty pieces is meant to be scrolled, not taken in at a glance.
+- It runs when a panel opens, when a dialog opens, on window resize, and — via
+  a MutationObserver with a 120 ms debounce — whenever the panel's content
+  changes on its own: the room filling up, the ranking arriving from the
+  cloud, the wardrobe switching tabs. Without that last one the panel was
+  measured while still empty and the fit came out short.
+- **Not on mobile** (width ≤ 600 px): there the panel already owns the whole
+  screen and scrolling is the natural gesture; shrinking would only make the
+  smallest screen unreadable.
+- The measurement is taken with the zoom cleared, so it never compounds.
+
 ## UI text (Spanish)
 
 Title screen: "PAC-MAN" (big, yellow), subtitle "TOP MUNDIAL", buttons
