@@ -4480,13 +4480,60 @@ body { font-size-adjust: 0.56; }
 .go-muerte { width: clamp(64px, 10vh, 96px); height: clamp(64px, 10vh, 96px); image-rendering: pixelated; flex: none; }
 .go-equipo { color: #ffb8ff; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 2px; }
 
+/* ---------- LA INVITACIÓN ----------
+ * Va en la caja del mueble (#prompt.popup) y lo que manda es el código: son
+ * las mismas casillas de la sala, para que al llegar se reconozca el sitio. */
+.inv-quien {
+  font-size: clamp(9px, 1.5vh, 11px);
+  letter-spacing: 2px;
+  color: #b9bae6;
+  line-height: 1.6;
+}
+
+.inv-quien b { color: #ffd400; font-weight: bold; }
+
+.inv-code {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0 2px;
+}
+
+.inv-letra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(34px, 7vh, 46px);
+  height: clamp(40px, 8.5vh, 56px);
+  font-size: clamp(20px, 4vh, 30px);
+  font-weight: bold;
+  color: #ffd400;
+  background: #000;
+  border: 2px solid #ffd400;
+  box-shadow: inset 0 0 14px rgba(255, 212, 0, 0.25), 0 0 16px rgba(255, 212, 0, 0.3);
+  text-shadow: 0 0 12px rgba(255, 212, 0, 0.7);
+}
+
+.inv-pie {
+  font-size: clamp(8px, 1.2vh, 10px);
+  letter-spacing: 2px;
+  color: #6a6c8e;
+}
+
 /* Las dos vistas del final de una party: la de siempre y la del equipo. */
 .go-vistas {
   display: flex;
   gap: 8px;
   justify-content: center;
   margin: 2px 0 4px;
+  /* ANCHO FIJO A PROPÓSITO: el panel se estrecha o se ensancha según la
+     vista, y con los botones centrados en él cada cambio los movía de sitio.
+     Con un ancho propio se quedan clavados y se puede ir y volver sin
+     perseguirlos. */
+  width: min(94%, 640px);
 }
+
+.go-vista { flex: 1 1 0; max-width: 220px; }
 
 .go-vista {
   font-family: inherit;
@@ -4509,7 +4556,7 @@ body { font-size-adjust: 0.56; }
 .go-vista:hover { color: #fff; }
 
 .go-equipo-tabla {
-  width: min(94%, 520px);
+  width: min(94%, 640px);
   margin: 0 auto;
   font-size: clamp(9px, 1.5vh, 12px);
   letter-spacing: 1px;
@@ -4532,12 +4579,35 @@ body { font-size-adjust: 0.56; }
 }
 
 .goe-nom {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   text-align: left;
+  font-weight: bold;
+  min-width: 0;
+}
+
+.goe-nom b {
   font-weight: bold;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* el emblema del rol: su color, y el marco también */
+.goe-rol {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--rc, #fff);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--rc, #fff) 45%, transparent);
+  background: color-mix(in srgb, var(--rc, #fff) 12%, #000);
+}
+
+.goe-rol canvas { display: block; image-rendering: pixelated; }
 
 .goe-fila b { color: #fff; font-weight: bold; }
 

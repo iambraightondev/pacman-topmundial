@@ -2,6 +2,28 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · El marcador del equipo, afinado; y la invitación, en su caja
+
+**Las frutas de los demás salían a cero.** El marcador del final lo manda el
+anfitrión, y la fruta de un invitado solo se apuntaba en la copia del
+invitado: al llegar el marcador bueno, se perdía. Ahora la apunta quien la
+tiene que apuntar.
+
+**Los dos botones ya no se mueven.** El panel se estrecha o se ensancha según
+la vista, y con los botones centrados en él, cada cambio los cambiaba de
+sitio; con un ancho propio se quedan clavados y se puede ir y volver sin
+perseguirlos.
+
+**Y cada jugador sale con el emblema de su rol**: un colmillo para el
+ASESINO, un escudo para el TANQUE, un rayo para el MAGO y una cruz para el
+SOPORTE, en su color y con su marco. El nombre se queda con el color de su
+Pac-Man: de qué color juegas y de qué vas son dos cosas, y las dos se ven.
+
+**La invitación pasa al mueble.** Eran cuatro letras sueltas en medio del
+negro, que es como se ve un aviso del sistema y no como se ve que te llamen
+a jugar: ahora va en caja, con quién te invita arriba, el código en las
+mismas casillas de la sala y una sola cosa que hacer.
+
 ## 2026-09-20 · El empujón en party, la sala de tu color y el marcador del equipo
 
 **El fantasma que rompe la coraza vuelve a salir empujado, también en**

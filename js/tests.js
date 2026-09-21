@@ -9513,6 +9513,39 @@
     ok(CFG.isOpen(g2.tileX(), g2.tileY()), 'acaba en pasillo, no en pared');
   });
 
+  test('MARCADOR: la fruta de un invitado la apunta el anfitrión', function () {
+    /* El marcador del final lo manda el anfitrión, así que lo que solo se
+     * apunte en la copia del invitado se pierde: por eso salían a cero las
+     * frutas de los demás. */
+    partidaRol(['asesino', 'tanque'], 6, 5, DR.RIGHT);
+    var rolAntes = G.netRole, idxAntes = G.localIdx;
+    G.netRole = 'host';
+    G.localIdx = 0;
+    try {
+      G.state = 'PLAYING';
+      G.fruitActive = true;
+      G.fruitInfo = CFG.fruitForLevel(1);
+      eq(G.marcador[1].frutas, 0, 'el invitado empieza sin frutas');
+      G.hostMsg('gevt', { t: 'ateFruit', i: 1 }, 'sid');
+      eq(G.marcador[1].frutas, 1, 'y su fruta queda apuntada en la del anfitrión');
+    } finally { G.netRole = rolAntes; G.localIdx = idxAntes; }
+  });
+
+  test('MARCADOR: lo que hace cada uno se apunta por jugador', function () {
+    partidaRol(['asesino', 'tanque'], 6, 5, DR.RIGHT);
+    var g = fantasmaEn(0, 8, 5);
+    g.frightened = true;
+    G.eatGhost(g, 1);
+    eq(G.marcador[1].kills, 1, 'la muerte del fantasma es de quien se lo come');
+    eq(G.marcador[0].kills, 0, 'y no del otro');
+    G.startPacDeath(0);
+    eq(G.marcador[0].muertes, 1, 'y la caída, de quien cae');
+    var vivo = G.marcador[1].vivo;
+    G.state = 'PLAYING';
+    G.stepClock();
+    ok(G.marcador[1].vivo > vivo, 'el tiempo en pie corre mientras se juega');
+  });
+
   test('TANQUE · el anfitrión da el empujón del escudo roto del invitado',
     function () {
       /* El empujón lo tiene que dar el ANFITRIÓN: los fantasmas los mueve él,

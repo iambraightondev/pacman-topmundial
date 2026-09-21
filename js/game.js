@@ -3573,6 +3573,11 @@
         case 'ateFruit':
           if (this.state === 'PLAYING' && this.fruitActive) {
             this.fruitActive = false;
+            /* En la libreta la apunta el ANFITRIÓN, que es quien la manda al
+             * final: el invitado se la apuntaba en su copia y se perdía al
+             * llegar el marcador bueno. Por eso salían a cero las frutas de
+             * los demás. */
+            this.marca(who, 'frutas');
             this.addScore(this.fruitInfo.points);
             this.addPopup(CFG.START.fruit.x * T + T / 2,
               CFG.START.fruit.y * T + T / 2,

@@ -6182,10 +6182,39 @@
     askInvite: function (from, code) {
       var self = this;
       if (window.PM.Game && window.PM.Game.inGame()) return;   // en partida, no
+      /* EN CAJA, COMO UNA INVITACIÓN DE VERDAD (20 sep). Antes eran cuatro
+       * letras sueltas flotando en medio del negro, que es como se ve un
+       * aviso del sistema, no como se ve que te llamen a jugar. Ahora va en
+       * el mueble: quién te invita arriba, el código en sus casillas —las
+       * mismas de la sala— y una sola cosa que hacer. */
       this.showPrompt({
-        title: 'INVITACIÓN',
-        lines: [(from || 'ALGUIEN') + ' TE INVITA A SU PARTY',
-                { text: code.split('').join(' '), big: true }],
+        popup: true,
+        title: 'TE INVITAN',
+        color: '#ffd400',
+        custom: function (caja) {
+          var quien = document.createElement('div');
+          quien.className = 'inv-quien';
+          var nom = document.createElement('b');
+          nom.textContent = from || 'ALGUIEN';
+          quien.appendChild(nom);
+          quien.appendChild(document.createTextNode(' TE INVITA A SU PARTY'));
+          caja.appendChild(quien);
+
+          var letras = document.createElement('div');
+          letras.className = 'inv-code';
+          String(code || '').split('').forEach(function (ch) {
+            var l = document.createElement('span');
+            l.className = 'inv-letra';
+            l.textContent = ch;
+            letras.appendChild(l);
+          });
+          caja.appendChild(letras);
+
+          var pie = document.createElement('div');
+          pie.className = 'inv-pie';
+          pie.textContent = 'HASTA 4 EN LA MISMA PARTIDA';
+          caja.appendChild(pie);
+        },
         buttons: [
           { label: 'ENTRAR', primary: true, keys: ['Enter'], hint: 'ENTER',
             onClick: function () {
@@ -6193,7 +6222,7 @@
               self.showOnline();
               self.partyJoin(code);
             } },
-          { label: 'AHORA NO', keys: ['Escape'], hint: 'ESC',
+          { label: 'AHORA NO', cls: 'btn-enlace', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
         ]
       });
@@ -10696,8 +10725,27 @@
         f.className = 'goe-fila';
         var nom = document.createElement('span');
         nom.className = 'goe-nom';
-        nom.textContent = g.nameFor(i);
-        nom.style.color = g.colorFor(i);
+        /* EL EMBLEMA DE SU ROL, en su color y con su marco. El nombre se
+         * queda con el color de SU PAC-MAN: son dos cosas distintas —de qué
+         * color juegas y de qué vas— y las dos se quieren ver. */
+        var rol = (g.hab && g.roles) ? g.roles[i] : null;
+        var info = rol && CFG.HAB.ROL_INFO[rol];
+        if (info) {
+          var em = document.createElement('span');
+          em.className = 'goe-rol';
+          em.style.setProperty('--rc', info.color);
+          em.title = info.name;
+          var cv = document.createElement('canvas');
+          cv.width = 22; cv.height = 22;
+          cv.setAttribute('aria-label', info.name);
+          em.appendChild(cv);
+          nom.appendChild(em);
+          this.pintarRolIcono(cv, rol, info.color);
+        }
+        var txt = document.createElement('b');
+        txt.textContent = g.nameFor(i);
+        txt.style.color = g.colorFor(i);
+        nom.appendChild(txt);
         f.appendChild(nom);
         var seg = Math.round(m.vivo / 60);
         [m.kills, m.muertes, m.frutas, m.rescates,
@@ -10709,6 +10757,48 @@
         caja.appendChild(f);
       }
       return caja;
+    },
+
+    /* EL EMBLEMA DE CADA ROL, dibujado a mano: un colmillo para el ASESINO,
+     * un escudo para el TANQUE, un rayo para el MAGO y una cruz para el
+     * SOPORTE. Son cuatro formas que se leen a 22 px, que es de lo que se
+     * trata. */
+    pintarRolIcono: function (cv, rol, color) {
+      var c = cv.getContext('2d');
+      var k = cv.width / 22;
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.setTransform(k, 0, 0, k, 0, 0);
+      c.fillStyle = color;
+      c.strokeStyle = color;
+      c.lineWidth = 2;
+      c.lineJoin = 'round';
+      c.lineCap = 'round';
+      if (rol === 'asesino') {                    // colmillo
+        c.beginPath();
+        c.moveTo(6, 4); c.lineTo(16, 4); c.lineTo(14, 11); c.lineTo(11, 18);
+        c.lineTo(8, 11);
+        c.closePath();
+        c.fill();
+      } else if (rol === 'tanque') {              // escudo
+        c.beginPath();
+        c.moveTo(11, 3); c.lineTo(18, 6); c.lineTo(18, 11);
+        c.quadraticCurveTo(18, 16, 11, 19);
+        c.quadraticCurveTo(4, 16, 4, 11);
+        c.lineTo(4, 6);
+        c.closePath();
+        c.fill();
+      } else if (rol === 'mago') {                // rayo
+        c.beginPath();
+        c.moveTo(13, 2); c.lineTo(6, 12); c.lineTo(10, 12); c.lineTo(9, 20);
+        c.lineTo(16, 9); c.lineTo(12, 9);
+        c.closePath();
+        c.fill();
+      } else {                                    // cruz (SOPORTE)
+        c.fillRect(9, 3, 4, 16);
+        c.fillRect(3, 9, 16, 4);
+      }
+      c.setTransform(1, 0, 0, 1, 0, 0);
     },
 
     /* ------------------------------------------------------
