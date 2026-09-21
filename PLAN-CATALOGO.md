@@ -59,9 +59,9 @@ existen. Las otras 16 son las que se están eligiendo aquí.
 
 | Ranura | Nombre | Qué hace | Recarga |
 | --- | --- | --- | --- |
-| Q | **SHURIKEN** | Tres cargas: cada Q lanza una. Si las tres aciertan, se recarga al instante; si falla una, recarga entera. Cada muerte vale 200, sin racha | 20 s |
+| Q | **SHURIKEN** | Tres cargas: cada Q lanza una, y desde cada disparo hay **3 s** para tirar la siguiente. Si se pasa el tiempo, la ráfaga se cierra y la Q se recarga entera; si las tres salen y las tres aciertan, se recarga al instante. Cada muerte vale 200, sin racha | 20 s |
 | Q | **BOMBA** | Se deja y explota al volver a pulsar Q: 2 casillas a la redonda, 150 por fantasma, sin racha | 24 s |
-| R | **MISIL** | Teledirigido que recorre los pasillos y mata a todos los fantasmas del más cercano al más lejano, con la racha de la pasiva (250 · 500 · 1.000 · 2.000) | 80 s |
+| R | **MISIL** | Teledirigido a **×2** que recorre los pasillos y mata a todos los fantasmas del más cercano al más lejano, con la racha de la pasiva (250 · 500 · 1.000 · 2.000) | 80 s |
 
 ### Alternativas implementadas por ranura
 
@@ -71,7 +71,7 @@ existen. Las otras 16 son las que se están eligiendo aquí.
 | W | **FRENESÍ** | 8 s: cada fantasma comido le suma +0,15 de velocidad, sin límite | 26 s |
 | W | **CARROÑA** | 6 s: cada fantasma comido deja una joya que vale 300 si la recoge él antes de 3 s | 24 s |
 | E | **MARCA** | Señala un fantasma 8 s: comérselo vale ×2 y se le ve la ruta | 30 s |
-| E | **GANCHO INVERSO** | Sale 5 casillas y regresa aunque falle. Si engancha, vuelve azul al fantasma y arrastra al Asesino a ×1,2 | 32 s |
+| E | **GANCHO INVERSO** | Sale 8 casillas y regresa aunque falle. Si engancha, vuelve azul al fantasma y arrastra al Asesino a ×1,2 | 32 s |
 
 **Ojo con el cupo**: la W tiene **tres** candidatas vivas (SOMBRA, FRENESÍ y
 CARROÑA) para **dos** huecos. O cae una, o esa ranura pasa a ofrecer tres y

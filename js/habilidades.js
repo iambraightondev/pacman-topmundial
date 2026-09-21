@@ -2546,9 +2546,12 @@
       var p = G.pacs[idx], s = this.estado(idx);
       var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
       if (!p || !s || !v) return false;
-      if (!s.shuriken) s.shuriken = { id: ++this.rafagaId, usados: 0, resueltos: 0, aciertos: 0 };
+      if (!s.shuriken) s.shuriken = { id: ++this.rafagaId, usados: 0, resueltos: 0, aciertos: 0, ventana: 0 };
       if (s.shuriken.usados >= H.SHURIKEN_CANT) return false;
       s.shuriken.usados++;
+      /* Cada disparo abre la ventana para el siguiente; el tercero ya no
+       * espera a nadie (cierra la ráfaga por su cuenta al resolverse). */
+      s.shuriken.ventana = (s.shuriken.usados < H.SHURIKEN_CANT) ? H.SHURIKEN_VENTANA : 0;
       this.proyectilesCat.push({
         tipo: 'shuriken', x: p.x, y: p.y, d: dir, w: idx,
         espera: 0, viaja: 0, max: H.SHURIKEN_TILES * T, grupo: s.shuriken.id
@@ -2751,6 +2754,22 @@
     niebla: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.niebla = { c: c.c, r: c.r, t: H.NIEBLA_TICKS }; this.efecto('niebla', c.c * T + T / 2, c.r * T + T / 2, 26); sonDe(G, idx, 'playStealth'); return true; },
     meteoro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d); if (!s || !c) return false; s.meteoro = { c: c.c, r: c.r, t: H.METEORO_AVISO }; s.fuegoMeteoro = null; this.efecto('meteoro_aviso', c.c * T + T / 2, c.r * T + T / 2, 30); sonDe(G, idx, 'playShout'); return true; },
     eclipse: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s) return false; s.eclipse = H.ECLIPSE_TICKS; this.eclipseTicks = H.ECLIPSE_TICKS; for (var i = 0; i < 4; i++) this.ciego[i] = H.ECLIPSE_TICKS; if (p) this.efecto('eclipse', p.x, p.y, 40); sonDe(G, idx, 'playShout'); return true; },
+
+    /* Se acabó el tiempo entre un shuriken y el siguiente: lo que quedaba de
+     * ráfaga se pierde y la Q se va a recargar, aunque haya alguno todavía
+     * en el aire (sin los tres tiros no hay pleno que valga). */
+    cerrarRafagaShuriken: function (G, idx) {
+      var s = this.estado(idx);
+      if (!s || !s.shuriken) return;
+      s.shuriken = null;
+      var k = this.kDe(G, idx, 'shuriken');
+      if (k >= 0) this.gastar(G, idx, k);
+      var p = G.pacs[idx];
+      if (p && this.vivo(G, idx)) {
+        G.addPopup(p.x, p.y - 8, 'RÁFAGA PERDIDA', 30);
+        this.efecto('shuriken_salida', p.x, p.y, 14);
+      }
+    },
 
     finShuriken: function (G, b, acerto) {
       var s = this.estado(b.w);
@@ -3002,6 +3021,10 @@
           if (sp) this.efecto('sombra_sale', sp.x, sp.y, 28);
         }
         if (s.frenesi > 0) s.frenesi--; else s.frenesiMult = 1;
+        /* SHURIKEN: el reloj entre tiro y tiro. Se agota y la ráfaga cae. */
+        if (s.shuriken && s.shuriken.ventana > 0 && --s.shuriken.ventana <= 0) {
+          this.cerrarRafagaShuriken(G, i);
+        }
         if (s.carrona > 0) s.carrona--;
         if (s.marca > 0 && --s.marca <= 0) for (j = 0; j < 4; j++) if (this.marcaGhost[j] === i) this.marcaGhost[j] = -1;
         if (s.caceria > 0) s.caceria--; else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;

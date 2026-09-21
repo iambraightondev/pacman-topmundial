@@ -10967,6 +10967,23 @@
     eq(H.st[0].cd[0], 20 * 60, 'un fallo conserva los 20 segundos');
   });
 
+  test('CATÁLOGO: la ráfaga de Shuriken caduca a los tres segundos', function () {
+    var H = window.PM.Hab, V = CFG.HAB.SHURIKEN_VENTANA;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
+    var p = G.pacs[0]; p.x = 8 * CFG.TILE + 4; p.y = CFG.TUNNEL_ROW * CFG.TILE + 4; p.nextDir = CFG.DIR.RIGHT;
+    for (var n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    ok(H.lanzar(G, 0, 0), 'sale la primera carga');
+    eq(H.st[0].cd[0], 0, 'la primera no manda a recargar');
+    for (var t = 0; t < V - 1; t++) H.pasoRoles(G, true);
+    ok(H.st[0].shuriken, 'antes de los tres segundos la ráfaga sigue viva');
+    ok(H.lanzar(G, 0, 0), 'la segunda entra dentro de la ventana');
+    eq(H.st[0].shuriken.usados, 2, 'y cuenta como segunda carga');
+    for (t = 0; t < V; t++) H.pasoRoles(G, true);
+    eq(H.st[0].shuriken, null, 'la tercera no llegó: la ráfaga se cierra');
+    eq(H.st[0].cd[0], 20 * 60, 'y la Q se va a recargar entera');
+  });
+
   test('CATÁLOGO: Sombra, Frenesí, Gancho y Cacería respetan sus nuevas reglas', function () {
     var H = window.PM.Hab;
     partida(1); G.hab = true;
@@ -10983,6 +11000,8 @@
 
     for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
     ok(H.ganchoInverso(G, 0), 'el gancho sale sin blanco');
+    eq(H.proyectilesCat.filter(function (b) { return b.tipo === 'gancho_inverso'; })[0].max,
+      8 * CFG.TILE, 'el gancho llega a ocho casillas');
     var volvio = false;
     for (n = 0; n < 100 && H.proyectilesCat.length; n++) { H.pasoProyectilesCat(G, true); if (H.proyectilesCat.some(function (b) { return b.fase === 'vuelve'; })) volvio = true; }
     ok(volvio && !H.proyectilesCat.length, 'falla y vuelve');
@@ -11023,8 +11042,9 @@
       G.ghosts[j].mode = 'normal'; G.ghosts[j].x = p.x + CFG.TILE; G.ghosts[j].y = p.y;
     }
     var base = G.score;
+    ok(Math.abs(CFG.HAB.MISIL_VEL - 2 * CFG.BASE_SPEED) < 1e-9, 'el misil vuela a ×2');
     ok(H.misil(G, 0), 'sale el misil');
-    for (var i = 0; i < 120 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
+    for (var i = 0; i < 240 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
     eq(G.score - base, 3750, '250 + 500 + 1.000 + 2.000');
     eq(G.ghosts.filter(function (g) { return g.mode === 'eyes'; }).length, 4, 'mata a los cuatro');
   });

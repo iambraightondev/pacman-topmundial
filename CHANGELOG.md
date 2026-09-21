@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-21 · Los tres retoques del Asesino
+
+**La ráfaga del SHURIKEN ahora tiene prisa.** Las tres cargas se podían
+guardar sin límite: se tiraba una y la Q se quedaba a medias para siempre,
+sin recargarse nunca. Desde cada disparo hay **tres segundos** para tirar el
+siguiente; si se pasa el tiempo, lo que quede de ráfaga se pierde y la
+recarga empieza ahí mismo. Salir con los tres y acertar los tres sigue
+devolviendo la Q al instante.
+
+**El GANCHO INVERSO llega tres casillas más lejos** (de cinco a ocho).
+
+**Y el MISIL vuela a ×2.** Iba a casi cuatro veces la velocidad de un
+Pac-Man: se acababa antes de que diera tiempo a verlo salir.
+
 ## 2026-09-21 · El catálogo de habilidades ya se juega y se ve
 
 **Las habilidades nuevas dejaron de ser estados a medias.** SHURIKEN reparte

@@ -2045,6 +2045,11 @@
     SHURIKEN_TILES: 10,
     SHURIKEN_VEL: 4,
     SHURIKEN_PUNTOS: 200,
+    /* La ráfaga tiene prisa (21 sep 2026): desde cada disparo hay esta
+     * ventana para tirar el siguiente. Si se pasa, la ráfaga se cierra con
+     * las cargas que queden y la recarga empieza ahí mismo. Sin esto las
+     * cargas se podían guardar para siempre y la Q no se recargaba nunca. */
+    SHURIKEN_VENTANA: 3 * 60,
     /* La bomba permanece hasta detonarla. El 0 se interpreta como duración
      * indefinida; la recarga empieza con la segunda pulsación. */
     BOMBA_TICKS: 0,
@@ -2060,13 +2065,17 @@
     CARROÑA_TICKS: 6 * 60,
     CARROÑA_JOYA: 3 * 60,
     MARCA_TICKS: 8 * 60,
-    GANCHO_INVERSO_TILES: 5,
+    GANCHO_INVERSO_TILES: 8,
     GANCHO_INVERSO_VEL: 4,
     GANCHO_ARRASTRE_MULT: 1.2,
     GANCHO_AZUL_TICKS: 5 * 60,
     CACERIA_TICKS: 6 * 60,
     CACERIA_MULT: 1.2,
-    MISIL_VEL: 4.5,
+    /* El misil vuela al DOBLE de la velocidad de referencia de un Pac-Man
+     * (21 sep 2026). Antes iba a 4,5 px por fotograma, que son casi cuatro
+     * veces eso: llegaba antes de que se viera salir. */
+    MISIL_MULT: 2,
+    MISIL_VEL: 2 * CFG.BASE_SPEED,
     EMPUJON_TILES: 3,
     EMPUJON_STUN: 60,
     GRITO_GUERRA_TICKS: 90,
@@ -2185,7 +2194,7 @@
     CFG.HAB.CATALOGO = {
       asesino: [
         [h('mordisco', 'Q', 'MORDISCO', 16, 'Come al fantasma cercano.'),
-         h('shuriken', 'Q', 'SHURIKEN', 20, 'Tres cargas: dispara una por pulsación.'),
+         h('shuriken', 'Q', 'SHURIKEN', 20, 'Tres cargas, 3 s entre una y la siguiente.'),
          h('bomba', 'Q', 'BOMBA', 24, 'Coloca y detona una bomba.')],
         [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 5 s.'),
          h('sombra', 'W', 'SOMBRA', 26, '4 s invisible y veloz; bajas de 500/750.'),
