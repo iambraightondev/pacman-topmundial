@@ -18,7 +18,8 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 Las cinco de la temporada de octubre (tema: **cazar fantasmas**) están
 aprobadas y metidas: el emote GRITO y el VISOR DE CAZA en el carril gratis;
 la MOCHILA DE PROTONES, el ECTOPLASMA y la skin TRAMPA en el de pago. El
-camino de los hitos las enseña dibujadas, no en monedas. El escaparate con
+camino de los hitos las enseña dibujadas, no en monedas, y los treinta
+galones pagan algo (antes solo nueve). El escaparate con
 el que se decidió sigue en <https://claude.ai/artifact/GX82VpW7V8MZW7K7nWTCxG>
 y su código en `propuestas/pase-2026-10/`.
 

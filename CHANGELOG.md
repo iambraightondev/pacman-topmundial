@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-20 · Todos los galones del pase pagan algo
+
+De los treinta escalones del camino solo pagaban **nueve**. Los otros
+veintiuno estaban vacíos, y se notaba: subir de galón no daba nada durante
+cuatro escalones seguidos, justo en el tramo donde hay que seguir jugando.
+
+Ahora **paga los treinta**, y el mes mueve el mismo dinero de antes —unas
+1.170 monedas el carril gratis y 2.830 el de pago—: 30 y 70 en un galón
+normal, 60 y 150 cada cinco, 150 y 400 al final, y las cinco piezas de la
+temporada donde estaban.
+
 ## 2026-09-20 · El pase de octubre ya reparte piezas: CAZAFANTASMAS
 
 Hasta hoy el camino del pase pagaba **solo monedas**, y un pase sin nada que

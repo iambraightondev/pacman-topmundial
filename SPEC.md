@@ -1144,9 +1144,13 @@ than halfway through; at 1 000 it was done in 18 days and the last fortnight
 pushed nobody.
 
 ### The path (`CFG.PASE.CAMINO`)
-One entry per rewarded galón, each with a `gratis` and a `pago` side; a galón
-not listed simply pays nothing. Both sides can carry `monedas` and (once they
-exist) an item `id`.
+One entry per galón, each with a `gratis` and a `pago` side; both sides can
+carry `monedas` and an item `id`. **Every one of the thirty pays something**
+(20 Sep): only nine did before, and the twenty-one gaps showed — four galones
+in a row paying nothing, right in the stretch where you have to keep playing.
+The month moves the same money it did, spread across the whole path: 30 and 70
+on a normal galón, 60 and 150 every fifth, 150 and 400 at the finish, about
+1 170 free coins and 2 830 on the paid lane.
 
 ### The season-exclusive pieces (20 Sep 2026)
 

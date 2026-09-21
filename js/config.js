@@ -861,32 +861,54 @@
      * nacen solos el día que hacen falta (js/achievements.js, tipoSuelto). */
     DESDE: '2026-10',
 
-    /* EL CAMINO. Un escalón por galón, y el galón que no aparezca no paga
-     * nada. Cada lado puede llevar monedas y, cuando existan, una pieza del
-     * vestuario (por su id) o un cofre.
+    /* EL CAMINO. Un escalón por galón: TODOS pagan algo.
      *
-     * OJO: las piezas EXCLUSIVAS DE TEMPORADA todavía no están dibujadas, así
-     * que de momento el camino solo paga monedas. Rellenar esos huecos es
-     * trabajo de arte, no de código, y hasta que existan NO se deben poner
-     * aquí las de cofre (PLAN-COFRES.md) ni las de la tienda: cada cosa tiene
-     * que salir de su sitio o las tres economías se pisan. */
+     * Hasta el 20 de septiembre solo pagaban nueve, y los veintiún huecos de
+     * en medio se veían: subir de galón no daba nada y el camino dejaba de
+     * tirar justo donde hay que seguir jugando. El reparto de ahora mueve el
+     * MISMO dinero del mes —unas 1.170 monedas el carril gratis y 2.830 el de
+     * pago— solo que repartido en los treinta escalones: 30 y 70 en un galón
+     * normal, 60 y 150 cada cinco, y 150 y 400 al final.
+     *
+     * Cada lado puede llevar monedas y una pieza del vestuario (por su id).
+     * Las EXCLUSIVAS de la temporada van en los hitos, y NO se ponen aquí las
+     * de cofre (PLAN-COFRES.md) ni las de la tienda: cada cosa tiene que
+     * salir de su sitio o las tres economías se pisan. */
     /* `hito`: el escalón que rompe la fila y se enseña al doble de ancho.
      * Va escrito aquí y no lo deduce la pantalla de las cifras, porque lo que
      * hace grande a un galón es lo que se pone EN él (la pieza del mes, el
      * cofre, el final), no cuántas monedas paga. */
     CAMINO: [
-      { g: 1,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
-      { g: 2,  gratis: {},               pago: { monedas: 150 } },
-      { g: 3,  gratis: { monedas: 50 },  pago: { monedas: 150 } },
-      { g: 5,  gratis: { monedas: 100 }, pago: { monedas: 200 } },
-      { g: 10, gratis: { monedas: 150, id: 'grito' },
-               pago:   { monedas: 300, id: 'acc_mochila' }, hito: true },
-      { g: 15, gratis: { monedas: 150 }, pago: { monedas: 300 } },
-      { g: 20, gratis: { monedas: 200 },
-               pago:   { monedas: 400, id: 'efx_ecto' }, hito: true },
-      { g: 25, gratis: { monedas: 200 }, pago: { monedas: 400 } },
-      { g: 30, gratis: { monedas: 300, id: 'acc_visor' },
-               pago:   { monedas: 800, id: 'trampa' }, hito: true }
+      { g:  1, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  2, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  3, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  4, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  5, gratis: { monedas: 60 }, pago: { monedas: 150 } },
+      { g:  6, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  7, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  8, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g:  9, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 10, gratis: { monedas: 60, id: 'grito' }, pago: { monedas: 150, id: 'acc_mochila' }, hito: true },
+      { g: 11, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 12, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 13, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 14, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 15, gratis: { monedas: 60 }, pago: { monedas: 150 } },
+      { g: 16, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 17, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 18, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 19, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 20, gratis: { monedas: 60 }, pago: { monedas: 150, id: 'efx_ecto' }, hito: true },
+      { g: 21, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 22, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 23, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 24, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 25, gratis: { monedas: 60 }, pago: { monedas: 150 } },
+      { g: 26, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 27, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 28, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 29, gratis: { monedas: 30 }, pago: { monedas: 70 } },
+      { g: 30, gratis: { monedas: 150, id: 'acc_visor' }, pago: { monedas: 400, id: 'trampa' }, hito: true }
     ]
   };
 
