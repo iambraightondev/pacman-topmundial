@@ -21,16 +21,30 @@ test('catálogo: Asesino resuelve daño, puntos, estados y proyectiles', async (
       const g = G.ghosts[i]; g.mode = 'normal'; g.frightened = false; g.x = x; g.y = y; return g;
     }
     function fly(n = 120) { for (let i = 0; i < n && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true); }
+    function recta(largo) {
+      for (let r = 1; r < CFG.ROWS - 1; r++) for (let c = 1; c < CFG.COLS - largo - 1; c++) {
+        let libre = true; for (let n = 0; n <= largo; n++) libre = libre && CFG.isOpen(c + n, r, false);
+        if (libre) return { c, r };
+      }
+    }
     const out = {};
 
     let p = start('shuriken,turbo,flash,grito');
     p.x = 8 * T + 4; p.y = CFG.TUNNEL_ROW * T + 4; p.nextDir = CFG.DIR.RIGHT;
     for (let i = 0; i < 3; i++) ghost(i, p.x + T, p.y);
     let base = G.score;
-    out.shurikenLanza = H.lanzar(G, 0, 0) && H.proyectilesCat.filter(b => b.tipo === 'shuriken').length === 3;
-    fly(60);
+    const q1 = H.lanzar(G, 0, 0), una = H.proyectilesCat.filter(b => b.tipo === 'shuriken').length === 1 && H.st[0].cd[0] === 0;
+    fly(60); const q2 = H.lanzar(G, 0, 0); fly(60); const q3 = H.lanzar(G, 0, 0); fly(60);
+    out.shurikenLanza = q1 && q2 && q3 && una;
     out.shurikenMataTres = G.score - base === 600 && G.ghosts.slice(0, 3).every(g => g.mode === 'eyes');
     out.shurikenRecarga = H.st[0].cd[0] === 0;
+
+    p = start('shuriken,turbo,flash,grito');
+    p.x = 8 * T + 4; p.y = CFG.TUNNEL_ROW * T + 4; p.nextDir = CFG.DIR.RIGHT;
+    H.lanzar(G, 0, 0); fly(100);
+    ghost(0, p.x + T, p.y); H.lanzar(G, 0, 0); fly(60);
+    ghost(1, p.x + T, p.y); H.lanzar(G, 0, 0); fly(60);
+    out.shurikenFallo = !H.st[0].shuriken && H.st[0].cd[0] === 20 * 60;
 
     p = start('bomba,turbo,flash,grito');
     p.x = 10 * T + 4; p.y = 10 * T + 4; ghost(0, p.x + T, p.y);
@@ -41,14 +55,17 @@ test('catálogo: Asesino resuelve daño, puntos, estados y proyectiles', async (
 
     p = start('mordisco,sombra,marca,grito');
     p.x = 10 * T + 4; p.y = 10 * T + 4;
-    H.sombra(G, 0); const invisible = H.oculto(0) && H.alfa(0, G) < 0.4;
-    H.st[0].sombra = 1; H.pasoRoles(G, true);
-    const sg = ghost(0, p.x + T, p.y); base = G.score; G.chainIndex = 0; G.eatGhost(sg, 0, 'mordisco');
-    out.sombra = invisible && G.score - base === 500 && !H.st[0].sombraGolpe;
+    H.sombra(G, 0); const invisible = H.oculto(0) && H.alfa(0, G) < 0.4 && H.multVel(0) === 1.2;
+    let sg = ghost(0, p.x + T, p.y); sg.dir = CFG.DIR.LEFT;
+    base = G.score; G.chainIndex = 0; G.eatGhost(sg, 0, 'contacto'); const frontal = G.score - base === 500;
+    sg = ghost(1, p.x + T, p.y); sg.dir = CFG.DIR.RIGHT;
+    base = G.score; H.matarCatalogo(G, sg, 0, CFG.HAB.BOMBA_PUNTOS, 'bomba', 1, true);
+    out.sombra = invisible && frontal && G.score - base === 750;
 
     p = start('mordisco,frenesi,marca,grito');
     H.frenesi(G, 0); const fg = ghost(0, p.x + T, p.y); G.eatGhost(fg, 0, 'mordisco');
-    out.frenesi = H.st[0].frenesiMult === 1.15 && H.multVel(0) > 1.14 && H.fx.some(f => f.t === 'frenesi');
+    for (let i = 0; i < 4; i++) H.alMatar(G, 0, null, p.x, p.y);
+    out.frenesi = H.st[0].frenesi === 8 * 60 && H.st[0].frenesiMult > 1.6 && H.multVel(0) > 1.6 && H.fx.some(f => f.t === 'frenesi');
 
     p = start('mordisco,carrona,flash,grito');
     H.carrona(G, 0); const cg = ghost(0, p.x + T, p.y); base = G.score; G.eatGhost(cg, 0, 'mordisco');
@@ -60,8 +77,14 @@ test('catálogo: Asesino resuelve daño, puntos, estados y proyectiles', async (
     out.marca = G.score - base === 500 && H.marcaGhost[0] === -1;
 
     p = start('mordisco,turbo,gancho_inverso,grito');
-    const gg = ghost(0, p.x + 2 * T, p.y); const ox = p.x;
-    out.gancho = H.ganchoInverso(G, 0) && p.x === gg.x && p.x !== ox && H.puedeComer(G, gg.id, 0) && H.fx.some(f => f.t === 'gancho');
+    const pasillo = recta(6);
+    p.x = pasillo.c * T + T / 2; p.y = pasillo.r * T + T / 2; p.nextDir = CFG.DIR.RIGHT;
+    const ox = p.x, falla = H.ganchoInverso(G, 0) && H.proyectilesCat.some(b => b.tipo === 'gancho_inverso');
+    let vioVuelta = false; for (let i = 0; i < 80 && H.proyectilesCat.length; i++) { H.pasoProyectilesCat(G, true); vioVuelta ||= H.proyectilesCat.some(b => b.fase === 'vuelve'); }
+    const regreso = falla && vioVuelta && !H.proyectilesCat.some(b => b.tipo === 'gancho_inverso') && p.x === ox;
+    const gg = ghost(0, p.x + 2 * T, p.y); H.ganchoInverso(G, 0);
+    for (let i = 0; i < 120 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
+    out.gancho = regreso && p.x === gg.x && H.puedeComer(G, gg.id, 0) && H.fx.some(f => f.t === 'gancho_atrapa');
 
     p = start('mordisco,turbo,flash,misil');
     for (let i = 0; i < 4; i++) ghost(i, p.x + T, p.y);
@@ -74,17 +97,63 @@ test('catálogo: Asesino resuelve daño, puntos, estados y proyectiles', async (
 
     start('mordisco,turbo,flash,caceria', 2);
     const hunt = ghost(0, G.pacs[0].x, G.pacs[0].y); H.caceria(G, 0);
-    const permisos = H.puedeComer(G, 0, 0) && !H.puedeComer(G, 0, 1) && H.caceriaQuien[0] === 0;
+    H.st[0].sombra = 2; H.st[0].frenesi = 2; H.st[0].frenesiMult = 1.15;
+    const acumulada = Math.abs(H.multVel(0) - 1.2 * 1.2 * 1.15) < 0.0001;
+    const permisos = H.puedeComer(G, 0, 0) && !H.puedeComer(G, 0, 1) && H.caceriaQuien[0] === 0 &&
+      acumulada && CFG.HAB.CATALOGO.asesino[3].find(x => x.id === 'caceria').cd === 90 * 60;
     G.pacs[0].pauseTicks = 30; G.stepPlaying();
-    out.caceria = permisos && !G.pacs[0].dying && hunt.mode === 'eyes';
+    hunt.mode = 'normal';
+    out.caceria = permisos && !G.pacs[0].dying && H.caceriaQuien[0] === -1 && !H.puedeComer(G, 0, 0);
     G.toMenu();
     return out;
   });
   expect(r).toEqual({
-    shurikenLanza: true, shurikenMataTres: true, shurikenRecarga: true,
+    shurikenLanza: true, shurikenMataTres: true, shurikenRecarga: true, shurikenFallo: true,
     bomba: true, sombra: true, frenesi: true, carrona: true, marca: true, gancho: true,
     misilLanza: true, misilCuatro: true, ejecucion: true, caceria: true
   });
+});
+
+test('catálogo: el misil sigue pasillos y se dibuja como misil animado', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const CFG = window.PM.CFG, H = window.PM.Hab, G = window.PM.Game, T = CFG.TILE;
+    G.newGame({ players: 1, hab: true, roles: ['asesino'], loadouts: ['mordisco,turbo,flash,misil'] });
+    G.state = 'PLAYING'; G.readyTicks = 0; G.roles = ['asesino'];
+    H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,misil']);
+    for (const g of G.ghosts) g.mode = 'house';
+    let par = null;
+    for (let r = 1; r < CFG.ROWS - 1 && !par; r++) for (let c = 1; c < CFG.COLS - 2 && !par; c++) {
+      if (!CFG.isOpen(c, r, false)) continue;
+      for (let d = 2; d <= 10 && c + d < CFG.COLS; d++) {
+        if (!CFG.isOpen(c + d, r, false)) continue;
+        let muro = false; for (let x = c + 1; x < c + d; x++) muro ||= !CFG.isOpen(x, r, false);
+        const ruta = muro && H.rutaLaberinto(c, r, c + d, r);
+        if (ruta && ruta.length > d) { par = { c, r, tc: c + d, tr: r, largo: ruta.length }; break; }
+      }
+    }
+    if (!par) return { encontro: false };
+    const p = G.pacs[0], g = G.ghosts[0];
+    p.x = par.c * T + T / 2; p.y = par.r * T + T / 2;
+    g.mode = 'normal'; g.frightened = false; g.x = par.tc * T + T / 2; g.y = par.tr * T + T / 2;
+    H.misil(G, 0);
+    const cv = document.createElement('canvas'); cv.width = CFG.NATIVE_W; cv.height = CFG.NATIVE_H;
+    const ctx = cv.getContext('2d', { willReadFrequently: true }); H.dibujarAire(G, ctx);
+    const cp = H.proyectilesCat[0], box = ctx.getImageData(Math.max(0, Math.floor(cp.x - 14)), Math.max(0, Math.floor(cp.y + CFG.MAZE_Y - 9)), 28, 18).data;
+    let tinta = 0; for (let i = 3; i < box.length; i += 4) if (box[i]) tinta++;
+    let abiertas = true, giros = 0, ang = null;
+    for (let i = 0; i < 1600 && H.proyectilesCat.length; i++) {
+      H.pasoProyectilesCat(G, true);
+      const m = H.proyectilesCat.find(x => x.tipo === 'misil');
+      if (m) {
+        abiertas = abiertas && CFG.isOpen(Math.floor(m.x / T), Math.floor(m.y / T), false);
+        if (ang != null && Math.abs(m.ang - ang) > 0.5) giros++;
+        ang = m.ang;
+      }
+    }
+    const out = { encontro: true, ruta: par.largo > 2, abiertas, giros: giros > 0, mata: g.mode === 'eyes', tinta: tinta > 20 };
+    G.toMenu(); return out;
+  });
+  expect(r).toEqual({ encontro: true, ruta: true, abiertas: true, giros: true, mata: true, tinta: true });
 });
 
 test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ page }) => {
@@ -201,6 +270,9 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
     H.dibujarSuelo(G, ctx); H.dibujarPac(G, ctx, G.pacs[0], 0); H.dibujarAire(G, ctx);
     const pixels = ink(), tipos = new Set(H.fx.map(f => f.t));
     const declaradas = ['sombra', 'marca', 'caceria', 'bomba_planta'].every(x => tipos.has(x));
+    const originalGhost = window.PM.Sprites.drawGhost; let modoAzul = '';
+    window.PM.Sprites.drawGhost = (...args) => { modoAzul = args[5]; };
+    H.azulCatalogo[0] = 1; G.ghosts[0].draw(ctx, G); window.PM.Sprites.drawGhost = originalGhost;
     const funciones = {
       shuriken: 'shuriken', bomba: 'bomba', sombra: 'sombra', frenesi: 'frenesi', carrona: 'carrona',
       marca: 'marca', gancho_inverso: 'ganchoInverso', misil: 'misil', ejecucion: 'ejecucion', caceria: 'caceria',
@@ -216,9 +288,10 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
       return !/efecto\(|proyectilesCat\.push/.test(src);
     }).map(([id]) => id);
     G.toMenu();
-    return { pixels, declaradas, sinAnimacion };
+    return { pixels, declaradas, azulClaro: modoAzul === 'fright', sinAnimacion };
   });
   expect(r.declaradas).toBe(true);
+  expect(r.azulClaro).toBe(true);
   expect(r.sinAnimacion).toEqual([]);
   expect(r.pixels).toBeGreaterThan(100);
 });

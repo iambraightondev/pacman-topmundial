@@ -4,12 +4,14 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-09-21 · El catálogo de habilidades ya se juega y se ve
 
-**Las habilidades nuevas dejaron de ser estados a medias.** SHURIKEN lanza
-tres proyectiles y se recarga al acertar los tres; BOMBA da 150 exactos;
-SOMBRA oculta y prepara el mordisco doble; FRENESÍ acelera con cada baja;
-MARCA duplica la muerte y enseña la ruta; GANCHO INVERSO lleva al Asesino
-hasta un fantasma azul; MISIL recorre los cuatro objetivos; y CACERÍA permite
-que solo su Asesino coma los fantasmas señalados.
+**Las habilidades nuevas dejaron de ser estados a medias.** SHURIKEN reparte
+sus tres cargas entre tres pulsaciones y evita la recarga solo con pleno;
+BOMBA da 150 exactos; SOMBRA suma velocidad y garantiza 500/750 por baja sin
+inflar la racha; FRENESÍ dura ocho segundos y crece sin tope; MARCA duplica la
+muerte y enseña la ruta; GANCHO INVERSO viaja, puede fallar, vuelve y arrastra
+al Asesino si engancha; MISIL recorre los pasillos y los cuatro objetivos; y
+CACERÍA acumula ×1,2 de velocidad, conserva GRITO como alternativa y retira
+cada marca al morir el fantasma.
 
 **Tanque, Soporte y Mago también resuelven la habilidad completa.** Puente y
 Estela benefician al equipo, Cadena comparte puntos y absorbe el golpe,

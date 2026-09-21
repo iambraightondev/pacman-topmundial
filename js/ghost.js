@@ -521,9 +521,10 @@
     var flashOn = false;
     if (this.mode === 'eyes' || this.mode === 'entering') {
       mode = 'eyes';
-    } else if (this.frightened) {
+    } else if (this.frightened || (game.hab && window.PM.Hab &&
+               window.PM.Hab.azulCatalogo && window.PM.Hab.azulCatalogo[this.id])) {
       mode = 'fright';
-      flashOn = game.frightFlashOn;
+      flashOn = this.frightened && game.frightFlashOn;
     }
     /* ACECHO (PAC-MAN VS. con poderes): el fantasma humano se vuelve
      * translúcido unos segundos. Fuera de ese caso alfa vale 1 y esto no

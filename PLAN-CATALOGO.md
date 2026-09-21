@@ -59,19 +59,19 @@ existen. Las otras 16 son las que se están eligiendo aquí.
 
 | Ranura | Nombre | Qué hace | Recarga |
 | --- | --- | --- | --- |
-| Q | **SHURIKEN** | Tres en línea recta. Si aciertan los tres, se recargan al instante; si falla uno, recarga entera. Cada muerte vale 200, sin racha | 20 s |
+| Q | **SHURIKEN** | Tres cargas: cada Q lanza una. Si las tres aciertan, se recarga al instante; si falla una, recarga entera. Cada muerte vale 200, sin racha | 20 s |
 | Q | **BOMBA** | Se deja y explota al volver a pulsar Q: 2 casillas a la redonda, 150 por fantasma, sin racha | 24 s |
-| R | **MISIL** | Teledirigido a ×2,5 que mata a todos los fantasmas del más cercano al más lejano, con la racha de la pasiva (250 · 500 · 1.000 · 2.000) | 80 s |
+| R | **MISIL** | Teledirigido que recorre los pasillos y mata a todos los fantasmas del más cercano al más lejano, con la racha de la pasiva (250 · 500 · 1.000 · 2.000) | 80 s |
 
 ### Alternativas implementadas por ranura
 
 | Ranura | Nombre | Qué hace | Recarga |
 | --- | --- | --- | --- |
-| W | **SOMBRA** | 4 s invisible: ningún fantasma le persigue y el primer mordisco al salir vale doble | 26 s |
-| W | **FRENESÍ** | 6 s: cada fantasma comido le suma +0,15 de velocidad, acumulable hasta ×1,6. Corre, pero solo si mata | 26 s |
+| W | **SOMBRA** | 4 s invisible y a ×1,2: cualquier baja garantiza 500, o 750 desde la espalda; la racha normal no se multiplica | 26 s |
+| W | **FRENESÍ** | 8 s: cada fantasma comido le suma +0,15 de velocidad, sin límite | 26 s |
 | W | **CARROÑA** | 6 s: cada fantasma comido deja una joya que vale 300 si la recoge él antes de 3 s | 24 s |
 | E | **MARCA** | Señala un fantasma 8 s: comérselo vale ×2 y se le ve la ruta | 30 s |
-| E | **GANCHO INVERSO** | Se lanza hacia el fantasma más cercano a 5 casillas y lo vuelve azul para poder comérselo | 32 s |
+| E | **GANCHO INVERSO** | Sale 5 casillas y regresa aunque falle. Si engancha, vuelve azul al fantasma y arrastra al Asesino a ×1,2 | 32 s |
 
 **Ojo con el cupo**: la W tiene **tres** candidatas vivas (SOMBRA, FRENESÍ y
 CARROÑA) para **dos** huecos. O cae una, o esa ranura pasa a ofrecer tres y
@@ -130,15 +130,10 @@ pero ahora protege un radio de 5 casillas y no todo el equipo.
 - **EJECUCIÓN** (Asesino, R · 80 s): mata en el acto a un solo fantasma,
   aunque no esté azul, y concede **5.000 puntos únicamente por esa muerte**.
   La recarga queda en 1 min 20 s.
-- **CACERÍA como R del Asesino** (cambio de lo que hay, no habilidad nueva):
-  reemplaza a GRITO. Los fantasmas quedan envueltos en círculos del color del
-  rol Asesino y solo pueden morir por él.
-  - *A favor*: el rol se llama Asesino y puntúa; hoy su R regala la mejor
-    ventana de puntos al equipo entero.
-  - *En contra*: hay que resolver cómo se pintan esos fantasmas para los
-    demás (ahora azul = comestible para todos; con esto, azul para uno y
-    mortal para el resto, y eso se presta a muertes injustas). Y en party
-    baja bastante lo que aporta el Asesino al grupo.
+- **CACERÍA como R alternativa del Asesino** (90 s): convive con GRITO. Da
+  velocidad ×1,2 acumulable con las demás habilidades; los fantasmas quedan
+  envueltos en círculos del color del rol Asesino y solo pueden morir por él.
+  La marca se consume con la muerte y no vuelve cuando el fantasma revive.
 
 ## Descartadas, con su motivo
 
@@ -148,7 +143,6 @@ pero ahora protege un radio de 5 casillas y no todo el equipo.
 | **DASH DE SANGRE** | Asesino · W | Otra forma de correr y embestir: se pisa con TURBO y con la APISONADORA del Tanque |
 | **RELOJ** | Asesino · W | Ralentizar el mapa es control, y el control es del Soporte |
 | **ESTOCADA** | Asesino · E | Es el MORDISCO con más alcance: no cambia cómo se juega |
-| **CACERÍA como habilidad nueva** | Asesino · R | Competía con su propia R. Se reconvierte en un cambio de la R actual (ver *En análisis*) |
 | **SED** (comer recarga la Q) | Asesino · W | No se ve desde fuera: por dentro es «la Q recarga antes», que es un número, no una jugada |
 | **CEBO** (señuelo que atrae fantasmas) | Asesino · E | Choca con el CLON del Mago, que hace lo mismo |
 | **INTERCAMBIO** | Mago · W | Cambiar posiciones no aporta apoyo real y puede sentirse como un sacrificio |

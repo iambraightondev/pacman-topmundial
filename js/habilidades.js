@@ -131,13 +131,13 @@
       /* ---------- estado del catálogo ---------- */
       bomba: null,          // { c, r, t }
       sombra: 0,
-      sombraGolpe: false,   // el primer MORDISCO al salir vale doble
+      sombraGolpe: false,   // compatibilidad con fotos antiguas; ya no se usa
       frenesi: 0,
       frenesiMult: 1,
       carroña: 0,
       marca: 0,
       ganchoInv: 0,
-      shuriken: null,       // { id, pendientes, aciertos }
+      shuriken: null,       // { id, usados, resueltos, aciertos }
       misil: null,          // proyectil en cadena del Asesino
       caceria: 0,
       estela: 0,
@@ -1331,7 +1331,9 @@
     multVel: function (idx) {
       if (this.arrollando(idx)) return H.APISONADORA_MULT;
       var s = this.estado(idx), m = this.conTurbo(idx) ? H.TURBO_MULT : 1;
+      if (s && s.sombra > 0) m *= H.SOMBRA_MULT;
       if (s && s.frenesi > 0) m *= s.frenesiMult || 1;
+      if (s && s.caceria > 0) m *= H.CACERIA_MULT;
       if (s && s.pielPiedra > 0) m *= 0.5;
       if (s && s.estela > 0) m *= H.ESTELA_MULT;
       else if (s && s.estelaBuff > 0) m *= H.ESTELA_RASTRO_MULT;
@@ -1499,19 +1501,19 @@
       return (rol === 'asesino') ? Math.round(base * H.BONO_ASESINO) : base;
     },
 
-    /* Bonos que dependen de QUÉ fantasma se ha comido y de cómo. Marca y el
-     * golpe de salida de Sombra tienen que pasar también por las muertes
-     * normales de Game.eatGhost; antes solo afectaban a matarCatalogo y por
-     * eso parecían no hacer nada con MORDISCO o CACERÍA. */
+    /* Bonos que dependen de QUÉ fantasma se ha comido y de cómo. Sombra no
+     * multiplica la cadena: garantiza 500, o 750 si la baja llega desde la
+     * espalda. Una cadena que ya valga más conserva su premio. */
     puntosFantasma: function (G, who, g, base, como, exacto) {
-      var s = this.estado(who), mult = 1;
+      var s = this.estado(who), mult = 1, pts;
       if (!exacto && g && this.marcaGhost[g.id] === who && s && s.marca > 0) mult *= 2;
-      if (!exacto && como === 'mordisco' && s && s.sombraGolpe) {
-        mult *= 2;
-        s.sombraGolpe = false;
+      pts = exacto ? Math.round(base || 0) : this.puntosDe(G, who, Math.round((base || 0) * mult));
+      if (s && s.sombra > 0 && g) {
+        var detras = this.deEspaldas(G.pacs[who], g);
+        pts = Math.max(pts, detras ? H.SOMBRA_ESPALDA_PUNTOS : H.SOMBRA_PUNTOS);
         this.efecto('sombra_golpe', g.x, g.y, 28, G.pacs[who].x, G.pacs[who].y);
       }
-      return exacto ? Math.round(base || 0) : this.puntosDe(G, who, Math.round((base || 0) * mult));
+      return pts;
     },
 
     /* Todo fantasma cobrado alimenta Frenesí y Carroña, venga de MORDISCO,
@@ -1522,10 +1524,11 @@
       if (!s) return;
       x = (x == null && g) ? g.x : x; y = (y == null && g) ? g.y : y;
       if (s.frenesi > 0) {
-        s.frenesiMult = Math.min(H.FRENESI_MAX, (s.frenesiMult || 1) + H.FRENESI_PASO);
+        s.frenesiMult = (s.frenesiMult || 1) + H.FRENESI_PASO;
         this.efecto('frenesi', x, y, 26);
         if (G.addPopup) G.addPopup(x, y - 7, '×' + s.frenesiMult.toFixed(2), 35);
       }
+      if (g && this.caceriaQuien[g.id] >= 0) this.caceriaQuien[g.id] = -1;
       if (s.carrona > 0) this.joyas.push({ x: x, y: y, t: H.CARROÑA_JOYA, w: who });
       if (g && this.marcaGhost[g.id] >= 0) {
         var duenoMarca = this.marcaGhost[g.id];
@@ -2543,13 +2546,18 @@
       var p = G.pacs[idx], s = this.estado(idx);
       var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
       if (!p || !s || !v) return false;
-      var id = ++this.rafagaId;
-      s.shuriken = { id: id, pendientes: H.SHURIKEN_CANT, aciertos: 0 };
-      for (var n = 0; n < H.SHURIKEN_CANT; n++) this.proyectilesCat.push({
+      if (!s.shuriken) s.shuriken = { id: ++this.rafagaId, usados: 0, resueltos: 0, aciertos: 0 };
+      if (s.shuriken.usados >= H.SHURIKEN_CANT) return false;
+      s.shuriken.usados++;
+      this.proyectilesCat.push({
         tipo: 'shuriken', x: p.x, y: p.y, d: dir, w: idx,
-        espera: n * H.SHURIKEN_SEPARA, viaja: 0, max: H.SHURIKEN_TILES * T, grupo: id
+        espera: 0, viaja: 0, max: H.SHURIKEN_TILES * T, grupo: s.shuriken.id
       });
+      /* Las dos primeras pulsaciones son cargas, no activan recarga. La
+       * tercera sí: al resolver los tres impactos se anula si todos dieron. */
+      this.sinGasto = s.shuriken.usados < H.SHURIKEN_CANT;
       this.efecto('shuriken_salida', p.x, p.y, 18);
+      G.addPopup(p.x, p.y - 8, s.shuriken.usados + '/3', 24);
       sonDe(G, idx, 'playFlash');
       return true;
     },
@@ -2582,13 +2590,15 @@
       sonDe(G, idx, 'playShout'); return true;
     },
     ganchoInverso: function (G, idx, d) {
-      var g = this.ghostCercano(G, idx, H.GANCHO_INVERSO_TILES), p = G.pacs[idx], s = this.estado(idx);
-      if (!g || !p || !s) return false;
-      var ox = p.x, oy = p.y;
-      this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_AZUL_TICKS;
-      s.ganchoInv = H.GANCHO_AZUL_TICKS;
-      if (G.isLocalAuth(idx)) { p.x = g.x; p.y = g.y; p.pauseTicks = 0; }
-      this.efecto('gancho', g.x, g.y, 30, ox, oy); sonDe(G, idx, 'playCharge'); return true;
+      var p = G.pacs[idx], s = this.estado(idx);
+      var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
+      if (!p || !s || !v) return false;
+      this.proyectilesCat.push({ tipo: 'gancho_inverso', x: p.x, y: p.y,
+        ox: p.x, oy: p.y, d: dir, w: idx, fase: 'sale', viaja: 0,
+        max: H.GANCHO_INVERSO_TILES * T, objetivo: -1 });
+      s.ganchoInv = 1;
+      this.efecto('gancho_salida', p.x, p.y, 22);
+      sonDe(G, idx, 'playCharge'); return true;
     },
     caceria: function (G, idx) {
       var s = this.estado(idx); if (!s) return false;
@@ -2745,9 +2755,10 @@
     finShuriken: function (G, b, acerto) {
       var s = this.estado(b.w);
       if (!s || !s.shuriken || s.shuriken.id !== b.grupo) return;
-      s.shuriken.pendientes--;
+      s.shuriken.resueltos++;
       if (acerto) s.shuriken.aciertos++;
-      if (s.shuriken.pendientes <= 0) {
+      if (s.shuriken.usados === H.SHURIKEN_CANT &&
+          s.shuriken.resueltos === H.SHURIKEN_CANT) {
         if (s.shuriken.aciertos === H.SHURIKEN_CANT) {
           var k = this.kDe(G, b.w, 'shuriken');
           if (k >= 0) s.cd[k] = 0;
@@ -2758,8 +2769,46 @@
       }
     },
 
-    /* Proyectiles visibles del catálogo. Aquí se resuelven tanto la ráfaga
-     * de tres shuriken como la bola que no falla, el misil encadenado y los
+    terminarGanchoInverso: function (b) {
+      var s = this.estado(b.w), queda = false;
+      for (var i = 0; i < this.proyectilesCat.length; i++) {
+        var o = this.proyectilesCat[i];
+        if (o !== b && o.tipo === 'gancho_inverso' && o.w === b.w) { queda = true; break; }
+      }
+      if (s && !queda) s.ganchoInv = 0;
+    },
+
+    /* Camino cardinal por casillas abiertas. El misil usa la misma topología
+     * que jugadores y fantasmas, incluido el túnel, así que nunca corta una
+     * esquina ni atraviesa una pared para llegar antes. */
+    rutaLaberinto: function (fc, fr, tc, tr) {
+      fc = CFG.wrapCol(fc); tc = CFG.wrapCol(tc);
+      if (fr < 0 || tr < 0 || fr >= CFG.ROWS || tr >= CFG.ROWS) return null;
+      if (fc === tc && fr === tr) return [];
+      var prev = new Array(CFG.COLS * CFG.ROWS), cola = [];
+      var inicio = fr * CFG.COLS + fc, fin = tr * CFG.COLS + tc, cabeza = 0;
+      prev[inicio] = inicio; cola.push(inicio);
+      while (cabeza < cola.length && prev[fin] == null) {
+        var id = cola[cabeza++], c = id % CFG.COLS, r = Math.floor(id / CFG.COLS);
+        for (var d = 0; d < 4; d++) {
+          var v = CFG.DIR_V[d], nc = CFG.wrapCol(c + v.x), nr = r + v.y;
+          if (nr < 0 || nr >= CFG.ROWS || !CFG.isOpen(nc, nr, false)) continue;
+          var ni = nr * CFG.COLS + nc;
+          if (prev[ni] != null) continue;
+          prev[ni] = id; cola.push(ni);
+        }
+      }
+      if (prev[fin] == null) return null;
+      var ruta = [], paso = fin;
+      while (paso !== inicio) {
+        ruta.push({ c: paso % CFG.COLS, r: Math.floor(paso / CFG.COLS) });
+        paso = prev[paso];
+      }
+      ruta.reverse(); return ruta;
+    },
+
+    /* Proyectiles visibles del catálogo. Aquí se resuelven las tres cargas
+     * de shuriken, la bola que no falla, el misil encadenado y los
      * disparos del tótem. El anfitrión decide los impactos; las demás
      * pantallas reciben las posiciones por la foto de red. */
     pasoProyectilesCat: function (G, manda) {
@@ -2790,22 +2839,99 @@
           continue;
         }
 
+        if (b.tipo === 'gancho_inverso') {
+          var hp = G.pacs[b.w], hv = CFG.DIR_V[b.d], quitarGancho = false;
+          if (!hp || hp.out || hp.dying) quitarGancho = true;
+          else if (b.fase === 'sale') {
+            var hnx = b.x + hv.x * H.GANCHO_INVERSO_VEL;
+            var hny = b.y + hv.y * H.GANCHO_INVERSO_VEL;
+            if (hnx < 0) hnx += ancho; else if (hnx >= ancho) hnx -= ancho;
+            var hc = Math.floor(hnx / T), hr = Math.floor(hny / T);
+            b.viaja += H.GANCHO_INVERSO_VEL;
+            if (hr < 0 || hr >= CFG.ROWS || !CFG.isOpen(hc, hr, false) || b.viaja > b.max) {
+              b.fase = 'vuelve';
+            } else {
+              b.x = hnx; b.y = hny;
+              if (manda) for (var hg = 0; hg < 4; hg++) {
+                var gg = G.ghosts[hg];
+                if (!this.enLaCalle(gg) || this.distancia(b.x, b.y, gg.x, gg.y) > T * 0.75) continue;
+                b.objetivo = gg.id; b.fase = 'arrastra'; b.x = gg.x; b.y = gg.y;
+                this.azulCatalogo[gg.id] = b.w + 1; this.azulCatTicks[gg.id] = H.GANCHO_AZUL_TICKS;
+                this.efecto('gancho_atrapa', gg.x, gg.y, 24, hp.x, hp.y);
+                break;
+              }
+            }
+          } else if (b.fase === 'arrastra') {
+            var hgObj = G.ghosts[b.objetivo | 0];
+            if (!this.enLaCalle(hgObj)) b.fase = 'vuelve';
+            else {
+              b.x = hgObj.x; b.y = hgObj.y;
+              this.aturdido[hgObj.id] = Math.max(this.aturdido[hgObj.id] || 0, 2);
+              var hdx = b.x - hp.x;
+              if (hdx > ancho / 2) hdx -= ancho; else if (hdx < -ancho / 2) hdx += ancho;
+              var hdy = b.y - hp.y, hdis = Math.sqrt(hdx * hdx + hdy * hdy) || 1;
+              var harr = G.pacSpeedPx(hp) * H.GANCHO_ARRASTRE_MULT;
+              if (hdis <= harr + 1) { hp.x = b.x; hp.y = b.y; hp.pauseTicks = 0; quitarGancho = true; }
+              else if (!G.isLocalAuth || G.isLocalAuth(b.w)) {
+                hp.x += hdx / hdis * harr; hp.y += hdy / hdis * harr;
+                if (hp.x < 0) hp.x += ancho; else if (hp.x >= ancho) hp.x -= ancho;
+                hp.pauseTicks = 0;
+              }
+            }
+          }
+          if (b.fase === 'vuelve') {
+            var rdx = hp.x - b.x;
+            if (rdx > ancho / 2) rdx -= ancho; else if (rdx < -ancho / 2) rdx += ancho;
+            var rdy = hp.y - b.y, rdis = Math.sqrt(rdx * rdx + rdy * rdy) || 1;
+            if (rdis <= H.GANCHO_INVERSO_VEL + 1) quitarGancho = true;
+            else {
+              b.x += rdx / rdis * H.GANCHO_INVERSO_VEL; b.y += rdy / rdis * H.GANCHO_INVERSO_VEL;
+              if (b.x < 0) b.x += ancho; else if (b.x >= ancho) b.x -= ancho;
+            }
+          }
+          if (quitarGancho) {
+            this.terminarGanchoInverso(b); this.proyectilesCat.splice(i, 1);
+          }
+          continue;
+        }
+
         var target = G.ghosts[b.objetivo | 0];
         if (!this.enLaCalle(target)) {
           if (b.tipo === 'misil') {
             while (b.cola && b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
-            if (b.cola && b.cola.length) { b.objetivo = b.cola.shift(); target = G.ghosts[b.objetivo]; }
+            if (b.cola && b.cola.length) { b.objetivo = b.cola.shift(); b.ruta = null; target = G.ghosts[b.objetivo]; }
           } else {
             target = this.ghostCercanoAt(G, Math.floor(b.x / T), Math.floor(b.y / T), 999);
             if (target) b.objetivo = target.id;
           }
         }
         if (!this.enLaCalle(target)) { this.proyectilesCat.splice(i, 1); continue; }
-        var dx = target.x - b.x;
-        if (dx > ancho / 2) dx -= ancho; else if (dx < -ancho / 2) dx += ancho;
-        var dy = target.y - b.y, dis = Math.sqrt(dx * dx + dy * dy) || 1;
         var vel = b.tipo === 'misil' ? H.MISIL_VEL : (b.tipo === 'totem' ? H.TOTEM_BALA_VEL : H.BOLA_GUIADA_VEL);
-        if (dis <= vel + 3) {
+        var dx, dy, dis, aObjetivo = true;
+        if (b.tipo === 'misil') {
+          var bc = Math.floor(b.x / T), br = Math.floor(b.y / T);
+          var tc = target.tileX(), tr = target.tileY(), clave = tc + ',' + tr;
+          if (!b.ruta || b.rutaObjetivo !== clave || (!b.ruta.length && (bc !== tc || br !== tr))) {
+            b.ruta = this.rutaLaberinto(bc, br, tc, tr);
+            b.rutaObjetivo = clave;
+          }
+          if (!b.ruta) { this.proyectilesCat.splice(i, 1); continue; }
+          var wp = b.ruta.length ? b.ruta[0] : null;
+          var wx = wp ? wp.c * T + T / 2 : target.x;
+          var wy = wp ? wp.r * T + T / 2 : target.y;
+          dx = wx - b.x; dy = wy - b.y; aObjetivo = !wp;
+        } else {
+          dx = target.x - b.x; dy = target.y - b.y;
+        }
+        if (dx > ancho / 2) dx -= ancho; else if (dx < -ancho / 2) dx += ancho;
+        dis = Math.sqrt(dx * dx + dy * dy) || 1;
+        b.ang = Math.atan2(dy, dx);
+        if (b.tipo === 'misil' && !aObjetivo && dis <= vel + 0.5) {
+          b.x += dx; b.y += dy; b.ruta.shift();
+          if (b.x < 0) b.x += ancho; else if (b.x >= ancho) b.x -= ancho;
+          continue;
+        }
+        if (aObjetivo && dis <= vel + 3) {
           b.x = target.x; b.y = target.y;
           if (manda) {
             if (b.tipo === 'guiada') this.matarCatalogo(G, target, b.w, H.BOLA_GUIADA_PUNTOS, 'bola_guiada', 1, true);
@@ -2817,7 +2943,7 @@
           }
           if (b.tipo === 'misil' && b.cola && b.cola.length) {
             while (b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
-            if (b.cola.length) { b.objetivo = b.cola.shift(); continue; }
+            if (b.cola.length) { b.objetivo = b.cola.shift(); b.ruta = null; b.rutaObjetivo = ''; continue; }
           }
           this.proyectilesCat.splice(i, 1); continue;
         }
@@ -2846,6 +2972,7 @@
         if (this.aturdido[j] > 0) this.aturdido[j]--;
         if (this.ciego[j] > 0) this.ciego[j]--;
         if (this.azulCatTicks[j] > 0 && --this.azulCatTicks[j] <= 0) this.azulCatalogo[j] = 0;
+        if (this.caceriaQuien[j] >= 0 && !this.enLaCalle(G.ghosts[j])) this.caceriaQuien[j] = -1;
       }
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
@@ -2871,14 +2998,12 @@
         if (s.gracia > 0) s.gracia--;
         if (s.inmune > 0) s.inmune--;
         if (s.sombra > 0 && --s.sombra <= 0) {
-          s.sombraGolpe = true;
           var sp = G.pacs[i];
-          if (sp) { this.efecto('sombra_sale', sp.x, sp.y, 28); G.addPopup(sp.x, sp.y - 7, '×2 Q', 35); }
+          if (sp) this.efecto('sombra_sale', sp.x, sp.y, 28);
         }
         if (s.frenesi > 0) s.frenesi--; else s.frenesiMult = 1;
         if (s.carrona > 0) s.carrona--;
         if (s.marca > 0 && --s.marca <= 0) for (j = 0; j < 4; j++) if (this.marcaGhost[j] === i) this.marcaGhost[j] = -1;
-        if (s.ganchoInv > 0) s.ganchoInv--;
         if (s.caceria > 0) s.caceria--; else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
         if (s.estelaBuff > 0) s.estelaBuff--;
         if (!s.estelaRastro) s.estelaRastro = [];
@@ -3463,8 +3588,14 @@
         var cg = G.ghosts[i];
         if (!cg || cg.mode !== 'normal') continue;
         if (this.azulCatalogo[i]) {
-          ctx.save(); ctx.strokeStyle = '#2121ff'; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 8, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+          /* El cuerpo ya se pinta azul desde Ghost.draw. Este halo pequeño y
+           * pulsante comunica que lo causó una habilidad, sin el aro grueso
+           * que antes parecía un error gráfico sobre un fantasma rojo. */
+          ctx.save(); ctx.strokeStyle = '#72b7ff'; ctx.shadowColor = '#244cff';
+          ctx.shadowBlur = 4; ctx.lineWidth = 1; ctx.globalAlpha = 0.65;
+          ctx.setLineDash([2, 2]); ctx.beginPath();
+          ctx.arc(cg.x, cg.y + Y, 9 + Math.sin(tk / 4), tk / 12, tk / 12 + Math.PI * 2);
+          ctx.stroke(); ctx.setLineDash([]); ctx.restore();
         }
         if (this.caceriaQuien[i] >= 0) {
           var colorCaza = (H.ROL_INFO && H.ROL_INFO.asesino && H.ROL_INFO.asesino.color) || '#ff66cc';
@@ -3497,12 +3628,46 @@
         var cp = this.proyectilesCat[i]; if (cp.espera > 0) continue;
         ctx.save();
         if (cp.tipo === 'shuriken') {
-          ctx.translate(cp.x, cp.y + Y); ctx.rotate(tk / 2 + i); ctx.strokeStyle = '#f4f7ff'; ctx.lineWidth = 1.4;
-          ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(5, 0); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.stroke();
+          var sv = CFG.DIR_V[cp.d] || { x: 1, y: 0 };
+          ctx.globalAlpha = 0.28; ctx.strokeStyle = '#8fdcff'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(cp.x - sv.x * 3, cp.y + Y - sv.y * 3);
+          ctx.lineTo(cp.x - sv.x * 11, cp.y + Y - sv.y * 11); ctx.stroke();
+          ctx.globalAlpha = 1; ctx.translate(cp.x, cp.y + Y); ctx.rotate(tk * 0.42 + i);
+          ctx.fillStyle = '#b7c9d8'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          for (var sh = 0; sh < 8; sh++) {
+            var sha = -Math.PI / 2 + sh * Math.PI / 4, shr = sh % 2 ? 2.2 : 6;
+            var shx = Math.cos(sha) * shr, shy = Math.sin(sha) * shr;
+            if (!sh) ctx.moveTo(shx, shy); else ctx.lineTo(shx, shy);
+          }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#263746'; ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+        } else if (cp.tipo === 'gancho_inverso') {
+          var duenoGancho = G.pacs[cp.w];
+          if (duenoGancho) {
+            ctx.strokeStyle = '#b8c2cc'; ctx.lineWidth = 1.4; ctx.setLineDash([3, 1]);
+            ctx.beginPath(); ctx.moveTo(duenoGancho.x, duenoGancho.y + Y); ctx.lineTo(cp.x, cp.y + Y); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          var gv = CFG.DIR_V[cp.d] || { x: 1, y: 0 };
+          ctx.translate(cp.x, cp.y + Y); ctx.rotate(Math.atan2(gv.y, gv.x));
+          ctx.strokeStyle = '#e6edf3'; ctx.shadowColor = '#79c8ff'; ctx.shadowBlur = 5; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(1, 0); ctx.arc(1, 3, 3, -Math.PI / 2, Math.PI * 0.75); ctx.stroke();
+          ctx.fillStyle = '#9aa7b2'; ctx.beginPath(); ctx.arc(-4, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+        } else if (cp.tipo === 'misil') {
+          ctx.translate(cp.x, cp.y + Y); ctx.rotate(cp.ang || 0);
+          var llama = 3 + ((tk + i) % 3);
+          ctx.fillStyle = '#ffb21c'; ctx.shadowColor = '#ff4b2b'; ctx.shadowBlur = 7;
+          ctx.beginPath(); ctx.moveTo(-5, -2); ctx.lineTo(-5 - llama, 0); ctx.lineTo(-5, 2); ctx.fill();
+          ctx.shadowBlur = 0; ctx.fillStyle = '#e9eef4';
+          ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(2, -3); ctx.lineTo(-5, -3); ctx.lineTo(-5, 3); ctx.lineTo(2, 3); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#ff4058'; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(2, -3); ctx.lineTo(2, 3); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(-5, -6); ctx.lineTo(1, -3); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(-2, 3); ctx.lineTo(-5, 6); ctx.lineTo(1, 3); ctx.fill();
         } else {
-          var pcCol = cp.tipo === 'misil' ? '#ff4058' : (cp.tipo === 'totem' ? '#ff9f1c' : '#8b3dff');
+          var pcCol = cp.tipo === 'totem' ? '#ff9f1c' : '#8b3dff';
           ctx.fillStyle = pcCol; ctx.shadowColor = pcCol; ctx.shadowBlur = 9;
-          ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, cp.tipo === 'misil' ? 4 : 3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, 3, 0, Math.PI * 2); ctx.fill();
           ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, 7 + Math.sin(tk / 3), 0, Math.PI * 2); ctx.strokeStyle = pcCol; ctx.stroke();
         }
         ctx.restore();
@@ -3750,14 +3915,19 @@
       if (s.sombra > 0) {
         ctx.strokeStyle = 'rgba(201,164,255,0.65)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(x, y, 10 + Math.sin(tk / 4), tk / 12, tk / 12 + Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-      }
-      if (s.sombraGolpe) {
-        ctx.fillStyle = '#ff66cc'; ctx.font = '5px monospace'; ctx.textAlign = 'center'; ctx.fillText('×2', x, y - 11);
+        ctx.fillStyle = '#e7c9ff'; ctx.font = '4px monospace'; ctx.textAlign = 'center'; ctx.fillText('500/750', x, y - 12);
       }
       if (s.frenesi > 0) {
         ctx.strokeStyle = '#ff4058'; ctx.lineWidth = 2;
         for (var fr = 0; fr < 3; fr++) { ctx.beginPath(); ctx.arc(x, y, 9 + fr * 2, tk / 8 + fr * 2, tk / 8 + fr * 2 + 1.1); ctx.stroke(); }
         ctx.fillStyle = '#ffffff'; ctx.font = '4px monospace'; ctx.textAlign = 'center'; ctx.fillText('×' + (s.frenesiMult || 1).toFixed(2), x, y - 13);
+      }
+      if (s.caceria > 0) {
+        ctx.strokeStyle = 'rgba(255,102,204,0.8)'; ctx.lineWidth = 1.5;
+        for (var cz = 0; cz < 3; cz++) {
+          ctx.beginPath(); ctx.moveTo(x - 8 - cz * 4, y - 5 + cz * 5);
+          ctx.lineTo(x - 15 - cz * 5, y - 5 + cz * 5); ctx.stroke();
+        }
       }
       if (s.carrona > 0) {
         ctx.fillStyle = '#ffe66d';

@@ -10945,6 +10945,56 @@
     eq(G.score - base, 150, 'premio fijo');
   });
 
+  test('CATÁLOGO: Shuriken usa tres pulsaciones y solo perdona la recarga con pleno', function () {
+    var H = window.PM.Hab;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
+    var p = G.pacs[0]; p.x = 8 * CFG.TILE + 4; p.y = CFG.TUNNEL_ROW * CFG.TILE + 4; p.nextDir = CFG.DIR.RIGHT;
+    for (var n = 0; n < 3; n++) {
+      var g = G.ghosts[n]; g.mode = 'normal'; g.frightened = false; g.x = p.x + CFG.TILE; g.y = p.y;
+    }
+    var base = G.score;
+    for (n = 0; n < 3; n++) {
+      ok(H.lanzar(G, 0, 0), 'sale la carga ' + (n + 1));
+      eq(H.proyectilesCat.filter(function (b) { return b.tipo === 'shuriken'; }).length, 1, 'solo sale uno');
+      for (var t = 0; t < 60 && H.proyectilesCat.length; t++) H.pasoProyectilesCat(G, true);
+    }
+    eq(G.score - base, 600, 'los tres impactos cobran 200');
+    eq(H.st[0].cd[0], 0, 'pleno sin recarga');
+
+    H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
+    for (n = 0; n < 3; n++) { ok(H.lanzar(G, 0, 0), 'sale intento ' + (n + 1)); for (t = 0; t < 100 && H.proyectilesCat.length; t++) H.pasoProyectilesCat(G, true); }
+    eq(H.st[0].cd[0], 20 * 60, 'un fallo conserva los 20 segundos');
+  });
+
+  test('CATÁLOGO: Sombra, Frenesí, Gancho y Cacería respetan sus nuevas reglas', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,sombra,gancho_inverso,caceria']); G.roles = ['asesino'];
+    var p = G.pacs[0]; p.x = 8 * CFG.TILE + 4; p.y = CFG.TUNNEL_ROW * CFG.TILE + 4; p.nextDir = CFG.DIR.RIGHT;
+    H.sombra(G, 0); eq(H.multVel(0), 1.2, 'Sombra da ×1,2');
+    var g = G.ghosts[0]; g.mode = 'normal'; g.x = p.x + CFG.TILE; g.y = p.y; g.dir = CFG.DIR.RIGHT;
+    var base = G.score; H.matarCatalogo(G, g, 0, CFG.HAB.BOMBA_PUNTOS, 'bomba', 1, true);
+    eq(G.score - base, 750, 'una baja cualquiera desde atrás da 750');
+
+    H.frenesi(G, 0); eq(H.st[0].frenesi, 8 * 60, 'Frenesí dura 8 segundos');
+    for (var n = 0; n < 5; n++) H.alMatar(G, 0, null, p.x, p.y);
+    ok(H.st[0].frenesiMult > 1.6, 'Frenesí no tiene tope');
+
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    ok(H.ganchoInverso(G, 0), 'el gancho sale sin blanco');
+    var volvio = false;
+    for (n = 0; n < 100 && H.proyectilesCat.length; n++) { H.pasoProyectilesCat(G, true); if (H.proyectilesCat.some(function (b) { return b.fase === 'vuelve'; })) volvio = true; }
+    ok(volvio && !H.proyectilesCat.length, 'falla y vuelve');
+
+    g.mode = 'normal'; g.x = p.x; g.y = p.y;
+    H.caceria(G, 0); H.st[0].sombra = 1; H.st[0].frenesi = 1; H.st[0].frenesiMult = 1.15;
+    ok(Math.abs(H.multVel(0) - 1.2 * 1.2 * 1.15) < 0.0001, 'los multiplicadores se acumulan');
+    H.alMatar(G, 0, g, g.x, g.y); g.mode = 'normal';
+    eq(H.caceriaQuien[g.id], -1, 'la marca no vuelve al revivir');
+    eq(CFG.HAB.CATALOGO.asesino[3].filter(function (x) { return x.id === 'caceria'; })[0].cd, 90 * 60, 'recarga de 90 segundos');
+  });
+
   test('CATÁLOGO: Bomba da 150 exactos y Cacería solo deja comer al Asesino dueño', function () {
     var H = window.PM.Hab;
     partida(2);
