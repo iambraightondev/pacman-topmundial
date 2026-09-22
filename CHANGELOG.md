@@ -12,6 +12,24 @@ fantasma —que es lo que se ve dibujado—, y al comérselo ese azul ya se le
 había quitado. Solo pasaba en DESATADO. **Las puntuaciones y las rachas de
 estos días están infladas por esto.**
 
+**EL MISIL YA NO DA MEDIA VUELTA.** Al quedarse sin blanco cogía el
+siguiente de su cola —ordenada por cercanía al Asesino en el instante del
+disparo— y se volvía en redondo por donde había venido. Ahora, cada vez que
+tiene que elegir, busca entre los que le quedan el que tenga menos pasillo
+**por delante**: sigue recto o dobla en un cruce, pero no se da la vuelta
+jamás. Si por delante no queda nadie, remata en el **REY FANTASMA** —al que
+ya le quitaba vida, y del gordo: solo la EJECUCIÓN pega más fuerte— y si
+tampoco lo hay, se apaga.
+
+**UN VIAJE A CASA DEJA AL FANTASMA LIMPIO.** Lo mismo por la otra puerta: un
+fantasma azulado por el GANCHO (o por el TOQUE ARCANO) se comía, se iba a
+casa hecho ojos y **volvía a salir azul** con lo que le quedara de reloj, así
+que moría otra vez de un toque en la misma puerta. Ahora, en cuanto deja la
+calle se le quita todo lo que le pintaron encima —el azul del catálogo, el
+hielo, la huida del pisotón, el aturdimiento y la ceguera—, que es lo que la
+CACERÍA y el DOMINIO ya hacían cada uno por su cuenta. De paso, uno comido
+mientras estaba congelado deja de volver sin poder moverse.
+
 **El GANCHO INVERSO ya no sobrevive a su dueño.** Al morir se le quitaba el
 estado al jugador, pero la cuerda seguía puesta en la mesa. En solitario la
 barría la reaparición; en una partida en línea no, porque la foto del

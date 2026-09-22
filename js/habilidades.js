@@ -3074,12 +3074,13 @@
       if (!blancos.length) {
         if (!this.rey(G)) return false;
         this.proyectilesCat.push({ tipo: 'misil', x: p.x, y: p.y, w: idx,
-          objetivo: -1, cola: [], golpe: 0, jefe: 1 });
+          objetivo: -1, cola: [], golpe: 0, jefe: 1, d: -1 });
         this.efecto('misil_salida', p.x, p.y, 26);
         sonDe(G, idx, 'playFlash'); return true;
       }
       this.proyectilesCat.push({ tipo: 'misil', x: p.x, y: p.y, w: idx,
-        objetivo: blancos[0].id, cola: blancos.slice(1).map(function (g) { return g.id; }), golpe: 0 });
+        objetivo: blancos[0].id, cola: blancos.slice(1).map(function (g) { return g.id; }),
+        golpe: 0, d: -1 });
       this.efecto('misil_salida', p.x, p.y, 26);
       sonDe(G, idx, 'playFlash'); return true;
     },
@@ -3635,8 +3636,12 @@
 
     /* Camino cardinal por casillas abiertas. El misil usa la misma topología
      * que jugadores y fantasmas, incluido el túnel, así que nunca corta una
-     * esquina ni atraviesa una pared para llegar antes. */
-    rutaLaberinto: function (fc, fr, tc, tr) {
+     * esquina ni atraviesa una pared para llegar antes.
+     * `prohibida` (opcional): dirección que NO puede tomar el primer paso.
+     * Es lo que impide que el misil se dé media vuelta — y como la casilla
+     * de partida nunca se vuelve a pisar, tampoco puede volver sobre sus
+     * pasos más adelante. Sin ella, la búsqueda es la de siempre. */
+    rutaLaberinto: function (fc, fr, tc, tr, prohibida) {
       fc = CFG.wrapCol(fc); tc = CFG.wrapCol(tc);
       if (fr < 0 || tr < 0 || fr >= CFG.ROWS || tr >= CFG.ROWS) return null;
       if (fc === tc && fr === tr) return [];
@@ -3646,6 +3651,7 @@
       while (cabeza < cola.length && prev[fin] == null) {
         var id = cola[cabeza++], c = id % CFG.COLS, r = Math.floor(id / CFG.COLS);
         for (var d = 0; d < 4; d++) {
+          if (id === inicio && d === prohibida) continue;   // nada de media vuelta
           var v = CFG.DIR_V[d], nc = CFG.wrapCol(c + v.x), nr = r + v.y;
           if (nr < 0 || nr >= CFG.ROWS || !CFG.isOpen(nc, nr, false)) continue;
           var ni = nr * CFG.COLS + nc;
@@ -3660,6 +3666,35 @@
         paso = prev[paso];
       }
       ruta.reverse(); return ruta;
+    },
+
+    /* EL MISIL NO DA MEDIA VUELTA (22 sep 2026). Al quedarse sin blanco
+     * cogía el siguiente de la cola —ordenada por cercanía al Asesino en el
+     * instante del disparo— y se volvía por donde había venido. Se ve fatal
+     * y encima deshace la cadena: un misil no es un boomerang. Ahora busca
+     * entre los que le quedan el que tenga menos pasillo POR DELANTE, con la
+     * ruta calculada prohibiendo el primer paso hacia atrás: sigue recto o
+     * dobla en un cruce, pero nunca se da la vuelta. Si por delante no queda
+     * nadie devuelve false, y arriba se decide si se apaga o remata en el
+     * REY FANTASMA. */
+    siguienteBlancoMisil: function (G, b) {
+      if (!b.cola || !b.cola.length) return false;
+      var bc = CFG.wrapCol(Math.floor(b.x / T)), br = Math.floor(b.y / T);
+      var prohibida = (b.d >= 0) ? CFG.OPP[b.d] : -1;
+      var mejor = -1, mejorRuta = null;
+      for (var k = 0; k < b.cola.length; k++) {
+        var g = G.ghosts[b.cola[k] | 0];
+        if (!this.enLaCalle(g)) continue;
+        var ruta = this.rutaLaberinto(bc, br, g.tileX(), g.tileY(), prohibida);
+        if (!ruta) continue;
+        if (!mejorRuta || ruta.length < mejorRuta.length) { mejor = g.id; mejorRuta = ruta; }
+      }
+      if (mejor < 0) return false;
+      b.cola.splice(b.cola.indexOf(mejor), 1);
+      b.objetivo = mejor;
+      b.ruta = mejorRuta;
+      b.rutaObjetivo = G.ghosts[mejor].tileX() + ',' + G.ghosts[mejor].tileY();
+      return true;
     },
 
     /* A quién se lleva por delante el MISIL desde donde está ahora mismo.
@@ -3680,14 +3715,9 @@
       }
       if (!golpeo) return true;
       if (b.objetivo >= 0 && this.enLaCalle(G.ghosts[b.objetivo])) return true;
-      /* se quedó sin blanco por el camino: pasa al siguiente de la cola que
-       * siga en pie y vuelve a calcular la ruta desde donde esté */
-      while (b.cola && b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
-      if (b.cola && b.cola.length) {
-        b.objetivo = b.cola.shift(); b.ruta = null; b.rutaObjetivo = '';
-        return true;
-      }
-      return false;
+      /* se quedó sin blanco por el camino: al siguiente que tenga POR
+       * DELANTE, sin darse la vuelta (ver siguienteBlancoMisil) */
+      return this.siguienteBlancoMisil(G, b);
     },
 
     /* Proyectiles visibles del catálogo. Aquí se resuelven las tres cargas
@@ -3890,8 +3920,7 @@
         var target = b.jefe ? this.blancoRey(G) : G.ghosts[b.objetivo | 0];
         if (!b.jefe && !this.enLaCalle(target)) {
           if (b.tipo === 'misil') {
-            while (b.cola && b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
-            if (b.cola && b.cola.length) { b.objetivo = b.cola.shift(); b.ruta = null; target = G.ghosts[b.objetivo]; }
+            if (this.siguienteBlancoMisil(G, b)) target = G.ghosts[b.objetivo];
           } else {
             target = this.ghostCercanoAt(G, Math.floor(b.x / T), Math.floor(b.y / T), 999);
             if (target) b.objetivo = target.id;
@@ -3937,6 +3966,15 @@
           var wx = wp ? wp.c * T + T / 2 : target.x;
           var wy = wp ? wp.r * T + T / 2 : target.y;
           dx = wx - b.x; dy = wy - b.y; aObjetivo = !wp;
+          /* rumbo actual del misil: un paso de ruta es cardinal, así que
+           * sale exacto. Es lo que luego tiene prohibido deshacer. */
+          if (b.tipo === 'misil' && wp) {
+            var wdx = dx;
+            if (wdx > ancho / 2) wdx -= ancho; else if (wdx < -ancho / 2) wdx += ancho;
+            b.d = (Math.abs(wdx) >= Math.abs(dy))
+              ? (wdx >= 0 ? CFG.DIR.RIGHT : CFG.DIR.LEFT)
+              : (dy >= 0 ? CFG.DIR.DOWN : CFG.DIR.UP);
+          }
         } else {
           dx = target.x - b.x; dy = target.y - b.y;
         }
@@ -3966,9 +4004,10 @@
               b.golpe++;
             }
           }
-          if (b.tipo === 'misil' && b.cola && b.cola.length) {
-            while (b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
-            if (b.cola.length) { b.objetivo = b.cola.shift(); b.ruta = null; b.rutaObjetivo = ''; continue; }
+          if (b.tipo === 'misil' && this.siguienteBlancoMisil(G, b)) continue;
+          /* y sin nadie por delante, el último eslabón es el REY FANTASMA */
+          if (b.tipo === 'misil' && !b.jefe && this.blancoRey(G)) {
+            b.jefe = 1; b.ruta = null; b.rutaObjetivo = ''; continue;
           }
           this.proyectilesCat.splice(i, 1); continue;
         }
@@ -3994,11 +4033,29 @@
       if (this.temblorTicks > 0) this.temblorTicks--;
       if (this.eclipseTicks > 0) this.eclipseTicks--;
       for (j = 0; j < 4; j++) {
+        /* UN VIAJE A CASA LO DEJA LIMPIO (22 sep 2026). Lo que le pintan
+         * encima las habilidades —el azul del catálogo, el hielo, la huida,
+         * el aturdimiento, la ceguera— es de ESE fantasma en la calle, no de
+         * su plaza: en cuanto se va a casa (comido, ojos, dentro o saliendo)
+         * se le quita todo. Sin esto, un fantasma azulado por el GANCHO que
+         * se comía volvía a salir AZUL con lo que le quedara de reloj —y por
+         * tanto se moría otra vez de un toque en la misma puerta—, y uno
+         * congelado volvía sin poder moverse. La CACERÍA y el DOMINIO ya lo
+         * hacían cada uno por su lado, ahora es la misma regla para todos. */
+        if (!this.enLaCalle(G.ghosts[j])) {
+          this.azulCatalogo[j] = 0; this.azulCatTicks[j] = 0; this.arcanoAzul[j] = 0;
+          this.hielo[j] = 0;
+          this.huye[j] = 0; this.huyeQuien[j] = -1;
+          this.lento[j] = 0; this.lentoMult[j] = 1;
+          this.aturdido[j] = 0; this.ciego[j] = 0;
+          this.caceriaQuien[j] = -1;
+          if (this.dominado[j] > 0) { this.dominado[j] = 0; this.dominaQuien[j] = -1; }
+          continue;
+        }
         if (this.lento[j] > 0) this.lento[j]--;
         if (this.aturdido[j] > 0) this.aturdido[j]--;
         if (this.ciego[j] > 0) this.ciego[j]--;
         if (this.azulCatTicks[j] > 0 && --this.azulCatTicks[j] <= 0) { this.azulCatalogo[j] = 0; this.arcanoAzul[j] = 0; }
-        if (this.caceriaQuien[j] >= 0 && !this.enLaCalle(G.ghosts[j])) this.caceriaQuien[j] = -1;
         /* DOMINIO: el reloj del fantasma prestado. Al agotarse vuelve a ser
          * de la casa pero ATURDIDO un segundo: lleva seis pegado al Mago y
          * sin esa resaca lo mataría en el mismo tick en que deja de serlo. */

@@ -25,6 +25,14 @@ La lista de [`PLAN-AJUSTES-2.md`](PLAN-AJUSTES-2.md) está entera en el juego.
   reloj seguía corriendo, así que al volver de casa era comida gratis una y
   otra vez. **Las puntuaciones y rachas de estos días están infladas por
   esto**; si alguna se quiere limpiar, hay que decirlo.
+- **Y la otra puerta del mismo fallo:** un fantasma azulado por el GANCHO se
+  comía, se iba a casa y **volvía a salir azul** con su reloj a medias, así
+  que moría otra vez de un toque en la puerta. Ahora, al dejar la calle se
+  le quita todo lo pintado encima (azul, hielo, huida, aturdimiento,
+  ceguera), como ya hacían la CACERÍA y el DOMINIO.
+- **El MISIL ya no se da la vuelta.** Al quedarse sin blanco elegía el
+  siguiente de su cola y volvía en redondo. Ahora coge siempre al que tenga
+  menos pasillo por delante, y sin nadie delante remata en el rey.
 - **Y de paso, el GANCHO INVERSO ya no sobrevive a su dueño.** No era el
   fallo reportado, pero se encontró buscándolo: al morir se cortaba el
   estado del jugador y no el proyectil, y en línea la foto del anfitrión se

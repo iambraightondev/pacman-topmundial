@@ -2457,6 +2457,27 @@ Rules that are deliberate, not incidental:
 - **E never lands in the ghost house.** `CFG.isOpen` treats the house
   interior as walkable (it is, for ghosts), so `habilidades.js` guards
   `CFG.HOUSE` explicitly: Pac-Man has no door and would be stuck forever.
+- **The MISIL never turns around** (22 Sep). It used to take the next id off
+  `b.cola` — ordered by distance from the assassin *at launch* — and double
+  back the way it came. Now every re-target goes through
+  `Hab.siguienteBlancoMisil`, which picks the pending ghost with the shortest
+  maze route **forward**: `rutaLaberinto` takes an optional `prohibida`
+  direction that its first step may not use, set to the opposite of the
+  missile's current heading (`b.d`, updated from each cardinal route step).
+  Since the search never re-enters its own start tile, the path cannot
+  double back later either. With nobody ahead it falls through to the REY
+  FANTASMA (`DANO.misil` = 6, second only to EJECUCIÓN) and, failing that,
+  goes out.
+- **A trip home wipes a ghost clean** (22 Sep). Everything an ability paints
+  on a ghost — the catalogue blue (`azulCatalogo`/`azulCatTicks`/
+  `arcanoAzul`), `hielo`, `huye`, `lento`, `aturdido`, `ciego` — belongs to
+  that ghost *out in the maze*, not to its slot, so `pasoRoles` clears the
+  lot the moment `enLaCalle` goes false (eaten, eyes, in the house, or
+  leaving it). `caceriaQuien` and `dominado` already did this one by one;
+  now it is one rule. Without it a ghost turned blue by the GANCHO was eaten,
+  went home and **came back out still blue** with whatever was left on its
+  clock — dying again on the first touch at the very door — and one eaten
+  while frozen came back unable to move.
 - **Blue belongs to the ghost, not to the clock** (22 Sep). `Hab.puedeComer`
   used to fall back on `G.frightTicks`, the table's energizer clock, so any
   ghost was edible while it ran. But a ghost that has already been eaten

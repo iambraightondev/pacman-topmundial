@@ -11684,6 +11684,29 @@
     eq(H.st[0].ganchoInv, 0, 'y la E vuelve a estar libre');
   });
 
+  test('AJUSTES: el viaje a casa le quita al fantasma lo que le pintaron encima', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['soporte'], ['gancho,inmunidad,aliado,vida']);
+    G.roles = ['soporte'];
+    var p = ponPac(0, 13, 20, DR.RIGHT), g = G.ghosts[0];
+    g.mode = 'normal'; g.frightened = false; g.x = p.x + CFG.TILE * 2; g.y = p.y;
+    /* el GANCHO lo deja azul sin energizante, y encima congelado y lento */
+    H.azulCatalogo[g.id] = 1; H.azulCatTicks[g.id] = CFG.HAB.GANCHO_AZUL_TICKS;
+    H.hielo[g.id] = 120; H.lento[g.id] = 120; H.aturdido[g.id] = 120;
+    ok(H.puedeComer(G, g.id, 0), 'azulado por el gancho, se come');
+    /* se lo come y se va a casa hecho ojos */
+    g.mode = 'eyes';
+    H.pasoRoles(G, true);
+    eq(H.azulCatalogo[g.id], 0, 'el azul no se va a casa con él');
+    eq(H.azulCatTicks[g.id], 0, 'ni el reloj que le quedaba');
+    eq(H.hielo[g.id], 0, 'ni el hielo');
+    eq(H.aturdido[g.id], 0, 'ni el aturdimiento');
+    /* y al salir otra vez es un fantasma normal: no es instakill en la puerta */
+    g.mode = 'normal'; g.frightened = false;
+    eq(H.puedeComer(G, g.id, 0), false, 'vuelve gris, no azul');
+  });
+
   test('AJUSTES: un fantasma ya comido no se muere solo al salir de casa', function () {
     var H = window.PM.Hab;
     partida(1); G.hab = true;
@@ -11731,6 +11754,46 @@
     var b2 = G.score;
     H.matarCatalogo(G, g2, 0, HC.SHURIKEN_PUNTOS, 'shuriken', 1, true);
     eq(G.score - b2, 200, 'sin marcar, 200 exactos');
+  });
+
+  test('AJUSTES: el Misil no da media vuelta, sigue hacia adelante', function () {
+    var H = window.PM.Hab, T = CFG.TILE, n;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,misil']); G.roles = ['asesino'];
+    /* Pasillo recto de once casillas: uno DETRÁS del Asesino y otro DELANTE.
+     * El misil sale a por el de detrás (es el más cercano) y, al matarlo,
+     * antes se volvía en redondo a por el otro. Ahora sigue de frente y
+     * llega por donde el laberinto le deje. */
+    var pas = null, c, r, vale;
+    for (r = 1; r < CFG.ROWS - 1 && !pas; r++) {
+      for (c = 1; c + 10 < CFG.COLS - 1 && !pas; c++) {
+        vale = true;
+        for (n = 0; n <= 10; n++) if (!CFG.isOpen(c + n, r, false)) vale = false;
+        if (vale) pas = { c: c, r: r };
+      }
+    }
+    ok(pas, 'hay un pasillo recto de once casillas');
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    var atras = G.ghosts[0], delante = G.ghosts[1];
+    function pon2(g, cc) {
+      g.mode = 'normal'; g.frightened = false;
+      g.x = cc * T + T / 2; g.y = pas.r * T + T / 2;
+    }
+    ponPac(0, pas.c + 5, pas.r, DR.RIGHT);
+    pon2(atras, pas.c + 3);        // dos casillas por detrás
+    pon2(delante, pas.c + 9);      // cuatro por delante
+    ok(H.misil(G, 0), 'sale el misil');
+    var prev = -1, vueltas = 0;
+    for (n = 0; n < 600 && H.proyectilesCat.length; n++) {
+      H.pasoProyectilesCat(G, true);
+      var m = H.proyectilesCat[0];
+      if (!m) break;
+      if (prev >= 0 && m.d >= 0 && m.d === CFG.OPP[prev]) vueltas++;
+      prev = m.d;
+    }
+    eq(vueltas, 0, 'el misil no se da la vuelta ni una vez');
+    eq(atras.mode, 'eyes', 'cae el de detrás, que era su blanco');
+    eq(delante.mode, 'eyes', 'y el otro también, dando el rodeo');
   });
 
   test('AJUSTES: el Misil atropella al que se le cruza y no lo cobra dos veces', function () {
