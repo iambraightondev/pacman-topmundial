@@ -103,7 +103,7 @@ rematarlos.
 
 ---
 
-## Los números (cambios de una línea)
+## Los números (cambios de una línea)  ·  HECHO (22 sep)
 
 | # | Habilidad | Hoy | Se pide |
 | --- | --- | --- | --- |
@@ -120,7 +120,7 @@ antes de darlos por buenos.
 
 ## Los que cambian cómo se juega
 
-### 6 · EMPUJÓN también hacia atrás *(punto 1)*
+### 6 · EMPUJÓN también hacia atrás *(punto 1)* — HECHO
 
 **Hoy:** busca fantasma en las tres casillas **de delante** (hacia donde
 mira el Tanque) y lo aleja tres casillas.
@@ -132,7 +132,7 @@ que viene **por detrás** y lo empuje hacia atrás, alejándolo igual. Es la
 jugada de «me lo quito de encima cuando ya lo tengo pegado», que hoy no
 existe: si te alcanzan por la espalda, la Q no hace nada.
 
-### 7 · GRITO DE GUERRA pasa a ser E, y a todo el mapa *(punto 2)*
+### 7 · GRITO DE GUERRA pasa a ser E, y a todo el mapa *(punto 2)* — HECHO
 
 **Hoy:** es una Q del Tanque y solo alcanza cinco casillas a la redonda.
 
@@ -149,7 +149,7 @@ bastante por encima de los 24 s de hoy, o el Tanque se come al Mago: su
 ECLIPSE (R de 60 s) hace algo parecido y más flojo. Mi recomendación:
 dejarlo global pero subir la recarga a 40-45 s.
 
-### 8 · ESTELA deja rastro fijo *(punto 12)*
+### 8 · ESTELA deja rastro fijo *(punto 12)* — HECHO
 
 **Hoy:** el rastro se va borrando solo; cada pisada dura tres cuartos de
 segundo y desaparece, aunque la habilidad siga activa.
@@ -161,7 +161,7 @@ borre entero al acabarse.
 en vez de una cola corta detrás del Soporte. Es bastante más fuerte —el
 equipo entero corriendo por la línea que él dibujó— y se ve mucho mejor.
 
-### 9 · TERREMOTO tiene que temblar *(punto 3)*
+### 9 · TERREMOTO tiene que temblar *(punto 3)* — HECHO
 
 **Hoy:** manda a los cuatro fantasmas a casa y el juego se congela medio
 segundo (es el parón de comer, que salta cuatro veces seguidas). Por fuera
@@ -176,7 +176,7 @@ segundos del poder, fuerte al principio y calmándose. Conviene que sea un
 apaño reutilizable, porque al METEORO le vendría igual de bien. Y hay que
 dejarlo quieto si el jugador tiene activado reducir movimiento.
 
-### 10 · BOLA GUIADA por los pasillos *(punto 5)*
+### 10 · BOLA GUIADA por los pasillos *(punto 5)* — HECHO
 
 **Hoy:** vuela en línea recta hacia el fantasma **atravesando las paredes**,
 como si el laberinto no existiera.
@@ -190,7 +190,7 @@ se mueve, la ruta se recalcula igual que hace el misil.
 
 ---
 
-## Los que necesitan dibujo
+## Los que necesitan dibujo  ·  HECHO (22 sep)
 
 Hoy MINA, MURO, FARO, SIRENA, TELARAÑA, NIEBLA y TÓTEM se pintan **todos
 con el mismo molde**: un cuadrado de color translúcido con borde. Solo el
@@ -258,6 +258,19 @@ por medio.
 ## Punto 19
 
 Quedó vacío en la lista. Cuando me lo diga, lo sumo aquí.
+
+---
+
+## Lo que queda
+
+Solo **los tres que esperan decisión** (TOQUE ARCANO, NIEBLA y METEORO) y el
+punto 19, que sigue vacío. Todo lo demás de esta lista está construido y
+probado: los errores el 21 de septiembre, y los números, los que cambian cómo
+se juega y los cuatro dibujos el 22.
+
+Decisiones tomadas por el camino, por si hay que revisarlas jugando: el GRITO
+DE GUERRA global pasó a 40 s de recarga; el PUENTE perfora hasta cuatro
+casillas de muro; el temblor del TERREMOTO dura 1,5 s de los seis del poder.
 
 ---
 

@@ -246,6 +246,29 @@
     return (h && SON[h.id]) || '';
   }
 
+  /* Un tirón repetible, entre -1 y 1, para el temblor de pantalla. NO usa
+   * Math.random a propósito: si el meneo saliera al azar, dos máquinas de la
+   * misma party verían temblores distintos y una repetición rebobinada
+   * enseñaría un suelo que no es el que se jugó. Saliendo del número de tick
+   * siempre da lo mismo, y aun así se ve desordenado, que es lo que hace que
+   * parezca un golpe y no una vibración de motor. */
+  function ruidoTemblor(n) {
+    var x = Math.sin(n * 127.1) * 43758.5453;
+    return (x - Math.floor(x)) * 2 - 1;
+  }
+
+  /* Lo que menea el TERREMOTO: segundo y medio de los seis que dura el poder,
+   * arrancando con cinco píxeles de desvío (más de media casilla).
+   *
+   * El temblor dura MENOS que el poder a propósito. El terremoto es un golpe:
+   * lo que se siente es el momento en que revienta el suelo, no los seis
+   * segundos siguientes. Temblando los seis enteros el laberinto se vuelve
+   * ilegible justo cuando hay que esquivar, y marea de verdad; lo que sí dura
+   * los seis segundos es lo que importa para jugar (la lentitud del equipo,
+   * TERREMOTO_SLOW), que se nota sin tener que sacudir la pantalla. */
+  var TERREMOTO_TEMBLOR = 90;      // 1,5 s
+  var TERREMOTO_SACUDIDA = 5;      // píxeles de desvío al arrancar
+
   var Hab = {
     on: false,       // ¿la partida en curso es de poderes?
     st: [],          // estado por jugador
@@ -294,6 +317,11 @@
       this.tirones = [];
       this.rafagaId = 0;
       this.terremotoTicks = 0;
+      /* el meneo de la pantalla no sobrevive a una muerte ni a un nivel: ver
+       * temblar() */
+      this.temblorTicks = 0;
+      this.temblorTotal = 0;
+      this.temblorFuerza = 0;
       this.eclipseTicks = 0;
       this.balas = [];
       this.portales = [];
@@ -1838,6 +1866,59 @@
                      x0: (x0 == null) ? x : x0, y0: (y0 == null) ? y : y0 });
     },
 
+    /* ---------- EL TEMBLOR DE PANTALLA ----------
+     * Un meneo del mapa que puede pedir cualquier poder: hoy el TERREMOTO del
+     * Tanque, mañana el METEORO del Mago. Quien lo pide solo dice cuánto dura
+     * y con cuánta fuerza empieza; el dibujo (Game.render) pregunta en cada
+     * fotograma por el desplazamiento y corre el laberinto con un translate.
+     * Así el temblor no es código pegado a un poder: es una cosa del juego
+     * que se enciende desde donde haga falta.
+     *
+     * Se mueve SOLO el laberinto y lo que vive dentro. El marcador de arriba
+     * y los avisos no se menean: lo que tiembla es el suelo, no la máquina.
+     */
+    temblorTicks: 0,
+    temblorTotal: 0,
+    temblorFuerza: 0,
+
+    /* Empieza (o pisa) un temblor: `ticks` de duración y `fuerza` en píxeles
+     * de desvío máximo al principio. Dos poderes a la vez no suman un
+     * terremoto del doble: manda el que menea más fuerte. */
+    temblar: function (ticks, fuerza) {
+      ticks = ticks | 0;
+      fuerza = fuerza || 0;
+      if (ticks <= 0 || fuerza <= 0) return;
+      if (this.temblorTicks > 0 && this.temblorFuerza > fuerza) return;
+      this.temblorTicks = ticks;
+      this.temblorTotal = ticks;
+      this.temblorFuerza = fuerza;
+    },
+
+    /* Cuántos píxeles hay que correr el dibujo AHORA MISMO: { x, y }, siempre
+     * enteros (medio píxel emborrona el laberinto, que va pintado a tamaño
+     * nativo) y ceros si no hay nada temblando.
+     *
+     * Se calma AL CUADRADO: el golpe se lleva casi todo el meneo en el primer
+     * tercio y el resto se apaga suave hasta parar del todo —los últimos
+     * coletazos ya no llegan ni a un píxel, así que se queda quieto antes de
+     * que se le acabe el reloj. Un temblor plano, igual de fuerte del
+     * principio al final, no parece un terremoto: parece una pantalla rota. */
+    temblor: function () {
+      var t = this.temblorTicks | 0;
+      if (t <= 0 || !this.temblorFuerza) return { x: 0, y: 0 };
+      /* REDUCIR MOVIMIENTO (accesibilidad, la misma que mira el resto del
+       * juego con PM.UI.menosMovimiento): a quien lo tenga puesto no se le
+       * mueve nada. El poder sigue haciendo lo suyo —los fantasmas se van a
+       * casa igual—, solo que sin marear a nadie. */
+      var U = window.PM.UI;
+      if (U && U.menosMovimiento && U.menosMovimiento()) return { x: 0, y: 0 };
+      var k = t / (this.temblorTotal || t);            // 1 al empezar, 0 al final
+      var amp = this.temblorFuerza * k * k;
+      var n = (this.temblorTotal || t) - t;            // qué tick del temblor es
+      return { x: Math.round(ruidoTemblor(n + 1) * amp),
+               y: Math.round(ruidoTemblor(n + 71.3) * amp) };
+    },
+
     /* =========================================================
      * TANQUE
      * ========================================================= */
@@ -2658,16 +2739,58 @@
       sonDe(G, idx, 'playShout'); return true;
     },
 
+    /* Q — EMPUJÓN: aparta al fantasma de la línea, y desde el 21 sep TAMBIÉN
+     * AL DE ATRÁS. Antes solo miraba las tres casillas de delante, así que
+     * al que te alcanzaba por la espalda —que es justo cuando hace falta— la
+     * Q no le hacía nada. Ahora se mira primero delante (sigue siendo la
+     * jugada principal) y, si ahí no hay nadie, detrás.
+     *
+     * Y se empuja SIEMPRE ALEJÁNDOLO del Tanque, no por donde venía el
+     * fantasma: si el empuje siguiera su rumbo, al que se acerca de frente lo
+     * mandaría encima. */
     empujon: function (G, idx, d) {
-      var g = this.ghostEnLinea(G, idx, H.EMPUJON_TILES, d); if (!g) return false;
+      var p = G.pacs[idx]; if (!p) return false;
+      var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p);
+      var g = this.ghostEnLinea(G, idx, H.EMPUJON_TILES, { d: dir }), hacia = dir;
+      if (!g) {
+        hacia = CFG.OPP[dir];
+        g = this.ghostEnLinea(G, idx, H.EMPUJON_TILES, { d: hacia });
+      }
+      if (!g) return false;
       this.aturdido[g.id] = H.EMPUJON_STUN;
-      if (this.manda(G)) this.empujar(G, g, H.EMPUJON_TILES);
-      this.efecto('empujon', g.x, g.y, 24, G.pacs[idx].x, G.pacs[idx].y);
+      if (this.manda(G)) this.empujarHacia(G, g, hacia, H.EMPUJON_TILES);
+      this.efecto('empujon', g.x, g.y, 24, p.x, p.y);
       sonDe(G, idx, 'playCharge'); return true;
     },
+
+    /* Empuja a un fantasma `casillas` en la dirección `dir`, parando en la
+     * primera pared (nunca acaba dentro del muro) y dándole la vuelta, que si
+     * no vuelve a meterse encima en dos pasos. */
+    empujarHacia: function (G, g, dir, casillas) {
+      var v = CFG.DIR_V[dir];
+      if (!g || !v || !casillas || g.mode !== 'normal') return false;
+      var cx = g.tileX(), cy = g.tileY(), movido = 0;
+      for (var n = 0; n < casillas; n++) {
+        var nx = CFG.wrapCol(cx + v.x), ny = cy + v.y;
+        if (ny < 0 || ny >= CFG.ROWS) break;
+        if (!CFG.isOpen(nx, ny)) break;
+        cx = nx; cy = ny; movido++;
+      }
+      if (!movido) return false;
+      g.x = cx * T + T / 2; g.y = cy * T + T / 2;
+      g.forceReverse();
+      this.efecto('aplasta', g.x, g.y, 16);
+      return true;
+    },
+
+    /* E — GRITO DE GUERRA: clava a los CUATRO fantasmas del mapa 2,5 s (21
+     * sep). Era una Q de cinco casillas a la redonda, que en la práctica
+     * pillaba a uno. Ahora alcanza a todo el que esté en la calle: con el
+     * aturdimiento apagándolos (ver inerte), es la jugada con la que el
+     * Tanque para una partida entera, y por eso la recarga subió a 40 s. */
     gritoGuerra: function (G, idx) {
       var p = G.pacs[idx]; if (!p) return false;
-      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i]) && this.distancia(p.x, p.y, G.ghosts[i].x, G.ghosts[i].y) <= 5 * T) {
+      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
         this.aturdido[i] = H.GRITO_GUERRA_TICKS;
         this.efecto('grito_guerra', G.ghosts[i].x, G.ghosts[i].y, 24, p.x, p.y);
       }
@@ -2684,6 +2807,10 @@
         this.matarCatalogo(G, g, idx, H.TERREMOTO_PUNTOS, 'terremoto', 1, true);
       }
       if (G.pacs[idx]) this.efecto('terremoto_onda', G.pacs[idx].x, G.pacs[idx].y, 50);
+      /* Y SE MUEVE EL MAPA. Antes el poder se veía como un parón: los cuatro
+       * fantasmas a casa de golpe encadenaban cuatro parones de comer y el
+       * juego parecía colgado un momento, no sacudido. */
+      this.temblar(TERREMOTO_TEMBLOR, TERREMOTO_SACUDIDA);
       sonDe(G, idx, 'playShout'); return true;
     },
     fortaleza: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.fortaleza = H.FORTALEZA_TICKS; this.efecto('fortaleza', p.x, p.y, 36); sonDe(G, idx, 'playStealth'); return true; },
@@ -3129,15 +3256,31 @@
         }
         if (!this.enLaCalle(target)) { this.proyectilesCat.splice(i, 1); continue; }
         var vel = b.tipo === 'misil' ? H.MISIL_VEL : (b.tipo === 'totem' ? H.TOTEM_BALA_VEL : H.BOLA_GUIADA_VEL);
+        /* El MISIL y la BOLA GUIADA persiguen igual: van por los pasillos con
+         * la ruta del laberinto y la recalculan en cuanto el fantasma cambia
+         * de casilla. Lo único distinto es la velocidad, así que en vez de
+         * duplicar la rama se marca aquí quién sigue el camino; lo demás (las
+         * balas del tótem) vuela en línea recta. La guiada iba recta y
+         * atravesaba las paredes como si el laberinto no existiera. */
+        var sigueRuta = (b.tipo === 'misil' || b.tipo === 'guiada');
         var dx, dy, dis, aObjetivo = true;
-        if (b.tipo === 'misil') {
+        if (sigueRuta) {
           var bc = Math.floor(b.x / T), br = Math.floor(b.y / T);
           var tc = target.tileX(), tr = target.tileY(), clave = tc + ',' + tr;
           if (!b.ruta || b.rutaObjetivo !== clave || (!b.ruta.length && (bc !== tc || br !== tr))) {
             b.ruta = this.rutaLaberinto(bc, br, tc, tr);
             b.rutaObjetivo = clave;
           }
-          if (!b.ruta) { this.proyectilesCat.splice(i, 1); continue; }
+          /* Sin camino el misil se apaga, como siempre. La guiada no puede
+           * fallar nunca: si el laberinto no da ruta (algo muy raro estando el
+           * fantasma en la calle) se va derecha a por él y lo vuelve a
+           * intentar al tick siguiente, pero no desaparece. */
+          if (!b.ruta) {
+            if (b.tipo === 'misil') { this.proyectilesCat.splice(i, 1); continue; }
+            sigueRuta = false;
+          }
+        }
+        if (sigueRuta) {
           var wp = b.ruta.length ? b.ruta[0] : null;
           var wx = wp ? wp.c * T + T / 2 : target.x;
           var wy = wp ? wp.r * T + T / 2 : target.y;
@@ -3148,7 +3291,7 @@
         if (dx > ancho / 2) dx -= ancho; else if (dx < -ancho / 2) dx += ancho;
         dis = Math.sqrt(dx * dx + dy * dy) || 1;
         b.ang = Math.atan2(dy, dx);
-        if (b.tipo === 'misil' && !aObjetivo && dis <= vel + 0.5) {
+        if (sigueRuta && !aObjetivo && dis <= vel + 0.5) {
           b.x += dx; b.y += dy; b.ruta.shift();
           if (b.x < 0) b.x += ancho; else if (b.x >= ancho) b.x -= ancho;
           continue;
@@ -3188,6 +3331,7 @@
       var manda = this.manda(G);
       this.pasoProyectilesCat(G, manda);
       if (this.terremotoTicks > 0) this.terremotoTicks--;
+      if (this.temblorTicks > 0) this.temblorTicks--;
       if (this.eclipseTicks > 0) this.eclipseTicks--;
       for (j = 0; j < 4; j++) {
         if (this.lento[j] > 0) this.lento[j]--;
@@ -3233,14 +3377,26 @@
         if (s.caceria > 0) s.caceria--; else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
         if (s.estelaBuff > 0) s.estelaBuff--;
         if (!s.estelaRastro) s.estelaRastro = [];
+        /* ESTELA: el rastro es un camino, no una colita. Antes cada pisada se
+         * borraba sola a los 45 ticks y detrás del Soporte solo quedaba un
+         * cabo corto; ahora las pisadas se quedan puestas mientras la
+         * habilidad dure y el camino entero desaparece de golpe al acabarse,
+         * que es lo que el compañero necesita ver para decidir si lo pisa. */
         if (s.estela > 0) {
-          s.estela--;
           var ep = G.pacs[i];
-          if (ep && (G.tick % 5 === 0)) s.estelaRastro.push({ x: ep.x, y: ep.y, t: H.ESTELA_RASTRO_TICKS });
-        }
-        for (j = s.estelaRastro.length - 1; j >= 0; j--) {
+          if (ep && (G.tick % 5 === 0)) {
+            s.estelaRastro.push({ x: ep.x, y: ep.y });
+            /* Tope de seguridad: los 8 s de la habilidad dan unas 96 pisadas,
+             * pero si algún día se alarga, el array no debe crecer sin fin;
+             * pasado el tope se tira la pisada más vieja. */
+            if (s.estelaRastro.length > 160) s.estelaRastro.shift();
+          }
+          if (--s.estela <= 0) s.estelaRastro.length = 0;
+        } else if (s.estelaRastro.length) s.estelaRastro.length = 0;
+        /* El empujón a los COMPAÑEROS que pisan el camino sigue igual: se mira
+         * pisada por pisada y se reparte mientras el rastro esté puesto. */
+        for (j = 0; j < s.estelaRastro.length; j++) {
           var er = s.estelaRastro[j];
-          if (--er.t <= 0) { s.estelaRastro.splice(j, 1); continue; }
           for (var ej = 0; ej < G.pacs.length; ej++) if (ej !== i && this.vivo(G, ej) &&
               this.distancia(G.pacs[ej].x, G.pacs[ej].y, er.x, er.y) <= T) this.st[ej].estelaBuff = 15;
         }
@@ -3753,11 +3909,15 @@
       /* Trampas, zonas y objetivos del catálogo. Se dibujan en el suelo para
        * que fantasmas y Pac-Man pasen por encima sin ocultar la señal. */
       for (i = 0; i < this.st.length; i++) {
+        /* El recuadro de color vale para las zonas que solo tienen que decir
+         * hasta dónde llegan. MINA, MURO, SIRENA y FARO salieron de aquí y
+         * tienen dibujo propio más abajo: cada una cuenta algo distinto (que
+         * va a saltar, que bloquea, que llama, que barre) y con el mismo
+         * molde para las cuatro no se distinguía ninguna. */
         var ds = this.st[i], zonas = [
-          [ds.bomba, '#ff4058', H.BOMBA_RADIO], [ds.mina, '#ffb852', 0.8], [ds.telarana, '#c77dff', 1.5],
-          [ds.muro, '#00c8ff', 0.45], [ds.faro, '#ffe66d', 0.8],
-          [ds.sirena, '#ff5577', 0.8], [ds.niebla, '#b6c8d9', 1.8],
-          [ds.totem, '#ff7a1a', 0.7], [ds.fuegoMeteoro, '#ff5a1f', H.METEORO_RADIO]
+          [ds.bomba, '#ff4058', H.BOMBA_RADIO], [ds.telarana, '#c77dff', 1.5],
+          [ds.niebla, '#b6c8d9', 1.8], [ds.totem, '#ff7a1a', 0.7],
+          [ds.fuegoMeteoro, '#ff5a1f', H.METEORO_RADIO]
         ];
         for (var zi = 0; zi < zonas.length; zi++) {
           var z = zonas[zi][0]; if (!z) continue;
@@ -3768,6 +3928,106 @@
           ctx.globalAlpha = 0.75; ctx.strokeStyle = zonas[zi][1]; ctx.lineWidth = 1;
           ctx.strokeRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
             zonas[zi][2] * T * 2, zonas[zi][2] * T * 2); ctx.restore();
+        }
+        /* MINA: un artefacto plantado en el suelo, con su cuerpo, su aro y
+         * tres patas, para que se lea como algo puesto ahí a propósito. El
+         * piloto del centro parpadea despacio y se acelera —y se pone rojo—
+         * el último segundo: ese es el único aviso de que va a saltar. */
+        if (ds.mina) {
+          var mnx = ds.mina.c * T + T / 2, mny = ds.mina.r * T + T / 2 + Y;
+          var mnRapido = ds.mina.t > 0 && ds.mina.t < 60;
+          var mnLuz = Math.floor(tk / (mnRapido ? 2 : 9)) % 2 === 0;
+          ctx.save();
+          ctx.strokeStyle = '#ffb852'; ctx.lineWidth = 1; ctx.globalAlpha = 0.8;
+          for (var mnp = 0; mnp < 3; mnp++) {
+            var mna = -Math.PI / 2 + mnp * Math.PI * 2 / 3;
+            ctx.beginPath();
+            ctx.moveTo(mnx + Math.cos(mna) * 2.5, mny + Math.sin(mna) * 2.5);
+            ctx.lineTo(mnx + Math.cos(mna) * 5.5, mny + Math.sin(mna) * 5.5);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#3a2410';
+          ctx.beginPath(); ctx.arc(mnx, mny, 3.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(mnx, mny, 3.2, 0, Math.PI * 2); ctx.stroke();
+          if (mnLuz) {
+            ctx.fillStyle = mnRapido ? '#ff4058' : '#ffe66d';
+            ctx.beginPath(); ctx.arc(mnx, mny, 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 0.28;
+            ctx.beginPath(); ctx.arc(mnx, mny, 5.5, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
+        }
+        /* MURO: una pared de verdad ocupando la casilla entera, con ladrillos
+         * a matajunta, no una mancha de color encima del suelo. Va en el tono
+         * del Soporte y con un destello que sube por las juntas, y eso es lo
+         * que la separa del muro del laberinto, que ni brilla ni se va. Se
+         * atenúa a parpadeos el último segundo: se está cayendo. */
+        if (ds.muro) {
+          var mux = ds.muro.c * T, muy = ds.muro.r * T + Y;
+          var muCae = ds.muro.t > 0 && ds.muro.t < 60 && Math.floor(tk / 5) % 2 === 0;
+          ctx.save();
+          ctx.globalAlpha = muCae ? 0.4 : 1;
+          ctx.fillStyle = '#073a4d';
+          ctx.fillRect(mux, muy, T, T);
+          ctx.strokeStyle = '#00c8ff'; ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(mux, muy + T / 2); ctx.lineTo(mux + T, muy + T / 2);
+          ctx.moveTo(mux + T / 2, muy); ctx.lineTo(mux + T / 2, muy + T / 2);
+          ctx.moveTo(mux + T / 4, muy + T / 2); ctx.lineTo(mux + T / 4, muy + T);
+          ctx.moveTo(mux + T * 3 / 4, muy + T / 2); ctx.lineTo(mux + T * 3 / 4, muy + T);
+          ctx.stroke();
+          ctx.strokeRect(mux + 0.5, muy + 0.5, T - 1, T - 1);
+          ctx.globalAlpha = muCae ? 0.18 : 0.5;
+          ctx.fillStyle = '#9fefff';
+          ctx.fillRect(mux + 1, muy + (tk * 0.6) % T, T - 2, 1);
+          ctx.restore();
+        }
+        /* SIRENA: un foco que llama a los fantasmas. Las ondas salen de la
+         * casilla y se apagan al crecer —tres repartidas en el ciclo, para
+         * que siempre haya una saliendo—, que es lo que deja ver de dónde
+         * viene la llamada y hacia dónde van a ir. */
+        if (ds.sirena) {
+          var six = ds.sirena.c * T + T / 2, siy = ds.sirena.r * T + T / 2 + Y;
+          ctx.save();
+          ctx.strokeStyle = '#ff5577'; ctx.lineWidth = 1;
+          for (var so = 0; so < 3; so++) {
+            var sif = ((tk / 45) + so / 3) % 1;
+            ctx.globalAlpha = (1 - sif) * 0.7;
+            ctx.beginPath(); ctx.arc(six, siy, 2 + sif * 2.6 * T, 0, Math.PI * 2); ctx.stroke();
+          }
+          /* el foco late aparte: la fuente se ve aunque no haya onda encima */
+          ctx.globalAlpha = 0.9; ctx.fillStyle = '#ff5577';
+          ctx.beginPath(); ctx.arc(six, siy, 2.2 + Math.sin(tk / 4) * 0.8, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 0.45; ctx.fillStyle = '#ffd0da';
+          ctx.beginPath(); ctx.arc(six, siy, 1.2, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+        /* FARO: una baliza que barre. El haz gira desde la lámpara y se
+         * desvanece con la distancia, que es lo que dice "hacia aquí" sin
+         * tapar el laberinto. El último segundo parpadea apagándose: quien
+         * venía corriendo tiene que saber que deja de estar. */
+        if (ds.faro) {
+          var fax = ds.faro.c * T + T / 2, fay = ds.faro.r * T + T / 2 + Y;
+          var faApaga = ds.faro.t > 0 && ds.faro.t < 60 && Math.floor(tk / 4) % 2 === 0;
+          var faAng = tk / 14;
+          ctx.save();
+          ctx.globalAlpha = faApaga ? 0.22 : 1;
+          var faHaz = ctx.createRadialGradient(fax, fay, 1, fax, fay, 2.4 * T);
+          faHaz.addColorStop(0, 'rgba(255, 230, 109, 0.55)');
+          faHaz.addColorStop(1, 'rgba(255, 230, 109, 0)');
+          ctx.fillStyle = faHaz;
+          ctx.beginPath();
+          ctx.moveTo(fax, fay);
+          ctx.arc(fax, fay, 2.4 * T, faAng - 0.35, faAng + 0.35);
+          ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#5a4a12';
+          ctx.fillRect(fax - 2.5, fay - 1, 5, 5);
+          ctx.strokeStyle = '#ffe66d'; ctx.lineWidth = 1;
+          ctx.strokeRect(fax - 2.5, fay - 1, 5, 5);
+          ctx.fillStyle = faApaga ? '#8a7a3a' : '#fff3b0';
+          ctx.beginPath(); ctx.arc(fax, fay - 2, 2, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
         }
         /* El paso del PUENTE: se borra el muro de esas casillas y se marca el
          * hueco. Parpadea el último segundo, que es el aviso de que se cierra
@@ -3792,10 +4052,32 @@
           }
         }
         var rastros = ds.estelaRastro || [];
-        for (var ei = 0; ei < rastros.length; ei++) {
-          var eh = rastros[ei];
-          ctx.save(); ctx.globalAlpha = Math.max(0.12, eh.t / H.ESTELA_RASTRO_TICKS * 0.55);
-          ctx.fillStyle = '#2bff88'; ctx.beginPath(); ctx.arc(eh.x, eh.y + Y, 3 + Math.sin((tk + ei) / 4), 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        if (rastros.length) {
+          /* El camino se pinta de una pieza y con la misma fuerza de punta a
+           * punta: ya no son puntos que se van apagando por detrás. Lo único
+           * que se desvanece es el conjunto, y solo al final — en el último
+           * tramo de la habilidad — para avisar de que el camino se acaba. */
+          var eVive = ds.estela == null ? H.ESTELA_RASTRO_TICKS : ds.estela;
+          var eAlfa = Math.min(1, eVive / H.ESTELA_RASTRO_TICKS);
+          ctx.save();
+          ctx.strokeStyle = '#2bff88'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.beginPath();
+          for (var ei = 0; ei < rastros.length; ei++) {
+            var eh = rastros[ei], eAnt = ei ? rastros[ei - 1] : null;
+            /* Dos pisadas muy separadas son un salto (el túnel, un portal): ahí
+             * se corta el trazo en vez de cruzar el mapa con una raya. */
+            if (!eAnt || Math.abs(eh.x - eAnt.x) > T * 2 || Math.abs(eh.y - eAnt.y) > T * 2) ctx.moveTo(eh.x, eh.y + Y);
+            else ctx.lineTo(eh.x, eh.y + Y);
+          }
+          ctx.globalAlpha = 0.28 * eAlfa; ctx.lineWidth = 7; ctx.stroke();
+          ctx.globalAlpha = 0.65 * eAlfa; ctx.lineWidth = 3; ctx.stroke();
+          /* Con una sola pisada no hay línea que trazar, así que se marca el
+           * arranque del camino con un punto. */
+          if (rastros.length === 1) {
+            ctx.fillStyle = '#2bff88'; ctx.beginPath();
+            ctx.arc(rastros[0].x, rastros[0].y + Y, 3 + Math.sin(tk / 4), 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.restore();
         }
         if (ds.clon) {
           var clx = ds.clon.x == null ? ds.clon.c * T + T / 2 : ds.clon.x;

@@ -5101,6 +5101,18 @@
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
 
+      /* EL TEMBLOR DEL MAPA (js/habilidades.js, Hab.temblor): el TERREMOTO
+       * del Tanque sacude el suelo. Se corre el dibujo unos píxeles y ya: va
+       * aquí, envolviendo el laberinto y a todo el que vive dentro, y se
+       * cierra ANTES del marcador y de los avisos, que no tiemblan nunca —lo
+       * que se menea es el suelo, no la máquina recreativa.
+       *
+       * El negro de detrás ya está pintado, así que al correrse el mapa se ve
+       * borde negro y no basura de otro fotograma. */
+      var tmb = (this.hab && window.PM.Hab) ? window.PM.Hab.temblor() : null;
+      var meneo = !!(tmb && (tmb.x || tmb.y));
+      if (meneo) { ctx.save(); ctx.translate(tmb.x, tmb.y); }
+
       /* laberinto (parpadea en LEVEL_DONE fase 1) */
       var mazeImg = this.mazeBlue;
       if (this.state === 'LEVEL_DONE' && this.levelPhase === 1) {
@@ -5294,6 +5306,9 @@
         var pp = this.popups[i];
         window.PM.Sprites.drawScorePopup(ctx, pp.x, pp.y + CFG.MAZE_Y, pp.text);
       }
+
+      /* se acabó lo que tiembla: el lienzo vuelve a estar como estaba */
+      if (meneo) ctx.restore();
 
       this.renderHUD(ctx);
       this.renderStateText(ctx);

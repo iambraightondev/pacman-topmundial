@@ -2,6 +2,50 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 · La segunda tanda del catálogo
+
+**El GRITO DE GUERRA se muda a la E y alcanza todo el mapa.** Era una Q que
+clavaba a cinco casillas a la redonda —en la práctica, a uno— y ahora clava a
+los **cuatro fantasmas estén donde estén, 2,5 s**. De paso tapa el único
+agujero que quedaba en el catálogo: la E del Tanque era la única ranura del
+juego con una sola opción. Como con el aturdimiento apagado (ver la tanda
+anterior) parar a los cuatro es media R, **la recarga sube de 24 a 40 s**.
+
+**El EMPUJÓN también aparta al que viene por detrás.** Solo miraba las tres
+casillas de delante, así que al que te alcanzaba por la espalda —justo cuando
+hace falta— la Q no le hacía nada. Ahora mira primero delante y, si ahí no hay
+nadie, coge al de atrás. Y el empuje **aleja siempre del Tanque**, en vez de
+seguir el rumbo del fantasma, que a veces te lo plantaba encima.
+
+**El TERREMOTO tiembla.** Antes mandaba a los cuatro fantasmas a casa y el
+juego se quedaba medio segundo congelado: parecía que se había colgado. Ahora
+el suelo se sacude —fuerte al arrancar y calmándose hasta parar—, solo el
+laberinto y lo que vive dentro: el marcador no se mueve. El temblor dura 1,5 s
+de los seis del poder, porque temblar los seis enteros vuelve el mapa
+ilegible justo cuando toca esquivar. Con **reducir movimiento** activado no se
+mueve nada. Queda montado como una pieza aparte, para que el METEORO la use.
+
+**La ESTELA deja un camino, no una colita.** Cada pisada se borraba a los
+tres cuartos de segundo aunque la habilidad siguiera activa. Ahora el rastro
+**se queda los ocho segundos enteros** y se borra de golpe al acabarse: el
+equipo corre por la línea que dibujó el Soporte, y se ve.
+
+**La BOLA GUIADA ya no atraviesa paredes.** Volaba recta hacia el fantasma
+como si el laberinto no existiera. Ahora persigue **por los pasillos**, con el
+mismo mecanismo del MISIL y recalculando la ruta cuando el fantasma se mueve.
+Sigue sin poder fallar y sigue dando 150 exactos.
+
+**Y cuatro zonas dejan de ser un cuadrado de color.** MINA, MURO, SIRENA y
+FARO se pintaban todas con el mismo molde; por eso se veían básicas. Ahora la
+mina es un artefacto con su piloto, que se acelera y se pone rojo el segundo
+antes de saltar; el muro es un bloque de ladrillos del color del Soporte, que
+no se confunde con la pared del laberinto; la sirena es un foco que late con
+ondas saliendo; y el faro es una baliza con un haz que gira y se apaga al
+gastarse.
+
+**Los números pedidos:** CHISPA aturde **3 s**, el MURO dura **10 s** y la
+TELARAÑA **16 s**.
+
 ## 2026-09-21 · Lo que estaba roto del catálogo
 
 **FORTALEZA no se apagaba nunca; ahora dura sus seis segundos.** Su reloj no

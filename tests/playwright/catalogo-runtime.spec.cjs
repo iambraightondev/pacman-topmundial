@@ -328,12 +328,38 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
       const src = String(H[fn]);
       return !/efecto\(|proyectilesCat\.push/.test(src);
     }).map(([id]) => id);
+    /* MINA, MURO, SIRENA y FARO salieron del recuadro de color común y
+     * tienen dibujo propio: si alguna volviera al molde, seguiría pintando,
+     * así que lo que se comprueba es que cada una deja tinta ella sola. */
+    const st0 = H.st[0], zc = G.pacs[0].tileX(), zr = G.pacs[0].tileY();
+    /* La bomba plantada antes cubre dos casillas a la redonda de ese mismo
+     * sitio: si se deja puesta, la tinta de las zonas pequeñas cae dentro de
+     * la suya y no se nota. */
+    st0.bomba = null;
+    function tintaZona(campo, zona) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      H.dibujarSuelo(G, ctx);
+      const base = ink();
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      st0[campo] = zona;
+      H.dibujarSuelo(G, ctx);
+      const con = ink();
+      st0[campo] = null;
+      return con > base;
+    }
+    const zonasPropias = {
+      mina: tintaZona('mina', { c: zc, r: zr, t: CFG.HAB.MINA_TICKS }),
+      muro: tintaZona('muro', { c: zc, r: zr, t: CFG.HAB.MURO_TICKS }),
+      sirena: tintaZona('sirena', { c: zc, r: zr, t: CFG.HAB.FARO_TICKS }),
+      faro: tintaZona('faro', { c: zc, r: zr, t: CFG.HAB.FARO_TICKS })
+    };
     G.toMenu();
-    return { pixels, declaradas, azulClaro: modoAzul === 'fright', tintaAturdido, sinAnimacion };
+    return { pixels, declaradas, azulClaro: modoAzul === 'fright', tintaAturdido, sinAnimacion, zonasPropias };
   });
   expect(r.declaradas).toBe(true);
   expect(r.azulClaro).toBe(true);
   expect(r.tintaAturdido).toBe(true);
   expect(r.sinAnimacion).toEqual([]);
+  expect(r.zonasPropias).toEqual({ mina: true, muro: true, sirena: true, faro: true });
   expect(r.pixels).toBeGreaterThan(100);
 });

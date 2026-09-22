@@ -2086,11 +2086,17 @@
     MISIL_VEL: 2 * CFG.BASE_SPEED,
     EMPUJON_TILES: 3,
     EMPUJON_STUN: 60,
-    GRITO_GUERRA_TICKS: 90,
+    /* GRITO DE GUERRA (21 sep): pasa de Q a E, de cinco casillas a TODO EL
+     * MAPA y de 1,5 s a 2,5 s. Con el aturdimiento apagando al fantasma
+     * (ver inerte), clavar a los cuatro es media R, así que la recarga sube
+     * de 24 a 40 s: por debajo de eso le come el sitio al ECLIPSE del Mago. */
+    GRITO_GUERRA_TICKS: 150,
     YUNQUE_TICKS: 120,
     PIEL_PIEDRA_TICKS: 5 * 60,
     REBOTE_TICKS: 5 * 60,
-    TELARANA_TICKS: 6 * 60,
+    /* 21 sep: de 6 s a 16 s. Una zona que ralentiza tres segundos no se
+     * llegaba a usar: cuando el fantasma entraba, ya se había ido. */
+    TELARANA_TICKS: 16 * 60,
     TELARANA_MULT: 0.5,
     ESTELA_TICKS: 8 * 60,
     ESTELA_MULT: 1.25,
@@ -2103,13 +2109,15 @@
     PUENTE_TILES: 4,
     CADENA_TICKS: 6 * 60,
     FARO_TICKS: 6 * 60,
-    MURO_TICKS: 5 * 60,
+    /* 21 sep: de 5 s a 10 s (corta un pasillo el rato suficiente para que
+     * el equipo se recoloque; hay que mirarlo jugando). */
+    MURO_TICKS: 10 * 60,
     CAMPO_TICKS: 5 * 60,
     HOSPITAL_TICKS: 10 * 60,
     BOLA_GUIADA_PUNTOS: 150,
     BOLA_GUIADA_VEL: 3.5,
     TOQUE_ARCANO_TICKS: 4 * 60,
-    CHISPA_TICKS: 2 * 60,
+    CHISPA_TICKS: 3 * 60,
     CLON_TICKS: 6 * 60,
     TOTEM_TICKS: 8 * 60,
     TOTEM_CADA: 2 * 60,
@@ -2228,12 +2236,15 @@
       tanque: [
         [h('pisoton', 'Q', 'PISOTÓN', 32, 'Todos huyen del Tanque.'),
          h('empujon', 'Q', 'EMPUJÓN', 18, 'Empuja y aturde a un fantasma.'),
-         h('grito_guerra', 'Q', 'GRITO DE GUERRA', 24, 'Clava a los fantasmas cercanos.'),
          h('rebote', 'Q', 'REBOTE', 30, 'El primer contacto mata al fantasma.')],
         [h('escudo', 'W', 'ESCUDO', 24, 'Aguanta un golpe.'),
          h('yunque', 'W', 'YUNQUE', 20, 'Quieto, eres intocable y rebotas fantasmas.'),
          h('piel_piedra', 'W', 'PIEL DE PIEDRA', 28, 'Inmune, pero lento, durante 5 s.')],
-        [h('provocar', 'E', 'PROVOCAR', 32, 'Todos van a por el Tanque.')],
+        /* La E del Tanque era la única ranura del juego con una sola opción:
+         * sus dos candidatas se cayeron en el diseño. El GRITO DE GUERRA se
+         * muda aquí desde la Q (21 sep) y de paso tapa ese agujero. */
+        [h('provocar', 'E', 'PROVOCAR', 32, 'Todos van a por el Tanque.'),
+         h('grito_guerra', 'E', 'GRITO DE GUERRA', 40, 'Clava a los cuatro fantasmas 2,5 s.')],
         [h('arrollar', 'R', 'APISONADORA', 46, 'Corre en línea recta hasta la pared.'),
          h('terremoto', 'R', 'TERREMOTO', 70, 'Devuelve a los fantasmas y ralentiza al equipo.'),
          h('fortaleza', 'R', 'FORTALEZA', 90, 'Protege un radio de 5 casillas.')]

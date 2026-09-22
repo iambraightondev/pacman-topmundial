@@ -13,6 +13,27 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**22 sep — LOS AJUSTES DEL CATÁLOGO, TERMINADOS SALVO TRES.**
+
+De las dieciocho cosas que salieron al jugarlo queda solo lo que espera su
+decisión: TOQUE ARCANO, NIEBLA y METEORO (los tres con propuesta escrita en
+**[`PLAN-AJUSTES-CATALOGO.md`](PLAN-AJUSTES-CATALOGO.md)**) y el punto 19, que
+quedó vacío.
+
+Lo construido el 21 por la noche: FORTALEZA se apaga, un fantasma aturdido
+queda apagado y no mata, el PUENTE perfora el muro de delante, el GANCHO
+arrastra al fantasma y la GRAVEDAD tira a la vista.
+
+Lo construido el 22: el GRITO DE GUERRA se mudó a la E y clava a los cuatro
+del mapa 2,5 s (recarga a 40 s); el EMPUJÓN aparta también al de atrás; el
+TERREMOTO sacude el suelo (1,5 s, y nada con reducir movimiento); la ESTELA
+deja camino fijo; la BOLA GUIADA va por los pasillos; MINA, MURO, SIRENA y
+FARO tienen dibujo propio; y CHISPA 3 s, MURO 10 s, TELARAÑA 16 s.
+
+**A mirar jugando** (son decisiones mías, no suyas): con el aturdimiento
+apagando al fantasma, el Tanque quedó fuerte —GRITO DE GUERRA y EMPUJÓN—; el
+MURO a 10 s y la TELARAÑA a 16 s dejan medio mapa cortado mucho rato.
+
 **21 sep (noche) — LO ROTO DEL CATÁLOGO, ARREGLADO.**
 
 De la lista de dieciocho cosas que salió al jugarlo ya están los cinco

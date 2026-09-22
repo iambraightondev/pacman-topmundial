@@ -10919,13 +10919,13 @@
     eq(G.pacs[0].x, antes, 'el soporte no se mueve');
   });
 
-  test('CATÁLOGO: Chispa aturde 2 s y Terremoto ralentiza al equipo', function () {
+  test('CATÁLOGO: Chispa aturde 3 s y Terremoto ralentiza al equipo', function () {
     var H = window.PM.Hab;
     partida(1);
     G.hab = true; H.empezar(true, 1, ['mago'], ['fuego,portal,runa,chispa']); G.roles = ['mago'];
     G.pacs[0].x = 13 * CFG.TILE + 4; G.pacs[0].y = 20 * CFG.TILE + 4;
     G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
-    ok(H.chispa(G, 0), 'sale chispa'); eq(H.aturdido[0], 120, 'aturdimiento de 2 segundos');
+    ok(H.chispa(G, 0), 'sale chispa'); eq(H.aturdido[0], 180, 'aturdimiento de 3 segundos');
     G.roles[0] = 'tanque'; H.empezar(true, 1, ['tanque'], ['pisoton,escudo,provocar,terremoto']); G.roles = ['tanque'];
     G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
     ok(H.terremoto(G, 0), 'sale terremoto'); eq(H.terremotoTicks, CFG.HAB.TERREMOTO_TICKS, 'dura seis segundos');
@@ -11217,6 +11217,179 @@
     for (n = 0; n < CFG.HAB.GRAVEDAD_TIRON; n++) H.pasoRoles(G, true);
     ok(H.distancia(g.x, g.y, p.x, p.y) <= CFG.TILE, 'y acaba encima del Mago');
     ok(H.apagado(g.id), 'sigue apagado al llegar');
+  });
+
+  test('AJUSTES: la Estela deja el camino entero y lo recoge al acabarse', function () {
+    var H = window.PM.Hab;
+    partida(2); G.hab = true;
+    H.empezar(true, 2, ['soporte', 'asesino'],
+      ['telarana,estela,relevo,hospital', 'mordisco,turbo,flash,grito']);
+    G.roles = ['soporte', 'asesino'];
+    var t = tramoRecto(8);
+    ok(t, 'hay un pasillo recto donde dejar el rastro');
+    ponPac(0, t.c, t.r, DR.RIGHT);
+    ponPac(1, t.c + 7, t.r, DR.LEFT);
+    var n;
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    ok(H.estela(G, 0), 'sale la estela');
+    /* El soporte va andando despacio para que las pisadas caigan separadas */
+    for (n = 1; n <= 50; n++) { G.tick++; G.pacs[0].x += 0.4; H.pasoRoles(G, true); }
+    var alos50 = H.st[0].estelaRastro.length;
+    ok(alos50 >= 9, 'se deja una pisada cada cinco ticks');
+    for (n = 1; n <= 30; n++) { G.tick++; G.pacs[0].x += 0.4; H.pasoRoles(G, true); }
+    ok(H.st[0].estelaRastro.length > alos50,
+       'pasados los 45 ticks no se borra ninguna (antes caducaban una a una)');
+    /* El empujón al compañero que lo pisa tiene que seguir funcionando, y
+     * ahora también en la parte vieja del camino, no solo en la colita. */
+    var primera = H.st[0].estelaRastro[0];
+    G.pacs[1].x = primera.x; G.pacs[1].y = primera.y;
+    G.tick++; H.pasoRoles(G, true);
+    ok(H.st[1].estelaBuff > 0, 'el compañero que pisa la pisada más vieja coge el empujón');
+    for (n = 0; n < CFG.HAB.ESTELA_TICKS; n++) { G.tick++; H.pasoRoles(G, true); }
+    eq(H.st[0].estela, 0, 'la habilidad se apaga a los 8 s');
+    eq(H.st[0].estelaRastro.length, 0, 'y el camino desaparece entero de golpe');
+  });
+
+  test('AJUSTES: la Bola Guiada rodea la pared por el pasillo y sigue dando 150', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['bola_guiada,portal,runa,tormenta']); G.roles = ['mago'];
+    var n;
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    /* Dos casillas de la misma fila con pared en medio: si la ruta del
+     * laberinto es más larga que la recta, llegar significa haber rodeado. */
+    var par = null, c, r, d, x;
+    for (r = 1; r < CFG.ROWS - 1 && !par; r++) {
+      for (c = 1; c < CFG.COLS - 2 && !par; c++) {
+        if (!CFG.isOpen(c, r, false)) continue;
+        for (d = 2; d <= 10 && c + d < CFG.COLS; d++) {
+          if (!CFG.isOpen(c + d, r, false)) continue;
+          var muro = false;
+          for (x = c + 1; x < c + d; x++) if (!CFG.isOpen(x, r, false)) muro = true;
+          if (!muro) continue;
+          var ruta = H.rutaLaberinto(c, r, c + d, r);
+          if (ruta && ruta.length > d) { par = { c: c, r: r, tc: c + d }; break; }
+        }
+      }
+    }
+    ok(par, 'hay un par de casillas separadas por una pared');
+    ponPac(0, par.c, par.r, DR.RIGHT);
+    var g = G.ghosts[0];
+    g.mode = 'normal'; g.frightened = false;
+    g.x = par.tc * CFG.TILE + CFG.TILE / 2; g.y = par.r * CFG.TILE + CFG.TILE / 2;
+    var base = G.score;
+    ok(H.bolaGuiada(G, 0), 'sale la bola');
+    var porPasillos = true;
+    for (n = 0; n < 900 && H.proyectilesCat.length; n++) {
+      H.pasoProyectilesCat(G, true);
+      var bo = H.proyectilesCat[0];
+      if (bo) porPasillos = porPasillos &&
+        CFG.isOpen(Math.floor(bo.x / CFG.TILE), Math.floor(bo.y / CFG.TILE), false);
+    }
+    ok(porPasillos, 'no atraviesa la pared: pasa solo por casillas abiertas');
+    eq(g.mode, 'eyes', 'llega igualmente: la bola no falla nunca');
+    eq(G.score - base, 150, 'premio fijo de 150');
+  });
+
+  test('AJUSTES: los números nuevos del catálogo', function () {
+    var C = CFG.HAB;
+    eq(C.CHISPA_TICKS, 3 * 60, 'Chispa aturde 3 s');
+    eq(C.MURO_TICKS, 10 * 60, 'el Muro dura 10 s');
+    eq(C.TELARANA_TICKS, 16 * 60, 'la Telaraña dura 16 s');
+    eq(C.GRITO_GUERRA_TICKS, 150, 'el Grito de Guerra clava 2,5 s');
+    /* El Grito se mudó de la Q a la E, que era la única ranura del juego con
+     * una sola opción */
+    var q = C.CATALOGO.tanque[0].map(function (h) { return h.id; });
+    var e = C.CATALOGO.tanque[2].map(function (h) { return h.id; });
+    ok(q.indexOf('grito_guerra') < 0, 'ya no está en la Q');
+    ok(e.indexOf('grito_guerra') >= 0, 'está en la E');
+    ok(e.length > 1, 'y la E del Tanque deja de tener una sola opción');
+    eq(C.CATALOGO.tanque[2].filter(function (h) { return h.id === 'grito_guerra'; })[0].cd,
+      40 * 60, 'con recarga de 40 s, que clavar a los cuatro es media R');
+  });
+
+  test('AJUSTES: el Grito de Guerra alcanza todo el mapa', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['tanque'], ['pisoton,escudo,grito_guerra,arrollar']); G.roles = ['tanque'];
+    var p = ponPac(0, 13, 20, DR.RIGHT), lejos = 0;
+    for (var n = 0; n < 4; n++) {
+      var g = G.ghosts[n];
+      g.mode = 'normal'; g.frightened = false;
+      g.x = (2 + n * 6) * CFG.TILE + CFG.TILE / 2; g.y = 2 * CFG.TILE + CFG.TILE / 2;
+      lejos = Math.max(lejos, H.distancia(g.x, g.y, p.x, p.y));
+    }
+    ok(lejos > 6 * CFG.TILE, 'están repartidos por el mapa, no al lado');
+    ok(H.gritoGuerra(G, 0), 'sale el grito');
+    for (n = 0; n < 4; n++) {
+      eq(H.aturdido[n], CFG.HAB.GRITO_GUERRA_TICKS, 'clava al fantasma ' + n);
+      ok(H.apagado(n), 'y lo deja apagado');
+    }
+  });
+
+  test('AJUSTES: el Empujón también aparta al que viene por detrás', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['tanque'], ['empujon,escudo,provocar,arrollar']); G.roles = ['tanque'];
+    var t = tramoRecto(7);
+    ok(t, 'hay un pasillo recto de siete casillas');
+    /* el Tanque en medio, mirando a la derecha, y el fantasma a su ESPALDA */
+    var p = ponPac(0, t.c + 3, t.r, DR.RIGHT), g = G.ghosts[0];
+    for (var n = 1; n < 4; n++) G.ghosts[n].mode = 'house';
+    g.mode = 'normal'; g.frightened = false;
+    g.x = (t.c + 2) * CFG.TILE + CFG.TILE / 2; g.y = p.y;
+    var antes = H.distancia(g.x, g.y, p.x, p.y);
+    ok(H.empujon(G, 0), 'la Q sale aunque no haya nadie delante');
+    ok(H.distancia(g.x, g.y, p.x, p.y) > antes, 'y lo aleja hacia atrás');
+    ok(g.x < p.x, 'sin traérselo por delante');
+    eq(H.aturdido[g.id], CFG.HAB.EMPUJON_STUN, 'aturdido como siempre');
+    /* y el de delante sigue siendo el primero al que mira */
+    g.x = (t.c + 4) * CFG.TILE + CFG.TILE / 2; g.y = p.y;
+    H.aturdido[g.id] = 0;
+    var antesD = H.distancia(g.x, g.y, p.x, p.y);
+    ok(H.empujon(G, 0), 'empuja al de delante');
+    ok(H.distancia(g.x, g.y, p.x, p.y) > antesD && g.x > p.x, 'alejándolo por delante');
+  });
+
+  /* El TERREMOTO se veía como un parón —cuatro fantasmas a casa de golpe— y
+   * no como un terremoto. Ahora sacude el mapa: un tirón fuerte que se calma
+   * hasta parar, y quieto del todo para quien tenga puesto REDUCIR
+   * MOVIMIENTO. Lo que se mide aquí es el desplazamiento que consulta el
+   * dibujo (Hab.temblor), no píxeles: en Node no se rasteriza nada. */
+  test('AJUSTES: el TERREMOTO sacude el mapa, y se está quieto si se pide', function () {
+    var H = window.PM.Hab, n, tope;
+    function meneo() {
+      var d = H.temblor();
+      return Math.max(Math.abs(d.x), Math.abs(d.y));
+    }
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['tanque'], ['pisoton,escudo,provocar,terremoto']); G.roles = ['tanque'];
+    ponPac(0, 13, 20, DR.RIGHT);
+    eq(meneo(), 0, 'sin nada lanzado, el mapa está quieto');
+
+    ok(H.terremoto(G, 0), 'sale el terremoto');
+    var fuerte = 0;
+    for (n = 0; n < 15; n++) { fuerte = Math.max(fuerte, meneo()); H.pasoRoles(G, true); }
+    ok(fuerte >= 3, 'el mapa se mueve de verdad al reventar el suelo');
+
+    var flojo = 0;
+    for (; n < 45; n++) { flojo = Math.max(flojo, meneo()); H.pasoRoles(G, true); }
+    ok(flojo > 0 && flojo < fuerte, 'y se va calmando, sin parar de golpe');
+
+    for (; n < 90; n++) H.pasoRoles(G, true);
+    eq(meneo(), 0, 'acaba quieto del todo');
+    ok(H.terremotoTicks > 0, 'aunque al poder le queden segundos: temblar seis marea');
+
+    /* REDUCIR MOVIMIENTO: el poder hace lo mismo, el suelo no se mueve */
+    var antesMM = window.matchMedia;
+    window.matchMedia = function () { return { matches: true, addListener: function () {} }; };
+    try {
+      ok(H.terremoto(G, 0), 'el terremoto sale igual');
+      tope = 0;
+      for (n = 0; n < 30; n++) { tope = Math.max(tope, meneo()); H.pasoRoles(G, true); }
+      eq(tope, 0, 'pero el mapa no se mueve ni un píxel');
+      ok(H.terremotoTicks > 0, 'y el resto del poder sigue en marcha');
+    } finally { window.matchMedia = antesMM; }
   });
 
   // ---------------------------------------------------------------
