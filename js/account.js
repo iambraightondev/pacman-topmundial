@@ -621,6 +621,9 @@
       if (window.PM.Achievements) {
         window.PM.Achievements.merge(fila.logros || {});
         window.PM.Achievements.syncSeen();   // lo traído no se celebra
+        /* la nube puede traer más DESATADO del que se sembró aquí: las
+         * maestrías de rol completan lo que falte (solo la diferencia) */
+        if (window.PM.Maestria) window.PM.Maestria.sembrar();
       }
       // ni las skins que abra lo traído (nivel, contadores, maestrías)
       if (window.PM.Skins) window.PM.Skins.syncVistas();

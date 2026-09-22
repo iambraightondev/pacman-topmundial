@@ -12027,6 +12027,143 @@
   });
 
   // ---------------------------------------------------------------
+  // MAESTRÍAS DE ROL (js/maestria.js)
+  // ---------------------------------------------------------------
+
+  /* Guarda los contadores, deja hacer y los devuelve como estaban */
+  function conContadores(fn) {
+    var A = window.PM.Achievements, raw = null;
+    try { raw = localStorage.getItem(CFG.ACH_KEY); } catch (e) { raw = null; }
+    try { A.reset(); fn(A); }
+    finally {
+      if (raw === null) A.reset();
+      else { try { localStorage.setItem(CFG.ACH_KEY, raw); } catch (e) {} }
+    }
+  }
+
+  test('MAESTRÍA: la nota sale de lo que hace cada rol, por minuto en pie',
+    function () {
+      var Mae = window.PM.Maestria;
+      // 5 minutos en pie, sin morir
+      eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 36 }, 0, 5)), 'S', '7,2 por minuto');
+      eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 18 }, 0, 5)), 'B', '3,6 por minuto');
+      eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 2 }, 0, 5)), 'D', 'casi nada');
+      // el Tanque cuenta sus golpes aguantados, x3
+      eq(Mae.notaDe('tanque', Mae.valor('tanque', { kills: 5 }, 5, 5)), 'B', '(15 + 5) / 5 = 4');
+      // el Soporte, a quien levanta x3 y lo que reparte
+      eq(Mae.notaDe('soporte', Mae.valor('soporte', { rescates: 4, apoyos: 6, kills: 5 }, 0, 5)), 'A',
+         '(12 + 6 + 5) / 5 = 4,6');
+    });
+
+  test('MAESTRÍA: morir rebaja la nota', function () {
+    var Mae = window.PM.Maestria;
+    var limpio = Mae.valor('asesino', { kills: 36, muertes: 0 }, 0, 5);
+    var sucio = Mae.valor('asesino', { kills: 36, muertes: 5 }, 0, 5);
+    ok(sucio < limpio, 'cinco muertes pesan');
+    eq(Mae.notaDe('asesino', sucio), 'B', 'y le quitan la S');
+  });
+
+  test('MAESTRÍA: los escalones altos piden notas S, no solo horas', function () {
+    var Mae = window.PM.Maestria;
+    eq(Mae.nivelDe(0, 0), -1, 'sin nada, ninguna');
+    eq(Mae.nivelDe(4000, 0), 2, '4.000 puntos: EXPERTO');
+    eq(Mae.nivelDe(50000, 0), 2, 'con 50.000 y ninguna S te quedas en EXPERTO');
+    eq(Mae.nivelDe(50000, 1), 3, 'una S abre MAESTRO');
+    eq(Mae.nivelDe(50000, 8), 5, 'y ocho, TOP MUNDIAL');
+  });
+
+  test('MAESTRÍA: una partida de DESATADO da puntos a tu rol al cerrarse',
+    function () {
+      conContadores(function (A) {
+        var Mae = window.PM.Maestria;
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1, hab: true, roles: ['tanque'] });
+        G.state = 'PLAYING';
+        G.timeTicks = 60 * 120;                  // dos minutos de partida
+        G.marcador[0].vivo = 3600 * 2;           // y dos en pie
+        G.marcador[0].kills = 4;
+        G.salvasMias = 2;                        // (6 + 4) / 2 = 5 → A
+        G.xpSent = false;
+        G.closeRun();
+        var r = G.runSummary.maestria;
+        ok(r, 'el resumen del final la trae');
+        eq(r.rol, 'tanque');
+        eq(r.nota, 'A');
+        eq(r.puntos, CFG.MAESTRIA.PUNTOS.A);
+        eq(Mae.datos('tanque').puntos, CFG.MAESTRIA.PUNTOS.A, 'y se queda apuntada');
+        eq(Mae.datos('asesino').puntos, 0, 'a otro rol no le toca nada');
+        eq(A.stats().maevivas, 1, 'y consta como partida ya contada');
+        G.toMenu();
+      });
+    });
+
+  test('MAESTRÍA: una partida de menos de 45 s no da nada', function () {
+    conContadores(function () {
+      var Mae = window.PM.Maestria;
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['mago'] });
+      G.state = 'PLAYING';
+      G.timeTicks = 60 * 20;
+      G.marcador[0].vivo = 60 * 20;
+      G.marcador[0].kills = 9;
+      G.xpSent = false;
+      G.closeRun();
+      ok(G.runSummary.maestria && G.runSummary.maestria.corta, 'se dice que no cuenta');
+      eq(Mae.datos('mago').puntos, 0, 'y no suma');
+      G.toMenu();
+    });
+  });
+
+  test('MAESTRÍA: lo ya jugado se siembra una vez, y lo nuevo no se cuenta dos',
+    function () {
+      conContadores(function (A) {
+        var Mae = window.PM.Maestria;
+        var R = window.PM.Replay;
+        var g1 = R.guardadas, g2 = R.guardadasRed;
+        R.guardadas = function () { return []; };
+        R.guardadasRed = function () { return []; };
+        try {
+          A.record('hab:partidas', 40);          // cuarenta partidas de antes
+          Mae.sembrar();
+          eq(Mae.datos('asesino').puntos, 40 * CFG.MAESTRIA.SEMBRADA, 'al Asesino, como una B');
+          eq(Mae.datos('asesino').sembradas, 40);
+          Mae.sembrar();
+          eq(Mae.datos('asesino').puntos, 40 * CFG.MAESTRIA.SEMBRADA, 'sembrar otra vez no suma');
+          // una partida nueva sube hab:partidas y maevivas a la vez
+          A.record('hab:partidas', 1);
+          Mae.anotarViva();
+          Mae.sembrar();
+          eq(Mae.datos('asesino').sembradas, 40, 'la nueva no se siembra: ya la contó el cierre');
+        } finally { R.guardadas = g1; R.guardadasRed = g2; }
+      });
+    });
+
+  test('MAESTRÍA: Ctrl+Espacio en DESATADO enseña el emblema de tu rol',
+    function () {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['soporte'] });
+      G.state = 'PLAYING';
+      G.emoteCooldown = 0;
+      G.sendBadgeTag();
+      var e = G.emotes[0];
+      ok(e && e.dib === 'emblema', 'con el emblema, no con la copa');
+      G.emotes[0] = null;
+      G.emoteCooldown = 0;
+      G.sendBadgeTag(1);
+      ok(G.emotes[0] && G.emotes[0].dib !== 'emblema', 'F1 sigue siendo el trofeo');
+      G.toMenu();
+    });
+
+  test('MAESTRÍAS: el panel enseña los seis emblemas del rol elegido', function () {
+    var UI = window.PM.UI;
+    UI.showMaestrias('mago');
+    eq(UI.maeList.children.length, CFG.MAESTRIA.NIVELES.length, 'los seis');
+    eq(UI.maeRol, 'mago');
+    ok(UI.maeK.textContent.indexOf('MAGO') !== -1, 'dice de qué rol es');
+    UI.showMenu();
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

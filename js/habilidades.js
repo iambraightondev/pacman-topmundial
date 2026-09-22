@@ -202,6 +202,17 @@
     return !G.netRole || idx === G.localIdx;
   }
 
+  /* Un golpe aguantado (coraza, escudo o rebote que se gastan), para la nota
+   * de la MAESTRÍA del Tanque (js/maestria.js). Solo cuenta el que se gasta:
+   * mientras dura la gracia de después, salvaDelChoque sigue diciendo que sí
+   * a cada tick y eso no son golpes. Va en la máquina de cada uno porque sus
+   * choques los decide ella, no el anfitrión. */
+  function aguanta(G, idx) {
+    if (mio(G, idx) && G.pacs[idx] && !G.pacs[idx].bot && !G.replaying) {
+      G.salvasMias = (G.salvasMias || 0) + 1;
+    }
+  }
+
   /* Apunta un contador de logros, si la jugada es de quien juega aquí */
   function apunta(G, idx, o) {
     if (mio(G, idx) && G.bumpAch) G.bumpAch(o);
@@ -1962,6 +1973,7 @@
       var p = G.pacs[idx], j;
       if (s.rebote > 0 && g) {
         s.rebote = 0;
+        aguanta(G, idx);
         if (this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote');
         return true;
       }
@@ -1977,6 +1989,7 @@
         var JR = window.PM.Jefe, rp = G.pacs[idx];
         if (JR && JR.activo(G)) {
           s.rebote = 0;
+          aguanta(G, idx);
           s.gracia = H.ESCUDO_GRACIA;
           if (this.manda(G)) {
             JR.danar(G, CFG.JEFE.DANO.rebote, idx, 'rebote');
@@ -2034,6 +2047,7 @@
           s.corCd = H.CORAZA_CD;
         }
         s.gracia = H.ESCUDO_GRACIA;
+        aguanta(G, idx);
         if (p) this.efecto('roto', p.x, p.y, 20);
         this.empujar(G, g, H.ESCUDO_EMPUJE);
         sonDe(G, idx, 'playBiteMiss');
@@ -2517,6 +2531,7 @@
       sonDe(G, idx, 'playStealth');
       if (soloVisual) return true;
       this.marcarEscudo(j, H.ALIADO_TICKS);
+      if (G.marca) G.marca(idx, 'apoyos');      // para su MAESTRÍA
       var o = G.pacs[j];
       this.efecto('amparo', o.x, o.y, 24);
       G.hostEvt({ t: 'habEsc', w: j });
@@ -2549,6 +2564,7 @@
       if (soloVisual) return true;
       for (var n = 0; n < js.length; n++) {
         this.marcarEscudo(js[n], H.ALIADO_TICKS);
+        if (G.marca && js[n] !== idx) G.marca(idx, 'apoyos');   // el suyo no cuenta
         var o = G.pacs[js[n]];
         this.efecto('amparo', o.x, o.y, 24);
         G.hostEvt({ t: 'habEsc', w: js[n] });
@@ -2603,6 +2619,7 @@
       var ind = (G.playerCount > 1 && G.livesMode === 'individual');
       if (ind) G.pacs[j].lives++;
       else G.lives++;
+      if (G.marca) G.marca(idx, 'apoyos', 2);   // una vida vale por dos escudos
       var o = G.pacs[j] || G.pacs[idx];
       this.efecto('vida', o.x, o.y, 40);
       G.addPopup(o.x, o.y - 6, '1UP', 60);
@@ -2936,6 +2953,9 @@
       G.addPopup(x, y, pts, 45);
       this.efecto(como || 'fuego', x, y, 18, p ? p.x : x, p ? p.y : y);
       this.alMatar(G, who, g, x, y);
+      /* a la libreta, como las de contacto: el marcador del final y la nota
+       * de la MAESTRÍA del Mago cuentan también lo que se mata a distancia */
+      if (G.marca) G.marca(who, 'kills');
       if (mio(G, who)) { G.runGhosts++; G.bumpAch && G.bumpAch({ fantasmas: 1 }); }
       G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como || 'fuego', p: pts,
         x: Math.round(x), y: Math.round(y), ox: p ? Math.round(p.x) : Math.round(x), oy: p ? Math.round(p.y) : Math.round(y) });

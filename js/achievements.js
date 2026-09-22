@@ -104,6 +104,22 @@
      * ganado: el saldo sale de restarlo. */
     gastoCont: 'suma'
   };
+  /* ...y las MAESTRÍAS DE ROL (js/maestria.js), cuatro por rol. Viven aquí
+   * para viajar a la cuenta con lo demás, sin columna nueva:
+   *   mae_<rol>     puntos de maestría ganados
+   *   maes_<rol>    notas S sacadas con ese rol
+   *   maep_<rol>    partidas que han contado
+   *   maesem_<rol>  de ellas, cuántas se sembraron de lo jugado antes
+   * y una para todos: maevivas, las partidas de DESATADO cerradas con las
+   * maestrías ya en marcha (cortas incluidas). Es lo que hay que quitarle a
+   * hab:partidas para saber cuántas son de ANTES y se pueden sembrar. */
+  BASE.maevivas = 'suma';
+  ((CFG.HAB && CFG.HAB.ROL_IDS) || []).forEach(function (r) {
+    BASE['mae_' + r] = 'suma';
+    BASE['maes_' + r] = 'suma';
+    BASE['maep_' + r] = 'suma';
+    BASE['maesem_' + r] = 'mayor';
+  });
   /* ...y una por cosa comprable: c_<id> = 1 si está comprada. Salen del
    * catálogo, así que añadir algo a la tienda crea su contador solo. */
   /* (las de COFRE y las del PASE van por el mismo contador: no se compran,

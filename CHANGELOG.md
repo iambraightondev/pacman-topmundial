@@ -2,6 +2,40 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 (tarde) · Maestrías de ROL, como en League of Legends
+
+**CADA ROL DE DESATADO TIENE SU MAESTRÍA.** ASESINO, TANQUE, MAGO y SOPORTE
+llevan cada uno la suya, con los emblemas de siempre: APRENDIZ, CAZADOR,
+EXPERTO, MAESTRO, LEYENDA y TOP MUNDIAL. No mide tu mejor marca (eso son los
+trofeos), sino **lo que has jugado con ese rol y lo bien que lo has hecho**.
+
+**CADA PARTIDA LLEVA NOTA.** Al acabar una partida de DESATADO de más de 45
+segundos, tu rol se lleva puntos según una nota de la S a la D (170, 130, 100,
+80 o 60). La nota mide lo que ese rol tiene que hacer, por minuto en pie:
+
+| Rol | Qué cuenta |
+| --- | --- |
+| ASESINO | los fantasmas que te comes |
+| MAGO | los fantasmas que matas, también a distancia |
+| TANQUE | los golpes que aguantas (valen triple) y lo que matas |
+| SOPORTE | a quién levantas (triple), los escudos y vidas que das, y lo que matas |
+
+Morir la rebaja un poco. Los listones del Asesino salen de las cifras reales
+(la gente se come de 3 a 4 fantasmas por minuto; la S pide 7); los del Tanque
+y el Soporte son una primera tanda para ajustar jugando.
+
+**LOS TRES DE ARRIBA PIDEN NOTAS S**, no solo horas: MAESTRO una, LEYENDA tres
+y TOP MUNDIAL ocho.
+
+**LO YA JUGADO CUENTA.** Cada partida de DESATADO que ya tenías se cuenta como
+una B. El rol sale de tus repeticiones guardadas; lo demás, y todo lo de antes
+del 17 de septiembre, va al Asesino, que era el único kit. Viaja con la cuenta.
+
+**DÓNDE SE VE:** botón MAESTRÍAS en el menú; una fila nueva en el GAME OVER con
+la nota y lo que te falta; y **Ctrl+Espacio en DESATADO enseña el emblema de tu
+rol** (F1–F4 siguen siendo tus copas). La práctica a uno con otro rol también
+suma a su maestría.
+
 ## 2026-09-22 (tarde) · Las maestrías de marcas pasan a ser TROFEOS
 
 **LA ESCALERA DE MARCAS SE LLAMA AHORA TROFEOS, Y SON COPAS.** Tu mejor

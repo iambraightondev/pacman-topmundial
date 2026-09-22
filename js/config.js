@@ -1087,6 +1087,54 @@
   ];
   CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
 
+  /* ---------- Maestrías de ROL (22 de septiembre) ----------
+   * Como las de campeón en League of Legends: miden lo que has JUGADO con
+   * cada rol de DESATADO, no tu mejor marca (eso son los TROFEOS). Cada
+   * partida de al menos MIN_SEGUNDOS da puntos según la NOTA, y la nota sale
+   * de lo que ese rol tiene que hacer, por minuto en pie (js/maestria.js).
+   * Llevan los emblemas de siempre, del APRENDIZ al TOP MUNDIAL.
+   *
+   * Los tres de arriba no se compran solo con horas: piden además notas S con
+   * ese rol, como los niveles altos de LoL. Sin eso, quien juega mucho y mal
+   * llegaba al mismo sitio que quien juega mucho y bien.
+   *
+   * Los listones de las notas salen de los contadores reales de las cuentas
+   * (22 sep): en DESATADO la gente se come de 3 a 4 fantasmas por minuto y el
+   * mejor, 7. Los del TANQUE y el SOPORTE no tienen datos todavía (sus
+   * contadores nacen hoy): son una primera tanda para ajustar jugando.
+   * ---------------------------------------------------------------- */
+  CFG.MAESTRIA = {
+    /* puntos acumulados y notas S con ese rol que pide cada escalón */
+    NIVELES: [
+      { id: 'aprendiz', name: 'APRENDIZ',    puntos: 300,   eses: 0 },
+      { id: 'cazador',  name: 'CAZADOR',     puntos: 1500,  eses: 0 },
+      { id: 'experto',  name: 'EXPERTO',     puntos: 4000,  eses: 0 },
+      { id: 'maestro',  name: 'MAESTRO',     puntos: 8000,  eses: 1 },
+      { id: 'leyenda',  name: 'LEYENDA',     puntos: 15000, eses: 3 },
+      { id: 'mundial',  name: 'TOP MUNDIAL', puntos: 30000, eses: 8 }
+    ],
+    /* puntos que da cada nota */
+    PUNTOS: { S: 170, A: 130, B: 100, C: 80, D: 60 },
+    /* lo que vale una partida de antes de que existieran las maestrías: no se
+     * sabe cómo fue, así que cuenta como una B */
+    SEMBRADA: 100,
+    /* menos que esto no da nada: salir y entrar no puede ser una forma de
+     * subir (cuenta el tiempo de partida, no el que estuviste en pie) */
+    MIN_SEGUNDOS: 45,
+    /* NOTAS: el valor por minuto en pie que pide cada una (S, A, B, C; por
+     * debajo, D). Cómo se calcula el valor de cada rol, en js/maestria.js. */
+    NOTAS: {
+      asesino: [7, 5, 3.5, 2],
+      mago:    [6, 4.5, 3, 1.8],
+      tanque:  [6, 4.5, 3, 1.8],
+      soporte: [6, 4.5, 3, 1.8]
+    },
+    /* cada muerte propia rebaja el valor en esta fracción (10 %) */
+    CASTIGO_MUERTE: 0.1,
+    /* colores de las notas, para el resumen del final */
+    COLOR_NOTA: { S: '#ffe23a', A: '#2bff88', B: '#00ffff', C: '#ffb852', D: '#ff6b6b' }
+  };
+
   /* ---------- Logros ----------
    * Todos se resuelven contra un CONTADOR guardado, nunca contra el estado
    * de la partida: así se pueden recalcular en cualquier momento (al entrar

@@ -434,6 +434,7 @@
       this.els.options = document.getElementById('options');
       this.els.online = document.getElementById('online');
       this.els.badges = document.getElementById('badges');
+      this.els.maestrias = document.getElementById('maestrias');
       this.els.ranking = document.getElementById('ranking');
       this.els.mazes = document.getElementById('mazes');
       this.els.friends = document.getElementById('friends');
@@ -443,6 +444,8 @@
       this.els.prompt = document.getElementById('prompt');
       if (window.PM.Badges) window.PM.Badges.syncSeen();
       if (window.PM.Achievements) window.PM.Achievements.syncSeen();
+      // lo ya jugado en DESATADO, a las maestrías de rol (solo lo que falte)
+      if (window.PM.Maestria) window.PM.Maestria.sembrar();
       // las skins que ya estaban abiertas al llegar no se anuncian como nuevas
       if (window.PM.Skins) window.PM.Skins.syncVistas();
       this.els.vestuario = document.getElementById('vestuario');
@@ -452,6 +455,7 @@
       this.buildOptions();
       this.buildOnline();
       this.buildBadges();
+      this.buildMaestrias();
       this.buildRanking();
       this.buildMazes();
       this.buildFriends();
@@ -714,6 +718,10 @@
       extras.appendChild(this.makeButton('TROFEOS', function () {
         self.resumeAudio();
         self.showBadges();
+      }));
+      extras.appendChild(this.makeButton('MAESTRÍAS', function () {
+        self.resumeAudio();
+        self.showMaestrias();
       }));
       extras.appendChild(this.makeButton('AMIGOS', function () {
         self.resumeAudio();
@@ -6703,6 +6711,264 @@
       this.animarMaestrias();
     },
 
+    /* ------------------------------------------------------
+     * Panel de MAESTRÍAS DE ROL (js/maestria.js)
+     * El mismo escenario que TROFEOS —el emblema en grande armándose y el
+     * camino de los seis debajo—, pero por ROL de DESATADO y con los
+     * emblemas: lo que miden es lo jugado con cada rol, no la mejor marca.
+     * ------------------------------------------------------ */
+    buildMaestrias: function () {
+      var self = this;
+      var o = this.els.maestrias;
+      if (!o) return;
+      o.innerHTML = '';
+      var H = CFG.HAB;
+
+      var cab = document.createElement('div');
+      cab.className = 'maes-cab';
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'MAESTRÍAS';
+      cab.appendChild(h);
+      var mandos = document.createElement('div');
+      mandos.className = 'maes-mandos';
+      this.maeRolDesp = this.desplegable('ROL',
+        H.ROL_IDS.map(function (r) { return { id: r, name: H.ROL_INFO[r].name }; }),
+        function (r) { self.maeRol = r; self.maePick = null; self.refreshMaestrias(); });
+      mandos.appendChild(this.maeRolDesp.el);
+      cab.appendChild(mandos);
+      o.appendChild(cab);
+
+      this.maeSub = document.createElement('div');
+      this.maeSub.className = 'note maes-nota';
+      o.appendChild(this.maeSub);
+
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'maes-cuerpo';
+      o.appendChild(cuerpo);
+      this.maeHero = document.createElement('canvas');
+      this.maeHero.width = 400;
+      this.maeHero.height = 480;
+      this.maeHero.className = 'maes-heroe';
+      cuerpo.appendChild(this.maeHero);
+
+      var info = document.createElement('div');
+      info.className = 'maes-info';
+      cuerpo.appendChild(info);
+      this.maeInfo = info;
+      ['K', 'Name', 'State', 'Datos', 'Sig'].forEach(function (k, i) {
+        var d = document.createElement('div');
+        d.className = ['maes-k', 'maes-nombre', 'maes-estado', 'maes-datos', 'maes-sig'][i];
+        info.appendChild(d);
+        self['mae' + k] = d;
+      });
+
+      var camino = document.createElement('div');
+      camino.className = 'maes-camino';
+      var linea = document.createElement('div');
+      linea.className = 'maes-linea';
+      this.maeLleno = document.createElement('div');
+      this.maeLleno.className = 'maes-lleno';
+      linea.appendChild(this.maeLleno);
+      camino.appendChild(linea);
+      this.maeList = document.createElement('div');
+      this.maeList.className = 'maes-pasos';
+      camino.appendChild(this.maeList);
+      o.appendChild(camino);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+
+      this.maeRol = 'asesino';
+      this.maePick = null;
+      this.maeLienzos = [];
+    },
+
+    /* rol: el que se quiere ver (sin él, el último que se eligió para jugar) */
+    showMaestrias: function (rol) {
+      var H = CFG.HAB;
+      if (!rol) {
+        var s = window.PM.settings || {};
+        rol = s.habRol1 || this.maeRol || 'asesino';
+      }
+      if (H.ROL_IDS.indexOf(rol) === -1) rol = 'asesino';
+      this.maeRol = rol;
+      this.maePick = null;
+      this.refreshMaestrias();
+      this.showPanel('maestrias');
+      var self = this;
+      this.animarLienzos('maeAnim', function () { return self.els.maestrias; },
+        function () { return [self.maeHeroL].concat(self.maeLienzos || []); });
+    },
+
+    refreshMaestrias: function () {
+      var Mae = window.PM.Maestria;
+      if (!Mae || !this.maeList) return;
+      var self = this, rol = this.maeRol, H = CFG.HAB, N = CFG.MAESTRIA.NIVELES;
+      var d = Mae.datos(rol);
+      var gema = (window.PM.Sprites && window.PM.Sprites.EMBLEM_GEMA) || [];
+      if (this.maeRolDesp) this.maeRolDesp.poner(rol);
+
+      var antes = d.sembradas
+        ? ('  ·  ' + this.milesMaes(d.sembradas) + ' DE ANTES, CONTADAS COMO NOTA B') : '';
+      this.maeSub.textContent = 'PARTIDAS CON ' + H.ROL_INFO[rol].name + ': ' +
+        this.milesMaes(d.partidas) + antes + '  ·  NOTAS S: ' + d.eses +
+        '  ·  CADA PARTIDA DE DESATADO DE MÁS DE ' + CFG.MAESTRIA.MIN_SEGUNDOS +
+        ' S DA PUNTOS SEGÚN TU NOTA: ' + this.maeReglaRol(rol);
+
+      this.maeList.innerHTML = '';
+      this.maeRows = {};
+      this.maeLienzos = [];
+      N.forEach(function (L, i) {
+        var got = d.nivel >= i;
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'maes-paso' + (got ? ' got' : '');
+        var cv = document.createElement('canvas');
+        cv.width = 120; cv.height = 144;
+        cv.className = 'maes-mini';
+        row.appendChild(cv);
+        var Lz = { cv: cv, rango: i, off: !got, a0: Date.now() + 250 + i * 160, dib: 'emblema' };
+        self.maeLienzos.push(Lz);
+        row.addEventListener('mouseenter', function () {
+          if (!Lz.off && (Date.now() - Lz.a0) / 1000 > 2.6) Lz.a0 = Date.now();
+        });
+        var nm = document.createElement('b');
+        nm.className = 'maes-paso-nombre';
+        nm.style.color = got ? (gema[i] || '#fff') : '#4a4868';
+        nm.textContent = L.name;
+        row.appendChild(nm);
+        var pt = document.createElement('small');
+        pt.className = 'maes-paso-puntos';
+        pt.textContent = self.milesMaes(L.puntos) + (L.eses ? (' · ' + L.eses + ' S') : '');
+        row.appendChild(pt);
+        row.addEventListener('click', function () { self.pickMaestria(i, true); });
+        self.maeRows[i] = row;
+        self.maeList.appendChild(row);
+      });
+
+      /* la línea de oro: hasta la tuya y un tramo hacia la siguiente */
+      var frac = 0;
+      if (d.nivel >= 0 && d.sig) {
+        var desde = N[d.nivel].puntos;
+        frac = Math.max(0, Math.min(1, (d.puntos - desde) / Math.max(1, d.sig.puntos - desde)));
+      }
+      var tramo = 100 / (N.length - 1);
+      this.maeLleno.style.width = (d.nivel < 0 ? 0 : Math.min(100, (d.nivel + frac) * tramo)) + '%';
+      if (d.nivel >= 0 && this.maeRows[d.nivel]) {
+        var tuya = document.createElement('span');
+        tuya.className = 'maes-tuya';
+        tuya.textContent = 'TUYA';
+        this.maeRows[d.nivel].appendChild(tuya);
+      }
+      var pick = (this.maePick != null && this.maeRows[this.maePick]) ? this.maePick
+        : Math.max(0, d.nivel);
+      this.pickMaestria(pick, true);
+    },
+
+    /* Qué mide la nota de cada rol, en una línea */
+    maeReglaRol: function (rol) {
+      return {
+        asesino: 'LOS FANTASMAS QUE TE COMES',
+        mago: 'LOS FANTASMAS QUE MATAS',
+        tanque: 'LOS GOLPES QUE AGUANTAS Y LO QUE MATAS',
+        soporte: 'A QUIÉN LEVANTAS, LOS ESCUDOS Y VIDAS QUE DAS Y LO QUE MATAS'
+      }[rol] + ', POR MINUTO EN PIE';
+    },
+
+    pickMaestria: function (i, play) {
+      var Mae = window.PM.Maestria;
+      var N = CFG.MAESTRIA.NIVELES, L = N[i];
+      if (!Mae || !L) return;
+      var cambia = this.maePick !== i;
+      this.maePick = i;
+      var rol = this.maeRol, H = CFG.HAB;
+      var d = Mae.datos(rol);
+      var got = d.nivel >= i, esTuya = d.nivel === i;
+      var gema = (window.PM.Sprites && window.PM.Sprites.EMBLEM_GEMA) || [];
+      for (var k in this.maeRows) {
+        if (this.maeRows.hasOwnProperty(k)) {
+          var sel = (+k === i);
+          this.maeRows[k].classList.toggle('sel', sel);
+          this.maeRows[k].setAttribute('aria-pressed', sel ? 'true' : 'false');
+        }
+      }
+      this.maeInfo.style.setProperty('--c', gema[i] || '#ffffff');
+      this.maeInfo.classList.toggle('off', !got);
+      this.maeK.textContent = 'DESATADO · ' + H.ROL_INFO[rol].name;
+      this.maeK.style.color = H.ROL_INFO[rol].color;
+      this.maeName.textContent = L.name;
+      var faltaP = Math.max(0, L.puntos - d.puntos), faltaS = Math.max(0, L.eses - d.eses);
+      var falta = [];
+      if (faltaP) falta.push(this.milesMaes(faltaP) + ' PUNTOS');
+      if (faltaS) falta.push(faltaS + (faltaS === 1 ? ' NOTA S' : ' NOTAS S'));
+      this.maeState.textContent = got
+        ? ((esTuya ? 'TU MAESTRÍA · ' : 'CONSEGUIDA · ') + this.milesMaes(L.puntos) + ' PUNTOS' +
+           (L.eses ? (' Y ' + L.eses + ' S') : ''))
+        : ('TE FALTAN ' + falta.join(' Y ') + ' PARA CONSEGUIRLA');
+
+      var self = this;
+      this.maeDatos.innerHTML = '';
+      [[this.milesMaes(d.puntos), 'PUNTOS'], [String(d.eses), 'NOTAS S'],
+       [this.milesMaes(d.partidas), 'PARTIDAS']].forEach(function (x) {
+        var c = document.createElement('div');
+        var v = document.createElement('b');
+        v.textContent = x[0];
+        var r = document.createElement('span');
+        r.textContent = x[1];
+        c.appendChild(v);
+        c.appendChild(r);
+        self.maeDatos.appendChild(c);
+      });
+
+      this.maeSig.innerHTML = '';
+      var fila = document.createElement('div');
+      fila.className = 'maes-sig-fila';
+      var izq = document.createElement('span');
+      var der = document.createElement('span');
+      var pct = 1, conBarra = false;
+      if (esTuya && d.sig) {
+        var desde = L.puntos;
+        pct = Math.max(0, Math.min(1, (d.puntos - desde) / Math.max(1, d.sig.puntos - desde)));
+        izq.appendChild(document.createTextNode('SIGUIENTE: '));
+        var em = document.createElement('em');
+        em.textContent = d.sig.name;
+        em.style.color = gema[i + 1] || '#fff';
+        izq.appendChild(em);
+        var f2 = [];
+        if (d.falta) f2.push(this.milesMaes(d.falta));
+        if (d.faltaS) f2.push(d.faltaS + ' S');
+        der.textContent = f2.length ? ('TE FALTAN ' + f2.join(' Y ')) : '';
+        conBarra = true;
+      } else if (!got) {
+        pct = Math.max(0, Math.min(1, d.puntos / Math.max(1, L.puntos)));
+        izq.textContent = 'SE GANA A ' + this.milesMaes(L.puntos) + ' PUNTOS' +
+          (L.eses ? (' CON ' + L.eses + ' S') : '');
+        der.textContent = Math.floor(pct * 100) + '%';
+        conBarra = true;
+      } else if (esTuya) {
+        izq.textContent = 'NO HAY NADA MÁS ARRIBA';
+      } else {
+        izq.textContent = 'YA ES TUYA';
+      }
+      fila.appendChild(izq);
+      fila.appendChild(der);
+      this.maeSig.appendChild(fila);
+      if (conBarra) {
+        var barra = document.createElement('div');
+        barra.className = 'maes-barra';
+        var relleno = document.createElement('i');
+        relleno.style.width = (pct * 100).toFixed(1) + '%';
+        barra.appendChild(relleno);
+        this.maeSig.appendChild(barra);
+      }
+      if (play || cambia || !this.maeHeroL) {
+        this.maeHeroL = { cv: this.maeHero, rango: i, off: !got, a0: Date.now(), dib: 'emblema' };
+      }
+    },
+
     /* Un solo bucle para el emblema grande y los seis del camino, vivo solo
      * mientras se ve el panel. */
     animarMaestrias: function () {
@@ -9976,7 +10242,7 @@
      * ------------------------------------------------------ */
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
-      var names = ['menu', 'options', 'online', 'badges', 'ranking',
+      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
                    'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'pase'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
@@ -10703,6 +10969,24 @@
             fila('', 'MONEDAS', mon, '#ffd23f', s.monedas > 0
               ? ('TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0)))
               : ('UN MINUTO O 1.000 PUNTOS PARA GANAR · TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0))));
+          }
+          /* la MAESTRÍA del rol que llevabas (js/maestria.js) */
+          var ma = s.maestria;
+          if (ma) {
+            var rn = CFG.HAB.ROL_INFO[ma.rol] ? CFG.HAB.ROL_INFO[ma.rol].name : '';
+            var NV = CFG.MAESTRIA.NIVELES;
+            var sube = !ma.corta && ma.nivel > ma.nivelAntes;
+            var falta = [];
+            if (ma.falta) falta.push(mil(ma.falta));
+            if (ma.faltaS) falta.push(ma.faltaS + ' S');
+            var sub = ma.corta
+              ? ('MENOS DE ' + CFG.MAESTRIA.MIN_SEGUNDOS + ' S: ESTA NO CUENTA')
+              : sube ? ('¡SUBES A ' + NV[ma.nivel].name + '!')
+              : ((ma.nivel >= 0 ? NV[ma.nivel].name : 'SIN MAESTRÍA') +
+                 (ma.sig ? (' · TE FALTAN ' + falta.join(' Y ') + ' PARA ' + ma.sig.name) : ''));
+            var val = ma.corta ? '+0' : ('+' + mil(ma.puntos) + ' · NOTA ' + ma.nota);
+            fila(sube ? 'sube' : '', 'MAESTRÍA ' + rn, val,
+              ma.corta ? '#8a8cae' : (CFG.MAESTRIA.COLOR_NOTA[ma.nota] || '#fff'), sub);
           }
           avisos.forEach(function (a) {
             var d = document.createElement('div');
@@ -11751,7 +12035,7 @@
     /* cuánto se deja encoger cada panel */
     ENCAJE_SUELO: {
       /* los que son UNA VISTA: tienen que caber enteros */
-      pase: 0.5, mazes: 0.5, online: 0.5, badges: 0.55, daily: 0.6,
+      pase: 0.5, mazes: 0.5, online: 0.5, badges: 0.55, maestrias: 0.55, daily: 0.6,
       profile: 0.55, mate: 0.6, options: 0.55, menu: 0.6, friends: 0.6,
       prompt: 0.5,
       /* los que son una LISTA: se encogen un poco y lo demás se recorre */
@@ -11807,7 +12091,7 @@
           self.encajarPanel();
         }, 120);
       });
-      var names = ['menu', 'options', 'online', 'badges', 'ranking',
+      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
                    'vestuario', 'tienda', 'pase', 'prompt'];
       names.forEach(function (n) {
@@ -11820,7 +12104,7 @@
      * cuando cambia el tamaño de la ventana. */
     encajarPanel: function () {
       var self = this;
-      var names = ['menu', 'options', 'online', 'badges', 'ranking',
+      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
                    'vestuario', 'tienda', 'pase'];
       names.forEach(function (n) {
@@ -11835,7 +12119,7 @@
       this.hidePrompt();
       // la ficha va encima de un panel: si se cambia de panel, se va con él
       if (this.ficha && this.ficha.host !== this.els[name]) this.cerrarFicha(true);
-      var panels = ['menu', 'options', 'online', 'badges', 'ranking',
+      var panels = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
                     'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'pase'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];

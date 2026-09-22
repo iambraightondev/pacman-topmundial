@@ -501,7 +501,8 @@
     marcaNueva: function () {
       var m = [];
       for (var i = 0; i < CFG.MAX_PLAYERS; i++) {
-        m.push({ kills: 0, muertes: 0, frutas: 0, rescates: 0, vivo: 0 });
+        /* apoyos: escudos y vidas que reparte el SOPORTE (para su maestría) */
+        m.push({ kills: 0, muertes: 0, frutas: 0, rescates: 0, vivo: 0, apoyos: 0 });
       }
       return m;
     },
@@ -525,6 +526,7 @@
       opts = opts || {};
       this.lastOpts = opts;
       this.marcador = this.marcaNueva();
+      this.salvasMias = 0;       // golpes aguantados aquí (maestría del Tanque)
       var n = parseInt(opts.players, 10);
       this.playerCount = (n >= 1 && n <= CFG.MAX_PLAYERS) ? n : 1;
       this.netRole = opts.net || null;
@@ -2525,8 +2527,27 @@
      * la de otro formato, así que el nombre solo ya no dice de dónde es. Quien
      * tenga la versión vieja no lo manda, y entonces la chapa va sin pestaña.
      * La de SOLO tampoco la lleva: es la maestría de siempre, sin apellido. */
-    showBadgeTag: function (who, id, f) {
+    showBadgeTag: function (who, id, f, rol, nivel) {
       if (!this.pacs[who]) return;
+      /* La MAESTRÍA DE ROL (Ctrl+Espacio en DESATADO) va con su emblema. Quien
+       * tenga la versión de antes recibe también `b` vacío y enseña su chapa
+       * sin trofeo: no se rompe nada ni hace falta subir el protocolo. */
+      var Mae = window.PM.Maestria;
+      if (rol && Mae && Mae.ROLES.indexOf(rol) !== -1) {
+        var nv = parseInt(nivel, 10);
+        var L = CFG.MAESTRIA.NIVELES[nv];
+        var gemas = (window.PM.Sprites && window.PM.Sprites.EMBLEM_GEMA) || [];
+        this.emotes[who] = {
+          tag: L ? L.name : 'SIN MAESTRÍA',
+          color: L ? (gemas[nv] || '#ffffff') : '#888888',
+          rango: L ? nv : -1,
+          formato: null,
+          dib: 'emblema',
+          ticks: CFG.BADGE_TAG_TICKS,
+          total: CFG.BADGE_TAG_TICKS
+        };
+        return;
+      }
       var b = this.badgeById(id);
       var n = parseInt(f, 10);
       var B = window.PM.Badges;
@@ -2547,6 +2568,18 @@
     sendBadgeTag: function (n) {
       if (!this.canEmote()) return;
       var who = this.netRole ? this.localIdx : 0;
+      /* En DESATADO, Ctrl+Espacio (sin n) enseña la MAESTRÍA del rol que
+       * llevas, como en LoL; F1..F4 siguen siendo los trofeos. */
+      var Mae = window.PM.Maestria;
+      var rol = (this.hab && this.roles && who >= 0) ? this.roles[who] : null;
+      if (n == null && Mae && rol && Mae.ROLES.indexOf(rol) !== -1 && !this.isVersus()) {
+        var nv = Mae.nivel(rol);
+        this.emoteCooldown = CFG.EMOTE_COOLDOWN;
+        this.showBadgeTag(who, '', 0, rol, nv);
+        if (this.netRole === 'guest') this.netSend('gevt', { t: 'badge', b: '', f: 0, r: rol, l: nv });
+        else this.hostEvt({ t: 'badge', w: who, b: '', f: 0, r: rol, l: nv });
+        return;
+      }
       n = parseInt(n, 10);
       if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) {
         n = Math.max(1, Math.min(CFG.MAX_PLAYERS, this.playerCount || 1));
@@ -2727,6 +2760,13 @@
         pastillas: this.runPastillas || 0,
         'super': this.runSuper || 0
       });
+      /* MAESTRÍA DE ROL (js/maestria.js): la nota y los puntos de esta
+       * partida. Antes, apuntar que es de las que ya cuentan en vivo, en la
+       * misma jugada que sube hab:partidas: así la siembra de lo viejo sabe
+       * qué partidas no son suyas. */
+      var Mae = window.PM.Maestria;
+      if (Mae && !this.replaying && this.achTags().indexOf('hab') !== -1) Mae.anotarViva();
+      var maestria = Mae ? Mae.cerrar(this) : null;
       /* Monedas de la TIENDA: las de la partida se cobran aquí, una vez, y
        * al resumen va todo lo ganado desde que empezó (también los retos del
        * DAILY cumplidos por el camino). Una repetición no paga. */
@@ -2751,7 +2791,8 @@
         lvlPide: ahora ? ahora.needed : 0,
         monedas: monedas,
         saldo: Tn ? Tn.saldo() : 0,
-        logros: this.runAch.slice()
+        logros: this.runAch.slice(),
+        maestria: maestria
       };
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();
@@ -3764,8 +3805,8 @@
           this.hostEvt({ t: 'emote', w: who, e: this.emoteId(d.e) });
           break;
         case 'badge':
-          this.showBadgeTag(who, d.b, d.f);
-          this.hostEvt({ t: 'badge', w: who, b: d.b, f: d.f });
+          this.showBadgeTag(who, d.b, d.f, d.r, d.l);
+          this.hostEvt({ t: 'badge', w: who, b: d.b, f: d.f, r: d.r, l: d.l });
           break;
         case 'chat':
           this.addChat(who, d.m);
@@ -3876,7 +3917,7 @@
         /* la libreta del marcador, solo al acabar: es cuando se mira, y así
          * no va en las mil fotos de una partida entera */
         mk: (this.state === 'GAME_OVER' || this.state === 'DYING')
-          ? this.marcador.map(function (m) { return [m.kills, m.muertes, m.frutas, m.rescates, m.vivo]; })
+          ? this.marcador.map(function (m) { return [m.kills, m.muertes, m.frutas, m.rescates, m.vivo, m.apoyos]; })
           : null,
         ct: this.contTicks,           // CONTINUE?: lo que queda para pagar
         cu: this.cuerposSnap(),       // cuerpos tirados: [x, y, ticks, pasadas]
@@ -4470,7 +4511,7 @@
           if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
           break;
         case 'badge':
-          if ((e.w || 0) !== this.localIdx) this.showBadgeTag(e.w || 0, e.b, e.f);
+          if ((e.w || 0) !== this.localIdx) this.showBadgeTag(e.w || 0, e.b, e.f, e.r, e.l);
           break;
         case 'chat':
           if ((e.w || 0) !== this.localIdx) this.addChat(e.w || 0, e.m);
@@ -4561,7 +4602,7 @@
           var f = s.mk[mi];
           if (!f) continue;
           this.marcador[mi] = { kills: f[0] | 0, muertes: f[1] | 0, frutas: f[2] | 0,
-                                rescates: f[3] | 0, vivo: f[4] | 0 };
+                                rescates: f[3] | 0, vivo: f[4] | 0, apoyos: f[5] | 0 };
         }
       }
       if (typeof s.ct === 'number') this.contTicks = s.ct;

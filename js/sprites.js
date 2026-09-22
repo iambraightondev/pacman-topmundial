@@ -804,6 +804,8 @@
 
     /* el emblema; sin js/emblemas.js, la medalla de siempre */
     var pegar = copa ? Sprites.drawTrofeoAt : Sprites.drawEmblemAt;
+    // sin ninguna todavía (rango −1): la medalla gris de siempre, no un emblema
+    if (typeof rango === 'number' && rango < 0) { pegar = null; color = '#888888'; }
     if (!(pegar && pegar(ctx, ri, mx, my + 2, ALTO, tick / 60, arm))) {
       Sprites.drawBadge(ctx, mx, my, 5, color, false);
     }

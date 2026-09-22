@@ -208,7 +208,7 @@ var doc = {
 };
 doc.body = new El('body');
 doc.documentElement = new El('html');
-['stage', 'game', 'menu', 'options', 'online', 'badges', 'ranking',
+['stage', 'game', 'menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
  'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'pase', 'prompt'].forEach(function (id) {
   var el = new El(id === 'game' ? 'canvas' : 'div');
   el.id = id;
@@ -290,7 +290,7 @@ vm.createContext(sandbox);
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
 var orden = ['config', 'letra', 'audio', 'sprites', 'skins', 'insignias', 'emblemas', 'trofeos', 'portadas', 'pacman', 'ghost', 'net-config',
   'net-directo', 'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
-  'temporadas', 'daily', 'mazes', 'achievements', 'stats', 'tienda', 'pase', 'ficha', 'account', 'versus',
+  'temporadas', 'daily', 'mazes', 'achievements', 'maestria', 'stats', 'tienda', 'pase', 'ficha', 'account', 'versus',
   'habilidades', 'jefe', 'supervivencia', 'caceria', 'game', 'replay', 'guardado', 'ui'];
 
 orden.forEach(function (nombre) {
