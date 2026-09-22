@@ -2457,6 +2457,30 @@ Rules that are deliberate, not incidental:
 - **E never lands in the ghost house.** `CFG.isOpen` treats the house
   interior as walkable (it is, for ghosts), so `habilidades.js` guards
   `CFG.HOUSE` explicitly: Pac-Man has no door and would be stuck forever.
+- **Account settings merge FIELD BY FIELD** (22 Sep). `ajustes` used to carry
+  a single block stamp and `aplicarAjustesDeNube` was one question — is the
+  remote block newer? — so a `no` dropped all twenty values. Since `habRol1`
+  and `habLoadout1` are on the list, merely picking a role before a game
+  bumped that stamp, and the last machine you played on kept everything: the
+  skin, the emote order and the settings changed on the other one never
+  arrived. Each key now carries its own stamp (`settings.ajustesTsK` locally,
+  `ajustes.t` on the wire) and wins or loses on its own; the block `ts` still
+  ships for older clients still open somewhere. A key with **no** local stamp
+  counts as 0 and always takes the account's value — never touched here means
+  no opinion. `aplicarAjustesDeNube` returns the map of keys it applied, and
+  `Account.applyRemote` uses `.avatar` on it to decide whether the `avatar`
+  column still applies.
+- **The DAILY card belongs to the account** (22 Sep). It lived only in
+  `localStorage[CFG.DAILY.KEY]`, so another computer showed it blank —
+  including `hito`, the last streak reward claimed, which is the only thing
+  stopping it being paid twice. It now rides inside the same `ajustes` jsonb
+  (`Daily.paraNube`), which keeps the whole payload around 1.1 kB of the
+  column's 4 kB ceiling and needs no migration. The merge is **best of each
+  side**, not last-write-wins (`Daily.desdeNube`): per-day progress and the
+  done flags take the max, so does `racha`, `mejor` and `hito`. A card from
+  another week contributes its streak but no progress, exactly as `leer`
+  already did locally. `limpiarLocal` now wipes it on sign-out, so the next
+  person on that machine does not inherit the week.
 - **The MISIL never turns around** (22 Sep). It used to take the next id off
   `b.cola` — ordered by distance from the assassin *at launch* — and double
   back the way it came. Now every re-target goes through

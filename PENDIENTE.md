@@ -13,6 +13,23 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**22 sep — LA CUENTA YA SE LLEVA LO TUYO AL CAMBIAR DE ORDENADOR.**
+
+- **Por qué a veces no viajaban la skin, los emotes ni los ajustes:** subían
+  con UN sello de tiempo para el bloque entero, y al bajar era todo o nada.
+  Tocar cualquier cosa en un ordenador —hasta elegir rol antes de jugar— lo
+  hacía "el más nuevo" y ya no bajaba nada del otro. Ahora cada ajuste lleva
+  su propia hora y se funde uno a uno.
+- **El DAILY no viajaba en absoluto.** Ahora sí, fundiendo lo mejor de cada
+  lado, y se borra al cerrar sesión para que no lo herede el siguiente.
+- **No hizo falta tocar Supabase**: todo cabe en la columna de ajustes que ya
+  existía. **Pero el token de Supabase que hay configurado está caducado** —
+  los tres MCP fallan al conectar y no se puede tocar el esquema hasta que se
+  renueve.
+
+**A mirar**: lo que sigue sin viajar y no se ha tocado es el **historial de
+partidas local** y las **repeticiones**, que siguen siendo del aparato.
+
 **22 sep (madrugada) — LAS SEIS, CONSTRUIDAS. LOS DOS FALLOS, DIAGNOSTICADOS.**
 
 La lista de [`PLAN-AJUSTES-2.md`](PLAN-AJUSTES-2.md) está entera en el juego.

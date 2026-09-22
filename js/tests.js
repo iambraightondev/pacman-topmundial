@@ -1109,10 +1109,61 @@
     }
   }
 
+  test('la cartilla del DAILY viaja con la cuenta y se funde con lo de aquí',
+    function () {
+      conDaily(function (D) {
+        /* Lo de ESTE ordenador: el martes a medias */
+        var aqui = D.vacio();
+        aqui.p[1] = 2; aqui.racha = 1;
+        D.guardar(aqui);
+        /* Lo del OTRO: el lunes cumplido, más racha y un escalón cobrado */
+        var alla = D.vacio();
+        alla.p[0] = 5; alla.h[0] = 1; alla.racha = 4; alla.mejor = 7;
+        alla.hito = 3; alla.ult = '2026-09-21';
+        ok(D.desdeNube(alla), 'baja y se funde');
+        var fin = D.leer();
+        eq(fin.p[0], 5, 'lo cumplido allí llega');
+        eq(fin.p[1], 2, 'y lo de aquí no se pierde');
+        eq(fin.h[0], 1, 'el día cumplido allí cuenta aquí');
+        eq(fin.racha, 4, 'la racha se queda con la mejor de las dos');
+        eq(fin.mejor, 7, 'y el récord de racha también');
+        eq(fin.hito, 3,
+          'el escalón ya cobrado viaja: si no, se pagaría dos veces');
+        eq(fin.ult, '2026-09-21', 'y el último día cumplido es el más reciente');
+      });
+    });
+
+  test('una cartilla de otra semana no trae progreso, solo la racha',
+    function () {
+      conDaily(function (D) {
+        var vieja = D.vacio('2000-W01');
+        vieja.w = '2000-W01';
+        vieja.p[3] = 9; vieja.h[3] = 1; vieja.racha = 6; vieja.mejor = 6;
+        D.desdeNube(vieja);
+        var fin = D.leer();
+        eq(fin.p[3], 0, 'el progreso de una semana pasada no cuenta en esta');
+        eq(fin.h[3], 0, 'ni el día dado por cumplido');
+        eq(fin.racha, 6, 'pero la racha sí, que es de días seguidos');
+      });
+    });
+
+  test('la cartilla sube con el perfil y se borra al cerrar sesión',
+    function () {
+      conDaily(function (D) {
+        var est = D.vacio(); est.p[0] = 3; D.guardar(est);
+        var sube = window.PM.Account.localState();
+        ok(sube.ajustes && sube.ajustes.daily, 'la cartilla va dentro de los ajustes');
+        eq(sube.ajustes.daily.p[0], 3, 'con lo que lleva hecho');
+        ok(JSON.stringify(sube.ajustes).length < 4000,
+          'y todo junto cabe de sobra en la columna');
+      });
+    });
+
   /* El día es el DEL RELOJ DE QUIEN JUEGA, no UTC. Con UTC, quien juega en
    * América veía cambiar el reto a media tarde: en Perú (UTC-5), a las 19:00
-   * de un viernes ya le salía el reto del sábado. El DAILY no manda nada a
-   * ningún servidor, así que no hay nada que sincronizar con nadie. */
+   * de un viernes ya le salía el reto del sábado. La cartilla sí viaja con
+   * la cuenta desde el 22 sep 2026 (Daily.paraNube), pero el DÍA lo pone
+   * siempre el reloj de quien juega. */
   test('el día del reto es el del reloj del jugador, no el de UTC', function () {
     // viernes 14 de agosto de 2026 a las 19:30 en hora local
     var vie = new Date(2026, 7, 14, 19, 30);
@@ -4965,9 +5016,19 @@
     var antes = {};
     var claves = CFG.AJUSTES_NUBE.concat(['ajustesTs', 'nick2', 'difficultyPreset']);
     claves.forEach(function (k) { antes[k] = s[k]; });
+    /* Los sellos POR CAMPO son un objeto, y guardar la referencia no aísla
+     * nada: quien los toque durante la prueba estaría escribiendo en la
+     * copia. Se guarda una copia y se entra con la pizarra en blanco, que
+     * es lo que significa «esta máquina no ha tocado nada». */
+    var sellosAntes = {};
+    for (var ks in (s.ajustesTsK || {})) {
+      if (s.ajustesTsK.hasOwnProperty(ks)) sellosAntes[ks] = s.ajustesTsK[ks];
+    }
+    s.ajustesTsK = {};
     try { fn(window.PM.UI, s); }
     finally {
       claves.forEach(function (k) { s[k] = antes[k]; });
+      s.ajustesTsK = sellosAntes;
       window.PM.UI.saveSettings();
     }
   }
@@ -5031,12 +5092,52 @@
       conAspecto(function (UI, s) {
         s.skin1 = 'pixel';
         s.ajustesTs = 5000;
+        s.ajustesTsK = { skin1: 5000 };
         var vino = UI.aplicarAjustesDeNube({ ts: 4999, skin1: 'clasico' });
         ok(!vino, 'no se aplica');
         eq(s.skin1, 'pixel', 'se queda lo de aquí, que es más nuevo');
         /* ni siquiera con el mismo sello: en un empate no hay motivo para
          * cambiar nada, y cambiar es lo único que se nota */
         ok(!UI.aplicarAjustesDeNube({ ts: 5000, skin1: 'clasico' }), 'empate: tampoco');
+        eq(s.skin1, 'pixel');
+      });
+    });
+
+  test('cada ajuste viaja por su cuenta: tocar el volumen aquí no bloquea la skin de allí',
+    function () {
+      conAspecto(function (UI, s) {
+        /* EL FALLO QUE HUBO: el sello era del BLOQUE, así que con solo
+         * elegir rol o bajar el volumen en este ordenador, este ordenador
+         * pasaba a ser «el más nuevo» y NADA de la cuenta bajaba: ni la
+         * skin, ni el orden de los emotes, ni los ajustes del otro. */
+        var otrosEmotes = CFG.EMOTE_IDS.slice(0, CFG.TIENDA.EMOTE_TECLAS)
+          .slice().reverse().join(',');
+        s.skin1 = 'clasico';
+        s.emotes1 = CFG.DEFAULT_SETTINGS.emotes1;
+        s.volMaster = 0.3;
+        /* aquí SOLO se tocó el volumen, y después que la skin de la nube */
+        s.ajustesTsK = { volMaster: 9000 };
+        s.ajustesTs = 9000;
+        var vino = UI.aplicarAjustesDeNube({
+          ts: 5000, skin1: 'pixel', emotes1: otrosEmotes, volMaster: 1,
+          t: { skin1: 5000, emotes1: 5000, volMaster: 4000 }
+        });
+        ok(vino, 'algo entra, aunque el bloque de aquí sea más nuevo');
+        eq(s.skin1, 'pixel', 'la skin de la cuenta llega igual');
+        eq(s.emotes1, otrosEmotes, 'y el orden de los emotes');
+        eq(s.volMaster, 0.3, 'pero el volumen de aquí, que es más nuevo, se respeta');
+        ok(vino.skin1 && !vino.volMaster, 'y dice exactamente qué entró');
+      });
+    });
+
+  test('un ajuste que nunca se tocó en esta máquina siempre acepta el de la cuenta',
+    function () {
+      conAspecto(function (UI, s) {
+        s.skin1 = 'clasico';
+        s.ajustesTsK = {};      // recién instalado: aquí no se ha tocado nada
+        s.ajustesTs = 99999999; // aunque el bloque venga de otra cosa
+        ok(UI.aplicarAjustesDeNube({ ts: 1, skin1: 'pixel' }),
+          'una fila vieja sin sellos por campo entra igual');
         eq(s.skin1, 'pixel');
       });
     });
@@ -5126,6 +5227,7 @@
         Ac.user = { id: 'id', usuario: 'PEPE', avatar: 'pac' };
         s.avatar = 'clyde';
         s.ajustesTs = 9000;
+        s.ajustesTsK = { avatar: 9000 };   // aquí se cambió, y hace nada
         /* La nube trae otro avatar EN SU COLUMNA y un aspecto más viejo. El
          * avatar va en las dos partes, así que sin cuidado entraba por la
          * columna lo que el sello acababa de rechazar. */

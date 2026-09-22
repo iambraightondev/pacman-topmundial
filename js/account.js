@@ -400,8 +400,12 @@
      * amigos y el nombre. El historial y las repeticiones no: son del
      * aparato y no se funden con ninguna cuenta. */
     limpiarLocal: function () {
+      /* La cartilla del DAILY también: desde que viaja con la cuenta es de
+       * la cuenta, y dejarla puesta hacía que el siguiente que entrara en
+       * ESTE ordenador se encontrara la semana, la racha y —lo peor— los
+       * escalones de racha del anterior dados por cobrados. */
       var keys = [CFG.LEVEL_KEY, CFG.ACH_KEY, CFG.BADGES_KEY, CFG.SAVE_KEY,
-        CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas'];
+        CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas', CFG.DAILY.KEY];
       try {
         for (var i = 0; i < keys.length; i++) localStorage.removeItem(keys[i]);
       } catch (e) { /* sin almacenamiento */ }
@@ -520,6 +524,12 @@
         delete o.record3;
         delete o.record4;
       }
+      /* LA CARTILLA DEL DAILY viaja en la misma bolsa (22 sep 2026, ver
+       * Daily.paraNube): es de la cuenta, no del navegador, y no llega a
+       * cien bytes. */
+      if (o.ajustes && window.PM.Daily && window.PM.Daily.paraNube) {
+        o.ajustes.daily = window.PM.Daily.paraNube();
+      }
       if (this.sinAjustes || !o.ajustes) delete o.ajustes;
       for (m = 0; m < this.modoCols.length; m++) {
         var col = this.modoCols[m][2];
@@ -622,6 +632,13 @@
        * el que se cambió más tarde, y eso lo decide UI con el sello que viene
        * dentro. Si lo de este aparato es más nuevo no se toca nada, y el push
        * de a continuación lo sube. */
+      /* LA CARTILLA DEL DAILY va en la misma bolsa y con su propia regla:
+       * lo mejor de cada lado, no el más nuevo (ver Daily.desdeNube). Se
+       * aplica aparte de los ajustes, que se funden por fecha. */
+      if (fila.ajustes && fila.ajustes.daily &&
+          window.PM.Daily && window.PM.Daily.desdeNube) {
+        window.PM.Daily.desdeNube(fila.ajustes.daily);
+      }
       if (window.PM.UI && window.PM.UI.aplicarAjustesDeNube) {
         var vino = window.PM.UI.aplicarAjustesDeNube(fila.ajustes);
         /* El avatar tiene además su propia columna (es lo que ve un amigo al
@@ -632,8 +649,12 @@
          * Si no traía ninguno —una cuenta de antes de que el aspecto viajara,
          * o un proyecto sin la columna— no hay nada que comparar y manda la
          * columna de siempre, como toda la vida. */
-        var traiaAspecto = !!(fila.ajustes && Math.floor(fila.ajustes.ts || 0) > 0);
-        if (traiaAspecto && !vino && avatarAqui) {
+        /* Ahora los ajustes se funden CLAVE A CLAVE, así que la pregunta ya
+         * no es si entró el bloque, sino si entró el avatar: si la nube
+         * traía uno y perdió contra el de aquí, la columna `avatar` de
+         * arriba tampoco vale y se devuelve el de este aparato. */
+        var traiaAspecto = !!(fila.ajustes && fila.ajustes.avatar !== undefined);
+        if (traiaAspecto && !(vino && vino.avatar) && avatarAqui) {
           s.avatar = avatarAqui;
           this.user.avatar = avatarAqui;
         }

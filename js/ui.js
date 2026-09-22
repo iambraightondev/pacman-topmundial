@@ -87,6 +87,16 @@
       return (/^#[0-9a-f]{6}$/i).test(String(value)) ? String(value) : def;
     }
     if (key === 'muted') return !!value;
+    if (key === 'ajustesTsK') {
+      var mapa = {};
+      if (value && typeof value === 'object') {
+        for (var mk = 0; mk < CFG.AJUSTES_NUBE.length; mk++) {
+          var mck = CFG.AJUSTES_NUBE[mk], mv = parseInt(value[mck], 10);
+          if (isFinite(mv) && mv > 0) mapa[mck] = mv;
+        }
+      }
+      return mapa;
+    }
     if (key === 'ajustesTs') {
       var ts = parseInt(value, 10);
       return (isFinite(ts) && ts > 0) ? ts : 0;
@@ -193,10 +203,33 @@
    * -------------------------------------------------------- */
   function fotoViajera(s) {
     var o = {}, L = CFG.AJUSTES_NUBE;
-    for (var i = 0; i < L.length; i++) o[L[i]] = s[L[i]];
-    return JSON.stringify(o);
+    for (var i = 0; i < L.length; i++) o[L[i]] = JSON.stringify(s[L[i]]);
+    return o;
   }
   var ultimaFoto = null;      // se siembra al cargar, abajo
+
+  /* La hora del último cambio de UNA clave (ver CFG.DEFAULT_SETTINGS.ajustesTsK).
+   * Sin sello propio vale CERO, y cero pierde contra cualquier cosa que
+   * baje de la nube. Es a propósito y es la mitad del arreglo: una clave
+   * que en ESTE ordenador no has tocado nunca no tiene por qué ganarle a la
+   * que sí cambiaste en el otro. Antes heredaba el sello del bloque —que se
+   * adelantaba con solo elegir rol antes de una partida—, y por eso el
+   * último aparato en el que jugabas se quedaba con todo: la skin, los
+   * emotes y los ajustes del otro no llegaban nunca. */
+  function selloDe(s, k) {
+    var m = s && s.ajustesTsK;
+    var v = (m && m[k] > 0) ? m[k] : 0;
+    return Math.max(0, Math.floor(v || 0));
+  }
+
+  function ponSello(s, k, ts) {
+    /* ...y nunca sobre el objeto de CFG.DEFAULT_SETTINGS, que es el mismo
+     * para todos: escribir ahí ensuciaría los valores de fábrica */
+    if (!s.ajustesTsK || typeof s.ajustesTsK !== 'object' ||
+        s.ajustesTsK === CFG.DEFAULT_SETTINGS.ajustesTsK) s.ajustesTsK = {};
+    s.ajustesTsK[k] = ts;
+    if (ts > Math.floor(s.ajustesTs || 0)) s.ajustesTs = ts;
+  }
 
   /* Sube a la nube lo que se acaba de cambiar, pero no en el acto: arrastrar
    * un deslizador de volumen son cincuenta guardados seguidos, y cada uno era
@@ -214,12 +247,20 @@
 
   function saveSettings() {
     var s = window.PM.settings;
-    /* ¿ha cambiado algo de lo que viaja con la cuenta? Entonces esto es lo
-     * más nuevo que hay de esta persona, y así se apunta. */
-    var foto = fotoViajera(s);
-    if (ultimaFoto !== null && foto !== ultimaFoto) {
-      s.ajustesTs = Date.now();
-      subirAjustesLuego();
+    /* ¿ha cambiado algo de lo que viaja con la cuenta? Se mira CLAVE A
+     * CLAVE y solo se sella la que cambió: así, entrar en la cuenta desde
+     * otro ordenador te trae el color que cambiaste allí aunque aquí hayas
+     * tocado el volumen después. */
+    var foto = fotoViajera(s), cambio = false;
+    if (ultimaFoto !== null) {
+      var ahora = Date.now();
+      for (var fk = 0; fk < CFG.AJUSTES_NUBE.length; fk++) {
+        var kk = CFG.AJUSTES_NUBE[fk];
+        if (foto[kk] === ultimaFoto[kk]) continue;
+        ponSello(s, kk, ahora);
+        cambio = true;
+      }
+      if (cambio) subirAjustesLuego();
     }
     ultimaFoto = foto;
     try {
@@ -312,6 +353,7 @@
       var quita = ['avatar', 'skin1', 'pacColor', 'acc1', 'efx1', 'emotes1'];
       for (var i = 0; i < quita.length; i++) s[quita[i]] = CFG.DEFAULT_SETTINGS[quita[i]];
       s.ajustesTs = 0;
+      s.ajustesTsK = {};
       ultimaFoto = fotoViajera(s);   // que el guardado no lo tome por un cambio
       saveSettings();
     },
@@ -321,10 +363,15 @@
      * lado manda sin preguntarle nada a nadie. */
     ajustesParaNube: function () {
       var s = window.PM.settings || {};
-      var o = { ts: Math.floor(s.ajustesTs || 0) };
+      /* `ts` sigue yendo (el mayor de todos) para que una versión vieja del
+       * juego abierta en otro sitio siga entendiendo la fila; `t` es el
+       * sello de cada clave, que es con lo que se funde de verdad. */
+      var o = { ts: Math.floor(s.ajustesTs || 0), t: {} };
       for (var i = 0; i < CFG.AJUSTES_NUBE.length; i++) {
         var k = CFG.AJUSTES_NUBE[i];
-        if (s.hasOwnProperty(k)) o[k] = s[k];
+        if (!s.hasOwnProperty(k)) continue;
+        o[k] = s[k];
+        o.t[k] = selloDe(s, k);
       }
       return o;
     },
@@ -342,17 +389,29 @@
       var s = window.PM.settings;
       if (!s || !o || typeof o !== 'object') return false;
       var ts = Math.floor(o.ts || 0);
-      if (!(ts > Math.floor(s.ajustesTs || 0))) return false;
+      var remotos = (o.t && typeof o.t === 'object') ? o.t : null;
 
-      var def = CFG.DEFAULT_SETTINGS;
+      /* CAMPO A CAMPO (22 sep 2026). Antes esto era una sola pregunta —¿es
+       * el bloque de allí más nuevo que el de aquí?— y con un no se caía
+       * todo: la skin que te pusiste en casa no llegaba al portátil solo
+       * porque en el portátil hubieras bajado el volumen después. Ahora cada
+       * clave se compara con su propia hora y gana la más reciente de las
+       * dos; las demás ni se tocan. Una fila vieja sin `t` trae el sello del
+       * bloque para todas, que es exactamente lo que significaba. */
+      /* devuelve QUÉ claves han entrado (o false si ninguna): el avatar
+       * tiene columna propia y arriba hace falta saber si ganó la de aquí */
+      var def = CFG.DEFAULT_SETTINGS, toco = false;
       for (var i = 0; i < CFG.AJUSTES_NUBE.length; i++) {
         var k = CFG.AJUSTES_NUBE[i];
         if (!o.hasOwnProperty(k)) continue;
+        var tk = remotos ? Math.max(0, Math.floor(remotos[k] || 0)) : ts;
+        if (!(tk > selloDe(s, k))) continue;
         s[k] = sanitizeSetting(k, o[k], def[k]);
+        ponSello(s, k, tk);
+        toco = toco || {};
+        toco[k] = true;
       }
-      /* el sello es el de allí: si no, este aparato se declararía el más
-       * nuevo por haber copiado, y le ganaría al que de verdad cambió algo */
-      s.ajustesTs = ts;
+      if (!toco) return false;
       s.difficultyPreset = presetDe(s);
       /* ...y la foto se pone al día a mano ANTES de guardar, para que
        * saveSettings no lo tome por un cambio de este aparato */
@@ -365,7 +424,7 @@
       if (this.refreshPerfilLook) this.refreshPerfilLook();
       if (this.refreshVestBtn) this.refreshVestBtn();
       /* a la party ya la avisa saveSettings: el aspecto nuevo se reparte solo */
-      return true;
+      return toco;
     },
 
     init: function () {

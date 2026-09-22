@@ -1738,7 +1738,17 @@
     /* Cuándo se cambió por última vez algo de CFG.AJUSTES_NUBE, para saber qué
      * lado manda al entrar en la cuenta desde otro aparato. No es un ajuste
      * que se toque a mano: lo pone saveSettings() al ver que algo cambió. */
-    ajustesTs: 0
+    ajustesTs: 0,
+    /* SELLO POR CAMPO (22 sep 2026). `ajustesTs` marcaba el bloque entero y
+     * la bajada era todo-o-nada: bastaba tocar el volumen en este ordenador
+     * para que NADA de la nube entrara —ni la skin, ni los emotes, ni los
+     * ajustes que sí se habían cambiado en el otro—, y con dos relojes
+     * descuadrados el aparato atrasado no ganaba nunca. Ahora cada clave de
+     * AJUSTES_NUBE lleva aquí su propia hora y se funde campo a campo: gana
+     * el más reciente de CADA uno, no el del bloque. `ajustesTs` se queda
+     * como el mayor de todos, que es lo que entienden las versiones viejas
+     * del juego que sigan abiertas en otro sitio. */
+    ajustesTsK: {}
   };
   CFG.PRESETS = {
     facil:   { ghostSpeedMult: 0.85, pacSpeedMult: 1.05, frightMult: 1.5, startLives: 5, startLevel: 1 },

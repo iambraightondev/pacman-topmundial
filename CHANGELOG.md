@@ -2,6 +2,33 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 (madrugada) · Que la cuenta se lleve de verdad lo tuyo
+
+**CADA AJUSTE VIAJA POR SU CUENTA.** Tu aspecto y tus preferencias subían a
+la nube con **un solo sello de tiempo para todo el bloque**, y al bajar era
+todo o nada: bastaba tocar cualquier cosa en este ordenador —incluso elegir
+rol antes de una partida, que también viaja— para que se declarara "el más
+nuevo" y **no bajara nada** de lo que habías cambiado en el otro. Esa es la
+razón de que a veces la skin, el orden de los emotes o el volumen no
+aparecieran al cambiar de PC. Ahora cada ajuste lleva su propia hora y se
+funde uno a uno: llega la skin que te pusiste en casa **y** se queda el
+volumen que bajaste en el portátil. Y un ajuste que en esta máquina no has
+tocado nunca acepta siempre el de la cuenta, así que ya no hace falta que
+gane nadie: gana lo que dijiste en el sitio donde lo dijiste.
+
+**EL DAILY YA ES DE LA CUENTA, NO DEL NAVEGADOR.** La cartilla de la semana
+—el progreso de cada día, la racha viva, tu mejor racha y los escalones de
+racha ya cobrados— no salía de ese navegador. Al abrir tu cuenta en otro
+ordenador aparecía en blanco, y como el escalón cobrado es justo lo que
+impide cobrar dos veces, el otro aparato podía volver a pagarlos. Ahora
+viaja, y se funde quedándose con **lo mejor de cada lado**: un reto que
+cumpliste en el otro sitio cuenta aquí, y lo que llevas hecho aquí no se
+pierde. Al cerrar sesión la cartilla se va con la cuenta, para que el
+siguiente que entre en ese ordenador no herede tu semana.
+
+Nada de esto pide tocar la base de datos: cabe todo en la columna de ajustes
+que ya existía (1,1 kB de los 4 kB que admite).
+
 ## 2026-09-22 (noche) · Las bajas regaladas y la segunda ronda de ajustes
 
 **SE ACABARON LAS BAJAS REGALADAS.** Un fantasma al que ya se habían comido

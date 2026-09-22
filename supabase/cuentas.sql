@@ -264,11 +264,26 @@ end $$;
 -- cuenta pero el habérselo PUESTO se quedaba en el navegador, así que abrir
 -- tu cuenta en otro ordenador te devolvía al Pac-Man amarillo de fábrica.
 --
--- Dentro va lo listado en CFG.AJUSTES_NUBE (js/config.js) y un sello `ts`:
--- cuando los dos lados tienen algo, manda el que se cambió más tarde, que es
--- la única regla que tiene sentido para un color o una skin (no hay uno
--- "mejor", como sí lo hay en un récord). Se lee en claro como el resto del
--- perfil; aquí no hay nada privado, solo gustos.
+-- Dentro va lo listado en CFG.AJUSTES_NUBE (js/config.js) y los sellos de
+-- tiempo con los que se decide qué lado manda: cuando los dos tienen algo,
+-- gana el que se cambió más tarde, que es la única regla con sentido para un
+-- color o una skin (no hay uno "mejor", como sí lo hay en un récord).
+--
+-- Desde el 22 sep 2026 el sello es POR CAMPO (`t`), no del bloque. Con un
+-- solo sello, tocar cualquier cosa en un ordenador —hasta elegir rol antes
+-- de jugar— lo declaraba "el más nuevo" y ya no bajaba NADA de la cuenta: ni
+-- la skin, ni el orden de los emotes, ni los ajustes cambiados en el otro. El
+-- `ts` del bloque sigue yendo para las versiones viejas del juego que sigan
+-- abiertas por ahí.
+--
+-- Y dentro va también `daily`: la cartilla de retos de la semana. Es de la
+-- CUENTA, no del navegador —la racha y los escalones de racha ya cobrados se
+-- perdían al cambiar de ordenador, y el otro aparato podía volver a
+-- pagarlos—, y cabe aquí de sobra: todo junto no llega a 1,1 kB de los 4 kB
+-- que permite la comprobación de abajo. Su regla NO es la fecha sino lo mejor
+-- de cada lado, como los récords (js/daily.js, Daily.desdeNube).
+--
+-- Se lee en claro como el resto del perfil; aquí no hay nada privado.
 alter table public.perfiles
   add column if not exists ajustes jsonb not null default '{}'::jsonb;
 

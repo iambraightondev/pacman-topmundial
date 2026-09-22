@@ -171,10 +171,16 @@
     },
 
     leer: function () {
-      var sem = this.semanaId();
       var o = null;
       try { o = JSON.parse(localStorage.getItem(D.KEY)); }
       catch (e) { o = null; }
+      return this.normalizar(o);
+    },
+
+    /* Pone en limpio una cartilla venga de donde venga —de este navegador o
+     * de la nube— y la trae a la semana de hoy. */
+    normalizar: function (o) {
+      var sem = this.semanaId();
       if (!o || typeof o !== 'object' || !isArray(o.p) || !isArray(o.h)) {
         return this.vacio(sem);
       }
@@ -238,6 +244,37 @@
     guardar: function (o) {
       try { localStorage.setItem(D.KEY, JSON.stringify(o)); }
       catch (e) { /* sin almacenamiento */ }
+    },
+
+    /* ---------- LA CARTILLA VIAJA CON LA CUENTA (22 sep 2026) ----------
+     * Hasta ahora era de este navegador y punto: abrir tu cuenta en otro
+     * ordenador la enseñaba en blanco —la semana, la racha viva y los
+     * escalones de racha ya cobrados—, y como el `hito` es justo lo que
+     * impide cobrar dos veces, el otro aparato podía volver a pagarlos.
+     * Viaja dentro de la columna `ajustes` del perfil, que es la bolsa de
+     * lo de esta cuenta que no es ni récord ni contador: son unos cientos
+     * de bytes y así no hace falta tocar el esquema. */
+    paraNube: function () { return this.leer(); },
+
+    /* Funde la de la nube con la de aquí. NO gana la más nueva: gana lo
+     * MEJOR de cada lado, como en los récords, porque un reto cumplido en
+     * el otro ordenador está cumplido y no hay por qué quitárselo. Los
+     * escalones de racha cobrados se quedan con el mayor de los dos: así ni
+     * se pagan dos veces ni se pierde el sitio. */
+    desdeNube: function (o) {
+      if (!o || typeof o !== 'object') return false;
+      var r = this.normalizar(o), a = this.leer(), i;
+      for (i = 0; i < D.DIAS; i++) {
+        a.p[i] = Math.max(a.p[i] || 0, r.p[i] || 0);
+        a.h[i] = (a.h[i] || r.h[i]) ? 1 : 0;
+      }
+      a.racha = Math.max(a.racha || 0, r.racha || 0);
+      a.mejor = Math.max(a.mejor || 0, r.mejor || 0);
+      a.hito = Math.max(a.hito || 0, r.hito || 0);
+      a.sem = (a.sem || r.sem) ? 1 : 0;
+      if (String(r.ult || '') > String(a.ult || '')) a.ult = r.ult;
+      this.guardar(a);
+      return true;
     },
 
     /* ---------- consultas para la interfaz ---------- */
