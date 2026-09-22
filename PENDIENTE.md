@@ -13,6 +13,32 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### DONDE SE DEJÓ (fin de la sesión del 22 sep)
+
+Todo lo de abajo está construido, probado y subido. Nada a medias, nada sin
+commitear. Lo que queda es de dos clases: lo que hay que **jugar** y lo que
+hay que **decidir**.
+
+**A jugar, para ver si los números están bien** (son decisiones mías, no
+suyas, y no se pueden medir sin partida):
+
+1. El salto del botín de CARROÑA: dos casillas, ¿cortas o largas?
+2. FRENESÍ a 10 s con 32 s de recarga.
+3. El MISIL sin media vuelta: cuando el siguiente fantasma queda detrás, da
+   un rodeo por el laberinto. Hay que ver si el rodeo se hace largo.
+4. Que el fantasma que vuelve de casa ya no sea comida gratis en la puerta.
+
+**A decidir usted** (sin esto no se puede seguir por esas ramas):
+
+| # | Qué | Por qué hace falta |
+| --- | --- | --- |
+| 1 | **Los récords inflados** por las bajas regaladas | Las puntuaciones y rachas de estos días valen más de lo que se jugó. Se pueden dejar o limpiar, pero limpiar borra marcas reales del mismo periodo |
+| 2 | **El historial de partidas y las repeticiones** | Siguen siendo del aparato, no de la cuenta: al cambiar de ordenador no van. ¿Se hace que viajen? |
+| 3 | **El token de Supabase** | El configurado está caducado: los tres MCP fallan al conectar y no se puede tocar el esquema. Hace falta uno nuevo |
+| 4 | **El punto 19** | Sigue vacío desde que se abrió |
+
+---
+
 **22 sep — LA CUENTA YA SE LLEVA LO TUYO AL CAMBIAR DE ORDENADOR.**
 
 - **Por qué a veces no viajaban la skin, los emotes ni los ajustes:** subían
