@@ -2,6 +2,23 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 (tarde) · Las maestrías de marcas pasan a ser TROFEOS
+
+**LA ESCALERA DE MARCAS SE LLAMA AHORA TROFEOS, Y SON COPAS.** Tu mejor
+puntuación en cada mundo y formato sigue dando lo mismo, con los mismos
+listones; lo que cambia es el nombre y el dibujo. En vez de los emblemas de
+oro, seis copas que se arman pieza a pieza: **BRONCE, PLATA, ORO, PLATINO,
+DIAMANTE y MUNDIAL** —esta última, el laberinto hecho globo con Pac-Man
+dándole la vuelta—. Quien ya tenía LEYENDA tiene ahora DIAMANTE, y así con
+todas: **no se pierde nada**, y las piezas que abría una maestría (CORONA,
+ESCUADRA, DRAGÓN...) siguen abiertas y ahora piden la copa equivalente.
+
+**Por qué:** «maestría» pasa a ser la de cada ROL de DESATADO, como en League
+of Legends, y se queda con los emblemas. Viene en la siguiente entrega.
+
+En partida: F1–F4 enseñan tu copa de cada formato; el aviso dice «¡TROFEO
+DE SOLO!»; y en el móvil el botón de la chapa se llama PRESUMIR.
+
 ## 2026-09-22 (madrugada) · Que la cuenta se lleve de verdad lo tuyo
 
 **CADA AJUSTE VIAJA POR SU CUENTA.** Tu aspecto y tus preferencias subían a

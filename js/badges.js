@@ -1,7 +1,13 @@
 /* ============================================================
  * PAC-MAN TOP MUNDIAL — js/badges.js
- * Maestrías: insignias que se entregan al alcanzar cierta
- * puntuación como récord personal. Define window.PM.Badges
+ * TROFEOS: copas que se entregan al alcanzar cierta puntuación
+ * como récord personal. Define window.PM.Badges
+ *
+ * Hasta el 22 de septiembre se llamaban MAESTRÍAS y llevaban los
+ * emblemas; ahora «maestría» es la de cada ROL (js/maestria.js) y
+ * esto son los trofeos (dibujo en js/trofeos.js). Por dentro no
+ * cambió nada: mismos ids, mismas claves guardadas, mismo nombre de
+ * módulo, para que lo ya ganado y lo ya anunciado sigan valiendo.
  *
  * Una ruta por MUNDO y FORMATO. DOCE en total.
  *

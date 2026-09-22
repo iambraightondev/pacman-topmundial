@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v212';
+var VERSION = 'pm-v213';
 var SHELL = [
   './',
   './index.html',
@@ -26,6 +26,7 @@ var SHELL = [
   './js/skins.js',
   './js/insignias.js',
   './js/emblemas.js',
+  './js/trofeos.js',
   './js/portadas.js',
   './js/pacman.js',
   './js/ghost.js',

@@ -711,7 +711,7 @@
         self.showPase();
       });
       extras.appendChild(this.menuPaseBtn);
-      extras.appendChild(this.makeButton('MAESTRÍAS', function () {
+      extras.appendChild(this.makeButton('TROFEOS', function () {
         self.resumeAudio();
         self.showBadges();
       }));
@@ -2649,14 +2649,14 @@
         return 'CREA UNA SALA O ENTRA CON UN CÓDIGO DE 4 LETRAS';
       }
       if (mo.id === 'lab' || mo.id === 'hab') {
-        return 'TOP MUNDIAL PROPIO · MAESTRÍAS PROPIAS POR FORMATO';
+        return 'TOP MUNDIAL PROPIO · TROFEOS PROPIOS POR FORMATO';
       }
       if (mo.id === 'caza') {
         return CFG.CAZA.NIVELES + ' RONDAS · CADA CAZA SON ' + CFG.VS.CATCH_POINTS +
           ' PUNTOS · NO ENTRA EN EL TOP MUNDIAL';
       }
       if (mo.id === 'duo') return 'PUNTUACIÓN DE EQUIPO Y RÉCORD DE DÚO';
-      return 'TU RÉCORD Y TU MAESTRÍA DE SIEMPRE';
+      return 'TU RÉCORD Y TUS TROFEOS DE SIEMPRE';
     },
 
     /* JUGAR. Tres modos arrancan de una; los otros dos necesitan que elijas
@@ -2985,7 +2985,7 @@
       var ctrlNote = document.createElement('div');
       ctrlNote.className = 'note';
       ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
-        'CTRL+ESPACIO TU MAESTRÍA · F1-F4 LA DE SOLO/DÚO/TRÍO/ESCUADRA · ' +
+        'CTRL+ESPACIO TU MAESTRÍA (DESATADO) O TU TROFEO · F1-F4 EL TROFEO DE SOLO/DÚO/TRÍO/ESCUADRA · ' +
         'T CHAT (ONLINE)';
       par.appendChild(ctrlNote);
 
@@ -3305,7 +3305,7 @@
     VEST_FILTROS: [
       { id: 'todas', name: 'TODAS' },
       { id: 'nivel', name: 'POR NIVEL', titulo: 'POR NIVEL · SUBIENDO DE NIVEL' },
-      { id: 'logro', name: 'POR LOGRO', titulo: 'POR LOGRO · CON LOGROS Y MAESTRÍAS' },
+      { id: 'logro', name: 'POR LOGRO', titulo: 'POR LOGRO · CON LOGROS Y TROFEOS' },
       { id: 'rara', name: 'EXTRAVAGANTES', titulo: 'EXTRAVAGANTES · CON LOGROS' },
       { id: 'temporada', name: 'FECHAS ESPECIALES', titulo: 'FECHAS ESPECIALES · HALLOWEEN, NAVIDAD Y LUNA LLENA' },
       { id: 'tienda', name: 'DE TIENDA', titulo: 'DE TIENDA · CON MONEDAS' },
@@ -5754,7 +5754,7 @@
         'CUATRO PODERES EN Q W E R, CON SU RECARGA',
         'AQUÍ SE MUEVE SOLO CON LAS FLECHAS',
         'CADA 5 NIVELES, EL REY FANTASMA',
-        'TOP MUNDIAL Y MAESTRÍAS PROPIOS'
+        'TOP MUNDIAL Y TROFEOS PROPIOS'
       ]);
       fHab.appendChild(el('div', 'ol-ficha-sub', 'TU ROL'));
       this.habRolBox = el('div', 'ol-roles');
@@ -6390,7 +6390,7 @@
       cab.className = 'maes-cab';
       var h = document.createElement('div');
       h.className = 'panel-title';
-      h.textContent = 'MAESTRÍAS';
+      h.textContent = 'TROFEOS';
       cab.appendChild(h);
 
       /* DOCE rutas independientes, elegidas por sus dos ejes: DÓNDE se juega
@@ -6535,7 +6535,7 @@
       this.badgeLienzos = [];
       var self = this;
       var S = window.PM.Sprites;
-      var gema = (S && S.EMBLEM_GEMA) || [];
+      var gema = (S && S.TROFEO_COLOR) || [];
       var lleno = this.badgeLleno;
       CFG.BADGES.forEach(function (b, i) {
         var puntos = meta(b);
@@ -6548,7 +6548,7 @@
         cv.width = 120; cv.height = 144;
         cv.className = 'maes-mini';
         row.appendChild(cv);
-        var L = { cv: cv, rango: i, off: !got, a0: Date.now() + 250 + i * 160 };
+        var L = { cv: cv, rango: i, off: !got, a0: Date.now() + 250 + i * 160, dib: 'trofeo' };
         self.badgeLienzos.push(L);
         // al pasar por encima se vuelve a armar
         row.addEventListener('mouseenter', function () {
@@ -6586,7 +6586,7 @@
       if (top && this.badgeRows[top.id]) {
         var tuya = document.createElement('span');
         tuya.className = 'maes-tuya';
-        tuya.textContent = 'TUYA';
+        tuya.textContent = 'TUYO';
         this.badgeRows[top.id].appendChild(tuya);
       }
 
@@ -6617,7 +6617,7 @@
       var puntos = B ? B.goal(badge, mode) : badge.points;
       var got = best >= puntos;
       var S = window.PM.Sprites;
-      var gema = (S && S.EMBLEM_GEMA) || [];
+      var gema = (S && S.TROFEO_COLOR) || [];
       var color = gema[rango] || badge.color;
       var mundoDe = B ? B.mundoDe(mode) : 'clasico', donde = '';
       (B ? B.MUNDOS : []).forEach(function (m) { if (m.id === mundoDe) donde = m.name; });
@@ -6639,14 +6639,14 @@
       this.badgeStageName.textContent = badge.name;
       this.badgeStageName.style.color = '';
       this.badgeStageState.textContent = got
-        ? ((esTuya ? 'TU MAESTRÍA · ' : 'CONSEGUIDA · ') + this.milesMaes(puntos) + ' PUNTOS')
+        ? ((esTuya ? 'TU TROFEO · ' : 'CONSEGUIDA · ') + this.milesMaes(puntos) + ' PUNTOS')
         : ('TE FALTAN ' + this.milesMaes(puntos - best) + ' PUNTOS PARA CONSEGUIRLA');
 
       var tienes = B ? B.earned(mode).length : 0;
       this.badgeDatos.innerHTML = '';
       var self = this;
       [[this.milesMaes(best), 'TU RÉCORD'], [this.milesMaes(puntos), 'PIDE'],
-       [tienes + ' / ' + CFG.BADGES.length, 'EMBLEMAS']].forEach(function (d) {
+       [tienes + ' / ' + CFG.BADGES.length, 'COPAS']].forEach(function (d) {
         var c = document.createElement('div');
         var v = document.createElement('b');
         v.textContent = d[0];
@@ -6678,12 +6678,12 @@
         der.textContent = 'TE FALTAN ' + this.milesMaes(hasta - best);
       } else if (!got) {
         pct = Math.max(0, Math.min(1, best / Math.max(1, puntos)));
-        izq.textContent = 'SE FORJA A ' + this.milesMaes(puntos) + ' PUNTOS';
+        izq.textContent = 'SE GANA A ' + this.milesMaes(puntos) + ' PUNTOS';
         der.textContent = Math.floor(pct * 100) + '%';
       } else if (esTuya) {
         izq.textContent = 'NO HAY NADA MÁS ARRIBA';
       } else {
-        izq.textContent = 'YA ES TUYA';
+        izq.textContent = 'YA ES TUYO';
       }
       fila.appendChild(izq);
       fila.appendChild(der);
@@ -6698,7 +6698,7 @@
       }
 
       if (play || cambia || !this.badgeHeroL) {
-        this.badgeHeroL = { cv: this.badgeHero, rango: rango, off: !got, a0: Date.now() };
+        this.badgeHeroL = { cv: this.badgeHero, rango: rango, off: !got, a0: Date.now(), dib: 'trofeo' };
       }
       this.animarMaestrias();
     },
@@ -6706,29 +6706,47 @@
     /* Un solo bucle para el emblema grande y los seis del camino, vivo solo
      * mientras se ve el panel. */
     animarMaestrias: function () {
+      var self = this;
+      this.animarLienzos('maesAnim', function () { return self.els.badges; },
+        function () { return [self.badgeHeroL].concat(self.badgeLienzos || []); });
+    },
+
+    /* Un bucle de requestAnimationFrame para los lienzos de un panel, vivo
+     * solo mientras el panel se ve. Lo usan TROFEOS (copas) y MAESTRÍAS
+     * (emblemas de rol): cada lienzo dice qué lleva con `dib`.
+     *   clave  dónde se apunta que el bucle ya corre (para no lanzar dos)
+     *   panel  función que da el panel; si se oculta, el bucle se para
+     *   lista  función que da los lienzos: { cv, rango, off, a0, dib } */
+    animarLienzos: function (clave, panel, lista) {
       var self = this, raf = window.requestAnimationFrame;
       var S = window.PM.Sprites;
-      if (!raf || this.maesAnim || !S || !S.drawEmblem) return;
-      this.maesAnim = true;
+      if (!raf || this[clave] || !S || !S.drawEmblem) return;
+      this[clave] = true;
       var t0 = Date.now();
       function pinta(L, ahora) {
+        if (!L) return;
         var cv = L.cv, c = cv.getContext && cv.getContext('2d');
         if (!c) return;
         if (L.off && L.hecho) return;
+        var copa = L.dib === 'trofeo' && S.drawTrofeo;
         c.setTransform(1, 0, 0, 1, 0, 0);
         c.clearRect(0, 0, cv.width, cv.height);
-        if (L.off) { if (!L.hecho) { S.drawEmblemOff(c, L.rango, cv.width, cv.height); L.hecho = true; } return; }
+        if (L.off) {
+          (copa ? S.drawTrofeoOff : S.drawEmblemOff)(c, L.rango, cv.width, cv.height);
+          L.hecho = true;
+          return;
+        }
         var k = cv.width / 200;
         c.setTransform(k, 0, 0, k, 0, 0);
-        S.drawEmblem(c, L.rango, (ahora - t0) / 1000, (ahora - L.a0) / 1000);
+        (copa ? S.drawTrofeo : S.drawEmblem)(c, L.rango, (ahora - t0) / 1000,
+          (ahora - L.a0) / 1000);
         c.setTransform(1, 0, 0, 1, 0, 0);
       }
       raf(function paso() {
-        var p = self.els.badges;
-        if (!p || p.style.display === 'none') { self.maesAnim = false; return; }
+        var p = panel();
+        if (!p || p.style.display === 'none') { self[clave] = false; return; }
         var ahora = Date.now();
-        if (self.badgeHeroL) pinta(self.badgeHeroL, ahora);
-        (self.badgeLienzos || []).forEach(function (L) { pinta(L, ahora); });
+        lista().forEach(function (L) { pinta(L, ahora); });
         raf(paso);
       });
     },
@@ -7268,7 +7286,7 @@
       fichas.className = 'perfil-fichas';
       lado.appendChild(fichas);
       this.profFichas = {};
-      [['logros', 'LOGROS', '#ffff00'], ['maestria', 'MAESTRÍA', '#00ffff'], ['record', 'RÉCORD', '#ffb8ff'],
+      [['logros', 'LOGROS', '#ffff00'], ['maestria', 'TROFEO', '#00ffff'], ['record', 'RÉCORD', '#ffb8ff'],
        ['monedas', 'MONEDAS', '#ffd23f'], ['partidas', 'PARTIDAS', '#00ff00'], ['tiempo', 'JUGADO', '#ffb852']].forEach(function (f) {
         var d = document.createElement('div');
         d.className = 'perfil-ficha';
@@ -7442,7 +7460,7 @@
       var top = B ? B.top('solo') : null;
       this.profResumen.textContent =
         'LOGROS ' + (A ? A.count() : 0) + '/' + (A ? A.total() : 0) +
-        ' · MAESTRÍA ' + (top ? top.name : 'NINGUNA') +
+        ' · TROFEO ' + (top ? top.name : 'NINGUNO') +
         ' · RÉCORD ' + ((window.PM.Game && window.PM.Game.highScore1) || 0);
 
       if (this.profFichas) {
@@ -7508,7 +7526,7 @@
         salir.classList.add('btn-preset');
         row.appendChild(salir);
         this.profAccountNote.textContent =
-          'TU NIVEL, LOGROS, MAESTRÍAS, RÉCORDS Y AMIGOS SE GUARDAN EN LA CUENTA';
+          'TU NIVEL, LOGROS, TROFEOS, MAESTRÍAS, RÉCORDS Y AMIGOS SE GUARDAN EN LA CUENTA';
         /* Y se pregunta si lo tiene. La respuesta tarda lo que tarde la red,
          * así que el renglón se escribe cuando llega y solo si el panel sigue
          * puesto: entretanto se lee lo de siempre, que no es mentira. */
@@ -9624,7 +9642,7 @@
       var mb = document.createElement('button');
       mb.type = 'button';
       mb.className = 'emote-btn badge-emote';
-      mb.textContent = 'MI MAESTRÍA';
+      mb.textContent = 'PRESUMIR';
       mb.addEventListener('click', function () {
         self.resumeAudio();
         window.PM.Game.sendBadgeTag();
@@ -9640,7 +9658,7 @@
         fb.type = 'button';
         fb.className = 'emote-btn badge-emote badge-fmt';
         fb.textContent = f[0];
-        fb.title = 'F' + f[1] + ' · MAESTRÍA DE ' +
+        fb.title = 'F' + f[1] + ' · TROFEO DE ' +
           (window.PM.Badges ? window.PM.Badges.FORMATOS[f[1] - 1].name : f[0]);
         fb.addEventListener('click', function () {
           self.resumeAudio();
@@ -10620,7 +10638,7 @@
             var prac = document.createElement('div');
             prac.className = 'go-equipo go-practica';
             prac.textContent = 'PRÁCTICA CON ' + CFG.HAB.ROL_INFO[g.roles[0]].name +
-              ' · NO CUENTA PARA RÉCORDS NI MAESTRÍAS';
+              ' · NO CUENTA PARA RÉCORDS NI TROFEOS';
             p.appendChild(prac);
           }
 
@@ -12119,7 +12137,7 @@
               { t: 'SOLO', d: 'FLECHAS + Q W E R (WASD NO MUEVE: LA W ES EL TURBO)' },
               { t: 'DOS JUGADORES', d: dos }
             ],
-            pie: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON SUS RÉCORDS Y MAESTRÍAS' +
+            pie: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON SUS RÉCORDS Y TROFEOS' +
               (conFantasma ? '' : '  ·  EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA') +
               '  ·  EN PARTY CADA UNO ELIGE SU ROL EN LA SALA'
           });
@@ -12166,8 +12184,8 @@
              * entera daría un salto cada vez que se cambia de rol. */
             var practica = roles[0] !== 'asesino';
             aviso.textContent = practica
-              ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: NO CUENTA PARA RÉCORDS NI MAESTRÍAS'
-              : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y MAESTRÍAS';
+              ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: SUMA A SU MAESTRÍA, NO A RÉCORDS NI TROFEOS'
+              : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y TROFEOS';
             aviso.classList.toggle('ok', !practica);
           }
           var pasiva = document.createElement('div');

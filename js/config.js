@@ -476,7 +476,9 @@
    *
    * `pide` (js/skins.js lo interpreta):
    *   { stat, meta, que }            contador de PM.Achievements >= meta
-   *   { ruta: [...], maestria, que }  maestría >= esa en alguna de esas rutas
+   *   { ruta: [...], maestria, que }  trofeo >= ese en alguna de esas rutas
+   *                                 (la clave se sigue llamando maestria:
+   *                                 es de antes del 22 sep)
    *   { fecha: 'halloween'|'navidad' } jugar una partida en esas fechas
    *   { luna: true }                  jugar una noche de luna llena (CFG.LUNA)
    * Las cifras salen de los contadores reales de los jugadores (13 sep):
@@ -521,11 +523,11 @@
       pide: { stat: 'caza:cazas', meta: 10, que: 'PAC-MAN CAZADOS EN CACERÍA' },
       ve: 'MEDIO PAC-MAN, MEDIO FANTASMA: FALDITA ONDULADA Y OJO DE PUPILA AZUL.' },
     { id: 'corona', name: 'CORONA', grupo: 'logro',
-      pide: { ruta: ['solo'], maestria: 'leyenda', que: 'LEYENDA EN CLÁSICO SOLO' },
+      pide: { ruta: ['solo'], maestria: 'leyenda', que: 'COPA DE DIAMANTE EN CLÁSICO SOLO' },
       ve: 'UNA CORONA DE SU MISMO COLOR CON UNA GEMITA ROJA.' },
     { id: 'escuadra', name: 'ESCUADRA', grupo: 'logro',
       pide: { ruta: ['escuadra', 'lab4', 'hab4'], maestria: 'maestro',
-              que: 'MAESTRO EN ESCUADRA' },
+              que: 'COPA DE PLATINO EN ESCUADRA' },
       ve: 'LLEVA DETRÁS UNA CRÍA DE PAC-MAN POR CADA COMPAÑERO, DE SU COLOR.' },
     { id: 'dorado', name: 'DORADO', grupo: 'logro',
       pide: { stat: 'top10', meta: 1, que: 'ENTRAR EN EL TOP 10 DEL TOP MUNDIAL' },
@@ -557,7 +559,7 @@
       pide: { stat: 'puntosMax', meta: 100000, que: 'PUNTOS EN UNA PARTIDA' },
       ve: 'UN COFRE VIVO: LA TAPA ES LA BOCA Y SUELTA MONEDAS.' },
     { id: 'dragon', name: 'DRAGÓN', grupo: 'logro', rara: true,
-      pide: { ruta: ['hab'], maestria: 'maestro', que: 'MAESTRO EN DESATADO SOLO' },
+      pide: { ruta: ['hab'], maestria: 'maestro', que: 'COPA DE PLATINO EN DESATADO SOLO' },
       ve: 'CABEZA DE DRAGÓN QUE ECHA HUMO Y, CADA POCO, UNA LLAMARADA.' },
     { id: 'calavera', name: 'CALAVERA', grupo: 'logro', rara: true,
       pide: { stat: 'muertes', meta: 250, que: 'MUERTES' },
@@ -592,7 +594,7 @@
       pide: { stat: 'racha', meta: 5, que: 'FANTASMAS CON UN MISMO ENERGIZANTE (EN EQUIPO)' },
       ve: 'PEZ REDONDO DE OJO ENORME Y LABIOS EN "O". CON LA Q SE INFLA CON LAS PÚAS DE PUNTA.' },
     { id: 'bicefalo', name: 'BICÉFALO', grupo: 'logro', rara: true,
-      pide: { ruta: ['hab2'], maestria: 'maestro', que: 'MAESTRO EN DESATADO DÚO' },
+      pide: { ruta: ['hab2'], maestria: 'maestro', que: 'COPA DE PLATINO EN DESATADO DÚO' },
       ve: 'DOS CABEZAS DE CARÁCTER OPUESTO, EL LISTO Y EL BOBO, QUE MUERDEN POR TURNOS. CON LA Q, LAS DOS A LA VEZ.' },
 
     /* --- de la TIENDA (1.500 monedas): extravagantes que no se ganan jugando --- */
@@ -1069,14 +1071,19 @@
   CFG.EFECTO_IDS = CFG.EFECTOS.map(function (e) { return e.id; });
   CFG.ACCESORIO_IDS = CFG.ACCESORIOS.map(function (e) { return e.id; });
 
-  /* ---------- Maestrías (insignias por récord personal) ---------- */
+  /* ---------- Trofeos (copas por récord personal) ----------
+   * Hasta el 22 de septiembre se llamaban maestrías y llevaban los emblemas
+   * de APRENDIZ a TOP MUNDIAL. Esos nombres y esos emblemas pasaron a las
+   * MAESTRÍAS DE ROL (CFG.MAESTRIA); la escalera de marcas se quedó con los
+   * mismos escalones y los mismos ids —lo guardado y las piezas que abre
+   * siguen valiendo— y cambió solo de nombre y de dibujo (js/trofeos.js). */
   CFG.BADGES = [
-    { id: 'aprendiz', name: 'APRENDIZ',    points: 3000,   color: '#ffffff' },
-    { id: 'cazador',  name: 'CAZADOR',     points: 8000,   color: '#00ffff' },
-    { id: 'experto',  name: 'EXPERTO',     points: 15000,  color: '#00ff00' },
-    { id: 'maestro',  name: 'MAESTRO',     points: 30000,  color: '#ffb8ff' },
-    { id: 'leyenda',  name: 'LEYENDA',     points: 60000,  color: '#ff8c00' },
-    { id: 'mundial',  name: 'TOP MUNDIAL', points: 100000, color: '#ffff00' }
+    { id: 'aprendiz', name: 'BRONCE',   points: 3000,   color: '#d98b45' },
+    { id: 'cazador',  name: 'PLATA',    points: 8000,   color: '#dfe4ec' },
+    { id: 'experto',  name: 'ORO',      points: 15000,  color: '#ffd23a' },
+    { id: 'maestro',  name: 'PLATINO',  points: 30000,  color: '#9fe6ee' },
+    { id: 'leyenda',  name: 'DIAMANTE', points: 60000,  color: '#6fd0ff' },
+    { id: 'mundial',  name: 'MUNDIAL',  points: 100000, color: '#ffe23a' }
   ];
   CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
 
@@ -1612,7 +1619,7 @@
     INTENTOS: 4                  // reintentos si el código sorteado ya existe
   };
 
-  /* ---------- Aviso de maestría en partida ---------- */
+  /* ---------- Aviso de trofeo en partida ---------- */
   CFG.BADGE_ANIM_TICKS = 300;   // 5 s: entrada, lucimiento y salida
 
   /* ---------- Ajustes (contrato con ui.js/game.js) ---------- */

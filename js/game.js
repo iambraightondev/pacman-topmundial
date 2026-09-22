@@ -2501,8 +2501,8 @@
       window.AudioSys && AudioSys.playEmote && AudioSys.playEmote();
     },
 
-    /* ---------- Enseñar la maestría (Ctrl+Espacio) ----------
-     * La insignia es propia de cada máquina (sale del récord local), así que
+    /* ---------- Enseñar el trofeo (F1..F4, y Ctrl+Espacio fuera de DESATADO) ----------
+     * El trofeo es propio de cada máquina (sale del récord local), así que
      * por red viaja su id y el otro extremo la busca en la tabla. */
     badgeById: function (id) {
       for (var i = 0; i < CFG.BADGES.length; i++) {
@@ -2531,7 +2531,7 @@
       var n = parseInt(f, 10);
       var B = window.PM.Badges;
       this.emotes[who] = {
-        tag: b ? b.name : 'SIN MAESTRÍA',
+        tag: b ? b.name : 'SIN TROFEO',
         color: b ? b.color : '#888888',
         rango: this.badgeRank(id),
         formato: (B && n >= 2 && n <= CFG.MAX_PLAYERS)
@@ -2612,7 +2612,7 @@
       }
     },
 
-    /* ---------- Maestrías ----------
+    /* ---------- Trofeos (antes «maestrías»; ver js/badges.js) ----------
      * Una ruta por MUNDO y FORMATO: doce en total. El mundo es dónde se juega
      * (el laberinto de 1980, LABERINTOS o DESATADO) y el formato cuántos sois
      * (solo, dúo, trío o escuadra). Cada una lleva su récord y sus insignias:
@@ -2634,7 +2634,7 @@
     checkBadges: function () {
       var B = window.PM.Badges;
       if (!B) return;
-      if (this.isVersus()) return;   // maestrías = récord: aquí no cuentan
+      if (this.isVersus()) return;   // trofeos = récord: aquí no cuentan
       if (this.practica) return;     // ni en una partida de práctica
       var mode = this.badgeMode();
       var fresh = B.claim(this.score, mode);
@@ -5305,7 +5305,7 @@
           if (em.tag) {
             var et = 1 - (em.ticks / (em.total || CFG.EMOTE_TICKS));
             window.PM.Sprites.drawBadgeTag(ctx, ex, ey, em.tag, em.color,
-              et, this.tick, em.rango, em.formato);
+              et, this.tick, em.rango, em.formato, em.dib);
           } else {
             window.PM.Sprites.drawEmote(ctx, ex, ey, em.e, this.colorFor(i),
               this.tick);

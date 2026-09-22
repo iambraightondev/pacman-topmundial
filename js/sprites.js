@@ -741,12 +741,14 @@
    *   name, formato — se aceptan porque la red los manda, pero no se
    *             escriben.
    */
-  Sprites.drawBadgeTag = function (ctx, x, y, name, color, t, tick, rango, formato) {
+  Sprites.drawBadgeTag = function (ctx, x, y, name, color, t, tick, rango, formato, dib) {
     t = (typeof t === 'number') ? Math.max(0, Math.min(1, t)) : 1;
     tick = tick || 0;
     var ri = (typeof rango === 'number') ? Math.max(0, Math.min(5, Math.round(rango))) : 2;
     var P = POMPA[ri];
-    var gemas = Sprites.EMBLEM_GEMA;
+    /* dib: 'emblema' es una MAESTRÍA DE ROL; lo demás, un TROFEO (copa) */
+    var copa = dib !== 'emblema' && !!Sprites.drawTrofeoAt;
+    var gemas = copa ? Sprites.TROFEO_COLOR : Sprites.EMBLEM_GEMA;
     color = (gemas && gemas[ri]) || color || '#888888';
 
     var DURA = (CFG.BADGE_TAG_TICKS || 330) / 60;   // segundos que dura entera
@@ -756,7 +758,8 @@
     var media = [6, 9, 10, 11, 12, 14][ri];   // media anchura del emblema
     // el armado va a su velocidad real, la misma que en el panel MAESTRÍAS
     var arm = t * DURA;
-    var armado = t - (Sprites.EMBLEM_FIN ? Sprites.EMBLEM_FIN[ri] : 1.5) / DURA;
+    var fines = copa ? Sprites.TROFEO_FIN : Sprites.EMBLEM_FIN;
+    var armado = t - (fines ? fines[ri] : 1.5) / DURA;
 
     var salida = (t > CIERRA) ? (t - CIERRA) / (1 - CIERRA) : 0;
     var vis = 1 - salida;
@@ -800,8 +803,8 @@
     }
 
     /* el emblema; sin js/emblemas.js, la medalla de siempre */
-    if (!(Sprites.drawEmblemAt &&
-          Sprites.drawEmblemAt(ctx, ri, mx, my + 2, ALTO, tick / 60, arm))) {
+    var pegar = copa ? Sprites.drawTrofeoAt : Sprites.drawEmblemAt;
+    if (!(pegar && pegar(ctx, ri, mx, my + 2, ALTO, tick / 60, arm))) {
       Sprites.drawBadge(ctx, mx, my, 5, color, false);
     }
 
@@ -925,8 +928,9 @@
 
     // medalla con el mismo latido que en el cartel grande
     var rs = (typeof info.rango === 'number') ? info.rango : -1;
-    if (!(rs >= 0 && Sprites.drawEmblemAt &&
-          Sprites.drawEmblemAt(ctx, rs, x0 + 13, cy + 1, 26, tick / 60, t * 12))) {
+    var pega = (info.dib === 'emblema' || !Sprites.drawTrofeoAt)
+      ? Sprites.drawEmblemAt : Sprites.drawTrofeoAt;
+    if (!(rs >= 0 && pega && pega(ctx, rs, x0 + 13, cy + 1, 26, tick / 60, t * 12))) {
       Sprites.drawBadge(ctx, x0 + 13, cy, 7 * (1 + 0.12 * Math.sin(tick * 0.18)),
         color, false);
     }
@@ -935,7 +939,7 @@
     ctx.textBaseline = 'middle';
     ctx.font = window.PM.Letra.lienzo(6);
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('¡MAESTRÍA DE ' + (info.mode || 'SOLO') + '!', x0 + 25, cy - 5);
+    ctx.fillText(info.titulo || ('¡TROFEO DE ' + (info.mode || 'SOLO') + '!'), x0 + 25, cy - 5);
     ctx.font = window.PM.Letra.lienzo(8);
     ctx.fillStyle = color;
     ctx.fillText(String(info.name || ''), x0 + 25, cy + 4);

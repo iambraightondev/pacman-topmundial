@@ -914,16 +914,16 @@
     }
   });
 
-  test('una maestría ya conseguida no se vuelve a celebrar', function () {
+  test('un trofeo ya conseguido no se vuelve a celebrar', function () {
     var h1 = G.highScore1;
     try {
       G.highScore1 = 59430;             // ya las tiene casi todas
       window.PM.Badges.syncSeen();      // y todas anunciadas
       partida(1);
       G.addScore(3000);
-      eq(G.badgeNotice, null, 'APRENDIZ ya la tenía: ni cartel ni ruido');
-      G.addScore(57000);                // 60000: LEYENDA, que sí es nueva
-      ok(G.badgeNotice && G.badgeNotice.name === 'LEYENDA', 'la nueva sí sale');
+      eq(G.badgeNotice, null, 'BRONCE ya lo tenía: ni cartel ni ruido');
+      G.addScore(57000);                // 60000: DIAMANTE, que sí es nuevo
+      ok(G.badgeNotice && G.badgeNotice.name === 'DIAMANTE', 'el nuevo sí sale');
       eq(G.badgeNotice.mode, 'SOLO');
       G.badgeNotice = null;
       G.addScore(500);
@@ -4428,7 +4428,7 @@
 
   /* El panel enseñaba una lista con un botón VER por fila y un lienzo suelto
    * encima. Ahora la fila entera es el botón y la elegida se ve al lado. */
-  test('MAESTRÍAS: se elige pulsando la fila y empieza por la que tienes',
+  test('TROFEOS: se elige pulsando la fila y empieza por el que tienes',
     function () {
       var UI = window.PM.UI;
       var h1 = G.highScore1, h2 = G.highScore2, h3 = G.highScore3;
@@ -4441,10 +4441,10 @@
         var fila = UI.badgesList.children[0];
         eq(fila.tagName, 'BUTTON', 'la fila entera es el botón');
         eq(fila.querySelectorAll('button').length, 0, 'sin botón VER dentro');
-        eq(UI.badgePick, 'cazador', 'de entrada, tu maestría');
-        eq(UI.badgeStageName.textContent, 'CAZADOR', 'y se ve en grande');
+        eq(UI.badgePick, 'cazador', 'de entrada, tu trofeo');
+        eq(UI.badgeStageName.textContent, 'PLATA', 'y se ve en grande');
         ok(UI.badgeRows.cazador.classList.contains('sel'), 'marcada en la lista');
-        ok(UI.badgeStageState.textContent.indexOf('TU MAESTRÍA') === 0,
+        ok(UI.badgeStageState.textContent.indexOf('TU TROFEO') === 0,
            'dice que es la tuya');
 
         UI.badgeRows.leyenda.click();

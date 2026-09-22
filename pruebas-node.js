@@ -288,7 +288,7 @@ sandbox.decodeURIComponent = decodeURIComponent;
 vm.createContext(sandbox);
 
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
-var orden = ['config', 'letra', 'audio', 'sprites', 'skins', 'insignias', 'emblemas', 'portadas', 'pacman', 'ghost', 'net-config',
+var orden = ['config', 'letra', 'audio', 'sprites', 'skins', 'insignias', 'emblemas', 'trofeos', 'portadas', 'pacman', 'ghost', 'net-config',
   'net-directo', 'net', 'party', 'badges', 'history', 'level', 'friends', 'ranking',
   'temporadas', 'daily', 'mazes', 'achievements', 'stats', 'tienda', 'pase', 'ficha', 'account', 'versus',
   'habilidades', 'jefe', 'supervivencia', 'caceria', 'game', 'replay', 'guardado', 'ui'];
