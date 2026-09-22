@@ -1915,7 +1915,7 @@
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA',
                  pasiva: 'LEVANTAS UN CUERPO DE UNA SOLA PASADA (LOS DEMÁS, CINCO)',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
-                        'ESCUDO AL MÁS CERCANO · MANTÉN 3 S: A TODO EL EQUIPO, TÚ INCLUIDO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
+                        'ESCUDO AL MÁS CERCANO · MANTÉN 2 S: A TODO EL EQUIPO, TÚ INCLUIDO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
                  pasiva: 'EL OJO: VES POR DÓNDE VA A PASAR CADA UNO Y CUÁNDO CAMBIAN DE MODO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
@@ -2005,8 +2005,11 @@
      * corta, y la corta sale al SOLTAR:
      *   Q  HIELO   2 s: una placa de hielo en su casilla que congela a todo
      *              fantasma que la pise (a cada uno, una vez).
-     *   E  ALIADO  3 s: escudo a TODO EL EQUIPO, él incluido y sin alcance. */
-    MANTENER: { hielo: 2 * 60, aliado: 3 * 60 },
+     *   E  ALIADO  2 s: escudo a TODO EL EQUIPO, él incluido y sin alcance. */
+    /* El ESCUDO ALIADO a todo el equipo se mantiene DOS segundos, no tres
+     * (22 sep 2026): tres eran una eternidad parado en medio del laberinto,
+     * y dos lo dejan igualado con el HIELO del mismo rol. */
+    MANTENER: { hielo: 2 * 60, aliado: 2 * 60 },
     PLACA_TICKS: 8 * 60,          // lo que dura la placa de hielo en el suelo
     ALIADO_AREA_TILES: 2,
     VIDA_MAX: 5,                  // la VIDA no sube a nadie de aquí
@@ -2060,10 +2063,25 @@
     SOMBRA_MULT: 1.2,
     SOMBRA_PUNTOS: 500,
     SOMBRA_ESPALDA_PUNTOS: 750,
-    FRENESI_TICKS: 8 * 60,
+    /* FRENESÍ de 8 s a 10 s, y su recarga de 26 s a 32 s (22 sep 2026).
+     * Ocho segundos no daban para encadenar: se acababa justo cuando la
+     * velocidad empezaba a notarse. Dos segundos más de ventana se pagan
+     * con seis más de espera, que si no la W del Asesino estaría lista casi
+     * siempre. */
+    FRENESI_TICKS: 10 * 60,
     FRENESI_PASO: 0.15,
     CARROÑA_TICKS: 6 * 60,
     CARROÑA_JOYA: 3 * 60,
+    /* EL BOTÍN SALE DESPEDIDO (22 sep 2026). La moneda nacía en la casilla
+     * EXACTA donde caía el fantasma y, como el Asesino mata de cerca, él ya
+     * estaba ahí: se recogía en el mismo fotograma en que aparecía y no
+     * llegaba a verse. Ahora salta hasta dos casillas por el pasillo, en la
+     * dirección contraria a quien mató, y nadie la puede coger durante medio
+     * segundo. Así se ve salir y se ve caer, recogerla pasa a ser una
+     * decisión —hay que ir a por ella— y en party el compañero llega. */
+    CARROÑA_SALTO: 2,        // casillas que salta como mucho
+    CARROÑA_VUELO: 15,       // lo que tarda en caer (un cuarto de segundo)
+    CARROÑA_GRACIA: 30,      // medio segundo en que no la coge nadie
     MARCA_TICKS: 8 * 60,
     /* El GANCHO INVERSO del Asesino llega a NUEVE casillas (22 sep 2026):
      * con ocho se quedaba a un pelo del fantasma una y otra vez y la E se
@@ -2288,8 +2306,8 @@
          h('bomba', 'Q', 'BOMBA', 24, 'Coloca y detona una bomba.')],
         [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 5 s.'),
          h('sombra', 'W', 'SOMBRA', 26, '4 s invisible y veloz; bajas de 500/750.'),
-         h('frenesi', 'W', 'FRENESÍ', 26, '8 s; cada baja suma velocidad sin límite.'),
-         h('carrona', 'W', 'CARROÑA', 24, 'Deja monedas al matar; las coge cualquiera.')],
+         h('frenesi', 'W', 'FRENESÍ', 32, '10 s; cada baja suma velocidad sin límite.'),
+         h('carrona', 'W', 'CARROÑA', 24, 'Al matar saltan monedas; las coge cualquiera.')],
         [h('flash', 'E', 'FLASH', 32, 'Salta tres casillas atravesando muros.'),
          h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar doble.'),
          h('gancho_inverso', 'E', 'GANCHO INVERSO', 32, 'Lanza un gancho; si atrapa, te arrastra.')],

@@ -1,8 +1,30 @@
 # Plan · Segunda ronda de ajustes (tras jugar el catálogo terminado)
 
-**Nada de esto está construido.** Es la lista de Braighton del 22 de
-septiembre de 2026, después de jugar el catálogo ya cerrado, contrastada una
-por una con lo que hace el juego hoy.
+**TODO ESTO YA ESTÁ CONSTRUIDO** (madrugada del 22 de septiembre de 2026).
+El documento se queda como estaba —es el razonamiento con el que se
+decidió—, con esta nota al principio de lo que se resolvió:
+
+- **Los puntos 1 y 2 eran el MISMO fallo.** El punto 1 se apuntó al revés:
+  no era el Asesino el que quedaba «en modo fantasma», era **el fantasma**
+  el que, al salir de casa con el Asesino esperando en la puerta, moría de
+  un toque sin estar azul. La causa es `Hab.puedeComer`, que miraba
+  `G.frightTicks` —el reloj de la mesa— en vez del azul del propio fantasma.
+  Al comerse uno se le quita ese azul, pero el reloj seguía corriendo, así
+  que al volver de casa era comida gratis. Arreglado y con prueba.
+- **De propina, el GANCHO INVERSO:** buscando lo anterior salió que la
+  cuerda no moría con su dueño. En solitario la barría la reaparición; en
+  línea, la foto del anfitrión se la devolvía al invitado ya resucitado y lo
+  arrastraba solo. Cortada también.
+- **Punto 3 (botín):** **opción A**.
+- **Los números:** hechos.
+- **Punto 4 (marca):** entran las **tres** (shuriken, bomba y bola guiada).
+  EJECUCIÓN, TERREMOTO y DOMINIO se quedan fuera.
+
+---
+
+Lo de abajo es la lista de Braighton del 22 de septiembre de 2026, después
+de jugar el catálogo ya cerrado, contrastada una por una con lo que hacía el
+juego entonces.
 
 Cada punto dice **qué pasa ahora** (comprobado en el código, no de memoria),
 **qué se pide** y **qué implica**. Los dos primeros son fallos; el resto son

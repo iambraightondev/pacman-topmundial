@@ -7,31 +7,38 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **20 de septiembre de 2026**.
+Última puesta al día: **22 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**22 sep (noche) — SEIS COSAS NUEVAS, APUNTADAS Y SIN CONSTRUIR.**
+**22 sep (madrugada) — LAS SEIS, CONSTRUIDAS. LOS DOS FALLOS, DIAGNOSTICADOS.**
 
-Braighton volvió a jugarlo y salieron seis: dos fallos (el GANCHO INVERSO
-deja al Asesino «en modo fantasma» al reaparecer, y algunos fantasmas mueren
-solos al salir de casa sin estar azules), el botín de CARROÑA que no se
-llega a ver, FRENESÍ a 10 s con 32 s de recarga, el ESCUDO ALIADO a todo el
-equipo manteniendo 2 s en vez de 3, y el SHURIKEN, que debe cobrar doble
-sobre un fantasma marcado.
+La lista de [`PLAN-AJUSTES-2.md`](PLAN-AJUSTES-2.md) está entera en el juego.
 
-Todo desglosado y contrastado con el código en
-**[`PLAN-AJUSTES-2.md`](PLAN-AJUSTES-2.md)**.
+- **Los puntos 1 y 2 eran EL MISMO fallo**, y lo de «modo fantasma» estaba
+  mal apuntado: no era el Asesino, era el FANTASMA. Esperando en su puerta,
+  el que salía de casa moría al tocarlo aunque no estuviera azul.
+  **La causa: el juego miraba el reloj del energizante de la mesa en vez del
+  azul del propio fantasma.** Al comerse uno se le quita ese azul, pero el
+  reloj seguía corriendo, así que al volver de casa era comida gratis una y
+  otra vez. **Las puntuaciones y rachas de estos días están infladas por
+  esto**; si alguna se quiere limpiar, hay que decirlo.
+- **Y de paso, el GANCHO INVERSO ya no sobrevive a su dueño.** No era el
+  fallo reportado, pero se encontró buscándolo: al morir se cortaba el
+  estado del jugador y no el proyectil, y en línea la foto del anfitrión se
+  lo devolvía al invitado ya reaparecido, arrastrándolo solo por el mapa.
+- **CARROÑA**: se tomó la **opción A** (sale despedida hasta dos casillas,
+  lejos del Asesino, con medio segundo en que no la coge nadie).
+- **La MARCA** entra en los **tres** premios fijos (shuriken 400, bomba 300,
+  bola guiada 300). EJECUCIÓN fuera: 5.000 ya son el premio gordo.
+- **FRENESÍ** 10 s / 32 s y **ESCUDO ALIADO** mantenido 2 s.
 
-**Los dos fallos quedaron SIN DIAGNOSTICAR** — se paró la investigación a
-medias. Es lo primero de mañana, y el segundo corre prisa porque regala
-bajas.
+**Lo que toca ahora es jugarlo**, sobre todo el salto de la moneda (¿dos
+casillas se quedan cortas o largas?) y el FRENESÍ a 10 s.
 
-**Pendiente de él**: elegir opción para el botín de CARROÑA, decir si la
-MARCA debe valer también para BOMBA y BOLA GUIADA (están en el mismo caso
-que el shuriken) y el punto 19, que sigue vacío.
+**Pendiente de él**: el punto 19, que sigue vacío.
 
 **22 sep (tarde) — EL CATÁLOGO, CERRADO. Y EL REY FANTASMA, TAMBIÉN.**
 

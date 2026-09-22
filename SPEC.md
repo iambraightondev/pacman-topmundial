@@ -2457,6 +2457,14 @@ Rules that are deliberate, not incidental:
 - **E never lands in the ghost house.** `CFG.isOpen` treats the house
   interior as walkable (it is, for ghosts), so `habilidades.js` guards
   `CFG.HOUSE` explicitly: Pac-Man has no door and would be stuck forever.
+- **Blue belongs to the ghost, not to the clock** (22 Sep). `Hab.puedeComer`
+  used to fall back on `G.frightTicks`, the table's energizer clock, so any
+  ghost was edible while it ran. But a ghost that has already been eaten
+  loses its blue (`Ghost.eaten`) and comes back out of the house grey with
+  the same energizer still running: it died on the spot the moment it left,
+  not blue, and handed over the kill and its points. It now reads that
+  ghost's own `frightened`, which is exactly what the screen draws. Only in
+  DESATADO — the whole branch hangs off `Game.hab`.
 - **Outside fright, every bite is worth the same** (`GHOST_CHAIN[0]`).
   The 200-400-800-1600 ladder belongs to the energizer; chaining it from a
   keypress would turn the run into free points. With ghosts already blue
@@ -2708,7 +2716,9 @@ the key index. `LIST` is the ASESINO (the original kit).
   the same tick at which playback re-injects it. Q held 120 ticks: an ice plate
   (`placas[idx]`, one per player, `PLACA_TICKS` = 8 s) on the support's tile;
   every ghost stepping on it freezes `HIELO_TICKS`, once per ghost per plate
-  (bitmask `z`). E held 180 ticks: shield (`ALIADO_TICKS`) to the **whole
+  (bitmask `z`). E held 120 ticks (2 s since 22 Sep, down from 3 — three
+  seconds standing still in the middle of the maze was a lifetime, and two
+  lines it up with the same role's ice plate): shield (`ALIADO_TICKS`) to the **whole
   team, the support included, at any distance** (20 Sep; it used to reach two
   tiles and skip himself — the one who hands out shields stayed bare, and the
   range asked the team to bunch up exactly when spreading out is what saves

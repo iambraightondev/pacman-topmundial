@@ -10073,8 +10073,8 @@
     ok(HB.estado(1).escudo > 0, 'al más cercano, aunque esté lejos');
   });
 
-  test('SOPORTE · E mantenida 3 s: escudo a todo el equipo, sin alcance', function () {
-    eq(HC.MANTENER.aliado, 3 * 60, 'la E se mantiene 3 s');
+  test('SOPORTE · E mantenida 2 s: escudo a todo el equipo, sin alcance', function () {
+    eq(HC.MANTENER.aliado, 2 * 60, 'la E se mantiene 2 s');
 
     partidaRol(['soporte', 'asesino', 'tanque', 'mago'], 6, 5, DR.RIGHT);
     HB.apretar(G, 0, 2, false);
@@ -11118,7 +11118,7 @@
     var base = G.score; H.matarCatalogo(G, g, 0, CFG.HAB.BOMBA_PUNTOS, 'bomba', 1, true);
     eq(G.score - base, 750, 'una baja cualquiera desde atrás da 750');
 
-    H.frenesi(G, 0); eq(H.st[0].frenesi, 8 * 60, 'Frenesí dura 8 segundos');
+    H.frenesi(G, 0); eq(H.st[0].frenesi, 10 * 60, 'Frenesí dura 10 segundos');
     for (var n = 0; n < 5; n++) H.alMatar(G, 0, null, p.x, p.y);
     ok(H.st[0].frenesiMult > 1.6, 'Frenesí no tiene tope');
 
@@ -11652,12 +11652,85 @@
     g.mode = 'normal'; g.frightened = true; g.x = p.x + CFG.TILE; g.y = p.y;
     G.eatGhost(g, 0, 'mordisco');
     eq(H.joyas.length, 1, 'la baja deja una moneda');
+    /* SALE DESPEDIDA: cae lejos del Asesino, no encima de él */
+    ok(H.distancia(H.joyas[0].x, H.joyas[0].y, p.x, p.y) > CFG.TILE,
+      'la moneda no se queda en los pies de quien mató');
+    ok(H.joyas[0].espera > 0, 'y sale con su medio segundo de gracia');
+    /* mientras vuela no la coge nadie, ni el propio Asesino encima */
+    p.x = H.joyas[0].x; p.y = H.joyas[0].y;
+    H.pasoRoles(G, true);
+    eq(H.joyas.length, 1, 'por los aires no se puede recoger');
+    p.x = 0; p.y = 0;
+    for (var kb = 0; kb < CFG.HAB.CARROÑA_GRACIA; kb++) H.pasoRoles(G, true);
     /* el compañero pasa por encima: antes se quedaba ahí tirada */
     compa.x = H.joyas[0].x; compa.y = H.joyas[0].y;
     var base = G.score;
     H.pasoRoles(G, true);
     eq(H.joyas.length, 0, 'la levanta el que pasa, no solo su dueño');
     eq(G.score - base, 300, 'y vale lo mismo');
+  });
+
+  test('AJUSTES: el gancho inverso no sobrevive a la muerte de su dueño', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,sombra,gancho_inverso,caceria']);
+    G.roles = ['asesino'];
+    ponPac(0, 2, 1, DR.DOWN);
+    for (var n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    ok(H.ganchoInverso(G, 0), 'sale el gancho');
+    eq(H.proyectilesCat.length, 1, 'hay cuerda en la mesa');
+    G.startPacDeath(0);
+    eq(H.proyectilesCat.length, 0, 'morir corta la cuerda, no solo el estado');
+    eq(H.st[0].ganchoInv, 0, 'y la E vuelve a estar libre');
+  });
+
+  test('AJUSTES: un fantasma ya comido no se muere solo al salir de casa', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,grito']); G.roles = ['asesino'];
+    var p = ponPac(0, 13, 20, DR.RIGHT), g = G.ghosts[1];
+    /* el energizante sigue corriendo, pero a ESTE ya se lo comieron: vuelve
+     * de casa gris. Antes se miraba el reloj de la mesa y no su azul, así
+     * que se moría solo nada más salir y regalaba la baja. */
+    G.frightTicks = 300;
+    g.mode = 'normal'; g.frightened = false; g.x = p.x; g.y = p.y;
+    p.safeTicks = 999;
+    eq(H.puedeComer(G, g.id, 0), false, 'sin azul propio no se puede comer');
+    var base = G.score;
+    G.stepPlaying();
+    eq(G.score - base, 0, 'pasarle por encima no lo mata');
+    ok(g.mode !== 'eyes', 'y sigue en la calle');
+    /* y el que SÍ está azul se come igual que siempre */
+    g.frightened = true; g.x = p.x; g.y = p.y;
+    eq(H.puedeComer(G, g.id, 0), true, 'el azul de verdad sí');
+  });
+
+  test('AJUSTES: la MARCA cobra doble también en el shuriken y la bomba', function () {
+    var H = window.PM.Hab, HC = CFG.HAB;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['shuriken,turbo,marca,ejecucion']); G.roles = ['asesino'];
+    var p = ponPac(0, 13, 20, DR.RIGHT);
+    function bajaMarcada(pts, como) {
+      var g = G.ghosts[0];
+      g.mode = 'normal'; g.frightened = false; g.x = p.x + CFG.TILE * 2; g.y = p.y;
+      H.marcaGhost[g.id] = 0; H.st[0].marca = 5 * 60;
+      var base = G.score;
+      H.matarCatalogo(G, g, 0, pts, como, 1, true);
+      g.mode = 'normal';
+      return G.score - base;
+    }
+    eq(bajaMarcada(HC.SHURIKEN_PUNTOS, 'shuriken'), 400, 'el shuriken sobre un marcado paga 400');
+    eq(bajaMarcada(HC.BOMBA_PUNTOS, 'bomba'), 300, 'la bomba, 300');
+    eq(bajaMarcada(HC.BOLA_GUIADA_PUNTOS, 'bola_guiada'), 300, 'la bola guiada, 300');
+    /* y los premios gordos siguen siendo exactos: la marca no los toca */
+    eq(bajaMarcada(HC.EJECUCION_PUNTOS, 'ejecucion'), 5000, 'la ejecución no se duplica');
+    /* sin marca, el shuriken vuelve a sus 200 */
+    var g2 = G.ghosts[0];
+    g2.mode = 'normal'; g2.x = p.x + CFG.TILE * 2; g2.y = p.y;
+    H.marcaGhost[g2.id] = -1; H.st[0].marca = 0;
+    var b2 = G.score;
+    H.matarCatalogo(G, g2, 0, HC.SHURIKEN_PUNTOS, 'shuriken', 1, true);
+    eq(G.score - b2, 200, 'sin marcar, 200 exactos');
   });
 
   test('AJUSTES: el Misil atropella al que se le cruza y no lo cobra dos veces', function () {

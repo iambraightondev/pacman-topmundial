@@ -2,6 +2,44 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 (noche) · Las bajas regaladas y la segunda ronda de ajustes
+
+**SE ACABARON LAS BAJAS REGALADAS.** Un fantasma al que ya se habían comido
+volvía de casa **gris, y se moría solo nada más salir** si el energizante
+seguía corriendo: puntos y fantasmas de balde, una y otra vez, mientras
+durase. El juego miraba el reloj de la mesa en vez del azul del propio
+fantasma —que es lo que se ve dibujado—, y al comérselo ese azul ya se le
+había quitado. Solo pasaba en DESATADO. **Las puntuaciones y las rachas de
+estos días están infladas por esto.**
+
+**El GANCHO INVERSO ya no sobrevive a su dueño.** Al morir se le quitaba el
+estado al jugador, pero la cuerda seguía puesta en la mesa. En solitario la
+barría la reaparición; en una partida en línea no, porque la foto del
+anfitrión se la devolvía al invitado que ya había vuelto a la vida, y el
+Asesino salía andando solo hacia el fantasma, muros incluidos. Ahora los dos
+ganchos —el del Soporte también— se cortan con la muerte de quien los tiró.
+
+**El botín de CARROÑA sale despedido.** La moneda nacía en la casilla exacta
+donde caía el fantasma y, como el Asesino mata de cerca, se recogía en el
+mismo fotograma en que aparecía: no es que no se viera bien, es que no
+llegaba a verse. Ahora salta hasta dos casillas por el pasillo, lejos de
+quien mató, y **nadie la puede coger durante medio segundo**. Se ve salir y
+se ve caer, recogerla pasa a ser una decisión, y en party el compañero llega
+a tiempo de verdad.
+
+**La MARCA cobra doble también con el SHURIKEN y la BOMBA.** Los premios
+fijos se saltan a propósito todos los multiplicadores —la racha, el bono del
+rol—, y por ahí se colaba también la marca: marcar y disparar el shuriken
+daba exactamente lo mismo que disparar sin marcar. Ahora el shuriken sobre un
+marcado paga 400 y la bomba 300 (y la bola guiada, por coherencia). La
+EJECUCIÓN no entra: 5.000 ya son el premio gordo.
+
+**FRENESÍ dura 10 s y recarga 32 s** (antes 8 y 26): ocho segundos se
+acababan justo cuando la velocidad empezaba a notarse.
+
+**El ESCUDO ALIADO a todo el equipo se mantiene 2 s, no 3**, igualado con el
+HIELO del mismo rol.
+
 ## 2026-09-22 (tarde) · El rey fantasma, el Mago nuevo y nueve retoques
 
 **EL CATÁLOGO YA LE HACE DAÑO AL REY FANTASMA.** Era el agujero gordo: las

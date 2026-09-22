@@ -600,7 +600,16 @@
        * modo que el propio Asesino moría al atravesar al marcado. */
       if (caz === (who | 0)) return true;
       if (this.azulCatalogo && this.azulCatalogo[gid]) return true;
-      return !!(G && G.frightTicks > 0);
+      /* EL AZUL DEL ENERGIZANTE ES DEL FANTASMA, NO DEL RELOJ (22 sep 2026).
+       * Aquí se miraba G.frightTicks, que es el reloj de la MESA: valía
+       * cualquier fantasma mientras quedara energizante. Pero al que ya se
+       * comieron se le quita el azul al comerlo (Ghost.eaten) y vuelve de
+       * casa gris con el energizante todavía corriendo. Mirando el reloj,
+       * ese fantasma se moría solo nada más salir —sin estar azul— y
+       * regalaba la baja con sus puntos. Se mira su azul, que es lo que se
+       * ve. */
+      var gh = (G && G.ghosts) ? G.ghosts[gid | 0] : null;
+      return !!(gh && gh.frightened);
     },
 
     /* Multiplicador de velocidad del fantasma `gid` (1 si no hay embestida).
@@ -1727,13 +1736,24 @@
       return (rol === 'asesino') ? Math.round(base * H.BONO_ASESINO) : base;
     },
 
+    /* Premios fijos que SÍ cobran la MARCA (22 sep 2026). Un premio
+     * «exacto» se salta a propósito todos los multiplicadores —la racha y
+     * el bono del rol— porque son bajas a distancia que no deben encadenar.
+     * La marca no es eso: es puntería, se gasta una E en ponerla y dura ocho
+     * segundos. Marcar y disparar el SHURIKEN daba lo mismo que disparar sin
+     * marcar, y con la BOMBA pasaba igual. Estas tres sí la cobran.
+     * Fuera quedan EJECUCIÓN (5.000 ya son el premio gordo), TERREMOTO y
+     * DOMINIO, que matan a varios de golpe y no apuntan a nadie. */
+    MARCA_EN_FIJOS: { shuriken: 1, bomba: 1, bola_guiada: 1 },
+
     /* Bonos que dependen de QUÉ fantasma se ha comido y de cómo. Sombra no
      * multiplica la cadena: garantiza 500, o 750 si la baja llega desde la
      * espalda. Una cadena que ya valga más conserva su premio. */
     puntosFantasma: function (G, who, g, base, como, exacto) {
       var s = this.estado(who), mult = 1, pts;
-      if (!exacto && g && this.marcaGhost[g.id] === who && s && s.marca > 0) mult *= 2;
-      pts = exacto ? Math.round(base || 0) : this.puntosDe(G, who, Math.round((base || 0) * mult));
+      var marcado = !!(g && this.marcaGhost[g.id] === who && s && s.marca > 0);
+      if (marcado && (!exacto || this.MARCA_EN_FIJOS[como])) mult *= 2;
+      pts = exacto ? Math.round((base || 0) * mult) : this.puntosDe(G, who, Math.round((base || 0) * mult));
       if (s && s.sombra > 0 && g) {
         var detras = this.deEspaldas(G.pacs[who], g);
         pts = Math.max(pts, detras ? H.SOMBRA_ESPALDA_PUNTOS : H.SOMBRA_PUNTOS);
@@ -1755,12 +1775,46 @@
         if (G.addPopup) G.addPopup(x, y - 7, '×' + s.frenesiMult.toFixed(2), 35);
       }
       if (g && this.caceriaQuien[g.id] >= 0) this.caceriaQuien[g.id] = -1;
-      if (s.carrona > 0) this.joyas.push({ x: x, y: y, t: H.CARROÑA_JOYA, w: who });
+      if (s.carrona > 0) this.soltarBotin(G, who, x, y);
       if (g && this.marcaGhost[g.id] >= 0) {
         var duenoMarca = this.marcaGhost[g.id];
         this.marcaGhost[g.id] = -1;
         if (this.st[duenoMarca]) this.st[duenoMarca].marca = 0;
       }
+    },
+
+    /* CARROÑA: la moneda sale despedida por el pasillo, lejos de quien mató,
+     * y cae a dos casillas (o a una, o donde pueda) con medio segundo en que
+     * no la puede coger nadie. Ver CFG.HAB.CARROÑA_SALTO. */
+    soltarBotin: function (G, who, x, y) {
+      var c0 = CFG.wrapCol(Math.floor(x / T)), r0 = Math.floor(y / T);
+      var dirs = this.dirsBotin(G, who, x, y), cF = c0, rF = r0;
+      for (var d = 0; d < dirs.length; d++) {
+        var v = CFG.DIR_V[dirs[d]], c = c0, r = r0, n = 0;
+        for (; n < H.CARROÑA_SALTO; n++) {
+          var nc = CFG.wrapCol(c + v.x), nr = r + v.y;
+          if (!aterrizable(nc, nr)) break;
+          c = nc; r = nr;
+        }
+        if (n > 0) { cF = c; rF = r; break; }
+      }
+      this.joyas.push({ x: cF * T + T / 2, y: rF * T + T / 2, ox: x, oy: y,
+        vuelo: H.CARROÑA_VUELO, espera: H.CARROÑA_GRACIA,
+        t: H.CARROÑA_JOYA, w: who });
+    },
+
+    /* Las cuatro direcciones ordenadas de más lejos a más cerca de quien
+     * mató: la moneda prueba primero la que lo aleja de él. */
+    dirsBotin: function (G, who, x, y) {
+      var D = CFG.DIR, p = G && G.pacs ? G.pacs[who] : null;
+      if (!p) return [D.RIGHT, D.LEFT, D.UP, D.DOWN];
+      var ancho = CFG.COLS * T, dx = x - p.x, dy = y - p.y;
+      if (dx > ancho / 2) dx -= ancho; else if (dx < -ancho / 2) dx += ancho;
+      var lejosX = (dx >= 0) ? D.RIGHT : D.LEFT;
+      var lejosY = (dy >= 0) ? D.DOWN : D.UP;
+      return (Math.abs(dx) >= Math.abs(dy))
+        ? [lejosX, lejosY, CFG.OPP[lejosY], CFG.OPP[lejosX]]
+        : [lejosY, lejosX, CFG.OPP[lejosX], CFG.OPP[lejosY]];
     },
 
     /* CADENA duplica en el marcador común lo que puntúe cualquiera de sus
@@ -4233,6 +4287,10 @@
       }
       for (i = this.joyas.length - 1; i >= 0; i--) {
         var joya = this.joyas[i]; if (--joya.t <= 0) { this.joyas.splice(i, 1); continue; }
+        if (joya.vuelo > 0) joya.vuelo--;
+        /* medio segundo por los aires: se ve salir y se ve caer antes de que
+         * nadie la pueda recoger (ver soltarBotin) */
+        if (joya.espera > 0) { joya.espera--; continue; }
         /* EL BOTÍN LO COGE CUALQUIERA (22 sep). Solo lo recogía el Asesino
          * que lo había dejado, así que en party se quedaba ahí tirado
          * mientras un compañero le pasaba por encima. Ahora lo levanta el
@@ -4302,6 +4360,20 @@
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
       s.sombra = 0; s.sombraGolpe = false; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
+      /* EL GANCHO NO SOBREVIVE A SU DUEÑO (22 sep 2026). Los dos ganchos —el
+       * del Soporte y el GANCHO INVERSO del Asesino— son una cuerda atada al
+       * jugador: mientras existen, mueven a alguien. Al morir se le quitaba el
+       * estado pero el proyectil seguía puesto en la mesa. En solitario lo
+       * barría el respawn; en línea no: la foto del anfitrión se lo devolvía
+       * al invitado que ya había reaparecido y el Asesino salía andando solo
+       * hacia el fantasma, muros incluidos. La cuerda se corta aquí. */
+      for (var pj = this.proyectilesCat.length - 1; pj >= 0; pj--) {
+        var bj = this.proyectilesCat[pj];
+        if (bj && bj.w === (idx | 0) &&
+            (bj.tipo === 'gancho' || bj.tipo === 'gancho_inverso')) {
+          this.proyectilesCat.splice(pj, 1);
+        }
+      }
       s.ganchoInv = 0; s.ganchoOut = 0; s.shuriken = null; s.misil = null; s.caceria = 0;
       s.estela = 0; s.estelaBuff = 0; s.estelaRastro = []; s.cadena = 0;
       if (s.puente && G) this.cerrarPuente(G, s.puente);
@@ -4928,8 +5000,17 @@
         var jo = this.joyas[i];
         var jcara = Math.abs(Math.cos((tk + i * 11) / 14));  // 1 de frente, 0 de canto
         var jrx = 3.2 * Math.max(0.12, jcara), jry = 3.2;
+        /* EL SALTO: mientras vuela va del sitio donde cayó el fantasma a su
+         * casilla, con una parábola para que se lea como algo que sale
+         * despedido y no como algo que se desliza. */
+        var jx = jo.x, jy = jo.y;
+        if (jo.vuelo > 0 && jo.ox != null) {
+          var jk = 1 - jo.vuelo / H.CARROÑA_VUELO;
+          jx = jo.ox + (jo.x - jo.ox) * jk;
+          jy = jo.oy + (jo.y - jo.oy) * jk - Math.sin(jk * Math.PI) * 5;
+        }
         ctx.save();
-        ctx.translate(jo.x, jo.y + Y);
+        ctx.translate(jx, jy + Y);
         ctx.fillStyle = '#a06a10';
         ctx.beginPath(); ctx.ellipse(0, 0.8, jrx, jry, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#ffe66d';
