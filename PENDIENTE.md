@@ -13,6 +13,26 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**22 sep (noche) — SEIS COSAS NUEVAS, APUNTADAS Y SIN CONSTRUIR.**
+
+Braighton volvió a jugarlo y salieron seis: dos fallos (el GANCHO INVERSO
+deja al Asesino «en modo fantasma» al reaparecer, y algunos fantasmas mueren
+solos al salir de casa sin estar azules), el botín de CARROÑA que no se
+llega a ver, FRENESÍ a 10 s con 32 s de recarga, el ESCUDO ALIADO a todo el
+equipo manteniendo 2 s en vez de 3, y el SHURIKEN, que debe cobrar doble
+sobre un fantasma marcado.
+
+Todo desglosado y contrastado con el código en
+**[`PLAN-AJUSTES-2.md`](PLAN-AJUSTES-2.md)**.
+
+**Los dos fallos quedaron SIN DIAGNOSTICAR** — se paró la investigación a
+medias. Es lo primero de mañana, y el segundo corre prisa porque regala
+bajas.
+
+**Pendiente de él**: elegir opción para el botín de CARROÑA, decir si la
+MARCA debe valer también para BOMBA y BOLA GUIADA (están en el mismo caso
+que el shuriken) y el punto 19, que sigue vacío.
+
 **22 sep (tarde) — EL CATÁLOGO, CERRADO. Y EL REY FANTASMA, TAMBIÉN.**
 
 Ya no queda nada abierto de las dos listas que salieron al jugarlo. Lo
