@@ -11,12 +11,14 @@ decidir antes*.
 
 ---
 
-## Lo que son errores, no gustos
+## Lo que son errores, no gustos  ·  HECHO (21 sep, noche)
 
 Van primero porque son cosas rotas: se arreglan aunque el resto del catálogo
-siga en discusión.
+siga en discusión. **Los cinco están construidos y probados** —cada uno con
+su prueba de Node y la de navegador—; lo que queda por hacer empieza en *Los
+números*.
 
-### 1 · FORTALEZA no se apaga nunca *(punto 4 de la lista)*
+### 1 · FORTALEZA no se apaga nunca *(punto 4)* — HECHO
 
 **Hoy:** la habilidad enciende su reloj de 6 s, pero ese reloj **no baja
 nunca**. El Tanque y todo el que esté a cinco casillas quedan inmortales
@@ -30,7 +32,7 @@ por fotograma.
 el aura al llegar a cero. Un arreglo pequeño. Conviene repasar de paso si
 algún otro poder del catálogo tiene el mismo olvido.
 
-### 2 · Un fantasma aturdido sigue matando *(puntos 1 y 10)*
+### 2 · Un fantasma aturdido sigue matando *(puntos 1 y 10)* — HECHO
 
 **Hoy:** aturdir a un fantasma solo le pone la velocidad a cero. Se queda
 clavado, pero **sigue siendo mortal**: el que pase por encima muere igual.
@@ -48,7 +50,7 @@ mata tiene que distinguirse de uno quieto que sí.
 **Ojo:** esto cambia el valor de tres habilidades a la vez. Un aturdimiento
 deja de ser «lo paro» y pasa a ser «lo apago»: es bastante más fuerte.
 
-### 3 · PUENTE es intangibilidad, y encima para todos *(punto 16)*
+### 3 · PUENTE es intangibilidad, y encima para todos *(punto 16)* — HECHO
 
 **Hoy:** mientras dura, **cualquier** Pac-Man atraviesa **cualquier** pared
 del laberinto. Dos fallos en uno: no es un puente, es volverse fantasma; y
@@ -57,14 +59,18 @@ todo el mundo, esté donde esté.
 
 **Se pide:** que abra un hueco en un muro, nada más.
 
-**Qué implica:** rehacerlo como lo que son el MURO y el PORTAL: una casilla
-concreta, elegida al pulsar (la pared que el Soporte tiene delante), abierta
-durante unos segundos, cruzable por el equipo y no por los fantasmas. Deja
-de ser un estado del jugador y pasa a ser una zona del mapa. Hay que
-repasar que un Pac-Man no se quede plantado dentro del muro cuando el hueco
-se cierra.
+**Cómo quedó:** una zona del mapa, no un estado del jugador. Al pulsar
+perfora el muro que el Soporte tiene delante y abre el paso hasta el pasillo
+del otro lado, hasta cuatro casillas de grosor —lo que miden los bloques del
+laberinto—; si delante hay pasillo, si el muro es más grueso o si al otro
+lado está la casa, no sale y no se gasta. Lo cruza el equipo y no los
+fantasmas, y al cerrarse el que se quedara dentro sale por la boca más
+cercana.
 
-### 4 · GANCHO no engancha *(punto 15)*
+*(Una sola casilla no servía: casi todos los muros del laberinto son de dos
+o tres, así que un hueco de una no llevaba a ninguna parte.)*
+
+### 4 · GANCHO no engancha *(punto 15)* — HECHO
 
 **Hoy:** no hay gancho. Se pinta una línea, y al fantasma que hubiera en
 esa línea se le pone azul cinco segundos. No sale nada, no viaja nada y no
@@ -78,7 +84,7 @@ y vuelta, pero al revés: allí el gancho arrastra al jugador hacia el
 fantasma, y aquí tiene que traer al fantasma hacia el Soporte, dejándolo
 azul al llegar. Si falla, vuelve y se gasta igual (eso ya está decidido).
 
-### 5 · GRAVEDAD no se nota *(punto 6)*
+### 5 · GRAVEDAD no se nota *(punto 6)* — HECHO
 
 **Hoy:** sí hace algo, pero es invisible y muy fácil de fallar. A los
 fantasmas que estén a tres casillas los **teletransporta** de golpe hacia
@@ -257,8 +263,10 @@ Quedó vacío en la lista. Cuando me lo diga, lo sumo aquí.
 
 ## Por dónde empezaría
 
-1. **Lo roto** (FORTALEZA, PUENTE, GANCHO, aturdimiento). Son errores y
-   algunos falsean lo que se ve al probar el resto.
+1. ~~**Lo roto** (FORTALEZA, PUENTE, GANCHO, aturdimiento, GRAVEDAD)~~ —
+   **hecho el 21 de septiembre por la noche.** Con el aturdimiento apagado,
+   EMPUJÓN, GRITO DE GUERRA, CHISPA y GRAVEDAD valen más que cuando se
+   escribió esta lista: conviene volver a jugarlas antes de tocar sus números.
 2. **Los números** (CHISPA, MURO, TELARAÑA, GRITO DE GUERRA) y el cambio de
    ranura del Tanque, que de paso tapa el agujero de su E.
 3. **Los que cambian el juego** (EMPUJÓN atrás, ESTELA fija, BOLA GUIADA por

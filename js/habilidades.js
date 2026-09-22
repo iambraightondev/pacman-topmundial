@@ -134,16 +134,17 @@
       sombraGolpe: false,   // compatibilidad con fotos antiguas; ya no se usa
       frenesi: 0,
       frenesiMult: 1,
-      carroña: 0,
+      carrona: 0,
       marca: 0,
       ganchoInv: 0,
+      ganchoOut: 0,         // GANCHO del Soporte: garfio en el aire
       shuriken: null,       // { id, usados, resueltos, aciertos }
       misil: null,          // proyectil en cadena del Asesino
       caceria: 0,
       estela: 0,
       estelaBuff: 0,
       estelaRastro: [],
-      puente: 0,
+      puente: null,         // { c, r, t }: el hueco abierto en una pared
       cadena: 0,
       cadenaCon: -1,
       faro: null,
@@ -289,6 +290,8 @@
       this.marcaGhost = [-1, -1, -1, -1];
       this.joyas = [];
       this.proyectilesCat = [];
+      /* GRAVEDAD: los arrastres en curso (el tirón que se ve venir) */
+      this.tirones = [];
       this.rafagaId = 0;
       this.terremotoTicks = 0;
       this.eclipseTicks = 0;
@@ -336,7 +339,7 @@
           ciego: this.ciego, azulCatalogo: this.azulCatalogo,
           azulCatTicks: this.azulCatTicks, terremotoTicks: this.terremotoTicks, eclipseTicks: this.eclipseTicks,
           caceriaQuien: this.caceriaQuien, marcaGhost: this.marcaGhost,
-          joyas: this.joyas, proyectilesCat: this.proyectilesCat,
+          joyas: this.joyas, proyectilesCat: this.proyectilesCat, tirones: this.tirones,
           rafagaId: this.rafagaId, balas: this.balas, portales: this.portales,
           runas: this.runas, placas: this.placas
         })) };
@@ -354,6 +357,10 @@
           o[k] = (Object.prototype.toString.call(s[k]) === '[object Array]')
             ? s[k].slice() : s[k];
         }
+        /* Repeticiones de antes del 21 sep: ahí PUENTE era un reloj del
+         * jugador y no el paso del mapa. Se descarta en vez de dejar un
+         * número donde ahora va una zona. */
+        if (typeof o.puente === 'number') o.puente = null;
         this.st.push(o);
       }
       this.roles = f.roles ? f.roles.slice() : [];
@@ -378,6 +385,7 @@
         this.marcaGhost = m.marcaGhost || this.marcaGhost;
         this.joyas = m.joyas || [];
         this.proyectilesCat = m.proyectilesCat || [];
+        this.tirones = m.tirones || [];
         this.rafagaId = m.rafagaId | 0;
         this.balas = m.balas || [];
         this.portales = m.portales || this.portales;
@@ -1341,9 +1349,29 @@
       return m;
     },
 
-    puenteActivo: function (idx) {
+    /* EL PUENTE ES UN HUECO EN UNA PARED, NO VOLVERSE FANTASMA (21 sep).
+     *
+     * Antes encendía un estado del jugador y `canGo` dejaba atravesar
+     * CUALQUIER pared del laberinto; encima no miraba de quién era el poder,
+     * así que se lo comía todo el equipo estuviera donde estuviera. Ahora es
+     * una casilla concreta —la pared que el Soporte tiene delante—, abierta
+     * unos segundos y cruzable por el equipo. Los fantasmas no pasan: ellos
+     * leen el laberinto de verdad y aquí no se toca. */
+    cruzaPared: function (idx, c, r) {
       if (!this.on) return false;
-      for (var i = 0; i < this.st.length; i++) if (this.st[i].puente > 0) return true;
+      c = CFG.wrapCol(c);
+      for (var i = 0; i < this.st.length; i++) {
+        var pu = this.st[i].puente;
+        if (!pu || !pu.cs) continue;
+        for (var k = 0; k < pu.cs.length; k++) if (pu.cs[k].c === c && pu.cs[k].r === r) return true;
+      }
+      return false;
+    },
+
+    /* ¿Hay algún hueco abierto ahora mismo? (la marca de la tecla) */
+    puenteActivo: function () {
+      if (!this.on) return false;
+      for (var i = 0; i < this.st.length; i++) if (this.st[i].puente) return true;
       return false;
     },
 
@@ -1558,6 +1586,27 @@
       return this.on && this.hielo[gid] > 0;
     },
 
+    /* UN FANTASMA ATURDIDO ESTÁ APAGADO, NO SOLO QUIETO (21 sep).
+     *
+     * Aturdir le ponía la velocidad a cero y nada más: se quedaba clavado en
+     * medio del pasillo y seguía matando al que pasara por encima, así que
+     * EMPUJÓN, GRITO DE GUERRA, CHISPA y GRAVEDAD paraban al fantasma para
+     * matarte con él. Ahora el aturdimiento apaga el choque, igual que el
+     * hielo: ni mata ni se puede comer (si está azul por otra cosa, se come
+     * por azul, que eso va por su lado).
+     *
+     * Sube el valor de esas cuatro habilidades a la vez: un aturdimiento deja
+     * de ser «lo paro» y pasa a ser «lo apago». */
+    inerte: function (gid) {
+      return !!(this.on && this.aturdido && this.aturdido[gid] > 0);
+    },
+
+    /* Quieto y sin morder: hielo o aturdimiento. Es lo que consulta el choque
+     * de game.js, que es el sitio por donde pasan todas las muertes. */
+    apagado: function (gid) {
+      return this.congelado(gid) || this.inerte(gid);
+    },
+
     /* PROVOCAR: la casilla del Tanque más cercano que esté provocando, o null.
      *
      * Vale para TODO el que esté en la calle, AZULES INCLUIDOS (20 sep). El
@@ -1743,6 +1792,7 @@
         case 'carrona': return s.carrona > 0;
         case 'marca': return s.marca > 0;
         case 'gancho_inverso': return s.ganchoInv > 0;
+        case 'gancho': return s.ganchoOut > 0;
         case 'shuriken': return !!s.shuriken;
         case 'misil':
         case 'bola_guiada':
@@ -1756,7 +1806,7 @@
         case 'terremoto': return s.terremoto > 0;
         case 'fortaleza': return s.fortaleza > 0;
         case 'estela': return s.estela > 0;
-        case 'puente': return s.puente > 0;
+        case 'puente': return !!s.puente;
         case 'cadena': return s.cadena > 0;
         case 'campo': return s.campo > 0;
         case 'hospital': return s.hospital > 0;
@@ -2509,28 +2559,6 @@
       return true;
     },
 
-    /* GRAVEDAD mueve de verdad hacia el centro, casilla a casilla y sin
-     * atravesar paredes. `empujar` usaba el rumbo del fantasma y podía
-     * mandarlo justo en la dirección contraria. */
-    atraerFantasma: function (G, g, tc, tr, casillas) {
-      if (!g || g.mode !== 'normal') return false;
-      var c = g.tileX(), r = g.tileY(), movido = 0;
-      for (var n = 0; n < casillas; n++) {
-        var dc = tc - c, dr = tr - r, opciones = [];
-        if (Math.abs(dc) >= Math.abs(dr) && dc) opciones.push({ c: CFG.wrapCol(c + (dc > 0 ? 1 : -1)), r: r });
-        if (dr) opciones.push({ c: c, r: r + (dr > 0 ? 1 : -1) });
-        if (Math.abs(dc) < Math.abs(dr) && dc) opciones.push({ c: CFG.wrapCol(c + (dc > 0 ? 1 : -1)), r: r });
-        var paso = null;
-        for (var k = 0; k < opciones.length; k++) if (opciones[k].r >= 0 && opciones[k].r < CFG.ROWS && CFG.isOpen(opciones[k].c, opciones[k].r, false)) { paso = opciones[k]; break; }
-        if (!paso) break;
-        c = paso.c; r = paso.r; movido++;
-        if (c === tc && r === tr) break;
-      }
-      if (!movido) return false;
-      g.x = c * T + T / 2; g.y = r * T + T / 2; g.clearPlan();
-      return true;
-    },
-
     /* MURO ocupa una casilla solo para los fantasmas. Pac-Man la atraviesa
      * porque el laberinto real sigue abierto. */
     bloqueaFantasma: function (c, r) {
@@ -2661,16 +2689,88 @@
     fortaleza: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.fortaleza = H.FORTALEZA_TICKS; this.efecto('fortaleza', p.x, p.y, 36); sonDe(G, idx, 'playStealth'); return true; },
 
     mina: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.mina = { c: c.c, r: c.r, t: H.MINA_TICKS }; this.efecto('mina', c.c * T + T / 2, c.r * T + T / 2, 22); sonDe(G, idx, 'playBiteMiss'); return true; },
+    /* Q — GANCHO: el garfio del Asesino del revés (21 sep). Antes no había
+     * gancho: se pintaba una línea y el fantasma que hubiera en ella se
+     * ponía azul, sin que saliera ni viajara nada. Ahora sale el garfio por
+     * el pasillo y, si engancha, ARRASTRA al fantasma hasta el Soporte, que
+     * lo recibe azul. Si no engancha, vuelve de vacío y se gasta igual. */
     gancho: function (G, idx, d) {
-      var p = G.pacs[idx], g = this.ghostEnLinea(G, idx, 6, d), fin = this.extremoLinea(G, idx, 6, d);
-      if (!p || !fin) return false;
-      if (g) { this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.GANCHO_AZUL_TICKS; }
-      this.efecto('gancho', g ? g.x : fin.c * T + T / 2, g ? g.y : fin.r * T + T / 2, 24, p.x, p.y);
+      var p = G.pacs[idx], s = this.estado(idx);
+      var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
+      if (!p || !s || !v) return false;
+      this.proyectilesCat.push({ tipo: 'gancho', x: p.x, y: p.y, ox: p.x, oy: p.y,
+        d: dir, w: idx, fase: 'sale', viaja: 0, max: H.GANCHO_TILES * T,
+        objetivo: -1, trae: 0 });
+      s.ganchoOut = 1;
+      this.efecto('gancho_salida', p.x, p.y, 22);
       sonDe(G, idx, 'playCharge'); return true;
     },
     telarana: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.telarana = { c: c.c, r: c.r, t: H.TELARANA_TICKS }; this.efecto('telarana', c.c * T + T / 2, c.r * T + T / 2, 24); sonDe(G, idx, 'playBiteMiss'); return true; },
     estela: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.estela = H.ESTELA_TICKS; s.estelaRastro = []; this.efecto('estela', p.x, p.y, 24); sonDe(G, idx, 'playTurbo'); return true; },
-    puente: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.puente = H.PUENTE_TICKS; this.efecto('puente', p.x, p.y, 30); sonDe(G, idx, 'playFlash'); return true; },
+    /* W — PUENTE: perfora el MURO que el Soporte tiene delante y deja un paso
+     * hasta el pasillo del otro lado. Es lo que dice su nombre: se cruza el
+     * bloque, no se atraviesan todas las paredes del mapa. Si delante hay
+     * pasillo (no hay nada que abrir), si el muro es más grueso que
+     * PUENTE_TILES o si al otro lado está la casa de los fantasmas, no sale y
+     * no se gasta la habilidad. */
+    puente: function (G, idx, d) {
+      var s = this.estado(idx), p = G.pacs[idx];
+      if (!s || !p) return false;
+      var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
+      if (!v) return false;
+      /* El rumbo es el que mandó quien pulsó (como el MURO); la posición
+       * buena es la de esta pantalla. */
+      var c0 = p.tileX(), r0 = p.tileY(), paso = [];
+      for (var n = 1; n <= H.PUENTE_TILES + 1; n++) {
+        var nc = CFG.wrapCol(c0 + v.x * n), nr = r0 + v.y * n;
+        if (nr < 0 || nr >= CFG.ROWS || esCasa(nc, nr)) return false;
+        if (CFG.isOpen(nc, nr, false)) {
+          if (!paso.length) return false;            // delante no había muro
+          s.puente = { cs: paso, t: H.PUENTE_TICKS,
+            de: { c: c0, r: r0 }, a: { c: nc, r: nr } };
+          this.efecto('puente', paso[0].c * T + T / 2, paso[0].r * T + T / 2, 30,
+            nc * T + T / 2, nr * T + T / 2);
+          sonDe(G, idx, 'playFlash'); return true;
+        }
+        if (paso.length >= H.PUENTE_TILES) return false;   // muro demasiado grueso
+        paso.push({ c: nc, r: nr });
+      }
+      return false;
+    },
+
+    /* Se cierra el paso: el que se quedara dentro del muro sale al pasillo
+     * más a mano —la boca por la que entró o la de enfrente—. Sin esto queda
+     * plantado dentro de la pared, sin salida a ningún lado. */
+    cerrarPuente: function (G, pu) {
+      if (!pu || !pu.cs || !G || !G.pacs) return;
+      for (var i = 0; i < G.pacs.length; i++) {
+        var p = G.pacs[i];
+        if (!p || p.out || !this.vivo(G, i)) continue;
+        var dentro = false, k;
+        for (k = 0; k < pu.cs.length; k++) {
+          if (p.tileX() === pu.cs[k].c && p.tileY() === pu.cs[k].r) { dentro = true; break; }
+        }
+        if (!dentro) continue;
+        if (G.isLocalAuth && !G.isLocalAuth(i) && !this.manda(G)) continue;
+        /* la boca más cercana de las dos, y si fallaran, cualquier vecina */
+        var bocas = [pu.a, pu.de], salida = null, mejor = 1e9;
+        for (k = 0; k < bocas.length; k++) {
+          var b = bocas[k];
+          if (!b || !CFG.isOpen(b.c, b.r, false)) continue;
+          var dis = this.distancia(p.x, p.y, b.c * T + T / 2, b.r * T + T / 2);
+          if (dis < mejor) { mejor = dis; salida = { c: b.c, r: b.r }; }
+        }
+        for (var dd = 0; dd < 4 && !salida; dd++) {
+          var v2 = CFG.DIR_V[dd];
+          var vc = CFG.wrapCol(p.tileX() + v2.x), vr = p.tileY() + v2.y;
+          if (vr < 0 || vr >= CFG.ROWS || !CFG.isOpen(vc, vr, false) || esCasa(vc, vr)) continue;
+          salida = { c: vc, r: vr };
+        }
+        if (!salida) continue;
+        p.x = salida.c * T + T / 2; p.y = salida.r * T + T / 2;
+        this.efecto('puente_cierra', p.x, p.y, 20);
+      }
+    },
     cadena: function (G, idx) { var s = this.estado(idx), j = this.aliadoDe(G, idx); if (!s || j < 0) return false; s.cadena = H.CADENA_TICKS; s.cadenaCon = j; this.efecto('cadena', G.pacs[j].x, G.pacs[j].y, 28, G.pacs[idx].x, G.pacs[idx].y); sonDe(G, idx, 'playStealth'); return true; },
     muro: function (G, idx, d) {
       var s = this.estado(idx), p = G.pacs[idx], dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p);
@@ -2740,14 +2840,25 @@
       this.efecto('clon', p.x, p.y, 28); sonDe(G, idx, 'playStealth'); return true;
     },
     totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0 }; this.efecto('totem', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
+    /* E — GRAVEDAD: los junta para rematarlos (21 sep). Antes teletransportaba
+     * de golpe a tres casillas y aturdía un segundo: como el salto era
+     * instantáneo y un aturdido no se veía, parecía que no pasaba nada. Ahora
+     * el tirón DURA medio segundo y se ve venir a los fantasmas por el
+     * pasillo, llega a cuatro casillas y los deja apagados dos segundos. */
     gravedad: function (G, idx) {
       var p = G.pacs[idx], blancos; if (!p) return false;
-      blancos = this.ghostsEn(G, p.tileX(), p.tileY(), 3);
+      blancos = this.ghostsEn(G, p.tileX(), p.tileY(), H.GRAVEDAD_RADIO);
       for (var i = 0; i < blancos.length; i++) {
-        var g = blancos[i], ox = g.x, oy = g.y;
-        if (this.manda(G)) this.atraerFantasma(G, g, p.tileX(), p.tileY(), 3);
+        var g = blancos[i];
         this.aturdido[g.id] = H.GRAVEDAD_TICKS;
-        this.efecto('gravedad', g.x, g.y, 28, ox, oy);
+        if (this.manda(G)) {
+          /* cada uno viene a la velocidad que le toca para llegar a la vez */
+          var ruta = this.rutaLaberinto(g.tileX(), g.tileY(), p.tileX(), p.tileY());
+          var pasos = (ruta && ruta.length) ? ruta.length : 1;
+          this.tirones.push({ gid: g.id, c: p.tileX(), r: p.tileY(), t: H.GRAVEDAD_TIRON,
+            vel: Math.max(0.5, pasos * T / H.GRAVEDAD_TIRON) });
+        }
+        this.efecto('gravedad', p.x, p.y, 28, g.x, g.y);
       }
       this.efecto('gravedad_centro', p.x, p.y, 32); sonDe(G, idx, 'playCharge'); return true;
     },
@@ -2795,6 +2906,39 @@
         if (o !== b && o.tipo === 'gancho_inverso' && o.w === b.w) { queda = true; break; }
       }
       if (s && !queda) s.ganchoInv = 0;
+    },
+
+    terminarGancho: function (b) {
+      var s = this.estado(b.w), queda = false;
+      for (var i = 0; i < this.proyectilesCat.length; i++) {
+        var o = this.proyectilesCat[i];
+        if (o !== b && o.tipo === 'gancho' && o.w === b.w) { queda = true; break; }
+      }
+      if (s && !queda) s.ganchoOut = 0;
+    },
+
+    /* Arrastra un fantasma UNA TAJADA de píxeles hacia (tc,tr) siguiendo los
+     * pasillos: se va al siguiente paso de la ruta, recalculada cada
+     * fotograma porque quien tira también se está moviendo. Es lo que usan el
+     * GANCHO y la GRAVEDAD para que el tirón se VEA, en vez de teletransportar.
+     * Solo lo llama quien manda: los fantasmas son del anfitrión. */
+    tirarFantasma: function (G, g, tc, tr, vel) {
+      if (!g || g.mode !== 'normal') return false;
+      var ancho = CFG.COLS * T, gc = g.tileX(), gr = g.tileY(), destino;
+      if (gc === tc && gr === tr) destino = { x: CFG.wrapCol(tc) * T + T / 2, y: tr * T + T / 2 };
+      else {
+        var ruta = this.rutaLaberinto(gc, gr, tc, tr);
+        if (!ruta || !ruta.length) return false;
+        destino = { x: ruta[0].c * T + T / 2, y: ruta[0].r * T + T / 2 };
+      }
+      var dx = destino.x - g.x;
+      if (dx > ancho / 2) dx -= ancho; else if (dx < -ancho / 2) dx += ancho;
+      var dy = destino.y - g.y, dis = Math.sqrt(dx * dx + dy * dy);
+      if (dis <= vel) { g.x = destino.x; g.y = destino.y; }
+      else { g.x += dx / dis * vel; g.y += dy / dis * vel; }
+      if (g.x < 0) g.x += ancho; else if (g.x >= ancho) g.x -= ancho;
+      g.clearPlan();
+      return true;
     },
 
     /* Camino cardinal por casillas abiertas. El misil usa la misma topología
@@ -2855,6 +2999,65 @@
               this.finShuriken(G, b, true); this.proyectilesCat.splice(i, 1); continue;
             }
           }
+          continue;
+        }
+
+        /* GANCHO (Soporte): sale, engancha y TRAE al fantasma. Las tres fases
+         * son las del gancho inverso, pero aquí quien viaja de vuelta es el
+         * fantasma, no el jugador. */
+        if (b.tipo === 'gancho') {
+          var sp2 = G.pacs[b.w], gv2 = CFG.DIR_V[b.d], quitarG = false;
+          if (!sp2 || sp2.out || sp2.dying) quitarG = true;
+          else if (b.fase === 'sale') {
+            var gnx = b.x + gv2.x * H.GANCHO_VEL, gny = b.y + gv2.y * H.GANCHO_VEL;
+            if (gnx < 0) gnx += ancho; else if (gnx >= ancho) gnx -= ancho;
+            var gcc = Math.floor(gnx / T), grr = Math.floor(gny / T);
+            b.viaja += H.GANCHO_VEL;
+            if (grr < 0 || grr >= CFG.ROWS || !CFG.isOpen(gcc, grr, false) || b.viaja > b.max) {
+              b.fase = 'vuelve';
+            } else {
+              b.x = gnx; b.y = gny;
+              for (var gj = 0; gj < 4; gj++) {
+                var gcand = G.ghosts[gj];
+                if (!this.enLaCalle(gcand) || this.distancia(b.x, b.y, gcand.x, gcand.y) > T * 0.75) continue;
+                b.objetivo = gcand.id; b.fase = 'trae'; b.trae = H.GANCHO_TRAE_MAX;
+                b.x = gcand.x; b.y = gcand.y;
+                this.efecto('gancho_atrapa', gcand.x, gcand.y, 24, sp2.x, sp2.y);
+                break;
+              }
+            }
+          } else if (b.fase === 'trae') {
+            var gobj = G.ghosts[b.objetivo | 0];
+            if (!this.enLaCalle(gobj) || --b.trae <= 0) b.fase = 'vuelve';
+            else {
+              b.x = gobj.x; b.y = gobj.y;
+              /* mientras viene no muerde: llega apagado y se despierta azul */
+              if (manda) this.aturdido[gobj.id] = Math.max(this.aturdido[gobj.id] || 0, 2);
+              if (this.distancia(gobj.x, gobj.y, sp2.x, sp2.y) <= T * 0.9) {
+                if (manda) {
+                  this.azulCatalogo[gobj.id] = b.w + 1;
+                  this.azulCatTicks[gobj.id] = H.GANCHO_AZUL_TICKS;
+                  this.aturdido[gobj.id] = 0;
+                }
+                this.efecto('gancho_trae', gobj.x, gobj.y, 22, sp2.x, sp2.y);
+                quitarG = true;
+              } else if (manda) {
+                this.tirarFantasma(G, gobj, sp2.tileX(), sp2.tileY(), H.GANCHO_TRAE_VEL);
+                b.x = gobj.x; b.y = gobj.y;
+              }
+            }
+          }
+          if (!quitarG && b.fase === 'vuelve') {
+            var vdx = sp2.x - b.x;
+            if (vdx > ancho / 2) vdx -= ancho; else if (vdx < -ancho / 2) vdx += ancho;
+            var vdy = sp2.y - b.y, vdis = Math.sqrt(vdx * vdx + vdy * vdy) || 1;
+            if (vdis <= H.GANCHO_VEL + 1) quitarG = true;
+            else {
+              b.x += vdx / vdis * H.GANCHO_VEL; b.y += vdy / vdis * H.GANCHO_VEL;
+              if (b.x < 0) b.x += ancho; else if (b.x >= ancho) b.x -= ancho;
+            }
+          }
+          if (quitarG) { this.terminarGancho(b); this.proyectilesCat.splice(i, 1); }
           continue;
         }
 
@@ -3041,7 +3244,9 @@
           for (var ej = 0; ej < G.pacs.length; ej++) if (ej !== i && this.vivo(G, ej) &&
               this.distancia(G.pacs[ej].x, G.pacs[ej].y, er.x, er.y) <= T) this.st[ej].estelaBuff = 15;
         }
-        if (s.puente > 0) s.puente--;
+        /* El hueco del PUENTE se cierra solo, y al cerrarse saca de la pared
+         * a quien estuviera dentro (si no, se queda plantado en el muro). */
+        if (s.puente && --s.puente.t <= 0) { this.cerrarPuente(G, s.puente); s.puente = null; }
         if (s.cadena > 0) s.cadena--; else s.cadenaCon = -1;
         if (s.campo > 0) s.campo--;
         if (s.hospital > 0) s.hospital--;
@@ -3054,6 +3259,12 @@
         }
         if (s.pielPiedra > 0) s.pielPiedra--;
         if (s.rebote > 0) s.rebote--;
+        /* FORTALEZA se quedaba encendida para siempre: era el único poder del
+         * catálogo al que le faltaba el descuento por fotograma (21 sep). */
+        if (s.fortaleza > 0 && --s.fortaleza <= 0) {
+          var fpf = G.pacs[i];
+          if (fpf) this.efecto('fortaleza_fin', fpf.x, fpf.y, 22);
+        }
         if (s.terremoto > 0) s.terremoto--;
         if (s.eclipse > 0) s.eclipse--;
         if (s.bomba && s.bomba.t > 0 && --s.bomba.t <= 0) s.bomba = null;
@@ -3105,6 +3316,15 @@
         if (this.huye[j] > 0) this.huye[j]--;
       }
       this.pasoBalas(G);
+      /* Los tirones de GRAVEDAD: arrastran mientras dure el medio segundo.
+       * Los fantasmas los mueve el anfitrión y nadie más. */
+      if (this.tirones && this.tirones.length) {
+        for (var ti = this.tirones.length - 1; ti >= 0; ti--) {
+          var tr2 = this.tirones[ti], tg2 = G.ghosts[tr2.gid];
+          if (!manda || !this.enLaCalle(tg2) || --tr2.t <= 0) { this.tirones.splice(ti, 1); continue; }
+          this.tirarFantasma(G, tg2, tr2.c, tr2.r, tr2.vel);
+        }
+      }
       if (!manda) return;
       /* Las zonas se recalculan sobre la posición actual de los fantasmas. */
       for (i = 0; i < this.st.length; i++) {
@@ -3238,8 +3458,10 @@
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
       s.sombra = 0; s.sombraGolpe = false; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
-      s.ganchoInv = 0; s.shuriken = null; s.misil = null; s.caceria = 0;
-      s.estela = 0; s.estelaBuff = 0; s.estelaRastro = []; s.puente = 0; s.cadena = 0;
+      s.ganchoInv = 0; s.ganchoOut = 0; s.shuriken = null; s.misil = null; s.caceria = 0;
+      s.estela = 0; s.estelaBuff = 0; s.estelaRastro = []; s.cadena = 0;
+      if (s.puente && G) this.cerrarPuente(G, s.puente);
+      s.puente = null;
       s.campo = 0; s.hospital = 0; s.yunque = 0; s.pielPiedra = 0; s.rebote = 0;
       s.fortaleza = 0; s.terremoto = 0; s.eclipse = 0;
       s.bomba = s.mina = s.telarana = s.muro = s.faro = s.sirena = s.niebla = s.clon = s.meteoro = s.fuegoMeteoro = s.totem = null;
@@ -3547,6 +3769,28 @@
           ctx.strokeRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
             zonas[zi][2] * T * 2, zonas[zi][2] * T * 2); ctx.restore();
         }
+        /* El paso del PUENTE: se borra el muro de esas casillas y se marca el
+         * hueco. Parpadea el último segundo, que es el aviso de que se cierra
+         * (y de que quien esté dentro va a salir por una de las bocas). */
+        if (ds.puente && ds.puente.cs) {
+          var puCierra = ds.puente.t < 60 && Math.floor(tk / 5) % 2 === 0;
+          for (var pk = 0; pk < ds.puente.cs.length; pk++) {
+            var pux = ds.puente.cs[pk].c * T + T / 2, puy = ds.puente.cs[pk].r * T + T / 2 + Y;
+            ctx.save();
+            ctx.globalAlpha = puCierra ? 0.35 : 1;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(pux - T / 2, puy - T / 2, T, T);
+            ctx.globalAlpha = puCierra ? 0.15 : 0.3;
+            ctx.fillStyle = '#00c8ff';
+            ctx.fillRect(pux - T / 2, puy - T / 2, T, T);
+            ctx.globalAlpha = puCierra ? 0.4 : 0.9;
+            ctx.strokeStyle = '#00c8ff'; ctx.lineWidth = 1;
+            ctx.setLineDash([3, 2]); ctx.lineDashOffset = -tk / 3;
+            ctx.strokeRect(pux - T / 2 + 0.5, puy - T / 2 + 0.5, T - 1, T - 1);
+            ctx.setLineDash([]); ctx.lineDashOffset = 0;
+            ctx.restore();
+          }
+        }
         var rastros = ds.estelaRastro || [];
         for (var ei = 0; ei < rastros.length; ei++) {
           var eh = rastros[ei];
@@ -3643,7 +3887,20 @@
           ctx.moveTo(cg.x, cg.y + Y - 13); ctx.lineTo(cg.x, cg.y + Y - 6); ctx.stroke(); ctx.restore();
         }
         if (this.aturdido[i] > 0) {
-          ctx.save(); ctx.fillStyle = '#ffe66d';
+          /* APAGADO, no solo quieto: un fantasma aturdido ya no mata (ver
+           * inerte), así que necesita señal propia. El velo gris dice que
+           * está fuera de juego y parpadea el último medio segundo, que es el
+           * aviso de que vuelve a morder. Las estrellitas siguen arriba. */
+          var vuelve = this.aturdido[i] < 30 && Math.floor(tk / 4) % 2 === 0;
+          ctx.save();
+          ctx.globalAlpha = vuelve ? 0.15 : 0.45;
+          ctx.fillStyle = '#6b7684';
+          ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 7.5, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = vuelve ? 0.35 : 0.85;
+          ctx.strokeStyle = '#c2cbd4'; ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+          ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 9.5, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 1; ctx.fillStyle = '#ffe66d';
           for (var es = 0; es < 3; es++) { var ea = tk / 5 + es * Math.PI * 2 / 3; ctx.fillRect(cg.x + Math.cos(ea) * 9 - 1, cg.y + Y - 8 + Math.sin(ea) * 3 - 1, 2, 2); }
           ctx.restore();
         }
@@ -3673,6 +3930,24 @@
           }
           ctx.closePath(); ctx.fill(); ctx.stroke();
           ctx.fillStyle = '#263746'; ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+        } else if (cp.tipo === 'gancho') {
+          /* El garfio del Soporte: cuerda hasta él y, cuando trae carga, la
+           * cuerda se tensa (línea entera y más gruesa). */
+          var duenoG = G.pacs[cp.w], trayendo = cp.fase === 'trae';
+          if (duenoG) {
+            ctx.strokeStyle = trayendo ? '#8fdcff' : '#b8c2cc';
+            ctx.lineWidth = trayendo ? 2 : 1.4;
+            if (!trayendo) ctx.setLineDash([3, 1]);
+            ctx.beginPath(); ctx.moveTo(duenoG.x, duenoG.y + Y); ctx.lineTo(cp.x, cp.y + Y); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          var gvd = CFG.DIR_V[cp.d] || { x: 1, y: 0 };
+          var ang = trayendo && duenoG ? Math.atan2(duenoG.y - cp.y, duenoG.x - cp.x) + Math.PI
+                                       : Math.atan2(gvd.y, gvd.x);
+          ctx.translate(cp.x, cp.y + Y); ctx.rotate(ang);
+          ctx.strokeStyle = '#e6edf3'; ctx.shadowColor = '#79c8ff'; ctx.shadowBlur = 5; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(1, 0); ctx.arc(1, 3, 3, -Math.PI / 2, Math.PI * 0.75); ctx.stroke();
+          ctx.fillStyle = '#9aa7b2'; ctx.beginPath(); ctx.arc(-4, 0, 1.5, 0, Math.PI * 2); ctx.fill();
         } else if (cp.tipo === 'gancho_inverso') {
           var duenoGancho = G.pacs[cp.w];
           if (duenoGancho) {
@@ -3747,7 +4022,8 @@
             frenesi: '#ff4058', carrona: '#ffe66d', marca: '#ff66cc', caceria: '#ff4058',
             misil: '#ff4058', misil_salida: '#ff4058', yunque: '#ffb852', yunque_roto: '#ffb852',
             piel_piedra: '#9aa4ad', rebote: '#ffb852', terremoto: '#ffb852', terremoto_onda: '#ffb852',
-            fortaleza: '#ffb852', mina: '#2bff88', telarana: '#c77dff', estela: '#2bff88', puente: '#00c8ff',
+            fortaleza: '#ffb852', fortaleza_fin: '#ffb852', mina: '#2bff88', telarana: '#c77dff',
+            estela: '#2bff88', puente: '#00c8ff', puente_cierra: '#00c8ff', gancho_trae: '#8fdcff',
             muro: '#00c8ff', faro: '#ffe66d', faro_toca: '#ffe66d', sirena: '#ff5577', campo: '#2bff88',
             resurreccion: '#ffffff', hospital: '#2bff88', bola_guiada: '#8b3dff', guiada_salida: '#8b3dff',
             arcano: '#8b3dff', clon: '#c9a4ff', clon_explota: '#c9a4ff', totem: '#ff9f1c',
@@ -3967,10 +4243,6 @@
       if (s.estela > 0 || s.estelaBuff > 0) {
         ctx.strokeStyle = s.estela > 0 ? '#2bff88' : '#8fffc0'; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(x, y, 9 + Math.sin(tk / 4), 0, Math.PI * 2); ctx.stroke();
-      }
-      if (this.puenteActivo(i)) {
-        ctx.strokeStyle = 'rgba(0,200,255,0.8)'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1;
-        ctx.strokeRect(x - 8 - Math.sin(tk / 5), y - 8, 16 + Math.sin(tk / 5) * 2, 16); ctx.setLineDash([]);
       }
       if (s.cadena > 0 && s.cadenaCon >= 0 && G.pacs[s.cadenaCon]) {
         ctx.strokeStyle = 'rgba(0,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);

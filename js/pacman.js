@@ -160,7 +160,9 @@
       else return false;
     }
     if (CFG.isOpen(nx, ny, false)) return true;
-    return !!(window.PM.Hab && window.PM.Hab.puenteActivo && window.PM.Hab.puenteActivo(owner));
+    /* PUENTE: las únicas paredes que se cruzan son las del paso que abrió el
+     * Soporte; el resto del laberinto sigue siendo laberinto */
+    return !!(window.PM.Hab && window.PM.Hab.cruzaPared && window.PM.Hab.cruzaPared(owner, nx, ny));
   }
 
   Pacman.prototype.setDesiredDir = function (d) {

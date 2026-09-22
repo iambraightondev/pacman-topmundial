@@ -13,24 +13,28 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**21 sep (noche) — LOS AJUSTES DEL CATÁLOGO, APUNTADOS Y SIN CONSTRUIR.**
+**21 sep (noche) — LO ROTO DEL CATÁLOGO, ARREGLADO.**
 
-Braighton lo probó y salió una lista de dieciocho cosas: tres errores de
-bulto (FORTALEZA no se apaga nunca, PUENTE atraviesa todas las paredes y de
-todos, GANCHO ni engancha ni atrae), un fantasma aturdido que sigue matando,
-cuatro duraciones, cuatro dibujos que hoy son el mismo cuadrado de color, y
-tres poderes que no funcionan como idea (TOQUE ARCANO, NIEBLA y METEORO).
+De la lista de dieciocho cosas que salió al jugarlo ya están los cinco
+errores de bulto: FORTALEZA se apaga a los 6 s (no bajaba nunca), un
+fantasma aturdido ya no mata —queda apagado, con señal propia—, el PUENTE
+abre un paso por el muro de delante en vez de atravesar todas las paredes
+para todo el mundo, el GANCHO del Soporte arrastra al fantasma y lo deja azul, y la
+GRAVEDAD tira de verdad: medio segundo de arrastre a la vista, cuatro
+casillas y dos segundos apagados.
 
-Todo está desglosado, contrastado con el código y con propuesta donde hace
-falta decidir, en **[`PLAN-AJUSTES-CATALOGO.md`](PLAN-AJUSTES-CATALOGO.md)**.
-Ahí está también el orden por el que conviene atacarlo: lo roto primero,
-porque falsea lo que se ve al probar lo demás.
+**Ojo con lo siguiente**: apagar el aturdimiento sube el valor de EMPUJÓN,
+GRITO DE GUERRA, CHISPA y GRAVEDAD a la vez. Conviene volver a jugarlas
+antes de tocar los números de la lista, y el GRITO DE GUERRA global a 2,5 s
+—si entra— pide una recarga bastante más alta de lo apuntado.
+
+Lo que queda, en orden, sigue en
+**[`PLAN-AJUSTES-CATALOGO.md`](PLAN-AJUSTES-CATALOGO.md)**: los cuatro
+números, los que cambian cómo se juega, los cuatro dibujos y los tres que
+necesitan decisión.
 
 **Pendiente de él**: confirmar cómo se empuja hacia atrás, elegir entre las
-opciones de esos tres poderes, y el punto 19, que quedó vacío.
-
-**Ya hecho de esa tanda** (el Asesino): la ráfaga del SHURIKEN caduca a los
-3 s, el GANCHO INVERSO llega a ocho casillas y el MISIL vuela a ×2.
+opciones de TOQUE ARCANO, NIEBLA y METEORO, y el punto 19, que quedó vacío.
 
 **21 sep — EL CATÁLOGO DE HABILIDADES, IMPLEMENTADO Y PROBADO.**
 

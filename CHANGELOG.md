@@ -2,6 +2,42 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-21 · Lo que estaba roto del catálogo
+
+**FORTALEZA no se apagaba nunca; ahora dura sus seis segundos.** Su reloj no
+bajaba ni un fotograma: el Tanque y todo el que estuviera a cinco casillas
+quedaban inmortales hasta morir o acabar el nivel, con la tecla encendida
+toda la recarga. Era el único poder del catálogo al que le faltaba el
+descuento por fotograma.
+
+**Un fantasma aturdido ya no mata.** Aturdir solo le ponía la velocidad a
+cero: se quedaba clavado en el pasillo y seguía siendo mortal, así que
+EMPUJÓN, GRITO DE GUERRA, CHISPA y GRAVEDAD servían para dejarte un fantasma
+quieto encima. Ahora el aturdimiento lo **apaga** —ni mata ni muerde, como el
+hielo— y se le ve apagado: velo gris con su aro, y un parpadeo el último
+medio segundo avisando de que despierta. Las cuatro habilidades valen bastante
+más que antes.
+
+**El PUENTE es un paso por el muro, no volverse fantasma.** Atravesaba
+**cualquier** pared del laberinto y encima no miraba de quién era el poder:
+se lo comía todo el equipo, cada uno donde estuviera. Ahora perfora el muro
+que el Soporte tiene delante y abre el paso hasta el pasillo del otro lado
+—hasta cuatro casillas de grosor, que es lo que miden los bloques; contra el
+marco de fuera no sale y no se gasta—. Lo cruza el equipo, los fantasmas no,
+y al cerrarse saca por una de las bocas a quien se quedara dentro.
+
+**El GANCHO del Soporte engancha de verdad.** No había gancho: se pintaba una
+línea y el fantasma que hubiera en ella se ponía azul. Ahora sale el garfio
+por el pasillo, y si atrapa **arrastra al fantasma** hasta el Soporte, que lo
+recibe azul; mientras viene está apagado. Si falla, vuelve de vacío y se
+gasta igual, como el GANCHO INVERSO del Asesino.
+
+**Y la GRAVEDAD se nota.** Teletransportaba de golpe a tres casillas y aturdía
+un segundo, así que parecía que no pasaba nada. Ahora el tirón **se ve**: medio
+segundo de arrastre por los pasillos —cada uno a la velocidad que le toca
+para llegar a la vez—, alcance de cuatro casillas y dos segundos apagados.
+Es lo que decía el catálogo: los junta para rematarlos.
+
 ## 2026-09-21 · Los tres retoques del Asesino
 
 **La ráfaga del SHURIKEN ahora tiene prisa.** Las tres cargas se podían

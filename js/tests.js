@@ -11073,6 +11073,153 @@
   });
 
   // ---------------------------------------------------------------
+  // AJUSTES DEL CATÁLOGO (21 sep): lo que salió roto al jugarlo
+  // ---------------------------------------------------------------
+
+  /* Un tramo recto de `largo` casillas abiertas, esté donde esté: así estas
+   * pruebas no dependen de coordenadas a mano de un laberinto concreto. */
+  function tramoRecto(largo) {
+    for (var r = 1; r < CFG.ROWS - 1; r++) {
+      var seguidas = 0;
+      for (var c = 1; c < CFG.COLS - 1; c++) {
+        seguidas = CFG.isOpen(c, r, false) ? seguidas + 1 : 0;
+        if (seguidas >= largo) return { c: c - largo + 1, r: r };
+      }
+    }
+    return null;
+  }
+
+  test('AJUSTES: Fortaleza dura sus 6 s y se apaga', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['tanque'], ['pisoton,escudo,provocar,fortaleza']); G.roles = ['tanque'];
+    ponPac(0, 13, 20, DR.RIGHT);
+    ok(H.fortaleza(G, 0), 'sale fortaleza');
+    eq(H.st[0].fortaleza, CFG.HAB.FORTALEZA_TICKS, 'seis segundos de aura');
+    for (var i = 0; i < CFG.HAB.FORTALEZA_TICKS; i++) H.pasoRoles(G, true);
+    eq(H.st[0].fortaleza, 0, 'y se apaga sola (antes no bajaba nunca)');
+    ok(!H.activa(G, 0, 3), 'la tecla deja de verse encendida');
+  });
+
+  test('AJUSTES: un fantasma aturdido está apagado, no solo quieto', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['chispa,portal,runa,tormenta']); G.roles = ['mago'];
+    var p = ponPac(0, 13, 20, DR.RIGHT), g = G.ghosts[0];
+    for (var n = 1; n < 4; n++) G.ghosts[n].mode = 'house';
+    g.mode = 'normal'; g.frightened = false; g.x = p.x + CFG.TILE; g.y = p.y;
+    ok(H.chispa(G, 0), 'sale chispa');
+    ok(H.aturdido[g.id] > 0, 'lo deja aturdido');
+    ok(H.apagado(g.id), 'y apagado: el choque no cuenta');
+    eq(H.multVelFantasma(G, g.id), 0, 'tampoco se mueve');
+    g.x = p.x; g.y = p.y; p.safeTicks = 0;
+    ticks(3);
+    ok(!p.dying, 'pasar por encima de un aturdido no mata');
+    H.aturdido[g.id] = 0; g.x = p.x; g.y = p.y;
+    ticks(3);
+    ok(p.dying, 'pero en cuanto despierta, sí');
+  });
+
+  test('AJUSTES: el Puente abre un paso por el muro, no todas las paredes', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['soporte'], ['hielo,puente,relevo,vida']); G.roles = ['soporte'];
+    /* una casilla con muro delante y pasillo al otro lado, sin pasar por la
+     * casa de los fantasmas (ahí no se abre ningún paso) */
+    var HO = CFG.HOUSE;
+    function casaAqui(c, r) {
+      return r >= HO.top - 1 && r <= HO.bottom + 1 && c >= HO.left - 1 && c <= HO.right + 1;
+    }
+    var sitio = null;
+    for (var r = 2; r < CFG.ROWS - 2 && !sitio; r++) {
+      for (var c = 2; c < CFG.COLS - 2 && !sitio; c++) {
+        if (!CFG.isOpen(c, r, false) || casaAqui(c, r)) continue;
+        for (var d = 0; d < 4 && !sitio; d++) {
+          var v = CFG.DIR_V[d], muro = [];
+          for (var n = 1; n <= CFG.HAB.PUENTE_TILES + 1; n++) {
+            var nc = CFG.wrapCol(c + v.x * n), nr = r + v.y * n;
+            if (nr < 1 || nr >= CFG.ROWS - 1 || casaAqui(nc, nr)) break;
+            if (CFG.isOpen(nc, nr, false)) {
+              if (muro.length) sitio = { c: c, r: r, d: d, muro: muro };
+              break;
+            }
+            if (muro.length >= CFG.HAB.PUENTE_TILES) break;
+            muro.push({ c: nc, r: nr });
+          }
+        }
+      }
+    }
+    ok(sitio, 'hay un muro con pasillo al otro lado');
+    var p = ponPac(0, sitio.c, sitio.r, sitio.d);
+    ok(H.puente(G, 0), 'se abre el paso');
+    eq(H.st[0].puente.cs.length, sitio.muro.length, 'perfora justo el grosor del muro');
+    for (var k = 0; k < sitio.muro.length; k++) {
+      ok(H.cruzaPared(0, sitio.muro[k].c, sitio.muro[k].r), 'esa casilla se cruza');
+      ok(!CFG.isOpen(sitio.muro[k].c, sitio.muro[k].r, false), 'el laberinto sigue cerrado para los fantasmas');
+    }
+    ok(!H.cruzaPared(0, sitio.c, sitio.r + 6), 'las demás paredes no');
+    /* al cerrarse, el que se quedara dentro sale a una de las bocas */
+    H.st[0].puente.t = 1;
+    p.x = sitio.muro[0].c * CFG.TILE + CFG.TILE / 2;
+    p.y = sitio.muro[0].r * CFG.TILE + CFG.TILE / 2;
+    H.pasoRoles(G, true);
+    eq(H.st[0].puente, null, 'el paso se cierra solo');
+    ok(CFG.isOpen(p.tileX(), p.tileY(), false), 'y nadie se queda dentro del muro');
+  });
+
+  test('AJUSTES: el Gancho sale, trae al fantasma y lo deja azul', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['soporte'], ['gancho,inmunidad,relevo,vida']); G.roles = ['soporte'];
+    var t = tramoRecto(5);
+    ok(t, 'hay un pasillo recto de cinco casillas');
+    var p = ponPac(0, t.c, t.r, DR.RIGHT), g = G.ghosts[0];
+    for (var n = 1; n < 4; n++) G.ghosts[n].mode = 'house';
+    g.mode = 'normal'; g.frightened = false;
+    g.x = (t.c + 4) * CFG.TILE + CFG.TILE / 2; g.y = p.y;
+    ok(H.gancho(G, 0), 'sale el garfio');
+    var b = H.proyectilesCat.filter(function (x) { return x.tipo === 'gancho'; })[0];
+    ok(b, 'se ve viajar');
+    eq(b.max, CFG.HAB.GANCHO_TILES * CFG.TILE, 'llega a seis casillas');
+    var lejos = H.distancia(g.x, g.y, p.x, p.y);
+    for (n = 0; n < 300 && H.proyectilesCat.length; n++) H.pasoProyectilesCat(G, true);
+    ok(H.distancia(g.x, g.y, p.x, p.y) < lejos, 'el fantasma viene hacia el Soporte');
+    ok(H.azulCatTicks[g.id] > 0, 'y llega azul');
+    eq(H.st[0].ganchoOut, 0, 'la tecla se libera al acabar');
+    /* sin nadie en el pasillo: vuelve de vacío y se gasta igual */
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    ok(H.gancho(G, 0), 'sale igual sin blanco');
+    var volvio = false;
+    for (n = 0; n < 300 && H.proyectilesCat.length; n++) {
+      H.pasoProyectilesCat(G, true);
+      if (H.proyectilesCat.some(function (x) { return x.tipo === 'gancho' && x.fase === 'vuelve'; })) volvio = true;
+    }
+    ok(volvio && !H.proyectilesCat.length, 'falla, vuelve y se recoge');
+  });
+
+  test('AJUSTES: la Gravedad arrastra a la vista y apaga dos segundos', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['fuego,portal,gravedad,tormenta']); G.roles = ['mago'];
+    var t = tramoRecto(5);
+    ok(t, 'hay un pasillo recto de cinco casillas');
+    var p = ponPac(0, t.c, t.r, DR.RIGHT), g = G.ghosts[0];
+    for (var n = 1; n < 4; n++) G.ghosts[n].mode = 'house';
+    g.mode = 'normal'; g.frightened = false;
+    g.x = (t.c + 4) * CFG.TILE + CFG.TILE / 2; g.y = p.y;   // cuatro casillas
+    var lejos = H.distancia(g.x, g.y, p.x, p.y);
+    ok(H.gravedad(G, 0), 'sale gravedad');
+    eq(H.aturdido[g.id], CFG.HAB.GRAVEDAD_TICKS, 'dos segundos apagado');
+    eq(H.distancia(g.x, g.y, p.x, p.y), lejos, 'no hay teletransporte: sigue donde estaba');
+    H.pasoRoles(G, true);
+    var medio = H.distancia(g.x, g.y, p.x, p.y);
+    ok(medio < lejos && medio > CFG.TILE, 'el tirón se ve empezar');
+    for (n = 0; n < CFG.HAB.GRAVEDAD_TIRON; n++) H.pasoRoles(G, true);
+    ok(H.distancia(g.x, g.y, p.x, p.y) <= CFG.TILE, 'y acaba encima del Mago');
+    ok(H.apagado(g.id), 'sigue apagado al llegar');
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

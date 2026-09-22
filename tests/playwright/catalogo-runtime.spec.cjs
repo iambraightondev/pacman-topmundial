@@ -199,7 +199,31 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
     out.mina = g.mode === 'eyes' && H.st[0].escudo > 0;
     H.estela(G, 0); G.tick = 5; H.pasoRoles(G, true); G.pacs[1].x = p.x; G.pacs[1].y = p.y; H.pasoRoles(G, true);
     out.estela = H.st[1].estelaBuff > 0 && H.multVel(1) === CFG.HAB.ESTELA_RASTRO_MULT;
-    H.puente(G, 0); out.puente = H.puenteActivo(0) && H.puenteActivo(1);
+    /* PUENTE: un paso por el muro de delante, cruzable por el equipo y por
+     * nadie más; el resto del laberinto sigue cerrado para todos */
+    const casa = (c, r) => { const HO = CFG.HOUSE; return r >= HO.top - 1 && r <= HO.bottom + 1 && c >= HO.left - 1 && c <= HO.right + 1; };
+    const pared = (() => {
+      for (let r = 2; r < CFG.ROWS - 2; r++) for (let c = 2; c < CFG.COLS - 2; c++) {
+        if (!CFG.isOpen(c, r, false) || casa(c, r)) continue;
+        for (let d = 0; d < 4; d++) {
+          const v = CFG.DIR_V[d], muro = [];
+          for (let n = 1; n <= CFG.HAB.PUENTE_TILES + 1; n++) {
+            const nc = CFG.wrapCol(c + v.x * n), nr = r + v.y * n;
+            if (nr < 1 || nr >= CFG.ROWS - 1 || casa(nc, nr)) break;
+            if (CFG.isOpen(nc, nr, false)) { if (muro.length) return { c, r, d, muro }; break; }
+            if (muro.length >= CFG.HAB.PUENTE_TILES) break;
+            muro.push({ c: nc, r: nr });
+          }
+        }
+      }
+    })();
+    const px0 = p.x, py0 = p.y, pd0 = p.nextDir;
+    p.x = pared.c * T + T / 2; p.y = pared.r * T + T / 2; p.dir = p.nextDir = pared.d;
+    out.puente = H.puente(G, 0) && pared.muro.every(m => H.cruzaPared(0, m.c, m.r) &&
+      H.cruzaPared(1, m.c, m.r) && !CFG.isOpen(m.c, m.r, false)) &&
+      !H.cruzaPared(0, pared.c, pared.r + 6);
+    H.st[0].puente = null;
+    p.x = px0; p.y = py0; p.dir = p.nextDir = pd0;
     const before = G.pacs[0].x; H.relevo(G, 0); out.relevo = G.pacs[1].x === before;
     H.campo(G, 0); out.campo = H.salvaDelChoque(G, 1, null);
 
@@ -213,7 +237,13 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
 
     p = start(['soporte', 'asesino'], ['gancho,cadena,muro,hospital', 'mordisco,turbo,flash,grito']);
     p.x = pos.c * T + 4; p.y = pos.r * T + 4; p.nextDir = CFG.DIR.RIGHT;
-    g = ghost(0, (pos.c + 1) * T + 4, p.y); H.gancho(G, 0); out.ganchoSoporte = H.puedeComer(G, 0, 1);
+    /* GANCHO: sale, engancha y TRAE al fantasma, que llega azul */
+    g = ghost(0, (pos.c + 1) * T + 4, p.y);
+    const ganchoLejos = H.distancia(g.x, g.y, p.x, p.y);
+    const ganchoSale = H.gancho(G, 0) && H.proyectilesCat.some(b => b.tipo === 'gancho');
+    fly(300);
+    out.ganchoSoporte = ganchoSale && H.distancia(g.x, g.y, p.x, p.y) <= ganchoLejos &&
+      H.azulCatTicks[0] > 0 && H.puedeComer(G, 0, 1) && H.st[0].ganchoOut === 0;
     H.cadena(G, 0); base = G.score; H.bonoCadena(G, 1, 20, p.x, p.y); out.cadena = G.score - base === 20;
     H.muro(G, 0); out.muro = !!H.st[0].muro && H.bloqueaFantasma(H.st[0].muro.c, H.st[0].muro.r);
     H.hospital(G, 0); const safe = G.pacs[1].safeTicks; G.startDeath(1, 0);
@@ -226,8 +256,12 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
     out.guiada = G.score - base === 150 && g.mode === 'eyes';
     p.nextDir = CFG.DIR.RIGHT; if (!H.libreDelante(p.tileX(), p.tileY(), CFG.DIR.RIGHT)) p.nextDir = CFG.DIR.LEFT;
     const clon = H.clon(G, 0); if (clon) { const x0 = H.st[0].clon.x; H.pasoRoles(G, true); out.clon = H.st[0].clon && H.st[0].clon.x !== x0; } else out.clon = false;
+    /* GRAVEDAD: el tirón se ve —medio segundo de arrastre—, no teletransporta */
     g = ghost(0, p.x + 2 * T, p.y); const d0 = H.distancia(g.x, g.y, p.x, p.y); H.gravedad(G, 0);
-    out.gravedad = H.distancia(g.x, g.y, p.x, p.y) < d0 && H.aturdido[0] === CFG.HAB.GRAVEDAD_TICKS;
+    const sinSalto = H.distancia(g.x, g.y, p.x, p.y) === d0;
+    for (let i = 0; i < CFG.HAB.GRAVEDAD_TIRON + 1; i++) H.pasoRoles(G, true);
+    out.gravedad = sinSalto && H.distancia(g.x, g.y, p.x, p.y) < d0 &&
+      H.aturdido[0] > 0 && H.aturdido[0] <= CFG.HAB.GRAVEDAD_TICKS;
     let fired = false; for (let d = 0; d < 4; d++) { p.nextDir = d; if (H.meteoro(G, 0)) { fired = true; break; } }
     if (fired) { H.st[0].meteoro.t = 0; H.pasoRoles(G, true); }
     out.meteoro = fired && !!H.st[0].fuegoMeteoro;
@@ -270,6 +304,13 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
     H.dibujarSuelo(G, ctx); H.dibujarPac(G, ctx, G.pacs[0], 0); H.dibujarAire(G, ctx);
     const pixels = ink(), tipos = new Set(H.fx.map(f => f.t));
     const declaradas = ['sombra', 'marca', 'caceria', 'bomba_planta'].every(x => tipos.has(x));
+    /* Un fantasma apagado tiene señal propia: sin ella, uno quieto que no
+     * mata se confunde con uno quieto que sí (21 sep) */
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const limpio = ink();
+    H.aturdido[0] = 60; H.dibujarAire(G, ctx);
+    const tintaAturdido = ink() > limpio;
+    H.aturdido[0] = 0;
     const originalGhost = window.PM.Sprites.drawGhost; let modoAzul = '';
     window.PM.Sprites.drawGhost = (...args) => { modoAzul = args[5]; };
     H.azulCatalogo[0] = 1; G.ghosts[0].draw(ctx, G); window.PM.Sprites.drawGhost = originalGhost;
@@ -288,10 +329,11 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
       return !/efecto\(|proyectilesCat\.push/.test(src);
     }).map(([id]) => id);
     G.toMenu();
-    return { pixels, declaradas, azulClaro: modoAzul === 'fright', sinAnimacion };
+    return { pixels, declaradas, azulClaro: modoAzul === 'fright', tintaAturdido, sinAnimacion };
   });
   expect(r.declaradas).toBe(true);
   expect(r.azulClaro).toBe(true);
+  expect(r.tintaAturdido).toBe(true);
   expect(r.sinAnimacion).toEqual([]);
   expect(r.pixels).toBeGreaterThan(100);
 });

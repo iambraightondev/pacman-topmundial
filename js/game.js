@@ -1276,9 +1276,9 @@
             if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
-            // DESATADO: un fantasma congelado no mata, ni uno que va a por
-            // el Tanque que provoca (ignora al resto del equipo)
-            if (this.hab && window.PM.Hab && (window.PM.Hab.congelado(g.id) ||
+            // DESATADO: un fantasma apagado no mata —congelado o aturdido—,
+            // ni uno que va a por el Tanque que provoca (ignora al resto)
+            if (this.hab && window.PM.Hab && (window.PM.Hab.apagado(g.id) ||
                 window.PM.Hab.ignoraA(this, i, g))) continue;
             if (!this.hitGhost(p, g)) continue;
             // ...y ESCUDO, INMUNIDAD o la carrera de ARROLLAR salvan el choque
@@ -4122,7 +4122,7 @@
           window.AudioSys && AudioSys.playEatGhost();
         } else {
           if (me.safeTicks > 0) continue;      // margen tras reaparecer
-          if (A && (A.congelado(g.id) || A.ignoraA(this, me.id, g))) continue;
+          if (A && (A.apagado(g.id) || A.ignoraA(this, me.id, g))) continue;
           if (!this.hitGhost(me, g)) continue;
           if (A && A.salvaDelChoque(this, me.id, g)) continue;
           /* predicción: se congela este Pac-Man (no la partida) y el

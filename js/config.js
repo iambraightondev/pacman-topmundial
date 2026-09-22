@@ -2069,6 +2069,14 @@
     GANCHO_INVERSO_VEL: 4,
     GANCHO_ARRASTRE_MULT: 1.2,
     GANCHO_AZUL_TICKS: 5 * 60,
+    /* El GANCHO del Soporte es el inverso del Asesino al revés: sale igual,
+     * puede fallar igual, pero lo que viaja es el FANTASMA, que llega azul.
+     * Se arrastra por los pasillos (no en línea recta hacia el jugador) y con
+     * un tope de tiempo, porque el Soporte se mueve mientras tira. */
+    GANCHO_TILES: 6,
+    GANCHO_VEL: 4,
+    GANCHO_TRAE_VEL: 2.4,
+    GANCHO_TRAE_MAX: 150,
     CACERIA_TICKS: 6 * 60,
     CACERIA_MULT: 1.2,
     /* El misil vuela al DOBLE de la velocidad de referencia de un Pac-Man
@@ -2089,6 +2097,10 @@
     ESTELA_RASTRO_MULT: 1.2,
     ESTELA_RASTRO_TICKS: 45,
     PUENTE_TICKS: 8 * 60,
+    /* Grosor máximo de muro que el PUENTE puede perforar. Los bloques del
+     * laberinto son de dos o tres casillas, así que con cuatro se cruza
+     * cualquiera de ellos y no el marco de fuera, que es macizo. */
+    PUENTE_TILES: 4,
     CADENA_TICKS: 6 * 60,
     FARO_TICKS: 6 * 60,
     MURO_TICKS: 5 * 60,
@@ -2102,7 +2114,12 @@
     TOTEM_TICKS: 8 * 60,
     TOTEM_CADA: 2 * 60,
     TOTEM_BALA_VEL: 3,
-    GRAVEDAD_TICKS: 60,
+    /* GRAVEDAD: el tirón se VE (medio segundo de arrastre por los pasillos,
+     * no un salto instantáneo), llega a cuatro casillas y los deja apagados
+     * dos segundos. Antes atraía un segundo de golpe y no se notaba nada. */
+    GRAVEDAD_TICKS: 2 * 60,
+    GRAVEDAD_RADIO: 4,
+    GRAVEDAD_TIRON: 30,
     NIEBLA_TICKS: 5 * 60,
     METEORO_AVISO: 90,
     METEORO_RADIO: 2,
@@ -2224,11 +2241,11 @@
       soporte: [
         [h('hielo', 'Q', 'DISPARO HELADO', 16, 'Congela al primer fantasma.'),
          h('mina', 'Q', 'MINA', 20, 'Trampa que mata y deja escudo.'),
-         h('gancho', 'Q', 'GANCHO', 18, 'Vuelve azul a un fantasma en línea.'),
+         h('gancho', 'Q', 'GANCHO', 18, 'Atrae al fantasma y lo deja azul.'),
          h('telarana', 'Q', 'TELARAÑA', 30, 'Zona que ralentiza a los fantasmas.')],
         [h('inmunidad', 'W', 'INMUNIDAD', 24, 'No puede tocarte nada durante 3 s.'),
          h('estela', 'W', 'ESTELA', 24, 'Acelera al equipo con un rastro.'),
-         h('puente', 'W', 'PUENTE', 32, 'El equipo atraviesa paredes durante 8 s.'),
+         h('puente', 'W', 'PUENTE', 32, 'Abre un paso por el muro de delante 8 s.'),
          h('cadena', 'W', 'CADENA', 28, 'Comparte puntos y absorbe un golpe.')],
         [h('aliado', 'E', 'ESCUDO ALIADO', 32, 'Da escudo al compañero.'),
          h('muro', 'E', 'MURO', 32, 'Pared que hace retroceder fantasmas.'),
