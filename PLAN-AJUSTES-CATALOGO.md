@@ -210,12 +210,12 @@ que fantasmas y Pac-Man pasen por encima sin tapar la señal.
 
 ---
 
-## Lo que hay que decidir antes
+## Lo que había que decidir  ·  DECIDIDO Y HECHO (22 sep)
 
 Estos tres no son un arreglo: son «esto no funciona, cámbialo». Van con
 propuesta, pero la decisión es suya.
 
-### TOQUE ARCANO es el MORDISCO otra vez *(punto 8)*
+### TOQUE ARCANO es el MORDISCO otra vez *(punto 8)* — HECHO: opción A
 
 **Hoy:** coge al fantasma más cercano a tres casillas y lo pone azul cuatro
 segundos. El MORDISCO del Asesino coge al más cercano y se lo come. La
@@ -227,7 +227,7 @@ diferencia —que los puntos son de quien se lo coma— **no se ve al jugarlo**.
 | B · Toque a distancia | Sube el alcance a 6 casillas y baja el azul a 3 s | Barato, pero sigue siendo el mordisco con más brazo |
 | C · Se cae | La Q del Mago se queda con BOLA DE FUEGO, BOLA GUIADA y CHISPA | Tres opciones ya son suficientes |
 
-### NIEBLA no tiene gracia *(punto 9)*
+### NIEBLA no tiene gracia *(punto 9)* — HECHO: ni A ni B, se hizo DOMINIO
 
 **Hoy:** una zona de cinco segundos; el fantasma que entra camina al azar.
 El problema es que un fantasma que anda al azar **se parece mucho a uno que
@@ -240,7 +240,7 @@ tiene la CEGUERA global en su R.
 | B · Niebla que tapa | La zona esconde a quien esté dentro: los fantasmas dejan de verlo | Choca con la SOMBRA del Asesino |
 | C · Se cae | La E del Mago se queda con RUNA y GRAVEDAD | Dos opciones es lo normal en el resto de ranuras |
 
-### METEORO es imposible de apuntar *(punto 7)*
+### METEORO es imposible de apuntar *(punto 7)* — HECHO: opción A
 
 **Hoy:** cae hasta seis casillas por delante, en la dirección de la última
 flecha que pulsaste, parando en la primera pared. Para ponerlo donde
@@ -262,6 +262,19 @@ Quedó vacío en la lista. Cuando me lo diga, lo sumo aquí.
 ---
 
 ## Lo que queda
+
+**Nada de esta lista**, salvo el punto 19, que sigue vacío. El 22 por la
+tarde entró lo que faltaba: TOQUE ARCANO contagioso, METEORO apuntado y, en
+lugar del ESPEJISMO que se propuso aquí (era el MURO del Soporte en redondo,
+como se vio al leerlo), **DOMINIO**: el Mago se queda un fantasma 6 s y lo
+manda a cazar a los suyos.
+
+En la misma tanda se cerró un agujero que no estaba en la lista: el REY
+FANTASMA no recibía NINGUNA habilidad del catálogo.
+
+---
+
+### (referencia) Lo que quedaba antes
 
 Solo **los tres que esperan decisión** (TOQUE ARCANO, NIEBLA y METEORO) y el
 punto 19, que sigue vacío. Todo lo demás de esta lista está construido y

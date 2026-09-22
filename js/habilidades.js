@@ -125,6 +125,12 @@
        * quien aprieta; lo que viaja y se graba es lo que sale al final. */
       mant: -1,
       mantT: 0,
+      /* METEORO APUNTADO: la retícula que se mueve mientras se tiene la R
+       * apretada ({ c, r, d, t, oc, or }; null cuando no se está apuntando).
+       * Es de ESTA pantalla y de nadie más —cada uno apunta el suyo—, así que
+       * no viaja en la foto de red: lo que viaja es la casilla final, al
+       * soltar. */
+      apunta: null,
       /* PORTAL (Mago): ticks que le quedan en la OTRA DIMENSIÓN (0: está en
        * la de todos). Mientras dure, nada lo toca y él no come. */
       dimension: 0,
@@ -238,7 +244,7 @@
     relevo: 'playFlash', faro: 'playShout', sirena: 'playShout', campo: 'playStealth',
     resurreccion: 'playExtraLife', hospital: 'playExtraLife', bola_guiada: 'playFlash',
     toque_arcano: 'playBiteMiss', chispa: 'playCharge', clon: 'playStealth', totem: 'playShout',
-    gravedad: 'playCharge', niebla: 'playStealth', meteoro: 'playShout', eclipse: 'playShout'
+    gravedad: 'playCharge', dominio: 'playShout', meteoro: 'playShout', eclipse: 'playShout'
   };
 
   function sonidoDe(G, idx, k) {
@@ -263,11 +269,18 @@
    * El temblor dura MENOS que el poder a propósito. El terremoto es un golpe:
    * lo que se siente es el momento en que revienta el suelo, no los seis
    * segundos siguientes. Temblando los seis enteros el laberinto se vuelve
-   * ilegible justo cuando hay que esquivar, y marea de verdad; lo que sí dura
-   * los seis segundos es lo que importa para jugar (la lentitud del equipo,
-   * TERREMOTO_SLOW), que se nota sin tener que sacudir la pantalla. */
+   * ilegible justo cuando hay que esquivar, y marea de verdad. */
   var TERREMOTO_TEMBLOR = 90;      // 1,5 s
   var TERREMOTO_SACUDIDA = 5;      // píxeles de desvío al arrancar
+
+  /* El golpe del METEORO mueve el suelo menos y menos rato que el terremoto:
+   * aquí cae una piedra en un sitio, allí se parte el mapa entero. Medio
+   * segundo es lo que tarda el ojo en volver al laberinto, y con cuatro
+   * píxeles se siente el impacto sin perder de vista a los fantasmas que
+   * quedan vivos alrededor. (Con "reducir movimiento" no tiembla nada: de eso
+   * ya se encarga temblar().) */
+  var METEORO_TEMBLOR = 30;
+  var METEORO_SACUDIDA = 4;
 
   var Hab = {
     on: false,       // ¿la partida en curso es de poderes?
@@ -309,7 +322,17 @@
       this.ciego = [0, 0, 0, 0];
       this.azulCatalogo = [0, 0, 0, 0];
       this.azulCatTicks = [0, 0, 0, 0];
+      /* Cuáles de esos azules son del TOQUE ARCANO. Hace falta el sello
+       * porque el azul del catálogo lo pone más de un poder (el GANCHO del
+       * Soporte, sin ir más lejos) y solo el del Mago se pega. */
+      this.arcanoAzul = [0, 0, 0, 0];
       this.caceriaQuien = [-1, -1, -1, -1];
+      /* DOMINIO (22 sep 2026): ticks que le quedan a cada fantasma de ser
+       * del Mago, y QUIÉN lo domina (-1: nadie). Van por fantasma y no por
+       * jugador porque lo que cambia es el fantasma —a quién persigue, a
+       * quién mata y de quién son los puntos—, igual que caceriaQuien. */
+      this.dominado = [0, 0, 0, 0];
+      this.dominaQuien = [-1, -1, -1, -1];
       this.marcaGhost = [-1, -1, -1, -1];
       this.joyas = [];
       this.proyectilesCat = [];
@@ -365,8 +388,10 @@
           hielo: this.hielo, huye: this.huye, huyeQuien: this.huyeQuien,
           lento: this.lento, lentoMult: this.lentoMult, aturdido: this.aturdido,
           ciego: this.ciego, azulCatalogo: this.azulCatalogo,
-          azulCatTicks: this.azulCatTicks, terremotoTicks: this.terremotoTicks, eclipseTicks: this.eclipseTicks,
+          azulCatTicks: this.azulCatTicks, arcanoAzul: this.arcanoAzul,
+          terremotoTicks: this.terremotoTicks, eclipseTicks: this.eclipseTicks,
           caceriaQuien: this.caceriaQuien, marcaGhost: this.marcaGhost,
+          dominado: this.dominado, dominaQuien: this.dominaQuien,
           joyas: this.joyas, proyectilesCat: this.proyectilesCat, tirones: this.tirones,
           rafagaId: this.rafagaId, balas: this.balas, portales: this.portales,
           runas: this.runas, placas: this.placas
@@ -407,9 +432,12 @@
         this.ciego = m.ciego || this.ciego;
         this.azulCatalogo = m.azulCatalogo || this.azulCatalogo;
         this.azulCatTicks = m.azulCatTicks || this.azulCatTicks;
+        this.arcanoAzul = m.arcanoAzul || this.arcanoAzul;
         this.terremotoTicks = m.terremotoTicks || 0;
         this.eclipseTicks = m.eclipseTicks || 0;
         this.caceriaQuien = m.caceriaQuien || this.caceriaQuien;
+        this.dominado = m.dominado || this.dominado;
+        this.dominaQuien = m.dominaQuien || this.dominaQuien;
         this.marcaGhost = m.marcaGhost || this.marcaGhost;
         this.joyas = m.joyas || [];
         this.proyectilesCat = m.proyectilesCat || [];
@@ -586,7 +614,7 @@
       if (this.huye && this.huye[gid] > 0) m *= H.PISOTON_LENTO;
       if (this.lento && this.lento[gid] > 0) m *= this.lentoMult[gid] || 1;
       if (this.aturdido && this.aturdido[gid] > 0) return 0;
-      /* ECLIPSE ya incluye ceguera: no se acumula con el 0,6 de NIEBLA. */
+      /* ECLIPSE ya incluye ceguera: no se acumula con el 0,6 de la otra. */
       if (this.eclipseTicks > 0) m *= 0.5;
       else if (this.ciego && this.ciego[gid] > 0) m *= 0.6;
       if (!G || !G.vsPlayerOf) return m;
@@ -662,6 +690,13 @@
         if (s.dientes > 0) s.dientes--;
         if (s.qEdad >= 0) s.qEdad = (s.qEdad < 120) ? s.qEdad + 1 : -1;
         if (s.flash > 0) s.flash--;
+        /* La retícula del METEORO solo vive con la partida EN MARCHA: si se
+         * para (pausa, una muerte, la congelación de comerse un fantasma) o el
+         * Mago se marcha a la otra dimensión, el apuntado se cierra sin tirar
+         * nada. No es manía: la marca tiene que durar exactamente los mismos
+         * ticks aquí que en la repetición, y allí no hay ningún dedo que
+         * suelte la tecla. */
+        if (s.apunta && (!corre || this.enDimension(i))) s.apunta = null;
         if (!corre) continue;
         for (var j = 0; j < 4; j++) if (s.guard[j] > 0) s.guard[j]--;
         for (var k = 0; k < 4; k++) if (s.cd[k] > 0) s.cd[k]--;
@@ -842,16 +877,30 @@
       return (H.MANTENER && H.MANTENER.hasOwnProperty(id)) ? H.MANTENER[id] : 0;
     },
 
+    /* ¿Esa tecla se APUNTA mientras se mantiene? Hoy solo el METEORO del
+     * Mago. Es prima de mantiene() —las dos hacen algo con la tecla apretada—
+     * pero esta no tiene ningún rato que cumplir: el apuntado empieza en
+     * cuanto se aprieta y dura lo que dure el dedo. */
+    esApuntada: function (G, idx, k) {
+      return this.idDe(G, idx, k) === 'meteoro';
+    },
+
     /* Tecla o botón apretado. repetida: la autorrepetición del teclado, que
      * en una tecla que se mantiene no puede volver a empezar la cuenta. */
     apretar: function (G, idx, k, repetida) {
-      if (!this.mantiene(G, idx, k)) return this.pulsar(G, idx, k);
+      var esAp = this.esApuntada(G, idx, k);
+      if (!this.mantiene(G, idx, k) && !esAp) return this.pulsar(G, idx, k);
       if (repetida) return false;
       var s = this.estado(idx), R = window.PM.Replay;
       if (!s || !this.puede(G, idx, k)) return false;
       if (R && R.habBloqueada && R.habBloqueada()) return false;
       s.mant = k;
       s.mantT = 0;
+      /* El apuntado se abre YA, no al cumplirse un rato: la retícula tiene
+       * que estar puesta para poder moverla. Sale por pulsar(mant) —la misma
+       * puerta que la placa de hielo— para que la repetición lo apunte y
+       * pueda volver a abrirlo en el mismo tick de aquel día. */
+      if (esAp && !this.pulsar(G, idx, k, true)) { s.mant = -1; return false; }
       return true;
     },
 
@@ -861,13 +910,112 @@
       if (!s || s.mant !== k) return false;
       s.mant = -1;
       s.mantT = 0;
-      return this.pulsar(G, idx, k);
+      var ok = this.pulsar(G, idx, k);
+      /* Si el meteoro no llegó a caer (se murió en el último tick, manda una
+       * repetición) la retícula se cierra igual: nada de dejar una marca en
+       * el suelo apuntando a algo que ya no va a pasar. */
+      if (s.apunta) s.apunta = null;
+      return ok;
     },
 
     /* Suelta todo sin lanzar nada (la ventana pierde el foco y ya no llegará
      * el "soltar") */
     cancelarMant: function () {
-      for (var i = 0; i < this.st.length; i++) { this.st[i].mant = -1; this.st[i].mantT = 0; }
+      for (var i = 0; i < this.st.length; i++) {
+        this.st[i].mant = -1; this.st[i].mantT = 0; this.st[i].apunta = null;
+      }
+    },
+
+    /* ---------- APUNTAR EL METEORO ----------
+     * ¿Ese jugador está apuntando? Mientras lo esté, las flechas son de la
+     * retícula y no de su Pac-Man (Game.setPacDir se lo pregunta antes de
+     * repartir el rumbo). */
+    apuntando: function (idx) {
+      var s = this.estado(idx);
+      return !!(s && s.apunta);
+    },
+
+    /* Hacia dónde camina la retícula ahora mismo (-1: nadie apunta). La
+     * repetición lo mira para no grabar dos veces la misma flecha
+     * (Replay.rumboDe), que es lo que hace que tener la tecla apretada deje
+     * una entrada y no doscientas. */
+    flechaApuntado: function (idx) {
+      var s = this.estado(idx);
+      return (s && s.apunta) ? s.apunta.d : -1;
+    },
+
+    /* Abre el apuntado: la retícula sale una casilla por delante del Mago (o
+     * encima de él si tiene la pared pegada a la cara) y echa a andar hacia
+     * donde él mira. Las flechas la GIRAN, no la empujan: ella sola se come
+     * una casilla cada METEORO_PASO ticks y se para al llegar a una pared o
+     * al alcance, así que apuntar es girarla y soltar la tecla a tiempo.
+     *
+     * Se hace así, y no un paso por pulsación, porque la autorrepetición del
+     * teclado la marca cada sistema operativo como quiere: una marca movida a
+     * golpe de repetición se vería andar a una velocidad distinta en cada
+     * ordenador, y en la repetición de la partida, a otra.
+     *
+     * `oc/or` es de dónde salió, y es contra eso —no contra el Mago de cada
+     * tick— contra lo que se mide el alcance: si se midiera contra él, andar
+     * mientras se apunta movería el listón y la marca se quedaría corta o
+     * larga sin que el jugador tocase nada. */
+    abrirApuntado: function (G, idx) {
+      var s = this.estado(idx), p = G.pacs[idx];
+      if (!s || !p) return false;
+      var oc = p.tileX(), or = p.tileY();
+      var c = this.casillaAdelante(G, idx, 1);
+      if (!c || !aterrizable(c.c, c.r)) c = { c: oc, r: or };
+      if (!aterrizable(c.c, c.r)) return false;
+      s.apunta = { c: c.c, r: c.r, d: this.dirFlash(p), t: 0, oc: oc, or: or };
+      this.efecto('meteoro_aviso', c.c * T + T / 2, c.r * T + T / 2, 12);
+      return true;
+    },
+
+    /* Una flecha mientras se apunta: cambia el rumbo de la retícula, que a
+     * partir de ahí camina sola (pasoApuntado). El primer paso NO sale aquí
+     * mismo sino en el tick siguiente, y a propósito: la repetición mete las
+     * flechas un poco más tarde dentro del mismo tick, y así la marca anda
+     * exactamente igual jugando que viéndolo luego. */
+    apuntarDir: function (idx, d) {
+      var s = this.estado(idx);
+      if (!s || !s.apunta || !(d >= 0 && d <= 3)) return false;
+      /* La misma flecha otra vez no reinicia la cuenta. El teclado repite el
+       * evento cada pocas centésimas mientras se tiene apretada, y si cada
+       * repetición pusiera el reloj a cero la marca no daría un paso en su
+       * vida. Es la misma criba que hace la repetición al grabar. */
+      if (s.apunta.d === d) return false;
+      s.apunta.d = d;
+      s.apunta.t = 0;
+      return true;
+    },
+
+    /* Casillas DE CAMINO entre dos puntos: las que andaría un fantasma, no la
+     * línea recta. Es lo que mide el alcance del meteoro, porque lo que hay
+     * de por medio son pasillos. -1 si no hay forma de llegar. */
+    pasosApuntado: function (fc, fr, tc, tr) {
+      if (fc === tc && fr === tr) return 0;
+      var ruta = this.rutaLaberinto(fc, fr, tc, tr);
+      return ruta ? ruta.length : -1;
+    },
+
+    /* Un tick de la retícula: cada METEORO_PASO ticks se come una casilla
+     * hacia su última flecha. Se para sola en las paredes, en la casa de los
+     * fantasmas y al llegar al alcance; no se pierde el apuntado por eso,
+     * solo deja de avanzar hasta que le digan otra dirección. */
+    pasoApuntado: function (G, idx) {
+      var s = this.estado(idx), a = s && s.apunta;
+      if (!a) return;
+      var p = G.pacs[idx];
+      /* muerto a media puntería: se cierra sin tirar nada */
+      if (!p || p.out || p.dying) { s.apunta = null; return; }
+      if (++a.t < H.METEORO_PASO) return;
+      a.t = 0;
+      if (!(a.d >= 0 && a.d <= 3)) return;
+      var v = CFG.DIR_V[a.d], nc = CFG.wrapCol(a.c + v.x), nr = a.r + v.y;
+      if (!aterrizable(nc, nr)) return;
+      var pasos = this.pasosApuntado(a.oc, a.or, nc, nr);
+      if (pasos < 0 || pasos > H.METEORO_ALCANCE) return;
+      a.c = nc; a.r = nr;
     },
 
     /* Un tick de las teclas mantenidas. Game.step lo llama ANTES que a
@@ -879,9 +1027,15 @@
         var s = this.st[i];
         if (!(s.mant >= 0)) continue;
         var p = G.pacs[i];
-        if (!p || p.out || p.dying) { s.mant = -1; s.mantT = 0; continue; }
+        if (!p || p.out || p.dying) { s.mant = -1; s.mantT = 0; s.apunta = null; continue; }
         if (G.state !== 'PLAYING' || G.paused || G.eatFreezeTicks > 0) continue;
         var k = s.mant;
+        /* El METEORO no tiene ningún rato que cumplir: dura lo que dure la
+         * tecla y lo que hace mientras tanto (pasear la retícula) corre en
+         * pasoRoles. Sin esta línea, como su rato vale cero, la tecla se
+         * daría por cumplida en el primer tick: volvería a abrir el apuntado
+         * una y otra vez y al soltar no caería nada. */
+        if (this.esApuntada(G, i, k)) continue;
         if (++s.mantT < this.mantiene(G, i, k)) continue;
         s.mant = -1;
         s.mantT = 0;
@@ -907,6 +1061,10 @@
       this.sinGasto = false;
       this.catalogoReset = false;
       if (mant) {
+        /* METEORO: la versión mantenida no lanza nada, ABRE EL APUNTADO. Ni
+         * gasta la recarga ni se le cuenta a la sala; eso pasa al soltar,
+         * que es cuando ya se sabe dónde cae. */
+        if (this.esApuntada(G, idx, k)) return this.abrirApuntado(G, idx);
         switch (this.idDe(G, idx, k)) {
           case 'hielo':  ok = deRed ? this.puedePlaca(G, idx) : this.placa(G, idx); break;
           case 'aliado': ok = this.aliadoArea(G, idx, deRed); break;
@@ -975,7 +1133,7 @@
         case 'clon': ok = this.clon(G, idx); break;
         case 'totem': ok = this.totem(G, idx); break;
         case 'gravedad': ok = this.gravedad(G, idx); break;
-        case 'niebla': ok = this.niebla(G, idx); break;
+        case 'dominio': ok = this.dominio(G, idx); break;
         case 'meteoro': ok = this.meteoro(G, idx); break;
         case 'eclipse': ok = this.eclipse(G, idx); break;
         default:          ok = false;
@@ -1015,6 +1173,14 @@
         if (p) {
           d.d = this.dirFlash(p); d.c = p.tileX(); d.r = p.tileY();
           d.x = Math.round(p.x); d.y = Math.round(p.y);
+        }
+        /* METEORO: lo que viaja es LA CASILLA apuntada, no el rumbo. La
+         * retícula la ha paseado él por los pasillos de su pantalla y desde
+         * la del anfitrión no hay forma de adivinarla; allí se comprueba
+         * antes de creérsela (ver meteoroValido). */
+        var sm = this.estado(idx);
+        if (sm && sm.meteoro && this.idDe(G, idx, k) === 'meteoro') {
+          d.ac = sm.meteoro.c; d.ar = sm.meteoro.r;
         }
         G.netSend('gevt', d);
       } else {
@@ -1114,7 +1280,7 @@
         case 'clon': ok = this.clon(G, who, d); break;
         case 'totem': ok = this.totem(G, who, d); break;
         case 'gravedad': ok = this.gravedad(G, who); break;
-        case 'niebla': ok = this.niebla(G, who, d); break;
+        case 'dominio': ok = this.dominio(G, who); break;
         case 'meteoro': ok = this.meteoro(G, who, d); break;
         case 'eclipse': ok = this.eclipse(G, who); break;
         default:
@@ -1180,7 +1346,7 @@
         case 'tormenta': if (s) s.tormenta = H.TORMENTA_RAYOS * H.TORMENTA_CADA; break;
       }
       var ecoId = this.idDe(G, who, k), ecoPac = G.pacs[who];
-      if (ecoPac && /^(shuriken|bomba|sombra|frenesi|carrona|marca|gancho_inverso|caceria|misil|ejecucion|empujon|grito_guerra|yunque|piel_piedra|rebote|terremoto|fortaleza|mina|gancho|telarana|estela|puente|cadena|muro|relevo|faro|sirena|campo|resurreccion|hospital|bola_guiada|toque_arcano|chispa|clon|totem|gravedad|niebla|meteoro|eclipse)$/.test(ecoId)) {
+      if (ecoPac && /^(shuriken|bomba|sombra|frenesi|carrona|marca|gancho_inverso|caceria|misil|ejecucion|empujon|grito_guerra|yunque|piel_piedra|rebote|terremoto|fortaleza|mina|gancho|telarana|estela|puente|cadena|muro|relevo|faro|sirena|campo|resurreccion|hospital|bola_guiada|toque_arcano|chispa|clon|totem|gravedad|dominio|meteoro|eclipse)$/.test(ecoId)) {
         this.efecto(ecoId, ecoPac.x, ecoPac.y, 24);
       }
       /* Y se oye. Bajito siempre: por aquí solo pasan los poderes de OTROS —el
@@ -1373,7 +1539,11 @@
       if (s && s.pielPiedra > 0) m *= 0.5;
       if (s && s.estela > 0) m *= H.ESTELA_MULT;
       else if (s && s.estelaBuff > 0) m *= H.ESTELA_RASTRO_MULT;
-      if (this.terremotoTicks > 0) m *= H.TERREMOTO_SLOW;
+      /* EL TERREMOTO YA NO FRENA AL EQUIPO (22 sep). Ralentizaba a todo el
+       * mundo seis segundos y, aunque no había ningún parón de verdad, al
+       * jugarlo se sentía como si el poder detuviera el tiempo. Ahora es lo
+       * que tiene que ser, como la TORMENTA del Mago: mata y se le ve
+       * (sacude el suelo), sin castigar a quien lo usa. */
       return m;
     },
 
@@ -1629,10 +1799,21 @@
       return !!(this.on && this.aturdido && this.aturdido[gid] > 0);
     },
 
+    /* DOMINIO: ¿este fantasma es ahora mismo del Mago? */
+    esDominado: function (gid) {
+      return !!(this.on && this.dominado && this.dominado[gid] > 0);
+    },
+
     /* Quieto y sin morder: hielo o aturdimiento. Es lo que consulta el choque
-     * de game.js, que es el sitio por donde pasan todas las muertes. */
+     * de game.js, que es el sitio por donde pasan todas las muertes.
+     *
+     * Desde el 22 sep 2026 entra aquí también el DOMINIO. Ese fantasma no
+     * está quieto —corre detrás de los suyos—, pero mientras es del Mago NO
+     * MUERDE A NADIE DEL EQUIPO, y este es justo el único sitio donde esa
+     * decisión se toma. Ponerlo aquí evita repetir la comprobación en los
+     * dos choques de game.js (el local y el de red) y que uno se olvide. */
     apagado: function (gid) {
-      return this.congelado(gid) || this.inerte(gid);
+      return this.congelado(gid) || this.inerte(gid) || this.esDominado(gid);
     },
 
     /* PROVOCAR: la casilla del Tanque más cercano que esté provocando, o null.
@@ -1648,6 +1829,25 @@
      * nadie, vuelven a su sitio. */
     objetivo: function (G, g) {
       if (!this.on || g.mode !== 'normal') return null;
+      /* DOMINIO: mientras el fantasma es del Mago ya no va a por Pac-Man,
+       * va a por LOS SUYOS. Se resuelve antes que nada —antes del clon, de
+       * la sirena, del grito del Tanque y de la ceguera— porque durante esos
+       * seis segundos no es un fantasma del laberinto: es del Mago, y nada
+       * de lo que mueve a los demás debería poder apartarlo de su presa.
+       * Se reaprovecha este camino (el mismo de PROVOCAR y SIRENA) en vez de
+       * inventar otro: Ghost.targetTile y Ghost.chooseDir ya pasan por aquí. */
+      if (this.esDominado(g.id)) {
+        var presa = this.presaDominado(G, g);
+        if (presa) return { x: presa.tileX(), y: presa.tileY() };
+        /* SIN PRESA, A POR EL REY FANTASMA (22 sep 2026). En un nivel de
+         * jefe los otros tres están encerrados en casa hasta que él los
+         * invoca, así que el dominado se quedaba sin nadie a quien cazar y
+         * volvía a perseguir a Pac-Man: el Mago se pagaba una E para que un
+         * fantasma le siguiera cazando a él. Ahora se va a por el rey y le
+         * pega un bocado (ver el DOMINIO de pasoRoles). */
+        if (this.rey(G)) return { x: Math.floor(G.jefe.x / T), y: Math.floor(G.jefe.y / T) };
+        return null;
+      }
       if (this.ciego && this.ciego[g.id] > 0) return null;
       for (var cidx = 0; cidx < this.st.length; cidx++) {
         var cs = this.st[cidx];
@@ -1676,6 +1876,21 @@
       return false;
     },
 
+    /* A quién persigue un fantasma DOMINADO: el fantasma NORMAL más
+     * cercano. Se saltan los que están en casa y los que vuelven hechos ojos
+     * (a esos no hay nada que hacerles) y los otros dominados, para que dos
+     * fantasmas del Mago no se peleen entre ellos en vez de cazar. */
+    presaDominado: function (G, g) {
+      var mejor = null, d0 = Infinity;
+      for (var i = 0; i < 4; i++) {
+        var o = G.ghosts[i];
+        if (i === g.id || !this.enLaCalle(o) || this.esDominado(i)) continue;
+        var d = this.distancia(g.x, g.y, o.x, o.y);
+        if (d < d0) { d0 = d; mejor = o; }
+      }
+      return mejor;
+    },
+
     /* PISOTÓN: el Pac-Man del que huye ese fantasma, o null */
     huyeDe: function (G, g) {
       if (!this.on || !(this.huye[g.id] > 0) || g.mode !== 'normal') return null;
@@ -1695,6 +1910,32 @@
         s.rebote = 0;
         if (this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote');
         return true;
+      }
+      /* EL REBOTE CONTRA EL REY FANTASMA (22 sep 2026). Sin fantasma que
+       * haya chocado, el único que pregunta por aquí es el jefe (Jefe.mata):
+       * es su choque el que no trae `g`, porque el rey no es un fantasma. Y
+       * el rebote es precisamente lo que dice su nombre —el primer contacto
+       * se devuelve—, así que se gasta igual: le quita vida y lo deja parado
+       * un segundo. Lo de pararlo no es un extra: el fantasma que rebota se
+       * muere y ahí se acaba el contacto, pero el rey sigue encima, y sin
+       * ese segundo el Tanque rebotaba y moría en el tick siguiente. */
+      if (s.rebote > 0 && !g) {
+        var JR = window.PM.Jefe, rp = G.pacs[idx];
+        if (JR && JR.activo(G)) {
+          s.rebote = 0;
+          s.gracia = H.ESCUDO_GRACIA;
+          if (this.manda(G)) {
+            JR.danar(G, CFG.JEFE.DANO.rebote, idx, 'rebote');
+            JR.congelar(G, CFG.JEFE.ATURDE.rebote);
+          } else if (G.netRole === 'guest' && idx === G.localIdx) {
+            /* el invitado decide que NO se muere, pero el golpe lo da el
+             * anfitrión: igual que la apisonadora (ver Jefe.peticionGolpe) */
+            G.netSend('gevt', { t: 'jefeGolpe', f: 'rebote' });
+          }
+          if (rp) this.efecto('rebote', rp.x, rp.y, 24);
+          sonDe(G, idx, 'playCharge');
+          return true;
+        }
       }
       if (s.yunque > 0 || s.pielPiedra > 0) { if (g) this.empujar(G, g, 1); return true; }
       /* El golpe del compañero enlazado lo absorbe el Soporte y consume la
@@ -1846,7 +2087,11 @@
         case 'muro': return !!s.muro;
         case 'faro': return !!s.faro;
         case 'sirena': return !!s.sirena;
-        case 'niebla': return !!s.niebla;
+        case 'dominio':
+          /* La E se queda encendida mientras le quede un fantasma suyo, que
+           * es lo único que dura de este poder (el reloj va por fantasma). */
+          for (var di = 0; di < 4; di++) if (this.dominaQuien[di] === idx) return true;
+          return false;
         case 'clon': return !!s.clon;
         case 'totem': return !!s.totem;
         case 'meteoro': return !!s.meteoro;
@@ -2627,7 +2872,11 @@
         Math.round((pts || H.MAGO_PUNTOS) * (mult || 1)), como, !!exacto);
       g.eaten();
       this.hielo[g.id] = 0; this.huye[g.id] = 0;
-      this.azulCatalogo[g.id] = 0; this.azulCatTicks[g.id] = 0; this.caceriaQuien[g.id] = -1;
+      this.azulCatalogo[g.id] = 0; this.azulCatTicks[g.id] = 0; this.arcanoAzul[g.id] = 0;
+      this.caceriaQuien[g.id] = -1;
+      /* si el que se va a casa era el fantasma prestado, deja de serlo: no
+       * tiene sentido que siga cazando desde dentro de la casa */
+      this.dominado[g.id] = 0; this.dominaQuien[g.id] = -1;
       G.addScore(pts);
       this.bonoCadena(G, who, pts, x, y);
       G.addPopup(x, y, pts, 45);
@@ -2649,6 +2898,38 @@
         if (m && m.c === c && m.r === r) return true;
       }
       return false;
+    },
+
+    /* ---------- EL REY FANTASMA Y EL CATÁLOGO (22 sep 2026) ----------
+     * Las habilidades nuevas no le hacían nada al jefe: quien no llevara el
+     * kit clásico llegaba a un nivel de jefe sin forma de tumbarlo, y ese
+     * nivel no se acaba hasta que cae. El camino es el que ya usaban el
+     * mordisco, la bola de fuego y el rayo —Jefe.danar y Jefe.congelar, con
+     * los números en CFG.JEFE—, así que aquí no se inventa nada: solo se
+     * avisa al jefe desde cada poder.
+     *
+     * Estos dos ayudantes son para no repetir la misma comprobación treinta
+     * veces. `rey` devuelve el módulo del jefe SOLO si hay uno vivo. */
+    rey: function (G) {
+      var JF = window.PM.Jefe;
+      return (JF && JF.activo(G)) ? JF : null;
+    },
+
+    /* Y este lo disfraza de fantasma —x, y, tileX(), tileY()— para que los
+     * proyectiles que persiguen (misil, bola guiada, balas del tótem) vuelen
+     * hacia él con el MISMO código que hacia un fantasma, rutas del
+     * laberinto incluidas, en vez de tener su propia rama. Es un solo objeto
+     * reutilizado: solo vive dentro del tick que lo pide. */
+    blancoRey: function (G) {
+      if (!this.rey(G)) return null;
+      var b = this.reyBlanco;
+      if (!b) {
+        b = this.reyBlanco = { rey: true,
+          tileX: function () { return CFG.wrapCol(Math.floor(this.x / T)); },
+          tileY: function () { return Math.floor(this.y / T); } };
+      }
+      b.x = G.jefe.x; b.y = G.jefe.y;
+      return b;
     },
 
     shuriken: function (G, idx, d) {
@@ -2687,6 +2968,12 @@
       s.bomba = null;
       if (this.manda(G)) for (var i = 0; i < blancos.length; i++)
         this.matarCatalogo(G, blancos[i], idx, H.BOMBA_PUNTOS, 'bomba', 1, true);
+      /* y al REY FANTASMA si le pilla en el radio (22 sep 2026): plantarla y
+       * esperar a que pase por encima es exactamente la jugada de la bomba */
+      var JB = this.manda(G) && this.rey(G);
+      if (JB && JB.cercaDe(G, b.c * T + T / 2, b.r * T + T / 2, H.BOMBA_RADIO)) {
+        JB.danar(G, CFG.JEFE.DANO.bomba, idx, 'bomba');
+      }
       this.efecto('bomba', b.c * T + T / 2, b.r * T + T / 2, 24);
       sonDe(G, idx, 'playShout'); return true;
     },
@@ -2726,14 +3013,43 @@
       if (!p) return false;
       for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) blancos.push(G.ghosts[i]);
       blancos.sort(function (a, b) { return this.distancia(p.x, p.y, a.x, a.y) - this.distancia(p.x, p.y, b.x, b.y); }.bind(this));
-      if (!blancos.length) return false;
+      /* SIN FANTASMAS, A POR EL REY (22 sep 2026). En un nivel de jefe los
+       * cuatro están encerrados en casa hasta que él los invoca: sin esto,
+       * la R del Asesino no salía siquiera. Sale con la cola vacía y el
+       * blanco puesto en el rey (ver pasoProyectilesCat). */
+      if (!blancos.length) {
+        if (!this.rey(G)) return false;
+        this.proyectilesCat.push({ tipo: 'misil', x: p.x, y: p.y, w: idx,
+          objetivo: -1, cola: [], golpe: 0, jefe: 1 });
+        this.efecto('misil_salida', p.x, p.y, 26);
+        sonDe(G, idx, 'playFlash'); return true;
+      }
       this.proyectilesCat.push({ tipo: 'misil', x: p.x, y: p.y, w: idx,
         objetivo: blancos[0].id, cola: blancos.slice(1).map(function (g) { return g.id; }), golpe: 0 });
       this.efecto('misil_salida', p.x, p.y, 26);
       sonDe(G, idx, 'playFlash'); return true;
     },
+    /* R — EJECUCIÓN: mata de golpe al fantasma más cercano por 5.000 puntos.
+     *
+     * CONTRA EL REY NO MATA DE GOLPE (22 sep 2026), le quita el bocado más
+     * grande de la tabla (ver CFG.JEFE.DANO). El motivo está escrito allí:
+     * la barra del rey ES la condición para acabar el nivel, y una R que se
+     * la salte entera convierte el nivel de jefe en pulsar una tecla. Y
+     * tampoco da los 5.000: esos son por comerse un fantasma, y al rey no se
+     * lo come nadie —lo suyo se cobra entero al tumbarlo (JEFE.PREMIO).
+     *
+     * El fantasma manda sobre el rey si los dos están a tiro: eso ya lo
+     * decide ghostCercano, y quitarle un fantasma de encima al equipo vale
+     * más que diez de vida. */
     ejecucion: function (G, idx) {
-      var g = this.ghostCercano(G, idx, 10); if (!g) return false;
+      var g = this.ghostCercano(G, idx, 10), p = G.pacs[idx];
+      if (!g) {
+        var JE = this.rey(G);
+        if (!JE || !p || !JE.cercaDe(G, p.x, p.y, 10)) return false;
+        if (this.manda(G)) JE.danar(G, CFG.JEFE.DANO.ejecucion, idx, 'ejecucion');
+        this.efecto('ejecucion', G.jefe.x, G.jefe.y, 36, p.x, p.y);
+        sonDe(G, idx, 'playShout'); return true;
+      }
       if (this.manda(G)) this.matarCatalogo(G, g, idx, H.EJECUCION_PUNTOS, 'ejecucion', 1, true);
       this.efecto('ejecucion', g.x, g.y, 36, G.pacs[idx].x, G.pacs[idx].y);
       sonDe(G, idx, 'playShout'); return true;
@@ -2755,6 +3071,22 @@
       if (!g) {
         hacia = CFG.OPP[dir];
         g = this.ghostEnLinea(G, idx, H.EMPUJON_TILES, { d: hacia });
+      }
+      /* EL REY FANTASMA (22 sep 2026): NO SE EMPUJA —pesa lo que pesa y
+       * moverlo de casilla sería una Q que lo saca de encima gratis cada
+       * dieciocho segundos— pero SÍ SE APAGA. Medio segundo, un tercio de lo
+       * que dura en un fantasma: lo justo para salir de debajo, que es para
+       * lo que está la Q del Tanque. Se mira después del fantasma: si hay
+       * uno en la línea, manda el fantasma. */
+      if (!g) {
+        var JE = this.rey(G);
+        var haciaRey = JE && JE.enLinea(G, idx, H.EMPUJON_TILES, dir) ? dir
+          : (JE && JE.enLinea(G, idx, H.EMPUJON_TILES, CFG.OPP[dir]) ? CFG.OPP[dir] : -1);
+        if (JE && haciaRey >= 0) {
+          JE.congelar(G, CFG.JEFE.ATURDE.empujon);
+          this.efecto('empujon', G.jefe.x, G.jefe.y, 24, p.x, p.y);
+          sonDe(G, idx, 'playCharge'); return true;
+        }
       }
       if (!g) return false;
       this.aturdido[g.id] = H.EMPUJON_STUN;
@@ -2790,9 +3122,24 @@
      * Tanque para una partida entera, y por eso la recarga subió a 40 s. */
     gritoGuerra: function (G, idx) {
       var p = G.pacs[idx]; if (!p) return false;
+      /* El rugido se pinta UNA vez y desde el Tanque (22 sep). Antes salía
+       * un trazo quebrado del Tanque a cada fantasma y eran cuatro rayos
+       * rojos: parecía electricidad, no un grito. Ahora es una onda que se
+       * expande por el mapa entero —que es justo hasta dónde llega el
+       * poder— y cada fantasma clavado se sacude en su sitio. */
+      this.efecto('grito_guerra', p.x, p.y, 34);
       for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
         this.aturdido[i] = H.GRITO_GUERRA_TICKS;
-        this.efecto('grito_guerra', G.ghosts[i].x, G.ghosts[i].y, 24, p.x, p.y);
+        this.efecto('grito_sacudida', G.ghosts[i].x, G.ghosts[i].y, 16);
+      }
+      /* Y AL REY FANTASMA (22 sep 2026), pero un segundo en vez de dos y
+       * medio. La onda llega a todo el mapa, así que contra el jefe esta es
+       * la única habilidad que ni hay que apuntar: por eso se le apaga menos
+       * que a un fantasma (ver CFG.JEFE.ATURDE). */
+      var JG = this.rey(G);
+      if (JG) {
+        JG.congelar(G, CFG.JEFE.ATURDE.grito_guerra);
+        this.efecto('grito_sacudida', G.jefe.x, G.jefe.y, 16);
       }
       sonDe(G, idx, 'playShout'); return true;
     },
@@ -2802,6 +3149,14 @@
     terremoto: function (G, idx) {
       var s = this.estado(idx); if (!s) return false;
       this.terremotoTicks = H.TERREMOTO_TICKS; s.terremoto = H.TERREMOTO_TICKS;
+      /* EL REY FANTASMA NO SE VA A CASA (22 sep 2026): no tiene casa a la
+       * que volver. La sacudida le quita vida, y de las gordas —es una R de
+       * setenta segundos que además ralentiza al propio equipo. */
+      var JT = this.manda(G) && this.rey(G);
+      if (JT) {
+        JT.danar(G, CFG.JEFE.DANO.terremoto, idx, 'terremoto');
+        this.efecto('terremoto', G.jefe.x, G.jefe.y, 30);
+      }
       if (this.manda(G)) for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
         var g = G.ghosts[i];
         this.matarCatalogo(G, g, idx, H.TERREMOTO_PUNTOS, 'terremoto', 1, true);
@@ -2939,13 +3294,102 @@
       var p = G.pacs[idx], g = this.ghostCercano(G, idx, 999);
       if (!p) return false;
       if (g) this.proyectilesCat.push({ tipo: 'guiada', x: p.x, y: p.y, w: idx, objetivo: g.id });
+      /* Y SI NO QUEDA NINGUNO, AL REY (22 sep 2026). En un nivel de jefe los
+       * cuatro empiezan encerrados, así que la Q del Mago salía sin bola y
+       * "la que no falla" no llegaba a salir nunca. */
+      else if (this.rey(G)) this.proyectilesCat.push({ tipo: 'guiada', x: p.x, y: p.y, w: idx, objetivo: -1, jefe: 1 });
       this.efecto('guiada_salida', p.x, p.y, 24);
       sonDe(G, idx, 'playFlash'); return true;
     },
-    toqueArcano: function (G, idx) { var g = this.ghostCercano(G, idx, 3); if (!g) return false; this.azulCatalogo[g.id] = idx + 1; this.azulCatTicks[g.id] = H.TOQUE_ARCANO_TICKS; this.efecto('arcano', g.x, g.y, 28, G.pacs[idx].x, G.pacs[idx].y); sonDe(G, idx, 'playBiteMiss'); return true; },
+    /* TOQUE ARCANO: EL AZUL SE CONTAGIA (22 sep 2026)
+     *
+     * Hasta hoy esto era poner azul a un fantasma cercano y ya: el MORDISCO
+     * del Asesino con otro nombre, indistinguible al jugarlo. Ahora el que
+     * recibe el toque LO PEGA: cualquier fantasma con el que se cruce se
+     * vuelve azul también. Es lo más de Mago del catálogo —no mata, altera
+     * el tablero— y en party es una bola de nieve para el equipo, porque el
+     * azul del catálogo se lo puede comer cualquiera, no solo quien lo puso.
+     *
+     * El freno está en la herencia: el contagiado recibe LO QUE LE QUEDE al
+     * que se lo pegó, nunca más, así que cada salto sale del mismo reloj y
+     * la cadena se apaga sola. Ver pasoContagioArcano. */
+    toqueArcano: function (G, idx) {
+      var g = this.ghostCercano(G, idx, 3);
+      /* EL REY FANTASMA NO SE VUELVE AZUL (22 sep 2026), porque el azul solo
+       * sirve para comérselo y a él no se lo come nadie: volverlo azul sería
+       * una Q que no hace absolutamente nada. Así que el toque le entra como
+       * lo que es —un toque— y le hace un rasguño: 1 de vida. Poco a
+       * propósito; la Q del Mago contra el jefe es la BOLA, no esta. */
+      if (!g) {
+        var JA = this.rey(G), pa = G.pacs[idx];
+        if (!JA || !pa || !JA.cercaDe(G, pa.x, pa.y, 3)) return false;
+        if (this.manda(G)) JA.danar(G, CFG.JEFE.DANO.arcano, idx, 'arcano');
+        this.efecto('arcano', G.jefe.x, G.jefe.y, 28, pa.x, pa.y);
+        sonDe(G, idx, 'playBiteMiss'); return true;
+      }
+      this.azulCatalogo[g.id] = idx + 1;
+      this.azulCatTicks[g.id] = H.TOQUE_ARCANO_TICKS;
+      this.arcanoAzul[g.id] = 1;                 // este azul se pega
+      this.efecto('arcano', g.x, g.y, 28, G.pacs[idx].x, G.pacs[idx].y);
+      sonDe(G, idx, 'playBiteMiss'); return true;
+    },
+
+    /* El salto del azul del TOQUE ARCANO, una vez por tick.
+     *
+     * Reglas, todas pensadas para que no se descontrole:
+     *  - salta cuando se CRUZAN de verdad, a una casilla escasa, como los
+     *    demás choques del archivo; no por estar en la misma zona;
+     *  - el contagiado hereda el tiempo que le queda al otro y su dueño
+     *    (quien cobra los puntos), nunca más tiempo del que había;
+     *  - al que ya está azul no se le renueva el reloj, que sería azul
+     *    infinito entre dos fantasmas dándose la vuelta;
+     *  - los ojos, los de casa y los que están saliendo no cuentan.
+     * Y el contagiado no vuelve a pegarlo hasta el tick siguiente (por eso
+     * la lista de portadores se hace antes): así una cadena de cuatro tarda
+     * cuatro ticks y se ve, en vez de encenderse el mapa de golpe.
+     *
+     * Esto lo resuelve SOLO el anfitrión; las demás pantallas reciben
+     * azulCatalogo y azulCatTicks en la foto y no deciden nada. */
+    pasoContagioArcano: function (G) {
+      var portadores = [], i, j, k;
+      for (i = 0; i < 4; i++) {
+        if (this.arcanoAzul[i] && this.azulCatTicks[i] > 0 && this.enLaCalle(G.ghosts[i])) portadores.push(i);
+      }
+      if (!portadores.length) return;
+      for (k = 0; k < portadores.length; k++) {
+        i = portadores[k];
+        var a = G.ghosts[i];
+        for (j = 0; j < 4; j++) {
+          if (j === i) continue;
+          var b = G.ghosts[j];
+          if (!this.enLaCalle(b)) continue;
+          if (this.azulCatTicks[j] > 0) continue;
+          if (this.distancia(a.x, a.y, b.x, b.y) > T) continue;
+          this.azulCatTicks[j] = this.azulCatTicks[i];
+          this.azulCatalogo[j] = this.azulCatalogo[i];
+          this.arcanoAzul[j] = 1;
+          /* que se VEA de dónde vino: el hilo morado entre los dos */
+          this.efecto('arcano_contagio', b.x, b.y, 20, a.x, a.y);
+        }
+      }
+    },
     chispa: function (G, idx) {
       var p = G.pacs[idx], primero = this.ghostCercano(G, idx, 3), usados = {}, actual = primero;
-      if (!p || !primero) return false;
+      if (!p) return false;
+      /* EL REY FANTASMA se lleva su chispazo aparte (22 sep 2026): no está
+       * en la cadena de fantasma a fantasma —no es uno de los cuatro— pero
+       * si el Mago lo tiene a tiro se le apaga un segundo, un tercio de los
+       * tres que dura en un fantasma. Y la Q sale aunque él sea el único
+       * blanco: es lo normal en un nivel de jefe. */
+      var JC = this.rey(G), tocaRey = JC && JC.cercaDe(G, p.x, p.y, 3);
+      if (tocaRey) {
+        JC.congelar(G, CFG.JEFE.ATURDE.chispa);
+        this.efecto('chispa', G.jefe.x, G.jefe.y, 24, p.x, p.y);
+      }
+      if (!primero) {
+        if (!tocaRey) return false;
+        sonDe(G, idx, 'playCharge'); return true;
+      }
       var ox = p.x, oy = p.y;
       while (actual) {
         usados[actual.id] = 1; this.aturdido[actual.id] = H.CHISPA_TICKS;
@@ -2974,6 +3418,16 @@
      * pasillo, llega a cuatro casillas y los deja apagados dos segundos. */
     gravedad: function (G, idx) {
       var p = G.pacs[idx], blancos; if (!p) return false;
+      /* AL REY NO SE LE ARRASTRA (22 sep 2026). Tirar de él hacia el Mago
+       * sería además la peor idea posible —te lo traes encima—, así que de
+       * la GRAVEDAD se queda con la mitad que sí tiene sentido: se le apaga
+       * tres cuartos de segundo, un tercio de los dos que dura en un
+       * fantasma. */
+      var JV = this.rey(G);
+      if (JV && JV.cercaDe(G, p.x, p.y, H.GRAVEDAD_RADIO)) {
+        JV.congelar(G, CFG.JEFE.ATURDE.gravedad);
+        this.efecto('gravedad', p.x, p.y, 28, G.jefe.x, G.jefe.y);
+      }
       blancos = this.ghostsEn(G, p.tileX(), p.tileY(), H.GRAVEDAD_RADIO);
       for (var i = 0; i < blancos.length; i++) {
         var g = blancos[i];
@@ -2989,8 +3443,65 @@
       }
       this.efecto('gravedad_centro', p.x, p.y, 32); sonDe(G, idx, 'playCharge'); return true;
     },
-    niebla: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.niebla = { c: c.c, r: c.r, t: H.NIEBLA_TICKS }; this.efecto('niebla', c.c * T + T / 2, c.r * T + T / 2, 26); sonDe(G, idx, 'playStealth'); return true; },
-    meteoro: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6, d); if (!s || !c) return false; s.meteoro = { c: c.c, r: c.r, t: H.METEORO_AVISO }; s.fuegoMeteoro = null; this.efecto('meteoro_aviso', c.c * T + T / 2, c.r * T + T / 2, 30); sonDe(G, idx, 'playShout'); return true; },
+    /* E — DOMINIO (22 sep 2026). Sustituye a NIEBLA, que plantaba una zona
+     * donde el fantasma que entraba caminaba al azar: no se distinguía de un
+     * fantasma persiguiéndote mal, no se planeaba nada con ella y el Mago ya
+     * tiene ceguera para los cuatro en su R (ECLIPSE).
+     *
+     * Ahora el Mago TOCA al fantasma más cercano y durante seis segundos ese
+     * fantasma es suyo: persigue a los otros tres (ver objetivo) y al
+     * alcanzarlos los manda a casa cobrando 200 por cabeza (ver pasoRoles).
+     * Mientras dura no muerde a nadie del equipo (ver apagado) y al acabarse
+     * vuelve aturdido un segundo (DOMINIO_RESACA), para que no mate al Mago
+     * en el acto por haber estado pegado a él. */
+    dominio: function (G, idx) {
+      var p = G.pacs[idx], g = this.ghostCercano(G, idx, H.DOMINIO_TILES);
+      if (!p || !g) return false;
+      this.dominado[g.id] = H.DOMINIO_TICKS;
+      this.dominaQuien[g.id] = idx;
+      /* Se le quita lo que le contara otra historia: el azul del catálogo
+       * (nadie se come a un fantasma que está cazando por ti) y el
+       * aturdimiento con el que pudiera venir de una CHISPA o una GRAVEDAD,
+       * que si no arrancaría el dominio sin poder moverse. */
+      this.azulCatalogo[g.id] = 0; this.azulCatTicks[g.id] = 0; this.arcanoAzul[g.id] = 0;
+      this.aturdido[g.id] = 0;
+      this.efecto('dominio', g.x, g.y, 30, p.x, p.y);
+      sonDe(G, idx, 'playShout'); return true;
+    },
+    /* EL METEORO CAE. Tres formas de llegar aquí, por orden de lo que pasa
+     * casi siempre:
+     *   1) el jugador venía APUNTANDO (la R mantenida) y la retícula ya está
+     *      donde él quiere: cae ahí;
+     *   2) llega por la red la casilla que eligió un invitado en su pantalla,
+     *      y el anfitrión la mira antes de plantarla;
+     *   3) sin nada de eso sigue valiendo lo de siempre: seis casillas al
+     *      frente. Son seis y no las ocho del alcance a posta — es el camino
+     *      por el que pasan las repeticiones de antes del 22 sep, y tienen
+     *      que volver a caer exactamente donde cayeron aquel día. */
+    meteoro: function (G, idx, d) {
+      var s = this.estado(idx), c = null;
+      if (!s) return false;
+      if (s.apunta) c = { c: s.apunta.c, r: s.apunta.r };
+      else if (d && d.ac != null && this.meteoroValido(G, idx, d.ac | 0, d.ar | 0)) c = { c: CFG.wrapCol(d.ac | 0), r: d.ar | 0 };
+      if (!c) c = this.casillaAdelante(G, idx, 6, d && d.d);
+      if (!c) return false;
+      s.apunta = null;
+      s.meteoro = { c: c.c, r: c.r, t: H.METEORO_AVISO };
+      s.fuegoMeteoro = null;
+      this.efecto('meteoro_aviso', c.c * T + T / 2, c.r * T + T / 2, 30);
+      sonDe(G, idx, 'playShout');
+      return true;
+    },
+
+    /* El anfitrión no se cree la casilla de un invitado sin mirarla: tiene
+     * que ser pisable (ni muro, ni casa de fantasmas) y estar a tiro por los
+     * pasillos, con la propina de METEORO_MARGEN_RED. */
+    meteoroValido: function (G, idx, c, r) {
+      var p = G.pacs[idx];
+      if (!p || !aterrizable(CFG.wrapCol(c), r)) return false;
+      var pasos = this.pasosApuntado(p.tileX(), p.tileY(), CFG.wrapCol(c), r);
+      return pasos >= 0 && pasos <= H.METEORO_ALCANCE + H.METEORO_MARGEN_RED;
+    },
     eclipse: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s) return false; s.eclipse = H.ECLIPSE_TICKS; this.eclipseTicks = H.ECLIPSE_TICKS; for (var i = 0; i < 4; i++) this.ciego[i] = H.ECLIPSE_TICKS; if (p) this.efecto('eclipse', p.x, p.y, 40); sonDe(G, idx, 'playShout'); return true; },
 
     /* Se acabó el tiempo entre un shuriken y el siguiente: lo que quedaba de
@@ -3097,6 +3608,34 @@
       ruta.reverse(); return ruta;
     },
 
+    /* A quién se lleva por delante el MISIL desde donde está ahora mismo.
+     * Devuelve false cuando ya no le queda nadie a quien perseguir y hay que
+     * apagarlo, que es lo que el misil ha hecho siempre al quedarse sin cola. */
+    atropellaMisil: function (G, b) {
+      var golpeo = false, j, g, k;
+      for (j = 0; j < 4; j++) {
+        g = G.ghosts[j];
+        if (!this.enLaCalle(g)) continue;
+        if (this.distancia(b.x, b.y, g.x, g.y) > T * 0.75) continue;
+        this.matarCatalogo(G, g, b.w, CFG.GHOST_CHAIN[Math.min(b.golpe, 3)], 'misil');
+        b.golpe++;
+        golpeo = true;
+        /* fuera de la cola: un mismo fantasma no se cobra dos veces */
+        if (b.cola) { k = b.cola.indexOf(g.id); if (k >= 0) b.cola.splice(k, 1); }
+        if (g.id === (b.objetivo | 0)) b.objetivo = -1;
+      }
+      if (!golpeo) return true;
+      if (b.objetivo >= 0 && this.enLaCalle(G.ghosts[b.objetivo])) return true;
+      /* se quedó sin blanco por el camino: pasa al siguiente de la cola que
+       * siga en pie y vuelve a calcular la ruta desde donde esté */
+      while (b.cola && b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
+      if (b.cola && b.cola.length) {
+        b.objetivo = b.cola.shift(); b.ruta = null; b.rutaObjetivo = '';
+        return true;
+      }
+      return false;
+    },
+
     /* Proyectiles visibles del catálogo. Aquí se resuelven las tres cargas
      * de shuriken, la bola que no falla, el misil encadenado y los
      * disparos del tótem. El anfitrión decide los impactos; las demás
@@ -3125,6 +3664,23 @@
               this.matarCatalogo(G, tocado, b.w, H.SHURIKEN_PUNTOS, 'shuriken', 1, true);
               this.finShuriken(G, b, true); this.proyectilesCat.splice(i, 1); continue;
             }
+            /* EL REY FANTASMA (22 sep 2026): la estrella se le clava y le
+             * quita vida. Entra FORZADA, saltándose el respiro entre golpes:
+             * las tres cargas de una ráfaga salen casi seguidas y, si no, la
+             * segunda y la tercera se perdían contra ese respiro y la Q
+             * valía un tercio de lo que dice. Es lo mismo que hacen la runa
+             * y el azul, que también traen su propio límite (tres tiros).
+             *
+             * Y NO cuenta como acierto para el pleno: el pleno perdona la
+             * recarga por limpiar tres fantasmas, y con el rey —que está
+             * siempre en la pantalla y es el doble de grande— sería una Q
+             * gratis para siempre. */
+            var JS = this.rey(G);
+            if (JS && JS.impactaEn(G, b.x, b.y)) {
+              JS.danar(G, CFG.JEFE.DANO.shuriken, b.w, 'shuriken', true);
+              this.efecto('shuriken', b.x, b.y, 16);
+              this.finShuriken(G, b, false); this.proyectilesCat.splice(i, 1); continue;
+            }
           }
           continue;
         }
@@ -3144,7 +3700,21 @@
               b.fase = 'vuelve';
             } else {
               b.x = gnx; b.y = gny;
-              for (var gj = 0; gj < 4; gj++) {
+              /* EL GARFIO CONTRA EL REY FANTASMA (22 sep 2026). Al fantasma
+               * se lo trae y lo deja azul; al rey no se le hace ni lo uno ni
+               * lo otro: no se le mueve de sitio —pesa lo que pesa— y volver
+               * azul a quien no se come no significa nada. Así que el garfio
+               * le entra, le hace un rasguño (1 de vida, ver CFG.JEFE.DANO)
+               * y vuelve de vacío. Es poco a posta: la Q del Soporte contra
+               * el jefe no es su jugada, pero tampoco puede ser una tecla
+               * que no hace nada. */
+              var JG = manda && this.rey(G);
+              if (JG && JG.impactaEn(G, b.x, b.y)) {
+                JG.danar(G, CFG.JEFE.DANO.gancho, b.w, 'gancho');
+                this.efecto('gancho', b.x, b.y, 20, sp2.x, sp2.y);
+                b.fase = 'vuelve';
+              }
+              for (var gj = 0; gj < 4 && b.fase === 'sale'; gj++) {
                 var gcand = G.ghosts[gj];
                 if (!this.enLaCalle(gcand) || this.distancia(b.x, b.y, gcand.x, gcand.y) > T * 0.75) continue;
                 b.objetivo = gcand.id; b.fase = 'trae'; b.trae = H.GANCHO_TRAE_MAX;
@@ -3244,8 +3814,27 @@
           continue;
         }
 
-        var target = G.ghosts[b.objetivo | 0];
-        if (!this.enLaCalle(target)) {
+        /* EL MISIL ATROPELLA (22 sep 2026): antes solo se llevaba al fantasma
+         * que llevaba apuntado y los demás lo veían pasar por delante de sus
+         * narices. Ahora mata a cualquiera que se le cruce, con el mismo radio
+         * de toque que el shuriken (tres cuartos de casilla). Al atropellado se
+         * le tacha de la cola para que no se le cobre dos veces, y la cadena de
+         * puntos sigue subiendo igual. Solo lo resuelve el anfitrión: las demás
+         * pantallas reciben las muertes por la foto de red. */
+        /* El misil que se queda sin cola se apaga... salvo que quede el REY
+         * FANTASMA: entonces sigue volando y remata en él (22 sep 2026). */
+        if (b.tipo === 'misil' && manda && !this.atropellaMisil(G, b) && !this.rey(G)) {
+          this.proyectilesCat.splice(i, 1); continue;
+        }
+        /* EL REY FANTASMA COMO BLANCO (22 sep 2026). El misil, la bola
+         * guiada y las balas del tótem persiguen fantasmas; en un nivel de
+         * jefe los cuatro están encerrados en casa hasta que él los invoca,
+         * así que esas tres habilidades ni siquiera salían. Con `b.jefe`
+         * puesto persiguen al rey, y como va disfrazado de fantasma
+         * (blancoRey) vuelan con este mismo código, rutas del laberinto
+         * incluidas. Al llegar le quitan vida en vez de comérselo. */
+        var target = b.jefe ? this.blancoRey(G) : G.ghosts[b.objetivo | 0];
+        if (!b.jefe && !this.enLaCalle(target)) {
           if (b.tipo === 'misil') {
             while (b.cola && b.cola.length && !this.enLaCalle(G.ghosts[b.cola[0]])) b.cola.shift();
             if (b.cola && b.cola.length) { b.objetivo = b.cola.shift(); b.ruta = null; target = G.ghosts[b.objetivo]; }
@@ -3253,8 +3842,14 @@
             target = this.ghostCercanoAt(G, Math.floor(b.x / T), Math.floor(b.y / T), 999);
             if (target) b.objetivo = target.id;
           }
+          /* y si ya no queda ningún fantasma, el que quede volando remata en
+           * el rey: el misil "mata en cadena" y el último eslabón es él */
+          if (!this.enLaCalle(target) && this.blancoRey(G)) {
+            b.jefe = 1; b.ruta = null; b.rutaObjetivo = '';
+            target = this.blancoRey(G);
+          }
         }
-        if (!this.enLaCalle(target)) { this.proyectilesCat.splice(i, 1); continue; }
+        if (!target || (!b.jefe && !this.enLaCalle(target))) { this.proyectilesCat.splice(i, 1); continue; }
         var vel = b.tipo === 'misil' ? H.MISIL_VEL : (b.tipo === 'totem' ? H.TOTEM_BALA_VEL : H.BOLA_GUIADA_VEL);
         /* El MISIL y la BOLA GUIADA persiguen igual: van por los pasillos con
          * la ruta del laberinto y la recalculan en cuanto el fantasma cambia
@@ -3276,7 +3871,10 @@
            * fantasma en la calle) se va derecha a por él y lo vuelve a
            * intentar al tick siguiente, pero no desaparece. */
           if (!b.ruta) {
-            if (b.tipo === 'misil') { this.proyectilesCat.splice(i, 1); continue; }
+            /* yendo a por el REY tampoco se apaga (22 sep 2026): él puede
+             * estar sobre la puerta de la casa, que para el laberinto no es
+             * pasillo, y ahí el camino no sale. Se va derecho y ya. */
+            if (b.tipo === 'misil' && !b.jefe) { this.proyectilesCat.splice(i, 1); continue; }
             sigueRuta = false;
           }
         }
@@ -3298,6 +3896,14 @@
         }
         if (aObjetivo && dis <= vel + 3) {
           b.x = target.x; b.y = target.y;
+          if (b.jefe) {
+            /* al rey no se lo come nadie: se le quita vida y el proyectil se
+             * acaba ahí (el misil tampoco sigue: él es el último eslabón) */
+            var JD = this.rey(G);
+            if (manda && JD) JD.danar(G, CFG.JEFE.DANO[b.tipo], b.w, b.tipo);
+            this.efecto(b.tipo === 'guiada' ? 'bola_guiada' : b.tipo, b.x, b.y, 22);
+            this.proyectilesCat.splice(i, 1); continue;
+          }
           if (manda) {
             if (b.tipo === 'guiada') this.matarCatalogo(G, target, b.w, H.BOLA_GUIADA_PUNTOS, 'bola_guiada', 1, true);
             else if (b.tipo === 'totem') this.matarCatalogo(G, target, b.w, H.MAGO_PUNTOS, 'totem');
@@ -3337,9 +3943,23 @@
         if (this.lento[j] > 0) this.lento[j]--;
         if (this.aturdido[j] > 0) this.aturdido[j]--;
         if (this.ciego[j] > 0) this.ciego[j]--;
-        if (this.azulCatTicks[j] > 0 && --this.azulCatTicks[j] <= 0) this.azulCatalogo[j] = 0;
+        if (this.azulCatTicks[j] > 0 && --this.azulCatTicks[j] <= 0) { this.azulCatalogo[j] = 0; this.arcanoAzul[j] = 0; }
         if (this.caceriaQuien[j] >= 0 && !this.enLaCalle(G.ghosts[j])) this.caceriaQuien[j] = -1;
+        /* DOMINIO: el reloj del fantasma prestado. Al agotarse vuelve a ser
+         * de la casa pero ATURDIDO un segundo: lleva seis pegado al Mago y
+         * sin esa resaca lo mataría en el mismo tick en que deja de serlo. */
+        if (this.dominado[j] > 0) {
+          if (!this.enLaCalle(G.ghosts[j])) { this.dominado[j] = 0; this.dominaQuien[j] = -1; }
+          else if (--this.dominado[j] <= 0) {
+            this.dominado[j] = 0; this.dominaQuien[j] = -1;
+            this.aturdido[j] = Math.max(this.aturdido[j], H.DOMINIO_RESACA);
+            this.efecto('dominio_fin', G.ghosts[j].x, G.ghosts[j].y, 24);
+          }
+        }
       }
+      /* el azul del TOQUE ARCANO salta de fantasma a fantasma: lo decide el
+       * anfitrión y solo él, los demás lo reciben ya resuelto en la foto */
+      if (manda) this.pasoContagioArcano(G);
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.provoca > 0) s.provoca--;
@@ -3429,8 +4049,12 @@
         if (s.muro && --s.muro.t <= 0) s.muro = null;
         if (s.faro && --s.faro.t <= 0) s.faro = null;
         if (s.sirena && --s.sirena.t <= 0) s.sirena = null;
-        if (s.niebla && --s.niebla.t <= 0) s.niebla = null;
         if (s.clon && --s.clon.t <= 0) s.clon = null;
+        /* La retícula del METEORO camina aquí y no en cargas() a propósito:
+         * cargas() corre ANTES que la repetición y esto tiene que correr
+         * DESPUÉS, que es donde ella vuelve a meter las flechas. Así la marca
+         * anda casilla por casilla igual jugando que viéndolo luego. */
+        if (s.apunta) this.pasoApuntado(G, i);
         if (s.meteoro && s.meteoro.t > 0) s.meteoro.t--;
         if (s.fuegoMeteoro && --s.fuegoMeteoro.t <= 0) s.fuegoMeteoro = null;
         if (s.totem && s.totem.t > 0) s.totem.t--;
@@ -3482,16 +4106,43 @@
         }
       }
       if (!manda) return;
+      /* DOMINIO: el fantasma del Mago alcanza a otro y lo manda a casa, como
+       * si se lo hubieran comido, y el Mago cobra DOMINIO_PUNTOS por cada
+       * uno. Lo resuelve el anfitrión, igual que todo lo que les pasa a los
+       * fantasmas, y a DOMINIO_CHOQUE de distancia, la misma media casilla
+       * larga que usan los demás contactos de este archivo. */
+      for (j = 0; j < 4; j++) {
+        if (!this.esDominado(j)) continue;
+        var cazador = G.ghosts[j], duenoDom = this.dominaQuien[j];
+        if (!this.enLaCalle(cazador) || !(duenoDom >= 0)) continue;
+        /* Y SI ALCANZA AL REY FANTASMA, le pega UN bocado y ahí se acaba su
+         * dominio: se va a casa hecho ojos, como la presa que caza (22 sep
+         * 2026). Uno y no más a propósito: pegado al rey le entraría un
+         * golpe cada tres cuartos de segundo, y los seis que dura el dominio
+         * le sacarían media barra con una E de treinta y dos segundos. Es el
+         * bocado que se ha ganado por llevárselo hasta allí. */
+        var JDo = this.rey(G);
+        if (JDo && JDo.cercaDe(G, cazador.x, cazador.y, H.DOMINIO_CHOQUE) &&
+            JDo.danar(G, CFG.JEFE.DANO.dominio, duenoDom, 'dominio')) {
+          this.efecto('dominio_caza', G.jefe.x, G.jefe.y, 26, cazador.x, cazador.y);
+          this.dominado[j] = 0; this.dominaQuien[j] = -1;
+          cazador.eaten();
+          continue;
+        }
+        for (var pz = 0; pz < 4; pz++) {
+          var presaDom = G.ghosts[pz];
+          if (pz === j || this.esDominado(pz) || !this.enLaCalle(presaDom)) continue;
+          if (this.distancia(cazador.x, cazador.y, presaDom.x, presaDom.y) > H.DOMINIO_CHOQUE * T) continue;
+          this.efecto('dominio_caza', presaDom.x, presaDom.y, 26, cazador.x, cazador.y);
+          this.matarCatalogo(G, presaDom, duenoDom, H.DOMINIO_PUNTOS, 'dominio', 1, true);
+        }
+      }
       /* Las zonas se recalculan sobre la posición actual de los fantasmas. */
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.telarana) {
           var red = this.ghostsEn(G, s.telarana.c, s.telarana.r, 1.5);
           for (j = 0; j < red.length; j++) { this.lento[red[j].id] = 2; this.lentoMult[red[j].id] = H.TELARANA_MULT; }
-        }
-        if (s.niebla) {
-          var bruma = this.ghostsEn(G, s.niebla.c, s.niebla.r, 2);
-          for (j = 0; j < bruma.length; j++) this.ciego[bruma[j].id] = Math.max(this.ciego[bruma[j].id], 2);
         }
         if (s.muro) {
           var pared = this.ghostsEn(G, s.muro.c, s.muro.r, 0.8);
@@ -3517,6 +4168,18 @@
           var tg = this.ghostCercanoAt(G, s.totem.c, s.totem.r, 10);
           if (tg) this.proyectilesCat.push({ tipo: 'totem', x: s.totem.c * T + T / 2,
             y: s.totem.r * T + T / 2, w: i, objetivo: tg.id });
+          /* SIN FANTASMAS, LA TORRE LE DISPARA AL REY (22 sep 2026). Una
+           * bala vale 1 de vida y tira cada dos segundos mientras dura, así
+           * que una torre plantada al lado del rey le saca cuatro: es lo que
+           * vale una W que hay que colocar bien y que él puede dejar atrás
+           * con dos pasos. */
+          else {
+            var JT2 = this.rey(G);
+            if (JT2 && JT2.cercaDe(G, s.totem.c * T + T / 2, s.totem.r * T + T / 2, 10)) {
+              this.proyectilesCat.push({ tipo: 'totem', x: s.totem.c * T + T / 2,
+                y: s.totem.r * T + T / 2, w: i, objetivo: -1, jefe: 1 });
+            }
+          }
           s.totem.cd = H.TOTEM_CADA;
         }
         if (s.clon) {
@@ -3530,7 +4193,15 @@
             s.clon.x = cnx; s.clon.y = cny; s.clon.c = Math.floor(cnx / T); s.clon.r = Math.floor(cny / T);
           }
           var cercaClon = this.ghostsEn(G, s.clon.c, s.clon.r, 0.7);
-          if (cercaClon.length) {
+          /* EL REY TAMBIÉN SE CREE EL CLON: ya lo persigue (Hab.objetivo lo
+           * mira sin preguntar quién es), así que lo único que faltaba era
+           * el reventón al alcanzarlo (22 sep 2026). Medio segundo apagado,
+           * un tercio de lo que se lleva un fantasma. */
+          var JK = this.rey(G);
+          if (JK && JK.cercaDe(G, s.clon.x, s.clon.y, 0.7)) {
+            JK.congelar(G, CFG.JEFE.ATURDE.clon);
+            this.efecto('clon_explota', s.clon.x, s.clon.y, 34); s.clon = null;
+          } else if (cercaClon.length) {
             for (j = 0; j < cercaClon.length; j++) this.aturdido[cercaClon[j].id] = Math.max(this.aturdido[cercaClon[j].id], 60);
             this.efecto('clon_explota', s.clon.x, s.clon.y, 34); s.clon = null;
           }
@@ -3538,7 +4209,19 @@
         if (s.meteoro && s.meteoro.t <= 0) {
           var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO);
           for (j = 0; j < mm.length; j++) this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro');
+          /* EL METEORO LE CAE ENCIMA AL REY (22 sep 2026): 5 de vida, la R
+           * más gorda del Mago contra él. La HOGUERA que queda después NO le
+           * repite el golpe —a los fantasmas sí los sigue matando— porque el
+           * respiro entre golpes del rey es de tres cuartos de segundo y los
+           * cuatro que dura el fuego le sacarían cinco veces más vida que la
+           * piedra: quedarse encima no puede valer más que el impacto. */
+          var JM = this.rey(G);
+          if (JM && JM.cercaDe(G, s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, H.METEORO_RADIO)) {
+            JM.danar(G, CFG.JEFE.DANO.meteoro, i, 'meteoro');
+          }
           this.efecto('meteoro', s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, 42);
+          /* cae una piedra del tamaño de un bloque: el suelo lo nota */
+          this.temblar(METEORO_TEMBLOR, METEORO_SACUDIDA);
           s.fuegoMeteoro = { c: s.meteoro.c, r: s.meteoro.r, t: H.METEORO_FUEGO };
           s.meteoro = null;
         }
@@ -3550,8 +4233,13 @@
       }
       for (i = this.joyas.length - 1; i >= 0; i--) {
         var joya = this.joyas[i]; if (--joya.t <= 0) { this.joyas.splice(i, 1); continue; }
-        for (j = 0; j < G.pacs.length; j++) if (j === joya.w && this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
-          G.addScore(300); this.bonoCadena(G, joya.w, 300, joya.x, joya.y);
+        /* EL BOTÍN LO COGE CUALQUIERA (22 sep). Solo lo recogía el Asesino
+         * que lo había dejado, así que en party se quedaba ahí tirado
+         * mientras un compañero le pasaba por encima. Ahora lo levanta el
+         * primero que pase; el bono de CADENA sigue yendo por quien lo cogió,
+         * que es quien hizo el recorrido. */
+        for (j = 0; j < G.pacs.length; j++) if (this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
+          G.addScore(300); this.bonoCadena(G, j, 300, joya.x, joya.y);
           G.addPopup(joya.x, joya.y, 300, 30); this.efecto('joya', joya.x, joya.y, 24);
           this.joyas.splice(i, 1); break;
         }
@@ -3620,8 +4308,11 @@
       s.puente = null;
       s.campo = 0; s.hospital = 0; s.yunque = 0; s.pielPiedra = 0; s.rebote = 0;
       s.fortaleza = 0; s.terremoto = 0; s.eclipse = 0;
-      s.bomba = s.mina = s.telarana = s.muro = s.faro = s.sirena = s.niebla = s.clon = s.meteoro = s.fuegoMeteoro = s.totem = null;
+      s.bomba = s.mina = s.telarana = s.muro = s.faro = s.sirena = s.clon = s.meteoro = s.fuegoMeteoro = s.totem = null;
       s.mant = -1; s.mantT = 0;
+      /* morir a media puntería cierra el apuntado y NO tira el meteoro: la R
+       * se queda cargada, que bastante castigo es la muerte */
+      s.apunta = null;
       s.dimension = 0;
     },
 
@@ -3659,13 +4350,14 @@
       }
       var ct = { lento: this.lento.slice(), lentoMult: this.lentoMult.slice(), aturdido: this.aturdido.slice(),
         ciego: this.ciego.slice(), azul: this.azulCatalogo.slice(), azulT: this.azulCatTicks.slice(),
-        caceria: this.caceriaQuien.slice(), marca: this.marcaGhost.slice(), joyas: this.joyas,
+        caceria: this.caceriaQuien.slice(), marca: this.marcaGhost.slice(),
+        dominado: this.dominado.slice(), dominaQuien: this.dominaQuien.slice(), joyas: this.joyas,
         proyectiles: this.proyectilesCat,
         terremoto: this.terremotoTicks, eclipse: this.eclipseTicks, st: [] };
       for (i = 0; i < this.st.length; i++) {
         var cs = this.st[i];
         ct.st.push({ bomba: cs.bomba, mina: cs.mina, telarana: cs.telarana, muro: cs.muro, faro: cs.faro,
-          sirena: cs.sirena, niebla: cs.niebla, clon: cs.clon, meteoro: cs.meteoro,
+          sirena: cs.sirena, clon: cs.clon, meteoro: cs.meteoro,
           fuegoMeteoro: cs.fuegoMeteoro, totem: cs.totem,
           sombra: cs.sombra, sombraGolpe: cs.sombraGolpe, frenesi: cs.frenesi,
           frenesiMult: cs.frenesiMult, caceria: cs.caceria, estela: cs.estela,
@@ -3721,6 +4413,8 @@
         if (ct.azul) this.azulCatalogo = ct.azul.slice(0, 4);
         if (ct.azulT) this.azulCatTicks = ct.azulT.slice(0, 4);
         if (ct.caceria) this.caceriaQuien = ct.caceria.slice(0, 4);
+        if (ct.dominado) this.dominado = ct.dominado.slice(0, 4);
+        if (ct.dominaQuien) this.dominaQuien = ct.dominaQuien.slice(0, 4);
         if (ct.marca) this.marcaGhost = ct.marca.slice(0, 4);
         if (ct.joyas) this.joyas = ct.joyas;
         if (ct.proyectiles) this.proyectilesCat = ct.proyectiles;
@@ -3913,10 +4607,11 @@
          * hasta dónde llegan. MINA, MURO, SIRENA y FARO salieron de aquí y
          * tienen dibujo propio más abajo: cada una cuenta algo distinto (que
          * va a saltar, que bloquea, que llama, que barre) y con el mismo
-         * molde para las cuatro no se distinguía ninguna. */
+         * molde para las cuatro no se distinguía ninguna. El 22 sep salieron
+         * también TELARAÑA y BOMBA por lo mismo: un cuadrado de color no
+         * dice "esto te frena" ni "esto va a estallar". */
         var ds = this.st[i], zonas = [
-          [ds.bomba, '#ff4058', H.BOMBA_RADIO], [ds.telarana, '#c77dff', 1.5],
-          [ds.niebla, '#b6c8d9', 1.8], [ds.totem, '#ff7a1a', 0.7],
+          [ds.totem, '#ff7a1a', 0.7],
           [ds.fuegoMeteoro, '#ff5a1f', H.METEORO_RADIO]
         ];
         for (var zi = 0; zi < zonas.length; zi++) {
@@ -4029,6 +4724,95 @@
           ctx.beginPath(); ctx.arc(fax, fay - 2, 2, 0, Math.PI * 2); ctx.fill();
           ctx.restore();
         }
+        /* TELARAÑA: una tela de verdad —hilos que salen del centro y anillos
+         * colgando entre ellos—, no una mancha morada (22 sep). Va tenue y
+         * sin relleno para que se siga viendo el laberinto por debajo: lo
+         * que tiene que decir es "aquí te quedas pegado", y eso lo cuenta la
+         * forma, no el color. Los anillos respiran despacio, como una tela
+         * tensada. Dura 16 s y parpadea el último segundo, igual que MINA,
+         * MURO y FARO: quien contaba con la trampa tiene que ver que se va. */
+        if (ds.telarana) {
+          var tex = ds.telarana.c * T + T / 2, tey = ds.telarana.r * T + T / 2 + Y;
+          var teApaga = ds.telarana.t > 0 && ds.telarana.t < 60 && Math.floor(tk / 5) % 2 === 0;
+          var teR = 1.5 * T, teHilos = 8;
+          ctx.save();
+          ctx.strokeStyle = '#c77dff'; ctx.lineWidth = 1;
+          ctx.globalAlpha = teApaga ? 0.12 : 0.45;
+          /* los radios: del centro al borde de la zona que frena */
+          ctx.beginPath();
+          for (var th = 0; th < teHilos; th++) {
+            var tha = th * Math.PI * 2 / teHilos;
+            ctx.moveTo(tex, tey);
+            ctx.lineTo(tex + Math.cos(tha) * teR, tey + Math.sin(tha) * teR);
+          }
+          ctx.stroke();
+          /* y los anillos, que no son círculos: cada tramo cuelga un poco
+           * hacia dentro, que es lo que hace que parezca tela y no diana */
+          ctx.globalAlpha = teApaga ? 0.1 : 0.38;
+          for (var ta = 1; ta <= 3; ta++) {
+            var tar = teR * (ta / 3.4) * (1 + 0.04 * Math.sin(tk / 22 + ta));
+            ctx.beginPath();
+            for (var tb = 0; tb < teHilos; tb++) {
+              var ta1 = tb * Math.PI * 2 / teHilos, ta2 = (tb + 1) * Math.PI * 2 / teHilos;
+              var tam = (ta1 + ta2) / 2;
+              if (!tb) ctx.moveTo(tex + Math.cos(ta1) * tar, tey + Math.sin(ta1) * tar);
+              ctx.quadraticCurveTo(tex + Math.cos(tam) * tar * 0.76, tey + Math.sin(tam) * tar * 0.76,
+                tex + Math.cos(ta2) * tar, tey + Math.sin(ta2) * tar);
+            }
+            ctx.stroke();
+          }
+          /* el nudo del centro, para que la tela tenga de dónde colgar */
+          ctx.globalAlpha = teApaga ? 0.2 : 0.7;
+          ctx.fillStyle = '#e0bfff';
+          ctx.beginPath(); ctx.arc(tex, tey, 1.4, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+        /* BOMBA: una bomba plantada con su cuerpo, su cuello y su mecha
+         * encendida (22 sep). No lleva cuenta atrás —el Asesino la revienta
+         * cuando quiere, con la misma tecla—, así que el aviso no es un
+         * parpadeo de fin: es la chispa saltando en la punta de la mecha y
+         * el cuerpo latiendo. El aro punteado marca hasta dónde llega el
+         * estallido, que es lo único que hacía el recuadro de antes. */
+        if (ds.bomba) {
+          var box = ds.bomba.c * T + T / 2, boy = ds.bomba.r * T + T / 2 + Y;
+          var boLate = 0.5 + 0.5 * Math.sin(tk / 5);
+          ctx.save();
+          /* el alcance: fino y punteado, girando, para que no tape el suelo */
+          ctx.globalAlpha = 0.2 + 0.18 * boLate;
+          ctx.strokeStyle = '#ff4058'; ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]); ctx.lineDashOffset = -tk / 4;
+          ctx.beginPath(); ctx.arc(box, boy, H.BOMBA_RADIO * T, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]); ctx.lineDashOffset = 0;
+          /* el cuerpo, con su brillo arriba a la izquierda para que sea una
+           * bola y no un círculo, y un rojo por dentro que late */
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#1b1b22';
+          ctx.beginPath(); ctx.arc(box, boy + 1, 3.6, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#ff4058'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(box, boy + 1, 3.6, 0, Math.PI * 2); ctx.stroke();
+          ctx.globalAlpha = 0.25 + 0.4 * boLate;
+          ctx.fillStyle = '#ff4058';
+          ctx.beginPath(); ctx.arc(box, boy + 1, 2.1, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 0.7; ctx.fillStyle = '#9aa4ad';
+          ctx.beginPath(); ctx.arc(box - 1.3, boy - 0.2, 0.9, 0, Math.PI * 2); ctx.fill();
+          /* el cuello y la mecha, que se curva hacia arriba a la derecha */
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#5a5a66';
+          ctx.fillRect(box - 1.2, boy - 3.2, 2.4, 1.6);
+          ctx.strokeStyle = '#c9a97a'; ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(box, boy - 3.2);
+          ctx.quadraticCurveTo(box + 3, boy - 4.6, box + 2.4, boy - 6.6);
+          ctx.stroke();
+          /* la chispa: salta de tamaño cada pocos fotogramas, que es lo que
+           * dice que la mecha está viva y esto va a estallar */
+          var boCh = 1 + (tk % 6 < 3 ? 0.9 : 0.2);
+          ctx.fillStyle = '#ffe66d';
+          ctx.beginPath(); ctx.arc(box + 2.4, boy - 6.8, boCh, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 0.35; ctx.fillStyle = '#ff9f1c';
+          ctx.beginPath(); ctx.arc(box + 2.4, boy - 6.8, boCh + 1.6, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
         /* El paso del PUENTE: se borra el muro de esas casillas y se marca el
          * hueco. Parpadea el último segundo, que es el aviso de que se cierra
          * (y de que quien esté dentro va a salir por una de las bocas). */
@@ -4069,13 +4853,20 @@
             if (!eAnt || Math.abs(eh.x - eAnt.x) > T * 2 || Math.abs(eh.y - eAnt.y) > T * 2) ctx.moveTo(eh.x, eh.y + Y);
             else ctx.lineTo(eh.x, eh.y + Y);
           }
-          ctx.globalAlpha = 0.28 * eAlfa; ctx.lineWidth = 7; ctx.stroke();
-          ctx.globalAlpha = 0.65 * eAlfa; ctx.lineWidth = 3; ctx.stroke();
+          /* Y se pinta FINO Y TRANSPARENTE (22 sep). El camino se estrenó
+           * como una raya verde gorda y brillante y se comía el mapa: tapaba
+           * las pastillas y los pasillos por los que hay que decidir. Lo que
+           * tiene que hacer es marcar por dónde ir, no ser lo primero que se
+           * mira, así que el halo queda casi insinuado y el trazo de dentro
+           * es una línea de un píxel y medio. */
+          ctx.globalAlpha = 0.1 * eAlfa; ctx.lineWidth = 4; ctx.stroke();
+          ctx.globalAlpha = 0.34 * eAlfa; ctx.lineWidth = 1.5; ctx.stroke();
           /* Con una sola pisada no hay línea que trazar, así que se marca el
-           * arranque del camino con un punto. */
+           * arranque del camino con un punto —igual de discreto. */
           if (rastros.length === 1) {
+            ctx.globalAlpha = 0.34 * eAlfa;
             ctx.fillStyle = '#2bff88'; ctx.beginPath();
-            ctx.arc(rastros[0].x, rastros[0].y + Y, 3 + Math.sin(tk / 4), 0, Math.PI * 2); ctx.fill();
+            ctx.arc(rastros[0].x, rastros[0].y + Y, 1.8 + 0.4 * Math.sin(tk / 4), 0, Math.PI * 2); ctx.fill();
           }
           ctx.restore();
         }
@@ -4093,12 +4884,65 @@
           ctx.beginPath(); ctx.arc(mx, my, H.METEORO_RADIO * T, 0, Math.PI * 2); ctx.stroke();
           ctx.setLineDash([]); ctx.restore();
         }
+        /* LA RETÍCULA de apuntar (la R mantenida). Tiene que distinguirse de
+         * un vistazo del aviso de caída de ahí arriba —que es el círculo rojo
+         * punteado y ya no se mueve—, así que esta es una CRUZ blanca con las
+         * cuatro esquinas marcadas: dice "esto todavía lo estás moviendo tú".
+         * El círculo del radio va en blanco y fino, para saber a quién se va a
+         * llevar por delante sin que parezca que ya está cayendo.
+         *
+         * Solo la ve quien apunta: `apunta` no viaja en la foto de red. */
+        if (ds.apunta) {
+          var ax = ds.apunta.c * T + T / 2, ay = ds.apunta.r * T + T / 2 + Y;
+          var lat = 5 + Math.sin(tk / 5);      // las esquinas respiran
+          ctx.save();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+          ctx.globalAlpha = 0.28;
+          ctx.beginPath(); ctx.arc(ax, ay, H.METEORO_RADIO * T, 0, Math.PI * 2); ctx.stroke();
+          ctx.globalAlpha = 0.95;
+          /* la cruz, con el centro hueco para no tapar la casilla */
+          ctx.beginPath();
+          ctx.moveTo(ax - 7, ay); ctx.lineTo(ax - 2, ay);
+          ctx.moveTo(ax + 2, ay); ctx.lineTo(ax + 7, ay);
+          ctx.moveTo(ax, ay - 7); ctx.lineTo(ax, ay - 2);
+          ctx.moveTo(ax, ay + 2); ctx.lineTo(ax, ay + 7);
+          ctx.stroke();
+          /* las cuatro escuadras */
+          ctx.strokeStyle = '#ff9f1c';
+          ctx.beginPath();
+          ctx.moveTo(ax - lat, ay - lat + 3); ctx.lineTo(ax - lat, ay - lat); ctx.lineTo(ax - lat + 3, ay - lat);
+          ctx.moveTo(ax + lat, ay - lat + 3); ctx.lineTo(ax + lat, ay - lat); ctx.lineTo(ax + lat - 3, ay - lat);
+          ctx.moveTo(ax - lat, ay + lat - 3); ctx.lineTo(ax - lat, ay + lat); ctx.lineTo(ax - lat + 3, ay + lat);
+          ctx.moveTo(ax + lat, ay + lat - 3); ctx.lineTo(ax + lat, ay + lat); ctx.lineTo(ax + lat - 3, ay + lat);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
+      /* EL BOTÍN DE CARROÑA son MONEDAS (22 sep). Eran cuadrados amarillos
+       * dando vueltas y no se leían: a 8 px por casilla, un cuadrado girando
+       * parece un adorno, no algo que se recoge. Una moneda se entiende
+       * sola. El giro es la elipse estrechándose hasta el canto y volviendo
+       * a abrirse; el canto oscuro debajo le da el grosor del disco y el
+       * brillo solo sale cuando la moneda da la cara. */
       for (i = 0; i < this.joyas.length; i++) {
-        var jo = this.joyas[i], js = 3 + 0.7 * Math.sin((tk + i * 9) / 3);
-        ctx.save(); ctx.fillStyle = '#ffe66d'; ctx.shadowColor = '#ff9f1c'; ctx.shadowBlur = 7;
-        ctx.translate(jo.x, jo.y + Y); ctx.rotate(tk / 18 + i);
-        ctx.fillRect(-js, -js, js * 2, js * 2); ctx.restore();
+        var jo = this.joyas[i];
+        var jcara = Math.abs(Math.cos((tk + i * 11) / 14));  // 1 de frente, 0 de canto
+        var jrx = 3.2 * Math.max(0.12, jcara), jry = 3.2;
+        ctx.save();
+        ctx.translate(jo.x, jo.y + Y);
+        ctx.fillStyle = '#a06a10';
+        ctx.beginPath(); ctx.ellipse(0, 0.8, jrx, jry, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffe66d';
+        ctx.beginPath(); ctx.ellipse(0, 0, jrx, jry, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(0, 0, jrx, jry, 0, 0, Math.PI * 2); ctx.stroke();
+        if (jcara > 0.45) {
+          ctx.globalAlpha = 0.85; ctx.fillStyle = '#fff8d0';
+          ctx.beginPath();
+          ctx.ellipse(-jrx * 0.3, -jry * 0.35, jrx * 0.3, jry * 0.32, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
       }
     },
 
@@ -4153,6 +4997,33 @@
           ctx.setLineDash([2, 2]); ctx.beginPath();
           ctx.arc(cg.x, cg.y + Y, 9 + Math.sin(tk / 4), tk / 12, tk / 12 + Math.PI * 2);
           ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+        }
+        if (this.dominado[i] > 0) {
+          /* EL FANTASMA ES DEL MAGO. Tenía que distinguirse de un golpe de
+           * los otros dos estados que también le cambian la vida al equipo:
+           * el azul del catálogo (halo fino azul, se come) y el aturdido
+           * (velo gris, está apagado). Así que aquí no va otro aro más: va
+           * una CORONA morada —#8b3dff, el color del Mago— encima de la
+           * cabeza, que es una forma y no un círculo, más el aro roto del
+           * mismo morado por debajo. Parpadea el último medio segundo: ese
+           * es el aviso de que vuelve a ser de la casa. */
+          var domFin = this.dominado[i] < 30 && Math.floor(tk / 4) % 2 === 0;
+          ctx.save();
+          ctx.globalAlpha = domFin ? 0.35 : 1;
+          ctx.strokeStyle = '#8b3dff'; ctx.shadowColor = '#8b3dff'; ctx.shadowBlur = 8;
+          ctx.lineWidth = 2; ctx.beginPath();
+          ctx.arc(cg.x, cg.y + Y, 10, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+          ctx.fillStyle = '#c9a4ff'; ctx.shadowBlur = 5;
+          ctx.beginPath();
+          ctx.moveTo(cg.x - 6, cg.y + Y - 8);
+          ctx.lineTo(cg.x - 6, cg.y + Y - 14);
+          ctx.lineTo(cg.x - 3, cg.y + Y - 11);
+          ctx.lineTo(cg.x, cg.y + Y - 16);
+          ctx.lineTo(cg.x + 3, cg.y + Y - 11);
+          ctx.lineTo(cg.x + 6, cg.y + Y - 14);
+          ctx.lineTo(cg.x + 6, cg.y + Y - 8);
+          ctx.closePath(); ctx.fill();
+          ctx.restore();
         }
         if (this.caceriaQuien[i] >= 0) {
           var colorCaza = (H.ROL_INFO && H.ROL_INFO.asesino && H.ROL_INFO.asesino.color) || '#ff66cc';
@@ -4278,11 +5149,75 @@
         var f = this.fx[i], q = f.n / f.tot;
         ctx.save();
         ctx.globalAlpha = Math.max(0, q);
-        if (f.t === 'rayo' || f.t === 'chispa' || f.t === 'gancho' || f.t === 'cadena' ||
-            f.t === 'cadena_rota' || f.t === 'relevo' || f.t === 'ejecucion' || f.t === 'gravedad' ||
-            f.t === 'empujon' || f.t === 'grito_guerra') {
-          var lineCol = f.t === 'gancho' ? '#2bff88' : (f.t === 'cadena' || f.t === 'cadena_rota' ? '#00ffff' :
-            (f.t === 'ejecucion' || f.t === 'empujon' || f.t === 'grito_guerra' ? '#ff4058' : '#e8d4ff'));
+        if (f.t === 'grito_guerra') {
+          /* EL RUGIDO: dos anillos que salen del Tanque y barren el mapa,
+           * el de delante grueso y el de detrás pisándole los talones. Van
+           * perdiendo fuerza al crecer, como suena un grito al alejarse. */
+          var grAv = 1 - Math.max(0, q);           // 0 al salir, 1 al apagarse
+          ctx.strokeStyle = '#ff4058';
+          ctx.shadowColor = '#ff4058'; ctx.shadowBlur = 6;
+          for (var gr = 0; gr < 2; gr++) {
+            var grf = grAv - gr * 0.2; if (grf <= 0) continue;
+            ctx.globalAlpha = Math.max(0, 1 - grf) * 0.8;
+            ctx.lineWidth = 4 - gr * 2;
+            ctx.beginPath();
+            ctx.arc(f.x, f.y + Y, grf * 16 * T, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        } else if (f.t === 'grito_sacudida') {
+          /* Y el fantasma clavado: cuatro trazos cortos temblando a su
+           * alrededor. Es la sacudida de quedarse tieso, no algo que le
+           * llegue desde fuera: por eso nace pegado a él y no cruza nada. */
+          /* Salen por FUERA del velo gris y del aro punteado del aturdido
+           * (que están a 7,5 y 9,5): ahí dentro no se veían. */
+          var gsR = 10 + (1 - Math.max(0, q)) * 3.5;
+          var gsTem = Math.sin((f.tot - f.n) * 1.1) * 0.45;
+          ctx.strokeStyle = '#ffd0d6'; ctx.lineWidth = 2;
+          ctx.shadowColor = '#ff4058'; ctx.shadowBlur = 5;
+          ctx.globalAlpha = Math.max(0, q) * 0.95;
+          ctx.beginPath();
+          for (var gs = 0; gs < 4; gs++) {
+            var gsa = gs * Math.PI / 2 + Math.PI / 4 + gsTem;
+            ctx.moveTo(f.x + Math.cos(gsa) * gsR, f.y + Y + Math.sin(gsa) * gsR);
+            ctx.lineTo(f.x + Math.cos(gsa) * (gsR + 4), f.y + Y + Math.sin(gsa) * (gsR + 4));
+          }
+          ctx.stroke();
+        } else if (f.t === 'ejecucion') {
+          /* LA EJECUCIÓN CAE DEL CIELO (22 sep 2026): hasta hoy era un rayo rojo
+           * que salía del jugador hacia el fantasma y parecía un disparo más del
+           * Asesino. Ahora es un rayo AMARILLO que baja desde arriba del laberinto
+           * hasta la casilla del fantasma, con su fogonazo al llegar: la sentencia
+           * no se lanza, cae. Por eso aquí se ignora el punto de salida (x0, y0)
+           * que le siguen mandando la habilidad y los avisos de red. */
+          var amarEj = '#ffe66d';
+          ctx.strokeStyle = amarEj;
+          ctx.shadowColor = amarEj; ctx.shadowBlur = 10;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(f.x, Y);
+          /* el zigzag se saca de f.tot, que no cambia mientras dura el efecto:
+           * así el rayo se queda clavado y se apaga, en vez de bailar */
+          var tramosEj = 7;
+          for (var zzEj = 1; zzEj < tramosEj; zzEj++) {
+            ctx.lineTo(f.x + ((zzEj * 41 + f.tot) % 9 - 4), Y + f.y * zzEj / tramosEj);
+          }
+          ctx.lineTo(f.x, f.y + Y);
+          ctx.stroke();
+          /* el fogonazo del impacto, abriéndose en la casilla del fantasma */
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y + Y, 3 + (1 - q) * 10, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (f.t === 'rayo' || f.t === 'chispa' || f.t === 'gancho' || f.t === 'cadena' ||
+            f.t === 'cadena_rota' || f.t === 'relevo' || f.t === 'gravedad' ||
+            f.t === 'empujon' || f.t === 'arcano_contagio' ||
+            f.t === 'dominio' || f.t === 'dominio_caza') {
+          /* el contagio del TOQUE ARCANO y el hilo del DOMINIO —el del toque
+           * y el de cada presa alcanzada— van en el morado del Mago */
+          var lineCol = (f.t === 'arcano_contagio' || f.t === 'dominio' ||
+            f.t === 'dominio_caza') ? '#8b3dff' :
+            (f.t === 'gancho' ? '#2bff88' : (f.t === 'cadena' || f.t === 'cadena_rota' ? '#00ffff' :
+            (f.t === 'empujon' ? '#ff4058' : '#e8d4ff')));
           ctx.strokeStyle = lineCol;
           ctx.shadowColor = lineCol; ctx.shadowBlur = 8;
           ctx.lineWidth = f.t === 'gancho' ? 2 : 1.5;
@@ -4309,7 +5244,7 @@
             muro: '#00c8ff', faro: '#ffe66d', faro_toca: '#ffe66d', sirena: '#ff5577', campo: '#2bff88',
             resurreccion: '#ffffff', hospital: '#2bff88', bola_guiada: '#8b3dff', guiada_salida: '#8b3dff',
             arcano: '#8b3dff', clon: '#c9a4ff', clon_explota: '#c9a4ff', totem: '#ff9f1c',
-            gravedad_centro: '#8b3dff', niebla: '#b6c8d9', meteoro_aviso: '#ff3030', meteoro: '#ff5a1f',
+            gravedad_centro: '#8b3dff', dominio_fin: '#8b3dff', meteoro_aviso: '#ff3030', meteoro: '#ff5a1f',
             meteoro_fuego: '#ff5a1f', eclipse: '#8b3dff', joya: '#ffe66d' };
           ctx.strokeStyle = colores[f.t] || '#ffffff';
           ctx.lineWidth = 1.5;

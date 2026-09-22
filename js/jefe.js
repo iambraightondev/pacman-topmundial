@@ -22,6 +22,29 @@
  *   · el HIELO (disparo o placa) no le quita vida: lo congela un momento
  * Tras cada golpe queda un momento sin poder recibir otro.
  *
+ * Y DESDE EL 22 SEP 2026, TAMBIÉN EL CATÁLOGO. Las habilidades nuevas no le
+ * hacían nada: quien no llevara el kit clásico se quedaba sin forma de
+ * tumbarlo, y el nivel no se acaba hasta que cae. Ahora:
+ *   · LE QUITAN VIDA  shuriken, bomba, misil, ejecución (Asesino); rebote y
+ *                     terremoto (Tanque); mina y gancho (Soporte); bola
+ *                     guiada, tótem, toque arcano, dominio y meteoro (Mago).
+ *                     Cuánto, en CFG.JEFE.DANO, por recarga y no por rol.
+ *   · LO APAGAN       empujón y grito de guerra (Tanque); chispa, gravedad y
+ *                     el choque del clon (Mago). Un tercio de lo que aturden
+ *                     a un fantasma (CFG.JEFE.ATURDE): es un jefe.
+ *   · YA LE VALÍAN    telaraña (lo frena, ver Hab.multVelJefe), sirena y clon
+ *                     (se los cree como objetivo, ver Hab.objetivo) y todo lo
+ *                     que salva del choque —yunque, piel de piedra, campo,
+ *                     fortaleza, cadena, escudos— porque su muerte pasa por
+ *                     Hab.salvaDelChoque igual que la de un fantasma.
+ *   · NO LE HACEN NADA, y es a posta: lo que vuelve azul (el azul del gancho
+ *                     y del toque arcano: un rey no se come, por eso los dos
+ *                     se quedan en un rasguño), lo que empuja o arrastra (no
+ *                     se le mueve de sitio: pesa lo que pesa), lo que ciega
+ *                     (el eclipse: él no camina al azar) y todo lo
+ *                     que es del propio jugador (sombra, frenesí, estela,
+ *                     puente, relevo, faro...).
+ *
  * Todo su estado vive en Game.jefe como datos planos: así lo guardan solos
  * la foto del rebobinado y la partida guardada, y la simulación es
  * determinista (no hay azar). Online lo simula el anfitrión y viaja en la
@@ -444,6 +467,17 @@
         if (this.danar(G, J.DANO.aplasta, who, 'aplasta')) {
           this.congelar(G, J.ATURDE_APISONADORA);
         }
+      } else if (f === 'rebote') {
+        /* REBOTE del catálogo (22 sep 2026): el invitado ya ha decidido que
+         * ese choque no lo mata (Hab.salvaDelChoque), pero el golpe lo da
+         * quien lleva la partida. Aquí se comprueba que de verdad lo tenía
+         * puesto y se gasta, que si no bastaría con mandar el aviso. */
+        var sr = A && A.estado(who);
+        if (!sr || !(sr.rebote > 0)) return;
+        sr.rebote = 0;
+        if (this.danar(G, J.DANO.rebote, who, 'rebote')) {
+          this.congelar(G, J.ATURDE.rebote);
+        }
       }
     },
 
@@ -461,6 +495,35 @@
     impactaEn: function (G, x, y) {
       if (!this.activo(G)) return false;
       return distX(x, G.jefe.x) <= J.RADIO_CHOQUE && Math.abs(y - G.jefe.y) <= J.RADIO_CHOQUE;
+    },
+
+    /* ¿El rey está a `radio` casillas de ese punto? (22 sep 2026)
+     *
+     * Es lo que preguntan las habilidades del catálogo que buscan blanco por
+     * cercanía —ejecución, chispa, toque arcano, gravedad, bomba, meteoro,
+     * tótem—, con el mismo criterio que usan para elegir fantasma: distancia
+     * en píxeles, redonda. Se le suma su medio cuerpo porque es el doble de
+     * grande que un fantasma y la cuenta se hace contra su centro: sin eso,
+     * un poder que le está dando de lleno en el costado no lo vería. */
+    cercaDe: function (G, x, y, radio) {
+      if (!this.activo(G)) return false;
+      var dx = distX(x, G.jefe.x), dy = y - G.jefe.y;
+      return Math.sqrt(dx * dx + dy * dy) <= (radio || 0) * T + J.RADIO_CHOQUE;
+    },
+
+    /* ¿Y está en la línea de tiro de ese Pac-Man, a `casillas` de él? Lo usa
+     * el EMPUJÓN del Tanque, que es de línea y no de círculo. */
+    enLinea: function (G, idx, casillas, dir) {
+      if (!this.activo(G)) return false;
+      var p = G.pacs[idx], v = CFG.DIR_V[dir];
+      if (!p || !v) return false;
+      var c = p.tileX(), r = p.tileY();
+      for (var n = 1; n <= casillas; n++) {
+        var nc = CFG.wrapCol(c + v.x * n), nr = r + v.y * n;
+        if (nr < 0 || nr >= CFG.ROWS || !CFG.isOpen(nc, nr, false)) return false;
+        if (this.cercaDe(G, nc * T + T / 2, nr * T + T / 2, 0.5)) return true;
+      }
+      return false;
     },
 
     /* PROVOCAR (Tanque): acude a por él y, si le daba la espalda, se da la
@@ -527,6 +590,29 @@
           if (!pl || pl.c !== col || pl.r !== row || (pl.z & 16)) continue;
           pl.z |= 16;
           this.congelar(G, J.HIELO);
+        }
+      }
+      /* LA MINA DEL SOPORTE (catálogo, 22 sep 2026). Se mira aquí y no en
+       * Hab.pasoRoles por lo mismo que la runa: las trampas del suelo las
+       * pisa el rey, y quien sabe por dónde anda es él. Al fantasma lo mata;
+       * a él le quita vida y le da el mismo escudo al Soporte, que es media
+       * habilidad. El radio es el de los fantasmas (MINA_RADIO no existe:
+       * son las seis décimas de casilla de Hab.pasoRoles).
+       *
+       * Si el rey viene de recibir otro golpe, la mina NO se gasta: sigue
+       * armada para la próxima pasada. Una trampa que se desactiva sola por
+       * llegar medio segundo pronto es una trampa rota. */
+      if (A.st) {
+        for (i = 0; i < A.st.length; i++) {
+          var s = A.st[i];
+          if (!s || !s.mina) continue;
+          if (!this.cercaDe(G, s.mina.c * T + T / 2, s.mina.r * T + T / 2, 0.6)) continue;
+          if (!this.danar(G, J.DANO.mina, i, 'mina')) continue;
+          s.mina = null;
+          s.escudo = Math.max(s.escudo, CFG.HAB.ALIADO_TICKS);
+          var mp = G.pacs[i];
+          if (mp) A.efecto('amparo', mp.x, mp.y, 28);
+          if (!this.activo(G)) return;
         }
       }
     },

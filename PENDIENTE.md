@@ -13,6 +13,31 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**22 sep (tarde) — EL CATÁLOGO, CERRADO. Y EL REY FANTASMA, TAMBIÉN.**
+
+Ya no queda nada abierto de las dos listas que salieron al jugarlo. Lo
+último de esta tanda:
+
+- **El rey fantasma recibe el catálogo entero.** Era el agujero gordo: quien
+  no llevara el kit clásico no tenía con qué tumbarlo y el nivel no se
+  acababa. Ahora trece habilidades le quitan vida y cinco lo apagan (un
+  tercio de lo que aturden a un fantasma). Lo que no le afecta está
+  razonado una por una en el propio código.
+- **DOMINIO** entra en la E del Mago y NIEBLA desaparece del catálogo.
+- **TOQUE ARCANO** contagia el azul; **METEORO** se apunta manteniendo la R.
+- **TERREMOTO** deja de frenar al equipo; **MISIL** atropella; el botín de
+  **CARROÑA** lo coge cualquiera y son monedas; **GANCHO INVERSO** a nueve
+  casillas; y se rehicieron los dibujos de EJECUCIÓN (rayo del cielo), GRITO
+  DE GUERRA (onda), TELARAÑA, BOMBA y ESTELA (más discreta).
+
+**Lo que toca ahora es jugarlo.** Hay decisiones mías sin probar en partida:
+la recarga del GRITO DE GUERRA (40 s), el alcance del PUENTE (cuatro
+casillas), el temblor del TERREMOTO (1,5 s), el daño de cada habilidad al
+rey y, sobre todo, si el METEORO se apunta a gusto — la retícula avanza
+sola y las flechas la giran, que no es exactamente moverla con las flechas.
+
+**Sigue pendiente de usted**: el punto 19, que quedó vacío.
+
 **22 sep — LOS AJUSTES DEL CATÁLOGO, TERMINADOS SALVO TRES.**
 
 De las dieciocho cosas que salieron al jugarlo queda solo lo que espera su

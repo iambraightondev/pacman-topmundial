@@ -2,6 +2,59 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 (tarde) · El rey fantasma, el Mago nuevo y nueve retoques
+
+**EL CATÁLOGO YA LE HACE DAÑO AL REY FANTASMA.** Era el agujero gordo: las
+habilidades nuevas no le hacían absolutamente nada, así que quien no llevara
+el kit clásico no tenía forma de tumbarlo y el nivel no se acababa. Ahora le
+quitan vida shuriken, bomba, misil, ejecución, rebote, terremoto, mina,
+gancho, bola guiada, tótem, toque arcano, dominio y meteoro —cuánto, según la
+recarga de cada una, no según el rol— y lo apagan empujón, grito de guerra,
+chispa, gravedad y el choque del clon, **un tercio** de lo que aturden a un
+fantasma normal, que para eso es un jefe. La EJECUCIÓN pega el golpe más
+gordo de la tabla, pero no lo mata de una: su barra es la condición para
+acabar el nivel. Lo que no le afecta —volverlo azul, empujarlo, cegarlo— está
+razonado una por una en el código.
+
+**DOMINIO sustituye a NIEBLA en la E del Mago.** La niebla no tenía gracia: un
+fantasma andando al azar se parece demasiado a uno que te persigue mal.
+Ahora el Mago toca a un fantasma a cuatro casillas y **durante 6 s es suyo**:
+persigue a los otros tres y al alcanzarlos los manda a casa, 200 puntos cada
+uno. Mientras dura no muerde a nadie del equipo, y al acabarse vuelve en sí
+aturdido un segundo. Se le ve la corona morada. Recarga 32 s.
+
+**El TOQUE ARCANO contagia el azul.** Era el mordisco del Asesino con otro
+nombre. Ahora el fantasma tocado pone azul a cualquiera con el que se cruce,
+heredando el tiempo que le quede —nunca más, así la cadena se apaga sola— y
+el dueño de los puntos. Recarga de 18 a 24 s.
+
+**El METEORO se apunta.** Se mantiene la R y sale una retícula que avanza por
+los pasillos; las flechas la giran en los cruces y al soltar cae ahí. Alcance
+de ocho casillas de camino. Antes había que colocarse uno mismo mirando al
+sitio, con el laberinto de por medio: era imposible apuntar.
+
+**El TERREMOTO deja de frenar al equipo.** No congelaba nada —eso ya se
+comprobó—, pero ralentizaba a todo el mundo seis segundos y al jugarlo se
+sentía como si el poder detuviera el tiempo. Ahora mata y sacude el suelo,
+como la TORMENTA del Mago, sin castigar a quien lo lanza.
+
+**El MISIL atropella.** Mata también a cualquier fantasma que se le cruce por
+el camino, no solo al que lleva apuntado, y lo tacha de su cola para no
+cobrarlo dos veces.
+
+**El botín de CARROÑA lo coge cualquiera** —se quedaba tirado mientras un
+compañero le pasaba por encima— y ahora **son monedas**, no cuadrados
+amarillos.
+
+**El GANCHO INVERSO llega a nueve casillas** (una más).
+
+**Y cuatro cosas que se veían mal:** la EJECUCIÓN ya no es un rayo rojo que
+sale de usted, sino un **rayo amarillo que le cae del cielo** al fantasma; el
+GRITO DE GUERRA es una **onda** que se expande, no rayos rojos; la TELARAÑA
+es una tela de verdad y la BOMBA una bomba con su mecha, en vez del cuadrado
+de color que compartían; y la ESTELA baja el volumen —sigue igual de larga,
+pero deja de tapar el laberinto.
+
 ## 2026-09-22 · La segunda tanda del catálogo
 
 **El GRITO DE GUERRA se muda a la E y alcanza todo el mapa.** Era una Q que

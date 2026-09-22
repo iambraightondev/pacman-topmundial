@@ -191,7 +191,9 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
     out.rebote = H.st[0].rebote === 0 && g.mode === 'eyes';
     for (let i = 0; i < 4; i++) ghost(i, p.x + T, p.y);
     let base = G.score; H.terremoto(G, 0);
-    out.terremoto = G.score - base === 400 && H.multVel(0) === 0.4;
+    /* 22 sep: el terremoto ya no frena al equipo, así que aquí solo queda la
+     * mitad de velocidad de la PIEL DE PIEDRA que lleva puesta este Tanque */
+    out.terremoto = G.score - base === 400 && H.multVel(0) === 0.5;
 
     p = start(['soporte', 'asesino'], ['mina,estela,relevo,campo', 'mordisco,turbo,flash,grito']);
     G.pacs[1].x = p.x + T; G.pacs[1].y = p.y;
@@ -266,17 +268,38 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
     if (fired) { H.st[0].meteoro.t = 0; H.pasoRoles(G, true); }
     out.meteoro = fired && !!H.st[0].fuegoMeteoro;
 
-    p = start(['mago'], ['chispa,totem,niebla,eclipse']);
+    p = start(['mago'], ['chispa,totem,dominio,eclipse']);
     for (let i = 0; i < 3; i++) ghost(i, p.x + (i + 1) * T, p.y);
     H.chispa(G, 0); out.chispa = H.aturdido.slice(0, 3).every(v => v === CFG.HAB.CHISPA_TICKS);
-    H.niebla(G, 0); H.pasoRoles(G, true); out.niebla = H.ciego.some(v => v > 0);
+    /* 22 sep: DOMINIO sustituye a NIEBLA. El tocado pasa a ser del Mago:
+     * caza a otro fantasma, no muerde al equipo y al alcanzarlo lo manda a
+     * casa por 200. */
+    const dom = H.dominio(G, 0);
+    const gDom = G.ghosts[0], gPresa = G.ghosts[1];
+    const puntos0 = G.score;
+    gPresa.x = gDom.x + T / 4; gPresa.y = gDom.y;
+    const objDom = H.objetivo(G, gDom);
+    H.pasoRoles(G, true);
+    out.dominio = dom && H.dominado[gDom.id] > 0 && H.apagado(gDom.id) &&
+      !!objDom && objDom.x === gPresa.tileX() && gPresa.mode === 'eyes' &&
+      G.score - puntos0 === CFG.HAB.DOMINIO_PUNTOS;
+    H.dominado = [0, 0, 0, 0]; H.dominaQuien = [-1, -1, -1, -1];
     H.aturdido = [0, 0, 0, 0]; H.eclipse(G, 0);
     out.eclipse = H.multVelFantasma(G, 0) === 0.5 && H.ciegoDe(0);
     H.totem(G, 0); H.st[0].totem.cd = 0; H.pasoRoles(G, true);
     out.totem = H.proyectilesCat.some(b => b.tipo === 'totem');
 
     p = start(['mago'], ['toque_arcano,clon,gravedad,eclipse']);
-    g = ghost(0, p.x + T, p.y); out.toqueArcano = H.toqueArcano(G, 0) && H.puedeComer(G, 0, 0);
+    g = ghost(0, p.x + T, p.y);
+    const arcanoToca = H.toqueArcano(G, 0) && H.puedeComer(G, 0, 0);
+    /* 22 sep: el azul del Mago SE CONTAGIA. El tocado se lo pega al que se
+     * cruza, con lo que le quede —nunca más— y heredando el dueño. */
+    const g2 = ghost(1, g.x + T / 2, g.y);
+    H.pasoRoles(G, true);
+    out.toqueArcano = arcanoToca && H.azulCatTicks[g2.id] > 0 &&
+      H.azulCatTicks[g2.id] <= H.azulCatTicks[g.id] &&
+      H.azulCatTicks[g2.id] < CFG.HAB.TOQUE_ARCANO_TICKS &&
+      H.azulCatalogo[g2.id] === H.azulCatalogo[g.id] && H.puedeComer(G, g2.id, 0);
     G.toMenu();
     return out;
   });
@@ -286,7 +309,7 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
     campo: true, telarana: true, faro: true, resurreccion: true,
     ganchoSoporte: true, cadena: true, muro: true, hospital: true, sirena: true,
     guiada: true, clon: true, gravedad: true, meteoro: true, chispa: true,
-    niebla: true, eclipse: true, totem: true, toqueArcano: true
+    dominio: true, eclipse: true, totem: true, toqueArcano: true
   });
 });
 
@@ -322,15 +345,16 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
       estela: 'estela', puente: 'puente', cadena: 'cadena', muro: 'muro', relevo: 'relevo', faro: 'faro',
       sirena: 'sirena', campo: 'campo', resurreccion: 'resurreccion', hospital: 'hospital', bola_guiada: 'bolaGuiada',
       toque_arcano: 'toqueArcano', chispa: 'chispa', clon: 'clon', totem: 'totem', gravedad: 'gravedad',
-      niebla: 'niebla', meteoro: 'meteoro', eclipse: 'eclipse'
+      dominio: 'dominio', meteoro: 'meteoro', eclipse: 'eclipse'
     };
     const sinAnimacion = Object.entries(funciones).filter(([, fn]) => {
       const src = String(H[fn]);
       return !/efecto\(|proyectilesCat\.push/.test(src);
     }).map(([id]) => id);
-    /* MINA, MURO, SIRENA y FARO salieron del recuadro de color común y
-     * tienen dibujo propio: si alguna volviera al molde, seguiría pintando,
-     * así que lo que se comprueba es que cada una deja tinta ella sola. */
+    /* MINA, MURO, SIRENA, FARO, TELARAÑA y BOMBA salieron del recuadro de
+     * color común y tienen dibujo propio: si alguna volviera al molde,
+     * seguiría pintando, así que lo que se comprueba es que cada una deja
+     * tinta ella sola. */
     const st0 = H.st[0], zc = G.pacs[0].tileX(), zr = G.pacs[0].tileY();
     /* La bomba plantada antes cubre dos casillas a la redonda de ese mismo
      * sitio: si se deja puesta, la tinta de las zonas pequeñas cae dentro de
@@ -351,7 +375,9 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
       mina: tintaZona('mina', { c: zc, r: zr, t: CFG.HAB.MINA_TICKS }),
       muro: tintaZona('muro', { c: zc, r: zr, t: CFG.HAB.MURO_TICKS }),
       sirena: tintaZona('sirena', { c: zc, r: zr, t: CFG.HAB.FARO_TICKS }),
-      faro: tintaZona('faro', { c: zc, r: zr, t: CFG.HAB.FARO_TICKS })
+      faro: tintaZona('faro', { c: zc, r: zr, t: CFG.HAB.FARO_TICKS }),
+      telarana: tintaZona('telarana', { c: zc, r: zr, t: CFG.HAB.TELARANA_TICKS }),
+      bomba: tintaZona('bomba', { c: zc, r: zr, t: CFG.HAB.BOMBA_TICKS })
     };
     G.toMenu();
     return { pixels, declaradas, azulClaro: modoAzul === 'fright', tintaAturdido, sinAnimacion, zonasPropias };
@@ -360,6 +386,6 @@ test('catálogo: las animaciones alteran el lienzo y cubren habilidades activas'
   expect(r.azulClaro).toBe(true);
   expect(r.tintaAturdido).toBe(true);
   expect(r.sinAnimacion).toEqual([]);
-  expect(r.zonasPropias).toEqual({ mina: true, muro: true, sirena: true, faro: true });
+  expect(r.zonasPropias).toEqual({ mina: true, muro: true, sirena: true, faro: true, telarana: true, bomba: true });
   expect(r.pixels).toBeGreaterThan(100);
 });

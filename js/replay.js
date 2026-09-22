@@ -194,7 +194,11 @@
    *   E         CONTINUAR pagado (qué = 8; desde el 17 sep 2026)
    *   F0..F7    poder MANTENIDO (qué = 9..12; desde el 17 sep 2026): la cifra
    *             es jugador * 4 + poder. La Q y la E del Soporte hacen otra
-   *             cosa si se dejan apretadas (CFG.HAB.MANTENER).
+   *             cosa si se dejan apretadas (CFG.HAB.MANTENER), y desde el 22
+   *             sep la R del Mago ABRE EL APUNTADO del METEORO: esta entrada
+   *             es el momento en que se apretó, las flechas que mueven la
+   *             retícula van como giros de siempre y la casilla donde cae
+   *             sale sola de las dos cosas.
    *
    * La E estaba libre (entre los poderes del J1 y los giros). Una versión
    * del juego de antes no la conoce y da la repetición por rota, que es lo
@@ -1123,6 +1127,14 @@
      * fantasma si lleva uno (PAC-MAN VS.). null cuando no tiene ficha, y
      * entonces no hay nada que apuntar. */
     rumboDe: function (idx) {
+      /* METEORO: mientras se apunta, las flechas mueven la retícula y no a
+       * Pac-Man (Game.setPacDir). Lo que hay que comparar entonces es la
+       * flecha que lleva puesta la marca; si se comparase con el rumbo del
+       * Pac-Man —que ahí no cambia nunca— tener la flecha apretada dejaría
+       * una entrada por cada repetición del teclado. */
+      if (G.hab && window.PM.Hab && window.PM.Hab.apuntando && window.PM.Hab.apuntando(idx)) {
+        return window.PM.Hab.flechaApuntado(idx);
+      }
       var gid = G.vsGhostOf ? G.vsGhostOf(idx) : -1;
       if (gid >= 0) {
         var gh = G.ghosts && G.ghosts[gid];

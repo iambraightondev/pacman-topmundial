@@ -10489,8 +10489,12 @@
 
   /* Una partida de DESATADO puesta en un nivel de jefe, con los Pac-Man a
    * salvo del arranque */
-  function nivelJefe(roles, nivel) {
+  function nivelJefe(roles, nivel, cargas) {
     partidaRol(roles || ['asesino'], 1, 1, DR.RIGHT);
+    /* 22 sep 2026: con elección del CATÁLOGO, si se pide. Se reparte igual
+     * que en Game.newGame —antes de montar el nivel— para que el jugador
+     * llegue al jefe con las habilidades nuevas y no con el kit clásico. */
+    if (cargas) HB.empezar(true, (roles || ['asesino']).length, roles || ['asesino'], cargas);
     G.level = nivel || CJ.CADA;
     G.resetLevel();
     G.state = 'PLAYING';
@@ -10696,6 +10700,118 @@
     eq(G.jefe.hp, vida, 'sin quitarle vida');
   });
 
+  /* 22 sep 2026: EL CATÁLOGO NO LE HACÍA NADA. Quien eligiera una habilidad
+   * nueva llegaba al nivel del jefe sin forma de tumbarlo, y ese nivel no se
+   * acaba hasta que cae. Un poder de daño por rol y los aturdimientos. */
+  test('JEFE · CATÁLOGO: un poder de daño de cada rol le quita vida', function () {
+    var i, n, t;
+
+    /* ASESINO — EJECUCIÓN: el bocado más gordo de la tabla, pero NO lo mata
+     * de golpe (a un fantasma sí): su barra es el nivel entero. */
+    nivelJefe(['asesino'], null, ['mordisco,turbo,flash,ejecucion']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(7, 5);
+    G.jefe.frz = 999;
+    var vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 3), 'la R ejecuta al rey aunque no haya fantasmas fuera');
+    eq(G.jefe.hp, vida - CJ.DANO.ejecucion, 'le quita ' + CJ.DANO.ejecucion);
+    ok(G.jefe.vivo, 'pero no lo mata de un golpe');
+    ok(CJ.DANO.ejecucion > CJ.DANO.aplasta, 'y pega más que cualquier otra');
+
+    /* ASESINO — SHURIKEN: las TRES cargas entran seguidas. Van forzadas a
+     * propósito (como la runa): si respetaran el respiro entre golpes, la
+     * segunda y la tercera se perderían y la Q valdría un tercio. */
+    nivelJefe(['asesino'], null, ['shuriken,turbo,flash,grito']);
+    ponPac(0, 2, CFG.TUNNEL_ROW, DR.RIGHT);
+    jefeEn(6, CFG.TUNNEL_ROW);
+    G.jefe.frz = 999;
+    vida = G.jefe.hp;
+    for (n = 0; n < 3; n++) {
+      ok(HB.lanzar(G, 0, 0), 'sale la carga ' + (n + 1));
+      for (t = 0; t < 60 && HB.proyectilesCat.length; t++) HB.pasoProyectilesCat(G, true);
+    }
+    eq(G.jefe.hp, vida - 3 * CJ.DANO.shuriken, 'las tres se le clavan');
+
+    /* TANQUE — TERREMOTO: a los fantasmas los manda a casa; el rey no tiene
+     * casa a la que volver, así que se lleva el golpe. */
+    nivelJefe(['tanque'], null, ['pisoton,escudo,provocar,terremoto']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(20, 5);
+    vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 3), 'el terremoto sacude todo el mapa');
+    eq(G.jefe.hp, vida - CJ.DANO.terremoto, 'le quita ' + CJ.DANO.terremoto);
+
+    /* TANQUE — REBOTE: el primer contacto se devuelve. Contra el rey le
+     * quita vida, lo para un segundo y SALVA al Tanque (sin ese segundo,
+     * rebotaba y moría en el tick siguiente). */
+    nivelJefe(['tanque'], null, ['rebote,escudo,provocar,arrollar']);
+    var tq = ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(6, 5);
+    HB.estado(0).corPas = 0;          // aquí se mide el rebote, no la CORAZA
+    vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 0), 'el Tanque se pone el rebote');
+    JF.colisiones(G);
+    eq(G.jefe.hp, vida - CJ.DANO.rebote, 'el choque le quita ' + CJ.DANO.rebote);
+    eq(G.jefe.frz, CJ.ATURDE.rebote, 'y lo deja parado un segundo');
+    ok(!tq.dying, 'el Tanque sale vivo del rebote');
+    eq(HB.estado(0).rebote, 0, 'se gasta en el primer contacto');
+
+    /* SOPORTE — MINA: la pisa el rey y le quita vida, como la runa del Mago */
+    nivelJefe(['soporte'], null, ['mina,inmunidad,aliado,vida']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(6, 5);
+    vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 0), 'planta la mina');
+    G.jefe.inv = 0;
+    JF.pisaRuna(G);
+    eq(G.jefe.hp, vida - CJ.DANO.mina, 'le quita ' + CJ.DANO.mina);
+    eq(HB.estado(0).mina, null, 'y la mina se gasta');
+    ok(HB.estado(0).escudo > 0, 'con su escudo para el Soporte, como siempre');
+
+    /* MAGO — BOLA GUIADA: sin fantasmas fuera ni siquiera salía */
+    nivelJefe(['mago'], null, ['bola_guiada,portal,runa,tormenta']);
+    ponPac(0, 2, 5, DR.RIGHT);
+    jefeEn(9, 5);
+    G.jefe.frz = 999;
+    vida = G.jefe.hp;
+    ok(HB.pulsar(G, 0, 0), 'la bola sale a por el rey');
+    for (i = 0; i < 90 && G.jefe.hp === vida; i++) {
+      G.jefe.x = 9 * CFG.TILE + 4; G.jefe.y = 5 * CFG.TILE + 4; G.step();
+    }
+    eq(G.jefe.hp, vida - CJ.DANO.guiada, 'le quita ' + CJ.DANO.guiada);
+  });
+
+  test('JEFE · CATÁLOGO: los aturdimientos lo apagan menos que a un fantasma', function () {
+    /* TANQUE — EMPUJÓN: al rey no se le empuja (pesa lo que pesa), se le
+     * apaga. Medio segundo: un tercio de lo que dura en un fantasma. */
+    nivelJefe(['tanque'], null, ['empujon,escudo,grito_guerra,arrollar']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var j = jefeEn(8, 5);
+    var vida = j.hp, donde = j.x;
+    ok(HB.pulsar(G, 0, 0), 'el empujón alcanza al rey');
+    eq(j.frz, CJ.ATURDE.empujon, 'lo apaga ' + CJ.ATURDE.empujon + ' ticks');
+    ok(CJ.ATURDE.empujon < HC.EMPUJON_STUN, 'menos que a un fantasma');
+    eq(j.hp, vida, 'sin quitarle vida: es un empujón');
+    eq(j.x, donde, 'y no se mueve del sitio');
+    eq(JF.velocidad(G), 0, 'apagado no se mueve');
+
+    /* TANQUE — GRITO DE GUERRA: llega a todo el mapa, sin apuntar */
+    nivelJefe(['tanque'], null, ['empujon,escudo,grito_guerra,arrollar']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    j = jefeEn(24, 20);
+    ok(HB.pulsar(G, 0, 2), 'el grito sale');
+    eq(j.frz, CJ.ATURDE.grito_guerra, 'clava al rey esté donde esté');
+    ok(CJ.ATURDE.grito_guerra < HC.GRITO_GUERRA_TICKS, 'menos que a un fantasma');
+
+    /* MAGO — CHISPA: sale aunque el rey sea el único blanco */
+    nivelJefe(['mago'], null, ['chispa,portal,runa,tormenta']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    j = jefeEn(7, 5);
+    ok(HB.pulsar(G, 0, 0), 'la chispa salta al rey');
+    eq(j.frz, CJ.ATURDE.chispa, 'lo apaga un segundo');
+    ok(CJ.ATURDE.chispa < HC.CHISPA_TICKS, 'menos que a un fantasma');
+  });
+
   test('JEFE: el nivel no se acaba sin él; tumbarlo lo acaba y da el premio', function () {
     nivelJefe();
     G.pacs[0].safeTicks = 999999;
@@ -10890,7 +11006,7 @@
   // ---------------------------------------------------------------
   test('CATÁLOGO: las opciones descartadas no vuelven y las nuevas ocupan su ranura', function () {
     var C = CFG.HAB.CATALOGO;
-    ok(!JSON.stringify(C).match(/intercambio|destierro|ancla|estaca|bastion/i), 'no hay habilidades descartadas');
+    ok(!JSON.stringify(C).match(/intercambio|destierro|ancla|estaca|bastion|niebla/i), 'no hay habilidades descartadas');
     eq(C.soporte[0].filter(function (h) { return h.id === 'telarana'; }).length, 1, 'telaraña es Q');
     eq(C.soporte[1].filter(function (h) { return h.id === 'puente'; }).length, 1, 'puente es W');
     eq(C.soporte[2].filter(function (h) { return h.id === 'relevo'; }).length, 1, 'relevo es E');
@@ -10919,7 +11035,7 @@
     eq(G.pacs[0].x, antes, 'el soporte no se mueve');
   });
 
-  test('CATÁLOGO: Chispa aturde 3 s y Terremoto ralentiza al equipo', function () {
+  test('CATÁLOGO: Chispa aturde 3 s y Terremoto manda a los cuatro a casa', function () {
     var H = window.PM.Hab;
     partida(1);
     G.hab = true; H.empezar(true, 1, ['mago'], ['fuego,portal,runa,chispa']); G.roles = ['mago'];
@@ -10929,7 +11045,7 @@
     G.roles[0] = 'tanque'; H.empezar(true, 1, ['tanque'], ['pisoton,escudo,provocar,terremoto']); G.roles = ['tanque'];
     G.ghosts[0].mode = 'normal'; G.ghosts[0].x = G.pacs[0].x + CFG.TILE; G.ghosts[0].y = G.pacs[0].y;
     ok(H.terremoto(G, 0), 'sale terremoto'); eq(H.terremotoTicks, CFG.HAB.TERREMOTO_TICKS, 'dura seis segundos');
-    eq(H.multVel(0), CFG.HAB.TERREMOTO_SLOW, 'ralentiza también al tanque');
+    eq(H.multVel(0), 1, 'y ya no frena al equipo: mata y sacude, como la Tormenta');
   });
 
   test('CATÁLOGO: Bola Guiada no falla y puntúa exactamente 150', function () {
@@ -11009,7 +11125,7 @@
     for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
     ok(H.ganchoInverso(G, 0), 'el gancho sale sin blanco');
     eq(H.proyectilesCat.filter(function (b) { return b.tipo === 'gancho_inverso'; })[0].max,
-      8 * CFG.TILE, 'el gancho llega a ocho casillas');
+      9 * CFG.TILE, 'el gancho llega a nueve casillas');
     var volvio = false;
     for (n = 0; n < 100 && H.proyectilesCat.length; n++) { H.pasoProyectilesCat(G, true); if (H.proyectilesCat.some(function (b) { return b.fase === 'vuelve'; })) volvio = true; }
     ok(volvio && !H.proyectilesCat.length, 'falla y vuelve');
@@ -11390,6 +11506,286 @@
       eq(tope, 0, 'pero el mapa no se mueve ni un píxel');
       ok(H.terremotoTicks > 0, 'y el resto del poder sigue en marcha');
     } finally { window.matchMedia = antesMM; }
+  });
+
+  test('AJUSTES: el TOQUE ARCANO contagia el azul al cruzarse', function () {
+    var H = window.PM.Hab, n;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['toque_arcano,clon,gravedad,eclipse']); G.roles = ['mago'];
+    var t = tramoRecto(6);
+    ok(t, 'hay un pasillo recto donde cruzarse');
+    var p = ponPac(0, t.c, t.r, DR.RIGHT);
+    var a = G.ghosts[0], b = G.ghosts[1], casa = G.ghosts[2], ojos = G.ghosts[3];
+    a.mode = 'normal'; a.frightened = false;
+    a.x = (t.c + 1) * CFG.TILE + CFG.TILE / 2; a.y = p.y;
+    b.mode = 'normal'; b.frightened = false;
+    b.x = (t.c + 5) * CFG.TILE + CFG.TILE / 2; b.y = p.y;   // de momento, lejos
+    /* Estos dos van pegados al tocado a propósito: no se contagian por estar
+     * en casa o ser ojos, no por estar lejos. */
+    casa.mode = 'house'; casa.x = a.x; casa.y = a.y;
+    ojos.mode = 'eyes'; ojos.x = a.x; ojos.y = a.y;
+
+    ok(H.toqueArcano(G, 0), 'el toque alcanza al fantasma de al lado');
+    ok(H.azulCatTicks[a.id] > 0, 'el tocado se pone azul');
+    ok(H.puedeComer(G, a.id, 0), 'y el Mago se lo puede comer');
+    eq(H.azulCatTicks[b.id], 0, 'el de lejos sigue entero');
+
+    H.pasoRoles(G, true);
+    eq(H.azulCatTicks[b.id], 0, 'a cuatro casillas no salta nada');
+
+    /* ahora sí se cruzan: media casilla */
+    b.x = a.x + CFG.TILE / 2; b.y = a.y;
+    H.pasoRoles(G, true);
+    ok(H.azulCatTicks[b.id] > 0, 'al cruzarse, el azul salta');
+    ok(H.azulCatTicks[b.id] <= H.azulCatTicks[a.id],
+      'y nunca con más tiempo del que le queda al que se lo pegó');
+    ok(H.azulCatTicks[b.id] < CFG.HAB.TOQUE_ARCANO_TICKS, 'no se reinicia el reloj: se hereda');
+    eq(H.azulCatalogo[b.id], H.azulCatalogo[a.id], 'el dueño de los puntos se hereda');
+    ok(H.puedeComer(G, b.id, 0), 'el Mago también cobra al contagiado');
+
+    eq(H.azulCatTicks[casa.id], 0, 'el que está en casa no se contagia');
+    eq(H.azulCatTicks[ojos.id], 0, 'el hecho ojos tampoco');
+
+    /* la cadena se apaga sola: al contagiado no se le renueva el reloj por
+     * seguir pegado al que se lo pasó */
+    var quedaba = H.azulCatTicks[b.id];
+    for (n = 0; n < 10; n++) H.pasoRoles(G, true);
+    eq(H.azulCatTicks[b.id], quedaba - 10, 'el reloj del contagiado solo baja');
+    eq(H.azulCatTicks[a.id], H.azulCatTicks[b.id], 'los dos se apagan a la vez');
+  });
+
+  test('AJUSTES: el METEORO se apunta manteniendo la R', function () {
+    var H = window.PM.Hab, HH = CFG.HAB, i;
+    var R = 3;                      // el METEORO es la R, el cuarto del Mago
+
+    /* Casilla donde puede caer: ni muro ni casa de los fantasmas */
+    function libre(c, r) {
+      var HO = CFG.HOUSE;
+      if (r >= HO.top && r <= HO.bottom && c >= HO.left && c <= HO.right) return false;
+      return CFG.isOpen(c, r, false);
+    }
+    /* Un pasillo horizontal donde quepa el alcance entero y con una pared
+     * ENCIMA a tiro: hacen falta las dos cosas para ver que la marca no
+     * atraviesa muros y que no pasa del alcance. Se busca en el laberinto que
+     * toque, sin coordenadas escritas a mano. */
+    function pasillo(largo) {
+      for (var r = 2; r < CFG.ROWS - 1; r++) {
+        for (var c = 1; c + largo < CFG.COLS - 1; c++) {
+          var vale = true, pared = -1, n;
+          for (n = 0; n <= largo; n++) {
+            if (!libre(c + n, r)) { vale = false; break; }
+            if (n >= 1 && n <= HH.METEORO_ALCANCE && pared < 0 &&
+                !CFG.isOpen(c + n, r - 1, false)) pared = c + n;
+          }
+          if (vale && pared >= 0) return { c: c, r: r, pared: pared };
+        }
+      }
+      return null;
+    }
+
+    /* Un tick de los poderes tal y como lo da la partida: primero las teclas
+     * que se mantienen y después los efectos, que es el orden en que los llama
+     * Game.step. Importa de verdad: el apuntado no tiene ningún rato que
+     * cumplir y tiene que aguantar tick tras tick sin reabrirse solo. */
+    function tic() { H.cargas(G); H.pasoRoles(G, true); }
+
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['fuego,portal,runa,meteoro']); G.roles = ['mago'];
+    var pas = pasillo(HH.METEORO_ALCANCE + 1);
+    ok(pas, 'hay un pasillo largo con pared encima donde apuntar');
+    ponPac(0, pas.c, pas.r, DR.RIGHT);
+
+    /* APRETAR: aparece la marca, no ha caído nada y la R sigue cargada */
+    ok(H.apretar(G, 0, R, false), 'la R mantenida abre el apuntado');
+    ok(H.st[0].apunta, 'al mantener aparece la marca');
+    eq(H.st[0].apunta.r, pas.r, 'en el pasillo del Mago');
+    eq(H.st[0].apunta.c, pas.c + 1, 'una casilla por delante de él');
+    ok(!H.st[0].meteoro, 'todavía no ha caído nada');
+    eq(H.st[0].cd[R], 0, 'ni se ha gastado la recarga');
+
+    /* PAREDES: la marca camina sola hacia su última flecha, y contra el muro
+     * de arriba se queda donde está */
+    for (i = 0; i < HH.METEORO_PASO * 30 && H.st[0].apunta.c !== pas.pared; i++) tic();
+    eq(H.st[0].apunta.c, pas.pared, 'la marca recorre el pasillo casilla a casilla');
+    eq(H.st[0].mant, R, 'la tecla sigue apretada, sin relanzarse sola');
+    /* la flecha entra por donde entran todas (Game.setPacDir): mientras se
+     * apunta es de la marca y no del Mago, que sigue a lo suyo */
+    G.setPacDir(0, DR.UP);
+    eq(G.pacs[0].nextDir, DR.RIGHT, 'la flecha no gira al Mago mientras apunta');
+    for (i = 0; i < HH.METEORO_PASO * 4; i++) tic();
+    eq(H.st[0].apunta.r, pas.r, 'y la pared de arriba no la deja pasar');
+
+    /* ALCANCE: por mucho que siga el pasillo, no se va más lejos */
+    G.setPacDir(0, DR.RIGHT);
+    for (i = 0; i < HH.METEORO_PASO * 30; i++) tic();
+    eq(H.st[0].apunta.c, pas.c + HH.METEORO_ALCANCE, 'se para en el alcance máximo');
+    ok(libre(pas.c + HH.METEORO_ALCANCE + 1, pas.r), 'aunque el pasillo siga abierto');
+
+    /* SOLTAR: cae donde estaba la marca y explota como toda la vida */
+    var dest = { c: H.st[0].apunta.c, r: H.st[0].apunta.r }, g = G.ghosts[0];
+    for (i = 1; i < 4; i++) G.ghosts[i].mode = 'house';
+    g.mode = 'normal'; g.frightened = false;
+    g.x = dest.c * CFG.TILE + CFG.TILE / 2;
+    g.y = dest.r * CFG.TILE + CFG.TILE / 2;
+    ok(H.soltar(G, 0, R), 'al soltar cae el meteoro');
+    eq(H.st[0].apunta, null, 'y se cierra el apuntado');
+    G.setPacDir(0, DR.UP);
+    eq(G.pacs[0].nextDir, DR.UP, 'las flechas vuelven a ser del Mago');
+    eq(H.st[0].meteoro.c, dest.c, 'cae en la columna apuntada');
+    eq(H.st[0].meteoro.r, dest.r, 'y en la fila apuntada');
+    eq(H.st[0].meteoro.t, HH.METEORO_AVISO, 'con el aviso de siempre');
+    ok(H.st[0].cd[R] > 0, 'ahora sí se gasta la recarga');
+    for (i = 0; i <= HH.METEORO_AVISO; i++) tic();
+    ok(!H.st[0].meteoro, 'pasado el aviso, revienta');
+    ok(H.st[0].fuegoMeteoro, 'y deja la zona de fuego');
+    eq(g.mode, 'eyes', 'llevándose por delante al fantasma que había debajo');
+  });
+
+  test('AJUSTES: el botín de Carroña lo coge cualquiera', function () {
+    var H = window.PM.Hab;
+    partida(2); G.hab = true;
+    H.empezar(true, 2, ['asesino', 'soporte'],
+      ['mordisco,carrona,flash,grito', 'hielo,inmunidad,relevo,vida']);
+    G.roles = ['asesino', 'soporte'];
+    var p = ponPac(0, 13, 20, DR.RIGHT), compa = G.pacs[1], g = G.ghosts[0];
+    ok(H.carrona(G, 0), 'sale carroña');
+    g.mode = 'normal'; g.frightened = true; g.x = p.x + CFG.TILE; g.y = p.y;
+    G.eatGhost(g, 0, 'mordisco');
+    eq(H.joyas.length, 1, 'la baja deja una moneda');
+    /* el compañero pasa por encima: antes se quedaba ahí tirada */
+    compa.x = H.joyas[0].x; compa.y = H.joyas[0].y;
+    var base = G.score;
+    H.pasoRoles(G, true);
+    eq(H.joyas.length, 0, 'la levanta el que pasa, no solo su dueño');
+    eq(G.score - base, 300, 'y vale lo mismo');
+  });
+
+  test('AJUSTES: el Misil atropella al que se le cruza y no lo cobra dos veces', function () {
+    var H = window.PM.Hab, T = CFG.TILE, n;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,misil']); G.roles = ['asesino'];
+
+    /* Un pasillo recto de siete casillas: el misil va de una punta a la otra
+     * y lo que se le plante en medio tiene que caer por el camino. Se busca
+     * en el laberinto que toque, sin coordenadas escritas a mano. */
+    var pas = null, c, r, vale;
+    for (r = 1; r < CFG.ROWS - 1 && !pas; r++) {
+      for (c = 1; c + 6 < CFG.COLS - 1 && !pas; c++) {
+        vale = true;
+        for (n = 0; n <= 6; n++) if (!CFG.isOpen(c + n, r, false)) vale = false;
+        if (vale) pas = { c: c, r: r };
+      }
+    }
+    ok(pas, 'hay un pasillo recto de siete casillas');
+    function pon(g, cc) {
+      g.mode = 'normal'; g.frightened = false;
+      g.x = cc * T + T / 2; g.y = pas.r * T + T / 2;
+    }
+    ponPac(0, pas.c, pas.r, DR.RIGHT);
+
+    /* UNO QUE SE CRUZA: se planta en mitad del camino DESPUÉS de lanzar, así
+     * que no es el objetivo del misil ni está en su cola. Antes lo veía pasar
+     * de largo; ahora lo arrolla. */
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    var medio = G.ghosts[0], lejos = G.ghosts[1];
+    pon(lejos, pas.c + 6);
+    var base = G.score;
+    ok(H.misil(G, 0), 'sale el misil a por el del fondo');
+    pon(medio, pas.c + 3);
+    var tMedio = -1, tLejos = -1;
+    for (n = 0; n < 400 && H.proyectilesCat.length; n++) {
+      H.pasoProyectilesCat(G, true);
+      if (tMedio < 0 && medio.mode === 'eyes') tMedio = n;
+      if (tLejos < 0 && lejos.mode === 'eyes') tLejos = n;
+    }
+    eq(medio.mode, 'eyes', 'el que se cruza cae aunque no fuera su objetivo');
+    eq(lejos.mode, 'eyes', 'y el del fondo cae igual');
+    ok(tMedio >= 0 && tMedio < tLejos, 'primero el del camino, luego el objetivo');
+    eq(G.score - base, 750, '250 + 500: la cadena de puntos sigue igual');
+    ok(!H.proyectilesCat.length, 'y se apaga al quedarse sin nadie a quien ir');
+
+    /* UNO DE SU PROPIA COLA: si lo atropella de paso, sale de la cola y no se
+     * le vuelve a visitar. Se le da la vuelta a la cadena a mano porque el
+     * misil apunta siempre al más cercano primero. */
+    for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
+    var enCola = G.ghosts[0], blanco = G.ghosts[1];
+    pon(enCola, pas.c + 3); pon(blanco, pas.c + 6);
+    base = G.score;
+    ok(H.misil(G, 0), 'sale otro misil');
+    var b = H.proyectilesCat[0];
+    b.objetivo = blanco.id; b.cola = [enCola.id]; b.ruta = null; b.rutaObjetivo = '';
+    var colaAlCaer = null;
+    for (n = 0; n < 400 && H.proyectilesCat.length; n++) {
+      H.pasoProyectilesCat(G, true);
+      if (colaAlCaer === null && enCola.mode === 'eyes') colaAlCaer = b.cola.slice();
+    }
+    ok(colaAlCaer && colaAlCaer.indexOf(enCola.id) < 0,
+      'al atropellarlo lo tacha de la cola: no se le cobra dos veces');
+    eq(enCola.mode, 'eyes', 'el de la cola cae por el camino');
+    eq(blanco.mode, 'eyes', 'y el objetivo también');
+    eq(G.score - base, 750, 'dos bajas y dos escalones de cadena, ni uno más');
+  });
+
+  /* DOMINIO (22 sep 2026) entra en la E del Mago en el sitio de NIEBLA. Lo
+   * que hay que ver aquí es lo que NIEBLA no hacía: que el fantasma tocado
+   * cambia de bando entero —caza a los suyos, no muerde al equipo— y que
+   * devolverlo no sale gratis (vuelve aturdido un segundo). */
+  test('AJUSTES: DOMINIO pone al fantasma tocado a cazar a los suyos', function () {
+    var H = window.PM.Hab, HH = CFG.HAB, n;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['chispa,clon,dominio,eclipse']); G.roles = ['mago'];
+    var t = tramoRecto(7);
+    ok(t, 'hay un pasillo recto donde cruzarse');
+    var p = ponPac(0, t.c, t.r, DR.RIGHT);
+    var mio = G.ghosts[0], presa = G.ghosts[1];
+    G.ghosts[2].mode = 'house'; G.ghosts[3].mode = 'house';
+    mio.mode = 'normal'; mio.frightened = false;
+    mio.x = (t.c + 1) * CFG.TILE + CFG.TILE / 2; mio.y = p.y;
+    presa.mode = 'normal'; presa.frightened = false;
+    presa.x = (t.c + 6) * CFG.TILE + CFG.TILE / 2; presa.y = p.y;   // de momento, lejos
+
+    ok(H.dominio(G, 0), 'el toque alcanza al fantasma de al lado');
+    eq(H.dominado[mio.id], HH.DOMINIO_TICKS, 'seis segundos es suyo');
+    eq(H.dominaQuien[mio.id], 0, 'y son del Mago');
+    eq(H.dominado[presa.id], 0, 'el de seis casillas no se entera: el toque llega a cuatro');
+
+    /* CAZA: su objetivo deja de ser Pac-Man y pasa a ser el otro fantasma */
+    var obj = H.objetivo(G, mio);
+    ok(obj, 'tiene objetivo propio');
+    eq(obj.x + ',' + obj.y, presa.tileX() + ',' + presa.tileY(), 'va a por el otro fantasma');
+
+    /* NO MATA AL EQUIPO: el Mago le pasa por encima y sigue vivo */
+    ok(H.apagado(mio.id), 'mientras es suyo no muerde al equipo');
+    mio.x = p.x; mio.y = p.y; p.safeTicks = 0;
+    ticks(3);
+    ok(!p.dying, 'pasar por encima del dominado no mata');
+    p.safeTicks = 999999;
+
+    /* SE CRUZA CON OTRO: ese se va a casa y el Mago cobra 200 */
+    var base = G.score;
+    mio.x = (t.c + 3) * CFG.TILE + CFG.TILE / 2; mio.y = p.y;
+    presa.x = mio.x + CFG.TILE / 4; presa.y = mio.y;
+    H.pasoRoles(G, true);
+    eq(presa.mode, 'eyes', 'al alcanzarlo lo manda a casa');
+    eq(G.score - base, HH.DOMINIO_PUNTOS, 'y le da 200 al Mago');
+    eq(HH.DOMINIO_PUNTOS, 200, 'que son 200, ni cadena ni multiplicadores');
+
+    /* SE ACABA: vuelve a la normalidad, pero aturdido un segundo */
+    for (n = 0; n < HH.DOMINIO_TICKS + 5 && H.dominado[mio.id] > 0; n++) H.pasoRoles(G, true);
+    eq(H.dominado[mio.id], 0, 'se acaba a su hora');
+    eq(H.dominaQuien[mio.id], -1, 'y deja de ser del Mago');
+    eq(H.aturdido[mio.id], HH.DOMINIO_RESACA, 'vuelve aturdido un segundo');
+    eq(H.objetivo(G, mio), null, 'ya no caza a nadie');
+  });
+
+  test('AJUSTES: NIEBLA se fue del catálogo y no quedó nada suyo', function () {
+    var E = CFG.HAB.CATALOGO.mago[2].map(function (h) { return h.id; });
+    ok(E.indexOf('niebla') < 0, 'la niebla ya no está en la E del Mago');
+    ok(E.indexOf('dominio') >= 0, 'y DOMINIO ocupa su sitio');
+    eq(CFG.HAB.CATALOGO.mago[2].filter(function (h) { return h.id === 'dominio'; })[0].cd,
+      32 * 60, 'con la misma recarga que RUNA y GRAVEDAD');
+    eq(window.PM.Hab.niebla, undefined, 'y la implementación no quedó colgando');
+    eq(CFG.HAB.NIEBLA_TICKS, undefined, 'ni su número');
   });
 
   // ---------------------------------------------------------------

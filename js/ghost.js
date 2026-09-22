@@ -223,10 +223,15 @@
       return this.humanChoice(candidates);
     }
 
-    /* ECLIPSE, NIEBLA y GRAVEDAD rompen la lectura normal del objetivo: el
-     * fantasma sigue avanzando, pero elige una salida legal pseudoaleatoria
-     * en vez de perseguir una posición conocida. */
-    if (game.hab && window.PM.Hab && window.PM.Hab.ciegoDe && window.PM.Hab.ciegoDe(this.id)) {
+    /* ECLIPSE y GRAVEDAD rompen la lectura normal del objetivo: el fantasma
+     * sigue avanzando, pero elige una salida legal pseudoaleatoria en vez de
+     * perseguir una posición conocida.
+     *
+     * Un fantasma DOMINADO no (22 sep 2026): mientras es del Mago va a por
+     * los suyos aunque el mapa esté a oscuras. Si la ceguera lo pisara, el
+     * Mago perdería su propia E cada vez que alguien lanzara un ECLIPSE. */
+    if (game.hab && window.PM.Hab && window.PM.Hab.ciegoDe && window.PM.Hab.ciegoDe(this.id) &&
+        !(window.PM.Hab.esDominado && window.PM.Hab.esDominado(this.id))) {
       var cegado = game.rndDir ? game.rndDir() : Math.floor(Math.random() * 4);
       if (candidates.indexOf(cegado) !== -1) return cegado;
       return candidates[0];

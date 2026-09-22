@@ -2065,7 +2065,11 @@
     CARROÑA_TICKS: 6 * 60,
     CARROÑA_JOYA: 3 * 60,
     MARCA_TICKS: 8 * 60,
-    GANCHO_INVERSO_TILES: 8,
+    /* El GANCHO INVERSO del Asesino llega a NUEVE casillas (22 sep 2026):
+     * con ocho se quedaba a un pelo del fantasma una y otra vez y la E se
+     * gastaba para nada. Una casilla más es la diferencia entre fallar y
+     * plantarse encima. */
+    GANCHO_INVERSO_TILES: 9,
     GANCHO_INVERSO_VEL: 4,
     GANCHO_ARRASTRE_MULT: 1.2,
     GANCHO_AZUL_TICKS: 5 * 60,
@@ -2128,13 +2132,74 @@
     GRAVEDAD_TICKS: 2 * 60,
     GRAVEDAD_RADIO: 4,
     GRAVEDAD_TIRON: 30,
-    NIEBLA_TICKS: 5 * 60,
+    /* ---------- DOMINIO (22 sep 2026), la E del Mago ----------
+     * Sustituye a NIEBLA, que era una zona donde el fantasma que entraba
+     * caminaba al azar. No tenía gracia: un fantasma que anda al azar se
+     * parece demasiado a uno que te persigue mal, no se distingue y no se
+     * planeaba nada con ella; encima el Mago ya ciega a los cuatro a la vez
+     * con su R (ECLIPSE), así que era media R más floja en la ranura E.
+     *
+     * DOMINIO hace lo contrario: el Mago toca al fantasma más cercano y ese
+     * fantasma ES SUYO. Persigue a los otros tres y al alcanzarlos los manda
+     * a casa. Se ve, se planea —se elige a cuál tocar y hacia dónde llevarlo—
+     * y no se parece a ningún otro poder del juego. */
+    /* Seis segundos: lo que tarda el dominado en cruzar medio laberinto y
+     * alcanzar a uno, con suerte a dos. Con tres no llegaba a nadie; con
+     * diez el Mago limpia el mapa entero sin jugarse nada. */
+    DOMINIO_TICKS: 6 * 60,
+    /* Cuatro casillas. Es un TOQUE, no un poder a distancia: hay que ir a
+     * buscar al fantasma, y ese paseo es el riesgo que paga el dominio. */
+    DOMINIO_TILES: 4,
+    /* Doscientos por cabeza, lo mismo que cualquier baja por habilidad (ver
+     * MAGO_PUNTOS). Se cobran fijos, sin cadena ni multiplicadores: si el
+     * dominado se llevara a los tres por delante con premio creciente, esta
+     * E puntuaría más que las dos R del Mago juntas. */
+    DOMINIO_PUNTOS: 200,
+    /* Al acabarse vuelve a la normalidad ATURDIDO un segundo. Sin esa resaca
+     * el fantasma se despierta pegado al Mago —lleva seis segundos a su
+     * lado— y lo mata en el mismo tick en que deja de ser suyo, que es
+     * castigar al jugador justo por haber usado bien el poder. */
+    DOMINIO_RESACA: 60,
+    /* A qué distancia se da por alcanzado al otro fantasma: media casilla
+     * larga, como el resto de contactos entre fantasmas de este juego (la
+     * mina y el contagio del TOQUE ARCANO andan por ahí). */
+    DOMINIO_CHOQUE: 0.6,
     METEORO_AVISO: 90,
     METEORO_RADIO: 2,
     METEORO_FUEGO: 4 * 60,
+    /* METEORO APUNTADO (22 sep). Antes caía seis casillas al frente, en la
+     * dirección de la última flecha: para ponerlo donde uno quería había que
+     * ir a colocarse mirando hacia allí, con el laberinto de por medio. O
+     * sea, que no se podía apuntar. Ahora se apunta MANTENIENDO la R: sale una
+     * retícula delante del Mago, las flechas la llevan por los pasillos y al
+     * soltar cae ahí. La partida no se para mientras tanto.
+     *
+     * ALCANCE, en casillas DE CAMINO (las que andaría un fantasma, no en
+     * línea recta): ocho. Seis —lo de antes— no daba ni para doblar la
+     * esquina de un bloque, que es justo lo que uno quiere hacer con esto; de
+     * diez para arriba el Mago revienta la otra punta del mapa sin enterarse
+     * de lo que pasa allí y el poder se queda sin riesgo. */
+    METEORO_ALCANCE: 8,
+    /* Lo que tarda la retícula en pasar de una casilla a la siguiente: seis
+     * ticks, o sea diez casillas por segundo. La marca CAMINA SOLA hacia la
+     * última flecha (las flechas la giran, no la empujan), así que este número
+     * es en realidad la puntería: se suelta la tecla cuando pasa por donde uno
+     * quiere. A tres ticks por casilla se escapa y hay que estar
+     * corrigiéndola; a doce, cruzar el alcance entero se lleva más de un
+     * segundo y el fantasma al que apuntabas ya se ha ido. Con seis, cada
+     * casilla dura una décima y el alcance completo ocho: lo justo para
+     * soltar a tiempo. */
+    METEORO_PASO: 6,
+    /* Casillas de propina que el anfitrión le perdona a la casilla que pide un
+     * invitado. Él apuntó desde donde tenía su Mago y aquí, medio segundo de
+     * red después, ya ha andado un poco: el desfase no es culpa suya. */
+    METEORO_MARGEN_RED: 2,
     ECLIPSE_TICKS: 10 * 60,
     TERREMOTO_PUNTOS: 100,
-    TERREMOTO_SLOW: 0.8,
+    /* Retirada el 22 sep: el TERREMOTO ya no frena al equipo (ver multVel).
+     * Se deja la constante a 1 porque hay repeticiones guardadas que la
+     * miran, y para poder volver a probarlo con un número si hiciera falta. */
+    TERREMOTO_SLOW: 1,
     TERREMOTO_TICKS: 6 * 60,
     FORTALEZA_TICKS: 6 * 60,
     FORTALEZA_RADIO: 5,
@@ -2224,7 +2289,7 @@
         [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 5 s.'),
          h('sombra', 'W', 'SOMBRA', 26, '4 s invisible y veloz; bajas de 500/750.'),
          h('frenesi', 'W', 'FRENESÍ', 26, '8 s; cada baja suma velocidad sin límite.'),
-         h('carrona', 'W', 'CARROÑA', 24, 'Deja joyas al matar.')],
+         h('carrona', 'W', 'CARROÑA', 24, 'Deja monedas al matar; las coge cualquiera.')],
         [h('flash', 'E', 'FLASH', 32, 'Salta tres casillas atravesando muros.'),
          h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar doble.'),
          h('gancho_inverso', 'E', 'GANCHO INVERSO', 32, 'Lanza un gancho; si atrapa, te arrastra.')],
@@ -2271,16 +2336,20 @@
       mago: [
         [h('fuego', 'Q', 'BOLA DE FUEGO', 20, 'Mata al primer fantasma.'),
          h('bola_guiada', 'Q', 'BOLA GUIADA', 22, 'No falla y da 150 puntos.'),
-         h('toque_arcano', 'Q', 'TOQUE ARCANO', 18, 'Vuelve azul a un fantasma cercano.'),
+         /* 22 sep 2026: el azul del TOQUE ARCANO se contagia, así que un solo
+          * toque puede acabar poniendo azules a los cuatro. De 18 s a 24 s:
+          * sigue siendo una Q barata, pero ya no se encadena un contagio
+          * detrás de otro sin dejar que el anterior se apague. */
+         h('toque_arcano', 'Q', 'TOQUE ARCANO', 24, 'Vuelve azul a un fantasma, y el azul se contagia.'),
          h('chispa', 'Q', 'CHISPA', 20, 'Aturde dos segundos.')],
         [h('portal', 'W', 'PORTAL', 46, 'Abre un paso entre dos bocas.'),
          h('clon', 'W', 'CLON', 30, 'Los fantasmas persiguen al doble.'),
          h('totem', 'W', 'TÓTEM', 34, 'Torre que dispara automáticamente.')],
         [h('runa', 'E', 'RUNA', 32, 'Trampa que mata en una casilla.'),
          h('gravedad', 'E', 'GRAVEDAD', 32, 'Agrupa y detiene fantasmas.'),
-         h('niebla', 'E', 'NIEBLA', 30, 'Hace caminar al azar.')],
+         h('dominio', 'E', 'DOMINIO', 32, 'El fantasma más cercano caza a los suyos 6 s.')],
         [h('tormenta', 'R', 'TORMENTA', 46, 'Tres rayos a distancia.'),
-         h('meteoro', 'R', 'METEORO', 60, 'Explosión señalada con aviso.'),
+         h('meteoro', 'R', 'METEORO', 60, 'Mantenla para apuntar dónde cae.'),
          h('eclipse', 'R', 'ECLIPSE', 60, 'Ceguera y ralentización global.')]
       ]
     };
@@ -2357,8 +2426,55 @@
     /* La APISONADORA del Tanque, además de su daño, lo deja parado 3 s:
      * cruzarse el laberinto para embestirlo tiene que valer algo (18 sep). */
     ATURDE_APISONADORA: 3 * 60,
-    /* lo que quita cada cosa */
-    DANO: { azul: 6, mordisco: 3, fuego: 2, rayo: 2, runa: 4, aplasta: 4 },
+    /* lo que quita cada cosa.
+     *
+     * EL CATÁLOGO TAMBIÉN LE PEGA (22 sep 2026). Hasta hoy solo le hacían
+     * daño los kits clásicos: quien eligiera una habilidad nueva se plantaba
+     * en un nivel de jefe sin nada que hacerle, y el nivel no se acaba hasta
+     * tumbarlo. Los números salen de la escala que ya había, que va por
+     * RECARGA y no por rol: una Q vale 2-3, una E vale 4 y una R vale de 4 a
+     * 6 (el mordisco es 3 con 16 s, la bola 2 con 20 s, la runa 4 con 32 s y
+     * la apisonadora 4 con 46 s).
+     *
+     * Los tres números que se salen de la regla, y por qué:
+     *   · shuriken 1, pero son TRES por ráfaga: los tres juntos valen lo que
+     *     un mordisco, y entran aunque el rey acabe de recibir otro golpe
+     *     (como la runa y el azul), que si no la segunda y la tercera carga
+     *     se perdían contra el respiro de INV;
+     *   · tótem 1 por bala, y dispara cada dos segundos mientras dure: una
+     *     torre plantada al lado del rey le saca cuatro de vida, que es lo
+     *     que vale una W que hay que colocar y defender;
+     *   · ejecución 10, el golpe más gordo de la tabla. NO LO MATA DE UN
+     *     GOLPE a propósito: a un fantasma sí, pero el rey ES el nivel —su
+     *     barra es la condición para pasar de pantalla— y una R que se lo
+     *     salte entero convierte el nivel de jefe en pulsar una tecla. En
+     *     party, además, cuatro Asesinos lo tumbarían antes de su primera
+     *     embestida. Diez de los veinticuatro que tiene a un jugador es
+     *     media barra en dos ejecuciones: pega como lo que vale, sin borrar
+     *     el nivel. */
+    DANO: { azul: 6, mordisco: 3, fuego: 2, rayo: 2, runa: 4, aplasta: 4,
+            /* Asesino */
+            shuriken: 1, bomba: 3, misil: 6, ejecucion: 10,
+            /* Tanque */
+            rebote: 3, terremoto: 6,
+            /* Soporte */
+            mina: 3, gancho: 1,
+            /* Mago */
+            guiada: 2, totem: 1, arcano: 1, meteoro: 5, dominio: 3 },
+    /* LO QUE LO DEJA PARADO, y cuánto.
+     *
+     * Regla: UN TERCIO de lo que ese mismo poder aturde a un fantasma, con
+     * medio segundo de suelo. Es el precedente que ya había en el archivo:
+     * el hielo clava a un fantasma 3 s (HAB.HIELO_TICKS) y al rey 1 s (el
+     * HIELO de aquí arriba). Es un jefe: se le apaga un momento para salir
+     * de debajo, no se le deja quieto mientras se le pega. */
+    ATURDE: { empujon: 30, grito_guerra: 50, chispa: 60, gravedad: 40, clon: 30,
+              /* El REBOTE no aturde a nadie: al fantasma lo mata y ahí se
+               * acaba el contacto. Contra el rey hace falta, porque después
+               * del golpe sigue encima; sin este segundo el Tanque rebotaba
+               * y moría en el tick siguiente. Es el mismo remedio que el
+               * mordisco (ATURDE_MORDISCO), en pequeño. */
+              rebote: 60 },
     COLOR: '#d0145a',
     COLOR_FURIA: '#ff5a00'
   };

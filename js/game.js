@@ -1004,6 +1004,16 @@
       var p = this.pacs[idx];
       if (!p || p.out) return;
       if (R && !R.entrada(idx, d)) return;
+      /* METEORO: mientras se apunta (la R mantenida) las flechas son de la
+       * RETÍCULA y no de Pac-Man, que sigue corriendo como iba. Va aquí, en el
+       * embudo de todo el rumbo, para que valga igual el teclado, la cruceta,
+       * el deslizamiento y la repetición cuando se está viendo una: los cuatro
+       * entran por la misma puerta. */
+      if (this.hab && window.PM.Hab && window.PM.Hab.apuntando &&
+          window.PM.Hab.apuntando(idx)) {
+        window.PM.Hab.apuntarDir(idx, d);
+        return;
+      }
       p.setDesiredDir(d);
     },
 
@@ -1276,8 +1286,10 @@
             if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
-            // DESATADO: un fantasma apagado no mata —congelado o aturdido—,
-            // ni uno que va a por el Tanque que provoca (ignora al resto)
+            // DESATADO: un fantasma apagado no mata —congelado, aturdido o
+            // DOMINADO por el Mago, que mientras dura caza a los suyos y no
+            // al equipo (ver Hab.apagado)—, ni uno que va a por el Tanque
+            // que provoca (ignora al resto)
             if (this.hab && window.PM.Hab && (window.PM.Hab.apagado(g.id) ||
                 window.PM.Hab.ignoraA(this, i, g))) continue;
             if (!this.hitGhost(p, g)) continue;
