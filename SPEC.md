@@ -3614,3 +3614,42 @@ from third parties. Cells are indices `row*28+col`.
     six-axis polygon of strengths, and a rival profile draws their shape over
     yours. Counters added for it are seeded from what was already known,
     never from zero, and the one figure that is an estimate says so.
+
+## Trofeos, maestrías de rol y rango (22 sep 2026)
+
+Tres escaleras que miden cosas distintas. Ninguna necesitó columnas nuevas:
+todo vive en los contadores de `Achievements` (que viajan en
+`perfiles.logros` y se funden quedándose con lo más alto de cada lado).
+
+**TROFEOS** (`js/badges.js`, dibujo en `js/trofeos.js`). Es la escalera de
+siempre por mejor marca, 12 rutas (mundo × formato). Solo cambió el nombre y
+el dibujo: `CFG.BADGES` conserva ids (`aprendiz` … `mundial`), claves
+guardadas y listones; los `name` son BRONCE … MUNDIAL. La clave `maestria`
+de `pide` en las skins sigue llamándose así por compatibilidad.
+`Sprites.drawTrofeo/At/Off` imitan a `drawEmblem*`; `drawBadgeTag` y
+`drawBadgeStrip` eligen dibujo con `dib` ('emblema' = maestría de rol).
+
+**MAESTRÍA DE ROL** (`js/maestria.js`, `CFG.MAESTRIA`). Contadores
+`mae_<rol>` (puntos), `maes_<rol>` (notas S), `maep_<rol>` (partidas),
+`maesem_<rol>` (sembradas) y `maevivas` (partidas de DESATADO cerradas con
+las maestrías en marcha). `Game.closeRun` llama a `Maestria.cerrar`: la
+nota es el valor del rol por minuto EN PIE (`marcador[i].vivo`) rebajado un
+10 % por muerte. Asesino y Mago: `kills` (ahora también las de
+`matarCatalogo`); Tanque: `Game.salvasMias` ×3 + kills (se cuenta en la
+máquina de cada uno, en `aguanta()` de habilidades.js, solo cuando se gasta
+una coraza, un escudo o un rebote); Soporte: `rescates` ×3 + `apoyos`
+(campo nuevo de la libreta: escudo dado 1, vida 2) + kills. La libreta viaja
+con un sexto campo (`apoyos`); quien no lo conozca lo ignora.
+**Siembra**: `hab:partidas − maevivas` son las de antes; las que tienen
+repetición anterior a `desde()` (hora local de la primera siembra) dan su
+rol, el resto va al Asesino; cada una vale `SEMBRADA` (una B). Se repite al
+entrar en la cuenta sumando solo la diferencia. Ctrl+Espacio en DESATADO manda
+`{ t: 'badge', b: '', f: 0, r: rol, l: nivel }` (sin subir PROTO).
+
+**RANGO** (`js/rango.js`, `CFG.RANGO`). Contadores sueltos por temporada y
+formato (`tipoSuelto`): `rc_` jugadas, `rt_` suma de colocación, `rg_`
+ganado, `rl_` perdido (todos 'suma') y `rm_` mejor división +1 ('mayor').
+PR = colocar(rt/5) + rg − rl, sin bajar de 0 (y sin apuntar pérdidas que no se
+pueden perder, así no hay deuda). Cuenta si el ajuste `clasif` (viaja con la
+cuenta) está encendido y `Rango.porQueNo(G)` es null. La tabla lee
+`perfiles?select=usuario,avatar,logros` y aplica `estadoDe` a cada uno.

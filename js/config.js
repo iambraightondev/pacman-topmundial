@@ -1087,6 +1087,36 @@
   ];
   CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
 
+  /* ---------- RANGO de temporada (22 de septiembre) ----------
+   * Las CLASIFICATORIAS de DESATADO (js/rango.js). Un rango por FORMATO —las
+   * cuatro ligas no se mezclan— que sube y baja partida a partida y vuelve a
+   * empezar cada mes. Las divisiones son las ocho frutas del Pac-Man de 1980,
+   * para no confundirse con los metales de las copas.
+   *
+   * `par` es la marca que se espera de alguien de esa división EN SOLO; en
+   * equipo se multiplica como los trofeos (Badges.FORMATOS). Salen de las
+   * marcas reales de DESATADO del 22 sep: a uno, la mitad de las partidas no
+   * pasa de 1.300 y una de cada diez supera 9.600; la mejor ronda 40.000.
+   * ---------------------------------------------------------------- */
+  CFG.RANGO = {
+    DIVISIONES: [
+      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 1500,  color: '#ff3b3b' },
+      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 3000,  color: '#ff5fa0' },
+      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 6000,  color: '#ffb852' },
+      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 10000, color: '#7dff5a' },
+      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 16000, color: '#2bff88' },
+      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 25000, color: '#6fd0ff' },
+      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 40000, color: '#ffe23a' },
+      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 60000, color: '#e6ecff' }
+    ],
+    PR_DIVISION: 100,     // puntos de rango (PR) que ocupa cada división
+    COLOCACION: 5,        // partidas antes de tener rango
+    /* lo que se gana o se pierde: 25 por cada vez que doblas (o te quedas en
+     * la mitad de) la marca de tu división, más 5 por jugarla. Igualar tu par
+     * sube un poco; la mitad te quita 20; el doble te da 30. */
+    PASO: 25, BASE: 5, MAX_GANA: 40, MAX_PIERDE: 25
+  };
+
   /* ---------- Maestrías de ROL (22 de septiembre) ----------
    * Como las de campeón en League of Legends: miden lo que has JUGADO con
    * cada rol de DESATADO, no tu mejor marca (eso son los TROFEOS). Cada
@@ -1742,7 +1772,7 @@
     /* el aspecto: lo que los demás ven de ti */
     'skin1', 'pacColor', 'acc1', 'efx1', 'emotes1', 'avatar',
     /* cómo juegas */
-    'modePick', 'habRol1', 'habLoadout1',
+    'modePick', 'habRol1', 'habLoadout1', 'clasif',
     'ghostSpeedMult', 'pacSpeedMult', 'frightMult', 'startLives', 'startLevel',
     /* y cómo suena */
     'muted', 'volMaster', 'volMusic', 'volSfx', 'volLoops', 'volVoices'
@@ -1773,6 +1803,9 @@
     livesMode: 'individual',      // 'individual' | 'shared' (solo por dentro)
     vsGhost2: -1,                 // PAC-MAN VS. en local: fantasma del J2 (-1 = Pac-Man)
     habRol1: 'asesino',           // DESATADO: el último rol elegido por el J1
+    /* DESATADO: ¿tus partidas son CLASIFICATORIAS? (js/rango.js). Es de cada
+     * jugador: en una party, a cada uno le mueve su rango solo si lo tiene. */
+    clasif: false,
     habRol2: 'asesino',           // ...y por el J2 (dos en el mismo teclado)
     /* armamento DESATADO: una habilidad por ranura, separadas por comas.
      * Se conserva el kit antiguo como valor inicial para que las partidas y

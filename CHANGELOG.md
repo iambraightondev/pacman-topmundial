@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-22 (tarde) · RANGO de temporada y partidas CLASIFICATORIAS
+
+**UN RANGO QUE SUBE Y BAJA.** El top mundial dice quién tiene la mejor marca;
+el rango dice cómo juegas **este mes**. Es de DESATADO, uno por formato (solo,
+dúo, trío y escuadra no se mezclan), y sus divisiones son las ocho frutas del
+Pac-Man de 1980: **CEREZA, FRESA, NARANJA, MANZANA, MELÓN, GALAXIAN, CAMPANA
+y LLAVE**, 100 puntos de rango (PR) cada una.
+
+**CÓMO SE JUEGA.** Enciende **CLASIFICATORIAS** en la pantalla de DESATADO o
+en RANGO (hace falta cuenta). Las cinco primeras partidas del mes son de
+colocación y te ponen donde dice tu media. Después, cada partida te da o te
+quita PR según tu marca contra la de tu división: el doble da +30, igualarla
++5 y la mitad −20. En cero no se baja más. Salirse a medias también cuenta.
+
+**EN PARTY** el interruptor es de cada uno: la marca es la del equipo, pero a
+cada jugador solo le mueve el rango si lo tiene encendido.
+
+**DÓNDE SE VE:** botón RANGO en el menú, con tu fruta, tus PR y **la tabla del
+mes**; y una fila en el GAME OVER con lo que ganaste o perdiste.
+
 ## 2026-09-22 (tarde) · Maestrías de ROL, como en League of Legends
 
 **CADA ROL DE DESATADO TIENE SU MAESTRÍA.** ASESINO, TANQUE, MAGO y SOPORTE

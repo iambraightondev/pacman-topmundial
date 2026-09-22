@@ -1526,9 +1526,10 @@ input[type="range"]:focus {
  * que hay debajo. */
 #options::before, #options::after,
 #badges::before, #badges::after,
-#maestrias::before, #maestrias::after { content: none; }
+#maestrias::before, #maestrias::after,
+#rango::before, #rango::after { content: none; }
 
-#options, #badges, #maestrias { justify-content: flex-start; }
+#options, #badges, #maestrias, #rango { justify-content: flex-start; }
 
 .tab-row {
   position: sticky;         /* siguen a la vista en pestañas largas */
@@ -5507,76 +5508,76 @@ body { font-size-adjust: 0.56; }
  * Arriba el título con la liga (mundo y formato en desplegables), en medio tu
  * maestría en grande armándose con tu récord al lado, y abajo el camino de
  * los seis emblemas con la línea de oro que se llena hasta donde llegaste. */
-:is(#badges, #maestrias) .maes-cab {
+:is(#badges, #maestrias, #rango) .maes-cab {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   width: min(94vw, 1180px); flex-wrap: wrap;
 }
-:is(#badges, #maestrias) .maes-cab .panel-title { margin: 0; max-width: none; }
-:is(#badges, #maestrias) .maes-mandos { display: flex; gap: 10px; flex-wrap: wrap; }
-:is(#badges, #maestrias) .maes-nota { width: min(94vw, 1180px); max-width: none; text-align: left; margin: 6px 0 0; color: #7c7ea6; }
-:is(#badges, #maestrias) .maes-cuerpo {
+:is(#badges, #maestrias, #rango) .maes-cab .panel-title { margin: 0; max-width: none; }
+:is(#badges, #maestrias, #rango) .maes-mandos { display: flex; gap: 10px; flex-wrap: wrap; }
+:is(#badges, #maestrias, #rango) .maes-nota { width: min(94vw, 1180px); max-width: none; text-align: left; margin: 6px 0 0; color: #7c7ea6; }
+:is(#badges, #maestrias, #rango) .maes-cuerpo {
   display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: clamp(16px, 3vw, 40px);
   align-items: center; width: min(94vw, 1180px); margin-top: 4px;
 }
-:is(#badges, #maestrias) .maes-heroe { width: 100%; max-width: 360px; height: auto; aspect-ratio: 200 / 240; justify-self: center; }
-:is(#badges, #maestrias) .maes-info { display: grid; gap: 14px; align-content: center; min-width: 0; --c: #ffff00; }
-:is(#badges, #maestrias) .maes-k { font-size: 10px; letter-spacing: 3px; color: #8a8cae; }
-:is(#badges, #maestrias) .maes-nombre {
+:is(#badges, #maestrias, #rango) .maes-heroe { width: 100%; max-width: 360px; height: auto; aspect-ratio: 200 / 240; justify-self: center; }
+:is(#badges, #maestrias, #rango) .maes-info { display: grid; gap: 14px; align-content: center; min-width: 0; --c: #ffff00; }
+:is(#badges, #maestrias, #rango) .maes-k { font-size: 10px; letter-spacing: 3px; color: #8a8cae; }
+:is(#badges, #maestrias, #rango) .maes-nombre {
   font-size: clamp(30px, 5.4vw, 64px); line-height: 1.15; letter-spacing: 4px;
   background: linear-gradient(180deg, #fff 0%, var(--c) 55%, color-mix(in srgb, var(--c) 45%, #000) 100%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--c);
   filter: drop-shadow(0 0 16px color-mix(in srgb, var(--c) 40%, transparent));
   overflow-wrap: anywhere;
 }
-:is(#badges, #maestrias) .maes-info.off .maes-nombre { background: linear-gradient(180deg, #8d8aa8, #3b3955); -webkit-background-clip: text; background-clip: text; filter: none; }
-:is(#badges, #maestrias) .maes-estado { font-size: 10px; letter-spacing: 2px; color: #c9c6e0; }
-:is(#badges, #maestrias) .maes-datos { display: flex; flex-wrap: wrap; gap: 14px 34px; }
-:is(#badges, #maestrias) .maes-datos div { display: grid; gap: 6px; }
-:is(#badges, #maestrias) .maes-datos b { font-size: clamp(13px, 1.6vw, 18px); color: #fff; }
-:is(#badges, #maestrias) .maes-datos span { font-size: 10px; letter-spacing: 2px; color: #8a8cae; }
-:is(#badges, #maestrias) .maes-sig { display: grid; gap: 10px; max-width: 560px; }
-:is(#badges, #maestrias) .maes-sig-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 10px; color: #c9c6e0; line-height: 1.8; }
-:is(#badges, #maestrias) .maes-sig-fila em { font-style: normal; }
-:is(#badges, #maestrias) .maes-barra { height: 12px; background: #10102a; border: 2px solid #2d2a5a; border-radius: 3px; overflow: hidden; position: relative; }
-:is(#badges, #maestrias) .maes-barra i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8e6420, #e6c270 70%, #fff0b8); box-shadow: 0 0 12px rgba(230, 194, 112, .6); }
-:is(#badges, #maestrias) .maes-camino { position: relative; width: min(94vw, 1180px); }
-:is(#badges, #maestrias) .maes-pasos { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+:is(#badges, #maestrias, #rango) .maes-info.off .maes-nombre { background: linear-gradient(180deg, #8d8aa8, #3b3955); -webkit-background-clip: text; background-clip: text; filter: none; }
+:is(#badges, #maestrias, #rango) .maes-estado { font-size: 10px; letter-spacing: 2px; color: #c9c6e0; }
+:is(#badges, #maestrias, #rango) .maes-datos { display: flex; flex-wrap: wrap; gap: 14px 34px; }
+:is(#badges, #maestrias, #rango) .maes-datos div { display: grid; gap: 6px; }
+:is(#badges, #maestrias, #rango) .maes-datos b { font-size: clamp(13px, 1.6vw, 18px); color: #fff; }
+:is(#badges, #maestrias, #rango) .maes-datos span { font-size: 10px; letter-spacing: 2px; color: #8a8cae; }
+:is(#badges, #maestrias, #rango) .maes-sig { display: grid; gap: 10px; max-width: 560px; }
+:is(#badges, #maestrias, #rango) .maes-sig-fila { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 10px; color: #c9c6e0; line-height: 1.8; }
+:is(#badges, #maestrias, #rango) .maes-sig-fila em { font-style: normal; }
+:is(#badges, #maestrias, #rango) .maes-barra { height: 12px; background: #10102a; border: 2px solid #2d2a5a; border-radius: 3px; overflow: hidden; position: relative; }
+:is(#badges, #maestrias, #rango) .maes-barra i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8e6420, #e6c270 70%, #fff0b8); box-shadow: 0 0 12px rgba(230, 194, 112, .6); }
+:is(#badges, #maestrias, #rango) .maes-camino { position: relative; width: min(94vw, 1180px); }
+:is(#badges, #maestrias, #rango) .maes-pasos { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   width: min(94vw, 1180px); margin-top: 8px; padding-top: 8px; border-top: 1px solid #1d1b3a;
 }
 /* la línea va de centro a centro del primero al último */
-:is(#badges, #maestrias) .maes-linea { position: absolute; left: calc(100% / 12); right: calc(100% / 12); top: calc(20px + clamp(60px, 11.04vw, 144px) * .53); height: 4px; background: #1b1a36; border-radius: 2px; }
-:is(#badges, #maestrias) .maes-lleno { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8e6420, #e6c270); box-shadow: 0 0 10px rgba(230, 194, 112, .6); border-radius: 2px; transition: width .6s ease; }
-:is(#badges, #maestrias) .maes-paso {
+:is(#badges, #maestrias, #rango) .maes-linea { position: absolute; left: calc(100% / 12); right: calc(100% / 12); top: calc(20px + clamp(60px, 11.04vw, 144px) * .53); height: 4px; background: #1b1a36; border-radius: 2px; }
+:is(#badges, #maestrias, #rango) .maes-lleno { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8e6420, #e6c270); box-shadow: 0 0 10px rgba(230, 194, 112, .6); border-radius: 2px; transition: width .6s ease; }
+:is(#badges, #maestrias, #rango) .maes-paso {
   position: relative; display: grid; justify-items: center; gap: 4px; background: none; border: 0;
   padding: 4px 2px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; color: inherit; min-width: 0;
 }
-:is(#badges, #maestrias) .maes-mini { width: clamp(50px, 9.2vw, 120px); height: auto; aspect-ratio: 200 / 240; }
-:is(#badges, #maestrias) .maes-paso-nombre { font-size: clamp(8px, .9vw, 11px); letter-spacing: 1px; text-align: center; overflow-wrap: anywhere; }
-:is(#badges, #maestrias) .maes-paso-puntos { font-size: 10px; color: #8a8cae; }
-:is(#badges, #maestrias) .maes-paso:hover { background: rgba(255, 255, 255, .035); }
-:is(#badges, #maestrias) .maes-paso.sel { background: rgba(255, 255, 255, .07); }
-:is(#badges, #maestrias) .maes-paso:focus-visible { outline: 2px solid #00ffff; outline-offset: 2px; }
-:is(#badges, #maestrias) .maes-tuya { position: absolute; top: 0; font-size: 10px; color: #000; background: #e6c270; padding: 3px 6px; border-radius: 2px; }
+:is(#badges, #maestrias, #rango) .maes-mini { width: clamp(50px, 9.2vw, 120px); height: auto; aspect-ratio: 200 / 240; }
+:is(#badges, #maestrias, #rango) .maes-paso-nombre { font-size: clamp(8px, .9vw, 11px); letter-spacing: 1px; text-align: center; overflow-wrap: anywhere; }
+:is(#badges, #maestrias, #rango) .maes-paso-puntos { font-size: 10px; color: #8a8cae; }
+:is(#badges, #maestrias, #rango) .maes-paso:hover { background: rgba(255, 255, 255, .035); }
+:is(#badges, #maestrias, #rango) .maes-paso.sel { background: rgba(255, 255, 255, .07); }
+:is(#badges, #maestrias, #rango) .maes-paso:focus-visible { outline: 2px solid #00ffff; outline-offset: 2px; }
+:is(#badges, #maestrias, #rango) .maes-tuya { position: absolute; top: 0; font-size: 10px; color: #000; background: #e6c270; padding: 3px 6px; border-radius: 2px; }
 @media (max-width: 700px) {
-  :is(#badges, #maestrias) .maes-cuerpo { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-  :is(#badges, #maestrias) .maes-heroe { max-width: 220px; }
-  :is(#badges, #maestrias) .maes-info { justify-items: center; }
-  :is(#badges, #maestrias) .maes-datos { justify-content: center; }
-  :is(#badges, #maestrias) .maes-sig { width: 100%; }
-  :is(#badges, #maestrias) .maes-pasos { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
-  :is(#badges, #maestrias) .maes-linea { display: none; }
-  :is(#badges, #maestrias) .maes-mini { width: 76px; }
-  :is(#badges, #maestrias) .maes-paso-nombre { font-size: 10px; }
+  :is(#badges, #maestrias, #rango) .maes-cuerpo { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  :is(#badges, #maestrias, #rango) .maes-heroe { max-width: 220px; }
+  :is(#badges, #maestrias, #rango) .maes-info { justify-items: center; }
+  :is(#badges, #maestrias, #rango) .maes-datos { justify-content: center; }
+  :is(#badges, #maestrias, #rango) .maes-sig { width: 100%; }
+  :is(#badges, #maestrias, #rango) .maes-pasos { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+  :is(#badges, #maestrias, #rango) .maes-linea { display: none; }
+  :is(#badges, #maestrias, #rango) .maes-mini { width: 76px; }
+  :is(#badges, #maestrias, #rango) .maes-paso-nombre { font-size: 10px; }
 }
-:is(#badges, #maestrias) .maes-info { text-align: left; justify-items: start; }
-:is(#badges, #maestrias) .maes-cab .panel-title { font-size: clamp(22px, min(5.5vh, 8vw), 46px); letter-spacing: clamp(2px, .6vw, 6px); }
+:is(#badges, #maestrias, #rango) .maes-info { text-align: left; justify-items: start; }
+:is(#badges, #maestrias, #rango) .maes-cab .panel-title { font-size: clamp(22px, min(5.5vh, 8vw), 46px); letter-spacing: clamp(2px, .6vw, 6px); }
 @media (max-width: 700px) {
-  :is(#badges, #maestrias) .maes-info { text-align: center; justify-items: center; }
-  :is(#badges, #maestrias) .maes-cab { justify-content: center; }
-  :is(#badges, #maestrias) .maes-mandos { justify-content: center; }
-  :is(#badges, #maestrias) .maes-nota { text-align: center; }
+  :is(#badges, #maestrias, #rango) .maes-info { text-align: center; justify-items: center; }
+  :is(#badges, #maestrias, #rango) .maes-cab { justify-content: center; }
+  :is(#badges, #maestrias, #rango) .maes-mandos { justify-content: center; }
+  :is(#badges, #maestrias, #rango) .maes-nota { text-align: center; }
 }
-:is(#badges, #maestrias) .maes-sig { width: 100%; }
+:is(#badges, #maestrias, #rango) .maes-sig { width: 100%; }
 
 /* ---------- Presentación de un modo (DESATADO, CACERÍA) ----------
  * Marco de recreativa: frase, cartas con su tecla y su recarga, mandos en dos
@@ -6767,3 +6768,36 @@ body { font-size-adjust: 0.56; }
   #pase .ps-fila-pago .ps-carril::after { animation: none; }
   #pase .ps-medidor-lleno { transition: none; }
 }
+
+/* ---------- RANGO (js/rango.js) ----------
+ * El mismo escenario que TROFEOS y MAESTRÍAS, con la fruta de tu división en
+ * vez del emblema, el interruptor de CLASIFICATORIAS y la tabla del mes. */
+#rango .rango-heroe { aspect-ratio: 1 / 1; max-width: 300px; image-rendering: pixelated; }
+#rango .section-title { width: min(94vw, 1180px); margin-top: 14px; }
+.rango-toggle { justify-self: start; }
+.rango-toggle.active { border-color: #2bff88; color: #2bff88; box-shadow: 0 0 12px rgba(43, 255, 136, 0.35); }
+.rango-clasif {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 6px 0; font-size: 9px; letter-spacing: 1px; color: #c9c6e0;
+}
+.rango-lista {
+  display: flex; flex-direction: column; gap: 4px;
+  width: min(94vw, 720px); margin-top: 6px; font-size: 10px; color: #8a8cae;
+}
+.rango-fila {
+  display: grid; grid-template-columns: 28px 20px minmax(0, 1fr) auto 90px;
+  align-items: center; gap: 10px; padding: 6px 10px;
+  border: 1px solid #1c1c3a; background: rgba(33, 33, 255, 0.05);
+}
+.rango-fila.yo { border-color: #ffff00; background: rgba(255, 255, 0, 0.07); }
+.rango-pos { color: #ffff00; text-align: right; }
+.rango-fruta { width: 16px; height: 16px; image-rendering: pixelated; }
+.rango-nombre { color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rango-div { letter-spacing: 1px; }
+.rango-pr { color: #fff; text-align: right; }
+@media (max-width: 600px) {
+  .rango-fila { grid-template-columns: 22px 16px minmax(0, 1fr) 70px; }
+  .rango-div { display: none; }
+}
+.rango-clasif .rango-toggle { font-size: 10px; padding: 6px 14px; min-height: 0; }
+#rango .rango-toggle { font-size: 12px; padding: 8px 16px; }

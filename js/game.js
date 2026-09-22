@@ -2767,6 +2767,9 @@
       var Mae = window.PM.Maestria;
       if (Mae && !this.replaying && this.achTags().indexOf('hab') !== -1) Mae.anotarViva();
       var maestria = Mae ? Mae.cerrar(this) : null;
+      /* y el RANGO, si era clasificatoria (js/rango.js) */
+      var Rg = window.PM.Rango;
+      var rango = Rg ? Rg.cerrar(this) : null;
       /* Monedas de la TIENDA: las de la partida se cobran aquí, una vez, y
        * al resumen va todo lo ganado desde que empezó (también los retos del
        * DAILY cumplidos por el camino). Una repetición no paga. */
@@ -2792,7 +2795,8 @@
         monedas: monedas,
         saldo: Tn ? Tn.saldo() : 0,
         logros: this.runAch.slice(),
-        maestria: maestria
+        maestria: maestria,
+        rango: rango
       };
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();

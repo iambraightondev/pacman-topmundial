@@ -12164,6 +12164,108 @@
   });
 
   // ---------------------------------------------------------------
+  // RANGO de temporada y CLASIFICATORIAS (js/rango.js)
+  // ---------------------------------------------------------------
+
+  test('RANGO: lo que da o quita una partida sale de tu marca contra tu par',
+    function () {
+      var Rg = window.PM.Rango;
+      // en CEREZA (0 PR) a uno el par son 1.500
+      eq(Rg.cambio(1500, 0, 1), 5, 'igualar tu par sube un poco');
+      eq(Rg.cambio(3000, 0, 1), 30, 'el doble, +30');
+      eq(Rg.cambio(750, 50, 1), -20, 'la mitad, −20');
+      eq(Rg.cambio(999999, 0, 1), CFG.RANGO.MAX_GANA, 'con tope por arriba');
+      eq(Rg.cambio(0, 250, 1), -CFG.RANGO.MAX_PIERDE, 'y por abajo');
+      // en equipo el par se multiplica como los trofeos
+      eq(Rg.cambio(1500 * 1.25, 0, 2), 5, 'en dúo, un cuarto más');
+    });
+
+  test('RANGO: la colocación te pone donde dice tu media', function () {
+    var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
+    eq(Rg.division(Rg.colocar(0, 1)), 0, 'sin nada, CEREZA');
+    eq(Rg.division(Rg.colocar(D[3].par, 1)), 3, 'con el par de MANZANA, MANZANA');
+    eq(Rg.division(Rg.colocar(D[7].par * 3, 1)), 7, 'muy arriba, LLAVE');
+  });
+
+  test('RANGO: cinco de colocación, luego sube y baja, y nunca por debajo de cero',
+    function () {
+      conContadores(function () {
+        var Rg = window.PM.Rango, RG = CFG.RANGO;
+        var logged = Rg.conCuenta;
+        var s = window.PM.settings, clasif = s.clasif;
+        Rg.conCuenta = function () { return true; };
+        s.clasif = true;
+        try {
+          window.PM.settings.muted = true;
+          var jugar = function (puntos) {
+            G.newGame({ players: 1, hab: true, roles: ['asesino'] });
+            G.state = 'PLAYING';
+            G.score = puntos;
+            return Rg.cerrar(G);
+          };
+          for (var i = 1; i < RG.COLOCACION; i++) {
+            var r = jugar(RG.DIVISIONES[2].par);
+            ok(r.colocando, 'la ' + i + '.ª aún coloca');
+            eq(r.cambio, 0, 'y no mueve nada');
+          }
+          var ultima = jugar(RG.DIVISIONES[2].par);
+          ok(ultima.colocado, 'la quinta te coloca');
+          eq(ultima.division, 2, 'en NARANJA, que es donde está tu media');
+          var pr = Rg.estado(1).pr;
+          var mala = jugar(0);
+          eq(mala.cambio, -RG.MAX_PIERDE, 'una partida en blanco quita el máximo');
+          eq(Rg.estado(1).pr, pr - RG.MAX_PIERDE);
+          for (var k = 0; k < 20; k++) jugar(0);
+          eq(Rg.estado(1).pr, 0, 'en el suelo se queda en cero');
+          var buena = jugar(RG.DIVISIONES[0].par * 2);
+          eq(buena.cambio, 30, 'y lo primero que ganas cuenta entero: no hay deuda');
+          G.toMenu();
+        } finally { Rg.conCuenta = logged; s.clasif = clasif; }
+      });
+    });
+
+  test('RANGO: sin clasificatoria, sin cuenta o en práctica no cuenta', function () {
+    var Rg = window.PM.Rango;
+    var logged = Rg.conCuenta;
+    var s = window.PM.settings, clasif = s.clasif;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['asesino'] });
+      s.clasif = false;
+      ok(Rg.porQueNo(G), 'con el interruptor apagado, no');
+      s.clasif = true;
+      Rg.conCuenta = function () { return false; };
+      eq(Rg.porQueNo(G), 'HACE FALTA CUENTA');
+      Rg.conCuenta = function () { return true; };
+      eq(Rg.porQueNo(G), null, 'con todo en regla, sí');
+      G.newGame({ players: 1, hab: true, roles: ['mago'] });
+      eq(Rg.porQueNo(G), 'LA PRÁCTICA NO CUENTA');
+      G.newGame({ players: 1 });
+      eq(Rg.porQueNo(G), 'SOLO EN DESATADO');
+      G.toMenu();
+    } finally { Rg.conCuenta = logged; s.clasif = clasif; }
+  });
+
+  test('RANGO: sus contadores viajan con la cuenta y se funden sin perder nada',
+    function () {
+      conContadores(function (A) {
+        var t = window.PM.Rango.temporada();
+        A.record('rg_' + t + '_1', 40);
+        A.merge({ ['rg_' + t + '_1']: 90, ['rl_' + t + '_1']: 10 });
+        eq(A.stats()['rg_' + t + '_1'], 90, 'lo ganado en el otro aparato llega');
+        eq(A.stats()['rl_' + t + '_1'], 10, 'y lo perdido también');
+      });
+    });
+
+  test('RANGO: el panel sale con la fruta, el interruptor y la tabla', function () {
+    var UI = window.PM.UI;
+    UI.buildRango();
+    UI.refreshRango();
+    ok(UI.rangoToggle.textContent.indexOf('CLASIFICATORIAS') === 0, 'el interruptor');
+    ok(UI.rangoName.textContent.length > 0, 'y tu rango (o que aún no lo tienes)');
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

@@ -7,13 +7,47 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **22 de septiembre de 2026**.
+Última puesta al día: **22 de septiembre de 2026 (tarde)**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-### DONDE SE DEJÓ (fin de la sesión del 22 sep)
+### DONDE SE DEJÓ (22 sep, tarde): TROFEOS, MAESTRÍAS DE ROL Y RANGO
+
+Braighton pidió una forma real de clasificar a la gente. Quedó así, en tres
+piezas que miden tres cosas distintas (detalle en CHANGELOG y SPEC →
+*Trofeos, maestrías de rol y rango*):
+
+| Pieza | Mide | ¿Baja? |
+| --- | --- | --- |
+| **TROFEOS** (antes «maestrías») | tu mejor marca en cada mundo y formato; copas BRONCE … MUNDIAL | no |
+| **MAESTRÍA DE ROL** | lo jugado con cada rol de DESATADO, con nota S–D por partida; emblemas APRENDIZ … TOP MUNDIAL | no |
+| **RANGO** | cómo juegas este mes en CLASIFICATORIA; frutas CEREZA … LLAVE | sí, y se reinicia cada mes |
+
+**Decidido por Braighton:** «maestría» es la de ROL, como en LoL, y se queda
+con los emblemas; la escalera de marcas cambió de nombre y de dibujo. Las
+maestrías de rol solo existen en DESATADO (clásico y LABERINTOS tienen trofeos
+y ya). **Decidido por Jarvis:** divisiones de fruta (para no chocar con los
+metales de las copas); clasificatoria como interruptor DE CADA JUGADOR, sin
+tocar la red; rango solo en DESATADO; la tabla se arma leyendo `perfiles`.
+
+**Números para ajustar jugando** (todos en `config.js`, CFG.MAESTRIA y
+CFG.RANGO):
+1. Las notas del TANQUE y el SOPORTE no tienen datos: sus contadores nacen hoy.
+   Las del Asesino salen de las cifras reales (S = 7 fantasmas por minuto).
+2. El `par` de cada fruta y lo que sube o baja una partida (+30 el doble de
+   tu par, −20 la mitad). Salió de las marcas reales de DESATADO, **infladas
+   por las bajas regaladas**: si se limpian (punto 1 de abajo), revisar.
+3. En equipo el rango usa los multiplicadores de los trofeos (x1,25/1,5/1,75),
+   y los datos dicen que en DESATADO los equipos puntúan bastante más. Mirar
+   cuando haya clasificatorias de dúo y trío.
+
+**Por hacer del rango:** premio al cerrar la temporada (insignia o piezas; va
+con el PASE), y pasar la tabla a una vista del servidor si las cuentas crecen
+(hoy se leen todos los perfiles enteros).
+
+### Lo de antes (fin de la sesión del 22 sep, mañana)
 
 Todo lo de abajo está construido, probado y subido. Nada a medias, nada sin
 commitear. Lo que queda es de dos clases: lo que hay que **jugar** y lo que
@@ -34,7 +68,7 @@ suyas, y no se pueden medir sin partida):
 | --- | --- | --- |
 | 1 | **Los récords inflados** por las bajas regaladas | Las puntuaciones y rachas de estos días valen más de lo que se jugó. Se pueden dejar o limpiar, pero limpiar borra marcas reales del mismo periodo |
 | 2 | **El historial de partidas y las repeticiones** | Siguen siendo del aparato, no de la cuenta: al cambiar de ordenador no van. ¿Se hace que viajen? |
-| 3 | **El token de Supabase** | El configurado está caducado: los tres MCP fallan al conectar y no se puede tocar el esquema. Hace falta uno nuevo |
+| 3 | ~~El token de Supabase~~ | **No hacía falta**: el de `.env.local` funciona contra la API de gestión (22 sep, tarde). Lo que falla son los tres conectores MCP, que no se usan para este proyecto |
 | 4 | **El punto 19** | Sigue vacío desde que se abrió |
 
 ---

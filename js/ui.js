@@ -87,6 +87,7 @@
       return (/^#[0-9a-f]{6}$/i).test(String(value)) ? String(value) : def;
     }
     if (key === 'muted') return !!value;
+    if (key === 'clasif') return !!value;
     if (key === 'ajustesTsK') {
       var mapa = {};
       if (value && typeof value === 'object') {
@@ -435,6 +436,7 @@
       this.els.online = document.getElementById('online');
       this.els.badges = document.getElementById('badges');
       this.els.maestrias = document.getElementById('maestrias');
+      this.els.rango = document.getElementById('rango');
       this.els.ranking = document.getElementById('ranking');
       this.els.mazes = document.getElementById('mazes');
       this.els.friends = document.getElementById('friends');
@@ -456,6 +458,7 @@
       this.buildOnline();
       this.buildBadges();
       this.buildMaestrias();
+      this.buildRango();
       this.buildRanking();
       this.buildMazes();
       this.buildFriends();
@@ -722,6 +725,10 @@
       extras.appendChild(this.makeButton('MAESTRÍAS', function () {
         self.resumeAudio();
         self.showMaestrias();
+      }));
+      extras.appendChild(this.makeButton('RANGO', function () {
+        self.resumeAudio();
+        self.showRango();
       }));
       extras.appendChild(this.makeButton('AMIGOS', function () {
         self.resumeAudio();
@@ -6712,6 +6719,291 @@
     },
 
     /* ------------------------------------------------------
+     * Panel de RANGO (js/rango.js)
+     * Arriba el formato y la temporada; en medio tu fruta en grande con tus
+     * puntos de rango (o la colocación, si aún no la has hecho) y el
+     * interruptor de CLASIFICATORIAS; abajo la tabla del mes.
+     * ------------------------------------------------------ */
+    buildRango: function () {
+      var self = this;
+      var o = this.els.rango;
+      if (!o) return;
+      o.innerHTML = '';
+      var B = window.PM.Badges;
+
+      var cab = document.createElement('div');
+      cab.className = 'maes-cab';
+      var h = document.createElement('div');
+      h.className = 'panel-title';
+      h.textContent = 'RANGO';
+      cab.appendChild(h);
+      var mandos = document.createElement('div');
+      mandos.className = 'maes-mandos';
+      this.rangoFmtDesp = this.desplegable('FORMATO',
+        (B ? B.FORMATOS : []).map(function (f) { return { id: f.n, name: f.name }; }),
+        function (n) { self.rangoFmt = n; self.refreshRango(); });
+      mandos.appendChild(this.rangoFmtDesp.el);
+      cab.appendChild(mandos);
+      o.appendChild(cab);
+
+      this.rangoSub = document.createElement('div');
+      this.rangoSub.className = 'note maes-nota';
+      o.appendChild(this.rangoSub);
+
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'maes-cuerpo rango-cuerpo';
+      o.appendChild(cuerpo);
+      this.rangoHero = document.createElement('canvas');
+      this.rangoHero.width = 400;
+      this.rangoHero.height = 400;
+      this.rangoHero.className = 'maes-heroe rango-heroe';
+      cuerpo.appendChild(this.rangoHero);
+
+      var info = document.createElement('div');
+      info.className = 'maes-info';
+      cuerpo.appendChild(info);
+      this.rangoInfo = info;
+      ['K', 'Name', 'State', 'Datos', 'Sig'].forEach(function (k, i) {
+        var d = document.createElement('div');
+        d.className = ['maes-k', 'maes-nombre', 'maes-estado', 'maes-datos', 'maes-sig'][i];
+        info.appendChild(d);
+        self['rango' + k] = d;
+      });
+      this.rangoToggle = this.makeButton('', function () {
+        var s = window.PM.settings;
+        s.clasif = !s.clasif;
+        saveSettings();
+        self.refreshRango();
+      });
+      this.rangoToggle.classList.add('rango-toggle');
+      info.appendChild(this.rangoToggle);
+
+      var tt = document.createElement('div');
+      tt.className = 'section-title';
+      tt.textContent = 'LA TABLA DEL MES';
+      o.appendChild(tt);
+      this.rangoLista = document.createElement('div');
+      this.rangoLista.className = 'rango-lista';
+      o.appendChild(this.rangoLista);
+
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary');
+      back.style.marginTop = '14px';
+      o.appendChild(back);
+      this.rangoFmt = 1;
+    },
+
+    showRango: function (n) {
+      if (n) this.rangoFmt = n;
+      this.refreshRango();
+      this.showPanel('rango');
+      this.cargarTablaRango();
+      this.animarRango();
+    },
+
+    /* El texto del interruptor y lo que dice debajo */
+    textoClasif: function () {
+      var Rg = window.PM.Rango;
+      var on = Rg && Rg.activa();
+      var Ac = window.PM.Account;
+      var cuenta = Ac && Ac.logged && Ac.logged();
+      return {
+        on: !!on,
+        boton: 'CLASIFICATORIAS: ' + (on ? 'SÍ' : 'NO'),
+        nota: !cuenta ? 'HACE FALTA CUENTA PARA TENER RANGO'
+          : on ? 'TUS PARTIDAS DE DESATADO MUEVEN TU RANGO'
+          : 'TUS PARTIDAS DE DESATADO NO TOCAN TU RANGO'
+      };
+    },
+
+    refreshRango: function () {
+      var Rg = window.PM.Rango, B = window.PM.Badges;
+      if (!Rg || !this.rangoName) return;
+      var RG = CFG.RANGO, D = RG.DIVISIONES, n = this.rangoFmt || 1;
+      var e = Rg.estado(n);
+      if (this.rangoFmtDesp) this.rangoFmtDesp.poner(n);
+      var S = window.PM.Season;
+      var fmt = B ? B.FORMATOS[n - 1].name : 'SOLO';
+      this.rangoSub.textContent = 'DESATADO · ' + fmt + ' · TEMPORADA ' +
+        (S ? S.nombre(e.temporada) : e.temporada) +
+        '  ·  CADA MES SE EMPIEZA DE CERO: ' + RG.COLOCACION +
+        ' PARTIDAS DE COLOCACIÓN Y LUEGO SUBES O BAJAS SEGÚN TU MARCA CONTRA LA DE TU DIVISIÓN';
+
+      var d = e.division, div = d >= 0 ? D[d] : null;
+      this.rangoInfo.style.setProperty('--c', div ? div.color : '#8a8cae');
+      this.rangoInfo.classList.toggle('off', !div);
+      this.rangoK.textContent = 'TU RANGO · ' + fmt;
+      this.rangoName.textContent = div ? div.name : 'SIN RANGO';
+      this.rangoState.textContent = div
+        ? (this.milesMaes(e.pr) + ' PR · ' + (d < D.length - 1
+            ? ('TE FALTAN ' + (RG.PR_DIVISION - e.enDivision) + ' PARA ' + D[d + 1].name)
+            : 'LA DIVISIÓN MÁS ALTA'))
+        : (e.jugadas ? ('COLOCACIÓN: ' + e.colocacion + ' DE ' + RG.COLOCACION)
+                     : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS'));
+
+      var self = this;
+      this.rangoDatos.innerHTML = '';
+      [[div ? this.milesMaes(e.pr) : '—', 'PR'], [String(e.jugadas), 'PARTIDAS'],
+       [e.mejor >= 0 ? D[e.mejor].name : '—', 'LO MÁS ALTO']].forEach(function (x) {
+        var c = document.createElement('div');
+        var v = document.createElement('b');
+        v.textContent = x[0];
+        var r = document.createElement('span');
+        r.textContent = x[1];
+        c.appendChild(v);
+        c.appendChild(r);
+        self.rangoDatos.appendChild(c);
+      });
+
+      this.rangoSig.innerHTML = '';
+      var fila = document.createElement('div');
+      fila.className = 'maes-sig-fila';
+      var izq = document.createElement('span');
+      var der = document.createElement('span');
+      var pct = div ? (e.enDivision / RG.PR_DIVISION) : (e.colocacion / RG.COLOCACION);
+      if (div) {
+        izq.textContent = 'TU MARCA DE REFERENCIA: ' +
+          this.milesMaes(Rg.par(d, n)) + ' PUNTOS';
+        der.textContent = e.enDivision + ' / ' + RG.PR_DIVISION;
+      } else {
+        izq.textContent = 'COLOCACIÓN';
+        der.textContent = e.colocacion + ' / ' + RG.COLOCACION;
+      }
+      fila.appendChild(izq);
+      fila.appendChild(der);
+      this.rangoSig.appendChild(fila);
+      var barra = document.createElement('div');
+      barra.className = 'maes-barra';
+      var relleno = document.createElement('i');
+      relleno.style.width = (Math.max(0, Math.min(1, pct)) * 100).toFixed(1) + '%';
+      barra.appendChild(relleno);
+      this.rangoSig.appendChild(barra);
+
+      var tx = this.textoClasif();
+      this.rangoToggle.textContent = tx.boton;
+      this.rangoToggle.classList.toggle('active', tx.on);
+      this.rangoToggle.title = tx.nota;
+      this.rangoFruta = div ? div.fruta : -1;
+      this.rangoColor = div ? div.color : '#4a4868';
+      if (this.rangoTabla) this.pintarTablaRango();
+    },
+
+    cargarTablaRango: function () {
+      var Rg = window.PM.Rango, self = this;
+      if (!Rg) return;
+      var n = this.rangoFmt || 1;
+      this.rangoLista.textContent = 'CARGANDO...';
+      this.rangoTabla = null;
+      Rg.tabla(n, function (err, filas) {
+        if (n !== (self.rangoFmt || 1)) return;     // ya se pidió otra
+        if (err) { self.rangoLista.textContent = 'NO SE PUDO CARGAR LA TABLA (' + err + ')'; return; }
+        self.rangoTabla = { n: n, filas: filas };
+        self.pintarTablaRango();
+      });
+    },
+
+    pintarTablaRango: function () {
+      var t = this.rangoTabla, D = CFG.RANGO.DIVISIONES;
+      if (!t) return;
+      if (t.n !== (this.rangoFmt || 1)) { this.cargarTablaRango(); return; }
+      this.rangoLista.innerHTML = '';
+      if (!t.filas.length) {
+        this.rangoLista.textContent = 'NADIE HA JUGADO CLASIFICATORIAS ESTE MES EN ESTE FORMATO. ¡ESTRÉNALA!';
+        return;
+      }
+      var Ac = window.PM.Account;
+      var yo = (Ac && Ac.logged && Ac.logged() && Ac.name) ? String(Ac.name()).toUpperCase() : '';
+      var self = this;
+      t.filas.forEach(function (f, i) {
+        var row = document.createElement('div');
+        row.className = 'rango-fila' + (f.usuario.toUpperCase() === yo ? ' yo' : '');
+        var pos = document.createElement('b');
+        pos.className = 'rango-pos';
+        pos.textContent = f.pr === null ? '·' : String(i + 1);
+        row.appendChild(pos);
+        var cv = document.createElement('canvas');
+        cv.width = 16; cv.height = 16;
+        cv.className = 'rango-fruta';
+        var c = cv.getContext && cv.getContext('2d');
+        if (c && f.division >= 0 && window.PM.Sprites.drawFruit) {
+          c.imageSmoothingEnabled = false;
+          window.PM.Sprites.drawFruit(c, 8, 8, D[f.division].fruta);
+        }
+        row.appendChild(cv);
+        var nm = document.createElement('span');
+        nm.className = 'rango-nombre';
+        nm.textContent = f.usuario;
+        row.appendChild(nm);
+        var dv = document.createElement('span');
+        dv.className = 'rango-div';
+        if (f.division >= 0) {
+          dv.textContent = D[f.division].name;
+          dv.style.color = D[f.division].color;
+        } else {
+          dv.textContent = 'COLOCACIÓN ' + f.colocacion + '/' + CFG.RANGO.COLOCACION;
+        }
+        row.appendChild(dv);
+        var pr = document.createElement('b');
+        pr.className = 'rango-pr';
+        pr.textContent = f.pr === null ? '' : (self.milesMaes(f.pr) + ' PR');
+        row.appendChild(pr);
+        self.rangoLista.appendChild(row);
+      });
+    },
+
+    /* La fruta en grande, flotando, con un aro del color de la división. Sin
+     * rango, su silueta en gris. Vivo solo mientras se ve el panel. */
+    animarRango: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      var S = window.PM.Sprites;
+      if (!raf || this.rangoAnim || !S || !S.drawFruit) return;
+      this.rangoAnim = true;
+      var t0 = Date.now();
+      raf(function paso() {
+        var p = self.els.rango;
+        if (!p || p.style.display === 'none') { self.rangoAnim = false; return; }
+        var cv = self.rangoHero, c = cv.getContext && cv.getContext('2d');
+        if (!c) { self.rangoAnim = false; return; }
+        var t = (Date.now() - t0) / 1000;
+        var quieto = self.menosMovimiento && self.menosMovimiento();
+        var W = cv.width, H = cv.height, col = self.rangoColor || '#4a4868';
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, W, H);
+        var fr = self.rangoFruta;
+        var dy = quieto ? 0 : Math.sin(t * 1.6) * 8;
+        // el aro
+        c.save();
+        c.translate(W / 2, H / 2);
+        c.strokeStyle = col;
+        c.globalAlpha = fr >= 0 ? 0.55 : 0.2;
+        c.lineWidth = 6;
+        c.beginPath(); c.arc(0, 0, 150, 0, Math.PI * 2); c.stroke();
+        if (fr >= 0 && !quieto) {
+          c.globalAlpha = 0.35;
+          c.lineWidth = 2;
+          c.setLineDash([10, 16]);
+          c.rotate(t * 0.3);
+          c.beginPath(); c.arc(0, 0, 170, 0, Math.PI * 2); c.stroke();
+        }
+        c.restore();
+        // la fruta, a escala de píxel
+        c.save();
+        c.imageSmoothingEnabled = false;
+        c.translate(W / 2, H / 2 + dy);
+        c.scale(16, 16);
+        if (fr >= 0) S.drawFruit(c, 0, 0, fr);
+        else {
+          S.drawFruit(c, 0, 0, 0);
+          c.globalCompositeOperation = 'source-atop';
+          c.fillStyle = 'rgba(22,21,40,.9)';
+          c.fillRect(-8, -8, 16, 16);
+        }
+        c.restore();
+        raf(paso);
+      });
+    },
+
+    /* ------------------------------------------------------
      * Panel de MAESTRÍAS DE ROL (js/maestria.js)
      * El mismo escenario que TROFEOS —el emblema en grande armándose y el
      * camino de los seis debajo—, pero por ROL de DESATADO y con los
@@ -10242,7 +10534,7 @@
      * ------------------------------------------------------ */
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
-      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
+      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'pase'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
@@ -10969,6 +11261,27 @@
             fila('', 'MONEDAS', mon, '#ffd23f', s.monedas > 0
               ? ('TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0)))
               : ('UN MINUTO O 1.000 PUNTOS PARA GANAR · TIENES ' + fmtMonedas(Math.max(0, s.saldo || 0))));
+          }
+          /* el RANGO, si era clasificatoria (js/rango.js) */
+          var rg = s.rango;
+          if (rg) {
+            var DV = CFG.RANGO.DIVISIONES;
+            var dn = rg.division >= 0 ? DV[rg.division] : null;
+            var valR, subR, colR = dn ? dn.color : '#8a8cae';
+            if (rg.colocando) {
+              valR = 'COLOCACIÓN ' + rg.jugadas + '/' + CFG.RANGO.COLOCACION;
+              subR = 'TE COLOCAMOS AL ACABAR LA ' + CFG.RANGO.COLOCACION + '.ª';
+            } else if (rg.colocado) {
+              valR = dn.name + ' · ' + mil(rg.despues) + ' PR';
+              subR = '¡YA TIENES RANGO! EMPIEZAS EN ' + dn.name;
+            } else {
+              valR = (rg.cambio >= 0 ? '+' : '') + rg.cambio + ' PR';
+              subR = rg.sube ? ('¡SUBES A ' + dn.name + '!')
+                : rg.baja ? ('BAJAS A ' + dn.name)
+                : (dn.name + ' · ' + mil(rg.despues) + ' PR');
+              colR = rg.cambio >= 0 ? '#2bff88' : '#ff6b6b';
+            }
+            fila(rg.sube || rg.colocado ? 'sube' : '', 'RANGO', valR, colR, subR);
           }
           /* la MAESTRÍA del rol que llevabas (js/maestria.js) */
           var ma = s.maestria;
@@ -12035,7 +12348,7 @@
     /* cuánto se deja encoger cada panel */
     ENCAJE_SUELO: {
       /* los que son UNA VISTA: tienen que caber enteros */
-      pase: 0.5, mazes: 0.5, online: 0.5, badges: 0.55, maestrias: 0.55, daily: 0.6,
+      pase: 0.5, mazes: 0.5, online: 0.5, badges: 0.55, maestrias: 0.55, rango: 0.6, daily: 0.6,
       profile: 0.55, mate: 0.6, options: 0.55, menu: 0.6, friends: 0.6,
       prompt: 0.5,
       /* los que son una LISTA: se encogen un poco y lo demás se recorre */
@@ -12091,7 +12404,7 @@
           self.encajarPanel();
         }, 120);
       });
-      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
+      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
                    'vestuario', 'tienda', 'pase', 'prompt'];
       names.forEach(function (n) {
@@ -12104,7 +12417,7 @@
      * cuando cambia el tamaño de la ventana. */
     encajarPanel: function () {
       var self = this;
-      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
+      var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
                    'vestuario', 'tienda', 'pase'];
       names.forEach(function (n) {
@@ -12119,7 +12432,7 @@
       this.hidePrompt();
       // la ficha va encima de un panel: si se cambia de panel, se va con él
       if (this.ficha && this.ficha.host !== this.els[name]) this.cerrarFicha(true);
-      var panels = ['menu', 'options', 'online', 'badges', 'maestrias', 'ranking',
+      var panels = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                     'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'pase'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
@@ -12479,6 +12792,34 @@
           var aviso = document.createElement('div');
           aviso.className = 'rol-aviso';
           p.insertBefore(aviso, p.querySelector('.brief-mandos'));
+
+          /* CLASIFICATORIA: se enciende aquí o en RANGO, y es de cada jugador
+           * (js/rango.js). Al lado, cómo vas en solo este mes. */
+          var clas = document.createElement('div');
+          clas.className = 'rango-clasif';
+          var clasBtn = self.makeButton('', function () {
+            s.clasif = !s.clasif;
+            saveSettings();
+            pintarClasif();
+          });
+          clasBtn.classList.add('rango-toggle');
+          clas.appendChild(clasBtn);
+          var clasNota = document.createElement('span');
+          clas.appendChild(clasNota);
+          p.insertBefore(clas, p.querySelector('.brief-mandos'));
+          function pintarClasif() {
+            var tx = self.textoClasif();
+            clasBtn.textContent = tx.boton;
+            clasBtn.classList.toggle('active', tx.on);
+            var Rg = window.PM.Rango, e = Rg ? Rg.estado(1) : null;
+            var D = CFG.RANGO.DIVISIONES;
+            clasNota.textContent = tx.nota + (e && tx.on
+              ? ('  ·  EN SOLO: ' + (e.division >= 0
+                  ? (D[e.division].name + ' ' + e.pr + ' PR')
+                  : ('COLOCACIÓN ' + e.colocacion + '/' + CFG.RANGO.COLOCACION)))
+              : '');
+          }
+          pintarClasif();
           pintar();
         },
         buttons: [
