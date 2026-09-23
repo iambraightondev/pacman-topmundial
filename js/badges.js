@@ -235,8 +235,13 @@
           apunta(cab.rl[idx], cab.j, (cab.fin && cab.fin.puntos) || 0);
         });
       } catch (e) { /* una repetición rota no para la siembra */ }
-      /* y lo que falte por explicar del récord de siempre, al Asesino */
-      for (n = 1; n <= CFG.MAX_PLAYERS; n++) {
+      /* y lo que falte por explicar del récord de siempre, al Asesino. Con
+       * CUENTA no: ese reparto ya se hizo en la nube (23 sep) con TODAS sus
+       * repeticiones subidas, y hacerlo aquí con solo las de este aparato le
+       * regalaría al Asesino marcas que allí se atribuyeron a otro rol. */
+      var Acc = window.PM.Account;
+      var conCuenta = !!(Acc && Acc.logged && Acc.logged());
+      for (n = 1; n <= CFG.MAX_PLAYERS && !conCuenta; n++) {
         var global = (g && g.recordModo) ? g.recordModo('hab', n) : 0;
         if (!(global > 0)) continue;
         var mejor = 0;

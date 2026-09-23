@@ -621,6 +621,9 @@
       if (window.PM.Achievements) {
         window.PM.Achievements.merge(fila.logros || {});
         window.PM.Achievements.syncSeen();   // lo traído no se celebra
+        /* ...ni las copas de cada ROL que traiga (los récords por rol viajan
+         * en los contadores: ver js/badges.js) */
+        if (window.PM.Badges) window.PM.Badges.syncSeen();
         /* la nube puede traer más DESATADO del que se sembró aquí: las
          * maestrías de rol completan lo que falte (solo la diferencia) */
         if (window.PM.Maestria) window.PM.Maestria.sembrar();
