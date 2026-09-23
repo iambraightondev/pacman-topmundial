@@ -8913,71 +8913,75 @@
     /* ------------------------------------------------------
      * Amigos (lista guardada en este navegador)
      * ------------------------------------------------------ */
+    /* ------------------------------------------------------
+     * AMIGOS (rediseño del 23 sep), con el mismo lenguaje que OPCIONES.
+     * Arriba, la barra para añadir y cuántos tienes; debajo, una ficha por
+     * amigo: su avatar en grande, su nivel y su mejor marca, y lo que se
+     * puede hacer con él a la vista (PERFIL, VER PARTIDA, INVITAR). QUITAR
+     * va en la esquina y pide que lo confirmes. Antes eran filas iguales
+     * con un OPCIONES ▾ que lo escondía todo.
+     * ------------------------------------------------------ */
     buildFriends: function () {
       var self = this;
       var o = this.els.friends;
       o.innerHTML = '';
+      o.classList.add('amg');
+      function el(tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      }
 
-      var h = document.createElement('div');
-      h.className = 'panel-title';
-      h.textContent = 'AMIGOS';
-      o.appendChild(h);
-
-      var sub = document.createElement('div');
-      sub.className = 'note';
-      sub.textContent = 'GUARDA AQUÍ CON QUIÉN SUELES JUGAR';
-      o.appendChild(sub);
+      o.appendChild(el('div', 'panel-title', 'AMIGOS'));
+      o.appendChild(el('div', 'amg-sub', 'CON QUIÉN SUELES JUGAR: INVÍTALOS A TU PARTY O MIRA SUS PARTIDAS.'));
 
       /* de invitado no hay lista: los amigos van con la cuenta */
-      this.friendsGate = document.createElement('div');
-      this.friendsGate.className = 'tab-pane';
-      var gnote = document.createElement('div');
-      gnote.className = 'note';
-      gnote.textContent = 'LOS AMIGOS SE GUARDAN EN TU CUENTA, ASÍ LOS TIENES ' +
-        'EN CUALQUIER SITIO. DE INVITADO NO HAY LISTA.';
-      this.friendsGate.appendChild(gnote);
-      var goProf = this.makeButton('IR A PERFIL', function () {
-        self.showProfile();
-      });
+      this.friendsGate = el('div', 'amg-puerta');
+      var gcv = document.createElement('canvas');
+      gcv.width = 240; gcv.height = 60;
+      gcv.className = 'amg-puerta-cv';
+      this.pintarFantasmas(gcv, 4, false);
+      this.friendsGate.appendChild(gcv);
+      this.friendsGate.appendChild(el('div', 'amg-puerta-t', 'TUS AMIGOS VIVEN EN TU CUENTA'));
+      this.friendsGate.appendChild(el('div', 'amg-puerta-d',
+        'ASÍ LOS TIENES EN CUALQUIER APARATO. ENTRA O CREA UNA CUENTA EN PERFIL PARA EMPEZAR TU LISTA.'));
+      var goProf = this.makeButton('IR A PERFIL', function () { self.showProfile(); });
       goProf.classList.add('btn-primary');
-      goProf.style.marginTop = '10px';
       this.friendsGate.appendChild(goProf);
       o.appendChild(this.friendsGate);
 
-      this.friendsBody = document.createElement('div');
-      this.friendsBody.className = 'tab-pane';
+      this.friendsBody = el('div', 'amg-cuerpo');
       o.appendChild(this.friendsBody);
 
-      var row = document.createElement('div');
-      row.className = 'preset-row';
-      row.style.marginTop = '10px';
+      var barra = el('div', 'amg-barra');
       this.friendInput = document.createElement('input');
       this.friendInput.type = 'text';
-      this.friendInput.className = 'nick-input';
+      this.friendInput.className = 'amg-input';
       this.friendInput.maxLength = CFG.NICK_MAX;
-      this.friendInput.placeholder = 'NOMBRE';
+      this.friendInput.placeholder = 'NOMBRE DE JUGADOR';
+      this.friendInput.setAttribute('aria-label', 'NOMBRE DE JUGADOR QUE QUIERES AÑADIR');
       this.friendInput.setAttribute('autocomplete', 'off');
       this.friendInput.addEventListener('keydown', function (ev) {
         ev.stopPropagation();
         if (ev.key === 'Enter') self.addFriend();
       });
-      row.appendChild(this.friendInput);
+      barra.appendChild(this.friendInput);
       var add = this.makeButton('AÑADIR', function () { self.addFriend(); });
-      add.classList.add('btn-preset');
-      row.appendChild(add);
-      this.friendsBody.appendChild(row);
+      add.classList.add('amg-anadir');
+      barra.appendChild(add);
+      this.friendsCount = el('span', 'amg-cuenta', '');
+      barra.appendChild(this.friendsCount);
+      this.friendsBody.appendChild(barra);
 
-      this.friendsMsg = document.createElement('div');
-      this.friendsMsg.className = 'lobby-status';
+      this.friendsMsg = el('div', 'lobby-status amg-msg');
       this.friendsBody.appendChild(this.friendsMsg);
 
-      this.friendsList = document.createElement('div');
-      this.friendsList.className = 'friend-list';
+      this.friendsList = el('div', 'friend-list amg-rejilla');
       this.friendsBody.appendChild(this.friendsList);
 
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
-      back.classList.add('btn-primary');
-      back.style.marginTop = '14px';
+      back.classList.add('btn-primary', 'amg-volver');
       o.appendChild(back);
     },
 
@@ -9056,19 +9060,35 @@
       });
     },
 
+    /* Los avatares y los datos de la lista: los guarda la cuenta de cada
+     * uno, así que se piden todos de una vez y se pintan cuando llegan.
+     * Quien no tenga cuenta se queda con el Pac-Man de siempre. */
     paintFriendAvatars: function () {
       var mapa = this.friendProfiles || {};
       if (!this.friendAvatars) return;
+      var L = window.PM.Level;
       for (var i = 0; i < this.friendAvatars.length; i++) {
         var it = this.friendAvatars[i];
         var fila = mapa[it.name];
         var av = (fila && CFG.AVATAR_IDS.indexOf(fila.avatar) !== -1)
           ? fila.avatar : 'pac';
+        /* su color, si lo guarda en sus ajustes; si no, el amarillo */
+        var aj = fila && fila.ajustes, pc = aj && aj.pacColor;
+        var color = (typeof pc === 'string') ? pc : (pc && typeof pc.v === 'string' ? pc.v : '#ffff00');
+        if (!/^#[0-9a-f]{6}$/i.test(color)) color = '#ffff00';
+        it.card.style.setProperty('--ac', color);
         var c = it.canvas.getContext('2d');
         c.setTransform(1, 0, 0, 1, 0, 0);
-        c.clearRect(0, 0, 44, 44);
+        c.clearRect(0, 0, it.canvas.width, it.canvas.height);
         c.imageSmoothingEnabled = false;
-        window.PM.Sprites.drawAvatar(c, 22, 22, 18, av, '#ffff00');
+        var m = it.canvas.width / 2;
+        window.PM.Sprites.drawAvatar(c, m, m, m * 0.82, av, color);
+        if (fila && it.datos) {
+          var nv = (L && L.stateFor) ? L.stateFor(fila.xp || 0).level : null;
+          var mejor = Math.max(fila.record1 || 0, fila.record_hab || 0, fila.record2 || 0);
+          it.datos.textContent = (nv ? 'NIVEL ' + nv : '') +
+            (mejor ? '  ·  MEJOR ' + this.milesMaes(mejor) : '');
+        }
       }
     },
 
@@ -9079,78 +9099,45 @@
       var list = F.all();
       this.friendsList.innerHTML = '';
       this.friendAvatars = [];
+      if (this.friendsCount) {
+        this.friendsCount.textContent = list.length ? (list.length + (list.length === 1 ? ' AMIGO' : ' AMIGOS')) : '';
+      }
+      function el(tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      }
       if (!list.length) {
-        var vacio = document.createElement('div');
-        vacio.className = 'note';
-        vacio.textContent = 'TODAVÍA NO HAS AÑADIDO A NADIE';
+        var vacio = el('div', 'amg-vacio');
+        var cv = document.createElement('canvas');
+        cv.width = 60; cv.height = 60;
+        cv.className = 'amg-vacio-cv';
+        self.pintarPersonaje(cv, -1, '#2bff88');
+        vacio.appendChild(cv);
+        vacio.appendChild(el('div', 'amg-vacio-t', 'TODAVÍA NO HAS AÑADIDO A NADIE'));
+        vacio.appendChild(el('div', 'amg-vacio-d', 'ESCRIBE ARRIBA EL NOMBRE DE QUIEN JUEGA CONTIGO Y PULSA AÑADIR.'));
         this.friendsList.appendChild(vacio);
         return;
       }
-      /* Cada amigo es una ficha: su avatar, su nombre y un botón que despliega
-       * lo que se puede hacer con él. Antes salían los cuatro botones de
-       * frente, y una lista de amigos parecía una barra de herramientas. */
       list.forEach(function (name) {
-        var row = document.createElement('div');
-        row.className = 'friend-row';
+        var card = el('div', 'friend-row amg-ficha');
 
-        var cab = document.createElement('div');
-        cab.className = 'friend-cab';
-        row.appendChild(cab);
-
-        var av = document.createElement('canvas');
-        av.width = 44; av.height = 44;
-        av.className = 'friend-avatar';
-        cab.appendChild(av);
-
-        var n = document.createElement('span');
-        n.className = 'friend-name';
-        n.textContent = name;
-        cab.appendChild(n);
-
-        var btns = document.createElement('div');
-        btns.className = 'friend-btns';
-        row.appendChild(btns);
-
-        var abrir = self.makeButton('OPCIONES ▾', function () {
-          var on = row.classList.toggle('open');
-          abrir.textContent = on ? 'OPCIONES ▴' : 'OPCIONES ▾';
-          abrir.setAttribute('aria-expanded', on ? 'true' : 'false');
-        });
-        abrir.classList.add('btn-preset', 'friend-toggle');
-        abrir.setAttribute('aria-expanded', 'false');
-        cab.appendChild(abrir);
-
-        self.friendAvatars.push({ name: name, canvas: av });
-
-        function boton(txt, fn, red) {
-          var b = self.makeButton(txt, fn);
-          b.classList.add('btn-preset');
-          if (red) b.disabled = !window.PM.Net.configured();
-          btns.appendChild(b);
-          return b;
-        }
-
-        boton('VER PERFIL', function () { self.showFriendProfile(name); });
-
-        boton('VER PARTIDA', function () { self.watchFriend(name); }, true);
-
-        boton('INVITAR', function () {
-          var P = window.PM.Party;
-          if (!P || !P.active()) {
-            self.friendsMsg.classList.add('error');
-            self.friendsMsg.textContent = 'PRIMERO CREA UNA PARTY';
+        /* QUITAR, en la esquina y con confirmación: el primer toque pregunta */
+        var quitar = self.makeButton('✕', function () {
+          if (!quitar.classList.contains('confirma')) {
+            quitar.classList.add('confirma');
+            quitar.textContent = '¿QUITAR?';
+            clearTimeout(quitar._t);
+            quitar._t = setTimeout(function () {
+              quitar.classList.remove('confirma');
+              quitar.textContent = '✕';
+            }, 3000);
             return;
           }
-          P.invite(name, function (ok, msg) {
-            self.friendsMsg.classList.toggle('error', !ok);
-            self.friendsMsg.textContent = msg || '';
-          });
-        }, true);
-
-        boton('QUITAR', function () {
           F.remove(name);                       // fuera de la copia local
           self.friendsMsg.classList.remove('error');
-          self.friendsMsg.textContent = '';
+          self.friendsMsg.textContent = name + ' YA NO ESTÁ EN TU LISTA';
           self.renderFriends();                 // se va de la lista al momento
           if (window.PM.Account) {
             window.PM.Account.removeFriend(name, function () {
@@ -9158,8 +9145,45 @@
             });
           }
         });
+        quitar.classList.add('amg-quitar');
+        quitar.title = 'QUITAR DE TUS AMIGOS';
+        quitar.setAttribute('aria-label', 'QUITAR A ' + name + ' DE TUS AMIGOS');
+        card.appendChild(quitar);
 
-        self.friendsList.appendChild(row);
+        var av = document.createElement('canvas');
+        av.width = 128; av.height = 128;
+        av.className = 'friend-avatar amg-avatar';
+        card.appendChild(av);
+        card.appendChild(el('div', 'friend-name amg-nombre', name));
+        var datos = el('div', 'amg-datos', '');
+        card.appendChild(datos);
+
+        var acciones = el('div', 'friend-btns amg-acciones');
+        function accion(txt, fn, red) {
+          var b = self.makeButton(txt, fn);
+          b.classList.add('amg-accion');
+          if (red) b.disabled = !window.PM.Net.configured();
+          acciones.appendChild(b);
+          return b;
+        }
+        accion('PERFIL', function () { self.showFriendProfile(name); });
+        accion('VER PARTIDA', function () { self.watchFriend(name); }, true);
+        accion('INVITAR', function () {
+          var P = window.PM.Party;
+          if (!P || !P.active()) {
+            self.friendsMsg.classList.add('error');
+            self.friendsMsg.textContent = 'PARA INVITAR A ' + name + ', PRIMERO CREA UNA PARTY EN ONLINE';
+            return;
+          }
+          P.invite(name, function (ok, msg) {
+            self.friendsMsg.classList.toggle('error', !ok);
+            self.friendsMsg.textContent = msg || '';
+          });
+        }, true);
+        card.appendChild(acciones);
+
+        self.friendAvatars.push({ name: name, canvas: av, card: card, datos: datos });
+        self.friendsList.appendChild(card);
       });
       this.paintFriendAvatars();     // con lo que ya se sepa
       this.pullFriendAvatars();      // y se repinta cuando lleguen

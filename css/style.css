@@ -7489,3 +7489,135 @@ body { font-size-adjust: 0.56; }
  * la elegida se distingue por el fondo y el marco */
 #options.opts .btn.opts-nav-btn { color: var(--sc); }
 .opts-nav-btn:not(.active) .opts-nav-icono { filter: none; }
+
+/* =========================================================
+ * AMIGOS (23 sep), con el lenguaje de OPCIONES: acento verde de sala
+ * ========================================================= */
+#friends.amg { --amg: #2bff88; --amg-suave: #8a91b8; --amg-texto: #dfe3ff; }
+#friends.amg .panel-title { margin-bottom: 8px; }
+.amg-sub { color: var(--amg-suave); font-size: 9px; letter-spacing: 1px; line-height: 1.8; margin-bottom: 18px; text-align: center; }
+.amg-cuerpo { display: flex; flex-direction: column; gap: 12px; width: min(96vw, 1000px); }
+
+/* ---- la barra de añadir ---- */
+.amg-barra {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid rgba(33, 33, 222, 0.55);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(10, 10, 40, 0.85), rgba(0, 0, 0, 0.85));
+}
+.amg-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  font: 12px "Press Start 2P", 'Courier New', monospace;
+  letter-spacing: 1px;
+  color: #fff;
+  background: #000;
+  border: 2px solid color-mix(in srgb, var(--amg) 40%, transparent);
+  border-radius: 8px;
+}
+.amg-input::placeholder { color: #4d5373; }
+.amg-input:focus { outline: none; border-color: var(--amg); box-shadow: 0 0 12px color-mix(in srgb, var(--amg) 30%, transparent); }
+#friends.amg .btn.amg-anadir {
+  min-width: 0;
+  padding: 11px 18px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #000;
+  background: var(--amg);
+  border: none;
+  border-radius: 8px;
+}
+#friends.amg .btn.amg-anadir:hover, #friends.amg .btn.amg-anadir:focus-visible { filter: brightness(1.15); outline: none; }
+.amg-cuenta { color: var(--amg-suave); font-size: 9px; letter-spacing: 1px; white-space: nowrap; padding: 0 4px; }
+#friends.amg .amg-msg { min-height: 1.6em; font-size: 9px; text-align: left; margin: 0; }
+
+/* ---- las fichas ---- */
+#friends.amg .amg-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+#friends.amg .friend-row.amg-ficha {
+  --ac: #ffff00;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px 12px;
+  border: 2px solid color-mix(in srgb, var(--ac) 30%, rgba(33, 33, 222, 0.5));
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--ac) 14%, transparent), transparent 60%),
+    rgba(0, 0, 0, 0.7);
+}
+.amg-avatar { width: 64px; height: 64px; image-rendering: pixelated; }
+.amg-nombre { color: var(--ac); font-size: 12px; letter-spacing: 1px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.amg-datos { color: var(--amg-suave); font-size: 8px; letter-spacing: 0.5px; min-height: 1.2em; }
+.amg-acciones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%; margin-top: 4px; }
+#friends.amg .btn.amg-accion {
+  min-width: 0;
+  padding: 8px 4px;
+  font-size: 7px;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+  color: var(--amg-texto);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+}
+#friends.amg .btn.amg-accion:hover:not(:disabled),
+#friends.amg .btn.amg-accion:focus-visible { color: #000; background: var(--amg); border-color: var(--amg); outline: none; }
+#friends.amg .btn.amg-accion:disabled { opacity: 0.35; cursor: not-allowed; }
+#friends.amg .btn.amg-quitar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 0;
+  padding: 4px 7px;
+  font-size: 9px;
+  color: var(--amg-suave);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+#friends.amg .btn.amg-quitar:hover, #friends.amg .btn.amg-quitar:focus-visible { color: #ff5a5a; border-color: rgba(255, 90, 90, 0.4); outline: none; }
+#friends.amg .btn.amg-quitar.confirma { color: #fff; background: #d62a3a; border-color: #d62a3a; font-size: 7px; }
+
+/* ---- vacío y sin cuenta ---- */
+.amg-vacio, .amg-puerta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 16px;
+  text-align: center;
+  border: 2px dashed rgba(43, 255, 136, 0.3);
+  border-radius: 12px;
+}
+.amg-puerta { width: min(96vw, 640px); border-style: solid; border-color: rgba(33, 33, 222, 0.55); background: rgba(0, 0, 0, 0.6); }
+.amg-vacio-cv { width: 60px; height: 60px; image-rendering: pixelated; }
+.amg-puerta-cv { width: 200px; height: 50px; image-rendering: pixelated; }
+.amg-vacio-t, .amg-puerta-t { color: var(--amg); font-size: 12px; letter-spacing: 1px; }
+.amg-vacio-d, .amg-puerta-d { color: var(--amg-suave); font-size: 9px; line-height: 1.8; max-width: 520px; }
+#friends.amg .btn.amg-volver { margin-top: 18px; }
+
+@media (max-width: 600px) {
+  .amg-barra { grid-template-columns: minmax(0, 1fr) auto; }
+  .amg-cuenta { grid-column: 1 / -1; }
+  #friends.amg .amg-rejilla { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* todas las fichas de una fila, del mismo alto; los botones, abajo */
+#friends.amg .friend-row.amg-ficha { align-self: stretch; height: auto; }
+#friends.amg .amg-acciones { margin-top: auto; }
+#friends.amg .amg-datos { min-height: 12px; }

@@ -4632,13 +4632,15 @@
       eq(pedidas, 1, 'una sola petición por refresco');
       eq(UI.friendsList.children.length, 2, 'salen los dos amigos');
       var fila = UI.friendsList.children[0];
-      eq(fila.querySelectorAll('.friend-btns .btn').length, 4,
-         'cada uno con ver perfil, ver partida, invitar y quitar');
-      // de entrada solo se ve el amigo; las opciones se despliegan
-      ok(!fila.classList.contains('open'), 'la ficha empieza plegada');
+      /* 23 sep: la ficha lo enseña a la vista (perfil, ver partida,
+       * invitar) y QUITAR va aparte, en la esquina, con confirmación */
+      eq(fila.querySelectorAll('.amg-accion').length, 3,
+         'cada uno con perfil, ver partida e invitar');
+      var quitar = fila.querySelector('.amg-quitar');
+      ok(quitar, 'y su botón de quitar');
       ok(fila.querySelector('.friend-avatar'), 'con su avatar');
-      fila.querySelector('.friend-toggle').click();
-      ok(fila.classList.contains('open'), 'y el botón la despliega');
+      quitar.click();
+      eq(F.all().length, 2, 'el primer toque solo pregunta');
     } finally {
       Ac.logged = logged0;
       Ac.listFriends = list0;
