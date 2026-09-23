@@ -11705,21 +11705,28 @@
     ok(!H.st[0].meteoro, 'todavía no ha caído nada');
     eq(H.st[0].cd[R], 0, 'ni se ha gastado la recarga');
 
-    /* PAREDES: la marca camina sola hacia su última flecha, y contra el muro
-     * de arriba se queda donde está */
-    for (i = 0; i < HH.METEORO_PASO * 30 && H.st[0].apunta.c !== pas.pared; i++) tic();
+    /* FRANCOTIRADOR: mientras apunta, el Mago no se mueve */
+    eq(H.multVel(0), 0, 'el Mago se queda plantado mientras apunta');
+    for (i = 0; i < 30; i++) tic();
+    eq(H.st[0].apunta.c, pas.c + 1, 'la marca ya no camina sola');
+
+    /* PAREDES: cada flecha es UN paso, y contra el muro de arriba no pasa */
+    var c0 = H.st[0].apunta.c;
+    G.setPacDir(0, DR.RIGHT);
+    eq(H.st[0].apunta.c, c0 + 1, 'una flecha, una casilla');
+    G.setPacDir(0, DR.LEFT);
+    eq(H.st[0].apunta.c, c0, 'y la contraria la devuelve');
+    while (H.st[0].apunta.c < pas.pared) G.setPacDir(0, DR.RIGHT);
     eq(H.st[0].apunta.c, pas.pared, 'la marca recorre el pasillo casilla a casilla');
     eq(H.st[0].mant, R, 'la tecla sigue apretada, sin relanzarse sola');
     /* la flecha entra por donde entran todas (Game.setPacDir): mientras se
-     * apunta es de la marca y no del Mago, que sigue a lo suyo */
+     * apunta es de la marca y no del Mago */
     G.setPacDir(0, DR.UP);
     eq(G.pacs[0].nextDir, DR.RIGHT, 'la flecha no gira al Mago mientras apunta');
-    for (i = 0; i < HH.METEORO_PASO * 4; i++) tic();
     eq(H.st[0].apunta.r, pas.r, 'y la pared de arriba no la deja pasar');
 
     /* ALCANCE: por mucho que siga el pasillo, no se va más lejos */
-    G.setPacDir(0, DR.RIGHT);
-    for (i = 0; i < HH.METEORO_PASO * 30; i++) tic();
+    for (i = 0; i < HH.METEORO_ALCANCE * 3; i++) G.setPacDir(0, DR.RIGHT);
     eq(H.st[0].apunta.c, pas.c + HH.METEORO_ALCANCE, 'se para en el alcance máximo');
     ok(libre(pas.c + HH.METEORO_ALCANCE + 1, pas.r), 'aunque el pasillo siga abierto');
 
@@ -11731,6 +11738,8 @@
     g.y = dest.r * CFG.TILE + CFG.TILE / 2;
     ok(H.soltar(G, 0, R), 'al soltar cae el meteoro');
     eq(H.st[0].apunta, null, 'y se cierra el apuntado');
+    H.pasoRoles(G, false);          // sin correr la partida: solo el estado
+    ok(H.multVel(0) > 0, 'y el Mago vuelve a andar');
     G.setPacDir(0, DR.UP);
     eq(G.pacs[0].nextDir, DR.UP, 'las flechas vuelven a ser del Mago');
     eq(H.st[0].meteoro.c, dest.c, 'cae en la columna apuntada');
@@ -11741,6 +11750,55 @@
     ok(!H.st[0].meteoro, 'pasado el aviso, revienta');
     ok(H.st[0].fuegoMeteoro, 'y deja la zona de fuego');
     eq(g.mode, 'eyes', 'llevándose por delante al fantasma que había debajo');
+  });
+
+  test('AJUSTES: el METEORO paga cuando acierta: más grande, recarga devuelta y fuego que quema', function () {
+    var H = window.PM.Hab, HH = CFG.HAB, T = CFG.TILE, i, j;
+    var R = 3;
+    function tic() { H.cargas(G); H.pasoRoles(G, true); }
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['fuego,portal,runa,meteoro']); G.roles = ['mago'];
+    ponPac(0, 1, 1, DR.RIGHT);
+    for (i = 0; i < 4; i++) { G.ghosts[i].mode = 'house'; }
+    /* una casilla donde caer y dos fantasmas: uno a TRES casillas del
+     * centro (antes quedaba fuera) y otro lejos */
+    var c = 13, r = 23;
+    var g1 = G.ghosts[0], g2 = G.ghosts[1];
+    g1.mode = 'normal'; g1.frightened = false; g1.x = (c - 3) * T + T / 2; g1.y = r * T + T / 2;
+    ok(H.ghostsEn(G, c, r, HH.METEORO_RADIO).indexOf(g1) >= 0, 'a tres casillas entra en el golpe');
+    H.st[0].cd[R] = 60 * 60;
+    H.st[0].meteoro = { c: c, r: r, t: 1 };
+    for (i = 0; i < 5 && H.st[0].meteoro; i++) tic();
+    eq(g1.mode, 'eyes', 'el golpe de tres casillas se lo lleva');
+    ok(H.st[0].cd[R] <= 60 * 60 - HH.METEORO_DEVUELVE, 'y devuelve quince segundos de recarga');
+    ok(H.st[0].cd[R] > 60 * 60 - HH.METEORO_DEVUELVE - 10, 'quince, no más');
+    ok(H.st[0].fuegoMeteoro, 'queda la hoguera');
+    eq(H.st[0].fuegoMeteoro.t, HH.METEORO_FUEGO, 'de seis segundos');
+    eq(H.radioFuego(H.st[0].fuegoMeteoro), HH.METEORO_RADIO, 'nace del tamaño del golpe');
+    for (i = 0; i < HH.METEORO_FUEGO_CRECE; i++) tic();
+    eq(H.radioFuego(H.st[0].fuegoMeteoro), HH.METEORO_RADIO + 1, 'y a los dos segundos crece una casilla');
+
+    /* el fantasma que pisa el fuego NO muere en el acto: se quema */
+    g2.mode = 'normal'; g2.frightened = false; g2.x = c * T + T / 2; g2.y = r * T + T / 2;
+    var g3 = G.ghosts[2];
+    g3.mode = 'normal'; g3.frightened = false; g3.x = (c + 1) * T + T / 2; g3.y = r * T + T / 2;
+    tic();
+    eq(g2.mode, 'normal', 'pisar el fuego no mata en el acto');
+    ok(H.quema[g2.id] > 0, 'lo deja ardiendo');
+    ok(H.quema[g3.id] > 0, 'a los dos que pisan');
+    /* uno que se va a casa antes de tiempo se apaga */
+    g3.mode = 'eyes';
+    tic();
+    eq(H.quema[g3.id], 0, 'si se lo comen antes, se le apaga');
+    /* se va del fuego: arde igual */
+    g2.x = 1 * T + T / 2; g2.y = 29 * T + T / 2;
+    var cdAntes = H.st[0].cd[R];
+    for (i = 0; i < HH.METEORO_QUEMA - 10; i++) tic();
+    eq(g2.mode, 'normal', 'todavía no');
+    for (i = 0; i < 10; i++) tic();
+    eq(g2.mode, 'eyes', 'a los cuatro segundos cae, aunque saliera del fuego');
+    ok(H.st[0].cd[R] <= Math.max(0, cdAntes - HH.METEORO_DEVUELVE), 'y también devuelve recarga');
+
   });
 
   test('AJUSTES: el botín de Carroña lo coge cualquiera', function () {

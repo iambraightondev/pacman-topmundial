@@ -13132,6 +13132,15 @@
         if (isArrow || isWasd) {
           if (canControl) {
             self.resumeAudio();
+            /* METEORO: mientras se apunta, cada flecha es UN paso de la mira,
+             * así que la autorrepetición de una flecha mantenida no cuenta:
+             * si no, la mira se iría al fondo a la velocidad que decida cada
+             * sistema operativo */
+            var quienFl = (g.playerCount === 2 && !g.netRole) ? (isArrow ? 0 : 1) : g.localIdx;
+            if (ev.repeat && g.hab && window.PM.Hab && window.PM.Hab.apuntando(quienFl)) {
+              ev.preventDefault();
+              return;
+            }
             if (g.playerCount === 2 && !g.netRole) {
               // dos jugadores locales: controles separados
               if (isArrow) g.setPacDir(0, ARROWS[ev.key]);

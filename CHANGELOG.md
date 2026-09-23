@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · El METEORO, rehecho
+
+**SE APUNTA COMO UN FRANCOTIRADOR.** Mantén la R y el Mago se queda plantado;
+cada flecha mueve la mira una casilla y al soltar cae. Nada de mira que anda
+sola ni de soltar al vuelo.
+
+**Y PAGA CUANDO ACIERTA.** El golpe es de **3 casillas** de radio (eran 2), y
+cada fantasma que mata le quita **15 s** a la recarga. La hoguera dura **6 s**,
+crece una casilla cada 2 s y ya no mata en el acto: el fantasma que la pisa
+**arde** y cae 4 s después, aunque salga del fuego.
+
 ## 2026-09-23 · Siete habilidades con dibujo propio
 
 **LO QUE ERA UN CUADRADO O UN ARO, AHORA SE LEE.** El **TÓTEM** es una torrecita

@@ -3659,6 +3659,8 @@
           if (!p || !data) return;
           // dy = el invitado está muriendo: el mensaje solo sirve de señal de
           // vida (y para las pastillas), la posición la lleva el anfitrión
+          // apuntando el METEORO: su Mago se queda plantado también aquí
+          if (this.hab && window.PM.Hab) window.PM.Hab.quietoRemoto(idx, !!data.ap);
           if (!p.dying && !data.dy) {
             p.ponRemoto(data.x, data.y, data.d, data.nd);
             // un giro no espera a la foto: sale hacia los demás ahora mismo
@@ -4211,7 +4213,12 @@
       this.posTimer++;
       var turned = !dying &&
         (me.dir !== this._lastSentDir || me.nextDir !== this._lastSentNext);
-      var dirty = this.outEaten.length > 0 || turned;
+      /* METEORO: mientras lo apunta, su Mago se queda plantado, y el
+       * anfitrión tiene que saberlo en el acto o lo seguiría moviendo */
+      var Hq = this.hab && window.PM.Hab;
+      var planta = (Hq && Hq.apuntando(this.localIdx)) ? 1 : 0;
+      var dirty = this.outEaten.length > 0 || turned || planta !== (this._lastSentAp | 0);
+      this._lastSentAp = planta;
       if (!dirty && this.posTimer < CFG.NET.POS_EVERY) return;
       this.posTimer = 0;
       this._lastSentDir = me.dir;
@@ -4225,6 +4232,7 @@
        * marcarlos evita hacerlo con los doce mensajes de cada segundo */
       if (turned) msg.g = 1;
       if (dying) msg.dy = 1;
+      if (planta) msg.ap = 1;
       this.netSend('pos', msg);
       this.outEaten = [];
       for (var k in this.recentEaten) {

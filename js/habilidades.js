@@ -131,6 +131,9 @@
        * no viaja en la foto de red: lo que viaja es la casilla final, al
        * soltar. */
       apunta: null,
+      /* El METEORO de OTRO jugador que se está apuntando: su Mago se queda
+       * plantado (ver plantado). En el propio lo dice la retícula. */
+      quieto: 0,
       /* PORTAL (Mago): ticks que le quedan en la OTRA DIMENSIÓN (0: está en
        * la de todos). Mientras dure, nada lo toca y él no come. */
       dimension: 0,
@@ -327,6 +330,10 @@
       this.hielo = [0, 0, 0, 0];
       this.huye = [0, 0, 0, 0];
       this.huyeQuien = [-1, -1, -1, -1];
+      /* QUEMADOS por la hoguera del METEORO (23 sep): ticks hasta que caen y
+       * quién los quemó (-1: nadie). Por fantasma, como la huida. */
+      this.quema = [0, 0, 0, 0];
+      this.quemaQuien = [-1, -1, -1, -1];
       this.lento = [0, 0, 0, 0];
       this.lentoMult = [1, 1, 1, 1];
       this.aturdido = [0, 0, 0, 0];
@@ -397,6 +404,7 @@
         loadouts: (this.loadouts || []).map(function (x) { return x ? x.slice() : null; }),
         mesa: JSON.parse(JSON.stringify({
           hielo: this.hielo, huye: this.huye, huyeQuien: this.huyeQuien,
+          quema: this.quema, quemaQuien: this.quemaQuien,
           lento: this.lento, lentoMult: this.lentoMult, aturdido: this.aturdido,
           ciego: this.ciego, azulCatalogo: this.azulCatalogo,
           azulCatTicks: this.azulCatTicks, arcanoAzul: this.arcanoAzul,
@@ -437,6 +445,8 @@
         this.hielo = m.hielo || this.hielo;
         this.huye = m.huye || this.huye;
         this.huyeQuien = m.huyeQuien || this.huyeQuien;
+        this.quema = m.quema || this.quema;
+        this.quemaQuien = m.quemaQuien || this.quemaQuien;
         this.lento = m.lento || this.lento;
         this.lentoMult = m.lentoMult || this.lentoMult;
         this.aturdido = m.aturdido || this.aturdido;
@@ -955,13 +965,12 @@
       return !!(s && s.apunta);
     },
 
-    /* Hacia dónde camina la retícula ahora mismo (-1: nadie apunta). La
-     * repetición lo mira para no grabar dos veces la misma flecha
-     * (Replay.rumboDe), que es lo que hace que tener la tecla apretada deje
-     * una entrada y no doscientas. */
+    /* Lo que la repetición compara para no grabar dos veces la misma flecha
+     * (Replay.rumboDe). Desde el 23 sep cada flecha es un paso de la
+     * retícula, así que ninguna es repetida: devuelve siempre -1 y se graban
+     * todas. La autorrepetición del teclado ya la ha cribado la UI. */
     flechaApuntado: function (idx) {
-      var s = this.estado(idx);
-      return (s && s.apunta) ? s.apunta.d : -1;
+      return -1;
     },
 
     /* Abre el apuntado: la retícula sale una casilla por delante del Mago (o
@@ -991,21 +1000,24 @@
       return true;
     },
 
-    /* Una flecha mientras se apunta: cambia el rumbo de la retícula, que a
-     * partir de ahí camina sola (pasoApuntado). El primer paso NO sale aquí
-     * mismo sino en el tick siguiente, y a propósito: la repetición mete las
-     * flechas un poco más tarde dentro del mismo tick, y así la marca anda
-     * exactamente igual jugando que viéndolo luego. */
+    /* Una flecha mientras se apunta: la retícula da UN paso hacia allí (23
+     * sep). Antes caminaba sola y las flechas solo la giraban, y había que
+     * soltar la R al vuelo cuando pasaba por el sitio: incomodísimo. Ahora va
+     * casilla a casilla, a golpe de flecha, y el Mago no se mueve mientras
+     * tanto (ver multVel), así que se apunta con calma.
+     *
+     * La autorrepetición del teclado NO da pasos: la criba la UI antes de
+     * llegar aquí (una tecla mantenida no es otra pulsación). Por eso cada
+     * llamada es un paso, y la repetición de la partida graba cada una. */
     apuntarDir: function (idx, d) {
-      var s = this.estado(idx);
-      if (!s || !s.apunta || !(d >= 0 && d <= 3)) return false;
-      /* La misma flecha otra vez no reinicia la cuenta. El teclado repite el
-       * evento cada pocas centésimas mientras se tiene apretada, y si cada
-       * repetición pusiera el reloj a cero la marca no daría un paso en su
-       * vida. Es la misma criba que hace la repetición al grabar. */
-      if (s.apunta.d === d) return false;
-      s.apunta.d = d;
-      s.apunta.t = 0;
+      var s = this.estado(idx), a = s && s.apunta;
+      if (!a || !(d >= 0 && d <= 3)) return false;
+      a.d = d;
+      var v = CFG.DIR_V[d], nc = CFG.wrapCol(a.c + v.x), nr = a.r + v.y;
+      if (!aterrizable(nc, nr)) return false;
+      var pasos = this.pasosApuntado(a.oc, a.or, nc, nr);
+      if (pasos < 0 || pasos > H.METEORO_ALCANCE) return false;
+      a.c = nc; a.r = nr;
       return true;
     },
 
@@ -1018,24 +1030,29 @@
       return ruta ? ruta.length : -1;
     },
 
-    /* Un tick de la retícula: cada METEORO_PASO ticks se come una casilla
-     * hacia su última flecha. Se para sola en las paredes, en la casa de los
-     * fantasmas y al llegar al alcance; no se pierde el apuntado por eso,
-     * solo deja de avanzar hasta que le digan otra dirección. */
+    /* Un tick de la retícula. Ya no camina sola (la mueven las flechas, ver
+     * apuntarDir): lo único que queda aquí es cerrarla si el Mago muere a
+     * media puntería, sin tirar nada. */
     pasoApuntado: function (G, idx) {
       var s = this.estado(idx), a = s && s.apunta;
       if (!a) return;
       var p = G.pacs[idx];
-      /* muerto a media puntería: se cierra sin tirar nada */
-      if (!p || p.out || p.dying) { s.apunta = null; return; }
-      if (++a.t < H.METEORO_PASO) return;
-      a.t = 0;
-      if (!(a.d >= 0 && a.d <= 3)) return;
-      var v = CFG.DIR_V[a.d], nc = CFG.wrapCol(a.c + v.x), nr = a.r + v.y;
-      if (!aterrizable(nc, nr)) return;
-      var pasos = this.pasosApuntado(a.oc, a.or, nc, nr);
-      if (pasos < 0 || pasos > H.METEORO_ALCANCE) return;
-      a.c = nc; a.r = nr;
+      if (!p || p.out || p.dying) s.apunta = null;
+    },
+
+    /* FRANCOTIRADOR (23 sep): mientras apunta, el Mago se queda plantado.
+     * En esta pantalla se sabe por la retícula; la de otro jugador no viaja,
+     * así que llega como `quieto`: el invitado se lo dice al anfitrión con su
+     * posición (quietoRemoto) y el anfitrión al resto en la foto. */
+    plantado: function (idx) {
+      var s = this.estado(idx);
+      return !!(s && (s.apunta || s.quieto));
+    },
+
+    /* Anfitrión: el invitado avisa de si está apuntando */
+    quietoRemoto: function (idx, si) {
+      var s = this.estado(idx);
+      if (s) s.quieto = si ? 1 : 0;
     },
 
     /* Un tick de las teclas mantenidas. Game.step lo llama ANTES que a
@@ -1551,6 +1568,7 @@
     /* Multiplicador de velocidad del jugador idx (1 si no hay turbo).
      * Lo consulta Game.pacSpeedPx. */
     multVel: function (idx) {
+      if (this.plantado(idx)) return 0;       // apuntando el METEORO
       if (this.arrollando(idx)) return H.APISONADORA_MULT;
       var s = this.estado(idx), m = this.conTurbo(idx) ? H.TURBO_MULT : 1;
       if (s && s.sombra > 0) m *= H.SOMBRA_MULT;
@@ -2665,7 +2683,11 @@
        * muerte ni si llevaba la pasiva del Asesino */
       G.addPopup(e.x, e.y, (e.p | 0) || H.MAGO_PUNTOS, 45);
       this.efecto(e.f || 'fuego', e.x, e.y, e.f === 'rayo' ? 14 : 18, e.ox, e.oy);
+      this.quema[g.id] = 0; this.quemaQuien[g.id] = -1;
       if ((e.w | 0) === G.localIdx && !G.isSpec()) {
+        /* la recarga del METEORO que devuelve una baja: la mía solo se
+         * corrige hacia arriba desde el anfitrión, así que la bajo yo */
+        if (e.f === 'meteoro' || e.f === 'meteoro_fuego') this.devolverMeteoro(G, G.localIdx);
         G.runGhosts++;
         G.bumpAch && G.bumpAch({ fantasmas: 1 });
       }
@@ -3571,6 +3593,23 @@
     /* El anfitrión no se cree la casilla de un invitado sin mirarla: tiene
      * que ser pisable (ni muro, ni casa de fantasmas) y estar a tiro por los
      * pasillos, con la propina de METEORO_MARGEN_RED. */
+    /* Radio de la HOGUERA ahora mismo: nace con el del golpe y crece una
+     * casilla cada METEORO_FUEGO_CRECE ticks. Lo usan el fuego y su dibujo. */
+    radioFuego: function (f) {
+      if (!f) return 0;
+      return H.METEORO_RADIO + Math.floor(Math.max(0, H.METEORO_FUEGO - f.t) / H.METEORO_FUEGO_CRECE);
+    },
+
+    /* Cada fantasma que mata el METEORO (golpe o quemadura) le devuelve al
+     * Mago METEORO_DEVUELVE de recarga: apuntarlo cuesta, acertar paga. */
+    devolverMeteoro: function (G, who) {
+      var s = this.estado(who), k = this.kDe(G, who, 'meteoro');
+      if (!s || k < 0 || !(s.cd[k] > 0)) return;
+      s.cd[k] = Math.max(0, s.cd[k] - H.METEORO_DEVUELVE);
+      var p = G.pacs[who];
+      if (p) G.addPopup(p.x, p.y - 8, '-' + Math.round(H.METEORO_DEVUELVE / 60) + ' S', 30);
+    },
+
     meteoroValido: function (G, idx, c, r) {
       var p = G.pacs[idx];
       if (!p || !aterrizable(CFG.wrapCol(c), r)) return false;
@@ -4045,6 +4084,9 @@
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.pisoton > 0) s.pisoton--;
+        /* el Mago de esta pantalla dice él mismo si está plantado; el de
+         * otro lo dice la red (quietoRemoto y la foto) */
+        if (!G.netRole || i === G.localIdx) s.quieto = s.apunta ? 1 : 0;
       }
       if (!corre) return;
       var manda = this.manda(G);
@@ -4063,6 +4105,7 @@
          * congelado volvía sin poder moverse. La CACERÍA y el DOMINIO ya lo
          * hacían cada uno por su lado, ahora es la misma regla para todos. */
         if (!this.enLaCalle(G.ghosts[j])) {
+          this.quema[j] = 0; this.quemaQuien[j] = -1;
           this.azulCatalogo[j] = 0; this.azulCatTicks[j] = 0; this.arcanoAzul[j] = 0;
           this.hielo[j] = 0;
           this.huye[j] = 0; this.huyeQuien[j] = -1;
@@ -4339,13 +4382,15 @@
         }
         if (s.meteoro && s.meteoro.t <= 0) {
           var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO);
-          for (j = 0; j < mm.length; j++) this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro');
+          for (j = 0; j < mm.length; j++) {
+            if (this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro')) this.devolverMeteoro(G, i);
+          }
           /* EL METEORO LE CAE ENCIMA AL REY (22 sep 2026): 5 de vida, la R
            * más gorda del Mago contra él. La HOGUERA que queda después NO le
-           * repite el golpe —a los fantasmas sí los sigue matando— porque el
-           * respiro entre golpes del rey es de tres cuartos de segundo y los
-           * cuatro que dura el fuego le sacarían cinco veces más vida que la
-           * piedra: quedarse encima no puede valer más que el impacto. */
+           * repite el golpe —a los fantasmas sí los quema— porque el respiro
+           * entre golpes del rey es de tres cuartos de segundo y los seis que
+           * dura el fuego le sacarían mucha más vida que la piedra: quedarse
+           * encima no puede valer más que el impacto. */
           var JM = this.rey(G);
           if (JM && JM.cercaDe(G, s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, H.METEORO_RADIO)) {
             JM.danar(G, CFG.JEFE.DANO.meteoro, i, 'meteoro');
@@ -4356,11 +4401,29 @@
           s.fuegoMeteoro = { c: s.meteoro.c, r: s.meteoro.r, t: H.METEORO_FUEGO };
           s.meteoro = null;
         }
+        /* LA HOGUERA QUEMA (23 sep): ya no mata en el acto. El fantasma que
+         * la pisa se prende y cae QUEMA ticks después, salga o no del fuego;
+         * uno que ya arde no se vuelve a prender (el reloj no se reinicia). */
         if (s.fuegoMeteoro) {
-          var fm = this.ghostsEn(G, s.fuegoMeteoro.c, s.fuegoMeteoro.r, H.METEORO_RADIO);
-          for (j = 0; j < fm.length; j++) this.matarCatalogo(G, fm[j], i, H.MAGO_PUNTOS, 'meteoro_fuego');
+          var fm = this.ghostsEn(G, s.fuegoMeteoro.c, s.fuegoMeteoro.r, this.radioFuego(s.fuegoMeteoro));
+          for (j = 0; j < fm.length; j++) {
+            var qid = fm[j].id;
+            if (this.quema[qid] > 0) continue;
+            this.quema[qid] = H.METEORO_QUEMA;
+            this.quemaQuien[qid] = i;
+          }
         }
         if (s.totem && s.totem.t <= 0) s.totem = null;
+      }
+      /* Los QUEMADOS: al acabarse el reloj, caen. Si entretanto se fueron a
+       * casa (comidos, ojos) ya lo borró el viaje (ver arriba), y si quien
+       * los quemó ya no está en la mesa, caen igual a nombre de nadie. */
+      for (j = 0; j < 4; j++) {
+        if (!(this.quema[j] > 0) || --this.quema[j] > 0) continue;
+        var qw = this.quemaQuien[j];
+        this.quemaQuien[j] = -1;
+        if (qw < 0 || qw >= this.st.length) continue;
+        if (this.matarCatalogo(G, G.ghosts[j], qw, H.MAGO_PUNTOS, 'meteoro_fuego')) this.devolverMeteoro(G, qw);
       }
       for (i = this.joyas.length - 1; i >= 0; i--) {
         var joya = this.joyas[i]; if (--joya.t <= 0) { this.joyas.splice(i, 1); continue; }
@@ -4461,7 +4524,7 @@
       s.mant = -1; s.mantT = 0;
       /* morir a media puntería cierra el apuntado y NO tira el meteoro: la R
        * se queda cargada, que bastante castigo es la muerte */
-      s.apunta = null;
+      s.apunta = null; s.quieto = 0;
       s.dimension = 0;
     },
 
@@ -4501,7 +4564,7 @@
         ciego: this.ciego.slice(), azul: this.azulCatalogo.slice(), azulT: this.azulCatTicks.slice(),
         caceria: this.caceriaQuien.slice(), marca: this.marcaGhost.slice(),
         dominado: this.dominado.slice(), dominaQuien: this.dominaQuien.slice(), joyas: this.joyas,
-        proyectiles: this.proyectilesCat,
+        proyectiles: this.proyectilesCat, quema: this.quema.slice(),
         terremoto: this.terremotoTicks, eclipse: this.eclipseTicks, st: [] };
       for (i = 0; i < this.st.length; i++) {
         var cs = this.st[i];
@@ -4513,7 +4576,7 @@
           estelaBuff: cs.estelaBuff, estelaRastro: cs.estelaRastro, puente: cs.puente,
           cadena: cs.cadena, cadenaCon: cs.cadenaCon, campo: cs.campo,
           hospital: cs.hospital, yunque: cs.yunque, pielPiedra: cs.pielPiedra, rebote: cs.rebote,
-          fortaleza: cs.fortaleza, eclipse: cs.eclipse });
+          fortaleza: cs.fortaleza, eclipse: cs.eclipse, quieto: cs.quieto });
       }
       return { e: e, hz: this.hielo.slice(), hu: this.huye.slice(), hq: this.huyeQuien.slice(),
                po: po, ru: ru, bl: bl, pl: pl, ct: ct };
@@ -4567,6 +4630,7 @@
         if (ct.marca) this.marcaGhost = ct.marca.slice(0, 4);
         if (ct.joyas) this.joyas = ct.joyas;
         if (ct.proyectiles) this.proyectilesCat = ct.proyectiles;
+        if (ct.quema) this.quema = ct.quema.slice(0, 4);
         this.terremotoTicks = ct.terremoto | 0; this.eclipseTicks = ct.eclipse | 0;
         for (i = 0; ct.st && i < ct.st.length && i < this.st.length; i++) {
           var cs = ct.st[i], ds = this.st[i];
@@ -4792,7 +4856,10 @@
          * repeticiones tienen que verse igual. Parpadea el último segundo. */
         if (ds.fuegoMeteoro) {
           var fgx = ds.fuegoMeteoro.c * T + T / 2, fgy = ds.fuegoMeteoro.r * T + T / 2 + Y;
-          var fgR = H.METEORO_RADIO * T;
+          /* crece una casilla cada dos segundos (radioFuego), y con ella las
+           * llamas: más fuego cuanto más grande */
+          var fgR = this.radioFuego(ds.fuegoMeteoro) * T;
+          var fgN = 3 + 2 * Math.round(fgR / T);
           var fgA = (ds.fuegoMeteoro.t < 60 && Math.floor(tk / 5) % 2 === 0) ? 0.4 : 1;
           ctx.save();
           var fgG = ctx.createRadialGradient(fgx, fgy, 1, fgx, fgy, fgR);
@@ -4803,7 +4870,7 @@
           ctx.beginPath(); ctx.arc(fgx, fgy, fgR, 0, Math.PI * 2); ctx.fill();
           ctx.globalAlpha = 0.55 * fgA; ctx.strokeStyle = '#ff5a1f'; ctx.lineWidth = 1;
           ctx.beginPath(); ctx.arc(fgx, fgy, fgR, 0, Math.PI * 2); ctx.stroke();
-          for (var fl = 0; fl < 7; fl++) {
+          for (var fl = 0; fl < fgN; fl++) {
             var fla = fl * 2.4, fld = fgR * (0.15 + 0.6 * ((fl * 37) % 10) / 10);
             var flx = fgx + Math.cos(fla) * fld, fly = fgy + Math.sin(fla) * fld;
             var flh = 3.5 + 2 * Math.sin(tk / 4 + fl * 1.7);
@@ -4818,7 +4885,7 @@
             ctx.closePath(); ctx.fill();
           }
           ctx.fillStyle = '#ffb852';
-          for (var pv = 0; pv < 4; pv++) {
+          for (var pv = 0; pv < fgN - 3; pv++) {
             var pvT = ((tk + pv * 17) % 40) / 40;
             ctx.globalAlpha = (1 - pvT) * 0.85 * fgA;
             ctx.fillRect(fgx + Math.sin(pv * 2.1 + pvT * 3) * fgR * 0.6 - 0.5,
@@ -5316,6 +5383,31 @@
           ctx.beginPath(); ctx.arc(cg.x + 7, cg.y + Y - 6 + huG * 4, 1.3, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.moveTo(cg.x + 5.8, cg.y + Y - 6.4 + huG * 4);
           ctx.lineTo(cg.x + 7, cg.y + Y - 9 + huG * 4); ctx.lineTo(cg.x + 8.2, cg.y + Y - 6.4 + huG * 4); ctx.fill();
+          ctx.restore();
+        }
+        if (this.quema[i] > 0) {
+          /* QUEMADO por la hoguera del METEORO: tres lenguas de fuego encima
+           * de la cabeza que se van avivando, y un reloj de brasas que se
+           * vacía. El último segundo parpadea: ahí cae. */
+          var qu = this.quema[i] / H.METEORO_QUEMA;
+          var quFin = this.quema[i] < 60 && Math.floor(tk / 3) % 2 === 0;
+          ctx.save();
+          ctx.globalAlpha = quFin ? 0.45 : 1;
+          for (var ql = -1; ql <= 1; ql++) {
+            var qlx = cg.x + ql * 3.5, qlh = 4 + (1 - qu) * 3 + 1.5 * Math.sin(tk / 3 + ql * 2);
+            var qly = cg.y + Y - 6;
+            ctx.fillStyle = '#ff5a1f';
+            ctx.beginPath(); ctx.moveTo(qlx - 1.8, qly);
+            ctx.quadraticCurveTo(qlx - 1.4, qly - qlh * 0.6, qlx, qly - qlh);
+            ctx.quadraticCurveTo(qlx + 1.4, qly - qlh * 0.6, qlx + 1.8, qly);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#ffe66d';
+            ctx.beginPath(); ctx.moveTo(qlx - 0.8, qly);
+            ctx.quadraticCurveTo(qlx, qly - qlh * 0.5, qlx + 0.8, qly);
+            ctx.closePath(); ctx.fill();
+          }
+          ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.arc(cg.x, cg.y + Y, 10, -Math.PI / 2, -Math.PI / 2 + qu * Math.PI * 2); ctx.stroke();
           ctx.restore();
         }
         if (this.ciegoDe(i)) {

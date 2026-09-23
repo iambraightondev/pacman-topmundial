@@ -2281,14 +2281,25 @@
      * mina y el contagio del TOQUE ARCANO andan por ahí). */
     DOMINIO_CHOQUE: 0.6,
     METEORO_AVISO: 90,
-    METEORO_RADIO: 2,
-    METEORO_FUEGO: 4 * 60,
+    /* METEORO que compensa (23 sep). Apuntarlo casilla a casilla cuesta, así
+     * que cuando acierta tiene que pagar: el golpe es de TRES casillas de
+     * radio (eran dos, más del doble de área), cada fantasma que mata le
+     * devuelve QUINCE segundos de recarga, y la hoguera dura seis segundos y
+     * crece una casilla cada dos. La hoguera ya no mata en el acto: el
+     * fantasma que la pisa se QUEMA y cae cuatro segundos después, aunque
+     * haya salido del fuego. */
+    METEORO_RADIO: 3,
+    METEORO_FUEGO: 6 * 60,
+    METEORO_FUEGO_CRECE: 2 * 60,
+    METEORO_QUEMA: 4 * 60,
+    METEORO_DEVUELVE: 15 * 60,
     /* METEORO APUNTADO (22 sep). Antes caía seis casillas al frente, en la
      * dirección de la última flecha: para ponerlo donde uno quería había que
      * ir a colocarse mirando hacia allí, con el laberinto de por medio. O
      * sea, que no se podía apuntar. Ahora se apunta MANTENIENDO la R: sale una
      * retícula delante del Mago, las flechas la llevan por los pasillos y al
-     * soltar cae ahí. La partida no se para mientras tanto.
+     * soltar cae ahí. La partida no se para, pero el Mago sí (23 sep): se
+     * queda plantado mientras apunta, en vez de ir corriendo a ciegas.
      *
      * ALCANCE, en casillas DE CAMINO (las que andaría un fantasma, no en
      * línea recta): ocho. Seis —lo de antes— no daba ni para doblar la
@@ -2296,15 +2307,9 @@
      * diez para arriba el Mago revienta la otra punta del mapa sin enterarse
      * de lo que pasa allí y el poder se queda sin riesgo. */
     METEORO_ALCANCE: 8,
-    /* Lo que tarda la retícula en pasar de una casilla a la siguiente: seis
-     * ticks, o sea diez casillas por segundo. La marca CAMINA SOLA hacia la
-     * última flecha (las flechas la giran, no la empujan), así que este número
-     * es en realidad la puntería: se suelta la tecla cuando pasa por donde uno
-     * quiere. A tres ticks por casilla se escapa y hay que estar
-     * corrigiéndola; a doce, cruzar el alcance entero se lleva más de un
-     * segundo y el fantasma al que apuntabas ya se ha ido. Con seis, cada
-     * casilla dura una décima y el alcance completo ocho: lo justo para
-     * soltar a tiempo. */
+    /* Retirado el 23 sep: la retícula ya no camina sola. Cada flecha la
+     * mueve UNA casilla y el Mago se queda plantado mientras apunta, como un
+     * francotirador. Se deja el número porque alguna prueba vieja lo mira. */
     METEORO_PASO: 6,
     /* Casillas de propina que el anfitrión le perdona a la casilla que pide un
      * invitado. Él apuntó desde donde tenía su Mago y aquí, medio segundo de
@@ -2465,7 +2470,7 @@
          h('gravedad', 'E', 'GRAVEDAD', 32, 'Agrupa y detiene fantasmas.'),
          h('dominio', 'E', 'DOMINIO', 32, 'El fantasma más cercano caza a los suyos 6 s.')],
         [h('tormenta', 'R', 'TORMENTA', 46, 'Tres rayos a distancia.'),
-         h('meteoro', 'R', 'METEORO', 60, 'Mantenla para apuntar dónde cae.'),
+         h('meteoro', 'R', 'METEORO', 60, 'Mantenla: el Mago se planta y cada flecha mueve la mira.'),
          h('eclipse', 'R', 'ECLIPSE', 60, 'Ceguera y ralentización global.')]
       ]
     };
