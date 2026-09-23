@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Siete habilidades con dibujo propio
+
+**LO QUE ERA UN CUADRADO O UN ARO, AHORA SE LEE.** El **TÓTEM** es una torrecita
+con un ojo de fuego que se carga antes de cada disparo, y dispara dardos de
+fuego que miran a su presa. La **BOLA GUIADA** es una esfera morada con dos
+chispas girando. El **METEORO** cae como una roca con cola de fuego, estalla
+hasta su alcance real y deja una **HOGUERA** de verdad. La explosión de la
+**BOMBA** también llega ya hasta donde mata. Los fantasmas que huyen del
+**PISOTÓN** llevan rayas de carrera y una gota de sudor los seis segundos. El
+**REBOTE** son puntas de flecha hacia fuera. **CAMPO** y **HOSPITAL** se ven en
+todo el equipo, no solo en el Soporte.
+
 ## 2026-09-23 · El rango cuenta con cualquier rol
 
 **TODOS LOS ROLES SUMAN AL RANGO**, también a solas. Jugar solo con TANQUE,

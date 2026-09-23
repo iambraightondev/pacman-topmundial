@@ -4758,20 +4758,73 @@
          * va a saltar, que bloquea, que llama, que barre) y con el mismo
          * molde para las cuatro no se distinguía ninguna. El 22 sep salieron
          * también TELARAÑA y BOMBA por lo mismo: un cuadrado de color no
-         * dice "esto te frena" ni "esto va a estallar". */
-        var ds = this.st[i], zonas = [
-          [ds.totem, '#ff7a1a', 0.7],
-          [ds.fuegoMeteoro, '#ff5a1f', H.METEORO_RADIO]
-        ];
-        for (var zi = 0; zi < zonas.length; zi++) {
-          var z = zonas[zi][0]; if (!z) continue;
-          var zx = z.c * T + T / 2, zy = z.r * T + T / 2 + Y;
-          ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = zonas[zi][1];
-          ctx.fillRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
-            zonas[zi][2] * T * 2, zonas[zi][2] * T * 2);
-          ctx.globalAlpha = 0.75; ctx.strokeStyle = zonas[zi][1]; ctx.lineWidth = 1;
-          ctx.strokeRect(zx - zonas[zi][2] * T, zy - zonas[zi][2] * T,
-            zonas[zi][2] * T * 2, zonas[zi][2] * T * 2); ctx.restore();
+         * dice "esto te frena" ni "esto va a estallar". Y el 23 sep, las dos
+         * últimas que quedaban: el TÓTEM y la HOGUERA del meteoro. Ya no
+         * queda ninguna zona con el recuadro de color. */
+        var ds = this.st[i];
+        /* EL TÓTEM: una torrecita plantada —peana, fuste con dos bandas y
+         * cabeza— con un OJO DE FUEGO arriba que se va cargando entre disparo
+         * y disparo y se pone blanco justo antes de soltar. Así se lee que es
+         * algo puesto ahí que dispara solo, y cuándo va a disparar. Parpadea
+         * el último segundo, que es el aviso de que se acaba. */
+        if (ds.totem) {
+          var tox = ds.totem.c * T + T / 2, toy = ds.totem.r * T + T / 2 + Y;
+          var toFin = ds.totem.t < 60 && Math.floor(tk / 5) % 2 === 0;
+          var toCarga = 1 - Math.max(0, Math.min(1, (ds.totem.cd || 0) / H.TOTEM_CADA));
+          ctx.save();
+          ctx.globalAlpha = toFin ? 0.35 : 1;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.beginPath(); ctx.ellipse(tox, toy + 5, 5, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#6b3a12'; ctx.fillRect(tox - 4.5, toy + 2.5, 9, 2.5);
+          ctx.fillStyle = '#a4581c'; ctx.fillRect(tox - 2.5, toy - 4, 5, 6.5);
+          ctx.fillStyle = '#ff9f1c'; ctx.fillRect(tox - 2.5, toy - 1.5, 5, 1); ctx.fillRect(tox - 2.5, toy + 0.8, 5, 0.8);
+          ctx.fillStyle = '#7a3f10'; ctx.fillRect(tox - 3.5, toy - 7.5, 7, 3.5);
+          ctx.shadowColor = '#ff9f1c'; ctx.shadowBlur = 3 + 6 * toCarga;
+          ctx.fillStyle = toCarga > 0.9 ? '#fff3c4' : '#ff9f1c';
+          ctx.beginPath(); ctx.arc(tox, toy - 5.8, 1 + toCarga, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+        /* LA HOGUERA del meteoro: mata a quien pise dentro durante cuatro
+         * segundos, así que tiene que parecer fuego y no un cuadrado de color.
+         * Brasa en el suelo hasta el borde real (el círculo es el alcance),
+         * siete lenguas de fuego que suben y bajan y pavesas que se escapan
+         * hacia arriba. Todo sale del reloj de la partida, sin azar: las
+         * repeticiones tienen que verse igual. Parpadea el último segundo. */
+        if (ds.fuegoMeteoro) {
+          var fgx = ds.fuegoMeteoro.c * T + T / 2, fgy = ds.fuegoMeteoro.r * T + T / 2 + Y;
+          var fgR = H.METEORO_RADIO * T;
+          var fgA = (ds.fuegoMeteoro.t < 60 && Math.floor(tk / 5) % 2 === 0) ? 0.4 : 1;
+          ctx.save();
+          var fgG = ctx.createRadialGradient(fgx, fgy, 1, fgx, fgy, fgR);
+          fgG.addColorStop(0, 'rgba(255, 120, 30, 0.4)');
+          fgG.addColorStop(0.7, 'rgba(170, 35, 10, 0.24)');
+          fgG.addColorStop(1, 'rgba(60, 10, 5, 0.05)');
+          ctx.globalAlpha = fgA; ctx.fillStyle = fgG;
+          ctx.beginPath(); ctx.arc(fgx, fgy, fgR, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 0.55 * fgA; ctx.strokeStyle = '#ff5a1f'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(fgx, fgy, fgR, 0, Math.PI * 2); ctx.stroke();
+          for (var fl = 0; fl < 7; fl++) {
+            var fla = fl * 2.4, fld = fgR * (0.15 + 0.6 * ((fl * 37) % 10) / 10);
+            var flx = fgx + Math.cos(fla) * fld, fly = fgy + Math.sin(fla) * fld;
+            var flh = 3.5 + 2 * Math.sin(tk / 4 + fl * 1.7);
+            ctx.globalAlpha = 0.9 * fgA; ctx.fillStyle = '#ff5a1f';
+            ctx.beginPath(); ctx.moveTo(flx - 2, fly + 1);
+            ctx.quadraticCurveTo(flx - 1.6, fly - flh * 0.6, flx, fly - flh);
+            ctx.quadraticCurveTo(flx + 1.6, fly - flh * 0.6, flx + 2, fly + 1);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#ffe66d';
+            ctx.beginPath(); ctx.moveTo(flx - 1, fly + 1);
+            ctx.quadraticCurveTo(flx, fly - flh * 0.55, flx + 1, fly + 1);
+            ctx.closePath(); ctx.fill();
+          }
+          ctx.fillStyle = '#ffb852';
+          for (var pv = 0; pv < 4; pv++) {
+            var pvT = ((tk + pv * 17) % 40) / 40;
+            ctx.globalAlpha = (1 - pvT) * 0.85 * fgA;
+            ctx.fillRect(fgx + Math.sin(pv * 2.1 + pvT * 3) * fgR * 0.6 - 0.5,
+              fgy - pvT * fgR * 1.2 - 0.5, 1, 1);
+          }
+          ctx.restore();
         }
         /* MINA: un artefacto plantado en el suelo, con su cuerpo, su aro y
          * tres patas, para que se lea como algo puesto ahí a propósito. El
@@ -5032,6 +5085,29 @@
           ctx.strokeStyle = '#ff3030'; ctx.setLineDash([2, 2]); ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.arc(mx, my, H.METEORO_RADIO * T, 0, Math.PI * 2); ctx.stroke();
           ctx.setLineDash([]); ctx.restore();
+          /* LA PIEDRA QUE CAE (23 sep): el aviso decía dónde, pero no que algo
+           * venía. Ahora baja en diagonal desde arriba con su cola de fuego y
+           * su sombra crece en el suelo: cuando la piedra toca la sombra, cae. */
+          var mcae = 1 - Math.max(0, Math.min(1, ds.meteoro.t / H.METEORO_AVISO));
+          var mAlto = 56 * (1 - mcae);
+          var mrx = mx + mAlto * 0.45, mry = Math.max(Y + 2, my - mAlto);
+          ctx.save();
+          ctx.globalAlpha = 0.2 + 0.4 * mcae; ctx.fillStyle = '#000000';
+          ctx.beginPath(); ctx.ellipse(mx, my + 1, 2 + 4 * mcae, 1 + 1.6 * mcae, 0, 0, Math.PI * 2); ctx.fill();
+          /* la cola: bolas de fuego cada vez más pequeñas y más apagadas */
+          ctx.globalCompositeOperation = 'lighter';     // el fuego suma luz
+          for (var mco = 6; mco >= 1; mco--) {
+            var mcx = mrx + mco * 1.6, mcy = mry - mco * 3.2 + ((tk + mco) % 3 === 0 ? 0.6 : 0);
+            ctx.globalAlpha = 1 - mco * 0.13;
+            ctx.fillStyle = mco < 3 ? '#ffe66d' : (mco < 5 ? '#ff9f1c' : '#ff5a1f');
+            ctx.beginPath(); ctx.arc(mcx, mcy, 3.2 - mco * 0.4, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 1; ctx.fillStyle = '#5a4030'; ctx.shadowColor = '#ff5a1f'; ctx.shadowBlur = 6;
+          ctx.beginPath(); ctx.arc(mrx, mry, 3.4, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0; ctx.fillStyle = '#8a6a50';
+          ctx.beginPath(); ctx.arc(mrx - 1, mry - 1, 1.2, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
         }
         /* LA RETÍCULA de apuntar (la R mantenida). Tiene que distinguirse de
          * un vistazo del aviso de caída de ahí arriba —que es el círculo rojo
@@ -5215,6 +5291,33 @@
           for (var es = 0; es < 3; es++) { var ea = tk / 5 + es * Math.PI * 2 / 3; ctx.fillRect(cg.x + Math.cos(ea) * 9 - 1, cg.y + Y - 8 + Math.sin(ea) * 3 - 1, 2, 2); }
           ctx.restore();
         }
+        if (this.huye[i] > 0) {
+          /* HUYENDO DEL PISOTÓN (23 sep). Son seis segundos en los que ese
+           * fantasma escapa del Tanque, y solo se veía la onda del primer
+           * medio segundo. Ahora lleva tres rayas de carrera por detrás, en
+           * el naranja del Tanque, y una gota de sudor que le resbala: se ve
+           * que va de huida. Parpadea el último medio segundo, cuando vuelve
+           * a perseguir. */
+          var huFin = this.huye[i] < 30 && Math.floor(tk / 4) % 2 === 0;
+          var hv = CFG.DIR_V[cg.dir] || { x: 0, y: 0 };
+          ctx.save();
+          ctx.globalAlpha = huFin ? 0.25 : 0.9;
+          ctx.strokeStyle = '#ffb852'; ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (var hl = -1; hl <= 1; hl++) {
+            var hlo = 9 + (tk + hl * 3 + 3) % 4;
+            var hox = cg.x - hv.x * hlo - hv.y * hl * 3, hoy = cg.y - hv.y * hlo + hv.x * hl * 3;
+            ctx.moveTo(hox, hoy + Y); ctx.lineTo(hox - hv.x * (hl ? 3 : 5), hoy - hv.y * (hl ? 3 : 5) + Y);
+          }
+          ctx.stroke();
+          var huG = (tk % 24) / 24;
+          ctx.globalAlpha = (huFin ? 0.25 : 0.9) * (1 - huG * 0.6);
+          ctx.fillStyle = '#bff4ff';
+          ctx.beginPath(); ctx.arc(cg.x + 7, cg.y + Y - 6 + huG * 4, 1.3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(cg.x + 5.8, cg.y + Y - 6.4 + huG * 4);
+          ctx.lineTo(cg.x + 7, cg.y + Y - 9 + huG * 4); ctx.lineTo(cg.x + 8.2, cg.y + Y - 6.4 + huG * 4); ctx.fill();
+          ctx.restore();
+        }
         if (this.ciegoDe(i)) {
           ctx.save(); ctx.strokeStyle = '#c9a4ff'; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.moveTo(cg.x - 5, cg.y + Y - 2); ctx.lineTo(cg.x - 1, cg.y + Y + 2);
@@ -5281,11 +5384,33 @@
           ctx.fillStyle = '#ff4058'; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(2, -3); ctx.lineTo(2, 3); ctx.closePath(); ctx.fill();
           ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(-5, -6); ctx.lineTo(1, -3); ctx.fill();
           ctx.beginPath(); ctx.moveTo(-2, 3); ctx.lineTo(-5, 6); ctx.lineTo(1, 3); ctx.fill();
+        } else if (cp.tipo === 'totem') {
+          /* EL DARDO DEL TÓTEM (23 sep): era la misma bolita que la bola
+           * guiada, en otro color. Ahora es una punta de fuego naranja con
+           * cola, que mira a su presa: se ve de dónde sale y a quién va. */
+          var tgT = cp.objetivo >= 0 ? G.ghosts[cp.objetivo] : null;
+          ctx.translate(cp.x, cp.y + Y);
+          ctx.rotate(tgT ? Math.atan2(tgT.y - cp.y, tgT.x - cp.x) : 0);
+          ctx.globalAlpha = 0.45; ctx.fillStyle = '#ff5a1f';
+          ctx.beginPath(); ctx.moveTo(-2, -1.6); ctx.lineTo(-8 - (tk % 3), 0); ctx.lineTo(-2, 1.6); ctx.fill();
+          ctx.globalAlpha = 1; ctx.fillStyle = '#ff9f1c'; ctx.shadowColor = '#ff9f1c'; ctx.shadowBlur = 6;
+          ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -2.4); ctx.lineTo(-0.8, 0); ctx.lineTo(-2, 2.4); ctx.closePath(); ctx.fill();
+          ctx.shadowBlur = 0; ctx.fillStyle = '#fff3c4';
+          ctx.beginPath(); ctx.arc(1, 0, 0.9, 0, Math.PI * 2); ctx.fill();
         } else {
-          var pcCol = cp.tipo === 'totem' ? '#ff9f1c' : '#8b3dff';
-          ctx.fillStyle = pcCol; ctx.shadowColor = pcCol; ctx.shadowBlur = 9;
-          ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, 3, 0, Math.PI * 2); ctx.fill();
-          ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.arc(cp.x, cp.y + Y, 7 + Math.sin(tk / 3), 0, Math.PI * 2); ctx.strokeStyle = pcCol; ctx.stroke();
+          /* LA BOLA GUIADA: una esfera morada con el corazón claro y dos
+           * chispas que la orbitan. Es el hechizo que no falla, y así no se
+           * confunde con los dardos del tótem ni con el fuego de la Q. */
+          ctx.translate(cp.x, cp.y + Y);
+          ctx.fillStyle = '#8b3dff'; ctx.shadowColor = '#8b3dff'; ctx.shadowBlur = 10;
+          ctx.beginPath(); ctx.arc(0, 0, 3.2, 0, Math.PI * 2); ctx.fill();
+          ctx.shadowBlur = 0; ctx.fillStyle = '#e8d4ff';
+          ctx.beginPath(); ctx.arc(-0.6, -0.6, 1.3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#c9a4ff';
+          for (var bo = 0; bo < 2; bo++) {
+            var boa = tk / 4 + bo * Math.PI;
+            ctx.beginPath(); ctx.arc(Math.cos(boa) * 6, Math.sin(boa) * 3.5, 1.1, 0, Math.PI * 2); ctx.fill();
+          }
         }
         ctx.restore();
       }
@@ -5366,6 +5491,28 @@
           ctx.beginPath();
           ctx.arc(f.x, f.y + Y, 3 + (1 - q) * 10, 0, Math.PI * 2);
           ctx.stroke();
+        } else if (f.t === 'bomba' || f.t === 'meteoro') {
+          /* EL ESTALLIDO (23 sep) de la BOMBA y del METEORO. Antes era el aro
+           * genérico, que no pasaba de trece píxeles y hacía parecer el golpe
+           * más pequeño de lo que es. Ahora la onda llega JUSTO al alcance
+           * real, con un fogonazo que llena el círculo y ocho cascotes que
+           * salen despedidos: lo que queda dentro, muere. */
+          var exR = (f.t === 'meteoro' ? H.METEORO_RADIO : H.BOMBA_RADIO) * T;
+          var exAv = 1 - Math.max(0, q);
+          var exCol = f.t === 'meteoro' ? '#ff5a1f' : '#ff4058';
+          ctx.globalAlpha = Math.max(0, 1 - exAv * 2.2) * 0.7;
+          ctx.fillStyle = f.t === 'meteoro' ? '#ffb852' : '#ffe66d';
+          ctx.beginPath(); ctx.arc(f.x, f.y + Y, exR * (0.55 + 0.45 * exAv), 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = Math.max(0, q);
+          ctx.strokeStyle = exCol; ctx.shadowColor = exCol; ctx.shadowBlur = 8;
+          ctx.lineWidth = 1 + 2 * Math.max(0, q);
+          ctx.beginPath(); ctx.arc(f.x, f.y + Y, exR * Math.min(1, 0.4 + exAv * 0.9), 0, Math.PI * 2); ctx.stroke();
+          ctx.shadowBlur = 0;
+          for (var ex = 0; ex < 8; ex++) {
+            var exa = ex * Math.PI / 4 + (f.tot % 5) * 0.1, exd = exR * (0.3 + exAv * 0.9);
+            ctx.fillStyle = f.t === 'meteoro' ? (ex % 2 ? '#ffb852' : '#6b4a32') : (ex % 2 ? '#ffe66d' : exCol);
+            ctx.fillRect(f.x + Math.cos(exa) * exd - 1, f.y + Y + Math.sin(exa) * exd - 1, 2, 2);
+          }
         } else if (f.t === 'rayo' || f.t === 'chispa' || f.t === 'gancho' || f.t === 'cadena' ||
             f.t === 'cadena_rota' || f.t === 'relevo' || f.t === 'gravedad' ||
             f.t === 'empujon' || f.t === 'arcano_contagio' ||
@@ -5632,8 +5779,25 @@
         for (var pi = 0; pi < 7; pi++) { var pa = pi * Math.PI * 2 / 7; ctx.beginPath(); ctx.moveTo(x + Math.cos(pa) * 7, y + Math.sin(pa) * 7); ctx.lineTo(x + Math.cos(pa) * 11, y + Math.sin(pa) * 11); ctx.stroke(); }
       }
       if (s.rebote > 0) {
-        ctx.strokeStyle = '#ffb852'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(x, y, 10 + (tk % 18) / 3, 0, Math.PI * 2); ctx.stroke();
+        /* REBOTE (23 sep): era un aro liso, igual que los de la estela o el
+         * campo. Lo que dice esta habilidad es "lo que me toque sale
+         * despedido", así que ahora son seis puntas de flecha hacia FUERA
+         * sobre un aro que gira, latiendo. Parpadea el último segundo. */
+        var rbFin = s.rebote < 60 && Math.floor(tk / 5) % 2 === 0;
+        ctx.save();
+        ctx.globalAlpha = rbFin ? 0.3 : 0.95;
+        ctx.strokeStyle = '#ffb852'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = '#ffb852';
+        for (var rb = 0; rb < 6; rb++) {
+          var rba = rb * Math.PI / 3 + tk / 25, rbp = 13.5 + 1.3 * Math.sin(tk / 5 + rb);
+          ctx.beginPath();
+          ctx.moveTo(x + Math.cos(rba) * rbp, y + Math.sin(rba) * rbp);
+          ctx.lineTo(x + Math.cos(rba - 0.3) * 10.5, y + Math.sin(rba - 0.3) * 10.5);
+          ctx.lineTo(x + Math.cos(rba + 0.3) * 10.5, y + Math.sin(rba + 0.3) * 10.5);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
       }
       if (s.terremoto > 0) {
         ctx.strokeStyle = 'rgba(255,184,82,0.55)'; ctx.lineWidth = 1;
@@ -5643,11 +5807,39 @@
         ctx.strokeStyle = 'rgba(255,184,82,0.55)'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
         ctx.beginPath(); ctx.arc(x, y, H.FORTALEZA_RADIO * T, tk / 20, tk / 20 + Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
       }
-      if (s.campo > 0 || s.hospital > 0) {
-        var au = s.hospital > 0 ? '#ffffff' : '#2bff88';
-        ctx.strokeStyle = au; ctx.globalAlpha = 0.45 + 0.25 * Math.sin(tk / 4); ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.stroke();
-        if (s.hospital > 0) { ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4); ctx.stroke(); }
+      /* CAMPO y HOSPITAL (23 sep). Protegen a TODO el equipo, pero el aro
+       * salía solo alrededor del Soporte que los lanzó: el compañero no sabía
+       * que estaba cubierto. Ahora la señal va en cada Pac-Man mientras
+       * alguien del equipo tenga uno encendido. CAMPO es una burbuja verde
+       * con su brillo (nadie muere dentro); HOSPITAL, una cruz verde
+       * flotando encima (quien caiga, vuelve). Parpadean el último segundo. */
+      var eqCampo = 0, eqHosp = 0;
+      for (var eq = 0; eq < this.st.length; eq++) {
+        if (!this.st[eq]) continue;
+        eqCampo = Math.max(eqCampo, this.st[eq].campo || 0);
+        eqHosp = Math.max(eqHosp, this.st[eq].hospital || 0);
+      }
+      if (eqCampo > 0) {
+        var caFin = eqCampo < 60 && Math.floor(tk / 5) % 2 === 0;
+        ctx.save();
+        ctx.globalAlpha = caFin ? 0.08 : 0.16; ctx.fillStyle = '#2bff88';
+        ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = caFin ? 0.3 : 0.75; ctx.strokeStyle = '#2bff88'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#eafff2'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, 9.5, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
+        ctx.restore();
+      }
+      if (eqHosp > 0) {
+        var hoFin = eqHosp < 60 && Math.floor(tk / 5) % 2 === 0;
+        var hoY = y - 16 + Math.sin(tk / 8);
+        ctx.save();
+        ctx.globalAlpha = hoFin ? 0.3 : 1;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - 3.5, hoY - 1.5, 7, 3); ctx.fillRect(x - 1.5, hoY - 3.5, 3, 7);
+        ctx.fillStyle = '#2bff88';
+        ctx.fillRect(x - 2.5, hoY - 0.5, 5, 1); ctx.fillRect(x - 0.5, hoY - 2.5, 1, 5);
+        ctx.restore();
       }
       ctx.restore();
     },
