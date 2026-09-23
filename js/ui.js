@@ -6388,7 +6388,25 @@
         }
       }
       function pintar() {
-        var rol = o.rol(), carga = o.carga() || [], info = H.ROL_INFO[rol], col = info.color;
+        var rol = o.rol(), carga = o.carga() || [];
+        /* SIN ROL (el J2 hasta que se le elija uno): solo las cartas de los
+         * roles, ninguna encendida, y el aviso de que falta elegir */
+        raiz.classList.toggle('sin-rol', !rol);
+        if (!rol) {
+          raiz.style.setProperty('--rol', '#9fb4ff');
+          for (var sid in botRol) {
+            if (!botRol.hasOwnProperty(sid)) continue;
+            var sr = botRol[sid], squien = o.ocupado ? o.ocupado(sid) : '';
+            sr.b.classList.remove('active');
+            sr.b.classList.toggle('ocupado', !!squien);
+            sr.b.disabled = !!squien;
+            sr.quien.textContent = squien || '';
+          }
+          riLema.textContent = o.sinRol || 'ELIGE UN ROL';
+          riMae.textContent = '';
+          return;
+        }
+        var info = H.ROL_INFO[rol], col = info.color;
         raiz.style.setProperty('--rol', col);
         /* roles */
         for (var id in botRol) {
@@ -10759,6 +10777,8 @@
         if (tit) {
           tit.classList.add('go-titulo');
           if (o.tono) tit.classList.add('tono-' + o.tono);
+          // un título largo (CLASIFICATORIA) en letra más chica: si no, se come el final
+          if (String(o.title || '').length > 10) tit.classList.add('go-titulo-largo');
         }
       } else if (p.removeAttribute) {
         p.removeAttribute('data-tono');
@@ -12877,12 +12897,23 @@
       var conFantasma = (s.vsGhost2 >= 0 && s.vsGhost2 < 4);
 
       function arranca(jugadores) {
+        /* A DOS sin rol para el J2: se le lleva a su pestaña a elegirlo (si
+         * lleva un fantasma no le hace falta: no tiene poderes de rol) */
+        if (jugadores === 2 && !conFantasma && !roles[1]) {
+          mirando = 1;
+          if (repintar) repintar();
+          return;
+        }
         self.resumeAudio();
         self.hidePrompt();
+        /* el J2 sin rol (a uno, o con fantasma) sale con uno cualquiera que no
+         * sea el del J1: la partida necesita uno, aunque no lo vaya a usar */
+        var rol2 = roles[1] || otroRol(roles[0]);
+        var carga2 = roles[1] ? cargas[1] : cargaDe(rol2, s.habLoadout2);
         function go() {
           self.hideAll();
-          var opts = { players: jugadores, hab: true, clasif: clasif, roles: [roles[0], roles[1]],
-            loadouts: [cargas[0].join(','), cargas[1].join(',')] };
+          var opts = { players: jugadores, hab: true, clasif: clasif, roles: [roles[0], rol2],
+            loadouts: [cargas[0].join(','), carga2.join(',')] };
           if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
           window.PM.Game.newGame(opts);
         }
@@ -12890,19 +12921,22 @@
         go();
       }
 
-      /* Los ROLES: cada jugador elige el suyo (se recuerda en settings) */
-      var roles = [H.rol(s.habRol1), H.rol(s.habRol2)];
-      // ningún rol repetido: si los dos traen el mismo, al J2 se le cambia
-      if (roles[0] === roles[1]) {
-        for (var ri = 0; ri < H.ROL_IDS.length; ri++) {
-          if (H.ROL_IDS[ri] !== roles[0]) { roles[1] = H.ROL_IDS[ri]; break; }
-        }
-      }
+      /* Los ROLES. El del J1 se recuerda; el J2 empieza SIN ROL (23 sep):
+       * antes arrancaba con el suyo guardado y ese rol le salía bloqueado al
+       * J1, que tenía que irse a la pestaña del J2 a cambiárselo para poder
+       * cogerlo. Ahora el J2 no bloquea nada: solo elige, y si el J1 le quita
+       * el rol, se queda sin él. */
+      var roles = [H.rol(s.habRol1), null];
       var mirando = 0;          // de qué jugador es el armario
+      var repintar = null;      // el pintar() del armario, cuando ya existe
       var cargas = [
         cargaDe(roles[0], s.habLoadout1),
-        cargaDe(roles[1], s.habLoadout2)
+        cargaDe(otroRol(roles[0]), s.habLoadout2)
       ];
+      function otroRol(r) {
+        for (var ri = 0; ri < H.ROL_IDS.length; ri++) if (H.ROL_IDS[ri] !== r) return H.ROL_IDS[ri];
+        return 'tanque';
+      }
 
       function cargaDe(rol, raw) {
         var cat = H.catalogoDe(rol), ids = String(raw || '').split(','), out = [];
@@ -12946,8 +12980,10 @@
             rol: function () { return roles[mirando]; },
             carga: function () { return cargas[mirando]; },
             onRol: function (id) {
+              // el J1 manda: si coge el rol del J2, el J2 se queda sin él
+              if (mirando === 0 && roles[1] === id) roles[1] = null;
               roles[mirando] = id;
-              cargas[mirando] = cargaDe(id, cargas[mirando].join(','));
+              cargas[mirando] = cargaDe(id, mirando ? s.habLoadout2 : cargas[0].join(','));
               s['habRol' + (mirando + 1)] = id;
               s['habLoadout' + (mirando + 1)] = cargas[mirando].join(',');
               saveSettings();
@@ -12959,10 +12995,12 @@
               saveSettings();
               pintar();
             },
-            // ningún rol repetido: el que lleva el otro jugador sale apagado
+            // ningún rol repetido, pero solo bloquea el J1: al J2 le sale
+            // apagado el del J1; al J1, nunca nada
             ocupado: function (id) {
-              return (!conFantasma && roles[1 - mirando] === id) ? (mirando ? 'EL J1' : 'EL J2') : '';
-            }
+              return (mirando === 1 && roles[0] === id) ? 'EL J1' : '';
+            },
+            sinRol: 'ELIGE EL ROL DEL J2 · SOLO HACE FALTA PARA DOS JUGADORES'
           });
           p.appendChild(arm.el);
 
@@ -12975,15 +13013,21 @@
 
           function pintar() {
             tabs.forEach(function (b, j) {
-              var rolJ = H.ROL_INFO[roles[j]];
+              var rolJ = roles[j] ? H.ROL_INFO[roles[j]] : null;
               b.textContent = (j ? 'J2' : 'J1') + ' · ' +
-                ((j === 1 && conFantasma) ? ('LLEVA A ' + CFG.VS.NAMES[s.vsGhost2]) : rolJ.name);
-              b.style.setProperty('--rol', (j === 1 && conFantasma) ? '#888' : rolJ.color);
+                ((j === 1 && conFantasma) ? ('LLEVA A ' + CFG.VS.NAMES[s.vsGhost2])
+                  : (rolJ ? rolJ.name : 'SIN ROL'));
+              b.style.setProperty('--rol', (j === 1 && conFantasma) ? '#888' : (rolJ ? rolJ.color : '#9fb4ff'));
               b.classList.toggle('active', mirando === j);
               b.disabled = (j === 1 && conFantasma);
             });
-            p.style.setProperty('--brief', H.ROL_INFO[roles[mirando]].color);
+            p.style.setProperty('--brief', roles[mirando] ? H.ROL_INFO[roles[mirando]].color : '#9fb4ff');
             arm.pintar();
+            if (mirando === 1 && !roles[1]) {
+              aviso.textContent = 'EL J2 NECESITA UN ROL PARA JUGAR A DOS';
+              aviso.classList.remove('ok');
+              return;
+            }
             if (clasif) {
               aviso.textContent = self.textoRangoSolo();
               aviso.classList.add('ok');
@@ -12995,6 +13039,7 @@
               : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y TROFEOS';
             aviso.classList.toggle('ok', !practica);
           }
+          repintar = pintar;
           pintar();
         },
         buttons: [

@@ -7117,3 +7117,17 @@ body { font-size-adjust: 0.56; }
   .arm-slot-nombre { font-size: 6px; letter-spacing: 0; }
   .btn.arm-slot { padding: 8px 2px 6px; }
 }
+
+/* 23 sep, tanda 2 del armario */
+/* un título arcade largo (CLASIFICATORIA) cabe entero */
+#prompt.arcade .panel-title.go-titulo.go-titulo-largo { font-size: clamp(26px, min(5.4vw, 8vh), 70px); }
+/* sin el contorno amarillo del foco: aquí el foco se ve en el borde, en el color del rol */
+.arm .btn:focus, .arm-jugadores .btn:focus { outline: none; }
+.arm .btn:focus-visible, .arm-jugadores .btn:focus-visible { outline: 2px solid var(--rol); outline-offset: 2px; }
+/* la maestría y la pasiva, en el color del rol y no en amarillo */
+.arm-ri-mae { color: var(--rol); opacity: 0.85; }
+.arm-pasiva { color: var(--rol); opacity: 0.9; }
+/* sin rol (el J2 hasta que elija): solo las cartas */
+.arm.sin-rol .arm-slots, .arm.sin-rol .arm-cajon, .arm.sin-rol .arm-pasiva { display: none; }
+.arm.sin-rol .arm-rolinfo { justify-content: center; }
+.arm.sin-rol .btn.arm-rol { opacity: 0.85; }

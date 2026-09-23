@@ -82,6 +82,33 @@
       circulo(c, x + r * 0.35, y - r * 0.1, r * 0.25, BLANCO);
     }
   }
+  /* Una boca con COLMILLOS de verdad: el Pac-Man con los dientes a lo largo
+   * de cada labio, apuntando hacia dentro, y recortados por el propio
+   * círculo (como el póster de DESATADO). n dientes por labio. */
+  function bocaConColmillos(c, x, y, r, color, ang, n) {
+    pac(c, x, y, r, color, ang);
+    c.save();
+    c.beginPath();
+    c.arc(x, y, r * 0.98, 0, PI * 2);
+    c.clip();
+    [1, -1].forEach(function (signo) {
+      var ux = Math.cos(signo * ang), uy = Math.sin(signo * ang);
+      var nx = -uy * signo, ny = ux * signo;          // hacia dentro de la boca
+      var paso = 0.62 / n;
+      for (var k = 0; k < n; k++) {
+        var a0 = r * (0.36 + k * paso), a1 = a0 + r * paso * 0.92;
+        var m = (a0 + a1) / 2, largo = r * (k === n - 1 ? 0.3 : 0.22);
+        c.beginPath();
+        c.moveTo(x + ux * a0, y + uy * a0);
+        c.lineTo(x + ux * a1, y + uy * a1);
+        c.lineTo(x + ux * m - nx * largo, y + uy * m - ny * largo);
+        c.closePath();
+        c.fillStyle = BLANCO;
+        c.fill();
+      }
+    });
+    c.restore();
+  }
   function rayo(c, x, y, e, color) {
     poli(c, [[x + 6 * e, y - 30 * e], [x - 14 * e, y + 4 * e], [x - 1 * e, y + 4 * e],
              [x - 6 * e, y + 30 * e], [x + 14 * e, y - 4 * e], [x + 1 * e, y - 4 * e]], color);
@@ -106,10 +133,8 @@
   var ROLES = {
     /* ASESINO: la boca con colmillos, lo que puntúa */
     asesino: function (c, col) {
-      pac(c, 50, 52, 26, col, 0.6);
-      poli(c, [[58, 40], [66, 47], [60, 50]], BLANCO);
-      poli(c, [[58, 64], [66, 57], [60, 54]], BLANCO);
-      circulo(c, 48, 38, 4, '#000');
+      bocaConColmillos(c, 48, 50, 28, col, 0.62, 2);
+      circulo(c, 46, 35, 4, '#000');
     },
     /* TANQUE: el escudo */
     tanque: function (c, col) {
@@ -156,11 +181,7 @@
   var HAB = {
     /* --- ASESINO --- */
     mordisco: function (c, k) {
-      pac(c, 46, 50, 32, k, 0.7);
-      for (var i = 0; i < 3; i++) {
-        poli(c, [[52 + i * 9, 34 + i * 4], [60 + i * 9, 36 + i * 4], [55 + i * 9, 44 + i * 3]], BLANCO);
-        poli(c, [[52 + i * 9, 66 - i * 4], [60 + i * 9, 64 - i * 4], [55 + i * 9, 56 - i * 3]], BLANCO);
-      }
+      bocaConColmillos(c, 44, 50, 38, k, 0.66, 3);
     },
     shuriken: function (c, k) {
       estrella(c, 50, 50, 38, 12, 4, k, PI / 4);
