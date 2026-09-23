@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Clon, puente y yunque en party
+
+**TRES FLECOS DE LA PARTY.** El **CLON** de un invitado se quedaba plantado
+en su pantalla: ahora anda igual que en las demás. Si el **PUENTE** de otro
+se cerraba contigo dentro, a veces te quedabas metido en el muro: ya te saca.
+Y el anfitrión te rompía el **YUNQUE** nada más ponerlo porque tu posición le
+llega con retraso: ahora lo rompes tú al moverte y se lo cuentas.
+
+Otra vez hace falta que toda la party tenga esta versión.
+
 ## 2026-09-23 · En party, lo que te hace otro te llega de verdad
 
 **LO QUE VEÍA EL ANFITRIÓN Y EL INVITADO NO TENÍA.** Cada invitado manda en su

@@ -4543,7 +4543,7 @@
        * Hab.aplicarResumen(). */
       if (this.hab && window.PM.Hab && s.hb) {
         window.PM.Hab.aplicarResumen(s.hb, this.isSpec() ? -1 : this.localIdx);
-        if (s.hx) window.PM.Hab.aplicarRoles(s.hx, this.isSpec() ? -1 : this.localIdx);
+        if (s.hx) window.PM.Hab.aplicarRoles(s.hx, this.isSpec() ? -1 : this.localIdx, this);
         if (window.PM.Jefe && s.hasOwnProperty('jf')) window.PM.Jefe.aplicar(this, s.jf);
       }
 

@@ -11865,6 +11865,74 @@
     } finally { G.netRole = rol; G.localIdx = idx; G.hostEvt = evt; }
   });
 
+  test('RED: el CLON de un invitado anda en su pantalla', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['mago'], ['fuego,clon,runa,tormenta']); G.roles = ['mago'];
+    var rol = G.netRole, idx = G.localIdx, send = G.netSend;
+    G.netRole = 'guest'; G.localIdx = 0; G.netSend = function () {};
+    try {
+      H.st[0].clon = { c: 13, r: 23, x: 13 * CFG.TILE + CFG.TILE / 2, y: 23 * CFG.TILE + CFG.TILE / 2,
+        d: DR.RIGHT, t: 300 };
+      var x0 = H.st[0].clon.x;
+      for (var i = 0; i < 10; i++) H.pasoRoles(G, true);
+      ok(H.st[0].clon && H.st[0].clon.x !== x0, 'el doble se mueve aunque no mande esta máquina');
+    } finally { G.netRole = rol; G.localIdx = idx; G.netSend = send; }
+  });
+
+  test('RED: el anfitrión no le rompe el YUNQUE a un invitado por su posición atrasada', function () {
+    var H = window.PM.Hab;
+    partida(2); G.hab = true;
+    H.empezar(true, 2, ['mago', 'tanque'], ['fuego,portal,runa,tormenta', 'pisoton,yunque,provocar,arrollar']);
+    G.roles = ['mago', 'tanque'];
+    var rol = G.netRole, idx = G.localIdx, auth = G.isLocalAuth, send = G.netSend, mandado = [];
+    G.netRole = 'host'; G.localIdx = 0;
+    G.isLocalAuth = function (j) { return j === 0; };
+    try {
+      var p = ponPac(1, 13, 23, DR.RIGHT);
+      ok(H.yunque(G, 1), 'el invitado planta el yunque');
+      p.x += CFG.TILE / 2;                     // la posición buena llega tarde
+      H.pasoRoles(G, true);
+      ok(H.st[1].yunque > 0, 'el anfitrión no lo rompe por el salto de la posición');
+      H.peticionGasto(G, 1, { t: 'habGasta', c: 'yunque', j: 1 });
+      eq(H.st[1].yunque, 0, 'se rompe cuando el invitado dice que se ha movido');
+      /* y en la máquina del invitado, al moverse, lo avisa */
+      G.netRole = 'guest'; G.localIdx = 1;
+      G.isLocalAuth = function (j) { return j === 1; };
+      G.netSend = function (t, d) { mandado.push(d); };
+      ok(H.yunque(G, 1), 'otra vez');
+      p.x += CFG.TILE;
+      H.pasoRoles(G, true);
+      eq(H.st[1].yunque, 0, 'en su pantalla se rompe al moverse');
+      ok(mandado.some(function (d) { return d.t === 'habGasta' && d.c === 'yunque'; }), 'y se lo cuenta al anfitrión');
+    } finally { G.netRole = rol; G.localIdx = idx; G.isLocalAuth = auth; G.netSend = send; }
+  });
+
+  test('RED: el PUENTE de otro que cierra la foto saca al invitado del muro', function () {
+    var H = window.PM.Hab;
+    partida(2); G.hab = true;
+    H.empezar(true, 2, ['soporte', 'mago'], ['hielo,puente,aliado,vida', 'fuego,portal,runa,tormenta']);
+    G.roles = ['soporte', 'mago'];
+    var rol = G.netRole, idx = G.localIdx, auth = G.isLocalAuth;
+    G.netRole = 'guest'; G.localIdx = 1;
+    G.isLocalAuth = function (j) { return j === 1; };
+    try {
+      /* un muro cualquiera con pasillo a los dos lados */
+      var hueco = null;
+      for (var r = 1; r < CFG.ROWS - 1 && !hueco; r++) for (var c = 1; c < CFG.COLS - 1 && !hueco; c++) {
+        if (!CFG.isOpen(c, r, false) && CFG.isOpen(c - 1, r, false) && CFG.isOpen(c + 1, r, false)) hueco = { c: c, r: r };
+      }
+      ok(hueco, 'hay un muro de una casilla');
+      H.st[0].puente = { cs: [hueco], t: 100, de: { c: hueco.c - 1, r: hueco.r }, a: { c: hueco.c + 1, r: hueco.r } };
+      var p = ponPac(1, hueco.c, hueco.r, DR.RIGHT);
+      var foto = H.resumenRoles();
+      foto.ct.st[0].puente = null;             // el anfitrión ya lo ha cerrado
+      H.aplicarRoles(foto, 1, G);
+      eq(H.st[0].puente, null, 'la foto lo cierra');
+      ok(p.tileX() !== hueco.c || p.tileY() !== hueco.r, 'y el invitado no se queda dentro de la pared');
+    } finally { G.netRole = rol; G.localIdx = idx; G.isLocalAuth = auth; }
+  });
+
   test('AJUSTES: el botín de Carroña lo coge cualquiera', function () {
     var H = window.PM.Hab;
     partida(2); G.hab = true;

@@ -2299,6 +2299,11 @@
       switch (d.t) {
         case 'habGasta':
           if (d.c === 'cadena' && this.estado(j)) this.dar(G, j, 'cadena');
+          /* su YUNQUE: se ha movido en su pantalla, que es la que vale */
+          if (d.c === 'yunque' && j === who && this.estado(j) && this.estado(j).yunque > 0) {
+            this.estado(j).yunque = 0;
+            if (G.pacs[j]) this.efecto('yunque_roto', G.pacs[j].x, G.pacs[j].y, 18);
+          }
           break;
         case 'habEmpuja':
           g = G.ghosts[d.g | 0];
@@ -3643,6 +3648,18 @@
       s.clon = { c: p.tileX(), r: p.tileY(), x: p.x, y: p.y, d: dir, t: H.CLON_TICKS };
       this.efecto('clon', p.x, p.y, 28); sonDe(G, idx, 'playStealth'); return true;
     },
+    /* Un paso del CLON: recto, y media vuelta al topar con una pared */
+    moverClon: function (cl) {
+      var cv = CFG.DIR_V[cl.d] || { x: 0, y: 0 };
+      var cnx = cl.x + cv.x * 1.1, cny = cl.y + cv.y * 1.1;
+      var cnc = Math.floor(cnx / T), cnr = Math.floor(cny / T);
+      if (cnx < 0) cnx += CFG.COLS * T; else if (cnx >= CFG.COLS * T) cnx -= CFG.COLS * T;
+      if (cnr < 0 || cnr >= CFG.ROWS || !CFG.isOpen(CFG.wrapCol(cnc), cnr, false)) {
+        cl.d = (cl.d + 2) % 4;
+      } else {
+        cl.x = cnx; cl.y = cny; cl.c = Math.floor(cnx / T); cl.r = Math.floor(cny / T);
+      }
+    },
     totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0 }; this.efecto('totem', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
     /* E — GRAVEDAD: los junta para rematarlos (21 sep). Antes teletransportaba
      * de golpe a tres casillas y aturdía un segundo: como el salto era
@@ -4338,11 +4355,17 @@
         if (s.cadena > 0) s.cadena--; else s.cadenaCon = -1;
         if (s.campo > 0) s.campo--;
         if (s.hospital > 0) s.hospital--;
+        /* YUNQUE: se rompe al moverse, y eso lo mira quien manda en ese
+         * Pac-Man. El anfitrión, con la posición de un invitado —que le llega
+         * a saltos y con retraso—, lo rompía nada más ponerlo; ahora le cree,
+         * y el invitado le avisa cuando se le rompe de verdad. */
         if (s.yunque > 0) {
           var yp = G.pacs[i];
-          if (!yp || this.distancia(yp.x, yp.y, s.yunqueX, s.yunqueY) > 1) {
+          var yAjeno = G.netRole === 'host' && G.isLocalAuth && !G.isLocalAuth(i);
+          if (!yp || (!yAjeno && this.distancia(yp.x, yp.y, s.yunqueX, s.yunqueY) > 1)) {
             s.yunque = 0;
             if (yp) this.efecto('yunque_roto', yp.x, yp.y, 18);
+            if (G.netRole === 'guest' && i === G.localIdx) G.netSend('gevt', { t: 'habGasta', c: 'yunque', j: i });
           } else s.yunque--;
         }
         if (s.pielPiedra > 0) s.pielPiedra--;
@@ -4384,6 +4407,13 @@
             s.meteoro = null;
           }
           if (s.totem && s.totem.t <= 0) s.totem = null;
+          /* El CLON anda también aquí: el suyo el invitado no lo toma de la
+           * foto, y como el paso solo lo daba quien manda, en su pantalla se
+           * quedaba plantado donde salió. Anda igual que en la del anfitrión
+           * (recto, rebotando en las paredes); el reventón lo decide él y
+           * llega por su aviso ('habDar'). Los de los demás los corrige la
+           * foto doce veces por segundo. */
+          if (s.clon) this.moverClon(s.clon);
         }
         if (s.cruce > 0) s.cruce--;
         if (s.arrollaRed > 0) s.arrollaRed--;
@@ -4510,15 +4540,7 @@
           s.totem.cd = H.TOTEM_CADA;
         }
         if (s.clon) {
-          var cv = CFG.DIR_V[s.clon.d] || { x: 0, y: 0 };
-          var cnx = s.clon.x + cv.x * 1.1, cny = s.clon.y + cv.y * 1.1;
-          var cnc = Math.floor(cnx / T), cnr = Math.floor(cny / T);
-          if (cnx < 0) cnx += CFG.COLS * T; else if (cnx >= CFG.COLS * T) cnx -= CFG.COLS * T;
-          if (cnr < 0 || cnr >= CFG.ROWS || !CFG.isOpen(CFG.wrapCol(cnc), cnr, false)) {
-            s.clon.d = (s.clon.d + 2) % 4;
-          } else {
-            s.clon.x = cnx; s.clon.y = cny; s.clon.c = Math.floor(cnx / T); s.clon.r = Math.floor(cny / T);
-          }
+          this.moverClon(s.clon);
           var cercaClon = this.ghostsEn(G, s.clon.c, s.clon.r, 0.7);
           /* EL REY TAMBIÉN SE CREE EL CLON: ya lo persigue (Hab.objetivo lo
            * mira sin preguntar quién es), así que lo único que faltaba era
@@ -4735,7 +4757,7 @@
                po: po, ru: ru, bl: bl, pl: pl, ct: ct };
     },
 
-    aplicarRoles: function (hx, mioIdx) {
+    aplicarRoles: function (hx, mioIdx, G) {
       if (!this.on || !hx) return;
       var i, k;
       /* los dos últimos llegaron con la CORAZA (20 sep): una foto vieja
@@ -4788,6 +4810,11 @@
         for (i = 0; ct.st && i < ct.st.length && i < this.st.length; i++) {
           var cs = ct.st[i], ds = this.st[i];
           if (i === mioIdx) continue;
+          /* El PUENTE de otro que el anfitrión ya ha cerrado: si la foto
+           * llega antes de que aquí se agote el reloj, se borraba sin
+           * cerrarlo, y quien estuviera dentro del muro se quedaba ahí.
+           * cerrarPuente solo saca de la pared al jugador de esta máquina. */
+          if (G && ds.puente && !cs.puente) this.cerrarPuente(G, ds.puente);
           for (var ck in cs) if (cs.hasOwnProperty(ck)) ds[ck] = cs[ck];
         }
       }

@@ -41,10 +41,9 @@ Todo construido, probado y subido; nada a medias. Detalle en CHANGELOG.
    todas las pantallas, y si la hoguera (hasta 5 casillas de radio) es mucho.
 2. Los dibujos nuevos en movimiento, sobre todo la roca del meteoro.
 
-**Cabos sueltos de red (menores, sin tocar):**
-- CLON de un invitado: en su pantalla no se mueve.
-- PUENTE: en un caso raro el invitado puede quedarse dentro del muro.
-- YUNQUE: el anfitrión lo rompe con la posición atrasada del invitado.
+**Cabos sueltos de red: ARREGLADOS (23 sep, mañana).** El CLON del
+invitado ya anda en su pantalla; el PUENTE de otro que cierra la foto lo
+saca del muro; el YUNQUE de un invitado lo rompe él (aviso nuevo, **PROTO 17**).
 
 ### DONDE SE DEJÓ (22 sep, tarde): TROFEOS, MAESTRÍAS DE ROL Y RANGO
 

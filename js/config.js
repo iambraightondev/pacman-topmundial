@@ -2619,8 +2619,9 @@
      * AL INSTANTE (el mensaje 'gir' del anfitrión y la 'g' del de posición);
      * la 16, LO QUE SE LE HACE AL JUGADOR DE OTRO (23 sep: 'habDar' del
      * anfitrión, habGasta/habEmpuja/habRebote/habHospital del invitado, la
-     * 'ap' del METEORO en la posición y los poderes 'h' en el saludo). */
-    PROTO: 16,
+     * 'ap' del METEORO en la posición y los poderes 'h' en el saludo); la 17,
+     * el YUNQUE roto que avisa el invitado (habGasta 'yunque'). */
+    PROTO: 17,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
