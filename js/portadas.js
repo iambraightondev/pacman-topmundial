@@ -24,12 +24,13 @@
   };
 
   /* color de cada póster (CACERÍA en el rojo de Blinky) y su frase */
-  var COLOR = { clasico: '#ffff00', duo: '#00ff00', hab: '#ff66cc', caza: '#ff2a2a', lab: '#ffb852', online: '#7ec8ff',
+  var COLOR = { clasico: '#ffff00', duo: '#00ff00', hab: '#ff66cc', clasif: '#ffd23f', caza: '#ff2a2a', lab: '#ffb852', online: '#7ec8ff',
     superv: '#ffd400' };
   var FRASE = {
     clasico: 'EL ARCADE DE 1980, TAL CUAL. EL QUE CUENTA PARA EL TOP MUNDIAL.',
     duo: 'J1 CON FLECHAS, J2 CON WASD. EL MISMO LABERINTO, A LA VEZ.',
     hab: 'CUATRO PODERES CON SU RECARGA. MUERDE ANTES DE QUE TE MUERDAN.',
+    clasif: 'DESATADO CON TU RANGO EN JUEGO. DE LA CEREZA A LA LLAVE.',
     caza: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA.',
     lab: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS.',
     online: 'DE 2 A 4, CADA UNO EN SU CASA, CON CÓDIGO DE SALA.',
@@ -126,6 +127,44 @@
         aTile(c,4.5,gx+k2*60,gy-k2*140,function(){Sp.drawGhost(c,0,0,D.RIGHT,1,'eyes',0,false);});
         c.fillStyle='#fff';for(var i=0;i<12;i++){var a=i*0.52,r=20+k2*90;c.fillRect(gx+Math.cos(a)*r-3,gy+Math.sin(a)*r-3,6,6);}
         c.fillStyle='rgba(255,102,204,'+(0.35*(1-k2))+')';c.fillRect(0,0,W,H);}
+    },
+
+    /* CLASIFICATORIA (23 sep): la escalera del RANGO. Las ocho frutas de las
+     * divisiones, de la CEREZA a la LLAVE, en peldaños; Pac-Man las sube de
+     * un salto en otro y arriba del todo, la LLAVE revienta en oro. */
+    clasif:function(c,m,t,e){
+      var n=8, x0=W*0.13, y0=H*0.8, dx=(W*0.74)/(n-1), dy=(H*0.58)/(n-1);
+      var paso=(t*1.4)%(n+1.2), i=Math.min(n-1,Math.floor(paso)), f=paso-Math.floor(paso);
+      for(var k=0;k<n;k++){
+        var x=x0+k*dx, y=y0-k*dy, ya=k<=i;
+        c.fillStyle=ya?'#ffd23f':'rgba(255,210,63,0.28)';
+        c.fillRect(x-22,y+14,44,6);
+        (function(kk,xx,yy,brilla){
+          c.save();if(!brilla)c.globalAlpha=0.45;
+          aTile(c,2.4,xx,yy-4,function(){window.PM.Sprites.drawFruit(c,0,0,kk);});
+          c.restore();
+        })(k,x,y,ya);
+      }
+      /* Pac-Man salta de un peldaño al siguiente */
+      var enCima=paso>=n-1+0.999;
+      var ax=x0+i*dx, ay=y0-i*dy, bx=ax+dx, by=ay-dy;
+      var px, py;
+      if(enCima||i>=n-1){px=x0+(n-1)*dx-4;py=y0-(n-1)*dy-38;}
+      else{var s=Math.min(1,f*1.6);px=ax+(bx-ax)*s;py=(ay+(by-ay)*s)-34-Math.sin(s*Math.PI)*30;}
+      aTile(c,3.2,px,py,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*10)%4],'#ffff00','clasico',{});});
+      if(i>=n-1){
+        var k2=Math.min(1,(paso-(n-1))/1.2);
+        var cx=x0+(n-1)*dx, cy=y0-(n-1)*dy-4;
+        c.fillStyle='rgba(255,210,63,'+(0.9*(1-k2))+')';
+        for(var r=0;r<14;r++){var a=r*0.45,d=20+k2*120;c.fillRect(cx+Math.cos(a)*d-4,cy+Math.sin(a)*d-4,8,8);}
+        c.fillStyle='rgba(255,210,63,'+(0.25*(1-k2))+')';c.fillRect(0,0,W,H);
+      }
+      /* la flecha del rango, que sube */
+      c.save();c.globalAlpha=0.5;c.fillStyle='#ffd23f';
+      var fy=H*0.2+((t*40)%30);
+      c.beginPath();c.moveTo(W*0.14,fy-26);c.lineTo(W*0.14+18,fy);c.lineTo(W*0.14-18,fy);c.closePath();c.fill();
+      c.fillRect(W*0.14-6,fy,12,26);
+      c.restore();
     },
 
     /* P4 · CACERÍA: BLINKY gigante; sus ojos siguen al ratón */

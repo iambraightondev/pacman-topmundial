@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · CLASIFICATORIA, modo propio · el armario con iconos
+
+**CLASIFICATORIA YA ES UN MODO.** Está al lado de DESATADO, con su póster
+(Pac-Man subiendo la escalera de frutas del rango hasta la LLAVE), en el menú
+y en la cartelera de la party. Es DESATADO con el rango del mes en juego: el
+rango **solo** se mueve ahí. Desaparece el interruptor de CLASIFICATORIAS; en
+el panel de RANGO hay un botón que lleva directo a jugarla. En party la elige
+quien manda, y cuenta para todos.
+
+**ELEGIR ROL Y PODERES, OTRA VEZ, MÁS CLARO.** Cada rol tiene su **logo** y
+cada poder su **icono**. Arriba los cuatro roles; debajo, tus cuatro teclas
+con el icono de lo que llevas; al pulsar una, se abre solo lo de esa tecla,
+con la explicación de cada opción. Cabe en una pantalla, también en la sala.
+
+**LAS EXPLICACIONES, DETRÁS DE UN «?».** Las teclas, qué cuenta y qué no, el
+rey fantasma… ya no van escritas debajo de todo: a solas en **? AYUDA**, y en
+la sala en el «?» de cada modo.
+
+Hace falta que toda la party tenga esta versión.
+
 ## 2026-09-23 · Elegir rol y poderes, por fin legible
 
 **UN MISMO ARMARIO, A SOLAS Y EN PARTY.** Los poderes eran botoncitos de letra

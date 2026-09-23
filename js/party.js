@@ -56,6 +56,7 @@
      * se pregunta uno por uno a propósito: media party con poderes y media
      * sin ellos no es una partida, son dos. */
     habPick: false,
+    clasifPick: false,   // CLASIFICATORIA: DESATADO con el rango en juego
     /* Modo CACERÍA: igual, lo decide el líder. Con él puesto TODOS llevan
      * fantasma (el de su asiento) y el Pac-Man lo lleva la máquina, así que
      * el reparto de fantasmas de PAC-MAN VS. no pinta nada. */
@@ -267,6 +268,7 @@
     setHab: function (on) {
       if (!this.st || !this.st.leader) return;
       this.habPick = !!on;
+      if (!this.habPick) this.clasifPick = false;
       if (this.habPick) { this.cazaPick = false; this.supervPick = false; }   // o una cosa o la otra
       this.sendRoster();
       this.changed();
@@ -276,7 +278,7 @@
     setCaza: function (on) {
       if (!this.st || !this.st.leader) return;
       this.cazaPick = !!on;
-      if (this.cazaPick) { this.habPick = false; this.supervPick = false; }
+      if (this.cazaPick) { this.habPick = false; this.clasifPick = false; this.supervPick = false; }
       this.sendRoster();
       this.changed();
     },
@@ -285,7 +287,8 @@
      * 'hab', 'caza' o 'superv'. Excluyentes entre sí. */
     setModo: function (id) {
       if (!this.st || !this.st.leader) return;
-      this.habPick = (id === 'hab');
+      this.habPick = (id === 'hab' || id === 'clasif');
+      this.clasifPick = (id === 'clasif');
       this.cazaPick = (id === 'caza');
       this.supervPick = (id === 'superv');
       this.sendRoster();
@@ -296,7 +299,7 @@
     setSuperv: function (on) {
       if (!this.st || !this.st.leader) return;
       this.supervPick = !!on;
-      if (this.supervPick) { this.habPick = false; this.cazaPick = false; }
+      if (this.supervPick) { this.habPick = false; this.clasifPick = false; this.cazaPick = false; }
       this.sendRoster();
       this.changed();
     },
@@ -471,6 +474,7 @@
       this.order = null;
       // el modo era de ESA party: la siguiente empieza como empieza todo
       this.habPick = false;
+      this.clasifPick = false;
       this.cazaPick = false;
       this.supervPick = false;
       window.PM.Net.leave();
@@ -532,6 +536,7 @@
         // el modo de la partida viaja con la lista: nadie debería enterarse
         // de que se juega con poderes al arrancar la partida
         hab: !!this.habPick,
+        cl: !!(this.habPick && this.clasifPick),
         caza: !!this.cazaPick,
         sv: !!this.supervPick
       });
@@ -607,6 +612,7 @@
       this.listo = !!(mio && mio.l);
       this.st.leaderSid = d.lider;
       this.habPick = !!d.hab;          // lo decide el líder; aquí solo se mira
+      this.clasifPick = !!(d.hab && d.cl);
       this.cazaPick = !!d.caza;
       this.supervPick = !!d.sv;
       this.changed();
@@ -661,14 +667,15 @@
       var order = this.gameOrder();
       var cfg = window.PM.UI ? window.PM.UI.netCfgSubset() : null;
       var hab = !!this.habPick, caza = !!this.cazaPick, sv = !!this.supervPick;
-      var salida = { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab, caza: caza, sv: sv };
+      var cl = hab && !!this.clasifPick;
+      var salida = { v: CFG.NET.PROTO, ord: order, cfg: cfg, hab: hab, cl: cl, caza: caza, sv: sv };
       /* SE GUARDA LA SALIDA. A quien tuviera la pestaña dormida no le llegaba
        * el aviso: los demás lo veían entrar y salir como AFK y él, al volver,
        * se encontraba solo en la sala con la partida ya empezada. Ahora la
        * puede pedir otra vez (ver 'pwho') y entra donde tocaba. */
       this.salida = salida;
       window.PM.Net.send('pstart', salida);
-      this.begin({ ord: order, cfg: cfg, hab: hab, caza: caza, sv: sv }, true);
+      this.begin({ ord: order, cfg: cfg, hab: hab, cl: cl, caza: caza, sv: sv }, true);
     },
 
     begin: function (d, leader) {
@@ -690,7 +697,7 @@
       this.stopBeat();
       if (this.onstart) {
         this.onstart(order, idx, leader ? null : d.cfg,
-          leader ? 'host' : 'guest', !!d.hab, !!d.caza, !!d.sv);
+          leader ? 'host' : 'guest', !!d.hab, !!d.caza, !!d.sv, !!(d.hab && d.cl));
       }
     },
 

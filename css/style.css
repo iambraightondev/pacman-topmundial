@@ -6081,7 +6081,7 @@ body { font-size-adjust: 0.56; }
  * Los modos son PÓSTERES (los del carrusel de la portada); el encendido abre
  * su ficha debajo, con las reglas y lo que hay que elegir (el rol en
  * DESATADO, el personaje en EQUIPO). */
-#online .ol-cartelera { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; }
+#online .ol-cartelera { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: 100%; }
 #online .btn.ol-poster {
   --mc: #00ff66;
   position: relative;
@@ -6138,7 +6138,7 @@ body { font-size-adjust: 0.56; }
 #online .rol-carta-lema { font-size: 7px; letter-spacing: 0.5px; line-height: 1.7; color: #b7c9bf; }
 #online .btn.rol-carta.active .rol-carta-lema { color: rgba(0, 0, 0, 0.75); }
 @media (max-width: 860px) {
-  #online .ol-cartelera { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #online .ol-cartelera { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #online .ol-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* el nombre del póster cabe entero aunque sea largo */
@@ -6148,7 +6148,7 @@ body { font-size-adjust: 0.56; }
 #online .ol-cols > .ol-card { height: 100%; box-sizing: border-box; }
 #online .ol-card-sala .ol-plazas { align-content: start; }
 /* el nombre del póster no se parte: se encoge hasta caber en una línea */
-#online .ol-poster-nombre { white-space: nowrap; overflow-wrap: normal; font-size: clamp(6px, 0.95vh, 8px); letter-spacing: 0.5px; }
+#online .ol-poster-nombre { white-space: nowrap; overflow-wrap: normal; font-size: clamp(5px, 0.8vh, 7px); letter-spacing: 0; }
 #online .ol-poster-tag { white-space: normal; }
 /* la ficha mide siempre lo mismo: cambiar de modo no encoge ni estira la sala */
 #online .ol-fichas { min-height: clamp(340px, 46vh, 440px); display: flex; }
@@ -6917,117 +6917,141 @@ body { font-size-adjust: 0.56; }
 #habBar.repe button { pointer-events: none; cursor: default; }
 
 /* ---------- EL ARMARIO: rol + poderes (ui.js, armario) ---------- */
-.arm .btn { min-width: 0; margin: 0; font-weight: normal; letter-spacing: 0.5px; }
-.arm, .arm-jugadores { text-align: left; }
+.arm .btn { min-width: 0; margin: 0; font-weight: normal; letter-spacing: 0.5px; font-family: inherit; }
 .arm {
   --rol: #ff66cc;
   width: 100%;
-  max-width: 980px;
+  max-width: 720px;
+  margin: 8px auto 2px;
   box-sizing: border-box;
-  margin: 10px auto 4px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  text-align: center;
 }
+/* los roles: el logo manda, el nombre debajo */
 .arm-roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .btn.arm-rol {
   --rol: #ff66cc;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  min-height: 74px;
-  text-align: left;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.45);
-  border: 2px solid color-mix(in srgb, var(--rol) 45%, transparent);
-  border-radius: 10px;
+  gap: 5px;
+  padding: 8px 4px 7px;
+  color: var(--rol);
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid transparent;
+  border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+  transition: transform 0.12s, background 0.12s, border-color 0.12s, opacity 0.12s;
+  opacity: 0.62;
 }
-.btn.arm-rol:hover:not(:disabled), .btn.arm-rol:focus-visible {
-  border-color: var(--rol);
-  background: color-mix(in srgb, var(--rol) 14%, rgba(0, 0, 0, 0.6));
-  outline: none;
-}
+.btn.arm-rol:hover:not(:disabled), .btn.arm-rol:focus-visible { opacity: 1; outline: none; background: rgba(0, 0, 0, 0.6); }
 .btn.arm-rol.active {
+  opacity: 1;
   border-color: var(--rol);
-  background: color-mix(in srgb, var(--rol) 22%, rgba(0, 0, 0, 0.55));
-  box-shadow: 0 0 0 1px var(--rol), 0 0 22px color-mix(in srgb, var(--rol) 40%, transparent);
+  background: color-mix(in srgb, var(--rol) 16%, rgba(0, 0, 0, 0.55));
+  box-shadow: 0 0 22px color-mix(in srgb, var(--rol) 40%, transparent);
+  transform: translateY(-2px);
 }
-.btn.arm-rol:disabled { opacity: 0.38; cursor: not-allowed; }
-.arm-rol-icono { width: 32px; height: 32px; flex: none; image-rendering: pixelated; }
-.arm-rol-tx { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.arm-rol-nombre { font-size: 12px; letter-spacing: 2px; color: var(--rol); }
-.arm-rol-lema { font-size: 7px; line-height: 1.6; letter-spacing: 0.5px; color: #cfd6f2; }
-.arm-rol-mae { font-size: 7px; letter-spacing: 0.5px; color: #ffe23a; }
+.btn.arm-rol.ocupado { opacity: 0.25; filter: grayscale(0.7); cursor: not-allowed; }
+.arm-rol-nombre { font-size: 10px; letter-spacing: 2px; }
+.arm-rol-quien { font-size: 7px; color: #cfd6f2; min-height: 7px; letter-spacing: 0.5px; }
+.arm-rolinfo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 8px; letter-spacing: 0.5px; line-height: 1.6; padding: 0 2px; }
+.arm-ri-lema { color: var(--rol); }
+.arm-ri-mae { color: #ffe23a; }
 
-.arm-slots { display: grid; gap: 6px; }
-.arm-slot { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; }
-.arm-tecla {
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  font-size: 13px;
+/* tus cuatro teclas */
+.arm-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.btn.arm-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px 8px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid color-mix(in srgb, var(--rol) 35%, transparent);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.btn.arm-slot:hover, .btn.arm-slot:focus-visible { border-color: var(--rol); outline: none; }
+.btn.arm-slot.abierto {
+  border-color: var(--rol);
+  background: color-mix(in srgb, var(--rol) 14%, rgba(0, 0, 0, 0.55));
+}
+.btn.arm-slot.abierto::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  margin-left: -8px;
+  border: 8px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--rol);
+}
+.arm-slot-tecla {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  font-size: 9px;
   color: #000;
   background: var(--rol);
-  border-radius: 7px;
+  border-radius: 4px;
+  padding: 3px 4px;
 }
-.arm-ops { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.arm-slot-nombre { font-size: 8px; line-height: 1.4; min-height: 2.8em; display: flex; align-items: center; }
+.arm-slot-cd { font-size: 7px; color: #b7c0e0; }
+
+/* el cajón de la tecla abierta */
+.arm-cajon {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid var(--rol);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--rol) 8%, rgba(0, 0, 0, 0.65));
+}
+.arm-cajon-ops { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .btn.arm-op {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  min-height: 34px;
+  gap: 5px;
+  width: 92px;
+  padding: 8px 4px 7px;
   color: #e8ecff;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 7px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
   cursor: pointer;
-  text-align: left;
 }
-.btn.arm-op:hover, .btn.arm-op:focus-visible {
-  border-color: var(--rol);
-  background: color-mix(in srgb, var(--rol) 12%, rgba(0, 0, 0, 0.6));
-  outline: none;
-}
-.btn.arm-op.active { color: #000; background: var(--rol); border-color: var(--rol); }
-.arm-op-nombre { font-size: 9px; letter-spacing: 0.5px; line-height: 1.4; }
-.arm-op-cd { font-size: 7px; opacity: 0.7; white-space: nowrap; }
-.btn.arm-op.active .arm-op-cd { opacity: 0.8; }
-
+.btn.arm-op:hover, .btn.arm-op:focus-visible { border-color: var(--rol); outline: none; }
+.btn.arm-op.active { border-color: var(--rol); background: color-mix(in srgb, var(--rol) 24%, rgba(0, 0, 0, 0.5)); color: #fff; }
+.arm-op-nombre { font-size: 7px; line-height: 1.4; }
 .arm-detalle {
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: 40px 1fr auto;
   align-items: center;
-  gap: 12px;
-  min-height: 64px;
-  padding: 10px 14px;
-  border: 1px solid color-mix(in srgb, var(--rol) 55%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--rol) 8%, rgba(0, 0, 0, 0.6));
+  gap: 10px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
 }
-.arm-det-tecla {
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  font-size: 13px;
-  color: var(--rol);
-  border: 2px solid var(--rol);
-  border-radius: 7px;
-}
-.arm-det-nombre { font-size: 11px; letter-spacing: 1px; color: var(--rol); margin-bottom: 6px; }
-.arm-det-desc { font-family: inherit; font-size: 9px; line-height: 1.7; color: #e8ecff; text-transform: uppercase; }
-.arm-det-cd { font-size: 8px; color: #b7c0e0; white-space: nowrap; }
-.arm-detalle.pasiva .arm-det-tecla { color: #ffe23a; border-color: #ffe23a; }
+.arm-det-nombre { font-size: 10px; letter-spacing: 1px; color: var(--rol); margin-bottom: 5px; }
+.arm-det-desc { font-size: 8px; line-height: 1.7; color: #e8ecff; text-transform: uppercase; }
+.arm-det-cd { font-size: 7px; color: #b7c0e0; white-space: nowrap; }
+.arm-pasiva { font-size: 8px; line-height: 1.7; color: #ffe23a; letter-spacing: 0.5px; }
 
 /* J1 / J2 a solas */
-.arm-jugadores { display: flex; justify-content: center; gap: 8px; margin-top: 4px; }
+.arm-jugadores { display: flex; justify-content: center; gap: 8px; margin-top: 2px; }
 .btn.arm-jug {
   --rol: #ff66cc;
   min-width: 0;
   font-size: 10px;
   letter-spacing: 1px;
-  padding: 8px 16px;
+  padding: 7px 14px;
   color: #cfd6f2;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.25);
@@ -7037,13 +7061,13 @@ body { font-size-adjust: 0.56; }
 .btn.arm-jug.active { color: #000; background: var(--rol); border-color: var(--rol); }
 .btn.arm-jug:disabled { opacity: 0.45; cursor: default; }
 
-/* en la sala de party el hueco es más estrecho: los roles en dos por dos */
-#online .arm { width: 100%; }
-#online .arm-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-#online .btn.arm-rol { min-height: 60px; padding: 8px 10px; }
-#online .arm-ops { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-#online .arm-op-nombre { font-size: 8px; }
-#online .arm-detalle { min-height: 58px; padding: 8px 10px; gap: 10px; }
+/* en la sala: más chico */
+#online .arm { max-width: none; gap: 6px; }
+#online .btn.arm-rol { padding: 6px 2px 5px; }
+#online .arm-rol-nombre { font-size: 8px; letter-spacing: 1px; }
+#online .arm-slot-nombre { font-size: 7px; }
+#online .btn.arm-op { width: 78px; }
+#online .arm-rolinfo { font-size: 7px; }
 
 /* los poderes de cada uno en la lista de jugadores de la sala */
 .ol-plaza-quien { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
@@ -7058,9 +7082,38 @@ body { font-size-adjust: 0.56; }
   text-overflow: ellipsis;
 }
 
-@media (max-width: 760px) {
-  .arm-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .arm-ops { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .arm-detalle { grid-template-columns: 30px 1fr; }
+/* botón de ayuda y su contenido */
+.btn.btn-ayuda { min-width: 0; }
+.ol-ficha-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.btn.ol-ayuda {
+  min-width: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0;
+  border-radius: 50%;
+  color: var(--mc, #fff);
+  background: transparent;
+  border: 1px solid currentColor;
+}
+.ayuda-bloques { display: grid; gap: 10px; max-width: 640px; margin: 6px auto 0; text-align: left; }
+.ayuda-bloque { border-left: 3px solid var(--brief, #ff66cc); padding: 4px 10px; }
+.ayuda-bloque b { display: block; font-size: 10px; color: #ffe23a; margin-bottom: 6px; letter-spacing: 1px; }
+.ayuda-bloque div { font-size: 9px; line-height: 1.8; color: #e8ecff; }
+
+@media (max-width: 560px) {
+  .arm-roles, .arm-slots { gap: 5px; }
+  .arm-rol-nombre { font-size: 7px; letter-spacing: 0.5px; }
+  .btn.arm-op { width: 76px; }
+  .arm-detalle { grid-template-columns: 34px 1fr; }
   .arm-det-cd { grid-column: 2; }
+}
+
+/* cinco pósters en la cartelera (con CLASIFICATORIA): los nombres largos caben */
+#online .ol-cartelera .ol-poster-nombre { font-size: 6px; letter-spacing: 0; white-space: nowrap; }
+.mode-frame .mode-name.poster-ttl.largo { font-size: 6.4cqw; }
+@media (max-width: 560px) {
+  .arm-slot-nombre { font-size: 6px; letter-spacing: 0; }
+  .btn.arm-slot { padding: 8px 2px 6px; }
 }

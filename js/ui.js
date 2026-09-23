@@ -305,6 +305,9 @@
     { id: 'hab', name: 'DESATADO', tag: '1 O 2 JUGADORES', color: '#ff66cc',
       icon: 'dientes',
       desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY' },
+    { id: 'clasif', name: 'CLASIFICATORIA', tag: 'RANGO DEL MES', color: '#ffd23f',
+      icon: 'fruta',
+      desc: 'DESATADO CON TU RANGO EN JUEGO: SUBE DE CEREZA A LLAVE. SOLO, EN PAREJA O EN PARTY' },
     { id: 'caza', name: 'CACERÍA', tag: 'DE 1 A 4 FANTASMAS', color: '#ffb8ff',
       icon: 'caza',
       desc: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA QUE SE VUELVE PELIGROSO CADA POCO' },
@@ -2285,6 +2288,8 @@
         var nm = document.createElement('span');
         nm.className = 'mode-name poster-ttl';
         nm.textContent = mo.name;
+        // los nombres largos (CLASIFICATORIA) en letra más chica: si no, se salen
+        if (mo.name.length > 11) nm.classList.add('largo');
         dentro.appendChild(nm);
 
         var frase = document.createElement('span');
@@ -2540,6 +2545,9 @@
       } else if (mo.icon === 'dientes') {
         S.drawPacman(c, 0, 0, D.RIGHT, 2, mo.color, 'clasico');
         S.drawPacTeeth(c, 0, 0, D.RIGHT, 2, mo.color);
+      } else if (mo.icon === 'fruta') {
+        // la LLAVE, lo más alto del rango
+        S.drawFruit(c, 0, 0, 7);
       } else if (mo.icon === 'caza') {
         // un fantasma pisándole los talones a Pac-Man: aquí el fantasma eres tú
         S.drawGhost(c, -5.5, 0, D.RIGHT, 1, 'normal', 0, false);
@@ -2666,6 +2674,7 @@
       if (mo.id === 'lab' || mo.id === 'hab') {
         return 'TOP MUNDIAL PROPIO · TROFEOS PROPIOS POR FORMATO';
       }
+      if (mo.id === 'clasif') return this.textoRangoSolo();
       if (mo.id === 'caza') {
         return CFG.CAZA.NIVELES + ' RONDAS · CADA CAZA SON ' + CFG.VS.CATCH_POINTS +
           ' PUNTOS · NO ENTRA EN EL TOP MUNDIAL';
@@ -2687,6 +2696,7 @@
        * paso ahí están escritas las teclas, que ya no son las mismas en solo
        * que en dos. */
       if (id === 'hab') { this.showHabPrompt(); return; }
+      if (id === 'clasif') { this.showHabPrompt(true); return; }
       if (id === 'caza') { this.showCazaPrompt(); return; }
       var self = this;
       function go() {
@@ -5727,11 +5737,19 @@
         f.style.visibility = 'hidden';
         f.setAttribute('aria-hidden', 'true');
         var cab = el('div', 'ol-ficha-cab');
-        cab.appendChild(el('span', 'ol-ficha-nombre', titulo));
+        var nombre = el('span', 'ol-ficha-nombre', titulo);
+        cab.appendChild(nombre);
+        /* LAS REGLAS, DETRÁS DE UN «?» (23 sep): escritas en la ficha la
+         * alargaban hasta sacar el armario de la pantalla. */
+        var ayuda = self.makeButton('?', function () { self.ayudaModoSala(f); });
+        ayuda.classList.add('ol-ayuda');
+        ayuda.title = 'CÓMO SE JUEGA';
+        ayuda.setAttribute('aria-label', 'CÓMO SE JUEGA ' + titulo);
+        cab.appendChild(ayuda);
         f.appendChild(cab);
-        var lista = el('div', 'ol-reglas');
-        reglas.forEach(function (r) { lista.appendChild(el('div', 'ol-regla', r)); });
-        f.appendChild(lista);
+        f.olNombre = nombre;
+        f.olTitulo = titulo;
+        f.olReglas = reglas;
         self.olFichas[id] = f;
         fichas.appendChild(f);
         return f;
@@ -5769,7 +5787,8 @@
         'CUATRO PODERES EN Q W E R, CON SU RECARGA',
         'AQUÍ SE MUEVE SOLO CON LAS FLECHAS',
         'CADA 5 NIVELES, EL REY FANTASMA',
-        'TOP MUNDIAL Y TROFEOS PROPIOS'
+        'TOP MUNDIAL Y TROFEOS PROPIOS',
+        'NINGÚN ROL SE REPITE: EL PRIMERO QUE LO COGE SE LO QUEDA'
       ]);
       fHab.appendChild(el('div', 'ol-ficha-sub', 'TU ROL Y TUS PODERES'));
       /* EL ARMARIO, el mismo que a solas (ver armario) */
@@ -5795,7 +5814,6 @@
       });
       this.habArm.el.classList.add('arm-sala');
       fHab.appendChild(this.habArm.el);
-      fHab.appendChild(el('div', 'ol-card-texto', 'NINGÚN ROL SE REPITE: EL PRIMERO QUE LO COGE SE LO QUEDA'));
 
       /* CACERÍA */
       var fCaza = ficha('caza', '#ff3b3b', 'CACERÍA', [
@@ -5953,8 +5971,8 @@
       };
       P.onerror = function (msg) { self.partyError(msg); };
       P.oninvite = function (from, code) { self.askInvite(from, code); };
-      P.onstart = function (order, idx, cfg, role, hab, caza, sv) {
-        self.startPartyGame(order, idx, cfg, role, hab, caza, sv);
+      P.onstart = function (order, idx, cfg, role, hab, caza, sv, clasif) {
+        self.startPartyGame(order, idx, cfg, role, hab, caza, sv, clasif);
       };
       P.listen();
     },
@@ -5995,6 +6013,7 @@
     OL_MODOS: [
       { id: 'equipo', poster: 'clasico', name: 'EN EQUIPO', tag: 'CONTRA LOS FANTASMAS', color: '#ffff00' },
       { id: 'hab', name: 'DESATADO', tag: 'PODERES Y ROLES', color: '#ff66cc' },
+      { id: 'clasif', name: 'CLASIFICATORIA', tag: 'RANGO DEL MES', color: '#ffd23f' },
       { id: 'caza', name: 'CACERÍA', tag: 'TODOS DE FANTASMA', color: '#ff3b3b' },
       { id: 'superv', name: 'SUPERVIVENCIA', tag: 'EL ÚLTIMO EN PIE', color: '#ffd400' }
     ],
@@ -6004,6 +6023,7 @@
       if (!P) return 'equipo';
       if (P.supervPick) return 'superv';
       if (P.cazaPick) return 'caza';
+      if (P.habPick && P.clasifPick) return 'clasif';
       if (P.habPick) return 'hab';
       return 'equipo';
     },
@@ -6178,17 +6198,28 @@
         }
       }
       if (this.olFichas) {
+        /* CLASIFICATORIA usa la ficha de DESATADO (el mismo armario), con su
+         * propio título y color */
+        var fichaModo = (modo === 'clasif') ? 'hab' : modo;
         for (var fid in this.olFichas) {
           if (!this.olFichas.hasOwnProperty(fid)) continue;
-          var esta = (fid === modo);
+          var esta = (fid === fichaModo);
           this.olFichas[fid].style.visibility = esta ? 'visible' : 'hidden';
           this.olFichas[fid].setAttribute('aria-hidden', esta ? 'false' : 'true');
+        }
+        var fh = this.olFichas.hab;
+        if (fh && fh.olNombre) {
+          var esClasif = (modo === 'clasif');
+          fh.olNombre.textContent = esClasif ? 'CLASIFICATORIA' : 'DESATADO';
+          fh.style.setProperty('--mc', esClasif ? '#ffd23f' : '#ff66cc');
+          fh.olClasif = esClasif;
         }
       }
       /* DESATADO: el rol lo elige cada uno, no el líder */
       if (this.habArm) {
         var miRol = P.myRol ? P.myRol() : 'asesino';
-        this.paletaDeRol(this.partyModo(P) === 'hab' ? miRol : null);
+        var conRoles = (modo === 'hab' || modo === 'clasif');
+        this.paletaDeRol(conRoles ? miRol : null);
         this.habArm.pintar();
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
@@ -6219,29 +6250,35 @@
     /* ------------------------------------------------------
      * EL ARMARIO: rol + poderes, el mismo a solas y en party (23 sep)
      *
-     * Antes eran dos pantallas distintas con el mismo problema: los poderes
-     * eran botoncitos de letra diminuta y solo se explicaba el que ya tenías
-     * puesto, así que para saber qué hacía la alternativa había que ponérsela.
-     * Ahora:
-     *   - los ROLES son cartas con su Pac-Man, su lema y tu MAESTRÍA con él;
-     *     el que lleva otro sale apagado y dice quién;
-     *   - cada tecla es una fila con sus opciones legibles y su recarga;
-     *   - la FICHA de abajo explica la que tengas debajo del ratón (o con el
-     *     foco del teclado); sin nada encima, la pasiva del rol.
+     * Como la selección de campeón de cualquier juego de equipo, y compacto:
+     *   - arriba, los cuatro ROLES con su logo (js/iconos.js); el que lleva
+     *     otro sale apagado y dice quién. Debajo, su lema y tu MAESTRÍA;
+     *   - tus cuatro casillas Q W E R, con el icono de lo que llevas;
+     *   - al pulsar una casilla se abre SU CAJÓN: solo las alternativas de esa
+     *     tecla, con icono, y la ficha de la que tengas debajo del ratón;
+     *   - la pasiva del rol, en un renglón.
+     * La primera versión enseñaba todas las opciones de las cuatro teclas a
+     * la vez y en party ocupaba media pantalla hacia abajo.
+     *
      * o: { rol(), carga() -> [4 ids], onRol(id), onPoder(k, id), ocupado(id) -> '' | quién }
-     * Devuelve { el, pintar }: pintar() solo cambia clases y textos (la sala
-     * se repinta a cada latido y rehacer los botones se comería los clics);
-     * las filas solo se rehacen al cambiar de rol.
+     * Devuelve { el, pintar }: pintar() solo cambia clases, textos e iconos
+     * (la sala se repinta a cada latido y rehacer botones se comería los
+     * clics); el cajón solo se rehace al cambiar de rol o de tecla.
      * ------------------------------------------------------ */
     armario: function (o) {
-      var self = this, H = CFG.HAB, TECLAS = ['Q', 'W', 'E', 'R'];
+      var self = this, H = CFG.HAB, TECLAS = ['Q', 'W', 'E', 'R'], I = window.PM.Iconos;
       function el(tag, cls, txt) {
         var e = document.createElement(tag);
         if (cls) e.className = cls;
         if (txt != null) e.textContent = txt;
         return e;
       }
+      function icono(tipo, id, tam, color) {
+        return I ? I.lienzo(tipo, id, tam, color) : el('span', 'arm-sin-icono', '');
+      }
       var raiz = el('div', 'arm');
+
+      /* ---- los roles ---- */
       var fRoles = el('div', 'arm-roles');
       var botRol = {};
       H.ROL_IDS.forEach(function (id) {
@@ -6249,39 +6286,64 @@
         var b = self.makeButton('', function () { o.onRol(id); });
         b.classList.add('arm-rol');
         b.style.setProperty('--rol', info.color);
-        var cv = document.createElement('canvas');
-        cv.width = 32; cv.height = 32;
-        cv.className = 'arm-rol-icono';
-        self.pintarPersonaje(cv, -1, info.color, 'clasico');
-        b.appendChild(cv);
-        var tx = el('span', 'arm-rol-tx');
-        tx.appendChild(el('b', 'arm-rol-nombre', info.name));
-        tx.appendChild(el('small', 'arm-rol-lema', info.lema));
-        var mae = el('small', 'arm-rol-mae', '');
-        tx.appendChild(mae);
-        b.appendChild(tx);
-        botRol[id] = { b: b, mae: mae, lema: tx.querySelector('.arm-rol-lema') };
+        b.appendChild(icono('rol', id, 52));
+        b.appendChild(el('span', 'arm-rol-nombre', info.name));
+        var quien = el('small', 'arm-rol-quien', '');
+        b.appendChild(quien);
+        b.setAttribute('aria-label', info.name + ' · ' + info.lema);
+        botRol[id] = { b: b, quien: quien };
         fRoles.appendChild(b);
       });
       raiz.appendChild(fRoles);
+      var rolInfo = el('div', 'arm-rolinfo');
+      var riLema = el('span', 'arm-ri-lema', '');
+      var riMae = el('span', 'arm-ri-mae', '');
+      rolInfo.appendChild(riLema);
+      rolInfo.appendChild(riMae);
+      raiz.appendChild(rolInfo);
 
+      /* ---- las cuatro casillas ---- */
       var fSlots = el('div', 'arm-slots');
+      var slots = [];
+      for (var sk = 0; sk < 4; sk++) {
+        (function (k) {
+          var b = self.makeButton('', function () { abierto = k; cajonDe = ''; pintar(); });
+          b.classList.add('arm-slot');
+          b.appendChild(el('b', 'arm-slot-tecla', TECLAS[k]));
+          var cv = icono('hab', '', 44, '#fff');
+          b.appendChild(cv);
+          var nom = el('span', 'arm-slot-nombre', '');
+          var cd = el('small', 'arm-slot-cd', '');
+          b.appendChild(nom);
+          b.appendChild(cd);
+          slots.push({ b: b, cv: cv, nom: nom, cd: cd, id: null });
+          fSlots.appendChild(b);
+        })(sk);
+      }
       raiz.appendChild(fSlots);
 
+      /* ---- el cajón de la tecla abierta ---- */
+      var cajon = el('div', 'arm-cajon');
+      var cajonOps = el('div', 'arm-cajon-ops');
+      cajon.appendChild(cajonOps);
       var det = el('div', 'arm-detalle');
-      var dTecla = el('b', 'arm-det-tecla', '');
+      var dIcono = icono('hab', '', 40, '#fff');
       var dTx = el('div', 'arm-det-tx');
       var dNombre = el('div', 'arm-det-nombre', '');
       var dDesc = el('div', 'arm-det-desc', '');
       var dCd = el('div', 'arm-det-cd', '');
       dTx.appendChild(dNombre);
       dTx.appendChild(dDesc);
-      det.appendChild(dTecla);
+      det.appendChild(dIcono);
       det.appendChild(dTx);
       det.appendChild(dCd);
-      raiz.appendChild(det);
+      cajon.appendChild(det);
+      raiz.appendChild(cajon);
 
-      var rolPintado = null, ops = [], encima = null;
+      var pasiva = el('div', 'arm-pasiva');
+      raiz.appendChild(pasiva);
+
+      var abierto = 0, cajonDe = '', ops = [], encima = null;
 
       /* La descripción: la del catálogo; los del kit de siempre la tienen en
        * ROL_INFO.desc (la misma que salía en las cartas de antes). */
@@ -6290,74 +6352,101 @@
         var kit = H.ROLES[rol] && H.ROLES[rol][k];
         return (kit && kit.id === hab.id && H.ROL_INFO[rol].desc) ? H.ROL_INFO[rol].desc[k] : '';
       }
-      function ver(hab, k) {
+      function habDe(rol, k, id) {
+        var fila = H.catalogoDe(rol)[k] || [];
+        for (var i = 0; i < fila.length; i++) if (fila[i].id === id) return fila[i];
+        return fila[0];
+      }
+      function ver(hab) {
         var rol = o.rol();
-        dTecla.textContent = TECLAS[k];
-        dNombre.textContent = hab.largo || hab.name;
-        dDesc.textContent = descDe(rol, k, hab);
+        if (I) I.repintar(dIcono, 'hab', hab.id, H.ROL_INFO[rol].color);
+        dNombre.textContent = TECLAS[abierto] + ' · ' + (hab.largo || hab.name);
+        dDesc.textContent = descDe(rol, abierto, hab);
         dCd.textContent = 'RECARGA ' + Math.round(hab.cd / 60) + ' S';
-        det.classList.remove('pasiva');
       }
-      function verPasiva() {
-        var info = H.ROL_INFO[o.rol()];
-        dTecla.textContent = '★';
-        dNombre.textContent = 'PASIVA · ' + info.name;
-        dDesc.textContent = info.pasiva || 'SIN PASIVA';
-        dCd.textContent = 'SIEMPRE';
-        det.classList.add('pasiva');
-      }
-      function construir(rol) {
-        fSlots.innerHTML = '';
+      function construirCajon(rol) {
+        cajonOps.innerHTML = '';
         ops = [];
-        var cat = H.catalogoDe(rol);
-        for (var k = 0; k < 4; k++) {
-          var fila = el('div', 'arm-slot');
-          fila.appendChild(el('b', 'arm-tecla', TECLAS[k]));
-          var lista = el('div', 'arm-ops');
-          for (var i = 0; i < cat[k].length; i++) {
-            (function (slot, hab) {
-              var b = self.makeButton('', function () { o.onPoder(slot, hab.id); ver(hab, slot); });
-              b.classList.add('arm-op');
-              b.appendChild(el('span', 'arm-op-nombre', hab.name));
-              b.appendChild(el('small', 'arm-op-cd', Math.round(hab.cd / 60) + ' S'));
-              b.setAttribute('aria-label', TECLAS[slot] + ' ' + hab.name + ' · ' + descDe(rol, slot, hab));
-              function entra() { encima = hab; ver(hab, slot); }
-              function sale() { encima = null; verPasiva(); }
-              b.addEventListener('mouseenter', entra);
-              b.addEventListener('focus', entra);
-              b.addEventListener('mouseleave', sale);
-              b.addEventListener('blur', sale);
-              ops.push({ b: b, id: hab.id, k: slot });
-              lista.appendChild(b);
-            })(k, cat[k][i]);
-          }
-          fila.appendChild(lista);
-          fSlots.appendChild(fila);
+        var fila = H.catalogoDe(rol)[abierto] || [];
+        var col = H.ROL_INFO[rol].color;
+        for (var i = 0; i < fila.length; i++) {
+          (function (hab) {
+            var b = self.makeButton('', function () { o.onPoder(abierto, hab.id); ver(hab); });
+            b.classList.add('arm-op');
+            b.appendChild(icono('hab', hab.id, 36, col));
+            b.appendChild(el('span', 'arm-op-nombre', hab.name));
+            b.setAttribute('aria-label', TECLAS[abierto] + ' ' + hab.name + ' · ' + descDe(rol, abierto, hab));
+            function entra() { encima = hab; ver(hab); }
+            function sale() { encima = null; ver(habDe(o.rol(), abierto, (o.carga() || [])[abierto])); }
+            b.addEventListener('mouseenter', entra);
+            b.addEventListener('focus', entra);
+            b.addEventListener('mouseleave', sale);
+            b.addEventListener('blur', sale);
+            ops.push({ b: b, id: hab.id });
+            cajonOps.appendChild(b);
+          })(fila[i]);
         }
       }
       function pintar() {
-        var rol = o.rol(), carga = o.carga() || [];
-        if (rol !== rolPintado) { rolPintado = rol; encima = null; construir(rol); }
-        raiz.style.setProperty('--rol', H.ROL_INFO[rol].color);
-        var M = window.PM.Maestria, N = CFG.MAESTRIA && CFG.MAESTRIA.NIVELES;
+        var rol = o.rol(), carga = o.carga() || [], info = H.ROL_INFO[rol], col = info.color;
+        raiz.style.setProperty('--rol', col);
+        /* roles */
         for (var id in botRol) {
           if (!botRol.hasOwnProperty(id)) continue;
           var r = botRol[id], quien = o.ocupado ? o.ocupado(id) : '';
+          var suyo = !!quien && id !== rol;
           r.b.classList.toggle('active', id === rol);
-          r.b.disabled = !!quien && id !== rol;
-          r.lema.textContent = (quien && id !== rol) ? ('LO LLEVA ' + quien) : H.ROL_INFO[id].lema;
-          var txt = 'SIN EMBLEMA TODAVÍA';
-          if (M && N) {
-            var d = M.datos(id);
-            if (d.nivel >= 0) txt = N[d.nivel].name + ' · ' + d.puntos.toLocaleString('es-ES') + ' PTS';
-            else if (d.puntos > 0) txt = d.puntos.toLocaleString('es-ES') + ' PTS';
-          }
-          r.mae.textContent = txt;
+          r.b.classList.toggle('ocupado', suyo);
+          r.b.disabled = suyo;
+          r.quien.textContent = suyo ? quien : '';
         }
-        for (var i = 0; i < ops.length; i++) ops[i].b.classList.toggle('active', carga[ops[i].k] === ops[i].id);
-        if (!encima) verPasiva();
+        riLema.textContent = info.name + ' · ' + info.lema;
+        var M = window.PM.Maestria, N = CFG.MAESTRIA && CFG.MAESTRIA.NIVELES, mTxt = 'SIN EMBLEMA TODAVÍA';
+        if (M && N) {
+          var d = M.datos(rol);
+          if (d.nivel >= 0) mTxt = 'MAESTRÍA ' + N[d.nivel].name + ' · ' + d.puntos.toLocaleString('es-ES');
+          else if (d.puntos > 0) mTxt = 'MAESTRÍA · ' + d.puntos.toLocaleString('es-ES') + ' PTS';
+        }
+        riMae.textContent = mTxt;
+        /* casillas */
+        for (var k = 0; k < 4; k++) {
+          var s = slots[k], hab = habDe(rol, k, carga[k]);
+          if (s.id !== rol + '|' + hab.id) {
+            s.id = rol + '|' + hab.id;
+            if (I) I.repintar(s.cv, 'hab', hab.id, col);
+            s.nom.textContent = hab.name;
+            s.cd.textContent = Math.round(hab.cd / 60) + ' S';
+            s.b.setAttribute('aria-label', TECLAS[k] + ' · ' + hab.name + ' · CAMBIAR');
+          }
+          s.b.classList.toggle('abierto', k === abierto);
+        }
+        /* cajón */
+        if (cajonDe !== rol + '|' + abierto) { cajonDe = rol + '|' + abierto; encima = null; construirCajon(rol); }
+        for (var i = 0; i < ops.length; i++) ops[i].b.classList.toggle('active', carga[abierto] === ops[i].id);
+        if (!encima) ver(habDe(rol, abierto, carga[abierto]));
+        pasiva.textContent = info.pasiva ? ('★ PASIVA · ' + info.pasiva) : '';
       }
       return { el: raiz, pintar: pintar };
+    },
+
+    /* El «?» de una ficha de la sala: sus reglas en un aviso encima (la sala
+     * sigue debajo, y al cerrarlo está tal cual) */
+    ayudaModoSala: function (f) {
+      var self = this;
+      if (!f) return;
+      var reglas = (f.olReglas || []).slice();
+      if (f.olClasif) {
+        reglas.push('CADA PARTIDA MUEVE EL RANGO DEL MES DE CADA UNO, EN SU FORMATO (DÚO, TRÍO, ESCUADRA)');
+        reglas.push('LAS 5 PRIMERAS SON DE COLOCACIÓN · HACE FALTA CUENTA');
+      }
+      this.showPrompt({
+        title: f.olClasif ? 'CLASIFICATORIA' : (f.olTitulo || 'CÓMO SE JUEGA'),
+        popup: true,
+        color: getComputedStyle(f).getPropertyValue('--mc') || '#fff',
+        lines: reglas,
+        buttons: [{ label: 'ENTENDIDO', primary: true, keys: ['Escape', 'Enter'], hint: 'ESC',
+          onClick: function () { self.hidePrompt(); } }]
+      });
     },
 
     /* Quién lleva ese rol en la sala (su nombre), o '' si nadie más */
@@ -6522,7 +6611,7 @@
       });
     },
 
-    startPartyGame: function (order, idx, cfg, role, hab, caza, sv) {
+    startPartyGame: function (order, idx, cfg, role, hab, caza, sv, clasif) {
       this.hidePrompt();
       this.hideAll();
       this.resumeAudio();
@@ -6542,6 +6631,7 @@
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
         colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!hab,           // lo enciende quien manda, y vale para todos
+        clasif: !!clasif,     // CLASIFICATORIA: el rango del mes, para todos
         roles: roles,         // ...y cada uno con el rol que eligió en la sala
         loadouts: loadouts,
         caza: !!caza,         // ídem: todos de fantasma contra la máquina
@@ -6944,11 +7034,12 @@
         info.appendChild(d);
         self['rango' + k] = d;
       });
-      this.rangoToggle = this.makeButton('', function () {
-        var s = window.PM.settings;
-        s.clasif = !s.clasif;
-        saveSettings();
-        self.refreshRango();
+      /* Antes era el interruptor de la clasificatoria; desde el 23 sep es un
+       * modo, y desde aquí se va directo a jugarlo */
+      this.rangoToggle = this.makeButton('JUGAR CLASIFICATORIA', function () {
+        self.pickMode('clasif');
+        self.showMenu();
+        self.showHabPrompt(true);
       });
       this.rangoToggle.classList.add('rango-toggle');
       info.appendChild(this.rangoToggle);
@@ -6976,20 +7067,6 @@
       this.animarRango();
     },
 
-    /* El texto del interruptor y lo que dice debajo */
-    textoClasif: function () {
-      var Rg = window.PM.Rango;
-      var on = Rg && Rg.activa();
-      var Ac = window.PM.Account;
-      var cuenta = Ac && Ac.logged && Ac.logged();
-      return {
-        on: !!on,
-        boton: 'CLASIFICATORIAS: ' + (on ? 'SÍ' : 'NO'),
-        nota: !cuenta ? 'HACE FALTA CUENTA PARA TENER RANGO'
-          : on ? 'TUS PARTIDAS DE DESATADO MUEVEN TU RANGO'
-          : 'TUS PARTIDAS DE DESATADO NO TOCAN TU RANGO'
-      };
-    },
 
     refreshRango: function () {
       var Rg = window.PM.Rango, B = window.PM.Badges;
@@ -7054,10 +7131,7 @@
       barra.appendChild(relleno);
       this.rangoSig.appendChild(barra);
 
-      var tx = this.textoClasif();
-      this.rangoToggle.textContent = tx.boton;
-      this.rangoToggle.classList.toggle('active', tx.on);
-      this.rangoToggle.title = tx.nota;
+      this.rangoToggle.title = 'EL RANGO SE JUEGA EN EL MODO CLASIFICATORIA';
       this.rangoFruta = div ? div.fruta : -1;
       this.rangoColor = div ? div.color : '#4a4868';
       if (this.rangoTabla) this.pintarTablaRango();
@@ -12782,24 +12856,32 @@
     },
 
     /* ------------------------------------------------------
-     * Modo DESATADO: reglas y salida a jugar
+     * Modo DESATADO (y CLASIFICATORIA): el armario y a jugar
+     *
+     * clasif: la CLASIFICATORIA (23 sep). Es DESATADO con el RANGO del mes
+     * en juego: el mismo armario, otro título, y la partida sale con
+     * `clasif` (js/rango.js). Antes era un interruptor de cada jugador
+     * dentro de esta pantalla; Braighton lo quiso como modo propio.
+     *
+     * Lo que se lee una vez y ya (las teclas, dónde cuenta cada partida)
+     * se fue a la AYUDA (showHabAyuda): aquí solo queda elegir.
      * ------------------------------------------------------ */
-    showHabPrompt: function () {
+    showHabPrompt: function (clasif) {
       var self = this;
       var H = CFG.HAB;
       var s = window.PM.settings;
+      clasif = !!clasif;
       /* ¿El J2 va a llevar un fantasma? Se elige en OPCIONES · PARTIDA y aquí
        * solo se cuenta, porque cambia por completo lo que hace la segunda
        * fila de teclas: con fantasma son dos poderes, no cuatro. */
       var conFantasma = (s.vsGhost2 >= 0 && s.vsGhost2 < 4);
-      var t2 = H.KEYS_2P;
 
       function arranca(jugadores) {
         self.resumeAudio();
         self.hidePrompt();
         function go() {
           self.hideAll();
-          var opts = { players: jugadores, hab: true, roles: [roles[0], roles[1]],
+          var opts = { players: jugadores, hab: true, clasif: clasif, roles: [roles[0], roles[1]],
             loadouts: [cargas[0].join(','), cargas[1].join(',')] };
           if (jugadores === 2) opts.ghosts = [-1, s.vsGhost2];
           window.PM.Game.newGame(opts);
@@ -12808,9 +12890,7 @@
         go();
       }
 
-      /* Los ROLES: cada jugador elige el suyo (se recuerda en settings). Las
-       * cartas enseñan los cuatro poderes del rol que se está mirando, leídos
-       * de CFG.HAB.ROLES: ni un texto de recarga escrito a mano. */
+      /* Los ROLES: cada jugador elige el suyo (se recuerda en settings) */
       var roles = [H.rol(s.habRol1), H.rol(s.habRol2)];
       // ningún rol repetido: si los dos traen el mismo, al J2 se le cambia
       if (roles[0] === roles[1]) {
@@ -12818,7 +12898,7 @@
           if (H.ROL_IDS[ri] !== roles[0]) { roles[1] = H.ROL_IDS[ri]; break; }
         }
       }
-      var mirando = 0;          // de qué jugador son las cartas
+      var mirando = 0;          // de qué jugador es el armario
       var cargas = [
         cargaDe(roles[0], s.habLoadout1),
         cargaDe(roles[1], s.habLoadout2)
@@ -12840,18 +12920,13 @@
         return out;
       }
 
-      var dos = conFantasma
-        ? ('J1 FLECHAS + ' + t2[0].join(' ') + '  ·  J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
-           ': WASD + ' + t2[1][0] + ' EMBESTIDA Y ' + t2[1][1] + ' ACECHO')
-        : ('J1 FLECHAS + ' + t2[0].join(' ') + '  ·  J2 WASD + ' + t2[1].join(' '));
       this.showPrompt({
-        title: 'DESATADO',
+        title: clasif ? 'CLASIFICATORIA' : 'DESATADO',
         arcade: true,
-        tono: 'rosa',
+        tono: clasif ? 'amarillo' : 'rosa',
         custom: function (p) {
-          /* DE QUIÉN SON LAS CARTAS: J1 o J2 (el J2 solo juega con DOS
-           * JUGADORES). Una pestaña por jugador en vez de dos filas de roles
-           * sueltas, que no dejaban claro a quién se le estaba armando. */
+          /* DE QUIÉN ES EL ARMARIO: J1 o J2 (el J2 solo juega con DOS
+           * JUGADORES). Una pestaña por jugador. */
           var pestanas = document.createElement('div');
           pestanas.className = 'arm-jugadores';
           var tabs = [0, 1].map(function (j) {
@@ -12891,20 +12966,12 @@
           });
           p.appendChild(arm.el);
 
-          self.briefingModo(p, {
-            lema: '',
-            cartas: [],
-            mandos: [
-              { t: 'SOLO', d: 'FLECHAS + Q W E R (WASD NO MUEVE: LA W ES EL TURBO)' },
-              { t: 'DOS JUGADORES', d: dos }
-            ],
-            pie: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON SUS RÉCORDS Y TROFEOS' +
-              (conFantasma ? '' : '  ·  EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA')
-          });
-          var lemaVacio = p.querySelector('.brief-lema');
-          if (lemaVacio) lemaVacio.parentNode.removeChild(lemaVacio);
-          var cartasVacias = p.querySelector('.brief-cartas');
-          if (cartasVacias) cartasVacias.parentNode.removeChild(cartasVacias);
+          /* Un renglón, siempre ocupado (si apareciera y desapareciera, la
+           * pantalla daría un salto al cambiar de rol): a uno con otro rol es
+           * PRÁCTICA; en CLASIFICATORIA, cómo vas de rango. */
+          var aviso = document.createElement('div');
+          aviso.className = 'rol-aviso';
+          p.appendChild(aviso);
 
           function pintar() {
             tabs.forEach(function (b, j) {
@@ -12917,48 +12984,17 @@
             });
             p.style.setProperty('--brief', H.ROL_INFO[roles[mirando]].color);
             arm.pintar();
-            /* A uno, con otro rol, la partida es de PRÁCTICA: se dice aquí,
-             * antes de jugar, y no en el GAME OVER cuando ya no tiene arreglo */
-            /* Siempre hay renglón: si apareciera y desapareciera, la pantalla
-             * entera daría un salto cada vez que se cambia de rol. */
+            if (clasif) {
+              aviso.textContent = self.textoRangoSolo();
+              aviso.classList.add('ok');
+              return;
+            }
             var practica = roles[0] !== 'asesino';
             aviso.textContent = practica
-              ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: SUMA A SU MAESTRÍA Y AL RANGO, NO A RÉCORDS NI TROFEOS'
+              ? 'A UNO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: SUMA A SU MAESTRÍA, NO A RÉCORDS NI TROFEOS'
               : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y TROFEOS';
             aviso.classList.toggle('ok', !practica);
           }
-
-          var aviso = document.createElement('div');
-          aviso.className = 'rol-aviso';
-          p.insertBefore(aviso, p.querySelector('.brief-mandos'));
-
-          /* CLASIFICATORIA: se enciende aquí o en RANGO, y es de cada jugador
-           * (js/rango.js). Al lado, cómo vas en solo este mes. */
-          var clas = document.createElement('div');
-          clas.className = 'rango-clasif';
-          var clasBtn = self.makeButton('', function () {
-            s.clasif = !s.clasif;
-            saveSettings();
-            pintarClasif();
-          });
-          clasBtn.classList.add('rango-toggle');
-          clas.appendChild(clasBtn);
-          var clasNota = document.createElement('span');
-          clas.appendChild(clasNota);
-          p.insertBefore(clas, p.querySelector('.brief-mandos'));
-          function pintarClasif() {
-            var tx = self.textoClasif();
-            clasBtn.textContent = tx.boton;
-            clasBtn.classList.toggle('active', tx.on);
-            var Rg = window.PM.Rango, e = Rg ? Rg.estado(1) : null;
-            var D = CFG.RANGO.DIVISIONES;
-            clasNota.textContent = tx.nota + (e && tx.on
-              ? ('  ·  EN SOLO: ' + (e.division >= 0
-                  ? (D[e.division].name + ' ' + e.pr + ' PR')
-                  : ('COLOCACIÓN ' + e.colocacion + '/' + CFG.RANGO.COLOCACION)))
-              : '');
-          }
-          pintarClasif();
           pintar();
         },
         buttons: [
@@ -12966,11 +13002,72 @@
             onClick: function () { arranca(1); } },
           { label: 'DOS JUGADORES', keys: ['2'], hint: '2',
             onClick: function () { arranca(2); } },
+          { label: '? AYUDA', keys: ['h', '?'], hint: 'H',
+            onClick: function () { self.showHabAyuda(clasif); } },
           { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
         ]
       });
       this.promptTag = 'hab';
+    },
+
+    /* En CLASIFICATORIA, cómo vas en solo este mes (o por qué no cuenta) */
+    textoRangoSolo: function () {
+      var Rg = window.PM.Rango;
+      if (!Rg) return '';
+      if (!Rg.conCuenta()) return 'HACE FALTA CUENTA PARA TENER RANGO';
+      var e = Rg.estado(1), D = CFG.RANGO.DIVISIONES;
+      return 'CUENTA PARA TU RANGO DEL MES · EN SOLO: ' + (e.division >= 0
+        ? (D[e.division].name + ' · ' + e.pr + ' PR')
+        : ('COLOCACIÓN ' + e.colocacion + '/' + CFG.RANGO.COLOCACION));
+    },
+
+    /* LA AYUDA de DESATADO / CLASIFICATORIA: lo que antes iba escrito debajo
+     * del armario (las teclas, qué cuenta y qué no). VOLVER regresa al
+     * armario tal y como estaba (lo elegido ya está guardado). */
+    showHabAyuda: function (clasif) {
+      var self = this, H = CFG.HAB, s = window.PM.settings;
+      var conFantasma = (s.vsGhost2 >= 0 && s.vsGhost2 < 4);
+      var t2 = H.KEYS_2P;
+      var bloques = [
+        { t: 'A SOLAS', d: 'FLECHAS PARA MOVERTE Y Q W E R PARA LOS PODERES. WASD NO MUEVE: LA W ES UN PODER.' },
+        { t: 'DOS JUGADORES', d: conFantasma
+          ? ('J1: FLECHAS + ' + t2[0].join(' ') + '. J2 LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] +
+             ': WASD + ' + t2[1][0] + ' EMBESTIDA Y ' + t2[1][1] + ' ACECHO.')
+          : ('J1: FLECHAS + ' + t2[0].join(' ') + '. J2: WASD + ' + t2[1].join(' ') + '.') },
+        { t: 'MANTENER PULSADO', d: 'ALGUNOS PODERES TIENEN UNA SEGUNDA FORMA SI MANTIENES LA TECLA: EL METEORO APUNTA, EL HIELO DEJA UNA PLACA, EL ESCUDO ALIADO CUBRE A TODO EL EQUIPO.' },
+        { t: 'EL REY FANTASMA', d: 'CADA 5 NIVELES SALE EL REY: MUCHA VIDA, EMBESTIDAS Y ESBIRROS. LOS PODERES LE HACEN DAÑO O LO ATURDEN.' },
+        clasif
+          ? { t: 'CLASIFICATORIA', d: 'CADA PARTIDA MUEVE TU RANGO DEL MES (CEREZA … LLAVE), CON CUALQUIER ROL. LAS 5 PRIMERAS SON DE COLOCACIÓN. HACE FALTA CUENTA Y LOS AJUSTES DE SERIE. EL RANGO SE REINICIA CADA MES.' }
+          : { t: 'QUÉ CUENTA', d: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON RÉCORDS Y TROFEOS. A UNO SOLO CUENTA CON ASESINO; CON OTRO ROL ES PRÁCTICA Y SUMA A SU MAESTRÍA. EL RANGO SE JUEGA EN CLASIFICATORIA.' },
+        { t: 'EL J2 CON FANTASMA', d: 'EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA EN VEZ DE UN PAC-MAN.' }
+      ];
+      this.showPrompt({
+        title: 'AYUDA',
+        arcade: true,
+        tono: clasif ? 'amarillo' : 'rosa',
+        custom: function (p) {
+          var caja = document.createElement('div');
+          caja.className = 'ayuda-bloques';
+          p.style.setProperty('--brief', clasif ? '#ffd23f' : '#ff66cc');
+          bloques.forEach(function (b) {
+            var d = document.createElement('div');
+            d.className = 'ayuda-bloque';
+            var t = document.createElement('b');
+            t.textContent = b.t;
+            var x = document.createElement('div');
+            x.textContent = b.d;
+            d.appendChild(t);
+            d.appendChild(x);
+            caja.appendChild(d);
+          });
+          p.appendChild(caja);
+        },
+        buttons: [
+          { label: 'VOLVER', primary: true, keys: ['Escape', 'Enter', 'h'], hint: 'ESC',
+            onClick: function () { self.showHabPrompt(clasif); } }
+        ]
+      });
     },
 
     /* CACERÍA: qué es y con cuántos, antes de empezar. Solo o dos en el

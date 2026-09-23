@@ -1746,7 +1746,7 @@
    * La lista de tarjetas (con su nombre, su color y su icono) sigue en
    * `MODOS`, arriba de js/ui.js: si se añade un modo hay que tocar los dos
    * sitios, y una prueba vigila que no se separen. */
-  CFG.MODE_IDS = ['clasico', 'duo', 'hab', 'caza', 'lab', 'online'];
+  CFG.MODE_IDS = ['clasico', 'duo', 'hab', 'clasif', 'caza', 'lab', 'online'];
   /* ---------- LO QUE VIAJA CON LA CUENTA (19 de septiembre de 2026) ----------
    * Entrar en tu cuenta en otro ordenador traía tus récords, tus logros y tus
    * compras... pero te dejaba con el Pac-Man amarillo de fábrica, sin tu
@@ -2624,8 +2624,9 @@
      * la 16, LO QUE SE LE HACE AL JUGADOR DE OTRO (23 sep: 'habDar' del
      * anfitrión, habGasta/habEmpuja/habRebote/habHospital del invitado, la
      * 'ap' del METEORO en la posición y los poderes 'h' en el saludo); la 17,
-     * el YUNQUE roto que avisa el invitado (habGasta 'yunque'). */
-    PROTO: 17,
+     * el YUNQUE roto que avisa el invitado (habGasta 'yunque'); la 18, la
+     * CLASIFICATORIA como modo de la sala ('cl' en la lista y en la salida). */
+    PROTO: 18,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

@@ -573,6 +573,10 @@
       /* modo DESATADO: Q/W/E/R. Se monta antes que los Pac-Man porque
        * reparte un juego de recargas por jugador (js/habilidades.js). */
       this.hab = !!opts.hab;
+      /* CLASIFICATORIA (23 sep): DESATADO con el rango del mes en juego. Es
+       * de la partida y no de cada jugador (antes era un interruptor en los
+       * ajustes): en party la elige quien manda, como el modo. */
+      this.clasif = !!opts.clasif && this.hab;
       this.jefe = null;          // el REY FANTASMA (js/jefe.js), si el nivel lo trae
       /* Lo que tenías antes de jugar en esta tabla: si lo superas sin cuenta,
        * se avisa de que ese récord no entra en el top (ver rankPendiente) */
@@ -927,6 +931,7 @@
       this.stopIntro();
       this.mazeId = null;
       this.hab = false;
+      this.clasif = false;
       this.loadouts = null;
       this.caza = false;
       this.cazaTicks = 0;

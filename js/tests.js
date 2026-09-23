@@ -12497,13 +12497,11 @@
       conContadores(function () {
         var Rg = window.PM.Rango, RG = CFG.RANGO;
         var logged = Rg.conCuenta;
-        var s = window.PM.settings, clasif = s.clasif;
         Rg.conCuenta = function () { return true; };
-        s.clasif = true;
         try {
           window.PM.settings.muted = true;
           var jugar = function (puntos) {
-            G.newGame({ players: 1, hab: true, roles: ['asesino'] });
+            G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
             G.state = 'PLAYING';
             G.score = puntos;
             return Rg.cerrar(G);
@@ -12525,30 +12523,63 @@
           var buena = jugar(RG.DIVISIONES[0].par * 2);
           eq(buena.cambio, 30, 'y lo primero que ganas cuenta entero: no hay deuda');
           G.toMenu();
-        } finally { Rg.conCuenta = logged; s.clasif = clasif; }
+        } finally { Rg.conCuenta = logged; }
       });
     });
 
-  test('RANGO: sin clasificatoria o sin cuenta no cuenta; con cualquier rol, sí', function () {
+  test('RANGO: solo en el modo CLASIFICATORIA y con cuenta; con cualquier rol, sí', function () {
     var Rg = window.PM.Rango;
     var logged = Rg.conCuenta;
-    var s = window.PM.settings, clasif = s.clasif;
     try {
       window.PM.settings.muted = true;
       G.newGame({ players: 1, hab: true, roles: ['asesino'] });
-      s.clasif = false;
-      ok(Rg.porQueNo(G), 'con el interruptor apagado, no');
-      s.clasif = true;
+      Rg.conCuenta = function () { return true; };
+      eq(Rg.porQueNo(G), 'NO ES CLASIFICATORIA', 'el DESATADO de siempre no toca el rango');
+      G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+      ok(G.clasif, 'la partida sale marcada');
       Rg.conCuenta = function () { return false; };
       eq(Rg.porQueNo(G), 'HACE FALTA CUENTA');
       Rg.conCuenta = function () { return true; };
       eq(Rg.porQueNo(G), null, 'con todo en regla, sí');
-      G.newGame({ players: 1, hab: true, roles: ['mago'] });
+      G.newGame({ players: 1, hab: true, clasif: true, roles: ['mago'] });
       eq(Rg.porQueNo(G), null, 'a uno con Mago también cuenta (práctica solo para récords)');
-      G.newGame({ players: 1 });
+      G.newGame({ players: 1, clasif: true });
+      ok(!G.clasif, 'sin DESATADO no hay clasificatoria');
       eq(Rg.porQueNo(G), 'SOLO EN DESATADO');
       G.toMenu();
-    } finally { Rg.conCuenta = logged; s.clasif = clasif; }
+      ok(!G.clasif, 'y al salir se apaga');
+    } finally { Rg.conCuenta = logged; }
+  });
+
+  test('ICONOS: cada poder del catálogo y cada rol tiene su dibujo', function () {
+    var I = window.PM.Iconos, H = CFG.HAB, faltan = [];
+    ok(I, 'el módulo está cargado');
+    H.ROL_IDS.forEach(function (r) {
+      if (!I.ROLES[r]) faltan.push('rol ' + r);
+      H.catalogoDe(r).forEach(function (fila) {
+        fila.forEach(function (h) { if (!I.tiene(h.id)) faltan.push(h.id); });
+      });
+    });
+    (H.LIST_G || []).forEach(function (h) { if (!I.tiene(h.id)) faltan.push(h.id); });
+    eq(faltan.join(', '), '', 'ninguno se queda con el genérico');
+  });
+
+  test('CLASIFICATORIA en party: el líder la elige y viaja en la lista y en la salida', function () {
+    var P = window.PM.Party, Net = window.PM.Net;
+    var st = P.st, hab = P.habPick, cl = P.clasifPick, envia = Net.send, mandados = [];
+    Net.send = function (n, d) { mandados.push([n, d]); };
+    try {
+      P.st = { status: 'dentro', leader: true, members: [] };
+      P.setModo('clasif');
+      ok(P.habPick && P.clasifPick, 'es DESATADO con rango');
+      var lista = mandados.filter(function (m) { return m[0] === 'proster'; }).pop();
+      ok(lista && lista[1].hab && lista[1].cl, 'la lista lo lleva');
+      P.setModo('hab');
+      ok(P.habPick && !P.clasifPick, 'volver a DESATADO lo quita');
+      P.st.leader = false;
+      P.onRoster({ v: CFG.NET.PROTO, lider: 'x', m: [{ s: Net.sid, n: 'YO' }], hab: true, cl: true });
+      ok(P.clasifPick, 'el invitado lo toma de la lista del líder');
+    } finally { P.st = st; P.habPick = hab; P.clasifPick = cl; Net.send = envia; }
   });
 
   test('RANGO: sus contadores viajan con la cuenta y se funden sin perder nada',
@@ -12562,11 +12593,11 @@
       });
     });
 
-  test('RANGO: el panel sale con la fruta, el interruptor y la tabla', function () {
+  test('RANGO: el panel sale con la fruta, el botón de CLASIFICATORIA y la tabla', function () {
     var UI = window.PM.UI;
     UI.buildRango();
     UI.refreshRango();
-    ok(UI.rangoToggle.textContent.indexOf('CLASIFICATORIAS') === 0, 'el interruptor');
+    eq(UI.rangoToggle.textContent, 'JUGAR CLASIFICATORIA', 'ya no es un interruptor: lleva al modo');
     ok(UI.rangoName.textContent.length > 0, 'y tu rango (o que aún no lo tienes)');
   });
 

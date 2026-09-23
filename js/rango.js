@@ -113,8 +113,9 @@
     temporada: temporada,
     estadoDe: estadoDe,
 
-    /* ¿Juegas en clasificatoria? (ajuste de cada jugador) */
-    activa: function () { return !!(window.PM.settings && window.PM.settings.clasif); },
+    /* ¿Esta partida es CLASIFICATORIA? Es un modo desde el 23 sep (antes,
+     * un interruptor de cada jugador en los ajustes) */
+    activa: function (G) { return !!(G && G.clasif); },
 
     /* Tu rango en un formato (1..4) esta temporada */
     estado: function (n, t) {
@@ -124,8 +125,8 @@
     /* Por qué esta partida NO cuenta (o null si cuenta). Sirve para decírselo
      * a quien la juega antes de empezar y en el GAME OVER. */
     porQueNo: function (G) {
-      if (!this.activa()) return 'NO ES CLASIFICATORIA';
       if (!G || !G.hab) return 'SOLO EN DESATADO';
+      if (!this.activa(G)) return 'NO ES CLASIFICATORIA';
       if (G.replaying || (G.isSpec && G.isSpec())) return 'MIRANDO';
       if ((G.isVersus && G.isVersus()) || G.caza || G.superv) return 'ESTE MODO NO CUENTA';
       if (G.seedBase) return 'CON SEMILLA DE FUERA NO CUENTA';
