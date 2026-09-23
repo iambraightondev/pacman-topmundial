@@ -6355,6 +6355,8 @@
       /* La descripción: la del catálogo; los del kit de siempre la tienen en
        * ROL_INFO.desc (la misma que salía en las cartas de antes). */
       function descDe(rol, k, hab) {
+        /* la explicación larga (CFG.HAB.DETALLE) si la hay; si no, la corta */
+        if (H.DETALLE && H.DETALLE[hab.id]) return H.DETALLE[hab.id];
         if (hab.desc) return hab.desc;
         var kit = H.ROLES[rol] && H.ROLES[rol][k];
         return (kit && kit.id === hab.id && H.ROL_INFO[rol].desc) ? H.ROL_INFO[rol].desc[k] : '';

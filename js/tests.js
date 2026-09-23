@@ -12564,6 +12564,17 @@
     eq(faltan.join(', '), '', 'ninguno se queda con el genérico');
   });
 
+  test('ARMARIO: cada poder tiene su explicación larga', function () {
+    var H = CFG.HAB, faltan = [];
+    H.ROL_IDS.forEach(function (r) {
+      H.catalogoDe(r).forEach(function (fila) {
+        fila.forEach(function (h) { if (!(H.DETALLE && H.DETALLE[h.id])) faltan.push(h.id); });
+      });
+    });
+    (H.LIST_G || []).forEach(function (h) { if (!(H.DETALLE && H.DETALLE[h.id])) faltan.push(h.id); });
+    eq(faltan.join(', '), '', 'ninguno se queda con la frase corta');
+  });
+
   test('CLASIFICATORIA en party: el líder la elige y viaja en la lista y en la salida', function () {
     var P = window.PM.Party, Net = window.PM.Net;
     var st = P.st, hab = P.habPick, cl = P.clasifPick, envia = Net.send, mandados = [];
