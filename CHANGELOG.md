@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Las repeticiones de party con pausa ya se ven
+
+**SE ACABABAN AL ABRIRLAS.** Si en la partida online alguien había pausado,
+la repetición se quedaba parada por dentro, el juego creía que se había
+caído la conexión y la cerraba mientras se preparaba: se veía correr a toda
+velocidad y volver al menú. Ahora la pausa grabada se salta y la repetición
+se ve entera. No se ha perdido ninguna: las que fallaban ya se abren bien.
+
 ## 2026-09-23 · Clips para reels y TikTok
 
 **LAS REPETICIONES YA SE PUEDEN SACAR EN VÍDEO.** En el reproductor hay un

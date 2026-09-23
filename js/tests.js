@@ -1851,6 +1851,39 @@
     }
   });
 
+  test('una partida online con una PAUSA en medio se ve entera', function () {
+    var R = window.PM.Replay;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_NET_KEY); }
+    catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      partida(2, 'host');
+      var i;
+      for (i = 0; i < 60; i++) { G.netWatch = 0; G.step(); }
+      /* el anfitrión pausa un buen rato: el reloj de la grabación se para,
+       * pero las fotos siguen saliendo, todas con la pausa puesta */
+      G.togglePause(); G.hostEvt({ t: 'pause', on: true });
+      for (i = 0; i < 40; i++) { G.netWatch = 0; G.step(); }
+      G.togglePause(); G.hostEvt({ t: 'pause', on: false });
+      for (i = 0; i < 60; i++) { G.netWatch = 0; G.step(); }
+      var leida = R.leerRed(R.redAcabar().s);
+      ok(leida, 'se graba');
+      ok(R.verRed(leida), 'arranca la reproducción');
+      /* sin tocar el vigilante de red: es justo lo que la tiraba */
+      for (i = 0; i < CFG.NET.DROP_TICKS + 200; i++) G.step();
+      ok(!G.paused, 'la pausa grabada no para al que mira');
+      ok(!G.netNotice && G.state !== 'MENU', 'ni la da por caída y la manda al menú');
+      ok(R.modo === 'verRed' && R.t > 120, 'el reloj pasa de la pausa');
+    } finally {
+      R.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_NET_KEY);
+        else localStorage.setItem(CFG.REPLAY_NET_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('de invitado o de mirón no se graba nada: la partida no es suya',
     function () {
       var R = window.PM.Replay;

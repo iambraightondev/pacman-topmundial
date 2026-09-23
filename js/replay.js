@@ -1216,6 +1216,8 @@
         this.salir(true);
         return;
       }
+      /* viendo una de red, no hay conexión que vigilar, ni en pausa */
+      if (this.modo === 'verRed') G.netWatch = 0;
       if (G.paused || G.netNotice) return;               // el tiempo no corre
       /* Las de red llevan reloj de PARED: se graban y se ven instantáneas que
        * el anfitrión emite todo el rato, también durante el "¡LISTO!". Las
@@ -1755,6 +1757,14 @@
         var ev = rep.eventos[this.cursorEv++][1];
         if (ev && ev.t === 'pm') {
           if (G.applyPelletHex) G.applyPelletHex(ev.hex);
+        } else if (ev && ev.t === 'pause') {
+          /* LAS PAUSAS DE LA PARTIDA NO SE REPRODUCEN (23 sep). El reloj de
+           * la grabación no corre en pausa, así que la pausa entera cae en un
+           * mismo tick y aquí no dura nada. Aplicarla dejaba la repetición
+           * parada por dentro: sin reloj no llegaba el siguiente cuadro, el
+           * vigilante de red daba la partida por caída y la mandaba al menú
+           * —mientras se preparaba, así que se veía correr y acabarse—. La
+           * pausa aquí es la de quien mira, y de nadie más. */
         } else {
           G.applyEvt(ev);
         }
@@ -1764,6 +1774,7 @@
         var c = rep.cuadros[this.cursor++];
         var s = montaSnap(c[1], n);
         s.he = c[2] || [];
+        s.pz = G.paused ? 1 : 0;       // ver arriba: la pausa es de quien mira
         G.applySnapshot(s);
       }
       // se acabó la grabación: se queda el final en pantalla
