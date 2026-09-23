@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Las repeticiones enseñan los poderes
+
+**LA BARRA DE PODERES TAMBIÉN AL VERLAS.** En una repetición de DESATADO sale a
+la derecha, como jugando: la tuya en grande (en las de party, con tu nombre)
+y las de los compañeros en pequeño, con sus recargas. Se mira, no se pulsa.
+
+**PAUSAR UNA DE PARTY YA NO TAPA TODO.** Pausar o abrir el ✂ CLIP sacaba el
+menú de mirón (SEGUIR VIENDO) encima de la barra; ahora se para como un vídeo
+y se puede elegir el trozo del clip.
+
 ## 2026-09-23 · Las repeticiones de party con pausa ya se ven
 
 **SE ACABABAN AL ABRIRLAS.** Si en la partida online alguien había pausado,

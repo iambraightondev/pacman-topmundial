@@ -2851,12 +2851,15 @@
      * y se ve el aviso. Sin preparar (en las pruebas) queda el de siempre. */
     pausaPrompt: function () {
       var self = this, UI = window.PM.UI;
-      if (this.modo !== 'ver' || !UI || !UI.showPrompt) return false;
+      /* la de party también: pausarla es parar el vídeo, no el menú de mirón
+       * con su SEGUIR VIENDO, que tapaba la barra y el panel del CLIP */
+      if ((this.modo !== 'ver' && this.modo !== 'verRed') || !UI || !UI.showPrompt) return false;
       if (this.barra && this.barra.style.display !== 'none' && this.fotos.length) {
         if (UI.hidePrompt) UI.hidePrompt();
         this.pintaBarra();
         return true;
       }
+      if (this.modo === 'verRed') return false;   // sin preparar: el de mirón
       this.pintaBarra();
       var segs = Math.round(CFG.REPLAY_SALTO / 60);
       var lineas = ['ESTÁS VIENDO UNA PARTIDA YA JUGADA.',

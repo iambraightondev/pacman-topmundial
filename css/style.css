@@ -6821,7 +6821,7 @@ body { font-size-adjust: 0.56; }
 .rv-clip-cab { display: flex; align-items: center; justify-content: space-between; }
 .rv-clip-titulo { font-size: 12px; letter-spacing: 1px; color: #ffff00; }
 .rv-clip-x { width: 30px; height: 30px; }
-.rv-clip-ayuda { font-size: 9px; line-height: 1.6; color: #9fb4ff; letter-spacing: 1px; }
+.rv-clip-ayuda { font-size: 10px; line-height: 1.6; color: #9fb4ff; letter-spacing: 1px; }
 .rv-clip-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .rv-clip-chip {
   font: 9px "Press Start 2P", 'Courier New', Courier, monospace;
@@ -6912,3 +6912,6 @@ body { font-size-adjust: 0.56; }
 @media (prefers-reduced-motion: reduce) {
   .clip-grabando-txt { animation: none; }
 }
+
+/* la barra de poderes viendo una repetición: se mira, no se pulsa */
+#habBar.repe button { pointer-events: none; cursor: default; }

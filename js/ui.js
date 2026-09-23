@@ -12005,7 +12005,7 @@
           ev.preventDefault();
           self.resumeAudio();
           var g = window.PM.Game;
-          if (!g.hab || !window.PM.Hab) return;
+          if (!g.hab || !window.PM.Hab || g.replaying) return;
           /* las que se pueden MANTENER salen al soltar: el dedo se queda
            * con el botón aunque resbale fuera */
           try { b.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura */ }
@@ -12064,7 +12064,10 @@
      * (que en online no tiene por qué ser el 0). */
     habIdxDe: function (gi) {
       var g = window.PM.Game;
-      return (g.playerCount === 2 && !g.netRole) ? gi : g.localIdx;
+      if (g.playerCount === 2 && !g.netRole) return gi;
+      /* el mirón (y la repetición de una party) no lleva a nadie: la fila
+       * grande es la del primero, y los demás van en las pequeñas */
+      return g.localIdx >= 0 ? g.localIdx : 0;
     },
 
     /* Le cuenta al escenario que la barra está puesta y cuánto ocupa.
@@ -12114,11 +12117,19 @@
       var g = window.PM.Game;
       var A = window.PM.Hab;
       if (!this.habBar || !this.habGroups) return;
-      var ver = !!(g.hab && A && !g.isSpec() && g.inGame() &&
+      /* EN LAS REPETICIONES TAMBIÉN (23 sep): ver cuándo gastó cada uno sus
+       * poderes es media gracia de volver a verla. Solo se miran, no se
+       * pulsan (.repe). La de party es de mirón, y aun así se enseña. */
+      var repe = !!g.replaying;
+      var ver = !!(g.hab && A && (!g.isSpec() || repe) && g.inGame() &&
                    g.state !== 'GAME_OVER' && !this.promptOpen);
       /* Encenderla o apagarla cambia lo que mide el escenario (va bajo el
        * lienzo y en el flujo), así que hay que rehacer el encaje. Solo cuando
        * cambia de verdad: esto se llama 60 veces por segundo. */
+      if (repe !== this.habBarRepe) {
+        this.habBarRepe = repe;
+        this.habBar.classList.toggle('repe', repe);
+      }
       if (ver !== this.habBarOn) {
         this.habBarOn = ver;
         this.habBar.classList.toggle('on', ver);
@@ -12132,11 +12143,18 @@
        * escenario, que obliga a rehacer el encaje del lienzo. */
       var dual = (g.playerCount === 2 && !g.netRole);
       var gi, grupo;
-      if (dual !== this.habDual) {
-        this.habDual = dual;
+      /* viendo la de una party, la fila grande es de alguien: se dice de quién */
+      var conNombre = dual || (g.isSpec() && repe);
+      if (conNombre !== this.habDual) {
+        this.habDual = conNombre;
         for (gi = 0; gi < this.habGroups.length; gi++) {
-          this.habGroups[gi].quien.style.display = dual ? '' : 'none';
+          this.habGroups[gi].quien.style.display = conNombre ? '' : 'none';
+          if (!dual) this.habGroups[gi].quien.textContent = 'J' + (gi + 1);
         }
+      }
+      if (conNombre && !dual) {
+        var nomPrin = g.nameFor(this.habIdxDe(0));
+        if (this.habGroups[0].quien.textContent !== nomPrin) this.habGroups[0].quien.textContent = nomPrin;
       }
       for (gi = 0; gi < this.habGroups.length; gi++) {
         grupo = this.habGroups[gi];
@@ -12228,7 +12246,7 @@
       var libres = [], i;
       if (!dual) {
         for (i = 0; i < g.playerCount && libres.length < this.habOtros.length; i++) {
-          if (i !== g.localIdx) libres.push(i);
+          if (i !== this.habIdxDe(0)) libres.push(i);
         }
       }
       for (var oi = 0; oi < this.habOtros.length; oi++) {
@@ -12353,7 +12371,9 @@
       /* La barra de poderes se refresca por fotograma desde Game.render,
        * pero ese camino solo existe DENTRO del modo: al volver al menú hay
        * que apagarla desde aquí o se quedaría colgada en la pantalla. */
-      if (this.habBar && this.habBarOn && !(playable && g.hab)) {
+      /* (viendo una repetición se queda: ahí la barra se mira, no se juega) */
+      var mirandoRepe = g.replaying && g.inGame() && g.state !== 'GAME_OVER';
+      if (this.habBar && this.habBarOn && !((playable || mirandoRepe) && g.hab)) {
         this.habBarOn = false;
         this.habBar.classList.remove('on');
         this.marcarHabBar();
