@@ -157,6 +157,102 @@
     return hay ? { colors: colores, skins: skins, looks: looks } : null;
   }
 
+  /* ---------- LOS PODERES ELEGIDOS (23 sep) ----------
+   * En DESATADO cada uno escoge sus cuatro poderes, y hasta ahora no se
+   * grababan: la repetición salía con los de serie (y una R que era METEORO
+   * se reproducía como GRITO, con otra partida distinta detrás).
+   * Lo que se guarda son los ids, 'mordisco,frenesi,flash,grito' por jugador. */
+  function poderesDeAhora() {
+    var H = window.PM.Hab;
+    if (!H || !esLista(H.loadouts) || !H.loadouts.length) return null;
+    var out = [];
+    for (var i = 0; i < H.loadouts.length; i++) {
+      var l = H.loadouts[i];
+      out.push(esLista(l) ? l.map(function (h) { return (h && h.id) || ''; }).join(',') : '');
+    }
+    return out;
+  }
+  /* En el texto de las locales los ajustes van separados por comas: dentro,
+   * los poderes de un jugador van con '+' y los jugadores con '.' */
+  function codPoderes(lista) {
+    return 'p' + lista.map(function (l) {
+      return String(l || '').replace(/[^a-z_,]/g, '').split(',').join('+');
+    }).join('.');
+  }
+  function decPoderes(txt) {
+    return txt.split('.').map(function (l) { return l.split('+').join(','); });
+  }
+
+  /* ---------- LO QUE NO CABE EN EL VECTOR (23 sep) ----------
+   * La foto de una party lleva más que posiciones: las recargas de cada uno
+   * (hb), lo que hacen las habilidades —portales, clones, tótems, meteoros,
+   * hielo... (hx)—, el REY FANTASMA (jf), SUPERVIVENCIA (sv), los cuerpos
+   * tirados (cu)... Nada de eso se grababa, y la repetición salía sin rey y
+   * sin habilidades. Va aparte, como DIFERENCIA con lo anterior: casi nada
+   * cambia de un cuadro al siguiente, y así pesa poco.
+   *   {"=": v}  -> se cambia entero por v
+   *   {"-": 1}  -> se quita
+   *   {"[": 1, "0": ...} -> lista del mismo largo, cambios por posición
+   *   {clave: ...}       -> objeto, cambios por clave */
+  var EXTRAS = ['hb', 'hx', 'jf', 'sv', 'cu', 'si', 'sk', 'cz', 'ct', 'mk'];
+  function esObj(v) { return v !== null && typeof v === 'object' && !esLista(v); }
+  function difJson(a, b) {
+    if (JSON.stringify(a) === JSON.stringify(b)) return undefined;
+    var out, k, d, hay = false;
+    if (esObj(a) && esObj(b)) {
+      out = {};
+      for (k in b) if (b.hasOwnProperty(k)) {
+        d = difJson(a[k], b[k]);
+        if (d !== undefined) { out[k] = d; hay = true; }
+      }
+      for (k in a) if (a.hasOwnProperty(k) && !b.hasOwnProperty(k)) { out[k] = { '-': 1 }; hay = true; }
+      return hay ? out : undefined;
+    }
+    if (esLista(a) && esLista(b) && a.length === b.length && a.length) {
+      out = { '[': 1 };
+      for (k = 0; k < b.length; k++) {
+        d = difJson(a[k], b[k]);
+        if (d !== undefined) { out[k] = d; hay = true; }
+      }
+      return hay ? out : undefined;
+    }
+    return { '=': b === undefined ? null : b };
+  }
+  function parcheJson(a, d) {
+    if (!esObj(d)) return a;
+    if (d.hasOwnProperty('=')) return d['='];
+    if (d['-']) return undefined;
+    var k, v;
+    if (d['[']) {
+      var arr = esLista(a) ? a.slice() : [];
+      for (k in d) if (d.hasOwnProperty(k) && k !== '[') arr[+k] = parcheJson(arr[+k], d[k]);
+      return arr;
+    }
+    var o = {};
+    if (esObj(a)) for (k in a) if (a.hasOwnProperty(k)) o[k] = a[k];
+    for (k in d) if (d.hasOwnProperty(k)) {
+      v = parcheJson(o[k], d[k]);
+      if (v === undefined) delete o[k]; else o[k] = v;
+    }
+    return o;
+  }
+  function extrasDe(s) {
+    var o = {};
+    for (var i = 0; i < EXTRAS.length; i++) {
+      var k = EXTRAS[i];
+      if (s[k] !== undefined && s[k] !== null) o[k] = s[k];
+    }
+    /* se guarda una copia limpia: lo de la foto puede cambiar por debajo */
+    return JSON.parse(JSON.stringify(o));
+  }
+  /* dentro del texto de red, ';' y '|' separan cuadros y trozos: fuera de una
+   * cadena JSON no salen nunca, y dentro se escapan */
+  function jsonSeguro(o) {
+    var bs = String.fromCharCode(92);      // la barra invertida del escape JSON
+    return JSON.stringify(o).split(';').join(bs + 'u003b').split('|').join(bs + 'u007c');
+  }
+
+
   function b36(n) { return Math.round(n).toString(36); }
   function d36(s) { return parseInt(s, 36); }
   function esNum(n) { return typeof n === 'number' && isFinite(n); }
@@ -426,7 +522,7 @@
 
   var Replay = {
     V: 1,
-    V_RED: 2,
+    V_RED: 3,
 
     /* Las tripas del formato de red, para poder probarlas sueltas: es la
      * pieza con más riesgo (un campo mal puesto se ve como una repetición
@@ -534,6 +630,7 @@
       if (esLista(a.roles) && a.roles.length) {
         aj.push('r' + a.roles.map(function (r) { return String(r).charAt(0); }).join(''));
       }
+      if (esLista(a.poderes) && a.poderes.length) aj.push(codPoderes(a.poderes));
       // 'm' + el laberinto (los ids no llevan ni comas ni virgulillas)
       if (a.maze) aj.push('m' + String(a.maze).replace(/[^a-z0-9_-]/gi, ''));
       var nombres = [];
@@ -592,6 +689,7 @@
           else if (aj[b] === 'q') ajustes.qArmada = true;
           else if (aj[b].charAt(0) === 'r') ajustes.roles = decRoles(aj[b].slice(1));
           else if (aj[b].charAt(0) === 'm') ajustes.maze = aj[b].slice(1);
+          else if (aj[b].charAt(0) === 'p') ajustes.poderes = decPoderes(aj[b].slice(1));
         }
 
         var crudos = p[6].split(','), nombres = [];
@@ -1100,6 +1198,8 @@
       if (G.hab && G.roles && G.roles.some(function (r) { return r !== 'asesino'; })) {
         ajustes.roles = G.roles.slice();
       }
+      /* ...y cuáles son sus cuatro poderes (ver poderesDeAhora) */
+      if (G.hab) { var pod = poderesDeAhora(); if (pod) ajustes.poderes = pod; }
 
       this.modo = 'grabar';
       this.grabando = {
@@ -1498,6 +1598,7 @@
         ghosts: G.vsGhosts ? G.vsGhosts.slice() : null,
         hab: !!G.hab,          // modo DESATADO: dientes, chispas y flash
         roles: G.hab && G.roles ? G.roles.slice() : null,
+        poderes: G.hab ? poderesDeAhora() : null,
         caza: !!G.caza,        // CACERÍA: el Pac-Man de la máquina y su reloj
         fecha: new Date().toISOString(),
         pm: null,              // mapa de pastillas del arranque
@@ -1505,6 +1606,7 @@
         eventos: [],           // [tick, evento]
         final: null
       };
+      this.redExtraPrev = {};
     },
 
     /* Cada instantánea del anfitrión pasa por aquí. Se guarda 1 de cada
@@ -1527,7 +1629,17 @@
       if (++this.redSalto < CFG.REPLAY_NET_EVERY) return;
       this.redSalto = 0;
       var copia = aplanaSnap(s, this.red.jugadores);
-      this.red.cuadros.push([this.t, copia, this.redPend]);
+      /* lo de fuera del vector, como diferencia (ver difJson) */
+      var ex = extrasDe(s);
+      /* Las RECARGAS, una vez por segundo y no seis: cambian en cada foto
+       * (bajan un tick cada tick) y eran la mitad del peso. Entre medias el
+       * juego las descuenta solo, que es lo que hace también en directo. */
+      if (this.red.cuadros.length % CFG.REPLAY_NET_RECARGAS !== 0 && this.redExtraPrev &&
+          this.redExtraPrev.hb) ex.hb = this.redExtraPrev.hb;
+      var dx = difJson(this.redExtraPrev || {}, ex);
+      this.redExtraPrev = ex;
+      this.red.cuadros.push(dx === undefined ? [this.t, copia, this.redPend]
+                                             : [this.t, copia, this.redPend, dx]);
       this.redPend = [];
       // una partida normal no llega; si alguien la deja corriendo un día
       // entero, se deja de grabar antes que reventar el almacenamiento
@@ -1563,6 +1675,7 @@
         aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
         lk: rep.looks || null,
         gh: rep.ghosts || null, hb: !!rep.hab, cz: !!rep.caza, rl: rep.roles || null,
+        lo: rep.poderes || null,
         fe: rep.fecha, pm: rep.pm || null,
         fin: rep.final
       };
@@ -1570,7 +1683,8 @@
       for (var i = 0; i < rep.cuadros.length; i++) {
         var c = rep.cuadros[i];
         var comidas = c[2] && c[2].length ? c[2].map(b36).join('.') : '';
-        filas.push(c[0] + '|' + codVector(c[1], previa) + '|' + comidas);
+        filas.push(c[0] + '|' + codVector(c[1], previa) + '|' + comidas +
+                   (c[3] !== undefined ? '|' + jsonSeguro(c[3]) : ''));
         previa = c[1];
       }
       var evs = [];
@@ -1585,7 +1699,8 @@
         var partes = String(texto || '').split('\n');
         if (partes.length < 3) return null;
         var cab = JSON.parse(partes[0]);
-        if (!cab || cab.v !== this.V_RED) return null;
+        /* la 3 lleva lo de fuera del vector; la 2 se sigue viendo, sin ello */
+        if (!cab || (cab.v !== this.V_RED && cab.v !== 2)) return null;
         var n = parseInt(cab.j, 10);
         if (!(n >= 1 && n <= CFG.MAX_PLAYERS)) return null;
         var largo = aplanaSnap({ ps: [], g: [] }, n).length;
@@ -1596,7 +1711,9 @@
           var v = decVector(trozos[1], previa, largo);
           if (!v) return null;
           var comidas = trozos[2] ? trozos[2].split('.').map(d36) : [];
-          cuadros.push([parseInt(trozos[0], 10) || 0, v, comidas]);
+          var fila = [parseInt(trozos[0], 10) || 0, v, comidas];
+          if (trozos[3]) fila.push(JSON.parse(trozos[3]));
+          cuadros.push(fila);
           previa = v;
         }
         if (!cuadros.length) return null;
@@ -1619,6 +1736,7 @@
           ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
           skins: cab.sk || [], looks: cab.lk || null,
           ghosts: cab.gh || null, hab: !!cab.hb, roles: cab.rl || null,
+          poderes: cab.lo || null,
           caza: !!cab.cz, fecha: cab.fe || '',
           pm: cab.pm || null, cuadros: cuadros, eventos: eventos,
           final: cab.fin || null
@@ -1640,6 +1758,14 @@
 
     guardarRed: function (rep) {
       var texto = this.serializarRed(rep);
+      /* Demasiado larga con todo: antes que perderla, se guarda sin lo de
+       * fuera del vector (se ve como las de antes: sin rey ni efectos) */
+      if (texto && texto.length > CFG.REPLAY_NET_MAX_CHARS) {
+        var ligera = {};
+        for (var lk in rep) if (rep.hasOwnProperty(lk)) ligera[lk] = rep[lk];
+        ligera.cuadros = rep.cuadros.map(function (c) { return c.slice(0, 3); });
+        texto = this.serializarRed(ligera);
+      }
       if (!texto || texto.length > CFG.REPLAY_NET_MAX_CHARS) return null;
       var lista = this.guardadasRed();
       var ahora = Date.now();
@@ -1727,8 +1853,10 @@
         maze: rep.maze || null,
         hab: !!rep.hab,
         roles: rep.roles || null,
+        loadouts: rep.poderes ? rep.poderes.slice() : null,
         caza: !!rep.caza
       });
+      this.redExtra = {};
       if (rep.pm && rep.pm.hex && G.applyPelletHex) G.applyPelletHex(rep.pm.hex);
       this.prepararConAviso();
       return true;
@@ -1774,6 +1902,17 @@
         var c = rep.cuadros[this.cursor++];
         var s = montaSnap(c[1], n);
         s.he = c[2] || [];
+        /* lo de fuera del vector: se va rehaciendo cuadro a cuadro, y se le
+         * da al juego una COPIA (lo aplicado se queda por referencia y el
+         * juego lo gasta: descuenta relojes encima) */
+        if (c[3] !== undefined) this.redExtra = parcheJson(this.redExtra || {}, c[3]) || {};
+        if (this.redExtra) {
+          var ex = JSON.parse(JSON.stringify(this.redExtra));
+          /* las recargas solo cuando llegan nuevas: volver a poner las de
+           * hace un segundo las haría saltar hacia atrás */
+          if (!(c[3] && c[3].hb)) delete ex.hb;
+          for (var ek in ex) if (ex.hasOwnProperty(ek)) s[ek] = ex[ek];
+        }
         s.pz = G.paused ? 1 : 0;       // ver arriba: la pausa es de quien mira
         G.applySnapshot(s);
       }
@@ -2005,6 +2144,7 @@
     guardaFoto: function () {
       this.fotos.push({ t: this.t, cursor: this.cursor, cursorEv: this.cursorEv,
                         redFin: !!this.redFin, foto: G.foto(),
+                        redExtra: this.redExtra ? JSON.stringify(this.redExtra) : null,
                         mini: this.guardaMiniatura() });
     },
 
@@ -2036,6 +2176,7 @@
       this.cursor = f.cursor;
       this.cursorEv = f.cursorEv;
       this.redFin = f.redFin;
+      this.redExtra = f.redExtra ? JSON.parse(f.redExtra) : {};
       var tope = CFG.REPLAY_FOTO_CADA * 4;       // red de seguridad
       while (this.t < destino && tope-- > 0 && !this.acabada()) G.step();
       G.simulandoFuera = fuera;
@@ -2165,6 +2306,8 @@
         hab: esDesatado(rep.modo),
         // ...ni qué poder era cada tecla
         roles: (rep.ajustes && rep.ajustes.roles) ? rep.ajustes.roles.slice() : null,
+        // ...ni cuáles eligió cada uno (las de antes no lo traen: los de serie)
+        loadouts: (rep.ajustes && rep.ajustes.poderes) ? rep.ajustes.poderes.slice() : null,
         // ni los giros del que llevaba fantasma, a quién moverle
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
           ? rep.ajustes.ghosts.slice() : null,

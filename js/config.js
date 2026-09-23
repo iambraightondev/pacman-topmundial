@@ -1670,11 +1670,15 @@
    * (supabase/repeticiones-destacadas.sql) */
   CFG.REPLAY_CADUCA_DIAS = 7;
   CFG.REPLAY_TITULO_MAX = 32;
-  CFG.REPLAY_NET_V = 2;            // versión del formato
+  CFG.REPLAY_NET_V = 3;            // versión del formato (3: poderes y lo de fuera del vector)
   CFG.REPLAY_NET_EVERY = 2;        // 1 de cada N instantáneas (12 Hz -> 6 Hz)
+  CFG.REPLAY_NET_RECARGAS = 6;     // las recargas, 1 de cada N cuadros (una por segundo)
   CFG.REPLAY_NET_MAX = 2;          // cuántas se guardan
-  CFG.REPLAY_NET_MAX_CHARS = 220000;   // tope de una (unos 15 min de partida)
-  CFG.REPLAY_NET_TOTAL_CHARS = 420000; // tope de todas juntas
+  /* 23 sep: con los poderes, el rey y los efectos, una de party pesa unas
+   * tres veces más; los topes suben lo justo para que siga cabiendo una
+   * partida larga (el localStorage da de sobra para esto) */
+  CFG.REPLAY_NET_MAX_CHARS = 450000;   // tope de una (unos 20-30 min de partida)
+  CFG.REPLAY_NET_TOTAL_CHARS = 900000; // tope de todas juntas
 
   /* ---------- Compartir una repetición por enlace ----------
    * Las LOCALES caben enteras en la URL (?rep=<texto>): son unos cientos de

@@ -1851,6 +1851,63 @@
     }
   });
 
+  test('una repetición de DESATADO guarda los PODERES elegidos, no los de serie', function () {
+    var R = window.PM.Replay, H = window.PM.Hab;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['mago'], loadouts: ['bola_guiada,clon,gravedad,meteoro'] });
+      var rep = R.enCurso();
+      ok(rep, 'se graba');
+      eq((rep.ajustes.poderes || []).join('|'), 'bola_guiada,clon,gravedad,meteoro', 'con sus cuatro poderes');
+      rep.final = { puntos: 10, nivel: 1, fantasmas: 0, tiempoMs: 1000 };
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'pasa por el texto');
+      eq((leida.ajustes.poderes || []).join('|'), 'bola_guiada,clon,gravedad,meteoro', 'y vuelve igual');
+      G.toMenu();
+      R.montar(leida);
+      eq(H.listaDe(G, 0).map(function (h) { return h.id; }).join(','), 'bola_guiada,clon,gravedad,meteoro',
+        'al verla, las teclas son las que eligió');
+    } finally { R.salir(); }
+  });
+
+  test('una repetición de party trae los poderes, lo que hacen y al REY FANTASMA', function () {
+    var R = window.PM.Replay, H = window.PM.Hab, J = window.PM.Jefe;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_NET_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, roles: ['mago', 'tanque'],
+                  loadouts: ['bola_guiada,totem,gravedad,meteoro', 'rebote,yunque,provocar,fortaleza'] });
+      G.state = 'PLAYING'; G.readyTicks = 0;
+      var i;
+      for (i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+      /* el rey en el laberinto y un TÓTEM plantado */
+      G.jefe = { vivo: true, hp: 7, max: 9, x: 100, y: 100, dir: 0, st: 'caza', stT: 0, inv: 0, frz: 0,
+                 azulUsado: 0, huye: 0, huyeDe: -1, golpeado: 0, plan: -1 };
+      H.st[0].totem = { c: 13, r: 23, t: 600, cd: 0 };
+      for (i = 0; i < 60; i++) { G.netWatch = 0; G.step(); }
+      var regRed = R.redAcabar();
+      var leida = regRed ? R.leerRed(regRed.s) : null;
+      ok(leida, 'se graba y se lee');
+      eq((leida.poderes || []).join('|'), 'bola_guiada,totem,gravedad,meteoro|rebote,yunque,provocar,fortaleza',
+        'con los poderes de cada uno');
+      ok(leida.cuadros.some(function (c) { return c[3]; }), 'y lo de fuera del vector');
+      ok(R.verRed(leida), 'arranca');
+      for (i = 0; i < 40; i++) G.step();
+      eq(H.listaDe(G, 1).map(function (h) { return h.id; }).join(','), 'rebote,yunque,provocar,fortaleza',
+        'el Tanque con los suyos');
+      ok(J.activo(G), 'el REY FANTASMA está');
+      eq(G.jefe.max, 9, 'con su barra de vida');
+      ok(H.st[0].totem, 'y el tótem del Mago, plantado');
+    } finally {
+      R.salir();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_NET_KEY);
+        else localStorage.setItem(CFG.REPLAY_NET_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('una partida online con una PAUSA en medio se ve entera', function () {
     var R = window.PM.Replay;
     var previo = null;

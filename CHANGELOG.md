@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Las repeticiones, como se jugaron: tus poderes y el rey
+
+**SALÍAN CON LOS PODERES DE SERIE.** Los cuatro poderes que elige cada uno no
+se grababan, así que la repetición los ponía de fábrica: en la barra salían
+otros, y en las de a solas una R que era METEORO se reproducía como GRITO (y
+la partida ya era otra). Ahora se guardan.
+
+**EN LAS DE PARTY FALTABA MEDIA PARTIDA.** Solo se grababan posiciones y
+puntos: ni el **REY FANTASMA**, ni lo que hacen las habilidades (tótems,
+portales, clones, meteoros, hielo...), ni las recargas. Ahora van también.
+
+Solo vale para las partidas que se jueguen desde ya: las grabadas antes no
+tienen esos datos y se siguen viendo como hasta ahora.
+
 ## 2026-09-23 · Las repeticiones enseñan los poderes
 
 **LA BARRA DE PODERES TAMBIÉN AL VERLAS.** En una repetición de DESATADO sale a
