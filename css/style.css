@@ -7128,6 +7128,14 @@ body { font-size-adjust: 0.56; }
 .arm-ri-mae { color: var(--rol); opacity: 0.85; }
 .arm-pasiva { color: var(--rol); opacity: 0.9; }
 /* sin rol (el J2 hasta que elija): solo las cartas */
-.arm.sin-rol .arm-slots, .arm.sin-rol .arm-cajon, .arm.sin-rol .arm-pasiva { display: none; }
-.arm.sin-rol .arm-rolinfo { justify-content: center; }
-.arm.sin-rol .btn.arm-rol { opacity: 0.85; }
+/* el cuerpo (casillas, cajón y pasiva) guarda su sitio aunque no haya rol */
+.arm-cuerpo { position: relative; display: grid; gap: 8px; }
+.arm.sin-rol .arm-cuerpo > :not(.arm-vacio) { visibility: hidden; }
+.arm-vacio { display: none; }
+.arm.sin-rol .arm-vacio {
+  display: flex; align-items: center; justify-content: center;
+  position: absolute; inset: 0; padding: 20px;
+  border: 2px dashed rgba(159, 180, 255, 0.35); border-radius: 12px;
+  font-size: 10px; letter-spacing: 1px; line-height: 1.8; color: #9fb4ff; text-align: center;
+}
+.arm.sin-rol .btn.arm-rol { opacity: 0.85; }.arm-rol-quien { display: block; height: 10px; line-height: 10px; }

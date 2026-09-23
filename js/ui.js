@@ -6320,7 +6320,12 @@
           fSlots.appendChild(b);
         })(sk);
       }
-      raiz.appendChild(fSlots);
+      /* Las casillas, el cajón y la pasiva van juntos en el CUERPO: sin rol se
+       * esconden pero siguen ocupando su sitio, y encima sale el aviso. Si se
+       * quitaran, la pantalla entera se encogería al pasar al J2 sin rol. */
+      var cuerpo = el('div', 'arm-cuerpo');
+      raiz.appendChild(cuerpo);
+      cuerpo.appendChild(fSlots);
 
       /* ---- el cajón de la tecla abierta ---- */
       var cajon = el('div', 'arm-cajon');
@@ -6338,10 +6343,12 @@
       det.appendChild(dTx);
       det.appendChild(dCd);
       cajon.appendChild(det);
-      raiz.appendChild(cajon);
+      cuerpo.appendChild(cajon);
 
       var pasiva = el('div', 'arm-pasiva');
-      raiz.appendChild(pasiva);
+      cuerpo.appendChild(pasiva);
+      var vacio = el('div', 'arm-vacio', '');
+      cuerpo.appendChild(vacio);
 
       var abierto = 0, cajonDe = '', ops = [], encima = null;
 
@@ -6402,8 +6409,9 @@
             sr.b.disabled = !!squien;
             sr.quien.textContent = squien || '';
           }
-          riLema.textContent = o.sinRol || 'ELIGE UN ROL';
+          riLema.textContent = ' ';
           riMae.textContent = '';
+          vacio.textContent = o.sinRol || 'ELIGE UN ROL';
           return;
         }
         var info = H.ROL_INFO[rol], col = info.color;
