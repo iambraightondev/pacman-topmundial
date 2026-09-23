@@ -150,6 +150,8 @@
     /* los del RANGO de temporada (js/rango.js): uno por mes y formato */
     if (/^r[cgtl]_[0-9]{4}-(0[1-9]|1[0-2])_[1-4]$/.test(key)) return 'suma';
     if (/^rm_[0-9]{4}-(0[1-9]|1[0-2])_[1-4]$/.test(key)) return 'mayor';   // mejor división
+    /* el récord de DESATADO de cada ROL (js/badges.js), por formato */
+    if (/^rhab_(asesino|tanque|mago|soporte)_[1-4]$/.test(key)) return 'mayor';
     return null;
   }
 

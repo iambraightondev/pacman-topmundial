@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · DESATADO: récord y copas de cada rol
+
+**CADA ROL, SU RÉCORD Y SUS COPAS.** En DESATADO el Asesino, el Tanque, el
+Mago y el Soporte llevan cada uno su récord en cada formato y su camino de
+copas, que no hacen los mismos puntos. En TROFEOS, con DESATADO elegido, sale
+un filtro de **ROL**; TODOS enseña la mejor marca de cualquiera.
+
+**A UNO YA CUENTA CON CUALQUIER ROL** para el récord y las copas de ese rol
+(el récord de DESATADO de siempre y el top mundial siguen siendo del Asesino a
+uno). Lo ya jugado se ha repartido mirando tus repeticiones; lo que no se
+podía atribuir va al Asesino, así que no se pierde ninguna copa. Viaja con la
+cuenta.
+
 ## 2026-09-23 · CLASIFICATORIA, modo propio · el armario con iconos
 
 **CLASIFICATORIA YA ES UN MODO.** Está al lado de DESATADO, con su póster

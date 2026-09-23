@@ -105,6 +105,32 @@
     }
   }
 
+  /* DESATADO POR ROL (23 sep): cada rol lleva SU récord y SUS copas en cada
+   * formato, que el Tanque y el Asesino no hacen los mismos puntos. Son
+   * rutas aparte ('hab_tanque', 'hab_tanque2'…); la de DESATADO de siempre
+   * ('hab', 'hab2'…) sigue siendo la de TODOS LOS ROLES: su mejor marca es
+   * la mejor de cualquiera de ellos.
+   *
+   * El récord de cada rol vive en los contadores de logros
+   * (rhab_<rol>_<n>, «el mayor»), que ya viajan a la cuenta y se funden
+   * quedándose con lo más alto: no hace falta ninguna columna nueva. */
+  var ROLES_HAB = (CFG.HAB && CFG.HAB.ROL_IDS) || ['asesino', 'tanque', 'mago', 'soporte'];
+  var MUNDO_HAB = MUNDOS[2];
+  function rutaRol(rol, n) { return 'hab_' + rol + (n > 1 ? n : ''); }
+  var ORDEN_ROL = [];
+  ROLES_HAB.forEach(function (rol) {
+    for (var fr = 0; fr < FORMATOS.length; fr++) {
+      var idr = rutaRol(rol, FORMATOS[fr].n);
+      RUTAS[idr] = { mundo: MUNDO_HAB, fmt: FORMATOS[fr], rol: rol };
+      ORDEN_ROL.push(idr);
+    }
+  });
+  function claveRol(rol, n) { return 'rhab_' + rol + '_' + n; }
+  function recordRol(rol, n) {
+    var A = window.PM.Achievements, c = A ? A.stats() : {};
+    return Math.floor((c && c[claveRol(rol, n)]) || 0);
+  }
+
   function isArray(v) {
     return Object.prototype.toString.call(v) === '[object Array]';
   }
@@ -143,8 +169,86 @@
   var Badges = {
     /* Las doce rutas, mundo a mundo y dentro de cada uno por formato */
     MODES: ORDEN,
+    MODES_ROL: ORDEN_ROL,
     MUNDOS: MUNDOS,
     FORMATOS: FORMATOS,
+    ROLES: ROLES_HAB,
+
+    /* ---------- DESATADO por rol ---------- */
+    rutaRol: function (rol, players) {
+      var n = Math.max(1, Math.min(CFG.MAX_PLAYERS, parseInt(players, 10) || 1));
+      return ROLES_HAB.indexOf(rol) !== -1 ? rutaRol(rol, n) : this.ruta('hab', n);
+    },
+    /* El rol de una ruta, o null si no es de un rol */
+    rolDe: function (mode) { return (RUTAS[norm(mode)] || {}).rol || null; },
+    claveRol: claveRol,
+    recordRol: recordRol,
+
+    /* Apunta la puntuación en el récord de ese rol (solo sube) */
+    apuntarRol: function (rol, n, puntos) {
+      var A = window.PM.Achievements;
+      if (!A || ROLES_HAB.indexOf(rol) === -1 || !(puntos > 0)) return;
+      var o = {};
+      o[claveRol(rol, Math.max(1, Math.min(CFG.MAX_PLAYERS, n | 0)))] = puntos;
+      A.recordAll(o);
+    },
+
+    /* LO YA JUGADO, una vez por aparato: los récords por rol nacen hoy, pero
+     * las copas de DESATADO que ya tenías no se pierden. Se miran las
+     * repeticiones guardadas (llevan el rol de cada uno) y el récord de
+     * DESATADO de siempre que ninguna repetición explique va al ASESINO: a
+     * solas era el único que hacía récord, y en party casi siempre. */
+    sembrarRoles: function () {
+      var KEY = 'pacman-topmundial-rhab-sembrado';
+      try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
+      var R = window.PM.Replay, g = window.PM.Game, self = this, n, rol;
+      var visto = {};          // 'rol|n' -> puntos, lo que explican las repeticiones
+      function apunta(r, np, p) {
+        if (ROLES_HAB.indexOf(r) === -1 || !(p > 0)) return;
+        self.apuntarRol(r, np, p);
+        var k = r + '|' + np;
+        visto[k] = Math.max(visto[k] || 0, p);
+      }
+      try {
+        /* las locales: a uno o dos en el mismo teclado, los roles son de aquí */
+        (R && R.guardadas ? R.guardadas() : []).forEach(function (reg) {
+          var rep = R.leer(reg.s);
+          if (!rep || !/^hab/.test(rep.modo) || rep.modo === 'habvs') return;
+          var roles = (rep.ajustes && rep.ajustes.roles) || ['asesino', 'asesino'];
+          var p = (rep.final && rep.final.puntos) || 0;
+          for (var i = 0; i < rep.jugadores; i++) {
+            /* a uno con otro rol era práctica: también es su marca */
+            apunta(roles[i] || 'asesino', rep.jugadores, p);
+          }
+        });
+        /* las de party: solo la cabecera (el rol de cada nombre) */
+        var yo = '';
+        var Ac = window.PM.Account;
+        if (Ac && Ac.logged && Ac.logged() && Ac.name) yo = String(Ac.name() || '').toUpperCase();
+        if (!yo) yo = String((window.PM.settings && window.PM.settings.nick1) || '').toUpperCase();
+        (R && R.guardadasRed ? R.guardadasRed() : []).forEach(function (reg) {
+          var cab = null;
+          try { cab = JSON.parse(String(reg.s || '').split(String.fromCharCode(10))[0]); } catch (e) { cab = null; }
+          if (!cab || !cab.hb || !cab.rl) return;
+          var idx = (cab.nm || []).map(function (x) { return String(x || '').toUpperCase(); }).indexOf(yo);
+          if (idx < 0) return;
+          apunta(cab.rl[idx], cab.j, (cab.fin && cab.fin.puntos) || 0);
+        });
+      } catch (e) { /* una repetición rota no para la siembra */ }
+      /* y lo que falte por explicar del récord de siempre, al Asesino */
+      for (n = 1; n <= CFG.MAX_PLAYERS; n++) {
+        var global = (g && g.recordModo) ? g.recordModo('hab', n) : 0;
+        if (!(global > 0)) continue;
+        var mejor = 0;
+        for (var ri = 0; ri < ROLES_HAB.length; ri++) {
+          rol = ROLES_HAB[ri];
+          mejor = Math.max(mejor, visto[rol + '|' + n] || 0);
+        }
+        if (mejor < global) this.apuntarRol('asesino', n, global);
+      }
+      try { localStorage.setItem(KEY, '1'); } catch (e) { /* sin almacén */ }
+      this.syncSeen();         // lo sembrado no se anuncia
+    },
 
     /* Ruta a la que cuenta una partida. mundo puede venir como null (el
      * clásico), que es justo lo que devuelve Game.recordSlot(). */
@@ -173,6 +277,9 @@
     modeName: function (mode) {
       var r = RUTAS[norm(mode)];
       if (r.mundo.id === 'clasico') return r.fmt.name;
+      if (r.rol && CFG.HAB && CFG.HAB.ROL_INFO[r.rol]) {
+        return r.mundo.name + ' · ' + CFG.HAB.ROL_INFO[r.rol].name + ' · ' + r.fmt.name;
+      }
       return r.mundo.name + ' · ' + r.fmt.name;
     },
 
@@ -202,7 +309,13 @@
       if (r.mundo.id === 'clasico') {
         return (g.recordFor ? g.recordFor(r.fmt.n) : 0) || 0;
       }
-      return (g.recordModo ? g.recordModo(r.mundo.id, r.fmt.n) : 0) || 0;
+      if (r.rol) return recordRol(r.rol, r.fmt.n);
+      var base = (g.recordModo ? g.recordModo(r.mundo.id, r.fmt.n) : 0) || 0;
+      /* DESATADO · TODOS LOS ROLES: lo mejor de cualquiera */
+      if (r.mundo.id === 'hab') {
+        for (var i = 0; i < ROLES_HAB.length; i++) base = Math.max(base, recordRol(ROLES_HAB[i], r.fmt.n));
+      }
+      return base;
     },
 
     earnedAt: function (points, mode) {
@@ -257,8 +370,9 @@
     syncSeen: function () {
       var seen = loadSeen();
       var changed = false;
-      for (var m = 0; m < this.MODES.length; m++) {
-        var mode = this.MODES[m];
+      var todas = this.MODES.concat(this.MODES_ROL);
+      for (var m = 0; m < todas.length; m++) {
+        var mode = todas[m];
         var got = this.earned(mode);
         for (var i = 0; i < got.length; i++) {
           if (seen[mode].indexOf(got[i].id) === -1) {

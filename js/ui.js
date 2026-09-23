@@ -451,6 +451,7 @@
       if (window.PM.Achievements) window.PM.Achievements.syncSeen();
       // lo ya jugado en DESATADO, a las maestrías de rol (solo lo que falte)
       if (window.PM.Maestria) window.PM.Maestria.sembrar();
+      if (window.PM.Badges && window.PM.Badges.sembrarRoles) window.PM.Badges.sembrarRoles();
       // las skins que ya estaban abiertas al llegar no se anuncian como nuevas
       if (window.PM.Skins) window.PM.Skins.syncVistas();
       this.els.vestuario = document.getElementById('vestuario');
@@ -6714,6 +6715,16 @@
         function (n) { self.showBadgeTab(null, n); });
       mandos.appendChild(this.badgeMundoDesp.el);
       mandos.appendChild(this.badgeFmtDesp.el);
+      /* DESATADO: el ROL (23 sep). Cada uno tiene su récord y sus copas;
+       * TODOS es la ruta de siempre, con lo mejor de cualquiera. Solo se
+       * enseña con DESATADO elegido. */
+      var roles = [{ id: 'todos', name: 'TODOS' }].concat((CFG.HAB.ROL_IDS || []).map(function (r) {
+        return { id: r, name: CFG.HAB.ROL_INFO[r].name };
+      }));
+      this.badgeRolDesp = this.desplegable('ROL', roles, function (id) {
+        self.showBadgeTab(null, null, id === 'todos' ? '' : id);
+      });
+      mandos.appendChild(this.badgeRolDesp.el);
       cab.appendChild(mandos);
       o.appendChild(cab);
 
@@ -6778,6 +6789,7 @@
 
       this.badgeMundo = 'clasico';
       this.badgeFmt = 1;
+      this.badgeRol = '';
       this.badgeTab = 'solo';
       this.badgePick = null;
       this.badgeLienzos = [];
@@ -6787,18 +6799,24 @@
      * recalcula la ruta. Se puede entrar también con una ruta hecha —lo hace
      * showBadges con la del modo en curso—, y entonces se deshace en sus dos
      * piezas para que los desplegables queden donde toca. */
-    showBadgeTab: function (mundo, n) {
+    showBadgeTab: function (mundo, n, rol) {
       var B = window.PM.Badges;
       if (!B) return;
-      if (mundo && B.MODES.indexOf(mundo) !== -1 && n == null) {
-        // ha llegado una ruta entera, no un mundo
+      if (mundo && (B.MODES.indexOf(mundo) !== -1 || (B.MODES_ROL || []).indexOf(mundo) !== -1) && n == null) {
+        // ha llegado una ruta entera, no un mundo (la de un rol, también)
+        rol = B.rolDe ? (B.rolDe(mundo) || '') : '';
         n = B.players(mundo);
         mundo = B.mundoDe(mundo);
       }
       if (mundo) this.badgeMundo = mundo;
       if (n) this.badgeFmt = n;
-      this.badgeTab = B.ruta(this.badgeMundo === 'clasico' ? null : this.badgeMundo,
-                             this.badgeFmt);
+      if (rol != null) this.badgeRol = rol;
+      if (this.badgeMundo === 'hab' && this.badgeRol && B.rutaRol) {
+        this.badgeTab = B.rutaRol(this.badgeRol, this.badgeFmt);
+      } else {
+        this.badgeTab = B.ruta(this.badgeMundo === 'clasico' ? null : this.badgeMundo,
+                               this.badgeFmt);
+      }
       this.badgeMundo = B.mundoDe(this.badgeTab);
       this.badgeFmt = B.players(this.badgeTab);
       this.badgePick = null;      // cada ruta empieza por la suya
@@ -6815,6 +6833,10 @@
       var mode = this.badgeTab || 'solo';
       if (this.badgeMundoDesp) this.badgeMundoDesp.poner(this.badgeMundo);
       if (this.badgeFmtDesp) this.badgeFmtDesp.poner(this.badgeFmt);
+      if (this.badgeRolDesp) {
+        this.badgeRolDesp.el.style.display = (this.badgeMundo === 'hab') ? '' : 'none';
+        this.badgeRolDesp.poner(this.badgeRol || 'todos');
+      }
       var best = B ? B.best(mode) : 0;
       var next = B ? B.next(mode) : null;
       /* Cada formato es su propia liga: su récord, sus insignias y su listón.
@@ -6828,8 +6850,9 @@
         nota = '  ·  OTRO TRAZADO, OTRA LIGA: LO DE AQUÍ NO ENTREGA LAS DEL ' +
                'LABERINTO DE 1980';
       } else if (mundo === 'hab') {
-        nota = '  ·  CON PODERES LOS PUNTOS SON MÁS BARATOS, ASÍ QUE ESTE ' +
-               'MUNDO TIENE SUS PROPIOS ESCALONES, MÁS ALTOS';
+        nota = (B && B.rolDe && B.rolDe(mode))
+          ? '  ·  CADA ROL TIENE SU RÉCORD Y SUS COPAS; A UNO TAMBIÉN CUENTA CON CUALQUIER ROL'
+          : '  ·  TODOS LOS ROLES: LA MEJOR MARCA DE CUALQUIERA · ELIGE UN ROL PARA VER LAS SUYAS';
       } else if (mode !== 'solo') {
         nota = '  ·  CADA FORMATO ES UNA LIGA APARTE Y PIDE MÁS PUNTOS ' +
                'CUANTOS MÁS SEÁIS';
@@ -6929,6 +6952,9 @@
       var color = gema[rango] || badge.color;
       var mundoDe = B ? B.mundoDe(mode) : 'clasico', donde = '';
       (B ? B.MUNDOS : []).forEach(function (m) { if (m.id === mundoDe) donde = m.name; });
+      // la ruta de un ROL lo dice: DESATADO · TANQUE · SOLO
+      var rolRuta = B && B.rolDe ? B.rolDe(mode) : null;
+      if (rolRuta && CFG.HAB.ROL_INFO[rolRuta]) donde += ' · ' + CFG.HAB.ROL_INFO[rolRuta].name;
       donde += ' · ' + (B && B.formatoName ? B.formatoName(mode) : 'SOLO');
 
       for (var k in this.badgeRows) {

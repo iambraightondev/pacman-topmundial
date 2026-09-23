@@ -6188,6 +6188,7 @@
   });
 
   test('cada modo aparte tiene su propia ruta de maestrías', function () {
+    conContadores(function () {        // sin récords por rol de otras pruebas
     var B = window.PM.Badges;
     var r = [G.highScore1, G.recordModo('lab'), G.recordModo('hab')];
     try {
@@ -6211,6 +6212,7 @@
       G.setRecordModo('lab', r[1]);
       G.setRecordModo('hab', r[2]);
     }
+    });
   });
 
   test('la cuenta se lleva también los récords de los modos aparte', function () {
@@ -10381,22 +10383,34 @@
   });
 
   /* ---------- PRÁCTICA ---------- */
-  test('PRÁCTICA: a uno con otro rol no hay récord ni maestrías; en dúo sí cuenta', function () {
-    partidaRol(['tanque']);
-    ok(G.practica, 'solo con Tanque es práctica');
-    var previo = G.recordModo('hab', 1);
-    G.score = previo + 999999;
-    G.highScore = G.score;
-    G.persistHighScore();
-    eq(G.recordModo('hab', 1), previo, 'no toca el récord de DESATADO');
-    G.badgeNotice = null;
-    G.checkBadges();
-    eq(G.badgeNotice, null, 'ni celebra maestrías');
-    partidaRol(['asesino']);
-    ok(!G.practica, 'con Asesino, la partida de siempre');
-    partidaRol(['soporte', 'asesino']);
-    ok(!G.practica, 'en dúo con Soporte cuenta');
-    G.setRecordModo('hab', previo, 1);
+  test('PRÁCTICA: a uno con otro rol no hay récord de DESATADO, pero sí el de SU rol; en dúo cuenta todo', function () {
+    conContadores(function () {
+      var vistos = null;
+      try { vistos = localStorage.getItem(CFG.BADGES_KEY); localStorage.removeItem(CFG.BADGES_KEY); } catch (e) {}
+      try {
+        partidaRol(['tanque']);
+        ok(G.practica, 'solo con Tanque es práctica');
+        var previo = G.recordModo('hab', 1);
+        G.score = previo + 999999;
+        G.highScore = G.score;
+        G.persistHighScore();
+        eq(G.recordModo('hab', 1), previo, 'no toca el récord de DESATADO');
+        eq(window.PM.Badges.recordRol('tanque', 1), G.score, 'pero sí el del TANQUE (23 sep)');
+        G.badgeNotice = null;
+        G.checkBadges();
+        ok(G.badgeNotice && G.badgeNotice.mode.indexOf('TANQUE') !== -1, 'y celebra las copas del Tanque');
+        partidaRol(['asesino']);
+        ok(!G.practica, 'con Asesino, la partida de siempre');
+        partidaRol(['soporte', 'asesino']);
+        ok(!G.practica, 'en dúo con Soporte cuenta');
+        G.setRecordModo('hab', previo, 1);
+      } finally {
+        try {
+          if (vistos === null) localStorage.removeItem(CFG.BADGES_KEY);
+          else localStorage.setItem(CFG.BADGES_KEY, vistos);
+        } catch (e) {}
+      }
+    });
   });
 
   /* ---------- MAGO ---------- */
@@ -12562,6 +12576,72 @@
     });
     (H.LIST_G || []).forEach(function (h) { if (!I.tiene(h.id)) faltan.push(h.id); });
     eq(faltan.join(', '), '', 'ninguno se queda con el genérico');
+  });
+
+  test('TROFEOS POR ROL: cada rol su récord y sus copas, y a uno cuenta con cualquiera', function () {
+    conContadores(function () {
+      var B = window.PM.Badges;
+      var vistos = null;
+      try { vistos = localStorage.getItem(CFG.BADGES_KEY); localStorage.removeItem(CFG.BADGES_KEY); } catch (e) {}
+      window.PM.settings.muted = true;
+      /* a uno con TANQUE: antes era práctica sin nada; ahora es su récord */
+      G.newGame({ players: 1, hab: true, roles: ['tanque'] });
+      G.state = 'PLAYING';
+      G.score = 20000;
+      G.persistHighScore();
+      eq(B.recordRol('tanque', 1), 20000, 'el récord del Tanque a uno');
+      eq(B.recordRol('asesino', 1), 0, 'y no el del Asesino');
+      eq(B.best(B.rutaRol('tanque', 1)), 20000, 'su ruta lo ve');
+      ok(B.best(B.ruta('hab', 1)) >= 20000, 'TODOS LOS ROLES se queda con lo mejor de cualquiera');
+      var copa = B.claim(20000, B.rutaRol('tanque', 1));
+      ok(copa, 'y le da su copa');
+      ok(!B.claim(20000, B.rutaRol('tanque', 1)), 'que no se vuelve a anunciar');
+      eq(B.modeName(B.rutaRol('tanque', 2)), 'DESATADO · TANQUE · DÚO', 'con su nombre');
+      /* en el mismo teclado, los dos roles */
+      G.newGame({ players: 2, hab: true, roles: ['mago', 'soporte'] });
+      G.state = 'PLAYING';
+      G.score = 30000;
+      G.persistHighScore();
+      eq(B.recordRol('mago', 2), 30000, 'el del Mago en dúo');
+      eq(B.recordRol('soporte', 2), 30000, 'y el del Soporte');
+      G.toMenu();
+      try {
+        if (vistos === null) localStorage.removeItem(CFG.BADGES_KEY);
+        else localStorage.setItem(CFG.BADGES_KEY, vistos);
+      } catch (e) {}
+    });
+  });
+
+  test('TROFEOS POR ROL: lo ya jugado se reparte y no se pierde ninguna copa', function () {
+    conContadores(function () {
+      var B = window.PM.Badges, R = window.PM.Replay;
+      var KEY = 'pacman-topmundial-rhab-sembrado';
+      var previo = [G.recordModo('hab', 1), G.recordModo('hab', 2)];
+      var loc = R.guardadas, red = R.guardadasRed;
+      try {
+        localStorage.removeItem(KEY);
+        G.setRecordModo('hab', 50000, 1);
+        G.setRecordModo('hab', 40000, 2);
+        /* una repetición de dúo que explica el récord de dúo: con Mago */
+        var rep = { v: 1, modo: 'habduo', semilla: null, nivel: 1, jugadores: 2,
+          ajustes: { velFantasmas: 1, velPac: 1, powerS: 1, vidas: 3, roles: ['mago', 'tanque'] },
+          nombres: ['A', 'B'], fecha: '2026-09-01T00:00:00.000Z', entradas: [[0, 0, 1]],
+          final: { puntos: 40000, nivel: 3, fantasmas: 1, tiempoMs: 1000 } };
+        R.guardadas = function () { return [{ s: R.serializar(rep) }]; };
+        R.guardadasRed = function () { return []; };
+        B.sembrarRoles();
+        eq(B.recordRol('asesino', 1), 50000, 'a uno, lo de siempre era del Asesino');
+        eq(B.recordRol('mago', 2), 40000, 'el dúo lo explica la repetición: del Mago');
+        eq(B.recordRol('tanque', 2), 40000, 'y de su compañero');
+        eq(B.recordRol('asesino', 2), 0, 'así que al Asesino no se le regala');
+        B.sembrarRoles();
+        ok(localStorage.getItem(KEY), 'una sola vez por aparato');
+      } finally {
+        R.guardadas = loc; R.guardadasRed = red;
+        G.setRecordModo('hab', previo[0], 1);
+        G.setRecordModo('hab', previo[1], 2);
+      }
+    });
   });
 
   test('ARMARIO: cada poder tiene su explicación larga', function () {

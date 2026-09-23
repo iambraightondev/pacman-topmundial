@@ -2431,6 +2431,10 @@
      * modo tiene su marca y su ruta, y no se pisan. */
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
+      /* DESATADO: el récord de cada ROL (js/badges.js). Va antes que la
+       * práctica porque a uno con otro rol SÍ es su marca (23 sep): lo que
+       * no hace es récord de DESATADO ni top mundial. */
+      this.apuntarRecordRol();
       if (this.practica) return;     // DESATADO a uno con otro rol: práctica
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
       if (this.superv) return;       // ni SUPERVIVENCIA, que no es de puntos
@@ -2452,6 +2456,29 @@
       try {
         localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));
       } catch (e) { /* sin almacenamiento */ }
+    },
+
+    /* Los roles de ESTA máquina en la partida (DESATADO): en party el suyo;
+     * en el mismo teclado, los de los dos (quien lleva fantasma no tiene) */
+    rolesLocales: function () {
+      if (!this.hab || !this.roles) return [];
+      if (this.netRole) {
+        if (this.isSpec() || !(this.localIdx >= 0)) return [];
+        return [this.roles[this.localIdx]];
+      }
+      var out = [];
+      for (var i = 0; i < this.playerCount; i++) {
+        if (this.vsGhostOf && this.vsGhostOf(i) >= 0) continue;
+        if (this.roles[i]) out.push(this.roles[i]);
+      }
+      return out;
+    },
+
+    apuntarRecordRol: function () {
+      var B = window.PM.Badges;
+      if (!B || !this.hab || this.isVersus() || this.superv || !(this.score > 0)) return;
+      var roles = this.rolesLocales();
+      for (var i = 0; i < roles.length; i++) B.apuntarRol(roles[i], this.playerCount, this.score);
     },
 
     addPopup: function (x, y, text, ticks) {
@@ -2662,9 +2689,22 @@
       var B = window.PM.Badges;
       if (!B) return;
       if (this.isVersus()) return;   // trofeos = récord: aquí no cuentan
-      if (this.practica) return;     // ni en una partida de práctica
-      var mode = this.badgeMode();
-      var fresh = B.claim(this.score, mode);
+      /* DESATADO: primero las copas del ROL (también a uno con otro rol:
+       * es su récord), y después las de DESATADO de siempre */
+      var mode = null, fresh = null;
+      if (this.hab && !this.superv) {
+        var rolesL = this.rolesLocales();
+        for (var ri = 0; ri < rolesL.length && !fresh; ri++) {
+          var mr = B.rutaRol(rolesL[ri], this.playerCount);
+          var fr = B.claim(this.score, mr);
+          if (fr) { fresh = fr; mode = mr; }
+        }
+      }
+      if (!this.practica) {
+        var mg = this.badgeMode();
+        var fg = B.claim(this.score, mg);
+        if (fg && !fresh) { fresh = fg; mode = mg; }
+      }
       if (!fresh) return;
       this.badgeNotice = {
         name: fresh.name, color: fresh.color, mode: B.modeName(mode),
