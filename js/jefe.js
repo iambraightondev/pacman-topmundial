@@ -25,6 +25,8 @@
  * Y DESDE EL 22 SEP 2026, TAMBIÉN EL CATÁLOGO. Las habilidades nuevas no le
  * hacían nada: quien no llevara el kit clásico se quedaba sin forma de
  * tumbarlo, y el nivel no se acaba hasta que cae. Ahora:
+ *   · CACERÍA (23 sep): mientras dura, el rey no mata al cazador y cada
+ *                     vez que lo toca le quita vida (CFG.JEFE.DANO.caceria).
  *   · LE QUITAN VIDA  shuriken, bomba, misil, ejecución (Asesino); rebote y
  *                     terremoto (Tanque); mina y gancho (Soporte); bola
  *                     guiada, tótem, toque arcano, dominio y meteoro (Mago).
@@ -349,6 +351,7 @@
       if (j.golpeado > 0) j.golpeado--;
       if (j.frz > 0) j.frz--;
       if (j.pidoAplasta > 0) j.pidoAplasta--;   // respiro entre golpes pedidos
+      if (j.pidoCaza > 0) j.pidoCaza--;         // ...y los de la CACERÍA
       j.stT++;
       this.mover(G, this.velocidad(G));
     },
@@ -371,6 +374,8 @@
       if (!p || p.out || p.dying || p.safeTicks > 0) return false;
       if (A && A.enDimension && A.enDimension(i)) return false;
       if (j.frz > 0 || this.vulnerable(G)) return false;
+      /* CACERÍA (23 sep): el cazador no muere contra el rey, le pega */
+      if (A && A.cazando && A.cazando(i)) return false;
       if (!this.toca(G, p)) return false;
       if (A && A.salvaDelChoque && A.salvaDelChoque(G, i)) return false;
       /* PROVOCAR (18 sep): mientras OTRO grita, el rey va a por él y a este
@@ -406,6 +411,11 @@
           }
           continue;
         }
+        /* CACERÍA: tocarlo le quita vida (una vez por cada respiro suyo) */
+        if (A && A.cazando && A.cazando(i)) {
+          this.danar(G, J.DANO.caceria, i, 'caceria');
+          continue;
+        }
         if (this.mata(G, i)) {
           G.startDeath(i, -1);
           if (G.state !== 'PLAYING') return;
@@ -420,6 +430,14 @@
       if (A && A.enDimension && A.enDimension(i)) return;
       if (!this.toca(G, me)) return;
       var esAzul = this.vulnerable(G);
+      /* CACERÍA: como la apisonadora, el golpe lo da el anfitrión */
+      if (!esAzul && A && A.cazando && A.cazando(i)) {
+        if (j.inv <= 0 && !(j.pidoCaza > 0)) {
+          j.pidoCaza = J.INV;
+          G.netSend('gevt', { t: 'jefeGolpe', f: 'caceria' });
+        }
+        return;
+      }
       if (esAzul || (A && A.arrollando && A.arrollando(i))) {
         if (esAzul) {
           /* el azul: UNA vez por cada energizante, como el anfitrión */
@@ -467,6 +485,10 @@
         if (this.danar(G, J.DANO.aplasta, who, 'aplasta')) {
           this.congelar(G, J.ATURDE_APISONADORA);
         }
+      } else if (f === 'caceria') {
+        var sc = A && A.estado(who);
+        if (!sc || !(sc.caceria > 0)) return;
+        this.danar(G, J.DANO.caceria, who, 'caceria');
       } else if (f === 'rebote') {
         /* REBOTE del catálogo (22 sep 2026): el invitado ya ha decidido que
          * ese choque no lo mata (Hab.salvaDelChoque), pero el golpe lo da

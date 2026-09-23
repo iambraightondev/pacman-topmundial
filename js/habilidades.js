@@ -2514,6 +2514,12 @@
       return !!s && s.arrolla > 0;
     },
 
+    /* ¿Ese jugador está de CACERÍA? (contra el rey: ver Jefe.colisiones) */
+    cazando: function (idx) {
+      var s = this.estado(idx);
+      return !!s && s.caceria > 0;
+    },
+
     /* Un tick de la apisonadora (lo llama el motor EN VEZ de mover a Pac-Man) */
     moverArrolla: function (G, idx) {
       var p = G.pacs[idx], s = this.estado(idx);

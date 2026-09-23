@@ -12644,6 +12644,26 @@
     });
   });
 
+  test('CACERÍA contra el REY: no te mata, y al tocarlo le quita vida', function () {
+    var H = window.PM.Hab, J = window.PM.Jefe;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,caceria']); G.roles = ['asesino'];
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    G.jefe = { vivo: true, hp: 20, max: 20, x: p.x, y: p.y, dir: 0, st: 'caza', stT: 0, inv: 0, frz: 0,
+               azulUsado: 0, huye: 0, huyeDe: -1, golpeado: 0, plan: -1 };
+    G.frightTicks = 0;
+    ok(J.mata(G, 0), 'sin cacería, tocarlo mata');
+    ok(H.caceria(G, 0), 'sale la cacería');
+    ok(!J.mata(G, 0), 'con ella, no');
+    J.colisiones(G);
+    eq(G.jefe.hp, 20 - CFG.JEFE.DANO.caceria, 'y el toque le quita vida');
+    ok(!p.dying, 'el cazador sigue vivo');
+    J.colisiones(G);
+    eq(G.jefe.hp, 20 - CFG.JEFE.DANO.caceria, 'una vez por cada respiro del rey, no a cada tick');
+    G.toMenu();
+  });
+
   test('ARMARIO: cada poder tiene su explicación larga', function () {
     var H = CFG.HAB, faltan = [];
     H.ROL_IDS.forEach(function (r) {
