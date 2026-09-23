@@ -5788,7 +5788,12 @@
         self.habRolBox.appendChild(b);
       });
       fHab.appendChild(this.habRolBox);
-      fHab.appendChild(el('div', 'ol-card-texto', 'SOLO CABE UN SOPORTE: EL PRIMERO QUE LO COGE SE LO QUEDA'));
+      /* TUS PODERES: cada uno arma los suyos aquí, como en la pantalla de
+       * DESATADO a solas. Se rehace al cambiar de rol (ver pintarArmaParty). */
+      this.habArmBox = el('div', 'hab-armamento ol-armamento');
+      this.habArmClave = '';
+      fHab.appendChild(this.habArmBox);
+      fHab.appendChild(el('div', 'ol-card-texto', 'NINGÚN ROL SE REPITE: EL PRIMERO QUE LO COGE SE LO QUEDA'));
 
       /* CACERÍA */
       var fCaza = ficha('caza', '#ff3b3b', 'CACERÍA', [
@@ -6170,6 +6175,7 @@
           this.habRolBtns[rid].disabled =
             (rid !== miRol && !!(P.rolDeOtro && P.rolDeOtro(rid)));
         }
+        this.pintarArmaParty(miRol, P.myCarga ? P.myCarga() : '');
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
@@ -6194,6 +6200,47 @@
               P.cuantosListos() + '/' + P.count() + ')')
                                  : 'CUANDO QUIERAS, EMPEZAD')
                 : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
+    },
+
+    /* Los poderes de mi rol en la sala: una fila por tecla con sus opciones.
+     * Solo se rehace si cambia el rol o lo elegido, que la sala se repinta con
+     * cada latido y rehacer los botones cada vez se comería los clics. */
+    pintarArmaParty: function (rol, carga) {
+      var box = this.habArmBox, self = this;
+      if (!box) return;
+      var clave = rol + '|' + carga;
+      if (clave === this.habArmClave) return;
+      this.habArmClave = clave;
+      box.innerHTML = '';
+      var H = CFG.HAB, cat = H.catalogoDe(rol), elegidos = String(carga).split(',');
+      box.style.setProperty('--brief', H.ROL_INFO[rol].color);
+      var titulo = document.createElement('div');
+      titulo.className = 'hab-armamento-titulo';
+      titulo.textContent = 'TUS PODERES · ' + H.ROL_INFO[rol].name;
+      box.appendChild(titulo);
+      for (var k = 0; k < 4; k++) {
+        var fila = document.createElement('div');
+        fila.className = 'hab-armamento-fila';
+        var tecla = document.createElement('b');
+        tecla.textContent = ['Q', 'W', 'E', 'R'][k];
+        fila.appendChild(tecla);
+        for (var i = 0; i < cat[k].length; i++) {
+          (function (slot, hab) {
+            var b = self.makeButton(hab.name, function () {
+              var nueva = String(window.PM.Party.myCarga()).split(',');
+              nueva[slot] = hab.id;
+              window.PM.Party.setCarga(nueva.join(','));
+              saveSettings();
+            });
+            b.classList.add('hab-arma-opcion');
+            b.classList.toggle('active', elegidos[slot] === hab.id);
+            b.setAttribute('aria-label', ['Q', 'W', 'E', 'R'][slot] + ' ' + hab.name);
+            if (hab.desc) b.title = hab.desc;
+            fila.appendChild(b);
+          })(k, cat[k][i]);
+        }
+        box.appendChild(fila);
+      }
     },
 
     /* Una etiqueta de color de la plaza (LÍDER, TÚ, el fantasma, el rol) */

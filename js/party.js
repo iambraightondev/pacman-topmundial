@@ -174,6 +174,35 @@
       this.changed();
     },
 
+    /* LOS PODERES DE CADA UNO (23 sep). En la sala solo se podía elegir el
+     * rol: los poderes eran los últimos que cada uno hubiera guardado jugando
+     * solo, y si cambiaba de rol en la sala le tocaban los de serie. Ahora
+     * cada uno arma los suyos aquí, igual que el rol, y viajan con él. */
+    setCarga: function (raw) {
+      var s = window.PM.settings;
+      var rol = this.myRol();
+      var h = CFG.HAB.loadoutValido(rol, raw);
+      if (s) s.habLoadout1 = h;
+      if (!this.st) return;
+      /* en mi fila ya, sin esperar a que el líder la devuelva: si no, el botón
+       * pulsado se apagaba un viaje de red y dos clics seguidos se pisaban */
+      var m = this.selfEntry();
+      if (m) m.h = h;
+      if (this.st.leader) {
+        this.sendRoster();
+      } else {
+        window.PM.Net.send('phello', this.hello());
+      }
+      this.changed();
+    },
+
+    /* Mis poderes tal y como los tiene la sala (los del rol que me tocó) */
+    myCarga: function () {
+      var m = this.selfEntry(), rol = this.myRol();
+      var s = window.PM.settings || {};
+      return CFG.HAB.loadoutValido(rol, (m && m.h) || s.habLoadout1);
+    },
+
     /* ---------- PAC-MAN VS.: quién lleva fantasma ----------
      * El líder es quien reparte: si dos piden el mismo, el segundo se queda
      * sin él. Así nadie puede acabar con el fantasma de otro. */
@@ -330,7 +359,9 @@
 
     hello: function () {
       var m = this.me();
-      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r,
+      /* h: los PODERES. Faltaban (23 sep): el rol viajaba y los poderes no,
+       * así que el líder le ponía a cada invitado los de serie de su rol */
+      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r, h: m.h,
                l: this.listo ? 1 : 0 };
     },
 
@@ -395,7 +426,7 @@
       } else {
         var m = this.selfEntry();
         if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k && m.a === yo.a && m.x === yo.x &&
-            m.r === yo.r) return;
+            m.r === yo.r && m.h === yo.h) return;
         window.PM.Net.send('phello', this.hello());
       }
       this.changed();
@@ -415,9 +446,12 @@
       if (!m) return false;
       yo = yo || this.me();
       var rol = this.claimRol(m.s, yo.r);
+      /* y los PODERES: el líder no los copiaba nunca, así que en la partida
+       * salía con los que tenía al abrir la sala */
+      var h = CFG.HAB.loadoutValido(rol, yo.h);
       var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k || m.a !== yo.a || m.x !== yo.x ||
-        m.r !== rol;
-      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t; m.r = rol;
+        m.r !== rol || m.h !== h;
+      m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t; m.r = rol; m.h = h;
       return cambia;
     },
 

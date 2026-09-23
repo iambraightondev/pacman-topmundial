@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · En la party, cada uno elige sus poderes
+
+**LOS INVITADOS SALÍAN CON LOS PODERES DE SERIE.** El rol viajaba al líder,
+pero los poderes no, así que cada invitado jugaba con los que trae su rol por
+defecto; y el líder, con los que tenía al abrir la sala. Ahora la ficha de
+DESATADO de la sala tiene **TUS PODERES**: cada uno elige los suyos, tecla a
+tecla, y salen en la partida.
+
 ## 2026-09-23 · El METEORO, rehecho
 
 **SE APUNTA COMO UN FRANCOTIRADOR.** Mantén la R y el Mago se queda plantado;

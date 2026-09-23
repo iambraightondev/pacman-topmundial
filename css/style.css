@@ -5948,6 +5948,10 @@ body { font-size-adjust: 0.56; }
 #online .btn.ol-modo.active .ol-switch { border-color: var(--modo); }
 #online .btn.ol-modo.active .ol-switch-bola { left: 26px; background: var(--modo); box-shadow: 0 0 8px var(--modo); }
 #online .ol-roles { padding: 2px 0 4px; }
+/* los poderes de cada uno en la sala: a lo ancho de la ficha, no de la pantalla */
+#online .ol-armamento { width: 100%; margin: 8px 0 2px; }
+#online .ol-armamento .hab-armamento-fila { display: grid; grid-template-columns: 16px repeat(4, minmax(0, 1fr)); gap: 4px; }
+#online .ol-armamento .hab-arma-opcion { min-width: 0; width: auto; margin: 0; padding: 4px 3px; font-size: 8px; line-height: 1.3; white-space: normal; }
 
 /* personaje */
 #online .ol-personajes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: 100%; }

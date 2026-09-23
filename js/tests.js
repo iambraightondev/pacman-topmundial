@@ -2571,6 +2571,38 @@
     } finally { S.skin1 = antes; N.send = enviar; P.st = null; P.order = null; }
   });
 
+  test('en la party cada uno elige sus poderes y salen en la partida', function () {
+    G.toMenu();
+    var P = party(['ANA', 'BENI']);
+    var N = window.PM.Net, S = window.PM.settings;
+    var rolAntes = S.habRol1, cargaAntes = S.habLoadout1, enviar = N.send, mandados = [];
+    P.st.members[0].s = N.sid;              // la primera fila es la del líder
+    N.send = function (n, d) { mandados.push([n, d]); };
+    try {
+      S.habRol1 = 'mago'; S.habLoadout1 = 'fuego,portal,runa,tormenta';
+      P.updateSelf();
+      eq(P.st.members[0].r, 'mago', 'el líder lleva su rol');
+      P.setCarga('fuego,portal,runa,meteoro');
+      eq(P.gameOrder()[0].h, 'fuego,portal,runa,meteoro', 'el líder sale con los poderes que eligió en la sala');
+      P.updateSelf();
+      eq(P.st.members[0].h, 'fuego,portal,runa,meteoro', 'y el latido no se los deshace');
+      ok(mandados.some(function (m) { return m[0] === 'proster'; }), 'y los reparte en el acto');
+      /* el invitado: los suyos viajan en el saludo */
+      P.st.leader = false;
+      mandados = [];
+      P.setCarga('fuego,portal,runa,eclipse');
+      ok(mandados.some(function (m) { return m[0] === 'phello' && m[1].h === 'fuego,portal,runa,eclipse'; }),
+        'el invitado se los manda al líder en el acto');
+      /* y el líder se los apunta */
+      P.st.leader = true;
+      P.onHello({ v: CFG.NET.PROTO, n: 'BENI', c: '#00ff00', k: 'clasico', g: -1,
+                  r: 'soporte', h: 'mina,estela,muro,campo' }, 'sid1');
+      eq(P.gameOrder()[1].h, 'mina,estela,muro,campo', 'la partida sale con los poderes del invitado');
+    } finally {
+      S.habRol1 = rolAntes; S.habLoadout1 = cargaAntes; N.send = enviar; P.st = null; P.order = null;
+    }
+  });
+
   test('cada miembro sabe qué jugador le toca', function () {
     var P = party(['ANA', 'BENI', 'CARLOS', 'DIEGO']);
     try {
