@@ -7484,3 +7484,8 @@ body { font-size-adjust: 0.56; }
 @media (max-width: 760px) {
   #options.opts .panel-title { font-size: clamp(22px, 10vw, 44px); letter-spacing: 2px; max-width: 100%; }
 }
+
+/* OPCIONES: las secciones no elegidas, con su color entero (no apagadas);
+ * la elegida se distingue por el fondo y el marco */
+#options.opts .btn.opts-nav-btn { color: var(--sc); }
+.opts-nav-btn:not(.active) .opts-nav-icono { filter: none; }

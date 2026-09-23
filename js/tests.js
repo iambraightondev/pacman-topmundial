@@ -7267,6 +7267,23 @@
     G.toMenu();
   });
 
+  test('CACERÍA a solas: cualquier fantasma que lo coja es caza tuya; con dos, la de cada uno', function () {
+    var V = window.PM.Versus;
+    caceria(1);
+    var bot = G.pacs.length - 1;
+    V.onCatch(G, bot, 2);                  // lo coge Inky, de la máquina
+    eq(V.catches(G, 0), 1, 'a solas, la caza de un fantasma de la máquina es tuya');
+    V.onCatch(G, bot, 0);                  // y con el tuyo, también
+    eq(V.catches(G, 0), 2);
+    caceria(2);
+    bot = G.pacs.length - 1;
+    V.onCatch(G, bot, 2);                  // Inky es de la máquina
+    eq(V.catches(G, 0) + V.catches(G, 1), 0, 'con dos cazadores, la de la máquina no es de nadie');
+    V.onCatch(G, bot, 1);
+    eq(V.catches(G, 1), 1, 'y cada uno cobra la suya');
+    G.toMenu();
+  });
+
   test('sin superpastillas: las cuatro son puntos normales y siguen siendo 244', function () {
     caceria(1);
     var o = 0, n = 0;

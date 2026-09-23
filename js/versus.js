@@ -179,6 +179,18 @@
     onCatch: function (g, who, byGhost) {
       if (!(byGhost >= 0) || !g.ghosts[byGhost]) return;
       var quien = g.vsPlayerOf(byGhost);
+      /* CACERÍA A SOLAS (23 sep): la caza la cobra el único jugador, la haga
+       * el fantasma que la haga. Si no, cuando lo acorralabas, la máquina se
+       * dejaba coger por otro fantasma antes que por el tuyo y la presa que
+       * habías cercado tú no contaba. Con dos o más cazadores sigue cobrando
+       * quien lo caza. */
+      if (quien < 0 && g.caza) {
+        var solo = -1, cuantos = 0;
+        for (var i = 0; i < g.pacs.length; i++) {
+          if (g.vsGhostOf(i) >= 0) { cuantos++; solo = i; }
+        }
+        if (cuantos === 1) quien = solo;
+      }
       if (quien < 0 || quien === who) return;
       g.addVsScore(quien, CFG.VS.CATCH_POINTS);
       g.addPopup(g.ghosts[byGhost].x, g.ghosts[byGhost].y,
