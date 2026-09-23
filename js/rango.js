@@ -21,7 +21,7 @@
  *   Solo las partidas que TÚ juegas en CLASIFICATORIA (el interruptor vive en
  *   los ajustes, `clasif`, y es de cada jugador): en una party, cada uno
  *   decide si esa partida le mueve su rango, y la marca es la del equipo.
- *   Además: DESATADO de verdad (ni práctica, ni PAC-MAN VS., ni CACERÍA, ni
+ *   Además: DESATADO de verdad (ni PAC-MAN VS., ni CACERÍA, ni
  *   supervivencia), ajustes de siempre, sin semilla de fuera y CON CUENTA,
  *   que es lo que te pone en la tabla. Salirse a medias también cuenta: si
  *   no, abandonar sería la forma de no perder nunca.
@@ -128,7 +128,6 @@
       if (!G || !G.hab) return 'SOLO EN DESATADO';
       if (G.replaying || (G.isSpec && G.isSpec())) return 'MIRANDO';
       if ((G.isVersus && G.isVersus()) || G.caza || G.superv) return 'ESTE MODO NO CUENTA';
-      if (G.practica) return 'LA PRÁCTICA NO CUENTA';
       if (G.seedBase) return 'CON SEMILLA DE FUERA NO CUENTA';
       var r = CFG.TIME_RULES;
       if (G.startLevel !== r.startLevel || G.pacSpeedMult !== r.pacSpeedMult ||

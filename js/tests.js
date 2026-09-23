@@ -12224,7 +12224,7 @@
       });
     });
 
-  test('RANGO: sin clasificatoria, sin cuenta o en práctica no cuenta', function () {
+  test('RANGO: sin clasificatoria o sin cuenta no cuenta; con cualquier rol, sí', function () {
     var Rg = window.PM.Rango;
     var logged = Rg.conCuenta;
     var s = window.PM.settings, clasif = s.clasif;
@@ -12239,7 +12239,7 @@
       Rg.conCuenta = function () { return true; };
       eq(Rg.porQueNo(G), null, 'con todo en regla, sí');
       G.newGame({ players: 1, hab: true, roles: ['mago'] });
-      eq(Rg.porQueNo(G), 'LA PRÁCTICA NO CUENTA');
+      eq(Rg.porQueNo(G), null, 'a uno con Mago también cuenta (práctica solo para récords)');
       G.newGame({ players: 1 });
       eq(Rg.porQueNo(G), 'SOLO EN DESATADO');
       G.toMenu();

@@ -2656,7 +2656,8 @@ the key index. `LIST` is the ASESINO (the original kit).
   which grey out whatever another player holds (`Party.rolDeOtro`).
   `Game.practica` = DESATADO + one player + role ≠ asesino: no record, no
   ranking, no badges (`persistHighScore`, `checkBadges`, `submitRanking`);
-  XP and achievements still count. HUD and GAME OVER say PRÁCTICA.
+  XP, achievements, role mastery and the season RANGO still count (every
+  role counts for rank since 23 Sep). HUD and GAME OVER say PRÁCTICA.
 - **PASIVAS (20 Sep).** One per role, always on, so a team *needs* each of
   them instead of picking by taste. **ASESINO: every kill is worth 25 % more**
   (`HAB.BONO_ASESINO` = 1.25) — the energizer chain pays 250 / 500 / 1 000 /

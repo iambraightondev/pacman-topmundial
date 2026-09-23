@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · El rango cuenta con cualquier rol
+
+**TODOS LOS ROLES SUMAN AL RANGO**, también a solas. Jugar solo con TANQUE,
+MAGO o SOPORTE sigue siendo práctica para récords y trofeos (cada rol tiene
+su maestría), pero ya mueve tu rango como con ASESINO.
+
 ## 2026-09-22 (tarde) · RANGO de temporada y partidas CLASIFICATORIAS
 
 **UN RANGO QUE SUBE Y BAJA.** El top mundial dice quién tiene la mejor marca;
