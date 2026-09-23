@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · CLASIFICATORIA retomada: ya cuenta
+
+**UNA PARTIDA GUARDADA NO PIERDE EL RANGO.** Al retomar una CLASIFICATORIA
+guardada volvía como DESATADO y no sumaba al rango. Ahora la partida recuerda
+que era CLASIFICATORIA y cuenta al acabar.
+
 ## 2026-09-23 · RANGO: todos los rangos, a un toque
 
 **LA ESCALERA ENTERA.** Al pulsar tu fruta en RANGO se abre la lista de las

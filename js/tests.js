@@ -1870,6 +1870,26 @@
     } finally { R.salir(); }
   });
 
+  test('una CLASIFICATORIA guardada y retomada sigue contando para el rango', function () {
+    var R = window.PM.Replay;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+      var rep = R.enCurso();
+      ok(rep && rep.ajustes.clasif, 'la grabación sabe que es CLASIFICATORIA');
+      rep.final = { puntos: 10, nivel: 1, fantasmas: 0, tiempoMs: 1000 };
+      var leida = R.leer(R.serializar(rep));
+      ok(leida && leida.ajustes.clasif, 'y lo conserva al pasar por el texto');
+      G.toMenu();
+      R.montar(leida);
+      ok(G.clasif, 'al montarla (y por tanto al retomarla) vuelve a ser CLASIFICATORIA');
+      eq(window.PM.Rango.porQueNo(G), 'MIRANDO', 'aunque mirarla no cuenta');
+      R.salir();
+      G.newGame({ players: 1, hab: true, roles: ['asesino'] });
+      ok(!R.enCurso().ajustes.clasif, 'un DESATADO normal no lleva la marca');
+    } finally { R.salir(); G.toMenu(); }
+  });
+
   test('una repetición de party trae los poderes, lo que hacen y al REY FANTASMA', function () {
     var R = window.PM.Replay, H = window.PM.Hab, J = window.PM.Jefe;
     var previo = null;
