@@ -2616,8 +2616,11 @@
      * 13, el REY FANTASMA ('jf') y SUPERVIVENCIA ('sv' en la foto, la sala y
      * el arranque); la 14, PASAR EL MANDO (el mensaje 'mando', con el que el
      * anfitrión que se va le deja la partida al siguiente); la 15, los GIROS
-     * AL INSTANTE (el mensaje 'gir' del anfitrión y la 'g' del de posición). */
-    PROTO: 15,
+     * AL INSTANTE (el mensaje 'gir' del anfitrión y la 'g' del de posición);
+     * la 16, LO QUE SE LE HACE AL JUGADOR DE OTRO (23 sep: 'habDar' del
+     * anfitrión, habGasta/habEmpuja/habRebote/habHospital del invitado, la
+     * 'ap' del METEORO en la posición y los poderes 'h' en el saludo). */
+    PROTO: 16,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

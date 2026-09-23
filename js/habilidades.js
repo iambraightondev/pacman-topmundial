@@ -1800,6 +1800,7 @@
       x = (x == null && g) ? g.x : x; y = (y == null && g) ? g.y : y;
       if (s.frenesi > 0) {
         s.frenesiMult = (s.frenesiMult || 1) + H.FRENESI_PASO;
+        this.dar(G, who, 'frenesiMult', s.frenesiMult);
         this.efecto('frenesi', x, y, 26);
         if (G.addPopup) G.addPopup(x, y - 7, '×' + s.frenesiMult.toFixed(2), 35);
       }
@@ -1808,7 +1809,7 @@
       if (g && this.marcaGhost[g.id] >= 0) {
         var duenoMarca = this.marcaGhost[g.id];
         this.marcaGhost[g.id] = -1;
-        if (this.st[duenoMarca]) this.st[duenoMarca].marca = 0;
+        if (this.st[duenoMarca]) this.dar(G, duenoMarca, 'marca');
       }
     },
 
@@ -1992,7 +1993,12 @@
       if (s.rebote > 0 && g) {
         s.rebote = 0;
         aguanta(G, idx);
+        /* medio segundo de gracia: en la máquina de un invitado el fantasma
+         * sigue encima hasta que el anfitrión lo mata, y sin esto el Tanque
+         * rebotaba y moría en el tick siguiente */
+        s.gracia = Math.max(s.gracia, H.ESCUDO_GRACIA);
         if (this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote');
+        else if (G.netRole === 'guest' && idx === G.localIdx) G.netSend('gevt', { t: 'habRebote', g: g.id });
         return true;
       }
       /* EL REBOTE CONTRA EL REY FANTASMA (22 sep 2026). Sin fantasma que
@@ -2022,14 +2028,15 @@
           return true;
         }
       }
-      if (s.yunque > 0 || s.pielPiedra > 0) { if (g) this.empujar(G, g, 1); return true; }
+      if (s.yunque > 0 || s.pielPiedra > 0) { this.empujarDesde(G, g, 1); return true; }
       /* El golpe del compañero enlazado lo absorbe el Soporte y consume la
        * cadena. Antes solo se miraba la cadena del jugador golpeado. */
       for (j = 0; j < this.st.length; j++) {
         var enl = this.st[j];
         if (enl.cadena > 0 && enl.cadenaCon === idx) {
-          enl.cadena = 0; enl.cadenaCon = -1;
-          if (g) this.empujar(G, g, 1);
+          this.gastarCadena(G, j);
+          s.gracia = Math.max(s.gracia, H.ESCUDO_GRACIA);
+          this.empujarDesde(G, g, 1);
           if (p && G.pacs[j]) this.efecto('cadena_rota', p.x, p.y, 26, G.pacs[j].x, G.pacs[j].y);
           return true;
         }
@@ -2037,11 +2044,16 @@
       for (j = 0; j < this.st.length; j++) {
         var fs = this.st[j], fp = G.pacs[j];
         if (fs.campo > 0 || (fs.fortaleza > 0 && fp && p && this.distancia(fp.x, fp.y, p.x, p.y) <= H.FORTALEZA_RADIO * T)) {
-          if (g) this.empujar(G, g, 1);
+          this.empujarDesde(G, g, 1);
           return true;
         }
       }
-      if (s.cadena > 0) { s.cadena = 0; s.cadenaCon = -1; if (g) this.empujar(G, g, 1); return true; }
+      if (s.cadena > 0) {
+        this.gastarCadena(G, idx);
+        s.gracia = Math.max(s.gracia, H.ESCUDO_GRACIA);
+        this.empujarDesde(G, g, 1);
+        return true;
+      }
       if (s.inmune > 0 || s.arrolla > 0 || s.gracia > 0 || s.dimension > 0) return true;
       /* QUÉ SE LLEVA UN GOLPE. La CORAZA del Tanque se suma SOLO a su
        * propio ESCUDO (la W): esos dos son suyos, los gana él, y juntos le
@@ -2183,6 +2195,127 @@
         case 'meteoro': return !!s.meteoro;
       }
       return false;
+    },
+
+    /* ---------- LO QUE UNA MÁQUINA LE HACE AL JUGADOR DE OTRA (23 sep) ----------
+     * Cada invitado manda en SU Pac-Man: su posición, sus choques, y lo suyo
+     * de la foto no se lo cree (el escudo, la recarga solo hacia arriba, sus
+     * objetos). Así que todo lo que el anfitrión decide sobre él —el escudo
+     * de su MINA, la recarga que le baja el FARO, el shuriken RECARGADO, el
+     * FRENESÍ que sube, el RELEVO que lo trae, la CADENA que le gastan— se
+     * quedaba en la copia del anfitrión: él lo veía y el dueño no lo tenía.
+     *
+     * dar() lo aplica aquí y, si el jugador es de otra máquina, se lo manda
+     * ('habDar'). aplicarDado() es lo que hace cada cambio, igual en las dos
+     * puntas. El camino contrario —el invitado gasta algo de otro— va por sus
+     * propios avisos (habGasta, habEmpuja, habRebote, habHospital). */
+    dar: function (G, j, c, v, k) {
+      this.aplicarDado(G, j, c, v, k);
+      if (G.netRole === 'host' && !G.isLocalAuth(j)) {
+        G.hostEvt({ t: 'habDar', w: j, c: c, v: (v == null ? null : v), k: (k == null ? -1 : k) });
+      }
+    },
+
+    aplicarDado: function (G, j, c, v, k) {
+      var s = this.estado(j), p = G.pacs[j];
+      if (!s) return;
+      switch (c) {
+        case 'escudo': s.escudo = Math.max(s.escudo, v | 0); break;
+        case 'cd':
+          if (k >= 0 && k < s.cd.length) s.cd[k] = Math.min(s.cd[k], Math.max(0, v | 0));
+          break;
+        case 'frenesiMult': if (+v > 0) s.frenesiMult = +v; break;
+        case 'cadena': s.cadena = 0; s.cadenaCon = -1; break;
+        case 'hospital': s.hospital = 0; break;
+        case 'rebote': s.rebote = 0; break;
+        case 'marca': s.marca = 0; break;
+        case 'mina': s.mina = null; break;
+        case 'faro': s.faro = null; break;
+        case 'clon': s.clon = null; break;
+        case 'shuriken': s.shuriken = null; break;
+        case 'pos':
+          /* el RELEVO: la posición solo la toca quien manda en ese Pac-Man */
+          if (p && v && v.length >= 3 && G.isLocalAuth(j)) {
+            p.x = +v[0]; p.y = +v[1]; p.dir = v[2] | 0; p.nextDir = v[2] | 0;
+          }
+          break;
+      }
+    },
+
+    /* Invitado: el anfitrión le cuenta lo que ha decidido sobre SU jugador */
+    recibeDado: function (G, e) {
+      if (!e || !this.on) return;
+      var j = e.w | 0;
+      if (j !== G.localIdx || G.isSpec()) return;   // lo de los demás llega en la foto
+      this.aplicarDado(G, j, String(e.c || ''), e.v, e.k);
+    },
+
+    /* La CADENA de un Soporte se gasta al salvar a alguien. Quien la gasta
+     * puede no ser su dueño: se le cuenta a quien haga falta. */
+    gastarCadena: function (G, j) {
+      var s = this.estado(j);
+      if (!s) return;
+      s.cadena = 0; s.cadenaCon = -1;
+      if (G.netRole === 'guest') G.netSend('gevt', { t: 'habGasta', c: 'cadena', j: j });
+      else this.dar(G, j, 'cadena');
+    },
+
+    /* Empujar a un fantasma desde un choque que se salvó. Los fantasmas los
+     * mueve el anfitrión: el invitado se lo pide. */
+    empujarDesde: function (G, g, n) {
+      if (!g) return;
+      if (this.manda(G)) this.empujar(G, g, n);
+      else if (G.netRole === 'guest') G.netSend('gevt', { t: 'habEmpuja', g: g.id });
+    },
+
+    /* HOSPITAL: la primera caída de la ventana se convierte en reanimación
+     * en el sitio. Lo mira quien decide esa muerte —el invitado, la suya—, y
+     * lo gastado se le cuenta al resto (antes solo lo miraba el anfitrión, y
+     * a un invitado no lo salvaba nunca). */
+    hospitalSalva: function (G, i) {
+      var p = G.pacs[i];
+      if (!this.on || !p) return false;
+      for (var hi = 0; hi < this.st.length; hi++) {
+        var hs = this.st[hi];
+        if (!hs || !(hs.hospital > 0)) continue;
+        if (G.netRole === 'guest') {
+          hs.hospital = 0;
+          G.netSend('gevt', { t: 'habHospital', j: hi });
+        } else {
+          this.dar(G, hi, 'hospital');
+        }
+        p.safeTicks = CFG.REVIVIR.ESCUDO_TICKS;
+        p.pauseTicks = 0;
+        G.addPopup(p.x, p.y, 'HOSPITAL', 60);
+        return true;
+      }
+      return false;
+    },
+
+    /* Anfitrión: un invitado ha gastado algo en su máquina */
+    peticionGasto: function (G, who, d) {
+      if (!this.on || !d) return;
+      var j = d.j | 0, g;
+      switch (d.t) {
+        case 'habGasta':
+          if (d.c === 'cadena' && this.estado(j)) this.dar(G, j, 'cadena');
+          break;
+        case 'habEmpuja':
+          g = G.ghosts[d.g | 0];
+          if (g) this.empujar(G, g, 1);
+          break;
+        case 'habRebote':
+          /* su REBOTE se gastó contra un fantasma: la baja la da el anfitrión */
+          var sr = this.estado(who);
+          if (sr) sr.rebote = 0;
+          g = G.ghosts[d.g | 0];
+          if (g) this.matarCatalogo(G, g, who, H.MAGO_PUNTOS, 'rebote');
+          break;
+        case 'habHospital':
+          /* el HOSPITAL de alguien le salvó en su máquina */
+          if (this.estado(j)) this.dar(G, j, 'hospital');
+          break;
+      }
     },
 
     marcarEscudo: function (idx, ticks) {
@@ -3363,6 +3496,9 @@
       var p = G.pacs[idx], j = this.aliadoDe(G, idx); if (!p || j < 0 || this.distancia(p.x, p.y, G.pacs[j].x, G.pacs[j].y) > 6 * T) return false;
       var ox = G.pacs[j].x, oy = G.pacs[j].y;
       if (G.isLocalAuth(j) || this.manda(G)) { G.pacs[j].x = p.x; G.pacs[j].y = p.y; G.pacs[j].dir = p.dir; G.pacs[j].nextDir = p.dir; }
+      /* un compañero INVITADO manda en su posición: si no se lo dicen, su
+       * siguiente aviso lo devuelve a donde estaba (ver dar) */
+      if (this.manda(G)) this.dar(G, j, 'pos', [Math.round(p.x), Math.round(p.y), p.dir]);
       this.efecto('relevo', p.x, p.y, 30, ox, oy);
       sonDe(G, idx, 'playFlash'); return true;
     },
@@ -3624,7 +3760,7 @@
     cerrarRafagaShuriken: function (G, idx) {
       var s = this.estado(idx);
       if (!s || !s.shuriken) return;
-      s.shuriken = null;
+      this.dar(G, idx, 'shuriken');
       var k = this.kDe(G, idx, 'shuriken');
       if (k >= 0) this.gastar(G, idx, k);
       var p = G.pacs[idx];
@@ -3643,11 +3779,13 @@
           s.shuriken.resueltos === H.SHURIKEN_CANT) {
         if (s.shuriken.aciertos === H.SHURIKEN_CANT) {
           var k = this.kDe(G, b.w, 'shuriken');
-          if (k >= 0) s.cd[k] = 0;
+          if (k >= 0) this.dar(G, b.w, 'cd', 0, k);
           var p = G.pacs[b.w];
           if (p) { G.addPopup(p.x, p.y - 8, 'RECARGADO', 45); this.efecto('shuriken_recarga', p.x, p.y, 28); }
         }
-        s.shuriken = null;
+        /* la ráfaga la resuelve el anfitrión: el dueño la cierra con este
+         * aviso (en su máquina no hay impactos que contar) */
+        this.dar(G, b.w, 'shuriken');
       }
     },
 
@@ -4232,6 +4370,21 @@
         if (s.meteoro && s.meteoro.t > 0) s.meteoro.t--;
         if (s.fuegoMeteoro && --s.fuegoMeteoro.t <= 0) s.fuegoMeteoro = null;
         if (s.totem && s.totem.t > 0) s.totem.t--;
+        /* EN LA PANTALLA DE UN INVITADO (23 sep). El golpe del METEORO y el
+         * fin del TÓTEM los decide el anfitrión, pero lo suyo el invitado no
+         * lo toma de la foto: nunca veía caer su propio meteoro —ni el
+         * estallido, ni el temblor, ni la hoguera— y la retícula se le
+         * quedaba pintada. Aquí se ve caer igual; las bajas siguen siendo
+         * cosa del anfitrión y llegan por su aviso. */
+        if (!manda) {
+          if (s.meteoro && s.meteoro.t <= 0) {
+            this.efecto('meteoro', s.meteoro.c * T + T / 2, s.meteoro.r * T + T / 2, 42);
+            this.temblar(METEORO_TEMBLOR, METEORO_SACUDIDA);
+            s.fuegoMeteoro = { c: s.meteoro.c, r: s.meteoro.r, t: H.METEORO_FUEGO };
+            s.meteoro = null;
+          }
+          if (s.totem && s.totem.t <= 0) s.totem = null;
+        }
         if (s.cruce > 0) s.cruce--;
         if (s.arrollaRed > 0) s.arrollaRed--;
         if (s.tormenta > 0) {
@@ -4326,16 +4479,16 @@
           var mina = this.ghostsEn(G, s.mina.c, s.mina.r, 0.6);
           if (mina.length) {
             for (j = 0; j < mina.length; j++) this.matarCatalogo(G, mina[j], i, H.MAGO_PUNTOS, 'mina');
-            s.escudo = Math.max(s.escudo, H.ALIADO_TICKS);
+            this.dar(G, i, 'escudo', H.ALIADO_TICKS);
             var mp = G.pacs[i]; if (mp) this.efecto('amparo', mp.x, mp.y, 28);
-            s.mina = null;
+            this.dar(G, i, 'mina');
           }
         }
         if (s.faro) {
           for (j = 0; j < G.pacs.length; j++) if (j !== i && this.vivo(G, j) && G.pacs[j].tileX() === s.faro.c && G.pacs[j].tileY() === s.faro.r) {
             var rr = this.listaDe(G, j)[3];
-            if (rr) this.st[j].cd[3] = Math.floor(this.st[j].cd[3] * 0.5);
-            this.efecto('faro_toca', G.pacs[j].x, G.pacs[j].y, 30); s.faro = null; break;
+            if (rr) this.dar(G, j, 'cd', Math.floor(this.st[j].cd[3] * 0.5), 3);
+            this.efecto('faro_toca', G.pacs[j].x, G.pacs[j].y, 30); this.dar(G, i, 'faro'); break;
           }
         }
         if (s.totem && s.totem.cd-- <= 0) {
@@ -4374,10 +4527,10 @@
           var JK = this.rey(G);
           if (JK && JK.cercaDe(G, s.clon.x, s.clon.y, 0.7)) {
             JK.congelar(G, CFG.JEFE.ATURDE.clon);
-            this.efecto('clon_explota', s.clon.x, s.clon.y, 34); s.clon = null;
+            this.efecto('clon_explota', s.clon.x, s.clon.y, 34); this.dar(G, i, 'clon');
           } else if (cercaClon.length) {
             for (j = 0; j < cercaClon.length; j++) this.aturdido[cercaClon[j].id] = Math.max(this.aturdido[cercaClon[j].id], 60);
-            this.efecto('clon_explota', s.clon.x, s.clon.y, 34); s.clon = null;
+            this.efecto('clon_explota', s.clon.x, s.clon.y, 34); this.dar(G, i, 'clon');
           }
         }
         if (s.meteoro && s.meteoro.t <= 0) {

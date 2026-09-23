@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · En party, lo que te hace otro te llega de verdad
+
+**LO QUE VEÍA EL ANFITRIÓN Y EL INVITADO NO TENÍA.** Cada invitado manda en su
+Pac-Man, y lo que el anfitrión decidía sobre él se quedaba en su pantalla. Ya
+no: el **escudo de la MINA**, la recarga que baja el **FARO**, el **shuriken
+RECARGADO** (y la ráfaga, que le dejaba la Q bloqueada), el **FRENESÍ** que
+acelera, el **RELEVO** que te trae, el **HOSPITAL** que te salva, el **REBOTE**
+que mata al fantasma, la **CADENA** que se gasta y el empujón de los choques
+salvados. Y el invitado ve caer su propio **METEORO**.
+
+Hace falta que toda la party tenga esta versión: con una vieja no deja entrar.
+
 ## 2026-09-23 · En la party, cada uno elige sus poderes
 
 **LOS INVITADOS SALÍAN CON LOS PODERES DE SERIE.** El rol viajaba al líder,

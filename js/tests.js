@@ -11833,6 +11833,38 @@
 
   });
 
+  test('RED: lo que el anfitrión le hace al jugador de un invitado le llega', function () {
+    var H = window.PM.Hab;
+    partida(2); G.hab = true;
+    H.empezar(true, 2, ['soporte', 'asesino'], ['mina,inmunidad,faro,vida', 'mordisco,frenesi,flash,grito']);
+    G.roles = ['soporte', 'asesino'];
+    var rol = G.netRole, idx = G.localIdx, evt = G.hostEvt, mandados = [];
+    G.netRole = 'host'; G.localIdx = 0;
+    G.hostEvt = function (o) { mandados.push(o); };
+    try {
+      /* el anfitrión le da escudo al invitado: se aplica aquí Y se le avisa */
+      H.dar(G, 1, 'escudo', 120);
+      eq(H.st[1].escudo, 120, 'se aplica en la copia del anfitrión');
+      ok(mandados.some(function (o) { return o.t === 'habDar' && o.w === 1 && o.c === 'escudo'; }),
+        'y viaja al dueño');
+      mandados = [];
+      H.dar(G, 0, 'escudo', 120);
+      eq(mandados.length, 0, 'lo del propio anfitrión no se manda');
+      /* en la máquina del invitado: solo se toca lo suyo */
+      G.netRole = 'guest'; G.localIdx = 1;
+      H.st[1].cd[3] = 900;
+      H.recibeDado(G, { t: 'habDar', w: 1, c: 'cd', v: 450, k: 3 });
+      eq(H.st[1].cd[3], 450, 'el FARO le baja la recarga al invitado');
+      H.recibeDado(G, { t: 'habDar', w: 1, c: 'cd', v: 800, k: 3 });
+      eq(H.st[1].cd[3], 450, 'un aviso nunca le sube la recarga');
+      H.recibeDado(G, { t: 'habDar', w: 1, c: 'frenesiMult', v: 1.3 });
+      eq(H.st[1].frenesiMult, 1.3, 'el FRENESÍ le acelera');
+      H.st[0].escudo = 0;
+      H.recibeDado(G, { t: 'habDar', w: 0, c: 'escudo', v: 99 });
+      eq(H.st[0].escudo, 0, 'lo de otro jugador no lo toma del aviso (va en la foto)');
+    } finally { G.netRole = rol; G.localIdx = idx; G.hostEvt = evt; }
+  });
+
   test('AJUSTES: el botín de Carroña lo coge cualquiera', function () {
     var H = window.PM.Hab;
     partida(2); G.hab = true;

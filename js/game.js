@@ -1711,19 +1711,8 @@
       if (!p || p.out || p.dying) return;
       /* HOSPITAL: la primera caída durante la ventana se convierte en una
        * reanimación inmediata. Solo la autoridad local puede consumirlo. */
-      if (this.hab && window.PM.Hab && this.isLocalAuth(i)) {
-        for (var hi = 0; hi < window.PM.Hab.st.length; hi++) {
-          var hs = window.PM.Hab.st[hi];
-          if (hs && hs.hospital > 0) {
-            hs.hospital = 0;
-            p.safeTicks = CFG.REVIVIR.ESCUDO_TICKS;
-            p.pauseTicks = 0;
-            this.addPopup(p.x, p.y, 'HOSPITAL', 60);
-            this.hostEvt({ t: 'hospital', w: i, by: hi });
-            return;
-          }
-        }
-      }
+      if (this.hab && window.PM.Hab && this.isLocalAuth(i) &&
+          window.PM.Hab.hospitalSalva(this, i)) return;
       var last = !this.anyPlaying(i);
       // se acabó la racha de niveles limpios (solo cuenta la muerte propia)
       if (!this.netRole || i === this.localIdx) this.limpiosSeguidos = 0;
@@ -3788,6 +3777,14 @@
         case 'jefeGolpe':
           if (window.PM.Jefe) window.PM.Jefe.peticionGolpe(this, who, d.f);
           break;
+        /* lo que un invitado gasta en su máquina y es de otro (o lo decide
+         * él y lo ejecuta el anfitrión): ver Hab.peticionGasto */
+        case 'habGasta':
+        case 'habEmpuja':
+        case 'habRebote':
+        case 'habHospital':
+          if (window.PM.Hab) window.PM.Hab.peticionGasto(this, who, d);
+          break;
         /* se le rompió el escudo en su máquina (los choques son suyos) */
         case 'habRoto':
           if (window.PM.Hab) {
@@ -4184,6 +4181,8 @@
           if (A && (A.apagado(g.id) || A.ignoraA(this, me.id, g))) continue;
           if (!this.hitGhost(me, g)) continue;
           if (A && A.salvaDelChoque(this, me.id, g)) continue;
+          // el HOSPITAL de un compañero también salva al invitado
+          if (A && A.hospitalSalva(this, me.id)) continue;
           /* predicción: se congela este Pac-Man (no la partida) y el
            * anfitrión confirma con 'death'; si es el último, parón clásico */
           this.startPacDeath(me.id);
@@ -4518,6 +4517,11 @@
         }
         case 'habRoto':
           if (window.PM.Hab) window.PM.Hab.escudoRoto(this, e.w | 0);
+          break;
+        /* lo que el anfitrión le hace a MI jugador: escudo de la mina, recarga
+         * del faro, shuriken recargado, frenesí, relevo... (Hab.dar) */
+        case 'habDar':
+          if (window.PM.Hab) window.PM.Hab.recibeDado(this, e);
           break;
         case 'emote':
           if ((e.w || 0) !== this.localIdx) this.showEmote(e.w || 0, e.e);
