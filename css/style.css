@@ -7141,3 +7141,346 @@ body { font-size-adjust: 0.56; }
 .arm.sin-rol .btn.arm-rol { opacity: 0.85; }.arm-rol-quien { display: block; height: 10px; line-height: 10px; }
 /* la explicación de cada poder ocupa siempre tres renglones: al pasar de uno a otro no salta nada */
 .arm-det-desc { min-height: calc(3 * 1.7em); display: flex; align-items: center; }
+
+/* =========================================================
+ * OPCIONES · el menú de servicio de la máquina (23 sep)
+ * Todo cuelga de #options.opts para no pisar a los demás paneles.
+ * ========================================================= */
+#options.opts { --opt-borde: rgba(33, 33, 222, 0.55); --opt-texto: #dfe3ff; --opt-suave: #8a91b8; }
+#options.opts .panel-title { margin-bottom: 14px; }
+.opts-shell {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 18px;
+  width: min(96vw, 1000px);
+  margin: 0 auto;
+  align-items: start;
+  text-align: left;
+}
+
+/* ---- las secciones, como botones de la máquina ---- */
+.opts-nav { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; }
+#options.opts .btn.opts-nav-btn {
+  --sc: #ffff00;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-align: left;
+  color: var(--opt-suave);
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid transparent;
+  border-left: 4px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: none;
+}
+#options.opts .btn.opts-nav-btn:hover,
+#options.opts .btn.opts-nav-btn:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border-left-color: var(--sc);
+  outline: none;
+}
+#options.opts .btn.opts-nav-btn.active {
+  color: var(--sc);
+  background: color-mix(in srgb, var(--sc) 12%, #000);
+  border-color: color-mix(in srgb, var(--sc) 55%, transparent);
+  border-left-color: var(--sc);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--sc) 22%, transparent);
+}
+.opts-nav-icono { width: 34px; height: 34px; image-rendering: pixelated; }
+.opts-nav-btn:not(.active) .opts-nav-icono { filter: saturate(0.35) brightness(0.8); }
+
+/* ---- la sección abierta ---- */
+.opts-main {
+  min-width: 0;
+  border: 2px solid var(--opt-borde);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(10, 10, 40, 0.85), rgba(0, 0, 0, 0.85));
+  padding: 20px 24px 22px;
+}
+#options.opts .tab-pane.opts-pane { align-items: stretch; gap: 0; }
+.opts-head { border-bottom: 2px solid color-mix(in srgb, var(--sc) 45%, transparent); padding-bottom: 12px; margin-bottom: 4px; }
+.opts-head-t { color: var(--sc); font-size: 18px; letter-spacing: 3px; text-shadow: 0 0 12px color-mix(in srgb, var(--sc) 40%, transparent); }
+.opts-head-d { color: var(--opt-suave); font-size: 9px; line-height: 1.8; letter-spacing: 1px; margin-top: 8px; }
+
+#options.opts .opt-group {
+  align-items: stretch;
+  gap: 10px;
+  padding: 16px 0 4px;
+  border: none;
+  background: none;
+  width: 100%;
+  max-width: none;
+}
+#options.opts .opt-group + .opt-group { border-top: 1px dashed rgba(255, 255, 255, 0.08); margin-top: 8px; }
+#options.opts .opt-group > .section-title {
+  color: var(--sc);
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin: 0 0 2px;
+  text-align: left;
+  opacity: 0.85;
+}
+#options.opts .note { color: var(--opt-suave); font-size: 8px; line-height: 1.8; margin-top: 2px; text-align: left; }
+.opts-texto { color: var(--opt-texto); font-size: 9px; line-height: 1.9; letter-spacing: 0.5px; }
+
+/* ---- DIFICULTAD: tres fichas ---- */
+.opts-fichas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+#options.opts .btn.opts-ficha {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 8px 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+#options.opts .btn.opts-ficha:hover, #options.opts .btn.opts-ficha:focus-visible { border-color: var(--sc); outline: none; }
+#options.opts .btn.opts-ficha.active {
+  border-color: var(--sc);
+  background: color-mix(in srgb, var(--sc) 14%, #000);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sc) 40%, transparent);
+}
+.opts-ficha-cv { width: 150px; max-width: 100%; height: 50px; image-rendering: pixelated; }
+.opts-ficha-n { font-size: 13px; letter-spacing: 2px; }
+.opts-ficha-d { font-size: 7px; color: var(--opt-suave); letter-spacing: 0.5px; }
+#options.opts .custom-tag { color: #ffb852; font-size: 9px; letter-spacing: 1px; text-align: left; }
+
+/* ---- los deslizadores: un pasillo con Pac-Man ---- */
+#options.opts .slider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 260px) 58px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  font-size: 10px;
+  padding: 4px 0;
+}
+#options.opts .slider-label { text-align: left; color: var(--opt-texto); letter-spacing: 1px; line-height: 1.6; }
+#options.opts .slider-value {
+  text-align: center;
+  color: #ffff00;
+  background: rgba(255, 255, 0, 0.08);
+  border: 1px solid rgba(255, 255, 0, 0.3);
+  border-radius: 6px;
+  padding: 5px 0;
+  font-size: 10px;
+}
+#options.opts input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  --pct: 50%;
+}
+#options.opts input[type="range"]::-webkit-slider-runnable-track {
+  height: 22px;
+  border-radius: 11px;
+  border: 2px solid #2121de;
+  background:
+    linear-gradient(90deg, #12125a var(--pct), transparent var(--pct)),
+    radial-gradient(circle, #ffb897 2px, transparent 2.5px) 0 50% / 14px 14px repeat-x,
+    #000;
+}
+#options.opts input[type="range"]::-moz-range-track {
+  height: 18px;
+  border-radius: 11px;
+  border: 2px solid #2121de;
+  background:
+    linear-gradient(90deg, #12125a var(--pct), transparent var(--pct)),
+    radial-gradient(circle, #ffb897 2px, transparent 2.5px) 0 50% / 14px 14px repeat-x,
+    #000;
+}
+#options.opts input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -1px;
+  border: none;
+  border-radius: 50%;
+  background: conic-gradient(from 125deg, #ffff00 0 290deg, transparent 290deg 360deg);
+  filter: drop-shadow(0 0 4px rgba(255, 255, 0, 0.6));
+  cursor: grab;
+}
+#options.opts input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: conic-gradient(from 125deg, #ffff00 0 290deg, transparent 290deg 360deg);
+  cursor: grab;
+}
+#options.opts input[type="range"]:focus { outline: none; }
+#options.opts input[type="range"]:focus-visible::-webkit-slider-runnable-track { border-color: #ffff00; }
+
+/* ---- botones sueltos y el interruptor ---- */
+.opts-botones { display: flex; flex-wrap: wrap; gap: 8px; }
+#options.opts .opts-botones .btn.btn-preset {
+  min-width: 0;
+  padding: 9px 14px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid color-mix(in srgb, var(--sc) 45%, transparent);
+  border-radius: 8px;
+}
+#options.opts .opts-botones .btn.btn-preset:hover,
+#options.opts .opts-botones .btn.btn-preset:focus-visible { border-color: var(--sc); color: var(--sc); outline: none; }
+.opts-interruptor {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  width: max-content;
+  padding: 4px;
+  border-radius: 22px;
+  border: 2px solid color-mix(in srgb, var(--sc) 45%, transparent);
+  background: #000;
+}
+#options.opts .opts-interruptor .btn.btn-preset {
+  min-width: 0;
+  padding: 8px 16px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--opt-suave);
+  background: transparent;
+  border: none;
+  border-radius: 18px;
+}
+#options.opts .opts-interruptor .btn.btn-preset.active { color: #000; background: var(--sc); }
+
+/* ---- PARTIDA: el J2 de fantasma ---- */
+.opts-personajes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+#options.opts .btn.opts-pj {
+  --pj: #ffff00;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 4px;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--pj);
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+#options.opts .btn.opts-pj:hover, #options.opts .btn.opts-pj:focus-visible { border-color: var(--pj); outline: none; }
+#options.opts .btn.opts-pj.active { border-color: var(--pj); background: color-mix(in srgb, var(--pj) 14%, #000); }
+.opts-pj-cv { width: 40px; height: 40px; image-rendering: pixelated; }
+
+/* ---- CONTROLES: teclas de verdad ---- */
+.opts-tecla-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.opts-tecla-fila:last-child { border-bottom: none; }
+.opts-tecla-que { color: var(--opt-texto); font-size: 9px; letter-spacing: 1px; line-height: 1.6; }
+.opts-teclas { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 5px; }
+.opts-kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  font: 10px "Press Start 2P", 'Courier New', monospace;
+  color: #fff;
+  background: linear-gradient(180deg, #2a2a55, #15153a);
+  border: 1px solid #4a4aa0;
+  border-bottom-width: 4px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.opts-o { color: var(--opt-suave); font-size: 8px; margin: 0 3px; }
+.opts-reparto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.opts-fantasma {
+  --pj: #ff0000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pj) 8%, #000);
+  border: 1px solid color-mix(in srgb, var(--pj) 35%, transparent);
+}
+.opts-fantasma-n { color: var(--pj); font-size: 10px; letter-spacing: 1px; }
+.opts-fantasma-a { color: var(--opt-suave); font-size: 7px; letter-spacing: 1px; }
+
+#options.opts .btn.opts-volver { margin-top: 18px; }
+
+/* ---- estrecho: las secciones arriba, en fila ---- */
+@media (max-width: 760px) {
+  .opts-shell { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .opts-nav { flex-direction: row; overflow-x: auto; position: static; padding-bottom: 4px; }
+  #options.opts .btn.opts-nav-btn { grid-template-columns: 1fr; justify-items: center; width: auto; min-width: 86px; font-size: 7px; letter-spacing: 1px; gap: 6px; padding: 8px; border-left-width: 2px; }
+  .opts-nav-icono { width: 26px; height: 26px; }
+  .opts-main { padding: 14px 12px 16px; }
+  #options.opts .slider-row { grid-template-columns: minmax(0, 1fr) 54px; }
+  #options.opts .slider-row input[type="range"] { grid-column: 1 / -1; grid-row: 2; }
+  .opts-personajes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .opts-reparto { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .opts-fichas { grid-template-columns: minmax(0, 1fr); }
+  .opts-tecla-fila { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .opts-teclas { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #options.opts .btn.opts-nav-btn { transition: none; }
+}
+
+/* OPCIONES: las secciones, una debajo de otra (la regla general de los
+ * paneles con pestañas las reparte en columnas y aquí apretujaba todo) */
+#options.opts .tab-pane.opts-pane { flex-direction: column; flex-wrap: nowrap; max-width: none; gap: 0; justify-content: flex-start; }
+#options.opts .opt-group { flex: none; max-width: none; padding: 16px 0 4px; }
+/* las flechas de los controles, dibujadas (la letra del juego no las trae) */
+.opts-kbd.opts-flecha { width: 26px; }
+.opts-kbd.opts-flecha::before { content: ''; width: 0; height: 0; border: 6px solid transparent; }
+.opts-kbd.opts-flecha.arr::before { border-bottom: 8px solid #fff; border-top-width: 0; }
+.opts-kbd.opts-flecha.aba::before { border-top: 8px solid #fff; border-bottom-width: 0; }
+.opts-kbd.opts-flecha.izq::before { border-right: 8px solid #fff; border-left-width: 0; }
+.opts-kbd.opts-flecha.der::before { border-left: 8px solid #fff; border-right-width: 0; }
+
+/* OPCIONES · JUGADORES: los nombres en filas, como el resto de ajustes */
+#options.opts .nick-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: 0;
+  padding: 4px 0;
+}
+#options.opts .nick-label { text-align: left; font-size: 10px; letter-spacing: 1px; color: var(--opt-texto); }
+#options.opts .nick-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-size: 12px;
+  text-align: left;
+  color: #fff;
+  background: #000;
+  border: 2px solid color-mix(in srgb, var(--sc) 45%, transparent);
+  border-radius: 8px;
+}
+#options.opts .nick-input:focus { outline: none; border-color: var(--sc); box-shadow: 0 0 10px color-mix(in srgb, var(--sc) 30%, transparent); }
+@media (max-width: 760px) {
+  #options.opts .nick-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
+
+/* OPCIONES en estrecho: el título cabe entero */
+@media (max-width: 760px) {
+  #options.opts .panel-title { font-size: clamp(22px, 10vw, 44px); letter-spacing: 2px; max-width: 100%; }
+}

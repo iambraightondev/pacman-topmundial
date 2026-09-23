@@ -2847,145 +2847,123 @@
     /* ------------------------------------------------------
      * Panel de opciones
      * ------------------------------------------------------ */
+    /* ------------------------------------------------------
+     * OPCIONES (rediseño del 23 sep): el MENÚ DE SERVICIO de la máquina.
+     *
+     * A la izquierda, las cinco secciones como botones con su dibujo, cada
+     * una del color de un fantasma (DIFICULTAD Blinky, JUGADORES Pinky,
+     * PARTIDA Inky, SONIDO Clyde; CONTROLES, Pac-Man). A la derecha, la
+     * sección abierta en filas: su nombre, para qué sirve, y cada ajuste con
+     * su mando. Los deslizadores son un pasillo: el tirador es Pac-Man y
+     * delante le quedan las bolitas (ver .opts input[type=range]).
+     * En móvil, las secciones pasan a una fila deslizable arriba.
+     * ------------------------------------------------------ */
     buildOptions: function () {
       var self = this;
       var o = this.els.options;
       o.innerHTML = '';
+      o.classList.add('opts');
+      function el(tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      }
 
-      var h = document.createElement('div');
-      h.className = 'panel-title';
-      h.textContent = 'OPCIONES';
-      o.appendChild(h);
+      o.appendChild(el('div', 'panel-title', 'OPCIONES'));
 
-      /* --- pestañas: el panel entero de golpe se ve abarrotado, aquí y en
-       * pantalla ancha. Lo que cambia con sitio de sobra es que las secciones
-       * de la pestaña abierta se reparten en columnas (ver .opt-group). --- */
       var TABS = [
-        ['dificultad', 'DIFICULTAD'],
-        ['jugadores', 'JUGADORES'],
-        ['partida', 'PARTIDA'],
-        ['sonido', 'SONIDO'],
-        ['controles', 'CONTROLES']
+        ['dificultad', 'DIFICULTAD', '#ff3b3b', 'LA VELOCIDAD, LAS VIDAS Y EL NIVEL DE SALIDA. SE APLICAN EN LA PRÓXIMA PARTIDA.'],
+        ['jugadores', 'JUGADORES', '#ffb8ff', 'CÓMO OS LLAMÁIS Y CÓMO VAIS VESTIDOS.'],
+        ['partida', 'PARTIDA', '#00ffff', 'CÓMO SE JUEGA EN EQUIPO Y CONTRA UN FANTASMA.'],
+        ['sonido', 'SONIDO', '#ffb852', 'QUÉ SUENA Y A QUÉ VOLUMEN.'],
+        ['controles', 'CONTROLES', '#ffff00', 'LAS TECLAS DE TODO EL JUEGO.']
       ];
-      var bar = document.createElement('div');
-      bar.className = 'tab-row';
+      var shell = el('div', 'opts-shell');
+      var nav = el('div', 'opts-nav');
+      var main = el('div', 'opts-main');
+      shell.appendChild(nav);
+      shell.appendChild(main);
+      o.appendChild(shell);
       this.tabBtns = {};
       this.tabPanes = {};
       TABS.forEach(function (t) {
-        var b = self.makeButton(t[1], function () { self.showOptionsTab(t[0]); });
-        b.classList.add('tab');
+        var b = self.makeButton('', function () { self.showOptionsTab(t[0]); });
+        b.classList.add('tab', 'opts-nav-btn');
+        b.style.setProperty('--sc', t[2]);
+        var cv = document.createElement('canvas');
+        cv.width = 64; cv.height = 64;
+        cv.className = 'opts-nav-icono';
+        self.iconoOpcion(cv, t[0], t[2]);
+        b.appendChild(cv);
+        b.appendChild(el('span', 'opts-nav-nombre', t[1]));
+        b.setAttribute('aria-label', t[1]);
         self.tabBtns[t[0]] = b;
-        bar.appendChild(b);
-      });
-      o.appendChild(bar);
-      TABS.forEach(function (t) {
-        var pane = document.createElement('div');
-        pane.className = 'tab-pane pane-' + t[0];
+        nav.appendChild(b);
+
+        var pane = el('div', 'tab-pane opts-pane pane-' + t[0]);
+        pane.style.setProperty('--sc', t[2]);
+        var cab = el('div', 'opts-head');
+        cab.appendChild(el('div', 'opts-head-t', t[1]));
+        cab.appendChild(el('div', 'opts-head-d', t[3]));
+        pane.appendChild(cab);
         self.tabPanes[t[0]] = pane;
-        o.appendChild(pane);
+        main.appendChild(pane);
       });
 
       var dif = this.tabPanes.dificultad;
       var jug = this.tabPanes.jugadores;
       var par = this.tabPanes.partida;
       var son = this.tabPanes.sonido;
+      var ctlP = this.tabPanes.controles;
 
-      /* ===== pestaña CONTROLES (antes, en la portada) ===== */
-      var ctl = this.optGroup(this.tabPanes.controles, 'CONTROLES');
-      var ayudas = [
-        'J1: FLECHAS O WASD',
-        'PAUSA: P O ESC (REANUDAR · RENDIRSE R · SALIR Q)',
-        'DOS JUGADORES: J1 FLECHAS · J2 WASD, CONTRA LOS FANTASMAS',
-        'DESATADO SOLO: FLECHAS PARA MOVERSE · Q W E R PARA LOS PODERES',
-        'DESATADO EN DOS: J1 FLECHAS Y ' + CFG.HAB.KEYS_2P[0].join(' ') +
-          ' · J2 WASD Y ' + CFG.HAB.KEYS_2P[1].join(' '),
-        'RENDIRSE: EN EL MENÚ DE PAUSA, CON R (EN DÚO, LOS DOS)'
-      ];
-      if (this.touchDevice) {
-        ayudas.push('TÁCTIL: DESLIZA PARA MOVERTE · EN DÚO, CADA UNO SU MITAD');
-      }
-      for (var a = 0; a < ayudas.length; a++) {
-        var hint = document.createElement('div');
-        hint.className = 'hint';
-        hint.textContent = ayudas[a];
-        ctl.appendChild(hint);
-      }
-      var rep = this.optGroup(this.tabPanes.controles, 'EL REPARTO');
-      var roster = document.createElement('div');
-      roster.className = 'roster';
-      [['SHADOW', '"BLINKY"', '#ff0000'], ['SPEEDY', '"PINKY"', '#ffb8ff'],
-       ['BASHFUL', '"INKY"', '#00ffff'], ['POKEY', '"CLYDE"', '#ffb852']].forEach(function (n) {
-        var row = document.createElement('div');
-        row.className = 'roster-row';
-        row.style.color = n[2];
-        var dot = document.createElement('span');
-        dot.className = 'roster-ghost';
-        dot.style.background = n[2];
-        row.appendChild(dot);
-        var tt = document.createElement('span');
-        tt.textContent = n[0] + '  ' + n[1];
-        row.appendChild(tt);
-        roster.appendChild(row);
-      });
-      rep.appendChild(roster);
-
-      /* ===== pestaña DIFICULTAD ===== */
-      var difA = this.optGroup(dif, 'DIFICULTAD');
-      var presetRow = document.createElement('div');
-      presetRow.className = 'preset-row';
-      var presets = [['facil', 'FÁCIL'], ['normal', 'NORMAL'], ['dificil', 'DIFÍCIL']];
+      /* ===== DIFICULTAD: tres fichas y, debajo, a tu medida ===== */
+      var difA = this.optGroup(dif, 'DE LA CASA');
+      var presetRow = el('div', 'opts-fichas');
+      var presets = [['facil', 'FÁCIL', 1], ['normal', 'NORMAL', 2], ['dificil', 'DIFÍCIL', 4]];
       this.presetButtons = {};
       presets.forEach(function (p) {
-        var b = self.makeButton(p[1], function () {
-          self.applyPreset(p[0]);
-        });
-        b.classList.add('btn-preset');
+        var b = self.makeButton('', function () { self.applyPreset(p[0]); });
+        b.classList.add('btn-preset', 'opts-ficha');
+        var cv = document.createElement('canvas');
+        cv.width = 180; cv.height = 60;
+        cv.className = 'opts-ficha-cv';
+        self.pintarFantasmas(cv, p[2], p[0] === 'facil');
+        b.appendChild(cv);
+        b.appendChild(el('span', 'opts-ficha-n', p[1]));
+        var v = CFG.PRESETS && CFG.PRESETS[p[0]];
+        if (v) {
+          b.appendChild(el('small', 'opts-ficha-d', 'FANTASMAS ×' + Number(v.ghostSpeedMult).toFixed(2) +
+            ' · ' + v.startLives + (v.startLives === 1 ? ' VIDA' : ' VIDAS')));
+        }
         self.presetButtons[p[0]] = b;
         presetRow.appendChild(b);
       });
       difA.appendChild(presetRow);
-
-      this.customTag = document.createElement('div');
-      this.customTag.className = 'custom-tag';
-      this.customTag.textContent = 'PERSONALIZADA';
+      this.customTag = el('div', 'custom-tag', 'LLEVAS UNA A TU MEDIDA');
       difA.appendChild(this.customTag);
-      var difNote = document.createElement('div');
-      difNote.className = 'note';
-      difNote.textContent = 'VELOCIDAD, VIDAS Y NIVEL SE APLICAN EN LA PRÓXIMA PARTIDA';
-      difA.appendChild(difNote);
 
       var difB = this.optGroup(dif, 'A TU MEDIDA');
       this.sliders = {};
-      difB.appendChild(this.makeSlider('ghostSpeedMult', 'VELOCIDAD FANTASMAS',
+      difB.appendChild(this.makeSlider('ghostSpeedMult', 'VELOCIDAD DE LOS FANTASMAS',
         0.5, 1.2, 0.05, function (v) { return '×' + v.toFixed(2); }));
-      difB.appendChild(this.makeSlider('pacSpeedMult', 'VELOCIDAD PAC-MAN',
+      difB.appendChild(this.makeSlider('pacSpeedMult', 'VELOCIDAD DE PAC-MAN',
         0.8, 1.3, 0.05, function (v) { return '×' + v.toFixed(2); }));
-      difB.appendChild(this.makeSlider('frightMult', 'DURACIÓN POWER PELLET',
+      difB.appendChild(this.makeSlider('frightMult', 'DURACIÓN DEL AZUL',
         0, 2, 0.25, function (v) { return '×' + v.toFixed(2); }));
       difB.appendChild(this.makeSlider('startLives', 'VIDAS',
         1, 5, 1, function (v) { return String(v); }));
-      difB.appendChild(this.makeSlider('startLevel', 'NIVEL INICIAL',
+      difB.appendChild(this.makeSlider('startLevel', 'NIVEL DE SALIDA',
         1, 21, 1, function (v) { return String(v); }));
 
-      /* ===== pestaña JUGADORES ===== */
+      /* ===== JUGADORES ===== */
       var jugN = this.optGroup(jug, 'NOMBRES', true);
       jugN.appendChild(this.makeNickRow('nick1', 'TU NOMBRE (J1 Y ONLINE)'));
-      jugN.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (LOCAL)'));
-      var nkNote = document.createElement('div');
-      nkNote.className = 'note';
-      nkNote.textContent = 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE';
-      jugN.appendChild(nkNote);
-
-      /* El aspecto (el tuyo y el del jugador 2 local) se elige en el
-       * VESTUARIO, que es el único sitio donde se viste a alguien. Aquí solo
-       * queda el atajo para no tener que ir a buscarlo. */
+      jugN.appendChild(this.makeNickRow('nick2', 'JUGADOR 2 (MISMO TECLADO)'));
+      jugN.appendChild(el('div', 'note', 'SE VEN EN EL MARCADOR, SOBRE CADA PAC-MAN Y EN LAS SALAS ONLINE'));
+      /* El aspecto se elige en el VESTUARIO; aquí, el atajo */
       var jugYo = this.optGroup(jug, 'ASPECTO');
-      var skNote = document.createElement('div');
-      skNote.className = 'note';
-      skNote.textContent = 'EL COLOR, LA SKIN Y LO QUE LLEVÁIS PUESTO SE ELIGE EN EL VESTUARIO';
-      jugYo.appendChild(skNote);
-      var vestRow = document.createElement('div');
-      vestRow.className = 'preset-row';
+      var vestRow = el('div', 'opts-botones');
       var vYo = this.makeButton('TU ASPECTO', function () { self.showVestuario('skin', 'yo'); });
       vYo.classList.add('btn-preset');
       vestRow.appendChild(vYo);
@@ -2993,57 +2971,46 @@
       vJ2.classList.add('btn-preset');
       vestRow.appendChild(vJ2);
       jugYo.appendChild(vestRow);
-      this.optMsgEl = document.createElement('div');
-      this.optMsgEl.className = 'lobby-status';
+      jugYo.appendChild(el('div', 'note', 'EL COLOR, LA SKIN Y LO QUE LLEVÁIS PUESTO SE ELIGEN EN EL VESTUARIO'));
+      this.optMsgEl = el('div', 'lobby-status');
       jugN.appendChild(this.optMsgEl);
 
-      /* ===== pestaña PARTIDA ===== */
-      /* Las vidas compartidas se quitaron el 18 sep: en equipo cada uno lleva
-       * las suyas, siempre. Aquí ya no hay nada que elegir. */
-      par = this.optGroup(par, 'VIDAS EN EQUIPO');
-      var lmNote = document.createElement('div');
-      lmNote.className = 'note';
-      lmNote.textContent = 'CADA UNO LLEVA LAS SUYAS. QUIEN SE QUEDA SIN VIDAS DEJA EL CUERPO: ' +
-        'SI UN COMPAÑERO LE PASA POR ENCIMA ' + CFG.REVIVIR.PASADAS + ' VECES EN ' +
-        Math.round(CFG.REVIVIR.CUERPO_TICKS / 60) + ' S, VUELVE (EL SOPORTE, CON UNA)';
-      par.appendChild(lmNote);
-
-      var ctrlNote = document.createElement('div');
-      ctrlNote.className = 'note';
-      ctrlNote.textContent = 'EN PARTIDA: P O ESC PAUSA · 1-6 EMOTES · ' +
-        'CTRL+ESPACIO TU MAESTRÍA (DESATADO) O TU TROFEO · F1-F4 EL TROFEO DE SOLO/DÚO/TRÍO/ESCUADRA · ' +
-        'T CHAT (ONLINE)';
-      par.appendChild(ctrlNote);
-
+      /* ===== PARTIDA ===== */
       /* PAC-MAN VS. en la misma máquina: el jugador 2 lleva un fantasma */
-      var vsg = this.optGroup(this.tabPanes.partida, 'PAC-MAN VS. (MISMO TECLADO)');
-      var vsRowL = document.createElement('div');
-      vsRowL.className = 'preset-row';
+      var vsg = this.optGroup(par, 'EL J2, DE FANTASMA');
+      var vsRowL = el('div', 'opts-personajes');
       this.vsLocalBtns = {};
       this.vsChoices().forEach(function (op) {
-        var b = self.makeButton(op[1], function () {
+        var b = self.makeButton('', function () {
           window.PM.settings.vsGhost2 = op[0];
           saveSettings();
           self.refreshOptions();
         });
-        b.classList.add('btn-preset');
-        if (op[0] >= 0) b.style.color = CFG.GHOSTS[op[0]].color;
+        b.classList.add('btn-preset', 'opts-pj');
+        var cv = document.createElement('canvas');
+        cv.width = 40; cv.height = 40;
+        cv.className = 'opts-pj-cv';
+        self.pintarPersonaje(cv, op[0], op[0] >= 0 ? null : '#ffff00');
+        b.appendChild(cv);
+        b.appendChild(el('span', 'opts-pj-n', op[1]));
+        if (op[0] >= 0) b.style.setProperty('--pj', CFG.GHOSTS[op[0]].color);
         self.vsLocalBtns[op[0]] = b;
         vsRowL.appendChild(b);
       });
       vsg.appendChild(vsRowL);
-      var vsNoteL = document.createElement('div');
-      vsNoteL.className = 'note';
-      vsNoteL.textContent = 'EN DOS JUGADORES, EL J2 (WASD) LLEVA ESE FANTASMA ' +
-        'EN VEZ DE UN PAC-MAN. GANA SI SE QUEDA CON TODAS TUS VIDAS';
-      vsg.appendChild(vsNoteL);
+      vsg.appendChild(el('div', 'note', 'EN DOS JUGADORES, EL J2 (WASD) LLEVA ESE FANTASMA EN VEZ DE UN PAC-MAN. ' +
+        'GANA SI SE QUEDA CON TODAS TUS VIDAS. CON PAC-MAN, JUGÁIS LOS DOS JUNTOS'));
+      /* Las vidas compartidas se quitaron el 18 sep: aquí solo se cuenta */
+      var vid = this.optGroup(par, 'VIDAS EN EQUIPO');
+      vid.appendChild(el('div', 'opts-texto', 'CADA UNO LLEVA LAS SUYAS. QUIEN SE QUEDA SIN VIDAS DEJA EL CUERPO: ' +
+        'SI UN COMPAÑERO LE PASA POR ENCIMA ' + CFG.REVIVIR.PASADAS + ' VECES EN ' +
+        Math.round(CFG.REVIVIR.CUERPO_TICKS / 60) + ' S, VUELVE. EL SOPORTE LO LEVANTA DE UNA PASADA.'));
 
-      /* ===== pestaña SONIDO ===== */
-      var sonA = this.optGroup(son, 'SONIDO');
-      var sndRow = document.createElement('div');
-      sndRow.className = 'preset-row';
+      /* ===== SONIDO ===== */
+      var sonA = this.optGroup(son, 'TODO EL SONIDO');
+      var sndRow = el('div', 'opts-interruptor');
       this.soundBtns = {};
-      [['si', 'SÍ'], ['no', 'NO']].forEach(function (p) {
+      [['si', 'ENCENDIDO'], ['no', 'APAGADO']].forEach(function (p) {
         var b = self.makeButton(p[1], function () {
           window.PM.settings.muted = (p[0] === 'no');
           self.applyMute();
@@ -3055,52 +3022,148 @@
         sndRow.appendChild(b);
       });
       sonA.appendChild(sndRow);
-
-      /* Prueba rápida de las voces de racha. Cuando las cuatro rachas llevan
-       * la misma voz —hoy la llevan— sale UN solo botón: cuatro botones con
-       * el mismo nombre no dicen nada y hacen creer que suenan cosas
-       * distintas. */
-      sonA.appendChild(this.sectionTitle('VOCES DE RACHA'));
-      var vRow = document.createElement('div');
-      vRow.className = 'preset-row';
+      var sonB = this.optGroup(son, 'VOLUMEN');
+      CFG.SOUND_CATS.forEach(function (c) {
+        sonB.appendChild(self.makeSlider(c.key, c.name, 0, 1, 0.1,
+          function (v) { return Math.round(v * 100) + '%'; }, true));
+      });
+      sonB.appendChild(el('div', 'note', 'EFECTOS: WAKA, FANTASMAS, FRUTA… · AMBIENTE: SIRENA Y MODO AZUL · VOCES: RACHA AL COMER FANTASMAS'));
+      /* Las voces de racha: cuando las cuatro llevan la misma (hoy sí), UN
+       * botón; cuatro con el mismo nombre harían creer que suenan distinto. */
+      var sonC = this.optGroup(son, 'VOCES DE RACHA');
+      var vRow = el('div', 'opts-botones');
       var unaSola = true;
       for (var vi = 1; vi < CFG.VOICES.length; vi++) {
         if (CFG.VOICES[vi] !== CFG.VOICES[0]) { unaSola = false; break; }
       }
       (unaSola ? [CFG.VOICE_NAMES[0]] : CFG.VOICE_NAMES).forEach(function (name, i) {
-        var b = self.makeButton(unaSola ? name : ((i + 1) + ' ' + name), function () {
+        var b = self.makeButton('▶ ' + (unaSola ? name : ((i + 1) + ' ' + name)), function () {
           self.resumeAudio();
           if (window.AudioSys) AudioSys.playVoice(i);
         });
         b.classList.add('btn-preset');
         vRow.appendChild(b);
       });
-      sonA.appendChild(vRow);
-      this.voicesNote = document.createElement('div');
-      this.voicesNote.className = 'note';
-      sonA.appendChild(this.voicesNote);
+      sonC.appendChild(vRow);
+      this.voicesNote = el('div', 'note');
+      sonC.appendChild(this.voicesNote);
 
-      var sonB = this.optGroup(son, 'VOLUMEN POR TIPO');
-      CFG.SOUND_CATS.forEach(function (c) {
-        sonB.appendChild(self.makeSlider(c.key, c.name, 0, 1, 0.1,
-          function (v) { return Math.round(v * 100) + '%'; }, true));
+      /* ===== CONTROLES: las teclas dibujadas como teclas ===== */
+      var ctl = this.optGroup(ctlP, 'JUGANDO');
+      var K2 = CFG.HAB.KEYS_2P;
+      function fila(caja, que, grupos, nota) {
+        var f = el('div', 'opts-tecla-fila');
+        f.appendChild(el('span', 'opts-tecla-que', que));
+        var teclas = el('span', 'opts-teclas');
+        grupos.forEach(function (g) {
+          if (typeof g === 'string') { teclas.appendChild(el('span', 'opts-o', g)); return; }
+          g.forEach(function (t) {
+            /* las flechas, dibujadas: la letra del juego no las trae todas */
+            var fl = { '↑': 'arr', '↓': 'aba', '←': 'izq', '→': 'der' }[t];
+            var k = el('kbd', 'opts-kbd' + (fl ? ' opts-flecha ' + fl : ''), fl ? '' : t);
+            if (fl) k.setAttribute('aria-label', { arr: 'ARRIBA', aba: 'ABAJO', izq: 'IZQUIERDA', der: 'DERECHA' }[fl]);
+            teclas.appendChild(k);
+          });
+        });
+        if (nota) teclas.appendChild(el('span', 'opts-o', nota));
+        f.appendChild(teclas);
+        caja.appendChild(f);
+      }
+      fila(ctl, 'MOVERSE', [['↑', '↓', '←', '→'], 'O', ['W', 'A', 'S', 'D']]);
+      fila(ctl, 'PAUSA', [['P'], 'O', ['ESC']], '· EN PAUSA, R RINDE Y Q SALE');
+      fila(ctl, 'EMOTES', [['1', '2', '3', '4', '5', '6']]);
+      fila(ctl, 'TU MAESTRÍA O TU TROFEO', [['CTRL', 'ESPACIO']]);
+      fila(ctl, 'TROFEO DE SOLO, DÚO, TRÍO, ESCUADRA', [['F1', 'F2', 'F3', 'F4']]);
+      fila(ctl, 'CHAT (ONLINE)', [['T']]);
+      var ctl2 = this.optGroup(ctlP, 'DESATADO');
+      fila(ctl2, 'A SOLAS: PODERES', [['Q', 'W', 'E', 'R']], '· FLECHAS PARA MOVERTE');
+      fila(ctl2, 'A DOS: J1', [['↑', '↓', '←', '→'], '+', K2[0]]);
+      fila(ctl2, 'A DOS: J2', [['W', 'A', 'S', 'D'], '+', K2[1]]);
+      if (this.touchDevice) {
+        var ctl3 = this.optGroup(ctlP, 'TÁCTIL');
+        ctl3.appendChild(el('div', 'opts-texto', 'DESLIZA PARA MOVERTE. EN DÚO, CADA UNO SU MITAD DE LA PANTALLA.'));
+      }
+      var rep = this.optGroup(ctlP, 'EL REPARTO');
+      var roster = el('div', 'opts-reparto');
+      [['SHADOW', 'BLINKY', 0], ['SPEEDY', 'PINKY', 1], ['BASHFUL', 'INKY', 2], ['POKEY', 'CLYDE', 3]].forEach(function (n) {
+        var r = el('div', 'opts-fantasma');
+        r.style.setProperty('--pj', CFG.GHOSTS[n[2]].color);
+        var cv = document.createElement('canvas');
+        cv.width = 48; cv.height = 48;
+        cv.className = 'opts-pj-cv';
+        self.pintarPersonaje(cv, n[2]);
+        r.appendChild(cv);
+        r.appendChild(el('span', 'opts-fantasma-n', n[1]));
+        r.appendChild(el('small', 'opts-fantasma-a', n[0]));
+        roster.appendChild(r);
       });
-      var volNote = document.createElement('div');
-      volNote.className = 'note';
-      volNote.textContent = 'EFECTOS: WAKA, FANTASMAS, FRUTA... · ' +
-        'AMBIENTE: SIRENA Y MODO AZUL · VOCES: RACHA AL COMER FANTASMAS';
-      sonB.appendChild(volNote);
+      rep.appendChild(roster);
 
-      /* --- VOLVER (fuera de las pestañas) --- */
-      var back = this.makeButton('VOLVER', function () {
-        self.showMenu();
-      });
-      back.classList.add('btn-primary');
-      back.style.marginTop = '14px';
+      /* --- VOLVER (fuera de las secciones) --- */
+      var back = this.makeButton('VOLVER', function () { self.showMenu(); });
+      back.classList.add('btn-primary', 'opts-volver');
       o.appendChild(back);
 
       this.showOptionsTab('dificultad');
       this.refreshOptions();
+    },
+
+    /* El dibujo de cada sección de OPCIONES, en un lienzo cuadrado */
+    iconoOpcion: function (cv, id, color) {
+      var S = window.PM.Sprites, c = cv.getContext && cv.getContext('2d');
+      if (!c) return;
+      var D = CFG.DIR, W = cv.width;
+      c.clearRect(0, 0, W, W);
+      c.save();
+      try {
+        if (id === 'dificultad' || id === 'partida') {
+          c.scale(W / 16, W / 16);
+          S.drawGhost(c, 8, 8, D.RIGHT, id === 'dificultad' ? 0 : 2, 'chase', 0, false);
+        } else if (id === 'jugadores') {
+          c.scale(W / 20, W / 20);
+          S.drawPacman(c, 6, 8, D.RIGHT, 1, '#ffff00', 'clasico', {});
+          S.drawPacman(c, 14, 12, D.LEFT, 1, color, 'clasico', {});
+        } else if (id === 'sonido') {
+          c.scale(W / 100, W / 100);
+          c.fillStyle = color;
+          c.beginPath();
+          c.moveTo(14, 38); c.lineTo(32, 38); c.lineTo(54, 18); c.lineTo(54, 82); c.lineTo(32, 62); c.lineTo(14, 62);
+          c.closePath(); c.fill();
+          c.strokeStyle = color; c.lineWidth = 7; c.lineCap = 'round';
+          c.beginPath(); c.arc(56, 50, 16, -0.8, 0.8); c.stroke();
+          c.beginPath(); c.arc(56, 50, 30, -0.8, 0.8); c.stroke();
+        } else {
+          /* controles: la cruceta */
+          c.scale(W / 100, W / 100);
+          c.fillStyle = color;
+          c.fillRect(38, 10, 24, 80);
+          c.fillRect(10, 38, 80, 24);
+          c.fillStyle = '#000';
+          c.beginPath(); c.moveTo(50, 16); c.lineTo(58, 28); c.lineTo(42, 28); c.closePath(); c.fill();
+          c.beginPath(); c.moveTo(50, 84); c.lineTo(58, 72); c.lineTo(42, 72); c.closePath(); c.fill();
+          c.beginPath(); c.moveTo(16, 50); c.lineTo(28, 42); c.lineTo(28, 58); c.closePath(); c.fill();
+          c.beginPath(); c.moveTo(84, 50); c.lineTo(72, 42); c.lineTo(72, 58); c.closePath(); c.fill();
+        }
+      } catch (e) { /* sin sprites, sin dibujo */ }
+      c.restore();
+    },
+
+    /* Las fichas de DIFICULTAD: n fantasmas en fila (azules en la fácil) */
+    pintarFantasmas: function (cv, n, azules) {
+      var S = window.PM.Sprites, c = cv.getContext && cv.getContext('2d');
+      if (!c || !S) return;
+      var D = CFG.DIR, paso = 15;
+      var ancho = paso * (n - 1) + 16;
+      // que quepan todos: con cuatro, algo más pequeños
+      var esc = Math.min(cv.height / 16, cv.width / (ancho + 2));
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.save();
+      c.scale(esc, esc);
+      var x0 = (cv.width / esc - ancho) / 2 + 8;
+      for (var i = 0; i < n; i++) {
+        try { S.drawGhost(c, x0 + i * paso, cv.height / esc / 2, D.LEFT, i % 4, azules ? 'fright' : 'chase', 0, false); } catch (e) {}
+      }
+      c.restore();
     },
 
     showOptionsTab: function (name) {
@@ -3110,6 +3173,12 @@
         if (!this.tabPanes.hasOwnProperty(k)) continue;
         this.tabPanes[k].style.display = (k === name) ? 'flex' : 'none';
         this.tabBtns[k].classList.toggle('active', k === name);
+      }
+      /* en móvil las secciones van en una fila que se desliza: la abierta,
+       * a la vista */
+      var bn = this.tabBtns[name], fila = bn && bn.parentNode;
+      if (fila && fila.scrollWidth > fila.clientWidth + 2) {
+        fila.scrollLeft = Math.max(0, bn.offsetLeft - fila.offsetLeft - 12);
       }
       this.els.options.scrollTop = 0;
     },
@@ -5471,9 +5540,16 @@
         }
         saveSettings();
         val.textContent = fmt(v);
+        pasillo(v);
       });
 
-      this.sliders[key] = { input: input, val: val, fmt: fmt };
+      /* lo recorrido del pasillo (OPCIONES: el tirador es Pac-Man y detrás
+       * ya no quedan bolitas) */
+      function pasillo(v) {
+        var pct = (max > min) ? (v - min) / (max - min) * 100 : 0;
+        input.style.setProperty('--pct', Math.max(0, Math.min(100, pct)).toFixed(1) + '%');
+      }
+      this.sliders[key] = { input: input, val: val, fmt: fmt, pasillo: pasillo };
       return wrap;
     },
 
@@ -5555,6 +5631,7 @@
         var sl = this.sliders[k];
         sl.input.value = String(s[k]);
         sl.val.textContent = sl.fmt(parseFloat(s[k]));
+        if (sl.pasillo) sl.pasillo(parseFloat(s[k]));
       }
       this.refreshNicks();
       this.refreshColorRows();

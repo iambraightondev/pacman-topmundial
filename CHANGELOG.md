@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · OPCIONES, rediseñada
+
+**EL MENÚ DE SERVICIO DE LA MÁQUINA.** A la izquierda, las cinco secciones
+con su dibujo y el color de un fantasma; a la derecha, la abierta en filas
+limpias. Los deslizadores son un pasillo: el tirador es Pac-Man y delante le
+quedan las bolitas. La dificultad, en tres fichas con fantasmas; el sonido,
+con un interruptor; el J2 de fantasma, con sus dibujos; y los controles,
+dibujados como teclas de verdad. En el móvil las secciones van arriba.
+
 ## 2026-09-23 · DESATADO: récord y copas de cada rol
 
 **CADA ROL, SU RÉCORD Y SUS COPAS.** En DESATADO el Asesino, el Tanque, el
