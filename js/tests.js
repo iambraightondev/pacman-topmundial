@@ -12751,6 +12751,51 @@
     ok(UI.rangoName.textContent.length > 0, 'y tu rango (o que aún no lo tienes)');
   });
 
+  test('RANGO: en CLASIFICATORIA la pausa no deja guardar; salir cuenta', function () {
+    var UI = window.PM.UI;
+    try {
+      partida(1);
+      G.hab = true; G.clasif = true;
+      G.score = 500;
+      UI.showPausePrompt();
+      var txt = UI.els.prompt.textContent;
+      ok(txt.indexOf('GUARDAR') === -1 || txt.indexOf('GUARDAR LA DEJA') === -1, 'sin la línea de guardar');
+      var botones = [].map.call(UI.els.prompt.querySelectorAll('button'), function (b) { return b.textContent; }).join('|');
+      ok(botones.indexOf('GUARDAR') === -1, 'y sin el botón: ' + botones);
+      ok(txt.indexOf('CUENTA PARA TU RANGO') !== -1, 'y avisa de que salir cuenta');
+    } finally { UI.hidePrompt(); G.clasif = false; G.toMenu(); }
+  });
+
+  test('RANGO: una CLASIFICATORIA guardada que se descarta cuenta con sus puntos; un DESATADO, no', function () {
+    var Rg = window.PM.Rango, Gd = window.PM.Guardado, cc = Rg.conCuenta;
+    conContadores(function () {
+      Rg.conCuenta = function () { return true; };
+      try {
+        function dejarGuardada(clasif) {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 1, hab: true, clasif: clasif, roles: ['asesino'] });
+          G.state = 'PLAYING'; G.readyTicks = 0;
+          G.pacs[0].safeTicks = 999999;
+          ticks(10);
+          G.score = 4000;
+          ok(Gd.guardar(), 'se guarda');
+          G.salvada = true;               // como GUARDAR Y SALIR: sin cobrarla
+          G.toMenu();
+          window.PM.Replay.salir(true);
+        }
+        dejarGuardada(true);
+        eq(Gd.sobre().cl, 1, 'la guardada sabe que es CLASIFICATORIA');
+        eq(Rg.estado(1).jugadas, 0, 'guardarla no cuenta todavía');
+        Gd.descartar();
+        eq(Rg.estado(1).jugadas, 1, 'descartarla sí cuenta');
+        ok(!Gd.hay(), 'y ya no hay guardada');
+        dejarGuardada(false);
+        Gd.descartar();
+        eq(Rg.estado(1).jugadas, 1, 'un DESATADO descartado no toca el rango');
+      } finally { Rg.conCuenta = cc; Gd.borrar(); }
+    });
+  });
+
   test('RANGO: la insignia abre la escalera entera, con tu división marcada', function () {
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     var est0 = Rg.estado, t0 = UI.rangoTabla;

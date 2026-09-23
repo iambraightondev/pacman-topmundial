@@ -1108,7 +1108,7 @@
       if (color) ficha.style.setProperty('--fc', color);
       var modo = document.createElement('div');
       modo.className = 'medias-modo';
-      modo.textContent = sb.maze ? 'LABERINTOS' : (Gd.NOMBRES[sb.modo] || 'PARTIDA');
+      modo.textContent = sb.maze ? 'LABERINTOS' : sb.cl ? 'CLASIFICATORIA' : (Gd.NOMBRES[sb.modo] || 'PARTIDA');
       ficha.appendChild(modo);
       var datos = document.createElement('div');
       datos.className = 'medias-datos';
@@ -1151,7 +1151,7 @@
             onClick: function () { self.hidePrompt(); } },
           { label: 'SÍ, DESCARTARLA', hint: 'D', keys: ['d'],
             onClick: function () {
-              Gd.borrar();
+              Gd.descartar();
               self.hidePrompt();
               self.refreshContinuar();
             } }
@@ -1268,7 +1268,7 @@
           ficha.className = 'medias-ficha';
           var modo = document.createElement('div');
           modo.className = 'medias-modo';
-          modo.textContent = sb.maze ? 'LABERINTOS' : (Gd.NOMBRES[sb.modo] || 'PARTIDA');
+          modo.textContent = sb.maze ? 'LABERINTOS' : sb.cl ? 'CLASIFICATORIA' : (Gd.NOMBRES[sb.modo] || 'PARTIDA');
           ficha.appendChild(modo);
           var datos = document.createElement('div');
           datos.className = 'medias-datos';
@@ -1297,7 +1297,7 @@
             onClick: function () { self.hidePrompt(); self.continuarPartida(); } },
           { label: 'EMPEZAR UNA NUEVA', hint: 'N', keys: ['n'],
             onClick: function () {
-              Gd.borrar();
+              Gd.descartar();
               self.hidePrompt();
               self.refreshContinuar();
               sigue();
@@ -11287,9 +11287,14 @@
        * dejó a medias hace dos días no tiene por qué acordarse. */
       if (g.retomada) lines.unshift('SIGUES TU PARTIDA: ' + g.retomada + '.');
       var Gd = window.PM.Guardado;
-      var sePuede = !!(Gd && Gd.puedeGuardar());
+      /* En CLASIFICATORIA no se guarda: salir la da por jugada y cuenta para
+       * el rango con lo que lleves. Guardarla sería la forma de no perder PR
+       * en una partida que va mal. */
+      var sePuede = !!(Gd && Gd.puedeGuardar()) && !g.clasif;
       if (sePuede) {
         lines.push('GUARDAR LA DEJA COMO ESTÁ PARA SEGUIRLA LUEGO, AQUÍ O EN OTRO APARATO.');
+      } else if (g.clasif && !g.netRole) {
+        lines.push('ES CLASIFICATORIA: SI SALES, CUENTA PARA TU RANGO CON LOS PUNTOS QUE LLEVAS.');
       }
       var botones = [
         { label: 'REANUDAR', hint: 'P · ESC', primary: true,

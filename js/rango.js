@@ -152,8 +152,16 @@
      *     antes, despues (PR), cambio, division, divisionAntes, sube, baja } */
     cerrar: function (G) {
       if (this.porQueNo(G) || !A()) return null;
-      var t = temporada(), n = G.playerCount || 1;
-      var puntos = Math.max(0, G.score || 0);   // la del equipo: es la que compite
+      // la del equipo: es la que compite
+      return this.apuntar(Math.max(0, G.score || 0), G.playerCount || 1);
+    },
+
+    /* Apunta una partida de `puntos` en el formato `n` y devuelve el resumen.
+     * La usa cerrar() y también la CLASIFICATORIA guardada que se descarta
+     * sin terminarla (js/guardado.js): dejarla a medias no libra de contar. */
+    apuntar: function (puntos, n) {
+      if (!A()) return null;
+      var t = temporada();
       var antes = this.estado(n, t);
       var o = {};
       o[clave('rc', t, n)] = 1;

@@ -151,6 +151,7 @@
         lv: g.level,
         j: g.playerCount,
         modo: rep.modo,
+        cl: g.clasif ? 1 : 0,     // CLASIFICATORIA: se enseña así y cuenta al descartarla
         // de dónde partía, si no partía del principio (partida preparada)
         arranque: g.arranque || null,
         fecha: Date.now(),
@@ -244,6 +245,23 @@
       if (window.PM.UI && window.PM.UI.refreshContinuar) {
         window.PM.UI.refreshContinuar();
       }
+    },
+
+    /* Descartar la guardada sin terminarla (EMPEZAR UNA NUEVA, DESCARTARLA).
+     * Si era CLASIFICATORIA, cuenta para el rango con los puntos que llevaba:
+     * si no, cerrar la pestaña al ir mal sería la forma de no perder PR. Solo
+     * si es de este mes y de quien tiene la sesión. */
+    descartar: function () {
+      var sb = this.sobre(), r = R(), Rg = window.PM.Rango, S = window.PM.Season;
+      var A = window.PM.Account;
+      var rep = (sb && r) ? r.leer(sb.rep) : null;
+      if (rep && rep.ajustes && rep.ajustes.clasif && Rg && Rg.conCuenta() &&
+          (!sb.quien || (A && A.name && sb.quien === A.name())) &&
+          (!S || S.actual(new Date(sb.fecha)) === Rg.temporada())) {
+        Rg.apuntar(Math.max(0, sb.p || 0), sb.j || 1);
+        if (A && A.pushQuiet) A.pushQuiet();
+      }
+      this.borrar();
     },
 
     /* GUARDAR Y SALIR, desde el menú de pausa. Deja la partida guardada y se
@@ -424,7 +442,7 @@
     titulo: function (sobre) {
       sobre = sobre || this.sobre();
       if (!sobre) return '';
-      var nombre = sobre.maze ? 'LABERINTOS' : (this.NOMBRES[sobre.modo] || 'PARTIDA');
+      var nombre = sobre.maze ? 'LABERINTOS' : sobre.cl ? 'CLASIFICATORIA' : (this.NOMBRES[sobre.modo] || 'PARTIDA');
       return nombre + ' · ' + this.miles(sobre.p) + ' PUNTOS · NIVEL ' + sobre.lv +
         (sobre.arranque ? ' · PREPARADA' : '');
     },

@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · CLASIFICATORIA: salir siempre cuenta
+
+**SALIR ES TERMINARLA.** En CLASIFICATORIA la pausa ya no ofrece GUARDAR:
+salir cuenta para el rango con los puntos que lleves, y lo avisa. Si se cierra
+la pestaña a medias, la partida queda para seguirla; y si se descarta en vez
+de seguirla, cuenta igual con sus puntos. Dejarla a medias ya no libra de
+perder PR.
+
 ## 2026-09-23 · CLASIFICATORIA retomada: ya cuenta
 
 **UNA PARTIDA GUARDADA NO PIERDE EL RANGO.** Al retomar una CLASIFICATORIA
