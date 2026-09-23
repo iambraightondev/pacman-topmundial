@@ -11196,7 +11196,7 @@
             var prac = document.createElement('div');
             prac.className = 'go-equipo go-practica';
             prac.textContent = 'PRÁCTICA CON ' + CFG.HAB.ROL_INFO[g.roles[0]].name +
-              ' · NO CUENTA PARA RÉCORDS NI TROFEOS';
+              ' · NO CUENTA PARA RÉCORDS, TROFEOS NI RANGO';
             p.appendChild(prac);
           }
 
@@ -12781,9 +12781,10 @@
              * entera daría un salto cada vez que se cambia de rol. */
             var practica = roles[0] !== 'asesino';
             aviso.textContent = practica
-              ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: SUMA A SU MAESTRÍA, NO A RÉCORDS NI TROFEOS'
+              ? 'SOLO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: SUMA A SU MAESTRÍA, NO A RÉCORDS, TROFEOS NI RANGO'
               : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y TROFEOS';
             aviso.classList.toggle('ok', !practica);
+            pintarClasif();
           }
           var pasiva = document.createElement('div');
           pasiva.className = 'rol-pasiva';
@@ -12808,7 +12809,13 @@
           clas.appendChild(clasNota);
           p.insertBefore(clas, p.querySelector('.brief-mandos'));
           function pintarClasif() {
+            if (!clasBtn) return;    // pintar() puede llegar antes de montarlo
             var tx = self.textoClasif();
+            /* a uno con otro rol es práctica, y la práctica no mueve el rango:
+             * decirlo aquí, que es donde se enciende la clasificatoria */
+            if (tx.on && roles[0] !== 'asesino' && window.PM.Rango.conCuenta()) {
+              tx.nota = 'CON ' + H.ROL_INFO[roles[0]].name + ' A UNO ES PRÁCTICA: NO MUEVE TU RANGO (EN PARTY SÍ)';
+            }
             clasBtn.textContent = tx.boton;
             clasBtn.classList.toggle('active', tx.on);
             var Rg = window.PM.Rango, e = Rg ? Rg.estado(1) : null;
