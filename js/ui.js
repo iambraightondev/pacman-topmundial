@@ -5771,28 +5771,30 @@
         'CADA 5 NIVELES, EL REY FANTASMA',
         'TOP MUNDIAL Y TROFEOS PROPIOS'
       ]);
-      fHab.appendChild(el('div', 'ol-ficha-sub', 'TU ROL'));
-      this.habRolBox = el('div', 'ol-roles');
-      this.habRolBtns = {};
-      CFG.HAB.ROL_IDS.forEach(function (id) {
-        var info = CFG.HAB.ROL_INFO[id];
-        var b = self.makeButton('', function () {
+      fHab.appendChild(el('div', 'ol-ficha-sub', 'TU ROL Y TUS PODERES'));
+      /* EL ARMARIO, el mismo que a solas (ver armario) */
+      this.habArm = this.armario({
+        rol: function () { var P = window.PM.Party; return P && P.myRol ? P.myRol() : 'asesino'; },
+        carga: function () {
+          var P = window.PM.Party;
+          return String(P && P.myCarga ? P.myCarga() : '').split(',');
+        },
+        onRol: function (id) {
           if (window.PM.Party) window.PM.Party.setRol(id);
           saveSettings();
-        });
-        b.classList.add('rol-carta');
-        b.style.setProperty('--rol', info.color);
-        b.appendChild(el('span', 'rol-carta-nombre', info.name));
-        b.appendChild(el('small', 'rol-carta-lema', info.lema.split(' · ')[0]));
-        self.habRolBtns[id] = b;
-        self.habRolBox.appendChild(b);
+        },
+        onPoder: function (k, id) {
+          var P = window.PM.Party;
+          if (!P) return;
+          var nueva = String(P.myCarga()).split(',');
+          nueva[k] = id;
+          P.setCarga(nueva.join(','));
+          saveSettings();
+        },
+        ocupado: function (id) { return self.duenoDeRol(id); }
       });
-      fHab.appendChild(this.habRolBox);
-      /* TUS PODERES: cada uno arma los suyos aquí, como en la pantalla de
-       * DESATADO a solas. Se rehace al cambiar de rol (ver pintarArmaParty). */
-      this.habArmBox = el('div', 'hab-armamento ol-armamento');
-      this.habArmClave = '';
-      fHab.appendChild(this.habArmBox);
+      this.habArm.el.classList.add('arm-sala');
+      fHab.appendChild(this.habArm.el);
       fHab.appendChild(el('div', 'ol-card-texto', 'NINGÚN ROL SE REPITE: EL PRIMERO QUE LO COGE SE LO QUEDA'));
 
       /* CACERÍA */
@@ -6114,7 +6116,26 @@
         var n = document.createElement('span');
         n.className = 'ol-plaza-nombre';
         n.textContent = m.n || ('J' + (i + 1));
-        row.appendChild(n);
+        /* DESATADO: debajo del nombre, los cuatro poderes que lleva. Saber
+         * que el Soporte va con HOSPITAL o el Mago con METEORO cambia cómo
+         * se arma uno; antes solo se veía el rol. */
+        if (P.habPick && m.r && CFG.HAB.ROL_INFO[m.r]) {
+          var quienBox = document.createElement('span');
+          quienBox.className = 'ol-plaza-quien';
+          quienBox.appendChild(n);
+          /* los mismos que le pondrá la partida (Hab.normalizarCarga) */
+          var HabN = window.PM.Hab;
+          var podTxt = (HabN && HabN.normalizarCarga ? HabN.normalizarCarga(m.r, m.h || '') : [])
+            .map(function (hab) { return hab ? hab.name : '?'; }).join(' · ');
+          var pod = document.createElement('small');
+          pod.className = 'ol-plaza-poderes';
+          pod.style.setProperty('--rc', CFG.HAB.ROL_INFO[m.r].color);
+          pod.textContent = podTxt;
+          quienBox.appendChild(pod);
+          row.appendChild(quienBox);
+        } else {
+          row.appendChild(n);
+        }
 
         var tags = document.createElement('span');
         tags.className = 'ol-plaza-tags';
@@ -6165,17 +6186,10 @@
         }
       }
       /* DESATADO: el rol lo elige cada uno, no el líder */
-      if (this.habRolBtns) {
+      if (this.habArm) {
         var miRol = P.myRol ? P.myRol() : 'asesino';
         this.paletaDeRol(this.partyModo(P) === 'hab' ? miRol : null);
-        for (var rid in this.habRolBtns) {
-          if (!this.habRolBtns.hasOwnProperty(rid)) continue;
-          this.habRolBtns[rid].classList.toggle('active', rid === miRol);
-          // ningún rol repetido: el que ya lleva otro sale apagado
-          this.habRolBtns[rid].disabled =
-            (rid !== miRol && !!(P.rolDeOtro && P.rolDeOtro(rid)));
-        }
-        this.pintarArmaParty(miRol, P.myCarga ? P.myCarga() : '');
+        this.habArm.pintar();
       }
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
@@ -6202,45 +6216,159 @@
                 : 'ESPERANDO A QUE EL LÍDER EMPIECE...');
     },
 
-    /* Los poderes de mi rol en la sala: una fila por tecla con sus opciones.
-     * Solo se rehace si cambia el rol o lo elegido, que la sala se repinta con
-     * cada latido y rehacer los botones cada vez se comería los clics. */
-    pintarArmaParty: function (rol, carga) {
-      var box = this.habArmBox, self = this;
-      if (!box) return;
-      var clave = rol + '|' + carga;
-      if (clave === this.habArmClave) return;
-      this.habArmClave = clave;
-      box.innerHTML = '';
-      var H = CFG.HAB, cat = H.catalogoDe(rol), elegidos = String(carga).split(',');
-      box.style.setProperty('--brief', H.ROL_INFO[rol].color);
-      var titulo = document.createElement('div');
-      titulo.className = 'hab-armamento-titulo';
-      titulo.textContent = 'TUS PODERES · ' + H.ROL_INFO[rol].name;
-      box.appendChild(titulo);
-      for (var k = 0; k < 4; k++) {
-        var fila = document.createElement('div');
-        fila.className = 'hab-armamento-fila';
-        var tecla = document.createElement('b');
-        tecla.textContent = ['Q', 'W', 'E', 'R'][k];
-        fila.appendChild(tecla);
-        for (var i = 0; i < cat[k].length; i++) {
-          (function (slot, hab) {
-            var b = self.makeButton(hab.name, function () {
-              var nueva = String(window.PM.Party.myCarga()).split(',');
-              nueva[slot] = hab.id;
-              window.PM.Party.setCarga(nueva.join(','));
-              saveSettings();
-            });
-            b.classList.add('hab-arma-opcion');
-            b.classList.toggle('active', elegidos[slot] === hab.id);
-            b.setAttribute('aria-label', ['Q', 'W', 'E', 'R'][slot] + ' ' + hab.name);
-            if (hab.desc) b.title = hab.desc;
-            fila.appendChild(b);
-          })(k, cat[k][i]);
-        }
-        box.appendChild(fila);
+    /* ------------------------------------------------------
+     * EL ARMARIO: rol + poderes, el mismo a solas y en party (23 sep)
+     *
+     * Antes eran dos pantallas distintas con el mismo problema: los poderes
+     * eran botoncitos de letra diminuta y solo se explicaba el que ya tenías
+     * puesto, así que para saber qué hacía la alternativa había que ponérsela.
+     * Ahora:
+     *   - los ROLES son cartas con su Pac-Man, su lema y tu MAESTRÍA con él;
+     *     el que lleva otro sale apagado y dice quién;
+     *   - cada tecla es una fila con sus opciones legibles y su recarga;
+     *   - la FICHA de abajo explica la que tengas debajo del ratón (o con el
+     *     foco del teclado); sin nada encima, la pasiva del rol.
+     * o: { rol(), carga() -> [4 ids], onRol(id), onPoder(k, id), ocupado(id) -> '' | quién }
+     * Devuelve { el, pintar }: pintar() solo cambia clases y textos (la sala
+     * se repinta a cada latido y rehacer los botones se comería los clics);
+     * las filas solo se rehacen al cambiar de rol.
+     * ------------------------------------------------------ */
+    armario: function (o) {
+      var self = this, H = CFG.HAB, TECLAS = ['Q', 'W', 'E', 'R'];
+      function el(tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
       }
+      var raiz = el('div', 'arm');
+      var fRoles = el('div', 'arm-roles');
+      var botRol = {};
+      H.ROL_IDS.forEach(function (id) {
+        var info = H.ROL_INFO[id];
+        var b = self.makeButton('', function () { o.onRol(id); });
+        b.classList.add('arm-rol');
+        b.style.setProperty('--rol', info.color);
+        var cv = document.createElement('canvas');
+        cv.width = 32; cv.height = 32;
+        cv.className = 'arm-rol-icono';
+        self.pintarPersonaje(cv, -1, info.color, 'clasico');
+        b.appendChild(cv);
+        var tx = el('span', 'arm-rol-tx');
+        tx.appendChild(el('b', 'arm-rol-nombre', info.name));
+        tx.appendChild(el('small', 'arm-rol-lema', info.lema));
+        var mae = el('small', 'arm-rol-mae', '');
+        tx.appendChild(mae);
+        b.appendChild(tx);
+        botRol[id] = { b: b, mae: mae, lema: tx.querySelector('.arm-rol-lema') };
+        fRoles.appendChild(b);
+      });
+      raiz.appendChild(fRoles);
+
+      var fSlots = el('div', 'arm-slots');
+      raiz.appendChild(fSlots);
+
+      var det = el('div', 'arm-detalle');
+      var dTecla = el('b', 'arm-det-tecla', '');
+      var dTx = el('div', 'arm-det-tx');
+      var dNombre = el('div', 'arm-det-nombre', '');
+      var dDesc = el('div', 'arm-det-desc', '');
+      var dCd = el('div', 'arm-det-cd', '');
+      dTx.appendChild(dNombre);
+      dTx.appendChild(dDesc);
+      det.appendChild(dTecla);
+      det.appendChild(dTx);
+      det.appendChild(dCd);
+      raiz.appendChild(det);
+
+      var rolPintado = null, ops = [], encima = null;
+
+      /* La descripción: la del catálogo; los del kit de siempre la tienen en
+       * ROL_INFO.desc (la misma que salía en las cartas de antes). */
+      function descDe(rol, k, hab) {
+        if (hab.desc) return hab.desc;
+        var kit = H.ROLES[rol] && H.ROLES[rol][k];
+        return (kit && kit.id === hab.id && H.ROL_INFO[rol].desc) ? H.ROL_INFO[rol].desc[k] : '';
+      }
+      function ver(hab, k) {
+        var rol = o.rol();
+        dTecla.textContent = TECLAS[k];
+        dNombre.textContent = hab.largo || hab.name;
+        dDesc.textContent = descDe(rol, k, hab);
+        dCd.textContent = 'RECARGA ' + Math.round(hab.cd / 60) + ' S';
+        det.classList.remove('pasiva');
+      }
+      function verPasiva() {
+        var info = H.ROL_INFO[o.rol()];
+        dTecla.textContent = '★';
+        dNombre.textContent = 'PASIVA · ' + info.name;
+        dDesc.textContent = info.pasiva || 'SIN PASIVA';
+        dCd.textContent = 'SIEMPRE';
+        det.classList.add('pasiva');
+      }
+      function construir(rol) {
+        fSlots.innerHTML = '';
+        ops = [];
+        var cat = H.catalogoDe(rol);
+        for (var k = 0; k < 4; k++) {
+          var fila = el('div', 'arm-slot');
+          fila.appendChild(el('b', 'arm-tecla', TECLAS[k]));
+          var lista = el('div', 'arm-ops');
+          for (var i = 0; i < cat[k].length; i++) {
+            (function (slot, hab) {
+              var b = self.makeButton('', function () { o.onPoder(slot, hab.id); ver(hab, slot); });
+              b.classList.add('arm-op');
+              b.appendChild(el('span', 'arm-op-nombre', hab.name));
+              b.appendChild(el('small', 'arm-op-cd', Math.round(hab.cd / 60) + ' S'));
+              b.setAttribute('aria-label', TECLAS[slot] + ' ' + hab.name + ' · ' + descDe(rol, slot, hab));
+              function entra() { encima = hab; ver(hab, slot); }
+              function sale() { encima = null; verPasiva(); }
+              b.addEventListener('mouseenter', entra);
+              b.addEventListener('focus', entra);
+              b.addEventListener('mouseleave', sale);
+              b.addEventListener('blur', sale);
+              ops.push({ b: b, id: hab.id, k: slot });
+              lista.appendChild(b);
+            })(k, cat[k][i]);
+          }
+          fila.appendChild(lista);
+          fSlots.appendChild(fila);
+        }
+      }
+      function pintar() {
+        var rol = o.rol(), carga = o.carga() || [];
+        if (rol !== rolPintado) { rolPintado = rol; encima = null; construir(rol); }
+        raiz.style.setProperty('--rol', H.ROL_INFO[rol].color);
+        var M = window.PM.Maestria, N = CFG.MAESTRIA && CFG.MAESTRIA.NIVELES;
+        for (var id in botRol) {
+          if (!botRol.hasOwnProperty(id)) continue;
+          var r = botRol[id], quien = o.ocupado ? o.ocupado(id) : '';
+          r.b.classList.toggle('active', id === rol);
+          r.b.disabled = !!quien && id !== rol;
+          r.lema.textContent = (quien && id !== rol) ? ('LO LLEVA ' + quien) : H.ROL_INFO[id].lema;
+          var txt = 'SIN EMBLEMA TODAVÍA';
+          if (M && N) {
+            var d = M.datos(id);
+            if (d.nivel >= 0) txt = N[d.nivel].name + ' · ' + d.puntos.toLocaleString('es-ES') + ' PTS';
+            else if (d.puntos > 0) txt = d.puntos.toLocaleString('es-ES') + ' PTS';
+          }
+          r.mae.textContent = txt;
+        }
+        for (var i = 0; i < ops.length; i++) ops[i].b.classList.toggle('active', carga[ops[i].k] === ops[i].id);
+        if (!encima) verPasiva();
+      }
+      return { el: raiz, pintar: pintar };
+    },
+
+    /* Quién lleva ese rol en la sala (su nombre), o '' si nadie más */
+    duenoDeRol: function (rol) {
+      var P = window.PM.Party;
+      if (!P || !P.rolDeOtro || !P.rolDeOtro(rol)) return '';
+      var ms = P.members ? P.members() : [], sid = window.PM.Net && window.PM.Net.sid;
+      for (var i = 0; i < ms.length; i++) {
+        if (ms[i].s !== sid && CFG.HAB.rol(ms[i].r) === CFG.HAB.rol(rol)) return ms[i].n || ('J' + (i + 1));
+      }
+      return 'OTRO';
     },
 
     /* Una etiqueta de color de la plaza (LÍDER, TÚ, el fantasma, el rol) */
@@ -12721,127 +12849,74 @@
         arcade: true,
         tono: 'rosa',
         custom: function (p) {
-          var filas = document.createElement('div');
-          filas.className = 'rol-filas';
-          var chips = [{}, {}];
-          [0, 1].forEach(function (j) {
-            var fila = document.createElement('div');
-            fila.className = 'rol-fila';
-            var quien = document.createElement('b');
-            quien.className = 'rol-quien';
-            quien.textContent = j ? 'J2' : 'J1';
-            fila.appendChild(quien);
-            if (j === 1 && conFantasma) {
-              var nota = document.createElement('span');
-              nota.className = 'rol-nota';
-              nota.textContent = 'LLEVA A ' + CFG.VS.NAMES[s.vsGhost2] + ' (SIN ROL)';
-              fila.appendChild(nota);
-            } else {
-              H.ROL_IDS.forEach(function (id) {
-                var info = H.ROL_INFO[id];
-                var b = self.makeButton(info.name, function () {
-                  roles[j] = id;
-                  mirando = j;
-                  cargas[j] = cargaDe(id, cargas[j].join(','));
-                  s['habRol' + (j + 1)] = id;
-                  s['habLoadout' + (j + 1)] = cargas[j].join(',');
-                  saveSettings();
-                  pintar();
-                });
-                b.classList.add('rol-chip');
-                b.style.setProperty('--rol', info.color);
-                chips[j][id] = b;
-                fila.appendChild(b);
-              });
-            }
-            filas.appendChild(fila);
+          /* DE QUIÉN SON LAS CARTAS: J1 o J2 (el J2 solo juega con DOS
+           * JUGADORES). Una pestaña por jugador en vez de dos filas de roles
+           * sueltas, que no dejaban claro a quién se le estaba armando. */
+          var pestanas = document.createElement('div');
+          pestanas.className = 'arm-jugadores';
+          var tabs = [0, 1].map(function (j) {
+            var b = self.makeButton('', function () {
+              if (j === 1 && conFantasma) return;
+              mirando = j;
+              pintar();
+            });
+            b.classList.add('arm-jug');
+            pestanas.appendChild(b);
+            return b;
           });
-          p.appendChild(filas);
+          p.appendChild(pestanas);
 
-          var arm = document.createElement('div');
-          arm.className = 'hab-armamento';
-          p.appendChild(arm);
-
-          function pintarArmamento() {
-            arm.innerHTML = '';
-            var catArm = H.catalogoDe(roles[mirando]);
-            var tituloArm = document.createElement('div');
-            tituloArm.className = 'hab-armamento-titulo';
-            tituloArm.textContent = 'ARMAMENTO · ' + (mirando ? 'J2' : 'J1');
-            arm.appendChild(tituloArm);
-            for (var ak = 0; ak < 4; ak++) {
-              var filaArm = document.createElement('div');
-              filaArm.className = 'hab-armamento-fila';
-              var teclaArm = document.createElement('b');
-              teclaArm.textContent = ['Q', 'W', 'E', 'R'][ak];
-              filaArm.appendChild(teclaArm);
-              for (var ai = 0; ai < catArm[ak].length; ai++) {
-                (function (slot, hab) {
-                  var botonArm = self.makeButton(hab.name, function () {
-                    cargas[mirando][slot] = hab.id;
-                    s['habLoadout' + (mirando + 1)] = cargas[mirando].join(',');
-                    saveSettings();
-                    pintar();
-                  });
-                  botonArm.classList.add('hab-arma-opcion');
-                  botonArm.classList.toggle('active', cargas[mirando][slot] === hab.id);
-                  botonArm.setAttribute('aria-label', ['Q', 'W', 'E', 'R'][slot] + ' ' + hab.name);
-                  filaArm.appendChild(botonArm);
-                })(ak, catArm[ak][ai]);
-              }
-              arm.appendChild(filaArm);
+          /* EL ARMARIO, el mismo de la sala de party (ver armario) */
+          var arm = self.armario({
+            rol: function () { return roles[mirando]; },
+            carga: function () { return cargas[mirando]; },
+            onRol: function (id) {
+              roles[mirando] = id;
+              cargas[mirando] = cargaDe(id, cargas[mirando].join(','));
+              s['habRol' + (mirando + 1)] = id;
+              s['habLoadout' + (mirando + 1)] = cargas[mirando].join(',');
+              saveSettings();
+              pintar();
+            },
+            onPoder: function (k, id) {
+              cargas[mirando][k] = id;
+              s['habLoadout' + (mirando + 1)] = cargas[mirando].join(',');
+              saveSettings();
+              pintar();
+            },
+            // ningún rol repetido: el que lleva el otro jugador sale apagado
+            ocupado: function (id) {
+              return (!conFantasma && roles[1 - mirando] === id) ? (mirando ? 'EL J1' : 'EL J2') : '';
             }
-          }
+          });
+          p.appendChild(arm.el);
 
           self.briefingModo(p, {
-            lema: ' ',
-            cartas: [{ k: 'Q', n: '', d: '', cd: 0 }, { k: 'W', n: '', d: '', cd: 0 },
-                     { k: 'E', n: '', d: '', cd: 0 }, { k: 'R', n: '', d: '', cd: 0 }],
+            lema: '',
+            cartas: [],
             mandos: [
               { t: 'SOLO', d: 'FLECHAS + Q W E R (WASD NO MUEVE: LA W ES EL TURBO)' },
               { t: 'DOS JUGADORES', d: dos }
             ],
             pie: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON SUS RÉCORDS Y TROFEOS' +
-              (conFantasma ? '' : '  ·  EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA') +
-              '  ·  EN PARTY CADA UNO ELIGE SU ROL EN LA SALA'
+              (conFantasma ? '' : '  ·  EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA')
           });
-          var lema = p.querySelector('.brief-lema');
-          var pasiva = p.querySelector('.rol-pasiva');
-          var cartas = p.querySelectorAll('.brief-carta');
+          var lemaVacio = p.querySelector('.brief-lema');
+          if (lemaVacio) lemaVacio.parentNode.removeChild(lemaVacio);
+          var cartasVacias = p.querySelector('.brief-cartas');
+          if (cartasVacias) cartasVacias.parentNode.removeChild(cartasVacias);
 
           function pintar() {
-            // ningún rol repetido: el que lleva el otro jugador sale apagado
-            [0, 1].forEach(function (j) {
-              for (var id in chips[j]) {
-                if (!chips[j].hasOwnProperty(id)) continue;
-                chips[j][id].classList.toggle('active', roles[j] === id);
-                chips[j][id].classList.toggle('mirando', roles[j] === id && mirando === j);
-                chips[j][id].disabled = (roles[1 - j] === id && !conFantasma);
-              }
+            tabs.forEach(function (b, j) {
+              var rolJ = H.ROL_INFO[roles[j]];
+              b.textContent = (j ? 'J2' : 'J1') + ' · ' +
+                ((j === 1 && conFantasma) ? ('LLEVA A ' + CFG.VS.NAMES[s.vsGhost2]) : rolJ.name);
+              b.style.setProperty('--rol', (j === 1 && conFantasma) ? '#888' : rolJ.color);
+              b.classList.toggle('active', mirando === j);
+              b.disabled = (j === 1 && conFantasma);
             });
-            var rol = roles[mirando], info = H.ROL_INFO[rol], cat = H.catalogoDe(rol), lista = [];
-            for (var lk = 0; lk < 4; lk++) {
-              for (var li = 0; li < cat[lk].length; li++) {
-                if (cat[lk][li].id === cargas[mirando][lk]) { lista.push(cat[lk][li]); break; }
-              }
-              if (!lista[lk]) lista.push(cat[lk][0]);
-            }
-            p.style.setProperty('--brief', info.color);
-            lema.textContent = (mirando ? 'J2 · ' : 'J1 · ') + info.name + ' — ' + info.lema;
-            /* LA PASIVA va en su propio renglón y no dentro del lema: es lo
-             * que trae el rol sin pulsar nada, y leída entre las cuatro
-             * teclas se perdía. Siempre ocupa sitio, aunque ese rol no tenga
-             * ninguna todavía, para que la pantalla no dé un salto al
-             * cambiar de rol. */
-            pasiva.textContent = info.pasiva ? ('PASIVA · ' + info.pasiva) : '';
-            for (var k = 0; k < cartas.length; k++) {
-              var h = lista[k];
-              cartas[k].querySelector('.brief-tecla').textContent = h.key;
-              cartas[k].querySelector('.brief-nombre').textContent = h.largo || h.name;
-              cartas[k].querySelector('.brief-desc').textContent = h.desc || info.desc[k];
-              cartas[k].querySelector('.brief-recarga').textContent = 'RECARGA ' + Math.round(h.cd / 60) + ' S';
-            }
-            pintarArmamento();
+            p.style.setProperty('--brief', H.ROL_INFO[roles[mirando]].color);
+            arm.pintar();
             /* A uno, con otro rol, la partida es de PRÁCTICA: se dice aquí,
              * antes de jugar, y no en el GAME OVER cuando ya no tiene arreglo */
             /* Siempre hay renglón: si apareciera y desapareciera, la pantalla
@@ -12852,9 +12927,6 @@
               : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y TROFEOS';
             aviso.classList.toggle('ok', !practica);
           }
-          var pasiva = document.createElement('div');
-          pasiva.className = 'rol-pasiva';
-          p.appendChild(pasiva);
 
           var aviso = document.createElement('div');
           aviso.className = 'rol-aviso';

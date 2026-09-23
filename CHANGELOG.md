@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Elegir rol y poderes, por fin legible
+
+**UN MISMO ARMARIO, A SOLAS Y EN PARTY.** Los poderes eran botoncitos de letra
+diminuta y solo se explicaba el que ya llevabas puesto. Ahora:
+
+- los **roles** son cartas con su Pac-Man, su lema y **tu maestría** con él;
+  el que lleva otro sale apagado y dice quién lo lleva;
+- cada tecla (Q W E R) es una fila con sus opciones **legibles y su recarga**;
+- una **ficha** explica la que tengas debajo del ratón; sin nada encima, la
+  pasiva del rol;
+- a solas, **J1 y J2** van en pestañas (antes eran dos filas de roles
+  sueltas);
+- en la sala de party, debajo de cada jugador salen **sus cuatro poderes**,
+  para armarse sabiendo qué lleva el equipo.
+
 ## 2026-09-23 · Las repeticiones, como se jugaron: tus poderes y el rey
 
 **SALÍAN CON LOS PODERES DE SERIE.** Los cuatro poderes que elige cada uno no

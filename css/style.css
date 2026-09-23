@@ -6915,3 +6915,152 @@ body { font-size-adjust: 0.56; }
 
 /* la barra de poderes viendo una repetición: se mira, no se pulsa */
 #habBar.repe button { pointer-events: none; cursor: default; }
+
+/* ---------- EL ARMARIO: rol + poderes (ui.js, armario) ---------- */
+.arm .btn { min-width: 0; margin: 0; font-weight: normal; letter-spacing: 0.5px; }
+.arm, .arm-jugadores { text-align: left; }
+.arm {
+  --rol: #ff66cc;
+  width: 100%;
+  max-width: 980px;
+  box-sizing: border-box;
+  margin: 10px auto 4px;
+  display: grid;
+  gap: 10px;
+}
+.arm-roles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.btn.arm-rol {
+  --rol: #ff66cc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  min-height: 74px;
+  text-align: left;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid color-mix(in srgb, var(--rol) 45%, transparent);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+}
+.btn.arm-rol:hover:not(:disabled), .btn.arm-rol:focus-visible {
+  border-color: var(--rol);
+  background: color-mix(in srgb, var(--rol) 14%, rgba(0, 0, 0, 0.6));
+  outline: none;
+}
+.btn.arm-rol.active {
+  border-color: var(--rol);
+  background: color-mix(in srgb, var(--rol) 22%, rgba(0, 0, 0, 0.55));
+  box-shadow: 0 0 0 1px var(--rol), 0 0 22px color-mix(in srgb, var(--rol) 40%, transparent);
+}
+.btn.arm-rol:disabled { opacity: 0.38; cursor: not-allowed; }
+.arm-rol-icono { width: 32px; height: 32px; flex: none; image-rendering: pixelated; }
+.arm-rol-tx { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.arm-rol-nombre { font-size: 12px; letter-spacing: 2px; color: var(--rol); }
+.arm-rol-lema { font-size: 7px; line-height: 1.6; letter-spacing: 0.5px; color: #cfd6f2; }
+.arm-rol-mae { font-size: 7px; letter-spacing: 0.5px; color: #ffe23a; }
+
+.arm-slots { display: grid; gap: 6px; }
+.arm-slot { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 8px; }
+.arm-tecla {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  font-size: 13px;
+  color: #000;
+  background: var(--rol);
+  border-radius: 7px;
+}
+.arm-ops { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.btn.arm-op {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  min-height: 34px;
+  color: #e8ecff;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+}
+.btn.arm-op:hover, .btn.arm-op:focus-visible {
+  border-color: var(--rol);
+  background: color-mix(in srgb, var(--rol) 12%, rgba(0, 0, 0, 0.6));
+  outline: none;
+}
+.btn.arm-op.active { color: #000; background: var(--rol); border-color: var(--rol); }
+.arm-op-nombre { font-size: 9px; letter-spacing: 0.5px; line-height: 1.4; }
+.arm-op-cd { font-size: 7px; opacity: 0.7; white-space: nowrap; }
+.btn.arm-op.active .arm-op-cd { opacity: 0.8; }
+
+.arm-detalle {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--rol) 55%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--rol) 8%, rgba(0, 0, 0, 0.6));
+}
+.arm-det-tecla {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  font-size: 13px;
+  color: var(--rol);
+  border: 2px solid var(--rol);
+  border-radius: 7px;
+}
+.arm-det-nombre { font-size: 11px; letter-spacing: 1px; color: var(--rol); margin-bottom: 6px; }
+.arm-det-desc { font-family: inherit; font-size: 9px; line-height: 1.7; color: #e8ecff; text-transform: uppercase; }
+.arm-det-cd { font-size: 8px; color: #b7c0e0; white-space: nowrap; }
+.arm-detalle.pasiva .arm-det-tecla { color: #ffe23a; border-color: #ffe23a; }
+
+/* J1 / J2 a solas */
+.arm-jugadores { display: flex; justify-content: center; gap: 8px; margin-top: 4px; }
+.btn.arm-jug {
+  --rol: #ff66cc;
+  min-width: 0;
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 8px 16px;
+  color: #cfd6f2;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  cursor: pointer;
+}
+.btn.arm-jug.active { color: #000; background: var(--rol); border-color: var(--rol); }
+.btn.arm-jug:disabled { opacity: 0.45; cursor: default; }
+
+/* en la sala de party el hueco es más estrecho: los roles en dos por dos */
+#online .arm { width: 100%; }
+#online .arm-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#online .btn.arm-rol { min-height: 60px; padding: 8px 10px; }
+#online .arm-ops { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#online .arm-op-nombre { font-size: 8px; }
+#online .arm-detalle { min-height: 58px; padding: 8px 10px; gap: 10px; }
+
+/* los poderes de cada uno en la lista de jugadores de la sala */
+.ol-plaza-quien { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.ol-plaza-poderes {
+  font-size: 7px;
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+  color: var(--rc, #cfd6f2);
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 760px) {
+  .arm-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arm-ops { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arm-detalle { grid-template-columns: 30px 1fr; }
+  .arm-det-cd { grid-column: 2; }
+}
