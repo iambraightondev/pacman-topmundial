@@ -129,42 +129,66 @@
         c.fillStyle='rgba(255,102,204,'+(0.35*(1-k2))+')';c.fillRect(0,0,W,H);}
     },
 
-    /* CLASIFICATORIA (23 sep): la escalera del RANGO. Las ocho frutas de las
-     * divisiones, de la CEREZA a la LLAVE, en peldaños; Pac-Man las sube de
-     * un salto en otro y arriba del todo, la LLAVE revienta en oro. */
+    /* CLASIFICATORIA (23 sep): las frutas del RANGO, de una en una y en
+     * grande. Cada división sale de golpe con su destello y su color, se
+     * queda un momento con su nombre debajo y sube a la siguiente; la LLAVE,
+     * la última, dura el doble y gira en rayos de oro. Debajo, las ocho
+     * casillas de la escalera, encendidas hasta la que se ve.
+     * (La primera versión era una escalera con las ocho pequeñas: no se veía
+     * ninguna.) */
     clasif:function(c,m,t,e){
-      var n=8, x0=W*0.13, y0=H*0.8, dx=(W*0.74)/(n-1), dy=(H*0.58)/(n-1);
-      var paso=(t*1.4)%(n+1.2), i=Math.min(n-1,Math.floor(paso)), f=paso-Math.floor(paso);
-      for(var k=0;k<n;k++){
-        var x=x0+k*dx, y=y0-k*dy, ya=k<=i;
-        c.fillStyle=ya?'#ffd23f':'rgba(255,210,63,0.28)';
-        c.fillRect(x-22,y+14,44,6);
-        (function(kk,xx,yy,brilla){
-          c.save();if(!brilla)c.globalAlpha=0.45;
-          aTile(c,2.4,xx,yy-4,function(){window.PM.Sprites.drawFruit(c,0,0,kk);});
-          c.restore();
-        })(k,x,y,ya);
+      var DIV=CFG.RANGO&&CFG.RANGO.DIVISIONES; if(!DIV)return;
+      var n=DIV.length, DUR=1.3, LARGA=2.6, ciclo=DUR*(n-1)+LARGA;
+      var u=t%ciclo, i=Math.min(n-1,Math.floor(u/DUR)), ini=i*DUR, dur=(i===n-1)?LARGA:DUR;
+      var f=Math.min(1,(u-ini)/dur), d=DIV[i], col=d.color, llave=(i===n-1);
+      var cx=W/2, cy=H*0.34;
+      /* flechas que suben por el fondo, del color de la división */
+      c.save();c.globalAlpha=0.13;c.fillStyle=col;
+      for(var k=0;k<6;k++){
+        var fx=W*(0.1+k*0.16), fy=H-((t*60+k*83)%(H+60));
+        c.beginPath();c.moveTo(fx,fy-22);c.lineTo(fx+20,fy);c.lineTo(fx+8,fy);c.lineTo(fx+8,fy+24);
+        c.lineTo(fx-8,fy+24);c.lineTo(fx-8,fy);c.lineTo(fx-20,fy);c.closePath();c.fill();
       }
-      /* Pac-Man salta de un peldaño al siguiente */
-      var enCima=paso>=n-1+0.999;
-      var ax=x0+i*dx, ay=y0-i*dy, bx=ax+dx, by=ay-dy;
-      var px, py;
-      if(enCima||i>=n-1){px=x0+(n-1)*dx-4;py=y0-(n-1)*dy-38;}
-      else{var s=Math.min(1,f*1.6);px=ax+(bx-ax)*s;py=(ay+(by-ay)*s)-34-Math.sin(s*Math.PI)*30;}
-      aTile(c,3.2,px,py,function(){Sp.drawPacman(c,0,0,D.RIGHT,[0,1,2,1][Math.floor(t*10)%4],'#ffff00','clasico',{});});
-      if(i>=n-1){
-        var k2=Math.min(1,(paso-(n-1))/1.2);
-        var cx=x0+(n-1)*dx, cy=y0-(n-1)*dy-4;
-        c.fillStyle='rgba(255,210,63,'+(0.9*(1-k2))+')';
-        for(var r=0;r<14;r++){var a=r*0.45,d=20+k2*120;c.fillRect(cx+Math.cos(a)*d-4,cy+Math.sin(a)*d-4,8,8);}
-        c.fillStyle='rgba(255,210,63,'+(0.25*(1-k2))+')';c.fillRect(0,0,W,H);
-      }
-      /* la flecha del rango, que sube */
-      c.save();c.globalAlpha=0.5;c.fillStyle='#ffd23f';
-      var fy=H*0.2+((t*40)%30);
-      c.beginPath();c.moveTo(W*0.14,fy-26);c.lineTo(W*0.14+18,fy);c.lineTo(W*0.14-18,fy);c.closePath();c.fill();
-      c.fillRect(W*0.14-6,fy,12,26);
       c.restore();
+      /* halo */
+      var halo=c.createRadialGradient(cx,cy,10,cx,cy,170);
+      halo.addColorStop(0,col+'66');halo.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=halo;c.fillRect(0,0,W,H);
+      /* la LLAVE: rayos de oro girando */
+      if(llave){
+        c.save();c.translate(cx,cy);c.rotate(t*0.6);c.globalAlpha=0.22*Math.min(1,f*4);c.fillStyle='#ffd23f';
+        for(var r=0;r<12;r++){c.rotate(Math.PI/6);c.beginPath();c.moveTo(0,0);c.lineTo(-14,-200);c.lineTo(14,-200);c.closePath();c.fill();}
+        c.restore();
+      }
+      /* entrada con rebote, salida hacia arriba */
+      var entra=0.16/(llave?2:1), sale=llave?0.9:0.86;
+      var esc, alfa=1, sube=0;
+      if(f<entra){var q=f/entra;esc=0.3+q*0.9;}
+      else if(f<entra*1.8){var q2=(f-entra)/(entra*0.8);esc=1.2-q2*0.2;}
+      else esc=1;
+      if(f>sale){var q3=(f-sale)/(1-sale);esc*=1+q3*0.35;alfa=1-q3;sube=q3*40;}
+      var flota=Math.sin(t*3)*5;
+      c.save();c.globalAlpha=Math.max(0,alfa);
+      aTile(c,12*esc,cx,cy-sube+flota,function(){window.PM.Sprites.drawFruit(c,0,0,d.fruta);});
+      c.restore();
+      /* destello al llegar */
+      if(f<0.4){
+        var k4=f/0.4;c.fillStyle=col;c.save();c.globalAlpha=1-k4;
+        for(var p=0;p<16;p++){var a=p*Math.PI/8+i,rr=40+k4*150;c.fillRect(cx+Math.cos(a)*rr-5,cy+Math.sin(a)*rr-5,10,10);}
+        c.restore();
+      }
+      /* el nombre de la división */
+      c.save();c.globalAlpha=Math.max(0,alfa);
+      c.font='26px "Press Start 2P",monospace';c.textAlign='center';c.textBaseline='middle';
+      c.lineWidth=7;c.strokeStyle='#000';c.strokeText(d.name,cx,H*0.595);
+      c.fillStyle=col;c.fillText(d.name,cx,H*0.595);
+      c.restore();
+      /* la escalera: ocho casillas, encendidas hasta la que se ve */
+      var ancho=22, hueco=8, total=n*ancho+(n-1)*hueco, x0=cx-total/2, py=H*0.655;
+      for(var s=0;s<n;s++){
+        c.fillStyle=s<=i?DIV[s].color:'rgba(255,255,255,0.14)';
+        c.fillRect(x0+s*(ancho+hueco),py,ancho,s===i?8:5);
+      }
     },
 
     /* P4 · CACERÍA: BLINKY gigante; sus ojos siguen al ratón */
