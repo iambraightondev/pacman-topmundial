@@ -2697,7 +2697,7 @@
        * paso ahí están escritas las teclas, que ya no son las mismas en solo
        * que en dos. */
       if (id === 'hab') { this.showHabPrompt(); return; }
-      if (id === 'clasif') { this.showHabPrompt(true); return; }
+      if (id === 'clasif') { this.showClasifPrompt(); return; }
       if (id === 'caza') { this.showCazaPrompt(); return; }
       var self = this;
       function go() {
@@ -6094,6 +6094,13 @@
       }
       this.onlineIdle.style.display = 'none';
       this.onlineRoom.style.display = 'flex';
+      /* la CLASIFICATORIA pedida antes de tener sala (showClasifPrompt): en
+       * cuanto la sala es tuya, se pone; en la de otro, manda el líder */
+      if (this.partyModoPendiente) {
+        var pend = this.partyModoPendiente;
+        this.partyModoPendiente = null;
+        if (P.isLeader()) { P.setModo(pend); return; }
+      }
       this.animarCartelera();
       var code = P.code() || '';
       /* el código, letra a letra en su casilla */
@@ -7093,7 +7100,7 @@
       this.rangoToggle = this.makeButton('JUGAR CLASIFICATORIA', function () {
         self.pickMode('clasif');
         self.showMenu();
-        self.showHabPrompt(true);
+        self.showClasifPrompt();
       });
       this.rangoToggle.classList.add('rango-toggle');
       info.appendChild(this.rangoToggle);
@@ -13086,10 +13093,45 @@
           { label: '? AYUDA', keys: ['h', '?'], hint: 'H',
             onClick: function () { self.showHabAyuda(clasif); } },
           { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
-            onClick: function () { self.hidePrompt(); } }
+            onClick: function () { if (clasif) self.showClasifPrompt(); else self.hidePrompt(); } }
         ]
       });
       this.promptTag = 'hab';
+    },
+
+    /* CLASIFICATORIA: lo primero, CÓMO se juega (23 sep). A solas o dos en
+     * el mismo teclado va al armario de siempre; EN PARTY abre la sala con
+     * la CLASIFICATORIA ya puesta, para invitar a quien sea. Si aún no hay
+     * sala, se queda apuntada y se pone en cuanto la crees (ver
+     * refreshParty); si estás en la de otro, manda el líder. */
+    showClasifPrompt: function () {
+      var self = this;
+      this.showPrompt({
+        title: 'CLASIFICATORIA',
+        arcade: true,
+        tono: 'amarillo',
+        lines: [self.textoRangoSolo(), '¿CÓMO LA QUIERES JUGAR?'],
+        buttons: [
+          { label: 'SOLO O DOS JUGADORES', primary: true, keys: ['Enter', '1'], hint: 'ENTER',
+            onClick: function () { self.showHabPrompt(true); } },
+          { label: 'EN PARTY', keys: ['p'], hint: 'P',
+            onClick: function () { self.clasifEnParty(); } },
+          { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } }
+        ]
+      });
+      this.promptTag = 'clasif';
+    },
+
+    clasifEnParty: function () {
+      var P = window.PM.Party;
+      this.hidePrompt();
+      this.partyModoPendiente = 'clasif';
+      if (P && P.inParty && P.inParty() && P.isLeader && P.isLeader()) {
+        this.partyModoPendiente = null;
+        P.setModo('clasif');
+      }
+      this.showOnline();
     },
 
     /* En CLASIFICATORIA, cómo vas en solo este mes (o por qué no cuenta) */
