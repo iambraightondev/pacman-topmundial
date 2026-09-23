@@ -13,6 +13,29 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### DONDE SE DEJÓ (23 sep, tarde): CLASIFICATORIA, ARMARIO, TROFEOS POR ROL
+
+Todo subido. Detalle en CHANGELOG.
+
+- **CLASIFICATORIA es un modo** (menú y cartelera de party, póster de frutas
+  una a una). Al abrirla pregunta SOLO O DOS JUGADORES / EN PARTY. El rango
+  solo se mueve ahí (`G.clasif`). PROTO de red: **18**.
+- **Armario de rol y poderes** (ui.js `armario`), el mismo a solas y en la
+  sala: logos de rol y 55 iconos (js/iconos.js), casillas Q W E R con cajón,
+  explicación larga de cada poder (`CFG.HAB.DETALLE`, sacada del código). El
+  J2 empieza sin rol y no bloquea al J1. Ayudas detrás de «?».
+- **Trofeos por rol en DESATADO**: récord y copas de cada rol por formato
+  (contadores `rhab_<rol>_<n>`, viajan con la cuenta). A uno cuenta con
+  cualquier rol para SU récord; el de DESATADO y el top siguen igual.
+- **Repeticiones**: guardan los poderes elegidos; las de party, rey, efectos
+  y recargas (formato de red 3). Clips verticales para reels (✂).
+
+**A decidir:**
+1. **YUNQUE**: se rompe al moverse un píxel; ¿más tolerante?
+2. Las **repeticiones viejas** no tienen rey ni poderes (no se puede arreglar).
+
+**A jugar:** una party de verdad con CLASIFICATORIA y el armario en la sala.
+
 ### DONDE SE DEJÓ (23 sep): RANGO, DIBUJOS, METEORO Y LA RED DE LA PARTY
 
 Todo construido, probado y subido; nada a medias. Detalle en CHANGELOG.
