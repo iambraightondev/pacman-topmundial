@@ -7,11 +7,44 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **22 de septiembre de 2026 (tarde)**.
+Última puesta al día: **23 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### DONDE SE DEJÓ (23 sep): RANGO, DIBUJOS, METEORO Y LA RED DE LA PARTY
+
+Todo construido, probado y subido; nada a medias. Detalle en CHANGELOG.
+
+- **RANGO:** cuenta con **cualquier rol**, también a solas (decisión de
+  Braighton). La práctica a solas sigue sin contar para récords ni trofeos.
+  A MAULIO se le apuntó a mano su primera partida de colocación del mes.
+- **Siete habilidades con dibujo propio:** TÓTEM, BOLA GUIADA, METEORO (roca,
+  estallido y hoguera), BOMBA, PISOTÓN, REBOTE, CAMPO/HOSPITAL en todo el
+  equipo. Vistos en capturas quietas, **no en movimiento**.
+- **METEORO rehecho (decisión de Braighton):** francotirador —al mantener la R
+  el Mago se planta y cada flecha mueve la mira una casilla—; golpe de 3
+  casillas; cada baja devuelve 15 s de recarga; hoguera de 6 s que crece una
+  casilla cada 2 s y **quema**: el fantasma que la pisa cae 4 s después.
+- **Party:** cada uno elige sus PODERES en la sala (el saludo no los llevaba y
+  los invitados salían con los de serie).
+- **Party, lo que el anfitrión le hace al jugador de un invitado** ahora le
+  llega (`Hab.dar` / `habDar`, y al revés `peticionGasto`): mina, faro,
+  shuriken (que dejaba la Q bloqueada), frenesí, relevo, hospital, rebote,
+  cadena, empujón de choques salvados, y el invitado ve caer su meteoro.
+  Probado con dos mundos en Node. **PROTO de red: 16** (versiones mezcladas
+  no entran en la misma party).
+
+**A jugar:**
+1. El METEORO nuevo en party real: que el Mago invitado se vea plantado en
+   todas las pantallas, y si la hoguera (hasta 5 casillas de radio) es mucho.
+2. Los dibujos nuevos en movimiento, sobre todo la roca del meteoro.
+
+**Cabos sueltos de red (menores, sin tocar):**
+- CLON de un invitado: en su pantalla no se mueve.
+- PUENTE: en un caso raro el invitado puede quedarse dentro del muro.
+- YUNQUE: el anfitrión lo rompe con la posición atrasada del invitado.
 
 ### DONDE SE DEJÓ (22 sep, tarde): TROFEOS, MAESTRÍAS DE ROL Y RANGO
 
