@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v222';
+var VERSION = 'pm-v223';
 var SHELL = [
   './',
   './index.html',
@@ -57,6 +57,7 @@ var SHELL = [
   './js/caceria.js',
   './js/game.js',
   './js/replay.js',
+  './js/clip.js',
   './js/guardado.js',
   './js/ui.js',
   './audio/desatado-intro.mp3',

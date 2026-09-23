@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · Clips para reels y TikTok
+
+**LAS REPETICIONES YA SE PUEDEN SACAR EN VÍDEO.** En el reproductor hay un
+botón nuevo, **✂ CLIP** (o la tecla C): se lleva la barra a la jugada, se
+elige cuánto dura (10, 15, 30 o 60 s) o se pulsa **★ MEJOR JUGADA**, que se
+va sola a la cadena de fantasmas más larga, y **GRABAR**. Sale un vídeo
+**vertical 9:16** con el sonido del juego, el título arriba, el rótulo del
+momento (CADENA ×4, MUERTE...) cuando pasa y el enlace al juego abajo. Al
+acabar se puede **compartir** directamente (en el móvil) o **descargar**.
+
+Se graba en tiempo real: un clip de 15 s tarda 15 s, y hay que dejar la
+pestaña a la vista mientras tanto.
+
 ## 2026-09-23 · Clon, puente y yunque en party
 
 **TRES FLECOS DE LA PARTY.** El **CLON** de un invitado se quedaba plantado

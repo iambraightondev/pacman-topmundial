@@ -36,6 +36,10 @@ Todo construido, probado y subido; nada a medias. Detalle en CHANGELOG.
   Probado con dos mundos en Node. **PROTO de red: 16** (versiones mezcladas
   no entran en la misma party).
 
+**CLIPS (23 sep, mañana):** botón ✂ en el reproductor; vídeo vertical con
+sonido, en MP4. Probado en Chromium; **falta probarlo en el móvil** (compartir
+directo a TikTok/Instagram) y en Safari.
+
 **A jugar:**
 1. El METEORO nuevo en party real: que el Mago invitado se vea plantado en
    todas las pantallas, y si la hoguera (hasta 5 casillas de radio) es mucho.

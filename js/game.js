@@ -5381,6 +5381,8 @@
 
       this.renderHUD(ctx);
       this.renderStateText(ctx);
+      /* un CLIP en marcha (js/clip.js) monta este fotograma en vertical */
+      if (window.PM.Clip && window.PM.Clip.grabando) window.PM.Clip.componer();
     },
 
     /* Los cuerpos tirados: el Pac-Man apagado, las pasadas que lleva y un

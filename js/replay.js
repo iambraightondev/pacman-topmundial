@@ -2308,6 +2308,7 @@
      * pausa, por ejemplo) y aquí solo hay que recoger. */
     salir: function (yaEnMenu) {
       var estaba = (this.modo === 'ver' || this.modo === 'verRed');
+      if (window.PM.Clip) { window.PM.Clip.parar(false); window.PM.Clip.cerrar(); }
       this.modo = null;
       this.rep = null;
       this.montaje = null;
@@ -2480,6 +2481,8 @@
       mandos.appendChild(el('span', 'rv-hueco'));
       this.btnVel = boton('rv-vel', '1×', 'VELOCIDAD · X', function () { self.otraVelocidad(); });
       mandos.appendChild(this.btnVel);
+      /* CLIP vertical para reels y tiktok (js/clip.js) */
+      if (window.PM.Clip) mandos.appendChild(boton('rv-ib rv-clip-btn', '✂', 'CLIP PARA REELS · C', function () { window.PM.Clip.abrir(); }));
       mandos.appendChild(boton('rv-ib', '⤴', 'COMPARTIR DESDE ESTE SEGUNDO', function () { self.compartirAqui(); }));
       mandos.appendChild(boton('rv-ib', '⛶', 'PANTALLA COMPLETA · F', function () { self.pantallaCompleta(); }));
       abajo.appendChild(mandos);
@@ -2791,6 +2794,7 @@
         this.rvMomento.textContent = m ? (m.label + ' ›') : '';
         this.rvMomento.style.display = m ? '' : 'none';
       }
+      if (window.PM.Clip && window.PM.Clip.abierto) window.PM.Clip.pinta();
       this.vigilaDormir();
     },
 
@@ -2809,6 +2813,7 @@
       if (!this.fotos.length) return false;
       var k = ev.key;
       this.despierta();
+      if (window.PM.Clip && window.PM.Clip.tecla(ev)) return true;
       if (k === 'ArrowLeft') { this.salta(-CFG.REPLAY_SALTO); this.avisoSalto(-1); return true; }
       if (k === 'ArrowRight') { this.salta(CFG.REPLAY_SALTO); this.avisoSalto(1); return true; }
       if (k === 'Home') { this.irA(0); return true; }

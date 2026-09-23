@@ -11865,6 +11865,31 @@
     } finally { G.netRole = rol; G.localIdx = idx; G.hostEvt = evt; }
   });
 
+  test('CLIPS: el trozo acaba tras la barra y MEJOR JUGADA va a la cadena más larga', function () {
+    var R = window.PM.Replay, C = window.PM.Clip;
+    var guarda = { t: R.t, tTotal: R.tTotal, momentos: R.momentos, dur: C.dur };
+    try {
+      R.tTotal = 60 * 60; C.dur = 15;
+      R.t = 30 * 60;
+      var r = C.rango();
+      eq(r.fin, 30 * 60 + 120, 'acaba dos segundos después de la barra');
+      eq(r.fin - r.ini, 15 * 60, 'y dura lo elegido');
+      R.t = 60;
+      r = C.rango();
+      eq(r.ini, 0, 'al principio de la partida empieza en el cero');
+      eq(r.fin - r.ini, 15 * 60, 'y se alarga hacia delante para no quedarse corto');
+      R.t = 60 * 60;
+      r = C.rango();
+      eq(r.fin, 60 * 60, 'no se pasa del final');
+      R.momentos = [{ t: 0, tipo: 'nivel', label: 'NIVEL 1' }, { t: 600, tipo: 'cadena', label: 'CADENA ×2' },
+        { t: 1200, tipo: 'muerte', label: 'MUERTE' }, { t: 1800, tipo: 'cadena', label: 'CADENA ×4' },
+        { t: 2400, tipo: 'cadena', label: 'CADENA ×3' }];
+      eq(C.mejorJugada(), 1800, 'la cadena de cuatro');
+      R.momentos = [{ t: 0, tipo: 'nivel', label: 'NIVEL 1' }, { t: 900, tipo: 'nivel', label: 'NIVEL 2' }];
+      eq(C.mejorJugada(), 900 + 8 * 60, 'sin cadenas, el último nivel empezado');
+    } finally { R.t = guarda.t; R.tTotal = guarda.tTotal; R.momentos = guarda.momentos; C.dur = guarda.dur; }
+  });
+
   test('RED: el CLON de un invitado anda en su pantalla', function () {
     var H = window.PM.Hab;
     partida(1); G.hab = true;

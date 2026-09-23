@@ -426,6 +426,23 @@
       for (var i = 0; i < n; i++) loadVoice(i);
     },
 
+    /* Los CLIPS (js/clip.js): una salida más colgada del volumen general,
+     * para grabar el sonido del juego a la vez que se oye. */
+    salidaGrabacion: function () {
+      if (!ctx || !master || !ctx.createMediaStreamDestination) return null;
+      try {
+        var d = ctx.createMediaStreamDestination();
+        master.connect(d);
+        this.resume();
+        return d;
+      } catch (e) { return null; }
+    },
+
+    soltarGrabacion: function (d) {
+      if (!d || !master) return;
+      try { master.disconnect(d); } catch (e) { /* ya estaba suelta */ }
+    },
+
     setMuted: function (b) {
       muted = !!b;
       applyLevels();
