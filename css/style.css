@@ -7621,3 +7621,77 @@ body { font-size-adjust: 0.56; }
 #friends.amg .friend-row.amg-ficha { align-self: stretch; height: auto; }
 #friends.amg .amg-acciones { margin-top: auto; }
 #friends.amg .amg-datos { min-height: 12px; }
+
+/* =========================================================
+ * RANGO (23 sep): la insignia se pulsa y la tabla va centrada por columnas
+ * ========================================================= */
+#rango .rango-insignia {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  justify-self: center; width: 100%; max-width: 300px; min-width: 0;
+  padding: 0; margin: 0; background: none; border: none; cursor: pointer;
+}
+#rango .rango-insignia .rango-heroe { width: 100%; transition: transform 0.15s ease; }
+#rango .rango-insignia:hover .rango-heroe,
+#rango .rango-insignia:focus-visible .rango-heroe { transform: scale(1.04); }
+#rango .rango-insignia:focus { outline: none; }
+.rango-insignia-pista {
+  font-family: "Press Start 2P", "Courier New", monospace; font-size: 8px; letter-spacing: 1px; color: #ffe23a;
+  border: 1px solid rgba(255, 226, 58, 0.4); border-radius: 6px; padding: 6px 10px;
+}
+#rango .rango-insignia:hover .rango-insignia-pista,
+#rango .rango-insignia:focus-visible .rango-insignia-pista { color: #000; background: #ffe23a; }
+
+/* la tabla del mes: cada dato centrado en su columna */
+#rango .rango-fila {
+  grid-template-columns: 40px 24px minmax(0, 1fr) 130px 110px;
+  justify-items: center; text-align: center;
+}
+#rango .rango-fila > * { text-align: center; }
+#rango .rango-nombre { max-width: 100%; }
+#rango .rango-fila.rango-cab {
+  border: none; background: none; padding-top: 0; padding-bottom: 0;
+  font-size: 8px; color: #8a8cae;
+}
+#rango .rango-fila.rango-cab > * { color: #8a8cae; }
+#rango .rango-fila.rango-cab .rango-fruta { height: auto; }
+@media (max-width: 600px) {
+  #rango .rango-fila { grid-template-columns: 30px 18px minmax(0, 1fr) 80px; }
+}
+
+/* LOS RANGOS: la escalera, de LLAVE arriba a CEREZA abajo */
+.rgs-lista { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 760px; box-sizing: border-box; margin: 10px auto 0; }
+.rgs-fila {
+  --c: #ffe23a;
+  display: grid; grid-template-columns: 56px minmax(0, 1.3fr) 1fr 1.3fr 1fr;
+  align-items: center; justify-items: center; text-align: center; gap: 8px;
+  padding: 6px 10px; border-radius: 10px;
+  border: 2px solid color-mix(in srgb, var(--c) 35%, transparent);
+  background: color-mix(in srgb, var(--c) 6%, rgba(0, 0, 0, 0.7));
+  font-size: 11px; color: #dfe3ff; box-sizing: border-box;
+}
+.rgs-fila.rgs-cab { border: none; background: none; padding: 0 10px; font-size: 8px; color: #8a91b8; letter-spacing: 1px; }
+.rgs-fruta { width: 40px; height: 40px; image-rendering: pixelated; }
+.rgs-nombre { color: var(--c); font-size: 13px; letter-spacing: 1px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.rgs-tu { font-style: normal; font-size: 7px; color: #000; background: var(--c); border-radius: 4px; padding: 3px 6px; }
+.rgs-marca { color: #fff; }
+.rgs-cuantos { color: #8a91b8; }
+.rgs-fila.yo {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 16%, rgba(0, 0, 0, 0.75));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--c) 35%, transparent);
+}
+.rgs-pie {
+  grid-column: 1 / -1; width: 100%;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  font-size: 8px; color: var(--c); padding: 4px 6px 2px;
+}
+.rgs-pie .maes-barra { margin: 0; height: 10px; background: #10102a; border: 2px solid #2d2a5a; border-radius: 3px; overflow: hidden; position: relative; }
+.rgs-pie .maes-barra i { position: absolute; inset: 0 auto 0 0; background: var(--c); box-shadow: 0 0 10px var(--c); }
+.rgs-colocacion { grid-column: 3 / -1; font-size: 8px; line-height: 1.7; color: #dfe3ff; }
+@media (max-width: 600px) {
+  .rgs-fila { grid-template-columns: 40px minmax(0, 1.2fr) 1fr 1fr; font-size: 8px; }
+  .rgs-cuantos, .rgs-cab > :last-child { display: none; }
+  .rgs-fruta { width: 30px; height: 30px; }
+  .rgs-nombre { font-size: 9px; }
+  .rgs-pie { grid-template-columns: minmax(0, 1fr); text-align: center; }
+}

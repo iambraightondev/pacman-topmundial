@@ -7160,7 +7160,17 @@
       this.rangoHero.width = 400;
       this.rangoHero.height = 400;
       this.rangoHero.className = 'maes-heroe rango-heroe';
-      cuerpo.appendChild(this.rangoHero);
+      /* la insignia se pulsa: lleva a la escalera de todos los rangos */
+      var insignia = this.makeButton('', function () { self.showRangosPrompt(); });
+      insignia.className = 'rango-insignia';
+      insignia.title = 'VER TODOS LOS RANGOS';
+      insignia.setAttribute('aria-label', 'VER TODOS LOS RANGOS Y SUS MARCAS');
+      insignia.appendChild(this.rangoHero);
+      var pista = document.createElement('span');
+      pista.className = 'rango-insignia-pista';
+      pista.textContent = 'VER TODOS LOS RANGOS';
+      insignia.appendChild(pista);
+      cuerpo.appendChild(insignia);
 
       var info = document.createElement('div');
       info.className = 'maes-info';
@@ -7301,6 +7311,16 @@
       var Ac = window.PM.Account;
       var yo = (Ac && Ac.logged && Ac.logged() && Ac.name) ? String(Ac.name()).toUpperCase() : '';
       var self = this;
+      /* la cabecera, para que cada dato se lea bajo su columna */
+      var cab = document.createElement('div');
+      cab.className = 'rango-fila rango-cab';
+      ['#', '', 'JUGADOR', 'DIVISIÓN', 'PR'].forEach(function (x, i) {
+        var s = document.createElement('span');
+        s.className = ['rango-pos', 'rango-fruta', 'rango-nombre', 'rango-div', 'rango-pr'][i];
+        s.textContent = x;
+        cab.appendChild(s);
+      });
+      this.rangoLista.appendChild(cab);
       t.filas.forEach(function (f, i) {
         var row = document.createElement('div');
         row.className = 'rango-fila' + (f.usuario.toUpperCase() === yo ? ' yo' : '');
@@ -7336,6 +7356,106 @@
         row.appendChild(pr);
         self.rangoLista.appendChild(row);
       });
+    },
+
+    /* LOS RANGOS (23 sep): al pulsar la insignia, la escalera entera de
+     * CEREZA a LLAVE en el formato que se está mirando. De cada división,
+     * sus PR, la marca que hay que superar para subir y cuántos hay en ella
+     * este mes (si la tabla ya llegó); la tuya, marcada con lo que te falta. */
+    showRangosPrompt: function () {
+      var self = this, Rg = window.PM.Rango, B = window.PM.Badges;
+      if (!Rg) return;
+      var RG = CFG.RANGO, D = RG.DIVISIONES, n = this.rangoFmt || 1;
+      var e = Rg.estado(n);
+      var fmt = B ? B.FORMATOS[n - 1].name : 'SOLO';
+      var t = this.rangoTabla, cuantos = null;
+      if (t && t.n === n) {
+        cuantos = D.map(function () { return 0; });
+        t.filas.forEach(function (f) { if (f.division >= 0) cuantos[f.division]++; });
+      }
+      function el(tag, cls, txt) {
+        var x = document.createElement(tag);
+        if (cls) x.className = cls;
+        if (txt != null) x.textContent = txt;
+        return x;
+      }
+      this.showPrompt({
+        title: 'LOS RANGOS',
+        arcade: true,
+        tono: 'amarillo',
+        lines: [fmt + ' · CADA DIVISIÓN SON ' + RG.PR_DIVISION + ' PR. SI SUPERAS LA MARCA DE TU DIVISIÓN, GANAS PR; SI TE QUEDAS CORTO, PIERDES.'],
+        custom: function (p) {
+          var lista = el('div', 'rgs-lista');
+          var cab = el('div', 'rgs-fila rgs-cab');
+          ['', 'DIVISIÓN', 'PR', 'MARCA A SUPERAR', 'JUGADORES'].forEach(function (x) {
+            cab.appendChild(el('span', null, x));
+          });
+          lista.appendChild(cab);
+          for (var d = D.length - 1; d >= 0; d--) {
+            var div = D[d], mia = (e.division === d);
+            var fila = el('div', 'rgs-fila' + (mia ? ' yo' : ''));
+            fila.style.setProperty('--c', div.color);
+            var cv = document.createElement('canvas');
+            cv.width = 48; cv.height = 48;
+            cv.className = 'rgs-fruta';
+            var c = cv.getContext && cv.getContext('2d');
+            if (c && window.PM.Sprites.drawFruit) {
+              c.imageSmoothingEnabled = false;
+              c.scale(3, 3);
+              window.PM.Sprites.drawFruit(c, 8, 8, div.fruta);
+            }
+            fila.appendChild(cv);
+            var nom = el('span', 'rgs-nombre', div.name);
+            if (mia) nom.appendChild(el('i', 'rgs-tu', 'ESTÁS AQUÍ'));
+            fila.appendChild(nom);
+            var desde = d * RG.PR_DIVISION;
+            fila.appendChild(el('span', 'rgs-pr', d < D.length - 1
+              ? (desde + ' – ' + (desde + RG.PR_DIVISION - 1)) : (desde + ' +')));
+            fila.appendChild(el('span', 'rgs-marca', self.milesMaes(Rg.par(d, n))));
+            fila.appendChild(el('span', 'rgs-cuantos', cuantos ? String(cuantos[d]) : '—'));
+            if (mia) {
+              var pie = el('div', 'rgs-pie');
+              pie.appendChild(el('span', null, self.milesMaes(e.pr) + ' PR'));
+              var barra = el('div', 'maes-barra');
+              var relleno = document.createElement('i');
+              relleno.style.width = (Math.max(0, Math.min(1, e.enDivision / RG.PR_DIVISION)) * 100).toFixed(1) + '%';
+              barra.appendChild(relleno);
+              pie.appendChild(barra);
+              pie.appendChild(el('span', null, d < D.length - 1
+                ? ('TE FALTAN ' + (RG.PR_DIVISION - e.enDivision) + ' PARA ' + D[d + 1].name)
+                : 'LA DIVISIÓN MÁS ALTA'));
+              fila.appendChild(pie);
+            }
+            lista.appendChild(fila);
+          }
+          /* sin rango aún: debajo de CEREZA, lo que te queda de colocación */
+          if (e.division < 0) {
+            var sin = el('div', 'rgs-fila rgs-sin yo');
+            sin.style.setProperty('--c', '#8a8cae');
+            sin.appendChild(el('span', 'rgs-fruta'));
+            var ns = el('span', 'rgs-nombre', 'SIN RANGO');
+            ns.appendChild(el('i', 'rgs-tu', 'ESTÁS AQUÍ'));
+            sin.appendChild(ns);
+            sin.appendChild(el('span', 'rgs-colocacion', e.jugadas
+              ? ('COLOCACIÓN ' + e.colocacion + ' DE ' + RG.COLOCACION + ': TE FALTAN ' + (RG.COLOCACION - e.colocacion))
+              : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS')));
+            lista.appendChild(sin);
+          }
+          p.appendChild(lista);
+        },
+        buttons: [
+          { label: 'VOLVER', primary: true, keys: ['Escape', 'Enter'], hint: 'ESC',
+            onClick: function () { self.hidePrompt(); } },
+          { label: 'JUGAR CLASIFICATORIA', keys: ['j'], hint: 'J',
+            onClick: function () {
+              self.hidePrompt();
+              self.pickMode('clasif');
+              self.showMenu();
+              self.showClasifPrompt();
+            } }
+        ]
+      });
+      this.promptTag = 'rangos';
     },
 
     /* La fruta en grande, flotando, con un aro del color de la división. Sin

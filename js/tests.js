@@ -12731,6 +12731,35 @@
     ok(UI.rangoName.textContent.length > 0, 'y tu rango (o que aún no lo tienes)');
   });
 
+  test('RANGO: la insignia abre la escalera entera, con tu división marcada', function () {
+    var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
+    var est0 = Rg.estado, t0 = UI.rangoTabla;
+    Rg.estado = function () {
+      return { temporada: 'x', n: 1, jugadas: 9, colocacion: 5, pr: 237, division: 2, enDivision: 37, mejor: 2 };
+    };
+    UI.rangoTabla = { n: 1, filas: [{ usuario: 'A', division: 2, pr: 210 }, { usuario: 'B', division: 4, pr: 420 }] };
+    try {
+      UI.buildRango();
+      UI.refreshRango();
+      ok(UI.rangoHero.parentNode.classList.contains('rango-insignia'), 'la fruta va dentro de un botón');
+      UI.rangoHero.parentNode.click();
+      var p = UI.els.prompt;
+      var filas = p.querySelectorAll('.rgs-fila:not(.rgs-cab)');
+      eq(filas.length, D.length, 'una fila por división');
+      ok(filas[0].textContent.indexOf(D[D.length - 1].name) !== -1, 'la más alta arriba');
+      var mia = p.querySelectorAll('.rgs-fila.yo');
+      eq(mia.length, 1, 'solo una marcada');
+      ok(mia[0].textContent.indexOf(D[2].name) !== -1, 'y es la tuya');
+      ok(mia[0].textContent.indexOf('TE FALTAN 63') !== -1, 'con lo que te falta para subir');
+      ok(filas[D.length - 1 - 2].querySelector('.rgs-cuantos').textContent === '1', 'y cuántos hay en ella este mes');
+      ok(filas[D.length - 1 - 2].querySelector('.rgs-marca').textContent === UI.milesMaes(Rg.par(2, 1)), 'y la marca a superar');
+    } finally {
+      Rg.estado = est0;
+      UI.rangoTabla = t0;
+      UI.hidePrompt();
+    }
+  });
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------

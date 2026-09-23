@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-23 · RANGO: todos los rangos, a un toque
+
+**LA ESCALERA ENTERA.** Al pulsar tu fruta en RANGO se abre la lista de las
+ocho divisiones, de LLAVE arriba a CEREZA abajo: sus PR, la marca que hay que
+superar en tu formato y cuántos hay en cada una este mes. La tuya va marcada,
+con tus PR y lo que te falta para subir. Y en la tabla del mes cada dato va
+centrado bajo su columna, con cabecera.
+
 ## 2026-09-23 · OPCIONES, rediseñada
 
 **EL MENÚ DE SERVICIO DE LA MÁQUINA.** A la izquierda, las cinco secciones
