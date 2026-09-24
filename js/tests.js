@@ -38,8 +38,15 @@
     });
   }
 
+  /* las celebraciones pendientes (js/celebrar.js) son del aparato: se
+   * guardan las de verdad y cada prueba empieza sin ninguna, para que una
+   * subida de otra prueba no salte encima de la siguiente */
+  var celebrar0 = null;
+  try { celebrar0 = localStorage.getItem(window.PM.Celebrar.KEY); } catch (e) { /* sin almacén */ }
+
   function test(nombre, fn) {
     var caso = { nombre: nombre, ok: true, error: null };
+    if (window.PM.Celebrar) window.PM.Celebrar.vaciar();
     try { fn(); } catch (e) { caso.ok = false; caso.error = e.message || String(e); }
     casos.push(caso);
   }
@@ -13254,10 +13261,84 @@
     }
   });
 
+  test('CELEBRAR: subir de división o de rango deja la pantalla épica pendiente hasta verla', function () {
+    var Rg = window.PM.Rango, C = window.PM.Celebrar, UI = window.PM.UI;
+    conContadores(function () {
+      var cc = Rg.conCuenta;
+      Rg.conCuenta = function () { return true; };
+      try {
+        for (var i = 0; i < 4; i++) Rg.apuntar(60000, 1, 5);
+        eq(C.siguiente(), null, 'colocándose, nada que celebrar');
+        Rg.apuntar(60000, 1, 5);
+        var e = C.siguiente();
+        ok(e && e.t === 'rango' && e.de === -1, 'colocarse se celebra');
+        eq(Rg.TRAMOS[e.a].nombre, 'FRESA IV');
+        // una subida más sin haberla visto: se junta en una, de donde estaba a donde llega
+        Rg.apuntar(200000, 1, 9);   // +22: aún FRESA IV
+        var r = Rg.apuntar(200000, 1, 9);
+        ok(r.sube, 'la partida buena sube');
+        var lista = C.leer().filter(function (x) { return x.t === 'rango'; });
+        eq(lista.length, 1, 'una sola pendiente');
+        eq(lista[0].de, -1, 'desde la colocación');
+        eq(lista[0].a, r.tramo, 'hasta lo último');
+        // se queda en el aparato: al abrir el juego, sale
+        ok(localStorage.getItem(C.KEY), 'guardada, aunque se cierre el juego');
+        UI.hidePrompt();
+        ok(UI.celebrarSiToca(), 'fuera de partida, sale');
+        var p = UI.els.prompt;
+        ok(p.querySelector('.rsu'), 'la pantalla épica');
+        ok(p.querySelector('.rsu-nombre').textContent === r.nombre, 'con el nombre al que llegas');
+        ok(p.querySelector('.rsu-premio'), 'y el premio de la fruta');
+        eq(C.siguiente(), null, 'vista, no vuelve a salir');
+        UI.hidePrompt();
+        eq(UI.celebrarSiToca(), false, 'y no hay más');
+      } finally { Rg.conCuenta = cc; UI.hidePrompt(); }
+    });
+  });
+
+  test('CELEBRAR: una subida de escalón dentro de la fruta es SUBES DE DIVISIÓN; bajar la retira', function () {
+    var C = window.PM.Celebrar, UI = window.PM.UI, T = window.PM.Rango.TRAMOS;
+    var f = T.filter(function (x) { return x.d === 1; });
+    C.rango({ sube: true, tramoAntes: T.indexOf(f[0]), tramo: T.indexOf(f[1]), monedas: 0 });
+    try {
+      UI.hidePrompt();
+      ok(UI.celebrarSiToca(), 'sale');
+      var p = UI.els.prompt;
+      ok(/DIVISI/.test(p.querySelector('.panel-title').textContent), 'como SUBES DE DIVISIÓN');
+      eq(p.querySelector('.rsu-escalones .on').textContent, f[1].rom, 'con el escalón nuevo encendido');
+      eq(p.querySelector('.rsu-escalones .antes').textContent, f[0].rom, 'y el de antes tachado');
+    } finally { UI.hidePrompt(); }
+    C.rango({ sube: true, tramoAntes: T.indexOf(f[0]), tramo: T.indexOf(f[1]), monedas: 0 });
+    C.rango({ baja: true, tramoAntes: T.indexOf(f[1]), tramo: T.indexOf(f[0]), monedas: 0 });
+    eq(C.siguiente(), null, 'subir y volver a bajar sin verlo: nada que celebrar');
+  });
+
+  test('CELEBRAR: el nivel también espera, y primero el nivel y luego el rango', function () {
+    var C = window.PM.Celebrar, UI = window.PM.UI, T = window.PM.Rango.TRAMOS;
+    C.rango({ colocado: true, tramoAntes: -1, tramo: 2, monedas: 0 });
+    C.nivel(7);
+    C.nivel(8);
+    try {
+      UI.hidePrompt();
+      G.state = 'PLAYING';
+      eq(UI.celebrarSiToca(), false, 'en partida no sale');
+      G.state = 'MENU';
+      ok(UI.celebrarSiToca(), 'fuera, sí');
+      ok(UI.els.prompt.querySelector('.lvl-sello b').textContent === '8', 'dos niveles sin ver: el último');
+      UI.els.prompt.querySelector('.btn-primary').click();
+      ok(UI.els.prompt.querySelector('.rsu'), 'al seguir, el rango');
+      eq(C.siguiente(), null, 'y ya está todo visto');
+    } finally { G.state = 'MENU'; UI.hidePrompt(); }
+  });
+
   // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();
+  try {
+    if (celebrar0) localStorage.setItem(window.PM.Celebrar.KEY, celebrar0);
+    else window.PM.Celebrar.vaciar();
+  } catch (e) { /* sin almacén */ }
 
   var fallos = 0;
   for (var i = 0; i < casos.length; i++) if (!casos[i].ok) fallos++;

@@ -497,6 +497,8 @@
       this.showMenu();
 
       this.partyHooks();
+      // lo que se subió y quedó sin ver (aunque se cerrara el juego)
+      this.arrancarCelebraciones();
 
       /* enlace compartido ?rep=<texto>: abre directo la repetición (y si
        * viene rota, avisa y el juego sigue como si nada) */
@@ -514,6 +516,17 @@
       }
       /* y si no llega por un enlace, vuelve a donde estabas al recargar */
       this.restaurarVista(vista);
+    },
+
+    /* Desde aquí, las celebraciones pendientes ya pueden salir (al abrir el
+     * juego, lo que quedó sin ver la última vez) */
+    arrancarCelebraciones: function () {
+      var self = this;
+      this.iniciado = true;
+      if (window.PM_PRUEBAS || this.relojCelebrar) return;
+      this.relojCelebrar = setInterval(function () {
+        if (document.visibilityState === 'visible') self.celebrarSiToca();
+      }, 1500);
     },
 
     /* ------------------------------------------------------
@@ -13318,14 +13331,109 @@
       if (window.PM.Conectados) window.PM.Conectados.arrancar();
       this.showPanel('menu');
       this.animarNickLook();     // tu Pac-Man junto a tu nombre
-      // si el nivel subió justo al salirse de la partida, el aviso no se
-      // llegó a ver: se celebra aquí
-      var g = window.PM.Game;
-      if (g && g.pendingLevelUp) {
-        var lv = g.pendingLevelUp;
-        g.pendingLevelUp = null;
-        this.showLevelUpPrompt(lv);
+      // lo que se subió (nivel, división, rango) y aún no se ha celebrado
+      if (this.iniciado) this.celebrarSiToca();
+    },
+
+    /* LAS CELEBRACIONES PENDIENTES (js/celebrar.js, 24 sep). Salen en el
+     * primer momento tranquilo: fuera de partida y sin otro diálogo encima.
+     * Se miran al volver al menú y, por si acaso, cada segundo y medio (así
+     * también salen al abrir el juego, o al cerrar el GAME OVER sin pasar
+     * por el menú). Se dan por vistas al enseñarlas. */
+    celebrarSiToca: function () {
+      var C = window.PM.Celebrar, g = window.PM.Game;
+      if (!C || this.promptOpen) return false;
+      if (g && ((g.inGame && g.inGame()) || g.replaying)) return false;
+      var e = C.siguiente();
+      if (!e) return false;
+      C.visto(e);
+      if (e.t === 'nivel') this.showLevelUpPrompt(e.lv);
+      else if (!this.showRangoSubePrompt(e)) return this.celebrarSiToca();
+      return true;
+    },
+
+    /* ¡SUBES DE DIVISIÓN! / ¡NUEVO RANGO! / ¡YA TIENES RANGO! — la fruta
+     * entra de golpe sobre un sol de rayos de su color, con su nombre
+     * grande, los escalones de la fruta con el nuevo encendido, el PR y lo
+     * que falta, y el premio en monedas si es la primera vez en ella. */
+    showRangoSubePrompt: function (e) {
+      var self = this, Rg = window.PM.Rango;
+      var TR = Rg && Rg.TRAMOS, D = CFG.RANGO.DIVISIONES;
+      var T = TR && TR[e.a];
+      if (!T) return false;
+      var antes = e.de >= 0 ? TR[e.de] : null;
+      var fruta = D[T.d];
+      var nueva = !antes || antes.d !== T.d;       // fruta nueva (o colocarse)
+      var titulo = !antes ? '¡YA TIENES RANGO!' : nueva ? '¡NUEVO RANGO!' : '¡SUBES DE DIVISIÓN!';
+      var est = Rg.estado();
+      var mil = function (n) { return self.milesMaes(n); };
+      function el(tag, cls, txt) {
+        var x = document.createElement(tag);
+        if (cls) x.className = cls;
+        if (txt != null) x.textContent = txt;
+        return x;
       }
+      if (window.AudioSys) {
+        try { nueva ? AudioSys.playIntro() : AudioSys.playExtraLife(); } catch (err) { /* sin sonido */ }
+      }
+      this.showPrompt({
+        title: titulo,
+        arcade: true,
+        tono: 'amarillo',
+        clase: 'rsu-prompt',
+        custom: function (p) {
+          var tt = p.querySelector('.panel-title');
+          if (tt) tt.classList.add('lvl-titulo');
+          var caja = el('div', 'rsu' + (nueva ? ' rsu-fruta-nueva' : ''));
+          caja.style.setProperty('--c', fruta.color);
+          var escena = el('div', 'rsu-escena');
+          escena.appendChild(el('div', 'rsu-rayos'));
+          escena.appendChild(el('div', 'rsu-onda'));
+          var aro = el('div', 'rsu-aro');
+          var cv = document.createElement('canvas');
+          cv.width = 112; cv.height = 112;
+          cv.className = 'rsu-fruta';
+          var c = cv.getContext && cv.getContext('2d');
+          if (c && window.PM.Sprites && window.PM.Sprites.drawFruit) {
+            c.imageSmoothingEnabled = false;
+            c.scale(7, 7);
+            window.PM.Sprites.drawFruit(c, 8, 8, fruta.fruta);
+          }
+          aro.appendChild(cv);
+          escena.appendChild(aro);
+          caja.appendChild(escena);
+          caja.appendChild(el('div', 'rsu-nombre', T.nombre));
+          /* los escalones de la fruta: el de antes se apaga, el nuevo se enciende */
+          var esc = TR.filter(function (x) { return x.d === T.d; });
+          if (esc.length > 1) {
+            var fila = el('div', 'rsu-escalones');
+            esc.forEach(function (x) {
+              var cls = x === T ? 'on' : (antes && x === antes ? 'antes' : (x.j < T.j ? 'hecho' : ''));
+              fila.appendChild(el('i', cls, x.rom));
+            });
+            caja.appendChild(fila);
+          }
+          caja.appendChild(el('div', 'rsu-desde', !antes
+            ? ('TRAS ' + CFG.RANGO.COLOCACION + ' CLASIFICATORIAS DE COLOCACIÓN')
+            : ('DEJAS ATRÁS ' + antes.nombre)));
+          if (est && est.pr !== null) {
+            caja.appendChild(el('div', 'rsu-pr', mil(est.pr) + ' PR' +
+              (est.siguiente ? ' · TE FALTAN ' + est.faltan + ' PARA ' + est.siguiente : ' · LA CIMA')));
+          }
+          if (e.monedas > 0) {
+            caja.appendChild(el('div', 'rsu-premio',
+              '+' + mil(e.monedas) + ' MONEDAS' + (e.fruta ? ' · PRIMERA VEZ EN ' + e.fruta : '')));
+          }
+          p.appendChild(caja);
+        },
+        buttons: [
+          { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '], hint: 'ENTER',
+            onClick: function () { self.hidePrompt(); self.celebrarSiToca(); } },
+          { label: 'VER LOS RANGOS', keys: ['r'], hint: 'R',
+            onClick: function () { self.hidePrompt(); self.showRangosPrompt(); } }
+        ]
+      });
+      return true;
     },
 
     showLevelUpPrompt: function (lv) {
@@ -13337,7 +13445,7 @@
        * subir ha abierto algo, un atajo al vestuario. */
       var botones = [
         { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '],
-          hint: 'ENTER', onClick: function () { self.hidePrompt(); } }
+          hint: 'ENTER', onClick: function () { self.hidePrompt(); self.celebrarSiToca(); } }
       ];
       if (nuevos > 0) {
         botones.push({ label: 'VER ' + (nuevos === 1 ? 'LO NUEVO' : 'LOS ' + nuevos + ' NUEVOS'), hint: 'V', keys: ['v'],

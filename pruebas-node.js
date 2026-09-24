@@ -290,7 +290,7 @@ vm.createContext(sandbox);
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
 var orden = ['config', 'letra', 'audio', 'sprites', 'skins', 'insignias', 'emblemas', 'trofeos', 'portadas', 'iconos', 'pacman', 'ghost', 'net-config',
   'net-directo', 'net', 'party', 'badges', 'history', 'level', 'friends', 'conectados', 'ranking',
-  'temporadas', 'daily', 'mazes', 'achievements', 'maestria', 'rango', 'stats', 'tienda', 'pase', 'ficha', 'account', 'versus',
+  'temporadas', 'daily', 'mazes', 'achievements', 'maestria', 'celebrar', 'rango', 'stats', 'tienda', 'pase', 'ficha', 'account', 'versus',
   'habilidades', 'jefe', 'supervivencia', 'caceria', 'game', 'replay', 'clip', 'guardado', 'ui'];
 
 orden.forEach(function (nombre) {

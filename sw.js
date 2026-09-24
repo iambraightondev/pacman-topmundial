@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v266';
+var VERSION = 'pm-v267';
 var SHELL = [
   './',
   './index.html',
@@ -46,6 +46,7 @@ var SHELL = [
   './js/mazes.js',
   './js/achievements.js',
   './js/maestria.js',
+  './js/celebrar.js',
   './js/rango.js',
   './js/stats.js',
   './js/tienda.js',

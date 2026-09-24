@@ -204,7 +204,6 @@
     levelNotice: null,   // { level, ticks } — nivel de jugador recién subido
     rankingSent: false,  // una sola subida por partida
     xpSent: false,       // la experiencia de la partida ya está sumada
-    pendingLevelUp: null,// nivel recién subido al salirse: lo celebra el menú
     timeTicks: 0,        // cronómetro de la partida (solo mientras se juega)
 
     /* rendición y revancha (deben aceptar los dos jugadores) */
@@ -898,14 +897,13 @@
       // salirse a medias no tira lo jugado: la experiencia se lleva igual
       var enPartida = this.inGame();
       var guardada = this.salvada;      // GUARDAR Y SALIR: la partida sigue viva
-      var subida = enPartida ? this.closeRun() : null;
+      if (enPartida) this.closeRun();
       /* ...y la PUNTUACIÓN también va al TOP MUNDIAL (18 sep). Antes solo
        * subía al llegar al GAME OVER, así que quien se salía al menú con su
        * mejor partida la perdía: quedaba la repetición y el récord de su
        * perfil, pero la tabla no se enteraba. */
       if (enPartida && !guardada && !traspasado) this.submitRanking();
       this.closeShowcase();
-      if (subida) this.pendingLevelUp = subida;   // lo celebra el menú
       if (this.netRole) {
         var mirando = this.isSpec();
         try {
@@ -2761,6 +2759,8 @@
       var nuevo = window.PM.Level.add(pts);
       if (nuevo) {
         this.levelNotice = { level: nuevo, ticks: 260 };
+        // y la pantalla de SUBES DE NIVEL, que sale aunque se cierre el juego
+        if (window.PM.Celebrar && !this.replaying) window.PM.Celebrar.nivel(nuevo);
         window.AudioSys && AudioSys.playExtraLife();
       }
       return nuevo;

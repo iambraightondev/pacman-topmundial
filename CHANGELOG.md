@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Subir de división, de rango o de nivel se celebra siempre
+
+**¡SUBES DE DIVISIÓN! / ¡NUEVO RANGO! / ¡YA TIENES RANGO!:** pantalla nueva
+con la fruta cayendo sobre un sol de rayos de su color, su nombre en grande,
+los escalones con el nuevo encendido, el PR y el premio en monedas.
+**Siempre se ve:** la subida (también la de nivel) se apunta en el aparato en
+cuanto pasa, acabe como acabe la partida, y solo se borra al enseñarse. Si se
+cierra el juego antes, sale al volver a abrirlo. Primero el nivel, luego el rango.
+
 ## 2026-09-24 · Tus amigos, conectados o no
 
 **AMIGOS:** cada tarjeta dice si ese amigo está EN LÍNEA, JUGANDO, EN PARTY o

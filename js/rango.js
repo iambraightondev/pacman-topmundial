@@ -317,6 +317,9 @@
       res.sube = res.tramo > res.tramoAntes && res.tramoAntes >= 0;
       res.baja = res.tramo < res.tramoAntes;
       res.colocado = antes.pr === null && res.despues !== null;
+      /* la pantalla de SUBES DE DIVISIÓN / NUEVO RANGO (js/celebrar.js): se
+       * apunta aquí, acabe como acabe la partida, y sale aunque se cierre */
+      if (window.PM.Celebrar) window.PM.Celebrar.rango(res);
       return res;
     },
 
