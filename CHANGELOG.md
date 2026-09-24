@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · RANGO por escalones, mucho más duro
+
+**CEREZA IV … CAMPANA I, Y LA LLAVE ARRIBA.** Cada fruta se sube por
+escalones (IV a I hasta NARANJA, III a I desde MANZANA) y cada uno pide más
+marca y más PR que el anterior: de 8.000 puntos en CEREZA IV a 130.000 en
+LLAVE, y de 25 a 70 PR por escalón. Desde FRESA hay que llegar a un nivel
+mínimo para ganar PR, igualar la marca ya no suma nada y lo que se gana baja
+(y lo que se pierde sube) según se asciende. El rango de septiembre de todos
+se ha recalculado con estas reglas a partir de lo jugado.
+
 ## 2026-09-23 · CLASIFICATORIA: salir siempre cuenta
 
 **SALIR ES TERMINARLA.** En CLASIFICATORIA la pausa ya no ofrece GUARDAR:

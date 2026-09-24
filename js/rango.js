@@ -9,12 +9,13 @@
  *   cuatro ligas no se mezclan nunca.
  *
  * Cómo funciona
- *   · Las divisiones son las ocho frutas (CEREZA … LLAVE), 100 puntos de
- *     rango (PR) cada una (CFG.RANGO).
+ *   · Las divisiones son las ocho frutas (CEREZA … LLAVE), partidas en
+ *     ESCALONES (CEREZA IV … CEREZA I) que piden cada vez más (CFG.RANGO).
  *   · Las cinco primeras partidas del mes son de COLOCACIÓN: no mueven nada,
  *     y al acabar la quinta te colocan según tu media.
- *   · Después, cada partida da o quita PR según tu marca contra el `par` de
- *     tu división: el doble da +30, igualarlo +5, la mitad −20.
+ *   · Después, cada partida da o quita PR según tu marca contra la de tu
+ *     escalón: el doble da +20, igualarla nada, la mitad −20. Sin llegar al
+ *     nivel que pide tu fruta, no se gana.
  *   · Cada mes se vuelve a empezar (la temporada es la de Season.actual()).
  *
  * Qué cuenta
@@ -31,10 +32,11 @@
  *   cuenta y se funden quedándose con lo más alto de cada lado. Por eso el PR
  *   no se guarda tal cual —bajar no se podría fundir—, sino como lo ganado y
  *   lo perdido, que solo crecen:
- *     rc_<temporada>_<n>  partidas clasificatorias jugadas
- *     rt_<temporada>_<n>  suma de las marcas de colocación
- *     rg_<temporada>_<n>  PR ganado · rl_… PR perdido
- *     rm_<temporada>_<n>  mejor división alcanzada, +1 (0 = ninguna)
+ *     rc2_<temporada>_<n>  partidas clasificatorias jugadas
+ *     rt2_<temporada>_<n>  suma de las marcas de colocación
+ *     rg2_<temporada>_<n>  PR ganado · rl2_… PR perdido
+ *     rm2_<temporada>_<n>  mejor escalón alcanzado, +1 (0 = ninguno)
+ *   El 2 es la versión de las reglas (24 sep); las de antes iban sin él.
  *   PR = colocación + ganado − perdido.
  *
  * La tabla
@@ -47,6 +49,7 @@
   var CFG = window.PM.CFG;
   var RG = CFG.RANGO;
   var DIV = RG.DIVISIONES;
+  var ROMANOS = ['I', 'II', 'III', 'IV'];
 
   function A() { return window.PM.Achievements; }
   function num(v) { var n = Math.floor(v || 0); return n > 0 ? n : 0; }
@@ -54,7 +57,10 @@
   function temporada() {
     return window.PM.Season ? window.PM.Season.actual() : '';
   }
-  function clave(tipo, t, n) { return tipo + '_' + t + '_' + n; }
+  /* rc2_2026-09_1: la VERSIÓN de las reglas va en la clave. Los contadores
+   * de las de antes (rc_…) se quedan donde están y no se leen: si no, un
+   * aparato que aún los tuviera los devolvería al fundir con la cuenta. */
+  function clave(tipo, t, n) { return tipo + (RG.VERSION > 1 ? RG.VERSION : '') + '_' + t + '_' + n; }
 
   /* multiplicador del formato (el de los trofeos: equipo x1,25 / 1,5 / 1,75) */
   function mult(n) {
@@ -63,53 +69,95 @@
     return f ? f.mult : 1;
   }
 
+  /* LOS ESCALONES, de abajo arriba: CEREZA IV, CEREZA III … CAMPANA I,
+   * LLAVE. Cada uno sabe de qué fruta es, desde qué PR empieza, cuántos
+   * ocupa (0 en LLAVE: no tiene techo) y su marca, que sube a pasos iguales
+   * (en proporción) desde la de su fruta hasta la de la siguiente. */
+  var TRAMOS = (function () {
+    var out = [], desde = 0;
+    for (var d = 0; d < DIV.length; d++) {
+      var D = DIV[d], k = D.escalones || 1, sig = DIV[d + 1];
+      var r = sig ? Math.pow(sig.par / D.par, 1 / k) : 1;
+      for (var j = 0; j < k; j++) {
+        var rom = k > 1 ? ROMANOS[k - 1 - j] : '';
+        out.push({ d: d, j: j, rom: rom, nombre: D.name + (rom ? ' ' + rom : ''),
+                   desde: desde, ancho: sig ? D.prEscalon : 0,
+                   par: Math.round(D.par * Math.pow(r, j) / 100) * 100 });
+        if (sig) desde += D.prEscalon;
+      }
+    }
+    return out;
+  })();
+
+  function tramo(pr) {
+    pr = num(pr);
+    for (var i = TRAMOS.length - 1; i > 0; i--) if (pr >= TRAMOS[i].desde) return i;
+    return 0;
+  }
+  function division(pr) { return TRAMOS[tramo(pr)].d; }
+  /* la marca de la fruta (la de su primer escalón) y la de un escalón */
   function par(d, n) { return DIV[Math.max(0, Math.min(DIV.length - 1, d))].par * mult(n); }
+  function parTramo(t, n) { return TRAMOS[Math.max(0, Math.min(TRAMOS.length - 1, t))].par * mult(n); }
 
-  function division(pr) {
-    return Math.max(0, Math.min(DIV.length - 1, Math.floor(num(pr) / RG.PR_DIVISION)));
-  }
-
-  /* PR de colocación para una media de puntos: la división más alta cuyo par
-   * alcanzas, y dentro de ella la mitad baja o alta según lo cerca que estés
-   * del par siguiente. */
+  /* PR de colocación para una media de puntos: el escalón más alto cuya
+   * marca alcanzas y, dentro de él, hasta la mitad según lo cerca que estés
+   * de la marca del siguiente. */
   function colocar(media, n) {
-    var d = -1;
-    for (var i = 0; i < DIV.length; i++) if (media >= par(i, n)) d = i;
-    if (d < 0) return Math.round(RG.PR_DIVISION / 2 * Math.max(0, media / par(0, n)));
-    var sig = (d + 1 < DIV.length) ? par(d + 1, n) : par(d, n) * 2;
-    var frac = Math.max(0, Math.min(1, (media - par(d, n)) / Math.max(1, sig - par(d, n))));
-    return d * RG.PR_DIVISION + Math.round(frac * RG.PR_DIVISION * 0.5);
+    var t = -1;
+    for (var i = 0; i < TRAMOS.length; i++) if (media >= parTramo(i, n)) t = i;
+    if (t < 0) {
+      return Math.min(TRAMOS[0].ancho - 1,
+        Math.round(TRAMOS[0].ancho / 2 * Math.max(0, media / parTramo(0, n))));
+    }
+    var T = TRAMOS[t];
+    var sig = (t + 1 < TRAMOS.length) ? parTramo(t + 1, n) : parTramo(t, n) * 1.3;
+    var frac = Math.max(0, Math.min(1, (media - parTramo(t, n)) / Math.max(1, sig - parTramo(t, n))));
+    return T.desde + Math.round(frac * (T.ancho || 50) * 0.5);
   }
 
-  /* Lo que mueve una partida de `puntos` a quien está en `pr` */
-  function cambio(puntos, pr, n) {
-    var p = par(division(pr), n);
-    var r = Math.max(1, puntos) / p;
-    var d = Math.round(RG.PASO * Math.log(r) / Math.LN2) + RG.BASE;
-    return Math.max(-RG.MAX_PIERDE, Math.min(RG.MAX_GANA, d));
+  /* Lo que mueve una partida de `puntos` a quien está en `pr`. Sin llegar
+   * al `nivel` de su fruta no se gana nada (restar, sí). */
+  function cambio(puntos, pr, n, nivel) {
+    var t = tramo(pr), D = DIV[TRAMOS[t].d];
+    var r = Math.max(1, puntos) / parTramo(t, n);
+    var d = Math.round(RG.PASO * Math.log(r) / Math.LN2);
+    if (d > 0 && nivel != null && nivel < (D.nivel || 1)) d = 0;
+    return Math.max(-D.pierde, Math.min(D.gana, d));
   }
 
   /* El estado de un formato a partir de unos contadores (los tuyos o los de
    * otro perfil, que para la tabla es lo mismo) */
   function estadoDe(c, t, n) {
     var jugadas = num(c[clave('rc', t, n)]);
+    var mejor = num(c[clave('rm', t, n)]) - 1;
     var out = { temporada: t, n: n, jugadas: jugadas,
                 colocacion: Math.min(jugadas, RG.COLOCACION), pr: null,
-                division: -1, mejor: num(c[clave('rm', t, n)]) - 1 };
+                division: -1, tramo: -1, nombre: '',
+                mejor: mejor, mejorNombre: mejor >= 0 && TRAMOS[mejor] ? TRAMOS[mejor].nombre : '' };
     if (jugadas < RG.COLOCACION) return out;
     var base = colocar(num(c[clave('rt', t, n)]) / RG.COLOCACION, n);
     out.pr = Math.max(0, base + num(c[clave('rg', t, n)]) - num(c[clave('rl', t, n)]));
-    out.division = division(out.pr);
-    out.enDivision = out.pr - out.division * RG.PR_DIVISION;
+    var i = tramo(out.pr), T = TRAMOS[i];
+    out.tramo = i;
+    out.division = T.d;
+    out.nombre = T.nombre;
+    out.enTramo = out.pr - T.desde;
+    out.anchoTramo = T.ancho;                                   // 0 en LLAVE
+    out.faltan = T.ancho ? (T.ancho - out.enTramo) : 0;
+    out.siguiente = TRAMOS[i + 1] ? TRAMOS[i + 1].nombre : '';
     return out;
   }
 
   var Rango = {
     DIVISIONES: DIV,
+    TRAMOS: TRAMOS,
+    tramo: tramo,
     division: division,
     colocar: colocar,
     cambio: cambio,
     par: par,
+    parTramo: parTramo,
+    clave: clave,
     temporada: temporada,
     estadoDe: estadoDe,
 
@@ -153,19 +201,20 @@
     cerrar: function (G) {
       if (this.porQueNo(G) || !A()) return null;
       // la del equipo: es la que compite
-      return this.apuntar(Math.max(0, G.score || 0), G.playerCount || 1);
+      return this.apuntar(Math.max(0, G.score || 0), G.playerCount || 1, G.level || 1);
     },
 
     /* Apunta una partida de `puntos` en el formato `n` y devuelve el resumen.
      * La usa cerrar() y también la CLASIFICATORIA guardada que se descarta
      * sin terminarla (js/guardado.js): dejarla a medias no libra de contar. */
-    apuntar: function (puntos, n) {
+    apuntar: function (puntos, n, nivel) {
       if (!A()) return null;
       var t = temporada();
       var antes = this.estado(n, t);
       var o = {};
       o[clave('rc', t, n)] = 1;
-      var res = { n: n, puntos: puntos, antes: antes.pr, divisionAntes: antes.division };
+      var res = { n: n, puntos: puntos, nivel: nivel, antes: antes.pr,
+                  divisionAntes: antes.division, tramoAntes: antes.tramo };
       if (antes.jugadas < RG.COLOCACION) {
         o[clave('rt', t, n)] = puntos;
         A().recordAll(o);
@@ -174,9 +223,16 @@
         res.jugadas = tras.colocacion;
         res.despues = tras.pr;
         res.division = tras.division;
+        res.tramo = tras.tramo;
+        res.nombre = tras.nombre;
         res.cambio = 0;
       } else {
-        var d = cambio(puntos, antes.pr, n);
+        var d = cambio(puntos, antes.pr, n, nivel);
+        /* ¿se quedó sin ganar por no llegar al nivel? (para decirlo) */
+        var D = DIV[antes.division];
+        res.sinNivel = nivel != null && nivel < (D.nivel || 1) && d === 0 &&
+          cambio(puntos, antes.pr, n) > 0;
+        res.nivelPide = D.nivel || 1;
         /* en el suelo no se acumula deuda: lo que no se puede perder no se
          * apunta como perdido */
         if (d < 0) d = -Math.min(-d, antes.pr);
@@ -187,11 +243,14 @@
         res.cambio = d;
         res.despues = ya.pr;
         res.division = ya.division;
+        res.tramo = ya.tramo;
+        res.nombre = ya.nombre;
         res.jugadas = ya.jugadas;
       }
-      if (res.division >= 0) A().record(clave('rm', t, n), res.division + 1);
-      res.sube = res.division > res.divisionAntes && res.divisionAntes >= 0;
-      res.baja = res.division < res.divisionAntes;
+      // lo más alto, por ESCALÓN (+1; 0 = ninguno)
+      if (res.tramo >= 0) A().record(clave('rm', t, n), res.tramo + 1);
+      res.sube = res.tramo > res.tramoAntes && res.tramoAntes >= 0;
+      res.baja = res.tramo < res.tramoAntes;
       res.colocado = antes.pr === null && res.despues !== null;
       return res;
     },
@@ -218,7 +277,8 @@
             var e = estadoDe(cc, t, n);
             if (!e.jugadas) return;
             out.push({ usuario: String(f.usuario || ''), avatar: f.avatar || '',
-                       pr: e.pr, division: e.division, jugadas: e.jugadas,
+                       pr: e.pr, division: e.division, tramo: e.tramo, nombre: e.nombre,
+                       jugadas: e.jugadas,
                        colocacion: e.colocacion });
           });
           out.sort(function (a, b) {

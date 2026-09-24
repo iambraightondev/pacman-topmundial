@@ -12527,21 +12527,39 @@
 
   test('RANGO: lo que da o quita una partida sale de tu marca contra tu par',
     function () {
-      var Rg = window.PM.Rango;
-      // en CEREZA (0 PR) a uno el par son 1.500
-      eq(Rg.cambio(1500, 0, 1), 5, 'igualar tu par sube un poco');
-      eq(Rg.cambio(3000, 0, 1), 30, 'el doble, +30');
-      eq(Rg.cambio(750, 50, 1), -20, 'la mitad, −20');
-      eq(Rg.cambio(999999, 0, 1), CFG.RANGO.MAX_GANA, 'con tope por arriba');
-      eq(Rg.cambio(0, 250, 1), -CFG.RANGO.MAX_PIERDE, 'y por abajo');
-      // en equipo el par se multiplica como los trofeos
-      eq(Rg.cambio(1500 * 1.25, 0, 2), 5, 'en dúo, un cuarto más');
+      var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
+      // en CEREZA IV (0 PR) a uno la marca son 8.000
+      eq(Rg.cambio(8000, 0, 1), 0, 'igualar la marca no da nada');
+      eq(Rg.cambio(16000, 0, 1), 20, 'el doble, +20');
+      eq(Rg.cambio(4000, 10, 1), -D[0].pierde, 'la mitad sería −20, pero en CEREZA se pierde como mucho 15');
+      eq(Rg.cambio(999999, 0, 1), D[0].gana, 'con tope por arriba, el de la fruta');
+      eq(Rg.cambio(0, 1100, 1), -D[7].pierde, 'y por abajo, que arriba duele más');
+      // FRESA pide llegar al nivel 2 para ganar
+      eq(Rg.cambio(30000, 100, 1, 1), 0, 'sin el nivel no se gana');
+      eq(Rg.cambio(30000, 100, 1, 2), 20, 'con él, sí');
+      eq(Rg.cambio(3000, 100, 1, 1), -D[1].pierde, 'y perder se pierde igual');
+      // en equipo la marca se multiplica como los trofeos
+      eq(Rg.cambio(8000 * 1.25, 0, 2), 0, 'en dúo, un cuarto más');
     });
+
+  test('RANGO: cada fruta en escalones, cada uno más caro que el anterior', function () {
+    var Rg = window.PM.Rango, T = Rg.TRAMOS;
+    eq(T.length, 4 + 4 + 4 + 3 + 3 + 3 + 3 + 1, 'IV a I hasta NARANJA, III a I desde MANZANA, LLAVE sola');
+    eq(T[0].nombre, 'CEREZA IV');
+    eq(T[12].nombre, 'MANZANA III', 'MANZANA empieza en III');
+    eq(T[T.length - 1].nombre, 'LLAVE');
+    eq(T[T.length - 1].desde, 1030, 'LLAVE desde 1.030 PR');
+    for (var i = 1; i < T.length; i++) {
+      ok(T[i].par > T[i - 1].par, T[i].nombre + ' pide más marca que ' + T[i - 1].nombre);
+      ok(T[i].ancho >= T[i - 1].ancho || !T[i].ancho, T[i].nombre + ' no cuesta menos PR');
+    }
+    eq(Rg.estadoDe({}, 'x', 1).pr, null, 'sin partidas, sin rango');
+  });
 
   test('RANGO: la colocación te pone donde dice tu media', function () {
     var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     eq(Rg.division(Rg.colocar(0, 1)), 0, 'sin nada, CEREZA');
-    eq(Rg.division(Rg.colocar(D[3].par, 1)), 3, 'con el par de MANZANA, MANZANA');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[3].par, 1))].nombre, 'MANZANA III', 'con la marca de MANZANA, su primer escalón');
     eq(Rg.division(Rg.colocar(D[7].par * 3, 1)), 7, 'muy arriba, LLAVE');
   });
 
@@ -12568,13 +12586,14 @@
           ok(ultima.colocado, 'la quinta te coloca');
           eq(ultima.division, 2, 'en NARANJA, que es donde está tu media');
           var pr = Rg.estado(1).pr;
+          eq(ultima.nombre, 'NARANJA IV', 'en su primer escalón');
           var mala = jugar(0);
-          eq(mala.cambio, -RG.MAX_PIERDE, 'una partida en blanco quita el máximo');
-          eq(Rg.estado(1).pr, pr - RG.MAX_PIERDE);
-          for (var k = 0; k < 20; k++) jugar(0);
+          eq(mala.cambio, -RG.DIVISIONES[2].pierde, 'una partida en blanco quita el máximo de la fruta');
+          eq(Rg.estado(1).pr, pr - RG.DIVISIONES[2].pierde);
+          for (var k = 0; k < 30; k++) jugar(0);
           eq(Rg.estado(1).pr, 0, 'en el suelo se queda en cero');
           var buena = jugar(RG.DIVISIONES[0].par * 2);
-          eq(buena.cambio, 30, 'y lo primero que ganas cuenta entero: no hay deuda');
+          eq(buena.cambio, 20, 'y lo primero que ganas cuenta entero: no hay deuda');
           G.toMenu();
         } finally { Rg.conCuenta = logged; }
       });
@@ -12735,11 +12754,17 @@
   test('RANGO: sus contadores viajan con la cuenta y se funden sin perder nada',
     function () {
       conContadores(function (A) {
-        var t = window.PM.Rango.temporada();
-        A.record('rg_' + t + '_1', 40);
-        A.merge({ ['rg_' + t + '_1']: 90, ['rl_' + t + '_1']: 10 });
-        eq(A.stats()['rg_' + t + '_1'], 90, 'lo ganado en el otro aparato llega');
-        eq(A.stats()['rl_' + t + '_1'], 10, 'y lo perdido también');
+        var Rg = window.PM.Rango, t = Rg.temporada();
+        var kg = Rg.clave('rg', t, 1), kl = Rg.clave('rl', t, 1);
+        eq(kg, 'rg2_' + t + '_1', 'las reglas de ahora llevan su versión en la clave');
+        A.record(kg, 40);
+        A.merge({ [kg]: 90, [kl]: 10 });
+        eq(A.stats()[kg], 90, 'lo ganado en el otro aparato llega');
+        eq(A.stats()[kl], 10, 'y lo perdido también');
+        /* los contadores de las reglas de antes no cuentan: un aparato que
+         * aún los tenga no puede devolver el PR viejo */
+        A.merge({ ['rg_' + t + '_1']: 500, ['rc_' + t + '_1']: 20, ['rt_' + t + '_1']: 900000 });
+        eq(Rg.estadoDe(A.stats(), t, 1).jugadas, 0, 'los de antes no se leen');
       });
     });
 
@@ -12800,7 +12825,9 @@
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     var est0 = Rg.estado, t0 = UI.rangoTabla;
     Rg.estado = function () {
-      return { temporada: 'x', n: 1, jugadas: 9, colocacion: 5, pr: 237, division: 2, enDivision: 37, mejor: 2 };
+      // NARANJA III: empieza en 235 y ocupa 35 PR
+      return Rg.estadoDe({ [Rg.clave('rc', 'x', 1)]: 9, [Rg.clave('rt', 'x', 1)]: 5 * 25000,
+                           [Rg.clave('rg', 'x', 1)]: 50 }, 'x', 1);
     };
     UI.rangoTabla = { n: 1, filas: [{ usuario: 'A', division: 2, pr: 210 }, { usuario: 'B', division: 4, pr: 420 }] };
     try {
@@ -12815,9 +12842,13 @@
       var mia = p.querySelectorAll('.rgs-fila.yo');
       eq(mia.length, 1, 'solo una marcada');
       ok(mia[0].textContent.indexOf(D[2].name) !== -1, 'y es la tuya');
-      ok(mia[0].textContent.indexOf('TE FALTAN 63') !== -1, 'con lo que te falta para subir');
+      eq(Rg.estado().nombre, 'NARANJA III', 'el estado de mentira cae donde se quería');
+      ok(mia[0].textContent.indexOf('TE FALTAN 20 PARA NARANJA II') !== -1, 'con lo que te falta para el escalón siguiente');
+      eq(mia[0].querySelector('.rgs-escalones .on').textContent, 'III', 'y su escalón encendido');
+      eq(filas[D.length - 1 - 3].querySelectorAll('.rgs-escalones i').length, 3, 'MANZANA tiene tres');
       ok(filas[D.length - 1 - 2].querySelector('.rgs-cuantos').textContent === '1', 'y cuántos hay en ella este mes');
-      ok(filas[D.length - 1 - 2].querySelector('.rgs-marca').textContent === UI.milesMaes(Rg.par(2, 1)), 'y la marca a superar');
+      ok(filas[D.length - 1 - 2].querySelector('.rgs-marca').textContent.indexOf(UI.milesMaes(Rg.par(2, 1))) === 0, 'y la marca a superar, de su primer escalón al último');
+      eq(filas[D.length - 1 - 2].querySelector('.rgs-nivel').textContent, '2', 'y el nivel que pide');
     } finally {
       Rg.estado = est0;
       UI.rangoTabla = t0;

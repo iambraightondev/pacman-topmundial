@@ -1099,22 +1099,35 @@
    * pasa de 1.300 y una de cada diez supera 9.600; la mejor ronda 40.000.
    * ---------------------------------------------------------------- */
   CFG.RANGO = {
+    /* 24 sep: más duro. Las marcas de antes se quedaban muy por debajo de lo
+     * que se juega (llegar al nivel 4 ya daba PR en LLAVE) y casi cualquier
+     * partida sumaba el máximo. Ahora cada fruta se parte en ESCALONES (IV a
+     * I hasta NARANJA, III a I desde MANZANA; LLAVE es la cima, sin
+     * escalones) y cada escalón pide más marca y más PR que el anterior.
+     *   par         la marca EN SOLO del primer escalón de la fruta; los
+     *               demás van subiendo hasta la de la fruta siguiente
+     *   escalones   en cuántos se parte
+     *   prEscalon   los PR que ocupa cada uno
+     *   nivel       el nivel al que hay que llegar para GANAR PR (sin él, la
+     *               partida solo puede restar)
+     *   gana/pierde lo máximo que mueve una partida en esa fruta */
     DIVISIONES: [
-      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 1500,  color: '#ff3b3b' },
-      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 3000,  color: '#ff5fa0' },
-      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 6000,  color: '#ffb852' },
-      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 10000, color: '#7dff5a' },
-      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 16000, color: '#2bff88' },
-      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 25000, color: '#6fd0ff' },
-      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 40000, color: '#ffe23a' },
-      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 60000, color: '#e6ecff' }
+      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 1, gana: 40, pierde: 15, color: '#ff3b3b' },
+      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 35, pierde: 18, color: '#ff5fa0' },
+      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 30, pierde: 20, color: '#ffb852' },
+      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 28, pierde: 22, color: '#7dff5a' },
+      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 25, pierde: 25, color: '#2bff88' },
+      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 22, pierde: 28, color: '#6fd0ff' },
+      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 20, pierde: 30, color: '#ffe23a' },
+      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 18, pierde: 30, color: '#e6ecff' }
     ],
-    PR_DIVISION: 100,     // puntos de rango (PR) que ocupa cada división
     COLOCACION: 5,        // partidas antes de tener rango
-    /* lo que se gana o se pierde: 25 por cada vez que doblas (o te quedas en
-     * la mitad de) la marca de tu división, más 5 por jugarla. Igualar tu par
-     * sube un poco; la mitad te quita 20; el doble te da 30. */
-    PASO: 25, BASE: 5, MAX_GANA: 40, MAX_PIERDE: 25
+    /* lo que mueve una partida: 20 por cada vez que doblas (o te quedas en la
+     * mitad de) la marca de tu escalón. Igualarla no da nada. */
+    PASO: 20,
+    /* Las reglas de antes eran otras cuentas: sus contadores no valen para
+     * estas. Los de ahora llevan este número en la clave (js/rango.js). */
+    VERSION: 2
   };
 
   /* ---------- Maestrías de ROL (22 de septiembre) ----------

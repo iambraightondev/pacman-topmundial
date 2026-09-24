@@ -258,7 +258,7 @@
       if (rep && rep.ajustes && rep.ajustes.clasif && Rg && Rg.conCuenta() &&
           (!sb.quien || (A && A.name && sb.quien === A.name())) &&
           (!S || S.actual(new Date(sb.fecha)) === Rg.temporada())) {
-        Rg.apuntar(Math.max(0, sb.p || 0), sb.j || 1);
+        Rg.apuntar(Math.max(0, sb.p || 0), sb.j || 1, sb.lv || 1);
         if (A && A.pushQuiet) A.pushQuiet();
       }
       this.borrar();

@@ -7227,24 +7227,24 @@
       this.rangoSub.textContent = 'DESATADO · ' + fmt + ' · TEMPORADA ' +
         (S ? S.nombre(e.temporada) : e.temporada) +
         '  ·  CADA MES SE EMPIEZA DE CERO: ' + RG.COLOCACION +
-        ' PARTIDAS DE COLOCACIÓN Y LUEGO SUBES O BAJAS SEGÚN TU MARCA CONTRA LA DE TU DIVISIÓN';
+        ' PARTIDAS DE COLOCACIÓN Y LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO';
 
       var d = e.division, div = d >= 0 ? D[d] : null;
       this.rangoInfo.style.setProperty('--c', div ? div.color : '#8a8cae');
       this.rangoInfo.classList.toggle('off', !div);
       this.rangoK.textContent = 'TU RANGO · ' + fmt;
-      this.rangoName.textContent = div ? div.name : 'SIN RANGO';
+      this.rangoName.textContent = div ? e.nombre : 'SIN RANGO';
       this.rangoState.textContent = div
-        ? (this.milesMaes(e.pr) + ' PR · ' + (d < D.length - 1
-            ? ('TE FALTAN ' + (RG.PR_DIVISION - e.enDivision) + ' PARA ' + D[d + 1].name)
-            : 'LA DIVISIÓN MÁS ALTA'))
+        ? (this.milesMaes(e.pr) + ' PR · ' + (e.anchoTramo
+            ? ('TE FALTAN ' + e.faltan + ' PARA ' + e.siguiente)
+            : 'LA CIMA'))
         : (e.jugadas ? ('COLOCACIÓN: ' + e.colocacion + ' DE ' + RG.COLOCACION)
                      : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS'));
 
       var self = this;
       this.rangoDatos.innerHTML = '';
       [[div ? this.milesMaes(e.pr) : '—', 'PR'], [String(e.jugadas), 'PARTIDAS'],
-       [e.mejor >= 0 ? D[e.mejor].name : '—', 'LO MÁS ALTO']].forEach(function (x) {
+       [e.mejorNombre || '—', 'LO MÁS ALTO']].forEach(function (x) {
         var c = document.createElement('div');
         var v = document.createElement('b');
         v.textContent = x[0];
@@ -7260,11 +7260,11 @@
       fila.className = 'maes-sig-fila';
       var izq = document.createElement('span');
       var der = document.createElement('span');
-      var pct = div ? (e.enDivision / RG.PR_DIVISION) : (e.colocacion / RG.COLOCACION);
+      var pct = div ? (e.anchoTramo ? e.enTramo / e.anchoTramo : 1) : (e.colocacion / RG.COLOCACION);
       if (div) {
-        izq.textContent = 'TU MARCA DE REFERENCIA: ' +
-          this.milesMaes(Rg.par(d, n)) + ' PUNTOS';
-        der.textContent = e.enDivision + ' / ' + RG.PR_DIVISION;
+        izq.textContent = 'MARCA A SUPERAR: ' + this.milesMaes(Rg.parTramo(e.tramo, n)) +
+          ' · NIVEL ' + (div.nivel || 1);
+        der.textContent = e.anchoTramo ? (e.enTramo + ' / ' + e.anchoTramo) : (this.milesMaes(e.pr) + ' PR');
       } else {
         izq.textContent = 'COLOCACIÓN';
         der.textContent = e.colocacion + ' / ' + RG.COLOCACION;
@@ -7344,7 +7344,7 @@
         var dv = document.createElement('span');
         dv.className = 'rango-div';
         if (f.division >= 0) {
-          dv.textContent = D[f.division].name;
+          dv.textContent = f.nombre || D[f.division].name;
           dv.style.color = D[f.division].color;
         } else {
           dv.textContent = 'COLOCACIÓN ' + f.colocacion + '/' + CFG.RANGO.COLOCACION;
@@ -7365,7 +7365,7 @@
     showRangosPrompt: function () {
       var self = this, Rg = window.PM.Rango, B = window.PM.Badges;
       if (!Rg) return;
-      var RG = CFG.RANGO, D = RG.DIVISIONES, n = this.rangoFmt || 1;
+      var RG = CFG.RANGO, D = RG.DIVISIONES, TR = Rg.TRAMOS, n = this.rangoFmt || 1;
       var e = Rg.estado(n);
       var fmt = B ? B.FORMATOS[n - 1].name : 'SOLO';
       var t = this.rangoTabla, cuantos = null;
@@ -7379,20 +7379,22 @@
         if (txt != null) x.textContent = txt;
         return x;
       }
+      /* los escalones de una fruta, de abajo arriba */
+      function deFruta(d) { return TR.filter(function (x) { return x.d === d; }); }
       this.showPrompt({
         title: 'LOS RANGOS',
         arcade: true,
         tono: 'amarillo',
-        lines: [fmt + ' · CADA DIVISIÓN SON ' + RG.PR_DIVISION + ' PR. SI SUPERAS LA MARCA DE TU DIVISIÓN, GANAS PR; SI TE QUEDAS CORTO, PIERDES.'],
+        lines: [fmt + ' · CADA FRUTA SE SUBE POR ESCALONES. SUPERA LA MARCA DE TU ESCALÓN Y LLEGA AL NIVEL QUE PIDE PARA GANAR PR; SI TE QUEDAS CORTO, PIERDES.'],
         custom: function (p) {
           var lista = el('div', 'rgs-lista');
           var cab = el('div', 'rgs-fila rgs-cab');
-          ['', 'DIVISIÓN', 'PR', 'MARCA A SUPERAR', 'JUGADORES'].forEach(function (x) {
+          ['', 'DIVISIÓN', 'PR', 'MARCA A SUPERAR', 'NIVEL', 'JUGADORES'].forEach(function (x) {
             cab.appendChild(el('span', null, x));
           });
           lista.appendChild(cab);
           for (var d = D.length - 1; d >= 0; d--) {
-            var div = D[d], mia = (e.division === d);
+            var div = D[d], mia = (e.division === d), esc = deFruta(d);
             var fila = el('div', 'rgs-fila' + (mia ? ' yo' : ''));
             fila.style.setProperty('--c', div.color);
             var cv = document.createElement('canvas');
@@ -7406,24 +7408,35 @@
             }
             fila.appendChild(cv);
             var nom = el('span', 'rgs-nombre', div.name);
-            if (mia) nom.appendChild(el('i', 'rgs-tu', 'ESTÁS AQUÍ'));
+            /* los escalones, de IV a I; el tuyo, encendido */
+            if (esc.length > 1) {
+              var chips = el('span', 'rgs-escalones');
+              esc.forEach(function (x) {
+                chips.appendChild(el('i', mia && TR[e.tramo] === x ? 'on' : '', x.rom));
+              });
+              nom.appendChild(chips);
+            }
             fila.appendChild(nom);
-            var desde = d * RG.PR_DIVISION;
-            fila.appendChild(el('span', 'rgs-pr', d < D.length - 1
-              ? (desde + ' – ' + (desde + RG.PR_DIVISION - 1)) : (desde + ' +')));
-            fila.appendChild(el('span', 'rgs-marca', self.milesMaes(Rg.par(d, n))));
+            var ult = esc[esc.length - 1];
+            fila.appendChild(el('span', 'rgs-pr', ult.ancho
+              ? (esc[0].desde + ' – ' + (ult.desde + ult.ancho - 1)) : (esc[0].desde + ' +')));
+            fila.appendChild(el('span', 'rgs-marca', esc.length > 1
+              ? (self.milesMaes(Rg.parTramo(TR.indexOf(esc[0]), n)) + ' – ' +
+                 self.milesMaes(Rg.parTramo(TR.indexOf(ult), n)))
+              : self.milesMaes(Rg.parTramo(TR.indexOf(esc[0]), n))));
+            fila.appendChild(el('span', 'rgs-nivel', (div.nivel || 1) > 1 ? String(div.nivel) : '—'));
             fila.appendChild(el('span', 'rgs-cuantos', cuantos ? String(cuantos[d]) : '—'));
             if (mia) {
               var pie = el('div', 'rgs-pie');
-              pie.appendChild(el('span', null, self.milesMaes(e.pr) + ' PR'));
+              pie.appendChild(el('span', null, e.nombre + ' · ' + self.milesMaes(e.pr) + ' PR'));
               var barra = el('div', 'maes-barra');
               var relleno = document.createElement('i');
-              relleno.style.width = (Math.max(0, Math.min(1, e.enDivision / RG.PR_DIVISION)) * 100).toFixed(1) + '%';
+              relleno.style.width = ((e.anchoTramo ? Math.max(0, Math.min(1, e.enTramo / e.anchoTramo)) : 1) * 100).toFixed(1) + '%';
               barra.appendChild(relleno);
               pie.appendChild(barra);
-              pie.appendChild(el('span', null, d < D.length - 1
-                ? ('TE FALTAN ' + (RG.PR_DIVISION - e.enDivision) + ' PARA ' + D[d + 1].name)
-                : 'LA DIVISIÓN MÁS ALTA'));
+              pie.appendChild(el('span', null, e.anchoTramo
+                ? ('TE FALTAN ' + e.faltan + ' PARA ' + e.siguiente)
+                : 'LA CIMA'));
               fila.appendChild(pie);
             }
             lista.appendChild(fila);
@@ -11810,13 +11823,14 @@
               valR = 'COLOCACIÓN ' + rg.jugadas + '/' + CFG.RANGO.COLOCACION;
               subR = 'TE COLOCAMOS AL ACABAR LA ' + CFG.RANGO.COLOCACION + '.ª';
             } else if (rg.colocado) {
-              valR = dn.name + ' · ' + mil(rg.despues) + ' PR';
-              subR = '¡YA TIENES RANGO! EMPIEZAS EN ' + dn.name;
+              valR = rg.nombre + ' · ' + mil(rg.despues) + ' PR';
+              subR = '¡YA TIENES RANGO! EMPIEZAS EN ' + rg.nombre;
             } else {
               valR = (rg.cambio >= 0 ? '+' : '') + rg.cambio + ' PR';
-              subR = rg.sube ? ('¡SUBES A ' + dn.name + '!')
-                : rg.baja ? ('BAJAS A ' + dn.name)
-                : (dn.name + ' · ' + mil(rg.despues) + ' PR');
+              subR = rg.sube ? ('¡SUBES A ' + rg.nombre + '!')
+                : rg.baja ? ('BAJAS A ' + rg.nombre)
+                : rg.sinNivel ? ('SIN LLEGAR AL NIVEL ' + rg.nivelPide + ' NO SE GANA PR')
+                : (rg.nombre + ' · ' + mil(rg.despues) + ' PR');
               colR = rg.cambio >= 0 ? '#2bff88' : '#ff6b6b';
             }
             fila(rg.sube || rg.colocado ? 'sube' : '', 'RANGO', valR, colR, subR);
@@ -13367,7 +13381,8 @@
       if (!Rg.conCuenta()) return 'HACE FALTA CUENTA PARA TENER RANGO';
       var e = Rg.estado(1), D = CFG.RANGO.DIVISIONES;
       return 'CUENTA PARA TU RANGO DEL MES · EN SOLO: ' + (e.division >= 0
-        ? (D[e.division].name + ' · ' + e.pr + ' PR')
+        ? (e.nombre + ' · ' + e.pr + ' PR · SUPERA ' + this.milesMaes(Rg.parTramo(e.tramo, 1)) +
+           ((D[e.division].nivel || 1) > 1 ? ' Y LLEGA AL NIVEL ' + D[e.division].nivel : ''))
         : ('COLOCACIÓN ' + e.colocacion + '/' + CFG.RANGO.COLOCACION));
     },
 
