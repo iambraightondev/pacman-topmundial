@@ -119,7 +119,8 @@
       var payload = {
         config: {
           broadcast: { self: false, ack: false },
-          presence: { key: '' },
+          // con clave (el usuario) si este canal lleva PRESENCIA (js/conectados.js)
+          presence: { key: self.presenceKey || '' },
           postgres_changes: []
         }
       };
@@ -168,12 +169,16 @@
           } else {
             self.vaciarPendientes();
           }
+          // al volver a unirse, se vuelve a decir quién es
+          if (self.presencia) self.enviarPresencia();
         } else {
           self.fallo();
         }
         return;
       }
-      if (msg.event === 'broadcast' && msg.payload) {
+      if ((msg.event === 'presence_state' || msg.event === 'presence_diff') && msg.payload) {
+        if (self.cbs.onPresence) self.cbs.onPresence(msg.event, msg.payload);
+      } else if (msg.event === 'broadcast' && msg.payload) {
         self.cbs.onData(msg.payload.event, msg.payload.payload);
       } else if (msg.event === 'phx_error' || msg.event === 'phx_close') {
         self.fallo();
@@ -190,6 +195,24 @@
       self.open = false;
       self.fallo();
     };
+  };
+
+  /* PRESENCIA (24 sep): lo que este jugador dice de sí mismo en el canal
+   * (quién es y qué hace). Supabase lo reparte a los demás y lo retira solo
+   * cuando se cae la conexión. */
+  SupaTransport.prototype.track = function (obj) {
+    this.presencia = obj;
+    if (this.open) this.enviarPresencia();
+  };
+  SupaTransport.prototype.enviarPresencia = function () {
+    if (!this.ws || !this.presencia) return;
+    try {
+      this.ws.send(JSON.stringify({
+        topic: this.topic, event: 'presence',
+        payload: { type: 'presence', event: 'track', payload: this.presencia },
+        ref: String(++this.refN), join_ref: 'join'
+      }));
+    } catch (e) { /* ya se reenviará al reconectar */ }
   };
 
   /* Suelta el socket actual sin que sus eventos vuelvan a molestar */

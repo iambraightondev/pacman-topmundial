@@ -7411,15 +7411,22 @@
            'LAS MARCAS SON DE SOLO. ' + self.textoMultRango() + '.',
            'LA PRIMERA VEZ QUE LLEGAS A CADA FRUTA EN LA TEMPORADA TE LLEVAS SU PREMIO EN MONEDAS.'
           ].forEach(function (t) { ayuda.appendChild(el('div', null, t)); });
-          ayudaB.addEventListener('click', function () {
-            var ver = ayuda.style.display === 'none';
+          /* un recuadro flotante pegado al "?" que tapa lo de debajo en vez de
+           * empujarlo; se cierra al pulsar fuera */
+          function verAyuda(ver) {
             ayuda.style.display = ver ? '' : 'none';
             ayudaB.classList.toggle('on', ver);
+          }
+          ayudaB.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            verAyuda(ayuda.style.display === 'none');
           });
+          ayuda.addEventListener('click', function (ev) { ev.stopPropagation(); });
+          p.addEventListener('click', function () { verAyuda(false); });
           var cabeza = el('div', 'rgs-cabeza');
           cabeza.appendChild(ayudaB);
+          cabeza.appendChild(ayuda);
           p.appendChild(cabeza);
-          p.appendChild(ayuda);
           var lista = el('div', 'rgs-lista');
           var cab = el('div', 'rgs-fila rgs-cab');
           ['', 'DIVISIÓN', 'PR', 'MARCA (SOLO)', 'NIVEL', 'PREMIO', 'JUGADORES'].forEach(function (x) {
@@ -9057,7 +9064,16 @@
         if (self.els.friends && self.els.friends.style.display !== 'none') {
           self.refreshFriends();
         }
+        // quién está conectado va con la cuenta: se une o se sale con ella
+        if (window.PM.Conectados) window.PM.Conectados.arrancar();
       };
+      if (window.PM.Conectados) {
+        window.PM.Conectados.onchange = function () {
+          if (self.els.friends && self.els.friends.style.display !== 'none') {
+            self.pintarEstadosAmigos();
+          }
+        };
+      }
       /* ¿Venimos del enlace del correo? Entonces la sesión ya viene abierta en
        * el ancla de la URL y lo único que falta es la contraseña nueva. Va
        * ANTES que restore() porque esta sesión manda sobre la que hubiera
@@ -9271,6 +9287,23 @@
       }
     },
 
+    /* EN LÍNEA / JUGANDO / EN PARTY / DESCONECTADO de cada amigo (24 sep).
+     * Se repinta cada vez que la presencia cambia (Conectados.onchange). */
+    pintarEstadosAmigos: function () {
+      var Cx = window.PM.Conectados;
+      if (!this.friendAvatars) return;
+      var TXT = { party: 'EN PARTY', jugando: 'JUGANDO', menu: 'EN LÍNEA' };
+      this.friendAvatars.forEach(function (it) {
+        if (!it.estado) return;
+        var e = Cx ? Cx.de(it.name) : null;
+        var clase = 'amg-estado ' + (e ? ('on ' + e) : 'off');
+        if (it.estado.className !== clase) it.estado.className = clase;
+        var t = e ? TXT[e] : 'DESCONECTADO';
+        if (it.estado.textContent !== t) it.estado.textContent = t;
+        it.card.classList.toggle('conectado', !!e);
+      });
+    },
+
     renderFriends: function () {
       var self = this;
       var F = window.PM.Friends;
@@ -9299,6 +9332,10 @@
         this.friendsList.appendChild(vacio);
         return;
       }
+      /* los que están conectados, primero (y entre ellos, los que juegan) */
+      var Cx = window.PM.Conectados;
+      var peso = function (n) { var e = Cx && Cx.de(n); return e === 'party' ? 3 : e === 'jugando' ? 2 : e ? 1 : 0; };
+      list = list.slice().sort(function (a, b) { return peso(b) - peso(a); });
       list.forEach(function (name) {
         var card = el('div', 'friend-row amg-ficha');
 
@@ -9334,6 +9371,9 @@
         av.className = 'friend-avatar amg-avatar';
         card.appendChild(av);
         card.appendChild(el('div', 'friend-name amg-nombre', name));
+        /* ¿está conectado? (js/conectados.js) */
+        var estado = el('div', 'amg-estado');
+        card.appendChild(estado);
         var datos = el('div', 'amg-datos', '');
         card.appendChild(datos);
 
@@ -9361,10 +9401,11 @@
         }, true);
         card.appendChild(acciones);
 
-        self.friendAvatars.push({ name: name, canvas: av, card: card, datos: datos });
+        self.friendAvatars.push({ name: name, canvas: av, card: card, datos: datos, estado: estado });
         self.friendsList.appendChild(card);
       });
       this.paintFriendAvatars();     // con lo que ya se sepa
+      this.pintarEstadosAmigos();
       this.pullFriendAvatars();      // y se repinta cuando lleguen
     },
 
@@ -13274,6 +13315,7 @@
       this.refreshMarquesina();  // marcador, monedas y cinta
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
+      if (window.PM.Conectados) window.PM.Conectados.arrancar();
       this.showPanel('menu');
       this.animarNickLook();     // tu Pac-Man junto a tu nombre
       // si el nivel subió justo al salirse de la partida, el aviso no se

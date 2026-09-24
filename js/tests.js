@@ -13216,6 +13216,12 @@
       eq(mia[0].querySelectorAll('.rgs-corte').length, 3, 'con una marca en cada cambio de escalón');
       ok(p.querySelector('.rgs-ayuda-b'), 'y el cómo se sube, detrás de un ?');
       eq(p.querySelector('.rgs-ayuda').style.display, 'none', 'cerrado hasta que se pulse');
+      var ayB = p.querySelector('.rgs-ayuda-b'), ayR = p.querySelector('.rgs-ayuda');
+      ok(ayR.parentNode === ayB.parentNode, 'el recuadro va pegado al ?, flotando');
+      ayB.click();
+      eq(ayR.style.display, '', 'se abre al pulsar el ?');
+      p.click();
+      eq(ayR.style.display, 'none', 'y se cierra al pulsar fuera');
       eq(mia[0].querySelector('.rgs-escalones .on').textContent, 'III', 'y su escalón encendido');
       eq(filas[D.length - 1 - 3].querySelectorAll('.rgs-escalones i').length, 3, 'MANZANA tiene tres');
       ok(filas[D.length - 1 - 2].querySelector('.rgs-cuantos').textContent === '1', 'y cuántos hay en ella este mes');
@@ -13225,6 +13231,26 @@
       Rg.estado = est0;
       UI.rangoTabla = t0;
       UI.hidePrompt();
+    }
+  });
+
+  test('AMIGOS: se ve quién está conectado y qué hace', function () {
+    var C = window.PM.Conectados;
+    var m0 = C.mapa, oc0 = C.onchange;
+    C.onchange = null;
+    try {
+      C.recibir('presence_state', { ESTER: { metas: [{ phx_ref: 'a', u: 'ESTER', e: 'menu' }] } });
+      eq(C.de('ester'), 'menu', 'en línea, sin importar mayúsculas');
+      eq(C.de('MAULIO'), null, 'quien no está sale desconectado');
+      C.recibir('presence_diff', { joins: { ESTER: { metas: [{ phx_ref: 'b', e: 'jugando' }] } }, leaves: {} });
+      eq(C.de('ESTER'), 'jugando', 'con dos pestañas se enseña la que más dice');
+      C.recibir('presence_diff', { joins: {}, leaves: { ESTER: { metas: [{ phx_ref: 'b' }] } } });
+      eq(C.de('ESTER'), 'menu', 'al cerrar una le queda la otra');
+      C.recibir('presence_diff', { joins: {}, leaves: { ESTER: { metas: [{ phx_ref: 'a' }] } } });
+      eq(C.de('ESTER'), null, 'y al cerrar todas, desconectada');
+    } finally {
+      C.mapa = m0;
+      C.onchange = oc0;
     }
   });
 

@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Tus amigos, conectados o no
+
+**AMIGOS:** cada tarjeta dice si ese amigo está EN LÍNEA, JUGANDO, EN PARTY o
+DESCONECTADO, con un punto de color, y los conectados salen primero. Va en
+vivo (presencia de Supabase Realtime) y desaparece solo al cerrar la pestaña.
+Solo se ve a quien tiene cuenta y la versión nueva abierta.
+**LOS RANGOS:** el "?" abre un recuadro flotante pequeño encima de la tabla,
+en vez de empujarla; se cierra al pulsar fuera.
+
 ## 2026-09-24 · CACERÍA y PAC-MAN VS. con el GAME OVER de recreativa
 
 Tenían el panel antiguo, con el ganador en una línea de texto. Ahora acaban
