@@ -8067,3 +8067,12 @@ body { font-size-adjust: 0.56; }
   position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
   background: rgba(0, 0, 0, 0.75);
 }
+
+/* ENCENDIDA: los segundos que le quedan de efecto, en grande y del color del
+ * rol, con brillo; la recarga (blanca, sobre la sombra) sale al apagarse */
+#habBar .hab-b.durando .hab-secs {
+  font-size: 17px;
+  color: #fff;
+  text-shadow: 0 0 6px var(--hb), 0 0 2px #000, 0 0 2px #000;
+}
+#habBar .hab-b.durando .hab-ico { opacity: 0.55; }

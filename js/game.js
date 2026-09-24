@@ -5214,6 +5214,8 @@
       }
       // la Q entera de las extravagantes nuevas, que dura más que los dientes
       if (st && st.qEdad >= 0) extra.qSeg = st.qEdad / 60;
+      // lo que va DETRÁS del muñeco (el aura de fuego del FRENESÍ)
+      if (A.dibujarDetras) A.dibujarDetras(this, ctx, pc, i);
       pc.draw(ctx, color, skin, extra);
       if (st && st.dientes > 0 && !rara) {
         S.drawPacTeeth(ctx, pc.x, y, pc.dir, pc.visibleMouth(), color, skin);

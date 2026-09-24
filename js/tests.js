@@ -6813,6 +6813,26 @@
     }
   });
 
+  test('encendida, la habilidad cuenta lo que le queda de efecto; apagada, su recarga', function () {
+    var UI = window.PM.UI;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['asesino'], loadouts: ['shuriken,frenesi,flash,ejecucion'] });
+      G.state = 'PLAYING'; G.readyTicks = 0;
+      var k = HB.listaDe(G, 0).map(function (h) { return h.id; }).indexOf('frenesi');
+      ok(k >= 0, 'lleva FRENESÍ');
+      ok(HB.pulsar(G, 0, k), 'se lanza');
+      UI.refreshHabBar();
+      var o = UI.habGroups[0].btns[k];
+      ok(o.b.classList.contains('durando'), 'encendida: el botón cuenta el efecto');
+      eq(o.secs.textContent, String(Math.ceil(HB.dura(G, 0, k) / 60)), 'con sus segundos');
+      HB.estado(0).frenesi = 0;
+      UI.refreshHabBar();
+      ok(!o.b.classList.contains('durando'), 'al apagarse deja de contarlo');
+      eq(o.secs.textContent, String(HB.restan(0, k)), 'y pasa a la recarga');
+    } finally { G.toMenu(); }
+  });
+
   test('en dúo cada jugador tiene sus cuatro poderes y su propia recarga',
     function () {
       partidaHab2(undefined, ['tanque', 'asesino']);

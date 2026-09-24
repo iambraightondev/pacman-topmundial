@@ -12723,17 +12723,21 @@
         o.b.classList.toggle('listo', listo);
         o.listo = listo;
       }
-      /* los segundos que faltan, solo cuando cambia el número */
-      var resta = A.restan(idx, k);
-      if (resta !== o.resta) {
-        o.resta = resta;
-        o.secs.textContent = resta > 0 ? resta : '';
-        o.b.classList.toggle('contando', resta > 0);
-      }
       var on = !!A.activa(g, idx, k);
       if (on !== o.activa) {
         o.activa = on;
         o.b.classList.toggle('activa', on);
+      }
+      /* Los segundos: MIENTRAS ESTÁ ENCENDIDA, los que le quedan de efecto
+       * (24 sep); al apagarse, los de la recarga. Solo cuando cambia el
+       * número. El signo delante distingue un reloj del otro. */
+      var dura = (on && A.dura) ? Math.ceil(A.dura(g, idx, k) / 60) : 0;
+      var resta = dura > 0 ? -dura : A.restan(idx, k);
+      if (resta !== o.resta) {
+        o.resta = resta;
+        o.secs.textContent = resta > 0 ? resta : (resta < 0 ? -resta : '');
+        o.b.classList.toggle('contando', resta !== 0);
+        o.b.classList.toggle('durando', resta < 0);
       }
     },
 

@@ -2196,6 +2196,35 @@
       return false;
     },
 
+    /* CUÁNTO LE QUEDA ENCENDIDA a la habilidad k, en ticks (24 sep): la barra
+     * lo enseña encima del botón mientras dura, y solo al apagarse pasa a
+     * enseñar la recarga. 0 si no está encendida o si no dura un tiempo
+     * fijo (un objeto que espera a que lo pisen, un proyectil en vuelo). */
+    CAMPOS_DURA: {
+      turbo: 'turbo', embestida: 'carga', acecho: 'acecho', provocar: 'provoca',
+      escudo: 'coraza', arrollar: 'arrolla', inmunidad: 'inmune', tormenta: 'tormenta',
+      sombra: 'sombra', frenesi: 'frenesi', carrona: 'carrona', marca: 'marca',
+      gancho_inverso: 'ganchoInv', gancho: 'ganchoOut', caceria: 'caceria', yunque: 'yunque',
+      piel_piedra: 'pielPiedra', rebote: 'rebote', terremoto: 'terremoto',
+      fortaleza: 'fortaleza', estela: 'estela', cadena: 'cadena', campo: 'campo',
+      hospital: 'hospital', eclipse: 'eclipse'
+    },
+    dura: function (G, idx, k) {
+      var s = this.estado(idx);
+      if (!s) return 0;
+      var h = this.listaDe(G, idx)[k];
+      if (!h || !this.activa(G, idx, k)) return 0;
+      var campo = this.CAMPOS_DURA[h.id];
+      if (campo) return Math.max(0, +s[campo] || 0);
+      /* los que dejan algo en el laberinto: si lleva su propio reloj, ese */
+      var o = s[h.id];
+      if (o && typeof o === 'object') {
+        var t = +(o.t || o.ticks || o.vida || o.dura) || 0;
+        return t > 0 ? t : 0;
+      }
+      return 0;
+    },
+
     /* ---------- LO QUE UNA MÁQUINA LE HACE AL JUGADOR DE OTRA (23 sep) ----------
      * Cada invitado manda en SU Pac-Man: su posición, sus choques, y lo suyo
      * de la foto no se lo cree (el escudo, la recarga solo hacia arriba, sus
@@ -5911,6 +5940,40 @@
       return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
     },
 
+    /* Lo que va DETRÁS de cada Pac-Man (24 sep). El FRENESÍ era tres arcos
+     * rojos y un número de cuatro píxeles: ahora es un aura de fuego que late
+     * y unas lenguas de llama que giran y crecen con el multiplicador, para
+     * que se vea de lejos que ese Pac-Man está desatado. */
+    dibujarDetras: function (G, ctx, pc, i) {
+      var s = this.estado(i);
+      if (!s || !(s.frenesi > 0)) return;
+      var x = pc.x, y = pc.y + CFG.MAZE_Y, tk = G.tick;
+      var furia = Math.min(1, ((s.frenesiMult || 1) - 1) / 1.5);   // 0 al empezar, 1 muy arriba
+      var late = Math.sin(tk / 5) * 1.2;
+      ctx.save();
+      var rad = 12 + furia * 4 + late;
+      var gr = ctx.createRadialGradient(x, y, 3, x, y, rad);
+      gr.addColorStop(0, 'rgba(255, 64, 88, 0.55)');
+      gr.addColorStop(0.6, 'rgba(255, 140, 40, 0.28)');
+      gr.addColorStop(1, 'rgba(255, 140, 40, 0)');
+      ctx.fillStyle = gr;
+      ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+      var lenguas = 8, largo = 3 + furia * 5;
+      for (var l = 0; l < lenguas; l++) {
+        var an = tk / 14 + l * Math.PI * 2 / lenguas;
+        var parpadeo = 0.6 + 0.4 * Math.abs(Math.sin(tk / 4 + l * 1.7));
+        var r0 = 7.5, r1 = r0 + largo * parpadeo;
+        ctx.fillStyle = (l % 2) ? '#ffb03a' : '#ff4058';
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(an - 0.28) * r0, y + Math.sin(an - 0.28) * r0);
+        ctx.lineTo(x + Math.cos(an) * r1, y + Math.sin(an) * r1);
+        ctx.lineTo(x + Math.cos(an + 0.28) * r0, y + Math.sin(an + 0.28) * r0);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    },
+
     /* Lo que lleva encima cada Pac-Man: aros de escudo e inmunidad, el aviso
      * de la provocación, la onda del pisotón y el aura de la tormenta */
     dibujarPac: function (G, ctx, pc, i) {
@@ -6024,9 +6087,23 @@
         ctx.fillStyle = '#e7c9ff'; ctx.font = '4px monospace'; ctx.textAlign = 'center'; ctx.fillText('500/750', x, y - 12);
       }
       if (s.frenesi > 0) {
-        ctx.strokeStyle = '#ff4058'; ctx.lineWidth = 2;
-        for (var fr = 0; fr < 3; fr++) { ctx.beginPath(); ctx.arc(x, y, 9 + fr * 2, tk / 8 + fr * 2, tk / 8 + fr * 2 + 1.1); ctx.stroke(); }
-        ctx.fillStyle = '#ffffff'; ctx.font = '4px monospace'; ctx.textAlign = 'center'; ctx.fillText('×' + (s.frenesiMult || 1).toFixed(2), x, y - 13);
+        /* delante: un aro blanco que se vacía con el tiempo que le queda y el
+         * multiplicador en una placa, con la letra del juego (el fuego va
+         * detrás, en dibujarDetras) */
+        var quedaF = Math.max(0, Math.min(1, s.frenesi / H.FRENESI_TICKS));
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, 10.5, -Math.PI / 2, -Math.PI / 2 + quedaF * Math.PI * 2); ctx.stroke();
+        var txtF = 'X' + (s.frenesiMult || 1).toFixed(2);
+        ctx.font = window.PM.Letra ? window.PM.Letra.lienzo(5) : '5px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        var anF = ctx.measureText(txtF).width + 4;
+        ctx.fillStyle = 'rgba(120, 8, 24, 0.9)';
+        ctx.fillRect(x - anF / 2, y - 18, anF, 7);
+        ctx.strokeStyle = '#ffb03a'; ctx.lineWidth = 0.5;
+        ctx.strokeRect(x - anF / 2, y - 18, anF, 7);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(txtF, x, y - 14.3);
+        ctx.textBaseline = 'alphabetic';
       }
       if (s.caceria > 0) {
         ctx.strokeStyle = 'rgba(255,102,204,0.8)'; ctx.lineWidth = 1.5;

@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · FRENESÍ con fuego, y cuánto le queda a cada poder
+
+**EL FRENESÍ SE VE.** Eran tres arcos y un número diminuto. Ahora el Pac-Man
+arde: un aura de fuego que late, llamas que giran y crecen con el multiplicador,
+el multiplicador en una placa legible y un aro que se vacía con el tiempo.
+**CADA PODER DICE CUÁNTO LE QUEDA.** Mientras está encendido, su botón cuenta
+los segundos de efecto que le quedan; al apagarse, pasa a contar la recarga.
+
 ## 2026-09-24 · Subir de rango paga
 
 **MONEDAS POR CADA FRUTA.** La primera vez que llegas a una fruta en la
