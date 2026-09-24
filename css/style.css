@@ -7776,7 +7776,7 @@ body { font-size-adjust: 0.56; }
   justify-content: center;
   overflow: hidden;
 }
-#habBar .hab-retrato canvas { width: 46px; height: 46px; image-rendering: auto; }
+#habBar .hab-retrato canvas { width: 56px; height: 56px; image-rendering: auto; }
 #habBar .hab-cuerpo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 #habBar .hab-cab { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 #habBar .hab-quien,
@@ -7886,7 +7886,7 @@ body { font-size-adjust: 0.56; }
 @media (max-width: 480px) {
   #habBar .hab-ficha { gap: 7px; padding: 5px 8px 5px 5px; }
   #habBar .hab-retrato { width: 44px; height: 44px; }
-  #habBar .hab-retrato canvas { width: 32px; height: 32px; }
+  #habBar .hab-retrato canvas { width: 40px; height: 40px; }
   #habBar .hab-celda { width: 42px; }
   #habBar .hab-b { width: 40px; height: 40px; }
   #habBar .hab-name { display: none; }

@@ -432,6 +432,9 @@
     },
 
     init: function () {
+      /* la pantalla en la que estabas, LO PRIMERO: montar los paneles ya
+       * apunta cosas (OPCIONES abre su primera pestaña) y la pisaría */
+      var vista = this.leerVista();
       this.touchDevice = ('ontouchstart' in window) ||
         (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
       this.els.menu = document.getElementById('menu');
@@ -507,7 +510,10 @@
           this.codeInput.value = rc;
           this.partyJoin(rc);
         }
+        return;
       }
+      /* y si no llega por un enlace, vuelve a donde estabas al recargar */
+      this.restaurarVista(vista);
     },
 
     /* ------------------------------------------------------
@@ -3169,6 +3175,7 @@
     showOptionsTab: function (name) {
       if (!this.tabPanes || !this.tabPanes[name]) return;
       this.optionsTab = name;
+      if (this.els.options && this.els.options.style.display !== 'none') this.recordarVista('options');
       for (var k in this.tabPanes) {
         if (!this.tabPanes.hasOwnProperty(k)) continue;
         this.tabPanes[k].style.display = (k === name) ? 'flex' : 'none';
@@ -12611,10 +12618,10 @@
       try {
         c.setTransform(1, 0, 0, 1, 0, 0);
         c.clearRect(0, 0, cv.width, cv.height);
-        /* 22 de lado lógico: el muñeco llena el círculo y aún cabe el accesorio */
-        var k = cv.width / 22;
+        /* 18 de lado lógico: el muñeco llena el círculo y aún cabe el accesorio */
+        var k = cv.width / 18;
         c.setTransform(k, 0, 0, k, 0, 0);
-        Sp.drawPacman(c, 11, look.a ? 12.5 : 11, CFG.DIR.RIGHT, 1, col, skin,
+        Sp.drawPacman(c, 9, look.a ? 10.5 : 9, CFG.DIR.RIGHT, 1, col, skin,
           { t: 0, icono: true, accesorio: look.a || null, team: [], estira: 1 });
         c.setTransform(1, 0, 0, 1, 0, 0);
       } catch (e) { /* un dibujo raro no rompe la barra */ }
@@ -13085,6 +13092,7 @@
         if (el && panels[i] !== name) el.style.zoom = '';
       }
       this.refreshControls();
+      this.recordarVista(name);
       /* el panel ya está puesto y medido: ahora se encoge si no cabe */
       var self = this;
       this.encajarPanel();
@@ -13093,6 +13101,58 @@
       if (window.requestAnimationFrame) {
         window.requestAnimationFrame(function () { self.encajarPanel(); });
       }
+    },
+
+    /* LA PANTALLA EN LA QUE ESTABAS (24 sep). Al recargar se volvía siempre
+     * a la portada. Ahora cada panel que se abre se apunta en esta pestaña
+     * (sessionStorage: sobrevive a la recarga, no a cerrarla) con lo que
+     * haga falta para volver a él tal cual —la pestaña de OPCIONES, el
+     * amigo cuyo perfil mirabas…— y UI.init lo reabre. En la portada o en
+     * partida no se apunta nada: una partida a medias ya se ofrece con
+     * CONTINUAR (js/guardado.js). */
+    VISTA_KEY: 'pacman-topmundial-vista',
+    recordarVista: function (name) {
+      var v = null;
+      if (name && name !== 'menu') {
+        v = { p: name };
+        if (name === 'mate') v.a = this.mateWho;
+        else if (name === 'options') v.a = this.optionsTab;
+        else if (name === 'ranking') v.a = this.rankTab;
+        else if (name === 'vestuario') v.a = this.vestTab;
+        else if (name === 'tienda') v.a = this.tiendaTab;
+      }
+      try {
+        if (v) sessionStorage.setItem(this.VISTA_KEY, JSON.stringify(v));
+        else sessionStorage.removeItem(this.VISTA_KEY);
+      } catch (e) { /* sin almacén: se vuelve a la portada, como antes */ }
+    },
+    leerVista: function () {
+      try {
+        var v = JSON.parse(sessionStorage.getItem(this.VISTA_KEY) || 'null');
+        return (v && typeof v.p === 'string') ? v : null;
+      } catch (e) { return null; }
+    },
+    restaurarVista: function (v) {
+      if (!v) return false;
+      var a = v.a;
+      var abre = {
+        options: function (s) { s.showOptions(); if (a) s.showOptionsTab(a); },
+        online: function (s) { s.showOnline(); },
+        badges: function (s) { s.showBadges(); },
+        maestrias: function (s) { s.showMaestrias(); },
+        rango: function (s) { s.showRango(); },
+        ranking: function (s) { s.showRanking(typeof a === 'number' ? a : null); },
+        mazes: function (s) { s.showMazes(); },
+        friends: function (s) { s.showFriends(); },
+        profile: function (s) { s.showProfile(); },
+        daily: function (s) { s.showDaily(); },
+        mate: function (s) { if (a) s.showFriendProfile(a); },
+        vestuario: function (s) { s.showVestuario(typeof a === 'string' ? a : null); },
+        tienda: function (s) { s.showTienda(typeof a === 'string' ? a : null); },
+        pase: function (s) { s.showPase(); }
+      }[v.p];
+      if (!abre) return false;
+      try { abre(this); return true; } catch (e) { this.showMenu(); return false; }
     },
 
     showMenu: function () {

@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Al recargar, sigues donde estabas
+
+**LA PÁGINA RECUERDA LA PANTALLA.** Recargar ya no te devuelve a la portada:
+vuelves al panel en el que estabas (con su pestaña, o el perfil del amigo que
+mirabas). En mitad de una partida sigue ofreciéndose CONTINUAR. Y el aspecto
+de cada jugador en su ficha de poderes se ve más grande.
+
 ## 2026-09-24 · La entrada a la CLASIFICATORIA, a la altura
 
 **TE JUEGAS ALGO.** Antes parecía la pausa. Ahora abre con la temporada, tu

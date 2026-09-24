@@ -12942,6 +12942,31 @@
     }
   });
 
+  test('al recargar se vuelve a la pantalla en la que estabas', function () {
+    var UI = window.PM.UI;
+    if (typeof sessionStorage === 'undefined') return;     // sin almacén (Node)
+    var antes = null;
+    try { antes = sessionStorage.getItem(UI.VISTA_KEY); } catch (e) { antes = null; }
+    try {
+      UI.showRango();
+      eq(UI.leerVista().p, 'rango', 'abrir un panel lo apunta');
+      UI.showOptions();
+      UI.showOptionsTab('sonido');
+      eq(UI.leerVista().a, 'sonido', 'con su pestaña');
+      UI.showMenu();
+      eq(UI.leerVista(), null, 'la portada lo borra: ahí no hay nada que recuperar');
+      ok(UI.restaurarVista({ p: 'friends' }), 'y al arrancar se reabre');
+      eq(UI.els.friends.style.display, 'flex', 'el panel que era');
+      ok(!UI.restaurarVista({ p: 'no-existe' }), 'uno desconocido, no');
+    } finally {
+      UI.showMenu();
+      try {
+        if (antes === null) sessionStorage.removeItem(UI.VISTA_KEY);
+        else sessionStorage.setItem(UI.VISTA_KEY, antes);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('CLASIFICATORIA: la entrada dice tu rango y lo que te juegas', function () {
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     var est0 = Rg.estado;
