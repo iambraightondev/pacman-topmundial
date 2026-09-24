@@ -1564,6 +1564,25 @@
       return true;
     },
 
+    /* El FRENESÍ (24 sep): +0,15 mientras haya algún fantasma AZUL (si no lo
+     * hay, ese primer bono no se da) más +0,15 por baja, todo con tope en
+     * FRENESI_MAX. */
+    hayAzul: function () {
+      var G = window.PM.Game;
+      if (!G || !G.ghosts) return false;
+      for (var i = 0; i < G.ghosts.length; i++) {
+        var g = G.ghosts[i];
+        if (g && g.frightened && (g.mode === 'normal' || g.mode === 'leaving')) return true;
+      }
+      return false;
+    },
+    frenesiVel: function (idx) {
+      var s = this.estado(idx);
+      if (!s || !(s.frenesi > 0)) return 1;
+      var v = (s.frenesiMult || 1) + (this.hayAzul() ? H.FRENESI_PASO : 0);
+      return Math.min(H.FRENESI_MAX, Math.round(v * 100) / 100);
+    },
+
     /* Multiplicador de velocidad del jugador idx (1 si no hay turbo).
      * Lo consulta Game.pacSpeedPx. */
     multVel: function (idx) {
@@ -1571,7 +1590,7 @@
       if (this.arrollando(idx)) return H.APISONADORA_MULT;
       var s = this.estado(idx), m = this.conTurbo(idx) ? H.TURBO_MULT : 1;
       if (s && s.sombra > 0) m *= H.SOMBRA_MULT;
-      if (s && s.frenesi > 0) m *= s.frenesiMult || 1;
+      if (s && s.frenesi > 0) m *= this.frenesiVel(idx);
       if (s && s.caceria > 0) m *= H.CACERIA_MULT;
       if (s && s.pielPiedra > 0) m *= 0.5;
       if (s && s.estela > 0) m *= H.ESTELA_MULT;
@@ -1780,7 +1799,7 @@
     puntosFantasma: function (G, who, g, base, como, exacto) {
       var s = this.estado(who), mult = 1, pts;
       var marcado = !!(g && this.marcaGhost[g.id] === who && s && s.marca > 0);
-      if (marcado && (!exacto || this.MARCA_EN_FIJOS[como])) mult *= 2;
+      if (marcado && (!exacto || this.MARCA_EN_FIJOS[como])) mult *= (H.MARCA_MULT || 2);
       pts = exacto ? Math.round((base || 0) * mult) : this.puntosDe(G, who, Math.round((base || 0) * mult));
       if (s && s.sombra > 0 && g) {
         var detras = this.deEspaldas(G.pacs[who], g);
@@ -1799,11 +1818,12 @@
       x = (x == null && g) ? g.x : x; y = (y == null && g) ? g.y : y;
       if (s.frenesi > 0) {
         this.efecto('frenesi', x, y, 26);
-        if ((s.frenesiMult || 1) < H.FRENESI_MAX - 1e-6) {
+        if (this.frenesiVel(who) < H.FRENESI_MAX - 1e-6) {
           /* cada baja acelera, hasta el tope */
-          s.frenesiMult = Math.min(H.FRENESI_MAX, (s.frenesiMult || 1) + H.FRENESI_PASO);
+          // redondeado a centésimas: sumar 0,15 cinco veces da 1,7499999…
+          s.frenesiMult = Math.min(H.FRENESI_MAX, Math.round(((s.frenesiMult || 1) + H.FRENESI_PASO) * 100) / 100);
           this.dar(G, who, 'frenesiMult', s.frenesiMult);
-          if (G.addPopup) G.addPopup(x, y - 7, 'X' + s.frenesiMult.toFixed(2), 35);
+          if (G.addPopup) G.addPopup(x, y - 7, 'X' + this.frenesiVel(who).toFixed(2), 35);
         } else {
           /* ya a tope: cada baja ALARGA el frenesí (24 sep) */
           s.frenesi += H.FRENESI_ALARGA;
@@ -1996,6 +2016,9 @@
     salvaDelChoque: function (G, idx, g) {
       var s = this.estado(idx);
       if (!s) return false;
+      /* SOMBRA (24 sep): INTANGIBLE, no solo invisible. Ni un fantasma ni
+       * el rey (que llega aquí sin `g`) lo pueden matar mientras dura. */
+      if (s.sombra > 0) return true;
       var p = G.pacs[idx], j;
       if (s.rebote > 0 && g) {
         s.rebote = 0;
@@ -3243,8 +3266,13 @@
       }
       var b = s.bomba, blancos = this.ghostsEn(G, b.c, b.r, H.BOMBA_RADIO);
       s.bomba = null;
-      if (this.manda(G)) for (var i = 0; i < blancos.length; i++)
-        this.matarCatalogo(G, blancos[i], idx, H.BOMBA_PUNTOS, 'bomba', 1, true);
+      /* las bajas de un mismo estallido van EN RACHA (24 sep): 250, 500,
+       * 1.000 y 2.000 */
+      var enRacha = 0;
+      if (this.manda(G)) for (var i = 0; i < blancos.length; i++) {
+        var ptsB = H.BOMBA_RACHA ? H.BOMBA_RACHA[Math.min(enRacha, H.BOMBA_RACHA.length - 1)] : H.BOMBA_PUNTOS;
+        if (this.matarCatalogo(G, blancos[i], idx, ptsB, 'bomba', 1, true)) enRacha++;
+      }
       /* y al REY FANTASMA si le pilla en el radio (22 sep 2026): plantarla y
        * esperar a que pase por encima es exactamente la jugada de la bomba */
       var JB = this.manda(G) && this.rey(G);
@@ -4655,8 +4683,9 @@
          * primero que pase; el bono de CADENA sigue yendo por quien lo cogió,
          * que es quien hizo el recorrido. */
         for (j = 0; j < G.pacs.length; j++) if (this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
-          G.addScore(300, j); this.bonoCadena(G, j, 300, joya.x, joya.y);
-          G.addPopup(joya.x, joya.y, 300, 30); this.efecto('joya', joya.x, joya.y, 24);
+          var ptsJ = H.CARROÑA_PUNTOS || 300;
+          G.addScore(ptsJ, j); this.bonoCadena(G, j, ptsJ, joya.x, joya.y);
+          G.addPopup(joya.x, joya.y, ptsJ, 30); this.efecto('joya', joya.x, joya.y, 24);
           this.joyas.splice(i, 1); break;
         }
       }
@@ -5454,18 +5483,30 @@
         }
         ctx.save();
         ctx.translate(jx, jy + Y);
-        ctx.fillStyle = '#a06a10';
-        ctx.beginPath(); ctx.ellipse(0, 0.8, jrx, jry, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#ffe66d';
-        ctx.beginPath(); ctx.ellipse(0, 0, jrx, jry, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.ellipse(0, 0, jrx, jry, 0, 0, Math.PI * 2); ctx.stroke();
-        if (jcara > 0.45) {
-          ctx.globalAlpha = 0.85; ctx.fillStyle = '#fff8d0';
-          ctx.beginPath();
-          ctx.ellipse(-jrx * 0.3, -jry * 0.35, jrx * 0.3, jry * 0.32, 0, 0, Math.PI * 2);
-          ctx.fill();
+        /* UN MONTÓN, NO UNA (24 sep): una pila de monedas planas debajo y
+         * dos girando encima, cada una a su compás. Los últimos segundos
+         * parpadea para avisar de que se va. */
+        if (jo.t < 90 && Math.floor(tk / 5) % 2 === 0) ctx.globalAlpha = 0.45;
+        for (var pila = 0; pila < 3; pila++) {
+          ctx.fillStyle = '#a06a10';
+          ctx.beginPath(); ctx.ellipse(0, 3.2 - pila * 1.3, 3.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = pila === 2 ? '#ffe66d' : '#e8b53a';
+          ctx.beginPath(); ctx.ellipse(0, 2.6 - pila * 1.3, 3.6, 1.4, 0, 0, Math.PI * 2); ctx.fill();
         }
+        [[-2.2, -1.6, 0], [2.3, -2.4, 7]].forEach(function (m) {
+          var cara = Math.abs(Math.cos((tk + i * 11 + m[2]) / 14));
+          var rx = 2.3 * Math.max(0.15, cara), ry = 2.3;
+          ctx.fillStyle = '#a06a10';
+          ctx.beginPath(); ctx.ellipse(m[0], m[1] + 0.6, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#ffe66d';
+          ctx.beginPath(); ctx.ellipse(m[0], m[1], rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#ff9f1c'; ctx.lineWidth = 0.7;
+          ctx.beginPath(); ctx.ellipse(m[0], m[1], rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+          if (cara > 0.45) {
+            ctx.fillStyle = '#fff8d0';
+            ctx.beginPath(); ctx.ellipse(m[0] - rx * 0.3, m[1] - ry * 0.35, rx * 0.3, ry * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+          }
+        });
         ctx.restore();
       }
     },
@@ -5957,7 +5998,7 @@
       var s = this.estado(i);
       if (!s || !(s.frenesi > 0)) return;
       var x = pc.x, y = pc.y + CFG.MAZE_Y, tk = G.tick;
-      var furia = Math.min(1, ((s.frenesiMult || 1) - 1) / ((H.FRENESI_MAX || 2) - 1));   // 0 al empezar, 1 a tope
+      var furia = Math.min(1, (this.frenesiVel(i) - 1) / ((H.FRENESI_MAX || 2) - 1));   // 0 al empezar, 1 a tope
       var late = Math.sin(tk / 5) * 1.2;
       ctx.save();
       var rad = 12 + furia * 4 + late;
@@ -6102,7 +6143,7 @@
         var quedaF = Math.max(0, Math.min(1, s.frenesi / H.FRENESI_TICKS));
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(x, y, 10.5, -Math.PI / 2, -Math.PI / 2 + quedaF * Math.PI * 2); ctx.stroke();
-        var txtF = 'X' + (s.frenesiMult || 1).toFixed(2);
+        var txtF = 'X' + this.frenesiVel(i).toFixed(2);
         ctx.font = window.PM.Letra ? window.PM.Letra.lienzo(5) : '5px monospace';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         var anF = ctx.measureText(txtF).width + 4;

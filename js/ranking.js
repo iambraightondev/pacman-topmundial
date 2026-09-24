@@ -150,8 +150,14 @@
       if (m === 'hab') {
         var ms = Math.max(0, Math.floor(tiempoMs || 0));
         var j = this.jugadores(jugadores);
-        total += (Math.floor(ms / 16000) + 1) * j * 1600 +
-                 (Math.floor(ms / 60000) + 1) * j * 3000;
+        /* DESATADO (24 sep): con el kit de ahora del Asesino un minuto puede
+         * dar mucho más que pastillas y fantasmas —la BOMBA en racha paga
+         * hasta 3.750 cada 12 s, la SOMBRA 2.000 por baja, la MARCA el
+         * triple, la EJECUCIÓN 5.000— y el rey 3.000 cada cinco niveles. Se
+         * da de sobra por minuto y jugador: el techo está para parar los
+         * 999999 inventados, no para tirar una partida buena. */
+        total += (Math.floor(ms / 60000) + 1) * j * 50000 +
+                 (Math.floor(hasta / 5) + 1) * 3000;
       }
       return Math.floor(total * MARGEN);
     },

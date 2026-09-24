@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · El ASESINO, rebalanceado, y el rey respeta el azul
+
+- **FRENESÍ:** +0,15 de velocidad mientras haya algún fantasma azul y +0,15 por
+  baja, con tope en x1,75; a tope, cada baja alarga 2 s.
+- **BOMBA:** recarga 12 s; las bajas de un estallido van en racha: 250, 500,
+  1.000 y 2.000. Al rey, 4 de vida.
+- **MORDISCO** recarga 18 s · **SHURIKEN** 24 s · **TURBO** dura 8 s.
+- **SOMBRA:** bajas de 1.000 (2.000 por la espalda) y ahora es intangible: nada
+  te mata mientras dura.
+- **CARROÑA:** 10 s, un montón de monedas de 500 que dura 5 s en el suelo.
+- **MARCA:** el triple · **MISIL:** x2,75 · **CACERÍA:** 6 de vida al rey.
+- **EL REY FANTASMA** ya no ignora el azul mientras carga su embestida.
+
 ## 2026-09-24 · FRENESÍ con tope: x2 y luego más tiempo
 
 **YA NO ACELERA SIN LÍMITE.** Cada baja durante el FRENESÍ sigue sumando +0,15

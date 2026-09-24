@@ -363,8 +363,11 @@
       return distX(p.x, j.x) < r && Math.abs(p.y - j.y) < r;
     },
 
+    /* AZUL ES AZUL (24 sep): antes, cargando su embestida, el rey ignoraba
+     * el azul y mataba aunque no se hubiera acabado. Mientras dure el azul
+     * no mata, cargue o no. */
     vulnerable: function (G) {
-      return this.activo(G) && G.frightTicks > 0 && G.jefe.st !== 'carga';
+      return this.activo(G) && G.frightTicks > 0;
     },
 
     /* ¿Ese Pac-Man muere contra el jefe? (lo mira quien decide sus muertes) */

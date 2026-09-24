@@ -1998,7 +1998,7 @@
      * 18 ticks (0.3 s) cubren pulsar con el fantasma a unas cinco casillas.
      * Más sería raro: mordiscos que salen solos mucho después de la tecla. */
     BITE_BUFFER: 18,
-    TURBO_TICKS: 5 * 60,     // 5 s de x1.5
+    TURBO_TICKS: 8 * 60,     // 8 s de x1.5 (eran 5 hasta el 24 sep)
     TURBO_MULT: 1.5,
     FLASH_TILES: 3,          // casillas que se recorren, paredes incluidas
     FLASH_SHOW: 15,          // 0.25 s translúcido al aterrizar
@@ -2006,7 +2006,7 @@
     /* Orden fijo: es el de las teclas, el del HUD y el que viaja por red y
      * por las repeticiones. No reordenar sin subir CFG.NET.PROTO. */
     LIST: [
-      { id: 'mordisco', key: 'Q', name: 'MORDISCO', cd: 16 * 60 },
+      { id: 'mordisco', key: 'Q', name: 'MORDISCO', cd: 18 * 60 },
       { id: 'turbo',    key: 'W', name: 'TURBO',    cd: 24 * 60 },
       { id: 'flash',    key: 'E', name: 'FLASH',    cd: 32 * 60 },
       { id: 'grito',    key: 'R', name: 'GRITO',    cd: 60 * 60 }
@@ -2199,12 +2199,15 @@
      * indefinida; la recarga empieza con la segunda pulsación. */
     BOMBA_TICKS: 0,
     BOMBA_RADIO: 2,
-    BOMBA_PUNTOS: 150,
+    /* 24 sep: lo que paga cada baja de UN MISMO estallido, en racha: la
+     * primera 250 y las siguientes 500, 1.000 y 2.000 */
+    BOMBA_RACHA: [250, 500, 1000, 2000],
+    BOMBA_PUNTOS: 250,
     MINA_TICKS: 5 * 60,
     SOMBRA_TICKS: 4 * 60,
     SOMBRA_MULT: 1.2,
-    SOMBRA_PUNTOS: 500,
-    SOMBRA_ESPALDA_PUNTOS: 750,
+    SOMBRA_PUNTOS: 1000,             // eran 500/750 hasta el 24 sep
+    SOMBRA_ESPALDA_PUNTOS: 2000,
     /* FRENESÍ de 8 s a 10 s, y su recarga de 26 s a 32 s (22 sep 2026).
      * Ocho segundos no daban para encadenar: se acababa justo cuando la
      * velocidad empezaba a notarse. Dos segundos más de ventana se pagan
@@ -2214,10 +2217,11 @@
     FRENESI_PASO: 0.15,
     /* 24 sep: la velocidad tiene tope (x2) y, ya a tope, cada baja alarga el
      * FRENESÍ 2 s en vez de seguir acelerando */
-    FRENESI_MAX: 2,
+    FRENESI_MAX: 1.75,       // x2 el 24 sep por la mañana; x1,75 por la tarde
     FRENESI_ALARGA: 2 * 60,
-    CARROÑA_TICKS: 6 * 60,
-    CARROÑA_JOYA: 3 * 60,
+    CARROÑA_TICKS: 10 * 60,           // eran 6 s hasta el 24 sep
+    CARROÑA_JOYA: 5 * 60,             // 5 s en el suelo para cogerlo (eran 3)
+    CARROÑA_PUNTOS: 500,              // lo que paga el montón (eran 300)
     /* EL BOTÍN SALE DESPEDIDO (22 sep 2026). La moneda nacía en la casilla
      * EXACTA donde caía el fantasma y, como el Asesino mata de cerca, él ya
      * estaba ahí: se recogía en el mismo fotograma en que aparecía y no
@@ -2229,6 +2233,7 @@
     CARROÑA_VUELO: 15,       // lo que tarda en caer (un cuarto de segundo)
     CARROÑA_GRACIA: 30,      // medio segundo en que no la coge nadie
     MARCA_TICKS: 8 * 60,
+    MARCA_MULT: 3,           // el fantasma marcado paga el triple (era el doble)
     /* El GANCHO INVERSO del Asesino llega a NUEVE casillas (22 sep 2026):
      * con ocho se quedaba a un pelo del fantasma una y otra vez y la E se
      * gastaba para nada. Una casilla más es la diferencia entre fallar y
@@ -2250,8 +2255,8 @@
     /* El misil vuela al DOBLE de la velocidad de referencia de un Pac-Man
      * (21 sep 2026). Antes iba a 4,5 px por fotograma, que son casi cuatro
      * veces eso: llegaba antes de que se viera salir. El 24 sep, a x2,25. */
-    MISIL_MULT: 2.25,
-    MISIL_VEL: 2.25 * CFG.BASE_SPEED,
+    MISIL_MULT: 2.75,
+    MISIL_VEL: 2.75 * CFG.BASE_SPEED,
     EMPUJON_TILES: 3,
     EMPUJON_STUN: 60,
     /* GRITO DE GUERRA (21 sep): pasa de Q a E, de cinco casillas a TODO EL
@@ -2452,15 +2457,15 @@
     }
     CFG.HAB.CATALOGO = {
       asesino: [
-        [h('mordisco', 'Q', 'MORDISCO', 16, 'Come al fantasma cercano.'),
-         h('shuriken', 'Q', 'SHURIKEN', 20, 'Tres cargas, 3 s entre una y la siguiente.'),
-         h('bomba', 'Q', 'BOMBA', 24, 'Coloca y detona una bomba.')],
-        [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 5 s.'),
-         h('sombra', 'W', 'SOMBRA', 26, '4 s invisible y veloz; bajas de 500/750.'),
-         h('frenesi', 'W', 'FRENESÍ', 32, '10 s; cada baja suma velocidad hasta x2 y, a tope, alarga 2 s.'),
+        [h('mordisco', 'Q', 'MORDISCO', 18, 'Come al fantasma cercano.'),
+         h('shuriken', 'Q', 'SHURIKEN', 24, 'Tres cargas, 3 s entre una y la siguiente.'),
+         h('bomba', 'Q', 'BOMBA', 12, 'Coloca y detona; las bajas del estallido van en racha.')],
+        [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 8 s.'),
+         h('sombra', 'W', 'SOMBRA', 26, '4 s intangible y veloz; bajas de 1.000/2.000.'),
+         h('frenesi', 'W', 'FRENESÍ', 32, '10 s; cada baja suma velocidad hasta x1,75 y, a tope, alarga 2 s.'),
          h('carrona', 'W', 'CARROÑA', 24, 'Al matar saltan monedas; las coge cualquiera.')],
         [h('flash', 'E', 'FLASH', 32, 'Salta tres casillas atravesando muros.'),
-         h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar doble.'),
+         h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar el triple.'),
          h('gancho_inverso', 'E', 'GANCHO INVERSO', 32, 'Lanza un gancho; si atrapa, te arrastra.')],
         [h('grito', 'R', 'GRITO', 60, 'Asusta a los cuatro fantasmas.'),
          h('misil', 'R', 'MISIL', 80, 'Mata en cadena al más cercano.'),
@@ -2527,20 +2532,20 @@
      * si un poder cambia, esto cambia con él. La `desc` corta del catálogo se
      * queda para donde no cabe más. */
     CFG.HAB.DETALLE = {
-      mordisco: "TE COMES AL FANTASMA QUE TENGAS A 2 CASILLAS · SI FALLAS NO SE GASTA Y QUEDA ARMADA 0,3 S · AL REY LE QUITA 3 DE VIDA Y LO ATURDE 2 S",
+      mordisco: "TE COMES AL FANTASMA QUE TENGAS A 2 CASILLAS · SI FALLAS NO SE GASTA Y QUEDA ARMADA 0,3 S · AL REY LE QUITA 3 DE VIDA Y LO ATURDE 2 S · RECARGA 18 S",
       shuriken: "3 ESTRELLAS RECTAS HACIA TU ÚLTIMA FLECHA, HASTA 10 CASILLAS · 3 S ENTRE TIROS · 200 POR BAJA · ACIERTA LAS 3 Y SE RECARGA SOLA · AL REY, 1 DE VIDA CADA UNA",
-      bomba: "1ª PULSACIÓN: PLANTAS LA BOMBA EN TU CASILLA, SIN LÍMITE DE TIEMPO · 2ª: ESTALLA A 2 CASILLAS A LA REDONDA, 150 POR FANTASMA · AL REY LE QUITA 3 DE VIDA",
-      turbo: "CORRES A X1,5 DURANTE 5 S · PARA ESCAPAR DE UNA ENCERRONA O LLEGAR A TIEMPO A LA SUPERPASTILLA",
-      sombra: "4 S CASI INVISIBLE Y A X1,2 · NI LOS FANTASMAS NI EL REY TE PERSIGUEN · CADA BAJA VALE MÍNIMO 500, O 750 SI LO PILLAS POR LA ESPALDA",
-      frenesi: "10 S DE CAZA: CADA FANTASMA QUE MATES, CON LO QUE SEA, TE SUMA +0,15 DE VELOCIDAD HASTA X2 · YA A TOPE, CADA BAJA ALARGA EL FRENESÍ 2 S",
-      carrona: "6 S: CADA FANTASMA QUE MATES SUELTA UNA MONEDA DE 300 QUE SALTA HASTA 2 CASILLAS · DURA 3 S EN EL SUELO Y LA COGE CUALQUIER JUGADOR",
+      bomba: "1ª PULSACIÓN: PLANTAS LA BOMBA EN TU CASILLA, SIN LÍMITE DE TIEMPO · 2ª: ESTALLA A 2 CASILLAS A LA REDONDA · LAS BAJAS VAN EN RACHA: 250, 500, 1.000 Y 2.000 · AL REY LE QUITA 4 DE VIDA · RECARGA 12 S",
+      turbo: "CORRES A X1,5 DURANTE 8 S · PARA ESCAPAR DE UNA ENCERRONA O LLEGAR A TIEMPO A LA SUPERPASTILLA",
+      sombra: "4 S CASI INVISIBLE, INTANGIBLE Y A X1,2 · NI LOS FANTASMAS NI EL REY TE PERSIGUEN NI TE PUEDEN MATAR · CADA BAJA VALE MÍNIMO 1.000, O 2.000 SI LO PILLAS POR LA ESPALDA",
+      frenesi: "10 S DE CAZA: +0,15 DE VELOCIDAD MIENTRAS HAYA ALGÚN FANTASMA AZUL, Y CADA FANTASMA QUE MATES, CON LO QUE SEA, SUMA OTRO +0,15, HASTA X1,75 · YA A TOPE, CADA BAJA ALARGA EL FRENESÍ 2 S",
+      carrona: "10 S: CADA FANTASMA QUE MATES SUELTA UN MONTÓN DE MONEDAS DE 500 QUE SALTA HASTA 2 CASILLAS · DURA 5 S EN EL SUELO Y LO COGE CUALQUIER JUGADOR",
       flash: "SALTAS HASTA 3 CASILLAS HACIA TU ÚLTIMA FLECHA ATRAVESANDO MUROS · TE COMES LO QUE HAYA EN EL CAMINO · SIN SUELO DONDE CAER NO SALE",
-      marca: "MARCAS AL FANTASMA MÁS CERCANO A 8 CASILLAS DURANTE 8 S · SI LO MATAS TÚ VALE EL DOBLE, TAMBIÉN CON SHURIKEN O BOMBA",
+      marca: "MARCAS AL FANTASMA MÁS CERCANO A 8 CASILLAS DURANTE 8 S · SI LO MATAS TÚ VALE EL TRIPLE, TAMBIÉN CON SHURIKEN O BOMBA",
       gancho_inverso: "GANCHO RECTO HACIA TU ÚLTIMA FLECHA, HASTA 9 CASILLAS · SI ENGANCHA, EL FANTASMA SE PONE AZUL 5 S Y TÚ SALES VOLANDO HACIA ÉL",
       grito: "LOS CUATRO FANTASMAS SE PONEN AZULES 6 S, SEA CUAL SEA EL NIVEL · EL REY TAMBIÉN: CADA JUGADOR LE PEGA UNA VEZ AL TOCARLO, 6 DE VIDA",
       misil: "PERSIGUE POR LOS PASILLOS AL FANTASMA MÁS CERCANO Y SALTA AL SIGUIENTE · ARROLLA A QUIEN SE CRUCE · PAGA EN CADENA 250/500/1.000/2.000 · REMATA AL REY: 6 DE VIDA",
       ejecucion: "MATA DE GOLPE AL FANTASMA MÁS CERCANO A 10 CASILLAS Y PAGA 5.000 · SIN NADIE A TIRO NO SALE · AL REY NO LO MATA: LE QUITA 10 DE VIDA",
-      caceria: "6 S A X1,2 · LOS FANTASMAS DE LA CALLE QUEDAN MARCADOS: SOLO TÚ TE LOS COMES, AUNQUE NO ESTÉN AZULES · EL REY NO TE MATA: TOCARLO LE QUITA 3 DE VIDA",
+      caceria: "6 S A X1,2 · LOS FANTASMAS DE LA CALLE QUEDAN MARCADOS: SOLO TÚ TE LOS COMES, AUNQUE NO ESTÉN AZULES · EL REY NO TE MATA: TOCARLO LE QUITA 6 DE VIDA",
       pisoton: "TODOS LOS FANTASMAS DE LA CALLE HUYEN DE TI 6 S AL 60% DE SU VELOCIDAD · NO SE PONEN AZULES · EL REY TAMBIÉN HUYE · SIN NADIE EN LA CALLE NO SALE",
       empujon: "EMPUJA 3 CASILLAS AL PRIMER FANTASMA A 3 DE DISTANCIA, DELANTE O SI NO DETRÁS, Y LO APAGA 1 S: NI MATA NI SE COME · AL REY NO LO MUEVE, LO APAGA 0,5 S",
       rebote: "5 S: EL PRIMER FANTASMA QUE TE TOQUE MUERE (200) Y TÚ TE SALVAS · CONTRA EL REY: LE QUITA 3 DE VIDA Y LO PARA 1 S",
@@ -2686,10 +2691,10 @@
      *     el nivel. */
     DANO: { azul: 6, mordisco: 3, fuego: 2, rayo: 2, runa: 4, aplasta: 4,
             /* Asesino */
-            shuriken: 1, bomba: 3, misil: 6, ejecucion: 10,
+            shuriken: 1, bomba: 4, misil: 6, ejecucion: 10,
             /* CACERÍA (23 sep): mientras dura, tocar al rey le pega en vez
              * de matarte, una vez por cada respiro suyo (INV) */
-            caceria: 3,
+            caceria: 6,
             /* Tanque */
             rebote: 3, terremoto: 6,
             /* Soporte */

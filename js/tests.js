@@ -1009,6 +1009,8 @@
     ok(R.maxPuntos(6, 5) < R.maxPuntos(6, 1), 'el nivel de salida cuenta');
     // una partida de verdad del nivel 1 entra de sobra
     ok(R.maxPuntos(1) > 12000, 'una gran partida del nivel 1 sigue entrando');
+    ok(R.maxPuntos(2, 1, 'hab', 3 * 60000, 1) > 3 * 30000, 'DESATADO: tres minutos del Asesino de ahora caben (24 sep)');
+    ok(R.maxPuntos(1, 1, 'hab', 60000, 1) < 999999, 'pero los 999999 en un minuto, no');
   });
 
   testConCuenta('una puntuación imposible no llega ni a salir a la red', function () {
@@ -5460,11 +5462,11 @@
    * el equilibrio del modo entero: si alguien los toca sin querer (o los
    * duplica en otro sitio), aquí se nota. */
   test('las recargas y duraciones son las acordadas', function () {
-    eq(HC.segs(0), 16, 'MORDISCO recarga en 16 s');
+    eq(HC.segs(0), 18, 'MORDISCO recarga en 18 s (24 sep)');
     eq(HC.segs(1), 24, 'TURBO recarga en 24 s');
     eq(HC.segs(2), 32, 'FLASH recarga en 32 s');
     eq(HC.segs(3), 60, 'GRITO recarga en 60 s');
-    eq(HC.TURBO_TICKS / 60, 5, 'el turbo dura 5 s');
+    eq(HC.TURBO_TICKS / 60, 8, 'el turbo dura 8 s');
     eq(HC.TURBO_MULT, 1.5, 'y corre x1.5');
     eq(HC.SHOUT_SECS, 6, 'el grito asusta 6 s');
     eq(HC.FLASH_TILES, 3, 'el flash salta 3 casillas');
@@ -9770,7 +9772,7 @@
     eq(HC.APISONADORA_MULT, 1.75, 'la apisonadora va a x1,75');
     eq(HC.segs(3, 'soporte'), 180, 'VIDA EXTRA 3 min');
     eq(HC.segs(0, 'mago'), 20, 'BOLA DE FUEGO 20 s');
-    eq(HC.segs(0), 16, 'sin rol, las del Asesino');
+    eq(HC.segs(0), 18, 'sin rol, las del Asesino');
     eq(HC.MAGO_PUNTOS, 200, 'lo del Mago vale 200 fijos');
   });
 
@@ -11424,7 +11426,7 @@
 
     H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
     for (n = 0; n < 3; n++) { ok(H.lanzar(G, 0, 0), 'sale intento ' + (n + 1)); for (t = 0; t < 100 && H.proyectilesCat.length; t++) H.pasoProyectilesCat(G, true); }
-    eq(H.st[0].cd[0], 20 * 60, 'un fallo conserva los 20 segundos');
+    eq(H.st[0].cd[0], 24 * 60, 'un fallo conserva los 24 segundos');
   });
 
   test('CATÁLOGO: la ráfaga de Shuriken caduca a los tres segundos', function () {
@@ -11441,7 +11443,7 @@
     eq(H.st[0].shuriken.usados, 2, 'y cuenta como segunda carga');
     for (t = 0; t < V; t++) H.pasoRoles(G, true);
     eq(H.st[0].shuriken, null, 'la tercera no llegó: la ráfaga se cierra');
-    eq(H.st[0].cd[0], 20 * 60, 'y la Q se va a recargar entera');
+    eq(H.st[0].cd[0], 24 * 60, 'y la Q se va a recargar entera');
 
     /* Morir a media ráfaga tampoco devuelve las cargas */
     H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
@@ -11449,7 +11451,7 @@
     eq(H.st[0].cd[0], 0, 'todavía sin recarga');
     G.startPacDeath(0);
     eq(H.st[0].shuriken, null, 'la ráfaga muere con él');
-    eq(H.st[0].cd[0], 20 * 60, 'y resucita con la Q recargando, no con las tres');
+    eq(H.st[0].cd[0], 24 * 60, 'y resucita con la Q recargando, no con las tres');
   });
 
   test('CATÁLOGO: Sombra, Frenesí, Gancho y Cacería respetan sus nuevas reglas', function () {
@@ -11460,7 +11462,7 @@
     H.sombra(G, 0); eq(H.multVel(0), 1.2, 'Sombra da ×1,2');
     var g = G.ghosts[0]; g.mode = 'normal'; g.x = p.x + CFG.TILE; g.y = p.y; g.dir = CFG.DIR.RIGHT;
     var base = G.score; H.matarCatalogo(G, g, 0, CFG.HAB.BOMBA_PUNTOS, 'bomba', 1, true);
-    eq(G.score - base, 750, 'una baja cualquiera desde atrás da 750');
+    eq(G.score - base, 2000, 'una baja cualquiera desde atrás da 2.000');
 
     H.frenesi(G, 0); eq(H.st[0].frenesi, 10 * 60, 'Frenesí dura 10 segundos');
     for (var n = 0; n < 5; n++) H.alMatar(G, 0, null, p.x, p.y);
@@ -11488,7 +11490,7 @@
     eq(CFG.HAB.CATALOGO.asesino[3].filter(function (x) { return x.id === 'caceria'; })[0].cd, 90 * 60, 'recarga de 90 segundos');
   });
 
-  test('CATÁLOGO: Bomba da 150 exactos y Cacería solo deja comer al Asesino dueño', function () {
+  test('CATÁLOGO: Bomba da 250 exactos y Cacería solo deja comer al Asesino dueño', function () {
     var H = window.PM.Hab;
     partida(2);
     G.hab = true;
@@ -11500,7 +11502,7 @@
     var base = G.score;
     ok(H.bomba(G, 0), 'la primera pulsación planta');
     ok(H.bomba(G, 0), 'la segunda detona');
-    eq(G.score - base, 150, 'sin bono oculto del Asesino');
+    eq(G.score - base, 250, 'sin bono oculto del Asesino');
     g.mode = 'normal'; g.x = p.x + CFG.TILE; g.y = p.y;
     ok(H.caceria(G, 0), 'sale Cacería');
     ok(H.puedeComer(G, 0, 0), 'el dueño puede comer al marcado');
@@ -11516,7 +11518,7 @@
       G.ghosts[j].mode = 'normal'; G.ghosts[j].x = p.x + CFG.TILE; G.ghosts[j].y = p.y;
     }
     var base = G.score;
-    ok(Math.abs(CFG.HAB.MISIL_VEL - 2.25 * CFG.BASE_SPEED) < 1e-9, 'el misil vuela a ×2,25');
+    ok(Math.abs(CFG.HAB.MISIL_VEL - 2.75 * CFG.BASE_SPEED) < 1e-9, 'el misil vuela a ×2,75');
     ok(H.misil(G, 0), 'sale el misil');
     for (var i = 0; i < 240 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
     eq(G.score - base, 3750, '250 + 500 + 1.000 + 2.000');
@@ -12202,7 +12204,7 @@
     var base = G.score;
     H.pasoRoles(G, true);
     eq(H.joyas.length, 0, 'la levanta el que pasa, no solo su dueño');
-    eq(G.score - base, 300, 'y vale lo mismo');
+    eq(G.score - base, CFG.HAB.CARROÑA_PUNTOS, 'y vale lo mismo');
   });
 
   test('AJUSTES: el gancho inverso no sobrevive a la muerte de su dueño', function () {
@@ -12263,6 +12265,62 @@
     eq(H.puedeComer(G, g.id, 0), true, 'el azul de verdad sí');
   });
 
+  test('AJUSTES 24 SEP: bomba en racha, frenesí con azul y tope, sombra intangible, carroña a 500', function () {
+    var H = window.PM.Hab, HC = CFG.HAB;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['bomba,frenesi,marca,misil']); G.roles = ['asesino'];
+    var p = ponPac(0, 13, 20, DR.RIGHT);
+    // BOMBA: tres fantasmas en el radio pagan 250, 500 y 1.000
+    var c = Math.round((p.x - CFG.TILE / 2) / CFG.TILE), r = Math.round((p.y - CFG.TILE / 2) / CFG.TILE);
+    H.st[0].bomba = { c: c, r: r, t: 0 };
+    for (var i = 0; i < 3; i++) {
+      var g = G.ghosts[i];
+      g.mode = 'normal'; g.frightened = false; g.x = p.x + i; g.y = p.y;
+    }
+    G.ghosts[3].mode = 'house';
+    var base = G.score;
+    H.bomba(G, 0);
+    eq(G.score - base, 250 + 500 + 1000, 'las bajas de un estallido van en racha');
+    // FRENESÍ: el primer +0,15 solo con algún fantasma azul, y tope en x1,75
+    for (i = 0; i < 4; i++) { G.ghosts[i].mode = 'normal'; G.ghosts[i].frightened = false; }
+    H.frenesi(G, 0);
+    eq(H.frenesiVel(0), 1, 'sin azules, sin el primer bono');
+    G.ghosts[0].frightened = true;
+    ok(Math.abs(H.frenesiVel(0) - (1 + HC.FRENESI_PASO)) < 1e-9, 'con uno azul, +0,15');
+    for (i = 0; i < 12; i++) H.alMatar(G, 0, null, p.x, p.y);
+    eq(H.frenesiVel(0), HC.FRENESI_MAX, 'y nunca pasa de x1,75');
+    // SOMBRA: ningún choque la mata
+    H.st[0].sombra = 60;
+    ok(H.salvaDelChoque(G, 0, G.ghosts[1]), 'un fantasma no la mata');
+    ok(H.salvaDelChoque(G, 0, null), 'ni el rey');
+    H.st[0].sombra = 0;
+    // CARROÑA: el montón paga 500
+    H.joyas = [{ x: p.x, y: p.y, t: HC.CARROÑA_JOYA, vuelo: 0, espera: 0, w: 0 }];
+    base = G.score;
+    H.paso(G);
+    eq(G.score - base >= HC.CARROÑA_PUNTOS, true, 'recoger el montón da 500');
+    eq(HC.CARROÑA_JOYA, 5 * 60, 'y dura 5 s en el suelo');
+    G.toMenu();
+  });
+
+  test('EL REY: azul es azul, también mientras carga su embestida', function () {
+    var J = window.PM.Jefe;
+    partida(1); G.hab = true;
+    H0();
+    function H0() { window.PM.Hab.empezar(true, 1, ['asesino']); G.roles = ['asesino']; }
+    G.level = 5;
+    J.alNivel(G);
+    ok(J.activo(G), 'hay rey');
+    G.jefe.st = 'carga';
+    G.frightTicks = 120;
+    ok(J.vulnerable(G), 'cargando y en azul, es vulnerable');
+    var p = G.pacs[0];
+    p.x = G.jefe.x; p.y = G.jefe.y; p.safeTicks = 0;
+    ok(!J.mata(G, 0), 'y no mata');
+    G.frightTicks = 0;
+    G.toMenu();
+  });
+
   test('AJUSTES: la MARCA cobra doble también en el shuriken y la bomba', function () {
     var H = window.PM.Hab, HC = CFG.HAB;
     partida(1); G.hab = true;
@@ -12277,9 +12335,9 @@
       g.mode = 'normal';
       return G.score - base;
     }
-    eq(bajaMarcada(HC.SHURIKEN_PUNTOS, 'shuriken'), 400, 'el shuriken sobre un marcado paga 400');
-    eq(bajaMarcada(HC.BOMBA_PUNTOS, 'bomba'), 300, 'la bomba, 300');
-    eq(bajaMarcada(HC.BOLA_GUIADA_PUNTOS, 'bola_guiada'), 300, 'la bola guiada, 300');
+    eq(bajaMarcada(HC.SHURIKEN_PUNTOS, 'shuriken'), 600, 'el shuriken sobre un marcado paga el triple, 600');
+    eq(bajaMarcada(HC.BOMBA_PUNTOS, 'bomba'), 750, 'la bomba, 750');
+    eq(bajaMarcada(HC.BOLA_GUIADA_PUNTOS, 'bola_guiada'), HC.BOLA_GUIADA_PUNTOS * 3, 'la bola guiada, el triple');
     /* y los premios gordos siguen siendo exactos: la marca no los toca */
     eq(bajaMarcada(HC.EJECUCION_PUNTOS, 'ejecucion'), 5000, 'la ejecución no se duplica');
     /* sin marca, el shuriken vuelve a sus 200 */
