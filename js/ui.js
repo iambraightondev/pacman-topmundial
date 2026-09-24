@@ -12648,8 +12648,11 @@
         o.pie.textContent = 'TUS PUNTOS CUENTAN PARA TU MEDIA';
         return;
       }
-      o.caja.style.setProperty('--c', v.color);
-      o.caja.className = 'hab-rango ' + (v.cambio > 0 ? 'gana' : v.cambio < 0 ? 'pierde' : 'igual');
+      /* El color es el de lo que te juegas, no el de tu fruta: CEREZA es roja
+       * y parecía que perdías aunque fueras ganando. Verde, gris o rojo. */
+      var tono = v.cambio > 0 ? 'gana' : v.cambio < 0 ? 'pierde' : 'igual';
+      o.caja.style.setProperty('--c', { gana: '#2bff88', igual: '#8a8cae', pierde: '#ff5a5a' }[tono]);
+      o.caja.className = 'hab-rango ' + tono;
       o.k.textContent = v.nombre + ' · SI ACABA AHORA';
       o.v.textContent = (v.cambio > 0 ? '+' : '') + v.cambio + ' PR';
       o.barra.style.display = '';

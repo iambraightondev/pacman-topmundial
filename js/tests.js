@@ -12854,10 +12854,15 @@
       ok(UI.habRango.on, 'el recuadro se enciende');
       eq(UI.habRango.v.textContent, '+20 PR', 'con lo que se ganaría');
       ok(UI.habRango.caja.classList.contains('gana'), 'en verde');
+      eq(UI.habRango.caja.style.getPropertyValue('--c'), '#2bff88', 'todo el recuadro, no del color de la fruta');
       G.score = 0;
       UI.refreshHabBar();
       eq(UI.habRango.v.textContent, '-' + D[1].pierde + ' PR', 'y lo que se perdería');
       ok(UI.habRango.caja.classList.contains('pierde'), 'en rojo');
+      G.score = 19400; G.level = 2;
+      UI.refreshHabBar();
+      eq(UI.habRango.v.textContent, '0 PR', 'igualando la marca, nada');
+      eq(UI.habRango.caja.style.getPropertyValue('--c'), '#8a8cae', 'en gris');
     } finally {
       G.clasif = false; G.rangoInicio = null;
       G.toMenu();
