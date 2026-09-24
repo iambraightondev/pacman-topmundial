@@ -8089,3 +8089,31 @@ body { font-size-adjust: 0.56; }
   text-align: center;
   text-shadow: 0 0 14px currentColor;
 }
+
+/* EL PASE CON UN SOLO DESPLAZAMIENTO (24 sep): los dos carriles se mueven
+ * como una pieza; los rótulos se quedan pegados a la izquierda y la cinta,
+ * quieta en medio, a lo ancho de lo que se ve */
+#pase .ps-tablero-alto { display: block; }
+#pase .ps-tablero-alto .ps-rotulos { padding-top: 0; }
+#pase .ps-uno {
+  display: flex;
+  flex-direction: column;
+  /* el imán deja cada galón justo a la derecha de los rótulos, no debajo */
+  scroll-padding-left: 117px;
+}
+#pase .ps-linea { display: flex; gap: 9px; align-items: flex-start; min-width: max-content; }
+#pase .ps-linea > .ps-rotulos {
+  position: sticky;
+  left: 0;
+  z-index: 20;          /* por encima del candado y la nota de las casillas */
+  align-self: stretch;
+  background: #000;
+  box-shadow: 10px 0 12px -6px #000;
+}
+#pase .ps-linea-alta > .ps-rotulos { padding-top: 44px; }
+#pase .ps-uno > .ps-cinta {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  width: var(--ps-ancho, 100%);
+}

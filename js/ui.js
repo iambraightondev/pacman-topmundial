@@ -1777,15 +1777,19 @@
       this.psRotPasePie = mk('small');
       this.psRotPase.appendChild(this.psRotPasePie);
 
-      var scroll = mk('div', 'ps-scroll ps-scroll-alto');
+      /* UN SOLO DESPLAZAMIENTO PARA LOS DOS CARRILES (24 sep). Eran dos que
+       * se copiaban la posición, y por mucho que se afinara se notaba que el
+       * de arriba iba detrás. Ahora los dos carriles, la cinta y los rótulos
+       * viven dentro del mismo: los rótulos y la cinta se quedan quietos
+       * (sticky) y las columnas de galones se mueven como una sola pieza. */
+      var scroll = mk('div', 'ps-scroll ps-uno');
       this.psScrollAlto = scroll;
       var camino = mk('div', 'ps-camino');
       this.psCamino = camino;
       var filaG = mk('div', 'ps-fila ps-fila-gratis');
 
-      /* el segundo tablero, el del pase, con su propio desplazamiento */
-      var scroll2 = mk('div', 'ps-scroll');
-      this.psScroll = scroll2;
+      var scroll2 = scroll;
+      this.psScroll = scroll;
       var camino2 = mk('div', 'ps-camino ps-camino-bajo');
       var filaP = mk('div', 'ps-fila ps-fila-pago');
       var filaN = mk('div', 'ps-fila ps-fila-nums');
@@ -1874,50 +1878,32 @@
       this.psBicho.setAttribute('aria-hidden', 'true');
 
       camino.appendChild(filaG);
-      scroll.appendChild(camino);
-      tablero.appendChild(scroll);
-      o.appendChild(tablero);
+      var lineaAlta = mk('div', 'ps-linea ps-linea-alta');
+      lineaAlta.appendChild(rot);
+      lineaAlta.appendChild(camino);
+      scroll.appendChild(lineaAlta);
 
-      /* la cinta, a lo ancho del panel y entre los dos carriles */
-      o.appendChild(this.psCinta);
+      /* la cinta, a lo ancho de lo que se ve y entre los dos carriles */
+      scroll.appendChild(this.psCinta);
 
       camino2.appendChild(filaP);
       camino2.appendChild(filaN);
-      scroll2.appendChild(camino2);
-      var tablero2 = mk('div', 'ps-tablero');
       var rot2 = mk('div', 'ps-rotulos');
       rot2.appendChild(this.psRotPase);
       rot2.appendChild(mk('div', 'ps-rot-pie', 'GALÓN'));
-      tablero2.appendChild(rot2);
-      tablero2.appendChild(scroll2);
-      o.appendChild(tablero2);
+      var lineaBaja = mk('div', 'ps-linea');
+      lineaBaja.appendChild(rot2);
+      lineaBaja.appendChild(camino2);
+      scroll.appendChild(lineaBaja);
+      tablero.appendChild(scroll);
+      o.appendChild(tablero);
 
-      /* los dos carriles se desplazan juntos: si no, las columnas de arriba y
-       * las de abajo dejarían de ser el mismo galón en cuanto se moviera uno */
-      /* EL QUE SIGUE, SIN IMÁN (24 sep). Los dos llevan imán de casilla
-       * (scroll-snap) y, al copiarle la posición al otro, su imán lo volvía a
-       * encajar a saltos: avanzaba, pero sin deslizarse. Ahora manda el que
-       * toca el jugador (ratón, rueda, dedo o teclado); el otro pierde el imán
-       * mientras le sigue y lo recupera al pararse, ya en la misma casilla.
-       * Y no se devuelve el movimiento: el que sigue no mueve al que manda. */
-      var lider = null, suelta = null;
-      [scroll, scroll2].forEach(function (el) {
-        ['pointerdown', 'wheel', 'touchstart', 'keydown'].forEach(function (ev) {
-          el.addEventListener(ev, function () { lider = el; }, { passive: true });
-        });
-      });
-      var ata = function (a, b) {
-        a.addEventListener('scroll', function () {
-          if (lider && lider !== a) return;          // lo mueve el otro
-          if (Math.abs(b.scrollLeft - a.scrollLeft) < 1) return;
-          b.classList.add('ps-sigue');
-          b.scrollLeft = a.scrollLeft;
-          clearTimeout(suelta);
-          suelta = setTimeout(function () { b.classList.remove('ps-sigue'); }, 250);
-        }, { passive: true });
+      /* la cinta mide lo que se ve del desplazamiento (va quieta encima) */
+      var self2 = this;
+      this.medirCintaPase = function () {
+        if (scroll.clientWidth) scroll.style.setProperty('--ps-ancho', scroll.clientWidth + 'px');
       };
-      ata(scroll, scroll2);
-      ata(scroll2, scroll);
+      window.addEventListener('resize', function () { self2.medirCintaPase(); });
 
       /* ---------- el pie ---------- */
       var pie = mk('div', 'ps-pie');
@@ -2013,7 +1999,7 @@
        * desplaza —su Pac-Man está allí esperando—. */
       var sc = this.psScroll;
       if (sc) sc.scrollLeft = 0;
-      if (this.psScrollAlto) this.psScrollAlto.scrollLeft = 0;
+      if (this.medirCintaPase) this.medirCintaPase();
       this.animarPase();
     },
 

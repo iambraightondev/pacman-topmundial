@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v264';
+var VERSION = 'pm-v265';
 var SHELL = [
   './',
   './index.html',
