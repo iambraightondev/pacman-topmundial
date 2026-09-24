@@ -39,10 +39,10 @@ cosa en CHANGELOG. Pruebas: tests.html 589/589; Node 1 fallo (el de siempre).
   x2,75, Cacería 6 al rey). El rey ya respeta el azul mientras carga.
 - **MAGO en racha**: sus bajas por habilidad entran en la cadena normal
   (200…1.600) en vez de 200 fijos.
-- **MAESTRÍAS**: S del Asesino 12/min, Mago 8, Tanque 5, Soporte 6 en equipo y
-  4 a solas (sin rescates). Lo jugado se recalificó reproduciendo cada
+- **MAESTRÍAS**: S del Asesino 12/min, Mago 8, Tanque 5, Soporte 5 en equipo y
+  4,5 a solas (sin rescates). Lo jugado se recalificó reproduciendo cada
   repetición hasta cuadrar puntos: IAMBRAIGHTON −13 S (baja a LEYENDA de
-  Asesino), MAULIO +3 S, ESTER +14 S. Todo en CFG.AJUSTES_CUENTA
+  Asesino), MAULIO +3 S, ESTER +7 S. Todo en CFG.AJUSTES_CUENTA
   ([puntos, partidas, S]).
 - **Amigos**: EN LÍNEA / JUGANDO / EN PARTY / DESCONECTADO en vivo (presencia de
   Supabase Realtime, canal pm-conectados, js/conectados.js).
@@ -152,7 +152,7 @@ tocar la red; rango solo en DESATADO; la tabla se arma leyendo `perfiles`.
 **Números para ajustar jugando** (todos en `config.js`, CFG.MAESTRIA y
 CFG.RANGO):
 1. **Notas ajustadas el 24 sep con datos reales (decisión de Braighton):** S del
-   Asesino 12/min, Mago 8, Tanque 5, Soporte 6 en equipo y 4 a solas (sin
+   Asesino 12/min, Mago 8, Tanque 5, Soporte 5 en equipo y 4,5 a solas (sin
    rescates). El MAGO encadena sus bajas (200…1.600). Lo jugado se recalificó
    reproduciendo las repeticiones (CFG.AJUSTES_CUENTA). Vigilar que el Mago en
    racha no pase al Asesino; si pasa, que la racha caduque a los pocos segundos.

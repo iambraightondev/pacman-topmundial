@@ -1150,7 +1150,8 @@
    * Los listones de las notas salen de los contadores reales de las cuentas
    * (22 sep): en DESATADO la gente se come de 3 a 4 fantasmas por minuto y el
    * mejor, 7. El 24 sep se subió la S del Asesino a 12 y la del Mago a 8,
-   * se bajó la del Tanque a 5 y el Soporte a solas tiene su propia tabla.
+   * se bajaron la del Tanque y la del Soporte a 5, y el Soporte a solas tiene
+   * su propia tabla.
    * ---------------------------------------------------------------- */
   /* ---------- AJUSTES A MANO POR CUENTA (24 sep) ----------
    * Correcciones de datos que no se pueden hacer en la nube: los aparatos
@@ -1172,14 +1173,14 @@
    *             23, que ya no se pueden reproducir, contando al menos las 3
    *             muertes de un GAME OVER) y cada una baja a A (−40). MAULIO
    *             gana 3 S de TANQUE (+40 cada una). ESTER, a solas con el
-   *             SOPORTE, se recalifica entera con la tabla de solo: +14 S y
-   *             +1.210 puntos. */
+   *             SOPORTE, se recalifica entera con la tabla de solo (S desde
+   *             4,5): +7 S y +930 puntos. */
   CFG.AJUSTES_CUENTA = {
     IAMBRAIGHTON: {
       cifras: { 'clasico:puntosMax': [180550, 84250], 'party:puntosMax': [180550, 119300] },
       maestria: { asesino: [-13720, -132, -13], mago: [6500, 65], tanque: [3900, 39], soporte: [2800, 28] }
     },
-    ESTER: { maestria: { asesino: [-800, -8], soporte: [2010, 8, 14] } },
+    ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] } },
     MAULIO: { maestria: { asesino: [-700, -7], tanque: [620, 5, 3], soporte: [200, 2] } }
   };
 
@@ -1207,15 +1208,17 @@
       /* 24 sep, decidido por Braighton con los datos de las partidas: la S
        * del ASESINO pide 12 (con 7 la sacaba casi cualquier partida buena),
        * la del MAGO 8 (hacía 6,5–8 por minuto: S casi siempre) y la del
-       * TANQUE 5 (con 6 no llegaba ni jugando bien). */
+       * TANQUE 5 (con 6 no llegaba ni jugando bien). El SOPORTE en equipo,
+       * también 5. */
       asesino: [12, 5, 3.5, 2],
       mago:    [8, 4.5, 3, 1.8],
       tanque:  [5, 4.5, 3, 1.8],
-      soporte: [6, 4.5, 3, 1.8],
+      soporte: [5, 4.5, 3, 1.8],
       /* El SOPORTE A SOLAS no tiene a quién levantar ni a quién proteger,
        * y a menudo gasta sus poderes en sobrevivir: se le mide solo por lo
-       * que mata y lo que se da a sí mismo, y la S pide 4. */
-      soporte_solo: [4, 3, 2, 1.2]
+       * que mata y lo que se da a sí mismo. La S empezó en 4 y subió a 4,5
+       * el mismo día (Braighton: con 4 regalaba demasiadas). */
+      soporte_solo: [4.5, 3, 2, 1.2]
     },
     /* cada muerte propia rebaja el valor en esta fracción (10 %) */
     CASTIGO_MUERTE: 0.1,

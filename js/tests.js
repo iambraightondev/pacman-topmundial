@@ -12634,8 +12634,10 @@
          '(12 + 6 + 5) / 5 = 4,6');
       // A SOLAS el Soporte no se mide por rescates, y la S pide 4
       eq(Mae.valor('soporte', { rescates: 4, apoyos: 6, kills: 14 }, 0, 5, true), 4, 'a solas, sin rescates: (6 + 14) / 5');
-      eq(Mae.notaDe('soporte', 4, true), 'S', 'y con 4 es S');
-      eq(Mae.notaDe('soporte', 4, false), 'B', 'en equipo, 4 sigue siendo B');
+      eq(Mae.notaDe('soporte', 4, true), 'A', 'con 4 a solas, A');
+      eq(Mae.notaDe('soporte', 4.5, true), 'S', 'la S a solas pide 4,5');
+      eq(Mae.notaDe('soporte', 4.5, false), 'A', 'en equipo, 4,5 sigue siendo A');
+      eq(Mae.notaDe('soporte', 5, false), 'S', 'y la S en equipo pide 5');
     });
 
   test('MAESTRÍA: morir rebaja la nota', function () {

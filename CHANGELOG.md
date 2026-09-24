@@ -9,11 +9,12 @@ normal (200, 400, 800, 1.600), la misma de comerse azules; la reinicia lo de
 siempre (otro energizante, morir o pasar de nivel). También la BOLA GUIADA y el
 DOMINIO. Con 200 fijos no llegaba ni a la marca de FRESA.
 **NOTAS S:** el Asesino pide 12 por minuto (antes 7), el Mago 8 (antes 6) y el
-Tanque 5 (antes 6). El Soporte a solas ya no se mide por rescates, solo por lo
-que mata y lo que se da, con su propia tabla (S desde 4).
+Tanque 5 (antes 6), igual que el Soporte en equipo. El Soporte a solas ya no
+se mide por rescates, solo por lo que mata y lo que se da, con su propia tabla
+(S desde 4,5).
 **Lo ya jugado, recalificado:** cada repetición se volvió a reproducir hasta dar
 los mismos puntos y se calificó con los listones nuevos: IAMBRAIGHTON -13 S de
-Asesino, MAULIO +3 S de Tanque, ESTER +14 S y +1.210 puntos de Soporte.
+Asesino, MAULIO +3 S de Tanque, ESTER +7 S y +930 puntos de Soporte.
 
 ## 2026-09-24 · Subir de división, de rango o de nivel se celebra siempre
 
