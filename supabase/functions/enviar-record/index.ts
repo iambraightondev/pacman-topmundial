@@ -87,6 +87,9 @@ const BOLA_MS = 20000;                             // CFG.HAB.LIST_M fuego
 const RUNA_MS = 32000;                             // CFG.HAB.LIST_M runa (dura 15 s)
 const TORMENTA_MS = 46000;                         // CFG.HAB.LIST_M tormenta
 const PUNTOS_MAGO = 200;                           // CFG.HAB.MAGO_PUNTOS
+const DESATADO_POR_MINUTO = 50000;                 // 24 sep: el kit de ahora
+const DESATADO_FANTASMAS_MINUTO = 40;
+const PREMIO_REY = 3000;                           // CFG.JEFE.PREMIO, cada 5 niveles
 
 /* Margen sobre el techo teórico: más vale dejar pasar una partida rarísima
  * que tirar la de alguien que jugó de verdad. Con el 10% sigue habiendo un
@@ -230,9 +233,15 @@ function extraDesatado(tiempoMs: number, jugadores: number) {
   const tanque = { puntos: arrollar * 4 * PUNTOS_MAGO, fantasmas: arrollar * 4 };
   const magias = veces(tiempoMs, BOLA_MS) + veces(tiempoMs, RUNA_MS) + veces(tiempoMs, TORMENTA_MS) * 2;
   const mago = { puntos: magias * PUNTOS_MAGO, fantasmas: magias };
+  /* EL ASESINO DE AHORA (24 sep): la BOMBA en racha paga hasta 3.750 cada
+   * 12 s y mata cuatro, la SOMBRA 2.000 por baja, la MARCA el triple, la
+   * EJECUCIÓN 5.000. Se da de sobra por minuto y jugador, igual que el techo
+   * del propio juego (js/ranking.js): esto está para parar lo inventado, no
+   * para tirar una partida buena. */
+  const minutos = veces(tiempoMs, 60000);
   return {
-    puntos: Math.max(asesino.puntos, tanque.puntos, mago.puntos) * jugadores,
-    fantasmas: Math.max(asesino.fantasmas, tanque.fantasmas, mago.fantasmas) * jugadores
+    puntos: Math.max(asesino.puntos, tanque.puntos, mago.puntos, minutos * DESATADO_POR_MINUTO) * jugadores,
+    fantasmas: Math.max(asesino.fantasmas, tanque.fantasmas, mago.fantasmas, minutos * DESATADO_FANTASMAS_MINUTO) * jugadores
   };
 }
 
@@ -241,7 +250,10 @@ function techoPartida(desde: number, hasta: number, mundo = 'clasico',
     tiempoMs = 0, jugadores = 1): number {
   let total = 0;
   for (let n = desde; n <= hasta; n++) total += techoNivel(n, mundo);
-  if (mundo === 'hab') total += extraDesatado(tiempoMs, jugadores).puntos;
+  if (mundo === 'hab') {
+    total += extraDesatado(tiempoMs, jugadores).puntos;
+    total += (Math.floor(hasta / 5) + 1) * PREMIO_REY;   // el rey fantasma
+  }
   return Math.floor(total * MARGEN);
 }
 

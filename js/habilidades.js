@@ -4394,7 +4394,19 @@
         }
         if (s.carrona > 0) s.carrona--;
         if (s.marca > 0 && --s.marca <= 0) for (j = 0; j < 4; j++) if (this.marcaGhost[j] === i) this.marcaGhost[j] = -1;
-        if (s.caceria > 0) s.caceria--; else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
+        if (s.caceria > 0) {
+          s.caceria--;
+          /* LOS QUE SALEN DURANTE LA CACERÍA TAMBIÉN QUEDAN MARCADOS (24 sep).
+           * Solo se marcaban los que estaban en la calle al pulsarla, y los
+           * que soltaba después la casa —o el REY al invocar— salían sin
+           * marca y mataban al cazador. */
+          for (j = 0; j < 4; j++) {
+            if (this.caceriaQuien[j] < 0 && this.enLaCalle(G.ghosts[j])) {
+              this.caceriaQuien[j] = i;
+              this.efecto('caceria', G.ghosts[j].x, G.ghosts[j].y, 30);
+            }
+          }
+        } else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
         if (s.estelaBuff > 0) s.estelaBuff--;
         if (!s.estelaRastro) s.estelaRastro = [];
         /* ESTELA: el rastro es un camino, no una colita. Antes cada pisada se

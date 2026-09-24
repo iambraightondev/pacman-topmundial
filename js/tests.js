@@ -12303,6 +12303,24 @@
     G.toMenu();
   });
 
+  test('CACERÍA: los fantasmas que salen mientras dura también quedan marcados', function () {
+    var H = window.PM.Hab;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['asesino'], ['mordisco,turbo,flash,caceria']); G.roles = ['asesino'];
+    G.ghosts[0].mode = 'house';
+    for (var i = 1; i < 4; i++) G.ghosts[i].mode = 'normal';
+    H.caceria(G, 0);
+    eq(H.caceriaQuien[0], -1, 'el de la casa no estaba marcado');
+    eq(H.caceriaQuien[1], 0, 'los de la calle, sí');
+    G.ghosts[0].mode = 'normal';
+    H.paso(G);
+    eq(H.caceriaQuien[0], 0, 'al salir durante la cacería, queda marcado');
+    H.st[0].caceria = 0;
+    H.paso(G);
+    eq(H.caceriaQuien[0], -1, 'y al acabarse, todos sin marca');
+    G.toMenu();
+  });
+
   test('EL REY: azul es azul, también mientras carga su embestida', function () {
     var J = window.PM.Jefe;
     partida(1); G.hab = true;
