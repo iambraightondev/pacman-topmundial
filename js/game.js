@@ -1738,6 +1738,9 @@
        * máquina (CACERÍA) no es de nadie. El invitado se apunta las suyas al
        * recibir el aviso 'death', que es cuando el anfitrión la da por buena. */
       if (!p.bot && (!this.netRole || i === this.localIdx)) this.bumpAch({ muertes: 1 });
+      /* y la caída del Pac-Man de la máquina vale para el DAILY a todos, lo
+       * haya pillado quien sea (el invitado la apunta al recibir 'death') */
+      if (p.bot && this.caza && this.netRole !== 'guest') this.bumpAch({ pacCaidos: 1 });
       if (window.PM.Versus) window.PM.Versus.onCatch(this, i, byGhost);
       this.startPacDeath(i);
       this.dyingPlayer = i;
@@ -4402,6 +4405,7 @@
             this.predictFreeze = 0;
             if (pw && !pw.bot) this.bumpAch({ muertes: 1 });   // CALAVERA
           }
+          if (pw && pw.bot && this.caza) this.bumpAch({ pacCaidos: 1 });   // DAILY de CACERÍA
           this.dyingPlayer = w;
           if (e.g) {                 // era el último: parón clásico
             this.state = 'DYING';

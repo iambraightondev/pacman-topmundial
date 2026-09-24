@@ -1542,8 +1542,11 @@
        * sitio de la lista, así la baraja de la semana no se descoloca. */
       { id: 'd_hab_nivel', modo: 'hab',
         desc: 'LLEGA AL NIVEL 5 EN DESATADO', stat: 'nivelMax', goal: 5 },
+      /* Vale que lo pille cualquier fantasma (24 sep, decidido por
+       * Braighton): en party la caza es de equipo, y contar solo las tuyas
+       * dejaba el reto en manos de quién llegaba primero. */
       { id: 'd_caza_pac', modo: 'caza',
-        desc: 'CAZA 2 VECES AL PAC-MAN EN CACERÍA', stat: 'cazas', goal: 2 }
+        desc: 'EL PAC-MAN CAE 2 VECES EN CACERÍA', stat: 'pacCaidos', goal: 2 }
     ]
   };
 

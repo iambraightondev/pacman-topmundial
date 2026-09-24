@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · El reto de CACERÍA vale lo pille quien lo pille
+
+**DAILY:** el reto de CACERÍA pasa a ser «EL PAC-MAN CAE 2 VECES EN CACERÍA» y
+cuenta cada caída del Pac-Man de la máquina, la provoque tu fantasma, el de un
+compañero o uno de la máquina. Antes solo valían las tuyas, y en party eso
+dejaba el reto en manos de quién llegaba primero. Cuenta en el momento, no al
+acabar la partida. Los puntos de la caza siguen siendo de quien caza.
+
 ## 2026-09-24 · CIFRAS y LOGROS a tamaño real, con scroll
 
 Las pestañas CIFRAS y LOGROS del perfil, y el perfil de un amigo, se encogían

@@ -37,6 +37,10 @@
     mordiscos: 'suma',   // fantasmas comidos con la Q (modo DESATADO)
     muros:     'suma',   // muros atravesados con la E (modo DESATADO)
     cazas:     'suma',   // Pac-Man cazados llevando un fantasma (PAC-MAN VS.)
+    /* Veces que cae el Pac-Man de la máquina en CACERÍA, lo pille el
+     * fantasma que lo pille (el tuyo, el de un compañero o uno de la
+     * máquina). Lo mide el reto del DAILY: cazar es cosa de equipo. */
+    pacCaidos: 'suma',
     dailyOk:   'suma',   // retos diarios cumplidos (js/daily.js)
     dailySemana: 'suma', // semanas con los siete cumplidos
     dailyRacha: 'mayor', // días seguidos cumpliendo alguno

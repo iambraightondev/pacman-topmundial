@@ -7342,6 +7342,32 @@
     return p;
   }
 
+  /* El reto de CACERÍA del DAILY cuenta las caídas del Pac-Man, las
+   * provoque el fantasma que las provoque (24 sep). */
+  test('DAILY de CACERÍA: vale que al Pac-Man lo pille cualquier fantasma', function () {
+    conLogrosLimpios(function (A) {
+      conDaily(function (D) {
+        var i = D.diaSemana(), retos0 = D.retos;
+        var reto = CFG.DAILY.MODOS.filter(function (r) { return r.id === 'd_caza_pac'; })[0];
+        D.retos = function () { var l = retos0.call(D).slice(); l[i] = reto; return l; };
+        try {
+          caceria(2);
+          var bot = Z.bot(G), b = G.pacs.indexOf(bot), ajeno = -1;
+          for (var g = 0; g < G.ghosts.length; g++) if (G.vsPlayerOf(g) < 0) { ajeno = g; break; }
+          ok(ajeno >= 0, 'hay un fantasma que no lleva nadie');
+          G.startDeath(b, ajeno);
+          eq(G.vsScoreOf(0), 0, 'la caza no es mía: no cobro los puntos');
+          eq(D.progreso(i).valor, 1, 'pero cuenta para el reto');
+          bot.dying = false; G.state = 'PLAYING';
+          G.startDeath(b, G.vsGhostOf(1));
+          ok(D.progreso(i).hecho, 'la de un compañero también: reto cumplido');
+          eq(A.stats().pacCaidos, 2, 'y queda apuntado');
+          G.toMenu();
+        } finally { D.retos = retos0; }
+      });
+    });
+  });
+
   /* Deja al bot en el cruce de la fila 5 mirando hacia `dir` */
   function botEnElCruce(dir) {
     var p = Z.bot(G);
