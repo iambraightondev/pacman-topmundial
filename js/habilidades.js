@@ -1854,7 +1854,7 @@
       for (var i = 0; i < this.st.length; i++) {
         var s = this.st[i];
         if (s.cadena > 0 && (i === who || s.cadenaCon === who)) {
-          G.addScore(pts);
+          G.addScore(pts, who);
           if (G.addPopup && x != null) G.addPopup(x, y - 7, '+' + pts, 30);
           this.efecto('cadena', x == null ? 0 : x, y == null ? 0 : y, 20);
           return pts;
@@ -2802,7 +2802,7 @@
       this.hielo[g.id] = 0;
       this.huye[g.id] = 0;
       var pts = this.puntosDe(G, who, H.MAGO_PUNTOS);
-      G.addScore(pts);
+      G.addScore(pts, who);
       this.bonoCadena(G, who, pts, g.x, g.y);
       G.addPopup(g.x, g.y, pts, 45);
       this.efecto(como, g.x, g.y, como === 'rayo' ? 14 : 18, ox, oy);
@@ -3113,7 +3113,7 @@
       /* si el que se va a casa era el fantasma prestado, deja de serlo: no
        * tiene sentido que siga cazando desde dentro de la casa */
       this.dominado[g.id] = 0; this.dominaQuien[g.id] = -1;
-      G.addScore(pts);
+      G.addScore(pts, who);
       this.bonoCadena(G, who, pts, x, y);
       G.addPopup(x, y, pts, 45);
       this.efecto(como || 'fuego', x, y, 18, p ? p.x : x, p ? p.y : y);
@@ -4617,7 +4617,7 @@
          * primero que pase; el bono de CADENA sigue yendo por quien lo cogió,
          * que es quien hizo el recorrido. */
         for (j = 0; j < G.pacs.length; j++) if (this.vivo(G, j) && this.distancia(G.pacs[j].x, G.pacs[j].y, joya.x, joya.y) < T) {
-          G.addScore(300); this.bonoCadena(G, j, 300, joya.x, joya.y);
+          G.addScore(300, j); this.bonoCadena(G, j, 300, joya.x, joya.y);
           G.addPopup(joya.x, joya.y, 300, 30); this.efecto('joya', joya.x, joya.y, 24);
           this.joyas.splice(i, 1); break;
         }

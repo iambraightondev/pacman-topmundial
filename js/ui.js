@@ -12587,17 +12587,32 @@
       if (col !== f.colJ) { f.colJ = col; f.quien.style.color = col; }
       var gid = g.vsGhostOf ? g.vsGhostOf(idx) : -1;
       var rol = A.rolDe ? A.rolDe(idx) : 'asesino';
-      var firma = gid >= 0 ? ('g' + gid) : rol;
+      /* EL RETRATO ES SU ASPECTO (24 sep): su skin con su accesorio, como se
+       * le ve en la portada; el rol va escrito al lado y en el color del aro */
+      var skin = g.skinFor ? g.skinFor(idx) : 'clasico';
+      var look = g.lookFor ? g.lookFor(idx) : { a: '' };
+      var firma = gid >= 0 ? ('g' + gid) : [rol, skin, look.a || '', col].join('|');
       if (firma === f.retratoDe) return;
       f.retratoDe = firma;
       if (gid >= 0) {
         this.pintarPersonaje(f.retrato, gid);
         f.rolTxt.textContent = (CFG.VS && CFG.VS.NAMES && CFG.VS.NAMES[gid]) || 'FANTASMA';
-      } else {
-        if (window.PM.Iconos) window.PM.Iconos.repintar(f.retrato, 'rol', rol);
-        var info = CFG.HAB.ROL_INFO[rol];
-        f.rolTxt.textContent = info ? info.name : '';
+        return;
       }
+      var info = CFG.HAB.ROL_INFO[rol];
+      f.rolTxt.textContent = info ? info.name : '';
+      var cv = f.retrato, c = cv.getContext && cv.getContext('2d'), Sp = window.PM.Sprites;
+      if (!c || !Sp) return;
+      try {
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, cv.width, cv.height);
+        /* 22 de lado lógico: el muñeco llena el círculo y aún cabe el accesorio */
+        var k = cv.width / 22;
+        c.setTransform(k, 0, 0, k, 0, 0);
+        Sp.drawPacman(c, 11, look.a ? 12.5 : 11, CFG.DIR.RIGHT, 1, col, skin,
+          { t: 0, icono: true, accesorio: look.a || null, team: [], estira: 1 });
+        c.setTransform(1, 0, 0, 1, 0, 0);
+      } catch (e) { /* un dibujo raro no rompe la barra */ }
     },
 
     /* Una casilla de poder: el icono (si cambia el poder o el color), la

@@ -6752,7 +6752,8 @@
       eq(UI.habGroups[1].caja.style.display, 'none', 'el segundo está apagado');
       ok(UI.habGroups[0].quien.textContent.length > 0, 'la ficha lleva el nombre de quien juega');
       eq(UI.habGroups[0].rolTxt.textContent, CFG.HAB.ROL_INFO[window.PM.Hab.rolDe(0)].name, 'y su rol');
-      eq(UI.habGroups[0].retratoDe, window.PM.Hab.rolDe(0), 'con el retrato de su rol');
+      eq(UI.habGroups[0].retratoDe.split('|').slice(0, 2).join('|'), window.PM.Hab.rolDe(0) + '|' + G.skinFor(0),
+         'con su aspecto (su skin) de retrato');
       var h0 = window.PM.Hab.listaDe(G, 0)[0];
       ok(UI.habGroups[0].btns[0].icoDe.indexOf(h0.id + '|') === 0, 'y cada poder con su icono');
       eq(UI.habIdxDe(0), 0, 'el único grupo es del jugador local');
@@ -6778,7 +6779,8 @@
         ok(otro.on, 'la del compañero se enciende');
         ok(otro.jug >= 0 && otro.jug !== UI.habIdxDe(0), 'y es del otro jugador');
         eq(otro.quien.textContent, G.nameFor(otro.jug), 'con su nombre');
-        eq(otro.retratoDe, HB.rolDe(otro.jug), 'y el retrato de su rol');
+        eq(otro.retratoDe.split('|')[1], G.skinFor(otro.jug), 'y su aspecto de retrato');
+        eq(otro.rolTxt.textContent, CFG.HAB.ROL_INFO[HB.rolDe(otro.jug)].name, 'con su rol escrito');
         eq(otro.btns.length, UI.habGroups[0].btns.length, 'las mismas casillas que la tuya');
         eq(otro.btns[0].b.className.split(' ')[0], 'hab-b', 'del mismo tipo (y tamaño)');
         ok(otro.btns[0].icoDe.indexOf(HB.listaDe(G, otro.jug)[0].id + '|') === 0, 'con el icono de SU poder');
@@ -6789,6 +6791,27 @@
         UI.refreshHabBar();
       }
     });
+
+  test('en party cada uno lleva la cuenta de SUS puntos, y viaja a los invitados', function () {
+    try {
+      partida(2, 'host');
+      G.addScore(100, 0);
+      G.addScore(250, 1);
+      G.addScore(50);
+      eq(G.score, 400, 'el marcador del equipo suma todo');
+      eq(G.ptsJ[0], 100, 'y cada uno lo suyo');
+      eq(G.ptsJ[1], 250);
+      eq(G.hudPuntosDe(1), '250', 'que es lo que sale en la cabecera');
+      var s = G.buildSnapshot(false);
+      G.netRole = 'guest';
+      G.ptsJ = [];
+      G.applySnapshot(s);
+      eq(G.ptsJ[1], 250, 'el invitado los recibe con la foto');
+    } finally {
+      G.netRole = null;
+      G.toMenu();
+    }
+  });
 
   test('en dúo cada jugador tiene sus cuatro poderes y su propia recarga',
     function () {

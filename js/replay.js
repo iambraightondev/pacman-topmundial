@@ -194,7 +194,7 @@
    *   {"-": 1}  -> se quita
    *   {"[": 1, "0": ...} -> lista del mismo largo, cambios por posición
    *   {clave: ...}       -> objeto, cambios por clave */
-  var EXTRAS = ['hb', 'hx', 'jf', 'sv', 'cu', 'si', 'sk', 'cz', 'ct', 'mk'];
+  var EXTRAS = ['hb', 'hx', 'jf', 'sv', 'cu', 'si', 'sk', 'cz', 'ct', 'mk', 'pj'];
   function esObj(v) { return v !== null && typeof v === 'object' && !esLista(v); }
   function difJson(a, b) {
     if (JSON.stringify(a) === JSON.stringify(b)) return undefined;

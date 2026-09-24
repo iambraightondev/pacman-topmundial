@@ -446,6 +446,15 @@
         : this.nameFor(i);
     },
 
+    /* La tercera línea de la cabecera en party (24 sep): LOS PUNTOS DE CADA
+     * UNO, en su color, en vez de su nombre (que ocupaba demasiado y ya sale
+     * en su ficha de poderes). Quien lleva un fantasma, los suyos de cazador.
+     * En CACERÍA siguen los nombres: ahí nadie hace puntos de Pac-Man. */
+    hudPuntosDe: function (i) {
+      if (this.vsGhostOf(i) >= 0) return String(this.vsScoreOf(i) || 0);
+      return String((this.ptsJ && this.ptsJ[i]) || 0);
+    },
+
     /* Escribe un texto encogiendo la letra hasta que quepa en ancho píxeles.
      * Los nombres pueden llegar a CFG.NICK_MAX letras y el lienzo solo mide
      * 224: con cuatro jugadores cada nombre tiene poco más de 50 px, así que
@@ -635,6 +644,9 @@
         ? 'individual' : 'shared';
       this.level = s.startLevel;
       this.score = 0;
+      /* los puntos de cada jugador (la cabecera de party): el marcador grande
+       * sigue siendo el del equipo, esto dice cuánto ha hecho cada uno */
+      this.ptsJ = [];
       this.extraLifeAwarded = false;
       this.paused = false;
 
@@ -1263,7 +1275,7 @@
                 this.runFrutas++;
                 this.bumpAch({ frutas: 1 });
               }
-              this.addScore(this.fruitInfo.points);
+              this.addScore(this.fruitInfo.points, i);
               if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this, i,
                 this.fruitInfo.points, p.x, p.y);
               this.addPopup(CFG.START.fruit.x * T + T / 2,
@@ -1403,13 +1415,13 @@
 
       var mio = !this.netRole || (pac && pac.id === this.localIdx);
       if (ch === '.') {
-        this.addScore(CFG.DOT_POINTS);
+        this.addScore(CFG.DOT_POINTS, pac ? (pac.id | 0) : 0);
         if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this,
           pac ? (pac.id | 0) : 0, CFG.DOT_POINTS, pac && pac.x, pac && pac.y);
         pac.pauseTicks = CFG.DOT_PAUSE;
         if (mio && !(pac && pac.bot)) this.runPastillas++;
       } else {
-        this.addScore(CFG.ENERGIZER_POINTS);
+        this.addScore(CFG.ENERGIZER_POINTS, pac ? (pac.id | 0) : 0);
         if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this,
           pac ? (pac.id | 0) : 0, CFG.ENERGIZER_POINTS, pac && pac.x, pac && pac.y);
         pac.pauseTicks = CFG.ENERGIZER_PAUSE;
@@ -1639,7 +1651,7 @@
         if (this.chainIndex >= 4) cuenta.racha4 = 1;
         this.bumpAch(cuenta);
       }
-      this.addScore(pts);
+      this.addScore(pts, who || 0);
       if (this.hab && window.PM.Hab) {
         window.PM.Hab.bonoCadena(this, who || 0, pts, g.x, g.y);
         window.PM.Hab.alMatar(this, who || 0, g, g.x, g.y);
@@ -2315,9 +2327,12 @@
     /* ---------------------------------------------------------
      * Puntuación (de equipo en modos de dos jugadores)
      * --------------------------------------------------------- */
-    addScore: function (pts) {
+    addScore: function (pts, quien) {
       var before = this.score;
       this.score += pts;
+      if (quien != null && quien >= 0 && this.ptsJ) {
+        this.ptsJ[quien] = (this.ptsJ[quien] || 0) + pts;
+      }
       if (!this.extraLifeAwarded && before < CFG.EXTRA_LIFE_AT &&
           this.score >= CFG.EXTRA_LIFE_AT) {
         this.extraLifeAwarded = true;
@@ -3768,7 +3783,7 @@
              * llegar el marcador bueno. Por eso salían a cero las frutas de
              * los demás. */
             this.marca(who, 'frutas');
-            this.addScore(this.fruitInfo.points);
+            this.addScore(this.fruitInfo.points, who);
             this.addPopup(CFG.START.fruit.x * T + T / 2,
               CFG.START.fruit.y * T + T / 2,
               this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
@@ -3950,6 +3965,7 @@
         ph: this.phaseTicks, dph: this.dyingPhase, lph: this.levelPhase,
         dp: this.dyingPlayer, rt: this.readyTicks,
         lvl: this.level, sc: this.score, hs: this.highScore,
+        pj: this.ptsJ || null,        // los puntos de cada uno (cabecera de party)
         gm: this.globalMode, el: this.elroy,
         /* el reloj de CAZA/DISPERSIÓN: sin esto, al invitado se le quedaba
          * clavado el aviso del OJO del Mago (los segundos no bajaban nunca) */
@@ -4629,6 +4645,7 @@
       }
 
       this.score = s.sc;
+      if (s.pj) this.ptsJ = s.pj.slice();
       this.checkBadges();        // el invitado también ve su cartel
       this.highScore = Math.max(this.highScore, s.hs || 0, s.sc || 0);
       this.globalMode = s.gm;
@@ -5509,18 +5526,20 @@
         ctx.fillText(String(this.level || 1), 220, 9);
       }
 
-      /* nombres del equipo en la tercera línea: dos a los lados, y con 3 o 4
-       * jugadores repartidos por igual para que quepan todos */
+      /* la tercera línea en equipo: los PUNTOS de cada uno en su color (en
+       * CACERÍA, los nombres), dos a los lados o repartidos si son 3 o 4 */
       if (team) {
         ctx.textBaseline = 'top';
         var n = caza ? this.playerCount : this.pacs.length;   // la máquina no va en la fila
+        var self = this;
+        var rotulo = function (i) { return caza ? self.hudNameFor(i) : self.hudPuntosDe(i); };
         if (n === 2) {
           ctx.textAlign = 'left';
           ctx.fillStyle = this.colorFor(0);
-          this.fitText(ctx, this.hudNameFor(0), 20, 16, 88, 7);
+          this.fitText(ctx, rotulo(0), 20, 17, 88, 7);
           ctx.textAlign = 'right';
           ctx.fillStyle = this.colorFor(1);
-          this.fitText(ctx, this.hudNameFor(1), 204, 16, 88, 7);
+          this.fitText(ctx, rotulo(1), 204, 17, 88, 7);
         } else {
           ctx.textAlign = 'center';
           var ancho = (CFG.NATIVE_W - 16) / n;
@@ -5529,7 +5548,7 @@
             // el que lleva fantasma tiene el pac fuera de juego a propósito:
             // ese nombre no va apagado, que sigue jugando
             ctx.globalAlpha = (this.pacs[i].out && this.vsGhostOf(i) < 0) ? 0.4 : 1;
-            this.fitText(ctx, this.hudNameFor(i), 8 + ancho * (i + 0.5), 16,
+            this.fitText(ctx, rotulo(i), 8 + ancho * (i + 0.5), 17,
               ancho - 3, 7);
           }
           ctx.globalAlpha = 1;

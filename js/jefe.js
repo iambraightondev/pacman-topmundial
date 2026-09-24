@@ -662,7 +662,7 @@
       /* rematarlo también es matar: si lo tumba el ASESINO, su pasiva cuenta */
       var premio = (G.hab && window.PM.Hab)
         ? window.PM.Hab.puntosDe(G, quien, J.PREMIO) : J.PREMIO;
-      G.addScore(premio);
+      G.addScore(premio, quien);
       G.addPopup(j.x, j.y, premio, 120);
       if (!G.netRole || quien === G.localIdx) G.bumpAch && G.bumpAch({ jefes: 1 });
       G.hostEvt({ t: 'jefeKill', w: quien, x: Math.round(j.x), y: Math.round(j.y) });

@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Tu aspecto en la ficha, y los puntos de cada uno
+
+**EL RETRATO ERES TÚ.** La ficha de poderes ya no lleva el emblema del rol:
+lleva a cada jugador con su skin y su accesorio, como se le ve en la portada.
+**EN PARTY, LOS PUNTOS DE CADA UNO.** Arriba, bajo el marcador del equipo,
+ya no van los nombres (ocupaban demasiado y salen en las fichas): van los
+puntos que ha hecho cada uno, en su color.
+
 ## 2026-09-24 · Un solo rango, a solo o en party
 
 **SE ACABARON LOS RANGOS POR FORMATO.** Cada jugador tiene un rango y lo
