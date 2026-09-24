@@ -5560,20 +5560,24 @@
       /* vidas (mini Pac-Mans) */
       if (this.state !== 'MENU') {
         if (team && this.livesMode === 'individual') {
-          // una tira corta por jugador, cada una de su color
-          var hueco = Math.floor(96 / this.pacs.length);
+          /* Una vida de cada jugador en SU color y, al lado, cuántas le
+           * quedan (24 sep). Antes eran tiras de iconos, y con tres o cuatro
+           * jugadores llegaban hasta el reloj y lo tapaban. Así todo cabe en
+           * el tercio izquierdo, sean dos o cuatro. */
+          ctx.save();
+          ctx.font = window.PM.Letra.lienzo(6);
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
           for (p = 0; p < this.pacs.length; p++) {
-            /* hasta CUATRO iconos por jugador: con la que lleva puesta son
-             * las cinco vidas del tope (18 sep). Con tres o cuatro jugadores
-             * no cabe tanto y se queda en dos. */
-            var quedan = Math.min(Math.max(this.pacs[p].lives - 1, 0),
-                                  this.pacs.length > 2 ? 2 : 4);
-            for (i = 0; i < quedan; i++) {
-              window.PM.Sprites.drawPacman(ctx, 18 + p * hueco + i * 11, 278,
-                D.LEFT, 2, this.colorFor(p), this.skinFor(p),
-                { t: this.tick / 60, icono: true });
-            }
+            var quedan = Math.max(this.pacs[p].lives - 1, 0);
+            var xv = 14 + p * 20;
+            ctx.globalAlpha = quedan > 0 ? 1 : 0.3;
+            window.PM.Sprites.drawPacman(ctx, xv, 278, D.LEFT, 2, this.colorFor(p), this.skinFor(p),
+              { t: this.tick / 60, icono: true });
+            ctx.fillStyle = this.colorFor(p);
+            ctx.fillText(String(quedan), xv + 7, 279);
           }
+          ctx.restore();
         } else {
           // fondo común: iconos blancos (vidas del equipo); en CACERÍA son
           // las de Pac-Man, y van de amarillo
@@ -5587,9 +5591,11 @@
         }
       }
 
-      /* frutas de los últimos <=7 niveles (abajo a la derecha) */
+      /* frutas de los últimos <=5 niveles (abajo a la derecha). Eran siete,
+       * como en la máquina, pero aquí la séptima y la sexta pisaban el reloj
+       * desde el nivel 6 (24 sep) */
       if (this.state !== 'MENU') {
-        var first = Math.max(1, this.level - 6);
+        var first = Math.max(1, this.level - 4);
         var x = CFG.NATIVE_W - 12;
         /* con el REY FANTASMA en pie, la fila de abajo es para su barra de
          * vida: las frutas de nivel son adorno y ceden el sitio */
