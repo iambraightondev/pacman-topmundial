@@ -12626,6 +12626,28 @@
       });
     });
 
+  test('RANGO: uno solo para solo y party; en party la marca se multiplica', function () {
+    conContadores(function () {
+      var Rg = window.PM.Rango, RG = CFG.RANGO, B = window.PM.Badges;
+      var m2 = B.FORMATOS[1].mult;
+      // cinco de colocación: tres en dúo con el doble de puntos y dos a solo
+      Rg.apuntar(Math.round(20000 * m2), 2, 5);
+      Rg.apuntar(Math.round(20000 * m2), 2, 5);
+      Rg.apuntar(Math.round(20000 * m2), 2, 5);
+      Rg.apuntar(20000, 1, 5);
+      var r = Rg.apuntar(20000, 1, 5);
+      ok(r.colocado, 'las de party y las de solo cuentan juntas: la quinta coloca');
+      eq(Rg.estado().jugadas, 5, 'en un solo rango');
+      eq(Rg.estado().pr, Rg.colocar(20000, 1), 'y la colocación pasa lo de party a solo');
+      var pr = Rg.estado().pr, t = Rg.estado().tramo;
+      // igualar la marca del escalón en dúo (multiplicada) no mueve nada
+      eq(Rg.apuntar(Math.round(Rg.parTramo(t, 1) * m2), 2, 5).cambio, 0, 'en dúo la marca es la de solo por ' + m2);
+      eq(Rg.estado().pr, pr);
+      // y doblarla en dúo da lo mismo que doblarla a solo
+      eq(Rg.apuntar(Math.round(Rg.parTramo(t, 1) * m2 * 2), 2, 5).cambio, 20, 'doblarla en dúo, +20');
+    });
+  });
+
   test('RANGO: solo en el modo CLASIFICATORIA y con cuenta; con cualquier rol, sí', function () {
     var Rg = window.PM.Rango;
     var logged = Rg.conCuenta;
@@ -12783,7 +12805,7 @@
       conContadores(function (A) {
         var Rg = window.PM.Rango, t = Rg.temporada();
         var kg = Rg.clave('rg', t, 1), kl = Rg.clave('rl', t, 1);
-        eq(kg, 'rg' + CFG.RANGO.VERSION + '_' + t + '_1', 'las reglas de ahora llevan su versión en la clave');
+        eq(kg, 'rg' + CFG.RANGO.VERSION + '_' + t, 'las reglas de ahora llevan su versión en la clave, y ya no el formato');
         A.record(kg, 40);
         A.merge({ [kg]: 90, [kl]: 10 });
         eq(A.stats()[kg], 90, 'lo ganado en el otro aparato llega');

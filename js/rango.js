@@ -5,8 +5,9 @@
  * Qué es
  *   Un rango que SUBE Y BAJA partida a partida, como en League of Legends,
  *   para DESATADO. El top mundial dice quién tiene la mejor marca; esto dice
- *   cómo juegas este mes. Uno por FORMATO (solo, dúo, trío, escuadra): las
- *   cuatro ligas no se mezclan nunca.
+ *   cómo juegas este mes. UNO SOLO por jugador (24 sep): se juega a solo o
+ *   en party y es el mismo rango; en party la marca a superar se multiplica
+ *   como la de los trofeos (x1,25 dúo, x1,5 trío, x1,75 escuadra).
  *
  * Cómo funciona
  *   · Las divisiones son las ocho frutas (CEREZA … LLAVE), partidas en
@@ -19,9 +20,9 @@
  *   · Cada mes se vuelve a empezar (la temporada es la de Season.actual()).
  *
  * Qué cuenta
- *   Solo las partidas que TÚ juegas en CLASIFICATORIA (el interruptor vive en
- *   los ajustes, `clasif`, y es de cada jugador): en una party, cada uno
- *   decide si esa partida le mueve su rango, y la marca es la del equipo.
+ *   Las partidas del modo CLASIFICATORIA, a solo o en party. En party cuenta
+ *   la marca del EQUIPO contra la de tu escalón multiplicada por el formato,
+ *   y a cada uno le mueve SU rango.
  *   Además: DESATADO de verdad (ni PAC-MAN VS., ni CACERÍA, ni
  *   supervivencia), ajustes de siempre, sin semilla de fuera y CON CUENTA,
  *   que es lo que te pone en la tabla. Salirse a medias también cuenta: si
@@ -32,10 +33,11 @@
  *   cuenta y se funden quedándose con lo más alto de cada lado. Por eso el PR
  *   no se guarda tal cual —bajar no se podría fundir—, sino como lo ganado y
  *   lo perdido, que solo crecen:
- *     rc3_<temporada>_<n>  partidas clasificatorias jugadas
- *     rt3_<temporada>_<n>  suma de las marcas de colocación
- *     rg3_<temporada>_<n>  PR ganado · rl3_… PR perdido
- *     rm3_<temporada>_<n>  mejor escalón alcanzado, +1 (0 = ninguno)
+ *     rc4_<temporada>  partidas clasificatorias jugadas
+ *     rt4_<temporada>  suma de las marcas de colocación, pasadas a SOLO
+ *                      (en party, los puntos entre el multiplicador)
+ *     rg4_<temporada>  PR ganado · rl4_… PR perdido
+ *     rm4_<temporada>  mejor escalón alcanzado, +1 (0 = ninguno)
  *   El número es la versión de las reglas (CFG.RANGO.VERSION): al cambiarlas
  *   se sube, y los contadores de antes dejan de leerse.
  *   PR = colocación + ganado − perdido.
@@ -58,10 +60,15 @@
   function temporada() {
     return window.PM.Season ? window.PM.Season.actual() : '';
   }
-  /* rc3_2026-09_1: la VERSIÓN de las reglas va en la clave. Los contadores
+  /* rc4_2026-09: la VERSIÓN de las reglas va en la clave. Los contadores
    * de las de antes (rc_…) se quedan donde están y no se leen: si no, un
    * aparato que aún los tuviera los devolvería al fundir con la cuenta. */
-  function clave(tipo, t, n) { return tipo + (RG.VERSION > 1 ? RG.VERSION : '') + '_' + t + '_' + n; }
+  /* Hasta la versión 3 había un rango por formato (…_1 a …_4); desde la 4
+   * es uno solo y la clave ya no lleva formato. */
+  function clave(tipo, t) {
+    var v = RG.VERSION > 1 ? RG.VERSION : '';
+    return tipo + v + '_' + t + (RG.VERSION >= 4 ? '' : '_1');
+  }
 
   /* multiplicador del formato (el de los trofeos: equipo x1,25 / 1,5 / 1,75) */
   function mult(n) {
@@ -121,18 +128,19 @@
     return Math.max(-D.pierde, Math.min(D.gana, d));
   }
 
-  /* El estado de un formato a partir de unos contadores (los tuyos o los de
-   * otro perfil, que para la tabla es lo mismo) */
-  function estadoDe(c, t, n) {
-    var jugadas = num(c[clave('rc', t, n)]);
-    var mejor = num(c[clave('rm', t, n)]) - 1;
-    var out = { temporada: t, n: n, jugadas: jugadas,
+  /* El rango a partir de unos contadores (los tuyos o los de otro perfil,
+   * que para la tabla es lo mismo) */
+  function estadoDe(c, t) {
+    var jugadas = num(c[clave('rc', t)]);
+    var mejor = num(c[clave('rm', t)]) - 1;
+    var out = { temporada: t, jugadas: jugadas,
                 colocacion: Math.min(jugadas, RG.COLOCACION), pr: null,
                 division: -1, tramo: -1, nombre: '',
                 mejor: mejor, mejorNombre: mejor >= 0 && TRAMOS[mejor] ? TRAMOS[mejor].nombre : '' };
     if (jugadas < RG.COLOCACION) return out;
-    var base = colocar(num(c[clave('rt', t, n)]) / RG.COLOCACION, n);
-    out.pr = Math.max(0, base + num(c[clave('rg', t, n)]) - num(c[clave('rl', t, n)]));
+    // la colocación se guarda ya pasada a SOLO: se coloca con la marca de solo
+    var base = colocar(num(c[clave('rt', t)]) / RG.COLOCACION, 1);
+    out.pr = Math.max(0, base + num(c[clave('rg', t)]) - num(c[clave('rl', t)]));
     var i = tramo(out.pr), T = TRAMOS[i];
     out.tramo = i;
     out.division = T.d;
@@ -182,8 +190,10 @@
     },
 
     /* Tu rango en un formato (1..4) esta temporada */
-    estado: function (n, t) {
-      return estadoDe(A() ? A().stats() : {}, t || temporada(), n || 1);
+    /* Tu rango esta temporada (el único: vale para solo y para party) */
+    estado: function (t) {
+      if (typeof t !== 'string') t = null;      // antes se pasaba el formato
+      return estadoDe(A() ? A().stats() : {}, t || temporada());
     },
 
     /* Por qué esta partida NO cuenta (o null si cuenta). Sirve para decírselo
@@ -226,15 +236,16 @@
     apuntar: function (puntos, n, nivel) {
       if (!A()) return null;
       var t = temporada();
-      var antes = this.estado(n, t);
+      var antes = this.estado(t);
       var o = {};
-      o[clave('rc', t, n)] = 1;
+      o[clave('rc', t)] = 1;
       var res = { n: n, puntos: puntos, nivel: nivel, antes: antes.pr,
                   divisionAntes: antes.division, tramoAntes: antes.tramo };
       if (antes.jugadas < RG.COLOCACION) {
-        o[clave('rt', t, n)] = puntos;
+        // pasada a SOLO: en party se divide entre el multiplicador del equipo
+        o[clave('rt', t)] = Math.round(puntos / mult(n));
         A().recordAll(o);
-        var tras = this.estado(n, t);
+        var tras = this.estado(t);
         res.colocando = tras.pr === null;
         res.jugadas = tras.colocacion;
         res.despues = tras.pr;
@@ -252,10 +263,10 @@
         /* en el suelo no se acumula deuda: lo que no se puede perder no se
          * apunta como perdido */
         if (d < 0) d = -Math.min(-d, antes.pr);
-        if (d > 0) o[clave('rg', t, n)] = d;
-        else if (d < 0) o[clave('rl', t, n)] = -d;
+        if (d > 0) o[clave('rg', t)] = d;
+        else if (d < 0) o[clave('rl', t)] = -d;
         A().recordAll(o);
-        var ya = this.estado(n, t);
+        var ya = this.estado(t);
         res.cambio = d;
         res.despues = ya.pr;
         res.division = ya.division;
@@ -264,7 +275,7 @@
         res.jugadas = ya.jugadas;
       }
       // lo más alto, por ESCALÓN (+1; 0 = ninguno)
-      if (res.tramo >= 0) A().record(clave('rm', t, n), res.tramo + 1);
+      if (res.tramo >= 0) A().record(clave('rm', t), res.tramo + 1);
       res.sube = res.tramo > res.tramoAntes && res.tramoAntes >= 0;
       res.baja = res.tramo < res.tramoAntes;
       res.colocado = antes.pr === null && res.despues !== null;
@@ -274,7 +285,7 @@
     /* La tabla de un formato: cb(err, [{ usuario, avatar, pr, division,
      * jugadas }]) ordenada por PR. Los que aún se están colocando van al
      * final, con su cuenta de partidas. */
-    tabla: function (n, cb, t) {
+    tabla: function (cb, t) {
       t = t || temporada();
       var c = window.PM.NET_CFG || {};
       if (!(c.SUPABASE_URL && c.SUPABASE_KEY && window.fetch)) { cb('SIN CONFIGURAR', null); return; }
@@ -290,7 +301,7 @@
           (filas || []).forEach(function (f) {
             var lg = f && f.logros;
             var cc = (lg && lg.c) || lg || {};
-            var e = estadoDe(cc, t, n);
+            var e = estadoDe(cc, t);
             if (!e.jugadas) return;
             out.push({ usuario: String(f.usuario || ''), avatar: f.avatar || '',
                        pr: e.pr, division: e.division, tramo: e.tramo, nombre: e.nombre,

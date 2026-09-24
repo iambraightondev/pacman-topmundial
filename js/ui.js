@@ -7140,13 +7140,8 @@
       h.className = 'panel-title';
       h.textContent = 'RANGO';
       cab.appendChild(h);
-      var mandos = document.createElement('div');
-      mandos.className = 'maes-mandos';
-      this.rangoFmtDesp = this.desplegable('FORMATO',
-        (B ? B.FORMATOS : []).map(function (f) { return { id: f.n, name: f.name }; }),
-        function (n) { self.rangoFmt = n; self.refreshRango(); });
-      mandos.appendChild(this.rangoFmtDesp.el);
-      cab.appendChild(mandos);
+      /* Sin selector de FORMATO (24 sep): el rango es uno solo, se juegue a
+       * solo o en party */
       o.appendChild(cab);
 
       this.rangoSub = document.createElement('div');
@@ -7204,11 +7199,19 @@
       back.classList.add('btn-primary');
       back.style.marginTop = '14px';
       o.appendChild(back);
-      this.rangoFmt = 1;
     },
 
-    showRango: function (n) {
-      if (n) this.rangoFmt = n;
+    /* En party la marca se multiplica como la de los trofeos: el texto que lo
+     * explica, con los números de verdad (Badges.FORMATOS) */
+    textoMultRango: function () {
+      var B = window.PM.Badges;
+      if (!B || !B.FORMATOS) return '';
+      return 'EN PARTY LA MARCA SE MULTIPLICA: ' + B.FORMATOS.slice(1).map(function (f) {
+        return f.name + ' X' + String(f.mult).replace('.', ',');
+      }).join(' · ');
+    },
+
+    showRango: function () {
       this.refreshRango();
       this.showPanel('rango');
       this.cargarTablaRango();
@@ -7219,20 +7222,19 @@
     refreshRango: function () {
       var Rg = window.PM.Rango, B = window.PM.Badges;
       if (!Rg || !this.rangoName) return;
-      var RG = CFG.RANGO, D = RG.DIVISIONES, n = this.rangoFmt || 1;
-      var e = Rg.estado(n);
-      if (this.rangoFmtDesp) this.rangoFmtDesp.poner(n);
+      var RG = CFG.RANGO, D = RG.DIVISIONES, n = 1;
+      var e = Rg.estado();
       var S = window.PM.Season;
-      var fmt = B ? B.FORMATOS[n - 1].name : 'SOLO';
-      this.rangoSub.textContent = 'DESATADO · ' + fmt + ' · TEMPORADA ' +
+      this.rangoSub.textContent = 'CLASIFICATORIA · TEMPORADA ' +
         (S ? S.nombre(e.temporada) : e.temporada) +
-        '  ·  CADA MES SE EMPIEZA DE CERO: ' + RG.COLOCACION +
-        ' PARTIDAS DE COLOCACIÓN Y LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO';
+        '  ·  UN SOLO RANGO, A SOLO O EN PARTY. CADA MES SE EMPIEZA DE CERO: ' + RG.COLOCACION +
+        ' PARTIDAS DE COLOCACIÓN Y LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO.  ' +
+        this.textoMultRango();
 
       var d = e.division, div = d >= 0 ? D[d] : null;
       this.rangoInfo.style.setProperty('--c', div ? div.color : '#8a8cae');
       this.rangoInfo.classList.toggle('off', !div);
-      this.rangoK.textContent = 'TU RANGO · ' + fmt;
+      this.rangoK.textContent = 'TU RANGO';
       this.rangoName.textContent = div ? e.nombre : 'SIN RANGO';
       this.rangoState.textContent = div
         ? (this.milesMaes(e.pr) + ' PR · ' + (e.anchoTramo
@@ -7262,7 +7264,7 @@
       var der = document.createElement('span');
       var pct = div ? (e.anchoTramo ? e.enTramo / e.anchoTramo : 1) : (e.colocacion / RG.COLOCACION);
       if (div) {
-        izq.textContent = 'MARCA A SUPERAR: ' + this.milesMaes(Rg.parTramo(e.tramo, n)) +
+        izq.textContent = 'MARCA A SUPERAR (SOLO): ' + this.milesMaes(Rg.parTramo(e.tramo, n)) +
           ' · NIVEL ' + (div.nivel || 1);
         der.textContent = e.anchoTramo ? ('ESCALÓN ' + e.enTramo + ' / ' + e.anchoTramo) : (this.milesMaes(e.pr) + ' PR');
       } else {
@@ -7288,13 +7290,11 @@
     cargarTablaRango: function () {
       var Rg = window.PM.Rango, self = this;
       if (!Rg) return;
-      var n = this.rangoFmt || 1;
       this.rangoLista.textContent = 'CARGANDO...';
       this.rangoTabla = null;
-      Rg.tabla(n, function (err, filas) {
-        if (n !== (self.rangoFmt || 1)) return;     // ya se pidió otra
+      Rg.tabla(function (err, filas) {
         if (err) { self.rangoLista.textContent = 'NO SE PUDO CARGAR LA TABLA (' + err + ')'; return; }
-        self.rangoTabla = { n: n, filas: filas };
+        self.rangoTabla = { filas: filas };
         self.pintarTablaRango();
       });
     },
@@ -7302,10 +7302,9 @@
     pintarTablaRango: function () {
       var t = this.rangoTabla, D = CFG.RANGO.DIVISIONES;
       if (!t) return;
-      if (t.n !== (this.rangoFmt || 1)) { this.cargarTablaRango(); return; }
       this.rangoLista.innerHTML = '';
       if (!t.filas.length) {
-        this.rangoLista.textContent = 'NADIE HA JUGADO CLASIFICATORIAS ESTE MES EN ESTE FORMATO. ¡ESTRÉNALA!';
+        this.rangoLista.textContent = 'NADIE HA JUGADO CLASIFICATORIAS ESTE MES. ¡ESTRÉNALA!';
         return;
       }
       var Ac = window.PM.Account;
@@ -7365,11 +7364,10 @@
     showRangosPrompt: function () {
       var self = this, Rg = window.PM.Rango, B = window.PM.Badges;
       if (!Rg) return;
-      var RG = CFG.RANGO, D = RG.DIVISIONES, TR = Rg.TRAMOS, n = this.rangoFmt || 1;
-      var e = Rg.estado(n);
-      var fmt = B ? B.FORMATOS[n - 1].name : 'SOLO';
+      var RG = CFG.RANGO, D = RG.DIVISIONES, TR = Rg.TRAMOS, n = 1;
+      var e = Rg.estado();
       var t = this.rangoTabla, cuantos = null;
-      if (t && t.n === n) {
+      if (t) {
         cuantos = D.map(function () { return 0; });
         t.filas.forEach(function (f) { if (f.division >= 0) cuantos[f.division]++; });
       }
@@ -7385,11 +7383,11 @@
         title: 'LOS RANGOS',
         arcade: true,
         tono: 'amarillo',
-        lines: [fmt + ' · CADA FRUTA SE SUBE POR ESCALONES. SUPERA LA MARCA DE TU ESCALÓN Y LLEGA AL NIVEL QUE PIDE PARA GANAR PR; SI TE QUEDAS CORTO, PIERDES.'],
+        lines: ['CADA FRUTA SE SUBE POR ESCALONES. SUPERA LA MARCA DE TU ESCALÓN Y LLEGA AL NIVEL QUE PIDE PARA GANAR PR; SI TE QUEDAS CORTO, PIERDES. LAS MARCAS SON DE SOLO; ' + self.textoMultRango() + '.'],
         custom: function (p) {
           var lista = el('div', 'rgs-lista');
           var cab = el('div', 'rgs-fila rgs-cab');
-          ['', 'DIVISIÓN', 'PR', 'MARCA A SUPERAR', 'NIVEL', 'JUGADORES'].forEach(function (x) {
+          ['', 'DIVISIÓN', 'PR', 'MARCA (SOLO)', 'NIVEL', 'JUGADORES'].forEach(function (x) {
             cab.appendChild(el('span', null, x));
           });
           lista.appendChild(cab);
@@ -13431,8 +13429,8 @@
       var Rg = window.PM.Rango;
       if (!Rg) return '';
       if (!Rg.conCuenta()) return 'HACE FALTA CUENTA PARA TENER RANGO';
-      var e = Rg.estado(1), D = CFG.RANGO.DIVISIONES;
-      return 'CUENTA PARA TU RANGO DEL MES · EN SOLO: ' + (e.division >= 0
+      var e = Rg.estado(), D = CFG.RANGO.DIVISIONES;
+      return 'CUENTA PARA TU RANGO DEL MES: ' + (e.division >= 0
         ? (e.nombre + ' · ' + e.pr + ' PR · SUPERA ' + this.milesMaes(Rg.parTramo(e.tramo, 1)) +
            ((D[e.division].nivel || 1) > 1 ? ' Y LLEGA AL NIVEL ' + D[e.division].nivel : ''))
         : ('COLOCACIÓN ' + e.colocacion + '/' + CFG.RANGO.COLOCACION));

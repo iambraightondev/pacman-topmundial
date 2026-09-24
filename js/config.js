@@ -1131,7 +1131,7 @@
     PASO: 20,
     /* Las reglas de antes eran otras cuentas: sus contadores no valen para
      * estas. Los de ahora llevan este número en la clave (js/rango.js). */
-    VERSION: 3             // 3: colocación estricta y topes más duros (24 sep)
+    VERSION: 4             // 3: colocación estricta; 4: un solo rango, sin formatos (24 sep)
   };
 
   /* ---------- Maestrías de ROL (22 de septiembre) ----------

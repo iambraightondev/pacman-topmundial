@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Un solo rango, a solo o en party
+
+**SE ACABARON LOS RANGOS POR FORMATO.** Cada jugador tiene un rango y lo
+mueven todas sus CLASIFICATORIAS, a solo o en party. En party la marca a
+superar se multiplica como la de los trofeos (x1,25 dúo, x1,5 trío, x1,75
+escuadra), y las partidas de colocación jugadas en party se pasan a su
+equivalente a solo. El rango de septiembre se ha recalculado juntando todo
+lo jugado.
+
 ## 2026-09-24 · Las fichas de poderes, como en LoL
 
 **RETRATO, ICONOS Y RECARGAS.** La barra de poderes es ahora una ficha por
