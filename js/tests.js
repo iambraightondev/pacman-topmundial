@@ -12824,6 +12824,50 @@
     });
   });
 
+  test('RANGO: en la partida, un contador dice cuántos PR te llevarías si acabara ahora', function () {
+    var Rg = window.PM.Rango, UI = window.PM.UI, D = CFG.RANGO.DIVISIONES;
+    // FRESA II (150 PR): marca 19.400 y hay que llegar al nivel 2
+    var e = Rg.estadoDe({ [Rg.clave('rc', 'x', 1)]: 9, [Rg.clave('rt', 'x', 1)]: 5 * 25000,
+                          [Rg.clave('rg', 'x', 1)]: 50 }, 'x', 1);
+    eq(e.nombre, 'FRESA II');
+    var g = { clasif: true, rangoInicio: e, playerCount: 1, score: 0, level: 1,
+              replaying: false, isSpec: function () { return false; } };
+    var v = Rg.enVivo(g);
+    eq(v.cambio, -D[1].pierde, 'sin puntos, lo que se perdería');
+    g.score = 19400 * 2;
+    eq(Rg.enVivo(g).cambio, 0, 'doblando la marca pero sin el nivel 2, nada');
+    ok(!Rg.enVivo(g).nivelOk, 'y lo dice');
+    g.level = 2;
+    eq(Rg.enVivo(g).cambio, 20, 'con el nivel, +20');
+    eq(Rg.enVivo(g).pct, 1, 'con la barra llena');
+    g.replaying = true;
+    eq(Rg.enVivo(g), null, 'viendo una repetición no sale');
+    g.replaying = false; g.clasif = false;
+    eq(Rg.enVivo(g), null, 'ni fuera de CLASIFICATORIA');
+    g.clasif = true;
+    g.rangoInicio = Rg.estadoDe({ [Rg.clave('rc', 'x', 1)]: 2 }, 'x', 1);
+    eq(Rg.enVivo(g).jugada, 3, 'colocándose, qué partida de colocación es');
+    // y en la barra de poderes de una partida de verdad
+    try {
+      partida(1);
+      G.hab = true; G.clasif = true;
+      G.rangoInicio = e;
+      G.score = 19400 * 2; G.level = 2;
+      UI.refreshHabBar();
+      ok(UI.habRango.on, 'el recuadro se enciende');
+      eq(UI.habRango.v.textContent, '+20 PR', 'con lo que se ganaría');
+      ok(UI.habRango.caja.classList.contains('gana'), 'en verde');
+      G.score = 0;
+      UI.refreshHabBar();
+      eq(UI.habRango.v.textContent, '-' + D[1].pierde + ' PR', 'y lo que se perdería');
+      ok(UI.habRango.caja.classList.contains('pierde'), 'en rojo');
+    } finally {
+      G.clasif = false; G.rangoInicio = null;
+      G.toMenu();
+      UI.refreshHabBar();
+    }
+  });
+
   test('RANGO: la insignia abre la escalera entera, con tu división marcada', function () {
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     var est0 = Rg.estado, t0 = UI.rangoTabla;

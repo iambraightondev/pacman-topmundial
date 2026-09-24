@@ -577,7 +577,10 @@
        * de la partida y no de cada jugador (antes era un interruptor en los
        * ajustes): en party la elige quien manda, como el modo. */
       this.clasif = !!opts.clasif && this.hab;
-      this.jefe = null;          // el REY FANTASMA (js/jefe.js), si el nivel lo trae
+      /* ...y cómo iba tu rango al empezar: lo mira el contador de PR en vivo
+       * (Rango.enVivo). Se lee una vez aquí y no a cada fotograma. */
+      this.rangoInicio = (this.clasif && window.PM.Rango) ? window.PM.Rango.estado(this.playerCount) : null;
+      this.jefe = null;         // el REY FANTASMA (js/jefe.js), si el nivel lo trae
       /* Lo que tenías antes de jugar en esta tabla: si lo superas sin cuenta,
        * se avisa de que ese récord no entra en el top (ver rankPendiente) */
       this.rankPendiente = null;

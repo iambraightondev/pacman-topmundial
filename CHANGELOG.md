@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · CLASIFICATORIA: los PR en vivo
+
+**SABES LO QUE TE JUEGAS.** Durante una CLASIFICATORIA, arriba de los poderes
+sale cuántos PR te llevarías si la partida acabara ahora (en verde si ganas,
+en rojo si pierdes), la marca de tu escalón con una barra de lo que llevas y
+si ya llegaste al nivel que pide tu fruta. En las de colocación, qué partida
+de las cinco es.
+
 ## 2026-09-24 · RANGO: colocación estricta y topes más duros
 
 **COLOCARSE YA NO REGALA.** Las cinco de colocación te dejan un escalón por

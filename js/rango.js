@@ -161,6 +161,26 @@
      * un interruptor de cada jugador en los ajustes) */
     activa: function (G) { return !!(G && G.clasif); },
 
+    /* EN VIVO (24 sep): lo que te llevarías si la partida acabara ahora
+     * mismo, para el contador de la barra (UI.refreshRangoVivo). null si no
+     * es una CLASIFICATORIA que cuente para ti. Sale del rango que tenías al
+     * empezar (G.rangoInicio) y de los puntos y el nivel de ahora. */
+    enVivo: function (G) {
+      var e = G && G.clasif && G.rangoInicio;
+      if (!e || G.replaying || (G.isSpec && G.isSpec())) return null;
+      var n = G.playerCount || 1, puntos = Math.max(0, G.score || 0), nivel = G.level || 1;
+      if (e.pr === null) {
+        return { colocando: true, jugada: Math.min(e.jugadas + 1, RG.COLOCACION),
+                 de: RG.COLOCACION, puntos: puntos };
+      }
+      var D = DIV[e.division], marca = parTramo(e.tramo, n);
+      var d = cambio(puntos, e.pr, n, nivel);
+      if (d < 0) d = -Math.min(-d, e.pr);       // en el suelo no se pierde
+      return { colocando: false, nombre: e.nombre, color: D.color, cambio: d,
+               puntos: puntos, marca: marca, pct: Math.min(1, puntos / marca),
+               nivelPide: D.nivel || 1, nivelOk: nivel >= (D.nivel || 1) };
+    },
+
     /* Tu rango en un formato (1..4) esta temporada */
     estado: function (n, t) {
       return estadoDe(A() ? A().stats() : {}, t || temporada(), n || 1);

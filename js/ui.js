@@ -12422,6 +12422,26 @@
       var bar = document.createElement('div');
       bar.id = 'habBar';
       bar.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+      /* CLASIFICATORIA: el contador de PR en vivo (24 sep), lo primero de la
+       * barra. Dice lo que te llevarías si la partida acabara ahora, la marca
+       * que hay que superar y si ya llegaste al nivel que pide tu fruta. */
+      var rg = document.createElement('div');
+      rg.className = 'hab-rango';
+      rg.style.display = 'none';
+      var rgK = document.createElement('span');
+      rgK.className = 'hab-rango-k';
+      var rgV = document.createElement('b');
+      rgV.className = 'hab-rango-v';
+      var rgBarra = document.createElement('div');
+      rgBarra.className = 'hab-rango-barra';
+      var rgFill = document.createElement('i');
+      rgBarra.appendChild(rgFill);
+      var rgPie = document.createElement('span');
+      rgPie.className = 'hab-rango-pie';
+      [rgK, rgV, rgBarra, rgPie].forEach(function (x) { rg.appendChild(x); });
+      bar.appendChild(rg);
+      this.habRango = { caja: rg, k: rgK, v: rgV, barra: rgBarra, fill: rgFill, pie: rgPie,
+                        on: false, ultimo: '' };
       /* Un grupo por jugador. En solo y en online solo se usa el primero; con
        * dos en el mismo teclado se encienden los dos, cada uno con SUS teclas
        * (CFG.HAB.KEYS_2P) y con la recarga de SU jugador. Se montan los dos
@@ -12605,6 +12625,44 @@
       this.habBar.style.right = lateral ? 'auto' : '';
     },
 
+    /* El contador de PR de la CLASIFICATORIA (Rango.enVivo). Va a 60 por
+     * segundo, así que solo escribe cuando cambia lo que se enseña. */
+    refreshRangoVivo: function (g) {
+      var o = this.habRango, Rg = window.PM.Rango;
+      if (!o) return;
+      var v = (Rg && Rg.enVivo) ? Rg.enVivo(g) : null;
+      var on = !!v;
+      if (on !== o.on) {
+        o.on = on;
+        o.caja.style.display = on ? '' : 'none';
+        o.ultimo = '';
+        this.marcarHabBar();
+        this.fitCanvas();
+      }
+      if (!on) return;
+      var firma = v.colocando ? ('c' + v.jugada)
+        : [v.nombre, v.cambio, Math.round(v.pct * 100), v.nivelOk].join('|');
+      if (firma === o.ultimo) return;
+      o.ultimo = firma;
+      if (v.colocando) {
+        o.caja.style.setProperty('--c', '#ffd23f');
+        o.caja.className = 'hab-rango igual';
+        o.k.textContent = 'CLASIFICATORIA';
+        o.v.textContent = 'COLOCACIÓN ' + v.jugada + '/' + v.de;
+        o.barra.style.display = 'none';
+        o.pie.textContent = 'TUS PUNTOS CUENTAN PARA TU MEDIA';
+        return;
+      }
+      o.caja.style.setProperty('--c', v.color);
+      o.caja.className = 'hab-rango ' + (v.cambio > 0 ? 'gana' : v.cambio < 0 ? 'pierde' : 'igual');
+      o.k.textContent = v.nombre + ' · SI ACABA AHORA';
+      o.v.textContent = (v.cambio > 0 ? '+' : '') + v.cambio + ' PR';
+      o.barra.style.display = '';
+      o.fill.style.width = (v.pct * 100).toFixed(1) + '%';
+      o.pie.textContent = 'MARCA ' + this.milesMaes(v.marca) + ' · ' +
+        (v.nivelOk ? ('NIVEL ' + v.nivelPide + ' LOGRADO') : ('LLEGA AL NIVEL ' + v.nivelPide));
+    },
+
     marcarHabBar: function () {
       var st = document.getElementById('stage');
       if (!st || !this.habBar) return;
@@ -12642,6 +12700,7 @@
         this.fitCanvas();
       }
       if (!ver) return;
+      this.refreshRangoVivo(g);
       /* Dos en el mismo teclado: dos grupos, cada uno con su etiqueta. Esto se
        * llama 60 veces por segundo, así que solo se toca el DOM cuando cambia
        * de verdad —y encender o apagar un grupo cambia lo que mide el
