@@ -240,7 +240,21 @@
       if (d && d.est) out.est = Math.floor(d.est) || 0;
       if (d && d.b) out.b = 1;          // y el regalo de veterano, ya calculado
     } catch (e) { /* sin almacenamiento */ }
+    ajustarCifras(out.c);
     return out;
+  }
+
+  /* Las CIFRAS corregidas a mano de la cuenta que ha entrado (CFG.AJUSTES_
+   * CUENTA): solo si el contador vale exactamente el número malo. */
+  function ajustarCifras(c) {
+    var AJ = CFG.AJUSTES_CUENTA, Ac = window.PM.Account;
+    if (!AJ || !Ac || !Ac.logged || !Ac.name) return;
+    try { if (!Ac.logged()) return; } catch (e) { return; }
+    var aj = AJ[String(Ac.name() || '').toUpperCase()];
+    if (!aj || !aj.cifras) return;
+    for (var k in aj.cifras) {
+      if (aj.cifras.hasOwnProperty(k) && c[k] === aj.cifras[k][0]) c[k] = aj.cifras[k][1];
+    }
   }
 
   /* Un contador GUARDADO tal cual está en el almacén, esté o no en STATS.

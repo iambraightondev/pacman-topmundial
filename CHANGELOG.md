@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Maestrías repartidas como se jugaron
+
+**LO DE ANTES, A SU ROL.** Las partidas jugadas antes de que existieran las
+maestrías (22 sep) se repartieron solo con lo guardado en cada navegador, y el
+resto fue al ASESINO. Se han recontado con las repeticiones de la nube y cada
+rol recibe las suyas (a IAMBRAIGHTON, 65 de Mago, 39 de Tanque y 28 de
+Soporte). También se corrige su mejor marca de CLÁSICO y de party, que tenían
+copiada la de DESATADO.
+
 ## 2026-09-24 · FRENESÍ con fuego, y cuánto le queda a cada poder
 
 **EL FRENESÍ SE VE.** Eran tres arcos y un número diminuto. Ahora el Pac-Man

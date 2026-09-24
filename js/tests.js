@@ -12466,6 +12466,27 @@
     }
   }
 
+  test('los ajustes a mano de una cuenta corrigen sus cifras y sus maestrías', function () {
+    var Ac = window.PM.Account, Mae = window.PM.Maestria, u0 = Ac.user, t0 = Ac.token;
+    conContadores(function (A) {
+      A.record('clasico:puntosMax', 180550);
+      A.record('mae_asesino', 20000);
+      A.record('maep_asesino', 200);
+      var mago0 = Mae.datos('mago').puntos;
+      try {
+        Ac.user = { id: 'id-prueba', usuario: 'IAMBRAIGHTON' };
+        Ac.token = 'token-de-prueba';
+        eq(A.stats()['clasico:puntosMax'], 84250, 'la cifra mala se corrige al leerla');
+        eq(Mae.datos('mago').puntos, mago0 + 6500, 'el Mago recibe sus partidas de antes');
+        eq(Mae.datos('asesino').puntos, 20000 - 13200, 'y se le quitan al Asesino');
+        eq(Mae.datos('asesino').partidas, 200 - 132, 'con sus partidas');
+        Ac.user = { id: 'id-prueba', usuario: 'OTRO' };
+        eq(A.stats()['clasico:puntosMax'], 180550, 'a otra cuenta no le toca nada');
+        eq(Mae.datos('asesino').puntos, 20000);
+      } finally { Ac.user = u0; Ac.token = t0; }
+    });
+  });
+
   test('MAESTRÍA: la nota sale de lo que hace cada rol, por minuto en pie',
     function () {
       var Mae = window.PM.Maestria;

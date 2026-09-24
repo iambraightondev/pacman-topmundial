@@ -94,6 +94,17 @@
     return String(n || '').toUpperCase();
   }
 
+  /* [puntos, partidas] que la cuenta que ha entrado tiene de ajuste en ese
+   * rol (CFG.AJUSTES_CUENTA), o [0, 0] */
+  function ajusteDe(rol) {
+    var AJ = CFG.AJUSTES_CUENTA, Ac = window.PM.Account;
+    if (!AJ || !Ac || !Ac.logged || !Ac.name) return [0, 0];
+    try { if (!Ac.logged()) return [0, 0]; } catch (e) { return [0, 0]; }
+    var aj = AJ[String(Ac.name() || '').toUpperCase()];
+    var r = aj && aj.maestria && aj.maestria[rol];
+    return r ? [r[0] | 0, r[1] | 0] : [0, 0];
+  }
+
   var Maestria = {
     ROLES: ROLES,
     nivelDe: nivelDe,
@@ -105,12 +116,15 @@
      *     sig (el escalón siguiente o null), falta (puntos), faltaS } */
     datos: function (rol) {
       var c = A() ? A().stats() : {};
-      var puntos = stat(c, 'mae_' + rol), eses = stat(c, 'maes_' + rol);
+      /* con el ajuste a mano de la cuenta, si lo tiene (CFG.AJUSTES_CUENTA) */
+      var aj = ajusteDe(rol);
+      var puntos = Math.max(0, stat(c, 'mae_' + rol) + aj[0]), eses = stat(c, 'maes_' + rol);
       var nivel = nivelDe(puntos, eses);
       var sig = M.NIVELES[nivel + 1] || null;
       return {
         rol: rol, puntos: puntos, eses: eses,
-        partidas: stat(c, 'maep_' + rol), sembradas: stat(c, 'maesem_' + rol),
+        partidas: Math.max(0, stat(c, 'maep_' + rol) + aj[1]),
+        sembradas: Math.max(0, stat(c, 'maesem_' + rol) + aj[1]),
         nivel: nivel, sig: sig,
         falta: sig ? Math.max(0, sig.puntos - puntos) : 0,
         faltaS: sig ? Math.max(0, sig.eses - eses) : 0

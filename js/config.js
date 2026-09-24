@@ -1152,6 +1152,27 @@
    * mejor, 7. Los del TANQUE y el SOPORTE no tienen datos todavía (sus
    * contadores nacen hoy): son una primera tanda para ajustar jugando.
    * ---------------------------------------------------------------- */
+  /* ---------- AJUSTES A MANO POR CUENTA (24 sep) ----------
+   * Correcciones de datos que no se pueden hacer en la nube: los aparatos
+   * funden sus contadores quedándose con lo más alto, así que uno que aún
+   * tenga el número malo lo vuelve a subir. Aquí van atadas a la cuenta y las
+   * aplica el juego al leer, en cualquier aparato.
+   *   cifras:   { clave: [valor malo, valor bueno] }: solo si vale EXACTAMENTE
+   *             el malo (si luego se juega más, manda lo jugado)
+   *   maestria: { rol: [puntos, partidas] } que se suman (o restan) a lo
+   *             guardado. Las partidas de antes de las maestrías (22 sep) se
+   *             repartieron solo con lo que había en cada navegador y el resto
+   *             se le dio al ASESINO; se recuentan con las repeticiones de la
+   *             nube, a 100 puntos por partida, que es lo que valían. */
+  CFG.AJUSTES_CUENTA = {
+    IAMBRAIGHTON: {
+      cifras: { 'clasico:puntosMax': [180550, 84250], 'party:puntosMax': [180550, 119300] },
+      maestria: { asesino: [-13200, -132], mago: [6500, 65], tanque: [3900, 39], soporte: [2800, 28] }
+    },
+    ESTER: { maestria: { asesino: [-800, -8], soporte: [800, 8] } },
+    MAULIO: { maestria: { asesino: [-700, -7], tanque: [500, 5], soporte: [200, 2] } }
+  };
+
   CFG.MAESTRIA = {
     /* puntos acumulados y notas S con ese rol que pide cada escalón */
     NIVELES: [
