@@ -6750,17 +6750,44 @@
       UI.refreshHabBar();
       ok(UI.habGroups && UI.habGroups.length === 2, 'los dos grupos existen');
       eq(UI.habGroups[1].caja.style.display, 'none', 'el segundo está apagado');
-      eq(UI.habGroups[0].quien.style.display, 'none',
-         'y sin etiqueta J1: con una sola fila no hay nada que distinguir');
+      ok(UI.habGroups[0].quien.textContent.length > 0, 'la ficha lleva el nombre de quien juega');
+      eq(UI.habGroups[0].rolTxt.textContent, CFG.HAB.ROL_INFO[window.PM.Hab.rolDe(0)].name, 'y su rol');
+      eq(UI.habGroups[0].retratoDe, window.PM.Hab.rolDe(0), 'con el retrato de su rol');
+      var h0 = window.PM.Hab.listaDe(G, 0)[0];
+      ok(UI.habGroups[0].btns[0].icoDe.indexOf(h0.id + '|') === 0, 'y cada poder con su icono');
       eq(UI.habIdxDe(0), 0, 'el único grupo es del jugador local');
 
       partidaHab2();                    // dos en el mismo teclado
       UI.refreshHabBar();
       ok(UI.habGroups[1].caja.style.display !== 'none', 'ahora hay dos filas');
-      ok(UI.habGroups[0].quien.style.display !== 'none', 'con su etiqueta');
+      ok(UI.habGroups[1].quien.textContent.length > 0, 'cada una con su nombre');
       eq(UI.habIdxDe(1), 1, 'el segundo grupo es del J2');
       eq(UI.habGroups[1].btns[0].key.textContent, CFG.HAB.KEYS_2P[1][0],
          'y enseña la tecla del J2, no la Q');
+    });
+
+  test('en party, la ficha del compañero es igual que la tuya: retrato, nombre y poderes con icono',
+    function () {
+      var UI = window.PM.UI;
+      try {
+        window.PM.settings.muted = true;
+        G.newGame({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, roles: ['asesino', 'tanque'] });
+        G.state = 'PLAYING'; G.readyTicks = 0;
+        UI.refreshHabBar();
+        var otro = UI.habOtros[0];
+        ok(otro.on, 'la del compañero se enciende');
+        ok(otro.jug >= 0 && otro.jug !== UI.habIdxDe(0), 'y es del otro jugador');
+        eq(otro.quien.textContent, G.nameFor(otro.jug), 'con su nombre');
+        eq(otro.retratoDe, HB.rolDe(otro.jug), 'y el retrato de su rol');
+        eq(otro.btns.length, UI.habGroups[0].btns.length, 'las mismas casillas que la tuya');
+        eq(otro.btns[0].b.className.split(' ')[0], 'hab-b', 'del mismo tipo (y tamaño)');
+        ok(otro.btns[0].icoDe.indexOf(HB.listaDe(G, otro.jug)[0].id + '|') === 0, 'con el icono de SU poder');
+        eq(otro.btns[0].b.tagName, 'DIV', 'pero no se pulsan: son suyos');
+      } finally {
+        G.netRole = null;
+        G.toMenu();
+        UI.refreshHabBar();
+      }
     });
 
   test('en dúo cada jugador tiene sus cuatro poderes y su propia recarga',

@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Las fichas de poderes, como en LoL
+
+**RETRATO, ICONOS Y RECARGAS.** La barra de poderes es ahora una ficha por
+jugador: el emblema de su rol en un círculo de su color, su nombre y su rol,
+y los cuatro poderes con su icono, la tecla en la esquina y el nombre debajo.
+Recargando, una sombra tapa el icono y se retira con los segundos encima;
+listo, se enciende. En party, cada compañero lleva la suya, igual y del
+mismo tamaño. Y los botones de la partida (CHAT, EMOTES) salen fuera del
+laberinto cuando hay sitio, para no tapar el nivel.
+
 ## 2026-09-24 · Adiós a la PRÁCTICA, y el nivel a la vista
 
 **CUALQUIER ROL CUENTA.** En DESATADO a uno ya no hay partidas de práctica:

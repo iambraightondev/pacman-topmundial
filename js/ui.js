@@ -12480,26 +12480,61 @@
      * fantasma solo use dos: los que sobran se esconden al refrescar, que sale
      * más barato que rehacer el DOM cada vez que cambia el reparto. */
     buildHabGroup: function (gi) {
+      return this.buildHabFicha(gi, true);
+    },
+
+    /* LA FICHA DE UN JUGADOR (24 sep), como en LoL: a la izquierda su
+     * retrato —el emblema de su rol en un círculo de su color—, y a la
+     * derecha su nombre, su rol y sus cuatro poderes CON SU ICONO, la tecla
+     * en la esquina y el nombre debajo. Recargando, una sombra tapa el icono
+     * y se va retirando, con los segundos encima; listo, se enciende.
+     *
+     * La tuya y la de los compañeros son LA MISMA, del mismo tamaño: lo que
+     * cambia es que las tuyas son botones (en el móvil se pulsan) y las de
+     * los demás no. `gi` es el grupo (0 o 1) de las tuyas; -1 en las ajenas. */
+    buildHabFicha: function (gi, propia) {
       var self = this;
       var caja = document.createElement('div');
-      caja.className = 'hab-grupo';
+      caja.className = 'hab-ficha ' + (propia ? 'hab-grupo' : 'hab-otro');
+      if (!propia) caja.style.display = 'none';
 
-      /* De quién es esta fila. Solo se ve con dos en el mismo teclado, que es
-       * cuando hay dos filas y hace falta saber cuál mirar. */
+      var marco = document.createElement('div');
+      marco.className = 'hab-retrato';
+      var retrato = document.createElement('canvas');
+      retrato.width = 128;
+      retrato.height = 128;
+      marco.appendChild(retrato);
+      caja.appendChild(marco);
+
+      var cuerpo = document.createElement('div');
+      cuerpo.className = 'hab-cuerpo';
+      caja.appendChild(cuerpo);
+      var cab = document.createElement('div');
+      cab.className = 'hab-cab';
       var quien = document.createElement('span');
       quien.className = 'hab-quien';
-      quien.textContent = 'J' + (gi + 1);
-      quien.style.display = 'none';   // solo con dos en el mismo teclado
-      caja.appendChild(quien);
+      cab.appendChild(quien);
+      var rolTxt = document.createElement('span');
+      rolTxt.className = 'hab-rol';
+      cab.appendChild(rolTxt);
+      cuerpo.appendChild(cab);
+      var fila = document.createElement('div');
+      fila.className = 'hab-slots';
+      cuerpo.appendChild(fila);
 
       var btns = [];
       CFG.HAB.LIST.forEach(function (h, k) {
-        var b = document.createElement('button');
-        b.type = 'button';
+        var b = document.createElement(propia ? 'button' : 'div');
+        if (propia) b.type = 'button';
         b.className = 'hab-b';
         b.setAttribute('aria-label', h.name);
-        /* el relleno es un hijo con altura variable: sube como un vaso que
-         * se llena, y a tope significa "lista" */
+        var ico = document.createElement('canvas');
+        ico.className = 'hab-ico';
+        ico.width = 104;
+        ico.height = 104;
+        b.appendChild(ico);
+        /* la sombra de la recarga: tapa el icono desde arriba y se retira
+         * según se carga (a tope, desaparece) */
         var fill = document.createElement('span');
         fill.className = 'hab-fill';
         b.appendChild(fill);
@@ -12507,76 +12542,109 @@
         lab.className = 'hab-key';
         lab.textContent = h.key;
         b.appendChild(lab);
-        var nom = document.createElement('small');
-        nom.className = 'hab-name';
-        nom.textContent = h.name;
-        b.appendChild(nom);
-        /* Los segundos que faltan. Van DONDE EL NOMBRE y se turnan con él:
-         * son dos cosas que nunca hacen falta a la vez —recargando quieres
-         * el número, cargada quieres saber cuál es— y en dos casillas
-         * distintas el botón se llenaría de letra pequeña. La barra sigue
-         * estando: dice de un vistazo cuánto queda, y el número dice
-         * cuánto exactamente, que es lo que hace falta para decidir si
-         * esperas o tiras de otra. */
         var secs = document.createElement('small');
         secs.className = 'hab-secs';
         b.appendChild(secs);
-        b.addEventListener('pointerdown', function (ev) {
-          ev.preventDefault();
-          self.resumeAudio();
-          var g = window.PM.Game;
-          if (!g.hab || !window.PM.Hab || g.replaying) return;
-          /* las que se pueden MANTENER salen al soltar: el dedo se queda
-           * con el botón aunque resbale fuera */
-          try { b.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura */ }
-          window.PM.Hab.apretar(g, self.habIdxDe(gi), k, false);
-        });
-        var soltarBtn = function () {
-          var g = window.PM.Game;
-          if (!g.hab || !window.PM.Hab) return;
-          window.PM.Hab.soltar(g, self.habIdxDe(gi), k);
-        };
-        b.addEventListener('pointerup', soltarBtn);
-        b.addEventListener('pointercancel', function () {
-          if (window.PM.Hab) window.PM.Hab.cancelarMant();
-        });
-        caja.appendChild(b);
-        btns.push({ b: b, fill: fill, key: lab, name: nom, secs: secs,
-                    ultimo: -1, listo: null, tecla: h.key, nombre: h.name,
+        var celda = document.createElement('div');
+        celda.className = 'hab-celda';
+        celda.appendChild(b);
+        var nom = document.createElement('small');
+        nom.className = 'hab-name';
+        nom.textContent = h.name;
+        celda.appendChild(nom);
+        if (propia) {
+          b.addEventListener('pointerdown', function (ev) {
+            ev.preventDefault();
+            self.resumeAudio();
+            var g = window.PM.Game;
+            if (!g.hab || !window.PM.Hab || g.replaying) return;
+            /* las que se pueden MANTENER salen al soltar: el dedo se queda
+             * con el botón aunque resbale fuera */
+            try { b.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura */ }
+            window.PM.Hab.apretar(g, self.habIdxDe(gi), k, false);
+          });
+          b.addEventListener('pointerup', function () {
+            var g = window.PM.Game;
+            if (!g.hab || !window.PM.Hab) return;
+            window.PM.Hab.soltar(g, self.habIdxDe(gi), k);
+          });
+          b.addEventListener('pointercancel', function () {
+            if (window.PM.Hab) window.PM.Hab.cancelarMant();
+          });
+        }
+        fila.appendChild(celda);
+        btns.push({ b: b, celda: celda, ico: ico, fill: fill, key: lab, name: nom, secs: secs,
+                    ultimo: -1, listo: null, tecla: h.key, nombre: h.name, icoDe: '',
                     resta: -1, visible: true });
       });
-      return { caja: caja, quien: quien, btns: btns, on: true };
+      return { caja: caja, quien: quien, rolTxt: rolTxt, retrato: retrato, btns: btns,
+               on: !!propia, jug: -1, nombreJ: '', colJ: '', retratoDe: '' };
     },
 
-    /* Una fila de compañero: su nombre y cuatro casillas chatas, una por
-     * poder. Se montan las cuatro aunque quien lleva un fantasma solo use
-     * dos; las que sobran se esconden al refrescar, igual que en la barra
-     * grande. No son botones: los poderes de otro no se pulsan desde aquí. */
-    buildHabOtro: function () {
-      var caja = document.createElement('div');
-      caja.className = 'hab-otro';
-      caja.style.display = 'none';
-
-      var nom = document.createElement('span');
-      nom.className = 'hab-otro-nom';
-      caja.appendChild(nom);
-
-      var celdas = [];
-      for (var k = 0; k < CFG.HAB.LIST.length; k++) {
-        var c = document.createElement('span');
-        c.className = 'hab-mini';
-        var fill = document.createElement('i');
-        fill.className = 'hab-mini-fill';
-        c.appendChild(fill);
-        var txt = document.createElement('b');
-        txt.className = 'hab-mini-txt';
-        c.appendChild(txt);
-        caja.appendChild(c);
-        celdas.push({ c: c, fill: fill, txt: txt,
-                      ultimo: -1, listo: null, texto: null, visible: true });
+    /* El retrato, el nombre y el rol de una ficha: solo cuando cambian */
+    pintarFicha: function (f, g, A, idx) {
+      var nombre = (g.nameFor && g.nameFor(idx)) || ('J' + (idx + 1));
+      if (nombre !== f.nombreJ) { f.nombreJ = nombre; f.quien.textContent = nombre; }
+      var col = (g.colorFor && g.colorFor(idx)) || '#ffff00';
+      if (col !== f.colJ) { f.colJ = col; f.quien.style.color = col; }
+      var gid = g.vsGhostOf ? g.vsGhostOf(idx) : -1;
+      var rol = A.rolDe ? A.rolDe(idx) : 'asesino';
+      var firma = gid >= 0 ? ('g' + gid) : rol;
+      if (firma === f.retratoDe) return;
+      f.retratoDe = firma;
+      if (gid >= 0) {
+        this.pintarPersonaje(f.retrato, gid);
+        f.rolTxt.textContent = (CFG.VS && CFG.VS.NAMES && CFG.VS.NAMES[gid]) || 'FANTASMA';
+      } else {
+        if (window.PM.Iconos) window.PM.Iconos.repintar(f.retrato, 'rol', rol);
+        var info = CFG.HAB.ROL_INFO[rol];
+        f.rolTxt.textContent = info ? info.name : '';
       }
-      return { caja: caja, nom: nom, celdas: celdas,
-               on: false, quien: -1, color: '', nombre: '' };
+    },
+
+    /* Una casilla de poder: el icono (si cambia el poder o el color), la
+     * sombra de la recarga, los segundos, "lista" y "encendida". Es la misma
+     * para tus poderes y para los de los compañeros. */
+    pintarSlot: function (o, g, A, idx, k, h, tecla, color) {
+      if (tecla !== o.tecla) { o.tecla = tecla; o.key.textContent = tecla; }
+      if (h.name !== o.nombre) {
+        o.nombre = h.name;
+        o.name.textContent = h.name;
+        o.b.setAttribute('aria-label', h.name);
+        o.b.title = h.name;
+      }
+      var icoDe = h.id + '|' + color;
+      if (icoDe !== o.icoDe && window.PM.Iconos) {
+        o.icoDe = icoDe;
+        window.PM.Iconos.repintar(o.ico, 'hab', h.id, color);
+      }
+      var pct = Math.round(A.carga(g, idx, k) * 100);
+      if (pct !== o.ultimo) {
+        o.fill.style.height = (100 - pct) + '%';
+        o.ultimo = pct;
+      }
+      var listo = (pct >= 100);
+      if (listo !== o.listo) {
+        o.b.classList.toggle('listo', listo);
+        o.listo = listo;
+      }
+      /* los segundos que faltan, solo cuando cambia el número */
+      var resta = A.restan(idx, k);
+      if (resta !== o.resta) {
+        o.resta = resta;
+        o.secs.textContent = resta > 0 ? resta : '';
+        o.b.classList.toggle('contando', resta > 0);
+      }
+      var on = !!A.activa(g, idx, k);
+      if (on !== o.activa) {
+        o.activa = on;
+        o.b.classList.toggle('activa', on);
+      }
+    },
+
+    /* Una ficha de compañero: la misma que la tuya, sin botones */
+    buildHabOtro: function () {
+      return this.buildHabFicha(-1, false);
     },
 
     /* Qué jugador maneja el grupo `gi`. Con dos en el mismo teclado, cada
@@ -12611,7 +12679,11 @@
       var r = cv ? cv.getBoundingClientRect() : null;
       /* cuánto queda libre a la derecha del lienzo */
       var hueco = r ? (window.innerWidth - r.right) : 0;
-      var lateral = window.innerWidth >= 1000 && hueco >= 190;
+      /* Los botones de la partida (CHAT, EMOTES…) se salen del lienzo cuando
+       * hay sitio: dentro tapaban el NIVEL de la esquina de arriba */
+      if (this.gameBtns) this.gameBtns.classList.toggle('fuera', hueco >= 110);
+      // las fichas (retrato + cuatro iconos) piden unos 330 px
+      var lateral = window.innerWidth >= 1000 && hueco >= 340;
       this.habBar.classList.toggle('lateral', lateral);
       /* PEGADA AL MAPA, no al borde de la ventana: en un monitor ancho el
        * borde queda a medio metro del laberinto y mirar si tienes la Q
@@ -12705,19 +12777,6 @@
        * escenario, que obliga a rehacer el encaje del lienzo. */
       var dual = (g.playerCount === 2 && !g.netRole);
       var gi, grupo;
-      /* viendo la de una party, la fila grande es de alguien: se dice de quién */
-      var conNombre = dual || (g.isSpec() && repe);
-      if (conNombre !== this.habDual) {
-        this.habDual = conNombre;
-        for (gi = 0; gi < this.habGroups.length; gi++) {
-          this.habGroups[gi].quien.style.display = conNombre ? '' : 'none';
-          if (!dual) this.habGroups[gi].quien.textContent = 'J' + (gi + 1);
-        }
-      }
-      if (conNombre && !dual) {
-        var nomPrin = g.nameFor(this.habIdxDe(0));
-        if (this.habGroups[0].quien.textContent !== nomPrin) this.habGroups[0].quien.textContent = nomPrin;
-      }
       for (gi = 0; gi < this.habGroups.length; gi++) {
         grupo = this.habGroups[gi];
         var activo = (gi === 0) || dual;
@@ -12729,17 +12788,18 @@
         }
         if (!activo) continue;
         var idx = this.habIdxDe(gi);
-        /* El color de la barra es el del ROL que lleva: el Tanque en naranja,
+        /* El color de la ficha es el del ROL que lleva: el Tanque en naranja,
          * el Soporte en cian, el Mago en violeta y el Asesino en rosa (y quien
          * lleva un fantasma, el de su fantasma). Así no hay que leer nada para
-         * saber de quién es la fila. */
+         * saber de quién es. */
         var colRol = this.colorHabDe(g, A, idx);
         if (colRol !== grupo.color) {
           grupo.color = colRol;
           grupo.caja.style.setProperty('--hb', colRol);
         }
+        this.pintarFicha(grupo, g, A, idx);
         /* Quien lleva un fantasma tiene otra lista (dos poderes en vez de
-         * cuatro) y hasta otros nombres, así que las etiquetas se refrescan
+         * cuatro) y hasta otros nombres, así que las casillas se refrescan
          * aquí en vez de escribirse al montar: en PAC-MAN VS. el reparto de
          * fantasmas se decide después de construir la barra. */
         var lista = A.listaDe(g, idx);
@@ -12750,59 +12810,18 @@
           var visible = !!h;
           if (visible !== o.visible) {
             o.visible = visible;
-            o.b.style.display = visible ? '' : 'none';
+            o.celda.style.display = visible ? '' : 'none';
           }
           if (!visible) continue;
-          var tecla = teclas ? teclas[k] : h.key;
-          if (tecla !== o.tecla) { o.tecla = tecla; o.key.textContent = tecla; }
-          if (h.name !== o.nombre) {
-            o.nombre = h.name;
-            o.name.textContent = h.name;
-            o.b.setAttribute('aria-label', h.name);
-          }
-          var pct = Math.round(A.carga(g, idx, k) * 100);
-          if (pct !== o.ultimo) {
-            o.fill.style.height = pct + '%';
-            o.ultimo = pct;
-          }
-          var listo = (pct >= 100);
-          if (listo !== o.listo) {
-            o.b.classList.toggle('listo', listo);
-            o.listo = listo;
-          }
-          /* Los segundos que faltan. Se escriben solo cuando cambia el
-           * número —una vez por segundo, no sesenta— y la clase 'contando'
-           * es la que aparta el nombre del poder para dejarles el sitio. */
-          var resta = A.restan(idx, k);
-          if (resta !== o.resta) {
-            o.resta = resta;
-            o.secs.textContent = resta > 0 ? resta : '';
-            o.b.classList.toggle('contando', resta > 0);
-          }
-        }
-        /* Lo que está ENCENDIDO ahora mismo se marca aparte: recargando y
-         * encendida son cosas distintas y en la misma casilla se confundirían.
-         * Del fantasma se encienden sus dos; de Pac-Man, solo el turbo (el
-         * mordisco y el flash duran un parpadeo y no hay nada que marcar). */
-        /* vale para todos los roles: A.activa sabe cuál dura y cuál no */
-        for (var ka = 0; ka < grupo.btns.length && ka < lista.length; ka++) {
-          var on = A.activa(g, idx, ka);
-          if (on !== grupo.btns[ka].activa) {
-            grupo.btns[ka].activa = on;
-            grupo.btns[ka].b.classList.toggle('activa', on);
-          }
+          this.pintarSlot(o, g, A, idx, k, h, teclas ? teclas[k] : h.key, colRol);
         }
       }
       this.refreshHabOtros(g, A, dual);
     },
 
-    /* Las recargas de los COMPAÑEROS. "Compañero" es todo el que juega y no
-     * lleva esta máquina: con dos en el mismo teclado no hay ninguno (los dos
-     * ya tienen su fila grande) y en online son todos menos el tuyo.
-     *
-     * Al mirón no se le enseña nada porque a él ya se le apaga la barra
-     * entera un poco más arriba; el día que se le encienda, esto le sirve
-     * tal cual y sin tocar nada. */
+    /* Las fichas de los COMPAÑEROS, iguales que la tuya. "Compañero" es todo
+     * el que juega y no lleva esta máquina: con dos en el mismo teclado no hay
+     * ninguno (los dos ya tienen la suya) y en online son todos menos el tuyo. */
     refreshHabOtros: function (g, A, dual) {
       if (!this.habOtros) return;
       var libres = [], i;
@@ -12815,7 +12834,7 @@
         var fila = this.habOtros[oi];
         var quien = (oi < libres.length) ? libres[oi] : -1;
         var on = (quien >= 0);
-        /* Encender o apagar una fila cambia lo que mide la barra, y la barra
+        /* Encender o apagar una ficha cambia lo que mide la barra, y la barra
          * empuja al lienzo: hay que rehacer el encaje, pero SOLO cuando pasa
          * de verdad (esto se llama sesenta veces por segundo). */
         if (on !== fila.on) {
@@ -12825,45 +12844,24 @@
           this.fitCanvas();
         }
         if (!on) continue;
-        if (quien !== fila.quien) { fila.quien = quien; fila.nombre = ''; fila.color = ''; }
-        /* El nombre va de SU color, que es el mismo con el que se le ve en el
-         * laberinto: con cuatro jugadores es lo único que hace la fila
-         * reconocible de un vistazo. */
-        var nombre = g.nameFor(quien), color = g.colorFor(quien);
-        if (nombre !== fila.nombre) { fila.nombre = nombre; fila.nom.textContent = nombre; }
-        if (color !== fila.color) { fila.color = color; fila.nom.style.color = color; }
+        if (quien !== fila.jug) { fila.jug = quien; fila.nombreJ = ''; fila.colJ = ''; fila.retratoDe = ''; }
         var colOtro = this.colorHabDe(g, A, quien);
-        if (colOtro !== fila.colRol) {
-          fila.colRol = colOtro;
+        if (colOtro !== fila.color) {
+          fila.color = colOtro;
           fila.caja.style.setProperty('--hb', colOtro);
         }
-
+        this.pintarFicha(fila, g, A, quien);
         var lista = A.listaDe(g, quien);
-        for (var k = 0; k < fila.celdas.length; k++) {
-          var c = fila.celdas[k];
+        for (var k = 0; k < fila.btns.length; k++) {
+          var o = fila.btns[k];
           var h = lista[k];
           var visible = !!h;
-          if (visible !== c.visible) {
-            c.visible = visible;
-            c.c.style.display = visible ? '' : 'none';
+          if (visible !== o.visible) {
+            o.visible = visible;
+            o.celda.style.display = visible ? '' : 'none';
           }
           if (!visible) continue;
-          var pct = Math.round(A.carga(g, quien, k) * 100);
-          if (pct !== c.ultimo) {
-            c.fill.style.height = pct + '%';
-            c.ultimo = pct;
-          }
-          /* Recargando enseña los segundos; lista, la tecla. Es la misma idea
-           * que en la barra grande: una casilla, dos estados que nunca se
-           * dan a la vez. */
-          var resta = A.restan(quien, k);
-          var texto = (resta > 0) ? String(resta) : h.key;
-          if (texto !== c.texto) { c.texto = texto; c.txt.textContent = texto; }
-          var listo = (resta <= 0);
-          if (listo !== c.listo) {
-            c.c.classList.toggle('listo', listo);
-            c.listo = listo;
-          }
+          this.pintarSlot(o, g, A, quien, k, h, h.key, colOtro);
         }
       }
     },

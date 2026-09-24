@@ -7745,3 +7745,165 @@ body { font-size-adjust: 0.56; }
 .hab-rango-pie { font-size: 8px; line-height: 1.6; color: #8a91b8; }
 #habBar.lateral .hab-rango { align-self: stretch; }
 @media (prefers-reduced-motion: reduce) { .hab-rango-barra i { transition: none; } }
+
+/* =========================================================
+ * LAS FICHAS DE PODERES (24 sep), como en LoL: retrato del rol en un
+ * círculo, nombre y rol, y los cuatro poderes con su icono. La tuya y la
+ * de cada compañero son iguales y del mismo tamaño.
+ * ========================================================= */
+#habBar .hab-ficha {
+  --hb: #ff66cc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px 7px 7px;
+  border: 2px solid color-mix(in srgb, var(--hb) 45%, transparent);
+  border-radius: 44px 12px 12px 44px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--hb) 16%, rgba(0, 0, 0, 0.88)), rgba(0, 0, 0, 0.82));
+  line-height: 1.3;
+}
+#habBar.lateral .hab-ficha { display: flex; grid-template-columns: none; }
+#habBar .hab-retrato {
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 3px solid var(--hb);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--hb) 28%, #000), #05050f 72%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hb) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+#habBar .hab-retrato canvas { width: 46px; height: 46px; image-rendering: auto; }
+#habBar .hab-cuerpo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+#habBar .hab-cab { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+#habBar .hab-quien,
+#habBar.lateral .hab-quien {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 1px;
+  line-height: 12px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#habBar .hab-rol { font-size: 7px; letter-spacing: 1px; line-height: 12px; color: var(--hb); white-space: nowrap; }
+#habBar .hab-slots { display: flex; gap: 6px; }
+#habBar .hab-celda { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 52px; }
+#habBar .hab-b {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  background: #0a0a18;
+  overflow: hidden;
+  color: #fff;
+}
+#habBar .hab-ico {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  opacity: 0.4;
+  filter: grayscale(0.7);
+  transition: opacity 0.15s, filter 0.15s;
+}
+/* la sombra de la recarga: baja desde arriba y se retira al cargarse */
+#habBar .hab-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: auto;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+#habBar .hab-key {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  display: block;
+  padding: 0 3px;
+  font-size: 8px;
+  line-height: 12px;
+  font-weight: bold;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.78);
+  border-radius: 3px;
+}
+#habBar .hab-secs {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 4px #000, 0 0 2px #000;
+}
+#habBar .hab-b.contando .hab-secs { display: flex; }
+#habBar .hab-name {
+  display: block;
+  padding: 0;
+  font-size: 6px;
+  letter-spacing: 0.3px;
+  line-height: 9px;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 1;
+  color: color-mix(in srgb, var(--hb) 75%, #fff);
+}
+#habBar .hab-b.listo {
+  color: #fff;
+  background: #0a0a18;
+  border-color: var(--hb);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--hb) 55%, transparent);
+}
+#habBar .hab-b.listo .hab-ico,
+#habBar .hab-b.activa .hab-ico { opacity: 1; filter: none; }
+#habBar .hab-b.listo .hab-key { color: #000; background: var(--hb); }
+#habBar .hab-b.listo:active { transform: scale(0.94); background: #0a0a18; }
+#habBar .hab-b.activa {
+  color: #fff;
+  border-color: #fff;
+  background: color-mix(in srgb, var(--hb) 35%, #0a0a18);
+  box-shadow: 0 0 14px var(--hb);
+}
+#habBar .hab-b.activa .hab-fill { background: transparent; }
+#habBar.lateral { gap: 10px; }
+#habBar.fija .hab-otro { order: -1; }
+@media (max-width: 480px) {
+  #habBar .hab-ficha { gap: 7px; padding: 5px 8px 5px 5px; }
+  #habBar .hab-retrato { width: 44px; height: 44px; }
+  #habBar .hab-retrato canvas { width: 32px; height: 32px; }
+  #habBar .hab-celda { width: 42px; }
+  #habBar .hab-b { width: 40px; height: 40px; }
+  #habBar .hab-name { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #habBar .hab-ico { transition: none; } }
+
+/* los nombres de los poderes, en dos líneas si hace falta: cortados no se
+ * entendían (DISPARO HE…) */
+#habBar .hab-name {
+  white-space: normal;
+  text-overflow: clip;
+  text-align: center;
+  height: 18px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+/* fuera del lienzo cuando hay sitio a la derecha (UI.colocarHabBar) */
+#gameBtns.fuera { right: auto; left: calc(100% + 10px); }
+@media (max-width: 480px) { #habBar .hab-name { display: none; } }
