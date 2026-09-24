@@ -8545,6 +8545,8 @@
     showProfileTab: function (tab) {
       this.profTab = (tab === 'logros' || tab === 'cifras') ? tab : 'perfil';
       this.refreshProfile();
+      if (this.els.profile) this.els.profile.scrollTop = 0;
+      this.encajarPanel();
     },
 
     /* El perfil ES la cuenta: sin sesión no hay nada que enseñar ahí, así
@@ -13171,6 +13173,15 @@
       vestuario: 0.85, tienda: 0.85, ranking: 0.85
     },
 
+    /* CIFRAS y LOGROS del perfil, y el perfil de un amigo, son páginas
+     * largas que se leen bajando: encogidas al 55 % quedaban diminutas en
+     * pantalla grande (24 sep). Esas van a tamaño real y con scroll. */
+    sueloEncaje: function (n) {
+      if (n === 'profile' && (this.profTab === 'cifras' || this.profTab === 'logros')) return 1;
+      if (n === 'mate') return 1;
+      return this.ENCAJE_SUELO[n];
+    },
+
     encajar: function (el, suelo) {
       if (!el || el.style.display === 'none') return;
       /* En MÓVIL no: ahí el panel ocupa la pantalla entera y desplazarse es
@@ -13238,7 +13249,7 @@
                    'vestuario', 'tienda', 'pase'];
       names.forEach(function (n) {
         var el = self.els[n];
-        if (el && el.style.display !== 'none') self.encajar(el, self.ENCAJE_SUELO[n]);
+        if (el && el.style.display !== 'none') self.encajar(el, self.sueloEncaje(n));
       });
       var pr = this.els.prompt;
       if (pr && pr.style.display !== 'none') this.encajar(pr, this.ENCAJE_SUELO.prompt);

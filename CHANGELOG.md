@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · CIFRAS y LOGROS a tamaño real, con scroll
+
+Las pestañas CIFRAS y LOGROS del perfil, y el perfil de un amigo, se encogían
+hasta el 55 % para caber sin bajar y en pantalla grande quedaban diminutas.
+Ahora van a tamaño real y se recorren con scroll. La pestaña PERFIL y el resto
+de pantallas siguen encajándose como antes.
+
 ## 2026-09-24 · La racha del Mago caduca
 
 **MAGO:** fuera del energizante, su racha se acaba a los 5 s sin matar y la
