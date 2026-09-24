@@ -2249,9 +2249,9 @@
     CACERIA_MULT: 1.2,
     /* El misil vuela al DOBLE de la velocidad de referencia de un Pac-Man
      * (21 sep 2026). Antes iba a 4,5 px por fotograma, que son casi cuatro
-     * veces eso: llegaba antes de que se viera salir. */
-    MISIL_MULT: 2,
-    MISIL_VEL: 2 * CFG.BASE_SPEED,
+     * veces eso: llegaba antes de que se viera salir. El 24 sep, a x2,25. */
+    MISIL_MULT: 2.25,
+    MISIL_VEL: 2.25 * CFG.BASE_SPEED,
     EMPUJON_TILES: 3,
     EMPUJON_STUN: 60,
     /* GRITO DE GUERRA (21 sep): pasa de Q a E, de cinco casillas a TODO EL

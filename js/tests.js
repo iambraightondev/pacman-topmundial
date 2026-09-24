@@ -11516,7 +11516,7 @@
       G.ghosts[j].mode = 'normal'; G.ghosts[j].x = p.x + CFG.TILE; G.ghosts[j].y = p.y;
     }
     var base = G.score;
-    ok(Math.abs(CFG.HAB.MISIL_VEL - 2 * CFG.BASE_SPEED) < 1e-9, 'el misil vuela a ×2');
+    ok(Math.abs(CFG.HAB.MISIL_VEL - 2.25 * CFG.BASE_SPEED) < 1e-9, 'el misil vuela a ×2,25');
     ok(H.misil(G, 0), 'sale el misil');
     for (var i = 0; i < 240 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
     eq(G.score - base, 3750, '250 + 500 + 1.000 + 2.000');
