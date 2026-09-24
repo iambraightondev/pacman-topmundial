@@ -6253,6 +6253,12 @@
         tags.className = 'ol-plaza-tags';
         if (i === 0) tags.appendChild(this.olTag('LÍDER', '#ffff00'));
         if (m.s === window.PM.Net.sid) tags.appendChild(this.olTag('TÚ', '#00ff66'));
+        /* su RANGO del mes (24 sep), en el color de su fruta */
+        var TRg = window.PM.Rango && window.PM.Rango.TRAMOS;
+        if (TRg && m.rg >= 0 && TRg[m.rg]) {
+          var trm = TRg[m.rg];
+          tags.appendChild(this.olTag(trm.nombre, CFG.RANGO.DIVISIONES[trm.d].color));
+        }
         if (gv >= 0 && gv < 4) tags.appendChild(this.olTag(CFG.VS.NAMES[gv], CFG.GHOSTS[gv].color));
         /* quién ha dicho ya que está listo (el líder, siempre) */
         if (m.l || (P.esLider && P.esLider(m))) {
@@ -7394,7 +7400,7 @@
         custom: function (p) {
           var lista = el('div', 'rgs-lista');
           var cab = el('div', 'rgs-fila rgs-cab');
-          ['', 'DIVISIÓN', 'PR', 'MARCA (SOLO)', 'NIVEL', 'JUGADORES'].forEach(function (x) {
+          ['', 'DIVISIÓN', 'PR', 'MARCA (SOLO)', 'NIVEL', 'PREMIO', 'JUGADORES'].forEach(function (x) {
             cab.appendChild(el('span', null, x));
           });
           lista.appendChild(cab);
@@ -7430,6 +7436,8 @@
                  self.milesMaes(Rg.parTramo(TR.indexOf(ult), n)))
               : self.milesMaes(Rg.parTramo(TR.indexOf(esc[0]), n))));
             fila.appendChild(el('span', 'rgs-nivel', (div.nivel || 1) > 1 ? String(div.nivel) : '—'));
+            // las monedas de llegar a esa fruta por primera vez en la temporada
+            fila.appendChild(el('span', 'rgs-premio', div.premio ? self.milesMaes(div.premio) : '—'));
             fila.appendChild(el('span', 'rgs-cuantos', cuantos ? String(cuantos[d]) : '—'));
             if (mia) {
               var pie = el('div', 'rgs-pie');
@@ -9905,9 +9913,27 @@
      * en oro y con el nombre cambiando de color). Sin franjas ni marcos: la
      * de 1980 era texto sobre negro. En PODIO sale del 4º en adelante y con
      * su avatar; en LISTA, todos y sin avatar, tal cual la recreativa. */
+    /* El RANGO de cada uno junto a su nombre en el top (24 sep). Se lee de
+     * la misma tabla que el panel de RANGO, una vez por minuto como mucho, y
+     * al llegar se repinta lo que haya puesto. */
+    cargarMapaRango: function () {
+      var self = this, Rg = window.PM.Rango;
+      if (!Rg || !Rg.tabla || (this.rangoMapaHasta || 0) > Date.now()) return;
+      this.rangoMapaHasta = Date.now() + 60000;
+      Rg.tabla(function (err, filas) {
+        if (err || !filas) return;
+        var mapa = {};
+        filas.forEach(function (f) { if (f.tramo >= 0) mapa[String(f.usuario).toUpperCase()] = f.tramo; });
+        self.rangoMapa = mapa;
+        if (self.ultimoRanking) self.renderRanking(self.ultimoRanking[0], self.ultimoRanking[1]);
+      });
+    },
+
     renderRanking: function (rows, desde) {
       var R = window.PM.Ranking;
       desde = desde || 0;
+      this.ultimoRanking = [rows, desde];
+      this.cargarMapaRango();
       var conAvatar = desde > 0;
       this.rankList.innerHTML = '';
       if (rows.length) this.rankList.appendChild(this.rankCabecera(['RANK', 'NAME', 'SCORE', 'LEVEL'], conAvatar));
@@ -9934,6 +9960,16 @@
         nom.className = 'tm-nom';
         nom.textContent = nombres.join(' + ');
         who.appendChild(nom);
+        /* su escalón del mes, en el color de su fruta (solo en las de uno) */
+        var TRk = window.PM.Rango && window.PM.Rango.TRAMOS;
+        var tk = (nombres.length === 1 && this.rangoMapa) ? this.rangoMapa[nombres[0]] : -1;
+        if (TRk && tk >= 0 && TRk[tk]) {
+          var chipR = document.createElement('span');
+          chipR.className = 'tm-rango';
+          chipR.textContent = TRk[tk].nombre;
+          chipR.style.setProperty('--c', CFG.RANGO.DIVISIONES[TRk[tk].d].color);
+          who.appendChild(chipR);
+        }
         if (this.rankEsMia(r)) {
           var tu = document.createElement('span');
           tu.className = 'tm-tu';
@@ -11829,13 +11865,16 @@
               subR = 'TE COLOCAMOS AL ACABAR LA ' + CFG.RANGO.COLOCACION + '.ª';
             } else if (rg.colocado) {
               valR = rg.nombre + ' · ' + mil(rg.despues) + ' PR';
-              subR = '¡YA TIENES RANGO! EMPIEZAS EN ' + rg.nombre;
+              subR = '¡YA TIENES RANGO! EMPIEZAS EN ' + rg.nombre +
+                (rg.monedas > 0 ? ' · +' + mil(rg.monedas) + ' MONEDAS' : '');
             } else {
               valR = (rg.cambio >= 0 ? '+' : '') + rg.cambio + ' PR';
               subR = rg.sube ? ('¡SUBES A ' + rg.nombre + '!')
                 : rg.baja ? ('BAJAS A ' + rg.nombre)
                 : rg.sinNivel ? ('SIN LLEGAR AL NIVEL ' + rg.nivelPide + ' NO SE GANA PR')
                 : (rg.nombre + ' · ' + mil(rg.despues) + ' PR');
+              /* la primera vez en una fruta esta temporada, su premio */
+              if (rg.monedas > 0) subR = '¡PRIMERA VEZ EN ' + rg.frutaNueva + '! +' + mil(rg.monedas) + ' MONEDAS';
               colR = rg.cambio >= 0 ? '#2bff88' : '#ff6b6b';
             }
             fila(rg.sube || rg.colocado ? 'sube' : '', 'RANGO', valR, colR, subR);

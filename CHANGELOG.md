@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Subir de rango paga
+
+**MONEDAS POR CADA FRUTA.** La primera vez que llegas a una fruta en la
+temporada te llevas su premio: FRESA 500, NARANJA 800, MANZANA 1.200, MELÓN
+2.000, GALAXIAN 3.000, CAMPANA 5.000 y LLAVE 10.000. Sale en el GAME OVER y en
+la escalera de rangos, y lo ya alcanzado este mes se paga solo. Además tu
+escalón sale junto a tu nombre en la sala de party y en el top mundial.
+
 ## 2026-09-24 · Al recargar, sigues donde estabas
 
 **LA PÁGINA RECUERDA LA PANTALLA.** Recargar ya no te devuelve a la portada:

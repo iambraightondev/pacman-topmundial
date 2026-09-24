@@ -12942,6 +12942,53 @@
     }
   });
 
+  test('RANGO: llegar a una fruta nueva paga su premio, una vez por temporada', function () {
+    var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES, T = Rg.TRAMOS, Tn = window.PM.Tienda;
+    conContadores(function (A) {
+      eq(Rg.monedas(), 0, 'sin rango, nada');
+      var saldo0 = Tn.saldo();
+      // FRESA IV en septiembre y MELÓN III en octubre
+      var fresa = T.filter(function (x) { return x.d === 1; })[0];
+      var melon = T.filter(function (x) { return x.d === 4; })[0];
+      A.record('rm4_2026-09', T.indexOf(fresa) + 1);
+      A.record('rm4_2026-10', T.indexOf(melon) + 1);
+      Rg._memoHasta = 0;
+      var esperado = D[1].premio + (D[1].premio + D[2].premio + D[3].premio + D[4].premio);
+      eq(Rg.monedas(), esperado, 'cada temporada paga todas las frutas hasta la más alta');
+      eq(Tn.saldo() - saldo0, esperado, 'y va al saldo de la tienda');
+      A.record('rm3_2026-11_1', 20);
+      Rg._memoHasta = 0;
+      eq(Rg.monedas(), esperado, 'los contadores de antes del rango único no pagan');
+    });
+    conContadores(function () {
+      var cc = Rg.conCuenta;
+      Rg.conCuenta = function () { return true; };
+      try {
+        // colocarse en FRESA IV (el tope) paga FRESA
+        for (var i = 0; i < 4; i++) Rg.apuntar(60000, 1, 5);
+        var r = Rg.apuntar(60000, 1, 5);
+        eq(r.nombre, 'FRESA IV');
+        eq(r.monedas, D[1].premio, 'la primera vez en FRESA, su premio');
+        eq(r.frutaNueva, 'FRESA');
+        var otra = Rg.apuntar(60000, 1, 5);
+        ok(!(otra.monedas > 0) || otra.frutaNueva !== 'FRESA', 'FRESA no se vuelve a pagar');
+      } finally { Rg.conCuenta = cc; }
+    });
+  });
+
+  test('RANGO: en la sala de party cada uno enseña su escalón', function () {
+    var P = window.PM.Party, Rg = window.PM.Rango;
+    var cc = Rg.conCuenta, est = Rg.estado;
+    try {
+      Rg.conCuenta = function () { return false; };
+      eq(P.me().rg, -1, 'sin cuenta, sin rango');
+      Rg.conCuenta = function () { return true; };
+      Rg.estado = function () { return { tramo: 7 }; };
+      eq(P.me().rg, 7, 'con cuenta, su escalón');
+      eq(P.hello().rg, 7, 'y viaja en el saludo');
+    } finally { Rg.conCuenta = cc; Rg.estado = est; }
+  });
+
   test('al recargar se vuelve a la pantalla en la que estabas', function () {
     var UI = window.PM.UI;
     if (typeof sessionStorage === 'undefined') return;     // sin almacén (Node)

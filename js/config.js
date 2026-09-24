@@ -1110,16 +1110,18 @@
      *   prEscalon   los PR que ocupa cada uno
      *   nivel       el nivel al que hay que llegar para GANAR PR (sin él, la
      *               partida solo puede restar)
-     *   gana/pierde lo máximo que mueve una partida en esa fruta */
+     *   gana/pierde lo máximo que mueve una partida en esa fruta
+     *   premio      monedas la primera vez que llegas a esa fruta en la
+     *               temporada (24 sep): de 500 en FRESA a 10.000 en LLAVE */
     DIVISIONES: [
-      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 2, gana: 25, pierde: 20, color: '#ff3b3b' },
-      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 22, pierde: 22, color: '#ff5fa0' },
-      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 20, pierde: 24, color: '#ffb852' },
-      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 18, pierde: 26, color: '#7dff5a' },
-      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 16, pierde: 28, color: '#2bff88' },
-      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 14, pierde: 30, color: '#6fd0ff' },
-      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 12, pierde: 32, color: '#ffe23a' },
-      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 10, pierde: 35, color: '#e6ecff' }
+      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 2, gana: 25, pierde: 20, premio: 0, color: '#ff3b3b' },
+      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 22, pierde: 22, premio: 500, color: '#ff5fa0' },
+      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 20, pierde: 24, premio: 800, color: '#ffb852' },
+      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 18, pierde: 26, premio: 1200, color: '#7dff5a' },
+      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 16, pierde: 28, premio: 2000, color: '#2bff88' },
+      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 14, pierde: 30, premio: 3000, color: '#6fd0ff' },
+      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 12, pierde: 32, premio: 5000, color: '#ffe23a' },
+      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 10, pierde: 35, premio: 10000, color: '#e6ecff' }
     ],
     COLOCACION: 5,        // partidas antes de tener rango
     /* La colocación no regala: un escalón por debajo del que alcanza tu

@@ -133,7 +133,13 @@
 
     saldo: function () {
       return T.INICIALES + this.regalo() + this.ganadas() +
-        this.delPase() - this.gastadas();
+        this.delPase() + this.delRango() - this.gastadas();
+    },
+
+    /* Lo que ha pagado el RANGO: el premio de cada fruta alcanzada en cada
+     * temporada. Como el del pase, se deduce cada vez (js/rango.js). */
+    delRango: function () {
+      return (window.PM.Rango && window.PM.Rango.monedas) ? window.PM.Rango.monedas() : 0;
     },
 
     /* Lo que ha pagado el camino de las temporadas. No está guardado en

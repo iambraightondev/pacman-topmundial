@@ -190,6 +190,37 @@
     },
 
     /* Tu rango en un formato (1..4) esta temporada */
+    /* LAS MONEDAS DEL RANGO (24 sep): la primera vez que llegas a cada fruta
+     * en una temporada te llevas su `premio` (CFG.RANGO). No se guardan: se
+     * DEDUCEN de lo más alto alcanzado en cada temporada (rmN_<temporada>),
+     * igual que las del pase, así que juntar dos aparatos no las cobra dos
+     * veces y bajar después no las quita. */
+    premiosHasta: function (d) {
+      var n = 0;
+      for (var i = 0; i <= d && i < DIV.length; i++) n += DIV[i].premio || 0;
+      return n;
+    },
+    monedas: function () {
+      var ahora = Date.now();
+      if (ahora < (this._memoHasta || 0)) return this._memo;
+      var c = A() ? A().stats() : {}, mejor = {}, n = 0, k, m;
+      for (k in c) {
+        if (!c.hasOwnProperty(k)) continue;
+        /* solo las de un rango único (versión 4 en adelante: sin formato) */
+        m = /^rm(\d+)_(\d{4}-\d{2})$/.exec(k);
+        if (!m || (m[1] | 0) < 4) continue;
+        mejor[m[2]] = Math.max(mejor[m[2]] || 0, num(c[k]));
+      }
+      for (k in mejor) {
+        if (!mejor.hasOwnProperty(k) || !(mejor[k] > 0)) continue;
+        var T = TRAMOS[Math.min(TRAMOS.length, mejor[k]) - 1];
+        if (T) n += this.premiosHasta(T.d);
+      }
+      this._memo = n;
+      this._memoHasta = ahora + 1000;
+      return n;
+    },
+
     /* Tu rango esta temporada (el único: vale para solo y para party) */
     estado: function (t) {
       if (typeof t !== 'string') t = null;      // antes se pasaba el formato
@@ -276,6 +307,13 @@
       }
       // lo más alto, por ESCALÓN (+1; 0 = ninguno)
       if (res.tramo >= 0) A().record(clave('rm', t), res.tramo + 1);
+      /* monedas por llegar a una fruta NUEVA esta temporada (ver monedas()) */
+      var fAntes = antes.mejor >= 0 && TRAMOS[antes.mejor] ? TRAMOS[antes.mejor].d : -1;
+      var mejorYa = Math.max(antes.mejor, res.tramo);
+      var fYa = mejorYa >= 0 && TRAMOS[mejorYa] ? TRAMOS[mejorYa].d : -1;
+      res.monedas = fYa > fAntes ? this.premiosHasta(fYa) - this.premiosHasta(fAntes) : 0;
+      res.frutaNueva = res.monedas > 0 ? DIV[fYa].name : '';
+      this._memoHasta = 0;
       res.sube = res.tramo > res.tramoAntes && res.tramoAntes >= 0;
       res.baja = res.tramo < res.tramoAntes;
       res.colocado = antes.pr === null && res.despues !== null;

@@ -8025,3 +8025,24 @@ body { font-size-adjust: 0.56; }
   #prompt.clasif-entrada .cle-ficha b { font-size: 12px; }
   #prompt.clasif-entrada .cle-ficha span, #prompt.clasif-entrada .cle-ficha small { font-size: 7px; }
 }
+
+/* la escalera lleva el PREMIO de cada fruta (24 sep) */
+.rgs-fila { grid-template-columns: 56px minmax(0, 1.3fr) 1fr 1.6fr 0.6fr 0.9fr 0.8fr; }
+.rgs-premio { color: #ffd23f; }
+@media (max-width: 600px) {
+  .rgs-fila { grid-template-columns: 34px minmax(0, 1.2fr) 0.9fr 1.3fr 0.5fr 0.8fr; }
+}
+
+/* el RANGO junto al nombre en el top (24 sep) */
+.tm-rango {
+  --c: #ffd23f;
+  margin-left: 8px;
+  padding: 2px 5px;
+  font-size: 0.6em;
+  letter-spacing: 1px;
+  color: var(--c);
+  border: 1px solid color-mix(in srgb, var(--c) 60%, transparent);
+  border-radius: 4px;
+  white-space: nowrap;
+  vertical-align: middle;
+}

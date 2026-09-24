@@ -118,8 +118,17 @@
         // el rol de DESATADO que tiene elegido (lo reparte el líder)
         r: CFG.HAB.rol(s.habRol1),
         h: CFG.HAB.loadoutValido(CFG.HAB.rol(s.habRol1), s.habLoadout1),
+        // su escalón del RANGO, para enseñarlo junto a su nombre (-1: sin rango)
+        rg: this.miTramo(),
         t: now()
       };
+    },
+
+    miTramo: function () {
+      var Rg = window.PM.Rango;
+      if (!Rg || !Rg.conCuenta || !Rg.conCuenta()) return -1;
+      var e = Rg.estado();
+      return (e && e.tramo >= 0) ? e.tramo : -1;
     },
 
     /* ---------- DESATADO: el rol de cada uno ----------
@@ -365,7 +374,7 @@
       /* h: los PODERES. Faltaban (23 sep): el rol viajaba y los poderes no,
        * así que el líder le ponía a cada invitado los de serie de su rol */
       return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r, h: m.h,
-               l: this.listo ? 1 : 0 };
+               rg: m.rg, l: this.listo ? 1 : 0 };
     },
 
     /* ---------- EL LISTO (20 sep) ----------
@@ -453,8 +462,9 @@
        * salía con los que tenía al abrir la sala */
       var h = CFG.HAB.loadoutValido(rol, yo.h);
       var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k || m.a !== yo.a || m.x !== yo.x ||
-        m.r !== rol || m.h !== h;
+        m.r !== rol || m.h !== h || m.rg !== yo.rg;
       m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t; m.r = rol; m.h = h;
+      m.rg = yo.rg;
       return cambia;
     },
 
@@ -590,6 +600,7 @@
       m.r = this.claimRol(sid, d.r);   // DESATADO: un solo Soporte
       m.h = CFG.HAB.loadoutValido(m.r, d.h);
       m.l = d.l ? 1 : 0;               // ¿ha dicho que está listo?
+      m.rg = (typeof d.rg === 'number' && d.rg >= 0 && d.rg < 64) ? (d.rg | 0) : -1;   // su escalón
       m.t = now();
       this.sendRoster();
       this.changed();

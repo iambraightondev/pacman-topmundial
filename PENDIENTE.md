@@ -102,6 +102,8 @@ CFG.RANGO):
    y los datos dicen que en DESATADO los equipos puntúan bastante más. Mirar
    cuando haya clasificatorias de dúo y trío.
 
+**Premios del rango (24 sep, aprobado por Braighton):** HECHO: monedas la primera vez que llegas a cada fruta en la temporada (FRESA 500, NARANJA 800, MANZANA 1.200, MELÓN 2.000, GALAXIAN 3.000, CAMPANA 5.000, LLAVE 10.000; se deducen de rmN_<temporada>, como el pase) y el escalón junto al nombre en la sala de party y en el top. POR HACER antes del 1 oct, al cerrar la temporada según lo más alto alcanzado: la fruta junto al nombre el mes siguiente y un recuerdo permanente en el perfil (todos); accesorio exclusivo de temporada (MANZANA+); efecto rastro dorado (CAMPANA+); skin LLAVE DORADA (LLAVE). Nada que dé ventaja en partida.
+
 **Por hacer del rango:** premio al cerrar la temporada (insignia o piezas; va
 con el PASE), y pasar la tabla a una vista del servidor si las cuentas crecen
 (hoy se leen todos los perfiles enteros).
