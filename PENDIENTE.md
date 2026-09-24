@@ -55,18 +55,13 @@ cosa en CHANGELOG. Pruebas: tests.html 589/589; Node 1 fallo (el de siempre).
   mentira de Node entiende selectores compuestos y el texto de los hijos.
 
 **POR HACER (lo siguiente):**
-1. **Título cortado en ¡SUBES DE DIVISIÓN!**: en pantalla ancha sale
-   "¡SUBES DE DIVISI". El título va en una línea (`lvl-titulo`, letra
-   `min(4.6vw, 8vh, 72px)`) y con 19 letras no cabe. Encoger la letra según
-   lo largo del título (o medirlo y ajustarlo al ancho), y mirar también ¡YA
-   TIENES RANGO! y ¡SUBES DE NIVEL! en móvil.
+1. ~~Título cortado~~ HECHO (24 sep): la letra se ajusta al ancho.
 2. **Premios de fin de temporada del rango, antes del 1 oct** (aprobados, ver
    abajo): fruta junto al nombre el mes siguiente, recuerdo en el perfil,
    accesorio (MANZANA+), rastro dorado (CAMPANA+), skin LLAVE DORADA.
 3. **Vigilar al Mago en racha**: si deja de comer energizantes para cobrar
    1.600 por baja, que la racha caduque a los pocos segundos sin matar.
-4. **~100 repeticiones de prueba viejas** ("PRUEBA", 17–19 sep, sin dueño) en
-   las públicas: preguntar a Braighton si se borran (no respondió).
+4. ~~Repeticiones de prueba~~ HECHO (24 sep): 118 borradas.
 5. Quitar el CSS obsoleto `.ps-sigue` del pase (no molesta).
 6. Los números del rango y de las notas se ajustan jugando; con más partidas
    de Tanque, Soporte y Mago, revisar sus listones.

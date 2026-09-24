@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Los títulos de celebración caben enteros
+
+**¡SUBES DE DIVISIÓN!** se cortaba en pantalla ancha («¡SUBES DE DIVISI») y en
+el móvil vertical todos los títulos de celebración se salían por los lados.
+Ahora se mide el título al pintarlo (y otra vez cuando llega la fuente) y la
+letra baja lo justo para que quepa en una línea. Visto en 1920, 2560, 1366,
+móvil vertical y apaisado.
+**Repeticiones de prueba borradas:** 118 sin dueño de las pruebas automáticas
+(«PRUEBA», «UNO + DOS», «ALGUIEN», sin nombre…) del 17 al 23 sep. Las sin
+dueño con nombre de jugador de verdad se quedan.
+
 ## 2026-09-24 · El Mago encadena y las notas de maestría se ajustan
 
 **MAGO:** sus bajas por habilidad dejan de valer 200 fijos y entran en la racha

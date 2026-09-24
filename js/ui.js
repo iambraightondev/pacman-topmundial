@@ -13385,7 +13385,7 @@
         clase: 'rsu-prompt',
         custom: function (p) {
           var tt = p.querySelector('.panel-title');
-          if (tt) tt.classList.add('lvl-titulo');
+          if (tt) { tt.classList.add('lvl-titulo'); self.ajustarTituloLvl(tt); }
           var caja = el('div', 'rsu' + (nueva ? ' rsu-fruta-nueva' : ''));
           caja.style.setProperty('--c', fruta.color);
           var escena = el('div', 'rsu-escena');
@@ -13459,7 +13459,7 @@
         tono: 'cian',
         custom: function (p) {
           var tt = p.querySelector('.panel-title');
-          if (tt) tt.classList.add('lvl-titulo');       // largo: en una línea
+          if (tt) { tt.classList.add('lvl-titulo'); self.ajustarTituloLvl(tt); }   // largo: en una línea
           var sello = document.createElement('div');
           sello.className = 'lvl-sello';
           var k = document.createElement('small');
@@ -13490,6 +13490,23 @@
         },
         buttons: botones
       });
+    },
+
+    /* Los títulos de celebración van en una línea y con la letra más grande
+     * que quepa: ¡SUBES DE DIVISIÓN! tiene 19 letras y con la letra fija se
+     * cortaba en pantalla ancha y se salía por los lados en el móvil. Se mide
+     * después de pintar y otra vez cuando llega la fuente. */
+    ajustarTituloLvl: function (tt) {
+      function ajusta() {
+        if (!tt.isConnected) return;
+        tt.style.fontSize = '';
+        for (var i = 0; i < 3 && tt.clientWidth && tt.scrollWidth > tt.clientWidth; i++) {
+          var px = parseFloat(window.getComputedStyle(tt).fontSize) || 40;
+          tt.style.fontSize = Math.floor(px * tt.clientWidth / tt.scrollWidth) + 'px';
+        }
+      }
+      if (window.requestAnimationFrame) requestAnimationFrame(ajusta); else ajusta();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajusta);
     },
 
     /* La presentación de un modo antes de jugar, con el marco de recreativa:
