@@ -7264,7 +7264,7 @@
       if (div) {
         izq.textContent = 'MARCA A SUPERAR: ' + this.milesMaes(Rg.parTramo(e.tramo, n)) +
           ' · NIVEL ' + (div.nivel || 1);
-        der.textContent = e.anchoTramo ? (e.enTramo + ' / ' + e.anchoTramo) : (this.milesMaes(e.pr) + ' PR');
+        der.textContent = e.anchoTramo ? ('ESCALÓN ' + e.enTramo + ' / ' + e.anchoTramo) : (this.milesMaes(e.pr) + ' PR');
       } else {
         izq.textContent = 'COLOCACIÓN';
         der.textContent = e.colocacion + ' / ' + RG.COLOCACION;
@@ -7428,7 +7428,10 @@
             fila.appendChild(el('span', 'rgs-cuantos', cuantos ? String(cuantos[d]) : '—'));
             if (mia) {
               var pie = el('div', 'rgs-pie');
-              pie.appendChild(el('span', null, e.nombre + ' · ' + self.milesMaes(e.pr) + ' PR'));
+              /* la barra es la del ESCALÓN, no la de la fruta: se dice cuánto
+               * llevas de él para que el hueco cuadre con lo que falta */
+              pie.appendChild(el('span', null, e.nombre + ' · ' + self.milesMaes(e.pr) + ' PR' +
+                (e.anchoTramo ? ' · ' + e.enTramo + ' DE ' + e.anchoTramo + ' DEL ESCALÓN' : '')));
               var barra = el('div', 'maes-barra');
               var relleno = document.createElement('i');
               relleno.style.width = ((e.anchoTramo ? Math.max(0, Math.min(1, e.enTramo / e.anchoTramo)) : 1) * 100).toFixed(1) + '%';
