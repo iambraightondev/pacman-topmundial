@@ -2899,6 +2899,9 @@
       var pts = this.puntosDe(G, who, this.esMago(G, who) ? this.rachaMago(G) : H.MAGO_PUNTOS);
       G.addScore(pts, who);
       this.bonoCadena(G, who, pts, g.x, g.y);
+      /* la baja va a la libreta (24 sep): sin esto las del Mago y las de la
+       * APISONADORA no contaban para su nota de maestría */
+      if (G.marca) G.marca(who, 'kills');
       G.addPopup(g.x, g.y, pts, 45);
       this.efecto(como, g.x, g.y, como === 'rayo' ? 14 : 18, ox, oy);
       this.alMatar(G, who, g, g.x, g.y);

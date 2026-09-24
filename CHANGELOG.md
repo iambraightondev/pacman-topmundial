@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · El Mago y el Tanque cuentan sus bajas a distancia
+
+**ARREGLO:** las bajas de la bola de fuego, los rayos, la runa y el meteoro del
+MAGO, y las de la APISONADORA del TANQUE, no llegaban a la libreta de la partida
+y no contaban para su nota de maestría (la mediana del Mago salía 2 por minuto
+cuando hacía 4,9).
+**NOTAS NUEVAS** (con 28 partidas de Mago y 42 de Tanque reales): Mago S 7,5 ·
+A 5,5 · B 4 · C 3; Tanque S 6,5 · A 5 · B 3,5 · C 2. Quedan en torno a S 15 %,
+A 25 %, B 25 %, C 20 %, D 15 %.
+**Recalificado:** IAMBRAIGHTON, 21 partidas de Mago y 13 de Tanque que contaban
+como B sembradas (+460 y 4 S; +310 y 5 S); MAULIO, 23 de Tanque (−210, queda con
+2 S). **Recuperado:** un aparato de MAULIO subió su perfil vacío esta mañana
+(antes de blindar la nube) y le borró la maestría, los récords por rol y el
+rango viejo; se le devolvió todo desde la copia de las 11:24.
+
 ## 2026-09-24 · Premios de fin de temporada, nube blindada y cifras de party
 
 **PREMIOS DEL RANGO (aprobados):** al cerrarse una temporada, según lo más alto

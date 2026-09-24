@@ -10586,6 +10586,7 @@
     eq(g.mode, 'eyes', 'el fantasma muere');
     eq(G.score - antes, 200, 'la primera de la racha vale 200');
     eq(G.chainIndex, 1, 'y sube la racha, la normal');
+    eq(G.marcador[0].kills, 1, 'y la baja va a la libreta (nota de maestría)');
     eq(G.eatFreezeTicks, 0, 'y el juego no se para');
   });
 
@@ -12675,7 +12676,7 @@
         Ac.user = { id: 'id-prueba', usuario: 'IAMBRAIGHTON' };
         Ac.token = 'token-de-prueba';
         eq(A.stats()['clasico:puntosMax'], 84250, 'la cifra mala se corrige al leerla');
-        eq(Mae.datos('mago').puntos, mago0 + 6500, 'el Mago recibe sus partidas de antes');
+        eq(Mae.datos('mago').puntos, mago0 + 6960, 'el Mago recibe sus partidas de antes');
         eq(Mae.datos('asesino').puntos, 20000 - 13720, 'y se le quitan al Asesino');
         eq(Mae.datos('asesino').partidas, 200 - 132, 'con sus partidas');
         eq(Mae.datos('asesino').eses, 20 - 13, 'y las S que ya no merece (12 por minuto)');
@@ -12693,8 +12694,9 @@
       // 5 minutos en pie, sin morir
       eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 60 }, 0, 5)), 'S', '12 por minuto');
       eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 36 }, 0, 5)), 'A', '7,2 por minuto ya no es S');
-      eq(Mae.notaDe('mago', Mae.valor('mago', { kills: 36 }, 0, 5)), 'A', 'el Mago pide 8 para la S');
-      eq(Mae.notaDe('tanque', Mae.valor('tanque', { kills: 25 }, 0, 5)), 'S', 'el Tanque, 5');
+      eq(Mae.notaDe('mago', Mae.valor('mago', { kills: 36 }, 0, 5)), 'A', 'el Mago pide 7,5 para la S');
+      eq(Mae.notaDe('tanque', Mae.valor('tanque', { kills: 25 }, 0, 5)), 'A', 'el Tanque con 5 ya no es S');
+      eq(Mae.notaDe('tanque', Mae.valor('tanque', { kills: 33 }, 0, 5)), 'S', 'pide 6,5');
       eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 18 }, 0, 5)), 'B', '3,6 por minuto');
       eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 2 }, 0, 5)), 'D', 'casi nada');
       // el Tanque cuenta sus golpes aguantados, x3
@@ -12737,8 +12739,8 @@
         G.state = 'PLAYING';
         G.timeTicks = 60 * 120;                  // dos minutos de partida
         G.marcador[0].vivo = 3600 * 2;           // y dos en pie
-        G.marcador[0].kills = 3;
-        G.salvasMias = 2;                        // (6 + 3) / 2 = 4,5 → A
+        G.marcador[0].kills = 4;
+        G.salvasMias = 2;                        // (6 + 4) / 2 = 5 → A
         G.xpSent = false;
         G.closeRun();
         var r = G.runSummary.maestria;

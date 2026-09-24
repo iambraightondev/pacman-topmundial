@@ -1191,10 +1191,12 @@
   CFG.AJUSTES_CUENTA = {
     IAMBRAIGHTON: {
       cifras: { 'clasico:puntosMax': [180550, 84250], 'party:puntosMax': [180550, 119300] },
-      maestria: { asesino: [-13720, -132, -13], mago: [6500, 65], tanque: [3900, 39], soporte: [2800, 28] }
+      /* mago y tanque recalificados el 24 sep (tarde) al contar por fin sus
+       * bajas a distancia: 21 y 13 partidas verificadas con nota propia */
+      maestria: { asesino: [-13720, -132, -13], mago: [6960, 65, 4], tanque: [4210, 39, 5], soporte: [2800, 28] }
     },
     ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] } },
-    MAULIO: { maestria: { asesino: [-700, -7], tanque: [620, 5, 3], soporte: [200, 2] } }
+    MAULIO: { maestria: { asesino: [-700, -7], tanque: [410, 5, 1], soporte: [200, 2] } }
   };
 
   CFG.MAESTRIA = {
@@ -1223,9 +1225,13 @@
        * la del MAGO 8 (hacía 6,5–8 por minuto: S casi siempre) y la del
        * TANQUE 5 (con 6 no llegaba ni jugando bien). El SOPORTE en equipo,
        * también 5. */
+      /* 24 sep (tarde): el MAGO y el TANQUE, recalibrados. Sus bajas a
+       * distancia (bola, rayos, runa, meteoro, apisonadora) no llegaban a la
+       * libreta: la mediana del Mago era 2 cuando hacía 4,9. Con ellas, y con
+       * 28 y 42 partidas reales, S ~15 %, A ~25 %, B ~25 %, C ~20 %, D ~15 %. */
       asesino: [12, 5, 3.5, 2],
-      mago:    [8, 4.5, 3, 1.8],
-      tanque:  [5, 4.5, 3, 1.8],
+      mago:    [7.5, 5.5, 4, 3],
+      tanque:  [6.5, 5, 3.5, 2],
       soporte: [5, 4.5, 3, 1.8],
       /* El SOPORTE A SOLAS no tiene a quién levantar ni a quién proteger,
        * y a menudo gasta sus poderes en sobrevivir: se le mide solo por lo
