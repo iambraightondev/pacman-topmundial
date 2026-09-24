@@ -2853,16 +2853,31 @@
     /* =========================================================
      * MAGO
      * ========================================================= */
-    /* Lo que mata el Mago (y lo que aplasta la APISONADORA del Tanque) vale
-     * MAGO_PUNTOS fijos, no toca la cadena y no para la partida: el fantasma
-     * pasa a ojos y se sigue jugando. */
+    /* EL MAGO ENCADENA (24 sep, decidido por Braighton). Sus bajas valían
+     * 200 fijos y con eso no llegaba ni a la marca de FRESA. Ahora entran en
+     * la RACHA NORMAL, la del energizante: 200, 400, 800 y 1.600, y la
+     * reinicia lo mismo que a la de siempre (otro energizante, morir o
+     * pasar de nivel). Es la misma cadena que la de comerse azules, así que
+     * morder y matar a distancia suman en la misma. */
+    esMago: function (G, who) {
+      return !!(this.on && G && G.hab && G.roles && G.roles[who | 0] === 'mago');
+    },
+    rachaMago: function (G) {
+      var v = CFG.GHOST_CHAIN[Math.min(G.chainIndex || 0, 3)];
+      G.chainIndex = (G.chainIndex || 0) + 1;
+      return v;
+    },
+
+    /* Lo que mata el Mago (y lo que aplasta la APISONADORA del Tanque) no
+     * para la partida: el fantasma pasa a ojos y se sigue jugando. Lo de la
+     * apisonadora vale MAGO_PUNTOS fijos; lo del Mago, su racha. */
     matarMago: function (G, g, who, como) {
       var p = G.pacs[who];
       var ox = p ? p.x : g.x, oy = p ? p.y : g.y;
       g.eaten();
       this.hielo[g.id] = 0;
       this.huye[g.id] = 0;
-      var pts = this.puntosDe(G, who, H.MAGO_PUNTOS);
+      var pts = this.puntosDe(G, who, this.esMago(G, who) ? this.rachaMago(G) : H.MAGO_PUNTOS);
       G.addScore(pts, who);
       this.bonoCadena(G, who, pts, g.x, g.y);
       G.addPopup(g.x, g.y, pts, 45);
@@ -3165,6 +3180,8 @@
     matarCatalogo: function (G, g, who, pts, como, mult, exacto) {
       if (!g || !this.enLaCalle(g)) return false;
       var x = g.x, y = g.y, p = G.pacs[who];
+      // el Mago cobra su racha (ver esMago), también la BOLA GUIADA y el DOMINIO
+      if (this.esMago(G, who)) pts = this.rachaMago(G);
       pts = this.puntosFantasma(G, who, g,
         Math.round((pts || H.MAGO_PUNTOS) * (mult || 1)), como, !!exacto);
       g.eaten();

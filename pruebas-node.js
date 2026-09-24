@@ -108,11 +108,16 @@ function TextNode(v) {
 TextNode.prototype._has = function () { return false; };
 
 Object.defineProperty(El.prototype, 'textContent', {
+  /* como en el navegador: el texto de todos los hijos, en orden (antes solo
+   * el primero, y "tal cosa" dentro de una fila con varios trozos no salía) */
   get: function () {
-    if (this.children.length && this.children[0].nodeType === 3) {
-      return this.children[0].nodeValue;
+    if (!this.children.length) return this._text;
+    var out = '';
+    for (var i = 0; i < this.children.length; i++) {
+      var k = this.children[i];
+      out += k.nodeType === 3 ? k.nodeValue : (k.textContent || '');
     }
-    return this._text;
+    return out;
   },
   set: function (v) {
     this._text = String(v == null ? '' : v);
@@ -150,7 +155,7 @@ El.prototype.dispatch = function (t, ev) {
   var list = this._events[t] || [];
   for (var i = 0; i < list.length; i++) list[i].call(this, ev || {});
 };
-El.prototype.click = function () { this.dispatch('click', { preventDefault: function () {} }); };
+El.prototype.click = function () { this.dispatch('click', { preventDefault: function () {}, stopPropagation: function () {} }); };
 El.prototype.focus = function () { doc.activeElement = this; };
 El.prototype.blur = function () { if (doc.activeElement === this) doc.activeElement = null; };
 El.prototype.scrollIntoView = function () {};
@@ -162,7 +167,34 @@ El.prototype.getContext = function () {
   if (!this._ctx) { this._ctx = fakeCtx(); this._ctx.canvas = this; }
   return this._ctx;
 };
-/* recorrido plano: a las pruebas les basta con encontrar por clase/etiqueta */
+/* Selectores sencillos: etiqueta y clases juntas (div.a.b), :not(.x) y
+ * descendientes separados por espacios (.a .b). Lo demás (atributos, otras
+ * pseudoclases) se ignora. Antes solo miraba la primera clase y las
+ * pruebas con ".lista .fila" o ":not(.cabecera)" fallaban aquí y no en el
+ * navegador. */
+function casaSimple(k, s) {
+  var nots = [];
+  s = s.replace(/:not\(([^)]*)\)/g, function (m, x) { nots.push(x.trim()); return ''; });
+  s = s.replace(/\[[^\]]*\]/g, '').replace(/::?[a-z-]+(\([^)]*\))?/gi, '');
+  var m = /^([a-z0-9*-]*)((?:\.[\w-]+)*)$/i.exec(s);
+  if (!m) return false;
+  if (m[1] && m[1] !== '*' && k.tagName !== m[1].toUpperCase()) return false;
+  var cls = m[2] ? m[2].slice(1).split('.') : [];
+  for (var i = 0; i < cls.length; i++) if (!k._has || !k._has(cls[i])) return false;
+  for (var j = 0; j < nots.length; j++) if (casaSimple(k, nots[j])) return false;
+  return true;
+}
+function casaSelector(k, sel) {
+  var pasos = sel.trim().split(/\s*>\s*|\s+/);   // el hijo directo, como descendiente
+  if (!casaSimple(k, pasos[pasos.length - 1])) return false;
+  var n = k.parentNode;
+  for (var i = pasos.length - 2; i >= 0; i--) {
+    while (n && !(n.tagName && casaSimple(n, pasos[i]))) n = n.parentNode;
+    if (!n) return false;
+    n = n.parentNode;
+  }
+  return true;
+}
 El.prototype.querySelectorAll = function (sel) {
   var out = [];
   var partes = String(sel).split(',').map(function (x) { return x.trim(); });
@@ -170,10 +202,7 @@ El.prototype.querySelectorAll = function (sel) {
     for (var i = 0; i < n.children.length; i++) {
       var k = n.children[i];
       for (var j = 0; j < partes.length; j++) {
-        var p = partes[j];
-        var cls = p.indexOf('.') === 0 ? p.slice(1).split(':')[0] : null;
-        var tag = cls ? null : p.split(/[:\[]/)[0].toUpperCase();
-        if ((cls && k._has(cls)) || (tag && k.tagName === tag)) { out.push(k); break; }
+        if (casaSelector(k, partes[j])) { out.push(k); break; }
       }
       anda(k);
     }

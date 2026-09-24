@@ -15,7 +15,8 @@
  *     MAGO     fantasmas que mata, a distancia o de cerca
  *     TANQUE   golpes que aguanta (x3) y lo que mata
  *     SOPORTE  compañeros que levanta (x3), escudos y vidas que da, y lo
- *              que mata
+ *              que mata; A SOLAS, solo lo que mata y lo que se da a sí
+ *              mismo, con su propia tabla de notas (24 sep)
  *   y cada muerte propia la rebaja un poco. Los tres escalones de arriba
  *   piden además notas S con ese rol: con horas solas no se llega.
  *
@@ -69,17 +70,17 @@
 
   /* El VALOR de una partida con ese rol: lo que el rol tiene que hacer, por
    * minuto en pie, rebajado por las muertes. */
-  function valor(rol, m, salvas, minutos) {
+  function valor(rol, m, salvas, minutos, solo) {
     var kills = m.kills || 0, v;
     if (rol === 'tanque') v = salvas * 3 + kills;
-    else if (rol === 'soporte') v = (m.rescates || 0) * 3 + (m.apoyos || 0) + kills;
+    else if (rol === 'soporte') v = (solo ? 0 : (m.rescates || 0) * 3) + (m.apoyos || 0) + kills;
     else v = kills;                                   // asesino y mago
     v = v / Math.max(0.75, minutos);
     return v / (1 + (m.muertes || 0) * M.CASTIGO_MUERTE);
   }
 
-  function notaDe(rol, v) {
-    var t = M.NOTAS[rol] || M.NOTAS.asesino;
+  function notaDe(rol, v, solo) {
+    var t = (solo && M.NOTAS[rol + '_solo']) || M.NOTAS[rol] || M.NOTAS.asesino;
     var letras = ['S', 'A', 'B', 'C'];
     for (var i = 0; i < t.length; i++) if (v >= t[i]) return letras[i];
     return 'D';
@@ -94,15 +95,15 @@
     return String(n || '').toUpperCase();
   }
 
-  /* [puntos, partidas] que la cuenta que ha entrado tiene de ajuste en ese
-   * rol (CFG.AJUSTES_CUENTA), o [0, 0] */
+  /* [puntos, partidas, notas S] que la cuenta que ha entrado tiene de
+   * ajuste en ese rol (CFG.AJUSTES_CUENTA), o [0, 0, 0] */
   function ajusteDe(rol) {
     var AJ = CFG.AJUSTES_CUENTA, Ac = window.PM.Account;
-    if (!AJ || !Ac || !Ac.logged || !Ac.name) return [0, 0];
-    try { if (!Ac.logged()) return [0, 0]; } catch (e) { return [0, 0]; }
+    if (!AJ || !Ac || !Ac.logged || !Ac.name) return [0, 0, 0];
+    try { if (!Ac.logged()) return [0, 0, 0]; } catch (e) { return [0, 0, 0]; }
     var aj = AJ[String(Ac.name() || '').toUpperCase()];
     var r = aj && aj.maestria && aj.maestria[rol];
-    return r ? [r[0] | 0, r[1] | 0] : [0, 0];
+    return r ? [r[0] | 0, r[1] | 0, r[2] | 0] : [0, 0, 0];
   }
 
   var Maestria = {
@@ -118,7 +119,8 @@
       var c = A() ? A().stats() : {};
       /* con el ajuste a mano de la cuenta, si lo tiene (CFG.AJUSTES_CUENTA) */
       var aj = ajusteDe(rol);
-      var puntos = Math.max(0, stat(c, 'mae_' + rol) + aj[0]), eses = stat(c, 'maes_' + rol);
+      var puntos = Math.max(0, stat(c, 'mae_' + rol) + aj[0]);
+      var eses = Math.max(0, stat(c, 'maes_' + rol) + aj[2]);
       var nivel = nivelDe(puntos, eses);
       var sig = M.NIVELES[nivel + 1] || null;
       return {
@@ -163,8 +165,9 @@
       }
       var m = (G.marcador && G.marcador[yo]) || {};
       var minutos = (m.vivo || 0) / 3600;
-      var v = valor(rol, m, G.salvasMias || 0, minutos);
-      var nota = notaDe(rol, v);
+      var solo = (G.playerCount || 1) === 1;
+      var v = valor(rol, m, G.salvasMias || 0, minutos, solo);
+      var nota = notaDe(rol, v, solo);
       var pts = M.PUNTOS[nota] || 0;
       var o = {};
       o['mae_' + rol] = pts;

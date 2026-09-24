@@ -1149,8 +1149,8 @@
    *
    * Los listones de las notas salen de los contadores reales de las cuentas
    * (22 sep): en DESATADO la gente se come de 3 a 4 fantasmas por minuto y el
-   * mejor, 7. Los del TANQUE y el SOPORTE no tienen datos todavía (sus
-   * contadores nacen hoy): son una primera tanda para ajustar jugando.
+   * mejor, 7. El 24 sep se subió la S del Asesino a 12 y la del Mago a 8,
+   * se bajó la del Tanque a 5 y el Soporte a solas tiene su propia tabla.
    * ---------------------------------------------------------------- */
   /* ---------- AJUSTES A MANO POR CUENTA (24 sep) ----------
    * Correcciones de datos que no se pueden hacer en la nube: los aparatos
@@ -1159,18 +1159,28 @@
    * aplica el juego al leer, en cualquier aparato.
    *   cifras:   { clave: [valor malo, valor bueno] }: solo si vale EXACTAMENTE
    *             el malo (si luego se juega más, manda lo jugado)
-   *   maestria: { rol: [puntos, partidas] } que se suman (o restan) a lo
-   *             guardado. Las partidas de antes de las maestrías (22 sep) se
-   *             repartieron solo con lo que había en cada navegador y el resto
-   *             se le dio al ASESINO; se recuentan con las repeticiones de la
-   *             nube, a 100 puntos por partida, que es lo que valían. */
+   *   maestria: { rol: [puntos, partidas, notas S] } que se suman (o
+   *             restan) a lo guardado. Las partidas de antes de las maestrías
+   *             (22 sep) se repartieron solo con lo que había en cada
+   *             navegador y el resto se le dio al ASESINO; se recuentan con las
+   *             repeticiones de la nube, a 100 puntos por partida, que es lo
+   *             que valían.
+   *             NOTAS NUEVAS (24 sep): las partidas ya jugadas se volvieron a
+   *             calificar con los listones nuevos, reproduciendo cada
+   *             repetición hasta que daba los mismos puntos. IAMBRAIGHTON
+   *             pierde 13 S de ASESINO (7 comprobadas; 6 de la madrugada del
+   *             23, que ya no se pueden reproducir, contando al menos las 3
+   *             muertes de un GAME OVER) y cada una baja a A (−40). MAULIO
+   *             gana 3 S de TANQUE (+40 cada una). ESTER, a solas con el
+   *             SOPORTE, se recalifica entera con la tabla de solo: +14 S y
+   *             +1.210 puntos. */
   CFG.AJUSTES_CUENTA = {
     IAMBRAIGHTON: {
       cifras: { 'clasico:puntosMax': [180550, 84250], 'party:puntosMax': [180550, 119300] },
-      maestria: { asesino: [-13200, -132], mago: [6500, 65], tanque: [3900, 39], soporte: [2800, 28] }
+      maestria: { asesino: [-13720, -132, -13], mago: [6500, 65], tanque: [3900, 39], soporte: [2800, 28] }
     },
-    ESTER: { maestria: { asesino: [-800, -8], soporte: [800, 8] } },
-    MAULIO: { maestria: { asesino: [-700, -7], tanque: [500, 5], soporte: [200, 2] } }
+    ESTER: { maestria: { asesino: [-800, -8], soporte: [2010, 8, 14] } },
+    MAULIO: { maestria: { asesino: [-700, -7], tanque: [620, 5, 3], soporte: [200, 2] } }
   };
 
   CFG.MAESTRIA = {
@@ -1194,10 +1204,18 @@
     /* NOTAS: el valor por minuto en pie que pide cada una (S, A, B, C; por
      * debajo, D). Cómo se calcula el valor de cada rol, en js/maestria.js. */
     NOTAS: {
-      asesino: [7, 5, 3.5, 2],
-      mago:    [6, 4.5, 3, 1.8],
-      tanque:  [6, 4.5, 3, 1.8],
-      soporte: [6, 4.5, 3, 1.8]
+      /* 24 sep, decidido por Braighton con los datos de las partidas: la S
+       * del ASESINO pide 12 (con 7 la sacaba casi cualquier partida buena),
+       * la del MAGO 8 (hacía 6,5–8 por minuto: S casi siempre) y la del
+       * TANQUE 5 (con 6 no llegaba ni jugando bien). */
+      asesino: [12, 5, 3.5, 2],
+      mago:    [8, 4.5, 3, 1.8],
+      tanque:  [5, 4.5, 3, 1.8],
+      soporte: [6, 4.5, 3, 1.8],
+      /* El SOPORTE A SOLAS no tiene a quién levantar ni a quién proteger,
+       * y a menudo gasta sus poderes en sobrevivir: se le mide solo por lo
+       * que mata y lo que se da a sí mismo, y la S pide 4. */
+      soporte_solo: [4, 3, 2, 1.2]
     },
     /* cada muerte propia rebaja el valor en esta fracción (10 %) */
     CASTIGO_MUERTE: 0.1,
@@ -2018,7 +2036,7 @@
     /* ---------- LOS ROLES ----------
      * Cada jugador elige uno antes de empezar. LIST (arriba) es el ASESINO, el
      * kit de siempre: puntúa. El TANQUE protege, el SOPORTE cura y controla y
-     * el MAGO mata a distancia (pero puntúa poco: ver MAGO_PUNTOS). Mismo
+     * el MAGO mata a distancia (y encadena: ver MAGO_PUNTOS). Mismo
      * formato que LIST y el mismo orden de teclas; lo que cambia es el id, y
      * js/habilidades.js despacha por id, no por la posición.
      *
@@ -2061,7 +2079,7 @@
                  pasiva: 'LEVANTAS UN CUERPO DE UNA SOLA PASADA (LOS DEMÁS, CINCO)',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 2 S: A TODO EL EQUIPO, TÚ INCLUIDO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
-      mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA, PERO PUNTÚA POCO',
+      mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA Y ENCADENA',
                  pasiva: 'EL OJO: VES POR DÓNDE VA A PASAR CADA UNO Y CUÁNDO CAMBIAN DE MODO',
                  desc: ['BOLA QUE MATA AL PRIMER FANTASMA', 'DOS BOCAS 20 S · SE ENTRA CON ESPACIO APRETADO',
                         'TRAMPA QUE MATA A LOS QUE LA PISEN', '3 RAYOS A 10 CASILLAS · UNO CADA 0,75 S'] }
@@ -2183,9 +2201,11 @@
     TORMENTA_RAYOS: 3,
     TORMENTA_CADA: 45,
     TORMENTA_TILES: 10,           // a diez casillas a la redonda
-    /* Lo que vale un fantasma que mata el Mago: fijo, sin tocar la cadena y
-     * sin el parón de comer. Sin esto el Mago, que mata sin arriesgarse,
-     * dejaría al Asesino sin sentido. */
+    /* Lo que vale una baja por habilidad que no es del Mago (la APISONADORA,
+     * la MINA, el REBOTE...): fijo, sin tocar la cadena y sin el parón de
+     * comer. Las del MAGO dejaron de ser fijas el 24 sep: entran en la
+     * racha normal (Hab.rachaMago), porque con 200 fijos no podía subir de
+     * rango ni a FRESA. Lo que le separa del Asesino es su pasiva (+25 %). */
     MAGO_PUNTOS: 200,
 
     /* ---------- poderes del catálogo ---------- */
@@ -2512,7 +2532,7 @@
       ],
       mago: [
         [h('fuego', 'Q', 'BOLA DE FUEGO', 20, 'Mata al primer fantasma.'),
-         h('bola_guiada', 'Q', 'BOLA GUIADA', 22, 'No falla y da 150 puntos.'),
+         h('bola_guiada', 'Q', 'BOLA GUIADA', 22, 'No falla.'),
          /* 22 sep 2026: el azul del TOQUE ARCANO se contagia, así que un solo
           * toque puede acabar poniendo azules a los cuatro. De 18 s a 24 s:
           * sigue siendo una Q barata, pero ya no se encadena un contagio
@@ -2562,17 +2582,17 @@
       fortaleza: "6 S: NADIE DE TU EQUIPO A 5 CASILLAS DE TI PUEDE MORIR, TÚ INCLUIDO, NI POR EL REY · EL FANTASMA QUE LOS TOQUE REBOTA 1 CASILLA",
       embestida: "CORRES A X1,35 DURANTE 4 S PARA CERRAR DISTANCIA O ESCAPAR DEL MORDISCO · SIGUES SIN ATRAVESAR MUROS",
       acecho: "4 S CASI INVISIBLE (AL 30% PARA LOS DEMÁS) Y SIN TU MARCA DE JUGADOR ENCIMA · AL QUE NO VEN VENIR NO LO MUERDEN",
-      fuego: "DISPARO RECTO HACIA TU ÚLTIMA FLECHA: MATA AL PRIMER FANTASMA QUE TOQUE (200 PTS) · AL REY FANTASMA LE QUITA 2 DE VIDA",
-      bola_guiada: "BOLA QUE PERSIGUE POR LOS PASILLOS AL FANTASMA MÁS CERCANO, ESTÉ DONDE ESTÉ, Y NO FALLA: 150 PTS · SIN FANTASMAS FUERA, VA A POR EL REY (2 DE VIDA)",
+      fuego: "DISPARO RECTO HACIA TU ÚLTIMA FLECHA: MATA AL PRIMER FANTASMA QUE TOQUE (EN RACHA: 200, 400, 800, 1.600) · AL REY FANTASMA LE QUITA 2 DE VIDA",
+      bola_guiada: "BOLA QUE PERSIGUE POR LOS PASILLOS AL FANTASMA MÁS CERCANO, ESTÉ DONDE ESTÉ, Y NO FALLA (EN RACHA) · SIN FANTASMAS FUERA, VA A POR EL REY (2 DE VIDA)",
       toque_arcano: "VUELVE AZUL 4 S AL FANTASMA MÁS CERCANO A 3 CASILLAS · EL AZUL SE CONTAGIA A LOS QUE SE CRUCEN CON ÉL · AL REY LE QUITA 1 DE VIDA",
       chispa: "APAGA 3 S AL FANTASMA MÁS CERCANO A 3 CASILLAS Y SALTA EN CADENA A LOS QUE ESTÉN A 3 DE ÉL: NI SE MUEVEN NI MATAN · AL REY LO PARA 1 S",
       portal: "PULSA: DEJAS LA ENTRADA Y PASAS A OTRA DIMENSIÓN, INTOCABLE (MÁX. 8 S) · PULSA OTRA VEZ: SALIDA · 20 S ABIERTO PARA EL EQUIPO, SE CRUZA CON ESPACIO",
       clon: "SUELTAS UN DOBLE QUE CORRE RECTO 6 S Y TODOS LOS FANTASMAS LO PERSIGUEN · EL QUE LO ALCANZA QUEDA APAGADO 1 S · AL REY LO ENGAÑA Y LO PARA 0,5 S",
-      totem: "TORRE EN TU CASILLA 8 S QUE DISPARA CADA 2 S AL FANTASMA MÁS CERCANO A 10 CASILLAS (200 PTS POR BAJA) · SIN FANTASMAS, 1 DE VIDA AL REY POR BALA",
-      runa: "TRAMPA EN TU CASILLA DURANTE 15 S: MATA A TODOS LOS FANTASMAS QUE LA PISEN A LA VEZ (200 PTS CADA UNO) · AL REY LE QUITA 4 DE VIDA",
+      totem: "TORRE EN TU CASILLA 8 S QUE DISPARA CADA 2 S AL FANTASMA MÁS CERCANO A 10 CASILLAS (EN RACHA: 200, 400, 800, 1.600) · SIN FANTASMAS, 1 DE VIDA AL REY POR BALA",
+      runa: "TRAMPA EN TU CASILLA DURANTE 15 S: MATA A TODOS LOS FANTASMAS QUE LA PISEN A LA VEZ (EN RACHA: 200, 400, 800, 1.600) · AL REY LE QUITA 4 DE VIDA",
       gravedad: "ARRASTRA HACIA TI EN MEDIO SEGUNDO A LOS FANTASMAS A 4 CASILLAS Y LOS APAGA 2 S PARA REMATARLOS · AL REY NO LO MUEVE: LO PARA 0,7 S",
-      dominio: "EL FANTASMA MÁS CERCANO A 4 CASILLAS ES TUYO 6 S: NO MUERDE AL EQUIPO Y CAZA A LOS OTROS (200 PTS CADA UNO) · SI ALCANZA AL REY, 3 DE VIDA",
-      tormenta: "3 RAYOS, UNO AL INSTANTE Y LUEGO UNO CADA 0,75 S, AL FANTASMA MÁS CERCANO A 10 CASILLAS: CADA RAYO MATA (200 PTS) · AL REY, 2 DE VIDA POR RAYO",
+      dominio: "EL FANTASMA MÁS CERCANO A 4 CASILLAS ES TUYO 6 S: NO MUERDE AL EQUIPO Y CAZA A LOS OTROS (EN RACHA) · SI ALCANZA AL REY, 3 DE VIDA",
+      tormenta: "3 RAYOS, UNO AL INSTANTE Y LUEGO UNO CADA 0,75 S, AL FANTASMA MÁS CERCANO A 10 CASILLAS: CADA RAYO MATA (EN RACHA: 200, 400, 800, 1.600) · AL REY, 2 DE VIDA POR RAYO",
       meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA (8 CASILLAS) · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 15 S · AL REY, 5 DE VIDA",
       eclipse: "10 S DE OSCURIDAD: LOS CUATRO FANTASMAS VAN A CIEGAS, GIRANDO AL AZAR, Y A MITAD DE VELOCIDAD · EL REY TAMBIÉN VA A MITAD DE VELOCIDAD",
       hielo: "DISPARO QUE CONGELA 3 S AL PRIMER FANTASMA Y A LOS DE SU CASILLA · MANTÉN 2 S: PLACA DE HIELO 8 S QUE CONGELA A QUIEN LA PISE · AL REY LO CONGELA 1 S",

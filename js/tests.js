@@ -10546,7 +10546,7 @@
   });
 
   /* ---------- MAGO ---------- */
-  test('MAGO · FUEGO: mata al primero, 200 fijos, sin cadena ni parón', function () {
+  test('MAGO · FUEGO: mata al primero, en racha y sin parón', function () {
     partidaRol(['mago'], 2, 5, DR.RIGHT);
     var g = fantasmaEn(0, 9, 5);
     HB.hielo[0] = 999;
@@ -10556,8 +10556,8 @@
     antes = G.score;
     ticks(20);
     eq(g.mode, 'eyes', 'el fantasma muere');
-    eq(G.score - antes, 200, 'vale 200 justos');
-    eq(G.chainIndex, 0, 'no sube la cadena');
+    eq(G.score - antes, 200, 'la primera de la racha vale 200');
+    eq(G.chainIndex, 1, 'y sube la racha, la normal');
     eq(G.eatFreezeTicks, 0, 'y el juego no se para');
   });
 
@@ -10691,7 +10691,7 @@
     HB.hielo[0] = HB.hielo[1] = 999;
     ticks(1);
     ok(a.mode === 'eyes' && b.mode === 'eyes', 'caen los dos');
-    eq(G.score - antes, 400, '200 cada uno');
+    eq(G.score - antes, 600, 'en racha: 200 y 400');
     eq(HB.runas[0], null, 'y la runa se gasta');
   });
 
@@ -11418,7 +11418,7 @@
     eq(H.multVel(0), 1, 'y ya no frena al equipo: mata y sacude, como la Tormenta');
   });
 
-  test('CATÁLOGO: Bola Guiada no falla y puntúa exactamente 150', function () {
+  test('CATÁLOGO: Bola Guiada no falla y puntúa en la racha del Mago', function () {
     var H = window.PM.Hab;
     partida(1);
     G.hab = true; H.empezar(true, 1, ['mago'], ['bola_guiada,portal,runa,tormenta']); G.roles = ['mago'];
@@ -11427,8 +11427,9 @@
     var base = G.score;
     ok(H.bolaGuiada(G, 0), 'sale aunque el blanco no esté perfectamente alineado');
     ok(H.proyectilesCat.some(function (b) { return b.tipo === 'guiada'; }), 'la bola se ve viajar');
+    G.chainIndex = 2;
     for (var i = 0; i < 60 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
-    eq(G.score - base, 150, 'premio fijo');
+    eq(G.score - base, 800, 'la tercera de la racha: 800');
   });
 
   test('CATÁLOGO: Shuriken usa tres pulsaciones y solo perdona la recarga con pleno', function () {
@@ -11742,7 +11743,7 @@
     eq(H.st[0].estelaRastro.length, 0, 'y el camino desaparece entero de golpe');
   });
 
-  test('AJUSTES: la Bola Guiada rodea la pared por el pasillo y sigue dando 150', function () {
+  test('AJUSTES: la Bola Guiada rodea la pared por el pasillo y cobra su racha', function () {
     var H = window.PM.Hab;
     partida(1); G.hab = true;
     H.empezar(true, 1, ['mago'], ['bola_guiada,portal,runa,tormenta']); G.roles = ['mago'];
@@ -11780,7 +11781,7 @@
     }
     ok(porPasillos, 'no atraviesa la pared: pasa solo por casillas abiertas');
     eq(g.mode, 'eyes', 'llega igualmente: la bola no falla nunca');
-    eq(G.score - base, 150, 'premio fijo de 150');
+    eq(G.score - base, 200, 'la primera de la racha, 200');
   });
 
   test('AJUSTES: los números nuevos del catálogo', function () {
@@ -12598,17 +12599,20 @@
       A.record('clasico:puntosMax', 180550);
       A.record('mae_asesino', 20000);
       A.record('maep_asesino', 200);
+      A.record('maes_asesino', 20);
       var mago0 = Mae.datos('mago').puntos;
       try {
         Ac.user = { id: 'id-prueba', usuario: 'IAMBRAIGHTON' };
         Ac.token = 'token-de-prueba';
         eq(A.stats()['clasico:puntosMax'], 84250, 'la cifra mala se corrige al leerla');
         eq(Mae.datos('mago').puntos, mago0 + 6500, 'el Mago recibe sus partidas de antes');
-        eq(Mae.datos('asesino').puntos, 20000 - 13200, 'y se le quitan al Asesino');
+        eq(Mae.datos('asesino').puntos, 20000 - 13720, 'y se le quitan al Asesino');
         eq(Mae.datos('asesino').partidas, 200 - 132, 'con sus partidas');
+        eq(Mae.datos('asesino').eses, 20 - 13, 'y las S que ya no merece (12 por minuto)');
         Ac.user = { id: 'id-prueba', usuario: 'OTRO' };
         eq(A.stats()['clasico:puntosMax'], 180550, 'a otra cuenta no le toca nada');
         eq(Mae.datos('asesino').puntos, 20000);
+        eq(Mae.datos('asesino').eses, 20);
       } finally { Ac.user = u0; Ac.token = t0; }
     });
   });
@@ -12617,7 +12621,10 @@
     function () {
       var Mae = window.PM.Maestria;
       // 5 minutos en pie, sin morir
-      eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 36 }, 0, 5)), 'S', '7,2 por minuto');
+      eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 60 }, 0, 5)), 'S', '12 por minuto');
+      eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 36 }, 0, 5)), 'A', '7,2 por minuto ya no es S');
+      eq(Mae.notaDe('mago', Mae.valor('mago', { kills: 36 }, 0, 5)), 'A', 'el Mago pide 8 para la S');
+      eq(Mae.notaDe('tanque', Mae.valor('tanque', { kills: 25 }, 0, 5)), 'S', 'el Tanque, 5');
       eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 18 }, 0, 5)), 'B', '3,6 por minuto');
       eq(Mae.notaDe('asesino', Mae.valor('asesino', { kills: 2 }, 0, 5)), 'D', 'casi nada');
       // el Tanque cuenta sus golpes aguantados, x3
@@ -12625,14 +12632,19 @@
       // el Soporte, a quien levanta x3 y lo que reparte
       eq(Mae.notaDe('soporte', Mae.valor('soporte', { rescates: 4, apoyos: 6, kills: 5 }, 0, 5)), 'A',
          '(12 + 6 + 5) / 5 = 4,6');
+      // A SOLAS el Soporte no se mide por rescates, y la S pide 4
+      eq(Mae.valor('soporte', { rescates: 4, apoyos: 6, kills: 14 }, 0, 5, true), 4, 'a solas, sin rescates: (6 + 14) / 5');
+      eq(Mae.notaDe('soporte', 4, true), 'S', 'y con 4 es S');
+      eq(Mae.notaDe('soporte', 4, false), 'B', 'en equipo, 4 sigue siendo B');
     });
 
   test('MAESTRÍA: morir rebaja la nota', function () {
     var Mae = window.PM.Maestria;
-    var limpio = Mae.valor('asesino', { kills: 36, muertes: 0 }, 0, 5);
-    var sucio = Mae.valor('asesino', { kills: 36, muertes: 5 }, 0, 5);
+    var limpio = Mae.valor('asesino', { kills: 60, muertes: 0 }, 0, 5);
+    var sucio = Mae.valor('asesino', { kills: 60, muertes: 5 }, 0, 5);
     ok(sucio < limpio, 'cinco muertes pesan');
-    eq(Mae.notaDe('asesino', sucio), 'B', 'y le quitan la S');
+    eq(Mae.notaDe('asesino', limpio), 'S');
+    eq(Mae.notaDe('asesino', sucio), 'A', 'y le quitan la S');
   });
 
   test('MAESTRÍA: los escalones altos piden notas S, no solo horas', function () {
@@ -12653,8 +12665,8 @@
         G.state = 'PLAYING';
         G.timeTicks = 60 * 120;                  // dos minutos de partida
         G.marcador[0].vivo = 3600 * 2;           // y dos en pie
-        G.marcador[0].kills = 4;
-        G.salvasMias = 2;                        // (6 + 4) / 2 = 5 → A
+        G.marcador[0].kills = 3;
+        G.salvasMias = 2;                        // (6 + 3) / 2 = 4,5 → A
         G.xpSent = false;
         G.closeRun();
         var r = G.runSummary.maestria;

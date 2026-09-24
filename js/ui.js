@@ -7753,7 +7753,9 @@
         mago: 'LOS FANTASMAS QUE MATAS',
         tanque: 'LOS GOLPES QUE AGUANTAS Y LO QUE MATAS',
         soporte: 'A QUIÉN LEVANTAS, LOS ESCUDOS Y VIDAS QUE DAS Y LO QUE MATAS'
-      }[rol] + ', POR MINUTO EN PIE';
+      }[rol] + ', POR MINUTO EN PIE · S DESDE ' +
+        String(CFG.MAESTRIA.NOTAS[rol][0]).replace('.', ',') +
+        (CFG.MAESTRIA.NOTAS[rol + '_solo'] ? (' (' + String(CFG.MAESTRIA.NOTAS[rol + '_solo'][0]).replace('.', ',') + ' A SOLAS)') : '');
     },
 
     pickMaestria: function (i, play) {

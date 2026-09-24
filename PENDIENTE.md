@@ -93,8 +93,11 @@ tocar la red; rango solo en DESATADO; la tabla se arma leyendo `perfiles`.
 
 **Números para ajustar jugando** (todos en `config.js`, CFG.MAESTRIA y
 CFG.RANGO):
-1. Las notas del TANQUE y el SOPORTE no tienen datos: sus contadores nacen hoy.
-   Las del Asesino salen de las cifras reales (S = 7 fantasmas por minuto).
+1. **Notas ajustadas el 24 sep con datos reales (decisión de Braighton):** S del
+   Asesino 12/min, Mago 8, Tanque 5, Soporte 6 en equipo y 4 a solas (sin
+   rescates). El MAGO encadena sus bajas (200…1.600). Lo jugado se recalificó
+   reproduciendo las repeticiones (CFG.AJUSTES_CUENTA). Vigilar que el Mago en
+   racha no pase al Asesino; si pasa, que la racha caduque a los pocos segundos.
 2. El `par` de cada fruta y lo que sube o baja una partida (+30 el doble de
    tu par, −20 la mitad). Salió de las marcas reales de DESATADO, **infladas
    por las bajas regaladas**: si se limpian (punto 1 de abajo), revisar.
