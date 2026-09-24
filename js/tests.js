@@ -44,6 +44,17 @@
   var celebrar0 = null;
   try { celebrar0 = localStorage.getItem(window.PM.Celebrar.KEY); } catch (e) { /* sin almacén */ }
 
+  /* TODO EL ALMACÉN se deja como estaba al acabar (24 sep). Las pruebas
+   * dejaban repeticiones de mentira (PEPE) en el del juego en local, y al
+   * abrir el juego después se subían solas a la nube de verdad. */
+  var almacen0 = {};
+  try {
+    for (var ai = 0; ai < localStorage.length; ai++) {
+      var ak = localStorage.key(ai);
+      almacen0[ak] = localStorage.getItem(ak);
+    }
+  } catch (e) { almacen0 = null; }
+
   function test(nombre, fn) {
     var caso = { nombre: nombre, ok: true, error: null };
     if (window.PM.Celebrar) window.PM.Celebrar.vaciar();
@@ -13339,6 +13350,12 @@
     if (celebrar0) localStorage.setItem(window.PM.Celebrar.KEY, celebrar0);
     else window.PM.Celebrar.vaciar();
   } catch (e) { /* sin almacén */ }
+  if (almacen0) {
+    try {
+      localStorage.clear();
+      for (var rk in almacen0) if (almacen0.hasOwnProperty(rk)) localStorage.setItem(rk, almacen0[rk]);
+    } catch (e) { /* sin almacén */ }
+  }
 
   var fallos = 0;
   for (var i = 0; i < casos.length; i++) if (!casos[i].ok) fallos++;
