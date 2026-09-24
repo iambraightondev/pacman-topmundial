@@ -8076,3 +8076,6 @@ body { font-size-adjust: 0.56; }
   text-shadow: 0 0 6px var(--hb), 0 0 2px #000, 0 0 2px #000;
 }
 #habBar .hab-b.durando .hab-ico { opacity: 0.55; }
+
+/* el carril que va siguiendo al otro, sin imán mientras se mueve (24 sep) */
+#pase .ps-scroll.ps-sigue { scroll-snap-type: none; scroll-behavior: auto; }

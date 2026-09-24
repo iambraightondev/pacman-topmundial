@@ -1516,10 +1516,13 @@
         stat: 'nivelMax', goal: 5 },
       { id: 'd_solo_marca', modo: 'solo',
         desc: '10.000 PUNTOS JUGANDO SOLO', stat: 'puntosMax', goal: 10000 },
-      { id: 'd_party_batida', modo: 'party',
-        desc: 'CÓMETE 15 FANTASMAS ACOMPAÑADO', stat: 'fantasmas', goal: 15 },
-      { id: 'd_vs_caza', modo: 'vs',
-        desc: 'CAZA 2 PAC-MAN LLEVANDO UN FANTASMA', stat: 'cazas', goal: 2 }
+      /* NINGUNO DEPENDE DE UN SEGUNDO (24 sep): el de PARTY y el de PAC-MAN
+       * VS. pedían a otra persona para poder cumplirse. Van en su mismo
+       * sitio de la lista, así la baraja de la semana no se descoloca. */
+      { id: 'd_hab_nivel', modo: 'hab',
+        desc: 'LLEGA AL NIVEL 5 EN DESATADO', stat: 'nivelMax', goal: 5 },
+      { id: 'd_caza_pac', modo: 'caza',
+        desc: 'CAZA 2 VECES AL PAC-MAN EN CACERÍA', stat: 'cazas', goal: 2 }
     ]
   };
 

@@ -1352,6 +1352,12 @@
   /* El DAILY no es un modo: se mide con los mismos contadores que los logros y
    * por el mismo embudo (Game.bumpAch), así que jugar a cualquier cosa lo
    * mueve sin que el juego tenga que saber que existe. */
+  test('ningún reto del DAILY necesita a otra persona para cumplirse', function () {
+    CFG.DAILY.MODOS.concat(CFG.DAILY.LIBRES).forEach(function (r) {
+      ok(r.modo !== 'party' && r.modo !== 'vs', r.id + ' se puede cumplir jugando a solas');
+    });
+  });
+
   test('el DAILY avanza jugando, por el mismo embudo que los logros',
     function () {
       conDaily(function (D) {

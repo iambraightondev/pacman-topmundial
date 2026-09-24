@@ -1894,14 +1894,27 @@
 
       /* los dos carriles se desplazan juntos: si no, las columnas de arriba y
        * las de abajo dejarían de ser el mismo galón en cuanto se moviera uno */
-      var atado = false;
+      /* EL QUE SIGUE, SIN IMÁN (24 sep). Los dos llevan imán de casilla
+       * (scroll-snap) y, al copiarle la posición al otro, su imán lo volvía a
+       * encajar a saltos: avanzaba, pero sin deslizarse. Ahora manda el que
+       * toca el jugador (ratón, rueda, dedo o teclado); el otro pierde el imán
+       * mientras le sigue y lo recupera al pararse, ya en la misma casilla.
+       * Y no se devuelve el movimiento: el que sigue no mueve al que manda. */
+      var lider = null, suelta = null;
+      [scroll, scroll2].forEach(function (el) {
+        ['pointerdown', 'wheel', 'touchstart', 'keydown'].forEach(function (ev) {
+          el.addEventListener(ev, function () { lider = el; }, { passive: true });
+        });
+      });
       var ata = function (a, b) {
         a.addEventListener('scroll', function () {
-          if (atado) return;
-          atado = true;
+          if (lider && lider !== a) return;          // lo mueve el otro
+          if (Math.abs(b.scrollLeft - a.scrollLeft) < 1) return;
+          b.classList.add('ps-sigue');
           b.scrollLeft = a.scrollLeft;
-          atado = false;
-        });
+          clearTimeout(suelta);
+          suelta = setTimeout(function () { b.classList.remove('ps-sigue'); }, 250);
+        }, { passive: true });
       };
       ata(scroll, scroll2);
       ata(scroll2, scroll);

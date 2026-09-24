@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · El pase se desliza entero, y el DAILY sin depender de nadie
+
+**EL PASE:** al deslizar un carril, el otro le sigue deslizándose en vez de
+saltar de casilla en casilla.
+**EL DAILY:** ningún reto necesita ya a otra persona. "CAZA 2 PAC-MAN LLEVANDO UN
+FANTASMA" (PAC-MAN VS.) pasa a "CAZA 2 VECES AL PAC-MAN EN CACERÍA", que se
+juega a solas, y "CÓMETE 15 FANTASMAS ACOMPAÑADO" a "LLEGA AL NIVEL 5 EN DESATADO".
+
 ## 2026-09-24 · El ASESINO, rebalanceado, y el rey respeta el azul
 
 - **FRENESÍ:** +0,15 de velocidad mientras haya algún fantasma azul y +0,15 por
