@@ -60,21 +60,64 @@ create or replace function public.perfiles_touch()
 returns trigger
 language plpgsql
 as $$
+declare
+  purga_old numeric;
+  purga_new numeric;
 begin
   new.actualizado := now();
-  /* Contadores que SOLO CRECEN: un aparato que suba sus logros sin haberlos
-   * traído antes no puede borrarlos ni bajarlos; de cada uno se queda el
-   * mayor. 24 sep: los del RANGO (rc2_… rm3_…, con la versión de las reglas)
-   * y los USOS de cada poder y tecla (hu_…, hk_…), sembrados en la nube con
-   * las repeticiones y que ningún aparato tenía. */
-  if tg_op = 'UPDATE' and jsonb_typeof(old.logros) = 'object'
-     and jsonb_typeof(new.logros) = 'object' then
-    new.logros := new.logros || coalesce((
-      select jsonb_object_agg(k, greatest(coalesce((new.logros->>k)::numeric, 0),
-                                          coalesce((old.logros->>k)::numeric, 0)))
-      from jsonb_object_keys(old.logros) as k
-      where k ~ '^r[cgtlm][2-9]_' or k ~ '^h[uk]_'
-    ), '{}'::jsonb);
+  /* LO JUGADO SOLO CRECE (24 sep). Cada aparato sube su perfil ENTERO sin
+   * leer antes la nube, así que un segundo aparato con datos viejos bajaba
+   * partidas, récords y experiencia de la cuenta hasta que el bueno volvía a
+   * entrar (y si ese se borraba, se perdían). Ahora, de cada contador de
+   * `logros`, de la experiencia y de cada récord se queda el mayor; de los
+   * tiempos (mejorT1, tiempo1) el menor. La única forma de BAJAR algo es una
+   * limpieza a mano que suba el contador `purga` en la misma escritura. */
+  if tg_op = 'UPDATE' then
+    purga_old := coalesce((old.logros->>'purga')::numeric, 0);
+    purga_new := coalesce((new.logros->>'purga')::numeric, 0);
+    if purga_new > purga_old then
+      return new;
+    end if;
+
+    new.xp := greatest(coalesce(new.xp, 0), coalesce(old.xp, 0));
+    new.record1 := greatest(coalesce(new.record1, 0), coalesce(old.record1, 0));
+    new.record2 := greatest(coalesce(new.record2, 0), coalesce(old.record2, 0));
+    new.record3 := greatest(coalesce(new.record3, 0), coalesce(old.record3, 0));
+    new.record4 := greatest(coalesce(new.record4, 0), coalesce(old.record4, 0));
+    new.record_lab := greatest(coalesce(new.record_lab, 0), coalesce(old.record_lab, 0));
+    new.record_lab2 := greatest(coalesce(new.record_lab2, 0), coalesce(old.record_lab2, 0));
+    new.record_lab3 := greatest(coalesce(new.record_lab3, 0), coalesce(old.record_lab3, 0));
+    new.record_lab4 := greatest(coalesce(new.record_lab4, 0), coalesce(old.record_lab4, 0));
+    new.record_hab := greatest(coalesce(new.record_hab, 0), coalesce(old.record_hab, 0));
+    new.record_hab2 := greatest(coalesce(new.record_hab2, 0), coalesce(old.record_hab2, 0));
+    new.record_hab3 := greatest(coalesce(new.record_hab3, 0), coalesce(old.record_hab3, 0));
+    new.record_hab4 := greatest(coalesce(new.record_hab4, 0), coalesce(old.record_hab4, 0));
+    if old.tiempo1 > 0 and (new.tiempo1 is null or new.tiempo1 <= 0 or new.tiempo1 > old.tiempo1) then
+      new.tiempo1 := old.tiempo1;
+    end if;
+
+    if jsonb_typeof(old.logros) = 'object' then
+      if jsonb_typeof(new.logros) is distinct from 'object' then
+        new.logros := old.logros;
+      else
+        new.logros := new.logros || coalesce((
+          select jsonb_object_agg(k,
+            case
+              /* los tiempos: el menor que no sea cero */
+              when k ~ 'mejorT1$' then
+                case when coalesce((new.logros->>k)::numeric, 0) > 0
+                          and coalesce((new.logros->>k)::numeric, 0) < (old.logros->>k)::numeric
+                     then (new.logros->k) else (old.logros->k) end
+              else to_jsonb(greatest(coalesce((new.logros->>k)::numeric, 0),
+                                     (old.logros->>k)::numeric))
+            end)
+          from jsonb_object_keys(old.logros) as k
+          where jsonb_typeof(old.logros->k) = 'number'
+            and (new.logros->k is null or jsonb_typeof(new.logros->k) = 'number')
+            and (old.logros->>k)::numeric > 0
+        ), '{}'::jsonb);
+      end if;
+    end if;
   end if;
   return new;
 end;
