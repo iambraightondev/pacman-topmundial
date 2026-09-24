@@ -59,8 +59,8 @@ cosa en CHANGELOG. Pruebas: tests.html 589/589; Node 1 fallo (el de siempre).
 2. **Premios de fin de temporada del rango, antes del 1 oct** (aprobados, ver
    abajo): fruta junto al nombre el mes siguiente, recuerdo en el perfil,
    accesorio (MANZANA+), rastro dorado (CAMPANA+), skin LLAVE DORADA.
-3. **Vigilar al Mago en racha**: si deja de comer energizantes para cobrar
-   1.600 por baja, que la racha caduque a los pocos segundos sin matar.
+3. ~~Mago en racha~~ HECHO (24 sep): caduca a los 5 s sin matar
+   fuera del energizante (`MAGO_RACHA_CADUCA`).
 4. ~~Repeticiones de prueba~~ HECHO (24 sep): 118 borradas.
 5. Quitar el CSS obsoleto `.ps-sigue` del pase (no molesta).
 6. Los números del rango y de las notas se ajustan jugando; con más partidas

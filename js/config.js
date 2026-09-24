@@ -2210,6 +2210,10 @@
      * racha normal (Hab.rachaMago), porque con 200 fijos no podía subir de
      * rango ni a FRESA. Lo que le separa del Asesino es su pasiva (+25 %). */
     MAGO_PUNTOS: 200,
+    /* ...pero fuera del energizante la racha caduca: si pasan 5 s sin una
+     * baja, la siguiente vuelve a valer 200. Sin esto le convenía NO comer
+     * energizantes (que reinician la cadena) y cobrar 1.600 por baja sin fin. */
+    MAGO_RACHA_CADUCA: 5 * 60,
 
     /* ---------- poderes del catálogo ---------- */
     SHURIKEN_CANT: 3,

@@ -1632,6 +1632,7 @@
         ? window.PM.Hab.puntosFantasma(this, who || 0, g, CFG.GHOST_CHAIN[streak], como || 'contacto', false)
         : CFG.GHOST_CHAIN[streak];
       this.chainIndex++;
+      this.cadenaTick = this.tick;   // la racha del Mago caduca contando desde aquí
       /* logros: solo los que me como yo (en online, `who` dice quién fue); lo
        * que se come el Pac-Man de la máquina (CACERÍA) no es de nadie */
       var comeBot = !!(this.pacs[who || 0] && this.pacs[who || 0].bot);

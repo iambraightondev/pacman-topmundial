@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · La racha del Mago caduca
+
+**MAGO:** fuera del energizante, su racha se acaba a los 5 s sin matar y la
+siguiente baja vuelve a valer 200. Como solo la reiniciaba otro energizante,
+morir o pasar de nivel, le convenía no comer energizantes y cobrar 1.600 por
+baja sin fin. Con los fantasmas azules no caduca: ahí manda el energizante.
+
 ## 2026-09-24 · Los títulos de celebración caben enteros
 
 **¡SUBES DE DIVISIÓN!** se cortaba en pantalla ancha («¡SUBES DE DIVISI») y en

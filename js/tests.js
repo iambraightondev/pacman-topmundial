@@ -10561,6 +10561,20 @@
     eq(G.eatFreezeTicks, 0, 'y el juego no se para');
   });
 
+  test('MAGO · la racha caduca a los 5 s sin matar, salvo con los azules', function () {
+    partidaRol(['mago'], 2, 5, DR.RIGHT);
+    var lim = CFG.HAB.MAGO_RACHA_CADUCA;
+    G.frightTicks = 0; G.chainIndex = 0;
+    eq([HB.rachaMago(G), HB.rachaMago(G), HB.rachaMago(G), HB.rachaMago(G)].join(','), '200,400,800,1600', 'seguidas: la escalera entera');
+    G.tick += lim - 1;
+    eq(HB.rachaMago(G), 1600, 'justo antes de caducar sigue en 1.600');
+    G.tick += lim + 1;
+    eq(HB.rachaMago(G), 200, 'tras 5 s sin matar vuelve a 200');
+    G.chainIndex = 3; G.cadenaTick = G.tick; G.frightTicks = 999;
+    G.tick += lim * 3;
+    eq(HB.rachaMago(G), 1600, 'con un energizante en marcha no caduca');
+  });
+
   test('MAGO · PORTAL: entrada y otra dimensión, salida, cruce y 20 s abierto', function () {
     eq(HC.segs(1, 'mago'), 46, 'recarga de 46 s');
     eq(HC.PORTAL_ESPERA, 8 * 60, '8 s en la otra dimensión');
@@ -11427,7 +11441,7 @@
     var base = G.score;
     ok(H.bolaGuiada(G, 0), 'sale aunque el blanco no esté perfectamente alineado');
     ok(H.proyectilesCat.some(function (b) { return b.tipo === 'guiada'; }), 'la bola se ve viajar');
-    G.chainIndex = 2;
+    G.chainIndex = 2; G.cadenaTick = G.tick;
     for (var i = 0; i < 60 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
     eq(G.score - base, 800, 'la tercera de la racha: 800');
   });

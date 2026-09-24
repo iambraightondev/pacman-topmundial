@@ -2858,13 +2858,19 @@
      * la RACHA NORMAL, la del energizante: 200, 400, 800 y 1.600, y la
      * reinicia lo mismo que a la de siempre (otro energizante, morir o
      * pasar de nivel). Es la misma cadena que la de comerse azules, así que
-     * morder y matar a distancia suman en la misma. */
+     * morder y matar a distancia suman en la misma. Fuera del energizante,
+     * además, caduca a los 5 s sin matar (ver MAGO_RACHA_CADUCA). */
     esMago: function (G, who) {
       return !!(this.on && G && G.hab && G.roles && G.roles[who | 0] === 'mago');
     },
     rachaMago: function (G) {
+      /* Con los fantasmas azules manda el energizante; sin ellos, la racha
+       * se acaba a los MAGO_RACHA_CADUCA ticks de la última baja (24 sep). */
+      var hace = (G.tick || 0) - (G.cadenaTick == null ? -1e9 : G.cadenaTick);
+      if (G.frightTicks <= 0 && (hace < 0 || hace > H.MAGO_RACHA_CADUCA)) G.chainIndex = 0;
       var v = CFG.GHOST_CHAIN[Math.min(G.chainIndex || 0, 3)];
       G.chainIndex = (G.chainIndex || 0) + 1;
+      G.cadenaTick = G.tick || 0;
       return v;
     },
 
