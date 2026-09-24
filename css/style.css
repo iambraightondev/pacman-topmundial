@@ -8312,3 +8312,17 @@ body { font-size-adjust: 0.56; }
   .cifras-roles .cifra-fila { font-size: 9px; letter-spacing: 0; gap: 6px; }
   .cifras-roles .cifra-fila.cabecera { font-size: 7px; letter-spacing: 0; }
 }
+
+/* ---------- PREMIOS DE FIN DE TEMPORADA (24 sep) ---------- */
+.fruta-mini { display: inline-block; vertical-align: middle; image-rendering: pixelated; margin: 0 4px; flex: none; }
+.perfil-temporadas { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.perfil-temporadas > .note { text-align: left; }
+.temporada-ficha {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-width: 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c) 14%, #03030d), #03030d 70%);
+  border: 2px solid color-mix(in srgb, var(--c) 45%, #000);
+}
+.temporada-ficha > div { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.temporada-ficha span { font-size: 8px; letter-spacing: 2px; color: #9a9cc6; }
+.temporada-ficha b { font-weight: normal; font-size: 12px; letter-spacing: 1px; color: var(--c); }
+.temporada-ficha .fruta-mini { margin: 0; }

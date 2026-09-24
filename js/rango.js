@@ -152,6 +152,41 @@
     return out;
   }
 
+  /* 'AAAA-MM' del mes de antes */
+  function mesAnterior(t) {
+    var m = /^(\d{4})-(\d{2})$/.exec(String(t || ''));
+    if (!m) return '';
+    var a = m[1] | 0, n = (m[2] | 0) - 1;
+    if (n < 1) { n = 12; a--; }
+    return a + '-' + (n < 10 ? '0' : '') + n;
+  }
+
+  /* Lo más alto que se alcanzó en una temporada (índice de TRAMOS, -1 si
+   * nada). Vale la clave de cualquier versión de las reglas desde la 4, la
+   * del rango único: las de antes eran por formato y ya no se leen. */
+  function mejorEn(c, t) {
+    var mejor = 0, re = /^rm(\d+)_(\d{4}-\d{2})$/, m;
+    for (var k in c) {
+      if (!c.hasOwnProperty(k)) continue;
+      m = re.exec(k);
+      if (m && (m[1] | 0) >= 4 && m[2] === t) mejor = Math.max(mejor, num(c[k]));
+    }
+    return Math.min(mejor, TRAMOS.length) - 1;
+  }
+
+  /* índice de una fruta por su id ('manzana' -> 3) */
+  function indiceFruta(id) {
+    for (var i = 0; i < DIV.length; i++) if (DIV[i].id === id) return i;
+    return -1;
+  }
+
+  var MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO',
+               'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+  function nombreMes(t) {
+    var m = /^(\d{4})-(\d{2})$/.exec(String(t || ''));
+    return m ? (MESES[(m[2] | 0) - 1] + ' ' + m[1]) : String(t || '');
+  }
+
   var Rango = {
     DIVISIONES: DIV,
     TRAMOS: TRAMOS,
@@ -219,6 +254,83 @@
       this._memo = n;
       this._memoHasta = ahora + 1000;
       return n;
+    },
+
+    /* =========================================================
+     * LOS PREMIOS DE FIN DE TEMPORADA (aprobados el 24 sep)
+     * Se ganan con lo MÁS ALTO que alcanzaste en una temporada, y se
+     * entregan al cerrarse (el primer día del mes siguiente):
+     *   · la fruta junto al nombre durante el mes siguiente (todos)
+     *   · un recuerdo para siempre en el perfil (todos)
+     *   · MANZANA o más: los laureles de esa temporada (accesorio)
+     *   · CAMPANA o más: el RASTRO DORADO (efecto)
+     *   · LLAVE: la skin LLAVE DORADA
+     * Nada se guarda aparte: se DEDUCE de rmN_<temporada>, que viaja con la
+     * cuenta y solo crece. Así no hay entrega que se pueda perder, cobrar dos
+     * veces o que dependa de abrir el juego un día concreto. Nada de esto da
+     * ventaja en la partida.
+     * ========================================================= */
+    mesAnterior: mesAnterior,
+    nombreMes: nombreMes,
+    mejorEn: mejorEn,
+
+    /* Las temporadas ya CERRADAS en las que llegaste a algo, de la más nueva
+     * a la más vieja: { temporada, mes, tramo, division, nombre, color, fruta } */
+    cerradas: function (c, hoy) {
+      c = c || (A() ? A().stats() : {});
+      hoy = hoy || temporada();
+      var vistas = {}, out = [], re = /^rm(\d+)_(\d{4}-\d{2})$/, m;
+      for (var k in c) {
+        if (!c.hasOwnProperty(k)) continue;
+        m = re.exec(k);
+        if (!m || (m[1] | 0) < 4 || m[2] >= hoy || vistas[m[2]]) continue;
+        vistas[m[2]] = 1;
+        var tr = mejorEn(c, m[2]);
+        if (tr < 0) continue;
+        var T = TRAMOS[tr], D = DIV[T.d];
+        out.push({ temporada: m[2], mes: nombreMes(m[2]), tramo: tr, division: T.d,
+                   nombre: T.nombre, color: D.color, fruta: D.fruta });
+      }
+      out.sort(function (a, b) { return a.temporada < b.temporada ? 1 : -1; });
+      return out;
+    },
+
+    /* La del mes pasado, que es la que va junto al nombre este mes (o null) */
+    anterior: function (c, hoy) {
+      hoy = hoy || temporada();
+      var t = mesAnterior(hoy);
+      var l = this.cerradas(c, hoy);
+      for (var i = 0; i < l.length; i++) if (l[i].temporada === t) return l[i];
+      return null;
+    },
+
+    /* ¿Tiene ganado un premio? req = { fruta: 'manzana', temporada?: 'AAAA-MM' }.
+     * Con temporada, tiene que ser en ESA (y ya cerrada); sin ella, en
+     * cualquiera ya cerrada. */
+    ganado: function (req, c, hoy) {
+      if (!req) return false;
+      var pide = indiceFruta(req.fruta);
+      if (pide < 0) return false;
+      var l = this.cerradas(c, hoy);
+      for (var i = 0; i < l.length; i++) {
+        if (req.temporada && l[i].temporada !== req.temporada) continue;
+        if (l[i].division >= pide) return true;
+      }
+      return false;
+    },
+
+    /* Cómo se consigue, para el vestuario */
+    comoGanar: function (req, hoy) {
+      if (!req) return '';
+      var d = DIV[Math.max(0, indiceFruta(req.fruta))];
+      hoy = hoy || temporada();
+      var mas = d.id === 'llave' ? '' : ' O MÁS';
+      if (req.temporada) {
+        return (req.temporada < hoy ? 'SE REPARTIÓ A QUIEN LLEGÓ A ' : 'LLEGA A ') + d.name + mas +
+          ' EN LA TEMPORADA DE ' + nombreMes(req.temporada) +
+          (req.temporada < hoy ? '' : ' · SE ENTREGA AL CERRARLA');
+      }
+      return 'LLEGA A ' + d.name + mas + ' EN UNA TEMPORADA · SE ENTREGA AL CERRARLA';
     },
 
     /* Tu rango esta temporada (el único: vale para solo y para party) */
@@ -338,10 +450,13 @@
         'Accept': 'application/json' } })
         .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error('HTTP ' + res.status)); })
         .then(function (filas) {
-          var out = [];
+          var out = [], antes = {};
           (filas || []).forEach(function (f) {
             var lg = f && f.logros;
             var cc = (lg && lg.c) || lg || {};
+            /* la fruta del mes pasado de cada uno, para ir junto a su nombre */
+            var pa = mejorEn(cc, mesAnterior(t));
+            if (pa >= 0) antes[String(f.usuario || '').toUpperCase()] = TRAMOS[pa].d;
             var e = estadoDe(cc, t);
             if (!e.jugadas) return;
             out.push({ usuario: String(f.usuario || ''), avatar: f.avatar || '',
@@ -354,7 +469,7 @@
             if (a.pr !== b.pr) return (b.pr || 0) - (a.pr || 0);
             return b.jugadas - a.jugadas;
           });
-          cb(null, out);
+          cb(null, out, antes);
         })
         .catch(function (e) { cb((e && e.message) || 'SIN CONEXIÓN', null); });
     }

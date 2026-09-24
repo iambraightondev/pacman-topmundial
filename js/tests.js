@@ -3924,7 +3924,7 @@
     var legado = ['clasico', 'sombra', 'ojos', 'neon', 'pixel', 'aro'];
     eq(CFG.SKIN_IDS.length, CFG.SKINS.length, 'SKIN_IDS sale de la lista');
     CFG.SKINS.forEach(function (sk) {
-      ok(['nivel', 'logro', 'temporada', 'tienda', 'cofre', 'pase'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
+      ok(['nivel', 'logro', 'temporada', 'tienda', 'cofre', 'pase', 'rango'].indexOf(sk.grupo) !== -1, sk.id + ': grupo conocido');
       if (legado.indexOf(sk.id) === -1) ok(S.ARTE.hasOwnProperty(sk.id), sk.id + ': tiene dibujo');
       if (sk.grupo === 'tienda') ok(sk.precio > 0 && !sk.pide, sk.id + ': se compra, no se gana');
       /* las de cofre no se compran ni se piden: salen de un cofre */
@@ -3936,6 +3936,8 @@
         ok(!sk.precio && !sk.pide, sk.id + ': ni precio ni requisito');
         ok(/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(sk.temporada || ''), sk.id + ': dice de qué temporada es');
       }
+      /* las del RANGO se ganan con lo alcanzado en una temporada: dicen qué fruta */
+      else if (sk.grupo === 'rango') ok(!sk.precio && sk.rango && !!sk.rango.fruta, sk.id + ': dice qué fruta pide');
       else if (sk.grupo !== 'nivel') ok(!!sk.pide, sk.id + ': dice qué pide');
       if (sk.pide && sk.pide.stat) {
         ok(window.PM.Achievements.STATS.hasOwnProperty(sk.pide.stat),
@@ -4853,7 +4855,7 @@
       UI.tiendaTengo = false;
       UI.refreshTienda();
       var vistas = UI.tiendaItems.filter(function (r) { return r.card.style.display !== 'none'; });
-      var deVenta = CFG.EFECTOS.filter(function (e) { return !e.cofre && !e.pase; }).length;
+      var deVenta = CFG.EFECTOS.filter(function (e) { return !e.cofre && !e.pase && !e.rango; }).length;
       eq(vistas.length, deVenta, 'sin nada comprado, salen todos los efectos que se venden');
       var a = vistas[0], b = vistas[1];
       ok(UI.tiendaAlTicket(a.it.id), 'el + echa al ticket');
@@ -12838,6 +12840,29 @@
       // en equipo la marca se multiplica como los trofeos
       eq(Rg.cambio(8000 * 1.25, 0, 2), 0, 'en dúo, un cuarto más');
     });
+
+  test('RANGO: los premios de fin de temporada se deducen de lo alcanzado en las cerradas', function () {
+    conLogrosLimpios(function (A) {
+      var Rg = window.PM.Rango, Se = window.PM.Season, act0 = Se.actual, Tn = window.PM.Tienda;
+      try {
+        Se.actual = function () { return '2026-10'; };
+        eq(Rg.cerradas().length, 0, 'sin rango, nada');
+        eq(Rg.anterior(), null);
+        var manzana = Rg.TRAMOS.filter(function (t) { return t.d === 3; })[0];
+        A.record('rm4_2026-09', Rg.TRAMOS.indexOf(manzana) + 1);
+        A.record('rm4_2026-10', 1);            // la de este mes aún no está cerrada
+        eq(Rg.cerradas().length, 1, 'solo cuenta la cerrada');
+        eq(Rg.anterior().nombre, manzana.nombre, 'la del mes pasado va junto al nombre');
+        ok(Tn.tiene('acc_laureles_2609'), 'MANZANA: los laureles de septiembre');
+        ok(!Tn.tiene('efx_dorado'), 'pero no el rastro dorado (CAMPANA)');
+        ok(!window.PM.Skins.estado('llave_dorada').abierta, 'ni la LLAVE DORADA');
+        eq(Tn.comprar('efx_dorado').ok, false, 'no se venden');
+        ok(Tn.VENTA.every(function (it) { return !it.rango; }), 'ni salen en la tienda');
+        Se.actual = function () { return '2026-09'; };
+        ok(!Tn.tiene('acc_laureles_2609'), 'mientras dura la temporada no se entregan');
+      } finally { Se.actual = act0; }
+    });
+  });
 
   test('RANGO: cada fruta en escalones, cada uno más caro que el anterior', function () {
     var Rg = window.PM.Rango, T = Rg.TRAMOS;

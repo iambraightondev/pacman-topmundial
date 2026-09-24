@@ -671,7 +671,13 @@
      * llegando a su galón en el mes que las reparte, y quien no jugó ese mes
      * no las tiene ya nunca. Ver CFG.PASE.CAMINO. --- */
     { id: 'trampa', name: 'TRAMPA', grupo: 'pase', rara: true, temporada: '2026-10',
-      ve: 'LA CAJA DE CAZAR FANTASMAS: LAS DOS HOJAS DEL FRENTE SON LA BOCA Y POR DENTRO LLEVA LUZ, CON LO QUE YA CAZÓ. CON LA Q DISPARA EL RAYO Y SE TRAGA UN FANTASMA.' }
+      ve: 'LA CAJA DE CAZAR FANTASMAS: LAS DOS HOJAS DEL FRENTE SON LA BOCA Y POR DENTRO LLEVA LUZ, CON LO QUE YA CAZÓ. CON LA Q DISPARA EL RAYO Y SE TRAGA UN FANTASMA.' },
+
+    /* --- del RANGO: premio de fin de temporada (js/rango.js, Rango.ganado).
+     * No se compra ni sale de cofre: es de quien llegó a LLAVE en una
+     * temporada, y se entrega al cerrarla. --- */
+    { id: 'llave_dorada', name: 'LLAVE DORADA', grupo: 'rango', rango: { fruta: 'llave' },
+      ve: 'ORO PULIDO CON UNA LLAVE GRABADA QUE SE ENCIENDE AL PASARLE EL DESTELLO. SOLO LA LLEVA QUIEN LLEGÓ A LLAVE, LA CIMA DEL RANGO.' }
   ];
   /* Ventanas de las skins de temporada, [mes, día] a [mes, día] incluidos
    * (mes 1-12). La de Navidad cruza el año. */
@@ -1007,7 +1013,10 @@
       ve: 'DEJA UNA ESTRELLA EN CADA GIRO Y LAS UNE CON UNA LÍNEA: EL CAMINO QUEDA DIBUJADO HASTA QUE SE APAGA.' },
     /* del PASE: no se vende (ver CFG.PASE.CAMINO) */
     { id: 'efx_ecto', name: 'ECTOPLASMA', pase: true, precio: 0,
-      ve: 'UN REGUERO DE BABA VERDE FOSFORESCENTE CON BURBUJAS QUE ASOMAN Y REVIENTAN.' }
+      ve: 'UN REGUERO DE BABA VERDE FOSFORESCENTE CON BURBUJAS QUE ASOMAN Y REVIENTAN.' },
+    /* del RANGO: premio de fin de temporada a quien llegó a CAMPANA */
+    { id: 'efx_dorado', name: 'RASTRO DORADO', rango: { fruta: 'campana' }, precio: 0,
+      ve: 'POLVO DE ORO Y DESTELLOS QUE SE QUEDAN FLOTANDO POR DONDE PASA. ES DE QUIEN LLEGÓ A CAMPANA.' }
   ];
   CFG.ACCESORIOS = [
     { id: 'acc_gafas', name: 'GAFAS DE SOL', precio: 450,
@@ -1066,7 +1075,11 @@
     { id: 'acc_mochila', name: 'MOCHILA DE PROTONES', pase: true, precio: 0,
       ve: 'EL APARATO A LA ESPALDA: ALETAS DE REFRIGERACIÓN, EL ACELERADOR LATIENDO EN VERDE Y LA MANGUERA QUE DEJA EL CAÑÓN SOBRE LA CORONILLA. VIBRA Y SUELTA VAPOR.' },
     { id: 'acc_visor', name: 'VISOR DE CAZA', pase: true, precio: 0,
-      ve: 'VISOR DE CRISTAL VERDE CON UN BARRIDO QUE SUBE Y BAJA, Y AL LADO EL MEDIDOR CON TRES BARRITAS QUE SUBEN SOLAS.' }
+      ve: 'VISOR DE CRISTAL VERDE CON UN BARRIDO QUE SUBE Y BAJA, Y AL LADO EL MEDIDOR CON TRES BARRITAS QUE SUBEN SOLAS.' },
+    /* del RANGO: los laureles de CADA temporada, a quien llegó a MANZANA en
+     * ella. Uno por temporada y no vuelven: cada mes nuevo lleva los suyos. */
+    { id: 'acc_laureles_2609', name: 'LAURELES · SEP 2026', rango: { fruta: 'manzana', temporada: '2026-09' }, precio: 0,
+      ve: 'CORONA DE LAUREL DORADA CON UNA MANZANA EN LA FRENTE, DE LA PRIMERA TEMPORADA. LAS HOJAS DESTELLAN UNA A UNA.' }
   ];
   CFG.EFECTO_IDS = CFG.EFECTOS.map(function (e) { return e.id; });
   CFG.ACCESORIO_IDS = CFG.ACCESORIOS.map(function (e) { return e.id; });

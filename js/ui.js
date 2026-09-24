@@ -3424,7 +3424,8 @@
       { id: 'temporada', name: 'FECHAS ESPECIALES', titulo: 'FECHAS ESPECIALES · HALLOWEEN, NAVIDAD Y LUNA LLENA' },
       { id: 'tienda', name: 'DE TIENDA', titulo: 'DE TIENDA · CON MONEDAS' },
       { id: 'cofre', name: 'DE COFRE', titulo: 'DE COFRE · NO SE COMPRAN, SE GANAN ABRIENDO UNO' },
-      { id: 'pase', name: 'DEL PASE', titulo: 'DEL PASE · SOLO SE REPARTEN EN SU TEMPORADA' }
+      { id: 'pase', name: 'DEL PASE', titulo: 'DEL PASE · SOLO SE REPARTEN EN SU TEMPORADA' },
+      { id: 'rango', name: 'DEL RANGO', titulo: 'DEL RANGO · PREMIOS DE FIN DE TEMPORADA' }
     ],
 
     /* ---------- lo que se ha visto ya (para las marcas de NUEVO) ----------
@@ -3509,15 +3510,17 @@
           var tuyo = !!(Tn && Tn.tiene(it.id));
           /* ni lo de cofre ni lo del pase se venden: ni precio ni barra de
            * ahorro; cada uno dice de dónde sale */
-          var deCofre = !!it.cofre, dePase = !!it.pase;
-          var fuera = deCofre || dePase;
+          var deCofre = !!it.cofre, dePase = !!it.pase, deRango = !!it.rango;
+          var fuera = deCofre || dePase || deRango;
+          var Rg = window.PM.Rango;
           out.push({
             id: it.id, name: it.name, ve: it.ve || '',
-            chip: tuyo ? (deCofre ? 'DE COFRE' : dePase ? 'DEL PASE' : 'COMPRADO')
-              : (deCofre ? 'COFRE' : dePase ? 'PASE' : 'TIENDA'),
+            chip: tuyo ? (deCofre ? 'DE COFRE' : dePase ? 'DEL PASE' : deRango ? 'DEL RANGO' : 'COMPRADO')
+              : (deCofre ? 'COFRE' : dePase ? 'PASE' : deRango ? 'RANGO' : 'TIENDA'),
             tuyo: tuyo, puesto: tuyo && puesto0 === it.id,
             como: tuyo ? '' : deCofre ? 'SOLO SALE DE UN COFRE'
               : dePase ? 'SOLO SE GANA EN EL PASE'
+              : deRango ? (Rg && Rg.comoGanar ? Rg.comoGanar(it.rango) : 'SE GANA CON EL RANGO')
               : ((Tn ? Tn.fmt(it.precio) : it.precio) + ' MONEDAS EN LA TIENDA'),
             pct: tuyo ? 1 : fuera ? 0
               : (Tn ? Math.min(1, Math.max(0, Tn.saldo()) / (it.precio || 1)) : 0),
@@ -6265,6 +6268,11 @@
         tags.className = 'ol-plaza-tags';
         if (i === 0) tags.appendChild(this.olTag('LÍDER', '#ffff00'));
         if (m.s === window.PM.Net.sid) tags.appendChild(this.olTag('TÚ', '#00ff66'));
+        /* la fruta de su temporada pasada, delante de todo */
+        if (m.ra >= 0) {
+          var cvP = this.frutaMini(m.ra, 14, 'TEMPORADA PASADA: ' + CFG.RANGO.DIVISIONES[m.ra].name);
+          if (cvP) tags.appendChild(cvP);
+        }
         /* su RANGO del mes (24 sep), en el color de su fruta */
         var TRg = window.PM.Rango && window.PM.Rango.TRAMOS;
         if (TRg && m.rg >= 0 && TRg[m.rg]) {
@@ -8017,6 +8025,18 @@
       window.PM.Sprites.drawAvatar(c, 36, 36, 30, av, '#ffff00');
 
       this.mateName.textContent = fila.usuario || '';
+      var RgM = window.PM.Rango;
+      if (RgM && RgM.cerradas) {
+        var lgM = fila.logros || {};
+        this.ponFrutaAnterior(this.mateName, RgM.anterior(lgM));
+        if (!this.mateTemporadas && this.mateBody) {
+          this.mateBody.appendChild(this.sectionTitle('SUS TEMPORADAS'));
+          this.mateTemporadas = document.createElement('div');
+          this.mateTemporadas.className = 'perfil-temporadas';
+          this.mateBody.appendChild(this.mateTemporadas);
+        }
+        this.pintarTemporadas(this.mateTemporadas, RgM.cerradas(lgM), false);
+      }
       this.mateLevel.textContent = 'NIVEL ' + st.level + ' · ' + st.inLevel +
         ' / ' + st.needed;
       this.mateFill.style.width = Math.round(st.pct * 100) + '%';
@@ -8424,6 +8444,64 @@
       });
     },
 
+    /* La fruta de una división del RANGO, pequeña, para ir junto a un nombre
+     * (premio de fin de temporada: se lleva todo el mes siguiente) */
+    frutaMini: function (d, px, titulo) {
+      var D = CFG.RANGO && CFG.RANGO.DIVISIONES[d];
+      if (!D || typeof document === 'undefined') return null;
+      var cv = document.createElement('canvas'), x = 2;
+      cv.width = px * x; cv.height = px * x;
+      cv.style.width = px + 'px'; cv.style.height = px + 'px';
+      cv.className = 'fruta-mini';
+      if (titulo) cv.title = titulo;
+      var c = cv.getContext && cv.getContext('2d');
+      if (c && window.PM.Sprites && window.PM.Sprites.drawFruit) {
+        c.imageSmoothingEnabled = false;
+        c.scale(px * x / 16, px * x / 16);
+        window.PM.Sprites.drawFruit(c, 8, 8, D.fruta);
+      }
+      return cv;
+    },
+
+    /* Pone la fruta de la temporada pasada detrás de un nombre (si la hay) */
+    ponFrutaAnterior: function (el, an) {
+      if (!el || !an) return;
+      var cv = this.frutaMini(an.division, 14, 'TEMPORADA DE ' + an.mes + ': ' + an.nombre);
+      if (cv) el.appendChild(cv);
+    },
+
+    /* EL RECUERDO DE LAS TEMPORADAS (premio de fin de temporada): una ficha
+     * por temporada cerrada con lo más alto que se alcanzó. Para siempre. */
+    pintarTemporadas: function (host, lista, propio) {
+      if (!host) return;
+      host.innerHTML = '';
+      if (!lista || !lista.length) {
+        var v = document.createElement('div');
+        v.className = 'note';
+        v.textContent = propio
+          ? 'AL CERRARSE CADA TEMPORADA (EL DÍA 1 DE CADA MES) AQUÍ QUEDA LO MÁS ALTO QUE ALCANZASTE EN EL RANGO.'
+          : 'TODAVÍA NO HA CERRADO NINGUNA TEMPORADA CON RANGO.';
+        host.appendChild(v);
+        return;
+      }
+      var self = this;
+      lista.forEach(function (t) {
+        var f = document.createElement('div');
+        f.className = 'temporada-ficha';
+        f.style.setProperty('--c', t.color);
+        var cv = self.frutaMini(t.division, 28);
+        if (cv) f.appendChild(cv);
+        var tx = document.createElement('div');
+        var k = document.createElement('span');
+        k.textContent = t.mes;
+        var n = document.createElement('b');
+        n.textContent = t.nombre;
+        tx.appendChild(k); tx.appendChild(n);
+        f.appendChild(tx);
+        host.appendChild(f);
+      });
+    },
+
     cifraCabecera: function (celdas) {
       var row = document.createElement('div');
       row.className = 'cifra-fila cabecera';
@@ -8595,6 +8673,15 @@
       masCifras.classList.add('btn-preset', 'perfil-mas');
       lado.appendChild(masCifras);
 
+      /* el recuerdo de cada temporada del RANGO */
+      var tt = document.createElement('div');
+      tt.className = 'section-title';
+      tt.textContent = 'TUS TEMPORADAS';
+      lado.appendChild(tt);
+      this.profTemporadas = document.createElement('div');
+      this.profTemporadas.className = 'perfil-temporadas';
+      lado.appendChild(this.profTemporadas);
+
       /* cuenta */
       var gCuenta = document.createElement('div');
       gCuenta.className = 'perfil-cuenta';
@@ -8738,6 +8825,13 @@
 
       this.profName.textContent = sanitizeNick(s.nick1) || 'SIN NOMBRE';
       this.profName.style.color = logged ? '#ffff00' : '#ddd';
+      var RgP = window.PM.Rango;
+      if (RgP && RgP.cerradas && logged) {
+        this.ponFrutaAnterior(this.profName, RgP.anterior());
+        this.pintarTemporadas(this.profTemporadas, RgP.cerradas(), true);
+      } else if (this.profTemporadas) {
+        this.pintarTemporadas(this.profTemporadas, [], true);
+      }
 
       var st = L ? L.state() : { level: 1, inLevel: 0, needed: 1, pct: 0 };
       this.profLevel.textContent = 'NIVEL ' + st.level + ' · ' +
@@ -10149,11 +10243,12 @@
       var self = this, Rg = window.PM.Rango;
       if (!Rg || !Rg.tabla || (this.rangoMapaHasta || 0) > Date.now()) return;
       this.rangoMapaHasta = Date.now() + 60000;
-      Rg.tabla(function (err, filas) {
+      Rg.tabla(function (err, filas, antes) {
         if (err || !filas) return;
         var mapa = {};
         filas.forEach(function (f) { if (f.tramo >= 0) mapa[String(f.usuario).toUpperCase()] = f.tramo; });
         self.rangoMapa = mapa;
+        self.rangoAntes = antes || {};
         if (self.ultimoRanking) self.renderRanking(self.ultimoRanking[0], self.ultimoRanking[1]);
       });
     },
@@ -10189,6 +10284,15 @@
         nom.className = 'tm-nom';
         nom.textContent = nombres.join(' + ');
         who.appendChild(nom);
+        /* la fruta de su temporada pasada (premio de fin de temporada) */
+        var da = (nombres.length === 1 && this.rangoAntes) ? this.rangoAntes[nombres[0]] : undefined;
+        if (da >= 0) {
+          var Rga = window.PM.Rango;
+          var cvA = this.frutaMini(da, 14, 'TEMPORADA DE ' +
+            (Rga && Rga.nombreMes ? Rga.nombreMes(Rga.mesAnterior(Rga.temporada())) : 'ANTES') + ': ' +
+            CFG.RANGO.DIVISIONES[da].name);
+          if (cvA) who.appendChild(cvA);
+        }
         /* su escalón del mes, en el color de su fruta (solo en las de uno) */
         var TRk = window.PM.Rango && window.PM.Rango.TRAMOS;
         var tk = (nombres.length === 1 && this.rangoMapa) ? this.rangoMapa[nombres[0]] : -1;
@@ -13498,12 +13602,95 @@
       var C = window.PM.Celebrar, g = window.PM.Game;
       if (!C || this.promptOpen) return false;
       if (g && ((g.inGame && g.inGame()) || g.replaying)) return false;
+      if (this.temporadaCerradaSiToca()) return true;
       var e = C.siguiente();
       if (!e) return false;
       C.visto(e);
       if (e.t === 'nivel') this.showLevelUpPrompt(e.lv);
       else if (!this.showRangoSubePrompt(e)) return this.celebrarSiToca();
       return true;
+    },
+
+    /* ¡TEMPORADA CERRADA! — la primera vez que se abre el juego después de
+     * cerrarse una temporada en la que tuviste rango: dónde acabaste y qué te
+     * llevas. Se enseña una vez por cuenta y temporada. */
+    TEMPORADA_VISTA_KEY: 'pacman-topmundial-temporada-vista',
+    temporadaCerradaSiToca: function () {
+      var Rg = window.PM.Rango, Ac = window.PM.Account;
+      if (!Rg || !Rg.anterior || !Ac || !Ac.logged || !Ac.logged()) return false;
+      var an = Rg.anterior();
+      if (!an) return false;
+      var u = String((Ac.name && Ac.name()) || '').toUpperCase(), vistas = {};
+      try { vistas = JSON.parse(localStorage.getItem(this.TEMPORADA_VISTA_KEY) || '{}') || {}; }
+      catch (e) { vistas = {}; }
+      if (vistas[u] && vistas[u] >= an.temporada) return false;
+      vistas[u] = an.temporada;
+      try { localStorage.setItem(this.TEMPORADA_VISTA_KEY, JSON.stringify(vistas)); }
+      catch (e) { /* sin almacén: se vería otra vez, no pasa nada */ }
+      this.showTemporadaCerrada(an);
+      return true;
+    },
+
+    showTemporadaCerrada: function (an) {
+      var self = this, Tn = window.PM.Tienda, Sk = window.PM.Skins;
+      var premios = ['LA ' + CFG.RANGO.DIVISIONES[an.division].name + ' JUNTO A TU NOMBRE TODO ESTE MES',
+                     'SU RECUERDO EN TU PERFIL, PARA SIEMPRE'];
+      var piezas = 0;
+      CFG.ACCESORIOS.concat(CFG.EFECTOS).forEach(function (it) {
+        if (it.rango && Tn && Tn.tiene(it.id) && (!it.rango.temporada || it.rango.temporada === an.temporada)) {
+          premios.push(it.name); piezas++;
+        }
+      });
+      CFG.SKINS.forEach(function (sk) {
+        if (sk.grupo === 'rango' && Sk && Sk.estado(sk.id).abierta) { premios.push('SKIN ' + sk.name); piezas++; }
+      });
+      if (window.AudioSys) { try { AudioSys.playIntro(); } catch (err) { /* sin sonido */ } }
+      var botones = [{ label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '], hint: 'ENTER',
+        onClick: function () { self.hidePrompt(); self.celebrarSiToca(); } }];
+      if (piezas) {
+        botones.push({ label: 'AL VESTUARIO', keys: ['v'], hint: 'V',
+          onClick: function () { self.hidePrompt(); self.showVestuario('skin', 'yo'); } });
+      }
+      this.showPrompt({
+        title: '¡TEMPORADA CERRADA!',
+        arcade: true,
+        tono: 'amarillo',
+        clase: 'rsu-prompt',
+        custom: function (p) {
+          var tt = p.querySelector('.panel-title');
+          if (tt) { tt.classList.add('lvl-titulo'); self.ajustarTituloLvl(tt); }
+          var caja = document.createElement('div');
+          caja.className = 'rsu rsu-fruta-nueva';
+          caja.style.setProperty('--c', an.color);
+          var escena = document.createElement('div');
+          escena.className = 'rsu-escena';
+          ['rsu-rayos', 'rsu-onda'].forEach(function (c) {
+            var d = document.createElement('div'); d.className = c; escena.appendChild(d);
+          });
+          var aro = document.createElement('div');
+          aro.className = 'rsu-aro';
+          var cv = self.frutaMini(an.division, 112);
+          if (cv) { cv.className = 'rsu-fruta'; aro.appendChild(cv); }
+          escena.appendChild(aro);
+          caja.appendChild(escena);
+          var nom = document.createElement('div');
+          nom.className = 'rsu-nombre';
+          nom.textContent = an.nombre;
+          caja.appendChild(nom);
+          var mes = document.createElement('div');
+          mes.className = 'rsu-desde';
+          mes.textContent = 'TEMPORADA DE ' + an.mes + ' · LO MÁS ALTO QUE ALCANZASTE';
+          caja.appendChild(mes);
+          premios.forEach(function (t) {
+            var pr = document.createElement('div');
+            pr.className = 'rsu-premio';
+            pr.textContent = '+ ' + t;
+            caja.appendChild(pr);
+          });
+          p.appendChild(caja);
+        },
+        buttons: botones
+      });
     },
 
     /* ¡SUBES DE DIVISIÓN! / ¡NUEVO RANGO! / ¡YA TIENES RANGO! — la fruta

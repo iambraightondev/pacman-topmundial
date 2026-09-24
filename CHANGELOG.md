@@ -2,6 +2,29 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Premios de fin de temporada, nube blindada y cifras de party
+
+**PREMIOS DEL RANGO (aprobados):** al cerrarse una temporada, según lo más alto
+alcanzado en ella: la fruta junto al nombre todo el mes siguiente (top mundial,
+sala de party y perfil), un recuerdo para siempre en el perfil (TUS TEMPORADAS,
+también en el de un amigo), los LAURELES de esa temporada (MANZANA o más,
+accesorio), el RASTRO DORADO (CAMPANA o más, efecto) y la skin LLAVE DORADA
+(LLAVE). Nada se guarda aparte: se deduce de lo alcanzado cada temporada
+(`rm4_<temporada>`), así que no se puede perder ni cobrar dos veces. Al abrir
+el juego tras el cierre sale ¡TEMPORADA CERRADA! con dónde acabaste y qué te
+llevas. No se venden ni salen de cofre; en el vestuario, filtro DEL RANGO.
+**LA NUBE YA NO BAJA NADA:** cada aparato sube su perfil entero sin leer la nube,
+y uno con datos viejos bajaba partidas, récords y experiencia. Ahora de cada
+contador, récord y la experiencia se queda el mayor (de los tiempos, el menor).
+Solo una limpieza a mano (sube `purga`) puede bajar algo, y un aparato que aún
+no se ha enterado de ella no escribe contadores hasta entrar de nuevo.
+**CIFRAS DE PARTY Y POR ROL SEMBRADAS:** partidas, fantasmas, vidas y tiempo de
+cada rol salen de 204 partidas locales reproducidas hasta dar la puntuación
+exacta y de 84 de party (189 jugadores); los usos de poderes de party, de 71.
+**Corregido:** 229 partidas del 21 al 23 sep no guardaban qué poderes llevaban;
+sus usos se habían atribuido a los de serie (784 MORDISCOS a IAMBRAIGHTON que
+casi seguro eran SHURIKEN). Se quitan de cada poder y se quedan en su tecla.
+
 ## 2026-09-24 · CIFRAS: roles, poderes y todo lo que ya se contaba
 
 **FAVORITOS:** debajo de las cuatro cifras grandes, el ROL FAVORITO (el más

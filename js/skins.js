@@ -675,6 +675,42 @@
       ctx.restore();
     },
 
+    /* LLAVE DORADA (premio del RANGO): el oro pulido de DORADO con una llave
+     * grabada en el cuerpo, en bajorrelieve —filo de luz arriba, surco oscuro
+     * abajo—, que se enciende entera cuando la cruza el destello. */
+    llave_dorada: function (ctx, o) {
+      DRAW.dorado(ctx, o);
+      var a = DIR_ANGLE[o.d], x = o.x, y = o.y;
+      ctx.save();
+      pacPath(ctx, x, y, R, a, o.half);
+      ctx.clip();
+      var kx = x - 0.9, ky = y + 2.0;
+      function llave() {
+        ctx.beginPath();
+        ctx.arc(kx - 2.7, ky, 1.45, 0, Math.PI * 2);
+        ctx.moveTo(kx - 1.25, ky); ctx.lineTo(kx + 3.3, ky);
+        ctx.moveTo(kx + 1.7, ky); ctx.lineTo(kx + 1.7, ky + 1.35);
+        ctx.moveTo(kx + 2.85, ky); ctx.lineTo(kx + 2.85, ky + 1.0);
+      }
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.save();
+      ctx.translate(-0.3, -0.3);
+      ctx.strokeStyle = 'rgba(255,250,215,.7)'; ctx.lineWidth = 0.8;
+      llave(); ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = '#6e4600'; ctx.lineWidth = 0.7;
+      llave(); ctx.stroke();
+      /* el destello de DORADO pasa cada 2,4 s: cuando cruza, la llave brilla */
+      var c = (o.t % 2.4) / 0.55;
+      if (c < 1) {
+        var brillo = 1 - Math.abs(c - 0.5) * 2;
+        ctx.strokeStyle = 'rgba(255,255,235,' + brillo + ')'; ctx.lineWidth = 0.5;
+        llave(); ctx.stroke();
+      }
+      ctx.restore();
+    },
+
     fantasma: function (ctx, o) {
       var a = DIR_ANGLE[o.d], x = o.x, y = o.y;
       ctx.save();
@@ -7223,7 +7259,8 @@
      * y las alitas van al cuerpo, como la pajarita */
     acc_espartano: 'cabeza', acc_antenas: 'cabeza', acc_cuernos: 'cabeza',
     acc_obra: 'cabeza', acc_aureola: 'cabeza',
-    acc_bufanda: 'cuello', acc_alas: 'cuello' };
+    acc_bufanda: 'cuello', acc_alas: 'cuello',
+    acc_laureles_2609: 'cabeza' };
   var OJO_PAC = [1.1, 3.7];
   /* Revisión del 15 sep, con las 26 y los 11 accesorios: el PARCHE quedaba
    * detrás del ojo (se seguía viendo), los AURICULARES caían encima del ojo
@@ -7248,7 +7285,7 @@
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
   var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6,
     acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
-    acc_aureola: R + 1.8 };
+    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4 };
 
 
   /* ============================================================
@@ -8583,6 +8620,80 @@
     cuerpo();
   };
 
+  /* ---------------- RASTRO DORADO (premio del RANGO) ----------------
+   * Polvo de oro que se queda flotando y sube despacio, con un destello en
+   * cruz de vez en cuando. Va debajo del cuerpo, como los demás rastros. */
+  EFX.efx_dorado = function (ctx, o, cuerpo) {
+    ctx.save();
+    rastro(o, 3.2, 46).forEach(function (q) {
+      var vive = 1 - q.edad;
+      var sube = q.edad * 2.6;
+      var dx = Math.sin(q.n * 1.7 + o.t * 1.3) * 1.1;
+      var px = q.p.x + dx, py = q.p.y - sube;
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(px, py, 0, px, py, 2.4);
+      g.addColorStop(0, 'rgba(255,214,80,' + (0.55 * vive) + ')');
+      g.addColorStop(1, 'rgba(255,214,80,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(px, py, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = (q.n % 2) ? '#ffe680' : '#ffc21a';
+      ctx.globalAlpha = vive;
+      ctx.beginPath(); ctx.arc(px, py, 0.55 + vive * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      if (q.n % 3 === 0) {
+        var tw = 0.5 + 0.5 * Math.sin(o.t * 9 + q.n);
+        estrella4(ctx, px, py, 1.6 * tw * (0.4 + vive * 0.6), '#fffbe0', vive * tw);
+      }
+    });
+    ctx.restore();
+    cuerpo();
+  };
+
+  /* ---------------- LAURELES DE TEMPORADA (premio del RANGO) ----------------
+   * Una rama de laurel dorada que rodea la coronilla de atrás adelante, con
+   * una manzana roja en la frente (la fruta que hay que alcanzar). Las hojas
+   * destellan de una en una. `oro` y `gema` cambian con cada temporada. */
+  function laureles(oro, oroOsc, gema) {
+    return function (ctx, o) {
+      var rr = R + 0.25, n = 0;
+      ctx.save();
+      ctx.lineCap = 'round';
+      /* el tallo */
+      ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.55;
+      ctx.beginPath(); ctx.arc(0, 0, rr, 0.22 * Math.PI, 0.86 * Math.PI); ctx.stroke();
+      /* las hojas, por parejas a lo largo del tallo */
+      var brilla = Math.floor(o.t * 5) % 12;
+      for (var ang = 0.84 * Math.PI; ang > 0.3 * Math.PI; ang -= 0.1 * Math.PI) {
+        var px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
+        [-1, 1].forEach(function (lado) {
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(ang - Math.PI / 2 + lado * 1.05);
+          ctx.beginPath();
+          ctx.ellipse(0, lado * 1.15, 0.7, 1.55, 0, 0, Math.PI * 2);
+          ctx.fillStyle = (n === brilla) ? '#fffbe0' : (lado < 0 ? oroOsc : oro);
+          ctx.fill();
+          ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.2;
+          ctx.stroke();
+          ctx.restore();
+          n++;
+        });
+      }
+      /* la manzana, en la frente */
+      var mx = Math.cos(0.26 * Math.PI) * rr, my = Math.sin(0.26 * Math.PI) * rr;
+      ctx.fillStyle = gema;
+      ctx.beginPath(); ctx.arc(mx, my, 1.05, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 0.2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.75)';
+      ctx.beginPath(); ctx.arc(mx - 0.35, my + 0.35, 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#3d7a1c'; ctx.lineWidth = 0.35;
+      ctx.beginPath(); ctx.moveTo(mx, my + 0.9); ctx.lineTo(mx + 0.35, my + 1.6); ctx.stroke();
+      ctx.restore();
+    };
+  }
+  ACC.acc_laureles_2609 = laureles('#ffd24a', '#8a5a00', '#ff3b3b');
+
   /* ---------------- GRITO (emote) ---------------- */
   function caraGrito(ctx, x, y, r, color, t) {
     var ink = '#000000', lw = Math.max(1, r * 0.17), k;
@@ -8701,6 +8812,18 @@
             : esteMes ? 'LLEGA AL GALÓN QUE LA LLEVA, ESTE MES'
             : 'SOLO SE REPARTIÓ EN EL PASE DE ' + mesDeTemporada(suMes),
           chip: 'PASE'
+        };
+      }
+      /* del RANGO: premio de fin de temporada (js/rango.js). No se guarda:
+       * se deduce de lo alcanzado en las temporadas ya cerradas. */
+      if (sk.grupo === 'rango') {
+        var Rg = window.PM.Rango;
+        var gano = !!(Rg && Rg.ganado && Rg.ganado(sk.rango));
+        return {
+          abierta: gano,
+          pct: gano ? 1 : 0,
+          progreso: gano ? 'PREMIO DEL RANGO' : (Rg && Rg.comoGanar ? Rg.comoGanar(sk.rango) : ''),
+          chip: 'RANGO'
         };
       }
       /* de la TIENDA: se compran con monedas (js/tienda.js) */

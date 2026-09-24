@@ -52,9 +52,12 @@
        * y ponerlas; ninguna está en VENTA. */
       var deCofre = !!(it.cofre || it.grupo === 'cofre');
       var dePase = !!(it.pase || it.grupo === 'pase');
+      /* `rango`: premio de fin de temporada; es tuyo si lo ganaste
+       * (Rango.ganado), no por ningún contador */
+      var deRango = it.rango || null;
       var item = { id: it.id, name: it.name, cat: cat,
-        precio: (deCofre || dePase) ? 0 : it.precio,
-        ve: it.ve || '', cofre: deCofre, pase: dePase,
+        precio: (deCofre || dePase || deRango) ? 0 : it.precio,
+        ve: it.ve || '', cofre: deCofre, pase: dePase, rango: deRango,
         temporada: it.temporada || null };
       CATALOGO.push(item);
       POR_ID[it.id] = item;
@@ -82,7 +85,7 @@
     /* TODO lo que se puede tener (incluye lo de cofre, que es tuyo por el
      * mismo contador) y, aparte, lo que de verdad se VENDE en la tienda */
     CATALOGO: CATALOGO,
-    VENTA: CATALOGO.filter(function (it) { return !it.cofre && !it.pase; }),
+    VENTA: CATALOGO.filter(function (it) { return !it.cofre && !it.pase && !it.rango; }),
     CATEGORIAS: [
       { id: 'emote', name: 'EMOTES', nota: 'SE PONEN EN LAS TECLAS 1 A 6 DE LA PARTIDA' },
       { id: 'efecto', name: 'EFECTOS', nota: 'LO QUE DEJAS AL PASAR. SE LLEVA UNO' },
@@ -154,6 +157,11 @@
     tiene: function (id) {
       if (EMOTES_BASE.indexOf(id) !== -1) return true;
       if (!POR_ID.hasOwnProperty(id)) return false;
+      /* lo del RANGO no se guarda: se deduce de lo alcanzado cada temporada */
+      if (POR_ID[id].rango) {
+        var Rg = window.PM.Rango;
+        return !!(Rg && Rg.ganado && Rg.ganado(POR_ID[id].rango));
+      }
       return stat('c_' + id) >= 1;
     },
 
@@ -173,6 +181,7 @@
       if (it.cofre) return { ok: false, msg: 'ESO SOLO SALE DE UN COFRE' };
       /* y lo del pase tampoco: se gana llegando a su galón, ese mes */
       if (it.pase) return { ok: false, msg: 'ESO SOLO SE GANA EN EL PASE' };
+      if (it.rango) return { ok: false, msg: 'ESO SOLO SE GANA CON EL RANGO' };
       var falta = it.precio - this.saldo();
       if (falta > 0) {
         return { ok: false, msg: 'TE FALTAN ' + this.fmt(falta) + ' MONEDAS' };

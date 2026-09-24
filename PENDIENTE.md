@@ -56,9 +56,12 @@ cosa en CHANGELOG. Pruebas: tests.html 589/589; Node 1 fallo (el de siempre).
 
 **POR HACER (lo siguiente):**
 1. ~~Título cortado~~ HECHO (24 sep): la letra se ajusta al ancho.
-2. **Premios de fin de temporada del rango, antes del 1 oct** (aprobados, ver
-   abajo): fruta junto al nombre el mes siguiente, recuerdo en el perfil,
-   accesorio (MANZANA+), rastro dorado (CAMPANA+), skin LLAVE DORADA.
+2. ~~Premios de fin de temporada~~ HECHO (24 sep). Cada temporada nueva necesita
+   sus LAURELES en CFG.ACCESORIOS (`rango: { fruta, temporada }`) y su
+   `ACC.acc_laureles_AAMM = laureles(oro, oroOscuro, gema)` en skins.js.
+7. **Marcador sin las bajas del Mago y la apisonadora** (`matarMago` no hace
+   `G.marca(who, 'kills')`): la nota de maestría del Mago y del Tanque no las
+   cuenta. Arreglarlo sube sus notas: decidir con Braighton si se recalibra.
 3. ~~Mago en racha~~ HECHO (24 sep): caduca a los 5 s sin matar
    fuera del energizante (`MAGO_RACHA_CADUCA`).
 4. ~~Repeticiones de prueba~~ HECHO (24 sep): 118 borradas.

@@ -78,6 +78,12 @@ begin
     if purga_new > purga_old then
       return new;
     end if;
+    /* Y un aparato que aún no se ha enterado de la última limpieza (trae una
+     * purga más vieja) no escribe contadores: devolvería lo que se limpió.
+     * Al entrar en la cuenta toma la nube tal cual y ya escribe normal. */
+    if purga_new < purga_old then
+      new.logros := old.logros;
+    end if;
 
     new.xp := greatest(coalesce(new.xp, 0), coalesce(old.xp, 0));
     new.record1 := greatest(coalesce(new.record1, 0), coalesce(old.record1, 0));
