@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · RANGO: colocación estricta y topes más duros
+
+**COLOCARSE YA NO REGALA.** Las cinco de colocación te dejan un escalón por
+debajo del que alcanza tu media, al principio de él y nunca por encima de
+FRESA IV: de ahí para arriba se sube jugando. Además se gana menos (de +25 en
+CEREZA a +10 en LLAVE), se pierde más (de −20 a −35) y ya en CEREZA hay que
+llegar al nivel 2 para ganar PR. El rango de septiembre se ha vuelto a
+calcular con estas reglas.
+
 ## 2026-09-24 · RANGO por escalones, mucho más duro
 
 **CEREZA IV … CAMPANA I, Y LA LLAVE ARRIBA.** Cada fruta se sube por

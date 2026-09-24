@@ -32,11 +32,12 @@
  *   cuenta y se funden quedándose con lo más alto de cada lado. Por eso el PR
  *   no se guarda tal cual —bajar no se podría fundir—, sino como lo ganado y
  *   lo perdido, que solo crecen:
- *     rc2_<temporada>_<n>  partidas clasificatorias jugadas
- *     rt2_<temporada>_<n>  suma de las marcas de colocación
- *     rg2_<temporada>_<n>  PR ganado · rl2_… PR perdido
- *     rm2_<temporada>_<n>  mejor escalón alcanzado, +1 (0 = ninguno)
- *   El 2 es la versión de las reglas (24 sep); las de antes iban sin él.
+ *     rc3_<temporada>_<n>  partidas clasificatorias jugadas
+ *     rt3_<temporada>_<n>  suma de las marcas de colocación
+ *     rg3_<temporada>_<n>  PR ganado · rl3_… PR perdido
+ *     rm3_<temporada>_<n>  mejor escalón alcanzado, +1 (0 = ninguno)
+ *   El número es la versión de las reglas (CFG.RANGO.VERSION): al cambiarlas
+ *   se sube, y los contadores de antes dejan de leerse.
  *   PR = colocación + ganado − perdido.
  *
  * La tabla
@@ -57,7 +58,7 @@
   function temporada() {
     return window.PM.Season ? window.PM.Season.actual() : '';
   }
-  /* rc2_2026-09_1: la VERSIÓN de las reglas va en la clave. Los contadores
+  /* rc3_2026-09_1: la VERSIÓN de las reglas va en la clave. Los contadores
    * de las de antes (rc_…) se quedan donde están y no se leen: si no, un
    * aparato que aún los tuviera los devolvería al fundir con la cuenta. */
   function clave(tipo, t, n) { return tipo + (RG.VERSION > 1 ? RG.VERSION : '') + '_' + t + '_' + n; }
@@ -99,20 +100,15 @@
   function par(d, n) { return DIV[Math.max(0, Math.min(DIV.length - 1, d))].par * mult(n); }
   function parTramo(t, n) { return TRAMOS[Math.max(0, Math.min(TRAMOS.length - 1, t))].par * mult(n); }
 
-  /* PR de colocación para una media de puntos: el escalón más alto cuya
-   * marca alcanzas y, dentro de él, hasta la mitad según lo cerca que estés
-   * de la marca del siguiente. */
+  /* PR de colocación para una media de puntos. Estricta (24 sep): un
+   * escalón POR DEBAJO del más alto cuya marca alcanzas, al principio de él
+   * y nunca por encima de TOPE_COLOCACION. Colocarse no regala nada: lo de
+   * arriba se gana jugando. */
   function colocar(media, n) {
     var t = -1;
     for (var i = 0; i < TRAMOS.length; i++) if (media >= parTramo(i, n)) t = i;
-    if (t < 0) {
-      return Math.min(TRAMOS[0].ancho - 1,
-        Math.round(TRAMOS[0].ancho / 2 * Math.max(0, media / parTramo(0, n))));
-    }
-    var T = TRAMOS[t];
-    var sig = (t + 1 < TRAMOS.length) ? parTramo(t + 1, n) : parTramo(t, n) * 1.3;
-    var frac = Math.max(0, Math.min(1, (media - parTramo(t, n)) / Math.max(1, sig - parTramo(t, n))));
-    return T.desde + Math.round(frac * (T.ancho || 50) * 0.5);
+    t = Math.min(t - 1, RG.TOPE_COLOCACION != null ? RG.TOPE_COLOCACION : TRAMOS.length - 1);
+    return t < 0 ? 0 : TRAMOS[t].desde;
   }
 
   /* Lo que mueve una partida de `puntos` a quien está en `pr`. Sin llegar

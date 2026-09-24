@@ -12531,7 +12531,8 @@
       // en CEREZA IV (0 PR) a uno la marca son 8.000
       eq(Rg.cambio(8000, 0, 1), 0, 'igualar la marca no da nada');
       eq(Rg.cambio(16000, 0, 1), 20, 'el doble, +20');
-      eq(Rg.cambio(4000, 10, 1), -D[0].pierde, 'la mitad sería −20, pero en CEREZA se pierde como mucho 15');
+      eq(Rg.cambio(2000, 10, 1), -D[0].pierde, 'la cuarta parte sería −40, pero en CEREZA se pierde como mucho 20');
+      eq(Rg.cambio(16000, 0, 1, 1), 0, 'y ya en CEREZA hay que llegar al nivel 2 para ganar');
       eq(Rg.cambio(999999, 0, 1), D[0].gana, 'con tope por arriba, el de la fruta');
       eq(Rg.cambio(0, 1100, 1), -D[7].pierde, 'y por abajo, que arriba duele más');
       // FRESA pide llegar al nivel 2 para ganar
@@ -12559,8 +12560,10 @@
   test('RANGO: la colocación te pone donde dice tu media', function () {
     var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     eq(Rg.division(Rg.colocar(0, 1)), 0, 'sin nada, CEREZA');
-    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[3].par, 1))].nombre, 'MANZANA III', 'con la marca de MANZANA, su primer escalón');
-    eq(Rg.division(Rg.colocar(D[7].par * 3, 1)), 7, 'muy arriba, LLAVE');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[1].par, 1))].nombre, 'CEREZA I', 'con la marca de FRESA IV, un escalón por debajo');
+    eq(Rg.colocar(D[1].par, 1), Rg.TRAMOS[3].desde, 'y al principio de él: no regala PR');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[3].par, 1))].nombre, 'FRESA IV', 'con la de MANZANA, el tope: FRESA IV');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[7].par * 3, 1))].nombre, 'FRESA IV', 'ni jugando como un LLAVE se coloca más arriba');
   });
 
   test('RANGO: cinco de colocación, luego sube y baja, y nunca por debajo de cero',
@@ -12575,6 +12578,7 @@
             G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
             G.state = 'PLAYING';
             G.score = puntos;
+            G.level = 5;                  // llega al nivel que pida cualquier fruta baja
             return Rg.cerrar(G);
           };
           for (var i = 1; i < RG.COLOCACION; i++) {
@@ -12584,12 +12588,11 @@
           }
           var ultima = jugar(RG.DIVISIONES[2].par);
           ok(ultima.colocado, 'la quinta te coloca');
-          eq(ultima.division, 2, 'en NARANJA, que es donde está tu media');
+          eq(ultima.nombre, 'FRESA IV', 'con la media de NARANJA, un escalón por debajo y con el tope: FRESA IV');
           var pr = Rg.estado(1).pr;
-          eq(ultima.nombre, 'NARANJA IV', 'en su primer escalón');
           var mala = jugar(0);
-          eq(mala.cambio, -RG.DIVISIONES[2].pierde, 'una partida en blanco quita el máximo de la fruta');
-          eq(Rg.estado(1).pr, pr - RG.DIVISIONES[2].pierde);
+          eq(mala.cambio, -RG.DIVISIONES[1].pierde, 'una partida en blanco quita el máximo de la fruta');
+          eq(Rg.estado(1).pr, pr - RG.DIVISIONES[1].pierde);
           for (var k = 0; k < 30; k++) jugar(0);
           eq(Rg.estado(1).pr, 0, 'en el suelo se queda en cero');
           var buena = jugar(RG.DIVISIONES[0].par * 2);
@@ -12756,7 +12759,7 @@
       conContadores(function (A) {
         var Rg = window.PM.Rango, t = Rg.temporada();
         var kg = Rg.clave('rg', t, 1), kl = Rg.clave('rl', t, 1);
-        eq(kg, 'rg2_' + t + '_1', 'las reglas de ahora llevan su versión en la clave');
+        eq(kg, 'rg' + CFG.RANGO.VERSION + '_' + t + '_1', 'las reglas de ahora llevan su versión en la clave');
         A.record(kg, 40);
         A.merge({ [kg]: 90, [kl]: 10 });
         eq(A.stats()[kg], 90, 'lo ganado en el otro aparato llega');
@@ -12825,9 +12828,9 @@
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     var est0 = Rg.estado, t0 = UI.rangoTabla;
     Rg.estado = function () {
-      // NARANJA III: empieza en 235 y ocupa 35 PR
+      // se coloca en FRESA IV (100) y +150: NARANJA III, que empieza en 235 y ocupa 35 PR
       return Rg.estadoDe({ [Rg.clave('rc', 'x', 1)]: 9, [Rg.clave('rt', 'x', 1)]: 5 * 25000,
-                           [Rg.clave('rg', 'x', 1)]: 50 }, 'x', 1);
+                           [Rg.clave('rg', 'x', 1)]: 150 }, 'x', 1);
     };
     UI.rangoTabla = { n: 1, filas: [{ usuario: 'A', division: 2, pr: 210 }, { usuario: 'B', division: 4, pr: 420 }] };
     try {

@@ -1112,22 +1112,26 @@
      *               partida solo puede restar)
      *   gana/pierde lo máximo que mueve una partida en esa fruta */
     DIVISIONES: [
-      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 1, gana: 40, pierde: 15, color: '#ff3b3b' },
-      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 35, pierde: 18, color: '#ff5fa0' },
-      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 30, pierde: 20, color: '#ffb852' },
-      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 28, pierde: 22, color: '#7dff5a' },
-      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 25, pierde: 25, color: '#2bff88' },
-      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 22, pierde: 28, color: '#6fd0ff' },
-      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 20, pierde: 30, color: '#ffe23a' },
-      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 18, pierde: 30, color: '#e6ecff' }
+      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 2, gana: 25, pierde: 20, color: '#ff3b3b' },
+      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 22, pierde: 22, color: '#ff5fa0' },
+      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 20, pierde: 24, color: '#ffb852' },
+      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 18, pierde: 26, color: '#7dff5a' },
+      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 16, pierde: 28, color: '#2bff88' },
+      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 14, pierde: 30, color: '#6fd0ff' },
+      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 12, pierde: 32, color: '#ffe23a' },
+      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 10, pierde: 35, color: '#e6ecff' }
     ],
     COLOCACION: 5,        // partidas antes de tener rango
+    /* La colocación no regala: un escalón por debajo del que alcanza tu
+     * media, al principio de él, y nunca más arriba que este (4 = FRESA IV).
+     * De ahí para arriba se sube jugando. */
+    TOPE_COLOCACION: 4,
     /* lo que mueve una partida: 20 por cada vez que doblas (o te quedas en la
      * mitad de) la marca de tu escalón. Igualarla no da nada. */
     PASO: 20,
     /* Las reglas de antes eran otras cuentas: sus contadores no valen para
      * estas. Los de ahora llevan este número en la clave (js/rango.js). */
-    VERSION: 2
+    VERSION: 3             // 3: colocación estricta y topes más duros (24 sep)
   };
 
   /* ---------- Maestrías de ROL (22 de septiembre) ----------
