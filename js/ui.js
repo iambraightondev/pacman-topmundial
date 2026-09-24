@@ -7396,8 +7396,31 @@
         title: 'LOS RANGOS',
         arcade: true,
         tono: 'amarillo',
-        lines: ['CADA FRUTA SE SUBE POR ESCALONES. SUPERA LA MARCA DE TU ESCALÓN Y LLEGA AL NIVEL QUE PIDE PARA GANAR PR; SI TE QUEDAS CORTO, PIERDES. LAS MARCAS SON DE SOLO; ' + self.textoMultRango() + '.'],
         custom: function (p) {
+          /* CÓMO FUNCIONA, detrás de un "?" (24 sep): escrito encima de la
+           * escalera era un párrafo que nadie leía y empujaba la tabla */
+          var ayudaB = document.createElement('button');
+          ayudaB.type = 'button';
+          ayudaB.className = 'rgs-ayuda-b';
+          ayudaB.textContent = '?';
+          ayudaB.title = 'CÓMO SE SUBE';
+          ayudaB.setAttribute('aria-label', 'CÓMO SE SUBE DE RANGO');
+          var ayuda = el('div', 'rgs-ayuda');
+          ayuda.style.display = 'none';
+          ['CADA FRUTA SE SUBE POR ESCALONES (IV, III, II, I).',
+           'SUPERA LA MARCA DE TU ESCALÓN Y LLEGA AL NIVEL QUE PIDE TU FRUTA PARA GANAR PR; SI TE QUEDAS CORTO, PIERDES.',
+           'LAS MARCAS SON DE SOLO. ' + self.textoMultRango() + '.',
+           'LA PRIMERA VEZ QUE LLEGAS A CADA FRUTA EN LA TEMPORADA TE LLEVAS SU PREMIO EN MONEDAS.'
+          ].forEach(function (t) { ayuda.appendChild(el('div', null, t)); });
+          ayudaB.addEventListener('click', function () {
+            var ver = ayuda.style.display === 'none';
+            ayuda.style.display = ver ? '' : 'none';
+            ayudaB.classList.toggle('on', ver);
+          });
+          var cabeza = el('div', 'rgs-cabeza');
+          cabeza.appendChild(ayudaB);
+          p.appendChild(cabeza);
+          p.appendChild(ayuda);
           var lista = el('div', 'rgs-lista');
           var cab = el('div', 'rgs-fila rgs-cab');
           ['', 'DIVISIÓN', 'PR', 'MARCA (SOLO)', 'NIVEL', 'PREMIO', 'JUGADORES'].forEach(function (x) {
@@ -7441,17 +7464,25 @@
             fila.appendChild(el('span', 'rgs-cuantos', cuantos ? String(cuantos[d]) : '—'));
             if (mia) {
               var pie = el('div', 'rgs-pie');
-              /* la barra es la del ESCALÓN, no la de la fruta: se dice cuánto
-               * llevas de él para que el hueco cuadre con lo que falta */
+              /* LA BARRA ES LA DE LA FRUTA ENTERA (24 sep), de su primer
+               * escalón al último, con una marca en cada cambio de escalón:
+               * lo que falta es lo que queda para la fruta siguiente */
+              var ini = esc[0].desde, fin = ult.ancho ? (ult.desde + ult.ancho) : 0;
+              var hechos = e.pr - ini, total = fin - ini;
               pie.appendChild(el('span', null, e.nombre + ' · ' + self.milesMaes(e.pr) + ' PR' +
-                (e.anchoTramo ? ' · ' + e.enTramo + ' DE ' + e.anchoTramo + ' DEL ESCALÓN' : '')));
+                (fin ? ' · ' + hechos + ' DE ' + total + ' DE LA FRUTA' : '')));
               var barra = el('div', 'maes-barra');
               var relleno = document.createElement('i');
-              relleno.style.width = ((e.anchoTramo ? Math.max(0, Math.min(1, e.enTramo / e.anchoTramo)) : 1) * 100).toFixed(1) + '%';
+              relleno.style.width = ((fin ? Math.max(0, Math.min(1, hechos / total)) : 1) * 100).toFixed(1) + '%';
               barra.appendChild(relleno);
+              if (fin) esc.slice(1).forEach(function (x) {
+                var marca = el('b', 'rgs-corte');
+                marca.style.left = ((x.desde - ini) / total * 100).toFixed(1) + '%';
+                barra.appendChild(marca);
+              });
               pie.appendChild(barra);
-              pie.appendChild(el('span', null, e.anchoTramo
-                ? ('TE FALTAN ' + e.faltan + ' PARA ' + e.siguiente)
+              pie.appendChild(el('span', null, fin
+                ? ('TE FALTAN ' + (fin - e.pr) + ' PARA ' + (D[d + 1] ? D[d + 1].name : ''))
                 : 'LA CIMA'));
               fila.appendChild(pie);
             }

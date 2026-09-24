@@ -13062,7 +13062,11 @@
       eq(mia.length, 1, 'solo una marcada');
       ok(mia[0].textContent.indexOf(D[2].name) !== -1, 'y es la tuya');
       eq(Rg.estado().nombre, 'NARANJA III', 'el estado de mentira cae donde se quería');
-      ok(mia[0].textContent.indexOf('TE FALTAN 20 PARA NARANJA II') !== -1, 'con lo que te falta para el escalón siguiente');
+      ok(mia[0].textContent.indexOf('TE FALTAN 90 PARA MANZANA') !== -1, 'con lo que te falta para acabar la fruta (NARANJA llega a 339)');
+      ok(mia[0].textContent.indexOf('50 DE 140 DE LA FRUTA') !== -1, 'y lo que llevas de ella');
+      eq(mia[0].querySelectorAll('.rgs-corte').length, 3, 'con una marca en cada cambio de escalón');
+      ok(p.querySelector('.rgs-ayuda-b'), 'y el cómo se sube, detrás de un ?');
+      eq(p.querySelector('.rgs-ayuda').style.display, 'none', 'cerrado hasta que se pulse');
       eq(mia[0].querySelector('.rgs-escalones .on').textContent, 'III', 'y su escalón encendido');
       eq(filas[D.length - 1 - 3].querySelectorAll('.rgs-escalones i').length, 3, 'MANZANA tiene tres');
       ok(filas[D.length - 1 - 2].querySelector('.rgs-cuantos').textContent === '1', 'y cuántos hay en ella este mes');

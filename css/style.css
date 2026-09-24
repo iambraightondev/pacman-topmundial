@@ -8046,3 +8046,24 @@ body { font-size-adjust: 0.56; }
   white-space: nowrap;
   vertical-align: middle;
 }
+
+/* la escalera: el "?" de cómo se sube y la barra de la fruta entera (24 sep) */
+.rgs-cabeza { display: flex; justify-content: flex-end; width: 100%; max-width: 760px; margin: 0 auto; }
+.rgs-ayuda-b {
+  width: 34px; height: 34px; padding: 0;
+  font-family: inherit; font-size: 16px; line-height: 1;
+  color: #ffd23f; background: rgba(0, 0, 0, 0.6);
+  border: 2px solid #ffd23f; border-radius: 50%;
+  cursor: pointer;
+}
+.rgs-ayuda-b:hover, .rgs-ayuda-b:focus-visible, .rgs-ayuda-b.on { color: #000; background: #ffd23f; outline: none; }
+.rgs-ayuda {
+  display: grid; gap: 8px;
+  width: 100%; max-width: 760px; margin: 8px auto 0; padding: 12px 14px; box-sizing: border-box;
+  font-size: 9px; line-height: 1.7; letter-spacing: 1px; color: #dfe3ff; text-align: left;
+  border: 2px solid rgba(255, 210, 63, 0.45); border-radius: 10px; background: rgba(0, 0, 0, 0.7);
+}
+.rgs-pie .maes-barra .rgs-corte {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+  background: rgba(0, 0, 0, 0.75);
+}
