@@ -20,9 +20,8 @@
  * (FUEGO, PORTAL, RUNA, TORMENTA). Las teclas son las mismas; lo
  * que se lanza se decide por el id del poder, no por su tecla.
  *
- * Tiene su propio top mundial y sus récords. A un jugador, con un
- * rol que no sea el Asesino, la partida es de PRÁCTICA: da
- * experiencia y logros, pero no récords ni maestrías.
+ * Tiene su propio top mundial y sus récords, y cada rol el suyo. Desde
+ * el 24 sep no hay PRÁCTICA: a uno, cualquier rol cuenta para todo.
  *
  * Dónde se juega
  *   En todas partes: solo, dos en el mismo teclado, party online

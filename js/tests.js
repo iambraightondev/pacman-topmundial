@@ -10421,27 +10421,24 @@
     }
   });
 
-  /* ---------- PRÁCTICA ---------- */
-  test('PRÁCTICA: a uno con otro rol no hay récord de DESATADO, pero sí el de SU rol; en dúo cuenta todo', function () {
+  /* ---------- sin PRÁCTICA (24 sep) ---------- */
+  test('a uno con cualquier rol cuenta todo: el récord de DESATADO y el de SU rol', function () {
     conContadores(function () {
       var vistos = null;
       try { vistos = localStorage.getItem(CFG.BADGES_KEY); localStorage.removeItem(CFG.BADGES_KEY); } catch (e) {}
       try {
         partidaRol(['tanque']);
-        ok(G.practica, 'solo con Tanque es práctica');
+        ok(!G.practica, 'ya no existe la práctica');
         var previo = G.recordModo('hab', 1);
         G.score = previo + 999999;
         G.highScore = G.score;
         G.persistHighScore();
-        eq(G.recordModo('hab', 1), previo, 'no toca el récord de DESATADO');
+        eq(G.recordModo('hab', 1), G.score, 'hace el récord de DESATADO, también con Tanque');
         eq(window.PM.Badges.recordRol('tanque', 1), G.score, 'pero sí el del TANQUE (23 sep)');
         G.badgeNotice = null;
         G.checkBadges();
         ok(G.badgeNotice && G.badgeNotice.mode.indexOf('TANQUE') !== -1, 'y celebra las copas del Tanque');
         partidaRol(['asesino']);
-        ok(!G.practica, 'con Asesino, la partida de siempre');
-        partidaRol(['soporte', 'asesino']);
-        ok(!G.practica, 'en dúo con Soporte cuenta');
         G.setRecordModo('hab', previo, 1);
       } finally {
         try {
@@ -12617,7 +12614,7 @@
       Rg.conCuenta = function () { return true; };
       eq(Rg.porQueNo(G), null, 'con todo en regla, sí');
       G.newGame({ players: 1, hab: true, clasif: true, roles: ['mago'] });
-      eq(Rg.porQueNo(G), null, 'a uno con Mago también cuenta (práctica solo para récords)');
+      eq(Rg.porQueNo(G), null, 'a uno con Mago también cuenta');
       G.newGame({ players: 1, clasif: true });
       ok(!G.clasif, 'sin DESATADO no hay clasificatoria');
       eq(Rg.porQueNo(G), 'SOLO EN DESATADO');

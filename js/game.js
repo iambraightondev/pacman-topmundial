@@ -161,7 +161,6 @@
     mazeLoaded: null,    // el que está puesto de verdad en CFG.MAZE
     hab: false,          // ¿esta partida es del modo DESATADO?
     roles: [],           // DESATADO: el rol de cada jugador ('asesino'...)
-    practica: false,     // a uno, con rol que no es el Asesino: sin récords
     caza: false,         // ¿y de CACERÍA? (js/caceria.js)
     cazaTicks: 0,        // CACERÍA: ticks que faltan para el poder de Pac-Man
 
@@ -592,9 +591,9 @@
        * es Asesino; en PAC-MAN VS. todos los Pac-Man son Asesino; y solo cabe
        * UN Soporte por partida (el segundo pasa a Asesino). */
       this.roles = this.rolesDe(opts);
-      /* A uno y con otro rol, PRÁCTICA: da experiencia y logros, pero no toca
-       * récords, top mundial ni maestrías. En equipo sí cuenta. */
-      this.practica = this.hab && this.playerCount === 1 && this.roles[0] !== 'asesino';
+      /* (Hasta el 24 sep, a uno con un rol que no fuera el Asesino la partida
+       * era de PRÁCTICA y no hacía récord ni iba al top. Ya no: cualquier rol
+       * cuenta para todo.) */
       if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount, this.roles, this.loadouts);
       /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
        * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
@@ -2434,11 +2433,9 @@
      * modo tiene su marca y su ruta, y no se pisan. */
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
-      /* DESATADO: el récord de cada ROL (js/badges.js). Va antes que la
-       * práctica porque a uno con otro rol SÍ es su marca (23 sep): lo que
-       * no hace es récord de DESATADO ni top mundial. */
+      /* DESATADO: el récord de cada ROL (js/badges.js), además del de
+       * DESATADO de siempre, que ahora hace cualquier rol */
       this.apuntarRecordRol();
-      if (this.practica) return;     // DESATADO a uno con otro rol: práctica
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
       if (this.superv) return;       // ni SUPERVIVENCIA, que no es de puntos
       var slot = this.recordSlot();
@@ -2703,11 +2700,9 @@
           if (fr) { fresh = fr; mode = mr; }
         }
       }
-      if (!this.practica) {
-        var mg = this.badgeMode();
-        var fg = B.claim(this.score, mg);
-        if (fg && !fresh) { fresh = fg; mode = mg; }
-      }
+      var mg = this.badgeMode();
+      var fg = B.claim(this.score, mg);
+      if (fg && !fresh) { fresh = fg; mode = mg; }
       if (!fresh) return;
       this.badgeNotice = {
         name: fresh.name, color: fresh.color, mode: B.modeName(mode),
@@ -3060,7 +3055,6 @@
       // lado no diría nada de nadie. Lo que sigue fuera: una partida con un
       // azar traído de fuera o con un fantasma que piensa (PAC-MAN VS.).
       if (this.seedBase || this.isVersus() || this.superv) return;
-      if (this.practica) return;               // práctica: no va al top
       if (!window.PM.Ranking || !window.PM.Ranking.configured()) return;
       if (!(this.score > 0)) return;
       if (this.missingRankingName()) return;    // se avisa en el panel final
@@ -5507,16 +5501,12 @@
         ctx.textAlign = 'right';
         ctx.fillText(String(hs || 0), 136, 9);
       }
-      /* PRÁCTICA: que se vea que esta partida no hace récord */
-      if (this.practica && this.state !== 'MENU') {
-        ctx.save();
-        ctx.font = window.PM.Letra.lienzo(6);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#ff66cc';
-        ctx.fillText('PRÁCTICA · ' + CFG.HAB.ROL_INFO[this.roles[0]].name, 112, 18);
-        ctx.restore();
-        ctx.font = window.PM.Letra.lienzo(8);
-        ctx.fillStyle = CFG.COLORS.text;
+      /* EL NIVEL en el que vas (24 sep), arriba a la derecha como el 1UP a
+       * la izquierda: pide nivel la CLASIFICATORIA y hay rey cada cinco */
+      if (this.state !== 'MENU') {
+        ctx.textAlign = 'right';
+        ctx.fillText('NIVEL', 220, 0);
+        ctx.fillText(String(this.level || 1), 220, 9);
       }
 
       /* nombres del equipo en la tercera línea: dos a los lados, y con 3 o 4

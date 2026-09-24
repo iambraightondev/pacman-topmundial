@@ -19,8 +19,8 @@
  *   y cada muerte propia la rebaja un poco. Los tres escalones de arriba
  *   piden además notas S con ese rol: con horas solas no se llega.
  *
- *   Cuenta también la PRÁCTICA (a uno con otro rol que no sea el Asesino):
- *   no da récords ni trofeos, pero es justo donde se aprende un rol.
+ *   Cuenta cualquier partida de DESATADO, a uno o en equipo y con el rol que
+ *   sea (hasta el 24 sep, a uno con otro rol era PRÁCTICA; ya no existe).
  *
  * De dónde salen los números
  *   La libreta de la partida (Game.marcador) trae los fantasmas, los

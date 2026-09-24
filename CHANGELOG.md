@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · Adiós a la PRÁCTICA, y el nivel a la vista
+
+**CUALQUIER ROL CUENTA.** En DESATADO a uno ya no hay partidas de práctica:
+con Tanque, Mago o Soporte se hace el récord de DESATADO, se entra en el top
+mundial y se ganan copas, además del récord de cada rol. Los récords que se
+quedaron fuera por esto (MAULIO y ESTER) se han recuperado de sus partidas.
+Y durante la partida, arriba a la derecha, el **NIVEL** en el que vas.
+
 ## 2026-09-24 · CLASIFICATORIA: los PR en vivo
 
 **SABES LO QUE TE JUEGAS.** Durante una CLASIFICATORIA, arriba de los poderes

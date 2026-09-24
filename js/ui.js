@@ -11745,14 +11745,6 @@
             equipo.textContent = eq.join('  +  ');
             p.appendChild(equipo);
           }
-          /* DESATADO a uno con otro rol: que se lea que no contaba */
-          if (g.practica) {
-            var prac = document.createElement('div');
-            prac.className = 'go-equipo go-practica';
-            prac.textContent = 'PRÁCTICA CON ' + CFG.HAB.ROL_INFO[g.roles[0]].name +
-              ' · NO CUENTA PARA RÉCORDS NI TROFEOS';
-            p.appendChild(prac);
-          }
 
           /* LAS DOS VISTAS DEL FINAL (20 sep). Con gente, el resumen de
            * siempre —puntos, experiencia, monedas— no cuenta lo que quiere
@@ -13378,11 +13370,8 @@
               aviso.classList.add('ok');
               return;
             }
-            var practica = roles[0] !== 'asesino';
-            aviso.textContent = practica
-              ? 'A UNO CON ' + H.ROL_INFO[roles[0]].name + ' ES PRÁCTICA: SUMA A SU MAESTRÍA, NO A RÉCORDS NI TROFEOS'
-              : 'A UNO CON ASESINO CUENTA PARA RÉCORDS Y TROFEOS';
-            aviso.classList.toggle('ok', !practica);
+            aviso.textContent = 'CON ' + H.ROL_INFO[roles[0]].name + ' CUENTA PARA TU RÉCORD, EL DE SU ROL, TROFEOS Y MAESTRÍA';
+            aviso.classList.add('ok');
           }
           repintar = pintar;
           pintar();
@@ -13465,7 +13454,7 @@
         { t: 'EL REY FANTASMA', d: 'CADA 5 NIVELES SALE EL REY: MUCHA VIDA, EMBESTIDAS Y ESBIRROS. LOS PODERES LE HACEN DAÑO O LO ATURDEN.' },
         clasif
           ? { t: 'CLASIFICATORIA', d: 'CADA PARTIDA MUEVE TU RANGO DEL MES (CEREZA … LLAVE), CON CUALQUIER ROL. LAS 5 PRIMERAS SON DE COLOCACIÓN. HACE FALTA CUENTA Y LOS AJUSTES DE SERIE. EL RANGO SE REINICIA CADA MES.' }
-          : { t: 'QUÉ CUENTA', d: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON RÉCORDS Y TROFEOS. A UNO SOLO CUENTA CON ASESINO; CON OTRO ROL ES PRÁCTICA Y SUMA A SU MAESTRÍA. EL RANGO SE JUEGA EN CLASIFICATORIA.' },
+          : { t: 'QUÉ CUENTA', d: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON RÉCORDS Y TROFEOS. CUALQUIER ROL CUENTA, TAMBIÉN A UNO, Y CADA ROL LLEVA ADEMÁS SU PROPIO RÉCORD. EL RANGO SE JUEGA EN CLASIFICATORIA.' },
         { t: 'EL J2 CON FANTASMA', d: 'EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA EN VEZ DE UN PAC-MAN.' }
       ];
       this.showPrompt({
