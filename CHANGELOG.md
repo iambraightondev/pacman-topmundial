@@ -15,6 +15,11 @@ barra. Se cuentan desde hoy (contadores nuevos `hu_<poder>` y `hk_<tecla>`).
 levantados, escudos y vidas del Soporte, cazas de PAC-MAN VS. y de CACERÍA por
 separado, caídas del Pac-Man, monedas gastadas en continuar y la COLECCIÓN
 (skins, accesorios, emotes y efectos conseguidos).
+**Sembrado con las repeticiones:** los usos de cada poder y tecla de las 537
+partidas de DESATADO en solitario guardadas en la nube (17–24 sep) se sumaron a
+sus cuentas (IAMBRAIGHTON, ESTER, MAULIO, PIEROSENSUAL, FREDDY). Las de party no
+entran. La nube protege esos contadores (`hu_`, `hk_`) como los del rango: solo
+crecen, así que un aparato que suba sin haberlos traído no los borra.
 
 ## 2026-09-24 · El reto de CACERÍA vale lo pille quien lo pille
 

@@ -62,6 +62,20 @@ language plpgsql
 as $$
 begin
   new.actualizado := now();
+  /* Contadores que SOLO CRECEN: un aparato que suba sus logros sin haberlos
+   * traído antes no puede borrarlos ni bajarlos; de cada uno se queda el
+   * mayor. 24 sep: los del RANGO (rc2_… rm3_…, con la versión de las reglas)
+   * y los USOS de cada poder y tecla (hu_…, hk_…), sembrados en la nube con
+   * las repeticiones y que ningún aparato tenía. */
+  if tg_op = 'UPDATE' and jsonb_typeof(old.logros) = 'object'
+     and jsonb_typeof(new.logros) = 'object' then
+    new.logros := new.logros || coalesce((
+      select jsonb_object_agg(k, greatest(coalesce((new.logros->>k)::numeric, 0),
+                                          coalesce((old.logros->>k)::numeric, 0)))
+      from jsonb_object_keys(old.logros) as k
+      where k ~ '^r[cgtlm][2-9]_' or k ~ '^h[uk]_'
+    ), '{}'::jsonb);
+  end if;
   return new;
 end;
 $$;
