@@ -46,6 +46,25 @@
     return Math.round((a / b) * m) / m;
   }
 
+  /* De cada poder del catálogo: su nombre, su tecla y de qué rol es. Se
+   * monta una vez; un id que ya no esté en el catálogo sale con su id. */
+  var PODERES = null;
+  function poderes() {
+    if (PODERES) return PODERES;
+    PODERES = {};
+    var cat = (CFG.HAB && CFG.HAB.CATALOGO) || {};
+    for (var rol in cat) {
+      if (!cat.hasOwnProperty(rol)) continue;
+      for (var f = 0; f < cat[rol].length; f++) {
+        for (var o = 0; o < cat[rol][f].length; o++) {
+          var h = cat[rol][f][o];
+          if (h && h.id && !PODERES[h.id]) PODERES[h.id] = { name: h.name, key: h.key, rol: rol };
+        }
+      }
+    }
+    return PODERES;
+  }
+
   var Stats = {
 
     /* =========================================================
@@ -169,7 +188,7 @@
      * `records` (opcional) son las marcas por formato y por mundo, que no
      * viven en los contadores sino en columnas propias.
      * ========================================================= */
-    de: function (c, xp, records) {
+    de: function (c, xp, records, nombre) {
       /* Se trabaja sobre una COPIA: aquí se rellenan huecos con cotas, y quien
        * pasa sus contadores no espera que se los toquen. */
       var orig = c || {}, k0;
@@ -253,6 +272,17 @@
       d.doblesExactos = Math.max(0, d.dobles - d.triples);
       d.triplesExactos = Math.max(0, d.triples - d.cuadruples);
 
+      /* --- lo que no cabía en ningún sitio (24 sep) --- */
+      d.cazasVs = cont(c, 'cazas', 'vs');
+      d.cazasCaza = cont(c, 'cazas', 'caza');
+      d.pacCaidos = cont(c, 'pacCaidos');
+      d.rescates = cont(c, 'rescates');
+      d.apoyos = cont(c, 'apoyos');
+      d.gastoCont = cont(c, 'gastoCont');
+      d.roles = this.rolesDe(c, nombre);
+      d.poderes = this.poderesDe(c);
+      d.coleccion = this.coleccionDe(c);
+
       /* El reparto declarado de lo viejo (ver Achievements.declararReparto):
        * de las `repBase` partidas que estaban todas apuntadas a CLÁSICO,
        * tantas por ciento fueron de DESATADO. Se aplica SOLO a esas; lo
@@ -319,6 +349,107 @@
       return d;
     },
 
+    /* =========================================================
+     * POR ROL (DESATADO)
+     * Las partidas y la maestría salen de los contadores de maestría, que se
+     * sembraron con lo jugado; el récord, de los de cada rol. Los fantasmas y
+     * las vidas por partida, de las etiquetas de rol, que existen desde el
+     * 24 sep: son una media de lo contado desde entonces, no de toda la vida.
+     * ========================================================= */
+    rolesDe: function (c, nombre) {
+      var ids = (CFG.HAB && CFG.HAB.ROL_IDS) || [], info = (CFG.HAB && CFG.HAB.ROL_INFO) || {};
+      /* las correcciones a mano de esa cuenta (CFG.AJUSTES_CUENTA), las mismas
+       * que aplica la pantalla de MAESTRÍAS: [puntos, partidas, notas S] */
+      var AJ = CFG.AJUSTES_CUENTA || {};
+      var aj = (nombre && AJ[String(nombre).toUpperCase()] && AJ[String(nombre).toUpperCase()].maestria) || {};
+      function ajuste(r, i) { return (aj[r] && aj[r][i]) | 0; }
+      var out = [], total = 0, i, parts = {};
+      for (i = 0; i < ids.length; i++) {
+        var id = ids[i];
+        parts[id] = Math.max(Math.max(0, cont(c, 'maep_' + id) + ajuste(id, 1)),
+                             cont(c, 'rol_' + id + ':partidas'));
+        total += parts[id];
+      }
+      for (i = 0; i < ids.length; i++) {
+        var r = ids[i], rec = 0;
+        for (var n = 1; n <= 4; n++) rec = Math.max(rec, cont(c, 'rhab_' + r + '_' + n));
+        var pv = cont(c, 'rol_' + r + ':partidas');
+        var p = parts[r];
+        out.push({
+          id: r, name: (info[r] && info[r].name) || r.toUpperCase(),
+          color: (info[r] && info[r].color) || '#ff66cc',
+          partidas: p,
+          pct: total > 0 ? Math.round(p * 100 / total) : 0,
+          maestria: Math.max(0, cont(c, 'mae_' + r) + ajuste(r, 0)),
+          notasS: Math.max(0, cont(c, 'maes_' + r) + ajuste(r, 2)),
+          record: rec,
+          tiempo: cont(c, 'rol_' + r + ':tiempo'),
+          /* medias de lo contado por la etiqueta (null: aún nada) */
+          fpp: pv > 0 ? razon(cont(c, 'rol_' + r + ':fantasmas'), pv) : null,
+          mpp: pv > 0 ? razon(cont(c, 'rol_' + r + ':muertes'), pv) : null
+        });
+      }
+      return out;
+    },
+
+    /* El rol más jugado, o null si no ha jugado con ninguno */
+    rolFavorito: function (d) {
+      var mejor = null;
+      (d.roles || []).forEach(function (r) {
+        if (r.partidas > 0 && (!mejor || r.partidas > mejor.partidas)) mejor = r;
+      });
+      return mejor;
+    },
+
+    /* =========================================================
+     * LOS PODERES: usos de cada uno (hu_<id>) y de cada tecla (hk_q..r)
+     * ========================================================= */
+    poderesDe: function (c) {
+      var cat = poderes(), lista = [], teclas = {}, total = 0;
+      'QWER'.split('').forEach(function (k) {
+        teclas[k] = { key: k, usos: cont(c, 'hk_' + k.toLowerCase()), lista: [] };
+      });
+      for (var key in c) {
+        if (!c.hasOwnProperty(key) || key.indexOf('hu_') !== 0) continue;
+        var n = num(c[key]);
+        if (!n) continue;
+        var id = key.slice(3);
+        var info = cat[id] || { name: id.toUpperCase().replace(/_/g, ' '), key: '', rol: '' };
+        var e = { id: id, name: info.name, key: info.key, rol: info.rol, usos: n };
+        lista.push(e);
+        total += n;
+        if (teclas[info.key]) teclas[info.key].lista.push(e);
+      }
+      function orden(a, b) { return (b.usos - a.usos) || (a.name < b.name ? -1 : 1); }
+      lista.sort(orden);
+      var porTecla = [], tecla = null;
+      'QWER'.split('').forEach(function (k) {
+        teclas[k].lista.sort(orden);
+        porTecla.push(teclas[k]);
+        if (teclas[k].usos > 0 && (!tecla || teclas[k].usos > tecla.usos)) tecla = teclas[k];
+      });
+      return { lista: lista, total: total, porTecla: porTecla,
+               favorito: lista[0] || null, teclaFavorita: tecla };
+    },
+
+    /* =========================================================
+     * LA COLECCIÓN: lo conseguido de la tienda, los cofres y el pase
+     * ========================================================= */
+    coleccionDe: function (c) {
+      function cuenta(lista) {
+        var tiene = 0;
+        (lista || []).forEach(function (it) { if (num(c['c_' + it.id])) tiene++; });
+        return { tiene: tiene, de: (lista || []).length };
+      }
+      var skins = (CFG.SKINS || []).filter(function (sk) {
+        return sk.grupo === 'tienda' || sk.grupo === 'cofre' || sk.grupo === 'pase';
+      });
+      return {
+        skins: cuenta(skins), accesorios: cuenta(CFG.ACCESORIOS),
+        emotes: cuenta(CFG.EMOTES_TIENDA), efectos: cuenta(CFG.EFECTOS)
+      };
+    },
+
     /* Los datos de UNO MISMO, de lo que hay en este navegador */
     mios: function () {
       var A = window.PM.Achievements, L = window.PM.Level, G = window.PM.Game;
@@ -328,7 +459,9 @@
         records.lab = G.recordModo ? G.recordModo('lab', 1) : 0;
         records.hab = G.recordModo ? G.recordModo('hab', 1) : 0;
       }
-      return this.de(A ? A.stats() : {}, L ? L.xp() : 0, records);
+      var Ac = window.PM.Account, yo = '';
+      try { yo = (Ac && Ac.logged && Ac.logged() && Ac.name) ? Ac.name() : ''; } catch (e) { yo = ''; }
+      return this.de(A ? A.stats() : {}, L ? L.xp() : 0, records, yo);
     },
 
     /* Y los de una fila de `perfiles` bajada de la nube (perfil ajeno) */
@@ -340,7 +473,7 @@
         lab: num(fila.record_lab),
         hab: num(fila.record_hab)
       };
-      return this.de(fila.logros || {}, num(fila.xp), records);
+      return this.de(fila.logros || {}, num(fila.xp), records, fila.usuario);
     },
 
     /* =========================================================
@@ -504,17 +637,34 @@
       ] });
 
       var pelea = [];
+      if (d.poderes && d.poderes.total) pelea.push(['PODERES LANZADOS', S.miles(d.poderes.total), 'DESDE EL 24/09/2026']);
       if (d.mordiscos) pelea.push(['MORDISCOS', S.miles(d.mordiscos), 'DESATADO']);
       if (d.muros) pelea.push(['MUROS ATRAVESADOS', S.miles(d.muros), 'DESATADO']);
-      if (d.cazas) pelea.push(['PAC-MAN CAZADOS', S.miles(d.cazas), 'PAC-MAN VS.']);
-      if (pelea.length) out.push({ titulo: 'PODERES', filas: pelea });
+      if (d.rescates) pelea.push(['COMPAÑEROS LEVANTADOS', S.miles(d.rescates), 'EN PARTY']);
+      if (d.apoyos) pelea.push(['ESCUDOS Y VIDAS DADOS', S.miles(d.apoyos), 'SOPORTE · UNA VIDA VALE DOS']);
+      if (d.cazasVs) pelea.push(['PAC-MAN CAZADOS', S.miles(d.cazasVs), 'PAC-MAN VS.']);
+      if (d.cazasCaza) pelea.push(['CAZAS PROPIAS', S.miles(d.cazasCaza), 'CACERÍA']);
+      if (d.pacCaidos) pelea.push(['CAÍDAS DEL PAC-MAN', S.miles(d.pacCaidos), 'CACERÍA · LO PILLE QUIEN LO PILLE']);
+      if (pelea.length) out.push({ titulo: 'PODERES Y EQUIPO', filas: pelea });
 
       out.push({ titulo: 'CONSTANCIA', filas: [
         ['RETOS DEL DAILY', S.miles(d.dailyOk)],
         ['MEJOR RACHA DE DÍAS', d.dailyRacha || '—'],
         ['SEMANAS COMPLETAS', S.miles(d.dailySemana)],
-        ['MONEDAS GANADAS', S.miles(d.monedas)]
+        ['MONEDAS GANADAS', S.miles(d.monedas)],
+        ['MONEDAS EN CONTINUAR', S.miles(d.gastoCont)]
       ] });
+
+      var co = d.coleccion;
+      if (co) {
+        var par = function (x) { return x.tiene + ' / ' + x.de; };
+        out.push({ titulo: 'COLECCIÓN', filas: [
+          ['SKINS', par(co.skins), 'DE TIENDA, COFRES Y PASE'],
+          ['ACCESORIOS', par(co.accesorios)],
+          ['EMOTES', par(co.emotes)],
+          ['EFECTOS', par(co.efectos)]
+        ] });
+      }
 
       return out;
     },
@@ -530,6 +680,7 @@
           partidas: (m.partidas < 0) ? '—'
             : ((m.aprox ? '~' : '') + S.miles(m.partidas)),
           mejor: m.mejor ? S.miles(m.mejor) : '—',
+          fantasmas: m.fantasmas ? S.miles(m.fantasmas) : '—',
           tiempo: m.tiempo ? ((m.tAprox ? '~' : '') + S.reloj(m.tiempo)) : '—'
         });
       }

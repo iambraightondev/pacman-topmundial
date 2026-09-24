@@ -106,7 +106,11 @@
     bono:      'mayor',
     /* ...y lo GASTADO en continuar partidas (CFG.CONTINUAR). Suma, como lo
      * ganado: el saldo sale de restarlo. */
-    gastoCont: 'suma'
+    gastoCont: 'suma',
+    /* Para las CIFRAS (24 sep): cuerpos levantados en party y escudos o vidas
+     * repartidos por el SOPORTE. Salen de la libreta de la partida al cerrarla. */
+    rescates:  'suma',
+    apoyos:    'suma'
   };
   /* ...y las MAESTRÍAS DE ROL (js/maestria.js), cuatro por rol. Viven aquí
    * para viajar a la cuenta con lo demás, sin columna nueva:
@@ -156,6 +160,10 @@
     if (/^rm[0-9]?_[0-9]{4}-(0[1-9]|1[0-2])(_[1-4])?$/.test(key)) return 'mayor';   // mejor división (o escalón)
     /* el récord de DESATADO de cada ROL (js/badges.js), por formato */
     if (/^rhab_(asesino|tanque|mago|soporte)_[1-4]$/.test(key)) return 'mayor';
+    /* los USOS de cada poder (hu_<id>) y de cada tecla (hk_q..hk_r), para las
+     * CIFRAS: el catálogo crece y no se declaran uno a uno */
+    if (/^hu_[a-z0-9_]{1,24}$/.test(key)) return 'suma';
+    if (/^hk_[qwer]$/.test(key)) return 'suma';
     return null;
   }
 
@@ -198,6 +206,15 @@
     for (i = 0; i < M.length; i++) {
       ['partidas', 'puntosMax', 'fantasmas', 'tiempo'].forEach(function (base) {
         o[M[i].id + ':' + base] = BASE[base];
+      });
+    }
+    /* ...y por ROL (24 sep): una partida de DESATADO lleva además la etiqueta
+     * del rol de quien juega (Game.achTags), y de ahí salen las cifras de
+     * cada rol: cuántos fantasmas y cuántas vidas por partida con él. */
+    var RL = (CFG.HAB && CFG.HAB.ROL_IDS) || [];
+    for (i = 0; i < RL.length; i++) {
+      ['partidas', 'fantasmas', 'muertes', 'tiempo'].forEach(function (base) {
+        o['rol_' + RL[i] + ':' + base] = BASE[base];
       });
     }
     return o;

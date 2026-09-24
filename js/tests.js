@@ -10587,6 +10587,34 @@
     eq(G.eatFreezeTicks, 0, 'y el juego no se para');
   });
 
+  test('CIFRAS: cada poder lanzado se cuenta, por poder y por tecla, con el rol', function () {
+    conLogrosLimpios(function (A) {
+      partidaRol(['mago'], 2, 5, DR.RIGHT);
+      fantasmaEn(0, 9, 5);
+      HB.hielo[0] = 999;
+      ok(G.achTags().indexOf('rol_mago') !== -1, 'la partida lleva la etiqueta del rol');
+      ok(HB.pulsar(G, 0, 0), 'la bola sale');
+      eq(A.stats().hu_fuego, 1, 'un uso de BOLA DE FUEGO');
+      eq(A.stats().hk_q, 1, 'y uno de la Q');
+      G.toMenu();
+    });
+  });
+
+  test('CIFRAS: rol y poder favoritos, y las medias por rol', function () {
+    var S = window.PM.Stats;
+    var d = S.de({ maep_asesino: 3, maep_mago: 10, 'rol_mago:partidas': 2, 'rol_mago:fantasmas': 7,
+                   'rol_mago:muertes': 1, hu_mordisco: 5, hu_turbo: 9, hk_q: 5, hk_w: 9 }, 0, {});
+    eq(S.rolFavorito(d).id, 'mago', 'el más jugado');
+    var mago = d.roles.filter(function (r) { return r.id === 'mago'; })[0];
+    eq(mago.pct, 77, '10 de 13 partidas con rol');
+    eq(mago.fpp, 3.5, 'fantasmas por partida de lo contado con la etiqueta');
+    eq(mago.mpp, 0.5, 'y vidas');
+    eq(d.poderes.favorito.id, 'turbo', 'el poder más usado');
+    eq(d.poderes.teclaFavorita.key, 'W', 'y la tecla');
+    eq(d.poderes.porTecla[0].lista[0].id, 'mordisco', 'cada poder en su tecla');
+    eq(d.poderes.total, 14);
+  });
+
   test('MAGO · la racha caduca a los 5 s sin matar, salvo con los azules', function () {
     partidaRol(['mago'], 2, 5, DR.RIGHT);
     var lim = CFG.HAB.MAGO_RACHA_CADUCA;

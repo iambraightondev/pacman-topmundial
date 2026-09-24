@@ -859,6 +859,8 @@
       if (mant) {
         if (!this.lanzar(G, idx, k, true)) return false;
         if (R && R.apuntaHab) R.apuntaHab(idx, k, true);
+        // abrir la mira del METEORO no es lanzarlo: ese se cuenta al soltar
+        if (!this.esApuntada(G, idx, k)) this.cuentaUso(G, idx, k);
         return true;
       }
       if (!this.lanzar(G, idx, k)) {
@@ -889,7 +891,18 @@
        * sería engordarla por gusto. El mordisco del reintento no: lo que se
        * grabó fue la pulsación que lo armó. */
       if (R && R.apuntaHab && !this.reintento) R.apuntaHab(idx, k);
+      this.cuentaUso(G, idx, k);
       return true;
+    },
+
+    /* Un poder que ha salido, para las CIFRAS: cuántas veces cada uno y
+     * cuántas cada tecla. Solo los de quien juega aquí (apunta). */
+    cuentaUso: function (G, idx, k) {
+      if (!(k >= 0 && k < 4)) return;
+      var o = {}, id = this.idDe(G, idx, k);
+      o['hk_' + 'qwer'.charAt(k)] = 1;
+      if (id) o['hu_' + id] = 1;
+      apunta(G, idx, o);
     },
 
     /* ---------- MANTENER PULSADO ----------

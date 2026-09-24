@@ -2,6 +2,20 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · CIFRAS: roles, poderes y todo lo que ya se contaba
+
+**FAVORITOS:** debajo de las cuatro cifras grandes, el ROL FAVORITO (el más
+jugado, con su % de DESATADO), el PODER MÁS USADO y la TECLA MÁS USADA.
+**POR ROL:** tabla con partidas, %, puntos de maestría, notas S, récord y
+fantasmas y vidas por partida de cada rol. Las partidas y la maestría llevan las
+correcciones a mano de la cuenta, igual que la pantalla de MAESTRÍAS.
+**PODERES MÁS USADOS:** Q, W, E y R con sus usos y, dentro, cada poder con su
+barra. Se cuentan desde hoy (contadores nuevos `hu_<poder>` y `hk_<tecla>`).
+**Lo que ya se guardaba y no salía:** fantasmas por modo, compañeros
+levantados, escudos y vidas del Soporte, cazas de PAC-MAN VS. y de CACERÍA por
+separado, caídas del Pac-Man, monedas gastadas en continuar y la COLECCIÓN
+(skins, accesorios, emotes y efectos conseguidos).
+
 ## 2026-09-24 · El reto de CACERÍA vale lo pille quien lo pille
 
 **DAILY:** el reto de CACERÍA pasa a ser «EL PAC-MAN CAE 2 VECES EN CACERÍA» y

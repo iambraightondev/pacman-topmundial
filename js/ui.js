@@ -8088,6 +8088,11 @@
       b.heroe.className = 'cifras-heroe';
       host.appendChild(b.heroe);
 
+      /* --- los favoritos: rol, poder y tecla --- */
+      b.favs = document.createElement('div');
+      b.favs.className = 'cifras-favs';
+      host.appendChild(b.favs);
+
       /* --- el polígono --- */
       var caja = document.createElement('div');
       caja.className = 'radar-box';
@@ -8108,6 +8113,20 @@
       b.grupos = document.createElement('div');
       b.grupos.className = 'cifras';
       host.appendChild(b.grupos);
+
+      /* --- por rol --- */
+      b.tituloRoles = this.sectionTitle('POR ROL · DESATADO');
+      host.appendChild(b.tituloRoles);
+      b.roles = document.createElement('div');
+      b.roles.className = 'cifras-tabla cifras-roles';
+      host.appendChild(b.roles);
+
+      /* --- los poderes, tecla a tecla --- */
+      b.tituloPoderes = this.sectionTitle('PODERES MÁS USADOS');
+      host.appendChild(b.tituloPoderes);
+      b.poderes = document.createElement('div');
+      b.poderes.className = 'cifras-poderes';
+      host.appendChild(b.poderes);
 
       /* --- por mundo --- */
       b.tituloMundos = this.sectionTitle('POR MODO');
@@ -8232,13 +8251,17 @@
         b.grupos.appendChild(g);
       }
 
+      this.pintarFavoritos(b, d);
+      this.pintarRoles(b, d);
+      this.pintarPoderes(b, d);
+
       /* por mundo */
       b.mundos.innerHTML = '';
       var mm = S.porMundo(d);
-      b.mundos.appendChild(this.cifraCabecera(['MODO', 'PARTIDAS', 'MEJOR', 'TIEMPO']));
+      b.mundos.appendChild(this.cifraCabecera(['MODO', 'PARTIDAS', 'MEJOR', 'FANTASMAS', 'TIEMPO']));
       for (var m = 0; m < mm.length; m++) {
         b.mundos.appendChild(this.cifraFila(
-          [mm[m].name, mm[m].partidas, mm[m].mejor, mm[m].tiempo], mm[m].color));
+          [mm[m].name, mm[m].partidas, mm[m].mejor, mm[m].fantasmas, mm[m].tiempo], mm[m].color));
       }
 
       /* por formato */
@@ -8281,7 +8304,124 @@
             : 'PORQUE ASÍ LO DECLARÓ QUIEN LAS JUGÓ (') +
           S.miles(d.reparto.partidas) + ' PARTIDAS). LO MARCADO CON ~ ES APROXIMADO.');
       }
+      if (d.poderes && d.poderes.total) {
+        avisos.push('LOS USOS DE CADA PODER Y LOS FANTASMAS Y VIDAS POR PARTIDA DE CADA ROL ' +
+          'SE CUENTAN DESDE EL 24/09/2026.');
+      }
       b.pie.textContent = avisos.join(' ');
+    },
+
+    /* ROL FAVORITO, PODER FAVORITO y TECLA FAVORITA, con su dibujo */
+    pintarFavoritos: function (b, d) {
+      if (!b.favs) return;
+      var S = window.PM.Stats, Ic = window.PM.Iconos;
+      var info = (CFG.HAB && CFG.HAB.ROL_INFO) || {};
+      b.favs.innerHTML = '';
+      var rol = S.rolFavorito(d), pd = d.poderes || {}, fav = pd.favorito, tec = pd.teclaFavorita;
+      var colRol = function (r) { return (info[r] && info[r].color) || '#ff66cc'; };
+      var fichas = [
+        { tit: 'ROL FAVORITO', valor: rol ? rol.name : '—', color: rol ? rol.color : '#666',
+          nota: rol ? (S.miles(rol.partidas) + ' PARTIDAS · ' + rol.pct + ' % DE DESATADO') : 'AÚN SIN PARTIDAS CON ROL',
+          icono: rol ? ['rol', rol.id] : null },
+        { tit: 'PODER MÁS USADO', valor: fav ? fav.name : '—', color: fav ? colRol(fav.rol) : '#666',
+          nota: fav ? (S.miles(fav.usos) + ' USOS · TECLA ' + (fav.key || '?')) : 'SE CUENTA DESDE EL 24/09/2026',
+          icono: fav ? ['hab', fav.id, colRol(fav.rol)] : null },
+        { tit: 'TECLA MÁS USADA', valor: tec ? (S.miles(tec.usos) + ' USOS') : '—', clave: tec ? tec.key : '?', color: '#00ffff',
+          nota: tec ? ('DE ' + S.miles(pd.total) + ' PODERES LANZADOS') : 'SE CUENTA DESDE EL 24/09/2026' }
+      ];
+      fichas.forEach(function (f) {
+        var el = document.createElement('div');
+        el.className = 'cifras-fav';
+        el.style.setProperty('--fc', f.color);
+        if (f.icono && Ic) {
+          var cv = Ic.lienzo(f.icono[0], f.icono[1], 44, f.icono[2]);
+          if (cv) { cv.className = 'cifras-fav-ico'; el.appendChild(cv); }
+        } else {
+          var ph = document.createElement('i');
+          ph.className = 'cifras-fav-ico tecla';
+          ph.textContent = f.clave || '?';
+          el.appendChild(ph);
+        }
+        var tx = document.createElement('div');
+        var k = document.createElement('span');
+        k.textContent = f.tit;
+        var v = document.createElement('b');
+        v.textContent = f.valor;
+        var n = document.createElement('small');
+        n.textContent = f.nota;
+        tx.appendChild(k); tx.appendChild(v); tx.appendChild(n);
+        el.appendChild(tx);
+        b.favs.appendChild(el);
+      });
+    },
+
+    /* La tabla de los cuatro roles */
+    pintarRoles: function (b, d) {
+      if (!b.roles) return;
+      var S = window.PM.Stats, Ic = window.PM.Iconos;
+      b.roles.innerHTML = '';
+      b.roles.appendChild(this.cifraCabecera(['ROL', 'PARTIDAS', '%', 'MAESTRÍA', 'NOTAS S',
+        'RÉCORD', 'FANT./PARTIDA', 'VIDAS/PARTIDA']));
+      var fav = S.rolFavorito(d);
+      (d.roles || []).forEach(function (r) {
+        var fila = this.cifraFila([r.name, S.miles(r.partidas), r.partidas ? (r.pct + ' %') : '—',
+          r.maestria ? S.miles(r.maestria) : '—', r.notasS ? S.miles(r.notasS) : '—',
+          r.record ? S.miles(r.record) : '—',
+          r.fpp === null ? '—' : String(r.fpp), r.mpp === null ? '—' : String(r.mpp)], r.color);
+        if (Ic) {
+          var cv = Ic.lienzo('rol', r.id, 16);
+          var cel = fila.primera;
+          if (cv && cel && cel.insertBefore) { cv.className = 'cifra-ico'; cel.insertBefore(cv, cel.firstChild || null); }
+        }
+        if (fav && fav.id === r.id) fila.classList.add('fav');
+        b.roles.appendChild(fila);
+      }, this);
+    },
+
+    /* Q W E R: cuántas veces cada tecla y, dentro, cada poder con su barra */
+    pintarPoderes: function (b, d) {
+      if (!b.poderes) return;
+      var S = window.PM.Stats, Ic = window.PM.Iconos;
+      var info = (CFG.HAB && CFG.HAB.ROL_INFO) || {};
+      var pd = d.poderes || { porTecla: [], total: 0 };
+      b.poderes.innerHTML = '';
+      pd.porTecla.forEach(function (t) {
+        var col = document.createElement('div');
+        col.className = 'cifras-tecla';
+        var cab = document.createElement('div');
+        cab.className = 'cifras-tecla-cab';
+        var k = document.createElement('b');
+        k.textContent = t.key;
+        var u = document.createElement('span');
+        u.textContent = t.usos ? (S.miles(t.usos) + ' USOS') : 'SIN USOS';
+        cab.appendChild(k); cab.appendChild(u);
+        col.appendChild(cab);
+        var max = t.lista.length ? t.lista[0].usos : 0;
+        t.lista.forEach(function (p) {
+          var c = (info[p.rol] && info[p.rol].color) || '#ff66cc';
+          var f = document.createElement('div');
+          f.className = 'cifras-poder';
+          f.style.setProperty('--pc', c);
+          if (Ic) {
+            var cv = Ic.lienzo('hab', p.id, 22, c);
+            if (cv) f.appendChild(cv);
+          }
+          var nm = document.createElement('span');
+          nm.textContent = p.name;
+          var n = document.createElement('b');
+          n.textContent = S.miles(p.usos);
+          var barra = document.createElement('i');
+          barra.style.width = 'calc((100% - 42px) * ' + Math.max(0.04, p.usos / max).toFixed(3) + ')';
+          f.appendChild(nm); f.appendChild(n); f.appendChild(barra);
+          col.appendChild(f);
+        });
+        if (!t.lista.length) {
+          var v = document.createElement('small');
+          v.textContent = 'AÚN NADA';
+          col.appendChild(v);
+        }
+        b.poderes.appendChild(col);
+      });
     },
 
     cifraCabecera: function (celdas) {
@@ -8303,6 +8443,7 @@
         var c = document.createElement('span');
         c.textContent = celdas[i];
         if (i === 0 && color) c.style.color = color;
+        if (i === 0) row.primera = c;
         row.appendChild(c);
       }
       return row;

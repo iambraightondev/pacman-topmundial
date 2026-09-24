@@ -520,6 +520,12 @@
       if (m && m.hasOwnProperty(campo)) m[campo] += (n == null ? 1 : n);
     },
 
+    /* Lo de la libreta que es de quien juega aquí (para las CIFRAS) */
+    miMarca: function (campo) {
+      var m = this.marcador && this.marcador[this.localIdx >= 0 ? this.localIdx : 0];
+      return (m && m[campo] > 0) ? m[campo] : 0;
+    },
+
     /* Un tick de vida por cada jugador que esté en pie */
     marcaTiempo: function () {
       if (this.state !== 'PLAYING' || !this.marcador) return;
@@ -2808,6 +2814,7 @@
      * (`hab:tiempo`, `lab:pastillas`...). */
       this.bumpAch({
         partidas: 1, puntosMax: pts, cazas: this.myCatches(),
+        rescates: this.miMarca('rescates'), apoyos: this.miMarca('apoyos'),
         tiempo: Math.round(this.timeTicks / 60),
         pastillas: this.runPastillas || 0,
         'super': this.runSuper || 0
@@ -2893,6 +2900,11 @@
       else if (this.isVersus()) t.push('vs');
       else if (this.mazeId) t.push('lab');
       else t.push('clasico');
+      /* en DESATADO, también el rol de quien juega aquí (cifras por rol) */
+      if (this.hab && !this.caza && this.roles) {
+        var rol = this.roles[this.localIdx >= 0 ? this.localIdx : 0];
+        if (rol) t.push('rol_' + rol);
+      }
       return t;
     },
 
