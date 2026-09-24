@@ -13,6 +13,40 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### DONDE SE DEJÓ (24 sep, tarde): CIFRAS, PREMIOS DEL RANGO, NUBE BLINDADA
+
+Todo subido (service worker pm-v276). Pruebas: tests.html 594/594; Node 1
+fallo (el de siempre). Detalle de cada cosa en CHANGELOG; cómo funciona, en SPEC.
+
+**Hecho esta tarde:**
+- **CIFRAS**: rol favorito, poder y tecla más usados, tabla por rol, poderes
+  Q/W/E/R, y todo lo que ya se guardaba y no salía (colección, rescates,
+  apoyos, cazas por modo, monedas en continuar...). A tamaño real y con scroll.
+  Sembrado desde las repeticiones de la nube (usos de poderes y cifras por rol).
+- **Premios de fin de temporada** del rango: se entregan solos el 1 oct (fruta
+  junto al nombre, TUS TEMPORADAS, LAURELES, RASTRO DORADO, LLAVE DORADA) y
+  sale ¡TEMPORADA CERRADA! al abrir el juego.
+- **Nube blindada** (trigger `perfiles_touch`): nada de lo jugado baja salvo
+  con una limpieza que suba `purga`. Un aparato de MAULIO le había borrado la
+  maestría por la mañana; se le devolvió desde la copia.
+- **Mago y apisonadora**: sus bajas cuentan para la maestría; notas del Mago y
+  del Tanque recalibradas y lo jugado, recalificado (AJUSTES_CUENTA).
+- Otros: títulos de celebración que caben, 118 repeticiones de prueba
+  borradas, la racha del Mago caduca a los 5 s, el DAILY de CACERÍA cuenta
+  cualquier caída del Pac-Man.
+
+**POR HACER (lo siguiente):**
+1. **Mirar el 1 de octubre** que la temporada cierra bien en el juego de
+   verdad: ¡TEMPORADA CERRADA!, la fruta junto al nombre en el top y en la
+   party, las piezas en el vestuario. Se probó simulando la fecha, no en vivo.
+2. **Laureles de octubre**: diseñarlos antes del 1 nov (cada temporada lleva
+   los suyos; ver SPEC → Premios de fin de temporada).
+3. Revisar las notas del **Mago y el Tanque** con más partidas (la muestra del
+   Mago fue de 28). Lo mismo los listones del rango.
+4. **Partidas cortas** (menos de 45 s) cuentan en las cifras por rol y bajan
+   las medias; decidir si se excluyen como en la maestría.
+5. Probar jugando: METEORO en party, clips en el móvil y en Safari, YUNQUE.
+
 ### DONDE SE DEJÓ (24 sep): RANGO ÚNICO, TARJETAS DE PODER, MAGO EN RACHA
 
 Todo subido (último commit a09f272, service worker pm-v268). Detalle de cada

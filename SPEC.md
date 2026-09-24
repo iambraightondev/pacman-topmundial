@@ -353,6 +353,21 @@ accounts that need this most is a mailbox that does not exist.
 table grants**, and without it the function gets a bare 42501 and answers
 "usuario o contraseña mal" forever with no way to guess why.
 
+### The cloud only grows (`perfiles_touch`, 24 Sep 2026)
+
+Every device upserts its whole profile (`Account.push`) without reading the
+cloud first, so a second device with stale data used to lower games, records
+and XP until the good device signed in again. The `before update` trigger in
+`supabase/cuentas.sql` now keeps, for every numeric key of `logros`, for
+`xp` and for every `record*` column, the **highest** of old and new (for
+`mejorT1` keys and `tiempo1`, the lowest non-zero). The only way to lower
+anything is a manual cleanup that raises `logros.purga` in the same write;
+the client then takes the cloud as-is (`Account.applyRemote`). A device that
+still carries an **older** `purga` cannot write `logros` at all (the trigger
+keeps the cloud's) until it signs in and adopts the cloud, so it cannot undo a
+cleanup. Lowering a counter for good is still done in code
+(`CFG.AJUSTES_CUENTA`), which every device applies when reading.
+
 ## Las CIFRAS del perfil (`js/stats.js` — `PM.Stats`)
 
 PERFIL has a third tab, CIFRAS, holding everything that is known about a
@@ -444,6 +459,33 @@ what is already known, always as a **lower bound**: `niveles` = `nivelMax` − 1
 returns how much of it came from there and the screen prints it at the
 bottom. Inventing a nicer figure would be worse than giving none — this
 screen is where people compare themselves.
+
+### Roles, powers and everything else (24 Sep 2026)
+
+- **Favourites row** (`UI.pintarFavoritos`): most played role
+  (`Stats.rolFavorito`), most used power and most used key.
+- **Per role** (`Stats.rolesDe(c, nombre)`, `UI.pintarRoles`): games and
+  mastery come from `maep_/mae_/maes_<rol>` **plus the per-account
+  `CFG.AJUSTES_CUENTA` mastery corrections** (the same ones MAESTRÍAS applies;
+  `Stats.de` takes the account name as 4th argument for that). Record = max of
+  `rhab_<rol>_1..4`. Ghosts and lives per game come from a **role tag**:
+  `Game.achTags()` adds `rol_<rol>` in DESATADO (the local player's role), and
+  STATS declares `rol_<rol>:partidas|fantasmas|muertes|tiempo`. They are
+  averages of what the tag counted, so partidas/fantasmas/muertes must always
+  be seeded together.
+- **Power uses**: loose counters `hu_<abilityId>` and `hk_q|w|e|r`
+  (`tipoSuelto`, 'suma'), bumped by `Hab.cuentaUso` every time `Hab.pulsar`
+  succeeds for the local player (the METEORO aim-open is not a cast; its fire
+  on release is). `UI.pintarPoderes`: Q/W/E/R columns with bars.
+- **Also shown now**: ghosts per mode, `rescates` and `apoyos` (from the game
+  tally at `closeRun`, `Game.miMarca`), VS. and CACERÍA catches apart,
+  `pacCaidos`, `gastoCont` and the COLLECTION (`c_<id>` over each catalogue).
+- **Seeded from the cloud replays** (24 Sep): `hu_/hk_` from 537 solo DESATADO
+  replays and 71 party ones (party casts are the `hab` host events), and the
+  `rol_` counters from 204 solo replays re-simulated until the exact score plus
+  84 party ones rebuilt from events. 229 solo replays of 21–23 Sep never
+  recorded the loadout: their casts stay on their key but are credited to no
+  power. Method and exclusions: memory note *recalificar-con-repeticiones*.
 
 ## App instalable (PWA) y pruebas
 
@@ -3635,8 +3677,10 @@ de `pide` en las skins sigue llamándose así por compatibilidad.
 `maesem_<rol>` (sembradas) y `maevivas` (partidas de DESATADO cerradas con
 las maestrías en marcha). `Game.closeRun` llama a `Maestria.cerrar`: la
 nota es el valor del rol por minuto EN PIE (`marcador[i].vivo`) rebajado un
-10 % por muerte. Asesino y Mago: `kills` (ahora también las de
-`matarCatalogo`); Tanque: `Game.salvasMias` ×3 + kills (se cuenta en la
+10 % por muerte. Asesino y Mago: `kills` (también las de `matarCatalogo` y,
+desde el 24 sep por la tarde, las de `matarMago`: bola, rayos, runa, meteoro
+y la APISONADORA del Tanque, que antes no llegaban a la libreta; con ellas se
+recalibraron sus notas: Mago 7,5/5,5/4/3 y Tanque 6,5/5/3,5/2); Tanque: `Game.salvasMias` ×3 + kills (se cuenta en la
 máquina de cada uno, en `aguanta()` de habilidades.js, solo cuando se gasta
 una coraza, un escudo o un rebote); Soporte: `rescates` ×3 + `apoyos`
 (campo nuevo de la libreta: escudo dado 1, vida 2) + kills. La libreta viaja
@@ -3654,3 +3698,22 @@ PR = colocar(rt/5) + rg − rl, sin bajar de 0 (y sin apuntar pérdidas que no s
 pueden perder, así no hay deuda). Cuenta si el ajuste `clasif` (viaja con la
 cuenta) está encendido y `Rango.porQueNo(G)` es null. La tabla lee
 `perfiles?select=usuario,avatar,logros` y aplica `estadoDe` a cada uno.
+
+**PREMIOS DE FIN DE TEMPORADA** (24 sep). Nada se guarda: todo se deduce de lo
+más alto alcanzado en cada temporada YA CERRADA (`rmN_<AAAA-MM>`, N ≥ 4,
+anterior a `Season.actual()`, que va en UTC). `Rango.cerradas(c)`,
+`Rango.anterior(c)` (la del mes pasado), `Rango.ganado(req, c)` y
+`Rango.comoGanar(req)`, con `req = { fruta: 'manzana', temporada?: 'AAAA-MM' }`.
+- La fruta de la temporada pasada junto al nombre: top mundial (`Rango.tabla`
+  pasa un tercer argumento `{ USUARIO: división }`), sala de party (campo `ra`
+  del miembro, sin subir PROTO) y perfil (`UI.frutaMini`).
+- El recuerdo: TUS TEMPORADAS en el perfil (y SUS TEMPORADAS en el de un amigo).
+- Piezas con `rango` en el catálogo: `acc_laureles_2609` (MANZANA+ en
+  2026-09), `efx_dorado` (CAMPANA+ en cualquiera) y la skin `llave_dorada`
+  (grupo 'rango', LLAVE). `Tienda.tiene` las resuelve con `Rango.ganado`, no
+  están en VENTA y `comprar` las rechaza. **Cada temporada nueva necesita sus
+  laureles**: una entrada en `CFG.ACCESORIOS` con su `temporada` y
+  `ACC.acc_laureles_AAMM = laureles(oro, oroOscuro, gema)` en skins.js (más su
+  `ZONA_ACC` y `BASE_SOMBRERO`).
+- ¡TEMPORADA CERRADA!: `UI.temporadaCerradaSiToca` (desde `celebrarSiToca`),
+  una vez por cuenta y temporada (`pacman-topmundial-temporada-vista`).
