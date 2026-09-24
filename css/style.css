@@ -8079,3 +8079,13 @@ body { font-size-adjust: 0.56; }
 
 /* el carril que va siguiendo al otro, sin imán mientras se mueve (24 sep) */
 #pase .ps-scroll.ps-sigue { scroll-snap-type: none; scroll-behavior: auto; }
+
+/* CACERÍA y PAC-MAN VS. en el GAME OVER de recreativa: el ganador en grande (24 sep) */
+#prompt.arcade .go-gana {
+  margin: 2px auto 8px;
+  font-size: clamp(16px, 2.8vh, 24px);
+  letter-spacing: 2px;
+  color: #ffd23f;
+  text-align: center;
+  text-shadow: 0 0 14px currentColor;
+}

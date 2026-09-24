@@ -12309,6 +12309,24 @@
     G.toMenu();
   });
 
+  test('CACERÍA acaba con el GAME OVER de recreativa, diciendo quién ha ganado', function () {
+    var UI = window.PM.UI;
+    try {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, caza: true });
+      G.state = 'GAME_OVER';
+      G.score = 7420;
+      G.runSummary = { puntos: 3000, exp: 3000, lvl: 3, lvlAntes: 3, lvlPide: 1000, lvlEn: 10, logros: [] };
+      UI.showGameOverPrompt();
+      var p = UI.els.prompt;
+      ok(p.classList.contains('arcade'), 'con el final de recreativa');
+      ok(p.textContent.indexOf('FIN DE LA CACERÍA') !== -1, 'titulado como su modo');
+      ok(p.querySelector('.go-gana'), 'con el ganador en grande');
+      ok(p.textContent.indexOf('7.420') !== -1 || p.textContent.indexOf('0') !== -1, 'y los puntos de Pac-Man');
+      ok(p.textContent.indexOf('CACERÍA NO CUENTA PARA EL TOP MUNDIAL') !== -1, 'y el aviso del top');
+    } finally { UI.hidePrompt(); G.runSummary = null; G.toMenu(); }
+  });
+
   test('CACERÍA: los fantasmas que salen mientras dura también quedan marcados', function () {
     var H = window.PM.Hab;
     partida(1); G.hab = true;

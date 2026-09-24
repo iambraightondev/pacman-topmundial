@@ -11700,9 +11700,10 @@
        * de siempre, con su resumen; PAC-MAN VS. y CACERÍA siguen con el
        * panel que dice quién ha ganado. */
       if (g.superv && window.PM.Superv) { this.showSupervFin(); return; }
-      if (!versus && !g.caza && g.runSummary &&
-          !(g.replaying && window.PM.Replay && window.PM.Replay.finPrompt)) {
-        this.showGameOverArcade(duo);
+      /* Desde el 24 sep también CACERÍA y PAC-MAN VS.: tenían el panel
+       * antiguo, con el ganador en una línea de texto */
+      if (g.runSummary && !(g.replaying && window.PM.Replay && window.PM.Replay.finPrompt)) {
+        this.showGameOverArcade(duo, versus || !!g.caza);
         return;
       }
       var lines = versus ? this.versusLines() : this.classicOverLines();
@@ -11790,10 +11791,15 @@
      * El diálogo se rehace a menudo (syncPrompt), así que la animación va
      * solo la primera vez por partida: después sale ya contado.
      * ------------------------------------------------------ */
-    showGameOverArcade: function (duo) {
+    showGameOverArcade: function (duo, deCaza) {
       var self = this;
       var g = window.PM.Game;
       var s = g.runSummary;
+      /* CACERÍA / PAC-MAN VS. (24 sep): lo primero es QUIÉN HA GANADO, y en
+       * vez de tus puntos van los de Pac-Man y los de cada cazador */
+      var V = window.PM.Versus;
+      var caza = !!g.caza;
+      deCaza = !!(deCaza && V);
       var anima = this.goVisto !== s && !this.menosMovimiento();
       this.goVisto = s;
       var mil = function (n) {
@@ -11801,12 +11807,14 @@
       };
 
       /* por qué no entra en el TOP MUNDIAL, si es el caso (lo de siempre) */
-      var avisos = (this.classicOverLines() || []).filter(function (l) {
-        return typeof l === 'string' && /TOP MUNDIAL/.test(l);
-      });
+      var avisos = deCaza
+        ? [(caza ? 'CACERÍA' : 'PAC-MAN VS.') + ' NO CUENTA PARA EL TOP MUNDIAL']
+        : (this.classicOverLines() || []).filter(function (l) {
+            return typeof l === 'string' && /TOP MUNDIAL/.test(l);
+          });
 
       this.showPrompt({
-        title: 'GAME OVER',
+        title: deCaza ? (caza ? 'FIN DE LA CACERÍA' : 'FIN DE LA RONDA') : 'GAME OVER',
         arcade: true,
         solid: true,
         status: g.flash ? g.flash.text : '',
@@ -11827,7 +11835,17 @@
           p.appendChild(muerte);
           self.goMuerte = muerte;
 
-          if (g.playerCount > 1) {
+          if (deCaza) {
+            /* EL GANADOR, en grande y con su color */
+            var gana = V.winner(g), mejor = V.topHunter(g);
+            var ganaEl = document.createElement('div');
+            ganaEl.className = 'go-gana';
+            ganaEl.textContent = gana === 'ghost'
+              ? ('¡GANA ' + (mejor ? mejor.name : V.ghostName(g)) + '!')
+              : (caza ? '¡GANA LA MÁQUINA!' : '¡GANAN LOS PAC-MAN!');
+            if (gana === 'ghost' && mejor && g.colorFor) ganaEl.style.color = g.colorFor(mejor.idx);
+            p.appendChild(ganaEl);
+          } else if (g.playerCount > 1) {
             var eq = [];
             for (var q = 0; q < g.playerCount; q++) eq.push(g.nameFor(q));
             var equipo = document.createElement('div');
@@ -11843,7 +11861,7 @@
            * que pulsarla, casi nadie la vería. Pulsar cualquiera de las dos
            * corta el cambio automático y manda la mano. */
           var vistas = null;
-          if (g.playerCount > 1) {
+          if (g.playerCount > 1 && !deCaza) {
             vistas = document.createElement('div');
             vistas.className = 'go-vistas';
             p.appendChild(vistas);
@@ -11878,11 +11896,28 @@
             return v;
           };
 
-          var pts = fila('grande', 'PUNTOS', anima ? '0' : mil(s.puntos));
-          fila('', 'RÉCORD · NIVEL', mil(g.highScore) + ' · ' + (s.nivel || g.level));
-          if (g.lvl1Cs > 0 && window.PM.Ranking) {
-            fila('', 'NIVEL 1 EN', window.PM.Ranking.fmtTime(g.lvl1Cs), '',
-              g.canTimeRecord() ? '' : 'NO CUENTA PARA EL TOP MUNDIAL');
+          var objetivo = deCaza ? (g.score || 0) : s.puntos;
+          var pts;
+          if (deCaza) {
+            pts = fila('grande', caza ? 'PAC-MAN (LA MÁQUINA)' : 'PAC-MAN', anima ? '0' : mil(objetivo));
+            V.hunters(g).forEach(function (c) {
+              var vc = fila('', c.name, mil(c.score), g.colorFor ? g.colorFor(c.idx) : '',
+                c.catches === 1 ? '1 PAC-MAN CAZADO' : (c.catches + ' PAC-MAN CAZADOS'));
+              return vc;
+            });
+            if (caza) {
+              var rondas = Math.min(window.PM.Caza.ronda(g) + (g.dotsLeft <= 0 ? 1 : 0), CFG.CAZA.NIVELES);
+              fila('', 'RONDAS DE PAC-MAN', rondas + ' DE ' + CFG.CAZA.NIVELES, '', 'LAS QUE DESPEJÓ LA MÁQUINA');
+            } else {
+              fila('', 'NIVEL', String(g.level));
+            }
+          } else {
+            pts = fila('grande', 'PUNTOS', anima ? '0' : mil(s.puntos));
+            fila('', 'RÉCORD · NIVEL', mil(g.highScore) + ' · ' + (s.nivel || g.level));
+            if (g.lvl1Cs > 0 && window.PM.Ranking) {
+              fila('', 'NIVEL 1 EN', window.PM.Ranking.fmtTime(g.lvl1Cs), '',
+                g.canTimeRecord() ? '' : 'NO CUENTA PARA EL TOP MUNDIAL');
+            }
           }
           var subio = s.lvl > s.lvlAntes;
           fila(subio ? 'sube' : '', 'EXPERIENCIA', '+' + mil(s.exp), '#00ffff',
@@ -11996,7 +12031,7 @@
             filas.forEach(function (f, i) {
               setTimeout(function () {
                 f.classList.add('on');
-                if (i === 0) self.contarGo(pts, s.puntos, 1300);
+                if (i === 0) self.contarGo(pts, objetivo, 1300);
               }, t0 + (i === 0 ? 0 : 1500 + (i - 1) * 550));
             });
             var tl = t0 + 1500 + filas.length * 550;
@@ -12006,7 +12041,7 @@
             /* pulsar en cualquier sitio lo acaba de golpe */
             p.addEventListener('pointerdown', function () {
               todo.forEach(function (f) { f.classList.add('on'); });
-              pts.textContent = mil(s.puntos);
+              pts.textContent = mil(objetivo);
               self.goContando = false;
             }, { once: true });
           }

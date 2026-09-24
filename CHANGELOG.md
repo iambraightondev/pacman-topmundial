@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · CACERÍA y PAC-MAN VS. con el GAME OVER de recreativa
+
+Tenían el panel antiguo, con el ganador en una línea de texto. Ahora acaban
+como el resto: el ganador en grande y en su color, los puntos de Pac-Man con
+su recuento, cada cazador con sus puntos y sus cazas, las rondas, la
+experiencia, las monedas, la maestría y los logros como sellos.
+
 ## 2026-09-24 · El pase se desliza entero, y el DAILY sin depender de nadie
 
 **EL PASE:** al deslizar un carril, el otro le sigue deslizándose en vez de

@@ -2129,9 +2129,10 @@
       this.submitRanking();     // partidas de dúo van al top mundial
       /* El GAME OVER de recreativa sale YA, sin volver al laberinto: los
        * logros van dentro como sellos y la subida de nivel en su renglón.
-       * Solo PAC-MAN VS. y CACERÍA, que siguen con el panel de antes, esperan
-       * a que acaben las celebraciones sobre el laberinto. */
-      var arcade = !this.caza && !this.superv && !(this.isVersus && this.isVersus()) && !!this.runSummary;
+       * Desde el 24 sep también PAC-MAN VS. y CACERÍA; solo la
+       * SUPERVIVENCIA, con su propio final, espera a que acaben las
+       * celebraciones sobre el laberinto. */
+      var arcade = !this.superv && !!this.runSummary;
       this.overWait = arcade ? false : this.celebrating();
       this.syncUI();
     },
