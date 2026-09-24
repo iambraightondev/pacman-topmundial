@@ -12942,6 +12942,32 @@
     }
   });
 
+  test('CLASIFICATORIA: la entrada dice tu rango y lo que te juegas', function () {
+    var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
+    var est0 = Rg.estado;
+    Rg.estado = function () {
+      return Rg.estadoDe({ [Rg.clave('rc', 'x')]: 9, [Rg.clave('rt', 'x')]: 5 * 25000,
+                           [Rg.clave('rg', 'x')]: 50 }, 'x');
+    };
+    try {
+      UI.showClasifPrompt();
+      var p = UI.els.prompt;
+      ok(p.classList.contains('clasif-entrada'), 'con su propio aspecto');
+      eq(p.querySelector('.cle-nombre').textContent, 'FRESA II', 'tu escalón en grande');
+      eq(p.querySelectorAll('.cle-ficha').length, 3, 'marca, nivel y PR en juego');
+      ok(p.querySelector('.cle-apuesta').textContent.indexOf(UI.milesMaes(Rg.parTramo(Rg.estado().tramo, 1))) !== -1,
+         'con la marca de tu escalón');
+      ok(p.querySelector('.cle-apuesta').textContent.indexOf('+' + D[1].gana + ' / -' + D[1].pierde) !== -1,
+         'y lo que se gana o se pierde');
+      ok(p.querySelector('.cle-aviso'), 'y el aviso de que salir cuenta');
+      UI.showPrompt({ title: 'OTRA', buttons: [] });
+      ok(!p.classList.contains('clasif-entrada'), 'el siguiente diálogo no hereda su aspecto');
+    } finally {
+      Rg.estado = est0;
+      UI.hidePrompt();
+    }
+  });
+
   test('RANGO: la insignia abre la escalera entera, con tu división marcada', function () {
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
     var est0 = Rg.estado, t0 = UI.rangoTabla;

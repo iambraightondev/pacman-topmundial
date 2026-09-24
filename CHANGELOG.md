@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · La entrada a la CLASIFICATORIA, a la altura
+
+**TE JUEGAS ALGO.** Antes parecía la pausa. Ahora abre con la temporada, tu
+fruta en grande con su aro girando, tu escalón, tus PR y lo que te falta;
+debajo, LO QUE TE JUEGAS (la marca a superar, el nivel mínimo y cuántos PR
+puedes ganar o perder) y una franja que avisa de que salir cuenta. Además,
+en la fila de abajo de la partida las vidas y las frutas ya no tapan el reloj.
+
 ## 2026-09-24 · Tu aspecto en la ficha, y los puntos de cada uno
 
 **EL RETRATO ERES TÚ.** La ficha de poderes ya no lleva el emblema del rol:

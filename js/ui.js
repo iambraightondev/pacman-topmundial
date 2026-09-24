@@ -11040,6 +11040,11 @@
       p.classList.toggle('popup', !!o.popup);
       p.classList.toggle('solid', !!o.solid);
       p.classList.toggle('arcade', !!o.arcade);
+      /* o.clase: una clase propia para el diálogo (la entrada de la
+       * CLASIFICATORIA, por ejemplo); la del anterior se quita */
+      if (this.promptClase) p.classList.remove(this.promptClase);
+      this.promptClase = o.clase || null;
+      if (o.clase) p.classList.add(o.clase);
       /* Marco de recreativa (el del GAME OVER): bombillas, título a rayas y
        * fondo con líneas de tubo. o.tono le da el color: rojo (el final),
        * amarillo (pausa, revancha), naranja (rendirse), cian (revivir). */
@@ -13411,15 +13416,120 @@
      * refreshParty); si estás en la de otro, manda el líder. */
     showClasifPrompt: function () {
       var self = this;
+      var Rg = window.PM.Rango, S = window.PM.Season, B = window.PM.Badges;
+      var RG = CFG.RANGO, D = RG.DIVISIONES;
+      var e = Rg ? Rg.estado() : { jugadas: 0, colocacion: 0, pr: null, division: -1 };
+      var cuenta = !!(Rg && Rg.conCuenta());
+      var div = e.division >= 0 ? D[e.division] : null;
+      var color = div ? div.color : '#ffd23f';
+      function el(tag, cls, txt) {
+        var x = document.createElement(tag);
+        if (cls) x.className = cls;
+        if (txt != null) x.textContent = txt;
+        return x;
+      }
       this.showPrompt({
         title: 'CLASIFICATORIA',
         arcade: true,
         tono: 'amarillo',
-        lines: [self.textoRangoSolo(), '¿CÓMO LA QUIERES JUGAR?'],
+        clase: 'clasif-entrada',
+        /* LA ENTRADA A UNA CLASIFICATORIA (24 sep): antes eran dos líneas de
+         * texto y parecía la pausa. Ahora dice lo que te juegas: tu fruta, tu
+         * escalón, la marca, el nivel, cuánto se gana o se pierde, y que
+         * salir cuenta. */
+        custom: function (p) {
+          p.style.setProperty('--cle', color);
+          p.appendChild(el('div', 'cle-temporada',
+            'TEMPORADA ' + (S ? S.nombre(e.temporada || Rg.temporada()) : '') + ' · TU RANGO EN JUEGO'));
+
+          var heroe = el('div', 'cle-heroe');
+          var cv = document.createElement('canvas');
+          cv.width = 240; cv.height = 240;
+          cv.className = 'cle-fruta';
+          heroe.appendChild(cv);
+          var info = el('div', 'cle-info');
+          info.appendChild(el('div', 'cle-k', div ? 'TU RANGO' : 'AÚN SIN RANGO'));
+          info.appendChild(el('div', 'cle-nombre', div ? e.nombre
+            : (e.jugadas ? ('COLOCACIÓN ' + e.colocacion + '/' + RG.COLOCACION) : 'POR COLOCAR')));
+          info.appendChild(el('div', 'cle-pr', div ? (self.milesMaes(e.pr) + ' PR')
+            : ('TE COLOCAMOS TRAS ' + RG.COLOCACION + ' PARTIDAS')));
+          var barra = el('div', 'cle-barra');
+          var relleno = el('i');
+          relleno.style.width = ((div ? (e.anchoTramo ? e.enTramo / e.anchoTramo : 1)
+            : (e.colocacion / RG.COLOCACION)) * 100).toFixed(1) + '%';
+          barra.appendChild(relleno);
+          info.appendChild(barra);
+          info.appendChild(el('div', 'cle-sig', div
+            ? (e.anchoTramo ? ('TE FALTAN ' + e.faltan + ' PR PARA ' + e.siguiente) : 'ESTÁS EN LA CIMA')
+            : 'LA COLOCACIÓN TE DEJA COMO MUCHO EN ' + Rg.TRAMOS[RG.TOPE_COLOCACION].nombre));
+          heroe.appendChild(info);
+          p.appendChild(heroe);
+
+          /* lo que te juegas en esta partida */
+          p.appendChild(el('div', 'cle-titulo', 'LO QUE TE JUEGAS'));
+          var apuesta = el('div', 'cle-apuesta');
+          var datos = div ? [
+            [self.milesMaes(Rg.parTramo(e.tramo, 1)), 'MARCA A SUPERAR', 'A SOLO'],
+            [(div.nivel || 1) > 1 ? ('NIVEL ' + div.nivel) : 'NINGUNO', 'NIVEL MÍNIMO', 'PARA GANAR PR'],
+            ['+' + div.gana + ' / -' + div.pierde, 'PR EN JUEGO', 'COMO MÁXIMO']
+          ] : [
+            [String(RG.COLOCACION - e.colocacion), 'PARTIDAS', 'DE COLOCACIÓN'],
+            ['TU MEDIA', 'DECIDE', 'DÓNDE EMPIEZAS'],
+            [Rg.TRAMOS[RG.TOPE_COLOCACION].nombre, 'COMO MÁXIMO', 'EL RESTO, JUGANDO']
+          ];
+          datos.forEach(function (d) {
+            var f = el('div', 'cle-ficha');
+            f.appendChild(el('b', null, d[0]));
+            f.appendChild(el('span', null, d[1]));
+            f.appendChild(el('small', null, d[2]));
+            apuesta.appendChild(f);
+          });
+          p.appendChild(apuesta);
+          p.appendChild(el('div', 'cle-aviso', cuenta
+            ? 'SALIR CUENTA COMO PARTIDA JUGADA · NO SE PUEDE GUARDAR A MEDIAS'
+            : 'SIN CUENTA NO HAY RANGO: ENTRA EN TU CUENTA PARA QUE CUENTE'));
+          if (self.textoMultRango) p.appendChild(el('div', 'cle-mult', self.textoMultRango()));
+
+          /* la fruta flotando con su aro girando, mientras esté en pantalla */
+          var Sp = window.PM.Sprites, raf = window.requestAnimationFrame, t0 = Date.now();
+          var quieto = self.menosMovimiento && self.menosMovimiento();
+          function pinta() {
+            var c = cv.getContext && cv.getContext('2d');
+            if (!c || !Sp || !Sp.drawFruit) return;
+            var t = (Date.now() - t0) / 1000, W = cv.width, H = cv.height;
+            c.setTransform(1, 0, 0, 1, 0, 0);
+            c.clearRect(0, 0, W, H);
+            c.save();
+            c.translate(W / 2, H / 2);
+            c.strokeStyle = color;
+            c.globalAlpha = 0.6;
+            c.lineWidth = 5;
+            c.beginPath(); c.arc(0, 0, 100, 0, Math.PI * 2); c.stroke();
+            c.globalAlpha = 0.4;
+            c.lineWidth = 2;
+            c.setLineDash([12, 14]);
+            c.rotate(quieto ? 0 : t * 0.5);
+            c.beginPath(); c.arc(0, 0, 114, 0, Math.PI * 2); c.stroke();
+            c.restore();
+            c.save();
+            c.imageSmoothingEnabled = false;
+            c.translate(W / 2, H / 2 + (quieto ? 0 : Math.sin(t * 1.8) * 5));
+            c.scale(9, 9);
+            Sp.drawFruit(c, 0, 0, div ? div.fruta : 0);
+            if (!div) {
+              c.globalCompositeOperation = 'source-atop';
+              c.fillStyle = 'rgba(40, 40, 70, 0.85)';
+              c.fillRect(-10, -10, 20, 20);
+            }
+            c.restore();
+            if (raf && !quieto && document.body.contains(cv)) raf(pinta);
+          }
+          pinta();
+        },
         buttons: [
           { label: 'SOLO O DOS JUGADORES', primary: true, keys: ['Enter', '1'], hint: 'ENTER',
             onClick: function () { self.showHabPrompt(true); } },
-          { label: 'EN PARTY', keys: ['p'], hint: 'P',
+          { label: 'EN PARTY', keys: ['p'], hint: 'P · INVITA A TU EQUIPO',
             onClick: function () { self.clasifEnParty(); } },
           { label: 'VOLVER', keys: ['Escape'], hint: 'ESC',
             onClick: function () { self.hidePrompt(); } }
