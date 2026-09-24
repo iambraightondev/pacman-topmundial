@@ -11464,7 +11464,13 @@
 
     H.frenesi(G, 0); eq(H.st[0].frenesi, 10 * 60, 'Frenesí dura 10 segundos');
     for (var n = 0; n < 5; n++) H.alMatar(G, 0, null, p.x, p.y);
-    ok(H.st[0].frenesiMult > 1.6, 'Frenesí no tiene tope');
+    ok(H.st[0].frenesiMult > 1.6, 'cada baja acelera');
+    for (n = 0; n < 10; n++) H.alMatar(G, 0, null, p.x, p.y);
+    eq(H.st[0].frenesiMult, CFG.HAB.FRENESI_MAX, 'pero con tope en x2 (24 sep)');
+    var quedaba = H.st[0].frenesi;
+    H.alMatar(G, 0, null, p.x, p.y);
+    eq(H.st[0].frenesi, quedaba + CFG.HAB.FRENESI_ALARGA, 'y ya a tope, cada baja alarga el frenesí 2 s');
+    eq(H.st[0].frenesiMult, CFG.HAB.FRENESI_MAX, 'sin pasar de x2');
 
     for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
     ok(H.ganchoInverso(G, 0), 'el gancho sale sin blanco');
@@ -12069,6 +12075,8 @@
       eq(H.st[1].cd[3], 450, 'un aviso nunca le sube la recarga');
       H.recibeDado(G, { t: 'habDar', w: 1, c: 'frenesiMult', v: 1.3 });
       eq(H.st[1].frenesiMult, 1.3, 'el FRENESÍ le acelera');
+      H.recibeDado(G, { t: 'habDar', w: 1, c: 'frenesi', v: 700 });
+      eq(H.st[1].frenesi, 700, 'y a tope, el tiempo que le alargan sus bajas (24 sep)');
       H.st[0].escudo = 0;
       H.recibeDado(G, { t: 'habDar', w: 0, c: 'escudo', v: 99 });
       eq(H.st[0].escudo, 0, 'lo de otro jugador no lo toma del aviso (va en la foto)');

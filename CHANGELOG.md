@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-24 · FRENESÍ con tope: x2 y luego más tiempo
+
+**YA NO ACELERA SIN LÍMITE.** Cada baja durante el FRENESÍ sigue sumando +0,15
+de velocidad, pero solo hasta x2. Ya a tope, cada baja alarga el FRENESÍ 2
+segundos (sale "+2 S" donde cae el fantasma y el botón cuenta el tiempo nuevo).
+
 ## 2026-09-24 · Maestrías repartidas como se jugaron
 
 **LO DE ANTES, A SU ROL.** Las partidas jugadas antes de que existieran las

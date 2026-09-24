@@ -2212,6 +2212,10 @@
      * siempre. */
     FRENESI_TICKS: 10 * 60,
     FRENESI_PASO: 0.15,
+    /* 24 sep: la velocidad tiene tope (x2) y, ya a tope, cada baja alarga el
+     * FRENESÍ 2 s en vez de seguir acelerando */
+    FRENESI_MAX: 2,
+    FRENESI_ALARGA: 2 * 60,
     CARROÑA_TICKS: 6 * 60,
     CARROÑA_JOYA: 3 * 60,
     /* EL BOTÍN SALE DESPEDIDO (22 sep 2026). La moneda nacía en la casilla
@@ -2453,7 +2457,7 @@
          h('bomba', 'Q', 'BOMBA', 24, 'Coloca y detona una bomba.')],
         [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 5 s.'),
          h('sombra', 'W', 'SOMBRA', 26, '4 s invisible y veloz; bajas de 500/750.'),
-         h('frenesi', 'W', 'FRENESÍ', 32, '10 s; cada baja suma velocidad sin límite.'),
+         h('frenesi', 'W', 'FRENESÍ', 32, '10 s; cada baja suma velocidad hasta x2 y, a tope, alarga 2 s.'),
          h('carrona', 'W', 'CARROÑA', 24, 'Al matar saltan monedas; las coge cualquiera.')],
         [h('flash', 'E', 'FLASH', 32, 'Salta tres casillas atravesando muros.'),
          h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar doble.'),
@@ -2528,7 +2532,7 @@
       bomba: "1ª PULSACIÓN: PLANTAS LA BOMBA EN TU CASILLA, SIN LÍMITE DE TIEMPO · 2ª: ESTALLA A 2 CASILLAS A LA REDONDA, 150 POR FANTASMA · AL REY LE QUITA 3 DE VIDA",
       turbo: "CORRES A X1,5 DURANTE 5 S · PARA ESCAPAR DE UNA ENCERRONA O LLEGAR A TIEMPO A LA SUPERPASTILLA",
       sombra: "4 S CASI INVISIBLE Y A X1,2 · NI LOS FANTASMAS NI EL REY TE PERSIGUEN · CADA BAJA VALE MÍNIMO 500, O 750 SI LO PILLAS POR LA ESPALDA",
-      frenesi: "10 S DE CAZA: CADA FANTASMA QUE MATES, CON LO QUE SEA, TE SUMA +0,15 DE VELOCIDAD, SIN LÍMITE",
+      frenesi: "10 S DE CAZA: CADA FANTASMA QUE MATES, CON LO QUE SEA, TE SUMA +0,15 DE VELOCIDAD HASTA X2 · YA A TOPE, CADA BAJA ALARGA EL FRENESÍ 2 S",
       carrona: "6 S: CADA FANTASMA QUE MATES SUELTA UNA MONEDA DE 300 QUE SALTA HASTA 2 CASILLAS · DURA 3 S EN EL SUELO Y LA COGE CUALQUIER JUGADOR",
       flash: "SALTAS HASTA 3 CASILLAS HACIA TU ÚLTIMA FLECHA ATRAVESANDO MUROS · TE COMES LO QUE HAYA EN EL CAMINO · SIN SUELO DONDE CAER NO SALE",
       marca: "MARCAS AL FANTASMA MÁS CERCANO A 8 CASILLAS DURANTE 8 S · SI LO MATAS TÚ VALE EL DOBLE, TAMBIÉN CON SHURIKEN O BOMBA",

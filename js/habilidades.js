@@ -1798,10 +1798,18 @@
       if (!s) return;
       x = (x == null && g) ? g.x : x; y = (y == null && g) ? g.y : y;
       if (s.frenesi > 0) {
-        s.frenesiMult = (s.frenesiMult || 1) + H.FRENESI_PASO;
-        this.dar(G, who, 'frenesiMult', s.frenesiMult);
         this.efecto('frenesi', x, y, 26);
-        if (G.addPopup) G.addPopup(x, y - 7, '×' + s.frenesiMult.toFixed(2), 35);
+        if ((s.frenesiMult || 1) < H.FRENESI_MAX - 1e-6) {
+          /* cada baja acelera, hasta el tope */
+          s.frenesiMult = Math.min(H.FRENESI_MAX, (s.frenesiMult || 1) + H.FRENESI_PASO);
+          this.dar(G, who, 'frenesiMult', s.frenesiMult);
+          if (G.addPopup) G.addPopup(x, y - 7, 'X' + s.frenesiMult.toFixed(2), 35);
+        } else {
+          /* ya a tope: cada baja ALARGA el frenesí (24 sep) */
+          s.frenesi += H.FRENESI_ALARGA;
+          this.dar(G, who, 'frenesi', s.frenesi);
+          if (G.addPopup) G.addPopup(x, y - 7, '+' + (H.FRENESI_ALARGA / 60) + ' S', 35);
+        }
       }
       if (g && this.caceriaQuien[g.id] >= 0) this.caceriaQuien[g.id] = -1;
       if (s.carrona > 0) this.soltarBotin(G, who, x, y);
@@ -2252,7 +2260,8 @@
         case 'cd':
           if (k >= 0 && k < s.cd.length) s.cd[k] = Math.min(s.cd[k], Math.max(0, v | 0));
           break;
-        case 'frenesiMult': if (+v > 0) s.frenesiMult = +v; break;
+        case 'frenesiMult': if (+v > 0) s.frenesiMult = Math.min(H.FRENESI_MAX || 99, +v); break;
+        case 'frenesi': if (+v > 0) s.frenesi = +v; break;
         case 'cadena': s.cadena = 0; s.cadenaCon = -1; break;
         case 'hospital': s.hospital = 0; break;
         case 'rebote': s.rebote = 0; break;
@@ -5948,7 +5957,7 @@
       var s = this.estado(i);
       if (!s || !(s.frenesi > 0)) return;
       var x = pc.x, y = pc.y + CFG.MAZE_Y, tk = G.tick;
-      var furia = Math.min(1, ((s.frenesiMult || 1) - 1) / 1.5);   // 0 al empezar, 1 muy arriba
+      var furia = Math.min(1, ((s.frenesiMult || 1) - 1) / ((H.FRENESI_MAX || 2) - 1));   // 0 al empezar, 1 a tope
       var late = Math.sin(tk / 5) * 1.2;
       ctx.save();
       var rad = 12 + furia * 4 + late;
