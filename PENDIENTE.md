@@ -7,11 +7,69 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **23 de septiembre de 2026**.
+Última puesta al día: **24 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### DONDE SE DEJÓ (24 sep): RANGO ÚNICO, TARJETAS DE PODER, MAGO EN RACHA
+
+Todo subido (último commit a09f272, service worker pm-v268). Detalle de cada
+cosa en CHANGELOG. Pruebas: tests.html 589/589; Node 1 fallo (el de siempre).
+
+**Hecho hoy, en grande:**
+- **RANGO**: escalones por fruta (IV…I; desde MANZANA, III…I), colocación
+  estricta (un escalón por debajo, tope FRESA IV), **un solo rango** para solo y
+  party (en party la marca se multiplica x1,25/1,5/1,75), claves versión 4
+  (`rc4_/rt4_/rg4_/rl4_/rm4_<temporada>`). Salir SIEMPRE cuenta (también
+  descartar una clasificatoria guardada). Contador de PR en vivo en la partida
+  (verde/gris/rojo) y el nivel en pantalla. Monedas la primera vez en cada fruta
+  (FRESA 500 … LLAVE 10.000). Escalera completa desde la insignia, con "?" en
+  recuadro flotante. Nadie bajó por los cambios de estructura (decisión de
+  Braighton: "no tenías por qué bajarnos").
+- **CELEBRACIONES que siempre se ven** (js/celebrar.js): SUBES DE NIVEL, SUBES
+  DE DIVISIÓN, NUEVO RANGO, YA TIENES RANGO. Se apuntan en el aparato al pasar y
+  se borran solo al enseñarse, aunque se cierre el juego.
+- **Tarjetas de poder estilo LoL** (propias y de compañeros, mismo tamaño), con
+  la skin y el accesorio del jugador; cada poder enseña su tiempo activo y luego
+  la recarga. Cabecera de party con los puntos de cada uno.
+- **ASESINO rebalanceado** (bomba en racha 250…2.000, Sombra intangible,
+  Carroña de 500, Marca x3, Frenesí tope x1,75 que se alarga con bajas, misil
+  x2,75, Cacería 6 al rey). El rey ya respeta el azul mientras carga.
+- **MAGO en racha**: sus bajas por habilidad entran en la cadena normal
+  (200…1.600) en vez de 200 fijos.
+- **MAESTRÍAS**: S del Asesino 12/min, Mago 8, Tanque 5, Soporte 6 en equipo y
+  4 a solas (sin rescates). Lo jugado se recalificó reproduciendo cada
+  repetición hasta cuadrar puntos: IAMBRAIGHTON −13 S (baja a LEYENDA de
+  Asesino), MAULIO +3 S, ESTER +14 S. Todo en CFG.AJUSTES_CUENTA
+  ([puntos, partidas, S]).
+- **Amigos**: EN LÍNEA / JUGANDO / EN PARTY / DESCONECTADO en vivo (presencia de
+  Supabase Realtime, canal pm-conectados, js/conectados.js).
+- **Otros**: recargar vuelve a la pantalla donde estabas; el pase se desliza
+  como una sola pieza; dailies que no piden a otra persona; GAME OVER de
+  recreativa en CACERÍA y PAC-MAN VS.; entrada de CLASIFICATORIA nueva; top
+  mundial corregido (FREDDY, 180.550 solo en DESATADO); "modo práctica" fuera.
+- **Pruebas**: tests.html deja el almacén como estaba (antes subía
+  repeticiones falsas a producción al abrir el juego después); el DOM de
+  mentira de Node entiende selectores compuestos y el texto de los hijos.
+
+**POR HACER (lo siguiente):**
+1. **Título cortado en ¡SUBES DE DIVISIÓN!**: en pantalla ancha sale
+   "¡SUBES DE DIVISI". El título va en una línea (`lvl-titulo`, letra
+   `min(4.6vw, 8vh, 72px)`) y con 19 letras no cabe. Encoger la letra según
+   lo largo del título (o medirlo y ajustarlo al ancho), y mirar también ¡YA
+   TIENES RANGO! y ¡SUBES DE NIVEL! en móvil.
+2. **Premios de fin de temporada del rango, antes del 1 oct** (aprobados, ver
+   abajo): fruta junto al nombre el mes siguiente, recuerdo en el perfil,
+   accesorio (MANZANA+), rastro dorado (CAMPANA+), skin LLAVE DORADA.
+3. **Vigilar al Mago en racha**: si deja de comer energizantes para cobrar
+   1.600 por baja, que la racha caduque a los pocos segundos sin matar.
+4. **~100 repeticiones de prueba viejas** ("PRUEBA", 17–19 sep, sin dueño) en
+   las públicas: preguntar a Braighton si se borran (no respondió).
+5. Quitar el CSS obsoleto `.ps-sigue` del pase (no molesta).
+6. Los números del rango y de las notas se ajustan jugando; con más partidas
+   de Tanque, Soporte y Mago, revisar sus listones.
 
 ### DONDE SE DEJÓ (23 sep, tarde): CLASIFICATORIA, ARMARIO, TROFEOS POR ROL
 
