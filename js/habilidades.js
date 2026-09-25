@@ -147,6 +147,7 @@
       ganchoInv: 0,
       ganchoOut: 0,         // GANCHO del Soporte: garfio en el aire
       shuriken: null,       // { id, usados, resueltos, aciertos }
+      shurikenRecargas: 0,  // plenos SEGUIDOS que ya recargaron (tope: SHURIKEN_RECARGAS)
       misil: null,          // proyectil en cadena del Asesino
       caceria: 0,
       estela: 0,
@@ -3888,6 +3889,7 @@
       var s = this.estado(idx);
       if (!s || !s.shuriken) return;
       this.dar(G, idx, 'shuriken');
+      s.shurikenRecargas = 0;         // se come la recarga: la cuenta vuelve a empezar
       var k = this.kDe(G, idx, 'shuriken');
       if (k >= 0) this.gastar(G, idx, k);
       var p = G.pacs[idx];
@@ -3904,11 +3906,19 @@
       if (acerto) s.shuriken.aciertos++;
       if (s.shuriken.usados === H.SHURIKEN_CANT &&
           s.shuriken.resueltos === H.SHURIKEN_CANT) {
-        if (s.shuriken.aciertos === H.SHURIKEN_CANT) {
+        var p = G.pacs[b.w], pleno = (s.shuriken.aciertos === H.SHURIKEN_CANT);
+        if (pleno && (s.shurikenRecargas || 0) < H.SHURIKEN_RECARGAS) {
+          s.shurikenRecargas = (s.shurikenRecargas || 0) + 1;
           var k = this.kDe(G, b.w, 'shuriken');
           if (k >= 0) this.dar(G, b.w, 'cd', 0, k);
-          var p = G.pacs[b.w];
-          if (p) { G.addPopup(p.x, p.y - 8, 'RECARGADO', 45); this.efecto('shuriken_recarga', p.x, p.y, 28); }
+          if (p) {
+            G.addPopup(p.x, p.y - 8, 'RECARGADO ' + s.shurikenRecargas + '/' + H.SHURIKEN_RECARGAS, 45);
+            this.efecto('shuriken_recarga', p.x, p.y, 28);
+          }
+        } else {
+          /* sin pleno, o con el tope ya gastado: se come la recarga */
+          if (pleno && p) G.addPopup(p.x, p.y - 8, 'PLENO · SIN RECARGA', 45);
+          s.shurikenRecargas = 0;
         }
         /* la ráfaga la resuelve el anfitrión: el dueño la cierra con este
          * aviso (en su máquina no hay impactos que contar) */
@@ -4794,6 +4804,7 @@
       if (s.shuriken && G) {
         var ks = this.kDe(G, idx, 'shuriken');
         if (ks >= 0 && !(s.cd[ks] > 0)) this.gastar(G, idx, ks);
+        s.shurikenRecargas = 0;
       }
       s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;

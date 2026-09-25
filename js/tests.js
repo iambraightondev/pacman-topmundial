@@ -11592,6 +11592,33 @@
     eq(H.st[0].cd[0], 24 * 60, 'un fallo conserva los 24 segundos');
   });
 
+  test('CATÁLOGO: el pleno del Shuriken recarga como mucho tres veces seguidas', function () {
+    var H = window.PM.Hab, TOPE = CFG.HAB.SHURIKEN_RECARGAS;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['asesino'], ['shuriken,turbo,flash,grito']); G.roles = ['asesino'];
+    var p = G.pacs[0];
+    function pleno() {
+      p.x = 8 * CFG.TILE + 4; p.y = CFG.TUNNEL_ROW * CFG.TILE + 4; p.nextDir = CFG.DIR.RIGHT;
+      for (var n = 0; n < 3; n++) {
+        var g = G.ghosts[n]; g.mode = 'normal'; g.frightened = false; g.x = p.x + CFG.TILE; g.y = p.y;
+      }
+      for (n = 0; n < 3; n++) {
+        ok(H.lanzar(G, 0, 0), 'sale la carga ' + (n + 1));
+        for (var t = 0; t < 60 && H.proyectilesCat.length; t++) H.pasoProyectilesCat(G, true);
+      }
+    }
+    eq(TOPE, 3, 'el tope es 3');
+    for (var i = 1; i <= TOPE; i++) {
+      pleno();
+      eq(H.st[0].cd[0], 0, 'el pleno ' + i + ' recarga');
+    }
+    pleno();
+    eq(H.st[0].cd[0], 24 * 60, 'el cuarto seguido se come la recarga');
+    H.st[0].cd[0] = 0;                 // pasa la recarga
+    pleno();
+    eq(H.st[0].cd[0], 0, 'y tras comérsela, la cuenta vuelve a empezar');
+  });
+
   test('CATÁLOGO: la ráfaga de Shuriken caduca a los tres segundos', function () {
     var H = window.PM.Hab, V = CFG.HAB.SHURIKEN_VENTANA;
     partida(1);

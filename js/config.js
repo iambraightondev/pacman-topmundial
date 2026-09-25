@@ -2242,6 +2242,11 @@
     SHURIKEN_TILES: 10,
     SHURIKEN_VEL: 4,
     SHURIKEN_PUNTOS: 200,
+    /* El pleno (las tres dentro) recarga la Q, pero como mucho estas veces
+     * SEGUIDAS (25 sep 2026): a la siguiente, aunque vuelvan a entrar las
+     * tres, se come la recarga entera y la cuenta vuelve a empezar. Sin tope,
+     * con los fantasmas en fila se tiraba sin parar. */
+    SHURIKEN_RECARGAS: 3,
     /* La ráfaga tiene prisa (21 sep 2026): desde cada disparo hay esta
      * ventana para tirar el siguiente. Si se pasa, la ráfaga se cierra con
      * las cargas que queden y la recarga empieza ahí mismo. Sin esto las
@@ -2585,7 +2590,7 @@
      * queda para donde no cabe más. */
     CFG.HAB.DETALLE = {
       mordisco: "TE COMES AL FANTASMA QUE TENGAS A 2 CASILLAS · SI FALLAS NO SE GASTA Y QUEDA ARMADA 0,3 S · AL REY LE QUITA 3 DE VIDA Y LO ATURDE 2 S · RECARGA 18 S",
-      shuriken: "3 ESTRELLAS RECTAS HACIA TU ÚLTIMA FLECHA, HASTA 10 CASILLAS · 3 S ENTRE TIROS · 200 POR BAJA · ACIERTA LAS 3 Y SE RECARGA SOLA · AL REY, 1 DE VIDA CADA UNA",
+      shuriken: "3 ESTRELLAS RECTAS HACIA TU ÚLTIMA FLECHA, HASTA 10 CASILLAS · 3 S ENTRE TIROS · 200 POR BAJA · ACIERTA LAS 3 Y SE RECARGA SOLA, HASTA 3 VECES SEGUIDAS · AL REY, 1 DE VIDA CADA UNA",
       bomba: "1ª PULSACIÓN: PLANTAS LA BOMBA EN TU CASILLA, SIN LÍMITE DE TIEMPO · 2ª: ESTALLA A 2 CASILLAS A LA REDONDA · LAS BAJAS VAN EN RACHA: 250, 500, 1.000 Y 2.000 · AL REY LE QUITA 4 DE VIDA · RECARGA 12 S",
       turbo: "CORRES A X1,5 DURANTE 8 S · PARA ESCAPAR DE UNA ENCERRONA O LLEGAR A TIEMPO A LA SUPERPASTILLA",
       sombra: "4 S CASI INVISIBLE, INTANGIBLE Y A X1,2 · NI LOS FANTASMAS NI EL REY TE PERSIGUEN NI TE PUEDEN MATAR · CADA BAJA VALE MÍNIMO 1.000, O 2.000 SI LO PILLAS POR LA ESPALDA",
