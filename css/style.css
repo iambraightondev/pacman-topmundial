@@ -6956,9 +6956,6 @@ body { font-size-adjust: 0.56; }
 .btn.arm-rol.ocupado { opacity: 0.25; filter: grayscale(0.7); cursor: not-allowed; }
 .arm-rol-nombre { font-size: 10px; letter-spacing: 2px; }
 .arm-rol-quien { font-size: 7px; color: #cfd6f2; min-height: 7px; letter-spacing: 0.5px; }
-.arm-rolinfo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 8px; letter-spacing: 0.5px; line-height: 1.6; padding: 0 2px; }
-.arm-ri-lema { color: var(--rol); }
-.arm-ri-mae { color: #ffe23a; }
 
 /* tus cuatro teclas */
 .arm-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -7067,7 +7064,6 @@ body { font-size-adjust: 0.56; }
 #online .arm-rol-nombre { font-size: 8px; letter-spacing: 1px; }
 #online .arm-slot-nombre { font-size: 7px; }
 #online .btn.arm-op { width: 78px; }
-#online .arm-rolinfo { font-size: 7px; }
 
 /* los poderes de cada uno en la lista de jugadores de la sala */
 .ol-plaza-quien { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
@@ -7124,23 +7120,66 @@ body { font-size-adjust: 0.56; }
 /* sin el contorno amarillo del foco: aquí el foco se ve en el borde, en el color del rol */
 .arm .btn:focus, .arm-jugadores .btn:focus { outline: none; }
 .arm .btn:focus-visible, .arm-jugadores .btn:focus-visible { outline: 2px solid var(--rol); outline-offset: 2px; }
-/* la maestría y la pasiva, en el color del rol y no en amarillo */
-.arm-ri-mae { color: var(--rol); opacity: 0.85; }
+/* la pasiva, en el color del rol y no en amarillo */
 .arm-pasiva { color: var(--rol); opacity: 0.9; }
-/* sin rol (el J2 hasta que elija): solo las cartas */
-/* el cuerpo (casillas, cajón y pasiva) guarda su sitio aunque no haya rol */
-.arm-cuerpo { position: relative; display: grid; gap: 8px; }
-.arm.sin-rol .arm-cuerpo > :not(.arm-vacio) { visibility: hidden; }
-.arm-vacio { display: none; }
-.arm.sin-rol .arm-vacio {
-  display: flex; align-items: center; justify-content: center;
-  position: absolute; inset: 0; padding: 20px;
-  border: 2px dashed rgba(159, 180, 255, 0.35); border-radius: 12px;
-  font-size: 10px; letter-spacing: 1px; line-height: 1.8; color: #9fb4ff; text-align: center;
-}
-.arm.sin-rol .btn.arm-rol { opacity: 0.85; }.arm-rol-quien { display: block; height: 10px; line-height: 10px; }
+.arm-cuerpo { display: grid; gap: 8px; }
+.arm-rol-quien { display: block; height: 10px; line-height: 10px; }
 /* la explicación de cada poder ocupa siempre tres renglones: al pasar de uno a otro no salta nada */
 .arm-det-desc { min-height: calc(3 * 1.7em); display: flex; align-items: center; }
+
+/* 25 sep: el armario en dos pasos. Primero la pregunta del rol, sola; con el
+ * rol puesto, las cartas se van y queda una tira con CAMBIAR ROL */
+.arm.eligiendo .arm-tira, .arm.eligiendo .arm-cuerpo { display: none; }
+.arm:not(.eligiendo) .arm-elige { display: none; }
+.arm-elige, .arm-tira, .arm-cuerpo { animation: arm-entra 0.18s ease-out; }
+@keyframes arm-entra { from { opacity: 0; transform: translateY(6px); } }
+.arm-elige { display: grid; gap: 12px; }
+.arm-elige-tit { font-size: 13px; letter-spacing: 3px; color: #fff; }
+.arm.eligiendo .btn.arm-rol { padding: 14px 6px 10px; gap: 7px; opacity: 0.8; }
+.arm.eligiendo .btn.arm-rol.active { opacity: 1; }
+.arm-rol-lema { font-size: 8px; line-height: 1.6; letter-spacing: 0.5px; color: #cfd6f2; min-height: 3.2em; }
+.arm-rol-mae { font-size: 7px; line-height: 1.5; letter-spacing: 0.5px; color: var(--rol); opacity: 0.85; }
+.arm-tira {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 12px;
+  text-align: left;
+  border: 2px solid var(--rol);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--rol) 12%, rgba(0, 0, 0, 0.55));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--rol) 25%, transparent);
+}
+.arm-tira-nombre { font-size: 14px; letter-spacing: 3px; color: var(--rol); }
+.arm-tira-lema { font-size: 8px; line-height: 1.5; letter-spacing: 0.5px; color: #cfd6f2; margin-top: 5px; }
+.arm-tira-mae { font-size: 8px; letter-spacing: 0.5px; color: var(--rol); opacity: 0.85; white-space: nowrap; }
+.arm .btn.arm-tira-cambiar {
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 8px 12px;
+  color: var(--rol);
+  background: transparent;
+  border: 1px solid var(--rol);
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.arm .btn.arm-tira-cambiar:hover, .arm .btn.arm-tira-cambiar:focus-visible { color: #000; background: var(--rol); }
+/* estrecho (y en la sala): la maestría baja debajo del lema */
+#online .arm-tira { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; }
+#online .arm-tira-mae { grid-column: 2; grid-row: 2; margin-top: -6px; }
+#online .btn.arm-tira-cambiar { grid-column: 3; grid-row: 1 / span 2; }
+#online .arm-tira-nombre { font-size: 11px; }
+#online .arm-tira-lema, #online .arm-tira-mae, #online .arm-rol-lema { font-size: 7px; }
+#online .arm-rol-mae { font-size: 6px; }
+#online .arm-elige-tit { font-size: 9px; letter-spacing: 2px; }
+@media (max-width: 560px) {
+  .arm-tira { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; }
+  .arm-tira-mae { grid-column: 2; grid-row: 2; margin-top: -6px; white-space: normal; }
+  .arm .btn.arm-tira-cambiar { grid-column: 3; grid-row: 1 / span 2; }
+  .arm-rol-lema { font-size: 6px; }
+}
 
 /* =========================================================
  * OPCIONES · el menú de servicio de la máquina (23 sep)

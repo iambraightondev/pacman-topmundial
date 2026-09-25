@@ -6395,30 +6395,67 @@
         return I ? I.lienzo(tipo, id, tam, color) : el('span', 'arm-sin-icono', '');
       }
       var raiz = el('div', 'arm');
+      /* DOS PASOS (25 sep): primero la pregunta del rol, sola; con el rol ya
+       * puesto (el de la última partida, si la hubo) las cartas se van y
+       * queda una tira con su nombre y CAMBIAR. Antes las cuatro cartas se
+       * quedaban siempre arriba y se comían media pantalla. */
+      var eligiendo = false;
+      function maestriaDe(rol) {
+        var M = window.PM.Maestria, N = CFG.MAESTRIA && CFG.MAESTRIA.NIVELES;
+        if (!M || !N) return '';
+        var d = M.datos(rol);
+        if (d.nivel >= 0) return 'MAESTRÍA ' + N[d.nivel].name + ' · ' + d.puntos.toLocaleString('es-ES');
+        if (d.puntos > 0) return 'MAESTRÍA · ' + d.puntos.toLocaleString('es-ES') + ' PTS';
+        return 'SIN EMBLEMA TODAVÍA';
+      }
 
-      /* ---- los roles ---- */
+      /* ---- paso 1: la pregunta ---- */
+      var fElige = el('div', 'arm-elige');
+      var eligeTit = el('div', 'arm-elige-tit', '');
+      fElige.appendChild(eligeTit);
       var fRoles = el('div', 'arm-roles');
       var botRol = {};
       H.ROL_IDS.forEach(function (id) {
         var info = H.ROL_INFO[id];
-        var b = self.makeButton('', function () { o.onRol(id); });
+        var b = self.makeButton('', function () { eligiendo = false; o.onRol(id); pintar(); });
         b.classList.add('arm-rol');
         b.style.setProperty('--rol', info.color);
         b.appendChild(icono('rol', id, 52));
         b.appendChild(el('span', 'arm-rol-nombre', info.name));
+        b.appendChild(el('span', 'arm-rol-lema', info.lema));
+        var mae = el('small', 'arm-rol-mae', '');
+        b.appendChild(mae);
         var quien = el('small', 'arm-rol-quien', '');
         b.appendChild(quien);
         b.setAttribute('aria-label', info.name + ' · ' + info.lema);
-        botRol[id] = { b: b, quien: quien };
+        botRol[id] = { b: b, quien: quien, mae: mae };
         fRoles.appendChild(b);
       });
-      raiz.appendChild(fRoles);
-      var rolInfo = el('div', 'arm-rolinfo');
-      var riLema = el('span', 'arm-ri-lema', '');
-      var riMae = el('span', 'arm-ri-mae', '');
-      rolInfo.appendChild(riLema);
-      rolInfo.appendChild(riMae);
-      raiz.appendChild(rolInfo);
+      fElige.appendChild(fRoles);
+      raiz.appendChild(fElige);
+
+      /* ---- paso 2: el rol ya elegido, en una tira ---- */
+      var tira = el('div', 'arm-tira');
+      var tIcono = icono('rol', H.ROL_IDS[0], 40);
+      var tTx = el('div', 'arm-tira-tx');
+      var tNombre = el('div', 'arm-tira-nombre', '');
+      var tLema = el('div', 'arm-tira-lema', '');
+      tTx.appendChild(tNombre);
+      tTx.appendChild(tLema);
+      var tMae = el('div', 'arm-tira-mae', '');
+      var tCambiar = self.makeButton('CAMBIAR ROL', function () {
+        eligiendo = true;
+        pintar();
+        var r = botRol[o.rol()];
+        if (r && r.b.focus) r.b.focus();
+      });
+      tCambiar.classList.add('arm-tira-cambiar');
+      tira.appendChild(tIcono);
+      tira.appendChild(tTx);
+      tira.appendChild(tMae);
+      tira.appendChild(tCambiar);
+      raiz.appendChild(tira);
+      var tiraDe = '';
 
       /* ---- las cuatro casillas ---- */
       var fSlots = el('div', 'arm-slots');
@@ -6438,9 +6475,8 @@
           fSlots.appendChild(b);
         })(sk);
       }
-      /* Las casillas, el cajón y la pasiva van juntos en el CUERPO: sin rol se
-       * esconden pero siguen ocupando su sitio, y encima sale el aviso. Si se
-       * quitaran, la pantalla entera se encogería al pasar al J2 sin rol. */
+      /* Las casillas, el cajón y la pasiva van juntos en el CUERPO: mientras
+       * se elige rol no se ven */
       var cuerpo = el('div', 'arm-cuerpo');
       raiz.appendChild(cuerpo);
       cuerpo.appendChild(fSlots);
@@ -6465,8 +6501,6 @@
 
       var pasiva = el('div', 'arm-pasiva');
       cuerpo.appendChild(pasiva);
-      var vacio = el('div', 'arm-vacio', '');
-      cuerpo.appendChild(vacio);
 
       var abierto = 0, cajonDe = '', ops = [], encima = null;
 
@@ -6516,27 +6550,12 @@
       }
       function pintar() {
         var rol = o.rol(), carga = o.carga() || [];
-        /* SIN ROL (el J2 hasta que se le elija uno): solo las cartas de los
-         * roles, ninguna encendida, y el aviso de que falta elegir */
-        raiz.classList.toggle('sin-rol', !rol);
-        if (!rol) {
-          raiz.style.setProperty('--rol', '#9fb4ff');
-          for (var sid in botRol) {
-            if (!botRol.hasOwnProperty(sid)) continue;
-            var sr = botRol[sid], squien = o.ocupado ? o.ocupado(sid) : '';
-            sr.b.classList.remove('active');
-            sr.b.classList.toggle('ocupado', !!squien);
-            sr.b.disabled = !!squien;
-            sr.quien.textContent = squien || '';
-          }
-          riLema.textContent = ' ';
-          riMae.textContent = '';
-          vacio.textContent = o.sinRol || 'ELIGE UN ROL';
-          return;
-        }
-        var info = H.ROL_INFO[rol], col = info.color;
-        raiz.style.setProperty('--rol', col);
-        /* roles */
+        /* SIN ROL (el J2 hasta que se le elija uno) no hay tira que enseñar:
+         * solo la pregunta */
+        var pregunta = eligiendo || !rol;
+        raiz.classList.toggle('eligiendo', pregunta);
+        raiz.style.setProperty('--rol', rol ? H.ROL_INFO[rol].color : '#9fb4ff');
+        eligeTit.textContent = rol ? '¿CON QUÉ ROL JUEGAS?' : (o.sinRol || '¿CON QUÉ ROL JUEGAS?');
         for (var id in botRol) {
           if (!botRol.hasOwnProperty(id)) continue;
           var r = botRol[id], quien = o.ocupado ? o.ocupado(id) : '';
@@ -6545,15 +6564,18 @@
           r.b.classList.toggle('ocupado', suyo);
           r.b.disabled = suyo;
           r.quien.textContent = suyo ? quien : '';
+          if (pregunta) r.mae.textContent = maestriaDe(id);
         }
-        riLema.textContent = info.name + ' · ' + info.lema;
-        var M = window.PM.Maestria, N = CFG.MAESTRIA && CFG.MAESTRIA.NIVELES, mTxt = 'SIN EMBLEMA TODAVÍA';
-        if (M && N) {
-          var d = M.datos(rol);
-          if (d.nivel >= 0) mTxt = 'MAESTRÍA ' + N[d.nivel].name + ' · ' + d.puntos.toLocaleString('es-ES');
-          else if (d.puntos > 0) mTxt = 'MAESTRÍA · ' + d.puntos.toLocaleString('es-ES') + ' PTS';
+        if (!rol) return;
+        var info = H.ROL_INFO[rol], col = info.color;
+        if (tiraDe !== rol) {
+          tiraDe = rol;
+          if (I) I.repintar(tIcono, 'rol', rol);
+          tNombre.textContent = info.name;
+          tLema.textContent = info.lema;
+          tCambiar.setAttribute('aria-label', 'CAMBIAR ROL · AHORA ' + info.name);
         }
-        riMae.textContent = mTxt;
+        tMae.textContent = maestriaDe(rol);
         /* casillas */
         for (var k = 0; k < 4; k++) {
           var s = slots[k], hab = habDe(rol, k, carga[k]);
@@ -6572,7 +6594,9 @@
         if (!encima) ver(habDe(rol, abierto, carga[abierto]));
         pasiva.textContent = info.pasiva ? ('★ PASIVA · ' + info.pasiva) : '';
       }
-      return { el: raiz, pintar: pintar };
+      /* volver a la tira sin cambiar nada (al pasar de J1 a J2, por ejemplo) */
+      function cerrarRoles() { eligiendo = false; }
+      return { el: raiz, pintar: pintar, cerrarRoles: cerrarRoles };
     },
 
     /* El «?» de una ficha de la sala: sus reglas en un aviso encima (la sala
@@ -13999,6 +14023,7 @@
             var b = self.makeButton('', function () {
               if (j === 1 && conFantasma) return;
               mirando = j;
+              arm.cerrarRoles();
               pintar();
             });
             b.classList.add('arm-jug');
@@ -14032,7 +14057,7 @@
             ocupado: function (id) {
               return (mirando === 1 && roles[0] === id) ? 'EL J1' : '';
             },
-            sinRol: 'ELIGE EL ROL DEL J2 · SOLO HACE FALTA PARA DOS JUGADORES'
+            sinRol: '¿CON QUÉ ROL JUEGA EL J2?'
           });
           p.appendChild(arm.el);
 
