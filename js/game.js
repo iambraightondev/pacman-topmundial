@@ -590,6 +590,10 @@
        * de la partida y no de cada jugador (antes era un interruptor en los
        * ajustes): en party la elige quien manda, como el modo. */
       this.clasif = !!opts.clasif && this.hab;
+      /* CONTINUAR RECARGA LOS PODERES (25 sep): quien paga sus 1.000 vuelve
+       * con las cuatro teclas listas. Las repeticiones de antes no lo hacían
+       * y se ven como se jugaron (Replay, bandera 'k'). */
+      this.contRecarga = this.hab && opts.contRecarga !== false;
       /* ...y cómo iba tu rango al empezar: lo mira el contador de PR en vivo
        * (Rango.enVivo). Se lee una vez aquí y no a cada fotograma. */
       this.rangoInicio = (this.clasif && window.PM.Rango) ? window.PM.Rango.estado() : null;
@@ -2007,6 +2011,7 @@
         p.out = false;
         p.dying = false;
         this.contHasta[lista[k]] = 0;
+        this.contRecargar(lista[k]);
       }
       if (this.state === 'CONTINUE') {
         // todos estaban fuera: parón clásico y "¡LISTO!" como tras una vida
@@ -2029,6 +2034,14 @@
       }
       this.syncUI();
       return true;
+    },
+
+    /* Quien vuelve pagando, con las cuatro teclas listas. Va por Hab.dar: en
+     * party la recarga de un invitado es suya y el anfitrión solo se la manda. */
+    contRecargar: function (i) {
+      var Hb = window.PM.Hab;
+      if (!this.contRecarga || !Hb || !Hb.estado(i)) return;
+      for (var k = 0; k < 4; k++) Hb.dar(this, i, 'cd', 0, k);
     },
 
     /* ¿Queda alguien fuera que todavía no haya pagado? */
@@ -2060,6 +2073,7 @@
         p.out = false;
         p.dying = false;
         this.contHasta[i] = 0;
+        this.contRecargar(i);
       }
       this.contTicks = 0;
       this.contPagado = [];
@@ -3289,6 +3303,9 @@
     restartGame: function () {
       if (!this.lastOpts) { this.toMenu(); return; }
       this.closeRun();          // lo jugado hasta aquí también cuenta
+      /* una guardada de antes del 25 sep, retomada, no recargaba al pagar;
+       * la siguiente ya es una partida nueva y sí */
+      delete this.lastOpts.contRecarga;
       this.newGame(this.lastOpts);
     },
 

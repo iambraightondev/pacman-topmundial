@@ -634,6 +634,8 @@
       /* CLASIFICATORIA: sin esto, retomar una guardada la volvía DESATADO y
        * no contaba para el rango */
       if (a.clasif) aj.push('c');
+      // el CONTINUAR recarga los poderes (25 sep); las de antes no la llevan
+      if (a.contRecarga) aj.push('k');
       // 'm' + el laberinto (los ids no llevan ni comas ni virgulillas)
       if (a.maze) aj.push('m' + String(a.maze).replace(/[^a-z0-9_-]/gi, ''));
       var nombres = [];
@@ -694,6 +696,7 @@
           else if (aj[b].charAt(0) === 'm') ajustes.maze = aj[b].slice(1);
           else if (aj[b].charAt(0) === 'p') ajustes.poderes = decPoderes(aj[b].slice(1));
           else if (aj[b] === 'c') ajustes.clasif = true;
+          else if (aj[b] === 'k') ajustes.contRecarga = true;
         }
 
         var crudos = p[6].split(','), nombres = [];
@@ -1205,6 +1208,7 @@
       /* ...y cuáles son sus cuatro poderes (ver poderesDeAhora) */
       if (G.hab) { var pod = poderesDeAhora(); if (pod) ajustes.poderes = pod; }
       if (G.clasif) ajustes.clasif = true;
+      if (G.contRecarga) ajustes.contRecarga = true;
 
       this.modo = 'grabar';
       this.grabando = {
@@ -2315,6 +2319,8 @@
         loadouts: (rep.ajustes && rep.ajustes.poderes) ? rep.ajustes.poderes.slice() : null,
         // ...y si era CLASIFICATORIA: al retomarla tiene que seguir contando
         clasif: !!(rep.ajustes && rep.ajustes.clasif),
+        // ...y si pagar recargaba los poderes (las de antes del 25 sep, no)
+        contRecarga: !!(rep.ajustes && rep.ajustes.contRecarga),
         // ni los giros del que llevaba fantasma, a quién moverle
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
           ? rep.ajustes.ghosts.slice() : null,

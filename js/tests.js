@@ -8455,6 +8455,73 @@
     } finally { G.toMenu(); }
   });
 
+  /* 25 sep: pagar los 1.000 devuelve las cuatro teclas listas */
+  function partidaHabCont(opts) {
+    window.PM.settings.muted = true;
+    G.newGame(opts);
+    G.state = 'PLAYING';
+    G.readyTicks = 0;
+    for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+  }
+
+  test('DESATADO: quien paga el CONTINUAR vuelve con los poderes recargados', function () {
+    var H = window.PM.Hab;
+    conTienda(function () {
+      partidaHabCont({ players: 1, hab: true, roles: ['asesino'] });
+      try {
+        var cd = H.st[0].cd;
+        cd[0] = 300; cd[2] = 900; cd[3] = 4000;
+        sinVidas();
+        eq(G.state, 'CONTINUE', 'sale la cuenta atrás');
+        ok(G.pedirContinuar(), 'se paga');
+        eq(H.st[0].cd.join(','), '0,0,0,0', 'las cuatro teclas, listas');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('DESATADO: una repetición de antes del 25 sep no recarga al pagar', function () {
+    var H = window.PM.Hab;
+    partidaHabCont({ players: 1, hab: true, roles: ['asesino'], contRecarga: false });
+    try {
+      H.st[0].cd[3] = 4000;
+      sinVidas();
+      ok(G.revivir(-1), 'vuelve');
+      eq(H.st[0].cd[3], 4000, 'con la recarga que llevaba, como se jugó');
+    } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+  });
+
+  test('DESATADO en party: el invitado que paga vuelve recargado, y se le manda', function () {
+    var H = window.PM.Hab;
+    partidaHabCont({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, roles: ['asesino', 'tanque'] });
+    var eventos = [], evt = G.hostEvt;
+    G.hostEvt = function (e) { eventos.push(e); return evt.apply(this, arguments); };
+    try {
+      G.livesMode = 'individual';
+      H.st[0].cd[1] = 500;
+      H.st[1].cd[2] = 900;
+      sinVidas();
+      G.hostGuestEvent({ t: 'contReq', i: 1 }, 1);
+      G.contTicks = 1;
+      G.stepContinue();
+      ok(!G.pacs[1].out, 'el que pagó vuelve');
+      eq(H.st[1].cd[2], 0, 'con sus poderes listos');
+      ok(eventos.some(function (e) {
+        return e.t === 'habDar' && e.w === 1 && e.c === 'cd' && e.v === 0 && e.k === 2;
+      }), 'y la recarga le llega a su máquina (Hab.dar)');
+      eq(H.st[0].cd[1], 500, 'al que no pagó no se le toca');
+    } finally { G.hostEvt = evt; G.toMenu(); }
+  });
+
+  test('la repetición sabe si pagar recargaba los poderes', function () {
+    var R = window.PM.Replay;
+    var rep = repDe(9000);
+    rep.ajustes.contRecarga = true;
+    var leido = R.leer(R.serializar(rep));
+    ok(leido && leido.ajustes.contRecarga, 'la bandera viaja en el texto');
+    var vieja = R.leer(R.serializar(repDe(9000)));
+    ok(vieja && !vieja.ajustes.contRecarga, 'una de antes no la lleva');
+  });
+
   test('muerto del todo, la pausa es solo tuya', function () {
     partida(2, 'guest');
     try {
