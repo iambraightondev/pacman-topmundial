@@ -8683,9 +8683,6 @@
       this.profResumen.className = 'note';
       this.profResumen.style.display = 'none';
       lado.appendChild(this.profResumen);
-      var masCifras = this.makeButton('VER TODAS LAS CIFRAS ▸', function () { self.showProfileTab('cifras'); });
-      masCifras.classList.add('btn-preset', 'perfil-mas');
-      lado.appendChild(masCifras);
 
       /* el recuerdo de cada temporada del RANGO */
       var tt = document.createElement('div');
@@ -8696,7 +8693,8 @@
       this.profTemporadas.className = 'perfil-temporadas';
       lado.appendChild(this.profTemporadas);
 
-      /* cuenta */
+      /* cuenta (25 sep): arriba quién eres y CERRAR SESIÓN, apartado y en
+       * pequeño; debajo las dos cosas que se hacen, del mismo ancho */
       var gCuenta = document.createElement('div');
       gCuenta.className = 'perfil-cuenta';
       var tc = document.createElement('div');
@@ -8704,11 +8702,17 @@
       tc.textContent = 'TU CUENTA';
       gCuenta.appendChild(tc);
       lado.appendChild(gCuenta);
+      var cab = document.createElement('div');
+      cab.className = 'perfil-cuenta-cab';
       this.profAccountMsg = document.createElement('div');
       this.profAccountMsg.className = 'lobby-status';
-      gCuenta.appendChild(this.profAccountMsg);
+      cab.appendChild(this.profAccountMsg);
+      this.profAccountSalir = document.createElement('div');
+      this.profAccountSalir.className = 'perfil-cuenta-salir';
+      cab.appendChild(this.profAccountSalir);
+      gCuenta.appendChild(cab);
       this.profAccountRow = document.createElement('div');
-      this.profAccountRow.className = 'preset-row';
+      this.profAccountRow.className = 'perfil-cuenta-btns';
       gCuenta.appendChild(this.profAccountRow);
       this.profAccountNote = document.createElement('div');
       this.profAccountNote.className = 'note';
@@ -8887,6 +8891,8 @@
       var Ac = window.PM.Account;
       var row = this.profAccountRow;
       row.innerHTML = '';
+      this.profAccountSalir.innerHTML = '';
+      this.profAccountNote.classList.remove('aviso');
       if (!Ac || !Ac.configured()) {
         this.profAccountMsg.classList.add('error');
         this.profAccountMsg.textContent = 'LAS CUENTAS NECESITAN CONEXIÓN';
@@ -8920,8 +8926,8 @@
         var salir = this.makeButton('CERRAR SESIÓN', function () {
           Ac.signOut(function () { self.refreshProfile(); });
         });
-        salir.classList.add('btn-preset');
-        row.appendChild(salir);
+        salir.classList.add('perfil-salir');
+        this.profAccountSalir.appendChild(salir);
         this.profAccountNote.textContent =
           'TU NIVEL, LOGROS, TROFEOS, MAESTRÍAS, RÉCORDS Y AMIGOS SE GUARDAN EN LA CUENTA';
         /* Y se pregunta si lo tiene. La respuesta tarda lo que tarde la red,
@@ -8930,6 +8936,10 @@
         Ac.miCorreo(function (err, c) {
           if (err || !self.profAccountNote) return;
           if (!Ac.logged()) return;
+          /* sin correo, el botón dice lo que hay que hacer y se enciende */
+          correoBtn.textContent = c ? 'CAMBIAR CORREO' : 'PONER CORREO';
+          correoBtn.classList.toggle('perfil-falta', !c);
+          self.profAccountNote.classList.toggle('aviso', !c);
           self.profAccountNote.textContent = c
             ? ('RECUPERACIÓN POR CORREO EN ' + c +
                ' · TU PROGRESO SE GUARDA EN LA CUENTA')

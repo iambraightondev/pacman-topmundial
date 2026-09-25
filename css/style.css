@@ -5273,9 +5273,19 @@ body { font-size-adjust: 0.56; }
 }
 .perfil-ficha b { font-weight: normal; font-size: clamp(13px, 2.2vh, 20px); color: var(--fc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .perfil-ficha span { font-size: 9px; letter-spacing: 2px; color: #7c7ea6; }
-.btn.perfil-mas { align-self: flex-start; }
-.perfil-cuenta { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; text-align: left; }
-.perfil-cuenta .preset-row { justify-content: flex-start; }
+.perfil-cuenta { display: flex; flex-direction: column; gap: 10px; align-items: stretch; text-align: left; }
+.perfil-cuenta-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.perfil-cuenta-cab .lobby-status { margin: 0; }
+.perfil-cuenta-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.perfil-cuenta-btns .btn { width: 100%; min-width: 0; margin: 0; }
+.perfil-cuenta-btns .btn.perfil-falta { color: #000; background: #ffe23a; border-color: #ffe23a; }
+.btn.perfil-salir {
+  min-width: 0; margin: 0; padding: 6px 10px; font-size: 9px; letter-spacing: 1px;
+  color: #ff7a7a; background: transparent; border: 1px solid rgba(255, 90, 90, 0.4); border-radius: 4px; cursor: pointer;
+}
+.btn.perfil-salir:hover, .btn.perfil-salir:focus-visible { color: #fff; background: rgba(255, 60, 60, 0.25); border-color: #ff5a5a; outline: none; }
+.perfil-cuenta .note.aviso { color: #ffe23a; }
+@media (max-width: 560px) { .perfil-cuenta-btns { grid-template-columns: 1fr; } }
 
 /* ---------- VESTUARIO: desplegables y emotes redondos ---------- */
 .vest-util { flex-wrap: wrap; gap: 10px; }
