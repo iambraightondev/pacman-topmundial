@@ -2,6 +2,29 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-25 · Reinicio suave del rango, marca por rol y un cuartel más corto
+
+**RANGO, REINICIO SUAVE (aprobado):** cada mes ya no se empieza de cero. Quien
+acabó el mes con rango arranca desde la mitad de su PR final (menos si jugó
+menos de 20 partidas) y las 5 de colocación se juegan desde ahí moviendo el
+doble. Un MANZANA III de 39 partidas empieza octubre en FRESA II; un GALAXIAN I
+de 30, en MANZANA II. Se estrena el 1 de octubre.
+**RANGO, MARCA POR ROL:** la marca que cuenta es la de la partida entre el factor
+del rol (ASESINO 1 · MAGO 0,9 · TANQUE 0,9 · SOPORTE 0,6; en party, la media del
+equipo), sacado de los puntos por nivel reales. Aplicado a todo septiembre con
+las clasificatorias a solas de la nube: ESTER sube a NARANJA IV (+41, tope
+puesto por Braighton), MAULIO +3; las de party no guardan el rol.
+**TU CUARTEL:** seis entradas en vez de diez. TOP MUNDIAL lleva dentro RANGO;
+PERFIL, TROFEOS y MAESTRÍAS; VESTUARIO, TIENDA; se cambia con la tira de arriba.
+Sin cuenta, PERFIL abre por TROFEOS.
+**DESATADO:** el rol se elige primero y luego se recoge en una tira con CAMBIAR
+ROL; debajo, los poderes. Pagar el CONTINUAR devuelve las cuatro teclas
+recargadas (las repeticiones de antes se ven como se jugaron). El pleno del
+SHURIKEN recarga como mucho 3 veces seguidas; la cuarta se come la recarga.
+**PERFIL:** fuera VER TODAS LAS CIFRAS (está en su pestaña); TU CUENTA ordenada,
+con CERRAR SESIÓN aparte y PONER CORREO en amarillo si falta.
+**Arreglo:** la etiqueta de rango ya no sale caída junto al nombre en el top.
+
 ## 2026-09-24 · El Mago y el Tanque cuentan sus bajas a distancia
 
 **ARREGLO:** las bajas de la bola de fuego, los rayos, la runa y el meteoro del

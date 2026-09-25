@@ -3699,6 +3699,22 @@ pueden perder, así no hay deuda). Cuenta si el ajuste `clasif` (viaja con la
 cuenta) está encendido y `Rango.porQueNo(G)` es null. La tabla lee
 `perfiles?select=usuario,avatar,logros` y aplica `estadoDe` a cada uno.
 
+**REINICIO SUAVE** (25 sep). `semillaDe(c, t)`: si el mes anterior acabó con
+rango, la temporada arranca en `round(PR final × ARRASTRE × min(1, jugadas /
+CONFIANZA))` (0,5 y 20). Con semilla, la colocación no usa `rt`: cada una de
+las 5 mueve `cambio() × COLOCACION_X` (2, con tope `gana/pierde × 2`) desde la
+semilla, en `ru4_`/`rd4_` (ganado/perdido en colocación, 'suma'), y al acabar
+PR = semilla + ru − rd + rg − rl. Sin semilla, lo de siempre. `estadoDe` da
+`semilla`, `semillaNombre`, `vieneDe` y `prColoca`. La cuenta va hacia atrás
+mes a mes (tope 24).
+**FACTOR DE ROL** (25 sep). `apuntar(puntos, n, nivel, roles)` divide la marca
+entre `factorRoles(roles, n)` (`CFG.RANGO.FACTOR_ROL`; en party, la media del
+equipo; sin roles, 1) antes de todo: colocación, cambio y `enVivo`. La pantalla
+de CLASIFICATORIA enseña la marca ya multiplicada por el factor de tu rol.
+**AJUSTES A MANO** (`CFG.AJUSTES_CUENTA.X.rango = { 'AAAA-MM': PR }`): se suman a
+`rg` al LEER (`Rango.ajustados(c, usuario)`, sobre una copia) en `estado`,
+`monedas`, `cerradas` y la tabla, y `rm` sube con ellos. En la nube no se tocan.
+
 **PREMIOS DE FIN DE TEMPORADA** (24 sep). Nada se guarda: todo se deduce de lo
 más alto alcanzado en cada temporada YA CERRADA (`rmN_<AAAA-MM>`, N ≥ 4,
 anterior a `Season.actual()`, que va en UTC). `Rango.cerradas(c)`,

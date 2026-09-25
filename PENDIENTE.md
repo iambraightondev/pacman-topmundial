@@ -15,6 +15,9 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ### DONDE SE DEJÓ (25 sep): REINICIO SUAVE DEL RANGO, FACTOR DE ROL, CUARTEL
 
+Todo subido (service worker pm-v284). Pruebas: tests.html 603/603. Detalle en
+CHANGELOG; cómo funciona, en SPEC (RANGO).
+
 **Decidido por Braighton hoy:**
 - **Reinicio suave del rango** (CFG.RANGO.ARRASTRE/CONFIANZA/COLOCACION_X):
   el mes nuevo arranca desde PR final × 50 % × (partidas del mes pasado / 20,
