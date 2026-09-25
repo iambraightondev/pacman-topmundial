@@ -17,7 +17,12 @@
  *   · Después, cada partida da o quita PR según tu marca contra la de tu
  *     escalón: el doble da +20, igualarla nada, la mitad −20. Sin llegar al
  *     nivel que pide tu fruta, no se gana.
- *   · Cada mes se vuelve a empezar (la temporada es la de Season.actual()).
+ *   · Cada mes se vuelve a empezar (la temporada es la de Season.actual()),
+ *     pero no de cero (25 sep): quien tuvo rango el mes pasado arranca desde
+ *     una parte de su PR (CFG.RANGO.ARRASTRE) y la colocación se juega desde
+ *     ahí, moviendo el doble.
+ *   · Cada rol cuenta con su FACTOR (CFG.RANGO.FACTOR_ROL): la marca de un
+ *     SOPORTE vale más que la misma de un ASESINO, que puntúa más fácil.
  *
  * Qué cuenta
  *   Las partidas del modo CLASIFICATORIA, a solo o en party. En party cuenta
@@ -38,9 +43,12 @@
  *                      (en party, los puntos entre el multiplicador)
  *     rg4_<temporada>  PR ganado · rl4_… PR perdido
  *     rm4_<temporada>  mejor escalón alcanzado, +1 (0 = ninguno)
+ *     ru4_<temporada>  PR ganado en la colocación · rd4_… PR perdido en ella
+ *                      (solo con temporada anterior: ver semillaDe)
  *   El número es la versión de las reglas (CFG.RANGO.VERSION): al cambiarlas
  *   se sube, y los contadores de antes dejan de leerse.
- *   PR = colocación + ganado − perdido.
+ *   PR = colocación + ganado − perdido; con temporada anterior, la
+ *   colocación es la semilla + lo ganado en ella − lo perdido en ella.
  *
  * La tabla
  *   Se arma leyendo los perfiles (lectura pública) y aplicando esta misma
@@ -128,18 +136,90 @@
     return Math.max(-D.pierde, Math.min(D.gana, d));
   }
 
+  /* LOS AJUSTES A MANO de una cuenta (CFG.AJUSTES_CUENTA, rango): PR que se
+   * suman a una temporada. Se aplican al LEER, sobre una copia de los
+   * contadores —en la nube no se pueden tocar: los aparatos se funden
+   * quedándose con lo más alto—, y lo más alto de esa temporada sube con
+   * ellos (premios incluidos). */
+  function ajustados(c, usuario) {
+    var AJ = CFG.AJUSTES_CUENTA || {};
+    var aj = usuario && AJ[String(usuario).toUpperCase()];
+    var R = aj && aj.rango;
+    if (!R) return c;
+    var out = {}, k;
+    for (k in c) if (c.hasOwnProperty(k)) out[k] = c[k];
+    for (var t in R) {
+      if (!R.hasOwnProperty(t) || !num(out[clave('rc', t)])) continue;
+      out[clave('rg', t)] = num(out[clave('rg', t)]) + (R[t] | 0);
+      var e = estadoDe(out, t);
+      if (e.tramo >= 0) out[clave('rm', t)] = Math.max(num(out[clave('rm', t)]), e.tramo + 1);
+    }
+    return out;
+  }
+  /* los tuyos, ya ajustados */
+  function mios() {
+    var c = A() ? A().stats() : {}, Ac = window.PM.Account;
+    var yo = '';
+    try { yo = (Ac && Ac.logged && Ac.logged() && Ac.name) ? Ac.name() : ''; } catch (e) { yo = ''; }
+    return ajustados(c, yo);
+  }
+
+  /* EL FACTOR DE LOS ROLES (CFG.RANGO.FACTOR_ROL): el de uno, o la media
+   * de los del equipo. Sin roles (las de antes, o todos Asesino), 1. */
+  function factorRoles(roles, n) {
+    var F = RG.FACTOR_ROL || {}, suma = 0, k = 0;
+    n = Math.max(1, n | 0);
+    for (var i = 0; i < n; i++) {
+      var r = roles && roles[i], f = F[r] > 0 ? F[r] : (F.asesino || 1);
+      suma += f; k++;
+    }
+    return k ? suma / k : 1;
+  }
+
+  /* 'AAAA-MM' del mes de antes */
+  function mesAnterior(t) {
+    var m = /^(\d{4})-(\d{2})$/.exec(String(t || ''));
+    if (!m) return '';
+    var a = m[1] | 0, n = (m[2] | 0) - 1;
+    if (n < 1) { n = 12; a--; }
+    return a + '-' + (n < 10 ? '0' : '') + n;
+  }
+
+  /* LA SEMILLA (el reinicio suave): desde dónde empieza la temporada quien
+   * tuvo rango en la anterior. null si no lo tuvo (o no acabó de colocarse):
+   * entonces se coloca como siempre. prof corta la cuenta hacia atrás, que
+   * cada mes depende del anterior. */
+  function semillaDe(c, t, prof) {
+    prof = prof || 0;
+    var ant = mesAnterior(t);
+    if (!ant || prof >= 24 || !num(c[clave('rc', ant)])) return null;
+    var e = estadoDe(c, ant, prof + 1);
+    if (e.pr === null) return null;
+    var conf = Math.min(1, e.jugadas / (RG.CONFIANZA || 1));
+    return { pr: Math.max(0, Math.round(e.pr * RG.ARRASTRE * conf)), de: e.nombre, deTramo: e.tramo };
+  }
+
   /* El rango a partir de unos contadores (los tuyos o los de otro perfil,
    * que para la tabla es lo mismo) */
-  function estadoDe(c, t) {
+  function estadoDe(c, t, prof) {
     var jugadas = num(c[clave('rc', t)]);
     var mejor = num(c[clave('rm', t)]) - 1;
     var out = { temporada: t, jugadas: jugadas,
                 colocacion: Math.min(jugadas, RG.COLOCACION), pr: null,
                 division: -1, tramo: -1, nombre: '',
                 mejor: mejor, mejorNombre: mejor >= 0 && TRAMOS[mejor] ? TRAMOS[mejor].nombre : '' };
+    var sem = semillaDe(c, t, prof);
+    out.semilla = sem ? sem.pr : null;
+    out.vieneDe = sem ? sem.de : '';
+    out.semillaNombre = sem ? TRAMOS[tramo(sem.pr)].nombre : '';
+    /* con semilla, la colocación va sumando y restando desde ella (sin verse
+     * hasta la quinta): aquí, dónde vas */
+    var coloca = sem ? Math.max(0, sem.pr + num(c[clave('ru', t)]) - num(c[clave('rd', t)])) : null;
+    out.prColoca = coloca;
     if (jugadas < RG.COLOCACION) return out;
-    // la colocación se guarda ya pasada a SOLO: se coloca con la marca de solo
-    var base = colocar(num(c[clave('rt', t)]) / RG.COLOCACION, 1);
+    /* sin semilla, la colocación se guarda ya pasada a SOLO: se coloca con la
+     * marca de solo */
+    var base = sem ? coloca : colocar(num(c[clave('rt', t)]) / RG.COLOCACION, 1);
     out.pr = Math.max(0, base + num(c[clave('rg', t)]) - num(c[clave('rl', t)]));
     var i = tramo(out.pr), T = TRAMOS[i];
     out.tramo = i;
@@ -150,15 +230,6 @@
     out.faltan = T.ancho ? (T.ancho - out.enTramo) : 0;
     out.siguiente = TRAMOS[i + 1] ? TRAMOS[i + 1].nombre : '';
     return out;
-  }
-
-  /* 'AAAA-MM' del mes de antes */
-  function mesAnterior(t) {
-    var m = /^(\d{4})-(\d{2})$/.exec(String(t || ''));
-    if (!m) return '';
-    var a = m[1] | 0, n = (m[2] | 0) - 1;
-    if (n < 1) { n = 12; a--; }
-    return a + '-' + (n < 10 ? '0' : '') + n;
   }
 
   /* Lo más alto que se alcanzó en una temporada (índice de TRAMOS, -1 si
@@ -199,6 +270,9 @@
     clave: clave,
     temporada: temporada,
     estadoDe: estadoDe,
+    semillaDe: semillaDe,
+    ajustados: ajustados,
+    factorRoles: factorRoles,
 
     /* ¿Esta partida es CLASIFICATORIA? Es un modo desde el 23 sep (antes,
      * un interruptor de cada jugador en los ajustes) */
@@ -212,15 +286,17 @@
       var e = G && G.clasif && G.rangoInicio;
       if (!e || G.replaying || (G.isSpec && G.isSpec())) return null;
       var n = G.playerCount || 1, puntos = Math.max(0, G.score || 0), nivel = G.level || 1;
+      /* la marca que cuenta, con el factor de los roles */
+      var cuenta = puntos / factorRoles(G.roles, n);
       if (e.pr === null) {
         return { colocando: true, jugada: Math.min(e.jugadas + 1, RG.COLOCACION),
                  de: RG.COLOCACION, puntos: puntos };
       }
       var D = DIV[e.division], marca = parTramo(e.tramo, n);
-      var d = cambio(puntos, e.pr, n, nivel);
+      var d = cambio(cuenta, e.pr, n, nivel);
       if (d < 0) d = -Math.min(-d, e.pr);       // en el suelo no se pierde
       return { colocando: false, nombre: e.nombre, color: D.color, cambio: d,
-               puntos: puntos, marca: marca, pct: Math.min(1, puntos / marca),
+               puntos: puntos, marca: marca, pct: Math.min(1, cuenta / marca),
                nivelPide: D.nivel || 1, nivelOk: nivel >= (D.nivel || 1) };
     },
 
@@ -238,7 +314,7 @@
     monedas: function () {
       var ahora = Date.now();
       if (ahora < (this._memoHasta || 0)) return this._memo;
-      var c = A() ? A().stats() : {}, mejor = {}, n = 0, k, m;
+      var c = mios(), mejor = {}, n = 0, k, m;
       for (k in c) {
         if (!c.hasOwnProperty(k)) continue;
         /* solo las de un rango único (versión 4 en adelante: sin formato) */
@@ -277,7 +353,7 @@
     /* Las temporadas ya CERRADAS en las que llegaste a algo, de la más nueva
      * a la más vieja: { temporada, mes, tramo, division, nombre, color, fruta } */
     cerradas: function (c, hoy) {
-      c = c || (A() ? A().stats() : {});
+      c = c || mios();
       hoy = hoy || temporada();
       var vistas = {}, out = [], re = /^rm(\d+)_(\d{4}-\d{2})$/, m;
       for (var k in c) {
@@ -336,7 +412,7 @@
     /* Tu rango esta temporada (el único: vale para solo y para party) */
     estado: function (t) {
       if (typeof t !== 'string') t = null;      // antes se pasaba el formato
-      return estadoDe(A() ? A().stats() : {}, t || temporada());
+      return estadoDe(mios(), t || temporada());
     },
 
     /* Por qué esta partida NO cuenta (o null si cuenta). Sirve para decírselo
@@ -370,13 +446,13 @@
     cerrar: function (G) {
       if (this.porQueNo(G) || !A()) return null;
       // la del equipo: es la que compite
-      return this.apuntar(Math.max(0, G.score || 0), G.playerCount || 1, G.level || 1);
+      return this.apuntar(Math.max(0, G.score || 0), G.playerCount || 1, G.level || 1, G.roles);
     },
 
     /* Apunta una partida de `puntos` en el formato `n` y devuelve el resumen.
      * La usa cerrar() y también la CLASIFICATORIA guardada que se descarta
      * sin terminarla (js/guardado.js): dejarla a medias no libra de contar. */
-    apuntar: function (puntos, n, nivel) {
+    apuntar: function (puntos, n, nivel, roles) {
       if (!A()) return null;
       var t = temporada();
       var antes = this.estado(t);
@@ -384,9 +460,23 @@
       o[clave('rc', t)] = 1;
       var res = { n: n, puntos: puntos, nivel: nivel, antes: antes.pr,
                   divisionAntes: antes.division, tramoAntes: antes.tramo };
+      /* lo que cuenta es la marca entre el factor de los roles (CFG.RANGO) */
+      var fr = factorRoles(roles, n);
+      res.factor = fr;
+      puntos = puntos / fr;
       if (antes.jugadas < RG.COLOCACION) {
-        // pasada a SOLO: en party se divide entre el multiplicador del equipo
-        o[clave('rt', t)] = Math.round(puntos / mult(n));
+        if (antes.prColoca !== null) {
+          /* CON SEMILLA: la colocación se juega desde ella, y mueve más */
+          var X = RG.COLOCACION_X || 1, Dc = DIV[division(antes.prColoca)];
+          var dc = cambio(puntos, antes.prColoca, n, nivel) * X;
+          dc = Math.max(-Dc.pierde * X, Math.min(Dc.gana * X, dc));
+          if (dc < 0) dc = -Math.min(-dc, antes.prColoca);
+          if (dc > 0) o[clave('ru', t)] = dc;
+          else if (dc < 0) o[clave('rd', t)] = -dc;
+        } else {
+          // pasada a SOLO: en party se divide entre el multiplicador del equipo
+          o[clave('rt', t)] = Math.round(puntos / mult(n));
+        }
         A().recordAll(o);
         var tras = this.estado(t);
         res.colocando = tras.pr === null;
@@ -453,7 +543,7 @@
           var out = [], antes = {};
           (filas || []).forEach(function (f) {
             var lg = f && f.logros;
-            var cc = (lg && lg.c) || lg || {};
+            var cc = ajustados((lg && lg.c) || lg || {}, f.usuario);
             /* la fruta del mes pasado de cada uno, para ir junto a su nombre */
             var pa = mejorEn(cc, mesAnterior(t));
             if (pa >= 0) antes[String(f.usuario || '').toUpperCase()] = TRAMOS[pa].d;

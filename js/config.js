@@ -1144,6 +1144,26 @@
     /* lo que mueve una partida: 20 por cada vez que doblas (o te quedas en la
      * mitad de) la marca de tu escalón. Igualarla no da nada. */
     PASO: 20,
+    /* EL REINICIO SUAVE (25 sep, aprobado por Braighton). Cada mes ya no se
+     * empieza de cero: quien acabó el mes pasado con rango arranca desde
+     *   PR con el que acabó × ARRASTRE × confianza
+     * donde la confianza es sus partidas de ese mes entre CONFIANZA (tope 1).
+     * Las cinco de colocación se juegan desde ahí y cada una mueve
+     * COLOCACION_X veces lo normal. Sin rango el mes pasado, se coloca como
+     * siempre (por la media, hasta TOPE_COLOCACION).
+     * Con los datos de septiembre: MANZANA III (347 PR, 39 partidas) empieza
+     * octubre en FRESA II; un GALAXIAN I con 30 partidas, en MANZANA II. */
+    ARRASTRE: 0.5,
+    CONFIANZA: 20,
+    COLOCACION_X: 2,
+    /* LO QUE PUNTÚA CADA ROL (25 sep). No todos hacen los mismos puntos: el
+     * ASESINO come a diestra y siniestra y el SOPORTE está para otra cosa.
+     * La marca que cuenta para el rango es la de la partida ENTRE el factor
+     * de su rol (en party, la media de los del equipo). Salen de las
+     * clasificatorias y DESATADOS reales del 20 al 25 sep, en puntos por
+     * nivel: ASESINO ~7.400, TANQUE ~6.600, SOPORTE ~4.200 (el MAGO aún con
+     * pocas partidas, se le supone como el TANQUE). Revisarlos con más datos. */
+    FACTOR_ROL: { asesino: 1, mago: 0.9, tanque: 0.9, soporte: 0.6 },
     /* Las reglas de antes eran otras cuentas: sus contadores no valen para
      * estas. Los de ahora llevan este número en la clave (js/rango.js). */
     VERSION: 4             // 3: colocación estricta; 4: un solo rango, sin formatos (24 sep)
@@ -1187,7 +1207,14 @@
    *             muertes de un GAME OVER) y cada una baja a A (−40). MAULIO
    *             gana 3 S de TANQUE (+40 cada una). ESTER, a solas con el
    *             SOPORTE, se recalifica entera con la tabla de solo (S desde
-   *             4,5): +7 S y +930 puntos. */
+   *             4,5): +7 S y +930 puntos.
+   *   rango:    { temporada: PR } que se suman al rango de ese mes. El 25 sep
+   *             el FACTOR_ROL se aplicó a todo septiembre, no solo desde ese
+   *             día: se reprodujeron las clasificatorias a solas guardadas en
+   *             la nube (las de party no guardan el rol y se quedan como se
+   *             jugaron). ESTER, 24 con el SOPORTE: +97, que Braighton dejó en
+   *             NARANJA IV como mucho (de 159 a 200: +41). MAULIO, 11 con el
+   *             TANQUE: +3. IAMBRAIGHTON, todas de ASESINO: nada. */
   CFG.AJUSTES_CUENTA = {
     IAMBRAIGHTON: {
       cifras: { 'clasico:puntosMax': [180550, 84250], 'party:puntosMax': [180550, 119300] },
@@ -1195,8 +1222,8 @@
        * bajas a distancia: 21 y 13 partidas verificadas con nota propia */
       maestria: { asesino: [-13720, -132, -13], mago: [6960, 65, 4], tanque: [4210, 39, 5], soporte: [2800, 28] }
     },
-    ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] } },
-    MAULIO: { maestria: { asesino: [-700, -7], tanque: [410, 5, 1], soporte: [200, 2] } }
+    ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] }, rango: { '2026-09': 41 } },
+    MAULIO: { maestria: { asesino: [-700, -7], tanque: [410, 5, 1], soporte: [200, 2] }, rango: { '2026-09': 3 } }
   };
 
   CFG.MAESTRIA = {

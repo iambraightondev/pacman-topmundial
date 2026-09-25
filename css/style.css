@@ -8094,7 +8094,11 @@ body { font-size-adjust: 0.56; }
   border-radius: 4px;
   white-space: nowrap;
   vertical-align: middle;
+  line-height: 1;
 }
+/* en la fila del top el nombre va alineado por la base: la etiqueta, al
+ * centro, o se quedaba caída (25 sep) */
+.rank-row.tm-fila-rank .tm-rango { align-self: center; padding: 4px 6px; }
 
 /* la escalera: el "?" de cómo se sube y la barra de la fruta entera (24 sep) */
 .rgs-cabeza { position: relative; display: flex; justify-content: flex-end; width: 100%; max-width: 760px; margin: 0 auto; }

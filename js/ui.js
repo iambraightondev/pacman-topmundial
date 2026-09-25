@@ -7255,7 +7255,20 @@
       if (!B || !B.FORMATOS) return '';
       return 'EN PARTY LA MARCA SE MULTIPLICA: ' + B.FORMATOS.slice(1).map(function (f) {
         return f.name + ' X' + String(f.mult).replace('.', ',');
+      }).join(' · ') + '.  ' + this.textoRolesRango();
+    },
+    /* lo que pide cada rol (CFG.RANGO.FACTOR_ROL), en palabras */
+    textoRolesRango: function () {
+      var F = CFG.RANGO.FACTOR_ROL, H = CFG.HAB;
+      if (!F || !H) return '';
+      return 'CADA ROL TIENE SU MARCA: ' + H.ROL_IDS.map(function (r) {
+        return H.ROL_INFO[r].name + ' ' + Math.round((F[r] || 1) * 100) + ' %';
       }).join(' · ');
+    },
+    /* de dónde arrancas este mes si vienes con rango del anterior */
+    textoSemilla: function (e) {
+      return (e && e.semilla !== null && e.semilla !== undefined)
+        ? ('VIENES DE ' + e.vieneDe + ': EMPIEZAS EN ' + e.semillaNombre) : '';
     },
 
     showRango: function () {
@@ -7274,8 +7287,9 @@
       var S = window.PM.Season;
       this.rangoSub.textContent = 'CLASIFICATORIA · TEMPORADA ' +
         (S ? S.nombre(e.temporada) : e.temporada) +
-        '  ·  UN SOLO RANGO, A SOLO O EN PARTY. CADA MES SE EMPIEZA DE CERO: ' + RG.COLOCACION +
-        ' PARTIDAS DE COLOCACIÓN Y LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO.  ' +
+        '  ·  UN SOLO RANGO, A SOLO O EN PARTY. CADA MES SE EMPIEZA DE NUEVO, PERO NO DE CERO: ARRANCAS CON EL ' +
+        Math.round(RG.ARRASTRE * 100) + ' % DE TU PR DEL MES PASADO (MENOS SI JUGASTE MENOS DE ' + RG.CONFIANZA +
+        ' PARTIDAS), Y LAS ' + RG.COLOCACION + ' DE COLOCACIÓN MUEVEN EL DOBLE. LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO.  ' +
         this.textoMultRango();
 
       var d = e.division, div = d >= 0 ? D[d] : null;
@@ -7287,8 +7301,9 @@
         ? (this.milesMaes(e.pr) + ' PR · ' + (e.anchoTramo
             ? ('TE FALTAN ' + e.faltan + ' PARA ' + e.siguiente)
             : 'LA CIMA'))
-        : (e.jugadas ? ('COLOCACIÓN: ' + e.colocacion + ' DE ' + RG.COLOCACION)
-                     : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS'));
+        : ((e.jugadas ? ('COLOCACIÓN: ' + e.colocacion + ' DE ' + RG.COLOCACION)
+                      : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS')) +
+           (this.textoSemilla(e) ? (' · ' + this.textoSemilla(e)) : ''));
 
       var self = this;
       this.rangoDatos.innerHTML = '';
@@ -7537,9 +7552,10 @@
             var ns = el('span', 'rgs-nombre', 'SIN RANGO');
             ns.appendChild(el('i', 'rgs-tu', 'ESTÁS AQUÍ'));
             sin.appendChild(ns);
-            sin.appendChild(el('span', 'rgs-colocacion', e.jugadas
+            sin.appendChild(el('span', 'rgs-colocacion', (e.jugadas
               ? ('COLOCACIÓN ' + e.colocacion + ' DE ' + RG.COLOCACION + ': TE FALTAN ' + (RG.COLOCACION - e.colocacion))
-              : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS')));
+              : ('JUEGA ' + RG.COLOCACION + ' CLASIFICATORIAS Y TE COLOCAMOS')) +
+              (self.textoSemilla(e) ? (' · ' + self.textoSemilla(e)) : '')));
             lista.appendChild(sin);
           }
           p.appendChild(lista);
@@ -14212,17 +14228,26 @@
           info.appendChild(barra);
           info.appendChild(el('div', 'cle-sig', div
             ? (e.anchoTramo ? ('TE FALTAN ' + e.faltan + ' PR PARA ' + e.siguiente) : 'ESTÁS EN LA CIMA')
-            : 'LA COLOCACIÓN TE DEJA COMO MUCHO EN ' + Rg.TRAMOS[RG.TOPE_COLOCACION].nombre));
+            : (self.textoSemilla(e) ||
+               ('LA COLOCACIÓN TE DEJA COMO MUCHO EN ' + Rg.TRAMOS[RG.TOPE_COLOCACION].nombre))));
           heroe.appendChild(info);
           p.appendChild(heroe);
 
           /* lo que te juegas en esta partida */
           p.appendChild(el('div', 'cle-titulo', 'LO QUE TE JUEGAS'));
           var apuesta = el('div', 'cle-apuesta');
+          /* la marca, ya con el factor de TU rol: es la que tienes que batir */
+          var rolYo = CFG.HAB.rol((window.PM.settings || {}).habRol1);
+          var fRol = Rg.factorRoles ? Rg.factorRoles([rolYo], 1) : 1;
           var datos = div ? [
-            [self.milesMaes(Rg.parTramo(e.tramo, 1)), 'MARCA A SUPERAR', 'A SOLO'],
+            [self.milesMaes(Math.round(Rg.parTramo(e.tramo, 1) * fRol / 100) * 100), 'MARCA A SUPERAR',
+             'A SOLO CON ' + CFG.HAB.ROL_INFO[rolYo].name],
             [(div.nivel || 1) > 1 ? ('NIVEL ' + div.nivel) : 'NINGUNO', 'NIVEL MÍNIMO', 'PARA GANAR PR'],
             ['+' + div.gana + ' / -' + div.pierde, 'PR EN JUEGO', 'COMO MÁXIMO']
+          ] : (e.semilla !== null && e.semilla !== undefined) ? [
+            [String(RG.COLOCACION - e.colocacion), 'PARTIDAS', 'DE COLOCACIÓN'],
+            [e.semillaNombre, 'EMPIEZAS EN', 'VIENES DE ' + e.vieneDe],
+            ['X' + (RG.COLOCACION_X || 1), 'PR EN JUEGO', 'EN CADA UNA']
           ] : [
             [String(RG.COLOCACION - e.colocacion), 'PARTIDAS', 'DE COLOCACIÓN'],
             ['TU MEDIA', 'DECIDE', 'DÓNDE EMPIEZAS'],
@@ -14328,7 +14353,7 @@
         { t: 'MANTENER PULSADO', d: 'ALGUNOS PODERES TIENEN UNA SEGUNDA FORMA SI MANTIENES LA TECLA: EL METEORO APUNTA, EL HIELO DEJA UNA PLACA, EL ESCUDO ALIADO CUBRE A TODO EL EQUIPO.' },
         { t: 'EL REY FANTASMA', d: 'CADA 5 NIVELES SALE EL REY: MUCHA VIDA, EMBESTIDAS Y ESBIRROS. LOS PODERES LE HACEN DAÑO O LO ATURDEN.' },
         clasif
-          ? { t: 'CLASIFICATORIA', d: 'CADA PARTIDA MUEVE TU RANGO DEL MES (CEREZA … LLAVE), CON CUALQUIER ROL. LAS 5 PRIMERAS SON DE COLOCACIÓN. HACE FALTA CUENTA Y LOS AJUSTES DE SERIE. EL RANGO SE REINICIA CADA MES.' }
+          ? { t: 'CLASIFICATORIA', d: 'CADA PARTIDA MUEVE TU RANGO DEL MES (CEREZA … LLAVE), CON CUALQUIER ROL: CADA UNO TIENE SU MARCA (EL SOPORTE, POR EJEMPLO, NECESITA MENOS PUNTOS QUE EL ASESINO). LAS 5 PRIMERAS SON DE COLOCACIÓN. HACE FALTA CUENTA Y LOS AJUSTES DE SERIE. CADA MES SE EMPIEZA DE NUEVO, DESDE LA MITAD DE TU PR DEL MES PASADO.' }
           : { t: 'QUÉ CUENTA', d: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON RÉCORDS Y TROFEOS. CUALQUIER ROL CUENTA, TAMBIÉN A UNO, Y CADA ROL LLEVA ADEMÁS SU PROPIO RÉCORD. EL RANGO SE JUEGA EN CLASIFICATORIA.' },
         { t: 'EL J2 CON FANTASMA', d: 'EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA EN VEZ DE UN PAC-MAN.' }
       ];

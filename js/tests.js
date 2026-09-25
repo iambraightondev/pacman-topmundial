@@ -13041,6 +13041,79 @@
     });
   });
 
+  /* 25 sep: el reinicio suave y el factor de cada rol */
+  test('RANGO: el mes siguiente no se empieza de cero, sino desde una parte del PR', function () {
+    var Rg = window.PM.Rango, RG = CFG.RANGO;
+    function c(o) { var x = {}; for (var k in o) x[Rg.clave(k.split('|')[0], k.split('|')[1])] = o[k]; return x; }
+    // septiembre: MANZANA III con 347 PR y 39 partidas
+    var cs = c({ 'rc|2026-09': 39, 'rg|2026-09': 347 });
+    eq(Rg.estadoDe(cs, '2026-09').nombre, 'MANZANA III', 'así acabó septiembre');
+    var oct = Rg.estadoDe(cs, '2026-10');
+    eq(oct.pr, null, 'en octubre, a colocarse otra vez');
+    eq(oct.semilla, Math.round(347 * RG.ARRASTRE), 'pero desde la mitad de su PR');
+    eq(oct.semillaNombre, 'FRESA II', 'MANZANA III empieza en FRESA II, no en CEREZA');
+    eq(oct.vieneDe, 'MANZANA III');
+    // con pocas partidas se arrastra menos
+    var poco = Rg.estadoDe(c({ 'rc|2026-09': 8, 'rg|2026-09': 790 }), '2026-10');
+    eq(poco.semilla, Math.round(790 * RG.ARRASTRE * 8 / RG.CONFIANZA), 'con 8 partidas, un 40 % de la mitad');
+    // la colocación se juega desde la semilla y la quinta la fija
+    var cc = c({ 'rc|2026-09': 39, 'rg|2026-09': 347, 'rc|2026-10': 5, 'ru|2026-10': 60, 'rd|2026-10': 20 });
+    eq(Rg.estadoDe(cc, '2026-10').pr, oct.semilla + 40, 'semilla + lo ganado − lo perdido en la colocación');
+    // sin rango el mes pasado, como siempre
+    var nuevo = Rg.estadoDe(c({ 'rc|2026-10': 2 }), '2026-10');
+    eq(nuevo.semilla, null, 'sin mes pasado no hay semilla');
+    // quien no acabó de colocarse el mes pasado tampoco arrastra nada
+    eq(Rg.estadoDe(c({ 'rc|2026-09': 3, 'rt|2026-09': 90000 }), '2026-10').semilla, null, 'ni sin colocarse');
+  });
+
+  test('RANGO: con semilla, cada partida de colocación mueve el doble desde ella', function () {
+    conContadores(function (A) {
+      var Rg = window.PM.Rango, RG = CFG.RANGO, Se = window.PM.Season, act0 = Se.actual;
+      try {
+        A.recordAll({ [Rg.clave('rc', '2026-09')]: 39, [Rg.clave('rg', '2026-09')]: 347 });
+        Se.actual = function () { return '2026-10'; };
+        var e = Rg.estado(), t = Rg.tramo(e.semilla);
+        var r = Rg.apuntar(Math.round(Rg.parTramo(t, 1) * 2), 1, 5);
+        ok(r.colocando, 'aún coloca');
+        eq(Rg.estado().prColoca, e.semilla + 20 * RG.COLOCACION_X, 'doblar la marca da +20, por dos');
+        for (var i = 0; i < 4; i++) r = Rg.apuntar(Math.round(Rg.parTramo(Rg.tramo(Rg.estado().prColoca), 1)), 1, 5);
+        ok(r.colocado, 'la quinta coloca');
+        eq(Rg.estado().pr, e.semilla + 20 * RG.COLOCACION_X, 'donde iba la colocación');
+      } finally { Se.actual = act0; }
+    });
+  });
+
+  test('RANGO: el ajuste a mano de una cuenta suma PR a su temporada al leer', function () {
+    var Rg = window.PM.Rango, AJ = CFG.AJUSTES_CUENTA;
+    var c = {};
+    c[Rg.clave('rc', '2026-09')] = 35; c[Rg.clave('rt', '2026-09')] = 196212;
+    c[Rg.clave('rg', '2026-09')] = 163; c[Rg.clave('rl', '2026-09')] = 104; c[Rg.clave('rm', '2026-09')] = 7;
+    eq(Rg.estadoDe(c, '2026-09').pr, 159, 'sin ajuste, 159');
+    var a = Rg.ajustados(c, 'ester');
+    eq(Rg.estadoDe(a, '2026-09').pr, 159 + AJ.ESTER.rango['2026-09'], 'con el suyo, lo que se le reconoce');
+    eq(Rg.estadoDe(a, '2026-09').nombre, 'NARANJA IV', 'ESTER llega a NARANJA IV');
+    eq(a[Rg.clave('rm', '2026-09')], Rg.estadoDe(a, '2026-09').tramo + 1, 'y lo más alto sube con él');
+    eq(c[Rg.clave('rg', '2026-09')], 163, 'sin tocar los contadores de verdad');
+    ok(Rg.ajustados(c, 'NADIE') === c, 'a quien no tiene ajuste no se le toca nada');
+  });
+
+  test('RANGO: cada rol tiene su marca; el SOPORTE necesita menos puntos', function () {
+    conContadores(function () {
+      var Rg = window.PM.Rango, F = CFG.RANGO.FACTOR_ROL;
+      eq(Rg.factorRoles(['asesino'], 1), 1, 'el ASESINO, la marca entera');
+      eq(Rg.factorRoles(['soporte'], 1), F.soporte, 'el SOPORTE, menos');
+      eq(Rg.factorRoles(null, 1), 1, 'sin roles (las de antes), como el ASESINO');
+      eq(Rg.factorRoles(['asesino', 'soporte'], 2), (1 + F.soporte) / 2, 'en party, la media del equipo');
+      for (var i = 0; i < 5; i++) Rg.apuntar(20000, 1, 5);
+      var t = Rg.estado().tramo, marca = Rg.parTramo(t, 1);
+      eq(Rg.apuntar(Math.round(marca * F.soporte), 1, 5, ['soporte']).cambio, 0,
+        'al SOPORTE, igualar SU marca no mueve nada');
+      eq(Rg.apuntar(Math.round(marca * F.soporte * 2), 1, 5, ['soporte']).cambio, 20, 'y doblarla, +20');
+      ok(Rg.apuntar(Math.round(marca * F.soporte * 2), 1, 5, ['asesino']).cambio < 20,
+        'los mismos puntos con el ASESINO valen menos');
+    });
+  });
+
   test('RANGO: solo en el modo CLASIFICATORIA y con cuenta; con cualquier rol, sí', function () {
     var Rg = window.PM.Rango;
     var logged = Rg.conCuenta;

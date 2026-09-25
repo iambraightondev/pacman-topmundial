@@ -7,11 +7,33 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **24 de septiembre de 2026**.
+Última puesta al día: **25 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### DONDE SE DEJÓ (25 sep): REINICIO SUAVE DEL RANGO, FACTOR DE ROL, CUARTEL
+
+**Decidido por Braighton hoy:**
+- **Reinicio suave del rango** (CFG.RANGO.ARRASTRE/CONFIANZA/COLOCACION_X):
+  el mes nuevo arranca desde PR final × 50 % × (partidas del mes pasado / 20,
+  tope 1); las 5 de colocación se juegan desde ahí y mueven el doble. Sin rango
+  el mes pasado, colocación de siempre. Se estrena el **1 de octubre**.
+- **Factor de rol** en la marca del rango (CFG.RANGO.FACTOR_ROL): Asesino 1,
+  Mago 0,9, Tanque 0,9, Soporte 0,6 (en party, la media del equipo). Aplicado
+  a todo septiembre, no solo desde hoy: recalculado con las clasificatorias a
+  solas de la nube (las de party no guardan el rol). ESTER +41 (tope NARANJA IV
+  por decisión suya), MAULIO +3, en AJUSTES_CUENTA.rango.
+- Otros: el cuartel en seis puertas con pestañas por grupo, el armario del rol
+  en dos pasos, continuar recarga los poderes, shuriken con tope de 3 plenos
+  seguidos, bloque de cuenta del perfil.
+
+**Por hacer de esto:**
+1. **Revisar los factores de rol a mitad de octubre**: salen de pocas partidas,
+   cada rol lo juega casi siempre la misma persona y del Mago casi no hay datos.
+2. Las repeticiones de party no apuntan si eran CLASIFICATORIA ni el rol de cada
+   uno: si hace falta volver a recalcular algo, no hay de dónde.
 
 ### DONDE SE DEJÓ (24 sep, tarde): CIFRAS, PREMIOS DEL RANGO, NUBE BLINDADA
 
