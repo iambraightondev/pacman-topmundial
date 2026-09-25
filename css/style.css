@@ -8365,3 +8365,22 @@ body { font-size-adjust: 0.56; }
 .temporada-ficha span { font-size: 8px; letter-spacing: 2px; color: #9a9cc6; }
 .temporada-ficha b { font-weight: normal; font-size: 12px; letter-spacing: 1px; color: var(--c); }
 .temporada-ficha .fruta-mini { margin: 0; }
+
+/* =========================================================
+ * EL CUARTEL POR GRUPOS (25 sep): dentro de cada grupo, la tira para pasar
+ * de un panel a otro
+ * ========================================================= */
+.grupo-tira {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 4px;
+  align-self: center; margin: 0 auto 12px; padding: 4px;
+  border: 1px solid rgba(33, 33, 255, 0.7); border-radius: 22px; background: rgba(0, 0, 0, 0.55);
+  flex-shrink: 0; position: relative; z-index: 2;
+}
+.btn.grupo-tab {
+  min-width: 0; margin: 0; font-size: 10px; letter-spacing: 2px; padding: 8px 16px;
+  color: #cfd6f2; background: transparent; border: 0; border-radius: 18px; cursor: pointer;
+  box-shadow: none; transform: none;
+}
+.btn.grupo-tab:hover:not(.active), .btn.grupo-tab:focus-visible:not(.active) { color: #ffff00; background: rgba(255, 255, 0, 0.08); outline: none; }
+.btn.grupo-tab.active { color: #000; background: #ffff00; cursor: default; }
+@media (max-width: 560px) { .btn.grupo-tab { font-size: 8px; letter-spacing: 1px; padding: 7px 10px; } }

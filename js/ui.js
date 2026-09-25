@@ -710,7 +710,11 @@
       main.appendChild(play);
       this.playBtn = play;
 
-      /* ===== el cuartel, como menú de recreativa ===== */
+      /* ===== el cuartel, como menú de recreativa =====
+       * SEIS PUERTAS (25 sep). Eran diez y ya no cabían de un vistazo. Lo que
+       * va junto entra por la misma puerta y dentro se cambia con la tira de
+       * arriba (ver GRUPOS_CUARTEL): TOP MUNDIAL con RANGO; PERFIL con
+       * TROFEOS y MAESTRÍAS; VESTUARIO con TIENDA. */
       side.appendChild(this.sectionTitle('TU CUARTEL'));
       var extras = document.createElement('div');
       extras.className = 'menu-extras';
@@ -718,9 +722,13 @@
         self.resumeAudio();
         self.showRanking();
       }));
+      /* sin cuenta, PERFIL abre por TROFEOS: la ficha la pide, y lo demás
+       * no tiene por qué quedarse detrás de esa puerta */
       extras.appendChild(this.makeButton('PERFIL', function () {
         self.resumeAudio();
-        self.showProfile();
+        var Ac = window.PM.Account;
+        if (Ac && Ac.logged()) self.showProfile();
+        else self.showBadges();
       }));
       /* VESTUARIO: todo lo que llevas puesto, en un solo sitio */
       this.menuVestBtn = this.makeButton('VESTUARIO', function () {
@@ -728,31 +736,13 @@
         self.showVestuario('skin', 'yo');
       });
       extras.appendChild(this.menuVestBtn);
-      this.menuTiendaBtn = this.makeButton('TIENDA', function () {
-        self.resumeAudio();
-        self.showTienda();
-      });
-      extras.appendChild(this.menuTiendaBtn);
-      /* EL PASE: el camino del mes. Va pegado a la TIENDA porque las dos
-       * reparten monedas, y lleva el galón escrito para que se vea desde el
-       * menú que hay algo que avanza. */
+      /* EL PASE: el camino del mes. Lleva el galón escrito para que se vea
+       * desde el menú que hay algo que avanza. */
       this.menuPaseBtn = this.makeButton('PASE', function () {
         self.resumeAudio();
         self.showPase();
       });
       extras.appendChild(this.menuPaseBtn);
-      extras.appendChild(this.makeButton('TROFEOS', function () {
-        self.resumeAudio();
-        self.showBadges();
-      }));
-      extras.appendChild(this.makeButton('MAESTRÍAS', function () {
-        self.resumeAudio();
-        self.showMaestrias();
-      }));
-      extras.appendChild(this.makeButton('RANGO', function () {
-        self.resumeAudio();
-        self.showRango();
-      }));
       extras.appendChild(this.makeButton('AMIGOS', function () {
         self.resumeAudio();
         self.showFriends();
@@ -13535,6 +13525,7 @@
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
         if (el && panels[i] !== name) el.style.zoom = '';
       }
+      this.tiraGrupo(name);
       this.refreshControls();
       this.recordarVista(name);
       /* el panel ya está puesto y medido: ahora se encoge si no cabe */
@@ -13545,6 +13536,55 @@
       if (window.requestAnimationFrame) {
         window.requestAnimationFrame(function () { self.encajarPanel(); });
       }
+    },
+
+    /* LOS GRUPOS DEL CUARTEL (25 sep): los paneles que entran por la misma
+     * puerta del menú llevan arriba una tira para pasar de uno a otro. */
+    GRUPOS_CUARTEL: [
+      [['ranking', 'TOP MUNDIAL'], ['rango', 'RANGO']],
+      [['profile', 'FICHA'], ['badges', 'TROFEOS'], ['maestrias', 'MAESTRÍAS']],
+      [['vestuario', 'VESTUARIO'], ['tienda', 'TIENDA']]
+    ],
+    tiraGrupo: function (name) {
+      var self = this, grupo = null, i, j;
+      for (i = 0; i < this.GRUPOS_CUARTEL.length && !grupo; i++) {
+        for (j = 0; j < this.GRUPOS_CUARTEL[i].length; j++) {
+          if (this.GRUPOS_CUARTEL[i][j][0] === name) { grupo = this.GRUPOS_CUARTEL[i]; break; }
+        }
+      }
+      var panel = grupo && this.els[name];
+      if (!panel) return;
+      if (!this.tirasGrupo) this.tirasGrupo = {};
+      /* una por panel, hecha la primera vez que se abre: en cada una la
+       * encendida es la suya y no cambia nunca */
+      if (this.tirasGrupo[name] && this.tirasGrupo[name].parentNode === panel) return;
+      var tira = document.createElement('div');
+      tira.className = 'grupo-tira';
+      tira.setAttribute('role', 'tablist');
+      grupo.forEach(function (g) {
+        var b = self.makeButton(g[1], function () { if (g[0] !== name) self.saltoGrupo(name, g[0]); });
+        b.classList.add('grupo-tab');
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-selected', g[0] === name ? 'true' : 'false');
+        if (g[0] === name) b.classList.add('active');
+        tira.appendChild(b);
+      });
+      panel.insertBefore(tira, panel.firstChild);
+      this.tirasGrupo[name] = tira;
+    },
+    /* De una pestaña del grupo a otra. El VOLVER sigue llevando a donde se
+     * entró al grupo (VESTUARIO y TIENDA se lo apuntan; los demás van al menú). */
+    saltoGrupo: function (de, a) {
+      var origen = (de === 'vestuario') ? this.vestVolver : (de === 'tienda') ? this.tiendaVolver : 'menu';
+      if (origen === 'vestuario' || origen === 'tienda') origen = 'menu';
+      this.resumeAudio();
+      if (a === 'ranking') this.showRanking();
+      else if (a === 'rango') this.showRango();
+      else if (a === 'profile') this.showProfile();
+      else if (a === 'badges') this.showBadges();
+      else if (a === 'maestrias') this.showMaestrias();
+      else if (a === 'vestuario') { this.showVestuario(null, 'yo'); this.vestVolver = origen; }
+      else if (a === 'tienda') { this.showTienda(); this.tiendaVolver = origen; }
     },
 
     /* LA PANTALLA EN LA QUE ESTABAS (24 sep). Al recargar se volvía siempre
