@@ -26,10 +26,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 - **Récord del invitado:** se apunta en vivo (antes solo al ver el GAME OVER:
   MAULIO se quedó sin los 218.350 de dúo; subido a mano en la nube) y es la
   puntuación del equipo, no el HIGH SCORE que ve, que es el récord del
-  anfitrión. **Por decidir:** SANDROPEPA, FREDDY y ALEXIS tienen récords de
-  IAMBRAIGHTON heredados así (119.300 de trío, 64.310 de escuadra) sin
-  haberlos jugado; bajarlos pide limpieza con `purga`.
-Service worker pm-v286.
+  anfitrión. **Limpiado (26 sep, con `purga`):** los récords heredados así,
+  bajados a su mejor partida del ranking: SANDROPEPA trío 71.500 y escuadra
+  44.800; FREDDY dúo 90.370 y escuadra 44.800; ALEXIS escuadra 44.800; ESTER
+  dúo 95.310 (los 107.200 eran de IAMBRAIGHTON + MAULIO). Sin tocar, por no
+  tener prueba: el 76.290 de dúo clásico que comparten siete cuentas (el fallo
+  de agosto), y los 67.330 / 74.560 / 67.930 de antes de mediados de sep.
+- **CLASIFICATORIA SOLO CON CUENTA:** a solas pide entrar antes de jugarla; en
+  party cada miembro dice si tiene sesión (`cu` en el saludo, PROTO 19) y
+  la sala en clasificatoria no arranca hasta que todos la tengan.
+Service worker pm-v287.
 
 ### 26 sep: LO JUGADO EN DOS APARATOS SE SUMA
 

@@ -12,7 +12,10 @@ sala. El shuriken y los ganchos del invitado salen de donde él los lanzó, y ya
 no se estrellan contra la esquina que acababa de doblar.
 **ARREGLO, RÉCORDS:** el invitado apunta su récord mientras juega, así que ya no
 lo pierde si se sale antes del final (MAULIO recupera sus 218.350 de dúo). Y deja
-de heredar el récord de quien abre la sala.
+de heredar el récord de quien abre la sala; los que se heredaron así (SANDROPEPA,
+FREDDY, ALEXIS y ESTER) vuelven a su mejor partida de verdad.
+**CLASIFICATORIA, SOLO CON CUENTA:** sin sesión se pide entrar antes de jugarla, y
+una party en clasificatoria no arranca mientras alguien no haya entrado en la suya.
 
 ## 2026-09-26 · Lo jugado en dos aparatos se suma
 
