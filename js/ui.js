@@ -7191,9 +7191,35 @@
        * solo o en party */
       o.appendChild(cab);
 
+      /* CÓMO FUNCIONA, detrás de un "?" como el de LOS RANGOS (25 sep): era
+       * un párrafo de cuatro líneas bajo el título que nadie leía y empujaba
+       * la insignia hacia abajo. Flota sobre lo de debajo y se cierra al
+       * pulsar fuera. */
+      var caja = document.createElement('div');
+      caja.className = 'rango-ayuda-caja';
+      var ayudaB = document.createElement('button');
+      ayudaB.type = 'button';
+      ayudaB.className = 'rgs-ayuda-b';
+      ayudaB.textContent = '?';
+      ayudaB.title = 'CÓMO FUNCIONA EL RANGO';
+      ayudaB.setAttribute('aria-label', 'CÓMO FUNCIONA EL RANGO');
       this.rangoSub = document.createElement('div');
-      this.rangoSub.className = 'note maes-nota';
-      o.appendChild(this.rangoSub);
+      this.rangoSub.className = 'rgs-ayuda rango-ayuda';
+      this.rangoSub.style.display = 'none';
+      var sub = this.rangoSub;
+      function verAyuda(ver) {
+        sub.style.display = ver ? '' : 'none';
+        ayudaB.classList.toggle('on', ver);
+      }
+      ayudaB.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        verAyuda(sub.style.display === 'none');
+      });
+      sub.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      o.addEventListener('click', function () { verAyuda(false); });
+      caja.appendChild(ayudaB);
+      caja.appendChild(sub);
+      cab.appendChild(caja);
 
       var cuerpo = document.createElement('div');
       cuerpo.className = 'maes-cuerpo rango-cuerpo';
@@ -7251,11 +7277,15 @@
     /* En party la marca se multiplica como la de los trofeos: el texto que lo
      * explica, con los números de verdad (Badges.FORMATOS) */
     textoMultRango: function () {
+      var party = this.textoPartyRango();
+      return party ? (party + '.  ' + this.textoRolesRango()) : '';
+    },
+    textoPartyRango: function () {
       var B = window.PM.Badges;
       if (!B || !B.FORMATOS) return '';
       return 'EN PARTY LA MARCA SE MULTIPLICA: ' + B.FORMATOS.slice(1).map(function (f) {
         return f.name + ' X' + String(f.mult).replace('.', ',');
-      }).join(' · ') + '.  ' + this.textoRolesRango();
+      }).join(' · ');
     },
     /* lo que pide cada rol (CFG.RANGO.FACTOR_ROL), en palabras */
     textoRolesRango: function () {
@@ -7285,12 +7315,23 @@
       var RG = CFG.RANGO, D = RG.DIVISIONES, n = 1;
       var e = Rg.estado();
       var S = window.PM.Season;
-      this.rangoSub.textContent = 'CLASIFICATORIA · TEMPORADA ' +
-        (S ? S.nombre(e.temporada) : e.temporada) +
-        '  ·  UN SOLO RANGO, A SOLO O EN PARTY. CADA MES SE EMPIEZA DE NUEVO, PERO NO DE CERO: ARRANCAS CON EL ' +
-        Math.round(RG.ARRASTRE * 100) + ' % DE TU PR DEL MES PASADO (MENOS SI JUGASTE MENOS DE ' + RG.CONFIANZA +
-        ' PARTIDAS), Y LAS ' + RG.COLOCACION + ' DE COLOCACIÓN MUEVEN EL DOBLE. LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO.  ' +
-        this.textoMultRango();
+      var sub = this.rangoSub;
+      sub.innerHTML = '';
+      ['CLASIFICATORIA · TEMPORADA ' + (S ? S.nombre(e.temporada) : e.temporada) +
+         '. UN SOLO RANGO, A SOLO O EN PARTY.',
+       'CADA MES SE EMPIEZA DE NUEVO, PERO NO DE CERO: ARRANCAS CON EL ' +
+         Math.round(RG.ARRASTRE * 100) + ' % DE TU PR DEL MES PASADO (MENOS SI JUGASTE MENOS DE ' +
+         RG.CONFIANZA + ' PARTIDAS).',
+       'LAS ' + RG.COLOCACION + ' DE COLOCACIÓN MUEVEN EL DOBLE. LUEGO SUBES O BAJAS POR ESCALONES ' +
+         'SEGÚN TU MARCA CONTRA LA DEL TUYO.',
+       this.textoPartyRango() + '.',
+       this.textoRolesRango() + '.'
+      ].forEach(function (t) {
+        if (t === '.') return;
+        var p = document.createElement('div');
+        p.textContent = t;
+        sub.appendChild(p);
+      });
 
       var d = e.division, div = d >= 0 ? D[d] : null;
       this.rangoInfo.style.setProperty('--c', div ? div.color : '#8a8cae');

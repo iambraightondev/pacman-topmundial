@@ -8137,6 +8137,9 @@ body { font-size-adjust: 0.56; }
   border-left: 2px solid #ffd23f; border-top: 2px solid #ffd23f;
   transform: rotate(45deg);
 }
+/* el mismo "?" en el panel de RANGO, a la derecha del título (25 sep) */
+.rango-ayuda-caja { position: relative; margin-left: auto; }
+.rgs-ayuda.rango-ayuda { width: 420px; }
 .rgs-pie .maes-barra .rgs-corte {
   position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
   background: rgba(0, 0, 0, 0.75);
