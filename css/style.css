@@ -7690,21 +7690,33 @@ body { font-size-adjust: 0.56; }
 #rango .rango-insignia:hover .rango-insignia-pista,
 #rango .rango-insignia:focus-visible .rango-insignia-pista { color: #000; background: #ffe23a; }
 
-/* la tabla del mes: cada dato centrado en su columna */
+/* la tabla del mes: cada dato centrado en su columna, y a lo ancho de lo de
+ * arriba (la insignia y los datos), con su mismo peso de letra */
+#rango .section-title { margin-top: clamp(20px, 3vh, 34px); }
+#rango .rango-lista {
+  width: min(94vw, 1180px); gap: 8px; margin-top: 12px;
+  font-size: clamp(11px, 1.2vw, 14px);
+}
 #rango .rango-fila {
-  grid-template-columns: 40px 24px minmax(0, 1fr) 130px 110px;
+  grid-template-columns: 70px 32px minmax(0, 1fr) minmax(150px, 240px) minmax(110px, 170px);
   justify-items: center; text-align: center;
+  gap: 16px; padding: 14px 20px;
 }
 #rango .rango-fila > * { text-align: center; }
+#rango .rango-fila.yo { border-width: 2px; padding: 13px 19px; }
+#rango .rango-fruta { width: 32px; height: 32px; }
 #rango .rango-nombre { max-width: 100%; }
 #rango .rango-fila.rango-cab {
-  border: none; background: none; padding-top: 0; padding-bottom: 0;
-  font-size: 8px; color: #8a8cae;
+  border: none; background: none; padding-top: 0; padding-bottom: 2px;
+  font-size: 10px; letter-spacing: 2px; color: #8a8cae;
 }
 #rango .rango-fila.rango-cab > * { color: #8a8cae; }
 #rango .rango-fila.rango-cab .rango-fruta { height: auto; }
 @media (max-width: 600px) {
-  #rango .rango-fila { grid-template-columns: 30px 18px minmax(0, 1fr) 80px; }
+  #rango .rango-lista { font-size: 10px; gap: 6px; }
+  #rango .rango-fila { grid-template-columns: 30px 22px minmax(0, 1fr) 80px; gap: 10px; padding: 10px 12px; }
+  #rango .rango-fila.yo { padding: 9px 11px; }
+  #rango .rango-fruta { width: 22px; height: 22px; }
 }
 
 /* LOS RANGOS: la escalera, de LLAVE arriba a CEREZA abajo */
