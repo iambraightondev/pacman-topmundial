@@ -6140,6 +6140,10 @@
     pickPartyModo: function (id) {
       var P = window.PM.Party;
       if (!P || !P.isLeader()) return;
+      if (id === 'clasif' && window.PM.Rango && !window.PM.Rango.conCuenta()) {
+        this.setLobbyStatus('LA CLASIFICATORIA ES CON CUENTA: ENTRA EN LA TUYA PARA PONERLA');
+        return;
+      }
       P.setModo(id);
     },
 
@@ -6363,8 +6367,11 @@
         this.ponRonda(this.listoBtn, 'btn-ronda');
       }
       this.inviteBtn.disabled = !P.active();
+      var sinCuenta = P.faltaCuenta ? P.faltaCuenta() : [];
       this.setLobbyStatus(
         P.connecting() ? 'CONECTANDO...'
+        : sinCuenta.length ? ('CLASIFICATORIA: HACE FALTA CUENTA · ' + sinCuenta.join(', ') +
+            (sinCuenta.length > 1 ? ' TIENEN' : ' TIENE') + ' QUE ENTRAR EN LA SUYA')
         : (!P.anyPac() && !P.cazaPick) ? 'ALGUIEN TIENE QUE LLEVAR UN PAC-MAN'
         : lider ? (P.count() < 2 ? 'ESPERANDO A MÁS JUGADORES...'
           : !P.todosListos() ? ('FALTA QUE DIGAN QUE ESTÁN LISTOS (' +
@@ -9478,6 +9485,8 @@
       var Ac = window.PM.Account;
       if (!Ac) return;
       Ac.onchange = function () {
+        // la sala se entera de si tienes sesión (la CLASIFICATORIA la pide)
+        if (window.PM.Party && window.PM.Party.refreshMe) window.PM.Party.refreshMe();
         self.refreshNicks();
         self.refreshLevel();
         self.refreshSkins();      // el nivel de la cuenta puede abrir skins
@@ -14322,6 +14331,16 @@
      * refreshParty); si estás en la de otro, manda el líder. */
     showClasifPrompt: function () {
       var self = this;
+      /* SIN CUENTA NO SE JUEGA (26 sep): antes se dejaba jugar y avisaba de
+       * que no contaba, y la partida se perdía. Ahora se pide entrar (o
+       * crearla) y, dentro, se vuelve aquí. */
+      if (window.PM.Rango && !window.PM.Rango.conCuenta()) {
+        this.showAccountPrompt('entrar', function (ok) {
+          if (ok) self.showClasifPrompt();
+        });
+        this.setPromptStatus('LA CLASIFICATORIA ES CON CUENTA: ENTRA O CREA UNA PARA JUGARLA', false);
+        return;
+      }
       var Rg = window.PM.Rango, S = window.PM.Season, B = window.PM.Badges;
       var RG = CFG.RANGO, D = RG.DIVISIONES;
       var e = Rg ? Rg.estado() : { jugadas: 0, colocacion: 0, pr: null, division: -1 };
@@ -14455,6 +14474,7 @@
 
     clasifEnParty: function () {
       var P = window.PM.Party;
+      if (window.PM.Rango && !window.PM.Rango.conCuenta()) { this.showClasifPrompt(); return; }
       this.hidePrompt();
       this.partyModoPendiente = 'clasif';
       if (P && P.inParty && P.inParty() && P.isLeader && P.isLeader()) {

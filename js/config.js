@@ -2828,7 +2828,7 @@
      * 'ap' del METEORO en la posición y los poderes 'h' en el saludo); la 17,
      * el YUNQUE roto que avisa el invitado (habGasta 'yunque'); la 18, la
      * CLASIFICATORIA como modo de la sala ('cl' en la lista y en la salida). */
-    PROTO: 18,
+    PROTO: 19,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

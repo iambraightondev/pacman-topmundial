@@ -100,13 +100,28 @@
       // en CACERÍA nadie lleva Pac-Man: lo lleva la máquina
       return this.active() && this.isLeader() && this.count() >= 2 &&
         (this.anyPac() || this.cazaPick || this.supervPick) &&
-        this.todosListos() &&
+        this.todosListos() && !this.faltaCuenta().length &&
         !(window.PM.Game && window.PM.Game.inGame());
+    },
+
+    /* CLASIFICATORIA SOLO CON CUENTA (26 sep): sin sesión el rango no se
+     * apunta, así que jugarla era perder la partida. Cada miembro dice si la
+     * tiene (`cu`) y la sala en CLASIFICATORIA no arranca hasta que todos.
+     * Devuelve los nombres de los que no, o [] si no es clasificatoria. */
+    faltaCuenta: function () {
+      if (!this.st || !(this.habPick && this.clasifPick)) return [];
+      var out = [];
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (!this.st.members[i].cu) out.push(this.st.members[i].n || 'JUGADOR');
+      }
+      return out;
     },
 
     me: function () {
       var s = window.PM.settings || {};
+      var Ac = window.PM.Account;
       return {
+        cu: (Ac && Ac.logged && Ac.logged()) ? 1 : 0,
         s: window.PM.Net.sid,
         n: cleanNick(s.nick1) || 'JUGADOR',
         c: s.pacColor || CFG.PLAYER_COLORS[0],
@@ -383,7 +398,7 @@
       /* h: los PODERES. Faltaban (23 sep): el rol viajaba y los poderes no,
        * así que el líder le ponía a cada invitado los de serie de su rol */
       return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r, h: m.h,
-               rg: m.rg, ra: m.ra, l: this.listo ? 1 : 0 };
+               rg: m.rg, ra: m.ra, cu: m.cu, l: this.listo ? 1 : 0 };
     },
 
     /* ---------- EL LISTO (20 sep) ----------
@@ -447,7 +462,7 @@
       } else {
         var m = this.selfEntry();
         if (m && m.n === yo.n && m.c === yo.c && m.k === yo.k && m.a === yo.a && m.x === yo.x &&
-            m.r === yo.r && m.h === yo.h) return;
+            m.r === yo.r && m.h === yo.h && m.cu === yo.cu) return;
         window.PM.Net.send('phello', this.hello());
       }
       this.changed();
@@ -471,10 +486,11 @@
        * salía con los que tenía al abrir la sala */
       var h = CFG.HAB.loadoutValido(rol, yo.h);
       var cambia = m.n !== yo.n || m.c !== yo.c || m.k !== yo.k || m.a !== yo.a || m.x !== yo.x ||
-        m.r !== rol || m.h !== h || m.rg !== yo.rg || m.ra !== yo.ra;
+        m.r !== rol || m.h !== h || m.rg !== yo.rg || m.ra !== yo.ra || m.cu !== yo.cu;
       m.n = yo.n; m.c = yo.c; m.k = yo.k; m.a = yo.a; m.x = yo.x; m.t = yo.t; m.r = rol; m.h = h;
       m.rg = yo.rg;
       m.ra = yo.ra;
+      m.cu = yo.cu;
       return cambia;
     },
 
@@ -610,6 +626,7 @@
       m.r = this.claimRol(sid, d.r);   // DESATADO: un solo Soporte
       m.h = CFG.HAB.loadoutValido(m.r, d.h);
       m.l = d.l ? 1 : 0;               // ¿ha dicho que está listo?
+      m.cu = d.cu ? 1 : 0;             // ¿tiene la sesión abierta? (CLASIFICATORIA)
       m.rg = (typeof d.rg === 'number' && d.rg >= 0 && d.rg < 64) ? (d.rg | 0) : -1;   // su escalón
       m.ra = (typeof d.ra === 'number' && d.ra >= 0 && d.ra < CFG.RANGO.DIVISIONES.length) ? (d.ra | 0) : -1;
       m.t = now();

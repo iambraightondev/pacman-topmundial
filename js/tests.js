@@ -13459,7 +13459,8 @@
 
   test('CLASIFICATORIA: la entrada dice tu rango y lo que te juegas', function () {
     var UI = window.PM.UI, Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
-    var est0 = Rg.estado;
+    var est0 = Rg.estado, cc0 = Rg.conCuenta;
+    Rg.conCuenta = function () { return true; };
     Rg.estado = function () {
       return Rg.estadoDe({ [Rg.clave('rc', 'x')]: 9, [Rg.clave('rt', 'x')]: 5 * 25000,
                            [Rg.clave('rg', 'x')]: 50 }, 'x');
@@ -13479,7 +13480,41 @@
       ok(!p.classList.contains('clasif-entrada'), 'el siguiente diálogo no hereda su aspecto');
     } finally {
       Rg.estado = est0;
+      Rg.conCuenta = cc0;
       UI.hidePrompt();
+    }
+  });
+
+  test('CLASIFICATORIA: sin cuenta no se juega, se pide entrar', function () {
+    var UI = window.PM.UI, Rg = window.PM.Rango;
+    var cc0 = Rg.conCuenta;
+    Rg.conCuenta = function () { return false; };
+    try {
+      UI.showClasifPrompt();
+      var p = UI.els.prompt;
+      ok(!p.classList.contains('clasif-entrada'), 'no sale la entrada de la clasificatoria');
+      ok(!p.querySelector('.cle-apuesta'), 'ni lo que te juegas');
+      ok(/CON CUENTA/.test(p.textContent), 'y dice que hace falta cuenta');
+    } finally {
+      Rg.conCuenta = cc0;
+      UI.hidePrompt();
+    }
+  });
+
+  test('CLASIFICATORIA EN PARTY: no arranca mientras alguien no tenga cuenta', function () {
+    var P = window.PM.Party;
+    var st0 = P.st, h0 = P.habPick, c0 = P.clasifPick;
+    try {
+      P.st = { code: 'X', leader: true, members: [{ s: 'a', n: 'UNO', cu: 1 }, { s: 'b', n: 'DOS', cu: 0 }] };
+      P.habPick = true; P.clasifPick = true;
+      eq(P.faltaCuenta().join(','), 'DOS', 'dice quién no la tiene');
+      P.st.members[1].cu = 1;
+      eq(P.faltaCuenta().length, 0, 'con todos dentro, nadie');
+      P.st.members[1].cu = 0;
+      P.clasifPick = false;
+      eq(P.faltaCuenta().length, 0, 'y en DESATADO normal no se pide');
+    } finally {
+      P.st = st0; P.habPick = h0; P.clasifPick = c0;
     }
   });
 
