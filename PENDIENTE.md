@@ -13,6 +13,13 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### 26 sep (4): REGALO A PIEROSENSUAL
+
++1.000 monedas por petición de Braighton, sumadas a `logros.monedas` en la
+nube (499 → 1.499). Subir en la nube aguanta: su aparato lo toma al entrar.
+**Siguiente sesión:** probar en las dos máquinas que la experiencia se suma, y
+el rey fantasma y la clasificatoria con cuenta en una party de verdad.
+
 ### 26 sep (3): LAS PARTIDAS LARGAS YA TIENEN REPETICIÓN
 
 Las mejores partidas (las más largas) se quedaban sin repetición: el dúo de
