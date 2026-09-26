@@ -13,6 +13,24 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### 26 sep (2): MAESTRÍA EN EL PERFIL, EL REY Y EL INVITADO, RÉCORD DEL INVITADO
+
+- **Mejor maestría en el perfil** (propio y de cualquiera): emblema, escalón y
+  rol, con sus puntos (Maestria.mejor, con los ajustes a mano de cada cuenta).
+- **Rey fantasma en party:** el invitado solo le pegaba con el azul UNA vez por
+  pelea (su marca de "ya pegué" no se borraba nunca); ahora una por
+  superpastilla, como el anfitrión. Y el shuriken y los dos ganchos salen de
+  donde estaba el invitado en su pantalla (como la bola de fuego), no de la
+  posición atrasada que ve el anfitrión. Probado con dos mundos en Node: las
+  15 habilidades que le quitan vida hacen lo mismo lanzadas por el invitado.
+- **Récord del invitado:** se apunta en vivo (antes solo al ver el GAME OVER:
+  MAULIO se quedó sin los 218.350 de dúo; subido a mano en la nube) y es la
+  puntuación del equipo, no el HIGH SCORE que ve, que es el récord del
+  anfitrión. **Por decidir:** SANDROPEPA, FREDDY y ALEXIS tienen récords de
+  IAMBRAIGHTON heredados así (119.300 de trío, 64.310 de escuadra) sin
+  haberlos jugado; bajarlos pide limpieza con `purga`.
+Service worker pm-v286.
+
 ### 26 sep: LO JUGADO EN DOS APARATOS SE SUMA
 
 IAMBRAIGHTON tenía nivel 50 en la nube y 49 en otro ordenador. La experiencia y

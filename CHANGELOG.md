@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-26 (2) · La mejor maestría en el perfil y el invitado contra el rey
+
+**PERFIL:** sale tu mejor maestría —emblema, escalón y con qué rol— y la de
+cualquiera cuyo perfil abras.
+**ARREGLO, REY FANTASMA:** en party, el invitado le pegaba con el azul una sola
+vez en toda la pelea; ahora una por cada superpastilla, igual que quien abre la
+sala. El shuriken y los ganchos del invitado salen de donde él los lanzó, y ya
+no se estrellan contra la esquina que acababa de doblar.
+**ARREGLO, RÉCORDS:** el invitado apunta su récord mientras juega, así que ya no
+lo pierde si se sale antes del final (MAULIO recupera sus 218.350 de dúo). Y deja
+de heredar el récord de quien abre la sala.
+
 ## 2026-09-26 · Lo jugado en dos aparatos se suma
 
 **ARREGLO:** la experiencia, las partidas y el resto de contadores que suman
