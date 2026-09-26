@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-26 (3) · Las partidas largas ya tienen repetición
+
+**ARREGLO:** las partidas más largas —justo las mejores— se quedaban sin
+repetición porque no cabían. Ahora caben mucho más en el navegador y, si aun así
+no caben, se suben enteras a la nube.
+
 ## 2026-09-26 (2) · La mejor maestría en el perfil y el invitado contra el rey
 
 **PERFIL:** sale tu mejor maestría —emblema, escalón y con qué rol— y la de

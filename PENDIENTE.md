@@ -13,6 +13,18 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### 26 sep (3): LAS PARTIDAS LARGAS YA TIENEN REPETICIÓN
+
+Las mejores partidas (las más largas) se quedaban sin repetición: el dúo de
+218.350 y el 180.550 de DESATADO no la tienen. Topes viejos de cuando se
+compartían en la URL: 24.000 caracteres las locales, 450.000 las de red, 260.000
+en la nube, y además se dejaba de grabar a los 20.000 giros o sucesos. Ahora
+caben mucho más aquí y, si no, van ENTERAS a la nube (Replay.aLaNube), cuyo
+CHECK sube a 4.000.000 (probado con filas de 3,9 MB). Se sigue borrando de la
+nube lo no destacado a los 7 días, como todo. Service worker pm-v288.
+**No se puede saber** si la de 218.350 fue clasificatoria: ni la de red ni el
+historial apuntan el modo.
+
 ### 26 sep (2): MAESTRÍA EN EL PERFIL, EL REY Y EL INVITADO, RÉCORD DEL INVITADO
 
 - **Mejor maestría en el perfil** (propio y de cualquiera): emblema, escalón y
