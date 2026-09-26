@@ -2433,6 +2433,12 @@
       return null;
     },
 
+    /* El récord propio de la liga de la partida en curso (mundo y formato) */
+    recordDeLiga: function () {
+      var slot = this.recordSlot();
+      return slot ? this.recordModo(slot, this.playerCount) : this.recordFor(this.playerCount);
+    },
+
     setRecordFor: function (n, v) {
       v = parseInt(v, 10) || 0;
       if (n >= 4) this.highScore4 = v;
@@ -2471,16 +2477,23 @@
      * modo tiene su marca y su ruta, y no se pisan. */
     persistHighScore: function () {
       if (this.replaying) return;    // una repetición no vuelve a hacer el récord
+      if (this.isSpec()) return;     // ni mirar la partida de otros
       /* DESATADO: el récord de cada ROL (js/badges.js), además del de
        * DESATADO de siempre, que ahora hace cualquier rol */
       this.apuntarRecordRol();
       if (this.isVersus()) return;   // ni una partida contra un fantasma humano
       if (this.superv) return;       // ni SUPERVIVENCIA, que no es de puntos
+      /* La marca del INVITADO es la puntuación del equipo, no el HIGH SCORE
+       * que ve: ese llega en la foto y es el RÉCORD DEL ANFITRIÓN. Guardarlo
+       * le regalaba a cada invitado el récord de quien abría la sala (así
+       * tenían SANDROPEPA, FREDDY y ALEXIS los 119.300 de trío y los 64.310
+       * de escuadra de IAMBRAIGHTON sin haberlos jugado). */
+      var marca = (this.netRole === 'guest') ? this.score : this.highScore;
       var slot = this.recordSlot();
       if (slot) {
         var np = this.playerCount;
-        if (this.highScore > this.recordModo(slot, np)) {
-          this.setRecordModo(slot, this.highScore, np);
+        if (marca > this.recordModo(slot, np)) {
+          this.setRecordModo(slot, marca, np);
         }
         try {
           localStorage.setItem(this.recordModoKey(slot, np),
@@ -2490,7 +2503,7 @@
       }
       // cada formato guarda el suyo: el récord de escuadra no pisa el de dúo
       var n = this.playerCount;
-      if (this.highScore > this.recordFor(n)) this.setRecordFor(n, this.highScore);
+      if (marca > this.recordFor(n)) this.setRecordFor(n, marca);
       try {
         localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));
       } catch (e) { /* sin almacenamiento */ }
@@ -4680,6 +4693,12 @@
       }
 
       this.score = s.sc;
+      /* El récord del invitado se apunta EN VIVO, como el del anfitrión (que
+       * lo hace en cada punto). Antes solo se guardaba al ver el GAME OVER, y
+       * quien no llegaba a verlo —se salía, se le cortaba la red— se quedaba
+       * sin la marca: MAULIO jugó el dúo de 218.350 y su perfil seguía en
+       * 120.170. */
+      if (this.netRole === 'guest' && s.sc > this.recordDeLiga()) this.persistHighScore();
       if (s.pj) this.ptsJ = s.pj.slice();
       this.checkBadges();        // el invitado también ve su cartel
       this.highScore = Math.max(this.highScore, s.hs || 0, s.sc || 0);
