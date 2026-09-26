@@ -233,10 +233,40 @@
     return Object.prototype.toString.call(v) === '[object Array]';
   }
 
+  /* Lo último que se leyó, ya puesto en limpio, y el texto del que salió.
+   * load() se llama muchísimo —cada skin del vestuario, cada precio de la
+   * tienda, cada poder que se usa en DESATADO pasa por aquí— y parsear y
+   * repasar las ~200 claves cada vez costaba cientos de milisegundos por
+   * pulsación en máquinas lentas: el tirón de antes de cada habilidad. Se
+   * vuelve a leer el almacén siempre (otra pestaña o la nube pueden haberlo
+   * cambiado), pero si el texto es el mismo se devuelve una COPIA de lo ya
+   * parseado: quien llama puede tocarla y guardarla sin ensuciar esta. */
+  var cache = { raw: null, d: null };
+
+  function copia(d) {
+    var c = {};
+    for (var k in d.c) if (d.c.hasOwnProperty(k)) c[k] = d.c[k];
+    return { c: c, v: d.v.slice(), m: d.m, d: d.d, k: d.k, b: d.b, e: d.e, est: d.est };
+  }
+
   function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(CFG.ACH_KEY); } catch (e) { /* sin almacenamiento */ }
+    if (cache.d && raw === cache.raw) {
+      var hit = copia(cache.d);
+      ajustarCifras(hit.c);
+      return hit;
+    }
+    var out = parse(raw);
+    cache.raw = raw;
+    cache.d = copia(out);
+    ajustarCifras(out.c);
+    return out;
+  }
+
+  function parse(raw) {
     var out = { c: vacio(), v: [], m: 0, d: 0, k: 0, b: 0, e: 0, est: 0 };
     try {
-      var raw = localStorage.getItem(CFG.ACH_KEY);
       var d = raw ? JSON.parse(raw) : null;
       if (d && d.c) {
         for (var k in STATS) {
@@ -261,7 +291,6 @@
       if (d && d.est) out.est = Math.floor(d.est) || 0;
       if (d && d.b) out.b = 1;          // y el regalo de veterano, ya calculado
     } catch (e) { /* sin almacenamiento */ }
-    ajustarCifras(out.c);
     return out;
   }
 
@@ -296,6 +325,28 @@
     catch (e) { /* sin almacenamiento */ }
   }
 
+  /* Acumula un contador en `d` (lo de load()) según su tipo. Devuelve si
+   * cambió algo, para que quien llama guarde una sola vez. */
+  function sumar(d, key, value) {
+    // `tipo` es cómo acumula (suma/mayor/menor), no el modo de juego
+    var tipo = STATS.hasOwnProperty(key) ? STATS[key] : tipoSuelto(key);
+    if (!tipo) return false;
+    var n = Math.floor(value || 0);
+    if (!(n > 0)) return false;
+    var v = (typeof d.c[key] === 'number') ? d.c[key] : 0;   // una suelta, recién nacida
+    if (tipo === 'suma') v += n;
+    else if (tipo === 'mayor') { if (n <= v) return false; v = n; }
+    else { if (v > 0 && n >= v) return false; v = n; }
+    d.c[key] = v;
+    return true;
+  }
+
+  function sumarTodo(d, o) {
+    var cambio = false;
+    for (var k in o) if (o.hasOwnProperty(k) && sumar(d, k, o[k])) cambio = true;
+    return cambio;
+  }
+
   function infoDe(id) {
     for (var i = 0; i < CFG.ACHIEVEMENTS.length; i++) {
       if (CFG.ACHIEVEMENTS[i].id === id) return CFG.ACHIEVEMENTS[i];
@@ -323,23 +374,15 @@
     /* ---------- acumular ---------- */
     /* n puede venir de una partida entera; se ignora lo que no mejore */
     record: function (key, value) {
-      // `tipo` es cómo acumula (suma/mayor/menor), no el modo de juego
-      var tipo = STATS.hasOwnProperty(key) ? STATS[key] : tipoSuelto(key);
-      if (!tipo) return;
-      var n = Math.floor(value || 0);
-      if (!(n > 0)) return;
       var d = load();
-      if (typeof d.c[key] !== 'number') d.c[key] = 0;   // una suelta, recién nacida
-      if (tipo === 'suma') d.c[key] += n;
-      else if (tipo === 'mayor') { if (n <= d.c[key]) return; d.c[key] = n; }
-      else { if (d.c[key] > 0 && n >= d.c[key]) return; d.c[key] = n; }
-      save(d);
+      if (sumar(d, key, value)) save(d);
     },
 
     /* Varias de golpe: { fantasmas: 3, racha: 4, ... } */
     recordAll: function (o) {
       if (!o) return;
-      for (var k in o) if (o.hasOwnProperty(k)) this.record(k, o[k]);
+      var d = load();
+      if (sumarTodo(d, o)) save(d);
     },
 
     /* Lo mismo, pero apuntándolo ADEMÁS en los contadores de cada modo que
@@ -348,15 +391,18 @@
      * algún logro mire, así que esto no engorda el almacén por gusto. */
     recordFor: function (tags, o) {
       if (!o) return;
-      this.recordAll(o);
-      if (!tags || !tags.length) return;
-      for (var i = 0; i < tags.length; i++) {
+      /* Una sola lectura y una sola escritura para todo: antes era una de
+       * cada por contador y por etiqueta (hasta ocho por poder usado). */
+      var d = load();
+      var cambio = sumarTodo(d, o);
+      for (var i = 0; tags && i < tags.length; i++) {
         for (var k in o) {
           if (!o.hasOwnProperty(k)) continue;
           var c = claveDe(tags[i], k);
-          if (STATS.hasOwnProperty(c)) this.record(c, o[k]);
+          if (STATS.hasOwnProperty(c) && sumar(d, c, o[k])) cambio = true;
         }
       }
+      if (cambio) save(d);
     },
 
     /* ---------- consulta ---------- */

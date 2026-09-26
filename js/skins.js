@@ -8776,6 +8776,21 @@
       return (a <= b) ? (md >= a && md <= b) : (md >= a || md <= b);
     },
 
+    /* Solo ¿es tuya?, sin el progreso ni los textos de estado(). Las de la
+     * TIENDA calculaban el saldo entero (dos veces) para la barra de "te
+     * faltan tantas monedas", y reclamar() repasa las 64 skins en cada
+     * contador que se apunta —cada poder de DESATADO que se usa—: eran
+     * cientos de milisegundos de tirón justo al pulsar la tecla. */
+    esTuya: function (id) {
+      var sk = INFO[id];
+      if (!sk) return false;
+      if (sk.grupo === 'tienda' || sk.grupo === 'cofre' || sk.grupo === 'pase') {
+        var T = window.PM.Tienda;
+        return !!(T && T.tiene(id));
+      }
+      return this.estado(id).abierta;
+    },
+
     /* Estado de una skin para quien juega en este navegador:
      *   abierta   ya se puede poner
      *   pct       0..1 de lo que lleva
@@ -8917,7 +8932,7 @@
 
     cuantas: function () {
       var n = 0;
-      for (var i = 0; i < CFG.SKINS.length; i++) if (this.estado(CFG.SKINS[i].id).abierta) n++;
+      for (var i = 0; i < CFG.SKINS.length; i++) if (this.esTuya(CFG.SKINS[i].id)) n++;
       return n;
     },
 
@@ -8986,7 +9001,7 @@
     syncVistas: function () {
       var abiertas = [];
       for (var i = 0; i < CFG.SKINS.length; i++) {
-        if (this.estado(CFG.SKINS[i].id).abierta) abiertas.push(CFG.SKINS[i].id);
+        if (this.esTuya(CFG.SKINS[i].id)) abiertas.push(CFG.SKINS[i].id);
       }
       var previas = cargarVistas() || [];
       for (var j = 0; j < previas.length; j++) {
@@ -9001,7 +9016,7 @@
       var nuevas = [];
       for (var i = 0; i < CFG.SKINS.length; i++) {
         var id = CFG.SKINS[i].id;
-        if (vistas.indexOf(id) === -1 && this.estado(id).abierta) {
+        if (vistas.indexOf(id) === -1 && this.esTuya(id)) {
           vistas.push(id);
           nuevas.push(CFG.SKINS[i]);
         }

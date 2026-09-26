@@ -91,7 +91,7 @@
     skinUnlocked: function (id) {
       var Sk = window.PM.Skins, info = null;
       for (var i = 0; i < CFG.SKINS.length; i++) if (CFG.SKINS[i].id === id) info = CFG.SKINS[i];
-      if (info && info.grupo && info.grupo !== 'nivel') return !!(Sk && Sk.estado(id).abierta);
+      if (info && info.grupo && info.grupo !== 'nivel') return !!(Sk && Sk.esTuya(id));
       return this.level() >= this.skinLevel(id);
     },
 

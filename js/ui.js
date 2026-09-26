@@ -4967,7 +4967,7 @@
     fichaTiene: function (it) {
       if (it.cat === 'skin') {
         var Sk = window.PM.Skins;
-        return !!(Sk && Sk.estado(it.id).abierta) || window.PM.settings.skin1 === it.id;
+        return !!(Sk && Sk.esTuya(it.id)) || window.PM.settings.skin1 === it.id;
       }
       var Tn = window.PM.Tienda;
       return !!(Tn && Tn.tiene(it.id));
@@ -13732,7 +13732,7 @@
         }
       });
       CFG.SKINS.forEach(function (sk) {
-        if (sk.grupo === 'rango' && Sk && Sk.estado(sk.id).abierta) { premios.push('SKIN ' + sk.name); piezas++; }
+        if (sk.grupo === 'rango' && Sk && Sk.esTuya(sk.id)) { premios.push('SKIN ' + sk.name); piezas++; }
       });
       if (window.AudioSys) { try { AudioSys.playIntro(); } catch (err) { /* sin sonido */ } }
       var botones = [{ label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '], hint: 'ENTER',
