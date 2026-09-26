@@ -8437,3 +8437,14 @@ body { font-size-adjust: 0.56; }
 .btn.grupo-tab:hover:not(.active), .btn.grupo-tab:focus-visible:not(.active) { color: #ffff00; background: rgba(255, 255, 0, 0.08); outline: none; }
 .btn.grupo-tab.active { color: #000; background: #ffff00; cursor: default; }
 @media (max-width: 560px) { .btn.grupo-tab { font-size: var(--fs-s); letter-spacing: 1px; padding: 7px 10px; } }
+
+/* LA MEJOR MAESTRÍA (26 sep): en el perfil propio y en el de otro */
+.perfil-maestria {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 12px; text-align: left;
+  background: #05050f; border: 2px solid #1b1b44; border-left: 4px solid #e6c270;
+}
+.perfil-maestria-emblema { flex: none; width: 44px; height: auto; aspect-ratio: 200 / 240; }
+.perfil-maestria-txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.perfil-maestria-txt span { font-size: var(--fs-m); letter-spacing: 2px; color: #a3a5cc; }
+.perfil-maestria-txt b { font-weight: normal; font-size: clamp(13px, 2.2vh, 18px); }
+.perfil-maestria-txt small { font-size: var(--fs-m); letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

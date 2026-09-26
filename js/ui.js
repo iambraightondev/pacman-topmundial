@@ -8050,6 +8050,8 @@
       datos.appendChild(this.mateResumen);
       cab.appendChild(datos);
       this.mateBody.appendChild(cab);
+      this.mateMaestria = this.crearMejorMaestria();
+      this.mateBody.appendChild(this.mateMaestria.box);
 
       this.mateBody.appendChild(this.sectionTitle('CIFRAS'));
       /* El mismo bloque que en el perfil propio: aquí se le pasan además las
@@ -8071,6 +8073,64 @@
       back.classList.add('btn-primary');
       back.style.marginTop = '14px';
       o.appendChild(back);
+    },
+
+    /* ------------------------------------------------------
+     * LA MEJOR MAESTRÍA (26 sep): el emblema del escalón más alto que tiene
+     * con algún rol, cuál es y con qué rol. Va en el perfil propio y en el
+     * de cualquiera que se abra, con los mismos datos (Maestria.mejor).
+     * ------------------------------------------------------ */
+    crearMejorMaestria: function () {
+      var m = {};
+      m.box = document.createElement('div');
+      m.box.className = 'perfil-maestria';
+      m.cv = document.createElement('canvas');
+      m.cv.width = 100; m.cv.height = 120;
+      m.cv.className = 'perfil-maestria-emblema';
+      m.box.appendChild(m.cv);
+      var txt = document.createElement('div');
+      txt.className = 'perfil-maestria-txt';
+      m.tit = document.createElement('span');
+      m.tit.textContent = 'MEJOR MAESTRÍA';
+      txt.appendChild(m.tit);
+      m.nivel = document.createElement('b');
+      txt.appendChild(m.nivel);
+      m.rol = document.createElement('small');
+      txt.appendChild(m.rol);
+      m.box.appendChild(txt);
+      return m;
+    },
+
+    pintarMejorMaestria: function (m, mejor) {
+      var S = window.PM.Sprites, N = CFG.MAESTRIA.NIVELES;
+      var info = mejor && CFG.HAB.ROL_INFO[mejor.rol];
+      var gema = (S && S.EMBLEM_GEMA) || [];
+      var c = m.cv.getContext && m.cv.getContext('2d');
+      if (c) {
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.clearRect(0, 0, m.cv.width, m.cv.height);
+        if (mejor && mejor.nivel >= 0 && S && S.drawEmblem) {
+          var k = m.cv.width / 200;
+          c.setTransform(k, 0, 0, k, 0, 0);
+          S.drawEmblem(c, mejor.nivel, 0, null);
+          c.setTransform(1, 0, 0, 1, 0, 0);
+        } else if (S && S.drawEmblemOff) {
+          S.drawEmblemOff(c, 0, m.cv.width, m.cv.height);
+        }
+      }
+      if (!mejor) {
+        m.nivel.textContent = 'NINGUNA';
+        m.nivel.style.color = '#6d6f99';
+        m.rol.textContent = 'TODAVÍA SIN JUGAR A DESATADO';
+        m.rol.style.color = '';
+        return;
+      }
+      var tiene = mejor.nivel >= 0;
+      m.nivel.textContent = tiene ? N[mejor.nivel].name : 'SIN EMBLEMA AÚN';
+      m.nivel.style.color = tiene ? (gema[mejor.nivel] || '#fff') : '#6d6f99';
+      m.rol.textContent = 'CON ' + (info ? info.name : mejor.rol.toUpperCase()) +
+        ' · ' + fmtMonedas(mejor.puntos) + ' PUNTOS';
+      m.rol.style.color = info ? info.color : '';
     },
 
     showFriendProfile: function (name) {
@@ -8130,6 +8190,10 @@
         ' / ' + st.needed;
       this.mateFill.style.width = Math.round(st.pct * 100) + '%';
       this.mateResumen.textContent = 'EXPERIENCIA TOTAL ' + (fila.xp || 0);
+      var MaeM = window.PM.Maestria;
+      if (this.mateMaestria && MaeM && MaeM.mejor) {
+        this.pintarMejorMaestria(this.mateMaestria, MaeM.mejor(fila.logros || {}, fila.usuario));
+      }
 
       /* récords: uno por formato. Trío y escuadra solo salen si ha jugado
        * alguna, que si no son dos ceros que no dicen nada. */
@@ -8699,6 +8763,10 @@
       nivel.appendChild(nivDatos);
       carta.appendChild(nivel);
 
+      /* su MEJOR MAESTRÍA: la misma que ve quien abre su perfil */
+      this.profMaestria = this.crearMejorMaestria();
+      carta.appendChild(this.profMaestria.box);
+
       this.profLook = document.createElement('div');
       this.profLook.className = 'note perfil-look';
       carta.appendChild(this.profLook);
@@ -8931,6 +8999,10 @@
         st.inLevel + ' / ' + st.needed;
       if (this.profLevelNum) this.profLevelNum.textContent = String(st.level);
       this.profFill.style.width = Math.round(st.pct * 100) + '%';
+      var MaeP = window.PM.Maestria;
+      if (this.profMaestria && MaeP && MaeP.mejor) {
+        this.pintarMejorMaestria(this.profMaestria, MaeP.mejor());
+      }
 
       var B = window.PM.Badges;
       var top = B ? B.top('solo') : null;

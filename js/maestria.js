@@ -97,11 +97,15 @@
 
   /* [puntos, partidas, notas S] que la cuenta que ha entrado tiene de
    * ajuste en ese rol (CFG.AJUSTES_CUENTA), o [0, 0, 0] */
-  function ajusteDe(rol) {
+  function ajusteDe(rol, nombre) {
     var AJ = CFG.AJUSTES_CUENTA, Ac = window.PM.Account;
-    if (!AJ || !Ac || !Ac.logged || !Ac.name) return [0, 0, 0];
-    try { if (!Ac.logged()) return [0, 0, 0]; } catch (e) { return [0, 0, 0]; }
-    var aj = AJ[String(Ac.name() || '').toUpperCase()];
+    if (!AJ) return [0, 0, 0];
+    if (nombre == null) {
+      if (!Ac || !Ac.logged || !Ac.name) return [0, 0, 0];
+      try { if (!Ac.logged()) return [0, 0, 0]; } catch (e) { return [0, 0, 0]; }
+      nombre = Ac.name();
+    }
+    var aj = AJ[String(nombre || '').toUpperCase()];
     var r = aj && aj.maestria && aj.maestria[rol];
     return r ? [r[0] | 0, r[1] | 0, r[2] | 0] : [0, 0, 0];
   }
@@ -131,6 +135,26 @@
         falta: sig ? Math.max(0, sig.puntos - puntos) : 0,
         faltaS: sig ? Math.max(0, sig.eses - eses) : 0
       };
+    },
+
+    /* LA MEJOR MAESTRÍA de alguien (26 sep): el rol con el escalón más alto
+     * y, a igualdad, con más puntos. Sale de sus contadores, así que vale
+     * igual para uno mismo (sin argumentos) que para el perfil de otro (sus
+     * `logros` de la nube y su nombre, por los ajustes a mano).
+     * { rol, nivel (−1..5), puntos, eses } o null si no ha jugado DESATADO */
+    mejor: function (logros, nombre) {
+      var c = logros || (A() ? A().stats() : {}), mejor = null;
+      for (var i = 0; i < ROLES.length; i++) {
+        var rol = ROLES[i], aj = ajusteDe(rol, nombre);
+        var puntos = Math.max(0, stat(c, 'mae_' + rol) + aj[0]);
+        var eses = Math.max(0, stat(c, 'maes_' + rol) + aj[2]);
+        if (!(puntos > 0)) continue;
+        var nivel = nivelDe(puntos, eses);
+        if (!mejor || nivel > mejor.nivel || (nivel === mejor.nivel && puntos > mejor.puntos)) {
+          mejor = { rol: rol, nivel: nivel, puntos: puntos, eses: eses };
+        }
+      }
+      return mejor;
     },
 
     /* El escalón que se enseña con Ctrl+Espacio (−1 si ninguno) */
