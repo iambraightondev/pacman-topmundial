@@ -7,11 +7,25 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **25 de septiembre de 2026**.
+Última puesta al día: **26 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### 26 sep: LO JUGADO EN DOS APARATOS SE SUMA
+
+IAMBRAIGHTON tenía nivel 50 en la nube y 49 en otro ordenador. La experiencia y
+los contadores que suman (partidas, fantasmas, pase, rango, maestrías...) se
+fundían con **el mayor** de cada lado: lo jugado en el aparato que iba por
+detrás, o sin sesión, se perdía. Ahora cada aparato guarda su **base** (cuánto
+de lo suyo ya está en la nube, clave `pacman-topmundial-nube-base`) y cada
+subida lee la nube y le **suma** lo pendiente (js/account.js, BASE_KEY). Además
+la cuenta se vuelve a leer al volver a la pestaña y cada 2 min en el menú.
+Service worker pm-v285. Probado con dos aparatos simulados contra una nube de
+mentira. **Por mirar:** lo perdido antes de hoy no vuelve (no hay forma de
+saber cuánto era); una siembra nueva de un contador que suma, si corre fuera
+de fundir(), se contaría una vez por aparato.
 
 ### DONDE SE DEJÓ (25 sep): REINICIO SUAVE DEL RANGO, FACTOR DE ROL, CUARTEL
 

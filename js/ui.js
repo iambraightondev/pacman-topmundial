@@ -493,7 +493,15 @@
       document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
         if (window.PM.Party && window.PM.Party.alVolver) window.PM.Party.alVolver();
+        self.refrescarCuenta();
       });
+      /* ...y lo jugado en OTRO aparato llega sin recargar: al volver a la
+       * pestaña y, por si la ventana nunca se escondió, cada dos minutos */
+      if (!window.PM_PRUEBAS) {
+        setInterval(function () {
+          if (document.visibilityState === 'visible') self.refrescarCuenta();
+        }, 120000);
+      }
       this.showMenu();
 
       this.partyHooks();
@@ -520,6 +528,16 @@
 
     /* Desde aquí, las celebraciones pendientes ya pueden salir (al abrir el
      * juego, lo que quedó sin ver la última vez) */
+    /* Mira si en otro aparato se ha jugado con la cuenta y lo trae
+     * (Account.refrescar). Nunca a mitad de partida: fundir toca el nivel,
+     * los contadores y lo que se da por visto. */
+    refrescarCuenta: function () {
+      var Ac = window.PM.Account, G = window.PM.Game;
+      if (!Ac || !Ac.refrescar || !Ac.logged()) return;
+      if (G && G.inGame && G.inGame()) return;
+      Ac.refrescar();
+    },
+
     arrancarCelebraciones: function () {
       var self = this;
       this.iniciado = true;

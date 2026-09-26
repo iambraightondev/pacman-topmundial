@@ -369,6 +369,13 @@
 
     stats: function () { return load().c; },
 
+    /* ¿Ese contador se va SUMANDO (partidas, fantasmas, experiencia del
+     * pase...)? Son los que, jugados en dos aparatos, hay que sumar en la
+     * cuenta en vez de quedarse con el mayor (js/account.js, pendiente). */
+    esSuma: function (key) {
+      return (STATS.hasOwnProperty(key) ? STATS[key] : tipoSuelto(key)) === 'suma';
+    },
+
     seen: function () { return load().v; },
 
     /* ---------- acumular ---------- */

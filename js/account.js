@@ -208,6 +208,56 @@
     intenta();
   }
 
+  /* ---------- LO QUE SE SUMA ENTRE APARATOS (26 sep 2026) ----------
+   * La experiencia y los contadores que se van sumando (partidas, fantasmas,
+   * la experiencia del pase...) se juntaban con la cuenta quedándose con el
+   * MAYOR de los dos lados, y el servidor hace lo mismo (perfiles_touch). Con
+   * un aparato da igual; con dos, lo jugado en el que iba por detrás se perdía
+   * entero: IAMBRAIGHTON llegó al nivel 50 en un ordenador y en el otro seguía
+   * en 49, y lo que jugase en ese no llegaba nunca a la cuenta.
+   *
+   * Ahora cada aparato apunta su BASE: cuánto de lo suyo ya está en la nube.
+   * Lo que tenga por encima es lo PENDIENTE —lo jugado aquí que la nube no
+   * conoce— y eso se le SUMA a lo que haya en la nube, no se compara. Por eso
+   * cada subida lee antes la nube. El servidor sigue quedándose con el mayor,
+   * que con esto ya es la suma.
+   *
+   * Sin base (un navegador de antes de esto, o una base de otra cuenta) no se
+   * sabe qué parte es nueva y se hace lo de siempre, el mayor; desde la
+   * primera subida buena ya hay base. Al cerrar sesión queda una base a cero
+   * SIN cuenta: lo que se juegue sin sesión se suma entero a la cuenta que
+   * entre después, en vez de perderse contra lo que ya tenía.
+   *
+   * Ojo al añadir una SIEMBRA de un contador que suma (las de
+   * Achievements.syncSeen): si corre fuera de fundir(), cada aparato la
+   * contaría como pendiente y la nube la sumaría una vez por aparato. */
+  var BASE_KEY = 'pacman-topmundial-nube-base';
+
+  function leerBase() {
+    try {
+      var b = JSON.parse(localStorage.getItem(BASE_KEY) || 'null');
+      return (b && typeof b === 'object' && b.c && typeof b.c === 'object') ? b : null;
+    } catch (e) { return null; }
+  }
+
+  function guardarBase(b) {
+    try { localStorage.setItem(BASE_KEY, JSON.stringify(b)); }
+    catch (e) { /* sin almacenamiento */ }
+  }
+
+  /* Lo de aquí que se suma: la experiencia y cada contador de los que suman */
+  function sumables() {
+    var L = window.PM.Level, A = window.PM.Achievements;
+    var o = { xp: L ? L.xp() : 0, c: {} };
+    if (A && A.esSuma) {
+      var s = A.stats();
+      for (var k in s) {
+        if (s.hasOwnProperty(k) && s[k] > 0 && A.esSuma(k)) o.c[k] = s[k];
+      }
+    }
+    return o;
+  }
+
   var Account = {
     user: null,        // { id, usuario, avatar }
     token: null,       // access token en memoria (no se guarda)
@@ -381,18 +431,48 @@
        * siguiente que entrara en SU cuenta desde aquí se llevaba el progreso
        * del anterior: así acabaron las cinco cuentas con el mismo récord de
        * dúo. */
-      if (this.logged()) this.push(true).catch(function () { /* nada */ });
+      var subida = this.logged() ? this.subirAlSalir() : Promise.resolve();
       this.token = null;
       this.user = null;
       this.saveSession(null);
       this.limpiarLocal();
       this.changed();
+      /* la sesión se cierra en el servidor DESPUÉS de subir, que la subida
+       * todavía va con ella */
       if (token) {
-        fetch(base('/auth/v1/logout'), {
-          method: 'POST', headers: authHeaders(token)
+        subida.then(function () {
+          return fetch(base('/auth/v1/logout'), {
+            method: 'POST', headers: authHeaders(token)
+          });
         }).catch(function () { /* da igual: la sesión local ya se fue */ });
       }
       if (cb) cb(null);
+    },
+
+    /* La última subida antes de cerrar sesión. La fila se arma YA (justo
+     * después se limpia este navegador) y lo pendiente se suma a lo que haya
+     * en la nube como en cualquier otra subida (ver BASE_KEY). */
+    subirAlSalir: function () {
+      var token = this.token, id = this.user.id;
+      var row = this.localState();
+      row.id = id;
+      row.usuario = this.user.usuario;
+      var pend = this.pendiente();
+      var self = this;
+      var leer = !pend ? Promise.resolve(null) :
+        fetch(base('/rest/v1/' + AC.TABLE + '?select=xp,logros&id=eq.' + id),
+              { headers: authHeaders(token) })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (rows) { return (rows && rows[0]) || null; })
+          .catch(function () { return null; });
+      return leer.then(function (fila) {
+        if (fila) self.sumarANube(row, fila, pend);
+        var h = authHeaders(token);
+        h['Prefer'] = 'resolution=merge-duplicates,return=minimal';
+        return fetch(base('/rest/v1/' + AC.TABLE), {
+          method: 'POST', headers: h, body: JSON.stringify(row)
+        });
+      }).catch(function () { /* nada */ });
     },
 
     /* Todo lo que es de la CUENTA y vive también en este navegador: nivel,
@@ -409,6 +489,9 @@
       try {
         for (var i = 0; i < keys.length; i++) localStorage.removeItem(keys[i]);
       } catch (e) { /* sin almacenamiento */ }
+      /* ...y la base queda a cero y sin cuenta: lo que se juegue desde aquí
+       * sin sesión es todo nuevo, y se SUMA a la cuenta que entre después */
+      guardarBase({ id: null, xp: 0, c: {} });
       var g = window.PM.Game;
       if (g && g.setRecordFor) {
         for (var n = 1; n <= CFG.MAX_PLAYERS; n++) g.setRecordFor(n, 0);
@@ -545,20 +628,112 @@
     sync: function (cb) {
       var self = this;
       if (!this.logged()) { if (cb) cb('SIN SESIÓN'); return; }
-      var url = base('/rest/v1/' + AC.TABLE + '?select=*&id=eq.' + this.user.id);
-      fetch(url, { headers: authHeaders(this.token) })
-        .then(function (res) { return res.json(); })
-        .then(function (rows) {
-          var fila = (rows && rows.length) ? rows[0] : null;
-          if (fila) self.applyRemote(fila);
-          return self.push(true);
-        })
-        .then(function () { if (cb) cb(null); })
+      this.enCola(function () {
+        if (!self.logged()) return;
+        return self.leerFila().then(function (fila) { return self.fundir(fila); });
+      }).then(function () { if (cb) cb(null); })
         .catch(function (e) { if (cb) cb(e.message || 'NO SE PUDO SINCRONIZAR'); });
     },
 
-    /* Lo de la nube entra en este navegador SIN pisar lo mejor de aquí */
-    applyRemote: function (fila) {
+    /* Las lecturas y subidas de la cuenta van DE UNA EN UNA: dos cruzadas
+     * leerían la misma nube y sumarían lo pendiente dos veces. */
+    cola: null,
+    enCola: function (fn) {
+      var nada = function () { /* la anterior falló: esta va igual */ };
+      this.cola = (this.cola || Promise.resolve()).catch(nada).then(fn);
+      return this.cola;
+    },
+
+    /* La fila de la cuenta en la nube, o null si aún no tiene */
+    leerFila: function () {
+      var url = base('/rest/v1/' + AC.TABLE + '?select=*&id=eq.' + this.user.id);
+      return fetch(url, { headers: authHeaders(this.token) })
+        .then(function (res) {
+          if (!res.ok) throw new Error('NO SE PUDO SINCRONIZAR');
+          return res.json();
+        })
+        .then(function (rows) { return (rows && rows.length) ? rows[0] : null; });
+    },
+
+    /* Lo jugado aquí que la nube aún no tiene (ver BASE_KEY), o null si no se
+     * puede saber. { xp, c: {contador: cuánto} } */
+    pendiente: function () {
+      var b = leerBase();
+      if (!b || !this.user || (b.id !== null && b.id !== this.user.id)) return null;
+      var ahora = sumables();
+      var p = { xp: Math.max(0, ahora.xp - Math.floor(b.xp || 0)), c: {} };
+      for (var k in ahora.c) {
+        var d = ahora.c[k] - Math.floor(b.c[k] || 0);
+        if (d > 0) p.c[k] = d;
+      }
+      return p;
+    },
+
+    /* Apunta la base: lo de `foto` menos lo que siga pendiente. No baja de la
+     * que había (salvo `bajar`, tras una limpieza de la nube): una subida que
+     * se confirma tarde no puede devolver a pendiente lo ya contado. */
+    fijarBase: function (foto, pend, bajar) {
+      if (!this.user) return;
+      var b = leerBase();
+      var tope = !bajar && b && b.id === this.user.id;
+      var n = { id: this.user.id, xp: foto.xp - ((pend && pend.xp) || 0), c: {} };
+      if (tope) n.xp = Math.max(n.xp, Math.floor(b.xp || 0));
+      for (var k in foto.c) {
+        var v = foto.c[k] - ((pend && pend.c[k]) || 0);
+        if (tope) v = Math.max(v, Math.floor(b.c[k] || 0));
+        if (v > 0) n.c[k] = v;
+      }
+      guardarBase(n);
+    },
+
+    /* Los contadores de la nube con lo pendiente de aquí ya sumado */
+    conPendiente: function (logros, pend) {
+      if (!pend) return logros;
+      var o = {};
+      for (var k in logros) if (logros.hasOwnProperty(k)) o[k] = logros[k];
+      for (var j in pend.c) o[j] = Math.floor(o[j] || 0) + pend.c[j];
+      return o;
+    },
+
+    /* Funde la fila de la nube con lo de aquí (sumando lo pendiente) y sube
+     * el resultado. Es lo de entrar en la cuenta y lo de volver a la pestaña
+     * después de jugar en otro aparato. */
+    fundir: function (fila) {
+      var self = this;
+      var pend = this.pendiente();
+      if (fila) this.applyRemote(fila, pend);
+      var foto = sumables();
+      /* ya fundido, lo pendiente sigue pendiente hasta que la subida se
+       * confirme: si falla, la próxima vez se vuelve a sumar (y solo eso) */
+      if (pend) this.fijarBase(foto, pend, pend.purga);
+      return this.push(true).then(function () {
+        self.fijarBase(foto, null);
+      });
+    },
+
+    /* Al volver a la pestaña (y cada poco en el menú): si la nube tiene más
+     * experiencia de la que este aparato le ha dado, se ha jugado en otro, y
+     * se funde como al entrar. Si no, no se toca nada. */
+    refrescar: function () {
+      if (!this.logged()) return;
+      var self = this;
+      this.enCola(function () {
+        if (!self.logged()) return;
+        return self.leerFila().then(function (fila) {
+          if (!fila) return;
+          var b = leerBase(), A = window.PM.Achievements, L = window.PM.Level;
+          var mia = (b && b.id === self.user.id) ? Math.floor(b.xp || 0) : (L ? L.xp() : 0);
+          var purga = Math.floor((fila.logros && fila.logros.purga) || 0);
+          if (Math.floor(fila.xp || 0) <= mia &&
+              !(A && purga > (A.stats().purga || 0))) return;
+          return self.fundir(fila).then(function () { self.changed(); });
+        });
+      }).catch(function () { /* ya se probará a la próxima */ });
+    },
+
+    /* Lo de la nube entra en este navegador SIN pisar lo mejor de aquí.
+     * `pend` es lo jugado aquí que la nube no tiene: se le suma a lo suyo. */
+    applyRemote: function (fila, pend) {
       var s = window.PM.settings || {};
       var g = window.PM.Game;
       this.user.usuario = cleanUser(fila.usuario) || this.user.usuario;
@@ -567,7 +742,9 @@
         this.user.avatar = fila.avatar;
         s.avatar = fila.avatar;
       }
-      if (window.PM.Level) window.PM.Level.setAtLeast(fila.xp);
+      if (window.PM.Level) {
+        window.PM.Level.setAtLeast(Math.floor(fila.xp || 0) + (pend ? pend.xp : 0));
+      }
       /* Una LIMPIEZA hecha a mano en la nube (cifras que nunca se jugaron)
        * lleva el contador `purga` más alto que el de aquí. Entonces la nube
        * manda: récords y contadores se toman tal cual en vez de quedarse con
@@ -589,6 +766,8 @@
         }
         A0.reemplazar(fila.logros);
         A0.syncSeen();
+        // tras una limpieza, los contadores de aquí se tiran: nada pendiente
+        if (pend) { pend.c = {}; pend.purga = true; }
       }
       if (g && g.recordFor) {
         /* Los cuatro récords, uno por formato. Se queda el mejor de cada
@@ -619,7 +798,7 @@
         if (cambio && window.PM.Badges) window.PM.Badges.syncSeen();
       }
       if (window.PM.Achievements) {
-        window.PM.Achievements.merge(fila.logros || {});
+        window.PM.Achievements.merge(this.conPendiente(fila.logros || {}, pend));
         window.PM.Achievements.syncSeen();   // lo traído no se celebra
         /* ...ni las copas de cada ROL que traiga (los récords por rol viajan
          * en los contadores: ver js/badges.js) */
@@ -671,7 +850,7 @@
     },
 
     /* Sube el estado de aquí. `callado` = no avisar a la UI. */
-    push: function (callado, cb) {
+    push: function (callado, cb, ajustar) {
       var self = this;
       if (!this.logged()) {
         if (cb) cb('SIN SESIÓN');
@@ -680,6 +859,7 @@
       var row = this.localState();
       row.id = this.user.id;
       row.usuario = this.user.usuario;
+      if (ajustar) ajustar(row);
       var h = authHeaders(this.token);
       h['Prefer'] = 'resolution=merge-duplicates,return=minimal';
       return fetch(base('/rest/v1/' + AC.TABLE), {
@@ -694,7 +874,7 @@
             var bandera = faltaColumna(self, t);
             if (bandera) {
               self[bandera] = true;
-              return self.push(callado, cb);
+              return self.push(callado, cb, ajustar);
             }
             throw new Error(/duplicate|unique/i.test(t)
               ? 'ESE USUARIO YA EXISTE' : 'NO SE PUDO GUARDAR');
@@ -711,7 +891,46 @@
     /* Guardado silencioso al acabar una partida: si falla, da igual */
     pushQuiet: function () {
       if (!this.logged()) return;
-      this.push(true).catch(function () { /* ya se subirá */ });
+      var self = this;
+      this.enCola(function () {
+        if (!self.logged()) return;
+        /* sin base no hay forma de saber qué es nuevo: se sube como siempre
+         * y desde ahí ya la hay */
+        if (!self.pendiente()) {
+          var foto0 = sumables();
+          return self.push(true).then(function () { self.fijarBase(foto0, null); });
+        }
+        return self.leerFila().then(function (fila) {
+          /* la nube trae una limpieza que aquí no se ha tomado: el servidor
+           * no aceptaría estos contadores, así que se funde entera */
+          var A = window.PM.Achievements;
+          if (fila && A && Math.floor((fila.logros && fila.logros.purga) || 0) >
+              (A.stats().purga || 0)) {
+            return self.fundir(fila);
+          }
+          var pend = self.pendiente();
+          var foto = sumables();
+          return self.push(true, null, function (row) {
+            self.sumarANube(row, fila, pend);
+          }).then(function () { self.fijarBase(foto, null); });
+        });
+      }).catch(function () { /* ya se subirá: lo pendiente sigue apuntado */ });
+    },
+
+    /* Lo que se sube para que la nube SUME lo pendiente: por cada contador
+     * que suma, lo de la nube más lo de aquí que no tiene (y nunca menos de lo
+     * de aquí). Lo de aquí no se toca: lo del otro aparato llega al fundir. */
+    sumarANube: function (row, fila, pend) {
+      if (!pend) return;
+      row.xp = Math.max(Math.floor(row.xp || 0),
+        Math.floor((fila && fila.xp) || 0) + pend.xp);
+      if (!row.logros) return;
+      var nube = (fila && fila.logros) || {}, lg = {};
+      for (var k in row.logros) if (row.logros.hasOwnProperty(k)) lg[k] = row.logros[k];
+      for (var j in pend.c) {
+        lg[j] = Math.max(Math.floor(lg[j] || 0), Math.floor(nube[j] || 0) + pend.c[j]);
+      }
+      row.logros = lg;
     },
 
     /* ---------- la partida a medias (js/guardado.js) ----------

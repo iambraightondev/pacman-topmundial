@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-26 · Lo jugado en dos aparatos se suma
+
+**ARREGLO:** la experiencia, las partidas y el resto de contadores que suman
+se juntaban con la cuenta quedándose con el mayor de cada lado, así que lo
+jugado en el ordenador que iba por detrás (o sin sesión) se perdía. Ahora cada
+aparato sube lo que la nube aún no tiene **sumado** a lo que ya hay, y lo jugado
+sin sesión se suma a la cuenta al entrar. El juego vuelve a leer la cuenta al
+volver a la pestaña y cada dos minutos en el menú, sin recargar.
+
 ## 2026-09-25 · Reinicio suave del rango, marca por rol y un cuartel más corto
 
 **RANGO, REINICIO SUAVE (aprobado):** cada mes ya no se empieza de cero. Quien
