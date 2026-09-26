@@ -13489,6 +13489,9 @@
      * esos, se encoge un poco y el resto se sigue desplazando, que es lo
      * correcto: una galería se recorre, no se mira de un vistazo.
      * ------------------------------------------------------ */
+    /* lo MÍNIMO que se encoge cualquier panel, para que la letra pequeña
+     * (css/style.css, --fs-xs y compañía) siga leyéndose */
+    ENCAJE_MIN: 0.9,
     /* cuánto se deja encoger cada panel */
     ENCAJE_SUELO: {
       /* los que son UNA VISTA: tienen que caber enteros */
@@ -13514,7 +13517,12 @@
        * lo natural; encoger dejaría la letra diminuta en la pantalla más
        * pequeña, que es justo donde menos sobra. */
       if (window.innerWidth <= 600) { el.style.zoom = ''; return; }
-      var min = (typeof suelo === 'number') ? suelo : 0.6;
+      /* Y nunca por debajo de ENCAJE_MIN, se pida lo que se pida (25 sep):
+       * en un portátil de 768 px de alto LOS RANGOS se encogía al 69 % y el
+       * RANGO al 83 %, así que la letra de 10 px se veía de 7. Lo que no quepa
+       * así se recorre con la rueda: leer importa más que verlo todo de un
+       * vistazo. */
+      var min = Math.max(this.ENCAJE_MIN, (typeof suelo === 'number') ? suelo : 0.6);
       this._encajando = true;
       el.style.zoom = '';
       /* con el zoom quitado, esto es lo que mide el contenido de verdad */
