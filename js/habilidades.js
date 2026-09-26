@@ -2938,6 +2938,24 @@
 
     /* La casilla de un poder que se pone en el sitio: la de quien lo pide.
      * Al anfitrión le llega la que ve el invitado, que es la buena. */
+    /* De dónde sale un tiro en línea recta (shuriken, los dos ganchos), con
+     * la misma regla que la bola de fuego (ver disparar): del sitio donde
+     * estaba quien lo lanzó EN SU PANTALLA si está a tres casillas o menos
+     * de lo que se ve aquí, y encarrilado por el centro de su pasillo. La
+     * posición de un invitado le llega al anfitrión unos ticks tarde, y
+     * desde ahí el tiro salía por detrás de él o contra la esquina que ya
+     * había doblado: en su pantalla le daba al rey y no le quitaba vida. */
+    salidaDe: function (G, idx, d, dir) {
+      var p = G.pacs[idx], v = CFG.DIR_V[dir];
+      var ox = p.x, oy = p.y;
+      if (d && typeof d.x === 'number' && typeof d.y === 'number' &&
+          this.distancia(d.x, d.y, p.x, p.y) <= 3 * T) {
+        ox = d.x; oy = d.y;
+      }
+      return { x: v.x ? ox : Math.floor(ox / T) * T + T / 2,
+               y: v.y ? oy : Math.floor(oy / T) * T + T / 2 };
+    },
+
     casillaDe: function (G, idx, d) {
       var p = G.pacs[idx];
       if (d && d.c >= 0 && d.c < CFG.COLS && d.r >= 0 && d.r < CFG.ROWS) {
@@ -3282,8 +3300,9 @@
       /* Cada disparo abre la ventana para el siguiente; el tercero ya no
        * espera a nadie (cierra la ráfaga por su cuenta al resolverse). */
       s.shuriken.ventana = (s.shuriken.usados < H.SHURIKEN_CANT) ? H.SHURIKEN_VENTANA : 0;
+      var sal = this.salidaDe(G, idx, d, dir);
       this.proyectilesCat.push({
-        tipo: 'shuriken', x: p.x, y: p.y, d: dir, w: idx,
+        tipo: 'shuriken', x: sal.x, y: sal.y, d: dir, w: idx,
         espera: 0, viaja: 0, max: H.SHURIKEN_TILES * T, grupo: s.shuriken.id
       });
       /* Las dos primeras pulsaciones son cargas, no activan recarga. La
@@ -3337,8 +3356,9 @@
       var p = G.pacs[idx], s = this.estado(idx);
       var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
       if (!p || !s || !v) return false;
-      this.proyectilesCat.push({ tipo: 'gancho_inverso', x: p.x, y: p.y,
-        ox: p.x, oy: p.y, d: dir, w: idx, fase: 'sale', viaja: 0,
+      var sal = this.salidaDe(G, idx, d, dir);
+      this.proyectilesCat.push({ tipo: 'gancho_inverso', x: sal.x, y: sal.y,
+        ox: sal.x, oy: sal.y, d: dir, w: idx, fase: 'sale', viaja: 0,
         max: H.GANCHO_INVERSO_TILES * T, objetivo: -1 });
       s.ganchoInv = 1;
       this.efecto('gancho_salida', p.x, p.y, 22);
@@ -3526,7 +3546,8 @@
       var p = G.pacs[idx], s = this.estado(idx);
       var dir = (d && d.d >= 0 && d.d <= 3) ? d.d : this.dirFlash(p), v = CFG.DIR_V[dir];
       if (!p || !s || !v) return false;
-      this.proyectilesCat.push({ tipo: 'gancho', x: p.x, y: p.y, ox: p.x, oy: p.y,
+      var sal = this.salidaDe(G, idx, d, dir);
+      this.proyectilesCat.push({ tipo: 'gancho', x: sal.x, y: sal.y, ox: sal.x, oy: sal.y,
         d: dir, w: idx, fase: 'sale', viaja: 0, max: H.GANCHO_TILES * T,
         objetivo: -1, trae: 0 });
       s.ganchoOut = 1;

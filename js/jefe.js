@@ -352,6 +352,9 @@
       if (j.frz > 0) j.frz--;
       if (j.pidoAplasta > 0) j.pidoAplasta--;   // respiro entre golpes pedidos
       if (j.pidoCaza > 0) j.pidoCaza--;         // ...y los de la CACERÍA
+      if (j.pidoAzul > 0) j.pidoAzul--;         // ...y el del azul
+      /* un azul nuevo deja volver a pegarle, como en el anfitrión (paso) */
+      if (G.frightTicks <= 0) j.azulUsado = 0;
       j.stT++;
       this.mover(G, this.velocidad(G));
     },
@@ -446,6 +449,7 @@
           /* el azul: UNA vez por cada energizante, como el anfitrión */
           if (j.inv <= 0 && !(j.azulUsado & (1 << i))) {
             j.azulUsado |= (1 << i);
+            j.pidoAzul = J.PIDO_AZUL;
             G.netSend('gevt', { t: 'jefeGolpe', f: 'azul' });
           }
         } else if (j.inv <= 0 && !(j.pidoAplasta > 0)) {
@@ -701,7 +705,15 @@
     aplicar: function (G, a) {
       if (!a) { G.jefe = null; return; }
       var j = G.jefe || {};
-      var mio = G.isSpec && !G.isSpec() ? (j.azulUsado || 0) & (1 << G.localIdx) : 0;
+      /* EL AZUL DEL INVITADO (26 sep). Su "ya le pegué" se guardaba para
+       * siempre: la foto del anfitrión lo borra con cada azul nuevo, pero aquí
+       * se le volvía a sumar el de esta máquina, así que el invitado le pegaba
+       * con el azul UNA vez en toda la pelea y el anfitrión una por cada
+       * superpastilla. Ahora el propio solo se sostiene mientras el golpe va
+       * de camino; después manda lo que diga el anfitrión (y si no lo contó,
+       * se puede volver a pedir). */
+      var mio = (G.isSpec && !G.isSpec() && j.pidoAzul > 0 && G.frightTicks > 0)
+        ? (j.azulUsado || 0) & (1 << G.localIdx) : 0;
       j.vivo = !!a[0]; j.hp = a[1]; j.max = a[2]; j.x = a[3]; j.y = a[4]; j.dir = a[5];
       j.st = ['caza', 'aviso', 'carga', 'invoca'][a[6]] || 'caza';
       j.stT = a[7]; j.inv = a[8]; j.frz = a[9];

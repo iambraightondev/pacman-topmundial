@@ -2737,6 +2737,9 @@
     INVOCA_FURIA: 8 * 60,
     INVOCA_PARON: 40,
     INV: 45,                           // tras un golpe, sin recibir otro
+    /* el invitado que pide un golpe de azul lo da por dado este rato (ticks):
+     * lo que tarda en ir y volver; si el anfitrión no lo contó, lo repide */
+    PIDO_AZUL: 30,
     HIELO: 60,                         // lo que lo congela el hielo
     /* MORDISCO: además del daño, lo ATURDE 2 s (18 sep). Sin esto la Q del
      * Asesino contra el jefe era un intercambio perdido: para morderlo hay
