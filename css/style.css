@@ -4466,6 +4466,11 @@ body { font-size-adjust: 0.56; }
   text-shadow: none;
 }
 #prompt.arcade::before, #prompt.arcade::after { display: none; }
+/* el marco va pegado a la PANTALLA, no al contenido: desde que los diálogos
+ * no se encogen por debajo del 90 % (UI.ENCAJE_MIN) algunos se recorren con
+ * la rueda, y la fila de abajo subía con ellos cruzando la tabla (25 sep).
+ * Lo mismo que ya hacía la sala ONLINE. */
+#prompt.arcade > .go-bombillas { position: fixed; }
 .go-bombillas {
   position: absolute;
   inset: 8px;
