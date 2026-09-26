@@ -1623,10 +1623,14 @@
    * ocupa muy poco; aun así se poda, que localStorage no da para tanto.
    * La del mejor récord no se suelta mientras quede otra cosa que soltar. */
   CFG.REPLAY_KEY = 'pacman-topmundial-repeticiones';
+  /* 26 sep: los topes eran de cuando una repetición se compartía metida en
+   * la URL, y tiraban justo las mejores partidas, que son las más largas
+   * (el 180.550 de DESATADO no tiene repetición). Compartir va ya por
+   * código de la nube; la URL solo queda de repuesto. */
   CFG.REPLAY_MAX = 8;             // repeticiones guardadas
-  CFG.REPLAY_MAX_CHARS = 24000;   // texto máximo de UNA repetición (tiene que caber en una URL)
-  CFG.REPLAY_TOTAL_CHARS = 90000; // techo de todas juntas
-  CFG.REPLAY_MAX_ENTRADAS = 20000;// giros máximos en una repetición
+  CFG.REPLAY_MAX_CHARS = 400000;  // texto máximo de UNA en este navegador (más: directa a la nube)
+  CFG.REPLAY_TOTAL_CHARS = 1000000; // techo de todas juntas
+  CFG.REPLAY_MAX_ENTRADAS = 250000; // giros y poderes: antes, pasado el tope se dejaba de grabar
 
   /* ---------- Ver una repetición como un vídeo ----------
    * Una repetición no guarda posiciones: guarda los giros y la partida se
@@ -1790,8 +1794,13 @@
   /* 23 sep: con los poderes, el rey y los efectos, una de party pesa unas
    * tres veces más; los topes suben lo justo para que siga cabiendo una
    * partida larga (el localStorage da de sobra para esto) */
-  CFG.REPLAY_NET_MAX_CHARS = 450000;   // tope de una (unos 20-30 min de partida)
-  CFG.REPLAY_NET_TOTAL_CHARS = 900000; // tope de todas juntas
+  /* 26 sep: el dúo de 218.350 (17 niveles) no cabía y se perdió entero.
+   * Ahora cabe mucho más aquí y, si aun así no cabe, va entera a la nube
+   * sin pasar por este navegador (ver Replay.guardarRed). */
+  CFG.REPLAY_NET_MAX_CHARS = 2000000;  // tope de una en este navegador
+  CFG.REPLAY_NET_TOTAL_CHARS = 2500000; // tope de todas juntas
+  CFG.REPLAY_NET_MAX_CUADROS = 200000;  // fotos grabadas (6 por segundo: más de 9 h)
+  CFG.REPLAY_NET_MAX_EVENTOS = 250000;  // y sucesos; pasado el tope se dejaba de grabar
 
   /* ---------- Compartir una repetición por enlace ----------
    * Las LOCALES caben enteras en la URL (?rep=<texto>): son unos cientos de
@@ -1810,7 +1819,7 @@
     PARAM: 'rn',                 // ?rn=<id> en el enlace
     ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
     ID_LEN: 8,
-    MAX_CHARS: 260000,           // el mismo tope que el CHECK de la tabla
+    MAX_CHARS: 4000000,          // el mismo tope que el CHECK de la tabla (26 sep; era 260.000)
     INTENTOS: 4                  // reintentos si el código sorteado ya existe
   };
 

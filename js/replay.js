@@ -1652,14 +1652,14 @@
       this.redPend = [];
       // una partida normal no llega; si alguien la deja corriendo un día
       // entero, se deja de grabar antes que reventar el almacenamiento
-      if (this.red.cuadros.length > 60000) this.red = null;
+      if (this.red.cuadros.length > CFG.REPLAY_NET_MAX_CUADROS) this.red = null;
     },
 
     /* Los eventos del anfitrión (muertes, frutas, subir de nivel, emotes...) */
     redEvento: function (o) {
       if (!this.red || !o) return;
       this.red.eventos.push([this.t, o]);
-      if (this.red.eventos.length > 20000) this.red = null;
+      if (this.red.eventos.length > CFG.REPLAY_NET_MAX_EVENTOS) this.red = null;
     },
 
     /* Fin de la partida: se cierra y se guarda en su propio almacén */
@@ -1765,8 +1765,44 @@
       } catch (e) { return []; }
     },
 
+    /* Una repetición que no cabe en este navegador va ENTERA a la nube, sin
+     * pasar por aquí (26 sep). Devuelve si se ha podido intentar; cb(err). */
+    aLaNube: function (reg, tipo, cb) {
+      cb = cb || function () {};
+      if (window.PM_PRUEBAS || !this.compartirConfigurado()) { cb('SIN NUBE'); return false; }
+      this.subirReg(reg, tipo, cb);
+      return true;
+    },
+
     guardarRed: function (rep) {
       var texto = this.serializarRed(rep);
+      var self = this;
+      /* DEMASIADO LARGA PARA ESTE NAVEGADOR (26 sep): entera a la nube, que
+       * aguanta mucho más. Solo si no se puede subir se hace lo de antes:
+       * guardarla aquí sin lo de fuera del vector. */
+      if (texto && texto.length > CFG.REPLAY_NET_MAX_CHARS &&
+          texto.length <= CFG.REPLAY_SHARE.MAX_CHARS) {
+        var ahoraN = Date.now(), miosN = G.myPoints ? G.myPoints() : rep.final.puntos;
+        rep.mios = miosN;           // la ligera de repuesto sale más tarde, con otra partida en marcha
+        var regN = { id: 'r' + ahoraN + '-' + b36(miosN), t: ahoraN, j: rep.jugadores, p: miosN,
+                     lv: rep.final.nivel, red: 1, s: texto };
+        var intentada = this.aLaNube(regN, 'red', function (err) {
+          if (err) self.guardarRedLigera(rep);
+        });
+        return intentada ? regN : this.guardarRedLigera(rep);
+      }
+      return this.guardarRedTexto(rep, texto);
+    },
+
+    /* Sin lo de fuera del vector: se ve como las de antes, sin rey ni efectos */
+    guardarRedLigera: function (rep) {
+      var ligera = {};
+      for (var lk in rep) if (rep.hasOwnProperty(lk)) ligera[lk] = rep[lk];
+      ligera.cuadros = rep.cuadros.map(function (c) { return c.slice(0, 3); });
+      return this.guardarRedTexto(rep, this.serializarRed(ligera));
+    },
+
+    guardarRedTexto: function (rep, texto) {
       /* Demasiado larga con todo: antes que perderla, se guarda sin lo de
        * fuera del vector (se ve como las de antes: sin rey ni efectos) */
       if (texto && texto.length > CFG.REPLAY_NET_MAX_CHARS) {
@@ -1781,7 +1817,7 @@
       /* La ficha lleva TUS puntos, no los del equipo: es con lo que la busca
        * el historial (js/history.js guarda myPoints), y en PAC-MAN VS. el
        * cazador tiene los suyos. La repetición sí guarda el marcador entero. */
-      var mios = G.myPoints ? G.myPoints() : rep.final.puntos;
+      var mios = (rep.mios != null) ? rep.mios : (G.myPoints ? G.myPoints() : rep.final.puntos);
       var reg = {
         id: 'r' + ahora + '-' + b36(mios),
         t: ahora, j: rep.jugadores, p: mios,
@@ -1804,11 +1840,12 @@
           this.subirPendientes();   // a la nube, para que no se pierda al podar
           return reg;
         } catch (e) {
-          if (lista.length <= 1) return null;
+          if (lista.length <= 1) break;
           lista.pop();
         }
       }
-      return null;
+      // no cabe ni sola en este navegador: a la nube tal cual
+      return this.aLaNube(reg, 'red') ? reg : null;
     },
 
     porIdRed: function (id) {
@@ -1989,7 +2026,14 @@
 
     guardar: function (rep) {
       var texto = this.serializar(rep);
-      if (!texto || texto.length > CFG.REPLAY_MAX_CHARS) return null;
+      if (!texto) return null;
+      /* más larga de lo que se guarda aquí: entera a la nube (26 sep) */
+      if (texto.length > CFG.REPLAY_MAX_CHARS) {
+        var ahoraN = Date.now();
+        var regN = { id: String(ahoraN) + '-' + b36(rep.final.puntos), t: ahoraN, j: rep.jugadores,
+                     p: rep.final.puntos, lv: rep.final.nivel, b: 0, s: texto };
+        return (texto.length <= CFG.REPLAY_SHARE.MAX_CHARS && this.aLaNube(regN, 'local')) ? regN : null;
+      }
       var lista = this.guardadas();
       var j = rep.jugadores;
       /* ¿es la de tu mejor marca? El récord ya está persistido cuando se
@@ -2010,6 +2054,8 @@
       lista.unshift(reg);
       this.podar(lista);
       this.escribir(lista);
+      /* si ni sola cabía en el almacén, escribir() la ha soltado: a la nube */
+      if (lista.indexOf(reg) === -1) return this.aLaNube(reg, 'local') ? reg : null;
       this.subirPendientes();     // a la nube, para que no se pierda al podar
       return reg;
     },

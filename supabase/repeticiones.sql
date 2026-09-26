@@ -44,6 +44,13 @@ create table if not exists public.repeticiones (
   datos      text        not null check (char_length(datos) between 1 and 260000)
 );
 
+-- 26 sep 2026: el tope de `datos` pasa de 260.000 a 4.000.000 de caracteres.
+-- Con 260.000 no cabían las partidas largas (el dúo de 218.350, 17 niveles) y
+-- se perdían enteras. Probado: la API acepta filas de ese tamaño.
+alter table public.repeticiones drop constraint if exists repeticiones_datos_check;
+alter table public.repeticiones
+  add constraint repeticiones_datos_check check (char_length(datos) between 1 and 4000000);
+
 comment on table public.repeticiones is
   'Repeticiones de partidas online compartidas por enlace (?rn=<id>).';
 
