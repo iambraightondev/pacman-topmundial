@@ -191,6 +191,12 @@
     return row >= C.top && row <= C.bottom && col >= C.left && col <= C.right;
   }
 
+  /* ¿La casilla está dentro del tablero? Muros y casa incluidos: es lo único
+   * que pide la mira del METEORO desde el 26 sep (ver apuntarDir). */
+  function enMapa(col, row) {
+    return col >= 0 && col < CFG.COLS && row >= 0 && row < CFG.ROWS;
+  }
+
   /* ¿Se puede aterrizar ahí? Ni muro, ni puerta, ni casa. */
   function aterrizable(col, row) {
     if (row < 0 || row >= CFG.ROWS) return false;
@@ -986,28 +992,18 @@
       return -1;
     },
 
-    /* Abre el apuntado: la retícula sale una casilla por delante del Mago (o
-     * encima de él si tiene la pared pegada a la cara) y echa a andar hacia
-     * donde él mira. Las flechas la GIRAN, no la empujan: ella sola se come
-     * una casilla cada METEORO_PASO ticks y se para al llegar a una pared o
-     * al alcance, así que apuntar es girarla y soltar la tecla a tiempo.
-     *
-     * Se hace así, y no un paso por pulsación, porque la autorrepetición del
-     * teclado la marca cada sistema operativo como quiere: una marca movida a
-     * golpe de repetición se vería andar a una velocidad distinta en cada
-     * ordenador, y en la repetición de la partida, a otra.
-     *
-     * `oc/or` es de dónde salió, y es contra eso —no contra el Mago de cada
-     * tick— contra lo que se mide el alcance: si se midiera contra él, andar
-     * mientras se apunta movería el listón y la marca se quedaría corta o
-     * larga sin que el jugador tocase nada. */
+    /* Abre el apuntado: la retícula sale una casilla por delante del Mago,
+     * haya muro o no (encima de él si está en el borde del tablero). Luego
+     * cada flecha la mueve una casilla (apuntarDir). `oc/or` es de dónde
+     * salió; ya no mide ningún alcance, se guarda por las fotos de red. */
     abrirApuntado: function (G, idx) {
       var s = this.estado(idx), p = G.pacs[idx];
       if (!s || !p) return false;
-      var oc = p.tileX(), or = p.tileY();
-      var c = this.casillaAdelante(G, idx, 1);
-      if (!c || !aterrizable(c.c, c.r)) c = { c: oc, r: or };
-      if (!aterrizable(c.c, c.r)) return false;
+      var oc = p.tileX(), or = p.tileY(), v = CFG.DIR_V[this.dirFlash(p)];
+      /* desde el 26 sep, delante aunque haya muro: la mira ya no es de pasillos */
+      var c = v ? { c: oc + v.x, r: or + v.y } : null;
+      if (!c || !enMapa(c.c, c.r)) c = { c: oc, r: or };
+      if (!enMapa(c.c, c.r)) return false;
       s.apunta = { c: c.c, r: c.r, d: this.dirFlash(p), t: 0, oc: oc, or: or };
       this.efecto('meteoro_aviso', c.c * T + T / 2, c.r * T + T / 2, 12);
       return true;
@@ -1022,14 +1018,18 @@
      * La autorrepetición del teclado NO da pasos: la criba la UI antes de
      * llegar aquí (una tecla mantenida no es otra pulsación). Por eso cada
      * llamada es un paso, y la repetición de la partida graba cada una. */
+    /* TODO EL MAPA, MUROS INCLUIDOS (26 sep, a petición de Braighton). Lo que
+     * vale del METEORO es el golpe en área, y ese alcanza los pasillos de
+     * alrededor caiga donde caiga: obligar a la mira a ir por pasillos y a no
+     * pasar de ocho casillas de camino le quitaba justo eso. Ahora es una
+     * mira de francotirador: cualquier casilla del tablero, sin dar la vuelta
+     * por el túnel (en el borde se para, no reaparece al otro lado). */
     apuntarDir: function (idx, d) {
       var s = this.estado(idx), a = s && s.apunta;
       if (!a || !(d >= 0 && d <= 3)) return false;
       a.d = d;
-      var v = CFG.DIR_V[d], nc = CFG.wrapCol(a.c + v.x), nr = a.r + v.y;
-      if (!aterrizable(nc, nr)) return false;
-      var pasos = this.pasosApuntado(a.oc, a.or, nc, nr);
-      if (pasos < 0 || pasos > H.METEORO_ALCANCE) return false;
+      var v = CFG.DIR_V[d], nc = a.c + v.x, nr = a.r + v.y;
+      if (!enMapa(nc, nr)) return false;
       a.c = nc; a.r = nr;
       return true;
     },
@@ -3875,9 +3875,6 @@
       return true;
     },
 
-    /* El anfitrión no se cree la casilla de un invitado sin mirarla: tiene
-     * que ser pisable (ni muro, ni casa de fantasmas) y estar a tiro por los
-     * pasillos, con la propina de METEORO_MARGEN_RED. */
     /* Radio de la HOGUERA ahora mismo: nace con el del golpe y crece una
      * casilla cada METEORO_FUEGO_CRECE ticks. Lo usan el fuego y su dibujo. */
     radioFuego: function (f) {
@@ -3895,11 +3892,10 @@
       if (p) G.addPopup(p.x, p.y - 8, '-' + Math.round(H.METEORO_DEVUELVE / 60) + ' S', 30);
     },
 
+    /* Desde el 26 sep la mira llega a todo el tablero, muros incluidos: del
+     * invitado solo se comprueba que la casilla exista. */
     meteoroValido: function (G, idx, c, r) {
-      var p = G.pacs[idx];
-      if (!p || !aterrizable(CFG.wrapCol(c), r)) return false;
-      var pasos = this.pasosApuntado(p.tileX(), p.tileY(), CFG.wrapCol(c), r);
-      return pasos >= 0 && pasos <= H.METEORO_ALCANCE + H.METEORO_MARGEN_RED;
+      return !!G.pacs[idx] && enMapa(CFG.wrapCol(c), r);
     },
     eclipse: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s) return false; s.eclipse = H.ECLIPSE_TICKS; this.eclipseTicks = H.ECLIPSE_TICKS; for (var i = 0; i < 4; i++) this.ciego[i] = H.ECLIPSE_TICKS; if (p) this.efecto('eclipse', p.x, p.y, 40); sonDe(G, idx, 'playShout'); return true; },
 

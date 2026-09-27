@@ -12096,7 +12096,7 @@
     eq(H.azulCatTicks[a.id], H.azulCatTicks[b.id], 'los dos se apagan a la vez');
   });
 
-  test('AJUSTES: el METEORO se apunta manteniendo la R', function () {
+  test('AJUSTES: el METEORO se apunta manteniendo la R, por todo el mapa', function () {
     var H = window.PM.Hab, HH = CFG.HAB, i;
     var R = 3;                      // el METEORO es la R, el cuarto del Mago
 
@@ -12150,7 +12150,7 @@
     for (i = 0; i < 30; i++) tic();
     eq(H.st[0].apunta.c, pas.c + 1, 'la marca ya no camina sola');
 
-    /* PAREDES: cada flecha es UN paso, y contra el muro de arriba no pasa */
+    /* cada flecha es UN paso */
     var c0 = H.st[0].apunta.c;
     G.setPacDir(0, DR.RIGHT);
     eq(H.st[0].apunta.c, c0 + 1, 'una flecha, una casilla');
@@ -12161,14 +12161,28 @@
     eq(H.st[0].mant, R, 'la tecla sigue apretada, sin relanzarse sola');
     /* la flecha entra por donde entran todas (Game.setPacDir): mientras se
      * apunta es de la marca y no del Mago */
+    /* MUROS (26 sep): la mira se mete en el muro de arriba, que el golpe es
+     * en área y alcanza igual los pasillos de alrededor */
     G.setPacDir(0, DR.UP);
     eq(G.pacs[0].nextDir, DR.RIGHT, 'la flecha no gira al Mago mientras apunta');
-    eq(H.st[0].apunta.r, pas.r, 'y la pared de arriba no la deja pasar');
+    eq(H.st[0].apunta.r, pas.r - 1, 'la mira se mete en el muro de arriba');
+    ok(!libre(H.st[0].apunta.c, H.st[0].apunta.r), 'que de verdad es muro');
+    G.setPacDir(0, DR.DOWN);
 
-    /* ALCANCE: por mucho que siga el pasillo, no se va más lejos */
-    for (i = 0; i < HH.METEORO_ALCANCE * 3; i++) G.setPacDir(0, DR.RIGHT);
-    eq(H.st[0].apunta.c, pas.c + HH.METEORO_ALCANCE, 'se para en el alcance máximo');
-    ok(libre(pas.c + HH.METEORO_ALCANCE + 1, pas.r), 'aunque el pasillo siga abierto');
+    /* TODO EL MAPA (26 sep): sin alcance, hasta el borde del tablero, y ahí
+     * se para (no da la vuelta por el túnel) */
+    for (i = 0; i < CFG.COLS * 2; i++) G.setPacDir(0, DR.RIGHT);
+    eq(H.st[0].apunta.c, CFG.COLS - 1, 'llega hasta la última columna');
+    for (i = 0; i < CFG.ROWS * 2; i++) G.setPacDir(0, DR.DOWN);
+    eq(H.st[0].apunta.r, CFG.ROWS - 1, 'y hasta la última fila');
+    for (i = 0; i < CFG.COLS * 2; i++) G.setPacDir(0, DR.LEFT);
+    for (i = 0; i < CFG.ROWS * 2; i++) G.setPacDir(0, DR.UP);
+    eq(H.st[0].apunta.c + ',' + H.st[0].apunta.r, '0,0', 'y a la esquina contraria');
+    ok(H.meteoroValido(G, 0, CFG.COLS - 1, CFG.ROWS - 1), 'el anfitrión se cree una casilla lejana del invitado');
+    ok(!H.meteoroValido(G, 0, 0, CFG.ROWS), 'pero no una fuera del tablero');
+    /* vuelta al pasillo para el resto de la prueba */
+    for (i = 0; i < pas.r; i++) G.setPacDir(0, DR.DOWN);
+    for (i = 0; i < pas.c + 4; i++) G.setPacDir(0, DR.RIGHT);
 
     /* SOLTAR: cae donde estaba la marca y explota como toda la vida */
     var dest = { c: H.st[0].apunta.c, r: H.st[0].apunta.r }, g = G.ghosts[0];

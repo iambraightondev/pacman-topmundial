@@ -2452,6 +2452,10 @@
      * esquina de un bloque, que es justo lo que uno quiere hacer con esto; de
      * diez para arriba el Mago revienta la otra punta del mapa sin enterarse
      * de lo que pasa allí y el poder se queda sin riesgo. */
+    /* Retirado el 26 sep: la mira llega a TODO el mapa, muros incluidos
+     * (ver Hab.apuntarDir). Braighton lo quiere de francotirador: lo que vale
+     * es el golpe en área. Se deja el número porque alguna prueba vieja lo
+     * mira. */
     METEORO_ALCANCE: 8,
     /* Retirado el 23 sep: la retícula ya no camina sola. Cada flecha la
      * mueve UNA casilla y el Mago se queda plantado mientras apunta, como un
@@ -2616,7 +2620,7 @@
          h('gravedad', 'E', 'GRAVEDAD', 32, 'Agrupa y detiene fantasmas.'),
          h('dominio', 'E', 'DOMINIO', 32, 'El fantasma más cercano caza a los suyos 6 s.')],
         [h('tormenta', 'R', 'TORMENTA', 46, 'Tres rayos a distancia.'),
-         h('meteoro', 'R', 'METEORO', 60, 'Mantenla: el Mago se planta y cada flecha mueve la mira.'),
+         h('meteoro', 'R', 'METEORO', 60, 'Mantenla: el Mago se planta y cada flecha mueve la mira por todo el mapa.'),
          h('eclipse', 'R', 'ECLIPSE', 60, 'Ceguera y ralentización global.')]
       ]
     };
@@ -2663,7 +2667,7 @@
       gravedad: "ARRASTRA HACIA TI EN MEDIO SEGUNDO A LOS FANTASMAS A 4 CASILLAS Y LOS APAGA 2 S PARA REMATARLOS · AL REY NO LO MUEVE: LO PARA 0,7 S",
       dominio: "EL FANTASMA MÁS CERCANO A 4 CASILLAS ES TUYO 6 S: NO MUERDE AL EQUIPO Y CAZA A LOS OTROS (EN RACHA) · SI ALCANZA AL REY, 3 DE VIDA",
       tormenta: "3 RAYOS, UNO AL INSTANTE Y LUEGO UNO CADA 0,75 S, AL FANTASMA MÁS CERCANO A 10 CASILLAS: CADA RAYO MATA (EN RACHA: 200, 400, 800, 1.600) · AL REY, 2 DE VIDA POR RAYO",
-      meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA (8 CASILLAS) · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 15 S · AL REY, 5 DE VIDA",
+      meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA POR TODO EL MAPA, MUROS INCLUIDOS · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 15 S · AL REY, 5 DE VIDA",
       eclipse: "10 S DE OSCURIDAD: LOS CUATRO FANTASMAS VAN A CIEGAS, GIRANDO AL AZAR, Y A MITAD DE VELOCIDAD · EL REY TAMBIÉN VA A MITAD DE VELOCIDAD",
       hielo: "DISPARO QUE CONGELA 3 S AL PRIMER FANTASMA Y A LOS DE SU CASILLA · MANTÉN 2 S: PLACA DE HIELO 8 S QUE CONGELA A QUIEN LA PISE · AL REY LO CONGELA 1 S",
       mina: "MINA EN TU CASILLA DURANTE 5 S: MATA AL FANTASMA QUE LA PISE (200 PTS) Y TE DA ESCUDO 8 S · AL REY LE QUITA 3 DE VIDA Y TAMBIÉN TE DA EL ESCUDO",

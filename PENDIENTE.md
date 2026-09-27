@@ -13,6 +13,15 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### 26 sep (5): LA MIRA DEL METEORO, POR TODO EL MAPA
+
+Decisión de Braighton: la mira del METEORO (R mantenida) va por muros y por
+todo el tablero, sin alcance (Hab.apuntarDir; en el borde se para, no cruza
+el túnel). Service worker pm-v289. tests.html 605/605.
+**Por mirar:** cada flecha sigue siendo UN paso (la autorrepetición se criba),
+así que cruzar el mapa son ~25 pulsaciones. Las repeticiones del 22-26 sep en
+que la mira chocó con un muro o con el alcance pueden reproducirse distinto.
+
 ### 26 sep (4): REGALO A PIEROSENSUAL
 
 +1.000 monedas por petición de Braighton, sumadas a `logros.monedas` en la

@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-26 (5) · La mira del meteoro llega a todo el mapa
+
+**METEORO:** con la R mantenida, la mira ya no va solo por pasillos ni se queda
+a ocho casillas: se mueve por todo el mapa, muros incluidos, como la de un
+francotirador. Lo que cuenta es el golpe en área.
+
 ## 2026-09-26 (3) · Las partidas largas ya tienen repetición
 
 **ARREGLO:** las partidas más largas —justo las mejores— se quedaban sin
