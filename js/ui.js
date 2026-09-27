@@ -13517,7 +13517,17 @@
           if (g.state !== 'PLAYING' && g.state !== 'READY') return;
           var idx = (g.playerCount === 2 && !g.netRole) ? playerIdx : g.localIdx;
           g.setPacDir(idx, df[0]);
+          g.mantenerFlecha(idx, df[0]);
         });
+        /* al levantar el dedo la mira del METEORO deja de deslizarse */
+        function suelta() {
+          var g = window.PM.Game;
+          var idx = (g.playerCount === 2 && !g.netRole) ? playerIdx : g.localIdx;
+          g.soltarFlecha(idx, df[0]);
+        }
+        b.addEventListener('pointerup', suelta);
+        b.addEventListener('pointercancel', suelta);
+        b.addEventListener('pointerleave', suelta);
         wrap.appendChild(b);
       });
       document.body.appendChild(wrap);
@@ -14693,6 +14703,16 @@
        * el resto Hab.soltar no hace nada. */
       document.addEventListener('keyup', function (ev) {
         var g = window.PM.Game;
+        /* la flecha que se suelta deja de deslizar la mira del METEORO */
+        var dosLocalFl = g && g.playerCount === 2 && !g.netRole;
+        /* WASD solo mueve sin poderes o con dos en el teclado (ver keydown) */
+        if (g && (ev.key in ARROWS || (ev.key in WASD && (!g.hab || dosLocalFl)))) {
+          if (dosLocalFl) {
+            g.soltarFlecha(ev.key in ARROWS ? 0 : 1, ev.key in ARROWS ? ARROWS[ev.key] : WASD[ev.key]);
+          } else {
+            g.soltarFlecha(g.localIdx, ev.key in ARROWS ? ARROWS[ev.key] : WASD[ev.key]);
+          }
+        }
         if (!g || !g.hab || !window.PM.Hab) return;
         // el ESPACIO es la puerta de los portales del Mago: al soltarlo, cerrada
         if (ev.code === 'Space' || ev.key === ' ' || ev.key === 'Spacebar') {
@@ -14710,6 +14730,7 @@
       /* sin foco no llega el keyup: lo que se estaba manteniendo se suelta
        * sin lanzar nada */
       window.addEventListener('blur', function () {
+        if (window.PM.Game && window.PM.Game.soltarFlechas) window.PM.Game.soltarFlechas();
         if (window.PM.Hab) {
           window.PM.Hab.cancelarMant();
           window.PM.Hab.soltarEspacio();
@@ -14847,6 +14868,8 @@
              * si no, la mira se iría al fondo a la velocidad que decida cada
              * sistema operativo */
             var quienFl = (g.playerCount === 2 && !g.netRole) ? (isArrow ? 0 : 1) : g.localIdx;
+            /* mantenida, desliza la mira a ritmo fijo (Game.pasoFlechas) */
+            if (!ev.repeat) g.mantenerFlecha(quienFl, isArrow ? ARROWS[ev.key] : WASD[ev.key]);
             if (ev.repeat && g.hab && window.PM.Hab && window.PM.Hab.apuntando(quienFl)) {
               ev.preventDefault();
               return;

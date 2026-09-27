@@ -2465,6 +2465,14 @@
      * invitado. Él apuntó desde donde tenía su Mago y aquí, medio segundo de
      * red después, ya ha andado un poco: el desfase no es culpa suya. */
     METEORO_MARGEN_RED: 2,
+    /* LA FLECHA MANTENIDA DESLIZA LA MIRA (26 sep). Con la mira por todo el
+     * mapa, cruzarlo a golpe de flecha eran unas 25 pulsaciones. Ahora la
+     * primera pulsación da un paso y, mantenida, la mira echa a andar sola a
+     * los ESPERA ticks, una casilla cada CADA: unas 20 por segundo, el mapa
+     * de lado a lado en año y medio. Lo cuenta el reloj de la partida y no la
+     * autorrepetición del teclado, que cada sistema pone a su aire. */
+    METEORO_DESLIZA_ESPERA: 12,
+    METEORO_DESLIZA_CADA: 3,
     ECLIPSE_TICKS: 10 * 60,
     TERREMOTO_PUNTOS: 100,
     /* Retirada el 22 sep: el TERREMOTO ya no frena al equipo (ver multVel).

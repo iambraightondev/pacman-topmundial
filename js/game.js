@@ -1022,6 +1022,39 @@
      * y esos giros no se grababan nunca, así que la repetición de una partida
      * de VS. salía con la mitad de las órdenes y al verla el fantasma humano
      * se movía por su cuenta. */
+    /* FLECHA MANTENIDA (26 sep): la UI dice qué flecha tiene apretada cada
+     * jugador de esta pantalla y, mientras apunta el METEORO, la mira se
+     * desliza sola a ritmo fijo (CFG.HAB.METEORO_DESLIZA_*). Cada paso entra
+     * por setPacDir, así que la repetición lo graba como una flecha más y al
+     * verla no hace falta saber nada de esto. Fuera del apuntado no hace
+     * nada: el Pac-Man ya sigue solo en su rumbo. */
+    flechaMant: [],
+    mantenerFlecha: function (idx, d) {
+      if (!(idx >= 0 && idx < CFG.MAX_PLAYERS) || !(d >= 0 && d <= 3)) return;
+      this.flechaMant[idx] = { d: d, t: 0 };
+    },
+    /* sin dirección, suelta la que sea (se va el foco, se levanta el dedo) */
+    soltarFlecha: function (idx, d) {
+      var fm = this.flechaMant[idx];
+      if (fm && (d == null || fm.d === d)) this.flechaMant[idx] = null;
+    },
+    soltarFlechas: function () { this.flechaMant = []; },
+    pasoFlechas: function () {
+      var H = window.PM.Hab, HH = CFG.HAB;
+      for (var i = 0; i < this.flechaMant.length; i++) {
+        var fm = this.flechaMant[i];
+        if (!fm) continue;
+        /* la cuenta empieza al abrir el apuntado, aunque la flecha viniera
+         * apretada de antes */
+        if (!(this.hab && H && H.apuntando && H.apuntando(i))) { fm.t = 0; continue; }
+        fm.t++;
+        if (fm.t >= HH.METEORO_DESLIZA_ESPERA &&
+            (fm.t - HH.METEORO_DESLIZA_ESPERA) % HH.METEORO_DESLIZA_CADA === 0) {
+          this.setPacDir(i, fm.d);
+        }
+      }
+    },
+
     setPacDir: function (idx, d) {
       var V = window.PM.Versus;
       var R = window.PM.Replay;
@@ -1126,6 +1159,7 @@
       /* DESATADO: las teclas mantenidas que llegan a su rato salen aquí, antes
        * que la repetición, que es donde ella las vuelve a meter (Hab.cargas) */
       if (window.PM.Hab && window.PM.Hab.cargas) window.PM.Hab.cargas(this);
+      this.pasoFlechas();
       if (window.PM.Replay) window.PM.Replay.paso();
       this.energizerTicks++;
       if (this.energizerTicks >= 12) {          // parpadeo ~0.2 s

@@ -6,7 +6,8 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 **METEORO:** con la R mantenida, la mira ya no va solo por pasillos ni se queda
 a ocho casillas: se mueve por todo el mapa, muros incluidos, como la de un
-francotirador. Lo que cuenta es el golpe en área.
+francotirador. Lo que cuenta es el golpe en área. Un toque de flecha la mueve
+una casilla; mantenida, se desliza sola y cruza el mapa en año y medio.
 
 ## 2026-09-26 (3) · Las partidas largas ya tienen repetición
 

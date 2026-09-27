@@ -12184,6 +12184,22 @@
     for (i = 0; i < pas.r; i++) G.setPacDir(0, DR.DOWN);
     for (i = 0; i < pas.c + 4; i++) G.setPacDir(0, DR.RIGHT);
 
+    /* FLECHA MANTENIDA (26 sep): tras una pausa corta la mira se desliza
+     * sola a ritmo fijo, y al soltar la flecha se para */
+    var cM = H.st[0].apunta.c;
+    G.soltarFlechas();
+    G.mantenerFlecha(0, DR.LEFT);
+    for (i = 0; i < HH.METEORO_DESLIZA_ESPERA - 1; i++) G.pasoFlechas();
+    eq(H.st[0].apunta.c, cM, 'mantenida, espera un poco antes de deslizarse');
+    G.pasoFlechas();
+    eq(H.st[0].apunta.c, cM - 1, 'y luego echa a andar sola');
+    for (i = 0; i < HH.METEORO_DESLIZA_CADA; i++) G.pasoFlechas();
+    eq(H.st[0].apunta.c, cM - 2, 'una casilla cada METEORO_DESLIZA_CADA ticks');
+    G.soltarFlecha(0, DR.LEFT);
+    for (i = 0; i < 30; i++) G.pasoFlechas();
+    eq(H.st[0].apunta.c, cM - 2, 'al soltar la flecha se para');
+    G.setPacDir(0, DR.RIGHT); G.setPacDir(0, DR.RIGHT);
+
     /* SOLTAR: cae donde estaba la marca y explota como toda la vida */
     var dest = { c: H.st[0].apunta.c, r: H.st[0].apunta.r }, g = G.ghosts[0];
     for (i = 1; i < 4; i++) G.ghosts[i].mode = 'house';
@@ -12196,6 +12212,10 @@
     ok(H.multVel(0) > 0, 'y el Mago vuelve a andar');
     G.setPacDir(0, DR.UP);
     eq(G.pacs[0].nextDir, DR.UP, 'las flechas vuelven a ser del Mago');
+    G.mantenerFlecha(0, DR.RIGHT);
+    for (i = 0; i < 40; i++) G.pasoFlechas();
+    eq(G.pacs[0].nextDir, DR.UP, 'sin apuntar, mantener la flecha no hace nada más');
+    G.soltarFlechas();
     eq(H.st[0].meteoro.c, dest.c, 'cae en la columna apuntada');
     eq(H.st[0].meteoro.r, dest.r, 'y en la fila apuntada');
     eq(H.st[0].meteoro.t, HH.METEORO_AVISO, 'con el aviso de siempre');
