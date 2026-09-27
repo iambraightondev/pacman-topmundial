@@ -113,6 +113,8 @@
         tInvoca: 0,      // ticks desde la última invocación
         inv: 0,          // ticks sin poder recibir golpe
         frz: 0,          // ticks congelado
+        frzHielo: false, // ...y lo congeló el hielo: al acabar, va más lento
+        trasHielo: 0,    // ticks a HIELO_LENTO_MULT tras el hielo
         golpeado: 0,     // ticks del destello de golpe (solo se pinta)
         azulUsado: 0,    // por jugador (bits): ya le pegó en este azul
         azulTick: -1,    // frightTicks del azul en curso, para saber si es otro
@@ -177,6 +179,7 @@
       else if (G.frightTicks > 0) pct = G.speedRow.ghostFright;
       // PISOTÓN del Tanque: mientras huye va al ritmo del que huye (18 sep)
       if (j.huye > 0 && j.st !== 'carga') pct *= CFG.HAB.PISOTON_LENTO;
+      if (j.trasHielo > 0) pct *= CFG.HAB.HIELO_LENTO_MULT;
       var A = Hab();
       if (A && A.multVelJefe) pct *= A.multVelJefe(G);
       return pct / 100 * CFG.BASE_SPEED;
@@ -287,7 +290,11 @@
       var j = G.jefe;
       if (j.inv > 0) j.inv--;
       if (j.golpeado > 0) j.golpeado--;
-      if (j.frz > 0) j.frz--;
+      if (j.trasHielo > 0) j.trasHielo--;
+      if (j.frz > 0 && --j.frz <= 0 && j.frzHielo) {
+        j.frzHielo = false;
+        j.trasHielo = CFG.HAB.HIELO_LENTO_TICKS;
+      }
       if (j.huye > 0 && --j.huye <= 0) { j.huyeDe = -1; j.plan = -1; }
       /* un azul nuevo deja volver a pegarle a todos */
       if (G.frightTicks <= 0) j.azulUsado = 0;
@@ -446,8 +453,13 @@
       }
       if (esAzul || (A && A.arrollando && A.arrollando(i))) {
         if (esAzul) {
-          /* el azul: UNA vez por cada energizante, como el anfitrión */
-          if (j.inv <= 0 && !(j.azulUsado & (1 << i))) {
+          /* el azul: UNA vez por cada energizante, como el anfitrión.
+           * SIN mirar el respiro del rey (27 sep): el golpe de azul entra
+           * aunque acabe de recibir otro (danar con forzar), y aquí se
+           * miraba. Pasando juntos un compañero y el invitado, el del
+           * compañero ponía el respiro y el del invitado no se pedía nunca:
+           * restaba un -6 y no dos. */
+          if (!(j.azulUsado & (1 << i))) {
             j.azulUsado |= (1 << i);
             j.pidoAzul = J.PIDO_AZUL;
             G.netSend('gevt', { t: 'jefeGolpe', f: 'azul' });
@@ -594,9 +606,11 @@
       return (v.x * hx + v.y * (p.y - j.y)) < 0;
     },
 
-    congelar: function (G, ticks) {
+    /* hielo: lo congela el hielo del Soporte, que al acabar lo deja lento */
+    congelar: function (G, ticks, hielo) {
       if (!this.activo(G)) return;
       G.jefe.frz = Math.max(G.jefe.frz, ticks || J.HIELO);
+      if (hielo) G.jefe.frzHielo = true;
       if (G.jefe.st === 'carga' || G.jefe.st === 'aviso') this.fin(G);
     },
 
@@ -618,7 +632,7 @@
           var pl = A.placas[i];
           if (!pl || pl.c !== col || pl.r !== row || (pl.z & 16)) continue;
           pl.z |= 16;
-          this.congelar(G, J.HIELO);
+          this.congelar(G, J.HIELO, true);
         }
       }
       /* LA MINA DEL SOPORTE (catálogo, 22 sep 2026). Se mira aquí y no en
@@ -655,8 +669,11 @@
       if (j.inv > 0 && !forzar) return false;
       j.hp = Math.max(0, j.hp - n);
       j.inv = J.INV;
+      /* dos golpes seguidos (dos jugadores que lo cruzan de azul a la vez) no
+       * se tapan: el segundo sale más arriba y se ven los dos */
+      var alto = j.golpeado > 12 ? 22 : 12;
       j.golpeado = 20;
-      G.addPopup(j.x, j.y - 12, '-' + n, 30);
+      G.addPopup(j.x, j.y - alto, '-' + n, 30);
       G.hostEvt({ t: 'jefeDano', n: n, f: fuente || '', w: quien });
       window.AudioSys && AudioSys.playEatGhost && AudioSys.playEatGhost();
       if (j.hp <= 0) this.morir(G, quien);
@@ -684,8 +701,9 @@
     evento: function (G, e) {
       if (!G.jefe) return;
       if (e.t === 'jefeDano') {
+        var altoE = G.jefe.golpeado > 12 ? 22 : 12;
         G.jefe.golpeado = 20;
-        G.addPopup(G.jefe.x, G.jefe.y - 12, '-' + (e.n | 0), 30);
+        G.addPopup(G.jefe.x, G.jefe.y - altoE, '-' + (e.n | 0), 30);
       } else if (e.t === 'jefeKill') {
         G.jefe.vivo = false;
         G.addPopup(e.x, e.y, J.PREMIO, 120);

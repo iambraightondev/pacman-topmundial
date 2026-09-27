@@ -2115,7 +2115,7 @@
       { id: 'aliado',    key: 'E', name: 'ALIADO',    largo: 'ESCUDO ALIADO', cd: 32 * 60 },
       /* VIDA EXTRA: 3 min (antes 5). A cinco minutos casi nunca llegaba a
        * usarse dos veces en una partida (18 sep). */
-      { id: 'vida',      key: 'R', name: 'VIDA',      largo: 'VIDA EXTRA', cd: 180 * 60 }
+      { id: 'vida',      key: 'R', name: 'VIDA',      largo: 'VIDA EXTRA', cd: 160 * 60 }
     ],
     LIST_M: [
       { id: 'fuego',    key: 'Q', name: 'FUEGO',    largo: 'BOLA DE FUEGO', cd: 20 * 60 },
@@ -2219,6 +2219,10 @@
     APISONADORA_RED: 5 * 60,
     /* Soporte */
     HIELO_TICKS: 3 * 60,          // fantasma congelado
+    /* TRAS EL HIELO (27 sep, Braighton): al descongelarse, el fantasma (y el
+     * rey) va un 20 % más lento durante 3 s. Vale para el disparo y la placa. */
+    HIELO_LENTO_TICKS: 3 * 60,
+    HIELO_LENTO_MULT: 0.8,
     PROYECTIL_VEL: 3,             // px por tick (Pac-Man va a ~1)
     INMUNE_TICKS: 3 * 60,
     /* escudo que se da al compañero: 8 s o un golpe. A solas no sale: el
@@ -2607,10 +2611,11 @@
          h('relevo', 'E', 'RELEVO', 26, 'Teletransporta al compañero cercano.'),
          h('faro', 'E', 'FARO', 30, 'Reduce la recarga de la R de un aliado.'),
          h('sirena', 'E', 'SIRENA', 34, 'Atrae fantasmas a un punto.')],
-        [h('vida', 'R', 'VIDA EXTRA', 180, 'Da una vida al compañero que menos tiene.'),
-         h('resurreccion', 'R', 'RESURRECCIÓN', 180, 'Levanta un cadáver caducado.'),
-         h('campo', 'R', 'CAMPO', 150, 'Nadie del equipo muere durante 5 s.'),
-         h('hospital', 'R', 'HOSPITAL', 150, 'Los caídos vuelven durante 10 s.')]
+        /* Las cuatro R del Soporte, 20 s menos de recarga (27 sep, Braighton) */
+        [h('vida', 'R', 'VIDA EXTRA', 160, 'Da una vida al compañero que menos tiene.'),
+         h('resurreccion', 'R', 'RESURRECCIÓN', 160, 'Levanta un cadáver caducado.'),
+         h('campo', 'R', 'CAMPO', 130, 'Nadie del equipo muere durante 5 s.'),
+         h('hospital', 'R', 'HOSPITAL', 130, 'Los caídos vuelven durante 10 s.')]
       ],
       mago: [
         [h('fuego', 'Q', 'BOLA DE FUEGO', 20, 'Mata al primer fantasma.'),
@@ -2650,7 +2655,7 @@
       grito: "LOS CUATRO FANTASMAS SE PONEN AZULES 6 S, SEA CUAL SEA EL NIVEL · EL REY TAMBIÉN: CADA JUGADOR LE PEGA UNA VEZ AL TOCARLO, 6 DE VIDA",
       misil: "PERSIGUE POR LOS PASILLOS AL FANTASMA MÁS CERCANO Y SALTA AL SIGUIENTE · ARROLLA A QUIEN SE CRUCE · PAGA EN CADENA 250/500/1.000/2.000 · REMATA AL REY: 6 DE VIDA",
       ejecucion: "MATA DE GOLPE AL FANTASMA MÁS CERCANO A 10 CASILLAS Y PAGA 5.000 · SIN NADIE A TIRO NO SALE · AL REY NO LO MATA: LE QUITA 10 DE VIDA",
-      caceria: "6 S A X1,2 · LOS FANTASMAS DE LA CALLE QUEDAN MARCADOS: SOLO TÚ TE LOS COMES, AUNQUE NO ESTÉN AZULES · EL REY NO TE MATA: TOCARLO LE QUITA 6 DE VIDA",
+      caceria: "6 S A X1,2 · LOS FANTASMAS DE LA CALLE QUEDAN MARCADOS: SOLO TÚ TE LOS COMES, AUNQUE NO ESTÉN AZULES (CADA UNO UNA VEZ: EL QUE MATAS NO SE VUELVE A MARCAR) · EL REY NO TE MATA: TOCARLO LE QUITA 6 DE VIDA",
       pisoton: "TODOS LOS FANTASMAS DE LA CALLE HUYEN DE TI 6 S AL 60% DE SU VELOCIDAD · NO SE PONEN AZULES · EL REY TAMBIÉN HUYE · SIN NADIE EN LA CALLE NO SALE",
       empujon: "EMPUJA 3 CASILLAS AL PRIMER FANTASMA A 3 DE DISTANCIA, DELANTE O SI NO DETRÁS, Y LO APAGA 1 S: NI MATA NI SE COME · AL REY NO LO MUEVE, LO APAGA 0,5 S",
       rebote: "5 S: EL PRIMER FANTASMA QUE TE TOQUE MUERE (200) Y TÚ TE SALVAS · CONTRA EL REY: LE QUITA 3 DE VIDA Y LO PARA 1 S",
@@ -2677,7 +2682,7 @@
       tormenta: "3 RAYOS, UNO AL INSTANTE Y LUEGO UNO CADA 0,75 S, AL FANTASMA MÁS CERCANO A 10 CASILLAS: CADA RAYO MATA (EN RACHA: 200, 400, 800, 1.600) · AL REY, 2 DE VIDA POR RAYO",
       meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA POR TODO EL MAPA, MUROS INCLUIDOS · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 15 S · AL REY, 5 DE VIDA",
       eclipse: "10 S DE OSCURIDAD: LOS CUATRO FANTASMAS VAN A CIEGAS, GIRANDO AL AZAR, Y A MITAD DE VELOCIDAD · EL REY TAMBIÉN VA A MITAD DE VELOCIDAD",
-      hielo: "DISPARO QUE CONGELA 3 S AL PRIMER FANTASMA Y A LOS DE SU CASILLA · MANTÉN 2 S: PLACA DE HIELO 8 S QUE CONGELA A QUIEN LA PISE · AL REY LO CONGELA 1 S",
+      hielo: "DISPARO QUE CONGELA 3 S AL PRIMER FANTASMA Y A LOS DE SU CASILLA · MANTÉN 2 S: PLACA DE HIELO 8 S QUE CONGELA A QUIEN LA PISE · AL DESCONGELARSE VA UN 20 % MÁS LENTO 3 S · AL REY LO CONGELA 1 S",
       mina: "MINA EN TU CASILLA DURANTE 5 S: MATA AL FANTASMA QUE LA PISE (200 PTS) Y TE DA ESCUDO 8 S · AL REY LE QUITA 3 DE VIDA Y TAMBIÉN TE DA EL ESCUDO",
       gancho: "GARFIO RECTO HASTA 6 CASILLAS: SI ENGANCHA, TE TRAE AL FANTASMA APAGADO Y TE LLEGA AZUL 5 S PARA COMÉRTELO · AL REY LE QUITA 1 DE VIDA",
       telarana: "TELARAÑA EN TU CASILLA DURANTE 16 S: TODO FANTASMA A 1,5 CASILLAS VA A MITAD DE VELOCIDAD · AL REY TAMBIÉN LO FRENA A LA MITAD",

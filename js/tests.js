@@ -9889,7 +9889,7 @@
     eq(HC.segs(3, 'tanque'), 46, 'ARROLLAR 46 s');
     eq(HC.segs(3, 'mago'), 46, 'TORMENTA 46 s');
     eq(HC.APISONADORA_MULT, 1.75, 'la apisonadora va a x1,75');
-    eq(HC.segs(3, 'soporte'), 180, 'VIDA EXTRA 3 min');
+    eq(HC.segs(3, 'soporte'), 160, 'VIDA EXTRA 2 min 40 s (27 sep: 20 s menos)');
     eq(HC.segs(0, 'mago'), 20, 'BOLA DE FUEGO 20 s');
     eq(HC.segs(0), 18, 'sin rol, las del Asesino');
     eq(HC.MAGO_PUNTOS, 200, 'lo del Mago vale 200 fijos');
@@ -10449,10 +10449,10 @@
     var vidas = G.lives;
     ok(HB.pulsar(G, 0, 3), 'la vida sale');
     eq(G.lives, vidas + 1, 'una vida más');
-    eq(HB.restan(0, 3), 180, 'y tres minutos de recarga');
+    eq(HB.restan(0, 3), 160, 'y 2 min 40 s de recarga');
     G.respawn();
     G.resetLevel();
-    eq(HB.restan(0, 3), 180, 'ni morir ni cambiar de nivel la devuelven');
+    eq(HB.restan(0, 3), 160, 'ni morir ni cambiar de nivel la devuelven');
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     G.lives = HC.VIDA_MAX;
     eq(HB.pulsar(G, 0, 3), false, 'con el tope ya puesto no sale');
@@ -12557,9 +12557,53 @@
     G.ghosts[0].mode = 'normal';
     H.paso(G);
     eq(H.caceriaQuien[0], 0, 'al salir durante la cacería, queda marcado');
+    /* 27 sep: el que ya se mató no vuelve a marcarse al salir de casa */
+    H.matarCatalogo(G, G.ghosts[1], 0, 200, 'mordisco', 1, true);
+    eq(H.caceriaQuien[1], -1, 'el muerto pierde la marca');
+    G.ghosts[1].mode = 'normal';
+    H.paso(G);
+    eq(H.caceriaQuien[1], -1, 'y al volver a salir de casa no se marca otra vez');
     H.st[0].caceria = 0;
     H.paso(G);
     eq(H.caceriaQuien[0], -1, 'y al acabarse, todos sin marca');
+    G.toMenu();
+  });
+
+  test('AJUSTES 27 sep: el invitado le pega de azul aunque el compañero le acabe de pegar', function () {
+    var J = window.PM.Jefe;
+    partida(1); G.hab = true;
+    window.PM.Hab.empezar(true, 1, ['asesino']); G.roles = ['asesino'];
+    G.level = 5;
+    J.alNivel(G);
+    ok(J.activo(G), 'hay rey');
+    G.frightTicks = 120;
+    G.jefe.inv = CFG.JEFE.INV;          // el golpe del compañero, recién dado
+    G.jefe.azulUsado = 0;
+    var p = G.pacs[0];
+    p.x = G.jefe.x; p.y = G.jefe.y; p.safeTicks = 0; p.id = 0;
+    var mandado = [], antes = G.netSend;
+    G.netSend = function (t, d) { mandado.push(d); };
+    try { J.colisionesInvitado(G, p); } finally { G.netSend = antes; }
+    ok(mandado.some(function (d) { return d && d.t === 'jefeGolpe' && d.f === 'azul'; }),
+      'pide su golpe de azul aunque el rey esté en su respiro');
+    G.frightTicks = 0;
+    G.toMenu();
+  });
+
+  test('AJUSTES 27 sep: tras el DISPARO HELADO, 3 s un 20 % más lento', function () {
+    var H = window.PM.Hab, HC = CFG.HAB;
+    partida(1); G.hab = true;
+    H.empezar(true, 1, ['soporte']); G.roles = ['soporte'];
+    var g = G.ghosts[0];
+    g.mode = 'normal';
+    H.hielo[0] = 1;
+    H.paso(G);
+    eq(H.hielo[0], 0, 'se descongela');
+    ok(H.trasHielo[0] > 0, 'y queda lento');
+    ok(Math.abs(H.multVelFantasma(G, 0) - HC.HIELO_LENTO_MULT) < 1e-9, 'a x0,8');
+    for (var i = 0; i < HC.HIELO_LENTO_TICKS; i++) H.paso(G);
+    eq(H.trasHielo[0], 0, 'a los 3 s se le pasa');
+    eq(H.multVelFantasma(G, 0), 1, 'y vuelve a su paso');
     G.toMenu();
   });
 

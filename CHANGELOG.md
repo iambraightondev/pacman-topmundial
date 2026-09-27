@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-27 · Rey en azul, Cacería, Soporte y hielo
+
+**ARREGLO, REY FANTASMA:** cuando lo cruzabais de azul dos a la vez, a menudo
+solo contaba un -6: el golpe del invitado se perdía si el compañero le acababa
+de pegar. Ahora cuentan los dos (y los dos -6 se ven, uno encima del otro).
+**CACERÍA:** cada fantasma se marca una sola vez por Cacería: el que matas y
+vuelve a salir de casa ya no sale marcado.
+**SOPORTE:** las cuatro R recargan 20 s antes (VIDA EXTRA y RESURRECCIÓN 2:40,
+CAMPO y HOSPITAL 2:10).
+**DISPARO HELADO:** al descongelarse, el fantasma (y el rey) va un 20 % más
+lento durante 3 s. También con la placa de hielo.
+
 ## 2026-09-26 (5) · La mira del meteoro llega a todo el mapa
 
 **METEORO:** con la R mantenida, la mira ya no va solo por pasillos ni se queda

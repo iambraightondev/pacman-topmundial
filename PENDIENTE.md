@@ -13,6 +13,19 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+### 27 sep: REY EN AZUL, CACERÍA, R DEL SOPORTE, HIELO QUE FRENA
+
+Pedido por Braighton. Service worker pm-v292. tests.html 607/607.
+- **Rey en azul, dos a la vez:** el invitado no pedía su golpe de azul si el
+  rey estaba en su respiro (j.inv), que es justo lo que deja el golpe del
+  compañero. Ahora lo pide siempre (el anfitrión ya lo admitía con forzar).
+  Los dos -6 salen escalonados. **Por probar** en una party de verdad.
+- **Cacería:** bits `caceriaVistos` por cacería: el que ya se marcó no se
+  vuelve a marcar (los que estaban en casa al pulsarla, sí, al salir).
+- **R del Soporte:** -20 s (160/160/130/130).
+- **Tras el hielo:** HIELO_LENTO_TICKS/MULT (3 s a x0,8), fantasmas y rey,
+  disparo y placa.
+
 ### 26 sep (5): LA MIRA DEL METEORO, POR TODO EL MAPA
 
 Decisión de Braighton: la mira del METEORO (R mantenida) va por muros y por
