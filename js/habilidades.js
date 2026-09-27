@@ -305,6 +305,7 @@
   var Hab = {
     on: false,       // ¿la partida en curso es de poderes?
     st: [],          // estado por jugador
+    miraVista: [],   // dónde se DIBUJA la mira del METEORO (suavizada; solo pintura)
     /* Marca que el mordisco que se está lanzando viene de una Q ARMADA y no
      * de la tecla: sin esto, un reintento que fallase volvería a armarla y la
      * dentellada pendiente no se agotaría nunca. Ver pulsar() y paso(). */
@@ -5517,6 +5518,20 @@
          * Solo la ve quien apunta: `apunta` no viaja en la foto de red. */
         if (ds.apunta) {
           var ax = ds.apunta.c * T + T / 2, ay = ds.apunta.r * T + T / 2 + Y;
+          /* SE DESLIZA LISA (26 sep): la mira va por casillas —es donde cae
+           * el meteoro, y lo que graba la repetición—, pero el dibujo la
+           * persigue suavizado, así que se ve correr y no saltar de cuadro en
+           * cuadro. Por reloj y no por tick, para que vaya igual a 60 que a
+           * 144 Hz. Si hace rato que no se dibujaba, es una mira nueva: sale
+           * en su sitio sin venir volando desde la anterior. */
+          var mv = this.miraVista[i], mvT = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+          if (!mv || mvT - mv.t > 150) {
+            mv = this.miraVista[i] = { x: ax, y: ay, t: mvT };
+          } else {
+            var mvK = 1 - Math.exp(-(mvT - mv.t) / 35);
+            mv.x += (ax - mv.x) * mvK; mv.y += (ay - mv.y) * mvK; mv.t = mvT;
+            ax = mv.x; ay = mv.y;
+          }
           var lat = 5 + Math.sin(tk / 5);      // las esquinas respiran
           ctx.save();
           ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;

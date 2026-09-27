@@ -18,8 +18,10 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 Decisión de Braighton: la mira del METEORO (R mantenida) va por muros y por
 todo el tablero, sin alcance (Hab.apuntarDir; en el borde se para, no cruza
 el túnel). Un toque es un paso; la flecha MANTENIDA la desliza a ritmo fijo
-del juego (Game.pasoFlechas, CFG.HAB.METEORO_DESLIZA_*: arranca a los 0,2 s,
-~20 casillas/s), también con la cruceta táctil. Service worker pm-v290.
+del juego (Game.pasoFlechas, CFG.HAB.METEORO_DESLIZA_*: arranca a los 0,15 s,
+~20 casillas/s), también con la cruceta táctil. El DIBUJO de la mira va
+suavizado (Hab.miraVista), así que se ve correr liso aunque cae por casillas.
+Service worker pm-v291.
 tests.html 605/605; probado en partida real con Playwright.
 **Por mirar:** el ritmo, jugando (¿rápido o lento?). Las repeticiones del
 22-26 sep en que la mira chocó con un muro o con el alcance pueden

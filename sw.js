@@ -12,7 +12,7 @@
  * ============================================================ */
 'use strict';
 
-var VERSION = 'pm-v290';
+var VERSION = 'pm-v291';
 var SHELL = [
   './',
   './index.html',
