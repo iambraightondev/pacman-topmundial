@@ -2686,7 +2686,7 @@ the key index. `LIST` is the ASESINO (the original kit).
 |---|---|---|---|---|
 | **ASESINO** | MORDISCO 16 s | TURBO 24 s | FLASH 32 s | GRITO 60 s |
 | **TANQUE** (`LIST_T`) | PROVOCAR 32 s (5 s active) | ESCUDO 24 s | PISOTÓN 32 s | ARROLLAR 60 s |
-| **SOPORTE** (`LIST_S`) | HIELO 16 s | INMUNIDAD 24 s | ESCUDO ALIADO 32 s | VIDA 180 s |
+| **SOPORTE** (`LIST_S`) | HIELO 16 s | INMUNIDAD 24 s | ESCUDO ALIADO 32 s | VIDA 160 s |
 | **MAGO** (`LIST_M`) | FUEGO 20 s | PORTAL 24 s | RUNA 32 s | TORMENTA 60 s |
 
 - **Rules** (`Game.rolesDe`, same on every machine): unknown role = asesino;
@@ -2792,7 +2792,12 @@ the key index. `LIST` is the ASESINO (the original kit).
   `jefeGolpe` request.
 - **SOPORTE.** HIELO: projectile (`PROYECTIL_VEL` px/tick, stops at walls,
   wraps in the tunnel) freezing the first ghost and every ghost on its tile for
-  3 s: speed 0, not lethal, still biteable. Always spends. INMUNIDAD: 3 s
+  3 s: speed 0, not lethal, still biteable. Always spends. When the freeze
+  runs out (shot or plate) the ghost goes `HIELO_LENTO_MULT` (x0.8) for
+  `HIELO_LENTO_TICKS` (3 s): `Hab.trasHielo`, in the rewind photo and the net
+  snapshot (`th`); the boss gets the same through `jefe.frzHielo`/`trasHielo`
+  (27 Sep). The catalogue's four Support R recharge 20 s faster (27 Sep):
+  VIDA and RESURRECCIÓN 160 s, CAMPO and HOSPITAL 130 s. INMUNIDAD: 3 s
   untouchable. ESCUDO ALIADO: shield (`ALIADO_TICKS`, 8 s or one hit) to the
   nearest living teammate; none = not cast (deliberately useless solo).
   **Hold** (`CFG.HAB.MANTENER`, ticks): Q and E are held abilities. On those
