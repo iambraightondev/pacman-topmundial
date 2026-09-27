@@ -2867,7 +2867,9 @@ the key index. `LIST` is the ASESINO (the original kit).
   pathing toward nearest living pac, provocation first, fleeing while fright),
   aviso (`AVISO` ticks) → carga (straight at `VEL_CARGA` until a wall), invoca.
   Damage (`DANO`, then `INV` ticks immune): fright contact once per player per
-  fright, mordisco when no ghost is in reach, fuego bullet, rayo if nearer than
+  fright (forced past `INV`; since 27 Sep the guest also asks for it while the
+  boss is in `INV`, or a teammate's hit a tick earlier swallowed the guest's;
+  back-to-back hits stack their popups), mordisco when no ghost is in reach, fuego bullet, rayo if nearer than
   any ghost, runa on its tile, apisonadora contact; hielo/placa freeze `HIELO`.
   Mordisco also stuns it `ATURDE_MORDISCO` (2 s) through the same `frz`, since
   biting means touching it and the trade used to cost a life every time.

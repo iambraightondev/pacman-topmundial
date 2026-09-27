@@ -7,11 +7,16 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **26 de septiembre de 2026**.
+Última puesta al día: **27 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**Siguiente sesión (27 sep):** probar en una party de verdad el doble -6 al
+rey en azul; jugar el METEORO (ritmo de la mira) y la CACERÍA nueva; ver si el
+frenazo del hielo (x0,8 3 s) se nota. Sigue en pie lo de abajo: 1 oct, cierre
+de temporada en vivo.
 
 ### 27 sep: REY EN AZUL, CACERÍA, R DEL SOPORTE, HIELO QUE FRENA
 
