@@ -771,18 +771,22 @@
    * (lo que deja al pasar), ACCESORIOS 450 (lo que lleva puesto) y SKINS de
    * tienda 1.500. Las de nivel, logro y temporada NO se venden.
    *
-   * Todos empiezan con 1.500. Se gana 5 por partida (si dura un minuto: si no,
-   * se ganarían reiniciando) más 1 por cada 1.000 puntos, con un tope de 40 por
-   * partida; 20 por cada reto del DAILY y 150 por la semana entera.
+   * Todos empiezan con INICIALES (1.500). Por partida se gana POR_PARTIDA (20)
+   * si dura PARTIDA_MIN_S (un minuto: si no, se ganaría reiniciando) más
+   * POR_MIL (4) por cada 1.000 puntos, con un tope de TOPE_PARTIDA (200); y
+   * POR_RETO (100) por cada reto del DAILY y POR_SEMANA (800) por la semana
+   * entera. Mandan los números de CFG.TIENDA, más abajo (Tienda.dePartida).
    *
    * Se lleva a la vez UNA skin, UN accesorio, UN efecto y SEIS emotes (uno
-   * por tecla del 1 al 6). Los accesorios solo lucen en skins con forma de
-   * Pac-Man: en una extravagante flotarían fuera de su cara.
+   * por tecla del 1 al 6). Desde el 15 sep los accesorios lucen también en
+   * las extravagantes, cada uno en su sitio de la cabeza (CABEZAS en
+   * js/skins.js).
    *
    * Nada de esto es una tabla nueva en la nube: lo ganado y lo comprado son
    * contadores de PM.Achievements (`monedas` y `c_<id>`), así que viajan a la
-   * cuenta con los logros y se juntan igual (lo mejor de cada lado). El saldo
-   * no se guarda: se calcula (1.500 + ganado − precio de lo comprado). */
+   * cuenta con los logros y se juntan igual: lo ganado en cada aparato se
+   * SUMA (desde el 26 sep) y lo comprado se queda. El saldo no se guarda: se
+   * calcula (1.500 + ganado − precio de lo comprado). */
   /* CONTINUAR (17 sep 2026): al quedarte sin vidas, 10 segundos para pagar
    * 1.000 monedas y seguir en el mismo nivel con 1 vida. En todos los modos
    * con vidas propias (no en PAC-MAN VS. ni en CACERÍA). En party paga cada
@@ -1531,14 +1535,13 @@
    * clasificación—: para jugarlo tenías que dejar de jugar a lo tuyo, y si un
    * día no te apetecía esa partida concreta, no había reto.
    *
-   * SEMANA CON RECUPERACIÓN. Los siete se ven desde el lunes; cada uno se
-   * abre el día que le toca y se queda abierto hasta que acaba la semana. Así
-   * se premia jugar, no estar presente a diario: quien no puede el martes lo
-   * cumple el jueves. Lo que sí se pierde es la semana entera cuando cambia.
+   * UNO AL DÍA, Y ES EL DE HOY. Los siete se ven desde el lunes, pero solo
+   * se cumple el del día: el de ayer caducó y el de mañana aún no está. Se
+   * probó con recuperación (los ya abiertos seguían abiertos hasta el
+   * domingo) y se quitó: el reto dejaba de ser diario (ver js/daily.js).
    *
-   * La semana y el día se sacan en UTC, como la fecha del reto viejo: así
-   * cambian a la vez en todo el planeta y nadie tiene un día de 48 horas
-   * cruzando la medianoche de su huso.
+   * La semana y el día son los del RELOJ DE QUIEN JUEGA, no UTC: en UTC, en
+   * Perú el reto del sábado salía el viernes a las 19:00.
    *
    * CINCO LIBRES Y DOS DE MODO. Los de modo son los que hacen que el Daily
    * enseñe el juego (te asomas a DESATADO o a LABERINTOS porque toca), pero

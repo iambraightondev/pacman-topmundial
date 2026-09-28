@@ -65,10 +65,11 @@ declare
   purga_new numeric;
 begin
   new.actualizado := now();
-  /* LO JUGADO SOLO CRECE (24 sep). Cada aparato sube su perfil ENTERO sin
-   * leer antes la nube, así que un segundo aparato con datos viejos bajaba
-   * partidas, récords y experiencia de la cuenta hasta que el bueno volvía a
-   * entrar (y si ese se borraba, se perdían). Ahora, de cada contador de
+  /* LO JUGADO SOLO CRECE (24 sep). Hasta entonces cada aparato subía su
+   * perfil ENTERO sin leer antes la nube, así que uno con datos viejos bajaba
+   * partidas, récords y experiencia de la cuenta. Desde el 26 sep el juego
+   * lee la nube antes de subir y le SUMA lo jugado en ese aparato (ver
+   * BASE_KEY en js/account.js); esto queda de red por debajo. De cada contador de
    * `logros`, de la experiencia y de cada récord se queda el mayor; de los
    * tiempos (mejorT1, tiempo1) el menor. La única forma de BAJAR algo es una
    * limpieza a mano que suba el contador `purga` en la misma escritura. */

@@ -5,6 +5,23 @@ Do NOT copy any original Namco assets (no ripped sprites, no ripped audio). All
 graphics are drawn procedurally on canvas; all audio is synthesized with Web
 Audio API. UI language: **Spanish**.
 
+## Valores vivos
+
+Numbers that change often. This SPEC does not repeat them (a copy here goes
+stale the next time they move): read them where they live. When a paragraph
+below quotes one, it is the value at the time that paragraph was written.
+
+| Value | Where it lives | Notes |
+| --- | --- | --- |
+| Network protocol version | `CFG.NET.PROTO` in `js/config.js` | The comment above it lists what each version added. Every client in a room must match. |
+| Service-worker cache version | `VERSION` in `sw.js` | Bumped on every deploy so browsers drop the old files. |
+| Coins earned per game, per DAILY challenge and per week | `CFG.TIENDA` in `js/config.js` | `Tienda.dePartida` applies the per-game ones. |
+| Shop catalogue and prices | `CFG.SKINS`, `CFG.EMOTES_TIENDA`, `CFG.EFECTOS`, `CFG.ACCESORIOS` in `js/config.js` | |
+| Season pass paths and rewards | `CFG.PASE` in `js/config.js` | |
+| Rank thresholds, rewards and role factors | `CFG.RANGO` in `js/config.js` | |
+| DAILY rules and streak rewards | `CFG.DAILY` in `js/config.js` | |
+| Per-account manual corrections | `CFG.AJUSTES_CUENTA` in `js/config.js` | |
+
 ## Nivel de jugador, cronómetro y amigos
 
 **Nivel** (`PM.Level`, `CFG.LEVEL_*`): the level measures **how much you
@@ -214,9 +231,17 @@ is composed internally as `<usuario>@<MAIL_DOMAIN>` and never shown. The
 usuario IS the in-game name, so ranking, party, invites and spectating keep
 working off a single name. Tables `perfiles` and `amigos` live in
 `supabase/cuentas.sql` with RLS (public read, owner-only writes). Signing in
-runs `applyRemote` + `push`: cloud and local are MERGED keeping the best of
-each (xp/records/counters never go down), so entering an account can never
-cost progress. The profile carries **one record per format** —
+runs `Account.fundir` (so does coming back to the tab, or every 2 min on the
+menu, when the cloud has more XP than this device gave it): it reads the
+cloud row and **adds** what this device played since its last upload. Each
+device keeps a **base** in `localStorage['pacman-topmundial-nube-base']`
+(`BASE_KEY` in `js/account.js`: how much of its own is already in the cloud);
+XP and every `suma` counter (games, ghosts, coins, pass XP, rank…) above it
+are pending and get summed onto the cloud's value, not compared with it.
+Records and the non-summing counters (`mayor`, `menor`) still keep the best
+of each side, and with no usable base (an older browser, another account's
+base) the merge falls back to the highest. Nothing ever goes down, and what
+is played on two devices adds up. The profile carries **one record per format** —
 `record1..record4`, driven by `Account.recordCols` against
 `Game.recordFor/setRecordFor` — so the four mastery tracks follow the account
 without storing a single badge list: each track is derived from its format's
@@ -355,10 +380,12 @@ table grants**, and without it the function gets a bare 42501 and answers
 
 ### The cloud only grows (`perfiles_touch`, 24 Sep 2026)
 
-Every device upserts its whole profile (`Account.push`) without reading the
-cloud first, so a second device with stale data used to lower games, records
-and XP until the good device signed in again. The `before update` trigger in
-`supabase/cuentas.sql` now keeps, for every numeric key of `logros`, for
+Until 26 Sep every device upserted its whole profile (`Account.push`) without
+reading the cloud first, so a second device with stale data used to lower
+games, records and XP until the good device signed in again. The client now
+reads the cloud before uploading and sums only its pending part (see
+**Cuentas** above); the trigger stays underneath as the safety net. The
+`before update` trigger in `supabase/cuentas.sql` keeps, for every numeric key of `logros`, for
 `xp` and for every `record*` column, the **highest** of old and new (for
 `mejorT1` keys and `tiempo1`, the lowest non-zero). The only way to lower
 anything is a manual cleanup that raises `logros.purga` in the same write;
@@ -1593,8 +1620,10 @@ approved 2026-09-15. Coins only, no real money.
   `PM.Achievements` (so they reach `perfiles.logros` with no schema change):
   `monedas` (total earned, `suma`) and one `c_<id>` per item (`mayor`, 1 =
   bought, generated from the catalogue). `saldo() = INICIALES (1 500) +
-  monedas − Σ price of owned`. Merging accounts keeps the best of each side,
-  so it can neither duplicate coins nor lose a purchase; spending the same
+  monedas − Σ price of owned`. Merging accounts sums the coins each device
+  earned since its last upload (`monedas` is `suma`, see **Cuentas**) and
+  keeps every purchase (`c_<id>` is `mayor`), so it can neither duplicate
+  coins nor lose a purchase; spending the same
   coins offline on two devices leaves a negative balance that blocks buying.
 - **Veteran gift** (`bono`, added 15 Sep, option A chosen by Braighton): a
   one-off `5 × partidas + 50 × achievements`, uncapped
@@ -1661,7 +1690,8 @@ approved 2026-09-15. Coins only, no real money.
   phase uses the same `half` as `dibujarArte` (full open with the Q). A skin
   whose drawing changes those transforms must change its `POSES` entry too.
   Without `DOMMatrix` (the Node fake DOM) the accessory is drawn static.
-- **Network** (`CFG.NET.PROTO` 9): party members carry `a`/`x`
+- **Network** (added in protocol 9; the current `CFG.NET.PROTO` is in
+  **Valores vivos**): party members carry `a`/`x`
   (`Party.me`), `gameOrder` passes them, `UI.lookDeRed` sanitises them into
   `opts.looks` → `Game.netLooks` → `Game.lookFor(i)`; spectators get `lk` in
   `svista`. Emotes travel as the **face id** (`e: 'chulo'`); an index is still
@@ -2134,8 +2164,8 @@ fields, and an old client would silently play against an AI ghost.
   `Versus.hunters(game)` lists them with `{idx, name, ghost, score, catches}`
   and `topHunter()` picks the headline; catches are derived from the score
   (`score / CATCH_POINTS`) so they also add up on a guest's screen, which only
-  receives the scores. The snapshot field `vs` is that array — hence
-  `CFG.NET.PROTO` 6.
+  receives the scores. The snapshot field `vs` is that array, which is why
+  the protocol went to 6.
 * `Versus.winner(game)` returns `'ghost'` when every Pac-Man seat is `out`
   (the hunter ran them out of lives) and `'pacs'` otherwise — surrender,
   disconnect or quitting all count as a Pac-Man win. The GAME OVER panel leads
@@ -2577,8 +2607,8 @@ applying it twice would double-count it. The sender ignores its own echo.
 A rejected request loses the keypress and the local cooldown has already
 started: it can only ever give less, never more. The mode itself travels
 in `pstart.hab` (and in `proster.hab`, so nobody discovers the rules when
-the game starts) and in `svista.hab` for spectators. `CFG.NET.PROTO` is
-**7**.
+the game starts) and in `svista.hab` for spectators. It took the protocol
+to 7.
 
 Two corrections that make the bite usable in a party — both are lag
 compensation, and both only ever give the guest what they already saw:
@@ -2877,7 +2907,7 @@ the key index. `LIST` is the ASESINO (the original kit).
   (`paso`, `colisiones`); snapshot `jf`; guests move it by estimate, decide
   their own deaths and send `jefeGolpe` for contact hits; events `jefeDano` /
   `jefeKill`. Network replays do not carry it yet.
-- **Network (PROTO 12; 12 adds `dimension` as the 9th field of each player's role row; 11 adds the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot).** Anything touching ghosts or lives is executed by the
+- **Network (protocol 11 added the held flag `m` on the guest's `hab` request and `pl` plates in the role snapshot; 12 added `dimension` as the 9th field of each player's role row).** Anything touching ghosts or lives is executed by the
   host (`Hab.peticion(G, who, k, d)`, where the guest sends its arrow `d`,
   tile `c,r` and position `x,y`); self-only effects (ESCUDO, INMUNIDAD, the
   ARROLLAR run, portal crossing) run on the machine that simulates that Pac-Man,
@@ -2960,13 +2990,13 @@ once, no energizers): at ×1.0 speed the bot never left round 1; at ×1.1 games
 last about three minutes and it clears one round and a bit; at ×1.2 it wins
 one in three. `VEL_PAC` is the balance knob.
 
-**Party.** `Party.cazaPick` (leader only, `setCaza`, mutually exclusive with
-`habPick`) travels in `proster` and `pstart` (`caza`) and reaches
+**Party.** `Party.cazaPick` (leader only, `setModo('caza')`, mutually exclusive
+with `habPick`) travels in `proster` and `pstart` (`caza`) and reaches
 `onstart(order, idx, cfg, role, hab, caza)`. `canStart()` no longer needs a
 Pac-Man seat when it is on; the ghost picker is disabled and the roster shows
 the seat's ghost. Local: the CACERÍA card opens a panel with JUGAR SOLO
 (Blinky, arrows/WASD) and DOS JUGADORES (Blinky/arrows, Pinky/WASD).
-`CFG.NET.PROTO` 7 → 8.
+It took `CFG.NET.PROTO` from 7 to 8.
 
 **Replays.** Local replays are not recorded (the entry format has one seat
 per player and there is one more here); network replays carry `caza` (`cz` in
@@ -3413,7 +3443,8 @@ host's difficulty settings + livesMode + startLevel are imposed):
   which auto-joins on load. The lobby **is the party** (see Party): the
   leader is J1 and `pstart` hands out the indices; whoever arrives once the
   game started gets `full` (unless they come to spectate). Protocol version
-  `PM.CFG.NET.PROTO` (= 15) must match.
+  `PM.CFG.NET.PROTO` must match (its value, and what each version added, is
+  in `js/config.js`: see **Valores vivos**).
 - Transport (`PM.Net`): Supabase Realtime broadcast channels over a minimal
   hand-written Phoenix WebSocket client (heartbeat every 25 s; no database
   usage), credentials in `js/net-config.js` (`PM.NET_CFG`). Dev transport
@@ -3645,8 +3676,10 @@ from third parties. Cells are indices `row*28+col`.
 28. PERFIL renders every avatar in `CFG.AVATARS` without throwing, and an
     unknown avatar id falls back to the first instead of drawing nothing.
 29. Accounts: usuario + contraseña only (no e-mail typed anywhere), usuario is
-    the in-game name, and signing in MERGES cloud and local keeping the best of
-    each — xp, records and counters never go down. Friends need an account.
+    the in-game name, and signing in MERGES cloud and local: XP and summing
+    counters get what this device played since its last upload added to the
+    cloud's value, records and the other counters keep the best of each side,
+    and nothing ever goes down. Friends need an account.
 30. A run left half-played can be continued: GUARDAR Y SALIR keeps it without
     cashing it in, CONTINUAR rebuilds it from its own replay and hands the
     controls back paused, and signing in on another machine brings it down
