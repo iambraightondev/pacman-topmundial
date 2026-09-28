@@ -195,3 +195,14 @@ grant truncate, references, trigger on public.ranking to anon, authenticated;
 drop function if exists public.equipo_sin_aval(uuid, uuid[]);
 drop function if exists public.avalar_equipo(text);
 drop table if exists public.avales_equipo;
+
+-- ------------------------------------------------------------
+-- 4) supabase/cuenta-frenos.sql
+--    DESPUÉS de volver a la función cuenta de e5ac575 (la nueva, sin estas
+--    funciones, deja entrar igual pero sin freno).
+-- ------------------------------------------------------------
+drop function if exists public.cuenta_olvide_toca(text);
+drop function if exists public.cuenta_limpia(text);
+drop function if exists public.cuenta_fallo(text);
+drop function if exists public.cuenta_espera(text);
+drop table if exists public.cuenta_frenos;
