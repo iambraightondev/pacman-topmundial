@@ -164,3 +164,34 @@ revoke insert (id, jugadores, puntos, nivel, nombres, datos, tipo, t_partida)
 grant insert, truncate, references, trigger on public.repeticiones to anon, authenticated;
 drop table if exists public.repeticiones_frenos;
 drop function if exists public.ip_cliente();
+
+-- ------------------------------------------------------------
+-- 3) supabase/ranking-cuarentena.sql (+ los cambios de ranking.sql y
+--    ranking-integridad.sql, que no hace falta deshacer)
+--    OJO: lanzar DESPUÉS de volver a la función enviar-record de e5ac575,
+--    que escribe en `verificado`. Lo que estuviera en cuarentena pasa a
+--    verse: mirar antes `select * from ranking where oculta`.
+-- ------------------------------------------------------------
+drop policy if exists "ranking lectura publica" on public.ranking;
+create policy "ranking lectura publica"
+  on public.ranking for select
+  to anon, authenticated
+  using (true);
+
+drop index if exists public.ranking_liga_idx;
+alter table public.ranking drop constraint if exists ranking_motivo_chk;
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'ranking'
+                and column_name = 'repeticion_coherente') then
+    alter table public.ranking rename column repeticion_coherente to verificado;
+  end if;
+end $$;
+-- las columnas nuevas se pueden quedar (no molestan a la función vieja); si
+-- se quieren quitar:
+--   alter table public.ranking drop column oculta, drop column motivo, drop column sin_aval;
+grant truncate, references, trigger on public.ranking to anon, authenticated;
+drop function if exists public.equipo_sin_aval(uuid, uuid[]);
+drop function if exists public.avalar_equipo(text);
+drop table if exists public.avales_equipo;

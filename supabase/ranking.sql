@@ -4,8 +4,9 @@
 -- Pégalo en el proyecto de Supabase del juego:
 --   Dashboard -> SQL Editor -> New query -> Run
 --
--- Crea (o pone al día) la tabla `ranking` con lectura e inserción
--- públicas (clave anónima) y sin permiso para modificar ni borrar.
+-- Crea (o pone al día) la tabla `ranking` con lectura pública (clave
+-- anónima) y sin permiso para insertar, modificar ni borrar: las partidas
+-- entran solo por la función `enviar-record` (ver ranking-integridad.sql).
 -- Se puede ejecutar tantas veces como haga falta.
 --
 -- Hay cuatro clasificaciones, separadas por la columna `jugadores`:
@@ -16,10 +17,9 @@
 -- Los nombres que sobran van a NULL. Solo entran partidas con nombre de
 -- verdad en TODOS los que jugaron: sin nombre no hay récord.
 --
--- Aviso: las puntuaciones las envía el navegador, así que se
--- pueden falsear. Para el uso normal del juego se asume; si algún
--- día molesta, la vía es validar la partida en una Edge Function
--- y dejar el INSERT solo a la service_role.
+-- Las puntuaciones las valida la Edge Function `enviar-record`, que es la
+-- única que puede escribir (service role). Antes de eso el INSERT era de la
+-- clave anónima y cualquiera podía falsear una marca desde la consola.
 -- ============================================================
 
 create table if not exists public.ranking (
@@ -150,21 +150,39 @@ alter table public.ranking enable row level security;
 
 -- Permisos de tabla: sin esto, PostgREST responde 401 aunque las políticas
 -- de RLS permitan la operación (RLS filtra filas, el GRANT abre la puerta).
-grant select, insert on public.ranking to anon, authenticated;
+--
+-- 28 sep 2026: SOLO LECTURA. Este archivo daba también el insert a la clave
+-- anónima (con su política "ranking insercion publica"), de cuando el
+-- navegador escribía directo en la tabla. Desde supabase/ranking-integridad.sql
+-- solo escribe la función `enviar-record`, y volver a lanzar este archivo
+-- reabría la puerta a meterse 999999 puntos desde la consola. Ya no.
+grant select on public.ranking to anon, authenticated;
+revoke insert on public.ranking from anon, authenticated;
 
+-- La lectura: lo que está en cuarentena (ranking-cuarentena.sql) no se ve.
+-- Si la columna todavía no existe, se lee todo, como antes.
 drop policy if exists "ranking lectura publica" on public.ranking;
-create policy "ranking lectura publica"
-  on public.ranking for select
-  to anon, authenticated
-  using (true);
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'ranking'
+                and column_name = 'oculta') then
+    create policy "ranking lectura publica"
+      on public.ranking for select
+      to anon, authenticated
+      using (not oculta);
+  else
+    create policy "ranking lectura publica"
+      on public.ranking for select
+      to anon, authenticated
+      using (true);
+  end if;
+end $$;
 
 drop policy if exists "ranking insercion publica" on public.ranking;
-create policy "ranking insercion publica"
-  on public.ranking for insert
-  to anon, authenticated
-  with check (true);
 
--- Sin políticas de update/delete: con RLS activo, quedan prohibidos.
+-- Sin políticas de insert/update/delete: con RLS activo, quedan prohibidos
+-- para todos menos la service role (la función enviar-record).
 
 -- ============================================================
 -- Mejor marca de cada jugador o equipo
