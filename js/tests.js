@@ -9391,13 +9391,19 @@
     ok(G.tocaPintar(1, 1016, m), 'con un paso, se pinta');
     ok(!G.tocaPintar(0, 1024, m), 'a 120 Hz, el cuadro sin paso no se repinta');
     ok(G.tocaPintar(2, 1033, m), 'y el siguiente con paso, sí');
-    G.toMenu();
-    ok(G.tocaPintar(0, 1040, m), 'al volver al menú se pinta al momento');
-    ok(!G.tocaPintar(1, 1056, m), 'en el menú no se pinta a 60 por segundo');
-    ok(G.tocaPintar(1, 1040 + G.MENU_PINTA_MS, m), 'sino cada MENU_PINTA_MS');
-    G.newGame({ players: 1 });
-    ok(G.tocaPintar(0, 1150, m), 'y al empezar la partida, al momento');
-    G.toMenu();
+    var tapa = false, portadaTapa = G.portadaTapa;
+    G.portadaTapa = function () { return tapa; };
+    try {
+      G.toMenu();
+      ok(G.tocaPintar(0, 1040, m), 'al volver al menú se pinta al momento');
+      ok(!G.tocaPintar(1, 1056, m), 'en el menú no se pinta a 60 por segundo');
+      ok(G.tocaPintar(1, 1040 + G.MENU_PINTA_MS, m), 'sino cada MENU_PINTA_MS');
+      tapa = true;
+      ok(!G.tocaPintar(1, 1500, m), 'y con la portada puesta, que lo tapa todo, nada');
+      G.newGame({ players: 1 });
+      ok(G.tocaPintar(0, 1550, m), 'y al empezar la partida, al momento');
+      G.toMenu();
+    } finally { G.portadaTapa = portadaTapa; }
   });
 
   test('preparar una repetición deja sus fotos y su duración', function () {

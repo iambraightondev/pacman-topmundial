@@ -1169,8 +1169,9 @@
      *    (Interpolar entre pasos para que a 90 Hz fuera más suave sería
      *    pintar posiciones que la simulación no ha tenido: queda anotado,
      *    no hecho, por no arriesgar lo determinista.)
-     *  - En el MENÚ el lienzo está tapado (la portada es opaca y los paneles
-     *    dejan ver un 12 %): basta con MENU_PINTA_MS entre cuadro y cuadro.
+     *  - En el MENÚ, con la portada puesta, nada: es opaca y tapa el lienzo
+     *    entero. Con otro panel (en el móvil dejan ver un 12 % del
+     *    laberinto) basta con MENU_PINTA_MS entre cuadro y cuadro.
      *  - Al entrar o salir del menú, al momento, para no enseñar un cuadro
      *    viejo. `memo` lo guarda el bucle, fuera de Game (y de su foto). */
     MENU_PINTA_MS: 95,
@@ -1183,9 +1184,15 @@
         return true;
       }
       if (!pasos) return false;
-      if (menu && now - memo.en < this.MENU_PINTA_MS) return false;
+      if (menu && (this.portadaTapa() || now - memo.en < this.MENU_PINTA_MS)) return false;
       memo.en = now;
       return true;
+    },
+
+    /* ¿Está puesta la portada (#menu)? Es opaca (css: #menu) y lo tapa todo */
+    portadaTapa: function () {
+      var m = (typeof document !== 'undefined') ? document.getElementById('menu') : null;
+      return !!(m && m.style && m.style.display && m.style.display !== 'none');
     },
 
     step: function () {
