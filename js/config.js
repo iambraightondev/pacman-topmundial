@@ -831,6 +831,60 @@
     VETERANO_POR_PARTIDA: 5,
     VETERANO_POR_LOGRO: 50
   };
+
+  /* ============================================================
+   * LOS COFRES (PLAN-COFRES.md; hechos el 28 de septiembre de 2026)
+   *
+   * Se GANAN jugando (nunca se compran) y se ABREN con cuenta: el premio lo
+   * decide y lo entrega el servidor (Edge Function `cofres`), con el mismo
+   * generador que el juego (js/cofres-gen.js). Todo lo de aquí va también al
+   * servidor en supabase/functions/cofres/datos.js: al tocar un número hay
+   * que regenerarlo (node supabase/cofres-datos.js) y desplegar la función;
+   * un guardián de pruebas-node.js avisa si se separan.
+   *
+   *   MADERA      cada 5 partidas de más de un minuto
+   *   PLATA       semana del DAILY completa · subir de nivel de jugador
+   *   ORO         escalón nuevo de maestría de rol · récord propio (+10 %
+   *               sobre uno de 10.000 o más, uno por ruta y día: lo cuenta
+   *               el servidor)
+   *   LEGENDARIO  top 3 del RANGO al cerrar la temporada · y un 2 % de los
+   *               ORO se abren como LEGENDARIO
+   * Solo apariencia y monedas: nada que dé ventaja en partida.
+   * ============================================================ */
+  CFG.COFRES = {
+    /* 70 % monedas (30–80, a saltos de 5) / 30 % un emote de la tienda */
+    MADERA: { pMonedas: 0.70, min: 30, max: 80, paso: 5 },
+    /* 40 % un efecto de cofre / 60 % monedas (100–250, a saltos de 10).
+     * SEGURO: tras 10 platas seguidas sin efecto, la 11.ª lo trae seguro. */
+    PLATA: { pObjeto: 0.40, min: 100, max: 250, paso: 10, seguro: 10 },
+    /* un accesorio de cofre siempre, y un 15 % además una skin de cofre;
+     * un 2 % de los ORO se abren como LEGENDARIO */
+    ORO: { pSkin: 0.15, pLegendario: 0.02 },
+    /* la skin legendaria (AGUJERO NEGRO) y, si se quiere, monedas encima */
+    LEGENDARIO: { monedas: 0 },
+    /* el regalo de bienvenida: UNA vez por cuenta (y por aparato sin cuenta) */
+    BIENVENIDA: { plata: 1, oro: 1 },
+    PARTIDAS_POR_MADERA: 5,
+    PARTIDA_LARGA_S: 60,            // "de más de un minuto" (la de la tienda)
+    /* ORO por récord: mejora de al menos un 10 % sobre un récord previo de
+     * 10.000 o más. El tope de uno por ruta y día lo lleva el servidor. */
+    RECORD: { min: 10000, mejoraPct: 10 },
+    /* Topes que ningún jugador de verdad toca y que impiden que una cifra
+     * inventada dé cofres sin fin: semanas del DAILY, una por semana; niveles,
+     * 20 + 10 por día desde la base; maestrías, una por cada 2 partidas. */
+    TOPES: { nivelesIni: 20, nivelesDia: 10, partidasPorMaestria: 2 },
+    /* VALOR de referencia de lo que no se vende, para los REPETIDOS (que dan
+     * la mitad en monedas): un poco más que su igual de tienda (efecto 250,
+     * accesorio 450, skin 1.500), porque no se puede comprar. */
+    VALOR: { efecto: 400, accesorio: 700, skin: 2400, legendaria: 4000 },
+    /* El top 3 de una temporada se reparte a partir del día 2 del mes
+     * siguiente (un día de margen para lo que suba tarde) y solo desde la
+     * primera temporada que cierra con los cofres ya en marcha. */
+    TOP3_DESDE: '2026-09',
+    TOP3_MARGEN_DIAS: 1,
+    COLORES: { madera: '#c07a3a', plata: '#cfd8e6', oro: '#ffd23f', legendario: '#c86bff' },
+    NOMBRES: { madera: 'MADERA', plata: 'PLATA', oro: 'ORO', legendario: 'LEGENDARIO' }
+  };
   /* ============================================================
    * EL PASE DE TEMPORADA (19 de septiembre de 2026)
    *
