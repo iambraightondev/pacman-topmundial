@@ -8546,3 +8546,60 @@ body { font-size-adjust: 0.56; }
   .btn.arm-slot .arm-slot-tecla { top: -7px; left: -5px; }
 }
 
+/* ---- Zonas táctiles: 44 px en los botones de partida, 32 px en los puntos
+ * del carrusel (se agranda el sitio donde se pulsa, no el dibujo) ---- */
+html.tactil .mode-dots { gap: 22px; }
+html.tactil .mode-dot { position: relative; }
+html.tactil .mode-dot::before { content: ""; position: absolute; inset: -11px; }
+html.tactil .game-btn { min-height: 44px; min-width: 44px; }
+html.tactil .btn { min-height: 44px; }
+/* los redondos de ayuda ("?") no crecen: crece el sitio donde se pulsan */
+html.tactil .btn.ol-ayuda, html.tactil .rgs-ayuda-b { position: relative; min-height: 0; }
+html.tactil .btn.ol-ayuda::after, html.tactil .rgs-ayuda-b::after { content: ""; position: absolute; inset: -9px; }
+
+/* ---- EN PARTIDA, MÓVIL EN VERTICAL (body.mandos-v, lo pone
+ * UI.reservaMandos): cruceta, poderes y pausa van DEBAJO del laberinto, cada
+ * uno en su sitio, y el lienzo se encoge lo justo para que nada lo pise.
+ * Antes flotaban encima: la ▼ de la cruceta tapaba la Q de DESATADO y la
+ * pausa (32 × 27 px) y EMOTES se comían el HIGH SCORE. ---- */
+body.mandos-v {
+  /* con la página ampliable (index.html ya no lleva user-scalable=no), en
+   * partida un pellizco fuera del laberinto no debe ampliar la pantalla */
+  touch-action: none;
+  box-sizing: border-box;
+  padding-top: var(--mandosArriba, 0px);
+  padding-bottom: var(--mandosAbajo, 0px);
+}
+/* la barra de poderes, abajo del todo y centrada */
+body.mandos-v #habBar.fija {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  align-items: center;
+  max-width: calc(100vw - 12px);
+}
+/* la cruceta, encima de la barra */
+body.mandos-v .dpad { bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--mandosHab, 0px)); }
+/* pausa a la izquierda de la cruceta; EMOTES y CHAT a la derecha */
+body.mandos-v #gameBtns {
+  position: fixed;
+  top: auto;
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--mandosHab, 0px));
+  pointer-events: none;
+}
+body.mandos-v #gameBtns.on {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+body.mandos-v #gameBtns .game-btn { pointer-events: auto; }
+body.mandos-v #pauseBtn { grid-column: 1; grid-row: 1 / span 2; min-width: 48px; min-height: 48px; }
+body.mandos-v #emoteBtn { grid-column: 3; grid-row: 1; }
+body.mandos-v #chatBtn { grid-column: 3; grid-row: 2; }
+/* dos crucetas en las esquinas (dos en el mismo móvil): los botones, arriba */
+body.mandos-v.mandos-dual #gameBtns { top: max(6px, env(safe-area-inset-top)); bottom: auto; align-items: start; }
+/* la fila de emotes sale encima de los mandos, junto al pulgar */
+body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosAbajo, 0px) + 4px); }

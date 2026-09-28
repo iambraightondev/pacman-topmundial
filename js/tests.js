@@ -2280,6 +2280,20 @@
     }
   });
 
+  test('el botón de EMOTES solo sale con alguien más en la partida', function () {
+    var UI = window.PM.UI, antes = UI.touchDevice;
+    UI.touchDevice = true;
+    try {
+      partida(1);
+      UI.refreshControls();
+      eq(UI.emoteBtn.style.display, 'none', 'a solas no hay a quién mandárselos');
+      G.toMenu();
+      partida(2);
+      UI.refreshControls();
+      eq(UI.emoteBtn.style.display, '', 'con dos, sí');
+    } finally { G.toMenu(); UI.touchDevice = antes; UI.refreshControls(); }
+  });
+
   // ---------------------------------------------------------------
   // Pausa y votaciones
   // ---------------------------------------------------------------

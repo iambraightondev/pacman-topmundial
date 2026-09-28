@@ -437,6 +437,10 @@
       var vista = this.leerVista();
       this.touchDevice = ('ontouchstart' in window) ||
         (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      /* para la hoja de estilos: zonas de toque y lo que solo va en el móvil */
+      if (this.touchDevice && document.documentElement && document.documentElement.classList) {
+        document.documentElement.classList.add('tactil');
+      }
       this.els.menu = document.getElementById('menu');
       this.els.options = document.getElementById('options');
       this.els.online = document.getElementById('online');
@@ -569,12 +573,56 @@
           !this.habBar.classList.contains('lateral')) {
         alto -= this.habBar.offsetHeight + 6;
       }
+      /* móvil en vertical: los mandos van debajo y el lienzo no los pisa */
+      var mandos = this.reservaMandos();
+      if (mandos) alto = Math.min(alto, window.innerHeight - mandos);
       var s = Math.min(window.innerWidth * 0.96 / CFG.NATIVE_W,
                        alto / CFG.NATIVE_H);
-      if (s >= 1) s = Math.floor(s * 2) / 2;   // saltos de 0.5 (x2.5, x3, ...)
+      /* saltos de 0.5 (x2.5, x3, ...). Con los mandos debajo no: en un
+       * iPhone SE el x1.4 que cabe bajaba a x1 y el laberinto perdía un
+       * tercio; ahí se aprovecha lo que haya, en pasos finos. */
+      if (s >= 1) s = mandos ? Math.floor(s * 20) / 20 : Math.floor(s * 2) / 2;
       if (s <= 0) s = 0.5;                     // pantalla imposible: algo hay que pintar
       canvas.style.width = Math.floor(CFG.NATIVE_W * s) + 'px';
       canvas.style.height = Math.floor(CFG.NATIVE_H * s) + 'px';
+    },
+
+    /* MÓVIL EN VERTICAL, EN PARTIDA (28 sep). La cruceta, la barra de poderes
+     * y la pausa flotaban encima del laberinto: la ▼ tapaba la Q de DESATADO
+     * y la pausa se comía el HIGH SCORE. Ahora van debajo, cada una en su
+     * fila (css: body.mandos-v), y esto dice cuánto alto se les deja. Devuelve
+     * 0 si no toca (con teclado, en horizontal o sin mandos a la vista). */
+    reservaMandos: function () {
+      var b = document.body;
+      var on = !!(this.touchDevice && this.mandosVis && window.innerHeight > window.innerWidth);
+      if (b && b.classList) {
+        b.classList.toggle('mandos-v', on);
+        b.classList.toggle('mandos-dual', on && !!this.mandosDual);
+      }
+      if (!on || !b.style || !b.style.setProperty) return 0;
+      var hb = this.habBar;
+      var hab = (hb && hb.classList.contains('on') && hb.classList.contains('fija'))
+        ? hb.offsetHeight + 8 : 0;
+      // la cruceta: 3 × 48 px y dos huecos de 3, más su margen de abajo
+      var abajo = this.margenAbajo() + 150 + 8 + hab;
+      var arriba = this.mandosDual ? 60 : 0;
+      b.style.setProperty('--mandosHab', hab + 'px');
+      b.style.setProperty('--mandosAbajo', abajo + 'px');
+      b.style.setProperty('--mandosArriba', arriba + 'px');
+      return abajo + arriba + 6;
+    },
+
+    /* lo que la pantalla se reserva abajo (la barra del iPhone), en px */
+    margenAbajo: function () {
+      var p = this.sondaSegura;
+      if (!p) {
+        p = document.createElement('div');
+        p.style.cssText = 'position:fixed;left:0;bottom:0;width:0;visibility:hidden;' +
+          'height:max(10px, env(safe-area-inset-bottom));pointer-events:none';
+        document.body.appendChild(p);
+        this.sondaSegura = p;
+      }
+      return Math.max(10, p.offsetHeight || 0);
     },
 
     /* ------------------------------------------------------
@@ -13543,9 +13591,10 @@
         !g.replaying && !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
       /* los emotes solo se ofrecen en táctil: con teclado van con 1..6 y el
-       * botón solo tapaba el laberinto */
+       * botón solo tapaba el laberinto. Y solo si hay a quién mandárselos:
+       * a solas era un botón que no servía para nada. */
       if (this.emoteBtn) {
-        this.emoteBtn.style.display = (playable && this.touchDevice) ? '' : 'none';
+        this.emoteBtn.style.display = (playable && this.touchDevice && g.playerCount > 1) ? '' : 'none';
       }
       if (this.chatBtn) {
         this.chatBtn.style.display = (playable && g.netRole) ? '' : 'none';
@@ -13571,6 +13620,17 @@
       this.dpad1.style.display = show ? 'grid' : 'none';
       this.dpad1.classList.toggle('dual', dual);
       this.dpad2.style.display = dual ? 'grid' : 'none';
+      /* Con mandos en pantalla cambia el sitio del lienzo. Se mira la
+       * partida, no si se ven ahora: una pausa o un diálogo los esconden un
+       * momento y el laberinto no tiene por qué dar un salto por detrás. */
+      var hay = !!(this.touchDevice && g.inGame() && g.state !== 'GAME_OVER' &&
+        !g.isSpec() && !g.replaying);
+      var hayDual = hay && g.playerCount === 2 && !g.netRole;
+      if (hay !== !!this.mandosVis || hayDual !== !!this.mandosDual) {
+        this.mandosVis = hay;
+        this.mandosDual = hayDual;
+        this.fitCanvas();
+      }
     },
 
     /* ------------------------------------------------------
