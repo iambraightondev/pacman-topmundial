@@ -864,6 +864,9 @@
       var self = this;
       var pend = this.pendiente();
       if (fila) this.applyRemote(fila, pend);
+      /* ya se sabe lo que trae la nube: PRIMEROS PASOS (js/pasos.js) espera a
+       * esto para cobrar, así no paga aquí lo que ya cobró otro aparato */
+      this.fundido = this.user ? this.user.id : null;
       var foto = sumables();
       /* ya fundido, lo pendiente sigue pendiente hasta que la subida se
        * confirme: si falla, la próxima vez se vuelve a sumar (y solo eso) */

@@ -3091,5 +3091,41 @@
     ROOM_LEN: 4
   };
 
+  /* ============================================================
+   * PRIMEROS PASOS (29 sep 2026; PROPUESTAS-2026-09-29.md, punto 2, A)
+   *
+   * Ocho misiones para los primeros días de un jugador nuevo (js/pasos.js).
+   * Cada una paga UNA vez (bandera paso_<id>) y completarlas todas da un
+   * cofre de PLATA, que reparte el servidor como todos (js/cofres-gen.js,
+   * pasosCofre). Lo ya hecho cuenta: quien las recibe con alguna cumplida
+   * la cobra al momento.
+   *
+   * QUIÉN: solo quien llega a los cofres con menos de MAX_PARTIDAS partidas
+   * (la base de los cofres: la de la cuenta la pone el servidor). El
+   * recuadro del menú se va al completarlas o al pasar de OCULTAR_EN
+   * partidas; lo que falte sigue contando y pagando igual (nada se pierde),
+   * solo deja de ocupar sitio en la portada. Ninguna pide jugar con nadie.
+   * Todo junto son 1.050 monedas: caben de sobra en el cupo del servidor
+   * (supabase/perfiles-blindaje.sql, 15.000 por hora).
+   * ============================================================ */
+  CFG.PASOS = {
+    MAX_PARTIDAS: 20,
+    OCULTAR_EN: 60,
+    COLOR: '#2ee8ff',   // el cian de INKY: ni el verde de CONTINUAR ni el amarillo de JUGAR
+    /* en el orden en que se enseñan; los id los conoce el servidor */
+    LISTA: [
+      { id: 'larga', name: 'UNA PARTIDA DE MÁS DE 1 MINUTO', monedas: 100 },
+      { id: 'triple', name: '3 FANTASMAS CON UN MISMO ENERGIZANTE', monedas: 100 },
+      { id: 'qwer', name: 'UNA PARTIDA DE DESATADO USANDO Q, W, E Y R', monedas: 150 },
+      { id: 'cuenta', name: 'CREA TU CUENTA O ENTRA EN ELLA', monedas: 0,
+        premio: 'COFRES DE BIENVENIDA' },
+      { id: 'daily', name: 'CUMPLE EL RETO BÁSICO DEL DAILY', monedas: 150 },
+      { id: 'vestir', name: 'PONTE ALGO DEL VESTUARIO', monedas: 100 },
+      { id: 'mundo', name: 'PRUEBA LABERINTOS O CACERÍA', monedas: 150 },
+      { id: 'clasif', name: 'JUEGA LAS ' + CFG.RANGO.COLOCACION + ' DE COLOCACIÓN DE CLASIFICATORIA',
+        monedas: 300 }
+    ]
+  };
+
   window.PM.CFG = CFG;
 })();

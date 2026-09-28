@@ -132,6 +132,18 @@
   ['cofre_madera', 'cofre_plata', 'cofre_oro', 'cofre_legendario', 'cofre_monedas',
    'cofre_recs', 'cofre_top3', 'cofre_b_dia', 'cofre_b_partidas', 'cofre_b_semana',
    'cofre_b_nivel', 'cofre_b_mae'].forEach(function (k) { BASE[k] = 'mayor'; });
+  /* PRIMEROS PASOS (js/pasos.js, 29 sep). Lo que miden sus misiones y no
+   * contaba nadie, y la bandera de cada una ya cobrada:
+   *   habQWER       partidas de DESATADO en las que se usaron Q, W, E y R
+   *   vestido       1 = se ha puesto algo del vestuario
+   *   dailyBasicos  días con el reto BÁSICO del DAILY cumplido (js/daily.js;
+   *                 si ya lo declara él, se queda como lo declare)
+   *   paso_<id>     1 = esa misión ya se cobró (un máximo: juntar dos
+   *                 aparatos no la cobra dos veces) */
+  BASE.habQWER = 'suma';
+  BASE.vestido = 'mayor';
+  if (!BASE.dailyBasicos) BASE.dailyBasicos = 'suma';
+  ((CFG.PASOS && CFG.PASOS.LISTA) || []).forEach(function (m) { BASE['paso_' + m.id] = 'mayor'; });
   /* ...y las MAESTRÍAS DE ROL (js/maestria.js), cuatro por rol. Viven aquí
    * para viajar a la cuenta con lo demás, sin columna nueva:
    *   mae_<rol>     puntos de maestría ganados

@@ -213,6 +213,63 @@
     return antes >= D.record.min && despues * 100 >= antes * (100 + D.record.mejoraPct);
   }
 
+  /* ---------- PRIMEROS PASOS (29 sep 2026) ----------
+   * Las ocho misiones de los primeros días (CFG.PASOS, js/pasos.js). Aquí
+   * solo lo que el SERVIDOR tiene que poder comprobar con los contadores de
+   * la nube: si cada una está cumplida y si le toca el cofre de PLATA de
+   * completarlas todas. Lo ya hecho antes cuenta (la regla de no tirar lo
+   * logrado): por eso cada una mira también el contador viejo que lo
+   * demuestra, aunque no sea el suyo.
+   *   larga   una partida de más de un minuto (o haber pasado del nivel 1)
+   *   triple  3 fantasmas con un mismo energizante
+   *   qwer    una partida de DESATADO usando Q, W, E y R (o haber usado las
+   *           cuatro alguna vez, de antes de que se contara por partida)
+   *   cuenta  tener cuenta: el servidor solo habla con cuentas
+   *   daily   el reto BÁSICO del DAILY (o uno cualquiera, de antes)
+   *   vestir  ponerse algo del vestuario (`vestido`, lo apunta el juego)
+   *   mundo   una partida de LABERINTOS o de CACERÍA
+   *   clasif  las partidas de colocación de la CLASIFICATORIA, en alguna
+   *           temporada (cualquier versión del rango) */
+  var PASOS = ['larga', 'triple', 'qwer', 'cuenta', 'daily', 'vestir', 'mundo', 'clasif'];
+  var RE_RC = /^rc[0-9]?_[0-9]{4}-(0[1-9]|1[0-2])(_[1-4])?$/;
+
+  function pasosHechos(c, D, conCuenta) {
+    c = c || {};
+    var P = D.pasos || {}, coloca = entero(P.colocacion) || 5, clasif = false;
+    for (var k in c) {
+      if (Object.prototype.hasOwnProperty.call(c, k) && RE_RC.test(k) && entero(c[k]) >= coloca) {
+        clasif = true;
+        break;
+      }
+    }
+    return {
+      larga: entero(c.largas) >= 1 || entero(c.nivelMax) >= 2,
+      triple: entero(c.racha3) >= 1 || entero(c.racha) >= 3,
+      qwer: entero(c.habQWER) >= 1 || (entero(c.hk_q) >= 1 && entero(c.hk_w) >= 1 &&
+                                        entero(c.hk_e) >= 1 && entero(c.hk_r) >= 1),
+      cuenta: !!conCuenta,
+      daily: entero(c.dailyBasicos) >= 1 || entero(c.dailyOk) >= 1,
+      vestir: entero(c.vestido) >= 1,
+      mundo: entero(c['lab:partidas']) >= 1 || entero(c['caza:partidas']) >= 1,
+      clasif: clasif
+    };
+  }
+
+  /* ¿Es de los que tienen PRIMEROS PASOS? Solo quien llegó a los cofres con
+   * menos de 20 partidas (la base: la de la cuenta la pone el servidor, así
+   * que un veterano no las gana por entrar desde un aparato nuevo). */
+  function pasosNuevo(base, D) {
+    return !!(base && D.pasos) && entero(base.partidas) < entero(D.pasos.maxPartidas);
+  }
+
+  /* El cofre de PLATA de completarlas todas: 1 o 0 */
+  function pasosCofre(c, base, D, conCuenta) {
+    if (!pasosNuevo(base, D)) return 0;
+    var h = pasosHechos(c, D, conCuenta);
+    for (var i = 0; i < PASOS.length; i++) if (!h[PASOS[i]]) return 0;
+    return 1;
+  }
+
   /* Cuántos cofres de cada tipo se llevan GANADOS (no pendientes: eso es
    * restar los abiertos, cofre_<tipo>). Sin base, ninguno.
    *
@@ -220,7 +277,8 @@
    *           pasar de las partidas jugadas desde la base.
    *   PLATA   el regalo + cada semana del DAILY completa (como mucho una por
    *           semana transcurrida) + cada nivel de jugador subido (con un
-   *           tope que ningún jugador de verdad toca: 20 + 10 por día).
+   *           tope que ningún jugador de verdad toca: 20 + 10 por día) + el
+   *           de PRIMEROS PASOS completos (uno; pide cuenta: `usuario`).
    *   ORO     el regalo + cada escalón de maestría de rol nuevo (no más de
    *           uno por cada 2 partidas) + los récords que pasaron los filtros
    *           (cofre_recs: lo cuenta SOLO el servidor).
@@ -239,7 +297,7 @@
                            Math.floor(dias / 7) + 1);
     var niveles = Math.min(Math.max(0, nivel(xp, D) - base.nivel),
                            T.nivelesIni + T.nivelesDia * dias);
-    out.plata = D.bienvenida.plata + semanas + niveles;
+    out.plata = D.bienvenida.plata + semanas + niveles + pasosCofre(c, base, D, !!usuario);
     var mae = Math.min(Math.max(0, maestrias(c, D, usuario) - base.mae),
                        Math.floor(partidas / T.partidasPorMaestria));
     out.oro = D.bienvenida.oro + mae + entero(c.cofre_recs);
@@ -390,6 +448,9 @@
       record: C.RECORD, topes: C.TOPES,
       top3Desde: C.TOP3_DESDE, top3MargenDias: C.TOP3_MARGEN_DIAS,
       pools: { emote: emote, efecto: efecto, accesorio: accesorio, skin: skin, legendaria: legendaria },
+      /* PRIMEROS PASOS: quién los tiene y cuántas son las de colocación */
+      pasos: CFG.PASOS ? { maxPartidas: CFG.PASOS.MAX_PARTIDAS,
+                           colocacion: (CFG.RANGO && CFG.RANGO.COLOCACION) || 5 } : null,
       valor: valor,
       nivel: { base: CFG.LEVEL_BASE, exp: CFG.LEVEL_EXP },
       roles: (CFG.HAB && CFG.HAB.ROL_IDS) || ['asesino', 'tanque', 'mago', 'soporte'],
@@ -423,6 +484,10 @@
     dia: dia,
     recordDaOro: recordDaOro,
     ganados: ganados,
+    PASOS: PASOS,
+    pasosHechos: pasosHechos,
+    pasosNuevo: pasosNuevo,
+    pasosCofre: pasosCofre,
     abiertos: abiertos,
     rangoCon: rangoCon,
     top3: top3

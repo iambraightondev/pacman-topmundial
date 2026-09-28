@@ -473,6 +473,7 @@
       this.els.vestuario = document.getElementById('vestuario');
       this.els.tienda = document.getElementById('tienda');
       this.els.cofres = document.getElementById('cofres');
+      this.els.pasos = document.getElementById('pasos');
       this.els.pase = document.getElementById('pase');
       this.buildMenu();
       this.buildOptions();
@@ -794,6 +795,10 @@
        * DESATADO porque el reto de hoy es de ahí— y se pulsa para ver la
        * semana entera. */
       player.appendChild(this.buildDailyBox());
+
+      /* PRIMEROS PASOS (js/pasos.js): solo para quien empieza. En estrecho se
+       * muda debajo de JUGAR para no empujarlo. */
+      if (window.PM.Pasos) player.appendChild(window.PM.Pasos.tarjeta(this));
 
       /* CONTINUAR: la partida que se dejó a medias (js/guardado.js). Si no
        * hay ninguna, el bloque entero no existe. */
@@ -4970,7 +4975,7 @@
      * ------------------------------------------------------ */
     COFRES_COMO: {
       madera: 'CADA 5 PARTIDAS DE MÁS DE UN MINUTO',
-      plata: 'SEMANA DEL DAILY COMPLETA · CADA NIVEL DE JUGADOR',
+      plata: 'SEMANA DEL DAILY COMPLETA · CADA NIVEL DE JUGADOR · PRIMEROS PASOS',
       oro: 'ESCALÓN NUEVO DE MAESTRÍA · RÉCORD PROPIO (+10 %)',
       legendario: 'TOP 3 DEL RANGO AL CERRAR LA TEMPORADA · 2 % DE LOS ORO'
     },
@@ -10406,6 +10411,8 @@
         }
         // quién está conectado va con la cuenta: se une o se sale con ella
         if (window.PM.Conectados) window.PM.Conectados.arrancar();
+        // PRIMEROS PASOS: entrar es una misión, y lo de la nube puede cumplir otras
+        if (window.PM.Pasos) window.PM.Pasos.alMenu(self);
       };
       if (window.PM.Conectados) {
         window.PM.Conectados.onchange = function () {
@@ -12571,7 +12578,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
-                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'cofres', 'pase'];
+                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'cofres', 'pase', 'pasos'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -14714,7 +14721,7 @@
       });
       var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
-                   'vestuario', 'tienda', 'cofres', 'pase', 'prompt'];
+                   'vestuario', 'tienda', 'cofres', 'pase', 'pasos', 'prompt'];
       names.forEach(function (n) {
         var el = self.els[n];
         if (el) self._obsEncaje.observe(el, { childList: true, subtree: true, characterData: true });
@@ -14727,7 +14734,7 @@
       var self = this;
       var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
-                   'vestuario', 'tienda', 'cofres', 'pase'];
+                   'vestuario', 'tienda', 'cofres', 'pase', 'pasos'];
       names.forEach(function (n) {
         var el = self.els[n];
         if (el && el.style.display !== 'none') self.encajar(el, self.sueloEncaje(n));
@@ -14741,7 +14748,7 @@
       // la ficha va encima de un panel: si se cambia de panel, se va con él
       if (this.ficha && this.ficha.host !== this.els[name]) this.cerrarFicha(true);
       var panels = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
-                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'cofres', 'pase'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'cofres', 'pase', 'pasos'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -14861,6 +14868,7 @@
         vestuario: function (s) { s.showVestuario(typeof a === 'string' ? a : null); },
         tienda: function (s) { s.showTienda(typeof a === 'string' ? a : null); },
         cofres: function (s) { s.showCofres(); },
+        pasos: function (s) { if (window.PM.Pasos) window.PM.Pasos.mostrar(s); },
         pase: function (s) { s.showPase(); }
       }[v.p];
       if (!abre) return false;
@@ -14882,6 +14890,8 @@
       if (window.PM.Conectados) window.PM.Conectados.arrancar();
       this.showPanel('menu');
       this.animarNickLook();     // tu Pac-Man junto a tu nombre
+      // PRIMEROS PASOS: lo cumplido fuera de partida se cobra y se celebra
+      if (window.PM.Pasos) window.PM.Pasos.alMenu(this);
       // lo que se subió (nivel, división, rango) y aún no se ha celebrado
       if (this.iniciado) this.celebrarSiToca();
     },
@@ -14900,6 +14910,9 @@
       if (!e) return false;
       C.visto(e);
       if (e.t === 'nivel') this.showLevelUpPrompt(e.lv);
+      else if (e.t === 'pasos') {
+        if (!(window.PM.Pasos && window.PM.Pasos.celebrar(this, e))) return this.celebrarSiToca();
+      }
       else if (!this.showRangoSubePrompt(e)) return this.celebrarSiToca();
       return true;
     },

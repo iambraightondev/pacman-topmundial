@@ -9037,3 +9037,199 @@ body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosA
   .cf-cofre { width: 120px; height: 96px; }
   .cf-it { padding: 8px 5px 10px; }
 }
+
+/* ---------- PRIMEROS PASOS (js/pasos.js, 29 sep) ----------
+ * El recuadro de la portada (en la ficha en ancho, debajo de JUGAR en el
+ * móvil), el panel #pasos con las ocho y la celebración. Todo con el cian de
+ * INKY (--pc): no es JUGAR (amarillo) ni CONTINUAR (verde). */
+.pp-box {
+  --pc: #2ee8ff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  font-family: inherit;
+  font-weight: bold;
+  text-align: left;
+  color: #cfcfcf;
+  background: linear-gradient(color-mix(in srgb, var(--pc) 10%, #05050f), #05050f 80%);
+  border: 2px solid color-mix(in srgb, var(--pc) 55%, #2d2d6e);
+  padding: 8px 10px 7px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.12s linear, border-color 0.12s linear;
+}
+.pp-box:hover,
+.pp-box:focus-visible { border-color: var(--pc); background: #0b0b1e; outline: none; }
+.pp-box-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pp-box-t { color: var(--pc); letter-spacing: 2px; font-size: clamp(var(--fs-m), 1.6vh, 12px); line-height: 1.4; }
+.pp-box-n { color: #fff; font-size: clamp(var(--fs-m), 1.6vh, 12px); letter-spacing: 1px; line-height: 1.4; }
+.pp-pips { display: flex; align-items: center; gap: 6px; }
+.pp-pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid color-mix(in srgb, var(--pc) 45%, #222);
+  flex: none;
+}
+.pp-pip.on { background: var(--pc); border-color: var(--pc); box-shadow: 0 0 6px var(--pc); }
+/* el cofre del final: la superpastilla de la fila */
+.pp-pip-cofre {
+  width: 15px;
+  height: 12px;
+  border-radius: 2px;
+  margin-left: auto;
+  border-color: #cfd8e6;
+  background: linear-gradient(#cfd8e6 0 45%, #3a74c9 45% 60%, #8e9bb0 60%);
+}
+.pp-box-sig {
+  font-size: var(--fs-s);
+  letter-spacing: 1px;
+  line-height: 1.6;
+  color: #b9bae6;
+}
+.menu-main .pp-box { margin-top: 4px; }
+/* en la ficha de pantalla ancha no sobra alto: la siguiente, en un renglón */
+@media (min-width: 1000px) {
+  .marq .menu-player .pp-box { padding: 7px 10px 6px; gap: 5px; }
+  .marq .menu-player .pp-box-sig { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+}
+
+/* el panel */
+#pasos::before, #pasos::after { content: none; }
+#pasos { justify-content: flex-start; --pc: #2ee8ff; }
+.pp-titulo { margin-bottom: 0; }
+#pasos > .pp-nota { max-width: 760px; text-align: center; }
+#pasos > .pp-barra,
+.pp-cel .pp-barra {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  height: 22px;
+  margin: 8px 0 4px;
+  border: 2px solid color-mix(in srgb, var(--pc) 50%, #1a1a7a);
+  background: #05051a;
+}
+.pp-barra i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: repeating-linear-gradient(90deg, var(--pc) 0 10px, color-mix(in srgb, var(--pc) 70%, #000) 10px 12px);
+}
+.pp-barra .pp-cuenta {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: var(--fs-m);
+  line-height: 18px;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+#pasos > .pp-lista {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pp-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border: 2px solid #1a1a7a;
+  border-radius: 6px;
+  background: #05051a;
+  text-align: left;
+}
+.pp-num {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #4a4c7a;
+  color: #8a8cae;
+  font-size: var(--fs-m);
+}
+.pp-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-nombre { color: #fff; font-size: clamp(var(--fs-m), 1.6vh, 12px); letter-spacing: 1px; line-height: 1.5; }
+.pp-est { color: #6d6f8e; font-size: var(--fs-s); letter-spacing: 1px; line-height: 1.4; }
+.pp-der { flex: none; display: flex; align-items: center; gap: 10px; }
+.pp-premio { font-size: clamp(var(--fs-m), 1.6vh, 12px); }
+.pp-premio-t { color: #ffd23f; font-weight: bold; letter-spacing: 1px; font-size: var(--fs-s); text-align: right; display: block; max-width: 150px; line-height: 1.5; }
+.btn.pp-accion { min-width: 0; flex: none; }
+.pp-fila.hecha { border-color: color-mix(in srgb, var(--pc) 55%, #1a1a7a); background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 12%, #05051a), #05051a 60%); }
+.pp-fila.hecha .pp-num { background: var(--pc); border-color: var(--pc); color: #000; box-shadow: 0 0 8px var(--pc); }
+.pp-fila.hecha .pp-nombre { color: #cfeff4; }
+.pp-fila.hecha .pp-est { color: var(--pc); }
+.pp-fila.hecha .precio { opacity: 0.55; }
+#pasos > .pp-fin {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 760px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 2px dashed #cfd8e6;
+  border-radius: 6px;
+  background: #07071c;
+  text-align: left;
+}
+.pp-cofre { flex: none; width: 90px; height: 72px; image-rendering: pixelated; }
+.pp-fin-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.pp-fin-t { color: #cfd8e6; font-size: clamp(var(--fs-m), 1.7vh, 13px); letter-spacing: 1px; line-height: 1.5; }
+.pp-fin-s { color: #8a8cae; font-size: var(--fs-s); letter-spacing: 1px; line-height: 1.5; }
+#pasos > .pp-fin.hecha { border-style: solid; box-shadow: 0 0 16px rgba(207, 216, 230, 0.35); }
+.pp-fin.hecha .pp-fin-s { color: #cfd8e6; }
+.btn.pp-volver { margin-top: 14px; }
+
+/* la celebración */
+.pp-cel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(92vw, 560px); --pc: #2ee8ff; }
+.pp-cel-lista { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.pp-cel-lista li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 2px solid var(--pc);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--pc) 10%, #05051a);
+  animation: pp-entra 0.35s steps(4) both;
+}
+.pp-cel-lista li:nth-child(2) { animation-delay: 0.15s; }
+.pp-cel-lista li:nth-child(3) { animation-delay: 0.3s; }
+.pp-cel-lista li:nth-child(n+4) { animation-delay: 0.45s; }
+.pp-cel-ok { color: #000; background: var(--pc); border-radius: 50%; width: 24px; height: 24px; flex: none; display: flex; align-items: center; justify-content: center; font-size: var(--fs-m); }
+.pp-cel-nombre { flex: 1; min-width: 0; color: #fff; font-size: clamp(var(--fs-m), 1.6vh, 12px); letter-spacing: 1px; line-height: 1.5; text-align: left; }
+.pp-cel-premio { flex: none; color: #ffd23f; font-size: var(--fs-m); letter-spacing: 1px; }
+.pp-cel-total { color: #ffd23f; font-weight: bold; letter-spacing: 2px; font-size: clamp(var(--fs-m), 1.8vh, 13px); }
+.pp-cel .pp-barra { margin: 2px 0; }
+.pp-cel-sig { color: #b9bae6; font-size: var(--fs-s); letter-spacing: 1px; line-height: 1.6; text-align: center; }
+.pp-cel-cofre { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.pp-cel-cofre canvas { width: 150px; height: 120px; image-rendering: pixelated; animation: pp-bote 1.2s ease-in-out infinite; }
+.pp-cel-cofre b { color: #cfd8e6; letter-spacing: 2px; font-size: clamp(var(--fs-m), 2vh, 15px); text-shadow: 0 0 10px rgba(207, 216, 230, 0.6); }
+.pp-cel-cofre small { color: #b9bae6; font-size: var(--fs-s); letter-spacing: 1px; }
+@keyframes pp-entra { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes pp-bote { 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .pp-cel-lista li, .pp-cel-cofre canvas { animation: none; }
+}
+/* en el móvil: el premio debajo del nombre y el botón de entrar a la derecha */
+@media (max-width: 600px) {
+  .pp-fila { flex-wrap: wrap; gap: 4px 10px; padding: 6px 8px; }
+  .pp-num { width: 24px; height: 24px; }
+  .pp-txt { flex-basis: calc(100% - 40px); }
+  .pp-der { flex-basis: 100%; padding-left: 34px; justify-content: space-between; }
+  .pp-premio-t { text-align: left; max-width: none; }
+  #pasos > .pp-fin { flex-wrap: wrap; justify-content: center; text-align: center; }
+  .pp-cel-lista li { flex-wrap: wrap; }
+  .pp-cel-premio { margin-left: 34px; }
+}

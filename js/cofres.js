@@ -4,7 +4,8 @@
  *
  * Lo decidido (PLAN-COFRES.md, CFG.COFRES):
  *   MADERA      cada 5 partidas de más de un minuto
- *   PLATA       semana del DAILY completa · subir de nivel de jugador
+ *   PLATA       semana del DAILY completa · subir de nivel de jugador ·
+ *               las ocho de PRIMEROS PASOS (una vez, js/pasos.js)
  *   ORO         escalón nuevo de maestría de rol · récord propio (+10 % sobre
  *               uno de 10.000 o más; uno por ruta y día)
  *   LEGENDARIO  top 3 del RANGO al cerrar la temporada · 2 % de los ORO

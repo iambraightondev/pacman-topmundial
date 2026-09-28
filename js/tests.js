@@ -8662,11 +8662,17 @@
      * estas pruebas (desde el 1 oct, con una temporada de verdad en marcha,
      * la tienda salía con 90-180 monedas de más). */
     if (Pa) Pa._memoHasta = 0;
+    /* ...y lo mismo PRIMEROS PASOS (js/pasos.js): una partida larga con los
+     * contadores a cero es su primera misión, y pagaría 100 por su cuenta.
+     * Sus pruebas lo encienden a mano (conPasos). */
+    var Ps = window.PM.Pasos, nuevo0 = Ps && Ps.nuevo;
+    if (Ps) Ps.nuevo = function () { return false; };
     conLogrosLimpios(function (A) {
       try { fn(window.PM.Tienda, A); }
       finally {
         for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k];
         if (Pa) { Pa.temporada = temp; Pa._memoHasta = 0; }
+        if (Ps) Ps.nuevo = nuevo0;
       }
     });
   }
@@ -9683,6 +9689,279 @@
     var top = Gn.top3(filas, t, D);
     eq(top.length, 3);
     eq(top.map(function (x) { return x.id; }).join(), 'c,a,b', 'por PR y, a igual PR, más partidas; sin colocar, fuera');
+  });
+
+  // ---------------------------------------------------------------
+  // PRIMEROS PASOS (29 sep, js/pasos.js): ocho misiones y un cofre
+  // ---------------------------------------------------------------
+  /* Sobre conCofres (sin cuenta, contadores a cero, base de este aparato
+   * de hoy y con 0 partidas), con PRIMEROS PASOS encendido (conTienda lo
+   * apaga para las demás pruebas) y lo puesto del vestuario de salida. */
+  var pasosNuevoReal = window.PM.Pasos.nuevo;
+  function conPasos(fn) {
+    var Ps = window.PM.Pasos, s = window.PM.settings, D0 = CFG.DEFAULT_SETTINGS;
+    var antes = { pacColor: s.pacColor, avatar: s.avatar };
+    conCofres(function (K, Gn, D, Tn, A) {
+      var apagado = Ps.nuevo;
+      Ps.nuevo = pasosNuevoReal;
+      s.skin1 = D0.skin1; s.acc1 = ''; s.efx1 = ''; s.emotes1 = D0.emotes1;
+      s.pacColor = D0.pacColor; s.avatar = D0.avatar;
+      try { fn(Ps, A, Tn, K, Gn, D); }
+      finally {
+        Ps.nuevo = apagado;
+        s.pacColor = antes.pacColor; s.avatar = antes.avatar;
+      }
+    });
+  }
+  /* los ocho hechos de golpe con los contadores de antes, salvo cuenta y vestir */
+  function pasosDeAntes() {
+    var c = { partidas: 12, nivelMax: 3, racha: 3, hk_q: 2, hk_w: 1, hk_e: 4, hk_r: 1, dailyOk: 1,
+              'lab:partidas': 1 };
+    c['rc' + CFG.RANGO.VERSION + '_2026-09'] = CFG.RANGO.COLOCACION;
+    return c;
+  }
+
+  test('PRIMEROS PASOS: ocho misiones, 1.050 monedas, y el servidor conoce las mismas', function () {
+    var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos();
+    eq(CFG.PASOS.LISTA.map(function (m) { return m.id; }).join(), Gn.PASOS.join(),
+      'el juego y el generador del servidor hablan de las mismas ocho');
+    eq(CFG.PASOS.LISTA.reduce(function (s, m) { return s + m.monedas; }, 0), 1050);
+    ok(D.pasos && D.pasos.maxPartidas === 20 && D.pasos.colocacion === CFG.RANGO.COLOCACION,
+      'los datos del servidor llevan quién las tiene y cuántas son de colocación');
+    /* 1.050 caben de sobra en una sola subida (perfiles-blindaje.sql: 15.000
+     * monedas por hora de cupo); y ninguna pide jugar con otra persona */
+    ok(1050 < 15000, 'caben en el cupo');
+    CFG.PASOS.LISTA.forEach(function (m) {
+      ok(!/PARTY|AMIGO|DÚO|COMPAÑ/.test(m.name), m.id + ': no pide compañía');
+    });
+  });
+
+  test('PRIMEROS PASOS: lo ya hecho cuenta y se cobra en el acto (contadores de antes)', function () {
+    conPasos(function (Ps, A, Tn) {
+      var saldo0 = Tn.saldo();
+      eq(Ps.estado().hechas, 0, 'de salida, nada');
+      A.recordAll(pasosDeAntes());
+      A.recordAll({ 'rc_2026-08_1': 5 });             // una versión vieja del rango también vale
+      var h = Ps.hechos();
+      ['larga', 'triple', 'qwer', 'daily', 'mundo', 'clasif'].forEach(function (id) { ok(h[id], id + ' cumplida por lo de antes'); });
+      ok(!h.cuenta && !h.vestir, 'sin cuenta y sin nada puesto, esas dos no');
+      var r = Ps.revisar();
+      eq(r.misiones.length, 6, 'se cobran las seis de golpe');
+      eq(r.monedas, 100 + 100 + 150 + 150 + 150 + 300);
+      eq(Tn.saldo(), saldo0 + 950, 'al saldo');
+      ok(!r.todas, 'aún faltan dos');
+      eq(A.stats().paso_clasif, 1, 'y queda la bandera');
+    });
+  });
+
+  test('PRIMEROS PASOS: cada misión se cumple con lo suyo', function () {
+    conPasos(function (Ps, A) {
+      var s = window.PM.settings, Ac = window.PM.Account;
+      function hecha(id) { return !!Ps.hechos()[id]; }
+      ok(!hecha('larga')); A.recordAll({ partidas: 1, largas: 1 }); ok(hecha('larga'), 'una de más de un minuto');
+      ok(!hecha('triple')); A.recordAll({ racha2: 1 }); ok(!hecha('triple'), 'dos fantasmas no');
+      A.recordAll({ racha3: 1 }); ok(hecha('triple'), 'tres con el mismo energizante');
+      ok(!hecha('qwer')); A.recordAll({ hk_q: 3, hk_w: 1, hk_e: 1 }); ok(!hecha('qwer'), 'sin la R no');
+      A.recordAll({ habQWER: 1 }); ok(hecha('qwer'), 'una partida con las cuatro');
+      ok(!hecha('daily')); A.recordAll({ dailyBasicos: 1 }); ok(hecha('daily'), 'el básico del DAILY (dailyBasicos)');
+      ok(!hecha('mundo')); A.recordAll({ 'caza:partidas': 1 }); ok(hecha('mundo'), 'una de CACERÍA');
+      var rc = 'rc' + CFG.RANGO.VERSION + '_2026-10';
+      var o = {}; o[rc] = CFG.RANGO.COLOCACION - 1;
+      A.recordAll(o); ok(!hecha('clasif'), 'a una de acabar la colocación, no');
+      o[rc] = 1; A.recordAll(o); ok(hecha('clasif'), 'con las cinco, sí');
+      /* ponerse algo: lo ve revisar() y lo apunta (vestido) */
+      ok(!hecha('vestir'));
+      Ps.revisar();
+      ok(!hecha('vestir'), 'con lo de salida puesto, no');
+      s.skin1 = 'fantasma';
+      Ps.revisar();
+      eq(A.stats().vestido, 1, 'una skin puesta se apunta');
+      ok(hecha('vestir'));
+      s.skin1 = CFG.DEFAULT_SETTINGS.skin1;
+      ok(hecha('vestir'), 'y quitársela no la deshace');
+      /* la cuenta */
+      ok(!hecha('cuenta'), 'sin cuenta, pendiente');
+      var u0 = Ac.user, t0 = Ac.token;
+      Ac.user = { id: 'id-nuevo', usuario: 'NUEVO', avatar: 'pac' }; Ac.token = 't';
+      try { ok(hecha('cuenta'), 'con sesión, hecha'); } finally { Ac.user = u0; Ac.token = t0; }
+    });
+  });
+
+  test('PRIMEROS PASOS: cada una se cobra una sola vez, y dos aparatos no la cobran dos veces', function () {
+    conPasos(function (Ps, A, Tn) {
+      var saldo0 = Tn.ganadas();
+      A.recordAll({ partidas: 1, largas: 1 });
+      eq(Ps.revisar().monedas, 100);
+      eq(Ps.revisar(), null, 'la segunda vez, nada');
+      A.recordAll({ partidas: 3, largas: 3 });
+      eq(Ps.revisar(), null, 'más partidas largas no la vuelven a pagar');
+      eq(Tn.ganadas(), saldo0 + 100);
+      /* EL OTRO APARATO: se funde con la cuenta (lo del primero ya subido) */
+      var nube = A.stats();
+      A.reset();
+      A.merge(nube);
+      A.merge(nube);
+      eq(Ps.revisar(), null, 'la bandera viaja: no la cobra otra vez');
+      eq(Tn.ganadas(), saldo0 + 100, 'ni una moneda de más (las ganadas; el saldo lleva además el regalo de veterano, que se recalcula al fundir)');
+      /* con cuenta se espera a haber fundido la nube en esta sesión */
+      var Ac = window.PM.Account, u0 = Ac.user, t0 = Ac.token, f0 = Ac.fundido;
+      Ac.user = { id: 'id-dos', usuario: 'DOSAPARATOS', avatar: 'pac' }; Ac.token = 't';
+      try {
+        A.recordAll({ racha3: 1 });
+        Ac.fundido = null;
+        eq(Ps.revisar(), null, 'sin saber aún lo que trae la nube, no cobra');
+        Ac.fundido = 'id-dos';
+        var push0 = Ac.pushQuiet, subidas = 0;
+        Ac.pushQuiet = function () { subidas++; };
+        try { eq(Ps.revisar().monedas, 100, 'ya fundida, sí'); } finally { Ac.pushQuiet = push0; }
+        eq(subidas, 1, 'y lo sube');
+      } finally { Ac.user = u0; Ac.token = t0; Ac.fundido = f0; }
+    });
+  });
+
+  test('PRIMEROS PASOS: solo para quien empieza, y el recuadro se va al completarlas o pasadas 60 partidas', function () {
+    conPasos(function (Ps, A, Tn, K) {
+      ok(Ps.estado().visible, 'un aparato nuevo las ve');
+      /* un veterano: llegó a los cofres con 25 partidas */
+      localStorage.setItem(K.BASE_KEY, JSON.stringify({ dia: K.hoy(), partidas: 25, semana: 0, nivel: 1, mae: 0 }));
+      A.recordAll(pasosDeAntes());
+      ok(!Ps.nuevo(), 'veterano: no');
+      ok(!Ps.estado().visible, 'no se le enseñan');
+      eq(Ps.revisar(), null, 'ni se le paga nada');
+      /* y con la base de la cuenta, que pone el servidor, manda esa */
+      A.tomar({ cofre_b_dia: K.hoy(), cofre_b_partidas: 19 });
+      ok(Ps.nuevo(), 'la cuenta llegó con 19: sí');
+      ok(Ps.estado().visible);
+      A.recordAll({ partidas: CFG.PASOS.OCULTAR_EN });
+      ok(!Ps.estado().visible, 'pasadas 60 partidas el recuadro se va');
+      ok(Ps.revisar().misiones.length > 0, 'pero lo cumplido sigue pagando');
+    });
+  });
+
+  test('PRIMEROS PASOS: completarlas todas da un cofre de PLATA (con cuenta), una vez y solo al nuevo', function () {
+    conPasos(function (Ps, A, Tn, K, Gn, D) {
+      A.recordAll(pasosDeAntes());
+      A.recordAll({ vestido: 1 });
+      var b = K.base(), plata0 = K.ganados().plata;
+      eq(Gn.pasosCofre(A.stats(), b, D, false), 0, 'sin cuenta falta una: no hay cofre');
+      eq(Gn.pasosCofre(A.stats(), b, D, true), 1, 'con cuenta, las ocho: cofre');
+      var Ac = window.PM.Account, u0 = Ac.user, t0 = Ac.token, f0 = Ac.fundido;
+      Ac.user = { id: 'id-pp', usuario: 'PRIMERIZO', avatar: 'pac' }; Ac.token = 't'; Ac.fundido = 'id-pp';
+      var push0 = Ac.pushQuiet;
+      Ac.pushQuiet = function () {};
+      try {
+        eq(K.ganados().plata, plata0 + 1, 'Cofres.ganados lo cuenta (y el servidor, con el mismo código)');
+        var r = Ps.revisar();
+        ok(r.todas, 'con esto quedan las ocho');
+        ok(!Ps.estado().visible, 'y el recuadro se va');
+        eq(Ps.revisar(), null, 'no se vuelve a anunciar');
+        A.recordAll({ partidas: 500, largas: 500 });
+        eq(Gn.pasosCofre(A.stats(), b, D, true), 1, 'jugar más no da otro');
+        /* el servidor: la base de la cuenta con 25 partidas no lo gana */
+        eq(Gn.pasosCofre(A.stats(), { dia: 1, partidas: 25, semana: 0, nivel: 1, mae: 0 }, D, true), 0,
+          'un veterano no gana el cofre aunque tenga todo hecho');
+        eq(Gn.pasosCofre(A.stats(), null, D, true), 0, 'sin base, nada');
+        eq(Gn.pasosCofre(A.stats(), b, { pasos: null }, true), 0, 'con los datos de antes (sin pasos), nada');
+      } finally { Ac.user = u0; Ac.token = t0; Ac.fundido = f0; Ac.pushQuiet = push0; }
+    });
+  });
+
+  test('PRIMEROS PASOS: en DESATADO, la partida con Q, W, E y R cuenta una vez y se avisa en la banda', function () {
+    conPasos(function (Ps, A, Tn) {
+      var H = window.PM.Hab;
+      sinRed(function () {
+        G.newGame({ players: 1, hab: true, roles: ['asesino'] });
+        G.state = 'PLAYING';
+        H.cuentaUso(G, 0, 0); H.cuentaUso(G, 0, 1); H.cuentaUso(G, 0, 2);
+        eq(A.stats().habQWER || 0, 0, 'con tres teclas, aún no');
+        H.cuentaUso(G, 0, 3);
+        eq(A.stats().habQWER, 1, 'con la cuarta, una');
+        H.cuentaUso(G, 0, 0); H.cuentaUso(G, 0, 3);
+        eq(A.stats().habQWER, 1, 'y no más en la misma partida');
+        ok(G.achNotices.concat(G.achNotice ? [G.achNotice] : []).some(function (n) {
+          return n.name === 'PRIMEROS PASOS' && /Q, W, E Y R/.test(n.desc);
+        }), 'aviso en la banda de la partida');
+        eq(A.stats().paso_qwer, 1, 'cobrada');
+        G.toMenu();
+        G.newGame({ players: 1 });
+        H.cuentaUso(G, 0, 0); H.cuentaUso(G, 0, 1); H.cuentaUso(G, 0, 2); H.cuentaUso(G, 0, 3);
+        eq(A.stats().habQWER, 1, 'fuera de DESATADO no cuenta');
+        G.toMenu();
+      });
+    });
+  });
+
+  test('PRIMEROS PASOS: el GAME OVER cobra lo del cierre y lo pone en el resumen', function () {
+    conPasos(function (Ps, A, Tn) {
+      sinRed(function () {
+        partida(1);
+        G.timeTicks = 70 * 60;                         // más de un minuto
+        G.closeRun();
+      });
+      eq(A.stats().paso_larga, 1, 'la partida larga, cobrada');
+      ok(G.runSummary.logros.some(function (x) { return x.name === 'PRIMEROS PASOS'; }), 'en el resumen');
+      ok(G.runSummary.monedas >= 100, 'y sus monedas en las de la partida (' + G.runSummary.monedas + ')');
+      G.toMenu();
+    });
+  });
+
+  test('PRIMEROS PASOS: el recuadro de la portada, el panel y la celebración de fuera de partida', function () {
+    conPasos(function (Ps, A, Tn, K) {
+      var UI = window.PM.UI, C = window.PM.Celebrar;
+      try {
+        UI.showMenu();
+        var t = UI.pasosTarjeta;
+        ok(t && t.box.style.display !== 'none', 'el recuadro sale');
+        eq(t.n.textContent, '0/8');
+        ok(/MÁS DE 1 MINUTO/.test(t.sig.textContent), 'con la siguiente y lo que paga: ' + t.sig.textContent);
+        Ps.mostrar(UI);
+        eq(UI.els.pasos.style.display, 'flex', 'el panel se abre');
+        eq(UI.els.pasos.querySelectorAll('.pp-fila').length, 8, 'con las ocho');
+        eq(UI.pasosPanel.cuenta.textContent, '0 DE 8');
+        ok(UI.pasosPanel.filas.cuenta.accion.style.display !== 'none', 'sin cuenta, el botón de entrar');
+        /* fuera de partida: se cobra al volver al menú y se celebra */
+        window.PM.settings.acc1 = '';
+        A.recordAll({ racha3: 1 });
+        window.PM.settings.skin1 = 'fantasma';
+        UI.hidePrompt();
+        G.state = 'MENU';
+        var celebrar0 = UI.celebrarSiToca, vista = null;
+        UI.celebrarSiToca = function () { return false; };   // que espere en la cola
+        try { UI.showMenu(); } finally { UI.celebrarSiToca = celebrar0; }
+        eq(t.n.textContent, '2/8', 'el recuadro, al día');
+        vista = C.siguiente();
+        ok(vista && vista.t === 'pasos' && vista.ids.join() === 'triple,vestir', 'a la cola de celebraciones');
+        ok(UI.celebrarSiToca(), 'sale en el primer momento tranquilo');
+        var p = UI.els.prompt;
+        eq(p.querySelectorAll('.pp-cel-lista li').length, 2, 'las dos juntas');
+        ok(/\+100 MONEDAS/.test(p.querySelector('.pp-cel-premio').textContent), 'con lo que pagan');
+        UI.hidePrompt();
+        eq(C.siguiente(), null, 'vista, no vuelve');
+        /* un veterano no ve nada */
+        localStorage.setItem(K.BASE_KEY, JSON.stringify({ dia: K.hoy(), partidas: 40, semana: 0, nivel: 1, mae: 0 }));
+        UI.showMenu();
+        eq(t.box.style.display, 'none', 'veterano: sin recuadro');
+      } finally {
+        window.PM.settings.skin1 = CFG.DEFAULT_SETTINGS.skin1;
+        UI.hidePrompt();
+        UI.showMenu();
+      }
+    });
+  });
+
+  test('PRIMEROS PASOS: completarlas fuera de partida celebra el cofre, y dos avisos sin ver se juntan', function () {
+    var C = window.PM.Celebrar, UI = window.PM.UI;
+    C.pasos({ misiones: [CFG.PASOS.LISTA[0]] });
+    C.pasos({ misiones: [CFG.PASOS.LISTA[1], CFG.PASOS.LISTA[0]], todas: true });
+    var e = C.siguiente();
+    eq(e.ids.join(), 'larga,triple', 'una sola entrada, sin repetir');
+    ok(e.todas, 'con el cofre');
+    try {
+      UI.hidePrompt();
+      G.state = 'MENU';
+      ok(UI.celebrarSiToca());
+      ok(UI.els.prompt.querySelector('.pp-cel-cofre'), 'se enseña el cofre de PLATA');
+    } finally { UI.hidePrompt(); C.vaciar(); }
   });
 
   test('lo puesto solo vale si es tuyo, y las teclas de emote no repiten cara', function () {

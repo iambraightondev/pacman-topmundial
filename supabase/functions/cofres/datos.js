@@ -92,6 +92,10 @@ export const DATOS = {
     ],
     "legendaria": "agujero"
   },
+  "pasos": {
+    "maxPartidas": 20,
+    "colocacion": 5
+  },
   "valor": {
     "dormido": 150,
     "burla": 150,
