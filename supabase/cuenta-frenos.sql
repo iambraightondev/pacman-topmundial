@@ -8,7 +8,8 @@
 --
 -- ENTRAR NO TENÍA FRENO. Cualquiera podía probar contraseñas contra
 -- cualquier usuario (los nombres son públicos: salen en el top) todo lo
--- rápido que diera la red. Ahora, por usuario:
+-- rápido que diera la red. Ahora, por usuario Y CONEXIÓN (la IP, resumida:
+-- así nadie puede dejar a otro sin entrar fallando a propósito):
 --   · 5 fallos seguidos (sin 15 min de calma entre ellos) cierran la puerta
 --     15 min; cada fallo más, el doble (30 min, 1 h...), 2 h como mucho.
 --   · entrar bien lo borra todo; un día sin fallos, también.
@@ -25,7 +26,7 @@
 -- ============================================================
 
 create table if not exists public.cuenta_frenos (
-  clave   text primary key,           -- 'entrar:USUARIO' u 'olvide:USUARIO'
+  clave   text primary key,           -- 'entrar:USUARIO:IPRESUMIDA' u 'olvide:USUARIO'
   n       integer not null default 0,
   ultimo  timestamptz not null default now()
 );

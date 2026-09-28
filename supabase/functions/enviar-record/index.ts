@@ -40,10 +40,13 @@
  *     Con EXIGIR_REPETICION=1 (secreto de la función) una partida LOCAL sin
  *     repetición coherente no entra. Apagado mientras quede algún juego sin
  *     actualizar: los de antes del 28 sep no la mandan nunca.
- *   · CUARENTENA: una marca de más de 1,5 veces el primero de su liga (mismo
- *     mundo y formato), o un tiempo del nivel 1 un 20 % más rápido que el
- *     mejor, entra OCULTA (`oculta`, con el `motivo`) hasta que alguien la
- *     apruebe a mano. Las normales entran como siempre.
+ *   · MARCAS FUERA DE SERIE: una de más de 1,5 veces el primero de su liga
+ *     (mismo mundo y formato), o un tiempo del nivel 1 un 20 % más rápido que
+ *     el mejor. SIN APROBAR NADA A MANO (Braighton, 28 sep noche): si trae su
+ *     repetición y cuadra, entra sola; si trae una repetición que NO cuadra,
+ *     se queda fuera sola (`oculta`, con el `motivo`); si no trae
+ *     repetición (las de red no la llevan; las locales enormes no caben),
+ *     entra y queda apuntada en el `motivo`. Las normales, como siempre.
  *   · COMPAÑEROS SIN PERMISO: una marca de equipo apunta en `sin_aval` a los
  *     compañeros que no dieron su permiso (no tienen al que envía en su lista
  *     de amigos ni jugaron con él en una party en las últimas 12 h). Con
@@ -69,8 +72,9 @@ const MAX_TIEMPO1 = 6000000;      // CFG.RANKING.MAX_TIME (centésimas)
 const MAX_NIVEL = 255;
 const MAX_TIEMPO_MS = 6 * 3600 * 1000;
 
-/* CUARENTENA: por encima de esto respecto al primero de su liga, oculta hasta
- * que se apruebe a mano (update ranking set oculta = false where id = ...) */
+/* FUERA DE SERIE: por encima de esto respecto al primero de su liga se mira
+ * la repetición con lupa (ver "fuera de serie" más abajo). Nadie aprueba nada:
+ * se decide sola. */
 const CUARENTENA_X = 1.5;
 const CUARENTENA_T1 = 1.2;       // tiempo del nivel 1: un 20 % más rápido que el mejor
 
@@ -678,18 +682,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const lider = (await primero('&mundo=eq.' + mundo + '&jugadores=eq.' + jugadores, 'puntos.desc', 'puntos')) ||
     (await primero('&mundo=eq.' + mundo, 'puntos.desc', 'puntos')) ||
     (await primero('', 'puntos.desc', 'puntos'));
+  let fueraDeSerie = false;
   if (lider > 0 && puntos > lider * CUARENTENA_X) {
-    oculta = true;
-    motivos.push('cuarentena: ' + (puntos / lider).toFixed(2) + ' veces el primero (' + lider + ')');
+    fueraDeSerie = true;
+    motivos.push('fuera de serie: ' + (puntos / lider).toFixed(2) + ' veces el primero (' + lider + ')');
   }
   if (tiempo1 != null) {
     const mejorT1 = await primero('&jugadores=eq.1&mundo=eq.clasico&tiempo1=not.is.null',
       'tiempo1.asc', 'tiempo1');
     if (mejorT1 > 0 && tiempo1 * CUARENTENA_T1 < mejorT1) {
-      oculta = true;
-      motivos.push('cuarentena: nivel 1 en ' + tiempo1 + ' cs, el mejor es ' + mejorT1);
+      fueraDeSerie = true;
+      motivos.push('fuera de serie: nivel 1 en ' + tiempo1 + ' cs, el mejor es ' + mejorT1);
     }
   }
+  /* Se decide sola: una fuera de serie con una repetición que NO cuadra es
+   * la huella de una marca inventada, y no entra. Con repetición buena, o
+   * sin repetición, entra. */
+  if (fueraDeSerie && falloRepe) oculta = true;
 
   /* ---- los compañeros, ¿dieron permiso? ----
    * Cada compañero con cuenta tiene que haber dado su permiso a quien envía:

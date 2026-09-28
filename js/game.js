@@ -3290,8 +3290,9 @@
         // si no entró, se dice en el panel de GAME OVER, que es donde el
         // jugador está mirando. La partida ya terminó: no rompe nada.
         if (err) self.setFlash('TOP MUNDIAL: ' + err);
-        // y si entró en cuarentena, que no la busque en el top todavía
-        else if (info && info.cuarentena) self.setFlash('TOP MUNDIAL: MARCA EN REVISIÓN');
+        // la función la dejó fuera sola (fuera de serie con una repetición que
+        // no cuadra, o compañeros sin permiso): que no la busque en el top
+        else if (info && info.cuarentena) self.setFlash('TOP MUNDIAL: ESTA MARCA NO ENTRA');
       });
     },
 

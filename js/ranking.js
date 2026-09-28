@@ -367,8 +367,9 @@
           }
           if (res.ok) {
             self.lastSubmitError = null;
-            /* { ok, repeticion, cuarentena }: una marca muy por encima del
-             * primero entra oculta hasta que se revise (28 sep) */
+            /* { ok, repeticion, cuarentena }: cuarentena = la función la dejó
+             * fuera sola, sin que nadie apruebe nada (ver
+             * supabase/functions/enviar-record) */
             return res.json().catch(function () { return {}; }).then(function (d) {
               if (cb) cb(null, d || {});
             });

@@ -35,7 +35,7 @@
  *   clave   { usuario, pass, pass2?, nueva }    -> { ok }
  *
  * 28 SEP 2026 — LO QUE CAMBIÓ (supabase/cuenta-frenos.sql)
- *   · ENTRAR TIENE FRENO: 5 fallos seguidos por usuario cierran 15 min, y
+ *   · ENTRAR TIENE FRENO: 5 fallos seguidos por usuario Y CONEXIÓN cierran 15 min, y
  *     cada fallo más dobla la espera (2 h como mucho). `pass2` es la
  *     contraseña tal cual se escribió, para las cuentas viejas que no la
  *     tienen en mayúsculas (Account.signIn): las dos en UNA petición, un
@@ -207,7 +207,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return null;
     }
   }
-  const claveEntrar = 'entrar:' + usuario;
+  /* El freno va por USUARIO Y CONEXIÓN (28 sep, noche). Solo por usuario,
+   * cualquiera que supiera un nombre del top podía dejar a su dueño sin
+   * entrar horas fallando a propósito. Así, quien falla solo se cierra la
+   * puerta a sí mismo, y el dueño entra desde la suya. La IP va resumida
+   * (sha-256), nunca tal cual. */
+  const ipCruda = (req.headers.get('cf-connecting-ip') ||
+    (req.headers.get('x-forwarded-for') || '').split(',')[0] || '').trim();
+  let ipResumen = 'sin-ip';
+  if (ipCruda) {
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pm-freno:' + ipCruda));
+    ipResumen = Array.from(new Uint8Array(h)).slice(0, 12)
+      .map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  const claveEntrar = 'entrar:' + usuario + ':' + ipResumen;
 
   async function frenado(): Promise<Response | null> {
     const s = Number(await rpc('cuenta_espera', claveEntrar)) || 0;

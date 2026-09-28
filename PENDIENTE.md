@@ -26,15 +26,19 @@ de funciones duplicadas, listas de módulos y vestuario). tests.html 653/653.
 **Apagado a propósito, para encender cuando todos hayan recargado (unos días):**
 secretos EXIGIR_REPETICION y EXIGIR_AVAL de enviar-record. El juego viejo no
 manda repetición ni da permiso de equipo: encenderlos antes rompería marcas
-legítimas. **Marcas en cuarentena:** entran ocultas hasta aprobarlas a mano
-(ver ranking-cuarentena.sql).
+legítimas. **Nada se aprueba a mano (Braighton, 28 sep noche):** una marca
+fuera de serie entra sola si su repetición cuadra o no trae; solo se queda
+fuera, sola, si trae una repetición que NO cuadra. **El freno de entrar va por
+usuario Y conexión** (IP resumida): nadie puede bloquear la cuenta de otro.
+**Descartado (Braighton):** canales de realtime privados, porque dejarían
+fuera de la party a los invitados sin cuenta.
 
 **Queda para decidir con Braighton:** reto diario de dos niveles (hoy la
 racha solo la mantienen los buenos); construir los cofres (28 piezas los
 esperan); primeros pasos para el jugador nuevo; rango (suelo de CEREZA y
 premios en monedas — ojo, cambiar premios reescribe lo cobrado en meses
 pasados); ritmo del pase (el medio llega al galón ~20 de 30); factor de rol en
-party; minificar al desplegar; realtime privado (rompería invitados sin cuenta);
+party; minificar al desplegar;
 cerrar el cambio de correo directo del juego viejo; precios en el servidor
 (piezas «a deuda»); retos entre amigos y regalar piezas.
 

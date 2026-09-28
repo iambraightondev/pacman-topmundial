@@ -8,11 +8,13 @@
 -- función aguanta sin estas columnas, y las columnas no molestan a la
 -- función de antes). La vuelta atrás, en supabase/seguridad-vuelta-atras.sql.
 --
---   oculta        la marca NO sale en el top ni en el historial: está en
---                 cuarentena (más de 1,5 veces el primero de su liga, o un
---                 nivel 1 un 20 % más rápido que el mejor) o le falta el
---                 permiso de un compañero (con EXIGIR_AVAL). Se aprueba a mano:
---                   update ranking set oculta = false where id = '<id>';
+--   oculta        la marca NO sale en el top ni en el historial. Lo decide
+--                 la función sola, nadie aprueba nada (28 sep, noche): una
+--                 marca fuera de serie (más de 1,5 veces el primero de su
+--                 liga, o un nivel 1 un 20 % más rápido que el mejor) cuya
+--                 repetición NO cuadra, o a la que le falta el permiso de un
+--                 compañero (con EXIGIR_AVAL). Si alguna vez hiciera falta
+--                 sacarla: update ranking set oculta = false where id = '<id>';
 --   motivo        por qué (cuarentena, repetición incoherente, permisos)
 --   sin_aval      compañeros que no dieron permiso a quien envió la marca
 --   repeticion_coherente   lo que antes se llamaba `verificado`: la
