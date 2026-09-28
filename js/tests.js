@@ -2796,6 +2796,24 @@
     } finally { G.netNotice = null; G.toMenu(); }
   });
 
+  /* 28 sep: si el anfitrión se caía SIN despedirse, al invitado le calmaba el
+   * vigilante cualquier mensaje: el 'pos' de otro invitado o el latido de un
+   * mirón. Se quedaba congelado para siempre y sin aviso. */
+  test('al invitado solo le calman el vigilante los mensajes del anfitrión', function () {
+    G.newGame({ players: 3, net: 'guest', localIdx: 2, names: ['UNO', 'DOS', 'TRES'] });
+    G.state = 'PLAYING';
+    try {
+      G.netWatch = 80;
+      G.netQueue.push(['pos', { x: 40, y: 60, d: 1, nd: 1, e: [], i: 1 }, 'otro']);
+      G.netQueue.push(['hello', { spec: 1, hb: 1 }, 'miron']);
+      G.processNetQueue();
+      eq(G.netWatch, 80, 'otro invitado y un mirón no cuentan');
+      G.netQueue.push(['snap', G.buildSnapshot(false), 'anfitrion']);
+      G.processNetQueue();
+      eq(G.netWatch, 0, 'la foto del anfitrión sí');
+    } finally { G.toMenu(); }
+  });
+
   test('el que deja de mandar noticias se queda fuera, no congela al resto',
     function () {
       partida(4, 'host');

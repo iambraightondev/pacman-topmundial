@@ -36,6 +36,10 @@
     return Object.prototype.toString.call(v) === '[object Array]';
   }
 
+  /* Lo que solo manda quien simula la partida: es lo único que le dice a un
+   * invitado (o a un mirón) que el anfitrión sigue ahí (processNetQueue) */
+  var DEL_ANFITRION = { snap: 1, gir: 1, evt: 1, mando: 1, svista: 1 };
+
   /* ---------- copias para las fotos de la partida (Game.foto) ----------
    * Todo lo que se fotografía son datos: números, textos, listas y objetos
    * pelados. Se copian a mano y en profundidad porque una foto tiene que
@@ -3468,7 +3472,13 @@
       if (!q.length) return;
       this.netQueue = [];
       for (var i = 0; i < q.length; i++) {
-        this.netWatch = 0;
+        /* El vigilante solo se calma con quien importa (28 sep). Antes valía
+         * cualquier mensaje: con tres o cuatro, el 'pos' de otro invitado (y
+         * en dúo el latido 'hello' de un mirón) tapaba la caída del
+         * anfitrión y los demás se quedaban congelados sin aviso. */
+        if (this.netRole === 'host' ? q[i][0] !== 'hello' : DEL_ANFITRION[q[i][0]]) {
+          this.netWatch = 0;
+        }
         if (this.netRole === 'host') {
           var quien = this.idxOfSender(q[i][1], q[i][2]);
           if (quien >= 0 && quien !== this.hostIdx) this.posWatch[quien] = 0;
