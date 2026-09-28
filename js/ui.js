@@ -5104,12 +5104,13 @@
     textoPremioCofre: function (ab) {
       var K = window.PM.Cofres, r = ab.resultado, pr = ab.premio;
       var partes = [], subs = [];
+      var CAT = { skin: 'SKIN', accesorio: 'ACCESORIO', efecto: 'EFECTO', emote: 'EMOTE' };
       (r.nuevos || []).forEach(function (id) {
         var p = K.pieza(id);
         partes.push(p.name);
-        subs.push('¡NUEVO! ' + ({ skin: 'SKIN', accesorio: 'ACCESORIO', efecto: 'EFECTO', emote: 'EMOTE' }[p.cat] || '') +
-          ' · YA LO TIENES EN EL VESTUARIO');
+        subs.push('¡' + (CAT[p.cat] || 'PIEZA') + (p.cat === 'skin' ? ' NUEVA!' : ' NUEVO!'));
       });
+      if ((r.nuevos || []).length) subs.push('YA EN TU VESTUARIO');
       (r.repetidos || []).forEach(function (x) {
         partes.push(K.pieza(x.id).name);
         subs.push('YA LO TENÍAS: +' + fmtMonedas(x.monedas) + ' MONEDAS');
@@ -5191,14 +5192,12 @@
       /* las bandas */
       r(3, 7, 2, 11, PAL.banda); r(19, 7, 2, 11, PAL.banda);
       r(3, 7, 1, 11, PAL.banda2); r(19, 7, 1, 11, PAL.banda2);
-      /* LA TAPA: se levanta girando hacia atrás */
+      /* LA TAPA: al abrirse sale volando hacia arriba y se desvanece */
       var tapa = Math.max(0, Math.min(1, op.tapa || 0));
-      var sube = Math.round(tapa * 9);
       c.save();
       if (tapa > 0) {
-        c.translate(x0 + 12 * u, y0 + 7 * u - sube * u);
-        c.rotate(-tapa * 0.5);
-        c.translate(-(x0 + 12 * u), -(y0 + 7 * u));
+        c.globalAlpha = Math.max(0, 1 - tapa);
+        c.translate(0, -Math.round(tapa * 14) * u);
       }
       r(0, 2, 24, 6, PAL.oscuro);
       r(1, 1, 22, 1, PAL.oscuro);

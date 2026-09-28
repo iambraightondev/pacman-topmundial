@@ -8677,3 +8677,130 @@ body.mandos-v #chatBtn { grid-column: 3; grid-row: 2; }
 body.mandos-v.mandos-dual #gameBtns { top: max(6px, env(safe-area-inset-top)); bottom: auto; align-items: start; }
 /* la fila de emotes sale encima de los mandos, junto al pulgar */
 body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosAbajo, 0px) + 4px); }
+
+/* ---------- LOS COFRES (js/cofres.js, 28 sep) ----------
+ * Cuatro fichas con su cofre en píxel gordo y su color (--cc), y la escena
+ * de abrir encima de todo el panel. Van con VESTUARIO y TIENDA. */
+#cofres::before, #cofres::after { content: none; }
+#cofres { justify-content: flex-start; }
+.cf-titulo { margin-bottom: 0; }
+.cf-nota { max-width: 760px; text-align: center; }
+.cf-cuenta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  max-width: 900px;
+  padding: 8px 14px;
+  border: 2px dashed #ffb852;
+  border-radius: 6px;
+  color: #ffb852;
+  font-size: clamp(var(--fs-m), 1.6vh, 12px);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.cf-cuenta .btn { min-width: 0; }
+.cf-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 1100px;
+}
+.cf-it {
+  --cc: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px 12px;
+  border: 2px solid #1a1a7a;
+  border-radius: 6px;
+  background: #05051a;
+  text-align: center;
+  min-width: 0;
+}
+.cf-it.hay {
+  border-color: var(--cc);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--cc) 45%, transparent);
+  background: linear-gradient(color-mix(in srgb, var(--cc) 14%, #05051a), #05051a 70%);
+}
+.cf-cofre { width: 150px; height: 120px; max-width: 100%; image-rendering: pixelated; }
+.cf-nombre { color: var(--cc); font-weight: bold; letter-spacing: 3px; font-size: clamp(13px, 2.2vh, 17px); }
+.cf-num { color: #fff; font-size: clamp(var(--fs-l), 1.8vh, 13px); letter-spacing: 1px; }
+.cf-it:not(.hay) .cf-num { color: #6d6f8e; }
+.cf-como, .cf-trae, .cf-prog { font-size: var(--fs-s); letter-spacing: 1px; color: #a3a5cc; line-height: 1.5; }
+.cf-trae { color: #d9d9f0; }
+.cf-prog { color: var(--cc); min-height: 1.5em; }
+.btn.cf-abrir { min-width: 0; width: 100%; padding: 8px 6px; font-size: clamp(12px, 2vh, 15px); letter-spacing: 1px; }
+.cf-it.hay .btn.cf-abrir:not(:disabled) { border-color: var(--cc); color: var(--cc); }
+.cf-it.hay .btn.cf-abrir:not(:disabled):hover,
+.cf-it.hay .btn.cf-abrir:not(:disabled):focus-visible { background: var(--cc); color: #000; }
+.cf-msg { min-height: 1.4em; text-align: center; }
+
+/* la escena de abrir */
+.cf-escena {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  background: #00000a;
+}
+.cf-lienzo {
+  width: min(88vw, 52vh, 420px);
+  height: min(88vw, 52vh, 420px);
+  image-rendering: pixelated;
+  border: 3px solid #2121ff;
+  border-radius: 8px;
+}
+.cf-premio-t {
+  max-width: 640px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  font-size: clamp(14px, 2.8vh, 22px);
+  text-align: center;
+  text-shadow: 0 0 12px currentColor;
+}
+.cf-premio-s { max-width: 640px; font-size: clamp(var(--fs-m), 1.6vh, 12px); letter-spacing: 1px; color: #b9bae6; text-align: center; }
+.cf-escena-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.cf-escena-btns .btn { min-width: 0; }
+
+/* el punto del menú: cofres sin abrir */
+.btn.con-cofres { overflow: visible; }
+.cf-punto {
+  display: inline-block;
+  margin-left: 10px;
+  vertical-align: middle;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: #ffd23f;
+  color: #000;
+  font-size: var(--fs-xs);
+  line-height: 22px;
+  letter-spacing: 0;
+  text-align: center;
+  box-shadow: 0 0 0 2px #000, 0 0 10px rgba(255, 210, 63, 0.8);
+  animation: cf-latido 1.6s ease-in-out infinite;
+}
+@keyframes cf-latido { 50% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .cf-punto { animation: none; } }
+
+/* en el GAME OVER, la fila de los cofres */
+.go-fila.cofre b { white-space: normal; }
+.resumen-cofres { font-size: clamp(var(--fs-m), 1.6vh, 12px); font-weight: bold; letter-spacing: 1px; }
+
+@media (max-width: 860px) {
+  .cf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 380px) {
+  .cf-cofre { width: 120px; height: 96px; }
+  .cf-it { padding: 8px 5px 10px; }
+}
