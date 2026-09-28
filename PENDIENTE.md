@@ -13,6 +13,14 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**29 sep — cabos sueltos (pm-v298).** LAURELES · OCT 2026 (plata, manzana
+violeta) hechos y protegidos en el servidor; las nueve extravagantes viejas
+ya llevan el accesorio pegado al moverse (POSES); pruebas de Playwright
+al día; SPEC del pase al día. En el servidor cada pieza del pase lleva su
+temporada (piezas_especiales.temporada): **al añadir el camino de un mes
+nuevo, ponerle su temporada a sus piezas** o las daría la experiencia de
+cualquier mes. Laureles de noviembre: antes del 24 nov.
+
 **29 sep — COFRES EN EL JUEGO (pm-v297).** Hecho según PLAN-COFRES.md (ver SPEC).
 Servidor: función cofres + supabase/cofres*.sql (vuelta atrás en
 supabase/cofres-vuelta-atras.sql); el generador es el mismo archivo en el

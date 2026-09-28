@@ -151,6 +151,12 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
 on conflict (id) do update
   set tipo = excluded.tipo, galon = excluded.galon, carril = excluded.carril;
 
+-- la temporada de cada pieza del pase (29 sep): sin ella, la experiencia del
+-- pase de noviembre abría las piezas del camino de octubre
+alter table public.piezas_especiales add column if not exists temporada text;
+update public.piezas_especiales set temporada = '2026-10'
+ where tipo = 'pase' and id in ('grito', 'acc_mochila', 'efx_ecto', 'acc_visor', 'trampa');
+
 -- ---------- el rango, en el servidor ----------
 -- El escalón (0..24) de unos PR: los mismos TRAMOS que js/rango.js arma con
 -- CFG.RANGO.DIVISIONES (CEREZA IV = 0 … LLAVE = 24).
@@ -195,7 +201,9 @@ begin
 end;
 $$;
 
--- ¿La pieza `pieza` del pase ya le toca? Algún mes desde el primero del pase
+-- ¿La pieza `pieza` del pase ya le toca? El mes de SU temporada (cada pase
+-- tiene su camino: la pieza de octubre no la da la experiencia de noviembre;
+-- temporada null = cualquier mes, como antes). Desde el primero del pase
 -- (CFG.PASE.DESDE) con experiencia para su galón (CFG.PASE.POR_GALON = 1.500)
 -- y, si es del carril de pago, con ese carril (pp_<mes>).
 create or replace function public.pase_pieza_ok(lg jsonb, pieza text)
@@ -209,6 +217,7 @@ as $$
      where p.id = pieza and p.tipo = 'pase'
        and k ~ '^px_[0-9]{4}-(0[1-9]|1[0-2])$'
        and substr(k, 4) >= '2026-10'
+       and (p.temporada is null or substr(k, 4) = p.temporada)
        and floor(public.num(lg, k) / 1500) >= p.galon
        and (p.carril = 'gratis' or public.num(lg, 'pp_' || substr(k, 4)) >= 1)
   )
