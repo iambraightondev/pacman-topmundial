@@ -11082,6 +11082,21 @@
     eq(HB.hielo[2], 77, 'y el hielo');
   });
 
+  /* 28 sep: los objetos de cada jugador (bomba, mina, faro...) iban por
+   * referencia en la foto: el paso les bajaba el reloj también DENTRO de la
+   * foto, y al rebobinar volvían con el tiempo de después. */
+  test('ROLES: la foto del rebobinado no comparte los objetos de cada jugador', function () {
+    partidaRol(['soporte'], 2, 5, DR.RIGHT);
+    HB.estado(0).mina = { c: 2, r: 5, t: 300 };
+    var f = HB.foto();
+    HB.estado(0).mina.t = 10;                 // el juego sigue y el reloj baja
+    eq(f.st[0].mina.t, 300, 'la foto no se entera');
+    HB.ponerFoto(f);
+    eq(HB.estado(0).mina.t, 300, 'al rebobinar vuelve con su tiempo');
+    HB.estado(0).mina.t = 5;
+    eq(f.st[0].mina.t, 300, 'y la foto sigue sirviendo para otro rebobinado');
+  });
+
   test('ROLES: el anfitrión dispara hacia donde apuntó el invitado y reparte la mesa', function () {
     window.PM.settings.muted = true;
     G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'], roles: ['asesino', 'mago'] });
