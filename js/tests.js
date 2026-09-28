@@ -8928,6 +8928,318 @@
     });
   });
 
+  // ---------------------------------------------------------------
+  // COFRES (28 sep, PLAN-COFRES.md): el generador, lo ganado, abrirlos
+  // ---------------------------------------------------------------
+  function conCofres(fn) {
+    var K = window.PM.Cofres, base0 = null;
+    try { base0 = localStorage.getItem(K.BASE_KEY); } catch (e) { /* nada */ }
+    conTienda(function (Tn, A) {
+      /* sin cuenta y con la base de este aparato a cero, de hoy */
+      localStorage.setItem(K.BASE_KEY, JSON.stringify({ dia: K.hoy(), partidas: 0, semana: 0, nivel: 1, mae: 0 }));
+      var L = window.PM.Level, xp0 = L.xp();
+      L.reset();
+      try { fn(K, window.PM.CofresGen, K.datos(), Tn, A); }
+      finally {
+        localStorage.setItem(CFG.LEVEL_KEY, String(xp0));
+        if (base0 === null) localStorage.removeItem(K.BASE_KEY);
+        else localStorage.setItem(K.BASE_KEY, base0);
+      }
+    });
+  }
+
+  test('COFRES: el mismo cofre da siempre el mismo premio, y otro cofre otro', function () {
+    var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos();
+    ['madera', 'plata', 'oro', 'legendario'].forEach(function (t) {
+      for (var n = 1; n <= 30; n++) {
+        eq(JSON.stringify(Gn.premio('uuid-1', t, n, D)), JSON.stringify(Gn.premio('uuid-1', t, n, D)),
+          t + ' ' + n + ': recargar no cambia nada');
+      }
+    });
+    var distintos = 0;
+    for (var n = 1; n <= 40; n++) {
+      if (JSON.stringify(Gn.premio('uuid-1', 'madera', n, D)) !== JSON.stringify(Gn.premio('uuid-2', 'madera', n, D))) distintos++;
+    }
+    ok(distintos > 20, 'otra cuenta, otra suerte (' + distintos + '/40)');
+    eq(Gn.hash('a|oro|1'), Gn.hash('a|oro|1'), 'el hash es estable');
+    ok(Gn.hash('a|oro|1') !== Gn.hash('a|oro|2'), 'y cambia con el número');
+  });
+
+  test('COFRES: 10.000 cofres simulados caen en los porcentajes de CFG.COFRES', function () {
+    var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos(), N = 10000, C = CFG.COFRES;
+    var mad = 0, pla = 0, sin = 0, skin = 0, leg = 0, monMin = 1e9, monMax = 0;
+    for (var n = 1; n <= N; n++) {
+      var m = Gn.premio('sim', 'madera', n, D);
+      if (m.monedas) { mad++; monMin = Math.min(monMin, m.monedas); monMax = Math.max(monMax, m.monedas); }
+      else ok(D.pools.emote.indexOf(m.items[0]) !== -1, 'la madera sin monedas trae un emote de tienda');
+      var p = Gn.premio('sim', 'plata', n, D, sin);
+      sin = p.items.length ? 0 : sin + 1;
+      if (p.items.length) { pla++; ok(D.pools.efecto.indexOf(p.items[0]) !== -1, 'un efecto de cofre'); }
+      var o = Gn.premio('sim', 'oro', n, D);
+      if (o.tipo === 'legendario') { leg++; eq(o.items[0], 'agujero'); }
+      else {
+        ok(D.pools.accesorio.indexOf(o.items[0]) !== -1, 'el ORO trae siempre un accesorio de cofre');
+        if (o.items.length > 1) { skin++; ok(D.pools.skin.indexOf(o.items[1]) !== -1, 'y la skin es de cofre'); }
+      }
+    }
+    ok(Math.abs(mad / N - C.MADERA.pMonedas) < 0.02, 'MADERA: monedas ~70 % (' + (mad / N) + ')');
+    ok(monMin >= C.MADERA.min && monMax <= C.MADERA.max, 'entre 30 y 80');
+    /* la plata lleva el seguro encima: un pelín más del 40 % */
+    ok(pla / N >= C.PLATA.pObjeto - 0.02 && pla / N < C.PLATA.pObjeto + 0.03, 'PLATA: objeto ~40 % (' + (pla / N) + ')');
+    ok(Math.abs(skin / (N - leg) - C.ORO.pSkin) < 0.02, 'ORO: skin ~15 % (' + (skin / (N - leg)) + ')');
+    ok(Math.abs(leg / N - C.ORO.pLegendario) < 0.006, 'ORO: legendario ~2 % (' + (leg / N) + ')');
+  });
+
+  test('COFRES: el seguro de mala suerte salta en la 11.ª plata seguida sin efecto', function () {
+    var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos(), vistos = 0;
+    for (var i = 0; i < 300 && vistos < 3; i++) {
+      var cuenta = 'mala-suerte-' + i, sin = 0;
+      for (var n = 1; n <= 200; n++) {
+        var p = Gn.premio(cuenta, 'plata', n, D);          // sin atajo: recorre las anteriores
+        eq(Gn.platasSinObjeto(cuenta, n, D), sin, 'lo recorrido cuadra');
+        if (sin === CFG.COFRES.PLATA.seguro) {
+          eq(p.items.length, 1, 'la 11.ª trae efecto seguro');
+          eq(p.seguro, !(Gn.tiradas(cuenta, 'plata', n)[0] < CFG.COFRES.PLATA.pObjeto),
+            'y dice si ha sido el seguro (o si le tocaba igual)');
+          vistos++;
+        }
+        ok(sin <= CFG.COFRES.PLATA.seguro, 'nunca más de 10 seguidas sin efecto');
+        sin = p.items.length ? 0 : sin + 1;
+        if (sin === 0 && vistos >= 3) break;
+      }
+    }
+    ok(vistos >= 1, 'se ha visto saltar (' + vistos + ')');
+  });
+
+  test('COFRES: lo repetido pasa a monedas por la mitad de su valor', function () {
+    conCofres(function (K, Gn, D, Tn) {
+      Tn.ganar(200);
+      ok(Tn.comprar('dormido').ok, 'un emote comprado (150)');
+      var pr = { cofre: 'madera', tipo: 'madera', n: 1, monedas: 0, items: ['dormido'], seguro: false };
+      var r = Gn.aplicar(pr, function (id) { return Tn.tiene(id); }, D);
+      eq(r.nuevos.length, 0);
+      eq(r.repetidos[0].monedas, 75, 'la mitad de 150');
+      eq(r.monedas, 75);
+      var oro = { cofre: 'oro', tipo: 'oro', n: 1, monedas: 0, items: ['acc_aureola', 'fenix'], seguro: false };
+      r = Gn.aplicar(oro, function (id) { return id === 'fenix'; }, D);
+      eq(r.nuevos.join(), 'acc_aureola', 'lo nuevo, nuevo');
+      eq(r.monedas, CFG.COFRES.VALOR.skin / 2, 'la skin de cofre repetida, a la mitad de su valor de referencia');
+    });
+  });
+
+  test('COFRES: lo ganado sale de los contadores, desde la base y con el regalo', function () {
+    conCofres(function (K, Gn, D, Tn, A) {
+      var g = K.ganados();
+      eq(g.plata, 1, 'el regalo: una PLATA');
+      eq(g.oro, 1, 'y un ORO');
+      eq(g.madera, 0);
+      A.recordAll({ partidas: 12, largas: 7 });
+      eq(K.ganados().madera, 1, '5 partidas largas: una MADERA');
+      A.recordAll({ largas: 3 });
+      eq(K.ganados().madera, 2, '10: dos');
+      A.recordAll({ largas: 20 });
+      eq(K.ganados().madera, 2, 'no más que las partidas jugadas (12 → dos)');
+      A.recordAll({ dailySemana: 5 });
+      eq(K.ganados().plata, 1 + 1, 'una semana del DAILY por semana transcurrida, como mucho');
+      window.PM.Level.setAtLeast(20000);              // nivel 1 → 4
+      eq(K.ganados().plata, 2 + (window.PM.Level.level() - 1), 'y cada nivel subido');
+      // la maestría: un escalón nuevo con partidas de sobra
+      A.recordAll({ mae_asesino: 400, partidas: 10 });
+      eq(K.ganados().oro, 2, 'escalón nuevo de maestría: un ORO');
+      // y lo que escribe el servidor
+      A.tomar({ cofre_recs: 2, cofre_top3: 1 });
+      eq(K.ganados().oro, 4, 'los récords que contó el servidor');
+      eq(K.ganados().legendario, 1, 'el top 3');
+      A.tomar({ cofre_plata: 1 });
+      eq(K.pendientes().plata, K.ganados().plata - 1, 'pendientes = ganados − abiertos');
+      // con la base de la cuenta (la pone el servidor) manda la suya
+      A.tomar({ cofre_b_dia: K.hoy(), cofre_b_partidas: A.stats().partidas, cofre_b_nivel: 1 });
+      eq(K.ganados().madera, 0, 'con la base de la cuenta, lo de antes no cuenta');
+    });
+  });
+
+  test('COFRES: lo jugado antes de que hubiera cofres no da cofres (la base)', function () {
+    conCofres(function (K, Gn, D, Tn, A) {
+      localStorage.removeItem(K.BASE_KEY);             // un aparato que llega hoy
+      A.recordAll({ partidas: 500, largas: 400, dailySemana: 20 });
+      window.PM.Level.setAtLeast(5000000);
+      var g = K.ganados();
+      eq(g.madera, 0, 'ninguna madera por lo viejo');
+      eq(g.plata, 1, 'solo el regalo de plata');
+      eq(g.oro, 1, 'y el de oro');
+      A.recordAll({ partidas: 5, largas: 5 });
+      eq(K.ganados().madera, 1, 'lo de después, sí');
+      // cerrar sesión: lo que se juegue sin cuenta cuenta desde cero
+      K.olvidarLocal();
+      A.reset();
+      eq(K.ganados().madera, 0);
+      A.recordAll({ partidas: 5, largas: 5 });
+      eq(K.ganados().madera, 1);
+    });
+  });
+
+  test('COFRES: juntar dos aparatos que abrieron el mismo cofre no duplica monedas ni piezas', function () {
+    conCofres(function (K, Gn, D, Tn, A) {
+      var saldo0 = Tn.saldo();
+      /* el servidor abrió la PLATA 1 (efecto nuevo) y la MADERA 1 (65 monedas) */
+      var nube = { cofre_plata: 1, cofre_madera: 1, cofre_monedas: 65, c_efx_portales: 1 };
+      A.tomar(nube);
+      eq(Tn.saldo(), saldo0 + 65, 'las monedas del cofre cuentan como ganadas');
+      ok(Tn.tiene('efx_portales'), 'la pieza es tuya');
+      // el otro aparato trae lo mismo al fundirse con la cuenta, dos veces
+      A.merge(nube);
+      A.merge(nube);
+      A.tomar(nube);
+      eq(Tn.saldo(), saldo0 + 65, 'ni una moneda de más');
+      eq(A.stats().cofre_plata, 1, 'ni un cofre abierto de más');
+      ok(!A.esSuma('cofre_monedas') && !A.esSuma('cofre_plata'), 'no se suman entre aparatos: los escribe el servidor');
+      ok(A.esSuma('largas'), 'las partidas largas sí se suman (se juegan en cada aparato)');
+    });
+  });
+
+  test('COFRES: el ORO del récord pasa los tres filtros', function () {
+    var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos();
+    ok(!Gn.recordDaOro(10000, 10900, D), 'un 9 % no da');
+    ok(Gn.recordDaOro(10000, 11200, D), 'un 12 % sí');
+    ok(Gn.recordDaOro(10000, 11000, D), 'justo el 10 %, sí');
+    ok(!Gn.recordDaOro(9000, 12000, D), 'con un récord previo de 9.000 no da');
+    ok(!Gn.recordDaOro(0, 50000, D), 'una ruta nunca jugada no da');
+    conCofres(function (K) {
+      var REC = 'pacman-topmundial-cofres-rec', guard = null;
+      try { guard = localStorage.getItem(REC); } catch (e) { /* nada */ }
+      localStorage.removeItem(REC);
+      ok(!K.recordNuevo('clasico1', 10000, 12000), 'sin cuenta no se avisa: lo cuenta el servidor');
+      var Ac = window.PM.Account, u0 = Ac.user, t0 = Ac.token;
+      Ac.user = { id: 'id-rec', usuario: 'RECORDISTA', avatar: 'pac' };
+      Ac.token = 't';
+      try {
+        ok(K.recordNuevo('clasico1', 10000, 12000), 'el primero del día en esa ruta, sí');
+        ok(!K.recordNuevo('clasico1', 12000, 15000), 'el segundo del día en la misma ruta, no');
+        ok(K.recordNuevo('hab2', 20000, 30000), 'en otra ruta, sí');
+      } finally {
+        Ac.user = u0; Ac.token = t0;
+        if (guard === null) localStorage.removeItem(REC); else localStorage.setItem(REC, guard);
+      }
+    });
+  });
+
+  test('COFRES: abrir con cuenta toma lo que manda el servidor; sin cuenta no se abre', function () {
+    conCofres(function (K, Gn, D, Tn, A) {
+      var err = null;
+      K.abrir('plata', function (e) { err = e; });
+      eq(err, 'CREA UNA CUENTA PARA ABRIRLOS', 'sin cuenta');
+      var env0 = K.enviar, pedidos = [];
+      cuentaSinRed('COFRERO', function () {
+        K.enviar = function (cuerpo) {
+          pedidos.push(cuerpo);
+          var pr = Gn.premio('id-COFRERO', 'plata', 1, D);
+          var res = Gn.aplicar(pr, function () { return false; }, D);
+          var lg = { cofre_plata: 1, cofre_monedas: res.monedas };
+          res.nuevos.forEach(function (id) { lg['c_' + id] = 1; });
+          return yaEsta({ ok: true, status: 200, d: { ok: true, premio: pr, resultado: res, logros: lg } });
+        };
+        try {
+          var saldo0 = Tn.saldo(), vino = null;
+          K.abrir('plata', function (e, d) { err = e; vino = d; });
+          eq(err, null, 'se abre');
+          eq(pedidos[0].op, 'abrir');
+          eq(pedidos[0].tipo, 'plata');
+          eq(A.stats().cofre_plata, 1, 'abierto');
+          eq(K.pendientes().plata, 0, 'y ya no está pendiente');
+          if (vino.resultado.nuevos.length) ok(Tn.tiene(vino.resultado.nuevos[0]), 'el efecto es tuyo');
+          else eq(Tn.saldo(), saldo0 + vino.resultado.monedas, 'las monedas, al saldo');
+        } finally { K.enviar = env0; }
+      });
+    });
+  });
+
+  test('COFRES: el GAME OVER dice qué cofres ha dado la partida', function () {
+    conCofres(function (K, Gn, D, Tn, A) {
+      A.recordAll({ partidas: 4, largas: 4 });
+      sinRed(function () {
+        partida(1);
+        G.timeTicks = 70 * 60;                         // más de un minuto
+        G.closeRun();
+      });
+      eq(A.stats().largas, 5, 'la partida larga se cuenta');
+      var cf = G.runSummary.cofres;
+      ok(cf && cf.madera === 1, 'una MADERA en el resumen');
+      ok(!cf.conCuenta, 'sin cuenta');
+      var fila = window.PM.UI.cofresDelResumen(cf);
+      eq(fila.valor, '+1 COFRE DE MADERA');
+      eq(fila.sub, 'CREA UNA CUENTA PARA ABRIRLOS');
+      G.toMenu();
+      sinRed(function () {
+        partida(1);
+        G.timeTicks = 30 * 60;                         // corta: no cuenta
+        G.closeRun();
+      });
+      eq(A.stats().largas, 5, 'la corta no');
+      eq(G.runSummary.cofres, null, 'y no da nada');
+      G.toMenu();
+    });
+  });
+
+  test('COFRES: la pantalla enseña los pendientes y pide cuenta para abrirlos', function () {
+    conCofres(function (K, Gn, D, Tn, A) {
+      var UI = window.PM.UI;
+      A.recordAll({ partidas: 10, largas: 10 });
+      UI.showCofres();
+      var f = UI.cofresFichas;
+      eq(f.madera.num.textContent, '×2 SIN ABRIR');
+      eq(f.plata.num.textContent, '×1 SIN ABRIR');
+      eq(f.legendario.num.textContent, 'NINGUNO');
+      ok(f.madera.btn.disabled, 'sin cuenta no se puede abrir');
+      ok(UI.cofresCuenta.style.display !== 'none', 'y se dice por qué');
+      UI.refreshCofresBadge();
+      eq(UI.menuCofresPunto.textContent, String(K.total()), 'el punto del menú cuenta los pendientes');
+      UI.showMenu();
+    });
+  });
+
+  test('COFRES: el top 3 del rango se calcula igual que la tabla del juego', function () {
+    var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos();
+    var R = Gn.rangoCon(D.rango), Rg = window.PM.Rango, V = CFG.RANGO.VERSION;
+    var t = '2026-09', ant = '2026-08';
+    var s = 7;
+    function az(n) { s = (s * 1103515245 + 12345) & 0x7fffffff; return s % n; }
+    conLogrosLimpios(function (A) {
+      for (var i = 0; i < 60; i++) {
+        A.reset();
+        var c = {};
+        c['rc' + V + '_' + t] = az(30);
+        c['rt' + V + '_' + t] = az(300000);
+        c['rg' + V + '_' + t] = az(400);
+        c['rl' + V + '_' + t] = az(300);
+        if (i % 2) {
+          c['rc' + V + '_' + ant] = 5 + az(30);
+          c['rt' + V + '_' + ant] = az(400000);
+          c['rg' + V + '_' + ant] = az(500);
+          c['rl' + V + '_' + ant] = az(200);
+          c['ru' + V + '_' + t] = az(100);
+          c['rd' + V + '_' + t] = az(100);
+        }
+        A.merge(c);
+        var mio = Rg.estado(t), suyo = R.estadoDe(A.stats(), t);
+        eq(suyo.pr, mio.pr, 'caso ' + i + ': el mismo PR');
+      }
+    });
+    var filas = [
+      { id: 'a', usuario: 'ANA', logros: {} },
+      { id: 'b', usuario: 'BEA', logros: {} },
+      { id: 'c', usuario: 'CAR', logros: {} },
+      { id: 'd', usuario: 'DAN', logros: {} },
+      { id: 'e', usuario: 'EVA', logros: {} }
+    ];
+    [[10, 250000, 300], [6, 200000, 100], [12, 250000, 300], [3, 900000, 999], [8, 100000, 20]].forEach(function (x, i) {
+      var lg = filas[i].logros;
+      lg['rc' + V + '_' + t] = x[0]; lg['rt' + V + '_' + t] = x[1]; lg['rg' + V + '_' + t] = x[2];
+    });
+    var top = Gn.top3(filas, t, D);
+    eq(top.length, 3);
+    eq(top.map(function (x) { return x.id; }).join(), 'c,a,b', 'por PR y, a igual PR, más partidas; sin colocar, fuera');
+  });
+
   test('lo puesto solo vale si es tuyo, y las teclas de emote no repiten cara', function () {
     conTienda(function (Tn) {
       var s = window.PM.settings;
