@@ -1219,7 +1219,9 @@
     /* del RANGO: los laureles de CADA temporada, a quien llegó a MANZANA en
      * ella. Uno por temporada y no vuelven: cada mes nuevo lleva los suyos. */
     { id: 'acc_laureles_2609', name: 'LAURELES · SEP 2026', rango: { fruta: 'manzana', temporada: '2026-09' }, precio: 0,
-      ve: 'CORONA DE LAUREL DORADA CON UNA MANZANA EN LA FRENTE, DE LA PRIMERA TEMPORADA. LAS HOJAS DESTELLAN UNA A UNA.' }
+      ve: 'CORONA DE LAUREL DORADA CON UNA MANZANA EN LA FRENTE, DE LA PRIMERA TEMPORADA. LAS HOJAS DESTELLAN UNA A UNA.' },
+    { id: 'acc_laureles_2610', name: 'LAURELES · OCT 2026', rango: { fruta: 'manzana', temporada: '2026-10' }, precio: 0,
+      ve: 'CORONA DE LAUREL DE PLATA CON UNA MANZANA VIOLETA EN LA FRENTE, DE LA TEMPORADA DE LA CAZA DE FANTASMAS. LAS HOJAS DESTELLAN UNA A UNA CON UN BRILLO FRÍO.' }
   ];
   CFG.EFECTO_IDS = CFG.EFECTOS.map(function (e) { return e.id; });
   CFG.ACCESORIO_IDS = CFG.ACCESORIOS.map(function (e) { return e.id; });

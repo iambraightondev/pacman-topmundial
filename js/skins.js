@@ -8628,7 +8628,7 @@
     acc_espartano: 'cabeza', acc_antenas: 'cabeza', acc_cuernos: 'cabeza',
     acc_obra: 'cabeza', acc_aureola: 'cabeza',
     acc_bufanda: 'cuello', acc_alas: 'cuello',
-    acc_laureles_2609: 'cabeza',
+    acc_laureles_2609: 'cabeza', acc_laureles_2610: 'cabeza',
     /* tanda de mitología: la serpiente se enrosca al cuello */
     acc_alado: 'cabeza', acc_ojo: 'cabeza', acc_serpiente: 'cuello' };
   /* la zona de un accesorio en una skin: la suya propia si la skin la fija */
@@ -8660,7 +8660,7 @@
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
   var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6,
     acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
-    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4,
+    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4, acc_laureles_2610: R - 0.4,
     acc_alado: 2.8, acc_ojo: 4.4, acc_vaquero: R - 2.2, acc_chullo: 2.4, acc_mohicano: 4.4,
     acc_orejas: R - 1.2 };
 
@@ -10035,8 +10035,10 @@
   /* ---------------- LAURELES DE TEMPORADA (premio del RANGO) ----------------
    * Una rama de laurel dorada que rodea la coronilla de atrás adelante, con
    * una manzana roja en la frente (la fruta que hay que alcanzar). Las hojas
-   * destellan de una en una. `oro` y `gema` cambian con cada temporada. */
-  function laureles(oro, oroOsc, gema) {
+   * destellan de una en una. `oro` y `gema` cambian con cada temporada;
+   * `brillo` (el destello de la hoja) es cálido si no se da otro. */
+  function laureles(oro, oroOsc, gema, brillo) {
+    brillo = brillo || '#fffbe0';
     return function (ctx, o) {
       var rr = R + 0.25, n = 0;
       ctx.save();
@@ -10054,7 +10056,7 @@
           ctx.rotate(ang - Math.PI / 2 + lado * 1.05);
           ctx.beginPath();
           ctx.ellipse(0, lado * 1.15, 0.7, 1.55, 0, 0, Math.PI * 2);
-          ctx.fillStyle = (n === brilla) ? '#fffbe0' : (lado < 0 ? oroOsc : oro);
+          ctx.fillStyle = (n === brilla) ? brillo : (lado < 0 ? oroOsc : oro);
           ctx.fill();
           ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.2;
           ctx.stroke();
@@ -10075,6 +10077,8 @@
     };
   }
   ACC.acc_laureles_2609 = laureles('#ffd24a', '#8a5a00', '#ff3b3b');
+  /* octubre, la temporada de la caza de fantasmas: plata y manzana violeta */
+  ACC.acc_laureles_2610 = laureles('#d9e0e8', '#5b6674', '#9b4dff', '#eef4ff');
 
   /* ---------------- GRITO (emote) ---------------- */
   function caraGrito(ctx, x, y, r, color, t) {
