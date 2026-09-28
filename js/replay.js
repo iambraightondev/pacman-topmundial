@@ -824,6 +824,14 @@
       return h;
     },
 
+    /* Con sesión, por Account.pedir: la sesión caduca a la hora y un 401
+     * aquí era una repetición que no subía (28 sep). Sin sesión, a pelo. */
+    fetchNube: function (url, opts) {
+      var Ac = window.PM.Account;
+      if (Ac && Ac.pedir && Ac.logged && Ac.logged()) return Ac.pedir(url, opts);
+      return fetch(url, opts);
+    },
+
     /* El índice, sin las que ya caducaron en la nube (no destacadas y de
      * hace más de CFG.REPLAY_CADUCA_DIAS): esas ya no se pueden ver. */
     indiceNube: function () {
@@ -917,7 +925,7 @@
       function intenta(quedan) {
         var codigo = self.codigoNuevo();
         fila.id = codigo;
-        fetch(self.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE), {
+        self.fetchNube(self.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE), {
           method: 'POST', headers: h, body: JSON.stringify(fila)
         }).then(function (res) {
           if (res.ok) {
@@ -971,7 +979,7 @@
         if (cb) cb('SIN CUENTA');
         return;
       }
-      fetch(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
+      this.fetchNube(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
               '?select=id,jugadores,puntos,nivel,tipo,t_partida,creado_en,nombres,destacada,titulo' +
               '&dueno=eq.' + encodeURIComponent(Ac.user.id) +
               '&order=creado_en.desc&limit=' + CFG.REPLAY_NUBE_MAX),
@@ -1006,7 +1014,7 @@
       var t = String(titulo || '').toUpperCase().trim().slice(0, CFG.REPLAY_TITULO_MAX);
       var R = window.PM.Ranking;
       if (activa && t && R && R.nameAllowed && !R.nameAllowed(t)) { cb('ESE NOMBRE NO VALE', null); return; }
-      fetch(this.restUrl('/rest/v1/rpc/destacar_repeticion'), {
+      this.fetchNube(this.restUrl('/rest/v1/rpc/destacar_repeticion'), {
         method: 'POST', headers: this.nubeHeaders(),
         body: JSON.stringify({ p_id: codigo, p_destacada: !!activa, p_titulo: activa ? t : null })
       }).then(function (res) {

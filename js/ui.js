@@ -9078,7 +9078,22 @@
         correoBtn.classList.add('btn-preset');
         row.appendChild(correoBtn);
         var salir = this.makeButton('CERRAR SESIÓN', function () {
-          Ac.signOut(function () { self.refreshProfile(); });
+          /* primero sube lo tuyo y solo entonces se cierra: si no sube, se
+           * dice y la sesión sigue (no se tira nada sin subir) */
+          if (self.profAccountMsg) {
+            self.profAccountMsg.classList.remove('error');
+            self.profAccountMsg.textContent = 'GUARDANDO ANTES DE SALIR...';
+          }
+          Ac.signOut(function (err) {
+            if (err) {
+              if (self.profAccountMsg) {
+                self.profAccountMsg.classList.add('error');
+                self.profAccountMsg.textContent = err;
+              }
+              return;
+            }
+            self.refreshProfile();
+          });
         });
         salir.classList.add('perfil-salir');
         this.profAccountSalir.appendChild(salir);

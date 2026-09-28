@@ -138,6 +138,22 @@
     return conRed(function () { return roto(new Error('SIN CONEXIÓN')); }, cuerpo);
   }
 
+  /* Con una sesión de mentira, lo que la cuenta manda por detrás (la cola de
+   * subidas, que va con promesas de verdad) saldría DESPUÉS de sinRed, ya con
+   * el fetch de verdad puesto. Aquí la cola va de un tirón y todo lo que
+   * pase dentro se queda sin red. */
+  function cuentaSinRed(nombre, fn) {
+    var Ac = window.PM.Account;
+    var u0 = Ac.user, t0 = Ac.token, cola0 = Ac.enCola;
+    Ac.user = { id: 'id-' + nombre, usuario: nombre, avatar: 'pac' };
+    Ac.token = 'token-de-prueba';
+    Ac.enCola = function (f) {
+      try { return yaEsta(f()); } catch (e) { return roto(e); }
+    };
+    try { sinRed(function () { fn(Ac); }); }
+    finally { Ac.user = u0; Ac.token = t0; Ac.enCola = cola0; }
+  }
+
   // ---------------------------------------------------------------
   // Laberinto y arranque
   // ---------------------------------------------------------------
@@ -4196,6 +4212,174 @@
     });
   });
 
+  /* ---------- LO JUGADO EN DOS APARATOS (js/account.js, BASE_KEY) ----------
+   * Cada aparato apunta su BASE (lo suyo que ya está en la nube) y cada
+   * subida le SUMA a la nube lo pendiente. Aquí se simulan dos aparatos
+   * cambiando el almacén de uno por el del otro, contra una nube de mentira
+   * que hace lo que el servidor: quedarse con el mayor de cada cifra. Nada
+   * sale a la red: fetch es de mentira y la cola va de un tirón. */
+  function dosAparatos(fn) {
+    var Ac = window.PM.Account, L = window.PM.Level, A = window.PM.Achievements;
+    var BASE = 'pacman-topmundial-nube-base';
+    var DEL_APARATO = [CFG.LEVEL_KEY, CFG.ACH_KEY, BASE];
+    var todas = DEL_APARATO.concat([CFG.SETTINGS_KEY, CFG.SAVE_KEY,
+      'pacman-topmundial-rhab-sembrado', 'pacman-topmundial-maestria-desde',
+      CFG.BADGES_KEY, CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas', CFG.DAILY.KEY]);
+    var antes = {};
+    todas.forEach(function (k) {
+      try { antes[k] = localStorage.getItem(k); } catch (e) { antes[k] = null; }
+    });
+    var u0 = Ac.user, t0 = Ac.token, cola0 = Ac.enCola, fetch0 = window.fetch;
+    var nick0 = window.PM.settings.nick1, av0 = window.PM.settings.avatar;
+    var d = {
+      nube: { id: 'id-dos', usuario: 'PEPE', avatar: 'pac', xp: 0, logros: {} },
+      caida: false, aparatos: {}, actual: null,
+      /* pasa a jugar en ese aparato (su almacén, tal como lo dejó) */
+      en: function (quien) {
+        var self = this;
+        if (self.actual) {
+          var guarda = {};
+          DEL_APARATO.forEach(function (k) { guarda[k] = localStorage.getItem(k); });
+          self.aparatos[self.actual] = guarda;
+        }
+        var suyo = self.aparatos[quien] || {};
+        DEL_APARATO.forEach(function (k) {
+          if (suyo[k] == null) localStorage.removeItem(k);
+          else localStorage.setItem(k, suyo[k]);
+        });
+        self.actual = quien;
+      },
+      fila: function () { return JSON.parse(JSON.stringify(this.nube)); }
+    };
+    window.fetch = function (url, opts) {
+      url = String(url); opts = opts || {};
+      if (!/\/rest\/v1\/perfiles/.test(url)) return respuesta(404, '');
+      if (!opts.method || opts.method === 'GET') return respuesta(200, [d.fila()]);
+      if (opts.method === 'POST') {
+        if (d.caida) return respuesta(500, 'caída');
+        var f = JSON.parse(opts.body);
+        d.nube.xp = Math.max(d.nube.xp, f.xp || 0);
+        for (var k in (f.logros || {})) {
+          d.nube.logros[k] = Math.max(d.nube.logros[k] || 0, f.logros[k] || 0);
+        }
+        return respuesta(201, '');
+      }
+      return respuesta(204, '');
+    };
+    Ac.enCola = function (f) { return yaEsta(f()); };
+    Ac.user = { id: 'id-dos', usuario: 'PEPE', avatar: 'pac' };
+    Ac.token = 'token-de-prueba';
+    try {
+      DEL_APARATO.forEach(function (k) { localStorage.removeItem(k); });
+      fn(d, Ac, L, A);
+    } finally {
+      window.fetch = fetch0;
+      Ac.enCola = cola0; Ac.user = u0; Ac.token = t0;
+      window.PM.settings.nick1 = nick0; window.PM.settings.avatar = av0;
+      todas.forEach(function (k) {
+        try {
+          if (antes[k] === null) localStorage.removeItem(k);
+          else localStorage.setItem(k, antes[k]);
+        } catch (e) { /* nada */ }
+      });
+    }
+  }
+
+  test('lo jugado en dos aparatos se SUMA en la nube y nada cuenta dos veces', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.en('A'); Ac.fundir(d.fila());
+      eq(L.xp(), 1000, 'A entra y se trae la cuenta');
+      d.en('B'); Ac.fundir(d.fila());
+      eq(L.xp(), 1000, 'B también');
+
+      d.en('A'); L.add(300); A.record('partidas', 2); Ac.pushQuiet();
+      eq(d.nube.xp, 1300, 'lo de A sube');
+      eq(d.nube.logros.partidas, 12);
+      d.en('B'); L.add(500); A.record('partidas', 3); Ac.pushQuiet();
+      eq(d.nube.xp, 1800, 'lo de B se SUMA a lo de A (antes se quedaba con el mayor)');
+      eq(d.nube.logros.partidas, 15, 'y los contadores que suman, igual');
+
+      // subir otra vez sin haber jugado no vuelve a sumar nada
+      Ac.pushQuiet(); d.en('A'); Ac.pushQuiet(); Ac.pushQuiet();
+      eq(d.nube.xp, 1800, 'repetir la subida no cuenta dos veces');
+      eq(d.nube.logros.partidas, 15);
+
+      // A vuelve a la pestaña: se trae lo de B y su subida no lo duplica
+      Ac.fundir(d.fila());
+      eq(L.xp(), 1800, 'A ve lo jugado en B');
+      eq(A.stats().partidas, 15);
+      Ac.pushQuiet();
+      d.en('B'); Ac.fundir(d.fila()); Ac.pushQuiet();
+      eq(L.xp(), 1800, 'B también');
+      eq(d.nube.xp, 1800, 'y la nube sigue con la suma exacta');
+      eq(d.nube.logros.partidas, 15);
+      var p = Ac.pendiente();
+      eq(p.xp, 0, 'sin nada pendiente');
+      eq(Object.keys(p.c).length, 0, 'ni contadores pendientes');
+    });
+  });
+
+  test('si una subida falla, lo pendiente llega después UNA sola vez', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.en('A'); Ac.fundir(d.fila());
+      L.add(200); A.record('partidas', 1);
+      d.caida = true;
+      Ac.pushQuiet(); Ac.pushQuiet();
+      eq(d.nube.xp, 1000, 'con la nube caída no llega');
+      eq(Ac.pendiente().xp, 200, 'y sigue apuntado como pendiente');
+      d.caida = false;
+      Ac.pushQuiet();
+      eq(d.nube.xp, 1200, 'al volver sube entero');
+      eq(d.nube.logros.partidas, 11, 'una sola vez');
+      Ac.pushQuiet();
+      eq(d.nube.xp, 1200, 'y no se vuelve a sumar');
+      // una fusión con la nube de por medio tampoco lo cuenta otra vez
+      Ac.fundir(d.fila());
+      eq(L.xp(), 1200);
+      eq(d.nube.xp, 1200);
+    });
+  });
+
+  /* GUARDIANA: al abrir el juego se siembran cosas (UI.init: lo visto, las
+   * maestrías de rol, los récords por rol, las skins). Si alguna hiciera
+   * crecer un contador que suma DESPUÉS de fijar la base, cada aparato lo
+   * contaría como pendiente y la nube lo sumaría una vez por aparato. */
+  test('las siembras del arranque no hacen crecer lo pendiente con la base ya fijada', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      var M = window.PM.Maestria, B = window.PM.Badges, S = window.PM.Skins;
+      function siembras() {
+        // lo mismo, y en el mismo orden, que UI.init
+        if (B) B.syncSeen();
+        A.syncSeen();
+        if (M) M.sembrar();
+        try { localStorage.removeItem('pacman-topmundial-rhab-sembrado'); } catch (e) { /* nada */ }
+        if (B && B.sembrarRoles) B.sembrarRoles();
+        if (S) S.syncVistas();
+      }
+      d.en('A');
+      // un aparato con historia: DESATADO de antes, maestrías sin sembrar
+      A.recordFor(['solo', 'hab'], { partidas: 7, fantasmas: 30 });
+      L.add(4000);
+      siembras();
+      Ac.fundir(d.fila());                 // entra: la base queda fijada
+      var antes = JSON.stringify(Ac.pendiente());
+      eq(Ac.pendiente().xp, 0, 'recién fijada, nada pendiente');
+      siembras(); siembras();              // se abre el juego otra vez (y otra)
+      eq(JSON.stringify(Ac.pendiente()), antes, 'las siembras no dejan nada pendiente');
+      var xp = d.nube.xp, lg = JSON.stringify(d.nube.logros);
+      Ac.pushQuiet();
+      eq(d.nube.xp, xp, 'y la nube no se infla');
+      eq(JSON.stringify(d.nube.logros), lg, 'ni sus contadores');
+      // el otro aparato, entrando después, tampoco añade nada al sembrar
+      d.en('B'); siembras(); Ac.fundir(d.fila()); siembras(); Ac.pushQuiet();
+      eq(d.nube.xp, xp, 'B no suma lo sembrado en A');
+    });
+  });
+
   test('comerse fantasmas y frutas alimenta los logros', function () {
     conLogrosLimpios(function (A) {
       partida(1);
@@ -4399,6 +4583,40 @@
         for (var k in guardadas) {
           try { if (guardadas[k] !== null) localStorage.setItem(k, guardadas[k]); } catch (e) { /* nada */ }
         }
+      }
+    });
+  });
+
+  /* 28 sep: antes se limpiaba en el acto y la subida iba por detrás; si
+   * fallaba, lo no subido se perdía para siempre. */
+  test('cerrar sesión espera a que la nube diga que sí; si no, no borra nada', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      // cerrar sesión deja los récords a cero: se guardan para devolverlos
+      var recs = [1, 2, 3, 4].map(function (n) { return G.recordFor(n); });
+      var modos = JSON.stringify(G.recordsModo);
+      try {
+        d.en('A');
+        L.add(5000); A.record('partidas', 7); G.highScore2 = 4321;
+        d.caida = true;
+        var err = 'sin respuesta';
+        Ac.signOut(function (e) { err = e; });
+        ok(err && /SIGUE ABIERTA/.test(err), 'se avisa: ' + err);
+        ok(Ac.logged(), 'la sesión sigue abierta');
+        eq(L.xp(), 5000, 'y lo de aquí no se ha tirado');
+        eq(A.stats().partidas, 7);
+        eq(G.recordFor(2), 4321, 'ni el récord');
+        d.caida = false;
+        err = 'sin respuesta';
+        Ac.signOut(function (e) { err = e; });
+        eq(err, null, 'con la nube de vuelta, se cierra');
+        ok(!Ac.logged(), 'ya sin sesión');
+        eq(d.nube.xp, 5000, 'con lo suyo ya en la nube');
+        eq(d.nube.logros.partidas, 7);
+        eq(L.xp(), 0, 'y el navegador limpio');
+      } finally {
+        recs.forEach(function (v, i) { G.setRecordFor(i + 1, v); });
+        G.recordsModo = JSON.parse(modos);
+        G.saveHighScores();
       }
     });
   });
@@ -5101,6 +5319,91 @@
       Ac.token = origTok;
       Ac.user = origUser;
     }
+  });
+
+  /* LA SESIÓN CADUCA A LA HORA (28 sep). Antes solo se renovaba al subir al
+   * TOP: pasada la hora, la cuenta dejaba de sincronizar sin decir nada. */
+  function conSesionDeMentira(fn) {
+    var Ac = window.PM.Account;
+    var g = { user: Ac.user, token: Ac.token, llave: Ac.llaveMem, caduca: Ac.caduca,
+              cb: Ac.cbRestore, ren: Ac.renovando };
+    // la llave guardada de verdad no se toca (fuera de tests.html sí se escribe)
+    var K = CFG.ACCOUNT.KEY, guardada = null;
+    try { guardada = localStorage.getItem(K); localStorage.removeItem(K); } catch (e) { /* nada */ }
+    Ac.user = { id: 'id-s', usuario: 'PEPE', avatar: 'pac' };
+    Ac.token = 'viejo';
+    Ac.llaveMem = 'llave-1';
+    Ac.caduca = 0;
+    Ac.renovando = null;
+    try { fn(Ac); } finally {
+      Ac.user = g.user; Ac.token = g.token; Ac.llaveMem = g.llave;
+      Ac.caduca = g.caduca; Ac.cbRestore = g.cb; Ac.renovando = g.ren;
+      try {
+        if (guardada === null) localStorage.removeItem(K);
+        else localStorage.setItem(K, guardada);
+      } catch (e) { /* nada */ }
+    }
+  }
+
+  test('un 401 renueva la sesión y repite la llamada, una vez', function () {
+    conSesionDeMentira(function (Ac) {
+      var vistas = conRed(function (url, opts) {
+        if (/grant_type=refresh_token/.test(url)) {
+          return respuesta(200, { access_token: 'nuevo', refresh_token: 'llave-2',
+                                  expires_in: 3600, user: { id: 'id-s' } });
+        }
+        if (opts.headers && opts.headers.Authorization === 'Bearer viejo') {
+          return respuesta(401, '{"message":"JWT expired"}');
+        }
+        return respuesta(200, [{ id: 'id-s', xp: 5 }]);
+      }, function () {
+        var fila = 'sin respuesta';
+        Ac.leerFila().then(function (f) { fila = f; });
+        eq(Ac.token, 'nuevo', 'el token se renueva');
+        ok(fila && fila.xp === 5, 'y la lectura se repite con él');
+        ok(Ac.caduca > Date.now(), 'con su caducidad apuntada');
+      });
+      eq(vistas.length, 3, 'la llamada, la renovación y la repetición');
+      eq(JSON.parse(vistas[1].opts.body).refresh_token, 'llave-1', 'con la llave de renovar');
+      eq(vistas[2].opts.headers.Authorization, 'Bearer nuevo');
+
+      // y si el token está a punto de caducar, se renueva ANTES de llamar
+      Ac.token = 'viejo';
+      Ac.caduca = Date.now() + 5000;
+      vistas = conRed(function (url) {
+        if (/grant_type=refresh_token/.test(url)) {
+          return respuesta(200, { access_token: 'otro', expires_in: 3600 });
+        }
+        return respuesta(200, []);
+      }, function () { Ac.leerFila(); });
+      ok(/grant_type=refresh_token/.test(vistas[0].url), 'primero la renovación');
+      eq(vistas[1].opts.headers.Authorization, 'Bearer otro', 'y la llamada ya va con el nuevo');
+      eq(vistas.length, 2, 'sin 401 de por medio');
+    });
+  });
+
+  test('abrir el juego sin red no cierra la sesión; una llave rechazada, sí', function () {
+    conSesionDeMentira(function (Ac) {
+      Ac.user = null; Ac.token = null;
+      var err = 'sin respuesta';
+      conRed(function () { return roto(new Error('sin red')); }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(err, 'SIN CONEXIÓN', 'sin red');
+      eq(Ac.llaveRenovar(), 'llave-1', 'la llave se queda para volver a probar');
+      conRed(function () { return respuesta(503, 'mantenimiento'); }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(Ac.llaveRenovar(), 'llave-1', 'un servidor caído tampoco la tira');
+      conRed(function () {
+        return respuesta(400, { error: 'invalid_grant', error_description: 'Invalid Refresh Token' });
+      }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(err, 'SESIÓN CADUCADA', 'si el servidor la rechaza, se dice');
+      eq(Ac.llaveRenovar(), null, 'y entonces sí se cierra');
+      ok(!Ac.logged());
+    });
   });
 
   /* Lo importante de entrar en una cuenta: que NUNCA cueste progreso.

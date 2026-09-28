@@ -140,23 +140,6 @@
     return 'NO SE PUDO: ' + (msg || 'ERROR');
   }
 
-  function post(path, body, token) {
-    return fetch(base(path), {
-      method: 'POST',
-      headers: authHeaders(token),
-      body: JSON.stringify(body)
-    }).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (d) {
-        if (!res.ok) {
-          var e = new Error(traduce(d.msg || d.error_description || d.error,
-                                    d.error_code));
-          throw e;
-        }
-        return d;
-      });
-    });
-  }
-
   /* ¿La respuesta se queja de una columna que este Supabase todavía no
    * tiene? Devuelve qué bandera hay que levantar, o null. Cada tanda de
    * columnas nuevas lleva la suya: un proyecto puede tener las de trío y
@@ -187,7 +170,7 @@
    * apunta y se repite la consulta sin ella. */
   function pedirPerfiles(self, hacerUrl, fallo, cb) {
     function intenta() {
-      fetch(hacerUrl(self.perfilCols()), { headers: authHeaders(self.token) })
+      self.pedir(hacerUrl(self.perfilCols()), { headers: authHeaders(self.token) })
         .then(function (res) {
           return res.text().then(function (t) {
             if (!res.ok) {
@@ -258,10 +241,140 @@
     return o;
   }
 
+  /* ---------- LA SESIÓN SE RENUEVA SOLA (28 sep 2026) ----------
+   * El token de Supabase dura una hora y solo se renovaba al subir al TOP:
+   * pasada la hora, la sincronización del perfil, la comprobación de cada
+   * dos minutos, la partida a medias y las repeticiones fallaban en silencio
+   * y lo jugado no llegaba a la cuenta. Ahora se renueva ANTES de caducar
+   * (un reloj) y, por si acaso, ante cualquier 401 se renueva y se repite la
+   * llamada una vez (Account.pedir).
+   *
+   * Y abrir el juego SIN RED ya no cierra la sesión: solo se cierra si el
+   * servidor dice que la llave de renovar ya no vale. Sin red se sigue sin
+   * sesión un rato y se vuelve a probar (al volver la red y cada poco). */
+  var RENUEVA_ANTES_MS = 5 * 60 * 1000;
+
+  /* Pide un token nuevo con la llave de renovar. Nunca falla: devuelve
+   * { ok, d, invalida } — invalida solo si el SERVIDOR la ha rechazado. */
+  function pedirRefresh(refresh) {
+    return fetch(base('/auth/v1/token?grant_type=refresh_token'), {
+      method: 'POST',
+      headers: authHeaders(null),
+      body: JSON.stringify({ refresh_token: refresh })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (d) {
+        if (res.ok && d && d.access_token) return { ok: true, d: d };
+        var s = res.status;
+        /* 4xx es "esa llave no vale" (caducada, usada, revocada); 408, 429
+         * y 5xx son del camino, y con eso no se tira la sesión de nadie */
+        return { ok: false, invalida: s >= 400 && s < 500 && s !== 408 && s !== 429 };
+      });
+    }).catch(function () { return { ok: false, invalida: false }; });
+  }
+
   var Account = {
     user: null,        // { id, usuario, avatar }
     token: null,       // access token en memoria (no se guarda)
     onchange: null,    // la UI se engancha aquí
+    caduca: 0,         // cuándo caduca el token (reloj de aquí, ms); 0 = no se sabe
+    relojRenovar: null,
+    renovando: null,   // la renovación en marcha (una sola a la vez)
+    reintentoSesion: null,
+    esperaSesion: 0,
+
+    /* Deja puesto un token recién dado y programa su renovación */
+    ponerToken: function (d, refresh) {
+      this.token = d.access_token;
+      var seg = Number(d.expires_in) || 3600;
+      this.caduca = Date.now() + seg * 1000;
+      this.llaveMem = d.refresh_token || refresh || null;
+      this.saveSession(d.refresh_token || refresh || null);
+      this.programarRenovar();
+    },
+
+    programarRenovar: function () {
+      var self = this;
+      if (this.relojRenovar) clearTimeout(this.relojRenovar);
+      this.relojRenovar = null;
+      if (window.PM_PRUEBAS || !this.token || !this.caduca) return;
+      var falta = Math.max(10000, this.caduca - Date.now() - RENUEVA_ANTES_MS);
+      this.relojRenovar = setTimeout(function () {
+        self.relojRenovar = null;
+        self.renovar().then(function (ok) {
+          // sin red: se prueba otra vez en un minuto (el token aún vale un rato)
+          if (!ok && self.logged()) {
+            self.relojRenovar = setTimeout(function () { self.renovar(); }, 60000);
+          }
+        });
+      }, falta);
+    },
+
+    /* Renueva el token. Promesa de true/false. Si el servidor dice que la
+     * llave no vale, la sesión se cierra (sin tocar lo de este aparato, que
+     * sigue siendo de la cuenta y sube al volver a entrar). */
+    renovar: function () {
+      var self = this;
+      if (this.renovando) return this.renovando;
+      var refresh = this.llaveRenovar();
+      if (!refresh || !this.configured()) return Promise.resolve(false);
+      var hecho = false;
+      var p = pedirRefresh(refresh).then(function (r) {
+        hecho = true;
+        self.renovando = null;
+        if (r.ok) { self.ponerToken(r.d, refresh); return true; }
+        if (r.invalida) {
+          /* otra pestaña del juego la acaba de renovar (y la vieja ya no
+           * vale): se prueba con la suya en vez de cerrar la sesión */
+          var otra = self.savedSession();
+          if (otra && otra !== refresh) return self.renovar();
+          self.perderSesion();
+        }
+        return false;
+      });
+      // (si ya contestó de un tirón, no queda nada "en marcha")
+      if (!hecho) this.renovando = p;
+      return p;
+    },
+
+    /* La llave de renovar: la guardada. Las pruebas no tocan la de verdad
+     * (savedSession) y pueden dejar una de mentira en memoria. */
+    llaveMem: null,
+    llaveRenovar: function () { return this.savedSession() || this.llaveMem; },
+
+    perderSesion: function () {
+      this.saveSession(null);
+      this.llaveMem = null;
+      this.token = null;
+      this.user = null;
+      this.caduca = 0;
+      if (this.relojRenovar) clearTimeout(this.relojRenovar);
+      this.relojRenovar = null;
+      this.changed();
+    },
+
+    /* Una llamada a Supabase CON LA SESIÓN: si el token está a punto de
+     * caducar se renueva antes, y si aun así contesta 401 se renueva y se
+     * repite una vez. Devuelve la promesa de fetch. Si no hay que renovar,
+     * el fetch sale en el acto (las pruebas lo miran sin esperar). */
+    pedir: function (url, opts) {
+      var self = this;
+      opts = opts || {};
+      function una() {
+        var o = {}, k;
+        for (k in opts) if (opts.hasOwnProperty(k)) o[k] = opts[k];
+        var h = {}, hh = opts.headers || authHeaders(self.token);
+        for (k in hh) if (hh.hasOwnProperty(k)) h[k] = hh[k];
+        if (self.token) h['Authorization'] = 'Bearer ' + self.token;
+        o.headers = h;
+        return fetch(url, o);
+      }
+      var casi = this.token && this.caduca && (this.caduca - Date.now() < 60000);
+      var sale = casi ? this.renovar().then(una) : una();
+      return sale.then(function (res) {
+        if (!res || res.status !== 401 || !self.token) return res;
+        return self.renovar().then(function (ok) { return ok ? una() : res; });
+      });
+    },
 
     configured: function () {
       var c = cfg();
@@ -299,8 +412,7 @@
         cb('LA CUENTA NECESITA CONFIRMACIÓN: AVISA AL ADMINISTRADOR');
         return;
       }
-      this.token = d.access_token;
-      this.saveSession(d.refresh_token || null);
+      this.ponerToken(d, null);
       this.user = { id: (d.user && d.user.id) || '', usuario: cleanUser(usuario),
                     avatar: 'pac' };
       this.sync(function (err) {
@@ -399,80 +511,135 @@
       });
     },
 
-    /* Al arrancar: si había sesión guardada, se renueva sin molestar */
+    /* Al arrancar: si había sesión guardada, se renueva sin molestar. Sin
+     * red NO se tira: la llave se queda y se vuelve a probar (al volver la
+     * red y cada poco); solo se cierra si el servidor la rechaza. cb(err) */
     restore: function (cb) {
       var self = this;
-      var refresh = this.savedSession();
+      var refresh = this.llaveRenovar();
       if (!refresh || !this.configured()) { if (cb) cb('SIN SESIÓN'); return; }
-      post('/auth/v1/token?grant_type=refresh_token', { refresh_token: refresh })
-        .then(function (d) {
-          if (!d || !d.access_token) throw new Error('SESIÓN CADUCADA');
-          self.token = d.access_token;
-          self.saveSession(d.refresh_token || refresh);
-          self.user = { id: (d.user && d.user.id) || '', usuario: '', avatar: 'pac' };
+      if (cb && !this.cbRestore) this.cbRestore = cb;    // para cuando vuelva la red
+      pedirRefresh(refresh).then(function (r) {
+        if (r.ok) {
+          self.esperaSesion = 0;
+          self.ponerToken(r.d, refresh);
+          self.user = { id: (r.d.user && r.d.user.id) || '', usuario: '', avatar: 'pac' };
           self.sync(function (err) {
             self.changed();
             if (cb) cb(err || null);
           });
-        })
-        .catch(function () {
-          self.saveSession(null);
-          self.token = null;
-          self.user = null;
+          return;
+        }
+        if (r.invalida) {
+          var otra = self.savedSession();
+          if (otra && otra !== refresh) { self.restore(cb); return; }   // otra pestaña
+          self.perderSesion();
           if (cb) cb('SESIÓN CADUCADA');
-        });
+          return;
+        }
+        self.reintentarSesion();
+        if (cb) cb('SIN CONEXIÓN');
+      });
     },
 
+    /* Sin red al abrir: se vuelve a probar con calma (30 s, 1 min, 2... hasta
+     * 5 min) y en cuanto el navegador diga que vuelve la red. */
+    reintentarSesion: function () {
+      var self = this;
+      if (window.PM_PRUEBAS || this.reintentoSesion) return;
+      this.esperaSesion = Math.min(300000, (this.esperaSesion || 15000) * 2);
+      function otraVez() {
+        if (self.reintentoSesion) clearTimeout(self.reintentoSesion);
+        self.reintentoSesion = null;
+        if (window.removeEventListener) window.removeEventListener('online', otraVez);
+        if (self.logged() || !self.llaveRenovar()) return;
+        var alFin = self.cbRestore;
+        // lo de después de entrar (subir repeticiones...) solo si esta vez entra
+        self.restore(function (err) { if (!err && alFin) alFin(null); });
+      }
+      this.reintentoSesion = setTimeout(otraVez, this.esperaSesion);
+      if (window.addEventListener) window.addEventListener('online', otraVez);
+    },
+
+    /* CERRAR SESIÓN. Lo de aquí sube ANTES de irse y el navegador queda como
+     * nuevo. Si no, el siguiente que entrara en SU cuenta desde aquí se
+     * llevaba el progreso del anterior: así acabaron las cinco cuentas con el
+     * mismo récord de dúo.
+     *
+     * Desde el 28 sep se ESPERA a que la nube diga que sí antes de limpiar
+     * nada: antes se limpiaba en el acto y, si la subida fallaba (sin red, la
+     * sesión caducada), lo no subido se perdía para siempre. Si falla, la
+     * sesión sigue abierta y cb(err) lo dice. */
     signOut: function (cb) {
       var self = this;
-      var token = this.token;
-      /* Lo de aquí sube antes de irse (la fila se arma ya, así que limpiar
-       * justo después no la toca) y el navegador queda como nuevo. Si no, el
-       * siguiente que entrara en SU cuenta desde aquí se llevaba el progreso
-       * del anterior: así acabaron las cinco cuentas con el mismo récord de
-       * dúo. */
-      var subida = this.logged() ? this.subirAlSalir() : Promise.resolve();
+      if (!this.logged()) {
+        this.cerrarYa(null);
+        if (cb) cb(null);
+        return;
+      }
+      if (this.saliendo) { if (cb) cb('YA SE ESTÁ CERRANDO LA SESIÓN'); return; }
+      this.saliendo = true;
+      this.enCola(function () { return self.subirAlSalir(); }).then(function (bien) {
+        self.saliendo = false;
+        if (!bien) {
+          if (cb) cb('NO SE PUDO GUARDAR TU PROGRESO EN LA CUENTA: LA SESIÓN SIGUE ABIERTA. PRUEBA OTRA VEZ CON CONEXIÓN');
+          return;
+        }
+        self.cerrarYa(self.token);
+        if (cb) cb(null);
+      }, function () {
+        self.saliendo = false;
+        if (cb) cb('NO SE PUDO GUARDAR TU PROGRESO EN LA CUENTA: LA SESIÓN SIGUE ABIERTA');
+      });
+    },
+    saliendo: false,
+
+    /* Limpia este navegador y cierra la sesión en el servidor (ya subido) */
+    cerrarYa: function (token) {
       this.token = null;
       this.user = null;
+      this.caduca = 0;
+      this.llaveMem = null;
+      if (this.relojRenovar) clearTimeout(this.relojRenovar);
+      this.relojRenovar = null;
       this.saveSession(null);
       this.limpiarLocal();
       this.changed();
-      /* la sesión se cierra en el servidor DESPUÉS de subir, que la subida
-       * todavía va con ella */
       if (token) {
-        subida.then(function () {
-          return fetch(base('/auth/v1/logout'), {
-            method: 'POST', headers: authHeaders(token)
-          });
-        }).catch(function () { /* da igual: la sesión local ya se fue */ });
+        fetch(base('/auth/v1/logout'), { method: 'POST', headers: authHeaders(token) })
+          .catch(function () { /* da igual: la sesión local ya se fue */ });
       }
-      if (cb) cb(null);
     },
 
-    /* La última subida antes de cerrar sesión. La fila se arma YA (justo
-     * después se limpia este navegador) y lo pendiente se suma a lo que haya
-     * en la nube como en cualquier otra subida (ver BASE_KEY). */
+    /* La última subida antes de cerrar sesión: lo pendiente se suma a lo que
+     * haya en la nube como en cualquier otra subida (ver BASE_KEY). Promesa
+     * de true solo si la nube ha dicho que sí. */
     subirAlSalir: function () {
-      var token = this.token, id = this.user.id;
+      if (!this.logged()) return Promise.resolve(false);
+      var id = this.user.id;
       var row = this.localState();
       row.id = id;
       row.usuario = this.user.usuario;
       var pend = this.pendiente();
       var self = this;
-      var leer = !pend ? Promise.resolve(null) :
-        fetch(base('/rest/v1/' + AC.TABLE + '?select=xp,logros&id=eq.' + id),
-              { headers: authHeaders(token) })
-          .then(function (res) { return res.ok ? res.json() : null; })
-          .then(function (rows) { return (rows && rows[0]) || null; })
-          .catch(function () { return null; });
-      return leer.then(function (fila) {
+      function sube(fila) {
         if (fila) self.sumarANube(row, fila, pend);
-        var h = authHeaders(token);
+        var h = authHeaders(self.token);
         h['Prefer'] = 'resolution=merge-duplicates,return=minimal';
-        return fetch(base('/rest/v1/' + AC.TABLE), {
+        return self.pedir(base('/rest/v1/' + AC.TABLE), {
           method: 'POST', headers: h, body: JSON.stringify(row)
         });
-      }).catch(function () { /* nada */ });
+      }
+      // sin base no hay nada que sumar: se sube tal cual, sin leer antes
+      var va = !pend ? sube(null) :
+        this.pedir(base('/rest/v1/' + AC.TABLE + '?select=xp,logros&id=eq.' + id))
+          .then(function (res) {
+            if (!res.ok) throw new Error('NO SE PUDO LEER LA CUENTA');
+            return res.json();
+          })
+          .then(function (rows) { return sube((rows && rows[0]) || null); });
+      return va.then(function (res) { return !!(res && res.ok); })
+        .catch(function () { return false; });
     },
 
     /* Todo lo que es de la CUENTA y vive también en este navegador: nivel,
@@ -503,6 +670,7 @@
       }
       if (window.PM.Achievements) window.PM.Achievements.reset();
       if (window.PM.Guardado) {
+        if (window.PM.Guardado.olvidarLocal) window.PM.Guardado.olvidarLocal();
         window.PM.Guardado.ultimo = -1;
         window.PM.Guardado.ultimoNube = -1;
         window.PM.Guardado.deNube = null;
@@ -647,7 +815,7 @@
     /* La fila de la cuenta en la nube, o null si aún no tiene */
     leerFila: function () {
       var url = base('/rest/v1/' + AC.TABLE + '?select=*&id=eq.' + this.user.id);
-      return fetch(url, { headers: authHeaders(this.token) })
+      return this.pedir(url)
         .then(function (res) {
           if (!res.ok) throw new Error('NO SE PUDO SINCRONIZAR');
           return res.json();
@@ -862,7 +1030,7 @@
       if (ajustar) ajustar(row);
       var h = authHeaders(this.token);
       h['Prefer'] = 'resolution=merge-duplicates,return=minimal';
-      return fetch(base('/rest/v1/' + AC.TABLE), {
+      return this.pedir(base('/rest/v1/' + AC.TABLE), {
         method: 'POST', headers: h, body: JSON.stringify(row)
       }).then(function (res) {
         if (!res.ok) {
@@ -943,20 +1111,39 @@
      * cb(err): 'SIN COLUMNA' cuando el proyecto todavía no tiene dónde
      * guardarla (falta correr supabase/cuentas.sql); quien llama deja de
      * insistir y la partida se queda guardada en este navegador. */
-    guardarPartida: function (texto, cb) {
+    guardarPartida: function (texto, cb, alIrse) {
       if (!this.logged()) { if (cb) cb('SIN SESIÓN'); return; }
+      /* la página de pruebas no escribe en la cuenta de nadie (sus sesiones
+       * son de mentira, y la nube es la de verdad) */
+      if (window.PM_PRUEBAS) { if (cb) cb('NO SE PUDO'); return; }
       var url = base('/rest/v1/' + AC.TABLE + '?id=eq.' + this.user.id);
       var h = authHeaders(this.token);
       h['Prefer'] = 'return=minimal';
-      fetch(url, {
-        method: 'PATCH', headers: h,
-        body: JSON.stringify({ partida: texto || null })
-      }).then(function (res) {
+      var cuerpo = JSON.stringify({ partida: texto || null });
+      var o = { method: 'PATCH', headers: h, body: cuerpo };
+      /* al cerrar la pestaña, que la petición sobreviva a la página (el
+       * navegador solo lo admite con cuerpos pequeños) */
+      if (alIrse && cuerpo.length < 60000) o.keepalive = true;
+      this.pedir(url, o).then(function (res) {
         if (res.ok) { if (cb) cb(null); return; }
         return res.text().then(function (t) {
           if (cb) cb(/partida/i.test(t) ? 'SIN COLUMNA' : 'NO SE PUDO');
         });
       }).catch(function () { if (cb) cb('NO SE PUDO'); });
+    },
+
+    /* La partida a medias que hay AHORA en la nube (texto o null). La mira
+     * Guardado antes de retomar una: si se cerró en otro aparato, no se
+     * sigue. cb(err, texto) */
+    leerPartida: function (cb) {
+      if (!this.logged()) { cb('SIN SESIÓN', null); return; }
+      this.pedir(base('/rest/v1/' + AC.TABLE + '?select=partida&id=eq.' + this.user.id))
+        .then(function (res) {
+          if (!res.ok) throw new Error('no');
+          return res.json();
+        })
+        .then(function (rows) { cb(null, (rows && rows[0] && rows[0].partida) || null); })
+        .catch(function () { cb('NO SE PUDO', null); });
     },
 
     /* ---------- el correo de recuperación ----------
@@ -968,7 +1155,7 @@
      * recuperar es lo mismo que no tener ninguno. */
     miCorreo: function (cb) {
       if (!this.logged()) { cb('SIN SESIÓN', null); return; }
-      fetch(base('/auth/v1/user'), { headers: authHeaders(this.token) })
+      this.pedir(base('/auth/v1/user'))
         .then(function (res) {
           if (!res.ok) throw new Error('no');
           return res.json();
@@ -990,7 +1177,7 @@
       if (!c) { cb('ESCRIBE UN CORREO'); return; }
       if (!mailOk(c)) { cb('ESE CORREO NO TIENE BUENA PINTA'); return; }
       if (mailInterno(c)) { cb('ESE CORREO NO VALE'); return; }
-      fetch(base('/auth/v1/user'), {
+      this.pedir(base('/auth/v1/user'), {
         method: 'PUT',
         headers: authHeaders(this.token),
         body: JSON.stringify({ email: c })
@@ -1015,7 +1202,7 @@
         cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES');
         return;
       }
-      fetch(base('/auth/v1/user'), {
+      this.pedir(base('/auth/v1/user'), {
         method: 'PUT',
         headers: authHeaders(this.token),
         body: JSON.stringify({ password: passUp(pass) })
@@ -1052,8 +1239,8 @@
           window.location.pathname + window.location.search);
       } catch (e) { /* navegador antiguo: se queda el ancla y no pasa nada */ }
 
-      this.token = access;
-      this.saveSession(refresh || null);
+      this.ponerToken({ access_token: access, refresh_token: refresh || null,
+                        expires_in: Number(lee('expires_in')) || 3600 }, null);
       /* Del enlace no viene quién es: se pregunta. El nombre del juego lo
        * rellena sync() con el perfil, como en restore(). */
       fetch(base('/auth/v1/user'), { headers: authHeaders(access) })
@@ -1125,7 +1312,7 @@
       if (!this.logged()) { cb('NECESITAS UNA CUENTA', null); return; }
       var url = base('/rest/v1/' + AC.FRIENDS_TABLE +
                      '?select=amigo&order=amigo.asc');
-      fetch(url, { headers: authHeaders(this.token) })
+      this.pedir(url)
         .then(function (res) { return res.json(); })
         .then(function (rows) {
           var out = [];
@@ -1142,7 +1329,7 @@
       if (n === this.name()) { cb('ESE ERES TÚ'); return; }
       var h = authHeaders(this.token);
       h['Prefer'] = 'return=minimal';
-      fetch(base('/rest/v1/' + AC.FRIENDS_TABLE), {
+      this.pedir(base('/rest/v1/' + AC.FRIENDS_TABLE), {
         method: 'POST', headers: h,
         body: JSON.stringify({ de: this.user.id, amigo: n })
       }).then(function (res) {
@@ -1157,7 +1344,7 @@
     removeFriend: function (nombre, cb) {
       var n = cleanUser(nombre);
       if (!this.logged()) { if (cb) cb('NECESITAS UNA CUENTA'); return; }
-      fetch(base('/rest/v1/' + AC.FRIENDS_TABLE +
+      this.pedir(base('/rest/v1/' + AC.FRIENDS_TABLE +
                  '?de=eq.' + this.user.id + '&amigo=eq.' + encodeURIComponent(n)), {
         method: 'DELETE', headers: authHeaders(this.token)
       }).then(function () { if (cb) cb(null); })
