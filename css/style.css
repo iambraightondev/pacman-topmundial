@@ -8557,6 +8557,20 @@ html.tactil .btn { min-height: 44px; }
 html.tactil .btn.ol-ayuda, html.tactil .rgs-ayuda-b { position: relative; min-height: 0; }
 html.tactil .btn.ol-ayuda::after, html.tactil .rgs-ayuda-b::after { content: ""; position: absolute; inset: -9px; }
 
+/* ---- PORTADA: tu nombre y el DAILY dicen lo que son ---- */
+/* la etiqueta del nombre sale mientras sigas siendo "J1" */
+.marq .menu-player .nick-row-menu.sin-nombre .nick-label { display: block; }
+.daily-que {
+  display: block;
+  align-self: center;
+  text-align: center;
+  font-weight: normal;
+  font-size: var(--fs-s);
+  letter-spacing: 1px;
+  line-height: 1.4;
+  color: #b8b9e0;
+}
+
 /* ---- PORTADA EN EL MÓVIL (y la tableta en vertical): JUGAR a la vista
  * sin desplazar. Los modos y JUGAR suben justo detrás del logo; tu ficha y
  * el DAILY pasan debajo. El póster mide lo que deja la pantalla (svh: la

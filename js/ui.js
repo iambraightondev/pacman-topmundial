@@ -1443,6 +1443,13 @@
       titulo.className = 'daily-titulo';
       titulo.textContent = 'DAILY';
       b.appendChild(titulo);
+      b.setAttribute('aria-label', 'Daily: un reto nuevo cada día. Abrir la semana');
+
+      /* qué es, en un renglón: "DAILY" solo no lo decía (28 sep) */
+      var que = document.createElement('span');
+      que.className = 'daily-que';
+      que.textContent = 'UN RETO NUEVO CADA DÍA';
+      b.appendChild(que);
 
       /* Al señalarlo, en vez de un recuadro, una línea que recorre su borde */
       this.ponRonda(b, 'daily-ronda');
@@ -2823,12 +2830,61 @@
       return 'TU RÉCORD Y TUS TROFEOS DE SIEMPRE';
     },
 
+    /* EL PRIMER JUGAR (28 sep). Quien abre el juego por primera vez juega
+     * como "J1" sin saber que ese hueco era su nombre. Se pregunta UNA vez,
+     * y se puede saltar. Con cuenta o con nombre puesto, nunca. Devuelve true
+     * si ha abierto la pregunta (y JUGAR sigue solo al contestarla). */
+    NOMBRE_PEDIDO_KEY: 'pacman-topmundial-nombre-pedido',
+    pideNombre: function () {
+      var s = window.PM.settings, Ac = window.PM.Account;
+      if (window.PM_PRUEBAS || s.nick1 || (Ac && Ac.logged && Ac.logged())) return false;
+      try {
+        if (localStorage.getItem(this.NOMBRE_PEDIDO_KEY)) return false;
+        localStorage.setItem(this.NOMBRE_PEDIDO_KEY, '1');
+      } catch (e) { return false; }
+      var self = this;
+      function sigue(nombre) {
+        var v = sanitizeNick(nombre || '');
+        if (v) {
+          s.nick1 = v;
+          saveSettings();
+          self.refreshNicks();
+        }
+        self.hidePrompt();
+        self.playPick();
+      }
+      this.showPrompt({
+        title: '¿CÓMO TE LLAMAS?',
+        popup: true,
+        lines: ['ES EL NOMBRE QUE SALE EN TUS PARTIDAS. LO CAMBIAS CUANDO QUIERAS EN LA PORTADA.'],
+        input: { placeholder: 'TU NOMBRE', onAccept: function (v) { sigue(v); } },
+        buttons: [
+          { label: 'JUGAR', primary: true,
+            onClick: function () { sigue(self.promptInput ? self.promptInput.value : ''); } },
+          { label: 'JUGAR COMO J1', hint: 'ESC', keys: ['Escape'], onClick: function () { sigue(''); } }
+        ]
+      });
+      var inp = this.promptInput;
+      if (inp) {
+        inp.setAttribute('aria-label', 'Tu nombre');
+        inp.setAttribute('autocapitalize', 'characters');
+        inp.addEventListener('input', function () {
+          var v = filterNick(inp.value);
+          if (v !== inp.value) inp.value = v;
+        });
+        // en el móvil no: el teclado saldría tapando media pregunta
+        if (!this.touchDevice) { try { inp.focus(); } catch (e) { } }
+      }
+      return true;
+    },
+
     /* JUGAR. Tres modos arrancan de una; los otros dos necesitan que elijas
      * algo antes (qué laberinto o qué sala), así que JUGAR abre eso. */
     playPick: function () {
       var s = window.PM.settings;
       var id = this.modePick || 'clasico';
       this.resumeAudio();
+      if (this.pideNombre()) return;     // el primer JUGAR, una sola vez
       if (id === 'lab') { this.showMazes(); return; }
       if (id === 'online') { this.showOnline(); return; }
       /* DESATADO abre su panel, como LABERINTOS y ONLINE: desde que se puede
@@ -3400,6 +3456,9 @@
         row.appendChild(caja);
         this.nickLook = look;
         this.nickLookInput = input;
+        /* sin nombre puesto, la etiqueta se ve (refreshNicks): un "J1" suelto
+         * no decía que ahí se escribe tu nombre */
+        this.nickRowMenu = row;
         /* el campo mide lo que el nombre: así aspecto y nombre van juntos y
          * centrados, sea el nombre corto o largo */
         input.addEventListener('input', function () { self.ajustarNickPortada(); });
@@ -3493,6 +3552,7 @@
       var Ac = window.PM.Account;
       var fijo = !!(Ac && Ac.logged());
       if (fijo && Ac.name()) s.nick1 = Ac.name();
+      if (this.nickRowMenu) this.nickRowMenu.classList.toggle('sin-nombre', !fijo && !s.nick1);
       for (var k in this.nickInputs) {
         if (!this.nickInputs.hasOwnProperty(k)) continue;
         var list = this.nickInputs[k];
