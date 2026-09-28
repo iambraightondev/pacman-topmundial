@@ -40,6 +40,12 @@
    * invitado (o a un mirón) que el anfitrión sigue ahí (processNetQueue) */
   var DEL_ANFITRION = { snap: 1, gir: 1, evt: 1, mando: 1, svista: 1 };
 
+  /* El 'bye' de un mirón lleva i = -1 (no tiene asiento). Sin mirarlo,
+   * idxOfSender lo tomaba por el asiento por defecto y echaba a un jugador. */
+  function esAdiosDeMiron(d) {
+    return !!d && typeof d.i === 'number' && d.i < 0;
+  }
+
   /* ---------- copias para las fotos de la partida (Game.foto) ----------
    * Todo lo que se fotografía son datos: números, textos, listas y objetos
    * pelados. Se copian a mano y en profundidad porque una foto tiene que
@@ -935,7 +941,9 @@
       if (this.netRole) {
         var mirando = this.isSpec();
         try {
-          if (!traspasado) window.PM.Net.gameSend('bye', { i: this.localIdx });
+          /* el mirón se va sin decir nada: no tiene asiento, y su adiós
+           * (i = -1) se leía como el del asiento por defecto */
+          if (!traspasado && !mirando) window.PM.Net.gameSend('bye', { i: this.localIdx });
         } catch (e) { /* canal cerrado */ }
         // De mirón solo se cierra la sala ajena: la party propia ni se entera.
         if (mirando) window.PM.Net.closeView();
@@ -3879,6 +3887,7 @@
           }
           break;
         case 'bye': {
+          if (esAdiosDeMiron(data)) break;    // un mirón no deja ningún asiento
           var quien = this.idxOfSender(data, sid);
           if (quien !== this.hostIdx) this.playerGone(quien);
           break;
@@ -4190,11 +4199,15 @@
         // el anfitrión se va y deja el mando (ver pasarElMando)
         case 'mando': this.recibirMando(data); break;
         case 'bye': {
-          if (this.isSpec()) { this.netFail('SE ACABÓ LA PARTIDA'); break; }
-          // si se va el anfitrión se acabó; si se va otro invitado, sigue
+          /* si se va el anfitrión se acabó; si se va otro invitado, sigue, y
+           * lo de un mirón no le importa a nadie. Al MIRÓN lo echaba
+           * cualquier adiós, fuera de quien fuera (28 sep). */
+          if (esAdiosDeMiron(data)) break;
           var i = this.idxOfSender(data, sid);
-          if (i === this.hostIdx) this.peerLeft();
-          else this.playerGone(i);
+          if (i === this.hostIdx) {
+            if (this.isSpec()) this.netFail('SE ACABÓ LA PARTIDA');
+            else this.peerLeft();
+          } else this.playerGone(i);
           break;
         }
       }

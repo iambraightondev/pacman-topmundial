@@ -2796,6 +2796,33 @@
     } finally { G.netNotice = null; G.toMenu(); }
   });
 
+  /* 28 sep: al mirón lo echaba el adiós de cualquiera, y el adiós de un
+   * mirón (i = -1) se leía como el del asiento por defecto: echaba a un
+   * jugador de verdad. */
+  test('los adioses de mirones e invitados no echan a quien no toca', function () {
+    G.newGame({ players: 3, net: 'spec', localIdx: -1, names: ['UNO', 'DOS', 'TRES'] });
+    G.state = 'PLAYING';
+    try {
+      G.guestMsg('bye', { i: 2 }, 'invitado');
+      ok(!G.netNotice, 'se va un invitado: el mirón sigue viendo');
+      ok(G.pacs[2].out, 'y lo ve fuera');
+      G.guestMsg('bye', { i: -1 }, 'otromiron');
+      ok(!G.netNotice, 'se va otro mirón: tampoco');
+      G.guestMsg('bye', { i: 0 }, 'anfitrion');
+      ok(G.netNotice, 'se va el anfitrión: ahí sí se acaba');
+    } finally { G.netNotice = null; G.toMenu(); }
+    partida(2, 'host');
+    try {
+      G.hostMsg('bye', { i: -1 }, 'miron');
+      ok(!G.pacs[1].out, 'el anfitrión no echa al invitado por un mirón');
+    } finally { G.toMenu(); }
+    partida(2, 'guest');
+    try {
+      G.guestMsg('bye', { i: -1 }, 'miron');
+      ok(!G.pacs[1].out && !G.netNotice, 'ni el invitado se echa a sí mismo');
+    } finally { G.netNotice = null; G.toMenu(); }
+  });
+
   /* 28 sep: si el anfitrión se caía SIN despedirse, al invitado le calmaba el
    * vigilante cualquier mensaje: el 'pos' de otro invitado o el latido de un
    * mirón. Se quedaba congelado para siempre y sin aviso. */
