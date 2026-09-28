@@ -1569,7 +1569,8 @@
       for (var i = 0; i < this.dailyTiles.length; i++) {
         var t = this.dailyTiles[i];
         var e = this.dailyEstado(D, est, i);
-        t.el.className = 'daily-tile ' + e + (i === hoy ? ' es-hoy' : '');
+        t.el.className = 'daily-tile ' + e + (i === hoy ? ' es-hoy' : '') +
+          (est.b && est.b[i] && !est.h[i] ? ' basico' : '');   // solo el básico
         // sin recuadro: el de hoy se distingue por el color de sus letras
         t.el.style.color = (i === hoy && !est.h[i]) ? this.dailyColor(i) : '';
         if (t.estado !== e) { this.pintarFantasmaDaily(t.cv, i, e); t.estado = e; }
@@ -1637,6 +1638,17 @@
       cab.appendChild(this.dailyRacha);
       o.appendChild(cab);
 
+      /* EL BÁSICO (29 sep): el de todos los días, el que lleva la racha, con
+       * su barra de puntos del día, la semana de básicos y el comodín. Lo
+       * rellena refreshDailyPanel. Debajo, los DUROS como siempre. */
+      this.dailyBasico = document.createElement('div');
+      this.dailyBasico.className = 'daily-basico';
+      o.appendChild(this.dailyBasico);
+      var duroCab = document.createElement('div');
+      duroCab.className = 'daily-duro-cab';
+      duroCab.innerHTML = '<b>DURO</b> EL RETO DE CADA DÍA · PAGA ADEMÁS DEL BÁSICO';
+      o.appendChild(duroCab);
+
       /* las siete casillas; en pantallas estrechas se desplazan de lado */
       this.dailyScroll = document.createElement('div');
       this.dailyScroll.className = 'daily-scroll';
@@ -1658,8 +1670,9 @@
 
       var regla = document.createElement('div');
       regla.className = 'note daily-regla';
-      regla.textContent = 'UNO POR DÍA, JUGANDO A LO QUE SEA · SOLO CUENTA EL DE HOY: ' +
-        'EL DE AYER YA PASÓ Y EL DE MAÑANA AÚN NO ESTÁ · LA RACHA SE ROMPE EL DÍA QUE NO CUMPLAS EL TUYO';
+      regla.textContent = 'SOLO CUENTA EL DE HOY · EL BÁSICO LLEVA LA RACHA Y EL DURO LO ' +
+        'INCLUYE · LA SEMANA PIDE LOS 7 DUROS · CADA ' + CFG.DAILY.COMODIN_CADA +
+        ' DÍAS DE RACHA, UN COMODÍN (MÁXIMO UNO) SALVA UN DÍA SIN BÁSICO, SIN PAGARLO';
       o.appendChild(regla);
 
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
@@ -1720,6 +1733,8 @@
           'DÍA ' + hito.dias + ' +' + hito.monedas));
       }
 
+      this.pintarBasicoDaily(D, est);
+
       this.dailyList.innerHTML = '';
       this.dailyHoyCard = null;
       for (var i = 0; i < CFG.DAILY.DIAS; i++) {
@@ -1777,7 +1792,7 @@
       var total = CFG.DAILY.DIAS * TC.POR_RETO + TC.POR_SEMANA;
       var cobrado = hechos * TC.POR_RETO + (est.sem ? TC.POR_SEMANA : 0);
       this.dailyBotinCab.innerHTML = '';
-      this.dailyBotinCab.appendChild(mk('span', null, 'BOTÍN DE LA SEMANA'));
+      this.dailyBotinCab.appendChild(mk('span', null, 'BOTÍN DE LOS DUROS'));
       var cuenta = mk('span');
       cuenta.appendChild(mk('b', null, String(cobrado)));
       cuenta.appendChild(document.createTextNode(' DE ' + total + ' MONEDAS · ' +
@@ -1817,6 +1832,80 @@
         cofre.textContent = 'SEMANA +' + TC.POR_SEMANA;
       }
       this.dailySlots.appendChild(cofre);
+    },
+
+    /* La franja del BÁSICO en la cartilla: qué pide, cuántos puntos van hoy,
+     * lo que paga, la semana de básicos (cumplido, salvado por el comodín,
+     * perdido) y el comodín, guardado o cuántos días faltan para el
+     * siguiente. */
+    pintarBasicoDaily: function (D, est) {
+      var o = this.dailyBasico;
+      if (!o || !D.progresoBasico) return;
+      var CD = CFG.DAILY, S = window.PM.Stats;
+      var miles = function (n) { return S && S.miles ? S.miles(n) : String(n); };
+      var mk = function (tag, cls, txt) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (txt != null) e.textContent = txt;
+        return e;
+      };
+      var hoy = D.diaSemana();
+      var p = D.progresoBasico(hoy, est);
+      o.className = 'daily-basico' + (p.hecho ? ' hecho' : '');
+      o.innerHTML = '';
+
+      var cab = mk('div', 'db-cab');
+      cab.appendChild(mk('span', 'db-tag', 'BÁSICO'));
+      cab.appendChild(mk('span', 'db-lema', 'LLEVA LA RACHA'));
+      o.appendChild(cab);
+
+      var main = mk('div', 'db-main');
+      main.appendChild(mk('div', 'db-desc', (p.hecho ? '✓ ' : '') + p.reto.desc));
+      var fila = mk('div', 'db-fila');
+      var barra = mk('span', 'daily-bar');
+      var fill = mk('span', 'daily-fill');
+      fill.style.width = Math.round(p.pct * 100) + '%';
+      barra.appendChild(fill);
+      fila.appendChild(barra);
+      fila.appendChild(mk('span', 'db-val', miles(p.valor) + ' / ' + miles(p.meta)));
+      main.appendChild(fila);
+      o.appendChild(main);
+
+      var premio = mk('div', 'db-premio');
+      var mcv = document.createElement('canvas');
+      mcv.width = 24; mcv.height = 24;
+      this.pintarMoneda(mcv);
+      premio.appendChild(mcv);
+      premio.appendChild(mk('span', null, '+' + CD.BASICO_MONEDAS));
+      premio.appendChild(mk('small', null, '+' + CD.BASICO_XP + ' EXP'));
+      if (p.hecho) premio.appendChild(mk('b', null, 'COBRADO'));
+      o.appendChild(premio);
+
+      /* la semana de básicos: una casilla por día */
+      var sem = mk('div', 'db-semana');
+      for (var i = 0; i < CD.DIAS; i++) {
+        var e = est.b[i] ? 'ok' : D.salvado(i, est) ? 'salvado'
+          : i === hoy ? 'hoy' : i < hoy ? 'perdido' : 'futuro';
+        var c = mk('span', 'db-dia ' + e);
+        c.appendChild(mk('i', null, e === 'ok' ? '✓' : e === 'salvado' ? 'C' : ''));
+        c.appendChild(mk('small', null, CD.DIA_CORTO[i]));
+        c.title = CD.DIA_NOMBRE[i] + (e === 'ok' ? ': CUMPLIDO' : e === 'salvado'
+          ? ': LO SALVÓ EL COMODÍN' : e === 'perdido' ? ': SE PASÓ' : '');
+        sem.appendChild(c);
+      }
+      o.appendChild(sem);
+
+      /* el comodín: guardado, o cuántos días de racha faltan */
+      var tiene = D.tieneComodin(est);
+      var com = mk('div', 'db-comodin' + (tiene ? ' on' : ''));
+      com.appendChild(mk('span', 'db-carta', 'C'));
+      var txt = mk('span', 'db-com-txt');
+      txt.appendChild(mk('b', null, 'COMODÍN'));
+      var falta = CD.COMODIN_CADA - ((est.racha || 0) % CD.COMODIN_CADA);
+      txt.appendChild(mk('small', null, tiene ? 'GUARDADO · SALVA UN DÍA'
+        : ('EN ' + falta + (falta === 1 ? ' DÍA' : ' DÍAS') + ' DE RACHA')));
+      com.appendChild(txt);
+      o.appendChild(com);
     },
 
     /* ------------------------------------------------------
@@ -4642,7 +4731,8 @@
       }).join(', ');
       gana.textContent = 'SE GANAN JUGANDO: ' + TC.POR_PARTIDA + ' POR PARTIDA DE AL MENOS UN MINUTO + ' +
         TC.POR_MIL + ' POR CADA 1.000 PUNTOS (HASTA ' + TC.TOPE_PARTIDA + ') · ' +
-        TC.POR_RETO + ' POR CADA RETO DEL DAILY · ' + TC.POR_SEMANA + ' POR LA SEMANA ENTERA · ' +
+        CFG.DAILY.BASICO_MONEDAS + ' POR EL BÁSICO DEL DAILY Y ' + TC.POR_RETO + ' POR EL DURO · ' +
+        TC.POR_SEMANA + ' POR LA SEMANA ENTERA · ' +
         'Y UN PREMIO EN CADA ESCALÓN DE RACHA (' + racha + ')';
       o.appendChild(gana);
 
@@ -5473,7 +5563,8 @@
       var r1 = document.createElement('span');
       r1.textContent = 'TU PARTIDA MEDIA TE DA +' + this.tiendaPorPartida();
       var r2 = document.createElement('span');
-      r2.textContent = 'UNA SEMANA ENTERA DEL DAILY, +' + (TC.POR_RETO * 7 + TC.POR_SEMANA);
+      r2.textContent = 'UNA SEMANA ENTERA DEL DAILY, +' +
+        ((TC.POR_RETO + CFG.DAILY.BASICO_MONEDAS) * 7 + TC.POR_SEMANA);
       this.tiendaRitmo.appendChild(r1);
       this.tiendaRitmo.appendChild(r2);
       if (this.tiendaRegalo) {

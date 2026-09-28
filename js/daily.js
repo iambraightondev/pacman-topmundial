@@ -51,6 +51,21 @@
  * hay nada que contar dos veces ni un gancho nuevo por el juego.
  * Lo que cambia es el alcance: aquí los contadores son DEL DÍA (o
  * de una partida, según el tipo), no de toda la vida.
+ *
+ * DOS NIVELES Y UN COMODÍN (29 sep 2026)
+ * Con un solo reto, la racha solo la mantenían los buenos: los de
+ * UNA partida ("20.000 puntos en una partida") se la rompían a
+ * quien había sumado cincuenta mil en el día. Ahora cada día hay:
+ *   - el BÁSICO, siempre el mismo: sumar CFG.DAILY.BASICO_PUNTOS
+ *     entre todas las partidas del día. ES EL QUE LLEVA LA RACHA.
+ *   - el DURO, el de la baraja de la semana, como siempre. Paga
+ *     ADEMÁS del básico, y la semana completa sigue pidiendo los
+ *     siete duros (dailySemana, el cofre de PLATA).
+ * Cumplir el duro da el básico por hecho si aún no lo estaba: quien
+ * hace el difícil no pierde la racha por no llegar a los puntos.
+ * Y el COMODÍN: uno por cada siete días de racha, como mucho uno
+ * guardado; el primer día que acaba sin básico se gasta solo y la
+ * racha no se rompe (ese día no paga nada ni recupera nada).
  * ============================================================ */
 (function () {
   'use strict';
@@ -64,6 +79,16 @@
   function fechaLocal(d) {
     return d.getFullYear() + '-' + dos(d.getMonth() + 1) + '-' +
       dos(d.getDate());
+  }
+
+  /* El día de al lado de una fecha 'AAAA-MM-DD' (n = +1 mañana, -1 ayer).
+   * Con Date de calendario, no sumando milisegundos: un cambio de hora
+   * haría que un "día" de 23 horas se quedara en el mismo. */
+  function otroDia(fecha, n) {
+    var p = String(fecha).split('-');
+    var d = new Date(+p[0], (+p[1]) - 1, +p[2]);
+    d.setDate(d.getDate() + n);
+    return fechaLocal(d);
   }
 
   /* Revoltijo de un texto (FNV-1a). El mismo de js/reto.js, que ya servía
@@ -161,16 +186,36 @@
       return this.retos()[i] || null;
     },
 
+    /* El BÁSICO: el mismo todos los días. Tiene forma de reto para que el
+     * aviso en partida y la pantalla lo traten como a los demás. */
+    basico: function () {
+      return { id: 'd_basico', desc: D.BASICO_DESC, stat: 'puntosMax',
+               goal: D.BASICO_PUNTOS, basico: true, titulo: 'BÁSICO CUMPLIDO' };
+    },
+
     /* ---------- lo guardado ----------
-     * { w: semana, p: [7] progreso, h: [7] cumplidos,
-     *   racha: días seguidos, mejor: la mejor racha, ult: último día cumplido,
+     * { w: semana, p: [7] progreso del duro, h: [7] duros cumplidos,
+     *   q: [7] puntos sumados cada día, b: [7] básicos cumplidos,
+     *   racha: días seguidos con el básico, mejor: la mejor racha,
+     *   ult: último día que cuenta para la racha (cumplido o salvado),
      *   sem: 1 si la semana ya se contó como completa,
      *   hito: días del último premio de racha cobrado (0 si ninguno),
-     *   rv: marca del último borrón aplicado (CFG.DAILY.RESET) } */
+     *   cg: día en que se ganó el último comodín ('' ninguno),
+     *   cu: día que salvó el último comodín gastado ('' ninguno),
+     *   rv: marca del último borrón aplicado (CFG.DAILY.RESET) }
+     *
+     * El comodín va en FECHAS y no en un "tengo 1": así dos aparatos se
+     * funden quedándose con la más reciente de cada una, y uno gastado en
+     * un aparato no resucita en el otro (con un 0/1 no hay forma de saber
+     * cuál de los dos es el bueno). Está guardado si se ganó DESPUÉS del
+     * último que se gastó. */
     vacio: function (semana) {
-      var o = { w: semana || this.semanaId(), p: [], h: [],
-                racha: 0, mejor: 0, ult: '', sem: 0, hito: 0, rv: D.RESET };
-      for (var i = 0; i < D.DIAS; i++) { o.p.push(0); o.h.push(0); }
+      var o = { w: semana || this.semanaId(), p: [], h: [], q: [], b: [],
+                racha: 0, mejor: 0, ult: '', sem: 0, hito: 0,
+                cg: '', cu: '', rv: D.RESET };
+      for (var i = 0; i < D.DIAS; i++) {
+        o.p.push(0); o.h.push(0); o.q.push(0); o.b.push(0);
+      }
       return o;
     },
 
@@ -198,25 +243,57 @@
       /* Semana nueva: el progreso se va, la racha NO. La racha es de días
        * seguidos jugando y no tiene por qué romperse un domingo por la
        * noche solo porque el calendario pase de página. */
-      if (o.w !== sem) {
-        var n = this.vacio(sem);
-        n.racha = o.racha || 0;
-        n.mejor = o.mejor || 0;
-        n.ult = o.ult || '';
-        n.hito = this.hitoDe(o);
-        return n;
-      }
       var base = this.vacio(sem);
-      for (var i = 0; i < D.DIAS; i++) {
-        base.p[i] = Math.max(0, Math.floor(o.p[i] || 0));
-        base.h[i] = o.h[i] ? 1 : 0;
-      }
       base.racha = Math.max(0, Math.floor(o.racha || 0));
       base.mejor = Math.max(0, Math.floor(o.mejor || 0));
       base.ult = String(o.ult || '');
-      base.sem = o.sem ? 1 : 0;
       base.hito = this.hitoDe(o);
-      return base;
+      base.cg = String(o.cg || '');
+      base.cu = String(o.cu || '');
+      if (o.w === sem) {
+        var q = isArray(o.q) ? o.q : [], b = isArray(o.b) ? o.b : [];
+        for (var i = 0; i < D.DIAS; i++) {
+          base.p[i] = Math.max(0, Math.floor(o.p[i] || 0));
+          base.h[i] = o.h[i] ? 1 : 0;
+          base.q[i] = Math.max(0, Math.floor(q[i] || 0));
+          /* Un duro cumplido es un básico cumplido: así se leen también las
+           * cartillas de antes de los dos niveles, que no traen `b`. */
+          base.b[i] = (b[i] || o.h[i]) ? 1 : 0;
+        }
+        base.sem = o.sem ? 1 : 0;
+      }
+      return this.asentar(base);
+    },
+
+    /* ¿Hay un comodín guardado? */
+    tieneComodin: function (est) {
+      est = est || this.leer();
+      return !!est.cg && String(est.cg) > String(est.cu || '');
+    },
+
+    /* PONE LA RACHA AL DÍA. Hasta los dos niveles, una racha rota se seguía
+     * enseñando entera hasta el siguiente reto cumplido; ahora hace falta
+     * saberlo antes, porque el comodín se gasta SOLO al acabar el día sin
+     * básico. No se escribe nada: se calcula cada vez que se lee, y como
+     * solo depende de la cartilla y de la fecha, dos aparatos llegan a lo
+     * mismo.
+     *   - el último día que cuenta es hoy o ayer: la racha sigue viva.
+     *   - si no, el primer día perdido lo salva el comodín, si lo hay (se
+     *     gasta, y ese día pasa a contar como el último); si con eso ya
+     *     llega a ayer, sigue viva.
+     *   - si no, se rompe: racha a cero y los escalones vuelven a empezar. */
+    asentar: function (est) {
+      if (!(est.racha > 0) || !est.ult) return est;
+      var ayer = otroDia(this.hoyISO(), -1);
+      if (est.ult >= ayer) return est;
+      var perdido = otroDia(est.ult, 1);
+      if (this.tieneComodin(est)) {
+        est.cu = perdido;
+        if (perdido === ayer) { est.ult = perdido; return est; }
+      }
+      est.racha = 0;
+      est.hito = 0;
+      return est;
     },
 
     /* De dónde arranca el premio de racha en una partida guardada que no lo
@@ -271,12 +348,22 @@
       for (i = 0; i < D.DIAS; i++) {
         a.p[i] = Math.max(a.p[i] || 0, r.p[i] || 0);
         a.h[i] = (a.h[i] || r.h[i]) ? 1 : 0;
+        /* Los puntos del día, con el mayor y NO sumando: la cartilla va y
+         * vuelve de la nube entera, y sumar contaría dos veces lo mismo. Lo
+         * jugado a la vez en dos aparatos sin juntarse se queda en el mejor
+         * de los dos; nunca de más. */
+        a.q[i] = Math.max(a.q[i] || 0, r.q[i] || 0);
+        a.b[i] = (a.b[i] || r.b[i]) ? 1 : 0;
       }
       a.racha = Math.max(a.racha || 0, r.racha || 0);
       a.mejor = Math.max(a.mejor || 0, r.mejor || 0);
       a.hito = Math.max(a.hito || 0, r.hito || 0);
       a.sem = (a.sem || r.sem) ? 1 : 0;
       if (String(r.ult || '') > String(a.ult || '')) a.ult = r.ult;
+      /* El comodín, fecha a fecha: el más reciente ganado y el más reciente
+       * gastado. Uno gastado allí queda gastado aquí. */
+      if (String(r.cg || '') > String(a.cg || '')) a.cg = r.cg;
+      if (String(r.cu || '') > String(a.cu || '')) a.cu = r.cu;
       this.guardar(a);
       return true;
     },
@@ -311,6 +398,32 @@
       };
     },
 
+    /* Progreso del BÁSICO del día i: los puntos sumados ese día */
+    progresoBasico: function (i, est) {
+      est = est || this.leer();
+      var v = est.q[i] || 0, hecho = !!est.b[i];
+      return {
+        reto: this.basico(), dia: i, valor: v, meta: D.BASICO_PUNTOS,
+        pct: hecho ? 1 : Math.min(1, D.BASICO_PUNTOS > 0 ? v / D.BASICO_PUNTOS : 0),
+        hecho: hecho, abierto: this.abierto(i),
+        salvado: this.salvado(i, est)
+      };
+    },
+
+    /* ¿El día i de esta semana lo salvó el comodín? */
+    salvado: function (i, est) {
+      est = est || this.leer();
+      return !!est.cu && est.cu === this.fechaDe(this.semanaId(), i);
+    },
+
+    /* Días de la semana con el básico cumplido */
+    basicos: function (est) {
+      est = est || this.leer();
+      var n = 0;
+      for (var i = 0; i < D.DIAS; i++) if (est.b[i]) n++;
+      return n;
+    },
+
     cumplidos: function (est) {
       est = est || this.leer();
       var n = 0;
@@ -333,58 +446,95 @@
      * formato y el modo) y `o` los contadores de esa jugada.
      *
      * Devuelve los retos recién cumplidos (para el aviso en pantalla), o una
-     * lista vacía. Nunca devuelve dos veces el mismo. */
+     * lista vacía: el básico primero y el duro después si caen a la vez.
+     * Nunca devuelve dos veces el mismo. */
     apunta: function (tags, o) {
       if (!o) return [];
       var est = this.leer();
       var i = this.diaSemana();                    // SOLO el de hoy
+      var out = [], cambio = false;
+
+      /* EL BÁSICO: los puntos de cada partida, de cualquier modo. Llegan con
+       * `puntosMax` porque es lo que manda Game.closeRun UNA vez por partida,
+       * con sus puntos (en ningún otro sitio se apunta). Se siguen sumando
+       * después de cumplirlo: la cartilla enseña lo hecho en el día. */
+      var pts = o.hasOwnProperty('puntosMax') ? Math.floor(o.puntosMax || 0) : 0;
+      if (pts > 0) {
+        est.q[i] = (est.q[i] || 0) + pts;
+        cambio = true;
+        if (!est.b[i] && est.q[i] >= D.BASICO_PUNTOS) {
+          est.b[i] = 1;
+          this.premiarBasico(est);
+          out.push(this.basico());
+        }
+      }
+
       var r = this.retos()[i];
-      if (!r || est.h[i]) return [];               // no hay, o ya está
+      var duro = this.apuntaDuro(est, r, i, tags, o);
+      if (duro) {
+        cambio = true;
+        if (duro === 'hecho') {
+          est.h[i] = 1;
+          /* el duro trae el básico si aún no estaba: la racha es de quien
+           * cumple, y el difícil también es cumplir */
+          if (!est.b[i]) {
+            est.b[i] = 1;
+            this.premiarBasico(est);
+            out.push(this.basico());
+          }
+          this.premiar(est);
+          out.push(r);
+        }
+      }
+      if (cambio) this.guardar(est);
+      if (out.length && window.PM.Account) window.PM.Account.pushQuiet();
+      return out;
+    },
+
+    /* Lleva el progreso del DURO de hoy. Devuelve '' si no se ha movido,
+     * 'avanza' si ha avanzado y 'hecho' si acaba de cumplirse. */
+    apuntaDuro: function (est, r, i, tags, o) {
+      if (!r || est.h[i]) return '';               // no hay, o ya está
       // los de modo solo cuentan en el suyo
-      if (r.modo && (!tags || tags.indexOf(r.modo) === -1)) return [];
-      if (!o.hasOwnProperty(r.stat)) return [];
+      if (r.modo && (!tags || tags.indexOf(r.modo) === -1)) return '';
+      if (!o.hasOwnProperty(r.stat)) return '';
       var v = Math.floor(o[r.stat] || 0);
-      if (!(v > 0)) return [];
+      if (!(v > 0)) return '';
       var t = tipo(r.stat);
       var antes = est.p[i] || 0;
       if (t === 'suma') est.p[i] = antes + v;
       else if (t === 'mayor') est.p[i] = Math.max(antes, v);
       else est.p[i] = (antes > 0) ? Math.min(antes, v) : v;
-      if (est.p[i] === antes) return [];
+      if (est.p[i] === antes) return '';
       var listo = r.menor ? (est.p[i] > 0 && est.p[i] <= r.goal)
                           : (est.p[i] >= r.goal);
-      if (!listo) { this.guardar(est); return []; }
-      est.h[i] = 1;
-      this.premiar(est);
-      this.guardar(est);
-      return [r];
+      return listo ? 'hecho' : 'avanza';
     },
 
-    /* Lo que se lleva quien cumple: experiencia, racha y los contadores de
-     * los logros del DAILY. Se hace aquí y no en quien llama para que valga
-     * igual venga de donde venga. */
-    premiar: function (est) {
+    /* Lo que se lleva quien cumple el BÁSICO: la racha (y sus escalones),
+     * el comodín cada siete días, sus monedas y su experiencia. Solo puede
+     * pasar una vez al día (bandera b[i]), y la guarda de `ult` se queda
+     * igual: es la que hace que la racha sea idempotente. */
+    premiarBasico: function (est) {
       var A = window.PM.Achievements;
       var L = window.PM.Level;
+      var Tn = window.PM.Tienda;
       var hoy = this.hoyISO();
 
-      /* La racha: días seguidos cumpliendo el del día. Solo puede tocarse una
-       * vez al día porque solo hay un reto al día, pero la guarda se queda
-       * igual: es la que hace que sea idempotente. */
+      /* La racha: días seguidos con el básico. `leer()` ya la ha puesto al
+       * día (asentar): si viene rota, vale 0 y aquí vuelve a empezar. */
       if (est.ult !== hoy) {
-        var ayer = new Date();
-        ayer.setDate(ayer.getDate() - 1);
-        est.racha = (est.ult === fechaLocal(ayer)) ? (est.racha + 1) : 1;
+        est.racha = (est.ult === otroDia(hoy, -1)) ? (est.racha + 1) : 1;
         est.ult = hoy;
         if (est.racha > est.mejor) est.mejor = est.racha;
         if (A) A.recordFor(['daily'], { dailyRacha: est.racha });
+        /* Un comodín cada siete días de racha, y como mucho uno guardado:
+         * si ya hay uno, el de hoy no se acumula. */
+        if (est.racha % D.COMODIN_CADA === 0 && !this.tieneComodin(est)) est.cg = hoy;
       }
 
-      if (A) A.recordFor(['daily'], { dailyOk: 1 });
-      // y monedas de la TIENDA: el reto, la semana entera y los escalones
-      // de racha
-      var Tn = window.PM.Tienda;
-      if (Tn) Tn.ganar(CFG.TIENDA.POR_RETO);
+      if (A) A.recordFor(['daily'], { dailyBasicos: 1 });
+      if (Tn) Tn.ganar(D.BASICO_MONEDAS);
 
       /* Escalones de racha. Se cobran todos los que la racha ya haya
        * pasado —normalmente uno— y se apunta el último para no repetirlo.
@@ -399,8 +549,24 @@
         }
       }
 
-      /* Semana redonda: los siete. Se cuenta una vez (bandera `sem`), que si
-       * no, cumplir el último y volver a entrar la contaría otra vez. */
+      if (L) L.add(D.BASICO_XP);
+    },
+
+    /* Lo que se lleva quien cumple el DURO: su experiencia, sus monedas, los
+     * contadores de los logros del DAILY y, con los siete, la semana. La
+     * racha no: esa la lleva el básico (que el duro trae consigo). */
+    premiar: function (est) {
+      var A = window.PM.Achievements;
+      var L = window.PM.Level;
+      var Tn = window.PM.Tienda;
+
+      if (A) A.recordFor(['daily'], { dailyOk: 1 });
+      if (Tn) Tn.ganar(CFG.TIENDA.POR_RETO);
+
+      /* Semana redonda: los siete DUROS. Se cuenta una vez (bandera `sem`),
+       * que si no, cumplir el último y volver a entrar la contaría otra vez.
+       * dailySemana es de lo que salen los cofres de PLATA (js/cofres.js y
+       * la función del servidor): los básicos no cuentan aquí. */
       if (!est.sem && this.cumplidos(est) >= CFG.DAILY.DIAS) {
         est.sem = 1;
         if (A) A.recordFor(['daily'], { dailySemana: 1 });
@@ -408,7 +574,6 @@
       }
 
       if (L) L.add(CFG.DAILY.XP);
-      if (window.PM.Account) window.PM.Account.pushQuiet();
     },
 
     /* Borra lo guardado (solo lo usan las pruebas) */

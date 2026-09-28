@@ -43,7 +43,11 @@
     pacCaidos: 'suma',
     dailyOk:   'suma',   // retos diarios cumplidos (js/daily.js)
     dailySemana: 'suma', // semanas con los siete cumplidos
-    dailyRacha: 'mayor', // días seguidos cumpliendo alguno
+    dailyRacha: 'mayor', // días seguidos con el básico cumplido
+    /* Días con el BÁSICO del DAILY cumplido (29 sep, los dos niveles). Solo
+     * crece con eso; lo leen los primeros pasos. Sembrado con dailyOk: cada
+     * duro cumplido es también un básico (sembrarBasicos). */
+    dailyBasicos: 'suma',
     racha:     'mayor',
     /* Cuántas veces se ha encadenado 2, 3 y 4 fantasmas con una misma
      * superpastilla. Son ACUMULATIVOS: un cuádruple suma también en dobles y
@@ -567,6 +571,27 @@
       return d.c;
     },
 
+    /* ---------- los BÁSICOS del DAILY de antes de que existieran ----------
+     * El básico llegó el 29 sep. Antes, el único reto del día era el que hoy
+     * es el duro, y cumplirlo es cumplir el básico (Daily.apunta lo da por
+     * hecho con él), así que cada reto cumplido es un día de básico:
+     * dailyBasicos >= dailyOk siempre. Los días en que se sumaron los puntos
+     * sin cumplir el reto no dejaron rastro y no se inventan.
+     *
+     * Es un máximo, no una suma, así que no necesita bandera: se puede pasar
+     * cada vez (al arrancar y tras juntar con la nube) sin contar dos veces. */
+    sembrarBasicos: function () {
+      var d = load();
+      var cambio = false;
+      [['dailyBasicos', 'dailyOk'], ['daily:dailyBasicos', 'daily:dailyOk']].forEach(function (par) {
+        if (!STATS.hasOwnProperty(par[0])) return;
+        var v = Math.floor(d.c[par[1]] || 0);
+        if (v > (d.c[par[0]] || 0)) { d.c[par[0]] = v; cambio = true; }
+      });
+      if (cambio) save(d);
+      return d.c;
+    },
+
     /* ---------- las MUERTES de antes de que se contaran ----------
      * La skin CALAVERA pide muertes y el juego no las contaba. Lo jugado es
      * del jugador, así que se estima con lo único que hay: cada partida
@@ -692,6 +717,7 @@
       // antes de nada, que lo jugado de antes cuente en su modo
       this.sembrarModos();
       this.sembrarDaily();
+      this.sembrarBasicos();
       this.sembrarMuertes();
       this.sembrarCifras();
       // y con los contadores ya sembrados, el regalo (cuenta logros)
@@ -770,6 +796,7 @@
       if (!(Math.floor(otros.bono || 0) > 0)) d.b = 0;
       save(d);
       this.sembrarModos();
+      this.sembrarBasicos();
       this.sembrarMuertes();
       this.sembrarBono();
       return this.stats();

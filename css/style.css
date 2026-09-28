@@ -535,6 +535,169 @@ body {
 .daily-slot.cofre { border: 2px solid #ffb852; color: #ffb852; letter-spacing: 1px; }
 .daily-slot.cofre.lleno { border-color: #145c14; color: #00ff00; background: rgba(0, 255, 0, 0.04); }
 
+/* ---------- EL BÁSICO (29 sep): la franja de todos los días ----------
+ * En el amarillo de Pac-Man, que es el de los puntos: lo que pide es sumar.
+ * Encima de los duros porque es el que lleva la racha. El comodín, en el
+ * naranja del cofre de la semana: es un premio guardado. */
+.daily-basico,
+.daily-duro-cab { width: min(96%, 1240px); }
+
+.daily-basico {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px 22px;
+  padding: 9px 16px;
+  border: 2px solid #ffff00;
+  background: linear-gradient(90deg, rgba(255, 255, 0, 0.07), #04040d 60%);
+  box-shadow: 0 0 14px rgba(255, 255, 0, 0.12);
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-align: left;
+  color: #9496bb;
+}
+.daily-basico.hecho {
+  border-color: #145c14;
+  background: linear-gradient(90deg, rgba(0, 255, 0, 0.06), #04040d 60%);
+  box-shadow: none;
+}
+
+.db-cab { display: flex; flex-direction: column; gap: 6px; }
+.db-tag {
+  align-self: flex-start;
+  padding: 3px 8px;
+  background: #ffff00;
+  color: #000;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+.daily-basico.hecho .db-tag { background: #00ff00; }
+.db-lema { font-size: 11px; color: #8f91b3; }
+
+.db-main { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.db-desc { font-size: clamp(13px, 1.9vh, 15px); color: #fff; letter-spacing: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.daily-basico.hecho .db-desc { color: #00ff00; }
+.db-fila { display: flex; align-items: center; gap: 10px; }
+.db-fila .daily-bar { height: 8px; }
+.db-fila .daily-fill { background: #ffff00; }
+.daily-basico.hecho .db-fila .daily-fill { background: #00ff00; }
+.db-val { font-size: 13px; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.db-premio {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 5px;
+  font-size: 15px;
+  color: #ffd23f;
+  white-space: nowrap;
+}
+.db-premio canvas { width: 16px; height: 16px; }
+.db-premio small { grid-column: 1 / -1; font-size: 11px; color: #9496bb; }
+.db-premio b { grid-column: 1 / -1; font-size: 11px; color: #3a9a3a; letter-spacing: 2px; }
+
+.db-semana { display: flex; gap: 4px; }
+.db-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #5a5c80;
+}
+.db-dia i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #2d2d6e;
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1;
+}
+.db-dia.ok { color: #00ff00; }
+.db-dia.ok i { border-color: #00ff00; background: rgba(0, 255, 0, 0.12); }
+.db-dia.salvado { color: #ffb852; }
+.db-dia.salvado i { border-color: #ffb852; background: rgba(255, 184, 82, 0.14); }
+.db-dia.hoy { color: #ffff00; }
+.db-dia.hoy i { border: 2px solid #ffff00; animation: db-late 1s steps(2) infinite; }
+.db-dia.perdido i { border-color: #2a2a2a; background: repeating-linear-gradient(45deg, #111 0 3px, #1c1c1c 3px 6px); }
+@keyframes db-late { 50% { border-color: rgba(255, 255, 0, 0.35); } }
+
+.db-comodin { display: flex; align-items: center; gap: 8px; color: #5a5c80; }
+.db-carta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 32px;
+  border: 2px dashed #3a3a5e;
+  font-size: 14px;
+  color: #3a3a5e;
+}
+.db-com-txt { display: flex; flex-direction: column; gap: 4px; }
+.db-com-txt b { font-size: 13px; letter-spacing: 2px; }
+.db-com-txt small { font-size: 10px; letter-spacing: 1px; white-space: nowrap; }
+.db-comodin.on { color: #ffb852; }
+.db-comodin.on .db-carta {
+  border: 2px solid #ffb852;
+  color: #000;
+  background: #ffb852;
+  box-shadow: 0 0 10px rgba(255, 184, 82, 0.45);
+  transform: rotate(-8deg);
+}
+
+/* encabezado de los duros, entre la franja del básico y las casillas */
+.daily-duro-cab {
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #8f91b3;
+  margin-bottom: -4px;
+}
+.daily-duro-cab b {
+  padding: 2px 7px;
+  margin-right: 8px;
+  border: 1px solid #ff6b6b;
+  color: #ff6b6b;
+}
+
+/* Con la franja del básico la cartilla ya no cabe siempre en el alto: las
+ * casillas no se encogen (se cortaban por abajo), es el panel el que baja. */
+.daily-scroll { flex-shrink: 0; }
+
+/* Pantallas bajas de ordenador (1366×768): las casillas, más apretadas,
+ * para que todo siga cabiendo sin bajar. */
+@media (min-width: 601px) and (max-height: 820px) {
+  .daily-card { grid-template-rows: auto 50px auto 1fr auto; gap: 5px; padding: 8px 8px 8px; }
+  .daily-card canvas { width: 48px; height: 48px; }
+  .daily-sello { top: 76px; }
+  .daily-slot { height: 34px; }
+}
+
+/* en la portada, un día con el básico y sin el duro: la marca en amarillo */
+.daily-tile.basico .daily-tick { display: block; color: #ffff00; }
+
+@media (max-width: 1100px) {
+  .daily-basico { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .db-semana { grid-column: 1 / 3; }
+  .db-comodin { grid-column: 3; justify-self: end; }
+}
+
+@media (max-width: 600px) {
+  .daily-basico { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 10px 12px; }
+  .db-cab { grid-column: 1; grid-row: 1; flex-direction: row; align-items: center; gap: 10px; }
+  .db-premio { grid-column: 2; grid-row: 1; }
+  .db-main { grid-column: 1 / -1; }
+  .db-desc { white-space: normal; }
+  .db-semana { grid-column: 1 / -1; justify-content: space-between; }
+  .db-comodin { grid-column: 1 / -1; justify-self: stretch; }
+  .db-dia i { width: 30px; height: 26px; }
+  /* la racha y su escalón no cabían en una línea y se salían por la derecha */
+  .daily-racha { flex-wrap: wrap; justify-content: center; }
+}
+
 @media (max-width: 600px) {
   .daily-slots { grid-template-columns: repeat(7, 1fr); }
   .daily-slot { height: 30px; font-size: var(--fs-m); }

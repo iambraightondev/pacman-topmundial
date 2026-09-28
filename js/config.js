@@ -1639,7 +1639,29 @@
     RESET: '2026-08-15',
     DIAS: 7,
     LIBRES_POR_SEMANA: 5,     // los otros dos salen de la lista de modo
-    XP: 2500,                 // experiencia por reto cumplido
+    XP: 2500,                 // experiencia por reto cumplido (el DURO)
+
+    /* DOS NIVELES (29 sep, propuesta 1 aprobada por Braighton). Solo 3 de 8
+     * mantenían la racha: los retos de UNA partida (20.000 puntos, nivel 6...)
+     * la rompían a quien juega de verdad. El 25 sep FERCRO y PIERO sumaron
+     * 47-49 mil puntos en el día y se quedaron sin reto.
+     *   BÁSICO: el mismo todos los días, sumar BASICO_PUNTOS entre todas las
+     *     partidas del día, de cualquier modo. Es el que MANTIENE Y SUBE LA
+     *     RACHA (y sus escalones) y paga BASICO_MONEDAS + BASICO_XP.
+     *   DURO: el reto del día de la baraja de siempre. Paga lo de siempre
+     *     (POR_RETO + XP) ADEMÁS del básico, y la semana completa sigue
+     *     pidiendo los siete duros.
+     * Cumplir el duro da el básico por cumplido si aún no lo estaba: nadie
+     * pierde la racha por hacer el difícil (como hasta ahora).
+     * COMODÍN: se gana uno cada COMODIN_CADA días de racha, como mucho
+     * UNO guardado, y se gasta solo el primer día que acaba sin el
+     * básico: ese día no paga nada, pero la racha no se rompe. No recupera
+     * retos pasados. */
+    BASICO_PUNTOS: 20000,
+    BASICO_MONEDAS: 60,
+    BASICO_XP: 1000,
+    BASICO_DESC: 'SUMA 20.000 PUNTOS HOY',
+    COMODIN_CADA: 7,
 
     /* PREMIOS DE RACHA. La racha se veía en la cartilla y no daba nada:
      * era un número de adorno. Ahora cada escalón de días seguidos paga,
