@@ -1541,7 +1541,10 @@
     VIEW_SEASON: 'ranking_temporada',  // lo mismo, pero mes a mes
     LIMIT: 20,
     MAX_POINTS: 10000000,     // descarta envíos absurdos antes de mandarlos
-    MAX_TIME: 6000000         // centésimas: 16 h y pico, de sobra
+    MAX_TIME: 6000000,        // centésimas: 16 h y pico, de sobra
+    /* La repetición viaja con la marca si cabe: la función corta el envío
+     * entero a los 512 KB (MAX_CUERPO en supabase/functions/enviar-record). */
+    REPE_MAX_CHARS: 450000
   };
 
   /* ---------- DAILY: siete retos por semana ----------
@@ -1824,7 +1827,8 @@
     FRIENDS_TABLE: 'amigos',
     MAIL_DOMAIN: 'cuentas.pacman-topmundial.vercel.app',
     USER_MIN: 3,
-    PASS_MIN: 6,
+    PASS_MIN: 6,             // el de las cuentas de antes: siguen entrando con la suya
+    PASS_MIN_NUEVA: 8,       // 28 sep: cuentas y contraseñas nuevas (lo mira también la función)
     KEY: 'pacman-topmundial-sesion',  // sesión guardada en este navegador
 
     /* ---------- recuperar la contraseña ----------

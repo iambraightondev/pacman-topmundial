@@ -8,7 +8,10 @@
 -- AJUSTE OBLIGATORIO DEL PROYECTO (no se puede hacer por SQL):
 --   Authentication -> Sign In / Providers
 --     · Email: ACTIVADO
---     · "Allow new users to sign up": ACTIVADO
+--     · "Allow new users to sign up": APAGADO desde el 28 sep 2026. Las
+--       cuentas las da de alta la función `cuenta` por la API de
+--       administración, que no depende de esto; con el alta pública abierta,
+--       cualquiera se saltaba la función (y su filtro de nombres).
 --     · "Confirm email": APAGADO
 -- El juego compone el correo por dentro a partir del usuario
 -- (usuario@cuentas.pacman-topmundial.vercel.app) y ese buzón no existe:
@@ -56,7 +59,17 @@ comment on table public.perfiles is
   'Cuentas del juego: el usuario es también el nombre dentro de la partida.';
 
 -- la marca de tiempo la pone el servidor, no el navegador
-create or replace function public.perfiles_touch()
+--
+-- OJO (28 sep 2026): la versión BUENA de esta función está en
+-- supabase/perfiles-blindaje.sql (topes a lo imposible y auditoría). Esta es
+-- la base, y solo se crea si todavía no hay ninguna: volver a lanzar este
+-- archivo ya no quita el blindaje. En un proyecto nuevo, lanzar después
+-- perfiles-blindaje.sql.
+do $crear$
+begin
+if to_regprocedure('public.perfiles_touch()') is null then
+execute $funcion$
+create function public.perfiles_touch()
 returns trigger
 language plpgsql
 as $$
@@ -128,7 +141,11 @@ begin
   end if;
   return new;
 end;
-$$;
+$$
+$funcion$;
+end if;
+end
+$crear$;
 
 drop trigger if exists perfiles_touch_trg on public.perfiles;
 create trigger perfiles_touch_trg

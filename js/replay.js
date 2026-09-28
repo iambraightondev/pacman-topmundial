@@ -537,6 +537,7 @@
     /* estado interno */
     modo: null,          // null | 'grabar' | 'ver'
     grabando: null,      // repetición en construcción
+    ultimaCerrada: null, // la de la partida que se acaba de cerrar (para el top)
     rep: null,           // repetición que se está viendo
     montaje: null,       // lo que la repetición no lleva dentro (el laberinto)
     t: 0,                // reloj de la repetición (ticks simulados)
@@ -1117,6 +1118,7 @@
     alEmpezar: function (opts) {
       this.t = 0;
       this.cursor = 0;
+      this.ultimaCerrada = null;       // la de la partida anterior ya no vale
       this.cursorEv = 0;
       G.timeScale = 1;
 
@@ -1548,6 +1550,7 @@
       var rep = this.grabando;
       this.grabando = null;
       this.modo = null;
+      this.ultimaCerrada = null;
       if (!rep) return deRed;
       rep.final = {
         puntos: G.score,
@@ -1556,6 +1559,9 @@
         tiempoMs: Math.round(G.timeTicks * 1000 / 60)
       };
       if (!(rep.final.puntos > 0)) return null;   // una partida de cero no interesa
+      /* La que se acaba de cerrar, tal cual: la lleva el envío al TOP MUNDIAL
+       * (Game.submitRanking), que la comprueba contra la marca (28 sep). */
+      this.ultimaCerrada = rep;
       return this.guardar(rep);
     },
 

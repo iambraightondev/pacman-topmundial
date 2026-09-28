@@ -75,12 +75,6 @@
     return String(v == null ? '' : v).toUpperCase();
   }
 
-  /* ¿El fallo de entrar fue de CONTRASEÑA (y no de red o del servidor)? Solo
-   * entonces vale la pena reintentar con lo que escribió el jugador. */
-  function esMala(err) {
-    return /USUARIO O CONTRASEÑA/.test(String(err || ''));
-  }
-
   /* Nombre de usuario: mismo saneado que los nombres del juego */
   function cleanUser(v) {
     return String(v == null ? '' : v).toUpperCase()
@@ -347,8 +341,8 @@
         cb('EL USUARIO NECESITA AL MENOS ' + AC.USER_MIN + ' LETRAS');
         return;
       }
-      if (passUp(pass).length < AC.PASS_MIN) {
-        cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES');
+      if (passUp(pass).length < AC.PASS_MIN_NUEVA) {
+        cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN_NUEVA + ' CARACTERES');
         return;
       }
       if (!c) { cb('ESCRIBE TU CORREO: ES LO QUE TE DEVUELVE LA CUENTA'); return; }
@@ -365,31 +359,29 @@
       var u = cleanUser(usuario);
       if (!u || !pass) { cb('ESCRIBE USUARIO Y CONTRASEÑA'); return; }
       var arriba = passUp(pass), tal = String(pass);
-      function dentro(d) { self.accept(d.sesion, u, cb); }
-      this.fn({ op: 'entrar', usuario: u, pass: arriba },
-        function (err, d) {
-          if (!err) { dentro(d); return; }
-          /* Cuenta vieja con la contraseña en minúsculas: se prueba tal cual
-           * se escribió y, si entra, se le pasa a mayúsculas en el acto (ver
-           * el comentario de passUp). Solo si el fallo fue de contraseña: un
-           * corte de red no se reintenta dos veces. */
-          if (arriba === tal || !esMala(err)) { cb(err); return; }
-          self.fn({ op: 'entrar', usuario: u, pass: tal },
-            function (err2, d2) {
-              if (err2) { cb(err); return; }      // el error que se enseña es el primero
-              self.accept(d2.sesion, u, function (e3) {
-                if (e3) { cb(e3); return; }
-                // ya dentro: se guarda en mayúsculas para la próxima vez
-                self.cambiarPass(arriba, function () { cb(null); });
-              });
-            });
+      /* Cuenta vieja con la contraseña en minúsculas: se manda también tal
+       * cual se escribió (`pass2`) y, si entra con esa, se le pasa a
+       * mayúsculas en el acto (ver el comentario de passUp). Las dos van en
+       * la MISMA petición (28 sep): entrar tiene freno por fallos, y probarlas
+       * de una en una gastaba dos intentos por cada uno del jugador. */
+      var cuerpo = { op: 'entrar', usuario: u, pass: arriba };
+      if (tal !== arriba) cuerpo.pass2 = tal;
+      this.fn(cuerpo, function (err, d) {
+        if (err) { cb(err); return; }
+        self.accept(d.sesion, u, function (e2) {
+          if (e2 || !d.segunda) { cb(e2 || null); return; }
+          // ya dentro: se guarda en mayúsculas para la próxima vez
+          self.cambiarClave(tal, arriba, function () { cb(null); });
         });
+      });
     },
 
     /* "He olvidado la contraseña": Supabase manda SU enlace al correo de esa
      * cuenta y el juego lo recoge al abrirse (ver desdeRecuperacion).
-     * cb(err, pista) — la pista es el correo tapado, para saber qué buzón
-     * mirar sin que salga entero en la pantalla de cualquiera. */
+     * cb(err, pista). Desde el 28 sep la función contesta LO MISMO exista la
+     * cuenta o no, y sin pista del correo: antes cualquiera que supiera un
+     * nombre del top veía si tenía correo y media dirección. La pista se
+     * sigue leyendo por si algún día vuelve. */
     olvide: function (usuario, cb) {
       var u = cleanUser(usuario);
       if (!u) { cb('ESCRIBE TU USUARIO', null); return; }
@@ -982,37 +974,45 @@
 
     /* Poner o cambiar tu correo. Esto es lo que tienen que hacer las cuentas
      * creadas antes de que se pidiera: hasta entonces siguen sin poder
-     * recuperar la contraseña. */
-    ponerCorreo: function (correo, cb) {
+     * recuperar la contraseña.
+     *
+     * CON LA CONTRASEÑA ACTUAL (28 sep 2026), y por la función `cuenta`, no
+     * con la sesión: quien se hiciera con una sesión abierta (un ordenador
+     * prestado sin cerrar) podía poner SU correo y pedir la recuperación, y la
+     * cuenta era suya. Va en mayúsculas y tal cual se escribió, como al
+     * entrar (ver passUp). */
+    ponerCorreo: function (correo, pass, cb) {
       var self = this;
       var c = cleanMail(correo);
       if (!this.logged()) { cb('NECESITAS TENER LA SESIÓN ABIERTA'); return; }
       if (!c) { cb('ESCRIBE UN CORREO'); return; }
       if (!mailOk(c)) { cb('ESE CORREO NO TIENE BUENA PINTA'); return; }
       if (mailInterno(c)) { cb('ESE CORREO NO VALE'); return; }
-      fetch(base('/auth/v1/user'), {
-        method: 'PUT',
-        headers: authHeaders(this.token),
-        body: JSON.stringify({ email: c })
-      }).then(function (res) {
-        return res.json().catch(function () { return {}; }).then(function (d) {
-          if (res.ok) { cb(null); return; }
-          var t = JSON.stringify(d);
-          cb(/already|registered|exists/i.test(t)
-            ? 'ESE CORREO YA ES DE OTRA CUENTA'
-            : traduce(d.msg || d.error_description || d.error, d.error_code));
-        });
-      }).catch(function () { cb('NO SE PUDO GUARDAR EL CORREO'); });
-      // el nombre no cambia, pero el panel sí tiene que repintarse
-      if (this.onchange) setTimeout(function () { self.changed(); }, 0);
+      if (!pass) { cb('ESCRIBE TU CONTRASEÑA ACTUAL'); return; }
+      var cuerpo = { op: 'correo', usuario: this.name(), pass: passUp(pass), correo: c };
+      if (String(pass) !== passUp(pass)) cuerpo.pass2 = String(pass);
+      this.fn(cuerpo, function (err) {
+        cb(err || null);
+        // el nombre no cambia, pero el panel sí tiene que repintarse
+        if (!err) self.changed();
+      });
     },
 
-    /* Cambiar la contraseña con la sesión abierta. Lo usa la pantalla que sale
-     * al volver del enlace de recuperación. */
+    /* Cambiar la contraseña sabiendo la actual, por la función `cuenta`. La
+     * usa signIn para pasar a mayúsculas la de una cuenta vieja. */
+    cambiarClave: function (actual, nueva, cb) {
+      if (!this.logged()) { cb('NECESITAS TENER LA SESIÓN ABIERTA'); return; }
+      this.fn({ op: 'clave', usuario: this.name(), pass: String(actual || ''),
+                nueva: passUp(nueva) }, function (err) { cb(err || null); });
+    },
+
+    /* Cambiar la contraseña con la sesión abierta. Lo usa SOLO la pantalla que
+     * sale al volver del enlace de recuperación, que es justo cuando no se sabe
+     * la actual (y la sesión es de un solo uso, recién sacada del correo). */
     cambiarPass: function (pass, cb) {
       if (!this.logged()) { cb('NECESITAS TENER LA SESIÓN ABIERTA'); return; }
-      if (String(pass || '').length < AC.PASS_MIN) {
-        cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN + ' CARACTERES');
+      if (String(pass || '').length < AC.PASS_MIN_NUEVA) {
+        cb('LA CONTRASEÑA NECESITA AL MENOS ' + AC.PASS_MIN_NUEVA + ' CARACTERES');
         return;
       }
       fetch(base('/auth/v1/user'), {
@@ -1075,6 +1075,21 @@
           if (cb) cb('EL ENLACE HA CADUCADO');
         });
       return true;
+    },
+
+    /* ---------- el permiso para las marcas de equipo (28 sep 2026) ----------
+     * Una marca de party la envía el líder con los nombres de todos. Para que
+     * nadie pueda poner a otro de compañero en una marca inventada, cada
+     * invitado con cuenta le da su permiso al líder al empezar la partida
+     * (vale 12 h: supabase/ranking-cuarentena.sql). Sin sesión, o si falla,
+     * no pasa nada: la partida es la misma. La página de pruebas no sube nada. */
+    avalarEquipo: function (anfitrion) {
+      var n = cleanUser(anfitrion);
+      if (window.PM_PRUEBAS || !this.logged() || !n || n === this.name()) return;
+      fetch(base('/rest/v1/rpc/avalar_equipo'), {
+        method: 'POST', headers: authHeaders(this.token),
+        body: JSON.stringify({ p_anfitrion: n })
+      }).catch(function () { /* sin permiso apuntado: la marca sale igual */ });
     },
 
     /* ---------- amigos (solo con cuenta) ---------- */

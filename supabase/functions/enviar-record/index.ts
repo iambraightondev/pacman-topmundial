@@ -23,10 +23,33 @@
  * ningún secreto a mano.
  *
  * Respuestas:
- *   200 { ok: true,  verificado: bool }
+ *   200 { ok: true, repeticion: bool, cuarentena: bool }
  *   4xx { ok: false, error: 'MOTIVO CORTO', detalle: '...' }
  * El `error` va corto a propósito: lo enseña el panel del juego.
  * El `detalle` es para quien mira la consola.
+ *
+ * 28 SEP 2026 — LO QUE CAMBIÓ (supabase/ranking-cuarentena.sql):
+ *   · Topes REALISTAS: nivel 255 como mucho (la pantalla rota del arcade;
+ *     la mejor marca de verdad llega al 17) y 6 horas de partida.
+ *   · La repetición (formato v1, la de las partidas locales) se mira más: el
+ *     último giro tiene que caer dentro de lo jugado (con los cambios de
+ *     nivel, que la repetición sí cuenta) y hace falta un mínimo de órdenes
+ *     (una cada 15 s; quien juega de verdad da varias por segundo). Ya no se
+ *     llama `verificado`, que prometía lo que no es —NO se rejuega la
+ *     partida (PENDIENTE.md, descartado)—, sino `repeticion_coherente`.
+ *     Con EXIGIR_REPETICION=1 (secreto de la función) una partida LOCAL sin
+ *     repetición coherente no entra. Apagado mientras quede algún juego sin
+ *     actualizar: los de antes del 28 sep no la mandan nunca.
+ *   · CUARENTENA: una marca de más de 1,5 veces el primero de su liga (mismo
+ *     mundo y formato), o un tiempo del nivel 1 un 20 % más rápido que el
+ *     mejor, entra OCULTA (`oculta`, con el `motivo`) hasta que alguien la
+ *     apruebe a mano. Las normales entran como siempre.
+ *   · COMPAÑEROS SIN PERMISO: una marca de equipo apunta en `sin_aval` a los
+ *     compañeros que no dieron su permiso (no tienen al que envía en su lista
+ *     de amigos ni jugaron con él en una party en las últimas 12 h). Con
+ *     EXIGIR_AVAL=1, esa marca entra oculta. Apagado de salida: hoy nadie
+ *     tiene amigos mutuos en las marcas de equipo, y los juegos de antes del
+ *     28 sep no dan el permiso al entrar en la party.
  *
  * Sin dependencias: Deno pelado y fetch contra PostgREST.
  * ============================================================ */
@@ -39,7 +62,23 @@
 const NICK_MAX = 12;              // CFG.NICK_MAX
 const MAX_PUNTOS = 10000000;      // CFG.RANKING.MAX_POINTS
 const MAX_TIEMPO1 = 6000000;      // CFG.RANKING.MAX_TIME (centésimas)
-const MAX_NIVEL = 999;            // el CHECK de la tabla
+/* Topes REALISTAS (28 sep). El CHECK de la tabla deja hasta el 999, pero en
+ * el arcade el 256 es la pantalla rota y aquí la mejor partida de verdad
+ * llegó al 17. Y seis horas de partida es muchísimo más de lo que ha durado
+ * ninguna (las repeticiones dejan de prepararse a las 8 h). */
+const MAX_NIVEL = 255;
+const MAX_TIEMPO_MS = 6 * 3600 * 1000;
+
+/* CUARENTENA: por encima de esto respecto al primero de su liga, oculta hasta
+ * que se apruebe a mano (update ranking set oculta = false where id = ...) */
+const CUARENTENA_X = 1.5;
+const CUARENTENA_T1 = 1.2;       // tiempo del nivel 1: un 20 % más rápido que el mejor
+
+/* Los dos interruptores (secretos de la función, 'EXIGIR_REPETICION' y
+ * 'EXIGIR_AVAL' a '1'). Apagados hasta que todos los jugadores tengan el
+ * juego del 28 sep: los de antes no mandan la repetición ni dan el permiso. */
+const EXIGIR_REPETICION = Deno.env.get('EXIGIR_REPETICION') === '1';
+const EXIGIR_AVAL = Deno.env.get('EXIGIR_AVAL') === '1';
 
 /* Puntuación de un nivel entero (CFG.DOT_POINTS, CFG.ENERGIZER_POINTS):
  * 240 pastillas de 10 + 4 energizantes de 50. */
@@ -135,10 +174,20 @@ const AJUSTES = {
 const ENVIOS_POR_MINUTO = 5;
 
 /* Repetición (formato v1): topes de tamaño y de densidad. Un humano no
- * cambia de dirección 20 veces por segundo, y el juego va a 60 ticks/s. */
+ * cambia de dirección 20 veces por segundo, y el juego va a 60 ticks/s.
+ * Por abajo, una orden cada 15 s: sin girar, Pac-Man se para en el primer
+ * muro, así que nadie juega un minuto con cuatro. */
 const REPE_VERSION = 1;
-const REPE_MAX_ENTRADAS = 40000;
+const REPE_MAX_ENTRADAS = 250000;   // CFG.REPLAY_MAX_ENTRADAS
 const REPE_ENTRADAS_POR_S = 20;
+const REPE_S_POR_ORDEN = 15;
+/* El reloj de la repetición corre también en el cambio de nivel
+ * (LEVEL_DONE: 60 + 120 ticks), que el cronómetro de la partida no cuenta. */
+const REPE_TICKS_POR_NIVEL = 200;
+/* Y el último giro no puede quedar más lejos del final que esto: dos minutos
+ * sin tocar nada hasta perder todas las vidas ya es mucho. */
+const REPE_TICKS_SIN_ORDENES = 7200;
+const REPE_MODOS = ['solo', 'duo', 'reto', 'hab', 'habduo'];
 const MAX_CUERPO = 512 * 1024;   // bytes de JSON: una repetición larga cabe
 
 /* Palabras vetadas: copia de CFG.BAD_WORDS de js/config.js */
@@ -271,23 +320,25 @@ function mal(motivo: string, estado = 400, detalle = ''): Response {
 }
 
 /* ------------------------------------------------------------
- * Repetición (formato v1, cerrado con el resto del equipo):
- *   { v:1, modo:'solo'|'duo'|'reto', semilla, nivel, jugadores,
- *     ajustes:{velFantasmas,velPac,powerS,vidas}, nombres, fecha,
- *     entradas:[[tick, jugador, dir], ...],
+ * Repetición (formato v1, js/replay.js):
+ *   { v:1, modo:'solo'|'duo'|'reto'|'hab'|'habduo', semilla, nivel,
+ *     jugadores, ajustes:{velFantasmas,velPac,powerS,vidas,...}, nombres,
+ *     fecha, entradas:[[tick, jugador, orden], ...],
  *     final:{puntos,nivel,fantasmas,tiempoMs} }
+ * La orden es 0..3 un giro, 4..7 un poder (DESATADO) y 8 un CONTINUAR.
  *
  * OJO: esto NO reproduce la partida, solo mira que lo que cuenta la
  * repetición cuadre con lo que se está enviando. La verificación de
- * verdad (rejugar las entradas con el motor) queda pendiente, y el
- * porqué de no haberla hecho todavía está en PENDIENTE.md.
+ * verdad (rejugar las entradas con el motor) está descartada, y el
+ * porqué está en PENDIENTE.md. Por eso el resultado se llama
+ * `repeticion_coherente` y no `verificado`.
  *
  * Devuelve null si todo cuadra, o el motivo si no.
  * ---------------------------------------------------------- */
 function repeticionCoherente(
   repe: Record<string, unknown> | null,
   parte: {
-    jugadores: number; puntos: number; nivel: number;
+    jugadores: number; puntos: number; nivel: number; niveles: number;
     fantasmas: number; tiempoMs: number;
     ajustes: Record<string, number>;
   }
@@ -296,7 +347,7 @@ function repeticionCoherente(
   if (entero(repe.v) !== REPE_VERSION) return 'version desconocida';
 
   const modo = String(repe.modo || '');
-  if (['solo', 'duo', 'reto'].indexOf(modo) === -1) return 'modo desconocido';
+  if (REPE_MODOS.indexOf(modo) === -1) return 'modo desconocido';
   if (entero(repe.jugadores) !== parte.jugadores) return 'jugadores que no cuadran';
 
   // los ajustes declarados en la repetición tienen que ser los del envío
@@ -323,7 +374,13 @@ function repeticionCoherente(
   if (entradas.length > segundos * REPE_ENTRADAS_POR_S) {
     return 'demasiadas ordenes para ese tiempo';
   }
-  const maxTick = Math.ceil(segundos * 60) + 120;   // 60 ticks/s y 2 s de margen
+  if (entradas.length < Math.floor(segundos / REPE_S_POR_ORDEN)) {
+    return 'muy pocas ordenes para ese tiempo';
+  }
+  /* El reloj de la repetición cuenta además los cambios de nivel; el de la
+   * partida (tiempoMs), no. Por eso el margen crece con los niveles. */
+  const ticksJugados = Math.ceil(segundos * 60);
+  const maxTick = ticksJugados + parte.niveles * REPE_TICKS_POR_NIVEL + 600;
   let previo = -1;
   for (let i = 0; i < entradas.length; i++) {
     const e = entradas[i];
@@ -332,8 +389,13 @@ function repeticionCoherente(
     if (tick < previo) return 'entradas desordenadas';
     if (tick > maxTick) return 'entradas fuera del tiempo jugado';
     if (jugador < 0 || jugador >= parte.jugadores) return 'jugador inexistente';
-    if (dir < 0 || dir > 3) return 'direccion inexistente';
+    if (dir < 0 || dir > 12) return 'orden inexistente';
+    if (dir > 3 && dir !== 8 && modo !== 'hab' && modo !== 'habduo') return 'poder fuera de DESATADO';
     previo = tick;
+  }
+  // el último giro, cerca del final: nadie pasa minutos sin tocar nada
+  if (ticksJugados > REPE_TICKS_SIN_ORDENES && previo < ticksJugados - REPE_TICKS_SIN_ORDENES) {
+    return 'la repeticion se acaba mucho antes que la partida';
   }
   return null;
 }
@@ -518,6 +580,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const puntosPorS = MAX_PUNTOS_POR_S * jugadores;
   const tiempoMs = entero(datos.tiempoMs);
   if (!(tiempoMs > 0)) return mal('FALTA EL TIEMPO JUGADO');
+  if (tiempoMs > MAX_TIEMPO_MS) {
+    return mal('TIEMPO IMPOSIBLE', 400,
+      tiempoMs + ' ms: el tope son ' + MAX_TIEMPO_MS + ' (6 horas)');
+  }
   if (tiempoMs < (niveles - 1) * msPorNivel) {
     return mal('TIEMPO IMPOSIBLE', 400,
       tiempoMs + ' ms para ' + (niveles - 1) + ' niveles despejados entre ' +
@@ -555,28 +621,108 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  /* ---- repetición: si viene, tiene que cuadrar ---- */
+  /* ---- repetición ----
+   * Si viene y cuadra, se guarda con la marca. Si no cuadra, la partida NO se
+   * tira mientras la repetición no sea obligatoria: se guarda sin ella y el
+   * porqué queda en el `motivo` (un fallo del juego al grabarla no puede
+   * costarle la marca a nadie). Con EXIGIR_REPETICION, una partida LOCAL sin
+   * repetición coherente no entra; la marca del nivel 1, que se manda en
+   * mitad de la partida, no la lleva nunca (su puntuación no pasa del techo
+   * de un nivel, y su tiempo va a cuarentena si bate por mucho al mejor). */
   let repeticion: unknown = null;
-  let verificado = false;
+  let coherente = false;
+  let falloRepe = '';
   if (datos.repeticion != null) {
     const fallo = repeticionCoherente(
       datos.repeticion as Record<string, unknown>,
-      { jugadores, puntos, nivel, fantasmas, tiempoMs, ajustes }
+      { jugadores, puntos, nivel, niveles, fantasmas, tiempoMs, ajustes }
     );
-    if (fallo) return mal('REPETICIÓN INCOHERENTE', 400, fallo);
-    repeticion = datos.repeticion;
-    verificado = true;
+    if (fallo) falloRepe = fallo;
+    else {
+      repeticion = datos.repeticion;
+      coherente = true;
+    }
+  }
+  const esMarcaNivel1 = tiempo1 != null && nivel === 1;
+  if (EXIGIR_REPETICION && modo === 'local' && !coherente && !esMarcaNivel1) {
+    return falloRepe
+      ? mal('REPETICIÓN INCOHERENTE', 400, falloRepe)
+      : mal('FALTA LA REPETICIÓN', 400, 'el top mundial pide la repetición de las partidas locales');
+  }
+
+  const cabeceras = {
+    'apikey': CLAVE,
+    'Authorization': 'Bearer ' + CLAVE,
+    'Content-Type': 'application/json'
+  };
+
+  /* ---- cuarentena ----
+   * La marca se compara con el PRIMERO de su liga (mismo mundo y formato,
+   * solo lo que está a la vista). Liga vacía: con el primero de ese mundo; y
+   * si tampoco hay, con el de todo el top. Si la consulta falla, la marca
+   * entra: el top mundial no puede dejar de funcionar por esto. */
+  const motivos: string[] = [];
+  if (falloRepe) motivos.push('repeticion incoherente: ' + falloRepe);
+  let oculta = false;
+  async function primero(filtro: string, orden: string, col: string): Promise<number> {
+    try {
+      const res = await fetch(URL_BASE + '/rest/v1/ranking?select=' + col +
+        '&oculta=eq.false' + filtro + '&order=' + orden + '&limit=1', { headers: cabeceras });
+      if (!res.ok) return 0;
+      const filas = await res.json() as Array<Record<string, number>>;
+      return (filas && filas.length) ? Number(filas[0][col]) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  }
+  const lider = (await primero('&mundo=eq.' + mundo + '&jugadores=eq.' + jugadores, 'puntos.desc', 'puntos')) ||
+    (await primero('&mundo=eq.' + mundo, 'puntos.desc', 'puntos')) ||
+    (await primero('', 'puntos.desc', 'puntos'));
+  if (lider > 0 && puntos > lider * CUARENTENA_X) {
+    oculta = true;
+    motivos.push('cuarentena: ' + (puntos / lider).toFixed(2) + ' veces el primero (' + lider + ')');
+  }
+  if (tiempo1 != null) {
+    const mejorT1 = await primero('&jugadores=eq.1&mundo=eq.clasico&tiempo1=not.is.null',
+      'tiempo1.asc', 'tiempo1');
+    if (mejorT1 > 0 && tiempo1 * CUARENTENA_T1 < mejorT1) {
+      oculta = true;
+      motivos.push('cuarentena: nivel 1 en ' + tiempo1 + ' cs, el mejor es ' + mejorT1);
+    }
+  }
+
+  /* ---- los compañeros, ¿dieron permiso? ----
+   * Cada compañero con cuenta tiene que haber dado su permiso a quien envía:
+   * tenerlo en su lista de amigos, o haber jugado con él en una party en las
+   * últimas 12 h (el juego lo apunta al entrar como invitado,
+   * public.avalar_equipo). De momento solo se APUNTA en `sin_aval`; con
+   * EXIGIR_AVAL, la marca entra oculta. */
+  let sinAval: string[] | null = null;
+  if (jugadores >= 2) {
+    const companeros: string[] = [];
+    for (let i = 0; i < jugadores; i++) {
+      const id = cuentas.get(nombres[i].trim().toUpperCase());
+      if (id && id !== usuarioId) companeros.push(id);
+    }
+    try {
+      const res = await fetch(URL_BASE + '/rest/v1/rpc/equipo_sin_aval', {
+        method: 'POST', headers: cabeceras,
+        body: JSON.stringify({ p_emisor: usuarioId, p_companeros: companeros })
+      });
+      if (res.ok) sinAval = await res.json() as string[];
+    } catch {
+      sinAval = null;       // no se sabe: no se apunta nada
+    }
+    if (sinAval && sinAval.length && EXIGIR_AVAL) {
+      oculta = true;
+      motivos.push('sin permiso de ' + sinAval.join(', '));
+    }
   }
 
   /* ---- freno por nombre y minuto ----
    * El mismo tope que el trigger de la tabla. Se traen las filas del último
    * minuto (son cuatro gatos) y se cuentan aquí: así no hay que meter el
    * nombre del jugador dentro de un filtro de PostgREST. */
-  const cabeceras = {
-    'apikey': CLAVE,
-    'Authorization': 'Bearer ' + CLAVE,
-    'Content-Type': 'application/json'
-  };
   const desde = new Date(Date.now() - 60000).toISOString();
   try {
     const res = await fetch(
@@ -614,13 +760,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     nombre2: (jugadores >= 2) ? nombres[1] : null,
     puntos: puntos,
     nivel: nivel,
-    verificado: verificado,
-    mundo: mundo
+    repeticion_coherente: coherente,
+    mundo: mundo,
+    oculta: oculta
   };
   if (jugadores >= 3) fila.nombre3 = nombres[2];
   if (jugadores >= 4) fila.nombre4 = nombres[3];
   if (tiempo1 != null) fila.tiempo1 = tiempo1;
   if (repeticion != null) fila.repeticion = repeticion;
+  if (motivos.length) fila.motivo = motivos.join(' · ').slice(0, 500);
+  if (sinAval && sinAval.length) fila.sin_aval = sinAval;
 
   function meter(cuerpo: Record<string, unknown>): Promise<Response> {
     return fetch(URL_BASE + '/rest/v1/ranking', {
@@ -631,20 +780,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   let ins: Response;
-  let guardadaLaRepeticion = verificado;
+  let guardadaLaRepeticion = coherente;
   try {
     ins = await meter(fila);
-    /* Red de seguridad del despliegue: la función se sube ANTES de aplicar el
-     * SQL, así que puede haber un rato en que las columnas `repeticion` y
-     * `verificado` todavía no existan. En vez de tirar la partida del jugador,
-     * se reintenta sin ellas. En cuanto el SQL esté aplicado, por aquí no se
-     * vuelve a pasar. */
+    /* Red de seguridad del despliegue: si la función se sube antes que el SQL
+     * (supabase/ranking-cuarentena.sql), las columnas nuevas todavía no
+     * existen. En vez de tirar la partida del jugador, se reintenta sin
+     * ellas. En cuanto el SQL esté aplicado, por aquí no se vuelve a pasar. */
     if (!ins.ok && ins.status === 400) {
       const texto = await ins.clone().text();
-      if (/column/i.test(texto) && /repeticion|verificado/i.test(texto)) {
-        delete fila.verificado;
+      if (/column/i.test(texto) &&
+          /repeticion|oculta|motivo|sin_aval/i.test(texto)) {
+        delete fila.repeticion_coherente;
         delete fila.repeticion;
+        delete fila.oculta;
+        delete fila.motivo;
+        delete fila.sin_aval;
         guardadaLaRepeticion = false;
+        oculta = false;
         ins = await meter(fila);
       }
     }
@@ -660,5 +813,5 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return mal('NO SE PUDO GUARDAR', 502, ins.status + ' ' + texto);
   }
 
-  return respuesta({ ok: true, verificado: guardadaLaRepeticion }, 200);
+  return respuesta({ ok: true, repeticion: guardadaLaRepeticion, cuarentena: oculta }, 200);
 });

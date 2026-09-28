@@ -1,7 +1,8 @@
 /* ============================================================
  * PAC-MAN TOP MUNDIAL — supabase/functions/cuenta
  *
- * Alta, entrada y "he olvidado la contraseña", en un solo sitio.
+ * Alta, entrada, "he olvidado la contraseña" y los cambios de correo
+ * y contraseña, en un solo sitio.
  *
  * EL PROBLEMA QUE RESUELVE
  * Hasta ahora el correo de la cuenta se componía por dentro
@@ -19,18 +20,36 @@
  * ¿Y cómo se entra con usuario si Supabase Auth pide el correo? Por
  * aquí: esta función resuelve usuario -> correo con la service role
  * y hace la petición de sesión ella misma. **El correo de nadie sale
- * nunca al navegador** —ni el propio, salvo enmascarado—, que es
- * justo lo que no se podría garantizar si el juego tuviera que
- * consultarlo para entrar.
+ * nunca al navegador**, que es justo lo que no se podría garantizar si
+ * el juego tuviera que consultarlo para entrar.
  *
  * verify_jwt: FALSE, a propósito: quien viene aquí todavía no tiene
  * sesión (esa es la gracia). Lo que protege cada operación es la
  * contraseña, o el propio correo en el caso de la recuperación.
  *
  * OPERACIONES
- *   alta    { usuario, pass, correo } -> { ok, sesion }
- *   entrar  { usuario, pass }         -> { ok, sesion }
- *   olvide  { usuario }               -> { ok, pista }
+ *   alta    { usuario, pass, correo }           -> { ok, sesion }
+ *   entrar  { usuario, pass, pass2? }           -> { ok, sesion, segunda }
+ *   olvide  { usuario }                         -> { ok, pista: '' }
+ *   correo  { usuario, pass, pass2?, correo }   -> { ok }
+ *   clave   { usuario, pass, pass2?, nueva }    -> { ok }
+ *
+ * 28 SEP 2026 — LO QUE CAMBIÓ (supabase/cuenta-frenos.sql)
+ *   · ENTRAR TIENE FRENO: 5 fallos seguidos por usuario cierran 15 min, y
+ *     cada fallo más dobla la espera (2 h como mucho). `pass2` es la
+ *     contraseña tal cual se escribió, para las cuentas viejas que no la
+ *     tienen en mayúsculas (Account.signIn): las dos en UNA petición, un
+ *     solo intento.
+ *   · ALTA: contraseña de 8 como mínimo (las cuentas que ya existen siguen
+ *     entrando con la suya) y el mismo filtro de palabras que el top mundial.
+ *   · OLVIDÉ: la MISMA respuesta exista la cuenta o no, tenga correo o no, y
+ *     sin pista del correo (antes decía "ese usuario no existe" o "esa cuenta
+ *     no tiene correo", y enseñaba media dirección a cualquiera que supiera un
+ *     nombre del top). Un correo cada 15 min por usuario.
+ *   · CAMBIAR EL CORREO o LA CONTRASEÑA pide la contraseña actual y va por
+ *     aquí (API de administración), no por /auth/v1/user con la sesión: con
+ *     una sesión robada ya no se puede cambiar el correo y pedir la
+ *     recuperación.
  *
  * Variables de entorno: las pone Supabase sola al desplegar
  * (SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY).
@@ -39,13 +58,25 @@
 /* Mismas constantes que js/config.js */
 const USER_MIN = 3;               // CFG.ACCOUNT.USER_MIN
 const NICK_MAX = 12;              // CFG.NICK_MAX
-const PASS_MIN = 6;               // CFG.ACCOUNT.PASS_MIN
+const PASS_MIN = 6;               // CFG.ACCOUNT.PASS_MIN: el de las cuentas de antes
+const PASS_MIN_NUEVA = 8;         // CFG.ACCOUNT.PASS_MIN_NUEVA: cuentas y contraseñas nuevas
 const PASS_MAX = 72;              // tope de bcrypt: más allá se ignora en silencio
 const MAIL_MAX = 254;             // lo que permite el estándar
 /* Dominio de los correos internos de antes de esto. Una cuenta con este
- * dominio NO tiene correo de verdad y no se le puede mandar nada: hay que
- * decírselo, no dejarla esperando un mensaje que no existe. */
+ * dominio NO tiene correo de verdad y no se le puede mandar nada. */
 const MAIL_INTERNO = 'cuentas.pacman-topmundial.vercel.app';
+/* "Olvidé" tarda lo mismo haya o no a quién escribir: si no, el tiempo de
+ * respuesta diría lo que el mensaje ya no dice. */
+const OLVIDE_MS = 900;
+
+/* Palabras vetadas: copia de CFG.BAD_WORDS de js/config.js (la misma lista
+ * que la función enviar-record) */
+const PALABRAS_VETADAS = [
+  'PUTA', 'PUTO', 'MIERDA', 'COÑO', 'CONO', 'JODER', 'GILIPOLL', 'CABRON',
+  'MARICA', 'MARICON', 'POLLA', 'VERGA', 'PENE', 'CULO', 'TETAS', 'ZORRA',
+  'PERRA', 'PENDEJO', 'CHINGA', 'VIOLA', 'NAZI', 'HITLER',
+  'FUCK', 'SHIT', 'BITCH', 'DICK', 'COCK', 'CUNT', 'RAPE', 'NIGG', 'FAG'
+];
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -77,6 +108,20 @@ function limpiaCorreo(v: unknown): string {
   return String(v == null ? '' : v).trim().toLowerCase().slice(0, MAIL_MAX);
 }
 
+/* Mismo aplanado que Ranking.nameAllowed() en js/ranking.js: los números que
+ * imitan letras vuelven a su letra, así no se cuela un PUT4. */
+function nombrePermitido(nombre: string): boolean {
+  const plano = String(nombre || '').toUpperCase()
+    .replace(/[0]/g, 'O').replace(/[1|!]/g, 'I').replace(/[3]/g, 'E')
+    .replace(/[4@]/g, 'A').replace(/[5$]/g, 'S').replace(/[7]/g, 'T')
+    .replace(/[^A-Z]/g, '');
+  if (!plano) return false;
+  for (const mala of PALABRAS_VETADAS) {
+    if (plano.indexOf(mala) !== -1) return false;
+  }
+  return true;
+}
+
 /* Comprobación deliberadamente floja: aquí no se valida un correo, se evita
  * un dedazo evidente. Si el correo está mal escrito lo dirá el mensaje que no
  * llega, y validar de más solo sirve para rechazar direcciones legítimas. */
@@ -89,21 +134,8 @@ function esInterno(c: string): boolean {
   return c.endsWith('@' + MAIL_INTERNO);
 }
 
-/* El correo, tapado: 'maulio@gmail.com' -> 'm****o@g****.com'. Se enseña para
- * que quien lo pide sepa QUÉ buzón mirar sin que el correo entero salga a la
- * pantalla de cualquiera que sepa un nombre de usuario. */
-function pista(c: string): string {
-  const at = c.lastIndexOf('@');
-  if (at <= 0) return '';
-  const usuario = c.slice(0, at);
-  const dominio = c.slice(at + 1);
-  const punto = dominio.indexOf('.');
-  const nombre = (punto > 0) ? dominio.slice(0, punto) : dominio;
-  const resto = (punto > 0) ? dominio.slice(punto) : '';
-  const tapa = (s: string) => (s.length <= 2)
-    ? (s.charAt(0) + '*')
-    : (s.charAt(0) + '*'.repeat(Math.min(4, s.length - 2)) + s.charAt(s.length - 1));
-  return tapa(usuario) + '@' + tapa(nombre) + resto;
+function espera(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, Math.max(0, ms)));
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -160,37 +192,135 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return String(u.email || '').toLowerCase();
   }
 
-  /* ---- sesión a partir de correo + contraseña ---- */
-  async function sesion(correo: string, pass: string): Promise<Response> {
+  /* ---- los frenos (supabase/cuenta-frenos.sql) ----
+   * Si la base no contesta, se deja pasar: no poder frenar no puede dejar a
+   * nadie sin entrar en su cuenta. */
+  async function rpc(nombre: string, clave: string): Promise<unknown> {
+    try {
+      const res = await fetch(URL_BASE + '/rest/v1/rpc/' + nombre, {
+        method: 'POST', headers: cab, body: JSON.stringify({ p_clave: clave })
+      });
+      if (!res.ok) return null;
+      const t = await res.text();
+      return t ? JSON.parse(t) : null;
+    } catch {
+      return null;
+    }
+  }
+  const claveEntrar = 'entrar:' + usuario;
+
+  async function frenado(): Promise<Response | null> {
+    const s = Number(await rpc('cuenta_espera', claveEntrar)) || 0;
+    if (s <= 0) return null;
+    const min = Math.max(1, Math.ceil(s / 60));
+    return mal('DEMASIADOS INTENTOS: ESPERA ' + min + ' MIN', 429, s + ' s');
+  }
+
+  /* ---- sesión a partir de correo + contraseña (null si no entra) ---- */
+  async function pedirSesion(correo: string, pass: string): Promise<Record<string, unknown> | null> {
     const res = await fetch(URL_BASE + '/auth/v1/token?grant_type=password', {
       method: 'POST', headers: cab,
       body: JSON.stringify({ email: correo, password: pass })
     });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok || !d.access_token) {
-      return mal('USUARIO O CONTRASEÑA MAL', 401,
-        JSON.stringify(d).slice(0, 200));
+    const d = await res.json().catch(() => ({})) as Record<string, unknown>;
+    return (res.ok && d.access_token) ? d : null;
+  }
+
+  /* ---- ¿esta contraseña (o la segunda, tal cual se escribió) es la de la
+   * cuenta? Devuelve la sesión, o null. Cuenta como un intento. ---- */
+  async function comprobar(id: string | null): Promise<{ sesion: Record<string, unknown> | null; correo: string; segunda: boolean }> {
+    const pass = String(datos.pass == null ? '' : datos.pass);
+    const pass2 = String(datos.pass2 == null ? '' : datos.pass2);
+    let correo = '';
+    let s: Record<string, unknown> | null = null;
+    let segunda = false;
+    if (id) {
+      correo = await correoDe(id);
+      if (correo && pass) s = await pedirSesion(correo, pass);
+      if (!s && correo && pass2 && pass2 !== pass) {
+        s = await pedirSesion(correo, pass2);
+        segunda = !!s;
+      }
     }
-    return respuesta({ ok: true, sesion: d }, 200);
+    if (s) await rpc('cuenta_limpia', claveEntrar);
+    else await rpc('cuenta_fallo', claveEntrar);
+    return { sesion: s, correo, segunda };
+  }
+
+  /* ---- cierra una sesión que solo se abrió para comprobar la contraseña ---- */
+  async function soltar(s: Record<string, unknown> | null): Promise<void> {
+    if (!s || !s.access_token) return;
+    await fetch(URL_BASE + '/auth/v1/logout', {
+      method: 'POST',
+      headers: { 'apikey': CLAVE, 'Authorization': 'Bearer ' + String(s.access_token) }
+    }).catch(() => {});
   }
 
   /* =========================================================
    * ENTRAR
+   * Usuario que no existe y contraseña mala dan la MISMA respuesta, y los
+   * dos cuentan para el freno.
    * ========================================================= */
   if (op === 'entrar') {
     const pass = String(datos.pass == null ? '' : datos.pass);
     if (!pass) return mal('ESCRIBE USUARIO Y CONTRASEÑA');
     try {
-      const id = await idDe(usuario);
-      /* Usuario que no existe y contraseña mala dan la MISMA respuesta. Los
-       * nombres son públicos (salen en el ranking), así que esto no esconde
-       * gran cosa, pero tampoco hay ningún motivo para regalar la lista. */
-      if (!id) return mal('USUARIO O CONTRASEÑA MAL', 401, 'no existe');
-      const correo = await correoDe(id);
-      if (!correo) return mal('USUARIO O CONTRASEÑA MAL', 401, 'sin correo');
-      return await sesion(correo, pass);
+      const f = await frenado();
+      if (f) return f;
+      const c = await comprobar(await idDe(usuario));
+      if (!c.sesion) return mal('USUARIO O CONTRASEÑA MAL', 401);
+      /* `segunda`: entró con la contraseña tal cual se escribió, no con la de
+       * mayúsculas. El juego se la pasa a mayúsculas acto seguido. */
+      return respuesta({ ok: true, sesion: c.sesion, segunda: c.segunda }, 200);
     } catch (e) {
       return mal('NO SE PUDO ENTRAR', 502, String(e));
+    }
+  }
+
+  /* =========================================================
+   * CAMBIAR EL CORREO o LA CONTRASEÑA, con la contraseña actual
+   * ========================================================= */
+  if (op === 'correo' || op === 'clave') {
+    try {
+      const f = await frenado();
+      if (f) return f;
+      const id = await idDe(usuario);
+      /* lo nuevo se mira ANTES de gastar un intento de contraseña */
+      let nuevoCorreo = '', nuevaClave = '';
+      if (op === 'correo') {
+        nuevoCorreo = limpiaCorreo(datos.correo);
+        if (!correoPlausible(nuevoCorreo)) return mal('ESE CORREO NO TIENE BUENA PINTA');
+        if (esInterno(nuevoCorreo)) return mal('ESE CORREO NO VALE');
+      } else {
+        nuevaClave = String(datos.nueva == null ? '' : datos.nueva);
+        const actual = String(datos.pass == null ? '' : datos.pass);
+        /* Pasar la de siempre a MAYÚSCULAS (Account.signIn con una cuenta
+         * vieja) no es una contraseña nueva: vale con su largo de antes. */
+        const mismaEnMayusculas = nuevaClave.toUpperCase() === actual.toUpperCase();
+        const min = mismaEnMayusculas ? PASS_MIN : PASS_MIN_NUEVA;
+        if (nuevaClave.length < min) return mal('LA CONTRASEÑA NECESITA AL MENOS ' + min + ' CARACTERES');
+        if (nuevaClave.length > PASS_MAX) return mal('CONTRASEÑA DEMASIADO LARGA');
+      }
+      const c = await comprobar(id);
+      if (!c.sesion || !id) return mal('CONTRASEÑA MAL', 401);
+      await soltar(c.sesion);
+      if (op === 'correo' && nuevoCorreo === c.correo) return respuesta({ ok: true }, 200);
+      const res = await fetch(URL_BASE + '/auth/v1/admin/users/' + encodeURIComponent(id), {
+        method: 'PUT', headers: cab,
+        body: JSON.stringify(op === 'correo'
+          ? { email: nuevoCorreo, email_confirm: true }
+          : { password: nuevaClave })
+      });
+      if (!res.ok) {
+        const texto = await res.text();
+        if (/already|registered|exists|duplicate/i.test(texto)) {
+          return mal('ESE CORREO YA ES DE OTRA CUENTA', 409, texto.slice(0, 200));
+        }
+        return mal('NO SE PUDO GUARDAR', 502, texto.slice(0, 200));
+      }
+      return respuesta({ ok: true }, 200);
+    } catch (e) {
+      return mal('NO SE PUDO GUARDAR', 502, String(e));
     }
   }
 
@@ -204,8 +334,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (op === 'alta') {
     const pass = String(datos.pass == null ? '' : datos.pass);
     const correo = limpiaCorreo(datos.correo);
-    if (pass.length < PASS_MIN) {
-      return mal('LA CONTRASEÑA NECESITA AL MENOS ' + PASS_MIN + ' CARACTERES');
+    if (!nombrePermitido(usuario)) return mal('ESE NOMBRE NO ESTÁ PERMITIDO');
+    if (pass.length < PASS_MIN_NUEVA) {
+      return mal('LA CONTRASEÑA NECESITA AL MENOS ' + PASS_MIN_NUEVA + ' CARACTERES');
     }
     if (pass.length > PASS_MAX) return mal('CONTRASEÑA DEMASIADO LARGA');
     if (!correoPlausible(correo)) return mal('ESE CORREO NO TIENE BUENA PINTA');
@@ -217,7 +348,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       /* email_confirm: la cuenta nace confirmada. El correo se pide para poder
        * recuperar la contraseña, no para verificar a nadie: obligar a
-       * confirmarlo antes de jugar es un peaje que no compra nada aquí. */
+       * confirmarlo antes de jugar es un peaje que no compra nada aquí.
+       * Va por la API de administración, que sigue funcionando con el alta
+       * pública de Supabase apagada (así nadie se salta esta función). */
       const alta = await fetch(URL_BASE + '/auth/v1/admin/users', {
         method: 'POST', headers: cab,
         body: JSON.stringify({ email: correo, password: pass, email_confirm: true })
@@ -248,7 +381,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
           ? 'ESE USUARIO YA EXISTE' : 'NO SE PUDO CREAR EL PERFIL',
           /duplicate|unique/i.test(texto) ? 409 : 502, texto.slice(0, 200));
       }
-      return await sesion(correo, pass);
+      const s = await pedirSesion(correo, pass);
+      if (!s) return mal('NO SE PUDO ENTRAR', 502, 'cuenta creada, sesión no');
+      return respuesta({ ok: true, sesion: s }, 200);
     } catch (e) {
       if (id) {
         await fetch(URL_BASE + '/auth/v1/admin/users/' + encodeURIComponent(id),
@@ -263,33 +398,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
    * Se le pide a Supabase que mande SU enlace de recuperación al correo de esa
    * cuenta. El enlace vuelve al juego con una sesión de un solo uso y el juego
    * pide la contraseña nueva (ver Account.desdeRecuperacion).
+   *
+   * La respuesta es SIEMPRE la misma y tarda lo mismo: exista o no el usuario,
+   * tenga correo o no, se mande o no (uno cada 15 min por usuario). Así este
+   * botón no sirve para averiguar nada de nadie.
    * ========================================================= */
   if (op === 'olvide') {
+    const empieza = Date.now();
     try {
       const id = await idDe(usuario);
-      if (!id) return mal('ESE USUARIO NO EXISTE', 404);
-      const correo = await correoDe(id);
-      /* Cuenta de antes de que se pidiera correo: no hay a dónde escribir, y
-       * decírselo claro es lo único útil que se puede hacer. */
-      if (!correo || esInterno(correo)) {
-        return mal('ESA CUENTA NO TIENE CORREO PUESTO', 409);
+      const correo = id ? await correoDe(id) : '';
+      if (correo && !esInterno(correo) &&
+          await rpc('cuenta_olvide_toca', 'olvide:' + usuario) === true) {
+        const res = await fetch(URL_BASE + '/auth/v1/recover', {
+          method: 'POST', headers: cab,
+          body: JSON.stringify({ email: correo })
+        });
+        if (!res.ok) console.log('olvide: recover ' + res.status);
       }
-      const res = await fetch(URL_BASE + '/auth/v1/recover', {
-        method: 'POST', headers: cab,
-        body: JSON.stringify({ email: correo })
-      });
-      if (!res.ok) {
-        const texto = await res.text();
-        if (/rate|too many|limit/i.test(texto)) {
-          return mal('DEMASIADOS CORREOS SEGUIDOS: ESPERA UN RATO', 429,
-            texto.slice(0, 200));
-        }
-        return mal('NO SE PUDO MANDAR EL CORREO', 502, texto.slice(0, 200));
-      }
-      return respuesta({ ok: true, pista: pista(correo) }, 200);
     } catch (e) {
-      return mal('NO SE PUDO MANDAR EL CORREO', 502, String(e));
+      console.log('olvide: ' + String(e));
     }
+    await espera(OLVIDE_MS - (Date.now() - empieza));
+    return respuesta({ ok: true, pista: '' }, 200);
   }
 
   return mal('OPERACIÓN DESCONOCIDA', 400, op);

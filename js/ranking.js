@@ -342,8 +342,8 @@
         var cs = Math.floor(o.tiempo1);
         if (players === 1 && cs > 0 && cs <= CFG.RANKING.MAX_TIME) row.tiempo1 = cs;
       }
-      // repetición de la partida (formato v1): opcional; si viene y cuadra,
-      // la fila queda marcada como verificada
+      // repetición de la partida (formato v1): la función la compara con la
+      // marca (repeticion_coherente). No es una verificación: no se rejuega.
       if (o.repeticion) row.repeticion = o.repeticion;
 
       var reintentado = false;
@@ -363,8 +363,11 @@
           }
           if (res.ok) {
             self.lastSubmitError = null;
-            if (cb) cb(null);
-            return null;
+            /* { ok, repeticion, cuarentena }: una marca muy por encima del
+             * primero entra oculta hasta que se revise (28 sep) */
+            return res.json().catch(function () { return {}; }).then(function (d) {
+              if (cb) cb(null, d || {});
+            });
           }
           return res.text().then(function (t) {
             self.lastSubmitError = self.submitError(res.status, t);

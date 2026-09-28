@@ -3270,6 +3270,15 @@
         fantasmas: this.runGhosts,
         tiempoMs: this.playedMs()
       };
+      /* LA REPETICIÓN, con la marca (28 sep): la función la compara con lo
+       * que se envía (supabase/functions/enviar-record). Solo la de ESTA
+       * partida y solo si cabe en el envío; las de red no son de este formato. */
+      var Rp = window.PM.Replay, rep = Rp && Rp.ultimaCerrada;
+      if (rep && rep.final && rep.final.puntos === this.score && !this.netRole) {
+        try {
+          if (JSON.stringify(rep).length <= CFG.RANKING.REPE_MAX_CHARS) envio.repeticion = rep;
+        } catch (e) { /* sin repetición: entra igual */ }
+      }
       /* SIN CUENTA no entra en el top. La partida se guarda aquí y, si era
        * un récord suyo, el GAME OVER le avisa: si crea la cuenta o entra en
        * ese momento, se sube sola con su nombre de cuenta. */
@@ -3277,10 +3286,12 @@
         this.rankPendiente = { datos: envio, idx: Math.max(0, this.localIdx) };
         return;
       }
-      window.PM.Ranking.submit(envio, function (err) {
+      window.PM.Ranking.submit(envio, function (err, info) {
         // si no entró, se dice en el panel de GAME OVER, que es donde el
         // jugador está mirando. La partida ya terminó: no rompe nada.
         if (err) self.setFlash('TOP MUNDIAL: ' + err);
+        // y si entró en cuarentena, que no la busque en el top todavía
+        else if (info && info.cuarentena) self.setFlash('TOP MUNDIAL: MARCA EN REVISIÓN');
       });
     },
 

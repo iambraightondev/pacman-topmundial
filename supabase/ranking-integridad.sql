@@ -28,9 +28,9 @@
 -- vistas; aquí solo se añade y se quitan permisos. Se puede
 -- ejecutar tantas veces como haga falta.
 --
--- OJO: `ranking.sql` vuelve a dar el insert a `anon` (es de antes
--- de esto). Si algún día se ejecuta otra vez, hay que ejecutar
--- este archivo DETRÁS para volver a cerrar la puerta.
+-- (Hasta el 28 sep 2026, `ranking.sql` volvía a dar el insert a
+-- `anon` si se lanzaba otra vez. Ya no: los dos dejan la puerta
+-- cerrada, se lancen en el orden que se lancen.)
 --
 -- Pégalo en el proyecto de Supabase del juego:
 --   Dashboard -> SQL Editor -> New query -> Run
@@ -49,16 +49,24 @@
 -- esto siguen valiendo, con `verificado` en falso.
 -- ------------------------------------------------------------
 alter table public.ranking add column if not exists repeticion jsonb;
-alter table public.ranking add column if not exists verificado boolean;
-
-update public.ranking set verificado = false where verificado is null;
-alter table public.ranking alter column verificado set default false;
-alter table public.ranking alter column verificado set not null;
 
 comment on column public.ranking.repeticion is
   'Repetición de la partida (formato v1) tal como la mandó el juego; null si no vino.';
-comment on column public.ranking.verificado is
-  'La repetición cuadra con la puntuación enviada (comprobación estructural).';
+
+-- 28 sep 2026: `verificado` pasó a llamarse `repeticion_coherente`
+-- (supabase/ranking-cuarentena.sql): prometía una verificación que no se
+-- hace. Si ya está renombrada, aquí no se vuelve a crear la vieja.
+do $$
+begin
+  if not exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'ranking'
+                    and column_name = 'repeticion_coherente') then
+    alter table public.ranking add column if not exists verificado boolean;
+    update public.ranking set verificado = false where verificado is null;
+    alter table public.ranking alter column verificado set default false;
+    alter table public.ranking alter column verificado set not null;
+  end if;
+end $$;
 
 -- Una repetición desatada puede pesar mucho: un tope de tamaño evita que
 -- alguien use el ranking como almacén. 512 KB es de sobra para una partida
@@ -96,11 +104,24 @@ drop policy if exists "ranking insercion publica" on public.ranking;
 -- proyecto donde no estuviera (es la misma política de ranking.sql).
 grant select on public.ranking to anon, authenticated;
 
+-- (lo que está en cuarentena, ranking-cuarentena.sql, no se ve)
 drop policy if exists "ranking lectura publica" on public.ranking;
-create policy "ranking lectura publica"
-  on public.ranking for select
-  to anon, authenticated
-  using (true);
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'ranking'
+                and column_name = 'oculta') then
+    create policy "ranking lectura publica"
+      on public.ranking for select
+      to anon, authenticated
+      using (not oculta);
+  else
+    create policy "ranking lectura publica"
+      on public.ranking for select
+      to anon, authenticated
+      using (true);
+  end if;
+end $$;
 
 -- Sin políticas de insert/update/delete: con RLS activo, quedan prohibidos
 -- para todo el mundo menos para la service role, que salta el RLS.
