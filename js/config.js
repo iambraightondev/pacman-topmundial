@@ -1707,8 +1707,12 @@
     MODOS: [
       { id: 'd_hab_mordisco', modo: 'hab',
         desc: 'CÓMETE 5 FANTASMAS A MORDISCOS (Q)', stat: 'mordiscos', goal: 5 },
+      /* Pedía ATRAVESAR 15 MUROS CON EL FLASH, que solo lleva el Asesino: fuera
+       * de dos cuentas, nadie había pasado de 12 en toda su historia (29 sep).
+       * Mismo id y mismo sitio, para no rebarajar la semana; ahora vale con
+       * cualquier rol. */
       { id: 'd_hab_muros', modo: 'hab',
-        desc: 'ATRAVIESA 15 MUROS CON EL FLASH (E)', stat: 'muros', goal: 15 },
+        desc: 'CÓMETE 20 FANTASMAS EN DESATADO', stat: 'fantasmas', goal: 20 },
       { id: 'd_hab_marca', modo: 'hab',
         desc: '15.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 15000 },
       { id: 'd_lab_marca', modo: 'lab',

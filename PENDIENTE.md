@@ -13,6 +13,12 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**29 sep — PROPUESTAS CON DATOS, esperando a Braighton:** ver
+[PROPUESTAS-2026-09-29.md](PROPUESTAS-2026-09-29.md) (reto diario, primeros
+pasos, rango, ritmo del pase —antes del 1 oct—, factor de rol en party).
+Arreglado sin esperar: el reto del DAILY del 1 oct pedía 15 muros con el FLASH
+(solo Asesino; casi nadie pasa de 12): ahora 20 fantasmas en DESATADO.
+
 **29 sep — cabos sueltos (pm-v298).** LAURELES · OCT 2026 (plata, manzana
 violeta) hechos y protegidos en el servidor; las nueve extravagantes viejas
 ya llevan el accesorio pegado al moverse (POSES); pruebas de Playwright
