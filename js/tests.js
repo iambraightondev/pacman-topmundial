@@ -9340,6 +9340,27 @@
     G.toMenu();
   });
 
+  test('el lienzo de las pastillas es solo dibujo: se rehace al comer y no va en la foto', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1 });
+    G.render();
+    var antes = JSON.stringify(G.foto());
+    var fila = -1, col = -1;
+    for (var r = 0; r < CFG.ROWS && fila < 0; r++) {
+      for (var c = 0; c < CFG.COLS; c++) if (G.pellets[r][c] === '.') { fila = r; col = c; break; }
+    }
+    ok(fila >= 0 && G.pastHuella[fila * CFG.COLS + col] === true, 'la pastilla está en el lienzo');
+    for (var i = 0; i < 5; i++) G.render();
+    eq(JSON.stringify(G.foto()), antes, 'pintar no cambia nada de la partida');
+    var f = G.foto();
+    ok(!('pastCapa' in f.g) && !('pastHuella' in f.g) && !('pastEstampas' in f.g),
+       'el lienzo no viaja en la foto');
+    G.pellets[fila][col] = null;
+    G.render();
+    eq(G.pastHuella[fila * CFG.COLS + col], false, 'al comerla sale del lienzo');
+    G.toMenu();
+  });
+
   test('preparar una repetición deja sus fotos y su duración', function () {
     conVideo(function (R) {
       var rep = repetiCorta({ players: 1 }, 900);
