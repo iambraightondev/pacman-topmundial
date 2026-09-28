@@ -8104,6 +8104,28 @@
     });
   });
 
+  test('el saldo se lee una vez por texto guardado, y se entera de lo que cambie', function () {
+    conTienda(function (Tn, A) {
+      var llamadas = 0, orig = A.stats;
+      A.stats = function () { llamadas++; return orig.apply(this, arguments); };
+      try {
+        Tn.saldo();
+        llamadas = 0;
+        for (var i = 0; i < 50; i++) Tn.saldo();
+        eq(llamadas, 0, 'mirar el saldo 50 veces no relee los contadores');
+        Tn.ganar(200);
+        eq(Tn.saldo(), 1700, 'lo ganado se ve al momento');
+        // otra pestaña (o la nube) escribe el almacén por su cuenta
+        var d = JSON.parse(localStorage.getItem(CFG.ACH_KEY));
+        d.c.monedas = 500;
+        localStorage.setItem(CFG.ACH_KEY, JSON.stringify(d));
+        eq(Tn.saldo(), 2000, 'y lo escrito desde fuera también');
+        ok(Tn.comprar('efx_nieve').ok && Tn.tiene('efx_nieve'), 'comprar se ve al momento');
+        eq(Tn.saldo(), 1750, 'y se cobra');
+      } finally { A.stats = orig; }
+    });
+  });
+
   test('el regalo de veterano: 5 por partida y 50 por logro, una vez y sin duplicarse', function () {
     conTienda(function (Tn, A) {
       var T = CFG.TIENDA;
