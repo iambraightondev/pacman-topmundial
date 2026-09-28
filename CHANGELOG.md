@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-29 (noche) · PRIMEROS PASOS para los nuevos
+
+Ocho misiones para los primeros días de quien empieza (menos de 20 partidas):
+partida larga, 3 fantasmas con un energizante, DESATADO con Q W E R, crear
+cuenta, el reto básico del DAILY, ponerse algo del vestuario, probar
+LABERINTOS o CACERÍA y la colocación de CLASIFICATORIA. Pagan 1.050 monedas en
+total y, completas, un cofre de PLATA. Lo ya hecho cuenta.
+
 ## 2026-09-29 (noche) · El DAILY tiene dos niveles
 
 - **BÁSICO**, el mismo cada día: SUMA 20.000 PUNTOS HOY (todas las partidas,

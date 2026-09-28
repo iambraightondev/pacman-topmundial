@@ -13,7 +13,15 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**29 sep — PROPUESTAS CON DATOS, esperando a Braighton:** ver
+**29 sep (noche) — LAS SEIS PROPUESTAS HECHAS (pm-v302), aprobadas por
+Braighton ("sí a todo"):** tope diario del pase (1.800), rango (CEREZA
+protegida, premios por temporada con septiembre congelado, factor de rol en
+party a media corrección — revisar a mitad de octubre), DAILY de dos niveles
+con comodín (el duro también cumple el básico), PRIMEROS PASOS (función
+cofres v3 con la PLATA de premio). **Por ver jugando** y ajustar tras una
+semana de datos.
+
+**29 sep — PROPUESTAS CON DATOS (ya hechas, ver arriba):** ver
 [PROPUESTAS-2026-09-29.md](PROPUESTAS-2026-09-29.md) (reto diario, primeros
 pasos, rango, ritmo del pase —antes del 1 oct—, factor de rol en party).
 Arreglado sin esperar: el reto del DAILY del 1 oct pedía 15 muros con el FLASH
