@@ -8359,6 +8359,28 @@
     });
   });
 
+  test('el saldo se lee una vez por texto guardado, y se entera de lo que cambie', function () {
+    conTienda(function (Tn, A) {
+      var llamadas = 0, orig = A.stats;
+      A.stats = function () { llamadas++; return orig.apply(this, arguments); };
+      try {
+        Tn.saldo();
+        llamadas = 0;
+        for (var i = 0; i < 50; i++) Tn.saldo();
+        eq(llamadas, 0, 'mirar el saldo 50 veces no relee los contadores');
+        Tn.ganar(200);
+        eq(Tn.saldo(), 1700, 'lo ganado se ve al momento');
+        // otra pestaña (o la nube) escribe el almacén por su cuenta
+        var d = JSON.parse(localStorage.getItem(CFG.ACH_KEY));
+        d.c.monedas = 500;
+        localStorage.setItem(CFG.ACH_KEY, JSON.stringify(d));
+        eq(Tn.saldo(), 2000, 'y lo escrito desde fuera también');
+        ok(Tn.comprar('efx_nieve').ok && Tn.tiene('efx_nieve'), 'comprar se ve al momento');
+        eq(Tn.saldo(), 1750, 'y se cobra');
+      } finally { A.stats = orig; }
+    });
+  });
+
   test('el regalo de veterano: 5 por partida y 50 por logro, una vez y sin duplicarse', function () {
     conTienda(function (Tn, A) {
       var T = CFG.TIENDA;
@@ -9751,6 +9773,50 @@
     G.toMenu();
   });
 
+  test('el lienzo de las pastillas es solo dibujo: se rehace al comer y no va en la foto', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1 });
+    G.render();
+    var antes = JSON.stringify(G.foto());
+    var fila = -1, col = -1;
+    for (var r = 0; r < CFG.ROWS && fila < 0; r++) {
+      for (var c = 0; c < CFG.COLS; c++) if (G.pellets[r][c] === '.') { fila = r; col = c; break; }
+    }
+    ok(fila >= 0 && G.pastHuella[fila * CFG.COLS + col] === true, 'la pastilla está en el lienzo');
+    for (var i = 0; i < 5; i++) G.render();
+    eq(JSON.stringify(G.foto()), antes, 'pintar no cambia nada de la partida');
+    var f = G.foto();
+    ok(!('pastCapa' in f.g) && !('pastHuella' in f.g) && !('pastEstampas' in f.g),
+       'el lienzo no viaja en la foto');
+    G.pellets[fila][col] = null;
+    G.render();
+    eq(G.pastHuella[fila * CFG.COLS + col], false, 'al comerla sale del lienzo');
+    G.toMenu();
+  });
+
+  test('se pinta solo con paso nuevo, y en el menú a poco ritmo', function () {
+    window.PM.settings.muted = true;
+    var m = {};
+    G.newGame({ players: 1 });
+    ok(G.tocaPintar(0, 1000, m), 'el primer cuadro de la partida sale al momento');
+    ok(G.tocaPintar(1, 1016, m), 'con un paso, se pinta');
+    ok(!G.tocaPintar(0, 1024, m), 'a 120 Hz, el cuadro sin paso no se repinta');
+    ok(G.tocaPintar(2, 1033, m), 'y el siguiente con paso, sí');
+    var tapa = false, portadaTapa = G.portadaTapa;
+    G.portadaTapa = function () { return tapa; };
+    try {
+      G.toMenu();
+      ok(G.tocaPintar(0, 1040, m), 'al volver al menú se pinta al momento');
+      ok(!G.tocaPintar(1, 1056, m), 'en el menú no se pinta a 60 por segundo');
+      ok(G.tocaPintar(1, 1040 + G.MENU_PINTA_MS, m), 'sino cada MENU_PINTA_MS');
+      tapa = true;
+      ok(!G.tocaPintar(1, 1500, m), 'y con la portada puesta, que lo tapa todo, nada');
+      G.newGame({ players: 1 });
+      ok(G.tocaPintar(0, 1550, m), 'y al empezar la partida, al momento');
+      G.toMenu();
+    } finally { G.portadaTapa = portadaTapa; }
+  });
+
   test('preparar una repetición deja sus fotos y su duración', function () {
     conVideo(function (R) {
       var rep = repetiCorta({ players: 1 }, 900);
@@ -9824,6 +9890,31 @@
         s.efx1 = antes.efx;
       }
     });
+  });
+
+  test('lo puesto de la tienda se pregunta una vez por partida, y otra si se cambia', function () {
+    var s = window.PM.settings, Tn = window.PM.Tienda;
+    var antes = { acc: s.acc1, efx: s.efx1 };
+    var tiene = Tn.tiene, preguntas = 0;
+    try {
+      Tn.tiene = function () { preguntas++; return true; };
+      s.acc1 = CFG.ACCESORIO_IDS[0];
+      s.efx1 = '';
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      eq(G.lookFor(0).a, CFG.ACCESORIO_IDS[0], 'lleva su accesorio');
+      preguntas = 0;
+      for (var i = 0; i < 30; i++) { G.lookFor(0); G.render(); }
+      eq(preguntas, 0, 'pintar no vuelve a preguntar a la tienda');
+      s.acc1 = CFG.ACCESORIO_IDS[1];
+      eq(G.lookFor(0).a, CFG.ACCESORIO_IDS[1], 'si se cambia, se ve');
+      ok(!('miLook' in G.foto().g), 'y no viaja en la foto de la partida');
+      G.toMenu();
+    } finally {
+      Tn.tiene = tiene;
+      s.acc1 = antes.acc;
+      s.efx1 = antes.efx;
+    }
   });
 
   test('una repetición de antes del aspecto se sigue viendo', function () {

@@ -411,8 +411,16 @@
         return l ? { a: l.a || '', x: l.x || '' } : nada;
       }
       if (this.netRole || i !== 0 || this.replaying) return nada;
-      var Tn = window.PM.Tienda;
-      return Tn ? { a: Tn.accesorio(), x: Tn.efecto() } : nada;
+      /* Se pregunta a la TIENDA una vez por partida (miLook, que newGame
+       * vacía) y otra si cambia lo elegido: esto sale dos veces por
+       * fotograma y la tienda mira el almacén para saber si es tuyo */
+      var st = this.settings(), m = this.miLook;
+      if (!m || m.acc !== st.acc1 || m.efx !== st.efx1) {
+        var Tn = window.PM.Tienda;
+        m = this.miLook = { acc: st.acc1, efx: st.efx1,
+          a: Tn ? Tn.accesorio() : '', x: Tn ? Tn.efecto() : '' };
+      }
+      return { a: m.a, x: m.x };
     },
 
     /* Skin del jugador i (online: intercambiadas en el saludo) */
@@ -563,6 +571,7 @@
       this.netNames = opts.names || null;
       this.netSkins = opts.skins || null;
       this.netLooks = opts.looks || null;
+      this.miLook = null;            // lo puesto de la tienda: se lee al pintar (lookFor)
       this.loadouts = opts.loadouts || null;
       this.confetiTick = [];         // tick en que cada jugador se comió un fantasma
       // lo ganado de la TIENDA se cuenta como diferencia (partida + DAILY)
@@ -959,6 +968,7 @@
         this.netLooks = null;
       }
       this.netNotice = null;
+      this.miLook = null;        // en el menú se puede comprar: se vuelve a preguntar
       this.retomada = null;
       this.emotes = this.emptyEmotes();
       this.chat = [];
@@ -1140,6 +1150,7 @@
       this.loopLast = performance.now();
       this.loopAcc = 0;
       var STEP = 1000 / 60;
+      var pintado = {};          // lo que recuerda tocaPintar (no es partida)
 
       function pump(now, doRender) {
         var dt = now - self.loopLast;
@@ -1151,11 +1162,13 @@
         // timeScale acelera el reloj sin tocar la simulación: los pasos
         // siguen siendo de 1/60 s, solo que caben más en cada fotograma
         self.loopAcc += dt * (self.timeScale || 1);
+        var pasos = 0;
         while (self.loopAcc >= STEP) {
           self.step();
           self.loopAcc -= STEP;
+          pasos++;
         }
-        if (doRender) self.render();
+        if (doRender && self.tocaPintar(pasos, now, pintado)) self.render();
       }
 
       function frame(now) {
@@ -1172,6 +1185,40 @@
         var now = performance.now();
         if (now - self.loopLast > 150) pump(now, false);
       }, 100);
+    },
+
+    /* ¿Se pinta este fotograma? (28 sep) Solo decide el DIBUJO: los pasos de
+     * la simulación ya se han dado y son los mismos se pinte o no, así que
+     * las repeticiones no se enteran.
+     *  - Sin paso nuevo no hay nada nuevo que pintar: en pantallas de 90, 120
+     *    o 144 Hz se repintaba el mismo cuadro dos o tres veces.
+     *    (Interpolar entre pasos para que a 90 Hz fuera más suave sería
+     *    pintar posiciones que la simulación no ha tenido: queda anotado,
+     *    no hecho, por no arriesgar lo determinista.)
+     *  - En el MENÚ, con la portada puesta, nada: es opaca y tapa el lienzo
+     *    entero. Con otro panel (en el móvil dejan ver un 12 % del
+     *    laberinto) basta con MENU_PINTA_MS entre cuadro y cuadro.
+     *  - Al entrar o salir del menú, al momento, para no enseñar un cuadro
+     *    viejo. `memo` lo guarda el bucle, fuera de Game (y de su foto). */
+    MENU_PINTA_MS: 95,
+
+    tocaPintar: function (pasos, now, memo) {
+      var menu = (this.state === 'MENU');
+      if (memo.menu !== menu) {
+        memo.menu = menu;
+        memo.en = now;
+        return true;
+      }
+      if (!pasos) return false;
+      if (menu && (this.portadaTapa() || now - memo.en < this.MENU_PINTA_MS)) return false;
+      memo.en = now;
+      return true;
+    },
+
+    /* ¿Está puesta la portada (#menu)? Es opaca (css: #menu) y lo tapa todo */
+    portadaTapa: function () {
+      var m = (typeof document !== 'undefined') ? document.getElementById('menu') : null;
+      return !!(m && m.style && m.style.display && m.style.display !== 'none');
     },
 
     step: function () {
@@ -4989,6 +5036,10 @@
     FOTO_FUERA: {
       canvas: 1, ctx: 1, mazeBlue: 1, mazeWhite: 1, showCh: 1, lastOpts: 1,
       pacs: 1, ghosts: 1, pellets: 1,
+      // el lienzo de las pastillas (capaPastillas): es dibujo, no partida
+      PAST_GRADOS: 1, pastCapa: 1, pastHuella: 1, pastGrado: 1, pastEstampas: 1,
+      miLook: 1,          // y lo puesto de la tienda, que se lee al pintar
+      MENU_PINTA_MS: 1,   // y cada cuánto se pinta en el menú (tocaPintar)
       // estos tres son tablas de CFG: no se tocan, así que van por referencia
       speedRow: 1, fruitInfo: 1, schedule: 1
     },
@@ -5405,6 +5456,79 @@
       A.dibujarPac(this, ctx, pc, i);
     },
 
+    /* LAS PASTILLAS PEQUEÑAS, EN SU LIENZO (28 sep). El halo (shadowBlur) de
+     * las 244 era lo más caro de cada fotograma. Ahora cada una es una
+     * ESTAMPA ya pintada con su halo —el mismo dibujo de antes, dos pasadas—
+     * y todas juntas viven en un lienzo que solo se rehace al comerse una o
+     * al cambiar de grado de latido; el fotograma lo pega de una vez. El
+     * latido va en PAST_GRADOS escalones en vez de continuo: medio píxel de
+     * halo por escalón, que a ojo no se distingue. Es solo dibujo: lee
+     * this.pellets y no toca nada de la simulación. */
+    PAST_GRADOS: 16,
+
+    capaPastillas: function (latido) {
+      var G = this.PAST_GRADOS, q = Math.round(latido * G);
+      var S = CFG.SCALE, W = this.canvas.width, H = this.canvas.height;
+      var capa = this.pastCapa;
+      if (!capa || capa.width !== W || capa.height !== H) {
+        capa = this.pastCapa = document.createElement('canvas');
+        capa.width = W;
+        capa.height = H;
+        this.pastHuella = null;
+      }
+      /* qué pastillas hay, contra lo que está pintado (868 casillas: nada) */
+      var huella = this.pastHuella;
+      var cambia = !huella || this.pastGrado !== q;
+      if (!huella) huella = this.pastHuella = [];
+      var k = 0, r, c;
+      for (r = 0; r < CFG.ROWS; r++) {
+        var fila = this.pellets[r];
+        for (c = 0; c < CFG.COLS; c++, k++) {
+          var hay = !!(fila && fila[c] === '.');
+          if (huella[k] !== hay) { huella[k] = hay; cambia = true; }
+        }
+      }
+      if (!cambia) return capa;
+      this.pastGrado = q;
+      var est = this.estampaPastilla(q, G);
+      var M = est.m, cc = capa.getContext('2d');
+      cc.setTransform(1, 0, 0, 1, 0, 0);
+      cc.clearRect(0, 0, W, H);
+      cc.setTransform(S, 0, 0, S, 0, 0);
+      cc.imageSmoothingEnabled = false;
+      k = 0;
+      for (r = 0; r < CFG.ROWS; r++) {
+        for (c = 0; c < CFG.COLS; c++, k++) {
+          if (!huella[k]) continue;
+          cc.drawImage(est.cv, c * T + T / 2 - 1 - M, r * T + T / 2 + CFG.MAZE_Y - 1 - M,
+            2 + 2 * M, 2 + 2 * M);
+        }
+      }
+      return capa;
+    },
+
+    /* Una pastilla pequeña con su halo, en el grado q de latido (se guarda) */
+    estampaPastilla: function (q, G) {
+      var hechas = this.pastEstampas || (this.pastEstampas = {});
+      if (hechas[q]) return hechas[q];
+      var latido = q / G, S = CFG.SCALE;
+      var M = 10;             // margen para el halo (15 px de pantalla caben de sobra)
+      var cv = document.createElement('canvas');
+      cv.width = cv.height = (2 + 2 * M) * S;
+      var c = cv.getContext('2d');
+      c.setTransform(S, 0, 0, S, 0, 0);
+      /* también respiran, pero muy poco: lo justo para que el laberinto no
+       * esté quieto del todo, sin robarle el latido a la grande */
+      c.shadowColor = CFG.COLORS.pelletMini;
+      c.shadowBlur = 8 + latido * 7;
+      c.globalAlpha = 0.8 + latido * 0.2;
+      c.fillStyle = CFG.COLORS.pelletMini;
+      /* dos pasadas: el halo de canvas es flojo y así se nota de verdad */
+      c.fillRect(M, M, 2, 2);
+      c.fillRect(M, M, 2, 2);
+      return (hechas[q] = { cv: cv, m: M });
+    },
+
     render: function () {
       var ctx = this.ctx;
       var i;
@@ -5452,34 +5576,25 @@
        * despacio con su halo, que se lee mucho mejor que un encendido y
        * apagado y no cansa la vista. */
       var latido = 0.5 + 0.5 * Math.sin(this.tick / 26);       // 0..1, ~2,7 s
+      /* Las pequeñas van ya pintadas en su lienzo aparte (capaPastillas): el
+       * halo de 244 pastillas era lo más caro de cada fotograma */
+      if (dimVista < 0) {
+        ctx.drawImage(this.capaPastillas(latido), 0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
+      }
       for (var r = 0; dimVista < 0 && r < CFG.ROWS; r++) {
         for (var c2 = 0; c2 < CFG.COLS; c2++) {
           var ch = this.pellets[r][c2];
-          if (!ch) continue;
+          if (!ch || ch === '.') continue;
           var cx = c2 * T + T / 2, cy = r * T + T / 2 + CFG.MAZE_Y;
-          if (ch === '.') {
-            /* también respiran, pero muy poco: lo justo para que el laberinto
-             * no esté quieto del todo, sin robarle el latido a la grande */
-            ctx.save();
-            ctx.shadowColor = CFG.COLORS.pelletMini;
-            ctx.shadowBlur = 8 + latido * 7;
-            ctx.globalAlpha = 0.8 + latido * 0.2;
-            ctx.fillStyle = CFG.COLORS.pelletMini;
-            /* dos pasadas: el halo de canvas es flojo y así se nota de verdad */
-            ctx.fillRect(cx - 1, cy - 1, 2, 2);
-            ctx.fillRect(cx - 1, cy - 1, 2, 2);
-            ctx.restore();
-          } else {
-            ctx.save();
-            ctx.shadowColor = CFG.COLORS.pellet;
-            ctx.shadowBlur = 6 + latido * 10;
-            ctx.globalAlpha = 0.75 + latido * 0.25;
-            ctx.fillStyle = CFG.COLORS.pellet;
-            ctx.beginPath();
-            ctx.arc(cx, cy, 3.4 + latido * 1.2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-          }
+          ctx.save();
+          ctx.shadowColor = CFG.COLORS.pellet;
+          ctx.shadowBlur = 6 + latido * 10;
+          ctx.globalAlpha = 0.75 + latido * 0.25;
+          ctx.fillStyle = CFG.COLORS.pellet;
+          ctx.beginPath();
+          ctx.arc(cx, cy, 3.4 + latido * 1.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
       }
 

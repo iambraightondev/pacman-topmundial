@@ -73,10 +73,36 @@
   var EMOTES_BASE = CFG.EMOTES.map(function (e) { return e.id; });
 
   function A() { return window.PM.Achievements; }
-  function stat(k) {
+
+  /* Los contadores, leídos UNA vez por cada texto guardado (28 sep). El
+   * saldo repasa ~120 contadores y cada uno era un Achievements.stats()
+   * entero (copiar las 218 claves): pintar el menú pedía el saldo decenas de
+   * veces —cada skin de tienda, cada accesorio— y eran ~10.000 lecturas y
+   * más de un segundo congelado en un móvil modesto. Ahora se mira el texto
+   * del almacén (leerlo y compararlo cuesta un microsegundo) y solo si ha
+   * cambiado —una compra, lo ganado, otra pestaña, la nube— se vuelve a
+   * pedir. También cuenta quién ha entrado: stats() corrige las cifras de
+   * algunas cuentas (CFG.AJUSTES_CUENTA). Solo se lee: nadie toca `c`. */
+  var leido = { raw: null, quien: null, fn: null, c: null };
+  function quienEntro() {
+    var Ac = window.PM.Account;
+    try { return (Ac && Ac.logged && Ac.logged()) ? String(Ac.name ? Ac.name() : '') : ''; }
+    catch (e) { return ''; }
+  }
+  function contadores() {
     var Ac = A();
-    if (!Ac) return 0;
-    var c = Ac.stats();
+    if (!Ac) return null;
+    var raw = null;
+    try { raw = localStorage.getItem(CFG.ACH_KEY); } catch (e) { raw = null; }
+    var quien = quienEntro();
+    if (leido.c && raw === leido.raw && quien === leido.quien && Ac.stats === leido.fn) {
+      return leido.c;
+    }
+    leido = { raw: raw, quien: quien, fn: Ac.stats, c: Ac.stats() };
+    return leido.c;
+  }
+  function stat(k) {
+    var c = contadores();
     return (c && c[k]) || 0;
   }
   function settings() { return window.PM.settings || CFG.DEFAULT_SETTINGS; }
