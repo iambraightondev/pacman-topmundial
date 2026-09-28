@@ -1609,6 +1609,10 @@
         roles: G.hab && G.roles ? G.roles.slice() : null,
         poderes: G.hab ? poderesDeAhora() : null,
         caza: !!G.caza,        // CACERÍA: el Pac-Man de la máquina y su reloj
+        /* CLASIFICATORIA (28 sep): no cambia cómo se ve, pero sin esto no se
+         * podía saber qué partidas de party contaron para el rango (ni revisar
+         * con datos el factor de rol, que sale de `roles`) */
+        clasif: !!G.clasif,
         fecha: new Date().toISOString(),
         pm: null,              // mapa de pastillas del arranque
         cuadros: [],           // [tick, vector]
@@ -1684,6 +1688,7 @@
         aj: rep.ajustes, nm: rep.nombres, co: rep.colores, sk: rep.skins,
         lk: rep.looks || null,
         gh: rep.ghosts || null, hb: !!rep.hab, cz: !!rep.caza, rl: rep.roles || null,
+        cl: !!rep.clasif,
         lo: rep.poderes || null,
         fe: rep.fecha, pm: rep.pm || null,
         fin: rep.final
@@ -1745,6 +1750,7 @@
           ajustes: cab.aj || {}, nombres: cab.nm || [], colores: cab.co || [],
           skins: cab.sk || [], looks: cab.lk || null,
           ghosts: cab.gh || null, hab: !!cab.hb, roles: cab.rl || null,
+          clasif: !!cab.cl,
           poderes: cab.lo || null,
           caza: !!cab.cz, fecha: cab.fe || '',
           pm: cab.pm || null, cuadros: cuadros, eventos: eventos,

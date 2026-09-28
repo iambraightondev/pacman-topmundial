@@ -52,7 +52,7 @@
   var History = {
     all: function () { return load(); },
 
-    /* o: { jugadores, modo, nombre1, nombre2, puntos, nivel }
+    /* o: { jugadores, modo, nombre1, nombre2, puntos, nivel, mundo, roles, clasif }
      *
      * `jugadores` va tal cual (1..4). Antes se recortaba a 1 o 2 —de cuando
      * solo había esos dos formatos— y una partida de trío o escuadra quedaba
@@ -62,7 +62,7 @@
     add: function (o) {
       if (!o || !(o.puntos > 0)) return;
       var list = load();
-      list.unshift({
+      var fila = {
         t: Date.now(),
         j: Math.max(1, Math.min(CFG.MAX_PLAYERS, Math.floor(o.jugadores || 1))),
         m: (o.modo === 'online') ? 'online' : 'local',
@@ -72,7 +72,12 @@
         lv: Math.floor(o.nivel || 1),
         // el mundo (hab, lab) para la etiqueta de TUS PARTIDAS; vacío es el clásico
         mu: (o.mundo === 'hab' || o.mundo === 'lab') ? o.mundo : ''
-      });
+      };
+      /* DESATADO (28 sep): el rol de cada asiento y si era CLASIFICATORIA,
+       * para poder revisar con datos el factor de rol del rango */
+      if (o.roles && o.roles.length) fila.rl = o.roles.map(function (r) { return String(r); });
+      if (o.clasif) fila.cl = 1;
+      list.unshift(fila);
       while (list.length > CFG.HISTORY_MAX) list.pop();
       save(list);
     },

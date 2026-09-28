@@ -3149,7 +3149,9 @@
           nombre2: (this.playerCount === 2) ? this.nameFor(1) : '',
           puntos: this.myPoints(),
           nivel: this.level,
-          mundo: this.recordSlot() || ''
+          mundo: this.recordSlot() || '',
+          roles: (this.hab && this.roles) ? this.roles : null,
+          clasif: !!this.clasif
         });
       }
       if (this.netRole === 'guest') return;     // online: sube solo el anfitrión

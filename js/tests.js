@@ -1954,6 +1954,66 @@
     }
   });
 
+  /* 28 sep: para revisar el factor de rol del rango con datos hace falta
+   * saber, de cada partida de party, el rol de cada uno y si era
+   * CLASIFICATORIA. La repetición de red ya traía los roles; ahora también
+   * la marca, y el historial apunta las dos cosas. */
+  test('una partida de party apunta el rol de cada uno y si era CLASIFICATORIA', function () {
+    var R = window.PM.Replay, Hi = window.PM.History;
+    var previo = null, add = Hi.add, apuntado = [];
+    try { previo = localStorage.getItem(CFG.REPLAY_NET_KEY); } catch (e) { /* sin almacén */ }
+    try {
+      window.PM.settings.muted = true;
+      // cerrar la partida apunta rango y monedas: que no se quede en los logros
+      conLogrosLimpios(function () { [true, false].forEach(function (cl) {
+        G.newGame({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, clasif: cl,
+                    roles: ['soporte', 'tanque'] });
+        G.state = 'PLAYING'; G.readyTicks = 0;
+        for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 999999;
+        for (i = 0; i < 30; i++) { G.netWatch = 0; G.step(); }
+        var leida = R.leerRed(R.redAcabar().s);
+        ok(leida, 'se graba y se lee');
+        eq((leida.roles || []).join(','), 'soporte,tanque', 'con el rol de cada asiento');
+        eq(leida.clasif, cl, cl ? 'y que era CLASIFICATORIA' : 'y que no lo era');
+        Hi.add = function (o) { apuntado.push(o); };
+        try {
+          G.score = 1200; G.rankingSent = false;
+          G.submitRanking();
+        } finally { Hi.add = add; }
+        var o = apuntado.pop();
+        eq(o && (o.roles || []).join(','), 'soporte,tanque', 'el historial recibe los roles');
+        eq(o && o.clasif, cl, 'y la marca');
+        R.salir(); G.toMenu();
+      }); });
+      var antes = Hi.all();
+      try {
+        Hi.clear();
+        Hi.add({ jugadores: 2, modo: 'online', nombre1: 'UNO', puntos: 900, nivel: 2,
+                 mundo: 'hab', roles: ['soporte', 'tanque'], clasif: true });
+        Hi.add({ jugadores: 1, modo: 'local', nombre1: 'UNO', puntos: 500, nivel: 1 });
+        var filas = Hi.all();
+        eq(filas[1].rl.join(','), 'soporte,tanque', 'la fila guarda los roles');
+        eq(filas[1].cl, 1, 'y la marca de CLASIFICATORIA');
+        ok(!filas[0].rl && !filas[0].cl, 'una clásica no lleva ni lo uno ni lo otro');
+      } finally {
+        Hi.clear();
+        for (var k = antes.length - 1; k >= 0; k--) {
+          Hi.add({ jugadores: antes[k].j, modo: antes[k].m, nombre1: antes[k].n1, nombre2: antes[k].n2,
+                   puntos: antes[k].p, nivel: antes[k].lv, mundo: antes[k].mu,
+                   roles: antes[k].rl, clasif: antes[k].cl });
+        }
+      }
+    } finally {
+      Hi.add = add;
+      R.salir();
+      G.toMenu();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_NET_KEY);
+        else localStorage.setItem(CFG.REPLAY_NET_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('una partida online con una PAUSA en medio se ve entera', function () {
     var R = window.PM.Replay;
     var previo = null;
