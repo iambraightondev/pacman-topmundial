@@ -79,8 +79,10 @@
 --           suelo de la función enviar-record (el mejor de verdad: 48,5 s).
 --
 -- LO QUE EL JUEGO NO ESCRIBE NUNCA (se queda como estaba):
---   · piezas de COFRE (c_<id>): los cofres no existen todavía. Cuando
---     existan, las entregará el servidor. Las del RANGO tampoco: se deducen
+--   · piezas de COFRE (c_<id>) ni nada de los cofres (cofre_*: abiertos,
+--     monedas, base, récords y top 3): lo escribe solo el servidor al
+--     abrirlos (supabase/cofres.sql, Edge Function `cofres`) y, el ORO de un
+--     récord, este mismo trigger (paso 5). Las del RANGO tampoco: se deducen
 --     (Rango.ganado), el contador no se mira.
 --   · pp_<mes>, el carril de pago del pase: no se vende (CFG.PASE.VENTA).
 --   · contadores de una temporada que todavía no ha empezado.
@@ -303,6 +305,7 @@ declare
   f         double precision;
   s_old     numeric;
   s_new     numeric;
+  filas     integer;
 begin
   new.actualizado := now();
 
@@ -314,6 +317,19 @@ begin
     if cliente and not exists (select 1 from public.perfiles p where p.id = new.id) then
       raise exception 'las cuentas se crean con la funcion cuenta'
         using errcode = '42501';
+    end if;
+    /* LOS COFRES (supabase/cofres.sql): una cuenta NUEVA de verdad (no el
+     * upsert del juego sobre una que ya existe) nace con su base de cofres
+     * puesta: el día de hoy y todo lo demás a cero, así que lo que suba
+     * después —también lo jugado antes sin cuenta— cuenta para sus cofres. */
+    if not cliente then
+      if jsonb_typeof(new.logros) is distinct from 'object' then
+        new.logros := '{}'::jsonb;
+      end if;
+      if public.num(new.logros, 'cofre_b_dia') <= 0 then
+        new.logros := new.logros || jsonb_build_object('cofre_b_dia',
+          floor(extract(epoch from now()) / 86400)::integer);
+      end if;
     end if;
     return new;
   end if;
@@ -405,6 +421,7 @@ begin
       m := regexp_match(k, '^(?:px|pp|r[a-z][0-9]?)_([0-9]{4}-[0-9]{2})(?:_[1-4])?$');
       if (m is not null and m[1] > mes_tope)                       -- temporada futura
          or k ~ '^pp_'                                             -- carril de pago
+         or k like 'cofre\_%'                                      -- cofres: solo el servidor
          or (k like 'c\_%' and exists (
                select 1 from public.piezas_especiales p
                 where 'c_' || p.id = k and p.tipo in ('cofre', 'rango')))
@@ -571,6 +588,30 @@ begin
       end if;
     end loop;
 
+    -- ---- 5. LOS COFRES: el ORO de un récord (supabase/cofres.sql) ----
+    -- Un récord propio da un cofre de ORO si mejora el anterior en un 10 % o
+    -- más, el anterior ya era de 10.000 o más, y como mucho uno por ruta (cada
+    -- columna de récord) y día. Lo cuenta ESTE trigger, que es el único que
+    -- ve cada récord subir, en `cofre_recs` (que el juego no puede escribir:
+    -- ver el paso 1). Sin la tabla de cofres, no hace nada.
+    if to_regclass('public.cofres_recordes') is not null then
+      for k in select unnest(array['record1', 'record2', 'record3', 'record4',
+                                   'record_lab', 'record_lab2', 'record_lab3', 'record_lab4',
+                                   'record_hab', 'record_hab2', 'record_hab3', 'record_hab4']) loop
+        vo := coalesce((to_jsonb(old) ->> k)::numeric, 0);
+        vn := coalesce((to_jsonb(new) ->> k)::numeric, 0);
+        if vo >= 10000 and vn * 100 >= vo * 110 then
+          insert into public.cofres_recordes (perfil, ruta, dia)
+          values (new.id, k, (now() at time zone 'utc')::date)
+          on conflict do nothing;
+          get diagnostics filas = row_count;
+          if filas > 0 then
+            ln := jsonb_set(ln, '{cofre_recs}', to_jsonb(public.num(ln, 'cofre_recs') + 1));
+          end if;
+        end if;
+      end loop;
+    end if;
+
     new.logros := ln;
   end if;
 
@@ -582,9 +623,10 @@ begin
       from (select jsonb_object_keys(new.logros) union
             select jsonb_object_keys(case when jsonb_typeof(old.logros) = 'object'
                                           then old.logros else '{}'::jsonb end)) s(x)
-     where x in ('monedas', 'bono', 'gastoCont', 'partidas', 'purga')
+     where x in ('monedas', 'bono', 'gastoCont', 'partidas', 'purga', 'largas')
         or x ~ '^(p[xp]|r[a-z][0-9]?|rhab|mae[a-z]*)_'
         or x like 'c\_%'
+        or (x like 'cofre\_%' and x not like 'cofre\_b\_%')
   ) t where d <> 0;
   for k in select unnest(array['xp', 'record1', 'record2', 'record3', 'record4',
                                'record_lab', 'record_lab2', 'record_lab3', 'record_lab4',

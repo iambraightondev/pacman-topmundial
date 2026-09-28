@@ -6,6 +6,7 @@
  *
  *   SBP=<personal access token> node supabase/desplegar-funcion.js enviar-record
  *   SBP=<token> node supabase/desplegar-funcion.js cuenta
+ *   SBP=<token> node supabase/desplegar-funcion.js cofres   (sube también gen.js y datos.js)
  *
  * Con un tercer argumento sube ESE archivo en vez del del repositorio (para
  * volver a una versión anterior):
@@ -38,6 +39,19 @@ form.append('metadata', JSON.stringify({
   name: slug, entrypoint_path: 'index.ts', verify_jwt: false
 }));
 form.append('file', new Blob([codigo], { type: 'application/typescript' }), 'index.ts');
+/* Una función de VARIOS ficheros (la de `cofres` lleva el generador del
+ * juego y sus datos al lado: gen.js y datos.js) sube también los demás .js y
+ * .ts de su carpeta, con su nombre, para que el import './gen.js' encuentre
+ * el suyo. Las de un solo fichero siguen igual. */
+var carpeta = path.join(__dirname, 'functions', String(slug));
+if (!process.argv[3] && fs.existsSync(carpeta)) {
+  fs.readdirSync(carpeta).filter(function (f) {
+    return /\.(js|ts)$/.test(f) && f !== 'index.ts';
+  }).forEach(function (f) {
+    form.append('file', new Blob([fs.readFileSync(path.join(carpeta, f), 'utf8')],
+      { type: /\.ts$/.test(f) ? 'application/typescript' : 'application/javascript' }), f);
+  });
+}
 
 fetch('https://api.supabase.com/v1/projects/' + REF + '/functions/deploy?slug=' +
       encodeURIComponent(slug), {
