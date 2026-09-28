@@ -6585,8 +6585,11 @@
    * círculo del color del jugador, rasgos en negro y un meneo propio. */
   /* Las cinco de la tanda del 18 sep se dibujan enteras aparte */
   var CARAS_18 = { silbando: 1, plis: 1, ambicioso: 1, nervios: 1, arcoiris: 1 };
+  /* y las cinco de la tanda de mitología (28 sep), también enteras aparte */
+  var CARAS_MITO = { oraculo: 1, petrificado: 1, divino: 1, maldicion: 1, invocando: 1 };
   function caraEmote(ctx, x, y, r, color, id, t) {
     if (CARAS_18[id]) { caraEmote18(ctx, x, y, r, color, id, t); return; }
+    if (CARAS_MITO[id]) { caraMito(ctx, x, y, r, color, id, t); return; }
     if (id === 'grito') { caraGrito(ctx, x, y, r, color, t); return; }
     var ink = '#000000', lw = Math.max(1, r * 0.17), k, p;
     var mx = 0, my = 0, giro = 0, esc = 1;
@@ -7035,6 +7038,2064 @@
   /* ============================================================
    * Registro: Sprites.drawPacman se desvía aquí para estas skins
    * ============================================================ */
+  /* ============================================================
+   * TANDA DE MITOLOGÍA (19 sep 2026, entra al juego el 28 sep). Diez
+   * skins sacadas de los mitos que dejan la silueta de Pac-Man —cada una
+   * come a su manera, tiene su Q y su propia muerte—, siete accesorios,
+   * seis efectos y cinco emotes. LA PARCA y el JINETE SIN CABEZA son de
+   * Halloween.
+   *
+   * El dibujo es el del escaparate, con las mismas medidas; solo cambia
+   * que la Q sale al pulsar la tecla (qDe) y no con un reloj. El código del
+   * escaparate sigue en propuestas/vestuario-mitologia/.
+   * ============================================================ */
+  /* ---------------- MEDUSA ---------------- */
+  /* Cabeza de mujer con serpientes por pelo, cada una con su vida: se mecen,
+   * miran y sacan la lengua. La boca es la suya, con dos colmillos. Q: la
+   * MIRADA, un cono verde que petrifica lo que pilla. */
+  DRAW.medusa = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.1), k;
+    var ang = [0, 13, 24][fz] * Math.PI / 180;
+    var piel = hex(mix(o.c, '#8fd67a', 0.55)), pielOsc = mix(piel, '#123018', 0.45);
+    var sierpe = hex(mix(o.c, '#2f8f4a', 0.72)), sierpeOsc = mix(sierpe, '#07200f', 0.5);
+    var mira = (q >= 0) ? Math.sin(Math.min(1, q * 1.8) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 5) * 0.16);
+
+    /* las serpientes: siete, saliendo de la coronilla y de la nuca */
+    var SIER = [[-1.2, 5.2, 1.0], [0.6, 5.6, 0.9], [2.0, 5.0, 0.8],
+                [-3.0, 4.4, 0.95], [-4.2, 2.6, 0.85], [-2.4, 6.0, 0.7], [1.6, 6.2, 0.65]];
+    SIER.forEach(function (s0, k2) {
+      var w = Math.sin(t * 3.2 + k2 * 1.3) * 0.9;
+      var lx = s0[0] - 2.2 - k2 * 0.25, ly = s0[1] + 2.4 + w;
+      ctx.strokeStyle = sierpeOsc; ctx.lineWidth = 1.25 * s0[2]; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(s0[0], s0[1]);
+      ctx.quadraticCurveTo(s0[0] - 1.6, s0[1] + 1.8 + w * 0.5, lx, ly);
+      ctx.stroke();
+      ctx.strokeStyle = sierpe; ctx.lineWidth = 0.7 * s0[2]; ctx.stroke();
+      /* la cabecita */
+      ctx.fillStyle = sierpe;
+      ctx.beginPath(); ctx.ellipse(lx, ly, 0.85 * s0[2], 0.6 * s0[2], w * 0.3, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.1); ctx.stroke();
+      ctx.fillStyle = '#ffe14a';
+      ctx.beginPath(); ctx.arc(lx - 0.3 * s0[2], ly - 0.12, 0.17 * s0[2], 0, Math.PI * 2); ctx.fill();
+      /* la lengua, de vez en cuando */
+      if (Math.sin(t * 4 + k2 * 2) > 0.7) {
+        ctx.strokeStyle = '#ff5f8d'; ctx.lineWidth = 0.16;
+        ctx.beginPath();
+        ctx.moveTo(lx - 0.8 * s0[2], ly); ctx.lineTo(lx - 1.5 * s0[2], ly - 0.2);
+        ctx.stroke();
+      }
+    });
+
+    ctx.fillStyle = '#3d0f1c';
+    ctx.beginPath(); ctx.moveTo(1.2, -0.7); ctx.lineTo(6.4, -0.4); ctx.lineTo(6.4, -3.4); ctx.lineTo(1.2, -1.6); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(6.4, 0.2);
+    cabeza.quadraticCurveTo(6.6, 2.4, 4.8, 3.6);
+    cabeza.quadraticCurveTo(2.4, 5.2, -0.6, 5.0);
+    cabeza.quadraticCurveTo(-4.0, 4.6, -4.4, 1.4);
+    cabeza.quadraticCurveTo(-4.6, -1.4, -2.0, -2.2);
+    cabeza.lineTo(1.0, -0.9);
+    cabeza.lineTo(6.4, 0.2);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.6, -1.0); mand.lineTo(6.4, -0.1);
+    mand.quadraticCurveTo(6.2, -2.6, 3.8, -3.2);
+    mand.quadraticCurveTo(0.6, -3.6, -1.6, -2.4);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.6, -1.0, ang, piel, hex(pielOsc), 0.7, 0.7);
+
+    /* labios y colmillos */
+    ctx.save(); girarSobre(ctx, 0.6, -1.0, -ang); ctx.clip(mand);
+    ctx.fillStyle = '#c94a6a';
+    ctx.beginPath(); ctx.ellipse(3.2, -1.9, 2.6, 0.8, 0.02, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    dientes(ctx, 2.0, 5.2, -0.3, 2, -1.0, '#fdfaf0');
+
+    /* el ojo, y la mirada que petrifica */
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(3.0, 1.9, 1.15, 1.0, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.fillStyle = mira > 0.1 ? '#b9ff6a' : '#ffe14a';
+    ctx.beginPath(); ctx.arc(3.4, 1.85, 0.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.ellipse(3.45, 1.85, 0.18, 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.7, 2.3, 0.3, 0.9);
+    contorno(ctx, 2.6);
+    ctx.beginPath(); ctx.moveTo(1.5, 3.6); ctx.lineTo(4.3, 3.0); ctx.stroke();
+
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createLinearGradient(4, 1.9, 18, 1.9);
+      g.addColorStop(0, 'rgba(185,255,106,' + (0.7 * mira) + ')');
+      g.addColorStop(1, 'rgba(120,220,90,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(4, 1.9);
+      ctx.lineTo(17, 1.9 + 6 * mira);
+      ctx.lineTo(17, 1.9 - 6 * mira);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 5; k++) {
+        var u = (q * 1.6 + k / 5) % 1;
+        ctx.fillStyle = 'rgba(150,160,150,' + ((1 - u) * mira * 0.9) + ')';
+        ctx.fillRect(6 + u * 10, 1.9 + Math.sin(k * 2.1) * 4 * u - 0.5, 1.1, 1.1);
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- CÍCLOPE ---------------- */
+  /* Bruto de un solo OJO enorme que ocupa media cara, ceja de una pieza,
+   * dos colmillos de abajo y el pelo hecho un desastre. Q: el PISOTÓN, que
+   * levanta el suelo. */
+  DRAW.ciclope = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 0.9), k;
+    var ang = [0, 16, 30][fz] * Math.PI / 180;
+    var piel = hex(mix(o.c, '#c98a4a', 0.62)), pielOsc = mix(piel, '#3a1c06', 0.45);
+    var pelo = '#2a1a10';
+    var golpe = (q >= 0) ? Math.sin(Math.min(1, q * 2.4) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 5)) * 0.3 - 0.15 + golpe * 0.9);
+
+    /* el pelo, tres mechones tiesos */
+    [[-1.6, 5.0, 1.5], [0.4, 5.4, 1.3], [-3.2, 4.2, 1.2]].forEach(function (m, k2) {
+      var w = Math.sin(t * 4 + k2) * 0.2;
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(m[0] - m[2], m[1] - 0.6);
+        ctx.quadraticCurveTo(m[0] - 0.3 + w, m[1] + 2.6, m[0] + m[2] * 0.7 + w, m[1] + 0.3);
+        ctx.closePath();
+      }, pelo, '#120a05', 0.25, 0.25, 1.4);
+    });
+
+    ctx.fillStyle = '#3d1010';
+    ctx.beginPath(); ctx.moveTo(0.6, -0.8); ctx.lineTo(6.0, -0.5); ctx.lineTo(6.0, -3.8); ctx.lineTo(0.6, -1.8); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(6.0, 0.4);
+    cabeza.quadraticCurveTo(6.4, 3.0, 4.0, 4.4);
+    cabeza.quadraticCurveTo(1.0, 5.8, -2.2, 5.0);
+    cabeza.quadraticCurveTo(-5.4, 4.2, -5.4, 0.8);
+    cabeza.quadraticCurveTo(-5.4, -2.4, -2.4, -2.8);
+    cabeza.lineTo(0.4, -1.0);
+    cabeza.lineTo(6.0, 0.4);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-0.2, -1.1); mand.lineTo(6.0, 0.0);
+    mand.quadraticCurveTo(5.8, -3.0, 3.2, -3.8);
+    mand.quadraticCurveTo(-0.4, -4.4, -2.8, -3.0);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, -0.2, -1.1, ang, piel, hex(pielOsc), 0.8, 0.8);
+
+    /* el ojazo */
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(1.9, 2.0, 2.5, 2.3, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.6); ctx.stroke();
+    ctx.fillStyle = '#7a3d12';
+    ctx.beginPath(); ctx.arc(2.5 + golpe * 0.3, 1.9, 1.35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.6 + golpe * 0.3, 1.9, 0.72, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 1.6, 3.0, 0.55, 0.95);
+    /* la ceja, de una pieza y con mala cara */
+    contorno(ctx, 3.4);
+    ctx.beginPath();
+    ctx.moveTo(-1.0, 4.4); ctx.quadraticCurveTo(2.0, 5.4, 4.6, 3.6);
+    ctx.stroke();
+
+    /* dos colmillos de abajo, saliendo de la mandíbula */
+    ctx.save(); girarSobre(ctx, -0.2, -1.1, -ang);
+    dientes(ctx, 1.4, 4.6, -1.0, 2, 1.5, '#f0e6d2');
+    ctx.restore();
+
+    /* Q: el pisotón */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalAlpha = golpe;
+      for (k = 0; k < 3; k++) {
+        var u = (q * 2 + k / 3) % 1;
+        ctx.strokeStyle = 'rgba(196,166,126,' + ((1 - u) * golpe) + ')';
+        ctx.lineWidth = 0.8 * (1 - u * 0.5);
+        ctx.beginPath();
+        ctx.ellipse(0, -6.5, 3 + u * 11, 1.2 + u * 3.2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      for (k = 0; k < 7; k++) {
+        var uu = tramoSimple(q, 0.05 + k * 0.03);
+        ctx.fillStyle = 'rgba(160,132,96,' + ((1 - uu) * golpe) + ')';
+        ctx.beginPath();
+        ctx.arc((k - 3) * 2.6, -6.5 - uu * 4, 0.7 + uu * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+  function tramoSimple(q, a) { return Math.max(0, Math.min(1, (q - a) / 0.6)); }
+
+  /* ---------------- FÉNIX ---------------- */
+  /* Ave de fuego: cuerpo de brasa, plumas que arden y una cresta de llamas.
+   * El pico es la boca. Q: ARDE ENTERO y renace de sus cenizas. */
+  DRAW.fenix = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.3), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var brasa = hex(mix(o.c, '#ff6a1a', 0.62)), brasaOsc = mix(brasa, '#4a0d02', 0.42);
+    var pico = '#ffd24a', picoOsc = '#a97d0d';
+    var arde = (q >= 0) ? Math.sin(Math.min(1, q * 1.4) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 4) * 0.35);
+
+    /* la cola de fuego, por detrás */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (k = 0; k < 5; k++) {
+      var w = Math.sin(t * 6 + k * 0.9) * 1.4;
+      var largo = 5 + k * 1.6 + arde * 5;
+      var g = ctx.createLinearGradient(-2, 0, -2 - largo, w);
+      g.addColorStop(0, mix('#ffd24a', '#ff3b0a', 0.3, 0.85));
+      g.addColorStop(1, mix('#ff3b0a', '#ff3b0a', 0, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-2, 1.8 - k * 0.9);
+      ctx.quadraticCurveTo(-4 - largo * 0.5, 2.4 - k * 1.0 + w, -2 - largo, w - k * 0.6);
+      ctx.quadraticCurveTo(-4 - largo * 0.4, 0.6 - k * 1.2 + w, -2, 0.6 - k * 0.9);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    /* las alas, batiendo */
+    var bate = Math.sin(t * 7) * 0.8 + arde * 2.5;
+    [1, -1].forEach(function (lado) {
+      if (lado < 0 && arde < 0.1) return;
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(-0.6, lado * 1.2);
+        ctx.quadraticCurveTo(-4.4, lado * (3.4 + bate), -7.4, lado * (1.2 + bate * 1.6));
+        ctx.quadraticCurveTo(-4.6, lado * (-1.4 + bate * 0.4), -0.6, lado * -1.6);
+        ctx.closePath();
+      }, brasa, hex(brasaOsc), 0.5, 0.5, 1.5);
+    });
+
+    ctx.fillStyle = '#4a1002';
+    ctx.beginPath(); ctx.moveTo(1.6, -0.7); ctx.lineTo(7.4, -0.4); ctx.lineTo(7.4, -3.0); ctx.lineTo(1.6, -1.5); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(7.4, 0.8);
+    cabeza.quadraticCurveTo(7.0, 2.0, 5.2, 2.2);
+    cabeza.quadraticCurveTo(3.0, 2.6, 1.6, 4.0);
+    cabeza.quadraticCurveTo(-0.6, 5.6, -3.2, 4.6);
+    cabeza.quadraticCurveTo(-5.6, 3.4, -5.0, 0.4);
+    cabeza.quadraticCurveTo(-4.4, -2.0, -1.4, -2.0);
+    cabeza.lineTo(1.4, -0.9);
+    cabeza.lineTo(7.4, 0.8);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(1.2, -1.0); mand.lineTo(7.4, -0.2);
+    mand.quadraticCurveTo(6.4, -2.2, 4.0, -2.6);
+    mand.quadraticCurveTo(1.0, -2.8, -0.6, -1.8);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 1.2, -1.0, ang, brasa, hex(brasaOsc), 0.7, 0.7);
+
+    /* el pico, de oro */
+    ctx.save(); ctx.clip(cabeza);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(4.4, 1.8);
+      ctx.quadraticCurveTo(7.6, 1.6, 7.8, 0.6);
+      ctx.lineTo(4.6, -0.6);
+      ctx.closePath();
+    }, pico, picoOsc, 0.3, 0.3, 1.4);
+    ctx.restore();
+
+    /* la cresta de llamas */
+    for (k = 0; k < 4; k++) {
+      var h = 1.6 + Math.abs(Math.sin(t * 8 + k * 1.3)) * 1.5 + arde * 1.6;
+      ctx.fillStyle = mix('#ffd24a', '#ff3b0a', k / 4, 0.92);
+      ctx.beginPath();
+      ctx.moveTo(-1.0 + k * 1.3, 4.2);
+      ctx.quadraticCurveTo(-0.4 + k * 1.3, 4.2 + h, -1.6 + k * 1.3, 4.2 + h * 1.4);
+      ctx.quadraticCurveTo(-2.4 + k * 1.3, 4.2 + h * 0.5, -1.0 + k * 1.3, 4.2);
+      ctx.closePath(); ctx.fill();
+    }
+
+    ctx.fillStyle = '#fff6d0';
+    ctx.beginPath(); ctx.arc(3.2, 1.6, 0.85, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(3.5, 1.55, 0.42, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.7, 1.95, 0.26, 0.95);
+
+    /* Q: arde entero */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var gf = ctx.createRadialGradient(0, 1, 1, 0, 1, 9 + arde * 6);
+      gf.addColorStop(0, 'rgba(255,240,180,' + (0.55 * arde) + ')');
+      gf.addColorStop(0.5, 'rgba(255,140,30,' + (0.4 * arde) + ')');
+      gf.addColorStop(1, 'rgba(255,60,10,0)');
+      ctx.fillStyle = gf;
+      ctx.beginPath(); ctx.arc(0, 1, 9 + arde * 6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 9; k++) {
+        var u = (q * 1.4 + k / 9) % 1;
+        ctx.fillStyle = mix('#ffd24a', '#ff3b0a', u, (1 - u) * arde);
+        ctx.beginPath();
+        ctx.arc(Math.sin(k * 2.3) * 7 * u, 1 + u * 9, 0.7 * (1 - u * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- GENIO ---------------- */
+  /* De la lámpara: turbante con su joya, barba en punta, brazos cruzados y
+   * de cintura para abajo una COLA DE HUMO que sale de la lámpara. Q: te
+   * concede el deseo, con la lámpara echando chispas doradas. */
+  DRAW.genio = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 13, 24][fz] * Math.PI / 180;
+    var piel = hex(mix(o.c, '#4aa8d8', 0.66)), pielOsc = mix(piel, '#062035', 0.45);
+    var tela = '#e8e0cc', telaOsc = '#b0a688', oro = '#ffd24a';
+    var deseo = (q >= 0) ? Math.sin(Math.min(1, q * 1.5) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 3.4) * 0.4);
+
+    /* la cola de humo, de la lámpara a la cintura */
+    ctx.save();
+    for (k = 6; k >= 0; k--) {
+      var u = k / 6;
+      var w = Math.sin(t * 2.6 + u * 4) * (0.8 + u * 1.6);
+      ctx.fillStyle = mix(piel, '#0a1a2a', u * 0.55, 0.85 - u * 0.45);
+      ctx.beginPath();
+      ctx.ellipse(-2.0 - u * 4.5 + w * 0.4, -2.0 - u * 2.6, 2.6 - u * 1.7, 1.9 - u * 1.2,
+        0.3 + u, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    /* la lámpara, al final del humo */
+    var lx = -7.8, ly = -5.6;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, 2.0, 1.1, -0.15, 0, Math.PI * 2);
+    }, oro, '#a97d0d', 0.25, 0.25, 1.4);
+    ctx.strokeStyle = '#a97d0d'; ctx.lineWidth = 0.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(lx + 1.7, ly + 0.2); ctx.lineTo(lx + 3.2, ly + 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(lx - 2.2, ly - 0.2, 0.8, -0.6, 1.9); ctx.stroke();
+
+    ctx.fillStyle = '#2a0a1c';
+    ctx.beginPath(); ctx.moveTo(1.0, -0.7); ctx.lineTo(5.8, -0.4); ctx.lineTo(5.8, -3.0); ctx.lineTo(1.0, -1.6); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(5.8, 0.6);
+    cabeza.quadraticCurveTo(5.8, 2.6, 3.8, 3.4);
+    cabeza.quadraticCurveTo(1.0, 4.4, -1.6, 3.6);
+    cabeza.quadraticCurveTo(-3.8, 2.8, -3.6, 0.6);
+    cabeza.quadraticCurveTo(-3.4, -1.4, -1.0, -1.8);
+    cabeza.lineTo(0.8, -0.9);
+    cabeza.lineTo(5.8, 0.6);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.6, -1.0); mand.lineTo(5.8, -0.1);
+    mand.quadraticCurveTo(5.4, -2.4, 3.0, -2.9);
+    mand.quadraticCurveTo(0.2, -3.2, -1.4, -2.0);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.6, -1.0, ang, piel, hex(pielOsc), 0.7, 0.7);
+
+    /* la barba en punta, colgando de la mandíbula */
+    ctx.save(); girarSobre(ctx, 0.6, -1.0, -ang);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(0.4, -2.2);
+      ctx.quadraticCurveTo(2.2, -3.0, 3.4, -2.4);
+      ctx.quadraticCurveTo(2.6, -5.6, 1.4, -6.6);
+      ctx.quadraticCurveTo(0.2, -4.6, 0.4, -2.2);
+      ctx.closePath();
+    }, hex(pielOsc), '#06131f', 0.3, 0.3, 1.3);
+    ctx.restore();
+
+    /* el turbante */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.6, 2.8);
+      ctx.quadraticCurveTo(-3.2, 6.6, 0.6, 6.8);
+      ctx.quadraticCurveTo(4.6, 6.6, 4.8, 3.4);
+      ctx.quadraticCurveTo(1.0, 2.0, -3.6, 2.8);
+      ctx.closePath();
+    }, tela, telaOsc, 0.5, 0.5, 1.6);
+    ctx.strokeStyle = telaOsc; ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(-3.3, 3.4); ctx.quadraticCurveTo(0.8, 2.6, 4.5, 3.9);
+    ctx.stroke();
+    /* la joya del turbante y su plumita */
+    ctx.fillStyle = oro;
+    ctx.beginPath(); ctx.arc(2.2, 5.6, 0.7, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.1); ctx.stroke();
+    ctx.fillStyle = '#e8355c';
+    ctx.beginPath(); ctx.arc(2.2, 5.6, 0.34, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = tela; ctx.lineWidth = 0.4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(2.2, 6.3);
+    ctx.quadraticCurveTo(1.2 + Math.sin(t * 4) * 0.4, 8.2, 3.0, 9.0);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(2.4, 1.6, 1.0, 0.85, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.75, 1.55, 0.44, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.0, 1.9, 0.25, 0.9);
+
+    /* Q: el deseo concedido */
+    if (q >= 0) {
+      for (k = 0; k < 10; k++) {
+        var u2 = (q * 1.5 + k / 10) % 1;
+        var a2 = k * 0.628;
+        estrella4(ctx,
+          lx + Math.cos(a2) * u2 * 12,
+          ly + Math.sin(a2) * u2 * 9,
+          0.8 * (1 - u2) + 0.2, oro, (1 - u2) * deseo);
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var gl = ctx.createRadialGradient(lx, ly, 0.4, lx, ly, 4 + deseo * 8);
+      gl.addColorStop(0, 'rgba(255,230,150,' + (0.7 * deseo) + ')');
+      gl.addColorStop(1, 'rgba(255,190,60,0)');
+      ctx.fillStyle = gl;
+      ctx.beginPath(); ctx.arc(lx, ly, 4 + deseo * 8, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- GOLEM ---------------- */
+  /* Un pedrusco con cara: bloques de piedra mal encajados, grietas que
+   * brillan por dentro y la RUNA de la frente, que es lo que lo mantiene
+   * vivo. Q: se endurece, la runa arde y le salen placas. */
+  DRAW.golem = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.1), k;
+    var ang = [0, 15, 28][fz] * Math.PI / 180;
+    var roca = hex(mix('#6b6f78', o.c, 0.16)), rocaOsc = mix(roca, '#14161b', 0.5);
+    var brillo = hex(mix(o.c, '#ff8c1a', 0.5));
+    var duro = (q >= 0) ? Math.sin(Math.min(1, q * 1.6) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 4.5)) * 0.22 - 0.1);
+
+    ctx.fillStyle = '#08090c';
+    ctx.beginPath(); ctx.moveTo(-2.4, -0.8); ctx.lineTo(5.4, -0.5); ctx.lineTo(5.4, -4.0); ctx.lineTo(-2.4, -2.2); ctx.closePath(); ctx.fill();
+
+    /* la cabeza, a cantos rectos: es piedra partida */
+    var cabeza = new Path2D();
+    cabeza.moveTo(5.6, -0.4);
+    cabeza.lineTo(6.0, 2.2);
+    cabeza.lineTo(4.4, 4.4);
+    cabeza.lineTo(1.6, 5.6);
+    cabeza.lineTo(-2.2, 5.0);
+    cabeza.lineTo(-4.8, 2.8);
+    cabeza.lineTo(-5.0, -0.2);
+    cabeza.lineTo(-3.0, -1.0);
+    cabeza.lineTo(5.6, -0.4);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-3.2, -1.2);
+    mand.lineTo(5.6, -0.6);
+    mand.lineTo(5.0, -3.6);
+    mand.lineTo(1.8, -4.8);
+    mand.lineTo(-2.0, -4.4);
+    mand.lineTo(-3.6, -2.6);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, -3.2, -1.1, ang, roca, hex(rocaOsc), 0.8, 0.8);
+
+    /* las grietas, encendidas por dentro */
+    ctx.save(); ctx.clip(cabeza);
+    ctx.strokeStyle = mix(brillo, '#ffffff', 0.2, 0.55 + 0.45 * Math.abs(Math.sin(t * 2)) + duro * 0.4);
+    ctx.lineWidth = 0.42; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-4.4, 1.2); ctx.lineTo(-2.0, 2.0); ctx.lineTo(-2.6, 4.2);
+    ctx.moveTo(-2.0, 2.0); ctx.lineTo(0.6, 0.6);
+    ctx.moveTo(4.8, 3.2); ctx.lineTo(3.2, 1.4);
+    ctx.stroke();
+    /* cantos más claros, para que se vean los bloques */
+    ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(-1.0, 5.2); ctx.lineTo(-0.6, 0.0);
+    ctx.moveTo(2.6, 5.2); ctx.lineTo(2.2, 0.2);
+    ctx.stroke();
+    ctx.restore();
+
+    /* la runa de la frente */
+    ctx.save();
+    ctx.translate(1.0, 3.9);
+    var lum = 0.5 + 0.5 * Math.abs(Math.sin(t * 2.2)) + duro;
+    ctx.strokeStyle = mix(brillo, '#ffffff', 0.35, Math.min(1, lum));
+    ctx.lineWidth = 0.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-0.9, -0.9); ctx.lineTo(0.9, -0.9); ctx.lineTo(-0.9, 0.9); ctx.lineTo(0.9, 0.9);
+    ctx.moveTo(0, -1.3); ctx.lineTo(0, 1.3);
+    ctx.stroke();
+    ctx.restore();
+
+    /* los ojos, dos huecos encendidos */
+    [[1.4, 1.6], [3.8, 1.3]].forEach(function (e) {
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.ellipse(e[0], e[1], 0.85, 0.65, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = mix(brillo, '#ffffff', 0.4, 0.8 + duro * 0.2);
+      ctx.beginPath(); ctx.ellipse(e[0] + 0.15, e[1], 0.42, 0.34, 0, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* dientes de piedra */
+    ctx.save(); girarSobre(ctx, -3.2, -1.1, -ang);
+    dientes(ctx, -1.2, 4.6, -1.1, 4, 1.2, hex(rocaOsc));
+    ctx.restore();
+
+    /* Q: se endurece, le salen placas */
+    if (q >= 0) {
+      for (k = 0; k < 6; k++) {
+        var a3 = k * 1.05 + 0.4;
+        var d = 5.5 + duro * 2.2;
+        ctx.save();
+        ctx.globalAlpha = duro;
+        ctx.translate(Math.cos(a3) * d, 1 + Math.sin(a3) * d * 0.8);
+        ctx.rotate(a3);
+        piezaX(ctx, function () {
+          ctx.beginPath();
+          ctx.moveTo(-1.2, -0.9); ctx.lineTo(1.2, -1.2); ctx.lineTo(1.0, 1.0); ctx.lineTo(-1.1, 0.8);
+          ctx.closePath();
+        }, roca, hex(rocaOsc), 0.2, 0.2, 1.2);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- ESFINGE ---------------- */
+  /* Cara de piedra con el tocado a rayas de los faraones, la barba postiza y
+   * una zarpa de león delante. Q: el ACERTIJO, un interrogante que sale y se
+   * queda flotando. */
+  DRAW.esfinge = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.4), k;
+    var ang = [0, 12, 22][fz] * Math.PI / 180;
+    var arena = hex(mix('#d8b878', o.c, 0.22)), arenaOsc = mix(arena, '#4a3410', 0.45);
+    var raya = hex(mix(o.c, '#2b6fd8', 0.66)), oro = '#ffd24a';
+    var piensa = (q >= 0) ? Math.sin(Math.min(1, q * 1.4) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 3.6) * 0.14);
+
+    /* la zarpa, delante y abajo */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(2.2, -3.6);
+      ctx.quadraticCurveTo(6.4, -4.4, 7.4, -5.6);
+      ctx.quadraticCurveTo(5.0, -6.6, 1.8, -5.8);
+      ctx.closePath();
+    }, arena, hex(arenaOsc), 0.4, 0.4, 1.5);
+    ctx.strokeStyle = hex(arenaOsc); ctx.lineWidth = 0.3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 3; k++) {
+      ctx.moveTo(5.2 + k * 0.7, -4.9 - k * 0.15);
+      ctx.lineTo(5.6 + k * 0.7, -5.9 - k * 0.15);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#3a1a08';
+    ctx.beginPath(); ctx.moveTo(1.2, -0.7); ctx.lineTo(6.0, -0.4); ctx.lineTo(6.0, -3.0); ctx.lineTo(1.2, -1.6); ctx.closePath(); ctx.fill();
+
+    /* el tocado: dos paños que caen a los lados */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-4.8, 4.2);
+      ctx.quadraticCurveTo(-4.2, 7.2, 0.4, 7.2);
+      ctx.quadraticCurveTo(4.6, 7.0, 5.2, 4.0);
+      ctx.lineTo(4.4, -1.8);
+      ctx.quadraticCurveTo(2.0, -3.0, -0.4, -2.2);
+      ctx.lineTo(-4.0, -1.0);
+      ctx.closePath();
+    }, arena, hex(arenaOsc), 0.6, 0.6, 1.7);
+    /* las rayas del tocado */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-4.8, 4.2);
+    ctx.quadraticCurveTo(-4.2, 7.2, 0.4, 7.2);
+    ctx.quadraticCurveTo(4.6, 7.0, 5.2, 4.0);
+    ctx.lineTo(4.4, -1.8);
+    ctx.quadraticCurveTo(2.0, -3.0, -0.4, -2.2);
+    ctx.lineTo(-4.0, -1.0);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = raya;
+    for (k = 0; k < 6; k++) ctx.fillRect(-5.2, 5.6 - k * 1.5, 11, 0.7);
+    ctx.restore();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(6.0, 0.4);
+    cabeza.quadraticCurveTo(6.2, 2.6, 4.4, 4.0);
+    cabeza.quadraticCurveTo(2.0, 5.4, -0.6, 4.8);
+    cabeza.quadraticCurveTo(-3.0, 4.2, -3.0, 1.4);
+    cabeza.quadraticCurveTo(-3.0, -0.8, -0.8, -1.4);
+    cabeza.lineTo(1.0, -0.9);
+    cabeza.lineTo(6.0, 0.4);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.8, -1.0); mand.lineTo(6.0, -0.2);
+    mand.quadraticCurveTo(5.6, -2.4, 3.2, -2.9);
+    mand.quadraticCurveTo(0.6, -3.2, -0.8, -2.0);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.8, -1.0, ang, arena, hex(arenaOsc), 0.6, 0.6);
+
+    /* la barba postiza, colgando de la mandíbula */
+    ctx.save(); girarSobre(ctx, 0.8, -1.0, -ang);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      roundRect(ctx, 2.0, -6.2, 1.5, 3.6, 0.5);
+    }, arena, hex(arenaOsc), 0.25, 0.25, 1.3);
+    ctx.strokeStyle = hex(arenaOsc); ctx.lineWidth = 0.22;
+    ctx.beginPath();
+    for (k = 0; k < 3; k++) { ctx.moveTo(2.1, -5.6 + k * 1.0); ctx.lineTo(3.4, -5.6 + k * 1.0); }
+    ctx.stroke();
+    ctx.restore();
+
+    /* el ojo, pintado a la egipcia */
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(2.6, 2.0, 1.15, 0.8, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.9, 1.95, 0.45, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.1, 2.25, 0.25, 0.9);
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.32; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(1.3, 2.0); ctx.lineTo(0.4, 1.4);
+    ctx.moveTo(1.4, 3.1); ctx.quadraticCurveTo(2.6, 3.6, 3.8, 2.9);
+    ctx.stroke();
+    /* el ureo de la frente */
+    ctx.fillStyle = oro;
+    ctx.beginPath(); ctx.ellipse(1.0, 4.6, 0.7, 0.5, -0.3, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.1); ctx.stroke();
+
+    /* Q: el acertijo */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalAlpha = piensa;
+      ctx.strokeStyle = mix(oro, '#ffffff', 0.3, 1);
+      ctx.lineWidth = 0.75; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      var bx = 7.5 + piensa * 1.5, by = 6.0 + Math.sin(t * 3) * 0.5;
+      ctx.beginPath();
+      ctx.arc(bx, by + 1.1, 1.15, Math.PI * 0.95, Math.PI * 2.15);
+      ctx.lineTo(bx, by - 0.5);
+      ctx.stroke();
+      ctx.fillStyle = mix(oro, '#ffffff', 0.3, 1);
+      ctx.beginPath(); ctx.arc(bx, by - 1.5, 0.42, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 4; k++) {
+        var u = (q * 1.2 + k / 4) % 1;
+        estrella4(ctx, 6.5 + u * 5, 3.0 + u * 4, 0.55 * (1 - u), oro, (1 - u) * piensa);
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- ÍCARO ---------------- */
+  /* El chaval de las alas de cera: dos alas de plumas pegadas con cera, cara
+   * de crío y una sonrisa de no saber lo que le espera. Q: SE ELEVA, las
+   * alas baten fuerte y sube dejando plumas. */
+  DRAW.icaro = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var piel = '#f0c89a', pielOsc = '#a8764a';
+    var pelo = hex(mix(o.c, '#6b3f1c', 0.5)), peloOsc = mix(pelo, '#241003', 0.5);
+    var pluma = '#f7f2e2', plumaOsc = '#bdb59a', cera = '#ffe9a8';
+    var sube = (q >= 0) ? Math.sin(Math.min(1, q * 1.4) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 4) * 0.25 + sube * 1.2);
+
+    /* las alas, una a cada lado */
+    var bate = Math.sin(t * 6) * 0.9 + sube * 3;
+    [1, -1].forEach(function (lado) {
+      if (lado < 0 && sube < 0.15) return;
+      for (k = 3; k >= 0; k--) {
+        var largo = 5.0 + k * 1.7;
+        ctx.save();
+        ctx.translate(-1.0, lado * 0.8);
+        ctx.rotate(lado * (0.25 + k * 0.16 + bate * 0.1));
+        piezaX(ctx, function () {
+          ctx.beginPath();
+          ctx.moveTo(0, lado * -1.6);
+          ctx.quadraticCurveTo(-largo * 0.55, lado * (3.4 + bate * 0.6), -largo, lado * (2.2 + bate));
+          ctx.quadraticCurveTo(-largo * 0.5, lado * -0.4, 0, lado * 1.6);
+          ctx.closePath();
+        }, pluma, plumaOsc, 0.35, 0.35, 1.3);
+        ctx.restore();
+      }
+      /* la cera que las pega */
+      ctx.fillStyle = cera;
+      ctx.beginPath(); ctx.ellipse(-1.2, lado * 1.2, 1.1, 0.6, lado * 0.3, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    });
+
+    ctx.fillStyle = '#5c1020';
+    ctx.beginPath(); ctx.moveTo(1.4, -0.7); ctx.lineTo(5.6, -0.4); ctx.lineTo(5.6, -2.8); ctx.lineTo(1.4, -1.5); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(5.6, 0.6);
+    cabeza.quadraticCurveTo(5.8, 2.6, 4.0, 3.8);
+    cabeza.quadraticCurveTo(1.6, 5.0, -0.8, 4.2);
+    cabeza.quadraticCurveTo(-3.0, 3.4, -2.8, 1.0);
+    cabeza.quadraticCurveTo(-2.6, -1.0, -0.4, -1.6);
+    cabeza.lineTo(1.2, -0.9);
+    cabeza.lineTo(5.6, 0.6);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(1.0, -1.0); mand.lineTo(5.6, -0.2);
+    mand.quadraticCurveTo(5.2, -2.2, 2.8, -2.7);
+    mand.quadraticCurveTo(0.4, -2.9, -0.8, -1.8);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 1.0, -1.0, ang, piel, pielOsc, 0.6, 0.6);
+
+    /* el flequillo */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-2.8, 1.6);
+      ctx.quadraticCurveTo(-3.0, 5.2, 0.6, 5.2);
+      ctx.quadraticCurveTo(3.8, 5.0, 4.6, 3.0);
+      ctx.quadraticCurveTo(3.0, 4.0, 1.6, 3.4);
+      ctx.quadraticCurveTo(0.2, 2.6, -0.8, 3.4);
+      ctx.quadraticCurveTo(-1.8, 3.0, -2.8, 1.6);
+      ctx.closePath();
+    }, pelo, hex(peloOsc), 0.4, 0.4, 1.4);
+
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(2.6, 1.7, 0.95, 0.85, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = '#3a6fd8';
+    ctx.beginPath(); ctx.arc(2.95, 1.65, 0.48, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.95, 1.65, 0.24, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.2, 2.0, 0.24, 0.95);
+    /* los mofletes de crío */
+    ctx.fillStyle = 'rgba(232,120,120,.42)';
+    ctx.beginPath(); ctx.ellipse(1.4, 0.4, 1.0, 0.6, 0.1, 0, Math.PI * 2); ctx.fill();
+
+    /* Q: el impulso hacia arriba */
+    if (q >= 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 * sube) + ')'; ctx.lineWidth = 0.32;
+      ctx.beginPath();
+      for (k = 0; k < 4; k++) {
+        var xx = -5 + k * 3.2;
+        ctx.moveTo(xx, -5.5); ctx.lineTo(xx, -5.5 - 4.5 * sube);
+      }
+      ctx.stroke();
+      for (k = 0; k < 5; k++) {
+        var u = (q * 1.3 + k / 5) % 1;
+        ctx.save();
+        ctx.globalAlpha = (1 - u) * sube;
+        ctx.translate(-3 + Math.sin(k * 2.2) * 5, -4 - u * 9);
+        ctx.rotate(u * 3 + k);
+        ctx.fillStyle = pluma;
+        ctx.beginPath(); ctx.ellipse(0, 0, 1.1, 0.4, 0, 0, Math.PI * 2); ctx.fill();
+        contorno(ctx, 0.9); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- TRITÓN ---------------- */
+  /* Medio pez: escamas, aletas por orejas, barba de alga y una CARACOLA que
+   * le hace de cuerno. Q: sopla la caracola y sale una ola. */
+  DRAW.triton = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var piel = hex(mix(o.c, '#2f9fb8', 0.62)), pielOsc = mix(piel, '#052430', 0.45);
+    var barba = '#6fd8a8', caracola = '#f4e2c8', caracolaOsc = '#bfa483';
+    var sopla = (q >= 0) ? Math.sin(Math.min(1, q * 1.5) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 3.2) * 0.3);
+
+    /* la aleta de la oreja */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-2.0, 2.2);
+      ctx.quadraticCurveTo(-6.0, 4.2, -6.6, 1.4);
+      ctx.quadraticCurveTo(-4.4, 0.2, -2.2, 0.8);
+      ctx.closePath();
+    }, piel, hex(pielOsc), 0.4, 0.4, 1.4);
+    ctx.strokeStyle = hex(pielOsc); ctx.lineWidth = 0.28;
+    ctx.beginPath();
+    for (k = 0; k < 3; k++) { ctx.moveTo(-2.6, 1.6 - k * 0.1); ctx.lineTo(-5.8, 2.6 - k * 0.9); }
+    ctx.stroke();
+
+    /* la cresta dorsal */
+    for (k = 0; k < 4; k++) {
+      var h = 1.3 + Math.sin(t * 4 + k) * 0.25;
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(-2.4 + k * 1.3, 4.0);
+        ctx.lineTo(-1.9 + k * 1.3, 4.0 + h * 1.7);
+        ctx.lineTo(-1.2 + k * 1.3, 4.1);
+        ctx.closePath();
+      }, hex(mix(piel, '#ffffff', 0.25)), hex(pielOsc), 0.2, 0.2, 1.1);
+    }
+
+    ctx.fillStyle = '#062230';
+    ctx.beginPath(); ctx.moveTo(1.0, -0.7); ctx.lineTo(5.8, -0.4); ctx.lineTo(5.8, -3.2); ctx.lineTo(1.0, -1.6); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(5.8, 0.4);
+    cabeza.quadraticCurveTo(6.0, 2.4, 4.2, 3.6);
+    cabeza.quadraticCurveTo(1.6, 4.8, -1.0, 4.0);
+    cabeza.quadraticCurveTo(-3.4, 3.2, -3.2, 0.8);
+    cabeza.quadraticCurveTo(-3.0, -1.2, -0.6, -1.8);
+    cabeza.lineTo(0.8, -0.9);
+    cabeza.lineTo(5.8, 0.4);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.6, -1.0); mand.lineTo(5.8, -0.2);
+    mand.quadraticCurveTo(5.4, -2.6, 3.0, -3.1);
+    mand.quadraticCurveTo(0.2, -3.3, -1.2, -2.0);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.6, -1.0, ang, piel, hex(pielOsc), 0.7, 0.7);
+
+    /* escamas */
+    ctx.save(); ctx.clip(cabeza);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 0.22;
+    for (k = 0; k < 10; k++) {
+      var ex = -2.6 + (k % 5) * 1.5, ey = 0.4 + Math.floor(k / 5) * 1.3;
+      ctx.beginPath(); ctx.arc(ex, ey, 0.75, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+    ctx.restore();
+
+    /* la barba de alga, en la mandíbula */
+    ctx.save(); girarSobre(ctx, 0.6, -1.0, -ang);
+    for (k = 0; k < 4; k++) {
+      var w = Math.sin(t * 3 + k * 1.2) * 0.6;
+      ctx.strokeStyle = barba; ctx.lineWidth = 0.75; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0.4 + k * 1.1, -2.2);
+      ctx.quadraticCurveTo(0.0 + k * 1.1 + w, -4.4, -0.6 + k * 1.1 + w * 1.6, -6.0);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(2.6, 1.7, 1.0, 0.9, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = '#1a3f5c';
+    ctx.beginPath(); ctx.arc(2.95, 1.65, 0.48, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.2, 2.0, 0.25, 0.95);
+
+    /* la caracola, delante de la boca al soplar */
+    if (sopla > 0.05 || fz > 0) {
+      ctx.save();
+      ctx.translate(6.4 + sopla * 0.6, -0.6);
+      ctx.rotate(-0.25);
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(-1.6, 0);
+        ctx.quadraticCurveTo(0.6, -1.8, 3.2, -1.2);
+        ctx.quadraticCurveTo(3.6, 0.4, 2.6, 1.4);
+        ctx.quadraticCurveTo(0.4, 1.8, -1.6, 0);
+        ctx.closePath();
+      }, caracola, caracolaOsc, 0.3, 0.3, 1.4);
+      ctx.strokeStyle = caracolaOsc; ctx.lineWidth = 0.26;
+      ctx.beginPath();
+      ctx.moveTo(-0.6, -0.6); ctx.quadraticCurveTo(1.2, 0.2, 2.6, -0.4);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* Q: la ola */
+    if (q >= 0) {
+      ctx.save();
+      for (k = 0; k < 3; k++) {
+        var u = (q * 1.5 + k / 3) % 1;
+        ctx.globalAlpha = (1 - u) * sopla;
+        ctx.fillStyle = mix('#3ec8ff', '#ffffff', u * 0.5, 0.75);
+        ctx.beginPath();
+        ctx.moveTo(8 + u * 6, -4);
+        ctx.quadraticCurveTo(10 + u * 8, 0.5 + u * 2, 8.5 + u * 7, 5 + u * 2);
+        ctx.quadraticCurveTo(12 + u * 9, 0.5, 8 + u * 6, -4);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- LA PARCA (temporada) ---------------- */
+  /* La capucha con nada dentro salvo dos luces, y la guadaña asomando por
+   * detrás. La boca es el hueco de la capucha. Q: el GUADAÑAZO, un arco
+   * blanco que cruza el pasillo. Solo en Halloween. */
+  DRAW.parca = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 0.8), k;
+    var ang = [0, 15, 28][fz] * Math.PI / 180;
+    var tela = hex(mix('#20222c', o.c, 0.13)), telaOsc = mix(tela, '#030408', 0.6);
+    var luz = hex(mix(o.c, '#8fff6a', 0.45));
+    var corte = (q >= 0) ? Math.min(1, q * 1.7) : -1;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 2.6) * 0.45);
+
+    /* la guadaña, por detrás */
+    ctx.save();
+    ctx.rotate(corte >= 0 ? -0.9 + corte * 1.8 : Math.sin(t * 2) * 0.05);
+    ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-3.6, -5.0); ctx.lineTo(-2.2, 6.6); ctx.stroke();
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-2.3, 6.4);
+      ctx.quadraticCurveTo(3.4, 8.2, 6.4, 5.0);
+      ctx.quadraticCurveTo(3.0, 6.6, -2.0, 5.2);
+      ctx.closePath();
+    }, '#d8dbe4', '#7d8494', 0.25, 0.25, 1.4);
+    ctx.restore();
+
+    /* el hueco negro de dentro de la capucha */
+    ctx.fillStyle = '#04040a';
+    ctx.beginPath(); ctx.moveTo(-0.6, -0.8); ctx.lineTo(5.4, -0.4); ctx.lineTo(5.4, -3.6); ctx.lineTo(-0.6, -2.0); ctx.closePath(); ctx.fill();
+
+    var capucha = new Path2D();
+    capucha.moveTo(5.4, 0.6);
+    capucha.quadraticCurveTo(5.8, 3.4, 3.4, 5.2);
+    capucha.quadraticCurveTo(0.2, 7.0, -3.0, 5.4);
+    capucha.quadraticCurveTo(-5.8, 3.8, -5.4, 0.4);
+    capucha.quadraticCurveTo(-5.0, -2.4, -2.0, -2.6);
+    capucha.lineTo(-0.8, -1.0);
+    capucha.lineTo(5.4, 0.6);
+    capucha.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-1.0, -1.1); mand.lineTo(5.4, -0.2);
+    mand.quadraticCurveTo(5.4, -3.4, 2.6, -4.2);
+    mand.quadraticCurveTo(-0.8, -4.8, -3.0, -3.2);
+    mand.closePath();
+    rostro(ctx, capucha, mand, -1.0, -1.1, ang, tela, hex(telaOsc), 0.8, 0.8);
+
+    /* el interior, un vacío con dos luces */
+    ctx.save(); ctx.clip(capucha);
+    ctx.fillStyle = '#04040a';
+    ctx.beginPath();
+    ctx.ellipse(2.2, 1.6, 3.4, 2.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    var parp = 0.55 + 0.45 * Math.abs(Math.sin(t * 1.8));
+    [[1.4, 2.0], [3.6, 1.6]].forEach(function (e) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(e[0], e[1], 0.1, e[0], e[1], 2.2);
+      g.addColorStop(0, mix(luz, '#ffffff', 0.5, parp));
+      g.addColorStop(1, mix(luz, '#ffffff', 0.5, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(e[0], e[1], 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = mix(luz, '#ffffff', 0.7, parp);
+      ctx.beginPath(); ctx.ellipse(e[0], e[1], 0.55, 0.42, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+
+    /* el borde de la capucha, bien marcado */
+    ctx.strokeStyle = hex(telaOsc); ctx.lineWidth = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(5.2, 0.8);
+    ctx.quadraticCurveTo(4.4, 4.4, 1.0, 5.6);
+    ctx.stroke();
+
+    /* Q: el guadañazo */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var alfa = Math.sin(corte * Math.PI);
+      ctx.strokeStyle = 'rgba(235,255,240,' + alfa + ')';
+      ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(2, 0.5, 9, -1.1 + corte * 1.2, 0.2 + corte * 1.2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(180,255,200,' + (alfa * 0.5) + ')';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.arc(2, 0.5, 9, -1.1 + corte * 1.2, 0.2 + corte * 1.2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- JINETE SIN CABEZA (temporada) ---------------- */
+  /* Del cuello para arriba no hay nada: solo el cuello de la capa y, encima,
+   * la CALABAZA encendida que lleva por cabeza. La boca es la de la calabaza.
+   * Q: la lanza por delante. Solo en Halloween. */
+  DRAW.jinete = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 18, 34][fz] * Math.PI / 180;
+    var capa = hex(mix('#2a1630', o.c, 0.14)), capaOsc = mix(capa, '#08040c', 0.55);
+    var naranja = '#ff8c1a', naranjaOsc = '#a84a02', llama = '#ffd24a';
+    var lanza = (q >= 0) ? Math.min(1, q * 1.4) : -1;
+    var flota = Math.sin(t * 2.8) * 0.5;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+
+    /* el cuello de la capa, abajo: vacío */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-5.0, -3.0);
+      ctx.quadraticCurveTo(-4.4, -0.6, -1.0, -0.2);
+      ctx.quadraticCurveTo(2.6, 0.2, 4.4, -1.4);
+      ctx.quadraticCurveTo(5.2, -3.4, 4.0, -5.4);
+      ctx.quadraticCurveTo(-0.4, -6.6, -5.0, -3.0);
+      ctx.closePath();
+    }, capa, hex(capaOsc), 0.6, 0.6, 1.7);
+    ctx.fillStyle = '#04030a';
+    ctx.beginPath();
+    ctx.ellipse(-0.4, -1.6, 3.2, 1.1, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* la calabaza, flotando encima */
+    ctx.save();
+    ctx.translate(lanza >= 0 ? lanza * 13 : 0, 4.4 + flota - (lanza >= 0 ? lanza * 1.5 : 0));
+    ctx.rotate(lanza >= 0 ? lanza * 5 : Math.sin(t * 2) * 0.05);
+
+    ctx.fillStyle = '#4a1a02';
+    ctx.beginPath(); ctx.moveTo(-1.6, -0.9); ctx.lineTo(3.6, -0.6); ctx.lineTo(3.6, -3.0); ctx.lineTo(-1.6, -1.8); ctx.closePath(); ctx.fill();
+
+    var cal = new Path2D();
+    cal.moveTo(3.8, -0.4);
+    cal.quadraticCurveTo(4.6, 1.6, 3.2, 3.0);
+    cal.quadraticCurveTo(1.0, 4.4, -1.2, 3.2);
+    cal.quadraticCurveTo(-2.8, 1.8, -2.2, -0.4);
+    cal.lineTo(3.8, -0.4);
+    cal.closePath();
+    var mandC = new Path2D();
+    mandC.moveTo(-2.2, -0.7);
+    mandC.lineTo(3.8, -0.7);
+    mandC.quadraticCurveTo(4.4, -2.6, 2.8, -3.6);
+    mandC.quadraticCurveTo(0.6, -4.4, -1.4, -3.2);
+    mandC.quadraticCurveTo(-2.6, -2.2, -2.2, -0.7);
+    mandC.closePath();
+    rostro(ctx, cal, mandC, -2.2, -0.6, ang, naranja, naranjaOsc, 0.5, 0.5);
+
+    /* los gajos */
+    ctx.save(); ctx.clip(cal);
+    ctx.strokeStyle = naranjaOsc; ctx.lineWidth = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(0.4, 3.9); ctx.quadraticCurveTo(-0.2, 1.6, 0.4, -0.5);
+    ctx.moveTo(2.4, 3.5); ctx.quadraticCurveTo(2.0, 1.6, 2.4, -0.5);
+    ctx.stroke();
+    ctx.restore();
+
+    /* el rabito */
+    ctx.strokeStyle = '#4a6b22'; ctx.lineWidth = 0.6; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0.8, 3.6); ctx.quadraticCurveTo(0.4, 5.0, 1.4, 5.4);
+    ctx.stroke();
+
+    /* los ojos tallados, con la vela dentro */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var vela = 0.65 + 0.35 * Math.abs(Math.sin(t * 6));
+    [[0.2, 1.8], [2.6, 1.5]].forEach(function (e) {
+      var g = ctx.createRadialGradient(e[0], e[1], 0.1, e[0], e[1], 2);
+      g.addColorStop(0, mix(llama, '#ffffff', 0.4, vela));
+      g.addColorStop(1, mix(llama, '#ffffff', 0.4, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(e[0], e[1], 2, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+    ctx.fillStyle = TINTA;
+    [[0.2, 1.8, 1], [2.6, 1.5, -1]].forEach(function (e) {
+      ctx.beginPath();
+      ctx.moveTo(e[0] - 0.85 * e[2], e[1] + 0.6);
+      ctx.lineTo(e[0] + 0.85 * e[2], e[1] + 0.75);
+      ctx.lineTo(e[0] + 0.1 * e[2], e[1] - 0.75);
+      ctx.closePath(); ctx.fill();
+    });
+    /* la boca dentada, en la mandíbula */
+    ctx.save(); girarSobre(ctx, -2.2, -0.6, -ang);
+    dientes(ctx, -1.2, 3.2, -1.1, 3, 1.0, llama);
+    ctx.restore();
+    ctx.restore();
+
+    /* Q: la estela de la calabaza lanzada */
+    if (q >= 0) {
+      for (k = 0; k < 6; k++) {
+        var u = Math.max(0, lanza - k * 0.08);
+        if (u <= 0) continue;
+        ctx.fillStyle = mix(llama, '#ff3b0a', k / 6, (1 - k / 6) * 0.55);
+        ctx.beginPath();
+        ctx.arc(u * 13 - k * 1.2, 4.4 - u * 1.5, 1.4 - k * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------- Las diez muertes de la tanda de mitología ----------
+   * Misma maquinaria: a la skin se le saca una foto quieta y la muerte la
+   * mueve, la quema, la parte o la borra. Cada una se muere de lo suyo: la
+   * que petrifica acaba petrificada, al de la lámpara se lo traga la lámpara
+   * y al de las alas de cera se le derrite la cera. */
+
+  /* MEDUSA: acaba petrificada ella misma. Se vuelve piedra de las serpientes
+   * hacia abajo, se queda tiesa y se agrieta. */
+  conMuerte('medusa', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var piedra = tramo(pm, 0.05, 0.5);
+    var fade = 1 - tramo(pm, 0.86, 1);
+    var cae = suave(tramo(pm, 0.55, 0.95));
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(146,148,152,' + (piedra * 0.92) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ rot: cae * 0.55, pf: -3, ps: -5, dy: cae * 3.2, alpha: fade });
+    /* las grietas, cuando ya es piedra del todo */
+    var raja = tramo(pm, 0.45, 0.8);
+    if (raja > 0) {
+      ctx.strokeStyle = 'rgba(40,40,44,' + (raja * 0.85 * fade) + ')';
+      ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      for (k = 0; k < 5; k++) {
+        var p0 = M.pant(-3 + k * 1.8, 3 - k * 1.2);
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p0.x + (k % 2 ? 2.2 : -1.8) * raja, p0.y + 2.6 * raja);
+      }
+      ctx.stroke();
+    }
+    /* cascotes que se desprenden */
+    for (k = 0; k < 8; k++) {
+      var d = tramo(pm, 0.6 + k * 0.03, 1);
+      if (d <= 0) continue;
+      var pc = M.pant((k - 3.5) * 2.0, -2 - d * 7);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.translate(pc.x, pc.y);
+      ctx.rotate(d * 5 + k);
+      ctx.fillStyle = '#8c8e94';
+      ctx.fillRect(-0.7, -0.6, 1.4, 1.2);
+      ctx.strokeStyle = 'rgba(30,30,34,.7)'; ctx.lineWidth = 0.18;
+      ctx.strokeRect(-0.7, -0.6, 1.4, 1.2);
+      ctx.restore();
+    }
+  });
+
+  /* CÍCLOPE: se le cierra el ojo, da dos tumbos y se desploma de bruces */
+  conMuerte('ciclope', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var tumbo = pm < 0.35 ? Math.sin(pm * 34) * 0.16 * (1 - pm / 0.35) : 0;
+    var cae = rebote(tramo(pm, 0.3, 0.7));
+    var fade = 1 - tramo(pm, 0.84, 1);
+    M.pinta({ rot: tumbo + cae * 1.5, pf: 2, ps: -5, dy: cae * 2.0, alpha: fade });
+    /* el párpado que baja: una tapa del color de la piel sobre el ojo */
+    var cierra = tramo(pm, 0.02, 0.28);
+    if (cierra > 0 && cae < 0.5) {
+      M.enFoto(function (c) {
+        c.fillStyle = 'rgba(160,110,60,' + (cierra * 0.95) + ')';
+        c.beginPath();
+        c.ellipse(1.9, -2.0, 2.7, 2.5 * cierra, 0, 0, Math.PI * 2);
+        c.fill();
+      }, 'source-atop');
+    }
+    /* el polvazo del golpe */
+    if (cae > 0.5) {
+      var golpe = tramo(pm, 0.5, 0.8);
+      for (k = 0; k < 8; k++) {
+        ctx.fillStyle = 'rgba(180,152,112,' + (0.55 * Math.sin(golpe * Math.PI) * fade) + ')';
+        ctx.beginPath();
+        ctx.arc(o.x + (k - 3.5) * 3.2 * golpe, o.y + 6 - golpe * 2,
+          1.2 + golpe * 3.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      var p = M.pant(0, 8);
+      mareo(ctx, p.x, p.y, o.t, fade * tramo(pm, 0.6, 0.75));
+    }
+  });
+
+  /* FÉNIX: arde hasta la ceniza, la ceniza brilla un instante —amaga con
+   * renacer— y se apaga. Es lo que lo hace fénix. */
+  conMuerte('fenix', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var arde = tramo(pm, 0.02, 0.35);
+    var ceniza = tramo(pm, 0.3, 0.62);
+    var amago = (pm > 0.62 && pm < 0.82) ? Math.sin((pm - 0.62) / 0.2 * Math.PI) : 0;
+    var fade = 1 - tramo(pm, 0.8, 1);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(255,220,120,' + (arde * (1 - ceniza) * 0.95) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+      c.fillStyle = 'rgba(58,54,52,' + (ceniza * 0.95) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ dy: suave(tramo(pm, 0.35, 0.9)) * 3.5, alpha: fade * (1 - ceniza * 0.35) });
+    /* las brasas que suben */
+    for (k = 0; k < 12; k++) {
+      var d = tramo(pm, 0.03 + k * 0.05, 1);
+      if (d <= 0) continue;
+      var p = M.pant((k - 5.5) * 1.4 + Math.sin(d * 5 + k) * 1.8, 2 + d * 13);
+      ctx.fillStyle = mix('#ffd24a', '#ff3b0a', d, (1 - d) * fade);
+      ctx.beginPath(); ctx.arc(p.x, p.y, 0.8 * (1 - d * 0.6), 0, Math.PI * 2); ctx.fill();
+    }
+    /* el amago de renacer */
+    if (amago > 0) {
+      var pa = M.pant(0, 0);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(pa.x, pa.y, 0.5, pa.x, pa.y, 4 + amago * 7);
+      g.addColorStop(0, 'rgba(255,240,180,' + (0.8 * amago) + ')');
+      g.addColorStop(1, 'rgba(255,120,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(pa.x, pa.y, 4 + amago * 7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  });
+
+  /* GENIO: lo llama la lámpara. Se estira, se hace humo y entra por la boca
+   * de la lámpara, que da un último destello. */
+  conMuerte('genio', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var tira = tramo(pm, 0.08, 0.72);
+    var fade = 1 - tramo(pm, 0.6, 0.9);
+    /* se estira hacia atrás y abajo, hacia donde está la lámpara */
+    M.pinta({ dx: -tira * 7, dy: -tira * 5.5, sf: 1 - tira * 0.8, ss: 1 - tira * 0.8,
+      rot: tira * 0.9, pf: 0, ps: 0, alpha: fade });
+    /* el hilo de humo que se lo traga */
+    var lp = M.pant(-7.8, -5.6);
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, tira * 2) * (1 - tramo(pm, 0.75, 1));
+    for (k = 0; k < 8; k++) {
+      var u = k / 8;
+      var px = lp.x + (1 - u) * tira * 7, py = lp.y - (1 - u) * tira * 5.5;
+      ctx.fillStyle = 'rgba(94,168,200,' + (0.5 * (1 - u)) + ')';
+      ctx.beginPath();
+      ctx.arc(px + Math.sin(o.t * 4 + u * 5) * 1.2, py, 1.6 * (1 - u * 0.7), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    /* la lámpara se queda, y destella al cerrarse */
+    ctx.save();
+    ctx.globalAlpha = 1 - tramo(pm, 0.9, 1);
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath(); ctx.ellipse(lp.x, lp.y, 2.0, 1.1, -0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(20,20,20,.8)'; ctx.lineWidth = 0.4; ctx.stroke();
+    var fin = (pm > 0.72 && pm < 0.86) ? Math.sin((pm - 0.72) / 0.14 * Math.PI) : 0;
+    if (fin > 0) estrella4(ctx, lp.x, lp.y - 1.4, 1.2 + fin * 1.6, '#fff6d0', fin);
+    ctx.restore();
+  });
+
+  /* GOLEM: se le apaga la runa y, sin nada que lo sujete, se desmorona en
+   * bloques que caen uno detrás de otro */
+  conMuerte('golem', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var apaga = tramo(pm, 0.02, 0.22);
+    var cae = tramo(pm, 0.2, 0.9);
+    var fade = 1 - tramo(pm, 0.8, 1);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(40,42,48,' + (apaga * 0.55) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    /* el cuerpo se va en bloques: cada uno cae por su cuenta, de arriba
+     * abajo. En el escaparate solo caía la columna del centro y el resto
+     * del golem desaparecía de golpe al empezar. */
+    for (k = 0; k < 6; k++) {
+      var s0 = 5.5 - k * 2.0;
+      for (var j = 0; j < 7; j++) {
+        var f0 = -6.0 + j * 2.0, par = (j + k) % 2;
+        var d = tramo(pm, 0.18 + k * 0.07 + (j % 3) * 0.025, 1);
+        M.trozo(f0, s0, 2.05, (par ? 1.5 : -1.2) * d * 5, d * d * 13,
+          d * (par ? 1.1 : -0.9), (1 - d * 0.6) * fade);
+      }
+    }
+    /* el destello de la runa al apagarse */
+    if (pm < 0.25) {
+      var p = M.pant(1.0, 3.9);
+      var fl = 1 - pm / 0.25;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(p.x, p.y, 0.2, p.x, p.y, 2 + fl * 5);
+      g.addColorStop(0, 'rgba(255,190,90,' + fl + ')');
+      g.addColorStop(1, 'rgba(255,140,30,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2 + fl * 5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    /* polvo de piedra abajo */
+    if (cae > 0.3) {
+      for (k = 0; k < 6; k++) {
+        ctx.fillStyle = 'rgba(150,152,158,' + (0.4 * (1 - cae) * fade) + ')';
+        ctx.beginPath();
+        ctx.arc(o.x + (k - 2.5) * 3.0, o.y + 7, 1.0 + cae * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+
+  /* ESFINGE: se deshace en arena, que el viento se lleva de delante atrás */
+  conMuerte('esfinge', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var arena = tramo(pm, 0.05, 0.85);
+    var fade = 1 - tramo(pm, 0.2, 0.95);
+    /* la foto se va comiendo por delante */
+    M.enFoto(function (c) {
+      c.globalCompositeOperation = 'destination-out';
+      c.fillStyle = '#000';
+      c.fillRect(FH - 2 - arena * FOTO, -FH, FOTO, FOTO);
+    }, 'source-over');
+    M.pinta({ dy: arena * 1.2, alpha: Math.max(0, fade) });
+    /* la arena volando */
+    for (k = 0; k < 22; k++) {
+      var d = tramo(pm, 0.02 + (k % 11) * 0.055, 1);
+      if (d <= 0) continue;
+      var sem = hash(k * 7 + 3) % 100;
+      var s0 = (sem / 100 - 0.5) * 12;
+      var p = M.pant(4 - d * 20, s0 + Math.sin(d * 5 + k) * 2.5 + d * 3);
+      ctx.fillStyle = 'rgba(216,184,120,' + ((1 - d) * 0.9) + ')';
+      ctx.fillRect(p.x, p.y, 0.8, 0.8);
+    }
+  });
+
+  /* ÍCARO: se le derrite la cera, las plumas se sueltan una a una y cae */
+  conMuerte('icaro', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var derrite = tramo(pm, 0.02, 0.32);
+    var cae = tramo(pm, 0.25, 1);
+    var fade = 1 - tramo(pm, 0.85, 1);
+    M.pinta({ dy: cae * cae * 14, rot: cae * 1.8, pf: 0, ps: -2, alpha: fade });
+    /* las gotas de cera */
+    for (k = 0; k < 6; k++) {
+      var g0 = tramo(pm, 0.03 + k * 0.05, 0.8);
+      if (g0 <= 0 || g0 >= 1) continue;
+      var pg = M.pant(-2 - k * 0.9, 1 - g0 * 9);
+      gota(ctx, pg.x, pg.y, 0.7, '#ffe9a8', (1 - g0) * fade);
+    }
+    /* las plumas, cayendo en espiral */
+    for (k = 0; k < 11; k++) {
+      var d = tramo(pm, 0.05 + k * 0.05, 1);
+      if (d <= 0) continue;
+      var p = M.pant(-3 + Math.sin(d * 4 + k) * 5, 2 - d * 12);
+      ctx.save();
+      ctx.globalAlpha = (1 - d * 0.8) * fade;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.sin(d * 6 + k) * 1.4);
+      ctx.fillStyle = '#f7f2e2';
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.2, 0.42, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,20,20,.55)'; ctx.lineWidth = 0.16; ctx.stroke();
+      ctx.restore();
+    }
+    /* el sol, arriba, que es quien lo mata */
+    if (pm < 0.4) {
+      var ps = M.pant(2, 12);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (1 - pm / 0.4) * 0.8;
+      var gs = ctx.createRadialGradient(ps.x, ps.y, 0.5, ps.x, ps.y, 7);
+      gs.addColorStop(0, 'rgba(255,245,190,.9)');
+      gs.addColorStop(1, 'rgba(255,200,60,0)');
+      ctx.fillStyle = gs;
+      ctx.beginPath(); ctx.arc(ps.x, ps.y, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  });
+
+  /* TRITÓN: se queda sin agua. Se seca, se le agrieta la piel y queda tieso,
+   * con un charquito debajo que se evapora. */
+  conMuerte('triton', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var seca = tramo(pm, 0.05, 0.55);
+    var fade = 1 - tramo(pm, 0.85, 1);
+    var cae = rebote(tramo(pm, 0.35, 0.8));
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(150,132,96,' + (seca * 0.7) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ rot: cae * 1.4, pf: 0, ps: -5, dy: cae * 2.0, alpha: fade });
+    /* el agua que se le escapa */
+    for (k = 0; k < 9; k++) {
+      var d = tramo(pm, 0.02 + k * 0.04, 0.7);
+      if (d <= 0 || d >= 1) continue;
+      var p = M.pant((k - 4) * 1.6, -3 - d * 5);
+      gota(ctx, p.x, p.y, 0.6 * (1 - d * 0.5), '#3ec8ff', (1 - d) * 0.9);
+    }
+    /* el charco, que se va evaporando */
+    var ch = tramo(pm, 0.3, 1);
+    if (ch > 0) {
+      var pc = M.pant(0, -6.5);
+      ctx.fillStyle = 'rgba(62,200,255,' + (0.45 * (1 - ch) * fade) + ')';
+      ctx.beginPath();
+      ctx.ellipse(pc.x, pc.y, 5.5 * (1 - ch * 0.7), 1.3 * (1 - ch * 0.7), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* las grietas de la piel seca */
+    if (seca > 0.5) {
+      ctx.strokeStyle = 'rgba(70,52,30,' + ((seca - 0.5) * 1.6 * fade) + ')';
+      ctx.lineWidth = 0.26;
+      ctx.beginPath();
+      for (k = 0; k < 4; k++) {
+        var p0 = M.pant(-2 + k * 2.0, 2.5 - k * 1.4);
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p0.x + 1.8, p0.y + 1.6);
+      }
+      ctx.stroke();
+    }
+  });
+
+  /* LA PARCA: dentro no había nadie. La capucha se desinfla, las dos luces
+   * se apagan y la guadaña cae al suelo. */
+  conMuerte('parca', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var apaga = tramo(pm, 0.02, 0.24);
+    var desinfla = tramo(pm, 0.18, 0.72);
+    var fade = 1 - tramo(pm, 0.72, 1);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(6,6,12,' + (apaga * 0.8) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    /* se aplasta contra el suelo, como una tela que cae */
+    M.pinta({ ss: 1 - desinfla * 0.85, sf: 1 + desinfla * 0.35,
+      dy: desinfla * 5.5, alpha: fade });
+    /* el último parpadeo de las dos luces */
+    if (pm < 0.3) {
+      var fl = (1 - pm / 0.3) * (Math.floor(pm * 30) % 2 ? 0.35 : 1);
+      [[1.4, 2.0], [3.6, 1.6]].forEach(function (e) {
+        var p = M.pant(e[0], e[1]);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        var g = ctx.createRadialGradient(p.x, p.y, 0.1, p.x, p.y, 2.5);
+        g.addColorStop(0, 'rgba(160,255,120,' + fl + ')');
+        g.addColorStop(1, 'rgba(120,220,90,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      });
+    }
+    /* la guadaña, cayendo de lado */
+    var gu = suave(tramo(pm, 0.12, 0.8));
+    ctx.save();
+    ctx.globalAlpha = fade;
+    var pg = M.pant(-2 - gu * 4, 3 - gu * 9);
+    ctx.translate(pg.x, pg.y);
+    ctx.rotate(-0.4 - gu * 1.9);
+    ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -5.5); ctx.lineTo(0, 5.5); ctx.stroke();
+    ctx.fillStyle = '#d8dbe4';
+    ctx.beginPath();
+    ctx.moveTo(0, 5.3);
+    ctx.quadraticCurveTo(5.0, 7.0, 7.6, 4.0);
+    ctx.quadraticCurveTo(4.6, 5.4, 0.2, 4.2);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(20,20,20,.75)'; ctx.lineWidth = 0.3; ctx.stroke();
+    ctx.restore();
+    /* un hilo de humo verde donde estaba */
+    for (k = 0; k < 5; k++) {
+      var u = tramo(pm, 0.3 + k * 0.07, 1);
+      if (u <= 0) continue;
+      var p2 = M.pant(0, -2 + u * 10);
+      ctx.fillStyle = 'rgba(120,220,140,' + ((1 - u) * 0.35) + ')';
+      ctx.beginPath();
+      ctx.arc(p2.x + Math.sin(u * 6 + k) * 2, p2.y, 1.0 + u * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  /* JINETE SIN CABEZA: la calabaza se le cae y se estrella; se apaga la vela
+   * y queda el cuello de la capa, vacío, que se deshace en niebla. */
+  conMuerte('jinete', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var suelta = tramo(pm, 0.04, 0.42);
+    var choca = tramo(pm, 0.42, 0.5);
+    var fade = 1 - tramo(pm, 0.78, 1);
+    /* la calabaza es parte de la foto: se le baja y se apaga entera */
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(10,8,14,' + (tramo(pm, 0.4, 0.75) * 0.85) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ dy: suelta * 6.5, rot: suelta * 2.2, pf: 0, ps: 3, alpha: fade });
+    /* el estallido contra el suelo */
+    if (choca > 0) {
+      for (k = 0; k < 10; k++) {
+        var d = Math.min(1, choca * 2 + k * 0.02);
+        var a2 = k * 0.628 + 0.3;
+        var p = M.pant(Math.cos(a2) * d * 9, -6.5 + Math.abs(Math.sin(a2)) * d * 5);
+        ctx.save();
+        ctx.globalAlpha = (1 - d * 0.8) * fade;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(a2 + d * 4);
+        ctx.fillStyle = (k % 3) ? '#ff8c1a' : '#a84a02';
+        ctx.beginPath();
+        ctx.moveTo(0, -1.0); ctx.lineTo(1.1, 0.2); ctx.lineTo(-0.6, 1.0);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(20,20,20,.7)'; ctx.lineWidth = 0.2; ctx.stroke();
+        ctx.restore();
+      }
+      /* la llama que se apaga */
+      var fl = Math.max(0, 1 - (pm - 0.42) / 0.25);
+      var pf = M.pant(0, -6.5);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(pf.x, pf.y, 0.3, pf.x, pf.y, 2 + fl * 6);
+      g.addColorStop(0, 'rgba(255,210,90,' + fl + ')');
+      g.addColorStop(1, 'rgba(255,140,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(pf.x, pf.y, 2 + fl * 6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    /* la niebla del cuello vacío */
+    for (k = 0; k < 6; k++) {
+      var u = tramo(pm, 0.25 + k * 0.06, 1);
+      if (u <= 0) continue;
+      var p3 = M.pant((k - 2.5) * 2.2, -2 + u * 6);
+      ctx.fillStyle = 'rgba(150,140,170,' + ((1 - u) * 0.3) + ')';
+      ctx.beginPath();
+      ctx.arc(p3.x, p3.y, 1.4 + u * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  /* ---- accesorios, efectos y caras de emote de la tanda ---- */
+  /* ---------------- ACCESORIOS ----------------
+   * Escritos ya como los quiere el juego: ACC.id = function (ctx, o), en el
+   * marco del cuerpo y con la skin debajo. */
+
+  /* CUERNOS DE CARNERO: los de Amón, enroscados a los lados */
+  ACC.acc_carnero = function (ctx, o) {
+    var hueso = '#e8dcc0', huesoOsc = '#9c8f6c', k;
+    [[1, 1.0], [-1, 0.75]].forEach(function (l) {
+      ctx.save();
+      ctx.scale(1, l[0]);
+      ctx.translate(0, 2.0);
+      ctx.scale(l[1], l[1]);
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(-1.2, 2.6);
+        ctx.quadraticCurveTo(-4.6, 3.2, -5.0, 0.6);
+        ctx.quadraticCurveTo(-5.2, -1.8, -2.6, -2.2);
+        ctx.quadraticCurveTo(-0.8, -2.2, -0.6, -0.8);
+        ctx.quadraticCurveTo(-0.6, 0.4, -1.8, 0.4);
+        ctx.quadraticCurveTo(-2.6, 0.2, -2.4, -0.6);
+        ctx.quadraticCurveTo(-3.8, -0.6, -3.7, 0.6);
+        ctx.quadraticCurveTo(-3.6, 2.0, -1.6, 1.8);
+        ctx.closePath();
+      }, hueso, huesoOsc, 0.3, 0.3, 1.5);
+      /* los anillos del cuerno */
+      ctx.strokeStyle = huesoOsc; ctx.lineWidth = 0.22;
+      ctx.beginPath();
+      for (k = 0; k < 3; k++) {
+        ctx.moveTo(-4.4 + k * 0.9, 1.9 - k * 0.25);
+        ctx.lineTo(-4.2 + k * 0.9, 0.2 - k * 0.2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    });
+  };
+
+  /* BARBA DE ZEUS: blanca, rizada y con un rayito escapándose */
+  ACC.acc_zeus = function (ctx, o) {
+    var pelo = '#f2f0e8', peloOsc = '#b6b2a4', k;
+    var w = Math.sin(o.t * 3) * 0.2;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(4.8, -0.6);
+      ctx.quadraticCurveTo(5.2, -3.4, 3.2, -5.2);
+      ctx.quadraticCurveTo(1.6, -6.8 + w, -0.6, -5.4);
+      ctx.quadraticCurveTo(-2.6, -4.0, -2.2, -1.4);
+      ctx.quadraticCurveTo(1.0, -0.2, 4.8, -0.6);
+      ctx.closePath();
+    }, pelo, peloOsc, 0.45, 0.45, 1.6);
+    /* los rizos del borde */
+    ctx.strokeStyle = peloOsc; ctx.lineWidth = 0.3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 4; k++) {
+      ctx.moveTo(3.4 - k * 1.5, -1.4 - k * 0.5);
+      ctx.quadraticCurveTo(3.0 - k * 1.5, -3.0 - k * 0.6, 2.2 - k * 1.5, -3.4 - k * 0.5);
+    }
+    ctx.stroke();
+    /* el bigote */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(1.6, 0.2);
+      ctx.quadraticCurveTo(4.2, 0.6, 5.2, -0.4);
+      ctx.quadraticCurveTo(3.4, -1.4, 1.4, -0.8);
+      ctx.closePath();
+    }, pelo, peloOsc, 0.25, 0.25, 1.3);
+    /* el rayito */
+    ctx.fillStyle = '#ffe14a';
+    ctx.beginPath();
+    ctx.moveTo(-3.4, -2.0); ctx.lineTo(-1.8, -3.2); ctx.lineTo(-2.6, -3.4);
+    ctx.lineTo(-1.0, -5.0); ctx.lineTo(-2.8, -4.0); ctx.lineTo(-2.0, -3.8);
+    ctx.closePath(); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+  };
+
+  /* SERPIENTE: enroscada al cuello, con la cabeza asomando por delante */
+  ACC.acc_serpiente = function (ctx, o) {
+    var verde = hex(mix(o.c, '#2f8f4a', 0.68)), verdeOsc = mix(verde, '#07200f', 0.5);
+    var w = Math.sin(o.t * 3.5) * 0.5;
+    ctx.strokeStyle = hex(verdeOsc); ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-5.4, -3.2);
+    ctx.quadraticCurveTo(-1.0, -6.4, 3.4, -4.4);
+    ctx.quadraticCurveTo(5.8, -3.2, 5.0, -1.0);
+    ctx.stroke();
+    ctx.strokeStyle = verde; ctx.lineWidth = 0.9; ctx.stroke();
+    /* la cabecita, mirando al frente */
+    ctx.save();
+    ctx.translate(5.2 + w * 0.3, -0.4);
+    ctx.rotate(-0.3 + w * 0.1);
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.4, 0.95, 0, 0, Math.PI * 2);
+    }, verde, hex(verdeOsc), 0.25, 0.25, 1.3);
+    ctx.fillStyle = '#ffe14a';
+    ctx.beginPath(); ctx.arc(0.5, -0.2, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.ellipse(0.55, -0.2, 0.1, 0.24, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ff5f8d'; ctx.lineWidth = 0.2;
+    ctx.beginPath();
+    ctx.moveTo(1.3, 0.2); ctx.lineTo(2.4, 0.5);
+    ctx.moveTo(2.4, 0.5); ctx.lineTo(2.9, 0.2);
+    ctx.moveTo(2.4, 0.5); ctx.lineTo(2.9, 0.9);
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  /* VENDA DEL ORÁCULO: la tira que le tapa los ojos, con su nudo detrás */
+  ACC.acc_venda = function (ctx, o) {
+    var tela = '#e8e0cc', telaOsc = '#a89c7c';
+    var w = Math.sin(o.t * 4) * 0.4;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-5.2, 4.6);
+      ctx.quadraticCurveTo(0.4, 5.6, 5.4, 3.2);
+      ctx.lineTo(5.0, 1.4);
+      ctx.quadraticCurveTo(0.2, 3.6, -5.4, 2.6);
+      ctx.closePath();
+    }, tela, telaOsc, 0.35, 0.35, 1.5);
+    /* el nudo y las dos puntas ondeando */
+    ctx.fillStyle = tela;
+    ctx.beginPath(); ctx.arc(-5.2, 3.5, 0.85, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    [0, 1].forEach(function (k) {
+      ctx.fillStyle = k ? telaOsc : tela;
+      ctx.beginPath();
+      ctx.moveTo(-5.6, 3.6 - k * 0.6);
+      ctx.quadraticCurveTo(-8.0, 4.4 - k * 1.2 + w, -9.6, 2.6 - k * 1.4 + w);
+      ctx.quadraticCurveTo(-7.8, 2.8 - k * 0.8, -5.8, 2.8 - k * 0.5);
+      ctx.closePath(); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    });
+    /* el ojo pintado en la venda, el que de verdad ve */
+    ctx.fillStyle = hex(mix(o.c, '#ffffff', 0.4));
+    ctx.beginPath(); ctx.ellipse(1.6, 3.5, 1.1, 0.55, -0.12, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(1.7, 3.45, 0.32, 0, Math.PI * 2); ctx.fill();
+  };
+
+  /* MÁSCARA DE TEATRO: la de la comedia, sujeta con su palito */
+  ACC.acc_mascara = function (ctx, o) {
+    var yeso = '#f4efe0', yesoOsc = '#b8b09a';
+    var w = Math.sin(o.t * 2.5) * 0.12;
+    ctx.save();
+    ctx.translate(1.6, 1.6);
+    ctx.rotate(w);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(3.4, 0.6);
+      ctx.quadraticCurveTo(3.6, 3.0, 1.6, 4.0);
+      ctx.quadraticCurveTo(-0.8, 4.8, -2.4, 3.2);
+      ctx.quadraticCurveTo(-3.6, 1.4, -3.0, -1.2);
+      ctx.quadraticCurveTo(-1.8, -3.6, 0.6, -3.4);
+      ctx.quadraticCurveTo(3.0, -2.8, 3.4, 0.6);
+      ctx.closePath();
+    }, yeso, yesoOsc, 0.4, 0.4, 1.6);
+    /* los dos huecos de los ojos y la boca de la comedia */
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.ellipse(-1.0, 1.6, 0.75, 0.62, 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(1.8, 1.4, 0.75, 0.62, 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-1.6, -1.4);
+    ctx.quadraticCurveTo(0.4, -3.2, 2.4, -1.6);
+    ctx.quadraticCurveTo(0.4, -2.2, -1.6, -1.4);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    /* el palito */
+    ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 0.55; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-1.4, -0.8); ctx.lineTo(-3.0, -5.4);
+    ctx.stroke();
+  };
+
+  /* CASCO ALADO: el de Hermes, con las dos alitas a los lados */
+  ACC.acc_alado = function (ctx, o) {
+    var bronce = '#d8b878', bronceOsc = '#8a6a32';
+    var pluma = '#f7f2e2', plumaOsc = '#bdb59a';
+    var bate = Math.sin(o.t * 9) * 0.35;
+    /* las alitas */
+    [1, -1].forEach(function (lado) {
+      ctx.save();
+      ctx.translate(-0.4, lado * 3.2);
+      ctx.rotate(lado * (0.25 + bate));
+      for (var k = 2; k >= 0; k--) {
+        piezaX(ctx, function () {
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(-2.2 - k * 0.5, lado * (1.6 + k * 0.5), -4.4 - k * 0.8, lado * (0.4 + k * 0.4));
+          ctx.quadraticCurveTo(-2.4, lado * -0.8, 0, lado * -0.6);
+          ctx.closePath();
+        }, pluma, plumaOsc, 0.25, 0.25, 1.1);
+      }
+      ctx.restore();
+    });
+    /* el casquete */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.4, 2.8);
+      ctx.quadraticCurveTo(-3.0, 6.4, 0.6, 6.6);
+      ctx.quadraticCurveTo(4.2, 6.4, 4.4, 3.0);
+      ctx.quadraticCurveTo(0.6, 1.8, -3.4, 2.8);
+      ctx.closePath();
+    }, bronce, bronceOsc, 0.4, 0.4, 1.6);
+    ctx.strokeStyle = bronceOsc; ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(-3.2, 3.4); ctx.quadraticCurveTo(0.6, 2.4, 4.2, 3.6);
+    ctx.stroke();
+    destello(ctx, -1.6, 5.4, 0.45, 0.6);
+  };
+
+  /* OJO QUE TODO LO VE: flota encima y te sigue con la mirada */
+  ACC.acc_ojo = function (ctx, o) {
+    var w = Math.sin(o.t * 2.2) * 0.5;
+    var cx = 0.4, cy = 8.4 + w;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(cx, cy, 0.4, cx, cy, 4.5);
+    g.addColorStop(0, mix(o.c, '#ffffff', 0.5, 0.45));
+    g.addColorStop(1, mix(o.c, '#ffffff', 0.5, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* el párpado, en forma de almendra */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(cx - 2.8, cy);
+      ctx.quadraticCurveTo(cx, cy + 2.4, cx + 2.8, cy);
+      ctx.quadraticCurveTo(cx, cy - 2.4, cx - 2.8, cy);
+      ctx.closePath();
+    }, '#f7f2e2', '#b8b09a', 0.2, 0.2, 1.4);
+    /* el iris, que mira adelante y atrás */
+    var mira = Math.sin(o.t * 1.3) * 0.9;
+    ctx.fillStyle = hex(mix(o.c, '#2b6fd8', 0.45));
+    ctx.beginPath(); ctx.arc(cx + mira, cy, 1.05, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(cx + mira, cy, 0.5, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, cx + mira - 0.4, cy + 0.4, 0.28, 0.95);
+    contorno(ctx, 1.2);
+    ctx.beginPath();
+    ctx.moveTo(cx - 2.8, cy);
+    ctx.quadraticCurveTo(cx, cy + 2.4, cx + 2.8, cy);
+    ctx.quadraticCurveTo(cx, cy - 2.4, cx - 2.8, cy);
+    ctx.closePath(); ctx.stroke();
+  };
+
+  /* ---------------- EFECTOS ---------------- */
+
+  /* RELÁMPAGOS: por donde pasa quedan rayos quebrados que chisporrotean.
+   * En el escaparate se llamaba RAYOS, pero ese nombre ya es del aura
+   * eléctrica del 17 sep. */
+  EFX.efx_relampagos = function (ctx, o, cuerpo) {
+    cuerpo();
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    rastro(o, 11, 44).forEach(function (q) {
+      var a = 1 - q.edad;
+      [[1.5, 0.25], [0.5, 0.9]].forEach(function (capa) {
+        ctx.strokeStyle = mix('#8fd6ff', '#ffffff', capa[1], a * capa[1]);
+        ctx.lineWidth = capa[0];
+        ctx.beginPath();
+        var x = q.p.x, y = q.p.y;
+        ctx.moveTo(x, y - 2.4);
+        for (var i = 1; i <= 4; i++) {
+          ctx.lineTo(x + ((q.n + i) % 2 ? 1.3 : -1.3) * (1 - q.edad), y - 2.4 + i * 1.3);
+        }
+        ctx.stroke();
+      });
+    });
+    ctx.restore();
+  };
+
+  /* ARENA: un reguero de arena que se va deshaciendo */
+  EFX.efx_arena = function (ctx, o, cuerpo) {
+    cuerpo();
+    rastro(o, 3, 52).forEach(function (q) {
+      for (var k = 0; k < 2; k++) {
+        var sem = (q.n * 13 + k * 29) % 17;
+        var dx = ((sem % 5) - 2) * 0.8, dy = ((sem % 4) - 1.5) * 0.7 + q.edad * 3.5;
+        ctx.globalAlpha = (1 - q.edad) * 0.8;
+        ctx.fillStyle = (sem % 3) ? '#d8b878' : '#b08f52';
+        ctx.fillRect(q.p.x + dx, q.p.y + dy, 0.65, 0.65);
+      }
+    });
+    ctx.globalAlpha = 1;
+  };
+
+  /* RUNAS: deja símbolos encendidos que laten y se apagan */
+  EFX.efx_runas = function (ctx, o, cuerpo) {
+    cuerpo();
+    var TRAZOS = [
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+      [[0, -1.2], [0, 1.2], [-1, 0], [1, 0]],
+      [[-1, 1], [0, -1.2], [1, 1], [-1, 1]],
+      [[-1, -1], [1, 1], [1, -1], [-1, 1]]
+    ];
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    rastro(o, 15, 66).forEach(function (q) {
+      var a = (1 - q.edad) * (0.6 + 0.4 * Math.sin(o.t * 5 + q.n));
+      var tr = TRAZOS[q.n % TRAZOS.length];
+      ctx.strokeStyle = mix(o.c, '#ffffff', 0.45, a);
+      ctx.lineWidth = 0.42;
+      ctx.beginPath();
+      for (var i = 0; i < tr.length; i++) {
+        var px = q.p.x + tr[i][0] * 1.25, py = q.p.y + tr[i][1] * 1.25;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
+  };
+
+  /* PISADAS: donde pisa queda la losa de piedra marcada */
+  EFX.efx_pisadas = function (ctx, o, cuerpo) {
+    rastro(o, 14, 90).forEach(function (q) {
+      ctx.save();
+      ctx.globalAlpha = (1 - q.edad) * 0.75;
+      ctx.translate(q.p.x, q.p.y);
+      ctx.rotate((q.n % 2 ? 1 : -1) * 0.2);
+      ctx.fillStyle = '#6b6f78';
+      roundRect(ctx, -1.7, -1.7, 3.4, 3.4, 0.4); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,22,26,.8)'; ctx.lineWidth = 0.26; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 0.2;
+      ctx.beginPath();
+      ctx.moveTo(-1.0, -0.6); ctx.lineTo(0.4, 0.2);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+    cuerpo();
+  };
+
+  /* BRASAS: va dejando ascuas que respiran y se apagan */
+  EFX.efx_brasas = function (ctx, o, cuerpo) {
+    cuerpo();
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    rastro(o, 5, 50).forEach(function (q) {
+      var vive = 0.55 + 0.45 * Math.sin(o.t * 6 + q.n * 1.7);
+      var a = (1 - q.edad) * vive;
+      var r = 1.0 * (1 - q.edad * 0.55);
+      var g = ctx.createRadialGradient(q.p.x, q.p.y, 0.1, q.p.x, q.p.y, r * 2.6);
+      g.addColorStop(0, 'rgba(255,238,170,' + a + ')');
+      g.addColorStop(0.45, 'rgba(255,140,26,' + (a * 0.65) + ')');
+      g.addColorStop(1, 'rgba(255,60,10,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(q.p.x, q.p.y, r * 2.6, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+  };
+
+  /* NIEBLA: la bruma del inframundo, que se queda pegada al suelo */
+  EFX.efx_niebla = function (ctx, o, cuerpo) {
+    ctx.save();
+    rastro(o, 8, 76).forEach(function (q) {
+      var a = (1 - q.edad) * 0.30;
+      var r = 2.0 + q.edad * 3.6;
+      ctx.fillStyle = 'rgba(126,146,170,' + a + ')';
+      ctx.beginPath();
+      ctx.ellipse(q.p.x + Math.sin(o.t * 1.4 + q.n) * 1.6, q.p.y + q.edad * 1.4,
+        r, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+    cuerpo();
+  };
+
+  /* ---------------- EMOTES ---------------- */
+  function caraMito(ctx, x, y, r, color, id, t) {
+    var ink = '#000000', lw = Math.max(1, r * 0.17), k;
+    var ex = r * 0.42, ey = y - r * 0.24;
+
+    if (id === 'oraculo') {
+      /* los ojos en blanco: está viendo lo que viene */
+      ctx.save();
+      ctx.translate(x, y - Math.abs(Math.sin(t * 0.04)) * r * 0.05);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      [-1, 1].forEach(function (lado) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.ellipse(lado * ex, ey - y, r * 0.26, r * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.45; ctx.stroke();
+      });
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.7; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.2, r * 0.45); ctx.lineTo(r * 0.2, r * 0.45);
+      ctx.stroke();
+      ctx.restore();
+      /* el resplandor que le sale de los ojos */
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      [-1, 1].forEach(function (lado) {
+        var g = ctx.createRadialGradient(x + lado * ex, ey, 0.5, x + lado * ex, ey, r * 0.8);
+        g.addColorStop(0, 'rgba(200,240,255,' + (0.4 + 0.3 * Math.sin(t * 0.06)) + ')');
+        g.addColorStop(1, 'rgba(160,220,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x + lado * ex, ey, r * 0.8, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+      return;
+    }
+
+    if (id === 'petrificado') {
+      /* gris, agrietado y con cara de horror */
+      ctx.save();
+      ctx.fillStyle = '#9a9ca2';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#5c5e64'; ctx.lineWidth = lw * 0.45; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.75, y - r * 0.4);
+      ctx.lineTo(x - r * 0.2, y - r * 0.05);
+      ctx.lineTo(x - r * 0.45, y + r * 0.5);
+      ctx.moveTo(x - r * 0.2, y - r * 0.05);
+      ctx.lineTo(x + r * 0.45, y + r * 0.25);
+      ctx.stroke();
+      /* ojos y boca, huecos */
+      ctx.fillStyle = '#4a4c52';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath(); ctx.ellipse(x + lado * ex, ey, r * 0.2, r * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.45, r * 0.24, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      /* cascotes que se le caen */
+      for (k = 0; k < 3; k++) {
+        var u = ((t * 0.018 + k * 0.33) % 1);
+        ctx.globalAlpha = 1 - u;
+        ctx.fillStyle = '#82848a';
+        ctx.fillRect(x + (k - 1) * r * 0.5, y + r * 0.8 + u * r * 1.2, r * 0.18, r * 0.18);
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    if (id === 'divino') {
+      /* aureola, ojos cerrados de paz y luz detrás */
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * 1.9);
+      g.addColorStop(0, 'rgba(255,240,190,.5)');
+      g.addColorStop(1, 'rgba(255,220,120,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r * 1.9, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.75; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.arc(x + lado * ex, ey + r * 0.12, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+        ctx.stroke();
+      });
+      ctx.lineWidth = lw * 0.65;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.3, r * 0.3, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
+      /* la aureola */
+      ctx.strokeStyle = '#ffd24a'; ctx.lineWidth = lw * 0.55;
+      ctx.beginPath();
+      ctx.ellipse(x, y - r * 1.18 - Math.sin(t * 0.04) * r * 0.06, r * 0.62, r * 0.2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      return;
+    }
+
+    if (id === 'maldicion') {
+      /* aura oscura, ojos rojos y una sonrisa torcida */
+      ctx.save();
+      for (k = 0; k < 6; k++) {
+        var a2 = t * 0.03 + k * 1.05;
+        ctx.fillStyle = 'rgba(70,20,100,.35)';
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a2) * r * 1.15, y + Math.sin(a2) * r * 1.15,
+          r * (0.32 + 0.1 * Math.sin(t * 0.07 + k)), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.fillStyle = mix(color, '#2a0a3a', 0.5);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      /* ojos encendidos */
+      [-1, 1].forEach(function (lado) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        var g2 = ctx.createRadialGradient(x + lado * ex, ey, 0.3, x + lado * ex, ey, r * 0.5);
+        g2.addColorStop(0, 'rgba(255,60,60,.95)');
+        g2.addColorStop(1, 'rgba(255,40,40,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(x + lado * ex, ey, r * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = '#ff3b3b';
+        ctx.beginPath(); ctx.ellipse(x + lado * ex, ey, r * 0.13, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+      });
+      /* cejas de maldad y sonrisa */
+      ctx.strokeStyle = '#1a0a22'; ctx.lineWidth = lw * 0.6; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.72, ey - r * 0.34); ctx.lineTo(x - r * 0.16, ey - r * 0.08);
+      ctx.moveTo(x + r * 0.72, ey - r * 0.34); ctx.lineTo(x + r * 0.16, ey - r * 0.08);
+      ctx.stroke();
+      ctx.lineWidth = lw * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.34, y + r * 0.34);
+      ctx.quadraticCurveTo(x, y + r * 0.62, x + r * 0.4, y + r * 0.28);
+      ctx.stroke();
+      return;
+    }
+
+    /* INVOCANDO: el círculo mágico girando debajo y los ojos encendidos */
+    ctx.save();
+    ctx.translate(x, y + Math.sin(t * 0.05) * r * 0.05);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.55; ctx.lineCap = 'round';
+    [-1, 1].forEach(function (lado) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(lado * ex, ey - y, r * 0.2, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.45; ctx.stroke();
+      ctx.fillStyle = mix('#7a3dff', '#ffffff', 0.25);
+      ctx.beginPath(); ctx.arc(lado * ex, ey - y, r * 0.11, 0, Math.PI * 2); ctx.fill();
+    });
+    /* boca recitando */
+    ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.ellipse(0, r * 0.44, r * 0.14, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* el círculo mágico, girando */
+    ctx.save();
+    ctx.translate(x, y + r * 1.15);
+    ctx.scale(1, 0.32);
+    ctx.rotate(t * 0.02);
+    ctx.strokeStyle = 'rgba(150,90,255,.9)'; ctx.lineWidth = lw * 0.4;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.75, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    for (k = 0; k < 5; k++) {
+      var a3 = k * (Math.PI * 4 / 5) - Math.PI / 2;
+      var px = Math.cos(a3) * r * 1.05, py = Math.sin(a3) * r * 1.05;
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  }
+
   var INFO = {};
   CFG.SKINS.forEach(function (sk) { INFO[sk.id] = sk; });
 
@@ -7115,6 +9176,11 @@
    * Medido a ojo sobre cada dibujo, en el marco de la skin (f hacia delante,
    * s hacia arriba). Una skin sin entrada aquí sigue sin admitir accesorios.
    * ============================================================ */
+  /* En las de mitología el ojo queda muy por debajo de la coronilla y el
+   * SOMBRERO VAQUERO, el CHULLO, el MOHICANO y las OREJAS DE GATO, que van a
+   * la cara como en Pac-Man, les tapaban el ojo: en ellas se apoyan en la
+   * coronilla, como los sombreros. */
+  var ZONAS_MITO = { acc_vaquero: 'cabeza', acc_chullo: 'cabeza', acc_mohicano: 'cabeza', acc_orejas: 'cabeza' };
   var CABEZAS = {
     hamburguesa: { ojo: [3.1, 2.3], k: 0.72, coronilla: [1.2, 5.3], cuello: [1.4, -4.8] },
     gato:        { ojo: [2.4, 2.2], k: 0.46, coronilla: [1.6, 4.8], cuello: [1.6, -2.4] },
@@ -7159,7 +9225,20 @@
     unicornio:   { ojo: [1.9, 1.9], k: 0.56, coronilla: [-1.0, 5.4], cuello: [-3.6, -1.4] },
     caracol:     { ojo: [5.6, 4.4], k: 0.34, coronilla: [-1.6, 6.4], cuello: [3.4, 0.6] },
     lobo:        { ojo: [-0.4, 4.3], k: 0.60, coronilla: [-1.2, 5.8], cuello: [1.0, -3.3],
-                   sitios: { acc_bigote: [4.4, 4.4] } }
+                   sitios: { acc_bigote: [4.4, 4.4] } },
+    /* --- tanda de mitología (28 sep) --- */
+    medusa:      { ojo: [3.0, 1.9], k: 0.68, coronilla: [-0.4, 5.2], cuello: [1.2, -3.4], zonas: ZONAS_MITO },
+    ciclope:     { ojo: [2.2, 2.0], k: 0.78, coronilla: [-0.8, 5.6], cuello: [0.8, -4.2], zonas: ZONAS_MITO },
+    golem:       { ojo: [3.2, 1.5], k: 0.80, coronilla: [1.0, 5.6], cuello: [1.0, -4.6], zonas: ZONAS_MITO },
+    esfinge:     { ojo: [2.6, 2.0], k: 0.66, coronilla: [0.4, 7.0], cuello: [1.6, -3.0], zonas: ZONAS_MITO },
+    icaro:       { ojo: [2.6, 1.7], k: 0.60, coronilla: [0.6, 5.1], cuello: [1.6, -2.8], zonas: ZONAS_MITO },
+    fenix:       { ojo: [3.2, 1.6], k: 0.62, coronilla: [0.2, 4.6], cuello: [1.0, -2.6], zonas: ZONAS_MITO },
+    genio:       { ojo: [2.4, 1.6], k: 0.60, coronilla: [0.6, 6.4], cuello: [0.8, -2.8], zonas: ZONAS_MITO },
+    triton:      { ojo: [2.6, 1.7], k: 0.62, coronilla: [-0.2, 4.6], cuello: [1.6, -3.0], zonas: ZONAS_MITO },
+    /* LA PARCA no tiene cara: manda la luz de delante */
+    parca:       { ojo: [3.0, 1.8], k: 0.80, coronilla: [0.2, 6.8], cuello: [1.2, -4.4], zonas: ZONAS_MITO },
+    /* el JINETE lleva la cabeza (la calabaza) flotando sobre el cuello vacío */
+    jinete:      { ojo: [2.6, 5.9], k: 0.55, coronilla: [0.9, 8.2], cuello: [0.4, -0.8], zonas: ZONAS_MITO }
   };
   /* ---------- el accesorio se MUEVE con la skin ----------
    * Las cabezas de arriba se midieron con la skin quieta en una pose
@@ -7237,7 +9316,30 @@
       m.scaleSelf(1.15, 1.15);
     },
     oso: function (m, o) { m.translateSelf(0, botaM(o.t, 7, 0.25) - 0.1).scaleSelf(1.02, 1.02); },
-    galleta: function (m, o) { m.rotateSelf(Math.sin(o.t * 8) * 0.05 * 180 / Math.PI); }
+    galleta: function (m, o) { m.rotateSelf(Math.sin(o.t * 8) * 0.05 * 180 / Math.PI); },
+    /* tanda de mitología: el mismo vaivén que hace cada dibujo */
+    medusa: function (m, o) { m.translateSelf(0, Math.sin(o.t * 5) * 0.16); },
+    ciclope: function (m, o) {
+      var q = qDe(o, 0.9), golpe = (q >= 0) ? Math.sin(Math.min(1, q * 2.4) * Math.PI) : 0;
+      m.translateSelf(0, Math.abs(Math.sin(o.t * 5)) * 0.3 - 0.15 + golpe * 0.9);
+    },
+    golem: function (m, o) { m.translateSelf(0, Math.abs(Math.sin(o.t * 4.5)) * 0.22 - 0.1); },
+    esfinge: function (m, o) { m.translateSelf(0, Math.sin(o.t * 3.6) * 0.14); },
+    icaro: function (m, o) {
+      var q = qDe(o, 1.2), sube = (q >= 0) ? Math.sin(Math.min(1, q * 1.4) * Math.PI) : 0;
+      m.translateSelf(0, Math.sin(o.t * 4) * 0.25 + sube * 1.2);
+    },
+    fenix: function (m, o) { m.translateSelf(0, Math.sin(o.t * 4) * 0.35); },
+    genio: function (m, o) { m.translateSelf(0, Math.sin(o.t * 3.4) * 0.4); },
+    triton: function (m, o) { m.translateSelf(0, Math.sin(o.t * 3.2) * 0.3); },
+    parca: function (m, o) { m.translateSelf(0, Math.sin(o.t * 2.6) * 0.45); },
+    /* la calabaza flota sola (y sale volando con la Q); el cuello de la capa no se mueve */
+    jinete: function (m, o, zona) {
+      if (zona === 'cuello') return;
+      var q = qDe(o, 1.0), lanza = (q >= 0) ? Math.min(1, q * 1.4) : -1;
+      m.translateSelf(lanza >= 0 ? lanza * 13 : 0, 4.4 + Math.sin(o.t * 2.8) * 0.5 - (lanza >= 0 ? lanza * 1.5 : 0))
+        .rotateSelf((lanza >= 0 ? lanza * 5 : Math.sin(o.t * 2) * 0.05) * 180 / Math.PI).translateSelf(0, -4.4);
+    }
   };
 
   /* La diferencia entre la pose de ahora y la medida, lista para
@@ -7260,7 +9362,14 @@
     acc_espartano: 'cabeza', acc_antenas: 'cabeza', acc_cuernos: 'cabeza',
     acc_obra: 'cabeza', acc_aureola: 'cabeza',
     acc_bufanda: 'cuello', acc_alas: 'cuello',
-    acc_laureles_2609: 'cabeza' };
+    acc_laureles_2609: 'cabeza',
+    /* tanda de mitología: la serpiente se enrosca al cuello */
+    acc_alado: 'cabeza', acc_ojo: 'cabeza', acc_serpiente: 'cuello' };
+  /* la zona de un accesorio en una skin: la suya propia si la skin la fija */
+  function zonaAcc(skin, acc) {
+    var c = CABEZAS[skin];
+    return (c && c.zonas && c.zonas[acc]) || ZONA_ACC[acc] || 'cara';
+  }
   var OJO_PAC = [1.1, 3.7];
   /* Revisión del 15 sep, con las 26 y los 11 accesorios: el PARCHE quedaba
    * detrás del ojo (se seguía viendo), los AURICULARES caían encima del ojo
@@ -7285,7 +9394,9 @@
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
   var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6,
     acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
-    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4 };
+    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4,
+    acc_alado: 2.8, acc_ojo: 4.4, acc_vaquero: R - 2.2, acc_chullo: 2.4, acc_mohicano: 4.4,
+    acc_orejas: R - 1.2 };
 
 
   /* ============================================================
@@ -8002,7 +10113,7 @@
   function anclaAccesorio(skin, acc) {
     var c = CABEZAS[skin];
     if (!c) return null;
-    var k = c.k, zona = ZONA_ACC[acc] || 'cara';
+    var k = c.k, zona = zonaAcc(skin, acc);
     if (zona === 'cara') {
       /* cada accesorio de la cara tiene su punto (PUNTO_ACC) y el sitio donde
        * debe caer respecto al ojo de la skin (DESDE_OJO); una skin puede
@@ -8065,7 +10176,7 @@
             // con la Q, las extravagantes abren del todo (como en dibujarArte)
             half: (e.muerde && rara) ? HALF[2] : (HALF[mouthPhase] || 0),
             qSeg: (typeof e.qSeg === 'number') ? e.qSeg : null
-          }, ZONA_ACC[e.accesorio] || 'cara');
+          }, zonaAcc(skin, e.accesorio));
           if (dp) ctx.transform(dp.a, dp.b, dp.c, dp.d, dp.e, dp.f);
           ctx.translate(an.x, an.y); ctx.scale(an.k, an.k);
         }
@@ -8079,6 +10190,7 @@
   Sprites.CARAS_TIENDA = { dormido: 1, burla: 1, chulo: 1, mareo: 1, ko: 1, jajaja: 1, enserio: 1,
     lloron: 1, ardiendo: 1, beso: 1, idea: 1, gg: 1,
     silbando: 1, plis: 1, ambicioso: 1, nervios: 1, arcoiris: 1,
+    oraculo: 1, petrificado: 1, divino: 1, maldicion: 1, invocando: 1,
     grito: 1 };
   Sprites.caraTienda = function (ctx, x, y, r, color, id, tick) {
     caraEmote(ctx, x, y, r, colorLargo(color), id, (typeof tick === 'number') ? tick : 0);

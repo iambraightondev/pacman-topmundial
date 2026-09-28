@@ -2,7 +2,7 @@
 
 Las **28 piezas** de la tercera tanda. Braighton eligió: mitología, tanda
 completa, tres de cada ocho solo de cofre y un par de temporada para Halloween.
-**Todavía NO están en el juego.**
+**Desde el 28 sep ya están en el juego.**
 
 Escaparate publicado: <https://claude.ai/artifact/LqebZaoKvGLj5v4ymUxzMr>
 
@@ -58,5 +58,7 @@ CALABAZA y NOCHE DE BRUJAS, y solo salen del 24 al 31 de octubre
 
 ## Dónde se quedó
 
-Dibujadas las 28 y publicado el escaparate. **Falta que las vea y diga cuáles
-entran.**
+Dibujadas las 28 y publicado el escaparate. **El 28 sep entraron las 28 al
+juego** (js/skins.js y js/config.js). Diferencias con este escaparate: RAYOS se
+llama RELÁMPAGOS (efx_relampagos) y la muerte del GOLEM cae en bloques por
+todo el cuerpo, no solo por la columna del centro.

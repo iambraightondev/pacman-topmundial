@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-28 · La tanda de MITOLOGÍA entra en el juego (28 piezas)
+
+Lo del escaparate de mitología ya se puede llevar puesto. Las skins dejan la
+silueta de Pac-Man, comen a su manera, tienen su Q y su propia muerte.
+
+- **Diez skins**: **MEDUSA**, **CÍCLOPE**, **GOLEM**, **ESFINGE** e **ÍCARO** en la
+  tienda (1.500); **FÉNIX**, **GENIO** y **TRITÓN** solo de cofre; **LA PARCA** y
+  el **JINETE SIN CABEZA** se ganan jugando del 24 al 31 de octubre.
+- **Siete accesorios (450)**: CUERNOS DE CARNERO, BARBA DE ZEUS, SERPIENTE,
+  VENDA DEL ORÁCULO y MÁSCARA DE TEATRO; CASCO ALADO y OJO QUE TODO LO VE de cofre.
+- **Seis efectos (250)**: RELÁMPAGOS, ARENA, RUNAS y PISADAS DE PIEDRA; BRASAS y
+  NIEBLA de cofre. El que en el escaparate era RAYOS se llama RELÁMPAGOS: RAYOS
+  ya era el aura eléctrica.
+- **Cinco emotes (150)**: ORÁCULO, PETRIFICADO, DIVINO, MALDICIÓN e INVOCANDO.
+
+Dos retoques sobre el escaparate: el GOLEM se desmorona entero (antes se
+quedaba en una columna fina nada más morir) y, en estas diez, el sombrero
+vaquero, el chullo, el mohicano y las orejas de gato se apoyan en la cabeza en
+vez de taparles el ojo.
+
 ## 2026-09-27 · Rey en azul, Cacería, Soporte y hielo
 
 **ARREGLO, REY FANTASMA:** cuando lo cruzabais de azul dos a la vez, a menudo

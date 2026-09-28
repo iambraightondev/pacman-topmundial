@@ -7,11 +7,21 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **27 de septiembre de 2026**.
+Última puesta al día: **28 de septiembre de 2026**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**28 sep — TANDA DE MITOLOGÍA EN EL JUEGO (pm-v293).** Braighton pidió meter
+las 28 piezas del escaparate. Hecho: dibujos, Q y muertes en js/skins.js (con
+su CABEZAS y su POSES cada una), catálogo en js/config.js. LA PARCA y JINETE
+van con pide halloween. El efecto RAYOS del escaparate pasa a RELÁMPAGOS
+(efx_relampagos) por choque de nombre. Las diez nuevas llevan zonas propias
+(ZONAS_MITO) para que los sombreros del 18 sep vayan a la coronilla; en las
+extravagantes viejas NO se tocó (en CANGREJO y CARACOL el sombrero sigue algo
+bajo: si lo nota, se les puede dar lo mismo). tests.html 607/607.
+**Por ver jugando:** las diez en partida y con accesorios a tamaño real.
 
 **Siguiente sesión (27 sep):** probar en una party de verdad el doble -6 al
 rey en azul; jugar el METEORO (ritmo de la mira) y la CACERÍA nueva; ver si el
