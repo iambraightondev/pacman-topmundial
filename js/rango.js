@@ -444,6 +444,10 @@
      *   { n, puntos, colocando (true si aún no hay rango), jugadas,
      *     antes, despues (PR), cambio, division, divisionAntes, sube, baja } */
     cerrar: function (G) {
+      /* cerrada como es debido: el testigo de "la pestaña murió en plena
+       * clasificatoria" (js/guardado.js) ya no tiene que contar nada */
+      var Gd = window.PM.Guardado;
+      if (Gd && Gd.quitarTestigo && G && !G.replaying) Gd.quitarTestigo();
       if (this.porQueNo(G) || !A()) return null;
       // la del equipo: es la que compite
       return this.apuntar(Math.max(0, G.score || 0), G.playerCount || 1, G.level || 1, G.roles);

@@ -9380,12 +9380,20 @@
   /* Alrededor de cada prueba: el almacén se deja como estaba y la
    * recuperación ocurre de un tirón (en el juego va por trozos para no
    * congelar la pantalla, y aquí no hay reloj que los encadene). */
+  /* lo que la partida a medias apunta aparte: las cerradas, lo que falta por
+   * subir a la nube y el testigo de la clasificatoria de party */
+  var CLAVES_GUARDADO = ['pacman-topmundial-partidas-cerradas',
+    'pacman-topmundial-partida-nube-pend', 'pacman-topmundial-clasif-viva'];
+
   function conGuardado(fn) {
     var Gd = window.PM.Guardado;
-    var previo = null, previoRep = null;
+    var previo = null, previoRep = null, aparte = {};
     var luego = Gd.luego;
     try { previo = localStorage.getItem(CFG.SAVE_KEY); } catch (e) { /* sin almacén */ }
     try { previoRep = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* nada */ }
+    CLAVES_GUARDADO.forEach(function (k) {
+      try { aparte[k] = localStorage.getItem(k); localStorage.removeItem(k); } catch (e) { aparte[k] = null; }
+    });
     Gd.luego = function (f) { f(); };
     Gd.deNube = null;
     /* Se llega aquí con lo que dejara la prueba de antes, y una repetición a
@@ -9406,6 +9414,10 @@
         else localStorage.setItem(CFG.SAVE_KEY, previo);
         if (previoRep === null) localStorage.removeItem(CFG.REPLAY_KEY);
         else localStorage.setItem(CFG.REPLAY_KEY, previoRep);
+        CLAVES_GUARDADO.forEach(function (k) {
+          if (aparte[k] === null) localStorage.removeItem(k);
+          else localStorage.setItem(k, aparte[k]);
+        });
       } catch (e) { /* sin almacén */ }
     }
   }
@@ -9528,6 +9540,123 @@
     });
   });
 
+  /* 28 sep: con el almacén lleno, escribir fallaba en silencio y GUARDAR Y
+   * SALIR se iba al menú dándola por guardada: la partida se perdía. */
+  test('GUARDAR Y SALIR con el almacén lleno no la da por guardada', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(700);
+      var escribir = Gd.escribir;
+      Gd.escribir = function (s) { return s ? false : escribir.call(Gd, s); };
+      try {
+        eq(Gd.guardarYSalir(), false, 'no dice que se guardó');
+        eq(Gd.fallo, 'SIN SITIO', 'y sabe por qué, para decirlo');
+        ok(G.inGame(), 'la partida sigue: no se sale al menú');
+        eq(G.salvada, false, 'ni queda marcada como guardada');
+      } finally { Gd.escribir = escribir; }
+      ok(Gd.guardarYSalir(), 'con sitio, se guarda');
+    });
+  });
+
+  /* CERRAR O RECARGAR LA PESTAÑA (pagehide): lo que se puede continuar se
+   * guarda donde iba, sin cobrarlo; se cobra al acabarla. */
+  test('cerrar la pestaña en plena partida la deja guardada, sin cobrarla', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      var L = window.PM.Level;
+      G.newGame({ players: 1 });
+      juegaGuion(900);
+      var puntos = G.score, xp = L.xp();
+      eq(Gd.alIrse(false), 'guardada', 'al esconderse, se guarda');
+      juegaGuion(50);
+      puntos = G.score;
+      eq(Gd.alIrse(true), 'guardada', 'al cerrarse, también (lo último)');
+      eq(Gd.sobre().p, puntos, 'con los puntos de ese momento');
+      eq(L.xp(), xp, 'y sin cobrarla');
+      cierraDeGolpe();
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'al volver se retoma');
+      eq(G.score, puntos, 'donde iba');
+      G.toMenu();
+      eq(L.xp(), xp + puntos, 'y se cobra una sola vez, al acabarla');
+    });
+  });
+
+  test('en party, cerrar la pestaña cobra lo jugado y una CLASIFICATORIA cuenta como salida', function () {
+    var Rg = window.PM.Rango, cc = Rg.conCuenta;
+    conGuardado(function (Gd) {
+      conContadores(function () { cuentaSinRed('UNO', function () {
+        Rg.conCuenta = function () { return true; };
+        try {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.state = 'PLAYING';
+          G.score = 3000;
+          eq(Rg.porQueNo(G), null, 'es una clasificatoria que cuenta');
+          var A = window.PM.Achievements;
+          var partidas = A.stats().partidas || 0, antes = Rg.estado().jugadas;
+          eq(Gd.alIrse(false), 'testigo', 'al esconderse deja el testigo (no se puede guardar)');
+          ok(Gd.testigo(), 'apuntado');
+          eq(G.inGame(), true, 'esconderse no es irse: la partida sigue');
+          eq(Gd.alIrse(true), 'cobrada', 'al cerrar la pestaña se cobra');
+          eq(G.inGame(), false);
+          eq(A.stats().partidas, partidas + 1, 'la partida se cobra (cuenta como jugada)');
+          ok(G.runSummary, 'con su resumen de lo que se lleva');
+          eq(Rg.estado().jugadas, antes + 1, 'y cuenta para el rango como una salida');
+          eq(Gd.testigo(), null, 'el testigo sobra');
+          Gd.revisarTestigo();
+          eq(Rg.estado().jugadas, antes + 1, 'y no cuenta otra vez al volver a abrir');
+        } finally {
+          Rg.conCuenta = cc;
+          if (G.inGame()) G.toMenu();
+        }
+      }); });
+    });
+  });
+
+  test('si la página muere escondida en plena clasificatoria de party, cuenta al volver', function () {
+    var Rg = window.PM.Rango, Ac = window.PM.Account, cc = Rg.conCuenta;
+    var ss = Ac.savedSession;
+    conGuardado(function (Gd) {
+      conContadores(function () { cuentaSinRed('UNO', function () {
+        Rg.conCuenta = function () { return true; };
+        Ac.savedSession = function () { return 'llave'; };
+        try {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.state = 'PLAYING';
+          G.score = 2500;
+          var antes = Rg.estado().jugadas;
+          eq(Gd.alIrse(false), 'testigo');
+          // el móvil la mata: nada se cierra, nada se cobra
+          G.netRole = null; cierraDeGolpe();
+          eq(Rg.estado().jugadas, antes, 'todavía no ha contado');
+          Gd.revisarTestigo();                // se vuelve a abrir el juego
+          eq(Rg.estado().jugadas, antes + 1, 'al volver a abrir, cuenta');
+          Gd.revisarTestigo();
+          eq(Rg.estado().jugadas, antes + 1, 'una sola vez');
+
+          /* y una clasificatoria que se cierra como es debido no deja testigo
+           * que cuente de más */
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.state = 'PLAYING';
+          G.score = 1200;
+          Gd.alIrse(false);
+          G.toMenu();
+          eq(Rg.estado().jugadas, antes + 2, 'salir cuenta, como siempre');
+          eq(Gd.testigo(), null, 'y se lleva el testigo');
+          Gd.revisarTestigo();
+          eq(Rg.estado().jugadas, antes + 2, 'que ya no suma nada');
+        } finally {
+          Rg.conCuenta = cc; Ac.savedSession = ss;
+          if (G.inGame()) G.toMenu();
+        }
+      }); });
+    });
+  });
+
   test('una partida que al rehacerla no sale igual no se retoma', function () {
     conGuardado(function (Gd) {
       window.PM.settings.muted = true;
@@ -9643,6 +9772,130 @@
       eq(Gd.sobre().p, 54321, 'una más nueva sí manda');
       Gd.desdeNube('esto no es un sobre');
       eq(Gd.sobre().p, mio.p, 'y una ilegible se ignora');
+    });
+  });
+
+  /* 28 sep: la partida retomada en OTRO aparato y acabada allí se cobraba
+   * allí... y la copia de aquí se podía seguir y cobrar otra vez. Dos
+   * aparatos: el almacén de uno se cambia por el del otro, y la "nube" es lo
+   * último que cada uno mandó por Account.guardarPartida. */
+  function conNubeDePartidas(fn) {
+    var Ac = window.PM.Account;
+    var gp = Ac.guardarPartida, lp = Ac.leerPartida;
+    var nube = { texto: null, cae: false };
+    Ac.guardarPartida = function (texto, cb) {
+      if (nube.cae) { if (cb) cb('NO SE PUDO'); return; }
+      nube.texto = texto;
+      if (cb) cb(null);
+    };
+    Ac.leerPartida = function (cb) { cb(nube.cae ? 'NO SE PUDO' : null, nube.texto); };
+    try { cuentaSinRed('PEPE', function () { fn(nube); }); }
+    finally { Ac.guardarPartida = gp; Ac.leerPartida = lp; }
+  }
+
+  test('una partida acabada en otro aparato ya no se puede seguir aquí', function () {
+    conGuardado(function (Gd) {
+      conNubeDePartidas(function (nube) {
+        var L = window.PM.Level;
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1 });
+        juegaGuion(700);
+        ok(Gd.guardarYSalir(), 'en A se deja a medias');
+        var enA = localStorage.getItem(CFG.SAVE_KEY);
+        var id = Gd.idDe(JSON.parse(enA));
+        ok(id, 'la guardada lleva el id de su partida');
+        eq(Gd.idDe(JSON.parse(nube.texto)), id, 'y sube a la nube con él');
+
+        // B (otro almacén): se la trae de la nube, la retoma y la acaba
+        localStorage.removeItem(CFG.SAVE_KEY);
+        Gd.desdeNube(nube.texto);
+        var err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, null, 'B la retoma');
+        var xp = L.xp();
+        G.toMenu();
+        ok(L.xp() > xp, 'B la cobra');
+        ok(Gd.estaCerrada(id), 'y la apunta como cerrada');
+        var lapida = JSON.parse(nube.texto);
+        ok(!lapida.rep && lapida.cz.indexOf(id) !== -1, 'a la nube va la lápida con su id');
+
+        // A: su copia sigue en su almacén, y A no sabe nada todavía
+        localStorage.setItem(CFG.SAVE_KEY, enA);
+        localStorage.removeItem('pacman-topmundial-partidas-cerradas');
+        ok(Gd.hay(), 'A todavía la tiene');
+        Gd.desdeNube(nube.texto);          // al entrar o sincronizar
+        eq(Gd.hay(), false, 'al saber que se cerró, ya no se puede seguir');
+        eq(localStorage.getItem(CFG.SAVE_KEY), null, 'y la copia se tira');
+      });
+    });
+  });
+
+  test('retomar mira antes la nube: si se acabó en otro aparato, no se sigue', function () {
+    conGuardado(function (Gd) {
+      conNubeDePartidas(function (nube) {
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1 });
+        juegaGuion(700);
+        ok(Gd.guardarYSalir(), 'guardada');
+        var id = Gd.idDe(Gd.sobre());
+        // mientras, en otro aparato se acabó: en la nube está su lápida
+        nube.texto = JSON.stringify({ v: CFG.SAVE_V, fin: 1, cz: [id], fecha: Date.now() });
+        var err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, 'CERRADA', 'no se retoma');
+        eq(G.inGame(), false, 'ni se monta nada');
+        eq(Gd.hay(), false, 'y deja de ofrecerse');
+
+        // sin red no hay forma de saberlo: se sigue como siempre
+        G.newGame({ players: 1 });
+        juegaGuion(600);
+        ok(Gd.guardarYSalir(), 'otra guardada');
+        nube.cae = true;
+        err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, null, 'sin red, se retoma');
+      });
+    });
+  });
+
+  test('la lápida que no llega a la nube se vuelve a mandar, sin pisar lo más nuevo', function () {
+    conGuardado(function (Gd) {
+      conNubeDePartidas(function (nube) {
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1 });
+        juegaGuion(700);
+        ok(Gd.guardarYSalir(), 'guardada (y subida)');
+        var vieja = nube.texto, id = Gd.idDe(Gd.sobre());
+        var err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, null);
+        nube.cae = true;
+        G.toMenu();                        // se acaba... y la nube no contesta
+        eq(nube.texto, vieja, 'la lápida no ha llegado');
+        nube.cae = false;
+        Gd.desdeNube(nube.texto);          // la próxima sincronización
+        var ahora = JSON.parse(nube.texto);
+        ok(!ahora.rep && ahora.cz.indexOf(id) !== -1, 'se vuelve a mandar y llega');
+
+        /* si entretanto otro aparato subió algo MÁS NUEVO, no se pisa: se le
+         * pegan las cerradas de aquí */
+        nube.cae = true;
+        G.newGame({ players: 1 });
+        juegaGuion(300);
+        G.toMenu();
+        var cerradaAqui = Gd.cerradas()[0];
+        nube.cae = false;
+        var otra = JSON.parse(vieja);
+        otra.id = 'p-otra-partida';
+        otra.cz = [];
+        otra.fecha = Date.now() + 60000;
+        nube.texto = JSON.stringify(otra);
+        Gd.desdeNube(nube.texto);
+        var queda = JSON.parse(nube.texto);
+        eq(queda.id, 'p-otra-partida', 'la guardada de allí se queda');
+        ok(queda.rep, 'entera');
+        ok(queda.cz.indexOf(cerradaAqui) !== -1, 'con lo cerrado aquí pegado');
+      });
     });
   });
 
@@ -13856,6 +14109,54 @@
         Gd.descartar();
         eq(Rg.estado(1).jugadas, 1, 'un DESATADO descartado no toca el rango');
       } finally { Rg.conCuenta = cc; Gd.borrar(); }
+    });
+  });
+
+  /* 28 sep: el DESCARTARLA del aviso "no se pudo retomar" borraba a pelo, y
+   * una CLASIFICATORIA tirada ahí no contaba (la forma de no perder PR). Y una
+   * que ya se cerró en otro aparato no vuelve a contar al descartarla aquí. */
+  test('RANGO: DESCARTARLA tras no poder retomarla cuenta; la cerrada en otro aparato, no', function () {
+    var Rg = window.PM.Rango, Gd = window.PM.Guardado, UI = window.PM.UI, cc = Rg.conCuenta;
+    var cerradas = 'pacman-topmundial-partidas-cerradas', c0 = null;
+    try { c0 = localStorage.getItem(cerradas); } catch (e) { /* nada */ }
+    conContadores(function () {
+      Rg.conCuenta = function () { return true; };
+      try {
+        function dejarGuardada() {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+          G.state = 'PLAYING'; G.readyTicks = 0;
+          G.pacs[0].safeTicks = 999999;
+          ticks(10);
+          G.score = 4000;
+          ok(Gd.guardar(), 'se guarda');
+          G.salvada = true;
+          G.toMenu();
+          window.PM.Replay.salir(true);
+        }
+        dejarGuardada();
+        UI.avisoNoSePudo('NO CUADRA');
+        var boton = [].filter.call(UI.els.prompt.querySelectorAll('button'), function (b) {
+          return b.textContent.indexOf('DESCARTARLA') === 0;
+        })[0];
+        ok(boton, 'el aviso tiene su DESCARTARLA');
+        boton.click();
+        eq(Rg.estado(1).jugadas, 1, 'descartarla ahí también cuenta para el rango');
+        ok(!Gd.hay(), 'y ya no está');
+
+        dejarGuardada();
+        var id = Gd.idDe(Gd.sobre());
+        Gd.aprender([id]);                 // se sabe que se acabó en otro aparato
+        ok(!Gd.hay(), 'la cerrada en otro aparato ya no se ofrece');
+        Gd.descartar();
+        eq(Rg.estado(1).jugadas, 1, 'y no vuelve a contar');
+      } finally {
+        Rg.conCuenta = cc; UI.hidePrompt(); Gd.borrar();
+        try {
+          if (c0 === null) localStorage.removeItem(cerradas);
+          else localStorage.setItem(cerradas, c0);
+        } catch (e) { /* nada */ }
+      }
     });
   });
 
