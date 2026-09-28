@@ -2812,6 +2812,24 @@
       eq(G.state, 'PLAYING');
     });
 
+  /* 28 sep: tras un traspaso manda el asiento 1, y el vigilante empezaba a
+   * contar en el 1: el nuevo anfitrión se echaba a sí mismo a los 10 s. */
+  test('el vigilante no cuenta el silencio de quien manda', function () {
+    partida(3, 'host');
+    try {
+      G.hostIdx = 1; G.localIdx = 1;
+      G.idos[0] = true; G.pacs[0].out = true;   // el anfitrión de antes, ido
+      G.posWatch = [];
+      for (var i = 0; i < CFG.NET.DROP_TICKS + 2; i++) {
+        G.netWatch = 0;
+        G.posWatch[2] = 0;
+        G.netMaintain();
+      }
+      ok(!G.pacs[1].out, 'el que manda sigue jugando');
+      ok(!G.pacs[2].out, 'y el que habla también');
+    } finally { G.toMenu(); }
+  });
+
   // ---------------------------------------------------------------
   // PAC-MAN VS.: un jugador lleva un fantasma
   // ---------------------------------------------------------------

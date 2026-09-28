@@ -3472,7 +3472,7 @@
         this.netWatch = 0;
         if (this.netRole === 'host') {
           var quien = this.idxOfSender(q[i][1], q[i][2]);
-          if (quien > 0) this.posWatch[quien] = 0;
+          if (quien >= 0 && quien !== this.hostIdx) this.posWatch[quien] = 0;
         }
         if (this.netRole === 'host') this.hostMsg(q[i][0], q[i][1], q[i][2]);
         else this.guestMsg(q[i][0], q[i][1], q[i][2]);   // invitado o espectador
@@ -3520,7 +3520,10 @@
          * los demás podrían estar callados y sus Pac-Man quedarse clavados.
          * Cada jugador tiene el suyo y al que calla se le deja de espectador. */
         if (this.playerCount > 2) {
-          for (var w = 1; w < this.pacs.length; w++) {
+          /* Tras un traspaso quien manda puede ser cualquier asiento, no el 0:
+           * al suyo no le llega ningún 'pos' y se echaba solo a los 10 s. */
+          for (var w = 0; w < this.pacs.length; w++) {
+            if (w === this.hostIdx) continue;
             if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
             this.posWatch[w] = (this.posWatch[w] || 0) + 1;
             if (this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
