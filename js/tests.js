@@ -11339,7 +11339,6 @@
     G.level = 5; G.resetLevel();
     eq(G.jefe.max, CJ.VIDA + CJ.VIDA_POR_JUGADOR, 'a dos, más vida');
   });
-
   test('JEFE: los cuatro fantasmas esperan en casa hasta que él los invoca', function () {
     nivelJefe();
     G.pacs[0].safeTicks = 999999;
@@ -12810,6 +12809,31 @@
     for (var i = 0; i < HC.HIELO_LENTO_TICKS; i++) H.paso(G);
     eq(H.trasHielo[0], 0, 'a los 3 s se le pasa');
     eq(H.multVelFantasma(G, 0), 1, 'y vuelve a su paso');
+    G.toMenu();
+  });
+
+  /* 28 sep: el frenazo del rey tras el hielo no viajaba en su foto (el
+   * invitado lo veía salir a toda velocidad), y al reaparecer tras una muerte
+   * se le quedaban encima el hielo pendiente, el frenazo y la huida. */
+  test('EL REY: el frenazo tras el hielo llega al invitado y no sobrevive a reaparecer', function () {
+    var J = window.PM.Jefe;
+    partida(1); G.hab = true;
+    window.PM.Hab.empezar(true, 1, ['soporte']); G.roles = ['soporte'];
+    G.level = 5;
+    J.alNivel(G);
+    var j = G.jefe;
+    j.trasHielo = 90;
+    var jf = JSON.parse(JSON.stringify(J.resumen(G)));
+    j.trasHielo = 0;
+    J.aplicar(G, jf);
+    eq(G.jefe.trasHielo, 90, 'la foto lleva el frenazo');
+    J.pasoInvitado(G);
+    eq(G.jefe.trasHielo, 89, 'y el invitado lo descuenta entre fotos');
+    G.jefe.frzHielo = true; G.jefe.frz = 30;
+    G.jefe.huye = 200; G.jefe.huyeDe = 0;
+    J.colocar(G);
+    ok(!G.jefe.frzHielo && G.jefe.trasHielo === 0, 'al reaparecer, sin hielo pendiente ni frenazo');
+    ok(G.jefe.huye === 0 && G.jefe.huyeDe === -1, 'ni huida');
     G.toMenu();
   });
 

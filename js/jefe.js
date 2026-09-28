@@ -140,6 +140,11 @@
       j.dir = D.LEFT;
       j.st = 'caza'; j.stT = 0; j.tCarga = 0; j.tInvoca = 0;
       j.frz = 0; j.inv = J.INV; j.plan = -1;
+      /* Vuelve a su sitio sin nada encima (28 sep): el hielo que lo congelaba
+       * dejaba el frenazo de después pendiente (frzHielo) y la huida del
+       * PISOTÓN seguía corriendo tras reaparecer. */
+      j.frzHielo = false; j.trasHielo = 0;
+      j.huye = 0; j.huyeDe = -1;
     },
 
     /* Los cuatro de siempre, dentro de la casa: salen cuando él los llama */
@@ -357,6 +362,7 @@
       if (j.inv > 0) j.inv--;
       if (j.golpeado > 0) j.golpeado--;
       if (j.frz > 0) j.frz--;
+      if (j.trasHielo > 0) j.trasHielo--;       // el frenazo, entre foto y foto
       if (j.pidoAplasta > 0) j.pidoAplasta--;   // respiro entre golpes pedidos
       if (j.pidoCaza > 0) j.pidoCaza--;         // ...y los de la CACERÍA
       if (j.pidoAzul > 0) j.pidoAzul--;         // ...y el del azul
@@ -717,7 +723,10 @@
       if (!j) return 0;
       return [j.vivo ? 1 : 0, j.hp, j.max, Math.round(j.x * 10) / 10, Math.round(j.y * 10) / 10, j.dir,
         ['caza', 'aviso', 'carga', 'invoca'].indexOf(j.st), j.stT, j.inv, j.frz, j.azulUsado,
-        j.huye || 0, (j.huyeDe == null ? -1 : j.huyeDe)];
+        j.huye || 0, (j.huyeDe == null ? -1 : j.huyeDe),
+        /* el FRENAZO tras el hielo (27 sep): sin él, en la pantalla del
+         * invitado el rey salía del hielo a toda velocidad (PROTO 20) */
+        j.trasHielo || 0];
     },
 
     aplicar: function (G, a) {
@@ -738,6 +747,7 @@
       j.azulUsado = (a[10] | 0) | mio;
       j.huye = a[11] || 0;
       j.huyeDe = (a[12] == null) ? -1 : a[12];
+      j.trasHielo = a[13] || 0;
       if (j.golpeado == null) j.golpeado = 0;
       j.plan = -1;
       G.jefe = j;

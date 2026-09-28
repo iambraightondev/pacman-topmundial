@@ -2919,8 +2919,10 @@
      * anfitrión, habGasta/habEmpuja/habRebote/habHospital del invitado, la
      * 'ap' del METEORO en la posición y los poderes 'h' en el saludo); la 17,
      * el YUNQUE roto que avisa el invitado (habGasta 'yunque'); la 18, la
-     * CLASIFICATORIA como modo de la sala ('cl' en la lista y en la salida). */
-    PROTO: 19,
+     * CLASIFICATORIA como modo de la sala ('cl' en la lista y en la salida);
+     * la 20, el frenazo del rey tras el hielo en su foto (jf[13]), la regla
+     * única de comer o morir y los mirones que se van sin 'bye' (28 sep). */
+    PROTO: 20,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
