@@ -646,6 +646,19 @@
       return !!g.paused;
     },
 
+    /* ¿Va "DESLIZA O USA LA CRUCETA" bajo el ¡LISTO!? (Game.renderStateText)
+     * En táctil, y solo en la primera partida desde que se abrió el juego:
+     * quien llega nuevo no sabe que puede deslizar, y al que ya juega no hace
+     * falta repetírselo cada vez. Cada partida estrena su `marcador`. */
+    pistaMandos: function (g) {
+      if (!this.touchDevice || !g || g.replaying || (g.isSpec && g.isSpec())) return false;
+      if (g.marcador !== this.pistaMarca) {
+        this.pistaMarca = g.marcador;
+        this.pistaPartidas = (this.pistaPartidas || 0) + 1;
+      }
+      return this.pistaPartidas === 1;
+    },
+
     /* ------------------------------------------------------
      * Menú principal
      * ------------------------------------------------------ */
@@ -3771,7 +3784,7 @@
       this.vestTeclasWrap.className = 'vest-teclas-wrap';
       var tt = document.createElement('div');
       tt.className = 'vest-mini-titulo';
-      tt.textContent = 'TUS EMOTES · TECLAS 1 A 6';
+      tt.textContent = this.touchDevice ? 'TUS EMOTES' : 'TUS EMOTES · TECLAS 1 A 6';
       this.vestTeclasWrap.appendChild(tt);
       /* EL DIAL (17 sep 2026): las seis teclas en círculo, en un dial que gira
        * como una rueda de selección. El dial gira para dejar arriba la tecla elegida
@@ -5841,7 +5854,7 @@
 
       var pieIdle = el('div', 'prompt-btns ol-pie');
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
-      back.appendChild(el('span', 'btn-key', 'ESC'));
+      if (!this.touchDevice) back.appendChild(el('span', 'btn-key', 'ESC'));
       this.ponRonda(back, 'btn-ronda');
       pieIdle.appendChild(back);
       idle.appendChild(pieIdle);
@@ -11660,11 +11673,21 @@
         var el = self.makeButton(b.label, alPulsar);
         if (b.primary) el.classList.add('btn-primary');
         if (b.cls) el.classList.add(b.cls);      // 'btn-peligro': rendirse, borrar...
-        if (b.hint) {
+        /* en táctil no hay teclado: la pista se queda solo con lo que no es
+         * una tecla (el precio de CONTINUAR, la cuenta atrás...) */
+        var pista = self.touchDevice ? self.pistaSinTeclas(b.hint) : b.hint;
+        if (pista) {
           var k = document.createElement('span');
           k.className = 'btn-key';
-          k.textContent = b.hint;
+          k.textContent = pista;
           el.appendChild(k);
+        }
+        /* b.nota: qué hace el botón, en un renglón debajo (PAUSA) */
+        if (b.nota) {
+          var nt = document.createElement('span');
+          nt.className = 'btn-nota';
+          nt.textContent = b.nota;
+          el.appendChild(nt);
         }
         self.ponRonda(el, 'btn-ronda');
         if (b.keys) self.promptKeys.push({ keys: b.keys, el: el });
@@ -11972,6 +11995,7 @@
          * se puede volver a jugar. En dos jugadores u online sigue siendo una
          * votación, igual que antes. */
         { label: 'RENDIRSE', hint: 'R', keys: ['r'], cls: 'btn-peligro',
+          nota: (g.netRole || g.playerCount === 2) ? 'LO VOTAN LOS DEMÁS' : 'ACABA YA CON GAME OVER',
           onClick: function () {
             self.resumeAudio();
             g.requestVote('surrender');   // el diálogo de la votación releva a este
@@ -11979,6 +12003,7 @@
       ];
       if (sePuede) {
         botones.push({ label: 'GUARDAR', hint: 'G', keys: ['g'],
+          nota: 'LA SIGUES LUEGO',
           onClick: function () {
             if (!Gd.guardarYSalir()) return;    // no se pudo: se sigue en pausa
             self.hidePrompt();
@@ -11986,6 +12011,7 @@
           } });
       }
       botones.push({ label: 'SALIR', hint: 'Q', keys: ['q'],
+        nota: 'AL MENÚ, CON LO JUGADO',
         onClick: function () { g.toMenu(); } });
       /* cómo va la partida, lo primero */
       lines.unshift({ text: 'PUNTOS ' + fmtMonedas(g.score || 0) + ' · NIVEL ' + g.level +
@@ -11994,6 +12020,7 @@
         title: 'PAUSA',
         arcade: true,
         tono: 'amarillo',
+        clase: 'pausa-menu',
         lines: lines,
         status: g.flash ? g.flash.text : '',
         buttons: botones

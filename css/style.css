@@ -8557,6 +8557,24 @@ html.tactil .btn { min-height: 44px; }
 html.tactil .btn.ol-ayuda, html.tactil .rgs-ayuda-b { position: relative; min-height: 0; }
 html.tactil .btn.ol-ayuda::after, html.tactil .rgs-ayuda-b::after { content: ""; position: absolute; inset: -9px; }
 
+/* ---- PAUSA: qué hace cada botón, en un renglón dentro de él ---- */
+.btn-nota {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--fs-s);
+  letter-spacing: 0;
+  line-height: 1.5;
+  color: #d8d8e8;
+  opacity: 0.85;
+  white-space: normal;
+}
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) .btn-nota { color: var(--btn2); }
+/* en el móvil, los de la pausa en columna y del mismo ancho */
+@media (max-width: 600px) {
+  #prompt.pausa-menu .prompt-btns { flex-direction: column; align-items: center; }
+  #prompt.pausa-menu .prompt-btns .btn { width: min(100%, 330px); box-sizing: border-box; padding-left: 12px; padding-right: 12px; }
+}
+
 /* ---- EN PARTIDA, MÓVIL EN VERTICAL (body.mandos-v, lo pone
  * UI.reservaMandos): cruceta, poderes y pausa van DEBAJO del laberinto, cada
  * uno en su sitio, y el lienzo se encoge lo justo para que nada lo pise.

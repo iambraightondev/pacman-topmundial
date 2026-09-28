@@ -2323,6 +2323,30 @@
     } finally { G.toMenu(); UI.hidePrompt(); }
   });
 
+  test('en la pausa, RENDIRSE y SALIR dicen qué hacen', function () {
+    var UI = window.PM.UI;
+    partida(1);
+    try {
+      G.requestPause();
+      var notas = UI.els.prompt.querySelectorAll('.btn-nota');
+      ok(notas.length >= 2, 'un renglón bajo cada uno: ' + notas.length);
+      var txt = [];
+      for (var i = 0; i < notas.length; i++) txt.push(notas[i].textContent);
+      ok(txt.some(function (t) { return /GAME OVER/.test(t); }), 'RENDIRSE acaba con su GAME OVER');
+      ok(txt.some(function (t) { return /MEN[UÚ]/.test(t); }), 'SALIR lleva al menú');
+    } finally { G.toMenu(); UI.hidePrompt(); }
+  });
+
+  test('en táctil los botones no enseñan teclas, pero sí el precio', function () {
+    var UI = window.PM.UI;
+    eq(UI.pistaSinTeclas('P · ESC'), '', 'teclas y nada más');
+    eq(UI.pistaSinTeclas('ENTER'), '');
+    eq(UI.pistaSinTeclas('1.000 · C'), '1.000', 'el precio de CONTINUAR se queda');
+    eq(UI.pistaSinTeclas('OTRA PARTIDA · R'), 'OTRA PARTIDA');
+    eq(UI.pistaSinTeclas('EN 5'), 'EN 5', 'la cuenta atrás no es una tecla');
+    eq(UI.pistaSinTeclas(''), '');
+  });
+
   test('reiniciar en local no necesita votación', function () {
     partida(2);
     G.score = 500;
