@@ -1521,7 +1521,10 @@
     VIEW_SEASON: 'ranking_temporada',  // lo mismo, pero mes a mes
     LIMIT: 20,
     MAX_POINTS: 10000000,     // descarta envíos absurdos antes de mandarlos
-    MAX_TIME: 6000000         // centésimas: 16 h y pico, de sobra
+    MAX_TIME: 6000000,        // centésimas: 16 h y pico, de sobra
+    /* La repetición viaja con la marca si cabe: la función corta el envío
+     * entero a los 512 KB (MAX_CUERPO en supabase/functions/enviar-record). */
+    REPE_MAX_CHARS: 450000
   };
 
   /* ---------- DAILY: siete retos por semana ----------

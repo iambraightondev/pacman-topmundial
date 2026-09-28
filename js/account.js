@@ -1077,6 +1077,21 @@
       return true;
     },
 
+    /* ---------- el permiso para las marcas de equipo (28 sep 2026) ----------
+     * Una marca de party la envía el líder con los nombres de todos. Para que
+     * nadie pueda poner a otro de compañero en una marca inventada, cada
+     * invitado con cuenta le da su permiso al líder al empezar la partida
+     * (vale 12 h: supabase/ranking-cuarentena.sql). Sin sesión, o si falla,
+     * no pasa nada: la partida es la misma. La página de pruebas no sube nada. */
+    avalarEquipo: function (anfitrion) {
+      var n = cleanUser(anfitrion);
+      if (window.PM_PRUEBAS || !this.logged() || !n || n === this.name()) return;
+      fetch(base('/rest/v1/rpc/avalar_equipo'), {
+        method: 'POST', headers: authHeaders(this.token),
+        body: JSON.stringify({ p_anfitrion: n })
+      }).catch(function () { /* sin permiso apuntado: la marca sale igual */ });
+    },
+
     /* ---------- amigos (solo con cuenta) ---------- */
     /* Perfil PÚBLICO de cualquier jugador, por su nombre.
      *

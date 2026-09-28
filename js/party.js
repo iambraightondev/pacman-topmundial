@@ -729,6 +729,17 @@
         else otros.push(order[i].s);
       }
       if (idx < 0) return;                 // esta partida no va con nosotros
+      /* EL PERMISO para salir en la marca del equipo (28 sep): la envía el
+       * líder con los nombres de todos, y el servidor mira que cada uno haya
+       * jugado de verdad con él (supabase/ranking-cuarentena.sql). */
+      if (!leader) {
+        var sidL = this.sidLider();
+        for (i = 0; i < order.length; i++) {
+          if (order[i].s === sidL && window.PM.Account && window.PM.Account.avalarEquipo) {
+            window.PM.Account.avalarEquipo(order[i].n);
+          }
+        }
+      }
       // si estábamos viendo la de otro, la propia manda: se deja de mirar
       window.PM.Net.closeView();
       this.order = order;

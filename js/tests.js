@@ -1537,6 +1537,43 @@
       }
     });
 
+  /* 28 sep: la marca viaja con su repetición, para que la función la compare
+   * (supabase/functions/enviar-record). Solo la de ESA partida: una vieja no
+   * cuadraría y la marca iría sin ella. */
+  testConCuenta('la marca lleva la repetición de su partida, y solo la suya',
+    function () {
+      var R = window.PM.Ranking, Rp = window.PM.Replay;
+      var enviado = null, orig = R.submit;
+      var n1 = window.PM.settings.nick1;
+      try {
+        R.submit = function (o) { enviado = o; };
+        window.PM.settings.nick1 = 'ANA';
+        G.newGame({ players: 1, names: ['ANA'] });
+        G.state = 'PLAYING';
+        G.score = 5000;
+        G.submitRanking();
+        ok(enviado && enviado.repeticion, 'va con repetición');
+        eq(enviado.repeticion.final.puntos, 5000, 'la de esta partida');
+        eq(enviado.repeticion.jugadores, 1);
+
+        // la siguiente partida empieza sin la de antes
+        G.newGame({ players: 1, names: ['ANA'] });
+        eq(Rp.ultimaCerrada, null, 'al empezar se olvida la anterior');
+      } finally {
+        R.submit = orig;
+        window.PM.settings.nick1 = n1;
+        G.toMenu();
+      }
+    });
+
+  test('sin sesión no se da permiso para las marcas de equipo', function () {
+    var Ac = window.PM.Account;
+    var vistas = conRed(function () { return roto(new Error('no')); }, function () {
+      Ac.avalarEquipo('ANA');
+    });
+    eq(vistas.length, 0, 'ni se intenta');
+  });
+
   test('cada formato pide su propia clasificación y sabe cómo se llama',
     function () {
       var R = window.PM.Ranking;
