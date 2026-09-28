@@ -8583,6 +8583,54 @@
     },
     oso: function (m, o) { m.translateSelf(0, botaM(o.t, 7, 0.25) - 0.1).scaleSelf(1.02, 1.02); },
     galleta: function (m, o) { m.rotateSelf(Math.sin(o.t * 8) * 0.05 * 180 / Math.PI); },
+    /* tanda extravagante del 18 sep (28 sep): botaban y se mecían con el
+     * accesorio quieto encima. Lo mismo que hace cada dibujo con su cuerpo */
+    rana: function (m, o) { m.translateSelf(0, botaM(o.t, 5, 0.4) - 0.2); },
+    /* en el PAYASO y la RECREATIVA la pajarita va en la mandíbula, que baja al comer */
+    payaso: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 6, 0.35) - 0.2);
+      if (zona === 'cuello') girarM(m, -1.0, -0.8, -[0, 15, 28][fase(o)] * Math.PI / 180);
+    },
+    recreativa: function (m, o, zona) {
+      m.translateSelf(0, Math.sin(o.t * 7) * 0.15);
+      if (zona === 'cuello') girarM(m, -5.0, -0.9, -[0, 14, 26][fase(o)] * Math.PI / 180);
+    },
+    /* el ojo del CANGREJO va en su tallo, que se balancea */
+    cangrejo: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 11, 0.3) - 0.3);
+      if (zona === 'cara') m.translateSelf(Math.sin(o.t * 5 + 1.6) * 0.18, 0);
+    },
+    /* el CARACOL: los sombreros van en la concha, que con la Q se centra y
+     * rueda (el sombrero no gira con ella: la concha es redonda y su punto
+     * de arriba sigue siendo el de arriba); lo demás, en la cabeza, que se
+     * mete dentro (y el ojo, en la punta del cuerno, que se encoge) */
+    caracol: function (m, o, zona) {
+      var q = qDe(o, 1.1);
+      var dentro = (q >= 0) ? Math.sin(Math.min(1, q * 2.2) * Math.PI / 2) * (q > 0.75 ? (1 - q) / 0.25 : 1) : 0;
+      m.translateSelf(0, Math.sin(o.t * 6) * 0.18);
+      if (zona === 'cabeza') {
+        m.translateSelf(dentro * 2.2, -dentro * 1.6);
+      } else {
+        m.translateSelf(-dentro * 5, 0);
+        if (zona === 'cara') m.translateSelf(0, Math.sin(o.t * 4) * 0.2 - dentro * 3.4);
+      }
+    },
+    condor: function (m, o) {
+      var q = qDe(o, 1.0);
+      var abre = (q >= 0) ? Math.sin(Math.min(1, q * 2) * Math.PI / 2) * (q > 0.7 ? (1 - q) / 0.3 : 1) : 0;
+      m.translateSelf(0, Math.sin(o.t * 3) * 0.25 + abre * 0.6);
+    },
+    /* la embestida de la Q: adelanta, baja y agacha la cabeza */
+    toro: function (m, o) {
+      var q = qDe(o, 0.9), emb = (q >= 0) ? Math.sin(Math.min(1, q * 1.8) * Math.PI) : 0;
+      m.translateSelf(emb * 1.1, botaM(o.t, 7, 0.3) - 0.2 - emb * 0.7).rotateSelf(-emb * 0.16 * 180 / Math.PI);
+    },
+    unicornio: function (m, o) { m.translateSelf(0, Math.sin(o.t * 5) * 0.25); },
+    /* los tumbos y el culatazo del rayo */
+    trampa: function (m, o) {
+      var q = qDe(o, 1.0), tira = (q >= 0) ? Math.sin(q * Math.PI) * 1.4 : 0;
+      m.translateSelf(-tira, Math.sin(o.t * 9) * 0.2);
+    },
     /* tanda de mitología: el mismo vaivén que hace cada dibujo */
     medusa: function (m, o) { m.translateSelf(0, Math.sin(o.t * 5) * 0.16); },
     ciclope: function (m, o) {
