@@ -2856,6 +2856,51 @@
     } finally { G.netNotice = null; G.toMenu(); }
   });
 
+  /* 28 sep: al mirón lo echaba el adiós de cualquiera, y el adiós de un
+   * mirón (i = -1) se leía como el del asiento por defecto: echaba a un
+   * jugador de verdad. */
+  test('los adioses de mirones e invitados no echan a quien no toca', function () {
+    G.newGame({ players: 3, net: 'spec', localIdx: -1, names: ['UNO', 'DOS', 'TRES'] });
+    G.state = 'PLAYING';
+    try {
+      G.guestMsg('bye', { i: 2 }, 'invitado');
+      ok(!G.netNotice, 'se va un invitado: el mirón sigue viendo');
+      ok(G.pacs[2].out, 'y lo ve fuera');
+      G.guestMsg('bye', { i: -1 }, 'otromiron');
+      ok(!G.netNotice, 'se va otro mirón: tampoco');
+      G.guestMsg('bye', { i: 0 }, 'anfitrion');
+      ok(G.netNotice, 'se va el anfitrión: ahí sí se acaba');
+    } finally { G.netNotice = null; G.toMenu(); }
+    partida(2, 'host');
+    try {
+      G.hostMsg('bye', { i: -1 }, 'miron');
+      ok(!G.pacs[1].out, 'el anfitrión no echa al invitado por un mirón');
+    } finally { G.toMenu(); }
+    partida(2, 'guest');
+    try {
+      G.guestMsg('bye', { i: -1 }, 'miron');
+      ok(!G.pacs[1].out && !G.netNotice, 'ni el invitado se echa a sí mismo');
+    } finally { G.netNotice = null; G.toMenu(); }
+  });
+
+  /* 28 sep: si el anfitrión se caía SIN despedirse, al invitado le calmaba el
+   * vigilante cualquier mensaje: el 'pos' de otro invitado o el latido de un
+   * mirón. Se quedaba congelado para siempre y sin aviso. */
+  test('al invitado solo le calman el vigilante los mensajes del anfitrión', function () {
+    G.newGame({ players: 3, net: 'guest', localIdx: 2, names: ['UNO', 'DOS', 'TRES'] });
+    G.state = 'PLAYING';
+    try {
+      G.netWatch = 80;
+      G.netQueue.push(['pos', { x: 40, y: 60, d: 1, nd: 1, e: [], i: 1 }, 'otro']);
+      G.netQueue.push(['hello', { spec: 1, hb: 1 }, 'miron']);
+      G.processNetQueue();
+      eq(G.netWatch, 80, 'otro invitado y un mirón no cuentan');
+      G.netQueue.push(['snap', G.buildSnapshot(false), 'anfitrion']);
+      G.processNetQueue();
+      eq(G.netWatch, 0, 'la foto del anfitrión sí');
+    } finally { G.toMenu(); }
+  });
+
   test('el que deja de mandar noticias se queda fuera, no congela al resto',
     function () {
       partida(4, 'host');
@@ -2871,6 +2916,24 @@
       eq(G.netNotice, null, 'sin corte de partida');
       eq(G.state, 'PLAYING');
     });
+
+  /* 28 sep: tras un traspaso manda el asiento 1, y el vigilante empezaba a
+   * contar en el 1: el nuevo anfitrión se echaba a sí mismo a los 10 s. */
+  test('el vigilante no cuenta el silencio de quien manda', function () {
+    partida(3, 'host');
+    try {
+      G.hostIdx = 1; G.localIdx = 1;
+      G.idos[0] = true; G.pacs[0].out = true;   // el anfitrión de antes, ido
+      G.posWatch = [];
+      for (var i = 0; i < CFG.NET.DROP_TICKS + 2; i++) {
+        G.netWatch = 0;
+        G.posWatch[2] = 0;
+        G.netMaintain();
+      }
+      ok(!G.pacs[1].out, 'el que manda sigue jugando');
+      ok(!G.pacs[2].out, 'y el que habla también');
+    } finally { G.toMenu(); }
+  });
 
   // ---------------------------------------------------------------
   // PAC-MAN VS.: un jugador lleva un fantasma
@@ -5956,6 +6019,65 @@
     G.toMenu();
   });
 
+  /* 28 sep: la regla de comer o morir es la misma en las dos máquinas. El
+   * invitado miraba solo el azul del energizante: lo mataba el fantasma de su
+   * propia CACERÍA o el azul del GANCHO, y se comía el marcado por otro. */
+  test('el invitado se come al de su cacería y al azul del gancho', function () {
+    var p = partidaHabInvitado(13, 20);
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push(d); };
+    try {
+      var g = fantasmaEn(1, 13, 20);
+      g.frightened = false;
+      HB.caceriaQuien[1] = 1;
+      G.guestCollisions(p);
+      ok(!p.dying, 'su cacería no lo mata');
+      eq(g.mode, 'eyes', 'se lo come');
+      var g2 = fantasmaEn(2, 13, 20);
+      g2.frightened = false;
+      HB.azulCatalogo[2] = 1; HB.azulCatTicks[2] = 300;
+      G.eatFreezeTicks = 0;
+      G.guestCollisions(p);
+      ok(!p.dying, 'el azul del gancho tampoco');
+      eq(g2.mode, 'eyes', 'y también se lo come');
+      ok(!mandados.some(function (d) { return d && d.t === 'died'; }), 'no avisa de ninguna muerte');
+    } finally { G.netSend = envia; G.toMenu(); }
+  });
+
+  test('el invitado no se come al azul marcado por otro: lo mata', function () {
+    var p = partidaHabInvitado(13, 20);
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push(d); };
+    try {
+      var g = fantasmaEn(1, 13, 20);
+      G.frightTicks = 600;
+      g.frightened = true;
+      HB.caceriaQuien[1] = 0;            // es del anfitrión
+      G.guestCollisions(p);
+      ok(g.mode !== 'eyes', 'no se lo come');
+      ok(p.dying, 'muere, como moriría el anfitrión');
+    } finally { G.netSend = envia; G.toMenu(); }
+  });
+
+  test('el anfitrión no da por buena una muerte contra un fantasma comible', function () {
+    partida(2, 'host');
+    G.hab = true;
+    HB.empezar(true, 2, ['tanque', 'asesino']);
+    try {
+      HB.caceriaQuien[0] = 1;
+      G.hostGuestEvent({ t: 'died', g: 0 }, 1);
+      ok(!G.pacs[1].dying, 'su cacería no lo mata');
+      G.hostGuestEvent({ t: 'ateGhost', g: 0 }, 1);
+      eq(G.ghosts[0].mode, 'eyes', 'y comérselo sí vale');
+      HB.caceriaQuien[1] = 0;
+      G.ghosts[1].mode = 'normal'; G.ghosts[1].frightened = true;
+      G.hostGuestEvent({ t: 'ateGhost', g: 1 }, 1);
+      ok(G.ghosts[1].mode !== 'eyes', 'el marcado por otro no se lo come');
+      G.hostGuestEvent({ t: 'died', g: 1 }, 1);
+      ok(G.pacs[1].dying, 'y ese sí lo mata');
+    } finally { G.toMenu(); }
+  });
+
   /* El anfitrión le perdona unos píxeles al mordisco que llega por red: la
    * posición del invitado le llega a 12 Hz y sus fantasmas los mueve él, así
    * que cuando la petición se ejecuta ya no están donde el invitado los vio. */
@@ -8805,6 +8927,36 @@
     } finally { G.netSend = envia; G.toMenu(); }
   });
 
+  /* 28 sep: en dúo, si al compañero se le caía la red, el anfitrión salía por
+   * el aviso de CONEXIÓN PERDIDA... traspasándole el mando a él, y como hubo
+   * "traspaso" no subía la partida al top. */
+  test('no se traspasa a quien calla, ni saliendo por un aviso de red', function () {
+    partida(3, 'host');
+    try {
+      G.posWatch = [];
+      for (var i = 0; i < CFG.NET.WAIT_TICKS + 5; i++) {
+        G.netWatch = 0;
+        G.posWatch[2] = 0;          // el 2 habla, el 1 no
+        G.netMaintain();
+      }
+      eq(G.sucesor(), 2, 'el mando va al que habla');
+      G.posWatch[2] = CFG.NET.WAIT_TICKS + 5;
+      eq(G.sucesor(), -1, 'y si callan todos, a nadie');
+    } finally { G.toMenu(); }
+    partida(2, 'host');
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push(n); };
+    try {
+      G.netFail('CONEXIÓN PERDIDA');
+      ok(!G.pasarElMando(), 'saliendo por la red no hay traspaso');
+      G.netNotice.ticks = 1;
+      G.step();
+      eq(G.state, 'MENU', 'vuelve al menú');
+      ok(mandados.indexOf('mando') < 0, 'sin mandar el mando a nadie');
+      ok(G.rankingSent, 'y la partida va al top');
+    } finally { G.netSend = envia; if (G.inGame()) G.toMenu(); }
+  });
+
   test('el que recibe el mando sigue la partida sin el anfitrión', function () {
     partida(2, 'host');
     var snap = G.buildSnapshot(true), extra = G.estadoExtra();
@@ -8824,6 +8976,25 @@
     } finally { G.toMenu(); }
   });
 
+  /* 28 sep: de invitado, el HIGH SCORE es el récord del anfitrión (viene en
+   * la foto); al heredar el mando se guardaba como récord propio. */
+  test('quien hereda el mando no se queda el récord del anfitrión', function () {
+    var guardado = G.recordFor(2);
+    partida(2, 'host');
+    G.highScore = 987654;
+    var snap = G.buildSnapshot(true), extra = G.estadoExtra();
+    G.toMenu();
+    partida(2, 'guest');
+    try {
+      G.applySnapshot(snap);
+      eq(G.highScore, 987654, 'de invitado ve el del anfitrión');
+      G.recibirMando({ n: 1, v: 0, s: snap, x: extra });
+      ok(G.highScore < 987654, 'al mandar vuelve a ser el suyo');
+      G.persistHighScore();
+      ok(G.recordFor(2) < 987654, 'y no se lo apunta');
+    } finally { G.toMenu(); G.setRecordFor(2, guardado); G.saveHighScores(); }
+  });
+
   test('a los demás invitados el traspaso solo les cambia quién manda', function () {
     partida(3, 'host');
     var snap = G.buildSnapshot(true), extra = G.estadoExtra();
@@ -8839,6 +9010,26 @@
       eq(G.idxOfSender({}, 'nadie'), 0, 'y el asiento por defecto ya no es el 1');
       G.guestMsg('bye', { i: 0 }, 'nadie');
       ok(!G.netNotice, 'el adiós del que ya se fue no acaba nada');
+    } finally { G.toMenu(); }
+  });
+
+  /* 28 sep: la revancha salía con las opciones de antes del traspaso: el
+   * nuevo anfitrión volvía a ser invitado y mandaba el asiento 0, ya ido. */
+  test('la revancha tras un traspaso sale con el mando donde quedó', function () {
+    partida(3, 'host');
+    var snap = G.buildSnapshot(true), extra = G.estadoExtra();
+    G.toMenu();
+    var opts = { players: 3, net: 'guest', localIdx: 1, names: ['UNO', 'DOS', 'TRES'] };
+    G.newGame(opts);
+    G.state = 'PLAYING';
+    try {
+      G.recibirMando({ n: 1, v: 0, s: snap, x: extra });
+      eq(opts.net, 'guest', 'las opciones de la sala no se tocan');
+      G.restartGame();
+      eq(G.netRole, 'host', 'en la revancha sigue mandando');
+      eq(G.hostIdx, 1, 'desde su asiento');
+      ok(G.pacs[0].out && G.idos[0], 'y el que se fue no vuelve a salir');
+      ok(!G.pacs[1].out && !G.pacs[2].out, 'los demás, sí');
     } finally { G.toMenu(); }
   });
 
@@ -11111,6 +11302,21 @@
     eq(HB.hielo[2], 77, 'y el hielo');
   });
 
+  /* 28 sep: los objetos de cada jugador (bomba, mina, faro...) iban por
+   * referencia en la foto: el paso les bajaba el reloj también DENTRO de la
+   * foto, y al rebobinar volvían con el tiempo de después. */
+  test('ROLES: la foto del rebobinado no comparte los objetos de cada jugador', function () {
+    partidaRol(['soporte'], 2, 5, DR.RIGHT);
+    HB.estado(0).mina = { c: 2, r: 5, t: 300 };
+    var f = HB.foto();
+    HB.estado(0).mina.t = 10;                 // el juego sigue y el reloj baja
+    eq(f.st[0].mina.t, 300, 'la foto no se entera');
+    HB.ponerFoto(f);
+    eq(HB.estado(0).mina.t, 300, 'al rebobinar vuelve con su tiempo');
+    HB.estado(0).mina.t = 5;
+    eq(f.st[0].mina.t, 300, 'y la foto sigue sirviendo para otro rebobinado');
+  });
+
   test('ROLES: el anfitrión dispara hacia donde apuntó el invitado y reparte la mesa', function () {
     window.PM.settings.muted = true;
     G.newGame({ players: 2, hab: true, net: 'host', names: ['UNO', 'DOS'], roles: ['asesino', 'mago'] });
@@ -11352,6 +11558,17 @@
     partidaRol(['asesino', 'mago']);
     G.level = 5; G.resetLevel();
     eq(G.jefe.max, CJ.VIDA + CJ.VIDA_POR_JUGADOR, 'a dos, más vida');
+  });
+
+  /* 28 sep: la vida del rey contaba también a quien empezaba el nivel fuera
+   * de juego o se había ido de la party */
+  test('JEFE: el que no juega no le suma vida al rey', function () {
+    partidaRol(['asesino', 'mago', 'tanque']);
+    G.pacs[1].out = true;                 // sin vidas
+    G.idos = { 2: true };                 // se fue
+    G.level = 5; G.resetLevel();
+    eq(G.jefe.max, CJ.VIDA, 'con uno solo en pie, la vida de uno');
+    G.toMenu();
   });
 
   test('JEFE: los cuatro fantasmas esperan en casa hasta que él los invoca', function () {
@@ -12824,6 +13041,31 @@
     for (var i = 0; i < HC.HIELO_LENTO_TICKS; i++) H.paso(G);
     eq(H.trasHielo[0], 0, 'a los 3 s se le pasa');
     eq(H.multVelFantasma(G, 0), 1, 'y vuelve a su paso');
+    G.toMenu();
+  });
+
+  /* 28 sep: el frenazo del rey tras el hielo no viajaba en su foto (el
+   * invitado lo veía salir a toda velocidad), y al reaparecer tras una muerte
+   * se le quedaban encima el hielo pendiente, el frenazo y la huida. */
+  test('EL REY: el frenazo tras el hielo llega al invitado y no sobrevive a reaparecer', function () {
+    var J = window.PM.Jefe;
+    partida(1); G.hab = true;
+    window.PM.Hab.empezar(true, 1, ['soporte']); G.roles = ['soporte'];
+    G.level = 5;
+    J.alNivel(G);
+    var j = G.jefe;
+    j.trasHielo = 90;
+    var jf = JSON.parse(JSON.stringify(J.resumen(G)));
+    j.trasHielo = 0;
+    J.aplicar(G, jf);
+    eq(G.jefe.trasHielo, 90, 'la foto lleva el frenazo');
+    J.pasoInvitado(G);
+    eq(G.jefe.trasHielo, 89, 'y el invitado lo descuenta entre fotos');
+    G.jefe.frzHielo = true; G.jefe.frz = 30;
+    G.jefe.huye = 200; G.jefe.huyeDe = 0;
+    J.colocar(G);
+    ok(!G.jefe.frzHielo && G.jefe.trasHielo === 0, 'al reaparecer, sin hielo pendiente ni frenazo');
+    ok(G.jefe.huye === 0 && G.jefe.huyeDe === -1, 'ni huida');
     G.toMenu();
   });
 

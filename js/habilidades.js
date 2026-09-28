@@ -75,6 +75,17 @@
    * durante toda la partida, así que no hacen falta ocho contadores. */
   var EMBESTIDA = 0, ACECHO = 1;
 
+  /* Copia HONDA para las fotos del rebobinado (foto / ponerFoto). Antes solo
+   * se copiaban las listas de primer nivel y los objetos (la BOMBA, la MINA,
+   * el FARO, el TÓTEM...) viajaban por referencia: el paso les seguía bajando
+   * el reloj dentro de la foto y rebobinar DESATADO torcía la partida. */
+  function copiaFoto(v) {
+    if (!v || typeof v !== 'object') return v;
+    var o = Object.prototype.toString.call(v) === '[object Array]' ? [] : {};
+    for (var k in v) if (v.hasOwnProperty(k)) o[k] = copiaFoto(v[k]);
+    return o;
+  }
+
   /* Estado limpio de un jugador. Las recargas empiezan a CERO: la primera
    * de cada partida está lista desde el "¡LISTO!". */
   function nuevoEstado() {
@@ -404,8 +415,7 @@
         var s = this.st[i], o = {};
         for (var k in s) {
           if (!s.hasOwnProperty(k)) continue;
-          o[k] = (Object.prototype.toString.call(s[k]) === '[object Array]')
-            ? s[k].slice() : s[k];
+          o[k] = copiaFoto(s[k]);
         }
         st.push(o);
       }
@@ -437,8 +447,7 @@
         var s = f.st[i], o = nuevoEstado();
         for (var k in s) {
           if (!s.hasOwnProperty(k)) continue;
-          o[k] = (Object.prototype.toString.call(s[k]) === '[object Array]')
-            ? s[k].slice() : s[k];
+          o[k] = copiaFoto(s[k]);
         }
         /* Repeticiones de antes del 21 sep: ahí PUENTE era un reloj del
          * jugador y no el paso del mapa. Se descarta en vez de dejar un

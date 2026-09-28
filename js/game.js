@@ -36,6 +36,16 @@
     return Object.prototype.toString.call(v) === '[object Array]';
   }
 
+  /* Lo que solo manda quien simula la partida: es lo único que le dice a un
+   * invitado (o a un mirón) que el anfitrión sigue ahí (processNetQueue) */
+  var DEL_ANFITRION = { snap: 1, gir: 1, evt: 1, mando: 1, svista: 1 };
+
+  /* El 'bye' de un mirón lleva i = -1 (no tiene asiento). Sin mirarlo,
+   * idxOfSender lo tomaba por el asiento por defecto y echaba a un jugador. */
+  function esAdiosDeMiron(d) {
+    return !!d && typeof d.i === 'number' && d.i < 0;
+  }
+
   /* ---------- copias para las fotos de la partida (Game.foto) ----------
    * Todo lo que se fotografía son datos: números, textos, listas y objetos
    * pelados. Se copian a mano y en profundidad porque una foto tiene que
@@ -703,8 +713,22 @@
       this.netQueue = [];
       this.netWatch = 0;
       this.posWatch = [];       // silencio de cada jugador (anfitrión, 3 y 4)
-      this.hostIdx = 0;         // qué asiento simula la partida (puede cambiar)
-      this.idos = {};           // quién ha dejado la partida para siempre
+      /* qué asiento simula la partida (puede cambiar) y quién la ha dejado
+       * para siempre. Una REVANCHA tras un traspaso del mando los trae en sus
+       * opciones (ver recibirMando): sin ellos volvía a mandar el asiento 0,
+       * que ya no está, y la sala se quedaba sin anfitrión. */
+      var hi = parseInt(opts.hostIdx, 10);
+      this.hostIdx = (hi >= 0 && hi < this.playerCount) ? hi : 0;
+      this.idos = {};
+      if (esLista(opts.fuera)) {
+        for (i = 0; i < opts.fuera.length; i++) {
+          var ido = opts.fuera[i] | 0;
+          if (ido < 0 || ido >= this.playerCount || ido === this.hostIdx) continue;
+          this.idos[ido] = true;
+          this.pacs[ido].out = true;
+          this.pacs[ido].lives = 0;
+        }
+      }
       this.netNotice = null;
       this.snapTimer = 0; this.snapCount = 0; this.posTimer = 0;
       this.outEaten = []; this.recentEaten = {}; this.snapEaten = [];
@@ -917,7 +941,9 @@
       if (this.netRole) {
         var mirando = this.isSpec();
         try {
-          if (!traspasado) window.PM.Net.gameSend('bye', { i: this.localIdx });
+          /* el mirón se va sin decir nada: no tiene asiento, y su adiós
+           * (i = -1) se leía como el del asiento por defecto */
+          if (!traspasado && !mirando) window.PM.Net.gameSend('bye', { i: this.localIdx });
         } catch (e) { /* canal cerrado */ }
         // De mirón solo se cierra la sala ajena: la party propia ni se entera.
         if (mirando) window.PM.Net.closeView();
@@ -1183,8 +1209,7 @@
       if (this.netNotice) {
         this.netNotice.ticks--;
         if (this.netNotice.ticks <= 0) {
-          this.netNotice = null;
-          this.toMenu();
+          this.toMenu();       // lo borra él, y así sabe que se sale por la red
         }
         return;
       }
@@ -1342,10 +1367,7 @@
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
           if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
-          if ((g.frightened && !(this.hab && window.PM.Hab &&
-              window.PM.Hab.caceriaQuien && window.PM.Hab.caceriaQuien[g.id] >= 0 &&
-              window.PM.Hab.caceriaQuien[g.id] !== i)) ||
-              (this.hab && window.PM.Hab && window.PM.Hab.puedeComer(this, g.id, i))) {
+          if (this.comible(g, i)) {
             if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
@@ -1655,6 +1677,20 @@
      * ni descuadrar una marca que ya esté puesta. */
     hitGhost: function (p, g) {
       return p.tileX() === g.tileX() && p.tileY() === g.tileY();
+    },
+
+    /* ¿Se lo puede comer el jugador i, o lo mata? LA MISMA REGLA en todas
+     * las máquinas (28 sep): el anfitrión miraba además la CACERÍA y el azul
+     * de las habilidades (GANCHO, TOQUE ARCANO) y el invitado solo el azul del
+     * energizante, así que al invitado lo mataba un fantasma de su propia
+     * cacería y en cambio se comía el marcado por otro. Todo lo que hace falta
+     * viaja en la foto (s.g[].f y Hab.resumenRoles). */
+    comible: function (g, i) {
+      var A = this.hab ? window.PM.Hab : null;
+      if (!A) return !!g.frightened;
+      if (g.frightened && !(A.caceriaQuien && A.caceriaQuien[g.id] >= 0 &&
+          A.caceriaQuien[g.id] !== i)) return true;
+      return A.puedeComer(this, g.id, i);
     },
 
     biteGhost: function (p, g) {
@@ -3471,10 +3507,16 @@
       if (!q.length) return;
       this.netQueue = [];
       for (var i = 0; i < q.length; i++) {
-        this.netWatch = 0;
+        /* El vigilante solo se calma con quien importa (28 sep). Antes valía
+         * cualquier mensaje: con tres o cuatro, el 'pos' de otro invitado (y
+         * en dúo el latido 'hello' de un mirón) tapaba la caída del
+         * anfitrión y los demás se quedaban congelados sin aviso. */
+        if (this.netRole === 'host' ? q[i][0] !== 'hello' : DEL_ANFITRION[q[i][0]]) {
+          this.netWatch = 0;
+        }
         if (this.netRole === 'host') {
           var quien = this.idxOfSender(q[i][1], q[i][2]);
-          if (quien > 0) this.posWatch[quien] = 0;
+          if (quien >= 0 && quien !== this.hostIdx) this.posWatch[quien] = 0;
         }
         if (this.netRole === 'host') this.hostMsg(q[i][0], q[i][1], q[i][2]);
         else this.guestMsg(q[i][0], q[i][1], q[i][2]);   // invitado o espectador
@@ -3521,12 +3563,16 @@
         /* Con más de dos, el vigilante general no basta: mientras uno hable
          * los demás podrían estar callados y sus Pac-Man quedarse clavados.
          * Cada jugador tiene el suyo y al que calla se le deja de espectador. */
-        if (this.playerCount > 2) {
-          for (var w = 1; w < this.pacs.length; w++) {
-            if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
-            this.posWatch[w] = (this.posWatch[w] || 0) + 1;
-            if (this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
-          }
+        /* El silencio de cada uno se cuenta siempre (también en el dúo: de
+         * ahí sale a quién NO dejarle el mando, ver sucesor), pero solo con
+         * más de dos se deja fuera al callado. Tras un traspaso quien manda
+         * puede ser cualquier asiento, no el 0: al suyo no le llega ningún
+         * 'pos' y se echaba solo a los 10 s. */
+        for (var w = 0; w < this.pacs.length; w++) {
+          if (w === this.hostIdx) continue;
+          if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
+          this.posWatch[w] = (this.posWatch[w] || 0) + 1;
+          if (this.playerCount > 2 && this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
         }
         this.hostAvisaGiro();
         this.snapTimer++;
@@ -3579,6 +3625,9 @@
         var p = this.pacs[i];
         if (i === this.hostIdx || !p || p.bot) continue;
         if (this.idos && this.idos[i]) continue;
+        /* ...ni a quien lleva rato callado: se le ha caído la red y el mando
+         * se perdería con él (y con él, la partida de todos) */
+        if (this.posWatch && this.posWatch[i] > CFG.NET.WAIT_TICKS) continue;
         return i;
       }
       return -1;
@@ -3622,6 +3671,9 @@
     pasarElMando: function () {
       if (this.netRole !== 'host' || this.isSpec() || !this.inGame()) return false;
       if (this.state === 'GAME_OVER') return false;
+      /* Se sale por un aviso de red (CONEXIÓN PERDIDA): no hay a quién
+       * dejarle nada, y traspasar se saltaba además el envío al top. */
+      if (this.netNotice) return false;
       var n = this.sucesor();
       if (n < 0) return false;
       this.netSend('mando', {
@@ -3651,6 +3703,10 @@
         this.snapEaten = [];
         this.outEaten = [];
         this.posWatch = [];
+        /* El HIGH SCORE que veía de invitado era el RÉCORD DEL ANFITRIÓN (lo
+         * trae la foto). Ahora que manda él, ese número es el que guarda
+         * persistHighScore: vuelve a ser el suyo o se quedaba con el ajeno. */
+        this.highScore = Math.max(this.recordDeLiga(), this.score);
         /* la repetición no se retoma: la tenía entera el que se fue, y una
          * que empezara a media partida se vería rota al rebobinar */
       }
@@ -3658,6 +3714,20 @@
         if (!this.idos) this.idos = {};
         this.idos[viejo] = true;
         this.dropPlayer(viejo);
+      }
+      /* ...y la REVANCHA tiene que salir igual: con quien manda ahora (y en
+       * su papel de anfitrión, si es este) y sin el que se fue. Se copia:
+       * las opciones son las de la sala y no se tocan por detrás. */
+      if (this.lastOpts) {
+        var lo = {}, k;
+        for (k in this.lastOpts) {
+          if (this.lastOpts.hasOwnProperty(k)) lo[k] = this.lastOpts[k];
+        }
+        lo.hostIdx = nuevo;
+        if (yo) lo.net = 'host';
+        lo.fuera = (esLista(lo.fuera) ? lo.fuera.slice() : []);
+        if (viejo >= 0 && lo.fuera.indexOf(viejo) < 0) lo.fuera.push(viejo);
+        this.lastOpts = lo;
       }
       if (yo) {
         this.setFlash((this.rawName(viejo) || 'EL ANFITRIÓN') + ' SE FUE · MANDAS TÚ');
@@ -3830,6 +3900,7 @@
           }
           break;
         case 'bye': {
+          if (esAdiosDeMiron(data)) break;    // un mirón no deja ningún asiento
           var quien = this.idxOfSender(data, sid);
           if (quien !== this.hostIdx) this.playerGone(quien);
           break;
@@ -3850,6 +3921,10 @@
           }
           break;
         case 'died':
+          /* No se cree una muerte contra un fantasma que, con la regla de
+           * aquí, se podía comer (una foto que llegó tarde): la predicción
+           * del invitado se deshace sola al no llegarle la confirmación. */
+          if (d.g >= 0 && d.g < 4 && this.comible(this.ghosts[d.g], who)) break;
           if (this.state === 'PLAYING' && this.pacs[who] &&
               !this.pacs[who].out && !this.pacs[who].dying) {
             this.startDeath(who, d.g);       // d.g: el fantasma que lo pilló
@@ -3863,7 +3938,7 @@
           break;
         case 'ateGhost': {
           var g = this.ghosts[d.g];
-          if (this.state === 'PLAYING' && g && g.frightened &&
+          if (this.state === 'PLAYING' && g && this.comible(g, who) &&
               (g.mode === 'normal' || g.mode === 'leaving')) {
             this.eatGhost(g, who);
           }
@@ -4137,11 +4212,15 @@
         // el anfitrión se va y deja el mando (ver pasarElMando)
         case 'mando': this.recibirMando(data); break;
         case 'bye': {
-          if (this.isSpec()) { this.netFail('SE ACABÓ LA PARTIDA'); break; }
-          // si se va el anfitrión se acabó; si se va otro invitado, sigue
+          /* si se va el anfitrión se acabó; si se va otro invitado, sigue, y
+           * lo de un mirón no le importa a nadie. Al MIRÓN lo echaba
+           * cualquier adiós, fuera de quien fuera (28 sep). */
+          if (esAdiosDeMiron(data)) break;
           var i = this.idxOfSender(data, sid);
-          if (i === this.hostIdx) this.peerLeft();
-          else this.playerGone(i);
+          if (i === this.hostIdx) {
+            if (this.isSpec()) this.netFail('SE ACABÓ LA PARTIDA');
+            else this.peerLeft();
+          } else this.playerGone(i);
           break;
         }
       }
@@ -4318,7 +4397,7 @@
          * 'ateGhost' además del mordisco y el anfitrión lo contaría dos veces.
          * Ver Hab.protegido() en js/habilidades.js. */
         if (A && A.protegido(me.id, g.id)) continue;
-        if (g.frightened) {
+        if (this.comible(g, me.id)) {
           if (!this.biteGhost(me, g)) continue;
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'
           g.eaten();
