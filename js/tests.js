@@ -8448,11 +8448,13 @@
     for (var id in enCabeza) {
       ok(S.BASE_SOMBRERO.hasOwnProperty(id), id + ': va a la cabeza y tiene su BASE_SOMBRERO');
     }
-    /* los laureles de cada temporada del rango, desde la primera (sep 2026)
-     * hasta la que está en curso: sin ellos, quien llegue a MANZANA en esa
-     * temporada no recibe nada */
+    /* los laureles de cada temporada del rango, desde la primera (sep 2026):
+     * se reparten al cerrarla, así que las ya cerradas los necesitan y la que
+     * está en curso, desde el día 24 (una semana de aviso antes del cierre).
+     * Sin ellos, quien llegó a MANZANA en esa temporada no recibe nada. */
     var hoy = window.PM.Season.actual(), t = '2026-09', vueltas = 0;
-    while (t <= hoy && vueltas++ < 600) {
+    var avisa = new Date().getDate() >= 24;
+    while ((t < hoy || (t === hoy && avisa)) && vueltas++ < 600) {
       var lid = 'acc_laureles_' + t.slice(2, 4) + t.slice(5, 7), it = null;
       CFG.ACCESORIOS.forEach(function (x) { if (x.id === lid) it = x; });
       ok(!!it && !!it.rango && it.rango.temporada === t, lid + ': los laureles de ' + t + ' están en CFG.ACCESORIOS');
