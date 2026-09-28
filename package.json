@@ -2,9 +2,11 @@
   "name": "pacman-topmundial-tests",
   "private": true,
   "scripts": {
+    "publicar": "node publicar.js",
     "test:playwright": "playwright test --config=playwright.config.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": "^1.62.1",
+    "esbuild": "0.28.2"
   }
 }

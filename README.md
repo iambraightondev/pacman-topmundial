@@ -2,7 +2,8 @@
 
 Recreación fiel del Pac-Man arcade de 1980, construida desde cero en JavaScript
 vanilla (HTML5 Canvas + Web Audio API). Sin dependencias, sin build, sin
-servidor: un solo doble clic y a jugar. Con modo de **dos jugadores en la misma
+servidor: un solo doble clic y a jugar (solo al publicar en Vercel se
+minifica una copia: ver [Publicar](#publicar-vercel)). Con modo de **dos jugadores en la misma
 máquina** y modo **online de hasta cuatro** en equipo contra los fantasmas,
 con **partys** que no se deshacen entre partida y partida.
 
@@ -271,6 +272,46 @@ Dos maneras de correr la misma batería:
   ninguna función repetida en el primer nivel de un mismo fichero, y los
   mismos módulos en `index.html`, `tests.html`, `pruebas-node.js` y el
   `SHELL` de `sw.js`.
+
+## Publicar (Vercel)
+
+Vercel publica la rama `main` en <https://pacman-topmundial.vercel.app>, y
+cualquier otra rama que se suba sale como publicación de prueba (*preview*,
+tras el login de Vercel). Para desarrollar **no hay paso de build**: el
+juego, `tests.html` y `pruebas-node.js` leen los ficheros fuente tal cual.
+El único paso previo es el de la publicación, y lo hace Vercel solo
+([`vercel.json`](vercel.json)):
+
+1. `npm ci` instala esbuild (y Playwright, que ahí no se usa).
+2. `node publicar.js` copia a `publicado/` **solo lo que el juego necesita**
+   —`index.html`, `manifest.json`, `sw.js`, `css/`, `js/` (menos
+   `js/tests.js`), `fonts/`, `icons/` y `audio/`— y minifica **cada `.js` y
+   cada `.css` por separado**, con el mismo nombre y en la misma ruta. No
+   junta ficheros ni renombra nada del primer nivel (los scripts se cargan
+   en orden y se hablan por `window.PM`), y la salida no pasa de ES2015.
+   El JS baja de ~690 KB a ~336 KB comprimido (brotli), casi la mitad.
+3. Vercel sirve `publicado/`. Lo demás del repositorio (`tests.html`,
+   `tests/`, `propuestas/`, `supabase/`, `capturas/`, los `.md`) ya no se
+   publica. Las funciones de Supabase no pasan por aquí: se despliegan
+   aparte (`supabase/desplegar-funcion.js`).
+
+Antes de dar la publicación por buena, `publicar.js` comprueba que estén
+todos los ficheros del `SHELL` de `sw.js`, los `<script>`/`<link>` de
+`index.html` y los iconos del manifest, y que ningún nombre del primer nivel
+haya cambiado; si algo falla sale con error y **Vercel no publica** (se
+queda la versión anterior). Si se añade un tipo de fichero o una carpeta
+nueva que el juego pida, hay que sumarla a `PUBLICO` en `publicar.js`.
+
+Para ver en local exactamente lo que se publica:
+
+```
+npm install
+node publicar.js ../pm-publicado --con-pruebas
+```
+
+`--con-pruebas` añade `tests.html` y `js/tests.js` (sin minificar), así que
+sirviendo esa carpeta se puede correr la batería contra el código
+minificado. La carpeta `publicado/` está en `.gitignore`.
 
 ## Características
 
@@ -561,6 +602,8 @@ manifest.json     App instalable (PWA)
 sw.js             Service worker: funciona sin conexión
 icons/            Iconos de la app
 tests.html        Pruebas automáticas (ábrelo como el juego)
+publicar.js       Lo que corre Vercel al publicar: copia y minifica
+vercel.json       Cómo publica Vercel (npm ci + publicar.js → publicado/)
 supabase/         SQL de las tablas y las funciones del servidor
                   (ranking, cuentas, recuperación y repeticiones compartidas)
 SPEC.md           Especificación técnica completa
