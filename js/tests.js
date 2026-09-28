@@ -9458,6 +9458,31 @@
     });
   });
 
+  test('lo puesto de la tienda se pregunta una vez por partida, y otra si se cambia', function () {
+    var s = window.PM.settings, Tn = window.PM.Tienda;
+    var antes = { acc: s.acc1, efx: s.efx1 };
+    var tiene = Tn.tiene, preguntas = 0;
+    try {
+      Tn.tiene = function () { preguntas++; return true; };
+      s.acc1 = CFG.ACCESORIO_IDS[0];
+      s.efx1 = '';
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      eq(G.lookFor(0).a, CFG.ACCESORIO_IDS[0], 'lleva su accesorio');
+      preguntas = 0;
+      for (var i = 0; i < 30; i++) { G.lookFor(0); G.render(); }
+      eq(preguntas, 0, 'pintar no vuelve a preguntar a la tienda');
+      s.acc1 = CFG.ACCESORIO_IDS[1];
+      eq(G.lookFor(0).a, CFG.ACCESORIO_IDS[1], 'si se cambia, se ve');
+      ok(!('miLook' in G.foto().g), 'y no viaja en la foto de la partida');
+      G.toMenu();
+    } finally {
+      Tn.tiene = tiene;
+      s.acc1 = antes.acc;
+      s.efx1 = antes.efx;
+    }
+  });
+
   test('una repetición de antes del aspecto se sigue viendo', function () {
     conVideo(function (R) {
       var rep = repetiCorta({ players: 1 }, 600);

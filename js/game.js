@@ -401,8 +401,16 @@
         return l ? { a: l.a || '', x: l.x || '' } : nada;
       }
       if (this.netRole || i !== 0 || this.replaying) return nada;
-      var Tn = window.PM.Tienda;
-      return Tn ? { a: Tn.accesorio(), x: Tn.efecto() } : nada;
+      /* Se pregunta a la TIENDA una vez por partida (miLook, que newGame
+       * vacía) y otra si cambia lo elegido: esto sale dos veces por
+       * fotograma y la tienda mira el almacén para saber si es tuyo */
+      var st = this.settings(), m = this.miLook;
+      if (!m || m.acc !== st.acc1 || m.efx !== st.efx1) {
+        var Tn = window.PM.Tienda;
+        m = this.miLook = { acc: st.acc1, efx: st.efx1,
+          a: Tn ? Tn.accesorio() : '', x: Tn ? Tn.efecto() : '' };
+      }
+      return { a: m.a, x: m.x };
     },
 
     /* Skin del jugador i (online: intercambiadas en el saludo) */
@@ -553,6 +561,7 @@
       this.netNames = opts.names || null;
       this.netSkins = opts.skins || null;
       this.netLooks = opts.looks || null;
+      this.miLook = null;            // lo puesto de la tienda: se lee al pintar (lookFor)
       this.loadouts = opts.loadouts || null;
       this.confetiTick = [];         // tick en que cada jugador se comió un fantasma
       // lo ganado de la TIENDA se cuenta como diferencia (partida + DAILY)
@@ -933,6 +942,7 @@
         this.netLooks = null;
       }
       this.netNotice = null;
+      this.miLook = null;        // en el menú se puede comprar: se vuelve a preguntar
       this.retomada = null;
       this.emotes = this.emptyEmotes();
       this.chat = [];
@@ -4899,6 +4909,7 @@
       pacs: 1, ghosts: 1, pellets: 1,
       // el lienzo de las pastillas (capaPastillas): es dibujo, no partida
       PAST_GRADOS: 1, pastCapa: 1, pastHuella: 1, pastGrado: 1, pastEstampas: 1,
+      miLook: 1,          // y lo puesto de la tienda, que se lee al pintar
       // estos tres son tablas de CFG: no se tocan, así que van por referencia
       speedRow: 1, fruitInfo: 1, schedule: 1
     },
