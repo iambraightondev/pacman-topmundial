@@ -12529,6 +12529,69 @@
     eq(g.mode, 'eyes', 'llevándose por delante al fantasma que había debajo');
   });
 
+  /* 28 sep: la mira se cierra sola al PAUSAR (y al perder el foco la ventana),
+   * pero la repetición no tiene pausas ni ventanas: allí seguía abierta y el
+   * meteoro caía en otro sitio. Ahora el cierre se graba como entrada propia. */
+  test('pausar o perder el foco con la mira del METEORO abierta no descuadra la repetición', function () {
+    var R = window.PM.Replay, H = window.PM.Hab, K = 3, DRx = CFG.DIR;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    function corre(n) { for (var j = 0; j < n; j++) G.step(); }
+    function dondeCae() {
+      var m = H.st[0] && H.st[0].meteoro;
+      return m ? (m.c + ',' + m.r) : null;
+    }
+    /* corta(): lo que cierra la mira sin tirar nada; tira(): cómo sale luego */
+    function jugar(corta, tira) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['mago'], loadouts: ['fuego,portal,runa,meteoro'] });
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      corre(20);
+      ok(H.apretar(G, 0, K, false), 'se abre la mira');
+      G.setPacDir(0, DRx.UP); G.setPacDir(0, DRx.UP); G.setPacDir(0, DRx.RIGHT);
+      corre(4);
+      corta();
+      eq(H.st[0].apunta, null, 'la mira se cierra sin tirar nada');
+      corre(4);
+      tira();
+      var cae = dondeCae();
+      ok(cae, 'y luego el meteoro cae (sin mira: al frente)');
+      corre(10);
+      var rep = R.enCurso();
+      rep.final = { puntos: Math.max(1, G.score), nivel: G.level, fantasmas: G.runGhosts,
+                    tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      return { rep: rep, cae: cae };
+    }
+    function verla(rep) {
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto');
+      ok(leida.entradas.some(function (e) { return e[2] === 13; }), 'con el cierre de la mira grabado');
+      ok(R.ver(leida), 'y arranca');
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      var visto = null;
+      for (var j = 0; j < 400 && !visto; j++) { G.step(); visto = dondeCae(); }
+      return visto;
+    }
+    try {
+      var a = jugar(function () { G.setPaused(true); corre(3); G.setPaused(false); },
+                    function () { H.soltar(G, 0, K); });
+      eq(verla(a.rep), a.cae, 'pausada: en la repetición cae en el mismo sitio');
+      R.salir();
+      var b = jugar(function () { H.cancelarMant(); },          // la ventana pierde el foco
+                    function () { H.pulsar(G, 0, K); });
+      eq(verla(b.rep), b.cae, 'sin foco: también');
+    } finally {
+      R.salir();
+      if (G.inGame()) G.toMenu();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('AJUSTES: el METEORO paga cuando acierta: más grande, recarga devuelta y fuego que quema', function () {
     var H = window.PM.Hab, HH = CFG.HAB, T = CFG.TILE, i, j;
     var R = 3;

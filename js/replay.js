@@ -313,6 +313,7 @@
       var e = arr[i];
       var delta = e[0] - prev;
       var code = (e[2] === 8) ? 'E'
+        : (e[2] === 13) ? 'F' + (8 + (e[1] & 1))       // cierre de la mira
         : esMant(e) ? 'F' + (((e[1] & 1) << 2) + ((e[2] - 9) & 3))
         : esHab(e) ? codHab(e)
         : String.fromCharCode(71 + ((e[1] & 3) << 2) + (e[2] & 3));
@@ -338,7 +339,7 @@
     var out = [];
     if (s === '') return out;
     // el punto que cierra la cuenta es opcional: los textos de antes no lo llevan
-    var re = /([0-9a-z]+)(F[0-7]|[A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
+    var re = /([0-9a-z]+)(F[0-9]|[A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
@@ -358,7 +359,8 @@
         if (cod === 69) out.push([tick, 0, 8]);            // E: continuar
         else if (cod === 70) {                             // F: poder mantenido
           var fm = parseInt(letra.charAt(1), 10);
-          out.push([tick, (fm >> 2) & 1, 9 + (fm & 3)]);
+          if (fm >= 8) out.push([tick, fm - 8, 13]);       // F8/F9: se cerró la mira
+          else out.push([tick, (fm >> 2) & 1, 9 + (fm & 3)]);
         }
         else if (poderDe >= 0) out.push([tick, poderDe, 4 + c]);
         else out.push([tick, (c >> 2) & 3, c & 3]);
@@ -599,7 +601,8 @@
          * de los dos primeros jugadores: es lo único que sabe grabar este
          * formato (de tres en adelante la partida es de red y se graba de
          * otra manera). */
-        if (!esNum(e[2]) || e[2] < 0 || e[2] > 12) return false;
+        /* 13: se cerró la mira del METEORO sin tirarlo (pausa, foco) */
+        if (!esNum(e[2]) || e[2] < 0 || e[2] > 13) return false;
         /* 8: CONTINUAR pagado. Siempre del J1 (en local un pago revive al
          * equipo del teclado) y nunca en PAC-MAN VS., que no tiene continuar. */
         if (e[2] === 8) {
@@ -1306,6 +1309,18 @@
       }
     },
 
+    /* La mira del METEORO se cerró SIN caer por algo que la repetición no
+     * tiene (pausa, la ventana pierde el foco...): entrada 13, 'F8'/'F9' en el
+     * texto (28 sep). Sin ella, al verla la mira seguía abierta y el meteoro
+     * caía en otro sitio. */
+    apuntaCierre: function (idx) {
+      if (!this.grabando || !(idx === 0 || idx === 1)) return;
+      this.grabando.entradas.push([this.t, idx, 13]);
+      if (this.grabando.entradas.length > CFG.REPLAY_MAX_ENTRADAS) {
+        this.grabando = null;
+      }
+    },
+
     /* CONTINUAR pagado (Game.pedirContinuar): se apunta en el tick en que
      * está parada la partida, y al verla revive en el mismo punto. */
     apuntaCont: function () {
@@ -1364,6 +1379,11 @@
           }
           if (!hayFuera) { this.cursor--; break; }
           G.revivir(-1);
+          continue;
+        }
+        if (e[2] === 13) {
+          // la mira del METEORO se cerró sin caer (aquel día se pausó o se perdió el foco)
+          if (window.PM.Hab && window.PM.Hab.cerrarMira) window.PM.Hab.cerrarMira(e[1], false);
           continue;
         }
         if (e[2] >= 9) {
