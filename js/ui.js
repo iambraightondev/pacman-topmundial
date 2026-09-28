@@ -493,6 +493,17 @@
         self.encajarPanel();
       });
       this.vigilarEncaje();
+      /* Si la pestaña se esconde o la ventana pierde el foco (una llamada,
+       * cambiar de app, el aviso de batería), la partida LOCAL se pausa y sale
+       * su menú: antes seguía corriendo y volvías a un GAME OVER. En online
+       * no: pausar ahí es cosa de todos y se pide por red. */
+      var pausaSola = function () {
+        if (!window.PM_PRUEBAS) self.pausarAlSalir();
+      };
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') pausaSola();
+      });
+      window.addEventListener('blur', pausaSola);
       /* al volver a la ventana, la party pregunta si se perdió la salida */
       document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
@@ -623,6 +634,16 @@
         this.sondaSegura = p;
       }
       return Math.max(10, p.offsetHeight || 0);
+    },
+
+    /* La ventana se esconde o pierde el foco: la partida LOCAL se pausa (y
+     * syncUI saca el menú de pausa). Online no, ni viendo una repetición.
+     * Devuelve true si ha pausado. */
+    pausarAlSalir: function () {
+      var g = window.PM.Game;
+      if (!g || g.netRole || g.replaying || g.paused || !g.canPause()) return false;
+      g.requestPause();
+      return !!g.paused;
     },
 
     /* ------------------------------------------------------

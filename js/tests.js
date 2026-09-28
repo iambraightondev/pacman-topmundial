@@ -2307,6 +2307,22 @@
     ok(!window.PM.UI.promptOpen);
   });
 
+  test('al esconder la ventana la partida local se pausa, y la online no', function () {
+    var UI = window.PM.UI;
+    partida(1);
+    try {
+      ok(UI.pausarAlSalir(), 'se pausa sola');
+      ok(G.paused && UI.promptOpen, 'con su menú de pausa delante');
+      ok(!UI.pausarAlSalir(), 'ya pausada no la despausa');
+      ok(G.paused, 'sigue en pausa');
+    } finally { G.toMenu(); UI.hidePrompt(); }
+    partida(2, 'host');
+    try {
+      ok(!UI.pausarAlSalir(), 'online no: pausar ahí es cosa de todos');
+      ok(!G.paused, 'la partida sigue');
+    } finally { G.toMenu(); UI.hidePrompt(); }
+  });
+
   test('reiniciar en local no necesita votación', function () {
     partida(2);
     G.score = 500;
