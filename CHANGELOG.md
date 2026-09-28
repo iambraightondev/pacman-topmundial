@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-29 (tarde) · Pase con tope diario y rango más justo
+
+- **PASE:** sube como mucho 1.800 de experiencia al día (las monedas se cobran
+  enteras). Quien juega a diario lo acaba hacia el día 25, no el 5. La
+  pantalla enseña HOY x / 1.800 y avisa cuando el día está lleno.
+- **RANGO, CEREZA protegida:** en CEREZA no se pierde, y llegar al nivel 2 da
+  al menos +5.
+- **RANGO, premios por temporada:** septiembre queda tal como se cobró; desde
+  octubre CAMPANA paga 3.000 y LLAVE 5.000.
+- **RANGO en party:** el rol corrige la marca a medias (Soporte 0,8; Tanque y
+  Mago 0,95) hasta tener datos.
+
 ## 2026-09-29 · Llegan los COFRES
 
 Se ganan jugando y no se compran; solo traen apariencia y monedas.
