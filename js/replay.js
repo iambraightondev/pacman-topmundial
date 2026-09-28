@@ -960,6 +960,8 @@
       // la página de pruebas no sube nada: sus partidas son de mentira
       if (window.PM_PRUEBAS || this.subiendo || !this.compartirConfigurado()) { if (cb) cb(); return; }
       var cola = [];
+      // primero las apartadas: son las que no están en ningún otro sitio
+      this.apartadas().forEach(function (r) { cola.push([r, r.red ? 'red' : 'local', true]); });
       this.guardadas().forEach(function (r) { if (!r.rn) cola.push([r, 'local']); });
       this.guardadasRed().forEach(function (r) { if (!r.rn) cola.push([r, 'red']); });
       if (!cola.length) { if (cb) cb(); return; }
@@ -968,6 +970,8 @@
         var x = cola.shift();
         if (!x) { self.subiendo = false; if (cb) cb(); return; }
         self.subirReg(x[0], x[1], function (err) {
+          // subida, o que nunca podrá subirse (rota, demasiado larga): se suelta
+          if (x[2] && (!err || /ROTA|LARGA|YA NO EST/.test(err))) self.soltarApartada(x[0].id);
           if (err && /DEMASIADAS|CONEXIÓN/.test(err)) { self.subiendo = false; if (cb) cb(); return; }
           siguiente();
         });
@@ -1872,8 +1876,8 @@
           lista.pop();
         }
       }
-      // no cabe ni sola en este navegador: a la nube tal cual
-      return this.aLaNube(reg, 'red') ? reg : null;
+      // no cabe ni sola en este navegador: a la nube tal cual (apartada hasta que llegue)
+      return this.aLaNubeSinPerderla(reg, 'red') ? reg : null;
     },
 
     porIdRed: function (id) {
@@ -2060,17 +2064,22 @@
         var ahoraN = Date.now();
         var regN = { id: String(ahoraN) + '-' + b36(rep.final.puntos), t: ahoraN, j: rep.jugadores,
                      p: rep.final.puntos, lv: rep.final.nivel, b: 0, s: texto };
-        return (texto.length <= CFG.REPLAY_SHARE.MAX_CHARS && this.aLaNube(regN, 'local')) ? regN : null;
+        if (texto.length > CFG.REPLAY_SHARE.MAX_CHARS) return null;
+        return this.aLaNubeSinPerderla(regN, 'local') ? regN : null;
       }
       var lista = this.guardadas();
       var j = rep.jugadores;
       /* ¿es la de tu mejor marca? El récord ya está persistido cuando se
-       * cierra la partida, así que basta con empatarlo */
-      var tope = G.recordFor(j);
+       * cierra la partida, así que basta con empatarlo. El de SU liga (28
+       * sep): una de DESATADO o de LABERINTOS se medía con el récord del
+       * clásico, y la del récord de verdad quedaba sin proteger de la poda. */
+      var liga = this.ligaDe(rep);
+      var tope = (liga === 'vs') ? Infinity
+        : liga ? (G.recordModo ? G.recordModo(liga, j) : 0) : G.recordFor(j);
       var esRecord = rep.final.puntos > 0 && rep.final.puntos >= (tope || 0);
       if (esRecord) {
         for (var i = 0; i < lista.length; i++) {
-          if (lista[i].j === j) lista[i].b = 0;
+          if (lista[i].j === j && (lista[i].m || null) === liga) lista[i].b = 0;
         }
       }
       var ahora = Date.now();
@@ -2079,13 +2088,95 @@
         t: ahora, j: j, p: rep.final.puntos, lv: rep.final.nivel,
         b: esRecord ? 1 : 0, s: texto
       };
+      if (liga) reg.m = liga;
       lista.unshift(reg);
       this.podar(lista);
       this.escribir(lista);
       /* si ni sola cabía en el almacén, escribir() la ha soltado: a la nube */
-      if (lista.indexOf(reg) === -1) return this.aLaNube(reg, 'local') ? reg : null;
+      if (lista.indexOf(reg) === -1) return this.aLaNubeSinPerderla(reg, 'local') ? reg : null;
       this.subirPendientes();     // a la nube, para que no se pierda al podar
       return reg;
+    },
+
+    /* La liga del récord de una repetición local: 'hab' (DESATADO), 'lab'
+     * (LABERINTOS), 'vs' (PAC-MAN VS., que no tiene récord) o null (clásico) */
+    ligaDe: function (rep) {
+      if (!rep) return null;
+      if (esVersus(rep.modo)) return 'vs';
+      if (esDesatado(rep.modo)) return 'hab';
+      if (rep.ajustes && rep.ajustes.maze) return 'lab';
+      return null;
+    },
+
+    /* ---------- LAS QUE NO CABEN AQUÍ Y AÚN NO ESTÁN EN LA NUBE (28 sep) ----------
+     * Una repetición demasiado larga para este navegador iba directa a la
+     * nube y, si la subida fallaba (sin red, la sesión caducada), se perdía:
+     * justo las mejores partidas, que son las más largas. Ahora se APARTA
+     * antes de subirla (en su propia clave, fuera de la poda) y solo se suelta
+     * cuando la nube dice que sí; si falla, subirPendientes la vuelve a
+     * intentar al acabar la siguiente partida y al abrir el juego. Si ni así
+     * cabe, se hace sitio soltando repeticiones que YA están en la nube. */
+    APARTADAS_KEY: 'pacman-topmundial-rep-apartadas',
+    APARTADAS_MAX: 4,
+
+    apartadas: function () {
+      try {
+        var arr = JSON.parse(localStorage.getItem(this.APARTADAS_KEY) || '[]');
+        return esLista(arr) ? arr.filter(function (r) { return r && r.id && typeof r.s === 'string'; }) : [];
+      } catch (e) { return []; }
+    },
+
+    escribirApartadas: function (lista) {
+      for (var intento = 0; intento < 12; intento++) {
+        try {
+          if (lista.length) localStorage.setItem(this.APARTADAS_KEY, JSON.stringify(lista));
+          else localStorage.removeItem(this.APARTADAS_KEY);
+          return true;
+        } catch (e) {
+          if (!this.hacerSitio()) return false;
+        }
+      }
+      return false;
+    },
+
+    /* Suelta la repetición más vieja de las de aquí que ya está en la nube
+     * (se puede volver a ver desde allí). false si no queda ninguna. */
+    hacerSitio: function () {
+      var claves = [[CFG.REPLAY_KEY, this.guardadas()], [CFG.REPLAY_NET_KEY, this.guardadasRed()]];
+      for (var c = 0; c < claves.length; c++) {
+        var l = claves[c][1];
+        for (var i = l.length - 1; i >= 0; i--) {
+          if (!l[i].rn) continue;
+          l.splice(i, 1);
+          try { localStorage.setItem(claves[c][0], JSON.stringify(l)); return true; }
+          catch (e) { return false; }
+        }
+      }
+      return false;
+    },
+
+    apartar: function (reg, tipo) {
+      var lista = this.apartadas().filter(function (r) { return r.id !== reg.id; });
+      lista.unshift({ id: reg.id, t: reg.t, j: reg.j, p: reg.p, lv: reg.lv,
+                      red: tipo === 'red' ? 1 : 0, s: reg.s });
+      while (lista.length > this.APARTADAS_MAX) lista.pop();
+      return this.escribirApartadas(lista);
+    },
+
+    soltarApartada: function (id) {
+      var lista = this.apartadas(), n = lista.length;
+      lista = lista.filter(function (r) { return r.id !== id; });
+      if (lista.length !== n) this.escribirApartadas(lista);
+    },
+
+    /* Aparta y sube. true si se ha quedado a salvo (apartada o subiéndose) */
+    aLaNubeSinPerderla: function (reg, tipo) {
+      var self = this;
+      var aSalvo = this.apartar(reg, tipo);
+      var intentada = this.aLaNube(reg, tipo, function (err) {
+        if (!err) self.soltarApartada(reg.id);
+      });
+      return aSalvo || intentada;
     },
 
     porId: function (id) {

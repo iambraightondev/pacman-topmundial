@@ -1803,6 +1803,85 @@
     }
   });
 
+  /* 28 sep: la de DESATADO y la de LABERINTOS se medían con el récord del
+   * CLÁSICO, así que la de su récord de verdad quedaba sin proteger. */
+  test('la repetición del récord se mide con el récord de SU modo', function () {
+    var R = window.PM.Replay;
+    var previo = null, hs = G.highScore1;
+    var hab = G.recordModo('hab', 1), lab = G.recordModo('lab', 1);
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    function deModo(puntos, modo, maze) {
+      var r = repDe(puntos);
+      r.modo = modo;
+      if (maze) r.ajustes.maze = maze;
+      return r;
+    }
+    try {
+      R.borrarTodo();
+      G.highScore1 = 500000;                    // el clásico, altísimo
+      G.setRecordModo('hab', 20000, 1);
+      G.setRecordModo('lab', 15000, 1);
+      var enHab = R.guardar(deModo(20000, 'hab'));
+      eq(enHab.b, 1, 'la de DESATADO que iguala SU récord es la del récord');
+      var enLab = R.guardar(deModo(15000, 'solo', 'anillos'));
+      eq(enLab.b, 1, 'y la de LABERINTOS igual');
+      eq(R.porId(enHab.id).b, 1, 'una no le quita la marca a la otra: son ligas distintas');
+      eq(R.guardar(repDe(30000)).b, 0, 'una del clásico que no llega a su récord, no');
+      eq(R.guardar(deModo(19000, 'hab')).b, 0, 'ni una de DESATADO por debajo del suyo');
+      for (var i = 0; i < CFG.REPLAY_MAX + 4; i++) R.guardar(repDe(100 + i));
+      ok(R.porId(enHab.id), 'la poda no suelta la del récord de DESATADO');
+      ok(R.porId(enLab.id), 'ni la de LABERINTOS');
+    } finally {
+      G.highScore1 = hs;
+      G.setRecordModo('hab', hab, 1);
+      G.setRecordModo('lab', lab, 1);
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  /* 28 sep: una repetición demasiado larga para este navegador iba directa a
+   * la nube y, si la subida fallaba, se perdía (las mejores partidas son las
+   * más largas). Ahora se aparta hasta que la nube diga que sí. */
+  test('una repetición que no cabe aquí se aparta hasta que llegue a la nube', function () {
+    var R = window.PM.Replay;
+    var K = R.APARTADAS_KEY, previo = null;
+    try { previo = localStorage.getItem(K); localStorage.removeItem(K); } catch (e) { /* nada */ }
+    var aLaNube = R.aLaNube, subirReg = R.subirReg, max = CFG.REPLAY_MAX_CHARS;
+    var subidas = [], contesta = 'NO SE PUDO SUBIR LA REPETICIÓN';
+    R.aLaNube = function (reg, tipo, cb) { subidas.push(reg.id); if (cb) cb(contesta); return true; };
+    try {
+      CFG.REPLAY_MAX_CHARS = 50;                // cualquiera es "demasiado larga"
+      var reg = R.guardar(repDe(64000));
+      ok(reg, 'no se da por perdida');
+      eq(subidas.length, 1, 'se intenta subir');
+      eq(R.apartadas().length, 1, 'y como falla, queda apartada');
+      eq(R.apartadas()[0].s, reg.s, 'entera');
+      ok(R.leer(R.apartadas()[0].s), 'y se puede leer');
+
+      /* la próxima vez que se suben las pendientes, va la primera; al llegar,
+       * se suelta (subirPendientes no corre en la página de pruebas: se
+       * recorre su cola a mano con la misma subida) */
+      contesta = null;
+      R.subirReg = function (r, tipo, cb) { cb(null, 'CODIGO01'); };
+      var pr = window.PM_PRUEBAS, cf = R.compartirConfigurado;
+      window.PM_PRUEBAS = false;
+      R.subiendo = false;
+      R.compartirConfigurado = function () { return true; };
+      try { R.subirPendientes(); } finally { window.PM_PRUEBAS = pr; R.compartirConfigurado = cf; }
+      eq(R.apartadas().length, 0, 'al llegar a la nube, se suelta');
+    } finally {
+      CFG.REPLAY_MAX_CHARS = max;
+      R.aLaNube = aLaNube; R.subirReg = subirReg; R.subiendo = false;
+      try {
+        if (previo === null) localStorage.removeItem(K);
+        else localStorage.setItem(K, previo);
+      } catch (e) { /* nada */ }
+    }
+  });
+
   /* ---------------------------------------------------------------
    * Repeticiones de partidas ONLINE (formato de red, v2)
    * Online no valen las teclas: la partida la simula el anfitrión con las
