@@ -13,14 +13,14 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-**28 sep — TANDA DE MITOLOGÍA EN EL JUEGO (pm-v293).** Braighton pidió meter
+**28 sep — TANDA DE MITOLOGÍA EN EL JUEGO (pm-v294).** Braighton pidió meter
 las 28 piezas del escaparate. Hecho: dibujos, Q y muertes en js/skins.js (con
 su CABEZAS y su POSES cada una), catálogo en js/config.js. LA PARCA y JINETE
 van con pide halloween. El efecto RAYOS del escaparate pasa a RELÁMPAGOS
 (efx_relampagos) por choque de nombre. Las diez nuevas llevan zonas propias
-(ZONAS_MITO) para que los sombreros del 18 sep vayan a la coronilla; en las
-extravagantes viejas NO se tocó (en CANGREJO y CARACOL el sombrero sigue algo
-bajo: si lo nota, se les puede dar lo mismo). tests.html 607/607.
+(SOMBREROS_ARRIBA) para que los sombreros del 18 sep vayan a la coronilla;
+Braighton pidió lo mismo para CANGREJO y CARACOL (van sobre caparazón y concha).
+El resto de extravagantes viejas no se tocó. tests.html 607/607.
 **Por ver jugando:** las diez en partida y con accesorios a tamaño real.
 
 **Siguiente sesión (27 sep):** probar en una party de verdad el doble -6 al

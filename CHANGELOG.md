@@ -20,7 +20,9 @@ silueta de Pac-Man, comen a su manera, tienen su Q y su propia muerte.
 Dos retoques sobre el escaparate: el GOLEM se desmorona entero (antes se
 quedaba en una columna fina nada más morir) y, en estas diez, el sombrero
 vaquero, el chullo, el mohicano y las orejas de gato se apoyan en la cabeza en
-vez de taparles el ojo.
+vez de taparles el ojo. Lo mismo en el **CANGREJO** (le tapaban los ojos) y el
+**CARACOL** (le quedaban bajos): ahora van sobre el caparazón y la concha, como
+la chistera.
 
 ## 2026-09-27 · Rey en azul, Cacería, Soporte y hielo
 

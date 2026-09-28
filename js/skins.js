@@ -9176,11 +9176,11 @@
    * Medido a ojo sobre cada dibujo, en el marco de la skin (f hacia delante,
    * s hacia arriba). Una skin sin entrada aquí sigue sin admitir accesorios.
    * ============================================================ */
-  /* En las de mitología el ojo queda muy por debajo de la coronilla y el
-   * SOMBRERO VAQUERO, el CHULLO, el MOHICANO y las OREJAS DE GATO, que van a
-   * la cara como en Pac-Man, les tapaban el ojo: en ellas se apoyan en la
-   * coronilla, como los sombreros. */
-  var ZONAS_MITO = { acc_vaquero: 'cabeza', acc_chullo: 'cabeza', acc_mohicano: 'cabeza', acc_orejas: 'cabeza' };
+  /* En las de mitología (y en CANGREJO y CARACOL) el ojo queda muy por
+   * debajo de la coronilla, y el SOMBRERO VAQUERO, el CHULLO, el MOHICANO y
+   * las OREJAS DE GATO, que van a la cara como en Pac-Man, les tapaban el ojo
+   * o les quedaban bajos: en ellas se apoyan en la coronilla, como la chistera. */
+  var SOMBREROS_ARRIBA = { acc_vaquero: 'cabeza', acc_chullo: 'cabeza', acc_mohicano: 'cabeza', acc_orejas: 'cabeza' };
   var CABEZAS = {
     hamburguesa: { ojo: [3.1, 2.3], k: 0.72, coronilla: [1.2, 5.3], cuello: [1.4, -4.8] },
     gato:        { ojo: [2.4, 2.2], k: 0.46, coronilla: [1.6, 4.8], cuello: [1.6, -2.4] },
@@ -9221,24 +9221,24 @@
     payaso:      { ojo: [2.4, 2.7], k: 0.62, coronilla: [-0.6, 6.2], cuello: [-1.4, -3.2] },
     /* la RECREATIVA no tiene ojo: manda el centro de su pantalla */
     recreativa:  { ojo: [0.0, 1.7], k: 0.76, coronilla: [-0.2, 5.4], cuello: [-0.2, -5.0] },
-    cangrejo:    { ojo: [1.6, 5.8], k: 0.50, coronilla: [0.0, 3.3], cuello: [0.0, -2.8] },
+    cangrejo:    { ojo: [1.6, 5.8], k: 0.50, coronilla: [0.0, 3.3], cuello: [0.0, -2.8], zonas: SOMBREROS_ARRIBA },
     unicornio:   { ojo: [1.9, 1.9], k: 0.56, coronilla: [-1.0, 5.4], cuello: [-3.6, -1.4] },
-    caracol:     { ojo: [5.6, 4.4], k: 0.34, coronilla: [-1.6, 6.4], cuello: [3.4, 0.6] },
+    caracol:     { ojo: [5.6, 4.4], k: 0.34, coronilla: [-1.6, 6.4], cuello: [3.4, 0.6], zonas: SOMBREROS_ARRIBA },
     lobo:        { ojo: [-0.4, 4.3], k: 0.60, coronilla: [-1.2, 5.8], cuello: [1.0, -3.3],
                    sitios: { acc_bigote: [4.4, 4.4] } },
     /* --- tanda de mitología (28 sep) --- */
-    medusa:      { ojo: [3.0, 1.9], k: 0.68, coronilla: [-0.4, 5.2], cuello: [1.2, -3.4], zonas: ZONAS_MITO },
-    ciclope:     { ojo: [2.2, 2.0], k: 0.78, coronilla: [-0.8, 5.6], cuello: [0.8, -4.2], zonas: ZONAS_MITO },
-    golem:       { ojo: [3.2, 1.5], k: 0.80, coronilla: [1.0, 5.6], cuello: [1.0, -4.6], zonas: ZONAS_MITO },
-    esfinge:     { ojo: [2.6, 2.0], k: 0.66, coronilla: [0.4, 7.0], cuello: [1.6, -3.0], zonas: ZONAS_MITO },
-    icaro:       { ojo: [2.6, 1.7], k: 0.60, coronilla: [0.6, 5.1], cuello: [1.6, -2.8], zonas: ZONAS_MITO },
-    fenix:       { ojo: [3.2, 1.6], k: 0.62, coronilla: [0.2, 4.6], cuello: [1.0, -2.6], zonas: ZONAS_MITO },
-    genio:       { ojo: [2.4, 1.6], k: 0.60, coronilla: [0.6, 6.4], cuello: [0.8, -2.8], zonas: ZONAS_MITO },
-    triton:      { ojo: [2.6, 1.7], k: 0.62, coronilla: [-0.2, 4.6], cuello: [1.6, -3.0], zonas: ZONAS_MITO },
+    medusa:      { ojo: [3.0, 1.9], k: 0.68, coronilla: [-0.4, 5.2], cuello: [1.2, -3.4], zonas: SOMBREROS_ARRIBA },
+    ciclope:     { ojo: [2.2, 2.0], k: 0.78, coronilla: [-0.8, 5.6], cuello: [0.8, -4.2], zonas: SOMBREROS_ARRIBA },
+    golem:       { ojo: [3.2, 1.5], k: 0.80, coronilla: [1.0, 5.6], cuello: [1.0, -4.6], zonas: SOMBREROS_ARRIBA },
+    esfinge:     { ojo: [2.6, 2.0], k: 0.66, coronilla: [0.4, 7.0], cuello: [1.6, -3.0], zonas: SOMBREROS_ARRIBA },
+    icaro:       { ojo: [2.6, 1.7], k: 0.60, coronilla: [0.6, 5.1], cuello: [1.6, -2.8], zonas: SOMBREROS_ARRIBA },
+    fenix:       { ojo: [3.2, 1.6], k: 0.62, coronilla: [0.2, 4.6], cuello: [1.0, -2.6], zonas: SOMBREROS_ARRIBA },
+    genio:       { ojo: [2.4, 1.6], k: 0.60, coronilla: [0.6, 6.4], cuello: [0.8, -2.8], zonas: SOMBREROS_ARRIBA },
+    triton:      { ojo: [2.6, 1.7], k: 0.62, coronilla: [-0.2, 4.6], cuello: [1.6, -3.0], zonas: SOMBREROS_ARRIBA },
     /* LA PARCA no tiene cara: manda la luz de delante */
-    parca:       { ojo: [3.0, 1.8], k: 0.80, coronilla: [0.2, 6.8], cuello: [1.2, -4.4], zonas: ZONAS_MITO },
+    parca:       { ojo: [3.0, 1.8], k: 0.80, coronilla: [0.2, 6.8], cuello: [1.2, -4.4], zonas: SOMBREROS_ARRIBA },
     /* el JINETE lleva la cabeza (la calabaza) flotando sobre el cuello vacío */
-    jinete:      { ojo: [2.6, 5.9], k: 0.55, coronilla: [0.9, 8.2], cuello: [0.4, -0.8], zonas: ZONAS_MITO }
+    jinete:      { ojo: [2.6, 5.9], k: 0.55, coronilla: [0.9, 8.2], cuello: [0.4, -0.8], zonas: SOMBREROS_ARRIBA }
   };
   /* ---------- el accesorio se MUEVE con la skin ----------
    * Las cabezas de arriba se midieron con la skin quieta en una pose
