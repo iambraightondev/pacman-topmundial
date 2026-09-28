@@ -11646,8 +11646,18 @@
       var row = document.createElement('div');
       row.className = 'prompt-btns';
       this.promptKeys = [];
+      /* o.guarda: milisegundos en que el diálogo recién salido no acepta
+       * pulsaciones (el toque que venía para la partida no paga nada) */
+      this.promptGuardaHasta = o.guarda ? Date.now() + o.guarda : 0;
       (o.buttons || []).forEach(function (b) {
-        var el = self.makeButton(b.label, b.onClick);
+        var alPulsar = b.onClick;
+        if (o.guarda && alPulsar) {
+          alPulsar = function () {
+            if (Date.now() < self.promptGuardaHasta) return;
+            return b.onClick.apply(this, arguments);
+          };
+        }
+        var el = self.makeButton(b.label, alPulsar);
         if (b.primary) el.classList.add('btn-primary');
         if (b.cls) el.classList.add(b.cls);      // 'btn-peligro': rendirse, borrar...
         if (b.hint) {
@@ -11795,9 +11805,21 @@
       return this.navMove(host, (k === 'ArrowDown' || k === 'ArrowRight') ? 1 : -1);
     },
 
+    /* Lo que queda de una pista de botón quitándole las teclas: 'P · ESC' se
+     * queda en nada y '1.000 · C' en '1.000'. En táctil no hay teclado y la
+     * tecla solo ocupaba sitio. */
+    pistaSinTeclas: function (hint) {
+      if (!hint) return '';
+      var tecla = /^(ESC|ENTER|INTRO|ESPACIO|TAB|SUPR|F\d{1,2}|[A-Z0-9<>?]|FLECHAS)$/;
+      return String(hint).split(' · ').filter(function (t) {
+        return !tecla.test(String(t).trim().toUpperCase());
+      }).join(' · ');
+    },
+
     /* Atajos del diálogo abierto. Devuelve true si la tecla era suya. */
     handlePromptKey: function (ev) {
       if (!this.promptKeys) return false;
+      if (this.promptGuardaHasta && Date.now() < this.promptGuardaHasta) return true;
       var key = (ev.key && ev.key.length === 1) ? ev.key.toLowerCase() : ev.key;
       for (var i = 0; i < this.promptKeys.length; i++) {
         var pk = this.promptKeys[i];
@@ -12751,10 +12773,19 @@
       var mil = function (n) {
         return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       };
+      /* PAGAR EN DOS PASOS (28 sep). CONTINUAR tenía el foco y respondía a
+       * Enter: quien venía machacando teclas o tocando la pantalla se gastaba
+       * 1.000 monedas sin enterarse. Ahora el primer toque pregunta y el
+       * segundo paga; el foco va a JUGAR OTRA VEZ, y el panel recién salido no
+       * acepta nada durante medio segundo. Si se rehace sin salir del
+       * CONTINUE? (llega algo por red), lo ya preguntado se conserva. */
+      var nuevo = this.promptEstado !== 'CONTINUE';
+      if (nuevo) this.contArmado = false;
       this.showPrompt({
         title: 'CONTINUE?',
         arcade: true,
         solid: true,
+        guarda: nuevo ? 500 : 0,
         status: g.flash ? g.flash.text : '',
         statusError: !!g.flash,
         custom: function (p) {
@@ -12802,8 +12833,15 @@
           }
         },
         buttons: [
-          { label: 'CONTINUAR', primary: true, hint: fmtMonedas(C.PRECIO) + ' · C', keys: ['c', 'Enter'],
-            onClick: function () { self.resumeAudio(); g.pedirContinuar(); } },
+          { label: this.contArmado ? '¿GASTAR ' + fmtMonedas(C.PRECIO) + '?' : 'CONTINUAR',
+            primary: true,
+            hint: this.contArmado ? 'SÍ, CONTINUAR · C' : (fmtMonedas(C.PRECIO) + ' · C'),
+            keys: ['c'],
+            onClick: function () {
+              self.resumeAudio();
+              if (!self.contArmado) { self.armarContinuar(this); return; }
+              g.pedirContinuar();
+            } },
           /* Se puede empezar otra sin esperar. En party no: los demás pueden
            * estar pagando, y la revancha se pide en el GAME OVER. */
           { label: 'JUGAR OTRA VEZ',
@@ -12825,10 +12863,31 @@
           btns[1].disabled = true;
           btns[1].classList.add('cont-bloqueado');
         }
-        if (btns[0].disabled && btns[2]) { try { btns[2].focus(); } catch (e) { } }
+        /* el foco, en lo que no cuesta: JUGAR OTRA VEZ. En party está
+         * bloqueado, y ahí no se deja en ninguno (en MENÚ, un Enter de más
+         * te sacaba de la partida de todos); nunca en pagar. */
+        try {
+          if (!btns[1].disabled) btns[1].focus();
+          else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        } catch (e) { }
       }
       this.promptEstado = 'CONTINUE';  // se cierra solo al salir del CONTINUE?
       this.tickContinue();
+    },
+
+    /* Primer toque en CONTINUAR: el botón pregunta "¿GASTAR 1.000?" y hasta
+     * el segundo no se paga. Se cambia en el sitio, sin rehacer el panel. */
+    armarContinuar: function (btn) {
+      this.contArmado = true;
+      btn = btn || this.contBtnPagar;
+      if (!btn) return;
+      var P = CFG.CONTINUAR.PRECIO;
+      var k = btn.querySelector && btn.querySelector('.btn-key');
+      var txt = btn.childNodes && btn.childNodes[0];
+      if (txt && txt.nodeType === 3) txt.nodeValue = '¿GASTAR ' + fmtMonedas(P) + '?';
+      var pista = 'SÍ, CONTINUAR · C';
+      if (k) k.textContent = this.touchDevice ? this.pistaSinTeclas(pista) : pista;
+      btn.classList.add('cont-armado');
     },
 
     /* ------------------------------------------------------

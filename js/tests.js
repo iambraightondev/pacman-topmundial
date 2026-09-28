@@ -8427,6 +8427,32 @@
     });
   });
 
+  test('CONTINUAR no se paga sin querer: ni con Enter, ni al primer toque, ni nada más salir', function () {
+    var UI = window.PM.UI;
+    conTienda(function (Tn) {
+      partida(1);
+      try {
+        sinVidas();
+        eq(G.state, 'CONTINUE');
+        ok(UI.promptOpen && UI.contBtnPagar, 'sale el panel');
+        ok(UI.promptGuardaHasta > Date.now(), 'recién salido no acepta toques');
+        UI.contBtnPagar.click();
+        eq(Tn.saldo(), 1500, 'el toque que venía de la partida no paga');
+        UI.promptGuardaHasta = 0;              // pasado el medio segundo
+        eq(document.activeElement, UI.contBtnOtra, 'el foco, en JUGAR OTRA VEZ');
+        UI.handlePromptKey({ key: 'Enter' });
+        eq(Tn.saldo(), 1500, 'Enter ya no es CONTINUAR');
+        UI.contBtnPagar.click();
+        eq(Tn.saldo(), 1500, 'el primer toque solo pregunta');
+        ok(/GASTAR/.test(UI.contBtnPagar.textContent), 'el botón dice ¿GASTAR 1.000?');
+        eq(G.state, 'CONTINUE', 'y se sigue esperando');
+        UI.contBtnPagar.click();
+        eq(Tn.saldo(), 500, 'el segundo paga');
+        eq(G.state, 'READY', 'y se sigue jugando');
+      } finally { G.toMenu(); UI.hidePrompt(); }
+    });
+  });
+
   test('sin monedas para seguir, el GAME OVER sale directo', function () {
     conTienda(function (Tn) {
       ok(Tn.comprar('cuy').ok, 'se gasta todo');
