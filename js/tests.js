@@ -8485,6 +8485,113 @@
       });
     });
 
+  /* ---------- EL TOPE DEL DÍA (CFG.PASE.TOPE_DIARIO, 29 sep) ----------
+   * `conDia` pone un reloj de mentira al pase: el día sale de ahí, y lo que
+   * se guarda de días viejos también. Sin esto, estas pruebas dependerían de
+   * la fecha en que se pasen. */
+  function conDia(Pa, dia, fn) {
+    var antes = Pa.dia, reloj = { hoy: dia };
+    Pa.dia = function () { return reloj.hoy; };
+    try { fn(reloj); } finally { Pa.dia = antes; }
+  }
+
+  test('el tope del día: 1.800 de experiencia del pase y lo que pase no suma',
+    function () {
+      var tope = CFG.PASE.TOPE_DIARIO;
+      eq(tope, 1800, 'el tope aprobado (PROPUESTAS 29 sep, punto 4)');
+      ok(CFG.PASE.GALONES * CFG.PASE.POR_GALON / tope >= 20,
+        'a tope todos los días, el camino pide 20 días o más (hoy, 25)');
+      conPase(function (Pa, Tn, A, t) {
+        conDia(Pa, '2026-10-05', function () {
+          var m = tope / CFG.PASE.XP_POR_MONEDA;            // 360 monedas
+          eq(Pa.hoy(), 0, 'el día empieza vacío');
+          eq(Pa.quedaHoy(), tope, 'y cabe el tope entero');
+          Tn.ganar(m - 60);
+          eq(Pa.xp(t), tope - 300, 'por debajo del tope entra todo');
+          eq(Pa.hoy(), tope - 300, 'y se apunta como de hoy');
+          Tn.ganar(100);                                     // 500 de experiencia
+          eq(Pa.xp(t), tope, 'solo entra lo que cabe');
+          eq(Pa.hoy(), tope, 'y el día se queda justo en el tope');
+          eq(Pa.quedaHoy(), 0, 'ya no cabe nada');
+          Tn.ganar(200);
+          eq(Pa.xp(t), tope, 'lo que pasa del tope no suma');
+          eq(Pa.hoy(), tope, 'ni cuenta como de hoy');
+          eq(A.stats().monedas, m - 60 + 100 + 200, 'las monedas se cobran enteras igual');
+          eq(A.stats()['pxd_2026-10-05'], tope, 'el contador del día es pxd_AAAA-MM-DD');
+          ok(A.esSuma('pxd_2026-10-05'), 'y se SUMA entre aparatos, como px_');
+        });
+      });
+    });
+
+  test('el tope del día se vacía al cambiar de día, y los días viejos no se guardan',
+    function () {
+      var tope = CFG.PASE.TOPE_DIARIO, m = tope / CFG.PASE.XP_POR_MONEDA;
+      conPase(function (Pa, Tn, A, t) {
+        conDia(Pa, '2026-10-05', function (reloj) {
+          Tn.ganar(m * 3);
+          eq(Pa.xp(t), tope, 'el 5, hasta el tope');
+          reloj.hoy = '2026-10-06';                           // pasa la medianoche
+          eq(Pa.hoy(), 0, 'el 6 empieza vacío');
+          Tn.ganar(100);
+          eq(Pa.xp(t), tope + 500, 'y vuelve a subir');
+          eq(A.stats()['pxd_2026-10-05'], tope, 'el de ayer sigue apuntado (un aparato puede subir tarde)');
+          reloj.hoy = '2026-10-08';
+          Tn.ganar(1);                                        // cualquier escritura
+          var c = A.stats();
+          ok(!c.hasOwnProperty('pxd_2026-10-05') && !c.hasOwnProperty('pxd_2026-10-06'),
+            'pasado ayer, el día ya no se guarda: el almacén no crece una clave por día');
+          eq(c['pxd_2026-10-08'], 5, 'el de hoy, sí');
+          eq(Pa.xp(t), tope + 505, 'y la experiencia de la temporada no pierde nada');
+          A.merge({ 'pxd_2026-10-05': 900, 'pxd_2026-10-08': 700 });
+          ok(!A.stats().hasOwnProperty('pxd_2026-10-05'), 'lo viejo que traiga la nube se ignora');
+          eq(A.stats()['pxd_2026-10-08'], 700, 'lo de hoy se junta como siempre, con el mayor');
+          eq(Pa.porMonedas(2000), tope - 700, 'y el tope cuenta lo que llegó de la nube');
+        });
+      });
+    });
+
+  test('el tope del día con dos aparatos: al juntarse cuenta lo de los dos',
+    function () {
+      var Pa = window.PM.Pase, Tn = window.PM.Tienda, t = CFG.PASE.DESDE;
+      var tope = CFG.PASE.TOPE_DIARIO, temp = Pa.temporada;
+      Pa.temporada = function () { return t; };
+      try {
+        dosAparatos(function (d, Ac, L, A) {
+          conDia(Pa, '2026-10-05', function (reloj) {
+            d.en('A'); Ac.fundir(d.fila());
+            d.en('B'); Ac.fundir(d.fila());
+            d.en('A'); Tn.ganar(200); Ac.pushQuiet();         // 1.000 en A
+            eq(d.nube.logros['pxd_2026-10-05'], 1000, 'lo de hoy sube a la cuenta');
+            d.en('B'); Ac.fundir(d.fila());
+            eq(Pa.hoy(), 1000, 'B ve lo que A ya llenó hoy');
+            Tn.ganar(200);
+            eq(Pa.hoy(), tope, 'y solo le cabe el resto');
+            Ac.pushQuiet();
+            eq(d.nube.logros['px_' + t], tope, 'en la cuenta, el tope justo');
+            eq(d.nube.logros['pxd_2026-10-05'], tope, 'y el día, lleno');
+            d.en('A'); Ac.fundir(d.fila());
+            eq(Pa.quedaHoy(), 0, 'A, al juntarse, ya no tiene hueco');
+            Tn.ganar(100); Ac.pushQuiet();
+            eq(d.nube.logros['px_' + t], tope, 'y lo que juegue hoy ya no sube el pase');
+
+            /* LO QUE SE ACEPTA: dos aparatos que juegan el mismo día SIN
+             * juntarse llenan cada uno el suyo */
+            reloj.hoy = '2026-10-06';
+            d.en('A'); Tn.ganar(1000);
+            d.en('B'); Tn.ganar(1000);
+            d.en('A'); Ac.pushQuiet();
+            d.en('B'); Ac.pushQuiet();
+            eq(d.nube.logros['px_' + t], tope * 3, 'sin juntarse, entre los dos se pasan (el tope de cada uno)');
+            d.en('A'); Ac.fundir(d.fila());
+            eq(Pa.hoy(), tope * 2, 'pero al juntarse cada uno ve la suma');
+            eq(Pa.quedaHoy(), 0, 'y ya no cabe nada más hasta mañana');
+            Tn.ganar(100); Ac.pushQuiet();
+            eq(d.nube.logros['px_' + t], tope * 3, 'nada más sube ese día');
+          });
+        });
+      } finally { Pa.temporada = temp; }
+    });
+
   /* las temporadas con piezas propias (CFG.PASE.PIEZAS), para recorrer sus caminos */
   function temporadasConPiezas() {
     return Object.keys(CFG.PASE.PIEZAS || {}).sort();
@@ -8670,6 +8777,29 @@
       eq(U.psCeldas[0].cel, primera, 'ni rehace las que había (se perdería el scroll)');
     });
   });
+
+  test('la pantalla del pase enseña el tope del día y avisa cuando está lleno',
+    function () {
+      conPantallaPase(function (U, Pa, Tn) {
+        conDia(Pa, '2026-10-05', function () {
+          var tope = CFG.PASE.TOPE_DIARIO;
+          U.refreshPase();
+          ok(U.psHoy.style.display !== 'none', 'con la temporada en marcha se ve el HOY');
+          eq(U.psHoyNum.textContent, '0 / 1.800', 'lo de hoy, contra el tope');
+          eq(U.psHoyAviso.style.display, 'none', 'sin tope lleno no hay aviso');
+          Tn.ganar(tope / CFG.PASE.XP_POR_MONEDA);
+          U.refreshPase();
+          eq(U.psHoyNum.textContent, '1.800 / 1.800', 'lleno');
+          ok(U.psHoy.classList.contains('lleno'), 'y se pinta como lleno');
+          ok(U.psHoyAviso.style.display !== 'none', 'sale el aviso');
+          ok(/VUELVE MAÑANA PARA SEGUIR SUBIENDO/.test(U.psHoyAviso.textContent), 'que dice qué hacer');
+          Pa.ganar(CFG.PASE.POR_GALON * CFG.PASE.GALONES);
+          U.refreshPase();
+          eq(U.psHoy.style.display, 'none', 'con el camino completo ya no hay nada que frenar');
+          eq(U.psHoyAviso.style.display, 'none', 'ni aviso');
+        });
+      });
+    });
 
   test('la pantalla marca lo ganado y deja a la vista lo que está cerrado',
     function () {

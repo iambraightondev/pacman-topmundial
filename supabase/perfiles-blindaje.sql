@@ -74,6 +74,12 @@
 --   bono    (regalo de veterano) <= 5 por partida + 3.000 (50 por logro, y
 --           hay 36).
 --   pase    todas las px_<mes> juntas <= 5 × monedas ganadas + 5.000.
+--           (pxd_<AAAA-MM-DD>, el tope diario del pase desde el 29 sep, NO
+--           entra aquí ni se blinda: ninguna expresión de este archivo lo
+--           reconoce —'^px_' pide el guion bajo justo después de px—, así que
+--           se junta con el mayor como cualquier contador. Solo limita al
+--           propio jugador; el tope real sigue siendo el de px_. Comentario
+--           solo: el trigger desplegado no cambia.)
 --   récords (record*, rhab_*, puntosMax) <= 10.000.000, el de la tabla del
 --           top mundial. Tiempos del nivel 1 (tiempo1, mejorT1) >= 20 s, el
 --           suelo de la función enviar-record (el mejor de verdad: 48,5 s).

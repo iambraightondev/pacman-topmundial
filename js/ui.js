@@ -1893,6 +1893,28 @@
       this.psEquivale = mk('b');
       mtxt.appendChild(this.psEquivale);
       marq.appendChild(mtxt);
+
+      /* EL TOPE DEL DÍA (CFG.PASE.TOPE_DIARIO): cuánto ha subido hoy y, con
+       * el tope lleno, que se vea que no es un fallo sino que mañana sigue */
+      this.psHoy = mk('div', 'ps-hoy');
+      this.psHoy.appendChild(mk('span', 'ps-hoy-tit', 'HOY'));
+      var hb = mk('div', 'ps-hoy-barra');
+      hb.setAttribute('role', 'progressbar');
+      hb.setAttribute('aria-label', 'Experiencia del pase ganada hoy');
+      this.psHoyBarra = hb;
+      this.psHoyLleno = mk('div', 'ps-hoy-lleno');
+      hb.appendChild(this.psHoyLleno);
+      this.psHoy.appendChild(hb);
+      this.psHoyNum = mk('span', 'ps-hoy-num');
+      this.psHoy.appendChild(this.psHoyNum);
+      this.psHoyNota = mk('span', 'ps-hoy-nota');
+      this.psHoy.appendChild(this.psHoyNota);
+      marq.appendChild(this.psHoy);
+      this.psHoyAviso = mk('div', 'ps-hoy-aviso');
+      this.psHoyAviso.appendChild(mk('span', null, 'VUELVE MAÑANA PARA SEGUIR SUBIENDO'));
+      this.psHoyAviso.appendChild(mk('small', null, 'LO QUE JUEGUES HOY SIGUE DANDO MONEDAS'));
+      this.psHoyAviso.setAttribute('role', 'status');
+      marq.appendChild(this.psHoyAviso);
       o.appendChild(marq);
 
       /* Antes de la primera temporada el camino se ve entero, pero lo que se
@@ -2185,6 +2207,25 @@
         ('EMPIEZA EL 1 DE ' + this.paseMesDe(CP.DESDE) +
          ': LO QUE JUEGUES HASTA ENTONCES NO SUBE ESTE CAMINO.');
       this.psDormido.style.display = enMarcha ? 'none' : '';
+
+      /* el tope del día: solo con la temporada en marcha, con tope y con
+       * camino por andar (al final ya no hay nada que frenar) */
+      var conTope = enMarcha && r.tope > 0 && r.galon < r.galones;
+      var lleno = conTope && r.hoy >= r.tope;
+      this.psHoy.style.display = conTope ? '' : 'none';
+      this.psHoy.classList.toggle('lleno', lleno);
+      this.psHoyAviso.style.display = lleno ? '' : 'none';
+      this.psMedidor.classList.toggle('ps-parado', lleno);
+      if (conTope) {
+        var hoy = Math.min(r.hoy, r.tope);
+        this.psHoyLleno.style.right = Math.round((1 - hoy / r.tope) * 100) + '%';
+        this.psHoyBarra.setAttribute('aria-valuemin', '0');
+        this.psHoyBarra.setAttribute('aria-valuemax', String(r.tope));
+        this.psHoyBarra.setAttribute('aria-valuenow', String(hoy));
+        this.psHoyNum.textContent = fmtMonedas(hoy) + ' / ' + fmtMonedas(r.tope);
+        this.psHoyNota.textContent = lleno ? 'TOPE DEL DÍA LLENO'
+          : ('EL CAMINO SUBE HASTA ' + fmtMonedas(r.tope) + ' AL DÍA');
+      }
 
       /* el rótulo del carril de abajo y su cinta cambian con el estado */
       this.psRotPasePie.textContent = suyo ? 'ES TUYO'

@@ -950,6 +950,27 @@
      * y esa es justo la sensación que hace que valga la pena seguir. */
     XP_POR_MONEDA: 5,
 
+    /* EL TOPE DEL DÍA (29 sep 2026, antes de que arranque el primer pase).
+     * La regla de arriba sigue en pie —todo lo que da monedas da
+     * experiencia—, pero lo que pase de esto en un mismo día NO suma.
+     *
+     * Por qué: con el ritmo REAL de septiembre (sacado de producción, no de
+     * la cuenta de arriba) los que juegan a diario ganaban tanto que acababan
+     * el camino hacia el día 4-6, y el resto del mes el pase ya no empujaba a
+     * nada. Con 1.800 al día, los treinta galones (45.000) piden 25 días: el
+     * que juega a diario lo termina rozando el final del mes, que es lo que
+     * se buscaba al fijar POR_GALON. El que juega poco no lo nota: 1.800 son
+     * 360 monedas ganadas en el día, unas seis partidas normales.
+     *
+     * El día es el del reloj de quien juega, el mismo que el del DAILY
+     * (js/daily.js): el tope se vacía a la vez que cambia el reto. Se cuenta
+     * en pxd_AAAA-MM-DD, un contador que solo crece y se SUMA entre aparatos
+     * como la experiencia (js/pase.js). Con dos aparatos jugando el mismo día
+     * sin haberse juntado todavía, cada uno llena su tope y entre los dos
+     * puede pasarse un poco: se acepta, porque en cuanto se juntan los dos
+     * ven la suma y ya no cabe nada más. 0 quita el tope. */
+    TOPE_DIARIO: 1800,
+
     /* CUÁNDO EMPIEZA. Antes de este mes el pase está dormido y no cambia
      * nada: una temporada que arranca a mitad de mes nace coja. No hay
      * ninguna lista de meses que mantener — los contadores de cada temporada
