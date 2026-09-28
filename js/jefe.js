@@ -94,7 +94,14 @@
 
     vidaMax: function (G, nivel) {
       var jug = 0;
-      for (var i = 0; i < G.pacs.length; i++) if (!G.pacs[i].bot) jug++;
+      /* Solo los que van a pegarle (28 sep): quien empieza el nivel fuera
+       * de juego o se ha ido de la party no le suma vida al rey. SPEC lo
+       * cuenta "por cada jugador de más", y uno que no juega no lo es. */
+      for (var i = 0; i < G.pacs.length; i++) {
+        var p = G.pacs[i];
+        if (p.bot || p.out || (G.idos && G.idos[i])) continue;
+        jug++;
+      }
       jug = Math.max(1, jug);
       var tanda = Math.max(1, Math.floor(nivel / J.CADA));
       return Math.round((J.VIDA + J.VIDA_POR_JUGADOR * (jug - 1)) * (1 + J.VIDA_POR_TANDA * (tanda - 1)));

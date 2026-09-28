@@ -11339,6 +11339,18 @@
     G.level = 5; G.resetLevel();
     eq(G.jefe.max, CJ.VIDA + CJ.VIDA_POR_JUGADOR, 'a dos, más vida');
   });
+
+  /* 28 sep: la vida del rey contaba también a quien empezaba el nivel fuera
+   * de juego o se había ido de la party */
+  test('JEFE: el que no juega no le suma vida al rey', function () {
+    partidaRol(['asesino', 'mago', 'tanque']);
+    G.pacs[1].out = true;                 // sin vidas
+    G.idos = { 2: true };                 // se fue
+    G.level = 5; G.resetLevel();
+    eq(G.jefe.max, CJ.VIDA, 'con uno solo en pie, la vida de uno');
+    G.toMenu();
+  });
+
   test('JEFE: los cuatro fantasmas esperan en casa hasta que él los invoca', function () {
     nivelJefe();
     G.pacs[0].safeTicks = 999999;
