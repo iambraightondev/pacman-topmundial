@@ -661,6 +661,8 @@
         if (g.saveHighScores) g.saveHighScores();
       }
       if (window.PM.Achievements) window.PM.Achievements.reset();
+      // y los cofres sin cuenta se cuentan desde aquí (js/cofres.js)
+      if (window.PM.Cofres && window.PM.Cofres.olvidarLocal) window.PM.Cofres.olvidarLocal();
       if (window.PM.Guardado) {
         if (window.PM.Guardado.olvidarLocal) window.PM.Guardado.olvidarLocal();
         window.PM.Guardado.ultimo = -1;

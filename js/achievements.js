@@ -110,8 +110,24 @@
     /* Para las CIFRAS (24 sep): cuerpos levantados en party y escudos o vidas
      * repartidos por el SOPORTE. Salen de la libreta de la partida al cerrarla. */
     rescates:  'suma',
-    apoyos:    'suma'
+    apoyos:    'suma',
+    /* LOS COFRES (js/cofres.js, 28 sep). `largas`: partidas de más de un
+     * minuto, de las que salen los de MADERA. Nace a cero a propósito: los
+     * cofres se cuentan desde que llegaron (no hay nada que sembrar). */
+    largas:    'suma'
   };
+  /* ...y los de los cofres que escribe SOLO el servidor (la Edge Function
+   * `cofres` y el trigger de perfiles; el juego no puede subirlos). Todos
+   * «el mayor»: aquí solo llegan desde la nube, y así no cuentan como algo
+   * jugado en este aparato que haya que sumar a la cuenta.
+   *   cofre_<tipo>     abiertos de cada tipo
+   *   cofre_monedas    monedas que han dado (cuentan como ganadas)
+   *   cofre_recs       ORO ganados por récord (con los tres filtros)
+   *   cofre_top3       LEGENDARIO ganados por un top 3 de temporada
+   *   cofre_b_*        la BASE: lo que había al llegar los cofres */
+  ['cofre_madera', 'cofre_plata', 'cofre_oro', 'cofre_legendario', 'cofre_monedas',
+   'cofre_recs', 'cofre_top3', 'cofre_b_dia', 'cofre_b_partidas', 'cofre_b_semana',
+   'cofre_b_nivel', 'cofre_b_mae'].forEach(function (k) { BASE[k] = 'mayor'; });
   /* ...y las MAESTRÍAS DE ROL (js/maestria.js), cuatro por rol. Viven aquí
    * para viajar a la cuenta con lo demás, sin columna nueva:
    *   mae_<rol>     puntos de maestría ganados
@@ -756,6 +772,25 @@
       this.sembrarModos();
       this.sembrarMuertes();
       this.sembrarBono();
+      return this.stats();
+    },
+
+    /* Unos contadores sueltos que manda la nube (lo que devuelve la función
+     * de los cofres): cada uno se queda con el mayor, y NADA MÁS. No es
+     * merge(): ese vuelve a sembrar y recalcula el regalo de veterano con lo
+     * que traiga, y aquí llega solo un puñado de claves. */
+    tomar: function (o) {
+      if (!o) return this.stats();
+      var d = load(), cambio = false;
+      for (var k in o) {
+        if (!o.hasOwnProperty(k)) continue;
+        var tipo = STATS.hasOwnProperty(k) ? STATS[k] : tipoSuelto(k);
+        var n = Math.floor(o[k] || 0);
+        if (tipo !== 'mayor' || !(n > (d.c[k] || 0))) continue;
+        d.c[k] = n;
+        cambio = true;
+      }
+      if (cambio) save(d);
       return this.stats();
     },
 

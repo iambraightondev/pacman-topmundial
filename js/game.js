@@ -717,6 +717,10 @@
       var slotHS = this.recordSlot();
       this.highScore = slotHS ? this.recordModo(slotHS, this.playerCount)
                               : this.recordFor(this.playerCount);
+      /* LOS COFRES (js/cofres.js): lo ganado al empezar y el récord de la
+       * liga, para decir en el GAME OVER qué cofres ha dado esta partida */
+      this.cofresAntes = window.PM.Cofres ? window.PM.Cofres.ganados() : null;
+      this.recordAntesCofre = this.recordDeLiga();
 
       /* red */
       this.netQueue = [];
@@ -2969,6 +2973,8 @@
      * (`hab:tiempo`, `lab:pastillas`...). */
       this.bumpAch({
         partidas: 1, puntosMax: pts, cazas: this.myCatches(),
+        /* de más de un minuto: de estas salen los cofres de MADERA */
+        largas: (this.timeTicks / 60 >= CFG.COFRES.PARTIDA_LARGA_S) ? 1 : 0,
         rescates: this.miMarca('rescates'), apoyos: this.miMarca('apoyos'),
         tiempo: Math.round(this.timeTicks / 60),
         pastillas: this.runPastillas || 0,
@@ -3010,10 +3016,22 @@
         saldo: Tn ? Tn.saldo() : 0,
         logros: this.runAch.slice(),
         maestria: maestria,
-        rango: rango
+        rango: rango,
+        /* los COFRES que ha dado (js/cofres.js): los que salen de los
+         * contadores y, si hubo récord, el ORO que el servidor contará al
+         * subirla. Una repetición o la partida de otro no dan nada. */
+        cofres: (window.PM.Cofres && !this.replaying && !this.isSpec())
+          ? window.PM.Cofres.alCerrar(this.cofresAntes, {
+              ruta: (this.recordSlot() || 'clasico') + this.playerCount,
+              antes: this.recordAntesCofre || 0, despues: this.recordDeLiga()
+            })
+          : null
       };
       // la cuenta se queda con lo último, si hay sesión
       if (window.PM.Account) window.PM.Account.pushQuiet();
+      if (this.runSummary.cofres && this.runSummary.cofres.record) {
+        window.PM.Cofres.refrescarTrasSubir();
+      }
       return subida;
     },
 

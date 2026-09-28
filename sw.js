@@ -50,6 +50,8 @@ var SHELL = [
   './js/rango.js',
   './js/stats.js',
   './js/tienda.js',
+  './js/cofres-gen.js',
+  './js/cofres.js',
   './js/pase.js',
   './js/ficha.js',
   './js/account.js',

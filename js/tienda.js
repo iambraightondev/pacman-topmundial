@@ -161,9 +161,15 @@
     regalo: function () { return stat('bono'); },
 
     saldo: function () {
-      return T.INICIALES + this.regalo() + this.ganadas() +
+      return T.INICIALES + this.regalo() + this.ganadas() + this.deCofres() +
         this.delPase() + this.delRango() - this.gastadas();
     },
+
+    /* Lo que han dado los COFRES (js/cofres.js): monedas y repetidos pasados
+     * a monedas. Lo escribe solo el servidor al abrirlos, en su propio
+     * contador, y cuenta como ganado. No da experiencia del pase: es un
+     * premio, no una partida (como el regalo de veterano). */
+    deCofres: function () { return stat('cofre_monedas'); },
 
     /* Lo que ha pagado el RANGO: el premio de cada fruta alcanzada en cada
      * temporada. Como el del pase, se deduce cada vez (js/rango.js). */
