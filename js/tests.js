@@ -8729,6 +8729,25 @@
     } finally { G.toMenu(); }
   });
 
+  /* 28 sep: de invitado, el HIGH SCORE es el récord del anfitrión (viene en
+   * la foto); al heredar el mando se guardaba como récord propio. */
+  test('quien hereda el mando no se queda el récord del anfitrión', function () {
+    var guardado = G.recordFor(2);
+    partida(2, 'host');
+    G.highScore = 987654;
+    var snap = G.buildSnapshot(true), extra = G.estadoExtra();
+    G.toMenu();
+    partida(2, 'guest');
+    try {
+      G.applySnapshot(snap);
+      eq(G.highScore, 987654, 'de invitado ve el del anfitrión');
+      G.recibirMando({ n: 1, v: 0, s: snap, x: extra });
+      ok(G.highScore < 987654, 'al mandar vuelve a ser el suyo');
+      G.persistHighScore();
+      ok(G.recordFor(2) < 987654, 'y no se lo apunta');
+    } finally { G.toMenu(); G.setRecordFor(2, guardado); G.saveHighScores(); }
+  });
+
   test('a los demás invitados el traspaso solo les cambia quién manda', function () {
     partida(3, 'host');
     var snap = G.buildSnapshot(true), extra = G.estadoExtra();

@@ -3668,6 +3668,10 @@
         this.snapEaten = [];
         this.outEaten = [];
         this.posWatch = [];
+        /* El HIGH SCORE que veía de invitado era el RÉCORD DEL ANFITRIÓN (lo
+         * trae la foto). Ahora que manda él, ese número es el que guarda
+         * persistHighScore: vuelve a ser el suyo o se quedaba con el ajeno. */
+        this.highScore = Math.max(this.recordDeLiga(), this.score);
         /* la repetición no se retoma: la tenía entera el que se fue, y una
          * que empezara a media partida se vería rota al rebobinar */
       }
