@@ -8448,3 +8448,232 @@ body { font-size-adjust: 0.56; }
 .perfil-maestria-txt span { font-size: var(--fs-m); letter-spacing: 2px; color: #a3a5cc; }
 .perfil-maestria-txt b { font-weight: normal; font-size: clamp(13px, 2.2vh, 18px); }
 .perfil-maestria-txt small { font-size: var(--fs-m); letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* =========================================================
+ * EL MÓVIL (28 sep): lo que en 360-430 px se pisaba, se cortaba o no se
+ * leía. Todo va dentro de su media query o de html.tactil (UI.init la pone
+ * cuando hay pantalla táctil), así que en escritorio no cambia nada.
+ * ========================================================= */
+
+/* ---- TOP MUNDIAL: las columnas fijas (110 + 190 + 110) no caben en un
+ * móvil y la de NAME se quedaba en 0 px. Aquí el nombre es lo que se estira
+ * y el nivel se va (en la lista de la recreativa no hacía falta). ---- */
+@media (max-width: 760px) {
+  .tm-cabecera, .rank-row.tm-fila-rank {
+    grid-template-columns: 48px 32px minmax(0, 1fr) auto 44px;
+    gap: 8px;
+    padding: 11px 6px;
+  }
+  .tm-cabecera.sin-avatar, .rank-row.tm-fila-rank.sin-avatar { grid-template-columns: 48px minmax(0, 1fr) auto 44px; }
+  .rank-row.tm-fila-rank { font-size: clamp(12px, 3.4vw, 16px); }
+  .rank-row.tm-fila-rank.p1 { font-size: clamp(13px, 3.8vw, 18px); }
+  .rank-row.tm-fila-rank .rank-who { gap: 6px; }
+  .rank-row.tm-fila-rank .tm-rango { margin-left: 0; }
+  .tm-cabecera { font-size: var(--fs-s); letter-spacing: 1px; }
+}
+@media (max-width: 480px) {
+  .tm-cabecera, .rank-row.tm-fila-rank { grid-template-columns: 44px 28px minmax(0, 1fr) auto; }
+  .tm-cabecera.sin-avatar, .rank-row.tm-fila-rank.sin-avatar { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .tm-cabecera span:last-child, .rank-row.tm-fila-rank .rank-lvl { display: none; }
+  .rank-row.tm-fila-rank .tm-avatar { width: 28px; height: 28px; }
+  /* el podio: los tres a lo ancho, sin que el nombre del 1º se parta a pedazos */
+  .tm-podio { gap: 6px; }
+  .tm-plaza .tm-avatar, .tm-avatar-hueco { width: 56px; height: 56px; }
+  .tm-plaza.p1 .tm-avatar { width: 72px; height: 72px; }
+  .tm-nombre { font-size: var(--fs-s); letter-spacing: 0; overflow-wrap: normal; word-break: break-all; }
+  .tm-pts { font-size: 12px; letter-spacing: 0; }
+  .tm-plaza.p1 .tm-pts { font-size: 14px; }
+}
+
+/* ---- Títulos que se salían por los lados (VESTUARIO, TOP MUNDIAL,
+ * CONTINUE?) y el scroll lateral que dejaban ---- */
+@media (max-width: 600px) {
+  .overlay { overflow-x: hidden; }
+  .overlay .panel-title { max-width: 100%; box-sizing: border-box; }
+  .overlay:not(#prompt) > .panel-title { font-size: min(clamp(26px, 5.5vh, 46px), 9vw); letter-spacing: min(6px, 0.8vw); }
+  .overlay .panel-title.tm-titulo { font-size: min(clamp(28px, 6vh, 52px), 7.4vw); letter-spacing: min(8px, 0.6vw); }
+  #prompt.arcade .panel-title.go-titulo { font-size: min(clamp(40px, 11vh, 104px), 8.4vw); letter-spacing: 0.04em; }
+  #prompt.arcade .panel-title.go-titulo.go-titulo-largo { font-size: min(clamp(26px, 8vh, 70px), 6.2vw); }
+
+  /* fondo opaco: el marcador de la partida (1UP · HIGH SCORE) asomaba por
+   * detrás de todos los paneles y se leía mezclado con ellos */
+  .overlay:not(#prompt) { background: #000; }
+  #prompt.arcade, #prompt.arcade[data-tono] { background-color: #000; }
+  #prompt:not(.arcade):not(.over-panel) { background: rgba(0, 0, 0, 0.82); }
+
+  /* En un diálogo que se desplaza, nada se encoge por debajo de su texto:
+   * la línea verde de DESATADO se quedaba en un renglón de alto y JUGAR
+   * SOLO le pasaba por encima. */
+  #prompt > *, #prompt .popup-caja > * { flex-shrink: 0; }
+
+  /* DESATADO: los nombres de las variantes (MORDISCO, SHURIKEN) no caben en
+   * 76 px y se juntaban en "MORDISCOSHURIKEN" */
+  .arm-cajon-ops { gap: 6px; }
+  .btn.arm-op { flex: 1 0 auto; width: auto; min-width: 72px; padding: 8px 6px 7px; }
+  .arm-op-nombre, .arm-slot-nombre { letter-spacing: 0; }
+  .arm-tira-tx, .arm-tira-mae { min-width: 0; }
+
+  /* OPCIONES: las cinco secciones caben en dos filas, sin pisarse y sin una
+   * quinta escondida fuera de la pantalla */
+  .opts-nav { flex-wrap: wrap; justify-content: center; overflow-x: visible; gap: 6px; }
+  #options.opts .btn.opts-nav-btn { flex: 1 1 auto; min-width: 0; padding: 8px 6px; font-size: var(--fs-s); letter-spacing: 0; }
+
+  /* VESTUARIO: a cuatro por fila, BLOQUEADA y HAMBURGUESA se salían de
+   * su ficha (y de la pantalla por la izquierda); a tres caben */
+  .vest-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .vest-tile { padding-left: 2px; padding-right: 2px; }
+  .vest-tile-name { max-width: 100%; hyphens: auto; overflow-wrap: anywhere; }
+  .vest-tile-tag { max-width: 100%; overflow-wrap: anywhere; }
+
+  /* la letra más pequeña del juego, en el móvil, no baja de 11 px */
+  :root { --fs-xs: 11px; }
+}
+/* las cuatro teclas de DESATADO, de dos en dos: a cuatro por fila cada
+ * carta medía 74 px y MORDISCO (o RESURRECCIÓN) se partía por la mitad */
+@media (max-width: 480px) {
+  .arm-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .btn.arm-slot {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 2px;
+    padding: 8px 8px 8px 12px;
+    text-align: left;
+  }
+  .btn.arm-slot > canvas { grid-row: 1 / span 2; width: 40px; height: 40px; }
+  .btn.arm-slot .arm-slot-nombre { min-height: 0; justify-content: flex-start; line-height: 1.3; }
+  .btn.arm-slot .arm-slot-tecla { top: -7px; left: -5px; }
+}
+
+/* ---- Zonas táctiles: 44 px en los botones de partida, 32 px en los puntos
+ * del carrusel (se agranda el sitio donde se pulsa, no el dibujo) ---- */
+html.tactil .mode-dots { gap: 22px; }
+html.tactil .mode-dot { position: relative; }
+html.tactil .mode-dot::before { content: ""; position: absolute; inset: -11px; }
+html.tactil .game-btn { min-height: 44px; min-width: 44px; }
+html.tactil .btn { min-height: 44px; }
+/* los redondos de ayuda ("?") no crecen: crece el sitio donde se pulsan */
+html.tactil .btn.ol-ayuda, html.tactil .rgs-ayuda-b { position: relative; min-height: 0; }
+html.tactil .btn.ol-ayuda::after, html.tactil .rgs-ayuda-b::after { content: ""; position: absolute; inset: -9px; }
+
+/* ---- PORTADA: tu nombre y el DAILY dicen lo que son ---- */
+/* la etiqueta del nombre sale mientras sigas siendo "J1" */
+.marq .menu-player .nick-row-menu.sin-nombre .nick-label { display: block; }
+.daily-que {
+  display: block;
+  align-self: center;
+  text-align: center;
+  font-weight: normal;
+  font-size: var(--fs-s);
+  letter-spacing: 1px;
+  line-height: 1.4;
+  color: #b8b9e0;
+}
+
+/* ---- PORTADA EN EL MÓVIL (y la tableta en vertical): JUGAR a la vista
+ * sin desplazar. Los modos y JUGAR suben justo detrás del logo; tu ficha y
+ * el DAILY pasan debajo. El póster mide lo que deja la pantalla (svh: la
+ * altura con las barras del navegador puestas) y lleva debajo su frase en
+ * un renglón, que dentro de un póster tan pequeño no cabía. ---- */
+@media (max-width: 999px) {
+  .marq > .marq-hud { order: 0; }
+  .marq > .menu-head { order: 1; }
+  .marq > .menu-main { order: 2; }
+  .marq > .menu-player { order: 3; }
+  .marq > .menu-side { order: 4; }
+  .mode-carousel { --posterH: clamp(170px, calc(100vh - 380px), 440px); }
+  .mode-carousel { --posterH: clamp(170px, calc(100svh - 380px), 440px); }
+  .marq .mode-note { white-space: normal; font-size: var(--fs-s); letter-spacing: 0; line-height: 1.5; }
+  .marq .menu-main { gap: 6px; }
+  .marq .menu-main > .section-title { margin: 0; }
+  .marq .menu-player { margin-top: 14px; }
+}
+@media (max-width: 600px) {
+  /* el póster aquí es pequeño y su frase no sale: va debajo, en un renglón */
+  .marq .mode-desc {
+    display: block;
+    font-size: var(--fs-s);
+    letter-spacing: 0;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .marq { gap: 8px; }
+  .marq .menu-head .title { font-size: min(clamp(30px, 7vh, 64px), 11vw); }
+  .marq .menu-head .subtitle { margin-top: 2px; }
+}
+/* el póster tocado una vez (táctil): marcado, y JUGAR llamando */
+.mode-frame .mode-card.poster.armada .poster-in {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--mc), 0 0 40px color-mix(in srgb, var(--mc) 55%, transparent);
+}
+.btn-play.llama { animation: jugar-llama 0.5s steps(2) 6; }
+@keyframes jugar-llama { 50% { color: #000; background: #ffff00; } }
+@media (prefers-reduced-motion: reduce) { .btn-play.llama { animation: none; } }
+
+/* ---- PAUSA: qué hace cada botón, en un renglón dentro de él ---- */
+.btn-nota {
+  display: block;
+  margin-top: 6px;
+  font-size: var(--fs-s);
+  letter-spacing: 0;
+  line-height: 1.5;
+  color: #d8d8e8;
+  opacity: 0.85;
+  white-space: normal;
+}
+#prompt.arcade .prompt-btns .btn:not(.btn-primary) .btn-nota { color: var(--btn2); }
+/* en el móvil, los de la pausa en columna y del mismo ancho */
+@media (max-width: 600px) {
+  #prompt.pausa-menu .prompt-btns { flex-direction: column; align-items: center; }
+  #prompt.pausa-menu .prompt-btns .btn { width: min(100%, 330px); box-sizing: border-box; padding-left: 12px; padding-right: 12px; }
+}
+
+/* ---- EN PARTIDA, MÓVIL EN VERTICAL (body.mandos-v, lo pone
+ * UI.reservaMandos): cruceta, poderes y pausa van DEBAJO del laberinto, cada
+ * uno en su sitio, y el lienzo se encoge lo justo para que nada lo pise.
+ * Antes flotaban encima: la ▼ de la cruceta tapaba la Q de DESATADO y la
+ * pausa (32 × 27 px) y EMOTES se comían el HIGH SCORE. ---- */
+body.mandos-v {
+  /* con la página ampliable (index.html ya no lleva user-scalable=no), en
+   * partida un pellizco fuera del laberinto no debe ampliar la pantalla */
+  touch-action: none;
+  box-sizing: border-box;
+  padding-top: var(--mandosArriba, 0px);
+  padding-bottom: var(--mandosAbajo, 0px);
+}
+/* la barra de poderes, abajo del todo y centrada */
+body.mandos-v #habBar.fija {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  align-items: center;
+  max-width: calc(100vw - 12px);
+}
+/* la cruceta, encima de la barra */
+body.mandos-v .dpad { bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--mandosHab, 0px)); }
+/* pausa a la izquierda de la cruceta; EMOTES y CHAT a la derecha */
+body.mandos-v #gameBtns {
+  position: fixed;
+  top: auto;
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--mandosHab, 0px));
+  pointer-events: none;
+}
+body.mandos-v #gameBtns.on {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+body.mandos-v #gameBtns .game-btn { pointer-events: auto; }
+body.mandos-v #pauseBtn { grid-column: 1; grid-row: 1 / span 2; min-width: 48px; min-height: 48px; }
+body.mandos-v #emoteBtn { grid-column: 3; grid-row: 1; }
+body.mandos-v #chatBtn { grid-column: 3; grid-row: 2; }
+/* dos crucetas en las esquinas (dos en el mismo móvil): los botones, arriba */
+body.mandos-v.mandos-dual #gameBtns { top: max(6px, env(safe-area-inset-top)); bottom: auto; align-items: start; }
+/* la fila de emotes sale encima de los mandos, junto al pulgar */
+body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosAbajo, 0px) + 4px); }

@@ -296,27 +296,36 @@
    *   go     qué hace JUGAR: arrancar, o abrir lo que ese modo necesita
    *          elegir antes (qué laberinto, qué sala, si gastas el intento) */
   var MODOS = [
+    /* `corta`: la frase de un renglón que se lee bajo el póster en el móvil
+     * (allí el póster es pequeño y su frase no cabe) */
     { id: 'clasico', name: 'CLÁSICO', tag: '1 JUGADOR', color: '#ffff00',
       icon: 'pac',
-      desc: 'EL ARCADE DE 1980, TAL CUAL. ES EL QUE CUENTA PARA EL TOP MUNDIAL' },
+      desc: 'EL ARCADE DE 1980, TAL CUAL. ES EL QUE CUENTA PARA EL TOP MUNDIAL',
+      corta: 'EL ARCADE DE 1980, TAL CUAL' },
     { id: 'duo', name: 'DOS JUGADORES', tag: 'MISMO TECLADO', color: '#00ff00',
       icon: 'duo',
-      desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO' },
+      desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO',
+      corta: 'DOS A LA VEZ, MISMO LABERINTO' },
     { id: 'hab', name: 'DESATADO', tag: '1 O 2 JUGADORES', color: '#ff66cc',
       icon: 'dientes',
-      desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY' },
+      desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY',
+      corta: 'CUATRO PODERES CON RECARGA' },
     { id: 'clasif', name: 'CLASIFICATORIA', tag: 'RANGO DEL MES', color: '#ffd23f',
       icon: 'fruta',
-      desc: 'DESATADO CON TU RANGO EN JUEGO: SUBE DE CEREZA A LLAVE. SOLO, EN PAREJA O EN PARTY' },
+      desc: 'DESATADO CON TU RANGO EN JUEGO: SUBE DE CEREZA A LLAVE. SOLO, EN PAREJA O EN PARTY',
+      corta: 'DESATADO CON TU RANGO EN JUEGO' },
     { id: 'caza', name: 'CACERÍA', tag: 'DE 1 A 4 FANTASMAS', color: '#ffb8ff',
       icon: 'caza',
-      desc: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA QUE SE VUELVE PELIGROSO CADA POCO' },
+      desc: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA QUE SE VUELVE PELIGROSO CADA POCO',
+      corta: 'AQUÍ TÚ ERES EL FANTASMA' },
     { id: 'lab', name: 'LABERINTOS', tag: 'OTROS TRAZADOS', color: '#ffb852',
       icon: 'maze',
-      desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR' },
+      desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR',
+      corta: 'OTROS TRAZADOS DE LABERINTO' },
     { id: 'online', name: 'ONLINE', tag: 'HASTA 4', color: '#7ec8ff',
       icon: 'party',
-      desc: 'DE 2 A 4 JUGADORES CADA UNO EN SU CASA, CON CÓDIGO DE SALA' }
+      desc: 'DE 2 A 4 JUGADORES CADA UNO EN SU CASA, CON CÓDIGO DE SALA',
+      corta: 'DE 2 A 4, CADA UNO EN SU CASA' }
   ];
 
   function modoPorId(id) {
@@ -437,6 +446,10 @@
       var vista = this.leerVista();
       this.touchDevice = ('ontouchstart' in window) ||
         (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      /* para la hoja de estilos: zonas de toque y lo que solo va en el móvil */
+      if (this.touchDevice && document.documentElement && document.documentElement.classList) {
+        document.documentElement.classList.add('tactil');
+      }
       this.els.menu = document.getElementById('menu');
       this.els.options = document.getElementById('options');
       this.els.online = document.getElementById('online');
@@ -489,6 +502,17 @@
         self.encajarPanel();
       });
       this.vigilarEncaje();
+      /* Si la pestaña se esconde o la ventana pierde el foco (una llamada,
+       * cambiar de app, el aviso de batería), la partida LOCAL se pausa y sale
+       * su menú: antes seguía corriendo y volvías a un GAME OVER. En online
+       * no: pausar ahí es cosa de todos y se pide por red. */
+      var pausaSola = function () {
+        if (!window.PM_PRUEBAS) self.pausarAlSalir();
+      };
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') pausaSola();
+      });
+      window.addEventListener('blur', pausaSola);
       /* al volver a la ventana, la party pregunta si se perdió la salida */
       document.addEventListener('visibilitychange', function () {
         if (document.visibilityState !== 'visible') return;
@@ -569,12 +593,79 @@
           !this.habBar.classList.contains('lateral')) {
         alto -= this.habBar.offsetHeight + 6;
       }
+      /* móvil en vertical: los mandos van debajo y el lienzo no los pisa */
+      var mandos = this.reservaMandos();
+      if (mandos) alto = Math.min(alto, window.innerHeight - mandos);
       var s = Math.min(window.innerWidth * 0.96 / CFG.NATIVE_W,
                        alto / CFG.NATIVE_H);
-      if (s >= 1) s = Math.floor(s * 2) / 2;   // saltos de 0.5 (x2.5, x3, ...)
+      /* saltos de 0.5 (x2.5, x3, ...). Con los mandos debajo no: en un
+       * iPhone SE el x1.4 que cabe bajaba a x1 y el laberinto perdía un
+       * tercio; ahí se aprovecha lo que haya, en pasos finos. */
+      if (s >= 1) s = mandos ? Math.floor(s * 20) / 20 : Math.floor(s * 2) / 2;
       if (s <= 0) s = 0.5;                     // pantalla imposible: algo hay que pintar
       canvas.style.width = Math.floor(CFG.NATIVE_W * s) + 'px';
       canvas.style.height = Math.floor(CFG.NATIVE_H * s) + 'px';
+    },
+
+    /* MÓVIL EN VERTICAL, EN PARTIDA (28 sep). La cruceta, la barra de poderes
+     * y la pausa flotaban encima del laberinto: la ▼ tapaba la Q de DESATADO
+     * y la pausa se comía el HIGH SCORE. Ahora van debajo, cada una en su
+     * fila (css: body.mandos-v), y esto dice cuánto alto se les deja. Devuelve
+     * 0 si no toca (con teclado, en horizontal o sin mandos a la vista). */
+    reservaMandos: function () {
+      var b = document.body;
+      var on = !!(this.touchDevice && this.mandosVis && window.innerHeight > window.innerWidth);
+      if (b && b.classList) {
+        b.classList.toggle('mandos-v', on);
+        b.classList.toggle('mandos-dual', on && !!this.mandosDual);
+      }
+      if (!on || !b.style || !b.style.setProperty) return 0;
+      var hb = this.habBar;
+      var hab = (hb && hb.classList.contains('on') && hb.classList.contains('fija'))
+        ? hb.offsetHeight + 8 : 0;
+      // la cruceta: 3 × 48 px y dos huecos de 3, más su margen de abajo
+      var abajo = this.margenAbajo() + 150 + 8 + hab;
+      var arriba = this.mandosDual ? 60 : 0;
+      b.style.setProperty('--mandosHab', hab + 'px');
+      b.style.setProperty('--mandosAbajo', abajo + 'px');
+      b.style.setProperty('--mandosArriba', arriba + 'px');
+      return abajo + arriba + 6;
+    },
+
+    /* lo que la pantalla se reserva abajo (la barra del iPhone), en px */
+    margenAbajo: function () {
+      var p = this.sondaSegura;
+      if (!p) {
+        p = document.createElement('div');
+        p.style.cssText = 'position:fixed;left:0;bottom:0;width:0;visibility:hidden;' +
+          'height:max(10px, env(safe-area-inset-bottom));pointer-events:none';
+        document.body.appendChild(p);
+        this.sondaSegura = p;
+      }
+      return Math.max(10, p.offsetHeight || 0);
+    },
+
+    /* La ventana se esconde o pierde el foco: la partida LOCAL se pausa (y
+     * syncUI saca el menú de pausa). Online no, ni viendo una repetición.
+     * Devuelve true si ha pausado. */
+    pausarAlSalir: function () {
+      var g = window.PM.Game;
+      if (!g || g.netRole || g.replaying || g.paused || !g.canPause()) return false;
+      g.requestPause();
+      return !!g.paused;
+    },
+
+    /* ¿Va "DESLIZA O USA LA CRUCETA" bajo el ¡LISTO!? (Game.renderStateText)
+     * En táctil, y solo en la primera partida desde que se abrió el juego:
+     * quien llega nuevo no sabe que puede deslizar, y al que ya juega no hace
+     * falta repetírselo cada vez. Cada partida estrena su `marcador`. */
+    pistaMandos: function (g) {
+      if (!this.touchDevice || !g || g.replaying || (g.isSpec && g.isSpec())) return false;
+      if (g.marcador !== this.pistaMarca) {
+        this.pistaMarca = g.marcador;
+        this.pistaPartidas = (this.pistaPartidas || 0) + 1;
+      }
+      return this.pistaPartidas === 1;
     },
 
     /* ------------------------------------------------------
@@ -1365,6 +1456,13 @@
       titulo.className = 'daily-titulo';
       titulo.textContent = 'DAILY';
       b.appendChild(titulo);
+      b.setAttribute('aria-label', 'Daily: un reto nuevo cada día. Abrir la semana');
+
+      /* qué es, en un renglón: "DAILY" solo no lo decía (28 sep) */
+      var que = document.createElement('span');
+      que.className = 'daily-que';
+      que.textContent = 'UN RETO NUEVO CADA DÍA';
+      b.appendChild(que);
 
       /* Al señalarlo, en vez de un recuadro, una línea que recorre su borde */
       this.ponRonda(b, 'daily-ronda');
@@ -2356,9 +2454,18 @@
         b.addEventListener('mouseleave', function () { dentro.style.transform = ''; estado.dir = null; });
 
         /* Pulsar la tarjeta arranca: la que se ve ES la elegida, así que aquí
-         * ya no hay nada que elegir. */
+         * ya no hay nada que elegir. En táctil, no al primer toque (28 sep):
+         * el dedo que iba a deslizar el carrusel o a bajar por la portada
+         * arrancaba una partida sin querer. El primero la marca y señala
+         * JUGAR; el segundo, o JUGAR, arranca. */
         b.addEventListener('click', function () {
           self.resumeAudio();
+          if (self.touchDevice && self.modeArmado !== mo.id) {
+            self.modeArmado = mo.id;
+            b.classList.add('armada');
+            if (self.playBtn) self.playBtn.classList.add('llama');
+            return;
+          }
           self.playPick();
         });
         caja.appendChild(b);
@@ -2612,6 +2719,7 @@
 
     pickMode: function (id) {
       this.modePick = modoPorId(id).id;
+      this.desarmarModo();
       /* Se guarda al elegir, no al jugar: elegir ya es la decisión, y quien
        * abre el juego, se asoma a un modo y se va, la próxima vez lo encuentra
        * donde lo dejó. */
@@ -2620,6 +2728,16 @@
         saveSettings();
       }
       this.refreshModePicker();
+    },
+
+    /* El póster vuelve a necesitar su primer toque (táctil): al cambiar de
+     * modo y al volver a la portada */
+    desarmarModo: function () {
+      this.modeArmado = null;
+      for (var k in (this.modeCards || {})) {
+        if (this.modeCards.hasOwnProperty(k)) this.modeCards[k].b.classList.remove('armada');
+      }
+      if (this.playBtn) this.playBtn.classList.remove('llama');
     },
 
     /* Pinta el estado del selector: cuál está elegido, su descripción y el
@@ -2674,7 +2792,9 @@
       });
       this.animarCambioModo(id);
       if (this.modeDesc) {
-        this.modeDesc.textContent = mo.desc;
+        /* en la portada solo se ve en el móvil, donde el póster es pequeño y
+         * no lleva su frase: ahí va la versión de un renglón */
+        this.modeDesc.textContent = mo.corta || mo.desc;
         this.modeDesc.style.color = mo.color;
       }
       if (this.modeNote) {
@@ -2728,12 +2848,61 @@
       return 'TU RÉCORD Y TUS TROFEOS DE SIEMPRE';
     },
 
+    /* EL PRIMER JUGAR (28 sep). Quien abre el juego por primera vez juega
+     * como "J1" sin saber que ese hueco era su nombre. Se pregunta UNA vez,
+     * y se puede saltar. Con cuenta o con nombre puesto, nunca. Devuelve true
+     * si ha abierto la pregunta (y JUGAR sigue solo al contestarla). */
+    NOMBRE_PEDIDO_KEY: 'pacman-topmundial-nombre-pedido',
+    pideNombre: function () {
+      var s = window.PM.settings, Ac = window.PM.Account;
+      if (window.PM_PRUEBAS || s.nick1 || (Ac && Ac.logged && Ac.logged())) return false;
+      try {
+        if (localStorage.getItem(this.NOMBRE_PEDIDO_KEY)) return false;
+        localStorage.setItem(this.NOMBRE_PEDIDO_KEY, '1');
+      } catch (e) { return false; }
+      var self = this;
+      function sigue(nombre) {
+        var v = sanitizeNick(nombre || '');
+        if (v) {
+          s.nick1 = v;
+          saveSettings();
+          self.refreshNicks();
+        }
+        self.hidePrompt();
+        self.playPick();
+      }
+      this.showPrompt({
+        title: '¿CÓMO TE LLAMAS?',
+        popup: true,
+        lines: ['ES EL NOMBRE QUE SALE EN TUS PARTIDAS. LO CAMBIAS CUANDO QUIERAS EN LA PORTADA.'],
+        input: { placeholder: 'TU NOMBRE', onAccept: function (v) { sigue(v); } },
+        buttons: [
+          { label: 'JUGAR', primary: true,
+            onClick: function () { sigue(self.promptInput ? self.promptInput.value : ''); } },
+          { label: 'JUGAR COMO J1', hint: 'ESC', keys: ['Escape'], onClick: function () { sigue(''); } }
+        ]
+      });
+      var inp = this.promptInput;
+      if (inp) {
+        inp.setAttribute('aria-label', 'Tu nombre');
+        inp.setAttribute('autocapitalize', 'characters');
+        inp.addEventListener('input', function () {
+          var v = filterNick(inp.value);
+          if (v !== inp.value) inp.value = v;
+        });
+        // en el móvil no: el teclado saldría tapando media pregunta
+        if (!this.touchDevice) { try { inp.focus(); } catch (e) { } }
+      }
+      return true;
+    },
+
     /* JUGAR. Tres modos arrancan de una; los otros dos necesitan que elijas
      * algo antes (qué laberinto o qué sala), así que JUGAR abre eso. */
     playPick: function () {
       var s = window.PM.settings;
       var id = this.modePick || 'clasico';
       this.resumeAudio();
+      if (this.pideNombre()) return;     // el primer JUGAR, una sola vez
       if (id === 'lab') { this.showMazes(); return; }
       if (id === 'online') { this.showOnline(); return; }
       /* DESATADO abre su panel, como LABERINTOS y ONLINE: desde que se puede
@@ -3305,6 +3474,9 @@
         row.appendChild(caja);
         this.nickLook = look;
         this.nickLookInput = input;
+        /* sin nombre puesto, la etiqueta se ve (refreshNicks): un "J1" suelto
+         * no decía que ahí se escribe tu nombre */
+        this.nickRowMenu = row;
         /* el campo mide lo que el nombre: así aspecto y nombre van juntos y
          * centrados, sea el nombre corto o largo */
         input.addEventListener('input', function () { self.ajustarNickPortada(); });
@@ -3398,6 +3570,7 @@
       var Ac = window.PM.Account;
       var fijo = !!(Ac && Ac.logged());
       if (fijo && Ac.name()) s.nick1 = Ac.name();
+      if (this.nickRowMenu) this.nickRowMenu.classList.toggle('sin-nombre', !fijo && !s.nick1);
       for (var k in this.nickInputs) {
         if (!this.nickInputs.hasOwnProperty(k)) continue;
         var list = this.nickInputs[k];
@@ -3720,7 +3893,7 @@
       this.vestTeclasWrap.className = 'vest-teclas-wrap';
       var tt = document.createElement('div');
       tt.className = 'vest-mini-titulo';
-      tt.textContent = 'TUS EMOTES · TECLAS 1 A 6';
+      tt.textContent = this.touchDevice ? 'TUS EMOTES' : 'TUS EMOTES · TECLAS 1 A 6';
       this.vestTeclasWrap.appendChild(tt);
       /* EL DIAL (17 sep 2026): las seis teclas en círculo, en un dial que gira
        * como una rueda de selección. El dial gira para dejar arriba la tecla elegida
@@ -5790,7 +5963,7 @@
 
       var pieIdle = el('div', 'prompt-btns ol-pie');
       var back = this.makeButton('VOLVER', function () { self.showMenu(); });
-      back.appendChild(el('span', 'btn-key', 'ESC'));
+      if (!this.touchDevice) back.appendChild(el('span', 'btn-key', 'ESC'));
       this.ponRonda(back, 'btn-ronda');
       pieIdle.appendChild(back);
       idle.appendChild(pieIdle);
@@ -11618,15 +11791,35 @@
       var row = document.createElement('div');
       row.className = 'prompt-btns';
       this.promptKeys = [];
+      /* o.guarda: milisegundos en que el diálogo recién salido no acepta
+       * pulsaciones (el toque que venía para la partida no paga nada) */
+      this.promptGuardaHasta = o.guarda ? Date.now() + o.guarda : 0;
       (o.buttons || []).forEach(function (b) {
-        var el = self.makeButton(b.label, b.onClick);
+        var alPulsar = b.onClick;
+        if (o.guarda && alPulsar) {
+          alPulsar = function () {
+            if (Date.now() < self.promptGuardaHasta) return;
+            return b.onClick.apply(this, arguments);
+          };
+        }
+        var el = self.makeButton(b.label, alPulsar);
         if (b.primary) el.classList.add('btn-primary');
         if (b.cls) el.classList.add(b.cls);      // 'btn-peligro': rendirse, borrar...
-        if (b.hint) {
+        /* en táctil no hay teclado: la pista se queda solo con lo que no es
+         * una tecla (el precio de CONTINUAR, la cuenta atrás...) */
+        var pista = self.touchDevice ? self.pistaSinTeclas(b.hint) : b.hint;
+        if (pista) {
           var k = document.createElement('span');
           k.className = 'btn-key';
-          k.textContent = b.hint;
+          k.textContent = pista;
           el.appendChild(k);
+        }
+        /* b.nota: qué hace el botón, en un renglón debajo (PAUSA) */
+        if (b.nota) {
+          var nt = document.createElement('span');
+          nt.className = 'btn-nota';
+          nt.textContent = b.nota;
+          el.appendChild(nt);
         }
         self.ponRonda(el, 'btn-ronda');
         if (b.keys) self.promptKeys.push({ keys: b.keys, el: el });
@@ -11767,9 +11960,21 @@
       return this.navMove(host, (k === 'ArrowDown' || k === 'ArrowRight') ? 1 : -1);
     },
 
+    /* Lo que queda de una pista de botón quitándole las teclas: 'P · ESC' se
+     * queda en nada y '1.000 · C' en '1.000'. En táctil no hay teclado y la
+     * tecla solo ocupaba sitio. */
+    pistaSinTeclas: function (hint) {
+      if (!hint) return '';
+      var tecla = /^(ESC|ENTER|INTRO|ESPACIO|TAB|SUPR|F\d{1,2}|[A-Z0-9<>?]|FLECHAS)$/;
+      return String(hint).split(' · ').filter(function (t) {
+        return !tecla.test(String(t).trim().toUpperCase());
+      }).join(' · ');
+    },
+
     /* Atajos del diálogo abierto. Devuelve true si la tecla era suya. */
     handlePromptKey: function (ev) {
       if (!this.promptKeys) return false;
+      if (this.promptGuardaHasta && Date.now() < this.promptGuardaHasta) return true;
       var key = (ev.key && ev.key.length === 1) ? ev.key.toLowerCase() : ev.key;
       for (var i = 0; i < this.promptKeys.length; i++) {
         var pk = this.promptKeys[i];
@@ -11922,6 +12127,7 @@
          * se puede volver a jugar. En dos jugadores u online sigue siendo una
          * votación, igual que antes. */
         { label: 'RENDIRSE', hint: 'R', keys: ['r'], cls: 'btn-peligro',
+          nota: (g.netRole || g.playerCount === 2) ? 'LO VOTAN LOS DEMÁS' : 'ACABA YA CON GAME OVER',
           onClick: function () {
             self.resumeAudio();
             g.requestVote('surrender');   // el diálogo de la votación releva a este
@@ -11929,6 +12135,7 @@
       ];
       if (sePuede) {
         botones.push({ label: 'GUARDAR', hint: 'G', keys: ['g'],
+          nota: 'LA SIGUES LUEGO',
           onClick: function () {
             if (!Gd.guardarYSalir()) {
               /* no se pudo: se dice por qué y se sigue en pausa (darla por
@@ -11950,6 +12157,7 @@
           } });
       }
       botones.push({ label: 'SALIR', hint: 'Q', keys: ['q'],
+        nota: 'AL MENÚ, CON LO JUGADO',
         onClick: function () { g.toMenu(); } });
       /* cómo va la partida, lo primero */
       lines.unshift({ text: 'PUNTOS ' + fmtMonedas(g.score || 0) + ' · NIVEL ' + g.level +
@@ -11958,6 +12166,7 @@
         title: 'PAUSA',
         arcade: true,
         tono: 'amarillo',
+        clase: 'pausa-menu',
         lines: lines,
         status: g.flash ? g.flash.text : '',
         buttons: botones
@@ -12737,10 +12946,19 @@
       var mil = function (n) {
         return String(Math.max(0, Math.round(n || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       };
+      /* PAGAR EN DOS PASOS (28 sep). CONTINUAR tenía el foco y respondía a
+       * Enter: quien venía machacando teclas o tocando la pantalla se gastaba
+       * 1.000 monedas sin enterarse. Ahora el primer toque pregunta y el
+       * segundo paga; el foco va a JUGAR OTRA VEZ, y el panel recién salido no
+       * acepta nada durante medio segundo. Si se rehace sin salir del
+       * CONTINUE? (llega algo por red), lo ya preguntado se conserva. */
+      var nuevo = this.promptEstado !== 'CONTINUE';
+      if (nuevo) this.contArmado = false;
       this.showPrompt({
         title: 'CONTINUE?',
         arcade: true,
         solid: true,
+        guarda: nuevo ? 500 : 0,
         status: g.flash ? g.flash.text : '',
         statusError: !!g.flash,
         custom: function (p) {
@@ -12788,8 +13006,15 @@
           }
         },
         buttons: [
-          { label: 'CONTINUAR', primary: true, hint: fmtMonedas(C.PRECIO) + ' · C', keys: ['c', 'Enter'],
-            onClick: function () { self.resumeAudio(); g.pedirContinuar(); } },
+          { label: this.contArmado ? '¿GASTAR ' + fmtMonedas(C.PRECIO) + '?' : 'CONTINUAR',
+            primary: true,
+            hint: this.contArmado ? 'SÍ, CONTINUAR · C' : (fmtMonedas(C.PRECIO) + ' · C'),
+            keys: ['c'],
+            onClick: function () {
+              self.resumeAudio();
+              if (!self.contArmado) { self.armarContinuar(this); return; }
+              g.pedirContinuar();
+            } },
           /* Se puede empezar otra sin esperar. En party no: los demás pueden
            * estar pagando, y la revancha se pide en el GAME OVER. */
           { label: 'JUGAR OTRA VEZ',
@@ -12811,10 +13036,31 @@
           btns[1].disabled = true;
           btns[1].classList.add('cont-bloqueado');
         }
-        if (btns[0].disabled && btns[2]) { try { btns[2].focus(); } catch (e) { } }
+        /* el foco, en lo que no cuesta: JUGAR OTRA VEZ. En party está
+         * bloqueado, y ahí no se deja en ninguno (en MENÚ, un Enter de más
+         * te sacaba de la partida de todos); nunca en pagar. */
+        try {
+          if (!btns[1].disabled) btns[1].focus();
+          else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        } catch (e) { }
       }
       this.promptEstado = 'CONTINUE';  // se cierra solo al salir del CONTINUE?
       this.tickContinue();
+    },
+
+    /* Primer toque en CONTINUAR: el botón pregunta "¿GASTAR 1.000?" y hasta
+     * el segundo no se paga. Se cambia en el sitio, sin rehacer el panel. */
+    armarContinuar: function (btn) {
+      this.contArmado = true;
+      btn = btn || this.contBtnPagar;
+      if (!btn) return;
+      var P = CFG.CONTINUAR.PRECIO;
+      var k = btn.querySelector && btn.querySelector('.btn-key');
+      var txt = btn.childNodes && btn.childNodes[0];
+      if (txt && txt.nodeType === 3) txt.nodeValue = '¿GASTAR ' + fmtMonedas(P) + '?';
+      var pista = 'SÍ, CONTINUAR · C';
+      if (k) k.textContent = this.touchDevice ? this.pistaSinTeclas(pista) : pista;
+      btn.classList.add('cont-armado');
     },
 
     /* ------------------------------------------------------
@@ -13598,9 +13844,10 @@
         !g.replaying && !this.promptOpen && !g.netNotice;
       if (this.gameBtns) this.gameBtns.classList.toggle('on', playable);
       /* los emotes solo se ofrecen en táctil: con teclado van con 1..6 y el
-       * botón solo tapaba el laberinto */
+       * botón solo tapaba el laberinto. Y solo si hay a quién mandárselos:
+       * a solas era un botón que no servía para nada. */
       if (this.emoteBtn) {
-        this.emoteBtn.style.display = (playable && this.touchDevice) ? '' : 'none';
+        this.emoteBtn.style.display = (playable && this.touchDevice && g.playerCount > 1) ? '' : 'none';
       }
       if (this.chatBtn) {
         this.chatBtn.style.display = (playable && g.netRole) ? '' : 'none';
@@ -13626,6 +13873,17 @@
       this.dpad1.style.display = show ? 'grid' : 'none';
       this.dpad1.classList.toggle('dual', dual);
       this.dpad2.style.display = dual ? 'grid' : 'none';
+      /* Con mandos en pantalla cambia el sitio del lienzo. Se mira la
+       * partida, no si se ven ahora: una pausa o un diálogo los esconden un
+       * momento y el laberinto no tiene por qué dar un salto por detrás. */
+      var hay = !!(this.touchDevice && g.inGame() && g.state !== 'GAME_OVER' &&
+        !g.isSpec() && !g.replaying);
+      var hayDual = hay && g.playerCount === 2 && !g.netRole;
+      if (hay !== !!this.mandosVis || hayDual !== !!this.mandosDual) {
+        this.mandosVis = hay;
+        this.mandosDual = hayDual;
+        this.fitCanvas();
+      }
     },
 
     /* ------------------------------------------------------
@@ -13887,6 +14145,7 @@
       this.refreshVestBtn();     // VESTUARIO · N NUEVOS
       this.refreshPaseBtn();     // PASE · G12
       this.refreshMarquesina();  // marcador, monedas y cinta
+      this.desarmarModo();       // el póster vuelve a pedir su primer toque
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       if (window.PM.Conectados) window.PM.Conectados.arrancar();

@@ -2472,6 +2472,20 @@
     }
   });
 
+  test('el botón de EMOTES solo sale con alguien más en la partida', function () {
+    var UI = window.PM.UI, antes = UI.touchDevice;
+    UI.touchDevice = true;
+    try {
+      partida(1);
+      UI.refreshControls();
+      eq(UI.emoteBtn.style.display, 'none', 'a solas no hay a quién mandárselos');
+      G.toMenu();
+      partida(2);
+      UI.refreshControls();
+      eq(UI.emoteBtn.style.display, '', 'con dos, sí');
+    } finally { G.toMenu(); UI.touchDevice = antes; UI.refreshControls(); }
+  });
+
   // ---------------------------------------------------------------
   // Pausa y votaciones
   // ---------------------------------------------------------------
@@ -2483,6 +2497,46 @@
     G.requestPause();
     ok(!G.paused);
     ok(!window.PM.UI.promptOpen);
+  });
+
+  test('al esconder la ventana la partida local se pausa, y la online no', function () {
+    var UI = window.PM.UI;
+    partida(1);
+    try {
+      ok(UI.pausarAlSalir(), 'se pausa sola');
+      ok(G.paused && UI.promptOpen, 'con su menú de pausa delante');
+      ok(!UI.pausarAlSalir(), 'ya pausada no la despausa');
+      ok(G.paused, 'sigue en pausa');
+    } finally { G.toMenu(); UI.hidePrompt(); }
+    partida(2, 'host');
+    try {
+      ok(!UI.pausarAlSalir(), 'online no: pausar ahí es cosa de todos');
+      ok(!G.paused, 'la partida sigue');
+    } finally { G.toMenu(); UI.hidePrompt(); }
+  });
+
+  test('en la pausa, RENDIRSE y SALIR dicen qué hacen', function () {
+    var UI = window.PM.UI;
+    partida(1);
+    try {
+      G.requestPause();
+      var notas = UI.els.prompt.querySelectorAll('.btn-nota');
+      ok(notas.length >= 2, 'un renglón bajo cada uno: ' + notas.length);
+      var txt = [];
+      for (var i = 0; i < notas.length; i++) txt.push(notas[i].textContent);
+      ok(txt.some(function (t) { return /GAME OVER/.test(t); }), 'RENDIRSE acaba con su GAME OVER');
+      ok(txt.some(function (t) { return /MEN[UÚ]/.test(t); }), 'SALIR lleva al menú');
+    } finally { G.toMenu(); UI.hidePrompt(); }
+  });
+
+  test('en táctil los botones no enseñan teclas, pero sí el precio', function () {
+    var UI = window.PM.UI;
+    eq(UI.pistaSinTeclas('P · ESC'), '', 'teclas y nada más');
+    eq(UI.pistaSinTeclas('ENTER'), '');
+    eq(UI.pistaSinTeclas('1.000 · C'), '1.000', 'el precio de CONTINUAR se queda');
+    eq(UI.pistaSinTeclas('OTRA PARTIDA · R'), 'OTRA PARTIDA');
+    eq(UI.pistaSinTeclas('EN 5'), 'EN 5', 'la cuenta atrás no es una tecla');
+    eq(UI.pistaSinTeclas(''), '');
   });
 
   test('reiniciar en local no necesita votación', function () {
@@ -9187,6 +9241,32 @@
         eq(G.score, 0, 'partida nueva');
         ok(Tn.saldo() >= 1500, 'sin pagar el continuar (y con lo ganado en la partida): ' + Tn.saldo());
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+  });
+
+  test('CONTINUAR no se paga sin querer: ni con Enter, ni al primer toque, ni nada más salir', function () {
+    var UI = window.PM.UI;
+    conTienda(function (Tn) {
+      partida(1);
+      try {
+        sinVidas();
+        eq(G.state, 'CONTINUE');
+        ok(UI.promptOpen && UI.contBtnPagar, 'sale el panel');
+        ok(UI.promptGuardaHasta > Date.now(), 'recién salido no acepta toques');
+        UI.contBtnPagar.click();
+        eq(Tn.saldo(), 1500, 'el toque que venía de la partida no paga');
+        UI.promptGuardaHasta = 0;              // pasado el medio segundo
+        eq(document.activeElement, UI.contBtnOtra, 'el foco, en JUGAR OTRA VEZ');
+        UI.handlePromptKey({ key: 'Enter' });
+        eq(Tn.saldo(), 1500, 'Enter ya no es CONTINUAR');
+        UI.contBtnPagar.click();
+        eq(Tn.saldo(), 1500, 'el primer toque solo pregunta');
+        ok(/GASTAR/.test(UI.contBtnPagar.textContent), 'el botón dice ¿GASTAR 1.000?');
+        eq(G.state, 'CONTINUE', 'y se sigue esperando');
+        UI.contBtnPagar.click();
+        eq(Tn.saldo(), 500, 'el segundo paga');
+        eq(G.state, 'READY', 'y se sigue jugando');
+      } finally { G.toMenu(); UI.hidePrompt(); }
     });
   });
 

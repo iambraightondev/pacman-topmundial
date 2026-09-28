@@ -5979,6 +5979,16 @@
           ctx.fillText('RONDA ' + (window.PM.Caza.ronda(this) + 1) + ' DE ' +
             CFG.CAZA.NIVELES, 112, 20 * T + T / 2 + CFG.MAZE_Y);
         }
+        // en el móvil, la primera partida: cómo se mueve (UI.pistaMandos)
+        var U = window.PM.UI;
+        if (!this.superv && !this.caza && U && U.pistaMandos && U.pistaMandos(this)) {
+          var pista = 'DESLIZA O USA LA CRUCETA', py = 20 * T + T / 2 + CFG.MAZE_Y;
+          var pw = ctx.measureText(pista).width + 6;
+          ctx.fillStyle = '#000';          // sobre las pastillas no se leía
+          ctx.fillRect(112 - pw / 2, py - 6, pw, 12);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(pista, 112, py);
+        }
       } else if (this.state === 'GAME_OVER' && this.replaying) {
         // viendo una repetición sí: ahí no sale la pantalla de recreativa
         ctx.font = window.PM.Letra.lienzo(8);
