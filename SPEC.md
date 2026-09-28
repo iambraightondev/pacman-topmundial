@@ -2410,17 +2410,66 @@ you meet **while playing whatever you were going to play anyway**.
 - `modo` on a challenge is one of the tags `Game.achTags()` produces — a mode
   (`clasico`, `lab`, `hab`, `vs`) or a format (`solo`, `party`) — and the
   challenge only advances when that tag is present.
-- **Rewards: XP and a streak.** Each clear adds `CFG.DAILY.XP`, and
-  `Daily.premiar` bumps the streak — days in a row clearing your challenge. It
-  only moves once per local day (`est.ult`; there is one challenge a day now,
-  but the guard is what makes it idempotent), and it **survives the week
-  rolling over** — breaking someone's streak at midnight on Sunday because the
-  calendar turned a page would be punishing the calendar, not the player.
+- **Two tiers a day: BÁSICO and DURO** (29 Sep, proposal 1 approved by
+  Braighton). With a single challenge only 3 of 8 active players kept a
+  streak: the single-run ones ("20 000 points in one run") broke it for
+  people who had scored 47-49 thousand over the day. Now:
+  - **BÁSICO** is the same every day: sum `CFG.DAILY.BASICO_PUNTOS` (20 000)
+    across **all the day's runs, any mode**. It is fed by the `puntosMax` that
+    `Game.closeRun` sends once per run with that run's score (nothing else
+    sends `puntosMax`). It pays `BASICO_MONEDAS` (60) + `BASICO_XP` (1 000)
+    and **it is what carries the streak** and its `RACHA_PREMIOS` steps.
+  - **DURO** is the week's shuffled challenge, unchanged. It pays what it
+    always did (`CFG.TIENDA.POR_RETO` + `CFG.DAILY.XP`) **on top of** the
+    básico, and the full week (`POR_SEMANA`, `dailySemana`, the PLATA chest in
+    `js/cofres.js` and the `cofres` function) still needs the **seven duros**.
+  - **Clearing the duro also clears the básico** if it was not yet: nobody who
+    did the hard one loses the streak for being short on points (as before),
+    and it keeps `dailyBasicos >= dailyOk` true forever.
+  - `Daily.apunta` returns the básico first when both land in the same
+    event; the básico's notice is titled `BÁSICO CUMPLIDO` (`reto.titulo`,
+    read by `Game.bumpAch`).
+- **Rewards and the streak.** `Daily.premiarBasico` bumps the streak — days
+  in a row with the básico — once per local day (`est.ult` is the guard that
+  makes it idempotent), pays its coins and XP, the streak steps and
+  `dailyBasicos`. `Daily.premiar` is the duro: `dailyOk`, its coins and XP,
+  and the week. The streak **survives the week rolling over** — breaking
+  someone's streak at midnight on Sunday because the calendar turned a page
+  would be punishing the calendar, not the player.
+- **The streak is settled on read** (`Daily.asentar`, called by `normalizar`).
+  Until the two tiers a broken streak kept showing whole until the next clear;
+  now it is worked out every time the card is read, from the card and the date
+  only (so two devices agree, and nothing needs writing): if the last day that
+  counts (`ult`) is today or yesterday, it is alive; otherwise the first missed
+  day may be saved by the COMODÍN; otherwise `racha` and `hito` go to 0 (the
+  best streak stays).
+- **COMODÍN**: one every `CFG.DAILY.COMODIN_CADA` (7) days of streak, **at
+  most one held**. The first day that ends without a básico spends it on its
+  own: that day pays nothing and does not count towards the streak, but the
+  streak does not break (`ult` moves to that day). It saves one day only —
+  two missed days break the streak and the comodín is spent on the first —
+  and it never reopens a past challenge. It is stored as **dates, not a
+  count**: `cg` the day the last one was earned, `cu` the day the last one
+  saved; one is held when `cg > cu`. With a 0/1 flag two devices could not
+  tell which side was right; with dates each keeps the latest, so one spent on
+  one device stays spent on the other.
 - Local state is one localStorage row (`CFG.DAILY.KEY`): `{w: week, p: [7]
-  progress, h: [7] cleared, racha, mejor, ult, sem, rv}`. Reading it when the
-  week has changed resets `p`/`h` and keeps the streak. `sem` marks the week as
-  already counted for SEMANA REDONDA, so re-entering after the seventh clear
-  does not count it again.
+  duro progress, h: [7] duros cleared, q: [7] points summed each day, b: [7]
+  básicos cleared, racha, mejor, ult, sem, hito, cg, cu, rv}`. Reading it when
+  the week has changed resets `p`/`h`/`q`/`b` and keeps the streak and the
+  comodín. A card from before the two tiers has no `b`: every `h` counts as a
+  básico. `sem` marks the week as already counted for SEMANA REDONDA, so
+  re-entering after the seventh clear does not count it again.
+- **`dailyBasicos`** (achievements, `suma`) counts days with the básico
+  cleared and only grows with that; the first-steps missions read it by that
+  name. `Achievements.sembrarBasicos()` seeds it with `dailyOk` — every
+  challenge cleared before the two tiers was the day's only challenge, i.e. a
+  básico. It is a max, so it runs on every `syncSeen` and after `merge`
+  without a flag. Days when points were summed without clearing anything left
+  no trace and are not invented. The server needs nothing new for it: it is a
+  plain counter merged by max like the others, and no coins or chests are
+  derived from it server-side (if the first-steps chest ever reads it, that is
+  where `supabase/perfiles-blindaje.sql` would need a cap).
 - **`rv` is a wipe marker.** When it does not match `CFG.DAILY.RESET`, `leer()`
   returns a blank record — week, streak and best streak all gone — and the new
   marker rides along in `vacio()`, so the wipe applies exactly once and the
@@ -2444,7 +2493,15 @@ you meet **while playing whatever you were going to play anyway**.
   and if the date changes under it the card refreshes itself. Inside, below
   the squares, the **week's loot**: seven `POR_RETO` slots and the
   `POR_SEMANA` chest, so the 290 coins at stake are visible before they are
-  earned. Before this it was a grey line of text on the front page and seven
+  earned. Since the two tiers, a yellow **BÁSICO** strip sits between the
+  header and the cards (`UI.pintarBasicoDaily`): what it asks, a bar of the
+  day's points, its reward, the week's básicos (✓, a C for a day the comodín
+  saved, struck-out missed ones) and the comodín, held or how many streak days
+  away. The cards and the loot below are the DUROS ("BOTÍN DE LOS DUROS"). On
+  the front page a day with only the básico shows its tick in yellow. On
+  short desktop screens (≤ 820 px high) the cards tighten so the card still
+  fits at 1366×768, and `.daily-scroll` no longer shrinks (it clipped the
+  cards): the panel scrolls instead. Before this it was a grey line of text on the front page and seven
   identical rows in two columns inside — nothing showed what you earn or how
   long you have. The box may only grow ~25 px: at 1440×900 JUGAR already sits
   at the bottom edge. On narrow screens the seven cards scroll sideways and
@@ -2712,7 +2769,15 @@ Rules that are deliberate, not incidental:
   (`Daily.paraNube`), which keeps the whole payload around 1.1 kB of the
   column's 4 kB ceiling and needs no migration. The merge is **best of each
   side**, not last-write-wins (`Daily.desdeNube`): per-day progress and the
-  done flags take the max, so does `racha`, `mejor` and `hito`. A card from
+  done flags take the max, so does `racha`, `mejor` and `hito`. Since the two
+  tiers (29 Sep) also the day's points `q` (max, **not** summed: the card
+  travels whole and summing would count the same runs twice — runs played on
+  two devices without syncing in between keep the better side, never more),
+  the básico flags `b`, and the comodín dates `cg`/`cu` (latest of each).
+  Both sides are settled (`asentar`) before merging, so a stale broken
+  streak from the cloud cannot resurrect itself over a live one here. Merging
+  never pays anything: a básico or duro already cleared on the other side is
+  simply cleared here and `apunta` will not pay it again. A card from
   another week contributes its streak but no progress, exactly as `leer`
   already did locally. `limpiarLocal` now wipes it on sign-out, so the next
   person on that machine does not inherit the week.

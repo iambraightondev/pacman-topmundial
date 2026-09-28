@@ -1155,7 +1155,7 @@
         /* Lo del OTRO: el lunes cumplido, más racha y un escalón cobrado */
         var alla = D.vacio();
         alla.p[0] = 5; alla.h[0] = 1; alla.racha = 4; alla.mejor = 7;
-        alla.hito = 3; alla.ult = '2026-09-21';
+        alla.hito = 3; alla.ult = D.fechaDe(D.hoyISO(), -1);   // ayer: racha viva
         ok(D.desdeNube(alla), 'baja y se funde');
         var fin = D.leer();
         eq(fin.p[0], 5, 'lo cumplido allí llega');
@@ -1165,7 +1165,7 @@
         eq(fin.mejor, 7, 'y el récord de racha también');
         eq(fin.hito, 3,
           'el escalón ya cobrado viaja: si no, se pagaría dos veces');
-        eq(fin.ult, '2026-09-21', 'y el último día cumplido es el más reciente');
+        eq(fin.ult, D.fechaDe(D.hoyISO(), -1), 'y el último día cumplido es el más reciente');
       });
     });
 
@@ -1298,8 +1298,10 @@
            'a medias no cumple');
         eq(D.progreso(i).valor, 3, 'pero el progreso se guarda');
         var hechos = D.apunta(['solo', 'clasico'], { fantasmas: 2 });
-        eq(hechos.length, 1, 'al llegar a la meta, cumplido');
-        eq(hechos[0].id, 'x_test');
+        /* el duro trae el básico consigo (que aún no estaba): los dos avisos */
+        eq(hechos.length, 2, 'al llegar a la meta, cumplido (y el básico con él)');
+        ok(hechos[0].basico, 'primero el básico');
+        eq(hechos[1].id, 'x_test');
         ok(D.progreso(i).hecho);
         eq(D.apunta(['solo', 'clasico'], { fantasmas: 9 }).length, 0,
            'y ya no vuelve a cumplirse');
@@ -1340,7 +1342,8 @@
       };
       try {
         D.apunta(['solo', 'clasico'], { partidas: 1 });
-        eq(L.xp(), xp0 + CFG.DAILY.XP, 'la experiencia entra');
+        eq(L.xp(), xp0 + CFG.DAILY.XP + CFG.DAILY.BASICO_XP,
+           'la experiencia entra (la del duro y la del básico que trae)');
         eq(D.racha(), 1, 'y el día cuenta para la racha');
         ok(D.mejorRacha() >= 1, 'que se apunta también como la mejor');
       } finally {
@@ -1361,7 +1364,7 @@
         return l;
       };
       try {
-        eq(D.apunta(['solo', 'clasico'], { partidas: 1 }).length, 1);
+        eq(D.apunta(['solo', 'clasico'], { partidas: 1 }).length, 2, 'duro y básico');
         eq(D.racha(), 1);
         D.apunta(['solo', 'clasico'], { partidas: 5 });
         eq(D.racha(), 1, 'seguir jugando el mismo día no la sube otra vez');
@@ -1373,7 +1376,8 @@
     conDaily(function (D) {
       var est = D.vacio('1999-01-04');       // una semana que ya pasó
       est.p[0] = 5; est.h[0] = 1;
-      est.racha = 9; est.mejor = 12; est.ult = '1999-01-04';
+      // el último día cumplido fue ayer: la racha sigue viva
+      est.racha = 9; est.mejor = 12; est.ult = D.fechaDe(D.hoyISO(), -1);
       D.guardar(est);
       var ahora = D.leer();
       eq(ahora.w, D.semanaId(), 'la semana se pone al día sola');
@@ -1418,6 +1422,307 @@
         } finally { D.retos = retos0; }
       });
     });
+
+  /* ---------- DOS NIVELES Y COMODÍN (29 sep) ----------
+   * El BÁSICO (sumar 20.000 puntos en el día, en cualquier modo) lleva la
+   * racha; el DURO es el reto de la baraja y paga además; la semana completa
+   * sigue pidiendo los siete duros; el comodín salva un día sin básico. */
+
+  /* Aísla todo lo que toca un reto cumplido: la cartilla, la tienda (con
+   * los logros) y la experiencia. `duro` es el reto de hoy que se pone a
+   * mano, para no depender de cuál toque en la semana de las pruebas. */
+  function conDosNiveles(duro, fn) {
+    var L = window.PM.Level;
+    var xp0 = L.xp();
+    conTienda(function (Tn, A) {
+      conDaily(function (D) {
+        var i = D.diaSemana();
+        var retos0 = D.retos;
+        D.retos = function () {
+          var l = retos0.call(D).slice();
+          l[i] = duro || { id: 'x_imposible', desc: 'CÓMETE 999 FANTASMAS',
+                           stat: 'fantasmas', goal: 999 };
+          return l;
+        };
+        try { fn(D, Tn, A, i); }
+        finally {
+          D.retos = retos0;
+          try { localStorage.setItem(CFG.LEVEL_KEY, String(xp0)); } catch (e) {}
+        }
+      });
+    });
+  }
+
+  function diaDe(D, n) { return D.fechaDe(D.hoyISO(), n); }
+
+  test('el BÁSICO suma los puntos de todas las partidas del día, de cualquier modo',
+    function () {
+      conDosNiveles(null, function (D, Tn, A, i) {
+        var L = window.PM.Level;
+        var xp0 = L.xp(), mon0 = Tn.ganadas();
+        eq(D.apunta(['solo', 'clasico'], { puntosMax: 8000 }).length, 0, 'a medias no');
+        eq(D.apunta(['party', 'hab'], { puntosMax: 7000 }).length, 0, 'otro modo suma igual');
+        eq(D.progresoBasico(i).valor, 15000, 'se van sumando');
+        ok(!D.progresoBasico(i).hecho);
+        var hechos = D.apunta(['solo', 'lab'], { puntosMax: 6000 });
+        eq(hechos.length, 1, 'con la tercera llega');
+        ok(hechos[0].basico, 'y es el básico');
+        eq(hechos[0].titulo, 'BÁSICO CUMPLIDO');
+        ok(D.progresoBasico(i).hecho);
+        eq(Tn.ganadas() - mon0, CFG.DAILY.BASICO_MONEDAS, 'paga sus monedas');
+        eq(L.xp() - xp0, CFG.DAILY.BASICO_XP, 'y su experiencia');
+        eq(A.stats().dailyBasicos, 1, 'cuenta como día de básico');
+        eq(A.stats().dailyOk || 0, 0, 'pero no como reto (duro) cumplido');
+        ok(!D.progreso(i).hecho, 'el duro sigue por hacer');
+        eq(D.apunta(['solo', 'clasico'], { puntosMax: 30000 }).length, 0,
+           'y no se cumple dos veces');
+        eq(D.progresoBasico(i).valor, 51000, 'aunque los puntos se siguen apuntando');
+        eq(Tn.ganadas() - mon0, CFG.DAILY.BASICO_MONEDAS, 'sin volver a pagar');
+        eq(D.apunta(['solo'], { fantasmas: 3 }).length, 0, 'lo que no son puntos no suma');
+        eq(D.progresoBasico(i).valor, 51000);
+      });
+    });
+
+  test('la racha la lleva el BÁSICO, y sus escalones también', function () {
+    conDosNiveles(null, function (D, Tn, A, i) {
+      var est = D.leer();
+      est.racha = 6; est.mejor = 6; est.hito = 3; est.ult = diaDe(D, -1);
+      D.guardar(est);
+      var mon0 = Tn.ganadas();
+      D.apunta(['solo', 'clasico'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+      eq(D.racha(), 7, 'el básico sube la racha');
+      eq(D.leer().hito, 7, 'y cobra el escalón de 7');
+      var e7 = CFG.DAILY.RACHA_PREMIOS.filter(function (h) { return h.dias === 7; })[0];
+      eq(Tn.ganadas() - mon0, CFG.DAILY.BASICO_MONEDAS + e7.monedas,
+         'el básico y el escalón, sin el duro');
+      eq(A.stats().dailyRacha, 7, 'el logro de racha lo ve');
+      ok(!D.progreso(i).hecho, 'sin haber cumplido el duro');
+    });
+  });
+
+  test('el DURO paga ADEMÁS del básico, y trae el básico si no estaba', function () {
+    var duro = { id: 'x_duro', desc: 'CÓMETE 5 FANTASMAS', stat: 'fantasmas', goal: 5 };
+    conDosNiveles(duro, function (D, Tn, A) {
+      var L = window.PM.Level;
+      // primero el básico
+      D.apunta(['solo', 'clasico'], { puntosMax: 25000 });
+      var mon0 = Tn.ganadas(), xp0 = L.xp();
+      var hechos = D.apunta(['solo', 'clasico'], { fantasmas: 5 });
+      eq(hechos.length, 1, 'solo el duro: el básico ya estaba');
+      eq(hechos[0].id, 'x_duro');
+      eq(Tn.ganadas() - mon0, CFG.TIENDA.POR_RETO, 'lo de siempre por el duro');
+      eq(L.xp() - xp0, CFG.DAILY.XP, 'y su experiencia');
+      eq(D.racha(), 1, 'la racha no sube dos veces el mismo día');
+      eq(A.stats().dailyOk, 1, 'reto cumplido');
+      eq(A.stats().dailyBasicos, 1, 'y un solo día de básico');
+    });
+    // y al revés: el duro sin el básico cumple los dos
+    conDosNiveles(duro, function (D, Tn, A, i) {
+      var mon0 = Tn.ganadas();
+      var hechos = D.apunta(['solo', 'clasico'], { fantasmas: 5 });
+      eq(hechos.length, 2, 'el duro trae el básico');
+      eq(Tn.ganadas() - mon0, CFG.TIENDA.POR_RETO + CFG.DAILY.BASICO_MONEDAS,
+         'y paga los dos');
+      eq(D.racha(), 1, 'con su día de racha');
+      ok(D.progresoBasico(i).hecho, 'el básico queda cumplido');
+      eq(A.stats().dailyBasicos, 1);
+    });
+  });
+
+  test('la semana completa sigue pidiendo los siete DUROS', function () {
+    var duro = { id: 'x_sem', desc: 'CÓMETE 1 FANTASMA', stat: 'fantasmas', goal: 1 };
+    conDosNiveles(duro, function (D, Tn, A, i) {
+      var est = D.leer(), k;
+      for (k = 0; k < CFG.DAILY.DIAS; k++) if (k !== i) est.b[k] = 1;
+      D.guardar(est);
+      D.apunta(['solo', 'clasico'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+      eq(D.basicos(), CFG.DAILY.DIAS, 'siete básicos');
+      eq(D.leer().sem, 0, 'no son la semana');
+      eq(A.stats().dailySemana || 0, 0, 'ni el cofre de PLATA');
+      est = D.leer();
+      for (k = 0; k < CFG.DAILY.DIAS; k++) if (k !== i) est.h[k] = 1;
+      D.guardar(est);
+      var mon0 = Tn.ganadas();
+      D.apunta(['solo', 'clasico'], { fantasmas: 1 });
+      eq(D.leer().sem, 1, 'con el séptimo duro, sí');
+      eq(A.stats().dailySemana, 1, 'y cuenta para el cofre');
+      eq(Tn.ganadas() - mon0, CFG.TIENDA.POR_RETO + CFG.TIENDA.POR_SEMANA);
+    });
+  });
+
+  test('el COMODÍN: uno cada siete días de racha, y como mucho uno', function () {
+    conDosNiveles(null, function (D) {
+      var est = D.leer();
+      est.racha = 6; est.mejor = 6; est.hito = 3; est.ult = diaDe(D, -1);
+      D.guardar(est);
+      ok(!D.tieneComodin(), 'con seis días, ninguno');
+      D.apunta(['solo'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+      ok(D.tieneComodin(), 'al séptimo día, uno');
+      eq(D.leer().cg, D.hoyISO());
+    });
+    conDosNiveles(null, function (D) {
+      // ya tiene uno (del día 7) y llega al 14: no se acumula
+      var est = D.leer();
+      est.racha = 13; est.mejor = 13; est.hito = 7; est.ult = diaDe(D, -1);
+      est.cg = diaDe(D, -7);
+      D.guardar(est);
+      ok(D.tieneComodin());
+      D.apunta(['solo'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+      eq(D.racha(), 14);
+      eq(D.leer().cg, diaDe(D, -7), 'el guardado es el mismo: máximo uno');
+    });
+    conDosNiveles(null, function (D) {
+      // gastó el suyo y llega al 14: gana otro
+      var est = D.leer();
+      est.racha = 13; est.mejor = 13; est.hito = 7; est.ult = diaDe(D, -1);
+      est.cg = diaDe(D, -9); est.cu = diaDe(D, -3);
+      D.guardar(est);
+      ok(!D.tieneComodin(), 'el de antes ya se gastó');
+      D.apunta(['solo'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+      ok(D.tieneComodin(), 'y el 14 trae otro');
+    });
+  });
+
+  test('el COMODÍN se gasta solo el día sin básico, y la racha no se rompe',
+    function () {
+      conDosNiveles(null, function (D, Tn) {
+        var est = D.leer();
+        // cumplió anteayer; ayer nada
+        est.racha = 8; est.mejor = 8; est.hito = 7; est.ult = diaDe(D, -2);
+        est.cg = diaDe(D, -3);
+        D.guardar(est);
+        var leido = D.leer();
+        eq(leido.racha, 8, 'la racha sigue en pie');
+        eq(leido.cu, diaDe(D, -1), 'ayer lo salvó el comodín');
+        ok(!D.tieneComodin(), 'y ya no queda');
+        var mon0 = Tn.ganadas();
+        D.apunta(['solo'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+        eq(D.racha(), 9, 'hoy sigue sumando (el día salvado no cuenta)');
+        eq(Tn.ganadas() - mon0, CFG.DAILY.BASICO_MONEDAS,
+           'y el día salvado no pagó nada');
+      });
+      conDosNiveles(null, function (D) {
+        // sin comodín, un día sin básico rompe la racha
+        var est = D.leer();
+        est.racha = 8; est.mejor = 8; est.hito = 7; est.ult = diaDe(D, -2);
+        D.guardar(est);
+        eq(D.racha(), 0, 'rota');
+        eq(D.leer().hito, 0, 'y los escalones vuelven a empezar');
+        eq(D.mejorRacha(), 8, 'la mejor se queda');
+        D.apunta(['solo'], { puntosMax: CFG.DAILY.BASICO_PUNTOS });
+        eq(D.racha(), 1, 'hoy empieza otra');
+      });
+      conDosNiveles(null, function (D) {
+        // dos días sin básico: el comodín salva uno, y el otro la rompe
+        var est = D.leer();
+        est.racha = 8; est.mejor = 8; est.hito = 7; est.ult = diaDe(D, -3);
+        est.cg = diaDe(D, -4);
+        D.guardar(est);
+        eq(D.racha(), 0, 'un comodín no salva dos días');
+        ok(!D.tieneComodin(), 'y se gastó en el primero');
+      });
+      conDosNiveles(null, function (D) {
+        // no recupera retos pasados: el día salvado sigue sin cumplir
+        var est = D.leer();
+        est.racha = 8; est.ult = diaDe(D, -2); est.cg = diaDe(D, -3);
+        D.guardar(est);
+        var i = D.diaSemana();
+        if (i > 0) {
+          ok(D.salvado(i - 1), 'ayer sale como salvado');
+          ok(!D.leer().b[i - 1] && !D.leer().h[i - 1], 'pero no cumplido');
+          ok(!D.abierto(i - 1), 'ni se puede cumplir ya');
+        }
+      });
+    });
+
+  test('dos aparatos: el básico no se paga dos veces ni el comodín resucita',
+    function () {
+      conDosNiveles(null, function (D, Tn) {
+        var i = D.diaSemana();
+        // aquí van 12.000 puntos
+        D.apunta(['solo'], { puntosMax: 12000 });
+        // en el otro aparato cumplió el básico hoy
+        var alla = D.vacio();
+        alla.q[i] = 21000; alla.b[i] = 1; alla.racha = 1; alla.mejor = 1;
+        alla.ult = D.hoyISO();
+        var mon0 = Tn.ganadas();
+        D.desdeNube(alla);
+        var fin = D.leer();
+        ok(fin.b[i], 'el básico cumplido allí cuenta aquí');
+        eq(fin.q[i], 21000, 'los puntos, con el mejor de los dos (no sumados)');
+        eq(Tn.ganadas() - mon0, 0, 'juntarse no paga nada');
+        eq(D.apunta(['solo'], { puntosMax: 9000 }).length, 0,
+           'y seguir jugando aquí no lo vuelve a cumplir');
+        eq(Tn.ganadas() - mon0, 0, 'ni lo vuelve a pagar');
+        eq(D.racha(), 1, 'ni sube la racha otra vez');
+        // y la vuelta: lo de aquí sube entero
+        var sube = D.paraNube();
+        ok(sube.b[i] && sube.q[i] >= 21000, 'la cartilla sube con el básico');
+        eq(D.normalizar(JSON.parse(JSON.stringify(sube))).b[i], 1,
+           'y se lee igual en el otro lado');
+      });
+      conDosNiveles(null, function (D) {
+        // aquí se guarda un comodín; allí ya se gastó
+        var est = D.leer();
+        est.racha = 9; est.mejor = 9; est.hito = 7; est.ult = diaDe(D, -1);
+        est.cg = diaDe(D, -3);
+        D.guardar(est);
+        ok(D.tieneComodin());
+        var alla = D.leer();
+        alla.cu = diaDe(D, -2);
+        D.desdeNube(alla);
+        ok(!D.tieneComodin(), 'gastado en un aparato, gastado en los dos');
+        // y al revés: uno ganado allí llega aquí
+        var alla2 = D.leer();
+        alla2.cg = diaDe(D, -1);
+        D.desdeNube(alla2);
+        ok(D.tieneComodin(), 'ganado allí, guardado aquí');
+      });
+      conDosNiveles(null, function (D) {
+        // una racha rota en la nube no pisa la viva de aquí
+        var est = D.leer();
+        est.racha = 2; est.mejor = 10; est.ult = D.hoyISO();
+        D.guardar(est);
+        var vieja = D.vacio();
+        vieja.racha = 10; vieja.mejor = 10; vieja.hito = 7; vieja.ult = diaDe(D, -5);
+        D.desdeNube(vieja);
+        eq(D.racha(), 2, 'la de la nube estaba rota: no resucita');
+        eq(D.leer().hito, 0, 'ni trae sus escalones cobrados');
+      });
+    });
+
+  /* El contador de días de básico (lo usan los primeros pasos) no empieza a
+   * cero: cada reto cumplido de antes fue también un básico. */
+  test('dailyBasicos se siembra con los retos cumplidos y solo crece con básicos',
+    function () {
+      conLogrosLimpios(function (A) {
+        A.record('dailyOk', 12);
+        eq(A.stats().dailyBasicos || 0, 0);
+        A.syncSeen();
+        eq(A.stats().dailyBasicos, 12, 'los doce retos cuentan como básicos');
+        A.record('dailyBasicos', 1);
+        A.sembrarBasicos();
+        eq(A.stats().dailyBasicos, 13, 'sembrar otra vez no lo pisa');
+        A.merge({ dailyOk: 20 });
+        eq(A.stats().dailyBasicos, 20, 'y con el historial de la nube, también');
+      });
+    });
+
+  test('el BÁSICO se celebra en la banda con su nombre, jugando', function () {
+    conDosNiveles(null, function (D) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      G.state = 'PLAYING';
+      G.bumpAch({ puntosMax: CFG.DAILY.BASICO_PUNTOS });
+      ok(D.progresoBasico(D.diaSemana()).hecho, 'una partida de 20.000 lo cumple');
+      var visto = false;
+      for (var k = 0; k < G.achNotices.length; k++) {
+        if (G.achNotices[k].name === 'BÁSICO CUMPLIDO') visto = true;
+      }
+      ok(visto, 'y sale en la banda de arriba');
+      G.toMenu();
+    });
+  });
 
   /* Lo que se jugó al RETO DE HOY no se tira: cada día jugado era el reto de
    * ese día cumplido, así que siembra el contador nuevo. */
@@ -8352,11 +8657,16 @@
      * y el pase se queda quieto (ver js/pase.js, cuenta()). */
     var Pa = window.PM.Pase, temp = Pa && Pa.temporada;
     if (Pa) Pa.temporada = function () { return '1970-01'; };
+    /* Pase.monedas() recuerda su cuenta un segundo: sin olvidarla, lo que
+     * pagaba el camino ANTES de limpiar los logros se colaba en el saldo de
+     * estas pruebas (desde el 1 oct, con una temporada de verdad en marcha,
+     * la tienda salía con 90-180 monedas de más). */
+    if (Pa) Pa._memoHasta = 0;
     conLogrosLimpios(function (A) {
       try { fn(window.PM.Tienda, A); }
       finally {
         for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k];
-        if (Pa) Pa.temporada = temp;
+        if (Pa) { Pa.temporada = temp; Pa._memoHasta = 0; }
       }
     });
   }

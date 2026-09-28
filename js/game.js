@@ -3102,7 +3102,7 @@
         var hechos = Dl.apunta(tags, o);
         for (var d = 0; d < hechos.length; d++) {
           var aviso = {
-            name: 'RETO CUMPLIDO', desc: hechos[d].desc, color: CFG.DAILY.COLOR,
+            name: hechos[d].titulo || 'RETO CUMPLIDO', desc: hechos[d].desc, color: CFG.DAILY.COLOR,
             ticks: CFG.DAILY.NOTICE_TICKS, total: CFG.DAILY.NOTICE_TICKS
           };
           this.achNotices.push(aviso);
