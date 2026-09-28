@@ -110,3 +110,57 @@ drop function if exists public.rango_pr_tope(jsonb, text, text, integer);
 drop function if exists public.rango_tramo(numeric);
 drop table if exists public.piezas_especiales;
 -- public.num(jsonb, text) se queda: no molesta y la usan los otros bloques.
+
+-- ------------------------------------------------------------
+-- 2) supabase/repeticiones-freno.sql
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.repeticiones_freno()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $$
+declare
+  n integer;
+begin
+  select count(*) into n
+    from public.repeticiones
+   where creado_en > now() - interval '1 minute';
+  if n >= 20 then
+    raise exception 'demasiadas repeticiones por minuto';
+  end if;
+  return new;
+end;
+$$;
+
+CREATE OR REPLACE FUNCTION public.destacar_repeticion(p_id text, p_destacada boolean, p_titulo text)
+ RETURNS TABLE(id text, destacada boolean, titulo text, dueno uuid)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $$
+declare
+  yo uuid := auth.uid();
+  limpio text := nullif(btrim(upper(coalesce(p_titulo, ''))), '');
+begin
+  if yo is null then
+    raise exception 'necesitas una cuenta';
+  end if;
+  if limpio is not null and char_length(limpio) > 32 then
+    limpio := left(limpio, 32);
+  end if;
+  return query
+    update public.repeticiones r
+       set destacada = coalesce(p_destacada, false),
+           titulo = case when coalesce(p_destacada, false) then limpio else null end,
+           dueno = yo
+     where r.id = p_id and (r.dueno = yo or r.dueno is null)
+    returning r.id, r.destacada, r.titulo, r.dueno;
+end;
+$$;
+
+revoke insert (id, jugadores, puntos, nivel, nombres, datos, tipo, t_partida)
+  on public.repeticiones from anon, authenticated;
+grant insert, truncate, references, trigger on public.repeticiones to anon, authenticated;
+drop table if exists public.repeticiones_frenos;
+drop function if exists public.ip_cliente();
