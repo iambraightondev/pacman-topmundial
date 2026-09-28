@@ -14,7 +14,7 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
 **29 sep — COFRES EN EL JUEGO (pm-v297).** Hecho según PLAN-COFRES.md (ver SPEC).
-Servidor: función  + supabase/cofres*.sql (vuelta atrás en
+Servidor: función cofres + supabase/cofres*.sql (vuelta atrás en
 supabase/cofres-vuelta-atras.sql); el generador es el mismo archivo en el
 juego y en la función. Decidido sin Braighton, revisable: retroactivos = solo
 bienvenida 1 PLATA + 1 ORO; abrir pide cuenta; el ORO por récord solo con
