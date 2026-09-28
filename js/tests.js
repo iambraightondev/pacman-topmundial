@@ -8662,6 +8662,36 @@
     } finally { G.netSend = envia; G.toMenu(); }
   });
 
+  /* 28 sep: en dúo, si al compañero se le caía la red, el anfitrión salía por
+   * el aviso de CONEXIÓN PERDIDA... traspasándole el mando a él, y como hubo
+   * "traspaso" no subía la partida al top. */
+  test('no se traspasa a quien calla, ni saliendo por un aviso de red', function () {
+    partida(3, 'host');
+    try {
+      G.posWatch = [];
+      for (var i = 0; i < CFG.NET.WAIT_TICKS + 5; i++) {
+        G.netWatch = 0;
+        G.posWatch[2] = 0;          // el 2 habla, el 1 no
+        G.netMaintain();
+      }
+      eq(G.sucesor(), 2, 'el mando va al que habla');
+      G.posWatch[2] = CFG.NET.WAIT_TICKS + 5;
+      eq(G.sucesor(), -1, 'y si callan todos, a nadie');
+    } finally { G.toMenu(); }
+    partida(2, 'host');
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push(n); };
+    try {
+      G.netFail('CONEXIÓN PERDIDA');
+      ok(!G.pasarElMando(), 'saliendo por la red no hay traspaso');
+      G.netNotice.ticks = 1;
+      G.step();
+      eq(G.state, 'MENU', 'vuelve al menú');
+      ok(mandados.indexOf('mando') < 0, 'sin mandar el mando a nadie');
+      ok(G.rankingSent, 'y la partida va al top');
+    } finally { G.netSend = envia; if (G.inGame()) G.toMenu(); }
+  });
+
   test('el que recibe el mando sigue la partida sin el anfitrión', function () {
     partida(2, 'host');
     var snap = G.buildSnapshot(true), extra = G.estadoExtra();

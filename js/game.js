@@ -1183,8 +1183,7 @@
       if (this.netNotice) {
         this.netNotice.ticks--;
         if (this.netNotice.ticks <= 0) {
-          this.netNotice = null;
-          this.toMenu();
+          this.toMenu();       // lo borra él, y así sabe que se sale por la red
         }
         return;
       }
@@ -3519,15 +3518,16 @@
         /* Con más de dos, el vigilante general no basta: mientras uno hable
          * los demás podrían estar callados y sus Pac-Man quedarse clavados.
          * Cada jugador tiene el suyo y al que calla se le deja de espectador. */
-        if (this.playerCount > 2) {
-          /* Tras un traspaso quien manda puede ser cualquier asiento, no el 0:
-           * al suyo no le llega ningún 'pos' y se echaba solo a los 10 s. */
-          for (var w = 0; w < this.pacs.length; w++) {
-            if (w === this.hostIdx) continue;
-            if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
-            this.posWatch[w] = (this.posWatch[w] || 0) + 1;
-            if (this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
-          }
+        /* El silencio de cada uno se cuenta siempre (también en el dúo: de
+         * ahí sale a quién NO dejarle el mando, ver sucesor), pero solo con
+         * más de dos se deja fuera al callado. Tras un traspaso quien manda
+         * puede ser cualquier asiento, no el 0: al suyo no le llega ningún
+         * 'pos' y se echaba solo a los 10 s. */
+        for (var w = 0; w < this.pacs.length; w++) {
+          if (w === this.hostIdx) continue;
+          if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
+          this.posWatch[w] = (this.posWatch[w] || 0) + 1;
+          if (this.playerCount > 2 && this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
         }
         this.hostAvisaGiro();
         this.snapTimer++;
@@ -3580,6 +3580,9 @@
         var p = this.pacs[i];
         if (i === this.hostIdx || !p || p.bot) continue;
         if (this.idos && this.idos[i]) continue;
+        /* ...ni a quien lleva rato callado: se le ha caído la red y el mando
+         * se perdería con él (y con él, la partida de todos) */
+        if (this.posWatch && this.posWatch[i] > CFG.NET.WAIT_TICKS) continue;
         return i;
       }
       return -1;
@@ -3623,6 +3626,9 @@
     pasarElMando: function () {
       if (this.netRole !== 'host' || this.isSpec() || !this.inGame()) return false;
       if (this.state === 'GAME_OVER') return false;
+      /* Se sale por un aviso de red (CONEXIÓN PERDIDA): no hay a quién
+       * dejarle nada, y traspasar se saltaba además el envío al top. */
+      if (this.netNotice) return false;
       var n = this.sucesor();
       if (n < 0) return false;
       this.netSend('mando', {
