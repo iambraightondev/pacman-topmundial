@@ -9075,6 +9075,11 @@
       eq(K.ganados().madera, 0);
       A.recordAll({ partidas: 5, largas: 5 });
       eq(K.ganados().madera, 1);
+      // una cuenta NUEVA: el servidor le pone solo el día (lo demás, a cero)
+      A.reset();
+      window.PM.Level.reset();
+      A.tomar({ cofre_b_dia: K.hoy() });
+      eq(K.ganados().plata, 1, 'nivel 1 no es un nivel subido: solo el regalo');
     });
   });
 

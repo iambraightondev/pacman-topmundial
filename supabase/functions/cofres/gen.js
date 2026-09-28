@@ -190,8 +190,10 @@
    * servidor en los contadores (cofre_b_*); sin cuenta, la de este aparato. */
   function baseDe(c) {
     if (!c || !(entero(c.cofre_b_dia) > 0)) return null;
+    /* el nivel de jugador empieza en 1: una base sin nivel (la de una cuenta
+     * nueva, que el servidor pone solo con el día) es nivel 1, no 0 */
     return { dia: entero(c.cofre_b_dia), partidas: entero(c.cofre_b_partidas),
-             semana: entero(c.cofre_b_semana), nivel: entero(c.cofre_b_nivel),
+             semana: entero(c.cofre_b_semana), nivel: Math.max(1, entero(c.cofre_b_nivel)),
              mae: entero(c.cofre_b_mae) };
   }
 
