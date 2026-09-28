@@ -7,11 +7,40 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **28 de septiembre de 2026**.
+Última puesta al día: **28 de septiembre de 2026 (noche)**.
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+**28 sep (noche) — GRAN REVISIÓN (pm-v295).** Braighton pidió analizar todo con
+varios agentes y arreglar lo que no necesitara decisión suya. Seis frentes,
+cada uno en su worktree y juntados en main: seguridad (aplicada YA en
+producción: supabase/perfiles-blindaje.sql, repeticiones-freno.sql,
+ranking-cuarentena.sql, cuenta-frenos.sql; vuelta atrás en
+supabase/seguridad-vuelta-atras.sql; funciones con supabase/desplegar-funcion.js),
+party (10 fallos, PROTO 20, pruebas-red.js con 17 casos), guardado y sesión,
+móvil, rendimiento y salud del código (pruebas-node sale ya en 0; guardianes
+de funciones duplicadas, listas de módulos y vestuario). tests.html 653/653.
+
+**Apagado a propósito, para encender cuando todos hayan recargado (unos días):**
+secretos EXIGIR_REPETICION y EXIGIR_AVAL de enviar-record. El juego viejo no
+manda repetición ni da permiso de equipo: encenderlos antes rompería marcas
+legítimas. **Marcas en cuarentena:** entran ocultas hasta aprobarlas a mano
+(ver ranking-cuarentena.sql).
+
+**Queda para decidir con Braighton:** reto diario de dos niveles (hoy la
+racha solo la mantienen los buenos); construir los cofres (28 piezas los
+esperan); primeros pasos para el jugador nuevo; rango (suelo de CEREZA y
+premios en monedas — ojo, cambiar premios reescribe lo cobrado en meses
+pasados); ritmo del pase (el medio llega al galón ~20 de 30); factor de rol en
+party; minificar al desplegar; realtime privado (rompería invitados sin cuenta);
+cerrar el cambio de correo directo del juego viejo; precios en el servidor
+(piezas «a deuda»); retos entre amigos y regalar piezas.
+
+**Por ver jugando:** una party real con los arreglos de red; el móvil de
+verdad (todo se probó emulado); los laureles de octubre antes del 24 oct (las
+pruebas los pedirán desde ese día).
 
 **28 sep — TANDA DE MITOLOGÍA EN EL JUEGO (pm-v294).** Braighton pidió meter
 las 28 piezas del escaparate. Hecho: dibujos, Q y muertes en js/skins.js (con

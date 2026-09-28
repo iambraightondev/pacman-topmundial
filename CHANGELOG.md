@@ -2,6 +2,38 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-28 (noche) · Gran revisión: seguridad, party, guardado, móvil y rendimiento
+
+Seis revisiones a fondo del juego y sus arreglos, todo de una vez.
+
+- **Contra las trampas:** la nube ya no se traga monedas, piezas de cofre ni
+  rango imposibles (recorta los saltos que no se pueden jugar y apunta cada
+  cambio); las repeticiones las fecha el servidor; una marca muy por encima
+  del primero de su liga entra **en revisión** hasta que se aprueba; el nombre
+  ya no se cambia desde el juego; entrar tiene freno tras 5 fallos; «olvidé la
+  contraseña» ya no delata si una cuenta existe; cambiar el correo pide la
+  contraseña actual.
+- **Party:** el invitado ya no muere al tocar el fantasma de su propia
+  CACERÍA; el que hereda el mando ya no se echa solo a los 10 s ni se queda
+  el récord del anterior; si el compañero de dúo se cae, la marca sí llega al
+  top; si el anfitrión se cae, los demás se enteran; la revancha tras un
+  traspaso funciona; los mirones ya no echan a nadie; hielo del rey y vida
+  del rey arreglados.
+- **Guardado:** una partida acabada en otro aparato ya no se puede volver a
+  cobrar; la sesión se renueva sola (antes caducaba a la hora sin avisar);
+  cerrar la pestaña en plena partida ya no tira lo jugado; cerrar sesión
+  espera a que se suba todo.
+- **Móvil:** el TOP enseña los nombres; la cruceta ya no tapa la Q; JUGAR se ve
+  sin desplazar; la pausa es más grande y no pisa el marcador; la partida se
+  pausa si te vas de la app; CONTINUAR y REVIVIR piden confirmación y ya no
+  pagan con Enter; se puede hacer zoom; bienvenida con tu nombre.
+- **Rendimiento:** volver al menú pasa de más de 1 s a una décima en un móvil
+  modesto, cada fotograma cuesta un tercio, el menú no gasta batería y el
+  juego abre aunque la red esté colgada.
+- **Reglas:** CONTINUAR ya no se puede usar en CLASIFICATORIA; el pase de
+  cada mes lleva su camino y un mes sin piezas propias paga solo monedas
+  (el de octubre no se repetirá en noviembre).
+
 ## 2026-09-28 · La tanda de MITOLOGÍA entra en el juego (28 piezas)
 
 Lo del escaparate de mitología ya se puede llevar puesto. Las skins dejan la
