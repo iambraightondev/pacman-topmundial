@@ -250,7 +250,15 @@ de jugar es un peaje que aquí no compra nada.
 
 Dos maneras de correr la misma batería:
 
-- **En el navegador**: abre `tests.html` desde el servidor, igual que el juego.
+- **En el navegador, de una vez**: `npm install` (la primera vez, más
+  `npx playwright install chromium`) y luego `npm run test:playwright`. Es la
+  prueba de navegador: Playwright levanta solo el servidor estático
+  (`node tests/servidor.cjs`, sin caché, en el 8264; `PW_PORT` cambia el
+  puerto), bloquea Supabase, abre `tests.html` en Chromium y falla si alguna
+  prueba falla o salta un error en la página. Corre además las comprobaciones
+  del catálogo de habilidades de `tests/playwright/`.
+- **En el navegador, a mano**: abre `tests.html` desde el servidor, igual que el juego
+  (`node tests/servidor.cjs` sirve la carpeta en http://127.0.0.1:8264/).
   El resultado queda también en `window.__TESTS`. Ojo: tras editar algo de
   `js/`, levanta el servidor en un **puerto nuevo** o el navegador te servirá
   la versión anterior del fichero (caché heurística) y estarás probando el
