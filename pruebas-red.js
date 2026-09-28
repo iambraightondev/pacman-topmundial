@@ -196,6 +196,13 @@ function duoHab(rolInvitado, carga) {
   return ms;
 }
 
+/* La marca de CACERÍA puesta a mano en el anfitrión: con su reloj, que sin él
+ * el paso de Hab la borra en el acto */
+function marcar(A, gid, quien) {
+  A.H.caceriaQuien[gid] = quien;
+  if (quien >= 0) A.H.st[quien].caceria = 600;
+}
+
 caso('1a · un fantasma de SU cacería: el invitado se lo come, no muere', function () {
   var ms = duoHab('asesino', 'mordisco,turbo,flash,caceria'), A = ms[0], B = ms[1];
   A.G.ghosts[0].frightened = false;
@@ -231,7 +238,7 @@ caso('1c · azul pero marcado por OTRO: al invitado lo mata, igual que al anfitr
   var ms = duoHab(), A = ms[0], B = ms[1];
   A.G.frightTicks = 400;
   A.G.ghosts[0].frightened = true;
-  A.H.caceriaQuien[0] = 0;                 // es del anfitrión
+  marcar(A, 0, 0);                         // es del anfitrión
   red.paso(10);
   ok(B.G.ghosts[0].frightened, 'el invitado lo ve azul');
   juntar(ms, 1, 0);
@@ -246,14 +253,14 @@ caso('1c · azul pero marcado por OTRO: al invitado lo mata, igual que al anfitr
 
 caso('1d · el anfitrión no acepta una muerte contra un fantasma que el invitado podía comerse', function () {
   var ms = duoHab(), A = ms[0], B = ms[1];
-  A.H.caceriaQuien[0] = 1;
+  marcar(A, 0, 1);
   red.paso(10);
   A.G.pacs[1].safeTicks = 0;
   B.G.netSend('gevt', { t: 'died', g: 0 });   // un invitado de antes, o una foto que llegó tarde
   red.paso(2);
   ok(!A.G.pacs[1].dying, 'no lo mata');
   /* ...pero un fantasma normal sí mata */
-  A.H.caceriaQuien[0] = -1;
+  marcar(A, 0, -1); A.H.st[1].caceria = 0;
   A.G.ghosts[0].frightened = false;
   B.G.netSend('gevt', { t: 'died', g: 0 });
   red.paso(2);
@@ -264,7 +271,7 @@ caso('1e · el anfitrión no deja comerse al marcado por otro', function () {
   var ms = duoHab(), A = ms[0], B = ms[1];
   A.G.frightTicks = 400;
   A.G.ghosts[0].frightened = true;
-  A.H.caceriaQuien[0] = 0;
+  marcar(A, 0, 0);
   red.paso(10);
   B.G.netSend('gevt', { t: 'ateGhost', g: 0 });
   red.paso(2);

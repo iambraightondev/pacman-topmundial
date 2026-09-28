@@ -1342,10 +1342,7 @@
         for (j = 0; j < 4; j++) {
           g = this.ghosts[j];
           if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
-          if ((g.frightened && !(this.hab && window.PM.Hab &&
-              window.PM.Hab.caceriaQuien && window.PM.Hab.caceriaQuien[g.id] >= 0 &&
-              window.PM.Hab.caceriaQuien[g.id] !== i)) ||
-              (this.hab && window.PM.Hab && window.PM.Hab.puedeComer(this, g.id, i))) {
+          if (this.comible(g, i)) {
             if (this.biteGhost(p, g)) this.eatGhost(g, i);
           } else {
             if (p.safeTicks > 0) continue;   // margen tras reaparecer en marcha
@@ -1655,6 +1652,20 @@
      * ni descuadrar una marca que ya esté puesta. */
     hitGhost: function (p, g) {
       return p.tileX() === g.tileX() && p.tileY() === g.tileY();
+    },
+
+    /* ¿Se lo puede comer el jugador i, o lo mata? LA MISMA REGLA en todas
+     * las máquinas (28 sep): el anfitrión miraba además la CACERÍA y el azul
+     * de las habilidades (GANCHO, TOQUE ARCANO) y el invitado solo el azul del
+     * energizante, así que al invitado lo mataba un fantasma de su propia
+     * cacería y en cambio se comía el marcado por otro. Todo lo que hace falta
+     * viaja en la foto (s.g[].f y Hab.resumenRoles). */
+    comible: function (g, i) {
+      var A = this.hab ? window.PM.Hab : null;
+      if (!A) return !!g.frightened;
+      if (g.frightened && !(A.caceriaQuien && A.caceriaQuien[g.id] >= 0 &&
+          A.caceriaQuien[g.id] !== i)) return true;
+      return A.puedeComer(this, g.id, i);
     },
 
     biteGhost: function (p, g) {
@@ -3837,6 +3848,10 @@
           }
           break;
         case 'died':
+          /* No se cree una muerte contra un fantasma que, con la regla de
+           * aquí, se podía comer (una foto que llegó tarde): la predicción
+           * del invitado se deshace sola al no llegarle la confirmación. */
+          if (d.g >= 0 && d.g < 4 && this.comible(this.ghosts[d.g], who)) break;
           if (this.state === 'PLAYING' && this.pacs[who] &&
               !this.pacs[who].out && !this.pacs[who].dying) {
             this.startDeath(who, d.g);       // d.g: el fantasma que lo pilló
@@ -3850,7 +3865,7 @@
           break;
         case 'ateGhost': {
           var g = this.ghosts[d.g];
-          if (this.state === 'PLAYING' && g && g.frightened &&
+          if (this.state === 'PLAYING' && g && this.comible(g, who) &&
               (g.mode === 'normal' || g.mode === 'leaving')) {
             this.eatGhost(g, who);
           }
@@ -4305,7 +4320,7 @@
          * 'ateGhost' además del mordisco y el anfitrión lo contaría dos veces.
          * Ver Hab.protegido() en js/habilidades.js. */
         if (A && A.protegido(me.id, g.id)) continue;
-        if (g.frightened) {
+        if (this.comible(g, me.id)) {
           if (!this.biteGhost(me, g)) continue;
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'
           g.eaten();

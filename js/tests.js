@@ -5896,6 +5896,65 @@
     G.toMenu();
   });
 
+  /* 28 sep: la regla de comer o morir es la misma en las dos máquinas. El
+   * invitado miraba solo el azul del energizante: lo mataba el fantasma de su
+   * propia CACERÍA o el azul del GANCHO, y se comía el marcado por otro. */
+  test('el invitado se come al de su cacería y al azul del gancho', function () {
+    var p = partidaHabInvitado(13, 20);
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push(d); };
+    try {
+      var g = fantasmaEn(1, 13, 20);
+      g.frightened = false;
+      HB.caceriaQuien[1] = 1;
+      G.guestCollisions(p);
+      ok(!p.dying, 'su cacería no lo mata');
+      eq(g.mode, 'eyes', 'se lo come');
+      var g2 = fantasmaEn(2, 13, 20);
+      g2.frightened = false;
+      HB.azulCatalogo[2] = 1; HB.azulCatTicks[2] = 300;
+      G.eatFreezeTicks = 0;
+      G.guestCollisions(p);
+      ok(!p.dying, 'el azul del gancho tampoco');
+      eq(g2.mode, 'eyes', 'y también se lo come');
+      ok(!mandados.some(function (d) { return d && d.t === 'died'; }), 'no avisa de ninguna muerte');
+    } finally { G.netSend = envia; G.toMenu(); }
+  });
+
+  test('el invitado no se come al azul marcado por otro: lo mata', function () {
+    var p = partidaHabInvitado(13, 20);
+    var mandados = [], envia = G.netSend;
+    G.netSend = function (n, d) { mandados.push(d); };
+    try {
+      var g = fantasmaEn(1, 13, 20);
+      G.frightTicks = 600;
+      g.frightened = true;
+      HB.caceriaQuien[1] = 0;            // es del anfitrión
+      G.guestCollisions(p);
+      ok(g.mode !== 'eyes', 'no se lo come');
+      ok(p.dying, 'muere, como moriría el anfitrión');
+    } finally { G.netSend = envia; G.toMenu(); }
+  });
+
+  test('el anfitrión no da por buena una muerte contra un fantasma comible', function () {
+    partida(2, 'host');
+    G.hab = true;
+    HB.empezar(true, 2, ['tanque', 'asesino']);
+    try {
+      HB.caceriaQuien[0] = 1;
+      G.hostGuestEvent({ t: 'died', g: 0 }, 1);
+      ok(!G.pacs[1].dying, 'su cacería no lo mata');
+      G.hostGuestEvent({ t: 'ateGhost', g: 0 }, 1);
+      eq(G.ghosts[0].mode, 'eyes', 'y comérselo sí vale');
+      HB.caceriaQuien[1] = 0;
+      G.ghosts[1].mode = 'normal'; G.ghosts[1].frightened = true;
+      G.hostGuestEvent({ t: 'ateGhost', g: 1 }, 1);
+      ok(G.ghosts[1].mode !== 'eyes', 'el marcado por otro no se lo come');
+      G.hostGuestEvent({ t: 'died', g: 1 }, 1);
+      ok(G.pacs[1].dying, 'y ese sí lo mata');
+    } finally { G.toMenu(); }
+  });
+
   /* El anfitrión le perdona unos píxeles al mordisco que llega por red: la
    * posición del invitado le llega a 12 Hz y sus fantasmas los mueve él, así
    * que cuando la petición se ejecuta ya no están donde el invitado los vio. */
