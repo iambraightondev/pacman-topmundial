@@ -8069,7 +8069,7 @@
       if (!F || !H) return '';
       return 'CADA ROL TIENE SU MARCA: ' + H.ROL_IDS.map(function (r) {
         return H.ROL_INFO[r].name + ' ' + Math.round((F[r] || 1) * 100) + ' %';
-      }).join(' · ');
+      }).join(' · ') + (CFG.RANGO.CORRECCION_PARTY < 1 ? ' (EN PARTY, LA MITAD DE LA REBAJA)' : '');
     },
     /* de dónde arrancas este mes si vienes con rango del anterior */
     textoSemilla: function (e) {
@@ -8275,6 +8275,7 @@
           ayuda.style.display = 'none';
           ['CADA FRUTA SE SUBE POR ESCALONES (IV, III, II, I).',
            'SUPERA LA MARCA DE TU ESCALÓN Y LLEGA AL NIVEL QUE PIDE TU FRUTA PARA GANAR PR; SI TE QUEDAS CORTO, PIERDES.',
+           'EN ' + D[0].name + ' NO SE PIERDE: LLEGAR AL NIVEL ' + D[0].nivel + ' DA AL MENOS +' + (D[0].minimo || 0) + ' PR.',
            'LAS MARCAS SON DE SOLO. ' + self.textoMultRango() + '.',
            'LA PRIMERA VEZ QUE LLEGAS A CADA FRUTA EN LA TEMPORADA TE LLEVAS SU PREMIO EN MONEDAS.'
           ].forEach(function (t) { ayuda.appendChild(el('div', null, t)); });
@@ -8333,7 +8334,8 @@
               : self.milesMaes(Rg.parTramo(TR.indexOf(esc[0]), n))));
             fila.appendChild(el('span', 'rgs-nivel', (div.nivel || 1) > 1 ? String(div.nivel) : '—'));
             // las monedas de llegar a esa fruta por primera vez en la temporada
-            fila.appendChild(el('span', 'rgs-premio', div.premio ? self.milesMaes(div.premio) : '—'));
+            var prem = Rg.premio ? Rg.premio(d) : 0;     // el de esta temporada
+            fila.appendChild(el('span', 'rgs-premio', prem ? self.milesMaes(prem) : '—'));
             fila.appendChild(el('span', 'rgs-cuantos', cuantos ? String(cuantos[d]) : '—'));
             if (mia) {
               var pie = el('div', 'rgs-pie');

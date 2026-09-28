@@ -1243,9 +1243,9 @@
   CFG.BADGES_KEY = 'pacman-topmundial-maestrias';
 
   /* ---------- RANGO de temporada (22 de septiembre) ----------
-   * Las CLASIFICATORIAS de DESATADO (js/rango.js). Un rango por FORMATO —las
-   * cuatro ligas no se mezclan— que sube y baja partida a partida y vuelve a
-   * empezar cada mes. Las divisiones son las ocho frutas del Pac-Man de 1980,
+   * Las CLASIFICATORIAS de DESATADO (js/rango.js). Un solo rango para solo
+   * y party (desde el 24 sep; en party la marca se multiplica por el formato)
+   * que sube y baja partida a partida y vuelve a empezar cada mes. Las divisiones son las ocho frutas del Pac-Man de 1980,
    * para no confundirse con los metales de las copas.
    *
    * `par` es la marca que se espera de alguien de esa división EN SOLO; en
@@ -1266,18 +1266,38 @@
      *   nivel       el nivel al que hay que llegar para GANAR PR (sin él, la
      *               partida solo puede restar)
      *   gana/pierde lo máximo que mueve una partida en esa fruta
-     *   premio      monedas la primera vez que llegas a esa fruta en la
-     *               temporada (24 sep): de 500 en FRESA a 10.000 en LLAVE */
+     *   minimo      lo MENOS que da una partida que llega a `nivel`, aunque
+     *               la marca se quede corta
+     *   Las monedas de cada fruta van aparte, por temporada: PREMIOS_TEMPORADA.
+     *
+     * CEREZA PROTEGIDA (29 sep, aprobado por Braighton): los nuevos no salían
+     * de CEREZA IV (FERCRO 0 de 4, PIERO 1 de 5). En CEREZA no se pierde
+     * (pierde 0) y llegar al nivel 2 da al menos +5 (minimo). De FRESA para
+     * arriba, igual que antes. Cabe en el tope del servidor (rg <= 25 por
+     * partida, supabase/perfiles-blindaje.sql): lo más sigue siendo `gana`. */
     DIVISIONES: [
-      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 2, gana: 25, pierde: 20, premio: 0, color: '#ff3b3b' },
-      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 22, pierde: 22, premio: 500, color: '#ff5fa0' },
-      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 20, pierde: 24, premio: 800, color: '#ffb852' },
-      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 18, pierde: 26, premio: 1200, color: '#7dff5a' },
-      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 16, pierde: 28, premio: 2000, color: '#2bff88' },
-      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 14, pierde: 30, premio: 3000, color: '#6fd0ff' },
-      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 12, pierde: 32, premio: 5000, color: '#ffe23a' },
-      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 10, pierde: 35, premio: 10000, color: '#e6ecff' }
+      { id: 'cereza',   name: 'CEREZA',   fruta: 0, par: 8000,   escalones: 4, prEscalon: 25, nivel: 2, gana: 25, pierde: 0, minimo: 5, color: '#ff3b3b' },
+      { id: 'fresa',    name: 'FRESA',    fruta: 1, par: 15000,  escalones: 4, prEscalon: 25, nivel: 2, gana: 22, pierde: 22, color: '#ff5fa0' },
+      { id: 'naranja',  name: 'NARANJA',  fruta: 2, par: 25000,  escalones: 4, prEscalon: 35, nivel: 2, gana: 20, pierde: 24, color: '#ffb852' },
+      { id: 'manzana',  name: 'MANZANA',  fruta: 3, par: 38000,  escalones: 3, prEscalon: 45, nivel: 3, gana: 18, pierde: 26, color: '#7dff5a' },
+      { id: 'melon',    name: 'MELÓN',    fruta: 4, par: 55000,  escalones: 3, prEscalon: 55, nivel: 4, gana: 16, pierde: 28, color: '#2bff88' },
+      { id: 'galaxian', name: 'GALAXIAN', fruta: 5, par: 75000,  escalones: 3, prEscalon: 60, nivel: 5, gana: 14, pierde: 30, color: '#6fd0ff' },
+      { id: 'campana',  name: 'CAMPANA',  fruta: 6, par: 100000, escalones: 3, prEscalon: 70, nivel: 6, gana: 12, pierde: 32, color: '#ffe23a' },
+      { id: 'llave',    name: 'LLAVE',    fruta: 7, par: 130000, escalones: 1, prEscalon: 0,  nivel: 7, gana: 10, pierde: 35, color: '#e6ecff' }
     ],
+    /* LAS MONEDAS DE CADA FRUTA, POR TEMPORADA (29 sep). Se cobran la primera
+     * vez que llegas a esa fruta en la temporada, y se DEDUCEN de lo más alto
+     * alcanzado (js/rango.js, monedas()): si hubiera una sola tabla, cambiar
+     * un premio reescribiría lo ya cobrado en los meses pasados (y podría
+     * dejar saldos en negativo). Por eso cada temporada tiene la suya, y una
+     * sin entrada propia usa la última definida antes de ella.
+     * SEPTIEMBRE 2026 NO SE TOCA NUNCA: es lo que ya se cobró.
+     * Desde octubre, CAMPANA y LLAVE bajan (LLAVE en un mes pagaba media
+     * tienda: 22.500 sumando todas). */
+    PREMIOS_TEMPORADA: {
+      '2026-09': { cereza: 0, fresa: 500, naranja: 800, manzana: 1200, melon: 2000, galaxian: 3000, campana: 5000, llave: 10000 },
+      '2026-10': { cereza: 0, fresa: 500, naranja: 800, manzana: 1200, melon: 2000, galaxian: 3000, campana: 3000, llave: 5000 }
+    },
     COLOCACION: 5,        // partidas antes de tener rango
     /* La colocación no regala: un escalón por debajo del que alcanza tu
      * media, al principio de él, y nunca más arriba que este (4 = FRESA IV).
@@ -1301,11 +1321,21 @@
     /* LO QUE PUNTÚA CADA ROL (25 sep). No todos hacen los mismos puntos: el
      * ASESINO come a diestra y siniestra y el SOPORTE está para otra cosa.
      * La marca que cuenta para el rango es la de la partida ENTRE el factor
-     * de su rol (en party, la media de los del equipo). Salen de las
+     * de su rol (en party, ver CORRECCION_PARTY). Salen de las
      * clasificatorias y DESATADOS reales del 20 al 25 sep, en puntos por
      * nivel: ASESINO ~7.400, TANQUE ~6.600, SOPORTE ~4.200 (el MAGO aún con
      * pocas partidas, se le supone como el TANQUE). Revisarlos con más datos. */
     FACTOR_ROL: { asesino: 1, mago: 0.9, tanque: 0.9, soporte: 0.6 },
+    /* EN PARTY, MEDIA CORRECCIÓN (29 sep, aprobado por Braighton). Con la
+     * media entera del equipo, una pareja con SOPORTE sacaba un 19 % más de
+     * marca que con TANQUE sin rendir menos: en equipo el SOPORTE no le quita
+     * tantos puntos al resto. Con más de uno, el factor es
+     *   1 − (1 − media del equipo) × CORRECCION_PARTY
+     * (con 0,5: SOPORTE 0,8; TANQUE y MAGO 0,95). A solas, el factor entero.
+     * Solo mueve las partidas que vengan: lo ya ganado está en rg/rl.
+     * REVISAR a mediados de octubre, con ~20 clasificatorias de party
+     * marcadas con sus roles (se apuntan desde el 28 sep). */
+    CORRECCION_PARTY: 0.5,
     /* Las reglas de antes eran otras cuentas: sus contadores no valen para
      * estas. Los de ahora llevan este número en la clave (js/rango.js). */
     VERSION: 4             // 3: colocación estricta; 4: un solo rango, sin formatos (24 sep)

@@ -3855,6 +3855,15 @@ PR = colocar(rt/5) + rg − rl, sin bajar de 0 (y sin apuntar pérdidas que no s
 pueden perder, así no hay deuda). Cuenta si el ajuste `clasif` (viaja con la
 cuenta) está encendido y `Rango.porQueNo(G)` es null. La tabla lee
 `perfiles?select=usuario,avatar,logros` y aplica `estadoDe` a cada uno.
+**CEREZA PROTEGIDA** (29 sep). `cambio(puntos, pr, n, nivel)` recorta a
+`[-pierde, gana]` de la fruta y, si la fruta tiene `minimo` y se llegó a su
+`nivel`, da al menos eso. CEREZA: `pierde: 0`, `minimo: 5` (nivel 2): ahí una
+clasificatoria nunca resta y llegar al nivel 2 da +5 aunque la marca se quede
+corta (en la colocación con semilla, ×`COLOCACION_X`: +10). Vale igual en
+`apuntar`, `enVivo` y la colocación con semilla, que pasan todas por
+`cambio()`. Sin `nivel` (null) no se aplica el mínimo. De FRESA para arriba no
+cambia nada. Cabe en el blindaje del servidor (`rg` <= 25 por partida, `ru`
+<= 50 por partida de colocación).
 
 **REINICIO SUAVE** (25 sep). `semillaDe(c, t)`: si el mes anterior acabó con
 rango, la temporada arranca en `round(PR final × ARRASTRE × min(1, jugadas /
@@ -3865,9 +3874,23 @@ PR = semilla + ru − rd + rg − rl. Sin semilla, lo de siempre. `estadoDe` da
 `semilla`, `semillaNombre`, `vieneDe` y `prColoca`. La cuenta va hacia atrás
 mes a mes (tope 24).
 **FACTOR DE ROL** (25 sep). `apuntar(puntos, n, nivel, roles)` divide la marca
-entre `factorRoles(roles, n)` (`CFG.RANGO.FACTOR_ROL`; en party, la media del
-equipo; sin roles, 1) antes de todo: colocación, cambio y `enVivo`. La pantalla
+entre `factorRoles(roles, n)` (`CFG.RANGO.FACTOR_ROL`; sin roles, 1) antes de
+todo: colocación, cambio y `enVivo`. A solas, el factor del rol. En party
+(n > 1, 29 sep), media corrección: `1 − (1 − media del equipo) ×
+CORRECCION_PARTY` (0,5: SOPORTE 0,8, TANQUE y MAGO 0,95). Revisar a mediados
+de octubre con ~20 clasificatorias de party con roles. Solo afecta a las
+partidas que vengan: lo ya ganado está en `rg`/`rl`. La pantalla
 de CLASIFICATORIA enseña la marca ya multiplicada por el factor de tu rol.
+**MONEDAS POR TEMPORADA** (29 sep). Cada fruta paga la primera vez que se
+llega a ella en una temporada, deducido de `rm`: `Rango.monedas()` suma, por
+cada temporada, `premiosHasta(fruta, temporada)`, y `apuntar` usa la de ahora.
+Los importes están en `CFG.RANGO.PREMIOS_TEMPORADA['AAAA-MM'] = { fruta: monedas }`
+(`Rango.premio(d, t)`); una temporada sin entrada usa la última definida antes
+de ella (y una anterior a todas, la primera). **2026-09 está congelado** (0,
+500, 800, 1.200, 2.000, 3.000, 5.000, 10.000: lo ya cobrado); desde 2026-10
+CAMPANA 3.000 y LLAVE 5.000. Para cambiar premios, añadir una entrada nueva,
+nunca tocar una temporada ya empezada. La escalera de LOS RANGOS enseña los de
+la temporada en curso.
 **AJUSTES A MANO** (`CFG.AJUSTES_CUENTA.X.rango = { 'AAAA-MM': PR }`): se suman a
 `rg` al LEER (`Rango.ajustados(c, usuario)`, sobre una copia) en `estado`,
 `monedas`, `cerradas` y la tabla, y `rm` sube con ellos. En la nube no se tocan.

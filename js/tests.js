@@ -14727,7 +14727,7 @@
       // en CEREZA IV (0 PR) a uno la marca son 8.000
       eq(Rg.cambio(8000, 0, 1), 0, 'igualar la marca no da nada');
       eq(Rg.cambio(16000, 0, 1), 20, 'el doble, +20');
-      eq(Rg.cambio(2000, 10, 1), -D[0].pierde, 'la cuarta parte sería −40, pero en CEREZA se pierde como mucho 20');
+      eq(Rg.cambio(2000, 10, 1), 0, 'la cuarta parte sería −40, pero en CEREZA no se pierde (29 sep)');
       eq(Rg.cambio(16000, 0, 1, 1), 0, 'y ya en CEREZA hay que llegar al nivel 2 para ganar');
       eq(Rg.cambio(999999, 0, 1), D[0].gana, 'con tope por arriba, el de la fruta');
       eq(Rg.cambio(0, 1100, 1), -D[7].pierde, 'y por abajo, que arriba duele más');
@@ -14812,10 +14812,17 @@
           var mala = jugar(0);
           eq(mala.cambio, -RG.DIVISIONES[1].pierde, 'una partida en blanco quita el máximo de la fruta');
           eq(Rg.estado(1).pr, pr - RG.DIVISIONES[1].pierde);
-          for (var k = 0; k < 30; k++) jugar(0);
-          eq(Rg.estado(1).pr, 0, 'en el suelo se queda en cero');
-          var buena = jugar(RG.DIVISIONES[0].par * 2);
-          eq(buena.cambio, 20, 'y lo primero que ganas cuenta entero: no hay deuda');
+          eq(Rg.estado(1).division, 0, 'y cae a CEREZA');
+          /* 29 sep: en CEREZA ya no se pierde; sin llegar al nivel 2, nada */
+          var enCereza = Rg.estado(1).pr;
+          for (var k = 0; k < 5; k++) {
+            G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+            G.state = 'PLAYING'; G.score = 0; G.level = 1;
+            eq(Rg.cerrar(G).cambio, 0, 'en CEREZA una partida en blanco no quita nada');
+          }
+          eq(Rg.estado(1).pr, enCereza, 'ni en cinco');
+          var buena = jugar(0);
+          eq(buena.cambio, RG.DIVISIONES[0].minimo, 'y llegando al nivel 2, aunque sea sin puntos, +' + RG.DIVISIONES[0].minimo);
           G.toMenu();
         } finally { Rg.conCuenta = logged; }
       });
@@ -14905,7 +14912,8 @@
       eq(Rg.factorRoles(['asesino'], 1), 1, 'el ASESINO, la marca entera');
       eq(Rg.factorRoles(['soporte'], 1), F.soporte, 'el SOPORTE, menos');
       eq(Rg.factorRoles(null, 1), 1, 'sin roles (las de antes), como el ASESINO');
-      eq(Rg.factorRoles(['asesino', 'soporte'], 2), (1 + F.soporte) / 2, 'en party, la media del equipo');
+      eq(Rg.factorRoles(['asesino', 'soporte'], 2), 1 - (1 - (1 + F.soporte) / 2) * CFG.RANGO.CORRECCION_PARTY,
+        'en party, la media del equipo con media corrección');
       for (var i = 0; i < 5; i++) Rg.apuntar(20000, 1, 5);
       var t = Rg.estado().tramo, marca = Rg.parTramo(t, 1);
       eq(Rg.apuntar(Math.round(marca * F.soporte), 1, 5, ['soporte']).cambio, 0,
@@ -14913,6 +14921,180 @@
       eq(Rg.apuntar(Math.round(marca * F.soporte * 2), 1, 5, ['soporte']).cambio, 20, 'y doblarla, +20');
       ok(Rg.apuntar(Math.round(marca * F.soporte * 2), 1, 5, ['asesino']).cambio < 20,
         'los mismos puntos con el ASESINO valen menos');
+    });
+  });
+
+  /* 29 sep (PROPUESTAS 3a-C): CEREZA protegida */
+  test('RANGO: en CEREZA no se pierde y llegar al nivel 2 da al menos +5', function () {
+    var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES, T = Rg.TRAMOS;
+    eq(D[0].pierde, 0, 'CEREZA no quita');
+    eq(D[0].minimo, 5, 'y da al menos +5');
+    // en cualquier escalón de CEREZA, con cualquier marca y formato
+    for (var pr = 0; pr < T[4].desde; pr += 7) {
+      [0, 1000, 4000, 8000, 16000, 50000, 1e7].forEach(function (p) {
+        [1, 2, 4].forEach(function (n) {
+          var sin = Rg.cambio(p, pr, n, 1), con = Rg.cambio(p, pr, n, 2), libre = Rg.cambio(p, pr, n);
+          ok(sin === 0, 'sin el nivel 2 ni se gana ni se pierde (' + pr + ' PR, ' + p + ')');
+          ok(con >= 5 && con <= D[0].gana, 'con él, de +5 a +' + D[0].gana + ' (' + pr + ' PR, ' + p + '): ' + con);
+          ok(libre >= 0, 'sin decir el nivel, tampoco resta');
+          ok(con <= 25, 'cabe en el tope del servidor: rg <= 25 por partida');
+        });
+      });
+    }
+    eq(Rg.cambio(0, 0, 1, 2), 5, 'una partida floja que llega al nivel 2: +5');
+    eq(Rg.cambio(16000, 0, 1, 2), 20, 'si la marca da más, lo que dé');
+    eq(Rg.cambio(1e7, 0, 1, 2), D[0].gana, 'con el tope de siempre');
+    // EN VIVO, lo mismo
+    var e = Rg.estadoDe({ [Rg.clave('rc', 'x')]: 9, [Rg.clave('rg', 'x')]: 10 }, 'x');
+    eq(e.nombre, 'CEREZA IV');
+    var g = { clasif: true, rangoInicio: e, playerCount: 1, score: 0, level: 1,
+              replaying: false, isSpec: function () { return false; } };
+    eq(Rg.enVivo(g).cambio, 0, 'en la barra: sin el nivel 2, 0');
+    g.level = 2;
+    eq(Rg.enVivo(g).cambio, 5, 'con él, +5');
+    // y al apuntarla de verdad
+    conContadores(function (A) {
+      for (var i = 0; i < 5; i++) Rg.apuntar(0, 1, 1);
+      eq(Rg.estado().nombre, 'CEREZA IV', 'colocado en CEREZA IV');
+      var r = Rg.apuntar(0, 1, 1);
+      eq(r.cambio, 0, 'sin nivel, nada');
+      ok(r.sinNivel, 'y se dice que sin el nivel 2 no se gana');
+      ok(!A.stats()[Rg.clave('rl', Rg.temporada())], 'no se apunta nada perdido');
+      eq(Rg.apuntar(0, 1, 2).cambio, 5, 'con el nivel 2, +5');
+      eq(Rg.estado().pr, 5);
+    });
+  });
+
+  test('RANGO: de FRESA para arriba, CEREZA protegida no cambia nada', function () {
+    var Rg = window.PM.Rango, T = Rg.TRAMOS;
+    // la cuenta de antes, con los gana/pierde de antes (24 sep)
+    var GANA = [25, 22, 20, 18, 16, 14, 12, 10], PIERDE = [20, 22, 24, 26, 28, 30, 32, 35];
+    var NIVEL = [2, 2, 2, 3, 4, 5, 6, 7];
+    function viejo(p, pr, n, nivel) {
+      var t = Rg.tramo(pr), d0 = T[t].d;
+      var d = Math.round(20 * Math.log(Math.max(1, p) / Rg.parTramo(t, n)) / Math.LN2);
+      if (d > 0 && nivel != null && nivel < NIVEL[d0]) d = 0;
+      return Math.max(-PIERDE[d0], Math.min(GANA[d0], d));
+    }
+    var vistos = 0;
+    for (var pr = T[4].desde; pr <= T[T.length - 1].desde + 50; pr += 13) {
+      [0, 3000, 15000, 25000, 60000, 130000, 400000, 1e7].forEach(function (p) {
+        [1, 2, 3, 4].forEach(function (n) {
+          [null, 1, 2, 5, 9].forEach(function (nv) {
+            var a = Rg.cambio(p, pr, n, nv), b = viejo(p, pr, n, nv);
+            if (a !== b) throw new Error('distinto en ' + pr + ' PR, ' + p + ' puntos, n ' + n + ', nivel ' + nv + ': ' + a + ' != ' + b);
+            vistos++;
+          });
+        });
+      });
+    }
+    ok(vistos > 1000, 'comprobadas ' + vistos + ' combinaciones');
+  });
+
+  test('RANGO: con semilla en CEREZA, la colocación tampoco resta', function () {
+    conContadores(function (A) {
+      var Rg = window.PM.Rango, RG = CFG.RANGO, Se = window.PM.Season, act0 = Se.actual;
+      try {
+        // septiembre acabó en FRESA IV (100 PR) con 39 partidas: octubre, desde 50 (CEREZA II)
+        A.recordAll({ [Rg.clave('rc', '2026-09')]: 39, [Rg.clave('rg', '2026-09')]: 100 });
+        Se.actual = function () { return '2026-10'; };
+        var e = Rg.estado();
+        eq(e.semilla, 50);
+        eq(Rg.division(e.semilla), 0, 'la semilla cae en CEREZA');
+        Rg.apuntar(0, 1, 1);
+        eq(Rg.estado().prColoca, 50, 'una partida en blanco no la baja');
+        Rg.apuntar(0, 1, 2);
+        eq(Rg.estado().prColoca, 50 + RG.DIVISIONES[0].minimo * RG.COLOCACION_X,
+          'llegar al nivel 2 da el mínimo, por ' + RG.COLOCACION_X + ' (cabe en ru <= 50)');
+      } finally { Se.actual = act0; }
+    });
+  });
+
+  /* 29 sep (PROPUESTAS 3b-A+B): premios por temporada */
+  test('RANGO: los premios de septiembre se quedan como se cobraron, moneda a moneda', function () {
+    var Rg = window.PM.Rango, T = Rg.TRAMOS, Se = window.PM.Season, act0 = Se.actual;
+    // lo que pagaba cada fruta el 24 sep (DIVISIONES[].premio), sumado hasta ella
+    var VIEJO = [0, 500, 800, 1200, 2000, 3000, 5000, 10000];
+    var hasta = VIEJO.map(function (x, i) { return VIEJO.slice(0, i + 1).reduce(function (a, b) { return a + b; }, 0); });
+    eq(hasta[7], 22500, 'LLAVE en un mes: 22.500');
+    for (var d = 0; d < 8; d++) {
+      eq(Rg.premio(d, '2026-09'), VIEJO[d], CFG.RANGO.DIVISIONES[d].name + ' en septiembre');
+      eq(Rg.premiosHasta(d, '2026-09'), hasta[d]);
+    }
+    try {
+      ['2026-09', '2026-10', '2027-03'].forEach(function (hoy) {
+        Se.actual = function () { return hoy; };
+        T.forEach(function (tr, i) {
+          conContadores(function (A) {
+            A.record('rm4_2026-09', i + 1);
+            Rg._memoHasta = 0;
+            eq(Rg.monedas(), hasta[tr.d], 'septiembre en ' + tr.nombre + ', visto en ' + hoy);
+          });
+        });
+      });
+    } finally { Se.actual = act0; Rg._memoHasta = 0; }
+  });
+
+  test('RANGO: desde octubre CAMPANA paga 3.000 y LLAVE 5.000', function () {
+    var Rg = window.PM.Rango, T = Rg.TRAMOS, Se = window.PM.Season, act0 = Se.actual;
+    eq(Rg.premio(6, '2026-10'), 3000, 'CAMPANA');
+    eq(Rg.premio(7, '2026-10'), 5000, 'LLAVE');
+    eq(Rg.premio(5, '2026-10'), 3000, 'GALAXIAN, igual');
+    eq(Rg.premio(1, '2026-10'), 500, 'FRESA, igual');
+    eq(Rg.premiosHasta(7, '2026-10'), 15500, 'LLAVE en un mes: 15.500');
+    eq(Rg.premio(7, '2027-02'), 5000, 'un mes sin tabla propia usa la última definida');
+    eq(Rg.premio(7, '2026-08'), 10000, 'y uno de antes de todas, la primera');
+    var llave = T.length;
+    try {
+      conContadores(function (A) {
+        A.record('rm4_2026-09', llave);
+        A.record('rm4_2026-10', llave);
+        Rg._memoHasta = 0;
+        eq(Rg.monedas(), 22500 + 15500, 'LLAVE en los dos meses: cada uno con su tabla');
+      });
+      // llegar a CAMPANA jugando paga lo de SU temporada
+      var campana = -1;
+      T.forEach(function (x, i) { if (campana < 0 && x.d === 6) campana = i; });
+      [['2026-09', 5000], ['2026-10', 3000]].forEach(function (caso) {
+        conContadores(function (A) {
+          var t = caso[0];
+          Se.actual = function () { return t; };
+          A.recordAll({ [Rg.clave('rc', t)]: 10, [Rg.clave('rg', t)]: T[campana].desde - 5,
+                        [Rg.clave('rm', t)]: campana });
+          eq(Rg.estado().tramo, campana - 1, 'a 5 PR de CAMPANA');
+          var r = Rg.apuntar(10000000, 1, 9);
+          eq(r.nombre, 'CAMPANA III');
+          eq(r.frutaNueva, 'CAMPANA');
+          eq(r.monedas, caso[1], 'en ' + t + ', CAMPANA paga ' + caso[1]);
+        });
+      });
+    } finally { Se.actual = act0; Rg._memoHasta = 0; }
+  });
+
+  /* 29 sep (PROPUESTAS 5-C): en party, media corrección del rol */
+  test('RANGO: en party el factor de los roles va a media corrección', function () {
+    var Rg = window.PM.Rango, RG = CFG.RANGO;
+    function casi(a, b, msg) { ok(Math.abs(a - b) < 1e-9, msg + ': ' + a + ' != ' + b); }
+    eq(RG.CORRECCION_PARTY, 0.5);
+    casi(Rg.factorRoles(['soporte'], 1), 0.6, 'a solas, el SOPORTE entero');
+    casi(Rg.factorRoles(['tanque'], 1), 0.9, 'y el TANQUE');
+    casi(Rg.factorRoles(['soporte', 'soporte'], 2), 0.8, 'en party, SOPORTE 0,8');
+    casi(Rg.factorRoles(['tanque', 'tanque'], 2), 0.95, 'TANQUE 0,95');
+    casi(Rg.factorRoles(['mago', 'mago', 'mago'], 3), 0.95, 'MAGO 0,95');
+    casi(Rg.factorRoles(['asesino', 'asesino'], 2), 1, 'ASESINO, 1');
+    casi(Rg.factorRoles(['asesino', 'soporte'], 2), 0.9, 'una pareja ASESINO + SOPORTE: 0,9');
+    casi(Rg.factorRoles(['asesino', 'soporte', 'tanque', 'mago'], 4), 1 - (1 - (1 + 0.6 + 0.9 + 0.9) / 4) / 2, 'escuadra');
+    casi(Rg.factorRoles(null, 2), 1, 'sin roles, 1');
+    // la pareja con SOPORTE ya no saca un 19 % más que con TANQUE
+    var ventaja = Rg.factorRoles(['asesino', 'tanque'], 2) / Rg.factorRoles(['asesino', 'soporte'], 2) - 1;
+    ok(ventaja < 0.1, 'SOPORTE frente a TANQUE en pareja: ' + Math.round(ventaja * 1000) / 10 + ' %');
+    // y apuntada: igualar la marca del dúo con esos roles no mueve nada
+    conContadores(function () {
+      for (var i = 0; i < 5; i++) Rg.apuntar(20000, 1, 5);
+      var t = Rg.estado().tramo, m2 = window.PM.Badges.FORMATOS[1].mult;
+      var marca = Rg.parTramo(t, 1) * m2 * Rg.factorRoles(['soporte', 'soporte'], 2);
+      eq(Rg.apuntar(Math.round(marca), 2, 5, ['soporte', 'soporte']).cambio, 0, 'dos SOPORTE, a su marca: 0');
+      eq(Rg.apuntar(Math.round(marca * 2), 2, 5, ['soporte', 'soporte']).cambio, 20, 'doblándola, +20');
     });
   });
 
@@ -15246,7 +15428,8 @@
       A.record('rm4_2026-09', T.indexOf(fresa) + 1);
       A.record('rm4_2026-10', T.indexOf(melon) + 1);
       Rg._memoHasta = 0;
-      var esperado = D[1].premio + (D[1].premio + D[2].premio + D[3].premio + D[4].premio);
+      var esperado = Rg.premio(1, '2026-09') +
+        (Rg.premio(1, '2026-10') + Rg.premio(2, '2026-10') + Rg.premio(3, '2026-10') + Rg.premio(4, '2026-10'));
       eq(Rg.monedas(), esperado, 'cada temporada paga todas las frutas hasta la más alta');
       eq(Tn.saldo() - saldo0, esperado, 'y va al saldo de la tienda');
       A.record('rm3_2026-11_1', 20);
@@ -15261,7 +15444,7 @@
         for (var i = 0; i < 4; i++) Rg.apuntar(60000, 1, 5);
         var r = Rg.apuntar(60000, 1, 5);
         eq(r.nombre, 'FRESA IV');
-        eq(r.monedas, D[1].premio, 'la primera vez en FRESA, su premio');
+        eq(r.monedas, Rg.premio(1), 'la primera vez en FRESA, su premio');
         eq(r.frutaNueva, 'FRESA');
         var otra = Rg.apuntar(60000, 1, 5);
         ok(!(otra.monedas > 0) || otra.frutaNueva !== 'FRESA', 'FRESA no se vuelve a pagar');

@@ -17,12 +17,17 @@
  *   · Después, cada partida da o quita PR según tu marca contra la de tu
  *     escalón: el doble da +20, igualarla nada, la mitad −20. Sin llegar al
  *     nivel que pide tu fruta, no se gana.
+ *   · CEREZA está PROTEGIDA (29 sep): ahí no se pierde, y llegar al nivel 2
+ *     da al menos +5 (CFG.RANGO, `pierde` 0 y `minimo`).
  *   · Cada mes se vuelve a empezar (la temporada es la de Season.actual()),
  *     pero no de cero (25 sep): quien tuvo rango el mes pasado arranca desde
  *     una parte de su PR (CFG.RANGO.ARRASTRE) y la colocación se juega desde
  *     ahí, moviendo el doble.
  *   · Cada rol cuenta con su FACTOR (CFG.RANGO.FACTOR_ROL): la marca de un
  *     SOPORTE vale más que la misma de un ASESINO, que puntúa más fácil.
+ *     En party, con media corrección (CFG.RANGO.CORRECCION_PARTY).
+ *   · Cada fruta paga monedas la primera vez que llegas a ella en el mes,
+ *     con la tabla de ESA temporada (CFG.RANGO.PREMIOS_TEMPORADA).
  *
  * Qué cuenta
  *   Las partidas del modo CLASIFICATORIA, a solo o en party. En party cuenta
@@ -127,13 +132,16 @@
   }
 
   /* Lo que mueve una partida de `puntos` a quien está en `pr`. Sin llegar
-   * al `nivel` de su fruta no se gana nada (restar, sí). */
+   * al `nivel` de su fruta no se gana nada (restar, sí). Llegando a él, al
+   * menos el `minimo` de la fruta (CEREZA, 29 sep: +5; y ahí `pierde` es 0).
+   * Sin `nivel` (null) no se aplica ni lo uno ni lo otro. */
   function cambio(puntos, pr, n, nivel) {
     var t = tramo(pr), D = DIV[TRAMOS[t].d];
     var r = Math.max(1, puntos) / parTramo(t, n);
     var d = Math.round(RG.PASO * Math.log(r) / Math.LN2);
     if (d > 0 && nivel != null && nivel < (D.nivel || 1)) d = 0;
-    return Math.max(-D.pierde, Math.min(D.gana, d));
+    if (D.minimo > 0 && nivel != null && nivel >= (D.nivel || 1)) d = Math.max(d, D.minimo);
+    return Math.max(-(D.pierde || 0), Math.min(D.gana, d)) || 0;   // || 0: nunca −0
   }
 
   /* LOS AJUSTES A MANO de una cuenta (CFG.AJUSTES_CUENTA, rango): PR que se
@@ -164,8 +172,10 @@
     return ajustados(c, yo);
   }
 
-  /* EL FACTOR DE LOS ROLES (CFG.RANGO.FACTOR_ROL): el de uno, o la media
-   * de los del equipo. Sin roles (las de antes, o todos Asesino), 1. */
+  /* EL FACTOR DE LOS ROLES (CFG.RANGO.FACTOR_ROL): a solas, el de tu rol.
+   * En party (29 sep), la media del equipo con solo una parte de la
+   * corrección (CFG.RANGO.CORRECCION_PARTY, 0,5: SOPORTE 0,8, TANQUE y MAGO
+   * 0,95). Sin roles (las de antes, o todos Asesino), 1. */
   function factorRoles(roles, n) {
     var F = RG.FACTOR_ROL || {}, suma = 0, k = 0;
     n = Math.max(1, n | 0);
@@ -173,7 +183,26 @@
       var r = roles && roles[i], f = F[r] > 0 ? F[r] : (F.asesino || 1);
       suma += f; k++;
     }
-    return k ? suma / k : 1;
+    var m = k ? suma / k : 1;
+    if (n > 1) {
+      var cp = RG.CORRECCION_PARTY != null ? RG.CORRECCION_PARTY : 1;
+      m = 1 - (1 - m) * cp;
+    }
+    return m;
+  }
+
+  /* LAS MONEDAS DE UNA FRUTA EN UNA TEMPORADA (CFG.RANGO.PREMIOS_TEMPORADA):
+   * la tabla de esa temporada o, si no tiene, la última definida antes de
+   * ella (y si es anterior a todas, la primera). */
+  function premiosDe(t) {
+    var P = RG.PREMIOS_TEMPORADA || {}, ks = Object.keys(P).sort(), elegida = ks[0];
+    t = String(t || temporada());
+    for (var i = 0; i < ks.length; i++) if (ks[i] <= t) elegida = ks[i];
+    return (elegida && P[elegida]) || {};
+  }
+  function premio(d, t) {
+    var D = DIV[d];
+    return D ? (premiosDe(t)[D.id] || 0) : 0;
   }
 
   /* 'AAAA-MM' del mes de antes */
@@ -300,15 +329,17 @@
                nivelPide: D.nivel || 1, nivelOk: nivel >= (D.nivel || 1) };
     },
 
-    /* Tu rango en un formato (1..4) esta temporada */
     /* LAS MONEDAS DEL RANGO (24 sep): la primera vez que llegas a cada fruta
-     * en una temporada te llevas su `premio` (CFG.RANGO). No se guardan: se
-     * DEDUCEN de lo más alto alcanzado en cada temporada (rmN_<temporada>),
-     * igual que las del pase, así que juntar dos aparatos no las cobra dos
-     * veces y bajar después no las quita. */
-    premiosHasta: function (d) {
+     * en una temporada te llevas su premio. No se guardan: se DEDUCEN de lo
+     * más alto alcanzado en cada temporada (rmN_<temporada>), igual que las
+     * del pase, así que juntar dos aparatos no las cobra dos veces y bajar
+     * después no las quita. Cada temporada paga con SU tabla
+     * (CFG.RANGO.PREMIOS_TEMPORADA, 29 sep): cambiar los premios de un mes
+     * no reescribe lo cobrado en los de antes. */
+    premio: premio,
+    premiosHasta: function (d, t) {
       var n = 0;
-      for (var i = 0; i <= d && i < DIV.length; i++) n += DIV[i].premio || 0;
+      for (var i = 0; i <= d && i < DIV.length; i++) n += premio(i, t);
       return n;
     },
     monedas: function () {
@@ -325,7 +356,7 @@
       for (k in mejor) {
         if (!mejor.hasOwnProperty(k) || !(mejor[k] > 0)) continue;
         var T = TRAMOS[Math.min(TRAMOS.length, mejor[k]) - 1];
-        if (T) n += this.premiosHasta(T.d);
+        if (T) n += this.premiosHasta(T.d, k);
       }
       this._memo = n;
       this._memoHasta = ahora + 1000;
@@ -495,7 +526,7 @@
         /* ¿se quedó sin ganar por no llegar al nivel? (para decirlo) */
         var D = DIV[antes.division];
         res.sinNivel = nivel != null && nivel < (D.nivel || 1) && d === 0 &&
-          cambio(puntos, antes.pr, n) > 0;
+          (cambio(puntos, antes.pr, n) > 0 || D.minimo > 0);
         res.nivelPide = D.nivel || 1;
         /* en el suelo no se acumula deuda: lo que no se puede perder no se
          * apunta como perdido */
@@ -517,7 +548,7 @@
       var fAntes = antes.mejor >= 0 && TRAMOS[antes.mejor] ? TRAMOS[antes.mejor].d : -1;
       var mejorYa = Math.max(antes.mejor, res.tramo);
       var fYa = mejorYa >= 0 && TRAMOS[mejorYa] ? TRAMOS[mejorYa].d : -1;
-      res.monedas = fYa > fAntes ? this.premiosHasta(fYa) - this.premiosHasta(fAntes) : 0;
+      res.monedas = fYa > fAntes ? this.premiosHasta(fYa, t) - this.premiosHasta(fAntes, t) : 0;
       res.frutaNueva = res.monedas > 0 ? DIV[fYa].name : '';
       this._memoHasta = 0;
       res.sube = res.tramo > res.tramoAntes && res.tramoAntes >= 0;
