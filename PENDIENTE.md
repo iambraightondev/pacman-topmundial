@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**29 sep — COFRES EN EL JUEGO (pm-v297).** Hecho según PLAN-COFRES.md (ver SPEC).
+Servidor: función  + supabase/cofres*.sql (vuelta atrás en
+supabase/cofres-vuelta-atras.sql); el generador es el mismo archivo en el
+juego y en la función. Decidido sin Braighton, revisable: retroactivos = solo
+bienvenida 1 PLATA + 1 ORO; abrir pide cuenta; el ORO por récord solo con
+cuenta; las monedas de cofre no suben el pase; maestría nueva = escalón de
+maestría de rol. Una sola pantalla de apertura (el plan pedía 2-3 a elegir).
+**Por ver:** la apertura jugando; el primer LEGENDARIO del top 3 (2 oct);
+porcentajes tras una semana.
+
 **28 sep (noche) — GRAN REVISIÓN (pm-v295).** Braighton pidió analizar todo con
 varios agentes y arreglar lo que no necesitara decisión suya. Seis frentes,
 cada uno en su worktree y juntados en main: seguridad (aplicada YA en

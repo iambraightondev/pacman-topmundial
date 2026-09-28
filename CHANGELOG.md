@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-29 · Llegan los COFRES
+
+Se ganan jugando y no se compran; solo traen apariencia y monedas.
+
+- **MADERA** cada 5 partidas de más de un minuto: monedas o un emote.
+- **PLATA** por la semana del DAILY completa y por cada nivel de jugador: monedas, o un efecto o accesorio.
+- **ORO** por cada escalón nuevo de maestría y por un récord propio que mejore el anterior un 10 % (si ya pasaba de 10.000; uno por ruta y día): accesorio asegurado y a veces una skin de cofre.
+- **LEGENDARIO** para el top 3 del rango al cerrar la temporada, y un 2 % de los ORO se convierten en él: AGUJERO NEGRO.
+- Lo repetido se cambia por la mitad de su valor. Diez PLATAS seguidas sin pieza garantizan la siguiente.
+- Cada cuenta recibe **1 PLATA + 1 ORO de bienvenida**; lo demás cuenta desde hoy.
+- Se ganan sin cuenta, pero para abrirlos hace falta tenerla: el premio lo sortea el servidor.
+
 ## 2026-09-28 (noche) · Gran revisión: seguridad, party, guardado, móvil y rendimiento
 
 Seis revisiones a fondo del juego y sus arreglos, todo de una vez.
