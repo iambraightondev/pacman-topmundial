@@ -748,7 +748,15 @@
          * nada. No es manía: la marca tiene que durar exactamente los mismos
          * ticks aquí que en la repetición, y allí no hay ningún dedo que
          * suelte la tecla. */
-        if (s.apunta && (!corre || this.enDimension(i))) s.apunta = null;
+        /* LA PAUSA NO ESTÁ EN LA REPETICIÓN (28 sep): allí nadie pausa, así
+         * que el cierre por pausa se GRABA como entrada propia (cerrarMira) y
+         * la repetición lo hace en el mismo tick. Y quien pausa el VÍDEO de
+         * una repetición no cierra nada: la partida de aquel día no se paró. */
+        if (s.apunta && (!corre || this.enDimension(i))) {
+          if (G.paused && G.replaying) { /* pausa del vídeo: la mira sigue */ }
+          else if (G.paused) this.cerrarMira(i, true);
+          else s.apunta = null;
+        }
         if (!corre) continue;
         for (var j = 0; j < 4; j++) if (s.guard[j] > 0) s.guard[j]--;
         for (var k = 0; k < 4; k++) if (s.cd[k] > 0) s.cd[k]--;
@@ -978,17 +986,33 @@
       var ok = this.pulsar(G, idx, k);
       /* Si el meteoro no llegó a caer (se murió en el último tick, manda una
        * repetición) la retícula se cierra igual: nada de dejar una marca en
-       * el suelo apuntando a algo que ya no va a pasar. */
-      if (s.apunta) s.apunta = null;
+       * el suelo apuntando a algo que ya no va a pasar. Se graba: si no, en
+       * la repetición la mira seguiría abierta. */
+      if (s.apunta) this.cerrarMira(idx, true);
       return ok;
     },
 
     /* Suelta todo sin lanzar nada (la ventana pierde el foco y ya no llegará
-     * el "soltar") */
+     * el "soltar"). La mira que estuviera abierta se cierra GRABÁNDOLO: perder
+     * el foco no existe en la repetición. */
     cancelarMant: function () {
       for (var i = 0; i < this.st.length; i++) {
-        this.st[i].mant = -1; this.st[i].mantT = 0; this.st[i].apunta = null;
+        this.st[i].mant = -1; this.st[i].mantT = 0;
+        if (this.st[i].apunta) this.cerrarMira(i, true);
       }
+    },
+
+    /* Cierra la mira del METEORO sin tirarlo. `grabar`: apuntarlo en la
+     * repetición (Replay.apuntaCierre) cuando el motivo no está en ella
+     * (pausa, foco, dedo que se va); la repetición lo vuelve a hacer aquí
+     * mismo, sin grabar, al llegar a esa entrada. */
+    cerrarMira: function (idx, grabar) {
+      var s = this.estado(idx);
+      if (!s || !s.apunta) return false;
+      s.apunta = null;
+      var R = window.PM.Replay;
+      if (grabar && R && R.apuntaCierre) R.apuntaCierre(idx);
+      return true;
     },
 
     /* ---------- APUNTAR EL METEORO ----------

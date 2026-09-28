@@ -313,6 +313,7 @@
       var e = arr[i];
       var delta = e[0] - prev;
       var code = (e[2] === 8) ? 'E'
+        : (e[2] === 13) ? 'F' + (8 + (e[1] & 1))       // cierre de la mira
         : esMant(e) ? 'F' + (((e[1] & 1) << 2) + ((e[2] - 9) & 3))
         : esHab(e) ? codHab(e)
         : String.fromCharCode(71 + ((e[1] & 3) << 2) + (e[2] & 3));
@@ -338,7 +339,7 @@
     var out = [];
     if (s === '') return out;
     // el punto que cierra la cuenta es opcional: los textos de antes no lo llevan
-    var re = /([0-9a-z]+)(F[0-7]|[A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
+    var re = /([0-9a-z]+)(F[0-9]|[A-EG-Z])(?:\*([0-9a-z]+)\.?)?/g;
     var pos = 0, m, tick = 0;
     while ((m = re.exec(s)) !== null) {
       if (m.index !== pos) return null;          // basura entre medias
@@ -358,7 +359,8 @@
         if (cod === 69) out.push([tick, 0, 8]);            // E: continuar
         else if (cod === 70) {                             // F: poder mantenido
           var fm = parseInt(letra.charAt(1), 10);
-          out.push([tick, (fm >> 2) & 1, 9 + (fm & 3)]);
+          if (fm >= 8) out.push([tick, fm - 8, 13]);       // F8/F9: se cerró la mira
+          else out.push([tick, (fm >> 2) & 1, 9 + (fm & 3)]);
         }
         else if (poderDe >= 0) out.push([tick, poderDe, 4 + c]);
         else out.push([tick, (c >> 2) & 3, c & 3]);
@@ -600,7 +602,8 @@
          * de los dos primeros jugadores: es lo único que sabe grabar este
          * formato (de tres en adelante la partida es de red y se graba de
          * otra manera). */
-        if (!esNum(e[2]) || e[2] < 0 || e[2] > 12) return false;
+        /* 13: se cerró la mira del METEORO sin tirarlo (pausa, foco) */
+        if (!esNum(e[2]) || e[2] < 0 || e[2] > 13) return false;
         /* 8: CONTINUAR pagado. Siempre del J1 (en local un pago revive al
          * equipo del teclado) y nunca en PAC-MAN VS., que no tiene continuar. */
         if (e[2] === 8) {
@@ -825,6 +828,14 @@
       return h;
     },
 
+    /* Con sesión, por Account.pedir: la sesión caduca a la hora y un 401
+     * aquí era una repetición que no subía (28 sep). Sin sesión, a pelo. */
+    fetchNube: function (url, opts) {
+      var Ac = window.PM.Account;
+      if (Ac && Ac.pedir && Ac.logged && Ac.logged()) return Ac.pedir(url, opts);
+      return fetch(url, opts);
+    },
+
     /* El índice, sin las que ya caducaron en la nube (no destacadas y de
      * hace más de CFG.REPLAY_CADUCA_DIAS): esas ya no se pueden ver. */
     indiceNube: function () {
@@ -918,7 +929,7 @@
       function intenta(quedan) {
         var codigo = self.codigoNuevo();
         fila.id = codigo;
-        fetch(self.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE), {
+        self.fetchNube(self.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE), {
           method: 'POST', headers: h, body: JSON.stringify(fila)
         }).then(function (res) {
           if (res.ok) {
@@ -950,6 +961,8 @@
       // la página de pruebas no sube nada: sus partidas son de mentira
       if (window.PM_PRUEBAS || this.subiendo || !this.compartirConfigurado()) { if (cb) cb(); return; }
       var cola = [];
+      // primero las apartadas: son las que no están en ningún otro sitio
+      this.apartadas().forEach(function (r) { cola.push([r, r.red ? 'red' : 'local', true]); });
       this.guardadas().forEach(function (r) { if (!r.rn) cola.push([r, 'local']); });
       this.guardadasRed().forEach(function (r) { if (!r.rn) cola.push([r, 'red']); });
       if (!cola.length) { if (cb) cb(); return; }
@@ -958,6 +971,8 @@
         var x = cola.shift();
         if (!x) { self.subiendo = false; if (cb) cb(); return; }
         self.subirReg(x[0], x[1], function (err) {
+          // subida, o que nunca podrá subirse (rota, demasiado larga): se suelta
+          if (x[2] && (!err || /ROTA|LARGA|YA NO EST/.test(err))) self.soltarApartada(x[0].id);
           if (err && /DEMASIADAS|CONEXIÓN/.test(err)) { self.subiendo = false; if (cb) cb(); return; }
           siguiente();
         });
@@ -972,7 +987,7 @@
         if (cb) cb('SIN CUENTA');
         return;
       }
-      fetch(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
+      this.fetchNube(this.restUrl('/rest/v1/' + CFG.REPLAY_SHARE.TABLE +
               '?select=id,jugadores,puntos,nivel,tipo,t_partida,creado_en,nombres,destacada,titulo' +
               '&dueno=eq.' + encodeURIComponent(Ac.user.id) +
               '&order=creado_en.desc&limit=' + CFG.REPLAY_NUBE_MAX),
@@ -1007,7 +1022,7 @@
       var t = String(titulo || '').toUpperCase().trim().slice(0, CFG.REPLAY_TITULO_MAX);
       var R = window.PM.Ranking;
       if (activa && t && R && R.nameAllowed && !R.nameAllowed(t)) { cb('ESE NOMBRE NO VALE', null); return; }
-      fetch(this.restUrl('/rest/v1/rpc/destacar_repeticion'), {
+      this.fetchNube(this.restUrl('/rest/v1/rpc/destacar_repeticion'), {
         method: 'POST', headers: this.nubeHeaders(),
         body: JSON.stringify({ p_id: codigo, p_destacada: !!activa, p_titulo: activa ? t : null })
       }).then(function (res) {
@@ -1300,6 +1315,18 @@
       }
     },
 
+    /* La mira del METEORO se cerró SIN caer por algo que la repetición no
+     * tiene (pausa, la ventana pierde el foco...): entrada 13, 'F8'/'F9' en el
+     * texto (28 sep). Sin ella, al verla la mira seguía abierta y el meteoro
+     * caía en otro sitio. */
+    apuntaCierre: function (idx) {
+      if (!this.grabando || !(idx === 0 || idx === 1)) return;
+      this.grabando.entradas.push([this.t, idx, 13]);
+      if (this.grabando.entradas.length > CFG.REPLAY_MAX_ENTRADAS) {
+        this.grabando = null;
+      }
+    },
+
     /* CONTINUAR pagado (Game.pedirContinuar): se apunta en el tick en que
      * está parada la partida, y al verla revive en el mismo punto. */
     apuntaCont: function () {
@@ -1358,6 +1385,11 @@
           }
           if (!hayFuera) { this.cursor--; break; }
           G.revivir(-1);
+          continue;
+        }
+        if (e[2] === 13) {
+          // la mira del METEORO se cerró sin caer (aquel día se pausó o se perdió el foco)
+          if (window.PM.Hab && window.PM.Hab.cerrarMira) window.PM.Hab.cerrarMira(e[1], false);
           continue;
         }
         if (e[2] >= 9) {
@@ -1856,8 +1888,8 @@
           lista.pop();
         }
       }
-      // no cabe ni sola en este navegador: a la nube tal cual
-      return this.aLaNube(reg, 'red') ? reg : null;
+      // no cabe ni sola en este navegador: a la nube tal cual (apartada hasta que llegue)
+      return this.aLaNubeSinPerderla(reg, 'red') ? reg : null;
     },
 
     porIdRed: function (id) {
@@ -2044,17 +2076,22 @@
         var ahoraN = Date.now();
         var regN = { id: String(ahoraN) + '-' + b36(rep.final.puntos), t: ahoraN, j: rep.jugadores,
                      p: rep.final.puntos, lv: rep.final.nivel, b: 0, s: texto };
-        return (texto.length <= CFG.REPLAY_SHARE.MAX_CHARS && this.aLaNube(regN, 'local')) ? regN : null;
+        if (texto.length > CFG.REPLAY_SHARE.MAX_CHARS) return null;
+        return this.aLaNubeSinPerderla(regN, 'local') ? regN : null;
       }
       var lista = this.guardadas();
       var j = rep.jugadores;
       /* ¿es la de tu mejor marca? El récord ya está persistido cuando se
-       * cierra la partida, así que basta con empatarlo */
-      var tope = G.recordFor(j);
+       * cierra la partida, así que basta con empatarlo. El de SU liga (28
+       * sep): una de DESATADO o de LABERINTOS se medía con el récord del
+       * clásico, y la del récord de verdad quedaba sin proteger de la poda. */
+      var liga = this.ligaDe(rep);
+      var tope = (liga === 'vs') ? Infinity
+        : liga ? (G.recordModo ? G.recordModo(liga, j) : 0) : G.recordFor(j);
       var esRecord = rep.final.puntos > 0 && rep.final.puntos >= (tope || 0);
       if (esRecord) {
         for (var i = 0; i < lista.length; i++) {
-          if (lista[i].j === j) lista[i].b = 0;
+          if (lista[i].j === j && (lista[i].m || null) === liga) lista[i].b = 0;
         }
       }
       var ahora = Date.now();
@@ -2063,13 +2100,95 @@
         t: ahora, j: j, p: rep.final.puntos, lv: rep.final.nivel,
         b: esRecord ? 1 : 0, s: texto
       };
+      if (liga) reg.m = liga;
       lista.unshift(reg);
       this.podar(lista);
       this.escribir(lista);
       /* si ni sola cabía en el almacén, escribir() la ha soltado: a la nube */
-      if (lista.indexOf(reg) === -1) return this.aLaNube(reg, 'local') ? reg : null;
+      if (lista.indexOf(reg) === -1) return this.aLaNubeSinPerderla(reg, 'local') ? reg : null;
       this.subirPendientes();     // a la nube, para que no se pierda al podar
       return reg;
+    },
+
+    /* La liga del récord de una repetición local: 'hab' (DESATADO), 'lab'
+     * (LABERINTOS), 'vs' (PAC-MAN VS., que no tiene récord) o null (clásico) */
+    ligaDe: function (rep) {
+      if (!rep) return null;
+      if (esVersus(rep.modo)) return 'vs';
+      if (esDesatado(rep.modo)) return 'hab';
+      if (rep.ajustes && rep.ajustes.maze) return 'lab';
+      return null;
+    },
+
+    /* ---------- LAS QUE NO CABEN AQUÍ Y AÚN NO ESTÁN EN LA NUBE (28 sep) ----------
+     * Una repetición demasiado larga para este navegador iba directa a la
+     * nube y, si la subida fallaba (sin red, la sesión caducada), se perdía:
+     * justo las mejores partidas, que son las más largas. Ahora se APARTA
+     * antes de subirla (en su propia clave, fuera de la poda) y solo se suelta
+     * cuando la nube dice que sí; si falla, subirPendientes la vuelve a
+     * intentar al acabar la siguiente partida y al abrir el juego. Si ni así
+     * cabe, se hace sitio soltando repeticiones que YA están en la nube. */
+    APARTADAS_KEY: 'pacman-topmundial-rep-apartadas',
+    APARTADAS_MAX: 4,
+
+    apartadas: function () {
+      try {
+        var arr = JSON.parse(localStorage.getItem(this.APARTADAS_KEY) || '[]');
+        return esLista(arr) ? arr.filter(function (r) { return r && r.id && typeof r.s === 'string'; }) : [];
+      } catch (e) { return []; }
+    },
+
+    escribirApartadas: function (lista) {
+      for (var intento = 0; intento < 12; intento++) {
+        try {
+          if (lista.length) localStorage.setItem(this.APARTADAS_KEY, JSON.stringify(lista));
+          else localStorage.removeItem(this.APARTADAS_KEY);
+          return true;
+        } catch (e) {
+          if (!this.hacerSitio()) return false;
+        }
+      }
+      return false;
+    },
+
+    /* Suelta la repetición más vieja de las de aquí que ya está en la nube
+     * (se puede volver a ver desde allí). false si no queda ninguna. */
+    hacerSitio: function () {
+      var claves = [[CFG.REPLAY_KEY, this.guardadas()], [CFG.REPLAY_NET_KEY, this.guardadasRed()]];
+      for (var c = 0; c < claves.length; c++) {
+        var l = claves[c][1];
+        for (var i = l.length - 1; i >= 0; i--) {
+          if (!l[i].rn) continue;
+          l.splice(i, 1);
+          try { localStorage.setItem(claves[c][0], JSON.stringify(l)); return true; }
+          catch (e) { return false; }
+        }
+      }
+      return false;
+    },
+
+    apartar: function (reg, tipo) {
+      var lista = this.apartadas().filter(function (r) { return r.id !== reg.id; });
+      lista.unshift({ id: reg.id, t: reg.t, j: reg.j, p: reg.p, lv: reg.lv,
+                      red: tipo === 'red' ? 1 : 0, s: reg.s });
+      while (lista.length > this.APARTADAS_MAX) lista.pop();
+      return this.escribirApartadas(lista);
+    },
+
+    soltarApartada: function (id) {
+      var lista = this.apartadas(), n = lista.length;
+      lista = lista.filter(function (r) { return r.id !== id; });
+      if (lista.length !== n) this.escribirApartadas(lista);
+    },
+
+    /* Aparta y sube. true si se ha quedado a salvo (apartada o subiéndose) */
+    aLaNubeSinPerderla: function (reg, tipo) {
+      var self = this;
+      var aSalvo = this.apartar(reg, tipo);
+      var intentada = this.aLaNube(reg, tipo, function (err) {
+        if (!err) self.soltarApartada(reg.id);
+      });
+      return aSalvo || intentada;
     },
 
     porId: function (id) {

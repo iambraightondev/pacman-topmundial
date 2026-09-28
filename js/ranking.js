@@ -353,12 +353,16 @@
       })
         .then(function (res) {
           /* la sesión caduca a la hora: se renueva una vez y se reintenta */
-          if (res.status === 401 && !reintentado && Ac.restore) {
+          if (res.status === 401 && !reintentado && (Ac.renovar || Ac.restore)) {
             reintentado = true;
-            Ac.restore(function (err) {
-              if (err || !Ac.logged()) { if (cb) cb('NECESITAS UNA CUENTA'); return; }
+            /* solo el token (Account.renovar): antes se rehacía la entrada
+             * entera, con su sincronización del perfil */
+            var otra = function (bien) {
+              if (!bien || !Ac.logged()) { if (cb) cb('NECESITAS UNA CUENTA'); return; }
               mandar();
-            });
+            };
+            if (Ac.renovar) Ac.renovar().then(otra);
+            else Ac.restore(function (err) { otra(!err); });
             return null;
           }
           if (res.ok) {

@@ -138,6 +138,22 @@
     return conRed(function () { return roto(new Error('SIN CONEXIÓN')); }, cuerpo);
   }
 
+  /* Con una sesión de mentira, lo que la cuenta manda por detrás (la cola de
+   * subidas, que va con promesas de verdad) saldría DESPUÉS de sinRed, ya con
+   * el fetch de verdad puesto. Aquí la cola va de un tirón y todo lo que
+   * pase dentro se queda sin red. */
+  function cuentaSinRed(nombre, fn) {
+    var Ac = window.PM.Account;
+    var u0 = Ac.user, t0 = Ac.token, cola0 = Ac.enCola;
+    Ac.user = { id: 'id-' + nombre, usuario: nombre, avatar: 'pac' };
+    Ac.token = 'token-de-prueba';
+    Ac.enCola = function (f) {
+      try { return yaEsta(f()); } catch (e) { return roto(e); }
+    };
+    try { sinRed(function () { fn(Ac); }); }
+    finally { Ac.user = u0; Ac.token = t0; Ac.enCola = cola0; }
+  }
+
   // ---------------------------------------------------------------
   // Laberinto y arranque
   // ---------------------------------------------------------------
@@ -1821,6 +1837,85 @@
         if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
         else localStorage.setItem(CFG.REPLAY_KEY, previo);
       } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  /* 28 sep: la de DESATADO y la de LABERINTOS se medían con el récord del
+   * CLÁSICO, así que la de su récord de verdad quedaba sin proteger. */
+  test('la repetición del récord se mide con el récord de SU modo', function () {
+    var R = window.PM.Replay;
+    var previo = null, hs = G.highScore1;
+    var hab = G.recordModo('hab', 1), lab = G.recordModo('lab', 1);
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    function deModo(puntos, modo, maze) {
+      var r = repDe(puntos);
+      r.modo = modo;
+      if (maze) r.ajustes.maze = maze;
+      return r;
+    }
+    try {
+      R.borrarTodo();
+      G.highScore1 = 500000;                    // el clásico, altísimo
+      G.setRecordModo('hab', 20000, 1);
+      G.setRecordModo('lab', 15000, 1);
+      var enHab = R.guardar(deModo(20000, 'hab'));
+      eq(enHab.b, 1, 'la de DESATADO que iguala SU récord es la del récord');
+      var enLab = R.guardar(deModo(15000, 'solo', 'anillos'));
+      eq(enLab.b, 1, 'y la de LABERINTOS igual');
+      eq(R.porId(enHab.id).b, 1, 'una no le quita la marca a la otra: son ligas distintas');
+      eq(R.guardar(repDe(30000)).b, 0, 'una del clásico que no llega a su récord, no');
+      eq(R.guardar(deModo(19000, 'hab')).b, 0, 'ni una de DESATADO por debajo del suyo');
+      for (var i = 0; i < CFG.REPLAY_MAX + 4; i++) R.guardar(repDe(100 + i));
+      ok(R.porId(enHab.id), 'la poda no suelta la del récord de DESATADO');
+      ok(R.porId(enLab.id), 'ni la de LABERINTOS');
+    } finally {
+      G.highScore1 = hs;
+      G.setRecordModo('hab', hab, 1);
+      G.setRecordModo('lab', lab, 1);
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
+  /* 28 sep: una repetición demasiado larga para este navegador iba directa a
+   * la nube y, si la subida fallaba, se perdía (las mejores partidas son las
+   * más largas). Ahora se aparta hasta que la nube diga que sí. */
+  test('una repetición que no cabe aquí se aparta hasta que llegue a la nube', function () {
+    var R = window.PM.Replay;
+    var K = R.APARTADAS_KEY, previo = null;
+    try { previo = localStorage.getItem(K); localStorage.removeItem(K); } catch (e) { /* nada */ }
+    var aLaNube = R.aLaNube, subirReg = R.subirReg, max = CFG.REPLAY_MAX_CHARS;
+    var subidas = [], contesta = 'NO SE PUDO SUBIR LA REPETICIÓN';
+    R.aLaNube = function (reg, tipo, cb) { subidas.push(reg.id); if (cb) cb(contesta); return true; };
+    try {
+      CFG.REPLAY_MAX_CHARS = 50;                // cualquiera es "demasiado larga"
+      var reg = R.guardar(repDe(64000));
+      ok(reg, 'no se da por perdida');
+      eq(subidas.length, 1, 'se intenta subir');
+      eq(R.apartadas().length, 1, 'y como falla, queda apartada');
+      eq(R.apartadas()[0].s, reg.s, 'entera');
+      ok(R.leer(R.apartadas()[0].s), 'y se puede leer');
+
+      /* la próxima vez que se suben las pendientes, va la primera; al llegar,
+       * se suelta (subirPendientes no corre en la página de pruebas: se
+       * recorre su cola a mano con la misma subida) */
+      contesta = null;
+      R.subirReg = function (r, tipo, cb) { cb(null, 'CODIGO01'); };
+      var pr = window.PM_PRUEBAS, cf = R.compartirConfigurado;
+      window.PM_PRUEBAS = false;
+      R.subiendo = false;
+      R.compartirConfigurado = function () { return true; };
+      try { R.subirPendientes(); } finally { window.PM_PRUEBAS = pr; R.compartirConfigurado = cf; }
+      eq(R.apartadas().length, 0, 'al llegar a la nube, se suelta');
+    } finally {
+      CFG.REPLAY_MAX_CHARS = max;
+      R.aLaNube = aLaNube; R.subirReg = subirReg; R.subiendo = false;
+      try {
+        if (previo === null) localStorage.removeItem(K);
+        else localStorage.setItem(K, previo);
+      } catch (e) { /* nada */ }
     }
   });
 
@@ -4356,6 +4451,174 @@
     });
   });
 
+  /* ---------- LO JUGADO EN DOS APARATOS (js/account.js, BASE_KEY) ----------
+   * Cada aparato apunta su BASE (lo suyo que ya está en la nube) y cada
+   * subida le SUMA a la nube lo pendiente. Aquí se simulan dos aparatos
+   * cambiando el almacén de uno por el del otro, contra una nube de mentira
+   * que hace lo que el servidor: quedarse con el mayor de cada cifra. Nada
+   * sale a la red: fetch es de mentira y la cola va de un tirón. */
+  function dosAparatos(fn) {
+    var Ac = window.PM.Account, L = window.PM.Level, A = window.PM.Achievements;
+    var BASE = 'pacman-topmundial-nube-base';
+    var DEL_APARATO = [CFG.LEVEL_KEY, CFG.ACH_KEY, BASE];
+    var todas = DEL_APARATO.concat([CFG.SETTINGS_KEY, CFG.SAVE_KEY,
+      'pacman-topmundial-rhab-sembrado', 'pacman-topmundial-maestria-desde',
+      CFG.BADGES_KEY, CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas', CFG.DAILY.KEY]);
+    var antes = {};
+    todas.forEach(function (k) {
+      try { antes[k] = localStorage.getItem(k); } catch (e) { antes[k] = null; }
+    });
+    var u0 = Ac.user, t0 = Ac.token, cola0 = Ac.enCola, fetch0 = window.fetch;
+    var nick0 = window.PM.settings.nick1, av0 = window.PM.settings.avatar;
+    var d = {
+      nube: { id: 'id-dos', usuario: 'PEPE', avatar: 'pac', xp: 0, logros: {} },
+      caida: false, aparatos: {}, actual: null,
+      /* pasa a jugar en ese aparato (su almacén, tal como lo dejó) */
+      en: function (quien) {
+        var self = this;
+        if (self.actual) {
+          var guarda = {};
+          DEL_APARATO.forEach(function (k) { guarda[k] = localStorage.getItem(k); });
+          self.aparatos[self.actual] = guarda;
+        }
+        var suyo = self.aparatos[quien] || {};
+        DEL_APARATO.forEach(function (k) {
+          if (suyo[k] == null) localStorage.removeItem(k);
+          else localStorage.setItem(k, suyo[k]);
+        });
+        self.actual = quien;
+      },
+      fila: function () { return JSON.parse(JSON.stringify(this.nube)); }
+    };
+    window.fetch = function (url, opts) {
+      url = String(url); opts = opts || {};
+      if (!/\/rest\/v1\/perfiles/.test(url)) return respuesta(404, '');
+      if (!opts.method || opts.method === 'GET') return respuesta(200, [d.fila()]);
+      if (opts.method === 'POST') {
+        if (d.caida) return respuesta(500, 'caída');
+        var f = JSON.parse(opts.body);
+        d.nube.xp = Math.max(d.nube.xp, f.xp || 0);
+        for (var k in (f.logros || {})) {
+          d.nube.logros[k] = Math.max(d.nube.logros[k] || 0, f.logros[k] || 0);
+        }
+        return respuesta(201, '');
+      }
+      return respuesta(204, '');
+    };
+    Ac.enCola = function (f) { return yaEsta(f()); };
+    Ac.user = { id: 'id-dos', usuario: 'PEPE', avatar: 'pac' };
+    Ac.token = 'token-de-prueba';
+    try {
+      DEL_APARATO.forEach(function (k) { localStorage.removeItem(k); });
+      fn(d, Ac, L, A);
+    } finally {
+      window.fetch = fetch0;
+      Ac.enCola = cola0; Ac.user = u0; Ac.token = t0;
+      window.PM.settings.nick1 = nick0; window.PM.settings.avatar = av0;
+      todas.forEach(function (k) {
+        try {
+          if (antes[k] === null) localStorage.removeItem(k);
+          else localStorage.setItem(k, antes[k]);
+        } catch (e) { /* nada */ }
+      });
+    }
+  }
+
+  test('lo jugado en dos aparatos se SUMA en la nube y nada cuenta dos veces', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.en('A'); Ac.fundir(d.fila());
+      eq(L.xp(), 1000, 'A entra y se trae la cuenta');
+      d.en('B'); Ac.fundir(d.fila());
+      eq(L.xp(), 1000, 'B también');
+
+      d.en('A'); L.add(300); A.record('partidas', 2); Ac.pushQuiet();
+      eq(d.nube.xp, 1300, 'lo de A sube');
+      eq(d.nube.logros.partidas, 12);
+      d.en('B'); L.add(500); A.record('partidas', 3); Ac.pushQuiet();
+      eq(d.nube.xp, 1800, 'lo de B se SUMA a lo de A (antes se quedaba con el mayor)');
+      eq(d.nube.logros.partidas, 15, 'y los contadores que suman, igual');
+
+      // subir otra vez sin haber jugado no vuelve a sumar nada
+      Ac.pushQuiet(); d.en('A'); Ac.pushQuiet(); Ac.pushQuiet();
+      eq(d.nube.xp, 1800, 'repetir la subida no cuenta dos veces');
+      eq(d.nube.logros.partidas, 15);
+
+      // A vuelve a la pestaña: se trae lo de B y su subida no lo duplica
+      Ac.fundir(d.fila());
+      eq(L.xp(), 1800, 'A ve lo jugado en B');
+      eq(A.stats().partidas, 15);
+      Ac.pushQuiet();
+      d.en('B'); Ac.fundir(d.fila()); Ac.pushQuiet();
+      eq(L.xp(), 1800, 'B también');
+      eq(d.nube.xp, 1800, 'y la nube sigue con la suma exacta');
+      eq(d.nube.logros.partidas, 15);
+      var p = Ac.pendiente();
+      eq(p.xp, 0, 'sin nada pendiente');
+      eq(Object.keys(p.c).length, 0, 'ni contadores pendientes');
+    });
+  });
+
+  test('si una subida falla, lo pendiente llega después UNA sola vez', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.en('A'); Ac.fundir(d.fila());
+      L.add(200); A.record('partidas', 1);
+      d.caida = true;
+      Ac.pushQuiet(); Ac.pushQuiet();
+      eq(d.nube.xp, 1000, 'con la nube caída no llega');
+      eq(Ac.pendiente().xp, 200, 'y sigue apuntado como pendiente');
+      d.caida = false;
+      Ac.pushQuiet();
+      eq(d.nube.xp, 1200, 'al volver sube entero');
+      eq(d.nube.logros.partidas, 11, 'una sola vez');
+      Ac.pushQuiet();
+      eq(d.nube.xp, 1200, 'y no se vuelve a sumar');
+      // una fusión con la nube de por medio tampoco lo cuenta otra vez
+      Ac.fundir(d.fila());
+      eq(L.xp(), 1200);
+      eq(d.nube.xp, 1200);
+    });
+  });
+
+  /* GUARDIANA: al abrir el juego se siembran cosas (UI.init: lo visto, las
+   * maestrías de rol, los récords por rol, las skins). Si alguna hiciera
+   * crecer un contador que suma DESPUÉS de fijar la base, cada aparato lo
+   * contaría como pendiente y la nube lo sumaría una vez por aparato. */
+  test('las siembras del arranque no hacen crecer lo pendiente con la base ya fijada', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      var M = window.PM.Maestria, B = window.PM.Badges, S = window.PM.Skins;
+      function siembras() {
+        // lo mismo, y en el mismo orden, que UI.init
+        if (B) B.syncSeen();
+        A.syncSeen();
+        if (M) M.sembrar();
+        try { localStorage.removeItem('pacman-topmundial-rhab-sembrado'); } catch (e) { /* nada */ }
+        if (B && B.sembrarRoles) B.sembrarRoles();
+        if (S) S.syncVistas();
+      }
+      d.en('A');
+      // un aparato con historia: DESATADO de antes, maestrías sin sembrar
+      A.recordFor(['solo', 'hab'], { partidas: 7, fantasmas: 30 });
+      L.add(4000);
+      siembras();
+      Ac.fundir(d.fila());                 // entra: la base queda fijada
+      var antes = JSON.stringify(Ac.pendiente());
+      eq(Ac.pendiente().xp, 0, 'recién fijada, nada pendiente');
+      siembras(); siembras();              // se abre el juego otra vez (y otra)
+      eq(JSON.stringify(Ac.pendiente()), antes, 'las siembras no dejan nada pendiente');
+      var xp = d.nube.xp, lg = JSON.stringify(d.nube.logros);
+      Ac.pushQuiet();
+      eq(d.nube.xp, xp, 'y la nube no se infla');
+      eq(JSON.stringify(d.nube.logros), lg, 'ni sus contadores');
+      // el otro aparato, entrando después, tampoco añade nada al sembrar
+      d.en('B'); siembras(); Ac.fundir(d.fila()); siembras(); Ac.pushQuiet();
+      eq(d.nube.xp, xp, 'B no suma lo sembrado en A');
+    });
+  });
+
   test('comerse fantasmas y frutas alimenta los logros', function () {
     conLogrosLimpios(function (A) {
       partida(1);
@@ -4559,6 +4822,40 @@
         for (var k in guardadas) {
           try { if (guardadas[k] !== null) localStorage.setItem(k, guardadas[k]); } catch (e) { /* nada */ }
         }
+      }
+    });
+  });
+
+  /* 28 sep: antes se limpiaba en el acto y la subida iba por detrás; si
+   * fallaba, lo no subido se perdía para siempre. */
+  test('cerrar sesión espera a que la nube diga que sí; si no, no borra nada', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      // cerrar sesión deja los récords a cero: se guardan para devolverlos
+      var recs = [1, 2, 3, 4].map(function (n) { return G.recordFor(n); });
+      var modos = JSON.stringify(G.recordsModo);
+      try {
+        d.en('A');
+        L.add(5000); A.record('partidas', 7); G.highScore2 = 4321;
+        d.caida = true;
+        var err = 'sin respuesta';
+        Ac.signOut(function (e) { err = e; });
+        ok(err && /SIGUE ABIERTA/.test(err), 'se avisa: ' + err);
+        ok(Ac.logged(), 'la sesión sigue abierta');
+        eq(L.xp(), 5000, 'y lo de aquí no se ha tirado');
+        eq(A.stats().partidas, 7);
+        eq(G.recordFor(2), 4321, 'ni el récord');
+        d.caida = false;
+        err = 'sin respuesta';
+        Ac.signOut(function (e) { err = e; });
+        eq(err, null, 'con la nube de vuelta, se cierra');
+        ok(!Ac.logged(), 'ya sin sesión');
+        eq(d.nube.xp, 5000, 'con lo suyo ya en la nube');
+        eq(d.nube.logros.partidas, 7);
+        eq(L.xp(), 0, 'y el navegador limpio');
+      } finally {
+        recs.forEach(function (v, i) { G.setRecordFor(i + 1, v); });
+        G.recordsModo = JSON.parse(modos);
+        G.saveHighScores();
       }
     });
   });
@@ -5259,6 +5556,91 @@
       Ac.token = origTok;
       Ac.user = origUser;
     }
+  });
+
+  /* LA SESIÓN CADUCA A LA HORA (28 sep). Antes solo se renovaba al subir al
+   * TOP: pasada la hora, la cuenta dejaba de sincronizar sin decir nada. */
+  function conSesionDeMentira(fn) {
+    var Ac = window.PM.Account;
+    var g = { user: Ac.user, token: Ac.token, llave: Ac.llaveMem, caduca: Ac.caduca,
+              cb: Ac.cbRestore, ren: Ac.renovando };
+    // la llave guardada de verdad no se toca (fuera de tests.html sí se escribe)
+    var K = CFG.ACCOUNT.KEY, guardada = null;
+    try { guardada = localStorage.getItem(K); localStorage.removeItem(K); } catch (e) { /* nada */ }
+    Ac.user = { id: 'id-s', usuario: 'PEPE', avatar: 'pac' };
+    Ac.token = 'viejo';
+    Ac.llaveMem = 'llave-1';
+    Ac.caduca = 0;
+    Ac.renovando = null;
+    try { fn(Ac); } finally {
+      Ac.user = g.user; Ac.token = g.token; Ac.llaveMem = g.llave;
+      Ac.caduca = g.caduca; Ac.cbRestore = g.cb; Ac.renovando = g.ren;
+      try {
+        if (guardada === null) localStorage.removeItem(K);
+        else localStorage.setItem(K, guardada);
+      } catch (e) { /* nada */ }
+    }
+  }
+
+  test('un 401 renueva la sesión y repite la llamada, una vez', function () {
+    conSesionDeMentira(function (Ac) {
+      var vistas = conRed(function (url, opts) {
+        if (/grant_type=refresh_token/.test(url)) {
+          return respuesta(200, { access_token: 'nuevo', refresh_token: 'llave-2',
+                                  expires_in: 3600, user: { id: 'id-s' } });
+        }
+        if (opts.headers && opts.headers.Authorization === 'Bearer viejo') {
+          return respuesta(401, '{"message":"JWT expired"}');
+        }
+        return respuesta(200, [{ id: 'id-s', xp: 5 }]);
+      }, function () {
+        var fila = 'sin respuesta';
+        Ac.leerFila().then(function (f) { fila = f; });
+        eq(Ac.token, 'nuevo', 'el token se renueva');
+        ok(fila && fila.xp === 5, 'y la lectura se repite con él');
+        ok(Ac.caduca > Date.now(), 'con su caducidad apuntada');
+      });
+      eq(vistas.length, 3, 'la llamada, la renovación y la repetición');
+      eq(JSON.parse(vistas[1].opts.body).refresh_token, 'llave-1', 'con la llave de renovar');
+      eq(vistas[2].opts.headers.Authorization, 'Bearer nuevo');
+
+      // y si el token está a punto de caducar, se renueva ANTES de llamar
+      Ac.token = 'viejo';
+      Ac.caduca = Date.now() + 5000;
+      vistas = conRed(function (url) {
+        if (/grant_type=refresh_token/.test(url)) {
+          return respuesta(200, { access_token: 'otro', expires_in: 3600 });
+        }
+        return respuesta(200, []);
+      }, function () { Ac.leerFila(); });
+      ok(/grant_type=refresh_token/.test(vistas[0].url), 'primero la renovación');
+      eq(vistas[1].opts.headers.Authorization, 'Bearer otro', 'y la llamada ya va con el nuevo');
+      eq(vistas.length, 2, 'sin 401 de por medio');
+    });
+  });
+
+  test('abrir el juego sin red no cierra la sesión; una llave rechazada, sí', function () {
+    conSesionDeMentira(function (Ac) {
+      Ac.user = null; Ac.token = null;
+      var err = 'sin respuesta';
+      conRed(function () { return roto(new Error('sin red')); }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(err, 'SIN CONEXIÓN', 'sin red');
+      eq(Ac.llaveRenovar(), 'llave-1', 'la llave se queda para volver a probar');
+      conRed(function () { return respuesta(503, 'mantenimiento'); }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(Ac.llaveRenovar(), 'llave-1', 'un servidor caído tampoco la tira');
+      conRed(function () {
+        return respuesta(400, { error: 'invalid_grant', error_description: 'Invalid Refresh Token' });
+      }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(err, 'SESIÓN CADUCADA', 'si el servidor la rechaza, se dice');
+      eq(Ac.llaveRenovar(), null, 'y entonces sí se cierra');
+      ok(!Ac.logged());
+    });
   });
 
   /* Lo importante de entrar en una cuenta: que NUNCA cueste progreso.
@@ -9508,12 +9890,20 @@
   /* Alrededor de cada prueba: el almacén se deja como estaba y la
    * recuperación ocurre de un tirón (en el juego va por trozos para no
    * congelar la pantalla, y aquí no hay reloj que los encadene). */
+  /* lo que la partida a medias apunta aparte: las cerradas, lo que falta por
+   * subir a la nube y el testigo de la clasificatoria de party */
+  var CLAVES_GUARDADO = ['pacman-topmundial-partidas-cerradas',
+    'pacman-topmundial-partida-nube-pend', 'pacman-topmundial-clasif-viva'];
+
   function conGuardado(fn) {
     var Gd = window.PM.Guardado;
-    var previo = null, previoRep = null;
+    var previo = null, previoRep = null, aparte = {};
     var luego = Gd.luego;
     try { previo = localStorage.getItem(CFG.SAVE_KEY); } catch (e) { /* sin almacén */ }
     try { previoRep = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* nada */ }
+    CLAVES_GUARDADO.forEach(function (k) {
+      try { aparte[k] = localStorage.getItem(k); localStorage.removeItem(k); } catch (e) { aparte[k] = null; }
+    });
     Gd.luego = function (f) { f(); };
     Gd.deNube = null;
     /* Se llega aquí con lo que dejara la prueba de antes, y una repetición a
@@ -9534,6 +9924,10 @@
         else localStorage.setItem(CFG.SAVE_KEY, previo);
         if (previoRep === null) localStorage.removeItem(CFG.REPLAY_KEY);
         else localStorage.setItem(CFG.REPLAY_KEY, previoRep);
+        CLAVES_GUARDADO.forEach(function (k) {
+          if (aparte[k] === null) localStorage.removeItem(k);
+          else localStorage.setItem(k, aparte[k]);
+        });
       } catch (e) { /* sin almacén */ }
     }
   }
@@ -9656,6 +10050,123 @@
     });
   });
 
+  /* 28 sep: con el almacén lleno, escribir fallaba en silencio y GUARDAR Y
+   * SALIR se iba al menú dándola por guardada: la partida se perdía. */
+  test('GUARDAR Y SALIR con el almacén lleno no la da por guardada', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1 });
+      juegaGuion(700);
+      var escribir = Gd.escribir;
+      Gd.escribir = function (s) { return s ? false : escribir.call(Gd, s); };
+      try {
+        eq(Gd.guardarYSalir(), false, 'no dice que se guardó');
+        eq(Gd.fallo, 'SIN SITIO', 'y sabe por qué, para decirlo');
+        ok(G.inGame(), 'la partida sigue: no se sale al menú');
+        eq(G.salvada, false, 'ni queda marcada como guardada');
+      } finally { Gd.escribir = escribir; }
+      ok(Gd.guardarYSalir(), 'con sitio, se guarda');
+    });
+  });
+
+  /* CERRAR O RECARGAR LA PESTAÑA (pagehide): lo que se puede continuar se
+   * guarda donde iba, sin cobrarlo; se cobra al acabarla. */
+  test('cerrar la pestaña en plena partida la deja guardada, sin cobrarla', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      var L = window.PM.Level;
+      G.newGame({ players: 1 });
+      juegaGuion(900);
+      var puntos = G.score, xp = L.xp();
+      eq(Gd.alIrse(false), 'guardada', 'al esconderse, se guarda');
+      juegaGuion(50);
+      puntos = G.score;
+      eq(Gd.alIrse(true), 'guardada', 'al cerrarse, también (lo último)');
+      eq(Gd.sobre().p, puntos, 'con los puntos de ese momento');
+      eq(L.xp(), xp, 'y sin cobrarla');
+      cierraDeGolpe();
+      var err = 'sin respuesta';
+      Gd.retomar(null, function (e) { err = e; });
+      eq(err, null, 'al volver se retoma');
+      eq(G.score, puntos, 'donde iba');
+      G.toMenu();
+      eq(L.xp(), xp + puntos, 'y se cobra una sola vez, al acabarla');
+    });
+  });
+
+  test('en party, cerrar la pestaña cobra lo jugado y una CLASIFICATORIA cuenta como salida', function () {
+    var Rg = window.PM.Rango, cc = Rg.conCuenta;
+    conGuardado(function (Gd) {
+      conContadores(function () { cuentaSinRed('UNO', function () {
+        Rg.conCuenta = function () { return true; };
+        try {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.state = 'PLAYING';
+          G.score = 3000;
+          eq(Rg.porQueNo(G), null, 'es una clasificatoria que cuenta');
+          var A = window.PM.Achievements;
+          var partidas = A.stats().partidas || 0, antes = Rg.estado().jugadas;
+          eq(Gd.alIrse(false), 'testigo', 'al esconderse deja el testigo (no se puede guardar)');
+          ok(Gd.testigo(), 'apuntado');
+          eq(G.inGame(), true, 'esconderse no es irse: la partida sigue');
+          eq(Gd.alIrse(true), 'cobrada', 'al cerrar la pestaña se cobra');
+          eq(G.inGame(), false);
+          eq(A.stats().partidas, partidas + 1, 'la partida se cobra (cuenta como jugada)');
+          ok(G.runSummary, 'con su resumen de lo que se lleva');
+          eq(Rg.estado().jugadas, antes + 1, 'y cuenta para el rango como una salida');
+          eq(Gd.testigo(), null, 'el testigo sobra');
+          Gd.revisarTestigo();
+          eq(Rg.estado().jugadas, antes + 1, 'y no cuenta otra vez al volver a abrir');
+        } finally {
+          Rg.conCuenta = cc;
+          if (G.inGame()) G.toMenu();
+        }
+      }); });
+    });
+  });
+
+  test('si la página muere escondida en plena clasificatoria de party, cuenta al volver', function () {
+    var Rg = window.PM.Rango, Ac = window.PM.Account, cc = Rg.conCuenta;
+    var ss = Ac.savedSession;
+    conGuardado(function (Gd) {
+      conContadores(function () { cuentaSinRed('UNO', function () {
+        Rg.conCuenta = function () { return true; };
+        Ac.savedSession = function () { return 'llave'; };
+        try {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.state = 'PLAYING';
+          G.score = 2500;
+          var antes = Rg.estado().jugadas;
+          eq(Gd.alIrse(false), 'testigo');
+          // el móvil la mata: nada se cierra, nada se cobra
+          G.netRole = null; cierraDeGolpe();
+          eq(Rg.estado().jugadas, antes, 'todavía no ha contado');
+          Gd.revisarTestigo();                // se vuelve a abrir el juego
+          eq(Rg.estado().jugadas, antes + 1, 'al volver a abrir, cuenta');
+          Gd.revisarTestigo();
+          eq(Rg.estado().jugadas, antes + 1, 'una sola vez');
+
+          /* y una clasificatoria que se cierra como es debido no deja testigo
+           * que cuente de más */
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.state = 'PLAYING';
+          G.score = 1200;
+          Gd.alIrse(false);
+          G.toMenu();
+          eq(Rg.estado().jugadas, antes + 2, 'salir cuenta, como siempre');
+          eq(Gd.testigo(), null, 'y se lleva el testigo');
+          Gd.revisarTestigo();
+          eq(Rg.estado().jugadas, antes + 2, 'que ya no suma nada');
+        } finally {
+          Rg.conCuenta = cc; Ac.savedSession = ss;
+          if (G.inGame()) G.toMenu();
+        }
+      }); });
+    });
+  });
+
   test('una partida que al rehacerla no sale igual no se retoma', function () {
     conGuardado(function (Gd) {
       window.PM.settings.muted = true;
@@ -9771,6 +10282,130 @@
       eq(Gd.sobre().p, 54321, 'una más nueva sí manda');
       Gd.desdeNube('esto no es un sobre');
       eq(Gd.sobre().p, mio.p, 'y una ilegible se ignora');
+    });
+  });
+
+  /* 28 sep: la partida retomada en OTRO aparato y acabada allí se cobraba
+   * allí... y la copia de aquí se podía seguir y cobrar otra vez. Dos
+   * aparatos: el almacén de uno se cambia por el del otro, y la "nube" es lo
+   * último que cada uno mandó por Account.guardarPartida. */
+  function conNubeDePartidas(fn) {
+    var Ac = window.PM.Account;
+    var gp = Ac.guardarPartida, lp = Ac.leerPartida;
+    var nube = { texto: null, cae: false };
+    Ac.guardarPartida = function (texto, cb) {
+      if (nube.cae) { if (cb) cb('NO SE PUDO'); return; }
+      nube.texto = texto;
+      if (cb) cb(null);
+    };
+    Ac.leerPartida = function (cb) { cb(nube.cae ? 'NO SE PUDO' : null, nube.texto); };
+    try { cuentaSinRed('PEPE', function () { fn(nube); }); }
+    finally { Ac.guardarPartida = gp; Ac.leerPartida = lp; }
+  }
+
+  test('una partida acabada en otro aparato ya no se puede seguir aquí', function () {
+    conGuardado(function (Gd) {
+      conNubeDePartidas(function (nube) {
+        var L = window.PM.Level;
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1 });
+        juegaGuion(700);
+        ok(Gd.guardarYSalir(), 'en A se deja a medias');
+        var enA = localStorage.getItem(CFG.SAVE_KEY);
+        var id = Gd.idDe(JSON.parse(enA));
+        ok(id, 'la guardada lleva el id de su partida');
+        eq(Gd.idDe(JSON.parse(nube.texto)), id, 'y sube a la nube con él');
+
+        // B (otro almacén): se la trae de la nube, la retoma y la acaba
+        localStorage.removeItem(CFG.SAVE_KEY);
+        Gd.desdeNube(nube.texto);
+        var err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, null, 'B la retoma');
+        var xp = L.xp();
+        G.toMenu();
+        ok(L.xp() > xp, 'B la cobra');
+        ok(Gd.estaCerrada(id), 'y la apunta como cerrada');
+        var lapida = JSON.parse(nube.texto);
+        ok(!lapida.rep && lapida.cz.indexOf(id) !== -1, 'a la nube va la lápida con su id');
+
+        // A: su copia sigue en su almacén, y A no sabe nada todavía
+        localStorage.setItem(CFG.SAVE_KEY, enA);
+        localStorage.removeItem('pacman-topmundial-partidas-cerradas');
+        ok(Gd.hay(), 'A todavía la tiene');
+        Gd.desdeNube(nube.texto);          // al entrar o sincronizar
+        eq(Gd.hay(), false, 'al saber que se cerró, ya no se puede seguir');
+        eq(localStorage.getItem(CFG.SAVE_KEY), null, 'y la copia se tira');
+      });
+    });
+  });
+
+  test('retomar mira antes la nube: si se acabó en otro aparato, no se sigue', function () {
+    conGuardado(function (Gd) {
+      conNubeDePartidas(function (nube) {
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1 });
+        juegaGuion(700);
+        ok(Gd.guardarYSalir(), 'guardada');
+        var id = Gd.idDe(Gd.sobre());
+        // mientras, en otro aparato se acabó: en la nube está su lápida
+        nube.texto = JSON.stringify({ v: CFG.SAVE_V, fin: 1, cz: [id], fecha: Date.now() });
+        var err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, 'CERRADA', 'no se retoma');
+        eq(G.inGame(), false, 'ni se monta nada');
+        eq(Gd.hay(), false, 'y deja de ofrecerse');
+
+        // sin red no hay forma de saberlo: se sigue como siempre
+        G.newGame({ players: 1 });
+        juegaGuion(600);
+        ok(Gd.guardarYSalir(), 'otra guardada');
+        nube.cae = true;
+        err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, null, 'sin red, se retoma');
+      });
+    });
+  });
+
+  test('la lápida que no llega a la nube se vuelve a mandar, sin pisar lo más nuevo', function () {
+    conGuardado(function (Gd) {
+      conNubeDePartidas(function (nube) {
+        window.PM.settings.muted = true;
+        G.newGame({ players: 1 });
+        juegaGuion(700);
+        ok(Gd.guardarYSalir(), 'guardada (y subida)');
+        var vieja = nube.texto, id = Gd.idDe(Gd.sobre());
+        var err = 'sin respuesta';
+        Gd.retomar(null, function (e) { err = e; });
+        eq(err, null);
+        nube.cae = true;
+        G.toMenu();                        // se acaba... y la nube no contesta
+        eq(nube.texto, vieja, 'la lápida no ha llegado');
+        nube.cae = false;
+        Gd.desdeNube(nube.texto);          // la próxima sincronización
+        var ahora = JSON.parse(nube.texto);
+        ok(!ahora.rep && ahora.cz.indexOf(id) !== -1, 'se vuelve a mandar y llega');
+
+        /* si entretanto otro aparato subió algo MÁS NUEVO, no se pisa: se le
+         * pegan las cerradas de aquí */
+        nube.cae = true;
+        G.newGame({ players: 1 });
+        juegaGuion(300);
+        G.toMenu();
+        var cerradaAqui = Gd.cerradas()[0];
+        nube.cae = false;
+        var otra = JSON.parse(vieja);
+        otra.id = 'p-otra-partida';
+        otra.cz = [];
+        otra.fecha = Date.now() + 60000;
+        nube.texto = JSON.stringify(otra);
+        Gd.desdeNube(nube.texto);
+        var queda = JSON.parse(nube.texto);
+        eq(queda.id, 'p-otra-partida', 'la guardada de allí se queda');
+        ok(queda.rep, 'entera');
+        ok(queda.cz.indexOf(cerradaAqui) !== -1, 'con lo cerrado aquí pegado');
+      });
     });
   });
 
@@ -12831,6 +13466,69 @@
     eq(g.mode, 'eyes', 'llevándose por delante al fantasma que había debajo');
   });
 
+  /* 28 sep: la mira se cierra sola al PAUSAR (y al perder el foco la ventana),
+   * pero la repetición no tiene pausas ni ventanas: allí seguía abierta y el
+   * meteoro caía en otro sitio. Ahora el cierre se graba como entrada propia. */
+  test('pausar o perder el foco con la mira del METEORO abierta no descuadra la repetición', function () {
+    var R = window.PM.Replay, H = window.PM.Hab, K = 3, DRx = CFG.DIR;
+    var previo = null;
+    try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { /* sin almacén */ }
+    function corre(n) { for (var j = 0; j < n; j++) G.step(); }
+    function dondeCae() {
+      var m = H.st[0] && H.st[0].meteoro;
+      return m ? (m.c + ',' + m.r) : null;
+    }
+    /* corta(): lo que cierra la mira sin tirar nada; tira(): cómo sale luego */
+    function jugar(corta, tira) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, roles: ['mago'], loadouts: ['fuego,portal,runa,meteoro'] });
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      corre(20);
+      ok(H.apretar(G, 0, K, false), 'se abre la mira');
+      G.setPacDir(0, DRx.UP); G.setPacDir(0, DRx.UP); G.setPacDir(0, DRx.RIGHT);
+      corre(4);
+      corta();
+      eq(H.st[0].apunta, null, 'la mira se cierra sin tirar nada');
+      corre(4);
+      tira();
+      var cae = dondeCae();
+      ok(cae, 'y luego el meteoro cae (sin mira: al frente)');
+      corre(10);
+      var rep = R.enCurso();
+      rep.final = { puntos: Math.max(1, G.score), nivel: G.level, fantasmas: G.runGhosts,
+                    tiempoMs: Math.round(G.timeTicks * 1000 / 60) };
+      return { rep: rep, cae: cae };
+    }
+    function verla(rep) {
+      var leida = R.leer(R.serializar(rep));
+      ok(leida, 'la repetición pasa por el texto');
+      ok(leida.entradas.some(function (e) { return e[2] === 13; }), 'con el cierre de la mira grabado');
+      ok(R.ver(leida), 'y arranca');
+      G.state = 'PLAYING';
+      G.readyTicks = 0;
+      var visto = null;
+      for (var j = 0; j < 400 && !visto; j++) { G.step(); visto = dondeCae(); }
+      return visto;
+    }
+    try {
+      var a = jugar(function () { G.setPaused(true); corre(3); G.setPaused(false); },
+                    function () { H.soltar(G, 0, K); });
+      eq(verla(a.rep), a.cae, 'pausada: en la repetición cae en el mismo sitio');
+      R.salir();
+      var b = jugar(function () { H.cancelarMant(); },          // la ventana pierde el foco
+                    function () { H.pulsar(G, 0, K); });
+      eq(verla(b.rep), b.cae, 'sin foco: también');
+    } finally {
+      R.salir();
+      if (G.inGame()) G.toMenu();
+      try {
+        if (previo === null) localStorage.removeItem(CFG.REPLAY_KEY);
+        else localStorage.setItem(CFG.REPLAY_KEY, previo);
+      } catch (e) { /* sin almacén */ }
+    }
+  });
+
   test('AJUSTES: el METEORO paga cuando acierta: más grande, recarga devuelta y fuego que quema', function () {
     var H = window.PM.Hab, HH = CFG.HAB, T = CFG.TILE, i, j;
     var R = 3;
@@ -14041,6 +14739,54 @@
         Gd.descartar();
         eq(Rg.estado(1).jugadas, 1, 'un DESATADO descartado no toca el rango');
       } finally { Rg.conCuenta = cc; Gd.borrar(); }
+    });
+  });
+
+  /* 28 sep: el DESCARTARLA del aviso "no se pudo retomar" borraba a pelo, y
+   * una CLASIFICATORIA tirada ahí no contaba (la forma de no perder PR). Y una
+   * que ya se cerró en otro aparato no vuelve a contar al descartarla aquí. */
+  test('RANGO: DESCARTARLA tras no poder retomarla cuenta; la cerrada en otro aparato, no', function () {
+    var Rg = window.PM.Rango, Gd = window.PM.Guardado, UI = window.PM.UI, cc = Rg.conCuenta;
+    var cerradas = 'pacman-topmundial-partidas-cerradas', c0 = null;
+    try { c0 = localStorage.getItem(cerradas); } catch (e) { /* nada */ }
+    conContadores(function () {
+      Rg.conCuenta = function () { return true; };
+      try {
+        function dejarGuardada() {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+          G.state = 'PLAYING'; G.readyTicks = 0;
+          G.pacs[0].safeTicks = 999999;
+          ticks(10);
+          G.score = 4000;
+          ok(Gd.guardar(), 'se guarda');
+          G.salvada = true;
+          G.toMenu();
+          window.PM.Replay.salir(true);
+        }
+        dejarGuardada();
+        UI.avisoNoSePudo('NO CUADRA');
+        var boton = [].filter.call(UI.els.prompt.querySelectorAll('button'), function (b) {
+          return b.textContent.indexOf('DESCARTARLA') === 0;
+        })[0];
+        ok(boton, 'el aviso tiene su DESCARTARLA');
+        boton.click();
+        eq(Rg.estado(1).jugadas, 1, 'descartarla ahí también cuenta para el rango');
+        ok(!Gd.hay(), 'y ya no está');
+
+        dejarGuardada();
+        var id = Gd.idDe(Gd.sobre());
+        Gd.aprender([id]);                 // se sabe que se acabó en otro aparato
+        ok(!Gd.hay(), 'la cerrada en otro aparato ya no se ofrece');
+        Gd.descartar();
+        eq(Rg.estado(1).jugadas, 1, 'y no vuelve a contar');
+      } finally {
+        Rg.conCuenta = cc; UI.hidePrompt(); Gd.borrar();
+        try {
+          if (c0 === null) localStorage.removeItem(cerradas);
+          else localStorage.setItem(cerradas, c0);
+        } catch (e) { /* nada */ }
+      }
     });
   });
 

@@ -1248,6 +1248,18 @@
       var self = this;
       var Gd = window.PM.Guardado;
       var sb = Gd.sobre();
+      /* se terminó (y se cobró) en otro aparato: ya no hay nada que decidir */
+      if (err === 'CERRADA') {
+        this.refreshContinuar();
+        this.showPrompt({
+          title: 'YA SE TERMINÓ', arcade: true, tono: 'amarillo',
+          lines: ['ESA PARTIDA SE ACABÓ EN OTRO APARATO Y SE COBRÓ ALLÍ',
+                  'AQUÍ YA NO SE PUEDE SEGUIR'],
+          buttons: [{ label: 'VALE', primary: true, hint: 'ENTER', keys: ['Enter', 'Escape'],
+            onClick: function () { self.hidePrompt(); } }]
+        });
+        return;
+      }
       this.showPrompt({
         title: 'NO SE PUDO',
         arcade: true,
@@ -1267,7 +1279,8 @@
         buttons: [
           { label: 'DESCARTARLA', primary: true, hint: 'ENTER', keys: ['Enter'],
             onClick: function () {
-              Gd.borrar();
+              // descartar, no borrar: una CLASIFICATORIA sigue contando al tirarla
+              Gd.descartar();
               self.hidePrompt();
               self.refreshContinuar();
             } },
@@ -9083,7 +9096,22 @@
         correoBtn.classList.add('btn-preset');
         row.appendChild(correoBtn);
         var salir = this.makeButton('CERRAR SESIÓN', function () {
-          Ac.signOut(function () { self.refreshProfile(); });
+          /* primero sube lo tuyo y solo entonces se cierra: si no sube, se
+           * dice y la sesión sigue (no se tira nada sin subir) */
+          if (self.profAccountMsg) {
+            self.profAccountMsg.classList.remove('error');
+            self.profAccountMsg.textContent = 'GUARDANDO ANTES DE SALIR...';
+          }
+          Ac.signOut(function (err) {
+            if (err) {
+              if (self.profAccountMsg) {
+                self.profAccountMsg.classList.add('error');
+                self.profAccountMsg.textContent = err;
+              }
+              return;
+            }
+            self.refreshProfile();
+          });
         });
         salir.classList.add('perfil-salir');
         this.profAccountSalir.appendChild(salir);
@@ -11902,7 +11930,21 @@
       if (sePuede) {
         botones.push({ label: 'GUARDAR', hint: 'G', keys: ['g'],
           onClick: function () {
-            if (!Gd.guardarYSalir()) return;    // no se pudo: se sigue en pausa
+            if (!Gd.guardarYSalir()) {
+              /* no se pudo: se dice por qué y se sigue en pausa (darla por
+               * guardada con el almacén lleno era perderla al salir) */
+              self.showPrompt({
+                title: 'NO SE PUDO GUARDAR', arcade: true, tono: 'rojo',
+                lines: [Gd.fallo === 'SIN SITIO'
+                    ? 'NO QUEDA SITIO EN ESTE NAVEGADOR PARA GUARDARLA'
+                    : Gd.fallo === 'DEMASIADO LARGA' ? 'ES DEMASIADO LARGA PARA GUARDARLA'
+                    : 'AHORA MISMO NO HAY NADA QUE GUARDAR',
+                  'LA PARTIDA SIGUE EN PAUSA: NO SE HA PERDIDO NADA'],
+                buttons: [{ label: 'VOLVER', primary: true, hint: 'ENTER', keys: ['Enter', 'Escape'],
+                  onClick: function () { self.syncPrompt(); } }]
+              });
+              return;
+            }
             self.hidePrompt();
             self.showMenu();
           } });
