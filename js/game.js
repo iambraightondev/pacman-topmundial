@@ -784,6 +784,10 @@
       // desde aquí se graba la repetición de la partida (o se vuelve a
       // empezar la que se esté viendo). Ver js/replay.js
       if (window.PM.Replay) window.PM.Replay.alEmpezar(opts);
+      /* SUPERA ESTO (js/retos.js): si hay un reto armado de esta ruta, la
+       * marca a batir va en el marcador. Después de la repetición, que es
+       * quien dice si esto se está jugando o solo viendo. */
+      if (window.PM.Retos) window.PM.Retos.alEmpezar(this);
       // controles en pantalla: una cruceta o dos según el modo recién arrancado
       this.syncUI();
     },
@@ -1251,6 +1255,7 @@
       this.stepEmotes();
       this.stepChat();
       this.stepBadgeNotice();
+      if (window.PM.Retos) window.PM.Retos.paso(this);   // ¿ya pasa la marca del reto?
       this.stepOverWait();
       // recargas y efectos de las habilidades (no hace nada fuera del modo)
       if (window.PM.Hab) window.PM.Hab.paso(this);
@@ -5878,6 +5883,9 @@
       if (caza) {
         // aquí no hay récord que valga: en su hueco, el reloj del poder
         window.PM.Caza.hud(this, ctx);
+        ctx.fillStyle = CFG.COLORS.text;
+      } else if (window.PM.Retos && window.PM.Retos.hud(this, ctx)) {
+        /* SUPERA ESTO: en su sitio, RETO <AMIGO> y la marca a batir */
         ctx.fillStyle = CFG.COLORS.text;
       } else {
         ctx.textAlign = 'center';

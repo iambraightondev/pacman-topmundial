@@ -9233,3 +9233,117 @@ body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosA
   .pp-cel-lista li { flex-wrap: wrap; }
   .pp-cel-premio { margin-left: 34px; }
 }
+
+/* ---------- RETOS ENTRE AMIGOS (js/retos.js, 29 sep) ----------
+ * ¡TE HAN SUPERADO! en la portada (en la ficha en ancho, debajo de JUGAR en
+ * el móvil), el diálogo SUPERA ESTO y SUS MARCAS en el perfil de un amigo.
+ * Todo con el rojo de BLINKY (--rc): el rival. */
+.rt-box {
+  --rc: #ff4d4d;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  font-weight: bold;
+  text-align: left;
+  color: #cfcfcf;
+  background: linear-gradient(color-mix(in srgb, var(--rc) 12%, #05050f), #05050f 80%);
+  border: 2px solid color-mix(in srgb, var(--rc) 60%, #2d2d6e);
+  padding: 7px 10px 8px;
+  animation: rt-late 1.6s ease-in-out 2;
+}
+.menu-main .rt-box { margin-top: 4px; }
+.rt-cab { display: flex; align-items: center; gap: 8px; }
+.rt-t { color: var(--rc); letter-spacing: 2px; font-size: clamp(var(--fs-m), 1.6vh, 12px); line-height: 1.4; flex: 1; min-width: 0; }
+.rt-n { color: #fff; font-size: var(--fs-s); letter-spacing: 1px; }
+.rt-box .btn.rt-cerrar {
+  min-width: 0;
+  padding: 2px 6px;
+  font-size: var(--fs-s);
+  color: #8a8bb8;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.rt-box .btn.rt-cerrar:hover,
+.rt-box .btn.rt-cerrar:focus-visible { color: #fff; border-color: var(--rc); background: transparent; outline: none; }
+.rt-txt { font-size: var(--fs-s); letter-spacing: 1px; line-height: 1.6; color: #b9bae6; }
+.rt-txt b { color: #fff; }
+.rt-txt .rt-quien { color: var(--rc); }
+.rt-pie { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rt-marca { flex: 1 1 auto; min-width: 0; font-size: var(--fs-s); letter-spacing: 1px; color: #b9bae6; line-height: 1.5; }
+.rt-marca b { color: #ffff00; font-size: clamp(var(--fs-m), 1.8vh, 14px); letter-spacing: 2px; }
+.rt-box .btn.rt-ir,
+.rt-box .btn.rt-sig {
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: var(--fs-s);
+  letter-spacing: 1px;
+}
+.rt-box .btn.rt-ir { color: var(--rc); border-color: var(--rc); }
+.rt-box .btn.rt-ir:hover,
+.rt-box .btn.rt-ir:focus-visible { color: #000; background: var(--rc); outline: none; }
+.rt-box .btn.rt-sig { color: #b9bae6; border-color: #2d2d6e; padding: 6px 8px; }
+@keyframes rt-late { 50% { border-color: var(--rc); box-shadow: 0 0 12px color-mix(in srgb, var(--rc) 55%, transparent); } }
+/* en ancho va bajo TU CUARTEL, que tiene hueco */
+@media (min-width: 1000px) {
+  .marq .menu-side .rt-box { margin-top: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .rt-box { animation: none; } }
+
+/* el diálogo SUPERA ESTO */
+.rt-reto { --rc: #ff4d4d; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; max-width: 560px; }
+.rt-reto-ruta { color: #fff; letter-spacing: 2px; font-size: clamp(var(--fs-m), 1.8vh, 14px); }
+.rt-reto-quien { color: var(--rc); letter-spacing: 2px; font-size: var(--fs-s); margin-top: 4px; }
+.rt-reto-marca {
+  font-size: clamp(30px, 6vh, 54px);
+  line-height: 1.15;
+  letter-spacing: 3px;
+  color: #ffff00;
+  text-shadow: 0.06em 0.06em 0 #b8860b, 0 0 18px rgba(255, 77, 77, 0.55);
+  animation: rsu-golpe 0.45s 0.1s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+.rt-reto-tuya { color: #b9bae6; letter-spacing: 1px; font-size: var(--fs-s); line-height: 1.6; }
+.rt-reto-nota { color: #8a8bb8; letter-spacing: 1px; font-size: var(--fs-xs); line-height: 1.7; }
+
+/* SUS MARCAS, en el perfil de un amigo */
+.rt-ficha { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.rt-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border: 1px solid rgba(33, 33, 222, 0.45);
+  background: rgba(0, 0, 0, 0.45);
+  font-size: var(--fs-s);
+  letter-spacing: 1px;
+  text-align: left;
+}
+.rt-fila.delante { border-color: color-mix(in srgb, #ff4d4d 55%, transparent); }
+.rt-fila-ruta { flex: 1; min-width: 0; color: #cfcfcf; line-height: 1.5; }
+.rt-fila-nums { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.rt-fila-nums b { color: #ffff00; letter-spacing: 1px; }
+.rt-fila-nums small { color: #8a8bb8; font-size: var(--fs-xs); }
+.rt-fila .btn.rt-fila-btn { min-width: 0; margin-left: auto; padding: 5px 8px; font-size: var(--fs-xs); color: #ff4d4d; border-color: #ff4d4d; }
+.rt-fila .btn.rt-fila-btn:hover,
+.rt-fila .btn.rt-fila-btn:focus-visible { color: #000; background: #ff4d4d; outline: none; }
+.rt-fila-ok { min-width: 88px; text-align: center; color: #2bff88; font-size: var(--fs-xs); }
+
+/* SUPERA ESTO en la ficha de cada amigo (y, sin cuenta, en la puerta) */
+#friends.amg .btn.amg-retar {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 4px;
+  font-size: var(--fs-xs);
+  letter-spacing: 1px;
+  color: #ff4d4d;
+  background: rgba(255, 77, 77, 0.06);
+  border: 1px solid rgba(255, 77, 77, 0.5);
+  border-radius: 7px;
+}
+#friends.amg .amg-puerta .btn.amg-retar { width: auto; padding: 8px 16px; }
+#friends.amg .btn.amg-retar:hover,
+#friends.amg .btn.amg-retar:focus-visible { color: #000; background: #ff4d4d; border-color: #ff4d4d; outline: none; }
+@media (max-width: 600px) {
+  .rt-fila { flex-wrap: wrap; gap: 4px 10px; }
+  .rt-fila-ruta { flex-basis: calc(100% - 110px); }
+}

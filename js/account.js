@@ -775,6 +775,13 @@
       if (o.ajustes && window.PM.Daily && window.PM.Daily.paraNube) {
         o.ajustes.daily = window.PM.Daily.paraNube();
       }
+      /* Y los RETOS ya avisados (js/retos.js): qué adelantamiento de qué
+       * amigo ya se te enseñó, para que otro aparato no lo repita. Texto
+       * corto y con tope, que la columna tiene el suyo. */
+      if (o.ajustes && window.PM.Retos && window.PM.Retos.paraNube) {
+        var rt = window.PM.Retos.paraNube();
+        if (rt) o.ajustes.retos = rt;
+      }
       if (this.sinAjustes || !o.ajustes) delete o.ajustes;
       for (m = 0; m < this.modoCols.length; m++) {
         var col = this.modoCols[m][2];
@@ -988,6 +995,10 @@
       if (fila.ajustes && fila.ajustes.daily &&
           window.PM.Daily && window.PM.Daily.desdeNube) {
         window.PM.Daily.desdeNube(fila.ajustes.daily);
+      }
+      // los RETOS avisados, igual: lo mayor de cada lado (Retos.desdeNube)
+      if (fila.ajustes && fila.ajustes.retos && window.PM.Retos && window.PM.Retos.desdeNube) {
+        window.PM.Retos.desdeNube(fila.ajustes.retos);
       }
       if (window.PM.UI && window.PM.UI.aplicarAjustesDeNube) {
         var vino = window.PM.UI.aplicarAjustesDeNube(fila.ajustes);
