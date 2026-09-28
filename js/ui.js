@@ -296,27 +296,36 @@
    *   go     qué hace JUGAR: arrancar, o abrir lo que ese modo necesita
    *          elegir antes (qué laberinto, qué sala, si gastas el intento) */
   var MODOS = [
+    /* `corta`: la frase de un renglón que se lee bajo el póster en el móvil
+     * (allí el póster es pequeño y su frase no cabe) */
     { id: 'clasico', name: 'CLÁSICO', tag: '1 JUGADOR', color: '#ffff00',
       icon: 'pac',
-      desc: 'EL ARCADE DE 1980, TAL CUAL. ES EL QUE CUENTA PARA EL TOP MUNDIAL' },
+      desc: 'EL ARCADE DE 1980, TAL CUAL. ES EL QUE CUENTA PARA EL TOP MUNDIAL',
+      corta: 'EL ARCADE DE 1980, TAL CUAL' },
     { id: 'duo', name: 'DOS JUGADORES', tag: 'MISMO TECLADO', color: '#00ff00',
       icon: 'duo',
-      desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO' },
+      desc: 'J1 CON LAS FLECHAS Y J2 CON WASD, A LA VEZ Y EN EL MISMO LABERINTO',
+      corta: 'DOS A LA VEZ, MISMO LABERINTO' },
     { id: 'hab', name: 'DESATADO', tag: '1 O 2 JUGADORES', color: '#ff66cc',
       icon: 'dientes',
-      desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY' },
+      desc: 'CUATRO PODERES CON SU RECARGA. SOLO, EN PAREJA O EN PARTY',
+      corta: 'CUATRO PODERES CON RECARGA' },
     { id: 'clasif', name: 'CLASIFICATORIA', tag: 'RANGO DEL MES', color: '#ffd23f',
       icon: 'fruta',
-      desc: 'DESATADO CON TU RANGO EN JUEGO: SUBE DE CEREZA A LLAVE. SOLO, EN PAREJA O EN PARTY' },
+      desc: 'DESATADO CON TU RANGO EN JUEGO: SUBE DE CEREZA A LLAVE. SOLO, EN PAREJA O EN PARTY',
+      corta: 'DESATADO CON TU RANGO EN JUEGO' },
     { id: 'caza', name: 'CACERÍA', tag: 'DE 1 A 4 FANTASMAS', color: '#ffb8ff',
       icon: 'caza',
-      desc: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA QUE SE VUELVE PELIGROSO CADA POCO' },
+      desc: 'TODOS DE FANTASMA CONTRA UN PAC-MAN DE MÁQUINA QUE SE VUELVE PELIGROSO CADA POCO',
+      corta: 'AQUÍ TÚ ERES EL FANTASMA' },
     { id: 'lab', name: 'LABERINTOS', tag: 'OTROS TRAZADOS', color: '#ffb852',
       icon: 'maze',
-      desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR' },
+      desc: 'OTROS LABERINTOS, LOS MISMOS FANTASMAS. ELIGE EN CUÁL JUGAR',
+      corta: 'OTROS TRAZADOS DE LABERINTO' },
     { id: 'online', name: 'ONLINE', tag: 'HASTA 4', color: '#7ec8ff',
       icon: 'party',
-      desc: 'DE 2 A 4 JUGADORES CADA UNO EN SU CASA, CON CÓDIGO DE SALA' }
+      desc: 'DE 2 A 4 JUGADORES CADA UNO EN SU CASA, CON CÓDIGO DE SALA',
+      corta: 'DE 2 A 4, CADA UNO EN SU CASA' }
   ];
 
   function modoPorId(id) {
@@ -2420,9 +2429,18 @@
         b.addEventListener('mouseleave', function () { dentro.style.transform = ''; estado.dir = null; });
 
         /* Pulsar la tarjeta arranca: la que se ve ES la elegida, así que aquí
-         * ya no hay nada que elegir. */
+         * ya no hay nada que elegir. En táctil, no al primer toque (28 sep):
+         * el dedo que iba a deslizar el carrusel o a bajar por la portada
+         * arrancaba una partida sin querer. El primero la marca y señala
+         * JUGAR; el segundo, o JUGAR, arranca. */
         b.addEventListener('click', function () {
           self.resumeAudio();
+          if (self.touchDevice && self.modeArmado !== mo.id) {
+            self.modeArmado = mo.id;
+            b.classList.add('armada');
+            if (self.playBtn) self.playBtn.classList.add('llama');
+            return;
+          }
           self.playPick();
         });
         caja.appendChild(b);
@@ -2676,6 +2694,7 @@
 
     pickMode: function (id) {
       this.modePick = modoPorId(id).id;
+      this.desarmarModo();
       /* Se guarda al elegir, no al jugar: elegir ya es la decisión, y quien
        * abre el juego, se asoma a un modo y se va, la próxima vez lo encuentra
        * donde lo dejó. */
@@ -2684,6 +2703,16 @@
         saveSettings();
       }
       this.refreshModePicker();
+    },
+
+    /* El póster vuelve a necesitar su primer toque (táctil): al cambiar de
+     * modo y al volver a la portada */
+    desarmarModo: function () {
+      this.modeArmado = null;
+      for (var k in (this.modeCards || {})) {
+        if (this.modeCards.hasOwnProperty(k)) this.modeCards[k].b.classList.remove('armada');
+      }
+      if (this.playBtn) this.playBtn.classList.remove('llama');
     },
 
     /* Pinta el estado del selector: cuál está elegido, su descripción y el
@@ -2738,7 +2767,9 @@
       });
       this.animarCambioModo(id);
       if (this.modeDesc) {
-        this.modeDesc.textContent = mo.desc;
+        /* en la portada solo se ve en el móvil, donde el póster es pequeño y
+         * no lleva su frase: ahí va la versión de un renglón */
+        this.modeDesc.textContent = mo.corta || mo.desc;
         this.modeDesc.style.color = mo.color;
       }
       if (this.modeNote) {
@@ -13999,6 +14030,7 @@
       this.refreshVestBtn();     // VESTUARIO · N NUEVOS
       this.refreshPaseBtn();     // PASE · G12
       this.refreshMarquesina();  // marcador, monedas y cinta
+      this.desarmarModo();       // el póster vuelve a pedir su primer toque
       // el canal personal va atado al nombre: si se ha cambiado, se rehace
       if (window.PM.Party) window.PM.Party.listen();
       if (window.PM.Conectados) window.PM.Conectados.arrancar();

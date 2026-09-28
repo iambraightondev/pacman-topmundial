@@ -8557,6 +8557,48 @@ html.tactil .btn { min-height: 44px; }
 html.tactil .btn.ol-ayuda, html.tactil .rgs-ayuda-b { position: relative; min-height: 0; }
 html.tactil .btn.ol-ayuda::after, html.tactil .rgs-ayuda-b::after { content: ""; position: absolute; inset: -9px; }
 
+/* ---- PORTADA EN EL MÓVIL (y la tableta en vertical): JUGAR a la vista
+ * sin desplazar. Los modos y JUGAR suben justo detrás del logo; tu ficha y
+ * el DAILY pasan debajo. El póster mide lo que deja la pantalla (svh: la
+ * altura con las barras del navegador puestas) y lleva debajo su frase en
+ * un renglón, que dentro de un póster tan pequeño no cabía. ---- */
+@media (max-width: 999px) {
+  .marq > .marq-hud { order: 0; }
+  .marq > .menu-head { order: 1; }
+  .marq > .menu-main { order: 2; }
+  .marq > .menu-player { order: 3; }
+  .marq > .menu-side { order: 4; }
+  .mode-carousel { --posterH: clamp(170px, calc(100vh - 380px), 440px); }
+  .mode-carousel { --posterH: clamp(170px, calc(100svh - 380px), 440px); }
+  .marq .mode-note { white-space: normal; font-size: var(--fs-s); letter-spacing: 0; line-height: 1.5; }
+  .marq .menu-main { gap: 6px; }
+  .marq .menu-main > .section-title { margin: 0; }
+  .marq .menu-player { margin-top: 14px; }
+}
+@media (max-width: 600px) {
+  /* el póster aquí es pequeño y su frase no sale: va debajo, en un renglón */
+  .marq .mode-desc {
+    display: block;
+    font-size: var(--fs-s);
+    letter-spacing: 0;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .marq { gap: 8px; }
+  .marq .menu-head .title { font-size: min(clamp(30px, 7vh, 64px), 11vw); }
+  .marq .menu-head .subtitle { margin-top: 2px; }
+}
+/* el póster tocado una vez (táctil): marcado, y JUGAR llamando */
+.mode-frame .mode-card.poster.armada .poster-in {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--mc), 0 0 40px color-mix(in srgb, var(--mc) 55%, transparent);
+}
+.btn-play.llama { animation: jugar-llama 0.5s steps(2) 6; }
+@keyframes jugar-llama { 50% { color: #000; background: #ffff00; } }
+@media (prefers-reduced-motion: reduce) { .btn-play.llama { animation: none; } }
+
 /* ---- PAUSA: qué hace cada botón, en un renglón dentro de él ---- */
 .btn-nota {
   display: block;
