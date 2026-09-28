@@ -7790,9 +7790,23 @@
       });
     });
 
+  /* las temporadas con piezas propias (CFG.PASE.PIEZAS), para recorrer sus caminos */
+  function temporadasConPiezas() {
+    return Object.keys(CFG.PASE.PIEZAS || {}).sort();
+  }
+
   test('el camino está bien escrito: galones dentro de rango y en orden',
     function () {
-      var c = window.PM.Pase.camino();
+      temporadasConPiezas().forEach(function (t) {
+        var dias = CFG.PASE.PIEZAS[t];
+        for (var g in dias) {
+          ok((g | 0) >= 1 && (g | 0) <= CFG.PASE.GALONES, t + ': la pieza del galón ' + g + ' cabe');
+          ok(window.PM.Pase.camino(t).some(function (e) { return e.g === (g | 0); }),
+             t + ': el galón ' + g + ' está en el camino de monedas');
+        }
+      });
+      [null].concat(temporadasConPiezas()).forEach(function (t) {
+      var c = window.PM.Pase.camino(t);
       ok(c.length > 0, 'hay camino');
       for (var i = 0; i < c.length; i++) {
         ok(c[i].g >= 1 && c[i].g <= CFG.PASE.GALONES, 'el galón ' + c[i].g + ' cabe');
@@ -7805,7 +7819,65 @@
         });
       }
       ok(c[c.length - 1].g === CFG.PASE.GALONES, 'el último galón paga algo');
+      });
     });
+
+  /* 28 sep: había UN camino sin fecha, así que el 1 de noviembre habría
+   * vuelto a repartir el GRITO, la MOCHILA, el ECTOPLASMA, el VISOR y la
+   * TRAMPA, que se prometieron solo de octubre. Ahora las piezas van por
+   * temporada y un mes sin las suyas paga las mismas monedas y nada más. */
+  test('las piezas del pase son de su mes: octubre las da, noviembre no', function () {
+    var Pa = window.PM.Pase, S = window.PM.Season;
+    var oct = S.actual(new Date(Date.UTC(2026, 9, 15, 12))),
+        nov = S.actual(new Date(Date.UTC(2026, 10, 1, 12)));
+    eq(oct, '2026-10', 'el 15 de octubre es la temporada de octubre');
+    eq(nov, '2026-11', 'y el 1 de noviembre, la de noviembre');
+    var piezas = function (t) {
+      var ids = [];
+      Pa.camino(t).forEach(function (e) {
+        ['gratis', 'pago'].forEach(function (l) { if (e[l] && e[l].id) ids.push(e[l].id); });
+      });
+      return ids.sort().join(',');
+    };
+    eq(piezas(oct), 'acc_mochila,acc_visor,efx_ecto,grito,trampa', 'octubre reparte sus cinco');
+    eq(piezas(nov), '', 'noviembre, ninguna');
+    var monedas = function (t) {
+      return Pa.camino(t).map(function (e) { return e.g + ':' + (e.gratis.monedas | 0) + '/' + (e.pago.monedas | 0); }).join(' ');
+    };
+    eq(monedas(nov), monedas(oct), 'y las mismas monedas, galón a galón');
+    eq(Pa.camino(nov).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
+       String(CFG.PASE.GALONES), 'sin pieza, solo el final es hito');
+    eq(Pa.camino(oct).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
+       '10,20,' + CFG.PASE.GALONES, 'en octubre, los galones con pieza');
+
+    conPase(function (Pa2, Tn, A, t) {
+      Pa2.conceder(t);
+      Pa2.ganar(CFG.PASE.POR_GALON * CFG.PASE.GALONES, t);
+      ['grito', 'acc_mochila', 'efx_ecto', 'acc_visor', 'trampa'].forEach(function (id) {
+        ok(Tn.tiene(id), 'en octubre, con el camino andado, ' + id + ' es suyo');
+      });
+    }, oct);
+    conPase(function (Pa2, Tn, A, t) {
+      Pa2.conceder(t);
+      var saldo = Tn.saldo();
+      Pa2.ganar(CFG.PASE.POR_GALON * CFG.PASE.GALONES, t);
+      eq(Pa2.galon(t), CFG.PASE.GALONES, 'noviembre también se anda entero');
+      ['grito', 'acc_mochila', 'efx_ecto', 'acc_visor', 'trampa'].forEach(function (id) {
+        ok(!Tn.tiene(id), 'pero en noviembre ' + id + ' no se reparte');
+      });
+      var todo = 0;
+      Pa2.camino(t).forEach(function (e) { todo += (e.gratis.monedas | 0) + (e.pago.monedas | 0); });
+      eq(Pa2.monedasDe(t), todo, 'y paga todas sus monedas, las mismas que octubre');
+      eq(Tn.saldo(), saldo + todo, 'que entran en el saldo');
+      eq(Pa2.monedasDe(oct), 0, 'y lo de noviembre no cuenta como octubre');
+      var U = window.PM.UI;
+      U.refreshPase();
+      eq(U.psTemporada, nov, 'la pantalla del pase rehace el camino al cambiar de mes');
+    }, nov);
+    window.PM.UI.refreshPase();
+    eq(window.PM.UI.psTemporada, Pa.cuenta() ? Pa.temporada() : CFG.PASE.DESDE,
+       'y vuelve al de la temporada que enseña (con el pase dormido, la primera)');
+  });
 
   /* ---------- LAS PIEZAS DE LA TEMPORADA ----------
    * Desde el 20 de septiembre el camino no paga solo monedas: los tres hitos
@@ -7815,7 +7887,7 @@
   test('lo que reparte el pase no se vende en ninguna parte', function () {
     var Tn = window.PM.Tienda;
     var hay = 0;
-    window.PM.Pase.camino().forEach(function (e) {
+    temporadasConPiezas().forEach(function (t) { window.PM.Pase.camino(t).forEach(function (e) {
       ['gratis', 'pago'].forEach(function (lado) {
         var id = e[lado] && e[lado].id;
         if (!id) return;
@@ -7827,13 +7899,13 @@
         ok(Tn.VENTA.indexOf(it) === -1, id + ' no sale en la tienda');
         ok(!Tn.comprar(id).ok, id + ' no se puede comprar');
       });
-    });
+    }); });
     ok(hay >= 3, 'y hay piezas que repartir: un pase de solo monedas no se vende');
   });
 
   test('cada pieza del camino está dibujada', function () {
     var Sp = window.PM.Sprites, Tn = window.PM.Tienda;
-    window.PM.Pase.camino().forEach(function (e) {
+    temporadasConPiezas().forEach(function (t) { window.PM.Pase.camino(t).forEach(function (e) {
       ['gratis', 'pago'].forEach(function (lado) {
         var id = e[lado] && e[lado].id;
         if (!id) return;
@@ -7843,7 +7915,7 @@
         else if (cat === 'efecto') ok(!!Sp.EFECTOS[id], id + ' tiene su rastro');
         else if (cat === 'emote') ok(!!Sp.CARAS_TIENDA[id], id + ' tiene su cara');
       });
-    });
+    }); });
   });
 
   test('llegar al galón entrega la pieza, y solo una vez', function () {

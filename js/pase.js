@@ -61,21 +61,35 @@
     return out;
   }
 
-  /* El camino, escalón por galón y ordenado. Un galón que no aparezca en
-   * CFG.PASE.CAMINO simplemente no paga nada.
+  /* El camino de UNA temporada (la de ahora si no se dice), escalón por
+   * galón y ordenado: las monedas de CFG.PASE.CAMINO, que son las mismas
+   * todos los meses, con las piezas de ESE mes (CFG.PASE.PIEZAS) encima. Un
+   * mes sin piezas propias paga solo monedas: las piezas del pase no vuelven.
+   * Un galón que no aparezca en CAMINO simplemente no paga nada.
    *
-   * Se ordena una sola vez: esto lo acaba llamando Tienda.saldo(), que se
-   * mira muchas veces al pintar una pantalla, y no tiene sentido rehacer la
-   * misma lista en cada una. */
-  var CAMINO = null;
-  function camino() {
-    if (CAMINO) return CAMINO;
-    var c = (P().CAMINO || []).slice();
-    c.sort(function (a, b) { return a.g - b.g; });
-    CAMINO = c.filter(function (e) {
+   * Se arma una sola vez por temporada: esto lo acaba llamando
+   * Tienda.saldo(), que se mira muchas veces al pintar una pantalla, y no
+   * tiene sentido rehacer la misma lista en cada una. */
+  var CAMINOS = {};
+  function camino(t) {
+    t = String(t || Pase.temporada());
+    if (CAMINOS.hasOwnProperty(t)) return CAMINOS[t];
+    var piezas = (P().PIEZAS && P().PIEZAS[t]) || {};
+    var c = (P().CAMINO || []).filter(function (e) {
       return e && e.g >= 1 && e.g <= P().GALONES;
+    }).map(function (e) {
+      var pz = piezas[e.g] || {}, out = { g: e.g };
+      ['gratis', 'pago'].forEach(function (lado) {
+        out[lado] = {};
+        if (e[lado] && e[lado].monedas) out[lado].monedas = e[lado].monedas;
+        if (pz[lado]) out[lado].id = pz[lado];
+      });
+      if (e.hito || pz.gratis || pz.pago) out.hito = true;
+      return out;
     });
-    return CAMINO;
+    c.sort(function (a, b) { return a.g - b.g; });
+    CAMINOS[t] = c;
+    return c;
   }
 
   var Pase = {
@@ -148,7 +162,7 @@
     escalones: function (t) {
       t = t || this.temporada();
       var g = this.galon(t), pago = this.tienePago(t);
-      return camino().map(function (e) {
+      return camino(t).map(function (e) {
         return {
           galon: e.g,
           alcanzado: e.g <= g,
@@ -168,7 +182,7 @@
        * se recorre entero cada vez que se mira el saldo */
       if (g === 0 || !this.cuenta(t)) return 0;
       var pago = this.tienePago(t), n = 0;
-      camino().forEach(function (e) {
+      camino(t).forEach(function (e) {
         if (e.g > g) return;
         n += Math.floor((e.gratis && e.gratis.monedas) || 0);
         if (pago) n += Math.floor((e.pago && e.pago.monedas) || 0);
@@ -206,7 +220,7 @@
       var c = Ac.stats();
       if (!c) return 0;
       var paso = P().POR_GALON, tope = P().GALONES, desde = String(P().DESDE);
-      var cam = camino(), n = 0;
+      var n = 0;
       /* solo se miran las temporadas que existen de verdad: las claves que
        * hay apuntadas, no una lista de meses inventada */
       for (var k in c) {
@@ -217,6 +231,7 @@
         if (xp < paso) continue;                       // ni un galón: nada que pagar
         var g = Math.min(tope, Math.floor(xp / paso));
         var pago = Math.floor(c['pp_' + t] || 0) >= 1;
+        var cam = camino(t);             // las monedas son las mismas cada mes
         for (var j = 0; j < cam.length; j++) {
           var e = cam[j];
           if (e.g > g) break;                          // el camino va en orden
@@ -231,15 +246,14 @@
      * que una compra. Es idempotente (el contador es un máximo), así que se
      * puede llamar todas las veces que haga falta.
      *
-     * Hoy no hay ninguna pieza en el camino —están sin dibujar, ver
-     * CFG.PASE.CAMINO—, pero el día que las haya esto es lo único que hay que
-     * llamar para entregarlas. */
+     * Solo entrega las piezas de ESA temporada (CFG.PASE.PIEZAS): las de
+     * octubre no se reparten en noviembre. */
     sincronizar: function (t) {
       t = t || this.temporada();
       var Ac = A();
       if (!Ac || !this.cuenta(t)) return 0;
       var g = this.galon(t), pago = this.tienePago(t), n = 0;
-      camino().forEach(function (e) {
+      camino(t).forEach(function (e) {
         if (e.g > g) return;
         var ids = [];
         if (e.gratis && e.gratis.id) ids.push(e.gratis.id);
@@ -300,7 +314,7 @@
         pendientePago: (function (self) {
           if (self.tienePago(t)) return 0;
           var g = self.galon(t), n = 0;
-          camino().forEach(function (e) {
+          camino(t).forEach(function (e) {
             if (e.g <= g) n += Math.floor((e.pago && e.pago.monedas) || 0);
           });
           return n;

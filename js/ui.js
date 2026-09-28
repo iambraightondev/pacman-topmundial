@@ -1817,7 +1817,10 @@
       this.psCinta = mk('div', 'ps-cinta');
 
       var porGalon = {};
-      P.camino().forEach(function (e) { porGalon[e.g] = e; });
+      /* el camino de la temporada que se enseña (con el pase dormido, la
+       * primera): cada mes trae sus piezas, o ninguna (CFG.PASE.PIEZAS) */
+      this.psTemporada = P.cuenta() ? P.temporada() : CP.DESDE;
+      P.camino(this.psTemporada).forEach(function (e) { porGalon[e.g] = e; });
 
       /* una celda del camino: la caja del premio, y encima —solo en el carril
        * del pase— el cristal y el candado, que van FUERA del carril para que
@@ -2033,6 +2036,8 @@
        * creer que la temporada ya estaba en marcha y no pagaba. */
       var enMarcha = P.cuenta();
       var r = P.resumen(enMarcha ? undefined : CP.DESDE);
+      /* cambió el mes con el juego abierto: el camino nuevo trae otras piezas */
+      if (this.psTemporada !== r.temporada) { this.buildPase(); if (this.psTemporada === r.temporada) this.refreshPase(); return; }
       var suyo = !!r.pago;
 
       this.psMes.textContent = (r.nombre || r.temporada).toUpperCase();

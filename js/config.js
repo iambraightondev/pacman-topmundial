@@ -696,7 +696,7 @@
 
     /* --- del PASE DE TEMPORADA: ni se compran ni salen de cofre. Se ganan
      * llegando a su galón en el mes que las reparte, y quien no jugó ese mes
-     * no las tiene ya nunca. Ver CFG.PASE.CAMINO. --- */
+     * no las tiene ya nunca. Ver CFG.PASE.PIEZAS. --- */
     { id: 'trampa', name: 'TRAMPA', grupo: 'pase', rara: true, temporada: '2026-10',
       ve: 'LA CAJA DE CAZAR FANTASMAS: LAS DOS HOJAS DEL FRENTE SON LA BOCA Y POR DENTRO LLEVA LUZ, CON LO QUE YA CAZÓ. CON LA Q DISPARA EL RAYO Y SE TRAGA UN FANTASMA.' },
 
@@ -909,14 +909,14 @@
      * pago— solo que repartido en los treinta escalones: 30 y 70 en un galón
      * normal, 60 y 150 cada cinco, y 150 y 400 al final.
      *
-     * Cada lado puede llevar monedas y una pieza del vestuario (por su id).
-     * Las EXCLUSIVAS de la temporada van en los hitos, y NO se ponen aquí las
-     * de cofre (PLAN-COFRES.md) ni las de la tienda: cada cosa tiene que
-     * salir de su sitio o las tres economías se pisan. */
-    /* `hito`: el escalón que rompe la fila y se enseña al doble de ancho.
-     * Va escrito aquí y no lo deduce la pantalla de las cifras, porque lo que
+     * Estas son las MONEDAS, y son las mismas todos los meses. Las piezas del
+     * vestuario van aparte, por temporada, en PIEZAS (abajo).
+     *
+     * `hito`: el escalón que rompe la fila y se enseña al doble de ancho.
+     * Va escrito y no lo deduce la pantalla de las cifras, porque lo que
      * hace grande a un galón es lo que se pone EN él (la pieza del mes, el
-     * cofre, el final), no cuántas monedas paga. */
+     * cofre, el final), no cuántas monedas paga. Aquí solo está el del final;
+     * los galones con pieza del mes lo son también (Pase.camino). */
     CAMINO: [
       { g:  1, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g:  2, gratis: { monedas: 30 }, pago: { monedas: 70 } },
@@ -927,7 +927,7 @@
       { g:  7, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g:  8, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g:  9, gratis: { monedas: 30 }, pago: { monedas: 70 } },
-      { g: 10, gratis: { monedas: 60, id: 'grito' }, pago: { monedas: 150, id: 'acc_mochila' }, hito: true },
+      { g: 10, gratis: { monedas: 60 }, pago: { monedas: 150 } },
       { g: 11, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 12, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 13, gratis: { monedas: 30 }, pago: { monedas: 70 } },
@@ -937,7 +937,7 @@
       { g: 17, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 18, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 19, gratis: { monedas: 30 }, pago: { monedas: 70 } },
-      { g: 20, gratis: { monedas: 60 }, pago: { monedas: 150, id: 'efx_ecto' }, hito: true },
+      { g: 20, gratis: { monedas: 60 }, pago: { monedas: 150 } },
       { g: 21, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 22, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 23, gratis: { monedas: 30 }, pago: { monedas: 70 } },
@@ -947,8 +947,22 @@
       { g: 27, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 28, gratis: { monedas: 30 }, pago: { monedas: 70 } },
       { g: 29, gratis: { monedas: 30 }, pago: { monedas: 70 } },
-      { g: 30, gratis: { monedas: 150, id: 'acc_visor' }, pago: { monedas: 400, id: 'trampa' }, hito: true }
-    ]
+      { g: 30, gratis: { monedas: 150 }, pago: { monedas: 400 }, hito: true }
+    ],
+
+    /* LAS PIEZAS DE CADA TEMPORADA, por galón y carril. Son las EXCLUSIVAS
+     * del mes: no se ponen aquí las de cofre (PLAN-COFRES.md) ni las de la
+     * tienda, o las tres economías se pisan. Una pieza del pase se reparte
+     * SOLO en su temporada y no vuelve: un mes sin entrada aquí paga las
+     * monedas de CAMINO y ninguna pieza (antes había un único camino sin
+     * fecha, y el 1 de noviembre habría vuelto a repartir lo de octubre). */
+    PIEZAS: {
+      '2026-10': {
+        10: { gratis: 'grito', pago: 'acc_mochila' },
+        20: { pago: 'efx_ecto' },
+        30: { gratis: 'acc_visor', pago: 'trampa' }
+      }
+    }
   };
 
   /* Emotes de la tienda (las caras están en js/skins.js, caraEmote). Los seis
@@ -1000,7 +1014,7 @@
       ve: 'AURA MORADA DANDO VUELTAS, OJOS ROJOS ENCENDIDOS Y UNA SONRISA TORCIDA.' },
     { id: 'invocando', name: 'INVOCANDO', precio: 150,
       ve: 'RECITA CON LOS OJOS ENCENDIDOS Y UN CÍRCULO MÁGICO GIRANDO DEBAJO.' },
-    /* del PASE: no se vende (ver CFG.PASE.CAMINO) */
+    /* del PASE: no se vende (ver CFG.PASE.PIEZAS) */
     { id: 'grito', name: 'GRITO', pase: true, precio: 0,
       ve: 'EL GRITO DEL CUADRO: LAS DOS MANOS EN LA CARA, OJOS DE ESPANTO Y LA BOCA EN UN ÓVALO QUE LATE.' }
   ];
@@ -1066,7 +1080,7 @@
       ve: 'SU ESTELA SON PORTALITOS MORADOS QUE SE ABREN Y SE CIERRAN. GUIÑO AL MAGO.' },
     { id: 'efx_constelacion', name: 'CONSTELACIÓN', cofre: true, precio: 0,
       ve: 'DEJA UNA ESTRELLA EN CADA GIRO Y LAS UNE CON UNA LÍNEA: EL CAMINO QUEDA DIBUJADO HASTA QUE SE APAGA.' },
-    /* del PASE: no se vende (ver CFG.PASE.CAMINO) */
+    /* del PASE: no se vende (ver CFG.PASE.PIEZAS) */
     { id: 'efx_ecto', name: 'ECTOPLASMA', pase: true, precio: 0,
       ve: 'UN REGUERO DE BABA VERDE FOSFORESCENTE CON BURBUJAS QUE ASOMAN Y REVIENTAN.' },
     /* del RANGO: premio de fin de temporada a quien llegó a CAMPANA */
@@ -1141,7 +1155,7 @@
       ve: 'UN ARO DE LUZ FLOTANDO SOBRE LA CABEZA QUE SE INCLINA AL GIRAR, COMO SI PESARA.' },
     { id: 'acc_alas', name: 'ALITAS', cofre: true, precio: 0,
       ve: 'DOS ALITAS BLANCAS A LOS LADOS QUE BATEN DE GOLPE AL COMERSE UN FANTASMA.' },
-    /* del PASE: no se compran ni salen de cofre (ver CFG.PASE.CAMINO) */
+    /* del PASE: no se compran ni salen de cofre (ver CFG.PASE.PIEZAS) */
     { id: 'acc_mochila', name: 'MOCHILA DE PROTONES', pase: true, precio: 0,
       ve: 'EL APARATO A LA ESPALDA: ALETAS DE REFRIGERACIÓN, EL ACELERADOR LATIENDO EN VERDE Y LA MANGUERA QUE DEJA EL CAÑÓN SOBRE LA CORONILLA. VIBRA Y SUELTA VAPOR.' },
     { id: 'acc_visor', name: 'VISOR DE CAZA', pase: true, precio: 0,

@@ -9567,7 +9567,7 @@
   /* ============================================================
    * TEMPORADA DE OCTUBRE DEL PASE (20 sep 2026): CAZAFANTASMAS
    *
-   * Las cinco piezas que reparte el camino del mes (CFG.PASE.CAMINO): la
+   * Las cinco piezas que reparte el camino del mes (CFG.PASE.PIEZAS): la
    * skin TRAMPA, la MOCHILA DE PROTONES, el VISOR DE CAZA, el ECTOPLASMA y
    * el emote GRITO. No se compran ni salen de cofre: quien no jugó ese mes
    * no las tiene ya nunca.
