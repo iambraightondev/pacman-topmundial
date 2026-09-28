@@ -256,8 +256,10 @@ Dos maneras de correr la misma batería:
   la versión anterior del fichero (caché heurística) y estarás probando el
   código viejo sin enterarte.
 - **Sin navegador**: `node pruebas-node.js`. Monta un DOM de mentira y corre
-  lo mismo; sale con código 1 si falla alguna, así que vale para CI. Lo único
-  que se salta son las comprobaciones que cuentan píxeles dibujados.
+  lo mismo; sale con código 0 si pasan todas y con 1 si falla alguna, así que
+  vale para CI. Lo único que se salta son las comprobaciones que cuentan
+  píxeles dibujados, y el ancho del texto es aproximado (cada carácter, 0,6
+  veces los px de la letra).
 
 ## Características
 

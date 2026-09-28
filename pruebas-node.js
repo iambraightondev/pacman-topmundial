@@ -36,7 +36,15 @@ function fakeCtx() {
     'ellipse', 'setLineDash', 'createLinearGradient', 'createRadialGradient',
     'addColorStop'];
   nada.forEach(function (m) { ctx[m] = function () { return ctx; }; });
-  ctx.measureText = function (t) { return { width: String(t).length * 5 }; };
+  /* El ancho crece con el cuerpo de la letra, como en el navegador: cada
+   * carácter ocupa 0,6 veces los px del `font` (lo de una monoespaciada). Sin
+   * tamaño en el `font`, 5 px por carácter. Antes eran 5 px siempre, así que
+   * encoger la letra no hacía caber nada y la prueba del nombre largo fallaba
+   * aquí sin fallar en tests.html. */
+  ctx.measureText = function (t) {
+    var m = /(\d+(?:\.\d+)?)px/.exec(String(ctx.font || ''));
+    return { width: String(t).length * (m ? parseFloat(m[1]) * 0.6 : 5) };
+  };
   ctx.getImageData = function () { return { data: [] }; };
   return ctx;
 }
