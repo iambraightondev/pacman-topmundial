@@ -1273,7 +1273,7 @@
     avalarEquipo: function (anfitrion) {
       var n = cleanUser(anfitrion);
       if (window.PM_PRUEBAS || !this.logged() || !n || n === this.name()) return;
-      fetch(base('/rest/v1/rpc/avalar_equipo'), {
+      this.pedir(base('/rest/v1/rpc/avalar_equipo'), {
         method: 'POST', headers: authHeaders(this.token),
         body: JSON.stringify({ p_anfitrion: n })
       }).catch(function () { /* sin permiso apuntado: la marca sale igual */ });
