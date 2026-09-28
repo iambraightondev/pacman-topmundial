@@ -26,6 +26,7 @@ var DIR = path.join(__dirname, 'functions', 'cofres');
 
 /* js/config.js y js/cofres-gen.js en un mundo aparte, sin navegador */
 function cargar(raiz) {
+  raiz = raiz || RAIZ;
   var sb = { console: console, Math: Math, JSON: JSON, Date: Date, Object: Object,
              Array: Array, String: String, Number: Number, RegExp: RegExp,
              parseInt: parseInt, parseFloat: parseFloat, isFinite: isFinite };
