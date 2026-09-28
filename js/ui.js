@@ -472,6 +472,7 @@
       if (window.PM.Skins) window.PM.Skins.syncVistas();
       this.els.vestuario = document.getElementById('vestuario');
       this.els.tienda = document.getElementById('tienda');
+      this.els.cofres = document.getElementById('cofres');
       this.els.pase = document.getElementById('pase');
       this.buildMenu();
       this.buildOptions();
@@ -487,6 +488,7 @@
       this.buildMate();
       this.buildVestuario();
       this.buildTienda();
+      this.buildCofres();
       this.buildPase();
       this.refreshPerfilLook();
       this.accountHooks();
@@ -842,7 +844,11 @@
       /* VESTUARIO: todo lo que llevas puesto, en un solo sitio */
       this.menuVestBtn = this.makeButton('VESTUARIO', function () {
         self.resumeAudio();
-        self.showVestuario('skin', 'yo');
+        /* con cofres sin abrir (y cuenta para abrirlos) se entra por ellos:
+         * es lo que dice el punto del botón */
+        var K = window.PM.Cofres;
+        if (K && K.puedeAbrir() && K.total() > 0) self.showCofres();
+        else self.showVestuario('skin', 'yo');
       });
       extras.appendChild(this.menuVestBtn);
       /* EL PASE: el camino del mes. Lleva el galón escrito para que se vea
@@ -4576,6 +4582,8 @@
       var n = this.vestNuevos();
       this.menuVestBtn.textContent = 'VESTUARIO' + (n ? ' · ' + n + (n === 1 ? ' NUEVO' : ' NUEVOS') : '');
       this.menuVestBtn.classList.toggle('vest-btn-nuevo', n > 0);
+      // el texto se acaba de reescribir: el punto de los cofres vuelve a ir
+      this.refreshCofresBadge();
     },
 
     /* ------------------------------------------------------
@@ -4817,6 +4825,559 @@
       if (v === 'profile') this.showProfile();
       else if (v === 'vestuario') this.showVestuario(null, 'yo');
       else this.showMenu();
+    },
+
+    /* ------------------------------------------------------
+     * COFRES (js/cofres.js, 28 sep)
+     *
+     * Van con VESTUARIO y TIENDA (la tira de arriba). Una ficha por tipo con
+     * su cofre dibujado, cuántos tienes sin abrir, cómo se ganan y ABRIR. Sin
+     * cuenta se ven y se van ganando, pero para abrirlos hay que entrar (el
+     * premio lo da el servidor). Abrir es una escena propia en un lienzo: el
+     * cofre tiembla mientras contesta el servidor, revienta con su color y
+     * sube el premio; si ya lo tenías, se ve en qué monedas se ha quedado.
+     * ------------------------------------------------------ */
+    COFRES_COMO: {
+      madera: 'CADA 5 PARTIDAS DE MÁS DE UN MINUTO',
+      plata: 'SEMANA DEL DAILY COMPLETA · CADA NIVEL DE JUGADOR',
+      oro: 'ESCALÓN NUEVO DE MAESTRÍA · RÉCORD PROPIO (+10 %)',
+      legendario: 'TOP 3 DEL RANGO AL CERRAR LA TEMPORADA · 2 % DE LOS ORO'
+    },
+    COFRES_TRAE: {
+      madera: '30–80 MONEDAS O UN EMOTE',
+      plata: '100–250 MONEDAS O UN EFECTO DE COFRE',
+      oro: 'UN ACCESORIO DE COFRE Y, A VECES, UNA SKIN',
+      legendario: 'LA SKIN AGUJERO NEGRO'
+    },
+
+    buildCofres: function () {
+      var self = this, o = this.els.cofres, K = window.PM.Cofres;
+      if (!o || !K) return;
+      o.innerHTML = '';
+      var h = document.createElement('div');
+      h.className = 'panel-title cf-titulo';
+      h.textContent = 'COFRES';
+      o.appendChild(h);
+      var nota = document.createElement('div');
+      nota.className = 'note cf-nota';
+      nota.textContent = 'SE GANAN JUGANDO Y NO SE COMPRAN · SOLO TRAEN APARIENCIA Y MONEDAS · ' +
+        'LO REPETIDO SE CAMBIA POR LA MITAD DE SU VALOR';
+      o.appendChild(nota);
+
+      /* sin cuenta: se ganan, pero para abrirlos hay que entrar */
+      this.cofresCuenta = document.createElement('div');
+      this.cofresCuenta.className = 'cf-cuenta';
+      var ct = document.createElement('span');
+      ct.textContent = 'CREA UNA CUENTA PARA ABRIRLOS · LOS QUE GANES SE QUEDAN';
+      this.cofresCuenta.appendChild(ct);
+      var entrar = this.makeButton('ENTRAR O CREAR CUENTA', function () {
+        self.resumeAudio();
+        self.showProfile();
+      });
+      entrar.classList.add('btn-preset');
+      this.cofresCuenta.appendChild(entrar);
+      o.appendChild(this.cofresCuenta);
+
+      var grid = document.createElement('div');
+      grid.className = 'cf-grid';
+      o.appendChild(grid);
+      this.cofresFichas = {};
+      var C = CFG.COFRES;
+      K.TIPOS.forEach(function (tipo) {
+        var card = document.createElement('div');
+        card.className = 'cf-it cf-' + tipo;
+        card.style.setProperty('--cc', C.COLORES[tipo]);
+        var cv = document.createElement('canvas');
+        cv.width = 120; cv.height = 96;
+        cv.className = 'cf-cofre';
+        cv.setAttribute('aria-hidden', 'true');
+        card.appendChild(cv);
+        var nom = document.createElement('span');
+        nom.className = 'cf-nombre';
+        nom.textContent = C.NOMBRES[tipo];
+        card.appendChild(nom);
+        var num = document.createElement('b');
+        num.className = 'cf-num';
+        card.appendChild(num);
+        var como = document.createElement('small');
+        como.className = 'cf-como';
+        como.textContent = self.COFRES_COMO[tipo];
+        card.appendChild(como);
+        var trae = document.createElement('small');
+        trae.className = 'cf-trae';
+        trae.textContent = 'TRAE: ' + self.COFRES_TRAE[tipo];
+        card.appendChild(trae);
+        var prog = document.createElement('small');
+        prog.className = 'cf-prog';
+        card.appendChild(prog);
+        var b = self.makeButton('ABRIR', function () { self.abrirCofre(tipo); });
+        b.classList.add('cf-abrir');
+        card.appendChild(b);
+        grid.appendChild(card);
+        self.cofresFichas[tipo] = { card: card, cv: cv, num: num, prog: prog, btn: b };
+      });
+
+      this.cofresMsg = document.createElement('div');
+      this.cofresMsg.className = 'lobby-status cf-msg';
+      this.cofresMsg.setAttribute('aria-live', 'polite');
+      o.appendChild(this.cofresMsg);
+
+      /* LA APERTURA: encima de todo lo del panel */
+      var esc = document.createElement('div');
+      esc.className = 'cf-escena';
+      esc.setAttribute('role', 'dialog');
+      esc.setAttribute('aria-label', 'Abriendo un cofre');
+      esc.style.display = 'none';
+      this.cofresLienzo = document.createElement('canvas');
+      this.cofresLienzo.className = 'cf-lienzo';
+      this.cofresLienzo.width = 320; this.cofresLienzo.height = 320;
+      esc.appendChild(this.cofresLienzo);
+      this.cofresPremioT = document.createElement('div');
+      this.cofresPremioT.className = 'cf-premio-t';
+      esc.appendChild(this.cofresPremioT);
+      this.cofresPremioS = document.createElement('div');
+      this.cofresPremioS.className = 'cf-premio-s';
+      esc.appendChild(this.cofresPremioS);
+      var fila = document.createElement('div');
+      fila.className = 'cf-escena-btns';
+      this.cofresOtroBtn = this.makeButton('ABRIR OTRO', function () {
+        var t = self.cofresAbriendo && self.cofresAbriendo.tipo;
+        self.cerrarEscenaCofre();
+        if (t) self.abrirCofre(t);
+      });
+      this.cofresOtroBtn.classList.add('btn-preset');
+      fila.appendChild(this.cofresOtroBtn);
+      this.cofresListoBtn = this.makeButton('LISTO', function () { self.cerrarEscenaCofre(); });
+      this.cofresListoBtn.classList.add('btn-primary');
+      fila.appendChild(this.cofresListoBtn);
+      esc.appendChild(fila);
+      o.appendChild(esc);
+      this.cofresEscena = esc;
+
+      var back = this.makeButton('VOLVER', function () { self.closeCofres(); });
+      back.classList.add('btn-primary', 'cf-volver');
+      o.appendChild(back);
+    },
+
+    showCofres: function () {
+      var abierto = this.visiblePanel();
+      if (abierto !== this.els.cofres) {
+        this.cofresVolver = (abierto === this.els.vestuario) ? 'vestuario'
+          : (abierto === this.els.tienda) ? 'tienda' : 'menu';
+      }
+      if (!this.cofresFichas) this.buildCofres();
+      this.cerrarEscenaCofre(true);
+      if (this.cofresMsg) this.cofresMsg.textContent = '';
+      this.refreshCofres();
+      this.showPanel('cofres');
+      if (this.els.cofres) this.els.cofres.scrollTop = 0;
+      this.animarCofres();
+      /* lo que diga el servidor (el ORO de un récord, un top 3 de temporada) */
+      var self = this, K = window.PM.Cofres;
+      if (K && K.puedeAbrir()) K.estado(function () { self.refreshCofres(); });
+    },
+
+    closeCofres: function () {
+      this.cerrarEscenaCofre(true);
+      var v = this.cofresVolver;
+      if (v === 'vestuario') this.showVestuario(null, 'yo');
+      else if (v === 'tienda') this.showTienda();
+      else this.showMenu();
+    },
+
+    refreshCofres: function () {
+      var K = window.PM.Cofres;
+      this.refreshCofresBadge();
+      if (!K || !this.cofresFichas) return;
+      var p = K.pendientes(), con = K.puedeAbrir(), pr = K.progreso();
+      this.cofresCuenta.style.display = con ? 'none' : '';
+      for (var tipo in this.cofresFichas) {
+        if (!this.cofresFichas.hasOwnProperty(tipo)) continue;
+        var f = this.cofresFichas[tipo], n = p[tipo] || 0;
+        f.num.textContent = n ? ('×' + n + ' SIN ABRIR') : 'NINGUNO';
+        f.card.classList.toggle('hay', n > 0);
+        f.btn.disabled = !(n > 0 && con);
+        f.btn.textContent = !con && n > 0 ? 'CON CUENTA' : 'ABRIR';
+        var txt = '';
+        if (tipo === 'madera') {
+          txt = 'SIGUIENTE: ' + pr.madera.hechas + '/' + pr.madera.pide + ' PARTIDAS';
+        } else if (tipo === 'plata' && pr.nivel) {
+          txt = 'NIVEL ' + (pr.nivel.nivel + 1) + ' AL ' + Math.round(pr.nivel.pct * 100) + ' %';
+        }
+        f.prog.textContent = txt;
+      }
+      if (this.els.cofres && this.els.cofres.style.display !== 'none') this.encajarPanel();
+    },
+
+    /* El punto del menú: cuántos cofres hay sin abrir (en el VESTUARIO, que
+     * es la puerta por la que se llega) y la pestaña de la tira */
+    refreshCofresBadge: function () {
+      var K = window.PM.Cofres, n = K ? K.total() : 0;
+      var btn = this.menuVestBtn;
+      if (btn) {
+        var punto = this.menuCofresPunto;
+        if (!punto || punto.parentNode !== btn) {
+          punto = document.createElement('span');
+          punto.className = 'cf-punto';
+          punto.setAttribute('aria-hidden', 'true');
+          this.menuCofresPunto = punto;
+          btn.appendChild(punto);
+        }
+        punto.textContent = n > 99 ? '99+' : String(n);
+        punto.style.display = n > 0 ? '' : 'none';
+        btn.setAttribute('aria-label', 'Vestuario' + (n > 0 ? ', ' + n + ' cofres sin abrir' : ''));
+        btn.classList.toggle('con-cofres', n > 0);
+      }
+      (this.tabsCofres || []).forEach(function (b) {
+        b.textContent = 'COFRES' + (n > 0 ? ' · ' + n : '');
+      });
+    },
+
+    cofresAviso: function (texto, error) {
+      if (!this.cofresMsg) return;
+      this.cofresMsg.textContent = texto || '';
+      this.cofresMsg.classList.toggle('error', !!error);
+    },
+
+    /* Pulsar ABRIR: la escena empieza en el acto (el cofre tiembla) y el
+     * premio llega cuando conteste el servidor */
+    abrirCofre: function (tipo) {
+      var self = this, K = window.PM.Cofres;
+      if (!K) return;
+      if (!K.puedeAbrir()) { this.cofresAviso('CREA UNA CUENTA PARA ABRIRLOS', true); return; }
+      if (!(K.pendientes()[tipo] > 0)) { this.cofresAviso('NO TIENES COFRES DE ' + CFG.COFRES.NOMBRES[tipo] + ' SIN ABRIR', true); return; }
+      this.resumeAudio();
+      this.cofresAviso('');
+      var ab = { tipo: tipo, t0: Date.now(), abierto: 0, premio: null, resultado: null, error: null };
+      this.cofresAbriendo = ab;
+      this.cofresPremioT.textContent = 'ABRIENDO…';
+      this.cofresPremioT.style.color = CFG.COFRES.COLORES[tipo];
+      this.cofresPremioS.textContent = 'COFRE DE ' + CFG.COFRES.NOMBRES[tipo];
+      this.cofresOtroBtn.style.display = 'none';
+      this.cofresListoBtn.style.display = 'none';
+      this.cofresEscena.style.display = 'flex';
+      this.animarAperturaCofre();
+      K.abrir(tipo, function (err, d) {
+        if (self.cofresAbriendo !== ab) return;
+        if (err || !d || !d.premio) {
+          ab.error = err || 'NO SE PUDO ABRIR';
+          self.cerrarEscenaCofre(true);
+          self.cofresAviso(ab.error, true);
+          self.refreshCofres();
+          return;
+        }
+        ab.premio = d.premio;
+        ab.resultado = d.resultado || { monedas: d.premio.monedas, nuevos: d.premio.items, repetidos: [] };
+        /* no revienta antes de haber temblado un poco: se nota más */
+        ab.abierto = Math.max(Date.now(), ab.t0 + 900);
+        if (window.AudioSys && AudioSys.playExtraLife) {
+          setTimeout(function () { if (self.cofresAbriendo === ab) AudioSys.playExtraLife(); },
+            Math.max(0, ab.abierto - Date.now()));
+        }
+        self.textoPremioCofre(ab);
+        self.refreshCofres();
+        self.refreshMarquesina();
+        self.refreshVestBtn();
+      });
+    },
+
+    /* La fila de COFRES del GAME OVER: "+1 COFRE DE PLATA", el color del
+     * mejor que haya salido y dónde se abren (o que hace falta cuenta) */
+    cofresDelResumen: function (cf) {
+      if (!cf || !(cf.total > 0)) return null;
+      var CC = CFG.COFRES, trozos = [], mejor = null;
+      ['legendario', 'oro', 'plata', 'madera'].forEach(function (t) {
+        if (!(cf[t] > 0)) return;
+        if (!mejor) mejor = t;
+        trozos.push('+' + cf[t] + (cf[t] === 1 ? ' COFRE' : ' COFRES') + ' DE ' + CC.NOMBRES[t]);
+      });
+      return {
+        rotulo: cf.total === 1 ? 'COFRE' : 'COFRES',
+        valor: trozos.join(' · '),
+        color: CC.COLORES[mejor] || '#fff',
+        sub: !cf.conCuenta ? 'CREA UNA CUENTA PARA ABRIRLOS'
+          : (cf.record ? 'EL DE ORO, POR TU RÉCORD · ' : '') + 'ÁBRELOS EN EL VESTUARIO'
+      };
+    },
+
+    /* Lo que dice la escena debajo del dibujo */
+    textoPremioCofre: function (ab) {
+      var K = window.PM.Cofres, r = ab.resultado, pr = ab.premio;
+      var partes = [], subs = [];
+      (r.nuevos || []).forEach(function (id) {
+        var p = K.pieza(id);
+        partes.push(p.name);
+        subs.push('¡NUEVO! ' + ({ skin: 'SKIN', accesorio: 'ACCESORIO', efecto: 'EFECTO', emote: 'EMOTE' }[p.cat] || '') +
+          ' · YA LO TIENES EN EL VESTUARIO');
+      });
+      (r.repetidos || []).forEach(function (x) {
+        partes.push(K.pieza(x.id).name);
+        subs.push('YA LO TENÍAS: +' + fmtMonedas(x.monedas) + ' MONEDAS');
+      });
+      var suelto = (r.monedas || 0) - (r.repetidos || []).reduce(function (s, x) { return s + x.monedas; }, 0);
+      if (suelto > 0) partes.push('+' + fmtMonedas(suelto) + ' MONEDAS');
+      var titulo = (pr.tipo === 'legendario' && pr.cofre === 'oro') ? '¡ERA LEGENDARIO! ' : '';
+      this.cofresPremioT.textContent = titulo + (partes.join(' + ') || 'NADA');
+      this.cofresPremioT.style.color = CFG.COFRES.COLORES[pr.tipo] || '#fff';
+      this.cofresPremioS.textContent = subs.join(' · ') ||
+        ('TIENES ' + fmtMonedas(Math.max(0, window.PM.Tienda ? window.PM.Tienda.saldo() : 0)) + ' MONEDAS');
+    },
+
+    cerrarEscenaCofre: function (callado) {
+      if (this.cofresEscena) this.cofresEscena.style.display = 'none';
+      if (!callado) this.refreshCofres();
+      this.cofresAbriendo = null;
+    },
+
+    /* Los cofres de las fichas, respirando */
+    animarCofres: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.cofresAnim) return;
+      this.cofresAnim = true;
+      var t0 = Date.now();
+      function paso() {
+        var o = self.els.cofres;
+        if (!o || o.style.display === 'none') { self.cofresAnim = false; return; }
+        var t = (Date.now() - t0) / 1000, K = window.PM.Cofres, p = K ? K.pendientes() : {};
+        for (var tipo in self.cofresFichas) {
+          if (!self.cofresFichas.hasOwnProperty(tipo)) continue;
+          self.pintarCofre(self.cofresFichas[tipo].cv, tipo, {
+            t: t, hay: p[tipo] > 0, bote: p[tipo] > 0 ? Math.abs(Math.sin(t * 3)) * 3 : 0 });
+        }
+        raf(paso);
+      }
+      paso();
+    },
+
+    /* UN COFRE, en píxeles gordos. op: { t, hay, bote, tiembla (0..1),
+     * tapa (0..1: abierta), brillo (0..1), fondo } */
+    pintarCofre: function (cv, tipo, op) {
+      var c = cv.getContext('2d');
+      op = op || {};
+      var W = cv.width, H = cv.height;
+      if (!op.sinBorrar) { c.clearRect(0, 0, W, H); }
+      var PAL = {
+        madera: { cuerpo: '#8a5226', claro: '#c07a3a', oscuro: '#4d2a10', banda: '#6d6f78', banda2: '#a9acb6', cierre: '#d9d9d9' },
+        plata: { cuerpo: '#8e9bb0', claro: '#cfd8e6', oscuro: '#4a5468', banda: '#3a74c9', banda2: '#7fb1ff', cierre: '#ffffff' },
+        oro: { cuerpo: '#d49b12', claro: '#ffd23f', oscuro: '#7a5200', banda: '#b01d2e', banda2: '#ff5a6e', cierre: '#fff4b0' },
+        legendario: { cuerpo: '#6a2bb0', claro: '#c86bff', oscuro: '#2c0f55', banda: '#ffd23f', banda2: '#fff4b0', cierre: '#ffffff' }
+      }[tipo] || null;
+      if (!PAL) return;
+      var u = Math.max(1, Math.floor(Math.min(W / 30, H / 24)));   // un píxel del dibujo
+      var cw = 24 * u, ch = 18 * u;
+      var tiembla = op.tiembla || 0, t = op.t || 0;
+      var dx = tiembla ? Math.round(Math.sin(t * 60) * tiembla * 2 * u / 2) : 0;
+      var x0 = Math.round((W - cw) / 2) + dx;
+      var y0 = Math.round(H - ch - u * 2 - (op.bote || 0));
+      c.imageSmoothingEnabled = false;
+      /* el brillo de detrás: más fuerte si hay alguno sin abrir */
+      var brillo = op.brillo != null ? op.brillo : (op.hay ? 0.35 + 0.15 * Math.sin(t * 2.5) : 0);
+      if (brillo > 0) {
+        var g = c.createRadialGradient(W / 2, y0 + ch / 2, 2, W / 2, y0 + ch / 2, Math.max(W, H) * 0.6);
+        g.addColorStop(0, this.conAlfa(PAL.claro, 0.55 * brillo));
+        g.addColorStop(1, this.conAlfa(PAL.claro, 0));
+        c.fillStyle = g;
+        c.fillRect(0, 0, W, H);
+      }
+      function r(x, y, w, h, col) { c.fillStyle = col; c.fillRect(x0 + x * u, y0 + y * u, w * u, h * u); }
+      /* sombra */
+      c.fillStyle = 'rgba(0,0,0,0.45)';
+      c.fillRect(x0 + u, y0 + ch, cw - 2 * u, u);
+      /* el cuerpo */
+      r(0, 7, 24, 11, PAL.oscuro);
+      r(1, 8, 22, 9, PAL.cuerpo);
+      r(1, 8, 22, 1, PAL.claro);
+      for (var i = 0; i < 3; i++) r(1, 11 + i * 2, 22, 1, this.conAlfa('#000000', 0.18));
+      /* las bandas */
+      r(3, 7, 2, 11, PAL.banda); r(19, 7, 2, 11, PAL.banda);
+      r(3, 7, 1, 11, PAL.banda2); r(19, 7, 1, 11, PAL.banda2);
+      /* LA TAPA: se levanta girando hacia atrás */
+      var tapa = Math.max(0, Math.min(1, op.tapa || 0));
+      var sube = Math.round(tapa * 9);
+      c.save();
+      if (tapa > 0) {
+        c.translate(x0 + 12 * u, y0 + 7 * u - sube * u);
+        c.rotate(-tapa * 0.5);
+        c.translate(-(x0 + 12 * u), -(y0 + 7 * u));
+      }
+      r(0, 2, 24, 6, PAL.oscuro);
+      r(1, 1, 22, 1, PAL.oscuro);
+      r(1, 2, 22, 5, PAL.cuerpo);
+      r(2, 1, 20, 1, PAL.claro);
+      r(1, 2, 22, 1, PAL.claro);
+      r(3, 1, 2, 7, PAL.banda); r(19, 1, 2, 7, PAL.banda);
+      r(3, 1, 1, 7, PAL.banda2); r(19, 1, 1, 7, PAL.banda2);
+      /* el cierre */
+      r(10, 5, 4, 4, PAL.oscuro);
+      r(11, 5, 2, 3, PAL.cierre);
+      if (tipo === 'oro' || tipo === 'legendario') r(11, 3, 2, 2, tipo === 'oro' ? '#ff3b3b' : '#6fd0ff');
+      c.restore();
+      /* abierto: la boca del cofre, con luz */
+      if (tapa > 0.2) {
+        r(1, 7, 22, 2, this.conAlfa(PAL.banda2, 0.9));
+        r(2, 7, 20, 1, '#ffffff');
+      }
+    },
+
+    /* '#rrggbb' con transparencia */
+    conAlfa: function (hex, a) {
+      var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+      if (!m) return 'rgba(255,255,255,' + a + ')';
+      return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
+    },
+
+    /* LA ESCENA DE ABRIR: tiembla (esperando al servidor) → revienta con el
+     * color del cofre y rayos que giran → sube el premio, que se ve moverse
+     * como en la tienda (o un montón de monedas) */
+    animarAperturaCofre: function () {
+      var self = this, raf = window.requestAnimationFrame;
+      if (!raf || this.cofresAnimAb) return;
+      this.cofresAnimAb = true;
+      var Sk = window.PM.Skins;
+      var tmp = document.createElement('canvas');
+      tmp.width = Sk ? Sk.ESCENA_W : 336; tmp.height = Sk ? Sk.ESCENA_H : 144;
+      var lupa = document.createElement('canvas');
+      lupa.width = 96; lupa.height = 96;
+      var chico = document.createElement('canvas');
+      chico.width = 160; chico.height = 128;
+      function paso() {
+        var ab = self.cofresAbriendo, esc = self.cofresEscena;
+        if (!ab || !esc || esc.style.display === 'none' ||
+            !self.els.cofres || self.els.cofres.style.display === 'none') {
+          self.cofresAnimAb = false;
+          return;
+        }
+        var cv = self.cofresLienzo, c = cv.getContext('2d');
+        var W = cv.width, H = cv.height, ahora = Date.now();
+        var t = (ahora - ab.t0) / 1000;
+        var tipo = (ab.premio && ab.abierto && ahora >= ab.abierto) ? ab.premio.tipo : ab.tipo;
+        var col = CFG.COFRES.COLORES[tipo] || '#fff';
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.fillStyle = '#04040d';
+        c.fillRect(0, 0, W, H);
+        var tras = (ab.abierto && ahora >= ab.abierto) ? (ahora - ab.abierto) / 1000 : -1;
+        /* los rayos, girando (más tras abrir) */
+        var fuerza = tras < 0 ? Math.min(0.5, t * 0.35) : 1;
+        c.save();
+        c.translate(W / 2, H * 0.52);
+        c.rotate(t * (tras < 0 ? 0.6 : 0.35));
+        for (var i = 0; i < 12; i++) {
+          c.rotate(Math.PI / 6);
+          c.fillStyle = self.conAlfa(col, (i % 2 ? 0.10 : 0.22) * fuerza);
+          c.beginPath();
+          c.moveTo(0, 0);
+          c.lineTo(W, -W * 0.13);
+          c.lineTo(W, W * 0.13);
+          c.closePath();
+          c.fill();
+        }
+        c.restore();
+        /* el cofre, en su lienzo chico y ampliado a píxel gordo */
+        var tiembla = tras < 0 ? Math.min(1, 0.25 + t * 0.6) : 0;
+        var tapa = tras < 0 ? 0 : Math.min(1, tras / 0.25);
+        self.pintarCofre(chico, ab.tipo, { t: t, tiembla: tiembla, tapa: tapa, brillo: tras < 0 ? 0.4 : 0 });
+        c.imageSmoothingEnabled = false;
+        var esc2 = 2;
+        c.drawImage(chico, (W - chico.width * esc2 / 1.25) / 2, H - chico.height * esc2 / 1.25 - 8,
+          chico.width * esc2 / 1.25, chico.height * esc2 / 1.25);
+        /* el fogonazo */
+        if (tras >= 0 && tras < 0.4) {
+          c.fillStyle = self.conAlfa('#ffffff', 0.85 * (1 - tras / 0.4));
+          c.fillRect(0, 0, W, H);
+        }
+        /* el PREMIO sube del cofre */
+        if (tras >= 0.15 && ab.premio) {
+          var k = Math.min(1, (tras - 0.15) / 0.5);
+          var sub = (1 - Math.pow(1 - k, 3));
+          var cx = W / 2, cy = H * 0.62 - sub * H * 0.3;
+          var r = ab.resultado || {};
+          var items = (ab.premio.items || []);
+          if (items.length) {
+            var lado = Math.round(88 + 24 * sub);
+            items.forEach(function (id, j) {
+              var off = (j - (items.length - 1) / 2) * (lado + 12);
+              self.pintarPremioCofre(lupa, tmp, id, t);
+              c.fillStyle = '#000';
+              c.fillRect(cx + off - lado / 2 - 3, cy - lado / 2 - 3, lado + 6, lado + 6);
+              c.strokeStyle = col;
+              c.lineWidth = 3;
+              c.strokeRect(cx + off - lado / 2 - 3, cy - lado / 2 - 3, lado + 6, lado + 6);
+              c.globalAlpha = k;
+              c.drawImage(lupa, cx + off - lado / 2, cy - lado / 2, lado, lado);
+              c.globalAlpha = 1;
+              var rep = (r.repetidos || []).some(function (x) { return x.id === id; });
+              if (rep && tras > 0.9) {
+                c.fillStyle = 'rgba(0,0,0,0.6)';
+                c.fillRect(cx + off - lado / 2, cy + lado / 2 - 22, lado, 22);
+                self.monedaCanvas(c, cx + off - lado / 2 + 13, cy + lado / 2 - 11, 7);
+                c.fillStyle = '#ffd23f';
+                c.font = '10px "Press Start 2P", monospace';
+                c.textAlign = 'left'; c.textBaseline = 'middle';
+                var rx = (r.repetidos.filter(function (x) { return x.id === id; })[0] || {}).monedas || 0;
+                c.fillText('+' + fmtMonedas(rx), cx + off - lado / 2 + 24, cy + lado / 2 - 10);
+              }
+            });
+          } else {
+            /* monedas: un montón que sube, con la cifra */
+            var n = Math.min(9, 3 + Math.floor((r.monedas || 0) / 40));
+            for (var m = 0; m < n; m++) {
+              var ang = m * 2.4 + t * 1.5;
+              self.monedaCanvas(c, cx + Math.cos(ang) * (18 + m * 4) * sub, cy + Math.sin(ang) * 12 * sub - m * 2, 12);
+            }
+            c.fillStyle = '#ffd23f';
+            c.font = '18px "Press Start 2P", monospace';
+            c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.globalAlpha = k;
+            c.fillText('+' + fmtMonedas(r.monedas || 0), cx, cy + 44);
+            c.globalAlpha = 1;
+          }
+          /* chispas */
+          for (var s = 0; s < 14; s++) {
+            var a2 = s * 0.45 + t * 2, rr = 40 + ((s * 37 + Math.floor(t * 20)) % 90);
+            c.fillStyle = s % 3 ? col : '#ffffff';
+            c.fillRect(Math.round(cx + Math.cos(a2) * rr), Math.round(cy + Math.sin(a2) * rr * 0.7), 3, 3);
+          }
+          /* los botones, cuando ya se ve */
+          if (tras > 0.7 && self.cofresListoBtn.style.display === 'none') {
+            var K = window.PM.Cofres, quedan = K ? (K.pendientes()[ab.tipo] || 0) : 0;
+            self.cofresListoBtn.style.display = '';
+            self.cofresOtroBtn.style.display = quedan > 0 ? '' : 'none';
+            self.cofresOtroBtn.textContent = 'ABRIR OTRO (' + quedan + ')';
+            try { self.cofresListoBtn.focus(); } catch (e) { /* sin foco */ }
+          }
+        }
+        raf(paso);
+      }
+      paso();
+    },
+
+    /* Una moneda de la tienda, en el lienzo */
+    monedaCanvas: function (c, x, y, r) {
+      c.fillStyle = '#b8860b';
+      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffd23f';
+      c.beginPath(); c.arc(x - 1, y - 1, r - 2, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff6c0';
+      c.fillRect(x - r / 3, y - r / 2, 2, 2);
+    },
+
+    /* El premio moviéndose, como en la tienda (escena + lupa) */
+    pintarPremioCofre: function (lupa, tmp, id, t) {
+      var Sk = window.PM.Skins, K = window.PM.Cofres;
+      if (!Sk || !K) return;
+      var it = K.pieza(id), s = window.PM.settings || {};
+      var color = s.pacColor || '#ffff00';
+      var mia = (CFG.SKIN_IDS.indexOf(s.skin1) !== -1) ? s.skin1 : 'clasico';
+      var conAcc = window.PM.Sprites && window.PM.Sprites.admiteAccesorio(mia) ? mia : 'clasico';
+      var skin = (it.cat === 'skin') ? id : (it.cat === 'accesorio') ? conAcc : mia;
+      try {
+        var pos = Sk.escena(tmp, skin, color, t * 44, t, {
+          efecto: (it.cat === 'efecto') ? id : null,
+          accesorio: (it.cat === 'accesorio') ? id : null,
+          emote: (it.cat === 'emote') ? id : null
+        });
+        Sk.lupa(lupa, tmp, pos, it.cat === 'efecto' ? 5 : 0, it.cat === 'emote' ? 19 : 0);
+      } catch (e) { /* sin dibujo: se queda el recuadro */ }
     },
 
     tiendaAviso: function (texto, error) {
@@ -11877,7 +12438,7 @@
     /* Panel visible ahora mismo (null si estamos en partida) */
     visiblePanel: function () {
       var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
-                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'pase'];
+                   'mazes', 'friends', 'profile', 'mate', 'vestuario', 'tienda', 'cofres', 'pase'];
       for (var i = 0; i < names.length; i++) {
         var el = this.els[names[i]];
         if (el && el.style.display !== 'none') return el;
@@ -12273,6 +12834,16 @@
           : ('SIN MONEDAS: LA PARTIDA TIENE QUE DURAR UN MINUTO O LLEGAR A 1.000 PUNTOS · TIENES ' +
              fmtMonedas(Math.max(0, s.saldo || 0)));
         box.appendChild(mon);
+      }
+
+      // los COFRES que ha dado esta partida
+      var cfr = this.cofresDelResumen(s.cofres);
+      if (cfr) {
+        var cfEl = document.createElement('div');
+        cfEl.className = 'resumen-cofres';
+        cfEl.style.color = cfr.color;
+        cfEl.textContent = cfr.valor + ' · ' + cfr.sub;
+        box.appendChild(cfEl);
       }
 
       var barra = document.createElement('div');
@@ -12709,6 +13280,10 @@
             fila(sube ? 'sube' : '', 'MAESTRÍA ' + rn, val,
               ma.corta ? '#8a8cae' : (CFG.MAESTRIA.COLOR_NOTA[ma.nota] || '#fff'), sub);
           }
+          /* los COFRES que ha dado (js/cofres.js): una fila más del resumen,
+           * no una ventana, así que no se pelea con las celebraciones */
+          var cfr = self.cofresDelResumen(s.cofres);
+          if (cfr) fila('sube cofre', cfr.rotulo, cfr.valor, cfr.color, cfr.sub);
           avisos.forEach(function (a) {
             var d = document.createElement('div');
             d.className = 'go-aviso';
@@ -13937,7 +14512,8 @@
       profile: 0.55, mate: 0.6, options: 0.55, menu: 0.6, friends: 0.6,
       prompt: 0.5,
       /* los que son una LISTA: se encogen un poco y lo demás se recorre */
-      vestuario: 0.85, tienda: 0.85, ranking: 0.85
+      vestuario: 0.85, tienda: 0.85, ranking: 0.85,
+      cofres: 0.6
     },
 
     /* CIFRAS y LOGROS del perfil, y el perfil de un amigo, son páginas
@@ -14005,7 +14581,7 @@
       });
       var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
-                   'vestuario', 'tienda', 'pase', 'prompt'];
+                   'vestuario', 'tienda', 'cofres', 'pase', 'prompt'];
       names.forEach(function (n) {
         var el = self.els[n];
         if (el) self._obsEncaje.observe(el, { childList: true, subtree: true, characterData: true });
@@ -14018,7 +14594,7 @@
       var self = this;
       var names = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
                    'mazes', 'friends', 'profile', 'daily', 'mate',
-                   'vestuario', 'tienda', 'pase'];
+                   'vestuario', 'tienda', 'cofres', 'pase'];
       names.forEach(function (n) {
         var el = self.els[n];
         if (el && el.style.display !== 'none') self.encajar(el, self.sueloEncaje(n));
@@ -14032,7 +14608,7 @@
       // la ficha va encima de un panel: si se cambia de panel, se va con él
       if (this.ficha && this.ficha.host !== this.els[name]) this.cerrarFicha(true);
       var panels = ['menu', 'options', 'online', 'badges', 'maestrias', 'rango', 'ranking',
-                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'pase'];
+                    'mazes', 'friends', 'profile', 'daily', 'mate', 'vestuario', 'tienda', 'cofres', 'pase'];
       for (var i = 0; i < panels.length; i++) {
         var el = this.els[panels[i]];
         if (el) el.style.display = (panels[i] === name) ? 'flex' : 'none';
@@ -14056,7 +14632,7 @@
     GRUPOS_CUARTEL: [
       [['ranking', 'TOP MUNDIAL'], ['rango', 'RANGO']],
       [['profile', 'FICHA'], ['badges', 'TROFEOS'], ['maestrias', 'MAESTRÍAS']],
-      [['vestuario', 'VESTUARIO'], ['tienda', 'TIENDA']]
+      [['vestuario', 'VESTUARIO'], ['tienda', 'TIENDA'], ['cofres', 'COFRES']]
     ],
     tiraGrupo: function (name) {
       var self = this, grupo = null, i, j;
@@ -14080,16 +14656,20 @@
         b.setAttribute('role', 'tab');
         b.setAttribute('aria-selected', g[0] === name ? 'true' : 'false');
         if (g[0] === name) b.classList.add('active');
+        /* la de COFRES lleva cuántos hay sin abrir (refreshCofresBadge) */
+        if (g[0] === 'cofres') { (self.tabsCofres = self.tabsCofres || []).push(b); }
         tira.appendChild(b);
       });
       panel.insertBefore(tira, panel.firstChild);
       this.tirasGrupo[name] = tira;
+      this.refreshCofresBadge();
     },
     /* De una pestaña del grupo a otra. El VOLVER sigue llevando a donde se
      * entró al grupo (VESTUARIO y TIENDA se lo apuntan; los demás van al menú). */
     saltoGrupo: function (de, a) {
-      var origen = (de === 'vestuario') ? this.vestVolver : (de === 'tienda') ? this.tiendaVolver : 'menu';
-      if (origen === 'vestuario' || origen === 'tienda') origen = 'menu';
+      var origen = (de === 'vestuario') ? this.vestVolver : (de === 'tienda') ? this.tiendaVolver
+        : (de === 'cofres') ? this.cofresVolver : 'menu';
+      if (origen === 'vestuario' || origen === 'tienda' || origen === 'cofres') origen = 'menu';
       this.resumeAudio();
       if (a === 'ranking') this.showRanking();
       else if (a === 'rango') this.showRango();
@@ -14098,6 +14678,7 @@
       else if (a === 'maestrias') this.showMaestrias();
       else if (a === 'vestuario') { this.showVestuario(null, 'yo'); this.vestVolver = origen; }
       else if (a === 'tienda') { this.showTienda(); this.tiendaVolver = origen; }
+      else if (a === 'cofres') { this.showCofres(); this.cofresVolver = origen; }
     },
 
     /* LA PANTALLA EN LA QUE ESTABAS (24 sep). Al recargar se volvía siempre
@@ -14146,6 +14727,7 @@
         mate: function (s) { if (a) s.showFriendProfile(a); },
         vestuario: function (s) { s.showVestuario(typeof a === 'string' ? a : null); },
         tienda: function (s) { s.showTienda(typeof a === 'string' ? a : null); },
+        cofres: function (s) { s.showCofres(); },
         pase: function (s) { s.showPase(); }
       }[v.p];
       if (!abre) return false;
@@ -14158,7 +14740,7 @@
       this.refreshOnlineBtn();
       this.refreshDaily();
       this.refreshContinuar();   // CONTINUAR, si quedó una partida a medias
-      this.refreshVestBtn();     // VESTUARIO · N NUEVOS
+      this.refreshVestBtn();     // VESTUARIO · N NUEVOS (y el punto de los COFRES)
       this.refreshPaseBtn();     // PASE · G12
       this.refreshMarquesina();  // marcador, monedas y cinta
       this.desarmarModo();       // el póster vuelve a pedir su primer toque

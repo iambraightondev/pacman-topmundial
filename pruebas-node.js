@@ -403,6 +403,56 @@ guardian('index.html, tests.html, pruebas-node.js y sw.js cargan los mismos mód
   }
 });
 
+/* (c) LOS COFRES: el servidor abre con SU copia del generador y sus datos
+ * (supabase/functions/cofres/gen.js y datos.js). Tienen que ser los del
+ * juego: si no, el premio que enseña el juego y el que entrega el servidor
+ * podrían no ser el mismo. Se arreglan con `node supabase/cofres-datos.js`. */
+guardian('la función de los cofres lleva el mismo generador y los mismos datos que el juego', function (malos) {
+  var CD = require(path.join(raiz, 'supabase', 'cofres-datos.js'));
+  var dir = path.join(raiz, 'supabase', 'functions', 'cofres');
+  var gen = fs.readFileSync(path.join(dir, 'gen.js'), 'utf8').replace(/\r\n/g, '\n');
+  if (gen !== CD.textoGen(raiz)) malos.push('gen.js no es copia exacta de js/cofres-gen.js');
+  var dat = fs.readFileSync(path.join(dir, 'datos.js'), 'utf8').replace(/\r\n/g, '\n');
+  if (dat !== CD.textoDatos(raiz)) malos.push('datos.js no está al día con js/config.js');
+  /* y, por si acaso, que den LO MISMO: la copia del servidor cargada aparte,
+   * con los datos del servidor, contra la del juego, en miles de cofres */
+  var sb = { Math: Math, JSON: JSON, Object: Object, Array: Array, String: String, Number: Number };
+  sb.globalThis = sb;
+  vm.createContext(sb);
+  vm.runInContext(gen, sb, { filename: 'supabase/functions/cofres/gen.js' });
+  var Gs = sb.PM.CofresGen;
+  var Ds = JSON.parse(dat.slice(dat.indexOf('export const DATOS = ') + 21).replace(/;\s*$/, ''));
+  var Gj = win.PM.CofresGen, Dj = Gj.datosDe(win.PM.CFG);
+  var distintos = 0;
+  ['madera', 'plata', 'oro', 'legendario'].forEach(function (t) {
+    for (var i = 0; i < 1500; i++) {
+      var cuenta = 'c' + (i % 37) + '-' + (i * 7919 % 100003);
+      var n = 1 + (i % 60);
+      if (JSON.stringify(Gs.premio(cuenta, t, n, Ds)) !== JSON.stringify(Gj.premio(cuenta, t, n, Dj))) distintos++;
+    }
+  });
+  if (distintos) malos.push(distintos + ' premios distintos entre el juego y el servidor');
+});
+/* (d) Las piezas de COFRE del catálogo (js/config.js) son las que el
+ * servidor protege (piezas_especiales, en perfiles-blindaje.sql y
+ * cofres.sql): una que falte ahí se podría dar el juego a sí mismo. */
+guardian('las piezas de cofre del catálogo están todas en piezas_especiales del SQL', function (malos) {
+  var CFGn = win.PM.CFG, cat = [];
+  (CFGn.EFECTOS || []).concat(CFGn.ACCESORIOS || []).forEach(function (x) { if (x.cofre) cat.push(x.id); });
+  (CFGn.SKINS || []).forEach(function (x) { if (x.grupo === 'cofre') cat.push(x.id); });
+  cat.sort();
+  ['perfiles-blindaje.sql', 'cofres.sql'].forEach(function (f) {
+    var sqlTxt = fs.readFileSync(path.join(raiz, 'supabase', f), 'utf8');
+    var re = /\('([a-z0-9_]+)', 'cofre', null, null\)/g, m, ids = [];
+    while ((m = re.exec(sqlTxt))) ids.push(m[1]);
+    ids.sort();
+    var faltan = cat.filter(function (x) { return ids.indexOf(x) === -1; });
+    var sobran = ids.filter(function (x) { return cat.indexOf(x) === -1; });
+    if (faltan.length) malos.push(f + ': faltan ' + faltan.join(', '));
+    if (sobran.length) malos.push(f + ': sobran ' + sobran.join(', '));
+  });
+});
+
 /* ---------- las pruebas ---------- */
 try {
   vm.runInContext(fs.readFileSync(path.join(raiz, 'js', 'tests.js'), 'utf8'),
