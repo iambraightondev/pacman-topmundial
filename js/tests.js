@@ -9383,6 +9383,23 @@
     G.toMenu();
   });
 
+  test('se pinta solo con paso nuevo, y en el menú a poco ritmo', function () {
+    window.PM.settings.muted = true;
+    var m = {};
+    G.newGame({ players: 1 });
+    ok(G.tocaPintar(0, 1000, m), 'el primer cuadro de la partida sale al momento');
+    ok(G.tocaPintar(1, 1016, m), 'con un paso, se pinta');
+    ok(!G.tocaPintar(0, 1024, m), 'a 120 Hz, el cuadro sin paso no se repinta');
+    ok(G.tocaPintar(2, 1033, m), 'y el siguiente con paso, sí');
+    G.toMenu();
+    ok(G.tocaPintar(0, 1040, m), 'al volver al menú se pinta al momento');
+    ok(!G.tocaPintar(1, 1056, m), 'en el menú no se pinta a 60 por segundo');
+    ok(G.tocaPintar(1, 1040 + G.MENU_PINTA_MS, m), 'sino cada MENU_PINTA_MS');
+    G.newGame({ players: 1 });
+    ok(G.tocaPintar(0, 1150, m), 'y al empezar la partida, al momento');
+    G.toMenu();
+  });
+
   test('preparar una repetición deja sus fotos y su duración', function () {
     conVideo(function (R) {
       var rep = repetiCorta({ players: 1 }, 900);

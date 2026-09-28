@@ -1124,6 +1124,7 @@
       this.loopLast = performance.now();
       this.loopAcc = 0;
       var STEP = 1000 / 60;
+      var pintado = {};          // lo que recuerda tocaPintar (no es partida)
 
       function pump(now, doRender) {
         var dt = now - self.loopLast;
@@ -1135,11 +1136,13 @@
         // timeScale acelera el reloj sin tocar la simulación: los pasos
         // siguen siendo de 1/60 s, solo que caben más en cada fotograma
         self.loopAcc += dt * (self.timeScale || 1);
+        var pasos = 0;
         while (self.loopAcc >= STEP) {
           self.step();
           self.loopAcc -= STEP;
+          pasos++;
         }
-        if (doRender) self.render();
+        if (doRender && self.tocaPintar(pasos, now, pintado)) self.render();
       }
 
       function frame(now) {
@@ -1156,6 +1159,33 @@
         var now = performance.now();
         if (now - self.loopLast > 150) pump(now, false);
       }, 100);
+    },
+
+    /* ¿Se pinta este fotograma? (28 sep) Solo decide el DIBUJO: los pasos de
+     * la simulación ya se han dado y son los mismos se pinte o no, así que
+     * las repeticiones no se enteran.
+     *  - Sin paso nuevo no hay nada nuevo que pintar: en pantallas de 90, 120
+     *    o 144 Hz se repintaba el mismo cuadro dos o tres veces.
+     *    (Interpolar entre pasos para que a 90 Hz fuera más suave sería
+     *    pintar posiciones que la simulación no ha tenido: queda anotado,
+     *    no hecho, por no arriesgar lo determinista.)
+     *  - En el MENÚ el lienzo está tapado (la portada es opaca y los paneles
+     *    dejan ver un 12 %): basta con MENU_PINTA_MS entre cuadro y cuadro.
+     *  - Al entrar o salir del menú, al momento, para no enseñar un cuadro
+     *    viejo. `memo` lo guarda el bucle, fuera de Game (y de su foto). */
+    MENU_PINTA_MS: 95,
+
+    tocaPintar: function (pasos, now, memo) {
+      var menu = (this.state === 'MENU');
+      if (memo.menu !== menu) {
+        memo.menu = menu;
+        memo.en = now;
+        return true;
+      }
+      if (!pasos) return false;
+      if (menu && now - memo.en < this.MENU_PINTA_MS) return false;
+      memo.en = now;
+      return true;
     },
 
     step: function () {
@@ -4910,6 +4940,7 @@
       // el lienzo de las pastillas (capaPastillas): es dibujo, no partida
       PAST_GRADOS: 1, pastCapa: 1, pastHuella: 1, pastGrado: 1, pastEstampas: 1,
       miLook: 1,          // y lo puesto de la tienda, que se lee al pintar
+      MENU_PINTA_MS: 1,   // y cada cuánto se pinta en el menú (tocaPintar)
       // estos tres son tablas de CFG: no se tocan, así que van por referencia
       speedRow: 1, fruitInfo: 1, schedule: 1
     },
