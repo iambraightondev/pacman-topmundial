@@ -13050,7 +13050,7 @@
 
     /* Primer toque en CONTINUAR: el botón pregunta "¿GASTAR 1.000?" y hasta
      * el segundo no se paga. Se cambia en el sitio, sin rehacer el panel. */
-    armarContinuar: function (btn) {
+    armarContinuar: function (btn, pistaSi) {
       this.contArmado = true;
       btn = btn || this.contBtnPagar;
       if (!btn) return;
@@ -13058,7 +13058,7 @@
       var k = btn.querySelector && btn.querySelector('.btn-key');
       var txt = btn.childNodes && btn.childNodes[0];
       if (txt && txt.nodeType === 3) txt.nodeValue = '¿GASTAR ' + fmtMonedas(P) + '?';
-      var pista = 'SÍ, CONTINUAR · C';
+      var pista = pistaSi || 'SÍ, CONTINUAR · C';
       if (k) k.textContent = this.touchDevice ? this.pistaSinTeclas(pista) : pista;
       btn.classList.add('cont-armado');
     },
@@ -13077,10 +13077,22 @@
       for (var i = 0; i < g.pacs.length; i++) {
         if (g.pacs[i].out && !g.pacs[i].bot) fuera.push(i);
       }
+      /* Paga en dos pasos, como el CONTINUE?: sin Enter, el primer toque
+       * pregunta y el segundo paga, y el panel recién salido no acepta nada
+       * durante medio segundo. */
+      var nuevo = this.promptEstado !== 'REVIVIR';
+      if (nuevo) this.contArmado = false;
       var botones = [];
       if (puedo) {
-        botones.push({ label: 'REVIVIR', primary: true, hint: fmtMonedas(C.PRECIO) + ' · C', keys: ['c', 'Enter'],
-          onClick: function () { self.resumeAudio(); g.pedirContinuar(); } });
+        botones.push({ label: this.contArmado ? '¿GASTAR ' + fmtMonedas(C.PRECIO) + '?' : 'REVIVIR',
+          primary: true,
+          hint: this.contArmado ? 'SÍ, REVIVIR · C' : (fmtMonedas(C.PRECIO) + ' · C'),
+          keys: ['c'],
+          onClick: function () {
+            self.resumeAudio();
+            if (!self.contArmado) { self.armarContinuar(this, 'SÍ, REVIVIR · C'); return; }
+            g.pedirContinuar();
+          } });
       }
       if (!g.netRole) {
         botones.push({ label: 'SIGUIENTE NIVEL', hint: 'S', keys: ['s'],
@@ -13101,6 +13113,7 @@
         arcade: true,
         tono: 'cian',
         solid: true,
+        guarda: nuevo ? 500 : 0,
         status: g.flash ? g.flash.text : '',
         statusError: !!g.flash,
         custom: function (p) {
@@ -13167,6 +13180,9 @@
       if (puedo) {
         var btns = this.els.prompt.querySelectorAll('.prompt-btns .btn');
         if (btns && btns[0]) btns[0].disabled = !llega || !!g.contPedido;
+        this.contBtnPagar = btns && btns[0];
+        /* el foco, nunca en pagar */
+        try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) { }
       }
       this.contBtnOtra = null;
       this.promptEstado = 'REVIVIR';   // se cierra solo al empezar el nivel
