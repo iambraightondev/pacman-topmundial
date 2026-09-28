@@ -8662,6 +8662,14 @@
      * estas pruebas (desde el 1 oct, con una temporada de verdad en marcha,
      * la tienda salía con 90-180 monedas de más). */
     if (Pa) Pa._memoHasta = 0;
+    /* ...y el RANGO, que también paga monedas y también las recuerda un
+     * segundo (Rango.monedas). Sin olvidarlo, el saldo de estas pruebas
+     * dependía de lo que dejara la prueba de antes y de cuándo caducara:
+     * si el segundo vencía justo en medio de una prueba, esta releía los
+     * contadores a destiempo («mirar el saldo 50 veces no relee los
+     * contadores: 1 != 0», una vez de cada cincuenta pasadas). */
+    var Rg = window.PM.Rango;
+    if (Rg) Rg._memoHasta = 0;
     /* ...y lo mismo PRIMEROS PASOS (js/pasos.js): una partida larga con los
      * contadores a cero es su primera misión, y pagaría 100 por su cuenta.
      * Sus pruebas lo encienden a mano (conPasos). */
@@ -8672,6 +8680,7 @@
       finally {
         for (var k in antes) if (antes.hasOwnProperty(k)) s[k] = antes[k];
         if (Pa) { Pa.temporada = temp; Pa._memoHasta = 0; }
+        if (Rg) Rg._memoHasta = 0;
         if (Ps) Ps.nuevo = nuevo0;
       }
     });
@@ -9320,12 +9329,17 @@
 
   test('el saldo se lee una vez por texto guardado, y se entera de lo que cambie', function () {
     conTienda(function (Tn, A) {
-      var llamadas = 0, orig = A.stats;
+      var llamadas = 0, orig = A.stats, ahora0 = Date.now;
       A.stats = function () { llamadas++; return orig.apply(this, arguments); };
       try {
+        /* el reloj, quieto mientras se mira: lo que se mide es la tienda, no
+         * el segundo que el pase y el rango recuerdan su cuenta */
+        var fijo = ahora0.call(Date);
+        Date.now = function () { return fijo; };
         Tn.saldo();
         llamadas = 0;
         for (var i = 0; i < 50; i++) Tn.saldo();
+        Date.now = ahora0;
         eq(llamadas, 0, 'mirar el saldo 50 veces no relee los contadores');
         Tn.ganar(200);
         eq(Tn.saldo(), 1700, 'lo ganado se ve al momento');
@@ -9336,7 +9350,7 @@
         eq(Tn.saldo(), 2000, 'y lo escrito desde fuera también');
         ok(Tn.comprar('efx_nieve').ok && Tn.tiene('efx_nieve'), 'comprar se ve al momento');
         eq(Tn.saldo(), 1750, 'y se cobra');
-      } finally { A.stats = orig; }
+      } finally { A.stats = orig; Date.now = ahora0; }
     });
   });
 
