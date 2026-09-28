@@ -1917,6 +1917,16 @@
      * ========================================================= */
     /* ¿Este modo tiene continuar? */
     puedeContinuar: function () {
+      /* CLASIFICATORIA (28 sep): pagar otra vida subía la marca y el rango,
+       * y ahí nada que se compre puede dar ventaja. Viendo (o rehaciendo)
+       * una repetición de antes, sí: se ve como se jugó. */
+      if (this.clasif && !this.replaying) return false;
+      return this.conVidasPropias();
+    },
+
+    /* Modos cuyas vidas se pierden de verdad: los que tienen CONTINUAR y
+     * cuerpos que levantar (no CACERÍA, SUPERVIVENCIA ni VS.) */
+    conVidasPropias: function () {
       if (this.caza || this.superv) return false;
       if (this.isVersus && this.isVersus()) return false;
       return this.inGame();
@@ -2238,7 +2248,8 @@
      * Solo con vidas propias: con el fondo común nadie se queda fuera a solas.
      * ========================================================= */
     puedeRevivir: function () {
-      return this.puedeContinuar() && this.playerCount > 1 && this.livesMode === 'individual';
+      // levantar el cuerpo es gratis: vale también en CLASIFICATORIA (el paso 2, no)
+      return this.conVidasPropias() && this.playerCount > 1 && this.livesMode === 'individual';
     },
 
     /* ¿Ese jugador lleva el SOPORTE? (fuera de DESATADO no hay roles) */
@@ -2307,7 +2318,7 @@
 
     /* ¿Se abre REVIVIR al acabar el nivel? */
     ofrecerRevivir: function () {
-      if (!this.puedeRevivir()) return false;
+      if (!this.puedeRevivir() || !this.puedeContinuar()) return false;   // aquí se paga
       if (!this.quedaPorRevivir()) return false;
       var R = window.PM.Replay;
       if (R && R.modo === 'ver') return !!(R.contEnEspera && R.contEnEspera());
