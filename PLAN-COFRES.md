@@ -1,5 +1,33 @@
 # Plan · Cofres de premios
 
+> **HECHO (28 sep 2026).** Todo el orden de trabajo de §5 está construido y
+> probado, y la parte de servidor está en producción (tablas y funciones de
+> `supabase/cofres.sql`, el trigger de `perfiles-blindaje.sql` con los pasos de
+> cofres, la base de las 10 cuentas y la Edge Function `cofres`). El juego que
+> los enseña sale con el próximo despliegue. Cómo funciona por dentro: `SPEC.md`,
+> «Los COFRES». Lo que quedó decidido al construirlo, sobre lo de abajo:
+> - **Retroactivos (§7): no.** Se cuenta desde el lanzamiento (una base por
+>   cuenta y por aparato sin cuenta) y cada cuenta recibe **1 PLATA + 1 ORO** de
+>   bienvenida.
+> - **El servidor entrega.** Abrir va por la Edge Function `cofres` con la
+>   sesión del jugador; el juego no puede escribir nada de cofre (el trigger se
+>   lo recorta). El generador es el mismo fichero en el juego y en el servidor.
+> - **Sin cuenta** se ganan y se ven; para abrirlos hace falta entrar. El ORO
+>   de un **récord** solo existe con cuenta (lo cuenta el servidor al subirlo).
+> - **Contenido:** MADERA monedas o emote de tienda; PLATA monedas o **efecto de
+>   cofre**; ORO **accesorio de cofre** + 15 % **skin de cofre**; LEGENDARIO
+>   **AGUJERO NEGRO**. Repetidos a la mitad del precio (lo de cofre, con un
+>   valor de referencia en `CFG.COFRES.VALOR`). Las monedas de cofre **no** dan
+>   experiencia del pase (son premio, como el regalo de veterano).
+> - **«Maestría nueva»** = escalón nuevo de **maestría de rol** (desde el 22 sep
+>   los trofeos son otra cosa; esos ya dan ORO por récord).
+> - **Top 3 del rango:** lo calcula el servidor con la misma cuenta de
+>   `js/rango.js`, una vez, al día siguiente de cerrar la temporada (desde la de
+>   septiembre de 2026).
+>
+> **Queda para Braighton:** ver la apertura jugando (se hizo un aspecto, no los
+> 2–3 a elegir de §4); ajustar porcentajes con una semana de datos (§7).
+
 Diseño acordado con Braighton el 17 sep 2026. **Falta por diseñar el
 contenido exclusivo de cofre** (se hará en otra sesión); todo lo demás está
 decidido y se puede implementar ya con el Legendario provisional de §2.
@@ -96,17 +124,17 @@ Cada jugador gana y abre **sus** cofres en su aparato; nada viaja por red.
 
 ## 5 · Orden de trabajo (con verificación)
 
-1. `CFG.COFRES` + generador determinista. Pruebas: el mismo cofre da el mismo
+1. **[HECHO]** `CFG.COFRES` + generador determinista. Pruebas: el mismo cofre da el mismo
    premio siempre; la distribución de 10.000 cofres simulados cae en los
    porcentajes; el seguro salta a la 11.ª PLATA; el 2 % de Legendario ronda
    el 2 %.
-2. Ganados y abiertos sobre contadores. Pruebas: juntar dos aparatos que
+2. **[HECHO]** Ganados y abiertos sobre contadores. Pruebas: juntar dos aparatos que
    abrieron el mismo cofre no duplica monedas ni objetos; los tres filtros
    del récord (9 % no da, 12 % sí, récord previo de 9.000 no da, dos récords
    el mismo día en la misma ruta dan uno).
-3. Repetidos → mitad de precio. Prueba con un objeto ya comprado.
-4. Pantalla de cofres + aviso en GAME OVER + marca en el menú.
-5. Top 3 de temporada → LEGENDARIO (mirar `js/temporadas.js` y cómo se
+3. **[HECHO]** Repetidos → mitad de precio. Prueba con un objeto ya comprado.
+4. **[HECHO]** Pantalla de cofres + aviso en GAME OVER + marca en el menú.
+5. **[HECHO]** Top 3 de temporada → LEGENDARIO (mirar `js/temporadas.js` y cómo se
    decide el cierre; si solo lo sabe el servidor, avisar antes de montar
    nada en Supabase).
 
@@ -143,7 +171,7 @@ contador**; `Tienda.VENTA` es lo que se vende y deja fuera lo de cofre;
 `Skins.estado` les pone su etiqueta. Nada más hay que tocar para entregarlas.
 
 ## 7 · Abierto (no decidir sin Braighton)
-- **Cofres retroactivos:** quien ya tiene niveles y maestrías, ¿recibe todos
+- **[DECIDIDO: no; regalo de 1 PLATA + 1 ORO]** **Cofres retroactivos:** quien ya tiene niveles y maestrías, ¿recibe todos
   esos cofres de golpe? Riesgo: decenas de cofres el primer día y la
   economía rota. Recomendación de Jarvis: un **regalo de bienvenida
   pequeño** (p. ej. 1 PLATA + 1 ORO) y contar solo desde el lanzamiento.

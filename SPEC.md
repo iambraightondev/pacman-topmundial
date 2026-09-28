@@ -21,6 +21,7 @@ below quotes one, it is the value at the time that paragraph was written.
 | Rank thresholds, rewards and role factors | `CFG.RANGO` in `js/config.js` | |
 | DAILY rules and streak rewards | `CFG.DAILY` in `js/config.js` | |
 | Per-account manual corrections | `CFG.AJUSTES_CUENTA` in `js/config.js` | |
+| Chest odds, coin ranges, pity, caps and reference values | `CFG.COFRES` in `js/config.js` | Also baked into `supabase/functions/cofres/datos.js`: regenerate (`node supabase/cofres-datos.js`) and redeploy the function after touching it. |
 
 ## Nivel de jugador, cronómetro y amigos
 
@@ -1318,6 +1319,109 @@ warning says what is played now does not count towards it.
 - Any actual payment. `Pase.conceder(temporada)` is the hook the checkout will
   call the day one exists; nothing in the game reaches it today and the button
   stays disabled.
+
+## Los COFRES (`js/cofres.js` — `PM.Cofres`, 28 Sep 2026)
+
+Prize chests. Earned by playing, never bought, opened only with an account,
+and only cosmetics or coins inside. Design and decisions: `PLAN-COFRES.md`.
+
+| Chest | Earned by | Contains |
+| --- | --- | --- |
+| MADERA | every 5 games longer than a minute (`largas`) | coins or a shop emote |
+| PLATA | a full DAILY week · each player level gained | coins or a chest-only effect (pity: the 11th silver in a row without one brings one) |
+| ORO | each new role-mastery tier · a personal record that passes the three filters | a chest-only accessory, sometimes also a chest-only skin; 2 % open as LEGENDARIO |
+| LEGENDARIO | top 3 of the RANGO when a season closes · the 2 % above | the AGUJERO NEGRO skin |
+
+Plus a one-off welcome gift: 1 PLATA + 1 ORO per account (and per guest
+device). Repeats turn into coins at half their value (shop price, or
+`CFG.COFRES.VALOR` for chest-only pieces).
+
+### Three layers, one generator (`js/cofres-gen.js` — `PM.CofresGen`)
+`cofres-gen.js` has no game dependencies (no `CFG`, no storage): it takes a
+data object `D` built by `CofresGen.datosDe(CFG)`. The Edge Function
+`supabase/functions/cofres/` runs **a byte-identical copy** (`gen.js`) with
+its own `datos.js`; both are written by `node supabase/cofres-datos.js`, and a
+`pruebas-node.js` guardian fails if either is stale (it also compares the two
+generators' prizes on 6,000 chests).
+- `premio(cuenta, tipo, n, D)`: the content of chest number `n` of a type. The
+  seed is `hash(accountId | tipo | n)` (FNV-1a + murmur3 mix, mulberry32; 32-bit
+  integer maths only, so every engine agrees). Four draws, always in the same
+  order. The silver pity is recomputed by walking silvers 1..n-1
+  (`platasSinObjeto`).
+- `aplicar(premio, tiene, D)`: repeats → coins. The only state-dependent step.
+- `ganados(c, xp, base, hoy, D, usuario)`: chests earned, from counters that
+  already travel with the account, **counted from a base** (see below) and
+  capped so that a forged counter cannot mint chests forever: DAILY weeks ≤ one
+  per elapsed week (+1); levels ≤ 20 + 10 per day since the base; mastery tiers
+  ≤ one per 2 games; `largas` ≤ games played since the base.
+- `top3(filas, t, D)`: the season table of `js/rango.js` (`estadoDe`, seeds,
+  `CFG.AJUSTES_CUENTA.rango`) ported, ties broken by games then by name. A test
+  compares it with `Rango.estado` on 60 random counter sets.
+
+### The base: chests count from launch
+Nothing is given for what was played before chests existed. The base
+(`cofre_b_dia`, `cofre_b_partidas`, `cofre_b_semana`, `cofre_b_nivel`,
+`cofre_b_mae`) lives in `perfiles.logros`:
+- accounts that existed on 28 Sep got a snapshot of their values
+  (`supabase/cofres-base.js`, run once; it only fills accounts without one);
+- new accounts get `cofre_b_dia` = today and everything else 0 from the INSERT
+  branch of `perfiles_touch`, so what a guest played before signing up counts;
+- a guest device keeps its own base (`pacman-topmundial-cofres-base`), taken
+  the first time the new client runs, reset to zero on sign-out
+  (`Cofres.olvidarLocal`, called from `Account.limpiarLocal`).
+
+### Who writes what
+The game **cannot** give itself chests: `perfiles_touch` (step 1 of the
+shield) drops any client change to `cofre_*` keys and to chest-only pieces
+(`c_<id>` listed in `piezas_especiales`). Server-only counters, all "mayor" in
+`Achievements.BASE` (they arrive from the cloud and are never summed between
+devices):
+- `cofre_<tipo>` opened per type; `cofre_monedas` coins given (Tienda adds it
+  as earned: `Tienda.deCofres`; it does NOT feed the season pass);
+- `cofre_recs` record OROs — counted by `perfiles_touch` step 5: for each of
+  the 12 record columns, old ≥ 10,000 and new ≥ old × 1.10, at most one per
+  column and UTC day (`cofres_recordes`); only for client writes;
+- `cofre_top3` legendaries from a season top 3.
+`largas` is a normal summing counter written by the game (bounded by
+`partidas`, which the shield's hourly budget already caps).
+
+### Opening (`functions/cofres`, verify_jwt off: it checks the token itself)
+`POST { op: 'estado' }` returns earned/opened and every `cofre_*` counter;
+`POST { op: 'abrir', tipo }` opens the next one. It reads the profile with the
+service role, computes `ganados` with the shared generator, generates prize
+`n = opened + 1`, converts repeats and calls `public.cofres_abrir(...)`, which
+locks the row and only accepts `n` if `cofre_<tipo>` is still `n − 1` and the
+new/repeated pieces are still as assumed; on conflict the function re-reads
+and retries (up to 4). Two simultaneous opens therefore become chests 1 and 2.
+The client (`Cofres.abrir`) first queues a `pushQuiet` (the game just played
+must be in the cloud) and then the call, in `Account.enCola`, and takes the
+returned counters with `Achievements.tomar` (max per key, no re-seeding).
+On each request the function also closes any finished RANGO season from
+`CFG.COFRES.TOP3_DESDE` on, one day after it ends (`TOP3_MARGEN_DIAS`): it
+reads all profiles, runs `top3` and calls `public.cofres_cerrar(t, ids)`
+(once per season; writes `cofre_top3` to the winners).
+
+### Screens
+- GAME OVER: a "COFRES" row in the summary (`UI.cofresDelResumen`), from
+  `Cofres.alCerrar(antes, record)` (earned at game start vs end, plus the
+  record ORO the server is expected to count). It is a row, not a pop-up, so
+  it never fights the celebration queue.
+- `#cofres`, in the VESTUARIO · TIENDA · COFRES group: one card per type with
+  its canvas chest, pending count, how it is earned and ABRIR. Guests see
+  "CREA UNA CUENTA PARA ABRIRLOS". Opening is a canvas scene: the chest
+  shakes while the server answers, bursts in its colour, the prize rises
+  (animated like the shop's previews, or a coin pile), repeats show the coins.
+- Menu: a yellow counter on the VESTUARIO door; with pending chests and an
+  account, that door opens COFRES directly. The group tab reads "COFRES · n".
+
+### Party
+Each player earns and opens their own; nothing travels over the network.
+
+### Server files
+`supabase/cofres.sql` (tables `cofres_recordes`, `cofres_cierres`; functions
+`cofres_abrir`, `cofres_fijar_base`, `cofres_cerrar`, service role only),
+`supabase/perfiles-blindaje.sql` (steps 1 and 5, INSERT base),
+`supabase/cofres-vuelta-atras.sql` (rollback: previous trigger, drops).
 
 ## Partida a medias (`js/guardado.js` — `PM.Guardado`)
 
