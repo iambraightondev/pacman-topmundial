@@ -23,8 +23,12 @@
  * LA FECHA ES LA DE TU RELOJ, NO UTC
  * Y esto importa más de lo que parece. El RETO DE HOY viejo iba en
  * UTC porque tenía una clasificación mundial y todos tenían que
- * jugar el mismo día a la vez. El DAILY no manda nada a ningún
- * servidor: es tuyo y de este navegador. En UTC, quien juega en
+ * jugar el mismo día a la vez. El DAILY no tiene clasificación ni
+ * nada que cuadrar con los demás: es tuyo. (Desde el 22 sep la
+ * cartilla viaja con la cuenta, dentro de `ajustes` del perfil, para
+ * que otro aparato no la vea en blanco ni vuelva a pagar la racha:
+ * ver Daily.paraNube y Daily.desdeNube. Pero el día sigue siendo el
+ * de tu reloj.) En UTC, quien juega en
  * América veía cambiar el reto a media tarde —en Perú, a las 19:00
  * del viernes ya le salía el del sábado—, que es sencillamente un
  * error a los ojos de quien está mirando el reloj.
@@ -55,8 +59,8 @@
 
   function dos(n) { return (n < 10 ? '0' : '') + n; }
 
-  /* Fecha en el huso DE QUIEN JUEGA. Aquí no hay nada que sincronizar con
-   * nadie, así que el día tiene que cambiar cuando cambia en su reloj. */
+  /* Fecha en el huso DE QUIEN JUEGA. No hay que ir al paso de nadie más,
+   * así que el día tiene que cambiar cuando cambia en su reloj. */
   function fechaLocal(d) {
     return d.getFullYear() + '-' + dos(d.getMonth() + 1) + '-' +
       dos(d.getDate());

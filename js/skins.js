@@ -8583,6 +8583,54 @@
     },
     oso: function (m, o) { m.translateSelf(0, botaM(o.t, 7, 0.25) - 0.1).scaleSelf(1.02, 1.02); },
     galleta: function (m, o) { m.rotateSelf(Math.sin(o.t * 8) * 0.05 * 180 / Math.PI); },
+    /* tanda extravagante del 18 sep (28 sep): botaban y se mecían con el
+     * accesorio quieto encima. Lo mismo que hace cada dibujo con su cuerpo */
+    rana: function (m, o) { m.translateSelf(0, botaM(o.t, 5, 0.4) - 0.2); },
+    /* en el PAYASO y la RECREATIVA la pajarita va en la mandíbula, que baja al comer */
+    payaso: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 6, 0.35) - 0.2);
+      if (zona === 'cuello') girarM(m, -1.0, -0.8, -[0, 15, 28][fase(o)] * Math.PI / 180);
+    },
+    recreativa: function (m, o, zona) {
+      m.translateSelf(0, Math.sin(o.t * 7) * 0.15);
+      if (zona === 'cuello') girarM(m, -5.0, -0.9, -[0, 14, 26][fase(o)] * Math.PI / 180);
+    },
+    /* el ojo del CANGREJO va en su tallo, que se balancea */
+    cangrejo: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 11, 0.3) - 0.3);
+      if (zona === 'cara') m.translateSelf(Math.sin(o.t * 5 + 1.6) * 0.18, 0);
+    },
+    /* el CARACOL: los sombreros van en la concha, que con la Q se centra y
+     * rueda (el sombrero no gira con ella: la concha es redonda y su punto
+     * de arriba sigue siendo el de arriba); lo demás, en la cabeza, que se
+     * mete dentro (y el ojo, en la punta del cuerno, que se encoge) */
+    caracol: function (m, o, zona) {
+      var q = qDe(o, 1.1);
+      var dentro = (q >= 0) ? Math.sin(Math.min(1, q * 2.2) * Math.PI / 2) * (q > 0.75 ? (1 - q) / 0.25 : 1) : 0;
+      m.translateSelf(0, Math.sin(o.t * 6) * 0.18);
+      if (zona === 'cabeza') {
+        m.translateSelf(dentro * 2.2, -dentro * 1.6);
+      } else {
+        m.translateSelf(-dentro * 5, 0);
+        if (zona === 'cara') m.translateSelf(0, Math.sin(o.t * 4) * 0.2 - dentro * 3.4);
+      }
+    },
+    condor: function (m, o) {
+      var q = qDe(o, 1.0);
+      var abre = (q >= 0) ? Math.sin(Math.min(1, q * 2) * Math.PI / 2) * (q > 0.7 ? (1 - q) / 0.3 : 1) : 0;
+      m.translateSelf(0, Math.sin(o.t * 3) * 0.25 + abre * 0.6);
+    },
+    /* la embestida de la Q: adelanta, baja y agacha la cabeza */
+    toro: function (m, o) {
+      var q = qDe(o, 0.9), emb = (q >= 0) ? Math.sin(Math.min(1, q * 1.8) * Math.PI) : 0;
+      m.translateSelf(emb * 1.1, botaM(o.t, 7, 0.3) - 0.2 - emb * 0.7).rotateSelf(-emb * 0.16 * 180 / Math.PI);
+    },
+    unicornio: function (m, o) { m.translateSelf(0, Math.sin(o.t * 5) * 0.25); },
+    /* los tumbos y el culatazo del rayo */
+    trampa: function (m, o) {
+      var q = qDe(o, 1.0), tira = (q >= 0) ? Math.sin(q * Math.PI) * 1.4 : 0;
+      m.translateSelf(-tira, Math.sin(o.t * 9) * 0.2);
+    },
     /* tanda de mitología: el mismo vaivén que hace cada dibujo */
     medusa: function (m, o) { m.translateSelf(0, Math.sin(o.t * 5) * 0.16); },
     ciclope: function (m, o) {
@@ -8628,7 +8676,7 @@
     acc_espartano: 'cabeza', acc_antenas: 'cabeza', acc_cuernos: 'cabeza',
     acc_obra: 'cabeza', acc_aureola: 'cabeza',
     acc_bufanda: 'cuello', acc_alas: 'cuello',
-    acc_laureles_2609: 'cabeza',
+    acc_laureles_2609: 'cabeza', acc_laureles_2610: 'cabeza',
     /* tanda de mitología: la serpiente se enrosca al cuello */
     acc_alado: 'cabeza', acc_ojo: 'cabeza', acc_serpiente: 'cuello' };
   /* la zona de un accesorio en una skin: la suya propia si la skin la fija */
@@ -8660,7 +8708,7 @@
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
   var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6,
     acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
-    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4,
+    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4, acc_laureles_2610: R - 0.4,
     acc_alado: 2.8, acc_ojo: 4.4, acc_vaquero: R - 2.2, acc_chullo: 2.4, acc_mohicano: 4.4,
     acc_orejas: R - 1.2 };
 
@@ -10035,8 +10083,10 @@
   /* ---------------- LAURELES DE TEMPORADA (premio del RANGO) ----------------
    * Una rama de laurel dorada que rodea la coronilla de atrás adelante, con
    * una manzana roja en la frente (la fruta que hay que alcanzar). Las hojas
-   * destellan de una en una. `oro` y `gema` cambian con cada temporada. */
-  function laureles(oro, oroOsc, gema) {
+   * destellan de una en una. `oro` y `gema` cambian con cada temporada;
+   * `brillo` (el destello de la hoja) es cálido si no se da otro. */
+  function laureles(oro, oroOsc, gema, brillo) {
+    brillo = brillo || '#fffbe0';
     return function (ctx, o) {
       var rr = R + 0.25, n = 0;
       ctx.save();
@@ -10054,7 +10104,7 @@
           ctx.rotate(ang - Math.PI / 2 + lado * 1.05);
           ctx.beginPath();
           ctx.ellipse(0, lado * 1.15, 0.7, 1.55, 0, 0, Math.PI * 2);
-          ctx.fillStyle = (n === brilla) ? '#fffbe0' : (lado < 0 ? oroOsc : oro);
+          ctx.fillStyle = (n === brilla) ? brillo : (lado < 0 ? oroOsc : oro);
           ctx.fill();
           ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.2;
           ctx.stroke();
@@ -10075,6 +10125,8 @@
     };
   }
   ACC.acc_laureles_2609 = laureles('#ffd24a', '#8a5a00', '#ff3b3b');
+  /* octubre, la temporada de la caza de fantasmas: plata y manzana violeta */
+  ACC.acc_laureles_2610 = laureles('#d9e0e8', '#5b6674', '#9b4dff', '#eef4ff');
 
   /* ---------------- GRITO (emote) ---------------- */
   function caraGrito(ctx, x, y, r, color, t) {

@@ -44,37 +44,49 @@ test('catálogo: Asesino resuelve daño, puntos, estados y proyectiles', async (
     H.lanzar(G, 0, 0); fly(100);
     ghost(0, p.x + T, p.y); H.lanzar(G, 0, 0); fly(60);
     ghost(1, p.x + T, p.y); H.lanzar(G, 0, 0); fly(60);
-    out.shurikenFallo = !H.st[0].shuriken && H.st[0].cd[0] === 20 * 60;
+    /* si falla alguna, la ráfaga se come la recarga entera del catálogo */
+    out.shurikenFallo = !H.st[0].shuriken &&
+      H.st[0].cd[0] === CFG.HAB.CATALOGO.asesino[0].find(x => x.id === 'shuriken').cd;
 
     p = start('bomba,turbo,flash,grito');
     p.x = 10 * T + 4; p.y = 10 * T + 4; ghost(0, p.x + T, p.y);
     base = G.score;
     const planta = H.lanzar(G, 0, 0), queda = !!H.st[0].bomba && H.st[0].cd[0] === 0;
     const detona = H.lanzar(G, 0, 0);
-    out.bomba = planta && queda && detona && G.score - base === 150 && G.ghosts[0].mode === 'eyes';
+    /* la primera baja de un estallido paga lo primero de la racha (24 sep) */
+    out.bomba = planta && queda && detona && G.score - base === CFG.HAB.BOMBA_RACHA[0] && G.ghosts[0].mode === 'eyes';
 
     p = start('mordisco,sombra,marca,grito');
     p.x = 10 * T + 4; p.y = 10 * T + 4;
     H.sombra(G, 0); const invisible = H.oculto(0) && H.alfa(0, G) < 0.4 && H.multVel(0) === 1.2;
     let sg = ghost(0, p.x + T, p.y); sg.dir = CFG.DIR.LEFT;
-    base = G.score; G.chainIndex = 0; G.eatGhost(sg, 0, 'contacto'); const frontal = G.score - base === 500;
+    base = G.score; G.chainIndex = 0; G.eatGhost(sg, 0, 'contacto'); const frontal = G.score - base === CFG.HAB.SOMBRA_PUNTOS;
     sg = ghost(1, p.x + T, p.y); sg.dir = CFG.DIR.RIGHT;
     base = G.score; H.matarCatalogo(G, sg, 0, CFG.HAB.BOMBA_PUNTOS, 'bomba', 1, true);
-    out.sombra = invisible && frontal && G.score - base === 750;
+    out.sombra = invisible && frontal && G.score - base === CFG.HAB.SOMBRA_ESPALDA_PUNTOS;
 
     p = start('mordisco,frenesi,marca,grito');
     H.frenesi(G, 0); const fg = ghost(0, p.x + T, p.y); G.eatGhost(fg, 0, 'mordisco');
     for (let i = 0; i < 4; i++) H.alMatar(G, 0, null, p.x, p.y);
-    out.frenesi = H.st[0].frenesi === 8 * 60 && H.st[0].frenesiMult > 1.6 && H.multVel(0) > 1.6 && H.fx.some(f => f.t === 'frenesi');
+    /* cinco bajas lo llevan justo al tope: todavía no alarga */
+    out.frenesi = H.st[0].frenesi === CFG.HAB.FRENESI_TICKS && H.st[0].frenesiMult > 1.6 && H.multVel(0) > 1.6 && H.fx.some(f => f.t === 'frenesi');
 
     p = start('mordisco,carrona,flash,grito');
     H.carrona(G, 0); const cg = ghost(0, p.x + T, p.y); base = G.score; G.eatGhost(cg, 0, 'mordisco');
-    const joya = H.joyas[0]; if (joya) { p.x = joya.x; p.y = joya.y; H.pasoRoles(G, true); }
-    out.carrona = !!joya && H.joyas.length === 0 && G.score - base === 550;
+    /* el botín sale despedido y nadie lo coge en su medio segundo de gracia
+     * (22 sep); luego, el que esté encima */
+    const primera = H.puntosDe(G, 0, CFG.GHOST_CHAIN[0]);
+    const joya = H.joyas[0];
+    let enGracia = false;
+    if (joya) {
+      p.x = joya.x; p.y = joya.y; H.pasoRoles(G, true); enGracia = H.joyas.length === 1;
+      for (let i = 0; i < CFG.HAB.CARROÑA_GRACIA && H.joyas.length; i++) H.pasoRoles(G, true);
+    }
+    out.carrona = !!joya && enGracia && H.joyas.length === 0 && G.score - base === primera + CFG.HAB.CARROÑA_PUNTOS;
 
     p = start('mordisco,turbo,marca,grito');
     const mg = ghost(0, p.x + T, p.y); H.marca(G, 0); base = G.score; G.chainIndex = 0; G.eatGhost(mg, 0, 'mordisco');
-    out.marca = G.score - base === 500 && H.marcaGhost[0] === -1;
+    out.marca = G.score - base === H.puntosDe(G, 0, CFG.GHOST_CHAIN[0] * CFG.HAB.MARCA_MULT) && H.marcaGhost[0] === -1;
 
     p = start('mordisco,turbo,gancho_inverso,grito');
     const pasillo = recta(6);
@@ -255,7 +267,8 @@ test('catálogo: Tanque, Soporte y Mago aplican todos sus efectos', async ({ pag
 
     p = start(['mago'], ['bola_guiada,clon,gravedad,meteoro']);
     g = ghost(0, p.x + 2 * T, p.y + T); base = G.score; H.bolaGuiada(G, 0); fly();
-    out.guiada = G.score - base === 150 && g.mode === 'eyes';
+    /* el Mago cobra su racha desde el 24 sep: la primera baja, lo primero */
+    out.guiada = G.score - base === CFG.GHOST_CHAIN[0] && g.mode === 'eyes';
     p.nextDir = CFG.DIR.RIGHT; if (!H.libreDelante(p.tileX(), p.tileY(), CFG.DIR.RIGHT)) p.nextDir = CFG.DIR.LEFT;
     const clon = H.clon(G, 0); if (clon) { const x0 = H.st[0].clon.x; H.pasoRoles(G, true); out.clon = H.st[0].clon && H.st[0].clon.x !== x0; } else out.clon = false;
     /* GRAVEDAD: el tirón se ve —medio segundo de arrastre—, no teletransporta */

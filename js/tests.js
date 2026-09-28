@@ -9388,12 +9388,11 @@
    * bota o se hunde en la cabeza. Esto obliga a decidirlo al añadirla. */
   test('el vestuario está completo: cabezas, poses, zonas, sombreros y laureles', function () {
     var S = window.PM.Sprites;
-    /* extravagantes SIN POSES. Las seis primeras no mueven el cuerpo; las
-     * otras nueve botan o se mecen (poco: décimas de px) y su accesorio NO
-     * las sigue. Están aquí para que ninguna NUEVA se quede sin POSES sin
-     * que alguien lo decida. */
-    var SIN_POSES = ['gato', 'robot', 'dragon', 'gargola', 'pulpo', 'vampiro',
-      'rana', 'payaso', 'recreativa', 'cangrejo', 'caracol', 'condor', 'toro', 'unicornio', 'trampa'];
+    /* extravagantes SIN POSES: estas seis no mueven el cuerpo. Están aquí
+     * para que ninguna NUEVA se quede sin POSES sin que alguien lo decida
+     * (las nueve que botaban con el accesorio quieto la tienen desde el
+     * 28 sep). */
+    var SIN_POSES = ['gato', 'robot', 'dragon', 'gargola', 'pulpo', 'vampiro'];
     /* accesorios que van a la CARA porque es lo que toca (no por olvido) */
     var CARA = ['acc_gafas', 'acc_afiladas', 'acc_bigote', 'acc_auriculares', 'acc_parche', 'acc_ninja',
       'acc_vaquero', 'acc_chullo', 'acc_mohicano', 'acc_orejas', 'acc_buceo',

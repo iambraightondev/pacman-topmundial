@@ -17,7 +17,7 @@ below quotes one, it is the value at the time that paragraph was written.
 | Service-worker cache version | `VERSION` in `sw.js` | Bumped on every deploy so browsers drop the old files. |
 | Coins earned per game, per DAILY challenge and per week | `CFG.TIENDA` in `js/config.js` | `Tienda.dePartida` applies the per-game ones. |
 | Shop catalogue and prices | `CFG.SKINS`, `CFG.EMOTES_TIENDA`, `CFG.EFECTOS`, `CFG.ACCESORIOS` in `js/config.js` | |
-| Season pass paths and rewards | `CFG.PASE` in `js/config.js` | |
+| Season pass paths and rewards | `CFG.PASE` in `js/config.js` | Coins in `CAMINO` (every month); each season's pieces in `PIEZAS`. |
 | Rank thresholds, rewards and role factors | `CFG.RANGO` in `js/config.js` | |
 | DAILY rules and streak rewards | `CFG.DAILY` in `js/config.js` | |
 | Per-account manual corrections | `CFG.AJUSTES_CUENTA` in `js/config.js` | |
@@ -1213,9 +1213,19 @@ target is that a daily player finishes brushing the end of the month rather
 than halfway through; at 1 000 it was done in 18 days and the last fortnight
 pushed nobody.
 
-### The path (`CFG.PASE.CAMINO`)
-One entry per galón, each with a `gratis` and a `pago` side; both sides can
-carry `monedas` and an item `id`. **Every one of the thirty pays something**
+### The path: coins in `CFG.PASE.CAMINO`, pieces per season in `CFG.PASE.PIEZAS`
+There is **one path per season**, assembled by `Pase.camino(t)` (built once
+per season and cached). Its coins come from `CFG.PASE.CAMINO`, one entry per
+galón with a `gratis` and a `pago` side, and they are the same every month.
+The pieces go on top from `CFG.PASE.PIEZAS[t]` — that season's own entry,
+keyed by galón and lane (`{ 10: { gratis: 'grito', pago: 'acc_mochila' } }`).
+A month with no entry in `PIEZAS` pays the coins of `CAMINO` and **no piece**:
+pass pieces are handed out only in their own season and never come back.
+There used to be a single undated path carrying the item ids, and on 1 Nov it
+would have handed October's pieces out all over again.
+`Pase.escalones`, `Pase.sincronizar` and the screen all read `Pase.camino(t)`.
+
+**Every one of the thirty pays something**
 (20 Sep): only nine did before, and the twenty-one gaps showed — four galones
 in a row paying nothing, right in the stretch where you have to keep playing.
 The month moves the same money it did, spread across the whole path: 30 and 70
@@ -1224,8 +1234,8 @@ on a normal galón, 60 and 150 every fifth, 150 and 400 at the finish, about
 
 ### The season-exclusive pieces (20 Sep 2026)
 
-The three `hito` galones hand out pieces that exist nowhere else. October's
-theme is **hunting ghosts**, deliberately not «halloween»: the halloween skins
+The three `hito` galones hand out pieces that exist nowhere else
+(`CFG.PASE.PIEZAS['2026-10']`). October's theme is **hunting ghosts**, deliberately not «halloween»: the halloween skins
 are already earned free that week, so selling the same thing would cannibalise
 them. Each of the three economies hands out its own things.
 
@@ -1246,7 +1256,8 @@ padlocked all month — because that is where the decision to buy is made.
 OCTUBRE DEL PASE* (skin in `DRAW`, accessory in `ACC`, trail in `EFX`, face in
 `caraEmote`); the piece is declared in `js/config.js` with `pase: true` (a skin
 says it with `grupo: 'pase'` plus the `temporada` it belonged to) and hung on
-`CFG.PASE.CAMINO` by its id. From there everything is automatic:
+`CFG.PASE.PIEZAS` by its id, under its season, galón and lane. From there
+everything is automatic:
 `Pase.sincronizar()` marks it with the same `c_<id>` counter as a purchase,
 `js/tienda.js` keeps it out of VENTA and refuses to sell it, and the wardrobe
 shows it under the DEL PASE filter. The path screen draws each piece for real
@@ -1281,10 +1292,11 @@ and the pass lane's is 3, and without it the columns drifted apart.
   velvet weave that drifts, gold inner edge, a light that sweeps across it,
   gold pedestal under each prize and the amount at double size.
 - Between them a **band** that states what the lower lane is.
-- A galón marked `hito: true` in `CFG.PASE.CAMINO` is drawn at double width.
-  It is written in the config, not inferred from the amounts, because what
-  makes a galón big is what is placed *on* it (the month's piece, a chest, the
-  finish), not how many coins it pays.
+- A galón marked `hito: true` in `CFG.PASE.CAMINO` (today only the finish),
+  or carrying that season's piece in `CFG.PASE.PIEZAS`, is drawn at double
+  width (`Pase.camino` sets the flag). It is never inferred from the amounts,
+  because what makes a galón big is what is placed *on* it (the month's
+  piece, a chest, the finish), not how many coins it pays.
 
 **The two states have to be told apart from a metre away.** That is the whole
 design. While the pass is not yours, its lane is shown **behind glass**:
@@ -1314,8 +1326,9 @@ Asleep-season state: before `CFG.PASE.DESDE` the whole path is visible but a
 warning says what is played now does not count towards it.
 
 ### Not built yet
-- The season-exclusive pieces (above): art work, and the reason the path still
-  pays coins only. The hito slots at 10, 20 and 30 are where they go.
+- Pieces for any season after October: `CFG.PASE.PIEZAS` only has
+  `2026-10`, so from November the path pays coins only until a month gets its
+  own entry.
 - Any actual payment. `Pase.conceder(temporada)` is the hook the checkout will
   call the day one exists; nothing in the game reaches it today and the button
   stays disabled.
