@@ -171,6 +171,14 @@
   function tipoSuelto(key) {
     if (/^px_[0-9]{4}-(0[1-9]|1[0-2])$/.test(key)) return 'suma';    // experiencia
     if (/^pp_[0-9]{4}-(0[1-9]|1[0-2])$/.test(key)) return 'mayor';   // carril de pago
+    /* la experiencia del pase de UN DÍA (CFG.PASE.TOPE_DIARIO). Se suma entre
+     * aparatos como px_, pero solo vive hoy y ayer (Pase.diaVivo): pasado eso
+     * no vale para nada, y sin esto el almacén crecería una clave por día
+     * jugado para siempre. Lo viejo que traiga la nube se ignora al leerlo. */
+    if (/^pxd_[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/.test(key)) {
+      var Pa = window.PM.Pase;
+      return (!Pa || !Pa.diaVivo || Pa.diaVivo(key.slice(4))) ? 'suma' : null;
+    }
     /* los del RANGO de temporada (js/rango.js): uno por mes y formato */
     if (/^r[cgtlud][0-9]?_[0-9]{4}-(0[1-9]|1[0-2])(_[1-4])?$/.test(key)) return 'suma';
     if (/^rm[0-9]?_[0-9]{4}-(0[1-9]|1[0-2])(_[1-4])?$/.test(key)) return 'mayor';   // mejor división (o escalón)

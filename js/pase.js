@@ -9,6 +9,7 @@
  *
  *   experiencia de la temporada  ->  px_AAAA-MM   (contador que solo crece)
  *   carril de pago               ->  pp_AAAA-MM   (1 o nada)
+ *   lo que entró HOY (el tope)   ->  pxd_AAAA-MM-DD (CFG.PASE.TOPE_DIARIO)
  *
  * De esos dos sale todo lo demás. El galón es la experiencia partida por
  * CFG.PASE.POR_GALON. Las monedas del camino no se ingresan en ninguna
@@ -71,6 +72,8 @@
    * Tienda.saldo(), que se mira muchas veces al pintar una pantalla, y no
    * tiene sentido rehacer la misma lista en cada una. */
   var CAMINOS = {};
+  /* hoy y ayer, para Pase.diaVivo (se mira cada vez que se lee el almacén) */
+  var DIAVIVO = { hoy: '', ayer: '' };
   function camino(t) {
     t = String(t || Pase.temporada());
     if (CAMINOS.hasOwnProperty(t)) return CAMINOS[t];
@@ -289,9 +292,64 @@
 
     /* Lo llama Tienda.ganar con lo que acaba de pagar cualquier cosa: una
      * partida, el reto del DAILY, la semana. Así el camino y la tienda no
-     * pueden descuadrarse, porque miden lo mismo. */
-    porMonedas: function (n) {
-      return this.ganar(this.deMonedas(n));
+     * pueden descuadrarse, porque miden lo mismo.
+     *
+     * Con el TOPE DEL DÍA (CFG.PASE.TOPE_DIARIO): solo entra lo que quepa hoy,
+     * y lo que entra se apunta también en el contador del día. Las monedas
+     * se cobran enteras igual (eso es Tienda.ganar): lo que se queda fuera es
+     * solo la experiencia del camino. */
+    porMonedas: function (n, d) {
+      var xp = Math.min(this.deMonedas(n), this.quedaHoy(d));
+      var hecho = this.ganar(xp);
+      if (hecho > 0 && this.topeDiario()) A().record('pxd_' + this.dia(d), hecho);
+      return hecho;
+    },
+
+    /* ---------- el tope del día ----------
+     * Un contador por día, pxd_AAAA-MM-DD, que solo crece y se SUMA entre
+     * aparatos igual que px_ (js/account.js, pendiente): al juntarse, cada
+     * uno ve lo que el otro ya llenó hoy. Lo que no se puede evitar es que
+     * dos aparatos que juegan el mismo día SIN juntarse llenen cada uno su
+     * tope; entre los dos puede pasarse un poco, y en cuanto se juntan ya no
+     * cabe nada más hasta mañana. Se acepta: cerrarlo del todo pediría
+     * preguntar al servidor antes de cada partida.
+     *
+     * EL DÍA es el del reloj de quien juega, el mismo del DAILY
+     * (Daily.hoyISO): el tope se vacía a la vez que cambia el reto. */
+    dia: function (d) {
+      var Dy = window.PM.Daily;
+      if (Dy && Dy.hoyISO) return Dy.hoyISO(d);
+      d = d || new Date();
+      var m = d.getMonth() + 1, dd = d.getDate();
+      return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd;
+    },
+
+    /* ¿Ese día (AAAA-MM-DD) todavía importa? Hoy y ayer (una partida que
+     * acaba pasada la medianoche, un aparato que sube tarde) y los que
+     * vengan. Lo más viejo no se guarda (js/achievements.js, tipoSuelto):
+     * sin esto el almacén crecería una clave por cada día jugado. */
+    diaVivo: function (dia) {
+      var hoy = this.dia();
+      if (hoy !== DIAVIVO.hoy) {
+        var p = hoy.split('-');
+        var y = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - 1));
+        DIAVIVO.hoy = hoy;
+        DIAVIVO.ayer = y.toISOString().slice(0, 10);
+      }
+      return String(dia) >= DIAVIVO.ayer;
+    },
+
+    /* 0 = sin tope */
+    topeDiario: function () { return Math.max(0, Math.floor(P().TOPE_DIARIO || 0)); },
+
+    /* Experiencia del pase ganada hoy (la que ha entrado, no la que se quedó
+     * fuera por el tope) */
+    hoy: function (d) { return stat('pxd_' + this.dia(d)); },
+
+    /* Lo que aún cabe hoy (sin tope, todo) */
+    quedaHoy: function (d) {
+      var t = this.topeDiario();
+      return t ? Math.max(0, t - this.hoy(d)) : Infinity;
     },
 
     /* ---------- todo junto, para la pantalla ---------- */
@@ -309,6 +367,9 @@
         seVende: this.seVende(),
         precio: P().PRECIO,
         escalones: this.escalones(t),
+        /* el tope del día: lo que ha entrado hoy y cuánto cabe (0 = sin tope) */
+        hoy: this.hoy(),
+        tope: this.topeDiario(),
         /* lo que se está dejando por no tener el carril de pago: es el número
          * que justifica el precio, y por eso se enseña aunque no se venda */
         pendientePago: (function (self) {

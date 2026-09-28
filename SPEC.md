@@ -1177,6 +1177,9 @@ Following the shop's rule — no new table, no saved balance:
     px_AAAA-MM   that season's experience      (suma)
     pp_AAAA-MM   1 = owns that season's paid lane (mayor)
 
+(plus `pxd_AAAA-MM-DD` for the daily cap, below — it derives nothing, it only
+limits.)
+
 They are **not** declared one by one. A pair per month, forever, meant a
 hundred keys sitting at zero inside the achievements store — and that store is
 parsed and rebuilt thousands of times a run: measured, it made every
@@ -1212,6 +1215,49 @@ plus the challenge is ~1 700 XP, so the 30 galones land at **~27 days**. The
 target is that a daily player finishes brushing the end of the month rather
 than halfway through; at 1 000 it was done in 18 days and the last fortnight
 pushed nobody.
+
+### The daily cap: `CFG.PASE.TOPE_DIARIO` (1 800 XP a day, from 29 sep 2026)
+That arithmetic was wrong in practice: September's real numbers (production,
+PROPUESTAS-2026-09-29 point 4) had daily players finishing the path around day
+4-6. So the rule stays — everything that pays coins pays XP — but **whatever
+goes over 1 800 in one day does not count**. 45 000 / 1 800 = 25 days at the
+cap every day. Coins are paid in full regardless (`Tienda.ganar`); only the
+path's XP is cut. The cap lives in `Pase.porMonedas(n)`, the only path the
+game uses; `Pase.ganar(n)` stays uncapped (tests, and the day something must
+be granted by hand).
+
+    pxd_AAAA-MM-DD   XP that entered the path that day   (suma)
+
+- **The day** is the player's own clock, the same as the DAILY
+  (`Pase.dia` → `Daily.hoyISO`): the cap empties when the challenge changes.
+- `Pase.hoy()`, `Pase.quedaHoy()`, `Pase.topeDiario()`; `resumen()` carries
+  `hoy` and `tope`. `TOPE_DIARIO: 0` turns the cap off.
+- **Two devices.** `pxd_` is a *suma* counter, so it travels with the pending
+  sum like `px_` (`Account.pendiente`): once synced, each device sees what the
+  other already filled today. Two devices playing the same day **without**
+  syncing each fill their own cap, so together they can overshoot (by up to
+  one cap per extra device); on the next sync both see the sum and nothing
+  more fits that day. Accepted: closing it fully would mean asking the server
+  before every run.
+- **Only today and yesterday live** (`Pase.diaVivo`, checked in
+  `tipoSuelto`): older `pxd_` keys are dropped on read and ignored on merge,
+  so the store does not grow a key per day played. Yesterday is kept for a run
+  that ends past midnight or a device that uploads late.
+- **Server.** The profile trigger (`supabase/perfiles-blindaje.sql`) needs no
+  change: `pxd_` matches none of its patterns (`^px_` needs the underscore
+  right after `px`), so it is merged with the generic "keep the greater" and
+  not counted in the `px_` total (`<= 5 × coins + 5 000`). It is not enforced
+  server-side — a tampered client could ignore the cap — but the existing
+  `px_` bound still holds, and writing a high `pxd_` only hurts its owner. Old
+  `pxd_` keys stay in the cloud row (the trigger keeps every old key); the game
+  ignores them.
+
+The screen shows it under the meter: a **HOY x / 1 800** strip (cyan while
+there is room, with "EL CAMINO SUBE HASTA 1.800 AL DÍA"); when full it turns
+red ("TOPE DEL DÍA LLENO"), the big meter stops shining and a framed notice
+blinks **VUELVE MAÑANA PARA SEGUIR SUBIENDO** with "LO QUE JUEGUES HOY SIGUE
+DANDO MONEDAS" under it. Hidden while the season is asleep and once the path
+is complete.
 
 ### The path: coins in `CFG.PASE.CAMINO`, pieces per season in `CFG.PASE.PIEZAS`
 There is **one path per season**, assembled by `Pase.camino(t)` (built once
