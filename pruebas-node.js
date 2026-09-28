@@ -8,7 +8,9 @@
  * Monta un DOM de mentira (lo justo: elementos, clases, estilos,
  * localStorage y un lienzo que no pinta nada), carga los módulos
  * del juego en el mismo orden que index.html y ejecuta js/tests.js.
- * Sale con código 1 si falla alguna, así vale para un gancho de CI.
+ * Antes pasa unos guardianes que miran los ficheros (funciones repetidas,
+ * listas de módulos que no coinciden: ver más abajo).
+ * Sale con 0 si todo pasa y con 1 si falla algo, así vale para CI.
  *
  * No sustituye a abrir tests.html: aquí no se ve nada dibujado.
  * Sirve para la lógica, que es donde se rompen las cosas.
@@ -342,6 +344,65 @@ orden.forEach(function (nombre) {
   }
 });
 
+/* ---------- guardianes del código ----------
+ * Lo que tests.js no puede ver porque mira el juego ya cargado, no sus
+ * ficheros. Cada uno que falla cuenta como una prueba mal. */
+var guardianes = [];
+function guardian(nombre, fn) {
+  var malos = [];
+  try { fn(malos); } catch (e) { malos.push(String(e && e.message || e)); }
+  guardianes.push({ nombre: nombre, ok: !malos.length, error: malos.join('; ') });
+}
+
+/* (a) Dos funciones con el mismo nombre en el primer nivel de un mismo
+ * fichero: gana la de abajo sin avisar y la de arriba queda muerta (así
+ * sobrevivieron un caraEmote y un rastro del escaparate del 18 sep). Cada
+ * fichero de js/ es un (function () { ... })() con su cuerpo a dos
+ * espacios, así que "primer nivel" es `  function nombre(` en su IIFE. */
+guardian('ninguna función se declara dos veces en el primer nivel de su fichero', function (malos) {
+  fs.readdirSync(path.join(raiz, 'js')).filter(function (f) { return /\.js$/.test(f); })
+    .forEach(function (f) {
+      var vistas = {}, iife = 0;
+      fs.readFileSync(path.join(raiz, 'js', f), 'utf8').split(/\r?\n/).forEach(function (l, i) {
+        if (/^;?\(function\b/.test(l)) { iife++; vistas = {}; }
+        var m = /^  function\s+([\w$]+)\s*\(/.exec(l);
+        if (!m) return;
+        if (vistas[m[1]]) malos.push('js/' + f + ': ' + m[1] + ' (líneas ' + vistas[m[1]] + ' y ' + (i + 1) + ')');
+        else vistas[m[1]] = i + 1;
+      });
+    });
+});
+
+/* (b) Los módulos se nombran en cuatro sitios y tienen que ser los mismos:
+ * index.html y tests.html (en el mismo orden, que es el de carga), la lista
+ * `orden` de aquí arriba y el SHELL del service worker (sin orden: es lo que
+ * se guarda para jugar sin red). Uno que falte en sw.js no se juega sin
+ * conexión; uno que falte aquí o en tests.html no se prueba. */
+guardian('index.html, tests.html, pruebas-node.js y sw.js cargan los mismos módulos', function (malos) {
+  function scripts(fichero) {
+    var html = fs.readFileSync(path.join(raiz, fichero), 'utf8'), out = [], m;
+    var re = /<script[^>]*\bsrc="js\/([\w-]+)\.js"/g;
+    while ((m = re.exec(html))) out.push(m[1]);
+    return out;
+  }
+  var index = scripts('index.html');
+  var pruebas = scripts('tests.html').filter(function (n) { return n !== 'tests'; });
+  var sw = fs.readFileSync(path.join(raiz, 'sw.js'), 'utf8');
+  var shell = /var SHELL = \[([\s\S]*?)\];/.exec(sw), enSw = [], m;
+  if (!shell) { malos.push('no encuentro el SHELL de sw.js'); return; }
+  var re = /'\.\/js\/([\w-]+)\.js'/g;
+  while ((m = re.exec(shell[1]))) enSw.push(m[1]);
+  if (!index.length) malos.push('index.html no carga ningún módulo de js/');
+  if (pruebas.join() !== index.join()) malos.push('tests.html no carga lo mismo que index.html, o no en el mismo orden');
+  if (orden.join() !== index.join()) malos.push('pruebas-node.js (orden) no carga lo mismo que index.html, o no en el mismo orden');
+  if (enSw.slice().sort().join() !== index.slice().sort().join()) {
+    malos.push('el SHELL de sw.js no guarda los mismos módulos que index.html: ' +
+      index.filter(function (n) { return enSw.indexOf(n) === -1; }).map(function (n) { return 'falta ' + n; })
+        .concat(enSw.filter(function (n) { return index.indexOf(n) === -1; }).map(function (n) { return 'sobra ' + n; }))
+        .join(', '));
+  }
+});
+
 /* ---------- las pruebas ---------- */
 try {
   vm.runInContext(fs.readFileSync(path.join(raiz, 'js', 'tests.js'), 'utf8'),
@@ -357,9 +418,11 @@ if (!r) {
   console.error('las pruebas no dejaron resultado en window.__TESTS');
   process.exit(1);
 }
-r.casos.forEach(function (c) {
+var todos = guardianes.concat(r.casos);
+var fallos = r.fallos + guardianes.filter(function (g) { return !g.ok; }).length;
+todos.forEach(function (c) {
   if (!c.ok) console.log('  MAL  ' + c.nombre + '  ->  ' + c.error);
 });
-console.log('\n' + (r.fallos ? 'FALLAN ' + r.fallos : 'TODO BIEN') +
-            '  ·  ' + r.total + ' pruebas');
-process.exit(r.fallos ? 1 : 0);
+console.log('\n' + (fallos ? 'FALLAN ' + fallos : 'TODO BIEN') +
+            '  ·  ' + r.total + ' pruebas y ' + guardianes.length + ' guardianes');
+process.exit(fallos ? 1 : 0);

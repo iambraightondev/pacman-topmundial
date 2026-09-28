@@ -9401,6 +9401,10 @@
     return { x: c.ojo[0] - k * OJO_PAC[0], y: c.ojo[1] - k * OJO_PAC[1], k: k };
   }
   Sprites.CABEZAS = CABEZAS;
+  // para la prueba de que el vestuario está completo (js/tests.js)
+  Sprites.POSES = POSES;
+  Sprites.ZONA_ACC = ZONA_ACC;
+  Sprites.BASE_SOMBRERO = BASE_SOMBRERO;
   Sprites.anclaAccesorio = anclaAccesorio;
 
   /* ¿Se le ve un accesorio a esta skin? Las de forma de Pac-Man, siempre; las

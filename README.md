@@ -259,7 +259,10 @@ Dos maneras de correr la misma batería:
   lo mismo; sale con código 0 si pasan todas y con 1 si falla alguna, así que
   vale para CI. Lo único que se salta son las comprobaciones que cuentan
   píxeles dibujados, y el ancho del texto es aproximado (cada carácter, 0,6
-  veces los px de la letra).
+  veces los px de la letra). Además pasa dos guardianes sobre los ficheros:
+  ninguna función repetida en el primer nivel de un mismo fichero, y los
+  mismos módulos en `index.html`, `tests.html`, `pruebas-node.js` y el
+  `SHELL` de `sw.js`.
 
 ## Características
 

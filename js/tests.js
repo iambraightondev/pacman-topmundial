@@ -8276,6 +8276,61 @@
     });
   });
 
+  /* GUARDIÁN DEL VESTUARIO (28 sep). Cada pieza nueva lleva varias tablas
+   * aparte de su dibujo, y olvidar una no rompe nada a la vista: el
+   * accesorio cae en la cara por defecto, flota quieto sobre un cuerpo que
+   * bota o se hunde en la cabeza. Esto obliga a decidirlo al añadirla. */
+  test('el vestuario está completo: cabezas, poses, zonas, sombreros y laureles', function () {
+    var S = window.PM.Sprites;
+    /* extravagantes SIN POSES. Las seis primeras no mueven el cuerpo; las
+     * otras nueve botan o se mecen (poco: décimas de px) y su accesorio NO
+     * las sigue. Están aquí para que ninguna NUEVA se quede sin POSES sin
+     * que alguien lo decida. */
+    var SIN_POSES = ['gato', 'robot', 'dragon', 'gargola', 'pulpo', 'vampiro',
+      'rana', 'payaso', 'recreativa', 'cangrejo', 'caracol', 'condor', 'toro', 'unicornio', 'trampa'];
+    /* accesorios que van a la CARA porque es lo que toca (no por olvido) */
+    var CARA = ['acc_gafas', 'acc_afiladas', 'acc_bigote', 'acc_auriculares', 'acc_parche', 'acc_ninja',
+      'acc_vaquero', 'acc_chullo', 'acc_mohicano', 'acc_orejas', 'acc_buceo',
+      'acc_carnero', 'acc_zeus', 'acc_venda', 'acc_mascara',
+      'acc_luchador', 'acc_patito', 'acc_mochila', 'acc_visor'];
+    CFG.SKINS.forEach(function (sk) {
+      if (!sk.rara) return;
+      ok(S.CABEZAS.hasOwnProperty(sk.id), sk.id + ': tiene su cabeza en CABEZAS');
+      ok(S.POSES.hasOwnProperty(sk.id) || SIN_POSES.indexOf(sk.id) !== -1,
+         sk.id + ': tiene POSES (o está apuntada en SIN_POSES)');
+    });
+    SIN_POSES.forEach(function (id) {
+      ok(!S.POSES.hasOwnProperty(id), id + ': ya tiene POSES, sobra en SIN_POSES');
+    });
+    var enCabeza = {};
+    CFG.ACCESORIO_IDS.forEach(function (id) {
+      var zona = S.ZONA_ACC[id];
+      ok(zona || CARA.indexOf(id) !== -1, id + ': tiene su zona en ZONA_ACC o está en la lista de la cara');
+      ok(!(zona && CARA.indexOf(id) !== -1), id + ': o zona propia o la cara, no las dos');
+      if (zona === 'cabeza') enCabeza[id] = 1;
+    });
+    for (var sk in S.CABEZAS) {
+      var zs = S.CABEZAS[sk].zonas || {};
+      for (var a in zs) if (zs[a] === 'cabeza') enCabeza[a] = 1;
+    }
+    for (var id in enCabeza) {
+      ok(S.BASE_SOMBRERO.hasOwnProperty(id), id + ': va a la cabeza y tiene su BASE_SOMBRERO');
+    }
+    /* los laureles de cada temporada del rango, desde la primera (sep 2026)
+     * hasta la que está en curso: sin ellos, quien llegue a MANZANA en esa
+     * temporada no recibe nada */
+    var hoy = window.PM.Season.actual(), t = '2026-09', vueltas = 0;
+    while (t <= hoy && vueltas++ < 600) {
+      var lid = 'acc_laureles_' + t.slice(2, 4) + t.slice(5, 7), it = null;
+      CFG.ACCESORIOS.forEach(function (x) { if (x.id === lid) it = x; });
+      ok(!!it && !!it.rango && it.rango.temporada === t, lid + ': los laureles de ' + t + ' están en CFG.ACCESORIOS');
+      ok(!!S.ACCESORIOS[lid], lid + ': y tienen su dibujo en ACC');
+      var m = (t.slice(5, 7) | 0) + 1, y = t.slice(0, 4) | 0;
+      if (m > 12) { m = 1; y++; }
+      t = y + '-' + (m < 10 ? '0' : '') + m;
+    }
+  });
+
   test('las skins nuevas hacen su Q y su muerte propia sin romper', function () {
     var S = window.PM.Sprites;
     var cv = document.createElement('canvas');
