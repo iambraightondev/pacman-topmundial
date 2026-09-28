@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-29 (noche) · El DAILY tiene dos niveles
+
+- **BÁSICO**, el mismo cada día: SUMA 20.000 PUNTOS HOY (todas las partidas,
+  cualquier modo). Paga 60 monedas y 1.000 de experiencia y es el que lleva la
+  racha. Cumplir el reto DURO también lo cumple.
+- **DURO**, el reto del día de siempre: paga lo de siempre además del básico.
+  La semana completa sigue pidiendo los siete duros.
+- **COMODÍN de racha:** uno cada 7 días de racha (máximo uno guardado). Un día
+  sin básico se gasta solo y la racha no se rompe.
+
 ## 2026-09-29 (tarde) · Pase con tope diario y rango más justo
 
 - **PASE:** sube como mucho 1.800 de experiencia al día (las monedas se cobran
