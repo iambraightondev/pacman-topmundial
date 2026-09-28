@@ -1341,7 +1341,7 @@ and only cosmetics or coins inside. Design and decisions: `PLAN-COFRES.md`.
 | Chest | Earned by | Contains |
 | --- | --- | --- |
 | MADERA | every 5 games longer than a minute (`largas`) | coins or a shop emote |
-| PLATA | a full DAILY week · each player level gained | coins or a chest-only effect (pity: the 11th silver in a row without one brings one) |
+| PLATA | a full DAILY week · each player level gained · all eight PRIMEROS PASOS (once, new players only) | coins or a chest-only effect (pity: the 11th silver in a row without one brings one) |
 | ORO | each new role-mastery tier · a personal record that passes the three filters | a chest-only accessory, sometimes also a chest-only skin; 2 % open as LEGENDARIO |
 | LEGENDARIO | top 3 of the RANGO when a season closes · the 2 % above | the AGUJERO NEGRO skin |
 
@@ -1435,6 +1435,77 @@ Each player earns and opens their own; nothing travels over the network.
 `cofres_abrir`, `cofres_fijar_base`, `cofres_cerrar`, service role only),
 `supabase/perfiles-blindaje.sql` (steps 1 and 5, INSERT base),
 `supabase/cofres-vuelta-atras.sql` (rollback: previous trigger, drops).
+
+## PRIMEROS PASOS (`js/pasos.js` — `PM.Pasos`, 29 Sep 2026)
+
+Eight missions for a new player's first days (`CFG.PASOS`; proposal 2, option
+A of `PROPUESTAS-2026-09-29.md`). Each pays once through `Tienda.ganar`
+(so it also feeds the season pass, like the DAILY); all eight give one PLATA
+chest, which the server hands out like any other.
+
+| id | Mission | Pays | Done when (`CofresGen.pasosHechos`) |
+| --- | --- | --- | --- |
+| `larga` | a game longer than 1 minute | 100 | `largas` ≥ 1 or `nivelMax` ≥ 2 |
+| `triple` | 3 ghosts with one energizer | 100 | `racha3` ≥ 1 or `racha` ≥ 3 |
+| `qwer` | a DESATADO game using Q, W, E and R | 150 | `habQWER` ≥ 1 or all four `hk_*` ≥ 1 |
+| `cuenta` | create an account or sign in | the welcome chests | signed in (the server: always) |
+| `daily` | the DAILY's BASIC challenge | 150 | `dailyBasicos` ≥ 1 or `dailyOk` ≥ 1 |
+| `vestir` | wear something from the wardrobe | 100 | `vestido` ≥ 1 |
+| `mundo` | try LABERINTOS or CACERÍA | 150 | `lab:partidas` or `caza:partidas` ≥ 1 |
+| `clasif` | the 5 CLASIFICATORIA placement games | 300 | any `rc<v>_<month>[_n]` ≥ `CFG.RANGO.COLOCACION` |
+
+1,050 coins in total, far inside the shield's hourly budget (15,000 coins per
+hour, `perfiles-blindaje.sql`). None needs another person.
+
+**What already happened counts.** Every mission also accepts the older
+counter that proves it (the second half of each "done when"), so a player who
+gets the feature with some done collects them at once. New counters:
+`habQWER` (sum; `Game.bumpAch` sets it once per DESATADO game, when the fourth
+key of `runTeclas` is used), `vestido` (max; `Pasos.revisar` records it the
+first time something non-default is worn: skin, colour, accessory, effect,
+emotes or avatar), `dailyBasicos` (sum; written by `js/daily.js`, declared
+here only if the DAILY does not) and one flag `paso_<id>` per mission paid
+(max).
+
+**Who gets them.** Only players whose chest base (`cofre_b_partidas`, or the
+guest device's base) is under `CFG.PASOS.MAX_PARTIDAS` = 20
+(`CofresGen.pasosNuevo`). The account's base is set by the server, so a
+veteran signing in on a fresh device stops qualifying at the first sync (at
+most what that guest device earned before signing in leaks). The menu card
+hides once all eight are done or after `OCULTAR_EN` = 60 games; missions left
+keep counting and paying in the background.
+
+**Paid once.** `Pasos.revisar()` pays every done mission without its
+`paso_<id>` flag and sets the flag. Flags are "max" counters, so merging two
+devices never pays twice. Signed in, it only pays after `Account.fundir` has
+merged the cloud in this session (`Account.fundido === user.id`): otherwise a
+second device that has not heard about the first one's payment yet would pay
+again and the cloud would sum both. Known leftover: two guest devices that
+each paid the same mission and later join one account keep both payments.
+
+**The chest.** `ganados` adds `pasosCofre(c, base, D, !!usuario)` to PLATA: 1
+when the player qualifies and all eight are done (the account mission needs a
+user, so guests see it only after signing in). The Edge Function runs the same
+code on the cloud counters (`D.pasos` in `datos.js`); no SQL change. Old
+clients never write `vestido`/`habQWER`, so they never unlock it. Deployed
+as `cofres` version 3 (29 Sep); to roll back, restore
+`supabase/functions/cofres/` from the commit before and redeploy it
+(`SBP=<token> node supabase/desplegar-funcion.js cofres`): without `D.pasos`
+`pasosCofre` gives 0.
+
+**Screens.** A card on the front page (`Pasos.tarjeta`, built by
+`UI.buildMenu`): title, n/8, eight dots plus a chest, and the next mission
+with its prize. In the wide layout it sits in the player column; below 1000 px
+it moves right under JUGAR so it never pushes the button down
+(`Pasos.colocarTarjeta`, also on resize). It opens `#pasos` (the list, a
+progress bar, ENTRAR for guests on the account row, the silver chest at the
+bottom). Completion notices: during a game, the achievement band plus the
+GAME OVER list (`Game.avisarPasos`, from `bumpAch` and `closeRun`; a mission
+paid at close is inside the game's coin total). Outside a game
+(`Pasos.alMenu`, from `UI.showMenu` and the account's `onchange`) they go to
+the celebration queue (`Celebrar.pasos`, one entry that merges ids) and
+`UI.celebrarSiToca` shows `Pasos.celebrar`: the missions with their prize,
+the progress, and the chest when all eight are done.
 
 ## Partida a medias (`js/guardado.js` — `PM.Guardado`)
 

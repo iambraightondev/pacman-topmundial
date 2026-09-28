@@ -83,6 +83,21 @@
       this.escribir(lista);
     },
 
+    /* Misiones de PRIMEROS PASOS cumplidas fuera de partida (js/pasos.js,
+     * Pasos.revisar) o la de completarlas todas. Varias sin ver, un solo
+     * aviso con todas. */
+    pasos: function (res) {
+      if (!res || !((res.misiones && res.misiones.length) || res.todas)) return;
+      var u = quien(), lista = this.leer(), ya = null;
+      lista.forEach(function (x) { if (x.t === 'pasos' && x.u === u) ya = x; });
+      if (!ya) { ya = { t: 'pasos', u: u, ids: [], todas: false }; lista.push(ya); }
+      (res.misiones || []).forEach(function (m) {
+        if (ya.ids.indexOf(m.id) === -1) ya.ids.push(m.id);
+      });
+      if (res.todas) ya.todas = true;
+      this.escribir(lista);
+    },
+
     /* El siguiente que le toca ver a la cuenta de ahora (primero el nivel,
      * y el rango al final, que es lo gordo). No lo borra: eso es visto(). */
     siguiente: function () {

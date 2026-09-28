@@ -644,6 +644,7 @@
       this.runFrutas = 0;
       this.runPastillas = 0;   // lo comido del laberinto, para las CIFRAS
       this.runSuper = 0;
+      this.runTeclas = 0;      // Q, W, E y R usadas en esta partida (PRIMEROS PASOS)
       this.runRacha = 0;
       this.limpiosSeguidos = 0;
       this.achNotices = [];
@@ -2995,6 +2996,9 @@
        * DAILY cumplidos por el camino). Una repetición no paga. */
       var Tn = window.PM.Tienda;
       if (Tn && !this.replaying) Tn.ganarPartida(pts, this.timeTicks / 60);
+      /* PRIMEROS PASOS que se cumplen al cerrar (la clasificatoria, que cuenta
+       * Rango.cerrar): su pago entra en las monedas del resumen */
+      if (window.PM.Pasos && !this.replaying) this.avisarPasos(window.PM.Pasos.revisar());
       var monedas = (Tn && !this.replaying) ? Math.max(0, Tn.ganadas() - (this.monedasAntes || 0)) : 0;
       var subida = this.awardLevelXp(pts);
       // subir de nivel también abre skins: van al resumen del final
@@ -3087,6 +3091,18 @@
       var A = window.PM.Achievements;
       if (!A) return;
       var tags = this.achTags();
+      /* PRIMEROS PASOS: una partida de DESATADO en la que se han usado las
+       * cuatro teclas cuenta una vez (habQWER), en cuanto sale la cuarta */
+      if (this.hab && (o.hk_q || o.hk_w || o.hk_e || o.hk_r) && this.runTeclas !== 15) {
+        this.runTeclas = (this.runTeclas || 0) | (o.hk_q ? 1 : 0) | (o.hk_w ? 2 : 0) |
+                         (o.hk_e ? 4 : 0) | (o.hk_r ? 8 : 0);
+        if (this.runTeclas === 15) {
+          var o2 = {};
+          for (var ko in o) if (o.hasOwnProperty(ko)) o2[ko] = o[ko];
+          o2.habQWER = 1;
+          o = o2;
+        }
+      }
       A.recordFor(tags, o);
       /* Los retos del DAILY se miden con estos mismos contadores y por este
        * mismo embudo: no son un modo de juego, sino algo que se cumple
@@ -3113,6 +3129,8 @@
           window.PM.UI.refreshDaily();
         }
       }
+      // PRIMEROS PASOS (js/pasos.js): por la misma banda que el DAILY
+      if (window.PM.Pasos) this.avisarPasos(window.PM.Pasos.revisar());
       var fresh = A.claim();
       for (var i = 0; i < fresh.length; i++) {
         this.achNotices.push({
@@ -3126,6 +3144,28 @@
       }
       if (fresh.length && window.PM.Account) window.PM.Account.pushQuiet();
       this.anunciarSkins();
+    },
+
+    /* Las misiones de PRIMEROS PASOS recién cumplidas (lo que devuelve
+     * Pasos.revisar): a la banda de arriba y al resumen del final. La de
+     * completarlas todas, además, a las celebraciones de fuera de partida
+     * (js/celebrar.js), que es donde se enseña el cofre. */
+    avisarPasos: function (res) {
+      if (!res || !res.misiones || !res.misiones.length) return;
+      var Ps = window.PM.Pasos, color = CFG.PASOS.COLOR;
+      for (var i = 0; i < res.misiones.length; i++) {
+        var m = res.misiones[i];
+        var aviso = { name: 'PRIMEROS PASOS', desc: m.name + ' · ' + Ps.premioTexto(m),
+                      color: color, ticks: CFG.ACH_NOTICE_TICKS, total: CFG.ACH_NOTICE_TICKS };
+        this.achNotices.push(aviso);
+        this.runAch.push({ name: aviso.name, desc: aviso.desc, color: color });
+      }
+      if (res.todas) {
+        this.runAch.push({ name: 'PRIMEROS PASOS COMPLETOS', desc: '+1 COFRE DE PLATA', color: color });
+        if (window.PM.Celebrar && window.PM.Celebrar.pasos) {
+          window.PM.Celebrar.pasos({ misiones: [], todas: true });
+        }
+      }
     },
 
     /* Skins que se acaban de abrir (por un contador, una maestría o el
