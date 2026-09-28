@@ -3,7 +3,8 @@
  *
  * Parties de verdad sin navegador:
  *
- *   node pruebas-red.js
+ *   node pruebas-red.js          (todo, unos 3 minutos: la matriz es lo lento)
+ *   node pruebas-red.js 4        (solo los casos que empiezan por "4")
  *
  * Carga el juego entero varias veces con el arnés de pruebas-node.js (el
  * mismo DOM de mentira), así que cada "mundo" es un navegador aparte con su
@@ -433,6 +434,156 @@ caso('10d · se va el anfitrión sin traspaso: el mirón sí se entera', functio
   A.G.toMenu();
   red.paso(3);
   ok(S.G.netNotice, 'se acabó la partida que miraba');
+});
+
+/* =============================================================
+ * M. MATRIZ: cada poder, lanzado por el anfitrión o por el invitado, deja
+ * lo mismo — y lo mismo en las dos pantallas
+ *
+ * Para cada poder del catálogo se monta un dúo dos veces: una con el
+ * lanzador de anfitrión y otra de invitado, con la misma escena (lanzador en
+ * (8,5) mirando a la derecha, el compañero detrás, Blinky de frente a dos
+ * casillas). Se compara la "huella" —qué efectos quedan encendidos, en el
+ * lanzador, en el compañero y en la mesa— en tres cruces: en el anfitrión
+ * según quién lo lanzó, y en cada lanzamiento, anfitrión contra invitado.
+ * Lo que es cuestión de un tick (un efecto que se apaga justo al mirar) no
+ * cuenta: una diferencia tiene que verse en dos momentos seguidos.
+ * ============================================================= */
+var RUIDO = {
+  qEdad: 1, cruce: 1, ultTile: 1, mant: 1, mantT: 1, adir: 1, arecorre: 1, flashDir: 1,
+  yunqueX: 1, yunqueY: 1, estelaRastro: 1, caceriaVistos: 1, corCd: 1, corPas: 1, guard: 1,
+  quieto: 1,
+  /* la credencial de la APISONADORA del invitado: solo existe en el
+   * anfitrión, para creerle cuando dice que ha arrollado a alguien */
+  arrollaRed: 1
+};
+
+/* Diferencias sabidas que no cambian la partida, con su porqué:
+ * - lo que el invitado ve de los relojes de OTRO jugador que no viajan en la
+ *   foto (solo encienden la casilla del HUD ajeno): shuriken, carroña,
+ *   marca, gancho inverso y terremoto;
+ * - la TELARAÑA: el invitado no recalcula la zona entre fotos, así que su
+ *   estima del fantasma atrapado va un poco rápida hasta que llega la
+ *   siguiente (la corrige cada foto). */
+var SABIDO = {
+  'anf-lanza · anfitrión/invitado': ['C.shuriken', 'C.carrona', 'C.marca', 'C.ganchoInv', 'C.terremoto', 'mesa.lento'],
+  'inv-lanza · anfitrión/invitado': ['mesa.lento'],
+  /* GANCHO INVERSO: el invitado se come al enganchado un tick más tarde (lo
+   * decide él y el anfitrión lo confirma), y el parón de comer congela el
+   * aturdido que el gancho le puso en ese tick. Se descongela igual. */
+  'asesino/gancho_inverso · lo lance quien lo lance': ['mesa.aturdido']
+};
+
+function activo(v) {
+  if (v == null || v === false) return 0;
+  if (typeof v === 'number') return v > 0 ? 1 : 0;
+  if (typeof v === 'boolean') return 1;
+  if (Object.prototype.toString.call(v) === '[object Array]') {
+    for (var i = 0; i < v.length; i++) if (activo(v[i])) return 1;
+    return 0;
+  }
+  return 1;
+}
+
+/* Lo que ha dejado el poder en la máquina m, con el lanzador c y su
+ * compañero t como 'C' y 'T' (así se comparan asientos distintos) */
+function huella(m, c, t) {
+  var H = m.H, G = m.G, o = {}, k;
+  function quien(v) { return v === c ? 'C' : v === t ? 'T' : (v < 0 ? '-' : '?'); }
+  var sc = H.st[c], stt = H.st[t];
+  for (k in sc) if (sc.hasOwnProperty(k) && !RUIDO[k]) o['C.' + k] = activo(sc[k]);
+  for (k in stt) if (stt.hasOwnProperty(k) && !RUIDO[k] && k !== 'cd') o['T.' + k] = activo(stt[k]);
+  o['C.cadenaCon'] = quien(sc.cadenaCon);
+  o['T.cadenaCon'] = quien(stt.cadenaCon);
+  ['hielo', 'huye', 'aturdido', 'lento', 'ciego', 'dominado', 'quema', 'azulCatalogo', 'trasHielo'].forEach(function (n) {
+    o['mesa.' + n] = H[n].map(activo).join('');
+  });
+  o['mesa.caceriaQuien'] = H.caceriaQuien.map(quien).join('');
+  o['mesa.marcaGhost'] = H.marcaGhost.map(quien).join('');
+  o['mesa.dominaQuien'] = H.dominaQuien.map(quien).join('');
+  o['mesa.huyeQuien'] = H.huyeQuien.map(quien).join('');
+  o['mesa.proyectiles'] = H.proyectilesCat.length > 0 ? 1 : 0;
+  o['mesa.balas'] = H.balas.length > 0 ? 1 : 0;
+  o['mesa.portalC'] = H.portales[c] ? 1 : 0;
+  o['mesa.runaC'] = H.runas[c] ? 1 : 0;
+  o['mesa.placaC'] = H.placas[c] ? 1 : 0;
+  o['mesa.eclipse'] = activo(H.eclipseTicks);
+  o['mesa.terremoto'] = activo(H.terremotoTicks);
+  o['mesa.joyas'] = H.joyas.length ? 1 : 0;
+  o['fantasmas'] = G.ghosts.map(function (g) { return g.mode.charAt(0) + (g.frightened ? 'F' : ''); }).join(',');
+  o['T.vidas'] = G.pacs[t].lives;
+  o['T.escudo'] = G.pacs[t].escudo ? 1 : 0;
+  o['T.out'] = G.pacs[t].out ? 1 : 0;
+  return o;
+}
+
+function difiere(a, b, sabido) {
+  var out = [];
+  for (var k in a) {
+    if (a[k] === b[k] || (sabido && sabido.indexOf(k) >= 0)) continue;
+    out.push(k + ' ' + a[k] + '/' + b[k]);
+  }
+  return out;
+}
+
+/* Un dúo con el lanzador en `quien` (0 anfitrión, 1 invitado): lanza la tecla
+ * k y devuelve la huella en las dos máquinas, a los 20 y a los 26 ticks */
+function lanzarEn(quien, rol, carga, k) {
+  var otro = rol === 'soporte' ? 'tanque' : 'soporte';
+  var ms = montar(2, { hab: true, roles: quien === 0 ? [rol, otro] : [otro, rol],
+                       loadouts: quien === 0 ? [carga, null] : [null, carga] });
+  blindar(ms);
+  var t = 1 - quien, L = ms[quien], DR = CFG(L).DIR;
+  ms.forEach(function (m) {
+    var G = m.G, pc = G.pacs[quien], pt = G.pacs[t];
+    pc.x = 8 * 8 + 4; pc.y = 5 * 8 + 4; pc.dir = DR.RIGHT; pc.nextDir = DR.RIGHT; pc.errX = pc.errY = 0;
+    pt.x = 5 * 8 + 4; pt.y = 5 * 8 + 4; pt.dir = DR.RIGHT; pt.nextDir = DR.RIGHT; pt.errX = pt.errY = 0;
+    pt.lives = 1;
+    var g = G.ghosts[0];
+    g.x = 10 * 8 + 4; g.y = 5 * 8 + 4; g.mode = 'normal'; g.dir = DR.LEFT; g.frightened = false;
+  });
+  red.paso(3);
+  L.G.pacs[quien].dir = DR.RIGHT; L.G.pacs[quien].nextDir = DR.RIGHT;
+  var salio = L.H.apretar(L.G, quien, k);   // con los que se mantienen: apretar y soltar
+  L.H.soltar(L.G, quien, k);
+  red.paso(20);
+  var r = { salio: salio, anf: [huella(ms[0], quien, t)], inv: [huella(ms[1], quien, t)] };
+  red.paso(6);
+  r.anf.push(huella(ms[0], quien, t));
+  r.inv.push(huella(ms[1], quien, t));
+  return r;
+}
+
+/* Lo que difiere en los dos momentos a la vez */
+function difiereSeguido(xs, ys, sabido) {
+  var d0 = difiere(xs[0], ys[0], sabido), d1 = difiere(xs[1], ys[1], sabido);
+  var k1 = d1.map(function (s) { return s.split(' ')[0]; });
+  return d0.filter(function (s) { return k1.indexOf(s.split(' ')[0]) >= 0; });
+}
+
+caso('M · matriz: cada poder deja lo mismo lo lance quien lo lance, en las dos pantallas', function () {
+  var CAT = CFG(mundo(0)).HAB.CATALOGO, malos = [], sinSalir = [];
+  ['asesino', 'tanque', 'soporte', 'mago'].forEach(function (rol) {
+    CAT[rol].forEach(function (fila, k) {
+      fila.forEach(function (h) {
+        var carga = CAT[rol].map(function (f, kk) { return kk === k ? h.id : f[0].id; }).join(',');
+        var a = lanzarEn(0, rol, carga, k), b = lanzarEn(1, rol, carga, k);
+        var nombre = rol + '/' + h.id;
+        if (a.salio !== b.salio) malos.push(nombre + ': sale de anfitrión ' + a.salio + ', de invitado ' + b.salio);
+        if (!a.salio && !b.salio) { sinSalir.push(nombre); return; }
+        var d1 = difiereSeguido(a.anf, b.anf, SABIDO[nombre + ' · lo lance quien lo lance']);
+        var d2 = difiereSeguido(b.anf, b.inv, SABIDO['inv-lanza · anfitrión/invitado']);
+        var d3 = difiereSeguido(a.anf, a.inv, SABIDO['anf-lanza · anfitrión/invitado']);
+        if (d1.length) malos.push(nombre + ' · en el anfitrión, lo lance él / el invitado: ' + d1.join('; '));
+        if (d2.length) malos.push(nombre + ' · lo lanza el invitado, anfitrión / invitado: ' + d2.join('; '));
+        if (d3.length) malos.push(nombre + ' · lo lanza el anfitrión, anfitrión / invitado: ' + d3.join('; '));
+      });
+    });
+  });
+  /* PUENTE pide muro delante y RESURRECCIÓN un compañero caído: en esta
+   * escena no salen, y está bien que no salgan */
+  eq(sinSalir.join(','), 'soporte/puente,soporte/resurreccion', 'los que no salen en esta escena');
+  if (malos.length) throw new Error('\n      ' + malos.join('\n      '));
 });
 
 /* ---------- la ejecución ---------- */
