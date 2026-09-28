@@ -8766,6 +8766,26 @@
     } finally { G.toMenu(); }
   });
 
+  /* 28 sep: la revancha salía con las opciones de antes del traspaso: el
+   * nuevo anfitrión volvía a ser invitado y mandaba el asiento 0, ya ido. */
+  test('la revancha tras un traspaso sale con el mando donde quedó', function () {
+    partida(3, 'host');
+    var snap = G.buildSnapshot(true), extra = G.estadoExtra();
+    G.toMenu();
+    var opts = { players: 3, net: 'guest', localIdx: 1, names: ['UNO', 'DOS', 'TRES'] };
+    G.newGame(opts);
+    G.state = 'PLAYING';
+    try {
+      G.recibirMando({ n: 1, v: 0, s: snap, x: extra });
+      eq(opts.net, 'guest', 'las opciones de la sala no se tocan');
+      G.restartGame();
+      eq(G.netRole, 'host', 'en la revancha sigue mandando');
+      eq(G.hostIdx, 1, 'desde su asiento');
+      ok(G.pacs[0].out && G.idos[0], 'y el que se fue no vuelve a salir');
+      ok(!G.pacs[1].out && !G.pacs[2].out, 'los demás, sí');
+    } finally { G.toMenu(); }
+  });
+
   // ---------------------------------------------------------------
   // REVIVIR AL COMPAÑERO (17 sep)
   // ---------------------------------------------------------------

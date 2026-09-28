@@ -707,8 +707,22 @@
       this.netQueue = [];
       this.netWatch = 0;
       this.posWatch = [];       // silencio de cada jugador (anfitrión, 3 y 4)
-      this.hostIdx = 0;         // qué asiento simula la partida (puede cambiar)
-      this.idos = {};           // quién ha dejado la partida para siempre
+      /* qué asiento simula la partida (puede cambiar) y quién la ha dejado
+       * para siempre. Una REVANCHA tras un traspaso del mando los trae en sus
+       * opciones (ver recibirMando): sin ellos volvía a mandar el asiento 0,
+       * que ya no está, y la sala se quedaba sin anfitrión. */
+      var hi = parseInt(opts.hostIdx, 10);
+      this.hostIdx = (hi >= 0 && hi < this.playerCount) ? hi : 0;
+      this.idos = {};
+      if (esLista(opts.fuera)) {
+        for (i = 0; i < opts.fuera.length; i++) {
+          var ido = opts.fuera[i] | 0;
+          if (ido < 0 || ido >= this.playerCount || ido === this.hostIdx) continue;
+          this.idos[ido] = true;
+          this.pacs[ido].out = true;
+          this.pacs[ido].lives = 0;
+        }
+      }
       this.netNotice = null;
       this.snapTimer = 0; this.snapCount = 0; this.posTimer = 0;
       this.outEaten = []; this.recentEaten = {}; this.snapEaten = [];
@@ -3679,6 +3693,20 @@
         if (!this.idos) this.idos = {};
         this.idos[viejo] = true;
         this.dropPlayer(viejo);
+      }
+      /* ...y la REVANCHA tiene que salir igual: con quien manda ahora (y en
+       * su papel de anfitrión, si es este) y sin el que se fue. Se copia:
+       * las opciones son las de la sala y no se tocan por detrás. */
+      if (this.lastOpts) {
+        var lo = {}, k;
+        for (k in this.lastOpts) {
+          if (this.lastOpts.hasOwnProperty(k)) lo[k] = this.lastOpts[k];
+        }
+        lo.hostIdx = nuevo;
+        if (yo) lo.net = 'host';
+        lo.fuera = (esLista(lo.fuera) ? lo.fuera.slice() : []);
+        if (viejo >= 0 && lo.fuera.indexOf(viejo) < 0) lo.fuera.push(viejo);
+        this.lastOpts = lo;
       }
       if (yo) {
         this.setFlash((this.rawName(viejo) || 'EL ANFITRIÓN') + ' SE FUE · MANDAS TÚ');
