@@ -103,20 +103,19 @@ self.addEventListener('fetch', function (ev) {
     /\.(?:html|css|js|json)(?:$|\?)/i.test(url.pathname);
 
   if (esCodigo) {
-    ev.respondWith(
-      fetch(req).then(function (res) {
-        if (res && res.ok) {
-          var copy = res.clone();
-          caches.open(VERSION).then(function (c) { c.put(req, copy); });
-        }
-        return res;
-      }).catch(function () {
-        return caches.match(req).then(function (hit) {
-          return hit || (req.mode === 'navigate'
-            ? caches.match('./index.html') : undefined);
-        });
-      })
-    );
+    /* Red primero, pero con PLAZO (28 sep): con una red que ni contesta ni
+     * falla (la wifi de un bar, el metro) el juego se quedaba en negro hasta
+     * que el navegador se rendía. Si la red no ha empezado a contestar en
+     * ESPERA_RED_MS se sirve la copia; lo que llegue después se guarda igual
+     * para la próxima vez. El plazo es hasta que llegan las cabeceras, no el
+     * archivo entero: una red lenta pero viva sigue sirviendo lo nuevo.
+     * Sin copia guardada se espera a la red lo que haga falta. */
+    var red = fetch(req);
+    // se clona ANTES de que la página lea el cuerpo (este then va primero)
+    ev.waitUntil(red.then(function (res) {
+      return (res && res.ok) ? guardar(req, res.clone()) : null;
+    }).catch(function () { /* sin red: ya se sirvió la copia */ }));
+    ev.respondWith(conPlazo(red, req));
     return;
   }
 
@@ -124,13 +123,67 @@ self.addEventListener('fetch', function (ev) {
   ev.respondWith(
     caches.match(req).then(function (hit) {
       var net = fetch(req).then(function (res) {
-        if (res && res.ok) {
-          var copy = res.clone();
-          caches.open(VERSION).then(function (c) { c.put(req, copy); });
-        }
+        if (res && res.ok) guardar(req, res.clone());
         return res;
       }).catch(function () { return hit; });
       return hit || net;
     })
   );
 });
+
+/* Cuánto se espera a que la red empiece a contestar antes de tirar de la
+ * copia guardada */
+var ESPERA_RED_MS = 2500;
+
+/* La copia de respaldo: la del archivo, y para una página, el juego */
+function respaldo(req) {
+  return caches.match(req).then(function (hit) {
+    return hit || (req.mode === 'navigate' ? caches.match('./index.html') : undefined);
+  });
+}
+
+/* Lo primero que llegue: la red, o la copia si la red se pasa del plazo. Si
+ * la red falla, la copia; si tampoco hay copia, el error de siempre. */
+function conPlazo(red, req) {
+  return new Promise(function (resolve) {
+    var hecho = false;
+    function dar(r) { if (!hecho && r) { hecho = true; resolve(r); } }
+    var plazo = setTimeout(function () {
+      respaldo(req).then(dar).catch(function () { /* sin copia: a esperar */ });
+    }, ESPERA_RED_MS);
+    red.then(function (res) {
+      clearTimeout(plazo);
+      dar(res);
+    }, function () {
+      clearTimeout(plazo);
+      respaldo(req).then(function (hit) { dar(hit || Response.error()); },
+        function () { dar(Response.error()); });
+    });
+  });
+}
+
+/* ¿Es la misma versión que la ya guardada? Por ETag, o si no hay, por
+ * Last-Modified. Sin ninguna de las dos no se sabe: se guarda. */
+function mismaVersion(guardada, nueva) {
+  if (!guardada) return false;
+  var a = guardada.headers.get('ETag'), b = nueva.headers.get('ETag');
+  if (a && b) return a === b;
+  a = guardada.headers.get('Last-Modified');
+  b = nueva.headers.get('Last-Modified');
+  return !!(a && b && a === b);
+}
+
+/* Guarda la respuesta, salvo que sea la misma que ya está: reescribir en
+ * cada visita los ~50 archivos del juego sin que hayan cambiado era gastar
+ * disco (y batería) para nada. */
+function guardar(req, copia) {
+  return caches.open(VERSION).then(function (c) {
+    return c.match(req).then(function (hit) {
+      if (mismaVersion(hit, copia)) {
+        if (copia.body && copia.body.cancel) copia.body.cancel();   // no se lee
+        return null;
+      }
+      return c.put(req, copia);
+    });
+  }).catch(function () { /* sin sitio en la caché: no pasa nada */ });
+}
