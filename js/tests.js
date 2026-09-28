@@ -5043,18 +5043,16 @@
       Ac.signIn('pepe', 'miClave1', function () {});
       eq(envios[0].usuario, 'PEPE', 'el usuario, saneado');
       eq(envios[0].pass, 'MICLAVE1', 'y la contraseña en mayúsculas');
-      /* si esa falla, se prueba TAL CUAL: es una cuenta de antes */
-      eq(envios[1].pass, 'miClave1', 'segundo intento: como la escribió');
-      eq(envios.length, 2, 'y no hay un tercero');
-      /* escrita ya en mayúsculas no se reintenta: sería la misma */
+      /* y TAL CUAL, por si es una cuenta de antes: en la MISMA petición
+       * (28 sep), que entrar tiene freno por fallos y dos peticiones eran
+       * dos fallos por cada intento del jugador */
+      eq(envios[0].pass2, 'miClave1', 'la de antes, como la escribió');
+      eq(envios.length, 1, 'una sola petición');
+      /* escrita ya en mayúsculas no hace falta la segunda: sería la misma */
       envios.length = 0;
       Ac.signIn('pepe', 'MICLAVE1', function () {});
-      eq(envios.length, 1, 'sin segundo intento si ya venía en mayúsculas');
-      /* y un fallo que no sea de contraseña tampoco se reintenta */
-      envios.length = 0;
-      Ac.fn = function (body, cb) { envios.push(body); cb('NO SE PUDO CONECTAR'); };
-      Ac.signIn('pepe', 'miClave1', function () {});
-      eq(envios.length, 1, 'un corte de red no se reintenta');
+      eq(envios.length, 1);
+      ok(!('pass2' in envios[0]), 'sin segunda si ya venía en mayúsculas');
       /* el alta también sube en mayúsculas */
       envios.length = 0;
       Ac.fn = function (body, cb) { envios.push(body); cb('CORTADO'); };
@@ -7341,12 +7339,54 @@
   test('poner un correo sin sesión no hace nada', function () {
     var Ac = window.PM.Account;
     var visto = null;
-    Ac.ponerCorreo('a@b.co', function (e) { visto = e; });
+    Ac.ponerCorreo('a@b.co', 'CLAVE', function (e) { visto = e; });
     ok(/SESIÓN/.test(visto || ''), 'hace falta la sesión abierta');
     visto = null;
     Ac.cambiarPass('otracosa', function (e) { visto = e; });
     ok(/SESIÓN/.test(visto || ''), 'y para cambiar la contraseña también');
   });
+
+  /* 28 sep: el correo se cambia con la contraseña actual y por la función
+   * `cuenta`, no con la sesión contra /auth/v1/user: si no, quien tuviera
+   * tu sesión abierta ponía su correo, pedía la recuperación y se quedaba
+   * la cuenta. */
+  test('cambiar el correo pide la contraseña y va por la función', function () {
+    var Ac = window.PM.Account;
+    var orig = Ac.fn, envios = [], tok = Ac.token, usr = Ac.user, visto = null;
+    var vistas = conRed(function () { return roto(new Error('no')); }, function () {
+      Ac.fn = function (body, cb) { envios.push(body); cb(null, { ok: true }); };
+      try {
+        Ac.token = 'token-de-prueba';
+        Ac.user = { id: '11111111-1111-1111-1111-111111111111', usuario: 'PEPE', avatar: 'pac' };
+        Ac.ponerCorreo('pepe@gmail.com', '', function (e) { visto = e; });
+        ok(/CONTRASEÑA/.test(visto || ''), 'sin contraseña ni se intenta');
+        eq(envios.length, 0);
+        Ac.ponerCorreo('pepe@gmail.com', 'miClave1', function (e) { visto = e; });
+        eq(envios.length, 1);
+        eq(envios[0].op, 'correo');
+        eq(envios[0].usuario, 'PEPE');
+        eq(envios[0].pass, 'MICLAVE1', 'en mayúsculas');
+        eq(envios[0].pass2, 'miClave1', 'y tal cual, por si la cuenta es de antes');
+        eq(envios[0].correo, 'pepe@gmail.com');
+      } finally { Ac.fn = orig; Ac.token = tok; Ac.user = usr; }
+    });
+    eq(vistas.length, 0, 'nada contra /auth/v1/user con la sesión');
+  });
+
+  test('una cuenta nueva pide 8 caracteres; las de antes entran con los suyos',
+    function () {
+      var Ac = window.PM.Account;
+      var errores = [];
+      Ac.signUp('ALGUIEN', 'SIETE77', 'a@b.co', function (e) { errores.push(e); });
+      ok(/8/.test(errores[0] || ''), 'el alta pide 8: ' + errores[0]);
+      var orig = Ac.fn, envios = [], tok = Ac.token, usr = Ac.user;
+      Ac.fn = function (body, cb) { envios.push(body); cb('CORTADO'); };
+      try {
+        Ac.token = null; Ac.user = null;
+        Ac.signIn('pepe', 'SEIS66', function () {});
+        eq(envios.length, 1, 'entrar con 6 sigue saliendo a la red');
+      } finally { Ac.fn = orig; Ac.token = tok; Ac.user = usr; }
+    });
 
   test('sin enlace de recuperación en la URL, no pasa nada', function () {
     var Ac = window.PM.Account;

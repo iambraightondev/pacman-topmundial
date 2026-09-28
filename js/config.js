@@ -1808,7 +1808,8 @@
     FRIENDS_TABLE: 'amigos',
     MAIL_DOMAIN: 'cuentas.pacman-topmundial.vercel.app',
     USER_MIN: 3,
-    PASS_MIN: 6,
+    PASS_MIN: 6,             // el de las cuentas de antes: siguen entrando con la suya
+    PASS_MIN_NUEVA: 8,       // 28 sep: cuentas y contraseñas nuevas (lo mira también la función)
     KEY: 'pacman-topmundial-sesion',  // sesión guardada en este navegador
 
     /* ---------- recuperar la contraseña ----------

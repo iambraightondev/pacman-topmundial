@@ -9333,10 +9333,14 @@
             title: 'MIRA TU CORREO',
             color: '#00ffff',
             solid: true,
+            /* La función ya no dice si la cuenta existe ni si tiene correo
+             * (28 sep): la respuesta es la misma para todos */
             lines: [
-              pista ? ('TE HEMOS MANDADO UN ENLACE A ' + pista) : 'ENLACE ENVIADO',
+              pista ? ('TE HEMOS MANDADO UN ENLACE A ' + pista)
+                    : 'SI ESA CUENTA TIENE CORREO, TE LLEGARÁ UN ENLACE',
               'ÁBRELO Y TE DEJARÁ PONER UNA CONTRASEÑA NUEVA',
-              'SI NO LO VES EN UN MINUTO, MIRA EN CORREO NO DESEADO'
+              'SI NO LO VES EN UN MINUTO, MIRA EN CORREO NO DESEADO',
+              'SE MANDA UNO CADA 15 MINUTOS COMO MUCHO'
             ],
             buttons: [
               { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape'],
@@ -9417,11 +9421,13 @@
     showCorreoPrompt: function (actual) {
       var self = this;
       var Ac = window.PM.Account;
-      var correo = '';
+      var correo = '', pass = '';
 
+      /* Con la contraseña de ahora (28 sep): con solo la sesión abierta,
+       * cualquiera en tu ordenador podía cambiar el correo y quedarse la cuenta */
       function enviar() {
         self.setPromptStatus('GUARDANDO...', false);
-        Ac.ponerCorreo(correo, function (err) {
+        Ac.ponerCorreo(correo, pass, function (err) {
           if (err) { self.setPromptStatus(err, true); return; }
           self.hidePrompt();
           self.refreshProfile();
@@ -9439,7 +9445,9 @@
         ],
         fields: [
           { placeholder: 'TU CORREO', maxLength: 64, correo: true,
-            onInput: function (v) { correo = v; }, onAccept: enviar }
+            onInput: function (v) { correo = v; }, onAccept: enviar },
+          { placeholder: 'TU CONTRASEÑA', password: true, maxLength: 40,
+            onInput: function (v) { pass = v; }, onAccept: enviar }
         ],
         status: '',
         buttons: [
