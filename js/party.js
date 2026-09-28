@@ -296,26 +296,6 @@
       this.changed();
     },
 
-    /* Modo DESATADO de la party. Solo el líder lo cambia, y el cambio se
-     * reparte con la lista para que a nadie le pille por sorpresa. */
-    setHab: function (on) {
-      if (!this.st || !this.st.leader) return;
-      this.habPick = !!on;
-      if (!this.habPick) this.clasifPick = false;
-      if (this.habPick) { this.cazaPick = false; this.supervPick = false; }   // o una cosa o la otra
-      this.sendRoster();
-      this.changed();
-    },
-
-    /* Modo CACERÍA de la party. También del líder, y excluye a DESATADO. */
-    setCaza: function (on) {
-      if (!this.st || !this.st.leader) return;
-      this.cazaPick = !!on;
-      if (this.cazaPick) { this.habPick = false; this.clasifPick = false; this.supervPick = false; }
-      this.sendRoster();
-      this.changed();
-    },
-
     /* El modo de la party de una vez (la cartelera de la sala): 'equipo',
      * 'hab', 'caza' o 'superv'. Excluyentes entre sí. */
     setModo: function (id) {
@@ -324,15 +304,6 @@
       this.clasifPick = (id === 'clasif');
       this.cazaPick = (id === 'caza');
       this.supervPick = (id === 'superv');
-      this.sendRoster();
-      this.changed();
-    },
-
-    /* Modo SUPERVIVENCIA de la party: del líder, excluye a los otros dos */
-    setSuperv: function (on) {
-      if (!this.st || !this.st.leader) return;
-      this.supervPick = !!on;
-      if (this.supervPick) { this.habPick = false; this.clasifPick = false; this.cazaPick = false; }
       this.sendRoster();
       this.changed();
     },

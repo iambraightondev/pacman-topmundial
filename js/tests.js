@@ -7618,12 +7618,13 @@
       ok(!P.canStart(), 'en VS. eso no arranca');
       P.cazaPick = true;
       ok(P.canStart(), 'en CACERÍA sí: lo lleva la máquina');
-      P.habPick = true;              // DESATADO apaga CACERÍA
-      P.setHab(true);
-      ok(!P.cazaPick, 'o una cosa o la otra');
-      P.setCaza(true);
+      P.setModo('hab');              // DESATADO apaga CACERÍA
+      ok(P.habPick && !P.cazaPick, 'o una cosa o la otra');
+      P.setModo('caza');
       ok(!P.habPick && P.cazaPick);
-    } finally { P.st = null; P.order = null; P.cazaPick = false; P.habPick = false; }
+      P.setModo('superv');           // y SUPERVIVENCIA apaga las dos
+      ok(!P.habPick && !P.cazaPick && P.supervPick);
+    } finally { P.st = null; P.order = null; P.cazaPick = false; P.habPick = false; P.supervPick = false; }
   });
 
   test('CACERÍA no se graba como repetición local', function () {

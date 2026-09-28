@@ -2115,7 +2115,7 @@
        * Si no, bastaba con que el Soporte pasara repartiendo para que el
        * Tanque fuera sumando capas de vida, y un escudo es una oportunidad,
        * no una capa de vida. */
-      var tieneCoraza = s.corPas > 0 && this.esRol(G, idx, 'tanque');
+      var tieneCoraza = this.corazaDe(G, idx);
       if (s.coraza > 0 || s.escudo > 0 || tieneCoraza) {
         if (s.escudo > 0) {
           s.escudo = 0;
@@ -6146,7 +6146,7 @@
       ctx.save();
       /* LA CORAZA (pasiva del Tanque): un aro fijo, por dentro de los otros
        * escudos, para que se vea que lleva un golpe de más aguantado. */
-      if (s.corPas > 0 && G.roles && G.roles[i] === 'tanque') {
+      if (this.corazaDe(G, i)) {
         /* los dos últimos segundos avisa, igual que el escudo de la W: que se
          * vea acabarse es lo que hace que se entienda cuándo se puede entrar */
         var seVa = s.corPas < 120 && Math.floor(tk / 6) % 2 === 0;
