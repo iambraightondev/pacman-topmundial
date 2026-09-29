@@ -2547,9 +2547,12 @@
         case 'habRebote':
           /* su REBOTE se gastó contra un fantasma: la baja la da el anfitrión */
           var sr = this.estado(who);
-          /* y el golpe que aguantó se paga, si de verdad lo tenía puesto */
-          if (sr && sr.rebote > 0 && G.pacs[who]) this.protege(G, who, 'golpe', G.pacs[who].x, G.pacs[who].y);
-          if (sr) sr.rebote = 0;
+          /* Solo si de verdad lo tenía puesto en la copia del anfitrión: un
+           * aviso inventado ni cobra el golpe ni mata al fantasma (30 sep;
+           * antes la baja de 200 se daba igual). */
+          if (!sr || !(sr.rebote > 0)) break;
+          if (G.pacs[who]) this.protege(G, who, 'golpe', G.pacs[who].x, G.pacs[who].y);
+          sr.rebote = 0;
           g = G.ghosts[d.g | 0];
           if (g) this.matarCatalogo(G, g, who, H.MAGO_PUNTOS, 'rebote');
           break;
