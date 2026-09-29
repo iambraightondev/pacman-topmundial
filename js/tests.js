@@ -17940,6 +17940,45 @@
     eq(C.siguiente(), null, 'subir y volver a bajar sin verlo: nada que celebrar');
   });
 
+  test('CELEBRAR: bajar de escalón enseña HAS SIDO DEGRADADO; recuperarlo lo retira', function () {
+    var C = window.PM.Celebrar, UI = window.PM.UI, T = window.PM.Rango.TRAMOS;
+    var f1 = T.filter(function (x) { return x.d === 1; }), f2 = T.filter(function (x) { return x.d === 2; });
+    C.vaciar();
+    /* de división, dentro de la fruta */
+    C.rango({ baja: true, tramoAntes: T.indexOf(f1[1]), tramo: T.indexOf(f1[0]), monedas: 0 });
+    try {
+      UI.hidePrompt();
+      ok(UI.celebrarSiToca(), 'sale');
+      var p = UI.els.prompt;
+      ok(/BAJAS DE DIVISI/.test(p.querySelector('.panel-title').textContent), 'BAJAS DE DIVISIÓN');
+      ok(/DEGRADADO/.test(p.querySelector('.rsu-degradado').textContent), 'HAS SIDO DEGRADADO A');
+      eq(p.querySelector('.rsu-nombre').textContent, f1[0].nombre, 'al escalón de ahora');
+      eq(p.querySelector('.rsu-escalones .perdido').textContent, f1[1].rom, 'con el perdido tachado');
+      eq(C.siguiente(), null, 'vista, no vuelve');
+    } finally { UI.hidePrompt(); }
+    /* de rango: pierde la fruta */
+    C.rango({ baja: true, tramoAntes: T.indexOf(f2[0]), tramo: T.indexOf(f1[f1.length - 1]), monedas: 0 });
+    try {
+      UI.hidePrompt();
+      ok(UI.celebrarSiToca(), 'sale');
+      ok(/BAJAS DE RANGO/.test(UI.els.prompt.querySelector('.panel-title').textContent), 'BAJAS DE RANGO');
+    } finally { UI.hidePrompt(); }
+    /* bajar dos veces sin verlo: una sola, hasta lo último */
+    C.rango({ baja: true, tramoAntes: T.indexOf(f1[2]), tramo: T.indexOf(f1[1]), monedas: 0 });
+    C.rango({ baja: true, tramoAntes: T.indexOf(f1[1]), tramo: T.indexOf(f1[0]), monedas: 0 });
+    var e = C.siguiente();
+    ok(e && e.t === 'baja' && e.de === T.indexOf(f1[2]) && e.a === T.indexOf(f1[0]), 'una bajada, de donde estaba a donde ha llegado');
+    /* y si lo recupera antes de verlo, no hay nada que contar */
+    C.rango({ sube: true, tramoAntes: T.indexOf(f1[0]), tramo: T.indexOf(f1[2]), monedas: 0 });
+    eq(C.siguiente(), null, 'recuperado sin verlo: nada');
+    /* subir sin ver y luego bajar por debajo de donde empezaba: degradado */
+    C.rango({ sube: true, tramoAntes: T.indexOf(f1[1]), tramo: T.indexOf(f1[2]), monedas: 0 });
+    C.rango({ baja: true, tramoAntes: T.indexOf(f1[2]), tramo: T.indexOf(f1[0]), monedas: 0 });
+    e = C.siguiente();
+    ok(e && e.t === 'baja' && e.de === T.indexOf(f1[1]) && e.a === T.indexOf(f1[0]), 'la subida se cae y queda la bajada desde el principio');
+    C.vaciar();
+  });
+
   test('CELEBRAR: el nivel también espera, y primero el nivel y luego el rango', function () {
     var C = window.PM.Celebrar, UI = window.PM.UI, T = window.PM.Rango.TRAMOS;
     C.rango({ colocado: true, tramoAntes: -1, tramo: 2, monedas: 0 });

@@ -15422,6 +15422,9 @@
       else if (e.t === 'regalo') {
         if (!(window.PM.Regalos && window.PM.Regalos.celebrar(this, e))) return this.celebrarSiToca();
       }
+      else if (e.t === 'baja') {
+        if (!this.showRangoBajaPrompt(e)) return this.celebrarSiToca();
+      }
       else if (!this.showRangoSubePrompt(e)) return this.celebrarSiToca();
       return true;
     },
@@ -15708,6 +15711,80 @@
             caja.appendChild(el('div', 'rsu-premio',
               '+' + mil(e.monedas) + ' MONEDAS' + (e.fruta ? ' · PRIMERA VEZ EN ' + e.fruta : '')));
           }
+          p.appendChild(caja);
+        },
+        buttons: [
+          { label: 'SEGUIR', primary: true, keys: ['Enter', 'Escape', ' '], hint: 'ENTER',
+            onClick: function () { self.hidePrompt(); self.celebrarSiToca(); } },
+          { label: 'VER LOS RANGOS', keys: ['r'], hint: 'R',
+            onClick: function () { self.hidePrompt(); self.showRangosPrompt(); } }
+        ]
+      });
+      return true;
+    },
+
+    /* HAS SIDO DEGRADADO (30 sep): la otra cara de la de arriba. Misma
+     * escena, en rojo y sin fiesta: la fruta a la que se baja, los escalones
+     * con el perdido tachado y lo que falta para recuperarlo. */
+    showRangoBajaPrompt: function (e) {
+      var self = this, Rg = window.PM.Rango;
+      var TR = Rg && Rg.TRAMOS, D = CFG.RANGO.DIVISIONES;
+      var T = TR && TR[e.a], antes = TR && TR[e.de];
+      if (!T || !antes) return false;
+      var fruta = D[T.d];
+      var deRango = antes.d !== T.d;              // pierde la fruta
+      var est = Rg.estado();
+      var mil = function (n) { return self.milesMaes(n); };
+      function el(tag, cls, txt) {
+        var x = document.createElement(tag);
+        if (cls) x.className = cls;
+        if (txt != null) x.textContent = txt;
+        return x;
+      }
+      if (window.AudioSys) {
+        try { AudioSys.playBiteMiss(); } catch (err) { /* sin sonido */ }
+      }
+      this.showPrompt({
+        title: deRango ? '¡BAJAS DE RANGO!' : '¡BAJAS DE DIVISIÓN!',
+        arcade: true,
+        tono: 'rojo',
+        clase: 'rsu-prompt',
+        custom: function (p) {
+          var tt = p.querySelector('.panel-title');
+          if (tt) { tt.classList.add('lvl-titulo'); self.ajustarTituloLvl(tt); }
+          var caja = el('div', 'rsu rsu-baja');
+          caja.style.setProperty('--c', fruta.color);
+          var escena = el('div', 'rsu-escena');
+          var aro = el('div', 'rsu-aro');
+          var cv = document.createElement('canvas');
+          cv.width = 112; cv.height = 112;
+          cv.className = 'rsu-fruta';
+          var c = cv.getContext && cv.getContext('2d');
+          if (c && window.PM.Sprites && window.PM.Sprites.drawFruit) {
+            c.imageSmoothingEnabled = false;
+            c.scale(7, 7);
+            window.PM.Sprites.drawFruit(c, 8, 8, fruta.fruta);
+          }
+          aro.appendChild(cv);
+          escena.appendChild(aro);
+          caja.appendChild(escena);
+          caja.appendChild(el('div', 'rsu-degradado', 'HAS SIDO DEGRADADO A'));
+          caja.appendChild(el('div', 'rsu-nombre', T.nombre));
+          var esc = TR.filter(function (x) { return x.d === T.d; });
+          if (esc.length > 1) {
+            var fila = el('div', 'rsu-escalones');
+            esc.forEach(function (x) {
+              var cls = x === T ? 'on' : (x === antes ? 'perdido' : (x.j < T.j ? 'hecho' : ''));
+              fila.appendChild(el('i', cls, x.rom));
+            });
+            caja.appendChild(fila);
+          }
+          caja.appendChild(el('div', 'rsu-desde', 'ANTES: ' + antes.nombre));
+          if (est && est.pr !== null) {
+            caja.appendChild(el('div', 'rsu-pr', mil(est.pr) + ' PR' +
+              (est.siguiente ? ' · TE FALTAN ' + est.faltan + ' PARA ' + est.siguiente : '')));
+          }
+          caja.appendChild(el('div', 'rsu-animo', 'LA SIGUIENTE CLASIFICATORIA PUEDE DEVOLVÉRTELO'));
           p.appendChild(caja);
         },
         buttons: [

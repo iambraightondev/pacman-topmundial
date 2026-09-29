@@ -61,9 +61,42 @@
      * ya no queda nada que celebrar). */
     rango: function (res) {
       if (!res || res.tramo == null || res.tramo < 0) return;
-      var u = quien(), lista = this.leer(), ya = null, i;
-      for (i = 0; i < lista.length; i++) if (lista[i].t === 'rango' && lista[i].u === u) ya = lista[i];
+      var u = quien(), lista = this.leer(), ya = null, bj = null, i;
+      for (i = 0; i < lista.length; i++) {
+        if (lista[i].u !== u) continue;
+        if (lista[i].t === 'rango') ya = lista[i];
+        else if (lista[i].t === 'baja') bj = lista[i];
+      }
       var sube = !!(res.sube || res.colocado);
+      /* HAS SIDO DEGRADADO (30 sep): una bajada sin ver y ahora una subida.
+       * Si se recupera lo perdido, la bajada se olvida (y lo que suba por
+       * encima de donde estaba se celebra desde ahí); si no, se queda la
+       * bajada con el escalón de ahora. */
+      if (sube && bj) {
+        if (res.tramo < bj.de) { bj.a = res.tramo; this.escribir(lista); return; }
+        lista.splice(lista.indexOf(bj), 1);
+        if (res.tramo === bj.de && !(res.monedas > 0)) { this.escribir(lista); return; }
+        if (!ya) {
+          lista.push({ t: 'rango', u: u, de: bj.de, a: res.tramo,
+                       monedas: res.monedas || 0, fruta: res.frutaNueva || '' });
+          this.escribir(lista);
+          return;
+        }
+      }
+      /* bajada: recorta la subida sin ver; si baja por debajo de donde
+       * empezaba, o no había subida, se apunta HAS SIDO DEGRADADO */
+      if (!sube && res.tramoAntes != null && res.tramoAntes >= 0 && res.tramo < res.tramoAntes) {
+        if (ya) {
+          if (res.tramo > ya.de || (res.tramo === ya.de && ya.monedas > 0)) ya.a = res.tramo;
+          else {
+            lista.splice(lista.indexOf(ya), 1);
+            if (res.tramo < ya.de) lista.push({ t: 'baja', u: u, de: ya.de, a: res.tramo });
+          }
+        } else if (bj) bj.a = res.tramo;
+        else lista.push({ t: 'baja', u: u, de: res.tramoAntes, a: res.tramo });
+        this.escribir(lista);
+        return;
+      }
       if (sube) {
         if (ya) {
           ya.a = res.tramo;
@@ -120,7 +153,8 @@
       var u = quien(), lista = this.leer();
       var mios = lista.filter(function (x) { return x && x.u === u; });
       if (!mios.length) return null;
-      mios.sort(function (a, b) { return (a.t === 'rango' ? 1 : 0) - (b.t === 'rango' ? 1 : 0); });
+      function alFinal(x) { return (x.t === 'rango' || x.t === 'baja') ? 1 : 0; }
+      mios.sort(function (a, b) { return alFinal(a) - alFinal(b); });
       return mios[0];
     },
     visto: function (e) {
