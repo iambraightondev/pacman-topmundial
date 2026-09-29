@@ -191,7 +191,12 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
   ('galaxia', 'cofre', null, null), ('agujero', 'cofre', null, null),
   ('condor', 'cofre', null, null), ('toro', 'cofre', null, null),
   ('unicornio', 'cofre', null, null), ('fenix', 'cofre', null, null),
-  ('genio', 'cofre', null, null), ('triton', 'cofre', null, null)
+  ('genio', 'cofre', null, null), ('triton', 'cofre', null, null),
+  -- yōkai (29 sep)
+  ('efx_onibi', 'cofre', null, null), ('efx_koi', 'cofre', null, null),
+  ('acc_kabuto', 'cofre', null, null), ('acc_raijin', 'cofre', null, null),
+  ('kitsune', 'cofre', null, null), ('oni', 'cofre', null, null),
+  ('maneki', 'cofre', null, null)
 on conflict (id) do update
   set tipo = excluded.tipo, galon = excluded.galon, carril = excluded.carril;
 

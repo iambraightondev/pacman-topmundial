@@ -61,13 +61,20 @@ export const DATOS = {
       "petrificado",
       "divino",
       "maldicion",
-      "invocando"
+      "invocando",
+      "kawaii",
+      "banzai",
+      "itadakimasu",
+      "zen",
+      "ninja"
     ],
     "efecto": [
       "efx_fantasmitas",
       "efx_ojos",
       "efx_brasas",
       "efx_niebla",
+      "efx_onibi",
+      "efx_koi",
       "efx_portales",
       "efx_constelacion"
     ],
@@ -76,6 +83,8 @@ export const DATOS = {
       "acc_patito",
       "acc_alado",
       "acc_ojo",
+      "acc_kabuto",
+      "acc_raijin",
       "acc_aureola",
       "acc_alas"
     ],
@@ -88,7 +97,10 @@ export const DATOS = {
       "unicornio",
       "fenix",
       "genio",
-      "triton"
+      "triton",
+      "kitsune",
+      "oni",
+      "maneki"
     ],
     "legendaria": "agujero"
   },
@@ -119,16 +131,25 @@ export const DATOS = {
     "divino": 150,
     "maldicion": 150,
     "invocando": 150,
+    "kawaii": 150,
+    "banzai": 150,
+    "itadakimasu": 150,
+    "zen": 150,
+    "ninja": 150,
     "efx_fantasmitas": 400,
     "efx_ojos": 400,
     "efx_brasas": 400,
     "efx_niebla": 400,
+    "efx_onibi": 400,
+    "efx_koi": 400,
     "efx_portales": 400,
     "efx_constelacion": 400,
     "acc_luchador": 700,
     "acc_patito": 700,
     "acc_alado": 700,
     "acc_ojo": 700,
+    "acc_kabuto": 700,
+    "acc_raijin": 700,
     "acc_aureola": 700,
     "acc_alas": 700,
     "plasma": 2400,
@@ -140,6 +161,9 @@ export const DATOS = {
     "fenix": 2400,
     "genio": 2400,
     "triton": 2400,
+    "kitsune": 2400,
+    "oni": 2400,
+    "maneki": 2400,
     "agujero": 4000
   },
   "nivel": {
