@@ -13,6 +13,16 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
+**30 sep — tanda "dale con todo" (pm-v306):** retos entre amigos, REGALAR y
+precios en el servidor (una pieza fiada de hasta 1.500 es posible a propósito:
+no se pierden compras legítimas de dos aparatos), hueco de PRIMEROS PASOS
+cerrado, minificado al publicar (vercel.json + publicar.js; tests.html ya no se
+publica), subidas con número para no sumar dos veces (supabase/perfiles-subidas.sql).
+Monedas de ESTER: sin fallo del código, no se tocan. **Espera a Braighton:** elegir
+apertura de cofres (https://claude.ai/artifact/BrZRgHuGi9ue9u2v54RUDN).
+**Al añadir una pieza a la tienda:** volver a lanzar en producción el SQL de
+precios (las pruebas avisan si no cuadra).
+
 **29 sep (noche) — LAS SEIS PROPUESTAS HECHAS (pm-v302), aprobadas por
 Braighton ("sí a todo"):** tope diario del pase (1.800), rango (CEREZA
 protegida, premios por temporada con septiembre congelado, factor de rol en

@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Lo jugado ya no se cuenta dos veces
+
+Con dos pestañas abiertas, o cerrando la pestaña justo mientras se subía, lo
+jugado podía sumarse dos veces en la cuenta. Ahora sube una pestaña a la vez y
+cada subida lleva su número: el servidor no suma dos veces la misma.
+
 ## 2026-09-30 · El juego pesa la mitad
 
 Al publicar, el código se minifica: la descarga del juego baja de unos 690 KB
