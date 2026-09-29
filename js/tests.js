@@ -4819,7 +4819,10 @@
   function dosAparatos(fn) {
     var Ac = window.PM.Account, L = window.PM.Level, A = window.PM.Achievements;
     var BASE = 'pacman-topmundial-nube-base';
-    var DEL_APARATO = [CFG.LEVEL_KEY, CFG.ACH_KEY, BASE];
+    /* (la subida en vuelo y el id del aparato también son de cada aparato:
+     * supabase/perfiles-subidas.sql) */
+    var DEL_APARATO = [CFG.LEVEL_KEY, CFG.ACH_KEY, BASE,
+      'pacman-topmundial-nube-vuelo', 'pacman-topmundial-aparato'];
     var todas = DEL_APARATO.concat([CFG.SETTINGS_KEY, CFG.SAVE_KEY,
       'pacman-topmundial-rhab-sembrado', 'pacman-topmundial-maestria-desde',
       CFG.BADGES_KEY, CFG.FRIENDS_KEY, 'pacman-topmundial-skins-vistas', CFG.DAILY.KEY]);
@@ -4828,10 +4831,20 @@
       try { antes[k] = localStorage.getItem(k); } catch (e) { antes[k] = null; }
     });
     var u0 = Ac.user, t0 = Ac.token, cola0 = Ac.enCola, fetch0 = window.fetch;
+    var sube0 = Ac.sinSube;
     var nick0 = window.PM.settings.nick1, av0 = window.PM.settings.avatar;
     var d = {
       nube: { id: 'id-dos', usuario: 'PEPE', avatar: 'pac', xp: 0, logros: {} },
       caida: false, aparatos: {}, actual: null,
+      /* lo que hace supabase/perfiles-subidas.sql: el último número sumado
+       * de cada aparato; `sumadas` cuenta las subidas que de verdad sumaron */
+      subidas: {}, sumadas: 0, subesVistas: [], sinColumna: false,
+      /* la subida llega al servidor pero la respuesta se pierde (la pestaña
+       * se cierra, la red se corta a la vuelta) */
+      sinRespuesta: false,
+      /* se llama con el servidor ya escrito y antes de contestar (lo que
+       * otra pestaña hace mientras esta espera) */
+      alLlegar: null,
       /* pasa a jugar en ese aparato (su almacén, tal como lo dejó) */
       en: function (quien) {
         var self = this;
@@ -4856,10 +4869,32 @@
       if (opts.method === 'POST') {
         if (d.caida) return respuesta(500, 'caída');
         var f = JSON.parse(opts.body);
-        d.nube.xp = Math.max(d.nube.xp, f.xp || 0);
-        for (var k in (f.logros || {})) {
-          d.nube.logros[k] = Math.max(d.nube.logros[k] || 0, f.logros[k] || 0);
+        var viejo = d.fila(), s = f.sube, suma = false;
+        // un servidor sin supabase/perfiles-subidas.sql
+        if (s && d.sinColumna) {
+          return respuesta(400, { code: 'PGRST204',
+            message: "Could not find the 'sube' column of 'perfiles' in the schema cache" });
         }
+        if (s) d.subesVistas.push({ ap: s.ap, n: s.n });
+        // perfiles_sube: suma lo pendiente UNA vez por aparato y número
+        if (s && s.n > (d.subidas[s.ap] || 0)) {
+          d.subidas[s.ap] = s.n;
+          d.sumadas++;
+          suma = true;
+        }
+        // perfiles_touch: de cada cifra, el mayor
+        d.nube.xp = Math.max(viejo.xp, f.xp || 0, suma ? viejo.xp + (s.xp || 0) : 0);
+        var k;
+        for (k in (f.logros || {})) {
+          d.nube.logros[k] = Math.max(viejo.logros[k] || 0, f.logros[k] || 0);
+        }
+        if (suma) {
+          for (k in (s.c || {})) {
+            d.nube.logros[k] = Math.max(d.nube.logros[k] || 0, (viejo.logros[k] || 0) + s.c[k]);
+          }
+        }
+        if (d.alLlegar) { var al = d.alLlegar; d.alLlegar = null; al(); }
+        if (d.sinRespuesta) return roto(new Error('SE CORTÓ A LA VUELTA'));
         return respuesta(201, '');
       }
       return respuesta(204, '');
@@ -4872,7 +4907,7 @@
       fn(d, Ac, L, A);
     } finally {
       window.fetch = fetch0;
-      Ac.enCola = cola0; Ac.user = u0; Ac.token = t0;
+      Ac.enCola = cola0; Ac.user = u0; Ac.token = t0; Ac.sinSube = sube0;
       window.PM.settings.nick1 = nick0; window.PM.settings.avatar = av0;
       todas.forEach(function (k) {
         try {
@@ -4940,6 +4975,190 @@
       eq(L.xp(), 1200);
       eq(d.nube.xp, 1200);
     });
+  });
+
+  /* ---------- UNA SUBIDA, UNA SOLA SUMA (29 sep, js/account.js VUELO_KEY) ----------
+   * Dos pestañas del juego con la misma cuenta comparten el almacén: ven el
+   * mismo pendiente. Y una pestaña que se cierra con la subida ya en el
+   * servidor pero sin haber apuntado la base, al volver la subía otra vez.
+   * Las dos cosas sumaban lo mismo DOS veces. */
+  var VUELO = 'pacman-topmundial-nube-vuelo';
+
+  test('dos pestañas con la misma cuenta no suben dos veces lo mismo', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10, monedas: 40 };
+      d.en('A'); Ac.fundir(d.fila());
+      /* la otra pestaña: su propia memoria, el MISMO almacén (y la misma
+       * sesión) */
+      var otra = Object.create(Ac);
+      otra.cola = null;
+      L.add(300); A.record('partidas', 2); A.record('monedas', 25);
+      /* la primera sube; mientras espera la respuesta (ya escrita en el
+       * servidor), la otra pestaña sube también: lo peor que puede pasar si
+       * el cerrojo entre pestañas no está (navegador sin Web Locks y los dos
+       * almacenes escribiendo a la vez) */
+      d.alLlegar = function () { otra.pushQuiet(); };
+      Ac.pushQuiet();
+      eq(d.nube.xp, 1300, 'la experiencia se suma una vez');
+      eq(d.nube.logros.partidas, 12, 'las partidas también');
+      eq(d.nube.logros.monedas, 65, 'y las monedas');
+      eq(d.sumadas, 1, 'el servidor sumó una sola subida');
+      ok(d.subesVistas.length >= 2, 'la otra pestaña sí subió (repitiendo la en vuelo)');
+      eq(d.subesVistas[1].n, d.subesVistas[0].n, 'con el MISMO número, que el servidor ya había visto');
+      eq(localStorage.getItem(VUELO), null, 'no queda nada en vuelo');
+      eq(Ac.pendiente().xp, 0, 'ni pendiente');
+      // y ninguna de las dos lo vuelve a subir
+      Ac.pushQuiet(); otra.pushQuiet(); Ac.fundir(d.fila()); otra.pushQuiet();
+      eq(d.nube.xp, 1300, 'subir otra vez desde cualquiera de las dos no suma');
+      eq(d.nube.logros.monedas, 65);
+      eq(L.xp(), 1300, 'y aquí tampoco se infla');
+      // lo que se juegue después sí llega, y una vez
+      L.add(50); otra.pushQuiet(); Ac.pushQuiet();
+      eq(d.nube.xp, 1350, 'lo siguiente se suma normal');
+      eq(d.sumadas, 2);
+    });
+  });
+
+  test('una subida que llegó sin respuesta se repite con el MISMO número y no suma dos veces', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.en('A'); Ac.fundir(d.fila());
+      L.add(200); A.record('partidas', 1);
+      // llega al servidor, pero la respuesta no (se cierra la pestaña)
+      d.sinRespuesta = true;
+      Ac.pushQuiet();
+      eq(d.nube.xp, 1200, 'el servidor ya la sumó');
+      var v = JSON.parse(localStorage.getItem(VUELO) || 'null');
+      ok(v && v.n >= 1 && v.xp === 200, 'y aquí se quedó apuntada en vuelo, con su número');
+      eq(Ac.pendiente().xp, 200, 'sin base apuntada: parece pendiente');
+      // se vuelve a abrir el juego: al entrar se funde con la nube
+      d.sinRespuesta = false;
+      var vistas0 = d.subesVistas.length;
+      var tras = Object.create(Ac);          // una pestaña nueva, el mismo almacén
+      tras.cola = null;
+      tras.fundir(d.fila());
+      eq(d.subesVistas[vistas0].ap, v.ap, 'se repite la de antes: el mismo aparato');
+      eq(d.subesVistas[vistas0].n, v.n, 'y el mismo número');
+      eq(d.nube.xp, 1200, 'el servidor no la suma otra vez');
+      eq(d.nube.logros.partidas, 11);
+      eq(d.sumadas, 1);
+      eq(L.xp(), 1200, 'aquí tampoco se dobla al fundir');
+      eq(A.stats().partidas, 11);
+      eq(localStorage.getItem(VUELO), null, 'ya no queda en vuelo');
+      eq(tras.pendiente().xp, 0, 'y la base, apuntada');
+      // lo mismo si al volver lo primero es una subida y no una fusión
+      L.add(30);
+      d.sinRespuesta = true; tras.pushQuiet(); d.sinRespuesta = false;
+      eq(d.nube.xp, 1230);
+      tras.pushQuiet(); tras.pushQuiet();
+      eq(d.nube.xp, 1230, 'repetida al subir, tampoco');
+      eq(d.sumadas, 2);
+    });
+  });
+
+  test('una subida que NO llegó se repite con su número y entonces sí suma (una vez)', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.en('A'); Ac.fundir(d.fila());
+      L.add(200); A.record('partidas', 1);
+      d.caida = true;
+      Ac.pushQuiet();
+      var v = JSON.parse(localStorage.getItem(VUELO) || 'null');
+      ok(v && v.xp === 200, 'queda en vuelo');
+      L.add(100);                            // y se sigue jugando
+      d.caida = false;
+      Ac.pushQuiet();
+      eq(d.subesVistas[0].n, v.n, 'primero va la de antes, igual');
+      eq(d.nube.xp, 1300, 'llegan las dos partes, cada una una vez');
+      eq(d.nube.logros.partidas, 11);
+      eq(d.sumadas, 2);
+      eq(Ac.pendiente().xp, 0);
+      eq(localStorage.getItem(VUELO), null);
+    });
+  });
+
+  test('GUARDAR AHORA sube lo pendiente una vez y dice cómo fue', function () {
+    dosAparatos(function (d, Ac, L) {
+      d.nube.xp = 1000;
+      d.en('A'); Ac.fundir(d.fila());
+      L.add(200);
+      var err = 'sin respuesta';
+      d.caida = true;
+      Ac.pushQuiet(function (e) { err = e; });
+      ok(err && err !== 'sin respuesta', 'con la nube caída avisa: ' + err);
+      d.caida = false;
+      err = 'sin respuesta';
+      Ac.pushQuiet(function (e) { err = e; });
+      eq(err, null, 'con la nube de vuelta, guardado');
+      eq(d.nube.xp, 1200);
+      Ac.pushQuiet(); Ac.pushQuiet(function () {});
+      eq(d.nube.xp, 1200, 'y guardar otra vez no lo vuelve a sumar');
+    });
+  });
+
+  test('un servidor sin la columna sube: el juego vuelve a sumar él, sin perder nada', function () {
+    dosAparatos(function (d, Ac, L, A) {
+      d.nube.xp = 1000;
+      d.nube.logros = { partidas: 10 };
+      d.sinColumna = true;
+      Ac.sinSube = false;
+      d.en('A'); Ac.fundir(d.fila());
+      d.en('B'); Ac.fundir(d.fila());
+      d.en('A'); L.add(300); A.record('partidas', 2); Ac.pushQuiet();
+      ok(Ac.sinSube, 'el 400 que nombra la columna levanta la bandera');
+      eq(d.nube.xp, 1300, 'y lo de A llega igual');
+      d.en('B'); L.add(500); A.record('partidas', 3); Ac.pushQuiet();
+      eq(d.nube.xp, 1800, 'lo de B se suma a lo de A, como antes');
+      eq(d.nube.logros.partidas, 15);
+      eq(localStorage.getItem(VUELO), null, 'sin nada en vuelo');
+    });
+  });
+
+  test('el cerrojo entre pestañas: uno a la vez, y caduca solo', function () {
+    var Ac = window.PM.Account, K = 'pacman-topmundial-subida-cerrojo';
+    var antes = localStorage.getItem(K);
+    try {
+      localStorage.removeItem(K);
+      ok(Ac.tomarCerrojoLocal('UNA', 1000), 'libre: lo toma la primera');
+      ok(!Ac.tomarCerrojoLocal('OTRA', 1500), 'la otra espera');
+      ok(Ac.tomarCerrojoLocal('UNA', 1500), 'la que lo tiene puede volver a entrar');
+      Ac.soltarCerrojoLocal('OTRA');
+      ok(!Ac.tomarCerrojoLocal('OTRA', 2000), 'soltar uno ajeno no lo suelta');
+      ok(Ac.tomarCerrojoLocal('OTRA', 1500 + 45001), 'el de una pestaña que murió caduca solo');
+      Ac.soltarCerrojoLocal('OTRA');
+      eq(localStorage.getItem(K), null, 'y al soltarlo no queda nada');
+
+      // con Web Locks: la cola entera va por el cerrojo del navegador
+      ok(/conCerrojo/.test(String(Ac.enCola)), 'enCola pasa por conCerrojo');
+      var pedidos = [], dentro = false, vio = null, c0 = Ac.cerrojos;
+      Ac.cerrojos = function () {
+        return { request: function (nombre, cb) {
+          pedidos.push(nombre);
+          dentro = true;
+          try { return Promise.resolve(cb()); } finally { dentro = false; }
+        } };
+      };
+      try {
+        Ac.conCerrojo(function () { vio = dentro; return 1; });
+      } finally { Ac.cerrojos = c0; }
+      eq(pedidos.join(), 'pacman-topmundial-subida', 'pide el cerrojo de las subidas');
+      eq(vio, true, 'y lo de dentro corre con él puesto');
+    } finally {
+      if (antes === null) localStorage.removeItem(K); else localStorage.setItem(K, antes);
+    }
+  });
+
+  test('el servidor suma cada subida una vez: supabase/perfiles-subidas.sql', function () {
+    var sql = leerArchivo('supabase/perfiles-subidas.sql');
+    ok(/where t\.n < excluded\.n/.test(sql), 'solo apunta (y suma) un número que no ha visto');
+    ok(/if filas = 0 then\s+return new;/.test(sql), 'visto: no suma nada');
+    ok('perfiles_sube_trg' < 'perfiles_touch_trg', 'corre ANTES del blindaje (orden alfabético)');
+    ok(/new\.sube := null;/.test(sql), 'la columna nunca se guarda');
+    var atras = leerArchivo('supabase/perfiles-subidas-vuelta-atras.sql');
+    ok(/drop column if exists sube/.test(atras), 'la vuelta atrás quita la columna (el juego lo nota y suma él)');
   });
 
   /* GUARDIANA: al abrir el juego se siembran cosas (UI.init: lo visto, las

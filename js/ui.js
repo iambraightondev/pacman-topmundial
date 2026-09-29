@@ -9958,7 +9958,9 @@
         var guardar = this.makeButton('GUARDAR AHORA', function () {
           self.profAccountMsg.classList.remove('error');
           self.profAccountMsg.textContent = 'GUARDANDO...';
-          Ac.push(false, function (err) {
+          /* por la cola de siempre (lo pendiente con nombre: se suma una
+           * vez), no con push() a secas (ver Account.pushQuiet) */
+          Ac.pushQuiet(function (err) {
             self.profAccountMsg.classList.toggle('error', !!err);
             self.profAccountMsg.textContent = err || 'GUARDADO';
           });

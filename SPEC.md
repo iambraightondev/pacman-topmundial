@@ -240,7 +240,8 @@ cloud row and **adds** what this device played since its last upload. Each
 device keeps a **base** in `localStorage['pacman-topmundial-nube-base']`
 (`BASE_KEY` in `js/account.js`: how much of its own is already in the cloud);
 XP and every `suma` counter (games, ghosts, coins, pass XP, rank…) above it
-are pending and get summed onto the cloud's value, not compared with it.
+are pending and get summed onto the cloud's value, not compared with it
+(by the server, once per named upload: see **Each upload is summed once**).
 Records and the non-summing counters (`mayor`, `menor`) still keep the best
 of each side, and with no usable base (an older browser, another account's
 base) the merge falls back to the highest. Nothing ever goes down, and what
@@ -397,6 +398,55 @@ still carries an **older** `purga` cannot write `logros` at all (the trigger
 keeps the cloud's) until it signs in and adopts the cloud, so it cannot undo a
 cleanup. Lowering a counter for good is still done in code
 (`CFG.AJUSTES_CUENTA`), which every device applies when reading.
+
+### Each upload is summed once (`perfiles_sube`, 29 Sep 2026)
+
+"Pending = local − base, and the cloud adds it" had two ways of adding the
+same pending twice: **two tabs** of the game on the same account share
+`localStorage`, so both saw the same pending and could upload it at once; and
+a tab **closed** after the upload reached the server but before the new base
+was written uploaded it again on the next start. Every summing counter was
+exposed (XP, coins, games, pass XP…). Two defences, each enough on its own:
+
+- **One upload at a time across tabs.** `Account.enCola` (the per-tab queue
+  every read/upload of the account already went through) now runs each job
+  inside `Account.conCerrojo`: the Web Locks API
+  (`navigator.locks`, lock `pacman-topmundial-subida`) or, without it, a lock
+  in `localStorage` (`pacman-topmundial-subida-cerrojo`, `{q: tab, h: expiry}`)
+  that expires by itself. Either is released after `CERROJO_MS` (45 s) even if
+  the job hangs. The pending is computed inside, with the base re-read from
+  storage, so the second tab sees what the first just uploaded. `tests.html`
+  (`PM_PRUEBAS`) never takes the real lock (it would share it with a game
+  open on the same origin).
+- **Named uploads.** The client no longer adds the pending to what it read:
+  it sends it apart, in the column `perfiles.sube`
+  `{ap: device id, n: upload number, xp, c: {counter: delta}}`, and the
+  `before insert or update` trigger `perfiles_sube_trg`
+  (`supabase/perfiles-subidas.sql`) adds `old + delta` (greatest with the row,
+  as always) **only if that device's `n` is new** — `perfiles_subidas` keeps
+  the last `n` per account and device (at most 50 devices per account). It
+  runs before `perfiles_touch_trg` (alphabetical), so the whole shield (hour
+  budget, keys the game cannot write, `purga`) still applies to the sum, and
+  a rollback of another change that recreates `perfiles_touch()` does not
+  remove it. `sube` is never stored. Before sending, the client writes the
+  upload **in flight** (`pacman-topmundial-nube-vuelo`: device, number, delta
+  and the `foto` of local that it accounts for; the device id and last number
+  live in `pacman-topmundial-aparato`). Until it is confirmed nothing else is
+  uploaded: every path (`pushQuiet`, `fundir`, `subirAlSalir`) first resends
+  it **as is** (`resolverVuelo`); if the server had already seen it, it adds
+  nothing and the client just writes the base. The row sent with a named
+  upload has its summing values capped to that `foto` (`caparSumas`), or
+  later play would sneak in through the "greatest" and be summed again by the
+  next upload.
+
+Compatibility: the published game sends no `sube` and behaves as before (it
+sums, the trigger keeps the highest). A server without the column answers 400
+naming it: `Account.sinSube` is raised and the client sums as before
+(`sumarANube`), dropping any in-flight upload **without** moving the base, so
+nothing is lost. Rollback: `supabase/perfiles-subidas-vuelta-atras.sql`.
+PERFIL → GUARDAR AHORA now goes through `pushQuiet(cb)` instead of a bare
+`push()`, which uploaded pending without moving the base (summed again by the
+next upload).
 
 ## Las CIFRAS del perfil (`js/stats.js` — `PM.Stats`)
 
