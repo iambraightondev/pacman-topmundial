@@ -338,6 +338,489 @@
   /* Skins cuya gracia es la estela: su miniatura la lleva */
   var CON_ESTELA = { sombra: 1, cometa: 1, rastro: 1, escuadra: 1 };
 
+  /* ============================================================
+   * LA APERTURA DE UN COFRE · «B · EL SALTO» (28 sep, elegida por Braighton
+   * en propuestas/cofres-apertura/aperturas.html)
+   *
+   * El cofre da tres saltos, cada uno más alto, con la tapa entreabriéndose
+   * y luz escapándose; en el último se agacha y la tapa sale disparada
+   * girando. Sube un haz de luz y el premio asciende por él dando vueltas
+   * como una carta hasta quedarse de frente. Lo repetido vuelve a girar, por
+   * detrás es una moneda y revienta en monedas que caen dentro del cofre. El
+   * LEGENDARIO no salta: levita con estrellas alrededor; el ORO del 2 % se
+   * queda arriba en el tercer salto, se agrieta y se repinta de violeta.
+   *
+   * Es el `draw` del escaparate, el mismo dibujo con los mismos tiempos, con
+   * una diferencia: allí la respuesta del servidor llega siempre a tiempo, y
+   * aquí no. LA ESPERA: mientras el servidor no contesta el cofre repite el
+   * segundo salto (un salto cada BUCLE s) y el tercero, el que abre, solo
+   * empieza con el premio ya sabido; `e.D` es cuánto se ha estirado la
+   * escena (0 si contestó antes del tercer salto). El legendario sigue
+   * levitando y se abre en cuanto llega. Nada del premio se dibuja antes.
+   *
+   * La escena `e` (UI.escenaDeApertura): { cofre (el que se abre), tipo (lo
+   * que resultó: un ORO puede ser LEGENDARIO), sabe, items, rep ({ id:
+   * monedas } de lo repetido), monedas, era (ORO que era LEGENDARIO), D }.
+   * Lienzo de 320 x 320, como el del escaparate.
+   * ============================================================ */
+  var APERTURA = (function () {
+    var W = 320, H = 320;
+    var LETRA = '"Press Start 2P", monospace';
+    var SALTOS = [[0.12, 0.28, 8], [0.55, 0.3, 14], [0.95, 0.34, 22]];
+    var TERCERO = 0.95;         // cuando empieza el salto que abre
+    var BUCLE = 0.4;            // un salto de espera: el segundo otra vez
+    var LEVITA = 2.0;           // lo que tarda en abrirse el legendario
+
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+    function seg(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
+    function lerp(a, b, k) { return a + (b - a) * k; }
+    function eOut(k) { return 1 - Math.pow(1 - k, 3); }
+    function eIn(k) { return k * k * k; }
+    function eInOut(k) { return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
+    function eBack(k) { var c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); }
+    function rnd(i) { var x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+    function alfa(hex, a) {
+      var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+      if (!m) return 'rgba(255,255,255,' + a + ')';
+      return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
+    }
+    function texto(c, s, x, y, px, col, al, sombra) {
+      c.font = px + 'px ' + LETRA;
+      c.textAlign = al || 'center';
+      c.textBaseline = 'middle';
+      if (sombra) { c.fillStyle = sombra; c.fillText(s, x + 2, y + 2); }
+      c.fillStyle = col;
+      c.fillText(s, x, y);
+    }
+
+    /* el cofre de UI.pintarCofre, partido en cuerpo y tapa (misma paleta) */
+    var PAL = {
+      madera: { cuerpo: '#8a5226', claro: '#c07a3a', oscuro: '#4d2a10', banda: '#6d6f78', banda2: '#a9acb6', cierre: '#d9d9d9', gema: null },
+      plata: { cuerpo: '#8e9bb0', claro: '#cfd8e6', oscuro: '#4a5468', banda: '#3a74c9', banda2: '#7fb1ff', cierre: '#ffffff', gema: null },
+      oro: { cuerpo: '#d49b12', claro: '#ffd23f', oscuro: '#7a5200', banda: '#b01d2e', banda2: '#ff5a6e', cierre: '#fff4b0', gema: '#ff3b3b' },
+      legendario: { cuerpo: '#6a2bb0', claro: '#c86bff', oscuro: '#2c0f55', banda: '#ffd23f', banda2: '#fff4b0', cierre: '#ffffff', gema: '#6fd0ff' }
+    };
+    /* o: dx dy sx sy tapaDY tapaDX tapaRot tapaA fuga(0..1: luz por la
+     *    rendija) boca(0..1: abierto) barrido(0..1 + pal2: repintado de arriba abajo) */
+    function cofre(c, pal, cx, by, u, o) {
+      o = o || {};
+      c.save();
+      c.translate(Math.round(cx + (o.dx || 0)), Math.round(by + (o.dy || 0)));
+      c.fillStyle = 'rgba(0,0,0,0.45)';
+      c.fillRect(-11 * u, -(o.dy || 0), 22 * u, u);
+      if (o.sx || o.sy) c.scale(o.sx || 1, o.sy || 1);
+      var x0 = -12 * u, y0 = -18 * u;
+      function pintar(P) {
+        function r(x, y, w, h, col) { c.fillStyle = col; c.fillRect(x0 + x * u, y0 + y * u, w * u, h * u); }
+        r(0, 7, 24, 11, P.oscuro);
+        r(1, 8, 22, 9, P.cuerpo);
+        r(1, 8, 22, 1, P.claro);
+        for (var i = 0; i < 3; i++) r(1, 11 + i * 2, 22, 1, 'rgba(0,0,0,0.18)');
+        r(3, 7, 2, 11, P.banda); r(19, 7, 2, 11, P.banda);
+        r(3, 7, 1, 11, P.banda2); r(19, 7, 1, 11, P.banda2);
+        if (o.boca) {
+          c.globalAlpha = o.boca;
+          r(1, 7, 22, 2, alfa(P.banda2, 0.9));
+          r(2, 7, 20, 1, '#ffffff');
+          c.globalAlpha = 1;
+        }
+        if (o.fuga) {
+          var alza = (o.tapaDY || 0);
+          c.fillStyle = alfa(P.banda2, Math.min(1, o.fuga));
+          c.fillRect(x0 + u, y0 + 7 * u - alza - u * 0.5, 22 * u, alza + u * 0.9);
+          c.fillStyle = alfa('#ffffff', Math.min(1, o.fuga) * 0.9);
+          c.fillRect(x0 + 2 * u, y0 + 7 * u - alza * 0.6 - u * 0.25, 20 * u, Math.max(1, alza * 0.5));
+        }
+        if (o.tapaA === 0) return;
+        c.save();
+        c.globalAlpha *= (o.tapaA == null ? 1 : o.tapaA);
+        c.translate(o.tapaDX || 0, -(o.tapaDY || 0));
+        if (o.tapaRot) {
+          c.translate(0, y0 + 4.5 * u);
+          c.rotate(o.tapaRot);
+          c.translate(0, -(y0 + 4.5 * u));
+        }
+        r(0, 2, 24, 6, P.oscuro);
+        r(1, 1, 22, 1, P.oscuro);
+        r(1, 2, 22, 5, P.cuerpo);
+        r(2, 1, 20, 1, P.claro);
+        r(1, 2, 22, 1, P.claro);
+        r(3, 1, 2, 7, P.banda); r(19, 1, 2, 7, P.banda);
+        r(3, 1, 1, 7, P.banda2); r(19, 1, 1, 7, P.banda2);
+        r(10, 5, 4, 4, P.oscuro);
+        r(11, 5, 2, 3, P.cierre);
+        if (P.gema) r(11, 3, 2, 2, P.gema);
+        c.restore();
+      }
+      pintar(pal);
+      if (o.barrido > 0 && o.pal2) {
+        c.save();
+        c.beginPath();
+        c.rect(x0 - 2 * u, y0 - 30 * u, 28 * u, (30 + 18 * o.barrido) * u + 2);
+        c.clip();
+        pintar(o.pal2);
+        c.restore();
+      }
+      c.restore();
+    }
+
+    function moneda(c, x, y, r, giro) {
+      var s = Math.cos(giro || 0), w = Math.max(0.18, Math.abs(s));
+      c.save();
+      c.translate(x, y);
+      c.scale(w, 1);
+      c.fillStyle = '#8a6206';
+      c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+      c.fillStyle = s >= 0 ? '#ffd23f' : '#e0a800';
+      c.beginPath(); c.arc(-r * 0.08, -r * 0.08, r * 0.8, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#b8860b';
+      c.fillRect(-r * 0.12, -r * 0.45, r * 0.24, r * 0.9);
+      c.fillStyle = '#fff6c0';
+      c.fillRect(-r * 0.55, -r * 0.55, Math.max(2, r * 0.22), Math.max(2, r * 0.22));
+      c.restore();
+    }
+
+    function estrella(c, x, y, s, col, a) {
+      if (a <= 0 || s <= 0) return;
+      c.save();
+      c.globalAlpha = Math.min(1, a);
+      c.fillStyle = col;
+      c.beginPath();
+      c.moveTo(x, y - s);
+      c.quadraticCurveTo(x, y, x + s, y);
+      c.quadraticCurveTo(x, y, x, y + s);
+      c.quadraticCurveTo(x, y, x - s, y);
+      c.quadraticCurveTo(x, y, x, y - s);
+      c.fill();
+      c.restore();
+    }
+
+    /* el cielo de estrellas del LEGENDARIO */
+    function estrellas(c, g, a) {
+      for (var i = 0; i < 38; i++) {
+        var x = rnd(i) * W, y = (rnd(i + 50) * H + g * (8 + rnd(i + 9) * 18)) % H;
+        var tw = 0.4 + 0.6 * Math.abs(Math.sin(g * (1.5 + rnd(i + 3) * 3) + i));
+        c.fillStyle = alfa(i % 3 ? '#c86bff' : '#ffffff', a * tw);
+        var s = i % 5 ? 2 : 3;
+        c.fillRect(Math.round(x), Math.round(y), s, s);
+      }
+    }
+
+    /* LEGENDARIO en letras que ondean, violeta y oro */
+    function letrero(c, s, y, px, g, a) {
+      if (a <= 0) return;
+      c.save();
+      c.globalAlpha = a;
+      var ancho = s.length * px, x0 = (W - ancho) / 2 + px / 2;
+      for (var i = 0; i < s.length; i++) {
+        var yy = y + Math.sin(g * 6 + i * 0.6) * 3;
+        texto(c, s[i], x0 + i * px, yy, px, (Math.floor(g * 4) + i) % 2 ? '#c86bff' : '#ffd23f', 'center', '#2c0f55');
+      }
+      c.restore();
+    }
+
+    /* un premio en su recuadro (la lupa del juego dentro). sx < 0: se ve el
+     * dorso, cuadros del color del cofre con una moneda */
+    function recuadro(c, lupa, cx, cy, lado, col, o) {
+      o = o || {};
+      var sx = o.sx == null ? 1 : o.sx;
+      c.save();
+      c.translate(cx, cy);
+      c.scale(Math.max(0.02, Math.abs(sx)), 1);
+      var h = lado / 2;
+      if (o.brillo) {
+        var g = c.createRadialGradient(0, 0, h * 0.4, 0, 0, h * 2.1);
+        g.addColorStop(0, alfa(col, 0.45 * o.brillo));
+        g.addColorStop(1, alfa(col, 0));
+        c.fillStyle = g;
+        c.fillRect(-h * 2.2, -h * 2.2, h * 4.4, h * 4.4);
+      }
+      c.fillStyle = '#000';
+      c.fillRect(-h - 3, -h - 3, lado + 6, lado + 6);
+      if (sx < 0) {
+        var n = 6, q = lado / n;
+        for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) {
+          c.fillStyle = (i + j) % 2 ? alfa(col, 0.55) : alfa(col, 0.3);
+          c.fillRect(-h + i * q, -h + j * q, q, q);
+        }
+        if (o.dorsoMoneda) moneda(c, 0, 0, lado * 0.32, 0);
+        else texto(c, '?', 0, 2, Math.round(lado * 0.36), '#fff', 'center', 'rgba(0,0,0,.6)');
+      } else if (lupa) {
+        c.imageSmoothingEnabled = false;
+        c.drawImage(lupa, -h, -h, lado, lado);
+      }
+      c.strokeStyle = col;
+      c.lineWidth = 3;
+      c.strokeRect(-h - 1.5, -h - 1.5, lado + 3, lado + 3);
+      c.fillStyle = col;
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (e) {
+        c.fillRect(e[0] * (h + 3) - 3, e[1] * (h + 3) - 3, 6, 6);
+      });
+      c.restore();
+    }
+
+    /* ---------- los tiempos ----------
+     * Cuánto se estira la escena esperando al servidor. `llega`: el segundo
+     * (desde que se pulsó ABRIR) en que contestó, o null si aún no; `t`, el
+     * instante que se va a pintar. Sin respuesta, el valor deja el momento de
+     * abrir siempre por delante de `t`. */
+    function espera(cofreTipo, t, llega) {
+      if (cofreTipo === 'legendario') {
+        if (llega != null) return Math.max(0, llega - LEVITA);
+        return Math.max(0, t - LEVITA) + 0.5;
+      }
+      if (llega != null) return llega <= TERCERO ? 0 : BUCLE * Math.ceil((llega - TERCERO) / BUCLE - 1e-9);
+      return t < TERCERO ? 0 : BUCLE * (Math.floor((t - TERCERO) / BUCLE) + 1);
+    }
+    /* sin estirar (el escaparate): cuándo se abre la tapa */
+    function abreBase(e) { return e.era ? 2.25 : e.cofre === 'legendario' ? LEVITA : 1.5; }
+    function abre(e) { return abreBase(e) + (e.D || 0); }
+    /* cuándo se dice el premio debajo, y cuándo salen LISTO / ABRIR OTRO */
+    function revela(e) { return abre(e) + 1.0; }
+    function botones(e) { return revela(e) + 0.35; }
+
+    /* ---------- el dibujo ----------
+     * c: el lienzo (320 x 320); e: la escena; tl: segundos desde ABRIR;
+     * g: el reloj de lo que gira y parpadea; lupaDe(id): el lienzo con el
+     * premio moviéndose (UI.pintarPremioCofre). */
+    function draw(c, e, tl, g, lupaDe) {
+      var D = e.D || 0, legC = e.cofre === 'legendario';
+      /* el tiempo del escaparate: en los saltos de espera se queda antes
+       * del tercero; después, todo corrido lo que se esperó */
+      var ts = legC || tl < TERCERO ? tl : (tl < TERCERO + D ? TERCERO - 0.05 : tl - D);
+      var ab = legC ? abre(e) : abreBase(e);
+      var tras = (legC ? tl : ts) - ab;
+      if (!e.sabe) tras = Math.min(tras, -0.001);
+      var leg = legC || (e.era && ts >= 1.5);
+      var col = CFG.COFRES.COLORES[leg ? 'legendario' : e.cofre] || '#fff';
+      c.fillStyle = '#04040d'; c.fillRect(0, 0, W, H);
+      if (leg) estrellas(c, g, e.era ? seg(ts, 1.5, 2.0) : seg(tl, 0, 0.8));
+      var u = 6, suelo = H - 34;
+      var dy = 0, sx = 1, sy = 1, alza = 0, sacude = 0, polvo = [];
+      if (legC) {
+        /* el legendario no salta: levita */
+        dy = -26 * eInOut(seg(tl, 0.1, 1.5)) + Math.sin(tl * 5) * 3 * seg(tl, 0.2, 1.0);
+        alza = seg(tl, 0.6, LEVITA) * u * (0.4 + 0.6 * Math.abs(Math.sin(tl * 17)));
+        if (tras >= 0) dy = -26 * (1 - eOut(seg(tras, 0.3, 1.0)));
+      } else {
+        /* los saltos, en el tiempo de verdad: los dos primeros, los de
+         * espera (el segundo otra vez) y el tercero, corrido lo esperado */
+        var saltos = [SALTOS[0], SALTOS[1]];
+        for (var b = 0; b < Math.round(D / BUCLE); b++) saltos.push([TERCERO + b * BUCLE, SALTOS[1][1], SALTOS[1][2]]);
+        if (!e.era) saltos.push([SALTOS[2][0] + D, SALTOS[2][1], SALTOS[2][2]]);
+        saltos.forEach(function (s) {
+          var p = (tl - s[0]) / s[1];
+          if (p >= 0 && p <= 1) dy = -s[2] * 4 * p * (1 - p);
+          var tras2 = tl - (s[0] + s[1]);
+          if (tras2 >= 0 && tras2 < 0.14) {
+            var q = 1 - tras2 / 0.14;
+            sy = 1 - 0.16 * q; sx = 1 + 0.12 * q; alza = Math.max(alza, u * 1.2 * q);
+            sacude = Math.max(sacude, s[2] / 22 * q);
+          }
+          if (tras2 >= 0 && tras2 < 0.45) polvo.push(tras2);
+        });
+        if (e.era && tl >= TERCERO + D) {
+          /* tercer salto: se queda arriba, se agrieta y cambia a violeta */
+          var subir = seg(ts, 0.95, 1.15), bajar = seg(ts, 1.85, 2.0);
+          if (ts >= 0.95 && ts < 2.0) dy = -30 * eOut(subir) * (1 - eIn(bajar)) + Math.sin(ts * 30) * 2 * seg(ts, 1.2, 1.4) * (1 - bajar);
+          var t3 = ts - 2.0;
+          if (t3 >= 0 && t3 < 0.14) { sy = 1 - 0.2 * (1 - t3 / 0.14); sx = 1 + 0.15 * (1 - t3 / 0.14); sacude = 1.2 * (1 - t3 / 0.14); }
+          if (t3 >= 0 && t3 < 0.45) polvo.push(t3);
+        }
+        /* se agacha antes de abrir */
+        var ag = e.sabe ? seg(ts, ab - 0.2, ab) : 0;
+        if (tras < 0 && ag > 0) { sy = Math.min(sy, 1 - 0.2 * ag); sx = Math.max(sx, 1 + 0.14 * ag); }
+      }
+      if (tras >= 0 && tras < 0.25) { var st = 1 - tras / 0.25; sy = 1 + 0.18 * st; sx = 1 - 0.1 * st; }
+      c.save();
+      if (sacude > 0) c.translate(Math.round((rnd(Math.floor(g * 40)) - 0.5) * 8 * sacude), Math.round((rnd(Math.floor(g * 40) + 3) - 0.5) * 6 * sacude));
+      /* el suelo */
+      c.fillStyle = '#2121ff';
+      c.fillRect(24, suelo + 2, W - 48, 3);
+      c.fillStyle = '#14146e';
+      c.fillRect(24, suelo + 8, W - 48, 2);
+      /* el polvo al caer */
+      polvo.forEach(function (pt) {
+        for (var i = 0; i < 8; i++) {
+          var lado = i % 2 ? 1 : -1, v = 40 + rnd(i) * 70;
+          var x = W / 2 + lado * (70 + v * pt), y = suelo - 4 - Math.sin(pt / 0.45 * Math.PI) * (6 + rnd(i + 2) * 10);
+          c.fillStyle = 'rgba(185,186,230,' + (0.7 * (1 - pt / 0.45)) + ')';
+          c.fillRect(Math.round(x), Math.round(y), 4, 4);
+        }
+      });
+      var bocaY = suelo + dy - 11 * u * sy;
+      /* el haz */
+      if (tras >= 0) {
+        var hz = seg(tras, 0, 0.12) * (1 - 0.55 * seg(tras, 1.2, 2.2));
+        var gr = c.createLinearGradient(0, bocaY, 0, 0);
+        gr.addColorStop(0, alfa(col, 0.6 * hz));
+        gr.addColorStop(1, alfa(col, 0));
+        c.fillStyle = gr;
+        c.beginPath();
+        c.moveTo(W / 2 - 10 * u, bocaY); c.lineTo(W / 2 + 10 * u, bocaY);
+        c.lineTo(W / 2 + 110, 0); c.lineTo(W / 2 - 110, 0); c.closePath(); c.fill();
+        for (var k = 0; k < 14; k++) {
+          var ph = (g * 0.8 + rnd(k)) % 1;
+          c.fillStyle = alfa(k % 3 ? col : '#ffffff', hz * (1 - ph));
+          c.fillRect(Math.round(W / 2 + (rnd(k + 5) - 0.5) * (120 + ph * 120)), Math.round(bocaY - ph * bocaY), 3, 3);
+        }
+      }
+      /* estrellas en órbita del legendario que levita */
+      if (legC && tras < 0) {
+        for (var o = 0; o < 6; o++) {
+          var ao = g * 2.4 + o * 1.047;
+          estrella(c, W / 2 + Math.cos(ao) * 100, suelo + dy - 50 + Math.sin(ao) * 22, 5, o % 2 ? '#ffd23f' : '#c86bff', Math.sin(ao) > -0.2 ? 1 : 0.4);
+        }
+      }
+      var abierta = tras >= 0;
+      var ltx = abierta ? 90 * tras : 0, lty = abierta ? (560 * tras + 380 * tras * tras) : alza;
+      cofre(c, PAL[e.cofre] || PAL.madera, W / 2, suelo, u, {
+        dy: dy, sx: sx, sy: sy,
+        tapaDY: lty, tapaDX: ltx, tapaRot: abierta ? tras * 11 : 0,
+        /* ya fuera de la pantalla, no se pinta */
+        tapaA: abierta && lty > H * 2 ? 0 : 1,
+        fuga: abierta ? 0 : Math.min(1, alza / u),
+        boca: abierta ? 1 : 0,
+        pal2: PAL.legendario,
+        barrido: e.era ? seg(ts, 1.35, 1.75) : 0
+      });
+      /* grietas de luz en el ORO que va a ser legendario */
+      if (e.era && ts > 1.2 && ts < 1.8) {
+        var gk = seg(ts, 1.2, 1.4) * (1 - seg(ts, 1.65, 1.8));
+        c.strokeStyle = alfa('#f0d0ff', gk);
+        c.lineWidth = 3;
+        c.beginPath();
+        var cyy = suelo + dy - 9 * u;
+        c.moveTo(W / 2 - 40, cyy - 20); c.lineTo(W / 2 - 18, cyy - 4); c.lineTo(W / 2 - 26, cyy + 12);
+        c.moveTo(W / 2 + 30, cyy - 26); c.lineTo(W / 2 + 12, cyy - 6); c.lineTo(W / 2 + 34, cyy + 14);
+        c.stroke();
+        var gg = c.createRadialGradient(W / 2, cyy, 6, W / 2, cyy, 130);
+        gg.addColorStop(0, alfa('#c86bff', 0.5 * gk)); gg.addColorStop(1, alfa('#c86bff', 0));
+        c.fillStyle = gg; c.fillRect(0, 0, W, H);
+      }
+      if (abierta) premio(c, e, tras, g, col, leg, bocaY, lupaDe);
+      c.restore();
+      if (abierta && tras < 0.2) { c.fillStyle = alfa('#ffffff', 0.7 * (1 - tras / 0.2)); c.fillRect(0, 0, W, H); }
+      if (leg && abierta) {
+        var nL = Math.floor(seg(tras, 1.0, 1.6) * 10);
+        letrero(c, 'LEGENDARIO'.slice(0, nL), 22, 16, g, 1);
+      }
+      /* sale del negro al empezar */
+      var f = 1 - seg(tl, 0, 0.12);
+      if (f > 0) { c.fillStyle = 'rgba(0,0,0,' + f + ')'; c.fillRect(0, 0, W, H); }
+    }
+
+    function premio(c, e, tras, g, col, leg, bocaY, lupaDe) {
+      var n = e.items.length;
+      if (!n) {
+        /* una fuente de monedas que cae al suelo */
+        var suelo = H - 34;
+        for (var m = 0; m < 16; m++) {
+          var t0 = 0.05 + m * 0.04, tv = tras - t0;
+          if (tv < 0) continue;
+          var vx = (rnd(m) - 0.5) * 300, vy = -(430 + rnd(m + 1) * 220), gz = 1100;
+          var tAire = (-vy + Math.sqrt(vy * vy + 2 * gz * (suelo - 10 - bocaY))) / gz;
+          var tt = Math.min(tv, tAire);
+          var x = W / 2 + vx * tt, y = bocaY + vy * tt + 0.5 * gz * tt * tt;
+          if (tv > tAire) { var rb = tv - tAire; y -= Math.max(0, Math.sin(rb * 14) * 14 * Math.exp(-rb * 6)); }
+          x = clamp(x, 30, W - 30);
+          moneda(c, x, y, 11, tv < tAire ? g * 12 + m : 0.3 * m);
+        }
+        var kk = seg(tras, 0.5, 0.8);
+        if (kk > 0) {
+          var s0 = 0.4 + 0.6 * eBack(kk);
+          c.save(); c.translate(W / 2, 70); c.scale(s0, s0);
+          texto(c, '+' + fmtMonedas(e.monedas * eOut(seg(tras, 0.5, 1.3))), 0, 0, 26, '#ffd23f', 'center', '#7a5200');
+          c.restore();
+        }
+        return;
+      }
+      var lado = n > 1 ? 96 : 116;
+      e.items.forEach(function (id, j) {
+        var d = j * 0.32;
+        var k = seg(tras, 0.05 + d, 1.0 + d);
+        if (k <= 0) return;
+        var ke = eOut(k);
+        var fx = W / 2 + (j - (n - 1) / 2) * (lado + 22);
+        var x = lerp(W / 2, fx, ke), y = lerp(bocaY, leg ? 118 : 104, ke);
+        var ang = (1 - ke) * (1 - ke) * Math.PI * 7;
+        var sx = Math.cos(ang), s = lado * (0.3 + 0.7 * ke);
+        var rep = e.rep && e.rep.hasOwnProperty(id) ? e.rep[id] : null;
+        var dorsoMoneda = false;
+        /* repetido: vuelve a girar y por detrás es una moneda */
+        if (rep != null) {
+          var fl = seg(tras, 1.7, 2.05);
+          if (fl > 0) { sx = Math.cos(fl * Math.PI); dorsoMoneda = true; }
+          var rv = seg(tras, 2.3, 2.5);
+          if (rv > 0) s *= (1 - rv);
+        }
+        if (leg && k > 0.2) {
+          /* remolino violeta detrás */
+          c.save(); c.translate(x, y);
+          for (var b = 0; b < 3; b++) {
+            c.rotate(g * 1.4 + b * 2.09);
+            c.strokeStyle = alfa(b === 1 ? '#ffd23f' : '#c86bff', 0.55 * k);
+            c.lineWidth = 5;
+            c.beginPath();
+            for (var a = 0; a < 3.2; a += 0.2) {
+              var rr = 30 + a * 28;
+              c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.8);
+            }
+            c.stroke();
+          }
+          c.restore();
+        }
+        if (s > 1) {
+          recuadro(c, sx < 0 ? null : lupaDe(id), x, y, s, col, { sx: sx, brillo: 0.5 + 0.5 * k, dorsoMoneda: dorsoMoneda });
+        }
+        /* estrellas en órbita mientras sube, y el destello al quedarse */
+        if (k < 1) {
+          for (var q = 0; q < 5; q++) {
+            var aq = g * 5 + q * 1.257;
+            estrella(c, x + Math.cos(aq) * s * 0.8, y + Math.sin(aq) * s * 0.35, 5, q % 2 ? '#ffffff' : col, 1);
+          }
+        } else {
+          var ting = seg(tras, 1.0 + d, 1.35 + d);
+          if (ting < 1 && !(rep != null && tras > 1.7)) {
+            c.strokeStyle = alfa('#ffffff', 1 - ting);
+            c.lineWidth = 3;
+            c.strokeRect(x - s / 2 - 6 - ting * 20, y - s / 2 - 6 - ting * 20, s + 12 + ting * 40, s + 12 + ting * 40);
+          }
+          for (var q2 = 0; q2 < 4; q2++) {
+            var tw = Math.sin(g * 3.5 + q2 * 2.1 + j);
+            estrella(c, x + [-1, 1, 1, -1][q2] * s * 0.62, y + [-1, -1, 1, 1][q2] * s * 0.62, 7 * Math.max(0, tw), '#ffffff', tw);
+          }
+        }
+        if (rep != null) {
+          /* revienta en monedas que caen dentro del cofre */
+          for (var m = 0; m < 10; m++) {
+            var q3 = seg(tras, 2.3 + m * 0.03, 2.95 + m * 0.03);
+            if (q3 <= 0 || q3 >= 1) continue;
+            var an = m * 0.628;
+            var px = lerp(x + Math.cos(an) * 60 * Math.sin(q3 * Math.PI), W / 2, eIn(q3));
+            var py = lerp(y + Math.sin(an) * 40 * Math.sin(q3 * Math.PI), bocaY, eIn(q3));
+            moneda(c, px, py, 10, g * 9 + m);
+          }
+          /* y lo que da, donde estaba (con dos premios, más pequeño) */
+          var kc = seg(tras, 2.45, 3.1);
+          if (kc > 0) {
+            var solo = n === 1;
+            texto(c, 'YA LO TENIAS', solo ? W / 2 : fx, 62, solo ? 10 : 8, '#ffffff', 'center', '#000');
+            var pop = 1 + 0.3 * Math.sin(seg(tras, 3.1, 3.35) * Math.PI);
+            c.save(); c.translate(solo ? W / 2 : fx, solo ? 106 : 104); c.scale(pop, pop);
+            texto(c, '+' + fmtMonedas(rep * eOut(kc)), 0, 0, solo ? 24 : 16, '#ffd23f', 'center', '#7a5200');
+            c.restore();
+          }
+        }
+      });
+    }
+
+    return {
+      W: W, H: H, SALTOS: SALTOS, TERCERO: TERCERO, BUCLE: BUCLE, LEVITA: LEVITA,
+      espera: espera, abre: abre, revela: revela, botones: botones, draw: draw
+    };
+  })();
+
   var UI = {
     els: {},
     audioResumed: false,
@@ -4973,9 +5456,10 @@
      * Van con VESTUARIO y TIENDA (la tira de arriba). Una ficha por tipo con
      * su cofre dibujado, cuántos tienes sin abrir, cómo se ganan y ABRIR. Sin
      * cuenta se ven y se van ganando, pero para abrirlos hay que entrar (el
-     * premio lo da el servidor). Abrir es una escena propia en un lienzo: el
-     * cofre tiembla mientras contesta el servidor, revienta con su color y
-     * sube el premio; si ya lo tenías, se ve en qué monedas se ha quedado.
+     * premio lo da el servidor). Abrir es una escena propia en un lienzo, la
+     * «B · EL SALTO» (APERTURA, arriba del todo): el cofre salta mientras
+     * contesta el servidor, la tapa sale girando y el premio sube por un haz
+     * como una carta; si ya lo tenías, se ve en qué monedas se ha quedado.
      * ------------------------------------------------------ */
     COFRES_COMO: {
       madera: 'CADA 5 PARTIDAS DE MÁS DE UN MINUTO',
@@ -5179,8 +5663,9 @@
       this.cofresMsg.classList.toggle('error', !!error);
     },
 
-    /* Pulsar ABRIR: la escena empieza en el acto (el cofre tiembla) y el
-     * premio llega cuando conteste el servidor */
+    /* Pulsar ABRIR: la escena empieza en el acto (el cofre salta) y el
+     * premio llega cuando conteste el servidor. Hasta que la escena lo
+     * enseña (APERTURA.revela) debajo sigue diciendo ABRIENDO… */
     abrirCofre: function (tipo) {
       var self = this, K = window.PM.Cofres;
       if (!K) return;
@@ -5188,7 +5673,9 @@
       if (!(K.pendientes()[tipo] > 0)) { this.cofresAviso('NO TIENES COFRES DE ' + CFG.COFRES.NOMBRES[tipo] + ' SIN ABRIR', true); return; }
       this.resumeAudio();
       this.cofresAviso('');
-      var ab = { tipo: tipo, t0: Date.now(), abierto: 0, premio: null, resultado: null, error: null };
+      /* llega: el segundo en que contestó el servidor (desde t0) */
+      var ab = { tipo: tipo, t0: Date.now(), llega: null, premio: null, resultado: null, error: null,
+        escena: null, sono: false, dicho: false };
       this.cofresAbriendo = ab;
       this.cofresPremioT.textContent = 'ABRIENDO…';
       this.cofresPremioT.style.color = CFG.COFRES.COLORES[tipo];
@@ -5208,13 +5695,9 @@
         }
         ab.premio = d.premio;
         ab.resultado = d.resultado || { monedas: d.premio.monedas, nuevos: d.premio.items, repetidos: [] };
-        /* no revienta antes de haber temblado un poco: se nota más */
-        ab.abierto = Math.max(Date.now(), ab.t0 + 900);
-        if (window.AudioSys && AudioSys.playExtraLife) {
-          setTimeout(function () { if (self.cofresAbriendo === ab) AudioSys.playExtraLife(); },
-            Math.max(0, ab.abierto - Date.now()));
-        }
-        self.textoPremioCofre(ab);
+        ab.llega = Math.max(0, (Date.now() - ab.t0) / 1000);
+        ab.escena = null;
+        /* el sonido, el texto y los botones van con la escena (pintarAperturaCofre) */
         self.refreshCofres();
         self.refreshMarquesina();
         self.refreshVestBtn();
@@ -5365,20 +5848,12 @@
       return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
     },
 
-    /* LA ESCENA DE ABRIR: tiembla (esperando al servidor) → revienta con el
-     * color del cofre y rayos que giran → sube el premio, que se ve moverse
-     * como en la tienda (o un montón de monedas) */
+    /* LA ESCENA DE ABRIR (APERTURA, «B · EL SALTO»): el bucle que la pinta
+     * mientras esté abierta */
     animarAperturaCofre: function () {
       var self = this, raf = window.requestAnimationFrame;
       if (!raf || this.cofresAnimAb) return;
       this.cofresAnimAb = true;
-      var Sk = window.PM.Skins;
-      var tmp = document.createElement('canvas');
-      tmp.width = Sk ? Sk.ESCENA_W : 336; tmp.height = Sk ? Sk.ESCENA_H : 144;
-      var lupa = document.createElement('canvas');
-      lupa.width = 96; lupa.height = 96;
-      var chico = document.createElement('canvas');
-      chico.width = 160; chico.height = 128;
       function paso() {
         var ab = self.cofresAbriendo, esc = self.cofresEscena;
         if (!ab || !esc || esc.style.display === 'none' ||
@@ -5386,118 +5861,90 @@
           self.cofresAnimAb = false;
           return;
         }
-        var cv = self.cofresLienzo, c = cv.getContext('2d');
-        var W = cv.width, H = cv.height, ahora = Date.now();
-        var t = (ahora - ab.t0) / 1000;
-        var tipo = (ab.premio && ab.abierto && ahora >= ab.abierto) ? ab.premio.tipo : ab.tipo;
-        var col = CFG.COFRES.COLORES[tipo] || '#fff';
-        c.setTransform(1, 0, 0, 1, 0, 0);
-        c.fillStyle = '#04040d';
-        c.fillRect(0, 0, W, H);
-        var tras = (ab.abierto && ahora >= ab.abierto) ? (ahora - ab.abierto) / 1000 : -1;
-        /* los rayos, girando (más tras abrir) */
-        var fuerza = tras < 0 ? Math.min(0.5, t * 0.35) : 1;
-        c.save();
-        c.translate(W / 2, H * 0.52);
-        c.rotate(t * (tras < 0 ? 0.6 : 0.35));
-        for (var i = 0; i < 12; i++) {
-          c.rotate(Math.PI / 6);
-          c.fillStyle = self.conAlfa(col, (i % 2 ? 0.10 : 0.22) * fuerza);
-          c.beginPath();
-          c.moveTo(0, 0);
-          c.lineTo(W, -W * 0.13);
-          c.lineTo(W, W * 0.13);
-          c.closePath();
-          c.fill();
-        }
-        c.restore();
-        /* el cofre, en su lienzo chico y ampliado a píxel gordo */
-        var tiembla = tras < 0 ? Math.min(1, 0.25 + t * 0.6) : 0;
-        var tapa = tras < 0 ? 0 : Math.min(1, tras / 0.25);
-        self.pintarCofre(chico, ab.tipo, { t: t, tiembla: tiembla, tapa: tapa, brillo: tras < 0 ? 0.4 : 0 });
-        c.imageSmoothingEnabled = false;
-        var esc2 = 2;
-        c.drawImage(chico, (W - chico.width * esc2 / 1.25) / 2, H - chico.height * esc2 / 1.25 - 8,
-          chico.width * esc2 / 1.25, chico.height * esc2 / 1.25);
-        /* el fogonazo */
-        if (tras >= 0 && tras < 0.4) {
-          c.fillStyle = self.conAlfa('#ffffff', 0.85 * (1 - tras / 0.4));
-          c.fillRect(0, 0, W, H);
-        }
-        /* el PREMIO sube del cofre */
-        if (tras >= 0.15 && ab.premio) {
-          var k = Math.min(1, (tras - 0.15) / 0.5);
-          var sub = (1 - Math.pow(1 - k, 3));
-          var cx = W / 2, cy = H * 0.62 - sub * H * 0.3;
-          var r = ab.resultado || {};
-          var items = (ab.premio.items || []);
-          if (items.length) {
-            var lado = Math.round(88 + 24 * sub);
-            items.forEach(function (id, j) {
-              var off = (j - (items.length - 1) / 2) * (lado + 12);
-              self.pintarPremioCofre(lupa, tmp, id, t);
-              c.fillStyle = '#000';
-              c.fillRect(cx + off - lado / 2 - 3, cy - lado / 2 - 3, lado + 6, lado + 6);
-              c.strokeStyle = col;
-              c.lineWidth = 3;
-              c.strokeRect(cx + off - lado / 2 - 3, cy - lado / 2 - 3, lado + 6, lado + 6);
-              c.globalAlpha = k;
-              c.drawImage(lupa, cx + off - lado / 2, cy - lado / 2, lado, lado);
-              c.globalAlpha = 1;
-              var rep = (r.repetidos || []).some(function (x) { return x.id === id; });
-              if (rep && tras > 0.9) {
-                c.fillStyle = 'rgba(0,0,0,0.6)';
-                c.fillRect(cx + off - lado / 2, cy + lado / 2 - 22, lado, 22);
-                self.monedaCanvas(c, cx + off - lado / 2 + 13, cy + lado / 2 - 11, 7);
-                c.fillStyle = '#ffd23f';
-                c.font = '10px "Press Start 2P", monospace';
-                c.textAlign = 'left'; c.textBaseline = 'middle';
-                var rx = (r.repetidos.filter(function (x) { return x.id === id; })[0] || {}).monedas || 0;
-                c.fillText('+' + fmtMonedas(rx), cx + off - lado / 2 + 24, cy + lado / 2 - 10);
-              }
-            });
-          } else {
-            /* monedas: un montón que sube, con la cifra */
-            var n = Math.min(9, 3 + Math.floor((r.monedas || 0) / 40));
-            for (var m = 0; m < n; m++) {
-              var ang = m * 2.4 + t * 1.5;
-              self.monedaCanvas(c, cx + Math.cos(ang) * (18 + m * 4) * sub, cy + Math.sin(ang) * 12 * sub - m * 2, 12);
-            }
-            c.fillStyle = '#ffd23f';
-            c.font = '18px "Press Start 2P", monospace';
-            c.textAlign = 'center'; c.textBaseline = 'middle';
-            c.globalAlpha = k;
-            c.fillText('+' + fmtMonedas(r.monedas || 0), cx, cy + 44);
-            c.globalAlpha = 1;
-          }
-          /* chispas */
-          for (var s = 0; s < 14; s++) {
-            var a2 = s * 0.45 + t * 2, rr = 40 + ((s * 37 + Math.floor(t * 20)) % 90);
-            c.fillStyle = s % 3 ? col : '#ffffff';
-            c.fillRect(Math.round(cx + Math.cos(a2) * rr), Math.round(cy + Math.sin(a2) * rr * 0.7), 3, 3);
-          }
-          /* los botones, cuando ya se ve */
-          if (tras > 0.7 && self.cofresListoBtn.style.display === 'none') {
-            var K = window.PM.Cofres, quedan = K ? (K.pendientes()[ab.tipo] || 0) : 0;
-            self.cofresListoBtn.style.display = '';
-            self.cofresOtroBtn.style.display = quedan > 0 ? '' : 'none';
-            self.cofresOtroBtn.textContent = 'ABRIR OTRO (' + quedan + ')';
-            try { self.cofresListoBtn.focus(); } catch (e) { /* sin foco */ }
-          }
-        }
+        self.pintarAperturaCofre(ab, Date.now());
         raf(paso);
       }
       paso();
     },
 
-    /* Una moneda de la tienda, en el lienzo */
-    monedaCanvas: function (c, x, y, r) {
-      c.fillStyle = '#b8860b';
-      c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ffd23f';
-      c.beginPath(); c.arc(x - 1, y - 1, r - 2, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#fff6c0';
-      c.fillRect(x - r / 3, y - r / 2, 2, 2);
+    /* La escena que se pinta, sacada de lo que se sabe: antes de que
+     * conteste el servidor, solo el cofre (sin premio y estirándose lo que
+     * haga falta); después, el premio, lo repetido y si el ORO era LEGENDARIO */
+    escenaDeApertura: function (ab, t) {
+      if (!ab.premio) {
+        return { cofre: ab.tipo, tipo: ab.tipo, sabe: false, items: [], rep: {}, monedas: 0, era: false,
+          D: APERTURA.espera(ab.tipo, t, null) };
+      }
+      if (!ab.escena) {
+        var pr = ab.premio, r = ab.resultado || {}, rep = {};
+        (r.repetidos || []).forEach(function (x) { rep[x.id] = (rep[x.id] || 0) + (x.monedas || 0); });
+        ab.escena = {
+          cofre: ab.tipo, tipo: pr.tipo || ab.tipo, sabe: true,
+          items: (pr.items || []).slice(0, 2), rep: rep,
+          monedas: r.monedas != null ? r.monedas : (pr.monedas || 0),
+          era: pr.tipo === 'legendario' && ab.tipo === 'oro',
+          D: APERTURA.espera(ab.tipo, null, ab.llega || 0)
+        };
+      }
+      return ab.escena;
+    },
+
+    /* Un cuadro de la escena en el instante `ahora` (ms), con lo que va
+     * debajo: el premio en letra cuando la escena lo enseña, el sonido al
+     * saltar la tapa y LISTO / ABRIR OTRO (n) al final. Con REDUCIR
+     * MOVIMIENTO no se mueve nada: el cofre quieto mientras espera y, con la
+     * respuesta, el premio ya de frente. */
+    pintarAperturaCofre: function (ab, ahora) {
+      var self = this, AP = APERTURA;
+      var t = Math.max(0, (ahora - ab.t0) / 1000);
+      var e = this.escenaDeApertura(ab, t);
+      var tl = t, g = t;
+      if (this.menosMovimiento()) {
+        g = 4.2;
+        tl = e.sabe ? AP.botones(e) + 4 : 0.12;
+      }
+      var cv = this.cofresLienzo, c = cv.getContext('2d');
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.imageSmoothingEnabled = false;
+      /* un lienzo con el premio moviéndose por pieza, pintado una vez por cuadro */
+      var lupas = this.cofresLupas || (this.cofresLupas = {});
+      var Sk = window.PM.Skins;
+      if (!this.cofresLupaTmp) {
+        this.cofresLupaTmp = document.createElement('canvas');
+        this.cofresLupaTmp.width = Sk ? Sk.ESCENA_W : 336;
+        this.cofresLupaTmp.height = Sk ? Sk.ESCENA_H : 144;
+      }
+      var cuadro = (this.cofresCuadro = (this.cofresCuadro || 0) + 1);
+      function lupaDe(id) {
+        var l = lupas[id];
+        if (!l) {
+          l = lupas[id] = { cv: document.createElement('canvas'), f: -1 };
+          l.cv.width = 96; l.cv.height = 96;
+        }
+        if (l.f !== cuadro) {
+          l.f = cuadro;
+          var d = Math.sin(String(id).length * 127.1 + 311.7) * 43758.5453;
+          self.pintarPremioCofre(l.cv, self.cofresLupaTmp, id, g + (d - Math.floor(d)) * 3);
+        }
+        return l.cv;
+      }
+      AP.draw(c, e, tl, g, lupaDe);
+      if (!e.sabe) return;
+      if (!ab.sono && tl >= AP.abre(e)) {
+        ab.sono = true;
+        if (window.AudioSys && AudioSys.playExtraLife) AudioSys.playExtraLife();
+      }
+      if (!ab.dicho && tl >= AP.revela(e)) {
+        ab.dicho = true;
+        this.textoPremioCofre(ab);
+      }
+      if (tl >= AP.botones(e) && this.cofresListoBtn.style.display === 'none') {
+        var K = window.PM.Cofres, quedan = K ? (K.pendientes()[ab.tipo] || 0) : 0;
+        this.cofresListoBtn.style.display = '';
+        this.cofresOtroBtn.style.display = quedan > 0 ? '' : 'none';
+        this.cofresOtroBtn.textContent = 'ABRIR OTRO (' + quedan + ')';
+        try { this.cofresListoBtn.focus(); } catch (err) { /* sin foco */ }
+      }
     },
 
     /* El premio moviéndose, como en la tienda (escena + lupa) */
@@ -16071,6 +16518,7 @@
     }
   };
 
+  UI.APERTURA = APERTURA;
   window.PM.UI = UI;
 
   /* Arranque */

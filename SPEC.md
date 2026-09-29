@@ -1520,9 +1520,33 @@ reads all profiles, runs `top3` and calls `public.cofres_cerrar(t, ids)`
   it never fights the celebration queue.
 - `#cofres`, in the VESTUARIO · TIENDA · COFRES group: one card per type with
   its canvas chest, pending count, how it is earned and ABRIR. Guests see
-  "CREA UNA CUENTA PARA ABRIRLOS". Opening is a canvas scene: the chest
-  shakes while the server answers, bursts in its colour, the prize rises
-  (animated like the shop's previews, or a coin pile), repeats show the coins.
+  "CREA UNA CUENTA PARA ABRIRLOS". Opening is a canvas scene (320 × 320),
+  **«B · EL SALTO»**, chosen by Braighton on 28 Sep from the showcase in
+  `propuestas/cofres-apertura/aperturas.html` and drawn exactly like it
+  (`APERTURA` at the top of `js/ui.js`, exposed as `UI.APERTURA`; the host is
+  `UI.pintarAperturaCofre` / `UI.escenaDeApertura`):
+  - the chest jumps three times, higher each time, light leaking under the
+    lid; on the third it crouches and the lid flies off spinning (1.5 s);
+    a beam rises and each prize climbs it spinning like a card until it faces
+    front (the prize is `UI.pintarPremioCofre`, the shop preview); coins burst
+    out as a fountain and are counted (`+N`);
+  - a repeat flips again, its back is a coin, and it bursts into coins that
+    fall back into the chest, then "YA LO TENIAS" and the coins it gave;
+  - LEGENDARIO does not jump: it levitates with orbiting stars (opens at
+    2.0 s); a swirl behind the prize and "LEGENDARIO" typed on top; the 2 %
+    ORO stays up on its third jump, cracks and is repainted violet (2.25 s);
+  - **waiting for the server**: the third jump (the one that opens) only
+    starts once the prize is known; until then the chest repeats the second
+    jump every 0.4 s (`APERTURA.espera`: the scene is stretched by whole
+    jumps, so nothing snaps), and the legendary keeps levitating. Nothing of
+    the prize is drawn or written before it arrives. The text under the
+    canvas says "ABRIENDO…" until `APERTURA.revela` (lid + 1 s), then the
+    prize (`UI.textoPremioCofre`); LISTO / ABRIR OTRO (n) 0.35 s later; the
+    sound plays when the lid flies. A server error closes the scene and shows
+    the message on the panel;
+  - REDUCIR MOVIMIENTO (`UI.menosMovimiento`): nothing moves; the chest waits
+    still and, with the answer, the final frame (prize facing front), text and
+    buttons appear at once.
 - Menu: a yellow counter on the VESTUARIO door; with pending chests and an
   account, that door opens COFRES directly. The group tab reads "COFRES · n".
 

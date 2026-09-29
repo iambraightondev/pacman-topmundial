@@ -10130,6 +10130,98 @@
     });
   });
 
+  /* LA APERTURA «B · EL SALTO» (28 sep): los tiempos son los del escaparate
+   * si el servidor contesta antes del tercer salto; si tarda, el cofre sigue
+   * saltando (o levitando) y no se ve ni se dice nada del premio hasta que
+   * llega. */
+  test('COFRES: la apertura espera al servidor saltando y no enseña un premio que no se sabe', function () {
+    var AP = window.PM.UI.APERTURA;
+    eq(AP.espera('madera', null, 0.3), 0, 'contesta pronto: la escena del escaparate, sin estirar');
+    eq(AP.abre({ cofre: 'madera', D: 0 }), 1.5, 'la tapa salta a los 1,5 s');
+    eq(AP.abre({ cofre: 'oro', era: true, D: 0 }), 2.25, 'el ORO que era LEGENDARIO, a los 2,25 s');
+    eq(AP.abre({ cofre: 'legendario', D: 0 }), 2.0, 'el LEGENDARIO, tras levitar 2 s');
+    ok(Math.abs(AP.espera('madera', null, 2.3) - 1.6) < 1e-9, 'contesta a los 2,3 s: cuatro saltos de espera');
+    for (var t = 0; t < 12; t += 0.37) {
+      ok(AP.abre({ cofre: 'plata', D: AP.espera('plata', t, null) }) > t, 'sin respuesta la tapa no salta (' + t.toFixed(2) + ' s)');
+      ok(AP.abre({ cofre: 'legendario', D: AP.espera('legendario', t, null) }) > t, 'ni la del legendario');
+    }
+    /* la espera no da tirones: lo que se pintaba esperando es lo mismo que
+     * se pinta con la respuesta (el D de antes y el de después coinciden) */
+    [1.0, 1.7, 2.3, 4.05].forEach(function (llega) {
+      eq(AP.espera('oro', llega - 0.01, null), AP.espera('oro', null, llega), 'mismo estirón al contestar a los ' + llega + ' s');
+    });
+
+    conCofres(function (K, Gn, D, Tn, A) {
+      var UI = window.PM.UI, raf0 = window.requestAnimationFrame, men0 = UI.menosMovimiento;
+      var puede0 = K.puedeAbrir, pend0 = K.pendientes, abrir0 = K.abrir, cb = null, p = { madera: 0, plata: 0, oro: 2, legendario: 0 };
+      window.requestAnimationFrame = function () { return 0; };
+      K.puedeAbrir = function () { return true; };
+      K.pendientes = function () { return p; };
+      K.abrir = function (tipo, f) { cb = f; };
+      UI.menosMovimiento = function () { return false; };
+      try {
+        UI.showCofres();
+        UI.cofresAnimAb = false;
+        UI.abrirCofre('oro');
+        var ab = UI.cofresAbriendo;
+        ok(ab && UI.cofresEscena.style.display !== 'none', 'la escena se abre en el acto');
+        ab.t0 = 0;
+        UI.pintarAperturaCofre(ab, 9000);
+        eq(UI.cofresPremioT.textContent, 'ABRIENDO…', 'a los 9 s sin respuesta sigue abriendo');
+        eq(UI.cofresListoBtn.style.display, 'none', 'y sin botones');
+        ok(!ab.sono, 'ni el sonido del premio');
+        /* contesta a los 9,05 s: el ORO del 2 % */
+        p.oro = 1;
+        cb(null, { premio: { cofre: 'oro', tipo: 'legendario', n: 1, monedas: 0, items: ['agujero'] },
+          resultado: { monedas: 0, nuevos: ['agujero'], repetidos: [] } });
+        ab.llega = 9.05; ab.escena = null;
+        var e = UI.escenaDeApertura(ab, 9.05);
+        ok(e.sabe && e.era && e.tipo === 'legendario', 'la escena sabe que era LEGENDARIO');
+        var abre = AP.abre(e);
+        ok(abre > 9.05 && abre < 9.05 + AP.BUCLE + 2.25, 'se abre al acabar el salto de espera en curso (' + abre.toFixed(2) + ' s)');
+        UI.pintarAperturaCofre(ab, Math.round((abre - 0.05) * 1000));
+        eq(UI.cofresPremioT.textContent, 'ABRIENDO…', 'antes de abrir, nada del premio');
+        UI.pintarAperturaCofre(ab, Math.round((abre + 0.1) * 1000));
+        ok(ab.sono, 'suena al saltar la tapa');
+        eq(UI.cofresPremioT.textContent, 'ABRIENDO…', 'el nombre, cuando la carta se queda de frente');
+        UI.pintarAperturaCofre(ab, Math.round((AP.revela(e) + 0.01) * 1000));
+        eq(UI.cofresPremioT.textContent, '¡ERA LEGENDARIO! AGUJERO NEGRO');
+        eq(UI.cofresListoBtn.style.display, 'none', 'los botones, un poco después');
+        UI.pintarAperturaCofre(ab, Math.round((AP.botones(e) + 0.01) * 1000));
+        eq(UI.cofresListoBtn.style.display, '', 'LISTO');
+        eq(UI.cofresOtroBtn.textContent, 'ABRIR OTRO (1)', 'y ABRIR OTRO con los que quedan');
+        UI.cerrarEscenaCofre(true);
+
+        /* un error del servidor cierra la escena y lo dice */
+        UI.cofresAnimAb = false;
+        UI.abrirCofre('oro');
+        cb('NO SE PUDO ABRIR', null);
+        eq(UI.cofresEscena.style.display, 'none', 'con error se cierra');
+        eq(UI.cofresMsg.textContent, 'NO SE PUDO ABRIR', 'y se dice');
+
+        /* REDUCIR MOVIMIENTO: con la respuesta, el premio ya de frente y todo a la vista */
+        UI.menosMovimiento = function () { return true; };
+        UI.cofresAnimAb = false;
+        UI.abrirCofre('oro');
+        ab = UI.cofresAbriendo; ab.t0 = 0;
+        cb(null, { premio: { cofre: 'oro', tipo: 'oro', n: 2, monedas: 0, items: ['acc_alado'] },
+          resultado: { monedas: 350, nuevos: [], repetidos: [{ id: 'acc_alado', monedas: 350 }] } });
+        ab.llega = 0.2;
+        UI.pintarAperturaCofre(ab, 250);
+        ok(/CASCO ALADO/.test(UI.cofresPremioT.textContent), 'el premio, sin esperar a la animación');
+        ok(/YA LO TENÍAS: \+350 MONEDAS/.test(UI.cofresPremioS.textContent), 'el repetido, en monedas');
+        eq(UI.cofresListoBtn.style.display, '', 'y LISTO');
+        UI.cerrarEscenaCofre(true);
+      } finally {
+        window.requestAnimationFrame = raf0;
+        UI.menosMovimiento = men0;
+        K.puedeAbrir = puede0; K.pendientes = pend0; K.abrir = abrir0;
+        UI.cofresAnimAb = false;
+        UI.showMenu();
+      }
+    });
+  });
+
   test('COFRES: el top 3 del rango se calcula igual que la tabla del juego', function () {
     var Gn = window.PM.CofresGen, D = window.PM.Cofres.datos();
     var R = Gn.rangoCon(D.rango), Rg = window.PM.Rango, V = CFG.RANGO.VERSION;

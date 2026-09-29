@@ -25,8 +25,14 @@
 >   `js/rango.js`, una vez, al día siguiente de cerrar la temporada (desde la de
 >   septiembre de 2026).
 >
-> **Queda para Braighton:** ver la apertura jugando (se hizo un aspecto, no los
-> 2–3 a elegir de §4); ajustar porcentajes con una semana de datos (§7).
+> - **Apertura (§4): elegida la B · EL SALTO** (28 sep) entre las cuatro del
+>   escaparate `propuestas/cofres-apertura/aperturas.html`, y montada en el
+>   juego con el mismo dibujo y los mismos tiempos (`SPEC.md`, «Screens»).
+>   Mientras el servidor no contesta, el cofre sigue saltando (el legendario,
+>   levitando) y el salto que abre solo llega con el premio ya sabido.
+>
+> **Queda para Braighton:** ver la apertura jugando; ajustar porcentajes con
+> una semana de datos (§7).
 
 Diseño acordado con Braighton el 17 sep 2026. **Falta por diseñar el
 contenido exclusivo de cofre** (se hará en otra sesión); todo lo demás está
@@ -116,7 +122,7 @@ Seguir el patrón de la tienda: nada de tabla nueva en la nube.
   natural). Animación de apertura con el color del cofre y el premio a la
   vista; si fue repetido, enseñar la conversión a monedas.
 - Punto/contador en el menú cuando hay cofres sin abrir.
-- Proponer 2–3 aspectos de la pantalla de apertura a Braighton antes de
+- **[HECHO: B · EL SALTO]** Proponer 2–3 aspectos de la pantalla de apertura a Braighton antes de
   fijar uno (así se ha hecho con la tienda y el reproductor).
 
 ### Party
