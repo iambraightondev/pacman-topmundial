@@ -1689,7 +1689,9 @@
      * ya está. */
     RESET: '2026-08-15',
     DIAS: 7,
-    LIBRES_POR_SEMANA: 5,     // los otros dos salen de la lista de modo
+    /* los otros dos salen de la lista de modo. Solo hasta la semana de
+     * ROLES_DESDE: desde ahí manda SEMANA (más abajo) */
+    LIBRES_POR_SEMANA: 5,
     XP: 2500,                 // experiencia por reto cumplido (el DURO)
 
     /* DOS NIVELES (29 sep, propuesta 1 aprobada por Braighton). Solo 3 de 8
@@ -1776,7 +1778,8 @@
 
     /* Y los que piden un modo concreto. `modo` es una etiqueta de las que
      * devuelve Game.achTags(): el modo ('clasico', 'lab', 'hab', 'vs') o el
-     * formato ('solo', 'party'). Dos por semana como mucho. */
+     * formato ('solo', 'party'). Dos por semana como mucho; desde ROLES_DESDE,
+     * uno y nunca de DESATADO (ese hueco es de los de rol, DE_ROL). */
     MODOS: [
       { id: 'd_hab_mordisco', modo: 'hab',
         desc: 'CÓMETE 5 FANTASMAS A MORDISCOS (Q)', stat: 'mordiscos', goal: 5 },
@@ -1814,6 +1817,74 @@
        * dejaba el reto en manos de quién llegaba primero. */
       { id: 'd_caza_pac', modo: 'caza',
         desc: 'EL PAC-MAN CAE 2 VECES EN CACERÍA', stat: 'pacCaidos', goal: 2 }
+    ],
+
+    /* ---------- LA BARAJA CON ROLES (desde el lunes 5 oct 2026) ----------
+     * Braighton (28 sep): más variedad, y que DESATADO no pida solo cosas del
+     * Asesino. Hasta aquí sus retos eran MORDISCOS (la Q del Asesino, y ni
+     * siquiera la que más se usa: en las repeticiones de la nube desde el 24
+     * sep los Asesinos llevan casi todos SHURIKEN, 0 mordiscos de mediana) y
+     * FANTASMAS EN DESATADO.
+     *
+     * Desde la semana de ROLES_DESDE (su lunes, el día del reloj de quien
+     * juega como todo el DAILY) cada semana son:
+     *   SEMANA.LIBRES  de CFG.DAILY.LIBRES (cualquier modo)
+     *   SEMANA.ROL     de DE_ROL: DESATADO con un rol concreto, y NUNCA dos
+     *                  del mismo rol en la semana. Los roles van por parejas
+     *                  de semanas: cada dos, los cuatro salen una vez.
+     *   SEMANA.MODO    de CFG.DAILY.MODOS, sin los de DESATADO (ese hueco ya
+     *                  lo llenan los de rol): laberintos, 1980, solo, cacería.
+     * O sea: DESATADO se queda en dos de siete. Las semanas de antes siguen
+     * con la baraja vieja TAL CUAL (5 libres + 2 de modo): la semana en curso
+     * no se toca.
+     *
+     * Cada reto de rol lleva `rol` y su `modo` es la etiqueta del rol que
+     * pone Game.achTags() ('rol_asesino'...): solo avanza en DESATADO con ese
+     * rol. Ninguno depende del kit elegido ni de ir acompañado.
+     *
+     * LAS METAS, con las partidas de verdad (repeticiones de la nube del 21
+     * al 28 sep, reproducidas, y los contadores por rol de los perfiles).
+     * Pensadas para que un jugador medio con ese rol las cumpla en 1-3
+     * partidas:
+     *   ASESINO 50 fantasmas: ~25 por partida de media los asesinos de
+     *     siempre (PANCHO, MAULIO; IAMBRAIGHTON hace ~75) -> dos partidas.
+     *   ASESINO 25.000 en una: 5 de cada 14 partidas a solas de los que no
+     *     son IAMBRAIGHTON pasan (1 de cada 3), y en party es la del equipo.
+     *   TANQUE 5 golpes aguantados (coraza, escudo o rebote): 2 por partida
+     *     de mediana, 3 el cuartil alto -> dos partidas.
+     *   TANQUE 30 fantasmas: 18-20 por partida de media (MAULIO, FREDDY),
+     *     9-10 los que empiezan -> de una a tres.
+     *   MAGO 10 con sus poderes: 7 de 17 en una partida de SANDROPEPA, 38 de
+     *     77 en una de IAMBRAIGHTON; el Mago mata a distancia cerca de la
+     *     mitad de lo que mata. OJO, es el rol con menos datos (cuatro cuentas).
+     *   MAGO 25 fantasmas: ~17 por partida de media (ALEXIS, SANDROPEPA).
+     *   SOPORTE 25 fantasmas: ~20 de mediana ESTER a solas, 7-18 de media
+     *     los demás (FREDDY 11) -> de una a tres.
+     *   SOPORTE nivel 5: ESTER llega en 16 de 53 partidas a solas; en party,
+     *     casi siempre. */
+    ROLES_DESDE: '2026-10-05',
+    SEMANA: { LIBRES: 4, ROL: 2, MODO: 1 },
+    DE_ROL: [
+      { id: 'd_as_batida', rol: 'asesino', modo: 'rol_asesino',
+        desc: 'CON EL ASESINO: CÓMETE 50 FANTASMAS', stat: 'fantasmas', goal: 50 },
+      { id: 'd_as_marca', rol: 'asesino', modo: 'rol_asesino',
+        desc: 'CON EL ASESINO: 25.000 PUNTOS EN UNA PARTIDA', stat: 'puntosMax', goal: 25000 },
+      /* `salvas`: un golpe que se lleva la coraza, el escudo o el rebote (lo
+       * mismo que cuenta su maestría). Lo apunta Hab con aguanta(). */
+      { id: 'd_tq_golpes', rol: 'tanque', modo: 'rol_tanque',
+        desc: 'CON EL TANQUE: AGUANTA 5 GOLPES', stat: 'salvas', goal: 5 },
+      { id: 'd_tq_batida', rol: 'tanque', modo: 'rol_tanque',
+        desc: 'CON EL TANQUE: CÓMETE 30 FANTASMAS', stat: 'fantasmas', goal: 30 },
+      /* `bajasHab`: un fantasma muerto por un poder (bola, runa, rayos,
+       * meteoro, tótem...), no a bocados. Lo apunta Hab al matar. */
+      { id: 'd_mg_poderes', rol: 'mago', modo: 'rol_mago',
+        desc: 'CON EL MAGO: MATA 10 FANTASMAS CON TUS PODERES', stat: 'bajasHab', goal: 10 },
+      { id: 'd_mg_batida', rol: 'mago', modo: 'rol_mago',
+        desc: 'CON EL MAGO: CÓMETE 25 FANTASMAS', stat: 'fantasmas', goal: 25 },
+      { id: 'd_sp_batida', rol: 'soporte', modo: 'rol_soporte',
+        desc: 'CON EL SOPORTE: CÓMETE 25 FANTASMAS', stat: 'fantasmas', goal: 25 },
+      { id: 'd_sp_nivel', rol: 'soporte', modo: 'rol_soporte',
+        desc: 'CON EL SOPORTE: LLEGA AL NIVEL 5', stat: 'nivelMax', goal: 5 }
     ]
   };
 

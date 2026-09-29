@@ -45,6 +45,11 @@
  * concretos —o peor, de retos que piden compañía— sería imposible
  * para quien juega solo. Cinco libres es el suelo.
  *
+ * DESDE EL 5 OCT 2026, CON ROLES: cuatro libres, dos de DESATADO con un
+ * rol concreto (Asesino, Tanque, Mago o Soporte; nunca dos del mismo en
+ * la semana, y los cuatro salen cada dos semanas) y uno de otro modo. Las
+ * semanas de antes siguen con la baraja de antes (ver retosConRoles).
+ *
  * CÓMO SE MIDE
  * Con el mismo vocabulario de contadores que los logros
  * (PM.Achievements.BASE), y por el mismo embudo: Game.bumpAch(). No
@@ -117,6 +122,23 @@
     return out;
   }
 
+  /* La misma baraja, pero sacando cada posición de los bits ALTOS del
+   * generador. La de arriba usa `s % (i + 1)`, que mira los bits bajos, y en
+   * un congruencial módulo 2^32 esos se repiten enseguida (el último alterna
+   * par-impar a cada paso): con listas cortas salen muy pocas mezclas
+   * distintas. Con cuatro roles se notaba: las mismas parejas cada mes. No se
+   * cambia la de arriba porque de ella salen las semanas de antes. */
+  function barajaAlta(lista, semilla) {
+    var out = lista.slice();
+    var s = (semilla >>> 0) || 1;
+    for (var i = out.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var j = Math.floor((s / 4294967296) * (i + 1));
+      var t = out[i]; out[i] = out[j]; out[j] = t;
+    }
+    return out;
+  }
+
   function isArray(v) {
     return Object.prototype.toString.call(v) === '[object Array]';
   }
@@ -168,6 +190,9 @@
      * semana da siempre lo mismo, aquí y en cualquier otro navegador. */
     retosDe: function (semana) {
       semana = semana || this.semanaId();
+      if (this.conRoles(semana)) return this.retosConRoles(semana);
+      /* LA BARAJA DE ANTES, intacta: las semanas de antes de ROLES_DESDE
+       * (la del 28 sep incluida) sacan exactamente lo mismo que sacaban. */
       var s = hash(semana);
       var libres = baraja(D.LIBRES, s).slice(0, D.LIBRES_POR_SEMANA);
       var deModo = baraja(D.MODOS, hash(semana + '#m'))
@@ -176,6 +201,62 @@
        * libres, también según la semana. Si cayeran fijos en martes y jueves
        * se notaría a la segunda semana. */
       return baraja(libres.concat(deModo), hash(semana + '#d'));
+    },
+
+    /* ---------- LA BARAJA CON ROLES (desde el 5 oct 2026) ----------
+     * CFG.DAILY.SEMANA dice cuántos de cada: libres, de rol (DESATADO con un
+     * rol concreto, DE_ROL) y de otro modo (MODOS sin los de DESATADO). Todo
+     * con barajaAlta (ver arriba por qué); lo nuevo es cómo salen los roles
+     * (ver rolesDe). */
+    conRoles: function (semana) {
+      return !!D.ROLES_DESDE && String(semana) >= String(D.ROLES_DESDE);
+    },
+
+    retosConRoles: function (semana) {
+      var S = D.SEMANA, self = this;
+      var libres = barajaAlta(D.LIBRES, hash(semana)).slice(0, S.LIBRES);
+      var otros = D.MODOS.filter(function (r) { return r.modo !== 'hab'; });
+      var deModo = barajaAlta(otros, hash(semana + '#m')).slice(0, S.MODO);
+      var deRol = this.rolesDe(semana).map(function (rol) {
+        return self.retoDeRol(semana, rol);
+      });
+      return barajaAlta(libres.concat(deRol, deModo), hash(semana + '#d'));
+    },
+
+    /* Los roles de la semana, sin repetir. Van POR PAREJAS DE SEMANAS: cada
+     * pareja baraja los cuatro, la primera semana se lleva dos y la segunda
+     * los otros dos. Así cada rol sale una vez cada dos semanas y ninguno se
+     * queda un mes sin salir, que es lo que haría un sorteo semana a semana.
+     * El orden de los roles es el de DE_ROL (no el de CFG.HAB.ROL_IDS, que
+     * es solo el de los selectores y se puede reordenar). */
+    rolesDe: function (semana) {
+      if (!this.conRoles(semana)) return [];
+      var roles = [];
+      D.DE_ROL.forEach(function (r) { if (roles.indexOf(r.rol) === -1) roles.push(r.rol); });
+      var n = this.semanasDesde(D.ROLES_DESDE, semana);
+      var pareja = Math.floor(n / 2);
+      var orden = barajaAlta(roles, hash(D.ROLES_DESDE + '#roles#' + pareja));
+      var cuantos = Math.min(D.SEMANA.ROL, Math.floor(roles.length / 2));
+      var desde = (n % 2) * cuantos;
+      return orden.slice(desde, desde + cuantos);
+    },
+
+    /* El reto de un rol esa semana. Cada vez que el rol vuelve (una vez por
+     * pareja de semanas) toca el SIGUIENTE de los suyos: así salen todos por
+     * turno y no el mismo dos veces seguidas. */
+    retoDeRol: function (semana, rol) {
+      var suyos = D.DE_ROL.filter(function (r) { return r.rol === rol; });
+      var pareja = Math.floor(this.semanasDesde(D.ROLES_DESDE, semana) / 2);
+      return suyos[(pareja + hash(rol)) % suyos.length];
+    },
+
+    /* Semanas enteras de un lunes a otro (con Date de calendario y
+     * redondeando: un cambio de hora deja una semana en 167 o 169 horas). */
+    semanasDesde: function (desde, semana) {
+      var a = String(desde).split('-'), b = String(semana).split('-');
+      var da = new Date(+a[0], (+a[1]) - 1, +a[2]);
+      var db = new Date(+b[0], (+b[1]) - 1, +b[2]);
+      return Math.max(0, Math.round((db - da) / (7 * 86400000)));
     },
 
     retos: function () { return this.retosDe(this.semanaId()); },

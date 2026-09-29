@@ -227,10 +227,14 @@
    * de la MAESTRÍA del Tanque (js/maestria.js). Solo cuenta el que se gasta:
    * mientras dura la gracia de después, salvaDelChoque sigue diciendo que sí
    * a cada tick y eso no son golpes. Va en la máquina de cada uno porque sus
-   * choques los decide ella, no el anfitrión. */
+   * choques los decide ella, no el anfitrión.
+   * Y va al embudo de los logros como `salvas` (5 oct 2026): lo mide el
+   * reto del DAILY del Tanque. Es solo del día: ningún contador de por vida
+   * lo guarda (Achievements lo deja pasar sin apuntarlo). */
   function aguanta(G, idx) {
     if (mio(G, idx) && G.pacs[idx] && !G.pacs[idx].bot && !G.replaying) {
       G.salvasMias = (G.salvasMias || 0) + 1;
+      if (G.bumpAch) G.bumpAch({ salvas: 1 });
     }
   }
 
@@ -2947,7 +2951,7 @@
       this.alMatar(G, who, g, g.x, g.y);
       if (mio(G, who)) {
         G.runGhosts++;
-        G.bumpAch && G.bumpAch({ fantasmas: 1 });
+        G.bumpAch && G.bumpAch({ fantasmas: 1, bajasHab: 1 });   // bajasHab: DAILY del Mago
       }
       G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como, p: pts,
         x: Math.round(g.x), y: Math.round(g.y), ox: Math.round(ox), oy: Math.round(oy) });
@@ -2970,7 +2974,7 @@
          * corrige hacia arriba desde el anfitrión, así que la bajo yo */
         if (e.f === 'meteoro' || e.f === 'meteoro_fuego') this.devolverMeteoro(G, G.localIdx);
         G.runGhosts++;
-        G.bumpAch && G.bumpAch({ fantasmas: 1 });
+        G.bumpAch && G.bumpAch({ fantasmas: 1, bajasHab: 1 });   // bajasHab: DAILY del Mago
       }
       window.AudioSys && AudioSys.playEatGhost();
     },
@@ -3279,7 +3283,8 @@
       /* a la libreta, como las de contacto: el marcador del final y la nota
        * de la MAESTRÍA del Mago cuentan también lo que se mata a distancia */
       if (G.marca) G.marca(who, 'kills');
-      if (mio(G, who)) { G.runGhosts++; G.bumpAch && G.bumpAch({ fantasmas: 1 }); }
+      /* bajasHab: muerto por un poder, no a bocados (el DAILY del Mago) */
+      if (mio(G, who)) { G.runGhosts++; G.bumpAch && G.bumpAch({ fantasmas: 1, bajasHab: 1 }); }
       G.hostEvt({ t: 'magoKill', g: g.id, w: who, f: como || 'fuego', p: pts,
         x: Math.round(x), y: Math.round(y), ox: p ? Math.round(p.x) : Math.round(x), oy: p ? Math.round(p.y) : Math.round(y) });
       window.AudioSys && AudioSys.playEatGhost();

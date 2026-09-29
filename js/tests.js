@@ -1237,12 +1237,13 @@
 
   /* El suelo del diseño: una semana entera de retos que piden un modo
    * concreto —o peor, compañía— sería imposible para quien juega solo. */
-  test('cada semana trae al menos cinco retos de cualquier modo', function () {
-    ['2026-08-10', '2026-08-17', '2026-09-07', '2027-01-04'].forEach(function (w) {
+  test('cada semana trae sus retos de cualquier modo (cinco hasta octubre, cuatro desde el 5)', function () {
+    ['2026-08-10', '2026-08-17', '2026-09-07', '2026-09-28', '2026-10-05', '2027-01-04'].forEach(function (w) {
       var libres = 0;
       DY.retosDe(w).forEach(function (r) { if (!r.modo) libres++; });
-      ok(libres >= CFG.DAILY.LIBRES_POR_SEMANA,
-         w + ': ' + libres + ' libres de ' + CFG.DAILY.DIAS);
+      var suelo = DY.conRoles(w) ? CFG.DAILY.SEMANA.LIBRES : CFG.DAILY.LIBRES_POR_SEMANA;
+      ok(suelo >= 4, 'el suelo no baja de cuatro');
+      ok(libres >= suelo, w + ': ' + libres + ' libres de ' + CFG.DAILY.DIAS);
     });
   });
 
@@ -1391,7 +1392,7 @@
    * por el mismo embudo (Game.bumpAch), así que jugar a cualquier cosa lo
    * mueve sin que el juego tenga que saber que existe. */
   test('ningún reto del DAILY necesita a otra persona para cumplirse', function () {
-    CFG.DAILY.MODOS.concat(CFG.DAILY.LIBRES).forEach(function (r) {
+    CFG.DAILY.MODOS.concat(CFG.DAILY.LIBRES, CFG.DAILY.DE_ROL).forEach(function (r) {
       ok(r.modo !== 'party' && r.modo !== 'vs', r.id + ' se puede cumplir jugando a solas');
     });
   });
@@ -1751,6 +1752,145 @@
         else { try { localStorage.setItem(CFG.ACH_KEY, raw); } catch (e) {} }
       }
     });
+
+  /* ---------- LA BARAJA CON ROLES (desde el 5 oct 2026) ----------
+   * Braighton (28 sep): que DESATADO no pida solo cosas del Asesino. Desde la
+   * semana del 5 oct: cuatro libres, dos de rol (nunca el mismo rol dos veces
+   * en la semana) y uno de otro modo. La semana en curso no se toca. */
+
+  /* La semana del 28 sep, tal cual salía ANTES de la baraja con roles (sacada
+   * con el código de antes del cambio). Si esto se mueve, a quien ya lleva
+   * retos cumplidos esta semana se le cambiarían a mitad. */
+  var SEMANA_28_SEP = '[{"id":"d_nivel6","desc":"LLEGA AL NIVEL 6","stat":"nivelMax","goal":6},' +
+    '{"id":"d_nivel4","desc":"LLEGA AL NIVEL 4","stat":"nivelMax","goal":4},' +
+    '{"id":"d_hab_marca","modo":"hab","desc":"15.000 PUNTOS EN UNA PARTIDA","stat":"puntosMax","goal":15000},' +
+    '{"id":"d_hab_muros","modo":"hab","desc":"CÓMETE 20 FANTASMAS EN DESATADO","stat":"fantasmas","goal":20},' +
+    '{"id":"d_marca","desc":"12.000 PUNTOS EN UNA PARTIDA","stat":"puntosMax","goal":12000},' +
+    '{"id":"d_cacería","desc":"CÓMETE 40 FANTASMAS","stat":"fantasmas","goal":40},' +
+    '{"id":"d_tres","desc":"JUEGA 3 PARTIDAS","stat":"partidas","goal":3}]';
+
+  test('DAILY: la semana en curso (28 sep) sale igual que antes de la baraja con roles', function () {
+    eq(JSON.stringify(DY.retosDe('2026-09-28')), SEMANA_28_SEP, 'los siete, con su texto y su meta');
+    eq(CFG.DAILY.ROLES_DESDE, '2026-10-05', 'la nueva empieza el lunes 5 de octubre');
+    ok(!DY.conRoles('2026-09-28'), 'la del 28 sep es de las de antes');
+    ok(DY.conRoles('2026-10-05'), 'la del 5 oct ya es de las nuevas');
+    /* y todas las de antes siguen con la receta de antes: cinco libres, dos
+     * de modo y ninguno de rol */
+    for (var w = '2026-08-17'; w <= '2026-09-28'; w = DY.fechaDe(w, 7)) {
+      var r = DY.retosDe(w);
+      eq(r.filter(function (x) { return !x.modo; }).length, CFG.DAILY.LIBRES_POR_SEMANA, w + ': cinco libres');
+      eq(r.filter(function (x) { return !!x.rol; }).length, 0, w + ': ninguno de rol');
+      eq(DY.rolesDe(w).length, 0, w + ': sin roles');
+    }
+  });
+
+  test('DAILY: desde el 5 oct, cuatro libres, dos de rol distintos y uno de otro modo', function () {
+    var S = CFG.DAILY.SEMANA;
+    eq(S.LIBRES + S.ROL + S.MODO, CFG.DAILY.DIAS, 'suman los siete de la semana');
+    for (var n = 0, w = '2026-10-05'; n < 104; n++, w = DY.fechaDe(w, 7)) {
+      var r = DY.retosDe(w), vistos = {}, roles = {};
+      eq(r.length, CFG.DAILY.DIAS, w + ': son siete');
+      r.forEach(function (x) {
+        ok(!vistos[x.id], w + ': sin repetir ' + x.id);
+        vistos[x.id] = 1;
+      });
+      var libres = r.filter(function (x) { return !x.modo; });
+      var deRol = r.filter(function (x) { return !!x.rol; });
+      var otros = r.filter(function (x) { return x.modo && !x.rol; });
+      eq(libres.length, S.LIBRES, w + ': libres');
+      eq(deRol.length, S.ROL, w + ': de rol');
+      eq(otros.length, S.MODO, w + ': de otro modo');
+      deRol.forEach(function (x) {
+        ok(!roles[x.rol], w + ': el rol ' + x.rol + ' no se repite en la semana');
+        roles[x.rol] = 1;
+      });
+      otros.forEach(function (x) {
+        ok(x.modo !== 'hab', w + ': el de modo no es otro de DESATADO (' + x.id + ')');
+      });
+      eq(Object.keys(roles).sort().join(), DY.rolesDe(w).slice().sort().join(), w + ': los de rolesDe');
+    }
+  });
+
+  test('DAILY: los cuatro roles salen cada dos semanas, y cada reto de rol acaba saliendo', function () {
+    var salidas = {};
+    CFG.DAILY.DE_ROL.forEach(function (x) { salidas[x.id] = 0; });
+    for (var n = 0, w = '2026-10-05'; n < 52; n += 2, w = DY.fechaDe(w, 14)) {
+      var dos = DY.rolesDe(w).concat(DY.rolesDe(DY.fechaDe(w, 7)));
+      eq(dos.slice().sort().join(), CFG.HAB.ROL_IDS.slice().sort().join(),
+         w + ' y la siguiente: los cuatro roles, una vez cada uno');
+      [w, DY.fechaDe(w, 7)].forEach(function (s) {
+        DY.retosDe(s).forEach(function (x) { if (x.rol) salidas[x.id]++; });
+      });
+    }
+    for (var id in salidas) ok(salidas[id] >= 10, id + ' sale en un año (' + salidas[id] + ' veces)');
+    /* y que las parejas cambien: si siempre fueran las mismas dos, un
+     * jugador de Tanque vería al Mago solo en semanas que no son la suya */
+    var parejas = {};
+    for (var k = 0, s = '2026-10-05'; k < 52; k++, s = DY.fechaDe(s, 7)) {
+      parejas[DY.rolesDe(s).slice().sort().join('+')] = 1;
+    }
+    eq(Object.keys(parejas).length, 6, 'en un año salen las seis parejas posibles');
+  });
+
+  test('DAILY: cada reto de rol dice su rol y solo avanza en DESATADO con ese rol', function () {
+    var I = CFG.HAB.ROL_INFO;
+    eq(CFG.DAILY.DE_ROL.length >= 8, true, 'al menos dos por rol');
+    CFG.HAB.ROL_IDS.forEach(function (rol) {
+      ok(CFG.DAILY.DE_ROL.filter(function (x) { return x.rol === rol; }).length >= 2, rol + ': dos o más');
+    });
+    CFG.DAILY.DE_ROL.forEach(function (reto) {
+      eq(reto.modo, 'rol_' + reto.rol, reto.id + ': su etiqueta es la del rol');
+      eq(reto.desc.indexOf('CON EL ' + I[reto.rol].name + ': '), 0, reto.id + ': el texto empieza por el rol');
+      ok(reto.goal > 0, reto.id + ': con meta');
+      var otro = CFG.HAB.ROL_IDS.filter(function (r) { return r !== reto.rol; })[0];
+      conDosNiveles(reto, function (D, Tn, A, i) {
+        var o = {};
+        o[reto.stat] = reto.goal;
+        D.apunta(['solo', 'clasico'], o);
+        eq(D.progreso(i).valor, 0, reto.id + ': fuera de DESATADO no cuenta');
+        D.apunta(['solo', 'hab', 'rol_' + otro], o);
+        eq(D.progreso(i).valor, 0, reto.id + ': con otro rol tampoco');
+        /* a medias (si es de los que se suman) y luego entero */
+        if (reto.goal > 1 && window.PM.Achievements.BASE[reto.stat] !== 'mayor') {
+          var med = {};
+          med[reto.stat] = reto.goal - 1;
+          D.apunta(['solo', 'hab', 'rol_' + reto.rol], med);
+          ok(!D.progreso(i).hecho, reto.id + ': a falta de uno, todavía no');
+          med[reto.stat] = 1;
+          D.apunta(['party', 'hab', 'rol_' + reto.rol], med);
+        } else {
+          D.apunta(['solo', 'hab', 'rol_' + reto.rol], o);
+        }
+        ok(D.progreso(i).hecho, reto.id + ': con su rol, cumplido');
+      });
+    });
+  });
+
+  test('DAILY: un golpe aguantado del Tanque y una baja por poder llegan jugando', function () {
+    var H = window.PM.Hab, tq = null, mg = null;
+    CFG.DAILY.DE_ROL.forEach(function (x) {
+      if (x.stat === 'salvas') tq = x;
+      if (x.stat === 'bajasHab') mg = x;
+    });
+    ok(tq && mg, 'están los dos retos');
+    conDosNiveles(tq, function (D, Tn, A, i) {
+      partidaRol(['tanque'], 6, 5, CFG.DIR.RIGHT);
+      G.pacs[0].safeTicks = 0;
+      var g = fantasmaEn(0, 6, 5);
+      ok(H.corazaDe(G, 0), 'el Tanque lleva su coraza');
+      ok(H.salvaDelChoque(G, 0, g), 'aguanta el golpe');
+      eq(D.progreso(i).valor, 1, 'y el reto del Tanque lo apunta');
+      G.toMenu();
+    });
+    conDosNiveles(mg, function (D, Tn, A, i) {
+      partidaRol(['mago'], 6, 5, CFG.DIR.RIGHT);
+      H.matarCatalogo(G, fantasmaEn(1, 12, 5), 0, 200, 'fuego', 1, true);
+      eq(D.progreso(i).valor, 1, 'una baja con un poder cuenta para el del Mago');
+      G.eatGhost(fantasmaEn(2, 14, 5), 0);
+      eq(D.progreso(i).valor, 1, 'y una a bocados no');
+      G.toMenu();
+    });
+  });
 
   // ---------------------------------------------------------------
   // Temporadas del top mundial

@@ -2713,12 +2713,61 @@ you meet **while playing whatever you were going to play anyway**.
   and takes **5 from `CFG.DAILY.LIBRES` and 2 from `CFG.DAILY.MODOS`**, then
   shuffles those seven into day order with a third hash so the mode-specific
   ones do not land on the same weekdays every week. Deterministic, so no
-  server and no draw is needed: same week, same seven, everywhere.
-- **Five free ones are the floor.** The mode-specific challenges are what make
+  server and no draw is needed: same week, same seven, everywhere. That is
+  the recipe for every week **before `CFG.DAILY.ROLES_DESDE`** (2026-10-05),
+  kept byte for byte: the week of 28 Sep is pinned in `js/tests.js`.
+- **From the week of 5 Oct 2026: the ROLE deck** (`Daily.retosConRoles`).
+  Braighton asked for variety and for DESATADO to stop asking only for
+  Asesino things (its challenges were MORDISCOS — the Asesino's Q, and not
+  even the one people pick: in the cloud replays since 24 Sep the Asesinos
+  run SHURIKEN, median 0 bites — and "ghosts in DESATADO"). Each week is now
+  `CFG.DAILY.SEMANA`: **4 free** (`LIBRES`), **2 role challenges**
+  (`DE_ROL`) and **1 from another mode** (`MODOS` minus the `hab` ones, so
+  DESATADO holds exactly two of seven). Rules:
+  - A role challenge has `rol` and `modo: 'rol_<rol>'`, the tag
+    `Game.achTags()` adds in DESATADO for the local player's role, so it only
+    advances in DESATADO **with that role**. Its text starts with the role
+    (`CON EL TANQUE: …`); the card's chip says `EN DESATADO` in the role's
+    colour (`UI.dailyModoName` / `UI.dailyModoColor`).
+  - **Never two of the same role in a week, and all four every two weeks**
+    (`Daily.rolesDe`): weeks go in pairs; each pair shuffles the four roles,
+    the first week takes two and the second the other two. Each time a role
+    comes back it takes its **next** challenge (`Daily.retoDeRol`). Over a
+    year all six role pairs show up.
+  - The new deck shuffles with `barajaAlta` (same LCG, index from the high
+    bits). The old `baraja` takes `s % (i + 1)`, whose low bits cycle almost
+    at once: with four roles it produced the same two pairings month after
+    month. The old one stays for the old weeks.
+  - The eight challenges and their goals, calibrated with real play (cloud
+    replays of 21-28 Sep re-simulated in Node, plus the per-role counters in
+    `perfiles.logros`) so that an average player of that role clears them in
+    1-3 runs; the evidence is next to them in `js/config.js`:
+
+    | Role | Challenge | stat | Goal |
+    |---|---|---|---|
+    | Asesino | eat ghosts | `fantasmas` | 50 |
+    | Asesino | points in one run | `puntosMax` | 25 000 |
+    | Tanque | hits absorbed (coraza, escudo, rebote) | `salvas` | 5 |
+    | Tanque | eat ghosts | `fantasmas` | 30 |
+    | Mago | ghosts killed with powers | `bajasHab` | 10 |
+    | Mago | eat ghosts | `fantasmas` | 25 |
+    | Soporte | eat ghosts | `fantasmas` | 25 |
+    | Soporte | reach level | `nivelMax` | 5 |
+  - Two **day-only event stats** feed them through `Game.bumpAch`: `salvas`
+    (sent by `aguanta()` in `js/habilidades.js`, the same hits the Tanque's
+    mastery counts) and `bajasHab` (sent with `fantasmas` by
+    `Hab.matarMago`, `Hab.matarCatalogo` and the guest's `Hab.magoKill` —
+    a kill by a power, not by contact). They are **not** lifetime counters:
+    they are not in `Achievements.BASE`, `recordFor` ignores them, nothing
+    goes to the cloud and there is nothing to seed or cap
+    (`supabase/perfiles-blindaje.sql` untouched). `Daily` treats an unknown
+    stat as `suma`.
+- **The floor of free ones.** The mode-specific challenges are what make
   the DAILY show you the game (you look into DESATADO because it is today's),
   but a whole week of them — or worse, of challenges needing company — would
-  be impossible for somebody who plays alone. `js/tests.js` enforces the floor
-  across several weeks.
+  be impossible for somebody who plays alone. Five free ones until the role
+  deck, four since (none of the role or mode ones needs company either).
+  `js/tests.js` enforces the floor across several weeks.
 - **Measured with the achievements' own vocabulary, through the same funnel.**
   A challenge names a `stat` from `PM.Achievements.BASE` and a `goal`, and
   `Game.bumpAch()` calls `Daily.apunta(tags, o)` before claiming achievements.
@@ -2728,8 +2777,9 @@ you meet **while playing whatever you were going to play anyway**.
   stats keep the best **single run** ("12 000 points"), and `menor` (times)
   keeps the lowest.
 - `modo` on a challenge is one of the tags `Game.achTags()` produces — a mode
-  (`clasico`, `lab`, `hab`, `vs`) or a format (`solo`, `party`) — and the
-  challenge only advances when that tag is present.
+  (`clasico`, `lab`, `hab`, `vs`, `caza`), a format (`solo`, `party`) or, in
+  DESATADO, the local player's role (`rol_asesino`…) — and the challenge only
+  advances when that tag is present.
 - **Two tiers a day: BÁSICO and DURO** (29 Sep, proposal 1 approved by
   Braighton). With a single challenge only 3 of 8 active players kept a
   streak: the single-run ones ("20 000 points in one run") broke it for

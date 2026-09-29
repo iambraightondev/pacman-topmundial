@@ -2101,8 +2101,20 @@
     dailyModoName: function (modo) {
       if (modo === 'solo') return 'SOLO';
       if (modo === 'party') return 'PARTY';
+      /* los de ROL (5 oct): el rol ya va en el texto del reto ("CON EL
+       * TANQUE: ..."); aquí basta con decir dónde se juega */
+      if (/^rol_/.test(String(modo))) return CFG.ACH_MODOS.hab.name;
       var m = CFG.ACH_MODOS[modo];
       return m ? m.name : String(modo).toUpperCase();
+    },
+
+    /* Color de la etiqueta del modo de un reto: el del rol para los de rol */
+    dailyModoColor: function (modo) {
+      var rol = /^rol_(.+)$/.exec(String(modo || ''));
+      var info = rol && CFG.HAB && CFG.HAB.ROL_INFO && CFG.HAB.ROL_INFO[rol[1]];
+      if (info) return info.color;
+      var m = CFG.ACH_MODOS[modo];
+      return m ? m.color : '#00ff00';
     },
 
     /* ------------------------------------------------------
@@ -2263,8 +2275,7 @@
           extra.appendChild(barra);
         } else if (p.reto.modo) {
           var chip = mk('span', 'daily-chip', 'EN ' + this.dailyModoName(p.reto.modo));
-          var m = CFG.ACH_MODOS[p.reto.modo];
-          chip.style.color = (e === 'perdido') ? '#555' : (m ? m.color : '#00ff00');
+          chip.style.color = (e === 'perdido') ? '#555' : this.dailyModoColor(p.reto.modo);
           extra.appendChild(chip);
         }
         card.appendChild(extra);
