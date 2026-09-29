@@ -9881,7 +9881,7 @@
       /* las skins de cofre van por el mismo camino */
       var Sk = window.PM.Skins;
       var cofreSkins = CFG.SKINS.filter(function (sk) { return sk.grupo === 'cofre'; });
-      eq(cofreSkins.length, 10, 'las diez skins de cofre');
+      eq(cofreSkins.length, 13, 'las trece skins de cofre');
       ok(cofreSkins.some(function (sk) { return sk.legendaria; }), 'una es la del Legendario');
       var sk1 = cofreSkins[0];
       ok(!Sk.estado(sk1.id).abierta, sk1.id + ': cerrada hasta que salga de un cofre');
@@ -11225,6 +11225,8 @@
       'acc_vaquero', 'acc_chullo', 'acc_mohicano', 'acc_orejas', 'acc_buceo',
       'acc_carnero', 'acc_zeus', 'acc_venda', 'acc_mascara',
       'acc_luchador', 'acc_patito', 'acc_mochila', 'acc_visor'];
+    /* las zonas que existen: 'cuerpo' va tal cual, alrededor de todo */
+    var ZONAS = ['cara', 'cabeza', 'cuello', 'cuerpo'];
     CFG.SKINS.forEach(function (sk) {
       if (!sk.rara) return;
       ok(S.CABEZAS.hasOwnProperty(sk.id), sk.id + ': tiene su cabeza en CABEZAS');
@@ -11237,6 +11239,7 @@
     var enCabeza = {};
     CFG.ACCESORIO_IDS.forEach(function (id) {
       var zona = S.ZONA_ACC[id];
+      ok(!zona || ZONAS.indexOf(zona) !== -1, id + ': su zona (' + zona + ') es una de las que hay');
       ok(zona || CARA.indexOf(id) !== -1, id + ': tiene su zona en ZONA_ACC o está en la lista de la cara');
       ok(!(zona && CARA.indexOf(id) !== -1), id + ': o zona propia o la cara, no las dos');
       if (zona === 'cabeza') enCabeza[id] = 1;
@@ -11278,6 +11281,85 @@
         S.drawPacman(ctx, 12, 12, 3, 2, '#ffff00', id, { t: 3, muerde: q < 0.4, mordio: true, qSeg: q });
       }
       for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 12, 12, k / 10, '#ffff00', id, k % 4);
+    });
+  });
+
+  /* TANDA YŌKAI (29 sep): las 28 piezas del escaparate, en el juego. Cada
+   * una sabe de dónde sale, está dibujada, hace su Q y su muerte, y lo que
+   * va pintado sobre el círculo de Pac-Man no se sale a la cara de una
+   * extravagante. */
+  test('la tanda yōkai está entera, bien clasificada y se dibuja', function () {
+    var S = window.PM.Sprites, Sk = window.PM.Skins;
+    var TIENDA = ['tengu', 'kappa', 'tanuki', 'daruma', 'kasa', 'chochin', 'namazu'];
+    var COFRE = ['kitsune', 'oni', 'maneki'];
+    var info = {};
+    CFG.SKINS.forEach(function (sk) { info[sk.id] = sk; });
+    TIENDA.forEach(function (id) {
+      ok(info[id] && info[id].grupo === 'tienda' && info[id].rara && info[id].precio === 1500,
+         id + ': extravagante de tienda a 1.500');
+    });
+    COFRE.forEach(function (id) {
+      ok(info[id] && info[id].grupo === 'cofre' && info[id].rara && !info[id].legendaria,
+         id + ': extravagante de cofre (no la del Legendario)');
+      eq(Sk.estado(id).chip.indexOf('COFRE'), 0, id + ': su etiqueta dice COFRE');
+    });
+    function de(lista, id) { var x = null; lista.forEach(function (e) { if (e.id === id) x = e; }); return x; }
+    [['acc_kitsunemen', 450], ['acc_kasa', 450], ['acc_chonmage', 450], ['acc_ramen', 450], ['acc_katana', 450],
+     ['acc_kabuto', 0], ['acc_raijin', 0]].forEach(function (a) {
+      var it = de(CFG.ACCESORIOS, a[0]);
+      ok(!!it && it.precio === a[1] && !!it.cofre === (a[1] === 0), a[0] + ': en el catálogo, ' + (a[1] ? 'a ' + a[1] : 'de cofre'));
+      ok(S.ACCESORIOS.hasOwnProperty(a[0]), a[0] + ': tiene dibujo');
+    });
+    [['efx_torii', 250], ['efx_olas', 250], ['efx_origami', 250], ['efx_farolillos', 250],
+     ['efx_onibi', 0], ['efx_koi', 0]].forEach(function (a) {
+      var it = de(CFG.EFECTOS, a[0]);
+      ok(!!it && it.precio === a[1] && !!it.cofre === (a[1] === 0), a[0] + ': en el catálogo, ' + (a[1] ? 'a ' + a[1] : 'de cofre'));
+      ok(S.EFECTOS.hasOwnProperty(a[0]), a[0] + ': tiene dibujo');
+    });
+    ['kawaii', 'banzai', 'itadakimasu', 'zen', 'ninja'].forEach(function (id) {
+      var it = de(CFG.EMOTES_TIENDA, id);
+      ok(!!it && it.precio === 150, id + ': emote de tienda a 150');
+      ok(S.CARAS_TIENDA[id], id + ': tiene cara');
+      ok(CFG.EMOTE_IDS.indexOf(id) !== -1, id + ': se puede poner en una tecla');
+    });
+
+    var cv = document.createElement('canvas');
+    cv.width = 96; cv.height = 96;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    TIENDA.concat(COFRE).forEach(function (id) {
+      ok(S.ARTE.hasOwnProperty(id), id + ': tiene dibujo');
+      ok(S.admiteAccesorio(id), id + ': admite accesorios');
+      for (var q = 0; q <= 1.6; q += 0.2) {
+        S.drawPacman(ctx, 16, 16, 3, 2, '#ff0000', id, { t: 3, muerde: q < 0.4, mordio: true, qSeg: q, accesorio: 'acc_kabuto' });
+      }
+      for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 16, 16, k / 10, '#ff0000', id, k % 4);
+    });
+    ['efx_torii', 'efx_olas', 'efx_origami', 'efx_farolillos', 'efx_onibi', 'efx_koi'].forEach(function (id) {
+      S.drawPacman(ctx, 16, 16, 3, 1, '#ffff00', 'clasico', { t: 2, s: 90, efecto: id });
+    });
+    ['kawaii', 'banzai', 'itadakimasu', 'zen', 'ninja'].forEach(function (id) {
+      for (var tk = 0; tk < 200; tk += 25) S.drawEmote(ctx, 16, 12, id, '#ffff00', tk);
+    });
+
+    /* los TAMBORES rodean el cuerpo entero, a su tamaño; el resto va a la cabeza */
+    var an = S.anclaAccesorio('oni', 'acc_raijin');
+    ok(an && an.x === 0 && an.y === 0 && an.k === 1, 'los tambores de raijin van tal cual alrededor del cuerpo');
+    eq(S.anclaAccesorio('oni', 'acc_kasa').k, S.CABEZAS.oni.k, 'la kasa, a la escala de su cabeza');
+
+    /* el pelo del CHONMAGE y la correa de la KATANA van sobre el círculo de
+     * Pac-Man: en una extravagante no se pintan (le tapaban la cara). El
+     * dibujo se entera por o.rara */
+    ['acc_chonmage', 'acc_katana'].forEach(function (acc) {
+      var orig = S.ACCESORIOS[acc], visto = {};
+      try {
+        ['clasico', 'kitsune', 'oni'].forEach(function (sk) {
+          S.ACCESORIOS[acc] = function (c, o) { visto[sk] = !!o.rara; orig(c, o); };
+          S.drawPacman(ctx, 16, 16, 3, 0, '#ffff00', sk, { t: 0.3, accesorio: acc });
+        });
+      } finally { S.ACCESORIOS[acc] = orig; }
+      ok(visto.clasico === false, acc + ': en CLÁSICO lleva lo pintado sobre el cuerpo');
+      ok(visto.kitsune === true && visto.oni === true, acc + ': en una extravagante, no');
     });
   });
 
