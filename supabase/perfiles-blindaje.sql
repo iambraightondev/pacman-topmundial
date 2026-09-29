@@ -161,6 +161,14 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
   ('acc_kabuto', 'cofre', null, null), ('acc_raijin', 'cofre', null, null),
   ('kitsune', 'cofre', null, null), ('oni', 'cofre', null, null),
   ('maneki', 'cofre', null, null),
+  -- objetos y andina (29 sep)
+  ('efx_glitch', 'cofre', null, null), ('efx_cinta', 'cofre', null, null),
+  ('efx_polvoro', 'cofre', null, null), ('efx_lineas', 'cofre', null, null),
+  ('acc_casco', 'cofre', null, null), ('acc_cadena', 'cofre', null, null),
+  ('acc_oro', 'cofre', null, null), ('acc_plumas', 'cofre', null, null),
+  ('discos', 'cofre', null, null), ('tele', 'cofre', null, null),
+  ('cabina', 'cofre', null, null), ('tumi', 'cofre', null, null),
+  ('inti', 'cofre', null, null), ('nazca', 'cofre', null, null),
   -- del PASE (CFG.PASE.CAMINO): galón y carril
   ('grito', 'pase', 10, 'gratis'), ('acc_mochila', 'pase', 10, 'pago'),
   ('efx_ecto', 'pase', 20, 'pago'), ('acc_visor', 'pase', 30, 'gratis'),
