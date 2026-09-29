@@ -7,3 +7,6 @@ playwright-report/
 
 # secretos locales (nunca al repo)
 .env.local
+
+# lo que genera publicar.js (solo en Vercel)
+publicado/
