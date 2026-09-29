@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Nueva apertura de cofres: EL SALTO
+
+Elegida por Braighton. El cofre da tres saltos, la tapa sale disparada girando
+y el premio sube por un haz de luz dando vueltas como una carta. El
+LEGENDARIO no salta: flota. Mientras el servidor contesta, el cofre sigue
+saltando.
+
 ## 2026-09-30 · Lo jugado ya no se cuenta dos veces
 
 Con dos pestañas abiertas, o cerrando la pestaña justo mientras se subía, lo
