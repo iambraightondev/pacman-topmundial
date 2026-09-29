@@ -40,6 +40,14 @@
    * invitado (o a un mirón) que el anfitrión sigue ahí (processNetQueue) */
   var DEL_ANFITRION = { snap: 1, gir: 1, evt: 1, mando: 1, svista: 1 };
 
+  /* VOLVER A LA PARTIDA (28 sep). Lo que manda un jugador en plena partida:
+   * si llega de un asiento que ya se dio por ido, se le contesta 'fuera' (el
+   * latido de la sala, 'phello', no: ese sigue en el menú y ya lo sabe). */
+  var DE_PARTIDA = { pos: 1, gevt: 1, vuelvo: 1, snap: 1, gir: 1, evt: 1, mando: 1 };
+  /* ...y los dos que NO dicen "aquí sigo": 'ausente' es justo lo contrario,
+   * y 'vuelvo' (quien recarga la página) se atiende aparte, con su foto. */
+  var SIN_VUELTA = { ausente: 1, vuelvo: 1 };
+
   /* El 'bye' de un mirón lleva i = -1 (no tiene asiento). Sin mirarlo,
    * idxOfSender lo tomaba por el asiento por defecto y echaba a un jugador. */
   function esAdiosDeMiron(d) {
@@ -727,6 +735,11 @@
       this.netQueue = [];
       this.netWatch = 0;
       this.posWatch = [];       // silencio de cada jugador (anfitrión, 3 y 4)
+      this.ausentes = {};       // a quién se espera (VOLVER A LA PARTIDA): asiento -> ticks
+      this.sinRed = 0;          // cuánto lleva ESTE aparato sin red
+      this.callaEnLinea = 0;    // cuánto lleva callado el anfitrión, oído con red
+      // mirando una partida local (escaparate): no hay plazo que esperar
+      this.vistaLocal = !!opts.vistaLocal && this.netRole === 'spec';
       /* qué asiento simula la partida (puede cambiar) y quién la ha dejado
        * para siempre. Una REVANCHA tras un traspaso del mando los trae en sus
        * opciones (ver recibirMando): sin ellos volvía a mandar el asiento 0,
@@ -1361,6 +1374,8 @@
       for (i = 0; i < this.pacs.length; i++) {
         p = this.pacs[i];
         if (p.out || p.dying) continue;
+        /* se le está esperando (VOLVER A LA PARTIDA): quieto y a salvo */
+        if (this.esperando(i)) { if (p.safeTicks < 2) p.safeTicks = 2; continue; }
         /* ARROLLAR (Tanque): durante la carrera no se anda, se carga */
         if (this.hab && window.PM.Hab && window.PM.Hab.arrollando(i)) {
           window.PM.Hab.moverArrolla(this, i);
@@ -2946,6 +2961,9 @@
      * contaba al llegar al GAME OVER, así que quien se salía antes no
      * sumaba nada de lo jugado. */
     closeRun: function () {
+      /* la party que se corta (js/guardado.js, VOLVER A LA PARTIDA): se ha
+       * cerrado aquí, así que ya no hay partida a la que volver */
+      if (window.PM.Guardado && window.PM.Guardado.redCerrada) window.PM.Guardado.redCerrada();
       /* GUARDAR Y SALIR (js/guardado.js): la partida se deja a medias para
        * seguirla luego, así que NO se cierra ni se cobra. Es la única salida
        * que no pasa por caja, y por eso la bandera se apaga aquí mismo: lo
@@ -3610,7 +3628,9 @@
     },
 
     sendShowView: function (sid) {
-      this.showSend('svista', this.specView(sid));
+      var v = this.specView(sid);
+      v.local = 1;              // sin sala detrás: al que mira no se le hace esperar el plazo
+      this.showSend('svista', v);
       this.showSend('snap', this.buildSnapshot(true));
     },
 
@@ -3629,25 +3649,52 @@
       if (!q.length) return;
       this.netQueue = [];
       for (var i = 0; i < q.length; i++) {
+        /* VOLVER A LA PARTIDA (28 sep): lo de un asiento que ya se dio por
+         * ido no se atiende —puede ser el anfitrión de antes, que recupera la
+         * red cuando la partida ya sigue con otro—, y si es de la partida se
+         * le dice que está fuera. */
+        var asiento = this.asientoDe(q[i][0], q[i][1], q[i][2]);
+        if (asiento >= 0 && asiento !== this.localIdx && this.idos && this.idos[asiento]) {
+          if (this.netRole === 'host' && DE_PARTIDA[q[i][0]]) {
+            this.netSend('fuera', { i: asiento, to: q[i][2] });
+          }
+          continue;
+        }
         /* El vigilante solo se calma con quien importa (28 sep). Antes valía
          * cualquier mensaje: con tres o cuatro, el 'pos' de otro invitado (y
          * en dúo el latido 'hello' de un mirón) tapaba la caída del
          * anfitrión y los demás se quedaban congelados sin aviso. */
         if (this.netRole === 'host' ? q[i][0] !== 'hello' : DEL_ANFITRION[q[i][0]]) {
           this.netWatch = 0;
+          this.callaEnLinea = 0;
         }
-        if (this.netRole === 'host') {
-          var quien = this.idxOfSender(q[i][1], q[i][2]);
-          if (quien >= 0 && quien !== this.hostIdx) this.posWatch[quien] = 0;
+        if (this.netRole === 'host' && asiento >= 0 && asiento !== this.hostIdx) {
+          this.posWatch[asiento] = 0;
+          // se le estaba esperando y vuelve a dar señales: sigue donde estaba
+          if (this.ausentes && this.ausentes[asiento] != null && !SIN_VUELTA[q[i][0]]) {
+            this.vuelveAsiento(asiento);
+          }
         }
         if (this.netRole === 'host') this.hostMsg(q[i][0], q[i][1], q[i][2]);
         else this.guestMsg(q[i][0], q[i][1], q[i][2]);   // invitado o espectador
       }
     },
 
+    /* ¿Se congela la partida aquí? Al invitado (y al mirón), cuando calla el
+     * anfitrión. Al anfitrión ya no le congela el silencio de los demás (28
+     * sep): a esos se les espera con el Pac-Man quieto (ver ausentes) y la
+     * partida sigue; solo se para si el que se ha quedado sin red es él. */
     netStalled: function () {
-      return !!this.netRole && this.inGame() && this.state !== 'GAME_OVER' &&
-        this.netWatch > CFG.NET.WAIT_TICKS;
+      if (!this.netRole || !this.inGame() || this.state === 'GAME_OVER') return false;
+      if (this.netRole === 'host') return (this.sinRed || 0) > CFG.NET.WAIT_TICKS;
+      return this.netWatch > CFG.NET.WAIT_TICKS;
+    },
+
+    /* ¿Tiene red este aparato? Lo sabe el transporte (net.js): mientras
+     * reconecta, no. Sin transporte (las pruebas) se da por hecho que sí. */
+    conRed: function () {
+      var N = window.PM.Net;
+      return !N || !N.enLinea || N.enLinea();
     },
 
     /* ¿Queda alguien de quien esperar noticias? Tras un traspaso del mando
@@ -3667,8 +3714,18 @@
 
     netMaintain: function () {
       if (!this.inGame()) return;
-      if (this.soloEnLaSala()) { this.netWatch = 0; return; }
+      var conRed = this.conRed();
+      if (this.soloEnLaSala()) {
+        this.netWatch = 0;
+        this.sinRed = 0;
+        return;
+      }
       this.netWatch++;
+      this.sinRed = conRed ? 0 : (this.sinRed || 0) + 1;
+      /* el silencio que cuenta para heredar el mando es el que se ha oído CON
+       * red: quien recupera la suya tras un rato no puede quedarse el mando
+       * antes de que le llegue la primera foto del anfitrión */
+      if (conRed) this.callaEnLinea = (this.callaEnLinea || 0) + 1;
       /* Silencio: puede que el sordo sea nuestro socket. Se le pide que lo
        * compruebe al empezar a esperar y cada 4 s mientras dure; si está
        * medio muerto, net.js reconecta antes de que esto se rinda. */
@@ -3676,25 +3733,54 @@
           (this.netWatch > CFG.NET.WAIT_TICKS && this.netWatch % 240 === 0)) {
         if (window.PM.Net && window.PM.Net.sondear) window.PM.Net.sondear();
       }
-      // también durante GAME OVER: ahí se espera la respuesta a la revancha
-      if (this.netWatch > CFG.NET.DROP_TICKS) {
-        this.netFail('CONEXIÓN PERDIDA');
+      /* VOLVER A LA PARTIDA (28 sep). Antes, 10 s de silencio eran CONEXIÓN
+       * PERDIDA para todos. Ahora al que se cae se le espera PLAZO_TICKS: el
+       * anfitrión solo se rinde si el que se ha quedado sin red es él, y el
+       * invitado, si calla el anfitrión, espera y después hereda el mando
+       * (plazoDelAnfitrion). En el GAME OVER no hay nada que salvar: ahí
+       * sigue valiendo el corte de siempre. */
+      if (this.state === 'GAME_OVER') {
+        if (this.netWatch > CFG.NET.DROP_TICKS && this.netRole !== 'host') {
+          this.netFail('CONEXIÓN PERDIDA');
+          return;
+        }
+      } else if (this.netRole === 'host') {
+        /* Sin red más de lo que esperan los demás (y un poco más, lo que
+         * tarda la cola en heredar): la partida habrá seguido con otro. Lo
+         * de aquí cuenta como una salida, pero no va al top como marca del
+         * equipo, que la acabará quien siga. */
+        if (this.sinRed > CFG.NET.PLAZO_TICKS + CFG.NET.SUCESION_TICKS * Math.max(1, this.playerCount)) {
+          if (this.sucesor() >= 0) this.rankingSent = true;
+          this.netFail('CONEXIÓN PERDIDA');
+          return;
+        }
+      } else if (this.vistaLocal) {
+        /* mirando una partida LOCAL (escaparate): allí no hay a quién
+         * esperar ni quien herede, así que el corte de siempre */
+        if (this.netWatch > CFG.NET.DROP_TICKS) { this.netFail('CONEXIÓN PERDIDA'); return; }
+      } else if (this.plazoDelAnfitrion(conRed)) {
         return;
       }
       if (this.netRole === 'host') {
-        /* Con más de dos, el vigilante general no basta: mientras uno hable
-         * los demás podrían estar callados y sus Pac-Man quedarse clavados.
-         * Cada jugador tiene el suyo y al que calla se le deja de espectador. */
-        /* El silencio de cada uno se cuenta siempre (también en el dúo: de
-         * ahí sale a quién NO dejarle el mando, ver sucesor), pero solo con
-         * más de dos se deja fuera al callado. Tras un traspaso quien manda
-         * puede ser cualquier asiento, no el 0: al suyo no le llega ningún
-         * 'pos' y se echaba solo a los 10 s. */
+        /* El silencio de cada jugador se cuenta siempre (de ahí sale también
+         * a quién NO dejarle el mando, ver sucesor). Al que calla se le
+         * ESPERA (28 sep): Pac-Man quieto y protegido, y los demás ven a
+         * quién se espera y cuánto queda. Pasado el plazo, se le da por ido.
+         * Sin red aquí no se cuenta nada: los callados seríamos nosotros.
+         * Tras un traspaso quien manda puede ser cualquier asiento, no el 0:
+         * al suyo no le llega ningún 'pos' y no hay que esperarle. */
         for (var w = 0; w < this.pacs.length; w++) {
-          if (w === this.hostIdx) continue;
-          if (this.pacs[w].out || this.pacs[w].bot) continue;   // la máquina no habla
+          if (w === this.hostIdx || this.pacs[w].bot) continue;   // la máquina no habla
+          if (this.idos && this.idos[w]) continue;
+          // sin vidas no juega (salvo quien lleva un fantasma de PAC-MAN VS.)
+          if (this.pacs[w].out && this.vsGhostOf(w) < 0) continue;
+          if (!conRed) continue;
           this.posWatch[w] = (this.posWatch[w] || 0) + 1;
-          if (this.playerCount > 2 && this.posWatch[w] > CFG.NET.DROP_TICKS) this.dropPlayer(w);
+          if (this.ausentes[w] == null) {
+            if (this.posWatch[w] > CFG.NET.WAIT_TICKS) this.marcarAusente(w);
+          } else if (++this.ausentes[w] > CFG.NET.PLAZO_TICKS) {
+            this.soltarAusente(w);
+          }
         }
         this.hostAvisaGiro();
         this.snapTimer++;
@@ -3721,6 +3807,275 @@
       this.flash = null;
       this.netNotice = { text: msg, ticks: CFG.NET.NOTICE_TICKS };
       this.syncUI();
+    },
+
+    /* =========================================================
+     * VOLVER A LA PARTIDA (28 sep 2026)
+     *
+     * Antes, a los 10 s de silencio la partida se acababa: CONEXIÓN PERDIDA
+     * si callaba el anfitrión, y el callado fuera si era un invitado (o la
+     * partida entera, en el dúo). Cerrar la pestaña era irse.
+     *
+     *  - Al INVITADO que calla se le ESPERA CFG.NET.PLAZO_TICKS: su Pac-Man
+     *    se queda quieto y a salvo (ni come ni se le puede matar: perder una
+     *    vida sin estar jugando no es justo, y dejarle comer tampoco) y los
+     *    demás siguen jugando con el aviso "ESPERANDO A X · RECONECTANDO".
+     *    Si vuelve, sigue donde estaba (con un momento de gracia); si no,
+     *    se le da por ido como siempre (playerGone).
+     *  - Si calla el ANFITRIÓN, los invitados se quedan en pausa (ya lo
+     *    hacían) el mismo plazo. Si vuelve, sigue mandando con su partida;
+     *    si no, el mando lo coge el primer invitado que quede, con la última
+     *    foto (heredarMando), en vez de acabarse la partida.
+     *  - Quien RECARGA la página (o la cierra y la vuelve a abrir a tiempo)
+     *    vuelve con el mismo sid y pide 'vuelvo': el anfitrión le contesta
+     *    'revista' con la sala, los ajustes y una foto completa, y sigue.
+     *  - Quien vuelve tarde recibe 'fuera' y la partida cuenta como una
+     *    salida (js/guardado.js se encarga de lo que no llegó a cobrarse).
+     * ========================================================= */
+
+    /* El asiento de quien manda un mensaje, o -1 si no juega (un mirón, un
+     * saludo). Sale de la lista de la sala; sin ella (las pruebas), como
+     * siempre, pero solo en lo que mandan los jugadores al anfitrión: en lo
+     * que manda el anfitrión, `i` es de quién se habla, no quién habla. */
+    asientoDe: function (name, data, sid) {
+      if (name === 'hello' || esAdiosDeMiron(data)) return -1;
+      var P = window.PM.Party;
+      if (P && P.order) {
+        var pi = P.indexOf(sid);
+        return (pi >= 0 && pi < this.pacs.length) ? pi : -1;
+      }
+      return (this.netRole === 'host') ? this.idxOfSender(data, sid) : -1;
+    },
+
+    /* ¿Se está esperando a ese jugador? */
+    esperando: function (i) {
+      return !!this.ausentes && this.ausentes[i] != null;
+    },
+
+    /* Para la foto: [[asiento, ticks esperando], ...], o nada si no hay nadie */
+    ausentesFoto: function () {
+      if (!this.ausentes) return undefined;
+      var out = [];
+      for (var k in this.ausentes) {
+        if (this.ausentes.hasOwnProperty(k) && this.ausentes[k] != null) out.push([k | 0, this.ausentes[k] | 0]);
+      }
+      return out.length ? out : undefined;
+    },
+
+    /* Anfitrión: un jugador lleva WAIT_TICKS sin dar señales. Quien lleva un
+     * fantasma de PAC-MAN VS. se lo deja a la máquina mientras tanto. */
+    marcarAusente: function (w) {
+      if (!this.ausentes) this.ausentes = {};
+      if (this.ausentes[w] != null || !this.pacs[w]) return;
+      this.ausentes[w] = 0;
+      // para sucesor(): a quien se espera no se le deja el mando
+      if (!(this.posWatch[w] > CFG.NET.WAIT_TICKS)) this.posWatch[w] = CFG.NET.WAIT_TICKS + 1;
+      var gid = this.vsGhostOf(w);
+      if (gid >= 0 && this.ghosts[gid].human) {
+        this.ghosts[gid].taken = false;
+        this.ghosts[gid].wishDir = -1;
+      }
+    },
+
+    /* Anfitrión: el que se esperaba vuelve a dar señales (o pide 'vuelvo') */
+    vuelveAsiento: function (w) {
+      if (!this.esperando(w)) return;
+      delete this.ausentes[w];
+      this.posWatch[w] = 0;
+      var p = this.pacs[w];
+      // un momento de gracia: volver con un fantasma encima es perder la vida
+      if (p && !p.out && p.safeTicks < CFG.RESPAWN_SAFE_TICKS) p.safeTicks = CFG.RESPAWN_SAFE_TICKS;
+      this.setFlash((this.rawName(w) || ('J' + (w + 1))) + ' HA VUELTO');
+      this.hostEvt({ t: 'vuelve', i: w });
+      // y una foto entera ya, sin esperar a la que lleve el mapa de pastillas
+      this.netSend('snap', this.buildSnapshot(true));
+    },
+
+    /* Anfitrión: se acabó el plazo y no ha vuelto. Se le da por ido. */
+    soltarAusente: function (w) {
+      if (this.ausentes) delete this.ausentes[w];
+      this.playerGone(w);
+    },
+
+    /* Invitado o mirón: el anfitrión calla. Se espera el plazo y después el
+     * mando lo hereda el primero que quede; si ese tampoco está, el
+     * siguiente SUCESION_TICKS más tarde (cada uno sabe su puesto, así que
+     * no hace falta ponerse de acuerdo). Sin red aquí no se hereda nada: el
+     * que se ha caído es uno mismo. Devuelve true si ya no hay que seguir. */
+    plazoDelAnfitrion: function (conRed) {
+      var P = CFG.NET.PLAZO_TICKS, S = CFG.NET.SUCESION_TICKS;
+      if (this.netWatch <= P) return false;
+      var tope = P + S * Math.max(1, this.playerCount);
+      if (!this.isSpec() && conRed) {
+        var k = this.puestoSucesion();
+        if (k >= 0 && (this.callaEnLinea || 0) > P + k * S) {
+          this.heredarMando(false);
+          return true;
+        }
+      }
+      if (this.netWatch > tope) {
+        this.netFail(this.isSpec() ? 'SE ACABÓ LA PARTIDA' : 'CONEXIÓN PERDIDA');
+        return true;
+      }
+      return false;
+    },
+
+    /* Mi puesto en la cola para heredar el mando (0 = el primero; -1 = no me
+     * toca). Los mismos en todas las máquinas: por asiento, sin el que manda,
+     * sin los idos ni a los que el anfitrión estaba esperando. */
+    puestoSucesion: function () {
+      var k = 0;
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (i === this.hostIdx || !p || p.bot) continue;
+        if (this.idos && this.idos[i]) continue;
+        if (this.esperando(i) && i !== this.localIdx) continue;
+        if (i === this.localIdx) return k;
+        k++;
+      }
+      return -1;
+    },
+
+    /* Coger el mando sin que nadie lo dé: el anfitrión no ha vuelto (o ha
+     * vuelto sin su partida, 'vuelvo'). Se sigue desde la última foto, que
+     * es lo que hay. Con `guarda` el asiento del anfitrión no se da por ido:
+     * es el que acaba de volver y se queda de invitado. */
+    heredarMando: function (guarda) {
+      if (this.netRole !== 'guest' || this.isSpec()) return false;
+      var viejo = this.hostIdx, yo = this.localIdx;
+      var nombre = this.rawName(viejo) || 'EL ANFITRIÓN';
+      this.recibirMando({ n: yo, v: viejo, r: guarda ? 1 : 0 });
+      if (this.netRole !== 'host') return false;
+      this.netSend('mando', { n: yo, v: viejo, s: this.buildSnapshot(true),
+                              x: this.estadoExtra(), r: guarda ? 1 : 0 });
+      this.setFlash(guarda ? nombre + ' HA VUELTO · MANDAS TÚ' : nombre + ' NO VOLVIÓ · MANDAS TÚ');
+      return true;
+    },
+
+    /* El anfitrión de antes se entera de que la partida siguió sin él (le
+     * llega el traspaso que lo deja fuera, o 'fuera'). Lo jugado cuenta como
+     * una salida, pero no va al top: la marca del equipo es la de quien siga. */
+    relevado: function () {
+      if (this.netNotice || !this.inGame()) return;
+      this.rankingSent = true;
+      this.netFail('LA PARTIDA SIGUIÓ SIN TI');
+    },
+
+    /* Anfitrión: alguien recargó la página y pide volver a su asiento. Con el
+     * mismo sid (js/party.js, volver), así que la sala no cambia. */
+    atenderVuelta: function (data, sid) {
+      var i = (data && typeof data.i === 'number') ? (data.i | 0) : -1;
+      if (!(i >= 0 && i < this.playerCount) || i === this.localIdx) return;
+      if (!data || data.v !== CFG.NET.PROTO) {
+        this.netSend('fuera', { i: i, to: sid, m: 'VERSION' });
+        return;
+      }
+      var P = window.PM.Party;
+      if (P && P.order && (!P.order[i] || P.order[i].s !== sid)) return;   // no es su asiento
+      if (this.idos && this.idos[i]) { this.netSend('fuera', { i: i, to: sid }); return; }
+      if (!this.esperando(i)) this.marcarAusente(i);   // recargó antes de que se notara
+      this.netSend('revista', this.revista(sid, i));
+      this.vuelveAsiento(i);
+    },
+
+    /* Lo que necesita quien vuelve para montar la partida otra vez: lo mismo
+     * que un mirón (specView) más su asiento, quién manda, quién se fue, los
+     * ajustes con los que se ARRANCÓ (specView manda el nivel de ahora, y en
+     * CLASIFICATORIA eso la haría no contar), la sala y una foto entera. */
+    revista: function (sid, i) {
+      var v = this.specView(sid), P = window.PM.Party, fuera = [], k;
+      for (k in this.idos) {
+        if (this.idos.hasOwnProperty(k) && this.idos[k]) fuera.push(k | 0);
+      }
+      v.i = i;
+      v.hi = this.hostIdx;
+      v.fuera = fuera;
+      v.cl = this.clasif ? 1 : 0;
+      v.maze = this.mazeId || null;
+      v.cfg = {
+        ghostSpeedMult: this.ghostSpeedMult, pacSpeedMult: this.pacSpeedMult,
+        frightMult: this.frightMult, livesMode: this.livesMode,
+        startLevel: this.startLevel, startLives: this.startLives
+      };
+      if (P && P.order) {
+        v.ord = P.order;
+        v.lider = P.sidLider ? P.sidLider() : null;
+        v.pm = P.st ? P.st.members : null;
+      }
+      v.s = this.buildSnapshot(true);
+      return v;
+    },
+
+    /* Quien vuelve: la partida ya está montada con la revista (UI); aquí se
+     * pone la foto, y el Pac-Man propio donde lo tenía el anfitrión (la foto
+     * no lo toca: normalmente lo simula uno mismo). */
+    ponerRevista: function (d) {
+      this.stopIntro();
+      if (d && d.s) this.applySnapshot(d.s);
+      var me = this.pacs[this.localIdx];
+      var ps = d && d.s && d.s.ps ? d.s.ps[this.localIdx] : null;
+      if (me && ps) {
+        me.x = ps.x; me.y = ps.y; me.dir = ps.d; me.nextDir = ps.nd;
+        if (typeof me.errX === 'number') { me.errX = 0; me.errY = 0; }
+      }
+      if (me && !me.out) me.safeTicks = CFG.RESPAWN_SAFE_TICKS;
+      this.netWatch = 0;
+      this.setFlash('DE VUELTA EN LA PARTIDA');
+      this.syncUI();
+    },
+
+    /* La pestaña se cierra (js/guardado.js, alIrse): el asiento se guarda el
+     * plazo por si vuelve. El anfitrión deja el mando al siguiente con su
+     * foto, como al salir, pero SIN darse por ido ('r'), y se queda aquí de
+     * invitado por si la página no muere (vuelve de la caché del
+     * navegador). El invitado avisa con 'ausente' para que se le espere ya.
+     * Devuelve false si no hay a quién esperar ni con quién quedarse. */
+    reservarAsiento: function () {
+      if (!this.netRole || this.isSpec() || !this.inGame()) return false;
+      if (this.xpSent || this.netNotice || this.state === 'GAME_OVER') return false;
+      if (this.netRole === 'host') {
+        var n = this.sucesor();
+        if (n < 0 || !this.pasarElMando(true)) return false;
+        this.netRole = 'guest';
+        this.hostIdx = n;
+        this.netWatch = 0;
+        this.callaEnLinea = 0;
+        this.posWatch = [];
+        return true;
+      }
+      this.netSend('ausente', { i: this.localIdx });
+      return true;
+    },
+
+    /* El aviso de red de ahora, en dos renglones (o null):
+     *   { a, b, tapa }  tapa = la partida está parada aquí
+     * Callando el anfitrión (o sin red uno mismo) se para; esperando a otro
+     * invitado, la partida sigue y el aviso va arriba. */
+    avisoRed: function () {
+      if (!this.netRole || this.netNotice || !this.inGame() || this.state === 'GAME_OVER') return null;
+      var P = CFG.NET.PLAZO_TICKS;
+      function seg(t) { return Math.max(0, Math.ceil((P - t) / 60)); }
+      if (this.netStalled()) {
+        if (this.vistaLocal) return { a: 'ESPERANDO CONEXIÓN...', b: '', tapa: true };
+        if (!this.conRed()) {
+          var t0 = this.netRole === 'host' ? (this.sinRed || 0) : this.netWatch;
+          return { a: 'SIN CONEXIÓN', b: 'RECONECTANDO · ' + seg(t0) + ' S', tapa: true };
+        }
+        var quien = this.rawName(this.hostIdx) || 'EL ANFITRIÓN';
+        if (this.netWatch > P) return { a: quien + ' NO HA VUELTO', b: 'PASANDO EL MANDO...', tapa: true };
+        return { a: 'ESPERANDO A ' + quien, b: 'RECONECTANDO · ' + seg(this.netWatch) + ' S', tapa: true };
+      }
+      if (!this.ausentes) return null;
+      var nombres = [], peor = 0;
+      for (var k in this.ausentes) {
+        if (!this.ausentes.hasOwnProperty(k) || this.ausentes[k] == null) continue;
+        var i = k | 0;
+        if (i === this.localIdx) continue;
+        nombres.push(this.rawName(i) || ('J' + (i + 1)));
+        if (this.ausentes[k] > peor) peor = this.ausentes[k];
+      }
+      if (!nombres.length) return null;
+      return { a: 'ESPERANDO A ' + nombres.join(' Y '), b: 'RECONECTANDO · ' + seg(peor) + ' S', tapa: false };
     },
 
     /* =========================================================
@@ -3790,7 +4145,7 @@
     /* El anfitrión se va: le deja el mando al siguiente. Devuelve true si lo
      * consiguió (y entonces NO hay que mandar el 'bye': el traspaso ya dice
      * que se va, y un 'bye' encima acabaría la partida del que lo recibe). */
-    pasarElMando: function () {
+    pasarElMando: function (reserva) {
       if (this.netRole !== 'host' || this.isSpec() || !this.inGame()) return false;
       if (this.state === 'GAME_OVER') return false;
       /* Se sale por un aviso de red (CONEXIÓN PERDIDA): no hay a quién
@@ -3802,7 +4157,10 @@
         n: n,                          // quién manda a partir de ahora
         v: this.hostIdx,               // ...y quién lo deja
         s: this.buildSnapshot(true),   // foto con el mapa de pastillas entero
-        x: this.estadoExtra()
+        x: this.estadoExtra(),
+        /* VOLVER A LA PARTIDA (28 sep): se cierra la pestaña, no se sale. El
+         * asiento se le guarda el plazo por si vuelve (ver reservarAsiento) */
+        r: reserva ? 1 : 0
       });
       return true;
     },
@@ -3813,7 +4171,13 @@
       if (!d) return;
       var nuevo = parseInt(d.n, 10), viejo = parseInt(d.v, 10);
       if (!(nuevo >= 0 && nuevo < this.pacs.length)) return;
-      if (this.netRole === 'host') return;        // ya manda uno aquí
+      if (this.netRole === 'host') {              // ya manda uno aquí...
+        /* ...salvo que el traspaso diga que el que lo deja soy YO: la
+         * partida siguió sin mí mientras no tenía red (28 sep) */
+        if (viejo === this.localIdx && nuevo !== this.localIdx) this.relevado();
+        return;
+      }
+      var reserva = !!d.r;      // el que lo deja no se va: se le espera (28 sep)
       if (d.s) this.applySnapshot(d.s);
       if (d.x) this.aplicarExtra(d.x);
       this.hostIdx = nuevo;
@@ -3832,7 +4196,9 @@
         /* la repetición no se retoma: la tenía entera el que se fue, y una
          * que empezara a media partida se vería rota al rebobinar */
       }
-      if (viejo >= 0 && viejo < this.pacs.length) {
+      if (viejo >= 0 && viejo < this.pacs.length && reserva) {
+        if (yo) this.marcarAusente(viejo);      // y los demás lo ven en la foto
+      } else if (viejo >= 0 && viejo < this.pacs.length) {
         if (!this.idos) this.idos = {};
         this.idos[viejo] = true;
         this.dropPlayer(viejo);
@@ -3848,7 +4214,7 @@
         lo.hostIdx = nuevo;
         if (yo) lo.net = 'host';
         lo.fuera = (esLista(lo.fuera) ? lo.fuera.slice() : []);
-        if (viejo >= 0 && lo.fuera.indexOf(viejo) < 0) lo.fuera.push(viejo);
+        if (viejo >= 0 && !reserva && lo.fuera.indexOf(viejo) < 0) lo.fuera.push(viejo);
         this.lastOpts = lo;
       }
       if (yo) {
@@ -4027,6 +4393,25 @@
           if (quien !== this.hostIdx) this.playerGone(quien);
           break;
         }
+        /* VOLVER A LA PARTIDA (28 sep) */
+        case 'vuelvo':                        // recargó la página y pide su asiento
+          this.atenderVuelta(data, sid);
+          break;
+        case 'ausente': {                     // cerró la pestaña: se le espera ya
+          var au = this.asientoDe(name, data, sid);
+          if (au < 0 || au === this.hostIdx) break;
+          if (data && data.fin) this.soltarAusente(au);   // "no vuelvo" (salió desde el menú)
+          else this.marcarAusente(au);
+          break;
+        }
+        /* Otro reparte fotos: la partida siguió con él mientras aquí no había
+         * red (los de un asiento ido ni llegan: processNetQueue) */
+        case 'snap':
+          this.relevado();
+          break;
+        case 'fuera':
+          if (data && (data.to === window.PM.Net.sid || data.i === this.localIdx)) this.relevado();
+          break;
       }
     },
 
@@ -4277,6 +4662,7 @@
         cz: this.caza ? this.cazaTicks : undefined,   // CACERÍA: reloj del poder
         sv: (this.superv && window.PM.Superv) ? window.PM.Superv.resumen(this) : undefined,
         he: this.snapEaten,
+        au: this.ausentesFoto(),      // a quién se espera y desde hace cuánto (28 sep)
         p0: { x: r1(p0.x), y: r1(p0.y), d: p0.dir, nd: p0.nextDir },
         /* posiciones de TODOS los jugadores: con 3 y 4 cada uno solo conoce
          * la suya, así que el anfitrión reparte las demás. Cada cliente
@@ -4345,6 +4731,31 @@
           } else this.playerGone(i);
           break;
         }
+        /* VOLVER A LA PARTIDA (28 sep). Llegar tarde: la partida siguió sin
+         * uno. Cuenta como una salida (toMenu la cobra). */
+        case 'fuera':
+          if (!this.isSpec() && data &&
+              (data.to === window.PM.Net.sid || data.i === this.localIdx)) {
+            this.netFail(data.m === 'VERSION' ? 'TIENEN OTRA VERSIÓN DEL JUEGO'
+              : 'TARDASTE DEMASIADO EN VOLVER');
+          }
+          break;
+        /* El ANFITRIÓN recargó la página: vuelve sin su partida, así que el
+         * primero de la cola coge el mando con la foto que tiene y le
+         * devuelve la partida como a cualquier otro que vuelve. */
+        case 'vuelvo':
+          if (data && data.i === this.hostIdx && !this.isSpec() && this.puestoSucesion() === 0 &&
+              this.asientoDe(name, data, sid) === this.hostIdx && this.heredarMando(true)) {
+            this.atenderVuelta(data, sid);
+          }
+          break;
+        // el anfitrión se despide para siempre desde el menú: se hereda ya
+        case 'ausente':
+          if (data && data.fin && !this.isSpec() && this.asientoDe(name, data, sid) === this.hostIdx &&
+              this.puestoSucesion() === 0) {
+            this.heredarMando(false);
+          }
+          break;
       }
     },
 
@@ -4426,7 +4837,7 @@
       for (i = 0; i < this.pacs.length; i++) {
         if (i === this.localIdx) continue;
         var otro = this.pacs[i];
-        if (!otro.out && !otro.dying) otro.update(this.pacSpeedPx(otro));
+        if (!otro.out && !otro.dying && !this.esperando(i)) otro.update(this.pacSpeedPx(otro));
       }
 
       /* pac propio: simulación local completa (sin lag de entrada) */
@@ -4631,6 +5042,17 @@
           break;
         case 'left':                 // el anfitrión avisa de quién se ha ido
           if (e.i !== this.localIdx) this.dropPlayer(e.i);
+          break;
+        /* VOLVER A LA PARTIDA (28 sep): el que se esperaba ha vuelto. Si soy
+         * yo, un momento de gracia, igual que al reaparecer. */
+        case 'vuelve':
+          if (this.ausentes) delete this.ausentes[e.i];
+          if (e.i === this.localIdx) {
+            var yoV = this.pacs[this.localIdx];
+            if (yoV && !yoV.out) yoV.safeTicks = CFG.RESPAWN_SAFE_TICKS;
+          } else if (e.i >= 0 && e.i < this.pacs.length) {
+            this.setFlash((this.rawName(e.i) || ('J' + (e.i + 1))) + ' HA VUELTO');
+          }
           break;
         /* Repesca del traspaso del mando: lo manda el nuevo anfitrión por si
          * el mensaje gordo (con la foto) no le llegó a alguno. */
@@ -5006,6 +5428,16 @@
         for (i = 0; i < this.pacs.length && i < s.out.length; i++) {
           var fuera = !!s.out[i];
           this.pacs[i].out = fuera;
+        }
+      }
+      /* a quién está esperando el anfitrión (28 sep): su Pac-Man no se mueve
+       * por estima y el aviso dice a quién y cuánto queda */
+      this.ausentes = {};
+      if (esLista(s.au)) {
+        for (i = 0; i < s.au.length; i++) {
+          if (esLista(s.au[i]) && s.au[i][0] >= 0 && s.au[i][0] < this.pacs.length) {
+            this.ausentes[s.au[i][0] | 0] = s.au[i][1] | 0;
+          }
         }
       }
 
@@ -6149,15 +6581,27 @@
         }
       }
 
-      /* avisos de red */
-      if (this.netRole && !this.netNotice && this.inGame() &&
-          this.state !== 'GAME_OVER' && this.netWatch > CFG.NET.WAIT_TICKS) {
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
-        if (Math.floor(this.tick / 20) % 2 === 0) {
-          ctx.font = window.PM.Letra.lienzo(9);
+      /* avisos de red: a quién se espera y cuánto queda (VOLVER A LA
+       * PARTIDA, 28 sep). Parada aquí, a pantalla entera; esperando a otro
+       * mientras se sigue jugando, en una franja arriba. */
+      var ar = this.avisoRed();
+      if (ar) {
+        ctx.font = window.PM.Letra.lienzo(ar.tapa ? 9 : 7);
+        if (ar.tapa) {
+          ctx.fillStyle = 'rgba(0,0,0,0.55)';
+          ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
           ctx.fillStyle = CFG.COLORS.text;
-          ctx.fillText('ESPERANDO CONEXIÓN...', 112, CFG.NATIVE_H / 2);
+          if (Math.floor(this.tick / 20) % 2 === 0) {
+            this.fitText(ctx, ar.a, 112, CFG.NATIVE_H / 2 - 6, CFG.NATIVE_W - 16, 9);
+          }
+          this.fitText(ctx, ar.b, 112, CFG.NATIVE_H / 2 + 6, CFG.NATIVE_W - 16, 9);
+        } else {
+          ctx.fillStyle = 'rgba(0,0,0,0.7)';
+          ctx.fillRect(0, 26, CFG.NATIVE_W, 18);
+          ctx.fillStyle = CFG.COLORS.ready;
+          this.fitText(ctx, ar.a, 112, 31, CFG.NATIVE_W - 8, 7);
+          ctx.fillStyle = CFG.COLORS.text;
+          this.fitText(ctx, ar.b, 112, 39, CFG.NATIVE_W - 8, 7);
         }
       }
       if (this.netNotice) {

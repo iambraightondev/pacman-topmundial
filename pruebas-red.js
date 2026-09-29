@@ -37,8 +37,16 @@ function cargarMundo(k) {
   var w = new Function('require', '__dirname', 'process', ARNES)(require, raiz, process);
   w.PM.Directo = null;                 // sin enlaces directos: todo por "el canal"
   if (w.PM.settings) w.PM.settings.muted = true;
+  /* la sesión de la pestaña (sobrevive a recargarla): la usa VOLVER A LA
+   * PARTIDA para saber que la party cortada es de esta pestaña */
+  var ses = {};
+  w.sessionStorage = {
+    getItem: function (c) { return ses.hasOwnProperty(c) ? ses[c] : null; },
+    setItem: function (c, v) { ses[c] = String(v); },
+    removeItem: function (c) { delete ses[c]; }
+  };
   var m = { k: k, w: w, G: w.PM.Game, Net: w.PM.Net, H: w.PM.Hab, J: w.PM.Jefe,
-            sid: 'sid' + k, caido: false, enviados: [] };
+            sid: 'sid' + k, caido: false, sinRed: false, enviados: [] };
   m.Net.sid = m.sid;
   return m;
 }
@@ -54,28 +62,43 @@ var red = {
   cola: [],
   mundos: [],
 
+  /* El transporte de mentira de un mundo. `open` es lo que miraría el juego
+   * del de Supabase: sin red (sinRed) o con la página muerta (caido), no. Si
+   * el juego abre otro (Party.volver, Party.despedirse), sale de aquí. */
+  transporte: function (m) {
+    var t = {
+      send: function (name, wrap) { red.poner(m, name, wrap); },
+      connect: function (topic, cbs) { if (cbs && cbs.onOpen) cbs.onOpen(); },
+      close: function () {}
+    };
+    Object.defineProperty(t, 'open', { get: function () { return !m.caido && !m.sinRed; } });
+    return t;
+  },
+
   /* Cada mundo habla por un transporte de mentira. Un mirón habla por su
    * canal de mirón (viewCh), como en el juego. */
   enchufar: function (m, miron) {
     m.caido = false;
+    m.sinRed = false;
     m.enviados = [];
     m.Net.peers = [];
     m.Net.ultimoQ = {};
     m.Net.seq = 0;
-    m.Net.transport = {
-      send: function (name, wrap) { red.poner(m, name, wrap); },
-      close: function () {}
-    };
+    m.Net.code = 'PRUE';
+    m.Net.transport = this.transporte(m);
+    m.Net.newTransport = function () { return red.transporte(m); };
     m.Net.viewCh = miron ? {
-      send: function (name, d) { red.poner(m, name, { s: m.sid, d: d }); },
+      send: function (name, d) { red.poner(m, name, { s: m.Net.sid, d: d }); },
       sondear: function () {},
+      enLinea: function () { return !m.caido && !m.sinRed; },
       close: function () {}
     } : null;
+    if (miron) m.Net.viewCode = 'PRUE';
     if (this.mundos.indexOf(m) < 0) this.mundos.push(m);
   },
 
   poner: function (m, name, wrap) {
-    if (m.caido) return;               // se le cayó la red: no sale nada
+    if (m.caido || m.sinRed) return;   // se le cayó la red: no sale nada
     var copia = JSON.parse(JSON.stringify(wrap));
     m.enviados.push([name, copia.d]);
     this.cola.push({ de: m, name: name, wrap: copia });
@@ -86,7 +109,7 @@ var red = {
       var msg = this.cola.shift();
       for (var i = 0; i < this.mundos.length; i++) {
         var m = this.mundos[i];
-        if (m === msg.de || m.caido) continue;
+        if (m === msg.de || m.caido || m.sinRed) continue;
         if (m.G.isSpec() && m.Net.viewHandler) {
           m.Net.viewHandler(msg.name, JSON.parse(JSON.stringify(msg.wrap.d)), msg.wrap.s);
         } else if (m.Net.transport && m.Net.handler) {
@@ -143,7 +166,7 @@ function montar(n, o) {
       net: miron ? 'spec' : (i === 0 ? 'host' : 'guest'),
       localIdx: miron ? -1 : i,
       names: NOMBRES.slice(0, n),
-      cfg: cfg, hab: !!o.hab, roles: o.roles || null, loadouts: o.loadouts || null
+      cfg: cfg, hab: !!o.hab, clasif: !!o.clasif, roles: o.roles || null, loadouts: o.loadouts || null
     });
   }
   red.paso(1);
@@ -171,6 +194,59 @@ function juntar(ms, i, gid) {
     p.x = x; p.y = y; p.errX = 0; p.errY = 0; p.pauseTicks = 30;
     g.x = x; g.y = y; g.mode = 'normal'; g.clearPlan && g.clearPlan();
   });
+}
+
+/* La página de m muere y se vuelve a abrir (VOLVER A LA PARTIDA): un mundo
+ * NUEVO, con lo que sobrevive a recargar —el almacén de lo que importa y la
+ * sesión de la pestaña— y un sid estrenado, como cualquier página recién
+ * abierta (el de antes lo tiene que traer la party cortada). */
+var CLAVES_RED = ['pacman-topmundial-red-viva', 'pacman-topmundial-clasif-viva'];
+function recargar(m) {
+  var guardado = {};
+  CLAVES_RED.forEach(function (c) { guardado[c] = m.w.localStorage.getItem(c); });
+  var ses = m.w.sessionStorage.getItem('pacman-topmundial-red-sid');
+  m.caido = true;
+  var n = cargarMundo(m.k);
+  CLAVES_RED.forEach(function (c) { if (guardado[c] !== null) n.w.localStorage.setItem(c, guardado[c]); });
+  if (ses !== null) n.w.sessionStorage.setItem('pacman-topmundial-red-sid', ses);
+  n.Net.sid = 'nueva' + m.k;
+  red.enchufar(n, false);
+  n.Net.code = null;                    // aún no está en ninguna sala
+  n.caidoDe = m;
+  return n;
+}
+
+/* ...y pide volver: hace lo que haría el aviso de la portada (UI.avisoVolver
+ * y VOLVER A LA PARTIDA). Devuelve el error, o null si ha vuelto. */
+function volver(n) {
+  var Gd = n.w.PM.Guardado;
+  eq(Gd.alAbrir(), 'pendiente', 'al abrir, la party cortada queda pendiente');
+  var rec = Gd.paraVolver();
+  ok(rec, 'y se ofrece volver');
+  var res = null;
+  n.w.PM.Party.volver(rec, function (err, d) { res = { err: err, d: d }; });
+  for (var t = 0; t < 10 && !res; t++) red.paso(1);
+  ok(res, 'alguien contesta');
+  if (res.err) return res.err;
+  n.w.PM.UI.volverConRevista(res.d);
+  Gd.redRetomada();
+  return null;
+}
+
+/* ¿Las dos máquinas ven la misma partida? (lo que manda el anfitrión) */
+function mismaPartida(A, B, i) {
+  eq(B.G.score, A.G.score, 'los puntos');
+  eq(B.G.dotsLeft, A.G.dotsLeft, 'las pastillas que quedan');
+  eq(B.G.pelletHex(), A.G.pelletHex(), 'el mapa de pastillas');
+  eq(B.G.level, A.G.level, 'el nivel');
+  eq(B.G.state, A.G.state, 'el estado');
+  eq(JSON.stringify(B.G.pacs.map(function (p) { return p.lives; })),
+     JSON.stringify(A.G.pacs.map(function (p) { return p.lives; })), 'las vidas');
+  if (i >= 0) {
+    var a = A.G.pacs[i], b = B.G.pacs[i];
+    ok(Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= 8,
+       'el Pac-Man ' + i + ' en el mismo sitio (' + a.x + ',' + a.y + ' / ' + b.x + ',' + b.y + ')');
+  }
 }
 
 function mensajes(m, nombre, t) {
@@ -300,13 +376,20 @@ caso('2 · trío: tras el traspaso, el nuevo anfitrión sigue jugando pasados 10
 /* =============================================================
  * 3. SALIR POR AVISO DE RED NO TRASPASA A UN MUDO
  * ============================================================= */
-caso('3a · dúo: si el compañero se cae, el anfitrión sale sin traspasar y sube su puntuación', function () {
+/* (28 sep, VOLVER A LA PARTIDA: antes el dúo se acababa a los 10 s; ahora
+ * se le espera el plazo y el anfitrión sigue solo) */
+caso('3a · dúo: si el compañero se cae, se le espera; si no vuelve, sigue solo, sin traspasarle ni perder el top', function () {
   var ms = montar(2), A = ms[0], B = ms[1];
   blindar(ms);
   B.caido = true;                           // se le va la red sin despedirse
   A.enviados = [];
-  for (var t = 0; t < 1200 && A.G.inGame(); t++) red.paso(1);
-  ok(!A.G.inGame(), 'el anfitrión acaba volviendo al menú');
+  red.paso(CFG(A).NET.WAIT_TICKS + 30);
+  ok(A.G.esperando(1), 'se le espera');
+  eq(A.G.state, 'PLAYING', 'y la partida sigue');
+  red.paso(CFG(A).NET.PLAZO_TICKS);
+  ok(A.G.pacs[1].out, 'pasado el plazo, queda fuera');
+  ok(A.G.inGame() && !A.G.netNotice, 'y el anfitrión sigue jugando solo');
+  A.G.toMenu();
   eq(mensajes(A, 'mando').length, 0, 'sin traspaso a quien no contesta');
   ok(A.G.rankingSent, 'y lo jugado va al top');
 });
@@ -329,24 +412,36 @@ caso('3b · trío: el mando no va a quien lleva callado', function () {
 /* =============================================================
  * 4. EL VIGILANTE DEL INVITADO ESCUCHA AL ANFITRIÓN
  * ============================================================= */
-caso('4a · trío: si el anfitrión se cae sin despedirse, los invitados se enteran', function () {
+/* (28 sep, VOLVER A LA PARTIDA: antes, CONEXIÓN PERDIDA para todos; ahora
+ * se espera y, si no vuelve, el mando pasa al siguiente con la última foto) */
+caso('4a · trío: si el anfitrión se cae sin despedirse, los invitados se enteran y el mando pasa al siguiente', function () {
   var ms = montar(3), A = ms[0], B = ms[1], C = ms[2];
   blindar(ms);
   A.caido = true;
-  red.paso(CFG(B).NET.DROP_TICKS + 30);
-  ok(B.G.netNotice || !B.G.inGame(), 'el 1 recibe el aviso');
-  ok(C.G.netNotice || !C.G.inGame(), 'el 2 también');
+  red.paso(CFG(B).NET.WAIT_TICKS + 30);
+  ok(B.G.netStalled() && C.G.netStalled(), 'los dos se paran');
+  ok(/ESPERANDO A UNO/.test(B.G.avisoRed().a), 'y dicen a quién esperan: ' + B.G.avisoRed().a);
+  red.paso(CFG(B).NET.PLAZO_TICKS);
+  eq(B.G.netRole, 'host', 'el 1 hereda el mando');
+  eq(C.G.hostIdx, 1, 'el 2 lo sabe');
+  ok(!B.G.netNotice && !C.G.netNotice, 'y nadie se queda sin partida');
+  ok(B.G.pacs[0].out && C.G.pacs[0].out, 'el anfitrión de antes queda fuera');
+  red.paso(60);
+  ok(!C.G.netStalled() && C.G.state === 'PLAYING', 'el 2 sigue jugando con el nuevo');
 });
 
 caso('4b · dúo con mirón: el latido del mirón no tapa la caída del anfitrión', function () {
   var ms = montar(2, { mirones: 1 }), A = ms[0], B = ms[1], S = ms[2];
   blindar(ms);
   A.caido = true;
-  for (var t = 0; t < CFG(B).NET.DROP_TICKS + 30; t++) {
+  for (var t = 0; t < CFG(B).NET.PLAZO_TICKS + 30; t++) {
     if (t % 60 === 0) S.Net.gameSend('hello', { v: CFG(S).NET.PROTO, spec: 1, hb: 1 });
     red.paso(1);
   }
-  ok(B.G.netNotice || !B.G.inGame(), 'el invitado recibe el aviso');
+  eq(B.G.netRole, 'host', 'el invitado se entera a su plazo y hereda el mando');
+  red.paso(30);
+  eq(S.G.hostIdx, 1, 'el mirón sigue la partida del nuevo');
+  ok(!S.G.netNotice && !S.G.netStalled(), 'sin cortársele');
 });
 
 /* =============================================================
@@ -434,6 +529,233 @@ caso('10d · se va el anfitrión sin traspaso: el mirón sí se entera', functio
   A.G.toMenu();
   red.paso(3);
   ok(S.G.netNotice, 'se acabó la partida que miraba');
+});
+
+/* =============================================================
+ * R. VOLVER A LA PARTIDA (28 sep): a quien se cae se le espera el plazo
+ * ============================================================= */
+function plazo(m) { return CFG(m).NET.PLAZO_TICKS; }
+
+caso('R1 · invitado sin red 20 s: se le espera quieto y a salvo, vuelve y las dos máquinas ven lo mismo', function () {
+  var ms = montar(2), A = ms[0], B = ms[1];
+  blindar(ms);
+  red.paso(30);
+  B.sinRed = true;                          // la página sigue viva; la red, no
+  red.paso(CFG(A).NET.WAIT_TICKS + 20);
+  ok(A.G.esperando(1), 'el anfitrión le espera');
+  ok(/ESPERANDO A DOS/.test(A.G.avisoRed().a) && !A.G.avisoRed().tapa,
+     'y lo dice sin parar su partida: ' + JSON.stringify(A.G.avisoRed()));
+  eq(B.G.avisoRed().a, 'SIN CONEXIÓN', 'el invitado sabe que el que no tiene red es él');
+  var x = A.G.pacs[1].x, y = A.G.pacs[1].y;
+  A.G.pacs[1].safeTicks = 0;
+  red.paso(20 * 60);
+  eq(A.G.pacs[1].x + ',' + A.G.pacs[1].y, x + ',' + y, 'su Pac-Man no se ha movido');
+  ok(A.G.pacs[1].safeTicks > 0, 'y está a salvo');
+  ok(!A.G.pacs[1].out && A.G.inGame(), 'sigue dentro');
+  B.sinRed = false;
+  red.paso(40);
+  ok(!A.G.esperando(1), 'vuelve y ya no se le espera');
+  ok(!B.G.netStalled() && !B.G.netNotice, 'el invitado sigue jugando');
+  ok(B.G.pacs[1].safeTicks > 0, 'con un momento de gracia');
+  red.paso(CFG(A).NET.PELLET_SYNC_EVERY * CFG(A).NET.SNAP_EVERY + 10);
+  mismaPartida(A, B, 1);
+});
+
+caso('R2 · invitado que no vuelve: pasado el plazo se le da por ido; si aparece luego, está fuera', function () {
+  var ms = montar(3), A = ms[0], B = ms[1], C = ms[2];
+  blindar(ms);
+  B.sinRed = true;
+  red.paso(plazo(A) - 60);
+  ok(A.G.esperando(1) && !A.G.pacs[1].out, 'hasta el final del plazo se le espera');
+  red.paso(CFG(A).NET.WAIT_TICKS + 120);
+  ok(A.G.pacs[1].out && C.G.pacs[1].out, 'después, fuera en todas las máquinas');
+  ok(!A.G.esperando(1), 'y ya no se le espera');
+  ok(A.G.inGame() && C.G.inGame() && !C.G.netNotice, 'los demás siguen');
+  B.sinRed = false;
+  red.paso(10);
+  ok(B.G.netNotice && /TARDASTE/.test(B.G.netNotice.text), 'al que llega tarde se le dice: ' +
+     (B.G.netNotice && B.G.netNotice.text));
+  red.paso(CFG(B).NET.NOTICE_TICKS + 5);
+  ok(!B.G.inGame(), 'y vuelve al menú (cuenta como una salida)');
+});
+
+caso('R3 · invitado que recarga la página: vuelve a su asiento con la partida de todos', function () {
+  var ms = montar(2), A = ms[0], B = ms[1];
+  blindar(ms);
+  red.paso(60);
+  eq(B.w.PM.Guardado.alIrse(true), 'reservada', 'al cerrar la pestaña se guarda el asiento, sin cobrar');
+  ok(B.G.inGame() && !B.G.xpSent, 'sin salir de la partida ni cobrarla');
+  B.caido = true;                           // y la página muere
+  red.paso(3);
+  ok(A.G.esperando(1), 'y el anfitrión le espera ya (ausente)');
+  var B2 = recargar(B);
+  red.paso(5 * 60);                         // lo que tarda en abrir otra vez
+  eq(volver(B2), null, 'vuelve');
+  eq(B2.Net.sid, B.sid, 'con su sid de antes');
+  eq(B2.G.netRole, 'guest');
+  eq(B2.G.localIdx, 1, 'en su asiento');
+  ok(!A.G.esperando(1), 'el anfitrión deja de esperarle');
+  red.paso(CFG(A).NET.PELLET_SYNC_EVERY * CFG(A).NET.SNAP_EVERY + 10);
+  mismaPartida(A, B2, 1);
+  ok(!B2.G.netStalled(), 'y juega');
+  A.G.toMenu();                             // el anfitrión se va: el mando, al que volvió
+  red.paso(3);
+  eq(B2.G.netRole, 'host', 'hasta el traspaso le funciona');
+});
+
+caso('R4 · anfitrión sin red 20 s: los invitados esperan en pausa, vuelve y sigue mandando', function () {
+  var ms = montar(3), A = ms[0], B = ms[1], C = ms[2];
+  blindar(ms);
+  red.paso(30);
+  A.sinRed = true;
+  red.paso(CFG(A).NET.WAIT_TICKS + 20);
+  ok(A.G.netStalled(), 'el anfitrión sin red se para');
+  ok(!A.G.esperando(1) && !A.G.esperando(2), 'sin echarle la culpa a los demás');
+  ok(B.G.netStalled() && C.G.netStalled(), 'los invitados, en pausa');
+  var puntos = A.G.score;
+  red.paso(20 * 60);
+  eq(A.G.score, puntos, 'nadie juega mientras');
+  A.sinRed = false;
+  red.paso(40);
+  eq(A.G.netRole, 'host', 'sigue mandando él');
+  eq(B.G.hostIdx, 0);
+  ok(!B.G.netStalled() && !C.G.netStalled() && !A.G.netStalled(), 'todos juegan otra vez');
+  red.paso(CFG(A).NET.PELLET_SYNC_EVERY * CFG(A).NET.SNAP_EVERY + 10);
+  mismaPartida(A, B, 1);
+  mismaPartida(A, C, 2);
+});
+
+caso('R5 · anfitrión que no vuelve: el mando pasa al siguiente con la última foto; si aparece luego, sigue sin él', function () {
+  var ms = montar(3), A = ms[0], B = ms[1], C = ms[2];
+  blindar(ms);
+  red.paso(30);
+  A.sinRed = true;
+  red.paso(CFG(B).NET.WAIT_TICKS + 10);
+  var foto = { sc: B.G.score, dl: B.G.dotsLeft, hex: B.G.pelletHex() };
+  for (var t = 0; t < plazo(B) && B.G.netRole !== 'host'; t++) red.paso(1);
+  eq(B.G.netRole, 'host', 'el primero de la cola hereda el mando');
+  ok(t > plazo(B) - CFG(B).NET.WAIT_TICKS - 20, 'pasado el plazo, no antes (' + t + ')');
+  eq(B.G.score, foto.sc, 'con los puntos de la última foto');
+  eq(B.G.pelletHex(), foto.hex, 'y su laberinto');
+  red.paso(1);
+  eq(C.G.hostIdx, 1, 'y el otro le hace caso');
+  ok(B.G.pacs[0].out && C.G.pacs[0].out, 'el anfitrión de antes queda fuera');
+  red.paso(60);
+  ok(C.G.state === 'PLAYING' && !C.G.netStalled(), 'la partida sigue');
+  A.sinRed = false;                         // el de antes recupera la red...
+  red.paso(10);
+  ok(A.G.netNotice && /SIGUIÓ SIN TI/.test(A.G.netNotice.text), '...y se entera de que siguió sin él: ' +
+     (A.G.netNotice && A.G.netNotice.text));
+  ok(A.G.rankingSent, 'lo suyo no va al top como marca del equipo');
+  eq(B.G.netRole, 'host', 'el nuevo no se deja quitar el mando');
+  ok(!B.G.netNotice && !C.G.netNotice, 'ni se corta nada');
+  red.paso(CFG(A).NET.PELLET_SYNC_EVERY * CFG(A).NET.SNAP_EVERY + 10);
+  mismaPartida(B, C, 2);
+});
+
+caso('R6 · anfitrión que recarga la página: vuelve de invitado y el mando lo coge el siguiente', function () {
+  var ms = montar(3), A = ms[0], B = ms[1], C = ms[2];
+  blindar(ms);
+  red.paso(60);
+  var A2 = recargar(A);                     // la página muere sin avisar
+  red.paso(5 * 60);
+  ok(B.G.netStalled() && C.G.netStalled(), 'mientras, los invitados esperan');
+  eq(volver(A2), null, 'vuelve');
+  eq(B.G.netRole, 'host', 'el primero de la cola coge el mando (el anfitrión volvió sin su partida)');
+  red.paso(2);
+  eq(C.G.hostIdx, 1, 'el otro lo sabe');
+  ok(!C.G.pacs[0].out && !B.G.pacs[0].out, 'y nadie da por ido al que vuelve');
+  eq(A2.G.netRole, 'guest', 'el que volvió juega de invitado');
+  eq(A2.G.localIdx, 0, 'en su asiento');
+  eq(A2.G.hostIdx, 1, 'sabiendo quién manda');
+  red.paso(CFG(B).NET.PELLET_SYNC_EVERY * CFG(B).NET.SNAP_EVERY + 10);
+  mismaPartida(B, A2, 0);
+  mismaPartida(B, C, 2);
+  ok(!A2.G.netStalled() && !C.G.netStalled(), 'y juegan todos');
+});
+
+caso('R7 · el anfitrión cierra la pestaña: deja el mando guardándose el asiento, y vuelve', function () {
+  var ms = montar(2), A = ms[0], B = ms[1];
+  blindar(ms);
+  red.paso(60);
+  eq(A.w.PM.Guardado.alIrse(true), 'reservada', 'se reserva el asiento');
+  A.caido = true;                           // y la página muere
+  red.paso(3);
+  eq(B.G.netRole, 'host', 'el mando pasa al instante, sin esperar el plazo');
+  ok(B.G.esperando(0) && !B.G.pacs[0].out, 'y al que se fue se le espera');
+  var A2 = recargar(A);
+  red.paso(120);
+  eq(volver(A2), null, 'vuelve');
+  eq(A2.G.netRole, 'guest');
+  ok(!B.G.esperando(0), 'ya no se le espera');
+  red.paso(CFG(B).NET.PELLET_SYNC_EVERY * CFG(B).NET.SNAP_EVERY + 10);
+  mismaPartida(B, A2, 0);
+});
+
+caso('R8 · CLASIFICATORIA de party recuperada: cuenta una vez para el rango de todos', function () {
+  var ms = montar(2, { hab: true, clasif: true, roles: ['tanque', 'asesino'], sinEmpezar: true });
+  var A = ms[0], B = ms[1];
+  ms.forEach(function (m) { m.w.PM.Rango.conCuenta = function () { return true; }; });
+  for (var t = 0; t < 900 && A.G.state !== 'PLAYING'; t++) red.paso(1);
+  blindar(ms);
+  red.paso(120);
+  eq(B.w.PM.Rango.porQueNo(B.G), null, 'es una clasificatoria que cuenta');
+  var antesA = A.w.PM.Rango.estado().jugadas, antesB = B.w.PM.Rango.estado().jugadas;
+  B.w.PM.Guardado.alIrse(true);             // se le cierra la pestaña
+  var B2 = recargar(B);
+  B2.w.PM.Rango.conCuenta = function () { return true; };
+  /* lo contado viaja con la cuenta: el mundo nuevo empieza con lo del viejo */
+  B2.w.PM.Achievements.recordAll(B.w.PM.Achievements.stats());
+  var antesB2 = B2.w.PM.Rango.estado().jugadas;
+  eq(antesB2, antesB, 'cerrar no ha contado todavía');
+  red.paso(120);
+  eq(volver(B2), null, 'vuelve');
+  ok(B2.G.clasif, 'y sigue siendo CLASIFICATORIA');
+  eq(B2.w.PM.Rango.porQueNo(B2.G), null, 'que cuenta');
+  red.paso(120);
+  A.G.surrenderNow();                       // se acaba
+  red.paso(10);
+  B2.G.toMenu();
+  A.G.toMenu();
+  eq(A.w.PM.Rango.estado().jugadas, antesA + 1, 'al anfitrión le cuenta una');
+  eq(B2.w.PM.Rango.estado().jugadas, antesB2 + 1, 'y al que volvió, una (no dos)');
+  eq(B2.w.localStorage.getItem('pacman-topmundial-red-viva'), null, 'y ya no queda nada a lo que volver');
+});
+
+caso('R9 · salir de la party cortada en vez de volver: cuenta como jugada y los demás dejan de esperar', function () {
+  var ms = montar(2, { hab: true, clasif: true, roles: ['tanque', 'asesino'] }), A = ms[0], B = ms[1];
+  ms.forEach(function (m) { m.w.PM.Rango.conCuenta = function () { return true; }; });
+  blindar(ms);
+  red.paso(120);
+  A.G.score = 2500;                         // lo que lleva el equipo (llega en la foto)
+  red.paso(61);                             // y lo apunta el latido de cada segundo
+  eq(B.G.score, 2500);
+  var B2 = recargar(B);
+  var Gd = B2.w.PM.Guardado;
+  eq(Gd.alAbrir(), 'pendiente');
+  var rec = Gd.paraVolver();
+  ok(rec, 'se ofrece volver');
+  var xp = B2.w.PM.Level.xp();
+  Gd.salirDeRed(rec);
+  ok(B2.w.PM.Level.xp() > xp, 'lo jugado da su experiencia');
+  eq(B2.w.PM.Achievements.stats().partidas | 0, 1, 'y cuenta como una partida');
+  eq(Gd.paraVolver(), null, 'ya no se ofrece');
+  red.paso(3);
+  ok(A.G.pacs[1].out && !A.G.esperando(1), 'el anfitrión deja de esperarle: se ha despedido');
+});
+
+caso('R10 · mirón sin red 20 s: sigue viendo al volver', function () {
+  var ms = montar(2, { mirones: 1 }), A = ms[0], B = ms[1], S = ms[2];
+  blindar(ms);
+  S.sinRed = true;
+  red.paso(20 * 60);
+  ok(S.G.inGame() && !S.G.netNotice, 'no se le corta');
+  eq(S.G.avisoRed().a, 'SIN CONEXIÓN');
+  S.sinRed = false;
+  red.paso(CFG(A).NET.PELLET_SYNC_EVERY * CFG(A).NET.SNAP_EVERY + 10);
+  ok(!S.G.netStalled(), 'vuelve a ver la partida');
+  mismaPartida(A, S, -1);
+  ok(!A.G.esperando(1) && !B.G.netStalled(), 'y a los jugadores no les ha pasado nada');
 });
 
 /* =============================================================

@@ -33,8 +33,11 @@
  * Game.closeRun. Guardar y cobrar se excluyen a propósito:
  *   - GUARDAR Y SALIR deja la partida guardada y NO la cobra.
  *   - Cerrar la pestaña tampoco la cobra: se guarda donde iba (alIrse) y se
- *     cobra al acabarla. Lo que NO se puede guardar (party, CACERÍA) sí se
- *     cobra al cerrar, como si se saliera al menú.
+ *     cobra al acabarla. También una CLASIFICATORIA: cortarse no es salir, y
+ *     al volver solo se puede seguir o descartarla (descartar cuenta). En
+ *     PARTY se guarda el ASIENTO el plazo de VOLVER A LA PARTIDA y se cobra
+ *     al acabarla o, si no se vuelve, como una salida (cobrarRed). Lo demás
+ *     que no se puede guardar se cobra al cerrar, como si se saliera al menú.
  *   - Cualquier final de verdad (GAME OVER, rendirse, salir al menú,
  *     reiniciar) la cobra Y BORRA el guardado, y la apunta como CERRADA
  *     también en la nube: la copia de otro aparato deja de valer.
@@ -74,6 +77,31 @@
    * pestaña. Si la página muere sin avisar (el móvil la mata), al volver a
    * abrir el juego cuenta para el rango como una salida. */
   var TESTIGO_KEY = 'pacman-topmundial-clasif-viva';
+  /* VOLVER A LA PARTIDA (28 sep 2026). La partida de party (o la que se
+   * estaba mirando) que está en marcha en esta pestaña: la sala, el asiento
+   * y el sid con el que se juega, más lo que habría que cobrar si no se
+   * vuelve. Se reescribe cada segundo (`f` dice cuándo seguía viva) y se
+   * borra al cerrarse la partida. Si la página muere, al abrirla otra vez
+   * dentro del plazo se ofrece VOLVER A LA PARTIDA; pasado el plazo, o
+   * saliendo de ella, se cobra como una salida (cobrarRed). */
+  var RED_KEY = 'pacman-topmundial-red-viva';
+  /* ...y el sid de ESTA pestaña (sessionStorage sobrevive a recargarla, no
+   * a abrir otra): así se distingue "he recargado" de "hay otra pestaña
+   * jugando" */
+  var RED_SES_KEY = 'pacman-topmundial-red-sid';
+  var OTRA_PESTANYA_MS = 3000;   // un latido de hace menos que esto es de alguien vivo
+
+  function plazoMs() { return CFG.NET.PLAZO_TICKS * 1000 / 60; }
+
+  function sesion(v) {
+    try {
+      if (typeof sessionStorage === 'undefined' || !sessionStorage) return null;
+      if (v === undefined) return sessionStorage.getItem(RED_SES_KEY);
+      if (v === null) sessionStorage.removeItem(RED_SES_KEY);
+      else sessionStorage.setItem(RED_SES_KEY, v);
+    } catch (e) { /* sin almacén de sesión */ }
+    return null;
+  }
 
   function G() { return window.PM.Game; }
   function R() { return window.PM.Replay; }
@@ -307,6 +335,7 @@
     /* Un paso del juego (Game.step). Guarda cada pocos segundos: lo que se
      * pierde si se va la luz es, como mucho, lo que quepa entre dos. */
     paso: function () {
+      this.pasoRed();
       var r = R();
       if (!r) return;
       /* qué partida es la que corre (para apuntarla como cerrada al cobrarla) */
@@ -320,7 +349,8 @@
        * vale. Sin esto, tras una partida larga la siguiente se quedaría sin
        * guardar sus primeros minutos. */
       if (r.t < this.ultimo) { this.ultimo = -1; this.ultimoNube = -1; }
-      if (this.ultimo >= 0 && (r.t - this.ultimo) < CFG.SAVE_EVERY) return;
+      var cada = (G().clasif && CFG.SAVE_EVERY_CLASIF) || CFG.SAVE_EVERY;
+      if (this.ultimo >= 0 && (r.t - this.ultimo) < cada) return;
       this.guardar();
     },
 
@@ -419,19 +449,247 @@
      *   - Al esconderse solo se deja un TESTIGO de la clasificatoria de party:
      *     esconderse no es irse, pero en el móvil la página puede morir sin
      *     avisar, y entonces cuenta al volver a abrir el juego.
+     * VOLVER A LA PARTIDA (28 sep, tarde): en PARTY cerrar ya no es irse.
+     * El asiento se guarda el plazo (Game.reservarAsiento: el anfitrión deja
+     * el mando sin darse por ido, el invitado avisa de que falta) y aquí
+     * queda apuntado a qué partida volver (RED_KEY). No se cobra: se cobra
+     * al acabarla, si se vuelve, o como una salida si no (cobrarRed). Solo
+     * se cobra al cerrar, como antes, si no hay con quién quedarse.
      * `cierra`: true en pagehide. Devuelve lo que hizo (para las pruebas).
      * ========================================================= */
     alIrse: function (cierra) {
       var g = G();
       if (!g || !g.inGame || !g.inGame() || g.replaying || this.tarea) return null;
-      if (g.isSpec && g.isSpec()) return null;
+      if (g.isSpec && g.isSpec()) { this.apuntarRed(); return null; }
       if (this.puedeGuardar()) {
         return this.guardar(true, !!cierra) ? 'guardada' : null;
       }
-      if (!cierra) return this.apuntarTestigo() ? 'testigo' : null;
+      if (!cierra) {
+        var red = this.apuntarRed();
+        return this.apuntarTestigo() ? 'testigo' : (red ? 'red' : null);
+      }
+      if (g.netRole && this.apuntarRed() && g.reservarAsiento && g.reservarAsiento()) {
+        this.apuntarTestigo();
+        return 'reservada';
+      }
       g.toMenu();
       this.quitarTestigo();
       return 'cobrada';
+    },
+
+    /* =========================================================
+     * VOLVER A LA PARTIDA (28 sep 2026) — lo que queda en este aparato
+     * ========================================================= */
+    /* El latido (Guardado.paso, cada paso del juego): cada segundo, mientras
+     * haya una partida de red sin cobrar. Y si se está jugando OTRA que no es
+     * la que quedó cortada, aquella se cobra ya: no se puede tener una a
+     * medias y empezar otra. */
+    redTick: 0,
+    redPend: null,       // la que quedó cortada al abrir la página (o null)
+
+    /* El almacén es { sid: partida }: una por pestaña. Dos pestañas del mismo
+     * navegador pueden estar cada una en su partida (o en la misma, con
+     * ?red=local), y ninguna debe pisar lo de la otra. */
+    redMapa: function () {
+      var m = leerJson(RED_KEY);
+      return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+    },
+
+    redGuarda: function (m) {
+      for (var k in m) {
+        if (m.hasOwnProperty(k)) return escribirJson(RED_KEY, m);
+      }
+      return escribirJson(RED_KEY, null);
+    },
+
+    redQuita: function (sid) {
+      var m = this.redMapa();
+      if (!sid || !m.hasOwnProperty(sid)) return;
+      delete m[sid];
+      this.redGuarda(m);
+    },
+
+    /* La partida cortada que le toca a esta pestaña: la suya (la sesión de
+     * la pestaña sobrevive a recargarla) o, si no, la más reciente de una
+     * página muerta. Un latido de hace menos de OTRA_PESTANYA_MS es de otra
+     * pestaña que sigue jugando: esa no se toca. Las que pasaron el plazo se
+     * cobran aquí mismo (ya no hay a qué volver); `redCobradas` dice cuántas. */
+    redCandidata: function () {
+      var m = this.redMapa(), ahora = Date.now(), caducas = [], k, r;
+      this.redCobradas = 0;
+      for (k in m) {
+        if (!m.hasOwnProperty(k)) continue;
+        r = m[k];
+        if (!r || typeof r !== 'object' || !r.code || !r.sid || ahora - (r.f || 0) > plazoMs()) {
+          caducas.push(r);
+          delete m[k];
+        }
+      }
+      if (caducas.length) {
+        this.redGuarda(m);
+        for (var c = 0; c < caducas.length; c++) {
+          if (caducas[c] && caducas[c].code) { this.redCobradas++; this.cobrarRed(caducas[c]); }
+        }
+      }
+      var mia = sesion();
+      if (mia && m.hasOwnProperty(mia)) return m[mia];
+      var elegida = null;
+      for (k in m) {
+        if (!m.hasOwnProperty(k)) continue;
+        r = m[k];
+        if (ahora - (r.f || 0) < OTRA_PESTANYA_MS) continue;
+        if (!elegida || r.f > elegida.f) elegida = r;
+      }
+      return elegida;
+    },
+
+    pasoRed: function () {
+      var g = G();
+      if (!g || !g.inGame || !g.inGame() || g.replaying) return;
+      if (this.redPend) {
+        var p = this.redPend, N = window.PM.Net;
+        this.redPend = null;
+        var misma = g.netRole && N && N.sid === p.sid &&
+          (p.spec ? N.viewCode === p.code : N.code === p.code);
+        if (!misma) this.salirDeRed(p);
+      }
+      if (!g.netRole || g.xpSent || g.netNotice || g.state === 'GAME_OVER') return;
+      if (++this.redTick < 60) return;
+      this.redTick = 0;
+      this.apuntarRed();
+    },
+
+    /* Apunta (o refresca) la partida de red de ahora. Devuelve si pudo */
+    apuntarRed: function () {
+      var g = G(), N = window.PM.Net, A = window.PM.Account, Rg = window.PM.Rango;
+      if (!g || !N || !g.netRole || !g.inGame() || g.replaying || g.xpSent) return false;
+      var spec = g.isSpec();
+      var code = spec ? N.viewCode : N.code;
+      if (!code || !N.sid) return false;
+      var rec = {
+        v: 1, code: code, sid: N.sid, i: spec ? -1 : g.localIdx, spec: spec ? 1 : 0,
+        host: g.rawName(g.hostIdx) || '', n: g.playerCount,
+        modo: g.clasif ? 'CLASIFICATORIA' : g.caza ? 'CACERÍA' : g.superv ? 'SUPERVIVENCIA'
+          : g.hab ? 'DESATADO' : (g.isVersus && g.isVersus()) ? 'PAC-MAN VS.' : 'PARTY',
+        p: spec ? 0 : Math.max(0, g.myPoints() || 0),
+        s: Math.round((g.timeTicks || 0) / 60), lv: g.level || 1,
+        tags: spec ? null : g.achTags(),
+        roles: g.roles ? g.roles.slice() : null,
+        // ¿contaba para el rango? (se mira ahora: después ya no hay partida)
+        cl: (!spec && Rg && !Rg.porQueNo(g)) ? 1 : 0,
+        t: Rg ? Rg.temporada() : '',
+        quien: (A && A.logged && A.logged()) ? A.name() : '',
+        f: Date.now()
+      };
+      sesion(N.sid);
+      var m = this.redMapa();
+      m[N.sid] = rec;
+      return this.redGuarda(m);
+    },
+
+    /* Se cerró la partida aquí (Game.closeRun): ya no hay a qué volver */
+    redCerrada: function () {
+      this.redTick = 0;
+      var N = window.PM.Net;
+      if (N && N.sid) this.redQuita(N.sid);
+    },
+
+    /* La partida cortada a la que se puede volver ahora mismo, o null (ver
+     * redCandidata: pasado el plazo ya no hay a qué volver y se cobra) */
+    paraVolver: function () {
+      var g = G();
+      if (g && g.inGame && g.inGame()) return null;
+      var rec = this.redCandidata();
+      if (!rec && this.redPend && !this.redMapa()[this.redPend.sid]) this.redPend = null;
+      return rec;
+    },
+
+    /* Cuánto le queda al plazo de esa partida, en segundos */
+    quedaRed: function (rec) {
+      return Math.max(0, Math.ceil((plazoMs() - (Date.now() - ((rec && rec.f) || 0))) / 1000));
+    },
+
+    /* Se volvió a la partida (Party.volver + UI): lo apuntado pasa a ser la
+     * partida en marcha, y el testigo sobra (la partida se cobrará al acabar) */
+    redRetomada: function () {
+      this.redPend = null;
+      this.quitarTestigo();
+      this.apuntarRed();
+    },
+
+    /* SALIR DE ELLA, o no se pudo volver: cuenta como una salida */
+    salirDeRed: function (rec) {
+      rec = rec || this.redCandidata();
+      this.redPend = null;
+      if (!rec) return null;
+      this.redQuita(rec.sid);
+      if (window.PM.Party && window.PM.Party.despedirse && !rec.spec) {
+        try { window.PM.Party.despedirse(rec); } catch (e) { /* sin red: esperan el plazo */ }
+      }
+      return this.cobrarRed(rec);
+    },
+
+    /* Cobrar una partida de red que ya no está: lo que se habría cobrado al
+     * salir de ella (Game.closeRun) y se puede rehacer sin la partida
+     * delante: la experiencia, las monedas, la partida jugada con su mejor
+     * marca y su tiempo y, si era CLASIFICATORIA, el rango. (La maestría de
+     * rol y el historial necesitan la partida entera y se pierden, como
+     * antes con una página que moría escondida.) Solo si es de la cuenta que
+     * hay ahora (o de nadie, sin cuenta). Devuelve lo que cobró. */
+    cobrarRed: function (rec) {
+      this.quitarTestigo();              // lo del rango va aquí: no se cuenta dos veces
+      if (!rec || typeof rec !== 'object' || rec.spec) return null;
+      var A = window.PM.Account, Rg = window.PM.Rango, L = window.PM.Level;
+      var Ac = window.PM.Achievements, Tn = window.PM.Tienda;
+      var yo = (A && A.logged && A.logged()) ? A.name() : '';
+      if (rec.quien && yo && yo !== rec.quien) return null;          // de otra cuenta
+      if (rec.quien && !yo && !(A && A.savedSession && A.savedSession())) return null;
+      var pts = Math.max(0, Math.floor(rec.p) || 0), seg = Math.max(0, rec.s | 0);
+      var out = { puntos: pts, rango: null };
+      if (Ac && Ac.recordFor && Array.isArray(rec.tags)) {
+        Ac.recordFor(rec.tags, {
+          partidas: 1, puntosMax: pts, tiempo: seg,
+          largas: (seg >= CFG.COFRES.PARTIDA_LARGA_S) ? 1 : 0
+        });
+      }
+      if (Tn && Tn.ganarPartida) Tn.ganarPartida(pts, seg);
+      if (L && L.add && pts > 0) {
+        var nuevo = L.add(pts);
+        if (nuevo && window.PM.Celebrar) window.PM.Celebrar.nivel(nuevo);
+      }
+      if (rec.cl && rec.quien && Rg && rec.t === Rg.temporada()) {
+        out.rango = Rg.apuntar(pts, Math.max(1, rec.n | 0), Math.max(1, rec.lv | 0),
+          Array.isArray(rec.roles) ? rec.roles : null);
+      }
+      if (A && A.pushQuiet) A.pushQuiet();
+      return out;
+    },
+
+    /* Antes de empezar otra partida de party (Party.begin): la cortada a la
+     * que no se volvió cuenta ya, y si la nueva es CLASIFICATORIA, también
+     * la clasificatoria a solas que quedara a medias (descartarla cuenta). */
+    antesDeOtra: function (clasif) {
+      /* (una partida que se cierra aquí borra lo suyo, así que lo que haya
+       * es de una anterior que no se cerró) */
+      var rec = this.redPend || this.redCandidata();
+      if (rec && rec.code) this.salirDeRed(rec);
+      var sb = this.sobre();
+      if (clasif && sb && sb.cl) this.descartar();
+    },
+
+    /* Al abrir el juego: la partida de red que se cortó. Dentro del plazo se
+     * deja para que la interfaz pregunte (VOLVER A LA PARTIDA); pasado, se
+     * cobra. Sin ella, lo de siempre: el testigo de la clasificatoria. */
+    alAbrir: function () {
+      var rec = this.redCandidata();
+      if (rec) {
+        this.redPend = rec;
+        return 'pendiente';
+      }
+      if (this.redCobradas) return 'cobrada';
+      // lo que quede es de otra pestaña que sigue jugando: su testigo es suyo
+      for (var k in this.redMapa()) return null;
+      return this.revisarTestigo() ? 'testigo' : null;
     },
 
     /* La clasificatoria de party de ahora mismo, por si la página muere */
@@ -476,6 +734,8 @@
       this.repViva = null;
       escribirJson(NUBE_PEND_KEY, null);
       this.quitarTestigo();
+      escribirJson(RED_KEY, null);       // y la party cortada, que era suya
+      this.redPend = null;
     },
 
     /* =========================================================
@@ -771,7 +1031,8 @@
         } catch (e) { /* nada */ }
       });
     }
-    // la clasificatoria de party que murió con la página, al abrir el juego
-    try { Guardado.revisarTestigo(); } catch (e) { /* nada */ }
+    /* la party que murió con la página, al abrir el juego: dentro del plazo
+     * se ofrece volver; si no, se cobra (y el testigo de la clasificatoria) */
+    try { Guardado.alAbrir(); } catch (e) { /* nada */ }
   }
 })();

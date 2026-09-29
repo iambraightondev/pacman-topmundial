@@ -55,6 +55,18 @@
   var PENDIENTES_MAX = 300;   // ~10 s de partida, de sobra
   var SUSTITUIBLES = { snap: 1, pos: 1 };
 
+  /* VOLVER A LA PARTIDA (28 sep). En plena partida de red se insiste todo el
+   * plazo que los demás esperan (CFG.NET.PLAZO_TICKS) y un poco más: rendirse
+   * a los 10 s era perder el asiento que los otros te están guardando. */
+  function aguanteMs() {
+    var G = window.PM.Game;
+    if (G && G.netRole && G.inGame && G.inGame()) {
+      var t = CFG.NET.PLAZO_TICKS + CFG.NET.SUCESION_TICKS * CFG.MAX_PLAYERS;
+      return Math.max(RECONEXION_MS, t * 1000 / 60 + 5000);
+    }
+    return RECONEXION_MS;
+  }
+
   function SupaTransport(url, key) {
     this.url = url;
     this.key = key;
@@ -235,7 +247,7 @@
     if (this.cerrado) return;
     this.soltarSocket();
     if (!this.caidaDesde) this.caidaDesde = Date.now();
-    if (Date.now() - this.caidaDesde > RECONEXION_MS) {
+    if (Date.now() - this.caidaDesde > aguanteMs()) {
       this.caidaDesde = 0;
       this.pendientes = [];
       this.cerrado = true;
@@ -423,6 +435,7 @@
       var ch = {
         send: function (name, data) { tr.send(name, { s: self.sid, d: data }); },
         sondear: function () { if (tr.sondear) tr.sondear(); },
+        enLinea: function () { return tr.open !== false; },
         close: function () { tr.close(); }
       };
       tr.connect(topic, {
@@ -533,6 +546,16 @@
         if (D) D.senal(wrap.d, wrap.s);
         return;
       }
+      /* VOLVER A LA PARTIDA (28 sep): quien recargó la página vuelve con su
+       * sid de antes, pero es una página NUEVA. Su numeración empieza de cero
+       * (sin esto, sus primeras posiciones se tirarían por "viejas") y el
+       * enlace directo que hubiera con él era con la página muerta (sin
+       * esto, lo que se le manda iría por ahí y la copia del canal diría
+       * que ya le llegó). */
+      if (name === 'vuelvo') {
+        delete this.ultimoQ[wrap.s];
+        if (D && D.olvida) D.olvida(wrap.s);
+      }
       if (D) D.ve(wrap.s);              // a quien se deja ver se le ofrece enlace
       if (!this.accepts(wrap.s, name)) return;
       if (!this.aTiempo(wrap)) return;  // uno viejo que llega tarde (ver CADUCAN)
@@ -578,6 +601,16 @@
     sondear: function () {
       if (this.viewCh) this.viewCh.sondear();
       else if (this.transport && this.transport.sondear) this.transport.sondear();
+    },
+
+    /* ¿Tiene red ahora mismo el canal de la partida? (VOLVER A LA PARTIDA:
+     * así el juego sabe si el que calla es el otro o uno mismo). Solo dice
+     * que no quien lo sabe —el transporte de Supabase mientras reconecta—;
+     * sin transporte (las pruebas) o con el local, sí. */
+    enLinea: function () {
+      if (this.viewCh) return this.viewCh.enLinea ? this.viewCh.enLinea() : true;
+      var t = this.transport;
+      return !t || t.open !== false;
     },
 
     /* "Sigue usando el canal durante estos milisegundos": lo pide el

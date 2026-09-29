@@ -1991,6 +1991,10 @@
   CFG.SAVE_KEY = 'pacman-topmundial-partida';
   CFG.SAVE_V = 1;                 // versión del sobre guardado
   CFG.SAVE_EVERY = 300;           // ticks entre guardados (5 s)
+  /* ...y en CLASIFICATORIA, cada segundo (28 sep): matar el navegador sin
+   * que avise volvía a lo guardado hasta 5 s antes, justo lo que hace falta
+   * para deshacer una muerte que cuesta PR */
+  CFG.SAVE_EVERY_CLASIF = 60;
   CFG.SAVE_CLOUD_EVERY = 3600;    // y entre subidas a la nube (1 min)
   /* Tope del texto guardado. Es más alto que el de una repetición para
    * compartir (CFG.REPLAY_MAX_CHARS, 24000) porque aquella tiene que caber en
@@ -3148,14 +3152,24 @@
      * el YUNQUE roto que avisa el invitado (habGasta 'yunque'); la 18, la
      * CLASIFICATORIA como modo de la sala ('cl' en la lista y en la salida);
      * la 20, el frenazo del rey tras el hielo en su foto (jf[13]), la regla
-     * única de comer o morir y los mirones que se van sin 'bye' (28 sep). */
-    PROTO: 20,
+     * única de comer o morir y los mirones que se van sin 'bye' (28 sep); la
+     * 21, VOLVER A LA PARTIDA (28 sep: 'vuelvo', 'revista', 'ausente' y
+     * 'fuera', la 'r' del traspaso que le guarda el asiento a quien se va y
+     * los que se están esperando, 'au', en la foto). */
+    PROTO: 21,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
     WAIT_TICKS: 90,         // sin datos 1.5 s: aviso "esperando conexión"
     DROP_TICKS: 600,        // sin datos 10 s: desconexión (lo que insiste net.js en reconectar)
     NOTICE_TICKS: 150,      // aviso en pantalla ~2.5 s antes de volver al menú
+    /* VOLVER A LA PARTIDA (28 sep): a quien se le corta la red o se le cierra
+     * la pestaña se le espera este rato antes de darlo por ido. Si el que se
+     * cae es el anfitrión, pasado el plazo el mando lo coge el primer
+     * invitado que quede, con la última foto; si ese tampoco está, el
+     * siguiente SUCESION_TICKS más tarde. */
+    PLAZO_TICKS: 3600,      // 60 s
+    SUCESION_TICKS: 300,    // 5 s entre un candidato al mando y el siguiente
     HELLO_TIMEOUT_MS: 6000, // espera de respuesta del anfitrión al unirse
     VOTE_TICKS: 1200,       // 20 s para responder a una votación (rendirse/revancha)
     ROOM_ALPHABET: 'ABCDEFGHJKLMNPQRSTUVWXYZ',   // sin I/O (se confunden)

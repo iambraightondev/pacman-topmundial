@@ -1758,7 +1758,9 @@
           self.fichaGuardada(p, sb, '#ffb852');
           var aviso = document.createElement('div');
           aviso.className = 'medias-aviso';
-          aviso.textContent = 'SE PIERDE ESA PARTIDA Y TODO LO QUE LLEVABA HECHO';
+          aviso.textContent = sb && sb.cl
+            ? 'ES CLASIFICATORIA: CUENTA COMO JUGADA, CON LOS PUNTOS QUE LLEVABA'
+            : 'SE PIERDE ESA PARTIDA Y TODO LO QUE LLEVABA HECHO';
           p.appendChild(aviso);
         },
         buttons: [
@@ -1917,14 +1919,19 @@
           p.appendChild(ficha);
           var aviso = document.createElement('div');
           aviso.className = 'medias-aviso';
-          aviso.textContent = 'SI EMPIEZAS UNA NUEVA, ESTA SE PIERDE';
+          /* CLASIFICATORIA (28 sep): mientras haya una a medias no se empieza
+           * otra sin cerrarla, y cerrarla sin jugarla cuenta con lo que llevaba */
+          aviso.textContent = sb.cl
+            ? 'ES CLASIFICATORIA: PARA EMPEZAR OTRA HAY QUE DESCARTARLA, Y DESCARTARLA CUENTA PARA TU RANGO CON LO QUE LLEVABA'
+            : 'SI EMPIEZAS UNA NUEVA, ESTA SE PIERDE';
           p.appendChild(aviso);
         },
         buttons: [
           { label: 'SEGUIR LA DE ANTES', primary: true, hint: 'ENTER',
             keys: ['Enter'],
             onClick: function () { self.hidePrompt(); self.continuarPartida(); } },
-          { label: 'EMPEZAR UNA NUEVA', hint: 'N', keys: ['n'],
+          { label: sb.cl ? 'DESCARTARLA Y EMPEZAR' : 'EMPEZAR UNA NUEVA', hint: 'N', keys: ['n'],
+            nota: sb.cl ? 'CUENTA PARA TU RANGO' : undefined,
             onClick: function () {
               Gd.descartar();
               self.hidePrompt();
@@ -11334,7 +11341,8 @@
           roles: (d && d.rl) || null,
           loadouts: (d && d.lo) || null,
           caza: !!(d && d.caza), // y el Pac-Man de la máquina, con su reloj
-          superv: !!(d && d.sv)  // y la zona de SUPERVIVENCIA
+          superv: !!(d && d.sv), // y la zona de SUPERVIVENCIA
+          vistaLocal: !!(d && d.local)   // partida local: sin plazo de espera
         });
       } else if (name === 'full') {
         if (d && d.to === window.PM.Net.sid) this.specFail('LA PARTIDA NO ADMITE MIRONES');
@@ -13307,6 +13315,8 @@
         lines.push('GUARDAR LA DEJA COMO ESTÁ PARA SEGUIRLA LUEGO, AQUÍ O EN OTRO APARATO.');
       } else if (g.clasif && !g.netRole) {
         lines.push('ES CLASIFICATORIA: SI SALES, CUENTA PARA TU RANGO CON LOS PUNTOS QUE LLEVAS.');
+        /* VOLVER A LA PARTIDA (28 sep): cortarse no es salir */
+        lines.push('SI SE CORTA O SE CIERRA, QUEDA DONDE IBA Y SOLO SE PUEDE SEGUIR O DESCARTAR.');
       }
       var botones = [
         { label: 'REANUDAR', hint: 'P · ESC', primary: true,
@@ -15399,6 +15409,8 @@
       var C = window.PM.Celebrar, g = window.PM.Game;
       if (!C || this.promptOpen) return false;
       if (g && ((g.inGame && g.inGame()) || g.replaying)) return false;
+      // antes que nada, la party que se cortó y aún espera (VOLVER A LA PARTIDA)
+      if (this.volverSiToca()) return true;
       if (this.temporadaCerradaSiToca()) return true;
       var e = C.siguiente();
       if (!e) return false;
@@ -15412,6 +15424,134 @@
       }
       else if (!this.showRangoSubePrompt(e)) return this.celebrarSiToca();
       return true;
+    },
+
+    /* ------------------------------------------------------
+     * VOLVER A LA PARTIDA (28 sep 2026)
+     * La página se recargó o se cerró en plena party y se ha vuelto a abrir
+     * a tiempo: los demás te guardan el asiento el plazo (CFG.NET.PLAZO_TICKS).
+     * Solo hay dos salidas: volver, o salir de ella, que cuenta como jugada
+     * (en CLASIFICATORIA, para el rango con lo que llevabas). No se puede
+     * dejar colgada: empezar otra partida la cobra (js/guardado.js).
+     * ------------------------------------------------------ */
+    volverSiToca: function () {
+      var Gd = window.PM.Guardado;
+      if (!Gd || !Gd.paraVolver || this.volviendo) return false;
+      var rec = Gd.paraVolver();
+      if (!rec) return false;
+      this.avisoVolver(rec);
+      return true;
+    },
+
+    avisoVolver: function (rec) {
+      var self = this, Gd = window.PM.Guardado;
+      var lineas = rec.spec
+        ? ['ESTABAS MIRANDO LA PARTIDA DE ' + (rec.host || 'UN AMIGO'),
+           'SE CORTÓ Y SIGUE EN MARCHA']
+        : ['SE CORTÓ TU PARTIDA DE ' + (rec.modo || 'PARTY') + ' · ' + Gd.miles(rec.p) + ' PUNTOS',
+           'LOS DEMÁS TE GUARDAN EL SITIO ' + Gd.quedaRed(rec) + ' S MÁS'];
+      if (!rec.spec && rec.cl) lineas.push('ES CLASIFICATORIA: SI SALES, CUENTA PARA TU RANGO CON LO QUE LLEVABAS');
+      else if (!rec.spec) lineas.push('SI SALES, CUENTA COMO JUGADA');
+      this.showPrompt({
+        title: rec.spec ? 'VOLVER A MIRAR' : 'PARTIDA EN MARCHA',
+        arcade: true,
+        tono: 'verde',
+        lines: lineas,
+        buttons: [
+          { label: rec.spec ? 'VOLVER A MIRARLA' : 'VOLVER A LA PARTIDA', primary: true,
+            hint: 'ENTER', keys: ['Enter'],
+            onClick: function () { self.hidePrompt(); self.volverAPartida(rec); } },
+          { label: rec.spec ? 'DEJARLA' : 'SALIR DE ELLA', hint: 'S', keys: ['s'],
+            nota: rec.spec ? '' : 'CUENTA COMO JUGADA',
+            onClick: function () {
+              Gd.salirDeRed(rec);
+              self.hidePrompt();
+              self.celebrarSiToca();
+            } }
+        ]
+      });
+    },
+
+    volverAPartida: function (rec) {
+      var self = this, Gd = window.PM.Guardado, P = window.PM.Party;
+      if (rec.spec) {
+        // el mirón vuelve por el camino de siempre: mirar la sala
+        Gd.salirDeRed(rec);
+        this.showFriends();
+        this.joinAsSpec(rec.code, rec.host || 'UN AMIGO');
+        return;
+      }
+      this.volviendo = true;
+      this.showPrompt({
+        title: 'VOLVIENDO', arcade: true, tono: 'verde',
+        lines: ['ENTRANDO EN LA SALA ' + rec.code + '...'],
+        buttons: [{ label: 'CANCELAR', hint: 'ESC', keys: ['Escape'],
+          onClick: function () { if (P.cancelarVuelta) P.cancelarVuelta(); } }]
+      });
+      P.volver(rec, function (err, d) {
+        self.volviendo = false;
+        if (!err) {
+          self.volverConRevista(d);
+          Gd.redRetomada();
+          return;
+        }
+        self.hidePrompt();
+        /* cancelado a medias: sigue pendiente (se vuelve a preguntar) */
+        if (err === 'CANCELADA') { self.showMenu(); return; }
+        /* sin red aquí: tampoco se da por perdida mientras dure el plazo */
+        if (err !== 'FUERA' && err !== 'VERSION' && err !== 'NO ESTÁ') {
+          self.showPrompt({
+            title: 'SIN CONEXIÓN', arcade: true, tono: 'amarillo',
+            lines: ['NO SE PUDO ENTRAR EN LA SALA', 'SE TE VOLVERÁ A OFRECER MIENTRAS TE GUARDEN EL SITIO'],
+            buttons: [{ label: 'VALE', primary: true, hint: 'ENTER', keys: ['Enter', 'Escape'],
+              onClick: function () { self.hidePrompt(); self.showMenu(); } }]
+          });
+          return;
+        }
+        // no se pudo: cuenta como una salida, como si hubiera elegido salir
+        Gd.salirDeRed(rec);
+        self.showPrompt({
+          title: 'NO SE PUDO VOLVER', arcade: true, tono: 'rojo',
+          lines: [err === 'FUERA' ? 'LA PARTIDA SIGUIÓ SIN TI: TARDASTE DEMASIADO'
+                : err === 'VERSION' ? 'LOS DEMÁS TIENEN OTRA VERSIÓN DEL JUEGO'
+                : 'LA PARTIDA YA NO ESTÁ',
+                  'CUENTA COMO JUGADA, CON LO QUE LLEVABAS'],
+          buttons: [{ label: 'VALE', primary: true, hint: 'ENTER', keys: ['Enter', 'Escape'],
+            onClick: function () { self.hidePrompt(); self.showMenu(); } }]
+        });
+      });
+    },
+
+    /* Monta la partida con lo que contesta quien manda (Game.revista): lo
+     * mismo que startPartyGame y que un mirón, pero en tu asiento, con quien
+     * manda ahora, los que ya se fueron y una foto entera encima. */
+    volverConRevista: function (d) {
+      this.hidePrompt();
+      this.hideAll();
+      this.resumeAudio();
+      var n = parseInt(d.n, 10);
+      if (!(n >= 2 && n <= CFG.MAX_PLAYERS)) n = 2;
+      var colors = [], names = [], skins = [], ghosts = [], looks = [], roles = [], loadouts = [];
+      for (var i = 0; i < n; i++) {
+        colors.push(sanitizeSetting('pacColor', (d.co || [])[i], CFG.PLAYER_COLORS[i]));
+        names.push(sanitizeNick((d.nm || [])[i]) || ('J' + (i + 1)));
+        skins.push(sanitizeSetting('skin1', (d.sk || [])[i], 'clasico'));
+        ghosts.push(sanitizeSetting('vsGhost2', (d.gh || [])[i], -1));
+        looks.push(this.lookDeRed((d.lk || [])[i]));
+        roles.push(CFG.HAB.rol((d.rl || [])[i]));
+        loadouts.push(CFG.HAB.loadoutValido(roles[i], (d.lo || [])[i] ||
+          CFG.HAB.ROLES[roles[i]].map(function (x) { return x.id; }).join(',')));
+      }
+      var G = window.PM.Game;
+      G.newGame({
+        players: n, net: 'guest', localIdx: d.i, hostIdx: d.hi,
+        fuera: Array.isArray(d.fuera) ? d.fuera : [],
+        cfg: this.sanitizeNetCfg(d.cfg),
+        colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
+        hab: !!d.hab, clasif: !!d.cl, roles: roles, loadouts: loadouts,
+        caza: !!d.caza, superv: !!d.sv, maze: d.maze || null
+      });
+      G.ponerRevista(d);
     },
 
     /* ¡TEMPORADA CERRADA! — la primera vez que se abre el juego después de
