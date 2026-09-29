@@ -9881,7 +9881,7 @@
       /* las skins de cofre van por el mismo camino */
       var Sk = window.PM.Skins;
       var cofreSkins = CFG.SKINS.filter(function (sk) { return sk.grupo === 'cofre'; });
-      eq(cofreSkins.length, 13, 'las trece skins de cofre');
+      eq(cofreSkins.length, 19, 'las diecinueve skins de cofre');
       ok(cofreSkins.some(function (sk) { return sk.legendaria; }), 'una es la del Legendario');
       var sk1 = cofreSkins[0];
       ok(!Sk.estado(sk1.id).abierta, sk1.id + ': cerrada hasta que salga de un cofre');
@@ -11215,16 +11215,17 @@
    * bota o se hunde en la cabeza. Esto obliga a decidirlo al añadirla. */
   test('el vestuario está completo: cabezas, poses, zonas, sombreros y laureles', function () {
     var S = window.PM.Sprites;
-    /* extravagantes SIN POSES: estas seis no mueven el cuerpo. Están aquí
+    /* extravagantes SIN POSES: estas no mueven el cuerpo. Están aquí
      * para que ninguna NUEVA se quede sin POSES sin que alguien lo decida
      * (las nueve que botaban con el accesorio quieto la tienen desde el
-     * 28 sep). */
-    var SIN_POSES = ['gato', 'robot', 'dragon', 'gargola', 'pulpo', 'vampiro'];
+     * 28 sep). El INTI (29 sep) solo gira los rayos: el disco está quieto. */
+    var SIN_POSES = ['gato', 'robot', 'dragon', 'gargola', 'pulpo', 'vampiro', 'inti'];
     /* accesorios que van a la CARA porque es lo que toca (no por olvido) */
     var CARA = ['acc_gafas', 'acc_afiladas', 'acc_bigote', 'acc_auriculares', 'acc_parche', 'acc_ninja',
       'acc_vaquero', 'acc_chullo', 'acc_mohicano', 'acc_orejas', 'acc_buceo',
       'acc_carnero', 'acc_zeus', 'acc_venda', 'acc_mascara',
-      'acc_luchador', 'acc_patito', 'acc_mochila', 'acc_visor'];
+      'acc_luchador', 'acc_patito', 'acc_mochila', 'acc_visor',
+      'acc_3d', 'acc_monoculo', 'acc_moto', 'acc_casco', 'acc_quena', 'acc_orejeras', 'acc_oro'];
     /* las zonas que existen: 'cuerpo' va tal cual, alrededor de todo */
     var ZONAS = ['cara', 'cabeza', 'cuello', 'cuerpo'];
     CFG.SKINS.forEach(function (sk) {
@@ -11361,6 +11362,91 @@
       ok(visto.clasico === false, acc + ': en CLÁSICO lleva lo pintado sobre el cuerpo');
       ok(visto.kitsune === true && visto.oni === true, acc + ': en una extravagante, no');
     });
+  });
+
+  /* TANDAS DE OBJETOS Y ANDINA (19 sep, entran el 29): las 51 piezas de los
+   * dos escaparates (las BURBUJAS de objetos no, que ya estaban). Cada una
+   * sabe de dónde sale, está dibujada y hace su Q y su muerte; las que
+   * chocaban por nombre o por dibujo con una que ya había no la pisan. */
+  test('las tandas de objetos y andina están enteras, bien clasificadas y se dibujan', function () {
+    var S = window.PM.Sprites, Sk = window.PM.Skins;
+    var TIENDA = ['camara', 'reloj', 'semaforo', 'caja', 'bola', 'gallito', 'puma', 'papa', 'aji', 'sapo'];
+    var COFRE = ['discos', 'tele', 'cabina', 'tumi', 'inti', 'nazca'];
+    /* la BOLA y el COLIBRÍ conservan la silueta de Pac-Man: no son extravagantes */
+    var REDONDAS = ['bola', 'nazca'];
+    var info = {};
+    CFG.SKINS.forEach(function (sk) { info[sk.id] = sk; });
+    TIENDA.forEach(function (id) {
+      ok(info[id] && info[id].grupo === 'tienda' && info[id].precio === 1500, id + ': de tienda a 1.500');
+    });
+    COFRE.forEach(function (id) {
+      ok(info[id] && info[id].grupo === 'cofre' && !info[id].legendaria, id + ': de cofre (no la del Legendario)');
+      eq(Sk.estado(id).chip.indexOf('COFRE'), 0, id + ': su etiqueta dice COFRE');
+    });
+    TIENDA.concat(COFRE).forEach(function (id) {
+      eq(!!info[id].rara, REDONDAS.indexOf(id) === -1, id + (REDONDAS.indexOf(id) === -1 ? ': extravagante' : ': con la silueta de Pac-Man'));
+    });
+    function de(lista, id) { var x = null; lista.forEach(function (e) { if (e.id === id) x = e; }); return x; }
+    var ACCS = [['acc_3d', 450], ['acc_corona', 450], ['acc_boina', 450], ['acc_monoculo', 450], ['acc_moto', 450],
+     ['acc_casco', 0], ['acc_cadena', 0],
+     ['acc_montera', 450], ['acc_poncho', 450], ['acc_quena', 450], ['acc_orejeras', 450], ['acc_trenzas', 450],
+     ['acc_oro', 0], ['acc_plumas', 0]];
+    ACCS.forEach(function (a) {
+      var it = de(CFG.ACCESORIOS, a[0]);
+      ok(!!it && it.precio === a[1] && !!it.cofre === (a[1] === 0), a[0] + ': en el catálogo, ' + (a[1] ? 'a ' + a[1] : 'de cofre'));
+      ok(S.ACCESORIOS.hasOwnProperty(a[0]), a[0] + ': tiene dibujo');
+    });
+    var EFX = [['efx_neon', 250], ['efx_polaroids', 250], ['efx_tickets', 250], ['efx_glitch', 0], ['efx_cinta', 0],
+      ['efx_coca', 250], ['efx_granizo', 250], ['efx_serpentina', 250], ['efx_tejido', 250],
+      ['efx_polvoro', 0], ['efx_lineas', 0]];
+    EFX.forEach(function (a) {
+      var it = de(CFG.EFECTOS, a[0]);
+      ok(!!it && it.precio === a[1] && !!it.cofre === (a[1] === 0), a[0] + ': en el catálogo, ' + (a[1] ? 'a ' + a[1] : 'de cofre'));
+      ok(S.EFECTOS.hasOwnProperty(a[0]), a[0] + ': tiene dibujo');
+    });
+    var EMOS = ['alucinado', 'pensando', 'roto', 'aplauso', 'chist', 'achachau', 'huayno', 'chevere', 'chau', 'rico'];
+    EMOS.forEach(function (id) {
+      var it = de(CFG.EMOTES_TIENDA, id);
+      ok(!!it && it.precio === 150, id + ': emote de tienda a 150');
+      ok(S.CARAS_TIENDA[id], id + ': tiene cara');
+      ok(CFG.EMOTE_IDS.indexOf(id) !== -1, id + ': se puede poner en una tecla');
+    });
+    /* lo que ya había sigue siendo lo de antes: un nombre por pieza en cada
+     * catálogo, y la BURBUJAS y la NIEVE de siempre no se las comió la tanda */
+    [CFG.SKINS, CFG.ACCESORIOS, CFG.EFECTOS, CFG.EMOTES_TIENDA].forEach(function (lista) {
+      var vistos = {};
+      lista.forEach(function (e) { ok(!vistos[e.name], e.name + ': el nombre no se repite'); vistos[e.name] = 1; });
+    });
+    var nombres = {};
+    CFG.SKINS.forEach(function (e) { nombres[e.name] = 1; });
+    /* (OJOS, efecto y skin, ya se llamaban igual: aquí solo las nuevas) */
+    ACCS.concat(EFX).forEach(function (a) {
+      var it = de(CFG.ACCESORIOS.concat(CFG.EFECTOS), a[0]);
+      ok(!nombres[it.name], it.name + ': no se llama como una skin');
+    });
+    ok(!!de(CFG.EFECTOS, 'efx_burbujas') && !!de(CFG.EFECTOS, 'efx_nieve'), 'BURBUJAS y NIEVE siguen en la tienda');
+
+    var cv = document.createElement('canvas');
+    cv.width = 96; cv.height = 96;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    TIENDA.concat(COFRE).forEach(function (id) {
+      ok(S.ARTE.hasOwnProperty(id), id + ': tiene dibujo');
+      ok(S.admiteAccesorio(id), id + ': admite accesorios');
+      for (var q = 0; q <= 1.6; q += 0.2) {
+        S.drawPacman(ctx, 16, 16, 3, 2, '#ff0000', id, { t: 3, muerde: q < 0.4, mordio: true, qSeg: q, accesorio: 'acc_corona' });
+        S.drawPacman(ctx, 16, 16, 1, 1, '#ff0000', id, { t: 3, qSeg: q, accesorio: 'acc_cadena' });
+      }
+      for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 16, 16, k / 10, '#ff0000', id, k % 4);
+    });
+    EFX.forEach(function (a) {
+      S.drawPacman(ctx, 16, 16, 3, 1, '#ffff00', 'clasico', { t: 2, s: 90, efecto: a[0] });
+    });
+    EMOS.forEach(function (id) {
+      for (var tk = 0; tk < 200; tk += 25) S.drawEmote(ctx, 16, 12, id, '#ffff00', tk);
+    });
+    /* las trenzas cuelgan de la coronilla en las extravagantes */
+    eq(S.anclaAccesorio('sapo', 'acc_trenzas').k, S.CABEZAS.sapo.k, 'las trenzas, a la escala de su cabeza');
   });
 
   test('HOMBRE LOBO: luna llena, de noche, en la hora de quien juega', function () {
