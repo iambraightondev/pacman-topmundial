@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · HAS SIDO DEGRADADO
+
+Al bajar de división o de rango sale su pantalla: ¡BAJAS DE RANGO! / ¡BAJAS DE
+DIVISIÓN!, HAS SIDO DEGRADADO A X, el escalón perdido tachado y lo que falta
+para recuperarlo. Si se recupera antes de verla, no sale.
+
 ## 2026-09-30 · Las partidas cortadas se recuperan
 
 - **CLASIFICATORIA a solas:** se guarda sola cada segundo; si se corta, al
