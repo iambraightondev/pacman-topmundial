@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v315).
+Última puesta al día: **30 de septiembre de 2026** (pm-v316).
 
 ---
 
@@ -25,9 +25,10 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
    LEGENDARIOS del top 3; hacia el 3-4 oct, encender EXIGIR_REPETICION y
    EXIGIR_AVAL (secretos de la función enviar-record) cuando todos hayan
    recargado; mitad de octubre, revisar FACTOR_ROL (ya con puntos por
-   proteger) y las metas de los retos del Mago; antes del 24 oct, el camino
-   del pase de NOVIEMBRE (5 piezas; sin él ese mes paga solo monedas) y sus
-   piezas con temporada en piezas_especiales.
+   proteger) y las metas de los retos del Mago; antes del 24 nov, el camino
+   del pase de DICIEMBRE (5 piezas; sin él ese mes paga solo monedas) y sus
+   piezas con temporada en piezas_especiales. El de NOVIEMBRE (Día de Muertos)
+   ya está en el juego (pm-v316).
 3. **Que Braighton pruebe jugando:** abrir un cofre (apertura EL SALTO),
    regalar una pieza, una party real (red, volver a la partida con dos
    aparatos por internet), el móvil de verdad y las skins nuevas.

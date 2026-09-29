@@ -9612,10 +9612,11 @@
    * vuelto a repartir el GRITO, la MOCHILA, el ECTOPLASMA, el VISOR y la
    * TRAMPA, que se prometieron solo de octubre. Ahora las piezas van por
    * temporada y un mes sin las suyas paga las mismas monedas y nada más. */
-  test('las piezas del pase son de su mes: octubre las da, noviembre no', function () {
+  test('las piezas del pase son de su mes: octubre las suyas, noviembre las suyas', function () {
     var Pa = window.PM.Pase, S = window.PM.Season;
     var oct = S.actual(new Date(Date.UTC(2026, 9, 15, 12))),
-        nov = S.actual(new Date(Date.UTC(2026, 10, 1, 12)));
+        nov = S.actual(new Date(Date.UTC(2026, 10, 1, 12))),
+        dic = S.actual(new Date(Date.UTC(2026, 11, 1, 12)));
     eq(oct, '2026-10', 'el 15 de octubre es la temporada de octubre');
     eq(nov, '2026-11', 'y el 1 de noviembre, la de noviembre');
     var piezas = function (t) {
@@ -9626,12 +9627,14 @@
       return ids.sort().join(',');
     };
     eq(piezas(oct), 'acc_mochila,acc_visor,efx_ecto,grito,trampa', 'octubre reparte sus cinco');
-    eq(piezas(nov), '', 'noviembre, ninguna');
+    eq(piezas(nov), 'acc_catrina,acc_cempasuchil,alebrije,calaverita,efx_velitas', 'noviembre, las cinco de Día de Muertos');
+    /* (diciembre aún no tiene camino: paga solo monedas) */
+    eq(piezas(dic), '', 'un mes sin camino, ninguna');
     var monedas = function (t) {
       return Pa.camino(t).map(function (e) { return e.g + ':' + (e.gratis.monedas | 0) + '/' + (e.pago.monedas | 0); }).join(' ');
     };
     eq(monedas(nov), monedas(oct), 'y las mismas monedas, galón a galón');
-    eq(Pa.camino(nov).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
+    eq(Pa.camino(dic).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
        String(CFG.PASE.GALONES), 'sin pieza, solo el final es hito');
     eq(Pa.camino(oct).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
        '10,20,' + CFG.PASE.GALONES, 'en octubre, los galones con pieza');
@@ -9651,6 +9654,9 @@
       ['grito', 'acc_mochila', 'efx_ecto', 'acc_visor', 'trampa'].forEach(function (id) {
         ok(!Tn.tiene(id), 'pero en noviembre ' + id + ' no se reparte');
       });
+      ['calaverita', 'acc_catrina', 'efx_velitas', 'acc_cempasuchil', 'alebrije'].forEach(function (id) {
+        ok(Tn.tiene(id), 'y sí las suyas: ' + id);
+      });
       var todo = 0;
       Pa2.camino(t).forEach(function (e) { todo += (e.gratis.monedas | 0) + (e.pago.monedas | 0); });
       eq(Pa2.monedasDe(t), todo, 'y paga todas sus monedas, las mismas que octubre');
@@ -9663,6 +9669,34 @@
     window.PM.UI.refreshPase();
     eq(window.PM.UI.psTemporada, Pa.cuenta() ? Pa.temporada() : CFG.PASE.DESDE,
        'y vuelve al de la temporada que enseña (con el pase dormido, la primera)');
+  });
+
+  /* PASE DE NOVIEMBRE (Día de Muertos, 30 sep): las cinco están dibujadas,
+   * son del pase (no se venden) y el ALEBRIJE hace su Q y su muerte */
+  test('las piezas del pase de noviembre se dibujan', function () {
+    var S = window.PM.Sprites;
+    function de(lista, id) { var x = null; lista.forEach(function (e) { if (e.id === id) x = e; }); return x; }
+    var sk = de(CFG.SKINS, 'alebrije');
+    ok(sk && sk.grupo === 'pase' && sk.rara && sk.temporada === '2026-11', 'ALEBRIJE: skin del pase de noviembre');
+    ['acc_catrina', 'acc_cempasuchil'].forEach(function (id) {
+      var it = de(CFG.ACCESORIOS, id);
+      ok(it && it.pase && !it.precio, id + ': del pase');
+      ok(S.ACCESORIOS.hasOwnProperty(id), id + ': tiene dibujo');
+    });
+    ok(de(CFG.EFECTOS, 'efx_velitas') && S.EFECTOS.hasOwnProperty('efx_velitas'), 'VELITAS: del pase y dibujada');
+    ok(de(CFG.EMOTES_TIENDA, 'calaverita') && S.CARAS_TIENDA.calaverita, 'CALAVERITA: del pase y con cara');
+    var cv = document.createElement('canvas');
+    cv.width = 96; cv.height = 96;
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(3, 0, 0, 3, 0, 0);
+    ok(S.admiteAccesorio('alebrije'), 'el ALEBRIJE admite accesorios');
+    for (var q = 0; q <= 1.6; q += 0.2) {
+      S.drawPacman(ctx, 16, 16, 3, 2, '#ff0000', 'alebrije', { t: 3, muerde: q < 0.4, mordio: true, qSeg: q, accesorio: 'acc_catrina' });
+      S.drawPacman(ctx, 16, 16, 0, 1, '#ff0000', 'clasico', { t: q, accesorio: 'acc_cempasuchil' });
+    }
+    for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 16, 16, k / 10, '#ff0000', 'alebrije', k % 4);
+    S.drawPacman(ctx, 16, 16, 3, 1, '#ffff00', 'clasico', { t: 2, s: 90, efecto: 'efx_velitas' });
+    for (var tk = 0; tk < 200; tk += 25) S.drawEmote(ctx, 16, 12, 'calaverita', '#ffff00', tk);
   });
 
   /* ---------- LAS PIEZAS DE LA TEMPORADA ----------
@@ -11263,7 +11297,8 @@
       'acc_vaquero', 'acc_chullo', 'acc_mohicano', 'acc_orejas', 'acc_buceo',
       'acc_carnero', 'acc_zeus', 'acc_venda', 'acc_mascara',
       'acc_luchador', 'acc_patito', 'acc_mochila', 'acc_visor',
-      'acc_3d', 'acc_monoculo', 'acc_moto', 'acc_casco', 'acc_quena', 'acc_orejeras', 'acc_oro'];
+      'acc_3d', 'acc_monoculo', 'acc_moto', 'acc_casco', 'acc_quena', 'acc_orejeras', 'acc_oro',
+      'acc_cempasuchil'];
     /* las zonas que existen: 'cuerpo' va tal cual, alrededor de todo */
     var ZONAS = ['cara', 'cabeza', 'cuello', 'cuerpo'];
     CFG.SKINS.forEach(function (sk) {

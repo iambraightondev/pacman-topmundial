@@ -174,6 +174,10 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
   ('grito', 'pase', 10, 'gratis'), ('acc_mochila', 'pase', 10, 'pago'),
   ('efx_ecto', 'pase', 20, 'pago'), ('acc_visor', 'pase', 30, 'gratis'),
   ('trampa', 'pase', 30, 'pago'),
+  -- noviembre 2026, Día de Muertos (su temporada, abajo)
+  ('calaverita', 'pase', 10, 'gratis'), ('acc_catrina', 'pase', 10, 'pago'),
+  ('efx_velitas', 'pase', 20, 'pago'), ('acc_cempasuchil', 'pase', 30, 'gratis'),
+  ('alebrije', 'pase', 30, 'pago'),
   -- del RANGO (premios de fin de temporada: se deducen, no se guardan)
   ('efx_dorado', 'rango', null, null), ('acc_laureles_2609', 'rango', null, null),
   ('acc_laureles_2610', 'rango', null, null)
@@ -185,6 +189,8 @@ on conflict (id) do update
 alter table public.piezas_especiales add column if not exists temporada text;
 update public.piezas_especiales set temporada = '2026-10'
  where tipo = 'pase' and id in ('grito', 'acc_mochila', 'efx_ecto', 'acc_visor', 'trampa');
+update public.piezas_especiales set temporada = '2026-11'
+ where tipo = 'pase' and id in ('calaverita', 'acc_catrina', 'efx_velitas', 'acc_cempasuchil', 'alebrije');
 
 -- ---------- el rango, en el servidor ----------
 -- El escalón (0..24) de unos PR: los mismos TRAMOS que js/rango.js arma con

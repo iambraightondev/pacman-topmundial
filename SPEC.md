@@ -1364,6 +1364,14 @@ pass a free player by; the paying lane gets the skin, which is the only thing
 actually being bought. Galón 20 pays a piece on the paid side only — visibly
 padlocked all month — because that is where the decision to buy is made.
 
+**November 2026 — Día de Muertos** (`PIEZAS['2026-11']`, approved 30 Sep; the
+half-Mexican theme was Braighton's call): 10 free CALAVERITA (emote), 10 pass
+SOMBRERO CATRINA (accessory, head), 20 pass VELITAS (trail), 30 free
+CEMPASÚCHIL (accessory, face: behind the ear), 30 pass ALEBRIJE (odd-shaped
+skin with its Q and death; `CABEZAS`/`POSES` like any other). Block
+*TEMPORADA DE NOVIEMBRE DEL PASE* in skins.js; server rows in
+`piezas_especiales` with `temporada = '2026-11'`.
+
 **How a piece is wired.** Drawings live in `js/skins.js` under *TEMPORADA DE
 OCTUBRE DEL PASE* (skin in `DRAW`, accessory in `ACC`, trail in `EFX`, face in
 `caraEmote`); the piece is declared in `js/config.js` with `pase: true` (a skin
@@ -1438,9 +1446,9 @@ Asleep-season state: before `CFG.PASE.DESDE` the whole path is visible but a
 warning says what is played now does not count towards it.
 
 ### Not built yet
-- Pieces for any season after October: `CFG.PASE.PIEZAS` only has
-  `2026-10`, so from November the path pays coins only until a month gets its
-  own entry.
+- Pieces for any season after November: `CFG.PASE.PIEZAS` has `2026-10` and
+  `2026-11`, so from December the path pays coins only until a month gets its
+  own entry (needed before the 24th of the month before).
 - Any actual payment. `Pase.conceder(temporada)` is the hook the checkout will
   call the day one exists; nothing in the game reaches it today and the button
   stays disabled.

@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · El pase de noviembre: DÍA DE MUERTOS
+
+Las cinco piezas del camino de noviembre, aprobadas por Braighton: CALAVERITA
+(emote, galón 10 gratis), SOMBRERO CATRINA (galón 10 de pago), VELITAS (efecto,
+galón 20 de pago), CEMPASÚCHIL (flor detrás de la oreja, galón 30 gratis) y la
+skin ALEBRIJE (galón 30 de pago). Solo se ganan en noviembre.
+
 ## 2026-09-30 · Dos pestañas ya no se pisan el récord
 
 Con el juego abierto en dos pestañas, la que se abrió antes no se enteraba del
