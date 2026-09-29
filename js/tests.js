@@ -5783,6 +5783,255 @@
     }
   });
 
+  /* ---------- RETOS ENTRE AMIGOS (js/retos.js, 29 sep) ----------
+   * Sin coincidir: se comparan las doce marcas de tus amigos con las tuyas
+   * al abrir el juego, cada adelantamiento se avisa una vez (también entre
+   * dos aparatos) y SUPERA ESTO pone su marca en el marcador. Todo con una
+   * cuenta de mentira y sin red. */
+  function conRetos(fn) {
+    var Ac = window.PM.Account, Rt = window.PM.Retos;
+    var g0 = { user: Ac.user, token: Ac.token, fundido: Ac.fundido, push: Ac.pushQuiet,
+               list: Ac.listFriends, perfiles: Ac.fetchProfiles };
+    var rec = { h1: G.highScore1, h2: G.highScore2, h3: G.highScore3, h4: G.highScore4,
+                lab: G.recordsModo.lab.slice(), hab: G.recordsModo.hab.slice() };
+    var r0 = { armado: Rt.armado, enJuego: Rt.enJuego, ultima: Rt.ultima };
+    var guardado = null;
+    try { guardado = localStorage.getItem(Rt.KEY); localStorage.removeItem(Rt.KEY); } catch (e) { /* nada */ }
+    Ac.user = { id: 'id-retos', usuario: 'PRUEBA', avatar: 'pac' };
+    Ac.token = 'token-de-prueba';
+    Ac.fundido = 'id-retos';
+    Ac.pushQuiet = function () { };
+    G.highScore1 = 0; G.highScore2 = 0; G.highScore3 = 0; G.highScore4 = 0;
+    G.recordsModo.lab = [0, 0, 0, 0]; G.recordsModo.hab = [0, 0, 0, 0];
+    Rt.armado = null; Rt.enJuego = null; Rt.ultima = 0; Rt.buscando = false;
+    try { fn(Rt, Ac); } finally {
+      Ac.user = g0.user; Ac.token = g0.token; Ac.fundido = g0.fundido; Ac.pushQuiet = g0.push;
+      Ac.listFriends = g0.list; Ac.fetchProfiles = g0.perfiles;
+      G.highScore1 = rec.h1; G.highScore2 = rec.h2; G.highScore3 = rec.h3; G.highScore4 = rec.h4;
+      G.recordsModo.lab = rec.lab; G.recordsModo.hab = rec.hab;
+      Rt.armado = r0.armado; Rt.enJuego = r0.enJuego; Rt.ultima = r0.ultima; Rt.buscando = false;
+      try {
+        if (guardado === null) localStorage.removeItem(Rt.KEY);
+        else localStorage.setItem(Rt.KEY, guardado);
+      } catch (e) { /* nada */ }
+      if (window.PM.UI.promptOpen) window.PM.UI.hidePrompt();
+    }
+  }
+
+  test('RETOS: se detecta quién te pasa, ruta a ruta (mundo y formato)', function () {
+    conRetos(function (Rt) {
+      eq(Rt.RUTAS.length, 12, 'doce rutas: tres mundos por cuatro formatos');
+      var mias = { c1: 1000, c2: 5000, l1: 800, h1: 5000, h3: 0 };
+      var filas = [
+        { usuario: 'ANA', record1: 2000, record2: 5000, record_lab: 900, record_hab: 4000, record_hab3: 9000 },
+        { usuario: 'PRUEBA', record1: 99999 }                       // uno mismo, nunca
+      ];
+      var ad = Rt.adelantos(mias, filas, {}, 'PRUEBA');
+      eq(ad.length, 2, 'clásico solo y laberintos solo: ' + JSON.stringify(ad));
+      eq(ad[0].amigo + ' ' + ad[0].k + ' ' + ad[0].suya + ' ' + ad[0].tuya, 'ANA c1 2000 1000');
+      eq(ad[1].k, 'l1', 'LABERINTOS va por su columna (record_lab)');
+      eq(Rt.nombreRuta('h3'), 'DESATADO · TRÍO');
+      eq(Rt.nombreRuta('c1'), 'CLÁSICO · SOLO');
+      // el empate (dúo) no es adelantar, y donde no tienes marca (trío) tampoco
+      ok(!ad.some(function (x) { return x.k === 'c2' || x.k === 'h3'; }), 'ni empates ni rutas sin marca tuya');
+      // también de un mapa { NOMBRE: fila }, que es lo que da fetchProfiles
+      eq(Rt.adelantos(mias, { ANA: filas[0] }, {}, 'PRUEBA').length, 2);
+      // las columnas por formato de los mundos aparte
+      eq(Rt.marcasDe({ record_lab2: 7, record_hab4: 9, record3: 5 }).l2, 7);
+      eq(Rt.marcasDe({ record_lab2: 7, record_hab4: 9, record3: 5 }).h4, 9);
+      eq(Rt.marcasDe({ record_lab2: 7, record_hab4: 9, record3: 5 }).c3, 5);
+    });
+  });
+
+  test('RETOS: cada adelantamiento se avisa una vez, y uno nuevo vuelve a avisar', function () {
+    conRetos(function (Rt) {
+      G.highScore1 = 1000;
+      var ana = { usuario: 'ANA', record1: 2000 };
+      var ad = Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA');
+      eq(ad.length, 1, 'la primera vez, sí');
+      Rt.marcar(ad);
+      eq(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA').length, 0, 'la segunda, no');
+      eq(Rt.pendientes().length, 1, 'y queda en el recuadro hasta cerrarlo');
+      // mejora su marca: eso es otro adelantamiento
+      ana.record1 = 2500;
+      eq(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA').length, 1, 'su marca nueva, sí');
+      Rt.marcar(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA'));
+      eq(Rt.pendientes().length, 1, 'el recuadro no repite amigo y ruta: el nuevo pisa al viejo');
+      eq(Rt.pendientes()[0].suya, 2500);
+      // le pasas tú: el aviso se cae solo del recuadro
+      G.highScore1 = 3000;
+      eq(Rt.pendientes().length, 0, 'lo ya superado no se enseña');
+      eq(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA').length, 0);
+      // y si ella te vuelve a pasar, es nuevo
+      ana.record1 = 3500;
+      eq(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA').length, 1, 'te vuelve a pasar: se avisa');
+      // cerrar el recuadro no olvida lo avisado
+      Rt.marcar(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA'));
+      Rt.quitar(null);
+      eq(Rt.pendientes().length, 0);
+      eq(Rt.adelantos(Rt.mias(), [ana], Rt.vistos(), 'PRUEBA').length, 0, 'cerrado sigue avisado');
+    });
+  });
+
+  test('RETOS: lo avisado viaja con la cuenta y el otro aparato no lo repite', function () {
+    conRetos(function (Rt, Ac) {
+      G.highScore1 = 1000;
+      G.recordsModo.hab[0] = 5000;
+      var filas = [{ usuario: 'ANA', record1: 2000, record_hab: 60000 },
+                   { usuario: 'LUIS', record_hab: 70000 }];
+      Rt.marcar(Rt.adelantos(Rt.mias(), filas, Rt.vistos(), 'PRUEBA'));
+      var txt = Rt.paraNube();
+      ok(/ANA:/.test(txt) && /LUIS:/.test(txt), 'va en texto corto: ' + txt);
+      ok(txt.length < 200, 'y corto de verdad');
+      // va en la bolsa de ajustes que sube con el perfil
+      var st = Ac.localState();
+      if (!Ac.sinAjustes) eq(st.ajustes.retos, txt, 'en ajustes.retos');
+      // EL OTRO APARATO: su almacén vacío, recibe la fila de la nube
+      localStorage.removeItem(Rt.KEY);
+      eq(Rt.adelantos(Rt.mias(), filas, Rt.vistos(), 'PRUEBA').length, 3, 'sin la nube, avisaría otra vez');
+      ok(Rt.desdeNube(txt), 'la nube trae lo avisado');
+      eq(Rt.adelantos(Rt.mias(), filas, Rt.vistos(), 'PRUEBA').length, 0, 'con ella, no repite');
+      eq(Rt.pendientes().length, 0, 'ni lo pone en su recuadro (ya se enseñó en el otro)');
+      // se funde con lo mayor de cada lado, y lo roto no entra
+      Rt.desdeNube('ANA:c1.' + (100).toString(36) + ';BASURA;<script>:c1.zz;ANA:x9.1');
+      eq(Rt.vistos().ANA.c1, 2000, 'lo menor de la nube no baja lo de aquí');
+      ok(!Rt.vistos()['<SCRIPT>'], 'un nombre raro no entra');
+      eq(Object.keys(Rt.leerNube(123)).length, 0, 'ni algo que no es texto');
+      // ...ni la fila de la nube de OTRA cuenta se mezcla con esta
+      Ac.user = { id: 'id-otra', usuario: 'OTRA', avatar: 'pac' };
+      eq(Object.keys(Rt.vistos()).length, 0, 'cada cuenta lo suyo');
+    });
+  });
+
+  test('RETOS: al abrir se leen los perfiles de los amigos y sale ¡TE HAN SUPERADO!', function () {
+    var UI = window.PM.UI;
+    conRetos(function (Rt, Ac) {
+      G.highScore1 = 28900;
+      G.recordsModo.hab[0] = 28900;
+      var pedidas = 0;
+      Ac.listFriends = function (cb) { pedidas++; cb(null, ['MAULIO']); };
+      Ac.fetchProfiles = function (l, cb) {
+        cb(null, { MAULIO: { usuario: 'MAULIO', record1: 1000, record_hab: 34560 } });
+      };
+      // sin la nube fundida en esta sesión no se mira: el otro aparato podría ya haberlo avisado
+      Ac.fundido = null;
+      ok(!Rt.revisar(null, true), 'espera a fundir la cuenta');
+      eq(pedidas, 0);
+      Ac.fundido = 'id-retos';
+      var nuevos = null;
+      ok(Rt.revisar(function (n) { nuevos = n; }, true), 'con la cuenta fundida, sí');
+      eq(nuevos.length, 1, 'uno nuevo');
+      ok(!Rt.revisar(null), 'y no vuelve a leer hasta pasado el rato');
+      UI.showMenu();
+      var t = UI.retosTarjeta;
+      eq(t.box.style.display, '', 'el recuadro se ve');
+      var texto = t.txt.textContent + ' · ' + t.marca.textContent;
+      eq(texto, 'MAULIO TE HA SUPERADO EN DESATADO · SOLO · 34.560 CONTRA TUS 28.900');
+      // otra ronda: no repite
+      Rt.revisar(function (n) { nuevos = n; }, true);
+      eq(nuevos.length, 0, 'la segunda ronda no repite');
+      // SUPERA ESTO abre el reto, con su marca
+      t.ir.click();
+      ok(UI.promptOpen, 'sale el diálogo');
+      ok(UI.els.prompt.textContent.indexOf('34.560') !== -1, 'con su marca');
+      ok(UI.els.prompt.textContent.indexOf('TE FALTAN') !== -1, 'y lo que te falta');
+      UI.hidePrompt();
+      // ✕: fuera del recuadro
+      t.box.querySelector('.rt-cerrar').click();
+      eq(t.box.style.display, 'none', 'cerrado');
+    });
+    UI.showMenu();
+  });
+
+  test('RETOS: sin cuenta no hay aviso, y SUPERA ESTO invita a crear una', function () {
+    var UI = window.PM.UI, Ac = window.PM.Account, Rt = window.PM.Retos;
+    ok(!Ac.logged(), 'sin sesión');
+    ok(!Rt.revisar(null, true), 'no se mira a nadie');
+    UI.showMenu();
+    eq(UI.retosTarjeta.box.style.display, 'none', 'ni recuadro');
+    UI.showFriends();
+    var b = UI.friendsGate.querySelector('.amg-retar');
+    ok(b, 'en la puerta de AMIGOS está el botón');
+    try {
+      b.click();
+      ok(UI.promptOpen, 'y explica');
+      var etiquetas = [].map.call(UI.els.prompt.querySelectorAll('.btn'),
+        function (x) { return x.textContent; }).join(' ');
+      ok(etiquetas.indexOf('CREAR CUENTA') !== -1, 'con la puerta de crear cuenta');
+      UI.hidePrompt();
+      Rt.abrir(UI, { amigo: 'ANA', k: 'c1', suya: 5000 });
+      ok(UI.els.prompt.textContent.indexOf('CREAR CUENTA') !== -1, 'desde un perfil, lo mismo');
+    } finally {
+      UI.hidePrompt();
+      UI.showMenu();
+    }
+  });
+
+  test('RETOS: la partida de la ruta enseña su marca y celebra al pasarla', function () {
+    conRetos(function (Rt) {
+      Rt.armar({ amigo: 'ANA', k: 'c1', suya: 500 });
+      partida(1);
+      ok(Rt.enJuego, 'la partida es de la ruta del reto');
+      var lienzo = document.createElement('canvas');
+      var ctx = lienzo.getContext('2d');
+      G.score = 400;
+      ticks(1);
+      ok(!Rt.enJuego.hecho, 'aún no');
+      ok(Rt.hud(G, ctx), 'su marca va en el marcador');
+      G.score = 510;
+      G.achNotices = []; G.achNotice = null;
+      ticks(1);
+      ok(Rt.enJuego.hecho, 'pasada');
+      var avisos = G.runAch.map(function (a) { return a.name; }).join(' ');
+      ok(avisos.indexOf('¡RETO SUPERADO!') !== -1, 'va al resumen del final: ' + avisos);
+      ok(G.achNotices.concat(G.achNotice ? [G.achNotice] : []).some(function (a) { return a.name === 'RETO SUPERADO'; }),
+         'y por la banda de arriba');
+      eq(Rt.armado, null, 'hecho: se desarma');
+      ok(!Rt.hud(G, ctx), 'y el marcador vuelve a su HIGH SCORE');
+      G.toMenu();
+      // otra ruta no lleva el reto: un dúo no es la ruta de solo
+      Rt.armar({ amigo: 'ANA', k: 'c1', suya: 500 });
+      partida(2);
+      eq(Rt.enJuego, null, 'un dúo no es CLÁSICO · SOLO');
+      G.toMenu();
+      // ni una repetición
+      Rt.armar({ amigo: 'ANA', k: 'c1', suya: 500 });
+      partida(1);
+      ok(Rt.enJuego, 'de nuevo la ruta');
+      G.replaying = true;
+      try { Rt.alEmpezar(G); } finally { G.replaying = false; }
+      eq(Rt.enJuego, null, 'una repetición no bate marcas');
+      G.toMenu();
+      Rt.armado = null;
+    });
+  });
+
+  test('RETOS: el perfil de un amigo trae SUS MARCAS con SUPERA ESTO donde va delante', function () {
+    var UI = window.PM.UI;
+    conRetos(function (Rt, Ac) {
+      var fetch0 = Ac.fetchProfile;
+      G.highScore1 = 9000;
+      try {
+        Ac.fetchProfile = function (n, cb) {
+          cb(null, { usuario: 'ANA', avatar: 'pinky', xp: 100, record1: 5000, record2: 0,
+                     record_hab: 34560, logros: {} });
+        };
+        UI.mateIrARetos = true;
+        UI.showFriendProfile('ANA');
+        var filas = UI.mateRetos.caja.querySelectorAll('.rt-fila');
+        eq(filas.length, 2, 'las rutas en las que tiene marca');
+        eq(UI.mateRetos.caja.querySelectorAll('.rt-fila-btn').length, 1, 'SUPERA ESTO solo donde te gana');
+        ok(UI.mateRetos.caja.textContent.indexOf('LE GANAS') !== -1, 'donde vas tú delante, se dice');
+        UI.mateRetos.caja.querySelector('.rt-fila-btn').click();
+        ok(UI.promptOpen && UI.els.prompt.textContent.indexOf('DESATADO · SOLO') !== -1, 'abre su reto');
+        UI.hidePrompt();
+      } finally {
+        Ac.fetchProfile = fetch0;
+        UI.showMenu();
+      }
+    });
+  });
+
   test('el usuario de una cuenta se sanea como un nombre del juego', function () {
     var Ac = window.PM.Account;
     eq(Ac.cleanUser('  pepe-123 '), 'PEPE123');

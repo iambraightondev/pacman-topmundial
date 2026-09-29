@@ -56,6 +56,7 @@ var SHELL = [
   './js/pase.js',
   './js/ficha.js',
   './js/account.js',
+  './js/retos.js',
   './js/versus.js',
   './js/habilidades.js',
   './js/jefe.js',

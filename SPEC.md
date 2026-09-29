@@ -43,7 +43,9 @@ travels in the snapshot (`tm`), so the host owns it.
 
 **Amigos** (`PM.Friends`, `CFG.FRIENDS_KEY`): a local list of names —
 add/remove, sanitised like nicknames, no duplicates, cannot add yourself.
-Each row can invite them to the party and spectate their game (see Party).
+Each row can invite them to the party and spectate their game (see Party),
+and challenge their records without being online together (SUPERA ESTO: see
+RETOS ENTRE AMIGOS).
 
 **Pausa**: `Game.canPause()` allows the menu in any in-game state except
 GAME OVER (and while a net notice is up), so `Escape`/`P` also work during a
@@ -561,6 +563,7 @@ results also land in `window.__TESTS`.
   - `js/party.js`   — persistent group rooms and invites (defines `PM.Party`)
   - `js/achievements.js` — achievement counters (defines `PM.Achievements`)
   - `js/account.js` — Supabase Auth accounts + cloud profile (defines `PM.Account`)
+  - `js/retos.js`   — challenges between friends, SUPERA ESTO (defines `PM.Retos`)
   - `js/game.js`    — state machine + fixed-timestep loop (defines `PM.Game`)
   - `js/ui.js`      — menus, settings panel, party panel (defines `PM.UI`)
   - Script order in index.html: config, audio, sprites, pacman, ghost,
@@ -1552,6 +1555,76 @@ paid at close is inside the game's coin total). Outside a game
 the celebration queue (`Celebrar.pasos`, one entry that merges ids) and
 `UI.celebrarSiToca` shows `Pasos.celebrar`: the missions with their prize,
 the progress, and the chest when all eight are done.
+
+## RETOS ENTRE AMIGOS (`js/retos.js` — `PM.Retos`, 29 Sep 2026)
+
+A challenge between friends that does not need both online at once (there
+are ~8 players and a party needs everybody connected). It rides on what the
+cloud already has: every public profile row carries its **twelve route
+records** — world (CLÁSICO `record1..4`, LABERINTOS `record_lab[2-4]`,
+DESATADO `record_hab[2-4]`) × format (solo, dúo, trío, escuadra). No new
+table, no server change, nothing written to anybody else's row: friends'
+profiles are only READ (`Account.listFriends` + `Account.fetchProfiles`).
+Routes are keyed `c1..c4`, `l1..l4`, `h1..h4` (`Retos.RUTAS`).
+
+**1. ¡TE HAN SUPERADO!** `Retos.revisar()` runs from the menu
+(`UI.showMenu` and the account's `onchange`, via `Retos.alMenu`), at most
+every `INTERVALO` = 5 min, only signed in and only once `Account.fundir` has
+merged the cloud in this session (`Account.fundido === user.id`), exactly
+like PRIMEROS PASOS: otherwise a second device would repeat what the first
+already showed. `Retos.adelantos(mias, filas, vistos)` is the pure rule: a
+friend has overtaken you on a route when **you have a record there**, theirs
+is **higher than yours** and **higher than the one already shown to you** for
+that friend and route. So each overtake is announced once; if you pass them
+back and they pass you again, their new record is higher than the shown one
+and it is announced again. Ties are not overtakes (team records shared by
+the same party are equal on every teammate).
+
+What was shown lives per account in `localStorage['pacman-topmundial-retos']`
+(`{ USER: { v: { FRIEND: { route: record } }, p: [pending] } }`) and travels
+with the account inside `perfiles.ajustes.retos` (`Account.localState` puts
+`Retos.paraNube()`, `Account.applyRemote` calls `Retos.desdeNube()`), as a
+short string `FRIEND:h1.<base36>,c1.<base36>;…` capped at 600 characters
+(the `ajustes` column has a 4,000-byte check). Merging keeps the **highest**
+value per friend and route, like the DAILY card. The first run shows every
+overtake that already exists (one card, paged), then only new ones.
+
+Pending overtakes go to a card on the front page (`Retos.tarjeta`, built by
+`UI.buildMenu`): "FREDDY TE HA SUPERADO EN CLÁSICO · SOLO — 35.090 CONTRA
+TUS 28.900", SUPERA ESTO, ► for the next one and ✕ to dismiss them all.
+Wide layout: under TU CUARTEL (the player column is already full with the
+DAILY); below 1000 px: right under JUGAR (after PRIMEROS PASOS if present), so
+it never pushes the button down (`Retos.colocar`, also on resize). A pending
+overtake you have since beaten drops off by itself. No push notifications.
+
+**2. SUPERA ESTO.** From the card, from each friend's card in AMIGOS (opens
+their profile at SUS MARCAS) or from SUS MARCAS in the friend profile
+(`Retos.pintarFicha`, from `UI.renderMate`: each route where they have a
+record, theirs against yours, SUPERA ESTO where they are ahead, LE GANAS or
+EMPATE otherwise). `Retos.abrir` shows the route, their record and what you
+lack, then **arms** the challenge (`Retos.armar`, memory only) and goes to the
+mode (`Retos.ir`): solo routes straight into their JUGAR (CLÁSICO starts,
+LABERINTOS opens the maze list, DESATADO its locker); team routes offer
+MISMO TECLADO (dúo in CLÁSICO or DESATADO) and EN PARTY (ONLINE panel).
+VER SU PARTIDA appears when `repeticiones` has a row with the same format,
+the same points and their name in `nombres` (public read, anon key).
+
+In the game, `Game.newGame` calls `Retos.alEmpezar` (after
+`Replay.alEmpezar`, which decides whether this is played or only watched): if
+the armed route matches the game's world and player count and the game can
+set a record (not a replay, spectator, PAC-MAN VS., SUPERVIVENCIA or
+CACERÍA), it becomes `Retos.enJuego`. `Game.renderHUD` then shows **RETO
+<FRIEND>** and their record in the HIGH SCORE slot (`Retos.hud`); `Game.step`
+calls `Retos.paso`, which on passing it pushes RETO SUPERADO to the
+achievement band and ¡RETO SUPERADO! to the GAME OVER list, plays the extra
+life jingle, disarms the challenge and removes it from the card. Your new
+record reaches your profile the usual way, and the friend sees it as (1) the
+next time they open the game — **if you are in their list**: friendships are
+one-way (`amigos.de → amigo`).
+
+**Guests.** No account, no friends: the card never shows, and SUPERA ESTO
+(in the AMIGOS gate and anywhere else) opens `Retos.pideCuenta`, which
+explains and offers CREAR CUENTA / YA TENGO CUENTA.
 
 ## Partida a medias (`js/guardado.js` — `PM.Guardado`)
 

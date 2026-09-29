@@ -800,6 +800,10 @@
        * muda debajo de JUGAR para no empujarlo. */
       if (window.PM.Pasos) player.appendChild(window.PM.Pasos.tarjeta(this));
 
+      /* ¡TE HAN SUPERADO! (js/retos.js): un amigo ha pasado una marca tuya.
+       * Como PRIMEROS PASOS, en estrecho va debajo de JUGAR. */
+      if (window.PM.Retos) player.appendChild(window.PM.Retos.tarjeta(this));
+
       /* CONTINUAR: la partida que se dejó a medias (js/guardado.js). Si no
        * hay ninguna, el bloque entero no existe. */
       player.appendChild(this.buildContinuarBox());
@@ -9091,6 +9095,8 @@
       if (this.mateMaestria && MaeM && MaeM.mejor) {
         this.pintarMejorMaestria(this.mateMaestria, MaeM.mejor(fila.logros || {}, fila.usuario));
       }
+      // SUS MARCAS, ruta a ruta contra las tuyas, con SUPERA ESTO (js/retos.js)
+      if (window.PM.Retos) window.PM.Retos.pintarFicha(this, fila);
 
       /* récords: uno por formato. Trío y escuadra solo salen si ha jugado
        * alguna, que si no son dos ceros que no dicen nada. */
@@ -10413,6 +10419,9 @@
         if (window.PM.Conectados) window.PM.Conectados.arrancar();
         // PRIMEROS PASOS: entrar es una misión, y lo de la nube puede cumplir otras
         if (window.PM.Pasos) window.PM.Pasos.alMenu(self);
+        // RETOS: con la nube recién fundida ya se puede mirar a los amigos
+        var Gm = window.PM.Game;
+        if (window.PM.Retos && !(Gm && Gm.inGame && Gm.inGame())) window.PM.Retos.alMenu(self);
       };
       if (window.PM.Conectados) {
         window.PM.Conectados.onchange = function () {
@@ -10491,6 +10500,12 @@
       var goProf = this.makeButton('IR A PERFIL', function () { self.showProfile(); });
       goProf.classList.add('btn-primary');
       this.friendsGate.appendChild(goProf);
+      /* los RETOS también van con la cuenta: el botón está, y explica por qué */
+      if (window.PM.Retos) {
+        var gRetar = this.makeButton('SUPERA ESTO', function () { window.PM.Retos.pideCuenta(self); });
+        gRetar.classList.add('amg-retar');
+        this.friendsGate.appendChild(gRetar);
+      }
       o.appendChild(this.friendsGate);
 
       this.friendsBody = el('div', 'amg-cuerpo');
@@ -10747,6 +10762,16 @@
           });
         }, true);
         card.appendChild(acciones);
+        /* SUPERA ESTO: al perfil, a la lista de sus marcas (js/retos.js) */
+        if (window.PM.Retos) {
+          var retar = self.makeButton('SUPERA ESTO', function () {
+            self.mateIrARetos = true;
+            self.showFriendProfile(name);
+          });
+          retar.classList.add('amg-retar');
+          retar.setAttribute('aria-label', 'Ver las marcas de ' + name + ' y superarlas');
+          card.appendChild(retar);
+        }
 
         self.friendAvatars.push({ name: name, canvas: av, card: card, datos: datos, estado: estado });
         self.friendsList.appendChild(card);
@@ -14892,6 +14917,8 @@
       this.animarNickLook();     // tu Pac-Man junto a tu nombre
       // PRIMEROS PASOS: lo cumplido fuera de partida se cobra y se celebra
       if (window.PM.Pasos) window.PM.Pasos.alMenu(this);
+      // RETOS: ¿algún amigo te ha pasado una marca? (como mucho cada 5 min)
+      if (window.PM.Retos) window.PM.Retos.alMenu(this);
       // lo que se subió (nivel, división, rango) y aún no se ha celebrado
       if (this.iniciado) this.celebrarSiToca();
     },
