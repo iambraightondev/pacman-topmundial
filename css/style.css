@@ -9233,3 +9233,135 @@ body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosA
   .pp-cel-lista li { flex-wrap: wrap; }
   .pp-cel-premio { margin-left: 34px; }
 }
+
+/* ---------- REGALAR (js/regalos.js, 29 sep) ----------
+ * Una capa ENCIMA de la ficha (no otra pantalla): la pieza, a quién, y el
+ * pago en dos pasos como CONTINUAR. Rosa de PINKY para no confundirlo con
+ * COMPRAR (amarillo) ni con PONÉRMELO (cian). */
+.btn.ficha-regalar { border-color: #ff7ad9; color: #ff7ad9; }
+.btn.ficha-regalar:hover, .btn.ficha-regalar:focus-visible { background: #ff7ad9; color: #000; }
+.rg-capa {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 18px 10px;
+  overflow-y: auto;
+  background: rgba(0, 0, 8, 0.86);
+}
+.rg-caja {
+  width: min(560px, 100%);
+  margin: auto 0;
+  padding: 16px 16px 14px;
+  border: 2px solid #ff7ad9;
+  border-radius: 6px;
+  background: #0b0418;
+  box-shadow: 0 0 0 4px #000, 0 0 30px rgba(255, 122, 217, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.rg-titulo {
+  color: #ff7ad9;
+  font-size: clamp(18px, 3.4vh, 26px);
+  letter-spacing: 6px;
+  text-align: center;
+  text-shadow: 3px 3px 0 #3a0f33;
+}
+.rg-pieza { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; }
+.rg-nombre { color: #fff; font-weight: bold; letter-spacing: 3px; font-size: clamp(13px, 2.2vh, 17px); }
+.rg-pieza .precio { font-size: clamp(13px, 2.2vh, 17px); font-weight: bold; }
+.rg-nota { color: #b9bae6; font-size: var(--fs-s); letter-spacing: 1px; line-height: 1.7; text-align: center; }
+.rg-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.rg-cargando, .rg-vacio {
+  grid-column: 1 / -1;
+  padding: 16px 8px;
+  color: #b9bae6;
+  font-size: var(--fs-m);
+  letter-spacing: 1px;
+  line-height: 1.7;
+  text-align: center;
+}
+.rg-cargando { animation: rg-parpadeo 1s steps(2) infinite; }
+.rg-amigo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 2px solid #2121ff;
+  border-radius: 4px;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.rg-amigo-n { font-weight: bold; letter-spacing: 2px; font-size: clamp(var(--fs-m), 1.8vh, 13px); }
+.rg-amigo-e { color: #ff8a8a; font-size: var(--fs-s); letter-spacing: 1px; line-height: 1.5; }
+.rg-amigo:hover:not(:disabled), .rg-amigo:focus-visible { border-color: #ff7ad9; outline: none; }
+.rg-amigo.elegido { border-color: #ff7ad9; background: #2a0b24; box-shadow: inset 0 0 0 2px #ff7ad9; }
+.rg-amigo.elegido .rg-amigo-n::before { content: '▶ '; color: #ff7ad9; }
+.rg-amigo:disabled { border-color: #222; color: #666; cursor: not-allowed; }
+.rg-aviso { min-height: 1.5em; color: #ffd23f; font-size: var(--fs-m); letter-spacing: 1px; line-height: 1.6; text-align: center; }
+.rg-aviso.error { color: #ff5a5a; }
+.rg-pie { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.btn.rg-dar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 18px;
+  font-size: clamp(12px, 2vh, 16px);
+  letter-spacing: 2px;
+  border-color: #ff7ad9;
+  background: #ff7ad9;
+  color: #000;
+}
+.btn.rg-dar .precio { color: #000; }
+.btn.rg-dar:hover:not(:disabled), .btn.rg-dar:focus-visible { background: #fff; }
+.btn.rg-dar.armado, .btn.rg-dar.armado:hover { background: #ffd23f; border-color: #ffd23f; color: #000; box-shadow: 0 0 0 3px #000, 0 0 0 5px #ffd23f; animation: rg-late 0.9s steps(2) infinite; }
+@keyframes rg-late { 50% { box-shadow: 0 0 0 3px #000, 0 0 0 5px #ff7ad9; } }
+.btn.rg-dar:disabled { background: #222; border-color: #333; color: #777; cursor: not-allowed; animation: none; }
+@keyframes rg-parpadeo { 50% { opacity: 0.55; } }
+
+/* EL AVISO DEL QUE LO RECIBE: X TE HA REGALADO … */
+.rg-cel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(92vw, 560px); }
+.rg-cel-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #ff7ad9;
+  border-radius: 6px;
+  background: #140617;
+  animation: pp-entra 0.35s steps(4) both;
+}
+.rg-cel-fila:nth-child(2) { animation-delay: 0.15s; }
+.rg-cel-fila:nth-child(n+3) { animation-delay: 0.3s; }
+.rg-cel-lupa { width: 72px; height: 72px; flex: none; image-rendering: pixelated; border: 1px solid #3a0f33; background: #000; }
+.rg-cel-txt { flex: 1; min-width: 0; font-size: clamp(var(--fs-m), 1.7vh, 13px); letter-spacing: 1px; line-height: 1.7; color: #ddd; }
+.rg-cel-de { color: #ff7ad9; }
+.rg-cel-pieza { color: #ffd23f; }
+.rg-cel-nota { color: #5cff8a; font-size: var(--fs-m); letter-spacing: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .rg-cargando, .btn.rg-dar.armado, .btn.rg-dar.armado:hover, .rg-cel-fila { animation: none; }
+}
+@media (max-width: 520px) {
+  .rg-caja { padding: 12px 10px; }
+  .rg-lista { grid-template-columns: 1fr 1fr; }
+  .rg-pie .btn { flex: 1 1 100%; justify-content: center; }
+}

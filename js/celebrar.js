@@ -98,6 +98,22 @@
       this.escribir(lista);
     },
 
+    /* Lo que te han REGALADO tus amigos (js/regalos.js): [{ n, de, pieza }].
+     * Varios sin ver, un solo aviso con todos; el mismo regalo (n) no se
+     * apunta dos veces. */
+    regalos: function (lista) {
+      if (!lista || !lista.length) return;
+      var u = quien(), todos = this.leer(), ya = null;
+      todos.forEach(function (x) { if (x.t === 'regalo' && x.u === u) ya = x; });
+      if (!ya) { ya = { t: 'regalo', u: u, lista: [] }; todos.push(ya); }
+      lista.forEach(function (r) {
+        if (!r || ya.lista.some(function (y) { return y.n === r.n; })) return;
+        ya.lista.push({ n: r.n, de: String(r.de || ''), pieza: String(r.pieza || '') });
+      });
+      ya.lista = ya.lista.slice(-10);
+      this.escribir(todos);
+    },
+
     /* El siguiente que le toca ver a la cuenta de ahora (primero el nivel,
      * y el rango al final, que es lo gordo). No lo borra: eso es visto(). */
     siguiente: function () {

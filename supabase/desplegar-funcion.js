@@ -7,6 +7,7 @@
  *   SBP=<personal access token> node supabase/desplegar-funcion.js enviar-record
  *   SBP=<token> node supabase/desplegar-funcion.js cuenta
  *   SBP=<token> node supabase/desplegar-funcion.js cofres   (sube también gen.js y datos.js)
+ *   SBP=<token> node supabase/desplegar-funcion.js regalos
  *
  * Con un tercer argumento sube ESE archivo en vez del del repositorio (para
  * volver a una versión anterior):

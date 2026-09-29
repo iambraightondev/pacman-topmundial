@@ -53,6 +53,7 @@ var SHELL = [
   './js/cofres-gen.js',
   './js/cofres.js',
   './js/pasos.js',
+  './js/regalos.js',
   './js/pase.js',
   './js/ficha.js',
   './js/account.js',

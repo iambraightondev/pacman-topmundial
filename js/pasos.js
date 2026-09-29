@@ -26,6 +26,14 @@
  * en esta sesión (Account.fundido): si no, un segundo aparato que aún no
  * sabe que otro ya la cobró la volvería a pagar y la nube sumaría las dos.
  *
+ * SIN CUENTA EN DOS APARATOS (29 sep): cada uno podía cobrar la misma misión
+ * y, al unirlos a una cuenta, la nube SUMABA los dos pagos (hasta 1.050
+ * monedas de más). Ahora cada pago deja apuntado lo que pagó este aparato
+ * (`pasoMon_<id>` en monedas y `pasoPx_<id>` en experiencia del pase, que se
+ * suman entre aparatos) y, al fundir con la cuenta, si la nube ya tenía esa
+ * misión cobrada, lo pagado aquí no se le suma (Account.quitarPasosDobles).
+ * Cada misión se paga una vez por cuenta; lo demás jugado aquí se suma igual.
+ *
  * EL COFRE lo reparte el servidor como todos (Cofres.ganados lo cuenta con
  * pasosCofre, que es el mismo código en la función `cofres`). Pide cuenta,
  * que además es una de las misiones.
@@ -122,6 +130,31 @@
       return m.monedas > 0 ? ('+' + miles(m.monedas) + ' MONEDAS') : (m.premio || '');
     },
 
+    /* Toda la experiencia del pase apuntada aquí (px_<mes>, todos los meses) */
+    pxTotal: function () {
+      var c = A() ? A().stats() : {}, n = 0;
+      for (var k in c) if (c.hasOwnProperty(k) && /^px_/.test(k)) n += Math.floor(c[k] || 0);
+      return n;
+    },
+
+    /* Lo cobrado ANTES de que se apuntara lo pagado (29 sep): en un aparato
+     * con lo jugado sin cuenta (base de la nube vacía o sin cuenta, ver
+     * Account.baseLibre), cada misión con bandera la pagó él, así que se
+     * apunta su pago. Con cuenta no: su bandera puede venir de la nube. La
+     * experiencia del pase de entonces no se sabe y no se apunta. */
+    sembrarPagos: function () {
+      var Ach = A(), a = Ac();
+      if (!Ach || !a || !a.baseLibre || !a.baseLibre()) return 0;
+      var c = Ach.stats(), n = 0;
+      for (var i = 0; i < P.LISTA.length; i++) {
+        var m = P.LISTA[i];
+        if (!(m.monedas > 0) || !((c['paso_' + m.id] || 0) >= 1) || (c['pasoMon_' + m.id] || 0) > 0) continue;
+        Ach.record('pasoMon_' + m.id, m.monedas);
+        n++;
+      }
+      return n;
+    },
+
     /* ---------- cobrar ----------
      * Mira las ocho, cobra las cumplidas que aún no se habían cobrado y
      * devuelve { misiones: [lo recién cobrado], monedas, todas } (todas: con
@@ -142,7 +175,14 @@
         if (!h[m.id]) { quedan++; continue; }
         Ach.record('paso_' + m.id, 1);
         if (!(Ach.stats()['paso_' + m.id] >= 1)) { quedan++; continue; }   // sin almacén
-        if (m.monedas > 0 && Tn) out.monedas += Tn.ganar(m.monedas);
+        if (m.monedas > 0 && Tn) {
+          /* y lo que pagó ESTE aparato, en monedas y en experiencia del pase:
+           * si otro aparato ya la cobró, al fundir no se suma (ver cabecera) */
+          var px0 = this.pxTotal(), dado = Tn.ganar(m.monedas), px1 = this.pxTotal();
+          out.monedas += dado;
+          if (dado > 0) Ach.record('pasoMon_' + m.id, dado);
+          if (px1 > px0) Ach.record('pasoPx_' + m.id, px1 - px0);
+        }
         out.misiones.push(m);
       }
       if (!out.misiones.length) return null;

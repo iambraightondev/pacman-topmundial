@@ -848,6 +848,55 @@
       guardarBase(n);
     },
 
+    /* ¿Lo de este aparato es todo de SIN CUENTA? (sin base, o la base a cero
+     * que deja cerrar sesión). Lo usa PRIMEROS PASOS para saber que sus
+     * misiones cobradas las pagó este aparato (Pasos.sembrarPagos). */
+    baseLibre: function () {
+      var b = leerBase();
+      return !b || b.id === null;
+    },
+
+    /* PRIMEROS PASOS PAGADOS DOS VECES (29 sep). Sin cuenta, dos aparatos
+     * pueden cobrar la misma misión; al unirlos, lo pendiente de cada uno se
+     * SUMABA a la cuenta y la misión se pagaba dos veces. Aquí, antes de
+     * sumar: si la nube ya tiene esa misión cobrada (paso_<id>) y este
+     * aparato la pagó sin que la nube lo supiera (pasoMon_<id> pendiente),
+     * ese pago —monedas y experiencia del pase— no se suma. Solo eso: lo
+     * demás pendiente se suma entero. Devuelve las monedas quitadas. */
+    quitarPasosDobles: function (pend, nube) {
+      var L = (CFG.PASOS && CFG.PASOS.LISTA) || [], quitadas = 0;
+      if (!pend || !pend.c || !nube) return 0;
+      function restar(re, cuanto) {
+        /* de la más nueva a la más vieja (el pago es de estos días) */
+        var ks = Object.keys(pend.c).filter(function (k) { return re.test(k); }).sort().reverse();
+        for (var i = 0; i < ks.length && cuanto > 0; i++) {
+          var q = Math.min(cuanto, pend.c[ks[i]]);
+          pend.c[ks[i]] -= q;
+          cuanto -= q;
+          if (!(pend.c[ks[i]] > 0)) delete pend.c[ks[i]];
+        }
+      }
+      for (var i = 0; i < L.length; i++) {
+        var id = L[i].id, km = 'pasoMon_' + id, kx = 'pasoPx_' + id;
+        if (!(Math.floor(nube['paso_' + id] || 0) >= 1)) continue;
+        var mon = Math.min(Math.floor(pend.c[km] || 0), Math.floor(pend.c.monedas || 0));
+        var px = Math.floor(pend.c[kx] || 0);
+        if (!(pend.c[km] > 0)) continue;
+        if (mon > 0) {
+          pend.c.monedas -= mon;
+          if (!(pend.c.monedas > 0)) delete pend.c.monedas;
+          quitadas += mon;
+        }
+        if (px > 0) {
+          restar(/^px_[0-9]{4}-[0-9]{2}$/, px);
+          restar(/^pxd_[0-9]{4}-[0-9]{2}-[0-9]{2}$/, px);
+        }
+        delete pend.c[km];
+        delete pend.c[kx];
+      }
+      return quitadas;
+    },
+
     /* Los contadores de la nube con lo pendiente de aquí ya sumado */
     conPendiente: function (logros, pend) {
       if (!pend) return logros;
@@ -862,7 +911,11 @@
      * después de jugar en otro aparato. */
     fundir: function (fila) {
       var self = this;
+      /* PRIMEROS PASOS cobrados aquí antes de que se apuntara el pago */
+      if (window.PM.Pasos && window.PM.Pasos.sembrarPagos) window.PM.Pasos.sembrarPagos();
       var pend = this.pendiente();
+      // ...y los que la nube ya tenía cobrados no se pagan otra vez
+      if (fila && pend) this.quitarPasosDobles(pend, fila.logros || {});
       if (fila) this.applyRemote(fila, pend);
       /* ya se sabe lo que trae la nube: PRIMEROS PASOS (js/pasos.js) espera a
        * esto para cobrar, así no paga aquí lo que ya cobró otro aparato */
@@ -1074,6 +1127,7 @@
             return self.fundir(fila);
           }
           var pend = self.pendiente();
+          if (fila && pend) self.quitarPasosDobles(pend, fila.logros || {});
           var foto = sumables();
           return self.push(true, null, function (row) {
             self.sumarANube(row, fila, pend);

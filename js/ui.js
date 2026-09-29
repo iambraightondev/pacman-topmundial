@@ -6328,6 +6328,9 @@
         ptxt.textContent = est.progreso || '';
         cuenta.appendChild(ptxt);
       }
+      /* REGALAR a un amigo (js/regalos.js): solo lo que se vende en la tienda */
+      var rg = window.PM.Regalos && window.PM.Regalos.boton(this, it);
+      if (rg) btns.insertBefore(rg, btns.firstChild);
     },
 
     /* COMPRAR Y PONÉRMELO: solo esa cosa, sin pasar por el ticket (si estaba
@@ -10413,6 +10416,8 @@
         if (window.PM.Conectados) window.PM.Conectados.arrancar();
         // PRIMEROS PASOS: entrar es una misión, y lo de la nube puede cumplir otras
         if (window.PM.Pasos) window.PM.Pasos.alMenu(self);
+        // y los regalos que esperaban a que entrase (js/regalos.js)
+        if (window.PM.Regalos) window.PM.Regalos.alMenu(self, true);
       };
       if (window.PM.Conectados) {
         window.PM.Conectados.onchange = function () {
@@ -14892,6 +14897,8 @@
       this.animarNickLook();     // tu Pac-Man junto a tu nombre
       // PRIMEROS PASOS: lo cumplido fuera de partida se cobra y se celebra
       if (window.PM.Pasos) window.PM.Pasos.alMenu(this);
+      // lo que te han regalado tus amigos (js/regalos.js)
+      if (window.PM.Regalos) window.PM.Regalos.alMenu(this);
       // lo que se subió (nivel, división, rango) y aún no se ha celebrado
       if (this.iniciado) this.celebrarSiToca();
     },
@@ -14912,6 +14919,9 @@
       if (e.t === 'nivel') this.showLevelUpPrompt(e.lv);
       else if (e.t === 'pasos') {
         if (!(window.PM.Pasos && window.PM.Pasos.celebrar(this, e))) return this.celebrarSiToca();
+      }
+      else if (e.t === 'regalo') {
+        if (!(window.PM.Regalos && window.PM.Regalos.celebrar(this, e))) return this.celebrarSiToca();
       }
       else if (!this.showRangoSubePrompt(e)) return this.celebrarSiToca();
       return true;

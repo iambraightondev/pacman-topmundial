@@ -204,6 +204,18 @@
      * CIFRAS: el catálogo crece y no se declaran uno a uno */
     if (/^hu_[a-z0-9_]{1,24}$/.test(key)) return 'suma';
     if (/^hk_[qwer]$/.test(key)) return 'suma';
+    /* LOS REGALOS (js/regalos.js, 29 sep). Los escribe SOLO el servidor
+     * (supabase/tienda.sql, regalos_dar), así que «el mayor»: aquí solo
+     * llegan desde la nube y no son nada jugado en este aparato.
+     *   gastoRegalo  monedas gastadas regalando (Tienda las cuenta gastadas)
+     *   rgl_<id>     1 = esa pieza te la regalaron (no cuenta como gastada) */
+    if (key === 'gastoRegalo') return 'mayor';
+    if (/^rgl_[a-z0-9_]{1,40}$/.test(key)) return 'mayor';
+    /* PRIMEROS PASOS (js/pasos.js): lo que pagó ESTE aparato por cada misión,
+     * en monedas y en experiencia del pase. Se SUMAN entre aparatos como lo
+     * pagado: así, al fundir con la cuenta, se ve si otro aparato ya la había
+     * cobrado y no se paga dos veces (Account.quitarPasosDobles). */
+    if (/^paso(Mon|Px)_[a-z0-9]{1,24}$/.test(key)) return 'suma';
     return null;
   }
 
