@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · La tanda YŌKAI entra en el juego (28 piezas)
+
+Folclore japonés, aprobada entera por Braighton.
+- **Diez skins (1.500):** TENGU, KAPPA, TANUKI, DARUMA, KASA-OBAKE, CHOCHIN-OBAKE y
+  NAMAZU en la tienda; KITSUNE, ONI y MANEKI-NEKO de cofre.
+- **Siete accesorios (450):** MÁSCARA KITSUNE, KASA DE PAJA, CHONMAGE, RAMEN y
+  KATANA; KABUTO y TAMBORES DE RAIJIN de cofre.
+- **Seis efectos (250):** TORII, OLAS, ORIGAMI y FAROLILLOS; ONIBI y KOI de cofre.
+- **Cinco emotes (150):** KAWAII, ¡BANZAI!, ITADAKIMASU, ZEN y NINJA.
+
 ## 2026-09-30 · HAS SIDO DEGRADADO
 
 Al bajar de división o de rango sale su pantalla: ¡BAJAS DE RANGO! / ¡BAJAS DE
