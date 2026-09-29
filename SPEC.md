@@ -2046,7 +2046,7 @@ confirmed), `safeTicks` (respawn grace).
 
 ## Skins, emotes, maestrías, ranking y chat
 
-**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 54 of them in five
+**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 84 of them (29 Sep) in five
 `grupo`s: **nivel** (player level, ladder 1·2·4·6·8·10·12·15·18·22·26·30·34 in
 the order Braighton picked), **logro** (`pide: {stat, meta}` on a
 `PM.Achievements` counter, or `{ruta:[...], maestria}` on a badge track),
@@ -2198,7 +2198,7 @@ approved 2026-09-15. Coins only, no real money.
   CARRO's moustache, CARRO's headphones); and
   `dibujarLook` applies it before drawing. `admiteAccesorio` is true for
   Pac-Man-shaped skins and for any extravagant one listed in `CABEZAS` (all
-  26 today); a new extravagant skin needs its entry, or it shows no
+  55 today); a new extravagant skin needs its entry, or it shows no
   accessory.
 - **The accessory moves with its piece** (`POSES`, `deltaPose`). The heads
   were measured in one pose (`POSE_MEDIDA`: t 0.3, mouth closed). `POSES`
@@ -2211,6 +2211,29 @@ approved 2026-09-15. Coins only, no real money.
   phase uses the same `half` as `dibujarArte` (full open with the Q). A skin
   whose drawing changes those transforms must change its `POSES` entry too.
   Without `DOMMatrix` (the Node fake DOM) the accessory is drawn static.
+- **Wardrobe batches from the showcases.** Mythology (28 Sep) and **yōkai**
+  (29 Sep: TENGU, KAPPA, TANUKI, DARUMA, KASA-OBAKE, CHOCHIN-OBAKE, NAMAZU in
+  the shop; KITSUNE, ONI, MANEKI-NEKO chest-only; 7 accessories, 6 effects,
+  5 emotes — KABUTO, TAMBORES DE RAIJIN, ONIBI and KOI chest-only) are ported
+  verbatim from `propuestas/vestuario-*/` into their own block before
+  `var INFO` in skins.js; the only change is the Q (`qFase(t, 3.4, d)` →
+  `qDe(o, d)`). Every new extravagant skin gets `CABEZAS` (with
+  `zonas: SOMBREROS_ARRIBA` when its eye sits far ahead of the crown, as in
+  all twenty of these) and `POSES`; every new accessory its `ZONA_ACC` (or the
+  face list of the completeness test) and, for the head, `BASE_SOMBRERO`.
+  Emote faces hook into `caraEmote` (`CARAS_MITO`, `CARAS_YOKAI`) and
+  `Sprites.CARAS_TIENDA`. Zone **`cuerpo`** (yōkai): the item goes as is,
+  scale 1, round the whole body (RAIJIN's drum ring; at head scale it
+  crossed the face). On an extravagant skin `dibujarLook` sets **`o.rara`**:
+  CHONMAGE skips the hair painted over Pac-Man's round head and KATANA its
+  strap (both crossed the face), leaving topknot and sword. The arcade font
+  has no Ō, so names avoid it (CHOCHIN-OBAKE). New pieces also need the
+  server: chest ones in `piezas_especiales` (perfiles-blindaje.sql and
+  cofres.sql), shop ones in `node supabase/tienda-precios.js` + its SQL, and
+  `node supabase/cofres-datos.js` + deploying `cofres` (the guardians of
+  pruebas-node.js catch all three). `propuestas/vestuario-yokai/en-el-juego.html`
+  draws skins, accessories, Q, deaths, effects and emotes with the game's own
+  code for checking by eye.
 - **Network** (added in protocol 9; the current `CFG.NET.PROTO` is in
   **Valores vivos**): party members carry `a`/`x`
   (`Party.me`), `gameOrder` passes them, `UI.lookDeRed` sanitises them into

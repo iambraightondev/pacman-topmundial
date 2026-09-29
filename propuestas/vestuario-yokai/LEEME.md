@@ -1,8 +1,8 @@
 # Vestuario YŌKAI — propuesta (29 sep 2026)
 
 Las **28 piezas** de la cuarta tanda: folclore japonés, porque Pac-Man nació
-en Japón. **Todavía NO están en el juego**: esto es el escaparate con el que
-Braighton decide qué entra, qué se retoca y qué se descarta.
+en Japón. Braighton las aprobó todas y **entraron al juego el 29 sep** con el
+mismo dibujo (ver «En el juego», abajo).
 
 Escaparate publicado: <https://claude.ai/artifact/SNNQ3Qqt6fyS18P65hP9YS>
 
@@ -85,7 +85,22 @@ admite varias separadas por comas (una fila cada una).
 - El emote NINJA no choca por id con la CINTA NINJA (acc_ninja), pero el
   nombre se parece: si molesta, renombrarlo a SHINOBI.
 
-## Dónde se quedó
+## En el juego (29 sep)
 
-Dibujadas y revisadas en grande las 28, publicado el escaparate. **Pendiente:**
-que Braighton diga qué entra. Hasta entonces no se toca js/ ni css/.
+Las 28, tal cual, en el bloque TANDA YŌKAI de js/skins.js y en js/config.js.
+Lo que cambió al meterlas:
+
+- La Q sale con la tecla (`qDe`), no cada 3,4 s.
+- CHŌCHIN-OBAKE se escribe **CHOCHIN-OBAKE**: la letra de máquina no tiene Ō.
+- El emote NINJA se queda NINJA.
+- Accesorios en las extravagantes: el pelo del CHONMAGE y la correa de la
+  KATANA van pintados sobre el círculo de Pac-Man y en una extravagante le
+  cruzaban la cara; allí solo van el moño y la espada (`o.rara`). Los
+  TAMBORES DE RAIJIN rodean el cuerpo entero a su tamaño (zona `cuerpo`).
+- Servidor: las 7 de cofre en `piezas_especiales`, los precios de las 21 de
+  tienda y los botes de la función `cofres`, ya en producción. Vuelta atrás:
+  `supabase/yokai-vuelta-atras.sql`.
+
+`en-el-juego.html` las dibuja con el código DEL JUEGO (servido con
+`node tests/servidor.cjs 8437` desde la raíz; las opciones van en su cabecera):
+andando, con su Q y muriendo, con accesorios, los efectos y los emotes.
