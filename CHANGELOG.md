@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · REGALAR piezas y la tienda en el servidor
+
+- **REGALAR:** desde la ficha de una pieza de tienda, comprársela a un amigo
+  (amistad mutua, con monedas ganadas jugando, 5 regalos al día). Quien la
+  recibe ve «X TE HA REGALADO…» al entrar.
+- El servidor conoce los precios: ya no se pueden marcar piezas como
+  compradas sin saldo.
+- PRIMEROS PASOS se paga una vez por cuenta aunque se hayan jugado en dos
+  aparatos sin cuenta.
+
 ## 2026-09-30 · RETOS ENTRE AMIGOS
 
 - Al abrir el juego te avisa si un amigo te ha superado en alguna de tus
