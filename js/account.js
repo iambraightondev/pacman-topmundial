@@ -139,6 +139,11 @@
    * columnas nuevas lleva la suya: un proyecto puede tener las de trío y
    * escuadra y no las de los modos aparte. */
   function faltaColumna(self, texto) {
+    /* la de las subidas con nombre (supabase/perfiles-subidas.sql): sin
+     * ella, lo pendiente se vuelve a sumar aquí, como antes */
+    if (!self.sinSube && /\bsube\b/i.test(texto)) {
+      return 'sinSube';
+    }
     if (!self.sinRecordsNuevos && /record3|record4/i.test(texto)) {
       return 'sinRecordsNuevos';
     }
@@ -220,6 +225,190 @@
   function guardarBase(b) {
     try { localStorage.setItem(BASE_KEY, JSON.stringify(b)); }
     catch (e) { /* sin almacenamiento */ }
+  }
+
+  /* ---------- UNA SUBIDA, UNA SOLA SUMA (29 sep 2026) ----------
+   * Lo pendiente se sumaba DOS veces en dos casos: dos pestañas del juego con
+   * la misma cuenta (comparten este almacén, así que ven el mismo pendiente
+   * y lo podían subir a la vez) y una pestaña que se cierra cuando la subida
+   * ya llegó al servidor pero antes de apuntar la base nueva (al volver, lo
+   * subía otra vez). Dos defensas, y cada una basta para lo suyo:
+   *
+   * 1) EL CERROJO. Las lecturas y subidas de la cuenta van de una en una
+   *    ENTRE PESTAÑAS, no solo dentro de cada una (enCola -> conCerrojo): con
+   *    Web Locks si el navegador los tiene y, si no, con un cerrojo en el
+   *    almacén que caduca solo. Lo pendiente se calcula dentro, con la base
+   *    recién leída del almacén, así que la segunda pestaña ya ve lo que
+   *    subió la primera.
+   *
+   * 2) CADA SUBIDA CON NOMBRE. Lo pendiente ya no lo suma el juego: viaja
+   *    aparte (columna `sube`) con el id de este aparato y un número, y lo
+   *    suma el servidor solo si ese número no lo ha visto
+   *    (supabase/perfiles-subidas.sql). Antes de mandarla se apunta aquí EN
+   *    VUELO (VUELO_KEY); si la respuesta no llega, la próxima vez se repite
+   *    la MISMA (mismo aparato, mismo número) antes de calcular nada: si ya
+   *    había llegado, el servidor no suma y aquí solo se apunta la base.
+   *
+   * Sin la columna en el servidor (el 400 que la nombra: Account.sinSube) se
+   * vuelve a lo de antes: el juego suma lo pendiente a lo que leyó. */
+  var VUELO_KEY = 'pacman-topmundial-nube-vuelo';
+  var APARATO_KEY = 'pacman-topmundial-aparato';
+  var CERROJO = 'pacman-topmundial-subida';
+  var CERROJO_KEY = 'pacman-topmundial-subida-cerrojo';
+  /* lo más que una pestaña retiene a las demás, aunque su subida no acabe
+   * (una red colgada): pasado esto, la siguiente entra, y si la colgada
+   * llegase después, su número ya visto no sumaría nada */
+  var CERROJO_MS = 45000;
+  var PESTANA = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  function nuevoIdAparato() {
+    return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  var aparatoMem = null;
+  /* { ap, n }: el id de este aparato y el último número de subida usado */
+  function leerAparato() {
+    var a;
+    try { a = JSON.parse(localStorage.getItem(APARATO_KEY) || 'null'); }
+    catch (e) {
+      // sin almacenamiento: el de esta sesión
+      return aparatoMem || { ap: nuevoIdAparato(), n: 0 };
+    }
+    if (a && typeof a.ap === 'string' && /^[A-Za-z0-9_-]{4,64}$/.test(a.ap)) {
+      return { ap: a.ap, n: Math.max(0, Math.floor(a.n || 0)) };
+    }
+    /* sin id guardado (aparato nuevo, almacén borrado): uno nuevo, que
+     * empieza de cero sin chocar con ningún número ya visto */
+    return { ap: nuevoIdAparato(), n: 0 };
+  }
+
+  function guardarAparato(a) {
+    aparatoMem = a;
+    try { localStorage.setItem(APARATO_KEY, JSON.stringify(a)); }
+    catch (e) { /* sin almacenamiento: vale para esta sesión */ }
+  }
+
+  function leerVuelo() {
+    try {
+      var v = JSON.parse(localStorage.getItem(VUELO_KEY) || 'null');
+      return (v && v.ap && v.n > 0 && v.foto && v.foto.c && v.c) ? v : null;
+    } catch (e) { return null; }
+  }
+
+  /* Quita la subida en vuelo, pero solo si sigue siendo ESA (otra pestaña
+   * puede haberla resuelto ya y apuntado la siguiente) */
+  function borrarVuelo(v) {
+    var ahora = leerVuelo();
+    if (!ahora || ahora.ap !== v.ap || ahora.n !== v.n) return;
+    try { localStorage.removeItem(VUELO_KEY); } catch (e) { /* nada */ }
+  }
+
+  function copiaC(c) {
+    var o = {};
+    for (var k in c) if (c.hasOwnProperty(k) && c[k] > 0) o[k] = Math.floor(c[k]);
+    return o;
+  }
+
+  function hayPendiente(pend) {
+    if (!pend) return false;
+    if (pend.xp > 0) return true;
+    for (var k in pend.c) if (pend.c.hasOwnProperty(k) && pend.c[k] > 0) return true;
+    return false;
+  }
+
+  /* Apunta una subida nueva EN VUELO antes de mandarla: lo pendiente, con su
+   * número, y la foto de lo de aquí que queda contado cuando se confirme */
+  function nuevoVuelo(id, pend, foto) {
+    var a = leerAparato();
+    a.n += 1;
+    guardarAparato(a);
+    var v = { id: id, ap: a.ap, n: a.n, xp: Math.max(0, Math.floor(pend.xp || 0)),
+              c: copiaC(pend.c), foto: { xp: foto.xp, c: copiaC(foto.c) } };
+    try { localStorage.setItem(VUELO_KEY, JSON.stringify(v)); }
+    catch (e) { /* sin almacenamiento */ }
+    return v;
+  }
+
+  /* Lo que viaja en la columna `sube` */
+  function subeDe(v) {
+    return { ap: v.ap, n: v.n, xp: v.xp, c: v.c };
+  }
+
+  /* La fila que acompaña a una subida con nombre no puede llevar, en lo que
+   * se suma, más de lo que esa subida cuenta (`foto`): el servidor se queda
+   * con el mayor entre la fila y "nube + pendiente", y una fila con lo jugado
+   * DESPUÉS (al repetir una subida vieja) metería eso por la puerta de atrás
+   * y la subida siguiente lo volvería a sumar. Los récords y lo que no suma
+   * van enteros. */
+  function caparSumas(row, foto) {
+    var A = window.PM.Achievements;
+    if (!row || !foto) return;
+    row.xp = Math.min(Math.floor(row.xp || 0), Math.floor(foto.xp || 0));
+    if (!row.logros || !A || !A.esSuma) return;
+    var lg = {};
+    for (var k in row.logros) {
+      if (!row.logros.hasOwnProperty(k)) continue;
+      lg[k] = row.logros[k];
+      if (typeof lg[k] === 'number' && A.esSuma(k)) {
+        lg[k] = Math.min(lg[k], Math.floor((foto.c && foto.c[k]) || 0));
+      }
+    }
+    row.logros = lg;
+  }
+
+  /* El cerrojo del almacén, para los navegadores sin Web Locks. Lo toma
+   * `quien` si está libre, caducado o ya es suyo; true si lo tiene. */
+  function tomarCerrojoLocal(quien, ahora) {
+    try {
+      var c = JSON.parse(localStorage.getItem(CERROJO_KEY) || 'null');
+      if (c && c.q !== quien && c.h > ahora) return false;
+      localStorage.setItem(CERROJO_KEY, JSON.stringify({ q: quien, h: ahora + CERROJO_MS }));
+      c = JSON.parse(localStorage.getItem(CERROJO_KEY) || 'null');
+      return !!(c && c.q === quien);
+    } catch (e) {
+      return true;     // sin almacén no hay otra pestaña con la que chocar
+    }
+  }
+
+  function soltarCerrojoLocal(quien) {
+    try {
+      var c = JSON.parse(localStorage.getItem(CERROJO_KEY) || 'null');
+      if (c && c.q === quien) localStorage.removeItem(CERROJO_KEY);
+    } catch (e) { /* nada */ }
+  }
+
+  function esMioCerrojoLocal(quien) {
+    try {
+      var c = JSON.parse(localStorage.getItem(CERROJO_KEY) || 'null');
+      return !!(c && c.q === quien);
+    } catch (e) { return true; }
+  }
+
+  /* fn() con el cerrojo del almacén: espera a tenerlo (como mucho lo que
+   * tarde en caducar el de otra pestaña) y lo suelta al acabar. Lo que
+   * escribe una pestaña tarda un poco en verse en las otras (cada una lleva
+   * su copia del almacén): dos que lo toman a la vez creen tenerlo las dos.
+   * Por eso, tomado, se espera un momento y se mira si sigue siendo suyo:
+   * para entonces las dos ven lo mismo, el del último que escribió. */
+  var CONFIRMA_MS = 150;
+  function cerrojoLocal(fn) {
+    function otraVez(intenta) { setTimeout(intenta, 150 + Math.floor(Math.random() * 150)); }
+    return new Promise(function (ok) {
+      (function intenta() {
+        if (!tomarCerrojoLocal(PESTANA, Date.now())) { otraVez(intenta); return; }
+        setTimeout(function () {
+          if (esMioCerrojoLocal(PESTANA)) ok(); else otraVez(intenta);
+        }, CONFIRMA_MS);
+      })();
+    }).then(function () {
+      return fn();
+    }).then(function (r) {
+      soltarCerrojoLocal(PESTANA);
+      return r;
+    }, function (e) {
+      soltarCerrojoLocal(PESTANA);
+      throw e;
+    });
   }
 
   /* Lo de aquí que se suma: la experiencia y cada contador de los que suman */
@@ -608,29 +797,17 @@
      * de true solo si la nube ha dicho que sí. */
     subirAlSalir: function () {
       if (!this.logged()) return Promise.resolve(false);
-      var id = this.user.id;
-      var row = this.localState();
-      row.id = id;
-      row.usuario = this.user.usuario;
-      var pend = this.pendiente();
       var self = this;
-      function sube(fila) {
-        if (fila) self.sumarANube(row, fila, pend);
-        var h = authHeaders(self.token);
-        h['Prefer'] = 'resolution=merge-duplicates,return=minimal';
-        return self.pedir(base('/rest/v1/' + AC.TABLE), {
-          method: 'POST', headers: h, body: JSON.stringify(row)
+      // antes que nada, la subida que se quedó sin confirmar (si la hay)
+      var va = this.trasVuelo(function () {
+        var pend = self.pendiente();
+        // sin base no hay nada que sumar: se sube tal cual, sin leer antes
+        if (!pend) return self.subirPendiente(null, null, sumables());
+        return self.leerFila().then(function (fila) {
+          return self.subirPendiente(fila, self.pendiente(), sumables());
         });
-      }
-      // sin base no hay nada que sumar: se sube tal cual, sin leer antes
-      var va = !pend ? sube(null) :
-        this.pedir(base('/rest/v1/' + AC.TABLE + '?select=xp,logros&id=eq.' + id))
-          .then(function (res) {
-            if (!res.ok) throw new Error('NO SE PUDO LEER LA CUENTA');
-            return res.json();
-          })
-          .then(function (rows) { return sube((rows && rows[0]) || null); });
-      return va.then(function (res) { return !!(res && res.ok); })
+      });
+      return va.then(function () { return true; })
         .catch(function () { return false; });
     },
 
@@ -651,6 +828,9 @@
       /* ...y la base queda a cero y sin cuenta: lo que se juegue desde aquí
        * sin sesión es todo nuevo, y se SUMA a la cuenta que entre después */
       guardarBase({ id: null, xp: 0, c: {} });
+      /* (la subida en vuelo ya se confirmó al salir: subirAlSalir no deja
+       * cerrar sin eso; si quedase alguna, era de esta cuenta) */
+      try { localStorage.removeItem(VUELO_KEY); } catch (e) { /* nada */ }
       var g = window.PM.Game;
       if (g && g.setRecordFor) {
         for (var n = 1; n <= CFG.MAX_PLAYERS; n++) g.setRecordFor(n, 0);
@@ -805,12 +985,135 @@
     },
 
     /* Las lecturas y subidas de la cuenta van DE UNA EN UNA: dos cruzadas
-     * leerían la misma nube y sumarían lo pendiente dos veces. */
+     * leerían la misma nube y sumarían lo pendiente dos veces. Y desde el 29
+     * sep, de una en una también ENTRE PESTAÑAS (conCerrojo): comparten el
+     * almacén, así que dos pestañas ven el mismo pendiente. */
     cola: null,
     enCola: function (fn) {
+      var self = this;
       var nada = function () { /* la anterior falló: esta va igual */ };
-      this.cola = (this.cola || Promise.resolve()).catch(nada).then(fn);
+      this.cola = (this.cola || Promise.resolve()).catch(nada).then(function () {
+        return self.conCerrojo(fn);
+      });
       return this.cola;
+    },
+
+    /* Web Locks, si el navegador los tiene. La página de pruebas no toma el
+     * cerrojo de verdad (lo compartiría con el juego abierto en el mismo
+     * sitio); sus pruebas ponen uno de mentira aquí. */
+    cerrojos: function () {
+      if (window.PM_PRUEBAS) return null;
+      try {
+        var L = window.navigator && window.navigator.locks;
+        return (L && typeof L.request === 'function') ? L : null;
+      } catch (e) { return null; }
+    },
+
+    /* fn() sin ninguna otra pestaña leyendo o subiendo la cuenta a la vez.
+     * Devuelve lo que devuelva fn. El cerrojo se suelta al acabar fn, o a
+     * los CERROJO_MS aunque fn siga colgada (ver VUELO_KEY: una subida que
+     * llegue tarde no suma dos veces). */
+    conCerrojo: function (fn) {
+      var L = this.cerrojos();
+      if (!L) return (window.PM_PRUEBAS || this.sinCerrojoLocal) ? fn() : cerrojoLocal(fn);
+      var entro = false;
+      return new Promise(function (ok, ko) {
+        L.request(CERROJO, function () {
+          entro = true;
+          var p;
+          try { p = Promise.resolve(fn()); } catch (e) { p = Promise.reject(e); }
+          p.then(ok, ko);
+          return new Promise(function (suelta) {
+            var t = setTimeout(suelta, CERROJO_MS);
+            p.then(function () { clearTimeout(t); suelta(); },
+                   function () { clearTimeout(t); suelta(); });
+          });
+        }).catch(function (e) {
+          // el navegador no dio el cerrojo (nunca entró): con el del almacén
+          if (!entro) cerrojoLocal(fn).then(ok, ko);
+          else ko(e);
+        });
+      });
+    },
+    sinCerrojoLocal: false,
+
+    /* Para las pruebas: el cerrojo del almacén por dentro */
+    tomarCerrojoLocal: tomarCerrojoLocal,
+    soltarCerrojoLocal: soltarCerrojoLocal,
+
+    /* ---------- la subida en vuelo (ver VUELO_KEY) ---------- */
+    sinSube: false,
+
+    /* La subida sin confirmar de ESTA cuenta, o null */
+    vuelo: function () {
+      var v = leerVuelo();
+      return (v && this.user && v.id === this.user.id) ? v : null;
+    },
+
+    /* Si quedó una subida sin confirmar, la repite TAL CUAL (mismo aparato,
+     * mismo número) y, confirmada, apunta su base. Devuelve la promesa, o
+     * null si no había nada (así lo que viene detrás no espera a nadie). Si
+     * falla, la promesa falla: no se sube nada más hasta resolverla, porque
+     * no se sabe si lo suyo ya está en la nube. */
+    resolverVuelo: function () {
+      var self = this, v = this.vuelo();
+      if (!v) return null;
+      if (!this.logged()) return Promise.reject(new Error('SIN SESIÓN'));
+      /* el servidor ya no tiene la columna: no puede saber si la sumó. Se
+       * olvida sin tocar la base, así que lo suyo sigue pendiente y se suma
+       * a la manera de antes (sin nada que se pierda) */
+      if (this.sinSube) { borrarVuelo(v); return null; }
+      return this.subir(function (row) {
+        if (!self.sinSube) {
+          row.sube = subeDe(v);
+          caparSumas(row, v.foto);
+        } else {
+          /* la columna se fue a mitad: esta subida no cuenta nada nuevo (lo
+           * suyo sigue pendiente y se suma después, a la manera de antes) */
+          var b = leerBase();
+          caparSumas(row, (b && b.id === self.user.id) ? b : { xp: 0, c: {} });
+        }
+      }).then(function () {
+        borrarVuelo(v);
+        // (si la columna desapareció justo ahora, no se sumó: sigue pendiente)
+        if (!self.sinSube) self.fijarBase(v.foto, null);
+      });
+    },
+
+    /* fn() después de resolver la subida en vuelo (en el acto si no hay) */
+    trasVuelo: function (fn) {
+      var r = this.resolverVuelo();
+      return r ? r.then(fn) : fn();
+    },
+
+    /* Sube la fila de aquí con lo pendiente `pend` (de `fila`, la nube recién
+     * leída) y, confirmada, apunta como base `foto` (lo de aquí que queda
+     * contado). Sin `pend` (sin base) se sube tal cual. */
+    subirPendiente: function (fila, pend, foto) {
+      var self = this;
+      if (!this.logged()) return Promise.reject(new Error('SIN SESIÓN'));
+      var v = (pend && !this.sinSube && hayPendiente(pend))
+        ? nuevoVuelo(this.user.id, pend, foto) : null;
+      return this.subir(function (row) {
+        if (v && !self.sinSube) {
+          row.sube = subeDe(v);
+          caparSumas(row, foto);
+        } else if (pend) {
+          self.sumarANube(row, fila, pend);   // a la manera de antes
+        }
+      }).then(function () {
+        if (v) borrarVuelo(v);
+        self.fijarBase(foto, null);
+      });
+    },
+
+    /* push() callado que FALLA si la nube no dice que sí (push sin cb
+     * relanza el error desde su catch; así el fallo siempre llega como
+     * promesa rechazada, nunca como excepción suelta) */
+    subir: function (ajustar) {
+      var fallo = null;
+      return this.push(true, function (err) { fallo = err || null; }, ajustar)
+        .then(function () { if (fallo) throw new Error(fallo); });
     },
 
     /* La fila de la cuenta en la nube, o null si aún no tiene */
@@ -918,6 +1221,12 @@
      * después de jugar en otro aparato. */
     fundir: function (fila) {
       var self = this;
+      /* la subida que quedó sin confirmar va antes: hasta saber si llegó,
+       * no se sabe qué parte de lo de aquí es pendiente */
+      return this.trasVuelo(function () { return self.fundirYa(fila); });
+    },
+
+    fundirYa: function (fila) {
       /* PRIMEROS PASOS cobrados aquí antes de que se apuntara el pago */
       if (window.PM.Pasos && window.PM.Pasos.sembrarPagos) window.PM.Pasos.sembrarPagos();
       var pend = this.pendiente();
@@ -931,9 +1240,9 @@
       /* ya fundido, lo pendiente sigue pendiente hasta que la subida se
        * confirme: si falla, la próxima vez se vuelve a sumar (y solo eso) */
       if (pend) this.fijarBase(foto, pend, pend.purga);
-      return this.push(true).then(function () {
-        self.fijarBase(foto, null);
-      });
+      /* Lo de aquí ya lleva lo pendiente sumado a la nube leída; el servidor
+       * lo suma a la nube de AHORA (y solo una vez: ver VUELO_KEY) */
+      return this.subirPendiente(fila, pend, foto);
     },
 
     /* Al volver a la pestaña (y cada poco en el menú): si la nube tiene más
@@ -1117,39 +1426,46 @@
       });
     },
 
-    /* Guardado silencioso al acabar una partida: si falla, da igual */
-    pushQuiet: function () {
-      if (!this.logged()) return;
+    /* Guardado silencioso al acabar una partida: si falla, da igual (ya se
+     * subirá: lo pendiente sigue apuntado). Con `cb(err)` avisa de cómo fue:
+     * es lo que usa GUARDAR AHORA en PERFIL, que antes subía la fila tal
+     * cual con push() y dejaba lo pendiente para sumarse OTRA vez después. */
+    pushQuiet: function (cb) {
+      if (!this.logged()) { if (cb) cb('SIN SESIÓN'); return; }
       var self = this;
       this.enCola(function () {
-        if (!self.logged()) return;
-        /* sin base no hay forma de saber qué es nuevo: se sube como siempre
-         * y desde ahí ya la hay */
-        if (!self.pendiente()) {
-          var foto0 = sumables();
-          return self.push(true).then(function () { self.fijarBase(foto0, null); });
-        }
-        return self.leerFila().then(function (fila) {
-          /* la nube trae una limpieza que aquí no se ha tomado: el servidor
-           * no aceptaría estos contadores, así que se funde entera */
-          var A = window.PM.Achievements;
-          if (fila && A && Math.floor((fila.logros && fila.logros.purga) || 0) >
-              (A.stats().purga || 0)) {
-            return self.fundir(fila);
-          }
-          var pend = self.pendiente();
-          if (fila && pend) self.quitarPasosDobles(pend, fila.logros || {});
-          var foto = sumables();
-          return self.push(true, null, function (row) {
-            self.sumarANube(row, fila, pend);
-          }).then(function () { self.fijarBase(foto, null); });
+        if (!self.logged()) throw new Error('SIN SESIÓN');
+        // la subida sin confirmar, antes de calcular nada
+        return self.trasVuelo(function () {
+          /* sin base no hay forma de saber qué es nuevo: se sube como siempre
+           * y desde ahí ya la hay. (La base se lee aquí dentro, con el
+           * cerrojo puesto: lo que otra pestaña acabe de subir ya cuenta.) */
+          if (!self.pendiente()) return self.subirPendiente(null, null, sumables());
+          return self.leerFila().then(function (fila) {
+            /* la nube trae una limpieza que aquí no se ha tomado: el servidor
+             * no aceptaría estos contadores, así que se funde entera */
+            var A = window.PM.Achievements;
+            if (fila && A && Math.floor((fila.logros && fila.logros.purga) || 0) >
+                (A.stats().purga || 0)) {
+              return self.fundirYa(fila);
+            }
+            var pend = self.pendiente();
+            if (fila && pend) self.quitarPasosDobles(pend, fila.logros || {});
+            return self.subirPendiente(fila, pend, sumables());
+          });
         });
-      }).catch(function () { /* ya se subirá: lo pendiente sigue apuntado */ });
+      }).then(function () {
+        if (cb) { self.changed(); cb(null); }
+      }).catch(function (e) {
+        if (cb) cb((e && e.message) || 'NO SE PUDO GUARDAR');
+      });
     },
 
     /* Lo que se sube para que la nube SUME lo pendiente: por cada contador
      * que suma, lo de la nube más lo de aquí que no tiene (y nunca menos de lo
-     * de aquí). Lo de aquí no se toca: lo del otro aparato llega al fundir. */
+     * de aquí). Lo de aquí no se toca: lo del otro aparato llega al fundir.
+     * Desde el 29 sep solo si el servidor no tiene la columna `sube`
+     * (sinSube): con ella, la suma la hace él, una vez por subida. */
     sumarANube: function (row, fila, pend) {
       if (!pend) return;
       row.xp = Math.max(Math.floor(row.xp || 0),
