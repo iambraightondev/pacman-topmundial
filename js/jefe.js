@@ -529,6 +529,9 @@
         var sr = A && A.estado(who);
         if (!sr || !(sr.rebote > 0)) return;
         sr.rebote = 0;
+        /* el golpe que aguantó el Tanque invitado lo paga quien lleva el
+         * marcador (CFG.HAB.PROTEGE_PUNTOS) */
+        if (A.protege) A.protege(G, who, 'golpe', p.x, p.y);
         if (this.danar(G, J.DANO.rebote, who, 'rebote')) {
           this.congelar(G, J.ATURDE.rebote);
         }

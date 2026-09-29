@@ -120,6 +120,11 @@
       corPas: 0,
       corCd: 0,
       escudo: 0,          // ESCUDO ALIADO (del Soporte): igual, pero dado por otro
+      /* Y QUIÉN se lo dio (28 sep): el que cobra cuando se rompe salvándolo
+       * (CFG.HAB.PROTEGE_PUNTOS). Solo lo sabe quien lleva la partida, que
+       * es quien reparte los escudos y quien paga; no se borra al acabarse
+       * el escudo, que en party el aviso del choque llega un poco tarde. */
+      escudoDe: -1,
       gracia: 0,          // tras romperse el escudo, un momento sin morir
       pisoton: 0,         // la onda del PISOTÓN (solo se pinta)
       arrolla: 0,         // ticks que le quedan a la carrera de ARROLLAR
@@ -344,6 +349,10 @@
          * estar desde el primer segundo y no al primer tick de reloj */
         if (this.roles[i] === 'tanque') this.st[i].corPas = H.CORAZA_DURA;
       }
+      /* Las VIDAS que ha regalado el Soporte y aún no han salvado a nadie:
+       * { a: a quién (-1: el fondo común), de: quién la dio }. Sobreviven a
+       * los niveles, como las vidas (ver alPerderVida). */
+      this.vidasDadas = [];
       this.limpiarMesa();
     },
 
@@ -427,6 +436,7 @@
         /* la mesa de los roles: objetos pequeños, se copian enteros */
         roles: (this.roles || []).slice(),
         loadouts: (this.loadouts || []).map(function (x) { return x ? x.slice() : null; }),
+        vidasDadas: JSON.parse(JSON.stringify(this.vidasDadas || [])),
         mesa: JSON.parse(JSON.stringify({
           hielo: this.hielo, trasHielo: this.trasHielo, huye: this.huye, huyeQuien: this.huyeQuien,
           quema: this.quema, quemaQuien: this.quemaQuien,
@@ -463,6 +473,7 @@
       this.loadouts = f.loadouts ? f.loadouts.map(function (x, i) {
         return this.normalizarCarga(this.roles[i], x);
       }, this) : [];
+      this.vidasDadas = f.vidasDadas ? JSON.parse(JSON.stringify(f.vidasDadas)) : [];
       this.limpiarMesa();
       if (f.mesa) {
         var m = JSON.parse(JSON.stringify(f.mesa));
@@ -2085,8 +2096,10 @@
          * sigue encima hasta que el anfitrión lo mata, y sin esto el Tanque
          * rebotaba y moría en el tick siguiente */
         s.gracia = Math.max(s.gracia, H.ESCUDO_GRACIA);
-        if (this.manda(G)) this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote');
-        else if (G.netRole === 'guest' && idx === G.localIdx) G.netSend('gevt', { t: 'habRebote', g: g.id });
+        if (this.manda(G)) {
+          this.matarCatalogo(G, g, idx, H.MAGO_PUNTOS, 'rebote');
+          if (p) this.protege(G, idx, 'golpe', p.x, p.y);
+        } else if (G.netRole === 'guest' && idx === G.localIdx) G.netSend('gevt', { t: 'habRebote', g: g.id });
         return true;
       }
       /* EL REBOTE CONTRA EL REY FANTASMA (22 sep 2026). Sin fantasma que
@@ -2106,6 +2119,7 @@
           if (this.manda(G)) {
             JR.danar(G, CFG.JEFE.DANO.rebote, idx, 'rebote');
             JR.congelar(G, CFG.JEFE.ATURDE.rebote);
+            if (rp) this.protege(G, idx, 'golpe', rp.x, rp.y);
           } else if (G.netRole === 'guest' && idx === G.localIdx) {
             /* el invitado decide que NO se muere, pero el golpe lo da el
              * anfitrión: igual que la apisonadora (ver Jefe.peticionGolpe) */
@@ -2122,6 +2136,7 @@
       for (j = 0; j < this.st.length; j++) {
         var enl = this.st[j];
         if (enl.cadena > 0 && enl.cadenaCon === idx) {
+          if (this.manda(G) && p) this.protege(G, j, 'salva', p.x, p.y);
           this.gastarCadena(G, j);
           s.gracia = Math.max(s.gracia, H.ESCUDO_GRACIA);
           this.empujarDesde(G, g, 1);
@@ -2137,6 +2152,7 @@
         }
       }
       if (s.cadena > 0) {
+        if (this.manda(G) && p) this.protege(G, idx, 'salva', p.x, p.y);
         this.gastarCadena(G, idx);
         s.gracia = Math.max(s.gracia, H.ESCUDO_GRACIA);
         this.empujarDesde(G, g, 1);
@@ -2154,6 +2170,10 @@
        * no una capa de vida. */
       var tieneCoraza = this.corazaDe(G, idx);
       if (s.coraza > 0 || s.escudo > 0 || tieneCoraza) {
+        /* qué capa lo aguanta: 'e' el escudo del Soporte, 'w' el de la W
+         * del Tanque, 'p' su coraza pasiva. Decide quién cobra. */
+        var capa = s.escudo > 0 ? 'e' : (s.coraza > 0 ? 'w' : 'p');
+        if (this.manda(G) && p) this.cobrarCapa(G, idx, capa, s.escudoDe, p.x, p.y);
         if (s.escudo > 0) {
           s.escudo = 0;
           s.coraza = 0;
@@ -2174,7 +2194,9 @@
          * le devuelve el fantasma a donde estaba y el empujón no llega a
          * verse. Quien lo tiene que dar es el anfitrión. */
         var gid = (g && typeof g.id === 'number') ? g.id : -1;
-        if (G.netRole === 'guest') G.netSend('gevt', { t: 'habRoto', g: gid });
+        /* y QUÉ CAPA (28 sep): el choque lo decide esta máquina, pero los
+         * puntos por proteger los paga el anfitrión (ver cobrarRoto) */
+        if (G.netRole === 'guest') G.netSend('gevt', { t: 'habRoto', g: gid, c: capa });
         else G.hostEvt({ t: 'habRoto', w: idx, g: gid });
         return true;
       }
@@ -2223,6 +2245,94 @@
       }
       var p = G.pacs[idx];
       if (p) this.efecto('roto', p.x, p.y, 20);
+    },
+
+    /* ---------- PUNTOS POR PROTEGER (28 sep 2026) ----------
+     * Ver CFG.HAB.PROTEGE_PUNTOS: el Tanque cobra cada golpe que aguanta su
+     * ESCUDO, su CORAZA o su REBOTE; el Soporte, cada escudo, cadena,
+     * hospital o vida suya que salva a alguien, y cada compañero que levanta.
+     *
+     * ¿Esta partida los paga? Solo DESATADO y solo con las reglas de
+     * puntuación de ahora: una repetición de antes (G.reglasPts 0) se
+     * reproduce como se jugó. */
+    puntuaProteger: function (G) {
+      return !!(this.on && G && G.hab && (G.reglasPts | 0) >= 1);
+    },
+
+    /* Cobra una protección: `tipo` 'golpe' (del Tanque), 'salva' o 'rescate'
+     * (del Soporte). La paga SOLO quien lleva la partida (el invitado avisa
+     * y cobra el anfitrión, que es el dueño del marcador); se suma directa,
+     * sin la pasiva del Asesino ni la CADENA, y se ve un "+600" como el de
+     * comerse un fantasma, en todas las pantallas. Devuelve lo cobrado. */
+    protege: function (G, quien, tipo, x, y) {
+      if (!this.puntuaProteger(G) || !this.manda(G)) return 0;
+      quien = (quien == null) ? -1 : quien | 0;
+      if (quien < 0 || !G.pacs[quien] || !G.roles) return 0;
+      if (G.roles[quien] !== (tipo === 'golpe' ? 'tanque' : 'soporte')) return 0;
+      var pts = (tipo === 'rescate') ? H.RESCATE_PUNTOS : H.PROTEGE_PUNTOS;
+      G.addScore(pts, quien);
+      x = Math.round(x || 0); y = Math.round((y || 0) - 8);   // por encima del salvado
+      G.addPopup(x, y, '+' + pts, CFG.EAT_FREEZE_TICKS);
+      G.hostEvt({ t: 'habProt', w: quien, p: pts, x: x, y: y });
+      return pts;
+    },
+
+    /* Quién cobra la capa que se ha llevado un golpe (ver salvaDelChoque) */
+    cobrarCapa: function (G, idx, capa, de, x, y) {
+      if (capa === 'e') return this.protege(G, de, 'salva', x, y);
+      return this.protege(G, idx, 'golpe', x, y);
+    },
+
+    /* Anfitrión: a un invitado se le ha roto una capa en su máquina (su
+     * 'habRoto', que trae cuál). Se paga si en la copia de aquí la tenía de
+     * verdad —un aviso inventado no cobra— y ANTES de borrarla (escudoRoto).
+     * Un aviso sin capa (un invitado de antes) se lee con la regla de
+     * siempre: el escudo del Soporte, luego la W, luego la coraza. */
+    cobrarRoto: function (G, who, c) {
+      var s = this.estado(who), p = G.pacs[who];
+      if (!s || !p || !this.puntuaProteger(G)) return 0;
+      if (c !== 'e' && c !== 'w' && c !== 'p') c = s.escudo > 0 ? 'e' : (s.coraza > 0 ? 'w' : 'p');
+      var tenia = (c === 'e') ? s.escudo > 0 : (c === 'w') ? s.coraza > 0 : this.corazaDe(G, who);
+      if (!tenia) return 0;
+      return this.cobrarCapa(G, who, c, s.escudoDe, p.x, p.y);
+    },
+
+    /* Una VIDA regalada salva a alguien cuando, sin ella, esa caída habría
+     * sido la última. Desde Game.finishPacDeath, con las vidas que le
+     * quedan después de descontar la de ahora (`left`). Las regaladas se
+     * gastan de la más nueva a la más vieja; si aun así se queda fuera, las
+     * que tuviera ya no salvan a nadie. */
+    alPerderVida: function (G, i, left) {
+      var l = this.vidasDadas;
+      if (!this.on || !l || !l.length) return 0;
+      var a = (G.livesMode === 'individual') ? i : -1;
+      var mias = [], k;
+      for (k = 0; k < l.length; k++) if (l[k].a === a) mias.push(k);
+      if (!mias.length) return 0;
+      if (left <= 0) {
+        this.vidasDadas = l.filter(function (v) { return v.a !== a; });
+        return 0;
+      }
+      if (left > mias.length) return 0;          // tenía vidas de sobra: no fue la vida
+      var dada = l.splice(mias[mias.length - 1], 1)[0];
+      var p = G.pacs[i];
+      return this.protege(G, dada.de, 'salva', p ? p.x : 0, p ? p.y : 0);
+    },
+
+    /* Game.revivirCuerpo: el Soporte que haya levantado a ese compañero */
+    alRescatar: function (G, c) {
+      var pts = 0;
+      if (!c || !c.quien) return 0;
+      for (var q in c.quien) {
+        if (c.quien.hasOwnProperty(q)) pts += this.protege(G, q | 0, 'rescate', c.x, c.y);
+      }
+      return pts;
+    },
+
+    /* Invitado (y mirón): el anfitrión ha pagado una protección */
+    protegeVisto: function (G, e) {
+      if (!e || !(e.p > 0)) return;
+      G.addPopup(+e.x || 0, +e.y || 0, '+' + (e.p | 0), CFG.EAT_FREEZE_TICKS);
     },
 
     /* ¿Está encendido ese poder? (la barra lo marca aparte) */
@@ -2400,6 +2510,7 @@
           G.netSend('gevt', { t: 'habHospital', j: hi });
         } else {
           this.dar(G, hi, 'hospital');
+          this.protege(G, hi, 'salva', p.x, p.y);
         }
         p.safeTicks = CFG.REVIVIR.ESCUDO_TICKS;
         p.pauseTicks = 0;
@@ -2415,7 +2526,14 @@
       var j = d.j | 0, g;
       switch (d.t) {
         case 'habGasta':
-          if (d.c === 'cadena' && this.estado(j)) this.dar(G, j, 'cadena');
+          if (d.c === 'cadena' && this.estado(j)) {
+            /* la CADENA de alguien le ha salvado en su máquina: se paga si de
+             * verdad seguía enlazada (un aviso inventado no cobra) */
+            if (this.estado(j).cadena > 0 && G.pacs[who]) {
+              this.protege(G, j, 'salva', G.pacs[who].x, G.pacs[who].y);
+            }
+            this.dar(G, j, 'cadena');
+          }
           /* su YUNQUE: se ha movido en su pantalla, que es la que vale */
           if (d.c === 'yunque' && j === who && this.estado(j) && this.estado(j).yunque > 0) {
             this.estado(j).yunque = 0;
@@ -2429,20 +2547,31 @@
         case 'habRebote':
           /* su REBOTE se gastó contra un fantasma: la baja la da el anfitrión */
           var sr = this.estado(who);
+          /* y el golpe que aguantó se paga, si de verdad lo tenía puesto */
+          if (sr && sr.rebote > 0 && G.pacs[who]) this.protege(G, who, 'golpe', G.pacs[who].x, G.pacs[who].y);
           if (sr) sr.rebote = 0;
           g = G.ghosts[d.g | 0];
           if (g) this.matarCatalogo(G, g, who, H.MAGO_PUNTOS, 'rebote');
           break;
         case 'habHospital':
           /* el HOSPITAL de alguien le salvó en su máquina */
-          if (this.estado(j)) this.dar(G, j, 'hospital');
+          if (this.estado(j)) {
+            /* se paga si de verdad lo tenía abierto, como la cadena */
+            if (this.estado(j).hospital > 0 && G.pacs[who]) {
+              this.protege(G, j, 'salva', G.pacs[who].x, G.pacs[who].y);
+            }
+            this.dar(G, j, 'hospital');
+          }
           break;
       }
     },
 
-    marcarEscudo: function (idx, ticks) {
+    /* `de`: quién lo da, para saber a quién pagar si salva (ver protege).
+     * Sin él (el aviso 'habEsc' en la máquina de un invitado) no se toca. */
+    marcarEscudo: function (idx, ticks, de) {
       var s = this.estado(idx);
       if (s) s.escudo = Math.max(s.escudo, ticks || H.ESCUDO_TICKS);
+      if (s && de != null && de >= 0) s.escudoDe = de;
     },
 
     /* Un efecto que solo se pinta (rayo, chispazo de hielo, fogonazo...) */
@@ -2809,7 +2938,7 @@
       if (j < 0) return false;
       sonDe(G, idx, 'playStealth');
       if (soloVisual) return true;
-      this.marcarEscudo(j, H.ALIADO_TICKS);
+      this.marcarEscudo(j, H.ALIADO_TICKS, idx);
       if (G.marca) G.marca(idx, 'apoyos');      // para su MAESTRÍA
       var o = G.pacs[j];
       this.efecto('amparo', o.x, o.y, 24);
@@ -2842,7 +2971,7 @@
       sonDe(G, idx, 'playStealth');
       if (soloVisual) return true;
       for (var n = 0; n < js.length; n++) {
-        this.marcarEscudo(js[n], H.ALIADO_TICKS);
+        this.marcarEscudo(js[n], H.ALIADO_TICKS, idx);
         if (G.marca && js[n] !== idx) G.marca(idx, 'apoyos');   // el suyo no cuenta
         var o = G.pacs[js[n]];
         this.efecto('amparo', o.x, o.y, 24);
@@ -2898,6 +3027,8 @@
       var ind = (G.playerCount > 1 && G.livesMode === 'individual');
       if (ind) G.pacs[j].lives++;
       else G.lives++;
+      /* para pagarla si un día salva a alguien (ver alPerderVida) */
+      (this.vidasDadas = this.vidasDadas || []).push({ a: ind ? j : -1, de: idx });
       if (G.marca) G.marca(idx, 'apoyos', 2);   // una vida vale por dos escudos
       var o = G.pacs[j] || G.pacs[idx];
       this.efecto('vida', o.x, o.y, 40);
@@ -4714,6 +4845,7 @@
           var mina = this.ghostsEn(G, s.mina.c, s.mina.r, 0.6);
           if (mina.length) {
             for (j = 0; j < mina.length; j++) this.matarCatalogo(G, mina[j], i, H.MAGO_PUNTOS, 'mina');
+            s.escudoDe = i;                      // el de la MINA es para él
             this.dar(G, i, 'escudo', H.ALIADO_TICKS);
             var mp = G.pacs[i]; if (mp) this.efecto('amparo', mp.x, mp.y, 28);
             this.dar(G, i, 'mina');

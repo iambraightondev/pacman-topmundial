@@ -640,6 +640,9 @@
       if (a.clasif) aj.push('c');
       // el CONTINUAR recarga los poderes (25 sep); las de antes no la llevan
       if (a.contRecarga) aj.push('k');
+      /* las REGLAS DE PUNTUACIÓN con que se jugó (28 sep: los puntos por
+       * proteger); las de antes no la llevan y se ven con las de entonces */
+      if (a.reglasPts > 0) aj.push('u' + b36(a.reglasPts));
       // 'm' + el laberinto (los ids no llevan ni comas ni virgulillas)
       if (a.maze) aj.push('m' + String(a.maze).replace(/[^a-z0-9_-]/gi, ''));
       var nombres = [];
@@ -701,6 +704,7 @@
           else if (aj[b].charAt(0) === 'p') ajustes.poderes = decPoderes(aj[b].slice(1));
           else if (aj[b] === 'c') ajustes.clasif = true;
           else if (aj[b] === 'k') ajustes.contRecarga = true;
+          else if (aj[b].charAt(0) === 'u') ajustes.reglasPts = d36(aj[b].slice(1)) | 0;
         }
 
         var crudos = p[6].split(','), nombres = [];
@@ -1226,6 +1230,9 @@
       if (G.hab) { var pod = poderesDeAhora(); if (pod) ajustes.poderes = pod; }
       if (G.clasif) ajustes.clasif = true;
       if (G.contRecarga) ajustes.contRecarga = true;
+      /* ...y con qué reglas de puntuación (solo DESATADO: los puntos por
+       * proteger no existen en otro modo, y el texto de las demás no cambia) */
+      if (G.hab && G.reglasPts > 0) ajustes.reglasPts = G.reglasPts;
 
       this.modo = 'grabar';
       this.grabando = {
@@ -2498,6 +2505,9 @@
         clasif: !!(rep.ajustes && rep.ajustes.clasif),
         // ...y si pagar recargaba los poderes (las de antes del 25 sep, no)
         contRecarga: !!(rep.ajustes && rep.ajustes.contRecarga),
+        // ...y con qué reglas se puntuaba (las de antes del 28 sep: 0, sin
+        // puntos por proteger), que si no la partida no cuadra
+        reglasPts: (rep.ajustes && rep.ajustes.reglasPts) | 0,
         // ni los giros del que llevaba fantasma, a quién moverle
         ghosts: (rep.ajustes && rep.ajustes.ghosts)
           ? rep.ajustes.ghosts.slice() : null,

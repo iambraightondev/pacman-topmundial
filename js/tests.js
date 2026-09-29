@@ -13571,6 +13571,256 @@
     ok(!HB.corazaDe(G, 0), 'y la coraza con él: esos dos no se acumulan');
   });
 
+  /* ---------- PUNTOS POR PROTEGER (28 sep 2026) ----------
+   * El Tanque cobra cada golpe que aguanta de verdad; el Soporte, cada
+   * escudo, cadena, hospital o vida suya que salva a alguien y cada
+   * compañero que levanta. Fijos, directos a quien protege, sin frenos. */
+  test('PROTEGER · los números: 600 por golpe o salvada, 1.200 por rescate', function () {
+    eq(HC.PROTEGE_PUNTOS, 600, 'un golpe aguantado o una salvada');
+    eq(HC.RESCATE_PUNTOS, 1200, 'levantar a un compañero');
+    ok(HC.REGLAS_PUNTOS >= 1, 'y las reglas de puntuación de ahora los traen');
+  });
+
+  test('PROTEGER · TANQUE: cobra el golpe que aguanta su coraza, su W o su rebote; sin nada, no',
+    function () {
+      partidaRol(['tanque'], 6, 5, DR.RIGHT);
+      filaVacia(5);
+      var p = G.pacs[0], s = HB.estado(0);
+      p.safeTicks = 0;
+      var g = fantasmaEn(0, 6, 5);
+      function golpe() {
+        s.gracia = 0;
+        g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false;
+        return HB.salvaDelChoque(G, 0, g);
+      }
+      var antes = G.score, popups = G.popups.length;
+      ok(golpe(), 'la coraza pasiva aguanta');
+      eq(G.score - antes, HC.PROTEGE_PUNTOS, 'y paga 600');
+      eq(G.ptsJ[0], HC.PROTEGE_PUNTOS, 'al Tanque');
+      ok(G.popups.length > popups && G.popups[G.popups.length - 1].text === '+600', 'con su "+600" flotante');
+
+      s.coraza = HC.ESCUDO_TICKS;                  // la W
+      antes = G.score;
+      ok(golpe(), 'el ESCUDO de la W aguanta');
+      eq(G.score - antes, HC.PROTEGE_PUNTOS, 'y paga 600');
+
+      antes = G.score;
+      ok(HB.salvaDelChoque(G, 0, g), 'en la gracia de después no muere');
+      eq(G.score, antes, 'pero la gracia no es otro golpe: no paga');
+
+      s.rebote = HC.REBOTE_TICKS;                  // el REBOTE
+      antes = G.score;
+      ok(golpe(), 'el REBOTE aguanta');
+      eq(G.score - antes, HC.PROTEGE_PUNTOS + HC.MAGO_PUNTOS, '600 por aguantar y 200 por la baja');
+
+      antes = G.score;
+      ok(!golpe(), 'sin nada puesto, el golpe no se perdona');
+      eq(G.score, antes, 'y tocar un fantasma sin protección no da nada');
+    });
+
+  test('PROTEGER · el escudo del Soporte roto sobre otro lo cobra el Soporte, no el salvado',
+    function () {
+      partidaRol(['tanque', 'soporte'], 6, 5, DR.RIGHT);
+      ponPac(1, 9, 5, DR.LEFT);
+      var t = G.pacs[0];
+      t.safeTicks = 0;
+      ok(HB.aliado(G, 1), 'el Soporte le da su escudo al Tanque');
+      eq(HB.estado(0).escudoDe, 1, 'y queda apuntado quién se lo dio');
+      var g = fantasmaEn(0, 6, 5);
+      var antes = G.score, sop = G.ptsJ[1] || 0, tan = G.ptsJ[0] || 0;
+      ok(HB.salvaDelChoque(G, 0, g), 'el escudo aguanta (y se lleva la coraza del Tanque)');
+      eq(G.score - antes, HC.PROTEGE_PUNTOS, 'se paga UNA protección');
+      eq((G.ptsJ[1] || 0) - sop, HC.PROTEGE_PUNTOS, 'al Soporte, que es quien le salvó');
+      eq((G.ptsJ[0] || 0) - tan, 0, 'y no al Tanque: la capa que aguantó no era suya');
+
+      /* el de todo el equipo, que le incluye a él, y el de la MINA, suyo */
+      partidaRol(['asesino', 'soporte'], 6, 5, DR.RIGHT);
+      ponPac(1, 9, 5, DR.LEFT);
+      ok(HB.aliadoArea(G, 1), 'escudo a todo el equipo');
+      eq(HB.estado(1).escudoDe, 1, 'el suyo también lo da él');
+      G.pacs[1].safeTicks = 0;
+      antes = G.ptsJ[1] || 0;
+      ok(HB.salvaDelChoque(G, 1, fantasmaEn(1, 9, 5)), 'su escudo le salva a él');
+      eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'y también lo cobra');
+    });
+
+  test('PROTEGER · la CADENA y el HOSPITAL del Soporte cobran cuando salvan', function () {
+    partidaRol(['asesino', 'soporte'], 6, 5, DR.RIGHT);
+    ponPac(1, 9, 5, DR.LEFT);
+    var s1 = HB.estado(1);
+    s1.cadena = HC.CADENA_TICKS; s1.cadenaCon = 0;
+    G.pacs[0].safeTicks = 0;
+    var antes = G.ptsJ[1] || 0;
+    ok(HB.salvaDelChoque(G, 0, fantasmaEn(0, 6, 5)), 'la cadena aguanta el golpe del compañero');
+    eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'y el Soporte cobra');
+
+    s1.hospital = HC.HOSPITAL_TICKS;
+    antes = G.ptsJ[1] || 0;
+    G.startDeath(0, 0);
+    ok(!G.pacs[0].dying, 'el hospital le levanta en el sitio');
+    eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'y el Soporte cobra');
+  });
+
+  test('PROTEGER · la VIDA regalada cobra solo si evita que se quede fuera', function () {
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    G.livesMode = 'individual';
+    G.pacs[0].lives = 3;
+    G.pacs[1].lives = 1;
+    ok(HB.vida(G, 0), 'el Soporte le da una vida al que menos tiene');
+    eq(G.pacs[1].lives, 2, 'que pasa a tener dos');
+    var antes = G.ptsJ[0] || 0;
+    G.finishPacDeath(1);
+    eq(G.pacs[1].lives, 1, 'cae y le queda una: la regalada');
+    ok(!G.pacs[1].out, 'sigue dentro');
+    eq((G.ptsJ[0] || 0) - antes, HC.PROTEGE_PUNTOS, 'sin ella se habría quedado fuera: cobra el Soporte');
+
+    /* con vidas de sobra la regalada no ha salvado a nadie... todavía */
+    G.pacs[0].lives = HC.VIDA_MAX;               // que no se la dé a sí mismo
+    G.pacs[1].lives = 3;
+    HB.vida(G, 0);                               // 4
+    antes = G.ptsJ[0] || 0;
+    G.finishPacDeath(1);                         // 3
+    G.finishPacDeath(1);                         // 2
+    eq((G.ptsJ[0] || 0) - antes, 0, 'caer con vidas de sobra no paga');
+    G.finishPacDeath(1);                         // 1: la que salva
+    eq((G.ptsJ[0] || 0) - antes, HC.PROTEGE_PUNTOS, 'la caída que habría sido la última, sí');
+
+    /* a solas la vida va al fondo común, y también cuenta */
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    G.lives = 1;
+    HB.vida(G, 0);
+    eq(G.lives, 2, 'una vida más en el fondo');
+    antes = G.score;
+    G.finishPacDeath(0);
+    eq(G.score - antes, HC.PROTEGE_PUNTOS, 'y la que le salva de quedarse fuera, cobra');
+  });
+
+  test('PROTEGER · levantar a un compañero: 1.200 al Soporte, cada vez', function () {
+    partidaRol(['asesino', 'soporte', 'tanque'], 6, 5, DR.RIGHT);
+    G.livesMode = 'individual';
+    function levantar(quien) {
+      var p = G.pacs[0];
+      p.out = true; p.lives = 0;
+      G.cuerpos[0] = { x: p.x, y: p.y, d: p.dir, t: 900, n: 5, en: {}, quien: {} };
+      G.cuerpos[0].quien[quien] = 1;
+      G.revivirCuerpo(0);
+      ok(!G.pacs[0].out, 'vuelve');
+    }
+    var antes = G.ptsJ[1] || 0;
+    levantar(1);
+    eq((G.ptsJ[1] || 0) - antes, HC.RESCATE_PUNTOS, 'el Soporte cobra el rescate');
+    levantar(1);
+    eq((G.ptsJ[1] || 0) - antes, 2 * HC.RESCATE_PUNTOS, 'y el segundo del mismo compañero también: sin frenos');
+    antes = G.ptsJ[2] || 0;
+    levantar(2);
+    eq((G.ptsJ[2] || 0) - antes, 0, 'el que levanta sin ser Soporte no cobra');
+  });
+
+  test('PROTEGER · nada de esto fuera de las reglas de ahora (una repetición de antes)', function () {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1, hab: true, roles: ['tanque'], reglasPts: 0 });
+    try {
+      G.state = 'PLAYING';
+      var p = ponPac(0, 6, 5, DR.RIGHT);
+      p.safeTicks = 0;
+      var antes = G.score;
+      ok(HB.salvaDelChoque(G, 0, fantasmaEn(0, 6, 5)), 'la coraza aguanta igual');
+      eq(G.score, antes, 'pero no paga: se juega como se jugó');
+    } finally { G.toMenu(); }
+  });
+
+  test('PROTEGER · en party, lo que aguanta el invitado lo paga el anfitrión', function () {
+    partidaRol(['soporte', 'tanque'], 6, 5, DR.RIGHT);
+    var rolAntes = G.netRole, idxAntes = G.localIdx, evt = G.hostEvt, eventos = [];
+    G.netRole = 'host';
+    G.localIdx = 0;
+    G.hostEvt = function (e) { eventos.push(e); };
+    try {
+      var s = HB.estado(1);
+      s.corPas = HC.CORAZA_DURA; s.corCd = 0; s.escudo = 0; s.coraza = 0;
+      var antes = G.ptsJ[1] || 0;
+      G.hostMsg('gevt', { t: 'habRoto', i: 1, g: -1, c: 'p' }, 'sid');
+      eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'su coraza rota: cobra el Tanque invitado');
+      ok(eventos.some(function (e) { return e.t === 'habProt' && e.w === 1 && e.p === HC.PROTEGE_PUNTOS; }),
+        'y el "+600" sale hacia todas las pantallas');
+
+      antes = G.ptsJ[1] || 0;
+      G.hostMsg('gevt', { t: 'habRoto', i: 1, g: -1, c: 'w' }, 'sid');
+      eq((G.ptsJ[1] || 0) - antes, 0, 'una capa que aquí no tenía no cobra (aviso inventado)');
+
+      HB.marcarEscudo(1, HC.ALIADO_TICKS, 0);   // el del Soporte anfitrión
+      var sop = G.ptsJ[0] || 0;
+      G.hostMsg('gevt', { t: 'habRoto', i: 1, g: -1, c: 'e' }, 'sid');
+      eq((G.ptsJ[0] || 0) - sop, HC.PROTEGE_PUNTOS, 'su escudo aliado roto: cobra el Soporte que se lo dio');
+
+      s.rebote = HC.REBOTE_TICKS;
+      antes = G.ptsJ[1] || 0;
+      G.hostMsg('gevt', { t: 'habRebote', i: 1, g: 0 }, 'sid');
+      ok((G.ptsJ[1] || 0) - antes >= HC.PROTEGE_PUNTOS, 'su REBOTE gastado: cobra');
+      antes = G.ptsJ[1] || 0;
+      G.hostMsg('gevt', { t: 'habRebote', i: 1, g: 1 }, 'sid');
+      eq((G.ptsJ[1] || 0) - antes < HC.PROTEGE_PUNTOS, true, 'sin rebote puesto, no');
+    } finally { G.hostEvt = evt; G.netRole = rolAntes; G.localIdx = idxAntes; }
+  });
+
+  /* LAS REPETICIONES DE ANTES SIGUEN CUADRANDO. Son de verdad, de la nube:
+   * un Tanque al que su coraza y su W le aguantan dos golpes (22 sep) y una
+   * Soporte a solas cuyo escudo de equipo y su VIDA la salvan (23 sep). No
+   * llevan la bandera de las reglas de puntuación, así que se reproducen sin
+   * puntos por proteger y acaban con los mismos puntos que se grabaron; con
+   * las reglas de ahora habrían sumado lo suyo. (Si un día dejan de cuadrar
+   * por otro cambio del juego, lo dice la primera comprobación.) */
+  test('PROTEGER · las repeticiones de antes siguen cuadrando, con sus reglas', function () {
+    var R = window.PM.Replay;
+    var viejas = [
+      ['R1~h~~1~1~2s,2s,2s,3,q,rt~IAMBRAIGHTON~muc789av~1kG29A1cIsJ~5u,1,0,3js~calavera.ffff00.acc_chistera.efx_estrellas', 2],
+      ['R1~h~~1~1~2s,2s,2s,3,q,rs,pmina+inmunidad+aliado+vida~ESTER~muekfh7p~xImJoIoJpGnJlGlHlGoJ1fIjHsJgIiJ12IkH6eBeGlJeGjHfGgJbIhJkIuH19JyGjJ16GeHpGgJ1vGeJoI14J3dIqHwIiHeG24ImGtHpG1zH9GrJkGoHnGoJlIaHeIxH2zG13IjJyGsIiJoIiJnIuH1zIjH8G2yJ17IrG6fGsB1cI10HxJ22IrHzGrH1rJ2fIiJ1hH1fJ17F2iGjHoGfJxGdJhIgJhG38J1jIzH23G2dH11J12I43G12J11IfH13GjHzJqI1aGnBqH1mIoH2zIyJ4mJ0H1dG1kIsG2jHyG1lJ2iI62DuI12H15IhJ2aGnHmGuHgGnJ16IuJiGhJ1gIhH2uIoH1aGbJ49JtIlHoIlHqJ2pGnHpG1lImHgG1cJ4eIyGgHuG5oH1iG10J3aI11H19GuJ2xIrH10G1lHlIoHqGmHpIiH1hIqHiG~5xc,2,a,2sfr~cuy.00ff00..efx_huellas', 2]
+    ];
+    function jugar(rep) {
+      if (G.inGame()) G.toMenu();
+      R.montar(rep);
+      G.simulandoFuera = true;
+      var n = 0, tope = Math.round(rep.final.tiempoMs * 60 / 1000) * 3 + 36000;
+      try {
+        while (G.state !== 'GAME_OVER' && G.state !== 'MENU' && n < tope) { G.step(); n++; }
+        return G.score;
+      } finally { G.simulandoFuera = false; R.salir(); G.toMenu(); }
+    }
+    window.PM.settings.muted = true;
+    viejas.forEach(function (v, i) {
+      var rep = R.leer(v[0]);
+      ok(rep, 'la ' + (i + 1) + '.ª se lee');
+      ok(!rep.ajustes.reglasPts, 'y no trae reglas de puntuación: es de antes');
+      eq(jugar(rep), rep.final.puntos, 'la ' + (i + 1) + '.ª cuadra con sus puntos de entonces');
+      var ahora = R.leer(v[0]);
+      ahora.ajustes.reglasPts = HC.REGLAS_PUNTOS;
+      eq(jugar(ahora), rep.final.puntos + v[1] * HC.PROTEGE_PUNTOS,
+        'con las reglas de ahora habría cobrado sus ' + v[1] + ' protecciones');
+    });
+
+    /* y la bandera viaja en el texto de las nuevas */
+    var nueva = R.leer(viejas[0][0]);
+    nueva.ajustes.reglasPts = 1;
+    var leida = R.leer(R.serializar(nueva));
+    eq(leida && leida.ajustes.reglasPts, 1, 'una de ahora lleva sus reglas en el texto');
+  });
+
+  test('PROTEGER · una partida nueva se graba con las reglas de ahora', function () {
+    var R = window.PM.Replay;
+    window.PM.settings.muted = true;
+    if (G.inGame()) G.toMenu();
+    R.salir();
+    G.newGame({ players: 1, hab: true, roles: ['tanque'] });
+    try {
+      eq(G.reglasPts, HC.REGLAS_PUNTOS, 'la partida juega con las de ahora');
+      ok(R.grabando && R.grabando.ajustes.reglasPts === HC.REGLAS_PUNTOS, 'y la repetición lo apunta');
+    } finally { G.toMenu(); }
+    G.newGame({ players: 1 });
+    try {
+      ok(!(R.grabando && R.grabando.ajustes.reglasPts), 'una clásica no lleva la bandera: su texto no cambia');
+    } finally { G.toMenu(); }
+  });
+
   /* EL OJO del Mago: por dónde VA A PASAR cada fantasma (no su destino: un
    * punto lejano no dice por dónde viene) y cuándo cambian de modo. */
   test('MAGO · PASIVA EL OJO: la ruta de cada fantasma, y solo para el Mago', function () {

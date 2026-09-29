@@ -395,6 +395,98 @@ caso('6 · trío: revancha tras el traspaso, con el mando donde quedó', functio
 });
 
 /* =============================================================
+ * 7. PUNTOS POR PROTEGER: el choque del invitado lo decide su máquina,
+ *    pero el marcador es del anfitrión (avisos habRoto con su capa,
+ *    habRebote). Se paga UNA vez, y el "+600" se ve en las dos pantallas.
+ * ============================================================= */
+function sinPastillas(ms, fila) {
+  ms.forEach(function (m) {
+    var P = m.G.pellets[fila];
+    for (var c = 0; c < P.length; c++) if (P[c]) { P[c] = null; m.G.dotsLeft--; }
+  });
+}
+function vioMas600(m) {
+  return m.G.popups.some(function (p) { return p.text === '+600'; });
+}
+/* El invitado se choca con Blinky y se mira cuánto ha cobrado cada uno en
+ * el anfitrión (y que la foto se lo lleva al invitado) */
+function chocaInvitado(ms) {
+  var A = ms[0], B = ms[1];
+  sinPastillas(ms, 5);
+  A.G.pacs[0].pauseTicks = 1e6;               // el anfitrión, quieto: que no coma
+  red.paso(2);
+  var antes = A.G.ptsJ.slice(), total = A.G.score;
+  A.G.popups = []; B.G.popups = [];
+  juntar(ms, 1, 0);
+  B.G.pacs[1].safeTicks = 0;
+  B.enviados = [];
+  red.paso(3);
+  red.paso(12);                                // que llegue la foto
+  return {
+    d: [(A.G.ptsJ[0] || 0) - (antes[0] || 0), (A.G.ptsJ[1] || 0) - (antes[1] || 0)],
+    total: A.G.score - total
+  };
+}
+
+/* Dúo con el Tanque de invitado (un rol por cabeza) y su coraza recién puesta */
+function tanqueInvitado(carga) {
+  var ms = montar(2, { hab: true, roles: ['asesino', 'tanque'], loadouts: [null, carga || null] });
+  blindar(ms);
+  ms.forEach(function (m) { var s = m.H.estado(1); s.corPas = CFG(m).HAB.CORAZA_DURA; s.corCd = 0; });
+  return ms;
+}
+
+caso('7a · la CORAZA del Tanque invitado: cobra él, lo paga el anfitrión', function () {
+  var ms = tanqueInvitado(), A = ms[0], B = ms[1];
+  ok(B.H.corazaDe(B.G, 1), 'el invitado lleva su coraza');
+  var r = chocaInvitado(ms);
+  ok(!B.G.pacs[1].dying && !A.G.pacs[1].dying, 'no muere');
+  eq(mensajes(B, 'gevt', 'habRoto').length, 1, 'avisa del golpe una vez');
+  eq(mensajes(B, 'gevt', 'habRoto')[0][1].c, 'p', 'diciendo que fue la coraza');
+  eq(r.d[1], CFG(A).HAB.PROTEGE_PUNTOS, 'el Tanque invitado cobra 600 en el anfitrión');
+  eq(r.total, CFG(A).HAB.PROTEGE_PUNTOS, 'y el marcador sube eso, una sola vez');
+  eq(B.G.score, A.G.score, 'la foto se lo lleva al invitado');
+  ok(vioMas600(A) && vioMas600(B), 'y el "+600" se ve en las dos pantallas');
+});
+
+caso('7b · el ESCUDO del Soporte anfitrión salva al invitado: cobra el Soporte', function () {
+  var ms = montar(2, { hab: true, roles: ['soporte', 'asesino'] }), A = ms[0], B = ms[1];
+  blindar(ms);
+  ok(A.H.aliado(A.G, 0), 'el Soporte le da su escudo');
+  red.paso(3);
+  ok(B.H.estado(1).escudo > 0, 'al invitado le llega');
+  var r = chocaInvitado(ms);
+  ok(!A.G.pacs[1].dying, 'el escudo le salva');
+  eq(mensajes(B, 'gevt', 'habRoto')[0][1].c, 'e', 'y avisa de que fue el escudo aliado');
+  eq(r.d[0], CFG(A).HAB.PROTEGE_PUNTOS, 'cobra el Soporte');
+  eq(r.d[1], 0, 'y no el salvado');
+  ok(vioMas600(B), 'el invitado ve el "+600"');
+});
+
+caso('7c · el REBOTE del Tanque invitado: 600 por aguantar y la baja, en el anfitrión', function () {
+  var ms = tanqueInvitado('rebote,escudo,provocar,arrollar'), A = ms[0], B = ms[1];
+  ms.forEach(function (m) { m.H.estado(1).corPas = 0; m.H.estado(1).corCd = 9999; });   // que aguante el rebote
+  ok(B.H.pulsar(B.G, 1, 0), 'el invitado se pone el REBOTE');
+  red.paso(6);
+  ok(A.H.estado(1).rebote > 0, 'el anfitrión se lo cree');
+  var r = chocaInvitado(ms);
+  eq(mensajes(B, 'gevt', 'habRebote').length, 1, 'avisa del rebote');
+  eq(r.d[1], CFG(A).HAB.PROTEGE_PUNTOS + CFG(A).HAB.MAGO_PUNTOS, 'cobra el golpe y la baja');
+  eq(A.G.ghosts[0].mode, 'eyes', 'y el fantasma cae');
+});
+
+caso('7d · un invitado que se inventa el golpe no cobra', function () {
+  var ms = tanqueInvitado(), A = ms[0], B = ms[1];
+  ms.forEach(function (m) { m.H.estado(1).corPas = 0; m.H.estado(1).corCd = 9999; });
+  red.paso(2);
+  var antes = A.G.ptsJ[1] || 0;
+  B.G.netSend('gevt', { t: 'habRoto', g: -1, c: 'p' });
+  B.G.netSend('gevt', { t: 'habRebote', g: 0 });
+  red.paso(3);
+  ok((A.G.ptsJ[1] || 0) - antes < CFG(A).HAB.PROTEGE_PUNTOS, 'sin coraza ni rebote puestos, nada de 600');
+});
+
+/* =============================================================
  * 10. A UN MIRÓN NO LO ECHAN LAS SALIDAS DE LOS DEMÁS
  * ============================================================= */
 caso('10a · se va un invitado: el mirón sigue viendo', function () {
@@ -455,7 +547,10 @@ var RUIDO = {
   quieto: 1,
   /* la credencial de la APISONADORA del invitado: solo existe en el
    * anfitrión, para creerle cuando dice que ha arrollado a alguien */
-  arrollaRed: 1
+  arrollaRed: 1,
+  /* quién dio el escudo: solo lo apunta quien reparte y paga (el anfitrión),
+   * para los puntos por proteger */
+  escudoDe: 1
 };
 
 /* Diferencias sabidas que no cambian la partida, con su porqué:

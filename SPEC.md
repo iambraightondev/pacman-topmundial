@@ -988,6 +988,17 @@ until the run ends with the recorded score. The choices (`dq`: index →
 `temprano`/`normal`) are stored in the saved record so it only happens once.
 Validated on the real 93 870 replay: same score and 124 ghosts.
 
+**Scoring-rules version (2026-09-28, flag `u`).** Local replays are re-simulated
+to be checked, so a change to *what scores* would make every older run stop
+adding up. DESATADO recordings now carry `ajustes.reglasPts`
+(`CFG.HAB.REGLAS_PUNTOS`, serialized as `u` + base 36; only when > 0, so
+classic replays keep their exact text). `Replay.montar` passes it to
+`Game.newGame` as `reglasPts` (missing → 0), a new game takes the current
+value, and `restartGame` drops it like `contRecarga`. Version 1 = the
+PROTECTION POINTS (see Roles): a replay recorded before 28 Sep plays without
+them and still ends on its recorded score (checked on all 155 cloud runs that
+matched, and in tests.js with two real ones).
+
 **RLE terminator.** A run count is now closed with `.` (`5A*8.5G`): without it
 `5A*8` followed by `5G` parsed as `5A*85` plus a bare `G`, which broke the text.
 The decoder accepts both forms.
@@ -3375,6 +3386,43 @@ the key index. `LIST` is the ASESINO (the original kit).
   drawing only — it never touches the game or the network. The role picker
   shows the line `PASIVA · …` under the motto (`ROL_INFO[].pasiva`), which is
   always there even when empty so the screen does not jump between roles.
+- **PROTECTION POINTS (28 Sep 2026, Braighton).** Tank and support scored
+  about half an assassin per minute (cloud replays: ~5 000 and ~4 100 against
+  ~11 400) because protecting did not score. Now, in DESATADO:
+  **TANQUE** gets `HAB.PROTEGE_PUNTOS` (600) for every hit his own layers
+  really absorb — the W ESCUDO (`coraza`), the passive CORAZA (`corPas`) or
+  the REBOTE (against a ghost or the king); a ghost touching him with nothing
+  on pays nothing, and the grace ticks after a break are not extra hits.
+  **SOPORTE** gets 600 for every shield of his that breaks saving someone
+  (ESCUDO ALIADO, the whole-team hold and the MINA's; the giver is stored in
+  `st[j].escudoDe`, set by `marcarEscudo(j, ticks, de)` and by the mine), for
+  every CADENA and HOSPITAL that saves, and for every gifted VIDA that keeps
+  someone in (`Hab.vidasDadas` `{a, de}`; `Hab.alPerderVida` from
+  `Game.finishPacDeath`: it pays when the lives left after the fall are ≤ the
+  gifted ones still pending, i.e. without them that fall was the last; newest
+  first; going out clears them), and `HAB.RESCATE_PUNTOS` (1 200) for lifting
+  a teammate (`Game.revivirCuerpo` → `Hab.alRescatar`, pass or RESURRECCIÓN;
+  only a soporte in `c.quien` gets paid). Saving himself counts too (the mine's
+  shield is always his, the team shield includes him, and solo his VIDA goes
+  to the shared pool). Everything runs through `Hab.protege(G, quien, tipo,
+  x, y)`: only the machine that owns the scoreboard pays (`manda`), straight
+  `G.addScore(pts, quien)` — no assassin bonus, no CADENA doubling — with a
+  `'+600'` popup like a ghost's, broadcast as `evt habProt {w, p, x, y}`
+  (`Hab.protegeVisto`). **No brakes** (Braighton, 28 Sep): no per-minute cap,
+  no "alive 10 s later", no one-per-teammate limit. Theoretical maxima by
+  cooldown, documented in CFG: tank 6.5 hits/min = 3 900/min; support in a
+  squad with rigged rescues (three teammates dying on top of him every
+  ~7.5 s) ≈ 36 400/min — under the server ceiling (50 000 per minute and
+  player, `enviar-record` and `js/ranking.js`), which is unchanged.
+  **Party:** the guest's collisions are decided on its machine, so it tells
+  the host: `habRoto {g, c}` now carries the layer (`'e'` support shield,
+  `'w'` tank W, `'p'` passive) and the host pays in `Hab.cobrarRoto`
+  **before** `escudoRoto` clears it, only if its own copy had that layer (a
+  made-up notice pays nothing; a notice without `c` falls back to the usual
+  order). `habRebote`, `habGasta` (cadena), `habHospital` and `jefeGolpe`
+  `'rebote'` pay the same way, each checked against the host's copy.
+  PROTO 21. Replays: see the scoring-rules flag `u` (older runs replay
+  without these points). Mastery and `RANGO.FACTOR_ROL` are untouched.
 - **TANQUE.** PROVOCAR: `Hab.objetivo` returns the nearest provoking tank's
   tile for **every ghost out in the maze**, and since 20 Sep that includes
   **blue ones**: the shout is how the tank saves the team, and while the
@@ -4153,6 +4201,10 @@ from third parties. Cells are indices `row*28+col`.
   'eatGhost'{g,pts,x,y,w,c:streak} | 'death'{w, g:last?} | 'levelDone' | 'fruitEat'{pts,w} |
   'extraLife' | 'gameOver' | 'pause'{on} | 'vote'{k} | 'voteRes'{k, ok} |
   'rematch' | 'emote'{w, e} | 'chat'{w, m} | 'badge'{w, b} | 'left'{i}}`.
+- DESATADO protection points (PROTO 21): guest → host `gevt habRoto {g, c}`
+  (`c`: which layer broke, `'e'`/`'w'`/`'p'`), `habRebote {g}`, `habGasta
+  {c:'cadena', j}`, `habHospital {j}`; host → all `evt habProt {w, p, x, y}`
+  (the "+600" of whoever was paid).
 - Both directions: `bye {}` on leaving. With 3 and 4 players a `bye` from a
   guest only benches that player (`left`), it does not end the game.
 - `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`

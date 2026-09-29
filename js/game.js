@@ -613,6 +613,10 @@
        * con las cuatro teclas listas. Las repeticiones de antes no lo hacían
        * y se ven como se jugaron (Replay, bandera 'k'). */
       this.contRecarga = this.hab && opts.contRecarga !== false;
+      /* LAS REGLAS DE PUNTUACIÓN (28 sep): una partida nueva, las de ahora;
+       * una repetición, las suyas (Replay, bandera 'u'). Las de antes de los
+       * PUNTOS POR PROTEGER no la llevan y se ven sin ellos, como se jugaron. */
+      this.reglasPts = (opts.reglasPts == null) ? CFG.HAB.REGLAS_PUNTOS : (opts.reglasPts | 0);
       /* ...y cómo iba tu rango al empezar: lo mira el contador de PR en vivo
        * (Rango.enVivo). Se lee una vez aquí y no a cada fotograma. */
       this.rangoInicio = (this.clasif && window.PM.Rango) ? window.PM.Rango.estado() : null;
@@ -1942,6 +1946,8 @@
         this.lives = Math.max(0, this.lives - 1);
         left = this.lives;
       }
+      /* ¿le ha salvado una VIDA que regaló el Soporte? (puntos por proteger) */
+      if (this.hab && window.PM.Hab) window.PM.Hab.alPerderVida(this, i, left);
       if (left <= 0) {
         p.out = true;               // sin vidas: de espectador
         if (this.superv && window.PM.Superv) window.PM.Superv.alCaer(this, i);
@@ -2396,6 +2402,8 @@
       /* el rescate se lo apunta TODO el que dio alguna pasada: levantar a uno
        * entre dos es de los dos */
       for (var q in (c.quien || {})) if (c.quien.hasOwnProperty(q)) this.marca(q | 0, 'rescates');
+      /* y el SOPORTE que lo levanta cobra el rescate (puntos por proteger) */
+      if (this.hab && window.PM.Hab) window.PM.Hab.alRescatar(this, c);
       p.out = false;
       p.dying = false;
       p.lives = CFG.REVIVIR.VIDAS;
@@ -3524,6 +3532,7 @@
       /* una guardada de antes del 25 sep, retomada, no recargaba al pagar;
        * la siguiente ya es una partida nueva y sí */
       delete this.lastOpts.contRecarga;
+      delete this.lastOpts.reglasPts;     // ni se jugaba con las reglas de ahora
       this.newGame(this.lastOpts);
     },
 
@@ -4143,6 +4152,9 @@
              * para siempre: el aro no se le apagaba nunca y todo lo que
              * decide el anfitrión —el rey, los choques que simula él— se la
              * seguía comiendo. */
+            /* Antes de borrarla, se paga lo que aguantó (28 sep): la capa
+             * que dice su máquina, si aquí la tenía (Hab.cobrarRoto). */
+            window.PM.Hab.cobrarRoto(this, who, d.c);
             window.PM.Hab.escudoRoto(this, who);
             /* y el empujón lo da él, que es quien mueve a los fantasmas */
             var gr = this.ghosts[d.g | 0];
@@ -4871,6 +4883,10 @@
         }
         case 'habRoto':
           if (window.PM.Hab) window.PM.Hab.escudoRoto(this, e.w | 0);
+          break;
+        /* el anfitrión ha pagado una protección: su "+600" (Hab.protege) */
+        case 'habProt':
+          if (window.PM.Hab) window.PM.Hab.protegeVisto(this, e);
           break;
         /* lo que el anfitrión le hace a MI jugador: escudo de la mina, recarga
          * del faro, shuriken recargado, frenesí, relevo... (Hab.dar) */

@@ -2480,6 +2480,54 @@
     CORAZA_DURA: 12 * 60,         // 12 s puesta
     CORAZA_CD: 30 * 60,           // y 30 s hasta la siguiente
 
+    /* PUNTOS POR PROTEGER (28 sep 2026, Braighton). En DESATADO el Tanque y
+     * el Soporte sacaban la mitad de puntos por minuto que un Asesino (con
+     * las repeticiones de la nube: Tanque ~5.000/min, Soporte ~4.100,
+     * Asesino ~11.400), porque lo suyo —aguantar y salvar— no puntuaba. Ahora
+     * sí, para que jueguen buscando su papel:
+     *
+     *   · TANQUE: PROTEGE_PUNTOS por cada golpe que AGUANTA DE VERDAD su
+     *     ESCUDO (la W), su CORAZA (la pasiva) o su REBOTE, también contra el
+     *     rey. Tocar un fantasma sin nada puesto no da nada, y la gracia de
+     *     después de romperse no cuenta como más golpes.
+     *   · SOPORTE: PROTEGE_PUNTOS por cada ESCUDO suyo (el ALIADO, el de todo
+     *     el equipo y el que deja la MINA) que se rompe salvando a alguien,
+     *     por cada CADENA y cada HOSPITAL que salvan, y por cada VIDA que
+     *     regaló y evita que alguien se quede fuera (sin ella, esa caída era
+     *     la última). Vale también cuando el salvado es él: el escudo de la
+     *     MINA es siempre para él, el de todo el equipo le incluye y, a
+     *     solas, su VIDA va al fondo común.
+     *   · SOPORTE que LEVANTA a un compañero (a pasadas o con la
+     *     RESURRECCIÓN): RESCATE_PUNTOS. Si le ayudó otro a levantarlo, ese
+     *     no cobra: el premio es del rol.
+     *
+     * Se cobran FIJOS, directos al que protege: ni la pasiva del Asesino ni
+     * la CADENA que duplica (es un premio, como el del rey), con su "+600"
+     * flotante. Los paga quien lleva la partida: en party, el anfitrión, al
+     * que el invitado le avisa de sus choques (habRoto con la capa, habRebote,
+     * habGasta, habHospital, jefeGolpe).
+     *
+     * SIN FRENOS (Braighton, 28 sep): cada golpe, cada salvada y cada rescate
+     * cobran siempre, sin tope por minuto. Lo más que da en teoría, con las
+     * recargas de hoy:
+     *   · Tanque: coraza cada 30 s + W cada 24 s + REBOTE cada 30 s = 6,5
+     *     golpes/min = 3.900/min.
+     *   · Soporte en escuadra con los rescates amañados (los tres compañeros
+     *     muriendo a propósito encima de él: 5 s de protección al volver +
+     *     2,5 s de muerte = un rescate cada 7,5 s por cabeza, 24/min):
+     *     28.800 de rescates + escudo a los cuatro cada 32 s (4.500) + MINA
+     *     cada 20 s (1.800) + CADENA cada 28 s (1.285) ≈ 36.400/min, con el
+     *     resto del equipo sin puntuar. Por debajo del techo del servidor
+     *     (50.000 por minuto y jugador, enviar-record y js/ranking.js). */
+    PROTEGE_PUNTOS: 600,
+    RESCATE_PUNTOS: 1200,
+    /* LA VERSIÓN DE LAS REGLAS DE PUNTUACIÓN de una partida. Va en los
+     * ajustes de la repetición (bandera 'u'), porque las locales se vuelven
+     * a simular para comprobarse: una de antes del 28 sep no la lleva (0) y
+     * se reproduce sin puntos por proteger, que es como se jugó, y sigue
+     * cuadrando. Se sube cuando cambie lo que vale algo que ya puntuaba. */
+    REGLAS_PUNTOS: 1,
+
     /* EL OJO (pasiva del MAGO): cuántas casillas por delante se le enseña el
      * camino de cada fantasma. Siete (20 sep): con cinco se veía venir la
      * encerrona justo cuando ya no daba tiempo a nada. Con diez no se
@@ -3148,8 +3196,10 @@
      * el YUNQUE roto que avisa el invitado (habGasta 'yunque'); la 18, la
      * CLASIFICATORIA como modo de la sala ('cl' en la lista y en la salida);
      * la 20, el frenazo del rey tras el hielo en su foto (jf[13]), la regla
-     * única de comer o morir y los mirones que se van sin 'bye' (28 sep). */
-    PROTO: 20,
+     * única de comer o morir y los mirones que se van sin 'bye' (28 sep); la
+     * 21, los PUNTOS POR PROTEGER (la capa rota 'c' en habRoto del invitado y
+     * el '+600' que reparte el anfitrión, 'habProt'). */
+    PROTO: 21,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas
