@@ -7786,7 +7786,12 @@
   test('laberintos y habilidades tienen su récord, aparte del de siempre', function () {
     var B = window.PM.Badges;
     var r = [G.highScore1, G.recordModo('lab'), G.recordModo('hab')];
+    /* también a cero en el almacén: al guardar se mira lo que hay en él (por
+     * si otra pestaña hizo récord), y ahí puede quedar el de otra prueba */
+    var claves = [CFG.HIGHSCORE_KEY, CFG.recordModoKey('lab', 1), CFG.recordModoKey('hab', 1)];
+    var antes = claves.map(function (k) { return localStorage.getItem(k); });
     try {
+      claves.forEach(function (k) { localStorage.removeItem(k); });
       G.highScore1 = 0;
       G.setRecordModo('lab', 0);
       G.setRecordModo('hab', 0);
@@ -7810,9 +7815,42 @@
       eq(G.recordModo('hab'), 30000, 'DESATADO guarda la suya');
       G.toMenu();
     } finally {
+      claves.forEach(function (k, i) {
+        if (antes[i] === null) localStorage.removeItem(k); else localStorage.setItem(k, antes[i]);
+      });
       G.highScore1 = r[0];
       G.setRecordModo('lab', r[1]);
       G.setRecordModo('hab', r[2]);
+    }
+  });
+
+  /* DOS PESTAÑAS (30 sep): la que se abrió antes no conoce el récord que
+   * hizo la otra; al acabar su partida no lo puede bajar. Y cuando la otra
+   * lo escribe, esta se entera (el evento 'storage'). */
+  test('una pestaña no pisa el récord que hizo otra', function () {
+    var k = CFG.recordModoKey('lab', 2), antes = localStorage.getItem(k);
+    var r = G.recordModo('lab', 2);
+    try {
+      G.setRecordModo('lab', 5000, 2);                // lo que leyó al abrirse
+      localStorage.setItem(k, '50000');               // lo que hizo la otra
+      window.PM.settings.muted = true;
+      var mz = window.PM.Mazes && window.PM.Mazes.LIST[0];
+      G.newGame({ players: 2, maze: mz.id });
+      G.score = 20000; G.highScore = 20000;
+      G.persistHighScore();
+      G.toMenu();
+      eq(localStorage.getItem(k), '50000', 'el 50.000 de la otra pestaña sigue guardado');
+      eq(G.recordModo('lab', 2), 50000, 'y esta ya lo conoce');
+      /* la otra pestaña bate otro récord: llega por 'storage' */
+      localStorage.setItem(k, '60000');
+      /* (en Node no hay StorageEvent: allí solo se mira lo de arriba) */
+      if (typeof StorageEvent === 'function' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new StorageEvent('storage', { key: k }));
+        eq(G.recordModo('lab', 2), 60000, 'el aviso de la otra pestaña la pone al día');
+      }
+    } finally {
+      if (antes === null) localStorage.removeItem(k); else localStorage.setItem(k, antes);
+      G.setRecordModo('lab', r, 2);
     }
   });
 

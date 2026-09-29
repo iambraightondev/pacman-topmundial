@@ -2400,6 +2400,12 @@ on the solo track — which is where nearly everybody set it). `Game.recordSlot(
 says which **world** the current run belongs to (`'lab' | 'hab' | null`);
 the format is just `playerCount`. `persistHighScore` writes exactly one cell
 and `newGame` shows that league's record as the in-game HIGH SCORE.
+**Two tabs** (30 Sep): the records live in memory from `init`, so a tab
+opened earlier used to write its stale value over a better one set in the
+other tab. Now `persistHighScore` first raises its cell to what the store holds,
+and a `storage` listener re-reads all records (`leerRecords`) whenever another
+tab writes one (or clears them on logout). Settings are NOT synced across tabs
+on purpose: two tabs are two players in `?red=local` party testing.
 `Game.badgeMode()` = `Badges.ruta(recordSlot(), playerCount)`.
 
 > This closed two real holes. First, a LABERINTOS run used to write into

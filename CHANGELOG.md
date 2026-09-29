@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Dos pestañas ya no se pisan el récord
+
+Con el juego abierto en dos pestañas, la que se abrió antes no se enteraba del
+récord que hacías en la otra y, al acabar su partida, lo bajaba en ese aparato.
+Ahora cada pestaña ve al momento los récords que hace la otra.
+
 ## 2026-09-30 · Las tandas de OBJETOS y ANDINA entran en el juego (51 piezas)
 
 Las dos del 19 sep que se habían quedado en el escaparate.

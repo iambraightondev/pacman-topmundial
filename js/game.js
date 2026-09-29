@@ -276,20 +276,21 @@
       this.highScore3 = 0;
       this.highScore4 = 0;
       this.recordsModo = { lab: [0, 0, 0, 0], hab: [0, 0, 0, 0] };
-      try {
-        for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
-          var v = localStorage.getItem(this.recordKey(n));
-          if (v !== null) this.setRecordFor(n, parseInt(v, 10) || 0);
-        }
-        // y los dos mundos aparte, cada uno con su marca por formato
-        ['lab', 'hab'].forEach(function (id) {
-          for (var m = 1; m <= CFG.MAX_PLAYERS; m++) {
-            var r = localStorage.getItem(CFG.recordModoKey(id, m));
-            if (r !== null) this.setRecordModo(id, parseInt(r, 10) || 0, m);
-          }
-        }, this);
-      } catch (e) { /* almacenamiento no disponible */ }
+      this.leerRecords();
       this.highScore = this.highScore1;
+      /* Otra pestaña del juego que hace récord (o que cierra sesión y los
+       * pone a cero) lo escribe en el almacén: aquí se ve al momento. Sin
+       * esto, esta pestaña seguía con los que leyó al abrirse y al acabar
+       * su partida, o al traerse los de la cuenta, los volvía a escribir
+       * encima: un récord hecho en la otra se perdía en este aparato. */
+      var self = this;
+      try {
+        window.addEventListener('storage', function (e) {
+          if (e.key !== null && !self.esClaveDeRecord(e.key)) return;
+          self.leerRecords();
+          if (self.state === 'MENU') self.highScore = self.highScore1;
+        });
+      } catch (e) { /* sin ventana (Node) */ }
 
       this.pacs = [new window.PM.Pacman(0)];
       this.ghosts = [];
@@ -2548,6 +2549,32 @@
       return CFG.HIGHSCORE_KEY;
     },
 
+    /* Los récords tal cual están en el almacén (ver el 'storage' de init).
+     * Una clave que no está deja el de memoria como estaba. */
+    leerRecords: function () {
+      try {
+        for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
+          var v = localStorage.getItem(this.recordKey(n));
+          if (v !== null) this.setRecordFor(n, parseInt(v, 10) || 0);
+        }
+        // y los dos mundos aparte, cada uno con su marca por formato
+        ['lab', 'hab'].forEach(function (id) {
+          for (var m = 1; m <= CFG.MAX_PLAYERS; m++) {
+            var r = localStorage.getItem(CFG.recordModoKey(id, m));
+            if (r !== null) this.setRecordModo(id, parseInt(r, 10) || 0, m);
+          }
+        }, this);
+      } catch (e) { /* almacenamiento no disponible */ }
+    },
+
+    esClaveDeRecord: function (k) {
+      for (var n = 1; n <= CFG.MAX_PLAYERS; n++) {
+        if (k === this.recordKey(n) || k === CFG.recordModoKey('lab', n) ||
+            k === CFG.recordModoKey('hab', n)) return true;
+      }
+      return false;
+    },
+
     recordFor: function (n) {
       if (n >= 4) return this.highScore4 || 0;
       if (n === 3) return this.highScore3 || 0;
@@ -2651,8 +2678,17 @@
        * de escuadra de IAMBRAIGHTON sin haberlos jugado). */
       var marca = (this.netRole === 'guest') ? this.score : this.highScore;
       var slot = this.recordSlot();
+      /* se compara también con lo que hay guardado AHORA en su casilla, no
+       * solo con lo que se leyó al empezar: otra pestaña puede haber hecho
+       * uno mejor mientras tanto (el 'storage' de init llega un poco tarde) */
+      var guardado = 0;
+      try {
+        guardado = parseInt(localStorage.getItem(slot ? this.recordModoKey(slot, this.playerCount)
+          : this.recordKey(this.playerCount)), 10) || 0;
+      } catch (e) { guardado = 0; }
       if (slot) {
         var np = this.playerCount;
+        if (guardado > this.recordModo(slot, np)) this.setRecordModo(slot, guardado, np);
         if (marca > this.recordModo(slot, np)) {
           this.setRecordModo(slot, marca, np);
         }
@@ -2664,6 +2700,7 @@
       }
       // cada formato guarda el suyo: el récord de escuadra no pisa el de dúo
       var n = this.playerCount;
+      if (guardado > this.recordFor(n)) this.setRecordFor(n, guardado);
       if (marca > this.recordFor(n)) this.setRecordFor(n, marca);
       try {
         localStorage.setItem(this.recordKey(n), String(this.recordFor(n)));

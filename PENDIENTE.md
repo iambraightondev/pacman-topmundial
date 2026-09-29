@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v314).
+Última puesta al día: **30 de septiembre de 2026** (pm-v315).
 
 ---
 
@@ -32,7 +32,9 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
    regalar una pieza, una party real (red, volver a la partida con dos
    aparatos por internet), el móvil de verdad y las skins nuevas.
 4. Pequeño, a su criterio: sacar el premio semanal del DAILY del tope diario
-   del pase; dos partidas a la vez en dos pestañas pueden pisarse lo guardado.
+   del pase. (Dos pestañas: el récord ya no se pisa, pm-v315; los AJUSTES —skin,
+   volumen— aún pueden pisarse entre pestañas, dejado así a propósito: en
+   ?red=local dos pestañas son dos jugadores.)
 
 **30 sep — tanda "dale con todo" (pm-v306):** retos entre amigos, REGALAR y
 precios en el servidor (una pieza fiada de hasta 1.500 es posible a propósito:
