@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script src="piezas.js"></script>
+<script src="motor.js"></script>
+<script>
+  var DRAW = {};
+  function qFase(t, periodo, dura) { var x = t % periodo; return x < dura ? x / dura : -1; }
+</script>
+<script src="y-skins.js"></script>
+<script src="y-skins2.js"></script>
+<script src="y-resto.js"></script>
+<script src="y-puente.js"></script>
+<script src="y-muertes.js"></script>
+<script>
+/* Hoja de contacto de UNA pieza (o varias, ids=a,b):
+ *   fila grande: la boca en sus tres fases, cuatro instantes de la Q y
+ *   cuatro de la muerte, a escala k; debajo, los mismos a tamaño de
+ *   partida (escala 3, la del juego).
+ *   ?id=kitsune&k=9&c=%23ffff00   ó   ?id=kitsune&ts=0.2,0.5&fs=0,0 */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var ids = (q.get('id') || 'kitsune').split(',');
+  var K = parseFloat(q.get('k') || '9');
+  var col = q.get('c') || '#ffff00';
+  var ts = q.get('ts') ? q.get('ts').split(',').map(Number) : [2.0, 2.0, 2.0, 0.15, 0.4, 0.7, 1.0, 5.55, 5.95, 6.35, 6.7];
+  var fs = q.get('fs') ? q.get('fs').split(',').map(Number) : [0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0];
+  var CELL = Math.round(30 * K), CH = 30 * 3;
+  var W = CELL * ts.length, H = (CELL + CH + 8) * ids.length;
+  var cv = document.getElementById('cv');
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  function pinta(id, t, f, cx, cy, esc) {
+    var o = {
+      x: 0, y: 0, d: 3, half: HALF[f], c: col, t: t,
+      s: 400 + t * 44, giro: 40, estira: 1, team: ['#ff0000', '#00ffff', '#00ff00'], vel: 1,
+      back: function (dist) { return { x: -dist, y: 0, d: 3 }; }
+    };
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(esc, esc);
+    DRAW[id](ctx, o);
+    ctx.restore();
+  }
+  ids.forEach(function (id, fila) {
+    var y0 = fila * (CELL + CH + 8);
+    ts.forEach(function (t, i) {
+      ctx.strokeStyle = '#14146e'; ctx.lineWidth = 1;
+      ctx.strokeRect(i * CELL + 0.5, y0 + 0.5, CELL - 1, CELL - 1);
+      pinta(id, t, fs[i] || 0, i * CELL + CELL / 2, y0 + CELL / 2, K);
+      ctx.fillStyle = '#7c7cae'; ctx.font = '12px monospace';
+      ctx.fillText(id + ' t=' + t + ' f=' + (fs[i] || 0), i * CELL + 6, y0 + 14);
+      pinta(id, t, fs[i] || 0, i * CELL + CELL / 2, y0 + CELL + 4 + CH / 2, 3);
+    });
+  });
+})();
+</script>
+</body>
+</html>
