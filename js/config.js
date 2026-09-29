@@ -645,6 +645,23 @@
     { id: 'icaro', name: 'ÍCARO', grupo: 'tienda', rara: true, precio: 1500,
       ve: 'EL CHAVAL DE LAS ALAS DE CERA, CON LOS MOFLETES COLORADOS. CON LA Q SE ELEVA SOLTANDO PLUMAS; AL MORIR SE LE DERRITE LA CERA.' },
 
+    /* --- YŌKAI (29 sep): folclore japonés, que Pac-Man nació en Japón.
+     * Extravagantes: cada una come a su manera, tiene su Q y su muerte. --- */
+    { id: 'tengu', name: 'TENGU', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL DUENDE DE LA MONTAÑA: CARA ROJA CON LA NARIZ LARGUÍSIMA, MELENA BLANCA Y ABANICO DE PLUMAS. CON LA Q, EL ABANICAZO: REMOLINOS DE VIENTO.' },
+    { id: 'kappa', name: 'KAPPA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL DIABLILLO DEL RÍO: PICO AMARILLO, CAPARAZÓN Y EL PLATO DE AGUA EN LA CORONILLA. CON LA Q ESCUPE UN CHORRO; AL MORIR SE LE VACÍA EL PLATO.' },
+    { id: 'tanuki', name: 'TANUKI', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL MAPACHE QUE CAMBIA DE FORMA: ANTIFAZ, COLA A ANILLOS Y LA HOJA EN LA CABEZA. CON LA Q, ¡DORON!: PUF DE HUMO Y SE CONVIERTE EN TETERA.' },
+    { id: 'daruma', name: 'DARUMA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL MUÑECO QUE NO SE CAE, LACADO DE SU COLOR Y CON UN SOLO OJO PINTADO. COME CABECEANDO; CON LA Q LE PINTAN EL OTRO: DESEO CUMPLIDO.' },
+    { id: 'kasa', name: 'KASA-OBAKE', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL PARAGUAS VIEJO QUE COBRA VIDA: UN OJAZO, LA LENGUA FUERA Y UNA PIERNA CON SU GETA, A SALTOS. CON LA Q SE ABRE DE GOLPE Y SE SACUDE EL AGUA.' },
+    { id: 'chochin', name: 'CHOCHIN-OBAKE', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL FAROLILLO DE PAPEL ENCANTADO: LA RAJA DEL PAPEL ES SU BOCA Y DENTRO ARDE LA VELA. CON LA Q ECHA UNA LLAMARADA.' },
+    { id: 'namazu', name: 'NAMAZU', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL SILURO GIGANTE DE LOS TERREMOTOS: CABEZOTA CHATA Y BIGOTES LARGUÍSIMOS QUE ONDEAN. CON LA Q, TERREMOTO; AL MORIR LO CLAVA LA PIEDRA SAGRADA.' },
+
     /* --- de COFRE: no se compran, solo salen de un cofre (PLAN-COFRES.md) --- */
     { id: 'plasma', name: 'PLASMA', grupo: 'cofre',
       ve: 'BOLA DE PLASMA: POR DENTRO SALTAN RAYOS QUE BUSCAN EL BORDE, COMO EN LA LÁMPARA DE FERIA.' },
@@ -670,6 +687,14 @@
       ve: 'EL DE LA LÁMPARA: TURBANTE CON JOYA, BARBA EN PUNTA Y COLA DE HUMO. CON LA Q CONCEDE EL DESEO ENTRE DESTELLOS DORADOS.' },
     { id: 'triton', name: 'TRITÓN', grupo: 'cofre', rara: true,
       ve: 'MEDIO PEZ: ESCAMAS, ALETA POR OREJA, BARBA DE ALGA Y UNA CARACOLA. CON LA Q LA SOPLA Y SALEN OLAS HACIA DELANTE.' },
+
+    /* yōkai (29 sep) que solo salen de cofre */
+    { id: 'kitsune', name: 'KITSUNE', grupo: 'cofre', rara: true,
+      ve: 'ZORRA DE CINCO COLAS CON LA CARA DE LAS MÁSCARAS DE INARI Y UN FUEGO FATUO AZUL QUE LA SIGUE. CON LA Q, UN CORRO DE FUEGOS AZULES.' },
+    { id: 'oni', name: 'ONI', grupo: 'cofre', rara: true,
+      ve: 'EL OGRO DE CUERNOS Y MELENA NEGRA, CON LA CARA DE SU COLOR Y LA MAZA DE HIERRO AL HOMBRO. CON LA Q, EL MAZAZO CONTRA EL SUELO.' },
+    { id: 'maneki', name: 'MANEKI-NEKO', grupo: 'cofre', rara: true,
+      ve: 'EL GATO DE LA SUERTE, DE PORCELANA, CON MANCHAS DE SU COLOR Y EL KOBAN DE ORO. COME SALUDANDO CON LA PATA; CON LA Q, LLUVIA DE MONEDAS.' },
 
     /* --- de temporada --- */
     { id: 'calabaza', name: 'CALABAZA', grupo: 'temporada',
@@ -1091,6 +1116,17 @@
       ve: 'AURA MORADA DANDO VUELTAS, OJOS ROJOS ENCENDIDOS Y UNA SONRISA TORCIDA.' },
     { id: 'invocando', name: 'INVOCANDO', precio: 150,
       ve: 'RECITA CON LOS OJOS ENCENDIDOS Y UN CÍRCULO MÁGICO GIRANDO DEBAJO.' },
+    /* --- yōkai (29 sep) --- */
+    { id: 'kawaii', name: 'KAWAII', precio: 150,
+      ve: 'OJAZOS BRILLANTES, COLORETES Y LA BOQUITA ABIERTA, DANDO SALTITOS ENTRE DESTELLOS.' },
+    { id: 'banzai', name: '¡BANZAI!', precio: 150,
+      ve: 'SALTA CON LOS DOS BRAZOS ARRIBA, OJOS DE ALEGRÍA Y LA BOCA ABIERTA DE PAR EN PAR.' },
+    { id: 'itadakimasu', name: 'ITADAKIMASU', precio: 150,
+      ve: 'UNOS PALILLOS LE ACERCAN UN NIGIRI DE SALMÓN, SE LO ZAMPA Y MASTICA CON LOS MOFLETES COLORADOS.' },
+    { id: 'zen', name: 'ZEN', precio: 150,
+      ve: 'OJOS CERRADOS, CALMA TOTAL, Y DETRÁS EL CÍRCULO DE PINCEL TRAZÁNDOSE SOLO.' },
+    { id: 'ninja', name: 'NINJA', precio: 150,
+      ve: 'CAPUCHA OSCURA CON LA RENDIJA DE LOS OJOS; CADA POCO, ¡PUF!, DESAPARECE EN HUMO Y VUELVE.' },
     /* del PASE: no se vende (ver CFG.PASE.PIEZAS) */
     { id: 'grito', name: 'GRITO', pase: true, precio: 0,
       ve: 'EL GRITO DEL CUADRO: LAS DOS MANOS EN LA CARA, OJOS DE ESPANTO Y LA BOCA EN UN ÓVALO QUE LATE.' }
@@ -1144,6 +1180,15 @@
       ve: 'DEJA SÍMBOLOS ENCENDIDOS DE SU COLOR QUE LATEN Y SE VAN APAGANDO.' },
     { id: 'efx_pisadas', name: 'PISADAS DE PIEDRA', precio: 250,
       ve: 'DONDE PISA QUEDA UNA LOSA DE PIEDRA MARCADA QUE DURA UN RATO.' },
+    /* --- yōkai (29 sep) --- */
+    { id: 'efx_torii', name: 'TORII', precio: 250,
+      ve: 'VA DEJANDO PUERTAS DE SANTUARIO BERMELLÓN POR EL CAMINO, COMO EL PASEO DE FUSHIMI INARI.' },
+    { id: 'efx_olas', name: 'OLAS', precio: 250,
+      ve: 'LA GRAN OLA DE HOKUSAI: SE LEVANTA DETRÁS DE ÉL, SE ENROSCA CON SUS GARRAS DE ESPUMA Y ROMPE.' },
+    { id: 'efx_origami', name: 'ORIGAMI', precio: 250,
+      ve: 'GRULLAS DE PAPEL DE SU COLOR QUE SALEN VOLANDO POR DETRÁS, BATIENDO LAS ALAS.' },
+    { id: 'efx_farolillos', name: 'FAROLILLOS', precio: 250,
+      ve: 'FAROLILLOS DE PAPEL ENCENDIDOS QUE SE QUEDAN FLOTANDO Y SUBEN DESPACIO.' },
     /* de COFRE: no se compran (PLAN-COFRES.md) */
     { id: 'efx_fantasmitas', name: 'FANTASMITAS', cofre: true, precio: 0,
       ve: 'SE LE ESCAPAN FANTASMAS DIMINUTOS DE LOS CUATRO COLORES, QUE SUBEN Y SE APAGAN.' },
@@ -1153,6 +1198,10 @@
       ve: 'VA DEJANDO ASCUAS QUE RESPIRAN, SE AVIVAN Y SE APAGAN.' },
     { id: 'efx_niebla', name: 'NIEBLA', cofre: true, precio: 0,
       ve: 'LA BRUMA DEL INFRAMUNDO, PEGADA AL SUELO, QUE SE ABRE A SU PASO.' },
+    { id: 'efx_onibi', name: 'ONIBI', cofre: true, precio: 0,
+      ve: 'FUEGOS FATUOS AZULES QUE SE QUEDAN TEMBLANDO DONDE PASÓ Y SE VAN APAGANDO.' },
+    { id: 'efx_koi', name: 'KOI', cofre: true, precio: 0,
+      ve: 'DOS CARPAS KOI LE SIGUEN NADANDO, UNA CON LAS MANCHAS DE SU COLOR, Y EL AGUA SE ONDULA A SU PASO.' },
     { id: 'efx_portales', name: 'PORTALES', cofre: true, precio: 0,
       ve: 'SU ESTELA SON PORTALITOS MORADOS QUE SE ABREN Y SE CIERRAN. GUIÑO AL MAGO.' },
     { id: 'efx_constelacion', name: 'CONSTELACIÓN', cofre: true, precio: 0,
@@ -1219,6 +1268,17 @@
       ve: 'LA TIRA QUE LE TAPA LOS OJOS, CON EL NUDO DETRÁS Y UN OJO PINTADO ENCIMA: EL QUE DE VERDAD VE.' },
     { id: 'acc_mascara', name: 'MÁSCARA DE TEATRO', precio: 450,
       ve: 'LA MÁSCARA GRIEGA DE LA COMEDIA, DE YESO, SUJETA POR SU PALITO.' },
+    /* --- yōkai (29 sep) --- */
+    { id: 'acc_kitsunemen', name: 'MÁSCARA KITSUNE', precio: 450,
+      ve: 'LA MÁSCARA DE ZORRO DE LOS FESTIVALES, BLANCA CON TRAZOS BERMELLÓN, ECHADA A UN LADO DE LA CABEZA CON SU CORDÓN.' },
+    { id: 'acc_kasa', name: 'KASA DE PAJA', precio: 450,
+      ve: 'EL SOMBRERO CÓNICO DE PAJA TRENZADA, ANCHO Y UN POCO CAÍDO HACIA DELANTE.' },
+    { id: 'acc_chonmage', name: 'CHONMAGE', precio: 450,
+      ve: 'EL PEINADO DE SAMURÁI: CORONILLA AFEITADA, EL PELO RECOGIDO DETRÁS Y EL MOÑO DOBLADO ENCIMA, ATADO CON CORDÓN BLANCO.' },
+    { id: 'acc_ramen', name: 'RAMEN', precio: 450,
+      ve: 'UN CUENCO DE RAMEN HUMEANTE EN LA CABEZA, CON NARUTO, HUEVO, ALGA Y LOS PALILLOS CLAVADOS.' },
+    { id: 'acc_katana', name: 'KATANA', precio: 450,
+      ve: 'A LA ESPALDA, EN SU VAINA LACADA: LA EMPUÑADURA ASOMA POR ENCIMA DEL HOMBRO Y LA CORREA LE CRUZA EL CUERPO.' },
     /* de COFRE: no se compran (PLAN-COFRES.md) */
     { id: 'acc_luchador', name: 'MÁSCARA DE LUCHADOR', cofre: true, precio: 0,
       ve: 'MÁSCARA DE LUCHA LIBRE: TELA AZUL, LLAMAS DORADAS ALREDEDOR DEL OJO Y LOS CORDONES CRUZADOS DETRÁS.' },
@@ -1228,6 +1288,10 @@
       ve: 'EL CASQUETE DE BRONCE DE HERMES, CON DOS ALITAS QUE BATEN A LOS LADOS.' },
     { id: 'acc_ojo', name: 'OJO QUE TODO LO VE', cofre: true, precio: 0,
       ve: 'UN OJO FLOTANDO ENCIMA DE LA CABEZA, CON SU RESPLANDOR, QUE MIRA ADELANTE Y ATRÁS.' },
+    { id: 'acc_kabuto', name: 'KABUTO', cofre: true, precio: 0,
+      ve: 'EL CASCO DE SAMURÁI: CUENCO DE HIERRO REMACHADO, ASTAS DORADAS, UN SOL EN EL FRENTE Y EL CUBRENUCA DE LÁMINAS DE SU COLOR.' },
+    { id: 'acc_raijin', name: 'TAMBORES DE RAIJIN', cofre: true, precio: 0,
+      ve: 'EL ARO DE TAMBORES DEL DIOS DEL TRUENO GIRANDO ALREDEDOR; DE VEZ EN CUANDO SALTA UN RAYO DE UNO A OTRO.' },
     { id: 'acc_aureola', name: 'AUREOLA', cofre: true, precio: 0,
       ve: 'UN ARO DE LUZ FLOTANDO SOBRE LA CABEZA QUE SE INCLINA AL GIRAR, COMO SI PESARA.' },
     { id: 'acc_alas', name: 'ALITAS', cofre: true, precio: 0,

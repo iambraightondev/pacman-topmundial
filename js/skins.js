@@ -5853,9 +5853,12 @@
   var CARAS_18 = { silbando: 1, plis: 1, ambicioso: 1, nervios: 1, arcoiris: 1 };
   /* y las cinco de la tanda de mitología (28 sep), también enteras aparte */
   var CARAS_MITO = { oraculo: 1, petrificado: 1, divino: 1, maldicion: 1, invocando: 1 };
+  /* y las cinco de la tanda yōkai (29 sep) */
+  var CARAS_YOKAI = { kawaii: 1, banzai: 1, itadakimasu: 1, zen: 1, ninja: 1 };
   function caraEmote(ctx, x, y, r, color, id, t) {
     if (CARAS_18[id]) { caraEmote18(ctx, x, y, r, color, id, t); return; }
     if (CARAS_MITO[id]) { caraMito(ctx, x, y, r, color, id, t); return; }
+    if (CARAS_YOKAI[id]) { caraYokai(ctx, x, y, r, color, id, t); return; }
     if (id === 'grito') { caraGrito(ctx, x, y, r, color, t); return; }
     var ink = '#000000', lw = Math.max(1, r * 0.17), k, p;
     var mx = 0, my = 0, giro = 0, esc = 1;
@@ -8362,6 +8365,2582 @@
     ctx.restore();
   }
 
+  /* ============================================================
+   * TANDA YŌKAI (29 sep 2026, entra al juego el 29 sep). Folclore japonés
+   * —Pac-Man nació en Japón—: diez skins que dejan la silueta de Pac-Man
+   * (cada una come a su manera, tiene su Q y su propia muerte), siete
+   * accesorios, seis efectos y cinco emotes. KITSUNE, ONI y MANEKI-NEKO,
+   * el KABUTO, los TAMBORES DE RAIJIN, ONIBI y KOI solo salen de cofre.
+   *
+   * El dibujo es el del escaparate, con las mismas medidas; solo cambia
+   * que la Q sale al pulsar la tecla (qDe) y no con un reloj. El código del
+   * escaparate sigue en propuestas/vestuario-yokai/.
+   * ============================================================ */
+  /* Fuego fatuo (kitsunebi / onibi): llama azul con su halo. `dir` = 1 en el
+   * marco del cuerpo (s hacia arriba), -1 en pantalla (y hacia abajo). */
+  function llamaAzul(ctx, x, y, s, alpha, t, dir) {
+    if (alpha <= 0 || s <= 0) return;
+    var d = dir || 1, w = Math.sin(t * 9 + x * 1.7) * 0.25 * s;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(x, y, 0.1, x, y, s * 2.6);
+    g.addColorStop(0, 'rgba(150,215,255,.7)');
+    g.addColorStop(1, 'rgba(60,140,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, s * 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, alpha);
+    /* una lengua: base redonda y la punta que ondea, más una lengüecilla al
+     * lado para que no parezca una gota */
+    function lengua(cx, k, punta, ww) {
+      ctx.beginPath();
+      ctx.moveTo(cx + ww, y + d * k * punta);
+      ctx.bezierCurveTo(cx + k * 0.2 + ww * 0.5, y + d * k * 1.0, cx + k * 1.0, y + d * k * 0.5, cx + k * 0.9, y - d * k * 0.3);
+      ctx.arc(cx, y - d * k * 0.3, k * 0.9, 0, Math.PI, d > 0);
+      ctx.bezierCurveTo(cx - k * 1.0, y + d * k * 0.6, cx - k * 0.1 + ww * 0.5, y + d * k * 1.2, cx + ww, y + d * k * punta);
+      ctx.fill();
+    }
+    var w2 = Math.sin(t * 11 + x) * 0.3 * s;
+    [[1, '#2f7dff'], [0.72, '#6fc8ff'], [0.4, '#eaffff']].forEach(function (capa) {
+      var k = capa[0] * s;
+      ctx.fillStyle = capa[1];
+      lengua(x, k, 3.1, w * 1.8);
+      if (capa[0] > 0.5) lengua(x + s * 0.55, k * 0.55, 2.2, w2);
+      if (capa[0] > 0.5) lengua(x - s * 0.5, k * 0.5, 2.0, -w2);
+    });
+    ctx.restore();
+  }
+
+  /* Nube de humo del "doron": el puf de los cambios de forma */
+  function humoPuf(ctx, x, y, u, alpha, r0) {
+    if (alpha <= 0) return;
+    var r = (r0 || 5) * (0.35 + u * 0.75);
+    ctx.save();
+    var P = [[0, 0, 1], [0.9, 0.35, 0.7], [-0.9, 0.3, 0.72], [0.45, 0.85, 0.66],
+             [-0.5, 0.85, 0.62], [0.6, -0.6, 0.6], [-0.6, -0.6, 0.62], [0, -0.9, 0.55]];
+    ctx.strokeStyle = 'rgba(90,86,110,' + (0.85 * alpha * alpha * alpha) + ')'; ctx.lineWidth = 0.5;
+    P.forEach(function (p) {
+      ctx.beginPath(); ctx.arc(x + p[0] * r, y + p[1] * r, p[2] * r * 0.62, 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.globalAlpha = Math.min(1, alpha);
+    P.forEach(function (p, i) {
+      ctx.fillStyle = i % 2 ? '#e4e0ee' : '#f6f4fb';
+      ctx.beginPath(); ctx.arc(x + p[0] * r, y + p[1] * r, p[2] * r * 0.62, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  /* ---------------- KITSUNE (cofre) ---------------- */
+  /* Zorra de cinco colas con la cara de las máscaras de Inari: hocico largo,
+   * mejillas blancas, rayas bermellón y ojo rasgado. Un fuego fatuo le
+   * sigue. Q: el KITSUNEBI, un corro de fuegos azules que la rodea. */
+  var COLAS_KITSUNE = [214, 187, 160, 133, 106];
+  DRAW.kitsune = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.3), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var pelo = hex(mix('#f2a444', o.c, 0.15)), punta = hex(mix(o.c, '#ffffff', 0.35)), peloOsc = mix(pelo, '#4a1a02', 0.45);
+    var blanco = '#fbf6ec', bermellon = '#e0322a';
+    var fuego = (q >= 0) ? Math.sin(Math.min(1, q * 1.2) * Math.PI) : 0;
+    var colas = (o.colas == null) ? 5 : o.colas;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 5) * 0.2);
+
+    /* las colas, en abanico por detrás; en la Q se abren más */
+    /* de fuera adentro, así la del medio queda encima; cada cola gorda,
+     * curvada como una llama y con la punta del color del jugador */
+    [0, 4, 1, 3, 2].forEach(function (k) {
+      if (k >= colas) return;
+      var a = COLAS_KITSUNE[k] * Math.PI / 180 + Math.sin(t * 3 + k * 0.9) * 0.1 + fuego * 0.12 * (k - 2);
+      var L = 8.8 - Math.abs(k - 2) * 0.5, b = (k - 2) * 0.45 + Math.sin(t * 4 + k) * 0.3;
+      ctx.save();
+      ctx.translate(-3.0, -0.4);
+      ctx.rotate(a);
+      var cola = function () {
+        ctx.beginPath();
+        ctx.moveTo(0, -0.9);
+        ctx.bezierCurveTo(L * 0.35, -3.0, L * 0.8, -2.2, L, b + 0.4);
+        ctx.bezierCurveTo(L * 0.72, 0.6 + b * 0.3, L * 0.8, 1.2, L * 0.6, 1.9);
+        ctx.bezierCurveTo(L * 0.4, 2.5, L * 0.2, 1.7, 0, 0.9);
+        ctx.closePath();
+      };
+      var claro = (k % 2) ? pelo : hex(mix(pelo, '#ffffff', 0.18));
+      piezaX(ctx, cola, claro, hex(peloOsc), 0.35, 0.35, 1.4);
+      ctx.save(); cola(); ctx.clip();
+      ctx.fillStyle = blanco;
+      ctx.beginPath(); ctx.ellipse(L, b * 0.6, L * 0.3, 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = punta;
+      ctx.beginPath(); ctx.ellipse(L + 0.4, b * 0.7, L * 0.14, 3, 0, 0, Math.PI * 2); ctx.fill();
+      /* un par de mechones de pelo */
+      ctx.strokeStyle = hex(peloOsc); ctx.lineWidth = 0.22;
+      ctx.beginPath();
+      ctx.moveTo(L * 0.3, -0.6); ctx.quadraticCurveTo(L * 0.45, -0.2, L * 0.55, -0.9);
+      ctx.moveTo(L * 0.25, 0.8); ctx.quadraticCurveTo(L * 0.4, 1.0, L * 0.45, 0.5);
+      ctx.stroke();
+      ctx.restore();
+      cola(); contorno(ctx, 1.4); ctx.stroke();
+      ctx.restore();
+    });
+    /* el fuego fatuo que la acompaña */
+    if (!o.sinFuego && q < 0) llamaAzul(ctx, -7.4, 8.0 + Math.sin(t * 2.4) * 0.6, 0.85, 0.95, t, 1);
+
+    /* las orejas, la de atrás más oscura */
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.moveTo(-3.8, 3.4); ctx.lineTo(-3.4, 8.0); ctx.lineTo(-1.2, 4.0); ctx.closePath();
+    }, hex(peloOsc), hex(mix(hex(peloOsc), '#000000', 0.3)), 0.2, 0.2, 1.4);
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.moveTo(-2.4, 3.8); ctx.lineTo(-0.4, 8.8); ctx.lineTo(1.4, 4.2); ctx.closePath();
+    }, pelo, hex(peloOsc), 0.3, 0.3, 1.4);
+    ctx.fillStyle = '#3a1208';
+    ctx.beginPath(); ctx.moveTo(-1.5, 4.5); ctx.lineTo(-0.5, 7.4); ctx.lineTo(0.6, 4.6); ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = '#3a0e06';
+    ctx.beginPath(); ctx.moveTo(0.4, -0.7); ctx.lineTo(7.0, -0.3); ctx.lineTo(7.0, -2.8); ctx.lineTo(0.4, -1.7); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(7.6, -0.2);
+    cabeza.quadraticCurveTo(7.8, 0.9, 6.8, 1.2);
+    cabeza.quadraticCurveTo(4.4, 1.8, 2.6, 3.2);
+    cabeza.quadraticCurveTo(1.0, 4.6, -1.4, 4.6);
+    cabeza.quadraticCurveTo(-4.4, 4.4, -4.6, 1.4);
+    cabeza.quadraticCurveTo(-4.8, -1.2, -2.6, -2.0);
+    cabeza.lineTo(0.2, -0.9);
+    cabeza.lineTo(7.6, -0.2);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.0, -0.95); mand.lineTo(7.0, -0.35);
+    mand.quadraticCurveTo(6.6, -1.6, 4.4, -1.9);
+    mand.quadraticCurveTo(1.6, -2.4, -0.6, -3.0);
+    mand.quadraticCurveTo(-2.0, -3.2, -2.8, -2.1);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.2, -0.9, ang, pelo, hex(peloOsc), 0.7, 0.7);
+
+    /* el blanco del hocico y de la quijada */
+    ctx.save(); ctx.clip(cabeza);
+    ctx.fillStyle = blanco;
+    ctx.beginPath(); ctx.ellipse(4.6, -0.2, 3.6, 1.35, 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-2.6, -1.4, 1.8, 1.4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.save(); girarSobre(ctx, 0.2, -0.9, -ang); ctx.clip(mand);
+    ctx.fillStyle = blanco; ctx.fillRect(-4, -4, 12, 4);
+    ctx.fillStyle = 'rgba(120,100,80,.35)';
+    ctx.beginPath(); ctx.ellipse(2.4, -3.0, 4.0, 0.9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* el blanco se come medio contorno: se repasa */
+    contorno(ctx, 1.6);
+    ctx.stroke(cabeza);
+    ctx.save(); girarSobre(ctx, 0.2, -0.9, -ang); ctx.stroke(mand); ctx.restore();
+
+    /* la trufa */
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.ellipse(7.3, 0.55, 0.6, 0.42, 0, 0, Math.PI * 2); ctx.fill();
+
+    /* las rayas bermellón de Inari */
+    ctx.strokeStyle = bermellon; ctx.lineCap = 'round';
+    ctx.lineWidth = 0.55;
+    ctx.beginPath(); ctx.moveTo(2.2, 3.3); ctx.quadraticCurveTo(0.6, 4.2, -1.0, 3.7); ctx.stroke();
+    ctx.lineWidth = 0.4;
+    ctx.beginPath(); ctx.moveTo(-0.4, 2.6); ctx.quadraticCurveTo(-1.6, 2.6, -2.4, 1.8); ctx.stroke();
+
+    /* el ojo rasgado, dorado, con la raya que se alarga hacia atrás */
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath();
+    ctx.moveTo(1.9, 1.7);
+    ctx.quadraticCurveTo(3.0, 2.9, 4.4, 2.6);
+    ctx.quadraticCurveTo(3.4, 1.5, 1.9, 1.7);
+    ctx.closePath(); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.ellipse(3.4, 2.15, 0.17, 0.42, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = bermellon; ctx.lineWidth = 0.35;
+    ctx.beginPath(); ctx.moveTo(1.9, 1.75); ctx.lineTo(0.7, 2.3); ctx.stroke();
+
+    /* Q: el corro de fuegos fatuos */
+    if (q >= 0) {
+      var rr = 4 + fuego * 6;
+      for (k = 0; k < 6; k++) {
+        var a2 = k * Math.PI / 3 + q * 5;
+        llamaAzul(ctx, Math.cos(a2) * rr * 1.1, 1 + Math.sin(a2) * rr * 0.9,
+          0.5 + fuego * 0.6, fuego, t + k, 1);
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- TENGU ---------------- */
+  /* El duende de la montaña: cara roja con la NARIZ larguísima, cejas y
+   * melena blancas, el tokin negro en la frente y el abanico de plumas en
+   * la mano. Q: el ABANICAZO, que suelta remolinos de viento. */
+  function abanicoTengu(ctx, ang) {
+    ctx.save();
+    ctx.rotate(ang);
+    ctx.strokeStyle = '#6b4a2a'; ctx.lineWidth = 0.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(2.4, 0); ctx.stroke();
+    for (var k = -3; k <= 3; k++) {
+      ctx.save();
+      ctx.translate(2.2, 0);
+      ctx.rotate(k * 0.26);
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(1.6, 1.3, 4.0, 0.5);
+        ctx.quadraticCurveTo(4.5, 0, 4.0, -0.5);
+        ctx.quadraticCurveTo(1.6, -1.3, 0, 0);
+        ctx.closePath();
+      }, k % 2 ? '#8a6444' : '#a8805c', '#4e3420', 0.15, 0.15, 1.0);
+      ctx.restore();
+    }
+    ctx.fillStyle = '#e0322a';
+    ctx.beginPath(); ctx.arc(2.3, 0, 0.55, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    ctx.restore();
+  }
+  DRAW.tengu = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 13, 24][fz] * Math.PI / 180;
+    var rojo = hex(mix('#e0302a', o.c, 0.12)), rojoOsc = mix(rojo, '#3a0404', 0.45);
+    var canas = '#f4f0e6', canasOsc = '#b8b0a0';
+    var sopla = (q >= 0) ? Math.sin(Math.min(1, q * 1.15) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 4.4) * 0.2);
+
+    /* el abanico, en la mano, por detrás */
+    if (q < 0) {
+      ctx.save(); ctx.translate(-3.4, -3.4); abanicoTengu(ctx, 3.75 + Math.sin(t * 3) * 0.12); ctx.restore();
+    }
+
+    /* la melena blanca, hacia atrás */
+    var w = Math.sin(t * 5) * 0.3;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-0.6, 4.6);
+      ctx.quadraticCurveTo(-4.6, 6.2, -7.4, 3.2 + w);
+      ctx.lineTo(-6.0, 2.6);
+      ctx.quadraticCurveTo(-7.8, 0.6 + w, -6.6, -1.6);
+      ctx.lineTo(-5.4, -0.8);
+      ctx.quadraticCurveTo(-5.2, -2.6, -3.0, -2.8);
+      ctx.lineTo(-2.0, 0);
+      ctx.closePath();
+    }, canas, canasOsc, 0.4, 0.4, 1.5);
+
+    ctx.fillStyle = '#3a0606';
+    ctx.beginPath(); ctx.moveTo(0.4, -0.7); ctx.lineTo(5.6, -0.3); ctx.lineTo(5.6, -3.0); ctx.lineTo(0.4, -1.6); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(5.8, 0.0);
+    cabeza.quadraticCurveTo(6.0, 2.6, 4.0, 3.8);
+    cabeza.quadraticCurveTo(1.4, 5.0, -1.2, 4.4);
+    cabeza.quadraticCurveTo(-3.6, 3.6, -3.6, 0.8);
+    cabeza.quadraticCurveTo(-3.6, -1.4, -1.4, -1.8);
+    cabeza.lineTo(0.2, -0.9);
+    cabeza.lineTo(5.8, 0.0);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.0, -0.95); mand.lineTo(5.6, -0.2);
+    mand.quadraticCurveTo(5.2, -2.4, 3.0, -2.8);
+    mand.quadraticCurveTo(0.4, -3.0, -1.2, -2.0);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.2, -0.9, ang, rojo, hex(rojoOsc), 0.7, 0.7);
+
+    /* la barba blanca, colgando de la mandíbula */
+    ctx.save(); girarSobre(ctx, 0.2, -0.9, -ang);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-1.0, -2.0);
+      ctx.quadraticCurveTo(1.6, -2.7, 4.4, -2.4);
+      ctx.quadraticCurveTo(3.4, -4.2, 2.2, -6.0 + w);
+      ctx.quadraticCurveTo(1.4, -4.8, 0.6, -5.4 + w);
+      ctx.quadraticCurveTo(0.0, -3.8, -1.0, -2.0);
+      ctx.closePath();
+    }, canas, canasOsc, 0.3, 0.3, 1.3);
+    ctx.restore();
+
+    /* la narizota */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(3.4, 2.7);
+      ctx.quadraticCurveTo(7.0, 2.8, 10.0, 2.1);
+      ctx.quadraticCurveTo(10.8, 1.7, 10.1, 1.1);
+      ctx.quadraticCurveTo(7.0, 0.5, 3.8, 0.4);
+      ctx.closePath();
+    }, rojo, hex(rojoOsc), 0.3, 0.35, 1.5);
+    destello(ctx, 8.4, 2.1, 0.3, 0.7);
+
+    /* el ojo, con la ceja blanca y poblada */
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(1.8, 2.5, 1.0, 0.72, 0.1, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = '#c98a1a';
+    ctx.beginPath(); ctx.arc(2.2, 2.5, 0.48, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.3, 2.5, 0.24, 0, Math.PI * 2); ctx.fill();
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(0.0, 3.3);
+      ctx.quadraticCurveTo(1.8, 4.6, 3.9, 3.3);
+      ctx.lineTo(3.2, 3.0);
+      ctx.lineTo(2.6, 3.4);
+      ctx.lineTo(1.9, 3.0);
+      ctx.lineTo(1.2, 3.4);
+      ctx.quadraticCurveTo(0.6, 3.0, 0.0, 3.3);
+      ctx.closePath();
+    }, canas, canasOsc, 0.15, 0.15, 1.2);
+
+    /* el tokin, la cajita negra de la frente, con su cordón */
+    ctx.save();
+    ctx.translate(1.6, 4.9);
+    ctx.rotate(-0.35);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-1.2, -0.5); ctx.lineTo(1.2, -0.5); ctx.lineTo(1.0, 0.9);
+      ctx.lineTo(0, 1.4); ctx.lineTo(-1.0, 0.9); ctx.closePath();
+    }, hex(mix(o.c, '#1a1a22', 0.6)), '#101014', 0.2, 0.2, 1.2);
+    ctx.restore();
+    ctx.strokeStyle = '#f2f0e6'; ctx.lineWidth = 0.22;
+    ctx.beginPath(); ctx.moveTo(0.6, 4.3); ctx.quadraticCurveTo(-0.6, 3.2, -1.2, 1.2); ctx.stroke();
+
+    /* Q: el abanicazo por delante y los remolinos */
+    if (q >= 0) {
+      /* el abanico barre por debajo de la barba, de atrás adelante */
+      var giro = -2.3 + suave(Math.min(1, q * 2.2)) * 2.5;
+      ctx.save(); ctx.translate(2.4, -4.4); abanicoTengu(ctx, giro); ctx.restore();
+      ctx.lineCap = 'round';
+      for (k = 0; k < 3; k++) {
+        var u = (q * 1.5 + k / 3) % 1;
+        var gx = 8 + u * 11, gy = -3.2 + k * 2.6;
+        ctx.strokeStyle = 'rgba(235,245,255,' + ((1 - u) * sopla) + ')';
+        ctx.lineWidth = 0.55;
+        ctx.beginPath();
+        ctx.moveTo(gx - 4 - u * 2, gy);
+        ctx.lineTo(gx, gy);
+        ctx.arc(gx, gy + 0.9 + u * 0.6, 0.9 + u * 0.6, -Math.PI / 2, Math.PI * 1.1, false);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- KAPPA ---------------- */
+  /* El diablillo del río: pico amarillo, caparazón de tortuga a la espalda,
+   * flequillo de tazón y el PLATO de agua en la coronilla, con el agua
+   * meneándose. Q: escupe un CHORRO de agua por delante. */
+  DRAW.kappa = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var verde = hex(mix(o.c, '#46b45e', 0.62)), verdeOsc = mix(verde, '#062a10', 0.5);
+    var pico = '#f2c230', picoOsc = '#9a7410';
+    var concha = '#8a6a3a', conchaOsc = '#3e2c14';
+    var agua = (o.agua == null) ? 1 : o.agua;
+    var escupe = (q >= 0) ? Math.sin(Math.min(1, q * 1.2) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 5)) * 0.3 - 0.15);
+
+    /* el caparazón, a la espalda */
+    var caparazon = function () {
+      ctx.beginPath();
+      ctx.moveTo(-2.0, 3.6);
+      ctx.quadraticCurveTo(-7.8, 4.0, -7.8, -0.8);
+      ctx.quadraticCurveTo(-7.4, -5.0, -2.2, -4.6);
+      ctx.closePath();
+    };
+    piezaX(ctx, caparazon, concha, conchaOsc, 0.5, 0.5, 1.6);
+    ctx.save(); caparazon(); ctx.clip();
+    ctx.strokeStyle = conchaOsc; ctx.lineWidth = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(-6.6, 2.2); ctx.lineTo(-4.6, 1.2); ctx.lineTo(-4.8, -1.6); ctx.lineTo(-6.8, -2.6);
+    ctx.moveTo(-4.6, 1.2); ctx.lineTo(-2.6, 2.0);
+    ctx.moveTo(-4.8, -1.6); ctx.lineTo(-2.6, -2.4);
+    ctx.stroke();
+    ctx.strokeStyle = '#c8a870'; ctx.lineWidth = 0.4;
+    ctx.beginPath(); ctx.moveTo(-7.4, 0.4); ctx.quadraticCurveTo(-7.0, -3.8, -2.4, -4.2); ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = '#12301a';
+    ctx.beginPath(); ctx.moveTo(0.6, -0.7); ctx.lineTo(6.8, -0.3); ctx.lineTo(6.8, -2.8); ctx.lineTo(0.6, -1.6); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(5.8, 0.0);
+    cabeza.quadraticCurveTo(5.8, 2.8, 3.6, 3.9);
+    cabeza.quadraticCurveTo(0.8, 5.0, -1.6, 4.2);
+    cabeza.quadraticCurveTo(-3.8, 3.2, -3.6, 0.6);
+    cabeza.quadraticCurveTo(-3.4, -1.6, -1.2, -1.8);
+    cabeza.lineTo(0.4, -0.9);
+    cabeza.lineTo(5.8, 0.0);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.2, -0.95); mand.lineTo(5.6, -0.2);
+    mand.quadraticCurveTo(5.0, -2.6, 2.6, -2.9);
+    mand.quadraticCurveTo(0.0, -3.0, -1.4, -2.0);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.4, -0.9, ang, verde, hex(verdeOsc), 0.7, 0.7);
+
+    /* el pico: la parte de arriba fija, la de abajo con la mandíbula */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(2.8, 1.5);
+      ctx.quadraticCurveTo(6.2, 2.2, 7.5, 0.3);
+      ctx.quadraticCurveTo(7.7, -0.7, 6.9, -0.9);
+      ctx.lineTo(6.4, -0.25);
+      ctx.lineTo(2.8, -0.45);
+      ctx.closePath();
+    }, pico, picoOsc, 0.25, 0.25, 1.3);
+    ctx.save(); girarSobre(ctx, 0.4, -0.9, -ang);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(2.8, -1.0); ctx.lineTo(6.3, -0.45);
+      ctx.quadraticCurveTo(6.0, -1.9, 4.2, -2.1);
+      ctx.lineTo(2.8, -2.0);
+      ctx.closePath();
+    }, pico, picoOsc, 0.2, 0.2, 1.2);
+    ctx.restore();
+
+    /* el flequillo de tazón alrededor del plato */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.9, 0.4);
+      ctx.quadraticCurveTo(-4.2, 4.8, -0.4, 5.1);
+      ctx.quadraticCurveTo(3.4, 5.2, 4.1, 3.0);
+      var P = [[3.5, 2.5], [3.0, 3.3], [2.4, 2.6], [1.7, 3.4], [1.0, 2.8], [0.2, 3.4], [-0.6, 2.8], [-1.4, 3.2],
+               [-2.0, 2.2], [-2.6, 2.4], [-2.9, 1.2], [-3.4, 1.2]];
+      P.forEach(function (p) { ctx.lineTo(p[0], p[1]); });
+      ctx.closePath();
+    }, '#27403a', '#0c1814', 0.3, 0.3, 1.4);
+
+    /* el plato, con el agua */
+    ctx.save();
+    ctx.translate(0.0, 5.2);
+    ctx.rotate(-0.08);
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.ellipse(0, 0, 3.0, 0.95, 0, 0, Math.PI * 2);
+    }, '#f4f0dc', '#b4ac90', 0.1, -0.2, 1.3);
+    if (agua > 0.02) {
+      var ola = Math.sin(t * 6) * 0.25;
+      ctx.fillStyle = '#5ad0ff';
+      ctx.beginPath(); ctx.ellipse(ola * agua, 0.12, 2.3 * agua, 0.55 * agua, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.8)';
+      ctx.beginPath(); ctx.ellipse(-0.8 + ola * 2, 0.25, 0.6 * agua, 0.16, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+
+    /* el ojo, redondo y saltón */
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.arc(2.4, 2.1, 1.05, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.75, 2.05, 0.52, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.0, 2.4, 0.28, 0.95);
+
+    /* Q: el chorro */
+    if (q >= 0) {
+      var alcance = Math.min(1, q * 2.4);
+      var chorro = function (u) { return { x: 7.4 + u * 13, y: 0.1 + u * 1.4 - u * u * 3.2 }; };
+      ctx.lineCap = 'round';
+      [[1.5, 'rgba(42,124,255,'], [0.95, 'rgba(90,208,255,'], [0.35, 'rgba(235,250,255,']].forEach(function (capa) {
+        ctx.strokeStyle = capa[1] + escupe + ')';
+        ctx.lineWidth = capa[0];
+        ctx.beginPath();
+        for (var i = 0; i <= 16; i++) {
+          var u = alcance * i / 16, p = chorro(u);
+          var w = Math.sin(t * 24 + i) * 0.12 * u;
+          if (i === 0) ctx.moveTo(p.x, p.y + w); else ctx.lineTo(p.x, p.y + w);
+        }
+        ctx.stroke();
+      });
+      for (k = 0; k < 6; k++) {
+        var uu = ((q * 3 + k / 6) % 1) * alcance;
+        var pp = chorro(uu);
+        ctx.fillStyle = mix('#8fe2ff', '#8fe2ff', 0, escupe * (1 - uu * 0.5));
+        ctx.beginPath(); ctx.arc(pp.x, pp.y + 1.0 + (k % 2) * -2.0, 0.32, 0, Math.PI * 2); ctx.fill();
+      }
+      if (alcance >= 1) {
+        for (k = 0; k < 5; k++) {
+          var aa = 0.4 + k * 0.55;
+          gota(ctx, 20.6 + Math.cos(aa) * 1.8 * escupe, -1.4 + Math.sin(aa) * 1.6 * escupe, 0.45, '#8fe2ff', escupe);
+        }
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- ONI (cofre) ---------------- */
+  /* El ogro: cara roja —azul, verde... con el color del jugador—, dos
+   * cuernos, melena negra encrespada, ojos saltones y colmillos. A la
+   * espalda, el KANABŌ, la maza de hierro con pinchos. Q: el MAZAZO. */
+  function kanabo(ctx) {
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.1; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(3.4, 0); ctx.stroke();
+    ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 0.55;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(3.4, 0); ctx.stroke();
+    var maza = function () {
+      ctx.beginPath();
+      ctx.moveTo(3.0, -0.55);
+      ctx.lineTo(10.4, -1.25);
+      ctx.quadraticCurveTo(11.4, 0, 10.4, 1.25);
+      ctx.lineTo(3.0, 0.55);
+      ctx.closePath();
+    };
+    /* los pinchos, asomando por el borde */
+    for (var k = 0; k < 5; k++) {
+      var x = 4.6 + k * 1.4, h = 0.7 + k * 0.13;
+      [1, -1].forEach(function (l) {
+        ctx.fillStyle = '#c8ccd8';
+        ctx.beginPath(); ctx.moveTo(x - 0.35, l * h); ctx.lineTo(x, l * (h + 0.7)); ctx.lineTo(x + 0.35, l * h); ctx.closePath(); ctx.fill();
+        contorno(ctx, 0.8); ctx.stroke();
+      });
+    }
+    piezaX(ctx, maza, '#5a5f6c', '#1c1e24', 0.25, 0.25, 1.4);
+    ctx.fillStyle = '#c8ccd8';
+    for (k = 0; k < 4; k++) {
+      ctx.beginPath(); ctx.arc(5.2 + k * 1.5, 0.15, 0.24, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  DRAW.oni = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 16, 30][fz] * Math.PI / 180;
+    var piel = hex(mix(o.c, '#b0201a', 0.35)), pielOsc = mix(piel, '#2a0404', 0.5);
+    var pelo = '#2c2228', cuerno = '#f2e2b0', cuernoOsc = '#a08a50';
+    var golpe = (q >= 0) ? tramo(q, 0.1, 0.42) : 0;
+    var impacto = (q >= 0 && q > 0.42) ? 1 - tramo(q, 0.42, 1) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    var tiembla = impacto > 0 ? Math.sin(t * 90) * 0.35 * impacto : 0;
+    ctx.translate(tiembla, Math.abs(Math.sin(t * 4.5)) * 0.3 - 0.15);
+
+    /* el kanabō: al hombro por detrás, o bajando en el mazazo */
+    var maza = function () {
+      if (o.sinMaza) return;
+      var am = (q >= 0) ? 2.2 - suave(golpe) * 2.75 : 2.2 + Math.sin(t * 4.5) * 0.05;
+      ctx.save();
+      ctx.translate(q >= 0 ? -3.0 + golpe * 2.2 : -3.0, -3.4);
+      ctx.rotate(am);
+      kanabo(ctx);
+      ctx.restore();
+    };
+    /* bajando, la maza pasa por delante de la cara */
+    var delante = (q >= 0 && golpe > 0.35);
+    if (!delante) maza();
+
+    /* la melena, a bultos: primero el contorno de todos, luego el relleno */
+    var BUL = [[1.4, 4.6, 1.3], [-0.6, 5.2, 1.5], [-2.8, 4.6, 1.5], [-4.4, 3.0, 1.4],
+               [-5.0, 0.8, 1.3], [-4.6, -1.3, 1.2], [3.2, 4.0, 1.0]];
+    ctx.lineWidth = 2 * 1.4 / S; ctx.strokeStyle = TINTA;
+    BUL.forEach(function (b, i) {
+      ctx.beginPath(); ctx.arc(b[0], b[1] + Math.sin(t * 6 + i) * 0.08, b[2], 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.fillStyle = pelo;
+    BUL.forEach(function (b, i) {
+      ctx.beginPath(); ctx.arc(b[0], b[1] + Math.sin(t * 6 + i) * 0.08, b[2], 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.fillStyle = '#4a3e46';
+    BUL.forEach(function (b, i) {
+      ctx.beginPath(); ctx.arc(b[0] + 0.3, b[1] + 0.3, b[2] * 0.45, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* los cuernos */
+    [[-1.4, 5.2, -0.8, 0.85], [1.6, 4.8, 1.2, 1.0]].forEach(function (c) {
+      var x = c[0], y = c[1], tx = c[2], e = c[3];
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(x - 0.9 * e, y);
+        ctx.quadraticCurveTo(x - 0.4 * e, y + 2.8 * e, x + tx, y + 4.4 * e);
+        ctx.quadraticCurveTo(x + 1.0 * e, y + 2.0 * e, x + 0.9 * e, y);
+        ctx.closePath();
+      }, e < 1 ? cuernoOsc : cuerno, e < 1 ? '#6a5a30' : cuernoOsc, 0.2, 0.2, 1.3);
+      ctx.strokeStyle = e < 1 ? '#6a5a30' : cuernoOsc; ctx.lineWidth = 0.22;
+      ctx.beginPath();
+      ctx.moveTo(x - 0.7 * e, y + 1.0 * e); ctx.lineTo(x + 0.75 * e, y + 1.1 * e);
+      ctx.moveTo(x - 0.4 * e, y + 2.1 * e); ctx.lineTo(x + 0.6 * e, y + 2.2 * e);
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = '#300606';
+    ctx.beginPath(); ctx.moveTo(0.4, -0.7); ctx.lineTo(6.0, -0.3); ctx.lineTo(6.0, -3.8); ctx.lineTo(0.4, -1.8); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(6.0, 0.0);
+    cabeza.quadraticCurveTo(6.4, 3.0, 4.0, 4.2);
+    cabeza.quadraticCurveTo(1.0, 5.2, -1.8, 4.4);
+    cabeza.quadraticCurveTo(-4.2, 3.4, -4.0, 0.6);
+    cabeza.quadraticCurveTo(-3.8, -1.8, -1.6, -2.0);
+    cabeza.lineTo(0.0, -0.9);
+    cabeza.lineTo(6.0, 0.0);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-0.2, -0.95); mand.lineTo(6.0, -0.2);
+    mand.quadraticCurveTo(5.8, -3.0, 3.2, -3.6);
+    mand.quadraticCurveTo(0.2, -4.0, -1.8, -2.6);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.0, -0.9, ang, piel, hex(pielOsc), 0.8, 0.8);
+
+    /* el mechón de la frente, entre los cuernos */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-1.6, 4.4); ctx.lineTo(0.2, 5.4); ctx.lineTo(0.0, 4.2); ctx.lineTo(1.6, 4.8);
+      ctx.lineTo(0.9, 3.6); ctx.quadraticCurveTo(-0.4, 3.8, -1.6, 4.4);
+      ctx.closePath();
+    }, '#3a3036', pelo, 0.15, 0.15, 1.2);
+
+    /* dientes de arriba y los dos colmillos de abajo */
+    dientes(ctx, 1.6, 5.6, -0.25, 4, -0.7, '#fbf3dc');
+    ctx.save(); girarSobre(ctx, 0.0, -0.9, -ang);
+    dientes(ctx, 1.2, 2.5, -1.0, 1, 2.0, '#fbf3dc');
+    dientes(ctx, 4.0, 5.2, -0.7, 1, 1.8, '#fbf3dc');
+    ctx.restore();
+
+    /* la nariz chata */
+    ctx.strokeStyle = hex(pielOsc); ctx.lineWidth = 0.35; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(5.6, 1.1, 0.55, Math.PI * 0.6, Math.PI * 1.5); ctx.stroke();
+
+    /* el ojo saltón, amarillo, con la ceja de mal genio */
+    ctx.fillStyle = '#ffe14a';
+    ctx.beginPath(); ctx.arc(2.9, 2.4, 1.2, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.4); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(3.3, 2.3, 0.42, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 2.5, 2.9, 0.3, 0.9);
+    ctx.strokeStyle = pelo; ctx.lineWidth = 0.75;
+    ctx.beginPath(); ctx.moveTo(1.2, 4.0); ctx.lineTo(4.6, 3.1); ctx.stroke();
+
+    if (delante) maza();
+
+    /* Q: el golpe contra el suelo */
+    if (impacto > 0) {
+      var ix = 7.4, iy = -6.2;
+      estrella4(ctx, ix, iy, 1.5 + impacto * 2.5, '#fff6d0', impacto);
+      ctx.strokeStyle = 'rgba(40,30,20,' + impacto + ')'; ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      for (k = 0; k < 5; k++) {
+        var a3 = -0.2 + k * 0.8, l = 3 + (k % 2) * 2;
+        ctx.moveTo(ix, iy);
+        ctx.lineTo(ix + Math.cos(a3) * l * 0.5, iy + Math.sin(a3) * l * 0.5 + 0.4);
+        ctx.lineTo(ix + Math.cos(a3) * l, iy + Math.sin(a3) * l);
+      }
+      ctx.stroke();
+      for (k = 0; k < 6; k++) {
+        var u = 1 - impacto;
+        ctx.fillStyle = 'rgba(150,120,90,' + impacto + ')';
+        ctx.beginPath();
+        ctx.arc(ix + (k - 2.5) * 1.6 * (1 + u * 2), iy + u * 4 * Math.sin(k + 1), 0.45, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- TANUKI ---------------- */
+  /* El mapache-perro que cambia de forma: antifaz oscuro, hocico crema,
+   * orejas redondas, cola gorda a anillos y la HOJA en la cabeza con la que
+   * se transforma. Q: ¡DORON! se convierte en la tetera de Bunbuku. */
+  function teteraBunbuku(ctx, t, pardo, pardoOsc) {
+    /* la cola por detrás */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.ellipse(-6.4, -1.8 + Math.sin(t * 6) * 0.3, 2.2, 1.2, -0.5, 0, Math.PI * 2);
+    }, pardo, pardoOsc, 0.2, 0.2, 1.3);
+    /* las patitas */
+    [-3.0, -1.0, 1.4, 3.2].forEach(function (x, i) {
+      ctx.fillStyle = pardoOsc;
+      ctx.beginPath(); ctx.ellipse(x, -5.2 + (i % 2 ? Math.sin(t * 12) * 0.3 : 0), 0.8, 1.0, 0, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    });
+    /* el asa */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.95;
+    ctx.beginPath(); ctx.moveTo(-4.2, 3.2); ctx.quadraticCurveTo(0, 10.2, 4.2, 3.2); ctx.stroke();
+    ctx.strokeStyle = '#55555e'; ctx.lineWidth = 0.45;
+    ctx.beginPath(); ctx.moveTo(-4.2, 3.2); ctx.quadraticCurveTo(0, 10.2, 4.2, 3.2); ctx.stroke();
+    /* el hierro */
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.ellipse(0, -0.6, 5.6, 4.5, 0, 0, Math.PI * 2);
+    }, '#5c5c66', '#26262c', 0.6, 0.6, 1.6);
+    ctx.fillStyle = 'rgba(255,255,255,.18)';
+    for (var k = 0; k < 6; k++) {
+      ctx.beginPath(); ctx.arc(-3.6 + k * 1.4, -2.2 + (k % 2) * 0.8, 0.25, 0, Math.PI * 2); ctx.fill();
+    }
+    /* la tapa y su pomo */
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.ellipse(0, 3.6, 3.4, 1.0, 0, 0, Math.PI * 2);
+    }, '#7a5230', '#3a2410', 0.2, 0.2, 1.3);
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.arc(0, 4.8, 0.8, 0, Math.PI * 2);
+    }, '#7a5230', '#3a2410', 0.15, 0.15, 1.2);
+    /* la cabecita asomando por delante */
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.ellipse(6.0, 0.6, 2.2, 1.9, 0, 0, Math.PI * 2);
+    }, pardo, pardoOsc, 0.3, 0.3, 1.4);
+    ctx.fillStyle = '#2e2018';
+    ctx.beginPath(); ctx.ellipse(6.3, 1.0, 1.1, 0.75, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.arc(6.5, 1.05, 0.38, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(6.6, 1.05, 0.22, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(8.0, 0.3, 0.35, 0.28, 0, 0, Math.PI * 2); ctx.fill();
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.arc(5.0, 2.4, 0.7, 0, Math.PI * 2);
+    }, pardo, pardoOsc, 0.1, 0.1, 1.1);
+  }
+  DRAW.tanuki = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.5), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var pardo = hex(mix('#9a6a3a', o.c, 0.12)), pardoOsc = mix(pardo, '#2a1604', 0.5);
+    var antifaz = '#2e2018', crema = '#f2e4c8';
+    var tetera = (q >= 0 && q > 0.14 && q < 0.86);
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 5.5)) * 0.35 - 0.15);
+
+    if (tetera) {
+      teteraBunbuku(ctx, t, pardo, hex(pardoOsc));
+    } else {
+      /* la cola gorda a anillos */
+      ctx.save();
+      ctx.translate(-3.4, -1.4);
+      ctx.rotate(3.55 + Math.sin(t * 6) * 0.15);
+      var cola = function () {
+        ctx.beginPath();
+        ctx.moveTo(0, -1.3);
+        ctx.bezierCurveTo(3.0, -2.9, 6.4, -2.4, 7.0, 0);
+        ctx.bezierCurveTo(6.4, 2.4, 3.0, 2.9, 0, 1.3);
+        ctx.closePath();
+      };
+      piezaX(ctx, cola, pardo, hex(pardoOsc), 0.3, 0.3, 1.4);
+      ctx.save(); cola(); ctx.clip();
+      ctx.fillStyle = antifaz;
+      ctx.fillRect(3.0, -3, 0.9, 6); ctx.fillRect(4.9, -3, 0.9, 6); ctx.fillRect(6.4, -3, 2, 6);
+      ctx.restore();
+      cola(); contorno(ctx, 1.4); ctx.stroke();
+      ctx.restore();
+
+      /* las orejas redondas */
+      [[-3.4, 3.7, 1.15, true], [-1.8, 4.4, 1.35, false]].forEach(function (e) {
+        piezaX(ctx, function () {
+          ctx.beginPath(); ctx.arc(e[0], e[1], e[2], 0, Math.PI * 2);
+        }, e[3] ? hex(pardoOsc) : pardo, e[3] ? antifaz : hex(pardoOsc), 0.2, 0.2, 1.3);
+        ctx.fillStyle = antifaz;
+        ctx.beginPath(); ctx.arc(e[0] + 0.1, e[1] + 0.1, e[2] * 0.5, 0, Math.PI * 2); ctx.fill();
+      });
+
+      ctx.fillStyle = '#3a1a08';
+      ctx.beginPath(); ctx.moveTo(0.2, -0.7); ctx.lineTo(6.2, -0.3); ctx.lineTo(6.2, -2.8); ctx.lineTo(0.2, -1.7); ctx.closePath(); ctx.fill();
+
+      var cabeza = new Path2D();
+      cabeza.moveTo(6.6, -0.1);
+      cabeza.quadraticCurveTo(6.8, 1.0, 5.8, 1.4);
+      cabeza.quadraticCurveTo(4.0, 1.8, 2.8, 3.0);
+      cabeza.quadraticCurveTo(1.0, 4.8, -1.4, 4.6);
+      cabeza.quadraticCurveTo(-4.6, 4.2, -4.6, 0.8);
+      cabeza.quadraticCurveTo(-4.6, -1.8, -2.2, -2.2);
+      cabeza.lineTo(0.0, -0.9);
+      cabeza.lineTo(6.6, -0.1);
+      cabeza.closePath();
+      var mand = new Path2D();
+      mand.moveTo(-0.2, -0.95); mand.lineTo(6.2, -0.35);
+      mand.quadraticCurveTo(5.8, -1.8, 3.8, -2.2);
+      mand.quadraticCurveTo(1.4, -2.8, -0.6, -3.2);
+      mand.quadraticCurveTo(-2.2, -3.2, -2.8, -2.2);
+      mand.closePath();
+      rostro(ctx, cabeza, mand, 0.0, -0.9, ang, pardo, hex(pardoOsc), 0.7, 0.7);
+
+      /* el hocico crema y la quijada */
+      ctx.save(); ctx.clip(cabeza);
+      ctx.fillStyle = crema;
+      ctx.beginPath(); ctx.ellipse(5.0, 0.1, 2.5, 1.2, 0.1, 0, Math.PI * 2); ctx.fill();
+      /* el antifaz, bajando por la mejilla */
+      /* frente clara encima del antifaz, como los tanuki de verdad */
+      ctx.fillStyle = hex(mix(pardo, '#fff4dc', 0.4));
+      ctx.beginPath(); ctx.ellipse(2.8, 3.3, 2.0, 0.9, -0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = antifaz;
+      ctx.beginPath();
+      ctx.moveTo(4.4, 2.2);
+      ctx.quadraticCurveTo(3.4, 3.2, 1.6, 2.8);
+      ctx.quadraticCurveTo(0.0, 2.2, -0.8, 0.2);
+      ctx.quadraticCurveTo(-1.2, -1.2, -2.2, -2.0);
+      ctx.lineTo(0.4, -0.9);
+      ctx.quadraticCurveTo(1.6, 0.6, 3.4, 0.9);
+      ctx.quadraticCurveTo(4.6, 1.2, 4.4, 2.2);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.save(); girarSobre(ctx, 0.0, -0.9, -ang); ctx.clip(mand);
+      ctx.fillStyle = crema; ctx.fillRect(1.0, -4, 7, 4);
+      ctx.restore();
+      contorno(ctx, 1.6);
+      ctx.stroke(cabeza);
+      ctx.save(); girarSobre(ctx, 0.0, -0.9, -ang); ctx.stroke(mand); ctx.restore();
+
+      /* la trufa y el ojo, brillante dentro del antifaz */
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.ellipse(6.3, 0.75, 0.58, 0.42, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fdfaf0';
+      ctx.beginPath(); ctx.arc(2.6, 1.9, 0.72, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.arc(2.85, 1.9, 0.48, 0, Math.PI * 2); ctx.fill();
+      destello(ctx, 3.05, 2.2, 0.25, 0.95);
+
+      /* la hoja de transformarse */
+      if (!o.sinHoja) hojaTanuki(ctx, 0.4, 5.3, -0.35 + Math.sin(t * 3) * 0.08);
+    }
+
+    /* Q: el puf de humo al entrar y al salir de la tetera */
+    if (q >= 0) {
+      /* opaco en el cambio (que no se vea el truco) y luego se deshace */
+      var u1 = tramo(q, 0, 0.3), u2 = tramo(q, 0.72, 1);
+      if (q < 0.3) humoPuf(ctx, 0.5, 0.5, Math.min(1, u1 * 1.6), u1 < 0.6 ? 1 : (1 - u1) / 0.4, 7);
+      if (q > 0.72) humoPuf(ctx, 0.5, 0.5, Math.min(1, u2 * 1.6), u2 < 0.6 ? 1 : (1 - u2) / 0.4, 7);
+    }
+    ctx.restore();
+  };
+  function hojaTanuki(ctx, x, y, rot) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-1.9, 0);
+      ctx.quadraticCurveTo(-0.2, 1.6, 2.0, 0);
+      ctx.quadraticCurveTo(-0.2, -1.6, -1.9, 0);
+      ctx.closePath();
+    }, '#6ccc52', '#246a1c', 0.2, 0.2, 1.2);
+    ctx.strokeStyle = '#246a1c'; ctx.lineWidth = 0.22; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-2.6, -0.3); ctx.lineTo(1.6, 0.05); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------------- DARUMA ---------------- */
+  /* El muñeco que no se cae: huevo de papel maché lacado del color del
+   * jugador, cara blanca con cejas de grulla y bigote de tortuga, y UN SOLO
+   * OJO pintado —el otro se pinta cuando se cumple el deseo—. Come
+   * cabeceando: se inclina hacia delante y vuelve. Q: se pinta el otro ojo. */
+  function huevoDaruma(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0.2, 6.4);
+    ctx.bezierCurveTo(3.8, 6.4, 5.4, 3.4, 5.9, 0.0);
+    ctx.bezierCurveTo(6.4, -3.6, 4.4, -6.2, 1.8, -6.4);
+    ctx.lineTo(-1.8, -6.4);
+    ctx.bezierCurveTo(-4.6, -6.2, -6.4, -3.6, -5.9, 0.0);
+    ctx.bezierCurveTo(-5.4, 3.4, -3.4, 6.4, 0.2, 6.4);
+    ctx.closePath();
+  }
+  DRAW.daruma = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.4), k;
+    var laca = hex(mix(o.c, '#d42a22', 0.45)), lacaOsc = mix(laca, '#300404', 0.5);
+    var cara = '#fbf3e4', oro = '#ffd24a';
+    var cabecea = [0, 0.13, 0.26][fz];
+    var pintado = (q >= 0) ? tramo(q, 0.25, 0.6) : 0;
+    var brilla = (q >= 0) ? Math.sin(tramo(q, 0.5, 1) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    /* se mece sobre la base, y al comer cabecea hacia delante */
+    girarSobre(ctx, 0, -6.2, -cabecea + Math.sin(t * 3.2) * 0.07);
+
+    piezaX(ctx, function () { huevoDaruma(ctx); }, laca, hex(lacaOsc), 0.8, 0.8, 1.8);
+
+    ctx.save(); huevoDaruma(ctx); ctx.clip();
+    /* las volutas de oro de la capucha y el sello de la tripa */
+    ctx.strokeStyle = oro; ctx.lineWidth = 0.35; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(-3.4, 1.4, 1.0, 0.3, Math.PI * 1.7);
+    ctx.arc(-3.4, -1.6, 0.9, -1.4, Math.PI * 1.2);
+    ctx.stroke();
+    /* 福, la buena suerte, en oro sobre la tripa */
+    ctx.save();
+    ctx.translate(2.2, -4.1);
+    ctx.scale(1, -1);
+    ctx.fillStyle = oro;
+    ctx.font = 'bold 3.4px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('福', 0, 0);
+    ctx.restore();
+    /* la cara blanca, con su ribete dorado */
+    var ovalo = function () { ctx.beginPath(); ctx.ellipse(2.6, 1.2, 3.4, 3.4, 0.1, 0, Math.PI * 2); };
+    ovalo();
+    ctx.fillStyle = cara; ctx.fill();
+    ctx.strokeStyle = oro; ctx.lineWidth = 0.4; ctx.stroke();
+    ctx.restore();
+    huevoDaruma(ctx); contorno(ctx, 1.8); ctx.stroke();
+
+    /* los ojos: uno pintado, el otro en blanco hasta que se cumple */
+    [[1.5, 2.4, 1], [3.9, 2.3, pintado]].forEach(function (e) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(e[0], e[1], 0.95, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      if (e[2] > 0) {
+        ctx.fillStyle = TINTA;
+        ctx.beginPath(); ctx.arc(e[0], e[1], 0.72 * e[2], 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    if (brilla > 0) destello(ctx, 4.3, 2.8, 0.4, brilla);
+    /* cejas de grulla */
+    ctx.strokeStyle = TINTA; ctx.lineCap = 'round';
+    ctx.lineWidth = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(0.3, 3.6); ctx.quadraticCurveTo(1.4, 4.4, 2.4, 3.6);
+    ctx.moveTo(3.0, 3.6); ctx.quadraticCurveTo(4.2, 4.5, 5.2, 3.3);
+    ctx.stroke();
+    /* la boca, que se abre al comer, y el bigote encima */
+    ctx.fillStyle = '#4a0a0a';
+    ctx.beginPath(); ctx.ellipse(2.8, -0.2, 0.75, 0.2 + fz * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(1.0, 0.5); ctx.quadraticCurveTo(2.0, 1.3, 2.8, 0.6); ctx.quadraticCurveTo(3.7, 1.3, 4.7, 0.5);
+    ctx.stroke();
+    /* la barba, una media luna negra bajo la boca */
+    ctx.fillStyle = TINTA;
+    ctx.beginPath();
+    ctx.moveTo(1.2, -0.9 - fz * 0.2);
+    ctx.quadraticCurveTo(2.8, -2.6 - fz * 0.2, 4.4, -0.9 - fz * 0.2);
+    ctx.quadraticCurveTo(2.8, -1.7 - fz * 0.2, 1.2, -0.9 - fz * 0.2);
+    ctx.closePath(); ctx.fill();
+
+    /* Q: el pincel que pinta el ojo, y el deseo cumplido */
+    if (q >= 0) {
+      var llega = tramo(q, 0.0, 0.25), va = tramo(q, 0.6, 0.8);
+      if (va < 1) {
+        ctx.save();
+        ctx.globalAlpha = 1 - va;
+        ctx.translate(3.9 + (1 - llega) * 5 + va * 4, 2.3 + (1 - llega) * 5 + va * 4);
+        ctx.rotate(0.75 + Math.sin(pintado * 18) * 0.15);
+        ctx.strokeStyle = '#c8a060'; ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.moveTo(0.8, 0); ctx.lineTo(6.0, 0); ctx.stroke();
+        contorno(ctx, 0.8);
+        ctx.beginPath(); ctx.moveTo(0.8, -0.35); ctx.lineTo(6.0, -0.35); ctx.moveTo(0.8, 0.35); ctx.lineTo(6.0, 0.35); ctx.stroke();
+        ctx.fillStyle = TINTA;
+        ctx.beginPath(); ctx.moveTo(1.0, -0.55); ctx.quadraticCurveTo(-0.6, 0, -0.9, 0); ctx.quadraticCurveTo(-0.6, 0, 1.0, 0.55); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      for (k = 0; k < 8; k++) {
+        var a = k * Math.PI / 4 + q * 2;
+        estrella4(ctx, 2.6 + Math.cos(a) * (6 + brilla * 3), 1 + Math.sin(a) * (6 + brilla * 3),
+          0.5 + brilla * 0.6, oro, brilla);
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- MANEKI-NEKO (cofre) ---------------- */
+  /* El gato de la suerte, de porcelana: manchas del color del jugador, collar
+   * rojo con cascabel, el koban de oro en una pata y la otra LEVANTADA. Come
+   * saludando: cada bocado es un "ven, ven" con la pata. Q: LLUVIA DE KOBAN. */
+  DRAW.maneki = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.3), k;
+    var por = '#fbf8f0', porOsc = '#c8c2b4';
+    var mancha = hex(mix(o.c, '#ff9a2a', 0.25)), manchaOsc = mix(mancha, '#2a1004', 0.45);
+    var oro = '#ffd24a', oroOsc = '#a97d0d';
+    var lluvia = (q >= 0) ? Math.sin(Math.min(1, q * 1.2) * Math.PI) : 0;
+    /* la pata: arriba del todo (0) o doblada hacia delante (2) */
+    var dobla = [0, 0.7, 1.4][fz];
+    if (q >= 0) dobla = 0.7 + Math.sin(q * 50) * 0.7;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 4)) * 0.25 - 0.1);
+
+    /* la cola, levantada por detrás */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-4.0, -4.6); ctx.quadraticCurveTo(-7.2, -4.2, -6.8, -1.2 + Math.sin(t * 3) * 0.3); ctx.stroke();
+    ctx.strokeStyle = mancha; ctx.lineWidth = 0.95; ctx.stroke();
+
+    /* el cuerpo, sentado */
+    var cuerpo = function () { ctx.beginPath(); ctx.ellipse(-0.6, -3.4, 4.4, 3.2, 0, 0, Math.PI * 2); };
+    piezaX(ctx, cuerpo, por, porOsc, 0.5, 0.5, 1.6);
+    ctx.save(); cuerpo(); ctx.clip();
+    ctx.fillStyle = mancha;
+    ctx.beginPath(); ctx.ellipse(-3.8, -2.4, 1.8, 1.4, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    /* las orejas */
+    [[-2.0, 5.0, -1.0, 8.4, 1.0, 5.8], [1.8, 5.8, 3.8, 8.2, 4.6, 4.8]].forEach(function (e, i) {
+      piezaX(ctx, function () {
+        ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(e[2], e[3]); ctx.lineTo(e[4], e[5]); ctx.closePath();
+      }, i ? por : mancha, i ? porOsc : hex(manchaOsc), 0.2, 0.2, 1.4);
+      ctx.fillStyle = '#ff9ab0';
+      ctx.beginPath();
+      ctx.moveTo(e[0] * 0.75 + e[4] * 0.25, e[1] * 0.75 + e[5] * 0.25 + 0.2);
+      ctx.lineTo(e[2], e[3] - 1.0);
+      ctx.lineTo(e[0] * 0.25 + e[4] * 0.75, e[1] * 0.25 + e[5] * 0.75 + 0.2);
+      ctx.closePath(); ctx.fill();
+    });
+
+    /* la cabeza */
+    var cabeza = function () { ctx.beginPath(); ctx.ellipse(1.0, 2.4, 4.4, 3.8, 0, 0, Math.PI * 2); };
+    piezaX(ctx, cabeza, por, porOsc, 0.5, 0.5, 1.6);
+    ctx.save(); cabeza(); ctx.clip();
+    ctx.fillStyle = mancha;
+    ctx.beginPath(); ctx.ellipse(-2.4, 4.4, 2.4, 1.8, -0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    cabeza(); contorno(ctx, 1.6); ctx.stroke();
+
+    /* los ojos, grandes y contentos */
+    [[0.6, 2.9], [3.2, 2.8]].forEach(function (e) {
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.ellipse(e[0], e[1], 0.62, 0.8, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(e[0] + 0.2, e[1] + 0.3, 0.24, 0, Math.PI * 2); ctx.fill();
+    });
+    /* la naricilla, la boca "ω" que se abre y los bigotes */
+    ctx.fillStyle = '#ff7a95';
+    ctx.beginPath(); ctx.moveTo(1.5, 1.7); ctx.lineTo(2.3, 1.7); ctx.lineTo(1.9, 1.2); ctx.closePath(); ctx.fill();
+    if (fz > 0) {
+      ctx.fillStyle = '#c8304a';
+      ctx.beginPath(); ctx.ellipse(1.9, 0.5, 0.55, 0.3 + fz * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.28; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(1.5, 1.1, 0.4, Math.PI * 1.1, Math.PI * 1.95, false);
+    ctx.arc(2.3, 1.1, 0.4, Math.PI * 1.05, Math.PI * 1.9, false);
+    ctx.stroke();
+    ctx.lineWidth = 0.18;
+    ctx.beginPath();
+    ctx.moveTo(-0.4, 1.6); ctx.lineTo(-2.2, 1.9); ctx.moveTo(-0.4, 1.1); ctx.lineTo(-2.2, 0.8);
+    ctx.moveTo(4.2, 1.6); ctx.lineTo(5.8, 1.9); ctx.moveTo(4.2, 1.1); ctx.lineTo(5.8, 0.8);
+    ctx.stroke();
+
+    /* el collar y el cascabel */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(-2.8, -1.0); ctx.quadraticCurveTo(0.8, -2.2, 4.2, -0.8); ctx.stroke();
+    ctx.strokeStyle = '#e0322a'; ctx.lineWidth = 0.8; ctx.stroke();
+    if (!o.sinCascabel) {
+      piezaX(ctx, function () { ctx.beginPath(); ctx.arc(1.4, -2.4, 0.95, 0, Math.PI * 2); }, oro, oroOsc, 0.2, 0.2, 1.3);
+      ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.22;
+      ctx.beginPath(); ctx.moveTo(0.6, -2.5); ctx.lineTo(2.2, -2.5); ctx.moveTo(1.4, -2.5); ctx.lineTo(1.4, -3.3); ctx.stroke();
+    }
+
+    /* el koban, abrazado con la otra pata */
+    ctx.save();
+    ctx.translate(2.6, -4.6);
+    ctx.rotate(-0.15);
+    piezaX(ctx, function () { ctx.beginPath(); ctx.ellipse(0, 0, 1.3, 1.9, 0, 0, Math.PI * 2); }, oro, oroOsc, 0.2, 0.2, 1.3);
+    ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.18;
+    ctx.beginPath();
+    for (k = -2; k <= 2; k++) { ctx.moveTo(-0.9, k * 0.55); ctx.lineTo(0.9, k * 0.55); }
+    ctx.stroke();
+    ctx.restore();
+    piezaX(ctx, function () { ctx.beginPath(); ctx.ellipse(1.4, -4.4, 1.1, 0.8, 0.3, 0, Math.PI * 2); }, por, porOsc, 0.2, 0.2, 1.3);
+
+    /* la pata levantada: el brazo sube desde el hombro, la mano se dobla */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(3.2, -2.6);
+      ctx.quadraticCurveTo(5.6, -2.2, 6.4, 1.2);
+      ctx.lineTo(4.8, 1.6);
+      ctx.quadraticCurveTo(4.4, -0.6, 3.0, -1.0);
+      ctx.closePath();
+    }, por, porOsc, 0.25, 0.25, 1.4);
+    ctx.save();
+    ctx.translate(5.6, 1.4);
+    ctx.rotate(-dobla);
+    piezaX(ctx, function () { ctx.beginPath(); ctx.ellipse(0.1, 1.2, 1.2, 1.4, 0, 0, Math.PI * 2); }, por, porOsc, 0.25, 0.25, 1.4);
+    ctx.fillStyle = '#ff9ab0';
+    ctx.beginPath(); ctx.arc(0.45, 1.1, 0.45, 0, Math.PI * 2); ctx.fill();
+    [[-0.3, 2.0], [0.4, 2.3], [1.0, 1.9]].forEach(function (d) {
+      ctx.beginPath(); ctx.arc(d[0], d[1], 0.2, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+
+    /* Q: la lluvia de koban */
+    if (q >= 0) {
+      for (k = 0; k < 10; k++) {
+        var u = (q * 1.3 + k / 10) % 1;
+        var vx = Math.cos(0.5 + k * 0.23) * (4 + (k % 3) * 2);
+        var cx = 5.6 + vx * u * 1.4, cy = 3 + u * 9 - u * u * 14;
+        ctx.save();
+        ctx.globalAlpha = lluvia * (1 - u * 0.6);
+        ctx.translate(cx, cy);
+        ctx.scale(Math.abs(Math.cos(t * 9 + k)) * 0.8 + 0.2, 1);
+        ctx.fillStyle = oro;
+        ctx.beginPath(); ctx.ellipse(0, 0, 0.75, 1.05, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.2; ctx.stroke();
+        ctx.restore();
+      }
+      for (k = 0; k < 5; k++) {
+        var u2 = (q * 2 + k / 5) % 1;
+        estrella4(ctx, 5.6 + Math.sin(k * 2.4) * 6 * u2, 4 + u2 * 5, 0.6 * (1 - u2), '#fff6d0', lluvia * (1 - u2));
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- KASA-OBAKE ---------------- */
+  /* El paraguas viejo que cobra vida: papel encerado del color del jugador,
+   * UN OJO enorme, la lengua fuera y una sola pierna con su geta, a saltos.
+   * La tela se abre como una boca. Q: SE ABRE de golpe, girando y
+   * sacudiéndose el agua. */
+  function lonaKasa(W, H, ab) {
+    /* la lona entera por encima de la boca y la tira de abajo que muerde.
+     * W = medio ancho, H = altura de la punta (negativa si está del revés) */
+    var cab = new Path2D(), mand = new Path2D();
+    var boca = 0.4 + H * 0.02;
+    cab.moveTo(W - 0.4, boca);
+    cab.quadraticCurveTo(W * 0.6, H * 0.6, 0.4, H);
+    cab.quadraticCurveTo(-W * 0.65, H * 0.6, -W, -1.0);
+    var n = 5, k;
+    for (k = 0; k < n; k++) {
+      var x0 = -W + (W) * k / n, x1 = -W + W * (k + 1) / n;
+      cab.quadraticCurveTo((x0 + x1) / 2, -0.2, x1, -1.0);
+    }
+    cab.lineTo(0, boca);
+    cab.closePath();
+    mand.moveTo(0, boca);
+    mand.lineTo(W - 0.4, boca);
+    mand.lineTo(W, -1.0);
+    for (k = n; k > 0; k--) {
+      var y0 = W * k / n, y1 = W * (k - 1) / n;
+      mand.quadraticCurveTo((y0 + y1) / 2, -0.2, y1, -1.0);
+    }
+    mand.closePath();
+    return { cab: cab, mand: mand, boca: boca };
+  }
+  DRAW.kasa = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 12, 22][fz] * Math.PI / 180;
+    var papel = hex(mix(o.c, '#c8382e', 0.4)), papelOsc = mix(papel, '#2a0404', 0.5);
+    var papel2 = hex(mix(papel, '#fff4dc', 0.35));
+    var ab = (q >= 0) ? Math.sin(Math.min(1, q * 1.15) * Math.PI) : 0;
+    var vuelta = o.vuelta || 0;
+    var W = 6.6 + ab * 3.4, H = 7.4 - ab * 3.2 - vuelta * 15;
+    var salto = Math.abs(Math.sin(t * 6));
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, (salto * 1.3 - 0.3) * (1 - vuelta));
+
+    /* la pierna peluda y la geta */
+    var rodilla = (1 - salto) * 0.9;
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(0.2, -0.8); ctx.lineTo(0.9 + rodilla, -3.2); ctx.lineTo(0.3, -5.4); ctx.stroke();
+    ctx.strokeStyle = '#e8b890'; ctx.lineWidth = 0.95; ctx.stroke();
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 0.18;
+    ctx.beginPath();
+    for (k = 0; k < 4; k++) { ctx.moveTo(0.6 + rodilla * 0.5 + k * 0.1, -1.6 - k * 0.8); ctx.lineTo(1.3 + rodilla * 0.5 + k * 0.1, -1.4 - k * 0.8); }
+    ctx.stroke();
+    piezaX(ctx, function () { ctx.beginPath(); roundRect(ctx, -1.4, -6.3, 3.8, 0.7, 0.2); }, '#c89a60', '#6a4a2a', 0.1, 0.1, 1.2);
+    ctx.fillStyle = '#6a4a2a';
+    ctx.fillRect(-0.9, -7.0, 0.55, 0.75); ctx.fillRect(1.4, -7.0, 0.55, 0.75);
+    ctx.strokeStyle = '#e0322a'; ctx.lineWidth = 0.3;
+    ctx.beginPath(); ctx.moveTo(-0.4, -5.6); ctx.lineTo(0.4, -4.9); ctx.lineTo(1.2, -5.6); ctx.stroke();
+
+    /* del revés, la tela sube por encima de la varilla */
+    if (vuelta > 0) {
+      ctx.translate(0, vuelta * 6);
+      ctx.strokeStyle = TINTA; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(0.2, -0.8 - vuelta * 6); ctx.lineTo(0.4, H); ctx.stroke();
+      ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 0.4; ctx.stroke();
+    }
+    var L = lonaKasa(W + vuelta * 1.5, H, ab);
+    /* dentro de la boca */
+    ctx.fillStyle = '#2a0808';
+    ctx.beginPath(); ctx.moveTo(0, L.boca); ctx.lineTo(W, L.boca); ctx.lineTo(W, -1.6); ctx.lineTo(0, -1.2); ctx.closePath(); ctx.fill();
+    rostro(ctx, L.cab, L.mand, 0, L.boca, ang, papel, hex(papelOsc), 0.6, 0.6);
+
+    /* las varillas y los paños alternos, que giran al abrirse */
+    ctx.save(); ctx.clip(L.cab);
+    var gira = (q >= 0) ? q * 9 : 0;
+    for (k = -6; k <= 6; k++) {
+      var fx = W * (k / 6 + (gira % (1 / 3)));
+      if (k % 2 === 0) {
+        ctx.fillStyle = papel2;
+        ctx.beginPath(); ctx.moveTo(0.4, H); ctx.lineTo(fx, -1.2); ctx.lineTo(fx + W / 6, -1.2); ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.strokeStyle = hex(papelOsc); ctx.lineWidth = 0.22;
+    ctx.beginPath();
+    for (k = -6; k <= 6; k++) { ctx.moveTo(0.4, H); ctx.lineTo(W * (k / 6 + (gira % (1 / 3))), -1.2); }
+    ctx.stroke();
+    ctx.restore();
+    contorno(ctx, 1.6); ctx.stroke(L.cab);
+    /* el remiendo de paraguas viejo */
+    if (ab < 0.3 && vuelta < 0.3) {
+      ctx.fillStyle = '#efe2c0';
+      ctx.fillRect(-3.8, 1.2, 1.5, 1.3);
+      ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 0.14;
+      ctx.beginPath();
+      ctx.moveTo(-3.8, 1.2); ctx.lineTo(-2.3, 2.5); ctx.moveTo(-2.3, 1.2); ctx.lineTo(-3.8, 2.5);
+      ctx.stroke();
+    }
+    /* el remate de la punta */
+    ctx.fillStyle = '#2a1a10';
+    ctx.beginPath(); ctx.ellipse(0.4, H + (H > 0 ? 0.5 : -0.5), 0.7, 0.55, 0, 0, Math.PI * 2); ctx.fill();
+
+    /* el ojo, enorme */
+    var ex = 1.6, ey = vuelta > 0.5 ? (H - 1) / 2 : Math.max(1.4, H * 0.42);
+    var parpa = (Math.sin(t * 1.3) > 0.97) ? 0.15 : 1;
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(ex, ey, 1.5, 1.35 * parpa, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.4); ctx.stroke();
+    if (parpa > 0.5) {
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.arc(ex + 0.5, ey - 0.1, 0.72, 0, Math.PI * 2); ctx.fill();
+      destello(ctx, ex + 0.8, ey + 0.3, 0.32, 0.95);
+    }
+
+    /* la lengua, fuera y moviéndose */
+    var lw = Math.sin(t * 7) * 0.5;
+    var lx = W + 1.6 + fz * 1.2, ly = -2.4 - fz * 0.5 + lw;
+    ctx.save(); girarSobre(ctx, 0, L.boca, -ang * 0.6);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(W - 2.6, L.boca - 0.2);
+      ctx.bezierCurveTo(W - 0.4, L.boca, W + 0.8, ly + 1.6, lx, ly);
+      ctx.bezierCurveTo(W + 0.2, ly - 0.2, W - 0.6, L.boca - 1.6, W - 2.6, L.boca - 1.2);
+      ctx.closePath();
+    }, '#ff6a86', '#b02a48', 0.2, 0.2, 1.3);
+    ctx.strokeStyle = '#b02a48'; ctx.lineWidth = 0.2;
+    ctx.beginPath(); ctx.moveTo(W - 1.8, L.boca - 0.7); ctx.quadraticCurveTo(W + 0.4, ly + 0.6, lx - 0.8, ly - 0.1); ctx.stroke();
+    ctx.restore();
+
+    /* Q: se sacude el agua */
+    if (q >= 0) {
+      for (k = 0; k < 10; k++) {
+        var u = (q * 2 + k / 10) % 1;
+        var a2 = Math.PI * (0.1 + 0.8 * (k / 9));
+        gota(ctx, Math.cos(a2) * (W + u * 6), 1 + Math.sin(a2) * (3 + u * 6), 0.4, '#8fe2ff', ab * (1 - u));
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- CHŌCHIN-OBAKE ---------------- */
+  /* El farolillo de papel encantado: se le raja el papel y esa raja es la
+   * boca, con la lengua fuera y la vela ardiendo dentro. Un ojo, el blasón
+   * pintado y el gancho de colgar. Q: LLAMARADA por la boca. */
+  var FAROL_RX = 4.1, FAROL_RY = 5.9, FAROL_BOCA = -0.4, FAROL_PIV = -0.6;
+  function papelFarol() {
+    var th0 = Math.asin(FAROL_BOCA / FAROL_RY);
+    var fb = FAROL_RX * Math.cos(th0);
+    /* ángulo del punto de abajo con f = FAROL_PIV */
+    var thB = -Math.acos(FAROL_PIV / FAROL_RX);
+    var cab = new Path2D(), mand = new Path2D();
+    cab.moveTo(fb, FAROL_BOCA);
+    cab.ellipse(0, 0, FAROL_RX, FAROL_RY, 0, th0, thB + Math.PI * 2, false);
+    cab.lineTo(FAROL_PIV, FAROL_BOCA);
+    cab.closePath();
+    mand.moveTo(FAROL_PIV, FAROL_BOCA);
+    mand.lineTo(fb, FAROL_BOCA);
+    mand.ellipse(0, 0, FAROL_RX, FAROL_RY, 0, th0, thB, true);
+    mand.closePath();
+    return { cab: cab, mand: mand };
+  }
+  DRAW.chochin = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.1), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var apagado = o.apagado || 0;
+    var papel = hex(mix(hex(mix('#e2382a', o.c, 0.28)), '#4a3a36', apagado * 0.6));
+    var papelOsc = mix(papel, '#5a2a08', 0.45);
+    var llama = (q >= 0) ? Math.sin(Math.min(1, q * 1.2) * Math.PI) : 0;
+    var vela = (0.8 + 0.2 * Math.sin(t * 13)) * (1 - apagado);
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    /* cuelga del gancho y se balancea */
+    girarSobre(ctx, 0, 9.0, Math.sin(t * 2.6) * 0.1);
+    ctx.translate(0, 0.4);
+
+    /* el gancho */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 6.4); ctx.lineTo(0, 8.8); ctx.arc(0.8, 8.8, 0.8, Math.PI, 0, true); ctx.stroke();
+    ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 0.45; ctx.stroke();
+
+    /* dentro: oscuro, con la vela */
+    ctx.fillStyle = '#1e0c04';
+    ctx.beginPath(); ctx.moveTo(FAROL_PIV, FAROL_BOCA); ctx.lineTo(5.0, FAROL_BOCA); ctx.lineTo(5.0, -3.0); ctx.lineTo(FAROL_PIV, -1.6); ctx.closePath(); ctx.fill();
+    if (vela > 0.05) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var gv = ctx.createRadialGradient(2.4, -1.0, 0.1, 2.4, -1.0, 2.2);
+      gv.addColorStop(0, 'rgba(255,220,120,' + vela + ')');
+      gv.addColorStop(1, 'rgba(255,120,20,0)');
+      ctx.fillStyle = gv;
+      ctx.beginPath(); ctx.arc(2.4, -1.0, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = mix('#fff6c0', '#fff6c0', 0, vela);
+      ctx.beginPath(); ctx.ellipse(2.4, -1.1, 0.35, 0.7, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    var P = papelFarol();
+    rostro(ctx, P.cab, P.mand, FAROL_PIV, FAROL_BOCA, ang, papel, hex(papelOsc), 0.6, 0.6);
+
+    /* las costillas de bambú, curvadas */
+    ctx.strokeStyle = hex(papelOsc); ctx.lineWidth = 0.22;
+    ctx.save(); ctx.clip(P.cab);
+    for (k = -4; k <= 4; k++) {
+      var sy = k * 1.25;
+      if (sy < FAROL_BOCA - 0.2) continue;
+      ctx.beginPath(); ctx.moveTo(-5, sy - 0.25); ctx.quadraticCurveTo(0, sy + 0.25, 5, sy - 0.25); ctx.stroke();
+    }
+    /* el blasón pintado en negro: el círculo y las tres comas (mitsudomoe) */
+    ctx.strokeStyle = '#1a0e0a'; ctx.lineWidth = 0.3;
+    ctx.beginPath(); ctx.arc(-1.9, 2.0, 1.25, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#1a0e0a';
+    for (k = 0; k < 3; k++) {
+      var a = k * Math.PI * 2 / 3 + 0.4;
+      ctx.beginPath();
+      ctx.arc(-1.9 + Math.cos(a) * 0.5, 2.0 + Math.sin(a) * 0.5, 0.36, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.save(); girarSobre(ctx, FAROL_PIV, FAROL_BOCA, -ang); ctx.clip(P.mand);
+    for (k = -4; k < 0; k++) {
+      ctx.beginPath(); ctx.moveTo(-5, k * 1.25 - 0.25); ctx.quadraticCurveTo(0, k * 1.25 + 0.25, 5, k * 1.25 - 0.25); ctx.stroke();
+    }
+    ctx.restore();
+
+    /* la luz de la vela a través del papel */
+    if (vela > 0.05) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var gp = ctx.createRadialGradient(1.0, 0.4, 0.4, 1.0, 0.4, 5.4);
+      gp.addColorStop(0, 'rgba(255,170,60,' + (0.28 * vela + llama * 0.35) + ')');
+      gp.addColorStop(1, 'rgba(255,120,20,0)');
+      ctx.fillStyle = gp;
+      ctx.beginPath(); ctx.arc(1.0, 0.4, 5.4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    /* los aros lacados de arriba y de abajo */
+    piezaX(ctx, function () { ctx.beginPath(); roundRect(ctx, -2.4, 5.4, 4.8, 1.3, 0.3); }, '#3a2a22', '#120a06', 0.15, 0.15, 1.3);
+    ctx.save(); girarSobre(ctx, FAROL_PIV, FAROL_BOCA, -ang);
+    piezaX(ctx, function () { ctx.beginPath(); roundRect(ctx, -2.4, -6.7, 4.8, 1.3, 0.3); }, '#3a2a22', '#120a06', 0.15, 0.15, 1.3);
+    ctx.restore();
+
+    /* el ojo, con una raja encima */
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(2.4, 2.2, 1.25, 1.1, 0, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(2.85, 2.1, 0.55, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.1, 2.45, 0.26, 0.9);
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.22;
+    ctx.beginPath(); ctx.moveTo(0.6, 3.8); ctx.lineTo(1.3, 3.5); ctx.lineTo(1.1, 4.1); ctx.lineTo(1.9, 3.9); ctx.stroke();
+
+    /* la lengua, corta y ancha */
+    ctx.save(); girarSobre(ctx, FAROL_PIV, FAROL_BOCA, -ang * 0.5);
+    var lw = Math.sin(t * 6) * 0.35;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(2.4, FAROL_BOCA - 0.2);
+      ctx.bezierCurveTo(4.6, FAROL_BOCA, 6.6, -1.2 + lw, 6.8, -2.6 + lw);
+      ctx.bezierCurveTo(6.0, -3.2 + lw, 4.4, -2.2, 2.6, -1.6);
+      ctx.closePath();
+    }, '#ff6a86', '#b02a48', 0.2, 0.2, 1.3);
+    ctx.restore();
+
+    /* Q: la llamarada */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var largo = 6 + llama * 10;
+      ctx.restore();
+      /* tres capas, de fuera adentro: rojo, naranja y el corazón amarillo */
+      [[1, '#ff3b0a', 2.6], [0.72, '#ff9a1a', 1.8], [0.45, '#fff0a0', 1.0]].forEach(function (capa, i) {
+        var L2 = largo * capa[0], h = capa[2] * (0.6 + llama * 0.6);
+        ctx.fillStyle = mix(capa[1], capa[1], 0, llama);
+        ctx.beginPath();
+        ctx.moveTo(4.2, -1.0 + h * 0.5);
+        ctx.quadraticCurveTo(4.5 + L2 * 0.5, -1.0 + h * 1.3 + Math.sin(t * 20 + i) * 0.6, 4.5 + L2, -1 + Math.sin(t * 17 + i) * 1.0);
+        ctx.quadraticCurveTo(4.5 + L2 * 0.5, -1.0 - h * 1.3 + Math.sin(t * 23 + i) * 0.6, 4.2, -1.0 - h * 0.5);
+        ctx.closePath(); ctx.fill();
+      });
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var gf = ctx.createRadialGradient(8, -1, 0.5, 8, -1, 8);
+      gf.addColorStop(0, 'rgba(255,200,90,' + (0.45 * llama) + ')');
+      gf.addColorStop(1, 'rgba(255,90,20,0)');
+      ctx.fillStyle = gf;
+      ctx.beginPath(); ctx.arc(8, -1, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 6; k++) {
+        var u = (q * 2.2 + k / 6) % 1;
+        ctx.fillStyle = mix('#ffd24a', '#ff3b0a', u, (1 - u) * llama);
+        ctx.beginPath(); ctx.arc(5 + u * largo, -1 + Math.sin(k * 2.1) * 2.4 * u, 0.5 * (1 - u * 0.5), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- NAMAZU ---------------- */
+  /* El siluro gigante que provoca los terremotos: cabezota ancha y chata,
+   * bocaza, bigotes larguísimos que ondean y el cuerpo culebreando detrás.
+   * Q: el TERREMOTO, que agrieta el suelo y lo hace temblar todo. */
+  DRAW.namazu = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var piel = hex(mix(o.c, '#5c6c58', 0.6)), pielOsc = mix(piel, '#101a10', 0.5);
+    var vientre = hex(mix(piel, '#f0e6c8', 0.5));
+    var tiembla = (q >= 0) ? Math.sin(Math.min(1, q * 1.1) * Math.PI) : 0;
+    var w = Math.sin(t * 7) * (1 + tiembla);
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    if (tiembla > 0) ctx.translate(Math.sin(t * 83) * 0.45 * tiembla, Math.cos(t * 71) * 0.45 * tiembla);
+
+    /* Q: las grietas del suelo, debajo de todo */
+    if (q >= 0) {
+      /* ondas de choque que salen del siluro, como anillos en el suelo */
+      for (k = 0; k < 3; k++) {
+        var uo = (q * 2.2 + k / 3) % 1;
+        ctx.strokeStyle = 'rgba(214,170,110,' + ((1 - uo) * tiembla * 0.9) + ')';
+        ctx.lineWidth = 0.9 * (1 - uo * 0.5);
+        ctx.beginPath(); ctx.ellipse(-1, 0, 5 + uo * 11, 4 + uo * 9, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+
+    /* la cola y el cuerpo, culebreando */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-8.4, 0.5 + w);
+      ctx.quadraticCurveTo(-11.4, 2.8 + w * 1.4, -11.8, 0.2 + w * 1.6);
+      ctx.quadraticCurveTo(-11.4, -2.4 + w * 1.4, -8.4, -0.5 + w);
+      ctx.closePath();
+    }, hex(pielOsc), hex(mix(hex(pielOsc), '#000000', 0.4)), 0.2, 0.2, 1.3);
+    var cuerpo = function () {
+      ctx.beginPath();
+      ctx.moveTo(-0.5, 3.4);
+      ctx.quadraticCurveTo(-5.4, 3.4 + w * 0.3, -8.8, 0.9 + w);
+      ctx.lineTo(-8.8, -0.7 + w);
+      ctx.quadraticCurveTo(-5.0, -3.4 + w * 0.3, -0.5, -3.4);
+      ctx.closePath();
+    };
+    piezaX(ctx, cuerpo, piel, hex(pielOsc), 0.5, 0.5, 1.5);
+    ctx.save(); cuerpo(); ctx.clip();
+    ctx.fillStyle = vientre;
+    ctx.beginPath(); ctx.ellipse(-4.0, -3.4 + w * 0.2, 5.0, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = hex(pielOsc);
+    [[-3.2, 1.6], [-5.4, 0.6], [-2.0, 0.0], [-6.6, 1.4]].forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p[0], p[1] + w * 0.25, 0.45, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+    cuerpo(); contorno(ctx, 1.5); ctx.stroke();
+    /* la aleta del lomo y la del pecho */
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.moveTo(-2.6, 3.2); ctx.quadraticCurveTo(-3.6, 5.0, -5.2, 4.4 + w * 0.2); ctx.lineTo(-4.6, 2.8); ctx.closePath();
+    }, hex(pielOsc), hex(mix(hex(pielOsc), '#000000', 0.4)), 0.15, 0.15, 1.2);
+
+    ctx.fillStyle = '#1e0c08';
+    ctx.beginPath(); ctx.moveTo(0.4, -0.7); ctx.lineTo(7.2, -0.3); ctx.lineTo(7.2, -3.2); ctx.lineTo(0.4, -1.8); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(7.3, -0.2);
+    cabeza.quadraticCurveTo(7.6, 1.8, 5.6, 2.8);
+    cabeza.quadraticCurveTo(2.6, 4.0, -1.0, 3.8);
+    cabeza.quadraticCurveTo(-2.8, 3.4, -2.8, 0.6);
+    cabeza.quadraticCurveTo(-2.8, -1.6, -1.0, -1.8);
+    cabeza.lineTo(0.6, -0.9);
+    cabeza.lineTo(7.3, -0.2);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(0.4, -0.95); mand.lineTo(7.1, -0.4);
+    mand.quadraticCurveTo(6.8, -2.6, 3.6, -3.2);
+    mand.quadraticCurveTo(0.6, -3.6, -1.2, -2.6);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 0.6, -0.9, ang, piel, hex(pielOsc), 0.7, 0.7);
+    ctx.save(); girarSobre(ctx, 0.6, -0.9, -ang); ctx.clip(mand);
+    ctx.fillStyle = vientre;
+    ctx.beginPath(); ctx.ellipse(3.4, -3.2, 4.4, 1.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* el labio, grueso */
+    ctx.strokeStyle = hex(mix(piel, '#f0e6c8', 0.3)); ctx.lineWidth = 0.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(2.4, -0.5); ctx.lineTo(7.1, -0.2); ctx.stroke();
+
+    /* el ojillo */
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath(); ctx.arc(3.4, 2.1, 0.7, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.1); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(3.6, 2.1, 0.42, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.75, 2.35, 0.2, 0.95);
+
+    /* los bigotes: dos largos del labio, dos cortos de la barbilla */
+    var bl = Math.sin(t * 3.2) * 0.9, bl2 = Math.sin(t * 3.2 + 1.3) * 0.9;
+    ctx.lineCap = 'round';
+    [[1.0, 'TINTA'], [0.45, 'claro']].forEach(function (capa) {
+      ctx.strokeStyle = capa[1] === 'TINTA' ? TINTA : hex(mix(piel, '#f0e6c8', 0.25));
+      ctx.lineWidth = capa[0];
+      ctx.beginPath();
+      ctx.moveTo(6.4, 0.9); ctx.bezierCurveTo(9.6, 1.6, 10.4, 4.8 + bl, 7.0, 6.4 + bl);
+      ctx.moveTo(6.6, 0.3); ctx.bezierCurveTo(10.2, 0.2, 11.0, -3.2 + bl2, 8.4, -5.8 + bl2);
+      ctx.stroke();
+      ctx.save(); girarSobre(ctx, 0.6, -0.9, -ang);
+      ctx.lineWidth = capa[0] * 0.75;
+      ctx.beginPath();
+      ctx.moveTo(4.8, -2.8); ctx.quadraticCurveTo(5.4, -3.6, 5.0, -4.1 + bl * 0.2);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    /* Q: polvo que salta con cada sacudida */
+    if (q >= 0) {
+      for (k = 0; k < 8; k++) {
+        var u = (q * 2.5 + k / 8) % 1;
+        var a3 = k * 0.785;
+        ctx.fillStyle = 'rgba(170,140,100,' + ((1 - u) * tiembla * 0.8) + ')';
+        ctx.beginPath();
+        ctx.arc(Math.cos(a3) * (6 + u * 6), Math.sin(a3) * (6 + u * 6), 0.4 + u * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------- Las diez muertes de la tanda yōkai ----------
+   * Misma maquinaria: a la skin se le saca una foto quieta y la muerte la
+   * mueve, la quema, la parte o la borra. Cada yōkai se muere según su
+   * leyenda: al kappa se le vacía el plato al hacer la reverencia, al tanuki
+   * se le cae la hoja y solo queda la hoja, al namazu lo clava la piedra. */
+
+  /* KITSUNE: se le apagan las colas una a una —cada una se va hecha fuego
+   * fatuo— y al final ella misma es un fuego azul que se apaga. */
+  conMuerte('kitsune', function (o2, pm) {
+    o2.colas = 5 - Math.min(5, Math.floor(tramo(pm, 0.04, 0.5) * 5.999));
+    o2.sinFuego = true;
+  }, function (M, pm, o) {
+    var ctx = M.ctx;
+    var azul = tramo(pm, 0.45, 0.7), fin = tramo(pm, 0.55, 0.92);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(80,160,255,' + (azul * 0.85) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ pf: 0, ps: 1, sf: 1 - fin * 0.9, ss: 1 - fin * 0.9, alpha: 1 - fin });
+    [4, 3, 2, 1, 0].forEach(function (j) {
+      var tv = 0.04 + 0.46 * (5 - j) / 5.999;
+      var u = tramo(pm, tv, tv + 0.4);
+      if (u <= 0 || u >= 1) return;
+      var a = COLAS_KITSUNE[j] * Math.PI / 180, L = 8.8 - Math.abs(j - 2) * 0.5;
+      var p = M.pant(-3.0 + Math.cos(a) * L, -0.4 + Math.sin(a) * L);
+      llamaAzul(ctx, p.x + Math.sin(u * 7 + j) * 1.2, p.y - u * 7, 0.9 * (1 - u * 0.4), 1 - u, o.t + j, -1);
+    });
+    var f2 = tramo(pm, 0.6, 1);
+    if (f2 > 0 && f2 < 1) {
+      var pc = M.pant(0, 1);
+      llamaAzul(ctx, pc.x, pc.y - f2 * 3, 1.7 * (1 - f2 * 0.6), f2 < 0.75 ? 1 : (1 - f2) / 0.25, o.t, -1);
+    }
+  });
+
+  /* TENGU: se lo lleva su propio torbellino. Gira cada vez más deprisa,
+   * sube, se hace pequeño y deja plumas cayendo. */
+  conMuerte('tengu', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var u = tramo(pm, 0.05, 0.9), fade = 1 - tramo(pm, 0.7, 1);
+    var sube = u * u * 9;
+    M.pinta({ rot: u * u * 14, pf: 0, ps: 1, sf: 1 - u * 0.75, ss: 1 - u * 0.75, dy: -sube, alpha: fade });
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (k = 0; k < 4; k++) {
+      var a0 = o.t * 9 + k * 1.6, r = 5 + k * 1.4 - u * 2;
+      ctx.strokeStyle = 'rgba(235,245,255,' + (0.75 * fade * Math.min(1, pm * 5)) + ')';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.ellipse(o.x, o.y - sube + 3 - k * 1.8, r, r * 0.32, 0, a0, a0 + 3.6);
+      ctx.stroke();
+    }
+    ctx.restore();
+    for (k = 0; k < 9; k++) {
+      var d = tramo(pm, 0.1 + k * 0.05, 1);
+      if (d <= 0) continue;
+      var a = k * 0.7 + d * 3;
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * 0.95;
+      ctx.translate(o.x + Math.cos(a) * d * 12, o.y - sube * 0.5 + Math.sin(k * 1.3) * 3 + d * 5);
+      ctx.rotate(a + d * 5);
+      ctx.fillStyle = k % 2 ? '#9a7250' : '#f4f0e6';
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.3, 0.45, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,20,20,.6)'; ctx.lineWidth = 0.16; ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  /* KAPPA: le engañan con la cortesía. Hace una reverencia, se le vacía el
+   * agua del plato —sin ella pierde la fuerza— y cae de bruces. */
+  conMuerte('kappa', function (o2, pm) {
+    o2.agua = 1 - tramo(pm, 0.16, 0.5);
+  }, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var inclina = suave(tramo(pm, 0.02, 0.22)) * 0.85;
+    var cae = rebote(tramo(pm, 0.55, 0.85));
+    var fade = 1 - tramo(pm, 0.82, 1);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(150,140,100,' + (tramo(pm, 0.45, 0.75) * 0.45) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ rot: -(inclina + cae * 0.7), pf: 0, ps: -5.5, dy: cae * 1.2, alpha: fade });
+    /* el agua que se sale del plato */
+    var df = 10.7 * Math.sin(inclina), ds = -5.5 + 10.7 * Math.cos(inclina);
+    for (k = 0; k < 10; k++) {
+      var d = tramo(pm, 0.14 + k * 0.03, 0.42 + k * 0.03);
+      if (d <= 0 || d >= 1) continue;
+      var p = M.pant(df + 1.2 + d * 1.5, ds);
+      ctx.fillStyle = 'rgba(90,208,255,' + (1 - d * 0.5) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y + d * d * 10, 0.55, 0, Math.PI * 2); ctx.fill();
+    }
+    /* el charco delante */
+    var ch = tramo(pm, 0.28, 0.5);
+    if (ch > 0) {
+      var pc = M.pant(df + 2.5, ds);
+      ctx.fillStyle = 'rgba(90,208,255,' + (0.45 * fade) + ')';
+      ctx.beginPath(); ctx.ellipse(pc.x, pc.y + 10, 1.5 + ch * 3, 0.5 + ch * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    if (cae > 0.6) {
+      var pm2 = M.pant(-2, 4);
+      mareo(ctx, pm2.x, pm2.y - 4, o.t, fade * tramo(pm, 0.7, 0.78));
+    }
+  });
+
+  /* ONI: el MAMEMAKI del Setsubun. Le llueven judías tostadas por delante,
+   * da un respingo, suelta la maza y sale huyendo encogido. */
+  conMuerte('oni', function (o2, pm) {
+    o2.sinMaza = pm > 0.35;
+  }, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var huye = suave(tramo(pm, 0.45, 0.95)), fade = 1 - tramo(pm, 0.75, 1);
+    var respingo = pm < 0.45 ? Math.sin(pm * 60) * 0.12 * tramo(pm, 0.05, 0.2) : 0;
+    var pb = M.pant(-huye * 14, huye * 2);
+    /* la maza, tirada en el suelo */
+    if (pm > 0.35) {
+      var pz = M.pant(-5.0, -6.0);
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(pz.x, pz.y);
+      ctx.rotate(-0.15);
+      ctx.scale(0.85, 0.85);
+      kanabo(ctx);
+      ctx.restore();
+    }
+    M.pinta({ dx: pb.x - o.x, dy: pb.y - o.y, rot: respingo, pf: 0, ps: -3,
+      sf: 1 - huye * 0.5, ss: 1 - huye * 0.5, alpha: fade });
+    /* las judías */
+    for (k = 0; k < 16; k++) {
+      var tb = 0.02 + k * 0.025;
+      var u = tramo(pm, tb, tb + 0.12);
+      if (u <= 0) continue;
+      var s0 = ((hash(k * 13 + 5) % 100) / 100 - 0.5) * 9;
+      var f, s, al = 1;
+      if (u < 1) { f = 17 - u * 12; s = s0; }
+      else {
+        var b = tramo(pm, tb + 0.12, tb + 0.42);
+        f = 5 + b * 6; s = s0 + Math.sin(b * Math.PI) * 3 - b * 5; al = 1 - b;
+        if (b < 0.25) {
+          var pi = M.pant(5, s0);
+          estrella4(ctx, pi.x, pi.y, 0.9, '#fff6d0', (1 - b * 4) * 0.9);
+        }
+      }
+      if (al <= 0) continue;
+      var p = M.pant(f, s);
+      ctx.save();
+      ctx.globalAlpha = al;
+      ctx.fillStyle = '#e8d49a';
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 0.6, 0.48, k, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(80,60,20,.9)'; ctx.lineWidth = 0.16; ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  /* TANUKI: se le cae la hoja de la cabeza, ¡DORON!, se deshace el truco y
+   * solo queda la hoja cayendo. Nunca hubo tanuki. */
+  conMuerte('tanuki', function (o2) {
+    o2.sinHoja = true;
+  }, function (M, pm, o) {
+    var ctx = M.ctx;
+    var puf = tramo(pm, 0.08, 0.42);
+    var cuerpo = 1 - tramo(pm, 0.14, 0.2);
+    if (cuerpo > 0) M.pinta({ alpha: cuerpo });
+    if (puf > 0 && puf < 1) {
+      var pc = M.pant(0.5, 0.5);
+      humoPuf(ctx, pc.x, pc.y, Math.min(1, puf * 1.6), puf < 0.6 ? 1 : (1 - puf) / 0.4, 7);
+    }
+    var p0 = M.pant(0.4, 5.3);
+    var sube = Math.sin(tramo(pm, 0, 0.2) * Math.PI / 2) * 3;
+    var cae = tramo(pm, 0.2, 1);
+    ctx.save();
+    ctx.globalAlpha = 1 - tramo(pm, 0.88, 1);
+    hojaTanuki(ctx, p0.x + Math.sin(cae * 9) * 3 * cae, p0.y - sube + cae * 12, Math.sin(cae * 9) * 0.8);
+    ctx.restore();
+  });
+
+  /* DARUMA: el que nunca se cae. Le dan un golpe y se endereza; otro, y
+   * se endereza; al tercero se raja por la mitad y cada mitad cae por su lado. */
+  function grietaDaruma(lado) {
+    return function (c) {
+      c.beginPath();
+      var P = [[0.8, 7.5], [0.1, 4.6], [1.4, 2.0], [0.3, -0.6], [1.3, -3.0], [0.2, -5.4], [0.9, -7.5]];
+      P.forEach(function (p, i) { if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); });
+      c.lineTo(lado * 10, -7.5); c.lineTo(lado * 10, 7.5); c.closePath();
+    };
+  }
+  conMuerte('daruma', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    if (pm < 0.52) {
+      var r1 = pm / 0.52;
+      var rot = Math.sin(r1 * Math.PI * 4) * 0.8 * (1 - r1 * 0.35);
+      M.pinta({ rot: rot, pf: 0, ps: -6.2 });
+      var golpe = Math.abs(Math.sin(r1 * Math.PI * 4));
+      if (golpe > 0.9) { var pg = M.pant(5.5, 1); estrella4(ctx, pg.x, pg.y, 1.4, '#fff6d0', (golpe - 0.9) * 10); }
+      return;
+    }
+    var u = tramo(pm, 0.52, 1), fade = 1 - tramo(pm, 0.8, 1);
+    M.pinta({ clip: grietaDaruma(-1), rot: u * 0.9, pf: -5, ps: -6.2, dx: -u * 2.5, dy: u * u * 3, alpha: fade });
+    M.pinta({ clip: grietaDaruma(1), rot: -u * 0.9, pf: 5, ps: -6.2, dx: u * 2.5, dy: u * u * 3, alpha: fade });
+    if (u < 0.3) {
+      var pc = M.pant(0.8, 0.5);
+      estrella4(ctx, pc.x, pc.y, 2 + u * 8, '#ffffff', 1 - u / 0.3);
+    }
+    /* virutas de papel maché */
+    for (k = 0; k < 7; k++) {
+      var d = tramo(pm, 0.52 + k * 0.02, 1);
+      var p = M.pant(0.8 + (k - 3) * 0.6, 4 - k * 1.4);
+      ctx.fillStyle = mix(k % 2 ? '#fbf3e4' : '#d42a22', '#000000', 0, (1 - d) * fade);
+      ctx.fillRect(p.x + (k - 3) * d * 3, p.y - d * 4 + d * d * 9, 0.7, 0.7);
+    }
+  });
+
+  /* MANEKI-NEKO: se tambalea, se hace añicos como la porcelana que es y el
+   * cascabel sale rodando tintineando. */
+  conMuerte('maneki', function (o2, pm) {
+    o2.sinCascabel = pm > 0.3;
+  }, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    if (pm < 0.3) {
+      M.pinta({ rot: Math.sin(pm * 45) * 0.16 * (pm / 0.3), pf: 0, ps: -6.5 });
+      return;
+    }
+    var u = tramo(pm, 0.3, 1), fade = 1 - tramo(pm, 0.7, 0.95);
+    var p0 = M.pant(0, 1), n = 0;
+    for (var f = -5.5; f <= 6.5; f += 2.4) {
+      for (var s = -6.5; s <= 8.5; s += 2.4) {
+        var h = (hash(n * 31 + 7) % 100) / 100; n++;
+        var p1 = M.pant(f, s);
+        var dx = p1.x - p0.x, dy = p1.y - p0.y, dl = Math.max(0.5, Math.sqrt(dx * dx + dy * dy));
+        var dist = u * (3 + h * 5);
+        M.trozo(f, s, 2.4, dx / dl * dist, dy / dl * dist * 0.7 + u * u * 6, u * (h - 0.5) * 7, fade);
+      }
+    }
+    if (u < 0.25) {
+      var pc = M.pant(1, 1);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,' + (1 - u * 4) + ')'; ctx.lineWidth = 0.35; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (k = 0; k < 8; k++) {
+        var a = k * Math.PI / 4;
+        ctx.moveTo(pc.x + Math.cos(a) * (4 + u * 10), pc.y + Math.sin(a) * (4 + u * 10));
+        ctx.lineTo(pc.x + Math.cos(a) * (6 + u * 14), pc.y + Math.sin(a) * (6 + u * 14));
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    /* el cascabel, rodando */
+    var bote = Math.abs(Math.sin(u * Math.PI * 3)) * 3 * (1 - u);
+    var pb = M.pant(1.4 + u * 13, -2.4);
+    ctx.save();
+    ctx.globalAlpha = 1 - tramo(pm, 0.88, 1);
+    ctx.translate(pb.x, pb.y - bote);
+    ctx.rotate(u * 12);
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath(); ctx.arc(0, 0, 0.95, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.3; ctx.stroke();
+    ctx.strokeStyle = '#a97d0d'; ctx.lineWidth = 0.22;
+    ctx.beginPath(); ctx.moveTo(-0.8, 0); ctx.lineTo(0.8, 0); ctx.moveTo(0, 0); ctx.lineTo(0, 0.8); ctx.stroke();
+    ctx.restore();
+  });
+
+  /* KASA-OBAKE: una racha de viento le da la vuelta como a los paraguas de
+   * verdad y se lo lleva dando vueltas. */
+  conMuerte('kasa', function (o2, pm) {
+    o2.vuelta = suave(tramo(pm, 0.08, 0.3));
+  }, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var vuela = tramo(pm, 0.3, 1), fade = 1 - tramo(pm, 0.72, 1);
+    var p = M.pant(-vuela * vuela * 14, 0);
+    M.pinta({ dx: p.x - o.x, dy: p.y - o.y - vuela * 7, rot: vuela * vuela * 9, pf: 0, ps: 0,
+      sf: 1 - vuela * 0.3, ss: 1 - vuela * 0.3, alpha: fade });
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (k = 0; k < 4; k++) {
+      var u = (pm * 2.5 + k / 4) % 1;
+      var a = (1 - u) * Math.min(1, pm * 5) * fade * 0.85;
+      var q0 = M.pant(12 - u * 24, -3 + k * 2.4), q1 = M.pant(17 - u * 24, -3 + k * 2.4);
+      ctx.strokeStyle = 'rgba(235,245,255,' + a + ')'; ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(q1.x, q1.y); ctx.lineTo(q0.x, q0.y);
+      ctx.arc(q0.x, q0.y - 0.9, 0.9, Math.PI / 2, Math.PI * 2.2, false);
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+
+  /* CHŌCHIN-OBAKE: se le apaga la vela, el papel se pliega como un acordeón
+   * y queda un hilo de humo. */
+  conMuerte('chochin', function (o2, pm) {
+    o2.apagado = tramo(pm, 0.03, 0.22);
+  }, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var aplasta = suave(tramo(pm, 0.25, 0.6)), fade = 1 - tramo(pm, 0.78, 1);
+    M.pinta({ ss: 1 - aplasta * 0.78, sf: 1 + aplasta * 0.15, pf: 0, ps: -6.6,
+      dy: tramo(pm, 0.6, 0.9) * 1.5, alpha: fade });
+    /* el último parpadeo de la vela */
+    if (pm < 0.22) {
+      var pv = M.pant(2.4, -0.6);
+      var fl = (1 - pm / 0.22) * (Math.floor(pm * 40) % 2 ? 0.3 : 1);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(pv.x, pv.y, 0.1, pv.x, pv.y, 4);
+      g.addColorStop(0, 'rgba(255,210,110,' + fl + ')');
+      g.addColorStop(1, 'rgba(255,120,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(pv.x, pv.y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    for (k = 0; k < 6; k++) {
+      var u = tramo(pm, 0.18 + k * 0.05, 0.92 + k * 0.01);
+      if (u <= 0 || u >= 1) continue;
+      var p = M.pant(1.0, 5.6 - aplasta * 9);
+      ctx.fillStyle = 'rgba(170,166,180,' + ((1 - u) * 0.45) + ')';
+      ctx.beginPath(); ctx.arc(p.x + Math.sin(u * 6 + k) * 1.5, p.y - u * 11, 0.6 + u * 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+  });
+
+  /* NAMAZU: el dios Kashima le clava encima la KANAME-ISHI, la piedra que
+   * sujeta el mundo. Cae del cielo con su cuerda sagrada y lo aplasta. */
+  function kanameIshi(ctx) {
+    var P = [[-4.6, 0.6], [-3.8, 3.6], [-1.0, 4.8], [2.4, 4.4], [4.6, 2.0], [4.8, -1.4], [3.0, -4.0], [-0.6, -4.6], [-3.6, -3.2]];
+    var roca = function () {
+      ctx.beginPath();
+      P.forEach(function (p, i) { if (i) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); });
+      ctx.closePath();
+    };
+    piezaX(ctx, roca, '#9a9ea8', '#4a4e58', 0.8, -0.8, 1.8);
+    ctx.save(); roca(); ctx.clip();
+    ctx.strokeStyle = 'rgba(40,42,50,.5)'; ctx.lineWidth = 0.25;
+    ctx.beginPath(); ctx.moveTo(-2.6, -2.6); ctx.lineTo(-1.0, -1.0); ctx.moveTo(2.4, 3.0); ctx.lineTo(3.4, 1.4); ctx.stroke();
+    /* la shimenawa, la cuerda de paja trenzada */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.7;
+    ctx.beginPath(); ctx.moveTo(-5, 0.6); ctx.quadraticCurveTo(0, -0.6, 5, 0.6); ctx.stroke();
+    ctx.strokeStyle = '#e8d49a'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = '#a88c4a'; ctx.lineWidth = 0.2;
+    ctx.beginPath();
+    for (var k = 0; k < 9; k++) { ctx.moveTo(-4.4 + k * 1.1, 0.8); ctx.lineTo(-3.8 + k * 1.1, -0.4); }
+    ctx.stroke();
+    ctx.restore();
+    /* los flecos de paja que cuelgan de la cuerda */
+    [-2.6, 0, 2.6].forEach(function (x) {
+      ctx.strokeStyle = '#c8a860'; ctx.lineWidth = 0.28; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (var k = -1; k <= 1; k++) { ctx.moveTo(x + k * 0.25, -0.2); ctx.lineTo(x + k * 0.4, -1.6); }
+      ctx.stroke();
+    });
+    /* motas de la piedra */
+    ctx.fillStyle = 'rgba(40,42,50,.35)';
+    [[-2.8, 2.4], [1.2, 3.2], [3.2, -2.6], [-1.6, -3.0], [2.8, 1.2]].forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p[0], p[1], 0.3, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+  conMuerte('namazu', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var cae = tramo(pm, 0.02, 0.3), aplasta = tramo(pm, 0.3, 0.36), fade = 1 - tramo(pm, 0.8, 1);
+    M.pinta({ ss: 1 - aplasta * 0.4, sf: 1 + aplasta * 0.15, pf: 0, ps: -3, alpha: fade });
+    var pc = M.pant(-0.5, 0.2);
+    /* la sombra que crece antes de que llegue */
+    if (cae < 1) {
+      ctx.fillStyle = 'rgba(0,0,0,' + (cae * 0.55) + ')';
+      ctx.beginPath(); ctx.ellipse(pc.x, pc.y, 5 * (0.4 + cae * 0.6), 4 * (0.4 + cae * 0.6), 0, 0, Math.PI * 2); ctx.fill();
+    }
+    var esc = 1 + (1 - cae * cae) * 1.7;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, cae * 3) * fade;
+    ctx.translate(pc.x, pc.y);
+    ctx.scale(esc * 0.95, esc * 0.95);
+    kanameIshi(ctx);
+    ctx.restore();
+    /* el golpe */
+    var gol = tramo(pm, 0.3, 0.6);
+    if (gol > 0 && gol < 1) {
+      ctx.strokeStyle = 'rgba(214,170,110,' + (1 - gol) + ')'; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.ellipse(pc.x, pc.y, 6 + gol * 9, 5 + gol * 7, 0, 0, Math.PI * 2); ctx.stroke();
+      for (k = 0; k < 8; k++) {
+        var a = k * Math.PI / 4 + 0.2;
+        ctx.fillStyle = 'rgba(170,140,100,' + (1 - gol) + ')';
+        ctx.beginPath(); ctx.arc(pc.x + Math.cos(a) * (6 + gol * 8), pc.y + Math.sin(a) * (5 + gol * 6), 0.5 + gol, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    /* burbujitas: el último suspiro */
+    for (k = 0; k < 4; k++) {
+      var b = tramo(pm, 0.45 + k * 0.08, 0.85 + k * 0.04);
+      if (b <= 0 || b >= 1) continue;
+      var pb = M.pant(7.5, -0.5);
+      ctx.strokeStyle = 'rgba(190,230,255,' + (1 - b) + ')'; ctx.lineWidth = 0.2;
+      ctx.beginPath(); ctx.arc(pb.x + Math.sin(b * 8 + k) * 0.8, pb.y - b * 7, 0.4 + b * 0.4, 0, Math.PI * 2); ctx.stroke();
+    }
+  });
+
+  /* ---------------- ACCESORIOS ----------------
+   * Escritos ya como los quiere el juego: ACC.id = function (ctx, o), en el
+   * marco del cuerpo (f hacia delante, s hacia la coronilla) y con la skin
+   * debajo. */
+
+  /* recorta FUERA del cuerpo: lo que va por detrás de Pac-Man no se pinta
+   * encima de él */
+  function fueraDelCuerpo(ctx, r) {
+    ctx.beginPath();
+    ctx.rect(-20, -20, 40, 40);
+    ctx.arc(0, 0, r || R + 0.2, 0, Math.PI * 2, true);
+    ctx.clip();
+  }
+
+  /* MÁSCARA KITSUNE: la de zorro de los festivales, echada a un lado de la
+   * cabeza, blanca con los trazos bermellón */
+  ACC.acc_kitsunemen = function (ctx, o) {
+    var w = Math.sin(o.t * 2.4) * 0.05;
+    ctx.save();
+    ctx.translate(-2.6, 4.4);
+    ctx.rotate(0.55 + w);
+    /* el cordón */
+    ctx.strokeStyle = '#e0322a'; ctx.lineWidth = 0.3;
+    ctx.beginPath(); ctx.moveTo(2.0, 0.6); ctx.quadraticCurveTo(4.6, -0.6, 6.4, -2.4); ctx.stroke();
+    var cara = function () {
+      ctx.beginPath();
+      ctx.moveTo(0, -3.2);
+      ctx.quadraticCurveTo(1.3, -2.3, 2.3, -0.2);
+      ctx.quadraticCurveTo(2.7, 1.2, 2.1, 2.0);
+      ctx.lineTo(2.4, 4.4);
+      ctx.lineTo(0.9, 2.5);
+      ctx.quadraticCurveTo(0, 2.8, -0.9, 2.5);
+      ctx.lineTo(-2.4, 4.4);
+      ctx.lineTo(-2.1, 2.0);
+      ctx.quadraticCurveTo(-2.7, 1.2, -2.3, -0.2);
+      ctx.quadraticCurveTo(-1.3, -2.3, 0, -3.2);
+      ctx.closePath();
+    };
+    piezaX(ctx, cara, '#fbf6ec', '#c9bfae', 0.3, -0.3, 1.5);
+    ctx.fillStyle = '#e0322a';
+    [-1, 1].forEach(function (l) {
+      ctx.beginPath(); ctx.moveTo(l * 2.0, 2.5); ctx.lineTo(l * 2.2, 3.8); ctx.lineTo(l * 1.2, 2.6); ctx.closePath(); ctx.fill();
+    });
+    /* los ojos rasgados y las cejas en rojo */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-1.6, 0.9); ctx.lineTo(-0.5, 0.4);
+    ctx.moveTo(1.6, 0.9); ctx.lineTo(0.5, 0.4);
+    ctx.stroke();
+    ctx.strokeStyle = '#e0322a'; ctx.lineWidth = 0.32;
+    ctx.beginPath();
+    ctx.moveTo(-1.8, 1.5); ctx.quadraticCurveTo(-1.0, 2.0, -0.4, 1.4);
+    ctx.moveTo(1.8, 1.5); ctx.quadraticCurveTo(1.0, 2.0, 0.4, 1.4);
+    ctx.moveTo(-1.6, -0.6); ctx.lineTo(-0.6, -1.2);
+    ctx.moveTo(1.6, -0.6); ctx.lineTo(0.6, -1.2);
+    ctx.stroke();
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath(); ctx.arc(0, 1.9, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.ellipse(0, -2.7, 0.45, 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+
+  /* KASA: el sombrero cónico de paja, con su cordón a la barbilla */
+  ACC.acc_kasa = function (ctx, o) {
+    var paja = '#e2c47a', pajaOsc = '#9a7a3a', k;
+    ctx.save();
+    girarSobre(ctx, 0, 5, -0.08);
+    var cono = function () {
+      ctx.beginPath();
+      ctx.moveTo(-7.4, 4.3);
+      ctx.quadraticCurveTo(-3.0, 7.6, 0.4, 9.8);
+      ctx.quadraticCurveTo(3.8, 7.8, 7.8, 4.7);
+      ctx.quadraticCurveTo(0.2, 3.6, -7.4, 4.3);
+      ctx.closePath();
+    };
+    piezaX(ctx, cono, paja, pajaOsc, 0.5, 0.5, 1.6);
+    ctx.save(); cono(); ctx.clip();
+    ctx.strokeStyle = pajaOsc; ctx.lineWidth = 0.18;
+    ctx.beginPath();
+    for (k = -6; k <= 6; k++) { ctx.moveTo(0.4, 9.8); ctx.lineTo(k * 1.25, 4.0); }
+    ctx.stroke();
+    ctx.strokeStyle = '#7a5a26'; ctx.lineWidth = 0.35;
+    ctx.beginPath(); ctx.moveTo(-2.4, 7.2); ctx.quadraticCurveTo(0.4, 6.6, 3.2, 7.3); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#7a5a26';
+    ctx.beginPath(); ctx.arc(0.4, 9.8, 0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  };
+
+  /* CHONMAGE: el peinado de samurái: la coronilla afeitada, el pelo negro
+   * recogido por detrás y el moño doblado encima, atado con cordón blanco */
+  ACC.acc_chonmage = function (ctx, o) {
+    var pelo = '#1e1a22', brillo = '#4a4456';
+    /* la coronilla afeitada, más clara, respetando la boca. En el juego:
+     * sobre una extravagante (o.rara) esto se pintaba en el círculo de
+     * Pac-Man y le tapaba media cara; allí solo va el moño */
+    if (!o.rara) {
+    ctx.save();
+    pacPath(ctx, 0, 0, R, 0, o.half);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.beginPath(); ctx.ellipse(1.2, 6.2, 3.6, 2.0, -0.15, 0, Math.PI * 2); ctx.fill();
+    /* el pelo, cubriendo toda la parte de atrás de la cabeza */
+    var nuca = function () {
+      ctx.beginPath();
+      ctx.moveTo(-1.2, 8);
+      ctx.quadraticCurveTo(-1.6, 4.4, -3.2, 2.2);
+      ctx.quadraticCurveTo(-4.6, 0.2, -4.4, -3.2);
+      ctx.lineTo(-8, -3.6);
+      ctx.lineTo(-8, 8);
+      ctx.closePath();
+    };
+    nuca(); ctx.fillStyle = pelo; ctx.fill();
+    ctx.save(); nuca(); ctx.clip();
+    ctx.strokeStyle = brillo; ctx.lineWidth = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(-3.0, 5.2); ctx.quadraticCurveTo(-4.2, 3.0, -5.2, 1.2);
+    ctx.moveTo(-2.2, 5.8); ctx.quadraticCurveTo(-3.2, 4.0, -4.2, 2.8);
+    ctx.stroke();
+    ctx.restore();
+    ctx.restore();
+    }
+    /* el moño: sale de la nuca, sube y se dobla hacia delante sobre la
+     * coronilla */
+    var mech = function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.4, 4.8);
+      ctx.quadraticCurveTo(-3.8, 9.0, -0.6, 9.2);
+      ctx.lineTo(4.0, 8.8);
+      ctx.quadraticCurveTo(5.8, 8.0, 4.2, 6.9);
+      ctx.lineTo(-0.2, 7.0);
+      ctx.quadraticCurveTo(-1.2, 6.9, -1.3, 5.4);
+      ctx.closePath();
+    };
+    piezaX(ctx, mech, brillo, pelo, 0.25, -0.25, 1.5);
+    ctx.strokeStyle = '#f4f0e6'; ctx.lineWidth = 0.55; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-3.4, 7.6); ctx.lineTo(-1.3, 7.2); ctx.stroke();
+  };
+
+  /* RAMEN: un cuenco humeante en la cabeza, con sus palillos, su naruto y su
+   * alga */
+  ACC.acc_ramen = function (ctx, o) {
+    var k, t = o.t;
+    /* el vapor */
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (k = 0; k < 3; k++) {
+      var u = (t * 0.6 + k / 3) % 1;
+      ctx.strokeStyle = 'rgba(240,240,250,' + (0.6 * Math.sin(u * Math.PI)) + ')';
+      ctx.lineWidth = 0.45;
+      ctx.beginPath();
+      var x0 = -1.8 + k * 1.8;
+      ctx.moveTo(x0, 11.0 + u * 2);
+      ctx.bezierCurveTo(x0 + 1, 12 + u * 2, x0 - 1, 13 + u * 2, x0 + 0.4, 14.2 + u * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    /* los palillos, clavados */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.75; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-0.6, 9.4); ctx.lineTo(3.8, 14.2); ctx.moveTo(0.2, 9.4); ctx.lineTo(4.8, 13.6); ctx.stroke();
+    ctx.strokeStyle = '#c8905a'; ctx.lineWidth = 0.4; ctx.stroke();
+    /* el caldo, con los fideos, el naruto, el huevo y el alga */
+    ctx.fillStyle = '#d88a3a';
+    ctx.beginPath(); ctx.ellipse(0, 10.2, 4.3, 0.9, 0, 0, Math.PI * 2); ctx.fill();
+    piezaX(ctx, function () { ctx.beginPath(); roundRect(ctx, -3.2, 9.8, 1.8, 2.6, 0.2); }, '#2f4a2a', '#14200f', 0.1, 0.1, 1.1);
+    ctx.fillStyle = '#fdfaf0';
+    ctx.beginPath(); ctx.ellipse(1.6, 10.4, 1.2, 0.55, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ff6a9a'; ctx.lineWidth = 0.2;
+    ctx.beginPath(); ctx.arc(1.6, 10.4, 0.35, 0, Math.PI * 1.6); ctx.stroke();
+    ctx.fillStyle = '#ffd24a';
+    ctx.beginPath(); ctx.arc(-0.4, 10.3, 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#ffe890'; ctx.lineWidth = 0.22;
+    ctx.beginPath();
+    for (k = 0; k < 3; k++) { ctx.moveTo(2.6 + k * 0.3, 10.0); ctx.quadraticCurveTo(3.2 + k * 0.3, 10.8, 3.6 + k * 0.3, 10.1); }
+    ctx.stroke();
+    /* el cuenco, rojo con la greca blanca */
+    var cuenco = function () {
+      ctx.beginPath();
+      ctx.moveTo(-4.4, 10.2);
+      ctx.quadraticCurveTo(-4.0, 6.4, -1.6, 6.0);
+      ctx.lineTo(1.6, 6.0);
+      ctx.quadraticCurveTo(4.0, 6.4, 4.4, 10.2);
+      ctx.quadraticCurveTo(0, 9.4, -4.4, 10.2);
+      ctx.closePath();
+    };
+    piezaX(ctx, cuenco, '#e0322a', '#7a0e0a', 0.4, 0.4, 1.5);
+    ctx.save(); cuenco(); ctx.clip();
+    ctx.fillStyle = '#fbf6ec';
+    ctx.fillRect(-5, 8.2, 10, 0.9);
+    ctx.strokeStyle = '#e0322a'; ctx.lineWidth = 0.18;
+    ctx.beginPath();
+    for (k = -4; k <= 3; k++) {
+      ctx.moveTo(k * 1.1, 8.35); ctx.lineTo(k * 1.1 + 0.7, 8.35); ctx.lineTo(k * 1.1 + 0.7, 8.95); ctx.lineTo(k * 1.1 + 0.25, 8.95);
+    }
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  /* KATANA: a la espalda, en su vaina lacada; asoman la empuñadura por
+   * encima del hombro y la contera por abajo, y la correa cruza el cuerpo */
+  ACC.acc_katana = function (ctx, o) {
+    /* la correa, cruzando el cuerpo (respeta la boca). En el juego, sobre
+     * una extravagante (o.rara) no: le cruzaba la cara */
+    if (!o.rara) {
+      ctx.save();
+      pacPath(ctx, 0, 0, R, 0, o.half);
+      ctx.clip();
+      ctx.strokeStyle = TINTA; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-3.6, 7.0); ctx.lineTo(4.2, -6.8); ctx.stroke();
+      ctx.strokeStyle = hex(mix(o.c, '#5a2a10', 0.7)); ctx.lineWidth = 1.0; ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save();
+    /* en una extravagante asoma más: su cabeza no es el círculo entero */
+    fueraDelCuerpo(ctx, o.rara ? R * 0.7 : 0);
+    var A = [-8.4, -3.6], B = [-0.8, 9.8];
+    var dx = B[0] - A[0], dy = B[1] - A[1];
+    var ang = Math.atan2(dy, dx), L = Math.sqrt(dx * dx + dy * dy);
+    ctx.translate(A[0], A[1]);
+    ctx.rotate(ang);
+    /* la vaina */
+    piezaX(ctx, function () { ctx.beginPath(); roundRect(ctx, 0, -0.6, L * 0.72, 1.2, 0.5); }, '#34343e', '#101014', 0.1, 0.2, 1.3);
+    ctx.fillStyle = '#ffd24a';
+    ctx.fillRect(0.1, -0.55, 0.8, 1.1);
+    /* la guarda */
+    piezaX(ctx, function () { ctx.beginPath(); ctx.ellipse(L * 0.725, 0, 0.35, 1.3, 0, 0, Math.PI * 2); }, '#ffd24a', '#a97d0d', 0.05, 0.1, 1.2);
+    /* la empuñadura, con el trenzado */
+    piezaX(ctx, function () { ctx.beginPath(); roundRect(ctx, L * 0.75, -0.5, L * 0.25, 1.0, 0.3); }, '#f4f0e6', '#b8b0a0', 0.05, 0.1, 1.2);
+    ctx.fillStyle = TINTA;
+    for (var k = 0; k < 4; k++) {
+      var x = L * 0.77 + k * 0.95;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 0.45, 0.45); ctx.lineTo(x + 0.9, 0); ctx.lineTo(x + 0.45, -0.45); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#ffd24a';
+    ctx.fillRect(L - 0.5, -0.5, 0.5, 1.0);
+    ctx.restore();
+  };
+
+  /* KABUTO: el casco de samurái, con las dos astas doradas (kuwagata) y el
+   * cubrenuca de láminas del color del jugador */
+  ACC.acc_kabuto = function (ctx, o) {
+    var hierro = '#3a3c46', hierroOsc = '#15161b', oro = '#ffd24a', oroOsc = '#a97d0d';
+    var lam = hex(mix(o.c, '#2a2a3a', 0.25)), lamOsc = mix(lam, '#000000', 0.5), k;
+    /* el cubrenuca, en tres láminas escalonadas */
+    for (k = 2; k >= 0; k--) {
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(-3.0 + k * 0.2, 3.6 - k * 1.8);
+        ctx.quadraticCurveTo(-6.6 - k * 0.9, 3.4 - k * 2.0, -7.6 - k * 0.9, 1.2 - k * 2.1);
+        ctx.lineTo(-6.6 - k * 0.9, 0.2 - k * 2.1);
+        ctx.quadraticCurveTo(-5.4 - k * 0.6, 2.2 - k * 1.9, -2.6 + k * 0.2, 2.4 - k * 1.8);
+        ctx.closePath();
+      }, lam, hex(lamOsc), 0.2, 0.2, 1.3);
+      ctx.fillStyle = '#fbf6ec';
+      for (var i = 0; i < 3; i++) {
+        ctx.beginPath(); ctx.arc(-4.2 - k * 0.7 - i * 1.0, 2.4 - k * 1.9 - i * 0.55, 0.18, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    /* las astas doradas */
+    [[1.4, 12.2, 0.8], [4.4, 11.8, 1]].forEach(function (a) {
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(2.0, 6.4);
+        ctx.quadraticCurveTo(a[0] - 1.6, 8.6, a[0], a[1]);
+        ctx.quadraticCurveTo(a[0] - 0.4, 9.0, 3.0, 6.6);
+        ctx.closePath();
+      }, a[2] < 1 ? oroOsc : oro, a[2] < 1 ? '#6a4e08' : oroOsc, 0.15, 0.15, 1.3);
+    });
+    /* el cuenco de hierro, con sus remaches */
+    var casco = function () {
+      ctx.beginPath();
+      ctx.moveTo(-5.8, 2.6);
+      ctx.quadraticCurveTo(-5.4, 7.4, 0.2, 7.6);
+      ctx.quadraticCurveTo(5.2, 7.4, 5.8, 3.2);
+      ctx.quadraticCurveTo(0, 2.0, -5.8, 2.6);
+      ctx.closePath();
+    };
+    piezaX(ctx, casco, hierro, hierroOsc, 0.5, 0.5, 1.6);
+    ctx.save(); casco(); ctx.clip();
+    ctx.fillStyle = '#8a8e9c';
+    for (k = 0; k < 4; k++) {
+      for (var j = 0; j < 5; j++) {
+        ctx.beginPath(); ctx.arc(-3.6 + j * 1.8, 3.6 + k * 1.1 + Math.abs(j - 2) * -0.25, 0.16, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+    /* la visera */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(2.4, 3.2); ctx.quadraticCurveTo(5.6, 3.0, 7.2, 2.2); ctx.lineTo(5.8, 3.6); ctx.quadraticCurveTo(4.2, 3.8, 2.4, 3.8);
+      ctx.closePath();
+    }, hierro, hierroOsc, 0.1, 0.1, 1.2);
+    /* el emblema del frente: un sol dorado */
+    piezaX(ctx, function () { ctx.beginPath(); ctx.arc(2.6, 6.4, 0.85, 0, Math.PI * 2); }, oro, oroOsc, 0.1, 0.1, 1.2);
+    ctx.fillStyle = '#e0322a';
+    ctx.beginPath(); ctx.arc(2.6, 6.4, 0.4, 0, Math.PI * 2); ctx.fill();
+  };
+
+  /* TAMBORES DE RAIJIN: el aro de tambores del dios del trueno, por detrás
+   * de la cabeza; de vez en cuando salta un rayo de uno a otro */
+  ACC.acc_raijin = function (ctx, o) {
+    var t = o.t, k, cx = -0.8, cy = 1.2, rr = 8.4;
+    var giro = t * 0.35;
+    ctx.save();
+    fueraDelCuerpo(ctx);
+    /* el aro */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.0;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#c8302a'; ctx.lineWidth = 0.55; ctx.stroke();
+    var pos = [];
+    for (k = 0; k < 8; k++) {
+      var a = giro + k * Math.PI / 4;
+      pos.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]);
+    }
+    /* el rayo que salta, unas décimas cada poco */
+    var ciclo = (t * 0.9) % 1, cual = Math.floor(t * 0.9) % 8;
+    if (ciclo < 0.18) {
+      var p0 = pos[cual], p1 = pos[(cual + 1) % 8];
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      [[1.2, 'rgba(120,180,255,.6)'], [0.45, 'rgba(255,255,230,1)']].forEach(function (c) {
+        ctx.strokeStyle = c[1]; ctx.lineWidth = c[0]; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p0[0], p0[1]);
+        for (var i = 1; i < 7; i++) {
+          var u = i / 7;
+          var nx = -(p1[1] - p0[1]), ny = p1[0] - p0[0], nl = Math.sqrt(nx * nx + ny * ny);
+          var j = (i % 2 ? 1 : -1) * (0.9 + 0.5 * Math.abs(Math.sin(t * 40 + i)));
+          ctx.lineTo(p0[0] + (p1[0] - p0[0]) * u + nx / nl * j, p0[1] + (p1[1] - p0[1]) * u + ny / nl * j);
+        }
+        ctx.lineTo(p1[0], p1[1]);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+    /* los tambores, con el tomoe de tres comas */
+    pos.forEach(function (p, i) {
+      piezaX(ctx, function () { ctx.beginPath(); ctx.arc(p[0], p[1], 1.45, 0, Math.PI * 2); }, '#b8402a', '#4a1008', 0.2, 0.2, 1.3);
+      ctx.fillStyle = '#f2e2b8';
+      ctx.beginPath(); ctx.arc(p[0], p[1], 1.0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = (i % 2) ? '#1a1414' : hex(mix(o.c, '#c8302a', 0.3));
+      for (var c = 0; c < 3; c++) {
+        var b = c * Math.PI * 2 / 3 + t * 2;
+        ctx.beginPath(); ctx.arc(p[0] + Math.cos(b) * 0.42, p[1] + Math.sin(b) * 0.42, 0.3, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.restore();
+  };
+
+  /* ---------------- EFECTOS ---------------- */
+
+  /* TORII: va dejando puertas de santuario bermellón, como el camino de
+   * Fushimi Inari */
+  EFX.efx_torii = function (ctx, o, cuerpo) {
+    rastro(o, 13, 84).forEach(function (q) {
+      var crece = Math.min(1, q.edad / 0.12);
+      var e = 0.5 + 0.5 * suave(crece);
+      ctx.save();
+      ctx.globalAlpha = (1 - q.edad) * 0.95;
+      ctx.translate(q.p.x, q.p.y + 0.6);
+      ctx.scale(e, e);
+      ctx.fillStyle = '#e8401c';
+      ctx.fillRect(-1.6, -1.6, 0.6, 3.4);
+      ctx.fillRect(1.0, -1.6, 0.6, 3.4);
+      ctx.fillRect(-2.0, -1.0, 4.0, 0.5);
+      ctx.fillStyle = '#1a1414';
+      ctx.beginPath();
+      ctx.moveTo(-2.7, -2.4); ctx.quadraticCurveTo(0, -1.8, 2.7, -2.4);
+      ctx.lineTo(2.5, -1.7); ctx.quadraticCurveTo(0, -1.3, -2.5, -1.7);
+      ctx.closePath(); ctx.fill();
+      ctx.fillRect(-1.7, 1.5, 0.8, 0.4); ctx.fillRect(0.9, 1.5, 0.8, 0.4);
+      ctx.restore();
+    });
+    cuerpo();
+  };
+
+  /* OLAS: la ola de Hokusai, que sube, se enrosca con sus garras de espuma y
+   * rompe detrás de él */
+  EFX.efx_olas = function (ctx, o, cuerpo) {
+    rastro(o, 9, 60).forEach(function (q) {
+      var sube = Math.min(1, q.edad / 0.3);
+      var lado = (q.n % 2) ? 1 : -1;
+      ctx.save();
+      ctx.globalAlpha = (1 - q.edad) * 0.95;
+      ctx.translate(q.p.x, q.p.y + 1.2);
+      ctx.scale(lado * (0.7 + 0.3 * sube), 0.4 + 0.6 * sube);
+      ctx.fillStyle = '#1f4fa8';
+      ctx.beginPath();
+      ctx.moveTo(-2.4, 0.4);
+      ctx.quadraticCurveTo(-1.8, -2.6, 0.6, -2.6);
+      ctx.quadraticCurveTo(2.2, -2.4, 1.6, -1.0);
+      ctx.quadraticCurveTo(0.8, -1.9, 0.0, -1.2);
+      ctx.quadraticCurveTo(-0.4, -0.4, 1.4, 0.4);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 0.3;
+      ctx.beginPath(); ctx.moveTo(-1.8, 0.0); ctx.quadraticCurveTo(-1.3, -2.0, 0.6, -2.2); ctx.stroke();
+      /* las garras de espuma */
+      ctx.fillStyle = '#ffffff';
+      [[1.7, -1.2], [1.2, -0.7], [2.0, -1.8], [0.7, -2.6]].forEach(function (p, i) {
+        ctx.beginPath(); ctx.arc(p[0], p[1], 0.32 - i * 0.03, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+    });
+    cuerpo();
+  };
+
+  /* ORIGAMI: grullas de papel de su color que salen volando por detrás */
+  EFX.efx_origami = function (ctx, o, cuerpo) {
+    cuerpo();
+    var papel = hex(mix(o.c, '#ffffff', 0.25)), papelOsc = hex(mix(o.c, '#000000', 0.35));
+    rastro(o, 15, 72).forEach(function (q) {
+      var bate = Math.sin(o.t * 12 + q.n) * 1.1;
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, (1 - q.edad) * 1.4);
+      ctx.translate(q.p.x + Math.sin(q.edad * 5 + q.n) * 1.5, q.p.y - q.edad * 8);
+      ctx.scale((q.n % 2) ? 1 : -1, 1);
+      /* el ala de atrás, más oscura */
+      ctx.fillStyle = papelOsc;
+      ctx.beginPath(); ctx.moveTo(-0.4, -0.1); ctx.lineTo(0.9, -0.1); ctx.lineTo(-1.2, -2.2 - bate * 0.8); ctx.closePath(); ctx.fill();
+      /* cuerpo, con el cuello largo y la cola en punta, casi horizontales */
+      ctx.fillStyle = papel;
+      ctx.beginPath();
+      ctx.moveTo(-3.4, -0.9); ctx.lineTo(-0.8, 0.1); ctx.lineTo(0.2, 0.9); ctx.lineTo(1.2, 0.1);
+      ctx.lineTo(3.0, -1.5); ctx.lineTo(3.7, -1.1); ctx.lineTo(3.1, -1.1); ctx.lineTo(1.4, 0.5);
+      ctx.lineTo(0.2, 1.2); ctx.lineTo(-1.0, 0.5); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = papelOsc; ctx.lineWidth = 0.15; ctx.stroke();
+      /* el ala de delante */
+      ctx.fillStyle = papel;
+      ctx.beginPath(); ctx.moveTo(-0.7, 0.2); ctx.lineTo(1.1, 0.2); ctx.lineTo(-0.6, -2.8 + bate); ctx.closePath(); ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    });
+  };
+
+  /* FAROLILLOS: farolillos de papel encendidos que se quedan flotando y
+   * suben despacio */
+  EFX.efx_farolillos = function (ctx, o, cuerpo) {
+    var papel = hex(mix(o.c, '#ff5a1a', 0.6));
+    rastro(o, 18, 110).forEach(function (q) {
+      var a = (1 - q.edad) * (0.85 + 0.15 * Math.sin(o.t * 7 + q.n * 2));
+      var x = q.p.x + Math.sin(o.t * 1.5 + q.n) * 0.8, y = q.p.y - q.edad * 5;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(x, y, 0.2, x, y, 3.6);
+      g.addColorStop(0, mix('#ffc070', '#ffc070', 0, 0.5 * a));
+      g.addColorStop(1, mix('#ff7a2a', '#ff7a2a', 0, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 3.6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, a * 1.3);
+      ctx.fillStyle = papel;
+      ctx.beginPath(); ctx.ellipse(x, y, 1.3, 1.65, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(40,10,0,.8)'; ctx.lineWidth = 0.18; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,240,190,.55)';
+      ctx.beginPath(); ctx.ellipse(x - 0.2, y, 0.6, 1.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1a1414';
+      ctx.fillRect(x - 0.8, y - 1.9, 1.6, 0.45);
+      ctx.fillRect(x - 0.8, y + 1.45, 1.6, 0.45);
+      ctx.restore();
+    });
+    cuerpo();
+  };
+
+  /* ONIBI: fuegos fatuos azules que se quedan flotando donde pasó */
+  EFX.efx_onibi = function (ctx, o, cuerpo) {
+    cuerpo();
+    rastro(o, 9, 58).forEach(function (q) {
+      var lado = (q.n % 2) ? 1.2 : -1.2;
+      llamaAzul(ctx, q.p.x + lado * 0.6, q.p.y - q.edad * 4 + lado * 0.4,
+        0.95 * (1 - q.edad * 0.5), (1 - q.edad) * 0.95, o.t + q.n, -1);
+    });
+  };
+
+  /* KOI: dos carpas que le siguen nadando, y las ondas del agua */
+  EFX.efx_koi = function (ctx, o, cuerpo) {
+    rastro(o, 14, 50).forEach(function (q) {
+      ctx.strokeStyle = 'rgba(140,210,255,' + ((1 - q.edad) * 0.5) + ')';
+      ctx.lineWidth = 0.35;
+      ctx.beginPath(); ctx.ellipse(q.p.x, q.p.y, 1 + q.edad * 4, 0.6 + q.edad * 2.4, 0, 0, Math.PI * 2); ctx.stroke();
+    });
+    [0, 1].forEach(function (k) {
+      var d = 10 + k * 10 + Math.sin(o.t * 2 + k) * 1.2;
+      var p = o.back(d);
+      var v = DIR_V[p.d], nx = -v[1], ny = v[0];
+      var lat = Math.sin(o.t * 3 + k * 2) * 1.6 * (k ? -1 : 1);
+      ctx.save();
+      ctx.translate(p.x + nx * lat, p.y + ny * lat);
+      ctx.rotate(DIR_ANGLE[p.d] + Math.cos(o.t * 3 + k * 2) * 0.35);
+      var cola = Math.sin(o.t * 10 + k) * 0.6;
+      /* la cola */
+      ctx.fillStyle = k ? 'rgba(255,255,255,.8)' : mix(o.c, '#ff6a2a', 0.4, 0.85);
+      ctx.beginPath(); ctx.moveTo(-1.8, 0); ctx.lineTo(-3.6, -1.3 + cola); ctx.lineTo(-3.2, cola * 0.5); ctx.lineTo(-3.6, 1.3 + cola); ctx.closePath(); ctx.fill();
+      /* el cuerpo blanco con las manchas */
+      ctx.fillStyle = '#fbf6ec';
+      ctx.beginPath(); ctx.ellipse(0, 0, 2.3, 0.95, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(0, 0, 2.3, 0.95, 0, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = k ? '#e8401c' : hex(mix(o.c, '#ff6a2a', 0.4));
+      ctx.beginPath(); ctx.ellipse(0.9, 0.2, 1.0, 0.7, 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-0.9, -0.3, 0.8, 0.6, 0, 0, Math.PI * 2); ctx.fill();
+      if (k) { ctx.fillStyle = '#1a1414'; ctx.beginPath(); ctx.arc(-0.2, 0.5, 0.3, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(20,20,20,.55)'; ctx.lineWidth = 0.18;
+      ctx.beginPath(); ctx.ellipse(0, 0, 2.3, 0.95, 0, 0, Math.PI * 2); ctx.stroke();
+      /* las aletas */
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      ctx.beginPath(); ctx.ellipse(0.6, 1.0, 0.6, 0.3, 0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0.6, -1.0, 0.6, 0.3, -0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1a1414';
+      ctx.beginPath(); ctx.arc(1.7, 0.4, 0.17, 0, Math.PI * 2); ctx.arc(1.7, -0.4, 0.17, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+    cuerpo();
+  };
+
+  /* ---------------- EMOTES ----------------
+   * En el idioma de Sprites.drawPacFace: círculo del color del jugador,
+   * rasgos en negro y un meneo propio. t va en ticks (60 por segundo). */
+  function caraYokai(ctx, x, y, r, color, id, t) {
+    var ink = '#000000', lw = Math.max(1, r * 0.17), k;
+    var ex = r * 0.42, ey = y - r * 0.24;
+
+    if (id === 'kawaii') {
+      /* ojazos brillantes, coloretes y la boquita "ω", dando saltitos */
+      var bota = Math.abs(Math.sin(t * 0.09)) * r * 0.12;
+      ctx.save();
+      ctx.translate(0, -bota);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      [-1, 1].forEach(function (l) {
+        ctx.fillStyle = ink;
+        ctx.beginPath(); ctx.ellipse(x + l * ex, ey + r * 0.05, r * 0.2, r * 0.27, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(x + l * ex + r * 0.07, ey - r * 0.06, r * 0.09, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + l * ex - r * 0.06, ey + r * 0.12, r * 0.045, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,110,150,.7)';
+        ctx.beginPath(); ctx.ellipse(x + l * r * 0.62, y + r * 0.22, r * 0.17, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      });
+      /* la boquita abierta, con la lengua */
+      ctx.fillStyle = '#5a0a18';
+      ctx.beginPath(); ctx.moveTo(x - r * 0.2, y + r * 0.28); ctx.lineTo(x + r * 0.2, y + r * 0.28);
+      ctx.quadraticCurveTo(x, y + r * 0.62, x - r * 0.2, y + r * 0.28); ctx.fill();
+      ctx.fillStyle = '#ff6a86';
+      ctx.beginPath(); ctx.ellipse(x, y + r * 0.42, r * 0.09, r * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 3; k++) {
+        var tw = Math.sin(t * 0.12 + k * 2.1);
+        estrella4(ctx, x + [-0.95, 0.95, 0.75][k] * r, y + [-0.85, -0.7, 0.75][k] * r, r * 0.22 * Math.max(0, tw), '#ffe9f4', Math.max(0, tw));
+      }
+      return;
+    }
+
+    if (id === 'banzai') {
+      /* ¡BANZAI!: salta con los brazos arriba, ojos de alegría y bocaza */
+      var salto = Math.abs(Math.sin(t * 0.08));
+      var cy = y + r * 0.1 - salto * r * 0.2;
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 1.1; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (l) {
+        var ay = cy - r * (0.5 + salto * 0.55);
+        ctx.strokeStyle = ink; ctx.lineWidth = lw * 1.3;
+        ctx.beginPath(); ctx.moveTo(x + l * r * 0.8, cy); ctx.lineTo(x + l * r * 1.05, ay); ctx.stroke();
+        ctx.strokeStyle = color; ctx.lineWidth = lw * 0.7; ctx.stroke();
+      });
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, cy, r * 0.88, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.6;
+      [-1, 1].forEach(function (l) {
+        ctx.beginPath(); ctx.arc(x + l * ex * 0.9, cy - r * 0.12, r * 0.16, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke();
+      });
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.moveTo(x - r * 0.34, cy + r * 0.12); ctx.lineTo(x + r * 0.34, cy + r * 0.12);
+      ctx.quadraticCurveTo(x, cy + r * 0.8, x - r * 0.34, cy + r * 0.12); ctx.fill();
+      ctx.fillStyle = '#ff6a86';
+      ctx.beginPath(); ctx.ellipse(x, cy + r * 0.42, r * 0.14, r * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+      return;
+    }
+
+    if (id === 'itadakimasu') {
+      /* los palillos le acercan un nigiri, abre la boca y se lo zampa */
+      var ciclo = (t * 0.012) % 1;
+      var llega = suave(tramo(ciclo, 0.0, 0.45)), come = tramo(ciclo, 0.45, 0.6);
+      var abre = ciclo > 0.35 && ciclo < 0.6 ? 1 : 0;
+      var masca = ciclo > 0.6 ? Math.abs(Math.sin(ciclo * 60)) : 0;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.6; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (l) {
+        ctx.beginPath(); ctx.arc(x + l * ex, ey + r * 0.1, r * 0.18, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke();
+      });
+      ctx.fillStyle = ink;
+      if (abre) { ctx.beginPath(); ctx.ellipse(x, y + r * 0.38, r * 0.26, r * 0.24, 0, 0, Math.PI * 2); ctx.fill(); }
+      else {
+        ctx.beginPath(); ctx.ellipse(x, y + r * 0.4, r * 0.2, r * (0.06 + masca * 0.08), 0, 0, Math.PI * 2); ctx.fill();
+        if (masca > 0) {
+          ctx.fillStyle = 'rgba(255,110,150,.6)';
+          [-1, 1].forEach(function (l) { ctx.beginPath(); ctx.arc(x + l * r * 0.6, y + r * 0.2, r * 0.14, 0, Math.PI * 2); ctx.fill(); });
+        }
+      }
+      if (come < 1) {
+        var sx = x + r * (1.3 - llega * 1.3), sy = y + r * (0.05 + llega * 0.33);
+        ctx.save();
+        ctx.globalAlpha = 1 - come;
+        ctx.strokeStyle = '#c8905a'; ctx.lineWidth = Math.max(1, r * 0.1);
+        ctx.beginPath(); ctx.moveTo(sx + r * 0.2, sy - r * 0.1); ctx.lineTo(sx + r * 1.5, sy - r * 1.0);
+        ctx.moveTo(sx + r * 0.25, sy + r * 0.12); ctx.lineTo(sx + r * 1.6, sy - r * 0.7); ctx.stroke();
+        ctx.fillStyle = '#fbf6ec';
+        ctx.beginPath(); ctx.ellipse(sx, sy, r * 0.32, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ff8a4a';
+        ctx.beginPath(); ctx.ellipse(sx, sy - r * 0.14, r * 0.36, r * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      return;
+    }
+
+    if (id === 'zen') {
+      /* ojos cerrados de calma y el ensō, el círculo de pincel, que se traza
+       * solo detrás */
+      var vuelta = (t * 0.008) % 1;
+      var trazo = suave(Math.min(1, vuelta / 0.7));
+      var borra = tramo(vuelta, 0.85, 1);
+      ctx.save();
+      ctx.globalAlpha = 1 - borra;
+      ctx.lineCap = 'round';
+      for (k = 0; k < 14; k++) {
+        var a0 = -Math.PI * 0.4 + trazo * Math.PI * 1.85 * (k / 14);
+        var a1 = -Math.PI * 0.4 + trazo * Math.PI * 1.85 * ((k + 1) / 14);
+        ctx.strokeStyle = 'rgba(244,240,230,.9)';
+        ctx.lineWidth = Math.max(0.8, r * 0.28 * (1 - k / 18));
+        ctx.beginPath(); ctx.arc(x, y, r * 1.2, a0, a1); ctx.stroke();
+      }
+      ctx.restore();
+      var flota = Math.sin(t * 0.05) * r * 0.06;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y + flota, r * 0.9, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.55; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (l) {
+        ctx.beginPath(); ctx.arc(x + l * ex * 0.9, ey + flota + r * 0.02, r * 0.17, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      });
+      ctx.beginPath(); ctx.arc(x, y + flota + r * 0.25, r * 0.16, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+      return;
+    }
+
+    /* NINJA: capucha oscura con la rendija de los ojos; cada poco, ¡puf!,
+     * desaparece en humo y vuelve */
+    var c2 = (t * 0.01) % 1;
+    var fuera = c2 > 0.62 && c2 < 0.86;
+    if (!fuera) {
+      ctx.fillStyle = '#1c2030';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = color;
+      ctx.beginPath(); roundRect(ctx, x - r * 0.85, ey - r * 0.24, r * 1.7, r * 0.5, r * 0.2); ctx.fill();
+      ctx.fillStyle = ink;
+      [-1, 1].forEach(function (l) {
+        ctx.beginPath();
+        ctx.moveTo(x + l * ex - r * 0.2, ey - r * 0.02);
+        ctx.lineTo(x + l * ex + r * 0.2, ey - r * 0.02 + l * r * 0.08);
+        ctx.lineTo(x + l * ex, ey + r * 0.14);
+        ctx.closePath(); ctx.fill();
+      });
+      /* el nudo y las puntas de la cinta */
+      ctx.strokeStyle = '#1c2030'; ctx.lineWidth = lw * 0.6; ctx.lineCap = 'round';
+      var on = Math.sin(t * 0.2) * r * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.9, y - r * 0.5); ctx.lineTo(x + r * 1.35, y - r * 0.75 + on);
+      ctx.moveTo(x + r * 0.9, y - r * 0.4); ctx.lineTo(x + r * 1.4, y - r * 0.35 + on);
+      ctx.stroke();
+    }
+    var h1 = tramo(c2, 0.58, 0.72), h2 = tramo(c2, 0.84, 0.98);
+    if (h1 > 0 && h1 < 1) humoPuf(ctx, x, y, h1, h1 < 0.6 ? 1 : (1 - h1) / 0.4, r * 1.1);
+    if (h2 > 0 && h2 < 1) humoPuf(ctx, x, y, h2, h2 < 0.6 ? 1 : (1 - h2) / 0.4, r * 1.1);
+  }
+
+
   var INFO = {};
   CFG.SKINS.forEach(function (sk) { INFO[sk.id] = sk; });
 
@@ -8504,7 +11083,23 @@
     /* LA PARCA no tiene cara: manda la luz de delante */
     parca:       { ojo: [3.0, 1.8], k: 0.80, coronilla: [0.2, 6.8], cuello: [1.2, -4.4], zonas: SOMBREROS_ARRIBA },
     /* el JINETE lleva la cabeza (la calabaza) flotando sobre el cuello vacío */
-    jinete:      { ojo: [2.6, 5.9], k: 0.55, coronilla: [0.9, 8.2], cuello: [0.4, -0.8], zonas: SOMBREROS_ARRIBA }
+    jinete:      { ojo: [2.6, 5.9], k: 0.55, coronilla: [0.9, 8.2], cuello: [0.4, -0.8], zonas: SOMBREROS_ARRIBA },
+    /* --- tanda yōkai (29 sep): todas con el ojo muy adelantado respecto a
+     * la coronilla (hocico, pico, nariz...), así que los sombreros van arriba */
+    kitsune:     { ojo: [3.4, 2.2], k: 0.56, coronilla: [-1.0, 4.8], cuello: [-0.8, -2.9], zonas: SOMBREROS_ARRIBA },
+    tengu:       { ojo: [2.2, 2.5], k: 0.62, coronilla: [0.4, 4.6], cuello: [-0.4, -2.6], zonas: SOMBREROS_ARRIBA },
+    kappa:       { ojo: [2.7, 2.1], k: 0.62, coronilla: [0.0, 5.6], cuello: [0.8, -2.9], zonas: SOMBREROS_ARRIBA },
+    oni:         { ojo: [3.3, 2.3], k: 0.66, coronilla: [0.2, 5.2], cuello: [0.8, -3.6], zonas: SOMBREROS_ARRIBA },
+    tanuki:      { ojo: [2.8, 1.9], k: 0.60, coronilla: [-0.6, 4.8], cuello: [-0.6, -3.1], zonas: SOMBREROS_ARRIBA },
+    /* el DARUMA mira de frente: el ojo que manda es el de delante, y el
+     * mostacho va sobre el suyo */
+    daruma:      { ojo: [3.7, 2.4], k: 0.90, coronilla: [0.2, 6.4], cuello: [2.0, -3.0], zonas: SOMBREROS_ARRIBA,
+                   sitios: { acc_bigote: [2.9, 0.8] } },
+    maneki:      { ojo: [3.2, 2.8], k: 0.63, coronilla: [1.0, 6.2], cuello: [1.2, -1.3], zonas: SOMBREROS_ARRIBA },
+    /* el KASA-OBAKE lleva los sombreros en la punta del paraguas */
+    kasa:        { ojo: [2.0, 3.1], k: 0.62, coronilla: [0.4, 7.6], cuello: [0.4, -1.4], zonas: SOMBREROS_ARRIBA },
+    chochin:     { ojo: [2.8, 2.5], k: 0.66, coronilla: [0.0, 7.0], cuello: [0.6, -5.0], zonas: SOMBREROS_ARRIBA },
+    namazu:      { ojo: [3.6, 2.1], k: 0.55, coronilla: [0.8, 3.5], cuello: [1.6, -3.2], zonas: SOMBREROS_ARRIBA }
   };
   /* ---------- el accesorio se MUEVE con la skin ----------
    * Las cabezas de arriba se midieron con la skin quieta en una pose
@@ -8653,6 +11248,34 @@
       var q = qDe(o, 1.0), lanza = (q >= 0) ? Math.min(1, q * 1.4) : -1;
       m.translateSelf(lanza >= 0 ? lanza * 13 : 0, 4.4 + Math.sin(o.t * 2.8) * 0.5 - (lanza >= 0 ? lanza * 1.5 : 0))
         .rotateSelf((lanza >= 0 ? lanza * 5 : Math.sin(o.t * 2) * 0.05) * 180 / Math.PI).translateSelf(0, -4.4);
+    },
+    /* tanda yōkai: el mismo vaivén o bote que hace cada dibujo */
+    kitsune: function (m, o) { m.translateSelf(0, Math.sin(o.t * 5) * 0.2); },
+    tengu: function (m, o) { m.translateSelf(0, Math.sin(o.t * 4.4) * 0.2); },
+    kappa: function (m, o) { m.translateSelf(0, botaM(o.t, 5, 0.3) - 0.15); },
+    /* el ONI tiembla con el mazazo */
+    oni: function (m, o) {
+      var q = qDe(o, 1.0), impacto = (q > 0.42) ? 1 - tramo(q, 0.42, 1) : 0;
+      m.translateSelf(impacto > 0 ? Math.sin(o.t * 90) * 0.35 * impacto : 0, botaM(o.t, 4.5, 0.3) - 0.15);
+    },
+    tanuki: function (m, o) { m.translateSelf(0, botaM(o.t, 5.5, 0.35) - 0.15); },
+    /* el DARUMA se mece sobre la base y cabecea al comer */
+    daruma: function (m, o) { girarM(m, 0, -6.2, -[0, 0.13, 0.26][fase(o)] + Math.sin(o.t * 3.2) * 0.07); },
+    maneki: function (m, o) { m.translateSelf(0, botaM(o.t, 4, 0.25) - 0.1); },
+    /* el KASA-OBAKE salta; con la Q la tela se abre y se aplana: baja la
+     * punta (los sombreros) y, un poco menos, el ojo */
+    kasa: function (m, o, zona) {
+      var q = qDe(o, 1.2), ab = (q >= 0) ? Math.sin(Math.min(1, q * 1.15) * Math.PI) : 0;
+      m.translateSelf(0, botaM(o.t, 6, 1.3) - 0.3);
+      if (zona === 'cabeza') m.translateSelf(0, -ab * 3.2);
+      else if (zona === 'cara') m.translateSelf(0, -ab * 3.2 * 0.42);
+    },
+    /* el CHŌCHIN cuelga de su gancho y se balancea */
+    chochin: function (m, o) { girarM(m, 0, 9.0, Math.sin(o.t * 2.6) * 0.1).translateSelf(0, 0.4); },
+    /* el NAMAZU tiembla con el terremoto */
+    namazu: function (m, o) {
+      var q = qDe(o, 1.2), tiembla = (q >= 0) ? Math.sin(Math.min(1, q * 1.1) * Math.PI) : 0;
+      if (tiembla > 0) m.translateSelf(Math.sin(o.t * 83) * 0.45 * tiembla, Math.cos(o.t * 71) * 0.45 * tiembla);
     }
   };
 
@@ -8678,7 +11301,12 @@
     acc_bufanda: 'cuello', acc_alas: 'cuello',
     acc_laureles_2609: 'cabeza', acc_laureles_2610: 'cabeza',
     /* tanda de mitología: la serpiente se enrosca al cuello */
-    acc_alado: 'cabeza', acc_ojo: 'cabeza', acc_serpiente: 'cuello' };
+    acc_alado: 'cabeza', acc_ojo: 'cabeza', acc_serpiente: 'cuello',
+    /* tanda yōkai: la máscara va echada a un lado de la cabeza, la katana a
+     * la espalda (con el cuello) y los TAMBORES DE RAIJIN alrededor de todo
+     * el cuerpo ('cuerpo': tal cual, ver anclaAccesorio) */
+    acc_kitsunemen: 'cabeza', acc_kasa: 'cabeza', acc_chonmage: 'cabeza', acc_ramen: 'cabeza',
+    acc_kabuto: 'cabeza', acc_katana: 'cuello', acc_raijin: 'cuerpo' };
   /* la zona de un accesorio en una skin: la suya propia si la skin la fija */
   function zonaAcc(skin, acc) {
     var c = CABEZAS[skin];
@@ -8710,7 +11338,8 @@
     acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
     acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4, acc_laureles_2610: R - 0.4,
     acc_alado: 2.8, acc_ojo: 4.4, acc_vaquero: R - 2.2, acc_chullo: 2.4, acc_mohicano: 4.4,
-    acc_orejas: R - 1.2 };
+    acc_orejas: R - 1.2,
+    acc_kitsunemen: R - 1, acc_kasa: R - 1, acc_chonmage: R - 1, acc_ramen: R - 0.5, acc_kabuto: 2.8 };
 
 
   /* ============================================================
@@ -9446,6 +12075,10 @@
       return { x: c.coronilla[0], y: c.coronilla[1] - k * (base + 1), k: k };
     }
     if (zona === 'cuello' && c.cuello) return { x: c.cuello[0] - k * 0.6, y: c.cuello[1] + k * (R - 0.2), k: k };
+    /* lo que rodea al jugador entero (los TAMBORES DE RAIJIN) va tal cual,
+     * alrededor del cuerpo y a su tamaño: a la escala de la cabeza le
+     * cruzaba la cara */
+    if (zona === 'cuerpo') return { x: 0, y: 0, k: 1 };
     return { x: c.ojo[0] - k * OJO_PAC[0], y: c.ojo[1] - k * OJO_PAC[1], k: k };
   }
   Sprites.CABEZAS = CABEZAS;
@@ -9497,6 +12130,9 @@
           }, zonaAcc(skin, e.accesorio));
           if (dp) ctx.transform(dp.a, dp.b, dp.c, dp.d, dp.e, dp.f);
           ctx.translate(an.x, an.y); ctx.scale(an.k, an.k);
+          /* lo que se pinta sobre el círculo de Pac-Man (el pelo del
+           * CHONMAGE, la correa de la KATANA) sabe así que no lo hay */
+          o.rara = rara;
         }
         ac(ctx, o);
         ctx.restore();
@@ -9509,6 +12145,7 @@
     lloron: 1, ardiendo: 1, beso: 1, idea: 1, gg: 1,
     silbando: 1, plis: 1, ambicioso: 1, nervios: 1, arcoiris: 1,
     oraculo: 1, petrificado: 1, divino: 1, maldicion: 1, invocando: 1,
+    kawaii: 1, banzai: 1, itadakimasu: 1, zen: 1, ninja: 1,
     grito: 1 };
   Sprites.caraTienda = function (ctx, x, y, r, color, id, tick) {
     caraEmote(ctx, x, y, r, colorLargo(color), id, (typeof tick === 'number') ? tick : 0);
