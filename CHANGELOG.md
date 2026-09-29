@@ -2,6 +2,11 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · LAURELES · NOV 2026
+
+Los laureles de noviembre para quien llegue a MANZANA ese mes: de cobre, con la
+manzana rosa mexicano del papel picado. Se reparten al cerrar la temporada.
+
 ## 2026-09-30 · El pase de noviembre: DÍA DE MUERTOS
 
 Las cinco piezas del camino de noviembre, aprobadas por Braighton: CALAVERITA

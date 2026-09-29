@@ -180,7 +180,7 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
   ('alebrije', 'pase', 30, 'pago'),
   -- del RANGO (premios de fin de temporada: se deducen, no se guardan)
   ('efx_dorado', 'rango', null, null), ('acc_laureles_2609', 'rango', null, null),
-  ('acc_laureles_2610', 'rango', null, null)
+  ('acc_laureles_2610', 'rango', null, null), ('acc_laureles_2611', 'rango', null, null)
 on conflict (id) do update
   set tipo = excluded.tipo, galon = excluded.galon, carril = excluded.carril;
 

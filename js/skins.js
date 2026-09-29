@@ -14767,7 +14767,7 @@
     acc_espartano: 'cabeza', acc_antenas: 'cabeza', acc_cuernos: 'cabeza',
     acc_obra: 'cabeza', acc_aureola: 'cabeza',
     acc_bufanda: 'cuello', acc_alas: 'cuello',
-    acc_laureles_2609: 'cabeza', acc_laureles_2610: 'cabeza',
+    acc_laureles_2609: 'cabeza', acc_laureles_2610: 'cabeza', acc_laureles_2611: 'cabeza',
     /* tanda de mitología: la serpiente se enrosca al cuello */
     acc_alado: 'cabeza', acc_ojo: 'cabeza', acc_serpiente: 'cuello',
     /* tanda yōkai: la máscara va echada a un lado de la cabeza, la katana a
@@ -14814,7 +14814,7 @@
   /* a qué altura de la cabeza de Pac-Man empieza cada sombrero (su base) */
   var BASE_SOMBRERO = { acc_chistera: R - 1, acc_gorra: R - 2, acc_vikingo: 2.4, acc_helice: 3.6,
     acc_espartano: 2.4, acc_obra: 2.2, acc_cuernos: R - 1.4, acc_antenas: R - 2.2,
-    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4, acc_laureles_2610: R - 0.4,
+    acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4, acc_laureles_2610: R - 0.4, acc_laureles_2611: R - 0.4,
     acc_alado: 2.8, acc_ojo: 4.4, acc_vaquero: R - 2.2, acc_chullo: 2.4, acc_mohicano: 4.4,
     acc_orejas: R - 1.2,
     acc_kitsunemen: R - 1, acc_kasa: R - 1, acc_chonmage: R - 1, acc_ramen: R - 0.5, acc_kabuto: 2.8,
@@ -16246,6 +16246,9 @@
   ACC.acc_laureles_2609 = laureles('#ffd24a', '#8a5a00', '#ff3b3b');
   /* octubre, la temporada de la caza de fantasmas: plata y manzana violeta */
   ACC.acc_laureles_2610 = laureles('#d9e0e8', '#5b6674', '#9b4dff', '#eef4ff');
+  /* noviembre, la del Día de Muertos: cobre y la manzana rosa mexicano del
+   * papel picado; el destello, de vela */
+  ACC.acc_laureles_2611 = laureles('#e0915a', '#7a3a14', '#ff2d8a', '#ffe7c2');
 
   /* ---------------- GRITO (emote) ---------------- */
   function caraGrito(ctx, x, y, r, color, t) {

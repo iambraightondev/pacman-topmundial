@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v316).
+Última puesta al día: **30 de septiembre de 2026** (pm-v317).
 
 ---
 
@@ -79,7 +79,8 @@ ya llevan el accesorio pegado al moverse (POSES); pruebas de Playwright
 al día; SPEC del pase al día. En el servidor cada pieza del pase lleva su
 temporada (piezas_especiales.temporada): **al añadir el camino de un mes
 nuevo, ponerle su temporada a sus piezas** o las daría la experiencia de
-cualquier mes. Laureles de noviembre: antes del 24 nov.
+cualquier mes. Laureles de noviembre: hechos (cobre y manzana rosa, pm-v317).
+Los de DICIEMBRE, antes del 24 dic.
 
 **29 sep — COFRES EN EL JUEGO (pm-v297).** Hecho según PLAN-COFRES.md (ver SPEC).
 Servidor: función cofres + supabase/cofres*.sql (vuelta atrás en
