@@ -662,6 +662,33 @@
     { id: 'namazu', name: 'NAMAZU', grupo: 'tienda', rara: true, precio: 1500,
       ve: 'EL SILURO GIGANTE DE LOS TERREMOTOS: CABEZOTA CHATA Y BIGOTES LARGUÍSIMOS QUE ONDEAN. CON LA Q, TERREMOTO; AL MORIR LO CLAVA LA PIEDRA SAGRADA.' },
 
+    /* --- OBJETOS (19 sep, entran el 29): cosas con vida propia, en la línea
+     * de RECREATIVA. Cada una come con su gesto, tiene su Q y su muerte. La
+     * BOLA DE DISCOTECA (y el COLIBRÍ DE NAZCA, de cofre) conservan la
+     * silueta de Pac-Man: no son extravagantes y llevan los dientes de la Q --- */
+    { id: 'camara', name: 'CÁMARA DE FOTOS', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'RÉFLEX DE CARRETE CON SU BANDA DE CUERO: EL OBJETIVO ES EL OJO Y LA TAPA DEL CARRETE, LA BOCA. CON LA Q, FLASHAZO QUE LO DEJA TODO BLANCO.' },
+    { id: 'reloj', name: 'DESPERTADOR', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL DE DOS CAMPANAS Y PATITAS: LA ESFERA ES LA CARA, CON LAS AGUJAS CORRIENDO. CON LA Q SUENA LA ALARMA Y EL MARTILLO SE DISPARA.' },
+    { id: 'semaforo', name: 'SEMÁFORO', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'LAS TRES LUCES CON SU VISERA: LA ROJA PARPADEA DE OJO Y LA VERDE ES LA BOCA. CON LA Q SE PONE EN VERDE Y SALE DISPARADO.' },
+    { id: 'caja', name: 'CAJA FUERTE', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'ACERO REMACHADO: LA RUEDA DE LA COMBINACIÓN ES EL OJO Y LA PUERTA BLINDADA, LA BOCA. CON LA Q SE ABRE DE GOLPE Y ESCUPE MONEDAS.' },
+    { id: 'bola', name: 'BOLA DE DISCOTECA', grupo: 'tienda', precio: 1500,
+      ve: 'BOLA DE ESPEJOS QUE SE ENCIENDEN POR TURNOS Y SUELTAN HACES. CON LA Q, LA PISTA ENTERA; AL MORIR SE LE SUELTAN LOS ESPEJITOS.' },
+
+    /* --- ANDINA (19 sep, entran el 29): sigue al CUY, la LLAMA y el CÓNDOR --- */
+    { id: 'gallito', name: 'GALLITO DE LAS ROCAS', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL AVE NACIONAL, NARANJA ENCENDIDO, CON LA CRESTA DE DISCO QUE LE TAPA MEDIA CARA. CON LA Q, EL BAILE DE CORTEJO A SALTITOS.' },
+    { id: 'puma', name: 'PUMA DE PIEDRA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'CARA DE FELINO TALLADA EN PIEDRA, A LO CHAVÍN: OJOS CUADRADOS, ESPIRALES Y COLMILLOS. CON LA Q, EL RUGIDO; AL MORIR SE PARTE EN BLOQUES.' },
+    { id: 'papa', name: 'PAPA', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'LA PAPA ANDINA, CON SUS BULTOS, SUS HOYITOS Y LOS BROTES ARRIBA. CON LA Q LE REVIENTAN LOS BROTES; AL MORIR SE PUDRE.' },
+    { id: 'aji', name: 'AJÍ', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'ROCOTO ENCENDIDO CON SU RABITO VERDE, CARA DE PILLO Y UN HILITO DE HUMO. CON LA Q ECHA FUEGO POR LA BOCA.' },
+    { id: 'sapo', name: 'SAPO', grupo: 'tienda', rara: true, precio: 1500,
+      ve: 'EL SAPO DE BRONCE DEL JUEGO DE LA CANTINA, CON LA BOCA ABIERTA ESPERANDO LA MONEDA. CON LA Q SE LA TRAGA Y SUENA LA CAMPANILLA.' },
+
     /* --- de COFRE: no se compran, solo salen de un cofre (PLAN-COFRES.md) --- */
     { id: 'plasma', name: 'PLASMA', grupo: 'cofre',
       ve: 'BOLA DE PLASMA: POR DENTRO SALTAN RAYOS QUE BUSCAN EL BORDE, COMO EN LA LÁMPARA DE FERIA.' },
@@ -695,6 +722,21 @@
       ve: 'EL OGRO DE CUERNOS Y MELENA NEGRA, CON LA CARA DE SU COLOR Y LA MAZA DE HIERRO AL HOMBRO. CON LA Q, EL MAZAZO CONTRA EL SUELO.' },
     { id: 'maneki', name: 'MANEKI-NEKO', grupo: 'cofre', rara: true,
       ve: 'EL GATO DE LA SUERTE, DE PORCELANA, CON MANCHAS DE SU COLOR Y EL KOBAN DE ORO. COME SALUDANDO CON LA PATA; CON LA Q, LLUVIA DE MONEDAS.' },
+
+    /* objetos (29 sep) que solo salen de cofre */
+    { id: 'discos', name: 'MÁQUINA DE DISCOS', grupo: 'cofre', rara: true,
+      ve: 'UNA WURLITZER CON EL ARCO DE NEÓN DE SU COLOR Y EL VINILO GIRANDO; LA RANURA DE LOS DISCOS ES LA BOCA. CON LA Q SUBE EL VOLUMEN.' },
+    { id: 'tele', name: 'TELEVISOR', grupo: 'cofre', rara: true,
+      ve: 'TELE DE TUBO CON ANTENAS DE CONEJO: LA CARA ES LO QUE ESTÁN DANDO EN LA PANTALLA. CON LA Q CAMBIA DE CANAL Y REVIENTA EN ESTÁTICA.' },
+    { id: 'cabina', name: 'CABINA TELEFÓNICA', grupo: 'cofre', rara: true,
+      ve: 'LA CABINA DE SIEMPRE, CON EL ARMAZÓN DE SU COLOR, EL APARATO AL FONDO Y LA PUERTA POR BOCA. CON LA Q, UN TIMBRAZO QUE LA HACE TEMBLAR.' },
+    /* andinas (29 sep) que solo salen de cofre */
+    { id: 'tumi', name: 'TUMI', grupo: 'cofre', rara: true,
+      ve: 'EL CUCHILLO CEREMONIAL DE ORO CON EL NAYLAMP ARRIBA Y LA MEDIA LUNA DEL FILO POR BOCA. CON LA Q, UN DESTELLO QUE CIEGA.' },
+    { id: 'inti', name: 'INTI', grupo: 'cofre', rara: true,
+      ve: 'EL SOL CON CARA: DISCO DE ORO Y SUS RAYOS GIRANDO. CON LA Q, EL MEDIODÍA; AL MORIR LO TAPA UN ECLIPSE.' },
+    { id: 'nazca', name: 'COLIBRÍ DE NAZCA', grupo: 'cofre',
+      ve: 'NO ES UN PÁJARO: ES EL GEOGLIFO, TRAZADO EN LA TIERRA DEL DESIERTO. CON LA Q SE ENCIENDE EL TRAZO; AL MORIR SE LO LLEVA EL VIENTO.' },
 
     /* --- de temporada --- */
     { id: 'calabaza', name: 'CALABAZA', grupo: 'temporada',
@@ -1127,6 +1169,28 @@
       ve: 'OJOS CERRADOS, CALMA TOTAL, Y DETRÁS EL CÍRCULO DE PINCEL TRAZÁNDOSE SOLO.' },
     { id: 'ninja', name: 'NINJA', precio: 150,
       ve: 'CAPUCHA OSCURA CON LA RENDIJA DE LOS OJOS; CADA POCO, ¡PUF!, DESAPARECE EN HUMO Y VUELVE.' },
+    /* --- objetos (29 sep) --- */
+    { id: 'alucinado', name: 'ALUCINADO', precio: 150,
+      ve: 'OJOS COMO PLATOS, CEJAS POR LAS NUBES Y LA MANDÍBULA POR LOS SUELOS.' },
+    { id: 'pensando', name: 'PENSANDO', precio: 150,
+      ve: 'UN OJO MIRANDO ARRIBA, EL OTRO ENTORNADO, LA BOCA TORCIDA Y TRES BURBUJITAS QUE CRECEN.' },
+    { id: 'roto', name: 'CORAZÓN ROTO', precio: 150,
+      ve: 'OJOS DE PENA, LA BOCA HACIA ABAJO Y UN CORAZÓN QUE SE VA PARTIENDO EN DOS ENCIMA.' },
+    { id: 'aplauso', name: 'APLAUSO', precio: 150,
+      ve: 'DOS MANOS CHOCANDO A LOS LADOS, OJOS CONTENTOS Y LAS RAYITAS DEL CHOQUE.' },
+    { id: 'chist', name: 'CHIST', precio: 150,
+      ve: 'UN OJO GUIÑADO, LA BOCA EN O Y EL DEDO CRUZADO EN LOS LABIOS PIDIENDO SILENCIO.' },
+    /* --- andinos (29 sep) --- */
+    { id: 'achachau', name: 'ACHACHAU', precio: 150,
+      ve: 'MUERTO DE FRÍO: TIRITANDO, MORADO, CON LOS OJOS APRETADOS, LA BOCA EN ZIGZAG Y EL VAHO SALIÉNDOLE.' },
+    { id: 'huayno', name: 'HUAYNO', precio: 150,
+      ve: 'BAILANDO: SE MECE DE LADO CON EL SOMBRERITO LADEADO Y LE SALEN NOTAS.' },
+    { id: 'chevere', name: 'CHÉVERE', precio: 150,
+      ve: 'UN OJO GUIÑADO, SONRISOTA DE OREJA A OREJA Y EL PULGAR ARRIBA.' },
+    { id: 'chau', name: 'CHAU', precio: 150,
+      ve: 'DICIENDO ADIÓS CON LA MANO, MECIÉNDOLA DE LADO A LADO.' },
+    { id: 'rico', name: 'QUÉ RICO', precio: 150,
+      ve: 'RELAMIÉNDOSE: OJOS ENTORNADOS DE GUSTO, LA LENGUA FUERA Y LOS MOFLETES CONTENTOS.' },
     /* del PASE: no se vende (ver CFG.PASE.PIEZAS) */
     { id: 'grito', name: 'GRITO', pase: true, precio: 0,
       ve: 'EL GRITO DEL CUADRO: LAS DOS MANOS EN LA CARA, OJOS DE ESPANTO Y LA BOCA EN UN ÓVALO QUE LATE.' }
@@ -1189,6 +1253,23 @@
       ve: 'GRULLAS DE PAPEL DE SU COLOR QUE SALEN VOLANDO POR DETRÁS, BATIENDO LAS ALAS.' },
     { id: 'efx_farolillos', name: 'FAROLILLOS', precio: 250,
       ve: 'FAROLILLOS DE PAPEL ENCENDIDOS QUE SE QUEDAN FLOTANDO Y SUBEN DESPACIO.' },
+    /* --- objetos (29 sep). Sus BURBUJAS no entran: ya estaban. NEÓN y
+     * GLITCH ya son skins de nivel, así que aquí se llaman de otra manera --- */
+    { id: 'efx_neon', name: 'TUBO DE NEÓN', precio: 250,
+      ve: 'DEJA UN TUBO DE NEÓN ENCENDIDO DE SU COLOR, CON SU HALO, QUE SE VA APAGANDO.' },
+    { id: 'efx_polaroids', name: 'POLAROIDS', precio: 250,
+      ve: 'VA SOLTANDO FOTOS INSTANTÁNEAS QUE CAEN GIRANDO POR EL CAMINO.' },
+    { id: 'efx_tickets', name: 'TICKETS', precio: 250,
+      ve: 'LA TIRA DE TICKETS DE PREMIOS DEL SALÓN RECREATIVO, SALIENDO POR DETRÁS.' },
+    /* --- andinos (29 sep). La NIEVE ya estaba: la de la cordillera es GRANIZO --- */
+    { id: 'efx_coca', name: 'HOJAS DE COCA', precio: 250,
+      ve: 'VAN CAYENDO HOJAS VERDES QUE GIRAN Y SE POSAN POR EL CAMINO.' },
+    { id: 'efx_granizo', name: 'GRANIZO', precio: 250,
+      ve: 'EL GRANIZO FINO DE LA CORDILLERA, CAYÉNDOLE EN DIAGONAL POR DETRÁS.' },
+    { id: 'efx_serpentina', name: 'SERPENTINA', precio: 250,
+      ve: 'TRES CINTAS DE CARNAVAL QUE SE ENROSCAN Y SE VAN SOLTANDO.' },
+    { id: 'efx_tejido', name: 'TEJIDO', precio: 250,
+      ve: 'POR DONDE PASA DEJA UNA FAJA TEJIDA CON SUS ROMBOS Y SUS RAYAS.' },
     /* de COFRE: no se compran (PLAN-COFRES.md) */
     { id: 'efx_fantasmitas', name: 'FANTASMITAS', cofre: true, precio: 0,
       ve: 'SE LE ESCAPAN FANTASMAS DIMINUTOS DE LOS CUATRO COLORES, QUE SUBEN Y SE APAGAN.' },
@@ -1202,6 +1283,14 @@
       ve: 'FUEGOS FATUOS AZULES QUE SE QUEDAN TEMBLANDO DONDE PASÓ Y SE VAN APAGANDO.' },
     { id: 'efx_koi', name: 'KOI', cofre: true, precio: 0,
       ve: 'DOS CARPAS KOI LE SIGUEN NADANDO, UNA CON LAS MANCHAS DE SU COLOR, Y EL AGUA SE ONDULA A SU PASO.' },
+    { id: 'efx_glitch', name: 'INTERFERENCIA', cofre: true, precio: 0,
+      ve: 'SE DESCOMPONE EN ROJO, VERDE Y AZUL DESENCAJADOS, CON BANDAS QUE LE CRUZAN.' },
+    { id: 'efx_cinta', name: 'CINTA DE CASETE', cofre: true, precio: 0,
+      ve: 'SE LE SALE LA CINTA MARRÓN Y SE VA ENREDANDO POR DONDE PASA.' },
+    { id: 'efx_polvoro', name: 'POLVO DE ORO', cofre: true, precio: 0,
+      ve: 'LA ARENILLA DORADA DEL RÍO, QUE BRILLA Y SE APAGA A SU PASO.' },
+    { id: 'efx_lineas', name: 'LÍNEAS DE NAZCA', cofre: true, precio: 0,
+      ve: 'EL CAMINO QUEDA GRABADO EN EL SUELO COMO UN GEOGLIFO: SURCO OSCURO, LÍNEA CLARA Y PIEDRAS AL BORDE.' },
     { id: 'efx_portales', name: 'PORTALES', cofre: true, precio: 0,
       ve: 'SU ESTELA SON PORTALITOS MORADOS QUE SE ABREN Y SE CIERRAN. GUIÑO AL MAGO.' },
     { id: 'efx_constelacion', name: 'CONSTELACIÓN', cofre: true, precio: 0,
@@ -1279,6 +1368,29 @@
       ve: 'UN CUENCO DE RAMEN HUMEANTE EN LA CABEZA, CON NARUTO, HUEVO, ALGA Y LOS PALILLOS CLAVADOS.' },
     { id: 'acc_katana', name: 'KATANA', precio: 450,
       ve: 'A LA ESPALDA, EN SU VAINA LACADA: LA EMPUÑADURA ASOMA POR ENCIMA DEL HOMBRO Y LA CORREA LE CRUZA EL CUERPO.' },
+    /* --- objetos (29 sep). La corona se llama DE ORO: CORONA ya es una skin
+     * de logro --- */
+    { id: 'acc_3d', name: 'GAFAS 3D', precio: 450,
+      ve: 'LAS DE CARTÓN DEL CINE: UN CRISTAL ROJO, OTRO CIAN Y LA PATILLA HACIA ATRÁS.' },
+    { id: 'acc_corona', name: 'CORONA DE ORO', precio: 450,
+      ve: 'DE ORO, CON TRES PUNTAS REMATADAS EN PIEDRA —ROJA, AZUL Y VERDE— Y EL ARO CON SU RUBÍ.' },
+    { id: 'acc_boina', name: 'BOINA', precio: 450,
+      ve: 'BOINA LADEADA DE SU COLOR, CON SU CINTA Y EL RABITO ARRIBA.' },
+    { id: 'acc_monoculo', name: 'MONÓCULO', precio: 450,
+      ve: 'CRISTAL CON ARO DE ORO, CEJA DE PILLO LEVANTADA Y LA CADENITA MECIÉNDOSE AL CORRER.' },
+    { id: 'acc_moto', name: 'CASCO DE MOTO', precio: 450,
+      ve: 'INTEGRAL, CON LA VISERA AZULADA LEVANTADA Y UNA BANDA DE SU COLOR CRUZÁNDOLO.' },
+    /* --- andinos (29 sep) --- */
+    { id: 'acc_montera', name: 'MONTERA', precio: 450,
+      ve: 'EL SOMBRERO DE ALA ANCHA, CON LA COPA Y LA CINTA BORDADA DE ROMBOS.' },
+    { id: 'acc_poncho', name: 'PONCHO', precio: 450,
+      ve: 'LA TELA CAYÉNDOLE POR LOS HOMBROS, CON SUS FRANJAS Y LOS FLECOS ONDEANDO.' },
+    { id: 'acc_quena', name: 'QUENA', precio: 450,
+      ve: 'LA FLAUTA DE CAÑA PEGADA A LA BOCA, CON SUS AGUJEROS, SOLTANDO NOTAS.' },
+    { id: 'acc_orejeras', name: 'OREJERAS DE ORO', precio: 450,
+      ve: 'LOS DISCOS DE ORO CON TURQUESA DE LOS SEÑORES MOCHICA, MECIÉNDOSE AL CORRER.' },
+    { id: 'acc_trenzas', name: 'TRENZAS', precio: 450,
+      ve: 'DOS TRENZAS LARGAS QUE SE MECEN, CADA UNA CON SU POMPÓN DE LANA DE COLORES.' },
     /* de COFRE: no se compran (PLAN-COFRES.md) */
     { id: 'acc_luchador', name: 'MÁSCARA DE LUCHADOR', cofre: true, precio: 0,
       ve: 'MÁSCARA DE LUCHA LIBRE: TELA AZUL, LLAMAS DORADAS ALREDEDOR DEL OJO Y LOS CORDONES CRUZADOS DETRÁS.' },
@@ -1292,6 +1404,14 @@
       ve: 'EL CASCO DE SAMURÁI: CUENCO DE HIERRO REMACHADO, ASTAS DORADAS, UN SOL EN EL FRENTE Y EL CUBRENUCA DE LÁMINAS DE SU COLOR.' },
     { id: 'acc_raijin', name: 'TAMBORES DE RAIJIN', cofre: true, precio: 0,
       ve: 'EL ARO DE TAMBORES DEL DIOS DEL TRUENO GIRANDO ALREDEDOR; DE VEZ EN CUANDO SALTA UN RAYO DE UNO A OTRO.' },
+    { id: 'acc_casco', name: 'CASCO DE ASTRONAUTA', cofre: true, precio: 0,
+      ve: 'BURBUJA DE CRISTAL CON EL REFLEJO CRUZÁNDOLA, ARO DE CUELLO Y UNA ANTENA CON SU PILOTO ROJO.' },
+    { id: 'acc_cadena', name: 'CADENA DE ORO', cofre: true, precio: 0,
+      ve: 'LOS ESLABONES AL CUELLO Y UNA MEDALLA COLGANDO QUE SE BAMBOLEA AL CORRER.' },
+    { id: 'acc_oro', name: 'MÁSCARA DE ORO', cofre: true, precio: 0,
+      ve: 'LA MÁSCARA FUNERARIA SICÁN, CON LOS OJOS ALADOS, LA NARIZ EN RELIEVE Y EL CINABRIO ROJO.' },
+    { id: 'acc_plumas', name: 'PLUMAS DE GUACAMAYO', cofre: true, precio: 0,
+      ve: 'NUEVE PLUMAS DE COLORES ABIERTAS HACIA ATRÁS, SUJETAS POR UNA VINCHA.' },
     { id: 'acc_aureola', name: 'AUREOLA', cofre: true, precio: 0,
       ve: 'UN ARO DE LUZ FLOTANDO SOBRE LA CABEZA QUE SE INCLINA AL GIRAR, COMO SI PESARA.' },
     { id: 'acc_alas', name: 'ALITAS', cofre: true, precio: 0,

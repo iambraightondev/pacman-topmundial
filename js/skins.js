@@ -5855,10 +5855,15 @@
   var CARAS_MITO = { oraculo: 1, petrificado: 1, divino: 1, maldicion: 1, invocando: 1 };
   /* y las cinco de la tanda yōkai (29 sep) */
   var CARAS_YOKAI = { kawaii: 1, banzai: 1, itadakimasu: 1, zen: 1, ninja: 1 };
+  /* y las de las tandas de objetos y andina (entran el 29 sep) */
+  var CARAS_OBJ = { alucinado: 1, pensando: 1, roto: 1, aplauso: 1, chist: 1 };
+  var CARAS_ANDINA = { achachau: 1, huayno: 1, chevere: 1, chau: 1, rico: 1 };
   function caraEmote(ctx, x, y, r, color, id, t) {
     if (CARAS_18[id]) { caraEmote18(ctx, x, y, r, color, id, t); return; }
     if (CARAS_MITO[id]) { caraMito(ctx, x, y, r, color, id, t); return; }
     if (CARAS_YOKAI[id]) { caraYokai(ctx, x, y, r, color, id, t); return; }
+    if (CARAS_OBJ[id]) { caraObj(ctx, x, y, r, color, id, t); return; }
+    if (CARAS_ANDINA[id]) { caraAndina(ctx, x, y, r, color, id, t); return; }
     if (id === 'grito') { caraGrito(ctx, x, y, r, color, t); return; }
     var ink = '#000000', lw = Math.max(1, r * 0.17), k, p;
     var mx = 0, my = 0, giro = 0, esc = 1;
@@ -10940,6 +10945,3363 @@
     if (h2 > 0 && h2 < 1) humoPuf(ctx, x, y, h2, h2 < 0.6 ? 1 : (1 - h2) / 0.4, r * 1.1);
   }
 
+  /* ============================================================
+   * TANDA DE OBJETOS (19 sep 2026, entra al juego el 29 sep). Ocho skins
+   * que no son bichos: son COSAS, en la línea de RECREATIVA. Cada una deja
+   * la silueta de Pac-Man, convierte el comer en el gesto del objeto —la
+   * ranura, la puerta, la tapa, la esfera— y tiene su Q y su muerte. Siete
+   * accesorios, cinco efectos y cinco emotes. MÁQUINA DE DISCOS, TELEVISOR,
+   * CABINA, el CASCO DE ASTRONAUTA, la CADENA DE ORO, INTERFERENCIA y la
+   * CINTA DE CASETE solo salen de cofre.
+   *
+   * El dibujo es el del escaparate, con las mismas medidas; solo cambia
+   * que la Q sale al pulsar la tecla (qDe) y no con un reloj. El código del
+   * escaparate sigue en propuestas/vestuario-objetos/.
+   * ============================================================ */
+
+  /* ---------------- MÁQUINA DE DISCOS ---------------- */
+  /* Wurlitzer de toda la vida: arco de neón del color del jugador, ventana
+   * con el disco girando, rejilla de altavoz y la RANURA DE LOS DISCOS por
+   * boca, abajo del todo. Q: sube el volumen y las ondas empujan. */
+  DRAW.discos = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.1), k;
+    var ang = [0, 13, 24][fz] * Math.PI / 180;
+    var mueble = hex(mix('#3a2418', o.c, 0.12)), muebleOsc = mix(mueble, '#0c0602', 0.5);
+    var neon = o.c, cromo = '#d8dbe4', cromoOsc = '#7d8494';
+    var subiendo = (q >= 0) ? Math.sin(Math.min(1, q * 1.6) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 6) * 0.12 + subiendo * 0.35);
+
+    /* el hueco oscuro que se ve al abrir la ranura */
+    ctx.fillStyle = '#07060a';
+    ctx.beginPath(); ctx.moveTo(-4.2, -0.8); ctx.lineTo(4.6, -0.5); ctx.lineTo(4.6, -4.4); ctx.lineTo(-4.2, -2.6); ctx.closePath(); ctx.fill();
+
+    /* el mueble: cuerpo recto y remate en arco, como el de verdad */
+    var cuerpo = new Path2D();
+    cuerpo.moveTo(4.5, -0.6);
+    cuerpo.lineTo(4.6, 2.6);
+    cuerpo.quadraticCurveTo(4.5, 5.6, 1.4, 6.2);
+    cuerpo.quadraticCurveTo(-2.0, 6.5, -3.8, 4.6);
+    cuerpo.quadraticCurveTo(-5.0, 3.0, -4.9, 0.6);
+    cuerpo.lineTo(-4.6, -0.9);
+    cuerpo.lineTo(4.5, -0.6);
+    cuerpo.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-4.6, -1.1);
+    mand.lineTo(4.5, -0.8);
+    mand.quadraticCurveTo(4.6, -4.6, 2.6, -5.4);
+    mand.lineTo(-3.4, -5.6);
+    mand.quadraticCurveTo(-4.8, -5.2, -4.6, -1.1);
+    mand.closePath();
+    rostro(ctx, cuerpo, mand, -4.6, -1.0, ang, mueble, muebleOsc, 0.8, 0.8);
+
+    ctx.save(); ctx.clip(cuerpo);
+    /* el arco de neón, dos tubos que siguen el remate */
+    for (k = 0; k < 2; k++) {
+      ctx.strokeStyle = (k ? hex(mix(neon, '#ffffff', 0.55)) : neon);
+      ctx.lineWidth = k ? 0.28 : 0.72;
+      ctx.globalAlpha = k ? 0.95 : (0.55 + 0.45 * Math.abs(Math.sin(t * 2 + k)) + subiendo * 0.4);
+      ctx.beginPath();
+      ctx.moveTo(4.1, 2.8);
+      ctx.quadraticCurveTo(3.9, 5.1, 1.3, 5.6);
+      ctx.quadraticCurveTo(-1.7, 5.9, -3.3, 4.2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    /* la ventana: el disco dando vueltas */
+    ctx.fillStyle = '#0a0a12';
+    roundRect(ctx, -3.7, 0.3, 7.9, 3.6, 0.9); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    var gira = t * (2.2 + subiendo * 5);
+    ctx.save();
+    ctx.translate(0.2, 2.1); ctx.rotate(gira);
+    ctx.fillStyle = '#16161f';
+    ctx.beginPath(); ctx.arc(0, 0, 1.62, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 0.14;
+    for (k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(0, 0, 0.62 + k * 0.3, 0, Math.PI * 2); ctx.stroke(); }
+    /* la etiqueta, para que se vea girar */
+    ctx.fillStyle = hex(mix(neon, '#ffffff', 0.25));
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 0.62, -0.5, 0.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = neon;
+    ctx.beginPath(); ctx.arc(0, 0, 0.26, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    destello(ctx, -2.3, 3.3, 0.5, 0.5);
+
+    /* rejilla del altavoz, a los lados de la ventana */
+    ctx.strokeStyle = cromoOsc; ctx.lineWidth = 0.3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 4; k++) { ctx.moveTo(-4.2, -0.1 + k * 0.001); ctx.lineTo(4.2, 0.0); }
+    ctx.stroke();
+    ctx.restore();
+
+    /* la ranura de los discos, en la mandíbula */
+    ctx.save(); girarSobre(ctx, -4.6, -1.0, -ang); ctx.clip(mand);
+    ctx.fillStyle = cromo;
+    roundRect(ctx, -3.2, -3.4, 6.6, 0.9, 0.4); ctx.fill();
+    contorno(ctx, 1.1); ctx.stroke();
+    ctx.fillStyle = '#0a0a12';
+    roundRect(ctx, -2.6, -3.15, 5.4, 0.42, 0.2); ctx.fill();
+    /* botonera de selección */
+    for (k = 0; k < 5; k++) {
+      ctx.fillStyle = (k % 2) ? '#e03a4a' : cromo;
+      ctx.beginPath(); ctx.arc(-2.4 + k * 1.3, -4.7, 0.36, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 0.9); ctx.stroke();
+    }
+    ctx.restore();
+
+    /* Q: el volumen a tope, ondas que salen de la rejilla */
+    if (q >= 0) {
+      ctx.lineCap = 'round';
+      for (k = 0; k < 3; k++) {
+        var u = (q * 1.8 + k / 3) % 1;
+        ctx.strokeStyle = mix(neon, '#ffffff', 0.4, (1 - u) * 0.9);
+        ctx.lineWidth = 0.9 * (1 - u * 0.4);
+        ctx.beginPath(); ctx.arc(4.8, 0.6, 1.4 + u * 7.5, -0.85, 0.85); ctx.stroke();
+      }
+      for (k = 0; k < 4; k++) {
+        var un = (q * 1.3 + k / 4) % 1;
+        nota(ctx, 5.4 + un * 5.5, 2.4 + Math.sin(un * 7 + k) * 1.8 + un * 2.2,
+          0.9, mix(neon, '#ffffff', 0.5, 1 - un));
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- TELEVISOR ---------------- */
+  /* Tele de tubo con antenas de conejo: la PANTALLA es la cara —dos ojos de
+   * fósforo y la mitad de abajo que se abre— y por detrás asoma la joroba del
+   * tubo. Q: cambia de canal, la imagen salta y revienta en estática. */
+  DRAW.tele = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 0.9), k;
+    var ang = [0, 12, 22][fz] * Math.PI / 180;
+    var caja = hex(mix('#5a4432', o.c, 0.16)), cajaOsc = mix(caja, '#150c05', 0.5);
+    var verde = '#7dff9a', cromo = '#c9ccd6';
+    var salto = (q >= 0) ? Math.sin(Math.min(1, q * 2.2) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 7) * 0.1);
+
+    /* antenas de conejo */
+    ctx.strokeStyle = cromo; ctx.lineWidth = 0.46; ctx.lineCap = 'round';
+    [[-0.9, 1.05], [0.6, -0.55]].forEach(function (a, k2) {
+      var w = Math.sin(t * 4 + k2) * 0.2;
+      ctx.beginPath();
+      ctx.moveTo(-0.6, 4.4);
+      ctx.lineTo(-0.6 + a[0] * 3.2 + w, 4.4 + Math.abs(a[1]) * 4.6);
+      ctx.stroke();
+      ctx.fillStyle = '#e8b13a';
+      ctx.beginPath(); ctx.arc(-0.6 + a[0] * 3.2 + w, 4.4 + Math.abs(a[1]) * 4.6, 0.36, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* la joroba del tubo, por detrás */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.6, 3.2);
+      ctx.quadraticCurveTo(-6.6, 2.4, -6.4, -0.4);
+      ctx.quadraticCurveTo(-6.2, -2.6, -3.6, -3.0);
+      ctx.closePath();
+    }, hex(cajaOsc), '#150c05', 0.3, 0.3);
+
+    ctx.fillStyle = '#06070c';
+    ctx.beginPath(); ctx.moveTo(-3.4, -0.7); ctx.lineTo(5.0, -0.4); ctx.lineTo(5.0, -4.2); ctx.lineTo(-3.4, -2.2); ctx.closePath(); ctx.fill();
+
+    var caj = new Path2D();
+    caj.moveTo(5.0, -0.5);
+    caj.lineTo(5.2, 3.4);
+    caj.quadraticCurveTo(5.2, 4.6, 3.9, 4.7);
+    caj.lineTo(-3.2, 4.9);
+    caj.quadraticCurveTo(-4.4, 4.8, -4.4, 3.6);
+    caj.lineTo(-4.2, -0.8);
+    caj.lineTo(5.0, -0.5);
+    caj.closePath();
+    var mandT = new Path2D();
+    mandT.moveTo(-4.2, -1.0);
+    mandT.lineTo(5.0, -0.7);
+    mandT.quadraticCurveTo(5.1, -4.4, 3.6, -4.9);
+    mandT.lineTo(-3.0, -5.1);
+    mandT.quadraticCurveTo(-4.3, -4.8, -4.2, -1.0);
+    mandT.closePath();
+    rostro(ctx, caj, mandT, -4.2, -0.9, ang, caja, cajaOsc, 0.8, 0.8);
+
+    /* la pantalla: marco de cristal y la cara de fósforo dentro */
+    ctx.save(); ctx.clip(caj);
+    ctx.fillStyle = '#080a10';
+    roundRect(ctx, -3.5, 0.0, 7.2, 4.2, 1.1); ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.save();
+    ctx.beginPath(); roundRect(ctx, -3.5, 0.0, 7.2, 4.2, 1.1); ctx.clip();
+    ctx.translate(salto * 1.2, -salto * 2.4);
+    /* los dos ojos */
+    [[-1.4, 2.4], [1.5, 2.4]].forEach(function (e) {
+      ctx.fillStyle = verde;
+      ctx.beginPath(); ctx.ellipse(e[0], e[1], 0.85, 0.95, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0b2a14';
+      ctx.beginPath(); ctx.arc(e[0] + 0.28, e[1] - 0.1, 0.42, 0, Math.PI * 2); ctx.fill();
+    });
+    /* estática al cambiar de canal */
+    if (salto > 0.05) {
+      for (k = 0; k < 26; k++) {
+        var sx = -3.4 + ((k * 37) % 70) / 10, sy = 0.2 + ((k * 53) % 38) / 10;
+        ctx.fillStyle = 'rgba(255,255,255,' + (salto * 0.5) + ')';
+        ctx.fillRect(sx, sy, 0.7, 0.18);
+      }
+    }
+    ctx.restore();
+    /* barrido del tubo */
+    ctx.fillStyle = 'rgba(255,255,255,.07)';
+    ctx.fillRect(-3.5, 0.0 + ((t * 2.6) % 4.2), 7.2, 0.4);
+    destello(ctx, -2.3, 3.4, 0.55, 0.5);
+    /* mandos, en el canto */
+    [[4.3, 2.8], [4.3, 1.4]].forEach(function (b) {
+      ctx.fillStyle = cromo;
+      ctx.beginPath(); ctx.arc(b[0], b[1], 0.42, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    });
+    ctx.restore();
+
+    /* la mitad de abajo de la pantalla, en la mandíbula: la boca */
+    ctx.save(); girarSobre(ctx, -4.2, -0.9, -ang); ctx.clip(mandT);
+    ctx.fillStyle = '#080a10';
+    roundRect(ctx, -3.3, -4.2, 6.8, 3.4, 1.0); ctx.fill();
+    ctx.fillStyle = verde;
+    ctx.beginPath();
+    ctx.moveTo(-2.2, -1.5);
+    ctx.quadraticCurveTo(0.2, -3.3, 2.6, -1.5);
+    ctx.quadraticCurveTo(0.2, -2.3, -2.2, -1.5);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    /* Q: el chispazo del cambio de canal */
+    if (q >= 0 && salto > 0.1) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + salto + ')'; ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      for (k = 0; k < 4; k++) {
+        var a3 = (k - 1.5) * 0.42;
+        ctx.moveTo(5.6 + Math.cos(a3) * 0.6, 2.0 + Math.sin(a3) * 1.4);
+        ctx.lineTo(5.6 + Math.cos(a3) * (2.4 + salto * 2), 2.0 + Math.sin(a3) * (3.0 + salto * 2));
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- CABINA TELEFÓNICA ---------------- */
+  /* La cabina roja de toda la vida, con el color del jugador en el armazón:
+   * cristales con su marco, el aparato colgado dentro, el letrero encendido
+   * arriba y la PUERTA por boca. Q: un timbrazo que la hace temblar. */
+  DRAW.cabina = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 16, 30][fz] * Math.PI / 180;
+    var hierro = hex(mix(o.c, '#c81f2a', 0.7)), hierroOsc = mix(hierro, '#2c0407', 0.5);
+    var vidrio = 'rgba(150,200,225,.30)', cromo = '#cfd3dc';
+    var timbre = (q >= 0) ? Math.sin(q * Math.PI * 7) * Math.sin(Math.min(1, q * 2) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(timbre * 0.5, Math.sin(t * 6) * 0.1);
+
+    ctx.fillStyle = '#07070d';
+    ctx.beginPath(); ctx.moveTo(-3.0, -0.8); ctx.lineTo(4.4, -0.5); ctx.lineTo(4.4, -5.0); ctx.lineTo(-3.0, -2.6); ctx.closePath(); ctx.fill();
+
+    var arm = new Path2D();
+    arm.moveTo(4.3, -0.6);
+    arm.lineTo(4.4, 4.6);
+    arm.quadraticCurveTo(4.4, 5.9, 3.0, 6.0);
+    arm.lineTo(-2.6, 6.2);
+    arm.quadraticCurveTo(-4.0, 6.1, -4.0, 4.8);
+    arm.lineTo(-3.8, -0.9);
+    arm.lineTo(4.3, -0.6);
+    arm.closePath();
+    var puerta = new Path2D();
+    puerta.moveTo(-3.8, -1.1);
+    puerta.lineTo(4.3, -0.8);
+    puerta.quadraticCurveTo(4.4, -5.2, 2.8, -5.8);
+    puerta.lineTo(-2.4, -6.0);
+    puerta.quadraticCurveTo(-3.9, -5.6, -3.8, -1.1);
+    puerta.closePath();
+    rostro(ctx, arm, puerta, -3.9, -1.0, ang, hierro, hierroOsc, 0.7, 0.7);
+
+    ctx.save(); ctx.clip(arm);
+    /* el letrero de arriba, encendido */
+    ctx.fillStyle = mix('#fff6d0', '#ffffff', 0.2 + 0.2 * Math.abs(Math.sin(t * 1.7)));
+    roundRect(ctx, -3.2, 4.6, 6.8, 1.1, 0.25); ctx.fill();
+    contorno(ctx, 1.1); ctx.stroke();
+    ctx.fillStyle = hierroOsc;
+    for (k = 0; k < 6; k++) ctx.fillRect(-2.6 + k * 1.05, 4.95, 0.5, 0.45);
+    /* los cristales, en cuadrícula */
+    ctx.fillStyle = vidrio;
+    roundRect(ctx, -3.2, 0.3, 6.8, 3.9, 0.3); ctx.fill();
+    ctx.strokeStyle = hierroOsc; ctx.lineWidth = 0.34;
+    ctx.beginPath();
+    for (k = 1; k < 3; k++) { ctx.moveTo(-3.2 + k * 2.27, 0.3); ctx.lineTo(-3.2 + k * 2.27, 4.2); }
+    for (k = 1; k < 3; k++) { ctx.moveTo(-3.2, 0.3 + k * 1.3); ctx.lineTo(3.6, 0.3 + k * 1.3); }
+    ctx.stroke();
+    contorno(ctx, 1.2);
+    roundRect(ctx, -3.2, 0.3, 6.8, 3.9, 0.3); ctx.stroke();
+    /* el aparato, al fondo */
+    ctx.fillStyle = '#1a1c24';
+    roundRect(ctx, -2.6, 1.1, 1.9, 2.2, 0.4); ctx.fill();
+    ctx.strokeStyle = cromo; ctx.lineWidth = 0.3;
+    ctx.beginPath(); ctx.moveTo(-1.7, 1.1); ctx.quadraticCurveTo(-1.2, 0.2, -0.6, 0.9); ctx.stroke();
+    ctx.fillStyle = cromo;
+    ctx.beginPath(); ctx.ellipse(-2.2, 3.1, 0.75, 0.32, -0.2, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 2.2, 3.5, 0.6, 0.55);
+    ctx.restore();
+
+    /* la puerta: su cristal y el tirador */
+    ctx.save(); girarSobre(ctx, -3.9, -1.0, -ang); ctx.clip(puerta);
+    ctx.fillStyle = vidrio;
+    roundRect(ctx, -3.0, -5.1, 6.4, 3.8, 0.3); ctx.fill();
+    ctx.strokeStyle = hierroOsc; ctx.lineWidth = 0.32;
+    ctx.beginPath();
+    for (k = 1; k < 3; k++) { ctx.moveTo(-3.0 + k * 2.13, -5.1); ctx.lineTo(-3.0 + k * 2.13, -1.3); }
+    ctx.moveTo(-3.0, -3.2); ctx.lineTo(3.4, -3.2);
+    ctx.stroke();
+    ctx.fillStyle = cromo;
+    roundRect(ctx, 2.6, -3.7, 0.5, 1.4, 0.2); ctx.fill();
+    contorno(ctx, 0.9); ctx.stroke();
+    ctx.restore();
+
+    /* Q: el timbrazo */
+    if (q >= 0) {
+      ctx.lineCap = 'round';
+      for (k = 0; k < 3; k++) {
+        var u = (q * 2.1 + k / 3) % 1;
+        ctx.strokeStyle = 'rgba(255,240,190,' + ((1 - u) * 0.95) + ')';
+        ctx.lineWidth = 0.75 * (1 - u * 0.4);
+        ctx.beginPath(); ctx.arc(4.6, 2.6, 1.6 + u * 7, -1.0, 1.0); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- CÁMARA DE FOTOS ---------------- */
+  /* Réflex de carrete: el OBJETIVO es el ojo —con su cristal azulado y su
+   * destello—, el flash arriba y la tapa del carrete por boca. Q: flashazo
+   * que lo deja todo blanco. */
+  DRAW.camara = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 0.7), k;
+    var ang = [0, 11, 20][fz] * Math.PI / 180;
+    var cuerpoC = hex(mix('#2b2d36', o.c, 0.14)), cuerpoOsc = mix(cuerpoC, '#08090d', 0.55);
+    var cuero = '#1b1c22', cromo = '#d5d8e0', cromoOsc = '#82879a';
+    var flash = (q >= 0 && q < 0.3) ? (1 - q / 0.3) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 6.5) * 0.14);
+
+    ctx.fillStyle = '#07070c';
+    ctx.beginPath(); ctx.moveTo(-4.0, -0.7); ctx.lineTo(3.6, -0.4); ctx.lineTo(3.6, -3.8); ctx.lineTo(-4.0, -2.2); ctx.closePath(); ctx.fill();
+
+    var cu = new Path2D();
+    cu.moveTo(3.6, -0.5);
+    cu.quadraticCurveTo(4.0, 1.6, 3.5, 2.8);
+    cu.lineTo(1.6, 3.0);
+    cu.quadraticCurveTo(1.2, 4.6, -0.4, 4.6);
+    cu.quadraticCurveTo(-2.0, 4.6, -2.4, 3.1);
+    cu.lineTo(-4.4, 2.9);
+    cu.quadraticCurveTo(-5.0, 1.4, -4.6, -0.8);
+    cu.lineTo(3.6, -0.5);
+    cu.closePath();
+    var tapa = new Path2D();
+    tapa.moveTo(-4.6, -1.0);
+    tapa.lineTo(3.6, -0.7);
+    tapa.quadraticCurveTo(3.9, -3.4, 2.2, -4.0);
+    tapa.lineTo(-3.6, -4.2);
+    tapa.quadraticCurveTo(-4.8, -3.6, -4.6, -1.0);
+    tapa.closePath();
+    rostro(ctx, cu, tapa, -4.6, -0.9, ang, cuerpoC, cuerpoOsc, 0.7, 0.7);
+
+    ctx.save(); ctx.clip(cu);
+    /* la banda de cuero que cruza el cuerpo */
+    ctx.fillStyle = cuero;
+    ctx.fillRect(-4.8, -0.1, 9.0, 1.15);
+    ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 0.16;
+    ctx.beginPath(); ctx.moveTo(-4.8, 0.5); ctx.lineTo(4.2, 0.5); ctx.stroke();
+    /* el flash, arriba */
+    ctx.fillStyle = mix('#dfe6f2', '#ffffff', flash);
+    roundRect(ctx, -2.3, 3.1, 1.9, 1.3, 0.25); ctx.fill();
+    contorno(ctx, 1.1); ctx.stroke();
+    /* el disparador y la palanca de arrastre */
+    ctx.fillStyle = '#e03a4a';
+    ctx.beginPath(); ctx.arc(2.5, 3.3, 0.5, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    ctx.restore();
+
+    /* el objetivo: es el ojo */
+    var lente = 2.15;
+    piezaX(ctx, function () { ctx.beginPath(); ctx.arc(1.3, 1.4, lente, 0, Math.PI * 2); },
+      cromo, cromoOsc, 0.35, 0.35, 1.7);
+    ctx.fillStyle = '#0b1220';
+    ctx.beginPath(); ctx.arc(1.3, 1.4, lente - 0.55, 0, Math.PI * 2); ctx.fill();
+    var g = ctx.createRadialGradient(0.8, 2.0, 0.1, 1.3, 1.4, lente - 0.55);
+    g.addColorStop(0, 'rgba(120,200,255,.85)');
+    g.addColorStop(0.55, 'rgba(30,70,150,.55)');
+    g.addColorStop(1, 'rgba(8,10,25,.9)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(1.3, 1.4, lente - 0.55, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(1.55, 1.3, 0.62, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 0.55, 2.25, 0.45, 0.95);
+    contorno(ctx, 1.1);
+    ctx.beginPath(); ctx.arc(1.3, 1.4, lente - 0.55, 0, Math.PI * 2); ctx.stroke();
+
+    /* la tapa del carrete: su bisagra y la ventanita del contador */
+    ctx.save(); girarSobre(ctx, -4.6, -0.9, -ang); ctx.clip(tapa);
+    ctx.fillStyle = cuero;
+    roundRect(ctx, -4.0, -3.7, 7.2, 2.5, 0.4); ctx.fill();
+    ctx.fillStyle = cromoOsc;
+    roundRect(ctx, 1.2, -3.2, 1.5, 1.0, 0.25); ctx.fill();
+    ctx.fillStyle = '#ffd23f';
+    ctx.font = '';
+    ctx.beginPath(); ctx.arc(1.95, -2.7, 0.26, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    /* Q: el flashazo */
+    if (flash > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var gf = ctx.createRadialGradient(-1.35, 3.75, 0.2, -1.35, 3.75, 4 + flash * 12);
+      gf.addColorStop(0, 'rgba(255,255,255,' + flash + ')');
+      gf.addColorStop(0.5, 'rgba(220,240,255,' + (flash * 0.5) + ')');
+      gf.addColorStop(1, 'rgba(180,220,255,0)');
+      ctx.fillStyle = gf;
+      ctx.beginPath(); ctx.arc(-1.35, 3.75, 4 + flash * 12, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,' + flash + ')'; ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (k = 0; k < 6; k++) {
+        var ar = k * Math.PI / 3 + 0.2, lr = 3 + flash * 8;
+        ctx.moveTo(-1.35 + Math.cos(ar) * 2, 3.75 + Math.sin(ar) * 2);
+        ctx.lineTo(-1.35 + Math.cos(ar) * lr, 3.75 + Math.sin(ar) * lr);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- DESPERTADOR ---------------- */
+  /* El de dos campanas: la ESFERA es la cara —con sus agujas corriendo— y la
+   * mitad de abajo se abre para comer. Q: la alarma, con el martillo
+   * disparado entre las dos campanas. */
+  DRAW.reloj = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 15, 28][fz] * Math.PI / 180;
+    var metal = hex(mix('#c3c7d2', o.c, 0.30)), metalOsc = mix(metal, '#2a2d38', 0.5);
+    var esfera = '#f7f2e2', esferaOsc = '#c9c2ac';
+    var alarma = (q >= 0) ? Math.sin(Math.min(1, q * 1.5) * Math.PI) : 0;
+    var tiembla = alarma * Math.sin(t * 60) * 0.45;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(tiembla, Math.abs(Math.sin(t * 7)) * 0.2 - 0.1);
+
+    /* patitas */
+    ctx.strokeStyle = hex(metalOsc); ctx.lineWidth = 0.7; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-2.4, -4.4); ctx.lineTo(-3.4, -6.0);
+    ctx.moveTo(2.4, -4.4); ctx.lineTo(3.4, -6.0);
+    ctx.stroke();
+
+    /* las dos campanas y el martillo entre ellas */
+    [[-3.1, 1], [3.1, -1]].forEach(function (c) {
+      piezaX(ctx, function () {
+        ctx.beginPath(); ctx.arc(c[0], 4.5, 1.75, 0, Math.PI * 2);
+      }, metal, hex(metalOsc), 0.4, 0.4, 1.6);
+      destello(ctx, c[0] - 0.55 * c[1], 5.2, 0.45, 0.75);
+    });
+    var mart = alarma * Math.sin(t * 60) * 1.5;
+    ctx.strokeStyle = hex(metalOsc); ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(0, 4.6); ctx.lineTo(mart, 6.3); ctx.stroke();
+    ctx.fillStyle = metal;
+    ctx.beginPath(); ctx.arc(mart, 6.4, 0.55, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+
+    ctx.fillStyle = '#100b06';
+    ctx.beginPath(); ctx.moveTo(-3.6, -0.7); ctx.lineTo(3.6, -0.5); ctx.lineTo(3.6, -4.2); ctx.lineTo(-3.6, -2.4); ctx.closePath(); ctx.fill();
+
+    var cajaR = new Path2D();
+    cajaR.moveTo(4.4, -0.6);
+    cajaR.quadraticCurveTo(4.6, 2.6, 2.4, 4.0);
+    cajaR.quadraticCurveTo(0.0, 5.2, -2.4, 4.0);
+    cajaR.quadraticCurveTo(-4.6, 2.6, -4.4, -0.6);
+    cajaR.lineTo(4.4, -0.6);
+    cajaR.closePath();
+    var mandR = new Path2D();
+    mandR.moveTo(-4.4, -0.9);
+    mandR.lineTo(4.4, -0.9);
+    mandR.quadraticCurveTo(4.6, -3.4, 2.4, -4.6);
+    mandR.quadraticCurveTo(0.0, -5.6, -2.4, -4.6);
+    mandR.quadraticCurveTo(-4.6, -3.4, -4.4, -0.9);
+    mandR.closePath();
+    rostro(ctx, cajaR, mandR, -4.4, -0.8, ang, metal, hex(metalOsc), 0.6, 0.6);
+
+    /* la esfera y las agujas */
+    ctx.save(); ctx.clip(cajaR);
+    ctx.fillStyle = esferaOsc;
+    ctx.beginPath(); ctx.arc(0.5, -0.8, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = esfera;
+    ctx.beginPath(); ctx.arc(0, -0.3, 3.5, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.22;
+    for (k = 0; k < 12; k++) {
+      var am = k * Math.PI / 6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(am) * 2.65, -0.3 + Math.sin(am) * 2.65);
+      ctx.lineTo(Math.cos(am) * 3.1, -0.3 + Math.sin(am) * 3.1);
+      ctx.stroke();
+    }
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.55;
+    ctx.beginPath(); ctx.moveTo(0, -0.3);
+    ctx.lineTo(Math.cos(-t * 0.9) * 1.7, -0.3 + Math.sin(-t * 0.9) * 1.7); ctx.stroke();
+    ctx.lineWidth = 0.38;
+    ctx.beginPath(); ctx.moveTo(0, -0.3);
+    ctx.lineTo(Math.cos(-t * 7) * 2.5, -0.3 + Math.sin(-t * 7) * 2.5); ctx.stroke();
+    ctx.fillStyle = o.c;
+    ctx.beginPath(); ctx.arc(0, -0.3, 0.45, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    ctx.restore();
+
+    /* la media esfera de abajo, en la mandíbula */
+    ctx.save(); girarSobre(ctx, -4.4, -0.8, -ang); ctx.clip(mandR);
+    ctx.fillStyle = esfera;
+    ctx.beginPath(); ctx.arc(0, -1.2, 3.5, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.22;
+    for (k = 0; k < 6; k++) {
+      var a2 = Math.PI + k * Math.PI / 6;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a2) * 2.65, -1.2 + Math.sin(a2) * 2.65);
+      ctx.lineTo(Math.cos(a2) * 3.1, -1.2 + Math.sin(a2) * 3.1);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    /* Q: el timbrazo saliendo de las dos campanas */
+    if (q >= 0) {
+      ctx.lineCap = 'round';
+      [-3.1, 3.1].forEach(function (cx) {
+        for (var k2 = 0; k2 < 2; k2++) {
+          var u = (q * 2.4 + k2 / 2) % 1;
+          ctx.strokeStyle = 'rgba(255,240,190,' + ((1 - u) * alarma) + ')';
+          ctx.lineWidth = 0.7 * (1 - u * 0.4);
+          ctx.beginPath(); ctx.arc(cx, 4.8, 2.2 + u * 5.5, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+        }
+      });
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- SEMÁFORO ---------------- */
+  /* Las tres luces con su visera: la ROJA de arriba hace de ojo y la VERDE de
+   * abajo es la boca, que se abre. Q: se pone en verde y arranca. */
+  DRAW.semaforo = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0);
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var chapa = hex(mix('#2f3742', o.c, 0.13)), chapaOsc = mix(chapa, '#080a0e', 0.5);
+    var verde = (q >= 0) ? 1 : 0.18;
+    var ambar = (q >= 0 && q < 0.25) ? 1 : 0.18;
+    var rojo = (q >= 0) ? 0.18 : (0.55 + 0.45 * Math.abs(Math.sin(t * 1.6)));
+    var arranca = (q >= 0) ? Math.sin(Math.min(1, q * 1.7) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(arranca * 0.9, Math.sin(t * 6) * 0.1);
+
+    ctx.fillStyle = '#06070b';
+    ctx.beginPath(); ctx.moveTo(-2.6, -0.8); ctx.lineTo(3.4, -0.5); ctx.lineTo(3.4, -5.0); ctx.lineTo(-2.6, -3.0); ctx.closePath(); ctx.fill();
+
+    var col = new Path2D();
+    col.moveTo(3.3, -0.6);
+    col.lineTo(3.4, 4.8);
+    col.quadraticCurveTo(3.4, 6.2, 1.8, 6.3);
+    col.lineTo(-1.6, 6.4);
+    col.quadraticCurveTo(-3.2, 6.3, -3.2, 4.9);
+    col.lineTo(-3.0, -0.9);
+    col.lineTo(3.3, -0.6);
+    col.closePath();
+    var mandS = new Path2D();
+    mandS.moveTo(-3.0, -1.1);
+    mandS.lineTo(3.3, -0.8);
+    mandS.quadraticCurveTo(3.4, -5.4, 1.8, -6.0);
+    mandS.lineTo(-1.4, -6.1);
+    mandS.quadraticCurveTo(-3.1, -5.6, -3.0, -1.1);
+    mandS.closePath();
+    rostro(ctx, col, mandS, -3.1, -1.0, ang, chapa, chapaOsc, 0.6, 0.6);
+
+    function luz(cx, cy, color, fuerza, recorta) {
+      ctx.save();
+      if (recorta) ctx.clip(recorta);
+      /* la visera */
+      ctx.fillStyle = chapaOsc;
+      ctx.beginPath();
+      ctx.moveTo(cx - 1.55, cy + 0.5);
+      ctx.quadraticCurveTo(cx, cy + 2.5, cx + 1.55, cy + 0.5);
+      ctx.lineTo(cx + 1.55, cy + 0.1); ctx.lineTo(cx - 1.55, cy + 0.1);
+      ctx.closePath(); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+      ctx.fillStyle = mix(color, '#000000', 0.72);
+      ctx.beginPath(); ctx.arc(cx, cy, 1.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = mix(color, '#ffffff', 0.15, fuerza);
+      ctx.beginPath(); ctx.arc(cx, cy, 1.15, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      if (fuerza > 0.5) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        var g = ctx.createRadialGradient(cx, cy, 0.2, cx, cy, 3.4);
+        g.addColorStop(0, mix(color, '#ffffff', 0.4, 0.55 * fuerza));
+        g.addColorStop(1, mix(color, '#ffffff', 0.4, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(cx, cy, 3.4, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      destello(ctx, cx - 0.45, cy + 0.5, 0.3, 0.55 * fuerza);
+      ctx.restore();
+    }
+    luz(0.1, 4.4, '#ff2a2a', rojo, col);
+    luz(0.1, 1.6, '#ffc21a', ambar, col);
+
+    /* la verde, en la mandíbula: es la boca */
+    ctx.save(); girarSobre(ctx, -3.1, -1.0, -ang);
+    luz(0.1, -2.6, '#2bff6a', verde, mandS);
+    ctx.restore();
+
+    /* Q: sale disparado, con las rayas de velocidad */
+    if (q >= 0) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.8 * arranca) + ')'; ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      [3.6, 1.2, -1.4].forEach(function (sl, k2) {
+        var x0 = -4.2 - k2 * 1.0;
+        ctx.moveTo(x0, sl); ctx.lineTo(x0 - 5.0 * arranca, sl);
+      });
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- CAJA FUERTE ---------------- */
+  /* Acero remachado, bisagras y la RUEDA por ojo; la puerta blindada es la
+   * boca. Q: se abre de golpe y escupe monedas. */
+  DRAW.caja = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 18, 34][fz] * Math.PI / 180;
+    var acero = hex(mix('#454b58', o.c, 0.16)), aceroOsc = mix(acero, '#0d0f14', 0.55);
+    var oro = '#ffd24a', cromo = '#d5d8e0';
+    var abre = (q >= 0) ? Math.sin(Math.min(1, q * 1.4) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 6)) * 0.18 - 0.1);
+
+    ctx.fillStyle = '#05060a';
+    ctx.beginPath(); ctx.moveTo(-4.2, -0.8); ctx.lineTo(4.6, -0.5); ctx.lineTo(4.6, -5.0); ctx.lineTo(-4.2, -3.0); ctx.closePath(); ctx.fill();
+
+    var cuerpoC = new Path2D();
+    cuerpoC.moveTo(4.6, -0.6);
+    cuerpoC.lineTo(4.7, 3.8);
+    cuerpoC.quadraticCurveTo(4.7, 5.2, 3.3, 5.3);
+    cuerpoC.lineTo(-3.4, 5.4);
+    cuerpoC.quadraticCurveTo(-4.8, 5.3, -4.8, 3.9);
+    cuerpoC.lineTo(-4.6, -0.9);
+    cuerpoC.lineTo(4.6, -0.6);
+    cuerpoC.closePath();
+    var puertaC = new Path2D();
+    puertaC.moveTo(-4.6, -1.1);
+    puertaC.lineTo(4.6, -0.8);
+    puertaC.quadraticCurveTo(4.7, -5.2, 3.2, -5.7);
+    puertaC.lineTo(-3.2, -5.8);
+    puertaC.quadraticCurveTo(-4.7, -5.4, -4.6, -1.1);
+    puertaC.closePath();
+    rostro(ctx, cuerpoC, puertaC, -4.7, -1.0, ang, acero, aceroOsc, 0.7, 0.7);
+
+    ctx.save(); ctx.clip(cuerpoC);
+    /* remaches por el borde */
+    ctx.fillStyle = cromo;
+    for (k = 0; k < 7; k++) {
+      ctx.beginPath(); ctx.arc(-3.9 + k * 1.3, 4.6, 0.24, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-3.9 + k * 1.3, 0.1, 0.24, 0, Math.PI * 2); ctx.fill();
+    }
+    /* bisagras, detrás */
+    ctx.fillStyle = aceroOsc;
+    roundRect(ctx, -4.9, 0.8, 0.9, 1.4, 0.3); ctx.fill();
+    roundRect(ctx, -4.9, 3.0, 0.9, 1.4, 0.3); ctx.fill();
+    /* la rueda: el ojo */
+    ctx.save();
+    ctx.translate(0.8, 2.5);
+    ctx.rotate(t * 1.1 + abre * 7);
+    piezaX(ctx, function () { ctx.beginPath(); ctx.arc(0, 0, 1.75, 0, Math.PI * 2); },
+      cromo, '#6e7486', 0.3, 0.3, 1.6);
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.42; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 3; k++) {
+      var ar = k * Math.PI / 3;
+      ctx.moveTo(-Math.cos(ar) * 1.5, -Math.sin(ar) * 1.5);
+      ctx.lineTo(Math.cos(ar) * 1.5, Math.sin(ar) * 1.5);
+    }
+    ctx.stroke();
+    ctx.fillStyle = oro;
+    ctx.beginPath(); ctx.arc(0, 0, 0.5, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    ctx.restore();
+    destello(ctx, -0.5, 3.4, 0.4, 0.6);
+    ctx.restore();
+
+    /* la puerta blindada */
+    ctx.save(); girarSobre(ctx, -4.7, -1.0, -ang); ctx.clip(puertaC);
+    ctx.fillStyle = aceroOsc;
+    roundRect(ctx, -4.0, -5.2, 8.0, 3.9, 0.5); ctx.fill();
+    ctx.strokeStyle = cromo; ctx.lineWidth = 0.26;
+    roundRect(ctx, -3.4, -4.8, 6.8, 3.1, 0.4); ctx.stroke();
+    ctx.fillStyle = oro;
+    roundRect(ctx, 2.2, -3.6, 1.4, 0.6, 0.25); ctx.fill();
+    contorno(ctx, 0.9); ctx.stroke();
+    ctx.restore();
+
+    /* Q: la puerta se abre y salen monedas volando */
+    if (q >= 0) {
+      for (k = 0; k < 7; k++) {
+        var u = Math.min(1, q * 1.5 + k * 0.04);
+        if (u <= 0.02) continue;
+        var dx = 4.6 + u * (5 + (k % 3) * 2.5);
+        var dy = -1.0 + Math.sin(u * Math.PI) * (3 + (k % 4)) - u * 2;
+        ctx.save();
+        ctx.globalAlpha = 1 - u * 0.75;
+        ctx.translate(dx, dy);
+        ctx.scale(Math.abs(Math.cos(u * 12 + k)) * 0.8 + 0.2, 1);
+        ctx.fillStyle = oro;
+        ctx.beginPath(); ctx.arc(0, 0, 0.78, 0, Math.PI * 2); ctx.fill();
+        contorno(ctx, 1); ctx.stroke();
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- BOLA DE DISCOTECA ---------------- */
+  /* Bola de espejos con su enganche arriba: los espejitos se encienden por
+   * turnos y sueltan haces que barren. El bocado de siempre, pero de
+   * espejos. Q: suelta la pista entera. */
+  DRAW.bola = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.3), k, j;
+    var ang = DIR_ANGLE[o.d], media = HALF[fz];
+    var fiesta = (q >= 0) ? Math.sin(Math.min(1, q * 1.5) * Math.PI) : 0;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+
+    /* los haces que barren, por detrás */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (k = 0; k < 6; k++) {
+      var ah = t * 0.9 + k * Math.PI / 3;
+      var largo = 9 + fiesta * 9;
+      var col = PRISMA[(k + Math.floor(t)) % PRISMA.length];
+      var g = ctx.createLinearGradient(0, 0, Math.cos(ah) * largo, Math.sin(ah) * largo);
+      g.addColorStop(0, mix(col, '#ffffff', 0.3, 0.4 + fiesta * 0.4));
+      g.addColorStop(1, mix(col, '#ffffff', 0.3, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ah - 0.11) * largo, Math.sin(ah - 0.11) * largo);
+      ctx.lineTo(Math.cos(ah + 0.11) * largo, Math.sin(ah + 0.11) * largo);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    /* el enganche */
+    ctx.save();
+    frame(ctx, 0, 0, o.d);
+    ctx.strokeStyle = '#9aa0b0'; ctx.lineWidth = 0.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 5.8); ctx.lineTo(0, 7.4); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 8.0, 0.8, 0.2 * Math.PI, 1.8 * Math.PI); ctx.stroke();
+    ctx.restore();
+
+    function bocado() {
+      ctx.beginPath();
+      if (media <= 0) ctx.arc(0, 0, R, 0, Math.PI * 2);
+      else {
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, R, ang + media, ang - media + Math.PI * 2);
+        ctx.closePath();
+      }
+    }
+
+    /* la bola: el mismo bocado de siempre, pero de espejitos */
+    ctx.save();
+    bocado(); ctx.clip();
+    ctx.fillStyle = '#1c2030';
+    ctx.fillRect(-R - 1, -R - 1, (R + 1) * 2, (R + 1) * 2);
+    for (j = -4; j <= 4; j++) {
+      var yy = j * 1.45, rr = Math.sqrt(Math.max(0, R * R - yy * yy));
+      var n = Math.max(2, Math.round(rr * 1.25));
+      for (k = 0; k < n; k++) {
+        var xx = -rr + (k + 0.5) * (rr * 2 / n);
+        var bri = 0.28 + 0.72 * Math.pow(Math.max(0, Math.sin(t * 2.4 + k * 1.7 + j * 0.9)), 6);
+        bri = Math.min(1, bri + fiesta * 0.35);
+        var cc = PRISMA[Math.abs(k + j * 3 + Math.floor(t * 2)) % PRISMA.length];
+        ctx.fillStyle = mix(mix('#9fb4d8', cc, 0.35), '#ffffff', bri * 0.9);
+        ctx.fillRect(xx - 0.62, yy - 0.62, 1.24, 1.24);
+      }
+    }
+    var gv = ctx.createRadialGradient(-R * 0.35, -R * 0.35, R * 0.15, 0, 0, R * 1.15);
+    gv.addColorStop(0, 'rgba(255,255,255,.18)');
+    gv.addColorStop(0.55, 'rgba(0,0,0,0)');
+    gv.addColorStop(1, 'rgba(0,0,0,.55)');
+    ctx.fillStyle = gv;
+    ctx.fillRect(-R - 1, -R - 1, (R + 1) * 2, (R + 1) * 2);
+    ctx.restore();
+
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.5 / S; ctx.lineJoin = 'round';
+    bocado(); ctx.stroke();
+
+    /* destellos sueltos */
+    for (k = 0; k < 4; k++) {
+      var ad = t * 1.6 + k * 1.57;
+      destello(ctx, Math.cos(ad) * R * 0.62, Math.sin(ad) * R * 0.62, 0.6 + fiesta * 0.7,
+        0.35 + 0.5 * Math.abs(Math.sin(t * 3 + k)) + fiesta * 0.4);
+    }
+    ctx.restore();
+  };
+
+  /* ---------- Las ocho muertes de la tanda de objetos ----------
+   * Misma maquinaria que siempre: a la skin se le saca una foto quieta y la
+   * muerte mueve, quema, parte o borra esa foto. Una cosa no se muere: se
+   * rompe, se funde o se queda sin corriente, y eso es lo que se dibuja. */
+
+  /* MÁQUINA DE DISCOS: se raya el disco, el neón parpadea hasta apagarse y
+   * el vinilo sale rodando por la ranura */
+  conMuerte('discos', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var tiembla = pm < 0.35 ? Math.sin(pm * 70) * 0.5 * (1 - pm / 0.35) : 0;
+    var apaga = tramo(pm, 0.1, 0.6);
+    var cae = suave(tramo(pm, 0.55, 1));
+    var fade = 1 - tramo(pm, 0.82, 1);
+    /* se le va la luz: la foto se apaga a negro */
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(8,8,14,' + (apaga * 0.82) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ dx: tiembla, dy: cae * 2.2, rot: cae * 0.22, pf: -2, ps: -5, alpha: fade });
+    /* el chirrido de la aguja, dos rayas que cruzan */
+    if (pm < 0.3) {
+      var ch = 1 - pm / 0.3;
+      ctx.strokeStyle = 'rgba(255,255,255,' + (ch * 0.8) + ')';
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      for (k = 0; k < 2; k++) {
+        var p0 = M.pant(-3 + k * 2, 2.5 - k * 3);
+        ctx.moveTo(p0.x - 4, p0.y); ctx.lineTo(p0.x + 4, p0.y + 1.5);
+      }
+      ctx.stroke();
+    }
+    /* el disco, rodando */
+    var d = tramo(pm, 0.3, 1);
+    if (d > 0) {
+      var p = M.pant(6 + d * 16, -3.5 + Math.abs(Math.sin(d * 9)) * 2.5);
+      ctx.save();
+      ctx.globalAlpha = fade * (1 - d * 0.35);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(d * 14);
+      ctx.fillStyle = '#16161f';
+      ctx.beginPath(); ctx.arc(0, 0, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 0.16;
+      for (k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(0, 0, 0.8 + k * 0.42, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.fillStyle = o.c;
+      ctx.beginPath(); ctx.arc(0, 0, 0.7, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  /* TELEVISOR: la imagen se cierra en una raya, luego en un punto, y el
+   * mueble se queda muerto echando humo */
+  conMuerte('tele', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var cierra = tramo(pm, 0.1, 0.45);
+    var fade = 1 - tramo(pm, 0.8, 1);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(6,7,12,' + (cierra * 0.9) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ dy: suave(tramo(pm, 0.6, 1)) * 1.6, rot: suave(tramo(pm, 0.6, 1)) * 0.12,
+      pf: -2, ps: -4, alpha: fade });
+    /* la raya del tubo al apagarse */
+    var p = M.pant(0.3, 2.0);
+    if (cierra > 0.05 && pm < 0.72) {
+      var raya = (pm < 0.5) ? 1 : Math.max(0, 1 - (pm - 0.5) / 0.22);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(200,255,220,' + (0.95 * fade) + ')';
+      var anchoR = 7.4 * raya + 0.6;
+      ctx.fillRect(p.x - anchoR / 2, p.y - 0.28, anchoR, 0.56);
+      if (raya < 0.4) {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 0.5 + raya, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+    /* humo por detrás */
+    for (k = 0; k < 5; k++) {
+      var u = tramo(pm, 0.45 + k * 0.08, 1);
+      if (u <= 0) continue;
+      var ph = M.pant(-6 - u * 2, 4 + u * 9);
+      ctx.fillStyle = 'rgba(120,120,132,' + ((1 - u) * 0.5 * fade) + ')';
+      ctx.beginPath();
+      ctx.arc(ph.x + Math.sin(u * 6 + k) * 2.2, ph.y, 1.0 + u * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  /* CABINA: los cristales se rajan, estallan en trozos y el armazón se vence */
+  conMuerte('cabina', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var raja = tramo(pm, 0.05, 0.3);
+    var estalla = tramo(pm, 0.3, 0.62);
+    var cae = rebote(tramo(pm, 0.45, 0.95));
+    var fade = 1 - tramo(pm, 0.85, 1);
+    M.pinta({ rot: -cae * 1.1, pf: -4.5, ps: -6, dy: cae * 1.2, alpha: fade });
+    /* las rajas, antes de reventar */
+    if (raja > 0 && estalla < 0.05) {
+      ctx.strokeStyle = 'rgba(235,250,255,' + (raja * 0.9) + ')';
+      ctx.lineWidth = 0.32;
+      ctx.beginPath();
+      for (k = 0; k < 5; k++) {
+        var c0 = M.pant(-2 + k * 1.4, 3.5 - k * 0.9);
+        ctx.moveTo(c0.x, c0.y);
+        ctx.lineTo(c0.x + (k % 2 ? 2.4 : -2.0) * raja, c0.y + 3.2 * raja);
+      }
+      ctx.stroke();
+    }
+    /* los cristales volando */
+    if (estalla > 0) {
+      for (k = 0; k < 14; k++) {
+        var sem = hash(k * 3 + 1) % 100;
+        var ang2 = (sem / 100) * Math.PI * 2;
+        var dd = estalla * (4 + (sem % 7));
+        var pc = M.pant(Math.cos(ang2) * dd, 2 + Math.sin(ang2) * dd - estalla * 3);
+        ctx.save();
+        ctx.globalAlpha = (1 - estalla) * fade;
+        ctx.translate(pc.x, pc.y);
+        ctx.rotate(ang2 + estalla * 6);
+        ctx.fillStyle = 'rgba(175,220,245,.85)';
+        ctx.beginPath();
+        ctx.moveTo(0, -0.9); ctx.lineTo(0.8, 0.3); ctx.lineTo(-0.5, 0.9);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 0.16; ctx.stroke();
+        ctx.restore();
+      }
+    }
+  });
+
+  /* CÁMARA: se le vela el carrete —un fogonazo blanco que la come— y queda
+   * el cuerpo desarmado con la película saliéndose */
+  conMuerte('camara', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var vela = tramo(pm, 0.06, 0.34);
+    var fade = 1 - tramo(pm, 0.78, 1);
+    var cae = suave(tramo(pm, 0.4, 1));
+    /* la foto se quema a blanco y luego se apaga */
+    M.enFoto(function (c) {
+      var q2 = (pm < 0.34) ? vela : Math.max(0, 1 - (pm - 0.34) / 0.3);
+      c.fillStyle = 'rgba(255,255,255,' + (q2 * 0.95) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ dy: cae * 4.5, rot: cae * 0.5, pf: -2, ps: -3, alpha: fade });
+    /* el fogonazo */
+    if (pm < 0.34) {
+      var p = M.pant(-1.4, 3.8);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(p.x, p.y, 0.3, p.x, p.y, 6 + vela * 16);
+      g.addColorStop(0, 'rgba(255,255,255,' + (1 - vela) + ')');
+      g.addColorStop(1, 'rgba(210,235,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 6 + vela * 16, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    /* la tira de película, saliéndose */
+    var tira = tramo(pm, 0.3, 0.95);
+    if (tira > 0) {
+      var pt = M.pant(-5.5, -1.5);
+      ctx.save();
+      ctx.globalAlpha = fade * (1 - tira * 0.3);
+      ctx.strokeStyle = '#3a2b1e'; ctx.lineWidth = 1.5; ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.moveTo(pt.x, pt.y);
+      for (k = 1; k <= 5; k++) {
+        ctx.lineTo(pt.x - k * 2.4 * tira, pt.y + Math.sin(k * 1.4 + tira * 5) * 2.4 * tira);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  /* DESPERTADOR: salta el muelle, las agujas salen disparadas y las dos
+   * campanas se le caen */
+  conMuerte('reloj', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var salta = tramo(pm, 0.02, 0.22);
+    var fade = 1 - tramo(pm, 0.8, 1);
+    var cae = rebote(tramo(pm, 0.25, 0.85));
+    M.pinta({ dy: -salta * 3 + cae * 4.5, rot: cae * 0.9, pf: 0, ps: -3, alpha: fade });
+    /* el muelle que se escapa por arriba */
+    var mu = tramo(pm, 0.05, 0.6);
+    if (mu > 0 && mu < 1) {
+      var pmu = M.pant(0.5, 7 + mu * 9);
+      ctx.save();
+      ctx.globalAlpha = (1 - mu) * fade;
+      ctx.strokeStyle = '#b9bdc8'; ctx.lineWidth = 0.42; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (k = 0; k <= 16; k++) {
+        var uu = k / 16;
+        var x2 = pmu.x + Math.sin(uu * 9) * 1.6 * (1 - uu * 0.4);
+        var y2 = pmu.y + uu * 4.5;
+        if (k === 0) ctx.moveTo(x2, y2); else ctx.lineTo(x2, y2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    /* las dos agujas, volando */
+    [[-1, 2.1], [1, 1.5]].forEach(function (ag, k2) {
+      var d = tramo(pm, 0.1 + k2 * 0.07, 0.9);
+      if (d <= 0) return;
+      var pa = M.pant(ag[0] * d * 13, 2 + d * 7 - d * d * 9);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.translate(pa.x, pa.y);
+      ctx.rotate(d * 11 * ag[0]);
+      ctx.strokeStyle = TINTA; ctx.lineWidth = 0.5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-ag[1], 0); ctx.lineTo(ag[1], 0); ctx.stroke();
+      ctx.restore();
+    });
+  });
+
+  /* SEMÁFORO: se le funden las tres luces de arriba abajo y el poste se
+   * dobla hasta el suelo */
+  conMuerte('semaforo', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var fade = 1 - tramo(pm, 0.82, 1);
+    var dobla = suave(tramo(pm, 0.3, 0.95));
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(10,12,16,' + (tramo(pm, 0.05, 0.5) * 0.8) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ rot: dobla * 1.35, pf: 0, ps: -6, dy: dobla * 1.4, alpha: fade });
+    /* el fundido de cada bombilla, con su chispazo */
+    [[4.4, 0.05], [1.6, 0.16], [-2.6, 0.27]].forEach(function (lz, k2) {
+      var u = tramo(pm, lz[1], lz[1] + 0.12);
+      if (u <= 0 || u >= 1) return;
+      var p = M.pant(0.1, lz[0]);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,255,235,' + ((1 - u) * fade) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1.2 + u * 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,240,200,' + ((1 - u) * 0.9 * fade) + ')';
+      ctx.lineWidth = 0.3;
+      ctx.beginPath();
+      for (k = 0; k < 4; k++) {
+        var a3 = k * Math.PI / 2 + u * 2 + k2;
+        ctx.moveTo(p.x + Math.cos(a3) * 1.4, p.y + Math.sin(a3) * 1.4);
+        ctx.lineTo(p.x + Math.cos(a3) * (2 + u * 4), p.y + Math.sin(a3) * (2 + u * 4));
+      }
+      ctx.stroke();
+    });
+  });
+
+  /* CAJA FUERTE: un reventón le arranca la puerta y se queda vacía, con las
+   * monedas rodando por el suelo */
+  conMuerte('caja', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var boom = tramo(pm, 0.08, 0.26);
+    var fade = 1 - tramo(pm, 0.82, 1);
+    var retro = (pm < 0.4) ? Math.sin(Math.min(1, pm / 0.2) * Math.PI) : 0;
+    M.pinta({ dx: -retro * 2.2, rot: suave(tramo(pm, 0.4, 1)) * 0.45,
+      pf: -3, ps: -5, dy: suave(tramo(pm, 0.4, 1)) * 2.4, alpha: fade });
+    /* el fogonazo del reventón */
+    if (boom > 0 && boom < 1) {
+      var p = M.pant(5, -1);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(p.x, p.y, 0.3, p.x, p.y, 3 + boom * 12);
+      g.addColorStop(0, 'rgba(255,245,200,' + (1 - boom) + ')');
+      g.addColorStop(0.45, 'rgba(255,170,40,' + (0.7 * (1 - boom)) + ')');
+      g.addColorStop(1, 'rgba(255,90,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3 + boom * 12, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    /* la puerta, saliendo por los aires */
+    var d = tramo(pm, 0.1, 0.9);
+    if (d > 0) {
+      var pd = M.pant(6 + d * 18, -2 + d * 5 - d * d * 11);
+      ctx.save();
+      ctx.globalAlpha = (1 - d * 0.5) * fade;
+      ctx.translate(pd.x, pd.y);
+      ctx.rotate(d * 7);
+      ctx.fillStyle = '#2b2f3a';
+      roundRect(ctx, -3.4, -1.9, 6.8, 3.8, 0.5); ctx.fill();
+      contorno(ctx, 1.5); ctx.stroke();
+      ctx.restore();
+    }
+    /* las monedas, rodando */
+    for (k = 0; k < 9; k++) {
+      var u = tramo(pm, 0.14 + k * 0.03, 1);
+      if (u <= 0) continue;
+      var pc = M.pant(3 + u * (8 + (k % 4) * 4), -4.5 + Math.abs(Math.sin(u * 7 + k)) * 3 * (1 - u));
+      ctx.save();
+      ctx.globalAlpha = (1 - u) * fade;
+      ctx.translate(pc.x, pc.y);
+      ctx.scale(Math.abs(Math.cos(u * 15 + k)) * 0.75 + 0.25, 1);
+      ctx.fillStyle = '#ffd24a';
+      ctx.beginPath(); ctx.arc(0, 0, 0.85, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.1); ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  /* BOLA DE DISCOTECA: se le sueltan los espejitos uno a uno, se apagan los
+   * haces y lo que queda cae y revienta */
+  conMuerte('bola', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var suelta = tramo(pm, 0.05, 0.6);
+    var cae = suave(tramo(pm, 0.4, 0.86));
+    var revienta = tramo(pm, 0.84, 1);
+    var fade = 1 - tramo(pm, 0.86, 1);
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(16,18,26,' + (suelta * 0.75) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    if (revienta <= 0) {
+      M.pinta({ dy: cae * 7, rot: cae * 1.6, pf: 0, ps: 0, alpha: fade });
+    }
+    /* los espejitos que se van cayendo */
+    for (k = 0; k < 18; k++) {
+      var d = tramo(pm, 0.03 + k * 0.035, 1);
+      if (d <= 0) continue;
+      var sem = hash(k * 5 + 2) % 100;
+      var lx = ((sem / 100) - 0.5) * 11;
+      var p = M.pant(lx, 1 - d * 12 + Math.sin(d * 4 + k) * 1.2);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(d * 8 + k);
+      ctx.fillStyle = mix('#c6d4ea', PRISMA[k % PRISMA.length], 0.3);
+      ctx.fillRect(-0.62, -0.62, 1.24, 1.24);
+      ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 0.14;
+      ctx.strokeRect(-0.62, -0.62, 1.24, 1.24);
+      ctx.restore();
+    }
+    /* el golpe final */
+    if (revienta > 0) {
+      var pg = M.pant(0, -6);
+      for (k = 0; k < 10; k++) {
+        var a4 = k * 0.628 + 0.3, dd = revienta * 9;
+        ctx.save();
+        ctx.globalAlpha = 1 - revienta;
+        ctx.translate(pg.x + Math.cos(a4) * dd, pg.y + Math.sin(a4) * dd * 0.5);
+        ctx.rotate(a4);
+        ctx.fillStyle = '#cfdcee';
+        ctx.fillRect(-0.5, -0.5, 1.0, 1.0);
+        ctx.restore();
+      }
+    }
+  });
+
+  /* ---------------- ACCESORIOS ----------------
+   * En el marco del cuerpo (f hacia delante, s hacia la coronilla), encima de
+   * la skin. Escritos ya como los quiere el juego: ACC.id = function (ctx, o),
+   * con el marco puesto. */
+
+  /* GAFAS 3D: las de cartón del cine, un cristal rojo y otro cian */
+  ACC.acc_3d = function (ctx, o) {
+    var carton = '#e8e4d8', cartonOsc = '#b3ad9c';
+    /* la patilla, hacia atrás */
+    ctx.strokeStyle = cartonOsc; ctx.lineWidth = 0.75; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-0.6, 4.0); ctx.lineTo(-4.4, 3.4); ctx.stroke();
+    /* el armazón */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      roundRect(ctx, -1.4, 2.5, 6.4, 2.5, 0.35);
+    }, carton, cartonOsc, 0.25, 0.25, 1.4);
+    /* los dos cristales */
+    ctx.save();
+    ctx.globalAlpha = 0.78;
+    ctx.fillStyle = '#ff2a2a';
+    roundRect(ctx, 2.2, 2.85, 2.4, 1.8, 0.25); ctx.fill();
+    ctx.fillStyle = '#1ae0ff';
+    roundRect(ctx, -1.0, 2.85, 2.7, 1.8, 0.25); ctx.fill();
+    ctx.restore();
+    contorno(ctx, 1.2);
+    roundRect(ctx, 2.2, 2.85, 2.4, 1.8, 0.25); ctx.stroke();
+    roundRect(ctx, -1.0, 2.85, 2.7, 1.8, 0.25); ctx.stroke();
+    destello(ctx, 3.0, 4.2, 0.3, 0.7);
+  };
+
+  /* CORONA: de oro, con sus puntas y tres piedras */
+  ACC.acc_corona = function (ctx, o) {
+    var oro = '#ffd24a', oroOsc = '#a97d0d';
+    var k;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-2.8, 4.6);
+      ctx.lineTo(-2.2, 7.2); ctx.lineTo(-0.9, 5.6);
+      ctx.lineTo(0.5, 7.7); ctx.lineTo(1.9, 5.6);
+      ctx.lineTo(3.1, 7.0); ctx.lineTo(3.5, 4.4);
+      ctx.closePath();
+    }, oro, oroOsc, 0.3, 0.3, 1.6);
+    /* el aro de la base */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      roundRect(ctx, -2.9, 3.7, 6.5, 1.15, 0.3);
+    }, oro, oroOsc, 0.25, 0.25, 1.4);
+    var piedras = [[-2.2, 7.2, '#ff3b5c'], [0.5, 7.7, '#3ee8ff'], [3.1, 7.0, '#3ee83e']];
+    for (k = 0; k < 3; k++) {
+      ctx.fillStyle = piedras[k][2];
+      ctx.beginPath(); ctx.arc(piedras[k][0], piedras[k][1], 0.45, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    }
+    ctx.fillStyle = '#e8355c';
+    ctx.beginPath(); ctx.arc(0.4, 4.25, 0.48, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    destello(ctx, -1.6, 4.5, 0.35, 0.8);
+  };
+
+  /* BOINA: ladeada, con su rabito */
+  ACC.acc_boina = function (ctx, o) {
+    var pano = hex(mix(o.c, '#2e3d8f', 0.72)), panoOsc = mix(pano, '#070c24', 0.45);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.4, 4.2);
+      ctx.quadraticCurveTo(-3.0, 7.4, 0.4, 7.3);
+      ctx.quadraticCurveTo(3.8, 7.1, 3.6, 4.9);
+      ctx.quadraticCurveTo(1.0, 3.6, -3.4, 4.2);
+      ctx.closePath();
+    }, pano, hex(panoOsc), 0.5, 0.5, 1.6);
+    /* la cinta del borde */
+    ctx.strokeStyle = hex(panoOsc); ctx.lineWidth = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(-3.3, 4.4); ctx.quadraticCurveTo(0.8, 3.8, 3.5, 5.0);
+    ctx.stroke();
+    /* el rabito */
+    ctx.strokeStyle = hex(panoOsc); ctx.lineWidth = 0.55; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0.3, 7.2); ctx.lineTo(0.1, 8.1); ctx.stroke();
+    destello(ctx, -1.8, 6.0, 0.4, 0.5);
+  };
+
+  /* CASCO DE ASTRONAUTA: burbuja de cristal con su aro y el reflejo */
+  ACC.acc_casco = function (ctx, o) {
+    var aro = '#d8dbe4', aroOsc = '#7d8494';
+    ctx.save();
+    /* la burbuja */
+    ctx.fillStyle = 'rgba(170,215,245,.22)';
+    ctx.beginPath(); ctx.arc(0.4, 1.4, R + 1.5, 0, Math.PI * 2); ctx.fill();
+    var g = ctx.createRadialGradient(-2.2, 4.4, 0.5, 0.4, 1.4, R + 1.5);
+    g.addColorStop(0, 'rgba(255,255,255,.35)');
+    g.addColorStop(0.45, 'rgba(255,255,255,.05)');
+    g.addColorStop(1, 'rgba(120,180,230,.20)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0.4, 1.4, R + 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(225,245,255,.75)'; ctx.lineWidth = 0.4;
+    ctx.beginPath(); ctx.arc(0.4, 1.4, R + 1.5, 0, Math.PI * 2); ctx.stroke();
+    /* el reflejo que cruza */
+    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.7; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(0.4, 1.4, R - 0.6, Math.PI * 0.78, Math.PI * 1.02);
+    ctx.stroke();
+    ctx.restore();
+    /* el aro del cuello */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      roundRect(ctx, -4.6, -6.4, 9.6, 1.5, 0.5);
+    }, aro, aroOsc, 0.25, 0.25, 1.5);
+    /* la antena */
+    ctx.strokeStyle = aroOsc; ctx.lineWidth = 0.42; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-4.2, 4.4); ctx.lineTo(-5.6, 7.0); ctx.stroke();
+    ctx.fillStyle = '#ff3b3b';
+    ctx.beginPath(); ctx.arc(-5.7, 7.3, 0.5, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+  };
+
+  /* MONÓCULO: cristal con su cadenita, y una ceja levantada encima */
+  ACC.acc_monoculo = function (ctx, o) {
+    var oro = '#ffd24a', oroOsc = '#a97d0d';
+    ctx.save();
+    ctx.fillStyle = 'rgba(200,235,255,.28)';
+    ctx.beginPath(); ctx.arc(1.4, 3.6, 2.0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    piezaX(ctx, function () {
+      ctx.beginPath(); ctx.arc(1.4, 3.6, 2.0, 0, Math.PI * 2);
+      ctx.arc(1.4, 3.6, 1.55, 0, Math.PI * 2);
+    }, oro, oroOsc, 0.2, 0.2, 1.3);
+    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 0.35; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(1.4, 3.6, 1.2, Math.PI * 0.85, Math.PI * 1.25); ctx.stroke();
+    /* la cadenita, colgando y meciéndose */
+    var w = Math.sin(o.t * 4) * 0.5;
+    ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(-0.5, 2.6);
+    ctx.quadraticCurveTo(-2.2 + w, 0.6, -3.0 + w, -1.8);
+    ctx.stroke();
+    /* la ceja de pillo */
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.5; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0.2, 6.2); ctx.quadraticCurveTo(1.8, 7.0, 3.3, 6.0);
+    ctx.stroke();
+  };
+
+  /* CASCO DE MOTO: integral, con la visera abierta y el mentón */
+  ACC.acc_moto = function (ctx, o) {
+    var casco = hex(mix(o.c, '#1f2430', 0.62)), cascoOsc = mix(casco, '#05070c', 0.5);
+    var visera = 'rgba(40,180,230,.5)';
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(5.2, 1.4);
+      ctx.quadraticCurveTo(5.6, 5.2, 1.8, 6.9);
+      ctx.quadraticCurveTo(-2.4, 8.2, -5.2, 5.2);
+      ctx.quadraticCurveTo(-7.0, 2.6, -6.2, -0.8);
+      ctx.quadraticCurveTo(-4.0, 0.2, -2.0, -0.2);
+      ctx.quadraticCurveTo(0.6, -0.8, 2.6, 0.2);
+      ctx.quadraticCurveTo(4.4, 0.4, 5.2, 1.4);
+      ctx.closePath();
+    }, casco, hex(cascoOsc), 0.6, 0.6, 1.8);
+    /* la visera levantada */
+    ctx.save();
+    ctx.fillStyle = visera;
+    ctx.beginPath();
+    ctx.moveTo(4.6, 3.6);
+    ctx.quadraticCurveTo(2.0, 8.4, -2.4, 8.2);
+    ctx.quadraticCurveTo(-0.6, 5.4, 1.4, 4.0);
+    ctx.closePath();
+    ctx.fill();
+    contorno(ctx, 1.4); ctx.stroke();
+    ctx.restore();
+    /* la banda del color del jugador */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(5.2, 1.4);
+    ctx.quadraticCurveTo(5.6, 5.2, 1.8, 6.9);
+    ctx.quadraticCurveTo(-2.4, 8.2, -5.2, 5.2);
+    ctx.quadraticCurveTo(-7.0, 2.6, -6.2, -0.8);
+    ctx.quadraticCurveTo(-4.0, 0.2, -2.0, -0.2);
+    ctx.quadraticCurveTo(0.6, -0.8, 2.6, 0.2);
+    ctx.quadraticCurveTo(4.4, 0.4, 5.2, 1.4);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = o.c;
+    ctx.fillRect(-7, 2.2, 13, 1.2);
+    ctx.restore();
+    destello(ctx, -3.6, 5.4, 0.5, 0.6);
+  };
+
+  /* CADENA DE ORO: los eslabones al cuello y una medalla colgando */
+  ACC.acc_cadena = function (ctx, o) {
+    var oro = '#ffd24a', oroOsc = '#a97d0d';
+    var w = Math.sin(o.t * 5) * 0.35, k;
+    /* los eslabones, siguiendo el borde de abajo */
+    for (k = 0; k <= 9; k++) {
+      var u = k / 9;
+      var a2 = Math.PI * (1.12 + u * 0.76);
+      var rx = Math.cos(a2) * (R - 0.4), ry = Math.sin(a2) * (R - 0.4) - 0.4;
+      ctx.fillStyle = (k % 2) ? oro : oroOsc;
+      ctx.beginPath(); ctx.arc(rx, ry + w * u, 0.5, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 0.9); ctx.stroke();
+    }
+    /* la medalla */
+    var mx = 0.2, my = -R - 0.6 + w;
+    piezaX(ctx, function () { ctx.beginPath(); ctx.arc(mx, my, 1.5, 0, Math.PI * 2); },
+      oro, oroOsc, 0.25, 0.25, 1.5);
+    ctx.fillStyle = oroOsc;
+    ctx.beginPath(); ctx.arc(mx, my, 0.85, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = oro;
+    ctx.beginPath(); ctx.arc(mx, my, 0.42, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, mx - 0.7, my + 0.7, 0.35, 0.9);
+  };
+
+  /* ---------------- EFECTOS ----------------
+   * EFX.id = function (ctx, o, cuerpo): cada uno decide si va debajo o encima
+   * de la skin llamando a cuerpo() donde toque. */
+
+  /* TUBO DE NEÓN: deja un tubo encendido de su color, con su halo */
+  EFX.efx_neon = function (ctx, o, cuerpo) {
+    var ptos = rastro(o, 4, 52);
+    if (ptos.length > 1) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      [[2.6, 0.16], [1.2, 0.35], [0.45, 0.95]].forEach(function (capa) {
+        ctx.strokeStyle = mix(o.c, '#ffffff', capa[1] > 0.5 ? 0.75 : 0.2, capa[1]);
+        ctx.lineWidth = capa[0];
+        ctx.beginPath();
+        ctx.moveTo(ptos[0].p.x, ptos[0].p.y);
+        for (var i = 1; i < ptos.length; i++) ctx.lineTo(ptos[i].p.x, ptos[i].p.y);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+    cuerpo();
+  };
+
+  /* INTERFERENCIA: se descompone en rojo, verde y azul desencajados */
+  EFX.efx_glitch = function (ctx, o, cuerpo) {
+    var salta = (Math.floor(o.t * 7) % 3 === 0);
+    var d = salta ? 1.4 : 0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    [['rgba(255,40,40,.55)', -d], ['rgba(40,255,90,.45)', 0], ['rgba(60,120,255,.55)', d]]
+      .forEach(function (capa) {
+        ctx.save();
+        ctx.translate(capa[1], 0);
+        ctx.globalAlpha = 0.5;
+        ctx.filter = 'none';
+        cuerpo();
+        ctx.restore();
+      });
+    ctx.restore();
+    cuerpo();
+    /* bandas que se desplazan */
+    if (salta) {
+      for (var k = 0; k < 3; k++) {
+        var yy = o.y - 5 + ((k * 37 + Math.floor(o.t * 20) * 11) % 11);
+        ctx.fillStyle = 'rgba(255,255,255,.22)';
+        ctx.fillRect(o.x - 7 + ((k % 2) ? 1.5 : -1.5), yy, 14, 0.7);
+      }
+    }
+  };
+
+  /* POLAROIDS: va soltando fotos instantáneas que caen girando */
+  EFX.efx_polaroids = function (ctx, o, cuerpo) {
+    cuerpo();
+    rastro(o, 16, 70).forEach(function (q) {
+      ctx.save();
+      ctx.globalAlpha = 1 - q.edad;
+      ctx.translate(q.p.x, q.p.y + q.edad * 5.5);
+      ctx.rotate((q.n % 2 ? 1 : -1) * (0.25 + q.edad * 1.1));
+      ctx.fillStyle = '#f4f1e6';
+      roundRect(ctx, -1.5, -1.7, 3.0, 3.4, 0.18); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+      ctx.fillStyle = mix(o.c, '#20242e', 0.55);
+      ctx.fillRect(-1.1, -1.35, 2.2, 2.1);
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+  };
+
+  /* TICKETS: la tira de tickets de premios, saliendo por detrás */
+  EFX.efx_tickets = function (ctx, o, cuerpo) {
+    cuerpo();
+    rastro(o, 6, 46).forEach(function (q) {
+      ctx.save();
+      ctx.globalAlpha = 1 - q.edad;
+      ctx.translate(q.p.x, q.p.y + Math.sin(q.edad * 6 + q.n) * 1.4);
+      ctx.rotate(Math.sin(q.n * 0.7) * 0.4);
+      ctx.fillStyle = (q.n % 2) ? '#ffd24a' : '#ffe9a8';
+      roundRect(ctx, -1.6, -0.7, 3.2, 1.4, 0.2); ctx.fill();
+      contorno(ctx, 0.9); ctx.stroke();
+      ctx.fillStyle = 'rgba(20,20,20,.5)';
+      ctx.beginPath(); ctx.arc(-1.05, 0, 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(1.05, 0, 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+  };
+
+  /* CINTA DE CASETE: la cinta marrón, enredándose por el camino */
+  EFX.efx_cinta = function (ctx, o, cuerpo) {
+    var ptos = rastro(o, 5, 80);
+    if (ptos.length > 2) {
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      [['rgba(74,50,30,.9)', 0.55, 1], ['rgba(122,86,52,.8)', 0.3, -1]].forEach(function (capa) {
+        ctx.strokeStyle = capa[0];
+        ctx.lineWidth = capa[1];
+        ctx.beginPath();
+        for (var i = 0; i < ptos.length; i++) {
+          var q = ptos[i];
+          var bal = Math.sin(q.n * 0.9 + o.t * 2) * (1.2 + q.edad * 2.8) * capa[2];
+          var x = q.p.x, y = q.p.y + bal;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+    cuerpo();
+  };
+
+  /* ---------------- EMOTES ----------------
+   * Cada cara se dibuja entera, con su propio meneo, en el globo del jugador.
+   * Mismo idioma que caraEmote del juego: círculo del color y rasgos negros. */
+  function caraObj(ctx, x, y, r, color, id, t) {
+    var ink = '#000000', lw = Math.max(1, r * 0.17), k;
+    var ex = r * 0.42, ey = y - r * 0.24;
+
+    if (id === 'alucinado') {
+      /* ojos como platos y la mandíbula por los suelos */
+      ctx.save();
+      ctx.translate(x, y); ctx.scale(1 + Math.sin(t * 0.25) * 0.03, 1); ctx.translate(-x, -y);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      [-1, 1].forEach(function (lado) {
+        var cx = x + lado * ex;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(cx, ey, r * 0.30, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.5; ctx.stroke();
+        ctx.fillStyle = ink;
+        ctx.beginPath(); ctx.arc(cx, ey, r * 0.13, 0, Math.PI * 2); ctx.fill();
+      });
+      /* cejas muy arriba */
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.55; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.arc(x + lado * ex, ey - r * 0.18, r * 0.30, 1.2 * Math.PI, 1.8 * Math.PI);
+        ctx.stroke();
+      });
+      /* la boca abierta de par en par */
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.42, r * 0.26, r * 0.36 + Math.sin(t * 0.2) * r * 0.04, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    if (id === 'pensando') {
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(-0.1); ctx.translate(-x, -y);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.lineCap = 'round';
+      /* un ojo mirando arriba y otro entornado */
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(x - ex, ey, r * 0.2, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.45; ctx.stroke();
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(x - ex, ey - r * 0.08, r * 0.09, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.6;
+      ctx.beginPath();
+      ctx.arc(x + ex, ey + r * 0.06, r * 0.2, 1.1 * Math.PI, 1.9 * Math.PI);
+      ctx.stroke();
+      /* la boca torcida, pensando */
+      ctx.lineWidth = lw * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.22, y + r * 0.44);
+      ctx.quadraticCurveTo(x + r * 0.1, y + r * 0.34, x + r * 0.3, y + r * 0.5);
+      ctx.stroke();
+      ctx.restore();
+      /* las tres burbujitas de pensar, creciendo */
+      for (k = 0; k < 3; k++) {
+        var u = ((t * 0.02 + k * 0.33) % 1);
+        var rr = r * (0.09 + k * 0.05);
+        ctx.globalAlpha = 0.35 + 0.65 * Math.sin(u * Math.PI);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x + r * (0.72 + k * 0.3), y - r * (0.62 + k * 0.34), rr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.35; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    if (id === 'roto') {
+      ctx.save();
+      ctx.translate(x, y); ctx.rotate(0.14); ctx.translate(-x, -y + Math.sin(t * 0.1) * r * 0.05);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      /* ojos de pena */
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.8; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.arc(x + lado * ex, ey + r * 0.14, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+        ctx.stroke();
+      });
+      /* boca hacia abajo */
+      ctx.lineWidth = lw * 0.75;
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.72, r * 0.3, 1.15 * Math.PI, 1.85 * Math.PI);
+      ctx.stroke();
+      ctx.restore();
+      /* el corazón partiéndose, arriba */
+      var sep = 0.2 + 0.8 * ((t * 0.012) % 1);
+      [[-1, -0.5], [1, 0.5]].forEach(function (m) {
+        ctx.save();
+        ctx.translate(x + r * 0.95 * m[1] * sep, y - r * 0.95 - sep * r * 0.2);
+        ctx.rotate(m[0] * sep * 0.6);
+        ctx.fillStyle = '#ff3b5c';
+        ctx.beginPath();
+        if (m[0] < 0) {
+          ctx.moveTo(0, r * 0.34);
+          ctx.quadraticCurveTo(-r * 0.42, r * 0.02, -r * 0.2, -r * 0.24);
+          ctx.quadraticCurveTo(-r * 0.04, -r * 0.34, 0, -r * 0.12);
+        } else {
+          ctx.moveTo(0, r * 0.34);
+          ctx.quadraticCurveTo(r * 0.42, r * 0.02, r * 0.2, -r * 0.24);
+          ctx.quadraticCurveTo(r * 0.04, -r * 0.34, 0, -r * 0.12);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.35; ctx.stroke();
+        ctx.restore();
+      });
+      return;
+    }
+
+    if (id === 'aplauso') {
+      var palma = Math.abs(Math.sin(t * 0.35));
+      ctx.save();
+      ctx.translate(x, y - palma * r * 0.05);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      /* ojos contentos, dos arcos */
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.8; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.arc(lado * ex, -r * 0.18, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+        ctx.stroke();
+      });
+      /* boca abierta de gusto */
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.4, r * 0.28, r * 0.2, 0, 0, Math.PI);
+      ctx.fill();
+      ctx.restore();
+      /* las dos manos, chocando */
+      [-1, 1].forEach(function (lado) {
+        var sep2 = (1 - palma) * r * 0.5;
+        ctx.save();
+        ctx.translate(x + lado * (r * 0.95 + sep2), y + r * 0.55);
+        ctx.rotate(lado * 0.5);
+        ctx.fillStyle = '#ffd9a8';
+        roundRect(ctx, -r * 0.2, -r * 0.3, r * 0.4, r * 0.6, r * 0.16); ctx.fill();
+        ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.4; ctx.stroke();
+        ctx.restore();
+      });
+      /* rayitas del choque */
+      if (palma > 0.85) {
+        ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = lw * 0.35;
+        ctx.beginPath();
+        for (k = 0; k < 4; k++) {
+          var a2 = -0.6 + k * 0.4;
+          ctx.moveTo(x + Math.cos(a2) * r * 1.1, y + r * 0.55 + Math.sin(a2) * r * 0.5);
+          ctx.lineTo(x + Math.cos(a2) * r * 1.45, y + r * 0.55 + Math.sin(a2) * r * 0.7);
+        }
+        ctx.stroke();
+      }
+      return;
+    }
+
+    /* CHIST: el dedo en los labios, pidiendo silencio */
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(-0.07); ctx.translate(-x, -y);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.55; ctx.lineCap = 'round';
+    /* un ojo normal y el otro guiñado */
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(x - ex, ey, r * 0.19, r * 0.21, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.45; ctx.stroke();
+    ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.arc(x - ex, ey, r * 0.09, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.7;
+    ctx.beginPath();
+    ctx.arc(x + ex, ey + r * 0.05, r * 0.2, 1.1 * Math.PI, 1.9 * Math.PI);
+    ctx.stroke();
+    /* la boca en O pequeña */
+    ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.ellipse(x + r * 0.05, y + r * 0.45, r * 0.11, r * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* el dedo, cruzando los labios */
+    ctx.save();
+    ctx.translate(x + r * 0.05, y + r * 0.45);
+    ctx.rotate(-0.35 + Math.sin(t * 0.06) * 0.05);
+    ctx.fillStyle = '#ffd9a8';
+    roundRect(ctx, -r * 0.14, -r * 0.62, r * 0.28, r * 0.95, r * 0.13); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.4; ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ============================================================
+   * TANDA ANDINA (19 sep 2026, entra al juego el 29 sep). Sigue el grupo
+   * del CUY, la LLAMA y el CÓNDOR: bichos y cosas de por aquí. Ocho skins
+   * que dejan la silueta de Pac-Man, con su Q y su muerte, siete
+   * accesorios, seis efectos y cinco emotes. TUMI, INTI, el COLIBRÍ DE
+   * NAZCA, la MÁSCARA DE ORO, las PLUMAS DE GUACAMAYO, el POLVO DE ORO y
+   * las LÍNEAS DE NAZCA solo salen de cofre.
+   *
+   * El dibujo es el del escaparate, con las mismas medidas; solo cambia
+   * que la Q sale al pulsar la tecla (qDe). El código del escaparate
+   * sigue en propuestas/vestuario-andina/.
+   * ============================================================ */
+
+  /* ---------------- GALLITO DE LAS ROCAS ---------------- */
+  /* El ave nacional: naranja encendido, con esa CRESTA en forma de disco que
+   * le tapa media cara y el pico asomando por debajo. Q: el baile de cortejo,
+   * dando saltitos y chillando. */
+  DRAW.gallito = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.2), k;
+    var ang = [0, 14, 26][fz] * Math.PI / 180;
+    var naranja = hex(mix(o.c, '#ff5a1a', 0.68)), naranjaOsc = mix(naranja, '#5a1400', 0.45);
+    var ala = '#1a1a22', pico = '#f2d98a';
+    var baila = (q >= 0) ? Math.abs(Math.sin(q * Math.PI * 4)) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 6)) * 0.3 - 0.15 + baila * 1.1);
+    ctx.rotate(baila * 0.12 * Math.sin(t * 20));
+
+    /* el ala y la cola, oscuras */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-1.0, 1.4);
+      ctx.quadraticCurveTo(-5.2, 2.6, -7.2, 0.2);
+      ctx.quadraticCurveTo(-5.0, -2.2, -1.2, -1.6);
+      ctx.closePath();
+    }, ala, '#08080c', 0.35, 0.35, 1.4);
+    ctx.strokeStyle = '#3a3a48'; ctx.lineWidth = 0.28; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 3; k++) {
+      ctx.moveTo(-2.0, 0.6 - k * 0.8);
+      ctx.quadraticCurveTo(-4.6, 0.2 - k * 0.7, -6.6, -0.4 - k * 0.4);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#4a1000';
+    ctx.beginPath(); ctx.moveTo(1.6, -0.7); ctx.lineTo(6.6, -0.4); ctx.lineTo(6.6, -2.8); ctx.lineTo(1.6, -1.5); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(6.6, 0.6);
+    cabeza.quadraticCurveTo(6.4, 1.8, 4.6, 2.0);
+    cabeza.quadraticCurveTo(2.0, 2.4, 0.4, 3.4);
+    cabeza.quadraticCurveTo(-2.0, 4.6, -4.0, 3.0);
+    cabeza.quadraticCurveTo(-5.4, 1.4, -4.6, -0.8);
+    cabeza.quadraticCurveTo(-3.0, -2.0, -0.6, -1.6);
+    cabeza.lineTo(1.4, -0.9);
+    cabeza.lineTo(6.6, 0.6);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(1.2, -1.0); mand.lineTo(6.6, -0.2);
+    mand.quadraticCurveTo(5.6, -2.0, 3.4, -2.4);
+    mand.quadraticCurveTo(0.6, -2.6, -0.8, -1.8);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, 1.2, -1.0, ang, naranja, hex(naranjaOsc), 0.6, 0.6);
+
+    /* el pico, pequeñito y claro */
+    ctx.save(); ctx.clip(cabeza);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(4.6, 1.4);
+      ctx.quadraticCurveTo(7.0, 1.2, 7.0, 0.4);
+      ctx.lineTo(4.6, -0.5);
+      ctx.closePath();
+    }, pico, '#a89055', 0.2, 0.2, 1.2);
+    ctx.restore();
+
+    /* LA CRESTA: un disco que le sale de la frente y le tapa media cara */
+    var w = Math.sin(t * 4) * 0.12 + baila * 0.3;
+    ctx.save();
+    girarSobre(ctx, 1.0, 1.6, w);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(5.6, 1.2);
+      ctx.quadraticCurveTo(6.4, 4.8, 3.2, 6.4);
+      ctx.quadraticCurveTo(-0.2, 7.8, -2.6, 5.6);
+      ctx.quadraticCurveTo(-4.0, 4.0, -3.0, 2.2);
+      ctx.quadraticCurveTo(0.6, 3.6, 5.6, 1.2);
+      ctx.closePath();
+    }, naranja, hex(naranjaOsc), 0.7, 0.7, 1.8);
+    /* el surco del disco */
+    ctx.strokeStyle = hex(naranjaOsc); ctx.lineWidth = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(4.4, 2.0); ctx.quadraticCurveTo(1.2, 5.0, -2.0, 5.0);
+    ctx.stroke();
+    ctx.restore();
+
+    /* el ojo, amarillo, asomando bajo la cresta */
+    ctx.fillStyle = '#ffe14a';
+    ctx.beginPath(); ctx.arc(3.4, 1.1, 0.7, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1.2); ctx.stroke();
+    ctx.fillStyle = TINTA;
+    ctx.beginPath(); ctx.arc(3.55, 1.05, 0.34, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, 3.7, 1.35, 0.2, 0.9);
+
+    /* Q: el baile, con su chillido */
+    if (q >= 0) {
+      ctx.lineWidth = 0.6; ctx.lineCap = 'round';
+      for (k = 0; k < 3; k++) {
+        var u = (q * 2.2 + k / 3) % 1;
+        ctx.strokeStyle = 'rgba(255,230,160,' + ((1 - u) * 0.9) + ')';
+        ctx.beginPath(); ctx.arc(7.2, 0.4, 1.4 + u * 6, -0.8, 0.8); ctx.stroke();
+      }
+      for (k = 0; k < 5; k++) {
+        var d = (q * 1.4 + k / 5) % 1;
+        ctx.fillStyle = 'rgba(200,180,150,' + ((1 - d) * 0.5) + ')';
+        ctx.beginPath();
+        ctx.arc((k - 2) * 2.4, -6.2 - d * 2, 0.7 + d * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- PUMA DE PIEDRA ---------------- */
+  /* Tallado, como los de Chavín: la cara de felino hecha en bloque de piedra,
+   * con los colmillos grandes y las espirales grabadas. Q: el RUGIDO, que
+   * saca ondas talladas. */
+  DRAW.puma = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 0.9), k;
+    var ang = [0, 17, 32][fz] * Math.PI / 180;
+    var roca = hex(mix('#8a8172', o.c, 0.18)), rocaOsc = mix(roca, '#231f18', 0.5);
+    var grabado = hex(mix(o.c, '#c8a24a', 0.55));
+    var ruge = (q >= 0) ? Math.sin(Math.min(1, q * 2.2) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(ruge * 0.5, Math.abs(Math.sin(t * 5)) * 0.2 - 0.1);
+
+    /* las orejas, dos bloques */
+    [[-2.6, 4.6], [1.0, 5.2]].forEach(function (or) {
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(or[0] - 1.2, or[1] - 1.0);
+        ctx.lineTo(or[0] - 0.4, or[1] + 1.4);
+        ctx.lineTo(or[0] + 1.3, or[1] + 0.2);
+        ctx.lineTo(or[0] + 0.9, or[1] - 1.4);
+        ctx.closePath();
+      }, roca, hex(rocaOsc), 0.3, 0.3, 1.5);
+    });
+
+    ctx.fillStyle = '#100d08';
+    ctx.beginPath(); ctx.moveTo(-1.6, -0.8); ctx.lineTo(6.2, -0.5); ctx.lineTo(6.2, -4.2); ctx.lineTo(-1.6, -2.4); ctx.closePath(); ctx.fill();
+
+    var cabeza = new Path2D();
+    cabeza.moveTo(6.2, 0.2);
+    cabeza.lineTo(6.4, 2.4);
+    cabeza.lineTo(4.4, 4.6);
+    cabeza.lineTo(0.6, 5.4);
+    cabeza.lineTo(-3.4, 4.6);
+    cabeza.lineTo(-5.0, 2.0);
+    cabeza.lineTo(-4.6, -0.6);
+    cabeza.lineTo(-2.0, -1.2);
+    cabeza.lineTo(6.2, 0.2);
+    cabeza.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-2.2, -1.3);
+    mand.lineTo(6.2, -0.2);
+    mand.lineTo(5.8, -3.6);
+    mand.lineTo(2.0, -5.0);
+    mand.lineTo(-1.8, -4.4);
+    mand.lineTo(-3.0, -2.6);
+    mand.closePath();
+    rostro(ctx, cabeza, mand, -2.2, -1.2, ang, roca, hex(rocaOsc), 0.8, 0.8);
+
+    /* los grabados: espirales y líneas, como en la piedra */
+    ctx.save(); ctx.clip(cabeza);
+    ctx.strokeStyle = grabado; ctx.lineWidth = 0.4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 10; k++) {
+      var a2 = k * 0.62, r2 = 0.3 + k * 0.16;
+      var px = -2.4 + Math.cos(a2) * r2, py = 2.6 + Math.sin(a2) * r2;
+      if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0.6, 4.8); ctx.lineTo(0.6, 3.0); ctx.lineTo(2.4, 3.0);
+    ctx.moveTo(4.6, 3.4); ctx.lineTo(3.2, 2.0);
+    ctx.stroke();
+    ctx.restore();
+
+    /* los ojos, cuadrados y hundidos */
+    [[1.6, 2.0], [4.2, 1.6]].forEach(function (e) {
+      ctx.fillStyle = TINTA;
+      roundRect(ctx, e[0] - 0.95, e[1] - 0.75, 1.9, 1.5, 0.25); ctx.fill();
+      ctx.fillStyle = grabado;
+      roundRect(ctx, e[0] - 0.42, e[1] - 0.4, 0.9, 0.8, 0.2); ctx.fill();
+    });
+
+    /* los colmillos, arriba y abajo: es lo que hace al felino */
+    dientes(ctx, 1.0, 5.4, -0.4, 2, -1.7, '#e8e0cc');
+    ctx.save(); girarSobre(ctx, -2.2, -1.2, -ang);
+    dientes(ctx, 1.2, 5.2, -1.3, 2, 1.6, '#e8e0cc');
+    ctx.restore();
+
+    /* Q: el rugido, ondas talladas */
+    if (q >= 0) {
+      ctx.lineCap = 'round';
+      for (k = 0; k < 3; k++) {
+        var u = (q * 2 + k / 3) % 1;
+        ctx.strokeStyle = mix(grabado, '#ffffff', 0.35, (1 - u) * ruge);
+        ctx.lineWidth = 1.0 * (1 - u * 0.4);
+        ctx.beginPath();
+        ctx.arc(6.8, 0.6, 1.8 + u * 8, -0.9, 0.9);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- TUMI ---------------- */
+  /* El cuchillo ceremonial de oro: arriba la figura del Naylamp con su tocado
+   * de rayos y sus turquesas, abajo la media luna del filo, que es la boca.
+   * Q: el DESTELLO del oro, que ciega. */
+  DRAW.tumi = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 0.8), k;
+    var ang = [0, 12, 22][fz] * Math.PI / 180;
+    var oro = hex(mix('#ffcf3a', o.c, 0.18)), oroOsc = mix(oro, '#7a4e02', 0.45);
+    var turquesa = '#3ec8b8';
+    var brilla = (q >= 0) ? Math.sin(Math.min(1, q * 2.4) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.sin(t * 5) * 0.16);
+
+    ctx.fillStyle = '#3a2400';
+    ctx.beginPath(); ctx.moveTo(-3.6, -0.8); ctx.lineTo(4.4, -0.5); ctx.lineTo(4.4, -4.0); ctx.lineTo(-3.6, -2.4); ctx.closePath(); ctx.fill();
+
+    /* el cuerpo del tumi: la figurita */
+    var cuerpo = new Path2D();
+    cuerpo.moveTo(4.4, -0.6);
+    cuerpo.lineTo(4.0, 1.6);
+    cuerpo.quadraticCurveTo(3.6, 3.4, 1.6, 3.8);
+    cuerpo.lineTo(-1.4, 3.9);
+    cuerpo.quadraticCurveTo(-3.4, 3.6, -3.8, 1.8);
+    cuerpo.lineTo(-4.2, -0.8);
+    cuerpo.lineTo(4.4, -0.6);
+    cuerpo.closePath();
+    /* el filo, media luna */
+    var filo = new Path2D();
+    filo.moveTo(-4.4, -1.0);
+    filo.lineTo(4.4, -0.8);
+    filo.quadraticCurveTo(4.8, -4.4, 0.2, -5.6);
+    filo.quadraticCurveTo(-4.6, -4.6, -4.4, -1.0);
+    filo.closePath();
+    rostro(ctx, cuerpo, filo, -4.4, -0.9, ang, oro, hex(oroOsc), 0.6, 0.6);
+
+    /* el tocado: un abanico de rayos que sale de la coronilla */
+    for (k = 0; k < 9; k++) {
+      var a2 = -1.05 + k * 0.2625;          // de -60º a +60º, repartidos
+      var lar = (k % 2 ? 3.4 : 2.4) + brilla * 1.0;
+      ctx.save();
+      ctx.translate(0.2, 3.5);
+      ctx.rotate(a2);
+      piezaX(ctx, function () {
+        ctx.beginPath();
+        ctx.moveTo(-0.55, 0.2);
+        ctx.lineTo(0, lar);
+        ctx.lineTo(0.55, 0.2);
+        ctx.closePath();
+      }, oro, hex(oroOsc), 0.15, 0.15, 1.2);
+      ctx.restore();
+    }
+
+    /* la cara del Naylamp */
+    ctx.save(); ctx.clip(cuerpo);
+    ctx.fillStyle = hex(oroOsc);
+    roundRect(ctx, -2.6, 0.2, 5.4, 3.2, 0.6); ctx.fill();
+    ctx.fillStyle = oro;
+    roundRect(ctx, -2.3, 0.4, 4.8, 2.8, 0.5); ctx.fill();
+    /* los ojos alados, la marca del Naylamp */
+    ctx.fillStyle = TINTA;
+    [[-1.0, 2.2], [1.4, 2.2]].forEach(function (e) {
+      ctx.beginPath();
+      ctx.moveTo(e[0] - 0.85, e[1]);
+      ctx.quadraticCurveTo(e[0], e[1] + 0.75, e[0] + 0.85, e[1]);
+      ctx.quadraticCurveTo(e[0], e[1] - 0.5, e[0] - 0.85, e[1]);
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.28;
+    ctx.beginPath();
+    ctx.moveTo(-0.8, 1.0); ctx.lineTo(1.2, 1.0);
+    ctx.stroke();
+    /* las turquesas */
+    [[-2.9, 1.4], [3.0, 1.4]].forEach(function (p) {
+      ctx.fillStyle = turquesa;
+      ctx.beginPath(); ctx.arc(p[0], p[1], 0.62, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    });
+    ctx.restore();
+
+    /* el filo, con su brillo */
+    ctx.save(); girarSobre(ctx, -4.4, -0.9, -ang); ctx.clip(filo);
+    ctx.strokeStyle = mix('#ffffff', oro, 0.4, 0.6);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(-3.8, -2.0); ctx.quadraticCurveTo(0.2, -4.4, 3.8, -2.0);
+    ctx.stroke();
+    ctx.restore();
+
+    /* Q: el destello */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(0, 1.5, 0.5, 0, 1.5, 6 + brilla * 12);
+      g.addColorStop(0, 'rgba(255,248,200,' + brilla + ')');
+      g.addColorStop(0.45, 'rgba(255,207,58,' + (brilla * 0.55) + ')');
+      g.addColorStop(1, 'rgba(255,180,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 1.5, 6 + brilla * 12, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,250,220,' + brilla + ')'; ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (k = 0; k < 8; k++) {
+        var ar = k * Math.PI / 4 + 0.2, lr = 5 + brilla * 9;
+        ctx.moveTo(Math.cos(ar) * 3, 1.5 + Math.sin(ar) * 3);
+        ctx.lineTo(Math.cos(ar) * lr, 1.5 + Math.sin(ar) * lr);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- INTI ---------------- */
+  /* El sol, con cara: disco de oro con los rayos alrededor —rectos y
+   * ondulados, alternando— y la cara grabada dentro. Q: el MEDIODÍA, todo se
+   * pone blanco un instante. */
+  DRAW.inti = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var media = HALF[fz], angD = DIR_ANGLE[o.d];
+    var oro = hex(mix('#ffcf3a', o.c, 0.24)), oroOsc = mix(oro, '#8a5200', 0.4);
+    var arde = (q >= 0) ? Math.sin(Math.min(1, q * 1.8) * Math.PI) : 0;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+
+    /* los rayos, girando despacio */
+    ctx.save();
+    ctx.rotate(t * 0.25);
+    for (k = 0; k < 16; k++) {
+      var a2 = k * Math.PI / 8;
+      var lar = (k % 2 ? 2.4 : 3.6) + arde * 1.8 + Math.sin(t * 3 + k) * 0.2;
+      ctx.save();
+      ctx.rotate(a2);
+      if (k % 2) {
+        /* rayo recto */
+        piezaX(ctx, function () {
+          ctx.beginPath();
+          ctx.moveTo(R - 0.5, -0.9);
+          ctx.lineTo(R + lar, 0);
+          ctx.lineTo(R - 0.5, 0.9);
+          ctx.closePath();
+        }, oro, hex(oroOsc), 0.15, 0.15, 1.2);
+      } else {
+        /* rayo ondulado */
+        ctx.strokeStyle = oro; ctx.lineWidth = 0.9; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(R - 0.4, 0);
+        ctx.quadraticCurveTo(R + lar * 0.35, -1.1, R + lar * 0.65, 0);
+        ctx.quadraticCurveTo(R + lar * 0.9, 1.1, R + lar, 0);
+        ctx.stroke();
+        ctx.strokeStyle = hex(oroOsc); ctx.lineWidth = 0.3; ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+
+    /* el disco, con el bocado de siempre */
+    function bocado() {
+      ctx.beginPath();
+      if (media <= 0) ctx.arc(0, 0, R, 0, Math.PI * 2);
+      else {
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, R, angD + media, angD - media + Math.PI * 2);
+        ctx.closePath();
+      }
+    }
+    ctx.save();
+    bocado(); ctx.clip();
+    ctx.fillStyle = hex(oroOsc);
+    ctx.fillRect(-R - 1, -R - 1, (R + 1) * 2, (R + 1) * 2);
+    ctx.fillStyle = oro;
+    ctx.beginPath(); ctx.arc(-0.6, 0.6, R, 0, Math.PI * 2); ctx.fill();
+    /* la cara grabada */
+    ctx.save();
+    frame(ctx, 0, 0, o.d);
+    ctx.strokeStyle = hex(oroOsc); ctx.lineWidth = 0.55; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(-1.6, 1.6, 1.0, 0, Math.PI * 2);
+    ctx.arc(1.8, 1.6, 1.0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = hex(oroOsc);
+    ctx.beginPath(); ctx.arc(-1.6, 1.6, 0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(1.8, 1.6, 0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(0.1, 1.0); ctx.lineTo(0.1, -0.8);
+    ctx.moveTo(-1.8, -2.2); ctx.quadraticCurveTo(0.2, -3.4, 2.2, -2.2);
+    ctx.stroke();
+    ctx.restore();
+    /* el mediodía: se pone blanco */
+    if (arde > 0) {
+      ctx.fillStyle = 'rgba(255,255,240,' + (arde * 0.75) + ')';
+      ctx.fillRect(-R - 1, -R - 1, (R + 1) * 2, (R + 1) * 2);
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.5 / S; ctx.lineJoin = 'round';
+    bocado(); ctx.stroke();
+
+    /* el halo */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R + 7 + arde * 8);
+    g.addColorStop(0, mix(oro, '#ffffff', 0.4, 0.3 + arde * 0.5));
+    g.addColorStop(1, mix(oro, '#ffffff', 0.4, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, R + 7 + arde * 8, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  };
+
+  /* ---------------- PAPA ---------------- */
+  /* La papa andina, con sus bultos, su piel terrosa y los OJOS de la papa
+   * —los brotes— saliéndole por arriba. Q: le revientan los brotes y echa
+   * hojitas. */
+  DRAW.papa = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.1), k;
+    var ang = [0, 16, 30][fz] * Math.PI / 180;
+    var piel = hex(mix('#b08050', o.c, 0.2)), pielOsc = mix(piel, '#3a2410', 0.5);
+    var carne = '#f2e4c2', brote = '#7aa83a';
+    var crece = (q >= 0) ? Math.min(1, q * 1.5) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 6)) * 0.28 - 0.14);
+
+    ctx.fillStyle = '#2a1608';
+    ctx.beginPath(); ctx.moveTo(-3.0, -0.8); ctx.lineTo(5.6, -0.5); ctx.lineTo(5.6, -4.0); ctx.lineTo(-3.0, -2.4); ctx.closePath(); ctx.fill();
+
+    /* la papa: una forma con bultos, nada redonda */
+    var cuerpo = new Path2D();
+    cuerpo.moveTo(5.8, -0.4);
+    cuerpo.quadraticCurveTo(6.6, 2.0, 4.6, 3.6);
+    cuerpo.quadraticCurveTo(3.2, 4.8, 1.0, 4.6);
+    cuerpo.quadraticCurveTo(-1.6, 5.4, -3.6, 3.8);
+    cuerpo.quadraticCurveTo(-5.6, 2.2, -5.0, -0.2);
+    cuerpo.lineTo(-4.4, -0.9);
+    cuerpo.lineTo(5.8, -0.4);
+    cuerpo.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-4.6, -1.1);
+    mand.lineTo(5.8, -0.6);
+    mand.quadraticCurveTo(6.2, -3.4, 4.0, -4.8);
+    mand.quadraticCurveTo(1.0, -5.8, -2.0, -5.0);
+    mand.quadraticCurveTo(-4.8, -4.0, -4.6, -1.1);
+    mand.closePath();
+    rostro(ctx, cuerpo, mand, -4.6, -1.0, ang, piel, hex(pielOsc), 0.7, 0.7);
+
+    /* la carne blanca, dentro de la boca */
+    ctx.save(); girarSobre(ctx, -4.6, -1.0, -ang); ctx.clip(mand);
+    ctx.fillStyle = carne;
+    ctx.beginPath(); ctx.ellipse(0.6, -2.6, 4.2, 1.8, 0.03, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    /* los hoyitos de la papa */
+    ctx.save(); ctx.clip(cuerpo);
+    ctx.fillStyle = hex(pielOsc);
+    [[-2.6, 2.6], [1.2, 3.4], [3.8, 1.4], [-0.6, 0.8], [-3.6, 0.6]].forEach(function (p, k2) {
+      ctx.beginPath();
+      ctx.ellipse(p[0], p[1], 0.5 + (k2 % 2) * 0.15, 0.34, 0.4 * k2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+
+    /* los BROTES, que salen de los hoyitos de arriba */
+    [[-2.6, 3.2, 1], [1.2, 4.2, -1], [3.6, 2.6, 1]].forEach(function (b, k2) {
+      var h = (1.2 + k2 * 0.3) * (1 + crece * 1.8);
+      var w = Math.sin(t * 4 + k2) * 0.25;
+      ctx.strokeStyle = brote; ctx.lineWidth = 0.42; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(b[0], b[1]);
+      ctx.quadraticCurveTo(b[0] + b[2] * 0.6 + w, b[1] + h * 0.6, b[0] + b[2] * 1.2 + w, b[1] + h);
+      ctx.stroke();
+      /* la hojita */
+      ctx.fillStyle = brote;
+      ctx.save();
+      ctx.translate(b[0] + b[2] * 1.2 + w, b[1] + h);
+      ctx.rotate(b[2] * 0.6);
+      ctx.beginPath(); ctx.ellipse(0, 0, 0.85 * (0.6 + crece * 0.6), 0.42, 0, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+      ctx.restore();
+    });
+
+    /* los ojos de la cara */
+    [[1.0, 2.0], [3.6, 1.2]].forEach(function (e) {
+      ctx.fillStyle = '#fdfaf0';
+      ctx.beginPath(); ctx.ellipse(e[0], e[1], 0.85, 0.75, 0, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.arc(e[0] + 0.25, e[1] - 0.05, 0.38, 0, Math.PI * 2); ctx.fill();
+    });
+    destello(ctx, 1.5, 2.4, 0.22, 0.85);
+
+    /* Q: le revientan los brotes */
+    if (q >= 0) {
+      for (k = 0; k < 8; k++) {
+        var u = (crece + k / 8) % 1;
+        ctx.save();
+        ctx.globalAlpha = (1 - u) * 0.9;
+        ctx.translate(Math.sin(k * 2.1) * 6 * u, 4 + u * 7);
+        ctx.rotate(u * 4 + k);
+        ctx.fillStyle = brote;
+        ctx.beginPath(); ctx.ellipse(0, 0, 0.9, 0.4, 0, 0, Math.PI * 2); ctx.fill();
+        contorno(ctx, 0.9); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- AJÍ ---------------- */
+  /* Rocoto encendido: cuerpo rojo brillante con su rabito verde, cara de
+   * pillo y la boca siempre a medio arder. Q: ECHA FUEGO por la boca y le
+   * sale humo por arriba. */
+  DRAW.aji = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 18, 34][fz] * Math.PI / 180;
+    var rojo = hex(mix(o.c, '#e01f1f', 0.7)), rojoOsc = mix(rojo, '#3a0202', 0.45);
+    var verde = '#5a9a2a', verdeOsc = '#2e5a10';
+    var quema = (q >= 0) ? Math.sin(Math.min(1, q * 1.6) * Math.PI) : 0;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 7)) * 0.25 - 0.12);
+
+    ctx.fillStyle = '#3a0000';
+    ctx.beginPath(); ctx.moveTo(-1.6, -0.8); ctx.lineTo(6.4, -0.5); ctx.lineTo(6.4, -4.2); ctx.lineTo(-1.6, -2.4); ctx.closePath(); ctx.fill();
+
+    /* el cuerpo del ají: gordo arriba y en punta atrás */
+    var cuerpo = new Path2D();
+    cuerpo.moveTo(6.4, -0.4);
+    cuerpo.quadraticCurveTo(6.8, 2.4, 4.4, 4.2);
+    cuerpo.quadraticCurveTo(1.0, 5.8, -2.6, 4.4);
+    cuerpo.quadraticCurveTo(-5.6, 3.0, -5.2, 0.4);
+    cuerpo.lineTo(-4.6, -0.9);
+    cuerpo.lineTo(6.4, -0.4);
+    cuerpo.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-4.8, -1.1);
+    mand.lineTo(6.4, -0.6);
+    mand.quadraticCurveTo(6.8, -3.2, 4.2, -4.8);
+    mand.quadraticCurveTo(0.8, -6.0, -2.6, -4.6);
+    mand.quadraticCurveTo(-5.2, -3.4, -4.8, -1.1);
+    mand.closePath();
+    rostro(ctx, cuerpo, mand, -4.8, -1.0, ang, rojo, hex(rojoOsc), 0.8, 0.8);
+
+    /* el brillo largo del pimiento */
+    ctx.save(); ctx.clip(cuerpo);
+    ctx.fillStyle = 'rgba(255,255,255,.28)';
+    ctx.beginPath();
+    ctx.ellipse(1.0, 3.2, 3.4, 0.7, -0.14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    /* el rabito verde, atrás y arriba */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.4, 4.0);
+      ctx.quadraticCurveTo(-4.6, 6.4, -2.6, 7.2);
+      ctx.quadraticCurveTo(-1.6, 6.0, -1.8, 4.2);
+      ctx.closePath();
+    }, verde, verdeOsc, 0.3, 0.3, 1.4);
+    ctx.fillStyle = verde;
+    [[-4.4, 4.6], [-1.0, 4.8], [-2.8, 5.2]].forEach(function (h) {
+      ctx.beginPath();
+      ctx.ellipse(h[0], h[1], 1.1, 0.5, h[0] * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+    });
+
+    /* los ojos, con cara de pillo */
+    [[1.6, 2.2], [4.2, 1.6]].forEach(function (e) {
+      ctx.fillStyle = '#fdfaf0';
+      ctx.beginPath(); ctx.ellipse(e[0], e[1], 0.9, 0.8, 0, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.arc(e[0] + 0.28, e[1] - 0.05, 0.4, 0, Math.PI * 2); ctx.fill();
+    });
+    destello(ctx, 2.1, 2.6, 0.22, 0.9);
+    contorno(ctx, 2.4);
+    ctx.beginPath();
+    ctx.moveTo(0.4, 3.6); ctx.lineTo(2.4, 3.2);
+    ctx.moveTo(3.2, 3.0); ctx.lineTo(5.2, 2.4);
+    ctx.stroke();
+
+    /* siempre le sale un hilito de humo */
+    for (k = 0; k < 3; k++) {
+      var ph = ((t * 0.9) + k / 3) % 1;
+      ctx.fillStyle = 'rgba(210,210,220,' + ((0.2 + 0.4 * quema) * (1 - ph)) + ')';
+      ctx.beginPath();
+      ctx.arc(-2.4 + Math.sin(ph * 5 + k) * 1.4, 7.4 + ph * 5, 0.5 + ph * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* Q: la llamarada */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (k = 0; k < 4; k++) {
+        var u = (q * 1.7 + k / 4) % 1;
+        var lar = 5 + u * 11;
+        var g = ctx.createLinearGradient(6, -1, 6 + lar, -1);
+        g.addColorStop(0, 'rgba(255,240,180,' + ((1 - u) * quema) + ')');
+        g.addColorStop(0.4, 'rgba(255,140,26,' + ((1 - u) * quema * 0.75) + ')');
+        g.addColorStop(1, 'rgba(255,50,10,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(6, -1);
+        ctx.quadraticCurveTo(6 + lar * 0.5, -1 + 3.2 * (1 - u), 6 + lar, -1);
+        ctx.quadraticCurveTo(6 + lar * 0.5, -1 - 3.2 * (1 - u), 6, -1);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- SAPO ---------------- */
+  /* El de bronce del juego del sapo, el de las cantinas: sentado, con la boca
+   * abierta de par en par esperando la moneda. Q: TRAGA la moneda y suena la
+   * campanilla. */
+  DRAW.sapo = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.0), k;
+    var ang = [0, 20, 38][fz] * Math.PI / 180;
+    var bronce = hex(mix('#9a7a34', o.c, 0.22)), bronceOsc = mix(bronce, '#2e2208', 0.5);
+    var oro = '#ffd24a';
+    var traga = (q >= 0) ? Math.min(1, q * 1.6) : -1;
+    ctx.save();
+    frame(ctx, o.x, o.y, o.d);
+    ctx.translate(0, Math.abs(Math.sin(t * 5)) * 0.2 - 0.1);
+
+    /* las patas de delante, apoyadas */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(2.0, -3.8);
+      ctx.quadraticCurveTo(5.8, -4.6, 6.8, -6.0);
+      ctx.quadraticCurveTo(4.2, -6.8, 1.6, -5.8);
+      ctx.closePath();
+    }, bronce, hex(bronceOsc), 0.3, 0.3, 1.4);
+
+    ctx.fillStyle = '#1a1200';
+    ctx.beginPath(); ctx.moveTo(-2.6, -0.8); ctx.lineTo(6.2, -0.5); ctx.lineTo(6.2, -4.6); ctx.lineTo(-2.6, -2.6); ctx.closePath(); ctx.fill();
+
+    var cuerpo = new Path2D();
+    cuerpo.moveTo(6.2, -0.4);
+    cuerpo.quadraticCurveTo(6.4, 1.8, 4.6, 2.6);
+    cuerpo.quadraticCurveTo(2.0, 3.6, -0.8, 3.2);
+    cuerpo.quadraticCurveTo(-4.4, 2.8, -5.0, 0.6);
+    cuerpo.lineTo(-4.6, -0.9);
+    cuerpo.lineTo(6.2, -0.4);
+    cuerpo.closePath();
+    var mand = new Path2D();
+    mand.moveTo(-4.8, -1.1);
+    mand.lineTo(6.2, -0.6);
+    mand.quadraticCurveTo(6.4, -3.6, 4.0, -5.0);
+    mand.quadraticCurveTo(0.4, -6.0, -2.8, -5.0);
+    mand.quadraticCurveTo(-5.0, -3.8, -4.8, -1.1);
+    mand.closePath();
+    rostro(ctx, cuerpo, mand, -4.8, -1.0, ang, bronce, hex(bronceOsc), 0.7, 0.7);
+
+    /* el agujero de la boca, negro de verdad */
+    ctx.save(); girarSobre(ctx, -4.8, -1.0, -ang); ctx.clip(mand);
+    ctx.fillStyle = '#06050a';
+    ctx.beginPath(); ctx.ellipse(1.2, -2.2, 3.6, 1.5, 0.02, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    /* los ojos saltones, de bronce pulido */
+    [[1.0, 3.4, 1.6], [4.0, 2.8, 1.3]].forEach(function (e) {
+      piezaX(ctx, function () { ctx.beginPath(); ctx.arc(e[0], e[1], e[2], 0, Math.PI * 2); },
+        bronce, hex(bronceOsc), 0.25, 0.25, 1.4);
+      ctx.fillStyle = TINTA;
+      ctx.beginPath(); ctx.ellipse(e[0] + 0.2, e[1], e[2] * 0.32, e[2] * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+      destello(ctx, e[0] - 0.4, e[1] + 0.55, e[2] * 0.22, 0.9);
+    });
+
+    /* los lunares del bronce */
+    ctx.fillStyle = hex(bronceOsc);
+    [[-2.6, 1.6], [-0.6, 0.8], [-3.6, 0.2], [1.4, 0.6]].forEach(function (p) {
+      ctx.beginPath(); ctx.ellipse(p[0], p[1], 0.45, 0.3, 0.3, 0, Math.PI * 2); ctx.fill();
+    });
+
+    /* Q: la moneda entrando y la campanilla */
+    if (q >= 0) {
+      var cx = 14 - traga * 11, cy = 4 - traga * 5.5;
+      ctx.save();
+      ctx.globalAlpha = traga < 0.92 ? 1 : (1 - traga) / 0.08;
+      ctx.translate(cx, cy);
+      ctx.scale(Math.abs(Math.cos(traga * 14)) * 0.8 + 0.2, 1);
+      ctx.fillStyle = oro;
+      ctx.beginPath(); ctx.arc(0, 0, 1.1, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      ctx.restore();
+      if (traga > 0.85) {
+        var tim = (traga - 0.85) / 0.15;
+        ctx.lineCap = 'round';
+        for (k = 0; k < 2; k++) {
+          var u = (tim + k / 2) % 1;
+          ctx.strokeStyle = 'rgba(255,230,160,' + ((1 - u) * 0.95) + ')';
+          ctx.lineWidth = 0.6;
+          ctx.beginPath(); ctx.arc(0, -1, 3 + u * 7, -1.1, 1.1); ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- COLIBRÍ DE NAZCA ---------------- */
+  /* El geoglifo: no es un pájaro, es el DIBUJO del pájaro, hecho con la línea
+   * clara sobre la tierra. Se ve el surco y la línea. Q: se enciende el
+   * trazo entero, como visto desde el cielo. */
+  DRAW.nazca = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qDe(o, 1.4), k;
+    var media = HALF[fz], angD = DIR_ANGLE[o.d];
+    var tierra = hex(mix('#6b4a32', o.c, 0.14)), tierraOsc = mix(tierra, '#1e1208', 0.5);
+    var linea = hex(mix('#e8d8b8', o.c, 0.3));
+    var enciende = (q >= 0) ? Math.sin(Math.min(1, q * 1.3) * Math.PI) : 0;
+    ctx.save();
+    ctx.translate(o.x, o.y);
+
+    function bocado() {
+      ctx.beginPath();
+      if (media <= 0) ctx.arc(0, 0, R, 0, Math.PI * 2);
+      else {
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, R, angD + media, angD - media + Math.PI * 2);
+        ctx.closePath();
+      }
+    }
+
+    /* la tierra del desierto */
+    ctx.save();
+    bocado(); ctx.clip();
+    ctx.fillStyle = hex(tierraOsc);
+    ctx.fillRect(-R - 1, -R - 1, (R + 1) * 2, (R + 1) * 2);
+    ctx.fillStyle = tierra;
+    ctx.beginPath(); ctx.arc(-0.7, 0.7, R, 0, Math.PI * 2); ctx.fill();
+    /* piedrecillas */
+    ctx.fillStyle = hex(tierraOsc);
+    for (k = 0; k < 14; k++) {
+      var a2 = k * 1.7, r2 = 1.5 + (k % 5) * 1.1;
+      ctx.fillRect(Math.cos(a2) * r2, Math.sin(a2) * r2, 0.5, 0.5);
+    }
+
+    /* EL TRAZO del colibrí, en el marco del cuerpo */
+    ctx.save();
+    frame(ctx, 0, 0, o.d);
+    var lum = 0.55 + 0.45 * Math.abs(Math.sin(t * 1.4)) + enciende;
+    [[1.5, 0.35], [0.7, 1]].forEach(function (capa) {
+      ctx.strokeStyle = mix(linea, '#ffffff', capa[1] > 0.5 ? 0.35 : 0,
+        Math.min(1, capa[1] * lum));
+      ctx.lineWidth = capa[0];
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      /* el pico larguísimo —es lo que lo delata— y el cuerpecito */
+      ctx.beginPath();
+      ctx.moveTo(6.2, 0);
+      ctx.lineTo(1.0, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(1.0, -0.8);
+      ctx.lineTo(1.0, 0.8);
+      ctx.lineTo(-1.4, 0.9);
+      ctx.lineTo(-1.4, -0.9);
+      ctx.closePath();
+      ctx.stroke();
+      /* las dos alas, largas y estiradas arriba y abajo */
+      ctx.beginPath();
+      ctx.moveTo(0.6, 0.7); ctx.lineTo(-0.4, 5.2); ctx.lineTo(-2.6, 5.0); ctx.lineTo(-1.2, 0.8);
+      ctx.moveTo(0.6, -0.7); ctx.lineTo(-0.4, -5.2); ctx.lineTo(-2.6, -5.0); ctx.lineTo(-1.2, -0.8);
+      ctx.stroke();
+      /* la cola, dos plumas largas que se abren */
+      ctx.beginPath();
+      ctx.moveTo(-1.4, 0.5); ctx.lineTo(-6.0, 2.6);
+      ctx.moveTo(-1.4, -0.5); ctx.lineTo(-6.0, -2.6);
+      ctx.moveTo(-6.0, 2.6); ctx.lineTo(-4.4, 0.2); ctx.lineTo(-6.0, -2.6);
+      ctx.stroke();
+    });
+    ctx.restore();
+    ctx.restore();
+
+    ctx.strokeStyle = TINTA; ctx.lineWidth = 1.5 / S; ctx.lineJoin = 'round';
+    bocado(); ctx.stroke();
+
+    /* Q: el trazo se enciende y sube polvo */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(0, 0, R * 0.5, 0, 0, R + 6 + enciende * 6);
+      g.addColorStop(0, mix(linea, '#ffffff', 0.5, 0.35 * enciende));
+      g.addColorStop(1, mix(linea, '#ffffff', 0.5, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, R + 6 + enciende * 6, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 8; k++) {
+        var u = (q * 1.2 + k / 8) % 1;
+        ctx.fillStyle = 'rgba(200,180,150,' + ((1 - u) * enciende * 0.8) + ')';
+        ctx.fillRect(Math.cos(k * 0.8) * (R + u * 7), Math.sin(k * 0.8) * (R + u * 7), 0.7, 0.7);
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------- Las ocho muertes de la tanda andina ----------
+   * Misma maquinaria: foto quieta de la skin y encima la muerte. Cada una se
+   * va como se iría de verdad: la piedra se parte, la papa se pudre, el sol
+   * lo tapa un eclipse y al dibujo de Nazca se lo lleva el viento. */
+
+  /* GALLITO: se le viene abajo la cresta —que era todo su orgullo— y el
+   * pájaro se apaga soltando plumas naranjas */
+  conMuerte('gallito', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var cae = suave(tramo(pm, 0.15, 0.85));
+    var fade = 1 - tramo(pm, 0.84, 1);
+    M.pinta({ rot: cae * 1.5, pf: -2, ps: -3, dy: cae * 4.5, alpha: fade });
+    /* las plumas de la cresta, cayendo */
+    for (k = 0; k < 10; k++) {
+      var d = tramo(pm, 0.04 + k * 0.05, 1);
+      if (d <= 0) continue;
+      var p = M.pant(1 + (k - 4.5) * 1.1, 5 - d * 11);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(Math.sin(d * 5 + k) * 1.5);
+      ctx.fillStyle = (k % 4) ? '#ff5a1a' : '#1a1a22';
+      ctx.beginPath(); ctx.ellipse(0, 0, 1.2, 0.45, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,20,20,.6)'; ctx.lineWidth = 0.16; ctx.stroke();
+      ctx.restore();
+    }
+    /* el último chillido, apagándose */
+    if (pm < 0.3) {
+      var u = pm / 0.3;
+      ctx.strokeStyle = 'rgba(255,230,160,' + ((1 - u) * 0.8) + ')';
+      ctx.lineWidth = 0.55; ctx.lineCap = 'round';
+      var pc = M.pant(7, 0.4);
+      ctx.beginPath(); ctx.arc(pc.x, pc.y, 2 + u * 7, -0.8, 0.8); ctx.stroke();
+    }
+  });
+
+  /* PUMA DE PIEDRA: se raja por el medio y se parte en bloques */
+  conMuerte('puma', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var raja = tramo(pm, 0.03, 0.22);
+    var parte = tramo(pm, 0.2, 0.92);
+    var fade = 1 - tramo(pm, 0.82, 1);
+    if (raja > 0 && parte < 0.06) {
+      ctx.strokeStyle = 'rgba(30,26,20,' + (raja * 0.9) + ')';
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      for (k = 0; k < 4; k++) {
+        var p0 = M.pant(-3 + k * 2.4, 4.5 - k * 2.2);
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p0.x + (k % 2 ? 2.4 : -2.0) * raja, p0.y + 2.4 * raja);
+      }
+      ctx.stroke();
+    }
+    /* cuatro bloques que se separan y caen: los cuatro cuartos de la cara
+     * (en el escaparate eran cuatro cuadraditos en columna y el resto de la
+     * piedra desaparecía de golpe) */
+    for (k = 0; k < 4; k++) {
+      var d = tramo(pm, 0.18 + k * 0.06, 1);
+      var f0 = (k % 2) ? 3.4 : -2.2, s0 = (k < 2) ? 2.6 : -2.6;
+      M.trozo(f0, s0, 5.9, (k % 2 ? 2.0 : -1.6) * d * 4, d * d * 14,
+        d * (k % 2 ? 0.9 : -1.2), (1 - d * 0.5) * fade);
+    }
+    /* el polvo de la piedra */
+    if (parte > 0.25) {
+      for (k = 0; k < 7; k++) {
+        ctx.fillStyle = 'rgba(158,150,134,' + (0.4 * (1 - parte) * fade) + ')';
+        ctx.beginPath();
+        ctx.arc(o.x + (k - 3) * 2.8, o.y + 7, 1.0 + parte * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+
+  /* TUMI: se le desprende el filo, que cae clavándose, y la figurita se
+   * apaga y se viene detrás */
+  conMuerte('tumi', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var suelta = tramo(pm, 0.05, 0.4);
+    var fade = 1 - tramo(pm, 0.82, 1);
+    var cae = suave(tramo(pm, 0.35, 0.95));
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(70,52,10,' + (tramo(pm, 0.3, 0.8) * 0.6) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ dy: cae * 4.0, rot: cae * 0.7, pf: 0, ps: 2, alpha: fade });
+    /* el filo, que se va por su lado */
+    if (suelta > 0) {
+      var pf = M.pant(-1 - suelta * 6, -3 - suelta * 6);
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(pf.x, pf.y);
+      ctx.rotate(-suelta * 2.6);
+      ctx.fillStyle = '#ffcf3a';
+      ctx.beginPath();
+      ctx.moveTo(-4.4, 0);
+      ctx.lineTo(4.4, 0.2);
+      ctx.quadraticCurveTo(4.8, -3.6, 0.2, -4.8);
+      ctx.quadraticCurveTo(-4.6, -3.8, -4.4, 0);
+      ctx.closePath(); ctx.fill();
+      contorno(ctx, 1.5); ctx.stroke();
+      ctx.restore();
+    }
+    /* las turquesas, saltando */
+    for (k = 0; k < 2; k++) {
+      var d = tramo(pm, 0.1 + k * 0.06, 0.9);
+      if (d <= 0) continue;
+      var pt = M.pant((k ? 3 : -3) + (k ? 1 : -1) * d * 7, 1.4 + d * 5 - d * d * 10);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.fillStyle = '#3ec8b8';
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 0.62, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,20,20,.7)'; ctx.lineWidth = 0.2; ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  /* INTI: un ECLIPSE. Una sombra redonda le cruza por delante, se lo come
+   * entero y solo queda el anillo un instante. */
+  conMuerte('inti', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var tapa = tramo(pm, 0.05, 0.6);
+    var anillo = (pm > 0.55 && pm < 0.78) ? Math.sin((pm - 0.55) / 0.23 * Math.PI) : 0;
+    var fade = 1 - tramo(pm, 0.75, 1);
+    /* los rayos se van recogiendo con la foto */
+    M.pinta({ sf: 1 - tapa * 0.25, ss: 1 - tapa * 0.25, alpha: fade });
+    /* la sombra que cruza */
+    var p = M.pant(0, 0);
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = '#06060c';
+    ctx.beginPath();
+    ctx.arc(p.x + (1 - tapa) * 16, p.y - (1 - tapa) * 4, R + 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    /* el anillo de fuego */
+    if (anillo > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,220,120,' + anillo + ')';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.arc(p.x, p.y, R + 1.3, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,180,60,' + (anillo * 0.5) + ')';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(p.x, p.y, R + 1.3, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    /* las estrellas que salen cuando se apaga el sol */
+    for (k = 0; k < 7; k++) {
+      var d = tramo(pm, 0.55 + k * 0.02, 1);
+      if (d <= 0) continue;
+      estrella4(ctx, p.x + Math.cos(k * 0.9) * (R + 4 + k), p.y + Math.sin(k * 0.9) * (R + 3 + k),
+        0.7, '#ffffff', d * (1 - tramo(pm, 0.9, 1)) * 0.9);
+    }
+  });
+
+  /* PAPA: se pudre. Se pone negra por manchas, se arruga y se hunde. */
+  conMuerte('papa', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var pudre = tramo(pm, 0.05, 0.6);
+    var fade = 1 - tramo(pm, 0.84, 1);
+    M.enFoto(function (c) {
+      /* manchas de podrido, que van creciendo */
+      c.fillStyle = 'rgba(28,20,10,' + (pudre * 0.9) + ')';
+      for (var j = 0; j < 6; j++) {
+        var a2 = j * 1.05;
+        c.beginPath();
+        c.arc(Math.cos(a2) * 3.4, Math.sin(a2) * 2.6, 1.0 + pudre * 2.6, 0, Math.PI * 2);
+        c.fill();
+      }
+    }, 'source-atop');
+    M.pinta({ ss: 1 - pudre * 0.3, sf: 1 + pudre * 0.12, dy: pudre * 3.0, alpha: fade });
+    /* los brotes se marchitan y caen */
+    for (k = 0; k < 3; k++) {
+      var d = tramo(pm, 0.1 + k * 0.08, 0.9);
+      if (d <= 0) continue;
+      var p = M.pant(-2.6 + k * 2.4, 4 - d * 9);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(d * 3 + k);
+      ctx.fillStyle = mix('#7aa83a', '#4a3a10', d);
+      ctx.beginPath(); ctx.ellipse(0, 0, 0.85, 0.42, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    /* moscas: dos puntitos dando vueltas */
+    if (pudre > 0.5) {
+      for (k = 0; k < 2; k++) {
+        var a3 = o.t * 6 + k * 3.14;
+        var pm2 = M.pant(Math.cos(a3) * 5, 3 + Math.sin(a3 * 1.7) * 3);
+        ctx.fillStyle = 'rgba(30,30,36,' + (0.8 * fade) + ')';
+        ctx.beginPath(); ctx.arc(pm2.x, pm2.y, 0.32, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  });
+
+  /* AJÍ: se consume. Se le va el color, se arruga y queda un ají seco. */
+  conMuerte('aji', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var seca = tramo(pm, 0.08, 0.62);
+    var fade = 1 - tramo(pm, 0.84, 1);
+    var cae = rebote(tramo(pm, 0.45, 0.9));
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(86,26,14,' + (seca * 0.85) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    /* se encoge y se retuerce */
+    M.pinta({ ss: 1 - seca * 0.38, sf: 1 - seca * 0.12,
+      rot: cae * 1.3 + Math.sin(pm * 22) * 0.05 * seca,
+      pf: 0, ps: -4, dy: cae * 2.6, alpha: fade });
+    /* el último humo, que sale de arriba */
+    for (k = 0; k < 5; k++) {
+      var u = tramo(pm, 0.02 + k * 0.06, 0.9);
+      if (u <= 0 || u >= 1) continue;
+      var p = M.pant(-2.4, 7 + u * 8);
+      ctx.fillStyle = 'rgba(200,200,212,' + ((1 - u) * 0.45 * fade) + ')';
+      ctx.beginPath();
+      ctx.arc(p.x + Math.sin(u * 6 + k) * 2.2, p.y, 0.8 + u * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* las semillas, que se le caen */
+    for (k = 0; k < 6; k++) {
+      var d = tramo(pm, 0.35 + k * 0.04, 1);
+      if (d <= 0) continue;
+      var ps = M.pant((k - 2.5) * 1.6, -4 - d * 7);
+      ctx.save();
+      ctx.globalAlpha = (1 - d) * fade;
+      ctx.fillStyle = '#f2e4a8';
+      ctx.beginPath(); ctx.ellipse(ps.x, ps.y, 0.4, 0.3, d * 3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  });
+
+  /* SAPO: se queda sin juego. Se le cae la moneda por dentro —suena— y el
+   * bronce se cubre de verdín hasta quedarse de adorno. */
+  conMuerte('sapo', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var verdin = tramo(pm, 0.18, 0.75);
+    var fade = 1 - tramo(pm, 0.85, 1);
+    var cae = rebote(tramo(pm, 0.5, 0.9));
+    M.enFoto(function (c) {
+      c.fillStyle = 'rgba(74,142,110,' + (verdin * 0.7) + ')';
+      c.fillRect(-FH, -FH, FOTO, FOTO);
+    }, 'source-atop');
+    M.pinta({ rot: cae * 1.1, pf: 0, ps: -5, dy: cae * 2.2, alpha: fade });
+    /* la moneda cayéndole dentro */
+    var mo = tramo(pm, 0.02, 0.3);
+    if (mo > 0 && mo < 1) {
+      var p = M.pant(1.2, 2 - mo * 6);
+      ctx.save();
+      ctx.globalAlpha = 1 - mo * 0.4;
+      ctx.translate(p.x, p.y);
+      ctx.scale(Math.abs(Math.cos(mo * 16)) * 0.8 + 0.2, 1);
+      ctx.fillStyle = '#ffd24a';
+      ctx.beginPath(); ctx.arc(0, 0, 1.0, 0, Math.PI * 2); ctx.fill();
+      contorno(ctx, 1.2); ctx.stroke();
+      ctx.restore();
+    }
+    /* el tin de la campanilla */
+    if (pm > 0.28 && pm < 0.5) {
+      var tim = (pm - 0.28) / 0.22;
+      var pc = M.pant(0, 0);
+      ctx.strokeStyle = 'rgba(255,230,160,' + ((1 - tim) * 0.9) + ')';
+      ctx.lineWidth = 0.55; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(pc.x, pc.y, 3 + tim * 8, -1.2, 1.2); ctx.stroke();
+    }
+    /* gotitas de verdín que resbalan */
+    for (k = 0; k < 4; k++) {
+      var d = tramo(pm, 0.4 + k * 0.05, 1);
+      if (d <= 0) continue;
+      var pg = M.pant((k - 1.5) * 2.4, -2 - d * 5);
+      gota(ctx, pg.x, pg.y, 0.55, '#6fd8a8', (1 - d) * 0.8 * fade);
+    }
+  });
+
+  /* NAZCA: el viento del desierto borra el trazo, raya a raya, y se lleva la
+   * tierra. Del geoglifo no queda nada. */
+  conMuerte('nazca', null, function (M, pm, o) {
+    var ctx = M.ctx, k;
+    var borra = tramo(pm, 0.05, 0.75);
+    var fade = 1 - tramo(pm, 0.7, 1);
+    /* la foto se borra en diagonal, como si la barriera el viento */
+    M.enFoto(function (c) {
+      c.globalCompositeOperation = 'destination-out';
+      c.save();
+      c.rotate(-0.5);
+      c.fillStyle = '#000';
+      /* una franja que baja desde fuera de la foto hasta taparla entera (en
+       * el escaparate subía: empezaba borrado y se iba descubriendo) */
+      c.fillRect(-FOTO * 1.5, -FOTO * 2.5, FOTO * 3, FOTO * (0.8 + borra * 3.2));
+      c.restore();
+    }, 'source-over');
+    M.pinta({ alpha: fade });
+    /* la tierra volando, en rachas */
+    for (k = 0; k < 26; k++) {
+      var d = tramo(pm, 0.02 + (k % 13) * 0.05, 1);
+      if (d <= 0) continue;
+      var sem = hash(k * 11 + 5) % 100;
+      var s0 = (sem / 100 - 0.5) * 13;
+      var p = M.pant(-2 - d * 18, s0 + d * 5 + Math.sin(d * 6 + k) * 1.6);
+      ctx.fillStyle = 'rgba(200,176,132,' + ((1 - d) * 0.85) + ')';
+      ctx.fillRect(p.x, p.y, 0.9, 0.55);
+    }
+    /* las rachas de viento */
+    if (pm < 0.7) {
+      ctx.strokeStyle = 'rgba(230,214,184,' + ((1 - pm / 0.7) * 0.35) + ')';
+      ctx.lineWidth = 0.3; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (k = 0; k < 4; k++) {
+        var py = o.y - 5 + k * 3.4;
+        ctx.moveTo(o.x + 8, py);
+        ctx.lineTo(o.x - 10 - k * 2, py + 1.5);
+      }
+      ctx.stroke();
+    }
+  });
+
+  /* ---------------- ACCESORIOS ----------------
+   * ACC.id = function (ctx, o), en el marco del cuerpo y con la skin debajo.
+   * Es la forma que pide el juego. */
+
+  /* MONTERA: el sombrero de ala ancha, con su cinta bordada */
+  ACC.acc_montera = function (ctx, o) {
+    var pano = hex(mix(o.c, '#3a2a1a', 0.62)), panoOsc = mix(pano, '#120a04', 0.45);
+    var cinta = hex(mix(o.c, '#e01f4a', 0.5)), k;
+    /* el ala, bien ancha */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.ellipse(0.2, 4.0, 6.4, 1.5, -0.06, 0, Math.PI * 2);
+    }, pano, hex(panoOsc), 0.35, 0.35, 1.6);
+    /* la copa */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-3.0, 4.2);
+      ctx.quadraticCurveTo(-2.8, 7.2, 0.4, 7.3);
+      ctx.quadraticCurveTo(3.6, 7.2, 3.8, 4.2);
+      ctx.quadraticCurveTo(0.4, 3.2, -3.0, 4.2);
+      ctx.closePath();
+    }, pano, hex(panoOsc), 0.4, 0.4, 1.6);
+    /* la cinta bordada, con sus rombos */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-3.0, 4.2);
+    ctx.quadraticCurveTo(-2.8, 7.2, 0.4, 7.3);
+    ctx.quadraticCurveTo(3.6, 7.2, 3.8, 4.2);
+    ctx.quadraticCurveTo(0.4, 3.2, -3.0, 4.2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = cinta;
+    ctx.fillRect(-3.4, 4.3, 7.6, 1.2);
+    ctx.fillStyle = '#f2e4c2';
+    for (k = 0; k < 5; k++) {
+      ctx.beginPath();
+      ctx.moveTo(-2.6 + k * 1.5, 4.9);
+      ctx.lineTo(-2.2 + k * 1.5, 4.5);
+      ctx.lineTo(-1.8 + k * 1.5, 4.9);
+      ctx.lineTo(-2.2 + k * 1.5, 5.3);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  };
+
+  /* PONCHO: la tela cayendo por los hombros, con sus franjas */
+  ACC.acc_poncho = function (ctx, o) {
+    var tela = hex(mix(o.c, '#a8221a', 0.55)), telaOsc = mix(tela, '#2a0604', 0.45);
+    var franja = '#f2e4c2', k;
+    var w = Math.sin(o.t * 4) * 0.35;
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(-6.4, -1.4);
+      ctx.quadraticCurveTo(-7.0, -5.0, -4.6, -6.6 + w);
+      ctx.quadraticCurveTo(0.4, -8.2 + w, 5.2, -6.4 + w);
+      ctx.quadraticCurveTo(7.0, -5.2, 6.2, -1.6);
+      ctx.quadraticCurveTo(0.2, 0.2, -6.4, -1.4);
+      ctx.closePath();
+    }, tela, hex(telaOsc), 0.5, 0.5, 1.7);
+    /* las franjas */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-6.4, -1.4);
+    ctx.quadraticCurveTo(-7.0, -5.0, -4.6, -6.6 + w);
+    ctx.quadraticCurveTo(0.4, -8.2 + w, 5.2, -6.4 + w);
+    ctx.quadraticCurveTo(7.0, -5.2, 6.2, -1.6);
+    ctx.quadraticCurveTo(0.2, 0.2, -6.4, -1.4);
+    ctx.closePath();
+    ctx.clip();
+    for (k = 0; k < 3; k++) {
+      ctx.fillStyle = (k % 2) ? franja : hex(telaOsc);
+      ctx.fillRect(-7.5, -5.4 + k * 1.5 + w, 15, 0.75);
+    }
+    ctx.restore();
+    /* los flecos */
+    ctx.strokeStyle = franja; ctx.lineWidth = 0.28; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (k = 0; k < 9; k++) {
+      var fx = -6.0 + k * 1.5;
+      ctx.moveTo(fx, -1.0 + Math.abs(fx) * 0.05);
+      ctx.lineTo(fx + Math.sin(o.t * 5 + k) * 0.3, -2.4 + Math.abs(fx) * 0.05);
+    }
+    ctx.stroke();
+  };
+
+  /* QUENA: la flauta pegada a la boca, con sus notas */
+  ACC.acc_quena = function (ctx, o) {
+    var cana = '#d8b878', canaOsc = '#8a6a32', k;
+    ctx.save();
+    ctx.translate(5.0, 0.2);
+    ctx.rotate(-0.55);
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      roundRect(ctx, -0.7, -1.0, 1.5, 8.6, 0.6);
+    }, cana, canaOsc, 0.2, 0.2, 1.4);
+    ctx.fillStyle = canaOsc;
+    for (k = 0; k < 5; k++) {
+      ctx.beginPath(); ctx.arc(0.05, 0.9 + k * 1.35, 0.26, 0, Math.PI * 2); ctx.fill();
+    }
+    /* los nudos de la caña */
+    ctx.strokeStyle = canaOsc; ctx.lineWidth = 0.24;
+    ctx.beginPath();
+    ctx.moveTo(-0.7, 2.6); ctx.lineTo(0.8, 2.6);
+    ctx.moveTo(-0.7, 5.6); ctx.lineTo(0.8, 5.6);
+    ctx.stroke();
+    ctx.restore();
+    /* dos notas escapándose */
+    for (k = 0; k < 2; k++) {
+      var u = ((o.t * 0.8) + k * 0.5) % 1;
+      nota(ctx, 7.5 + u * 3.5, 6.5 + u * 3 + Math.sin(u * 6 + k) * 1.2,
+        0.8 * (1 - u * 0.4), mix('#ffffff', o.c, 0.4, 1 - u));
+    }
+  };
+
+  /* OREJERAS DE ORO: los discos de oro en la oreja, de los señores mochica */
+  ACC.acc_orejeras = function (ctx, o) {
+    var oro = '#ffd24a', oroOsc = '#a97d0d';
+    var turquesa = '#3ec8b8';
+    var w = Math.sin(o.t * 4) * 0.35;
+    [[-3.4, 1.4, 2.0], [-5.4, 0.2, 1.4]].forEach(function (d, k) {
+      ctx.save();
+      ctx.translate(d[0], d[1] + w * (k ? 0.6 : 1));
+      piezaX(ctx, function () { ctx.beginPath(); ctx.arc(0, 0, d[2], 0, Math.PI * 2); },
+        oro, oroOsc, 0.25, 0.25, 1.4);
+      ctx.fillStyle = turquesa;
+      ctx.beginPath(); ctx.arc(0, 0, d[2] * 0.55, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.22; ctx.stroke();
+      ctx.fillStyle = oro;
+      ctx.beginPath(); ctx.arc(0, 0, d[2] * 0.22, 0, Math.PI * 2); ctx.fill();
+      if (!k) destello(ctx, -d[2] * 0.4, d[2] * 0.4, 0.3, 0.85);
+      ctx.restore();
+    });
+  };
+
+  /* TRENZAS: dos trenzas largas con sus pompones de lana */
+  ACC.acc_trenzas = function (ctx, o) {
+    var pelo = '#2a1a10', peloOsc = '#120a05';
+    var lana = hex(mix(o.c, '#e01f4a', 0.45)), k;
+    [[1, 0], [-1, 0.7]].forEach(function (l, j) {
+      var w = Math.sin(o.t * 3.5 + l[1]) * 0.8;
+      var bx = -3.0 - j * 0.8, by = 2.4 - j * 1.6;
+      /* la trenza: tres bolitas seguidas */
+      for (k = 0; k < 5; k++) {
+        var u = k / 4;
+        var px = bx - u * 1.6 + Math.sin(u * 3 + w) * 0.9;
+        var py = by - u * 6.2 - w * u;
+        ctx.fillStyle = (k % 2) ? pelo : peloOsc;
+        ctx.beginPath(); ctx.ellipse(px, py, 0.95 - u * 0.22, 0.8 - u * 0.18, 0.2, 0, Math.PI * 2); ctx.fill();
+        contorno(ctx, 1.1); ctx.stroke();
+      }
+      /* el pompón del final */
+      var fx = bx - 1.6 + Math.sin(3 + w) * 0.9, fy = by - 6.2 - w;
+      ctx.fillStyle = lana;
+      for (k = 0; k < 5; k++) {
+        var a2 = k * 1.256;
+        ctx.beginPath();
+        ctx.arc(fx + Math.cos(a2) * 0.42, fy + Math.sin(a2) * 0.42, 0.58, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      contorno(ctx, 1.1);
+      ctx.beginPath(); ctx.arc(fx, fy, 0.95, 0, Math.PI * 2); ctx.stroke();
+    });
+  };
+
+  /* MÁSCARA DE ORO: la funeraria sicán, con los ojos alados */
+  ACC.acc_oro = function (ctx, o) {
+    var oro = '#ffcf3a', oroOsc = '#8a5200';
+    var rojo = '#c8342a';
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      ctx.moveTo(6.0, 1.2);
+      ctx.quadraticCurveTo(6.4, 4.6, 3.4, 5.6);
+      ctx.quadraticCurveTo(-0.6, 6.6, -3.6, 4.8);
+      ctx.quadraticCurveTo(-5.4, 3.4, -5.0, 0.6);
+      ctx.quadraticCurveTo(-4.2, -1.6, -1.4, -1.4);
+      ctx.quadraticCurveTo(2.6, -1.0, 6.0, 1.2);
+      ctx.closePath();
+    }, oro, oroOsc, 0.45, 0.45, 1.7);
+    /* los ojos alados, la marca sicán */
+    ctx.fillStyle = TINTA;
+    [[1.0, 2.8], [4.0, 2.4]].forEach(function (e) {
+      ctx.beginPath();
+      ctx.moveTo(e[0] - 1.2, e[1]);
+      ctx.quadraticCurveTo(e[0], e[1] + 0.95, e[0] + 1.2, e[1]);
+      ctx.quadraticCurveTo(e[0], e[1] - 0.65, e[0] - 1.2, e[1]);
+      ctx.closePath(); ctx.fill();
+    });
+    /* la nariz, en relieve */
+    ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.38; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(2.4, 2.2); ctx.lineTo(2.6, 0.4);
+    ctx.stroke();
+    /* el cinabrio, el rojo que llevaban */
+    ctx.fillStyle = 'rgba(200,52,42,.45)';
+    ctx.beginPath(); ctx.ellipse(-2.6, 2.4, 1.6, 1.0, 0.2, 0, Math.PI * 2); ctx.fill();
+    destello(ctx, -1.0, 4.6, 0.5, 0.75);
+  };
+
+  /* PLUMAS DE GUACAMAYO: el tocado de plumas de colores, hacia atrás */
+  ACC.acc_plumas = function (ctx, o) {
+    var COL = ['#e01f1f', '#ff8c1a', '#ffd24a', '#3ee83e', '#1ae0ff', '#2e6bff'];
+    var k;
+    for (k = 0; k < 9; k++) {
+      var u = k / 8;
+      /* hacia arriba y atrás (en el escaparate caían sobre la cara) */
+      var a2 = 1.35 + u * 1.5;
+      var lar = 5.5 + Math.sin(u * 3) * 1.6;
+      var w = Math.sin(o.t * 3.5 + k * 0.6) * 0.12;
+      ctx.save();
+      ctx.translate(-0.4, 4.2);
+      ctx.rotate(a2 + w);
+      ctx.fillStyle = COL[k % COL.length];
+      ctx.beginPath();
+      ctx.moveTo(0, -0.55);
+      ctx.quadraticCurveTo(lar * 0.6, -1.1, lar, 0);
+      ctx.quadraticCurveTo(lar * 0.6, 1.1, 0, 0.55);
+      ctx.closePath(); ctx.fill();
+      contorno(ctx, 1.1); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.2;
+      ctx.beginPath(); ctx.moveTo(0.3, 0); ctx.lineTo(lar - 0.4, 0); ctx.stroke();
+      ctx.restore();
+    }
+    /* la vincha que las sujeta */
+    piezaX(ctx, function () {
+      ctx.beginPath();
+      roundRect(ctx, -4.0, 3.2, 8.0, 1.3, 0.4);
+    }, hex(mix(o.c, '#a8221a', 0.5)), '#3a0a06', 0.25, 0.25, 1.4);
+  };
+
+  /* ---------------- EFECTOS ---------------- */
+
+  /* HOJAS DE COCA: van cayendo hojas verdes que se posan */
+  EFX.efx_coca = function (ctx, o, cuerpo) {
+    cuerpo();
+    rastro(o, 10, 66).forEach(function (q) {
+      ctx.save();
+      ctx.globalAlpha = 1 - q.edad;
+      ctx.translate(q.p.x, q.p.y + q.edad * 3.5);
+      ctx.rotate((q.n % 2 ? 1 : -1) * (0.3 + q.edad * 2.2));
+      ctx.fillStyle = (q.n % 3) ? '#5a9a2a' : '#3e7a1a';
+      ctx.beginPath();
+      ctx.moveTo(-1.4, 0);
+      ctx.quadraticCurveTo(0, -0.85, 1.4, 0);
+      ctx.quadraticCurveTo(0, 0.85, -1.4, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,40,10,.7)'; ctx.lineWidth = 0.16; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-1.1, 0); ctx.lineTo(1.1, 0); ctx.stroke();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+  };
+
+  /* GRANIZO: el granizo fino de la cordillera, cayendo en diagonal (NIEVE,
+   * con sus copos en fila, ya estaba) */
+  EFX.efx_granizo = function (ctx, o, cuerpo) {
+    cuerpo();
+    rastro(o, 4, 58).forEach(function (q) {
+      var a = 1 - q.edad;
+      var x = q.p.x - q.edad * 2.2, y = q.p.y + q.edad * 6;
+      ctx.fillStyle = 'rgba(240,250,255,' + a + ')';
+      ctx.beginPath(); ctx.arc(x, y, 0.42 * (1 - q.edad * 0.4), 0, Math.PI * 2); ctx.fill();
+      if (q.n % 4 === 0) {
+        ctx.strokeStyle = 'rgba(200,235,255,' + (a * 0.7) + ')';
+        ctx.lineWidth = 0.18;
+        ctx.beginPath();
+        for (var k = 0; k < 3; k++) {
+          var a2 = k * Math.PI / 3;
+          ctx.moveTo(x - Math.cos(a2) * 0.9, y - Math.sin(a2) * 0.9);
+          ctx.lineTo(x + Math.cos(a2) * 0.9, y + Math.sin(a2) * 0.9);
+        }
+        ctx.stroke();
+      }
+    });
+  };
+
+  /* SERPENTINA: las cintas de carnaval, enroscándose por el camino */
+  EFX.efx_serpentina = function (ctx, o, cuerpo) {
+    var COL = ['#e01f4a', '#ffd24a', '#3ee83e', '#1ae0ff', '#ff8c1a'];
+    var ptos = rastro(o, 4, 62);
+    ctx.save();
+    ctx.lineCap = 'round';
+    [0, 1, 2].forEach(function (j) {
+      ctx.strokeStyle = mix(COL[j % COL.length], '#ffffff', 0.15, 0.85);
+      ctx.lineWidth = 0.55;
+      ctx.beginPath();
+      for (var i = 0; i < ptos.length; i++) {
+        var q = ptos[i];
+        var bal = Math.sin(q.n * 0.55 + j * 2.1 + o.t * 2) * (1.4 + q.edad * 3.4);
+        ctx.globalAlpha = 1 - q.edad;
+        if (i === 0) ctx.moveTo(q.p.x, q.p.y + bal);
+        else ctx.lineTo(q.p.x, q.p.y + bal);
+      }
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    cuerpo();
+  };
+
+  /* TEJIDO: deja una faja tejida, con sus rombos */
+  EFX.efx_tejido = function (ctx, o, cuerpo) {
+    var ptos = rastro(o, 5, 70);
+    ctx.save();
+    ptos.forEach(function (q) {
+      ctx.globalAlpha = (1 - q.edad) * 0.9;
+      ctx.fillStyle = hex(mix(o.c, '#a8221a', 0.45));
+      ctx.fillRect(q.p.x - 1.6, q.p.y - 1.6, 3.2, 3.2);
+      ctx.fillStyle = '#f2e4c2';
+      var m = q.n % 3;
+      if (m === 0) {
+        ctx.beginPath();
+        ctx.moveTo(q.p.x, q.p.y - 1.0);
+        ctx.lineTo(q.p.x + 1.0, q.p.y);
+        ctx.lineTo(q.p.x, q.p.y + 1.0);
+        ctx.lineTo(q.p.x - 1.0, q.p.y);
+        ctx.closePath(); ctx.fill();
+      } else if (m === 1) {
+        ctx.fillRect(q.p.x - 1.4, q.p.y - 0.35, 2.8, 0.7);
+      } else {
+        ctx.fillRect(q.p.x - 0.35, q.p.y - 1.4, 0.7, 2.8);
+      }
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    cuerpo();
+  };
+
+  /* POLVO DE ORO: la arenilla dorada del río, brillando */
+  EFX.efx_polvoro = function (ctx, o, cuerpo) {
+    cuerpo();
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    rastro(o, 3, 48).forEach(function (q) {
+      var bri = (1 - q.edad) * (0.5 + 0.5 * Math.sin(o.t * 7 + q.n * 1.3));
+      var dx = Math.sin(q.n * 2.1) * 1.4, dy = -q.edad * 2.6 + Math.cos(q.n * 1.7) * 1.2;
+      estrella4(ctx, q.p.x + dx, q.p.y + dy, 0.5 + bri * 0.8, '#ffd24a', bri);
+    });
+    ctx.restore();
+  };
+
+  /* LÍNEAS DE NAZCA: el camino queda grabado en el suelo, como un geoglifo */
+  EFX.efx_lineas = function (ctx, o, cuerpo) {
+    var ptos = rastro(o, 6, 110);
+    if (ptos.length > 1) {
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      /* el surco oscuro */
+      ctx.strokeStyle = 'rgba(60,44,26,.55)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(ptos[0].p.x, ptos[0].p.y);
+      for (var i = 1; i < ptos.length; i++) ctx.lineTo(ptos[i].p.x, ptos[i].p.y);
+      ctx.stroke();
+      /* la línea clara, encima */
+      ctx.strokeStyle = 'rgba(232,216,184,.85)';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(ptos[0].p.x, ptos[0].p.y);
+      for (i = 1; i < ptos.length; i++) ctx.lineTo(ptos[i].p.x, ptos[i].p.y);
+      ctx.stroke();
+      /* las piedras del borde, cada tanto */
+      ctx.fillStyle = 'rgba(180,160,124,.7)';
+      ptos.forEach(function (q) {
+        if (q.n % 3) return;
+        ctx.fillRect(q.p.x - 0.3, q.p.y - 1.9, 0.6, 0.6);
+        ctx.fillRect(q.p.x - 0.3, q.p.y + 1.3, 0.6, 0.6);
+      });
+      ctx.restore();
+    }
+    cuerpo();
+  };
+
+  /* ---------------- EMOTES ---------------- */
+  function caraAndina(ctx, x, y, r, color, id, t) {
+    var ink = '#000000', lw = Math.max(1, r * 0.17), k;
+    var ex = r * 0.42, ey = y - r * 0.24;
+
+    if (id === 'achachau') {
+      /* muerto de frío: tiritando, morado y con vaho */
+      var tir = Math.sin(t * 1.2) * r * 0.05;
+      ctx.save();
+      ctx.translate(x + tir, y);
+      ctx.fillStyle = mix(color, '#6a9ad8', 0.45);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.7; ctx.lineCap = 'round';
+      /* ojos apretados */
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.moveTo(lado * ex - r * 0.2, ey - y - r * 0.08);
+        ctx.lineTo(lado * ex + r * 0.2, ey - y + r * 0.08);
+        ctx.moveTo(lado * ex - r * 0.2, ey - y + r * 0.08);
+        ctx.lineTo(lado * ex + r * 0.2, ey - y - r * 0.08);
+        ctx.stroke();
+      });
+      /* la boca temblando, en zigzag */
+      ctx.lineWidth = lw * 0.6;
+      ctx.beginPath();
+      for (k = 0; k <= 6; k++) {
+        var px = -r * 0.36 + k * (r * 0.12);
+        var py = r * 0.42 + (k % 2 ? -r * 0.08 : r * 0.08);
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      /* mofletes helados */
+      ctx.fillStyle = 'rgba(120,180,240,.55)';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath(); ctx.ellipse(lado * r * 0.6, r * 0.18, r * 0.24, r * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.restore();
+      /* el vaho */
+      for (k = 0; k < 3; k++) {
+        var u = ((t * 0.02 + k * 0.33) % 1);
+        ctx.fillStyle = 'rgba(230,245,255,' + ((1 - u) * 0.6) + ')';
+        ctx.beginPath();
+        ctx.arc(x + r * (0.9 + u * 1.2), y + r * 0.3 - u * r * 0.4, r * (0.12 + u * 0.16), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+
+    if (id === 'huayno') {
+      /* bailando: se mece de lado y le salen notas */
+      var mece = Math.sin(t * 0.18);
+      ctx.save();
+      ctx.translate(x + mece * r * 0.16, y - Math.abs(mece) * r * 0.1);
+      ctx.rotate(mece * 0.18);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.8; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.arc(lado * ex, -r * 0.18, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+        ctx.stroke();
+      });
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.ellipse(0, r * 0.42, r * 0.26, r * 0.2, 0, 0, Math.PI); ctx.fill();
+      /* el sombrerito, ladeado */
+      ctx.fillStyle = mix(color, '#3a2a1a', 0.7);
+      ctx.beginPath(); ctx.ellipse(-r * 0.12, -r * 0.92, r * 0.78, r * 0.18, -0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-r * 0.12, -r * 1.12, r * 0.42, r * 0.26, -0.12, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      for (k = 0; k < 3; k++) {
+        var un = ((t * 0.015 + k * 0.33) % 1);
+        nota(ctx, x + r * (1.0 + un * 0.9) * (k % 2 ? 1 : -1),
+          y - r * (0.5 + un * 1.3), r * 0.22, mix('#ffffff', color, 0.4, 1 - un));
+      }
+      return;
+    }
+
+    if (id === 'chevere') {
+      /* el pulgar arriba y una sonrisa de oreja a oreja */
+      ctx.save();
+      ctx.translate(x, y - Math.abs(Math.sin(t * 0.12)) * r * 0.06);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.8; ctx.lineCap = 'round';
+      /* un ojo guiñado */
+      ctx.beginPath();
+      ctx.arc(-ex, -r * 0.18, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(ex, ey - y, r * 0.2, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.45; ctx.stroke();
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.arc(ex, ey - y, r * 0.1, 0, Math.PI * 2); ctx.fill();
+      /* la sonrisota */
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.5, r * 0.28);
+      ctx.quadraticCurveTo(0, r * 0.82, r * 0.5, r * 0.28);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      /* la mano con el pulgar */
+      ctx.save();
+      ctx.translate(x + r * 1.02, y + r * 0.45);
+      ctx.rotate(-0.25 + Math.sin(t * 0.1) * 0.08);
+      ctx.fillStyle = '#ffd9a8';
+      roundRect(ctx, -r * 0.24, -r * 0.24, r * 0.48, r * 0.52, r * 0.16); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.4; ctx.stroke();
+      roundRect(ctx, -r * 0.1, -r * 0.62, r * 0.22, r * 0.44, r * 0.11); ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    if (id === 'chau') {
+      /* diciendo adiós con la mano */
+      var saluda = Math.sin(t * 0.3);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(saluda * 0.06);
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.8; ctx.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        ctx.beginPath();
+        ctx.arc(lado * ex, -r * 0.18, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+        ctx.stroke();
+      });
+      ctx.lineWidth = lw * 0.65;
+      ctx.beginPath();
+      ctx.arc(0, r * 0.22, r * 0.3, 0.18 * Math.PI, 0.82 * Math.PI);
+      ctx.stroke();
+      ctx.restore();
+      /* la mano, meciéndose */
+      ctx.save();
+      ctx.translate(x + r * 1.05, y - r * 0.15);
+      ctx.rotate(saluda * 0.5);
+      ctx.fillStyle = '#ffd9a8';
+      roundRect(ctx, -r * 0.26, -r * 0.3, r * 0.52, r * 0.6, r * 0.18); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.4; ctx.stroke();
+      for (k = 0; k < 3; k++) {
+        roundRect(ctx, -r * 0.2 + k * r * 0.16, -r * 0.52, r * 0.13, r * 0.28, r * 0.06);
+        ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+
+    /* QUÉ RICO: relamiéndose, con la lengua y un brillo */
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(t * 0.06) * 0.06);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.8; ctx.lineCap = 'round';
+    /* ojos entornados de gusto */
+    [-1, 1].forEach(function (lado) {
+      ctx.beginPath();
+      ctx.arc(lado * ex, -r * 0.16, r * 0.22, 1.15 * Math.PI, 1.85 * Math.PI);
+      ctx.stroke();
+    });
+    /* la boca abierta y la lengua relamiendo */
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.4, r * 0.3, r * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+    var lengua = 0.5 + 0.5 * Math.sin(t * 0.25);
+    ctx.fillStyle = '#ff6a8a';
+    ctx.save();
+    ctx.translate(r * 0.1 + lengua * r * 0.18, r * 0.5);
+    ctx.rotate(lengua * 0.5);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.22, r * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    /* mofletes contentos */
+    ctx.fillStyle = 'rgba(240,120,120,.45)';
+    [-1, 1].forEach(function (lado) {
+      ctx.beginPath(); ctx.ellipse(lado * r * 0.62, r * 0.16, r * 0.22, r * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.restore();
+    estrella4(ctx, x + r * 0.85, y - r * 0.75, r * 0.2, '#ffffff',
+      0.5 + 0.5 * Math.sin(t * 0.14));
+  }
+
 
   var INFO = {};
   CFG.SKINS.forEach(function (sk) { INFO[sk.id] = sk; });
@@ -11099,7 +14461,29 @@
     /* el KASA-OBAKE lleva los sombreros en la punta del paraguas */
     kasa:        { ojo: [2.0, 3.1], k: 0.62, coronilla: [0.4, 7.6], cuello: [0.4, -1.4], zonas: SOMBREROS_ARRIBA },
     chochin:     { ojo: [2.8, 2.5], k: 0.66, coronilla: [0.0, 7.0], cuello: [0.6, -5.0], zonas: SOMBREROS_ARRIBA },
-    namazu:      { ojo: [3.6, 2.1], k: 0.55, coronilla: [0.8, 3.5], cuello: [1.6, -3.2], zonas: SOMBREROS_ARRIBA }
+    namazu:      { ojo: [3.6, 2.1], k: 0.55, coronilla: [0.8, 3.5], cuello: [1.6, -3.2], zonas: SOMBREROS_ARRIBA },
+    /* --- tanda de objetos (29 sep). Las que no tienen ojo mandan con el
+     * centro de su "cara": la ventana del disco, los cristales de la cabina.
+     * La BOLA DE DISCOTECA conserva la silueta de Pac-Man y no está aquí */
+    discos:      { ojo: [0.2, 2.1], k: 0.70, coronilla: [0.4, 6.3], cuello: [0.0, -5.5], zonas: SOMBREROS_ARRIBA },
+    tele:        { ojo: [1.5, 2.4], k: 0.66, coronilla: [0.4, 4.9], cuello: [0.4, -5.0], zonas: SOMBREROS_ARRIBA },
+    cabina:      { ojo: [0.4, 2.3], k: 0.72, coronilla: [0.2, 6.2], cuello: [0.2, -5.9], zonas: SOMBREROS_ARRIBA },
+    camara:      { ojo: [1.3, 1.4], k: 0.60, coronilla: [-0.4, 4.6], cuello: [-0.4, -4.1], zonas: SOMBREROS_ARRIBA },
+    /* el DESPERTADOR lleva los sombreros encima de las campanas */
+    reloj:       { ojo: [0.8, 1.2], k: 0.66, coronilla: [0.0, 6.1], cuello: [0.0, -5.3], zonas: SOMBREROS_ARRIBA },
+    /* el SEMÁFORO mira con la luz roja, arriba del todo */
+    semaforo:    { ojo: [0.1, 4.4], k: 0.52, coronilla: [0.1, 6.4], cuello: [0.2, -6.0], zonas: SOMBREROS_ARRIBA },
+    caja:        { ojo: [0.8, 2.5], k: 0.72, coronilla: [0.0, 5.4], cuello: [0.0, -5.7], zonas: SOMBREROS_ARRIBA },
+    /* --- tanda andina (29 sep). El COLIBRÍ DE NAZCA conserva la silueta de
+     * Pac-Man y no está aquí. Al GALLITO los sombreros le van sobre la cresta */
+    gallito:     { ojo: [3.4, 1.1], k: 0.52, coronilla: [1.2, 6.8], cuello: [2.4, -2.4], zonas: SOMBREROS_ARRIBA },
+    puma:        { ojo: [4.2, 1.6], k: 0.72, coronilla: [0.0, 5.6], cuello: [2.0, -5.0], zonas: SOMBREROS_ARRIBA },
+    papa:        { ojo: [3.6, 1.2], k: 0.70, coronilla: [0.4, 5.0], cuello: [1.0, -5.4], zonas: SOMBREROS_ARRIBA },
+    aji:         { ojo: [4.2, 1.6], k: 0.72, coronilla: [0.6, 5.2], cuello: [1.0, -5.4], zonas: SOMBREROS_ARRIBA },
+    sapo:        { ojo: [4.0, 2.8], k: 0.66, coronilla: [1.0, 5.0], cuello: [1.0, -5.6], zonas: SOMBREROS_ARRIBA },
+    tumi:        { ojo: [1.4, 2.2], k: 0.62, coronilla: [0.2, 4.6], cuello: [0.2, -5.6], zonas: SOMBREROS_ARRIBA },
+    /* el INTI tiene el disco de Pac-Man, pero la cara mira de frente */
+    inti:        { ojo: [1.8, 1.6], k: 0.80, coronilla: [0.0, 6.5], cuello: [0.0, -6.3], zonas: SOMBREROS_ARRIBA }
   };
   /* ---------- el accesorio se MUEVE con la skin ----------
    * Las cabezas de arriba se midieron con la skin quieta en una pose
@@ -11276,8 +14660,83 @@
     namazu: function (m, o) {
       var q = qDe(o, 1.2), tiembla = (q >= 0) ? Math.sin(Math.min(1, q * 1.1) * Math.PI) : 0;
       if (tiembla > 0) m.translateSelf(Math.sin(o.t * 83) * 0.45 * tiembla, Math.cos(o.t * 71) * 0.45 * tiembla);
+    },
+    /* tandas de objetos y andina: el bote de cada dibujo y, para la pajarita,
+     * la mandíbula de abajo, que es la que se abre (ver mandibulaM) */
+    discos: function (m, o, zona) {
+      var q = qDe(o, 1.1), sube = (q >= 0) ? Math.sin(Math.min(1, q * 1.6) * Math.PI) : 0;
+      m.translateSelf(0, Math.sin(o.t * 6) * 0.12 + sube * 0.35);
+      mandibulaM(m, o, zona, -4.6, -1.0, [0, 13, 24]);
+    },
+    tele: function (m, o, zona) {
+      m.translateSelf(0, Math.sin(o.t * 7) * 0.1);
+      mandibulaM(m, o, zona, -4.2, -0.9, [0, 12, 22]);
+    },
+    /* la CABINA tiembla con el timbrazo */
+    cabina: function (m, o, zona) {
+      var q = qDe(o, 1.0);
+      var timbre = (q >= 0) ? Math.sin(q * Math.PI * 7) * Math.sin(Math.min(1, q * 2) * Math.PI) : 0;
+      m.translateSelf(timbre * 0.5, Math.sin(o.t * 6) * 0.1);
+      mandibulaM(m, o, zona, -3.9, -1.0, [0, 16, 30]);
+    },
+    camara: function (m, o, zona) {
+      m.translateSelf(0, Math.sin(o.t * 6.5) * 0.14);
+      mandibulaM(m, o, zona, -4.6, -0.9, [0, 11, 20]);
+    },
+    /* el DESPERTADOR tiembla con la alarma */
+    reloj: function (m, o, zona) {
+      var q = qDe(o, 1.0), alarma = (q >= 0) ? Math.sin(Math.min(1, q * 1.5) * Math.PI) : 0;
+      m.translateSelf(alarma * Math.sin(o.t * 60) * 0.45, botaM(o.t, 7, 0.2) - 0.1);
+      mandibulaM(m, o, zona, -4.4, -0.8, [0, 15, 28]);
+    },
+    /* el SEMÁFORO arranca hacia delante al ponerse en verde */
+    semaforo: function (m, o, zona) {
+      var q = qDe(o, 1.0), arranca = (q >= 0) ? Math.sin(Math.min(1, q * 1.7) * Math.PI) : 0;
+      m.translateSelf(arranca * 0.9, Math.sin(o.t * 6) * 0.1);
+      mandibulaM(m, o, zona, -3.1, -1.0, [0, 14, 26]);
+    },
+    caja: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 6, 0.18) - 0.1);
+      mandibulaM(m, o, zona, -4.7, -1.0, [0, 18, 34]);
+    },
+    /* el GALLITO baila con la Q, y la cresta (donde van los sombreros) se
+     * mece sobre su base */
+    gallito: function (m, o, zona) {
+      var q = qDe(o, 1.2), baila = (q >= 0) ? Math.abs(Math.sin(q * Math.PI * 4)) : 0;
+      m.translateSelf(0, botaM(o.t, 6, 0.3) - 0.15 + baila * 1.1)
+        .rotateSelf(baila * 0.12 * Math.sin(o.t * 20) * 180 / Math.PI);
+      if (zona === 'cabeza') girarM(m, 1.0, 1.6, Math.sin(o.t * 4) * 0.12 + baila * 0.3);
+      mandibulaM(m, o, zona, 1.2, -1.0, [0, 14, 26]);
+    },
+    /* el PUMA se echa adelante al rugir */
+    puma: function (m, o, zona) {
+      var q = qDe(o, 0.9), ruge = (q >= 0) ? Math.sin(Math.min(1, q * 2.2) * Math.PI) : 0;
+      m.translateSelf(ruge * 0.5, botaM(o.t, 5, 0.2) - 0.1);
+      mandibulaM(m, o, zona, -2.2, -1.2, [0, 17, 32]);
+    },
+    papa: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 6, 0.28) - 0.14);
+      mandibulaM(m, o, zona, -4.6, -1.0, [0, 16, 30]);
+    },
+    aji: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 7, 0.25) - 0.12);
+      mandibulaM(m, o, zona, -4.8, -1.0, [0, 18, 34]);
+    },
+    sapo: function (m, o, zona) {
+      m.translateSelf(0, botaM(o.t, 5, 0.2) - 0.1);
+      mandibulaM(m, o, zona, -4.8, -1.0, [0, 20, 38]);
+    },
+    tumi: function (m, o, zona) {
+      m.translateSelf(0, Math.sin(o.t * 5) * 0.16);
+      mandibulaM(m, o, zona, -4.4, -0.9, [0, 12, 22]);
     }
   };
+  /* En las de las tandas de objetos y andina la boca es la parte de ABAJO,
+   * que baja girando sobre la bisagra (px, py) los grados de cada fase: lo
+   * que va al cuello se va con ella */
+  function mandibulaM(m, o, zona, px, py, grados) {
+    if (zona === 'cuello') girarM(m, px, py, -grados[fase(o)] * Math.PI / 180);
+  }
 
   /* La diferencia entre la pose de ahora y la medida, lista para
    * ctx.transform; null si la skin no se mueve o no hay DOMMatrix */
@@ -11306,7 +14765,14 @@
      * la espalda (con el cuello) y los TAMBORES DE RAIJIN alrededor de todo
      * el cuerpo ('cuerpo': tal cual, ver anclaAccesorio) */
     acc_kitsunemen: 'cabeza', acc_kasa: 'cabeza', acc_chonmage: 'cabeza', acc_ramen: 'cabeza',
-    acc_kabuto: 'cabeza', acc_katana: 'cuello', acc_raijin: 'cuerpo' };
+    acc_kabuto: 'cabeza', acc_katana: 'cuello', acc_raijin: 'cuerpo',
+    /* tandas de objetos y andina: el poncho y la cadena van al cuello; las
+     * trenzas cuelgan de la coronilla (desde el ojo le cruzaban la cara a
+     * las anchas); las gafas 3D, el monóculo, los cascos, la quena, las
+     * orejeras y la máscara de oro, a la cara */
+    acc_corona: 'cabeza', acc_boina: 'cabeza', acc_montera: 'cabeza', acc_plumas: 'cabeza',
+    acc_trenzas: 'cabeza',
+    acc_cadena: 'cuello', acc_poncho: 'cuello' };
   /* la zona de un accesorio en una skin: la suya propia si la skin la fija */
   function zonaAcc(skin, acc) {
     var c = CABEZAS[skin];
@@ -11339,7 +14805,8 @@
     acc_aureola: R + 1.8, acc_laureles_2609: R - 0.4, acc_laureles_2610: R - 0.4,
     acc_alado: 2.8, acc_ojo: 4.4, acc_vaquero: R - 2.2, acc_chullo: 2.4, acc_mohicano: 4.4,
     acc_orejas: R - 1.2,
-    acc_kitsunemen: R - 1, acc_kasa: R - 1, acc_chonmage: R - 1, acc_ramen: R - 0.5, acc_kabuto: 2.8 };
+    acc_kitsunemen: R - 1, acc_kasa: R - 1, acc_chonmage: R - 1, acc_ramen: R - 0.5, acc_kabuto: 2.8,
+    acc_corona: 3.7, acc_boina: 4.2, acc_montera: 4.0, acc_plumas: 3.2, acc_trenzas: R - 1 };
 
 
   /* ============================================================
@@ -12146,6 +15613,8 @@
     silbando: 1, plis: 1, ambicioso: 1, nervios: 1, arcoiris: 1,
     oraculo: 1, petrificado: 1, divino: 1, maldicion: 1, invocando: 1,
     kawaii: 1, banzai: 1, itadakimasu: 1, zen: 1, ninja: 1,
+    alucinado: 1, pensando: 1, roto: 1, aplauso: 1, chist: 1,
+    achachau: 1, huayno: 1, chevere: 1, chau: 1, rico: 1,
     grito: 1 };
   Sprites.caraTienda = function (ctx, x, y, r, color, id, tick) {
     caraEmote(ctx, x, y, r, colorLargo(color), id, (typeof tick === 'number') ? tick : 0);
