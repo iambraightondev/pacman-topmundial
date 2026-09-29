@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Las partidas cortadas se recuperan
+
+- **CLASIFICATORIA a solas:** se guarda sola cada segundo; si se corta, al
+  volver solo se puede seguir (o descartarla, que cuenta para el rango).
+- **Party:** si un invitado pierde la conexión o cierra la pestaña, se le
+  espera 60 s con su Pac-Man quieto y a salvo; si vuelve, sigue en su sitio.
+  Si se cae el anfitrión, la partida espera; si no vuelve, manda el siguiente
+  desde la última foto en vez de acabarse. Al reabrir la pestaña sale VOLVER
+  A LA PARTIDA. Una clasificatoria de party recuperada cuenta una sola vez.
+
 ## 2026-09-30 · Tanque y Soporte puntúan por proteger
 
 Decidido por Braighton. En DESATADO:

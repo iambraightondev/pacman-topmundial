@@ -4206,7 +4206,7 @@ host's difficulty settings + livesMode + startLevel are imposed):
   network without a handover is now covered too (below). The new host does
   not resume replay recording.
 
-#### Volver a la partida (28 Sep 2026, PROTO 21)
+#### Volver a la partida (30 Sep 2026, PROTO 22)
 
 Before, 10 s of silence ended the game: CONEXIÓN PERDIDA when the host went
 quiet, the quiet guest benched (the whole game, in a duo), and closing the tab

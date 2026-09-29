@@ -18,7 +18,9 @@ precios en el servidor (una pieza fiada de hasta 1.500 es posible a propósito:
 no se pierden compras legítimas de dos aparatos), hueco de PRIMEROS PASOS
 cerrado, minificado al publicar (vercel.json + publicar.js; tests.html ya no se
 publica), subidas con número para no sumar dos veces (supabase/perfiles-subidas.sql).
-Monedas de ESTER: sin fallo del código, no se tocan. **Puntos por proteger (pm-v309, PROTO 21):** sin frenos por decisión de
+Monedas de ESTER: sin fallo del código, no se tocan. **Volver a la partida (pm-v310, PROTO 22):** probado con pestañas locales y 31
+casos de red en Node; falta probarlo con dos aparatos por internet de verdad.
+**Puntos por proteger (pm-v309, PROTO 21):** sin frenos por decisión de
 Braighton; máximo teórico con rescates amañados en escuadra ~36.400/min (el
 techo del servidor, 50.000, aguanta). Si se ve en el top, el freno está
 descrito en el estudio (rescate que cobra solo si el levantado vive 10 s).
