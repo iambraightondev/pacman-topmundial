@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · RETOS ENTRE AMIGOS
+
+- Al abrir el juego te avisa si un amigo te ha superado en alguna de tus
+  rutas (MAULIO TE HA SUPERADO EN DESATADO · SOLO…), una vez por adelantamiento.
+- **SUPERA ESTO:** desde el aviso, la ficha del amigo o su perfil (lista SUS
+  MARCAS). En partida, el hueco del HIGH SCORE enseña la marca a batir y avisa
+  al superarla. Si hay repetición suya, se puede ver antes.
+- No hace falta coincidir con nadie.
+
 ## 2026-09-29 (noche) · PRIMEROS PASOS para los nuevos
 
 Ocho misiones para los primeros días de quien empieza (menos de 20 partidas):
