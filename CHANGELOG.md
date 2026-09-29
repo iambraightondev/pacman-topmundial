@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Tanque y Soporte puntúan por proteger
+
+Decidido por Braighton. En DESATADO:
+- **TANQUE:** +600 por cada golpe que aguanta su escudo, su coraza o su rebote.
+- **SOPORTE:** +600 por cada escudo, cadena, hospital o vida suya que salva a
+  alguien, y +1.200 por levantar a un compañero.
+- Sin topes. Las repeticiones de antes se siguen viendo con sus reglas.
+
 ## 2026-09-30 · Retos del DAILY para los cuatro roles (desde el 5 oct)
 
 Pedido por Braighton. Cada semana trae dos retos de DESATADO de roles

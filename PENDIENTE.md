@@ -18,7 +18,12 @@ precios en el servidor (una pieza fiada de hasta 1.500 es posible a propósito:
 no se pierden compras legítimas de dos aparatos), hueco de PRIMEROS PASOS
 cerrado, minificado al publicar (vercel.json + publicar.js; tests.html ya no se
 publica), subidas con número para no sumar dos veces (supabase/perfiles-subidas.sql).
-Monedas de ESTER: sin fallo del código, no se tocan. Retos del DAILY por rol desde el 5 oct (pm-v308): revisar las metas del Mago
+Monedas de ESTER: sin fallo del código, no se tocan. **Puntos por proteger (pm-v309, PROTO 21):** sin frenos por decisión de
+Braighton; máximo teórico con rescates amañados en escuadra ~36.400/min (el
+techo del servidor, 50.000, aguanta). Si se ve en el top, el freno está
+descrito en el estudio (rescate que cobra solo si el levantado vive 10 s).
+Revisar FACTOR_ROL a mitad de octubre con estos puntos ya en juego.
+Retos del DAILY por rol desde el 5 oct (pm-v308): revisar las metas del Mago
 tras 2-3 semanas (el rol con menos datos). Apertura de cofres: eligió la B (EL SALTO), ya en el juego (pm-v307).
 **Al añadir una pieza a la tienda:** volver a lanzar en producción el SQL de
 precios (las pruebas avisan si no cuadra).
