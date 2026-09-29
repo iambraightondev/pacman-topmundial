@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Retos del DAILY para los cuatro roles (desde el 5 oct)
+
+Pedido por Braighton. Cada semana trae dos retos de DESATADO de roles
+distintos (Asesino, Tanque, Soporte y Mago salen cada dos semanas), cuatro
+libres y uno de otro modo. Metas sacadas de las partidas reales: por ejemplo
+CON EL TANQUE: AGUANTA 5 GOLPES, CON EL MAGO: MATA 10 FANTASMAS CON TUS
+PODERES, CON EL SOPORTE: LLEGA AL NIVEL 5. La semana en curso no cambia.
+
 ## 2026-09-30 · Nueva apertura de cofres: EL SALTO
 
 Elegida por Braighton. El cofre da tres saltos, la tapa sale disparada girando
