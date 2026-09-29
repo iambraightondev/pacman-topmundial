@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · El juego pesa la mitad
+
+Al publicar, el código se minifica: la descarga del juego baja de unos 690 KB
+a unos 345 KB comprimidos. Para jugar y probar en local nada cambia.
+Arreglado de paso: los estilos de REGALAR solo se veían en pantallas estrechas.
+
 ## 2026-09-30 · REGALAR piezas y la tienda en el servidor
 
 - **REGALAR:** desde la ficha de una pieza de tienda, comprársela a un amigo
