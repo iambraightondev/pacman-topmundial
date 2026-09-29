@@ -90,6 +90,9 @@
 --     abrirlos (supabase/cofres.sql, Edge Function `cofres`) y, el ORO de un
 --     récord, este mismo trigger (paso 5). Las del RANGO tampoco: se deducen
 --     (Rango.ganado), el contador no se mira.
+--   · lo de los REGALOS (29 sep, supabase/tienda.sql): `gastoRegalo` (lo que
+--     has gastado regalando) y `rgl_<id>` (esa pieza te la regalaron). Los
+--     escribe solo la función regalos_dar, con la service role.
 --   · pp_<mes>, el carril de pago del pase: no se vende (CFG.PASE.VENTA).
 --   · contadores de una temporada que todavía no ha empezado.
 --   · el nombre de usuario y la fecha de alta (el nombre solo lo cambia la
@@ -98,6 +101,12 @@
 --     bastaba con subirla desde el navegador para saltarse TODO lo de arriba.
 --   Las piezas del PASE (c_<id> del camino) solo si el camino llega a su
 --   galón en alguna temporada (y el carril de pago, si es de pago).
+--
+-- LAS COMPRAS DE LA TIENDA (29 sep, paso 6; supabase/tienda.sql): una pieza
+-- de tienda NUEVA entra solo si el saldo de antes de ella (tienda_saldo, como
+-- Tienda.saldo) no es negativo. Deja una pieza fiada como mucho (el caso de
+-- dos aparatos sin conexión que gastaron las mismas monedas); la deuda no
+-- crece. Sin supabase/tienda.sql puesto, el paso 6 no hace nada.
 --
 -- Las escrituras de la service role y del SQL a mano no se recortan (son
 -- las limpiezas y los regalos), pero sí se apuntan en la auditoría.
@@ -322,6 +331,9 @@ declare
   s_old     numeric;
   s_new     numeric;
   filas     integer;
+  nuevas    text[];
+  saldo     numeric;
+  pr        integer;
 begin
   new.actualizado := now();
 
@@ -438,12 +450,19 @@ begin
       if (m is not null and m[1] > mes_tope)                       -- temporada futura
          or k ~ '^pp_'                                             -- carril de pago
          or k like 'cofre\_%'                                      -- cofres: solo el servidor
+         or k like 'rgl\_%' or k = 'gastoRegalo'                   -- regalos: solo el servidor
          or (k like 'c\_%' and exists (
                select 1 from public.piezas_especiales p
                 where 'c_' || p.id = k and p.tipo in ('cofre', 'rango')))
          or (jsonb_typeof(lo -> k) = 'number' and jsonb_typeof(ln -> k) <> 'number')
       then
-        if (ln -> k) is distinct from (lo -> k) then
+        /* un CERO de una clave que la nube no tiene es el almacén del juego
+         * (nace con todas a cero), no un intento: se quita sin apuntarlo, o
+         * cada guardado dejaba una fila de auditoría con los cofre_* a 0
+         * (29 sep) */
+        if (ln -> k) = '0'::jsonb and not (lo ? k) then
+          ln := ln - k;
+        elsif (ln -> k) is distinct from (lo -> k) then
           recortes := recortes || jsonb_build_object(k, jsonb_build_array(ln -> k, lo -> k));
           if lo ? k then ln := jsonb_set(ln, array[k], lo -> k);
           else ln := ln - k;
@@ -628,6 +647,38 @@ begin
       end loop;
     end if;
 
+    -- ---- 6. LAS COMPRAS DE LA TIENDA, con saldo (supabase/tienda.sql) ----
+    -- Cada pieza de tienda que llega NUEVA, de la más barata a la más cara,
+    -- entra si el saldo ANTES de ella no es negativo (tienda_saldo, el mismo
+    -- cálculo que Tienda.saldo). Así cabe la deuda legítima de dos aparatos
+    -- sin conexión que gastaron las mismas monedas (una pieza fiada, que se
+    -- paga con lo siguiente que se gane), pero la deuda no puede crecer: con
+    -- el saldo en negativo no entra ninguna más. La que no entra se queda en
+    -- el aparato y vuelve a subir en cada guardado; entra sola cuando haya
+    -- saldo. Sin la tabla de precios, no hace nada.
+    if to_regclass('public.tienda_precios') is not null then
+      select array_agg(p.id order by p.precio, p.id) into nuevas
+        from public.tienda_precios p
+       where public.num(ln, 'c_' || p.id) >= 1 and public.num(lo, 'c_' || p.id) < 1
+         and public.num(ln, 'rgl_' || p.id) < 1;
+      if nuevas is not null then
+        saldo := public.tienda_saldo(ln, new.usuario)
+               + (select coalesce(sum(p.precio), 0) from public.tienda_precios p where p.id = any(nuevas));
+        foreach k in array nuevas loop
+          select p.precio into pr from public.tienda_precios p where p.id = k;
+          if saldo >= 0 then
+            saldo := saldo - pr;
+          else
+            recortes := recortes || jsonb_build_object('c_' || k,
+                          jsonb_build_array(ln -> ('c_' || k), lo -> ('c_' || k)));
+            if lo ? ('c_' || k) then ln := jsonb_set(ln, array['c_' || k], lo -> ('c_' || k));
+            else ln := ln - ('c_' || k);
+            end if;
+          end if;
+        end loop;
+      end if;
+    end if;
+
     new.logros := ln;
   end if;
 
@@ -639,9 +690,9 @@ begin
       from (select jsonb_object_keys(new.logros) union
             select jsonb_object_keys(case when jsonb_typeof(old.logros) = 'object'
                                           then old.logros else '{}'::jsonb end)) s(x)
-     where x in ('monedas', 'bono', 'gastoCont', 'partidas', 'purga', 'largas')
+     where x in ('monedas', 'bono', 'gastoCont', 'gastoRegalo', 'partidas', 'purga', 'largas')
         or x ~ '^(p[xp]|r[a-z][0-9]?|rhab|mae[a-z]*)_'
-        or x like 'c\_%'
+        or x like 'c\_%' or x like 'rgl\_%'
         or (x like 'cofre\_%' and x not like 'cofre\_b\_%')
   ) t where d <> 0;
   for k in select unnest(array['xp', 'record1', 'record2', 'record3', 'record4',

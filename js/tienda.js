@@ -23,6 +23,17 @@
  * gaste lo mismo dos veces: el saldo se queda en negativo y no deja comprar
  * hasta que se gane lo que falta.
  *
+ * EL SERVIDOR TAMBIÉN LO MIRA (29 sep, supabase/tienda.sql): conoce los
+ * precios (tabla generada desde este catálogo por supabase/tienda-precios.js)
+ * y una pieza nueva solo entra en la cuenta si el saldo de antes de ella no
+ * es negativo. Los dos aparatos de arriba caben (el segundo deja una deuda
+ * que se paga ganando); la consola ya no puede quedarse con todo. Una pieza
+ * que el servidor no acepta se queda aquí y vuelve a subir en cada guardado.
+ *
+ * REGALOS (js/regalos.js): lo que te regala un amigo es tuyo (`c_<id>`) pero
+ * no lo pagaste (`rgl_<id>`); lo que tú regalas va en `gastoRegalo`. Los dos
+ * los escribe solo el servidor.
+ *
  * Lo PUESTO (accesorio, efecto y las seis caras de las teclas) es un ajuste
  * de este aparato, como la skin (settings acc1, efx1, emotes1). Si lo puesto
  * no está comprado —un ajuste tocado a mano, otra cuenta en el mismo
@@ -132,9 +143,30 @@
     gastadas: function () {
       var n = 0;
       for (var i = 0; i < CATALOGO.length; i++) {
-        if (stat('c_' + CATALOGO[i].id) >= 1) n += CATALOGO[i].precio;
+        var id = CATALOGO[i].id;
+        /* lo que te REGALÓ un amigo es tuyo, pero no lo pagaste tú (rgl_<id>,
+         * js/regalos.js) */
+        if (stat('c_' + id) >= 1 && !(stat('rgl_' + id) >= 1)) n += CATALOGO[i].precio;
       }
-      return n + stat('gastoCont');      // y lo pagado por continuar partidas
+      return n + stat('gastoCont') +     // y lo pagado por continuar partidas
+        stat('gastoRegalo');             // y lo regalado a otros (lo apunta el servidor)
+    },
+
+    /* ---------- regalar (js/regalos.js) ----------
+     * ¿Se puede regalar? Solo lo que se VENDE: ni cofre, ni pase, ni rango. */
+    regalable: function (id) {
+      var it = this.item(id);
+      return !!(it && !it.cofre && !it.pase && !it.rango && it.precio > 0);
+    },
+
+    /* ¿Esta la tienes porque te la regalaron? */
+    regalada: function (id) { return stat('rgl_' + id) >= 1; },
+
+    /* Lo que se puede gastar en regalos: lo GANADO. Las monedas de salida
+     * (CFG.TIENDA.INICIALES) no se regalan, o cada cuenta nueva sería una
+     * skin gratis para otra (el servidor mira lo mismo: regalos_dar). */
+    paraRegalar: function () {
+      return Math.max(0, this.saldo() - T.INICIALES);
     },
 
     /* ---------- continuar ----------

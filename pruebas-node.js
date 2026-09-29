@@ -299,6 +299,11 @@ var win = {
 };
 /* aviso para las pruebas que miden píxeles: aquí no se rasteriza nada */
 win.__SIN_LIENZO = true;
+/* un fichero del repositorio, para las pruebas que comparan el juego con lo
+ * del servidor (en el navegador lo sirve el servidor local) */
+win.__leerArchivo = function (ruta) {
+  return fs.readFileSync(path.join(raiz, String(ruta).replace(/^\/+/, '')), 'utf8');
+};
 win.window = win;
 win.self = win;
 win.globalThis = win;
@@ -329,7 +334,7 @@ vm.createContext(sandbox);
 /* ---------- carga de los módulos, en el orden de index.html ---------- */
 var orden = ['config', 'letra', 'audio', 'sprites', 'skins', 'insignias', 'emblemas', 'trofeos', 'portadas', 'iconos', 'pacman', 'ghost', 'net-config',
   'net-directo', 'net', 'party', 'badges', 'history', 'level', 'friends', 'conectados', 'ranking',
-  'temporadas', 'daily', 'mazes', 'achievements', 'maestria', 'celebrar', 'rango', 'stats', 'tienda', 'cofres-gen', 'cofres', 'pasos', 'pase', 'ficha', 'account', 'retos', 'versus',
+  'temporadas', 'daily', 'mazes', 'achievements', 'maestria', 'celebrar', 'rango', 'stats', 'tienda', 'cofres-gen', 'cofres', 'pasos', 'regalos', 'pase', 'ficha', 'account', 'retos', 'versus',
   'habilidades', 'jefe', 'supervivencia', 'caceria', 'game', 'replay', 'clip', 'guardado', 'ui'];
 
 orden.forEach(function (nombre) {
@@ -451,6 +456,15 @@ guardian('las piezas de cofre del catálogo están todas en piezas_especiales de
     if (faltan.length) malos.push(f + ': faltan ' + faltan.join(', '));
     if (sobran.length) malos.push(f + ': sobran ' + sobran.join(', '));
   });
+});
+
+/* (e) LOS PRECIOS DEL SERVIDOR (supabase/tienda-precios.sql) son los que
+ * genera supabase/tienda-precios.js con el catálogo de hoy: si no, el
+ * servidor rechazaría compras legítimas o dejaría pasar las de otro precio. */
+guardian('los precios del servidor están al día con el catálogo (node supabase/tienda-precios.js)', function (malos) {
+  var TP = require(path.join(raiz, 'supabase', 'tienda-precios.js'));
+  var hay = fs.readFileSync(path.join(raiz, 'supabase', 'tienda-precios.sql'), 'utf8').replace(/\r\n/g, '\n');
+  if (hay !== TP.texto(raiz)) malos.push('supabase/tienda-precios.sql no es lo que genera el catálogo de hoy');
 });
 
 /* ---------- las pruebas ---------- */

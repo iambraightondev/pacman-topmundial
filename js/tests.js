@@ -10227,6 +10227,387 @@
     } finally { UI.hidePrompt(); C.vaciar(); }
   });
 
+  /* PRIMEROS PASOS PAGADOS DOS VECES (29 sep, Account.quitarPasosDobles).
+   * Dos aparatos SIN cuenta (la base a cero que deja cerrar sesión) cobran
+   * la misma misión y luego entran en la misma cuenta. */
+  function pasosEnDosAparatos(fn) {
+    conPasos(function (Ps, A, Tn) {
+      dosAparatos(function (d, Ac, L) {
+        var yo = Ac.user, BASE = 'pacman-topmundial-nube-base';
+        var sinCuenta = function (quien) {
+          d.en(quien);
+          Ac.user = null;
+          if (!localStorage.getItem(BASE)) localStorage.setItem(BASE, JSON.stringify({ id: null, xp: 0, c: {} }));
+        };
+        var entra = function (quien) { d.en(quien); Ac.user = yo; Ac.fundir(d.fila()); };
+        fn(Ps, A, Tn, d, Ac, sinCuenta, entra);
+      });
+    });
+  }
+  function pxDe(c) {
+    var n = 0;
+    for (var k in c) if (c.hasOwnProperty(k) && /^px_/.test(k)) n += Math.floor(c[k] || 0);
+    return n;
+  }
+
+  test('PRIMEROS PASOS: sin cuenta en dos aparatos, la misma misión se paga UNA vez al unirlos', function () {
+    pasosEnDosAparatos(function (Ps, A, Tn, d, Ac, sinCuenta, entra) {
+      sinCuenta('A');
+      A.recordAll({ partidas: 1, largas: 1 });
+      eq(Ps.revisar().monedas, 100, 'A cobra la partida larga');
+      eq(A.stats().pasoMon_larga, 100, 'y apunta lo que pagó');
+      var pxA = pxDe(A.stats());
+      sinCuenta('B');
+      A.recordAll({ partidas: 1, largas: 1, racha3: 1 });
+      eq(Ps.revisar().monedas, 200, 'B cobra la misma y la de los tres fantasmas');
+      Tn.ganar(37);                                   // y juega algo más
+      var pxB = pxDe(A.stats()), pxDoble = A.stats().pasoPx_larga || 0;
+      entra('A');
+      eq(d.nube.logros.monedas, 100, 'A entra: sus 100');
+      entra('B');
+      eq(d.nube.logros.monedas, 100 + 100 + 37, 'B entra: la larga NO se paga otra vez; la triple y lo jugado, sí');
+      eq(pxDe(d.nube.logros), pxA + pxB - pxDoble, 'ni la experiencia del pase de ese pago');
+      eq(Tn.ganadas(), 237, 'B lo ve igual');
+      entra('A');
+      eq(Tn.ganadas(), 237, 'y A también, sin nada de más');
+      Ac.pushQuiet(); d.en('B'); Ac.pushQuiet();
+      eq(d.nube.logros.monedas, 237, 'subir otra vez no cambia nada');
+      eq(d.nube.logros.paso_larga, 1, 'la misión, cobrada');
+    });
+  });
+
+  test('PRIMEROS PASOS: misiones DISTINTAS en cada aparato se pagan las dos, y lo cobrado antes del arreglo tampoco se dobla', function () {
+    pasosEnDosAparatos(function (Ps, A, Tn, d, Ac, sinCuenta, entra) {
+      sinCuenta('A');
+      A.recordAll({ partidas: 1, largas: 1 });
+      Ps.revisar();
+      sinCuenta('B');
+      A.recordAll({ racha3: 1 });
+      Ps.revisar();
+      entra('A'); entra('B');
+      eq(d.nube.logros.monedas, 200, 'cada aparato pagó una distinta: las dos cuentan');
+    });
+    pasosEnDosAparatos(function (Ps, A, Tn, d, Ac, sinCuenta, entra) {
+      sinCuenta('A');
+      A.recordAll({ partidas: 1, largas: 1 });
+      Ps.revisar();
+      /* B la cobró con el juego de antes: bandera y monedas, sin lo pagado */
+      sinCuenta('B');
+      A.recordAll({ paso_larga: 1, monedas: 100 + 20 });
+      entra('A'); entra('B');
+      eq(A.stats().pasoMon_larga, 100, 'al entrar, B apunta lo que pagó entonces');
+      eq(d.nube.logros.monedas, 120, 'y la misión no se paga dos veces; sus 20 de jugar, sí');
+      /* ya con cuenta, su bandera puede venir de la nube: no se apunta nada */
+      entra('A');
+      eq(Ac.baseLibre(), false, 'con la base de la cuenta');
+      eq(Ps.sembrarPagos(), 0, 'no siembra');
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // LA TIENDA EN EL SERVIDOR (29 sep, supabase/tienda.sql)
+  // ---------------------------------------------------------------
+  /* Un fichero del repositorio: en Node lo lee pruebas-node.js; en el
+   * navegador se pide al servidor local, que sirve el repositorio entero */
+  function leerArchivo(ruta) {
+    if (window.__leerArchivo) return window.__leerArchivo(ruta);
+    var x = new XMLHttpRequest();
+    x.open('GET', ruta + '?t=' + Date.now(), false);
+    x.send(null);
+    if (!(x.status === 200 || (x.status === 0 && x.responseText))) throw new Error('no se puede leer ' + ruta);
+    return x.responseText;
+  }
+  function datosTiendaSql() {
+    var sql = leerArchivo('supabase/tienda-precios.sql').replace(/\r\n/g, '\n');
+    var bloque = sql.slice(sql.indexOf('insert into public.tienda_precios'), sql.indexOf('on conflict (id)'));
+    var re = /\('([a-z0-9_]+)', (\d+)\)/g, m, precios = {}, datos = {};
+    while ((m = re.exec(bloque))) precios[m[1]] = +m[2];
+    var reD = /\('([a-z]+)', '(.*)'::jsonb\)/g;
+    while ((m = reD.exec(sql))) datos[m[1]] = JSON.parse(m[2]);
+    return { sql: sql, precios: precios, datos: datos };
+  }
+  /* tienda_saldo (supabase/tienda.sql) traducido tal cual, para comprobar
+   * que con los datos generados da lo mismo que Tienda.saldo() */
+  function saldoServidor(lg, usr, D) {
+    function num(k) { return typeof lg[k] === 'number' ? lg[k] : 0; }
+    var n = D.iniciales + num('bono') + num('monedas') + num('cofre_monedas'), k, m;
+    for (k in lg) {
+      if (!/^px_[0-9]{4}-(0[1-9]|1[0-2])$/.test(k) || k.slice(3) < D.pase.desde) continue;
+      var g = Math.min(D.pase.galones, Math.floor(num(k) / D.pase.porGalon));
+      if (g < 1) continue;
+      n += D.pase.gratis[g] + (num('pp_' + k.slice(3)) >= 1 ? D.pase.pago[g] : 0);
+    }
+    var mejor = {};
+    for (k in lg) {
+      m = /^rm([0-9]+)_([0-9]{4}-[0-9]{2})$/.exec(k);
+      if (m && +m[1] >= 4) mejor[m[2]] = Math.max(mejor[m[2]] || 0, num(k));
+    }
+    var nd = D.rango.tramoDiv.length, tablas = Object.keys(D.rango.premios).sort();
+    for (var t in mejor) {
+      if (mejor[t] < 1) continue;
+      var dv = D.rango.tramoDiv[Math.min(nd, Math.floor(mejor[t])) - 1];
+      if ((D.ajustes[String(usr || '').toUpperCase()] || []).indexOf(t) !== -1) {
+        dv = Math.min(dv + 1, D.rango.tramoDiv[nd - 1]);
+      }
+      var tabla = tablas[0];
+      tablas.forEach(function (x) { if (x <= t) tabla = x; });
+      n += D.rango.premios[tabla][dv] || 0;
+    }
+    for (var id in D.precios) {
+      if (num('c_' + id) >= 1 && !(num('rgl_' + id) >= 1)) n -= D.precios[id];
+    }
+    return n - num('gastoCont') - num('gastoRegalo');
+  }
+
+  test('TIENDA EN EL SERVIDOR: la tabla de precios es la del catálogo (si no: node supabase/tienda-precios.js)', function () {
+    var S = datosTiendaSql(), Tn = window.PM.Tienda, venta = {};
+    Tn.VENTA.forEach(function (it) { venta[it.id] = it.precio; });
+    var faltan = Object.keys(venta).filter(function (id) { return !S.precios.hasOwnProperty(id); });
+    var sobran = Object.keys(S.precios).filter(function (id) { return !venta.hasOwnProperty(id); });
+    var distintos = Object.keys(venta).filter(function (id) {
+      return S.precios.hasOwnProperty(id) && S.precios[id] !== venta[id];
+    });
+    eq(faltan.join(', '), '', 'se venden y el servidor no los conoce');
+    eq(sobran.join(', '), '', 'el servidor cree que se venden y ya no');
+    eq(distintos.join(', '), '', 'con otro precio en el servidor');
+    ok(Object.keys(S.precios).length > 50, 'la tabla no está vacía');
+    /* ni cofre, ni pase, ni rango (esas no se compran ni se regalan) */
+    Tn.CATALOGO.forEach(function (it) {
+      if (it.cofre || it.pase || it.rango) ok(!S.precios.hasOwnProperty(it.id), it.id + ' no se vende');
+    });
+    /* y lo que ya no se vende se borra (la lista del delete es la misma) */
+    var del = S.sql.slice(S.sql.indexOf('delete from public.tienda_precios'));
+    Tn.VENTA.forEach(function (it) { ok(del.indexOf("'" + it.id + "'") !== -1, it.id + ' en la lista del delete'); });
+  });
+
+  test('TIENDA EN EL SERVIDOR: los datos del saldo (pase, rango, salida) son los del juego', function () {
+    var D = datosTiendaSql().datos, R = window.PM.Rango;
+    eq(D.iniciales, CFG.TIENDA.INICIALES, 'monedas de salida');
+    eq(D.pase.desde, CFG.PASE.DESDE); eq(D.pase.porGalon, CFG.PASE.POR_GALON); eq(D.pase.galones, CFG.PASE.GALONES);
+    for (var g = 0; g <= CFG.PASE.GALONES; g++) {
+      var sg = 0, sp = 0;
+      CFG.PASE.CAMINO.forEach(function (e) {
+        if (e.g >= 1 && e.g <= g) { sg += (e.gratis && e.gratis.monedas) || 0; sp += (e.pago && e.pago.monedas) || 0; }
+      });
+      eq(D.pase.gratis[g], sg, 'pase gratis hasta el galón ' + g);
+      eq(D.pase.pago[g], sp, 'pase de pago hasta el galón ' + g);
+    }
+    eq(D.rango.tramoDiv.length, R.TRAMOS.length, 'los escalones del rango');
+    R.TRAMOS.forEach(function (T, i) { eq(D.rango.tramoDiv[i], T.d, 'escalón ' + i); });
+    Object.keys(CFG.RANGO.PREMIOS_TEMPORADA).forEach(function (t) {
+      CFG.RANGO.DIVISIONES.forEach(function (Dv, d) {
+        eq(D.rango.premios[t][d], R.premiosHasta(d, t), t + ' hasta ' + Dv.id);
+      });
+    });
+    Object.keys(CFG.AJUSTES_CUENTA).forEach(function (u) {
+      if (CFG.AJUSTES_CUENTA[u].rango) ok(D.ajustes[u], u + ': sus PR a mano, conocidos');
+    });
+  });
+
+  test('TIENDA EN EL SERVIDOR: el saldo del servidor es el de Tienda.saldo() (y regalado no es gastado)', function () {
+    conTienda(function (Tn, A) {
+      var S = datosTiendaSql(), D = S.datos;
+      D.precios = S.precios;
+      var Pa = window.PM.Pase, R = window.PM.Rango;
+      function mira(msg) {
+        if (Pa) Pa._memoHasta = 0;
+        if (R) R._memoHasta = 0;
+        try { eq(saldoServidor(A.stats(), '', D), Tn.saldo(), msg); }
+        finally { if (R) R._memoHasta = 0; }   // lo del rango de aquí no se cuela en otras pruebas
+      }
+      mira('de salida');
+      A.recordAll({ monedas: 3000, bono: 200, cofre_monedas: 150, gastoCont: 500 });
+      mira('ganado, veterano, cofres y continuar');
+      var o = {};
+      o['px_' + CFG.PASE.DESDE] = CFG.PASE.POR_GALON * 7 + 10;
+      o['pp_' + CFG.PASE.DESDE] = 1;
+      o['rm' + CFG.RANGO.VERSION + '_2026-09'] = 14;
+      o['rm' + CFG.RANGO.VERSION + '_2026-10'] = 9;
+      o['rm3_2026-08'] = 20;                            // una versión vieja no paga
+      A.recordAll(o);
+      mira('con el pase (gratis y pago) y el rango de dos temporadas');
+      ok(Tn.comprar('cuy').ok && Tn.comprar('acc_gafas').ok, 'dos compras');
+      mira('comprando');
+      var s0 = Tn.saldo();
+      A.tomar({ c_acc_chistera: 1, rgl_acc_chistera: 1 });
+      ok(Tn.tiene('acc_chistera') && Tn.regalada('acc_chistera'), 'una que te regalaron es tuya');
+      eq(Tn.saldo(), s0, 'y no te cuesta nada');
+      mira('lo regalado, igual en el servidor');
+      A.tomar({ gastoRegalo: 450 });
+      eq(Tn.saldo(), s0 - 450, 'lo que regalas tú, sí');
+      mira('lo regalado a otro, igual');
+      eq(Tn.paraRegalar(), Math.max(0, Tn.saldo() - CFG.TIENDA.INICIALES), 'se regala con lo ganado');
+      ok(!Tn.regalable('plasma') && !Tn.regalable('grito') && !Tn.regalable('efx_dorado'),
+        'cofre, pase y rango no se regalan');
+      ok(Tn.regalable('cuy') && Tn.regalable('acc_gafas'), 'lo de la tienda, sí');
+      A.reset();
+      if (R) R._memoHasta = 0;       // lo del rango de aquí no se cuela en otras pruebas
+      if (Pa) Pa._memoHasta = 0;
+    });
+  });
+
+  test('TIENDA EN EL SERVIDOR: lo que escribe solo el servidor viaja como el mayor y no suma entre aparatos', function () {
+    var A = window.PM.Achievements;
+    ok(!A.esSuma('gastoRegalo') && !A.esSuma('rgl_cuy'), 'gastoRegalo y rgl_<id>: el mayor');
+    ok(A.esSuma('pasoMon_larga') && A.esSuma('pasoPx_larga'), 'lo pagado por PRIMEROS PASOS se suma');
+    conLogrosLimpios(function (A) {
+      A.merge({ gastoRegalo: 900, rgl_cuy: 1, c_cuy: 1 });
+      A.merge({ gastoRegalo: 450 });
+      eq(A.stats().gastoRegalo, 900, 'se queda con el mayor');
+      eq(A.stats().rgl_cuy, 1, 'y la marca de regalada');
+    });
+    var sql = leerArchivo('supabase/perfiles-blindaje.sql');
+    ok(/k like 'rgl\\_%' or k = 'gastoRegalo'/.test(sql), 'el trigger no deja al juego escribirlos');
+    ok(/6\. LAS COMPRAS DE LA TIENDA/.test(sql) && /tienda_saldo\(ln, new\.usuario\)/.test(sql),
+      'y mira el saldo de cada pieza nueva');
+  });
+
+  // ---------------------------------------------------------------
+  // REGALAR (29 sep, js/regalos.js)
+  // ---------------------------------------------------------------
+  function conRegalos(fn) {
+    var UI = window.PM.UI, Rg = window.PM.Regalos, Ac = window.PM.Account;
+    var enviar0 = Rg.enviar, cola0 = Ac.enCola, push0 = Ac.pushQuiet, f0 = Ac.fundido, ult0 = Rg.ULTIMA;
+    /* una búsqueda de otra prueba (al volver al menú) puede seguir en vuelo */
+    var busc0 = Rg.buscando;
+    Rg.buscando = false;
+    conTienda(function (Tn, A) {
+      var llamadas = [], respuestas = {};
+      Rg.enviar = function (c) {
+        llamadas.push(c);
+        var r = respuestas[c.op] || { ok: true };
+        return yaEsta({ ok: !!r.ok, status: r.ok ? 200 : 409, d: r });
+      };
+      Ac.enCola = function (f) { return yaEsta(f()); };
+      Ac.pushQuiet = function () {};
+      try { fn(UI, Rg, Tn, A, llamadas, respuestas); }
+      finally {
+        Rg.enviar = enviar0; Ac.enCola = cola0; Ac.pushQuiet = push0; Ac.fundido = f0; Rg.ULTIMA = ult0;
+        Rg.buscando = busc0;
+        if (UI.ficha) UI.cerrarFicha(true);
+        UI.hidePrompt();
+        UI.tiendaBolsa = [];
+      }
+    });
+    UI.showMenu();
+  }
+
+  test('REGALAR: el botón sale en la ficha de lo que se vende, no en lo de cofre; sin cuenta, lo dice', function () {
+    conRegalos(function (UI) {
+      UI.showTienda('accesorio');
+      UI.abrirFicha('accesorio', 'acc_gafas', 'tienda');
+      var b = UI.ficha.win.querySelector('.ficha-regalar');
+      ok(b, 'REGALAR en la ficha de una pieza de tienda');
+      b.click();
+      ok(!UI.ficha.win.querySelector('.rg-capa'), 'sin cuenta no se abre');
+      ok(/ENTRA EN TU CUENTA/.test(UI.ficha.aviso.textContent), 'y avisa de por qué');
+      UI.abrirFicha('efecto', 'efx_brasas', 'tienda');
+      ok(!UI.ficha.win.querySelector('.ficha-regalar'), 'una de cofre no se regala');
+    });
+  });
+
+  testConCuenta('REGALAR: eliges amigo, pagas en dos pasos y el servidor cobra', function () {
+    conRegalos(function (UI, Rg, Tn, A, llamadas, respuestas) {
+      A.recordAll({ monedas: 2000 });
+      var s0 = Tn.saldo();
+      respuestas.amigos = { ok: true, precio: 450, regalable: true, disponible: 2000, hoy: 1, tope: 5,
+        amigos: [{ usuario: 'LUIS', estado: 'no_mutuo' }, { usuario: 'ANA', estado: 'ok' },
+                 { usuario: 'EVA', estado: 'ya_la_tiene' }] };
+      respuestas.regalar = { ok: true, para: 'ANA', pieza: 'acc_gafas', precio: 450, logros: { gastoRegalo: 450 } };
+      UI.showTienda('accesorio');
+      UI.abrirFicha('accesorio', 'acc_gafas', 'tienda');
+      UI.ficha.win.querySelector('.ficha-regalar').click();
+      var capa = UI.ficha.win.querySelector('.rg-capa');
+      ok(capa, 'se abre la capa de REGALAR');
+      eq(llamadas[0].op, 'amigos', 'pregunta por los amigos');
+      eq(llamadas[0].pieza, 'acc_gafas');
+      var bs = capa.querySelectorAll('.rg-amigo');
+      eq(bs.length, 3, 'los tres amigos');
+      var porNombre = {};
+      for (var i = 0; i < bs.length; i++) porNombre[bs[i].querySelector('.rg-amigo-n').textContent] = bs[i];
+      ok(!porNombre.ANA.disabled, 'ANA puede recibirla');
+      ok(porNombre.LUIS.disabled && /NO TE TIENE/.test(porNombre.LUIS.textContent), 'LUIS no te tiene en su lista');
+      ok(porNombre.EVA.disabled && /YA LA TIENE/.test(porNombre.EVA.textContent), 'EVA ya la tiene');
+      ok(/TE QUEDAN 4 REGALOS HOY/.test(capa.querySelector('.rg-aviso').textContent), 'cuántos quedan hoy');
+      var dar = capa.querySelector('.rg-dar');
+      ok(dar.disabled, 'sin elegir, no se puede');
+      porNombre.ANA.click();
+      ok(!dar.disabled && /REGALAR A ANA/.test(dar.textContent), 'REGALAR A ANA');
+      dar.click();
+      ok(/¿GASTAR 450\?/.test(dar.textContent), 'el primer toque pregunta');
+      eq(llamadas.filter(function (c) { return c.op === 'regalar'; }).length, 0, 'y no gasta');
+      dar.click();
+      var r = llamadas.filter(function (c) { return c.op === 'regalar'; });
+      eq(r.length, 1, 'el segundo regala');
+      eq(r[0].para, 'ANA'); eq(r[0].pieza, 'acc_gafas');
+      eq(A.stats().gastoRegalo, 450, 'lo cobrado lo apunta el servidor y llega aquí');
+      eq(Tn.saldo(), s0 - 450, 'el saldo baja lo que costó');
+      ok(!Tn.tiene('acc_gafas'), 'la pieza no es tuya: es de ANA');
+      ok(!UI.ficha.win.querySelector('.rg-capa'), 'la capa se cierra');
+      ok(/REGALADO A ANA/.test(UI.ficha.aviso.textContent), 'y lo dice');
+    });
+  });
+
+  testConCuenta('REGALAR: si el servidor dice que no, se ve por qué y no se cobra nada', function () {
+    conRegalos(function (UI, Rg, Tn, A, llamadas, respuestas) {
+      respuestas.amigos = { ok: true, precio: 1500, disponible: 3000, hoy: 0, tope: 5,
+                            amigos: [{ usuario: 'ANA', estado: 'ok' }] };
+      respuestas.regalar = { ok: false, error: 'ANA YA LA TIENE' };
+      A.recordAll({ monedas: 3000 });
+      var s0 = Tn.saldo();
+      UI.showTienda('skin');
+      UI.abrirFicha('skin', 'cuy', 'tienda');
+      UI.ficha.win.querySelector('.ficha-regalar').click();
+      var capa = UI.ficha.win.querySelector('.rg-capa');
+      capa.querySelector('.rg-amigo').click();
+      var dar = capa.querySelector('.rg-dar');
+      dar.click(); dar.click();
+      ok(/ANA YA LA TIENE/.test(capa.querySelector('.rg-aviso').textContent), 'el motivo');
+      eq(Tn.saldo(), s0, 'sin cobrar');
+      ok(!/¿GASTAR/.test(dar.textContent), 'y hay que volver a confirmar');
+      /* y con poco ganado no deja ni elegir */
+      respuestas.amigos = { ok: true, precio: 1500, disponible: 300, hoy: 0, tope: 5,
+                            amigos: [{ usuario: 'ANA', estado: 'ok' }] };
+      Rg.cerrar(UI);
+      UI.ficha.win.querySelector('.ficha-regalar').click();
+      capa = UI.ficha.win.querySelector('.rg-capa');
+      ok(capa.querySelector('.rg-amigo').disabled, 'no alcanza: nadie elegible');
+      ok(/TE FALTAN 1\.200 MONEDAS GANADAS/.test(capa.querySelector('.rg-aviso').textContent), 'y cuánto falta');
+    });
+  });
+
+  testConCuenta('REGALAR: el que recibe lo ve al entrar, la pieza es suya y no le cuesta nada', function () {
+    conRegalos(function (UI, Rg, Tn, A, llamadas, respuestas) {
+      var Ac = window.PM.Account, C = window.PM.Celebrar;
+      respuestas.avisos = { ok: true, avisos: [{ n: 7, de: 'ANA', pieza: 'cuy' }, { n: 9, de: 'LUIS', pieza: 'acc_gafas' }],
+                            logros: { c_cuy: 1, rgl_cuy: 1, c_acc_gafas: 1, rgl_acc_gafas: 1 } };
+      var s0 = Tn.saldo();
+      Ac.fundido = null;
+      Rg.buscarAvisos(true);
+      eq(llamadas.length, 0, 'antes de fundir la nube no pregunta');
+      Ac.fundido = Ac.user.id;
+      UI.hidePrompt();
+      G.state = 'MENU';
+      Rg.buscarAvisos(true);
+      eq(llamadas[0].op, 'avisos', 'ya fundida, pregunta');
+      ok(Tn.tiene('cuy') && Tn.tiene('acc_gafas'), 'las piezas llegan');
+      eq(Tn.saldo(), s0, 'y no le cuestan nada');
+      var visto = llamadas.filter(function (c) { return c.op === 'vistos'; })[0];
+      ok(visto && visto.hasta === 9, 'se dan por vistos hasta el último');
+      ok(UI.els.prompt.querySelector('.rg-cel'), 'sale el aviso');
+      var des = UI.els.prompt.querySelectorAll('.rg-cel-de');
+      eq(des.length, 2, 'los dos regalos en uno');
+      eq(des[0].textContent, 'ANA');
+      ok(/TE HA REGALADO/.test(UI.els.prompt.querySelector('.rg-cel-dice').textContent), 'X TE HA REGALADO …');
+      eq(C.siguiente(), null, 'y ya no queda pendiente');
+      /* el mismo regalo dos veces no se apunta dos veces */
+      C.regalos([{ n: 7, de: 'ANA', pieza: 'cuy' }]);
+      C.regalos([{ n: 7, de: 'ANA', pieza: 'cuy' }]);
+      eq(C.siguiente().lista.length, 1, 'sin repetir');
+      C.vaciar();
+    });
+  });
+
   test('lo puesto solo vale si es tuyo, y las teclas de emote no repiten cara', function () {
     conTienda(function (Tn) {
       var s = window.PM.settings;
