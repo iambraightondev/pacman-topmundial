@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8">
+<style>html,body{margin:0;padding:0;background:#000;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<!-- Hoja de contacto de las piezas, en grande, sin servidor:
+       render-pase.html?id=alebrije,acc_catrina&ts=0.3,1.0,3.6,4.0,5.8,6.4&fs=0,2,2,2,0,0&k=9
+     `id` admite varias (una fila cada una), `ts` los instantes (la Q sale
+     cada 3,4 s y la muerte entre 5,3 y 6,8), `fs` la fase de la boca de
+     cada instante, `k` la escala y `c` el color (%23ff0000). -->
+<canvas id="cv"></canvas>
+<script src="../vestuario-2026-09-18/piezas.js"></script>
+<script>
+  function qFase(t, periodo, dura) { var x = t % periodo; return x < dura ? x / dura : -1; }
+  function hash(n) { return ((n * 1103515245 + 12345) & 0x7fffffff); }
+  var DRAW = {};
+</script>
+<script src="../pase-2026-10/p-helpers.js"></script>
+<script src="p-piezas.js"></script>
+<script src="p-muerte.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var ids = (q.get('id') || 'alebrije').split(',');
+  var ts = (q.get('ts') || '0.3,1.0,3.6,4.0,5.8,6.4').split(',').map(parseFloat);
+  var fs = (q.get('fs') || '0,2,2,2,0,0').split(',').map(function (v) { return parseInt(v, 10); });
+  var K = parseFloat(q.get('k') || '9');
+  var CEL = 34;
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  cv.width = ts.length * CEL * K; cv.height = ids.length * CEL * K;
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ids.forEach(function (id, f) {
+    ts.forEach(function (t, c) {
+      ctx.save();
+      ctx.translate((c + 0.5) * CEL * K, (f + 0.5) * CEL * K + (id.indexOf('emo_') === 0 ? 6 * K : 0));
+      ctx.scale(K, K);
+      var x0 = 0;
+      var o = {
+        x: 0, y: 0, d: 3, half: HALF[fs[c] || 0], c: q.get('c') || '#ffff00', t: t,
+        s: 60 + t * 44, giro: 40, estira: 1, team: null, vel: 1,
+        back: function (dist) { return { x: x0 - dist, y: 0, d: 3 }; }
+      };
+      DRAW[id](ctx, o);
+      ctx.restore();
+    });
+  });
+})();
+</script>
+</body>
+</html>

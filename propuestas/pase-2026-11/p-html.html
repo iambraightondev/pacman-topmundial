@@ -1,0 +1,92 @@
+<style>
+  .chip.gratis { color: #6fe3ff; }
+  .chip.pago { color: #ffb852; }
+  table.camino { width: 100%; border-collapse: collapse; margin: 18px 0 4px; font-size: 13px; }
+  table.camino th, table.camino td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #1c2044; }
+  table.camino th { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #8a8cae; font-weight: 600; }
+  table.camino td { color: #c9cbe0; }
+  table.camino tr.hito td { background: rgba(255, 210, 63, .07); }
+  table.camino td.g { font-variant-numeric: tabular-nums; color: #8a8cae; width: 74px; white-space: nowrap; }
+  table.camino .pieza { color: #ffb852; font-weight: 700; margin-left: 6px; }
+  table.camino .pieza.libre { color: #6fe3ff; }
+  .tabla { overflow-x: auto; }
+  .nota { font-size: 13px; line-height: 1.7; color: #9a9cba; border-left: 3px solid #2121ff; padding-left: 12px; margin: 16px 0 4px; }
+</style>
+
+<header class="top wrap">
+  <p class="eyebrow">Pac-Man Top Mundial · pase de temporada</p>
+  <h1>Noviembre: DÍA DE MUERTOS</h1>
+  <p class="lede">El 1 y el 2 de noviembre los difuntos vuelven de visita, y en un juego de fantasmas es la fiesta que toca. Estas son las cinco piezas exclusivas del pase de noviembre: solo las tiene quien juegue ese mes, y no salen de cofre ni de la tienda. Todo corre por un pasillo del juego a tamaño real, con lupa al lado; el ALEBRIJE enseña su Q cada 3,4 s y su muerte cada 6,8 s. Cambie el color arriba para verlo con el de cualquier jugador.</p>
+  <p class="tally"><b>1</b> skin · <b>2</b> accesorios · <b>1</b> efecto · <b>1</b> emote · <b>3</b> en el carril de pago</p>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <span class="bar-label" id="color-label">Color del jugador</span>
+    <div class="swatches" role="group" aria-labelledby="color-label" id="swatches"></div>
+    <label class="vel" for="vel"><span class="bar-label">Velocidad</span>
+      <input type="range" id="vel" min="80" max="180" step="10" value="100">
+      <output id="vel-out" for="vel">100 %</output></label>
+    <button class="btn" id="pause" type="button">Pausar</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <section>
+    <div class="sec-head">
+      <h2>Dónde cae cada una</h2>
+      <p>El mismo reparto que octubre: 30 galones a 1.500 de experiencia (como mucho 1.800 al día), y las piezas en los galones 10, 20 y 30. Las monedas del camino son las de todos los meses.</p>
+    </div>
+    <div class="tabla">
+    <table class="camino">
+      <thead>
+        <tr><th>Galón</th><th>Carril gratis</th><th>Carril de pago</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="g">los demás</td><td>30 monedas</td><td>70 monedas</td></tr>
+        <tr><td class="g">5 · 15 · 25</td><td>60 monedas</td><td>150 monedas</td></tr>
+        <tr class="hito"><td class="g">10</td><td>60 monedas + <span class="pieza libre">EMOTE: CALAVERITA</span></td><td>150 monedas + <span class="pieza">SOMBRERO CATRINA</span></td></tr>
+        <tr class="hito"><td class="g">20</td><td>60 monedas</td><td>150 monedas + <span class="pieza">VELITAS</span></td></tr>
+        <tr class="hito"><td class="g">30</td><td>150 monedas + <span class="pieza libre">CEMPASÚCHIL</span></td><td>400 monedas + <span class="pieza">SKIN: ALEBRIJE</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="nota">Como en octubre: quien juega gratis termina el mes con dos piezas que se ven (el emote y la flor), así que la temporada no le pasa de largo; quien paga se lleva el sombrero en cuanto empieza, el efecto a dos tercios del camino —con candado a la vista todo el mes— y la skin al final.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>La skin · galón 30, carril de pago</h2>
+      <p>Extravagante, como la TRAMPA de octubre: no es un Pac-Man pintado, es otro bicho. El hocico es la boca.</p>
+    </div>
+    <div class="grid" id="g-skin"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Los accesorios</h2>
+      <p>Lucen con cualquier skin. Se ven sobre CLÁSICO para poder compararlos con los de la tienda.</p>
+    </div>
+    <div class="grid" id="g-accesorio"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>El efecto · galón 20, carril de pago</h2>
+      <p>Lo que deja al pasar, sin tapar el laberinto. Se ve sobre CLÁSICO.</p>
+    </div>
+    <div class="grid" id="g-efecto"></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>El emote · galón 10, carril gratis</h2>
+      <p>Sale en el globo sobre el jugador. Se eligen seis en el vestuario, uno por tecla.</p>
+    </div>
+    <div class="grid" id="g-emote"></div>
+  </section>
+
+  <footer>
+    <p>Dígame qué entra, qué se retoca y si el tema le cuadra. Con eso las paso al juego antes del 24 de octubre y noviembre deja de pagar solo monedas.</p>
+  </footer>
+</main>
