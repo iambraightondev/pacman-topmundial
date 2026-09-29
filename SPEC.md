@@ -2046,7 +2046,7 @@ confirmed), `safeTicks` (respawn grace).
 
 ## Skins, emotes, maestrías, ranking y chat
 
-**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 84 of them (29 Sep) in five
+**Skins** (`CFG.SKINS`, settings `skin1`/`skin2`), 100 of them (29 Sep) in five
 `grupo`s: **nivel** (player level, ladder 1·2·4·6·8·10·12·15·18·22·26·30·34 in
 the order Braighton picked), **logro** (`pide: {stat, meta}` on a
 `PM.Achievements` counter, or `{ruta:[...], maestria}` on a badge track),
@@ -2198,7 +2198,7 @@ approved 2026-09-15. Coins only, no real money.
   CARRO's moustache, CARRO's headphones); and
   `dibujarLook` applies it before drawing. `admiteAccesorio` is true for
   Pac-Man-shaped skins and for any extravagant one listed in `CABEZAS` (all
-  55 today); a new extravagant skin needs its entry, or it shows no
+  69 today); a new extravagant skin needs its entry, or it shows no
   accessory.
 - **The accessory moves with its piece** (`POSES`, `deltaPose`). The heads
   were measured in one pose (`POSE_MEDIDA`: t 0.3, mouth closed). `POSES`
@@ -2234,6 +2234,32 @@ approved 2026-09-15. Coins only, no real money.
   pruebas-node.js catch all three). `propuestas/vestuario-yokai/en-el-juego.html`
   draws skins, accessories, Q, deaths, effects and emotes with the game's own
   code for checking by eye.
+- **Objects and Andean batches** (drawn 19 Sep, in the game 29 Sep), same
+  path, own blocks after the yōkai one. **Objects:** CÁMARA DE FOTOS,
+  DESPERTADOR, SEMÁFORO, CAJA FUERTE, BOLA DE DISCOTECA in the shop; MÁQUINA DE
+  DISCOS, TELEVISOR, CABINA TELEFÓNICA chest-only; GAFAS 3D, CORONA DE ORO,
+  BOINA, MONÓCULO, CASCO DE MOTO (+ CASCO DE ASTRONAUTA, CADENA DE ORO from
+  chests); TUBO DE NEÓN, POLAROIDS, TICKETS (+ INTERFERENCIA, CINTA DE CASETE);
+  emotes ALUCINADO, PENSANDO, CORAZÓN ROTO, APLAUSO, CHIST. **Andean:** GALLITO
+  DE LAS ROCAS, PUMA DE PIEDRA, PAPA, AJÍ, SAPO in the shop; TUMI, INTI,
+  COLIBRÍ DE NAZCA chest-only; MONTERA, PONCHO, QUENA, OREJERAS DE ORO,
+  TRENZAS (+ MÁSCARA DE ORO, PLUMAS DE GUACAMAYO); HOJAS DE COCA, GRANIZO,
+  SERPENTINA, TEJIDO (+ POLVO DE ORO, LÍNEAS DE NAZCA); emotes ACHACHAU,
+  HUAYNO, CHÉVERE, CHAU, QUÉ RICO (`caraObj`/`caraAndina`, `CARAS_OBJ`,
+  `CARAS_ANDINA`). Clashes with what existed: the objects' BURBUJAS did not
+  go in (`efx_burbujas` was already nearly the same), the Andean NIEVE became
+  **GRANIZO** (`efx_granizo`: `efx_nieve` exists), and NEÓN, GLITCH and
+  CORONA, already skins, are named TUBO DE NEÓN, INTERFERENCIA and CORONA DE
+  ORO (ids `efx_neon`, `efx_glitch`, `acc_corona`). BOLA and NAZCA keep
+  Pac-Man's silhouette and wedge, so they are **not** `rara` (the Q draws the
+  teeth; accessories go on Pac-Man's head); INTI keeps the disc too but is
+  `rara` so its front-facing face gets its own `CABEZAS` (it has no `POSES`:
+  only the rays turn). On these objects the mouth is the LOWER half, hinged
+  at the back: `mandibulaM` moves the bow tie with it. TRENZAS hang from the
+  crown (`cabeza`): from the eye they crossed wide faces. Fixed on porting,
+  from the showcase: PLUMAS pointed down over the face, PUMA's death drew
+  only a thin column of its four blocks, and NAZCA's wind un-erased it.
+  Rollback of the server part: `supabase/objetos-andina-vuelta-atras.sql`.
 - **Network** (added in protocol 9; the current `CFG.NET.PROTO` is in
   **Valores vivos**): party members carry `a`/`x`
   (`Party.me`), `gameOrder` passes them, `UI.lookDeRed` sanitises them into

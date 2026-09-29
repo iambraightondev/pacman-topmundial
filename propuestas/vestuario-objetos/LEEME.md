@@ -1,8 +1,8 @@
 # Vestuario de OBJETOS — propuesta (19 sep 2026)
 
 Las **26 piezas** de la segunda tanda. Braighton eligió el rumbo: *menos
-bichos, más objetos*, en la línea de RECREATIVA. **Todavía NO están en el
-juego.**
+bichos, más objetos*, en la línea de RECREATIVA. **Entraron al juego el
+30 sep** (ver «En el juego», abajo).
 
 Escaparate publicado: <https://claude.ai/artifact/6Z9ycywGi3Ng88RTVyZ1Xi>
 
@@ -69,7 +69,22 @@ DIR=$(pwd -W)
   "file:///$DIR/render2.html?id=reloj&t=2.0&k=22&cx=210&cy=210"
 ```
 
-## Dónde se quedó
+## En el juego (30 sep)
 
-Dibujadas las 26 y publicado el escaparate. **Falta que Braighton las vea y
-diga cuáles entran.** Hasta entonces no se toca `js/skins.js` ni la tienda.
+Entraron con el mismo dibujo, en el bloque TANDA DE OBJETOS de js/skins.js y
+en js/config.js. Lo que cambió al meterlas:
+
+- La Q sale con la tecla (`qDe`), no cada 3,4 s.
+- Las BURBUJAS no entran: el juego ya tenía unas casi iguales (quedan 25).
+- Cambian de nombre las que chocaban con una skin: TUBO DE NEÓN, INTERFERENCIA
+  (el GLITCH) y CORONA DE ORO.
+- La BOLA DE DISCOTECA conserva la silueta de Pac-Man: no es extravagante, así
+  que con la Q lleva los dientes y los accesorios van en la cabeza de Pac-Man.
+- En estas cosas la boca es la mitad de ABAJO: la pajarita baja con ella.
+- Servidor: las piezas de cofre en `piezas_especiales`, los precios de las de
+  tienda y los botes de la función `cofres`, ya en producción. Vuelta atrás:
+  `supabase/objetos-andina-vuelta-atras.sql`.
+
+`en-el-juego.html` las dibuja con el código DEL JUEGO (servido con
+`node tests/servidor.cjs 8437` desde la raíz; las opciones van en su cabecera):
+andando, con su Q y muriendo, con accesorios, los efectos y los emotes.

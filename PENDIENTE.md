@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v312).
+Última puesta al día: **30 de septiembre de 2026** (pm-v313).
 
 ---
 
@@ -15,14 +15,11 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 ### ▶ PRÓXIMA SESIÓN (dejado el 30 sep)
 
-1. **RECORDARLE A BRAIGHTON las dos tandas del 19 sep que nunca entraron**
-   (lo pidió él): OBJETOS (26 piezas, propuestas/vestuario-objetos/,
-   https://claude.ai/artifact/6Z9ycywGi3Ng88RTVyZ1Xi) y ANDINA (26 piezas,
-   propuestas/vestuario-andina/, https://claude.ai/artifact/GCbCayA81zNbEcXXa3AnyV).
-   Si dice que entran: mismo camino que MITOLOGÍA y YŌKAI (portar dibujos con
-   qFase→qDe, CABEZAS/POSES/zonas, CFG, y en el SERVIDOR piezas_especiales de
-   cofre, tabla de precios y bote de cofres —node supabase/cofres-datos.js y
-   desplegar la función cofres—).
+1. **Que Braighton vea en el juego las tandas de OBJETOS y ANDINA** (entraron
+   el 30 sep, pm-v313): los accesorios se midieron a ojo sobre las 16 skins
+   nuevas; si alguno le queda mal en una, se ajusta su CABEZAS. Decidido sin
+   preguntar: la CORONA DE ORO se vende a 450 aunque la skin CORONA es de logro
+   (copa de diamante); si le resta mérito, pasarla a cofre.
 2. **Con fecha:** 1 oct, que la temporada de septiembre cierre bien en el
    juego real (¡TEMPORADA CERRADA!, fruta junto al nombre, LAURELES · SEP) y
    que arranque el pase de octubre con el tope diario; 2 oct, que salgan los
@@ -45,7 +42,9 @@ cerrado, minificado al publicar (vercel.json + publicar.js; tests.html ya no se
 publica), subidas con número para no sumar dos veces (supabase/perfiles-subidas.sql).
 Monedas de ESTER: sin fallo del código, no se tocan. **Tanda YŌKAI en el juego (pm-v312):** servidor al día (piezas de cofre,
 precios y bote de cofres; vuelta atrás en supabase/yokai-vuelta-atras.sql).
-Quedan sin entrar las tandas de OBJETOS y ANDINA (propuestas/, 19 sep).
+**Tandas OBJETOS y ANDINA en el juego (pm-v313):** 51 piezas (sin las
+BURBUJAS repetidas), servidor al día; vuelta atrás en
+supabase/objetos-andina-vuelta-atras.sql.
 **Volver a la partida (pm-v310, PROTO 22):** probado con pestañas locales y 31
 casos de red en Node; falta probarlo con dos aparatos por internet de verdad.
 **Puntos por proteger (pm-v309, PROTO 21):** sin frenos por decisión de

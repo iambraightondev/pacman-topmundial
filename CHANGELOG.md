@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Las tandas de OBJETOS y ANDINA entran en el juego (51 piezas)
+
+Las dos del 19 sep que se habían quedado en el escaparate.
+- **Objetos, ocho skins (1.500):** CÁMARA DE FOTOS, DESPERTADOR, SEMÁFORO, CAJA
+  FUERTE y BOLA DE DISCOTECA en la tienda; MÁQUINA DE DISCOS, TELEVISOR y CABINA
+  TELEFÓNICA de cofre. Accesorios GAFAS 3D, CORONA DE ORO, BOINA, MONÓCULO y
+  CASCO DE MOTO (CASCO DE ASTRONAUTA y CADENA DE ORO de cofre); efectos TUBO DE
+  NEÓN, POLAROIDS y TICKETS (INTERFERENCIA y CINTA DE CASETE de cofre); emotes
+  ALUCINADO, PENSANDO, CORAZÓN ROTO, APLAUSO y CHIST.
+- **Andina, ocho skins (1.500):** GALLITO DE LAS ROCAS, PUMA DE PIEDRA, PAPA, AJÍ y
+  SAPO en la tienda; TUMI, INTI y COLIBRÍ DE NAZCA de cofre. Accesorios MONTERA,
+  PONCHO, QUENA, OREJERAS DE ORO y TRENZAS (MÁSCARA DE ORO y PLUMAS DE GUACAMAYO
+  de cofre); efectos HOJAS DE COCA, GRANIZO, SERPENTINA y TEJIDO (POLVO DE ORO y
+  LÍNEAS DE NAZCA de cofre); emotes ACHACHAU, HUAYNO, CHÉVERE, CHAU y QUÉ RICO.
+- Las BURBUJAS de objetos no entran (ya había unas casi iguales); la NIEVE andina
+  se llama GRANIZO, y el NEÓN, el GLITCH y la CORONA, que ya eran skins, se
+  llaman TUBO DE NEÓN, INTERFERENCIA y CORONA DE ORO.
+- Arreglado al meterlas: las PLUMAS caían sobre la cara, el PUMA se esfumaba al
+  morir en vez de partirse en bloques y el COLIBRÍ se borraba al revés.
+
 ## 2026-09-30 · La tanda YŌKAI entra en el juego (28 piezas)
 
 Folclore japonés, aprobada entera por Braighton.
