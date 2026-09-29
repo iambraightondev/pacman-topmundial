@@ -1,0 +1,1573 @@
+<title>Aperturas de cofre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+  /* la letra del juego (fonts/press-start-2p.woff2, OFL), dentro de la página */
+  @font-face { font-family: "Press Start 2P"; src: url(data:font/woff2;base64,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) format("woff2"); font-display: block; }
+  /* Un solo tema a propósito: es la pantalla del juego (negro, muros azules).
+   * Maqueta: una franja por alternativa, seis escenas por franja (los cuatro
+   * cofres, el repetido y el ORO que resulta LEGENDARIO), todas en bucle. */
+  :root {
+    color-scheme: dark;
+    --ground: #000000;
+    --scene: #04040d;
+    --wall: #2121ff;
+    --wall-dim: #14146e;
+    --ink: #ffffff;
+    --ink-soft: #b9bae6;
+    --ink-faint: #6d6f8e;
+    --pac: #ffff00;
+    --door: #ffb8ff;
+    --madera: #c07a3a;
+    --plata: #cfd8e6;
+    --oro: #ffd23f;
+    --leg: #c86bff;
+    --arcade: 'Press Start 2P', 'Courier New', Courier, monospace;
+    --crt: 'VT323', 'Courier New', Courier, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--ground); }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--crt);
+    font-size: 21px;
+    line-height: 1.25;
+    padding-block: 0 56px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; }
+
+  header.top { padding-block: 40px 26px; display: grid; gap: 16px; }
+  .eyebrow { margin: 0; font-family: var(--arcade); font-size: 10px; letter-spacing: .14em; color: var(--door); }
+  h1 {
+    margin: 0; font-family: var(--arcade); color: var(--pac); font-weight: 400;
+    font-size: clamp(22px, 4.6vw, 44px); line-height: 1.15; letter-spacing: .04em; text-wrap: balance;
+    text-shadow: 0 0 18px rgba(255, 255, 0, .35);
+  }
+  .lede { margin: 0; max-width: 64ch; color: var(--ink-soft); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; }
+  .chips li {
+    font-family: var(--arcade); font-size: 9px; letter-spacing: .1em; padding: 6px 9px;
+    border: 2px solid currentColor; border-radius: 999px;
+  }
+
+  .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: rgba(0, 0, 0, .94); border-block: 2px solid var(--wall); }
+  .bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; padding-block: 10px; }
+  .bar-label { font-family: var(--arcade); font-size: 9px; letter-spacing: .12em; color: var(--ink-soft); }
+  .swatches { display: flex; flex-wrap: wrap; gap: 9px; }
+  .sw {
+    width: 22px; height: 22px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+    background: conic-gradient(var(--c) 0 62deg, transparent 62deg 118deg, var(--c) 118deg 360deg);
+  }
+  .sw[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .vel { display: flex; align-items: center; gap: 8px; }
+  .vel input { width: 110px; accent-color: var(--pac); }
+  .vel output { font-family: var(--arcade); font-size: 9px; min-width: 5ch; font-variant-numeric: tabular-nums; }
+  .acciones { display: flex; gap: 10px; margin-left: auto; }
+  @media (max-width: 720px) { .bar { position: static; } .acciones { margin-left: 0; } }
+  .btn {
+    font-family: var(--arcade); font-size: 9px; letter-spacing: .12em; color: var(--ink);
+    background: transparent; border: 2px solid var(--wall); border-radius: 6px; padding: 8px 12px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--pac); color: var(--pac); }
+  .sw:focus-visible, .btn:focus-visible, .lienzo:focus-visible { outline: 2px dashed var(--pac); outline-offset: 3px; }
+
+  section.alt { padding-block: 44px 6px; display: grid; gap: 18px; border-bottom: 2px dashed var(--wall-dim); }
+  .alt-head { display: grid; gap: 10px; }
+  h2 {
+    margin: 0; font-family: var(--arcade); font-weight: 400; font-size: clamp(15px, 2.4vw, 20px);
+    letter-spacing: .08em; line-height: 1.4; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px;
+  }
+  h2 .letra {
+    display: inline-grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%;
+    background: var(--pac); color: #000; font-size: .9em;
+  }
+  h2 .mia { font-size: 9px; color: #000; background: var(--door); padding: 5px 8px; border-radius: 999px; letter-spacing: .1em; }
+  .alt-head p { margin: 0; max-width: 72ch; color: var(--ink-soft); }
+  .facts { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 10px 22px; }
+  .facts div { display: grid; gap: 2px; align-content: start; }
+  .facts dt { font-family: var(--arcade); font-size: 8px; letter-spacing: .12em; color: var(--ink-faint); line-height: 1.6; }
+  .facts dd { margin: 0; color: var(--ink); }
+
+  .stages { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 22px 18px; }
+  @media (max-width: 720px) { .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; } figure.stage figcaption { min-height: 3.4em; } }
+  figure.stage { margin: 0; display: grid; gap: 8px; justify-items: center; align-content: start; min-width: 0; }
+  figure.stage figcaption {
+    justify-self: stretch; font-family: var(--arcade); font-size: 8px; letter-spacing: .1em; line-height: 1.7;
+    color: var(--ink-soft); display: block;
+  }
+  figure.stage figcaption b { color: var(--c); font-weight: 400; }
+  .lienzo {
+    display: block; width: 100%; max-width: 330px; aspect-ratio: 1; padding: 0; cursor: zoom-in;
+    background: var(--scene); border: 3px solid var(--wall); border-radius: 8px; overflow: hidden;
+  }
+  .lienzo canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .premio-t {
+    font-family: var(--arcade); font-size: clamp(9px, 1.25vw, 12px); letter-spacing: .08em; line-height: 1.5;
+    text-align: center; min-height: 3em; text-shadow: 0 0 10px currentColor; max-width: 100%; overflow-wrap: anywhere;
+    transition: opacity .15s;
+  }
+  .premio-s { font-family: var(--arcade); font-size: 7px; letter-spacing: .08em; line-height: 1.7; color: var(--ink-soft); text-align: center; min-height: 3.4em; max-width: 100%; }
+  .fbtns { display: flex; gap: 8px; min-height: 30px; justify-content: center; flex-wrap: wrap; }
+  .fbtns span {
+    font-family: var(--arcade); font-size: 7px; letter-spacing: .08em; padding: 8px 10px; border-radius: 6px;
+    border: 2px solid var(--wall); color: var(--ink); visibility: hidden;
+  }
+  .fbtns span.prim { border-color: var(--pac); color: var(--pac); }
+  .fbtns.si span { visibility: visible; }
+
+  /* la escena en grande, al tamaño que tiene en el juego */
+  .zoom { position: fixed; inset: 0; z-index: 20; background: #00000a; display: grid; place-items: center; padding: 16px; overflow: auto; }
+  .zoom[hidden] { display: none; }
+  .zoom-in { display: grid; gap: 12px; justify-items: center; width: min(100%, 460px); }
+  .zoom-cap { font-family: var(--arcade); font-size: 9px; letter-spacing: .1em; color: var(--ink-soft); text-align: center; line-height: 1.7; }
+  .zoom .lienzo { max-width: min(88vw, 52vh, 420px); cursor: default; }
+  .zoom .premio-t { font-size: clamp(12px, 2.4vh, 18px); }
+  .zoom .premio-s { font-size: 9px; }
+  .zoom .fbtns span { font-size: 9px; }
+
+  footer { padding-block: 44px 0; }
+  footer p { margin: 0; font-family: var(--arcade); font-size: clamp(13px, 2vw, 18px); color: var(--pac); letter-spacing: .06em; line-height: 1.5; }
+  footer small { display: block; margin-top: 14px; color: var(--ink-faint); font-size: 19px; max-width: 70ch; }
+</style>
+
+<header class="top wrap">
+  <p class="eyebrow">PAC-MAN TOP MUNDIAL · PANTALLA DE COFRES</p>
+  <h1>APERTURAS DE COFRE</h1>
+  <p class="lede">Cuatro maneras de abrir un cofre, para elegir una. Cada una se ve con las mismas seis escenas y todas se repiten solas. Los premios son los dibujos del juego, sacados de su propio motor: FÉNIX, AGUJERO NEGRO, AUREOLA, CASCO ALADO y BRASAS. Toque una escena para verla al tamaño que tiene en el juego.</p>
+  <ul class="chips" aria-label="Las seis escenas">
+    <li style="color: var(--madera)">MADERA · MONEDAS</li>
+    <li style="color: var(--plata)">PLATA · EFECTO</li>
+    <li style="color: var(--oro)">ORO · ACCESORIO + SKIN</li>
+    <li style="color: var(--oro)">ORO · REPETIDO</li>
+    <li style="color: var(--leg)">LEGENDARIO</li>
+    <li style="color: var(--leg)">ORO QUE ERA LEGENDARIO</li>
+  </ul>
+</header>
+
+<div class="bar">
+  <div class="wrap">
+    <span class="bar-label" id="color-label">COLOR DEL JUGADOR</span>
+    <div class="swatches" role="group" aria-labelledby="color-label" id="swatches"></div>
+    <label class="vel" for="vel"><span class="bar-label">VELOCIDAD</span>
+      <input type="range" id="vel" min="50" max="150" step="10" value="100">
+      <output id="vel-out" for="vel">100 %</output></label>
+    <div class="acciones">
+      <button class="btn" id="reiniciar" type="button">DESDE EL PRINCIPIO</button>
+      <button class="btn" id="pausa" type="button">PAUSAR</button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap" id="alts"></main>
+
+<footer class="wrap">
+  <p>Dígame cuál entra.</p>
+  <small>Se pueden mezclar: por ejemplo, la espera de una con el remate de otra. Lo que elija se monta en el juego con la misma escena, los mismos premios y los mismos textos que se ven aquí.</small>
+</footer>
+
+<div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Escena al tamaño del juego">
+  <div class="zoom-in">
+    <div class="zoom-cap" id="zoom-cap"></div>
+    <div class="lienzo" id="zoom-lienzo"><canvas width="320" height="320"></canvas></div>
+    <div class="premio-t" id="zoom-t"></div>
+    <div class="premio-s" id="zoom-s"></div>
+    <div class="fbtns" id="zoom-b"><span class="otro">ABRIR OTRO</span><span class="prim">LISTO</span></div>
+    <button class="btn" id="zoom-cerrar" type="button">CERRAR</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/letra.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/skins.js"></script>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.PM.CFG, Sk = window.PM.Skins, Sprites = window.PM.Sprites;
+  var W = 320, H = 320;
+  var COL = CFG.COFRES.COLORES;
+  var NOM = CFG.COFRES.NOMBRES;
+  var LETRA = '"Press Start 2P", monospace';
+  var jugador = '#ffff00';
+
+  /* ================= utilidades ================= */
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function seg(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
+  function lerp(a, b, k) { return a + (b - a) * k; }
+  function eOut(k) { return 1 - Math.pow(1 - k, 3); }
+  function eIn(k) { return k * k * k; }
+  function eInOut(k) { return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; }
+  function eBack(k) { var c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); }
+  function rnd(i) { var x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  function alfa(hex, a) {
+    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
+  }
+  function mezcla(a, b, k) {
+    var pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16), o = '#';
+    [16, 8, 0].forEach(function (s) {
+      var v = Math.round(((pa >> s) & 255) * (1 - k) + ((pb >> s) & 255) * k);
+      o += ('0' + v.toString(16)).slice(-2);
+    });
+    return o;
+  }
+  function miles(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function texto(c, s, x, y, px, col, al, sombra) {
+    c.font = px + 'px ' + LETRA;
+    c.textAlign = al || 'center';
+    c.textBaseline = 'middle';
+    if (sombra) { c.fillStyle = sombra; c.fillText(s, x + 2, y + 2); }
+    c.fillStyle = col;
+    c.fillText(s, x, y);
+  }
+
+  /* ================= el cofre (el de ui.js, en piezas) =================
+   * Mismo dibujo y misma paleta que UI.pintarCofre, separado en cuerpo y
+   * tapa para poder levantarla, girarla o lanzarla. 24 x 18 píxeles gordos. */
+  var PAL = {
+    madera: { cuerpo: '#8a5226', claro: '#c07a3a', oscuro: '#4d2a10', banda: '#6d6f78', banda2: '#a9acb6', cierre: '#d9d9d9', gema: null },
+    plata: { cuerpo: '#8e9bb0', claro: '#cfd8e6', oscuro: '#4a5468', banda: '#3a74c9', banda2: '#7fb1ff', cierre: '#ffffff', gema: null },
+    oro: { cuerpo: '#d49b12', claro: '#ffd23f', oscuro: '#7a5200', banda: '#b01d2e', banda2: '#ff5a6e', cierre: '#fff4b0', gema: '#ff3b3b' },
+    legendario: { cuerpo: '#6a2bb0', claro: '#c86bff', oscuro: '#2c0f55', banda: '#ffd23f', banda2: '#fff4b0', cierre: '#ffffff', gema: '#6fd0ff' },
+    /* asustado, como un fantasma tras la superpastilla (alternativa D) */
+    susto: { cuerpo: '#2121ff', claro: '#5a5aff', oscuro: '#0c0c66', banda: '#ffb8ae', banda2: '#ffe0da', cierre: '#ffb8ae', gema: null },
+    blanco: { cuerpo: '#ffffff', claro: '#ffffff', oscuro: '#b0b0c0', banda: '#ff0000', banda2: '#ff7070', cierre: '#ff0000', gema: null }
+  };
+  /* o: dx dy sx sy tapaDY tapaDX tapaRot tapaA fuga(0..1: luz por la rendija)
+   *    boca(0..1: abierto, con luz) barrido(0..1 + pal2: repintado de arriba abajo) */
+  function cofre(c, pal, cx, by, u, o) {
+    o = o || {};
+    c.save();
+    c.translate(Math.round(cx + (o.dx || 0)), Math.round(by + (o.dy || 0)));
+    if (o.sombra !== false) {
+      c.fillStyle = 'rgba(0,0,0,0.45)';
+      c.fillRect(-11 * u, -(o.dy || 0) + 0, 22 * u, u);
+    }
+    if (o.sx || o.sy) c.scale(o.sx || 1, o.sy || 1);
+    var x0 = -12 * u, y0 = -18 * u;
+    function pintar(P) {
+      function r(x, y, w, h, col) { c.fillStyle = col; c.fillRect(x0 + x * u, y0 + y * u, w * u, h * u); }
+      r(0, 7, 24, 11, P.oscuro);
+      r(1, 8, 22, 9, P.cuerpo);
+      r(1, 8, 22, 1, P.claro);
+      for (var i = 0; i < 3; i++) r(1, 11 + i * 2, 22, 1, 'rgba(0,0,0,0.18)');
+      r(3, 7, 2, 11, P.banda); r(19, 7, 2, 11, P.banda);
+      r(3, 7, 1, 11, P.banda2); r(19, 7, 1, 11, P.banda2);
+      if (o.boca) {
+        c.globalAlpha = o.boca;
+        r(1, 7, 22, 2, alfa(P.banda2, 0.9));
+        r(2, 7, 20, 1, '#ffffff');
+        c.globalAlpha = 1;
+      }
+      if (o.fuga) {
+        var alza = (o.tapaDY || 0);
+        c.fillStyle = alfa(P.banda2, Math.min(1, o.fuga));
+        c.fillRect(x0 + u, y0 + 7 * u - alza - u * 0.5, 22 * u, alza + u * 0.9);
+        c.fillStyle = alfa('#ffffff', Math.min(1, o.fuga) * 0.9);
+        c.fillRect(x0 + 2 * u, y0 + 7 * u - alza * 0.6 - u * 0.25, 20 * u, Math.max(1, alza * 0.5));
+      }
+      if (o.tapaA === 0) return;
+      c.save();
+      c.globalAlpha *= (o.tapaA == null ? 1 : o.tapaA);
+      c.translate(o.tapaDX || 0, -(o.tapaDY || 0));
+      if (o.tapaRot) {
+        c.translate(0, y0 + 4.5 * u);
+        c.rotate(o.tapaRot);
+        c.translate(0, -(y0 + 4.5 * u));
+      }
+      r(0, 2, 24, 6, P.oscuro);
+      r(1, 1, 22, 1, P.oscuro);
+      r(1, 2, 22, 5, P.cuerpo);
+      r(2, 1, 20, 1, P.claro);
+      r(1, 2, 22, 1, P.claro);
+      r(3, 1, 2, 7, P.banda); r(19, 1, 2, 7, P.banda);
+      r(3, 1, 1, 7, P.banda2); r(19, 1, 1, 7, P.banda2);
+      r(10, 5, 4, 4, P.oscuro);
+      r(11, 5, 2, 3, P.cierre);
+      if (P.gema) r(11, 3, 2, 2, P.gema);
+      if (o.cara) {
+        /* la boca en zigzag del fantasma asustado */
+        for (var z = 0; z < 6; z++) r(6 + z * 2, 4 + (z % 2), 2, 1, P.cierre);
+      }
+      c.restore();
+    }
+    pintar(o.pal || pal);
+    if (o.barrido > 0 && o.pal2) {
+      c.save();
+      c.beginPath();
+      c.rect(x0 - 2 * u, y0 - 30 * u, 28 * u, (30 + 18 * o.barrido) * u + 2);
+      c.clip();
+      pintar(o.pal2);
+      c.restore();
+    }
+    c.restore();
+  }
+
+  /* ================= premios: el motor del juego =================
+   * Igual que UI.pintarPremioCofre: la escena de la vitrina (pasillo con el
+   * Pac-Man dando vueltas a tamaño de partida) y la lupa x2 encima. */
+  var PIEZA = {};
+  (CFG.SKINS || []).forEach(function (s) { PIEZA[s.id] = { name: s.name, cat: 'skin' }; });
+  (CFG.EFECTOS || []).forEach(function (s) { PIEZA[s.id] = { name: s.name, cat: 'efecto' }; });
+  (CFG.ACCESORIOS || []).forEach(function (s) { PIEZA[s.id] = { name: s.name, cat: 'accesorio' }; });
+  (CFG.EMOTES_TIENDA || []).forEach(function (s) { PIEZA[s.id] = { name: s.name, cat: 'emote' }; });
+  var TMP = document.createElement('canvas');
+  TMP.width = Sk.ESCENA_W; TMP.height = Sk.ESCENA_H;
+  var lupas = {}, cuadro = 0, relojG = 0;
+  function lupa(id) {
+    var e = lupas[id];
+    if (!e) {
+      e = lupas[id] = { cv: document.createElement('canvas'), f: -1 };
+      e.cv.width = 96; e.cv.height = 96;
+    }
+    if (e.f !== cuadro) {
+      e.f = cuadro;
+      var p = PIEZA[id] || { cat: 'skin' }, t = relojG + (rnd(id.length) * 3);
+      try {
+        var pos = Sk.escena(TMP, p.cat === 'skin' ? id : 'clasico', jugador, t * 44, t, {
+          efecto: p.cat === 'efecto' ? id : null,
+          accesorio: p.cat === 'accesorio' ? id : null,
+          emote: p.cat === 'emote' ? id : null
+        });
+        Sk.lupa(e.cv, TMP, pos, p.cat === 'efecto' ? 5 : 0, p.cat === 'emote' ? 19 : 0);
+      } catch (err) {
+        var c = e.cv.getContext('2d');
+        c.fillStyle = '#300'; c.fillRect(0, 0, 96, 96);
+      }
+    }
+    return e.cv;
+  }
+  function nombre(id) { return (PIEZA[id] && PIEZA[id].name) || id.toUpperCase(); }
+
+  /* un premio en su recuadro. sx < 0: se ve el dorso (vuelta de carta) */
+  function recuadro(c, id, cx, cy, lado, col, o) {
+    o = o || {};
+    var sx = o.sx == null ? 1 : o.sx;
+    c.save();
+    c.translate(cx, cy);
+    c.scale(Math.max(0.02, Math.abs(sx)), 1);
+    var h = lado / 2;
+    if (o.brillo) {
+      var g = c.createRadialGradient(0, 0, h * 0.4, 0, 0, h * 2.1);
+      g.addColorStop(0, alfa(col, 0.45 * o.brillo));
+      g.addColorStop(1, alfa(col, 0));
+      c.fillStyle = g;
+      c.fillRect(-h * 2.2, -h * 2.2, h * 4.4, h * 4.4);
+    }
+    c.fillStyle = '#000';
+    c.fillRect(-h - 3, -h - 3, lado + 6, lado + 6);
+    if (sx < 0 || o.dorso) {
+      /* el dorso: cuadros del color del cofre y una interrogación */
+      var n = 6, q = lado / n;
+      for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) {
+        c.fillStyle = (i + j) % 2 ? alfa(col, 0.55) : alfa(col, 0.3);
+        c.fillRect(-h + i * q, -h + j * q, q, q);
+      }
+      if (o.dorsoMoneda) {
+        moneda(c, 0, 0, lado * 0.32, 0);
+      } else {
+        texto(c, '?', 0, 2, Math.round(lado * 0.36), '#fff', 'center', 'rgba(0,0,0,.6)');
+      }
+    } else {
+      c.imageSmoothingEnabled = false;
+      c.globalAlpha = o.a == null ? 1 : o.a;
+      c.drawImage(lupa(id), -h, -h, lado, lado);
+      c.globalAlpha = 1;
+      if (o.gris) {
+        c.fillStyle = 'rgba(0,0,10,' + (0.6 * o.gris) + ')';
+        c.fillRect(-h, -h, lado, lado);
+      }
+    }
+    c.strokeStyle = o.borde || col;
+    c.lineWidth = 3;
+    c.strokeRect(-h - 1.5, -h - 1.5, lado + 3, lado + 3);
+    /* esquinas de píxel */
+    c.fillStyle = o.borde || col;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (e) {
+      c.fillRect(e[0] * (h + 3) - 3, e[1] * (h + 3) - 3, 6, 6);
+    });
+    c.restore();
+  }
+
+  function moneda(c, x, y, r, giro) {
+    var s = Math.cos(giro || 0), w = Math.max(0.18, Math.abs(s));
+    c.save();
+    c.translate(x, y);
+    c.scale(w, 1);
+    c.fillStyle = '#8a6206';
+    c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+    c.fillStyle = s >= 0 ? '#ffd23f' : '#e0a800';
+    c.beginPath(); c.arc(-r * 0.08, -r * 0.08, r * 0.8, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#b8860b';
+    c.fillRect(-r * 0.12, -r * 0.45, r * 0.24, r * 0.9);
+    c.fillStyle = '#fff6c0';
+    c.fillRect(-r * 0.55, -r * 0.55, Math.max(2, r * 0.22), Math.max(2, r * 0.22));
+    c.restore();
+  }
+
+  function estrella(c, x, y, s, col, a) {
+    if (a <= 0 || s <= 0) return;
+    c.save();
+    c.globalAlpha = Math.min(1, a);
+    c.fillStyle = col;
+    c.beginPath();
+    c.moveTo(x, y - s);
+    c.quadraticCurveTo(x, y, x + s, y);
+    c.quadraticCurveTo(x, y, x, y + s);
+    c.quadraticCurveTo(x, y, x - s, y);
+    c.quadraticCurveTo(x, y, x, y - s);
+    c.fill();
+    c.restore();
+  }
+
+  function rayos(c, cx, cy, cols, fuerza, ang, n) {
+    if (fuerza <= 0) return;
+    c.save();
+    c.translate(cx, cy);
+    c.rotate(ang);
+    for (var i = 0; i < n; i++) {
+      c.rotate(Math.PI * 2 / n);
+      c.fillStyle = alfa(cols[i % cols.length], (i % 2 ? 0.10 : 0.22) * fuerza);
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(W, -W * 0.13 * 12 / n);
+      c.lineTo(W, W * 0.13 * 12 / n);
+      c.closePath();
+      c.fill();
+    }
+    c.restore();
+  }
+
+  /* cielo de estrellas del LEGENDARIO */
+  function estrellas(c, g, a) {
+    for (var i = 0; i < 38; i++) {
+      var x = rnd(i) * W, y = (rnd(i + 50) * H + g * (8 + rnd(i + 9) * 18)) % H;
+      var tw = 0.4 + 0.6 * Math.abs(Math.sin(g * (1.5 + rnd(i + 3) * 3) + i));
+      c.fillStyle = alfa(i % 3 ? '#c86bff' : '#ffffff', a * tw);
+      var s = i % 5 ? 2 : 3;
+      c.fillRect(Math.round(x), Math.round(y), s, s);
+    }
+  }
+
+  function fundido(c, tl, dur) {
+    var f = seg(tl, dur - 0.35, dur) + (1 - seg(tl, 0, 0.12));
+    if (f > 0) { c.fillStyle = 'rgba(0,0,0,' + Math.min(1, f) + ')'; c.fillRect(0, 0, W, H); }
+  }
+
+  /* LEGENDARIO en letras que ondean, violeta y oro */
+  function letrero(c, s, y, px, g, a) {
+    if (a <= 0) return;
+    c.save();
+    c.globalAlpha = a;
+    c.font = px + 'px ' + LETRA;
+    var ancho = s.length * px, x0 = (W - ancho) / 2 + px / 2;
+    for (var i = 0; i < s.length; i++) {
+      var yy = y + Math.sin(g * 6 + i * 0.6) * 3;
+      texto(c, s[i], x0 + i * px, yy, px, (Math.floor(g * 4) + i) % 2 ? '#c86bff' : '#ffd23f', 'center', '#2c0f55');
+    }
+    c.restore();
+  }
+
+  /* ================= las seis escenas =================
+   * Los premios y los textos son los que da el juego (UI.textoPremioCofre). */
+  var ESC = [
+    { id: 'madera', cofre: 'madera', tipo: 'madera', items: [], monedas: 55, quedan: 2, cap: 'MADERA', sub: 'MONEDAS' },
+    { id: 'plata', cofre: 'plata', tipo: 'plata', items: ['efx_brasas'], monedas: 0, quedan: 1, cap: 'PLATA', sub: 'EFECTO NUEVO' },
+    { id: 'oro', cofre: 'oro', tipo: 'oro', items: ['acc_aureola', 'fenix'], monedas: 0, quedan: 0, cap: 'ORO', sub: 'ACCESORIO + SKIN (15 %)' },
+    { id: 'repe', cofre: 'oro', tipo: 'oro', items: ['acc_alado'], rep: 350, monedas: 350, quedan: 0, cap: 'ORO', sub: 'REPETIDO > MONEDAS' },
+    { id: 'leg', cofre: 'legendario', tipo: 'legendario', items: ['agujero'], monedas: 0, quedan: 0, cap: 'LEGENDARIO', sub: 'TOP 3 DE TEMPORADA' },
+    { id: 'era', cofre: 'oro', tipo: 'legendario', items: ['agujero'], era: true, monedas: 0, quedan: 0, cap: 'ORO', sub: 'QUE ERA LEGENDARIO (2 %)' }
+  ];
+  var CAT = { skin: 'SKIN', accesorio: 'ACCESORIO', efecto: 'EFECTO', emote: 'EMOTE' };
+  function textos(e) {
+    var partes = [], subs = [];
+    if (e.rep) {
+      partes.push(nombre(e.items[0]));
+      subs.push('YA LO TENÍAS: +' + miles(e.rep) + ' MONEDAS');
+    } else {
+      e.items.forEach(function (id) {
+        var p = PIEZA[id] || {};
+        partes.push(nombre(id));
+        subs.push('¡' + (CAT[p.cat] || 'PIEZA') + (p.cat === 'skin' ? ' NUEVA!' : ' NUEVO!'));
+      });
+      if (e.items.length) subs.push('YA EN TU VESTUARIO');
+      if (!e.items.length) partes.push('+' + miles(e.monedas) + ' MONEDAS');
+    }
+    return {
+      t: (e.era ? '¡ERA LEGENDARIO! ' : '') + partes.join(' + '),
+      s: subs.join(' · ') || ('TIENES ' + miles(1230 + e.monedas) + ' MONEDAS'),
+      col: COL[e.tipo]
+    };
+  }
+  /* ¿se ve ya legendario? (el ORO del 2 % cambia a mitad) */
+  function esLeg(e, tl, cambio) { return e.cofre === 'legendario' || (e.era && tl >= cambio); }
+
+  /* ======================================================================
+   * A · LA DE HOY, PULIDA
+   * Lo mismo que hay (rayos, cofre abajo, premio en su recuadro arriba) con
+   * lo que le falta: la luz se escapa por la rendija mientras espera, onda
+   * al abrir, el recuadro sube con rebote, las monedas se cuentan y el
+   * repetido lleva su sello. El legendario tiembla la pantalla y cambia el
+   * cielo.
+   * ====================================================================== */
+  var A = {
+    abre: function (e) { return e.era ? 2.3 : e.cofre === 'legendario' ? 1.7 : 1.1; },
+    revela: function (e) { return this.abre(e) + 0.6; },
+    dur: function (e) { return this.abre(e) + (e.rep ? 5.0 : e.cofre === 'legendario' || e.era ? 4.6 : 4.0); },
+    draw: function (c, e, tl, g) {
+      var ab = this.abre(e), tras = tl - ab;
+      var leg = esLeg(e, tl, 1.4);
+      var col = COL[leg ? 'legendario' : e.cofre];
+      c.fillStyle = '#04040d'; c.fillRect(0, 0, W, H);
+      if (leg) estrellas(c, g, e.era ? seg(tl, 1.4, 1.9) : 1);
+      c.save();
+      if (leg && tras < 0 && tl > 0.4) {
+        var q = e.era ? seg(tl, 1.6, ab) : seg(tl, 0.4, ab);
+        c.translate(Math.round((rnd(Math.floor(g * 30)) - 0.5) * 6 * q), Math.round((rnd(Math.floor(g * 30) + 7) - 0.5) * 6 * q));
+      }
+      var fuerza = tras < 0 ? Math.min(0.55, tl * 0.4) * (leg ? 1.5 : 1) : 1;
+      rayos(c, W / 2, 168, leg ? ['#c86bff', '#ffd23f'] : [col], fuerza, g * (tras < 0 ? 0.6 : 0.35), leg ? 16 : 12);
+
+      /* el cofre */
+      var u = 6, by = H - 20;
+      var tiembla = tras < 0 ? Math.min(1, 0.25 + tl * 0.6) : 0;
+      if (e.era && tl > 1.1 && tl < 1.65) tiembla = 0;
+      if (e.era && tl >= 1.65 && tras < 0) tiembla = 1.5;
+      var dx = tiembla ? Math.round(Math.sin(tl * 60) * tiembla * u * 0.5) : 0;
+      var fuga = tras < 0 ? seg(tl, 0.15, ab) : 0;
+      var alza = tras < 0 ? fuga * u * (0.5 + 0.5 * Math.abs(Math.sin(tl * 23))) : 0;
+      /* la luz de la rendija */
+      if (fuga > 0) {
+        var gl = c.createRadialGradient(W / 2, by - 11 * u, 4, W / 2, by - 11 * u, 120);
+        gl.addColorStop(0, alfa(col, 0.5 * fuga));
+        gl.addColorStop(1, alfa(col, 0));
+        c.fillStyle = gl; c.fillRect(0, 0, W, H);
+        for (var p = 0; p < 10; p++) {
+          var ph = (g * 0.9 + rnd(p)) % 1;
+          c.fillStyle = alfa(p % 3 ? col : '#ffffff', (1 - ph) * fuga);
+          c.fillRect(Math.round(W / 2 - 60 + rnd(p + 4) * 120 + dx), Math.round(by - 11 * u - ph * 60), 3, 3);
+        }
+      }
+      var pal = PAL[e.cofre];
+      var abierta = tras >= 0;
+      cofre(c, pal, W / 2, by, u, {
+        dx: dx,
+        tapaDY: abierta ? tras * 520 : alza,
+        tapaRot: abierta ? tras * 2.2 : 0,
+        tapaA: abierta ? 1 - seg(tras, 0.12, 0.4) : 1,
+        fuga: abierta ? 0 : fuga,
+        boca: abierta ? 1 : 0,
+        pal2: PAL.legendario,
+        barrido: e.era ? seg(tl, 1.15, 1.55) : 0
+      });
+      /* ORO que cambia: fogonazo breve al empezar */
+      if (e.era && tl > 1.1 && tl < 1.35) {
+        c.fillStyle = 'rgba(200,107,255,' + (0.5 * (1 - seg(tl, 1.1, 1.35))) + ')';
+        c.fillRect(0, 0, W, H);
+      }
+
+      if (abierta) {
+        /* onda */
+        if (tras < 0.6) {
+          c.strokeStyle = alfa(col, 1 - tras / 0.6);
+          c.lineWidth = 6;
+          c.beginPath(); c.arc(W / 2, by - 11 * u, 20 + tras * 380, 0, Math.PI * 2); c.stroke();
+        }
+        /* confeti de píxel */
+        for (var k = 0; k < 26; k++) {
+          var tv = tras - 0.02;
+          if (tv < 0 || tv > 1.4) continue;
+          var ang = -Math.PI / 2 + (rnd(k) - 0.5) * 2.6, v = 180 + rnd(k + 2) * 260;
+          var x = W / 2 + Math.cos(ang) * v * tv, y = by - 11 * u + Math.sin(ang) * v * tv + 380 * tv * tv;
+          c.fillStyle = alfa([col, '#ffffff', leg ? '#ffd23f' : PAL[e.cofre].banda2][k % 3], 1 - tv / 1.4);
+          c.fillRect(Math.round(x), Math.round(y), 4, 4);
+        }
+        premioA(c, e, tras, g, col, leg, by - 11 * u);
+      }
+      c.restore();
+
+      if (abierta && tras < 0.35) {
+        c.fillStyle = alfa('#ffffff', 0.85 * (1 - tras / 0.35));
+        c.fillRect(0, 0, W, H);
+        if (leg && tras > 0.12) { c.fillStyle = alfa('#c86bff', 0.5 * (1 - tras / 0.35)); c.fillRect(0, 0, W, H); }
+      }
+      if (leg && abierta) letrero(c, 'LEGENDARIO', 24, 16, g, seg(tras, 0.4, 0.8));
+      fundido(c, tl, this.dur(e));
+    }
+  };
+  function premioA(c, e, tras, g, col, leg, bocaY) {
+    if (tras < 0.12) return;
+    var k = seg(tras, 0.12, 0.75), kk = eBack(k), ke = eOut(k);
+    var n = e.items.length;
+    var cy = lerp(bocaY, leg ? 140 : 128, kk);
+    if (n) {
+      var lado = n > 1 ? 100 : 116;
+      e.items.forEach(function (id, j) {
+        var off = (j - (n - 1) / 2) * (lado + 18) * ke;
+        var s = lado * (0.35 + 0.65 * ke);
+        var borde = leg ? ((Math.floor(g * 5) % 2) ? '#c86bff' : '#ffd23f') : col;
+        var gris = e.rep ? seg(tras, 1.7, 2.0) : 0;
+        recuadro(c, id, W / 2 + off, cy, s, col, { a: k, brillo: 0.6 + 0.4 * Math.sin(g * 3), borde: borde, gris: gris });
+        if (k >= 1) {
+          for (var q = 0; q < 6; q++) {
+            var tw = Math.sin(g * 4 + q * 1.7);
+            var aq = q * 1.047 + g * 0.5;
+            estrella(c, W / 2 + off + Math.cos(aq) * (s * 0.78), cy + Math.sin(aq) * (s * 0.7), 6 * Math.max(0, tw), '#ffffff', tw);
+          }
+        }
+        if (e.rep) repetidoA(c, W / 2 + off, cy, s, tras, g);
+      });
+    } else {
+      /* monedas: salen del cofre en arco, se amontonan y se cuentan */
+      for (var m = 0; m < 12; m++) {
+        var t0 = 0.05 + m * 0.035, q2 = seg(tras, t0, t0 + 0.55);
+        if (q2 <= 0) continue;
+        var tx = W / 2 + ((m % 4) - 1.5) * 26 + (Math.floor(m / 4) % 2) * 13;
+        var ty = 176 - Math.floor(m / 4) * 14;
+        var x = lerp(W / 2, tx, q2), y = lerp(bocaY, ty, q2) - Math.sin(q2 * Math.PI) * 70;
+        moneda(c, x, y, 13, g * 6 + m);
+      }
+      var cuenta = Math.round(e.monedas * eOut(seg(tras, 0.35, 1.15)));
+      var pop = (0.4 + 0.6 * eBack(seg(tras, 0.3, 0.5))) * (1 + 0.35 * Math.sin(seg(tras, 1.15, 1.4) * Math.PI));
+      c.save(); c.translate(W / 2, 88); c.scale(pop, pop); c.globalAlpha = seg(tras, 0.3, 0.4);
+      texto(c, '+' + miles(cuenta), 0, 0, 26, '#ffd23f', 'center', '#7a5200');
+      c.restore();
+    }
+  }
+  function repetidoA(c, x, y, lado, tras, g) {
+    /* el sello */
+    var k = seg(tras, 1.35, 1.52);
+    if (k > 0) {
+      var s = lerp(2.2, 1, eOut(k));
+      c.save();
+      c.translate(x, y - lado * 0.08);
+      c.rotate(-0.22);
+      c.scale(s, s);
+      c.globalAlpha = k;
+      c.fillStyle = '#ffffff';
+      c.fillRect(-62, -13, 124, 26);
+      c.fillStyle = '#e8203a';
+      c.fillRect(-59, -10, 118, 20);
+      texto(c, 'YA LO TENIAS', 0, 1, 8, '#ffffff');
+      c.restore();
+    }
+    /* se deshace en monedas */
+    for (var m = 0; m < 8; m++) {
+      var t0 = 1.75 + m * 0.07, q = seg(tras, t0, t0 + 0.7);
+      if (q <= 0 || q >= 1) continue;
+      var dir = (rnd(m + 30) - 0.5) * 2;
+      moneda(c, x + dir * 90 * q, y + lado * 0.2 - Math.sin(q * Math.PI) * 60 + q * 80, 9, g * 8 + m);
+    }
+    var kc = seg(tras, 1.8, 2.6);
+    if (kc > 0) {
+      c.fillStyle = 'rgba(0,0,0,0.75)';
+      c.fillRect(x - lado / 2, y + lado / 2 - 28, lado, 28);
+      moneda(c, x - lado / 2 + 16, y + lado / 2 - 14, 9, g * 5);
+      texto(c, '+' + miles(350 * eOut(kc)), x - lado / 2 + 32, y + lado / 2 - 13, 12, '#ffd23f', 'left');
+    }
+  }
+
+  /* ======================================================================
+   * B · EL SALTO
+   * El cofre da tres saltos (cada vez más altos, la tapa se entreabre y se
+   * escapa luz), en el último se agacha y la tapa sale disparada girando.
+   * Sube un haz de luz y el premio asciende por él dando vueltas como una
+   * carta, hasta quedarse de frente. El repetido vuelve a girar y por detrás
+   * es una moneda que revienta en monedas.
+   * ====================================================================== */
+  var SALTOS = [[0.12, 0.28, 8], [0.55, 0.3, 14], [0.95, 0.34, 22]];
+  var B = {
+    abre: function (e) { return e.era ? 2.25 : e.cofre === 'legendario' ? 2.0 : 1.5; },
+    revela: function (e) { return this.abre(e) + 1.0; },
+    dur: function (e) { return this.abre(e) + (e.rep ? 5.0 : e.items.length > 1 ? 4.4 : 4.0); },
+    draw: function (c, e, tl, g) {
+      var ab = this.abre(e), tras = tl - ab;
+      var leg = esLeg(e, tl, 1.5);
+      var col = COL[leg ? 'legendario' : e.cofre];
+      c.fillStyle = '#04040d'; c.fillRect(0, 0, W, H);
+      if (leg) estrellas(c, g, e.era ? seg(tl, 1.5, 2.0) : seg(tl, 0, 0.8));
+      var u = 6, suelo = H - 34;
+      var dy = 0, sx = 1, sy = 1, alza = 0, sacude = 0, polvo = [];
+      if (e.cofre === 'legendario') {
+        /* el legendario no salta: levita */
+        dy = -26 * eInOut(seg(tl, 0.1, 1.5)) + Math.sin(tl * 5) * 3 * seg(tl, 0.2, 1.0);
+        alza = seg(tl, 0.6, ab) * u * (0.4 + 0.6 * Math.abs(Math.sin(tl * 17)));
+        if (tras >= 0) dy = -26 * (1 - eOut(seg(tras, 0.3, 1.0)));
+      } else {
+        var saltos = e.era ? SALTOS.slice(0, 2) : SALTOS;
+        saltos.forEach(function (s) {
+          var p = (tl - s[0]) / s[1];
+          if (p >= 0 && p <= 1) dy = -s[2] * 4 * p * (1 - p);
+          var tras2 = tl - (s[0] + s[1]);
+          if (tras2 >= 0 && tras2 < 0.14) {
+            var q = 1 - tras2 / 0.14;
+            sy = 1 - 0.16 * q; sx = 1 + 0.12 * q; alza = Math.max(alza, u * 1.2 * q);
+            sacude = Math.max(sacude, s[2] / 22 * q);
+          }
+          if (tras2 >= 0 && tras2 < 0.45) polvo.push(tras2);
+        });
+        if (e.era) {
+          /* tercer salto: se queda arriba, se agrieta y cambia a violeta */
+          var subir = seg(tl, 0.95, 1.15), bajar = seg(tl, 1.85, 2.0);
+          if (tl >= 0.95 && tl < 2.0) dy = -30 * eOut(subir) * (1 - eIn(bajar)) + Math.sin(tl * 30) * 2 * seg(tl, 1.2, 1.4) * (1 - bajar);
+          var t3 = tl - 2.0;
+          if (t3 >= 0 && t3 < 0.14) { sy = 1 - 0.2 * (1 - t3 / 0.14); sx = 1 + 0.15 * (1 - t3 / 0.14); sacude = 1.2 * (1 - t3 / 0.14); }
+          if (t3 >= 0 && t3 < 0.45) polvo.push(t3);
+        }
+        /* se agacha antes de abrir */
+        var ag = seg(tl, ab - 0.2, ab);
+        if (tras < 0 && ag > 0) { sy = Math.min(sy, 1 - 0.2 * ag); sx = Math.max(sx, 1 + 0.14 * ag); }
+      }
+      if (tras >= 0 && tras < 0.25) { var st = 1 - tras / 0.25; sy = 1 + 0.18 * st; sx = 1 - 0.1 * st; }
+      c.save();
+      if (sacude > 0) c.translate(Math.round((rnd(Math.floor(g * 40)) - 0.5) * 8 * sacude), Math.round((rnd(Math.floor(g * 40) + 3) - 0.5) * 6 * sacude));
+      /* el suelo */
+      c.fillStyle = '#2121ff';
+      c.fillRect(24, suelo + 2, W - 48, 3);
+      c.fillStyle = '#14146e';
+      c.fillRect(24, suelo + 8, W - 48, 2);
+      /* el polvo al caer */
+      polvo.forEach(function (pt) {
+        for (var i = 0; i < 8; i++) {
+          var lado = i % 2 ? 1 : -1, v = 40 + rnd(i) * 70;
+          var x = W / 2 + lado * (70 + v * pt), y = suelo - 4 - Math.sin(pt / 0.45 * Math.PI) * (6 + rnd(i + 2) * 10);
+          c.fillStyle = 'rgba(185,186,230,' + (0.7 * (1 - pt / 0.45)) + ')';
+          c.fillRect(Math.round(x), Math.round(y), 4, 4);
+        }
+      });
+      var bocaY = suelo + dy - 11 * u * sy;
+      /* el haz */
+      if (tras >= 0) {
+        var hz = seg(tras, 0, 0.12) * (1 - 0.55 * seg(tras, 1.2, 2.2));
+        var gr = c.createLinearGradient(0, bocaY, 0, 0);
+        gr.addColorStop(0, alfa(col, 0.6 * hz));
+        gr.addColorStop(1, alfa(col, 0));
+        c.fillStyle = gr;
+        c.beginPath();
+        c.moveTo(W / 2 - 10 * u, bocaY); c.lineTo(W / 2 + 10 * u, bocaY);
+        c.lineTo(W / 2 + 110, 0); c.lineTo(W / 2 - 110, 0); c.closePath(); c.fill();
+        for (var k = 0; k < 14; k++) {
+          var ph = (g * 0.8 + rnd(k)) % 1;
+          c.fillStyle = alfa(k % 3 ? col : '#ffffff', hz * (1 - ph));
+          c.fillRect(Math.round(W / 2 + (rnd(k + 5) - 0.5) * (120 + ph * 120)), Math.round(bocaY - ph * bocaY), 3, 3);
+        }
+      }
+      /* estrellas en órbita del legendario que levita */
+      if (e.cofre === 'legendario' && tras < 0) {
+        for (var o = 0; o < 6; o++) {
+          var ao = g * 2.4 + o * 1.047;
+          estrella(c, W / 2 + Math.cos(ao) * 100, suelo + dy - 50 + Math.sin(ao) * 22, 5, o % 2 ? '#ffd23f' : '#c86bff', Math.sin(ao) > -0.2 ? 1 : 0.4);
+        }
+      }
+      var abierta = tras >= 0;
+      var ltx = abierta ? 90 * tras : 0, lty = abierta ? (560 * tras + 380 * tras * tras) : alza;
+      cofre(c, PAL[e.cofre], W / 2, suelo, u, {
+        dy: dy, sx: sx, sy: sy,
+        tapaDY: lty, tapaDX: ltx, tapaRot: abierta ? tras * 11 : 0,
+        fuga: abierta ? 0 : Math.min(1, alza / u),
+        boca: abierta ? 1 : 0,
+        pal2: PAL.legendario,
+        barrido: e.era ? seg(tl, 1.35, 1.75) : 0
+      });
+      /* grietas de luz en el ORO que va a ser legendario */
+      if (e.era && tl > 1.2 && tl < 1.8) {
+        var gk = seg(tl, 1.2, 1.4) * (1 - seg(tl, 1.65, 1.8));
+        c.strokeStyle = alfa('#f0d0ff', gk);
+        c.lineWidth = 3;
+        c.beginPath();
+        var cyy = suelo + dy - 9 * u;
+        c.moveTo(W / 2 - 40, cyy - 20); c.lineTo(W / 2 - 18, cyy - 4); c.lineTo(W / 2 - 26, cyy + 12);
+        c.moveTo(W / 2 + 30, cyy - 26); c.lineTo(W / 2 + 12, cyy - 6); c.lineTo(W / 2 + 34, cyy + 14);
+        c.stroke();
+        var gg = c.createRadialGradient(W / 2, cyy, 6, W / 2, cyy, 130);
+        gg.addColorStop(0, alfa('#c86bff', 0.5 * gk)); gg.addColorStop(1, alfa('#c86bff', 0));
+        c.fillStyle = gg; c.fillRect(0, 0, W, H);
+      }
+      if (abierta) premioB(c, e, tras, g, col, leg, bocaY);
+      c.restore();
+      if (abierta && tras < 0.2) { c.fillStyle = alfa('#ffffff', 0.7 * (1 - tras / 0.2)); c.fillRect(0, 0, W, H); }
+      if (leg && abierta) {
+        var nL = Math.floor(seg(tras, 1.0, 1.6) * 10);
+        letrero(c, 'LEGENDARIO'.slice(0, nL), 22, 16, g, 1);
+      }
+      fundido(c, tl, this.dur(e));
+    }
+  };
+  function premioB(c, e, tras, g, col, leg, bocaY) {
+    var n = e.items.length;
+    if (!n) {
+      /* una fuente de monedas que cae al suelo */
+      var suelo = H - 34;
+      for (var m = 0; m < 16; m++) {
+        var t0 = 0.05 + m * 0.04, tv = tras - t0;
+        if (tv < 0) continue;
+        var vx = (rnd(m) - 0.5) * 300, vy = -(430 + rnd(m + 1) * 220), gz = 1100;
+        var tAire = (-vy + Math.sqrt(vy * vy + 2 * gz * (suelo - 10 - bocaY))) / gz;
+        var tt = Math.min(tv, tAire);
+        var x = W / 2 + vx * tt, y = bocaY + vy * tt + 0.5 * gz * tt * tt;
+        if (tv > tAire) { var rb = tv - tAire; y -= Math.max(0, Math.sin(rb * 14) * 14 * Math.exp(-rb * 6)); }
+        x = clamp(x, 30, W - 30);
+        moneda(c, x, y, 11, tv < tAire ? g * 12 + m : 0.3 * m);
+      }
+      var kk = seg(tras, 0.5, 0.8);
+      if (kk > 0) {
+        var s = 0.4 + 0.6 * eBack(kk);
+        c.save(); c.translate(W / 2, 70); c.scale(s, s);
+        texto(c, '+' + miles(e.monedas * eOut(seg(tras, 0.5, 1.3))), 0, 0, 26, '#ffd23f', 'center', '#7a5200');
+        c.restore();
+      }
+      return;
+    }
+    var lado = n > 1 ? 96 : 116;
+    e.items.forEach(function (id, j) {
+      var d = j * 0.32;
+      var k = seg(tras, 0.05 + d, 1.0 + d);
+      if (k <= 0) return;
+      var ke = eOut(k);
+      var fx = W / 2 + (j - (n - 1) / 2) * (lado + 22);
+      var x = lerp(W / 2, fx, ke), y = lerp(bocaY, leg ? 118 : 104, ke);
+      var ang = (1 - ke) * (1 - ke) * Math.PI * 7;
+      var sx = Math.cos(ang), s = lado * (0.3 + 0.7 * ke);
+      var dorsoMoneda = false;
+      /* repetido: vuelve a girar y por detrás es una moneda */
+      if (e.rep) {
+        var fl = seg(tras, 1.7, 2.05);
+        if (fl > 0) { sx = Math.cos(fl * Math.PI); dorsoMoneda = true; }
+        var rv = seg(tras, 2.3, 2.5);
+        if (rv > 0) s *= (1 - rv);
+      }
+      if (leg && k > 0.2) {
+        /* remolino violeta detrás */
+        c.save(); c.translate(x, y);
+        for (var b = 0; b < 3; b++) {
+          c.rotate(g * 1.4 + b * 2.09);
+          c.strokeStyle = alfa(b === 1 ? '#ffd23f' : '#c86bff', 0.55 * k);
+          c.lineWidth = 5;
+          c.beginPath();
+          for (var a = 0; a < 3.2; a += 0.2) {
+            var rr = 30 + a * 28;
+            c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.8);
+          }
+          c.stroke();
+        }
+        c.restore();
+      }
+      if (s > 1) recuadro(c, id, x, y, s, col, { sx: sx, brillo: 0.5 + 0.5 * k, dorsoMoneda: dorsoMoneda });
+      /* estrellas en órbita mientras sube, y el ting al quedarse */
+      if (k < 1) {
+        for (var q = 0; q < 5; q++) {
+          var aq = g * 5 + q * 1.257;
+          estrella(c, x + Math.cos(aq) * s * 0.8, y + Math.sin(aq) * s * 0.35, 5, q % 2 ? '#ffffff' : col, 1);
+        }
+      } else {
+        var ting = seg(tras, 1.0 + d, 1.35 + d);
+        if (ting < 1 && !(e.rep && tras > 1.7)) {
+          c.strokeStyle = alfa('#ffffff', 1 - ting);
+          c.lineWidth = 3;
+          c.strokeRect(x - s / 2 - 6 - ting * 20, y - s / 2 - 6 - ting * 20, s + 12 + ting * 40, s + 12 + ting * 40);
+        }
+        for (var q2 = 0; q2 < 4; q2++) {
+          var tw = Math.sin(g * 3.5 + q2 * 2.1 + j);
+          estrella(c, x + [-1, 1, 1, -1][q2] * s * 0.62, y + [-1, -1, 1, 1][q2] * s * 0.62, 7 * Math.max(0, tw), '#ffffff', tw);
+        }
+      }
+      if (e.rep) {
+        /* revienta en monedas que caen dentro del cofre */
+        for (var m = 0; m < 10; m++) {
+          var q3 = seg(tras, 2.3 + m * 0.03, 2.95 + m * 0.03);
+          if (q3 <= 0 || q3 >= 1) continue;
+          var an = m * 0.628;
+          var px = lerp(x + Math.cos(an) * 60 * Math.sin(q3 * Math.PI), W / 2, eIn(q3));
+          var py = lerp(y + Math.sin(an) * 40 * Math.sin(q3 * Math.PI), bocaY, eIn(q3));
+          moneda(c, px, py, 10, g * 9 + m);
+        }
+        var kc = seg(tras, 2.45, 3.1);
+        if (kc > 0) {
+          texto(c, 'YA LO TENIAS', W / 2, 62, 10, '#ffffff', 'center', '#000');
+          var pop = 1 + 0.3 * Math.sin(seg(tras, 3.1, 3.35) * Math.PI);
+          c.save(); c.translate(W / 2, 106); c.scale(pop, pop);
+          texto(c, '+' + miles(e.rep * eOut(kc)), 0, 0, 24, '#ffd23f', 'center', '#7a5200');
+          c.restore();
+        }
+      }
+    });
+  }
+
+  /* ======================================================================
+   * C · LA TRAGAPERRAS
+   * El cofre es la máquina (su madera, sus bandas y su cierre). Se tira de
+   * la palanca y el rodillo gira con lo que puede traer ese cofre mientras
+   * contesta el servidor; cuando contesta, frena y se clava en el premio.
+   * ORO con skin: dos rodillos, el segundo frena después. El ORO del 2 %
+   * parece pararse en un accesorio y da un salto más hasta AGUJERO NEGRO.
+   * ====================================================================== */
+  var POOL = {
+    madera: [{ m: 30 }, { m: 45 }, { m: 80 }, { id: 'burla' }, { m: 60 }, { id: 'mareo' }, { m: 35 }, { id: 'jajaja' }],
+    plata: [{ id: 'efx_niebla' }, { m: 150 }, { id: 'efx_fantasmitas' }, { id: 'efx_constelacion' }, { m: 220 }, { id: 'efx_portales' }, { id: 'efx_ojos' }],
+    oro: [{ id: 'acc_luchador' }, { id: 'acc_patito' }, { id: 'acc_ojo' }, { id: 'acc_alas' }, { id: 'acc_alado' }, { id: 'acc_aureola' }],
+    skin: [{ nada: 1 }, { id: 'toro' }, { nada: 1 }, { id: 'genio' }, { nada: 1 }, { id: 'unicornio' }, { nada: 1 }, { id: 'triton' }],
+    legendario: [{ leg: 1 }, { id: 'agujero' }]
+  };
+  var V0 = 13;
+  var MXC = 150;   // el centro de la máquina (la palanca va a la derecha)
+  function rodillo(pool, premio, tFreno, dFreno, sem) {
+    /* dónde está a los tFreno s y dónde tiene que acabar: se ajusta la
+     * frenada (cúbica) para clavarse justo en una casilla con el premio */
+    var pS = V0 * 0.075 + V0 * Math.max(0, tFreno - 0.25);
+    var L0 = V0 * dFreno / 3;
+    var T = Math.ceil(pS + L0);
+    var L = T - pS, D = 3 * L / V0;
+    return {
+      T: T, D: D, tF: tFreno,
+      pos: function (t) {
+        if (t < 0.1) return 0;
+        if (t < 0.25) return V0 * (t - 0.1) * (t - 0.1) / 0.3;
+        if (t < tFreno) return V0 * 0.075 + V0 * (t - 0.25);
+        var u = (t - tFreno) / D;
+        if (u < 1) return pS + L * (1 - Math.pow(1 - u, 3));
+        var r = t - tFreno - D;
+        return T - 0.1 * Math.sin(r * 18) * Math.exp(-r * 7);
+      },
+      vel: function (t) { if (t < tFreno) return t < 0.25 ? V0 * 0.5 : V0; var u = (t - tFreno) / D; return u < 1 ? V0 * Math.pow(1 - u, 2) : 0; },
+      celda: function (i) {
+        if (i === T) return premio;
+        return pool[Math.floor(rnd(i * 7 + sem) * pool.length)];
+      },
+      fin: tFreno + D
+    };
+  }
+  var C = {
+    datos: function (e) {
+      if (e._c) return e._c;
+      var d = {};
+      if (e.id === 'madera') d.r = [rodillo(POOL.madera, { m: 55 }, 1.0, 1.4, 1)];
+      else if (e.id === 'plata') d.r = [rodillo(POOL.plata, { id: 'efx_brasas' }, 1.0, 1.4, 2)];
+      else if (e.id === 'oro') d.r = [rodillo(POOL.oro, { id: 'acc_aureola' }, 1.0, 1.2, 3), rodillo(POOL.skin, { id: 'fenix' }, 1.0, 2.3, 4)];
+      else if (e.id === 'repe') d.r = [rodillo(POOL.oro, { id: 'acc_alado' }, 1.0, 1.4, 5)];
+      else if (e.id === 'leg') d.r = [rodillo(POOL.legendario, { id: 'agujero' }, 1.0, 2.4, 6)];
+      else d.r = [rodillo(POOL.oro, { id: 'acc_ojo' }, 1.0, 1.4, 7)];
+      d.para = Math.max.apply(null, d.r.map(function (r) { return r.fin; }));
+      if (e.era) d.para += 1.1;
+      e._c = d;
+      return d;
+    },
+    abre: function (e) { return 1.0; },
+    revela: function (e) { return this.datos(e).para + 0.25; },
+    dur: function (e) { return this.datos(e).para + (e.rep ? 4.6 : 3.8); },
+    draw: function (c, e, tl, g) {
+      var d = this.datos(e), para = d.para;
+      var leg = esLeg(e, tl, para - 0.9);
+      var pal = PAL[leg && e.era ? 'legendario' : e.cofre];
+      if (e.era) {
+        var kk = seg(tl, para - 1.0, para - 0.6);
+        if (kk > 0 && kk < 1) pal = mezclaPal(PAL.oro, PAL.legendario, kk);
+      }
+      var col = COL[leg ? 'legendario' : e.cofre];
+      var ganado = tl >= para;
+      c.fillStyle = '#04040d'; c.fillRect(0, 0, W, H);
+      if (leg) estrellas(c, g, 0.8);
+      if (ganado) rayos(c, MXC, 132, leg ? ['#c86bff', '#ffd23f'] : [col], seg(tl, para, para + 0.3), g * 0.35, leg ? 16 : 12);
+      /* la máquina: el cofre de pie */
+      var mx = 28, my = 16, mw = 244, mh = 238;
+      c.fillStyle = pal.oscuro; c.fillRect(mx, my, mw, mh);
+      c.fillStyle = pal.cuerpo; c.fillRect(mx + 6, my + 6, mw - 12, mh - 12);
+      c.fillStyle = pal.claro; c.fillRect(mx + 6, my + 6, mw - 12, 6);
+      for (var i = 0; i < 6; i++) { c.fillStyle = 'rgba(0,0,0,0.16)'; c.fillRect(mx + 6, my + 60 + i * 32, mw - 12, 6); }
+      c.fillStyle = pal.banda; c.fillRect(mx + 18, my, 12, mh); c.fillRect(mx + mw - 30, my, 12, mh);
+      c.fillStyle = pal.banda2; c.fillRect(mx + 18, my, 6, mh); c.fillRect(mx + mw - 30, my, 6, mh);
+      /* las bombillas */
+      var nb = 0, fase = Math.floor(g * 12);
+      function bombilla(x, y) {
+        var on;
+        if (!ganado) on = (nb + fase) % 3 === 0;
+        else if (tl < para + 1.0) on = Math.floor(g * 8) % 2 === 0;
+        else on = (nb + Math.floor(g * 5)) % 2 === 0;
+        var cc = leg ? (nb % 2 ? '#ffd23f' : '#e6b3ff') : '#fff6c0';
+        c.fillStyle = on ? cc : alfa('#000000', 0.45);
+        c.beginPath(); c.arc(x, y, 4, 0, Math.PI * 2); c.fill();
+        if (on) { c.fillStyle = alfa(cc, 0.25); c.beginPath(); c.arc(x, y, 8, 0, Math.PI * 2); c.fill(); }
+        nb++;
+      }
+      for (var bx = mx + 12; bx <= mx + mw - 12; bx += 22) bombilla(bx, my + 30);
+      for (var bx2 = mx + mw - 12; bx2 >= mx + 12; bx2 -= 22) bombilla(bx2, my + mh - 20);
+      /* el rótulo */
+      var rot = leg && ganado ? (Math.floor(g * 3) % 2 ? 'LEGENDARIO' : '') : (e.cofre === 'legendario' ? 'COFRE LEGENDARIO' : 'COFRE DE ' + NOM[e.cofre]);
+      if (leg && !ganado && e.era && tl > para - 0.9) rot = '¡UN MOMENTO!';
+      c.fillStyle = '#000'; c.fillRect(mx + 34, my + 16, mw - 68, 28);
+      texto(c, rot, MXC, my + 31, 9, leg ? '#e6b3ff' : pal.cierre);
+      /* la ventana (o dos) */
+      var n = d.r.length;
+      var wy = 66, wh = 152, gap = 12;
+      var ww = n > 1 ? 88 : 140;
+      var wx0 = MXC - (n * ww + (n - 1) * gap) / 2;
+      d.r.forEach(function (r, j) {
+        var wx = wx0 + j * (ww + gap);
+        var tR = tl;
+        var pos = r.pos(tR);
+        var paradoR = tR >= r.fin;
+        /* el ORO del 2 %: un salto más */
+        var extra = 0;
+        if (e.era) {
+          var tn = seg(tl, r.fin + 0.55, r.fin + 1.05);
+          extra = eOut(tn) + (tn >= 1 ? 0.06 * Math.sin((tl - r.fin - 1.05) * 20) * Math.exp(-(tl - r.fin - 1.05) * 8) : 0);
+          pos += extra;
+          paradoR = tl >= r.fin + 1.05;
+        }
+        c.fillStyle = '#000'; c.fillRect(wx, wy, ww, wh);
+        c.save();
+        c.beginPath(); c.rect(wx, wy, ww, wh); c.clip();
+        var CH = ww > 100 ? 118 : 96, lado = ww > 100 ? 100 : 76;
+        var cy = wy + wh / 2;
+        var v = r.vel(tR);
+        var base = Math.floor(pos);
+        for (var ci = base - 2; ci <= base + 2; ci++) {
+          var yy = cy + (ci - pos) * CH;
+          if (yy < wy - CH || yy > wy + wh + CH) continue;
+          var cel = (e.era && ci === r.T + 1) ? { id: 'agujero' } : r.celda(ci);
+          var blur = Math.min(1, v / V0);
+          var esPremio = (ci === r.T && !e.era) || (e.era && ci === r.T + 1);
+          celdaC(c, cel, wx + ww / 2, yy, lado, blur, g, esPremio && paradoR ? col : null);
+        }
+        /* sombras de cristal curvado */
+        var gs = c.createLinearGradient(0, wy, 0, wy + wh);
+        gs.addColorStop(0, 'rgba(0,0,0,0.85)'); gs.addColorStop(0.28, 'rgba(0,0,0,0)');
+        gs.addColorStop(0.72, 'rgba(0,0,0,0)'); gs.addColorStop(1, 'rgba(0,0,0,0.85)');
+        c.fillStyle = gs; c.fillRect(wx, wy, ww, wh);
+        c.restore();
+        c.strokeStyle = paradoR ? col : '#2121ff'; c.lineWidth = 3;
+        c.strokeRect(wx - 1.5, wy - 1.5, ww + 3, wh + 3);
+        /* las flechas de la línea de premio: parpadean con cada casilla */
+        var tic = (pos % 1) < 0.18 && v > 0.5;
+        c.fillStyle = tic ? '#ffffff' : (paradoR ? col : '#ffb8ff');
+        c.beginPath(); c.moveTo(wx - 4, cy - 8); c.lineTo(wx + 6, cy); c.lineTo(wx - 4, cy + 8); c.fill();
+        c.beginPath(); c.moveTo(wx + ww + 4, cy - 8); c.lineTo(wx + ww - 6, cy); c.lineTo(wx + ww + 4, cy + 8); c.fill();
+      });
+      /* la palanca */
+      var tir = tl < 0.45 ? Math.sin(seg(tl, 0.05, 0.45) * Math.PI) : 0;
+      var lx = mx + mw + 12, ly0 = 92;
+      c.fillStyle = '#6d6f78'; c.fillRect(lx - 3, ly0, 6, 78);
+      c.fillStyle = pal.oscuro; c.fillRect(mx + mw - 2, ly0 + 64, 14, 20);
+      var bolaY = ly0 - 6 + tir * 70;
+      c.fillStyle = '#ff3b3b'; c.beginPath(); c.arc(lx, bolaY, 9, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffb0b0'; c.fillRect(lx - 4, bolaY - 5, 3, 3);
+      /* el cierre, que hace de ranura */
+      c.fillStyle = pal.oscuro; c.fillRect(MXC - 12, my + mh - 12, 24, 24);
+      c.fillStyle = pal.cierre; c.fillRect(MXC - 6, my + mh - 12, 12, 16);
+      /* ganado: destellos y lo que toque */
+      if (ganado) {
+        var kg = tl - para;
+        for (var s = 0; s < 10; s++) {
+          var tw = Math.sin(g * 4 + s * 1.9);
+          estrella(c, 40 + rnd(s + 11) * 240, 60 + rnd(s + 21) * 170, 7 * Math.max(0, tw), s % 2 ? '#ffffff' : col, tw);
+        }
+        if (kg < 0.25) { c.fillStyle = alfa('#ffffff', 0.6 * (1 - kg / 0.25)); c.fillRect(0, 0, W, H); }
+        if (!e.items.length || e.rep) monedasC(c, e, kg, g, col);
+      }
+      fundido(c, tl, this.dur(e));
+    }
+  };
+  function mezclaPal(a, b, k) {
+    var o = {};
+    for (var key in a) if (a.hasOwnProperty(key)) o[key] = (a[key] && b[key]) ? mezcla(a[key], b[key], k) : (k < 0.5 ? a[key] : b[key]);
+    return o;
+  }
+  function celdaC(c, cel, x, y, lado, blur, g, ganador) {
+    function uno(dy, a) {
+      c.save(); c.globalAlpha = a; c.translate(0, dy);
+      if (cel.id) {
+        c.imageSmoothingEnabled = false;
+        c.drawImage(lupa(cel.id), x - lado / 2, y - lado / 2, lado, lado);
+        c.strokeStyle = 'rgba(33,33,255,0.8)'; c.lineWidth = 2;
+        c.strokeRect(x - lado / 2, y - lado / 2, lado, lado);
+      } else if (cel.m) {
+        moneda(c, x - lado * 0.22, y - 10, lado * 0.14, 0);
+        moneda(c, x + lado * 0.05, y - 16, lado * 0.14, 0.4);
+        moneda(c, x + lado * 0.22, y - 8, lado * 0.14, 0.9);
+        texto(c, '+' + cel.m, x, y + lado * 0.28, lado > 90 ? 16 : 12, '#ffd23f', 'center', '#000');
+      } else if (cel.leg) {
+        estrella(c, x, y - 8, lado * 0.3, '#c86bff', 1);
+        estrella(c, x, y - 8, lado * 0.16, '#ffd23f', 1);
+        texto(c, '?', x, y + lado * 0.3, 12, '#e6b3ff');
+      } else {
+        texto(c, '---', x, y - 4, 12, '#6d6f8e');
+        texto(c, 'SIN SKIN', x, y + 16, 7, '#6d6f8e');
+      }
+      c.restore();
+    }
+    if (blur > 0.25) {
+      uno(-lado * 0.2 * blur, 0.3);
+      uno(lado * 0.2 * blur, 0.3);
+      uno(0, 0.55);
+    } else {
+      if (ganador) {
+        var gg = c.createRadialGradient(x, y, 10, x, y, lado);
+        gg.addColorStop(0, alfa(ganador, 0.5 + 0.2 * Math.sin(g * 6))); gg.addColorStop(1, alfa(ganador, 0));
+        c.fillStyle = gg; c.fillRect(x - lado, y - lado, lado * 2, lado * 2);
+      }
+      uno(0, 1);
+    }
+  }
+  function monedasC(c, e, kg, g, col) {
+    var total = e.rep || e.monedas;
+    var t0 = e.rep ? 1.1 : 0.2;
+    if (e.rep) {
+      /* el sello, sobre la ventana */
+      var k = seg(kg, 0.7, 0.85);
+      if (k > 0) {
+        c.save(); c.translate(MXC, 142); c.rotate(-0.2); c.scale(lerp(2, 1, eOut(k)), lerp(2, 1, eOut(k)));
+        c.globalAlpha = k;
+        c.fillStyle = '#fff'; c.fillRect(-62, -13, 124, 26);
+        c.fillStyle = '#e8203a'; c.fillRect(-59, -10, 118, 20);
+        texto(c, 'YA LO TENIAS', 0, 1, 8, '#fff');
+        c.restore();
+      }
+    }
+    /* las monedas caen por la ranura a la bandeja */
+    for (var m = 0; m < 10; m++) {
+      var q = seg(kg, t0 + m * 0.07, t0 + m * 0.07 + 0.45);
+      if (q <= 0) continue;
+      var x = MXC + (rnd(m) - 0.5) * 140 * q;
+      var y = 250 + eIn(q) * 44 - Math.sin(q * Math.PI) * 26;
+      moneda(c, x, Math.min(y, 296), 10, q < 1 ? g * 10 + m : m);
+    }
+    var kc = seg(kg, t0 + 0.1, t0 + 0.9);
+    if (kc > 0) {
+      c.fillStyle = 'rgba(0,0,0,0.8)'; c.fillRect(MXC - 70, 266, 140, 30);
+      texto(c, '+' + miles(total * eOut(kc)), MXC, 282, 16, '#ffd23f', 'center', '#7a5200');
+    }
+  }
+
+  /* ======================================================================
+   * D · LA CASA DE LOS FANTASMAS (la que propongo)
+   * El cofre espera en la casa de los fantasmas. Pac-Man entra por el
+   * pasillo comiendo pastillas (eso tapa la espera del servidor), se come la
+   * superpastilla de la puerta y el cofre se pone azul como un fantasma
+   * asustado. Pac-Man se lo come, se congela un instante como al comerse un
+   * fantasma y el premio sale por la puerta de la casa. Las monedas se
+   * sueltan por el pasillo y Pac-Man se las va comiendo mientras cuentan.
+   * Todo a tamaño de partida: casilla de 8, Pac-Man de radio 6,5, escala 3.
+   * ====================================================================== */
+  var S = CFG.SCALE;
+  var D_VEL = 62;
+  var D = {
+    abre: function (e) { return 1.6; },           // se lo come
+    revienta: function (e) { return 2.0 + (e.era ? 0.7 : 0); },
+    revela: function (e) { return this.revienta(e) + 0.85; },
+    dur: function (e) { return this.revela(e) + (e.rep ? 4.4 : !e.items.length ? 3.6 : 3.2); },
+    draw: function (c, e, tl, g) {
+      var chomp = this.abre(e), rv = this.revienta(e), tras = tl - rv;
+      var leg = esLeg(e, tl, chomp + 0.4);
+      var col = COL[leg ? 'legendario' : e.cofre];
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+      /* el laberinto parpadea: al abrir el legendario, como al pasar de nivel */
+      var muro = CFG.COLORS.wall;
+      if (leg && tl > chomp + 0.4 && tl < rv + 0.9 && Math.floor(g * 7) % 2 === 0) muro = '#ffffff';
+      c.save();
+      c.setTransform(S, 0, 0, S, 0, 0);
+      muros(c, muro);
+      /* puntos del pasillo: los de la izquierda se los come al entrar */
+      var pac = caminoD(e, tl, chomp, rv);
+      c.fillStyle = CFG.COLORS.pelletMini;
+      for (var x = 4; x <= 44; x += 8) if (!(pac.comidoHasta >= x)) c.fillRect(x - 1, 51, 2, 2);
+      var monedasPasillo = (!e.items.length) || e.rep;
+      if (!monedasPasillo) for (var x2 = 68; x2 <= 104; x2 += 8) c.fillRect(x2 - 1, 51, 2, 2);
+      /* la superpastilla, en la boca de la puerta */
+      if (tl < 1.02 && Math.floor(g * 4) % 2 === 0) {
+        c.fillStyle = CFG.COLORS.pellet;
+        c.beginPath(); c.arc(53, 52, 3, 0, Math.PI * 2); c.fill();
+      }
+      c.restore();
+
+      /* el cofre, en la casa (en píxeles de pantalla, u = 3) */
+      var u = 3, cxp = 53 * S, byp = 97 * S;
+      var susto = tl >= 1.02 && tl < chomp;
+      var palC = PAL[e.cofre];
+      if (susto) palC = (tl > chomp - 0.3 && Math.floor(g * 10) % 2) ? PAL.blanco : PAL.susto;
+      if (e.era && tl >= chomp + 0.4) palC = PAL.legendario;
+      var abierto = tras >= 0;
+      var comido = tl >= chomp && tl < rv;
+      var bote = susto ? Math.sin(g * 18) * 1.5 : 0;
+      if (!comido) {
+        cofre(c, palC, cxp, byp, u, {
+          dx: bote,
+          tapaDY: abierto ? tras * 360 : 0,
+          tapaRot: abierto ? tras * 4 : 0,
+          tapaA: abierto ? 1 - seg(tras, 0.2, 0.45) : 1,
+          boca: abierto ? 1 : 0,
+          cara: susto
+        });
+      }
+      /* congelado: el cofre desaparece y sale el marcador en cian */
+      if (comido) {
+        var nombreC = NOM[e.cofre];
+        texto(c, nombreC, cxp, byp - 26, 9, CFG.COLORS.popup);
+        if (e.era && tl > chomp + 0.4) {
+          c.save(); c.globalAlpha = Math.floor(g * 8) % 2 ? 1 : 0.3;
+          texto(c, '¿?', cxp, byp - 48, 12, '#c86bff');
+          c.restore();
+          cofre(c, PAL.legendario, cxp, byp, u, { sx: eBack(seg(tl, chomp + 0.4, chomp + 0.8)), sy: eBack(seg(tl, chomp + 0.4, chomp + 0.8)) });
+        }
+      }
+
+      /* fantasmas del legendario */
+      if (e.cofre === 'legendario') fantasmasD(c, tl, g, chomp, rv);
+
+      /* Pac-Man */
+      if (pac.ve) {
+        c.save();
+        c.setTransform(S, 0, 0, S, 0, 0);
+        Sprites.drawPacman(c, pac.x, pac.y, pac.d, pac.boca, jugador, 'clasico', { t: g });
+        c.restore();
+      }
+      /* READY! */
+      if (tl < 0.7) texto(c, 'READY!', 53 * S, 30 * S, 12, CFG.COLORS.ready);
+
+      /* el premio sale por la puerta */
+      if (abierto) {
+        var hz = seg(tras, 0, 0.1) * (1 - 0.6 * seg(tras, 1.0, 2.0));
+        var gr = c.createLinearGradient(0, byp - 11 * u, 0, 0);
+        gr.addColorStop(0, alfa(col, 0.55 * hz)); gr.addColorStop(1, alfa(col, 0));
+        c.fillStyle = gr;
+        c.beginPath();
+        c.moveTo(cxp - 8 * u, byp - 11 * u); c.lineTo(cxp + 8 * u, byp - 11 * u);
+        c.lineTo(cxp + 70, 0); c.lineTo(cxp - 70, 0); c.closePath(); c.fill();
+        premioD(c, e, tras, g, col, leg, cxp, byp - 11 * u, pac);
+      }
+      if (leg && abierto) letrero(c, 'LEGENDARIO', 14, 12, g, seg(tras, 0.5, 0.9));
+      fundido(c, tl, this.dur(e));
+    }
+  };
+  function muros(c, col) {
+    var lw = 2 / S;
+    c.strokeStyle = col; c.lineWidth = lw; c.lineJoin = 'round';
+    /* el pasillo: raya de arriba entera, la de abajo con el hueco de la puerta */
+    c.beginPath();
+    c.moveTo(-2, 44); c.lineTo(110, 44);
+    c.moveTo(-2, 60); c.lineTo(45, 60); c.lineTo(45, 68);
+    c.moveTo(110, 60); c.lineTo(61, 60); c.lineTo(61, 68);
+    c.stroke();
+    /* la casa */
+    c.beginPath();
+    c.moveTo(47, 68); c.lineTo(23, 68); c.lineTo(23, 104); c.lineTo(83, 104); c.lineTo(83, 68); c.lineTo(59, 68);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(47, 71); c.lineTo(26, 71); c.lineTo(26, 101); c.lineTo(80, 101); c.lineTo(80, 71); c.lineTo(59, 71);
+    c.stroke();
+    /* la puerta rosa */
+    c.fillStyle = CFG.COLORS.door;
+    c.fillRect(47, 68.6, 12, 1.4);
+    /* esquinas de laberinto abajo, para que se lea como el mapa */
+    c.beginPath();
+    c.moveTo(-2, 76); c.lineTo(15, 76); c.lineTo(15, 110);
+    c.moveTo(110, 76); c.lineTo(91, 76); c.lineTo(91, 110);
+    c.stroke();
+  }
+  /* dónde está Pac-Man: entra por la izquierda, baja por la puerta hasta el
+   * cofre, se congela al comérselo y luego sale al pasillo a mirar */
+  function caminoD(e, tl, chomp, rv) {
+    var o = { ve: true, x: 0, y: 52, d: 3, boca: [0, 1, 2, 1][Math.floor(tl * 14) % 4], comidoHasta: -99 };
+    var tBaja = (53 + 10) / D_VEL;             // llega a la puerta
+    if (tl < tBaja) {
+      o.x = -10 + D_VEL * tl; o.comidoHasta = o.x + 3;
+    } else if (tl < chomp) {
+      o.x = 53; o.comidoHasta = 99;
+      o.y = Math.min(88, 52 + D_VEL * (tl - tBaja)); o.d = 2;
+    } else if (tl < rv) {
+      o.ve = false; o.comidoHasta = 99;
+    } else {
+      o.comidoHasta = 99;
+      var t2 = tl - rv;
+      var sube = 36 / D_VEL;
+      if (t2 < sube) { o.x = 53; o.y = 88 - D_VEL * t2; o.d = 0; }
+      else {
+        var t3 = t2 - sube;
+        var monedasPasillo = (!e.items.length) || e.rep;
+        var arranca = monedasPasillo ? (e.rep ? 1.9 : 0.55) : 0;
+        var hasta = monedasPasillo ? 118 : 84;
+        if (t3 < arranca) { o.x = 53; o.y = 52; o.d = 3; o.boca = 1; }
+        else {
+          o.x = Math.min(hasta, 53 + D_VEL * 0.8 * (t3 - arranca)); o.y = 52; o.d = 3;
+          if (o.x >= hasta) { o.boca = 1; o.d = 1; }
+        }
+        if (!monedasPasillo && o.x >= 84) { o.d = 1; o.boca = 1; }
+      }
+    }
+    return o;
+  }
+  function fantasmasD(c, tl, g, chomp, rv) {
+    c.save();
+    c.setTransform(S, 0, 0, S, 0, 0);
+    var asust = tl >= 1.02, flash = tl > chomp - 0.35 && Math.floor(g * 8) % 2 === 0;
+    var fase = Math.floor(g * 8) % 2;
+    /* dos en la casa, a los lados del cofre */
+    [[34, 88, 0], [72, 88, 1]].forEach(function (f, i) {
+      var y = f[1] + Math.sin(g * 6 + i * 2) * 1.5, x = f[0];
+      if (tl >= chomp) {
+        /* se vuelven ojos y se escapan por la puerta */
+        var k = seg(tl, chomp, chomp + 0.8);
+        if (k >= 1) return;
+        x = lerp(f[0], 53, seg(k, 0, 0.3)); y = lerp(f[1], -10, seg(k, 0.3, 1));
+        Sprites.drawGhost(c, x, y, 0, f[2], 'eyes', fase, false);
+        return;
+      }
+      Sprites.drawGhost(c, x, y, i ? 1 : 3, f[2], asust ? 'fright' : 'normal', fase, asust && flash);
+    });
+    /* dos por el pasillo, que vienen y huyen */
+    [[96, 2], [112, 3]].forEach(function (f, i) {
+      var x;
+      if (tl < 1.02) x = f[0] - tl * 20;
+      else x = f[0] - 1.02 * 20 + (tl - 1.02) * 55;
+      if (x > 120) return;
+      Sprites.drawGhost(c, x, 52, asust ? 3 : 1, f[1], asust ? 'fright' : 'normal', fase, asust && flash);
+    });
+    c.restore();
+  }
+  function premioD(c, e, tras, g, col, leg, cx, bocaY, pac) {
+    var n = e.items.length;
+    var k = seg(tras, 0.05, 0.85), ke = eOut(k);
+    if (n) {
+      var lado = n > 1 ? 84 : 100;
+      e.items.forEach(function (id, j) {
+        var fx = cx + (j - (n - 1) / 2) * (lado + 16) * ke;
+        var y = lerp(bocaY, leg ? 76 : 66, ke);
+        var s = lado * (0.25 + 0.75 * ke);
+        recuadro(c, id, fx, y, s, col, { brillo: 0.5 * k, gris: e.rep ? seg(tras, 1.55, 1.8) : 0 });
+        if (k >= 1) for (var q = 0; q < 4; q++) {
+          var tw = Math.sin(g * 3.5 + q * 2.1 + j);
+          estrella(c, fx + [-1, 1, 1, -1][q] * s * 0.62, y + [-1, -1, 1, 1][q] * s * 0.62, 6 * Math.max(0, tw), '#ffffff', tw);
+        }
+        if (e.rep) {
+          var ks = seg(tras, 1.3, 1.45);
+          if (ks > 0) {
+            c.save(); c.translate(fx, y); c.rotate(-0.2); c.scale(lerp(2, 1, eOut(ks)), lerp(2, 1, eOut(ks)));
+            c.globalAlpha = ks;
+            c.fillStyle = '#fff'; c.fillRect(-62, -13, 124, 26);
+            c.fillStyle = '#e8203a'; c.fillRect(-59, -10, 118, 20);
+            texto(c, 'YA LO TENIAS', 0, 1, 8, '#fff');
+            c.restore();
+          }
+        }
+      });
+    }
+    /* monedas por el pasillo: caen del premio (o salen del cofre) y Pac-Man se las come */
+    if (!n || e.rep) {
+      var total = e.rep || e.monedas;
+      var nm = 6, t0 = e.rep ? 1.7 : 0.1;
+      var comidas = 0;
+      for (var m = 0; m < nm; m++) {
+        var mx = 64 + m * 8, my = 52;
+        var q = seg(tras, t0 + m * 0.06, t0 + m * 0.06 + 0.4);
+        if (q <= 0) continue;
+        if (pac.x >= mx - 2 && pac.y === 52 && pac.x > 60) { comidas++; continue; }
+        var sx0 = e.rep ? cx : cx, sy0 = e.rep ? 66 + 40 : bocaY;
+        var x = lerp(sx0, mx * S, q), y = lerp(sy0, my * S, q) - Math.sin(q * Math.PI) * 50;
+        moneda(c, x, y, 7, q < 1 ? g * 10 + m : 0);
+      }
+      var cuenta = Math.round(total * comidas / nm);
+      if (comidas > 0 || !e.rep) {
+        var yy = e.rep ? 104 : 70;
+        if (e.rep) {
+          c.fillStyle = 'rgba(0,0,0,0.8)'; c.fillRect(cx - 50, yy - 14, 100, 26);
+          texto(c, '+' + miles(cuenta), cx, yy, 14, '#ffd23f', 'center', '#7a5200');
+        } else if (tras > 0.1) {
+          var pop = comidas === nm ? 1 + 0.3 * Math.sin(seg(tras, 1.6, 1.85) * Math.PI) : 1;
+          c.save(); c.translate(cx, yy); c.scale(pop, pop);
+          moneda(c, -70, 0, 14, g * 4);
+          texto(c, '+' + miles(cuenta), 10, 0, 24, '#ffd23f', 'center', '#7a5200');
+          c.restore();
+        }
+      }
+      /* el "+" de cada moneda, en cian como los puntos del arcade */
+      if (comidas > 0 && comidas <= nm) {
+        var ult = 64 + (comidas - 1) * 8;
+        if (pac.x - ult < 10) texto(c, '+' + Math.round(total / nm), ult * S, 40 * S, 8, CFG.COLORS.popup);
+      }
+    }
+  }
+
+  /* ================= catálogo de alternativas ================= */
+  var ALTS = [
+    { k: 'A', motor: A, nombre: 'LA DE HOY, PULIDA',
+      que: 'La escena que ya está en el juego, con lo que le falta. Mientras el servidor contesta, el cofre tiembla y se le escapa luz por la rendija. Al abrirse, onda y confeti de píxel. El recuadro del premio sube con rebote, las monedas saltan del cofre y se cuentan.',
+      espera: 'Tiembla cada vez más y sale luz por la rendija. Aguanta lo que tarde.',
+      dura: 'Unos 2 s hasta ver el premio (2,9 el legendario).',
+      repe: 'Cae un sello de YA LO TENÍAS, el dibujo se apaga y se deshace en monedas que se cuentan.',
+      leg: 'Tiembla la pantalla, el cielo se llena de estrellas y los rayos van en violeta y oro.' },
+    { k: 'B', motor: B, nombre: 'EL SALTO',
+      que: 'El cofre da tres saltos, cada uno más alto, con la tapa entreabriéndose. En el último se agacha y la tapa sale disparada dando vueltas. Sube un haz de luz y el premio asciende por él girando como una carta, hasta quedarse de frente con un destello.',
+      espera: 'Los saltos. Si el servidor tarda, sigue saltando.',
+      dura: 'Unos 2,5 s hasta ver el premio.',
+      repe: 'La carta vuelve a girar y por detrás es una moneda, que revienta en monedas que caen dentro del cofre.',
+      leg: 'No salta: levita con estrellas girando alrededor. El premio sube con un remolino violeta detrás. El ORO del 2 % se queda en el aire, se agrieta y se repinta de violeta.' },
+    { k: 'C', motor: C, nombre: 'LA TRAGAPERRAS',
+      que: 'El cofre es la máquina, con su madera, sus bandas y el cierre de ranura. Se tira de la palanca y el rodillo gira con lo que puede traer ese cofre. Cuando contesta el servidor, frena y se clava en el premio entre bombillas. En el ORO con skin hay dos rodillos, y el segundo frena después para dar más tensión.',
+      espera: 'El rodillo gira mientras espera y frena cuando llega la respuesta. Es la que mejor tapa un servidor lento.',
+      dura: 'Unos 2,6 s (3,6 s con dos rodillos, 4 s el legendario).',
+      repe: 'Sello de YA LO TENÍAS y las monedas caen a la bandeja con la cuenta.',
+      leg: 'Bombillas violeta y oro. El ORO del 2 % parece pararse en un accesorio, el rótulo dice ¡UN MOMENTO! y el rodillo da un salto más hasta AGUJERO NEGRO.' },
+    { k: 'D', motor: D, nombre: 'LA CASA DE LOS FANTASMAS', mia: true,
+      que: 'La que propongo. El cofre espera en la casa de los fantasmas. Pac-Man entra por el pasillo comiendo pastillas, se come la superpastilla de la puerta y el cofre se pone azul, como un fantasma asustado. Se lo come, todo se congela un instante como al comerse un fantasma, y el premio sale por la puerta rosa.',
+      espera: 'El paseo de Pac-Man. Si el servidor tarda, el cofre sigue asustado y parpadeando hasta que conteste.',
+      dura: 'Unos 2,9 s hasta ver el premio. Es la más larga, y con ABRIR OTRO se puede acortar.',
+      repe: 'El premio suelta monedas al pasillo y Pac-Man se las come una a una mientras suben.',
+      leg: 'Hay fantasmas en la casa y en el pasillo. Con la superpastilla se asustan, se vuelven ojos y huyen, y el laberinto parpadea como al pasar de nivel.' }
+  ];
+
+  /* ================= la página ================= */
+  var main = document.getElementById('alts');
+  var escenas = [];
+  ALTS.forEach(function (alt) {
+    var sec = document.createElement('section');
+    sec.className = 'alt';
+    sec.id = 'alt-' + alt.k.toLowerCase();
+    sec.innerHTML =
+      '<div class="alt-head">' +
+      '<h2><span class="letra">' + alt.k + '</span>' + alt.nombre + (alt.mia ? '<span class="mia">MI PROPUESTA</span>' : '') + '</h2>' +
+      '<p>' + alt.que + '</p>' +
+      '<dl class="facts">' +
+      '<div><dt>MIENTRAS ESPERA AL SERVIDOR</dt><dd>' + alt.espera + '</dd></div>' +
+      '<div><dt>CUÁNTO TARDA</dt><dd>' + alt.dura + '</dd></div>' +
+      '<div><dt>SI YA LO TENÍAS</dt><dd>' + alt.repe + '</dd></div>' +
+      '<div><dt>EL LEGENDARIO</dt><dd>' + alt.leg + '</dd></div>' +
+      '</dl></div>';
+    var grid = document.createElement('div');
+    grid.className = 'stages';
+    ESC.forEach(function (e) {
+      var fig = document.createElement('figure');
+      fig.className = 'stage';
+      fig.style.setProperty('--c', COL[e.tipo]);
+      fig.innerHTML =
+        '<figcaption><b>' + e.cap + '</b> <span>' + e.sub + '</span></figcaption>' +
+        '<button class="lienzo" type="button" aria-label="Ver ' + alt.nombre + ', ' + e.cap + ' ' + e.sub + ', al tamaño del juego">' +
+        '<canvas width="320" height="320"></canvas></button>' +
+        '<div class="premio-t"></div><div class="premio-s"></div>' +
+        '<div class="fbtns"><span class="otro">ABRIR OTRO</span><span class="prim">LISTO</span></div>';
+      grid.appendChild(fig);
+      var esc = {
+        alt: alt, e: e, cv: fig.querySelector('canvas'), fig: fig,
+        t: fig.querySelector('.premio-t'), s: fig.querySelector('.premio-s'), b: fig.querySelector('.fbtns'),
+        otro: fig.querySelector('.otro'), visible: false, estado: ''
+      };
+      esc.ctx = esc.cv.getContext('2d');
+      escenas.push(esc);
+      fig.querySelector('.lienzo').addEventListener('click', function () { abrirZoom(alt, e); });
+    });
+    sec.appendChild(grid);
+    main.appendChild(sec);
+  });
+
+  /* solo se pintan las que se ven */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) {
+        escenas.forEach(function (s) { if (s.fig === en.target) s.visible = en.isIntersecting; });
+      });
+    }, { rootMargin: '120px' });
+    escenas.forEach(function (s) { io.observe(s.fig); });
+  } else escenas.forEach(function (s) { s.visible = true; });
+
+  /* el texto de debajo, como en el juego */
+  function rotulos(sc, alt, e, tl) {
+    var m = alt.motor, estado;
+    var rev = m.revela(e);
+    var dur = m.dur(e);
+    estado = tl < rev ? 'abriendo' : 'premio';
+    if (tl > dur - 0.35) estado = 'fin';
+    var bot = tl >= rev + 0.35 && estado !== 'fin';
+    if (sc.estado !== estado) {
+      sc.estado = estado;
+      if (estado === 'abriendo') {
+        sc.t.textContent = 'ABRIENDO…';
+        sc.t.style.color = COL[e.cofre];
+        sc.s.textContent = 'COFRE DE ' + NOM[e.cofre];
+      } else if (estado === 'premio') {
+        var tx = textos(e);
+        sc.t.textContent = tx.t;
+        sc.t.style.color = tx.col;
+        sc.s.textContent = tx.s;
+      }
+      sc.t.style.opacity = estado === 'fin' ? 0 : 1;
+      sc.s.style.opacity = estado === 'fin' ? 0 : 1;
+      sc.otro.style.display = e.quedan > 0 ? '' : 'none';
+      sc.otro.textContent = 'ABRIR OTRO (' + e.quedan + ')';
+    }
+    if (sc.bot !== bot) { sc.bot = bot; sc.b.classList.toggle('si', bot); }
+  }
+
+  /* ================= zoom ================= */
+  var zoom = document.getElementById('zoom');
+  var zc = zoom.querySelector('canvas');
+  var zsc = { cv: zc, ctx: zc.getContext('2d'), t: document.getElementById('zoom-t'), s: document.getElementById('zoom-s'),
+    b: document.getElementById('zoom-b'), otro: zoom.querySelector('.otro'), estado: '', visible: true };
+  var zoomDe = null;
+  function abrirZoom(alt, e) {
+    zoomDe = { alt: alt, e: e, t0: reloj };
+    zsc.estado = ''; zsc.bot = null;
+    document.getElementById('zoom-cap').textContent = alt.k + ' · ' + alt.nombre + ' · ' + e.cap + ' · ' + e.sub;
+    zoom.hidden = false;
+    document.getElementById('zoom-cerrar').focus();
+  }
+  function cerrarZoom() { zoom.hidden = true; zoomDe = null; }
+  document.getElementById('zoom-cerrar').addEventListener('click', cerrarZoom);
+  zoom.addEventListener('click', function (ev) { if (ev.target === zoom) cerrarZoom(); });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && zoomDe) cerrarZoom(); });
+
+  /* ================= controles ================= */
+  var swWrap = document.getElementById('swatches');
+  CFG.PAC_SWATCHES.forEach(function (hex, i) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'sw';
+    b.style.setProperty('--c', hex);
+    b.setAttribute('aria-label', 'Color ' + hex);
+    b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      jugador = hex;
+      Array.prototype.forEach.call(swWrap.children, function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    });
+    swWrap.appendChild(b);
+  });
+  var vel = 1, reloj = 0, pausado = false, ultimo = null;
+  var velIn = document.getElementById('vel'), velOut = document.getElementById('vel-out');
+  velIn.addEventListener('input', function () { vel = velIn.value / 100; velOut.textContent = velIn.value + ' %'; });
+  var pausaBtn = document.getElementById('pausa');
+  pausaBtn.addEventListener('click', function () {
+    pausado = !pausado;
+    pausaBtn.textContent = pausado ? 'SEGUIR' : 'PAUSAR';
+  });
+  document.getElementById('reiniciar').addEventListener('click', function () { reloj = 0; if (zoomDe) zoomDe.t0 = 0; });
+  /* con movimiento reducido arranca en pausa, en el momento del premio */
+  var reducido = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reducido) { pausado = true; pausaBtn.textContent = 'SEGUIR'; reloj = 4.2; }
+
+  function pintar(sc, alt, e, tl) {
+    var m = alt.motor, dur = m.dur(e);
+    var t = ((tl % dur) + dur) % dur;
+    sc.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    sc.ctx.imageSmoothingEnabled = false;
+    m.draw(sc.ctx, e, t, relojG);
+    rotulos(sc, alt, e, t);
+  }
+
+  /* para las capturas: congelar en un instante */
+  window.__fijar = function (t) { pausado = true; reloj = t; relojG = t; cuadro++; dibujarTodo(); };
+
+  function dibujarTodo() {
+    escenas.forEach(function (sc) { if (sc.visible || window.__todas) pintar(sc, sc.alt, sc.e, reloj); });
+    if (zoomDe) pintar(zsc, zoomDe.alt, zoomDe.e, reloj - zoomDe.t0);
+  }
+
+  function frame(ts) {
+    if (ultimo == null) ultimo = ts;
+    var dt = Math.min(0.1, (ts - ultimo) / 1000);
+    ultimo = ts;
+    if (!pausado) { reloj += dt * vel; relojG += dt * vel; }
+    cuadro++;
+    dibujarTodo();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
