@@ -10968,7 +10968,12 @@
     var fz = fase(o), t = o.t, q = qDe(o, 1.1), k;
     var ang = [0, 13, 24][fz] * Math.PI / 180;
     var mueble = hex(mix('#3a2418', o.c, 0.12)), muebleOsc = mix(mueble, '#0c0602', 0.5);
-    var neon = o.c, cromo = '#d8dbe4', cromoOsc = '#7d8494';
+    var cromo = '#d8dbe4', cromoOsc = '#7d8494';
+    /* el neón es el color del jugador, pero un neón no puede ser negro: con
+     * un color muy oscuro se aclara hasta que se vea encendido */
+    var pc = parseInt(o.c.slice(1), 16);
+    var lum = (0.299 * ((pc >> 16) & 255) + 0.587 * ((pc >> 8) & 255) + 0.114 * (pc & 255)) / 255;
+    var neon = (lum < 0.3) ? hex(mix(o.c, '#ffffff', 0.45)) : o.c;
     var subiendo = (q >= 0) ? Math.sin(Math.min(1, q * 1.6) * Math.PI) : 0;
     ctx.save();
     frame(ctx, o.x, o.y, o.d);
@@ -12343,17 +12348,16 @@
   EFX.efx_glitch = function (ctx, o, cuerpo) {
     var salta = (Math.floor(o.t * 7) % 3 === 0);
     var d = salta ? 1.4 : 0.5;
+    /* el rojo y el azul, desencajados a los lados y por detrás del cuerpo.
+     * En el escaparate eran tres copias enteras de la skin (cuatro dibujos
+     * por frame: 5 ms con una KITSUNE) y los colores no se usaban; ahora son
+     * dos siluetas redondas teñidas y el cuerpo se pinta una sola vez */
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    [['rgba(255,40,40,.55)', -d], ['rgba(40,255,90,.45)', 0], ['rgba(60,120,255,.55)', d]]
-      .forEach(function (capa) {
-        ctx.save();
-        ctx.translate(capa[1], 0);
-        ctx.globalAlpha = 0.5;
-        ctx.filter = 'none';
-        cuerpo();
-        ctx.restore();
-      });
+    [['rgba(255,40,40,.5)', -d], ['rgba(60,120,255,.5)', d]].forEach(function (capa) {
+      ctx.fillStyle = capa[0];
+      ctx.beginPath(); ctx.arc(o.x + capa[1], o.y, R + 0.3, 0, Math.PI * 2); ctx.fill();
+    });
     ctx.restore();
     cuerpo();
     /* bandas que se desplazan */
@@ -16343,12 +16347,15 @@
     [[1, 12, '#e86a00'], [0.74, 10, '#ff9412'], [0.48, 8, '#ffb733']].forEach(function (capa, j) {
       var rr = r * capa[0], n = capa[1];
       ctx.fillStyle = capa[2];
+      /* cada corona en un solo trazo: 30 rellenos por flor pesaban */
+      ctx.beginPath();
       for (var k = 0; k < n; k++) {
         var a = k * Math.PI * 2 / n + j * 0.3;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * rr * 0.62, Math.sin(a) * rr * 0.62, rr * 0.42, 0, Math.PI * 2);
-        ctx.fill();
+        var px = Math.cos(a) * rr * 0.62, py = Math.sin(a) * rr * 0.62;
+        ctx.moveTo(px + rr * 0.42, py);
+        ctx.arc(px, py, rr * 0.42, 0, Math.PI * 2);
       }
+      ctx.fill();
     });
     ctx.fillStyle = '#b84a00';
     ctx.beginPath(); ctx.arc(0, 0, r * 0.2, 0, Math.PI * 2); ctx.fill();
@@ -16637,11 +16644,12 @@
       var alto = 2.0 * (1 - q.edad * 0.6);
       var fl = 0.85 + 0.15 * Math.sin(o.t * 13 + q.n * 2.1);
       var fy = q.p.y + 1.6 - alto - 0.9;
-      var g = ctx.createRadialGradient(q.p.x, fy, 0.1, q.p.x, fy, 3.4 * fl);
-      g.addColorStop(0, 'rgba(255,170,60,' + (0.4 * vive) + ')');
-      g.addColorStop(1, 'rgba(255,120,20,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(q.p.x, fy, 3.4 * fl, 0, Math.PI * 2); ctx.fill();
+      /* el halo en tres círculos planos: un degradado por vela y por frame
+       * costaba el triple que el TORII */
+      [[3.4, 0.07], [2.3, 0.1], [1.2, 0.16]].forEach(function (h) {
+        ctx.fillStyle = 'rgba(255,150,40,' + (h[1] * vive) + ')';
+        ctx.beginPath(); ctx.arc(q.p.x, fy, h[0] * fl, 0, Math.PI * 2); ctx.fill();
+      });
     });
     ctx.restore();
     ptos.forEach(function (q) {

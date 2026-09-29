@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Repaso de las piezas nuevas
+
+- INTERFERENCIA pintaba la skin cuatro veces por frame (hasta 5 ms por jugador):
+  ahora una, y por fin salen el rojo y el azul desencajados.
+- VELITAS, SOMBRERO CATRINA y CEMPASÚCHIL, tres veces más ligeros, con el mismo
+  aspecto.
+- La MÁQUINA DE DISCOS con un color muy oscuro ya no apaga su neón.
+
 ## 2026-09-30 · LAURELES · NOV 2026
 
 Los laureles de noviembre para quien llegue a MANZANA ese mes: de cobre, con la
