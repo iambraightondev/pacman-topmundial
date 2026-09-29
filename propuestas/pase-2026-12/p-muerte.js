@@ -1,47 +1,49 @@
-  /* ---------- La muerte del AÑO VIEJO ----------
-   * Lo que se hace con él a medianoche: arde. Le prenden por abajo, las
-   * llamas lo suben entero, se queda en ceniza negra, se hunde y el viento
-   * se lleva las pavesas. */
-  conMuerte('anoviejo', null, function (M, pm, o) {
+  /* ---------- La muerte del RETABLO ----------
+   * Se le va la luz del nicho, el cajón se desencaja y se desarma en tablas
+   * que caen, y las figuritas del nacimiento saltan fuera y ruedan. */
+  conMuerte('retablo', null, function (M, pm, o) {
     var ctx = M.ctx, k;
-    var arde = tramo(pm, 0.04, 0.5);
-    var ceniza = tramo(pm, 0.3, 0.72);
-    var hunde = suave(tramo(pm, 0.55, 0.95));
+    var apaga = tramo(pm, 0.02, 0.35);
     var fade = 1 - tramo(pm, 0.82, 1);
-    /* la foto se enciende de naranja y luego se queda en ceniza */
+    var tiembla = pm < 0.3 ? Math.sin(pm * 80) * 0.4 * (1 - pm / 0.3) : 0;
     M.enFoto(function (c) {
-      c.fillStyle = 'rgba(255,110,20,' + (arde * (1 - ceniza) * 0.55) + ')';
-      c.fillRect(-FH, -FH, FOTO, FOTO);
-      c.fillStyle = 'rgba(28,24,22,' + (ceniza * 0.9) + ')';
+      c.fillStyle = 'rgba(20,10,14,' + (apaga * 0.45) + ')';
       c.fillRect(-FH, -FH, FOTO, FOTO);
     }, 'source-atop');
-    /* se hunde sobre su base, como lo que se consume */
-    M.pinta({ pf: 0, ps: -5.4, sf: 1 - hunde * 0.15, ss: 1 - hunde * 0.75, alpha: fade });
-    /* las llamas, que suben por la pantalla desde abajo */
-    var fuerza = Math.sin(Math.min(1, pm * 1.35) * Math.PI) * fade;
-    var BASES = [[-3.6, -4.6], [-1.2, -5.2], [1.4, -5.0], [3.8, -4.2], [-4.6, -1.0], [4.8, 0.0]];
-    for (k = 0; k < BASES.length; k++) {
-      var sube = tramo(pm, k * 0.035, 0.3 + k * 0.035);
-      var p = M.pant(BASES[k][0], BASES[k][1] + hunde * 4);
-      llamarada(ctx, p.x, p.y, (3.2 + (k % 3) * 1.4) * sube * fuerza * (1 - hunde * 0.6), 1.1 + (k % 2) * 0.4, o.t + k, fuerza);
+    /* seis tablas de 5,4 que juntas son el retablo; caen a destiempo */
+    var F = [-3.0, 2.4], Sd = [4.2, 0.6, -3.2];
+    for (k = 0; k < 6; k++) {
+      var d = tramo(pm, 0.28 + k * 0.05, 1);
+      var f0 = F[k % 2], s0 = Sd[Math.floor(k / 2)];
+      M.trozo(f0, s0, 5.4, tiembla + ((k % 2) ? 1 : -1) * d * 4.5, d * d * 14,
+        d * ((k % 2) ? 1.2 : -1.0), (1 - d * 0.4) * fade);
     }
-    /* las pavesas, subiendo y yéndose con el viento */
-    for (k = 0; k < 14; k++) {
-      var e = tramo(pm, 0.1 + k * 0.035, 0.6 + k * 0.03);
-      if (e <= 0 || e >= 1) continue;
-      var q0 = M.pant(-4 + (k % 7) * 1.3, -3 + Math.floor(k / 7) * 3.5);
-      ctx.fillStyle = (k % 3) ? 'rgba(255,150,40,' + (1 - e) + ')' : 'rgba(255,230,140,' + (1 - e) + ')';
-      ctx.fillRect(q0.x + Math.sin(e * 5 + k) * 1.4 - e * 4, q0.y - e * 11, 0.45, 0.45);
+    /* las figuritas: la Virgen, San José, el Niño y la llamita, saltando */
+    var FIG = [[-2.4, 1.0, '#7fb2ff'], [2.5, 1.0, '#8a5a2e'], [0.2, 0.4, '#fbf6ec'], [1.4, 0.5, '#f4efe4']];
+    for (k = 0; k < FIG.length; k++) {
+      var e = tramo(pm, 0.3 + k * 0.06, 0.95);
+      if (e <= 0) continue;
+      var p = M.pant(FIG[k][0], FIG[k][1]);
+      var dx = (k % 2 ? 1 : -1) * e * (5 + k), dy = -Math.sin(e * Math.PI) * 5 + e * e * 6;
+      ctx.save();
+      ctx.globalAlpha = (1 - tramo(e, 0.7, 1)) * fade;
+      ctx.translate(p.x + dx, p.y + dy);
+      ctx.rotate(e * (k % 2 ? 6 : -6));
+      ctx.fillStyle = FIG[k][2];
+      ctx.beginPath(); ctx.moveTo(-0.6, 0.6); ctx.quadraticCurveTo(0, -1.2, 0.6, 0.6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f3c9a0';
+      ctx.beginPath(); ctx.arc(0, -0.9, 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
-    /* el humo de al final */
-    var humo = tramo(pm, 0.55, 1);
-    if (humo > 0 && humo < 1) {
-      var ph = M.pant(0, -3);
-      ctx.fillStyle = 'rgba(120,118,128,' + ((1 - humo) * 0.45) + ')';
-      for (k = 0; k < 3; k++) {
-        ctx.beginPath();
-        ctx.arc(ph.x + (k - 1) * 2.2 - humo * 2, ph.y - 2 - humo * 7 - k, 1.4 + humo * 2.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    /* la estrella del pesebre, que se apaga y cae la última */
+    var st = tramo(pm, 0.45, 1);
+    if (st > 0) {
+      var ps = M.pant(0.1, 2.55);
+      ctx.save();
+      ctx.globalAlpha = (1 - st) * fade;
+      ctx.fillStyle = mix('#ffd23f', '#6a5a30', st);
+      estrella5(ctx, ps.x, ps.y + st * st * 10, 0.6, st * 5);
+      ctx.fill();
+      ctx.restore();
     }
   });

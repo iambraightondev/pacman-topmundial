@@ -199,8 +199,8 @@
 
 <header class="top wrap">
   <p class="eyebrow">Pac-Man Top Mundial · pase de temporada</p>
-  <h1>Diciembre: FIN DE AÑO</h1>
-  <p class="lede">No es la Navidad —esa ya la regala CLAUS-MAN del 20 de diciembre al 6 de enero—: es la noche del 31 a la latina. Se quema el AÑO VIEJO, se comen las doce uvas, se da la vuelta a la manzana con la maleta y revientan los cohetes. Estas son las cinco piezas exclusivas del pase de diciembre: solo las tiene quien juegue ese mes, y no salen de cofre ni de la tienda. Todo corre por un pasillo del juego a tamaño real, con lupa al lado; el AÑO VIEJO enseña su Q cada 3,4 s y su muerte cada 6,8 s. Cambie el color arriba para verlo con el de cualquier jugador.</p>
+  <h1>Diciembre: NAVIDAD PERUANA</h1>
+  <p class="lede">Navidad, pero la de aquí y no la del Polo Norte: el gorro de Papá Noel ya lo regala CLAUS-MAN del 20 de diciembre al 6 de enero. Aquí va el retablo ayacuchano con su nacimiento dentro, la chocolatada con panetón, los foquitos del balcón y la estrella de Belén. Estas son las cinco piezas exclusivas del pase de diciembre: solo las tiene quien juegue ese mes, y no salen de cofre ni de la tienda. Todo corre por un pasillo del juego a tamaño real, con lupa al lado; el RETABLO enseña su Q cada 3,4 s y su muerte cada 6,8 s. Cambie el color arriba para verlo con el de cualquier jugador.</p>
   <p class="tally"><b>1</b> skin · <b>2</b> accesorios · <b>1</b> efecto · <b>1</b> emote · <b>3</b> en el carril de pago</p>
 </header>
 
@@ -229,19 +229,19 @@
       <tbody>
         <tr><td class="g">los demás</td><td>30 monedas</td><td>70 monedas</td></tr>
         <tr><td class="g">5 · 15 · 25</td><td>60 monedas</td><td>150 monedas</td></tr>
-        <tr class="hito"><td class="g">10</td><td>60 monedas + <span class="pieza libre">EMOTE: DOCE UVAS</span></td><td>150 monedas + <span class="pieza">LENTES 2027</span></td></tr>
-        <tr class="hito"><td class="g">20</td><td>60 monedas</td><td>150 monedas + <span class="pieza">COHETES</span></td></tr>
-        <tr class="hito"><td class="g">30</td><td>150 monedas + <span class="pieza libre">MALETA</span></td><td>400 monedas + <span class="pieza">SKIN: AÑO VIEJO</span></td></tr>
+        <tr class="hito"><td class="g">10</td><td>60 monedas + <span class="pieza libre">EMOTE: CHOCOLATADA</span></td><td>150 monedas + <span class="pieza">PANETÓN</span></td></tr>
+        <tr class="hito"><td class="g">20</td><td>60 monedas</td><td>150 monedas + <span class="pieza">FOQUITOS</span></td></tr>
+        <tr class="hito"><td class="g">30</td><td>150 monedas + <span class="pieza libre">ESTRELLA DE BELÉN</span></td><td>400 monedas + <span class="pieza">SKIN: RETABLO</span></td></tr>
       </tbody>
     </table>
     </div>
-    <p class="nota">Como en octubre: quien juega gratis termina el mes con dos piezas que se ven (el emote y la maleta), así que la temporada no le pasa de largo; quien paga se lleva los lentes en cuanto empieza, el efecto a dos tercios del camino —con candado a la vista todo el mes— y la skin al final.</p>
+    <p class="nota">Como en octubre: quien juega gratis termina el mes con dos piezas que se ven (el emote y la estrella), así que la temporada no le pasa de largo; quien paga se lleva el panetón en cuanto empieza, el efecto a dos tercios del camino —con candado a la vista todo el mes— y la skin al final.</p>
   </section>
 
   <section>
     <div class="sec-head">
       <h2>La skin · galón 30, carril de pago</h2>
-      <p>Extravagante, como la TRAMPA de octubre y el ALEBRIJE de noviembre: no es un Pac-Man vestido, es otro muñeco. La mandíbula de trapo es la boca.</p>
+      <p>Extravagante, como la TRAMPA de octubre y el ALEBRIJE de noviembre: no es un Pac-Man, es una caja con el nacimiento dentro. El cajón de abajo es la boca.</p>
     </div>
     <div class="grid" id="g-skin"></div>
   </section>
@@ -677,416 +677,382 @@
   }
 
   /* =====================================================================
-   * TEMPORADA DE DICIEMBRE — FIN DE AÑO
-   * Las cinco piezas exclusivas del camino del pase. No es la Navidad (esa
-   * ya la regala CLAUS-MAN del 20 de diciembre al 6 de enero): es la noche
-   * del 31 a la latina, la de aquí. Se quema el AÑO VIEJO, se comen las doce
-   * uvas con las campanadas, se da la vuelta a la manzana con la MALETA para
-   * viajar el año que viene, los LENTES del año nuevo y los COHETES.
+   * TEMPORADA DE DICIEMBRE — NAVIDAD A LA PERUANA
+   * Las cinco piezas exclusivas del camino del pase. Navidad, pero la de
+   * aquí y no la del Polo Norte (el gorro de Papá Noel ya lo regala
+   * CLAUS-MAN del 20 de diciembre al 6 de enero): el RETABLO ayacuchano con
+   * su nacimiento dentro, la chocolatada con PANETÓN, los FOQUITOS de colores
+   * y la ESTRELLA DE BELÉN que corona el pesebre.
    * Mismo marco que el resto del vestuario (f hacia donde avanza, s hacia la
    * coronilla) y la misma cadencia: la Q cada 3,4 s con qFase() y la muerte
    * cada 6,8 s.
    *
    * Escritas ya como las quiere el juego: la skin como DRAW.id (al portarla,
    * qFase(t, 3.4, d) -> qDe(o, d)), los accesorios como ACC.id, el efecto
-   * como EFX.id(ctx, o, cuerpo) y el emote como caraFinDeAno(). El puente
-   * del final las enchufa a la vitrina.
+   * como EFX.id(ctx, o, cuerpo) y el emote como caraNavidad(). El puente del
+   * final las enchufa a la vitrina.
    * ===================================================================== */
   var ACC = {}, EFX = {};
 
-  /* los colores de los cohetes y del papel de fiesta */
-  var PAL_FIN = ['#ffd23f', '#ff3b5c', '#2de0ff', '#7dff4a', '#ff8c1a', '#c86bff'];
+  /* los colores de los foquitos y de las flores pintadas del retablo */
+  var PAL_NAVI = ['#ff3b3b', '#ffd23f', '#3ee86a', '#2de0ff', '#ff5fd0', '#ff9a1a'];
 
-  /* una lengua de fuego que sube por la PANTALLA (el fuego siempre sube,
-   * mire a donde mire): base en (x, y), alto h, ancho w */
-  function llamarada(ctx, x, y, h, w, t, alpha) {
-    if (alpha <= 0 || h <= 0) return;
-    var ond = Math.sin(t * 17 + x * 3) * w * 0.35;
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, alpha);
-    [[1, '#ff5a0a'], [0.66, '#ffa31a'], [0.36, '#fff1a8']].forEach(function (c) {
-      var hh = h * c[0], ww = w * c[0];
-      ctx.fillStyle = c[1];
-      ctx.beginPath();
-      ctx.moveTo(x - ww, y);
-      ctx.bezierCurveTo(x - ww * 1.1, y - hh * 0.45, x + ond - ww * 0.3, y - hh * 0.7, x + ond, y - hh);
-      ctx.bezierCurveTo(x + ond + ww * 0.3, y - hh * 0.7, x + ww * 1.1, y - hh * 0.45, x + ww, y);
-      ctx.closePath();
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  /* un reventón de petardo: estrella de rayos cortos que se abre y se apaga */
-  function petardo(ctx, x, y, u, col) {
-    if (u <= 0 || u >= 1) return;
-    var r = 0.6 + u * 2.2;
-    ctx.save();
-    ctx.globalAlpha = 1 - u;
-    ctx.strokeStyle = col; ctx.lineWidth = 0.35; ctx.lineCap = 'round';
+  /* una estrella de cinco puntas, de radio r, girada `giro` */
+  function estrella5(ctx, x, y, r, giro) {
     ctx.beginPath();
-    for (var k = 0; k < 8; k++) {
-      var a = k * Math.PI / 4 + 0.3;
-      ctx.moveTo(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45);
-      ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    for (var k = 0; k < 10; k++) {
+      var a = giro + Math.PI / 2 + k * Math.PI / 5, rr = (k % 2) ? r * 0.44 : r;
+      if (k === 0) ctx.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      else ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
     }
-    ctx.stroke();
-    ctx.fillStyle = '#fff6c8';
-    ctx.beginPath(); ctx.arc(x, y, 0.5 * (1 - u), 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+    ctx.closePath();
   }
 
-  /* ---------------- AÑO VIEJO ----------------
-   * El muñeco que se quema a medianoche: cabeza de trapo relleno, cosida a
-   * parches, con ojo de botón, sombrero de paja roto y el cartel del año que
-   * se va. La paja le asoma por detrás. La mandíbula de trapo es la boca.
-   * Q: le prenden la mecha y revientan los petardos que lleva dentro.
-   * Es extravagante: no es un Pac-Man vestido, es otro muñeco. */
-  DRAW.anoviejo = function (ctx, o) {
-    var fz = fase(o), t = o.t, q = qFase(t, 3.4, 1.2), k;
+  /* una florecita pintada a mano, de las del retablo */
+  function florcita(ctx, x, y, r, col) {
+    ctx.fillStyle = col;
+    for (var k = 0; k < 5; k++) {
+      var a = k * Math.PI * 0.4;
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.45, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#ffe680';
+    ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* ---------------- RETABLO ----------------
+   * El retablo ayacuchano: un cajón de madera con techo a dos aguas, todo
+   * pintado de flores, y dentro, en su nicho azul, el nacimiento: la Virgen,
+   * San José, el Niño en el pesebre y una llamita. El cajón de abajo, con su
+   * tapa, es la boca. Q: se enciende por dentro, brilla la estrella y suena
+   * el villancico. Es extravagante: no es un Pac-Man, es una caja. */
+  DRAW.retablo = function (ctx, o) {
+    var fz = fase(o), t = o.t, q = qFase(t, 3.4, 1.1), k;
     var ang = [0, 16, 30][fz] * Math.PI / 180;
-    var tela = hex(mix('#b8966a', o.c, 0.34)), telaOsc = hex(mix(tela, '#2a1a08', 0.5));
-    var paja = '#e6c25a', pajaOsc = '#9c7a22';
-    var mecha = (q >= 0) ? Math.min(1, q * 1.5) : 0;          // lo que ya ardió de la mecha
-    var trueno = (q >= 0) ? Math.abs(Math.sin(q * Math.PI * 9)) * (1 - q) : 0;
+    var madera = hex(mix('#c0392b', o.c, 0.4)), maderaOsc = hex(mix(madera, '#2a0606', 0.5));
+    var luz = (q >= 0) ? Math.sin(Math.min(1, q * 1.3) * Math.PI) : 0;
     ctx.save();
     frame(ctx, o.x, o.y, o.d);
-    ctx.translate(Math.sin(t * 70) * 0.22 * trueno, Math.abs(Math.sin(t * 6)) * 0.25 - 0.12 + trueno * 0.25);
+    ctx.translate(0, Math.abs(Math.sin(t * 6)) * 0.2 - 0.1);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
 
-    /* la paja que asoma por detrás */
-    ctx.strokeStyle = pajaOsc; ctx.lineWidth = 0.42;
-    ctx.beginPath();
-    for (k = 0; k < 7; k++) {
-      var sy = -0.6 + k * 0.62, w = Math.sin(t * 5 + k) * 0.25;
-      ctx.moveTo(-4.4, sy); ctx.lineTo(-6.6 - (k % 3) * 0.6, sy + w + (k - 3) * 0.28);
+    /* el hueco del cajón al abrirse */
+    ctx.fillStyle = '#12060a';
+    ctx.beginPath(); ctx.moveTo(-4.4, -0.8); ctx.lineTo(4.6, -0.5); ctx.lineTo(4.6, -4.4); ctx.lineTo(-4.4, -2.6); ctx.closePath(); ctx.fill();
+
+    /* el cuerpo: la caja y el techo a dos aguas */
+    var caja = new Path2D();
+    caja.moveTo(4.6, -0.6);
+    caja.lineTo(4.6, 3.4);
+    caja.lineTo(5.2, 3.4);
+    caja.lineTo(0.1, 6.9);
+    caja.lineTo(-5.0, 3.4);
+    caja.lineTo(-4.5, 3.4);
+    caja.lineTo(-4.6, -0.9);
+    caja.lineTo(4.6, -0.6);
+    caja.closePath();
+    var cajon = new Path2D();
+    cajon.moveTo(-4.6, -1.1);
+    cajon.lineTo(4.6, -0.8);
+    cajon.lineTo(4.6, -4.6);
+    cajon.quadraticCurveTo(4.6, -5.3, 3.9, -5.3);
+    cajon.lineTo(-3.9, -5.3);
+    cajon.quadraticCurveTo(-4.6, -5.3, -4.6, -4.6);
+    cajon.closePath();
+    rostro(ctx, caja, cajon, -4.7, -1.0, ang, madera, maderaOsc, 0.7, 0.7);
+
+    ctx.save(); ctx.clip(caja);
+    /* el frontón, con su flor grande y dos chicas */
+    florcita(ctx, 0.1, 4.7, 0.95, PAL_NAVI[1]);
+    florcita(ctx, -2.3, 3.9, 0.55, PAL_NAVI[4]);
+    florcita(ctx, 2.5, 3.9, 0.55, PAL_NAVI[3]);
+    /* el nicho: arco azul con el nacimiento dentro */
+    var nicho = new Path2D();
+    nicho.moveTo(-3.6, -0.3);
+    nicho.lineTo(-3.6, 1.9);
+    nicho.quadraticCurveTo(-3.6, 3.2, 0.1, 3.2);
+    nicho.quadraticCurveTo(3.8, 3.2, 3.8, 1.9);
+    nicho.lineTo(3.8, -0.3);
+    nicho.closePath();
+    ctx.fillStyle = mix('#1c2a78', '#ffd88a', luz * 0.55);
+    ctx.fill(nicho);
+    ctx.save(); ctx.clip(nicho);
+    if (luz > 0) {
+      var g = ctx.createRadialGradient(0.1, 1.0, 0.2, 0.1, 1.0, 4.2);
+      g.addColorStop(0, 'rgba(255,240,180,' + (0.8 * luz) + ')');
+      g.addColorStop(1, 'rgba(255,200,90,0)');
+      ctx.fillStyle = g; ctx.fillRect(-4, -1, 8.2, 4.6);
     }
-    ctx.stroke();
-    ctx.strokeStyle = paja; ctx.lineWidth = 0.24;
-    ctx.stroke();
-
-    /* el hueco de la boca */
-    ctx.fillStyle = '#1a0e04';
-    ctx.beginPath(); ctx.moveTo(-4.2, -0.8); ctx.lineTo(5.6, -0.5); ctx.lineTo(5.6, -4.2); ctx.lineTo(-4.2, -2.4); ctx.closePath(); ctx.fill();
-
-    var cabeza = new Path2D();
-    cabeza.moveTo(5.6, -0.4);
-    cabeza.quadraticCurveTo(6.5, 2.4, 4.4, 4.0);
-    cabeza.quadraticCurveTo(1.4, 5.4, -2.2, 4.6);
-    cabeza.quadraticCurveTo(-5.4, 3.4, -5.0, 0.2);
-    cabeza.lineTo(-4.4, -0.9);
-    cabeza.lineTo(5.6, -0.4);
-    cabeza.closePath();
-    var mand = new Path2D();
-    mand.moveTo(-4.6, -1.1);
-    mand.lineTo(5.6, -0.6);
-    mand.quadraticCurveTo(6.0, -3.4, 3.8, -4.7);
-    mand.quadraticCurveTo(0.6, -5.8, -2.2, -5.0);
-    mand.quadraticCurveTo(-4.8, -4.0, -4.6, -1.1);
-    mand.closePath();
-    rostro(ctx, cabeza, mand, -4.6, -1.0, ang, tela, telaOsc, 0.7, 0.7);
-
-    /* la cabeza: un parche del color del jugador y las costuras */
-    ctx.save(); ctx.clip(cabeza);
-    ctx.fillStyle = hex(mix(o.c, '#ffffff', 0.15));
-    ctx.save(); ctx.translate(-2.4, 2.2); ctx.rotate(0.18);
-    ctx.fillRect(-1.0, -0.9, 2.0, 1.8);
-    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.18;
-    ctx.setLineDash([0.28, 0.22]);
-    ctx.strokeRect(-0.85, -0.75, 1.7, 1.5);
-    ctx.restore();
-    ctx.strokeStyle = telaOsc; ctx.lineWidth = 0.22;
-    ctx.beginPath(); ctx.moveTo(0.4, 5.4); ctx.quadraticCurveTo(-0.4, 2.6, 0.2, -0.6); ctx.stroke();
-    ctx.setLineDash([]);
-    /* el colorete pintado */
-    ctx.fillStyle = 'rgba(230,70,70,.45)';
-    ctx.beginPath(); ctx.arc(4.7, 1.0, 0.62, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-
-    /* el ojo: un botón cosido en cruz */
-    ctx.fillStyle = '#26262e';
-    ctx.beginPath(); ctx.arc(3.4, 2.3, 0.88, 0, Math.PI * 2); ctx.fill();
-    contorno(ctx, 1.1); ctx.stroke();
-    ctx.strokeStyle = '#f2ead6'; ctx.lineWidth = 0.2;
-    ctx.beginPath();
-    ctx.moveTo(3.1, 2.0); ctx.lineTo(3.7, 2.6); ctx.moveTo(3.7, 2.0); ctx.lineTo(3.1, 2.6);
-    ctx.stroke();
-    destello(ctx, 3.0, 2.8, 0.22, 0.7);
-
-    /* el cartel del año que se va, prendido con un alfiler */
-    ctx.save();
-    ctx.translate(-2.2, -0.2);
-    ctx.rotate(-0.16 + Math.sin(t * 4) * 0.05);
-    ctx.fillStyle = '#f7f2e4';
-    ctx.fillRect(-1.5, -0.95, 3.0, 1.3);
-    contorno(ctx, 0.9); ctx.strokeRect(-1.5, -0.95, 3.0, 1.3);
-    ctx.save(); ctx.scale(1, -1);
-    ctx.fillStyle = '#b01e2a';
-    ctx.font = 'bold 1.05px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('2026', 0, 0.33);
-    ctx.restore();
-    ctx.fillStyle = '#c9ccd6';
-    ctx.beginPath(); ctx.arc(0, 0.25, 0.16, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-
-    /* la boca: los labios cosidos, en la mandíbula */
-    ctx.save(); girarSobre(ctx, -4.6, -1.0, -ang); ctx.clip(mand);
-    ctx.strokeStyle = TINTA; ctx.lineWidth = 0.22;
-    ctx.beginPath();
-    ctx.moveTo(0.6, -1.5); ctx.quadraticCurveTo(3.0, -1.9, 5.2, -1.2);
-    for (k = 0; k < 6; k++) {
-      var mx = 1.0 + k * 0.8, my = -1.55 - Math.sin(k / 5 * Math.PI) * 0.18 + k * 0.04;
-      ctx.moveTo(mx, my - 0.3); ctx.lineTo(mx + 0.18, my + 0.3);
+    /* la Virgen (manto azul claro), San José (marrón), el Niño en su pesebre
+     * y la llamita, en fila como en los retablos */
+    function figura(x, manto, cara) {
+      ctx.fillStyle = manto;
+      ctx.beginPath(); ctx.moveTo(x - 0.75, -0.3); ctx.quadraticCurveTo(x - 0.6, 1.3, x, 1.55); ctx.quadraticCurveTo(x + 0.6, 1.3, x + 0.75, -0.3); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = cara;
+      ctx.beginPath(); ctx.arc(x, 1.75, 0.36, 0, Math.PI * 2); ctx.fill();
     }
-    ctx.stroke();
+    figura(-2.4, '#7fb2ff', '#f3c9a0');
+    figura(2.5, '#8a5a2e', '#e8b98e');
+    /* el pesebre y el Niño */
+    ctx.fillStyle = '#d9a650';
+    ctx.fillRect(-0.7, -0.3, 1.6, 0.55);
+    ctx.fillStyle = '#fbf6ec';
+    ctx.beginPath(); ctx.ellipse(0.1, 0.42, 0.6, 0.28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f3c9a0';
+    ctx.beginPath(); ctx.arc(0.55, 0.5, 0.22, 0, Math.PI * 2); ctx.fill();
+    /* la llamita, asomando detrás */
+    ctx.fillStyle = '#f4efe4';
+    ctx.beginPath(); ctx.ellipse(1.25, 0.25, 0.42, 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(1.52, 0.3, 0.2, 0.75);
+    ctx.beginPath(); ctx.arc(1.7, 1.08, 0.2, 0, Math.PI * 2); ctx.fill();
+    /* la estrella del pesebre, arriba del nicho */
+    ctx.fillStyle = mix('#ffd23f', '#ffffff', luz * 0.6);
+    estrella5(ctx, 0.1, 2.55, 0.42 + luz * 0.25, Math.sin(t * 2) * 0.2);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = maderaOsc; ctx.lineWidth = 0.3;
+    ctx.stroke(nicho);
+    /* el marco del nicho, con puntitos de colores */
+    for (k = 0; k < 9; k++) {
+      var am = Math.PI * (0.05 + k * 0.1125);
+      ctx.fillStyle = PAL_NAVI[k % PAL_NAVI.length];
+      ctx.beginPath(); ctx.arc(0.1 + Math.cos(am) * 3.95, 1.9 + Math.sin(am) * 1.45, 0.22, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
 
-    /* el sombrero de paja, viejo y roto, un poco caído hacia atrás */
+    /* el cajón de abajo: su tapa pintada y el tirador */
+    ctx.save(); girarSobre(ctx, -4.7, -1.0, -ang); ctx.clip(cajon);
+    florcita(ctx, -2.4, -3.0, 0.7, PAL_NAVI[0]);
+    florcita(ctx, 2.6, -3.0, 0.7, PAL_NAVI[2]);
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath(); ctx.arc(0.1, -2.2, 0.38, 0, Math.PI * 2); ctx.fill();
+    contorno(ctx, 1); ctx.stroke();
+    ctx.restore();
+
+    /* Q: brilla la estrella y suena el villancico */
+    if (q >= 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(255,230,150,' + (luz * 0.9) + ')'; ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      for (k = 0; k < 8; k++) {
+        var ar = k * Math.PI / 4 + t;
+        ctx.moveTo(0.1 + Math.cos(ar) * 1.2, 7.6 + Math.sin(ar) * 1.2);
+        ctx.lineTo(0.1 + Math.cos(ar) * (2.0 + luz * 1.6), 7.6 + Math.sin(ar) * (2.0 + luz * 1.6));
+      }
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#ffe680';
+      estrella5(ctx, 0.1, 7.6, 0.9 + luz * 0.5, t * 1.5);
+      ctx.fill();
+      contorno(ctx, 1); ctx.stroke();
+      for (k = 0; k < 4; k++) {
+        var un = (q * 1.3 + k / 4) % 1;
+        nota(ctx, 5.2 + un * 5.2, 2.2 + Math.sin(un * 7 + k) * 1.6 + un * 2.4,
+          0.85, mix(PAL_NAVI[k], '#ffffff', 0.3, 1 - un));
+      }
+    }
+    ctx.restore();
+  };
+
+  /* ---------------- PANETÓN ----------------
+   * Un panetón entero en la cabeza, en su molde de papel: la cúpula dorada
+   * con sus frutas confitadas y pasas, y un hilito de vapor, recién sacado. */
+  ACC.acc_paneton = function (ctx, o) {
+    var k, bam = Math.sin(o.t * 6) * 0.03;
     ctx.save();
-    ctx.translate(0.4, 4.6);
-    ctx.rotate(0.14 + Math.sin(t * 5) * 0.03);
+    ctx.translate(0.3, R - 1.0);
+    ctx.rotate(-0.05 + bam);
+    /* la cúpula, abombada y algo más ancha que el molde */
     piezaX(ctx, function () {
       ctx.beginPath();
-      ctx.moveTo(-2.7, 0.4);
-      ctx.quadraticCurveTo(-2.6, 3.2, 0.1, 3.3);
-      ctx.quadraticCurveTo(2.8, 3.2, 2.7, 0.4);
+      ctx.moveTo(-3.0, 1.9);
+      ctx.quadraticCurveTo(-3.3, 4.7, 0, 4.9);
+      ctx.quadraticCurveTo(3.3, 4.7, 3.0, 1.9);
       ctx.closePath();
-    }, paja, pajaOsc, 0.35, 0.35, 1.4);
-    ctx.fillStyle = '#2b2118';
-    ctx.fillRect(-2.7, 0.55, 5.4, 0.7);
+    }, '#c98a2e', '#6e4210', 0.4, 0.4, 1.5);
+    /* el brillo tostado de arriba */
+    ctx.fillStyle = 'rgba(255,210,120,.45)';
+    ctx.beginPath(); ctx.ellipse(-0.6, 3.9, 1.5, 0.5, -0.15, 0, Math.PI * 2); ctx.fill();
+    /* las frutas confitadas y las pasas */
+    [[-1.8, 2.7, '#e8352c'], [0.3, 3.4, '#3ec05a'], [1.8, 2.6, '#ff9a1a'], [-0.6, 2.4, '#3a1a10'],
+     [1.0, 2.1, '#3a1a10'], [-1.2, 3.8, '#e8352c']].forEach(function (f) {
+      ctx.fillStyle = f[2];
+      ctx.beginPath(); ctx.arc(f[0], f[1], 0.3, 0, Math.PI * 2); ctx.fill();
+    });
+    /* el molde de papel, a pliegues, del color del jugador */
     piezaX(ctx, function () {
-      ctx.beginPath(); ctx.ellipse(0, 0.35, 5.0, 0.95, 0, 0, Math.PI * 2);
-    }, paja, pajaOsc, 0.25, 0.25, 1.5);
-    /* el agujero de la copa, con su paja rota */
-    ctx.fillStyle = '#3a2410';
-    ctx.beginPath(); ctx.ellipse(1.2, 2.3, 0.55, 0.42, 0.3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = pajaOsc; ctx.lineWidth = 0.18;
-    ctx.beginPath(); ctx.moveTo(1.0, 2.5); ctx.lineTo(1.5, 3.1); ctx.moveTo(1.5, 2.2); ctx.lineTo(2.1, 2.5); ctx.stroke();
-
-    /* la mecha, que sale por la copa; con la Q se enciende y se consume */
-    var mTip = 1 - mecha * 0.75;
-    ctx.strokeStyle = '#3b3026'; ctx.lineWidth = 0.34;
+      ctx.beginPath();
+      ctx.moveTo(-2.8, 0);
+      ctx.lineTo(-2.95, 2.1);
+      ctx.lineTo(2.95, 2.1);
+      ctx.lineTo(2.8, 0);
+      ctx.closePath();
+    }, hex(mix(o.c, '#f2e2b8', 0.45)), hex(mix(o.c, '#5a3a10', 0.55)), 0.25, 0.25, 1.4);
+    ctx.strokeStyle = 'rgba(60,30,10,.4)'; ctx.lineWidth = 0.14;
     ctx.beginPath();
-    ctx.moveTo(-0.6, 3.2);
-    ctx.quadraticCurveTo(-0.9, 3.2 + 1.4 * mTip, -0.1, 3.2 + 2.1 * mTip);
+    for (k = 0; k < 9; k++) { ctx.moveTo(-2.5 + k * 0.63, 0.1); ctx.lineTo(-2.55 + k * 0.64, 2.0); }
     ctx.stroke();
-    if (q >= 0 && mecha < 1) {
-      var chx = -0.1, chy = 3.2 + 2.1 * mTip;
-      estrella4(ctx, chx, chy, 0.9 + Math.sin(t * 40) * 0.25, '#fff2a0', 1);
-      for (k = 0; k < 6; k++) {
-        var a2 = t * 11 + k * 1.05, rr = 0.6 + ((t * 7 + k) % 1) * 1.4;
-        ctx.fillStyle = (k % 2) ? '#ffb020' : '#ffe680';
-        ctx.fillRect(chx + Math.cos(a2) * rr, chy + Math.sin(a2) * rr, 0.22, 0.22);
-      }
-    }
-    ctx.restore();
-
-    /* Q: revientan los petardos por todo el muñeco */
-    if (q >= 0.3) {
-      var PET = [[5.6, 3.4], [-4.0, 4.6], [2.4, -5.8], [-5.6, -2.8], [6.8, -1.6], [0.4, 7.4]];
-      for (k = 0; k < PET.length; k++) {
-        var u = tramo(q, 0.3 + k * 0.1, 0.52 + k * 0.1);
-        petardo(ctx, PET[k][0], PET[k][1], u, PAL_FIN[k % PAL_FIN.length]);
-      }
+    /* el vapor */
+    for (k = 0; k < 2; k++) {
+      var u = ((o.t * 0.5) + k * 0.5) % 1;
+      ctx.strokeStyle = 'rgba(240,240,250,' + ((1 - u) * 0.55) + ')'; ctx.lineWidth = 0.28;
+      ctx.beginPath();
+      ctx.moveTo(-0.6 + k * 1.2, 5.0 + u * 2.4);
+      ctx.quadraticCurveTo(-0.1 + k * 1.2 + Math.sin(u * 6) * 0.5, 5.8 + u * 2.4, -0.6 + k * 1.2, 6.6 + u * 2.4);
+      ctx.stroke();
     }
     ctx.restore();
   };
 
-  /* ---------------- LENTES 2027 ----------------
-   * Los lentes de fiesta con el año nuevo: cuatro cifras doradas con
-   * purpurina, y el CERO hace de cristal, justo sobre el ojo. */
-  function cifra(ctx, d, x, y, h) {
-    var w = h * 0.6;
-    ctx.beginPath();
-    if (d === '2') {
-      ctx.arc(x, y + h * 0.2, w * 0.46, Math.PI * 0.95, -Math.PI * 0.18, true);
-      ctx.lineTo(x - w * 0.5, y - h * 0.5);
-      ctx.lineTo(x + w * 0.5, y - h * 0.5);
-    } else if (d === '0') {
-      ctx.ellipse(x, y, w * 0.5, h * 0.5, 0, 0, Math.PI * 2);
-    } else {
-      ctx.moveTo(x - w * 0.5, y + h * 0.5);
-      ctx.lineTo(x + w * 0.5, y + h * 0.5);
-      ctx.lineTo(x - w * 0.08, y - h * 0.5);
-    }
-  }
-  ACC.acc_lentes = function (ctx, o) {
-    var h = 2.4, y = 3.7, CIF = [['2', -0.65], ['0', 1.1], ['2', 2.85], ['7', 4.55]];
-    var oro = '#ffd23f', oroOsc = '#8a5e00';
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    /* la patilla, hacia atrás */
-    ctx.strokeStyle = oroOsc; ctx.lineWidth = 0.5;
-    ctx.beginPath(); ctx.moveTo(-1.2, y + 0.4); ctx.lineTo(-4.4, y - 0.2); ctx.stroke();
-    /* el cristal del cero, ahumado del color del jugador */
-    ctx.fillStyle = mix(o.c, '#1a1030', 0.55, 0.55);
-    ctx.beginPath(); ctx.ellipse(1.1, y, h * 0.3, h * 0.5, 0, 0, Math.PI * 2); ctx.fill();
-    /* las cifras: borde oscuro, oro y un brillo */
-    [[0.95, TINTA], [0.62, oroOsc], [0.4, oro]].forEach(function (capa) {
-      ctx.strokeStyle = capa[1]; ctx.lineWidth = capa[0];
-      CIF.forEach(function (c) { cifra(ctx, c[0], c[1], y, h); ctx.stroke(); });
-    });
-    ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 0.14;
-    CIF.forEach(function (c) { cifra(ctx, c[0], c[1] - 0.08, y + 0.08, h); ctx.stroke(); });
-    /* la purpurina: destellos que saltan de cifra en cifra */
-    for (var k = 0; k < 3; k++) {
-      var u = ((o.t * 0.9) + k / 3) % 1;
-      var c = CIF[(k + Math.floor(o.t * 0.9 + k / 3)) % 4];
-      estrella4(ctx, c[1] + 0.5 - k * 0.3, y + 1.0 - k * 0.8, 0.55 * Math.sin(u * Math.PI), '#ffffff', 1);
-    }
-  };
-
-  /* ---------------- MALETA ----------------
-   * La de dar la vuelta a la manzana a medianoche, para viajar el año que
-   * viene: de cuero, con sus correas, las pegatinas de los viajes y una
-   * etiqueta del color del jugador. Va colgada a la espalda y bota al correr. */
-  ACC.acc_maleta = function (ctx, o) {
-    var cuero = '#8a5a2e', cueroOsc = '#3e2410', k;
-    var bota = Math.abs(Math.sin(o.t * 8)) * 0.4, mece = Math.sin(o.t * 8) * 0.06;
+  /* ---------------- ESTRELLA DE BELÉN ----------------
+   * La estrella que corona el pesebre, flotando sobre la cabeza con su cola
+   * de cometa hacia atrás y su resplandor: sube y baja despacio y titila. */
+  ACC.acc_belen = function (ctx, o) {
+    var t = o.t, k;
+    var fy = 8.8 + Math.sin(t * 2.4) * 0.35, fx = 0.8, gira = Math.sin(t * 1.3) * 0.18;
+    var titila = 0.8 + 0.2 * Math.sin(t * 7);
     ctx.save();
-    ctx.translate(-7.6, -0.6 + bota);
-    ctx.scale(1.15, 1.15);
-    ctx.rotate(mece);
-    /* el asa */
-    ctx.strokeStyle = '#2a1a0c'; ctx.lineWidth = 0.55; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(-0.9, 2.3); ctx.quadraticCurveTo(0, 3.5, 0.9, 2.3); ctx.stroke();
-    /* la correa que la sujeta al lomo */
-    ctx.strokeStyle = cueroOsc; ctx.lineWidth = 0.45;
-    ctx.beginPath(); ctx.moveTo(1.9, 1.2); ctx.lineTo(3.4, 2.2); ctx.stroke();
-    /* el cuerpo */
-    piezaX(ctx, function () {
-      ctx.beginPath(); roundRect(ctx, -2.1, -2.4, 4.2, 4.7, 0.6);
-    }, cuero, cueroOsc, 0.35, 0.35, 1.5);
-    /* las dos correas y las esquinas de metal */
-    ctx.fillStyle = cueroOsc;
-    ctx.fillRect(-1.3, -2.4, 0.45, 4.7);
-    ctx.fillRect(0.85, -2.4, 0.45, 4.7);
-    ctx.fillStyle = '#d0d4de';
-    [[-2.1, 2.3], [2.1, 2.3], [-2.1, -2.4], [2.1, -2.4]].forEach(function (p) {
-      ctx.beginPath(); ctx.arc(p[0], p[1], 0.32, 0, Math.PI * 2); ctx.fill();
-    });
-    /* las pegatinas de los viajes: un sol, un corazón y una estrella */
+    /* el resplandor */
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(fx, fy, 0.2, fx, fy, 3.4);
+    g.addColorStop(0, 'rgba(255,236,160,' + (0.55 * titila) + ')');
+    g.addColorStop(1, 'rgba(255,200,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(fx, fy, 3.4, 0, Math.PI * 2); ctx.fill();
+    /* la cola de cometa, hacia atrás, con chispitas */
+    var cola = ctx.createLinearGradient(fx, fy, fx - 7, fy - 1.6);
+    cola.addColorStop(0, 'rgba(255,230,150,.7)');
+    cola.addColorStop(1, 'rgba(255,230,150,0)');
+    ctx.fillStyle = cola;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy + 0.7);
+    ctx.quadraticCurveTo(fx - 3.5, fy + 0.4, fx - 7.2, fy - 1.4);
+    ctx.quadraticCurveTo(fx - 3.5, fy - 0.8, fx, fy - 0.6);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+    for (k = 0; k < 4; k++) {
+      var u = ((t * 0.7) + k / 4) % 1;
+      estrella4(ctx, fx - 1.2 - u * 5.5, fy - u * 1.2 + Math.sin(k * 2.1) * 0.5, 0.35 * (1 - u), '#fff6c8', 1 - u);
+    }
+    /* la estrella */
     ctx.fillStyle = '#ffd23f';
-    ctx.beginPath(); ctx.arc(-0.1, 0.9, 0.55, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 0.14;
-    ctx.beginPath();
-    for (k = 0; k < 8; k++) {
-      var a = k * Math.PI / 4;
-      ctx.moveTo(-0.1 + Math.cos(a) * 0.7, 0.9 + Math.sin(a) * 0.7);
-      ctx.lineTo(-0.1 + Math.cos(a) * 0.95, 0.9 + Math.sin(a) * 0.95);
-    }
-    ctx.stroke();
-    corazon(ctx, -0.2, -1.0, 0.5, '#ff3b5c');
-    estrella4(ctx, 1.55, -0.4, 0.45, '#2de0ff', 1);
-    ctx.restore();
-    /* la etiqueta, del color del jugador, colgando del asa */
-    ctx.save();
-    ctx.translate(-7.6, 2.3 + bota);
-    ctx.rotate(-0.5 + Math.sin(o.t * 6) * 0.25);
-    ctx.strokeStyle = '#e8e2d0'; ctx.lineWidth = 0.14;
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -1.1); ctx.stroke();
-    ctx.fillStyle = o.c;
-    roundRect(ctx, -0.45, -2.1, 0.9, 1.1, 0.18); ctx.fill();
-    contorno(ctx, 0.8); ctx.stroke();
-    ctx.restore();
+    estrella5(ctx, fx, fy, 1.55, gira);
+    ctx.fill();
+    contorno(ctx, 1.3); ctx.stroke();
+    ctx.fillStyle = '#fff3b0';
+    estrella5(ctx, fx - 0.1, fy + 0.1, 0.75, gira);
+    ctx.fill();
+    destello(ctx, fx - 0.5, fy + 0.5, 0.4, titila);
   };
 
-  /* ---------------- COHETES ----------------
-   * Por el camino van saliendo cohetes: suben con su cola de chispas y
-   * revientan en una palmera de colores que cae y se apaga. Uno de cada tres
-   * revienta del color del jugador. */
-  EFX.efx_cohetes = function (ctx, o, cuerpo) {
-    cuerpo();
-    ctx.save();
-    rastro(o, 26, 118).forEach(function (q) {
-      var e = q.edad, col = (q.n % 3 === 0) ? o.c : PAL_FIN[q.n % PAL_FIN.length];
-      var x0 = q.p.x + ((q.n * 7) % 5 - 2) * 0.6, y0 = q.p.y;
-      var alto = 7 + (q.n % 3) * 1.5;
-      if (e < 0.32) {
-        /* sube, con su cola */
-        var u = e / 0.32, y = y0 - suave(u) * alto;
+  /* ---------------- FOQUITOS ----------------
+   * Por donde pasa deja una tira de foquitos de colores colgando de su
+   * cable, que se encienden por turnos, como los del balcón en diciembre. */
+  EFX.efx_foquitos = function (ctx, o, cuerpo) {
+    var ptos = rastro(o, 3.2, 86);
+    if (ptos.length > 1) {
+      ctx.save();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      /* el cable, combándose entre punto y punto */
+      ctx.strokeStyle = 'rgba(30,70,40,.85)'; ctx.lineWidth = 0.32;
+      ctx.beginPath();
+      for (var i = 0; i < ptos.length; i++) {
+        var q = ptos[i], comba = Math.abs(Math.sin(q.n * Math.PI / 3)) * 0.8;
+        if (i === 0) ctx.moveTo(q.p.x, q.p.y + comba); else ctx.lineTo(q.p.x, q.p.y + comba);
+      }
+      ctx.stroke();
+      /* los foquitos, uno de cada tres puntos, que se encienden por turnos */
+      var turno = Math.floor(o.t * 5);
+      ptos.forEach(function (q) {
+        if (q.n % 3) return;
+        var col = PAL_NAVI[(q.n / 3) % PAL_NAVI.length | 0];
+        var on = ((q.n / 3 + turno) % 3) !== 0;
+        var a = 1 - q.edad;
+        var x = q.p.x, y = q.p.y + Math.abs(Math.sin(q.n * Math.PI / 3)) * 0.8 + 0.5;
+        if (on) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          var g = ctx.createRadialGradient(x, y + 0.4, 0.1, x, y + 0.4, 2.2);
+          g.addColorStop(0, mix(col, '#ffffff', 0.2, 0.55 * a));
+          g.addColorStop(1, mix(col, '#000000', 0, 0));
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(x, y + 0.4, 2.2, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#2a4a2e';
+        ctx.fillRect(x - 0.22, y - 0.2, 0.44, 0.4);
+        ctx.fillStyle = on ? col : mix(col, '#1a1a22', 0.6);
+        ctx.beginPath(); ctx.ellipse(x, y + 0.65, 0.36, 0.55, 0, 0, Math.PI * 2); ctx.fill();
+        if (on) destello(ctx, x - 0.1, y + 0.85, 0.16, a);
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = 'rgba(255,210,120,.75)'; ctx.lineWidth = 0.35; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x0, y + 2.6); ctx.lineTo(x0, y); ctx.stroke();
-        ctx.fillStyle = col;
-        ctx.fillRect(x0 - 0.3, y - 0.5, 0.6, 1.0);
-        estrella4(ctx, x0, y + 2.8, 0.45, '#fff2a0', 0.9);
-        return;
-      }
-      /* revienta en palmera */
-      var b = tramo(e, 0.32, 1), r = 0.6 + suave(Math.min(1, b * 1.7)) * 3.8, yb = y0 - alto;
-      ctx.globalCompositeOperation = 'lighter';
-      for (var k = 0; k < 11; k++) {
-        var a = k * Math.PI * 2 / 11 + q.n;
-        var px = x0 + Math.cos(a) * r, py = yb + Math.sin(a) * r + b * b * 3.2;
-        ctx.globalAlpha = (1 - b) * 0.9;
-        ctx.strokeStyle = col; ctx.lineWidth = 0.38;
-        ctx.beginPath();
-        ctx.moveTo(x0 + Math.cos(a) * r * 0.65, yb + Math.sin(a) * r * 0.65 + b * b * 2.4);
-        ctx.lineTo(px, py);
-        ctx.stroke();
-        ctx.fillStyle = (k % 3) ? col : '#ffffff';
-        ctx.beginPath(); ctx.arc(px, py, 0.34 * (1 - b * 0.6), 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.globalCompositeOperation = 'source-over';
-    });
-    ctx.restore();
-    ctx.globalAlpha = 1;
+      });
+      ctx.restore();
+    }
+    cuerpo();
   };
 
-  /* ---------------- EMOTE: DOCE UVAS ----------------
-   * Una uva por campanada: se las va metiendo en la boca a toda prisa, con
-   * los mofletes a reventar y los ojos apretados de concentración, mientras
-   * el racimo de arriba se queda en nada. */
-  function caraFinDeAno(ctx, x, y, r, color, id, t) {
+  /* ---------------- EMOTE: CHOCOLATADA ----------------
+   * La taza de chocolate caliente de la chocolatada: sopla, sorbe, se queda
+   * con el bigote de chocolate y suspira de gusto con los ojos cerrados. */
+  function caraNavidad(ctx, x, y, r, color, id, t) {
     var ink = '#000000', lw = Math.max(1, r * 0.17), k;
-    var CICLO = 12 * 18, fase12 = t % CICLO;
-    var quedan = 12 - Math.floor(fase12 / 18);
-    var p = (fase12 % 18) / 18;                 // la uva que va de camino
-    var masca = Math.abs(Math.sin(t * 0.45));
-    var uva = '#8fd14a', uvaOsc = '#4f8a1c';
+    var ciclo = (t % 150) / 150;
+    var sorbe = tramo(ciclo, 0.25, 0.4) * (1 - tramo(ciclo, 0.6, 0.72));    // la taza sube a la boca
+    var gusto = tramo(ciclo, 0.7, 0.8) * (1 - tramo(ciclo, 0.95, 1));
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(Math.sin(t * 0.2) * 0.05);
+    ctx.rotate(-sorbe * 0.12 + gusto * 0.06);
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-    /* los mofletes, a reventar */
-    ctx.fillStyle = hex(mix(color, '#ffffff', 0.28));
-    [-1, 1].forEach(function (l) {
-      ctx.beginPath(); ctx.arc(l * r * 0.58, r * 0.22, r * 0.3 * (1 + masca * 0.12), 0, Math.PI * 2); ctx.fill();
-    });
-    ctx.fillStyle = 'rgba(255,90,110,.35)';
-    [-1, 1].forEach(function (l) {
-      ctx.beginPath(); ctx.arc(l * r * 0.6, r * 0.28, r * 0.14, 0, Math.PI * 2); ctx.fill();
-    });
-    /* los ojos, apretados */
+    /* los ojos: abiertos al soplar, cerrados de gusto al tragar */
     ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.6; ctx.lineCap = 'round';
     [-1, 1].forEach(function (l) {
       ctx.beginPath();
-      ctx.moveTo(l * r * 0.52, -r * 0.34); ctx.lineTo(l * r * 0.26, -r * 0.24); ctx.lineTo(l * r * 0.52, -r * 0.14);
+      if (sorbe > 0.3 || gusto > 0.1) ctx.arc(l * r * 0.4, -r * 0.2, r * 0.2, 0.15 * Math.PI, 0.85 * Math.PI);
+      else { ctx.fillStyle = ink; ctx.arc(l * r * 0.4, -r * 0.24, r * 0.1, 0, Math.PI * 2); ctx.fill(); }
       ctx.stroke();
     });
-    /* la boca, masticando */
-    ctx.fillStyle = ink;
-    ctx.beginPath(); ctx.ellipse(0, r * 0.44, r * 0.14, r * (0.06 + masca * 0.1), 0, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-    /* el racimo de arriba, con las que quedan */
-    var HUECOS = [[0, 0], [-1, 0], [1, 0], [-0.5, 0.85], [0.5, 0.85], [-1.5, 0.85], [1.5, 0.85],
-                  [0, 1.7], [-1, 1.7], [1, 1.7], [-0.5, 2.55], [0.5, 2.55]];
-    var rx = x + r * 1.0, ry = y - r * 1.1, ru = r * 0.12;
-    ctx.strokeStyle = uvaOsc; ctx.lineWidth = lw * 0.3;
-    ctx.beginPath(); ctx.moveTo(rx, ry - ru * 1.4); ctx.lineTo(rx + ru * 0.8, ry - ru * 2.6); ctx.stroke();
-    for (k = 0; k < quedan - 1 && k < HUECOS.length; k++) {
-      var hx = rx + HUECOS[k][0] * ru * 1.8, hy = ry + HUECOS[k][1] * ru * 1.7;
-      ctx.fillStyle = uva;
-      ctx.beginPath(); ctx.arc(hx, hy, ru, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = uvaOsc; ctx.lineWidth = lw * 0.18; ctx.stroke();
+    /* los mofletes, colorados del calor */
+    ctx.fillStyle = 'rgba(255,90,90,.4)';
+    [-1, 1].forEach(function (l) {
+      ctx.beginPath(); ctx.arc(l * r * 0.62, r * 0.18, r * 0.15, 0, Math.PI * 2); ctx.fill();
+    });
+    /* la boca: soplando en O, luego sonrisa con bigote de chocolate */
+    if (ciclo > 0.7) {
+      ctx.fillStyle = '#5a2e14';
+      ctx.beginPath(); ctx.ellipse(0, r * 0.3, r * 0.34, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.5;
+      ctx.beginPath(); ctx.arc(0, r * 0.32, r * 0.24, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    } else {
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.ellipse(r * 0.05, r * 0.42, r * 0.11, r * 0.13, 0, 0, Math.PI * 2); ctx.fill();
     }
-    /* la que va de camino a la boca */
-    if (quedan > 0) {
-      var ux = rx + (x - rx) * p, uy = ry + (y + r * 0.44 - ry) * p - Math.sin(p * Math.PI) * r * 0.5;
-      ctx.fillStyle = uva;
-      ctx.beginPath(); ctx.arc(ux, uy, ru * 1.15 * (1 - p * 0.3), 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = uvaOsc; ctx.lineWidth = lw * 0.18; ctx.stroke();
+    ctx.restore();
+    /* la taza, abajo a la derecha; sube a la boca al sorber */
+    var tx = x + r * (0.85 - sorbe * 0.55), ty = y + r * (0.95 - sorbe * 0.45), tr = sorbe * 0.5;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(-tr);
+    ctx.fillStyle = '#f7f2e6';
+    roundRect(ctx, -r * 0.42, -r * 0.4, r * 0.84, r * 0.78, r * 0.12); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = lw * 0.35; ctx.stroke();
+    ctx.fillStyle = '#d9362c';
+    ctx.fillRect(-r * 0.42, -r * 0.05, r * 0.84, r * 0.14);
+    ctx.fillStyle = '#5a2e14';
+    ctx.beginPath(); ctx.ellipse(0, -r * 0.4, r * 0.4, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#f7f2e6'; ctx.lineWidth = lw * 0.45;
+    ctx.beginPath(); ctx.arc(r * 0.46, 0, r * 0.18, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+    ctx.restore();
+    /* el vapor */
+    for (k = 0; k < 2; k++) {
+      var u = ((t * 0.02) + k * 0.5) % 1;
+      ctx.strokeStyle = 'rgba(255,255,255,' + ((1 - u) * 0.7) + ')'; ctx.lineWidth = lw * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(tx - r * 0.12 + k * r * 0.24, ty - r * 0.55 - u * r * 0.7);
+      ctx.quadraticCurveTo(tx + Math.sin(u * 6 + k) * r * 0.2, ty - r * 0.75 - u * r * 0.7,
+        tx - r * 0.12 + k * r * 0.24, ty - r * 0.95 - u * r * 0.7);
+      ctx.stroke();
     }
   }
 
@@ -1096,83 +1062,85 @@
     var dib = EFX[id];
     DRAW[id] = function (ctx, o) { dib(ctx, o, function () { body(ctx, o); }); };
   });
-  DRAW.emo_uvas = function (ctx, o) {
+  DRAW.emo_chocolatada = function (ctx, o) {
     body(ctx, o);
     globoEmote(ctx, o.x, o.y - 11, o.c, o.t * 60, function (cx, cy, r) {
-      caraFinDeAno(ctx, cx, cy, r, o.c, 'uvas', o.t * 60);
+      caraNavidad(ctx, cx, cy, r, o.c, 'chocolatada', o.t * 60);
     });
   };
 
-  /* ---------- La muerte del AÑO VIEJO ----------
-   * Lo que se hace con él a medianoche: arde. Le prenden por abajo, las
-   * llamas lo suben entero, se queda en ceniza negra, se hunde y el viento
-   * se lleva las pavesas. */
-  conMuerte('anoviejo', null, function (M, pm, o) {
+  /* ---------- La muerte del RETABLO ----------
+   * Se le va la luz del nicho, el cajón se desencaja y se desarma en tablas
+   * que caen, y las figuritas del nacimiento saltan fuera y ruedan. */
+  conMuerte('retablo', null, function (M, pm, o) {
     var ctx = M.ctx, k;
-    var arde = tramo(pm, 0.04, 0.5);
-    var ceniza = tramo(pm, 0.3, 0.72);
-    var hunde = suave(tramo(pm, 0.55, 0.95));
+    var apaga = tramo(pm, 0.02, 0.35);
     var fade = 1 - tramo(pm, 0.82, 1);
-    /* la foto se enciende de naranja y luego se queda en ceniza */
+    var tiembla = pm < 0.3 ? Math.sin(pm * 80) * 0.4 * (1 - pm / 0.3) : 0;
     M.enFoto(function (c) {
-      c.fillStyle = 'rgba(255,110,20,' + (arde * (1 - ceniza) * 0.55) + ')';
-      c.fillRect(-FH, -FH, FOTO, FOTO);
-      c.fillStyle = 'rgba(28,24,22,' + (ceniza * 0.9) + ')';
+      c.fillStyle = 'rgba(20,10,14,' + (apaga * 0.45) + ')';
       c.fillRect(-FH, -FH, FOTO, FOTO);
     }, 'source-atop');
-    /* se hunde sobre su base, como lo que se consume */
-    M.pinta({ pf: 0, ps: -5.4, sf: 1 - hunde * 0.15, ss: 1 - hunde * 0.75, alpha: fade });
-    /* las llamas, que suben por la pantalla desde abajo */
-    var fuerza = Math.sin(Math.min(1, pm * 1.35) * Math.PI) * fade;
-    var BASES = [[-3.6, -4.6], [-1.2, -5.2], [1.4, -5.0], [3.8, -4.2], [-4.6, -1.0], [4.8, 0.0]];
-    for (k = 0; k < BASES.length; k++) {
-      var sube = tramo(pm, k * 0.035, 0.3 + k * 0.035);
-      var p = M.pant(BASES[k][0], BASES[k][1] + hunde * 4);
-      llamarada(ctx, p.x, p.y, (3.2 + (k % 3) * 1.4) * sube * fuerza * (1 - hunde * 0.6), 1.1 + (k % 2) * 0.4, o.t + k, fuerza);
+    /* seis tablas de 5,4 que juntas son el retablo; caen a destiempo */
+    var F = [-3.0, 2.4], Sd = [4.2, 0.6, -3.2];
+    for (k = 0; k < 6; k++) {
+      var d = tramo(pm, 0.28 + k * 0.05, 1);
+      var f0 = F[k % 2], s0 = Sd[Math.floor(k / 2)];
+      M.trozo(f0, s0, 5.4, tiembla + ((k % 2) ? 1 : -1) * d * 4.5, d * d * 14,
+        d * ((k % 2) ? 1.2 : -1.0), (1 - d * 0.4) * fade);
     }
-    /* las pavesas, subiendo y yéndose con el viento */
-    for (k = 0; k < 14; k++) {
-      var e = tramo(pm, 0.1 + k * 0.035, 0.6 + k * 0.03);
-      if (e <= 0 || e >= 1) continue;
-      var q0 = M.pant(-4 + (k % 7) * 1.3, -3 + Math.floor(k / 7) * 3.5);
-      ctx.fillStyle = (k % 3) ? 'rgba(255,150,40,' + (1 - e) + ')' : 'rgba(255,230,140,' + (1 - e) + ')';
-      ctx.fillRect(q0.x + Math.sin(e * 5 + k) * 1.4 - e * 4, q0.y - e * 11, 0.45, 0.45);
+    /* las figuritas: la Virgen, San José, el Niño y la llamita, saltando */
+    var FIG = [[-2.4, 1.0, '#7fb2ff'], [2.5, 1.0, '#8a5a2e'], [0.2, 0.4, '#fbf6ec'], [1.4, 0.5, '#f4efe4']];
+    for (k = 0; k < FIG.length; k++) {
+      var e = tramo(pm, 0.3 + k * 0.06, 0.95);
+      if (e <= 0) continue;
+      var p = M.pant(FIG[k][0], FIG[k][1]);
+      var dx = (k % 2 ? 1 : -1) * e * (5 + k), dy = -Math.sin(e * Math.PI) * 5 + e * e * 6;
+      ctx.save();
+      ctx.globalAlpha = (1 - tramo(e, 0.7, 1)) * fade;
+      ctx.translate(p.x + dx, p.y + dy);
+      ctx.rotate(e * (k % 2 ? 6 : -6));
+      ctx.fillStyle = FIG[k][2];
+      ctx.beginPath(); ctx.moveTo(-0.6, 0.6); ctx.quadraticCurveTo(0, -1.2, 0.6, 0.6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f3c9a0';
+      ctx.beginPath(); ctx.arc(0, -0.9, 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
-    /* el humo de al final */
-    var humo = tramo(pm, 0.55, 1);
-    if (humo > 0 && humo < 1) {
-      var ph = M.pant(0, -3);
-      ctx.fillStyle = 'rgba(120,118,128,' + ((1 - humo) * 0.45) + ')';
-      for (k = 0; k < 3; k++) {
-        ctx.beginPath();
-        ctx.arc(ph.x + (k - 1) * 2.2 - humo * 2, ph.y - 2 - humo * 7 - k, 1.4 + humo * 2.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    /* la estrella del pesebre, que se apaga y cae la última */
+    var st = tramo(pm, 0.45, 1);
+    if (st > 0) {
+      var ps = M.pant(0.1, 2.55);
+      ctx.save();
+      ctx.globalAlpha = (1 - st) * fade;
+      ctx.fillStyle = mix('#ffd23f', '#6a5a30', st);
+      estrella5(ctx, ps.x, ps.y + st * st * 10, 0.6, st * 5);
+      ctx.fill();
+      ctx.restore();
     }
   });
 
   /* ---------- Las cinco piezas del pase de diciembre ---------- */
   var CAT = [
-    { id: 'anoviejo', name: 'AÑO VIEJO', cat: 'skin', carril: 'pago', galon: 30,
-      ve: 'El muñeco que se quema a medianoche: cabeza de trapo relleno de paja, cosida a parches (uno del color del jugador), ojo de botón cosido en cruz, sombrero de paja roto y el cartel del 2026 prendido con un alfiler. La mandíbula de trapo, con los labios cosidos, es la boca.',
-      q: 'Le prenden la mecha que asoma por el sombrero: se consume chisporroteando y revientan los petardos que lleva dentro, uno detrás de otro, mientras el muñeco da respingos.',
-      muerte: 'Lo que toca a medianoche: arde de abajo arriba, se queda en ceniza negra, se hunde y el viento se lleva las pavesas.',
-      ojo: 'Quemar el año viejo es de aquí (Perú, Ecuador, Colombia...), y es lo contrario de la Navidad: CLAUS-MAN ya se regala del 20 de diciembre al 6 de enero, así que el pase no le pisa nada.' },
+    { id: 'retablo', name: 'RETABLO', cat: 'skin', carril: 'pago', galon: 30,
+      ve: 'El retablo ayacuchano: un cajón de madera con techo a dos aguas, pintado de flores y con la madera del color del jugador. Dentro, en su nicho azul, el nacimiento: la Virgen, San José, el Niño en el pesebre y una llamita, con la estrella encima. El cajón de abajo es la boca.',
+      q: 'Se enciende por dentro: el nicho se llena de luz dorada, sale la estrella de Belén con sus rayos por el techo y suena el villancico.',
+      muerte: 'Se le va la luz, el cajón se desarma en tablas que caen, las figuritas del nacimiento saltan fuera y la estrella se apaga la última.',
+      ojo: 'Navidad de aquí, no del Polo Norte: el gorro de Papá Noel ya lo regala CLAUS-MAN del 20 de diciembre al 6 de enero, así que el pase no le pisa nada.' },
 
-    { id: 'acc_lentes', name: 'LENTES 2027', cat: 'accesorio', carril: 'pago', galon: 10,
-      ve: 'Los lentes de fiesta del año nuevo: el 2027 en cifras doradas con purpurina, y el CERO hace de cristal ahumado del color del jugador, justo sobre el ojo. Los destellos saltan de cifra en cifra.',
-      ojo: 'Van a la cara, como las gafas de la tienda.' },
+    { id: 'acc_paneton', name: 'PANETÓN', cat: 'accesorio', carril: 'pago', galon: 10,
+      ve: 'Un panetón entero en la cabeza, recién salido: la cúpula dorada con sus frutas confitadas y pasas, el molde de papel a pliegues del color del jugador y un hilito de vapor.',
+      ojo: 'Va a la cabeza, como el RAMEN de la tanda yōkai o la chistera.' },
 
-    { id: 'acc_maleta', name: 'MALETA', cat: 'accesorio', carril: 'gratis', galon: 30,
-      ve: 'La maleta de dar la vuelta a la manzana a medianoche, para viajar el año que viene: de cuero, con sus correas, esquinas de metal, pegatinas de los viajes (un sol, un corazón, una estrella) y una etiqueta del color del jugador. Va colgada a la espalda y bota al correr.',
-      ojo: 'A la espalda, como la MOCHILA DE PROTONES de octubre: se lleva con cualquier sombrero.' },
+    { id: 'acc_belen', name: 'ESTRELLA DE BELÉN', cat: 'accesorio', carril: 'gratis', galon: 30,
+      ve: 'La estrella que corona el pesebre, flotando sobre la cabeza con su resplandor y su cola de cometa hacia atrás: sube y baja despacio y titila.',
+      ojo: 'La del carril gratis tiene que lucir: brilla sola y se lleva con cualquier skin.' },
 
-    { id: 'efx_cohetes', name: 'COHETES', cat: 'efecto', carril: 'pago', galon: 20,
-      ve: 'Por el camino van saliendo cohetes: suben con su cola de chispas y revientan en una palmera de colores que cae y se apaga. Uno de cada tres revienta del color del jugador.',
-      ojo: 'Suben por encima del pasillo y se apagan rápido: no tapan las pastillas.' },
+    { id: 'efx_foquitos', name: 'FOQUITOS', cat: 'efecto', carril: 'pago', galon: 20,
+      ve: 'Por donde pasa deja una tira de foquitos de colores colgando de su cable, que se encienden por turnos, como los del balcón en diciembre.',
+      ojo: 'Luz de colores pegada al suelo del pasillo: se lee bien y no tapa las pastillas.' },
 
-    { id: 'emo_uvas', name: 'DOCE UVAS', cat: 'emote', carril: 'gratis', galon: 10,
-      ve: 'Una uva por campanada: se las va metiendo en la boca a toda prisa, con los mofletes a reventar y los ojos apretados, mientras el racimo de al lado se queda en nada.' }
+    { id: 'emo_chocolatada', name: 'CHOCOLATADA', cat: 'emote', carril: 'gratis', galon: 10,
+      ve: 'La taza de chocolate caliente de la chocolatada: sopla, sorbe, se queda con el bigote de chocolate y suspira de gusto con los ojos cerrados.' }
   ];
 
   CAT.forEach(function (it) {

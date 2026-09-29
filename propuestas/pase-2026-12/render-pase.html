@@ -5,7 +5,7 @@
 </head>
 <body>
 <!-- Hoja de contacto de las piezas, en grande, sin servidor:
-       render-pase.html?id=anoviejo,acc_lentes&ts=0.3,1.0,3.6,4.0,5.8,6.4&fs=0,2,2,2,0,0&k=9
+       render-pase.html?id=retablo,acc_paneton&ts=0.3,1.0,3.6,4.0,5.8,6.4&fs=0,2,2,2,0,0&k=9
      `id` admite varias (una fila cada una), `ts` los instantes (la Q sale
      cada 3,4 s y la muerte entre 5,3 y 6,8), `fs` la fase de la boca de
      cada instante, `k` la escala y `c` el color (%23ff0000). -->
@@ -22,7 +22,7 @@
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
-  var ids = (q.get('id') || 'anoviejo').split(',');
+  var ids = (q.get('id') || 'retablo').split(',');
   var ts = (q.get('ts') || '0.3,1.0,3.6,4.0,5.8,6.4').split(',').map(parseFloat);
   var fs = (q.get('fs') || '0,2,2,2,0,0').split(',').map(function (v) { return parseInt(v, 10); });
   var K = parseFloat(q.get('k') || '9');
