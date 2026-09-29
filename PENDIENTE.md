@@ -7,11 +7,36 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **28 de septiembre de 2026 (noche)**.
+Última puesta al día: **30 de septiembre de 2026** (pm-v312).
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### ▶ PRÓXIMA SESIÓN (dejado el 30 sep)
+
+1. **RECORDARLE A BRAIGHTON las dos tandas del 19 sep que nunca entraron**
+   (lo pidió él): OBJETOS (26 piezas, propuestas/vestuario-objetos/,
+   https://claude.ai/artifact/6Z9ycywGi3Ng88RTVyZ1Xi) y ANDINA (26 piezas,
+   propuestas/vestuario-andina/, https://claude.ai/artifact/GCbCayA81zNbEcXXa3AnyV).
+   Si dice que entran: mismo camino que MITOLOGÍA y YŌKAI (portar dibujos con
+   qFase→qDe, CABEZAS/POSES/zonas, CFG, y en el SERVIDOR piezas_especiales de
+   cofre, tabla de precios y bote de cofres —node supabase/cofres-datos.js y
+   desplegar la función cofres—).
+2. **Con fecha:** 1 oct, que la temporada de septiembre cierre bien en el
+   juego real (¡TEMPORADA CERRADA!, fruta junto al nombre, LAURELES · SEP) y
+   que arranque el pase de octubre con el tope diario; 2 oct, que salgan los
+   LEGENDARIOS del top 3; hacia el 3-4 oct, encender EXIGIR_REPETICION y
+   EXIGIR_AVAL (secretos de la función enviar-record) cuando todos hayan
+   recargado; mitad de octubre, revisar FACTOR_ROL (ya con puntos por
+   proteger) y las metas de los retos del Mago; antes del 24 oct, el camino
+   del pase de NOVIEMBRE (5 piezas; sin él ese mes paga solo monedas) y sus
+   piezas con temporada en piezas_especiales.
+3. **Que Braighton pruebe jugando:** abrir un cofre (apertura EL SALTO),
+   regalar una pieza, una party real (red, volver a la partida con dos
+   aparatos por internet), el móvil de verdad y las skins nuevas.
+4. Pequeño, a su criterio: sacar el premio semanal del DAILY del tope diario
+   del pase; dos partidas a la vez en dos pestañas pueden pisarse lo guardado.
 
 **30 sep — tanda "dale con todo" (pm-v306):** retos entre amigos, REGALAR y
 precios en el servidor (una pieza fiada de hasta 1.500 es posible a propósito:
