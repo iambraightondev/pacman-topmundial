@@ -11387,7 +11387,7 @@
       eq(!!info[id].rara, REDONDAS.indexOf(id) === -1, id + (REDONDAS.indexOf(id) === -1 ? ': extravagante' : ': con la silueta de Pac-Man'));
     });
     function de(lista, id) { var x = null; lista.forEach(function (e) { if (e.id === id) x = e; }); return x; }
-    var ACCS = [['acc_3d', 450], ['acc_corona', 450], ['acc_boina', 450], ['acc_monoculo', 450], ['acc_moto', 450],
+    var ACCS = [['acc_3d', 450], ['acc_corona', 0], ['acc_boina', 450], ['acc_monoculo', 450], ['acc_moto', 450],
      ['acc_casco', 0], ['acc_cadena', 0],
      ['acc_montera', 450], ['acc_poncho', 450], ['acc_quena', 450], ['acc_orejeras', 450], ['acc_trenzas', 450],
      ['acc_oro', 0], ['acc_plumas', 0]];

@@ -1368,12 +1368,9 @@
       ve: 'UN CUENCO DE RAMEN HUMEANTE EN LA CABEZA, CON NARUTO, HUEVO, ALGA Y LOS PALILLOS CLAVADOS.' },
     { id: 'acc_katana', name: 'KATANA', precio: 450,
       ve: 'A LA ESPALDA, EN SU VAINA LACADA: LA EMPUÑADURA ASOMA POR ENCIMA DEL HOMBRO Y LA CORREA LE CRUZA EL CUERPO.' },
-    /* --- objetos (29 sep). La corona se llama DE ORO: CORONA ya es una skin
-     * de logro --- */
+    /* --- objetos (29 sep) --- */
     { id: 'acc_3d', name: 'GAFAS 3D', precio: 450,
       ve: 'LAS DE CARTÓN DEL CINE: UN CRISTAL ROJO, OTRO CIAN Y LA PATILLA HACIA ATRÁS.' },
-    { id: 'acc_corona', name: 'CORONA DE ORO', precio: 450,
-      ve: 'DE ORO, CON TRES PUNTAS REMATADAS EN PIEDRA —ROJA, AZUL Y VERDE— Y EL ARO CON SU RUBÍ.' },
     { id: 'acc_boina', name: 'BOINA', precio: 450,
       ve: 'BOINA LADEADA DE SU COLOR, CON SU CINTA Y EL RABITO ARRIBA.' },
     { id: 'acc_monoculo', name: 'MONÓCULO', precio: 450,
@@ -1404,6 +1401,10 @@
       ve: 'EL CASCO DE SAMURÁI: CUENCO DE HIERRO REMACHADO, ASTAS DORADAS, UN SOL EN EL FRENTE Y EL CUBRENUCA DE LÁMINAS DE SU COLOR.' },
     { id: 'acc_raijin', name: 'TAMBORES DE RAIJIN', cofre: true, precio: 0,
       ve: 'EL ARO DE TAMBORES DEL DIOS DEL TRUENO GIRANDO ALREDEDOR; DE VEZ EN CUANDO SALTA UN RAYO DE UNO A OTRO.' },
+    /* la corona se llama DE ORO (CORONA ya es la skin de logro de la copa de
+     * diamante) y solo sale de cofre, para no abaratar ese logro */
+    { id: 'acc_corona', name: 'CORONA DE ORO', cofre: true, precio: 0,
+      ve: 'DE ORO, CON TRES PUNTAS REMATADAS EN PIEDRA —ROJA, AZUL Y VERDE— Y EL ARO CON SU RUBÍ.' },
     { id: 'acc_casco', name: 'CASCO DE ASTRONAUTA', cofre: true, precio: 0,
       ve: 'BURBUJA DE CRISTAL CON EL REFLEJO CRUZÁNDOLA, ARO DE CUELLO Y UNA ANTENA CON SU PILOTO ROJO.' },
     { id: 'acc_cadena', name: 'CADENA DE ORO', cofre: true, precio: 0,

@@ -7,8 +7,9 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 Las dos del 19 sep que se habían quedado en el escaparate.
 - **Objetos, ocho skins (1.500):** CÁMARA DE FOTOS, DESPERTADOR, SEMÁFORO, CAJA
   FUERTE y BOLA DE DISCOTECA en la tienda; MÁQUINA DE DISCOS, TELEVISOR y CABINA
-  TELEFÓNICA de cofre. Accesorios GAFAS 3D, CORONA DE ORO, BOINA, MONÓCULO y
-  CASCO DE MOTO (CASCO DE ASTRONAUTA y CADENA DE ORO de cofre); efectos TUBO DE
+  TELEFÓNICA de cofre. Accesorios GAFAS 3D, BOINA, MONÓCULO y CASCO DE MOTO
+  (CORONA DE ORO, CASCO DE ASTRONAUTA y CADENA DE ORO de cofre: la corona, para
+  no abaratar la skin CORONA de la copa de diamante); efectos TUBO DE
   NEÓN, POLAROIDS y TICKETS (INTERFERENCIA y CINTA DE CASETE de cofre); emotes
   ALUCINADO, PENSANDO, CORAZÓN ROTO, APLAUSO y CHIST.
 - **Andina, ocho skins (1.500):** GALLITO DE LAS ROCAS, PUMA DE PIEDRA, PAPA, AJÍ y

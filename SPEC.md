@@ -2237,9 +2237,10 @@ approved 2026-09-15. Coins only, no real money.
 - **Objects and Andean batches** (drawn 19 Sep, in the game 29 Sep), same
   path, own blocks after the yōkai one. **Objects:** CÁMARA DE FOTOS,
   DESPERTADOR, SEMÁFORO, CAJA FUERTE, BOLA DE DISCOTECA in the shop; MÁQUINA DE
-  DISCOS, TELEVISOR, CABINA TELEFÓNICA chest-only; GAFAS 3D, CORONA DE ORO,
-  BOINA, MONÓCULO, CASCO DE MOTO (+ CASCO DE ASTRONAUTA, CADENA DE ORO from
-  chests); TUBO DE NEÓN, POLAROIDS, TICKETS (+ INTERFERENCIA, CINTA DE CASETE);
+  DISCOS, TELEVISOR, CABINA TELEFÓNICA chest-only; GAFAS 3D, BOINA, MONÓCULO,
+  CASCO DE MOTO (+ CORONA DE ORO, CASCO DE ASTRONAUTA, CADENA DE ORO from
+  chests; the crown chest-only so it does not cheapen the diamond-cup CORONA
+  skin); TUBO DE NEÓN, POLAROIDS, TICKETS (+ INTERFERENCIA, CINTA DE CASETE);
   emotes ALUCINADO, PENSANDO, CORAZÓN ROTO, APLAUSO, CHIST. **Andean:** GALLITO
   DE LAS ROCAS, PUMA DE PIEDRA, PAPA, AJÍ, SAPO in the shop; TUMI, INTI,
   COLIBRÍ DE NAZCA chest-only; MONTERA, PONCHO, QUENA, OREJERAS DE ORO,

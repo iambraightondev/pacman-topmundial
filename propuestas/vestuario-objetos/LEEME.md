@@ -77,7 +77,8 @@ en js/config.js. Lo que cambió al meterlas:
 - La Q sale con la tecla (`qDe`), no cada 3,4 s.
 - Las BURBUJAS no entran: el juego ya tenía unas casi iguales (quedan 25).
 - Cambian de nombre las que chocaban con una skin: TUBO DE NEÓN, INTERFERENCIA
-  (el GLITCH) y CORONA DE ORO.
+  (el GLITCH) y CORONA DE ORO. La corona pasa a cofre: la skin CORONA es el
+  premio de la copa de diamante y no se abarata.
 - La BOLA DE DISCOTECA conserva la silueta de Pac-Man: no es extravagante, así
   que con la Q lleva los dientes y los accesorios van en la cabeza de Pac-Man.
 - En estas cosas la boca es la mitad de ABAJO: la pajarita baja con ella.

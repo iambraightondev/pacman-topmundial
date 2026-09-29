@@ -2,9 +2,9 @@
 -- VUELTA ATRÁS de las tandas de OBJETOS y ANDINA en el servidor (29 sep 2026)
 --
 -- Lo que se puso en producción al meter las dos tandas:
---   · las 14 piezas de cofre en piezas_especiales (perfiles-blindaje.sql y
+--   · las 15 piezas de cofre en piezas_especiales (perfiles-blindaje.sql y
 --     cofres.sql las llevan ya);
---   · los 37 precios de tienda en tienda_precios (tienda-precios.sql);
+--   · los 36 precios de tienda en tienda_precios (tienda-precios.sql);
 --   · la función `cofres` con los datos nuevos (functions/cofres/datos.js).
 --
 -- Esto quita las dos primeras. La función se vuelve a la de antes con:
@@ -17,13 +17,13 @@
 
 delete from public.piezas_especiales
  where id in ('efx_glitch', 'efx_cinta', 'efx_polvoro', 'efx_lineas',
-              'acc_casco', 'acc_cadena', 'acc_oro', 'acc_plumas',
+              'acc_casco', 'acc_cadena', 'acc_oro', 'acc_plumas', 'acc_corona',
               'discos', 'tele', 'cabina', 'tumi', 'inti', 'nazca');
 
 delete from public.tienda_precios
  where id in ('camara', 'reloj', 'semaforo', 'caja', 'bola',
               'gallito', 'puma', 'papa', 'aji', 'sapo',
-              'acc_3d', 'acc_corona', 'acc_boina', 'acc_monoculo', 'acc_moto',
+              'acc_3d', 'acc_boina', 'acc_monoculo', 'acc_moto',
               'acc_montera', 'acc_poncho', 'acc_quena', 'acc_orejeras', 'acc_trenzas',
               'efx_neon', 'efx_polaroids', 'efx_tickets',
               'efx_coca', 'efx_granizo', 'efx_serpentina', 'efx_tejido',

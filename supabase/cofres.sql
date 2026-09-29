@@ -202,6 +202,7 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
   ('efx_polvoro', 'cofre', null, null), ('efx_lineas', 'cofre', null, null),
   ('acc_casco', 'cofre', null, null), ('acc_cadena', 'cofre', null, null),
   ('acc_oro', 'cofre', null, null), ('acc_plumas', 'cofre', null, null),
+  ('acc_corona', 'cofre', null, null),
   ('discos', 'cofre', null, null), ('tele', 'cofre', null, null),
   ('cabina', 'cofre', null, null), ('tumi', 'cofre', null, null),
   ('inti', 'cofre', null, null), ('nazca', 'cofre', null, null)

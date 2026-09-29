@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v313).
+Última puesta al día: **30 de septiembre de 2026** (pm-v314).
 
 ---
 
@@ -17,9 +17,8 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 1. **Que Braighton vea en el juego las tandas de OBJETOS y ANDINA** (entraron
    el 30 sep, pm-v313): los accesorios se midieron a ojo sobre las 16 skins
-   nuevas; si alguno le queda mal en una, se ajusta su CABEZAS. Decidido sin
-   preguntar: la CORONA DE ORO se vende a 450 aunque la skin CORONA es de logro
-   (copa de diamante); si le resta mérito, pasarla a cofre.
+   nuevas; si alguno le queda mal en una, se ajusta su CABEZAS. La CORONA DE
+   ORO pasó a cofre (pm-v314, lo decidió él) para no abaratar la skin CORONA.
 2. **Con fecha:** 1 oct, que la temporada de septiembre cierre bien en el
    juego real (¡TEMPORADA CERRADA!, fruta junto al nombre, LAURELES · SEP) y
    que arranque el pase de octubre con el tope diario; 2 oct, que salgan los
