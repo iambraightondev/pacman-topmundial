@@ -9346,6 +9346,7 @@ body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosA
 @media (max-width: 600px) {
   .rt-fila { flex-wrap: wrap; gap: 4px 10px; }
   .rt-fila-ruta { flex-basis: calc(100% - 110px); }
+}
 
 /* ---------- REGALAR (js/regalos.js, 29 sep) ----------
  * Una capa ENCIMA de la ficha (no otra pantalla): la pieza, a quién, y el

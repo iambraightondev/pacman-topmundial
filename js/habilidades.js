@@ -2262,7 +2262,6 @@
         case 'campo': return s.campo > 0;
         case 'hospital': return s.hospital > 0;
         case 'eclipse': return s.eclipse > 0;
-        case 'portal': return !!this.portales[idx];
         case 'bomba': return !!s.bomba;
         case 'mina': return !!s.mina;
         case 'telarana': return !!s.telarana;
