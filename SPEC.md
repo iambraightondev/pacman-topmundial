@@ -75,7 +75,9 @@ group (`Game.toMenu()` calls `Party.resume()` instead of `Net.leave()`).
 - With **more than two players**, a `bye` or a silent player no longer kills
   the game: `Game.dropPlayer(i)` benches them (`out`) and the rest keep
   playing. The host runs a per-player watchdog (`posWatch[]`) because the
-  global one only needs *somebody* to talk.
+  global one only needs *somebody* to talk. Since 28 Sep a silent player is
+  first **waited for** 60 s, also in a duo, and closing or reloading the tab
+  can be undone: see **Volver a la partida** under Multiplayer.
 
 **Espectador** (`net: 'spec'`, `localIdx = -1`): the host answers a
 `hello {spec:1}` with `svista` (player count, names, colours, skins, settings)
@@ -1954,6 +1956,31 @@ the DESATADO dialog and the LABERINTOS list.
 `Guardado.luego(fn)` is how the next chunk is scheduled (`setTimeout` in the
 game). The tests replace it with `function (f) { f(); }` so a recovery happens
 inside the test, where no clock is running.
+
+### CLASIFICATORIA a solas: cortarse no es salir (28 Sep 2026)
+
+A solo CLASIFICATORIA is a DESATADO replay (`ajustes.clasif`), so it was
+already autosaved and saved on `pagehide`/hidden; what the rules now say:
+
+- **No manual save**: the pause menu still has no GUARDAR in CLASIFICATORIA
+  (leaving on purpose counts, with the points so far). It says instead that a
+  cut (lost page, reload, the phone killing it) leaves the run where it was.
+- **Saved every second** (`CFG.SAVE_EVERY_CLASIF` = 60 ticks instead of 300):
+  killing the browser without `pagehide` used to rewind up to 5 s — exactly
+  enough to undo a death that costs PR. (The cloud copy keeps its 1-minute
+  cadence; resuming an older cloud copy on another device is the remaining,
+  small, rewind.)
+- **Only CONTINUE or DISCARD**: with a CLASIFICATORIA pending,
+  `UI.avisaSiHayGuardada` offers SEGUIR LA DE ANTES or DESCARTARLA Y EMPEZAR
+  (noted CUENTA PARA TU RANGO); DESCARTARLA in the CONTINUAR box and in NO SE
+  PUDO say the same. Discarding counts (`Guardado.descartar` →
+  `Rango.apuntar` with the saved points), as before. A CLASIFICATORIA party
+  game cannot start with one pending either: `Party.begin` →
+  `Guardado.antesDeOtra(true)` discards it (counting) first.
+- The resumed run is the same CLASIFICATORIA (`Replay.montar` keeps `clasif`,
+  `Rango.porQueNo` is null) and counts once when it really ends; all the
+  protections above (run id, closed runs travelling with the account, never
+  paid twice) apply unchanged.
 
 ## Nombres de jugador (nicknames)
 
@@ -4156,10 +4183,12 @@ host's difficulty settings + livesMode + startLevel are imposed):
   host validates and replies `eatGhost` with chain points), own death
   (local freeze, host replies `death`). Pause: either player; guest's `P`
   sends `pauseReq`, host applies and broadcasts.
-- Robustness: watchdog shows "ESPERANDO CONEXIÓN..." after 1.5 s without
-  data and drops with "CONEXIÓN PERDIDA" after 8 s; leaving sends `bye`
-  ("EL OTRO JUGADOR HA SALIDO" on the other side → menu). A hidden tab
-  keeps simulating via a 100 ms interval pump (rAF stops in background).
+- Robustness: watchdog freezes after 1.5 s without data (`WAIT_TICKS`) and
+  says who it is waiting for; since 28 Sep a silence is waited out for
+  `PLAZO_TICKS` instead of ending the game at 10 s — see **Volver a la
+  partida** below. Leaving sends `bye` ("EL OTRO JUGADOR HA SALIDO" on the
+  other side → menu). A hidden tab keeps simulating via a 100 ms interval
+  pump (rAF stops in background).
 - **Host migration (18 Sep, PROTO 14).** Leaving no longer ends anyone
   else's game. A host on its way out first broadcasts
   `mando {n, v, s, x}`: `n` = the seat that takes over (lowest live
@@ -4173,9 +4202,110 @@ host's difficulty settings + livesMode + startLevel are imposed):
   lost). No `bye` is sent when the handover succeeds. Any other player
   leaving is now `dropPlayer` (spectator) instead of ending the game, also
   in a duo. The watchdog is muted while `soloEnLaSala()` — otherwise the
-  last player standing would time itself out. **Not covered:** a host that
-  drops off the network without a handover; nobody holds the snapshot, so
-  the game still ends. The new host does not resume replay recording.
+  last player standing would time itself out. A host that drops off the
+  network without a handover is now covered too (below). The new host does
+  not resume replay recording.
+
+#### Volver a la partida (28 Sep 2026, PROTO 21)
+
+Before, 10 s of silence ended the game: CONEXIÓN PERDIDA when the host went
+quiet, the quiet guest benched (the whole game, in a duo), and closing the tab
+was leaving. Now a cut is **waited out** for `CFG.NET.PLAZO_TICKS` (3 600 =
+60 s) and can be recovered, also after a reload.
+
+- **Knowing who is offline.** `Net.enLinea()` asks the transport (the
+  Supabase one reports `open: false` while reconnecting; no transport or the
+  local one = online). `Game.conRed()` wraps it. The Supabase transport keeps
+  retrying for the whole plazo while a network game is on (`aguanteMs`:
+  `PLAZO + SUCESION × MAX_PLAYERS` + 5 s) instead of giving up at 10 s.
+- **A guest goes quiet** (host side, `netMaintain`): `posWatch[w] >
+  WAIT_TICKS` → `marcarAusente(w)`. `ausentes[w]` counts ticks; the seat's
+  Pac-Man is **frozen and safe** (skipped in `stepPlaying`, `safeTicks ≥ 2`,
+  so the king and SUPERVIVENCIA spare it too; guests stop dead-reckoning it)
+  and a VS. ghost goes back to the machine (`taken = false`). Chosen as the
+  fairest: losing a life while not playing is unfair, and so is scoring. The
+  game **keeps going** for everyone else, with a strip "ESPERANDO A X ·
+  RECONECTANDO · n S" (`Game.avisoRed`; the list travels in the snapshot as
+  `au: [[seat, ticks], …]`). Any message from the seat → `vuelveAsiento`:
+  back where it was, `RESPAWN_SAFE_TICKS` of grace (`evt {t:'vuelve', i}`
+  gives the guest its own), and a full snapshot at once. After the plazo →
+  `soltarAusente` → `playerGone` (benched, as a `bye` always did, duo
+  included: the host then plays on alone). Silence is only counted while the
+  host itself is online (otherwise the quiet ones would be us).
+- **The host goes quiet** (guest side): guests freeze as before, now with
+  "ESPERANDO A X · RECONECTANDO · n S" (or "SIN CONEXIÓN" when the offline one
+  is this machine). If the host comes back, nothing else happens: it still
+  holds its game and just carries on. If not, `plazoDelAnfitrion`: the guest
+  whose `puestoSucesion()` is `k` (seat order, skipping the host, the gone and
+  the awaited — the same on every machine, so nobody has to agree) takes over
+  after `PLAZO + k × SUCESION_TICKS` of silence **heard while online**
+  (`callaEnLinea`, so a guest that was offline itself cannot grab the mando
+  before the first snapshot reaches it): `heredarMando` goes through
+  `recibirMando` locally and broadcasts `mando {n, v, s, x}` built from **its
+  last snapshot** (extras are this guest's own, slightly stale — accepted).
+  Nobody left after `PLAZO + SUCESION × players` → CONEXIÓN PERDIDA.
+- **Two hosts.** The old host, back online after being replaced, learns it by
+  any `snap` from someone else (`hostMsg` → `relevado`), the `mando` that
+  names it as `v`, or `fuera`: "LA PARTIDA SIGUIÓ SIN TI", counted as a
+  leave but **not** sent to the top (the team's mark is whoever finishes).
+  Everyone ignores game messages from a seat marked gone (`idos`), and the
+  host answers them `fuera {i, to}` (`processNetQueue`, `DE_PARTIDA`). A host
+  offline longer than `PLAZO + SUCESION × players` gives up with CONEXIÓN
+  PERDIDA, also without top if it had someone to hand over to.
+- **Reloading / closing the tab.** `Guardado.pasoRed` writes
+  `pacman-topmundial-red-viva` every second during a network game, one entry
+  per tab keyed by sid: `{code, sid, i, spec, host, n, modo, p, s, lv, tags,
+  roles, cl, t, quien, f}` (the
+  room, the seat, **the sid** — the identity in the room — and what would be
+  cashed on leaving), plus the tab's sid in sessionStorage. `pagehide`
+  (`alIrse(true)`) no longer cashes a party game: `Game.reservarAsiento()` —
+  a guest sends `ausente {i}` (awaited at once), a host hands over with
+  `mando {…, r:1}` (the seat is kept: marked awaited, not gone, not in the
+  rematch's `fuera`) and demotes itself to guest in case the page comes back
+  from the bfcache. It still cashes as before if there is nobody to wait with.
+  On load, `Guardado.alAbrir()`: within the plazo the record stays pending;
+  `UI.volverSiToca` (from `celebrarSiToca`) offers **VOLVER A LA PARTIDA /
+  SALIR DE ELLA** (a record whose heartbeat is under 3 s old and is not this
+  tab's belongs to another live tab and is left alone). VOLVER →
+  `Party.volver(rec)`: reconnects with the **same sid**, sends `vuelvo {v, i}`
+  once a second; the host (`atenderVuelta`, checks the seat's sid in
+  `Party.order`) answers `revista` — `specView` + `i`, `hi` (host seat),
+  `fuera`, `cl`, `maze`, the **start** settings (specView sends the current
+  level, which would void a CLASIFICATORIA), the room (`ord`, `lider`, `pm`)
+  and a full snapshot — and `UI.volverConRevista` rebuilds the game in that
+  seat (`Game.ponerRevista` puts the own Pac-Man where the host had it). The
+  party state is restored too, so after the game the player is back in the
+  lobby. If the one who reloaded was the **host**, its game died with the
+  page: the first guest in the queue takes the mando with its snapshot
+  (`heredarMando(true)`, seat kept) and answers the `vuelvo` itself. `Net`
+  forgets the sid's numbering (`ultimoQ`) and its stale WebRTC link on
+  `vuelvo`: it is a new page with the old sid.
+- **Cashing, never twice.** A game that ends here clears the record
+  (`closeRun` → `Guardado.redCerrada`). SALIR DE ELLA, a failed VOLVER
+  (`fuera` = too late, no answer, other version; cancelling or having no
+  network here keeps it pending and it is offered again), a record found past the
+  plazo, or starting any other game (`pasoRed`, and `Party.begin` →
+  `antesDeOtra`) → `cobrarRed`: XP, coins, one game with its best and time,
+  and, if it was an eligible CLASIFICATORIA, the rank (`Rango.apuntar`) —
+  maestría and history need the whole game and are lost, as with a page that
+  died hidden before. SALIR also sends `ausente {i, fin:1}` through a one-shot
+  channel (`Party.despedirse`) so the others stop waiting (a host seat's
+  `fin` makes the first guest inherit at once). Only for the account the
+  record belongs to. The old testigo (`clasif-viva`) is kept as the fallback
+  for pages that died without a record and is dropped whenever the record is
+  settled.
+- **Spectators** reconnect the same way: their channel keeps retrying, they
+  wait the plazo plus the succession (and follow the new host's `mando`);
+  after a reload the notice offers VOLVER A MIRAR, which is the usual
+  `joinAsSpec`. Watching a **local** game (showcase, `svista.local`,
+  `Game.vistaLocal`) keeps the old 10 s cut: nobody there can inherit.
+- **CLASIFICATORIA de party**: nothing special — the rejoined player's game is
+  rebuilt with `clasif` and the start settings, so `Rango.porQueNo` is null
+  and its `closeRun` counts it once for everyone (pruebas-red.js R8).
+- Tests: `pruebas-red.js` R1–R10 (guest/host offline and back, not back,
+  reload, tab close, CLASIFICATORIA recovered, leaving instead of returning,
+  spectator), with `sinRed` (page alive, no network) next to `caido` (page
+  dead) and `recargar()` (a fresh world with the old storage and session).
 
 ### Wire messages (reference)
 
@@ -4207,6 +4337,12 @@ from third parties. Cells are indices `row*28+col`.
   (the "+600" of whoever was paid).
 - Both directions: `bye {}` on leaving. With 3 and 4 players a `bye` from a
   guest only benches that player (`left`), it does not end the game.
+- Volver a la partida (PROTO 21): `ausente {i, fin?}` (tab closed: wait for
+  me / `fin`: I am not coming back), `vuelvo {v, i}` (reloaded, give me my
+  seat) → `revista {…specView, i, hi, fuera, cl, maze, cfg, ord, lider, pm,
+  s}` or `fuera {i, to, m?}` (too late; `m:'VERSION'`); `mando` gains `r:1`
+  (seat kept); `evt {t:'vuelve', i}`; snapshot field `au`; showcase `svista`
+  gains `local:1`.
 - `snap` fields: `st ph dph lph dp rt pz` (state/phases/pause), `lvl sc hs`
   (level/score/high), `gm el ft ffl ch` (mode/elroy/fright/chain),
   `fz hg ei` (eat-freeze/hidden ghost/eater), `dl de fa` (dots/fruit),

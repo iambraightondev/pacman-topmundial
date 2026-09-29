@@ -711,6 +711,11 @@
           }
         }
       }
+      /* NO SE EMPIEZA OTRA CON UNA A MEDIAS (28 sep): la party cortada a la
+       * que no se volvió cuenta ya, y si esta es CLASIFICATORIA, también la
+       * clasificatoria a solas que quedara guardada (js/guardado.js) */
+      var Gd = window.PM.Guardado;
+      if (Gd && Gd.antesDeOtra) Gd.antesDeOtra(!!(d.hab && d.cl));
       // si estábamos viendo la de otro, la propia manda: se deja de mirar
       window.PM.Net.closeView();
       this.order = order;
@@ -741,6 +746,104 @@
       }
       this.startBeat();
       this.changed();
+    },
+
+    /* ---------- VOLVER A LA PARTIDA (28 sep) ----------
+     * La página se recargó (o se cerró y se volvió a abrir) en plena
+     * partida de party. js/guardado.js dejó apuntado dónde: la sala, el
+     * asiento y el sid, que es la identidad en la sala. Con el MISMO sid se
+     * entra otra vez y se pide 'vuelvo'; quien manda contesta 'revista'
+     * (ajustes, sala y una foto entera, ver Game.revista) o 'fuera' si ya
+     * se le dio por ido. `hecho(err, revista)`; err: 'FUERA', 'VERSION',
+     * 'NO ESTÁ' (nadie contesta) o el del canal. */
+    VOLVER_INTENTOS: 8,        // un 'vuelvo' por segundo
+
+    volver: function (rec, hecho) {
+      var self = this, N = window.PM.Net;
+      if (!rec || !rec.code || !rec.sid || !N.configured()) { hecho('NO ESTÁ'); return; }
+      this.close();
+      N.sid = rec.sid;
+      this.st = { code: rec.code, leader: false, members: [], status: 'volviendo', joinTimer: null };
+      var fin = false, intentos = 0, reloj = null;
+      function acaba(err, d) {
+        if (fin) return;
+        fin = true;
+        if (reloj) { clearInterval(reloj); reloj = null; }
+        if (err) { self.close(); self.changed(); }
+        hecho(err, d);
+      }
+      this.cancelarVuelta = function () { acaba('CANCELADA'); };
+      N.handler = function (name, d) {
+        if (!d || fin) return;
+        if (name === 'revista' && d.to === N.sid) {
+          if (d.v !== CFG.NET.PROTO) { acaba('VERSION'); return; }
+          self.alVolver2(d);
+          acaba(null, d);
+        } else if (name === 'fuera' && (d.to === N.sid || d.i === rec.i)) {
+          acaba(d.m === 'VERSION' ? 'VERSION' : 'FUERA');
+        }
+      };
+      N.onclose = function () { acaba('SIN CONEXIÓN'); };
+      function pide() {
+        if (fin) return;
+        if (++intentos > self.VOLVER_INTENTOS) { acaba('NO ESTÁ'); return; }
+        N.send('vuelvo', { v: CFG.NET.PROTO, i: rec.i });
+      }
+      N.connect(rec.code, {
+        onOpen: function () {
+          if (fin) return;
+          pide();
+          if (!fin) reloj = setInterval(pide, 1000);
+        },
+        onError: function (m) { acaba(m || 'SIN CONEXIÓN'); }
+      });
+    },
+
+    /* Ha contestado quien manda: la sala vuelve a ser la de antes (la lista,
+     * quién es el líder y el modo), para que al acabar la partida se siga en
+     * ella como todos. La partida la monta la interfaz (UI.volverConRevista). */
+    alVolver2: function (d) {
+      var N = window.PM.Net, i, otros = [];
+      this.cancelarVuelta = null;
+      var ord = (d.ord && d.ord.length) ? d.ord : null;
+      var lider = d.lider || null;
+      this.st.status = 'dentro';
+      this.st.leader = (lider === N.sid);
+      this.st.leaderSid = lider;
+      this.st.members = (d.pm && d.pm.length) ? d.pm : (ord || []);
+      this.habPick = !!d.hab;
+      this.clasifPick = !!(d.hab && d.cl);
+      this.cazaPick = !!d.caza;
+      this.supervPick = !!d.sv;
+      this.order = ord;
+      if (ord) {
+        for (i = 0; i < ord.length; i++) if (ord[i].s !== N.sid) otros.push(ord[i].s);
+        N.lockPeers(otros);
+      }
+      this.stopBeat();
+    },
+
+    /* Salir de la partida que se cortó sin volver a ella (SALIR DE ELLA en
+     * el aviso): se entra un momento con el mismo sid para decir 'ausente'
+     * con `fin`, y así los demás no se quedan esperando el plazo entero. */
+    despedirse: function (rec) {
+      var N = window.PM.Net;
+      if (!rec || !rec.code || !rec.sid || !N.configured()) return;
+      if (this.st || (window.PM.Game && window.PM.Game.inGame())) return;
+      N.sid = rec.sid;
+      var ch = null, abierto = false, dicho = false;
+      function dilo() {
+        if (!ch || !abierto || dicho) return;
+        dicho = true;
+        ch.send('ausente', { i: rec.i, fin: 1 });
+        setTimeout(function () { ch.close(); }, 800);
+      }
+      ch = N.openChannel('sala:' + rec.code, {
+        onOpen: function () { abierto = true; dilo(); },
+        onError: function () { if (ch) ch.close(); }
+      });
+      dilo();                      // por si el canal abrió sin esperar
+      setTimeout(function () { ch.close(); }, 6000);
     },
 
     /* AL VOLVER A LA VENTANA. Si estoy en una sala, no soy el líder y no

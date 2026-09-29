@@ -3532,18 +3532,31 @@
     } finally { G.toMenu(); }
   });
 
+  /* 28 sep (VOLVER A LA PARTIDA): al callado primero se le ESPERA el plazo,
+   * quieto y a salvo; solo después queda fuera */
   test('el que deja de mandar noticias se queda fuera, no congela al resto',
     function () {
       partida(4, 'host');
       G.posWatch = [];
       // el jugador 1 sigue hablando; el 2 y el 3 se han quedado mudos
-      for (var i = 0; i < CFG.NET.DROP_TICKS + 2; i++) {
+      var i;
+      for (i = 0; i < CFG.NET.DROP_TICKS + 2; i++) {
         G.netWatch = 0;
         G.posWatch[1] = 0;
         G.netMaintain();
       }
       ok(!G.pacs[1].out, 'el que habla sigue jugando');
-      ok(G.pacs[2].out && G.pacs[3].out, 'los callados quedan de espectadores');
+      ok(G.esperando(2) && G.esperando(3), 'a los callados se les espera');
+      ok(!G.pacs[2].out && !G.pacs[3].out, 'sin echarlos todavía');
+      ok(/ESPERANDO A/.test((G.avisoRed() || {}).a || ''), 'y se dice a quién');
+      ok(!G.avisoRed().tapa, 'sin parar la partida');
+      for (i = 0; i < CFG.NET.PLAZO_TICKS; i++) {
+        G.netWatch = 0;
+        G.posWatch[1] = 0;
+        G.netMaintain();
+      }
+      ok(G.pacs[2].out && G.pacs[3].out, 'pasado el plazo, quedan de espectadores');
+      ok(!G.esperando(2), 'y ya no se les espera');
       eq(G.netNotice, null, 'sin corte de partida');
       eq(G.state, 'PLAYING');
     });
@@ -12103,7 +12116,8 @@
   /* lo que la partida a medias apunta aparte: las cerradas, lo que falta por
    * subir a la nube y el testigo de la clasificatoria de party */
   var CLAVES_GUARDADO = ['pacman-topmundial-partidas-cerradas',
-    'pacman-topmundial-partida-nube-pend', 'pacman-topmundial-clasif-viva'];
+    'pacman-topmundial-partida-nube-pend', 'pacman-topmundial-clasif-viva',
+    'pacman-topmundial-red-viva'];
 
   function conGuardado(fn) {
     var Gd = window.PM.Guardado;
@@ -12374,6 +12388,200 @@
           if (G.inGame()) G.toMenu();
         }
       }); });
+    });
+  });
+
+  /* =================================================================
+   * VOLVER A LA PARTIDA (28 sep): la CLASIFICATORIA a solas que se corta
+   * se guarda sola y solo se puede seguir o descartar (y descartar cuenta);
+   * la party que se corta guarda el asiento y, si no se vuelve, cuenta.
+   * (Lo de varias máquinas a la vez está en pruebas-red.js, casos R.)
+   * ================================================================= */
+  function clasifCortada(Gd, guion) {
+    window.PM.settings.muted = true;
+    G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+    juegaGuion(guion);
+    ok(G.score > 0 && G.state !== 'GAME_OVER', 'la partida va');
+    eq(Gd.alIrse(true), 'guardada', 'al cortarse se guarda sola');
+  }
+
+  test('CLASIFICATORIA a solas: si se corta se guarda sola, se retoma donde iba y cuenta una vez', function () {
+    var Rg = window.PM.Rango, cc = Rg.conCuenta;
+    conGuardado(function (Gd) {
+      conContadores(function () {
+        Rg.conCuenta = function () { return true; };
+        try {
+          var jug = Rg.estado().jugadas;
+          window.PM.settings.muted = true;
+          G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+          eq(Rg.porQueNo(G), null, 'es una clasificatoria que cuenta');
+          juegaGuion(900);
+          ok(G.score > 0 && G.state !== 'GAME_OVER', 'la partida va');
+          eq(Gd.alIrse(true), 'guardada', 'al cortarse (cerrar, recargar, matar la página) se guarda sola');
+          var antes = { p: G.score, dl: G.dotsLeft, lv: G.lives, t: G.timeTicks,
+                        pos: G.pacs[0].x + ',' + G.pacs[0].y };
+          eq(Rg.estado().jugadas, jug, 'cortarse no cuenta como salida');
+          cierraDeGolpe();
+          eq(Gd.sobre().cl, 1, 'la guardada es CLASIFICATORIA');
+          var err = 'sin respuesta';
+          Gd.retomar(null, function (e) { err = e; });
+          eq(err, null, 'se retoma');
+          ok(G.clasif, 'sigue siendo CLASIFICATORIA');
+          eq(Rg.porQueNo(G), null, 'y sigue contando para el rango');
+          eq(G.score, antes.p, 'con sus puntos');
+          eq(G.dotsLeft, antes.dl, 'sus pastillas');
+          eq(G.lives, antes.lv, 'sus vidas');
+          eq(G.timeTicks, antes.t, 'y su reloj');
+          eq(G.pacs[0].x + ',' + G.pacs[0].y, antes.pos, 'Pac-Man donde estaba');
+          ok(G.paused, 'en pausa, para ubicarse');
+          G.toMenu();
+          eq(Rg.estado().jugadas, jug + 1, 'al acabarla cuenta UNA vez');
+          ok(!Gd.hay(), 'y no queda nada que seguir');
+        } finally { Rg.conCuenta = cc; }
+      });
+    });
+  });
+
+  test('CLASIFICATORIA a solas: se guarda cada segundo, no cada cinco', function () {
+    conGuardado(function (Gd) {
+      window.PM.settings.muted = true;
+      G.newGame({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+      juegaGuion(400);
+      var t0 = Gd.sobre() ? Gd.sobre().t : -1;
+      juegaGuion(CFG.SAVE_EVERY_CLASIF + 2);
+      ok(Gd.sobre() && Gd.sobre().t > t0, 'el autoguardado va al segundo');
+      ok(CFG.SAVE_EVERY_CLASIF < CFG.SAVE_EVERY, 'más a menudo que una partida normal');
+    });
+  });
+
+  test('CLASIFICATORIA a solas a medias: no se empieza otra sin descartarla, y descartarla cuenta', function () {
+    var Rg = window.PM.Rango, UI = window.PM.UI, cc = Rg.conCuenta;
+    conGuardado(function (Gd) {
+      conContadores(function () {
+        Rg.conCuenta = function () { return true; };
+        try {
+          clasifCortada(Gd, 300);
+          cierraDeGolpe();
+          var jug = Rg.estado().jugadas, empezada = false;
+          ok(UI.avisaSiHayGuardada(function () { empezada = true; }), 'antes de empezar otra, se pregunta');
+          var botones = [].slice.call(UI.els.prompt.querySelectorAll('button'));
+          var textos = botones.map(function (b) { return b.textContent; }).join('|');
+          ok(textos.indexOf('EMPEZAR UNA NUEVA') === -1, 'sin "empezar una nueva" a secas: ' + textos);
+          ok(textos.indexOf('SEGUIR LA DE ANTES') !== -1, 'se puede seguir');
+          ok(/CUENTA PARA TU RANGO/.test(UI.els.prompt.textContent), 'y se avisa de que descartarla cuenta');
+          eq(Rg.estado().jugadas, jug, 'preguntar no cuenta nada');
+          var descartar = botones.filter(function (b) { return b.textContent.indexOf('DESCARTARLA Y EMPEZAR') === 0; })[0];
+          ok(descartar, 'la otra salida es descartarla');
+          descartar.click();
+          ok(empezada, 'y entonces sí se empieza');
+          eq(Rg.estado().jugadas, jug + 1, 'contando la descartada');
+          ok(!Gd.hay(), 'que ya no está');
+          /* y una CLASIFICATORIA de party tampoco empieza con una a solas a
+           * medias: la de antes cuenta primero (Party.begin → antesDeOtra) */
+          clasifCortada(Gd, 300);
+          cierraDeGolpe();
+          Gd.antesDeOtra(false);
+          ok(Gd.hay(), 'una party que no es clasificatoria no la toca');
+          var P = window.PM.Party, onstart = P.onstart, llamada = false;
+          P.onstart = function () { llamada = true; };
+          try {
+            P.begin({ v: CFG.NET.PROTO, hab: true, cl: true,
+                      ord: [{ s: window.PM.Net.sid, n: 'YO' }, { s: 'otro', n: 'OTRO' }] }, true);
+          } finally { P.onstart = onstart; P.order = null; window.PM.Net.unlockPeers(); }
+          ok(llamada, 'la party arranca');
+          eq(Rg.estado().jugadas, jug + 2, 'y la clasificatoria a medias cuenta antes');
+          ok(!Gd.hay(), 'ya descartada');
+        } finally { Rg.conCuenta = cc; UI.hidePrompt(); }
+      });
+    });
+  });
+
+  test('en party, cerrar la pestaña guarda el asiento sin cobrar; si no se vuelve a tiempo, cuenta al abrir', function () {
+    var Rg = window.PM.Rango, N = window.PM.Net, cc = Rg.conCuenta;
+    var code0 = N.code, envia = G.netSend, mandados = [];
+    conGuardado(function (Gd) {
+      conContadores(function (A) { cuentaSinRed('UNO', function () {
+        Rg.conCuenta = function () { return true; };
+        try {
+          window.PM.settings.muted = true;
+          G.newGame({ players: 2, hab: true, clasif: true, net: 'guest', names: ['UNO', 'DOS'] });
+          G.netSend = function (n, d) { mandados.push([n, d]); };
+          N.code = 'PRUE';
+          G.state = 'PLAYING';
+          G.score = 3000;
+          var partidas = A.stats().partidas | 0, jug = Rg.estado().jugadas;
+          eq(Gd.alIrse(true), 'reservada', 'se le guarda el asiento');
+          ok(G.inGame(), 'sin salir de la partida');
+          ok(mandados.some(function (m) { return m[0] === 'ausente' && m[1].i === 1; }),
+             'avisando de que falta, para que le esperen ya');
+          eq(A.stats().partidas | 0, partidas, 'sin cobrarla');
+          eq(Rg.estado().jugadas, jug, 'ni contarla');
+          G.netRole = null; cierraDeGolpe();           // la página muere
+          var mapa = JSON.parse(localStorage.getItem('pacman-topmundial-red-viva')) || {};
+          var rec = mapa[N.sid];
+          ok(rec && rec.code === 'PRUE' && rec.i === 1 && rec.cl === 1 && rec.p === 3000,
+             'queda apuntado a qué volver: ' + JSON.stringify(mapa));
+          function ponRec() {
+            var o = {};
+            o[rec.sid] = rec;
+            localStorage.setItem('pacman-topmundial-red-viva', JSON.stringify(o));
+          }
+          rec.f = Date.now() - 5000;                    // no es de otra pestaña viva
+          ponRec();
+          eq(Gd.alAbrir(), 'pendiente', 'al abrir dentro del plazo, queda por decidir');
+          ok(Gd.paraVolver(), 'y se ofrece volver');
+          eq(Rg.estado().jugadas, jug, 'sin contar todavía');
+          rec.f = Date.now() - CFG.NET.PLAZO_TICKS * 1000 / 60 - 1000;
+          ponRec();
+          eq(Gd.paraVolver(), null, 'pasado el plazo ya no se ofrece');
+          eq(A.stats().partidas | 0, partidas + 1, 'cuenta como jugada');
+          eq(Rg.estado().jugadas, jug + 1, 'y para el rango');
+          Gd.alAbrir();
+          ok(!Gd.paraVolver(), 'nada más');
+          eq(Rg.estado().jugadas, jug + 1, 'una sola vez');
+        } finally {
+          Rg.conCuenta = cc; N.code = code0; G.netSend = envia;
+          if (G.inGame()) G.toMenu();
+        }
+      }); });
+    });
+  });
+
+  test('la portada ofrece VOLVER A LA PARTIDA o SALIR DE ELLA, y salir cuenta', function () {
+    var UI = window.PM.UI, P = window.PM.Party, desp = P.despedirse, dichos = [];
+    conGuardado(function (Gd) {
+      conContadores(function (A) {
+        P.despedirse = function (r) { dichos.push(r); };   // sin red en las pruebas
+        try {
+          var rec = { v: 1, code: 'PRUE', sid: 'sid-viejo', i: 1, spec: 0, host: 'UNO', n: 2,
+                      modo: 'DESATADO', p: 1200, s: 90, lv: 1, tags: ['party', 'hab'], roles: null,
+                      cl: 0, t: '', quien: '', f: Date.now() - 5000 };
+          localStorage.setItem('pacman-topmundial-red-viva', JSON.stringify({ 'sid-viejo': rec }));
+          /* y otra pestaña que sigue jugando (latido de ahora mismo): esa no se toca */
+          var viva = JSON.parse(JSON.stringify(rec));
+          viva.sid = 'sid-vivo'; viva.f = Date.now();
+          var mapa = JSON.parse(localStorage.getItem('pacman-topmundial-red-viva'));
+          mapa['sid-vivo'] = viva;
+          localStorage.setItem('pacman-topmundial-red-viva', JSON.stringify(mapa));
+          eq(Gd.paraVolver().sid, 'sid-viejo', 'se ofrece la de la página muerta, no la de la viva');
+          ok(UI.volverSiToca(), 'se pregunta');
+          var txt = UI.els.prompt.textContent;
+          ok(/PARTIDA EN MARCHA/.test(txt) && /DESATADO/.test(txt), 'qué partida es: ' + txt);
+          ok(/TE GUARDAN EL SITIO \d+ S/.test(txt), 'y cuánto le queda al plazo');
+          var botones = [].slice.call(UI.els.prompt.querySelectorAll('button'));
+          ok(botones.some(function (b) { return b.textContent.indexOf('VOLVER A LA PARTIDA') === 0; }), 'volver');
+          var salir = botones.filter(function (b) { return b.textContent.indexOf('SALIR DE ELLA') === 0; })[0];
+          ok(salir, 'o salir');
+          var partidas = A.stats().partidas | 0;
+          salir.click();
+          eq(A.stats().partidas | 0, partidas + 1, 'salir cuenta como jugada');
+          eq(dichos.length, 1, 'y se despide de la sala, para que no le esperen');
+          eq(Gd.paraVolver(), null, 'ya no se ofrece');
+          eq(UI.volverSiToca(), false, 'ni se vuelve a preguntar');
+          ok(JSON.parse(localStorage.getItem('pacman-topmundial-red-viva'))['sid-vivo'],
+             'y la de la otra pestaña sigue ahí');
+        } finally { P.despedirse = desp; UI.hidePrompt(); }
+      });
     });
   });
 
