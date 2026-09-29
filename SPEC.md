@@ -1372,6 +1372,15 @@ skin with its Q and death; `CABEZAS`/`POSES` like any other). Block
 *TEMPORADA DE NOVIEMBRE DEL PASE* in skins.js; server rows in
 `piezas_especiales` with `temporada = '2026-11'`.
 
+**December 2026 — Navidad a la peruana** (`PIEZAS['2026-12']`, approved 30
+Sep after Braighton asked for something more Christmassy than a New Year's Eve
+first draft; nothing that overlaps the free CLAUS-MAN): 10 free CHOCOLATADA
+(emote), 10 pass PANETÓN (accessory, head), 20 pass FOQUITOS (trail), 30 free
+ESTRELLA DE BELÉN (accessory floating over the head, `BASE_SOMBRERO` 7), 30 pass
+RETABLO (odd-shaped skin: the Ayacucho altarpiece; the lower drawer is the
+mouth). Block *TEMPORADA DE DICIEMBRE DEL PASE*; server rows with
+`temporada = '2026-12'`.
+
 **How a piece is wired.** Drawings live in `js/skins.js` under *TEMPORADA DE
 OCTUBRE DEL PASE* (skin in `DRAW`, accessory in `ACC`, trail in `EFX`, face in
 `caraEmote`); the piece is declared in `js/config.js` with `pase: true` (a skin
@@ -1446,9 +1455,9 @@ Asleep-season state: before `CFG.PASE.DESDE` the whole path is visible but a
 warning says what is played now does not count towards it.
 
 ### Not built yet
-- Pieces for any season after November: `CFG.PASE.PIEZAS` has `2026-10` and
-  `2026-11`, so from December the path pays coins only until a month gets its
-  own entry (needed before the 24th of the month before).
+- Pieces for any season after December: `CFG.PASE.PIEZAS` has `2026-10`,
+  `2026-11` and `2026-12`, so from January 2027 the path pays coins only until
+  a month gets its own entry (needed before the 24th of the month before).
 - Any actual payment. `Pase.conceder(temporada)` is the hook the checkout will
   call the day one exists; nothing in the game reaches it today and the button
   stays disabled.

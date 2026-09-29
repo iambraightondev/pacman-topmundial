@@ -7,28 +7,35 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v318).
+Última puesta al día: **30 de septiembre de 2026** (pm-v319).
 
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
 
-### ▶ PRÓXIMA SESIÓN (dejado el 30 sep)
+### ▶ PRÓXIMA SESIÓN (dejado el 30 sep, noche)
 
-1. **Que Braighton vea en el juego las tandas de OBJETOS y ANDINA** (entraron
-   el 30 sep, pm-v313): los accesorios se midieron a ojo sobre las 16 skins
-   nuevas; si alguno le queda mal en una, se ajusta su CABEZAS. La CORONA DE
-   ORO pasó a cofre (pm-v314, lo decidió él) para no abaratar la skin CORONA.
+**Hecho el 30 sep (tarde-noche), todo publicado:** tandas OBJETOS y ANDINA
+(51 piezas, pm-v313; CORONA DE ORO a cofre, pm-v314), récord entre dos
+pestañas (pm-v315), pase de NOVIEMBRE · Día de Muertos (pm-v316), LAURELES ·
+NOV (pm-v317), repaso de rendimiento de las piezas nuevas (pm-v318) y pase de
+DICIEMBRE · Navidad a la peruana (pm-v319). Los pases de oct, nov y dic ya
+tienen camino; **el de ENERO 2027, antes del 24 dic**, y los LAURELES · DIC
+también antes del 24 dic.
+
+1. **Que Braighton vea en el juego lo nuevo:** las tandas de OBJETOS y ANDINA
+   y las piezas de noviembre y diciembre (los accesorios se midieron a ojo;
+   si alguno queda mal en una skin, se ajusta su CABEZAS). INTERFERENCIA
+   cambió de aspecto al aligerarla (franjas roja y azul redondas detrás).
 2. **Con fecha:** 1 oct, que la temporada de septiembre cierre bien en el
    juego real (¡TEMPORADA CERRADA!, fruta junto al nombre, LAURELES · SEP) y
    que arranque el pase de octubre con el tope diario; 2 oct, que salgan los
    LEGENDARIOS del top 3; hacia el 3-4 oct, encender EXIGIR_REPETICION y
    EXIGIR_AVAL (secretos de la función enviar-record) cuando todos hayan
    recargado; mitad de octubre, revisar FACTOR_ROL (ya con puntos por
-   proteger) y las metas de los retos del Mago; antes del 24 nov, el camino
-   del pase de DICIEMBRE (5 piezas; sin él ese mes paga solo monedas) y sus
-   piezas con temporada en piezas_especiales. El de NOVIEMBRE (Día de Muertos)
-   ya está en el juego (pm-v316).
+   proteger) y las metas de los retos del Mago; antes del 24 dic, el camino
+   del pase de ENERO 2027 (5 piezas; sin él ese mes paga solo monedas) con
+   sus piezas con temporada en piezas_especiales, y los LAURELES · DIC.
 3. **Que Braighton pruebe jugando:** abrir un cofre (apertura EL SALTO),
    regalar una pieza, una party real (red, volver a la partida con dos
    aparatos por internet), el móvil de verdad y las skins nuevas.

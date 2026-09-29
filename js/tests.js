@@ -9616,7 +9616,8 @@
     var Pa = window.PM.Pase, S = window.PM.Season;
     var oct = S.actual(new Date(Date.UTC(2026, 9, 15, 12))),
         nov = S.actual(new Date(Date.UTC(2026, 10, 1, 12))),
-        dic = S.actual(new Date(Date.UTC(2026, 11, 1, 12)));
+        dic = S.actual(new Date(Date.UTC(2026, 11, 1, 12))),
+        ene = S.actual(new Date(Date.UTC(2027, 0, 1, 12)));
     eq(oct, '2026-10', 'el 15 de octubre es la temporada de octubre');
     eq(nov, '2026-11', 'y el 1 de noviembre, la de noviembre');
     var piezas = function (t) {
@@ -9628,13 +9629,14 @@
     };
     eq(piezas(oct), 'acc_mochila,acc_visor,efx_ecto,grito,trampa', 'octubre reparte sus cinco');
     eq(piezas(nov), 'acc_catrina,acc_cempasuchil,alebrije,calaverita,efx_velitas', 'noviembre, las cinco de Día de Muertos');
-    /* (diciembre aún no tiene camino: paga solo monedas) */
-    eq(piezas(dic), '', 'un mes sin camino, ninguna');
+    eq(piezas(dic), 'acc_belen,acc_paneton,chocolatada,efx_foquitos,retablo', 'diciembre, las cinco de la Navidad peruana');
+    /* (enero aún no tiene camino: paga solo monedas) */
+    eq(piezas(ene), '', 'un mes sin camino, ninguna');
     var monedas = function (t) {
       return Pa.camino(t).map(function (e) { return e.g + ':' + (e.gratis.monedas | 0) + '/' + (e.pago.monedas | 0); }).join(' ');
     };
     eq(monedas(nov), monedas(oct), 'y las mismas monedas, galón a galón');
-    eq(Pa.camino(dic).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
+    eq(Pa.camino(ene).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
        String(CFG.PASE.GALONES), 'sin pieza, solo el final es hito');
     eq(Pa.camino(oct).filter(function (e) { return e.hito; }).map(function (e) { return e.g; }).join(),
        '10,20,' + CFG.PASE.GALONES, 'en octubre, los galones con pieza');
@@ -9673,7 +9675,7 @@
 
   /* PASE DE NOVIEMBRE (Día de Muertos, 30 sep): las cinco están dibujadas,
    * son del pase (no se venden) y el ALEBRIJE hace su Q y su muerte */
-  test('las piezas del pase de noviembre se dibujan', function () {
+  test('las piezas del pase de noviembre y diciembre se dibujan', function () {
     var S = window.PM.Sprites;
     function de(lista, id) { var x = null; lista.forEach(function (e) { if (e.id === id) x = e; }); return x; }
     var sk = de(CFG.SKINS, 'alebrije');
@@ -9697,6 +9699,24 @@
     for (var k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 16, 16, k / 10, '#ff0000', 'alebrije', k % 4);
     S.drawPacman(ctx, 16, 16, 3, 1, '#ffff00', 'clasico', { t: 2, s: 90, efecto: 'efx_velitas' });
     for (var tk = 0; tk < 200; tk += 25) S.drawEmote(ctx, 16, 12, 'calaverita', '#ffff00', tk);
+
+    /* diciembre: Navidad a la peruana */
+    var re = de(CFG.SKINS, 'retablo');
+    ok(re && re.grupo === 'pase' && re.rara && re.temporada === '2026-12', 'RETABLO: skin del pase de diciembre');
+    ['acc_paneton', 'acc_belen'].forEach(function (id) {
+      var it = de(CFG.ACCESORIOS, id);
+      ok(it && it.pase && !it.precio && S.ACCESORIOS.hasOwnProperty(id), id + ': del pase y dibujado');
+    });
+    ok(de(CFG.EFECTOS, 'efx_foquitos') && S.EFECTOS.hasOwnProperty('efx_foquitos'), 'FOQUITOS: del pase y dibujados');
+    ok(de(CFG.EMOTES_TIENDA, 'chocolatada') && S.CARAS_TIENDA.chocolatada, 'CHOCOLATADA: del pase y con cara');
+    ok(S.admiteAccesorio('retablo'), 'el RETABLO admite accesorios');
+    for (q = 0; q <= 1.6; q += 0.2) {
+      S.drawPacman(ctx, 16, 16, 3, 2, '#ff0000', 'retablo', { t: 3, muerde: q < 0.4, mordio: true, qSeg: q, accesorio: 'acc_paneton' });
+      S.drawPacman(ctx, 16, 16, 0, 1, '#ff0000', 'clasico', { t: q, accesorio: 'acc_belen' });
+    }
+    for (k = 0; k <= 10; k++) S.drawSkinDeath(ctx, 16, 16, k / 10, '#ff0000', 'retablo', k % 4);
+    S.drawPacman(ctx, 16, 16, 3, 1, '#ffff00', 'clasico', { t: 2, s: 90, efecto: 'efx_foquitos' });
+    for (tk = 0; tk < 200; tk += 25) S.drawEmote(ctx, 16, 12, 'chocolatada', '#ffff00', tk);
   });
 
   /* ---------- LAS PIEZAS DE LA TEMPORADA ----------

@@ -2,8 +2,10 @@
 
 Las **cinco piezas exclusivas** del camino del pase de diciembre. Sin ellas,
 ese mes el pase solo paga monedas (`CFG.PASE.PIEZAS` no tiene entrada
-`'2026-12'`). **Todavía NO están en el juego: falta que Braighton las
-apruebe; hay que tenerlas dentro antes del 24 de noviembre.**
+`'2026-12'`). **Aprobadas por Braighton el 30 sep y ya en el juego**
+(pm-v319): bloque TEMPORADA DE DICIEMBRE DEL PASE de js/skins.js,
+`CFG.PASE.PIEZAS['2026-12']` y `piezas_especiales` con su temporada. El dibujo
+es el mismo; solo la Q sale de la tecla (`qDe`).
 
 Escaparate publicado: <https://claude.ai/artifact/NyxQSYiSuqxNkpCVyX5YNJ>
 

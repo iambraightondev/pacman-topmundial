@@ -178,6 +178,10 @@ insert into public.piezas_especiales (id, tipo, galon, carril) values
   ('calaverita', 'pase', 10, 'gratis'), ('acc_catrina', 'pase', 10, 'pago'),
   ('efx_velitas', 'pase', 20, 'pago'), ('acc_cempasuchil', 'pase', 30, 'gratis'),
   ('alebrije', 'pase', 30, 'pago'),
+  -- diciembre 2026, Navidad a la peruana (su temporada, abajo)
+  ('chocolatada', 'pase', 10, 'gratis'), ('acc_paneton', 'pase', 10, 'pago'),
+  ('efx_foquitos', 'pase', 20, 'pago'), ('acc_belen', 'pase', 30, 'gratis'),
+  ('retablo', 'pase', 30, 'pago'),
   -- del RANGO (premios de fin de temporada: se deducen, no se guardan)
   ('efx_dorado', 'rango', null, null), ('acc_laureles_2609', 'rango', null, null),
   ('acc_laureles_2610', 'rango', null, null), ('acc_laureles_2611', 'rango', null, null)
@@ -191,6 +195,8 @@ update public.piezas_especiales set temporada = '2026-10'
  where tipo = 'pase' and id in ('grito', 'acc_mochila', 'efx_ecto', 'acc_visor', 'trampa');
 update public.piezas_especiales set temporada = '2026-11'
  where tipo = 'pase' and id in ('calaverita', 'acc_catrina', 'efx_velitas', 'acc_cempasuchil', 'alebrije');
+update public.piezas_especiales set temporada = '2026-12'
+ where tipo = 'pase' and id in ('chocolatada', 'acc_paneton', 'efx_foquitos', 'acc_belen', 'retablo');
 
 -- ---------- el rango, en el servidor ----------
 -- El escalón (0..24) de unos PR: los mismos TRAMOS que js/rango.js arma con

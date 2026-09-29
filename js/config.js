@@ -766,6 +766,8 @@
      * no las tiene ya nunca. Ver CFG.PASE.PIEZAS. --- */
     { id: 'trampa', name: 'TRAMPA', grupo: 'pase', rara: true, temporada: '2026-10',
       ve: 'LA CAJA DE CAZAR FANTASMAS: LAS DOS HOJAS DEL FRENTE SON LA BOCA Y POR DENTRO LLEVA LUZ, CON LO QUE YA CAZÓ. CON LA Q DISPARA EL RAYO Y SE TRAGA UN FANTASMA.' },
+    { id: 'retablo', name: 'RETABLO', grupo: 'pase', rara: true, temporada: '2026-12',
+      ve: 'EL RETABLO AYACUCHANO, PINTADO DE FLORES Y CON LA MADERA DE SU COLOR, CON EL NACIMIENTO EN SU NICHO; EL CAJÓN DE ABAJO ES LA BOCA. CON LA Q SE ENCIENDE Y SALE LA ESTRELLA.' },
     { id: 'alebrije', name: 'ALEBRIJE', grupo: 'pase', rara: true, temporada: '2026-11',
       ve: 'EL BICHO IMPOSIBLE DE OAXACA: MEDIO GATO, MEDIO DRAGÓN, CON ALAS DE MARIPOSA Y PINTADO A LUNARES; LA CARA LLEVA SU COLOR. CON LA Q ABRE LAS ALAS Y ECHA CHISPAS DE COLORES.' },
 
@@ -1113,6 +1115,12 @@
         10: { gratis: 'calaverita', pago: 'acc_catrina' },
         20: { pago: 'efx_velitas' },
         30: { gratis: 'acc_cempasuchil', pago: 'alebrije' }
+      },
+      /* NAVIDAD A LA PERUANA (aprobado el 30 sep): propuestas/pase-2026-12/ */
+      '2026-12': {
+        10: { gratis: 'chocolatada', pago: 'acc_paneton' },
+        20: { pago: 'efx_foquitos' },
+        30: { gratis: 'acc_belen', pago: 'retablo' }
       }
     }
   };
@@ -1202,6 +1210,8 @@
     /* del PASE: no se vende (ver CFG.PASE.PIEZAS) */
     { id: 'grito', name: 'GRITO', pase: true, precio: 0,
       ve: 'EL GRITO DEL CUADRO: LAS DOS MANOS EN LA CARA, OJOS DE ESPANTO Y LA BOCA EN UN ÓVALO QUE LATE.' },
+    { id: 'chocolatada', name: 'CHOCOLATADA', pase: true, precio: 0,
+      ve: 'LA TAZA DE CHOCOLATE CALIENTE: SOPLA, SORBE, SE QUEDA CON EL BIGOTE DE CHOCOLATE Y SUSPIRA DE GUSTO.' },
     { id: 'calaverita', name: 'CALAVERITA', pase: true, precio: 0,
       ve: 'LA CARA SE VUELVE CALAVERITA DE AZÚCAR, CON PÉTALOS DE SU COLOR EN LAS CUENCAS Y FLOR EN LA FRENTE. SE RÍE CASTAÑETEANDO LA MANDÍBULA.' }
   ];
@@ -1308,6 +1318,8 @@
     /* del PASE: no se vende (ver CFG.PASE.PIEZAS) */
     { id: 'efx_ecto', name: 'ECTOPLASMA', pase: true, precio: 0,
       ve: 'UN REGUERO DE BABA VERDE FOSFORESCENTE CON BURBUJAS QUE ASOMAN Y REVIENTAN.' },
+    { id: 'efx_foquitos', name: 'FOQUITOS', pase: true, precio: 0,
+      ve: 'DEJA UNA TIRA DE FOQUITOS DE COLORES COLGANDO DE SU CABLE, QUE SE ENCIENDEN POR TURNOS, COMO LOS DEL BALCÓN EN DICIEMBRE.' },
     { id: 'efx_velitas', name: 'VELITAS', pase: true, precio: 0,
       ve: 'DEJA VELITAS ENCENDIDAS EN EL SUELO, COMO EL CAMINO A LA OFRENDA: SE CONSUMEN Y SE APAGAN CON SU HILITO DE HUMO. UNA DE CADA TRES, DE SU COLOR.' },
     /* del RANGO: premio de fin de temporada a quien llegó a CAMPANA */
@@ -1434,6 +1446,10 @@
       ve: 'EL APARATO A LA ESPALDA: ALETAS DE REFRIGERACIÓN, EL ACELERADOR LATIENDO EN VERDE Y LA MANGUERA QUE DEJA EL CAÑÓN SOBRE LA CORONILLA. VIBRA Y SUELTA VAPOR.' },
     { id: 'acc_visor', name: 'VISOR DE CAZA', pase: true, precio: 0,
       ve: 'VISOR DE CRISTAL VERDE CON UN BARRIDO QUE SUBE Y BAJA, Y AL LADO EL MEDIDOR CON TRES BARRITAS QUE SUBEN SOLAS.' },
+    { id: 'acc_paneton', name: 'PANETÓN', pase: true, precio: 0,
+      ve: 'UN PANETÓN ENTERO EN LA CABEZA, RECIÉN SALIDO: FRUTAS CONFITADAS, EL MOLDE DE PAPEL DE SU COLOR Y UN HILITO DE VAPOR.' },
+    { id: 'acc_belen', name: 'ESTRELLA DE BELÉN', pase: true, precio: 0,
+      ve: 'LA ESTRELLA QUE CORONA EL PESEBRE, FLOTANDO SOBRE LA CABEZA CON SU RESPLANDOR Y SU COLA DE COMETA: SUBE, BAJA Y TITILA.' },
     { id: 'acc_catrina', name: 'SOMBRERO CATRINA', pase: true, precio: 0,
       ve: 'EL DE LA CATRINA: ALA ENORME CON BORDE DE ENCAJE, CINTA DE SU COLOR, UN RAMILLETE DE FLORES DELANTE Y UNA PLUMA QUE SE MECE.' },
     { id: 'acc_cempasuchil', name: 'CEMPASÚCHIL', pase: true, precio: 0,

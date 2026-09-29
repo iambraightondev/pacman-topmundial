@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · El pase de diciembre: NAVIDAD A LA PERUANA
+
+Las cinco piezas del camino de diciembre, aprobadas por Braighton (quería algo
+más navideño que el Fin de Año del primer escaparate): CHOCOLATADA (emote,
+galón 10 gratis), PANETÓN (galón 10 de pago), FOQUITOS (efecto, galón 20 de
+pago), ESTRELLA DE BELÉN (galón 30 gratis) y la skin RETABLO, el ayacuchano con
+su nacimiento (galón 30 de pago). Solo se ganan en diciembre y no pisan a
+CLAUS-MAN.
+
 ## 2026-09-30 · Repaso de las piezas nuevas
 
 - INTERFERENCIA pintaba la skin cuatro veces por frame (hasta 5 ms por jugador):
