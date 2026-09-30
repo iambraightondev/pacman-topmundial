@@ -1632,7 +1632,9 @@
       cifras: { 'clasico:puntosMax': [180550, 84250], 'party:puntosMax': [180550, 119300] },
       /* mago y tanque recalificados el 24 sep (tarde) al contar por fin sus
        * bajas a distancia: 21 y 13 partidas verificadas con nota propia */
-      maestria: { asesino: [-13720, -132, -13], mago: [6960, 65, 4], tanque: [4210, 39, 5], soporte: [2800, 28] }
+      maestria: { asesino: [-13720, -132, -13], mago: [6960, 65, 4], tanque: [4210, 39, 5], soporte: [2800, 28] },
+      /* 30 sep: los 26 PR que le quitó por error su última clasificatoria */
+      rango: { '2026-09': 26 }
     },
     ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] }, rango: { '2026-09': 41 } },
     MAULIO: { maestria: { asesino: [-700, -7], tanque: [410, 5, 1], soporte: [200, 2] }, rango: { '2026-09': 3 } }
