@@ -21,8 +21,8 @@
  *     da al menos +5 (CFG.RANGO, `pierde` 0 y `minimo`).
  *   · Cada mes se vuelve a empezar (la temporada es la de Season.actual()),
  *     pero no de cero (25 sep): quien tuvo rango el mes pasado arranca desde
- *     una parte de su PR (CFG.RANGO.ARRASTRE) y la colocación se juega desde
- *     ahí, moviendo el doble.
+ *     una parte de su PR (CFG.RANGO.ARRASTRE). Desde el 30 sep, YA COLOCADO:
+ *     tiene ese rango desde el primer minuto del mes y no juega colocación.
  *   · Cada rol cuenta con su FACTOR (CFG.RANGO.FACTOR_ROL): la marca de un
  *     SOPORTE vale más que la misma de un ASESINO, que puntúa más fácil.
  *     En party, con media corrección (CFG.RANGO.CORRECCION_PARTY).
@@ -49,11 +49,12 @@
  *     rg4_<temporada>  PR ganado · rl4_… PR perdido
  *     rm4_<temporada>  mejor escalón alcanzado, +1 (0 = ninguno)
  *     ru4_<temporada>  PR ganado en la colocación · rd4_… PR perdido en ella
- *                      (solo con temporada anterior: ver semillaDe)
+ *                      (con temporada anterior, hasta el 30 sep: ver semillaDe;
+ *                      lo que ya hubiera se sigue sumando)
  *   El número es la versión de las reglas (CFG.RANGO.VERSION): al cambiarlas
  *   se sube, y los contadores de antes dejan de leerse.
  *   PR = colocación + ganado − perdido; con temporada anterior, la
- *   colocación es la semilla + lo ganado en ella − lo perdido en ella.
+ *   colocación es la semilla (+ ru − rd de antes del 30 sep).
  *
  * La tabla
  *   Se arma leyendo los perfiles (lectura pública) y aplicando esta misma
@@ -215,8 +216,10 @@
   }
 
   /* LA SEMILLA (el reinicio suave): desde dónde empieza la temporada quien
-   * tuvo rango en la anterior. null si no lo tuvo (o no acabó de colocarse):
-   * entonces se coloca como siempre. prof corta la cuenta hacia atrás, que
+   * tuvo rango en la anterior, ya colocado y sin jugar nada (30 sep: antes
+   * jugaba cinco de colocación desde ella y hasta entonces salía SIN RANGO).
+   * null si no lo tuvo (o no acabó de colocarse): entonces se coloca como
+   * siempre. prof corta la cuenta hacia atrás, que
    * cada mes depende del anterior. */
   function semillaDe(c, t, prof) {
     prof = prof || 0;
@@ -241,11 +244,12 @@
     out.semilla = sem ? sem.pr : null;
     out.vieneDe = sem ? sem.de : '';
     out.semillaNombre = sem ? TRAMOS[tramo(sem.pr)].nombre : '';
-    /* con semilla, la colocación va sumando y restando desde ella (sin verse
-     * hasta la quinta): aquí, dónde vas */
+    /* con semilla ya estás colocado ahí (ru/rd: lo que movió la colocación
+     * de antes del 30 sep, que se jugó y cuenta) */
     var coloca = sem ? Math.max(0, sem.pr + num(c[clave('ru', t)]) - num(c[clave('rd', t)])) : null;
     out.prColoca = coloca;
-    if (jugadas < RG.COLOCACION) return out;
+    if (sem) out.colocacion = RG.COLOCACION;
+    else if (jugadas < RG.COLOCACION) return out;
     /* sin semilla, la colocación se guarda ya pasada a SOLO: se coloca con la
      * marca de solo */
     var base = sem ? coloca : colocar(num(c[clave('rt', t)]) / RG.COLOCACION, 1);
@@ -499,19 +503,9 @@
       var fr = factorRoles(roles, n);
       res.factor = fr;
       puntos = puntos / fr;
-      if (antes.jugadas < RG.COLOCACION) {
-        if (antes.prColoca !== null) {
-          /* CON SEMILLA: la colocación se juega desde ella, y mueve más */
-          var X = RG.COLOCACION_X || 1, Dc = DIV[division(antes.prColoca)];
-          var dc = cambio(puntos, antes.prColoca, n, nivel) * X;
-          dc = Math.max(-Dc.pierde * X, Math.min(Dc.gana * X, dc));
-          if (dc < 0) dc = -Math.min(-dc, antes.prColoca);
-          if (dc > 0) o[clave('ru', t)] = dc;
-          else if (dc < 0) o[clave('rd', t)] = -dc;
-        } else {
-          // pasada a SOLO: en party se divide entre el multiplicador del equipo
-          o[clave('rt', t)] = Math.round(puntos / mult(n));
-        }
+      if (antes.pr === null) {
+        // pasada a SOLO: en party se divide entre el multiplicador del equipo
+        o[clave('rt', t)] = Math.round(puntos / mult(n));
         A().recordAll(o);
         var tras = this.estado(t);
         res.colocando = tras.pr === null;
@@ -583,7 +577,8 @@
             var pa = mejorEn(cc, mesAnterior(t));
             if (pa >= 0) antes[String(f.usuario || '').toUpperCase()] = TRAMOS[pa].d;
             var e = estadoDe(cc, t);
-            if (!e.jugadas) return;
+            /* con semilla ya tiene rango, aunque aún no haya jugado este mes */
+            if (!e.jugadas && e.pr === null) return;
             out.push({ usuario: String(f.usuario || ''), avatar: f.avatar || '',
                        pr: e.pr, division: e.division, tramo: e.tramo, nombre: e.nombre,
                        jugadas: e.jugadas,

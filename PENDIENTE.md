@@ -7,7 +7,13 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v319).
+Última puesta al día: **30 de septiembre de 2026** (pm-v322).
+
+> **30 sep, noche (pm-v322):** temporadas a medianoche de Perú (UTC−5, en el
+> juego y en la columna `ranking.temporada`) y reinicio del rango YA COLOCADO
+> desde la semilla, sin colocación. ESTER jugó 3 clasificatorias entre las 7 y
+> las 12 del 30 sep que quedaron apuntadas en octubre (+84 PR de colocación):
+> se le suman a su arranque de octubre.
 
 ---
 

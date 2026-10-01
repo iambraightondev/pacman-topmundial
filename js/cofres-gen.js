@@ -367,7 +367,8 @@
       var out = { jugadas: jugadas, pr: null };
       var sem = semillaDe(c, t, prof);
       var coloca = sem !== null ? Math.max(0, sem + entero(c[clave('ru', t)]) - entero(c[clave('rd', t)])) : null;
-      if (jugadas < R.colocacion) return out;
+      /* con semilla ya está colocado (30 sep): no juega colocación */
+      if (sem === null && jugadas < R.colocacion) return out;
       var base = sem !== null ? coloca : colocar(entero(c[clave('rt', t)]) / R.colocacion);
       out.pr = Math.max(0, base + entero(c[clave('rg', t)]) - entero(c[clave('rl', t)]));
       out.tramo = tramo(out.pr);
@@ -398,7 +399,9 @@
       var lg = f.logros || {};
       var c = Rg.ajustados((lg && lg.c) || lg, f.usuario);
       var e = Rg.estadoDe(c, t);
-      if (e.pr === null) return;
+      /* el podio, solo para quien jugó la temporada: con semilla se tiene
+       * rango sin jugar, pero se piden las mismas partidas que la colocación */
+      if (e.pr === null || e.jugadas < (D.rango.colocacion || 5)) return;
       lista.push({ id: f.id, usuario: String(f.usuario || ''), pr: e.pr, jugadas: e.jugadas });
     });
     lista.sort(function (a, b) {

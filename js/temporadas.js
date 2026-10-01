@@ -9,9 +9,10 @@
  * partidas de siempre entran solas en la temporada que les tocaba y
  * el HISTÓRICO (la vista de toda la vida) no pierde nada.
  *
- * El mes se saca en UTC, igual que en el servidor: si cada navegador
- * lo calculara en su huso, a fin de mes unos pedirían una temporada
- * y otros otra.
+ * El mes se saca en HORA DE PERÚ (CFG.RANKING.HUSO_H, UTC−5), igual
+ * para todos y que en el servidor: si cada navegador lo calculara en su
+ * huso, a fin de mes unos pedirían una temporada y otros otra. Hasta el
+ * 30 sep iba en UTC y la temporada cambiaba a las 7 de la tarde en Perú.
  * ============================================================ */
 (function () {
   'use strict';
@@ -37,14 +38,30 @@
       '/rest/v1/' + what;
   }
 
+  /* la hora de Perú, para leerla con los getUTC… */
+  function huso() { return ((CFG.RANKING && CFG.RANKING.HUSO_H) || 0) * 3600000; }
+  function local(d) { return new Date((d ? d.getTime() : Date.now()) + huso()); }
+
   var Season = {
     lastError: null,
 
-    /* Temporada en curso (AAAA-MM), en UTC */
+    /* Temporada en curso (AAAA-MM), en hora de Perú */
     actual: function (d) {
-      d = d || new Date();
-      var m = d.getUTCMonth() + 1;
-      return d.getUTCFullYear() + '-' + (m < 10 ? '0' : '') + m;
+      var p = local(d);
+      var m = p.getUTCMonth() + 1;
+      return p.getUTCFullYear() + '-' + (m < 10 ? '0' : '') + m;
+    },
+
+    /* Cuándo empieza la temporada siguiente (ms): la medianoche del 1 en Perú */
+    fin: function (d) {
+      var p = local(d);
+      return Date.UTC(p.getUTCFullYear(), p.getUTCMonth() + 1, 1) - huso();
+    },
+
+    /* La temporada de antes (AAAA-MM) */
+    pasada: function (d) {
+      var p = local(d);
+      return this.actual(new Date(Date.UTC(p.getUTCFullYear(), p.getUTCMonth(), 1) - huso() - 1));
     },
 
     /* Cómo se lee en pantalla: "AGOSTO 2026" */

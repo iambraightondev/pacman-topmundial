@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-09-30 · Las temporadas, a la hora de Perú y sin volver a colocarse
+
+- La temporada (top mundial, rango y pase) cambia a la **medianoche de Perú**.
+  Iba en UTC y el 30 sep cambió a las 7 de la tarde; las 9 partidas del top
+  que se habían ido a octubre vuelven a septiembre.
+- Quien tuvo rango el mes pasado empieza el mes **ya colocado** con la mitad de
+  su PR (menos si jugó poco): sale con su rango desde el primer minuto, en la
+  tabla también, y cada partida mueve lo normal. Sin rango el mes pasado, las 5
+  de colocación de siempre. Al podio del mes (cofre legendario) siguen
+  llegando solo quienes jueguen al menos 5 partidas en él.
+
 ## 2026-09-30 · El pase de diciembre: NAVIDAD A LA PERUANA
 
 Las cinco piezas del camino de diciembre, aprobadas por Braighton (quería algo

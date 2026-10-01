@@ -1550,9 +1550,11 @@
      * empieza de cero: quien acabó el mes pasado con rango arranca desde
      *   PR con el que acabó × ARRASTRE × confianza
      * donde la confianza es sus partidas de ese mes entre CONFIANZA (tope 1).
-     * Las cinco de colocación se juegan desde ahí y cada una mueve
-     * COLOCACION_X veces lo normal. Sin rango el mes pasado, se coloca como
-     * siempre (por la media, hasta TOPE_COLOCACION).
+     * 30 sep (Braighton): arranca YA COLOCADO en ese rango, sin partidas de
+     * colocación (antes jugaba cinco desde ahí, moviendo COLOCACION_X veces
+     * lo normal, y mientras tanto salía SIN RANGO). COLOCACION_X ya no se
+     * usa. Sin rango el mes pasado, se coloca como siempre (por la media,
+     * hasta TOPE_COLOCACION).
      * Con los datos de septiembre: MANZANA III (347 PR, 39 partidas) empieza
      * octubre en FRESA II; un GALAXIAN I con 30 partidas, en MANZANA II. */
     ARRASTRE: 0.5,
@@ -1868,6 +1870,10 @@
     VIEW: 'ranking_top',      // mejor marca de cada jugador/dúo (lectura)
     VIEW_TIME: 'ranking_tiempo',  // mejor tiempo de cada jugador en el nivel 1
     VIEW_SEASON: 'ranking_temporada',  // lo mismo, pero mes a mes
+    /* LA HORA DE LAS TEMPORADAS (30 sep): la de Perú, UTC−5 todo el año (no
+     * tiene horario de verano). Con UTC la temporada cambiaba a las 7 de la
+     * tarde del último día. La misma cuenta en supabase/temporadas.sql. */
+    HUSO_H: -5,
     LIMIT: 20,
     MAX_POINTS: 10000000,     // descarta envíos absurdos antes de mandarlos
     MAX_TIME: 6000000,        // centésimas: 16 h y pico, de sobra

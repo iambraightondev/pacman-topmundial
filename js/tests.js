@@ -1895,10 +1895,10 @@
   // ---------------------------------------------------------------
   // Temporadas del top mundial
   // ---------------------------------------------------------------
-  test('la temporada es el mes natural, contado en UTC', function () {
+  test('la temporada es el mes natural, contado en hora de Perú', function () {
     var S = window.PM.Season;
     eq(S.actual(new Date(Date.UTC(2026, 7, 5, 23, 59))), '2026-08');
-    eq(S.actual(new Date(Date.UTC(2026, 0, 1, 0, 0))), '2026-01');
+    eq(S.actual(new Date(Date.UTC(2026, 0, 1, 5, 0))), '2026-01');
     eq(S.nombre('2026-08'), 'AGOSTO 2026');
     eq(S.nombre('2026-12'), 'DICIEMBRE 2026');
   });
@@ -10508,6 +10508,15 @@
     var top = Gn.top3(filas, t, D);
     eq(top.length, 3);
     eq(top.map(function (x) { return x.id; }).join(), 'c,a,b', 'por PR y, a igual PR, más partidas; sin colocar, fuera');
+    /* 30 sep: con semilla se tiene rango sin jugar, pero al podio solo llega
+     * quien jugó al menos las de la colocación */
+    var ant = R.mesAnterior(t), big = {};
+    big['rc' + V + '_' + ant] = 40; big['rg' + V + '_' + ant] = 5000; big['rc' + V + '_' + t] = 4;
+    eq(R.estadoDe(big, t).pr, 2500, 'con semilla, ya tiene PR');
+    filas.push({ id: 'f', usuario: 'FER', logros: big });
+    eq(Gn.top3(filas, t, D).map(function (x) { return x.id; }).join(), 'c,a,b', 'con 4 partidas, fuera del podio');
+    big['rc' + V + '_' + t] = 5;
+    eq(Gn.top3(filas, t, D)[0].id, 'f', 'con 5, dentro');
   });
 
   // ---------------------------------------------------------------
@@ -17391,16 +17400,17 @@
     var cs = c({ 'rc|2026-09': 39, 'rg|2026-09': 347 });
     eq(Rg.estadoDe(cs, '2026-09').nombre, 'MANZANA III', 'así acabó septiembre');
     var oct = Rg.estadoDe(cs, '2026-10');
-    eq(oct.pr, null, 'en octubre, a colocarse otra vez');
-    eq(oct.semilla, Math.round(347 * RG.ARRASTRE), 'pero desde la mitad de su PR');
+    eq(oct.semilla, Math.round(347 * RG.ARRASTRE), 'desde la mitad de su PR');
+    eq(oct.pr, oct.semilla, '30 sep: ya colocado ahí, sin jugar nada');
+    eq(oct.nombre, 'FRESA II', 'y con su rango a la vista');
     eq(oct.semillaNombre, 'FRESA II', 'MANZANA III empieza en FRESA II, no en CEREZA');
     eq(oct.vieneDe, 'MANZANA III');
     // con pocas partidas se arrastra menos
     var poco = Rg.estadoDe(c({ 'rc|2026-09': 8, 'rg|2026-09': 790 }), '2026-10');
     eq(poco.semilla, Math.round(790 * RG.ARRASTRE * 8 / RG.CONFIANZA), 'con 8 partidas, un 40 % de la mitad');
-    // la colocación se juega desde la semilla y la quinta la fija
-    var cc = c({ 'rc|2026-09': 39, 'rg|2026-09': 347, 'rc|2026-10': 5, 'ru|2026-10': 60, 'rd|2026-10': 20 });
-    eq(Rg.estadoDe(cc, '2026-10').pr, oct.semilla + 40, 'semilla + lo ganado − lo perdido en la colocación');
+    // lo que movió la colocación de antes del 30 sep se sigue sumando
+    var cc = c({ 'rc|2026-09': 39, 'rg|2026-09': 347, 'rc|2026-10': 3, 'ru|2026-10': 60, 'rd|2026-10': 20 });
+    eq(Rg.estadoDe(cc, '2026-10').pr, oct.semilla + 40, 'semilla + ru − rd, aunque fueran solo 3');
     // sin rango el mes pasado, como siempre
     var nuevo = Rg.estadoDe(c({ 'rc|2026-10': 2 }), '2026-10');
     eq(nuevo.semilla, null, 'sin mes pasado no hay semilla');
@@ -17408,21 +17418,32 @@
     eq(Rg.estadoDe(c({ 'rc|2026-09': 3, 'rt|2026-09': 90000 }), '2026-10').semilla, null, 'ni sin colocarse');
   });
 
-  test('RANGO: con semilla, cada partida de colocación mueve el doble desde ella', function () {
+  test('RANGO: con semilla, la primera partida del mes ya mueve el rango (30 sep)', function () {
     conContadores(function (A) {
-      var Rg = window.PM.Rango, RG = CFG.RANGO, Se = window.PM.Season, act0 = Se.actual;
+      var Rg = window.PM.Rango, Se = window.PM.Season, act0 = Se.actual;
       try {
         A.recordAll({ [Rg.clave('rc', '2026-09')]: 39, [Rg.clave('rg', '2026-09')]: 347 });
         Se.actual = function () { return '2026-10'; };
         var e = Rg.estado(), t = Rg.tramo(e.semilla);
+        eq(e.pr, e.semilla, 'sin jugar, ya en su rango');
         var r = Rg.apuntar(Math.round(Rg.parTramo(t, 1) * 2), 1, 5);
-        ok(r.colocando, 'aún coloca');
-        eq(Rg.estado().prColoca, e.semilla + 20 * RG.COLOCACION_X, 'doblar la marca da +20, por dos');
-        for (var i = 0; i < 4; i++) r = Rg.apuntar(Math.round(Rg.parTramo(Rg.tramo(Rg.estado().prColoca), 1)), 1, 5);
-        ok(r.colocado, 'la quinta coloca');
-        eq(Rg.estado().pr, e.semilla + 20 * RG.COLOCACION_X, 'donde iba la colocación');
+        ok(!r.colocando && !r.colocado, 'no hay colocación');
+        eq(r.cambio, 20, 'doblar la marca da +20, lo normal');
+        eq(Rg.estado().pr, e.semilla + 20);
       } finally { Se.actual = act0; }
     });
+  });
+
+  test('TEMPORADAS: cambian a medianoche de Perú, no de UTC (30 sep)', function () {
+    var Se = window.PM.Season;
+    // 30 sep, 21:00 en Lima = 1 oct, 02:00 UTC
+    eq(Se.actual(new Date(Date.UTC(2026, 9, 1, 2, 0))), '2026-09', 'a las 9 de la noche sigue septiembre');
+    eq(Se.actual(new Date(Date.UTC(2026, 9, 1, 4, 59))), '2026-09', 'a las 23:59 también');
+    eq(Se.actual(new Date(Date.UTC(2026, 9, 1, 5, 0))), '2026-10', 'a medianoche, octubre');
+    eq(Se.fin(new Date(Date.UTC(2026, 9, 1, 2, 0))), Date.UTC(2026, 9, 1, 5, 0), 'el reloj cuenta hasta la medianoche de Lima');
+    eq(Se.pasada(new Date(Date.UTC(2026, 9, 1, 5, 0))), '2026-09');
+    eq(Se.pasada(new Date(Date.UTC(2027, 0, 1, 6, 0))), '2026-12', 'y cruza el año');
+    eq(Se.actual(new Date(Date.UTC(2027, 0, 1, 3, 0))), '2026-12', 'nochevieja en Lima sigue siendo diciembre');
   });
 
   test('RANGO: el ajuste a mano de una cuenta suma PR a su temporada al leer', function () {
@@ -17524,7 +17545,7 @@
     ok(vistos > 1000, 'comprobadas ' + vistos + ' combinaciones');
   });
 
-  test('RANGO: con semilla en CEREZA, la colocación tampoco resta', function () {
+  test('RANGO: con semilla en CEREZA, tampoco resta', function () {
     conContadores(function (A) {
       var Rg = window.PM.Rango, RG = CFG.RANGO, Se = window.PM.Season, act0 = Se.actual;
       try {
@@ -17534,11 +17555,11 @@
         var e = Rg.estado();
         eq(e.semilla, 50);
         eq(Rg.division(e.semilla), 0, 'la semilla cae en CEREZA');
+        eq(e.pr, 50, 'ya colocado ahí');
         Rg.apuntar(0, 1, 1);
-        eq(Rg.estado().prColoca, 50, 'una partida en blanco no la baja');
+        eq(Rg.estado().pr, 50, 'una partida en blanco no la baja');
         Rg.apuntar(0, 1, 2);
-        eq(Rg.estado().prColoca, 50 + RG.DIVISIONES[0].minimo * RG.COLOCACION_X,
-          'llegar al nivel 2 da el mínimo, por ' + RG.COLOCACION_X + ' (cabe en ru <= 50)');
+        eq(Rg.estado().pr, 50 + RG.DIVISIONES[0].minimo, 'llegar al nivel 2 da el mínimo');
       } finally { Se.actual = act0; }
     });
   });

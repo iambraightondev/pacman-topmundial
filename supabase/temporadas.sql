@@ -18,9 +18,12 @@
 -- Se puede ejecutar tantas veces como haga falta.
 -- ============================================================
 
--- El mes se saca en UTC a propósito, igual que en el navegador
--- (js/temporadas.js): si cada uno lo calculara en su huso, a fin de mes
--- unos pedirían una temporada y otros otra.
+-- El mes se saca en HORA DE PERÚ (UTC−5 fijo, sin horario de verano),
+-- igual que en el navegador (js/temporadas.js, CFG.RANKING.HUSO_H): si cada
+-- uno lo calculara en su huso, a fin de mes unos pedirían una temporada y
+-- otros otra. Hasta el 30 sep iba en UTC y cambiaba a las 7 de la tarde.
+-- Se resta un intervalo fijo y no se usa 'America/Lima': así la expresión es
+-- inmutable sin depender de la base de husos.
 --
 -- Y se arma con extract + lpad, no con to_char: to_char es STABLE (mira la
 -- configuración de fecha de la sesión) y una columna generada exige una
@@ -29,13 +32,21 @@
 alter table public.ranking
   add column if not exists temporada text
   generated always as (
-    lpad(extract(year from (creado_en at time zone 'UTC'))::int::text, 4, '0')
+    lpad(extract(year from ((creado_en at time zone 'UTC') - interval '5 hours'))::int::text, 4, '0')
     || '-' ||
-    lpad(extract(month from (creado_en at time zone 'UTC'))::int::text, 2, '0')
+    lpad(extract(month from ((creado_en at time zone 'UTC') - interval '5 hours'))::int::text, 2, '0')
   ) stored;
 
+-- Donde ya existía en UTC (hasta el 30 sep), se cambia la cuenta. Postgres 17
+-- recalcula todas las filas; no borra nada.
+alter table public.ranking alter column temporada set expression as (
+    lpad(extract(year from ((creado_en at time zone 'UTC') - interval '5 hours'))::int::text, 4, '0')
+    || '-' ||
+    lpad(extract(month from ((creado_en at time zone 'UTC') - interval '5 hours'))::int::text, 2, '0')
+);
+
 comment on column public.ranking.temporada is
-  'Mes natural de la partida (AAAA-MM, en UTC). Calculada: no se escribe nunca a mano.';
+  'Mes natural de la partida (AAAA-MM, en hora de Perú, UTC-5). Calculada: no se escribe nunca a mano.';
 
 -- Orden habitual de consulta: una temporada, una clasificación, mejores puntos
 create index if not exists ranking_temporada_idx

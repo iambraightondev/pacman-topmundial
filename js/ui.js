@@ -1455,7 +1455,7 @@
       var hoy = D && D.hoy ? D.hoy() : null;
       if (hoy && hoy.desc) grupos.push([['i', 'RETO DE HOY: '], ['span', hoy.desc]]);
       var d = new Date();
-      var finMes = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+      var finMes = window.PM.Season ? window.PM.Season.fin(d) : Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
       var dias = Math.max(0, Math.ceil((finMes - d.getTime()) / 86400000));
       grupos.push([['i', 'FIN DE TEMPORADA EN ' + dias + (dias === 1 ? ' DÍA' : ' DÍAS')]]);
       el.innerHTML = '';
@@ -8707,8 +8707,8 @@
        'CADA MES SE EMPIEZA DE NUEVO, PERO NO DE CERO: ARRANCAS CON EL ' +
          Math.round(RG.ARRASTRE * 100) + ' % DE TU PR DEL MES PASADO (MENOS SI JUGASTE MENOS DE ' +
          RG.CONFIANZA + ' PARTIDAS).',
-       'LAS ' + RG.COLOCACION + ' DE COLOCACIÓN MUEVEN EL DOBLE. LUEGO SUBES O BAJAS POR ESCALONES ' +
-         'SEGÚN TU MARCA CONTRA LA DEL TUYO.',
+       'CON RANGO EL MES PASADO EMPIEZAS YA COLOCADO; SI NO, JUEGAS ' + RG.COLOCACION +
+         ' DE COLOCACIÓN. LUEGO SUBES O BAJAS POR ESCALONES SEGÚN TU MARCA CONTRA LA DEL TUYO.',
        this.textoPartyRango() + '.',
        this.textoRolesRango() + '.'
       ].forEach(function (t) {
@@ -11713,12 +11713,12 @@
       this.pintarReloj();
     },
 
-    /* Lo que le queda a la temporada (van por meses, en hora UTC) */
+    /* Lo que le queda a la temporada (van por meses, en hora de Perú) */
     pintarReloj: function () {
       var H = this.rankHud;
       if (!H) return;
       var ahora = new Date();
-      var fin = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1);
+      var fin = window.PM.Season ? window.PM.Season.fin(ahora) : Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() + 1, 1);
       var s = Math.max(0, Math.floor((fin - ahora.getTime()) / 1000));
       var dd = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600);
       var mm = Math.floor((s % 3600) / 60), ss = s % 60;
@@ -12056,8 +12056,7 @@
       if (!S) return;
       var p2 = document.createElement('div');
       p2.className = 'tm-panel';
-      var ahora = new Date();
-      var pasada = S.actual(new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth() - 1, 15)));
+      var pasada = S.pasada();
       var t2 = document.createElement('div');
       t2.className = 'tm-panel-t';
       t2.textContent = 'HALL OF FAME · ' + String(S.nombre(pasada)).split(' ')[0];
@@ -16184,10 +16183,6 @@
              'A SOLO CON ' + CFG.HAB.ROL_INFO[rolYo].name],
             [(div.nivel || 1) > 1 ? ('NIVEL ' + div.nivel) : 'NINGUNO', 'NIVEL MÍNIMO', 'PARA GANAR PR'],
             ['+' + div.gana + ' / -' + div.pierde, 'PR EN JUEGO', 'COMO MÁXIMO']
-          ] : (e.semilla !== null && e.semilla !== undefined) ? [
-            [String(RG.COLOCACION - e.colocacion), 'PARTIDAS', 'DE COLOCACIÓN'],
-            [e.semillaNombre, 'EMPIEZAS EN', 'VIENES DE ' + e.vieneDe],
-            ['X' + (RG.COLOCACION_X || 1), 'PR EN JUEGO', 'EN CADA UNA']
           ] : [
             [String(RG.COLOCACION - e.colocacion), 'PARTIDAS', 'DE COLOCACIÓN'],
             ['TU MEDIA', 'DECIDE', 'DÓNDE EMPIEZAS'],
@@ -16294,7 +16289,7 @@
         { t: 'MANTENER PULSADO', d: 'ALGUNOS PODERES TIENEN UNA SEGUNDA FORMA SI MANTIENES LA TECLA: EL METEORO APUNTA, EL HIELO DEJA UNA PLACA, EL ESCUDO ALIADO CUBRE A TODO EL EQUIPO.' },
         { t: 'EL REY FANTASMA', d: 'CADA 5 NIVELES SALE EL REY: MUCHA VIDA, EMBESTIDAS Y ESBIRROS. LOS PODERES LE HACEN DAÑO O LO ATURDEN.' },
         clasif
-          ? { t: 'CLASIFICATORIA', d: 'CADA PARTIDA MUEVE TU RANGO DEL MES (CEREZA … LLAVE), CON CUALQUIER ROL: CADA UNO TIENE SU MARCA (EL SOPORTE, POR EJEMPLO, NECESITA MENOS PUNTOS QUE EL ASESINO). LAS 5 PRIMERAS SON DE COLOCACIÓN. HACE FALTA CUENTA Y LOS AJUSTES DE SERIE. CADA MES SE EMPIEZA DE NUEVO, DESDE LA MITAD DE TU PR DEL MES PASADO.' }
+          ? { t: 'CLASIFICATORIA', d: 'CADA PARTIDA MUEVE TU RANGO DEL MES (CEREZA … LLAVE), CON CUALQUIER ROL: CADA UNO TIENE SU MARCA (EL SOPORTE, POR EJEMPLO, NECESITA MENOS PUNTOS QUE EL ASESINO). HACE FALTA CUENTA Y LOS AJUSTES DE SERIE. CADA MES EMPIEZAS YA COLOCADO CON LA MITAD DE TU PR DEL MES PASADO; SIN RANGO EL MES PASADO, LAS 5 PRIMERAS SON DE COLOCACIÓN.' }
           : { t: 'QUÉ CUENTA', d: 'TIENE SU PROPIA LIGA EN EL TOP MUNDIAL, CON RÉCORDS Y TROFEOS. CUALQUIER ROL CUENTA, TAMBIÉN A UNO, Y CADA ROL LLEVA ADEMÁS SU PROPIO RÉCORD. EL RANGO SE JUEGA EN CLASIFICATORIA.' },
         { t: 'EL J2 CON FANTASMA', d: 'EN OPCIONES · PARTIDA EL J2 PUEDE LLEVAR UN FANTASMA EN VEZ DE UN PAC-MAN.' }
       ];

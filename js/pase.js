@@ -383,10 +383,11 @@
       };
     },
 
-    /* Días que le quedan a la temporada (el mes natural, en UTC) */
+    /* Días que le quedan a la temporada (el mes natural, en hora de Perú) */
     diasRestantes: function (d) {
       d = d || new Date();
-      var fin = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+      var S = window.PM.Season;
+      var fin = S && S.fin ? S.fin(d) : Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
       return Math.max(0, Math.ceil((fin - d.getTime()) / 86400000));
     }
   };
