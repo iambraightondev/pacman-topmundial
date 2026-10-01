@@ -13,7 +13,7 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > juego y en la columna `ranking.temporada`) y reinicio del rango YA COLOCADO
 > desde la semilla, sin colocación. ESTER jugó 3 clasificatorias entre las 7 y
 > las 12 del 30 sep que quedaron apuntadas en octubre (+84 PR de colocación):
-> se le suman a su arranque de octubre.
+> se le suman a su arranque de octubre (Braighton: se le dejan).
 
 ---
 
