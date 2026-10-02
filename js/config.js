@@ -860,8 +860,8 @@
    * calcula (1.500 + ganado − precio de lo comprado). */
   /* CONTINUAR (17 sep 2026): al quedarte sin vidas, 10 segundos para pagar
    * 1.000 monedas y seguir en el mismo nivel con 1 vida. En todos los modos
-   * con vidas propias (no en PAC-MAN VS., CACERÍA ni SUPERVIVENCIA), salvo en
-   * CLASIFICATORIA: ahí las monedas subirían el rango (28 sep, Game.puedeContinuar).
+   * con vidas propias (no en PAC-MAN VS., CACERÍA ni SUPERVIVENCIA), también
+   * en CLASIFICATORIA (quitado el 28 sep, devuelto el 2 oct: Game.puedeContinuar).
    * En party paga cada
    * uno por sí mismo, y quien no paga se queda mirando sin salirse. La
    * partida continuada cuenta entera para el TOP MUNDIAL. */

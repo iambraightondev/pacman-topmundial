@@ -2032,10 +2032,9 @@
      * ========================================================= */
     /* ¿Este modo tiene continuar? */
     puedeContinuar: function () {
-      /* CLASIFICATORIA (28 sep): pagar otra vida subía la marca y el rango,
-       * y ahí nada que se compre puede dar ventaja. Viendo (o rehaciendo)
-       * una repetición de antes, sí: se ve como se jugó. */
-      if (this.clasif && !this.replaying) return false;
+      /* CLASIFICATORIA: del 28 sep al 2 oct no tuvo continuar (pagar otra
+       * vida sube la marca y el rango). Braighton lo devolvió el 2 oct: la
+       * gente no veía la opción y creía que estaba roto. */
       return this.conVidasPropias();
     },
 

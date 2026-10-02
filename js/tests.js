@@ -11765,33 +11765,29 @@
     });
   });
 
-  /* 28 sep: en CLASIFICATORIA pagar otra vida subía la marca y el rango, y
-   * ahí nada que se compre puede dar ventaja (como en CACERÍA, SUPERVIVENCIA
-   * y VS.). Levantar al compañero, que es gratis, sigue valiendo. */
-  test('CLASIFICATORIA no tiene continuar: las monedas no suben el rango', function () {
+  /* 28 sep se quitó el continuar de CLASIFICATORIA (pagar otra vida sube la
+   * marca y el rango); el 2 oct Braighton lo devolvió: la gente no veía la
+   * opción y creía que estaba roto. Aquí se paga como en cualquier modo. */
+  test('CLASIFICATORIA también tiene continuar (desde el 2 oct)', function () {
     conTienda(function (Tn) {
       partidaHabCont({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
       try {
         ok(G.clasif, 'es clasificatoria');
-        ok(!G.puedeContinuar(), 'sin continuar');
+        ok(G.puedeContinuar(), 'tiene continuar');
         sinVidas();
-        eq(G.state, 'GAME_OVER', 'sin vidas, GAME OVER directo');
-        ok(!G.pedirContinuar(), 'y no hay nada que pagar');
-        eq(Tn.saldo(), 1500, 'ni se cobra nada');
+        eq(G.state, 'CONTINUE', 'sin vidas, la cuenta atrás');
+        ok(G.pedirContinuar(), 'se paga');
+        eq(Tn.saldo(), 500, 'cuesta 1.000');
+        eq(G.state, 'READY', 'y se sigue');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
       partidaHabCont({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, clasif: true,
                        roles: ['asesino', 'tanque'] });
       try {
         G.livesMode = 'individual';
         G.pacs[1].out = true; G.pacs[1].lives = 0;
-        ok(G.puedeRevivir(), 'en party, el cuerpo se sigue pudiendo levantar');
-        ok(!G.ofrecerRevivir(), 'pero pagar para volver al acabar el nivel, no');
-        G.replaying = true;
-        ok(G.puedeContinuar(), 'una repetición de antes se ve como se jugó');
-      } finally { G.replaying = false; G.toMenu(); window.PM.UI.hidePrompt(); }
-      partidaHabCont({ players: 1, hab: true, roles: ['asesino'] });
-      try { ok(G.puedeContinuar(), 'un DESATADO que no es clasificatoria sí lo tiene'); }
-      finally { G.toMenu(); }
+        ok(G.puedeRevivir(), 'en party, el cuerpo se puede levantar');
+        ok(G.ofrecerRevivir(), 'y pagar para volver al acabar el nivel, también');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
   });
 

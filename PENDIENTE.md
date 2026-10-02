@@ -7,7 +7,12 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **30 de septiembre de 2026** (pm-v322).
+Última puesta al día: **2 de octubre de 2026** (pm-v323).
+
+> **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
+> Se había quitado el 28 sep para que las monedas no subieran el rango, pero
+> casi todo se juega en clasificatoria y la gente creía que estaba roto.
+> Pagar otra vida vuelve a contar para la marca y el PR.
 
 > **30 sep, noche (pm-v322):** temporadas a medianoche de Perú (UTC−5, en el
 > juego y en la columna `ranking.temporada`) y reinicio del rango YA COLOCADO

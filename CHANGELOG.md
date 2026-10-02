@@ -2,6 +2,11 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-02 · CONTINUAR vuelve a la CLASIFICATORIA
+
+- Al quedarte sin vidas en una **CLASIFICATORIA** vuelves a poder pagar 1.000
+  monedas para seguir, como en el resto de modos.
+
 ## 2026-09-30 · Las temporadas, a la hora de Perú y sin volver a colocarse
 
 - La temporada (top mundial, rango y pase) cambia a la **medianoche de Perú**.
