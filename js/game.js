@@ -668,6 +668,7 @@
       this.contTicks = 0;        // CONTINUE?: lo que queda para pagar
       this.contHasta = [];       // hasta qué tick puede volver cada jugador
       this.contPedido = 0;       // invitado: tick en que pidió continuar
+      this.contUsos = [];        // cuántas veces ha vuelto pagando cada jugador
       this.noRevivir = {};       // quien dijo SEGUIR VIENDO: ya no se le pregunta
       this.cuerpos = [];         // el cuerpo de quien se quedó sin vidas
 
@@ -2019,7 +2020,7 @@
     /* =========================================================
      * CONTINUAR (CFG.CONTINUAR)
      *
-     * Sin vidas, antes del GAME OVER, hay 10 segundos para pagar 1.000
+     * Sin vidas, antes del GAME OVER, hay 10 segundos para pagar 2.000
      * monedas y seguir en el mismo nivel con 1 vida. Si nadie paga, GAME OVER
      * de siempre (y ahí se cobra la partida y va al TOP, entera).
      *
@@ -2038,6 +2039,27 @@
       return this.conVidasPropias();
     },
 
+    /* CLASIFICATORIA: se vuelve pagando UNA vez por jugador y partida (3 oct).
+     * Quien ya la gastó y pierde otra vez su última vida no puede pagar más;
+     * que un compañero le levante el cuerpo sigue valiendo. */
+    contAgotado: function (i) {
+      return !!(this.clasif && ((this.contUsos && this.contUsos[i]) || 0) >= CFG.CONTINUAR.CLASIF_MAX);
+    },
+
+    /* ¿Queda fuera alguien que todavía pueda pagar su vuelta? */
+    contAlguienPuede: function () {
+      for (var i = 0; i < this.pacs.length; i++) {
+        var p = this.pacs[i];
+        if (p.out && !p.bot && !this.contAgotado(i)) return true;
+      }
+      return false;
+    },
+
+    contApunta: function (i) {
+      if (!this.contUsos) this.contUsos = [];
+      this.contUsos[i] = (this.contUsos[i] || 0) + 1;
+    },
+
     /* Modos cuyas vidas se pierden de verdad: los que tienen CONTINUAR y
      * cuerpos que levantar (no CACERÍA, SUPERVIVENCIA ni VS.) */
     conVidasPropias: function () {
@@ -2053,6 +2075,7 @@
       // viendo una repetición: solo si aquel día se pagó justo aquí
       if (R && R.modo === 'ver') return !!(R.contEnEspera && R.contEnEspera());
       if (this.replaying) return false;
+      if (!this.contAlguienPuede()) return false;   // clasificatoria: ya la gastaron
       // online puede pagar cualquiera; solo, hace falta que llegue
       if (this.netRole) return true;
       var Tn = window.PM.Tienda;
@@ -2065,7 +2088,7 @@
       this.contPagado = [];          // quién ha pagado ya su vuelta
       this.contTicks = CFG.CONTINUAR.TICKS;
       for (var i = 0; i < this.pacs.length; i++) {
-        if (this.pacs[i].out && !this.pacs[i].bot) this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
+        if (this.pacs[i].out && !this.pacs[i].bot && !this.contAgotado(i)) this.contHasta[i] = this.tick + CFG.CONTINUAR.TICKS;
       }
       this.stopAllLoops();
       this.hostEvt({ t: 'contAbre', tk: this.contTicks });
@@ -2108,8 +2131,7 @@
     contDisponible: function () {
       if (!this.puedeContinuar() || this.replaying || this.isSpec()) return false;
       if (this.netNotice || this.state === 'GAME_OVER' || this.state === 'MENU') return false;
-      if (this.state === 'CONTINUE') return true;
-      if (this.state === 'REVIVIR') return this.contQuien() !== null;
+      if (this.state === 'CONTINUE' || this.state === 'REVIVIR') return this.contQuien() !== null;
       return false;
     },
 
@@ -2119,13 +2141,13 @@
       var ind = (this.livesMode === 'individual');
       if (this.netRole) {
         var yo = this.pacs[this.localIdx];
-        if (!yo || !yo.out) return null;
+        if (!yo || !yo.out || this.contAgotado(this.localIdx)) return null;
         if (this.state !== 'CONTINUE' && this.state !== 'REVIVIR') return null;
         return this.localIdx;
       }
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
-        if (p.bot || !p.out) continue;
+        if (p.bot || !p.out || this.contAgotado(i)) continue;
         if (this.state === 'CONTINUE' || this.state === 'REVIVIR') return -1;
       }
       return null;
@@ -2141,6 +2163,8 @@
         p = this.pacs[i];
         if (p.bot || !p.out) continue;
         if (ind && quien >= 0 && i !== quien) continue;
+        // una repetición se ve como se jugó, con las reglas de aquel día
+        if (!this.replaying && this.contAgotado(i)) continue;
         lista.push(i);
       }
       if (!lista.length) return false;
@@ -2169,6 +2193,7 @@
         p.out = false;
         p.dying = false;
         this.contHasta[lista[k]] = 0;
+        this.contApunta(lista[k]);
         this.contRecargar(lista[k]);
       }
       if (this.state === 'CONTINUE') {
@@ -2206,7 +2231,7 @@
     contFaltaAlguien: function () {
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
-        if (!p || p.bot || !p.out) continue;
+        if (!p || p.bot || !p.out || this.contAgotado(i)) continue;
         if (!(this.contPagado && this.contPagado[i])) return true;
       }
       return false;
@@ -2231,6 +2256,7 @@
         p.out = false;
         p.dying = false;
         this.contHasta[i] = 0;
+        this.contApunta(i);
         this.contRecargar(i);
       }
       this.contTicks = 0;
@@ -2449,7 +2475,7 @@
       if (!this.noRevivir) this.noRevivir = {};
       for (var i = 0; i < this.pacs.length; i++) {
         var p = this.pacs[i];
-        if (p.out && !p.bot && !this.noRevivir[i]) return true;
+        if (p.out && !p.bot && !this.noRevivir[i] && !this.contAgotado(i)) return true;
       }
       return false;
     },
@@ -4533,7 +4559,7 @@
           var aTiempo = this.state === 'CONTINUE' || this.state === 'REVIVIR' ||
             ((this.contHasta[who] || 0) + CFG.CONTINUAR.ESPERA_RED > this.tick);
           if (this.puedeContinuar() && pq && pq.out && !pq.bot && aTiempo &&
-              this.state !== 'GAME_OVER') {
+              !this.contAgotado(who) && this.state !== 'GAME_OVER') {
             this.revivir(this.livesMode === 'individual' ? who : -1);
           } else {
             this.hostEvt({ t: 'contNo', w: who });
@@ -5210,6 +5236,7 @@
             this.contPedido = 0;
             var Tp = window.PM.Tienda;
             if (Tp) Tp.gastarContinuar();
+            this.contApunta(this.localIdx);
             this.contPagueYo = true;
             this.setFlash('PAGADO · ESPERANDO A LOS DEMÁS');
           }
@@ -5222,6 +5249,7 @@
             this.contPedido = 0;
             var Tc = window.PM.Tienda;
             if (Tc) Tc.gastarContinuar();
+            this.contApunta(this.localIdx);
             this.setFlash('¡SIGUES! ' + CFG.CONTINUAR.VIDAS + (CFG.CONTINUAR.VIDAS === 1 ? ' VIDA' : ' VIDAS'));
           }
           var me = this.pacs[this.localIdx];

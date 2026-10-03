@@ -11588,8 +11588,12 @@
   });
 
   // ---------------------------------------------------------------
-  // CONTINUAR (17 sep): 1.000 monedas por seguir con 1 vida
+  // CONTINUAR (17 sep): 2.000 monedas (1.000 hasta el 3 oct) por seguir con 1 vida
   // ---------------------------------------------------------------
+  /* La tienda de las pruebas empieza con 1.500, que ya no llegan: se le da
+   * justo el precio, así que sin pagar hay CON_PARA y pagando quedan 1.500. */
+  function paraContinuar(Tn) { Tn.ganar(CFG.CONTINUAR.PRECIO); }
+  var CON_PARA = 1500 + CFG.CONTINUAR.PRECIO;
   function sinVidas() {
     for (var i = 0; i < G.pacs.length; i++) {
       var p = G.pacs[i];
@@ -11602,6 +11606,7 @@
 
   test('sin vidas sale el CONTINUE?, y pagar sigue con 1 vida en el mismo nivel', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       partida(1);
       try {
         G.score = 5000;
@@ -11611,14 +11616,14 @@
         eq(G.contTicks, CFG.CONTINUAR.TICKS, '10 segundos');
         ok(!G.canPause(), 'no se pausa para pensárselo');
         ok(G.pedirContinuar(), 'se paga');
-        eq(Tn.saldo(), 500, 'cuesta 1.000');
+        eq(Tn.saldo(), 1500, 'cuesta 2.000');
         eq(G.state, 'READY', 'se sigue');
         eq(G.level, 3, 'en el mismo nivel');
         eq(G.lives, 1, 'con 1 vida');
         ok(!G.pacs[0].out, 'Pac-Man vuelve');
         eq(G.score, 5000, 'los puntos se quedan');
         ok(!G.pedirContinuar(), 'ya no hay nada que pagar');
-        eq(Tn.saldo(), 500, 'ni se cobra otra vez');
+        eq(Tn.saldo(), 1500, 'ni se cobra otra vez');
         var rep = window.PM.Replay.enCurso();
         ok(rep && rep.entradas.some(function (e) { return e[2] === 8; }), 'y queda en la repetición');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
@@ -11627,6 +11632,7 @@
 
   test('si nadie paga en 10 segundos, GAME OVER sin cobrar', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       partida(1);
       try {
         sinVidas();
@@ -11634,7 +11640,7 @@
         eq(G.state, 'CONTINUE', 'todavía se puede');
         ticks(2);
         eq(G.state, 'GAME_OVER', 'se acabó el tiempo');
-        eq(Tn.saldo(), 1500, 'no se cobra nada');
+        eq(Tn.saldo(), CON_PARA, 'no se cobra nada');
         ok(!G.pedirContinuar(), 'ya no se puede pagar');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
@@ -11642,6 +11648,7 @@
 
   test('JUGAR OTRA VEZ vale también durante la cuenta atrás', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       partida(1);
       try {
         G.score = 2500;
@@ -11652,7 +11659,7 @@
         try { ok(G.otraDesdeContinue(), 'empieza otra'); } finally { G.closeRun = cierra; }
         ok(cerradas >= 1, 'la de antes se cierra y se cobra');
         eq(G.score, 0, 'partida nueva');
-        ok(Tn.saldo() >= 1500, 'sin pagar el continuar (y con lo ganado en la partida): ' + Tn.saldo());
+        ok(Tn.saldo() >= CON_PARA, 'sin pagar el continuar (y con lo ganado en la partida): ' + Tn.saldo());
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
   });
@@ -11660,6 +11667,7 @@
   test('CONTINUAR no se paga sin querer: ni con Enter, ni al primer toque, ni nada más salir', function () {
     var UI = window.PM.UI;
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       partida(1);
       try {
         sinVidas();
@@ -11667,17 +11675,17 @@
         ok(UI.promptOpen && UI.contBtnPagar, 'sale el panel');
         ok(UI.promptGuardaHasta > Date.now(), 'recién salido no acepta toques');
         UI.contBtnPagar.click();
-        eq(Tn.saldo(), 1500, 'el toque que venía de la partida no paga');
+        eq(Tn.saldo(), CON_PARA, 'el toque que venía de la partida no paga');
         UI.promptGuardaHasta = 0;              // pasado el medio segundo
         eq(document.activeElement, UI.contBtnOtra, 'el foco, en JUGAR OTRA VEZ');
         UI.handlePromptKey({ key: 'Enter' });
-        eq(Tn.saldo(), 1500, 'Enter ya no es CONTINUAR');
+        eq(Tn.saldo(), CON_PARA, 'Enter ya no es CONTINUAR');
         UI.contBtnPagar.click();
-        eq(Tn.saldo(), 1500, 'el primer toque solo pregunta');
-        ok(/GASTAR/.test(UI.contBtnPagar.textContent), 'el botón dice ¿GASTAR 1.000?');
+        eq(Tn.saldo(), CON_PARA, 'el primer toque solo pregunta');
+        ok(/GASTAR 2\.000/.test(UI.contBtnPagar.textContent), 'el botón dice ¿GASTAR 2.000?');
         eq(G.state, 'CONTINUE', 'y se sigue esperando');
         UI.contBtnPagar.click();
-        eq(Tn.saldo(), 500, 'el segundo paga');
+        eq(Tn.saldo(), 1500, 'el segundo paga');
         eq(G.state, 'READY', 'y se sigue jugando');
       } finally { G.toMenu(); UI.hidePrompt(); }
     });
@@ -11741,7 +11749,7 @@
     } finally { G.toMenu(); }
   });
 
-  /* 25 sep: pagar los 1.000 devuelve las cuatro teclas listas */
+  /* 25 sep: pagar el continuar devuelve las cuatro teclas listas */
   function partidaHabCont(opts) {
     window.PM.settings.muted = true;
     G.newGame(opts);
@@ -11752,7 +11760,8 @@
 
   test('DESATADO: quien paga el CONTINUAR vuelve con los poderes recargados', function () {
     var H = window.PM.Hab;
-    conTienda(function () {
+    conTienda(function (Tn) {
+      paraContinuar(Tn);
       partidaHabCont({ players: 1, hab: true, roles: ['asesino'] });
       try {
         var cd = H.st[0].cd;
@@ -11770,6 +11779,7 @@
    * opción y creía que estaba roto. Aquí se paga como en cualquier modo. */
   test('CLASIFICATORIA también tiene continuar (desde el 2 oct)', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       partidaHabCont({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
       try {
         ok(G.clasif, 'es clasificatoria');
@@ -11777,7 +11787,7 @@
         sinVidas();
         eq(G.state, 'CONTINUE', 'sin vidas, la cuenta atrás');
         ok(G.pedirContinuar(), 'se paga');
-        eq(Tn.saldo(), 500, 'cuesta 1.000');
+        eq(Tn.saldo(), 1500, 'cuesta 2.000');
         eq(G.state, 'READY', 'y se sigue');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
       partidaHabCont({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, clasif: true,
@@ -11789,6 +11799,54 @@
         ok(G.ofrecerRevivir(), 'y pagar para volver al acabar el nivel, también');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
+  });
+
+  /* 3 oct (Braighton): en CLASIFICATORIA se vuelve pagando una sola vez. Si
+   * vuelve a perder su última vida, ya no hay CONTINUE? que valga. */
+  test('CLASIFICATORIA: el continuar se paga UNA vez por jugador y partida', function () {
+    conTienda(function (Tn) {
+      Tn.ganar(CFG.CONTINUAR.PRECIO * 4);
+      partidaHabCont({ players: 1, hab: true, clasif: true, roles: ['asesino'] });
+      try {
+        H0();
+        sinVidas();
+        ok(G.pedirContinuar(), 'la primera se paga');
+        eq(window.PM.Hab.st[0].cd.join(','), '0,0,0,0', 'y vuelve con los poderes listos');
+        var saldo = Tn.saldo();
+        ok(G.contAgotado(0), 'queda gastada');
+        sinVidas();
+        eq(G.state, 'GAME_OVER', 'la segunda vez, GAME OVER directo');
+        ok(!G.pedirContinuar(), 'no se puede pagar');
+        ok(!G.revivir(-1), 'ni por la puerta de atrás');
+        eq(Tn.saldo(), saldo, 'ni se cobra');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+      /* fuera de la clasificatoria, las veces que se quiera */
+      partidaHabCont({ players: 1, hab: true, roles: ['asesino'] });
+      try {
+        sinVidas();
+        ok(G.pedirContinuar(), 'DESATADO normal: se paga');
+        sinVidas();
+        eq(G.state, 'CONTINUE', 'y se puede volver a pagar');
+        ok(G.pedirContinuar(), 'otra vez');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+      /* en party es de cada uno: el que ya pagó no vuelve, su compañero sí */
+      partidaHabCont({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, clasif: true,
+                       roles: ['asesino', 'tanque'] });
+      try {
+        G.livesMode = 'individual';
+        G.contUsos[1] = 1;
+        G.pacs[1].out = true; G.pacs[1].lives = 0;
+        ok(!G.ofrecerRevivir(), 'al acabar el nivel no se le ofrece pagar otra vez');
+        sinVidas();
+        eq(G.state, 'CONTINUE', 'al anfitrión aún le queda la suya');
+        G.hostGuestEvent({ t: 'contReq', i: 1 }, 1);
+        ok(!(G.contPagado && G.contPagado[1]), 'al que ya la gastó no se le acepta');
+        G.contUsos[0] = 1;
+        sinVidas();
+        eq(G.state, 'GAME_OVER', 'con los dos gastados, se acabó');
+      } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
+    });
+    function H0() { var cd = window.PM.Hab.st[0].cd; cd[0] = 300; cd[3] = 4000; }
   });
 
   test('DESATADO: una repetición de antes del 25 sep no recarga al pagar', function () {
@@ -11851,6 +11909,7 @@
 
   test('en party, el invitado pide, y se le cobra solo si el anfitrión dice que sí', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       partida(2, 'guest');
       var mandados = [], envia = G.netSend;
       G.netSend = function (n, d) { mandados.push([n, d]); };
@@ -11861,14 +11920,14 @@
         eq(G.state, 'CONTINUE', 'le llega la cuenta atrás');
         ok(G.pedirContinuar(), 'lo pide');
         ok(mandados.some(function (m) { return m[1] && m[1].t === 'contReq'; }), 'se lo pide al anfitrión');
-        eq(Tn.saldo(), 1500, 'todavía sin cobrar');
+        eq(Tn.saldo(), CON_PARA, 'todavía sin cobrar');
         ok(!G.pedirContinuar(), 'no se pide dos veces');
         G.applyEvt({ t: 'ready', lvl: G.level, full: false, rt: 60 });
         G.applyEvt({ t: 'contOk', w: G.localIdx });
-        eq(Tn.saldo(), 500, 'con el sí, se cobra');
+        eq(Tn.saldo(), 1500, 'con el sí, se cobra');
         ok(!me.out, 'y vuelve a jugar');
         G.applyEvt({ t: 'contOk', w: G.localIdx });
-        eq(Tn.saldo(), 500, 'un sí repetido no cobra otra vez');
+        eq(Tn.saldo(), 1500, 'un sí repetido no cobra otra vez');
       } finally { G.netSend = envia; G.toMenu(); }
     });
   });
@@ -12133,6 +12192,7 @@
 
   test('al acabar el nivel, quien está fuera puede pagar para volver', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       duoConVidasPropias();
       try {
         G.finishPacDeath(1);
@@ -12143,7 +12203,7 @@
         eq(G.state, 'REVIVIR', 'sale la vista de revivir');
         ok(G.contDisponible(), 'se puede pagar');
         ok(G.pedirContinuar(), 'se paga');
-        eq(Tn.saldo(), 500, '1.000 monedas');
+        eq(Tn.saldo(), 1500, '2.000 monedas');
         ok(!G.pacs[1].out, 'J2 vuelve');
         eq(G.level, nivel + 1, 'y se pasa al nivel siguiente');
         eq(G.state, 'READY');
@@ -12154,7 +12214,8 @@
   /* 18 sep: antes la única salida del panel era el MENÚ, y desde el
    * anfitrión eso cortaba la partida de todos. */
   test('SEGUIR VIENDO cierra el panel y no vuelve a preguntar', function () {
-    conTienda(function () {
+    conTienda(function (Tn) {
+      paraContinuar(Tn);
       duoConVidasPropias();
       try {
         G.finishPacDeath(1);
@@ -12176,6 +12237,7 @@
 
   test('SIGUIENTE NIVEL sin pagar deja al compañero mirando', function () {
     conTienda(function (Tn) {
+      paraContinuar(Tn);
       duoConVidasPropias();
       try {
         G.finishPacDeath(1);
@@ -12185,7 +12247,7 @@
         ok(G.saltarRevivir(), 'se sigue');
         eq(G.state, 'READY', 'nivel siguiente');
         ok(G.pacs[1].out, 'J2 sigue fuera');
-        eq(Tn.saldo(), 1500, 'sin cobrar');
+        eq(Tn.saldo(), CON_PARA, 'sin cobrar');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
   });
@@ -12252,8 +12314,9 @@
     var previo = null, previoSave = null;
     try { previo = localStorage.getItem(CFG.REPLAY_KEY); } catch (e) { previo = null; }
     try { previoSave = localStorage.getItem(CFG.SAVE_KEY); } catch (e) { previoSave = null; }
-    conTienda(function () {
+    conTienda(function (Tn) {
       try {
+        paraContinuar(Tn);
         window.PM.settings.muted = true;
         if (G.inGame()) G.toMenu();
         R.salir();

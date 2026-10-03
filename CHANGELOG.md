@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-03 · Volver pagando cuesta 2.000, y en CLASIFICATORIA solo una vez
+
+- **CONTINUAR / REVIVIR pagando cuesta 2.000 monedas** (antes 1.000), en todos
+  los modos.
+- En **CLASIFICATORIA** cada jugador puede pagar su vuelta **una sola vez por
+  partida**: si vuelve a perder su última vida, ya no se le ofrece (a solas,
+  GAME OVER directo). Que un compañero le levante el cuerpo sigue valiendo.
+- Quien vuelve pagando sale con sus cuatro poderes recargados, como hasta ahora.
+
 ## 2026-10-02 · CONTINUAR vuelve a la CLASIFICATORIA
 
 - Al quedarte sin vidas en una **CLASIFICATORIA** vuelves a poder pagar 1.000

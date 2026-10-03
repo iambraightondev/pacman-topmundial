@@ -4166,7 +4166,14 @@ OPCIONES. Shared 2-player rules (both modes):
   `REVIVIR.PASADAS` (5) passes bring it back with 1 life and a shield, except
   for a **SOPORTE, who needs a single pass** (18 Sep, `Game.esSoporte` /
   `pasadasDe`: reviving is its job, and five laps over a body with the ghosts
-  on top is not something anyone does). GAME OVER when everyone is out. `'shared'` (one team pool,
+  on top is not something anyone does). Paying to come back (`CFG.CONTINUAR`,
+  CONTINUE? when everyone is out, REVIVIR at level end) costs `PRECIO` (2,000
+  since 3 Oct) and reloads the four powers (`Game.contRecargar`); being lifted
+  by a teammate does not. In **CLASIFICATORIA each player may pay only
+  `CLASIF_MAX` (1) time per run** (`Game.contUsos` / `contAgotado`): once
+  spent, losing the last life again skips CONTINUE?/REVIVIR for that player
+  (straight to GAME OVER if nobody else can pay); the host enforces it, and a
+  replay is shown as it was played. GAME OVER when everyone is out. `'shared'` (one team pool,
   white icons) survives only for CACERÍA, solo play and old replays, which
   carry their own `livesMode`; the option is gone from the menu and a saved
   `'shared'` is rewritten to `'individual'` on load. Any death runs the

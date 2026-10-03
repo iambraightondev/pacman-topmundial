@@ -14149,7 +14149,7 @@
     /* ------------------------------------------------------
      * CONTINUE? (CFG.CONTINUAR)
      *
-     * Sin vidas: 10 segundos para pagar 1.000 monedas y seguir con 1 vida en
+     * Sin vidas: 10 segundos para pagar 2.000 monedas y seguir con 1 vida en
      * el mismo nivel. JUGAR OTRA VEZ no se puede pulsar hasta que se acaba la
      * cuenta atrás (entonces sale el GAME OVER). MENÚ sí: irse es irse.
      * ------------------------------------------------------ */
@@ -14211,10 +14211,14 @@
             : ('TIENES ' + fmtMonedas(Tn ? Tn.saldo() : 0) + ' · TE FALTAN ' + fmtMonedas(C.PRECIO - (Tn ? Tn.saldo() : 0)));
           p.appendChild(saldo);
 
-          if (g.netRole) {
+          /* CLASIFICATORIA: una sola vuelta pagada por partida (Game.contAgotado) */
+          var gastada = g.contAgotado(g.netRole ? g.localIdx : 0);
+          if (g.netRole || g.clasif) {
             var nota = document.createElement('div');
             nota.className = 'cont-nota';
             nota.textContent = g.contPedido ? 'ESPERANDO AL ANFITRIÓN...'
+              : gastada ? 'YA PAGASTE TU VUELTA EN ESTA PARTIDA · ESPERANDO A LOS DEMÁS'
+              : g.clasif ? 'EN CLASIFICATORIA SOLO SE PAGA UNA VEZ POR PARTIDA'
               : 'CADA UNO PAGA LO SUYO · QUIEN NO PAGUE SE QUEDA MIRANDO';
             p.appendChild(nota);
           }
@@ -14384,7 +14388,8 @@
             var nota = document.createElement('div');
             nota.className = 'cont-nota';
             nota.textContent = g.contPedido ? 'ESPERANDO AL ANFITRIÓN...'
-              : (puedo ? 'SI NO PAGAS, SIGUES MIRANDO SIN GASTAR VIDAS'
+              : (puedo ? (g.clasif ? 'EN CLASIFICATORIA SOLO SE PAGA UNA VEZ POR PARTIDA'
+                                   : 'SI NO PAGAS, SIGUES MIRANDO SIN GASTAR VIDAS')
                       : 'ESPERANDO A QUE TUS COMPAÑEROS DECIDAN');
             p.appendChild(nota);
           }

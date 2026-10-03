@@ -7,7 +7,13 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **2 de octubre de 2026** (pm-v323).
+Última puesta al día: **3 de octubre de 2026** (pm-v324).
+
+> **3 oct (pm-v324):** volver pagando cuesta **2.000** (en todos los modos) y
+> en CLASIFICATORIA **una sola vez por jugador y partida** (pedido de
+> Braighton). Vuelve con los poderes recargados; levantado por un compañero,
+> no (así estaba; no se ha tocado). El invitado que se reconecta no recuerda
+> que ya pagó: su botón sale, pero el anfitrión se lo niega.
 
 > **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
 > Se había quitado el 28 sep para que las monedas no subieran el rango, pero
