@@ -14,6 +14,8 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > Braighton). Vuelve con los poderes recargados; levantado por un compañero,
 > no (así estaba; no se ha tocado). El invitado que se reconecta no recuerda
 > que ya pagó: su botón sale, pero el anfitrión se lo niega.
+> **pm-v325:** aviso del precio nuevo al entrar, una vez por aparato y hasta
+> el 3 nov (`CFG.AVISOS`, sirve para el próximo cambio que haya que contar).
 
 > **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
 > Se había quitado el 28 sep para que las monedas no subieran el rango, pero

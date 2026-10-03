@@ -10,6 +10,7 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   partida**: si vuelve a perder su última vida, ya no se le ofrece (a solas,
   GAME OVER directo). Que un compañero le levante el cuerpo sigue valiendo.
 - Quien vuelve pagando sale con sus cuatro poderes recargados, como hasta ahora.
+- Al abrir el juego sale **una vez** un aviso con el precio nuevo (hasta el 3 nov).
 
 ## 2026-10-02 · CONTINUAR vuelve a la CLASIFICATORIA
 

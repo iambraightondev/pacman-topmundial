@@ -26,6 +26,8 @@
   var CFG = window.PM.CFG;
   var G = window.PM.Game;
   var casos = [];
+  /* los avisos de cambios (CFG.AVISOS) taparían lo que miden las pruebas */
+  if (window.PM.UI) window.PM.UI.avisosApagados = true;
 
   /* Desde el 16 sep solo entra en el top quien juega con cuenta: las pruebas
    * del envío llevan una sesión de mentira (y nunca la de verdad, PM_PRUEBAS). */
@@ -11847,6 +11849,38 @@
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
     });
     function H0() { var cd = window.PM.Hab.st[0].cd; cd[0] = 300; cd[3] = 4000; }
+  });
+
+  test('el aviso de que CONTINUAR sube a 2.000 sale una sola vez por aparato', function () {
+    var UI = window.PM.UI, K = UI.AVISOS_VISTOS_KEY, previo = null, mem = UI.avisosVistos;
+    try { previo = localStorage.getItem(K); } catch (e) { previo = null; }
+    try {
+      try { localStorage.removeItem(K); } catch (e) { /* nada */ }
+      UI.avisosVistos = {};
+      if (G.inGame()) G.toMenu();
+      UI.hidePrompt();
+      eq(UI.avisoSiToca(), false, 'las pruebas no lo ven sin pedirlo');
+      ok(UI.avisoSiToca(true), 'la primera vez sale');
+      ok(UI.promptOpen, 'en un diálogo');
+      ok(/2\.000/.test(UI.els.prompt.textContent), 'con el precio nuevo');
+      ok(/CONTINUAR/.test(UI.els.prompt.textContent), 'y de qué es');
+      UI.hidePrompt();
+      eq(UI.avisoSiToca(true), false, 'la segunda ya no');
+      UI.avisosVistos = {};
+      eq(UI.avisoSiToca(true), false, 'ni tras recargar: queda apuntado en el aparato');
+      var a = CFG.AVISOS[0], hasta = a.hasta;
+      try { localStorage.removeItem(K); } catch (e) { /* nada */ }
+      a.hasta = '2000-01-01';
+      try { eq(UI.avisoSiToca(true), false, 'pasada su fecha, a nadie'); }
+      finally { a.hasta = hasta; }
+    } finally {
+      UI.avisosVistos = mem;
+      try {
+        if (previo === null) localStorage.removeItem(K);
+        else localStorage.setItem(K, previo);
+      } catch (e) { /* nada */ }
+      UI.hidePrompt();
+    }
   });
 
   test('DESATADO: una repetición de antes del 25 sep no recarga al pagar', function () {

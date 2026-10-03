@@ -15416,6 +15416,7 @@
       // antes que nada, la party que se cortó y aún espera (VOLVER A LA PARTIDA)
       if (this.volverSiToca()) return true;
       if (this.temporadaCerradaSiToca()) return true;
+      if (this.avisoSiToca()) return true;
       var e = C.siguiente();
       if (!e) return false;
       C.visto(e);
@@ -15559,6 +15560,59 @@
         caza: !!d.caza, superv: !!d.sv, maze: d.maze || null
       });
       G.ponerRevista(d);
+    },
+
+    /* AVISOS DE CAMBIOS (CFG.AVISOS): al abrir el juego, una vez por aparato
+     * y solo hasta su fecha. Se da por visto al enseñarlo. Las pruebas no los
+     * ven (taparían lo que miden) salvo que lo pidan con `forzar`. */
+    AVISOS_VISTOS_KEY: 'pacman-topmundial-avisos-vistos',
+    avisoSiToca: function (forzar) {
+      if ((window.PM_PRUEBAS || this.avisosApagados) && !forzar) return false;
+      var lista = CFG.AVISOS || [], vistos = {};
+      try { vistos = JSON.parse(localStorage.getItem(this.AVISOS_VISTOS_KEY) || '{}') || {}; }
+      catch (e) { vistos = {}; }
+      if (!this.avisosVistos) this.avisosVistos = {};   // por si no hay almacén
+      var d = new Date();
+      var hoy = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+      for (var i = 0; i < lista.length; i++) {
+        var a = lista[i];
+        if (vistos[a.id] || this.avisosVistos[a.id]) continue;
+        if (a.hasta && hoy > a.hasta) continue;
+        vistos[a.id] = 1;
+        this.avisosVistos[a.id] = 1;
+        try { localStorage.setItem(this.AVISOS_VISTOS_KEY, JSON.stringify(vistos)); }
+        catch (e) { /* sin almacén: no vuelve a salir en esta visita */ }
+        this.showAviso(a);
+        return true;
+      }
+      return false;
+    },
+
+    showAviso: function (a) {
+      var self = this;
+      this.showPrompt({
+        title: a.titulo,
+        arcade: true,
+        tono: 'amarillo',
+        solid: true,
+        custom: function (p) {
+          var tt = p.querySelector('.panel-title');
+          if (tt) { tt.classList.add('lvl-titulo'); self.ajustarTituloLvl(tt); }
+          var oferta = document.createElement('div');
+          oferta.className = 'cont-oferta';
+          oferta.appendChild(document.createTextNode(a.texto + (a.precio ? ' ' : '')));
+          if (a.precio) oferta.appendChild(self.precioEl(a.precio));
+          p.appendChild(oferta);
+          (a.notas || []).forEach(function (t) {
+            var n = document.createElement('div');
+            n.className = 'cont-nota';
+            n.textContent = t;
+            p.appendChild(n);
+          });
+        },
+        buttons: [{ label: 'ENTENDIDO', primary: true, keys: ['Enter', 'Escape', ' '], hint: 'ENTER',
+          onClick: function () { self.hidePrompt(); self.celebrarSiToca(); } }]
+      });
     },
 
     /* ¡TEMPORADA CERRADA! — la primera vez que se abre el juego después de

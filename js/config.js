@@ -877,6 +877,19 @@
     ESPERA_RED: 180      // lo que espera un invitado a que el anfitrión conteste
   };
 
+  /* AVISOS DE CAMBIOS (3 oct 2026): lo que el jugador tiene que saber al
+   * entrar porque le cambia una cuenta que ya tenía hecha. Cada uno sale UNA
+   * vez por aparato (UI.avisoSiToca) y deja de salir pasado `hasta`: a quien
+   * llegue después ya no le cambió nada. `precio` pinta la cifra con su moneda. */
+  CFG.AVISOS = [
+    { id: 'continuar-2000', hasta: '2026-11-03',
+      titulo: 'CONTINUAR SUBE DE PRECIO',
+      texto: 'VOLVER A LA PARTIDA PAGANDO CUESTA AHORA',
+      precio: CFG.CONTINUAR.PRECIO,
+      notas: ['ANTES COSTABA 1.000',
+              'EN CLASIFICATORIA SOLO SE PUEDE PAGAR UNA VEZ POR PARTIDA'] }
+  ];
+
   /* REVIVIR AL COMPAÑERO (17 sep 2026). Con vidas propias, quien se queda
    * sin vidas deja su cuerpo en el laberinto: si un compañero le pasa por
    * encima PASADAS veces antes de CUERPO_TICKS (15 s), vuelve con 1 vida y ESCUDO_TICKS
