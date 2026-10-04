@@ -367,7 +367,8 @@
       /* TOCADOS POR EL TÓTEM (4 oct): ticks que le quedan a cada fantasma
        * frenado por los dardos, y cuántos lleva encima (totemGolpes: cada
        * uno le quita TOTEM_LENTO de velocidad y el que hace TOTEM_GOLPES lo
-       * mata). Si los ticks se acaban, la cuenta vuelve a cero. */
+       * mata). Si los ticks se acaban recupera la velocidad, pero la cuenta
+       * se queda: solo se borra al morir o volver a casa. */
       this.totemToque = [0, 0, 0, 0];
       this.totemGolpes = [0, 0, 0, 0];
       this.huye = [0, 0, 0, 0];
@@ -3096,7 +3097,7 @@
       var p = G.pacs[who];
       var ox = p ? p.x : g.x, oy = p ? p.y : g.y;
       g.eaten();
-      this.hielo[g.id] = 0; this.trasHielo[g.id] = 0; this.totemToque[g.id] = 0;
+      this.hielo[g.id] = 0; this.trasHielo[g.id] = 0; this.totemToque[g.id] = 0; this.totemGolpes[g.id] = 0;
       this.huye[g.id] = 0;
       var pts = this.puntosDe(G, who, this.esMago(G, who) ? this.rachaMago(G) : H.MAGO_PUNTOS);
       G.addScore(pts, who);
@@ -3441,7 +3442,7 @@
       pts = this.puntosFantasma(G, who, g,
         Math.round((pts || H.MAGO_PUNTOS) * (mult || 1)), como, !!exacto);
       g.eaten();
-      this.hielo[g.id] = 0; this.trasHielo[g.id] = 0; this.totemToque[g.id] = 0; this.huye[g.id] = 0;
+      this.hielo[g.id] = 0; this.trasHielo[g.id] = 0; this.totemToque[g.id] = 0; this.totemGolpes[g.id] = 0; this.huye[g.id] = 0;
       this.azulCatalogo[g.id] = 0; this.azulCatTicks[g.id] = 0; this.arcanoAzul[g.id] = 0;
       this.caceriaQuien[g.id] = -1;
       /* si el que se va a casa era el fantasma prestado, deja de serlo: no
@@ -4570,7 +4571,6 @@
             /* EL TÓTEM MATA AL CUARTO DARDO (4 oct): los de antes solo frenan,
              * cada uno un poco más */
             else if (b.tipo === 'totem') {
-              if (!(this.totemToque[target.id] > 0)) this.totemGolpes[target.id] = 0;
               if (++this.totemGolpes[target.id] >= H.TOTEM_GOLPES) {
                 this.totemGolpes[target.id] = 0;
                 this.matarCatalogo(G, target, b.w, H.MAGO_PUNTOS, 'totem');
@@ -4628,7 +4628,7 @@
         if (!this.enLaCalle(G.ghosts[j])) {
           this.quema[j] = 0; this.quemaQuien[j] = -1;
           this.azulCatalogo[j] = 0; this.azulCatTicks[j] = 0; this.arcanoAzul[j] = 0;
-          this.hielo[j] = 0; this.trasHielo[j] = 0; this.totemToque[j] = 0;
+          this.hielo[j] = 0; this.trasHielo[j] = 0; this.totemToque[j] = 0; this.totemGolpes[j] = 0;
           this.huye[j] = 0; this.huyeQuien[j] = -1;
           this.lento[j] = 0; this.lentoMult[j] = 1;
           this.aturdido[j] = 0; this.ciego[j] = 0;

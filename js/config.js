@@ -3007,14 +3007,15 @@
      * y los tira en dos segundos, uno cada medio. Cada uno de los tres
      * primeros le quita al fantasma un 20 % de SU velocidad (TOTEM_LENTO: va
      * al 80, al 60 y al 40 %) y el cuarto lo mata. Si pasa TOTEM_LENTO_TICKS
-     * sin que le llegue otro, se le pasa y la cuenta vuelve a cero. Al REY le
+     * (4 s) sin que le llegue otro recupera su velocidad, pero los dardos que
+     * lleva NO se le borran: solo al morir o volver a casa. Al REY le
      * sigue tirando cada dos segundos (TOTEM_CADA_REY): una torre bien puesta
      * le saca cuatro, igual que siempre. */
     TOTEM_CADA: 30,
     TOTEM_CADA_REY: 2 * 60,
     TOTEM_GOLPES: 4,
     TOTEM_LENTO: 0.2,
-    TOTEM_LENTO_TICKS: 3 * 60,
+    TOTEM_LENTO_TICKS: 4 * 60,
     TOTEM_BALA_VEL: 3,
     /* GRAVEDAD: el tirón se VE (medio segundo de arrastre por los pasillos,
      * no un salto instantáneo), llega a cuatro casillas y los deja apagados

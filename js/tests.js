@@ -15936,16 +15936,21 @@
     eq(g.mode, 'eyes', 'el cuarto lo mata');
     ok(G.score > base, 'y puntúa');
     eq(H.totemToque[0], 0, 'vuelve de casa sin el frenazo');
-    /* si deja de recibir, se le pasa y la cuenta vuelve a empezar */
+    eq(H.totemGolpes[0], 0, 'y con la cuenta a cero');
+    /* si deja de recibir recupera la velocidad, pero la cuenta se queda */
     planta();
-    dardo(); dardo(); dardo();
+    dardo(); dardo();
+    eq(HC.TOTEM_LENTO_TICKS, 4 * 60, 'el frenazo dura 4 s');
     for (var n = 0; n < HC.TOTEM_LENTO_TICKS; n++) H.paso(G);
-    eq(H.totemToque[0], 0, 'a los 3 s se le pasa');
+    eq(H.totemToque[0], 0, 'a los 4 s se le pasa');
     eq(H.multVelFantasma(G, 0), 1, 'y vuelve a su paso');
+    eq(H.totemGolpes[0], 2, 'pero sigue llevando sus dos dardos');
     planta();
     dardo();
-    ok(H.enLaCalle(g), 'y el siguiente dardo vuelve a ser el primero');
-    ok(Math.abs(H.multVelFantasma(G, 0) - 0.8) < 1e-9, 'al 80 % otra vez');
+    ok(H.enLaCalle(g), 'el siguiente es el tercero: no mata');
+    ok(Math.abs(H.multVelFantasma(G, 0) - 0.4) < 1e-9, 'y lo deja al 40 %');
+    dardo();
+    eq(g.mode, 'eyes', 'y el cuarto lo mata');
     G.toMenu();
   });
 
