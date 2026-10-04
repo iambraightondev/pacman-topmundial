@@ -570,6 +570,32 @@ caso('7c · el REBOTE del Tanque invitado: 600 por aguantar y la baja, en el anf
   eq(A.G.ghosts[0].mode, 'eyes', 'y el fantasma cae');
 });
 
+/* La W (el ESCUDO de 8 s) del Tanque invitado, con la coraza pasiva gastada:
+ * MAULIO decía que su escudo no le daba puntos y la pasiva sí (3 oct). */
+caso('7e · el ESCUDO (W) del Tanque invitado: cobra 600, con la pasiva gastada y con ella puesta', function () {
+  var ms = tanqueInvitado(), A = ms[0], B = ms[1];
+  ms.forEach(function (m) { m.H.estado(1).corPas = 0; m.H.estado(1).corCd = 9999; });
+  ok(B.H.pulsar(B.G, 1, 1), 'el invitado se pone la W');
+  red.paso(6);
+  ok(B.H.estado(1).coraza > 0, 'la lleva en su máquina');
+  ok(A.H.estado(1).coraza > 0, 'y el anfitrión se lo cree');
+  var r = chocaInvitado(ms);
+  ok(!B.G.pacs[1].dying && !A.G.pacs[1].dying, 'no muere');
+  eq(mensajes(B, 'gevt', 'habRoto').length, 1, 'avisa del golpe');
+  eq(mensajes(B, 'gevt', 'habRoto')[0][1].c, 'w', 'diciendo que fue la W');
+  eq(r.d[1], CFG(A).HAB.PROTEGE_PUNTOS, 'cobra 600 en el anfitrión');
+  ok(vioMas600(B), 'y lo ve en su pantalla');
+
+  /* con las dos puestas: primero se gasta la W, y también cobra */
+  ms = tanqueInvitado(); A = ms[0]; B = ms[1];
+  ok(B.H.pulsar(B.G, 1, 1), 'la W encima de la coraza');
+  red.paso(6);
+  r = chocaInvitado(ms);
+  eq(mensajes(B, 'gevt', 'habRoto')[0][1].c, 'w', 'se rompe la W');
+  eq(r.d[1], CFG(A).HAB.PROTEGE_PUNTOS, 'y cobra');
+  ok(A.H.corazaDe(A.G, 1), 'la coraza sigue para el siguiente golpe');
+});
+
 caso('7d · un invitado que se inventa el golpe no cobra', function () {
   var ms = tanqueInvitado(), A = ms[0], B = ms[1];
   ms.forEach(function (m) { m.H.estado(1).corPas = 0; m.H.estado(1).corCd = 9999; });
