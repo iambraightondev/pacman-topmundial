@@ -1550,11 +1550,13 @@
      * dejar saldos en negativo). Por eso cada temporada tiene la suya, y una
      * sin entrada propia usa la última definida antes de ella.
      * SEPTIEMBRE 2026 NO SE TOCA NUNCA: es lo que ya se cobró.
-     * Desde octubre, CAMPANA y LLAVE bajan (LLAVE en un mes pagaba media
-     * tienda: 22.500 sumando todas). */
+     * 4 oct (Braighton): hay que pagar más por llegar a cada división. Octubre
+     * sube entero, con la temporada ya empezada: como solo sube, nadie queda
+     * en negativo, y quien ya había llegado a una fruta cobra la diferencia.
+     * LLAVE en un mes: 43.500 sumando todas. BAJAR un mes empezado, nunca. */
     PREMIOS_TEMPORADA: {
       '2026-09': { cereza: 0, fresa: 500, naranja: 800, manzana: 1200, melon: 2000, galaxian: 3000, campana: 5000, llave: 10000 },
-      '2026-10': { cereza: 0, fresa: 500, naranja: 800, manzana: 1200, melon: 2000, galaxian: 3000, campana: 3000, llave: 5000 }
+      '2026-10': { cereza: 0, fresa: 1000, naranja: 2000, manzana: 3000, melon: 5000, galaxian: 7500, campana: 10000, llave: 15000 }
     },
     COLOCACION: 5,        // partidas antes de tener rango
     /* La colocación no regala: un escalón por debajo del que alcanza tu

@@ -17752,14 +17752,15 @@
     } finally { Se.actual = act0; Rg._memoHasta = 0; }
   });
 
-  test('RANGO: desde octubre CAMPANA paga 3.000 y LLAVE 5.000', function () {
+  /* 4 oct: octubre sube entero (1.000, 2.000, 3.000, 5.000, 7.500, 10.000, 15.000) */
+  test('RANGO: desde octubre cada fruta paga más, de 1.000 en FRESA a 15.000 en LLAVE', function () {
     var Rg = window.PM.Rango, T = Rg.TRAMOS, Se = window.PM.Season, act0 = Se.actual;
-    eq(Rg.premio(6, '2026-10'), 3000, 'CAMPANA');
-    eq(Rg.premio(7, '2026-10'), 5000, 'LLAVE');
-    eq(Rg.premio(5, '2026-10'), 3000, 'GALAXIAN, igual');
-    eq(Rg.premio(1, '2026-10'), 500, 'FRESA, igual');
-    eq(Rg.premiosHasta(7, '2026-10'), 15500, 'LLAVE en un mes: 15.500');
-    eq(Rg.premio(7, '2027-02'), 5000, 'un mes sin tabla propia usa la última definida');
+    [0, 1000, 2000, 3000, 5000, 7500, 10000, 15000].forEach(function (x, d) {
+      eq(Rg.premio(d, '2026-10'), x, CFG.RANGO.DIVISIONES[d].name + ' en octubre');
+      ok(x >= Rg.premio(d, '2026-09'), CFG.RANGO.DIVISIONES[d].name + ' no baja');
+    });
+    eq(Rg.premiosHasta(7, '2026-10'), 43500, 'LLAVE en un mes: 43.500');
+    eq(Rg.premio(7, '2027-02'), 15000, 'un mes sin tabla propia usa la última definida');
     eq(Rg.premio(7, '2026-08'), 10000, 'y uno de antes de todas, la primera');
     var llave = T.length;
     try {
@@ -17767,12 +17768,12 @@
         A.record('rm4_2026-09', llave);
         A.record('rm4_2026-10', llave);
         Rg._memoHasta = 0;
-        eq(Rg.monedas(), 22500 + 15500, 'LLAVE en los dos meses: cada uno con su tabla');
+        eq(Rg.monedas(), 22500 + 43500, 'LLAVE en los dos meses: cada uno con su tabla');
       });
       // llegar a CAMPANA jugando paga lo de SU temporada
       var campana = -1;
       T.forEach(function (x, i) { if (campana < 0 && x.d === 6) campana = i; });
-      [['2026-09', 5000], ['2026-10', 3000]].forEach(function (caso) {
+      [['2026-09', 5000], ['2026-10', 10000]].forEach(function (caso) {
         conContadores(function (A) {
           var t = caso[0];
           Se.actual = function () { return t; };

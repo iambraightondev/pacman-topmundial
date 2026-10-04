@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · Llegar a cada división paga más
+
+- **Premios del rango, desde octubre:** FRESA 1.000, NARANJA 2.000, MANZANA
+  3.000, MELÓN 5.000, GALAXIAN 7.500, CAMPANA 10.000 y LLAVE 15.000 (antes
+  500, 800, 1.200, 2.000, 3.000, 3.000 y 5.000).
+- Quien ya había llegado a una fruta este mes **cobra la diferencia** sin
+  hacer nada. Septiembre se queda como se cobró.
+
 ## 2026-10-04 · La fruta del Soporte vale el doble, y el METEORO devuelve 10 s
 
 - **SOPORTE: la fruta le vale el doble** (en DESATADO y CLASIFICATORIA). Es el

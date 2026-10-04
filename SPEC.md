@@ -4695,9 +4695,10 @@ Los importes están en `CFG.RANGO.PREMIOS_TEMPORADA['AAAA-MM'] = { fruta: moneda
 (`Rango.premio(d, t)`); una temporada sin entrada usa la última definida antes
 de ella (y una anterior a todas, la primera). **2026-09 está congelado** (0,
 500, 800, 1.200, 2.000, 3.000, 5.000, 10.000: lo ya cobrado); desde 2026-10
-CAMPANA 3.000 y LLAVE 5.000. Para cambiar premios, añadir una entrada nueva,
-nunca tocar una temporada ya empezada. La escalera de LOS RANGOS enseña los de
-la temporada en curso.
+(subido el 4 oct) 0, 1.000, 2.000, 3.000, 5.000, 7.500, 10.000, 15.000. Para
+cambiar premios, añadir una entrada nueva; una temporada ya empezada solo se
+puede SUBIR (quien ya llegó cobra la diferencia), nunca bajar. La escalera de
+LOS RANGOS enseña los de la temporada en curso.
 **AJUSTES A MANO** (`CFG.AJUSTES_CUENTA.X.rango = { 'AAAA-MM': PR }`): se suman a
 `rg` al LEER (`Rango.ajustados(c, usuario)`, sobre una copia) en `estado`,
 `monedas`, `cerradas` y la tabla, y `rm` sube con ellos. En la nube no se tocan.
