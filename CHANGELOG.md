@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · El TERREMOTO paga 150, y el TÓTEM no suelta a su presa
+
+- **TERREMOTO (Tanque, R):** cada fantasma que manda a casa vale **150**
+  (antes 100).
+- **TÓTEM:** dispara al **mismo fantasma hasta matarlo**, aunque otro se le
+  ponga más cerca. Solo cambia si ese muere o se le va de las 10 casillas.
+
 ## 2026-10-04 · El TÓTEM dispara cada segundo y mata al segundo dardo
 
 - **TÓTEM (Mago, W):** dispara **cada segundo** (antes cada 2). El **primer

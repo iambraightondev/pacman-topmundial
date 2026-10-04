@@ -3357,6 +3357,20 @@
       return mejor;
     },
 
+    /* A quién le tira el TÓTEM: al que ya tenía (tt.obj) mientras siga en la
+     * calle y a tiro; si no, al más cercano, y se queda con él. */
+    blancoTotem: function (G, tt) {
+      var g = tt.obj >= 0 ? G.ghosts[tt.obj] : null, radio = 10;
+      if (g && this.enLaCalle(g)) {
+        var dx = Math.abs(g.tileX() - tt.c), dy = Math.abs(g.tileY() - tt.r);
+        dx = Math.min(dx, CFG.COLS - dx);
+        if (Math.sqrt(dx * dx + dy * dy) <= radio) return g;
+      }
+      g = this.ghostCercanoAt(G, tt.c, tt.r, radio);
+      tt.obj = g ? g.id : -1;
+      return g;
+    },
+
     ghostCercano: function (G, idx, radio) {
       var p = G.pacs[idx], mejor = null, d0 = Infinity;
       if (!p) return null;
@@ -3993,7 +4007,7 @@
         cl.x = cnx; cl.y = cny; cl.c = Math.floor(cnx / T); cl.r = Math.floor(cny / T);
       }
     },
-    totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0 }; this.efecto('totem', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
+    totem: function (G, idx, d) { var s = this.estado(idx), c = this.casillaDe(G, idx, d); if (!s || !c) return false; s.totem = { c: c.c, r: c.r, t: H.TOTEM_TICKS, cd: 0, obj: -1 }; this.efecto('totem', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
     /* E — GRAVEDAD: los junta para rematarlos (21 sep). Antes teletransportaba
      * de golpe a tres casillas y aturdía un segundo: como el salto era
      * instantáneo y un aturdido no se veía, parecía que no pasaba nada. Ahora
@@ -4892,7 +4906,10 @@
           }
         }
         if (s.totem && s.totem.cd-- <= 0) {
-          var tg = this.ghostCercanoAt(G, s.totem.c, s.totem.r, 10);
+          /* NO SUELTA A SU PRESA (4 oct): sigue con el mismo fantasma hasta
+           * matarlo, aunque otro se le ponga más cerca. Solo cambia si ese ya
+           * no está en la calle o se le ha ido de las 10 casillas. */
+          var tg = this.blancoTotem(G, s.totem);
           if (tg) this.proyectilesCat.push({ tipo: 'totem', x: s.totem.c * T + T / 2,
             y: s.totem.r * T + T / 2, w: i, objetivo: tg.id });
           /* SIN FANTASMAS, LA TORRE LE DISPARA AL REY (22 sep 2026). Una

@@ -15946,6 +15946,26 @@
     G.toMenu();
   });
 
+  test('CATÁLOGO: el Tótem no cambia de fantasma hasta matar al que eligió', function () {
+    var H = window.PM.Hab, T = CFG.TILE;
+    partida(1);
+    G.hab = true; H.empezar(true, 1, ['mago'], ['bola_guiada,totem,gravedad,meteoro']); G.roles = ['mago'];
+    G.ghosts[2].mode = 'house'; G.ghosts[3].mode = 'house';
+    var a = G.ghosts[0], b = G.ghosts[1];
+    a.mode = 'normal'; a.x = 15 * T + T / 2; a.y = 23 * T + T / 2;
+    b.mode = 'normal'; b.x = 19 * T + T / 2; b.y = 23 * T + T / 2;
+    var tt = { c: 13, r: 23, t: 600, cd: 0, obj: -1 };
+    eq(H.blancoTotem(G, tt).id, 0, 'empieza por el más cercano');
+    b.x = 14 * T + T / 2;
+    eq(H.blancoTotem(G, tt).id, 0, 'y sigue con él aunque otro se acerque más');
+    a.mode = 'eyes';
+    eq(H.blancoTotem(G, tt).id, 1, 'muerto ese, pasa al siguiente');
+    b.x = 26 * T + T / 2; a.mode = 'normal';
+    eq(H.blancoTotem(G, tt).id, 0, 'y si se le va de las 10 casillas, cambia');
+    eq(CFG.HAB.TERREMOTO_PUNTOS, 150, 'el TERREMOTO paga 150 por fantasma');
+    G.toMenu();
+  });
+
   test('CATÁLOGO: Shuriken usa tres pulsaciones y solo perdona la recarga con pleno', function () {
     var H = window.PM.Hab;
     partida(1);
