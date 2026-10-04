@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · El TÓTEM dispara cada segundo y mata al segundo dardo
+
+- **TÓTEM (Mago, W):** dispara **cada segundo** (antes cada 2). El **primer
+  dardo** ya no mata: frena al fantasma un **20 %** durante 3 s. El
+  **segundo**, si lo pilla aún frenado, lo mata.
+- Al REY FANTASMA le sigue tirando cada 2 s: le saca lo mismo que antes.
+
 ## 2026-10-04 · Llegar a cada división paga más
 
 - **Premios del rango, desde octubre:** FRESA 1.000, NARANJA 2.000, MANZANA
