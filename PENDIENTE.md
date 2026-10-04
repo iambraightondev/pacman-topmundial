@@ -21,6 +21,9 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > bloque está al final de css/style.css). Medido en 1280×990, 1366×768,
 > 1920×1080 y móvil con ?red=local. **Por ver jugando:** una party real de 4
 > y el móvil de verdad (ahí la sala sigue desplazándose, a propósito).
+> **pm-v327:** el GAME OVER de recreativa cabe con sus ocho renglones y los
+> botones fijos (también al final de css/style.css). Medido con un resumen de
+> mentira, no con una partida real.
 
 > **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
 > Se había quitado el 28 sep para que las monedas no subieran el rango, pero

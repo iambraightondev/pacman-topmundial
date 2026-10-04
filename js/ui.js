@@ -13826,6 +13826,11 @@
         : (this.classicOverLines() || []).filter(function (l) {
             return typeof l === 'string' && /TOP MUNDIAL/.test(l);
           });
+      /* el tiempo del nivel 1 ya tiene su renglón, con el «NO CUENTA» debajo:
+       * repetido al pie era una línea más que empujaba los botones fuera */
+      if (!deCaza && g.lvl1Cs > 0 && window.PM.Ranking) {
+        avisos = avisos.filter(function (l) { return !/^NIVEL 1 EN/.test(l); });
+      }
 
       this.showPrompt({
         title: deCaza ? (caza ? 'FIN DE LA CACERÍA' : 'FIN DE LA RONDA') : 'GAME OVER',

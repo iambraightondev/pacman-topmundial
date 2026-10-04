@@ -9666,3 +9666,37 @@ body.mandos-v #emoteBar { position: fixed; top: auto; bottom: calc(var(--mandosA
   #online .prompt-btns.ol-pie .btn { max-width: 100%; white-space: normal; }
   #online .prompt-btns.ol-pie .btn-primary { font-size: clamp(13px, 3.6vw, 18px); letter-spacing: 1px; padding: 14px 16px 11px; }
 }
+/* =========================================================
+ * EL GAME OVER CABE EN LA PANTALLA (3 oct 2026)
+ *
+ * Con rango, maestría y cofre el recuento tiene ocho renglones, y con el
+ * título a 104 px y el Pac-Man a 96 los botones quedaban cortados abajo.
+ * Todo mide ahora según el alto de la pantalla, y INSERT COIN y MENÚ no se
+ * mueven: si aun así no cabe, se recorre el recuento por dentro.
+ * ========================================================= */
+@media (min-width: 601px) {
+  #prompt.arcade:has(> .go-cuerpo) { overflow: hidden; gap: clamp(6px, 1.2vh, 14px); padding: clamp(26px, 3.4vh, 34px) 24px; }
+  #prompt.arcade:has(> .go-cuerpo) > * { flex-shrink: 0; }
+  #prompt.arcade:has(> .go-cuerpo) > .go-cuerpo { flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+  #prompt.arcade:has(> .go-cuerpo) .panel-title.go-titulo { font-size: clamp(34px, min(7.4vw, 7.4vh), 92px); line-height: 1.1; }
+  #prompt.arcade:has(> .go-cuerpo) .go-muerte { width: clamp(36px, 5.6vh, 72px); height: clamp(36px, 5.6vh, 72px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-vistas { margin: 0; }
+  #prompt.arcade:has(> .go-cuerpo) .go-tabla { gap: clamp(3px, 0.7vh, 10px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-fila { row-gap: 3px; padding-bottom: clamp(3px, 0.6vh, 8px); font-size: clamp(var(--fs-l), 1.6vh, 16px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-fila.grande { font-size: clamp(14px, 2.2vh, 22px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-fila.grande b { font-size: clamp(20px, 3.4vh, 34px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-continue { margin-top: clamp(2px, 0.8vh, 10px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-sellos { gap: clamp(12px, 2.4vh, 30px); }
+  #prompt.arcade:has(> .go-cuerpo) .prompt-btns .btn-primary { padding: clamp(9px, 1.4vh, 16px) 26px clamp(7px, 1.1vh, 12px); font-size: clamp(15px, 2.4vh, 22px); }
+  #prompt.arcade:has(> .go-cuerpo) .go-equipo-tabla { margin: 0 auto; }
+}
+/* estrecho: los sellos van debajo del recuento, en una fila apretada */
+@media (min-width: 601px) and (max-width: 1100px) {
+  #prompt.arcade:has(> .go-cuerpo) .go-sellos { gap: 8px 14px; padding-top: 8px; margin-top: 0; }
+  #prompt.arcade:has(> .go-cuerpo) .go-sello { padding: 4px 8px; border-width: 2px; }
+  #prompt.arcade:has(.go-sello) .go-muerte { display: none; }
+}
+@media (min-width: 601px) and (max-height: 820px) {
+  #prompt.arcade:has(> .go-cuerpo) .go-muerte { display: none; }
+  #prompt.arcade:has(> .go-cuerpo) .go-fila small { line-height: 1.2; }
+}

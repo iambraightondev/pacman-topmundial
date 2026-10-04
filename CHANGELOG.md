@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-03 · El GAME OVER cabe en la pantalla
+
+- Con rango, maestría y cofre el recuento se salía por abajo y cortaba
+  **INSERT COIN** y **MENÚ**. Ahora todo se ajusta al alto de la pantalla y
+  los dos botones no se mueven de su sitio.
+- El tiempo del nivel 1 ya no sale repetido al pie.
+
 ## 2026-10-03 · La sala de party cabe en la pantalla
 
 - **EMPEZAR PARTIDA, VOLVER y SALIR siempre a la vista**, sin desplazar la
