@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **3 de octubre de 2026** (pm-v324).
+Última puesta al día: **4 de octubre de 2026** (pm-v329).
 
 > **3 oct (pm-v324):** volver pagando cuesta **2.000** (en todos los modos) y
 > en CLASIFICATORIA **una sola vez por jugador y partida** (pedido de
@@ -49,6 +49,32 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### ▶ PRÓXIMA SESIÓN (dejado el 4 oct)
+
+**Hecho el 3-4 oct, todo publicado (pm-v324 a pm-v329):** volver pagando a
+2.000 y una sola vez por partida en CLASIFICATORIA; aviso de cambios al entrar
+(`CFG.AVISOS`); sala de party y GAME OVER sin desbordes y con los botones
+fijos; la W del Tanque paga en los dos casos que fallaban; fruta x2 para el
+SOPORTE; METEORO devuelve 10 s. Detalle en CHANGELOG y SPEC.
+
+1. **Que Braighton vea jugando:** la sala nueva en una party real de 4 (y de
+   invitado), el GAME OVER de una partida de verdad con logros, y que al
+   Soporte le salga el doble al comer fruta.
+2. **Preguntas que quedaron sin contestar:**
+   - ¿el levantado por un compañero vuelve también con los poderes
+     recargados? (hoy solo quien vuelve pagando);
+   - ¿botones fijos abajo también en el MÓVIL en la sala? (hoy se desplaza);
+   - ¿YUNQUE, PIEL DE PIEDRA, FORTALEZA y CAMPO pagan por golpe parado? (hoy
+     no; harían falta topes por uso).
+3. **Mitad de octubre:** FACTOR_ROL del Soporte (0,6) con la fruta doble ya
+   en juego — compensa dos veces. Datos de partida, a solas desde el 28 sep:
+   Asesino 13.090/min (8), Mago ~10.000 (1), Tanque 6.188 (10), Soporte 5.216
+   (47); cada rol lo juega UNA persona, y de party no hay medida.
+4. **Cuidado al probar en el navegador:** montar una partida a mano con el
+   juego servido en local SUBE repeticiones a producción aunque no haya
+   sesión (el 4 oct se colaron 9 del GAME OVER de mentira; borradas).
+   Vaciar la URL de Supabase antes, o no llamar a `newGame`.
 
 ### ▶ PRÓXIMA SESIÓN (dejado el 30 sep, noche)
 

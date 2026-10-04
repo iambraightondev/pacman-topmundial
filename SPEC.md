@@ -999,7 +999,11 @@ classic replays keep their exact text). `Replay.montar` passes it to
 value, and `restartGame` drops it like `contRecarga`. Version 1 = the
 PROTECTION POINTS (see Roles): a replay recorded before 28 Sep plays without
 them and still ends on its recorded score (checked on all 155 cloud runs that
-matched, and in tests.js with two real ones).
+matched, and in tests.js with two real ones). Version 2 (4 Oct) = the tank is
+also paid when the support's shield takes the hit and his W goes with it.
+Version 3 (4 Oct) = fruit is worth double to the SOPORTE
+(`HAB.FRUTA_SOPORTE`, `Game.frutaPts(i)`). Each rule checks
+`G.reglasPts >= n`, so an older replay keeps its total.
 
 **RLE terminator.** A run count is now closed with `.` (`5A*8.5G`): without it
 `5A*8` followed by `5G` parsed as `5A*85` plus a bare `G`, which broke the text.
@@ -3486,6 +3490,25 @@ the key index. `LIST` is the ASESINO (the original kit).
   drawing only — it never touches the game or the network. The role picker
   shows the line `PASIVA · …` under the motto (`ROL_INFO[].pasiva`), which is
   always there even when empty so the screen does not jump between roles.
+- **SOPORTE fruit x2 (4 Oct 2026).** Solo cloud replays since 28 Sep:
+  Asesino 13 090 pts/min, Mago ~10 000 (one run), Tanque 6 188, Soporte 5 216,
+  and the support ate 0.9 fruit per run against ~7 for the others. In DESATADO
+  the level fruit pays `fruitInfo.points × HAB.FRUTA_SOPORTE` (2) to a
+  soporte, on the host for both the local eat and a guest's `ateFruit`; the
+  popup and `fruitEat.pts` carry the doubled figure. Its rank `FACTOR_ROL`
+  (0.6) now compensates twice: review mid-October.
+- **W shield paid in two more cases (4 Oct 2026).** (1) When a support shield
+  (`escudo`) is on top, one hit clears both it and the tank's W: the support
+  is paid as before and now the tank too (`Hab.cobrarCapa(..., suya)`, rules
+  ≥ 2; the passive CORAZA lost the same way still pays only the support, by
+  design). (2) Party: a guest's W timer and the host's copy drift, so a
+  `habRoto c:'w'` arriving just after the host's copy expired was refused;
+  the host now remembers a natural expiry for `HAB.W_MARGEN_RED` (150 ticks,
+  `st[i].corazaFue`) and pays once. Still unpaid on purpose: YUNQUE, PIEL DE
+  PIEDRA, FORTALEZA, CAMPO, INMUNIDAD (they do not break), a hit absorbed
+  first by CADENA / grace / APISONADORA, and a W that times out untouched.
+- **METEORO** gives back `HAB.METEORO_DEVUELVE` = 10 s of cooldown per kill
+  (15 s until 4 Oct).
 - **PROTECTION POINTS (28 Sep 2026, Braighton).** Tank and support scored
   about half an assassin per minute (cloud replays: ~5 000 and ~4 100 against
   ~11 400) because protecting did not score. Now, in DESATADO:
@@ -4018,6 +4041,41 @@ falls back to its own rounded bar, so they must only reach Firefox.
 Settings panel offers preset swatches: #ffff00 (clásico), #ff0000, #00ffff,
 #00ff00, #ff69b4, #ff8c00, #b19cd9, #ffffff — plus `<input type="color">`.
 Applies to Pac-Man body, death animation and lives icons.
+
+## Screens that pin their buttons (3–4 Oct 2026)
+
+Two screens were taller than the window even after `UI.encajar` (its floor
+is 90 %), so their main buttons fell off the bottom. Both are now laid out to
+fit and, on desktop, keep the footer fixed; the rules live in two blocks at
+the END of `css/style.css` (they override the earlier room / game-over rules
+on purpose).
+
+- **Party room** (`#online.en-sala`, class toggled by `refreshParty` /
+  `showOnlineIdle`). The mode billboard is collapsed: `.ol-modo-tira` shows
+  the current mode (animated poster thumb via `UI.olTira`, name, tag) and
+  CAMBIAR MODO (`UI.abrirCartelera`, leader only; guests read LO ELIGE EL
+  LÍDER) swaps the mode ficha for a one-column list of the five modes
+  (`.eligiendo-modo`); picking one closes it. The role closet is built with
+  `armario({ plegable: true })`: no drawer open at start (`arm-recogido`),
+  each Q/W/E/R slot toggles its own, and the passive line hides while one is
+  open. Player rows are a grid — name (and powers) on top, tags below. At
+  ≥ 861 px wide the overlay does not scroll: `.ol-cols` shrinks and each card
+  scrolls inside if it must. Phones keep the page scroll.
+- **Arcade GAME OVER** (`#prompt.arcade:has(> .go-cuerpo)`, > 600 px wide).
+  Title, dying Pac-Man and rows scale with the viewport height; `.go-cuerpo`
+  is the only part that may scroll, so INSERT COIN / MENÚ stay put. The
+  level-1 time no longer repeats as a footer notice when it already has its
+  row. Under 820 px tall the dying Pac-Man is hidden.
+
+## Change notices (`CFG.AVISOS`, 3 Oct 2026)
+
+`CFG.AVISOS = [{ id, hasta, titulo, texto, precio, notas }]`.
+`UI.avisoSiToca()` runs inside `celebrarSiToca` (after VOLVER A LA PARTIDA
+and ¡TEMPORADA CERRADA!): the first unseen notice whose `hasta` date has not
+passed is shown once per device (`pacman-topmundial-avisos-vistos`, plus an
+in-memory mark when there is no storage). Tests switch it off
+(`UI.avisosApagados`, `PM_PRUEBAS`) unless called with `forzar`. First
+notice: CONTINUAR now costs 2 000 (until 3 Nov).
 
 ## Panels that fit the window (`UI.encajar`, 20 Sep 2026)
 
