@@ -2,6 +2,17 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-03 · La sala de party cabe en la pantalla
+
+- **EMPEZAR PARTIDA, VOLVER y SALIR siempre a la vista**, sin desplazar la
+  pantalla (en ordenador). Si la ventana es muy pequeña, se desplaza la carta
+  por dentro, no la sala.
+- **LA CARTELERA va plegada**: se ve el modo puesto y CAMBIAR MODO despliega
+  la lista de los cinco, con el nombre entero de cada uno.
+- **Los poderes, recogidos**: cada tecla abre y cierra su cajón.
+- Cada jugador de la lista enseña su nombre arriba y sus etiquetas debajo: ya
+  no se salen de la ficha ni tapan el nombre.
+
 ## 2026-10-03 · Volver pagando cuesta 2.000, y en CLASIFICATORIA solo una vez
 
 - **CONTINUAR / REVIVIR pagando cuesta 2.000 monedas** (antes 1.000), en todos

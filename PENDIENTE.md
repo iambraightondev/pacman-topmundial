@@ -16,6 +16,11 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > que ya pagó: su botón sale, pero el anfitrión se lo niega.
 > **pm-v325:** aviso del precio nuevo al entrar, una vez por aparato y hasta
 > el 3 nov (`CFG.AVISOS`, sirve para el próximo cambio que haya que contar).
+> **pm-v326:** la sala de party sin desbordes y sin desplazar (cartelera
+> plegada en una tira, cajón de poderes recogido, pie fijo en escritorio; el
+> bloque está al final de css/style.css). Medido en 1280×990, 1366×768,
+> 1920×1080 y móvil con ?red=local. **Por ver jugando:** una party real de 4
+> y el móvil de verdad (ahí la sala sigue desplazándose, a propósito).
 
 > **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
 > Se había quitado el 28 sep para que las monedas no subieran el rango, pero

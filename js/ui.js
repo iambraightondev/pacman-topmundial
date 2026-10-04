@@ -1511,7 +1511,8 @@
         var art = (p.mo && p.mo.poster) || id;
         Po.pintar(p.cv, art, (id === modo) ? t : t * 0.45 + 2.7, p.estado || (p.estado = {}));
       }
-      void modo;
+      var tr = this.olTira;
+      if (tr && tr.art && tr.cv.offsetParent) Po.pintar(tr.cv, tr.art, t, tr.estado);
     },
 
     /* La cartelera se mueve mientras la sala está a la vista, y nada más
@@ -7168,16 +7169,41 @@
 
       /* ---- derecha: la cartelera y la ficha del modo elegido ---- */
       var der = el('div', 'ol-card ol-card-partida');
+      this.olDer = der;
       der.appendChild(el('div', 'ol-card-titulo', 'LA CARTELERA'));
-      this.olModoNota = el('div', 'ol-card-texto ol-solo-lider', 'EL MODO LO ELIGE EL LÍDER');
-      der.appendChild(this.olModoNota);
 
-      /* Los cuatro modos como PÓSTERES (los mismos del carrusel de la
-       * portada, js/portadas.js). El encendido se abre abajo en su ficha. */
+      /* LA CARTELERA, PLEGADA (3 oct). Los cinco pósteres en fila se comían
+       * un tercio de la carta y sus nombres no cabían (CLASIFICAT...), y con
+       * el armario debajo los botones de EMPEZAR quedaban fuera de la
+       * pantalla. Ahora se ve solo el modo puesto, en una tira; CAMBIAR MODO
+       * despliega la lista en el sitio de la ficha y elegir uno la recoge. */
+      var mTira = el('div', 'ol-modo-tira');
+      var mCv = document.createElement('canvas');
+      mCv.className = 'ol-modo-tira-cv';
+      mCv.width = 180; mCv.height = 235;
+      mTira.appendChild(mCv);
+      var mTx = el('div', 'ol-modo-tira-tx');
+      this.olTiraNombre = el('div', 'ol-modo-tira-nombre', '');
+      this.olTiraTag = el('div', 'ol-modo-tira-tag', '');
+      mTx.appendChild(this.olTiraNombre);
+      mTx.appendChild(this.olTiraTag);
+      mTira.appendChild(mTx);
+      this.olModoNota = el('div', 'ol-modo-tira-nota', 'LO ELIGE EL LÍDER');
+      mTira.appendChild(this.olModoNota);
+      this.olModoCambiar = this.makeButton('CAMBIAR MODO', function () {
+        self.abrirCartelera(!der.classList.contains('eligiendo-modo'));
+      });
+      this.olModoCambiar.classList.add('ol-modo-cambiar');
+      mTira.appendChild(this.olModoCambiar);
+      der.appendChild(mTira);
+      this.olTira = { el: mTira, cv: mCv, estado: {} };
+
+      /* Los modos, cada uno con su PÓSTER (los del carrusel de la portada,
+       * js/portadas.js) en miniatura. */
       var cartelera = el('div', 'ol-cartelera');
       this.olPosters = {};
       this.OL_MODOS.forEach(function (mo) {
-        var b = self.makeButton('', function () { self.pickPartyModo(mo.id); });
+        var b = self.makeButton('', function () { self.pickPartyModo(mo.id); self.abrirCartelera(false); });
         b.classList.add('ol-poster');
         b.style.setProperty('--mc', mo.color);
         b.setAttribute('aria-label', mo.name);
@@ -7259,8 +7285,9 @@
         'NINGÚN ROL SE REPITE: EL PRIMERO QUE LO COGE SE LO QUEDA'
       ]);
       fHab.appendChild(el('div', 'ol-ficha-sub', 'TU ROL Y TUS PODERES'));
-      /* EL ARMARIO, el mismo que a solas (ver armario) */
+      /* EL ARMARIO, el mismo que a solas (ver armario), con el cajón recogido */
       this.habArm = this.armario({
+        plegable: true,
         rol: function () { var P = window.PM.Party; return P && P.myRol ? P.myRol() : 'asesino'; },
         carga: function () {
           var P = window.PM.Party;
@@ -7370,6 +7397,8 @@
     showOnlineIdle: function () {
       this.onlineIdle.style.display = 'flex';
       this.onlineRoom.style.display = 'none';
+      this.els.online.classList.remove('en-sala');
+      this.abrirCartelera(false);
       var ok = window.PM.Net.configured();
       this.onlineWarn.style.display = ok ? 'none' : 'block';
       if (!ok) {
@@ -7496,6 +7525,22 @@
       return 'equipo';
     },
 
+    /* Desplegar o recoger la lista de modos de la sala (solo el líder) */
+    abrirCartelera: function (si) {
+      var P = window.PM.Party;
+      if (!this.olDer) return;
+      si = !!si && !!(P && P.isLeader());
+      this.olDer.classList.toggle('eligiendo-modo', si);
+      if (this.olModoCambiar) {
+        this.olModoCambiar.textContent = si ? 'CERRAR' : 'CAMBIAR MODO';
+        this.olModoCambiar.setAttribute('aria-expanded', si ? 'true' : 'false');
+      }
+      if (si) {
+        var po = this.olPosters && this.olPosters[this.partyModo(P)];
+        if (po && po.b.focus) po.b.focus();
+      }
+    },
+
     /* Elegir un póster de la cartelera (solo el líder) */
     pickPartyModo: function (id) {
       var P = window.PM.Party;
@@ -7565,6 +7610,7 @@
       }
       this.onlineIdle.style.display = 'none';
       this.onlineRoom.style.display = 'flex';
+      this.els.online.classList.add('en-sala');
       /* la CLASIFICATORIA pedida antes de tener sala (showClasifPrompt): en
        * cuanto la sala es tuya, se pone; en la de otro, manda el líder */
       if (this.partyModoPendiente) {
@@ -7676,6 +7722,21 @@
       var lider = P.isLeader();
       var modo = this.partyModo(P);
       if (this.olModoNota) this.olModoNota.style.display = lider ? 'none' : '';
+      if (this.olModoCambiar) this.olModoCambiar.style.display = lider ? '' : 'none';
+      if (!lider) this.abrirCartelera(false);
+      /* la tira: el modo que hay puesto */
+      if (this.olTira) {
+        var moTira = null;
+        for (var mi = 0; mi < this.OL_MODOS.length; mi++) if (this.OL_MODOS[mi].id === modo) moTira = this.OL_MODOS[mi];
+        if (moTira && this.olTira.modo !== modo) {
+          this.olTira.modo = modo;
+          this.olTira.art = moTira.poster || modo;
+          this.olTira.estado = {};
+          this.olTira.el.style.setProperty('--mc', moTira.color);
+          this.olTiraNombre.textContent = moTira.name;
+          this.olTiraTag.textContent = moTira.tag;
+        }
+      }
       /* LA CARTELERA: el póster del modo puesto se enciende, los demás se
        * apagan; y solo el líder puede cambiarlo (pero todos lo ven). */
       if (this.olPosters) {
@@ -7837,7 +7898,11 @@
       var slots = [];
       for (var sk = 0; sk < 4; sk++) {
         (function (k) {
-          var b = self.makeButton('', function () { abierto = k; cajonDe = ''; pintar(); });
+          var b = self.makeButton('', function () {
+            abierto = (o.plegable && abierto === k) ? -1 : k;
+            cajonDe = '';
+            pintar();
+          });
           b.classList.add('arm-slot');
           b.appendChild(el('b', 'arm-slot-tecla', TECLAS[k]));
           var cv = icono('hab', '', 44, '#fff');
@@ -7877,7 +7942,10 @@
       var pasiva = el('div', 'arm-pasiva');
       cuerpo.appendChild(pasiva);
 
-      var abierto = 0, cajonDe = '', ops = [], encima = null;
+      /* PLEGABLE (la sala, 3 oct): el cajón empieza recogido y cada casilla
+       * abre y cierra el suyo. Con él siempre abierto la sala no cabía. */
+      var abierto = o.plegable ? -1 : 0, cajonDe = '', ops = [], encima = null;
+      if (o.plegable) raiz.classList.add('arm-plegable');
 
       /* La descripción: la del catálogo; los del kit de siempre la tienen en
        * ROL_INFO.desc (la misma que salía en las cartas de antes). */
@@ -7962,12 +8030,15 @@
             s.b.setAttribute('aria-label', TECLAS[k] + ' · ' + hab.name + ' · CAMBIAR');
           }
           s.b.classList.toggle('abierto', k === abierto);
+          if (o.plegable) s.b.setAttribute('aria-expanded', k === abierto ? 'true' : 'false');
         }
+        pasiva.textContent = info.pasiva ? ('★ PASIVA · ' + info.pasiva) : '';
+        raiz.classList.toggle('arm-recogido', abierto < 0);
+        if (abierto < 0) { cajonDe = ''; return; }
         /* cajón */
         if (cajonDe !== rol + '|' + abierto) { cajonDe = rol + '|' + abierto; encima = null; construirCajon(rol); }
         for (var i = 0; i < ops.length; i++) ops[i].b.classList.toggle('active', carga[abierto] === ops[i].id);
         if (!encima) ver(habDe(rol, abierto, carga[abierto]));
-        pasiva.textContent = info.pasiva ? ('★ PASIVA · ' + info.pasiva) : '';
       }
       /* volver a la tira sin cambiar nada (al pasar de J1 a J2, por ejemplo) */
       function cerrarRoles() { eligiendo = false; }
