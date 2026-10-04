@@ -1420,13 +1420,14 @@
                 this.runFrutas++;
                 this.bumpAch({ frutas: 1 });
               }
-              this.addScore(this.fruitInfo.points, i);
+              var fpts = this.frutaPts(i);
+              this.addScore(fpts, i);
               if (this.hab && window.PM.Hab) window.PM.Hab.bonoCadena(this, i,
-                this.fruitInfo.points, p.x, p.y);
+                fpts, p.x, p.y);
               this.addPopup(CFG.START.fruit.x * T + T / 2,
                 CFG.START.fruit.y * T + T / 2,
-                this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
-              this.hostEvt({ t: 'fruitEat', pts: this.fruitInfo.points, w: i });
+                fpts, CFG.FRUIT_SCORE_S * 60);
+              this.hostEvt({ t: 'fruitEat', pts: fpts, w: i });
               window.AudioSys && AudioSys.playEatFruit();
               break;
             }
@@ -2537,6 +2538,17 @@
     /* ---------------------------------------------------------
      * Puntuación (de equipo en modos de dos jugadores)
      * --------------------------------------------------------- */
+    /* Lo que vale la fruta del nivel para ese jugador: al SOPORTE, en
+     * DESATADO, el doble (CFG.HAB.FRUTA_SOPORTE). Una repetición de antes
+     * (reglasPts < 3) la cobra a su precio, como se jugó. */
+    frutaPts: function (i) {
+      var pts = this.fruitInfo ? this.fruitInfo.points : 0;
+      if (this.hab && (this.reglasPts | 0) >= 3 && this.roles && this.roles[i] === 'soporte') {
+        pts *= CFG.HAB.FRUTA_SOPORTE;
+      }
+      return pts;
+    },
+
     addScore: function (pts, quien) {
       var before = this.score;
       this.score += pts;
@@ -4530,11 +4542,12 @@
              * llegar el marcador bueno. Por eso salían a cero las frutas de
              * los demás. */
             this.marca(who, 'frutas');
-            this.addScore(this.fruitInfo.points, who);
+            var fq = this.frutaPts(who);
+            this.addScore(fq, who);
             this.addPopup(CFG.START.fruit.x * T + T / 2,
               CFG.START.fruit.y * T + T / 2,
-              this.fruitInfo.points, CFG.FRUIT_SCORE_S * 60);
-            this.hostEvt({ t: 'fruitEat', pts: this.fruitInfo.points, w: who });
+              fq, CFG.FRUIT_SCORE_S * 60);
+            this.hostEvt({ t: 'fruitEat', pts: fq, w: who });
             window.AudioSys && AudioSys.playEatFruit();
           }
           break;

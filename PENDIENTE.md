@@ -29,6 +29,11 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > de puntuación a 2 (`CFG.HAB.REGLAS_PUNTOS`). **Sin tocar, a decidir:**
 > YUNQUE, PIEL DE PIEDRA, FORTALEZA, CAMPO e INMUNIDAD no pagan nada; y la
 > coraza PASIVA tampoco cobra cuando se la lleva el escudo del Soporte.
+> **pm-v329:** fruta x2 para el SOPORTE (`CFG.HAB.FRUTA_SOPORTE`, reglas de
+> puntuación 3) y METEORO devuelve 10 s por baja. **REVISAR a mitad de
+> octubre** con el FACTOR_ROL: el 0,6 del Soporte ahora compensa dos veces.
+> Datos del 4 oct (a solas, desde el 28 sep): Asesino 13.090/min, Mago
+> ~10.000 (1 partida), Tanque 6.188, Soporte 5.216.
 
 > **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
 > Se había quitado el 28 sep para que las monedas no subieran el rango, pero

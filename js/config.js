@@ -2680,7 +2680,7 @@
                  desc: ['TODO EL MAPA HUYE DE TI, UN 40% MÁS LENTO · TAMBIÉN EL JEFE', '8 S DE ESCUDO: AGUANTA UN GOLPE',
                         'TODOS VAN A POR TI, HASTA LOS AZULES · TU EQUIPO NO MUERE', 'EN LÍNEA RECTA HASTA LA PARED · AL JEFE LO ATURDE 3 S'] },
       soporte: { name: 'SOPORTE', color: '#2bff88', lema: 'CURA Y CONTROLA',
-                 pasiva: 'LEVANTAS UN CUERPO DE UNA SOLA PASADA (LOS DEMÁS, CINCO)',
+                 pasiva: 'LEVANTAS UN CUERPO DE UNA SOLA PASADA (LOS DEMÁS, CINCO) · LA FRUTA TE VALE EL DOBLE',
                  desc: ['DISPARO QUE CONGELA · MANTÉN 2 S: HIELO EN EL SUELO', 'NADIE TE PUEDE TOCAR 3 S',
                         'ESCUDO AL MÁS CERCANO · MANTÉN 2 S: A TODO EL EQUIPO, TÚ INCLUIDO', 'UNA VIDA MÁS PARA QUIEN MENOS TIENE'] },
       mago:    { name: 'MAGO', color: '#8b3dff', lema: 'MATA A DISTANCIA Y ENCADENA',
@@ -2780,8 +2780,18 @@
      * 2 (4 oct 2026): el Tanque cobra también cuando el golpe se lo lleva el
      * ESCUDO del Soporte y con él se le va su W (antes cobraba solo el
      * Soporte, y el Tanque perdía el escudo que había pulsado a cambio de
-     * nada). Con la coraza pasiva sigue cobrando solo el Soporte. */
-    REGLAS_PUNTOS: 2,
+     * nada). Con la coraza pasiva sigue cobrando solo el Soporte.
+     *
+     * 3 (4 oct 2026): al SOPORTE la fruta le vale el doble (FRUTA_SOPORTE). */
+    REGLAS_PUNTOS: 3,
+    /* LA FRUTA DEL SOPORTE (4 oct 2026, Braighton). Es el rol que menos
+     * puntúa: a solas, con las repeticiones de la nube desde el 28 sep,
+     * Soporte 5.216/min, Tanque 6.188, Mago ~10.000, Asesino 13.090. Y es el
+     * que menos fruta come (0,9 por partida contra 7 de los demás), así que
+     * el premio le cambia la forma de jugar además de la marca: con todas
+     * comidas, a x2 se pone a la altura del Tanque (~6.400/min).
+     * REVISAR con ello su FACTOR_ROL del rango (0,6): compensa dos veces. */
+    FRUTA_SOPORTE: 2,
     /* Party: el reloj de la W del invitado y el de la copia del anfitrión no
      * van clavados (una máquina lenta, un parón). Si el invitado avisa de que
      * su W ha aguantado un golpe cuando aquí acaba de caducar, se le cree
@@ -3043,7 +3053,7 @@
     METEORO_FUEGO: 6 * 60,
     METEORO_FUEGO_CRECE: 2 * 60,
     METEORO_QUEMA: 4 * 60,
-    METEORO_DEVUELVE: 15 * 60,
+    METEORO_DEVUELVE: 10 * 60,   // 15 s hasta el 4 oct (Braighton)
     /* METEORO APUNTADO (22 sep). Antes caía seis casillas al frente, en la
      * dirección de la última flecha: para ponerlo donde uno quería había que
      * ir a colocarse mirando hacia allí, con el laberinto de por medio. O
@@ -3281,7 +3291,7 @@
       gravedad: "ARRASTRA HACIA TI EN MEDIO SEGUNDO A LOS FANTASMAS A 4 CASILLAS Y LOS APAGA 2 S PARA REMATARLOS · AL REY NO LO MUEVE: LO PARA 0,7 S",
       dominio: "EL FANTASMA MÁS CERCANO A 4 CASILLAS ES TUYO 6 S: NO MUERDE AL EQUIPO Y CAZA A LOS OTROS (EN RACHA) · SI ALCANZA AL REY, 3 DE VIDA",
       tormenta: "3 RAYOS, UNO AL INSTANTE Y LUEGO UNO CADA 0,75 S, AL FANTASMA MÁS CERCANO A 10 CASILLAS: CADA RAYO MATA (EN RACHA: 200, 400, 800, 1.600) · AL REY, 2 DE VIDA POR RAYO",
-      meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA POR TODO EL MAPA, MUROS INCLUIDOS · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 15 S · AL REY, 5 DE VIDA",
+      meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA POR TODO EL MAPA, MUROS INCLUIDOS · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 10 S · AL REY, 5 DE VIDA",
       eclipse: "10 S DE OSCURIDAD: LOS CUATRO FANTASMAS VAN A CIEGAS, GIRANDO AL AZAR, Y A MITAD DE VELOCIDAD · EL REY TAMBIÉN VA A MITAD DE VELOCIDAD",
       hielo: "DISPARO QUE CONGELA 3 S AL PRIMER FANTASMA Y A LOS DE SU CASILLA · MANTÉN 2 S: PLACA DE HIELO 8 S QUE CONGELA A QUIEN LA PISE · AL DESCONGELARSE VA UN 20 % MÁS LENTO 3 S · AL REY LO CONGELA 1 S",
       mina: "MINA EN TU CASILLA DURANTE 5 S: MATA AL FANTASMA QUE LA PISE (200 PTS) Y TE DA ESCUDO 8 S · AL REY LE QUITA 3 DE VIDA Y TAMBIÉN TE DA EL ESCUDO",

@@ -14189,6 +14189,30 @@
       eq(G.score, antes, 'y tocar un fantasma sin protección no da nada');
     });
 
+  test('SOPORTE: la fruta le vale el doble; a los demás, lo de siempre', function () {
+    partidaRol(['soporte', 'tanque'], 6, 5, DR.RIGHT);
+    try {
+      var base = G.fruitInfo.points;
+      ok(base > 0, 'hay fruta en el nivel');
+      eq(HC.FRUTA_SOPORTE, 2, 'x2');
+      eq(G.frutaPts(0), base * 2, 'al Soporte, el doble');
+      eq(G.frutaPts(1), base, 'al Tanque, su precio');
+      /* comiéndosela de verdad */
+      G.fruitActive = true; G.fruitTicks = 600;
+      ponPac(0, 13, CFG.START.fruit.y, DR.LEFT);
+      var antes = G.ptsJ[0] || 0, total = G.score;
+      G.step();
+      ok(!G.fruitActive, 'se la come');
+      eq((G.ptsJ[0] || 0) - antes, base * 2, 'y cobra el doble');
+      ok(G.score - total >= base * 2, 'que sube al marcador');
+      G.reglasPts = 2;
+      eq(G.frutaPts(0), base, 'una repetición de antes la cobra a su precio');
+    } finally { G.toMenu(); }
+    partida(1);
+    try { eq(G.frutaPts(0), G.fruitInfo.points, 'fuera de DESATADO no hay roles ni doble'); }
+    finally { G.toMenu(); }
+  });
+
   /* 4 oct: «hay casos en los que la W del Tanque no paga». Eran dos. */
   test('PROTEGER · TANQUE: si el golpe se lo lleva el escudo del Soporte y con él su W, cobran los dos', function () {
     partidaRol(['soporte', 'tanque'], 6, 5, DR.RIGHT);
@@ -14410,7 +14434,7 @@
       ok(!rep.ajustes.reglasPts, 'y no trae reglas de puntuación: es de antes');
       eq(jugar(rep), rep.final.puntos, 'la ' + (i + 1) + '.ª cuadra con sus puntos de entonces');
       var ahora = R.leer(v[0]);
-      ahora.ajustes.reglasPts = HC.REGLAS_PUNTOS;
+      ahora.ajustes.reglasPts = 2;   // las de proteger (las 3 doblan además la fruta del Soporte)
       eq(jugar(ahora), rep.final.puntos + v[1] * HC.PROTEGE_PUNTOS,
         'con las reglas de ahora habría cobrado sus ' + v[1] + ' protecciones');
     });
@@ -16624,8 +16648,8 @@
     H.st[0].meteoro = { c: c, r: r, t: 1 };
     for (i = 0; i < 5 && H.st[0].meteoro; i++) tic();
     eq(g1.mode, 'eyes', 'el golpe de tres casillas se lo lleva');
-    ok(H.st[0].cd[R] <= 60 * 60 - HH.METEORO_DEVUELVE, 'y devuelve quince segundos de recarga');
-    ok(H.st[0].cd[R] > 60 * 60 - HH.METEORO_DEVUELVE - 10, 'quince, no más');
+    ok(H.st[0].cd[R] <= 60 * 60 - HH.METEORO_DEVUELVE, 'y devuelve diez segundos de recarga');
+    ok(H.st[0].cd[R] > 60 * 60 - HH.METEORO_DEVUELVE - 10, 'diez, no más');
     ok(H.st[0].fuegoMeteoro, 'queda la hoguera');
     eq(H.st[0].fuegoMeteoro.t, HH.METEORO_FUEGO, 'de seis segundos');
     eq(H.radioFuego(H.st[0].fuegoMeteoro), HH.METEORO_RADIO, 'nace del tamaño del golpe');

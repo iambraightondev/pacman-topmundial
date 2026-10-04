@@ -2,6 +2,12 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · La fruta del Soporte vale el doble, y el METEORO devuelve 10 s
+
+- **SOPORTE: la fruta le vale el doble** (en DESATADO y CLASIFICATORIA). Es el
+  rol que menos puntúa y el que menos fruta comía.
+- **METEORO:** cada baja devuelve **10 s** de recarga (antes 15).
+
 ## 2026-10-04 · El ESCUDO (W) del Tanque paga siempre que aguanta
 
 Había dos casos en los que el Tanque gastaba su W y no cobraba sus 600:
