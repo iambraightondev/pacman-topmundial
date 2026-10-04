@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · El TÓTEM mata al cuarto dardo, en dos segundos
+
+- **TÓTEM:** tira **un dardo cada medio segundo** y hacen falta **cuatro**
+  para matar. Cada uno de los tres primeros le quita al fantasma un **20 %**
+  de velocidad (va al 80, al 60 y al 40 %) y el cuarto lo mata. Si pasa 3 s
+  sin recibir otro, se recupera y la cuenta vuelve a cero.
+
 ## 2026-10-04 · El TERREMOTO paga 150, y el TÓTEM no suelta a su presa
 
 - **TERREMOTO (Tanque, R):** cada fantasma que manda a casa vale **150**

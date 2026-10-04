@@ -365,9 +365,11 @@
        * HIELO_LENTO_MULT después de descongelarse */
       this.trasHielo = [0, 0, 0, 0];
       /* TOCADOS POR EL TÓTEM (4 oct): ticks que le quedan a cada fantasma
-       * frenado por un primer dardo (TOTEM_LENTO_MULT). Mientras le queden,
-       * el siguiente dardo lo mata. */
+       * frenado por los dardos, y cuántos lleva encima (totemGolpes: cada
+       * uno le quita TOTEM_LENTO de velocidad y el que hace TOTEM_GOLPES lo
+       * mata). Si los ticks se acaban, la cuenta vuelve a cero. */
       this.totemToque = [0, 0, 0, 0];
+      this.totemGolpes = [0, 0, 0, 0];
       this.huye = [0, 0, 0, 0];
       this.huyeQuien = [-1, -1, -1, -1];
       /* QUEMADOS por la hoguera del METEORO (23 sep): ticks hasta que caen y
@@ -443,7 +445,7 @@
         loadouts: (this.loadouts || []).map(function (x) { return x ? x.slice() : null; }),
         vidasDadas: JSON.parse(JSON.stringify(this.vidasDadas || [])),
         mesa: JSON.parse(JSON.stringify({
-          hielo: this.hielo, trasHielo: this.trasHielo, totemToque: this.totemToque,
+          hielo: this.hielo, trasHielo: this.trasHielo, totemToque: this.totemToque, totemGolpes: this.totemGolpes,
           huye: this.huye, huyeQuien: this.huyeQuien,
           quema: this.quema, quemaQuien: this.quemaQuien,
           lento: this.lento, lentoMult: this.lentoMult, aturdido: this.aturdido,
@@ -486,6 +488,7 @@
         this.hielo = m.hielo || this.hielo;
         this.trasHielo = m.trasHielo || this.trasHielo;
         this.totemToque = m.totemToque || this.totemToque;
+        this.totemGolpes = m.totemGolpes || this.totemGolpes;
         this.huye = m.huye || this.huye;
         this.huyeQuien = m.huyeQuien || this.huyeQuien;
         this.quema = m.quema || this.quema;
@@ -687,7 +690,7 @@
       if (this.huye && this.huye[gid] > 0) m *= H.PISOTON_LENTO;
       if (this.lento && this.lento[gid] > 0) m *= this.lentoMult[gid] || 1;
       if (this.trasHielo && this.trasHielo[gid] > 0) m *= H.HIELO_LENTO_MULT;
-      if (this.totemToque && this.totemToque[gid] > 0) m *= H.TOTEM_LENTO_MULT;
+      if (this.totemToque && this.totemToque[gid] > 0) m *= Math.max(0, 1 - H.TOTEM_LENTO * (this.totemGolpes[gid] || 0));
       if (this.aturdido && this.aturdido[gid] > 0) return 0;
       /* ECLIPSE ya incluye ceguera: no se acumula con el 0,6 de la otra. */
       if (this.eclipseTicks > 0) m *= 0.5;
@@ -4564,10 +4567,14 @@
           }
           if (manda) {
             if (b.tipo === 'guiada') this.matarCatalogo(G, target, b.w, H.BOLA_GUIADA_PUNTOS, 'bola_guiada', 1, true);
-            /* EL TÓTEM MATA AL SEGUNDO DARDO (4 oct): el primero solo frena */
+            /* EL TÓTEM MATA AL CUARTO DARDO (4 oct): los de antes solo frenan,
+             * cada uno un poco más */
             else if (b.tipo === 'totem') {
-              if (this.totemToque[target.id] > 0) this.matarCatalogo(G, target, b.w, H.MAGO_PUNTOS, 'totem');
-              else {
+              if (!(this.totemToque[target.id] > 0)) this.totemGolpes[target.id] = 0;
+              if (++this.totemGolpes[target.id] >= H.TOTEM_GOLPES) {
+                this.totemGolpes[target.id] = 0;
+                this.matarCatalogo(G, target, b.w, H.MAGO_PUNTOS, 'totem');
+              } else {
                 this.totemToque[target.id] = H.TOTEM_LENTO_TICKS;
                 this.efecto('totem', target.x, target.y, 14);
               }
@@ -5131,7 +5138,7 @@
         ciego: this.ciego.slice(), azul: this.azulCatalogo.slice(), azulT: this.azulCatTicks.slice(),
         caceria: this.caceriaQuien.slice(), marca: this.marcaGhost.slice(),
         dominado: this.dominado.slice(), dominaQuien: this.dominaQuien.slice(), joyas: this.joyas,
-        proyectiles: this.proyectilesCat, quema: this.quema.slice(), totemToque: this.totemToque.slice(),
+        proyectiles: this.proyectilesCat, quema: this.quema.slice(), totemToque: this.totemToque.slice(), totemGolpes: this.totemGolpes.slice(),
         terremoto: this.terremotoTicks, eclipse: this.eclipseTicks, st: [] };
       for (i = 0; i < this.st.length; i++) {
         var cs = this.st[i];
@@ -5188,6 +5195,7 @@
         var ct = hx.ct;
         if (ct.lento) this.lento = ct.lento.slice(0, 4);
         if (ct.totemToque) this.totemToque = ct.totemToque.slice(0, 4);
+        if (ct.totemGolpes) this.totemGolpes = ct.totemGolpes.slice(0, 4);
         if (ct.lentoMult) this.lentoMult = ct.lentoMult.slice(0, 4);
         if (ct.aturdido) this.aturdido = ct.aturdido.slice(0, 4);
         if (ct.ciego) this.ciego = ct.ciego.slice(0, 4);

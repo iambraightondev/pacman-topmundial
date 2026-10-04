@@ -3003,14 +3003,17 @@
     CHISPA_TICKS: 3 * 60,
     CLON_TICKS: 6 * 60,
     TOTEM_TICKS: 8 * 60,
-    /* 4 oct (Braighton): dispara cada segundo, pero hacen falta DOS dardos
-     * para matar: el primero solo frena al fantasma (TOTEM_LENTO_MULT durante
-     * TOTEM_LENTO_TICKS, lo justo para que le llegue el segundo) y el segundo,
-     * si lo pilla aún frenado, lo mata. Al REY le sigue tirando cada dos
-     * segundos (TOTEM_CADA_REY): una torre bien puesta le saca cuatro, igual. */
-    TOTEM_CADA: 60,
+    /* 4 oct (Braighton): hacen falta CUATRO dardos para matar (TOTEM_GOLPES)
+     * y los tira en dos segundos, uno cada medio. Cada uno de los tres
+     * primeros le quita al fantasma un 20 % de SU velocidad (TOTEM_LENTO: va
+     * al 80, al 60 y al 40 %) y el cuarto lo mata. Si pasa TOTEM_LENTO_TICKS
+     * sin que le llegue otro, se le pasa y la cuenta vuelve a cero. Al REY le
+     * sigue tirando cada dos segundos (TOTEM_CADA_REY): una torre bien puesta
+     * le saca cuatro, igual que siempre. */
+    TOTEM_CADA: 30,
     TOTEM_CADA_REY: 2 * 60,
-    TOTEM_LENTO_MULT: 0.8,
+    TOTEM_GOLPES: 4,
+    TOTEM_LENTO: 0.2,
     TOTEM_LENTO_TICKS: 3 * 60,
     TOTEM_BALA_VEL: 3,
     /* GRAVEDAD: el tirón se VE (medio segundo de arrastre por los pasillos,
@@ -3296,7 +3299,7 @@
       chispa: "APAGA 3 S AL FANTASMA MÁS CERCANO A 3 CASILLAS Y SALTA EN CADENA A LOS QUE ESTÉN A 3 DE ÉL: NI SE MUEVEN NI MATAN · AL REY LO PARA 1 S",
       portal: "PULSA: DEJAS LA ENTRADA Y PASAS A OTRA DIMENSIÓN, INTOCABLE (MÁX. 8 S) · PULSA OTRA VEZ: SALIDA · 20 S ABIERTO PARA EL EQUIPO, SE CRUZA CON ESPACIO",
       clon: "SUELTAS UN DOBLE QUE CORRE RECTO 6 S Y TODOS LOS FANTASMAS LO PERSIGUEN · EL QUE LO ALCANZA QUEDA APAGADO 1 S · AL REY LO ENGAÑA Y LO PARA 0,5 S",
-      totem: "TORRE EN TU CASILLA 8 S QUE DISPARA CADA SEGUNDO AL FANTASMA MÁS CERCANO A 10 CASILLAS Y NO LO SUELTA HASTA MATARLO · EL 1.er DARDO LO FRENA UN 20 %, EL 2.º LO MATA (EN RACHA: 200, 400, 800, 1.600) · SIN FANTASMAS, 1 DE VIDA AL REY POR BALA",
+      totem: "TORRE EN TU CASILLA 8 S QUE DISPARA 2 DARDOS POR SEGUNDO AL FANTASMA MÁS CERCANO A 10 CASILLAS Y NO LO SUELTA HASTA MATARLO · CADA DARDO LO FRENA UN 20 % MÁS Y EL 4.º LO MATA (EN RACHA: 200, 400, 800, 1.600) · SIN FANTASMAS, 1 DE VIDA AL REY POR BALA",
       runa: "TRAMPA EN TU CASILLA DURANTE 15 S: MATA A TODOS LOS FANTASMAS QUE LA PISEN A LA VEZ (EN RACHA: 200, 400, 800, 1.600) · AL REY LE QUITA 4 DE VIDA",
       gravedad: "ARRASTRA HACIA TI EN MEDIO SEGUNDO A LOS FANTASMAS A 4 CASILLAS Y LOS APAGA 2 S PARA REMATARLOS · AL REY NO LO MUEVE: LO PARA 0,7 S",
       dominio: "EL FANTASMA MÁS CERCANO A 4 CASILLAS ES TUYO 6 S: NO MUERDE AL EQUIPO Y CAZA A LOS OTROS (EN RACHA) · SI ALCANZA AL REY, 3 DE VIDA",

@@ -15911,38 +15911,41 @@
     eq(G.score - base, 800, 'la tercera de la racha: 800');
   });
 
-  /* 4 oct: el tótem dispara cada segundo y mata al segundo dardo */
-  test('CATÁLOGO: el Tótem frena un 20 % con el primer dardo y mata con el segundo', function () {
+  /* 4 oct: cuatro dardos en dos segundos; tres frenan y el cuarto mata */
+  test('CATÁLOGO: el Tótem frena un 20 % más con cada dardo y mata con el cuarto', function () {
     var H = window.PM.Hab, HC = CFG.HAB, T = CFG.TILE;
     partida(1);
     G.hab = true; H.empezar(true, 1, ['mago'], ['bola_guiada,totem,gravedad,meteoro']); G.roles = ['mago'];
-    eq(HC.TOTEM_CADA, 60, 'dispara cada segundo');
+    eq(HC.TOTEM_CADA * HC.TOTEM_GOLPES, 120, 'los cuatro dardos salen en dos segundos');
     var g = G.ghosts[0];
     for (var k = 1; k < 4; k++) G.ghosts[k].mode = 'house';
-    g.mode = 'normal'; g.x = 15 * T + T / 2; g.y = 23 * T + T / 2;
+    function planta() { g.mode = 'normal'; g.x = 15 * T + T / 2; g.y = 23 * T + T / 2; }
     function dardo() {
       H.proyectilesCat.push({ tipo: 'totem', x: 13 * T + T / 2, y: 23 * T + T / 2, w: 0, objetivo: 0 });
       for (var i = 0; i < 120 && H.proyectilesCat.length; i++) H.pasoProyectilesCat(G, true);
     }
+    planta();
     var base = G.score;
+    [0.8, 0.6, 0.4].forEach(function (v, n) {
+      dardo();
+      ok(H.enLaCalle(g), 'el dardo ' + (n + 1) + ' no lo mata');
+      eq(G.score, base, 'ni puntúa');
+      ok(Math.abs(H.multVelFantasma(G, 0) - v) < 1e-9, 'lo deja al ' + (v * 100) + ' %');
+    });
     dardo();
-    ok(H.enLaCalle(g), 'el primero no lo mata');
-    eq(G.score, base, 'ni puntúa');
-    eq(H.totemToque[0], HC.TOTEM_LENTO_TICKS, 'lo deja tocado');
-    ok(Math.abs(H.multVelFantasma(G, 0) - 0.8) < 1e-9, 'un 20 % más lento');
-    dardo();
-    eq(g.mode, 'eyes', 'el segundo lo mata');
+    eq(g.mode, 'eyes', 'el cuarto lo mata');
     ok(G.score > base, 'y puntúa');
     eq(H.totemToque[0], 0, 'vuelve de casa sin el frenazo');
-    /* si el segundo no llega a tiempo, se le pasa y hay que empezar de nuevo */
-    g.mode = 'normal'; g.x = 15 * T + T / 2; g.y = 23 * T + T / 2;
-    dardo();
+    /* si deja de recibir, se le pasa y la cuenta vuelve a empezar */
+    planta();
+    dardo(); dardo(); dardo();
     for (var n = 0; n < HC.TOTEM_LENTO_TICKS; n++) H.paso(G);
     eq(H.totemToque[0], 0, 'a los 3 s se le pasa');
     eq(H.multVelFantasma(G, 0), 1, 'y vuelve a su paso');
-    g.mode = 'normal'; g.x = 15 * T + T / 2; g.y = 23 * T + T / 2;
+    planta();
     dardo();
     ok(H.enLaCalle(g), 'y el siguiente dardo vuelve a ser el primero');
+    ok(Math.abs(H.multVelFantasma(G, 0) - 0.8) < 1e-9, 'al 80 % otra vez');
     G.toMenu();
   });
 
