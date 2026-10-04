@@ -114,6 +114,7 @@
       /* ---- los roles ---- */
       provoca: 0,         // PROVOCAR: ticks atrayendo a los fantasmas
       coraza: 0,          // ESCUDO del Tanque: 8 s o un choque, lo que llegue antes
+      corazaFue: 0,       // anfitrión: lo que hace que caducó sola (H.W_MARGEN_RED)
       /* CORAZA, la pasiva del Tanque: ticks que le quedan PUESTA (0 = no la
        * lleva), y `corCd`, los que faltan para la siguiente. Caduca a
        * propósito: sin caducidad el Tanque iba siempre con un golpe gratis. */
@@ -2173,7 +2174,7 @@
         /* qué capa lo aguanta: 'e' el escudo del Soporte, 'w' el de la W
          * del Tanque, 'p' su coraza pasiva. Decide quién cobra. */
         var capa = s.escudo > 0 ? 'e' : (s.coraza > 0 ? 'w' : 'p');
-        if (this.manda(G) && p) this.cobrarCapa(G, idx, capa, s.escudoDe, p.x, p.y);
+        if (this.manda(G) && p) this.cobrarCapa(G, idx, capa, s.escudoDe, p.x, p.y, s.coraza > 0);
         if (s.escudo > 0) {
           s.escudo = 0;
           s.coraza = 0;
@@ -2277,9 +2278,18 @@
       return pts;
     },
 
-    /* Quién cobra la capa que se ha llevado un golpe (ver salvaDelChoque) */
-    cobrarCapa: function (G, idx, capa, de, x, y) {
-      if (capa === 'e') return this.protege(G, de, 'salva', x, y);
+    /* Quién cobra la capa que se ha llevado un golpe (ver salvaDelChoque).
+     * `suya`: el golpeado llevaba además su W de Tanque puesta, que el
+     * ESCUDO del Soporte se lleva por delante en el mismo golpe. Desde las
+     * reglas 2 el Tanque cobra también ese golpe: antes se quedaba sin la W
+     * que había pulsado y sin puntos, y era el caso de «mi W no paga». La
+     * coraza PASIVA sigue sin cobrar ahí: no la ha gastado él, vuelve sola. */
+    cobrarCapa: function (G, idx, capa, de, x, y, suya) {
+      if (capa === 'e') {
+        var pts = this.protege(G, de, 'salva', x, y);
+        if (suya && (G.reglasPts | 0) >= 2) pts += this.protege(G, idx, 'golpe', x, (y || 0) - 9);
+        return pts;
+      }
       return this.protege(G, idx, 'golpe', x, y);
     },
 
@@ -2292,9 +2302,13 @@
       var s = this.estado(who), p = G.pacs[who];
       if (!s || !p || !this.puntuaProteger(G)) return 0;
       if (c !== 'e' && c !== 'w' && c !== 'p') c = s.escudo > 0 ? 'e' : (s.coraza > 0 ? 'w' : 'p');
-      var tenia = (c === 'e') ? s.escudo > 0 : (c === 'w') ? s.coraza > 0 : this.corazaDe(G, who);
+      /* la W, también si aquí acaba de caducar sola (H.W_MARGEN_RED): los
+       * dos relojes no van clavados. Vale una vez por W. */
+      var tenia = (c === 'e') ? s.escudo > 0
+        : (c === 'w') ? (s.coraza > 0 || s.corazaFue > 0) : this.corazaDe(G, who);
       if (!tenia) return 0;
-      return this.cobrarCapa(G, who, c, s.escudoDe, p.x, p.y);
+      if (c === 'w') s.corazaFue = 0;
+      return this.cobrarCapa(G, who, c, s.escudoDe, p.x, p.y, s.coraza > 0);
     },
 
     /* Una VIDA regalada salva a alguien cuando, sin ella, esa caída habría
@@ -4626,7 +4640,8 @@
           }
         }
         if (s.escudo > 0) s.escudo--;
-        if (s.coraza > 0) s.coraza--;
+        if (s.coraza > 0) { if (--s.coraza <= 0) s.corazaFue = H.W_MARGEN_RED; }
+        else if (s.corazaFue > 0) s.corazaFue--;
         if (s.gracia > 0) s.gracia--;
         if (s.inmune > 0) s.inmune--;
         if (s.sombra > 0 && --s.sombra <= 0) {
@@ -5014,7 +5029,7 @@
         if (ks >= 0 && !(s.cd[ks] > 0)) this.gastar(G, idx, ks);
         s.shurikenRecargas = 0;
       }
-      s.provoca = 0; s.escudo = 0; s.coraza = 0; s.gracia = 0; s.inmune = 0;
+      s.provoca = 0; s.escudo = 0; s.coraza = 0; s.corazaFue = 0; s.gracia = 0; s.inmune = 0;
       s.arrolla = 0; s.tormenta = 0; s.turbo = 0; s.pedirQ = 0;
       s.sombra = 0; s.sombraGolpe = false; s.frenesi = 0; s.frenesiMult = 1; s.carrona = 0; s.marca = 0;
       /* EL GANCHO NO SOBREVIVE A SU DUEÑO (22 sep 2026). Los dos ganchos —el

@@ -14189,6 +14189,52 @@
       eq(G.score, antes, 'y tocar un fantasma sin protección no da nada');
     });
 
+  /* 4 oct: «hay casos en los que la W del Tanque no paga». Eran dos. */
+  test('PROTEGER · TANQUE: si el golpe se lo lleva el escudo del Soporte y con él su W, cobran los dos', function () {
+    partidaRol(['soporte', 'tanque'], 6, 5, DR.RIGHT);
+    filaVacia(5);
+    var p = G.pacs[1], s = HB.estado(1);
+    p.safeTicks = 0;
+    var g = fantasmaEn(0, 6, 5);
+    s.corPas = 0; s.corCd = 9999; s.gracia = 0;
+    s.coraza = HC.ESCUDO_TICKS;                  // su W
+    HB.marcarEscudo(1, HC.ALIADO_TICKS, 0);      // y encima, el del Soporte
+    g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false;
+    var sop = G.ptsJ[0] || 0, tan = G.ptsJ[1] || 0;
+    ok(HB.salvaDelChoque(G, 1, g), 'aguanta');
+    eq(s.coraza, 0, 'la W se va con el escudo aliado (no se acumulan)');
+    eq((G.ptsJ[0] || 0) - sop, HC.PROTEGE_PUNTOS, 'cobra el Soporte');
+    eq((G.ptsJ[1] || 0) - tan, HC.PROTEGE_PUNTOS, 'y el Tanque, que ha gastado su W');
+
+    /* una repetición con las reglas de antes se ve como se jugó */
+    G.reglasPts = 1;
+    s.gracia = 0; s.coraza = HC.ESCUDO_TICKS; HB.marcarEscudo(1, HC.ALIADO_TICKS, 0);
+    tan = G.ptsJ[1] || 0;
+    ok(HB.salvaDelChoque(G, 1, g));
+    eq((G.ptsJ[1] || 0) - tan, 0, 'con las reglas 1, solo el Soporte');
+    G.toMenu();
+  });
+
+  test('PROTEGER · en party, la W del invitado cobra aunque aquí acabe de caducar', function () {
+    partidaRol(['soporte', 'tanque'], 6, 5, DR.RIGHT);
+    var rolAntes = G.netRole, idxAntes = G.localIdx, evt = G.hostEvt;
+    G.netRole = 'host'; G.localIdx = 0; G.hostEvt = function () { };
+    try {
+      var s = HB.estado(1);
+      s.corPas = 0; s.corCd = 9999; s.escudo = 0;
+      s.coraza = 1;
+      HB.paso(G);                                 // caduca sola en el anfitrión
+      eq(s.coraza, 0, 'aquí ya no la lleva');
+      ok(s.corazaFue > 0, 'pero se acuerda de que acaba de caducar');
+      var antes = G.ptsJ[1] || 0;
+      G.hostMsg('gevt', { t: 'habRoto', i: 1, g: -1, c: 'w' }, 'sid');
+      eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'el golpe que aguantó en su máquina se paga');
+      antes = G.ptsJ[1] || 0;
+      G.hostMsg('gevt', { t: 'habRoto', i: 1, g: -1, c: 'w' }, 'sid');
+      eq((G.ptsJ[1] || 0) - antes, 0, 'una vez por W');
+    } finally { G.hostEvt = evt; G.netRole = rolAntes; G.localIdx = idxAntes; G.toMenu(); }
+  });
+
   test('PROTEGER · el escudo del Soporte roto sobre otro lo cobra el Soporte, no el salvado',
     function () {
       partidaRol(['tanque', 'soporte'], 6, 5, DR.RIGHT);

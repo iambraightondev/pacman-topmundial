@@ -24,6 +24,11 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > **pm-v327:** el GAME OVER de recreativa cabe con sus ocho renglones y los
 > botones fijos (también al final de css/style.css). Medido con un resumen de
 > mentira, no con una partida real.
+> **4 oct (pm-v328):** la W del Tanque no pagaba en dos casos (escudo del
+> Soporte encima; reloj del invitado y del anfitrión desacompasados). Reglas
+> de puntuación a 2 (`CFG.HAB.REGLAS_PUNTOS`). **Sin tocar, a decidir:**
+> YUNQUE, PIEL DE PIEDRA, FORTALEZA, CAMPO e INMUNIDAD no pagan nada; y la
+> coraza PASIVA tampoco cobra cuando se la lleva el escudo del Soporte.
 
 > **2 oct (pm-v323):** CONTINUAR vuelve a CLASIFICATORIA (pedido de Braighton).
 > Se había quitado el 28 sep para que las monedas no subieran el rango, pero

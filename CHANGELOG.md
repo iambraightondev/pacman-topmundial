@@ -2,6 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · El ESCUDO (W) del Tanque paga siempre que aguanta
+
+Había dos casos en los que el Tanque gastaba su W y no cobraba sus 600:
+
+- **Con el escudo del Soporte encima.** El golpe se lleva los dos escudos a la
+  vez y solo cobraba el Soporte. Ahora cobran los dos.
+- **En party, de invitado, apurando los 8 segundos.** Si el golpe llegaba
+  cuando en la máquina del líder la W ya había caducado, no se pagaba. Ahora
+  se le da un margen de 2,5 s.
+
 ## 2026-10-03 · El GAME OVER cabe en la pantalla
 
 - Con rango, maestría y cofre el recuento se salía por abajo y cortaba

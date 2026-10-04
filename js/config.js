@@ -2775,8 +2775,18 @@
      * ajustes de la repetición (bandera 'u'), porque las locales se vuelven
      * a simular para comprobarse: una de antes del 28 sep no la lleva (0) y
      * se reproduce sin puntos por proteger, que es como se jugó, y sigue
-     * cuadrando. Se sube cuando cambie lo que vale algo que ya puntuaba. */
-    REGLAS_PUNTOS: 1,
+     * cuadrando. Se sube cuando cambie lo que vale algo que ya puntuaba.
+     *
+     * 2 (4 oct 2026): el Tanque cobra también cuando el golpe se lo lleva el
+     * ESCUDO del Soporte y con él se le va su W (antes cobraba solo el
+     * Soporte, y el Tanque perdía el escudo que había pulsado a cambio de
+     * nada). Con la coraza pasiva sigue cobrando solo el Soporte. */
+    REGLAS_PUNTOS: 2,
+    /* Party: el reloj de la W del invitado y el de la copia del anfitrión no
+     * van clavados (una máquina lenta, un parón). Si el invitado avisa de que
+     * su W ha aguantado un golpe cuando aquí acaba de caducar, se le cree
+     * durante este margen: sin él, ese golpe no pagaba (4 oct). */
+    W_MARGEN_RED: 150,
 
     /* EL OJO (pasiva del MAGO): cuántas casillas por delante se le enseña el
      * camino de cada fantasma. Siete (20 sep): con cinco se veía venir la
