@@ -14285,7 +14285,7 @@
       eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'y también lo cobra');
     });
 
-  test('PROTEGER · la CADENA y el HOSPITAL del Soporte cobran cuando salvan', function () {
+  test('PROTEGER · la CADENA del Soporte cobra cuando salva', function () {
     partidaRol(['asesino', 'soporte'], 6, 5, DR.RIGHT);
     ponPac(1, 9, 5, DR.LEFT);
     var s1 = HB.estado(1);
@@ -14294,12 +14294,26 @@
     var antes = G.ptsJ[1] || 0;
     ok(HB.salvaDelChoque(G, 0, fantasmaEn(0, 6, 5)), 'la cadena aguanta el golpe del compañero');
     eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'y el Soporte cobra');
+  });
 
-    s1.hospital = HC.HOSPITAL_TICKS;
-    antes = G.ptsJ[1] || 0;
-    G.startDeath(0, 0);
-    ok(!G.pacs[0].dying, 'el hospital le levanta en el sitio');
-    eq((G.ptsJ[1] || 0) - antes, HC.PROTEGE_PUNTOS, 'y el Soporte cobra');
+  /* 4 oct: el HOSPITAL ya no es un seguro de 10 s; levanta a todos a la vez */
+  test('HOSPITAL · levanta a todos los caídos en el acto, con sus poderes recargados', function () {
+    partidaRol(['soporte', 'asesino', 'tanque'], 6, 5, DR.RIGHT);
+    G.livesMode = 'individual';
+    ok(!HB.hospital(G, 0), 'sin nadie fuera no sale');
+    eq(HB.estado(0).hospital, 0, 'y ya no abre ninguna ventana');
+    [1, 2].forEach(function (j) {
+      G.pacs[j].out = true; G.pacs[j].lives = 0;
+      HB.estado(j).cd = [600, 900, 1200, 3000];
+    });
+    ok(HB.hospital(G, 0), 'con dos fuera, sale');
+    [1, 2].forEach(function (j) {
+      ok(!G.pacs[j].out, 'el ' + j + ' vuelve');
+      eq(G.pacs[j].lives, CFG.REVIVIR.VIDAS, 'con una vida');
+      eq(G.pacs[j].safeTicks, CFG.REVIVIR.ESCUDO_TICKS, '5 s de protección');
+      eq(HB.estado(j).cd.join(','), '0,0,0,0', 'y sus cuatro habilidades listas');
+    });
+    G.toMenu();
   });
 
   test('PROTEGER · la VIDA regalada cobra solo si evita que se quede fuera', function () {

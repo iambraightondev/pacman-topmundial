@@ -3240,7 +3240,7 @@
         [h('vida', 'R', 'VIDA EXTRA', 160, 'Da una vida al compañero que menos tiene.'),
          h('resurreccion', 'R', 'RESURRECCIÓN', 160, 'Levanta un cadáver caducado.'),
          h('campo', 'R', 'CAMPO', 130, 'Nadie del equipo muere durante 5 s.'),
-         h('hospital', 'R', 'HOSPITAL', 130, 'Los caídos vuelven durante 10 s.')]
+         h('hospital', 'R', 'HOSPITAL', 130, 'Levanta a todos los caídos, con sus poderes listos.')]
       ],
       mago: [
         [h('fuego', 'Q', 'BOLA DE FUEGO', 20, 'Mata al primer fantasma.'),
@@ -3323,7 +3323,7 @@
       vida: "+1 VIDA AL COMPAÑERO VIVO QUE MENOS TIENE (A IGUALDAD, EL MÁS CERCANO) · CON VIDAS COMPARTIDAS VA AL FONDO COMÚN · NADIE PASA DE 5",
       resurreccion: "DEVUELVE A LA PARTIDA A UN COMPAÑERO ELIMINADO, ESTÉ DONDE ESTÉ, CON 1 VIDA Y 5 S DE PROTECCIÓN · SIN NADIE FUERA NO SALE",
       campo: "5 S EN LOS QUE NADIE DEL EQUIPO MUERE, NI CONTRA EL REY · EL FANTASMA QUE CHOCA CON CUALQUIERA SALE EMPUJADO UNA CASILLA",
-      hospital: "10 S DE HOSPITAL: LA PRIMERA CAÍDA DE CUALQUIERA DEL EQUIPO NO CUENTA · SE LEVANTA EN EL SITIO CON 5 S DE PROTECCIÓN"
+      hospital: "DEVUELVE A LA PARTIDA A TODOS LOS COMPAÑEROS ELIMINADOS A LA VEZ, CON 1 VIDA, 5 S DE PROTECCIÓN Y SUS HABILIDADES RECARGADAS · SIN NADIE FUERA NO SALE"
     };
     CFG.HAB.catalogoDe = function (rol) {
       return CFG.HAB.CATALOGO[CFG.HAB.rol(rol)] || CFG.HAB.CATALOGO.asesino;

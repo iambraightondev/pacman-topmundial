@@ -3874,7 +3874,28 @@
       this.efecto('resurreccion', G.pacs[target].x, G.pacs[target].y, 48);
       sonDe(G, idx, 'playExtraLife'); return true;
     },
-    hospital: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.hospital = H.HOSPITAL_TICKS; this.efecto('hospital', p.x, p.y, 36); sonDe(G, idx, 'playExtraLife'); return true; },
+    /* HOSPITAL (4 oct, Braighton): ya no abre diez segundos de seguro. Levanta
+     * EN EL ACTO a todos los que estén fuera, como la RESURRECCIÓN pero a
+     * todos a la vez, y vuelven con sus cuatro habilidades recargadas. Sin
+     * nadie fuera no sale (ni gasta). La ventana de antes (s.hospital,
+     * hospitalSalva) ya no la enciende nadie. */
+    hospital: function (G, idx) {
+      var fuera = [], i, k;
+      for (i = 0; i < G.pacs.length; i++) if (i !== idx && G.pacs[i] && G.pacs[i].out) fuera.push(i);
+      if (!fuera.length) return false;
+      for (i = 0; i < fuera.length; i++) {
+        var j = fuera[i], sj = this.estado(j);
+        if (this.manda(G)) {
+          if (!G.cuerpos[j]) G.cuerpos[j] = { x: G.pacs[j].x, y: G.pacs[j].y,
+            d: G.pacs[j].dir, t: 1, n: 0, en: {}, quien: {} };
+          G.cuerpos[j].quien[idx] = 1;
+          G.revivirCuerpo(j);
+          for (k = 0; sj && k < sj.cd.length; k++) this.dar(G, j, 'cd', 0, k);
+        }
+        this.efecto('hospital', G.pacs[j].x, G.pacs[j].y, 48);
+      }
+      sonDe(G, idx, 'playExtraLife'); return true;
+    },
 
     bolaGuiada: function (G, idx) {
       /* GUIADA no depende de que el fantasma esté alineado ni a una distancia

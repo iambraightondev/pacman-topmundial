@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · El HOSPITAL levanta a todos los caídos
+
+- **HOSPITAL (Soporte, R):** ya no es un seguro de 10 s. Al usarlo **vuelven
+  a la partida todos los compañeros eliminados a la vez**, con 1 vida, 5 s de
+  protección y **sus cuatro habilidades recargadas**. Sin nadie fuera no sale
+  (ni gasta la recarga).
+
 ## 2026-10-04 · El TÓTEM mata al cuarto dardo, en dos segundos
 
 - **TÓTEM:** tira **un dardo cada medio segundo** y hacen falta **cuatro**
