@@ -4691,6 +4691,19 @@ CORRECCION_PARTY` (0,5: SOPORTE 0,8, TANQUE y MAGO 0,95). Revisar a mediados
 de octubre con ~20 clasificatorias de party con roles. Solo afecta a las
 partidas que vengan: lo ya ganado está en `rg`/`rl`. La pantalla
 de CLASIFICATORIA enseña la marca ya multiplicada por el factor de tu rol.
+**ABILITY CHANGES OF 4-5 OCT.** TÓTEM: fires every `TOTEM_CADA` (30 ticks,
+`TOTEM_CADA_REY` 120 at the king); `Hab.totemGolpes[gid]` counts darts and the
+`TOTEM_GOLPES`-th (4) kills; each earlier one sets `totemToque[gid]` to
+`TOTEM_LENTO_TICKS` (4 s) during which speed is `1 − TOTEM_LENTO × darts`; the
+count survives the slow and is cleared only when the ghost dies or leaves the
+street; both arrays travel in `mesa` and in the `ct` role snapshot.
+`Hab.blancoTotem` keeps `totem.obj` until that ghost dies or leaves the 10-tile
+range. TERREMOTO pays `TERREMOTO_PUNTOS` 150. DOMINIO multiplies the ghost's
+speed by `DOMINIO_VEL` (1.5). CACERÍA: `Game.comible` and `Hab.puedeComer` let
+anyone eat a ghost marked by a teammate while `g.frightened` (energizer or
+GRITO); unmarked-blue rules are unchanged. REY FANTASMA: `Game.frightSecs()`
+never returns less than `CFG.JEFE.AZUL_MIN` (2 s) while `Jefe.activo`, used by
+`triggerFright` and the guest's `predictFright`.
 **COLOCACIÓN ALTA** (4 oct). `Rango.colocar(media, n, temporada)`: from
 `CFG.RANGO.COLOCA_ALTA_DESDE` ('2026-09', so September placements are lifted too) the placed step is the best of the old
 rule (one step below the reached one, capped at `TOPE_COLOCACION`) and

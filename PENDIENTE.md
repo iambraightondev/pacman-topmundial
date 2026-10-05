@@ -7,7 +7,25 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **4 de octubre de 2026** (pm-v329).
+Última puesta al día: **5 de octubre de 2026** (pm-v339).
+
+> **4-5 oct (pm-v330 a pm-v339), todo pedido por Braighton y publicado:**
+> **Premios del rango de octubre** subidos con la temporada empezada (1.000,
+> 2.000, 3.000, 5.000, 7.500, 10.000, 15.000; LLAVE en un mes: 43.500). Solo
+> se puede SUBIR un mes empezado: bajar dejaría saldos en negativo.
+> **TÓTEM:** un dardo cada medio segundo, mata al cuarto; cada uno de los tres
+> primeros quita un 20 % de velocidad (80/60/40 %), a los 4 s sin dardos se
+> recupera pero la cuenta NO se borra hasta morir; no suelta a su presa
+> (`blancoTotem`); al REY le sigue tirando cada 2 s. **TERREMOTO** 150 por
+> fantasma. **HOSPITAL** ya no es un seguro de 10 s: levanta a la vez a todos
+> los CAÍDOS (con cuerpo en el laberinto, no a los muertos sin cuerpo) y
+> vuelven con los poderes recargados; de paso salió un fallo que también
+> tenía RESURRECCIÓN (el cuerpo de una caída real no trae `quien`). **REY
+> FANTASMA:** con él vivo, el azul dura al menos 2 s (`CFG.JEFE.AZUL_MIN`).
+> **COLOCACIÓN:** hasta NARANJA I (305 PR) con media de LLAVE, septiembre
+> incluido (`COLOCA_ALTA_*`; también en cofres-gen y en `rango_pr_tope`).
+> **DOMINIO** a x1,5. **CACERÍA:** el marcado, si está azul de superpastilla,
+> se lo come cualquiera (antes mataba al aliado).
 
 > **3 oct (pm-v324):** volver pagando cuesta **2.000** (en todos los modos) y
 > en CLASIFICATORIA **una sola vez por jugador y partida** (pedido de
@@ -49,6 +67,42 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 ---
 
 ## POR DÓNDE SEGUIR (lo primero de mañana)
+
+### ▶ PRÓXIMA SESIÓN (dejado el 5 oct)
+
+**Hecho el 4-5 oct, todo publicado (pm-v330 a pm-v339):** ver el recuadro de
+arriba y el CHANGELOG. Probado solo con `pruebas-node.js` (755): **nada de
+esto se ha jugado en el navegador ni en una party real.**
+
+1. **Preguntas que Braighton dejó sin contestar:**
+   - **RESURRECCIÓN frente a HOSPITAL.** Hospital levanta a todos los caídos
+     con poderes recargados y recarga 130 s; Resurrección a uno, sin recargar,
+     160 s. Lo que le queda a Resurrección es que alcanza a los MUERTOS (sin
+     cuerpo). Propuesto: Hospital a 180 s. Además, a solas Hospital ya no
+     sirve para nada (antes salvaba al propio Soporte).
+   - **SUPERVIVENCIA con poderes en un mapa más grande.** Propuestos tres
+     mapas (A: 56×31 doble ancho, cabe en 1080p sin achicar nada —
+     recomendado; B: 40×41; C: 56×62 con cámara) y tres reglas (1: tres
+     corazones — recomendada; 2: una vida; 3: poderes solo de control). El
+     28×31 está metido en unos 220 sitios: es el cambio más grande desde los
+     roles. Sin decidir; tampoco se sabe si se juega en móvil.
+   - **DOMINIO «que no asesine aliados».** En el código ya no muerde a nadie
+     del equipo mientras dura (`Hab.apagado`, en los dos choques). No se
+     encontró el caso; falta saber si lo vio durante los 6 s o al acabar (ahí
+     queda 1 s aturdido y vuelve a morder).
+   - **TÓTEM:** ¿marca visible en el fantasma frenado? ¿el frenazo acumulado
+     (80/60/40) o sobre lo que queda (80/64/51)? ¿seguir a la presa sin
+     límite de 10 casillas?
+   - **REY y superpastilla:** los 2 s de azul también ponen azules a los
+     fantasmas que él invoca; hacerlo solo para el rey quedó sin hacer.
+   - **Premios de noviembre:** ¿se quedan en 43.500 por mes?
+2. **A vigilar:** FREDDY sale en NARANJA I, pero sus 2.000 monedas de NARANJA
+   le entran al acabar su próxima clasificatoria (`rm` solo sube al jugar).
+   En la tabla de septiembre PANCHO pasa ahora a ESTER (327 contra 216 PR);
+   el top 3 de septiembre ya se repartió y no se recalcula.
+3. **Trampa de esta sesión:** un `node -e "..."` con comillas invertidas
+   dentro se las come bash (borró tres nombres en comentarios). Scripts de
+   apoyo, a fichero con heredoc entre comillas simples.
 
 ### ▶ PRÓXIMA SESIÓN (dejado el 4 oct)
 
