@@ -3596,8 +3596,9 @@ the key index. `LIST` is the ASESINO (the original kit).
   `HIELO_LENTO_TICKS` (3 s): `Hab.trasHielo`, in the rewind photo and the net
   snapshot (`th`); the boss gets the same through `jefe.frzHielo`/`trasHielo`
   (27 Sep). The catalogue's four Support R recharge 20 s faster (27 Sep):
-  VIDA and RESURRECCIÓN 160 s, CAMPO and HOSPITAL 130 s (since 4 Oct HOSPITAL revives every
-  eliminated teammate at once, like RESURRECCIÓN, with their four cooldowns at 0; its 10 s
+  VIDA and RESURRECCIÓN 160 s, CAMPO and HOSPITAL 130 s (since 4 Oct HOSPITAL revives at once every
+  fallen teammate whose body is still on the maze (`G.cuerpos`), not the ones whose body is
+  gone — those are RESURRECCIÓN's —, with their four cooldowns at 0; its 10 s
   window and `hospitalSalva` are no longer switched on by anything). INMUNIDAD: 3 s
   untouchable. ESCUDO ALIADO: shield (`ALIADO_TICKS`, 8 s or one hit) to the
   nearest living teammate; none = not cast (deliberately useless solo).

@@ -11,10 +11,14 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 ## 2026-10-04 · El HOSPITAL levanta a todos los caídos
 
-- **HOSPITAL (Soporte, R):** ya no es un seguro de 10 s. Al usarlo **vuelven
-  a la partida todos los compañeros eliminados a la vez**, con 1 vida, 5 s de
-  protección y **sus cuatro habilidades recargadas**. Sin nadie fuera no sale
-  (ni gasta la recarga).
+- **HOSPITAL (Soporte, R):** ya no es un seguro de 10 s. Al usarlo **se
+  levantan a la vez todos los compañeros CAÍDOS** (los que aún tienen su
+  cuerpo en el laberinto), con 1 vida, 5 s de protección y **sus cuatro
+  habilidades recargadas**. A los que ya no tienen cuerpo no los levanta: eso
+  es la RESURRECCIÓN. Sin nadie caído no sale (ni gasta la recarga).
+- **Arreglado:** el HOSPITAL nuevo no levantaba a nadie, y la RESURRECCIÓN
+  tampoco a quien acababa de caer: fallaban justo cuando el cuerpo seguía en
+  el suelo.
 
 ## 2026-10-04 · El TÓTEM mata al cuarto dardo, en dos segundos
 

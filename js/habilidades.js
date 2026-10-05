@@ -3868,6 +3868,9 @@
       if (this.manda(G)) {
         if (!G.cuerpos[target]) G.cuerpos[target] = { x: G.pacs[target].x, y: G.pacs[target].y,
           d: G.pacs[target].dir, t: 1, n: 0, en: {}, quien: {} };
+        /* un cuerpo aún en el suelo no trae `quien`: sin esto, resucitar a
+         * alguien recién caído reventaba (4 oct) */
+        if (!G.cuerpos[target].quien) G.cuerpos[target].quien = {};
         G.cuerpos[target].quien[idx] = 1;
         G.revivirCuerpo(target);
       }
@@ -3875,24 +3878,28 @@
       sonDe(G, idx, 'playExtraLife'); return true;
     },
     /* HOSPITAL (4 oct, Braighton): ya no abre diez segundos de seguro. Levanta
-     * EN EL ACTO a todos los que estén fuera, como la RESURRECCIÓN pero a
-     * todos a la vez, y vuelven con sus cuatro habilidades recargadas. Sin
-     * nadie fuera no sale (ni gasta). La ventana de antes (s.hospital,
-     * hospitalSalva) ya no la enciende nadie. */
+     * EN EL ACTO a todos los CAÍDOS: los que están fuera y aún tienen su
+     * cuerpo en el laberinto (los 15 s de CFG.REVIVIR). A los MUERTOS —el
+     * cuerpo ya se fue— no: eso es cosa de la RESURRECCIÓN. Vuelven con sus
+     * cuatro habilidades recargadas. Sin nadie caído no sale (ni gasta). La
+     * ventana de antes (s.hospital, hospitalSalva) ya no la enciende nadie. */
     hospital: function (G, idx) {
-      var fuera = [], i, k;
-      for (i = 0; i < G.pacs.length; i++) if (i !== idx && G.pacs[i] && G.pacs[i].out) fuera.push(i);
-      if (!fuera.length) return false;
-      for (i = 0; i < fuera.length; i++) {
-        var j = fuera[i], sj = this.estado(j);
+      var caidos = [], i, k;
+      for (i = 0; i < G.pacs.length; i++) {
+        if (i !== idx && G.pacs[i] && G.pacs[i].out && G.cuerpos && G.cuerpos[i]) caidos.push(i);
+      }
+      if (!caidos.length) return false;
+      for (i = 0; i < caidos.length; i++) {
+        var j = caidos[i], sj = this.estado(j), c = G.cuerpos[j];
+        this.efecto('hospital', c.x, c.y, 48);
         if (this.manda(G)) {
-          if (!G.cuerpos[j]) G.cuerpos[j] = { x: G.pacs[j].x, y: G.pacs[j].y,
-            d: G.pacs[j].dir, t: 1, n: 0, en: {}, quien: {} };
-          G.cuerpos[j].quien[idx] = 1;
+          /* el cuerpo que deja una caída no trae `quien` (solo lo pone quien
+           * le pasa por encima) */
+          if (!c.quien) c.quien = {};
+          c.quien[idx] = 1;
           G.revivirCuerpo(j);
           for (k = 0; sj && k < sj.cd.length; k++) this.dar(G, j, 'cd', 0, k);
         }
-        this.efecto('hospital', G.pacs[j].x, G.pacs[j].y, 48);
       }
       sonDe(G, idx, 'playExtraLife'); return true;
     },

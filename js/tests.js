@@ -14298,21 +14298,46 @@
 
   /* 4 oct: el HOSPITAL ya no es un seguro de 10 s; levanta a todos a la vez */
   test('HOSPITAL · levanta a todos los caídos en el acto, con sus poderes recargados', function () {
-    partidaRol(['soporte', 'asesino', 'tanque'], 6, 5, DR.RIGHT);
-    G.livesMode = 'individual';
-    ok(!HB.hospital(G, 0), 'sin nadie fuera no sale');
-    eq(HB.estado(0).hospital, 0, 'y ya no abre ninguna ventana');
+    var roles = ['soporte', 'asesino', 'tanque', 'mago'];
+    partidaRol(roles, 6, 5, DR.RIGHT);
+    HB.empezar(true, 4, roles, ['telarana,puente,relevo,hospital', null, null, null]); G.roles = roles;
+    eq(HB.idDe(G, 0, 3), 'hospital', 'el Soporte lleva el HOSPITAL en la R');
+    ok(!HB.pulsar(G, 0, 3), 'sin nadie caído no sale');
+    eq(HB.estado(0).cd[3], 0, 'ni gasta la recarga');
+    /* dos CAEN de verdad (su cuerpo se queda en el suelo, como en partida:
+     * ese cuerpo no trae `quien`, y por eso el poder reventaba) */
     [1, 2].forEach(function (j) {
-      G.pacs[j].out = true; G.pacs[j].lives = 0;
-      HB.estado(j).cd = [600, 900, 1200, 3000];
+      G.pacs[j].lives = 1; G.pacs[j].safeTicks = 0;
+      G.startDeath(j, 0);
     });
-    ok(HB.hospital(G, 0), 'con dos fuera, sale');
+    for (var t = 0; t < 400 && !(G.pacs[1].out && G.pacs[2].out); t++) G.step();
+    ok(G.cuerpos[1] && G.cuerpos[2], 'los dos dejan su cuerpo');
+    /* y otro está MUERTO: fuera y ya sin cuerpo */
+    G.pacs[3].out = true; G.pacs[3].lives = 0; G.cuerpos[3] = null;
+    [1, 2].forEach(function (j) { HB.estado(j).cd = [600, 900, 1200, 3000]; });
+    G.pacs[0].safeTicks = 999999;
+    ok(HB.pulsar(G, 0, 3), 'con dos caídos, sale');
     [1, 2].forEach(function (j) {
       ok(!G.pacs[j].out, 'el ' + j + ' vuelve');
       eq(G.pacs[j].lives, CFG.REVIVIR.VIDAS, 'con una vida');
       eq(G.pacs[j].safeTicks, CFG.REVIVIR.ESCUDO_TICKS, '5 s de protección');
       eq(HB.estado(j).cd.join(','), '0,0,0,0', 'y sus cuatro habilidades listas');
     });
+    ok(G.pacs[3].out, 'al muerto no lo levanta: ya no tiene cuerpo');
+    ok(HB.estado(0).cd[3] > 0, 'y el Soporte gasta su recarga');
+    G.toMenu();
+  });
+
+  test('RESURRECCIÓN · levanta también a quien acaba de caer y aún tiene su cuerpo', function () {
+    var roles = ['soporte', 'asesino'];
+    partidaRol(roles, 6, 5, DR.RIGHT);
+    HB.empezar(true, 2, roles, ['telarana,puente,relevo,resurreccion', null]); G.roles = roles;
+    G.pacs[1].lives = 1; G.pacs[1].safeTicks = 0;
+    G.startDeath(1, 0);
+    for (var t = 0; t < 400 && !G.pacs[1].out; t++) G.step();
+    ok(G.cuerpos[1], 'deja su cuerpo');
+    ok(HB.pulsar(G, 0, 3), 'la resurrección sale');
+    ok(!G.pacs[1].out, 'y vuelve');
     G.toMenu();
   });
 
