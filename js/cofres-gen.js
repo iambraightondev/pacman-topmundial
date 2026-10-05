@@ -340,10 +340,15 @@
       for (var i = TR.length - 1; i > 0; i--) if (pr >= TR[i].desde) return i;
       return 0;
     }
-    function colocar(media) {
+    /* temp: la temporada que se coloca (la colocación alta, desde colocaAltaDesde) */
+    function colocar(media, temp) {
       var t = -1;
       for (var i = 0; i < TR.length; i++) if (media >= TR[i].par) t = i;
+      var alc = t;
       t = Math.min(t - 1, R.topeColocacion != null ? R.topeColocacion : TR.length - 1);
+      if (R.colocaAltaDesde && String(temp || '') >= R.colocaAltaDesde && alc > 0) {
+        t = Math.max(t, Math.floor(alc * R.colocaAltaTope / (TR.length - 1)));
+      }
       return t < 0 ? 0 : TR[t].desde;
     }
     function mesAnterior(t) {
@@ -369,7 +374,7 @@
       var coloca = sem !== null ? Math.max(0, sem + entero(c[clave('ru', t)]) - entero(c[clave('rd', t)])) : null;
       /* con semilla ya está colocado (30 sep): no juega colocación */
       if (sem === null && jugadas < R.colocacion) return out;
-      var base = sem !== null ? coloca : colocar(entero(c[clave('rt', t)]) / R.colocacion);
+      var base = sem !== null ? coloca : colocar(entero(c[clave('rt', t)]) / R.colocacion, t);
       out.pr = Math.max(0, base + entero(c[clave('rg', t)]) - entero(c[clave('rl', t)]));
       out.tramo = tramo(out.pr);
       return out;
@@ -464,6 +469,7 @@
           return { par: d.par, escalones: d.escalones, prEscalon: d.prEscalon };
         }),
         colocacion: RG.COLOCACION, topeColocacion: RG.TOPE_COLOCACION,
+        colocaAltaDesde: RG.COLOCA_ALTA_DESDE || '', colocaAltaTope: RG.COLOCA_ALTA_TOPE || 0,
         arrastre: RG.ARRASTRE, confianza: RG.CONFIANZA, version: RG.VERSION,
         ajustes: ajRango
       }

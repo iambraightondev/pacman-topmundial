@@ -125,10 +125,19 @@
    * escalón POR DEBAJO del más alto cuya marca alcanzas, al principio de él
    * y nunca por encima de TOPE_COLOCACION. Colocarse no regala nada: lo de
    * arriba se gana jugando. */
-  function colocar(media, n) {
+  /* COLOCACIÓN ALTA (4 oct): desde COLOCA_ALTA_DESDE, además, la escalera de
+   * marcas entera se reparte hasta COLOCA_ALTA_TOPE: el escalón más alto que
+   * alcanza tu media, en proporción (el de LLAVE da el tope; ver config). Se
+   * queda con lo mejor de las dos reglas. `temp` es la temporada que se
+   * coloca; sin ella, la de ahora. */
+  function colocar(media, n, temp) {
     var t = -1;
     for (var i = 0; i < TRAMOS.length; i++) if (media >= parTramo(i, n)) t = i;
+    var alc = t;
     t = Math.min(t - 1, RG.TOPE_COLOCACION != null ? RG.TOPE_COLOCACION : TRAMOS.length - 1);
+    if (RG.COLOCA_ALTA_DESDE && String(temp || temporada()) >= RG.COLOCA_ALTA_DESDE && alc > 0) {
+      t = Math.max(t, Math.floor(alc * RG.COLOCA_ALTA_TOPE / (TRAMOS.length - 1)));
+    }
     return t < 0 ? 0 : TRAMOS[t].desde;
   }
 
@@ -252,7 +261,7 @@
     else if (jugadas < RG.COLOCACION) return out;
     /* sin semilla, la colocación se guarda ya pasada a SOLO: se coloca con la
      * marca de solo */
-    var base = sem ? coloca : colocar(num(c[clave('rt', t)]) / RG.COLOCACION, 1);
+    var base = sem ? coloca : colocar(num(c[clave('rt', t)]) / RG.COLOCACION, 1, t);
     out.pr = Math.max(0, base + num(c[clave('rg', t)]) - num(c[clave('rl', t)]));
     var i = tramo(out.pr), T = TRAMOS[i];
     out.tramo = i;

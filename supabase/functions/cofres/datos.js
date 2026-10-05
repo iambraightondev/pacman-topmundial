@@ -346,6 +346,8 @@ export const DATOS = {
     ],
     "colocacion": 5,
     "topeColocacion": 4,
+    "colocaAltaDesde": "2026-09",
+    "colocaAltaTope": 11,
     "arrastre": 0.5,
     "confianza": 20,
     "version": 4,

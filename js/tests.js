@@ -17605,11 +17605,38 @@
 
   test('RANGO: la colocación te pone donde dice tu media', function () {
     var Rg = window.PM.Rango, D = CFG.RANGO.DIVISIONES;
-    eq(Rg.division(Rg.colocar(0, 1)), 0, 'sin nada, CEREZA');
-    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[1].par, 1))].nombre, 'CEREZA I', 'con la marca de FRESA IV, un escalón por debajo');
-    eq(Rg.colocar(D[1].par, 1), Rg.TRAMOS[3].desde, 'y al principio de él: no regala PR');
-    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[3].par, 1))].nombre, 'FRESA IV', 'con la de MANZANA, el tope: FRESA IV');
-    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[7].par * 3, 1))].nombre, 'FRESA IV', 'ni jugando como un LLAVE se coloca más arriba');
+    eq(Rg.division(Rg.colocar(0, 1, '2026-08')), 0, 'sin nada, CEREZA');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[1].par, 1, '2026-08'))].nombre, 'CEREZA I', 'con la marca de FRESA IV, un escalón por debajo');
+    eq(Rg.colocar(D[1].par, 1, '2026-08'), Rg.TRAMOS[3].desde, 'y al principio de él: no regala PR');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[3].par, 1, '2026-08'))].nombre, 'FRESA IV', 'con la de MANZANA, el tope: FRESA IV');
+    eq(Rg.TRAMOS[Rg.tramo(Rg.colocar(D[7].par * 3, 1, '2026-08'))].nombre, 'FRESA IV', 'con la regla de antes, ni jugando como un LLAVE se coloca más arriba');
+    /* 4 oct: se puede salir hasta NARANJA I, con media de LLAVE (septiembre incluido) */
+    eq(Rg.colocar(D[7].par, 1, '2026-09'), 305, 'septiembre también');
+    function sale(media) { return Rg.TRAMOS[Rg.tramo(Rg.colocar(media, 1, '2026-10'))].nombre; }
+    eq(sale(0), 'CEREZA IV', 'sin nada, abajo');
+    eq(sale(D[1].par), 'CEREZA I', 'por abajo manda la regla de siempre');
+    eq(sale(D[3].par), 'FRESA III', 'con la marca de MANZANA, FRESA III');
+    eq(sale(D[4].par), 'FRESA II', 'con la de MELÓN no se pasa de FRESA');
+    eq(sale(D[5].par), 'NARANJA IV', 'con la de GALAXIAN, NARANJA IV');
+    eq(sale(D[7].par - 1), 'NARANJA II', 'rozando la de LLAVE, NARANJA II');
+    eq(sale(D[7].par), 'NARANJA I', 'NARANJA I pide la media de LLAVE');
+    eq(sale(D[7].par * 3), 'NARANJA I', 'y es el tope, se juegue como se juegue');
+    eq(Rg.colocar(D[7].par, 1, '2026-10'), 305, 'al principio de él: 305 PR');
+    var antes = -1;
+    for (var md = 0; md <= 200000; md += 500) {
+      var ahora = Rg.colocar(md, 1, '2026-10');
+      ok(ahora >= antes, 'más media nunca coloca peor (' + md + ')');
+      ok(ahora >= Rg.colocar(md, 1, '2026-08'), 'ni peor que con la regla de antes (' + md + ')');
+      antes = ahora;
+    }
+    /* y el servidor hace la misma cuenta (js/cofres-gen.js) */
+    conContadores(function (A) {
+      A.recordAll({ 'rc4_2026-10': 5, 'rt4_2026-10': 914491 });
+      var Se = window.PM.Season, act0 = Se.actual;
+      Se.actual = function () { return '2026-10'; };
+      try { eq(Rg.estado().nombre, 'NARANJA I', 'el caso de FREDDY: cinco partidas con media de 183.000'); }
+      finally { Se.actual = act0; }
+    });
   });
 
   test('RANGO: cinco de colocación, luego sube y baja, y nunca por debajo de cero',
@@ -17736,9 +17763,9 @@
     var c = {};
     c[Rg.clave('rc', '2026-09')] = 35; c[Rg.clave('rt', '2026-09')] = 196212;
     c[Rg.clave('rg', '2026-09')] = 163; c[Rg.clave('rl', '2026-09')] = 104; c[Rg.clave('rm', '2026-09')] = 7;
-    eq(Rg.estadoDe(c, '2026-09').pr, 159, 'sin ajuste, 159');
+    eq(Rg.estadoDe(c, '2026-09').pr, 184, 'sin ajuste, 184 (159 antes de la colocación alta del 4 oct)');
     var a = Rg.ajustados(c, 'ester');
-    eq(Rg.estadoDe(a, '2026-09').pr, 159 + AJ.ESTER.rango['2026-09'], 'con el suyo, lo que se le reconoce');
+    eq(Rg.estadoDe(a, '2026-09').pr, 184 + AJ.ESTER.rango['2026-09'], 'con el suyo, lo que se le reconoce');
     eq(Rg.estadoDe(a, '2026-09').nombre, 'NARANJA IV', 'ESTER llega a NARANJA IV');
     eq(a[Rg.clave('rm', '2026-09')], Rg.estadoDe(a, '2026-09').tramo + 1, 'y lo más alto sube con él');
     eq(c[Rg.clave('rg', '2026-09')], 163, 'sin tocar los contadores de verdad');
@@ -18280,13 +18307,13 @@
       var cc = Rg.conCuenta;
       Rg.conCuenta = function () { return true; };
       try {
-        // colocarse en FRESA IV (el tope) paga FRESA
-        for (var i = 0; i < 4; i++) Rg.apuntar(60000, 1, 5);
-        var r = Rg.apuntar(60000, 1, 5);
+        // colocarse en FRESA IV (con media de NARANJA) paga FRESA
+        for (var i = 0; i < 4; i++) Rg.apuntar(30000, 1, 5);
+        var r = Rg.apuntar(30000, 1, 5);
         eq(r.nombre, 'FRESA IV');
         eq(r.monedas, Rg.premio(1), 'la primera vez en FRESA, su premio');
         eq(r.frutaNueva, 'FRESA');
-        var otra = Rg.apuntar(60000, 1, 5);
+        var otra = Rg.apuntar(30000, 1, 5);
         ok(!(otra.monedas > 0) || otra.frutaNueva !== 'FRESA', 'FRESA no se vuelve a pagar');
       } finally { Rg.conCuenta = cc; }
     });
@@ -18462,9 +18489,9 @@
       var cc = Rg.conCuenta;
       Rg.conCuenta = function () { return true; };
       try {
-        for (var i = 0; i < 4; i++) Rg.apuntar(60000, 1, 5);
+        for (var i = 0; i < 4; i++) Rg.apuntar(30000, 1, 5);
         eq(C.siguiente(), null, 'colocándose, nada que celebrar');
-        Rg.apuntar(60000, 1, 5);
+        Rg.apuntar(30000, 1, 5);
         var e = C.siguiente();
         ok(e && e.t === 'rango' && e.de === -1, 'colocarse se celebra');
         eq(Rg.TRAMOS[e.a].nombre, 'FRESA IV');

@@ -4691,6 +4691,12 @@ CORRECCION_PARTY` (0,5: SOPORTE 0,8, TANQUE y MAGO 0,95). Revisar a mediados
 de octubre con ~20 clasificatorias de party con roles. Solo afecta a las
 partidas que vengan: lo ya ganado está en `rg`/`rl`. La pantalla
 de CLASIFICATORIA enseña la marca ya multiplicada por el factor de tu rol.
+**COLOCACIÓN ALTA** (4 oct). `Rango.colocar(media, n, temporada)`: from
+`CFG.RANGO.COLOCA_ALTA_DESDE` ('2026-09', so September placements are lifted too) the placed step is the best of the old
+rule (one step below the reached one, capped at `TOPE_COLOCACION`) and
+`floor(reached × COLOCA_ALTA_TOPE / 24)`, so NARANJA I (step 11, 305 PR) needs
+the LLAVE mark. Mirrored in `js/cofres-gen.js` (`colocaAltaDesde/Tope`) and in
+`rango_pr_tope` (305) of `supabase/perfiles-blindaje.sql`.
 **MONEDAS POR TEMPORADA** (29 sep). Cada fruta paga la primera vez que se
 llega a ella en una temporada, deducido de `rm`: `Rango.monedas()` suma, por
 cada temporada, `premiosHasta(fruta, temporada)`, y `apuntar` usa la de ahora.

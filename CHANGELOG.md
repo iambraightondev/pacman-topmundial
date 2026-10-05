@@ -2,6 +2,15 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · La colocación puede dejarte hasta en NARANJA I
+
+- Antes, jugaras como jugaras tus cinco partidas de colocación, no salías
+  más arriba de FRESA IV (100 PR). Ahora el tope es **NARANJA I
+  (305 PR)**, y hay que ganárselo: pide una **media de LLAVE** (130.000 en
+  solo). Con media de GALAXIAN se sale en NARANJA IV; con la de MELÓN, en
+  FRESA II. Nadie sale peor que antes, y vale también para quien se colocó
+  en septiembre.
+
 ## 2026-10-04 · La superpastilla siempre afecta al REY FANTASMA
 
 - Desde el nivel 19 la superpastilla ya no pone azul a nadie, y al rey del

@@ -1563,6 +1563,19 @@
      * media, al principio de él, y nunca más arriba que este (4 = FRESA IV).
      * De ahí para arriba se sube jugando. */
     TOPE_COLOCACION: 4,
+    /* COLOCACIÓN ALTA (4 oct, Braighton). FREDDY jugó sus cinco con una media
+     * de LLAVE (183.000 en solo) y se quedó en FRESA IV, 100 PR. Desde
+     * COLOCA_ALTA_DESDE se puede salir colocado hasta COLOCA_ALTA_TOPE
+     * (11 = NARANJA I), pero no se regala: la escalera entera de marcas se
+     * reparte hasta ese tope, así que NARANJA I pide la media de LLAVE, la
+     * de GALAXIAN III deja en NARANJA IV y la de MELÓN no pasa de FRESA.
+     * Nadie sale peor que con la regla de antes (que sigue mandando por
+     * abajo). Vale también para SEPTIEMBRE (pedido de Braighton: «aplica lo
+     * mismo a los demás que hayan hecho colocación»): a ESTER y a PANCHO les
+     * sube la colocación de entonces, y con ella la semilla de octubre. El
+     * top 3 de septiembre ya se repartió y no se vuelve a calcular. */
+    COLOCA_ALTA_DESDE: '2026-09',
+    COLOCA_ALTA_TOPE: 11,
     /* lo que mueve una partida: 20 por cada vez que doblas (o te quedas en la
      * mitad de) la marca de tu escalón. Igualarla no da nada. */
     PASO: 20,

@@ -68,7 +68,7 @@
 --           rm<v>_<mes> (mejor escalón, del que salen las monedas y los
 --           premios de fin de temporada): 0 sin haber acabado la colocación
 --           (5 partidas); después, el escalón al que llegan esos PR como
---           mucho: colocación (100) + semilla del mes anterior (la mitad de su
+--           mucho: colocación (305: NARANJA I, 4 oct) + semilla del mes anterior (la mitad de su
 --           tope) + ganado + de colocación + 100 de margen (los ajustes a mano
 --           de CFG.AJUSTES_CUENTA.rango). Las cuentas de hoy caben todas.
 --   bono    (regalo de veterano) <= 5 por partida + 3.000 (50 por logro, y
@@ -215,7 +215,7 @@ $$;
 
 -- Lo MÁS que pueden valer los PR de una temporada con esos contadores
 -- (versión v de las reglas, temporada t = 'AAAA-MM'). Generoso a propósito:
---   colocación (100 como mucho, CFG.RANGO.TOPE_COLOCACION)
+--   colocación (305 como mucho: NARANJA I, CFG.RANGO.COLOCA_ALTA_TOPE; antes 100)
 --   + semilla (la mitad del tope del mes anterior, si se jugó)
 --   + PR ganados + PR de la colocación con semilla
 --   + 100 de margen (los ajustes a mano de CFG.AJUSTES_CUENTA.rango).
@@ -235,7 +235,7 @@ begin
   if prof < 24 and public.num(lg, 'rc' || v || '_' || ant) > 0 then
     semilla := 0.5 * public.rango_pr_tope(lg, v, ant, prof + 1);
   end if;
-  return 100 + semilla
+  return 305 + semilla
        + public.num(lg, 'rg' || v || '_' || t)
        + public.num(lg, 'ru' || v || '_' || t)
        + 100;
