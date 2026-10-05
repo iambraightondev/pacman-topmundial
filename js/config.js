@@ -3051,6 +3051,9 @@
      * alcanzar a uno, con suerte a dos. Con tres no llegaba a nadie; con
      * diez el Mago limpia el mapa entero sin jugarse nada. */
     DOMINIO_TICKS: 6 * 60,
+    /* 5 oct (Braighton): mientras es del Mago corre a x1,5, para que le dé
+     * tiempo a alcanzar a los suyos en los seis segundos. */
+    DOMINIO_VEL: 1.5,
     /* Cuatro casillas. Es un TOQUE, no un poder a distancia: hay que ir a
      * buscar al fantasma, y ese paseo es el riesgo que paga el dominio. */
     DOMINIO_TILES: 4,
@@ -3269,7 +3272,7 @@
          h('totem', 'W', 'TÓTEM', 34, 'Torre que dispara automáticamente.')],
         [h('runa', 'E', 'RUNA', 32, 'Trampa que mata en una casilla.'),
          h('gravedad', 'E', 'GRAVEDAD', 32, 'Agrupa y detiene fantasmas.'),
-         h('dominio', 'E', 'DOMINIO', 32, 'El fantasma más cercano caza a los suyos 6 s.')],
+         h('dominio', 'E', 'DOMINIO', 32, 'El fantasma más cercano caza a los suyos 6 s, a x1,5.')],
         [h('tormenta', 'R', 'TORMENTA', 46, 'Tres rayos a distancia.'),
          h('meteoro', 'R', 'METEORO', 60, 'Mantenla: el Mago se planta y cada flecha mueve la mira por todo el mapa.'),
          h('eclipse', 'R', 'ECLIPSE', 60, 'Ceguera y ralentización global.')]

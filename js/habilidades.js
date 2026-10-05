@@ -657,12 +657,16 @@
     },
 
     /* Un fantasma puede quedar azul por una habilidad aunque no haya
-     * energizante activo. Cacería añade una restricción: solo el Asesino que
-     * la lanzó puede cobrar esas muertes. */
+     * energizante activo. Cacería añade una restricción: al marcado solo se
+     * lo come el Asesino que la lanzó... SALVO QUE ESTÉ AZUL DE SUPERPASTILLA
+     * (5 oct, Braighton): la marca le quitaba al resto del equipo un fantasma
+     * que su propia superpastilla había puesto azul, y encima los mataba.
+     * Azul es azul: se lo come cualquiera. */
     puedeComer: function (G, gid, who) {
       if (!this.on) return false;
       var caz = this.caceriaQuien && this.caceriaQuien[gid];
-      if (caz >= 0 && caz !== (who | 0)) return false;
+      var azul = !!(G && G.ghosts && G.ghosts[gid | 0] && G.ghosts[gid | 0].frightened);
+      if (caz >= 0 && caz !== (who | 0)) return azul;
       /* El círculo de CACERÍA es la autorización del Asesino. Antes se
        * comprobaba el dueño pero después se exigía igualmente modo azul, de
        * modo que el propio Asesino moría al atravesar al marcado. */
@@ -693,6 +697,8 @@
       if (this.trasHielo && this.trasHielo[gid] > 0) m *= H.HIELO_LENTO_MULT;
       if (this.totemToque && this.totemToque[gid] > 0) m *= Math.max(0, 1 - H.TOTEM_LENTO * (this.totemGolpes[gid] || 0));
       if (this.aturdido && this.aturdido[gid] > 0) return 0;
+      /* DOMINIO: el fantasma del Mago corre más (DOMINIO_VEL) */
+      if (this.dominado && this.dominado[gid] > 0) m *= H.DOMINIO_VEL || 1;
       /* ECLIPSE ya incluye ceguera: no se acumula con el 0,6 de la otra. */
       if (this.eclipseTicks > 0) m *= 0.5;
       else if (this.ciego && this.ciego[gid] > 0) m *= 0.6;
@@ -1537,7 +1543,7 @@
         var g = G.ghosts[i];
         if (!g) continue;
         if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
-        if (this.caceriaQuien[g.id] >= 0 && this.caceriaQuien[g.id] !== idx) continue;
+        if (this.caceriaQuien[g.id] >= 0 && this.caceriaQuien[g.id] !== idx && !g.frightened) continue;
         var dx = distX(g.x, p.x);
         var dy = Math.abs(g.y - p.y);
         if (dx > alcance || dy > alcance) continue;

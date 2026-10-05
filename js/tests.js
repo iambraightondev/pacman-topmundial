@@ -7443,7 +7443,8 @@
     } finally { G.netSend = envia; G.toMenu(); }
   });
 
-  test('el invitado no se come al azul marcado por otro: lo mata', function () {
+  /* 5 oct: el azul de la superpastilla manda sobre la marca de CACERÍA */
+  test('el invitado se come al azul de superpastilla aunque lo marcara otro; sin azul, lo mata', function () {
     var p = partidaHabInvitado(13, 20);
     var mandados = [], envia = G.netSend;
     G.netSend = function (n, d) { mandados.push(d); };
@@ -7453,8 +7454,15 @@
       g.frightened = true;
       HB.caceriaQuien[1] = 0;            // es del anfitrión
       G.guestCollisions(p);
-      ok(g.mode !== 'eyes', 'no se lo come');
-      ok(p.dying, 'muere, como moriría el anfitrión');
+      eq(g.mode, 'eyes', 'azul de superpastilla: se lo come');
+      ok(!p.dying, 'y no muere');
+      var g2 = fantasmaEn(2, 13, 20);
+      g2.frightened = false;
+      HB.caceriaQuien[2] = 0;
+      G.eatFreezeTicks = 0;
+      G.guestCollisions(p);
+      ok(g2.mode !== 'eyes', 'sin azul, el marcado por otro no se come');
+      ok(p.dying, 'y lo mata, como mataría al anfitrión');
     } finally { G.netSend = envia; G.toMenu(); }
   });
 
@@ -7469,9 +7477,9 @@
       G.hostGuestEvent({ t: 'ateGhost', g: 0 }, 1);
       eq(G.ghosts[0].mode, 'eyes', 'y comérselo sí vale');
       HB.caceriaQuien[1] = 0;
-      G.ghosts[1].mode = 'normal'; G.ghosts[1].frightened = true;
+      G.ghosts[1].mode = 'normal'; G.ghosts[1].frightened = false;
       G.hostGuestEvent({ t: 'ateGhost', g: 1 }, 1);
-      ok(G.ghosts[1].mode !== 'eyes', 'el marcado por otro no se lo come');
+      ok(G.ghosts[1].mode !== 'eyes', 'el marcado por otro, sin azul, no se lo come');
       G.hostGuestEvent({ t: 'died', g: 1 }, 1);
       ok(G.pacs[1].dying, 'y ese sí lo mata');
     } finally { G.toMenu(); }
@@ -17330,6 +17338,9 @@
 
     ok(H.dominio(G, 0), 'el toque alcanza al fantasma de al lado');
     eq(H.dominado[mio.id], HH.DOMINIO_TICKS, 'seis segundos es suyo');
+    eq(H.multVelFantasma(G, mio.id), 1.5, 'y corre a x1,5');
+    eq(H.multVelFantasma(G, presa.id), 1, 'los demás, a su paso');
+    ok(H.apagado(mio.id), 'mientras es del Mago no muerde a nadie del equipo');
     eq(H.dominaQuien[mio.id], 0, 'y son del Mago');
     eq(H.dominado[presa.id], 0, 'el de seis casillas no se entera: el toque llega a cuatro');
 

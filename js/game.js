@@ -1773,12 +1773,12 @@
      * de las habilidades (GANCHO, TOQUE ARCANO) y el invitado solo el azul del
      * energizante, así que al invitado lo mataba un fantasma de su propia
      * cacería y en cambio se comía el marcado por otro. Todo lo que hace falta
-     * viaja en la foto (s.g[].f y Hab.resumenRoles). */
+     * viaja en la foto (s.g[].f y Hab.resumenRoles).
+     * 5 oct: el azul de la superpastilla vale para TODOS, también sobre un
+     * fantasma marcado por la CACERÍA de otro (ver Hab.puedeComer). */
     comible: function (g, i) {
       var A = this.hab ? window.PM.Hab : null;
-      if (!A) return !!g.frightened;
-      if (g.frightened && !(A.caceriaQuien && A.caceriaQuien[g.id] >= 0 &&
-          A.caceriaQuien[g.id] !== i)) return true;
+      if (!A || g.frightened) return !!g.frightened;
       return A.puedeComer(this, g.id, i);
     },
 

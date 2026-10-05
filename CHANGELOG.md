@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-05 · DOMINIO corre más, y la superpastilla manda sobre la CACERÍA
+
+- **DOMINIO (Mago, E):** el fantasma dominado corre a **×1,5**.
+- **CACERÍA + superpastilla:** un fantasma marcado por la CACERÍA de un
+  compañero, si está **azul de superpastilla, se lo come cualquiera**. Antes
+  la marca lo reservaba para el Asesino y al resto del equipo ese fantasma
+  azul **lo mataba**. Sin azul sigue siendo solo del Asesino.
+
 ## 2026-10-04 · La colocación puede dejarte hasta en NARANJA I
 
 - Antes, jugaras como jugaras tus cinco partidas de colocación, no salías
