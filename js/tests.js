@@ -15354,6 +15354,26 @@
     return G.jefe;
   }
 
+  /* 4 oct: desde el nivel 19 la superpastilla no asusta a nadie, y el rey
+   * del 20 se quedaba sin su golpe de azul */
+  test('JEFE: la superpastilla le afecta siempre, también del nivel 20 en adelante', function () {
+    eq(CFG.fright(20).seconds, 0, 'en el 20 el nivel ya no da azul');
+    nivelJefe(['asesino'], 20);
+    ok(G.jefe && G.jefe.vivo, 'hay rey');
+    G.triggerFright();
+    eq(G.frightTicks, CJ.AZUL_MIN * 60, 'con él vivo, el azul dura su mínimo');
+    ok(window.PM.Jefe.vulnerable(G), 'y se le puede pegar');
+    G.frightTicks = 0;
+    G.jefe.vivo = false;
+    G.triggerFright();
+    eq(G.frightTicks, 0, 'sin rey, el nivel 20 sigue sin azul');
+    nivelJefe(['asesino'], 10);
+    G.triggerFright();
+    eq(G.frightTicks, CFG.fright(10).seconds * 60, 'y donde el nivel da más, manda el nivel');
+    G.frightTicks = 0;
+    G.toMenu();
+  });
+
   /* El jefe quieto en una casilla (sin ataques en marcha) */
   function jefeEn(col, fila) {
     var j = G.jefe;

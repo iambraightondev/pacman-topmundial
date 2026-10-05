@@ -3388,6 +3388,11 @@
     INVOCA_FURIA: 8 * 60,
     INVOCA_PARON: 40,
     INV: 45,                           // tras un golpe, sin recibir otro
+    /* LA SUPERPASTILLA SIEMPRE LE AFECTA (4 oct, Braighton). Desde el nivel
+     * 19 ya no pone azul a nadie (CFG.fright) y el rey del 20 en adelante se
+     * quedaba sin su golpe más fuerte. Con él vivo, el azul dura al menos
+     * esto (segundos): lo mismo que en el primer rey, el del nivel 5. */
+    AZUL_MIN: 2,
     /* el invitado que pide un golpe de azul lo da por dado este rato (ticks):
      * lo que tarda en ir y volver; si el anfitrión no lo contó, lo repide */
     PIDO_AZUL: 30,

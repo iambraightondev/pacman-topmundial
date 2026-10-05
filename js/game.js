@@ -1587,9 +1587,19 @@
     /* segsFijos: el GRITO (R) del modo DESATADO asusta lo mismo en el
      * nivel 1 que en el 18, donde la superpastilla ya no dura nada. Sin eso
      * la habilidad se apagaría sola justo cuando más falta hace. */
+    /* Lo que dura el azul de una superpastilla en este nivel. Con el REY
+     * FANTASMA vivo nunca menos de CFG.JEFE.AZUL_MIN: a él le afecta siempre,
+     * aunque el nivel ya no asuste a los fantasmas. */
+    frightSecs: function () {
+      var secs = CFG.fright(this.level).seconds * this.frightMult;
+      var J = window.PM.Jefe;
+      if (J && J.activo(this)) secs = Math.max(secs, CFG.JEFE.AZUL_MIN || 0);
+      return secs;
+    },
+
     triggerFright: function (segsFijos) {
       var fr = CFG.fright(this.level);
-      var secs = (segsFijos > 0) ? segsFijos : fr.seconds * this.frightMult;
+      var secs = (segsFijos > 0) ? segsFijos : this.frightSecs();
       this.chainIndex = 0;                       // la cadena se reinicia
       this.forceReversalFright();
       if (secs <= 0) {                           // solo inversión, sin modo azul
@@ -1599,7 +1609,7 @@
       this.frightTicks = Math.round(secs * 60);
       /* con segundos fijos (GRITO, CACERÍA) los fantasmas tienen que avisar
        * de que se acaba aunque el nivel ya no tenga parpadeos en la tabla */
-      this.frightFlashes = (segsFijos > 0 && !fr.flashes) ? 5 : fr.flashes;
+      this.frightFlashes = fr.flashes || 5;     // ...o el azul mínimo del REY
       this.frightFlashOn = false;
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
@@ -4989,7 +4999,7 @@
     predictFright: function () {
       this.frightPredictTick = this.tick;
       var fr = CFG.fright(this.level);
-      var secs = fr.seconds * this.frightMult;
+      var secs = this.frightSecs();
       for (var i = 0; i < 4; i++) {
         var g = this.ghosts[i];
         if (g.mode === 'normal') g.dir = CFG.OPP[g.dir];
@@ -4999,7 +5009,7 @@
       }
       if (secs <= 0) return;
       this.frightTicks = Math.round(secs * 60);
-      this.frightFlashes = fr.flashes;
+      this.frightFlashes = fr.flashes || 5;
       this.frightFlashOn = false;
     },
 

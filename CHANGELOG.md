@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-04 · La superpastilla siempre afecta al REY FANTASMA
+
+- Desde el nivel 19 la superpastilla ya no pone azul a nadie, y al rey del
+  nivel 20 en adelante no se le podía pegar con ella. Ahora, **con el rey
+  vivo, el azul dura al menos 2 s** en cualquier nivel (el del nivel 15 pasa
+  de 1 s a 2).
+
 ## 2026-10-04 · El HOSPITAL levanta a todos los caídos
 
 - **HOSPITAL (Soporte, R):** ya no es un seguro de 10 s. Al usarlo **vuelven
