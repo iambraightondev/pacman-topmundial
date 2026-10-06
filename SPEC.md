@@ -4078,7 +4078,7 @@ and ¡TEMPORADA CERRADA!): the first unseen notice whose `hasta` date has not
 passed is shown once per device (`pacman-topmundial-avisos-vistos`, plus an
 in-memory mark when there is no storage). Tests switch it off
 (`UI.avisosApagados`, `PM_PRUEBAS`) unless called with `forzar`. First
-notice: CONTINUAR now costs 2 000 (until 3 Nov).
+notice: CONTINUAR is back to 1 000 (6 Oct; it was 2 000 from 3 to 6 Oct), shown until 3 Nov.
 
 ## Panels that fit the window (`UI.encajar`, 20 Sep 2026)
 
@@ -4228,7 +4228,7 @@ OPCIONES. Shared 2-player rules (both modes):
   for a **SOPORTE, who needs a single pass** (18 Sep, `Game.esSoporte` /
   `pasadasDe`: reviving is its job, and five laps over a body with the ghosts
   on top is not something anyone does). Paying to come back (`CFG.CONTINUAR`,
-  CONTINUE? when everyone is out, REVIVIR at level end) costs `PRECIO` (2,000
+  CONTINUE? when everyone is out, REVIVIR at level end) costs `PRECIO` (1,000
   since 3 Oct) and reloads the four powers (`Game.contRecargar`); being lifted
   by a teammate does not. In **CLASIFICATORIA each player may pay only
   `CLASIF_MAX` (1) time per run** (`Game.contUsos` / `contAgotado`): once

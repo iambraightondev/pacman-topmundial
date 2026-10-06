@@ -27,6 +27,10 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > **DOMINIO** a x1,5. **CACERÍA:** el marcado, si está azul de superpastilla,
 > se lo come cualquiera (antes mataba al aliado).
 
+> **6 oct (pm-v340):** volver pagando cuesta otra vez **1.000** (pedido de
+> Braighton); el tope de una vez en CLASIFICATORIA no se toca. Aviso nuevo
+> (`continuar-1000`) hasta el 3 nov.
+
 > **3 oct (pm-v324):** volver pagando cuesta **2.000** (en todos los modos) y
 > en CLASIFICATORIA **una sola vez por jugador y partida** (pedido de
 > Braighton). Vuelve con los poderes recargados; levantado por un compañero,

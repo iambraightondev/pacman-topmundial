@@ -2,6 +2,13 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-06 · Volver pagando vuelve a costar 1.000
+
+- **CONTINUAR / REVIVIR pagando cuesta otra vez 1.000 monedas** (del 3 al 6
+  de octubre costó 2.000), en todos los modos.
+- En CLASIFICATORIA se sigue pudiendo pagar **una sola vez por partida**.
+- Al abrir el juego sale **una vez** el aviso del precio (hasta el 3 nov).
+
 ## 2026-10-05 · DOMINIO corre más, y la superpastilla manda sobre la CACERÍA
 
 - **DOMINIO (Mago, E):** el fantasma dominado corre a **×1,5**.

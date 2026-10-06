@@ -859,7 +859,7 @@
    * SUMA (desde el 26 sep) y lo comprado se queda. El saldo no se guarda: se
    * calcula (1.500 + ganado − precio de lo comprado). */
   /* CONTINUAR (17 sep 2026): al quedarte sin vidas, 10 segundos para pagar
-   * 2.000 monedas (1.000 hasta el 3 oct) y seguir en el mismo nivel con 1 vida. En todos los modos
+   * 1.000 monedas (2.000 del 3 al 6 oct) y seguir en el mismo nivel con 1 vida. En todos los modos
    * con vidas propias (no en PAC-MAN VS., CACERÍA ni SUPERVIVENCIA), también
    * en CLASIFICATORIA (quitado el 28 sep, devuelto el 2 oct: Game.puedeContinuar).
    * En party paga cada
@@ -870,7 +870,7 @@
    * partida (3 oct, Braighton): la segunda vez que pierde su última vida ya
    * no hay nada que pagar (Game.contAgotado). Levantar el cuerpo sigue igual. */
   CFG.CONTINUAR = {
-    PRECIO: 2000,
+    PRECIO: 1000,
     CLASIF_MAX: 1,
     VIDAS: 1,
     TICKS: 600,          // 10 s para decidir
@@ -882,12 +882,12 @@
    * vez por aparato (UI.avisoSiToca) y deja de salir pasado `hasta`: a quien
    * llegue después ya no le cambió nada. `precio` pinta la cifra con su moneda. */
   CFG.AVISOS = [
-    { id: 'continuar-2000', hasta: '2026-11-03',
-      titulo: 'CONTINUAR SUBE DE PRECIO',
-      texto: 'VOLVER A LA PARTIDA PAGANDO CUESTA AHORA',
+    { id: 'continuar-1000', hasta: '2026-11-03',
+      titulo: 'CONTINUAR BAJA DE PRECIO',
+      texto: 'VOLVER A LA PARTIDA PAGANDO VUELVE A COSTAR',
       precio: CFG.CONTINUAR.PRECIO,
-      notas: ['ANTES COSTABA 1.000',
-              'EN CLASIFICATORIA SOLO SE PUEDE PAGAR UNA VEZ POR PARTIDA'] }
+      notas: ['DEL 3 AL 6 DE OCTUBRE COSTÓ 2.000',
+              'EN CLASIFICATORIA SE SIGUE PAGANDO UNA SOLA VEZ POR PARTIDA'] }
   ];
 
   /* REVIVIR AL COMPAÑERO (17 sep 2026). Con vidas propias, quien se queda

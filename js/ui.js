@@ -14225,7 +14225,7 @@
     /* ------------------------------------------------------
      * CONTINUE? (CFG.CONTINUAR)
      *
-     * Sin vidas: 10 segundos para pagar 2.000 monedas y seguir con 1 vida en
+     * Sin vidas: 10 segundos para pagar 1.000 monedas y seguir con 1 vida en
      * el mismo nivel. JUGAR OTRA VEZ no se puede pulsar hasta que se acaba la
      * cuenta atrás (entonces sale el GAME OVER). MENÚ sí: irse es irse.
      * ------------------------------------------------------ */

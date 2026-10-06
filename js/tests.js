@@ -11598,7 +11598,7 @@
   });
 
   // ---------------------------------------------------------------
-  // CONTINUAR (17 sep): 2.000 monedas (1.000 hasta el 3 oct) por seguir con 1 vida
+  // CONTINUAR (17 sep): 1.000 monedas (2.000 del 3 al 6 oct) por seguir con 1 vida
   // ---------------------------------------------------------------
   /* La tienda de las pruebas empieza con 1.500, que ya no llegan: se le da
    * justo el precio, así que sin pagar hay CON_PARA y pagando quedan 1.500. */
@@ -11626,7 +11626,7 @@
         eq(G.contTicks, CFG.CONTINUAR.TICKS, '10 segundos');
         ok(!G.canPause(), 'no se pausa para pensárselo');
         ok(G.pedirContinuar(), 'se paga');
-        eq(Tn.saldo(), 1500, 'cuesta 2.000');
+        eq(Tn.saldo(), 1500, 'cuesta 1.000');
         eq(G.state, 'READY', 'se sigue');
         eq(G.level, 3, 'en el mismo nivel');
         eq(G.lives, 1, 'con 1 vida');
@@ -11692,7 +11692,7 @@
         eq(Tn.saldo(), CON_PARA, 'Enter ya no es CONTINUAR');
         UI.contBtnPagar.click();
         eq(Tn.saldo(), CON_PARA, 'el primer toque solo pregunta');
-        ok(/GASTAR 2\.000/.test(UI.contBtnPagar.textContent), 'el botón dice ¿GASTAR 2.000?');
+        ok(/GASTAR 1\.000/.test(UI.contBtnPagar.textContent), 'el botón dice ¿GASTAR 1.000?');
         eq(G.state, 'CONTINUE', 'y se sigue esperando');
         UI.contBtnPagar.click();
         eq(Tn.saldo(), 1500, 'el segundo paga');
@@ -11797,7 +11797,7 @@
         sinVidas();
         eq(G.state, 'CONTINUE', 'sin vidas, la cuenta atrás');
         ok(G.pedirContinuar(), 'se paga');
-        eq(Tn.saldo(), 1500, 'cuesta 2.000');
+        eq(Tn.saldo(), 1500, 'cuesta 1.000');
         eq(G.state, 'READY', 'y se sigue');
       } finally { G.toMenu(); window.PM.UI.hidePrompt(); }
       partidaHabCont({ players: 2, net: 'host', names: ['UNO', 'DOS'], hab: true, clasif: true,
@@ -11859,7 +11859,7 @@
     function H0() { var cd = window.PM.Hab.st[0].cd; cd[0] = 300; cd[3] = 4000; }
   });
 
-  test('el aviso de que CONTINUAR sube a 2.000 sale una sola vez por aparato', function () {
+  test('el aviso de que CONTINUAR vuelve a 1.000 sale una sola vez por aparato', function () {
     var UI = window.PM.UI, K = UI.AVISOS_VISTOS_KEY, previo = null, mem = UI.avisosVistos;
     try { previo = localStorage.getItem(K); } catch (e) { previo = null; }
     try {
@@ -11870,7 +11870,7 @@
       eq(UI.avisoSiToca(), false, 'las pruebas no lo ven sin pedirlo');
       ok(UI.avisoSiToca(true), 'la primera vez sale');
       ok(UI.promptOpen, 'en un diálogo');
-      ok(/2\.000/.test(UI.els.prompt.textContent), 'con el precio nuevo');
+      ok(/1\.000/.test(UI.els.prompt.textContent), 'con el precio nuevo');
       ok(/CONTINUAR/.test(UI.els.prompt.textContent), 'y de qué es');
       UI.hidePrompt();
       eq(UI.avisoSiToca(true), false, 'la segunda ya no');
@@ -12245,7 +12245,7 @@
         eq(G.state, 'REVIVIR', 'sale la vista de revivir');
         ok(G.contDisponible(), 'se puede pagar');
         ok(G.pedirContinuar(), 'se paga');
-        eq(Tn.saldo(), 1500, '2.000 monedas');
+        eq(Tn.saldo(), 1500, '1.000 monedas');
         ok(!G.pacs[1].out, 'J2 vuelve');
         eq(G.level, nivel + 1, 'y se pasa al nivel siguiente');
         eq(G.state, 'READY');

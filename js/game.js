@@ -2031,7 +2031,7 @@
     /* =========================================================
      * CONTINUAR (CFG.CONTINUAR)
      *
-     * Sin vidas, antes del GAME OVER, hay 10 segundos para pagar 2.000
+     * Sin vidas, antes del GAME OVER, hay 10 segundos para pagar 1.000
      * monedas y seguir en el mismo nivel con 1 vida. Si nadie paga, GAME OVER
      * de siempre (y ahí se cobra la partida y va al TOP, entera).
      *
