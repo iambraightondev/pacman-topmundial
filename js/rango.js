@@ -7,7 +7,7 @@
  *   para DESATADO. El top mundial dice quién tiene la mejor marca; esto dice
  *   cómo juegas este mes. UNO SOLO por jugador (24 sep): se juega a solo o
  *   en party y es el mismo rango; en party la marca a superar se multiplica
- *   como la de los trofeos (x1,25 dúo, x1,5 trío, x1,75 escuadra).
+ *   (CFG.RANGO.MULT_FORMATO: x1,5 dúo, x2 trío, x2,5 escuadra).
  *
  * Cómo funciona
  *   · Las divisiones son las ocho frutas (CEREZA … LLAVE), partidas en
@@ -84,11 +84,11 @@
     return tipo + v + '_' + t + (RG.VERSION >= 4 ? '' : '_1');
   }
 
-  /* multiplicador del formato (el de los trofeos: equipo x1,25 / 1,5 / 1,75) */
+  /* multiplicador del formato (CFG.RANGO.MULT_FORMATO; hasta el 6 oct, el de
+   * los trofeos) */
   function mult(n) {
-    var B = window.PM.Badges;
-    var f = B && B.FORMATOS && B.FORMATOS[(n | 0) - 1];
-    return f ? f.mult : 1;
+    var M = RG.MULT_FORMATO || [];
+    return M[(n | 0) - 1] > 0 ? M[(n | 0) - 1] : 1;
   }
 
   /* LOS ESCALONES, de abajo arriba: CEREZA IV, CEREZA III … CAMPANA I,
@@ -309,6 +309,7 @@
     cambio: cambio,
     par: par,
     parTramo: parTramo,
+    mult: mult,
     clave: clave,
     temporada: temporada,
     estadoDe: estadoDe,

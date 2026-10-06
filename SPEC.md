@@ -4665,6 +4665,10 @@ PR = colocar(rt/5) + rg − rl, sin bajar de 0 (y sin apuntar pérdidas que no s
 pueden perder, así no hay deuda). Cuenta si el ajuste `clasif` (viaja con la
 cuenta) está encendido y `Rango.porQueNo(G)` es null. La tabla lee
 `perfiles?select=usuario,avatar,logros` y aplica `estadoDe` a cada uno.
+**LISTÓN DE EQUIPO** (6 oct). La marca de cada escalón se multiplica por
+`CFG.RANGO.MULT_FORMATO[n − 1]` = 1 / 1,5 / 2 / 2,5 (`Rango.mult(n)`); antes
+era el de los trofeos (`Badges.FORMATOS[].mult`, 1,25 / 1,5 / 1,75), que no
+cambia. No toca lo ya apuntado: `rg`/`rl` guardan PR, no marcas.
 **CEREZA PROTEGIDA** (29 sep). `cambio(puntos, pr, n, nivel)` recorta a
 `[-pierde, gana]` de la fruta y, si la fruta tiene `minimo` y se llegó a su
 `nivel`, da al menos eso. CEREZA: `pierde: 0`, `minimo: 5` (nivel 2): ahí una

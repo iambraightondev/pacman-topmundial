@@ -8730,17 +8730,17 @@
       o.appendChild(back);
     },
 
-    /* En party la marca se multiplica como la de los trofeos: el texto que lo
-     * explica, con los números de verdad (Badges.FORMATOS) */
+    /* En party la marca se multiplica: el texto que lo explica, con los
+     * números de verdad (CFG.RANGO.MULT_FORMATO) */
     textoMultRango: function () {
       var party = this.textoPartyRango();
       return party ? (party + '.  ' + this.textoRolesRango()) : '';
     },
     textoPartyRango: function () {
-      var B = window.PM.Badges;
-      if (!B || !B.FORMATOS) return '';
+      var B = window.PM.Badges, Rg = window.PM.Rango;
+      if (!B || !B.FORMATOS || !Rg) return '';
       return 'EN PARTY LA MARCA SE MULTIPLICA: ' + B.FORMATOS.slice(1).map(function (f) {
-        return f.name + ' X' + String(f.mult).replace('.', ',');
+        return f.name + ' X' + String(Rg.mult(f.n)).replace('.', ',');
       }).join(' · ');
     },
     /* lo que pide cada rol (CFG.RANGO.FACTOR_ROL), en palabras */

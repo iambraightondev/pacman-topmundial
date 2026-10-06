@@ -17573,8 +17573,11 @@
       eq(Rg.cambio(30000, 100, 1, 1), 0, 'sin el nivel no se gana');
       eq(Rg.cambio(30000, 100, 1, 2), 20, 'con él, sí');
       eq(Rg.cambio(3000, 100, 1, 1), -D[1].pierde, 'y perder se pierde igual');
-      // en equipo la marca se multiplica como los trofeos
-      eq(Rg.cambio(8000 * 1.25, 0, 2), 0, 'en dúo, un cuarto más');
+      // en equipo la marca se multiplica (CFG.RANGO.MULT_FORMATO, 6 oct)
+      eq(Rg.cambio(8000 * 1.5, 0, 2), 0, 'en dúo, la mitad más');
+      eq(Rg.cambio(8000 * 2, 0, 3), 0, 'en trío, el doble');
+      eq(Rg.cambio(8000 * 2.5, 0, 4), 0, 'en escuadra, dos veces y media');
+      eq(window.PM.Badges.FORMATOS[1].mult, 1.25, 'los trofeos siguen con su x1,25');
     });
 
   test('RANGO: los premios de fin de temporada se deducen de lo alcanzado en las cerradas', function () {
@@ -17696,7 +17699,7 @@
   test('RANGO: uno solo para solo y party; en party la marca se multiplica', function () {
     conContadores(function () {
       var Rg = window.PM.Rango, RG = CFG.RANGO, B = window.PM.Badges;
-      var m2 = B.FORMATOS[1].mult;
+      var m2 = Rg.mult(2);
       // cinco de colocación: tres en dúo con el doble de puntos y dos a solo
       Rg.apuntar(Math.round(20000 * m2), 2, 5);
       Rg.apuntar(Math.round(20000 * m2), 2, 5);
@@ -17969,7 +17972,7 @@
     // y apuntada: igualar la marca del dúo con esos roles no mueve nada
     conContadores(function () {
       for (var i = 0; i < 5; i++) Rg.apuntar(20000, 1, 5);
-      var t = Rg.estado().tramo, m2 = window.PM.Badges.FORMATOS[1].mult;
+      var t = Rg.estado().tramo, m2 = Rg.mult(2);
       var marca = Rg.parTramo(t, 1) * m2 * Rg.factorRoles(['soporte', 'soporte'], 2);
       eq(Rg.apuntar(Math.round(marca), 2, 5, ['soporte', 'soporte']).cambio, 0, 'dos SOPORTE, a su marca: 0');
       eq(Rg.apuntar(Math.round(marca * 2), 2, 5, ['soporte', 'soporte']).cambio, 20, 'doblándola, +20');

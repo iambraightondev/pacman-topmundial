@@ -2,6 +2,14 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-06 · En equipo, el rango pide más
+
+- En **CLASIFICATORIA**, la marca a superar en party sube: **DÚO ×1,5, TRÍO
+  ×2 y ESCUADRA ×2,5** (antes ×1,25 / ×1,5 / ×1,75). En equipo se puntúa
+  bastante más que a solas y jugar en dúo era el atajo para subir.
+- Vale para las partidas de ahora en adelante: el PR que ya tienes no cambia.
+- Los trofeos de equipo siguen pidiendo lo mismo.
+
 ## 2026-10-06 · Volver pagando vuelve a costar 1.000
 
 - **CONTINUAR / REVIVIR pagando cuesta otra vez 1.000 monedas** (del 3 al 6

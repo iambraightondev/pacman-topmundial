@@ -1507,7 +1507,7 @@
    * para no confundirse con los metales de las copas.
    *
    * `par` es la marca que se espera de alguien de esa división EN SOLO; en
-   * equipo se multiplica como los trofeos (Badges.FORMATOS). Salen de las
+   * equipo se multiplica por MULT_FORMATO (hasta el 6 oct, como los trofeos). Salen de las
    * marcas reales de DESATADO del 22 sep: a uno, la mitad de las partidas no
    * pasa de 1.300 y una de cada diez supera 9.600; la mejor ronda 40.000.
    * ---------------------------------------------------------------- */
@@ -1559,6 +1559,15 @@
       '2026-10': { cereza: 0, fresa: 1000, naranja: 2000, manzana: 3000, melon: 5000, galaxian: 7500, campana: 10000, llave: 15000 }
     },
     COLOCACION: 5,        // partidas antes de tener rango
+    /* EL LISTÓN DE EQUIPO (6 oct, Braighton): por cuánto se multiplica la
+     * marca según cuántos jugáis (solo, dúo, trío, escuadra). Hasta entonces
+     * era el de los trofeos (x1,25 / x1,5 / x1,75) y jugar en dúo era el
+     * atajo para subir: con los mismos jugadores, las marcas reales de
+     * DESATADO salen ~x3 en dúo y ~x5 en trío (23 y 12 partidas, casi todas
+     * del mismo equipo). Se propuso x3 / x5 / x7 y Braighton eligió esto,
+     * más suave. Los trofeos NO cambian (Badges.FORMATOS). Solo vale para lo
+     * que se juegue desde ahora: lo ganado está guardado en PR. */
+    MULT_FORMATO: [1, 1.5, 2, 2.5],
     /* La colocación no regala: un escalón por debajo del que alcanza tu
      * media, al principio de él, y nunca más arriba que este (4 = FRESA IV).
      * De ahí para arriba se sube jugando. */

@@ -27,6 +27,15 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > **DOMINIO** a x1,5. **CACERÍA:** el marcado, si está azul de superpastilla,
 > se lo come cualquiera (antes mataba al aliado).
 
+> **6 oct (pm-v341):** el listón de equipo del RANGO ya no es el de los
+> trofeos: **x1,5 / x2 / x2,5** (`CFG.RANGO.MULT_FORMATO`). Datos reales desde
+> el 24 sep (DESATADO): solo mediana 25.950 (261), dúo 114.470 (23), trío
+> 191.460 (12), escuadra sin partidas; con los mismos jugadores, ~x3 y ~x5.
+> Se propuso x3/x5/x7 y Braighton lo vio excesivo. **A vigilar:** con esto, de las partidas medidas siguen
+> pasando la marca de GALAXIAN el 52 % de los dúos y el 67 % de los tríos, y
+> la de LLAVE el 13 % y el 42 % (en solo, el 11 % y el 2 %); si el equipo
+> sigue siendo el atajo, es subir estos tres números. Los trofeos no se tocaron.
+
 > **6 oct (pm-v340):** volver pagando cuesta otra vez **1.000** (pedido de
 > Braighton); el tope de una vez en CLASIFICATORIA no se toca. Aviso nuevo
 > (`continuar-1000`) hasta el 3 nov.
