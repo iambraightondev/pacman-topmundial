@@ -7,7 +7,26 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **5 de octubre de 2026** (pm-v339).
+Última puesta al día: **6 de octubre de 2026** (pm-v341).
+
+> **SESIÓN DEL 6 OCT (pm-v340 y pm-v341), publicada. Se retoma en otra
+> sesión; lo abierto es el punto «A vigilar» del listón de equipo.**
+
+> **6 oct (pm-v341):** el listón de equipo del RANGO ya no es el de los
+> trofeos: **x1,5 / x2 / x2,5** (`CFG.RANGO.MULT_FORMATO`). Datos reales desde
+> el 24 sep (DESATADO): solo mediana 25.950 (261), dúo 114.470 (23), trío
+> 191.460 (12), escuadra sin partidas; con los mismos jugadores, ~x3 y ~x5.
+> Se propuso x3/x5/x7 y Braighton lo vio excesivo («una salvajada»); no
+> volver a proponerlo sin partidas nuevas. **A vigilar:** con esto, de las
+> partidas medidas (todas las de DESATADO: el top no dice cuáles fueron
+> clasificatorias, y Braighton está en las 35 de equipo) siguen
+> pasando la marca de GALAXIAN el 52 % de los dúos y el 67 % de los tríos, y
+> la de LLAVE el 13 % y el 42 % (en solo, el 11 % y el 2 %); si el equipo
+> sigue siendo el atajo, es subir estos tres números. Los trofeos no se tocaron.
+
+> **6 oct (pm-v340):** volver pagando cuesta otra vez **1.000** (pedido de
+> Braighton); el tope de una vez en CLASIFICATORIA no se toca. Aviso nuevo
+> (`continuar-1000`) hasta el 3 nov.
 
 > **4-5 oct (pm-v330 a pm-v339), todo pedido por Braighton y publicado:**
 > **Premios del rango de octubre** subidos con la temporada empezada (1.000,
@@ -26,19 +45,6 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > incluido (`COLOCA_ALTA_*`; también en cofres-gen y en `rango_pr_tope`).
 > **DOMINIO** a x1,5. **CACERÍA:** el marcado, si está azul de superpastilla,
 > se lo come cualquiera (antes mataba al aliado).
-
-> **6 oct (pm-v341):** el listón de equipo del RANGO ya no es el de los
-> trofeos: **x1,5 / x2 / x2,5** (`CFG.RANGO.MULT_FORMATO`). Datos reales desde
-> el 24 sep (DESATADO): solo mediana 25.950 (261), dúo 114.470 (23), trío
-> 191.460 (12), escuadra sin partidas; con los mismos jugadores, ~x3 y ~x5.
-> Se propuso x3/x5/x7 y Braighton lo vio excesivo. **A vigilar:** con esto, de las partidas medidas siguen
-> pasando la marca de GALAXIAN el 52 % de los dúos y el 67 % de los tríos, y
-> la de LLAVE el 13 % y el 42 % (en solo, el 11 % y el 2 %); si el equipo
-> sigue siendo el atajo, es subir estos tres números. Los trofeos no se tocaron.
-
-> **6 oct (pm-v340):** volver pagando cuesta otra vez **1.000** (pedido de
-> Braighton); el tope de una vez en CLASIFICATORIA no se toca. Aviso nuevo
-> (`continuar-1000`) hasta el 3 nov.
 
 > **3 oct (pm-v324):** volver pagando cuesta **2.000** (en todos los modos) y
 > en CLASIFICATORIA **una sola vez por jugador y partida** (pedido de
@@ -120,7 +126,7 @@ esto se ha jugado en el navegador ni en una party real.**
 ### ▶ PRÓXIMA SESIÓN (dejado el 4 oct)
 
 **Hecho el 3-4 oct, todo publicado (pm-v324 a pm-v329):** volver pagando a
-2.000 y una sola vez por partida en CLASIFICATORIA; aviso de cambios al entrar
+2.000 (devuelto a 1.000 el 6 oct) y una sola vez por partida en CLASIFICATORIA; aviso de cambios al entrar
 (`CFG.AVISOS`); sala de party y GAME OVER sin desbordes y con los botones
 fijos; la W del Tanque paga en los dos casos que fallaban; fruta x2 para el
 SOPORTE; METEORO devuelve 10 s. Detalle en CHANGELOG y SPEC.
