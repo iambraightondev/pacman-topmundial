@@ -110,8 +110,18 @@
     return r ? [r[0] | 0, r[1] | 0, r[2] | 0] : [0, 0, 0];
   }
 
+  /* Los puntos de un rol, con lo de antes del 7 oct convertido a la escala
+   * nueva: la cuenta es de PM.CofresGen.puntosMae, que es la misma que hace
+   * el servidor para los cofres. */
+  function puntosDe(c, rol, aj) {
+    var CG = window.PM.CofresGen;
+    if (CG && CG.puntosMae) return CG.puntosMae(c || {}, rol, aj, CG.escalaMae(CFG));
+    return Math.max(0, stat(c, 'mae_' + rol) + aj[0]) + stat(c, 'maen_' + rol);
+  }
+
   var Maestria = {
     ROLES: ROLES,
+    puntosDe: puntosDe,
     nivelDe: nivelDe,
     notaDe: notaDe,
     valor: valor,
@@ -123,7 +133,7 @@
       var c = A() ? A().stats() : {};
       /* con el ajuste a mano de la cuenta, si lo tiene (CFG.AJUSTES_CUENTA) */
       var aj = ajusteDe(rol);
-      var puntos = Math.max(0, stat(c, 'mae_' + rol) + aj[0]);
+      var puntos = puntosDe(c, rol, aj);
       var eses = Math.max(0, stat(c, 'maes_' + rol) + aj[2]);
       var nivel = nivelDe(puntos, eses);
       var sig = M.NIVELES[nivel + 1] || null;
@@ -146,7 +156,7 @@
       var c = logros || (A() ? A().stats() : {}), mejor = null;
       for (var i = 0; i < ROLES.length; i++) {
         var rol = ROLES[i], aj = ajusteDe(rol, nombre);
-        var puntos = Math.max(0, stat(c, 'mae_' + rol) + aj[0]);
+        var puntos = puntosDe(c, rol, aj);
         var eses = Math.max(0, stat(c, 'maes_' + rol) + aj[2]);
         if (!(puntos > 0)) continue;
         var nivel = nivelDe(puntos, eses);
@@ -194,9 +204,12 @@
       var nota = notaDe(rol, v, solo);
       var pts = M.PUNTOS[nota] || 0;
       var o = {};
-      o['mae_' + rol] = pts;
+      /* a los contadores de la escala nueva (7 oct): mae_<rol> se queda con
+       * lo de antes, que se convierte al leerlo */
+      o['maen_' + rol] = pts;
+      o['maenp_' + rol] = 1;
       o['maep_' + rol] = 1;
-      if (nota === 'S') o['maes_' + rol] = 1;
+      if (nota === 'S') { o['maes_' + rol] = 1; o['maens_' + rol] = 1; }
       A().recordAll(o);
       var ahora = this.datos(rol);
       return {

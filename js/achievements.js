@@ -150,6 +150,9 @@
    *   maes_<rol>    notas S sacadas con ese rol
    *   maep_<rol>    partidas que han contado
    *   maesem_<rol>  de ellas, cuántas se sembraron de lo jugado antes
+   *   maen_<rol>    puntos ganados con la escala del 7 oct (mae_<rol> se
+   *                 queda con lo de antes, en la escala vieja)
+   *   maenp_<rol>, maens_<rol>   las partidas y las S de esa escala nueva
    * y una para todos: maevivas, las partidas de DESATADO cerradas con las
    * maestrías ya en marcha (cortas incluidas). Es lo que hay que quitarle a
    * hab:partidas para saber cuántas son de ANTES y se pueden sembrar. */
@@ -159,6 +162,9 @@
     BASE['maes_' + r] = 'suma';
     BASE['maep_' + r] = 'suma';
     BASE['maesem_' + r] = 'mayor';
+    BASE['maen_' + r] = 'suma';
+    BASE['maenp_' + r] = 'suma';
+    BASE['maens_' + r] = 'suma';
   });
   /* ...y una por cosa comprable: c_<id> = 1 si está comprada. Salen del
    * catálogo, así que añadir algo a la tienda crea su contador solo. */

@@ -1695,8 +1695,16 @@
       { id: 'leyenda',  name: 'LEYENDA',     puntos: 15000, eses: 3 },
       { id: 'mundial',  name: 'TOP MUNDIAL', puntos: 30000, eses: 8 }
     ],
-    /* puntos que da cada nota */
-    PUNTOS: { S: 170, A: 130, B: 100, C: 80, D: 60 },
+    /* puntos que da cada nota.
+     * 7 oct (Braighton): ESCALA EMPINADA. Con 170/130/100/80/60 la peor nota
+     * pagaba un tercio de la mejor y la maestría medía cuánto se jugaba, no
+     * cómo: MAULIO, con más S de TANQUE que nadie, iba a un tercio de quien
+     * simplemente llevaba más partidas. Ahora la S vale cuatro B y la D nada.
+     * Lo ya jugado se convierte al leerlo (PM.CofresGen.puntosMae): los
+     * contadores viejos (mae_<rol>) se quedan en la escala de antes y lo
+     * nuevo va a los suyos (maen_<rol>). */
+    PUNTOS: { S: 400, A: 200, B: 100, C: 40, D: 0 },
+    PUNTOS_ANTES: { S: 170, A: 130, B: 100, C: 80, D: 60 },
     /* lo que vale una partida de antes de que existieran las maestrías: no se
      * sabe cómo fue, así que cuenta como una B */
     SEMBRADA: 100,

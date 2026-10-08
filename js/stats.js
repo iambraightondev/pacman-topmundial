@@ -380,7 +380,9 @@
           color: (info[r] && info[r].color) || '#ff66cc',
           partidas: p,
           pct: total > 0 ? Math.round(p * 100 / total) : 0,
-          maestria: Math.max(0, cont(c, 'mae_' + r) + ajuste(r, 0)),
+          maestria: (window.PM.Maestria && window.PM.Maestria.puntosDe)
+            ? window.PM.Maestria.puntosDe(c, r, [ajuste(r, 0), ajuste(r, 1), ajuste(r, 2)])
+            : Math.max(0, cont(c, 'mae_' + r) + ajuste(r, 0)),
           notasS: Math.max(0, cont(c, 'maes_' + r) + ajuste(r, 2)),
           record: rec,
           tiempo: cont(c, 'rol_' + r + ':tiempo'),

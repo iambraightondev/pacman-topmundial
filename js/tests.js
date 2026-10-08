@@ -17459,6 +17459,26 @@
     }
   }
 
+  /* 7 oct (Braighton): la S vale cuatro B y la D nada. Lo nuevo va a sus
+   * contadores; lo de antes se convierte al leerlo y nunca baja. */
+  test('MAESTRÍA: la escala empinada, y lo ya jugado convertido', function () {
+    var Mae = window.PM.Maestria, P = CFG.MAESTRIA.PUNTOS;
+    eq([P.S, P.A, P.B, P.C, P.D].join(','), '400,200,100,40,0', 'la escala nueva');
+    conContadores(function (A) {
+      /* 10 sembradas (B) y 5 S de antes: 1.000 + 850 con la escala vieja */
+      A.recordAll({ mae_tanque: 1850, maep_tanque: 15, maes_tanque: 5, maesem_tanque: 10 });
+      eq(Mae.datos('tanque').puntos, 10 * 100 + 5 * 400, 'las S de antes pagan como S de ahora y las B igual');
+      /* una sola partida mala de antes: valdría menos, pero no se le quita */
+      A.recordAll({ mae_mago: 60, maep_mago: 1 });
+      eq(Mae.datos('mago').puntos, 60, 'lo ya ganado no baja');
+      /* y una S de ahora suma 400 encima, sin volver a convertirse */
+      A.recordAll({ maen_tanque: 400, maenp_tanque: 1, maep_tanque: 1, maes_tanque: 1, maens_tanque: 1 });
+      eq(Mae.datos('tanque').puntos, 3000 + 400, 'lo nuevo se suma tal cual');
+      eq(Mae.datos('tanque').eses, 6, 'y las S cuentan todas');
+      eq(Mae.datos('tanque').partidas, 16);
+    });
+  });
+
   test('los ajustes a mano de una cuenta corrigen sus cifras y sus maestrías', function () {
     var Ac = window.PM.Account, Mae = window.PM.Maestria, u0 = Ac.user, t0 = Ac.token;
     conContadores(function (A) {
@@ -17471,13 +17491,15 @@
         Ac.user = { id: 'id-prueba', usuario: 'IAMBRAIGHTON' };
         Ac.token = 'token-de-prueba';
         eq(A.stats()['clasico:puntosMax'], 84250, 'la cifra mala se corrige al leerla');
-        eq(Mae.datos('mago').puntos, mago0 + 6960, 'el Mago recibe sus partidas de antes');
-        eq(Mae.datos('asesino').puntos, 20000 - 13720, 'y se le quitan al Asesino');
+        /* desde el 7 oct lo de antes se lee convertido a la escala nueva:
+         * las 4 S del Mago a 400, sus 61 de siempre a 100 y lo que sobra */
+        eq(Mae.datos('mago').puntos, mago0 + 7880, 'el Mago recibe sus partidas de antes');
+        eq(Mae.datos('asesino').puntos, 6378, 'y se le quitan al Asesino (6.280 de antes, convertidos)');
         eq(Mae.datos('asesino').partidas, 200 - 132, 'con sus partidas');
         eq(Mae.datos('asesino').eses, 20 - 13, 'y las S que ya no merece (12 por minuto)');
         Ac.user = { id: 'id-prueba', usuario: 'OTRO' };
         eq(A.stats()['clasico:puntosMax'], 180550, 'a otra cuenta no le toca nada');
-        eq(Mae.datos('asesino').puntos, 20000);
+        eq(Mae.datos('asesino').puntos, 23186, 'sin ajuste, sus 20.000 convertidos');
         eq(Mae.datos('asesino').eses, 20);
       } finally { Ac.user = u0; Ac.token = t0; }
     });

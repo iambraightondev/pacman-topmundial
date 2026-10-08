@@ -301,6 +301,22 @@ export const DATOS = {
       ]
     }
   },
+  "maeEscala": {
+    "antes": [
+      170,
+      130,
+      100,
+      80,
+      60
+    ],
+    "ahora": [
+      400,
+      200,
+      100,
+      40,
+      0
+    ]
+  },
   "rango": {
     "divisiones": [
       {

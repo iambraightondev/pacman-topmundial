@@ -166,6 +166,43 @@
     return lvl;
   }
 
+  /* PUNTOS DE MAESTRÍA de un rol, con la escala del 7 oct (js/config.js,
+   * CFG.MAESTRIA.PUNTOS). Es la ÚNICA cuenta: la usan la pantalla de
+   * maestrías, las estadísticas y los cofres, aquí y en el servidor.
+   *
+   * Lo jugado desde entonces ya viene en la escala nueva (maen_<rol>). Lo de
+   * antes se guardó sumado, sin la nota de cada partida, así que se
+   * convierte con lo que sí se sabe: cuántas fueron S (pagan la S nueva),
+   * cuántas se sembraron (eran B: valen lo mismo) y la MEDIA de las demás.
+   * Una media no dice el reparto, y la escala nueva no es una recta: se toma
+   * el punto medio entre lo menos y lo más que ese reparto podría dar. Y
+   * nunca menos de lo que ya se tenía.
+   *   a  el ajuste a mano de la cuenta: [puntos, partidas, notas S]
+   *   E  { antes: [S, A, B, C, D], ahora: [S, A, B, C, D] } */
+  function puntosMae(c, rol, a, E) {
+    a = a || [0, 0, 0];
+    var nuevos = entero(c['maen_' + rol]);
+    var P = Math.max(0, entero(c['mae_' + rol]) + (a[0] | 0));
+    if (!E || !E.antes || !E.ahora) return P + nuevos;
+    var N = Math.max(0, entero(c['maep_' + rol]) + (a[1] | 0) - entero(c['maenp_' + rol]));
+    var s = Math.min(N, Math.max(0, entero(c['maes_' + rol]) + (a[2] | 0) - entero(c['maens_' + rol])));
+    var b = Math.min(N - s, Math.max(0, entero(c['maesem_' + rol]) + (a[1] | 0)));
+    var m = N - s - b, Q = P - E.antes[0] * s - E.antes[2] * b, resto;
+    if (m <= 0) resto = Math.max(0, Q);
+    else {
+      /* las notas que no son S, de la peor a la mejor */
+      var x = [E.antes[4], E.antes[3], E.antes[2], E.antes[1]];
+      var y = [E.ahora[4], E.ahora[3], E.ahora[2], E.ahora[1]];
+      var q = Math.min(x[3], Math.max(x[0], Q / m)), menos = y[3], i;
+      for (i = 0; i < 3; i++) {
+        if (q <= x[i + 1]) { menos = y[i] + (q - x[i]) * (y[i + 1] - y[i]) / (x[i + 1] - x[i]); break; }
+      }
+      var mas = y[0] + (q - x[0]) * (y[3] - y[0]) / (x[3] - x[0]);
+      resto = m * (menos + mas) / 2;
+    }
+    return Math.max(P, Math.round(E.ahora[0] * s + E.ahora[2] * b + resto)) + nuevos;
+  }
+
   /* escalones de MAESTRÍA DE ROL alcanzados entre los cuatro roles
    * (js/maestria.js, nivelDe + 1 por rol), con el ajuste a mano de la cuenta
    * (CFG.AJUSTES_CUENTA), que es lo que ve el jugador */
@@ -174,7 +211,7 @@
     var total = 0;
     for (var r = 0; r < D.roles.length; r++) {
       var rol = D.roles[r], a = (aj && aj[rol]) || [0, 0, 0];
-      var pts = Math.max(0, entero(c['mae_' + rol]) + (a[0] | 0));
+      var pts = puntosMae(c, rol, a, D.maeEscala);
       var eses = Math.max(0, entero(c['maes_' + rol]) + (a[2] | 0));
       var k = 0;
       for (var i = 0; i < D.maestria.length; i++) {
@@ -464,6 +501,7 @@
       roles: (CFG.HAB && CFG.HAB.ROL_IDS) || ['asesino', 'tanque', 'mago', 'soporte'],
       maestria: CFG.MAESTRIA.NIVELES.map(function (n) { return [n.puntos, n.eses]; }),
       ajustesMae: ajMae,
+      maeEscala: escalaMae(CFG),
       rango: {
         divisiones: RG.DIVISIONES.map(function (d) {
           return { par: d.par, escalones: d.escalones, prEscalon: d.prEscalon };
@@ -474,6 +512,14 @@
         ajustes: ajRango
       }
     };
+  }
+
+  /* las dos escalas de la maestría, como las quiere puntosMae */
+  function escalaMae(CFG) {
+    var M = CFG.MAESTRIA, L = ['S', 'A', 'B', 'C', 'D'];
+    if (!M || !M.PUNTOS_ANTES) return null;
+    return { antes: L.map(function (n) { return M.PUNTOS_ANTES[n]; }),
+             ahora: L.map(function (n) { return M.PUNTOS[n]; }) };
   }
 
   var CofresGen = {
@@ -488,6 +534,8 @@
     aplicar: aplicar,
     nivel: nivel,
     maestrias: maestrias,
+    puntosMae: puntosMae,
+    escalaMae: escalaMae,
     baseDe: baseDe,
     baseAhora: baseAhora,
     dia: dia,
