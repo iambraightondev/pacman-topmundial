@@ -916,17 +916,17 @@
   });
 
   /* En equipo no se hacen más puntos (el laberinto es el mismo), pero se
-   * aguanta más. Cada escalón sube un cuarto por formato: x1,25 / x1,5 / x1,75.
-   * Antes era x2 / x3 / x4 y las maestrías de equipo eran casi inalcanzables. */
-  test('el listón de cada maestría sube un cuarto por formato',
+   * aguanta más. El escalón sube por formato: x1,5 / x2 / x2,5 (7 oct; antes
+   * x1,25 / x1,5 / x1,75, y al principio x2 / x3 / x4). */
+  test('el listón de cada maestría sube por formato',
     function () {
       var B = window.PM.Badges;
       var aprendiz = CFG.BADGES[0];
       eq(B.goal(aprendiz, 'solo'), 3000);
-      eq(B.goal(aprendiz, 'duo'), 3750, 'en dúo, x1,25');
-      eq(B.goal(aprendiz, 'trio'), 4500, 'en trío, x1,5');
-      eq(B.goal(aprendiz, 'escuadra'), 5250, 'en escuadra, x1,75');
-      eq(B.goal(CFG.BADGES[5], 'escuadra'), 175000, 'TOP MUNDIAL en escuadra');
+      eq(B.goal(aprendiz, 'duo'), 4500, 'en dúo, x1,5');
+      eq(B.goal(aprendiz, 'trio'), 6000, 'en trío, x2');
+      eq(B.goal(aprendiz, 'escuadra'), 7500, 'en escuadra, x2,5');
+      eq(B.goal(CFG.BADGES[5], 'escuadra'), CFG.BADGES[5].points * 2.5, 'TOP MUNDIAL en escuadra');
       eq(B.players('trio'), 3);
       eq(B.modeName('escuadra'), 'ESCUADRA');
     });
@@ -7878,8 +7878,8 @@
       eq(B.mult('hab'), 1, 'habilidades no multiplica: tiene tabla propia');
       eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab'), 100000,
          'LEYENDA en DESATADO son 100.000');
-      eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab2'), 125000,
-         'y en dúo, x1,25, como en cualquier ruta');
+      eq(B.goal({ id: 'leyenda', points: 60000 }, 'hab2'), 150000,
+         'y en dúo, x1,5, como en cualquier ruta');
       eq(B.top('lab').id, 'cazador', '9.000 en laberintos: CAZADOR');
       eq(B.top('hab').id, 'aprendiz', 'los mismos 9.000 en habilidades: APRENDIZ');
       eq(B.top('solo'), null, 'y en solo, ninguna: ahí no se ha jugado');
@@ -7947,14 +7947,14 @@
   });
 
   /* Doce rutas: el listón lo marcan las dos cosas a la vez, el formato y el
-   * mundo. Escuadra en DESATADO es lo más caro que hay (su tabla propia, x1,75). */
+   * mundo. Escuadra en DESATADO es lo más caro que hay (su tabla propia, x2,5). */
   test('el listón de una ruta cruza el formato con el mundo', function () {
     var B = window.PM.Badges;
     var aprendiz = CFG.BADGES[0];
     eq(B.goal(aprendiz, 'lab'), 3000, 'laberintos en solo: el escalón de siempre');
-    eq(B.goal(aprendiz, 'lab3'), 4500, 'en trío, x1,5');
+    eq(B.goal(aprendiz, 'lab3'), 6000, 'en trío, x2');
     eq(B.goal(aprendiz, 'hab'), 5000, 'desatado en solo: el suyo, más alto');
-    eq(B.goal(aprendiz, 'hab4'), 8750, 'y en escuadra, x1,75 el suyo');
+    eq(B.goal(aprendiz, 'hab4'), 12500, 'y en escuadra, x2,5 el suyo');
     eq(B.mundoDe('hab3'), 'hab');
     eq(B.players('hab3'), 3);
     eq(B.modeName('hab3'), 'DESATADO · TRÍO');
@@ -17638,7 +17638,7 @@
       eq(Rg.cambio(8000 * 1.5, 0, 2), 0, 'en dúo, la mitad más');
       eq(Rg.cambio(8000 * 2, 0, 3), 0, 'en trío, el doble');
       eq(Rg.cambio(8000 * 2.5, 0, 4), 0, 'en escuadra, dos veces y media');
-      eq(window.PM.Badges.FORMATOS[1].mult, 1.25, 'los trofeos siguen con su x1,25');
+      eq(window.PM.Badges.FORMATOS[1].mult, 1.5, 'y desde el 7 oct los trofeos piden lo mismo');
     });
 
   test('RANGO: los premios de fin de temporada se deducen de lo alcanzado en las cerradas', function () {

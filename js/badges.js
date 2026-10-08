@@ -29,8 +29,9 @@
  * Y cada ruta pide MÁS puntos según lo que se regale: el escalón
  * de siempre multiplicado por su factor, que es el del formato por
  * el del mundo.
- *   · Por FORMATO: x1 solo, x1,25 dúo, x1,5 trío y x1,75 escuadra
- *     (APRENDIZ son 3.000, 3.750, 4.500 y 5.250). No es por
+ *   · Por FORMATO: x1 solo, x1,5 dúo, x2 trío y x2,5 escuadra
+ *     (APRENDIZ son 3.000, 4.500, 6.000 y 7.500; hasta el 7 oct eran
+ *     x1,25 / x1,5 / x1,75). No es por
  *     jugadores: en equipo no se hacen más puntos, se aguanta más.
  *     Ver FORMATOS.
  *   · Por MUNDO, DESATADO no multiplica: tiene SU PROPIA TABLA de
@@ -78,12 +79,17 @@
    * las marcas reales de equipo salían PARECIDAS a las de solo (en DESATADO,
    * 110.000 en solo contra 74.000 / 68.000 / 64.000 en dúo, trío y
    * escuadra). Lo que sí da un equipo es aguante —más vidas, compañeros que
-   * reaparecen—, y eso es lo que pagan estos cuartos de más. */
+   * reaparecen—, y eso es lo que pagan estos multiplicadores.
+ *
+ * 7 oct (Braighton): de x1,25 / x1,5 / x1,75 a x1,5 / x2 / x2,5, los
+ * mismos que el listón de equipo del rango (CFG.RANGO.MULT_FORMATO). Los
+ * trofeos se calculan en vivo contra el récord, así que quien estuviera
+ * entre el listón viejo y el nuevo pierde esa copa: decidido así. */
   var FORMATOS = [
     { n: 1, name: 'SOLO',     mult: 1 },
-    { n: 2, name: 'DÚO',      mult: 1.25 },
-    { n: 3, name: 'TRÍO',     mult: 1.5 },
-    { n: 4, name: 'ESCUADRA', mult: 1.75 }
+    { n: 2, name: 'DÚO',      mult: 1.5 },
+    { n: 3, name: 'TRÍO',     mult: 2 },
+    { n: 4, name: 'ESCUADRA', mult: 2.5 }
   ];
 
   /* Identificador de una ruta. Los del clásico y los de solo de cada mundo

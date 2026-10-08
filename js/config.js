@@ -1565,7 +1565,7 @@
      * atajo para subir: con los mismos jugadores, las marcas reales de
      * DESATADO salen ~x3 en dúo y ~x5 en trío (23 y 12 partidas, casi todas
      * del mismo equipo). Se propuso x3 / x5 / x7 y Braighton eligió esto,
-     * más suave. Los trofeos NO cambian (Badges.FORMATOS). Solo vale para lo
+     * más suave. Los trofeos se igualaron a esto el 7 oct (Badges.FORMATOS). Solo vale para lo
      * que se juegue desde ahora: lo ganado está guardado en PR. */
     MULT_FORMATO: [1, 1.5, 2, 2.5],
     /* La colocación no regala: un escalón por debajo del que alcanza tu
