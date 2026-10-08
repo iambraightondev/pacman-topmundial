@@ -2969,8 +2969,13 @@
     /* El GANCHO INVERSO del Asesino llega a NUEVE casillas (22 sep 2026):
      * con ocho se quedaba a un pelo del fantasma una y otra vez y la E se
      * gastaba para nada. Una casilla más es la diferencia entre fallar y
-     * plantarse encima. */
-    GANCHO_INVERSO_TILES: 9,
+     * plantarse encima.
+     * 7 oct (Braighton): DOCE casillas, recarga de 32 s a 28 s, y la baja
+     * del enganchado vale 1.000 como mínimo para quien lo enganchó. Al REY
+     * también lo engancha: se pone azul 5 s, pero el golpe de azul
+     * (CFG.JEFE.DANO.azul) solo lo da el Asesino del gancho (ver js/jefe.js). */
+    GANCHO_INVERSO_TILES: 12,
+    GANCHO_INVERSO_PUNTOS: 1000,
     GANCHO_INVERSO_VEL: 4,
     GANCHO_ARRASTRE_MULT: 1.2,
     GANCHO_AZUL_TICKS: 5 * 60,
@@ -3220,12 +3225,15 @@
          h('shuriken', 'Q', 'SHURIKEN', 24, 'Tres cargas, 3 s entre una y la siguiente.'),
          h('bomba', 'Q', 'BOMBA', 12, 'Coloca y detona; las bajas del estallido van en racha.')],
         [h('turbo', 'W', 'TURBO', 24, 'Velocidad ×1,5 durante 8 s.'),
-         h('sombra', 'W', 'SOMBRA', 26, '4 s intangible y veloz; bajas de 1.000/2.000.'),
+         /* SIGILO se llamaba SOMBRA hasta el 7 oct. Solo cambia el nombre que
+          * se lee: el id sigue siendo 'sombra', que es lo que llevan los
+          * equipos guardados y las repeticiones. */
+         h('sombra', 'W', 'SIGILO', 26, '4 s intangible y veloz; bajas de 1.000/2.000.'),
          h('frenesi', 'W', 'FRENESÍ', 32, '10 s; cada baja suma velocidad hasta x1,75 y, a tope, alarga 2 s.'),
          h('carrona', 'W', 'CARROÑA', 24, 'Al matar saltan monedas; las coge cualquiera.')],
         [h('flash', 'E', 'FLASH', 32, 'Salta tres casillas atravesando muros.'),
          h('marca', 'E', 'MARCA', 30, 'Marca un fantasma para cobrar el triple.'),
-         h('gancho_inverso', 'E', 'GANCHO INVERSO', 32, 'Lanza un gancho; si atrapa, te arrastra.')],
+         h('gancho_inverso', 'E', 'GANCHO INVERSO', 28, 'Lanza un gancho; si atrapa, te arrastra y la baja vale 1.000.')],
         [h('grito', 'R', 'GRITO', 60, 'Asusta a los cuatro fantasmas.'),
          h('misil', 'R', 'MISIL', 80, 'Mata en cadena al más cercano.'),
          h('ejecucion', 'R', 'EJECUCIÓN', 80, 'Una muerte por 5.000 puntos.'),
@@ -3296,12 +3304,12 @@
       shuriken: "3 ESTRELLAS RECTAS HACIA TU ÚLTIMA FLECHA, HASTA 10 CASILLAS · 3 S ENTRE TIROS · 200 POR BAJA · ACIERTA LAS 3 Y SE RECARGA SOLA, HASTA 3 VECES SEGUIDAS · AL REY, 1 DE VIDA CADA UNA",
       bomba: "1ª PULSACIÓN: PLANTAS LA BOMBA EN TU CASILLA, SIN LÍMITE DE TIEMPO · 2ª: ESTALLA A 2 CASILLAS A LA REDONDA · LAS BAJAS VAN EN RACHA: 250, 500, 1.000 Y 2.000 · AL REY LE QUITA 4 DE VIDA · RECARGA 12 S",
       turbo: "CORRES A X1,5 DURANTE 8 S · PARA ESCAPAR DE UNA ENCERRONA O LLEGAR A TIEMPO A LA SUPERPASTILLA",
-      sombra: "4 S CASI INVISIBLE, INTANGIBLE Y A X1,2 · NI LOS FANTASMAS NI EL REY TE PERSIGUEN NI TE PUEDEN MATAR · CADA BAJA VALE MÍNIMO 1.000, O 2.000 SI LO PILLAS POR LA ESPALDA",
+      sombra: "4 S CASI INVISIBLE, INTANGIBLE Y A X1,2 · NI LOS FANTASMAS NI EL REY TE PERSIGUEN NI TE PUEDEN MATAR · CADA BAJA VALE MÍNIMO 1.000, O 2.000 SI LO PILLAS POR LA ESPALDA · CON MARCA, EL TRIPLE",
       frenesi: "10 S DE CAZA: +0,15 DE VELOCIDAD MIENTRAS HAYA ALGÚN FANTASMA AZUL, Y CADA FANTASMA QUE MATES, CON LO QUE SEA, SUMA OTRO +0,15, HASTA X1,75 · YA A TOPE, CADA BAJA ALARGA EL FRENESÍ 2 S",
       carrona: "10 S: CADA FANTASMA QUE MATES SUELTA UN MONTÓN DE MONEDAS DE 500 QUE SALTA HASTA 2 CASILLAS · DURA 5 S EN EL SUELO Y LO COGE CUALQUIER JUGADOR",
       flash: "SALTAS HASTA 3 CASILLAS HACIA TU ÚLTIMA FLECHA ATRAVESANDO MUROS · TE COMES LO QUE HAYA EN EL CAMINO · SIN SUELO DONDE CAER NO SALE",
-      marca: "MARCAS AL FANTASMA MÁS CERCANO A 8 CASILLAS DURANTE 8 S · SI LO MATAS TÚ VALE EL TRIPLE, TAMBIÉN CON SHURIKEN O BOMBA",
-      gancho_inverso: "GANCHO RECTO HACIA TU ÚLTIMA FLECHA, HASTA 9 CASILLAS · SI ENGANCHA, EL FANTASMA SE PONE AZUL 5 S Y TÚ SALES VOLANDO HACIA ÉL",
+      marca: "MARCAS AL FANTASMA MÁS CERCANO A 8 CASILLAS DURANTE 8 S · SI LO MATAS TÚ VALE EL TRIPLE, TAMBIÉN CON SHURIKEN, BOMBA O EJECUCIÓN, Y TRIPLICA LAS BAJAS DE SIGILO",
+      gancho_inverso: "GANCHO RECTO HACIA TU ÚLTIMA FLECHA, HASTA 12 CASILLAS · SI ENGANCHA, EL FANTASMA SE PONE AZUL 5 S Y TÚ SALES VOLANDO HACIA ÉL · SI LO MATAS TÚ VALE MÍNIMO 1.000 · AL REY TAMBIÉN LO ENGANCHA: AZUL 5 S, PERO SOLO TÚ LE QUITAS LOS 6 DE VIDA",
       grito: "LOS CUATRO FANTASMAS SE PONEN AZULES 6 S, SEA CUAL SEA EL NIVEL · EL REY TAMBIÉN: CADA JUGADOR LE PEGA UNA VEZ AL TOCARLO, 6 DE VIDA",
       misil: "PERSIGUE POR LOS PASILLOS AL FANTASMA MÁS CERCANO Y SALTA AL SIGUIENTE · ARROLLA A QUIEN SE CRUCE · PAGA EN CADENA 250/500/1.000/2.000 · REMATA AL REY: 6 DE VIDA",
       ejecucion: "MATA DE GOLPE AL FANTASMA MÁS CERCANO A 10 CASILLAS Y PAGA 5.000 · SIN NADIE A TIRO NO SALE · AL REY NO LO MATA: LE QUITA 10 DE VIDA",

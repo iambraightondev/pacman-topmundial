@@ -15576,6 +15576,32 @@
     eq(G.jefe.hp, vida - CJ.DANO.azul, 'una sola vez por azul');
   });
 
+  /* 7 oct (Braighton): el GANCHO INVERSO también engancha al rey y lo deja
+   * azul, pero ese azul solo le sirve al Asesino que lo lanzó */
+  test('JEFE: el gancho inverso lo deja azul solo para su Asesino', function () {
+    nivelJefe(['asesino', 'mago'], 0, ['mordisco,sombra,gancho_inverso,caceria', 'fuego,portal,runa,tormenta']);
+    var a = ponPac(0, 1, 5, DR.RIGHT), m = ponPac(1, 6, 5, DR.RIGHT);
+    jefeEn(6, 5);
+    G.jefe.frz = 999;
+    var vida = G.jefe.hp;
+    ok(HB.ganchoInverso(G, 0, { d: DR.RIGHT }), 'sale el gancho');
+    for (var n = 0; n < 40 && !G.jefe.gAzul; n++) HB.pasoProyectilesCat(G, true);
+    ok(JF.azulDe(G, 0) && !JF.azulDe(G, 1), 'lo engancha, y el azul es del Asesino');
+    G.jefe.frz = 0;
+    JF.colisiones(G);
+    ok(!m.dying, 'azul es azul: al compañero no lo mata');
+    eq(G.jefe.hp, vida, 'pero el compañero no le resta nada');
+    a.x = G.jefe.x; a.y = G.jefe.y;
+    JF.colisiones(G);
+    eq(G.jefe.hp, vida - CJ.DANO.azul, 'el Asesino sí: ' + CJ.DANO.azul);
+    G.jefe.inv = 0;
+    JF.colisiones(G);
+    eq(G.jefe.hp, vida - CJ.DANO.azul, 'una sola vez por gancho');
+    G.jefe.gAzul = 1; JF.paso(G);
+    ok(!JF.azulGancho(G), 'y a los 5 s se le pasa');
+    G.toMenu();
+  });
+
   test('JEFE: mordisco, bola de fuego y hielo', function () {
     nivelJefe(['asesino']);
     ponPac(0, 6, 5, DR.RIGHT);
@@ -16138,7 +16164,7 @@
     for (n = 0; n < 4; n++) G.ghosts[n].mode = 'house';
     ok(H.ganchoInverso(G, 0), 'el gancho sale sin blanco');
     eq(H.proyectilesCat.filter(function (b) { return b.tipo === 'gancho_inverso'; })[0].max,
-      9 * CFG.TILE, 'el gancho llega a nueve casillas');
+      12 * CFG.TILE, 'el gancho llega a doce casillas');
     var volvio = false;
     for (n = 0; n < 100 && H.proyectilesCat.length; n++) { H.pasoProyectilesCat(G, true); if (H.proyectilesCat.some(function (b) { return b.fase === 'vuelve'; })) volvio = true; }
     ok(volvio && !H.proyectilesCat.length, 'falla y vuelve');
@@ -16979,6 +17005,32 @@
     eq(H.st[0].ganchoInv, 0, 'y la E vuelve a estar libre');
   });
 
+  test('AJUSTES 7 OCT: Sigilo, Marca sobre Sigilo y el gancho inverso de 1.000', function () {
+    var H = window.PM.Hab, CAT = CFG.HAB.CATALOGO.asesino;
+    partida(2); G.hab = true;
+    H.empezar(true, 2, ['asesino', 'asesino'],
+      ['mordisco,sombra,marca,caceria', 'mordisco,sombra,gancho_inverso,caceria']);
+    G.roles = ['asesino', 'asesino'];
+    eq(CAT[1].filter(function (x) { return x.id === 'sombra'; })[0].name, 'SIGILO', 'Sombra pasa a llamarse Sigilo');
+    eq(CAT[2].filter(function (x) { return x.id === 'gancho_inverso'; })[0].cd, 28 * 60, 'el gancho recarga en 28 s');
+    var g = G.ghosts[0]; g.mode = 'normal';
+    H.st[0].sombra = 60;
+    var sinMarca = H.puntosFantasma(G, 0, g, 200, 'contacto', false);
+    H.marcaGhost[g.id] = 0; H.st[0].marca = 60;
+    eq(H.puntosFantasma(G, 0, g, 200, 'contacto', false), sinMarca * CFG.HAB.MARCA_MULT,
+      'la marca triplica la baja de Sigilo');
+    H.st[0].sombra = 0;
+    eq(H.puntosFantasma(G, 0, g, CFG.HAB.EJECUCION_PUNTOS, 'ejecucion', true),
+      CFG.HAB.EJECUCION_PUNTOS * CFG.HAB.MARCA_MULT, 'y también la EJECUCIÓN');
+    H.marcaGhost[g.id] = -1; H.st[0].marca = 0;
+    H.azulCatalogo[g.id] = 2;
+    eq(H.puntosFantasma(G, 1, g, 200, 'contacto', false), CFG.HAB.GANCHO_INVERSO_PUNTOS,
+      'el enganchado vale 1.000 para quien lo enganchó');
+    ok(H.puntosFantasma(G, 0, g, 200, 'contacto', false) < CFG.HAB.GANCHO_INVERSO_PUNTOS,
+      'y lo de siempre para el compañero');
+    H.azulCatalogo[g.id] = 0;
+  });
+
   test('AJUSTES: el viaje a casa le quita al fantasma lo que le pintaron encima', function () {
     var H = window.PM.Hab;
     partida(1); G.hab = true;
@@ -17201,8 +17253,8 @@
     eq(bajaMarcada(HC.SHURIKEN_PUNTOS, 'shuriken'), 600, 'el shuriken sobre un marcado paga el triple, 600');
     eq(bajaMarcada(HC.BOMBA_PUNTOS, 'bomba'), 750, 'la bomba, 750');
     eq(bajaMarcada(HC.BOLA_GUIADA_PUNTOS, 'bola_guiada'), HC.BOLA_GUIADA_PUNTOS * 3, 'la bola guiada, el triple');
-    /* y los premios gordos siguen siendo exactos: la marca no los toca */
-    eq(bajaMarcada(HC.EJECUCION_PUNTOS, 'ejecucion'), 5000, 'la ejecución no se duplica');
+    /* 7 oct (Braighton): el premio gordo también la cobra */
+    eq(bajaMarcada(HC.EJECUCION_PUNTOS, 'ejecucion'), 15000, 'la ejecución marcada, 15.000');
     /* sin marca, el shuriken vuelve a sus 200 */
     var g2 = G.ghosts[0];
     g2.mode = 'normal'; g2.x = p.x + CFG.TILE * 2; g2.y = p.y;

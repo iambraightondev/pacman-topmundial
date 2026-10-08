@@ -39,6 +39,8 @@
  *                     que salva del choque —yunque, piel de piedra, campo,
  *                     fortaleza, cadena, escudos— porque su muerte pasa por
  *                     Hab.salvaDelChoque igual que la de un fantasma.
+ *   · GANCHO INVERSO (7 oct): lo engancha y lo deja azul 5 s, pero ese azul
+ *                     solo le sirve al Asesino que lo lanzó (ver azulDe).
  *   · NO LE HACEN NADA, y es a posta: lo que vuelve azul (el azul del gancho
  *                     y del toque arcano: un rey no se come, por eso los dos
  *                     se quedan en un rasguño), lo que empuja o arrastra (no
@@ -125,6 +127,9 @@
         golpeado: 0,     // ticks del destello de golpe (solo se pinta)
         azulUsado: 0,    // por jugador (bits): ya le pegó en este azul
         azulTick: -1,    // frightTicks del azul en curso, para saber si es otro
+        gAzul: 0,        // GANCHO INVERSO: ticks de azul que le quedan
+        gDe: -1,         // ...de quién es ese azul (solo él le pega)
+        gUsado: 0,       // ...y si ya le pegó
         plan: -1,        // casilla en la que ya decidió
         huye: 0,         // PISOTÓN del Tanque: ticks huyendo de él
         huyeDe: -1       // ...y de quién
@@ -152,6 +157,7 @@
        * PISOTÓN seguía corriendo tras reaparecer. */
       j.frzHielo = false; j.trasHielo = 0;
       j.huye = 0; j.huyeDe = -1;
+      j.gAzul = 0; j.gDe = -1; j.gUsado = 0;
     },
 
     /* Los cuatro de siempre, dentro de la casa: salen cuando él los llama */
@@ -310,6 +316,7 @@
       if (j.huye > 0 && --j.huye <= 0) { j.huyeDe = -1; j.plan = -1; }
       /* un azul nuevo deja volver a pegarle a todos */
       if (G.frightTicks <= 0) j.azulUsado = 0;
+      if (j.gAzul > 0 && --j.gAzul <= 0) { j.gDe = -1; j.gUsado = 0; }
       j.stT++;
       var furia = this.furia(G);
       if (j.st === 'caza' && j.frz <= 0) {
@@ -373,6 +380,8 @@
       if (j.pidoAplasta > 0) j.pidoAplasta--;   // respiro entre golpes pedidos
       if (j.pidoCaza > 0) j.pidoCaza--;         // ...y los de la CACERÍA
       if (j.pidoAzul > 0) j.pidoAzul--;         // ...y el del azul
+      if (j.pidoGancho > 0) j.pidoGancho--;     // ...y el del gancho inverso
+      if (j.gAzul > 0) j.gAzul--;
       /* un azul nuevo deja volver a pegarle, como en el anfitrión (paso) */
       if (G.frightTicks <= 0) j.azulUsado = 0;
       j.stT++;
@@ -393,13 +402,33 @@
       return this.activo(G) && G.frightTicks > 0;
     },
 
+    /* EL AZUL DEL GANCHO INVERSO (7 oct, Braighton). El Asesino que lo
+     * engancha lo deja azul CFG.HAB.GANCHO_AZUL_TICKS. Se ve azul y, como
+     * azul es azul, mientras dura no mata a nadie; pero el golpe de azul
+     * (DANO.azul, una vez) solo lo da quien lanzó el gancho: los demás lo
+     * tocan y no le restan nada. Tiene su propio reloj porque el del
+     * energizante (G.frightTicks) es de la mesa y le pegaría todo el equipo. */
+    enganchar: function (G, quien) {
+      if (!this.activo(G)) return;
+      var j = G.jefe;
+      j.gAzul = CFG.HAB.GANCHO_AZUL_TICKS; j.gDe = quien | 0; j.gUsado = 0;
+    },
+
+    azulGancho: function (G) {
+      return this.activo(G) && G.jefe.gAzul > 0;
+    },
+
+    azulDe: function (G, i) {
+      return this.azulGancho(G) && G.jefe.gDe === (i | 0);
+    },
+
     /* ¿Ese Pac-Man muere contra el jefe? (lo mira quien decide sus muertes) */
     mata: function (G, i) {
       if (!this.activo(G)) return false;
       var p = G.pacs[i], j = G.jefe, A = Hab();
       if (!p || p.out || p.dying || p.safeTicks > 0) return false;
       if (A && A.enDimension && A.enDimension(i)) return false;
-      if (j.frz > 0 || this.vulnerable(G)) return false;
+      if (j.frz > 0 || this.vulnerable(G) || this.azulGancho(G)) return false;
       /* CACERÍA (23 sep): el cazador no muere contra el rey, le pega */
       if (A && A.cazando && A.cazando(i)) return false;
       if (!this.toca(G, p)) return false;
@@ -430,6 +459,12 @@
           }
           continue;
         }
+        /* el azul del gancho inverso: solo le pega su dueño, una vez */
+        if (this.azulDe(G, i) && !G.jefe.gUsado) {
+          G.jefe.gUsado = 1;
+          this.danar(G, J.DANO.azul, i, 'azul', true);
+          continue;
+        }
         if (A && A.arrollando && A.arrollando(i)) {
           // y lo deja ATURDIDO: cruzar el laberinto para embestirlo vale algo
           if (this.danar(G, J.DANO.aplasta, i, 'aplasta')) {
@@ -456,6 +491,14 @@
       if (A && A.enDimension && A.enDimension(i)) return;
       if (!this.toca(G, me)) return;
       var esAzul = this.vulnerable(G);
+      /* el azul del gancho inverso: solo lo pide su dueño, y una vez */
+      if (!esAzul && this.azulDe(G, i) && !j.gUsado) {
+        if (!(j.pidoGancho > 0)) {
+          j.pidoGancho = J.PIDO_AZUL;
+          G.netSend('gevt', { t: 'jefeGolpe', f: 'gancho_inverso' });
+        }
+        return;
+      }
       /* CACERÍA: como la apisonadora, el golpe lo da el anfitrión */
       if (!esAzul && A && A.cazando && A.cazando(i)) {
         if (j.inv <= 0 && !(j.pidoCaza > 0)) {
@@ -510,6 +553,10 @@
       if (f === 'azul') {
         if (G.frightTicks <= 0 || (G.jefe.azulUsado & (1 << who))) return;
         G.jefe.azulUsado |= (1 << who);
+        this.danar(G, J.DANO.azul, who, 'azul', true);
+      } else if (f === 'gancho_inverso') {
+        if (!this.azulDe(G, who) || G.jefe.gUsado) return;
+        G.jefe.gUsado = 1;
         this.danar(G, J.DANO.azul, who, 'azul', true);
       } else if (f === 'aplasta') {
         var s = A && A.estado(who);
@@ -736,7 +783,9 @@
         j.huye || 0, (j.huyeDe == null ? -1 : j.huyeDe),
         /* el FRENAZO tras el hielo (27 sep): sin él, en la pantalla del
          * invitado el rey salía del hielo a toda velocidad (PROTO 20) */
-        j.trasHielo || 0];
+        j.trasHielo || 0,
+        /* el azul del gancho inverso: cuánto le queda, de quién es y si ya pegó */
+        j.gAzul || 0, (j.gDe == null ? -1 : j.gDe), j.gUsado ? 1 : 0];
     },
 
     aplicar: function (G, a) {
@@ -758,6 +807,9 @@
       j.huye = a[11] || 0;
       j.huyeDe = (a[12] == null) ? -1 : a[12];
       j.trasHielo = a[13] || 0;
+      j.gAzul = a[14] || 0;
+      j.gDe = (a[15] == null) ? -1 : a[15];
+      j.gUsado = a[16] | 0;
       if (j.golpeado == null) j.golpeado = 0;
       j.plan = -1;
       G.jefe = j;
@@ -770,15 +822,17 @@
       if (!this.activo(G)) return;
       var j = G.jefe, Y = CFG.MAZE_Y, tk = G.tick;
       var x = j.x, y = j.y + Y, R = J.RADIO_DIBUJO;
-      if (j.inv > 0 && j.golpeado <= 0 && Math.floor(tk / 4) % 2 === 0 && !this.vulnerable(G)) {
+      /* azul de superpastilla o del gancho inverso: se pinta igual */
+      var vul = this.vulnerable(G) || this.azulGancho(G);
+      if (j.inv > 0 && j.golpeado <= 0 && Math.floor(tk / 4) % 2 === 0 && !vul) {
         /* parpadeo del rato sin golpes */
         ctx.save(); ctx.globalAlpha = 0.55;
       } else {
         ctx.save();
       }
       var cuerpo = J.COLOR;
-      if (this.vulnerable(G)) {
-        var acaba = G.frightTicks < 120 && Math.floor(tk / 10) % 2 === 0;
+      if (vul) {
+        var acaba = Math.max(G.frightTicks, j.gAzul || 0) < 120 && Math.floor(tk / 10) % 2 === 0;
         cuerpo = acaba ? '#ffffff' : '#2121ff';
       } else if (j.st === 'aviso') {
         cuerpo = Math.floor(tk / 4) % 2 === 0 ? '#ffffff' : '#ff2020';
@@ -818,7 +872,6 @@
       ctx.fill();
       /* ojos */
       var v = CFG.DIR_V[j.dir] || { x: 0, y: 0 };
-      var vul = this.vulnerable(G);
       for (var s = -1; s <= 1; s += 2) {
         var ex = x + s * R * 0.4, ey = y - R * 0.25;
         if (vul) {

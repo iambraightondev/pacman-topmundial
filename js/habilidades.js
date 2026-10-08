@@ -1876,13 +1876,19 @@
      * La marca no es eso: es puntería, se gasta una E en ponerla y dura ocho
      * segundos. Marcar y disparar el SHURIKEN daba lo mismo que disparar sin
      * marcar, y con la BOMBA pasaba igual. Estas tres sí la cobran.
-     * Fuera quedan EJECUCIÓN (5.000 ya son el premio gordo), TERREMOTO y
-     * DOMINIO, que matan a varios de golpe y no apuntan a nadie. */
-    MARCA_EN_FIJOS: { shuriken: 1, bomba: 1, bola_guiada: 1 },
+     * 7 oct (Braighton): la EJECUCIÓN también (15.000 sobre un marcado).
+     * TERREMOTO y DOMINIO siguen fuera, y a posta: la marca solo paga al
+     * Asesino que la puso (ver puntosFantasma), no a sus compañeros. */
+    MARCA_EN_FIJOS: { shuriken: 1, bomba: 1, bola_guiada: 1, ejecucion: 1 },
 
-    /* Bonos que dependen de QUÉ fantasma se ha comido y de cómo. Sombra no
-     * multiplica la cadena: garantiza 500, o 750 si la baja llega desde la
-     * espalda. Una cadena que ya valga más conserva su premio. */
+    /* Bonos que dependen de QUÉ fantasma se ha comido y de cómo. Sigilo (la
+     * antigua Sombra) no multiplica la cadena: garantiza 1.000, o 2.000 si
+     * la baja llega desde la espalda. Una cadena que ya valga más conserva
+     * su premio. Desde el 7 oct la MARCA también multiplica ese mínimo: se
+     * quedaba fuera, y marcar antes de entrar en sigilo no daba nada.
+     * El GANCHO INVERSO garantiza 1.000 a quien enganchó a ese fantasma: su
+     * azul lo lleva apuntado en azulCatalogo, y el único azul que pone un
+     * Asesino es el de su gancho. */
     puntosFantasma: function (G, who, g, base, como, exacto) {
       var s = this.estado(who), mult = 1, pts;
       var marcado = !!(g && this.marcaGhost[g.id] === who && s && s.marca > 0);
@@ -1890,8 +1896,11 @@
       pts = exacto ? Math.round((base || 0) * mult) : this.puntosDe(G, who, Math.round((base || 0) * mult));
       if (s && s.sombra > 0 && g) {
         var detras = this.deEspaldas(G.pacs[who], g);
-        pts = Math.max(pts, detras ? H.SOMBRA_ESPALDA_PUNTOS : H.SOMBRA_PUNTOS);
+        pts = Math.max(pts, (detras ? H.SOMBRA_ESPALDA_PUNTOS : H.SOMBRA_PUNTOS) * mult);
         this.efecto('sombra_golpe', g.x, g.y, 28, G.pacs[who].x, G.pacs[who].y);
+      }
+      if (g && this.azulCatalogo[g.id] === (who | 0) + 1 && G.roles && G.roles[who | 0] === 'asesino') {
+        pts = Math.max(pts, H.GANCHO_INVERSO_PUNTOS);
       }
       return pts;
     },
@@ -4459,7 +4468,17 @@
               b.fase = 'vuelve';
             } else {
               b.x = hnx; b.y = hny;
-              if (manda) for (var hg = 0; hg < 4; hg++) {
+              /* EL GANCHO INVERSO CONTRA EL REY (7 oct, Braighton). También
+               * lo engancha: el Asesino sale volando hacia él y el rey se
+               * pone azul 5 s, pero ese azul solo le sirve a quien lanzó el
+               * gancho (Jefe.enganchar). */
+              var JH = manda && this.rey(G);
+              if (JH && JH.impactaEn(G, b.x, b.y)) {
+                JH.enganchar(G, b.w);
+                b.rey = 1; b.fase = 'arrastra'; b.x = G.jefe.x; b.y = G.jefe.y;
+                this.efecto('gancho_atrapa', b.x, b.y, 24, hp.x, hp.y);
+              }
+              if (manda && b.fase === 'sale') for (var hg = 0; hg < 4; hg++) {
                 var gg = G.ghosts[hg];
                 if (!this.enLaCalle(gg) || this.distancia(b.x, b.y, gg.x, gg.y) > T * 0.75) continue;
                 b.objetivo = gg.id; b.fase = 'arrastra'; b.x = gg.x; b.y = gg.y;
@@ -4469,11 +4488,12 @@
               }
             }
           } else if (b.fase === 'arrastra') {
-            var hgObj = G.ghosts[b.objetivo | 0];
-            if (!this.enLaCalle(hgObj)) b.fase = 'vuelve';
+            /* al rey no se le apaga mientras tira: no es un fantasma */
+            var hgObj = b.rey ? (this.rey(G) ? G.jefe : null) : G.ghosts[b.objetivo | 0];
+            if (b.rey ? !hgObj : !this.enLaCalle(hgObj)) b.fase = 'vuelve';
             else {
               b.x = hgObj.x; b.y = hgObj.y;
-              this.aturdido[hgObj.id] = Math.max(this.aturdido[hgObj.id] || 0, 2);
+              if (!b.rey) this.aturdido[hgObj.id] = Math.max(this.aturdido[hgObj.id] || 0, 2);
               var hdx = b.x - hp.x;
               if (hdx > ancho / 2) hdx -= ancho; else if (hdx < -ancho / 2) hdx += ancho;
               var hdy = b.y - hp.y, hdis = Math.sqrt(hdx * hdx + hdy * hdy) || 1;
