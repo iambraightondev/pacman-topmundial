@@ -1607,6 +1607,11 @@
         return;
       }
       this.frightTicks = Math.round(secs * 60);
+      /* UN AZUL NUEVO ES OTRO AZUL (7 oct, Braighton): el «ya le pegué» al
+       * REY solo se borraba al acabarse el azul, así que una superpastilla
+       * comida con el azul anterior todavía corriendo no dejaba pegarle a
+       * nadie otra vez. Cada azul que empieza les devuelve el golpe a todos. */
+      if (this.jefe) this.jefe.azulUsado = 0;
       /* con segundos fijos (GRITO, CACERÍA) los fantasmas tienen que avisar
        * de que se acaba aunque el nivel ya no tenga parpadeos en la tabla */
       this.frightFlashes = fr.flashes || 5;     // ...o el azul mínimo del REY
@@ -5009,6 +5014,7 @@
       }
       if (secs <= 0) return;
       this.frightTicks = Math.round(secs * 60);
+      if (this.jefe) this.jefe.azulUsado = 0;   // otro azul: se le puede volver a pegar
       this.frightFlashes = fr.flashes || 5;
       this.frightFlashOn = false;
     },
@@ -5162,6 +5168,7 @@
           this.chainIndex = 0;
           if (e.tk > 0) {
             this.frightTicks = e.tk;
+            if (this.jefe) this.jefe.azulUsado = 0;   // otro azul: se le puede volver a pegar
             this.frightFlashes = e.fl;
             this.frightFlashOn = false;
             for (i = 0; i < 4; i++) {

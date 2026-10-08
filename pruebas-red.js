@@ -311,7 +311,10 @@ caso('1b · un fantasma azul del GANCHO: el invitado se lo come', function () {
   eq(A.G.ghosts[0].mode, 'eyes', 'y el anfitrión le da la baja');
 });
 
-caso('1c · azul pero marcado por OTRO: al invitado lo mata, igual que al anfitrión', function () {
+/* 5 oct (Braighton): el azul de la superpastilla vale para TODOS, también
+ * sobre el marcado por la CACERÍA de otro (Hab.puedeComer). Sin azul, el
+ * marcado sigue siendo solo de su cazador. */
+caso('1c · marcado por OTRO: azul de superpastilla se lo come el invitado; sin azul lo mata', function () {
   var ms = duoHab(), A = ms[0], B = ms[1];
   A.G.frightTicks = 400;
   A.G.ghosts[0].frightened = true;
@@ -322,7 +325,19 @@ caso('1c · azul pero marcado por OTRO: al invitado lo mata, igual que al anfitr
   B.G.pacs[1].safeTicks = 0;
   B.enviados = [];
   red.paso(3);
-  eq(mensajes(B, 'gevt', 'ateGhost').length, 0, 'no se lo come');
+  eq(mensajes(B, 'gevt', 'died').length, 0, 'azul es azul: no muere');
+  eq(mensajes(B, 'gevt', 'ateGhost').length, 1, 'se lo come');
+  eq(A.G.ghosts[0].mode, 'eyes', 'y el anfitrión le da la baja');
+
+  ms = duoHab(); A = ms[0]; B = ms[1];
+  A.G.ghosts[0].frightened = false;
+  marcar(A, 0, 0);
+  red.paso(10);
+  juntar(ms, 1, 0);
+  B.G.pacs[1].safeTicks = 0;
+  B.enviados = [];
+  red.paso(3);
+  eq(mensajes(B, 'gevt', 'ateGhost').length, 0, 'sin azul no se lo come');
   eq(mensajes(B, 'gevt', 'died').length, 1, 'muere');
   red.paso(3);
   ok(A.G.pacs[1].dying, 'y el anfitrión le da la muerte');
@@ -344,15 +359,49 @@ caso('1d · el anfitrión no acepta una muerte contra un fantasma que el invitad
   ok(A.G.pacs[1].dying, 'con uno normal, sí');
 });
 
-caso('1e · el anfitrión no deja comerse al marcado por otro', function () {
+caso('1e · el anfitrión no deja comerse al marcado por otro si no está azul', function () {
   var ms = duoHab(), A = ms[0], B = ms[1];
-  A.G.frightTicks = 400;
-  A.G.ghosts[0].frightened = true;
+  A.G.ghosts[0].frightened = false;
   marcar(A, 0, 0);
   red.paso(10);
   B.G.netSend('gevt', { t: 'ateGhost', g: 0 });
   red.paso(2);
   ok(A.G.ghosts[0].mode !== 'eyes', 'sigue vivo');
+});
+
+/* 7 oct (Braighton): el GANCHO INVERSO deja azul al rey, pero ese azul solo
+ * le sirve al Asesino que lo lanzó. Aquí el Asesino es el invitado: el golpe
+ * lo pide él y lo da el anfitrión, una sola vez. El rey va congelado para
+ * que no se mueva de la casilla. */
+caso('1f · REY: el azul del gancho inverso es del invitado que lo lanzó, y pega una vez', function () {
+  var ms = duoHab('asesino', 'mordisco,turbo,gancho_inverso,grito'), A = ms[0], B = ms[1];
+  var x = 6 * 8 + 4, y = 5 * 8 + 4, DANO = CFG(A).JEFE.DANO.azul;
+  A.G.jefe = { vivo: true, hp: 50, max: 50, x: x, y: y, dir: 0, st: 'caza', stT: 0, tCarga: 0, tInvoca: 0,
+               inv: 0, frz: 1e6, frzHielo: false, trasHielo: 0, golpeado: 0, azulUsado: 0, azulTick: -1,
+               gAzul: 0, gDe: -1, gUsado: 0, plan: -1, huye: 0, huyeDe: -1 };
+  red.paso(10);
+  ok(B.G.jefe && B.G.jefe.vivo, 'el invitado ve al rey');
+  A.w.PM.Jefe.enganchar(A.G, 1);
+  red.paso(10);
+  ok(B.w.PM.Jefe.azulDe(B.G, 1), 'al invitado le llega que el azul es suyo');
+  ok(!B.w.PM.Jefe.azulDe(B.G, 0), 'y que no es del anfitrión');
+  function encima(i) {
+    ms.forEach(function (m) { var p = m.G.pacs[i]; p.x = x; p.y = y; p.errX = 0; p.errY = 0; p.pauseTicks = 30; });
+  }
+  encima(0);
+  red.paso(3);
+  eq(A.G.jefe.hp, 50, 'el compañero lo toca y no le resta nada');
+  encima(1);
+  B.enviados = [];
+  /* el anfitrión tarda unos ticks en ver al invitado en su casilla nueva (lo
+   * hemos movido de golpe): mientras no le cuente el golpe, lo vuelve a pedir */
+  red.paso(45);
+  ok(mensajes(B, 'gevt', 'jefeGolpe').length >= 1, 'el invitado pide su golpe');
+  eq(A.G.jefe.hp, 50 - DANO, 'y el anfitrión se lo da');
+  ok(!B.G.pacs[1].dying, 'sin morir');
+  encima(1);
+  red.paso(60);
+  eq(A.G.jefe.hp, 50 - DANO, 'una sola vez por gancho');
 });
 
 /* =============================================================
@@ -1023,9 +1072,9 @@ caso('M · matriz: cada poder deja lo mismo lo lance quien lo lance, en las dos 
       });
     });
   });
-  /* PUENTE pide muro delante y RESURRECCIÓN un compañero caído: en esta
-   * escena no salen, y está bien que no salgan */
-  eq(sinSalir.join(','), 'soporte/puente,soporte/resurreccion', 'los que no salen en esta escena');
+  /* PUENTE pide muro delante, y RESURRECCIÓN y HOSPITAL (desde el 4 oct) un
+   * compañero caído: en esta escena no salen, y está bien que no salgan */
+  eq(sinSalir.join(','), 'soporte/puente,soporte/resurreccion,soporte/hospital', 'los que no salen en esta escena');
   if (malos.length) throw new Error('\n      ' + malos.join('\n      '));
 });
 

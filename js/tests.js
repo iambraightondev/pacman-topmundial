@@ -15574,6 +15574,15 @@
     G.jefe.inv = 0;
     ticks(5);
     eq(G.jefe.hp, vida - CJ.DANO.azul, 'una sola vez por azul');
+    /* 7 oct (Braighton): otra superpastilla con el azul aún corriendo es
+     * otro azul, y se le vuelve a pegar */
+    ok(G.frightTicks > 0, 'el primer azul sigue');
+    G.triggerFright(6);
+    p = ponPac(0, 6, 5, DR.RIGHT);
+    jefeEn(6, 5);
+    G.jefe.inv = 0;
+    G.step();
+    eq(G.jefe.hp, vida - 2 * CJ.DANO.azul, 'una superpastilla nueva deja pegarle otra vez');
   });
 
   /* 7 oct (Braighton): el GANCHO INVERSO también engancha al rey y lo deja
