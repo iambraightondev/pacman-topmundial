@@ -7,7 +7,61 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **6 de octubre de 2026** (pm-v341).
+Última puesta al día: **8 de octubre de 2026** (pm-v345).
+
+> **SESIÓN DEL 7-8 OCT (pm-v342 a pm-v345), todo pedido por Braighton y
+> publicado. Se retoma en otra sesión; lo abierto es la COPA TOP MUNDIAL.**
+
+> **▶ ABIERTO · la copa TOP MUNDIAL (solo diseño, nada tocado en el juego).**
+> Braighton pidió mejoras a la copa de hoy (`js/trofeos.js`, la 5). La primera
+> tanda fueron seis RETOQUES combinables sobre la actual (globo-laberinto,
+> Pac-Man en órbita, superpastilla, corona, fantasmas de oro, peana con
+> nombre) y **no le gustó** («no me gustó lo q me diste»), sin decir qué. La
+> segunda son cuatro copas NUEVAS: A cáliz imperial, B Pac-Man de oro
+> (estatua; la recomendada), C planeta con anillo, D corona. Está esperando
+> su respuesta. Escaparate animado, con miniatura al tamaño de la escalera:
+> <https://claude.ai/artifact/4qThPZ7VFShrFLhAEFtgh2>; el fuente, en
+> `propuestas/copa-mundial/vitrina-copa.html` (la primera tanda está en el
+> historial de git de ese fichero). Si tampoco convence, **preguntar qué
+> falla antes de dibujar una tercera**. La elegida hay que pasarla a
+> `js/trofeos.js` con su armado pieza a pieza y su silueta apagada.
+
+> **7 oct (pm-v345) · MAESTRÍA, escala empinada:** S 400 · A 200 · B 100 ·
+> C 40 · D 0 (era 170/130/100/80/60). Viene de MAULIO: 22 S de TANQUE en 113
+> partidas y 12.770 puntos, contra los 42.470 de Braighton con 17 S en 389:
+> la maestría medía volumen. Lo nuevo va a contadores propios
+> (`maen_/maenp_/maens_<rol>`); lo de antes se queda en `mae_<rol>` y se
+> CONVIERTE AL LEER en `CofresGen.puntosMae`, la única cuenta (pantalla,
+> estadísticas y la función `cofres`, redesplegada: versión 11). Como no se
+> guardó la nota de cada partida vieja, las S y las sembradas se convierten
+> exactas y el resto por la media; nadie baja. Quedó: MAULIO tanque 18.266
+> (pasa a LEYENDA), Braighton asesino 52.031. **Dicho y aceptado:** la
+> distancia apenas se cierra (de x3,3 a x2,8) por las ~280 sembradas de
+> Braighton. Se ofrecieron además «sube y baja» como el rango (la
+> recomendada) y «nota media de las últimas 30»; eligió esta. Los listones
+> de los escalones no se tocaron.
+
+> **7 oct (pm-v344) · TROFEOS en equipo:** x1,5 / x2 / x2,5 (era x1,25 / x1,5
+> / x1,75), igual que el rango. Se calculan en vivo contra el récord, así
+> que quien estuviera entre el listón viejo y el nuevo PIERDE esa copa:
+> avisado, y Braighton dijo que no importa.
+
+> **7 oct (pm-v343) · REY FANTASMA:** una superpastilla (o GRITO) con el azul
+> anterior aún corriendo vuelve a dejar que cada jugador le pegue; el «ya le
+> pegué» solo se borraba al acabarse el azul (lo vio jugando en party).
+
+> **7 oct (pm-v342) · ASESINO:** SOMBRA se llama **SIGILO** (el id sigue
+> siendo `sombra`). **GANCHO INVERSO:** 12 casillas, 28 s, la baja del
+> enganchado vale mínimo 1.000 para quien lo enganchó, y engancha al REY: azul
+> 5 s en los que no mata a nadie (confirmado por Braighton) pero solo el
+> Asesino del gancho le quita los 6, una vez. **MARCA** triplica también las
+> bajas de SIGILO y la EJECUCIÓN (15.000); **solo paga al Asesino que la
+> puso**: TERREMOTO y DOMINIO fuera a posta, decidido.
+
+> **Cabos sueltos del 7-8 oct:** nada de esto se anunció en `CFG.AVISOS` ni
+> está en CHANGELOG/SPEC; `pruebas-red.js` se puso al día (33 casos, todos
+> bien: tres esperaban reglas ya cambiadas el 4-5 oct) y tiene un caso nuevo
+> del gancho al rey lanzado por un invitado. Nada se ha jugado en navegador.
 
 > **SESIÓN DEL 6 OCT (pm-v340 y pm-v341), publicada. Se retoma en otra
 > sesión; lo abierto es el punto «A vigilar» del listón de equipo.**
