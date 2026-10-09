@@ -6763,9 +6763,9 @@
       if (s.hiper) {
         var hl = 0.5 + 0.5 * Math.sin(tk / 5), hr = 11 + hl * 1.5;
         ctx.save();
-        ctx.strokeStyle = 'rgba(125, 249, 255, ' + (0.55 + 0.4 * hl) + ')';
+        ctx.strokeStyle = 'rgba(255, 213, 74, ' + (0.6 + 0.4 * hl) + ')';   // oro, como sus teclas
         ctx.lineWidth = 1.5;
-        ctx.shadowColor = '#7df9ff'; ctx.shadowBlur = 6 + hl * 6;
+        ctx.shadowColor = '#ffb300'; ctx.shadowBlur = 6 + hl * 6;
         ctx.beginPath();
         ctx.moveTo(x, y - hr); ctx.lineTo(x + hr, y); ctx.lineTo(x, y + hr); ctx.lineTo(x - hr, y);
         ctx.closePath(); ctx.stroke();
