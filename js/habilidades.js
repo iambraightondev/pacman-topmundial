@@ -194,6 +194,9 @@
        * potenciada), el rato que el invitado no se cree la foto tras gastarla
        * y QUÉ poderes suyos salieron potenciados la última vez (id -> 1): es
        * lo que mira x2() mientras dura lo que dejó ese lanzamiento. */
+      /* RESURRECCIÓN guardada como SEGURO propio (0: no; 1; 2: potenciada).
+       * Sobrevive a morir y a los niveles: se gasta al salvarle. */
+      seguro: 0,
       hiper: 0,
       hiperVeto: 0,
       pot: {}
@@ -2708,6 +2711,7 @@
         case 'cadena': return s.cadena > 0;
         case 'campo': return s.campo > 0;
         case 'hospital': return s.hospital > 0;
+        case 'resurreccion': return s.seguro > 0;      // el seguro, esperando
         case 'eclipse': return s.eclipse > 0;
         case 'bomba': return !!s.bomba;
         case 'mina': return !!s.mina;
@@ -2790,6 +2794,7 @@
         case 'rebote': s.rebote = 0; break;
         case 'marca': s.marca = 0; break;
         case 'mina': s.mina = null; break;
+        case 'seguro': s.seguro = 0; break;
         case 'faro': s.faro = null; break;
         case 'clon': s.clon = null; break;
         case 'shuriken': s.shuriken = null; break;
@@ -4180,10 +4185,26 @@
     sirena: function (G, idx, d) { var s = this.estado(idx), c = this.casillaAdelante(G, idx, 6 * this.x2(idx, 'sirena'), d) || this.casillaDe(G, idx, d); if (!s || !c) return false; s.sirena = { c: c.c, r: c.r, t: H.FARO_TICKS * this.x2(idx, 'sirena') }; this.efecto('sirena', c.c * T + T / 2, c.r * T + T / 2, 28); sonDe(G, idx, 'playShout'); return true; },
     campo: function (G, idx) { var s = this.estado(idx), p = G.pacs[idx]; if (!s || !p) return false; s.campo = H.CAMPO_TICKS * this.x2(idx, 'campo'); this.efecto('campo', p.x, p.y, 34); sonDe(G, idx, 'playStealth'); return true; },
     resurreccion: function (G, idx) {
-      /* potenciada levanta a DOS eliminados en vez de a uno */
-      var fuera = [], i, cuantos = this.x2(idx, 'resurreccion');
+      /* MEJORADA (9 oct 2026, Braighton), desde las reglas RESU_REGLAS:
+       *   · levanta a TODOS los eliminados, no a uno (HOSPITAL es para los
+       *     recién caídos; esta, para los que ya perdieron el cuerpo);
+       *   · SIN NADIE FUERA se guarda como SEGURO PROPIO: si el Soporte
+       *     pierde su última vida, vuelve él, una vez (ver seguroSalva). Así
+       *     deja de ser una tecla muerta a solas. Con el seguro ya puesto no
+       *     vuelve a salir.
+       * Potenciada por la hiperpastilla: vuelven con una vida más (y el
+       * seguro, con dos). Una repetición de antes la ve como era: a uno (a
+       * dos, potenciada) y sin seguro. */
+      var nueva = (G.reglasPts | 0) >= H.RESU_REGLAS, mRe = this.x2(idx, 'resurreccion');
+      var fuera = [], i, cuantos = nueva ? G.pacs.length : mRe, sRe = this.estado(idx);
       for (i = 0; i < G.pacs.length && fuera.length < cuantos; i++) if (i !== idx && G.pacs[i] && G.pacs[i].out) fuera.push(i);
-      if (!fuera.length) return false;
+      if (!fuera.length) {
+        if (!nueva || !sRe || sRe.seguro > 0 || !G.pacs[idx]) return false;
+        sRe.seguro = mRe;
+        this.efecto('resurreccion', G.pacs[idx].x, G.pacs[idx].y, 48);
+        if (G.addPopup && mio(G, idx)) G.addPopup(G.pacs[idx].x, G.pacs[idx].y - 10, 'SEGURO', 50);
+        sonDe(G, idx, 'playExtraLife'); return true;
+      }
       for (i = 0; i < fuera.length; i++) {
         var target = fuera[i];
         if (this.manda(G)) {
@@ -4192,13 +4213,35 @@
           /* un cuerpo aún en el suelo no trae `quien`: sin esto, resucitar a
            * alguien recién caído reventaba (4 oct) */
           if (!G.cuerpos[target].quien) G.cuerpos[target].quien = {};
-          G.cuerpos[target].quien[idx] = this.x2(idx, 'resurreccion');
+          G.cuerpos[target].quien[idx] = mRe;
           G.revivirCuerpo(target);
+          if (nueva && mRe > 1) {
+            if (G.playerCount > 1 && G.livesMode === 'individual') G.pacs[target].lives = Math.min(H.VIDA_MAX, G.pacs[target].lives + 1);
+            else if (G.lives < H.VIDA_MAX) G.lives++;
+          }
         }
         this.efecto('resurreccion', G.pacs[target].x, G.pacs[target].y, 48);
       }
       sonDe(G, idx, 'playExtraLife'); return true;
     },
+    /* EL SEGURO de la RESURRECCIÓN: ese jugador acaba de perder su última
+     * vida (Game.finishPacDeath). Si lo llevaba puesto, se gasta y vuelve
+     * con una vida (dos si salió potenciado). Lo decide quien lleva las
+     * vidas —el anfitrión—; al dueño invitado se le cuenta con dar(). */
+    seguroSalva: function (G, i) {
+      var s = this.estado(i), p = G.pacs[i];
+      if (!s || !p || !(s.seguro > 0) || !this.manda(G)) return false;
+      var vidas = s.seguro > 1 ? 2 : 1;
+      this.dar(G, i, 'seguro');
+      if (G.livesMode === 'individual') p.lives = vidas; else G.lives = vidas;
+      this.efecto('resurreccion', p.x, p.y, 48);
+      G.hostEvt({ t: 'habFx', f: 'resurreccion', x: Math.round(p.x), y: Math.round(p.y) });
+      if (G.addPopup) G.addPopup(p.x, p.y - 8, 'RESURRECCIÓN', 70);
+      if (G.setFlash) G.setFlash('¡RESURRECCIÓN!');
+      sonDe(G, i, 'playExtraLife');
+      return true;
+    },
+
     /* HOSPITAL (4 oct, Braighton): ya no abre diez segundos de seguro. Levanta
      * EN EL ACTO a todos los CAÍDOS: los que están fuera y aún tienen su
      * cuerpo en el laberinto (los 15 s de CFG.REVIVIR). A los MUERTOS —el
@@ -5527,7 +5570,7 @@
           estelaBuff: cs.estelaBuff, estelaRastro: cs.estelaRastro, puente: cs.puente,
           cadena: cs.cadena, cadenaCon: cs.cadenaCon, campo: cs.campo,
           hospital: cs.hospital, yunque: cs.yunque, pielPiedra: cs.pielPiedra, rebote: cs.rebote,
-          fortaleza: cs.fortaleza, eclipse: cs.eclipse, quieto: cs.quieto, pot: cs.pot || {} });
+          fortaleza: cs.fortaleza, eclipse: cs.eclipse, quieto: cs.quieto, pot: cs.pot || {}, seguro: cs.seguro | 0 });
       }
       var hp = this.hiperP;
       return { e: e, hz: this.hielo.slice(), th: this.trasHielo.slice(), hu: this.huye.slice(), hq: this.huyeQuien.slice(),

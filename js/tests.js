@@ -18690,16 +18690,63 @@
   });
 
   // ---------------------------------------------------------------
-  // LA HIPERPASTILLA (9 oct 2026): niveles 20, 25, 30... de DESATADO
+  // RESURRECCIÓN MEJORADA (9 oct 2026): a todos, y de seguro propio
+  // ---------------------------------------------------------------
+  test('RESURRECCIÓN · a solas se guarda como seguro: al perder la última vida, vuelve una vez', function () {
+    nivelJefe(['soporte'], 1, ['hielo,inmunidad,aliado,resurreccion']);
+    G.jefe = null;
+    var s = HB.estado(0), p = G.pacs[0];
+    ok(HB.pulsar(G, 0, 3), 'sin nadie fuera, sale: se guarda');
+    eq(s.seguro, 1, 'lleva el seguro');
+    ok(HB.activa(G, 0, 3), 'y la tecla se ve encendida');
+    s.cd[3] = 0;
+    ok(!HB.pulsar(G, 0, 3), 'con el seguro puesto no se guarda otro');
+    HB.limpiarEfectos();
+    eq(s.seguro, 1, 'morir con vidas de sobra no lo gasta');
+    G.lives = 1;
+    p.dying = true;
+    G.finishPacDeath(0);
+    ok(!p.out, 'pierde la última vida y sigue en la partida');
+    eq(G.lives, 1, 'con una vida');
+    eq(s.seguro, 0, 'y el seguro gastado');
+    p.dying = true;
+    G.finishPacDeath(0);
+    ok(p.out, 'la siguiente ya es la de verdad');
+    G.toMenu();
+  });
+
+  test('RESURRECCIÓN · levanta a TODOS los eliminados; con las reglas de antes, a uno y sin seguro', function () {
+    function escena(reglas) {
+      nivelJefe(['soporte', 'asesino', 'tanque'], 1, ['hielo,inmunidad,aliado,resurreccion', null, null]);
+      G.jefe = null;
+      if (reglas != null) G.reglasPts = reglas;
+      G.pacs[1].out = true; G.pacs[1].lives = 0;
+      G.pacs[2].out = true; G.pacs[2].lives = 0;
+    }
+    escena();
+    ok(HB.pulsar(G, 0, 3), 'con dos fuera, sale');
+    ok(!G.pacs[1].out && !G.pacs[2].out, 'y vuelven los dos');
+    eq(HB.estado(0).seguro, 0, 'levantando a alguien no se guarda seguro');
+    escena(4);
+    ok(HB.pulsar(G, 0, 3), 'reglas de antes: sale');
+    ok(!G.pacs[1].out && G.pacs[2].out, 'pero solo levanta a uno');
+    G.pacs[2].out = false;
+    HB.estado(0).cd[3] = 0;
+    ok(!HB.pulsar(G, 0, 3), 'y sin nadie fuera no sale, como entonces');
+    G.toMenu();
+  });
+
+  // ---------------------------------------------------------------
+  // LA HIPERPASTILLA (9 oct 2026): niveles 15, 20, 25... de DESATADO
   // ---------------------------------------------------------------
   var HP = HC.HIPER;
 
-  test('HIPER · sale del nivel 20 en adelante, cada 5, en una casilla pisable y dentro del minuto y medio', function () {
-    nivelJefe(['asesino'], 15);
-    eq(HB.hiperP, null, 'en el 15 no hay');
+  test('HIPER · sale del nivel 15 en adelante, cada 5, en una casilla pisable y dentro del minuto y medio', function () {
+    nivelJefe(['asesino'], 10);
+    eq(HB.hiperP, null, 'en el 10 no hay');
     nivelJefe(['asesino'], 21);
     eq(HB.hiperP, null, 'ni en el 21');
-    [20, 25, 30].forEach(function (n) {
+    [15, 20, 25, 30].forEach(function (n) {
       nivelJefe(['asesino'], n);
       var hp = HB.hiperP;
       ok(hp, 'en el ' + n + ' sí');

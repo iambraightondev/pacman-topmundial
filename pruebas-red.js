@@ -1072,9 +1072,10 @@ caso('M · matriz: cada poder deja lo mismo lo lance quien lo lance, en las dos 
       });
     });
   });
-  /* PUENTE pide muro delante, y RESURRECCIÓN y HOSPITAL (desde el 4 oct) un
-   * compañero caído: en esta escena no salen, y está bien que no salgan */
-  eq(sinSalir.join(','), 'soporte/puente,soporte/resurreccion,soporte/hospital', 'los que no salen en esta escena');
+  /* PUENTE pide muro delante y HOSPITAL (desde el 4 oct) un compañero caído:
+   * en esta escena no salen, y está bien que no salgan. RESURRECCIÓN sí sale
+   * desde el 9 oct: sin nadie fuera se guarda como seguro. */
+  eq(sinSalir.join(','), 'soporte/puente,soporte/hospital', 'los que no salen en esta escena');
   if (malos.length) throw new Error('\n      ' + malos.join('\n      '));
 });
 
@@ -1083,7 +1084,7 @@ caso('M · matriz: cada poder deja lo mismo lo lance quien lo lance, en las dos 
  * ============================================================= */
 caso('H · HIPERPASTILLA: el invitado la pisa, el anfitrión se la da y su TURBO sale a x2 en las dos pantallas', function () {
   var ms = duoHab('asesino'), A = ms[0], B = ms[1], HC = CFG(A).HAB;
-  /* puesta a mano en el anfitrión: sola sale del nivel 20 en adelante */
+  /* puesta a mano en el anfitrión: sola sale del nivel 15 en adelante */
   A.H.hiperP = { c: 6, r: 5, en: 0, on: 1, fin: 0 };
   red.paso(12);
   ok(B.H.hiperP && B.H.hiperP.on, 'al invitado le llega en la foto');

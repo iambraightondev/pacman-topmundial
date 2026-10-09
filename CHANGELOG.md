@@ -2,9 +2,16 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-09 · RESURRECCIÓN, mejorada
+
+- **Levanta a TODOS los compañeros eliminados**, no a uno solo.
+- **Sin nadie fuera se guarda como SEGURO:** si el Soporte pierde su última
+  vida, vuelve él, una vez. La tecla se queda encendida mientras lo lleva.
+  Así sirve también jugando a solas.
+
 ## 2026-10-09 · La HIPERPASTILLA
 
-- En **DESATADO**, en los niveles **20, 25, 30...** (los del REY FANTASMA)
+- En **DESATADO**, en los niveles **15, 20, 25...** (los del REY FANTASMA)
   sale **una hiperpastilla por nivel**: un rombo que brilla, en una casilla
   al azar y en un momento al azar del primer minuto y medio.
 - Quien se la come lleva su **próxima habilidad a ×2**: dura el doble, llega

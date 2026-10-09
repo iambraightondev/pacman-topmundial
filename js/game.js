@@ -864,7 +864,7 @@
       if (this.caza) window.PM.Caza.reiniciar(this);   // el reloj del poder, de cero
       /* DESATADO: cada 5 niveles, el REY FANTASMA (encierra a los cuatro) */
       if (window.PM.Jefe) window.PM.Jefe.alNivel(this);
-      /* ...y desde el 20, cada 5, la HIPERPASTILLA (se sortea dónde y cuándo) */
+      /* ...y desde el 15, cada 5, la HIPERPASTILLA (se sortea dónde y cuándo) */
       if (window.PM.Hab && window.PM.Hab.alNivel) window.PM.Hab.alNivel(this);
     },
 
@@ -1988,6 +1988,10 @@
       }
       /* ¿le ha salvado una VIDA que regaló el Soporte? (puntos por proteger) */
       if (this.hab && window.PM.Hab) window.PM.Hab.alPerderVida(this, i, left);
+      /* ¿llevaba la RESURRECCIÓN guardada como seguro? Vuelve él (Hab.seguroSalva) */
+      if (left <= 0 && this.hab && window.PM.Hab && window.PM.Hab.seguroSalva(this, i)) {
+        left = (this.livesMode === 'individual') ? p.lives : this.lives;
+      }
       if (left <= 0) {
         p.out = true;               // sin vidas: de espectador
         if (this.superv && window.PM.Superv) window.PM.Superv.alCaer(this, i);

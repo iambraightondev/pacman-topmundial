@@ -13,7 +13,7 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > **MINA** del Soporte a 8 s (pedido de Braighton). Las repeticiones viejas
 > con mina no se protegieron (igual que el gancho del 7 oct); se le preguntó
 > y no contestó.
-> **HIPERPASTILLA** (pedido de Braighton): niveles 20, 25, 30... de DESATADO
+> **HIPERPASTILLA** (pedido de Braighton): niveles 15, 20, 25... de DESATADO (eran desde el 20 hasta la noche del 9 oct)
 > (`CFG.HAB.HIPER`), una por nivel, casilla y momento al azar dentro de 1:30 (eran 3 min hasta el mismo día);
 > quien la come lleva su PRÓXIMA habilidad a x2 y sus teclas brillan (.hiper).
 > Reglas de puntuación a **4**: una repetición de antes no la trae. El sorteo
@@ -34,6 +34,14 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > rescate 2.400; la coraza pasiva no). **LABORATORIO** (`laboratorio.bat`,
 > puerto 8265): el juego en local SIN Supabase y con barra lateral de trucos;
 > no se publica. Probar ahí, no sirviendo index.html a pelo.
+> **9 oct, noche (pm-v350) · RESURRECCIÓN mejorada** (Braighton eligió B + D
+> de cuatro opciones; descartadas A «120 s y vuelve recargado» y C «2 vidas y
+> 8 s»): levanta a TODOS los eliminados y, sin nadie fuera, se guarda como
+> SEGURO propio (`s.seguro`, `Hab.seguroSalva` desde `finishPacDeath`).
+> Reglas de puntuación a **5** (`RESU_REGLAS`): una repetición de antes la
+> ve como era. Potenciada: vuelven con una vida más, y el seguro con dos
+> (decidido por Claude, por confirmar). Queda sin tocar la pregunta de subir
+> HOSPITAL a 180 s.
 > **Por ver:** nada se ha jugado en navegador (solo el dibujo suelto y
 > `pruebas-node` 768 + `pruebas-red` 34, con un caso nuevo «H»). Si la pelea
 > con el rey acaba antes de su hora, en ese nivel no llega a salir. La mira

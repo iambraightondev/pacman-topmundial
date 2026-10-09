@@ -2817,10 +2817,13 @@
      * 3 (4 oct 2026): al SOPORTE la fruta le vale el doble (FRUTA_SOPORTE).
      *
      * 4 (9 oct 2026): la HIPERPASTILLA (HIPER, más abajo). Una repetición de
-     * antes no la trae: en sus niveles 20, 25... no sale nada. */
-    REGLAS_PUNTOS: 4,
+     * antes no la trae: en sus niveles 15, 20... no sale nada.
+     * (5, 9 oct 2026: la RESURRECCIÓN mejorada, ver RESU_REGLAS.)
+     */
+    REGLAS_PUNTOS: 5,
+    RESU_REGLAS: 5,
     /* LA HIPERPASTILLA (9 oct 2026, Braighton). En los niveles DESDE,
-     * DESDE+CADA... (20, 25, 30: los del REY FANTASMA) sale UNA por nivel:
+     * DESDE+CADA... (15, 20, 25: los del REY FANTASMA) sale UNA por nivel:
      * un rombo que brilla, en una casilla al azar y en un momento al azar de
      * los primeros VENTANA ticks (nunca antes de MIN). Quien se la come lleva
      * su PRÓXIMA habilidad POTENCIADA: todo lo suyo vale x MULT —lo que dura,
@@ -2831,7 +2834,7 @@
      * REGLAS: desde qué versión de las reglas existe (ver REGLAS_PUNTOS).
      * VETO_RED: party, lo que tarda el invitado en volver a creerse la foto
      * del anfitrión después de gastarla (su aviso va de camino). */
-    HIPER: { DESDE: 20, CADA: 5, VENTANA: 90 * 60, MIN: 5 * 60, MULT: 2,
+    HIPER: { DESDE: 15, CADA: 5, VENTANA: 90 * 60, MIN: 5 * 60, MULT: 2,
              REGLAS: 4, VETO_RED: 90 },
     /* LA FRUTA DEL SOPORTE (4 oct 2026, Braighton). Es el rol que menos
      * puntúa: a solas, con las repeticiones de la nube desde el 28 sep,
@@ -3296,7 +3299,7 @@
          h('sirena', 'E', 'SIRENA', 34, 'Atrae fantasmas a un punto.')],
         /* Las cuatro R del Soporte, 20 s menos de recarga (27 sep, Braighton) */
         [h('vida', 'R', 'VIDA EXTRA', 160, 'Da una vida al compañero que menos tiene.'),
-         h('resurreccion', 'R', 'RESURRECCIÓN', 160, 'Levanta un cadáver caducado.'),
+         h('resurreccion', 'R', 'RESURRECCIÓN', 160, 'Levanta a todos los eliminados; sin nadie fuera, es tu seguro.'),
          h('campo', 'R', 'CAMPO', 130, 'Nadie del equipo muere durante 5 s.'),
          h('hospital', 'R', 'HOSPITAL', 130, 'Levanta a todos los caídos, con sus poderes listos.')]
       ],
@@ -3379,7 +3382,7 @@
       faro: "FARO EN TU CASILLA DURANTE 6 S: EL PRIMER COMPAÑERO QUE LO PISE VE LA RECARGA DE SU R REDUCIDA A LA MITAD",
       sirena: "SEÑUELO HASTA 6 CASILLAS POR DELANTE DURANTE 6 S: TODOS LOS FANTASMAS VAN HACIA ÉL · TAMBIÉN ATRAE AL REY",
       vida: "+1 VIDA AL COMPAÑERO VIVO QUE MENOS TIENE (A IGUALDAD, EL MÁS CERCANO) · CON VIDAS COMPARTIDAS VA AL FONDO COMÚN · NADIE PASA DE 5",
-      resurreccion: "DEVUELVE A LA PARTIDA A UN COMPAÑERO ELIMINADO, ESTÉ DONDE ESTÉ, CON 1 VIDA Y 5 S DE PROTECCIÓN · SIN NADIE FUERA NO SALE",
+      resurreccion: "DEVUELVE A LA PARTIDA A TODOS LOS COMPAÑEROS ELIMINADOS, ESTÉN DONDE ESTÉN, CON 1 VIDA Y 5 S DE PROTECCIÓN · SIN NADIE FUERA SE GUARDA COMO SEGURO: SI PIERDES TU ÚLTIMA VIDA, VUELVES TÚ, UNA VEZ",
       campo: "5 S EN LOS QUE NADIE DEL EQUIPO MUERE, NI CONTRA EL REY · EL FANTASMA QUE CHOCA CON CUALQUIERA SALE EMPUJADO UNA CASILLA",
       hospital: "LEVANTA A LA VEZ A TODOS LOS COMPAÑEROS CAÍDOS (CON SU CUERPO AÚN EN EL LABERINTO), CON 1 VIDA, 5 S DE PROTECCIÓN Y SUS HABILIDADES RECARGADAS · SIN NADIE CAÍDO NO SALE"
     };
