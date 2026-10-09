@@ -14857,6 +14857,13 @@
         o.activa = on;
         o.b.classList.toggle('activa', on);
       }
+      /* HIPERPASTILLA (9 oct): mientras ese jugador la lleve encima, sus
+       * teclas brillan (.hiper): la próxima que use sale a x2 */
+      var hiper = !!(A.tieneHiper && A.tieneHiper(idx));
+      if (hiper !== o.hiper) {
+        o.hiper = hiper;
+        o.b.classList.toggle('hiper', hiper);
+      }
       /* Los segundos: MIENTRAS ESTÁ ENCENDIDA, los que le quedan de efecto
        * (24 sep); al apagarse, los de la recarga. Solo cuando cambia el
        * número. El signo delante distingue un reloj del otro. */

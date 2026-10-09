@@ -18690,6 +18690,182 @@
   });
 
   // ---------------------------------------------------------------
+  // LA HIPERPASTILLA (9 oct 2026): niveles 20, 25, 30... de DESATADO
+  // ---------------------------------------------------------------
+  var HP = HC.HIPER;
+
+  test('HIPER · sale del nivel 20 en adelante, cada 5, en una casilla pisable y dentro de los 3 minutos', function () {
+    nivelJefe(['asesino'], 15);
+    eq(HB.hiperP, null, 'en el 15 no hay');
+    nivelJefe(['asesino'], 21);
+    eq(HB.hiperP, null, 'ni en el 21');
+    [20, 25, 30].forEach(function (n) {
+      nivelJefe(['asesino'], n);
+      var hp = HB.hiperP;
+      ok(hp, 'en el ' + n + ' sí');
+      ok(!hp.on && !hp.fin, 'pero todavía no ha salido');
+      ok(hp.en >= HP.MIN && hp.en <= HP.VENTANA, 'saldrá dentro de los tres minutos (' + hp.en + ')');
+      ok(CFG.isOpen(hp.c, hp.r, false), 'en una casilla que se puede pisar');
+      ok(!(hp.r >= CFG.HOUSE.top && hp.r <= CFG.HOUSE.bottom && hp.c >= CFG.HOUSE.left && hp.c <= CFG.HOUSE.right),
+        'y no dentro de la casa');
+    });
+    G.toMenu();
+  });
+
+  test('HIPER · el sorteo es de la partida (cambia con los puntos), se repite igual y no toca el azar del nivel', function () {
+    nivelJefe(['asesino'], 20);
+    var a = JSON.stringify(HB.hiperP), azar = G.rndState;
+    G.resetLevel();
+    eq(JSON.stringify(HB.hiperP), a, 'los mismos puntos y el mismo nivel dan la misma pastilla');
+    var distintas = 0;
+    for (var k = 1; k <= 6; k++) {
+      G.score = k * 1730;
+      G.resetLevel();
+      if (JSON.stringify(HB.hiperP) !== a) distintas++;
+    }
+    ok(distintas >= 4, 'con otros puntos sale en otro sitio o a otra hora (' + distintas + '/6)');
+    /* una repetición de antes (reglas 3) no la trae, y el azar es el mismo */
+    G.score = 0;
+    G.reglasPts = 3;
+    G.resetLevel();
+    eq(HB.hiperP, null, 'con las reglas de antes no sale');
+    eq(G.rndState, azar, 'y el azar del nivel no se ha movido por sortearla');
+    G.toMenu();
+  });
+
+  test('HIPER · aparece a su hora, se come al pisarla y la PRÓXIMA habilidad sale a x2; la siguiente, normal', function () {
+    nivelJefe(['asesino'], 20);
+    var hp = HB.hiperP, s = HB.estado(0);
+    G.jefe.frz = 1e6;                          // el rey, quieto
+    for (var g = 0; g < 4; g++) G.ghosts[g].mode = 'house';
+    hp.en = 3;
+    HB.pasoRoles(G, true); HB.pasoRoles(G, true);
+    ok(!hp.on, 'antes de su hora no está');
+    HB.pasoRoles(G, true);
+    ok(hp.on, 'a su hora, aparece');
+    ok(!HB.tieneHiper(0), 'y nadie la lleva aún');
+    ponPac(0, hp.c, hp.r, DR.LEFT);
+    HB.pasoRoles(G, true);
+    ok(HB.tieneHiper(0), 'al pisarla, la lleva encima');
+    ok(!hp.on && hp.fin, 'y la pastilla desaparece');
+    /* morir no la quita */
+    HB.limpiarEfectos();
+    ok(HB.tieneHiper(0), 'ni morir ni pasar de nivel se la quitan');
+    ok(HB.pulsar(G, 0, 1), 'usa el TURBO');
+    eq(s.turbo, HC.TURBO_TICKS * HP.MULT, 'dura el doble');
+    ok(!HB.tieneHiper(0), 'y se gasta con esa habilidad');
+    s.cd[1] = 0; s.turbo = 0;
+    ok(HB.pulsar(G, 0, 1), 'el siguiente TURBO');
+    eq(s.turbo, HC.TURBO_TICKS, 'ya es el de siempre');
+    G.toMenu();
+  });
+
+  test('HIPER · una habilidad que no llega a salir no la gasta', function () {
+    partidaRol(['asesino'], 6, 5, DR.RIGHT);
+    var s = HB.estado(0);
+    s.hiper = 1;
+    ok(!HB.pulsar(G, 0, 0), 'un MORDISCO al aire no sale');
+    ok(HB.tieneHiper(0), 'y la hiperpastilla sigue encima');
+    eq(HB.x2(0, 'mordisco'), 1, 'sin dejar nada potenciado');
+    G.toMenu();
+  });
+
+  test('HIPER · MORDISCO potenciado: llega el doble de lejos y paga el doble', function () {
+    partidaRol(['asesino'], 6, 5, DR.RIGHT);
+    filaVacia(5);
+    var s = HB.estado(0), lejos = Math.ceil(HC.BITE_PX / CFG.TILE) + 1;
+    var g = fantasmaEn(0, 6 + lejos, 5);
+    ok(lejos * CFG.TILE > HC.BITE_PX && lejos * CFG.TILE <= HC.BITE_PX * 2, 'fuera del alcance normal, dentro del doble');
+    ok(!HB.presa(G, 0), 'sin hiperpastilla no lo alcanza');
+    s.hiper = 1;
+    var antes = G.score;
+    ok(HB.pulsar(G, 0, 0), 'con ella, sí');
+    eq(g.mode, 'eyes', 'se lo come');
+    eq(G.score - antes, HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]) * HP.MULT, 'y vale el doble');
+    G.toMenu();
+  });
+
+  test('HIPER · GRITO potenciado: el doble de azul', function () {
+    partidaRol(['asesino'], 6, 5, DR.RIGHT);
+    HB.estado(0).hiper = 1;
+    ok(HB.pulsar(G, 0, 3), 'grita');
+    eq(G.frightTicks, HC.SHOUT_SECS * HP.MULT * 60, '12 s en vez de 6');
+    G.toMenu();
+  });
+
+  test('HIPER · TORMENTA potenciada: el doble de rayos y cada uno le quita el doble al rey', function () {
+    var j = nivelJefe(['mago'], 20), s = HB.estado(0), k = HB.kDe(G, 0, 'tormenta');
+    ok(k >= 0, 'el Mago lleva TORMENTA');
+    ponPac(0, Math.floor(j.x / CFG.TILE), Math.floor(j.y / CFG.TILE) + 3, DR.LEFT);
+    G.pacs[0].safeTicks = 999999;
+    j.inv = 0; j.frz = 1e6;
+    s.hiper = 1;
+    var vida = j.hp;
+    ok(HB.pulsar(G, 0, k), 'lanza la TORMENTA');
+    eq(s.tormenta, HC.TORMENTA_RAYOS * HC.TORMENTA_CADA * HP.MULT, 'seis rayos en vez de tres');
+    eq(vida - j.hp, CJ.DANO.rayo * HP.MULT, 'y el primero ya le quita el doble');
+    G.toMenu();
+  });
+
+  test('HIPER · detonar la BOMBA no gasta otra hiperpastilla, y estalla el doble de ancho', function () {
+    nivelJefe(['asesino'], 1, ['bomba,turbo,flash,grito']);
+    G.jefe = null;
+    ponPac(0, 6, 5, DR.RIGHT);
+    filaVacia(5);
+    var s = HB.estado(0);
+    s.hiper = 1;
+    ok(HB.pulsar(G, 0, 0), 'planta la bomba');
+    ok(s.bomba && s.bomba.m === HP.MULT, 'potenciada');
+    ok(!HB.tieneHiper(0), 'plantarla la gasta');
+    s.hiper = 1;                                  // otra, cogida entre medias
+    var g = fantasmaEn(0, 6 + HC.BOMBA_RADIO + 1, 5);
+    ok(HB.pulsar(G, 0, 0), 'la detona');
+    eq(g.mode, 'eyes', 'alcanza a un fantasma que quedaba fuera del radio normal');
+    ok(HB.tieneHiper(0), 'y la segunda hiperpastilla sigue entera: detonar no es un poder nuevo');
+    G.toMenu();
+  });
+
+  test('HIPER · quien ya la lleva no recoge otra', function () {
+    nivelJefe(['asesino'], 20);
+    var hp = HB.hiperP;
+    G.jefe.frz = 1e6;
+    hp.on = 1; hp.en = 0;
+    HB.estado(0).hiper = 1;
+    ponPac(0, hp.c, hp.r, DR.LEFT);
+    HB.pasoRoles(G, true);
+    ok(hp.on && !hp.fin, 'la pastilla se queda en el suelo para otro');
+    G.toMenu();
+  });
+
+  test('HIPER · viaja en la foto de red y en la del rebobinado', function () {
+    nivelJefe(['asesino'], 20);
+    var s = HB.estado(0);
+    HB.hiperP.on = 1;
+    s.hiper = 1; s.pot = { turbo: 1 };
+    var red = JSON.parse(JSON.stringify(HB.resumenRoles())), foto = HB.foto();
+    var era = JSON.stringify(HB.hiperP);
+    HB.hiperP = null; s.hiper = 0; s.pot = {};
+    HB.aplicarRoles(red, -1, G);
+    eq(JSON.stringify(HB.hiperP), era, 'un mirón ve la pastilla');
+    eq(HB.estado(0).hiper, 1, 'y quién la lleva');
+    eq(HB.x2(0, 'turbo'), HP.MULT, 'y lo que salió potenciado');
+    /* la mía: el anfitrión me la da, pero recién gastada no me la devuelve */
+    s = HB.estado(0);
+    s.hiper = 0; s.hiperVeto = 30;
+    HB.aplicarRoles(red, 0, G);
+    eq(s.hiper, 0, 'una foto atrasada no me la devuelve');
+    s.hiperVeto = 0;
+    HB.aplicarRoles(red, 0, G);
+    eq(s.hiper, 1, 'pasado el margen, manda el anfitrión');
+    HB.hiperP = null; s.hiper = 0; s.pot = {};
+    HB.ponerFoto(foto);
+    eq(JSON.stringify(HB.hiperP), era, 'al rebobinar vuelve la pastilla');
+    eq(HB.estado(0).hiper, 1, 'y quien la llevaba');
+    eq(HB.x2(0, 'turbo'), HP.MULT, 'con su x2');
+    G.toMenu();
+  });
+
+  // ---------------------------------------------------------------
   // Salida
   // ---------------------------------------------------------------
   G.toMenu();

@@ -2,6 +2,19 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-09 · La HIPERPASTILLA
+
+- En **DESATADO**, en los niveles **20, 25, 30...** (los del REY FANTASMA)
+  sale **una hiperpastilla por nivel**: un rombo que brilla, en una casilla
+  al azar y en un momento al azar de los tres primeros minutos.
+- Quien se la come lleva su **próxima habilidad a ×2**: dura el doble, llega
+  el doble de lejos, paga el doble y le quita el doble al rey. La velocidad
+  y la recarga no cambian. Se gasta al usar una habilidad, la que sea.
+- Mientras la llevas, tus **cuatro teclas brillan en cian con un «x2»** y tu
+  Pac-Man lleva un rombo de luz alrededor. No caduca: ni al morir ni al
+  pasar de nivel. No se acumula.
+- La **MINA** del Soporte dura **8 s** (eran 5).
+
 ## 2026-10-06 · En equipo, el rango pide más
 
 - En **CLASIFICATORIA**, la marca a superar en party sube: **DÚO ×1,5, TRÍO

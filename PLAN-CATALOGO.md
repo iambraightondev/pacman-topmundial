@@ -37,7 +37,7 @@ existen. Las otras 16 son las que se están eligiendo aquí.
 
 | Ranura | Nombre | Qué hace | Recarga |
 | --- | --- | --- | --- |
-| Q | **MINA** | Trampa en el suelo 5 s: el fantasma que la pisa muere y deja escudo al jugador | 20 s |
+| Q | **MINA** | Trampa en el suelo 8 s: el fantasma que la pisa muere y deja escudo al jugador | 20 s |
 | Q | **GANCHO** | Línea recta de 6 casillas; el fantasma atrapado se pone azul 5 s. Si falla, se gasta igual | 18 s |
 | Q | **TELARAÑA** | Mancha 3×3 durante 6 s: el fantasma que la pisa va a media velocidad (el rey también) | 30 s |
 | W | **ESTELA** | Velocidad ×1,25 para él y un rastro que da ×1,2 al equipo, 8 s | 24 s |

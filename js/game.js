@@ -864,6 +864,8 @@
       if (this.caza) window.PM.Caza.reiniciar(this);   // el reloj del poder, de cero
       /* DESATADO: cada 5 niveles, el REY FANTASMA (encierra a los cuatro) */
       if (window.PM.Jefe) window.PM.Jefe.alNivel(this);
+      /* ...y desde el 20, cada 5, la HIPERPASTILLA (se sortea dónde y cuándo) */
+      if (window.PM.Hab && window.PM.Hab.alNivel) window.PM.Hab.alNivel(this);
     },
 
     /* NINGÚN ROL REPETIDO (18 sep). Antes solo el Soporte era único; ahora
@@ -1805,6 +1807,8 @@
       var pts = (this.hab && window.PM.Hab)
         ? window.PM.Hab.puntosFantasma(this, who || 0, g, CFG.GHOST_CHAIN[streak], como || 'contacto', false)
         : CFG.GHOST_CHAIN[streak];
+      /* el MORDISCO potenciado por la HIPERPASTILLA paga el doble */
+      if (como === 'mordisco' && this.hab && window.PM.Hab) pts *= window.PM.Hab.x2(who || 0, 'mordisco');
       this.chainIndex++;
       this.cadenaTick = this.tick;   // la racha del Mago caduca contando desde aquí
       /* logros: solo los que me como yo (en online, `who` dice quién fue); lo
@@ -4601,6 +4605,10 @@
         case 'hab':
           if (window.PM.Hab) window.PM.Hab.peticion(this, who, d.k | 0, d);
           break;
+        /* HIPERPASTILLA: un invitado dice que la ha pisado (decide el anfitrión) */
+        case 'hiperCome':
+          if (window.PM.Hab) window.PM.Hab.peticionHiper(this, who);
+          break;
         /* ARROLLAR de un invitado: su carrera ha pillado a un fantasma */
         case 'habCome':
           if (window.PM.Hab) window.PM.Hab.peticionCome(this, who, d.g | 0);
@@ -5357,7 +5365,7 @@
          * propio evento —'eatGhost' para el mordisco, 'fright' para el
          * grito—, así que aplicarlo otra vez sería contarlo dos veces. */
         case 'hab':
-          if (window.PM.Hab) window.PM.Hab.evento(this, e.w || 0, e.k | 0, e.ng);
+          if (window.PM.Hab) window.PM.Hab.evento(this, e.w || 0, e.k | 0, e.ng, e.h);
           break;
         /* los ROLES: lo que ejecuta el anfitrión y aquí se pinta y suena */
         case 'magoKill':
@@ -5381,9 +5389,13 @@
         case 'habFx':
           if (window.PM.Hab) window.PM.Hab.efecto(e.f, e.x, e.y, 18);
           break;
+        /* alguien se ha comido la HIPERPASTILLA */
+        case 'hiperCome':
+          if (window.PM.Hab) window.PM.Hab.hiperVisto(this, e);
+          break;
         case 'habEsc':
           if (window.PM.Hab) {
-            window.PM.Hab.marcarEscudo(e.w | 0, CFG.HAB.ALIADO_TICKS);
+            window.PM.Hab.marcarEscudo(e.w | 0, (e.n | 0) || CFG.HAB.ALIADO_TICKS);
             var pe = this.pacs[e.w | 0];
             if (pe) window.PM.Hab.efecto('amparo', pe.x, pe.y, 24);
           }

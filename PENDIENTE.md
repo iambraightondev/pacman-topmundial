@@ -7,7 +7,30 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **8 de octubre de 2026** (pm-v345).
+Última puesta al día: **9 de octubre de 2026** (pm-v346).
+
+> **9 oct (pm-v346) · HIPERPASTILLA y MINA, publicado.**
+> **MINA** del Soporte a 8 s (pedido de Braighton). Las repeticiones viejas
+> con mina no se protegieron (igual que el gancho del 7 oct); se le preguntó
+> y no contestó.
+> **HIPERPASTILLA** (pedido de Braighton): niveles 20, 25, 30... de DESATADO
+> (`CFG.HAB.HIPER`), una por nivel, casilla y momento al azar dentro de 3 min;
+> quien la come lleva su PRÓXIMA habilidad a x2 y sus teclas brillan (.hiper).
+> Reglas de puntuación a **4**: una repetición de antes no la trae. El sorteo
+> lleva su propio azar (nivel + puntos), no toca `Game.rndState`.
+> **Qué es «x2», decidido por Claude y por confirmar con Braighton:** duración,
+> alcance/radio, puntos y daño/aturdimiento al rey. **NO** velocidad ni
+> recarga. Casos sin número evidente: VIDA da 2; RESURRECCIÓN levanta a 2;
+> HOSPITAL devuelve con una vida más; FARO recarga la R entera; TORMENTA 6
+> rayos; MARCA x6; CADENA regala el doble (x3 en total); EJECUCIÓN 10.000.
+> SHURIKEN sigue en 3 estrellas (más lejos y al doble). APISONADORA: solo
+> puntos y daño. Las continuaciones (cargas del shuriken, detonar la bomba,
+> salida del portal) no gastan otra.
+> **Por ver:** nada se ha jugado en navegador (solo el dibujo suelto y
+> `pruebas-node` 768 + `pruebas-red` 34, con un caso nuevo «H»). Si la pelea
+> con el rey acaba antes de su hora, en ese nivel no llega a salir. La mira
+> del METEORO no enseña el radio doble mientras se apunta. Sin aviso en
+> `CFG.AVISOS` ni entrada en SPEC.
 
 > **SESIÓN DEL 7-8 OCT (pm-v342 a pm-v345), todo pedido por Braighton y
 > publicado. Se retoma en otra sesión; lo abierto es la COPA TOP MUNDIAL.**

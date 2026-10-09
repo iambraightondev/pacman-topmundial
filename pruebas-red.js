@@ -1078,6 +1078,42 @@ caso('M · matriz: cada poder deja lo mismo lo lance quien lo lance, en las dos 
   if (malos.length) throw new Error('\n      ' + malos.join('\n      '));
 });
 
+/* =============================================================
+ * HIPERPASTILLA (9 oct): la pisa un invitado, decide el anfitrión
+ * ============================================================= */
+caso('H · HIPERPASTILLA: el invitado la pisa, el anfitrión se la da y su TURBO sale a x2 en las dos pantallas', function () {
+  var ms = duoHab('asesino'), A = ms[0], B = ms[1], HC = CFG(A).HAB;
+  /* puesta a mano en el anfitrión: sola sale del nivel 20 en adelante */
+  A.H.hiperP = { c: 6, r: 5, en: 0, on: 1, fin: 0 };
+  red.paso(12);
+  ok(B.H.hiperP && B.H.hiperP.on, 'al invitado le llega en la foto');
+  ms.forEach(function (m) {
+    var p = m.G.pacs[1];
+    p.x = 6 * 8 + 4; p.y = 5 * 8 + 4; p.errX = 0; p.errY = 0; p.pauseTicks = 40;
+  });
+  B.enviados = [];
+  red.paso(12);
+  ok(mensajes(B, 'gevt', 'hiperCome').length >= 1, 'el invitado la pide');
+  ok(A.H.st[1].hiper, 'el anfitrión se la da');
+  ok(B.H.st[1].hiper, 'y el invitado se entera');
+  ok(!A.H.hiperP.on && !B.H.hiperP.on, 'la pastilla desaparece en las dos pantallas');
+  ok(!A.H.st[0].hiper && !B.H.st[0].hiper, 'el otro no la lleva');
+  ok(B.H.pulsar(B.G, 1, 1), 'lanza su TURBO');
+  eq(B.H.st[1].turbo, HC.TURBO_TICKS * HC.HIPER.MULT, 'a x2 en su pantalla');
+  ok(!B.H.st[1].hiper, 'y la gasta');
+  red.paso(10);
+  ok(!A.H.st[1].hiper, 'el anfitrión también la da por gastada');
+  ok(A.H.st[1].turbo > HC.TURBO_TICKS, 'y allí su turbo también dura el doble');
+  red.paso(40);
+  ok(!B.H.st[1].hiper, 'una foto atrasada no se la devuelve');
+  /* y un poder que ejecuta el anfitrión: el GRITO de un invitado potenciado */
+  A.H.st[1].hiper = 1; B.H.st[1].hiper = 1;
+  ok(B.H.pulsar(B.G, 1, 3), 'grita con otra encima');
+  red.paso(10);
+  ok(A.G.frightTicks > HC.SHOUT_SECS * 60, 'el azul que reparte el anfitrión dura el doble');
+  ok(!A.H.st[1].hiper && !B.H.st[1].hiper, 'gastada en las dos');
+});
+
 /* ---------- la ejecución ---------- */
 function CFG(m) { return m.w.PM.CFG; }
 

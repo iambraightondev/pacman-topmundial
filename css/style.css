@@ -8411,6 +8411,52 @@ body { font-size-adjust: 0.56; }
 }
 #habBar .hab-b.durando .hab-ico { opacity: 0.55; }
 
+/* HIPERPASTILLA (9 oct): quien la lleva tiene su próxima habilidad a x2. Sus
+ * cuatro teclas se encienden en cian, laten, las cruza un barrido de luz y
+ * llevan un "x2" en la esquina, hasta que gaste una. Manda sobre "lista" y
+ * "encendida": es lo que hay que ver de un vistazo. */
+#habBar .hab-b.hiper {
+  border-color: #7df9ff;
+  box-shadow: 0 0 10px 1px rgba(125, 249, 255, 0.9), inset 0 0 12px rgba(125, 249, 255, 0.45);
+  animation: hab-hiper-late 0.8s ease-in-out infinite alternate;
+}
+#habBar .hab-b.hiper .hab-ico { opacity: 1; filter: drop-shadow(0 0 3px #7df9ff) brightness(1.25); }
+#habBar .hab-b.hiper .hab-key { color: #000; background: #7df9ff; }
+#habBar .hab-b.hiper::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: -70%;
+  width: 55%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  pointer-events: none;
+  animation: hab-hiper-barrido 1.5s linear infinite;
+}
+#habBar .hab-b.hiper::after {
+  content: 'x2';
+  position: absolute;
+  z-index: 2;
+  top: 2px;
+  right: 3px;
+  font-size: 10px;
+  line-height: 10px;
+  font-weight: bold;
+  color: #7df9ff;
+  text-shadow: 0 0 4px #000, 0 0 2px #000;
+  pointer-events: none;
+}
+@keyframes hab-hiper-late {
+  from { box-shadow: 0 0 8px 1px rgba(125, 249, 255, 0.75), inset 0 0 10px rgba(125, 249, 255, 0.35); }
+  to { border-color: #fff; box-shadow: 0 0 18px 3px #7df9ff, inset 0 0 14px rgba(255, 102, 204, 0.55); }
+}
+@keyframes hab-hiper-barrido { to { left: 130%; } }
+@media (prefers-reduced-motion: reduce) {
+  #habBar .hab-b.hiper { animation: none; }
+  #habBar .hab-b.hiper::before { display: none; }
+}
+
 /* el carril que va siguiendo al otro, sin imán mientras se mueve (24 sep) */
 #pase .ps-scroll.ps-sigue { scroll-snap-type: none; scroll-behavior: auto; }
 

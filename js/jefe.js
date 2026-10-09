@@ -82,6 +82,12 @@
 
   function Hab() { return window.PM.Hab; }
 
+  /* HIPERPASTILLA: el x2 de un poder potenciado de ese jugador (Hab.x2) */
+  function x2(i, id) {
+    var A = Hab();
+    return (A && A.x2) ? A.x2(i, id) : 1;
+  }
+
   var Jefe = {
     /* ---------- ¿hay jefe en este nivel? ---------- */
     tocaEn: function (G, nivel) {
@@ -408,10 +414,10 @@
      * (DANO.azul, una vez) solo lo da quien lanzó el gancho: los demás lo
      * tocan y no le restan nada. Tiene su propio reloj porque el del
      * energizante (G.frightTicks) es de la mesa y le pegaría todo el equipo. */
-    enganchar: function (G, quien) {
+    enganchar: function (G, quien, m) {
       if (!this.activo(G)) return;
       var j = G.jefe;
-      j.gAzul = CFG.HAB.GANCHO_AZUL_TICKS; j.gDe = quien | 0; j.gUsado = 0;
+      j.gAzul = CFG.HAB.GANCHO_AZUL_TICKS * (m || 1); j.gDe = quien | 0; j.gUsado = 0;
     },
 
     azulGancho: function (G) {
@@ -467,14 +473,14 @@
         }
         if (A && A.arrollando && A.arrollando(i)) {
           // y lo deja ATURDIDO: cruzar el laberinto para embestirlo vale algo
-          if (this.danar(G, J.DANO.aplasta, i, 'aplasta')) {
-            this.congelar(G, J.ATURDE_APISONADORA);
+          if (this.danar(G, J.DANO.aplasta * x2(i, 'arrollar'), i, 'aplasta')) {
+            this.congelar(G, J.ATURDE_APISONADORA * x2(i, 'arrollar'));
           }
           continue;
         }
         /* CACERÍA: tocarlo le quita vida (una vez por cada respiro suyo) */
         if (A && A.cazando && A.cazando(i)) {
-          this.danar(G, J.DANO.caceria, i, 'caceria');
+          this.danar(G, J.DANO.caceria * x2(i, 'caceria'), i, 'caceria');
           continue;
         }
         if (this.mata(G, i)) {
@@ -561,13 +567,13 @@
       } else if (f === 'aplasta') {
         var s = A && A.estado(who);
         if (!s || !(s.arrollaRed > 0 || s.arrolla > 0)) return;
-        if (this.danar(G, J.DANO.aplasta, who, 'aplasta')) {
-          this.congelar(G, J.ATURDE_APISONADORA);
+        if (this.danar(G, J.DANO.aplasta * x2(who, 'arrollar'), who, 'aplasta')) {
+          this.congelar(G, J.ATURDE_APISONADORA * x2(who, 'arrollar'));
         }
       } else if (f === 'caceria') {
         var sc = A && A.estado(who);
         if (!sc || !(sc.caceria > 0)) return;
-        this.danar(G, J.DANO.caceria, who, 'caceria');
+        this.danar(G, J.DANO.caceria * x2(who, 'caceria'), who, 'caceria');
       } else if (f === 'rebote') {
         /* REBOTE del catálogo (22 sep 2026): el invitado ya ha decidido que
          * ese choque no lo mata (Hab.salvaDelChoque), pero el golpe lo da
@@ -579,8 +585,8 @@
         /* el golpe que aguantó el Tanque invitado lo paga quien lleva el
          * marcador (CFG.HAB.PROTEGE_PUNTOS) */
         if (A.protege) A.protege(G, who, 'golpe', p.x, p.y);
-        if (this.danar(G, J.DANO.rebote, who, 'rebote')) {
-          this.congelar(G, J.ATURDE.rebote);
+        if (this.danar(G, J.DANO.rebote * x2(who, 'rebote'), who, 'rebote')) {
+          this.congelar(G, J.ATURDE.rebote * x2(who, 'rebote'));
         }
       }
     },
@@ -686,7 +692,7 @@
         var r = A.runas[i];
         if (!r || r.c !== col || r.r !== row) continue;
         A.runas[i] = null;
-        this.danar(G, J.DANO.runa, i, 'runa', true);
+        this.danar(G, J.DANO.runa * x2(i, 'runa'), i, 'runa', true);
         if (!this.activo(G)) return;
       }
       /* y las placas de hielo del Soporte lo congelan (una vez cada una) */
@@ -695,7 +701,7 @@
           var pl = A.placas[i];
           if (!pl || pl.c !== col || pl.r !== row || (pl.z & 16)) continue;
           pl.z |= 16;
-          this.congelar(G, J.HIELO, true);
+          this.congelar(G, J.HIELO * (pl.m || 1), true);
         }
       }
       /* LA MINA DEL SOPORTE (catálogo, 22 sep 2026). Se mira aquí y no en
@@ -713,9 +719,10 @@
           var s = A.st[i];
           if (!s || !s.mina) continue;
           if (!this.cercaDe(G, s.mina.c * T + T / 2, s.mina.r * T + T / 2, 0.6)) continue;
-          if (!this.danar(G, J.DANO.mina, i, 'mina')) continue;
+          var mMi = s.mina.m || 1;          // potenciada por la HIPERPASTILLA
+          if (!this.danar(G, J.DANO.mina * mMi, i, 'mina')) continue;
           s.mina = null;
-          s.escudo = Math.max(s.escudo, CFG.HAB.ALIADO_TICKS);
+          s.escudo = Math.max(s.escudo, CFG.HAB.ALIADO_TICKS * mMi);
           var mp = G.pacs[i];
           if (mp) A.efecto('amparo', mp.x, mp.y, 28);
           if (!this.activo(G)) return;

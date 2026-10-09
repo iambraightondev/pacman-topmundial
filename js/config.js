@@ -2814,8 +2814,25 @@
      * Soporte, y el Tanque perdía el escudo que había pulsado a cambio de
      * nada). Con la coraza pasiva sigue cobrando solo el Soporte.
      *
-     * 3 (4 oct 2026): al SOPORTE la fruta le vale el doble (FRUTA_SOPORTE). */
-    REGLAS_PUNTOS: 3,
+     * 3 (4 oct 2026): al SOPORTE la fruta le vale el doble (FRUTA_SOPORTE).
+     *
+     * 4 (9 oct 2026): la HIPERPASTILLA (HIPER, más abajo). Una repetición de
+     * antes no la trae: en sus niveles 20, 25... no sale nada. */
+    REGLAS_PUNTOS: 4,
+    /* LA HIPERPASTILLA (9 oct 2026, Braighton). En los niveles DESDE,
+     * DESDE+CADA... (20, 25, 30: los del REY FANTASMA) sale UNA por nivel:
+     * un rombo que brilla, en una casilla al azar y en un momento al azar de
+     * los primeros VENTANA ticks (nunca antes de MIN). Quien se la come lleva
+     * su PRÓXIMA habilidad POTENCIADA: todo lo suyo vale x MULT —lo que dura,
+     * lo que alcanza, lo que paga y lo que le quita al rey—. La velocidad y
+     * la recarga NO se tocan: a x3 no se puede jugar. Se gasta al usar una
+     * habilidad, la que sea, y hasta entonces no caduca (ni al morir ni al
+     * pasar de nivel). No se acumula: quien ya la lleva no recoge otra.
+     * REGLAS: desde qué versión de las reglas existe (ver REGLAS_PUNTOS).
+     * VETO_RED: party, lo que tarda el invitado en volver a creerse la foto
+     * del anfitrión después de gastarla (su aviso va de camino). */
+    HIPER: { DESDE: 20, CADA: 5, VENTANA: 3 * 60 * 60, MIN: 5 * 60, MULT: 2,
+             REGLAS: 4, VETO_RED: 90 },
     /* LA FRUTA DEL SOPORTE (4 oct 2026, Braighton). Es el rol que menos
      * puntúa: a solas, con las repeticiones de la nube desde el 28 sep,
      * Soporte 5.216/min, Tanque 6.188, Mago ~10.000, Asesino 13.090. Y es el
@@ -2943,7 +2960,7 @@
      * primera 250 y las siguientes 500, 1.000 y 2.000 */
     BOMBA_RACHA: [250, 500, 1000, 2000],
     BOMBA_PUNTOS: 250,
-    MINA_TICKS: 5 * 60,
+    MINA_TICKS: 8 * 60,
     SOMBRA_TICKS: 4 * 60,
     SOMBRA_MULT: 1.2,
     SOMBRA_PUNTOS: 1000,             // eran 500/750 hasta el 24 sep
@@ -3349,7 +3366,7 @@
       meteoro: "MANTÉN: TE PLANTAS Y LAS FLECHAS MUEVEN LA MIRA POR TODO EL MAPA, MUROS INCLUIDOS · SUELTA: CAE A 1,5 S, MATA EN 3 CASILLAS Y DEJA 6 S DE FUEGO · CADA BAJA DEVUELVE 10 S · AL REY, 5 DE VIDA",
       eclipse: "10 S DE OSCURIDAD: LOS CUATRO FANTASMAS VAN A CIEGAS, GIRANDO AL AZAR, Y A MITAD DE VELOCIDAD · EL REY TAMBIÉN VA A MITAD DE VELOCIDAD",
       hielo: "DISPARO QUE CONGELA 3 S AL PRIMER FANTASMA Y A LOS DE SU CASILLA · MANTÉN 2 S: PLACA DE HIELO 8 S QUE CONGELA A QUIEN LA PISE · AL DESCONGELARSE VA UN 20 % MÁS LENTO 3 S · AL REY LO CONGELA 1 S",
-      mina: "MINA EN TU CASILLA DURANTE 5 S: MATA AL FANTASMA QUE LA PISE (200 PTS) Y TE DA ESCUDO 8 S · AL REY LE QUITA 3 DE VIDA Y TAMBIÉN TE DA EL ESCUDO",
+      mina: "MINA EN TU CASILLA DURANTE 8 S: MATA AL FANTASMA QUE LA PISE (200 PTS) Y TE DA ESCUDO 8 S · AL REY LE QUITA 3 DE VIDA Y TAMBIÉN TE DA EL ESCUDO",
       gancho: "GARFIO RECTO HASTA 6 CASILLAS: SI ENGANCHA, TE TRAE AL FANTASMA APAGADO Y TE LLEGA AZUL 5 S PARA COMÉRTELO · AL REY LE QUITA 1 DE VIDA",
       telarana: "TELARAÑA EN TU CASILLA DURANTE 16 S: TODO FANTASMA A 1,5 CASILLAS VA A MITAD DE VELOCIDAD · AL REY TAMBIÉN LO FRENA A LA MITAD",
       inmunidad: "3 S EN LOS QUE NADA TE PUEDE TOCAR, NI FANTASMAS NI EL REY · A DIFERENCIA DE UN ESCUDO, NO SE GASTA CON EL PRIMER GOLPE",
