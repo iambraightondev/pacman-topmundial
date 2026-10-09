@@ -18694,7 +18694,7 @@
   // ---------------------------------------------------------------
   var HP = HC.HIPER;
 
-  test('HIPER · sale del nivel 20 en adelante, cada 5, en una casilla pisable y dentro de los 3 minutos', function () {
+  test('HIPER · sale del nivel 20 en adelante, cada 5, en una casilla pisable y dentro del minuto y medio', function () {
     nivelJefe(['asesino'], 15);
     eq(HB.hiperP, null, 'en el 15 no hay');
     nivelJefe(['asesino'], 21);
@@ -18704,7 +18704,7 @@
       var hp = HB.hiperP;
       ok(hp, 'en el ' + n + ' sí');
       ok(!hp.on && !hp.fin, 'pero todavía no ha salido');
-      ok(hp.en >= HP.MIN && hp.en <= HP.VENTANA, 'saldrá dentro de los tres minutos (' + hp.en + ')');
+      ok(hp.en >= HP.MIN && hp.en <= HP.VENTANA, 'saldrá dentro del minuto y medio (' + hp.en + ')');
       ok(CFG.isOpen(hp.c, hp.r, false), 'en una casilla que se puede pisar');
       ok(!(hp.r >= CFG.HOUSE.top && hp.r <= CFG.HOUSE.bottom && hp.c >= CFG.HOUSE.left && hp.c <= CFG.HOUSE.right),
         'y no dentro de la casa');

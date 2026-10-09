@@ -2831,7 +2831,7 @@
      * REGLAS: desde qué versión de las reglas existe (ver REGLAS_PUNTOS).
      * VETO_RED: party, lo que tarda el invitado en volver a creerse la foto
      * del anfitrión después de gastarla (su aviso va de camino). */
-    HIPER: { DESDE: 20, CADA: 5, VENTANA: 3 * 60 * 60, MIN: 5 * 60, MULT: 2,
+    HIPER: { DESDE: 20, CADA: 5, VENTANA: 90 * 60, MIN: 5 * 60, MULT: 2,
              REGLAS: 4, VETO_RED: 90 },
     /* LA FRUTA DEL SOPORTE (4 oct 2026, Braighton). Es el rol que menos
      * puntúa: a solas, con las repeticiones de la nube desde el 28 sep,

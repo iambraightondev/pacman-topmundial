@@ -7,14 +7,14 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **9 de octubre de 2026** (pm-v346).
+Última puesta al día: **9 de octubre de 2026** (pm-v347).
 
 > **9 oct (pm-v346) · HIPERPASTILLA y MINA, publicado.**
 > **MINA** del Soporte a 8 s (pedido de Braighton). Las repeticiones viejas
 > con mina no se protegieron (igual que el gancho del 7 oct); se le preguntó
 > y no contestó.
 > **HIPERPASTILLA** (pedido de Braighton): niveles 20, 25, 30... de DESATADO
-> (`CFG.HAB.HIPER`), una por nivel, casilla y momento al azar dentro de 3 min;
+> (`CFG.HAB.HIPER`), una por nivel, casilla y momento al azar dentro de 1:30 (eran 3 min hasta el mismo día);
 > quien la come lleva su PRÓXIMA habilidad a x2 y sus teclas brillan (.hiper).
 > Reglas de puntuación a **4**: una repetición de antes no la trae. El sorteo
 > lleva su propio azar (nivel + puntos), no toca `Game.rndState`.

@@ -6,7 +6,7 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
 
 - En **DESATADO**, en los niveles **20, 25, 30...** (los del REY FANTASMA)
   sale **una hiperpastilla por nivel**: un rombo que brilla, en una casilla
-  al azar y en un momento al azar de los tres primeros minutos.
+  al azar y en un momento al azar del primer minuto y medio.
 - Quien se la come lleva su **próxima habilidad a ×2**: dura el doble, llega
   el doble de lejos, paga el doble y le quita el doble al rey. La velocidad
   y la recarga no cambian. Se gasta al usar una habilidad, la que sea.
