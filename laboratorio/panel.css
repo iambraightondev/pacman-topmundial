@@ -1,0 +1,213 @@
+/* El panel del LABORATORIO (laboratorio/panel.js). No se publica.
+ * UNA BARRA LATERAL pegada a la izquierda, de arriba abajo: se recoge
+ * deslizándose fuera de la pantalla y deja asomando su asa en el borde.
+ * Viste como el juego: negro de máquina, letra Press Start 2P, marcos azul
+ * laberinto, títulos cian subrayados como los del menú (TU CUARTEL), el
+ * amarillo de Pac-Man para lo principal y la tira de bombillas en el canto. */
+#labPanel {
+  --azul: #2121ff;
+  --amarillo: #ffff00;
+  --cian: #00ffff;
+  --rosa: #ffb8ff;
+  position: fixed;
+  z-index: 99999;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  font: 8px/1.6 "Press Start 2P", 'Courier New', monospace;
+  font-synthesis: none;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #fff;
+  background: #000;
+  border-right: 2px solid var(--azul);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.7), 0 0 18px rgba(33, 33, 255, 0.45);
+  transition: transform 0.22s ease;
+}
+/* la tira de bombillas de la marquesina, en el canto derecho */
+#labPanel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 5px;
+  width: 6px;
+  background: radial-gradient(circle, #ffe98a 0 2px, transparent 2.6px) center top / 6px 22px repeat-y;
+  opacity: 0.85;
+  pointer-events: none;
+}
+#labPanel.lab-oculto { display: none; }
+#labPanel.lab-plegado { transform: translateX(-100%); box-shadow: none; }
+#labPanel * { box-sizing: border-box; font: inherit; letter-spacing: 0; text-shadow: none; }
+#labPanel button { margin: 0; min-width: 0; width: auto; height: auto; box-shadow: none; cursor: pointer; border-radius: 0; text-transform: uppercase; }
+
+/* ---------- la cabecera: como el marcador de arriba ---------- */
+#labPanel .lab-cab {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 22px 12px 14px;
+  color: #fff;
+  background: #000;
+  border: 0;
+  border-bottom: 2px solid var(--azul);
+  text-align: left;
+}
+#labPanel .lab-cab:hover .lab-logo { color: #fff; text-shadow: 0 0 8px var(--amarillo); }
+#labPanel .lab-logo {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--amarillo);
+  text-shadow: 2px 2px 0 #b8860b;
+}
+#labPanel .lab-resumen { flex: 1 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--rosa); }
+/* la flecha: un triángulo macizo, de píxel */
+#labPanel .lab-flecha {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  border-left-color: currentColor;
+  border-right-width: 0;
+  transition: transform 0.12s;
+}
+#labPanel .lab-cab > .lab-flecha { transform: rotate(180deg); color: var(--amarillo); }
+
+/* ---------- el asa: lo que asoma por el borde ---------- */
+#labPanel .lab-asa {
+  position: absolute;
+  left: calc(100% + 2px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 24px;
+  padding: 12px 0;
+  color: #000;
+  background: var(--amarillo);
+  border: 0;
+  border-bottom: 4px solid #b8860b;
+  box-shadow: 0 0 14px rgba(255, 255, 0, 0.45);
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+#labPanel .lab-asa:hover, #labPanel.lab-plegado .lab-asa { opacity: 1; }
+#labPanel .lab-asa-txt { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 9px; line-height: 1; }
+#labPanel .lab-asa .lab-flecha { transform: rotate(180deg); }
+#labPanel.lab-plegado .lab-asa .lab-flecha { transform: none; }
+
+/* ---------- el cuerpo ---------- */
+#labPanel .lab-cuerpo {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 22px 16px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--azul) #000;
+}
+#labPanel .lab-estado {
+  padding: 8px 9px;
+  white-space: pre-wrap;
+  line-height: 1.9;
+  color: var(--amarillo);
+  background: #000;
+  border: 2px solid var(--azul);
+  min-height: 30px;
+}
+#labPanel .lab-nota { margin-top: 8px; line-height: 1.8; color: #8a8ad8; text-transform: none; font-size: 7px; }
+
+/* ---------- los apartados: títulos como los del menú ---------- */
+#labPanel .lab-sec { margin-top: 14px; }
+#labPanel .lab-tit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2px 7px;
+  font-size: 9px;
+  color: var(--cian);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--azul);
+  text-align: left;
+}
+#labPanel .lab-tit:hover { color: #fff; text-shadow: 0 0 8px var(--cian); }
+#labPanel .lab-tit .lab-flecha { color: var(--amarillo); }
+#labPanel .lab-abierta > .lab-tit .lab-flecha { transform: rotate(90deg); }
+#labPanel .lab-dentro { display: none; padding: 10px 0 0; }
+#labPanel .lab-abierta > .lab-dentro { display: block; }
+
+#labPanel .lab-fila { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+#labPanel .lab-fila > span { flex: 0 0 82px; color: var(--rosa); }
+#labPanel .lab-fila select,
+#labPanel .lab-fila input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 6px;
+  color: #fff;
+  background: #000;
+  border: 2px solid var(--azul);
+  border-radius: 0;
+  outline: none;
+  text-transform: uppercase;
+}
+#labPanel .lab-fila select option { background: #000; color: #fff; }
+#labPanel .lab-fila select:hover,
+#labPanel .lab-fila select:focus,
+#labPanel .lab-fila input:hover,
+#labPanel .lab-fila input:focus { border-color: var(--amarillo); color: var(--amarillo); }
+
+/* las casillas: un cuadro azul que se llena de amarillo, sin palomita */
+#labPanel .lab-chk { display: flex; align-items: center; gap: 10px; padding: 5px 0; cursor: pointer; }
+#labPanel .lab-chk input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  background: #000;
+  border: 2px solid var(--azul);
+  border-radius: 0;
+  cursor: pointer;
+}
+#labPanel .lab-chk input:checked { background: var(--amarillo); border-color: var(--amarillo); box-shadow: inset 0 0 0 2px #000, 0 0 8px rgba(255, 255, 0, 0.6); }
+#labPanel .lab-chk:hover span { color: var(--amarillo); }
+#labPanel .lab-chk input:checked + span { color: var(--amarillo); }
+
+/* los botones: los del juego (negro con marco azul; el principal, amarillo
+ * macizo con su canto dorado, como JUGAR) */
+#labPanel .lab-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+#labPanel .lab-b {
+  padding: 8px 4px;
+  line-height: 1.5;
+  color: #fff;
+  background: #000;
+  border: 2px solid var(--azul);
+  white-space: normal;
+  transition: background 0.12s, color 0.12s;
+}
+#labPanel .lab-b:hover { background: var(--azul); color: #fff; }
+#labPanel .lab-b:active { transform: translateY(2px); }
+#labPanel .lab-b.lab-ppal {
+  grid-column: 1 / -1;
+  padding: 12px 4px 10px;
+  font-size: 12px;
+  color: #000;
+  background: var(--amarillo);
+  border: 0;
+  border-bottom: 4px solid #b8860b;
+  box-shadow: 0 0 14px rgba(255, 255, 0, 0.4);
+}
+#labPanel .lab-b.lab-ppal:hover { background: #fff; color: #000; }
+#labPanel .lab-b.lab-on { color: #000; background: var(--amarillo); border-color: var(--amarillo); }
+#labPanel .lab-botones.lab-vel { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+#labPanel .lab-botones.lab-vel .lab-b { padding: 8px 0; font-size: 7px; }

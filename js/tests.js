@@ -18790,6 +18790,108 @@
     HB.estado(0).hiper = 1;
     ok(HB.pulsar(G, 0, 3), 'grita');
     eq(G.frightTicks, HC.SHOUT_SECS * HP.MULT * 60, '12 s en vez de 6');
+    /* y lo que se coma él en ese azul vale el doble */
+    var gz = fantasmaEn(0, 7, 5);
+    gz.frightened = true;
+    var antesG = G.score;
+    G.eatGhost(gz, 0);
+    eq(G.score - antesG, HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]) * HP.MULT, 'la baja de azul paga el doble');
+    G.eatFreezeTicks = 0;
+    G.frightTicks = 0;
+    HB.pasoRoles(G, true);
+    var gy = fantasmaEn(1, 7, 5);
+    gy.frightened = true;
+    G.chainIndex = 0;
+    antesG = G.score;
+    G.eatGhost(gy, 0);
+    eq(G.score - antesG, HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]), 'acabado ese azul, lo de siempre');
+    G.toMenu();
+  });
+
+  test('HIPER · CACERÍA, GANCHO y TOQUE ARCANO potenciados: la baja a bocados paga el doble, y solo a quien lo lanzó', function () {
+    function come(rol, carga, k, prepara) {
+      nivelJefe([rol, rol === 'asesino' ? 'tanque' : 'asesino'], 1, [carga, null]);
+      G.jefe = null;
+      ponPac(0, 6, 5, DR.RIGHT); ponPac(1, 20, 5, DR.LEFT);
+      filaVacia(5);
+      var g = fantasmaEn(0, 8, 5), s = HB.estado(0);
+      s.hiper = 1;
+      ok(HB.pulsar(G, 0, k), rol + ': lanza su poder con la hiperpastilla');
+      prepara(g);
+      ok(G.comible(g, 0), rol + ': el fantasma queda a tiro');
+      var base = HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]), antes = G.score;
+      G.chainIndex = 0;
+      eq(HB.bocadoX2(G, 1, g), 1, rol + ': al compañero no le paga doble');
+      G.eatGhost(g, 0);
+      eq(G.score - antes, base * HP.MULT, rol + ': comérselo paga el doble');
+      G.toMenu();
+    }
+    come('asesino', 'mordisco,turbo,flash,caceria', 3, function () {});
+    come('mago', 'toque_arcano,portal,runa,tormenta', 0, function () {});
+    come('soporte', 'gancho,inmunidad,aliado,vida', 0, function (g) {
+      /* el garfio sale, engancha y lo trae: se deja correr hasta que llega azul */
+      for (var n = 0; n < 240 && !HB.azulCatalogo[g.id]; n++) HB.pasoRoles(G, true);
+    });
+  });
+
+  test('HIPER · proteger con un poder potenciado paga el doble: la W del Tanque, su REBOTE y el ESCUDO ALIADO', function () {
+    partidaRol(['tanque', 'soporte'], 6, 5, DR.RIGHT);
+    filaVacia(5);
+    var p = G.pacs[0], s = HB.estado(0);
+    p.safeTicks = 0;
+    s.corPas = 0; s.corCd = 99999;                // sin la coraza pasiva por medio
+    var g = fantasmaEn(0, 6, 5);
+    function golpe() {
+      s.gracia = 0;
+      g.x = p.x; g.y = p.y; g.mode = 'normal'; g.frightened = false;
+      var antes = G.score;
+      ok(HB.salvaDelChoque(G, 0, g), 'aguanta el golpe');
+      return G.score - antes;
+    }
+    var kW = HB.kDe(G, 0, 'escudo');
+    s.hiper = 1;
+    ok(HB.pulsar(G, 0, kW), 'la W del Tanque, potenciada');
+    eq(golpe(), HC.PROTEGE_PUNTOS * HP.MULT, 'el golpe que aguanta paga 1.200');
+    s.cd[kW] = 0;
+    ok(HB.pulsar(G, 0, kW), 'la siguiente W, normal');
+    eq(golpe(), HC.PROTEGE_PUNTOS, 'vuelve a pagar 600');
+    /* el escudo que da el Soporte, potenciado: cobra él, el doble */
+    HB.estado(1).pot = { aliado: 1 };
+    HB.marcarEscudo(0, HC.ALIADO_TICKS * HP.MULT, 1, HB.x2(1, 'aliado'));
+    var antesS = G.ptsJ[1] || 0;
+    eq(golpe(), HC.PROTEGE_PUNTOS * HP.MULT, 'el ESCUDO ALIADO potenciado paga 1.200');
+    eq((G.ptsJ[1] || 0) - antesS, HC.PROTEGE_PUNTOS * HP.MULT, 'al Soporte');
+    /* y el rescate de un HOSPITAL o una RESURRECCIÓN potenciados */
+    var antesR = G.score, q = {};
+    q[1] = HP.MULT;
+    HB.alRescatar(G, { x: p.x, y: p.y, quien: q });
+    eq(G.score - antesR, HC.RESCATE_PUNTOS * HP.MULT, 'el rescate potenciado paga 2.400');
+    G.toMenu();
+  });
+
+  test('HIPER · FRENESÍ potenciado: dura el doble y todo lo que mata mientras dura vale el doble', function () {
+    nivelJefe(['asesino'], 1, ['shuriken,frenesi,flash,grito']);
+    G.jefe = null;
+    ponPac(0, 6, 5, DR.RIGHT);
+    filaVacia(5);
+    var s = HB.estado(0);
+    s.hiper = 1;
+    ok(HB.pulsar(G, 0, 1), 'entra en FRENESÍ con la hiperpastilla');
+    eq(s.frenesi, HC.FRENESI_TICKS * HP.MULT, '20 s en vez de 10');
+    var g = fantasmaEn(0, 7, 5);
+    g.frightened = true;
+    var antes = G.score;
+    G.eatGhost(g, 0);
+    eq(G.score - antes, HB.puntosDe(G, 0, CFG.GHOST_CHAIN[0]) * HP.MULT, 'a bocados, el doble');
+    var g2 = fantasmaEn(1, 9, 5);
+    antes = G.score;
+    HB.matarCatalogo(G, g2, 0, HC.SHURIKEN_PUNTOS, 'shuriken', 1, true);
+    eq(G.score - antes, HC.SHURIKEN_PUNTOS * HP.MULT, 'y con sus poderes, también');
+    s.frenesi = 0;
+    var g3 = fantasmaEn(2, 9, 5);
+    antes = G.score;
+    HB.matarCatalogo(G, g3, 0, HC.SHURIKEN_PUNTOS, 'shuriken', 1, true);
+    eq(G.score - antes, HC.SHURIKEN_PUNTOS, 'acabado el frenesí, lo de siempre');
     G.toMenu();
   });
 

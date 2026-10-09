@@ -26,6 +26,14 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 > SHURIKEN sigue en 3 estrellas (más lejos y al doble). APISONADORA: solo
 > puntos y daño. Las continuaciones (cargas del shuriken, detonar la bomba,
 > salida del portal) no gastan otra.
+> **9 oct, tarde (pm-v348 y pm-v349), publicado:** teclas potenciadas en oro +
+> color del rol; el x2 llega también a lo que se come A BOCADOS tras GRITO,
+> CACERÍA, GANCHO y TOQUE ARCANO (`Hab.bocadoX2`, solo a quien lo lanzó), a
+> todo lo que mata un FRENESÍ potenciado (`frenesiX2`; Braighton eligió esto
+> frente a «acelera y alarga el doble») y a los PUNTOS POR PROTEGER (1.200 /
+> rescate 2.400; la coraza pasiva no). **LABORATORIO** (`laboratorio.bat`,
+> puerto 8265): el juego en local SIN Supabase y con barra lateral de trucos;
+> no se publica. Probar ahí, no sirviendo index.html a pelo.
 > **Por ver:** nada se ha jugado en navegador (solo el dibujo suelto y
 > `pruebas-node` 768 + `pruebas-red` 34, con un caso nuevo «H»). Si la pelea
 > con el rey acaba antes de su hora, en ese nivel no llega a salir. La mira

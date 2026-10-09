@@ -1809,6 +1809,9 @@
         : CFG.GHOST_CHAIN[streak];
       /* el MORDISCO potenciado por la HIPERPASTILLA paga el doble */
       if (como === 'mordisco' && this.hab && window.PM.Hab) pts *= window.PM.Hab.x2(who || 0, 'mordisco');
+      /* ...y lo que se coma quien dejó a ese fantasma a tiro con un GRITO,
+       * una CACERÍA, un GANCHO o un TOQUE ARCANO potenciados (Hab.bocadoX2) */
+      if (this.hab && window.PM.Hab) pts *= window.PM.Hab.bocadoX2(this, who || 0, g);
       this.chainIndex++;
       this.cadenaTick = this.tick;   // la racha del Mago caduca contando desde aquí
       /* logros: solo los que me como yo (en online, `who` dice quién fue); lo

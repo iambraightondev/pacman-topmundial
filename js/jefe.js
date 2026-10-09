@@ -584,7 +584,7 @@
         sr.rebote = 0;
         /* el golpe que aguantó el Tanque invitado lo paga quien lleva el
          * marcador (CFG.HAB.PROTEGE_PUNTOS) */
-        if (A.protege) A.protege(G, who, 'golpe', p.x, p.y);
+        if (A.protege) A.protege(G, who, 'golpe', p.x, p.y, x2(who, 'rebote'));
         if (this.danar(G, J.DANO.rebote * x2(who, 'rebote'), who, 'rebote')) {
           this.congelar(G, J.ATURDE.rebote * x2(who, 'rebote'));
         }
@@ -723,6 +723,7 @@
           if (!this.danar(G, J.DANO.mina * mMi, i, 'mina')) continue;
           s.mina = null;
           s.escudo = Math.max(s.escudo, CFG.HAB.ALIADO_TICKS * mMi);
+          s.escudoDe = i; s.escudoM = mMi;
           var mp = G.pacs[i];
           if (mp) A.efecto('amparo', mp.x, mp.y, 28);
           if (!this.activo(G)) return;

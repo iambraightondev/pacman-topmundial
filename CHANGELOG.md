@@ -14,6 +14,14 @@ Juego en producción: <https://pacman-topmundial.vercel.app>
   Pac-Man lleva un rombo de luz alrededor. No caduca: ni al morir ni al
   pasar de nivel. No se acumula.
 - La **MINA** del Soporte dura **8 s** (eran 5).
+- Las teclas potenciadas se ven **en oro fundido con el color de tu rol**.
+- **Lo que dejas a tiro también paga doble:** con GRITO, CACERÍA, GANCHO o
+  TOQUE ARCANO potenciados, el fantasma que te comas después vale el doble
+  (solo a quien lanzó el poder). Con **FRENESÍ** potenciado, todo lo que
+  mates mientras dura.
+- **Proteger potenciado paga doble:** 1.200 por golpe aguantado o salvada
+  (W y REBOTE del Tanque, ESCUDO ALIADO, CADENA, escudo de la MINA) y 2.400
+  por rescate con HOSPITAL o RESURRECCIÓN.
 
 ## 2026-10-06 · En equipo, el rango pide más
 
