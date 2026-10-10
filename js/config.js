@@ -3434,10 +3434,11 @@
     ZONA_MAX: 9,            // hasta dejar el centro (en el ancho, 20 x 13 casillas)
     ZONA_GRACIA: 2 * 60,    // dentro de la zona roja, un corazón cada 2 s
     AVISO: 5 * 60,          // el anillo siguiente parpadea los últimos 5 s
-    /* Lo que alcanza a TODO EL MAPA contra los fantasmas, contra un rival
-     * solo llega hasta aquí (casillas): un golpe que no se puede esquivar
-     * desde la otra punta no es una jugada. */
-    RADIO_GLOBAL: 8,
+    /* Lo que alcanza a TODO EL MAPA contra los fantasmas (TERREMOTO, GRITO
+     * DE GUERRA, PISOTÓN) alcanza también a TODOS los rivales, estén donde
+     * estén (Braighton, 10 oct: con un tope de 8 casillas «no afectaban a
+     * todos»). 0 = sin tope; un número lo vuelve a poner, en casillas. */
+    RADIO_GLOBAL: 0,
     /* Cada cuánto se le repite a un invitado «te han dado» mientras no
      * conteste (ticks), y cada cuánto se le recoloca si algo lo arrastra */
     AVISO_CADA: 12,

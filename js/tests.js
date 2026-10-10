@@ -16143,6 +16143,18 @@
     eq(H.marcaGhost[5], -1, 'y la marca se gasta');
   });
 
+  testSv('SUPERVIVENCIA: los poderes de mapa entero alcanzan a todos los rivales, estén donde estén', function () {
+    var H = window.PM.Hab;
+    supervivencia(['tanque', 'asesino', 'mago', 'soporte'], ['pisoton,escudo,grito_guerra,terremoto', '', '', '']);
+    ponPac(0, 6, 5, DR.RIGHT); ponPac(1, 9, 5); ponPac(2, 49, 29); ponPac(3, 49, 5);
+    ok(H.pulsar(G, 0, 3), 'el TERREMOTO');
+    eq(G.pacs.map(function (p) { return p.lives; }).join(), '3,2,2,2', 'un corazón a cada rival, también a los de la otra punta');
+    ok(H.pulsar(G, 0, 2), 'el GRITO DE GUERRA');
+    ok(H.aturdido[5] > 0 && H.aturdido[6] > 0 && H.aturdido[7] > 0 && !(H.aturdido[4] > 0), 'clava a los tres y no a quien grita');
+    ok(H.pulsar(G, 0, 0), 'el PISOTÓN');
+    ok(H.huye[5] > 0 && H.huye[6] > 0 && H.huye[7] > 0, 'y frena a los tres');
+  });
+
   testSv('SUPERVIVENCIA: el GRITO da poder y la apisonadora atropella al rival', function () {
     var H = window.PM.Hab;
     supervivencia(['asesino', 'tanque']);

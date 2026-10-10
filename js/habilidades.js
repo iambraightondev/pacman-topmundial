@@ -554,7 +554,7 @@
      * fantasmas esos poderes no tienen alcance; contra un jugador sí (ver
      * CFG.SUPERV.RADIO_GLOBAL). Un fantasma siempre está a tiro. */
     aTiroGlobal: function (G, idx, g) {
-      if (!g || g.rival == null) return true;
+      if (!g || g.rival == null || !(CFG.SUPERV.RADIO_GLOBAL > 0)) return true;
       var p = G.pacs[idx];
       return !!p && this.distancia(p.x, p.y, g.x, g.y) <= CFG.SUPERV.RADIO_GLOBAL * T;
     },
