@@ -16155,6 +16155,19 @@
     ok(H.huye[5] > 0 && H.huye[6] > 0 && H.huye[7] > 0, 'y frena a los tres');
   });
 
+  testSv('SUPERVIVENCIA: el MURO cierra el paso a los rivales y no a quien lo puso', function () {
+    var H = window.PM.Hab;
+    supervivencia(['soporte', 'asesino'], ['hielo,inmunidad,muro,vida', '']);
+    var a = ponPac(0, 10, 5, DR.RIGHT), b = ponPac(1, 6, 5, DR.RIGHT);
+    ok(H.pulsar(G, 0, 2), 'el Soporte deja el MURO a su espalda');
+    eq(H.estado(0).muro.c + ',' + H.estado(0).muro.r, '9,5', 'en la casilla de detrás');
+    for (var i = 0; i < 90; i++) { ponPac(0, 10, 5); G.step(); }
+    ok(b.tileX() <= 8, 'el rival que viene por el pasillo se queda delante (' + b.tileX() + ')');
+    a = ponPac(0, 10, 5, DR.LEFT);
+    for (i = 0; i < 30; i++) { ponPac(1, 6, 5); G.step(); }
+    ok(a.tileX() <= 9, 'y él lo atraviesa');
+  });
+
   testSv('SUPERVIVENCIA: el GRITO da poder y la apisonadora atropella al rival', function () {
     var H = window.PM.Hab;
     supervivencia(['asesino', 'tanque']);

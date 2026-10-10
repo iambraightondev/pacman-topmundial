@@ -159,6 +159,8 @@
       if (cy === CFG.TUNNEL_ROW) nx = CFG.wrapCol(nx);   // túnel: envolver
       else return false;
     }
+    /* SUPERVIVENCIA: el MURO de un rival tampoco se pisa (Hab.muroRival) */
+    if (window.PM.Hab && window.PM.Hab.sv && window.PM.Hab.muroRival(owner, nx, ny)) return false;
     if (CFG.isOpen(nx, ny, false)) return true;
     /* PUENTE: las únicas paredes que se cruzan son las del paso que abrió el
      * Soporte; el resto del laberinto sigue siendo laberinto */

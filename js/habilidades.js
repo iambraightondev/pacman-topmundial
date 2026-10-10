@@ -4023,6 +4023,20 @@
       return false;
     },
 
+    /* SUPERVIVENCIA (10 oct, Braighton): el MURO también cierra el paso a los
+     * JUGADORES rivales. Quien lo puso lo atraviesa, como siempre. Lo mira
+     * Pacman.canGo en la máquina de cada uno, con los muros que trae la foto;
+     * el que ya estuviera dentro puede salir. El FLASH lo salta, como
+     * cualquier pared. */
+    muroRival: function (idx, c, r) {
+      if (!this.sv) return false;
+      for (var i = 0; i < this.st.length; i++) {
+        var m = this.st[i].muro;
+        if (i !== idx && m && m.c === c && m.r === r) return true;
+      }
+      return false;
+    },
+
     /* ---------- EL REY FANTASMA Y EL CATÁLOGO (22 sep 2026) ----------
      * Las habilidades nuevas no le hacían nada al jefe: quien no llevara el
      * kit clásico llegaba a un nivel de jefe sin forma de tumbarlo, y ese
