@@ -206,7 +206,7 @@
     },
 
     /* Choques entre Pac-Man. Golpea al tocar:
-     *   · quien tiene PODER, a quien no lo tiene;
+     *   · quien tiene PODER, a quien toque (aunque el otro también lo tenga);
      *   · quien está de CACERÍA, a los que marcó;
      *   · cualquiera, a quien un poder haya dejado AZUL (el gancho, el toque
      *     arcano): es lo mismo que comerse a un fantasma azulado.
@@ -224,9 +224,12 @@
           if (A && A.enDimension(b)) continue;
           if (distX(pa.x, pb.x) >= S.CHOQUE || Math.abs(pa.y - pb.y) >= S.CHOQUE) continue;
           var como = '';
-          if (s.poder[a] > 0 && !(s.poder[b] > 0)) como = 'poder';
+          /* el poder NO es un escudo (10 oct, Braighton): quien lo tiene
+           * golpea a quien toque, lo tenga también el otro o no (y entonces
+           * se golpean los dos) */
+          if (s.poder[a] > 0) como = 'poder';
           else if (A && A.sv && A.caceriaQuien[4 + b] === a) como = 'caceria';
-          else if (A && A.sv && A.azulCatTicks[4 + b] > 0 && !(A.azulCatTicks[4 + a] > 0)) como = 'azul';
+          else if (A && A.sv && A.azulCatTicks[4 + b] > 0) como = 'azul';
           if (!como) continue;
           this.golpear(G, b, a, como);
           if (G.state !== 'PLAYING') return;

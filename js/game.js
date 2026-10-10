@@ -1885,8 +1885,12 @@
       }
       this.addPopup(g.x, g.y, pts, CFG.EAT_FREEZE_TICKS);
       g.eaten();
-      this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;
-      this.hiddenGhost = g.id;
+      /* SUPERVIVENCIA: comerse un fantasma NO para la partida (10 oct). El
+       * parón de un segundo era de todos: mientras el de la superpastilla
+       * comía, a los demás no les salían los poderes ni avanzaba nada de lo
+       * que le habían tirado, y parecía que la pastilla lo protegía. */
+      this.eatFreezeTicks = this.superv ? 0 : CFG.EAT_FREEZE_TICKS;
+      this.hiddenGhost = this.superv ? -1 : g.id;
       this.eaterIdx = who || 0;
       if (this.confetiTick) this.confetiTick[this.eaterIdx] = this.tick;   // efecto CONFETI
       this.hostEvt({ t: 'eatGhost', g: g.id, pts: pts,
@@ -5110,8 +5114,8 @@
           if (!this.biteGhost(me, g)) continue;
           // predicción: congela y oculta; el anfitrión confirma con 'eatGhost'
           g.eaten();
-          this.eatFreezeTicks = CFG.EAT_FREEZE_TICKS;
-          this.hiddenGhost = g.id;
+          this.eatFreezeTicks = this.superv ? 0 : CFG.EAT_FREEZE_TICKS;
+          this.hiddenGhost = this.superv ? -1 : g.id;
           this.eaterIdx = me.id;
           this.eatPredictTick = this.tick;
           this.netSend('gevt', { t: 'ateGhost', g: g.id });
@@ -5274,11 +5278,11 @@
           var predicted = (this.hiddenGhost === e.g && this.eatFreezeTicks > 0);
           var g2 = this.ghosts[e.g];
           if (g2) g2.eaten();
-          this.eatFreezeTicks = Math.max(this.eatFreezeTicks, CFG.EAT_FREEZE_TICKS - 10);
-          this.hiddenGhost = e.g;
+          this.eatFreezeTicks = this.superv ? 0 : Math.max(this.eatFreezeTicks, CFG.EAT_FREEZE_TICKS - 10);
+          this.hiddenGhost = this.superv ? -1 : e.g;
           this.eaterIdx = e.w || 0;
           if (this.confetiTick) this.confetiTick[this.eaterIdx] = this.tick;   // efecto CONFETI
-          this.addPopup(e.x, e.y, e.pts, this.eatFreezeTicks);
+          this.addPopup(e.x, e.y, e.pts, this.eatFreezeTicks || CFG.EAT_FREEZE_TICKS);
           if (!predicted) window.AudioSys && AudioSys.playEatGhost();
           // la racha la lleva el anfitrión: la voz sale con su número
           this.playStreakVoice(e.c || 0);

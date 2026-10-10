@@ -16017,6 +16017,12 @@
     G.step();
     ok(b.dying, 'con el último corazón, cae');
     eq(G.superv.bajas[0], 1, 'y la baja es de quien lo tocó');
+    /* los dos con poder: no se anulan, se golpean los dos */
+    supervivencia(['asesino', 'mago']);
+    a = ponPac(0, 6, 5, DR.RIGHT); b = ponPac(1, 6, 5, DR.LEFT);
+    G.superv.poder[0] = G.superv.poder[1] = 300;
+    G.step();
+    eq(a.lives + ',' + b.lives, '2,2', 'con poder los dos, pierden un corazón los dos');
   });
 
   testSv('SUPERVIVENCIA: gana el último en pie', function () {
@@ -16166,6 +16172,37 @@
     a = ponPac(0, 10, 5, DR.LEFT);
     for (i = 0; i < 30; i++) { ponPac(1, 6, 5); G.step(); }
     ok(a.tileX() <= 9, 'y él lo atraviesa');
+  });
+
+  testSv('SUPERVIVENCIA: la superpastilla no es un escudo: con ella puesta, los poderes ajenos le quitan corazones igual', function () {
+    var H = window.PM.Hab, casos = [
+      ['mago', 'fuego,portal,runa,tormenta', 0, 5], ['mago', 'fuego,portal,runa,tormenta', 3, 5],
+      ['asesino', 'shuriken,turbo,flash,ejecucion', 0, 5], ['asesino', 'shuriken,turbo,flash,ejecucion', 3, 5],
+      ['asesino', 'mordisco,turbo,flash,misil', 0, 1], ['asesino', 'mordisco,turbo,flash,misil', 3, 5],
+      ['tanque', 'pisoton,escudo,provocar,arrollar', 3, 3], ['tanque', 'pisoton,escudo,provocar,terremoto', 3, 5],
+      ['mago', 'bola_guiada,portal,runa,meteoro', 0, 5]];
+    casos.forEach(function (c) {
+      supervivencia([c[0], 'soporte'], [c[1], '']);
+      var id = H.idDe(G, 0, c[2]);
+      ponPac(0, 6, 5, DR.RIGHT);
+      var b = ponPac(1, 6 + c[3], 5, DR.LEFT);
+      G.superv.poder[1] = 99999;                 // el rival, con la superpastilla puesta
+      G.frightTicks = 600;
+      ok(H.pulsar(G, 0, c[2]), id + ' sale');
+      for (var i = 0; i < 200 && b.lives === 3; i++) { ponPac(1, 6 + c[3], 5); if (id !== 'arrollar') ponPac(0, 6, 5); G.pacs[0].safeTicks = 9; G.step(); }
+      eq(b.lives, 2, id + ' le quita un corazón aunque tenga la pastilla');
+    });
+  });
+
+  testSv('SUPERVIVENCIA: comerse un fantasma no para la partida ni las teclas de los demás', function () {
+    var H = window.PM.Hab;
+    supervivencia(['asesino', 'mago']);
+    ponPac(0, 6, 5, DR.RIGHT); ponPac(1, 40, 29, DR.LEFT);
+    var g = fantasmaEn(0, 6, 5); g.frightened = true; G.frightTicks = 300;
+    G.step();
+    eq(g.mode, 'eyes', 'se lo come');
+    eq(G.eatFreezeTicks, 0, 'sin parón');
+    ok(H.puede(G, 1, 0), 'y el rival puede lanzar sus poderes en ese mismo momento');
   });
 
   testSv('SUPERVIVENCIA: el GRITO da poder y la apisonadora atropella al rival', function () {
