@@ -86,6 +86,69 @@
     return o;
   }
 
+  /* Una lista de n valores iguales (la mesa: un hueco por blanco) */
+  function llena(n, v) {
+    var o = [];
+    for (var i = 0; i < n; i++) o.push(v);
+    return o;
+  }
+
+  /* ---------- EL RIVAL, DISFRAZADO DE FANTASMA (SUPERVIVENCIA, 10 oct) ----------
+   * En SUPERVIVENCIA los poderes apuntan también a los otros Pac-Man. En vez
+   * de escribir cada poder dos veces, al rival se le pone la cara que el
+   * código ya sabe tratar: la de un fantasma (x, y, tileX, tileY, mode, dir y
+   * los cuatro gestos que se le piden a uno). Es el mismo truco que blancoRey.
+   *
+   * Su `id` es 4 + su asiento: los cuatro primeros huecos de la mesa
+   * (hielo, aturdido, lento...) son de los fantasmas y los cuatro siguientes
+   * de los jugadores. Lo que un poder le apunte ahí a un rival —congelado,
+   * aturdido, frenado— se lo cobra Hab.frenoRival al andar.
+   *
+   * MOVERLO (un empujón, un gancho, la gravedad) es escribirle x o y: cambia
+   * su Pac-Man y deja apuntado `movido`, para que el anfitrión se lo cuente
+   * al dueño si es de otra máquina (Superv.paso). Y `eaten()` no hace nada:
+   * a un rival no se lo come nadie, se le quita un corazón, y eso lo deciden
+   * matarCatalogo y matarMago antes de llegar aquí. */
+  function Rival(G, idx) {
+    this.G = G;
+    this.rival = idx;
+    this.id = 4 + idx;
+    this.frightened = false;
+    this.human = false;
+    this.movido = false;
+  }
+  Rival.prototype.pac = function () { return this.G.pacs[this.rival] || null; };
+  Rival.prototype.tileX = function () { return CFG.wrapCol(Math.floor(this.x / T)); };
+  Rival.prototype.tileY = function () { return Math.floor(this.y / T); };
+  Rival.prototype.driven = function () { return false; };
+  Rival.prototype.forceReverse = function () { };
+  Rival.prototype.clearPlan = function () { };
+  Rival.prototype.eaten = function () { };
+  Object.defineProperty(Rival.prototype, 'x', {
+    get: function () { var p = this.pac(); return p ? p.x : 0; },
+    set: function (v) { var p = this.pac(); if (p && p.x !== v) { p.x = v; p.pauseTicks = 0; this.movido = true; } }
+  });
+  Object.defineProperty(Rival.prototype, 'y', {
+    get: function () { var p = this.pac(); return p ? p.y : 0; },
+    set: function (v) { var p = this.pac(); if (p && p.y !== v) { p.y = v; p.pauseTicks = 0; this.movido = true; } }
+  });
+  Object.defineProperty(Rival.prototype, 'dir', {
+    get: function () { var p = this.pac(); return p ? p.dir : 0; },
+    set: function () { }
+  });
+  /* 'normal' si se le puede hacer algo; 'house' si no (caído, muriendo, en
+   * la otra dimensión o en SIGILO, que es intangible): enLaCalle lo descarta
+   * igual que a un fantasma metido en casa. */
+  Object.defineProperty(Rival.prototype, 'mode', {
+    get: function () {
+      var p = this.pac(), A = window.PM.Hab, s = A && A.st[this.rival];
+      if (!p || p.out || p.dying) return 'house';
+      if (s && (s.dimension > 0 || s.sombra > 0)) return 'house';
+      return 'normal';
+    },
+    set: function () { }
+  });
+
   /* Estado limpio de un jugador. Las recargas empiezan a CERO: la primera
    * de cada partida está lista desde el "¡LISTO!". */
   function nuevoEstado() {
@@ -346,8 +409,13 @@
 
     /* ---------- ciclo de vida ---------- */
     /* Desde Game.newGame. n = cuántos jugadores hay en la mesa. */
-    empezar: function (on, n, roles, loadouts) {
+    empezar: function (on, n, roles, loadouts, sv) {
       this.on = !!on;
+      /* SUPERVIVENCIA: los rivales también son blancos. La mesa tiene
+       * entonces ocho huecos (cuatro fantasmas y cuatro jugadores). */
+      this.sv = !!sv && !!on;
+      this.nB = this.sv ? 8 : 4;
+      this.rivales = [];
       this.st = [];
       this.roles = [];
       this.loadouts = [];
@@ -360,6 +428,7 @@
         /* el TANQUE empieza con su CORAZA puesta: es una pasiva, tiene que
          * estar desde el primer segundo y no al primer tick de reloj */
         if (this.roles[i] === 'tanque') this.st[i].corPas = H.CORAZA_DURA;
+        if (this.sv) this.st[i].guard = llena(this.nB, 0);
       }
       /* Las VIDAS que ha regalado el Soporte y aún no han salvado a nadie:
        * { a: a quién (-1: el fondo común), de: quién la dio }. Sobreviven a
@@ -375,41 +444,42 @@
     /* Lo que no es de un jugador: fantasmas congelados o huyendo,
      * proyectiles en vuelo, portales, runas y los efectos que se pintan */
     limpiarMesa: function () {
-      this.hielo = [0, 0, 0, 0];
+      var nB = this.nB || 4;      // cuatro fantasmas (y, en SUPERVIVENCIA, cuatro rivales)
+      this.hielo = llena(nB, 0);
       /* TRAS EL HIELO (27 sep): ticks que le quedan a cada fantasma de ir a
        * HIELO_LENTO_MULT después de descongelarse */
-      this.trasHielo = [0, 0, 0, 0];
+      this.trasHielo = llena(nB, 0);
       /* TOCADOS POR EL TÓTEM (4 oct): ticks que le quedan a cada fantasma
        * frenado por los dardos, y cuántos lleva encima (totemGolpes: cada
        * uno le quita TOTEM_LENTO de velocidad y el que hace TOTEM_GOLPES lo
        * mata). Si los ticks se acaban recupera la velocidad, pero la cuenta
        * se queda: solo se borra al morir o volver a casa. */
-      this.totemToque = [0, 0, 0, 0];
-      this.totemGolpes = [0, 0, 0, 0];
-      this.huye = [0, 0, 0, 0];
-      this.huyeQuien = [-1, -1, -1, -1];
+      this.totemToque = llena(nB, 0);
+      this.totemGolpes = llena(nB, 0);
+      this.huye = llena(nB, 0);
+      this.huyeQuien = llena(nB, -1);
       /* QUEMADOS por la hoguera del METEORO (23 sep): ticks hasta que caen y
        * quién los quemó (-1: nadie). Por fantasma, como la huida. */
-      this.quema = [0, 0, 0, 0];
-      this.quemaQuien = [-1, -1, -1, -1];
-      this.lento = [0, 0, 0, 0];
-      this.lentoMult = [1, 1, 1, 1];
-      this.aturdido = [0, 0, 0, 0];
-      this.ciego = [0, 0, 0, 0];
-      this.azulCatalogo = [0, 0, 0, 0];
-      this.azulCatTicks = [0, 0, 0, 0];
+      this.quema = llena(nB, 0);
+      this.quemaQuien = llena(nB, -1);
+      this.lento = llena(nB, 0);
+      this.lentoMult = llena(nB, 1);
+      this.aturdido = llena(nB, 0);
+      this.ciego = llena(nB, 0);
+      this.azulCatalogo = llena(nB, 0);
+      this.azulCatTicks = llena(nB, 0);
       /* Cuáles de esos azules son del TOQUE ARCANO. Hace falta el sello
        * porque el azul del catálogo lo pone más de un poder (el GANCHO del
        * Soporte, sin ir más lejos) y solo el del Mago se pega. */
-      this.arcanoAzul = [0, 0, 0, 0];
-      this.caceriaQuien = [-1, -1, -1, -1];
+      this.arcanoAzul = llena(nB, 0);
+      this.caceriaQuien = llena(nB, -1);
       /* DOMINIO (22 sep 2026): ticks que le quedan a cada fantasma de ser
        * del Mago, y QUIÉN lo domina (-1: nadie). Van por fantasma y no por
        * jugador porque lo que cambia es el fantasma —a quién persigue, a
        * quién mata y de quién son los puntos—, igual que caceriaQuien. */
-      this.dominado = [0, 0, 0, 0];
-      this.dominaQuien = [-1, -1, -1, -1];
-      this.marcaGhost = [-1, -1, -1, -1];
+      this.dominado = llena(nB, 0);
+      this.dominaQuien = llena(nB, -1);
+      this.marcaGhost = llena(nB, -1);
       this.joyas = [];
       this.proyectilesCat = [];
       /* GRAVEDAD: los arrastres en curso (el tirón que se ve venir) */
@@ -435,6 +505,94 @@
       }
       this.fx = [];
       this.gritoPot = null;     // GRITO potenciado en curso: { w: quién, t: ticks }
+    },
+
+    /* ---------- LOS BLANCOS DE UN PODER ----------
+     * Los cuatro fantasmas y, en SUPERVIVENCIA, los Pac-Man rivales de `de`
+     * con su disfraz (ver Rival). Fuera de ese modo es la lista de fantasmas
+     * tal cual, en su orden: nada cambia para DESATADO ni para una
+     * repetición. Sin `de` (o con uno negativo) entran todos los jugadores. */
+    blancos: function (G, de) {
+      if (!this.sv) return G.ghosts;
+      var out = G.ghosts.slice();
+      for (var i = 0; i < G.pacs.length; i++) {
+        if (i === de) continue;
+        var r = this.rival(G, i);
+        if (r) out.push(r);
+      }
+      return out;
+    },
+
+    /* Solo los rivales de `de` (lista vacía fuera de SUPERVIVENCIA) */
+    soloRivales: function (G, de) {
+      var out = [];
+      if (!this.sv) return out;
+      for (var i = 0; i < G.pacs.length; i++) {
+        if (i === de) continue;
+        var r = this.rival(G, i);
+        if (r) out.push(r);
+      }
+      return out;
+    },
+
+    /* El disfraz del jugador idx (uno por jugador, el mismo toda la partida) */
+    rival: function (G, idx) {
+      if (!this.sv || !G.pacs[idx] || G.pacs[idx].bot) return null;
+      var r = this.rivales[idx];
+      if (!r || r.G !== G) r = this.rivales[idx] = new Rival(G, idx);
+      return r;
+    },
+
+    /* Un blanco por su id: 0..3 un fantasma, 4..7 un rival */
+    blanco: function (G, id) {
+      id = id | 0;
+      if (id < 4) return G.ghosts[id] || null;
+      return this.rival(G, id - 4);
+    },
+
+    /* ¿Ese rival le queda a tiro de un poder de MAPA ENTERO? Contra los
+     * fantasmas esos poderes no tienen alcance; contra un jugador sí (ver
+     * CFG.SUPERV.RADIO_GLOBAL). Un fantasma siempre está a tiro. */
+    aTiroGlobal: function (G, idx, g) {
+      if (!g || g.rival == null) return true;
+      var p = G.pacs[idx];
+      return !!p && this.distancia(p.x, p.y, g.x, g.y) <= CFG.SUPERV.RADIO_GLOBAL * T;
+    },
+
+    /* El golpe de un poder a un RIVAL: no se lo come nadie, se le quita un
+     * corazón (y eso lo decide SUPERVIVENCIA, con sus escudos y su rato de
+     * gracia). Devuelve si el golpe salió. */
+    golpeRival: function (G, g, who, como) {
+      var SV = window.PM.Superv;
+      if (!SV || !g || g.rival == null) return false;
+      var x = g.x, y = g.y, p = G.pacs[who];
+      this.efecto(como || 'fuego', x, y, 18, p ? p.x : x, p ? p.y : y);
+      return SV.golpear(G, g.rival, who, como || 'poder');
+    },
+
+    /* LO QUE FRENA A UN RIVAL (SUPERVIVENCIA): lo que los poderes de los
+     * demás le hayan apuntado en su hueco de la mesa. 0 es clavado en el
+     * sitio (hielo o aturdido); 1, nada. Lo consulta multVel, así que corre
+     * igual en la máquina de cada uno con lo que trae la foto. */
+    frenoRival: function (idx) {
+      if (!this.sv) return 1;
+      var id = 4 + (idx | 0), m = 1;
+      if (this.hielo[id] > 0 || this.aturdido[id] > 0) return 0;
+      if (this.huye[id] > 0) m *= H.PISOTON_LENTO;
+      if (this.lento[id] > 0) m *= this.lentoMult[id] || 1;
+      if (this.trasHielo[id] > 0) m *= H.HIELO_LENTO_MULT;
+      if (this.totemToque[id] > 0) m *= Math.max(0.2, 1 - H.TOTEM_LENTO * (this.totemGolpes[id] || 0));
+      /* ECLIPSE de otro: a oscuras se anda más despacio (0,6, como un
+       * fantasma cegado; no la mitad, que diez segundos es mucho) */
+      for (var j = 0; j < this.st.length; j++) {
+        if (j !== idx && this.st[j].eclipse > 0) { m *= 0.6; break; }
+      }
+      return m;
+    },
+
+    /* ¿Ese jugador está clavado por un poder ajeno? (ni anda ni lanza nada) */
+    clavado: function (idx) {
+      return this.sv && this.frenoRival(idx) === 0;
     },
 
     /* Rol de un jugador ('asesino' si no hay) */
@@ -550,7 +708,7 @@
         this.st[i].flashDir = -1;
         this.st[i].carga = 0;
         this.st[i].acecho = 0;
-        this.st[i].guard = [0, 0, 0, 0];
+        this.st[i].guard = llena(this.nB || 4, 0);
         /* Una Q que quedó armada muere con la vida: sin esto, la dentellada
          * pendiente saldría sola al reaparecer, contra un fantasma al que
          * nadie apuntó. */
@@ -811,7 +969,7 @@
           else s.apunta = null;
         }
         if (!corre) continue;
-        for (var j = 0; j < 4; j++) if (s.guard[j] > 0) s.guard[j]--;
+        for (var j = 0; j < s.guard.length; j++) if (s.guard[j] > 0) s.guard[j]--;
         for (var k = 0; k < 4; k++) if (s.cd[k] > 0) s.cd[k]--;
         if (s.turbo > 0) {
           s.turbo--;
@@ -1160,6 +1318,8 @@
       } else {
         var p = G.pacs[idx];
         if (!p || p.out || p.dying) return false;
+        /* SUPERVIVENCIA: congelado o aturdido por otro, no se lanza nada */
+        if (this.clavado(idx)) return false;
         /* en la otra dimensión solo se puede cerrar el portal */
         if (this.enDimension(idx) && this.idDe(G, idx, k) !== 'portal') return false;
       }
@@ -1394,6 +1554,18 @@
     plantado: function (idx) {
       var s = this.estado(idx);
       return !!(s && (s.apunta || s.quieto));
+    },
+
+    /* Anfitrión: la CORAZA pasiva de un Tanque invitado, tal como la lleva
+     * ÉL (10 oct). Cada máquina le llevaba su propio reloj y, como los
+     * parones de comerse un fantasma no duran lo mismo en las dos, se iban
+     * separando: el anfitrión lo veía con coraza cuando ya no la tenía, y al
+     * revés. Ahora manda el dueño, que es quien decide sus choques. */
+    corazaRemota: function (G, idx, cp) {
+      var s = this.estado(idx);
+      if (!s || !cp || cp.length < 2 || !this.esRol(G, idx, 'tanque')) return;
+      s.corPas = Math.max(0, Math.min(H.CORAZA_DURA, cp[0] | 0));
+      s.corCd = Math.max(0, Math.min(H.CORAZA_CD, cp[1] | 0));
     },
 
     /* Anfitrión: el invitado avisa de si está apuntando */
@@ -1819,9 +1991,9 @@
       var p = G.pacs[idx];
       if (!p) return null;
       var alcance = H.BITE_PX + (extra || 0);
-      var mejor = null, mejorD = Infinity;
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+      var mejor = null, mejorD = Infinity, L = this.blancos(G, idx);
+      for (var i = 0; i < L.length; i++) {
+        var g = L[i];
         if (!g) continue;
         if (g.mode === 'house' || g.mode === 'entering' || g.mode === 'eyes') continue;
         if (this.caceriaQuien[g.id] >= 0 && this.caceriaQuien[g.id] !== idx && !g.frightened) continue;
@@ -1921,6 +2093,8 @@
        * de tecla convertiría la partida en una cuenta de puntos regalados.
        * Con los fantasmas ya azules, el mordisco entra en la cadena que
        * hubiera, que para eso te has ganado la superpastilla. */
+      /* SUPERVIVENCIA: a un rival no se lo come, le quita un corazón */
+      if (g.rival != null) { this.golpeRival(G, g, idx, 'mordisco'); return true; }
       if (G.frightTicks <= 0) G.chainIndex = 0;
       G.eatGhost(g, idx, 'mordisco');
       return true;
@@ -1958,8 +2132,11 @@
      * Lo consulta Game.pacSpeedPx. */
     multVel: function (idx) {
       if (this.plantado(idx)) return 0;       // apuntando el METEORO
+      /* SUPERVIVENCIA: lo que le hayan hecho los poderes de los demás */
+      var freno = this.frenoRival(idx);
+      if (freno === 0) return 0;
       if (this.arrollando(idx)) return H.APISONADORA_MULT;
-      var s = this.estado(idx), m = this.conTurbo(idx) ? H.TURBO_MULT : 1;
+      var s = this.estado(idx), m = (this.conTurbo(idx) ? H.TURBO_MULT : 1) * freno;
       if (s && s.sombra > 0) m *= H.SOMBRA_MULT;
       if (s && s.frenesi > 0) m *= this.frenesiVel(idx);
       if (s && s.caceria > 0) m *= H.CACERIA_MULT;
@@ -2100,6 +2277,8 @@
       if (soloVisual) return true;      // lo reparte el anfitrión
       var mGri = this.x2(idx, 'grito');
       G.triggerFright(H.SHOUT_SECS * mGri);
+      /* SUPERVIVENCIA: gritar da también el PODER contra los demás Pac-Man */
+      if (this.sv && window.PM.Superv) window.PM.Superv.darPoder(G, idx, CFG.SUPERV.PODER_GRITO * mGri);
       /* GRITO potenciado (hiperpastilla): además del doble de azul, las
        * bajas de quien gritó valen el doble mientras dure ESE azul */
       this.gritoPot = mGri > 1 ? { w: idx, t: Math.round(H.SHOUT_SECS * mGri * 60) } : null;
@@ -2355,6 +2534,15 @@
       var mejor = null, mejorD = Infinity;
       for (var i = 0; i < this.st.length; i++) {
         if (!(this.st[i].provoca > 0) || this.st[i].sombra > 0 || !this.vivo(G, i)) continue;
+        if (this.sv) {
+          /* SUPERVIVENCIA: los azuza contra sus rivales, el más cercano al fantasma */
+          for (var rv = 0; rv < G.pacs.length; rv++) {
+            if (rv === i || !this.vivo(G, rv) || this.st[rv].sombra > 0 || this.st[rv].dimension > 0) continue;
+            var dr = this.distancia(G.pacs[rv].x, G.pacs[rv].y, g.x, g.y);
+            if (dr < mejorD) { mejorD = dr; mejor = G.pacs[rv]; }
+          }
+          continue;
+        }
         var p = G.pacs[i];
         var d = this.distancia(p.x, p.y, g.x, g.y);
         if (d < mejorD) { mejorD = d; mejor = p; }
@@ -2368,6 +2556,8 @@
      * azules no están provocados: huyen y se comen como siempre. */
     ignoraA: function (G, idx, g) {
       if (!this.on || !g || g.mode !== 'normal' || g.frightened) return false;
+      /* SUPERVIVENCIA: al que provoca es al que no tocan */
+      if (this.sv) return !!(this.st[idx] && this.st[idx].provoca > 0);
       for (var i = 0; i < this.st.length; i++) {
         if (i !== idx && this.st[i].provoca > 0 && this.vivo(G, i)) return true;
       }
@@ -2380,9 +2570,11 @@
      * fantasmas del Mago no se peleen entre ellos en vez de cazar. */
     presaDominado: function (G, g) {
       var mejor = null, d0 = Infinity;
-      for (var i = 0; i < 4; i++) {
-        var o = G.ghosts[i];
-        if (i === g.id || !this.enLaCalle(o) || this.esDominado(i)) continue;
+      /* SUPERVIVENCIA: el fantasma prestado caza a los RIVALES de su dueño */
+      var L = this.sv ? this.soloRivales(G, this.dominaQuien[g.id]) : G.ghosts;
+      for (var i = 0; i < L.length; i++) {
+        var o = L[i];
+        if (o.id === g.id || !this.enLaCalle(o) || this.esDominado(o.id)) continue;
         var d = this.distancia(g.x, g.y, o.x, o.y);
         if (d < d0) { d0 = d; mejor = o; }
       }
@@ -2464,6 +2656,7 @@
       }
       for (j = 0; j < this.st.length; j++) {
         var fs = this.st[j], fp = G.pacs[j];
+        if (this.sv && j !== idx) continue;        // SUPERVIVENCIA: lo de otro no me cubre
         if (fs.campo > 0 || (fs.fortaleza > 0 && fp && p && this.distancia(fp.x, fp.y, p.x, p.y) <= H.FORTALEZA_RADIO * this.x2(j, 'fortaleza') * T)) {
           this.empujarDesde(G, g, 1);
           return true;
@@ -3034,10 +3227,11 @@
        * obligaba a perdonar píxeles por la red, porque el fantasma que el
        * invitado ve justo en el borde no está ahí en la pantalla del
        * anfitrión. Sin radio, no hay borde que discutir. */
-      var blancos = [];
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+      var blancos = [], L = this.blancos(G, idx);
+      for (var i = 0; i < L.length; i++) {
+        var g = L[i];
         if (!this.enLaCalle(g) || g.driven()) continue;
+        if (!this.aTiroGlobal(G, idx, g)) continue;     // a un rival, solo de cerca
         blancos.push(g);
       }
       /* el REY FANTASMA también sale por patas (18 sep): con jefe, el
@@ -3139,8 +3333,9 @@
       if (this.manda(G) && G.isLocalAuth(idx)) G.eatAt(p.tileX(), p.tileY(), p);
       p.pauseTicks = 0;
       /* lo que pilla por el camino */
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+      var LA = this.blancos(G, idx);
+      for (var i = 0; i < LA.length; i++) {
+        var g = LA[i];
         if (!this.enLaCalle(g)) continue;
         if (distX(g.x, p.x) >= T || Math.abs(g.y - p.y) >= T) continue;
         if (this.manda(G)) {
@@ -3156,7 +3351,8 @@
      * Vale si de verdad la lleva encendida (lo sabe por su petición) y si ese
      * fantasma está cerca de donde le llega su Pac-Man. */
     peticionCome: function (G, who, gid) {
-      var s = this.estado(who), p = G.pacs[who], g = G.ghosts[gid | 0];
+      var s = this.estado(who), p = G.pacs[who], g = this.blanco(G, gid);
+      if (g && g.rival === who) return;
       if (!s || !p || !(s.arrollaRed > 0) || !this.enLaCalle(g)) return;
       var alcance = 2 * T + H.BITE_NET_MARGIN;
       if (distX(g.x, p.x) > alcance || Math.abs(g.y - p.y) > alcance) return;
@@ -3218,8 +3414,9 @@
           }
           bl.x = nx; bl.y = ny;
           if (!manda) continue;
-          for (var i = 0; i < 4; i++) {
-            var g = G.ghosts[i];
+          var LB = this.blancos(G, bl.w);
+          for (var i = 0; i < LB.length; i++) {
+            var g = LB[i];
             if (!this.enLaCalle(g)) continue;
             if (distX(g.x, bl.x) > 6 || Math.abs(g.y - bl.y) > 6) continue;
             this.impacto(G, bl, g);
@@ -3237,9 +3434,9 @@
         return;
       }
       /* el hielo congela al primero y a todos los de su misma casilla */
-      var col = g.tileX(), row = g.tileY();
-      for (var i = 0; i < 4; i++) {
-        var o = G.ghosts[i];
+      var col = g.tileX(), row = g.tileY(), LH = this.blancos(G, bl.w);
+      for (var i = 0; i < LH.length; i++) {
+        var o = LH[i];
         if (!this.enLaCalle(o)) continue;
         if (o === g || (o.tileX() === col && o.tileY() === row)) {
           this.hielo[o.id] = H.HIELO_TICKS * (bl.m || 1);
@@ -3265,6 +3462,7 @@
     aliadoDe: function (G, idx) {
       var p = G.pacs[idx], mejor = -1, mejorD = Infinity;
       if (!p) return -1;
+      if (this.sv) return this.vivo(G, idx) ? idx : -1;   // sin equipo: el escudo es para él
       for (var i = 0; i < G.pacs.length; i++) {
         if (i === idx || !this.vivo(G, i)) continue;
         var o = G.pacs[i];
@@ -3301,6 +3499,7 @@
     aliadosCerca: function (G, idx) {
       var out = [];
       if (!G.pacs[idx]) return out;
+      if (this.sv) { if (this.vivo(G, idx)) out.push(idx); return out; }
       for (var i = 0; i < G.pacs.length; i++) {
         if (this.vivo(G, i)) out.push(i);
       }
@@ -3348,6 +3547,8 @@
      * no sube a nadie de VIDA_MAX. Con vidas compartidas, al fondo común. */
     destinoVida: function (G, idx) {
       var ind = (G.playerCount > 1 && G.livesMode === 'individual');
+      /* SUPERVIVENCIA: un corazón para él, sin pasar de los que tenía al empezar */
+      if (this.sv) return (this.vivo(G, idx) && G.pacs[idx].lives < CFG.SUPERV.CORAZONES) ? idx : -1;
       if (!ind) return (G.lives < H.VIDA_MAX) ? idx : -1;
       var p = G.pacs[idx], mejor = -1, mejorV = Infinity, mejorD = Infinity;
       for (var i = 0; i < G.pacs.length; i++) {
@@ -3369,7 +3570,25 @@
       var ind = (G.playerCount > 1 && G.livesMode === 'individual');
       /* potenciada: dos vidas (sin pasar de VIDA_MAX) */
       var masV = this.x2(idx, 'vida');
-      if (ind) G.pacs[j].lives = Math.min(Math.max(H.VIDA_MAX, G.pacs[j].lives + 1), G.pacs[j].lives + masV);
+      /* UNA VIDA A CADA UNO (10 oct, Braighton: a uno solo era muy poco para
+       * una R de 160 s). A todos los que sigan en pie, él incluido, sin pasar
+       * de VIDA_MAX. Una repetición de antes la ve como era: a uno. */
+      if (!this.sv && ind && (G.reglasPts | 0) >= H.VIDA_REGLAS) {
+        for (var q = 0; q < G.pacs.length; q++) {
+          var pq = G.pacs[q];
+          if (!this.vivo(G, q) || pq.lives >= H.VIDA_MAX) continue;
+          pq.lives = Math.min(H.VIDA_MAX, pq.lives + masV);
+          this.vidasDadas.push({ a: q, de: idx });
+          if (G.marca) G.marca(idx, 'apoyos', 2);
+          this.efecto('vida', pq.x, pq.y, 40);
+          G.addPopup(pq.x, pq.y - 6, masV > 1 ? '2UP' : '1UP', 60);
+          G.hostEvt({ t: 'habVida', w: q });
+        }
+        window.AudioSys && AudioSys.playExtraLife();
+        return true;
+      }
+      if (this.sv) G.pacs[j].lives = Math.min(CFG.SUPERV.CORAZONES, G.pacs[j].lives + masV);
+      else if (ind) G.pacs[j].lives = Math.min(Math.max(H.VIDA_MAX, G.pacs[j].lives + 1), G.pacs[j].lives + masV);
       else G.lives = Math.min(Math.max(H.VIDA_MAX, G.lives + 1), G.lives + masV);
       /* para pagarla si un día salva a alguien (ver alPerderVida) */
       (this.vidasDadas = this.vidasDadas || []).push({ a: ind ? j : -1, de: idx });
@@ -3410,6 +3629,7 @@
      * para la partida: el fantasma pasa a ojos y se sigue jugando. Lo de la
      * apisonadora vale MAGO_PUNTOS fijos; lo del Mago, su racha. */
     matarMago: function (G, g, who, como, mult) {
+      if (g && g.rival != null) { this.golpeRival(G, g, who, como); return; }
       var p = G.pacs[who];
       var ox = p ? p.x : g.x, oy = p ? p.y : g.y;
       g.eaten();
@@ -3639,8 +3859,9 @@
       if (!p) return;
       var mejor = null, mejorD = Infinity;
       var mRa = this.x2(idx, 'tormenta'), alcRa = H.TORMENTA_TILES * T * mRa;
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+      var LR = this.blancos(G, idx);
+      for (var i = 0; i < LR.length; i++) {
+        var g = LR[i];
         if (!this.enLaCalle(g)) continue;
         var d = this.distancia(p.x, p.y, g.x, g.y);
         if (d <= alcRa && d < mejorD) { mejorD = d; mejor = g; }
@@ -3666,10 +3887,11 @@
      * las interacciones con fantasmas y los puntos especiales no entran en la
      * cadena clásica de la superpastilla.
      * ========================================================= */
-    ghostCercanoAt: function (G, c, r, radio) {
-      var mejor = null, d0 = Infinity;
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+    /* `de`: de quién es el poder (SUPERVIVENCIA: sus rivales también valen) */
+    ghostCercanoAt: function (G, c, r, radio, de) {
+      var mejor = null, d0 = Infinity, L = (de >= 0) ? this.blancos(G, de) : G.ghosts;
+      for (var i = 0; i < L.length; i++) {
+        var g = L[i];
         if (!this.enLaCalle(g)) continue;
         var dx = Math.abs(g.tileX() - c), dy = Math.abs(g.tileY() - r);
         dx = Math.min(dx, CFG.COLS - dx);
@@ -3681,23 +3903,26 @@
 
     /* A quién le tira el TÓTEM: al que ya tenía (tt.obj) mientras siga en la
      * calle y a tiro; si no, al más cercano, y se queda con él. */
-    blancoTotem: function (G, tt) {
-      var g = tt.obj >= 0 ? G.ghosts[tt.obj] : null, radio = 10 * (tt.m || 1);
+    blancoTotem: function (G, tt, de) {
+      var g = tt.obj >= 0 ? this.blanco(G, tt.obj) : null, radio = 10 * (tt.m || 1);
+      if (g && g.rival != null && g.rival === de) g = null;
       if (g && this.enLaCalle(g)) {
         var dx = Math.abs(g.tileX() - tt.c), dy = Math.abs(g.tileY() - tt.r);
         dx = Math.min(dx, CFG.COLS - dx);
         if (Math.sqrt(dx * dx + dy * dy) <= radio) return g;
       }
-      g = this.ghostCercanoAt(G, tt.c, tt.r, radio);
+      g = this.ghostCercanoAt(G, tt.c, tt.r, radio, de);
       tt.obj = g ? g.id : -1;
       return g;
     },
 
-    ghostCercano: function (G, idx, radio) {
+    /* soloFantasmas: el poder no vale contra un rival (DOMINIO) */
+    ghostCercano: function (G, idx, radio, soloFantasmas) {
       var p = G.pacs[idx], mejor = null, d0 = Infinity;
       if (!p) return null;
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+      var L = soloFantasmas ? G.ghosts : this.blancos(G, idx);
+      for (var i = 0; i < L.length; i++) {
+        var g = L[i];
         if (!this.enLaCalle(g) || g.driven && g.driven()) continue;
         var d = this.distancia(p.x, p.y, g.x, g.y);
         if (d <= radio * T && d < d0) { d0 = d; mejor = g; }
@@ -3705,10 +3930,13 @@
       return mejor;
     },
 
-    ghostsEn: function (G, c, r, radio) {
-      var out = [];
-      for (var i = 0; i < 4; i++) {
-        var g = G.ghosts[i];
+    /* `de`: de quién es el poder. Con él, en SUPERVIVENCIA entran también
+     * sus rivales; sin él, solo los fantasmas (el MURO, que un Pac-Man
+     * atraviesa). */
+    ghostsEn: function (G, c, r, radio, de) {
+      var out = [], L = (de >= 0) ? this.blancos(G, de) : G.ghosts;
+      for (var i = 0; i < L.length; i++) {
+        var g = L[i];
         if (!this.enLaCalle(g)) continue;
         var dx = Math.abs(g.tileX() - c), dy = Math.abs(g.tileY() - r);
         dx = Math.min(dx, CFG.COLS - dx);
@@ -3739,8 +3967,9 @@
       for (var n = 1; n <= max; n++) {
         var c = CFG.wrapCol(p.tileX() + v.x * n), r = p.tileY() + v.y * n;
         if (r < 0 || r >= CFG.ROWS || !CFG.isOpen(c, r, false)) break;
-        for (var i = 0; i < 4; i++) {
-          var g = G.ghosts[i];
+        var LL = this.blancos(G, idx);
+        for (var i = 0; i < LL.length; i++) {
+          var g = LL[i];
           if (this.enLaCalle(g) && g.tileX() === c && g.tileY() === r) return g;
         }
       }
@@ -3754,6 +3983,7 @@
 
     matarCatalogo: function (G, g, who, pts, como, mult, exacto) {
       if (!g || !this.enLaCalle(g)) return false;
+      if (g.rival != null) return this.golpeRival(G, g, who, como);
       var x = g.x, y = g.y, p = G.pacs[who];
       // el Mago cobra su racha (ver esMago), también la BOLA GUIADA y el DOMINIO
       if (this.esMago(G, who)) pts = this.rachaMago(G);
@@ -3859,7 +4089,7 @@
         this.efecto('bomba_planta', c.c * T + T / 2, c.r * T + T / 2, 24);
         sonDe(G, idx, 'playShout'); return true;
       }
-      var b = s.bomba, mB = b.m || 1, blancos = this.ghostsEn(G, b.c, b.r, H.BOMBA_RADIO * mB);
+      var b = s.bomba, mB = b.m || 1, blancos = this.ghostsEn(G, b.c, b.r, H.BOMBA_RADIO * mB, idx);
       s.bomba = null;
       /* las bajas de un mismo estallido van EN RACHA (24 sep): 250, 500,
        * 1.000 y 2.000 */
@@ -3906,17 +4136,22 @@
       var s = this.estado(idx); if (!s) return false;
       s.caceria = H.CACERIA_TICKS * this.x2(idx, 'caceria');
       s.caceriaVistos = 0;
-      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
-        this.caceriaQuien[i] = idx;
-        s.caceriaVistos |= (1 << i);
-        this.efecto('caceria', G.ghosts[i].x, G.ghosts[i].y, 30);
+      /* en SUPERVIVENCIA marca también a los rivales: mientras dure, tocarlos
+       * les quita un corazón (Superv.choques) */
+      var LC = this.blancos(G, idx);
+      for (var i = 0; i < LC.length; i++) if (this.enLaCalle(LC[i])) {
+        var ci = LC[i].id;
+        this.caceriaQuien[ci] = idx;
+        s.caceriaVistos |= (1 << ci);
+        this.efecto('caceria', LC[i].x, LC[i].y, 30);
       }
       sonDe(G, idx, 'playShout'); return true;
     },
     misil: function (G, idx) {
       var p = G.pacs[idx], blancos = [];
       if (!p) return false;
-      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) blancos.push(G.ghosts[i]);
+      var LM = this.blancos(G, idx);
+      for (var i = 0; i < LM.length; i++) if (this.enLaCalle(LM[i])) blancos.push(LM[i]);
       blancos.sort(function (a, b) { return this.distancia(p.x, p.y, a.x, a.y) - this.distancia(p.x, p.y, b.x, b.y); }.bind(this));
       /* SIN FANTASMAS, A POR EL REY (22 sep 2026). En un nivel de jefe los
        * cuatro están encerrados en casa hasta que él los invoca: sin esto,
@@ -4035,9 +4270,10 @@
        * expande por el mapa entero —que es justo hasta dónde llega el
        * poder— y cada fantasma clavado se sacude en su sitio. */
       this.efecto('grito_guerra', p.x, p.y, 34);
-      for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
-        this.aturdido[i] = H.GRITO_GUERRA_TICKS * this.x2(idx, 'grito_guerra');
-        this.efecto('grito_sacudida', G.ghosts[i].x, G.ghosts[i].y, 16);
+      var LG = this.blancos(G, idx);
+      for (var i = 0; i < LG.length; i++) if (this.enLaCalle(LG[i]) && this.aTiroGlobal(G, idx, LG[i])) {
+        this.aturdido[LG[i].id] = H.GRITO_GUERRA_TICKS * this.x2(idx, 'grito_guerra');
+        this.efecto('grito_sacudida', LG[i].x, LG[i].y, 16);
       }
       /* Y AL REY FANTASMA (22 sep 2026), pero un segundo en vez de dos y
        * medio. La onda llega a todo el mapa, así que contra el jefe esta es
@@ -4064,8 +4300,9 @@
         JT.danar(G, CFG.JEFE.DANO.terremoto * this.x2(idx, 'terremoto'), idx, 'terremoto');
         this.efecto('terremoto', G.jefe.x, G.jefe.y, 30);
       }
-      if (this.manda(G)) for (var i = 0; i < 4; i++) if (this.enLaCalle(G.ghosts[i])) {
-        var g = G.ghosts[i];
+      var LT = this.blancos(G, idx);
+      if (this.manda(G)) for (var i = 0; i < LT.length; i++) if (this.enLaCalle(LT[i]) && this.aTiroGlobal(G, idx, LT[i])) {
+        var g = LT[i];
         this.matarCatalogo(G, g, idx, H.TERREMOTO_PUNTOS, 'terremoto', this.x2(idx, 'terremoto'), true);
       }
       if (G.pacs[idx]) this.efecto('terremoto_onda', G.pacs[idx].x, G.pacs[idx].y, 50);
@@ -4197,7 +4434,7 @@
        * dos, potenciada) y sin seguro. */
       var nueva = (G.reglasPts | 0) >= H.RESU_REGLAS, mRe = this.x2(idx, 'resurreccion');
       var fuera = [], i, cuantos = nueva ? G.pacs.length : mRe, sRe = this.estado(idx);
-      for (i = 0; i < G.pacs.length && fuera.length < cuantos; i++) if (i !== idx && G.pacs[i] && G.pacs[i].out) fuera.push(i);
+      for (i = 0; i < G.pacs.length && fuera.length < cuantos && !this.sv; i++) if (i !== idx && G.pacs[i] && G.pacs[i].out) fuera.push(i);
       if (!fuera.length) {
         if (!nueva || !sRe || sRe.seguro > 0 || !G.pacs[idx]) return false;
         sRe.seguro = mRe;
@@ -4338,19 +4575,21 @@
      * Esto lo resuelve SOLO el anfitrión; las demás pantallas reciben
      * azulCatalogo y azulCatTicks en la foto y no deciden nada. */
     pasoContagioArcano: function (G) {
-      var portadores = [], i, j, k;
-      for (i = 0; i < 4; i++) {
-        if (this.arcanoAzul[i] && this.azulCatTicks[i] > 0 && this.enLaCalle(G.ghosts[i])) portadores.push(i);
+      var portadores = [], i, j, k, nB = this.nB || 4;
+      for (i = 0; i < nB; i++) {
+        if (this.arcanoAzul[i] && this.azulCatTicks[i] > 0 && this.enLaCalle(this.blanco(G, i))) portadores.push(i);
       }
       if (!portadores.length) return;
       for (k = 0; k < portadores.length; k++) {
         i = portadores[k];
-        var a = G.ghosts[i];
-        for (j = 0; j < 4; j++) {
+        var a = this.blanco(G, i);
+        for (j = 0; j < nB; j++) {
           if (j === i) continue;
-          var b = G.ghosts[j];
+          var b = this.blanco(G, j);
           if (!this.enLaCalle(b)) continue;
           if (this.azulCatTicks[j] > 0) continue;
+          /* SUPERVIVENCIA: a quien lo lanzó no se le pega su propio azul */
+          if (b.rival != null && b.rival === this.azulCatalogo[i] - 1) continue;
           if (this.distancia(a.x, a.y, b.x, b.y) > T) continue;
           this.azulCatTicks[j] = this.azulCatTicks[i];
           this.azulCatalogo[j] = this.azulCatalogo[i];
@@ -4382,9 +4621,9 @@
       while (actual) {
         usados[actual.id] = 1; this.aturdido[actual.id] = H.CHISPA_TICKS * mCh;
         this.efecto('chispa', actual.x, actual.y, 24, ox, oy); ox = actual.x; oy = actual.y;
-        var sig = null, sd = Infinity;
-        for (var i = 0; i < 4; i++) {
-          var g = G.ghosts[i]; if (!this.enLaCalle(g) || usados[g.id]) continue;
+        var sig = null, sd = Infinity, LCh = this.blancos(G, idx);
+        for (var i = 0; i < LCh.length; i++) {
+          var g = LCh[i]; if (!this.enLaCalle(g) || usados[g.id]) continue;
           var dd = this.distancia(actual.x, actual.y, g.x, g.y);
           if (dd <= 3 * T * mCh && dd < sd) { sd = dd; sig = g; }
         }
@@ -4429,7 +4668,7 @@
         JV.congelar(G, CFG.JEFE.ATURDE.gravedad * mGr);
         this.efecto('gravedad', p.x, p.y, 28, G.jefe.x, G.jefe.y);
       }
-      blancos = this.ghostsEn(G, p.tileX(), p.tileY(), radioGr);
+      blancos = this.ghostsEn(G, p.tileX(), p.tileY(), radioGr, idx);
       for (var i = 0; i < blancos.length; i++) {
         var g = blancos[i];
         this.aturdido[g.id] = H.GRAVEDAD_TICKS * mGr;
@@ -4457,7 +4696,7 @@
      * en el acto por haber estado pegado a él. */
     dominio: function (G, idx) {
       var mDo = this.x2(idx, 'dominio');
-      var p = G.pacs[idx], g = this.ghostCercano(G, idx, H.DOMINIO_TILES * mDo);
+      var p = G.pacs[idx], g = this.ghostCercano(G, idx, H.DOMINIO_TILES * mDo, true);
       if (!p || !g) return false;
       this.dominado[g.id] = H.DOMINIO_TICKS * mDo;
       this.dominaQuien[g.id] = idx;
@@ -4655,7 +4894,7 @@
       var prohibida = (b.d >= 0) ? CFG.OPP[b.d] : -1;
       var mejor = -1, mejorRuta = null;
       for (var k = 0; k < b.cola.length; k++) {
-        var g = G.ghosts[b.cola[k] | 0];
+        var g = this.blanco(G, b.cola[k]);
         if (!this.enLaCalle(g)) continue;
         var ruta = this.rutaLaberinto(bc, br, g.tileX(), g.tileY(), prohibida);
         if (!ruta) continue;
@@ -4665,7 +4904,7 @@
       b.cola.splice(b.cola.indexOf(mejor), 1);
       b.objetivo = mejor;
       b.ruta = mejorRuta;
-      b.rutaObjetivo = G.ghosts[mejor].tileX() + ',' + G.ghosts[mejor].tileY();
+      b.rutaObjetivo = this.blanco(G, mejor).tileX() + ',' + this.blanco(G, mejor).tileY();
       return true;
     },
 
@@ -4673,9 +4912,9 @@
      * Devuelve false cuando ya no le queda nadie a quien perseguir y hay que
      * apagarlo, que es lo que el misil ha hecho siempre al quedarse sin cola. */
     atropellaMisil: function (G, b) {
-      var golpeo = false, j, g, k;
-      for (j = 0; j < 4; j++) {
-        g = G.ghosts[j];
+      var golpeo = false, j, g, k, LMi = this.blancos(G, b.w);
+      for (j = 0; j < LMi.length; j++) {
+        g = LMi[j];
         if (!this.enLaCalle(g)) continue;
         if (this.distancia(b.x, b.y, g.x, g.y) > T * 0.75) continue;
         this.matarCatalogo(G, g, b.w, CFG.GHOST_CHAIN[Math.min(b.golpe, 3)], 'misil', b.pot || 1);
@@ -4686,7 +4925,7 @@
         if (g.id === (b.objetivo | 0)) b.objetivo = -1;
       }
       if (!golpeo) return true;
-      if (b.objetivo >= 0 && this.enLaCalle(G.ghosts[b.objetivo])) return true;
+      if (b.objetivo >= 0 && this.enLaCalle(this.blanco(G, b.objetivo))) return true;
       /* se quedó sin blanco por el camino: al siguiente que tenga POR
        * DELANTE, sin darse la vuelta (ver siguienteBlancoMisil) */
       return this.siguienteBlancoMisil(G, b);
@@ -4711,9 +4950,9 @@
           }
           b.x = nx; b.y = ny;
           if (manda) {
-            var tocado = null;
-            for (var j = 0; j < 4; j++) {
-              var sg = G.ghosts[j];
+            var tocado = null, LS = this.blancos(G, b.w);
+            for (var j = 0; j < LS.length; j++) {
+              var sg = LS[j];
               if (this.enLaCalle(sg) && this.distancia(b.x, b.y, sg.x, sg.y) <= T * 0.75) { tocado = sg; break; }
             }
             if (tocado) {
@@ -4770,8 +5009,9 @@
                 this.efecto('gancho', b.x, b.y, 20, sp2.x, sp2.y);
                 b.fase = 'vuelve';
               }
-              for (var gj = 0; gj < 4 && b.fase === 'sale'; gj++) {
-                var gcand = G.ghosts[gj];
+              var LGa = this.blancos(G, b.w);
+              for (var gj = 0; gj < LGa.length && b.fase === 'sale'; gj++) {
+                var gcand = LGa[gj];
                 if (!this.enLaCalle(gcand) || this.distancia(b.x, b.y, gcand.x, gcand.y) > T * 0.75) continue;
                 b.objetivo = gcand.id; b.fase = 'trae'; b.trae = H.GANCHO_TRAE_MAX * (b.pot || 1);
                 b.x = gcand.x; b.y = gcand.y;
@@ -4780,7 +5020,7 @@
               }
             }
           } else if (b.fase === 'trae') {
-            var gobj = G.ghosts[b.objetivo | 0];
+            var gobj = this.blanco(G, b.objetivo);
             if (!this.enLaCalle(gobj) || --b.trae <= 0) b.fase = 'vuelve';
             else {
               b.x = gobj.x; b.y = gobj.y;
@@ -4837,8 +5077,9 @@
                 b.rey = 1; b.fase = 'arrastra'; b.x = G.jefe.x; b.y = G.jefe.y;
                 this.efecto('gancho_atrapa', b.x, b.y, 24, hp.x, hp.y);
               }
-              if (manda && b.fase === 'sale') for (var hg = 0; hg < 4; hg++) {
-                var gg = G.ghosts[hg];
+              var LGi = this.blancos(G, b.w);
+              if (manda && b.fase === 'sale') for (var hg = 0; hg < LGi.length; hg++) {
+                var gg = LGi[hg];
                 if (!this.enLaCalle(gg) || this.distancia(b.x, b.y, gg.x, gg.y) > T * 0.75) continue;
                 b.objetivo = gg.id; b.fase = 'arrastra'; b.x = gg.x; b.y = gg.y;
                 this.azulCatalogo[gg.id] = b.w + 1; this.azulCatTicks[gg.id] = H.GANCHO_AZUL_TICKS * (b.pot || 1);
@@ -4848,7 +5089,7 @@
             }
           } else if (b.fase === 'arrastra') {
             /* al rey no se le apaga mientras tira: no es un fantasma */
-            var hgObj = b.rey ? (this.rey(G) ? G.jefe : null) : G.ghosts[b.objetivo | 0];
+            var hgObj = b.rey ? (this.rey(G) ? G.jefe : null) : this.blanco(G, b.objetivo);
             if (b.rey ? !hgObj : !this.enLaCalle(hgObj)) b.fase = 'vuelve';
             else {
               b.x = hgObj.x; b.y = hgObj.y;
@@ -4900,12 +5141,12 @@
          * puesto persiguen al rey, y como va disfrazado de fantasma
          * (blancoRey) vuelan con este mismo código, rutas del laberinto
          * incluidas. Al llegar le quitan vida en vez de comérselo. */
-        var target = b.jefe ? this.blancoRey(G) : G.ghosts[b.objetivo | 0];
+        var target = b.jefe ? this.blancoRey(G) : this.blanco(G, b.objetivo);
         if (!b.jefe && !this.enLaCalle(target)) {
           if (b.tipo === 'misil') {
-            if (this.siguienteBlancoMisil(G, b)) target = G.ghosts[b.objetivo];
+            if (this.siguienteBlancoMisil(G, b)) target = this.blanco(G, b.objetivo);
           } else {
-            target = this.ghostCercanoAt(G, Math.floor(b.x / T), Math.floor(b.y / T), 999);
+            target = this.ghostCercanoAt(G, Math.floor(b.x / T), Math.floor(b.y / T), 999, b.w);
             if (target) b.objetivo = target.id;
           }
           /* y si ya no queda ningún fantasma, el que quede volando remata en
@@ -5030,7 +5271,8 @@
       if (this.terremotoTicks > 0) this.terremotoTicks--;
       if (this.temblorTicks > 0) this.temblorTicks--;
       if (this.eclipseTicks > 0) this.eclipseTicks--;
-      for (j = 0; j < 4; j++) {
+      var nB = this.nB || 4;
+      for (j = 0; j < nB; j++) {
         /* UN VIAJE A CASA LO DEJA LIMPIO (22 sep 2026). Lo que le pintan
          * encima las habilidades —el azul del catálogo, el hielo, la huida,
          * el aturdimiento, la ceguera— es de ESE fantasma en la calle, no de
@@ -5040,7 +5282,7 @@
          * tanto se moría otra vez de un toque en la misma puerta—, y uno
          * congelado volvía sin poder moverse. La CACERÍA y el DOMINIO ya lo
          * hacían cada uno por su lado, ahora es la misma regla para todos. */
-        if (!this.enLaCalle(G.ghosts[j])) {
+        if (!this.enLaCalle(this.blanco(G, j))) {
           this.quema[j] = 0; this.quemaQuien[j] = -1;
           this.azulCatalogo[j] = 0; this.azulCatTicks[j] = 0; this.arcanoAzul[j] = 0;
           this.hielo[j] = 0; this.trasHielo[j] = 0; this.totemToque[j] = 0; this.totemGolpes[j] = 0;
@@ -5105,7 +5347,7 @@
           this.cerrarRafagaShuriken(G, i);
         }
         if (s.carrona > 0) s.carrona--;
-        if (s.marca > 0 && --s.marca <= 0) for (j = 0; j < 4; j++) if (this.marcaGhost[j] === i) this.marcaGhost[j] = -1;
+        if (s.marca > 0 && --s.marca <= 0) for (j = 0; j < nB; j++) if (this.marcaGhost[j] === i) this.marcaGhost[j] = -1;
         if (s.caceria > 0) {
           s.caceria--;
           /* LOS QUE SALEN DURANTE LA CACERÍA TAMBIÉN QUEDAN MARCADOS (24 sep).
@@ -5116,15 +5358,17 @@
            * marcado en esta cacería —casi siempre porque lo mataste y vuelve
            * a salir de casa— no se vuelve a marcar. Los que estaban dentro
            * al pulsarla sí, la primera vez que salen. */
-          for (j = 0; j < 4; j++) {
+          for (j = 0; j < nB; j++) {
+            if (j === 4 + i) continue;                 // a sí mismo no se marca
+            var bc2 = this.blanco(G, j);
             if (this.caceriaQuien[j] < 0 && !((s.caceriaVistos | 0) & (1 << j)) &&
-                this.enLaCalle(G.ghosts[j])) {
+                this.enLaCalle(bc2)) {
               this.caceriaQuien[j] = i;
               s.caceriaVistos = (s.caceriaVistos | 0) | (1 << j);
-              this.efecto('caceria', G.ghosts[j].x, G.ghosts[j].y, 30);
+              this.efecto('caceria', bc2.x, bc2.y, 30);
             }
           }
-        } else for (j = 0; j < 4; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
+        } else for (j = 0; j < nB; j++) if (this.caceriaQuien[j] === i) this.caceriaQuien[j] = -1;
         if (s.estelaBuff > 0) s.estelaBuff--;
         if (!s.estelaRastro) s.estelaRastro = [];
         /* ESTELA: el rastro es un camino, no una colita. Antes cada pisada se
@@ -5147,7 +5391,7 @@
          * pisada por pisada y se reparte mientras el rastro esté puesto. */
         for (j = 0; j < s.estelaRastro.length; j++) {
           var er = s.estelaRastro[j];
-          for (var ej = 0; ej < G.pacs.length; ej++) if (ej !== i && this.vivo(G, ej) &&
+          for (var ej = 0; ej < G.pacs.length && !this.sv; ej++) if (ej !== i && this.vivo(G, ej) &&
               this.distancia(G.pacs[ej].x, G.pacs[ej].y, er.x, er.y) <= T) this.st[ej].estelaBuff = 15;
         }
         /* El hueco del PUENTE se cierra solo, y al cerrarse saca de la pared
@@ -5250,10 +5494,10 @@
         var pl = this.placas[i];
         if (pl && --pl.t <= 0) this.placas[i] = null;
       }
-      for (var j = 0; j < 4; j++) {
+      for (var j = 0; j < nB; j++) {
         if (this.trasHielo[j] > 0) this.trasHielo[j]--;
         /* al descongelarse, 3 s más lento (HIELO_LENTO_*) */
-        if (this.hielo[j] > 0 && --this.hielo[j] <= 0 && this.enLaCalle(G.ghosts[j])) {
+        if (this.hielo[j] > 0 && --this.hielo[j] <= 0 && this.enLaCalle(this.blanco(G, j))) {
           this.trasHielo[j] = H.HIELO_LENTO_TICKS;
         }
         if (this.huye[j] > 0) this.huye[j]--;
@@ -5263,7 +5507,7 @@
        * Los fantasmas los mueve el anfitrión y nadie más. */
       if (this.tirones && this.tirones.length) {
         for (var ti = this.tirones.length - 1; ti >= 0; ti--) {
-          var tr2 = this.tirones[ti], tg2 = G.ghosts[tr2.gid];
+          var tr2 = this.tirones[ti], tg2 = this.blanco(G, tr2.gid);
           if (!manda || !this.enLaCalle(tg2) || --tr2.t <= 0) { this.tirones.splice(ti, 1); continue; }
           this.tirarFantasma(G, tg2, tr2.c, tr2.r, tr2.vel);
         }
@@ -5292,9 +5536,10 @@
           cazador.eaten();
           continue;
         }
-        for (var pz = 0; pz < 4; pz++) {
-          var presaDom = G.ghosts[pz];
-          if (pz === j || this.esDominado(pz) || !this.enLaCalle(presaDom)) continue;
+        var LD = this.sv ? this.soloRivales(G, duenoDom) : G.ghosts;
+        for (var pz = 0; pz < LD.length; pz++) {
+          var presaDom = LD[pz];
+          if (presaDom.id === j || this.esDominado(presaDom.id) || !this.enLaCalle(presaDom)) continue;
           if (this.distancia(cazador.x, cazador.y, presaDom.x, presaDom.y) > H.DOMINIO_CHOQUE * T) continue;
           this.efecto('dominio_caza', presaDom.x, presaDom.y, 26, cazador.x, cazador.y);
           this.matarCatalogo(G, presaDom, duenoDom, H.DOMINIO_PUNTOS, 'dominio', this.x2(duenoDom, 'dominio'), true);
@@ -5304,7 +5549,7 @@
       for (i = 0; i < this.st.length; i++) {
         s = this.st[i];
         if (s.telarana) {
-          var red = this.ghostsEn(G, s.telarana.c, s.telarana.r, 1.5 * (s.telarana.m || 1));
+          var red = this.ghostsEn(G, s.telarana.c, s.telarana.r, 1.5 * (s.telarana.m || 1), i);
           for (j = 0; j < red.length; j++) { this.lento[red[j].id] = 2; this.lentoMult[red[j].id] = H.TELARANA_MULT; }
         }
         if (s.muro) {
@@ -5312,7 +5557,7 @@
           for (j = 0; j < pared.length; j++) this.empujar(G, pared[j], 1);
         }
         if (s.mina) {
-          var mina = this.ghostsEn(G, s.mina.c, s.mina.r, 0.6);
+          var mina = this.ghostsEn(G, s.mina.c, s.mina.r, 0.6, i);
           if (mina.length) {
             for (j = 0; j < mina.length; j++) this.matarCatalogo(G, mina[j], i, H.MAGO_PUNTOS, 'mina', s.mina.m || 1);
             s.escudoDe = i;                      // el de la MINA es para él
@@ -5334,7 +5579,7 @@
           /* NO SUELTA A SU PRESA (4 oct): sigue con el mismo fantasma hasta
            * matarlo, aunque otro se le ponga más cerca. Solo cambia si ese ya
            * no está en la calle o se le ha ido de las 10 casillas. */
-          var tg = this.blancoTotem(G, s.totem);
+          var tg = this.blancoTotem(G, s.totem, i);
           if (tg) this.proyectilesCat.push({ tipo: 'totem', x: s.totem.c * T + T / 2,
             y: s.totem.r * T + T / 2, w: i, objetivo: tg.id, pot: s.totem.m || 1 });
           /* SIN FANTASMAS, LA TORRE LE DISPARA AL REY (22 sep 2026). Una
@@ -5356,7 +5601,7 @@
         }
         if (s.clon) {
           this.moverClon(s.clon);
-          var cercaClon = this.ghostsEn(G, s.clon.c, s.clon.r, 0.7);
+          var cercaClon = this.ghostsEn(G, s.clon.c, s.clon.r, 0.7, i);
           /* EL REY TAMBIÉN SE CREE EL CLON: ya lo persigue (Hab.objetivo lo
            * mira sin preguntar quién es), así que lo único que faltaba era
            * el reventón al alcanzarlo (22 sep 2026). Medio segundo apagado,
@@ -5372,7 +5617,7 @@
         }
         if (s.meteoro && s.meteoro.t <= 0) {
           var mMe = s.meteoro.m || 1;
-          var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO * mMe);
+          var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO * mMe, i);
           for (j = 0; j < mm.length; j++) {
             if (this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro', mMe)) this.devolverMeteoro(G, i);
           }
@@ -5397,7 +5642,7 @@
          * la pisa se prende y cae QUEMA ticks después, salga o no del fuego;
          * uno que ya arde no se vuelve a prender (el reloj no se reinicia). */
         if (s.fuegoMeteoro) {
-          var fm = this.ghostsEn(G, s.fuegoMeteoro.c, s.fuegoMeteoro.r, this.radioFuego(s.fuegoMeteoro));
+          var fm = this.ghostsEn(G, s.fuegoMeteoro.c, s.fuegoMeteoro.r, this.radioFuego(s.fuegoMeteoro), i);
           for (j = 0; j < fm.length; j++) {
             var qid = fm[j].id;
             if (this.quema[qid] > 0) continue;
@@ -5410,12 +5655,12 @@
       /* Los QUEMADOS: al acabarse el reloj, caen. Si entretanto se fueron a
        * casa (comidos, ojos) ya lo borró el viaje (ver arriba), y si quien
        * los quemó ya no está en la mesa, caen igual a nombre de nadie. */
-      for (j = 0; j < 4; j++) {
+      for (j = 0; j < nB; j++) {
         if (!(this.quema[j] > 0) || --this.quema[j] > 0) continue;
         var qw = this.quemaQuien[j];
         this.quemaQuien[j] = -1;
         if (qw < 0 || qw >= this.st.length) continue;
-        if (this.matarCatalogo(G, G.ghosts[j], qw, H.MAGO_PUNTOS, 'meteoro_fuego', this.x2(qw, 'meteoro'))) this.devolverMeteoro(G, qw);
+        if (this.matarCatalogo(G, this.blanco(G, j), qw, H.MAGO_PUNTOS, 'meteoro_fuego', this.x2(qw, 'meteoro'))) this.devolverMeteoro(G, qw);
       }
       for (i = this.joyas.length - 1; i >= 0; i--) {
         var joya = this.joyas[i]; if (--joya.t <= 0) { this.joyas.splice(i, 1); continue; }
@@ -5439,8 +5684,9 @@
       for (i = 0; i < this.runas.length; i++) {
         var r = this.runas[i];
         if (!r) continue;
-        for (j = 0; j < 4; j++) {
-          var g = G.ghosts[j];
+        var LRu = this.blancos(G, i);
+        for (j = 0; j < LRu.length; j++) {
+          var g = LRu[j];
           if (!this.enLaCalle(g) || g.tileX() !== r.c || g.tileY() !== r.r) continue;
           this.runas[i] = null;
           this.matarMago(G, g, i, 'runa', this.x2(i, 'runa'));     // y sigue: caen todos los de la casilla
@@ -5450,13 +5696,14 @@
       for (i = 0; i < this.placas.length; i++) {
         var pc = this.placas[i];
         if (!pc) continue;
-        for (j = 0; j < 4; j++) {
-          var gp = G.ghosts[j];
-          if (pc.z & (1 << j)) continue;
+        var LPl = this.blancos(G, i);
+        for (j = 0; j < LPl.length; j++) {
+          var gp = LPl[j], gpi = gp.id;
+          if (pc.z & (1 << gpi)) continue;
           if (!this.enLaCalle(gp) || gp.tileX() !== pc.c || gp.tileY() !== pc.r) continue;
-          pc.z |= (1 << j);
-          this.hielo[j] = H.HIELO_TICKS * (pc.m || 1);
-          this.huye[j] = 0;
+          pc.z |= (1 << gpi);
+          this.hielo[gpi] = H.HIELO_TICKS * (pc.m || 1);
+          this.huye[gpi] = 0;
           this.efecto('escarcha', gp.x, gp.y, 18);
           G.hostEvt({ t: 'habFx', f: 'escarcha', x: Math.round(gp.x), y: Math.round(gp.y) });
         }
@@ -5581,7 +5828,7 @@
 
     aplicarRoles: function (hx, mioIdx, G) {
       if (!this.on || !hx) return;
-      var i, k;
+      var i, k, nBf = this.nB || 4;
       /* los dos últimos llegaron con la CORAZA (20 sep): una foto vieja
        * simplemente no los trae y se quedan como están */
       var CAMPOS = ['provoca', 'escudo', 'pisoton', 'arrolla', 'inmune', 'tormenta', 'gracia', 'coraza', 'dimension',
@@ -5621,27 +5868,27 @@
           }
         }
       }
-      if (hx.hz) this.hielo = hx.hz.slice(0, 4);
-      if (hx.th) this.trasHielo = hx.th.slice(0, 4);
-      if (hx.hu) this.huye = hx.hu.slice(0, 4);
-      if (hx.hq) this.huyeQuien = hx.hq.slice(0, 4);
+      if (hx.hz) this.hielo = hx.hz.slice(0, nBf);
+      if (hx.th) this.trasHielo = hx.th.slice(0, nBf);
+      if (hx.hu) this.huye = hx.hu.slice(0, nBf);
+      if (hx.hq) this.huyeQuien = hx.hq.slice(0, nBf);
       if (hx.ct) {
         var ct = hx.ct;
-        if (ct.lento) this.lento = ct.lento.slice(0, 4);
-        if (ct.totemToque) this.totemToque = ct.totemToque.slice(0, 4);
-        if (ct.totemGolpes) this.totemGolpes = ct.totemGolpes.slice(0, 4);
-        if (ct.lentoMult) this.lentoMult = ct.lentoMult.slice(0, 4);
-        if (ct.aturdido) this.aturdido = ct.aturdido.slice(0, 4);
-        if (ct.ciego) this.ciego = ct.ciego.slice(0, 4);
-        if (ct.azul) this.azulCatalogo = ct.azul.slice(0, 4);
-        if (ct.azulT) this.azulCatTicks = ct.azulT.slice(0, 4);
-        if (ct.caceria) this.caceriaQuien = ct.caceria.slice(0, 4);
-        if (ct.dominado) this.dominado = ct.dominado.slice(0, 4);
-        if (ct.dominaQuien) this.dominaQuien = ct.dominaQuien.slice(0, 4);
-        if (ct.marca) this.marcaGhost = ct.marca.slice(0, 4);
+        if (ct.lento) this.lento = ct.lento.slice(0, nBf);
+        if (ct.totemToque) this.totemToque = ct.totemToque.slice(0, nBf);
+        if (ct.totemGolpes) this.totemGolpes = ct.totemGolpes.slice(0, nBf);
+        if (ct.lentoMult) this.lentoMult = ct.lentoMult.slice(0, nBf);
+        if (ct.aturdido) this.aturdido = ct.aturdido.slice(0, nBf);
+        if (ct.ciego) this.ciego = ct.ciego.slice(0, nBf);
+        if (ct.azul) this.azulCatalogo = ct.azul.slice(0, nBf);
+        if (ct.azulT) this.azulCatTicks = ct.azulT.slice(0, nBf);
+        if (ct.caceria) this.caceriaQuien = ct.caceria.slice(0, nBf);
+        if (ct.dominado) this.dominado = ct.dominado.slice(0, nBf);
+        if (ct.dominaQuien) this.dominaQuien = ct.dominaQuien.slice(0, nBf);
+        if (ct.marca) this.marcaGhost = ct.marca.slice(0, nBf);
         if (ct.joyas) this.joyas = ct.joyas;
         if (ct.proyectiles) this.proyectilesCat = ct.proyectiles;
-        if (ct.quema) this.quema = ct.quema.slice(0, 4);
+        if (ct.quema) this.quema = ct.quema.slice(0, nBf);
         this.terremotoTicks = ct.terremoto | 0; this.eclipseTicks = ct.eclipse | 0;
         for (i = 0; ct.st && i < ct.st.length && i < this.st.length; i++) {
           var cs = ct.st[i], ds = this.st[i];

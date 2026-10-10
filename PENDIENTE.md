@@ -7,7 +7,37 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **9 de octubre de 2026** (pm-v350).
+Última puesta al día: **10 de octubre de 2026** (pm-v351, publicado).
+
+> **SESIÓN DEL 10 OCT · SUPERVIVENCIA con poderes, tres corazones y tablero
+> ancho (Braighton eligió el mapa A y la regla 1). Hecho y probado
+> (`pruebas-node` 781, `pruebas-red` 42 con los casos «S» nuevos; visto en
+> el laboratorio a 1920×1080). Publicado; sube `CFG.NET.PROTO` a 23.**
+> **Además, el mismo día:** un poder POTENCIADO le entra siempre al rey (se
+> salta su respiro: `Jefe.danar`; el TERREMOTO x2 de MAULIO no le quitó nada,
+> causa deducida, no reproducida); la CORAZA pasiva de un Tanque invitado la
+> marca su máquina (`cp` en su `pos`, `Hab.corazaRemota`); HOSPITAL 75 s,
+> RESURRECCIÓN 90 s; VIDA EXTRA da una vida a CADA jugador en pie (reglas de
+> puntuación a 6, `VIDA_REGLAS`).
+> **Cómo está hecho:** `CFG.TABLEROS` + `CFG.ponerTablero` / `Game.ponerTablero`
+> (todo lo que depende del ancho cambia junto); los rivales son blancos de los
+> poderes con un disfraz de fantasma (`Rival` y `Hab.blancos` en
+> habilidades.js; sus estados van en los huecos 4..7 de la mesa); los golpes,
+> en `Superv.golpear/recibir/quitar` (el invitado decide sus escudos, el
+> anfitrión lleva los corazones: `svGolpe` / `svDano`).
+> **Decidido por Claude, sin confirmar:** qué le hace cada poder a un rival
+> (lo que mata quita un corazón, lo que frena frena; PROVOCAR azuza a los
+> fantasmas contra los rivales; GRITO da 3 s de poder; MARCA hace que el
+> siguiente golpe quite dos; CACERÍA deja golpear por contacto; DOMINIO caza
+> rivales); los vetados (`CFG.SUPERV.VETADAS`); 2 s de gracia tras un golpe;
+> los poderes de mapa entero solo alcanzan a un rival a 8 casillas; la zona
+> acaba en 20×13 (ZONA_MAX 9).
+> **Sin hacer / a vigilar:** nada se ha JUGADO con gente (balance entero por
+> ver); en móvil vertical el mapa ancho sale a menos de x1; solo hay cuatro
+> fantasmas para el doble de mapa; los estados sobre un rival se pintan con
+> marcas sencillas (bloque de hielo, chispas, aro); las repeticiones de red
+> de SUPERVIVENCIA de antes de hoy no llevan la marca del modo; no se
+> anunció en `CFG.AVISOS`; SPEC.md sin tocar.
 
 > **SESIÓN DEL 9 OCT (pm-v346 a pm-v350), todo pedido por Braighton y
 > publicado. Se retoma en otra sesión. Detalle por dentro en SPEC («La

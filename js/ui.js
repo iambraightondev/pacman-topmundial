@@ -7291,7 +7291,19 @@
         rol: function () { var P = window.PM.Party; return P && P.myRol ? P.myRol() : 'asesino'; },
         carga: function () {
           var P = window.PM.Party;
-          return String(P && P.myCarga ? P.myCarga() : '').split(',');
+          var c = String(P && P.myCarga ? P.myCarga() : '');
+          /* SUPERVIVENCIA: lo que no entra se ve ya cambiado, como se jugará */
+          if (P && P.supervPick) c = CFG.SUPERV.carga(P.myRol ? P.myRol() : 'asesino', c);
+          return c.split(',');
+        },
+        /* qué poderes se ofrecen (y un sello para rehacer el cajón si cambia) */
+        entra: function (id) {
+          var P = window.PM.Party;
+          return !(P && P.supervPick) || CFG.SUPERV.entra(id);
+        },
+        sello: function () {
+          var P = window.PM.Party;
+          return (P && P.supervPick) ? 'sv' : '';
         },
         onRol: function (id) {
           if (window.PM.Party) window.PM.Party.setRol(id);
@@ -7319,11 +7331,17 @@
       fCaza.appendChild(el('div', 'ol-card-texto', 'CADA UNO LLEVA EL FANTASMA DE SU ASIENTO: NO HAY NADA QUE ELEGIR'));
 
       /* SUPERVIVENCIA */
+      /* (su ficha no se enseña: en la sala va la del armario, con este
+       * título y estas reglas en el «?». Ver refreshParty y ayudaModoSala) */
       var fSv = ficha('superv', '#ffd400', 'SUPERVIVENCIA', [
-        'TODOS CONTRA TODOS, UNA VIDA CADA UNO',
-        'LA SUPERPASTILLA TE DEJA ELIMINAR A LOS DEMÁS UNOS SEGUNDOS',
-        'LA ZONA SE CIERRA: FUERA DE ELLA NO SE AGUANTA',
-        'GANA EL ÚLTIMO EN PIE'
+        'TODOS CONTRA TODOS, CADA UNO CON SU ROL Y SUS CUATRO PODERES',
+        CFG.SUPERV.CORAZONES + ' CORAZONES: CADA GOLPE QUITA UNO Y TE DEJA UN MOMENTO A SALVO',
+        'TE GOLPEAN LOS FANTASMAS, LA ZONA Y LOS PODERES DE LOS DEMÁS',
+        'LO QUE CONGELA O ATURDE A UN FANTASMA, A TI TAMBIÉN',
+        'LA SUPERPASTILLA TE DEJA GOLPEAR A QUIEN TOQUES UNOS SEGUNDOS',
+        'LA ZONA SE CIERRA: DENTRO PIERDES UN CORAZÓN CADA 2 S',
+        'LOS PODERES DE EQUIPO NO ENTRAN · EL MAPA ES EL DOBLE DE ANCHO',
+        'GANA EL ÚLTIMO EN PIE · NO CUENTA PARA EL TOP MUNDIAL'
       ]);
       fSv.appendChild(el('div', 'ol-card-texto', 'TODOS SALEN DE PAC-MAN · NO CUENTA PARA EL TOP MUNDIAL'));
 
@@ -7664,13 +7682,15 @@
         /* DESATADO: debajo del nombre, los cuatro poderes que lleva. Saber
          * que el Soporte va con HOSPITAL o el Mago con METEORO cambia cómo
          * se arma uno; antes solo se veía el rol. */
-        if (P.habPick && m.r && CFG.HAB.ROL_INFO[m.r]) {
+        if ((P.habPick || P.supervPick) && m.r && CFG.HAB.ROL_INFO[m.r]) {
           var quienBox = document.createElement('span');
           quienBox.className = 'ol-plaza-quien';
           quienBox.appendChild(n);
           /* los mismos que le pondrá la partida (Hab.normalizarCarga) */
           var HabN = window.PM.Hab;
-          var podTxt = (HabN && HabN.normalizarCarga ? HabN.normalizarCarga(m.r, m.h || '') : [])
+          /* en SUPERVIVENCIA, sin los que no entran (CFG.SUPERV.carga) */
+          var cargaM = P.supervPick ? CFG.SUPERV.carga(m.r, m.h || '') : (m.h || '');
+          var podTxt = (HabN && HabN.normalizarCarga ? HabN.normalizarCarga(m.r, cargaM) : [])
             .map(function (hab) { return hab ? hab.name : '?'; }).join(' · ');
           var pod = document.createElement('small');
           pod.className = 'ol-plaza-poderes';
@@ -7702,7 +7722,7 @@
         if (m.l || (P.esLider && P.esLider(m))) {
           tags.appendChild(this.olTag('LISTO', '#00ff66'));
         }
-        if (P.habPick && m.r && CFG.HAB.ROL_INFO[m.r]) {
+        if ((P.habPick || P.supervPick) && m.r && CFG.HAB.ROL_INFO[m.r]) {
           tags.appendChild(this.olTag(CFG.HAB.ROL_INFO[m.r].name, CFG.HAB.ROL_INFO[m.r].color));
         }
         row.appendChild(tags);
@@ -7751,7 +7771,8 @@
       if (this.olFichas) {
         /* CLASIFICATORIA usa la ficha de DESATADO (el mismo armario), con su
          * propio título y color */
-        var fichaModo = (modo === 'clasif') ? 'hab' : modo;
+        /* ...y SUPERVIVENCIA también: se juega con rol y poderes (10 oct) */
+        var fichaModo = (modo === 'clasif' || modo === 'superv') ? 'hab' : modo;
         for (var fid in this.olFichas) {
           if (!this.olFichas.hasOwnProperty(fid)) continue;
           var esta = (fid === fichaModo);
@@ -7760,16 +7781,17 @@
         }
         var fh = this.olFichas.hab;
         if (fh && fh.olNombre) {
-          var esClasif = (modo === 'clasif');
-          fh.olNombre.textContent = esClasif ? 'CLASIFICATORIA' : 'DESATADO';
-          fh.style.setProperty('--mc', esClasif ? '#ffd23f' : '#ff66cc');
+          var esClasif = (modo === 'clasif'), esSv = (modo === 'superv');
+          fh.olNombre.textContent = esSv ? 'SUPERVIVENCIA' : esClasif ? 'CLASIFICATORIA' : 'DESATADO';
+          fh.style.setProperty('--mc', esSv ? '#ffd400' : esClasif ? '#ffd23f' : '#ff66cc');
           fh.olClasif = esClasif;
+          fh.olSuperv = esSv;
         }
       }
       /* DESATADO: el rol lo elige cada uno, no el líder */
       if (this.habArm) {
         var miRol = P.myRol ? P.myRol() : 'asesino';
-        var conRoles = (modo === 'hab' || modo === 'clasif');
+        var conRoles = (modo === 'hab' || modo === 'clasif' || modo === 'superv');
         this.paletaDeRol(conRoles ? miRol : null);
         this.habArm.pintar();
       }
@@ -7974,6 +7996,7 @@
         var fila = H.catalogoDe(rol)[abierto] || [];
         var col = H.ROL_INFO[rol].color;
         for (var i = 0; i < fila.length; i++) {
+          if (o.entra && !o.entra(fila[i].id)) continue;      // no entra en este modo
           (function (hab) {
             var b = self.makeButton('', function () { o.onPoder(abierto, hab.id); ver(hab); });
             b.classList.add('arm-op');
@@ -8036,7 +8059,8 @@
         raiz.classList.toggle('arm-recogido', abierto < 0);
         if (abierto < 0) { cajonDe = ''; return; }
         /* cajón */
-        if (cajonDe !== rol + '|' + abierto) { cajonDe = rol + '|' + abierto; encima = null; construirCajon(rol); }
+        var claveCajon = rol + '|' + abierto + '|' + (o.sello ? o.sello() : '');
+        if (cajonDe !== claveCajon) { cajonDe = claveCajon; encima = null; construirCajon(rol); }
         for (var i = 0; i < ops.length; i++) ops[i].b.classList.toggle('active', carga[abierto] === ops[i].id);
         if (!encima) ver(habDe(rol, abierto, carga[abierto]));
       }
@@ -8051,12 +8075,15 @@
       var self = this;
       if (!f) return;
       var reglas = (f.olReglas || []).slice();
+      /* SUPERVIVENCIA usa la ficha del armario: sus reglas son las suyas */
+      var esSv = !!(f.olSuperv && this.olFichas && this.olFichas.superv);
+      if (esSv) reglas = (this.olFichas.superv.olReglas || []).slice();
       if (f.olClasif) {
         reglas.push('CADA PARTIDA MUEVE EL RANGO DEL MES DE CADA UNO, EN SU FORMATO (DÚO, TRÍO, ESCUADRA)');
         reglas.push('LAS 5 PRIMERAS SON DE COLOCACIÓN · HACE FALTA CUENTA');
       }
       this.showPrompt({
-        title: f.olClasif ? 'CLASIFICATORIA' : (f.olTitulo || 'CÓMO SE JUEGA'),
+        title: esSv ? 'SUPERVIVENCIA' : f.olClasif ? 'CLASIFICATORIA' : (f.olTitulo || 'CÓMO SE JUEGA'),
         popup: true,
         color: getComputedStyle(f).getPropertyValue('--mc') || '#fff',
         lines: reglas,

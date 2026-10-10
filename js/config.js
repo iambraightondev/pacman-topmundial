@@ -2550,8 +2550,10 @@
    * vuelve al clásico. Recuenta las pastillas: cada laberinto tiene las
    * suyas y el final de nivel se decide con ese número. Devuelve cuántas. */
   CFG.setMaze = function (rows) {
-    var ok = rows && rows.length === CFG.ROWS;
-    CFG.MAZE = ok ? rows.slice() : CFG.MAZE_CLASSIC.slice();
+    /* del ancho del tablero puesto (CFG.TABLEROS): un laberinto de 28 en el
+     * tablero de 56 dejaría media pantalla sin muros */
+    var ok = rows && rows.length === CFG.ROWS && rows[0].length === CFG.COLS;
+    CFG.MAZE = ok ? rows.slice() : (CFG.MAZE_BASE || CFG.MAZE_CLASSIC).slice();
     var n = 0;
     for (var r = 0; r < CFG.ROWS; r++) {
       for (var c = 0; c < CFG.COLS; c++) {
@@ -2820,8 +2822,9 @@
      * antes no la trae: en sus niveles 15, 20... no sale nada.
      * (5, 9 oct 2026: la RESURRECCIÓN mejorada, ver RESU_REGLAS.)
      */
-    REGLAS_PUNTOS: 5,
+    REGLAS_PUNTOS: 6,
     RESU_REGLAS: 5,
+    VIDA_REGLAS: 6,               // desde estas, la VIDA EXTRA es para todos
     /* LA HIPERPASTILLA (9 oct 2026, Braighton). En los niveles DESDE,
      * DESDE+CADA... (15, 20, 25: los del REY FANTASMA) sale UNA por nivel:
      * un rombo que brilla, en una casilla al azar y en un momento al azar de
@@ -3298,10 +3301,10 @@
          h('faro', 'E', 'FARO', 30, 'Reduce la recarga de la R de un aliado.'),
          h('sirena', 'E', 'SIRENA', 34, 'Atrae fantasmas a un punto.')],
         /* Las cuatro R del Soporte, 20 s menos de recarga (27 sep, Braighton) */
-        [h('vida', 'R', 'VIDA EXTRA', 160, 'Da una vida al compañero que menos tiene.'),
-         h('resurreccion', 'R', 'RESURRECCIÓN', 160, 'Levanta a todos los eliminados; sin nadie fuera, es tu seguro.'),
+        [h('vida', 'R', 'VIDA EXTRA', 160, 'Da una vida a cada jugador en pie.'),
+         h('resurreccion', 'R', 'RESURRECCIÓN', 90, 'Levanta a todos los eliminados; sin nadie fuera, es tu seguro.'),
          h('campo', 'R', 'CAMPO', 130, 'Nadie del equipo muere durante 5 s.'),
-         h('hospital', 'R', 'HOSPITAL', 130, 'Levanta a todos los caídos, con sus poderes listos.')]
+         h('hospital', 'R', 'HOSPITAL', 75, 'Levanta a todos los caídos, con sus poderes listos.')]
       ],
       mago: [
         [h('fuego', 'Q', 'BOLA DE FUEGO', 20, 'Mata al primer fantasma.'),
@@ -3381,7 +3384,7 @@
       relevo: "TRAE AL INSTANTE A TU POSICIÓN AL COMPAÑERO VIVO MÁS CERCANO, SI ESTÁ A 6 CASILLAS O MENOS",
       faro: "FARO EN TU CASILLA DURANTE 6 S: EL PRIMER COMPAÑERO QUE LO PISE VE LA RECARGA DE SU R REDUCIDA A LA MITAD",
       sirena: "SEÑUELO HASTA 6 CASILLAS POR DELANTE DURANTE 6 S: TODOS LOS FANTASMAS VAN HACIA ÉL · TAMBIÉN ATRAE AL REY",
-      vida: "+1 VIDA AL COMPAÑERO VIVO QUE MENOS TIENE (A IGUALDAD, EL MÁS CERCANO) · CON VIDAS COMPARTIDAS VA AL FONDO COMÚN · NADIE PASA DE 5",
+      vida: "+1 VIDA A CADA JUGADOR QUE SIGA EN PIE, TÚ INCLUIDO · NADIE PASA DE 5 · A SOLAS, UNA PARA TI",
       resurreccion: "DEVUELVE A LA PARTIDA A TODOS LOS COMPAÑEROS ELIMINADOS, ESTÉN DONDE ESTÉN, CON 1 VIDA Y 5 S DE PROTECCIÓN · SIN NADIE FUERA SE GUARDA COMO SEGURO: SI PIERDES TU ÚLTIMA VIDA, VUELVES TÚ, UNA VEZ",
       campo: "5 S EN LOS QUE NADIE DEL EQUIPO MUERE, NI CONTRA EL REY · EL FANTASMA QUE CHOCA CON CUALQUIERA SALE EMPUJADO UNA CASILLA",
       hospital: "LEVANTA A LA VEZ A TODOS LOS COMPAÑEROS CAÍDOS (CON SU CUERPO AÚN EN EL LABERINTO), CON 1 VIDA, 5 S DE PROTECCIÓN Y SUS HABILIDADES RECARGADAS · SIN NADIE CAÍDO NO SALE"
@@ -3412,18 +3415,158 @@
   };
 
   /* ---------- SUPERVIVENCIA (js/supervivencia.js) ----------
-   * Party online, todos contra todos, una vida cada uno. */
+   * Party online, todos contra todos. Desde el 10 oct 2026 (Braighton): con
+   * los PODERES y los ROLES de DESATADO, TRES CORAZONES cada uno y en un
+   * tablero de DOBLE ANCHO (CFG.TABLEROS.ancho). */
   CFG.SUPERV = {
     NOMBRE: 'SUPERVIVENCIA',
-    PODER: 6 * 60,          // la superpastilla deja eliminar a otros Pac-Man
+    TABLERO: 'ancho',       // en qué tablero se juega (CFG.TABLEROS)
+    CORAZONES: 3,           // golpes que aguanta cada uno
+    /* tras un golpe, un rato sin poder recibir otro: es lo que impide que
+     * tres rayos seguidos o un fantasma pegado vacíen los tres corazones */
+    INVULNERABLE: 2 * 60,
+    PODER: 6 * 60,          // la superpastilla deja golpear a otros Pac-Man
+    PODER_GRITO: 3 * 60,    // ...y el GRITO del Asesino, la mitad
     VUELVE: 20 * 60,        // y vuelve a salir al rato
     CHOQUE: 9,              // px: lo que tienen que acercarse dos Pac-Man
     ZONA_INICIO: 45 * 60,   // el primer anillo se cierra a los 45 s
     ZONA_CADA: 20 * 60,     // y luego uno cada 20 s
-    ZONA_MAX: 11,           // hasta dejar solo el centro
-    ZONA_GRACIA: 2 * 60,    // dentro de la zona roja, 2 s y fuera
-    AVISO: 5 * 60           // el anillo siguiente parpadea los últimos 5 s
+    ZONA_MAX: 9,            // hasta dejar el centro (en el ancho, 20 x 13 casillas)
+    ZONA_GRACIA: 2 * 60,    // dentro de la zona roja, un corazón cada 2 s
+    AVISO: 5 * 60,          // el anillo siguiente parpadea los últimos 5 s
+    /* Lo que alcanza a TODO EL MAPA contra los fantasmas, contra un rival
+     * solo llega hasta aquí (casillas): un golpe que no se puede esquivar
+     * desde la otra punta no es una jugada. */
+    RADIO_GLOBAL: 8,
+    /* Cada cuánto se le repite a un invitado «te han dado» mientras no
+     * conteste (ticks), y cada cuánto se le recoloca si algo lo arrastra */
+    AVISO_CADA: 12,
+    POS_CADA: 6,
+    /* PODERES QUE NO ENTRAN: son de equipo y aquí no hay equipo (CADENA,
+     * RELEVO, FARO y HOSPITAL), o solo dan puntos (CARROÑA) y en este modo
+     * los puntos no deciden nada. Quien los traiga elegidos juega con la
+     * primera opción libre de esa tecla. */
+    VETADAS: { cadena: 1, relevo: 1, faro: 1, hospital: 1, carrona: 1 }
   };
+  /* ¿Ese poder entra en SUPERVIVENCIA? */
+  CFG.SUPERV.entra = function (id) {
+    return !CFG.SUPERV.VETADAS.hasOwnProperty(id);
+  };
+  /* Los cuatro poderes de un rol para SUPERVIVENCIA: los elegidos, cambiando
+   * los que no entran por la primera opción de su tecla que sí. Devuelve la
+   * misma lista de ids separada por comas que CFG.HAB.loadoutValido. */
+  CFG.SUPERV.carga = function (rol, raw) {
+    var ids = String(CFG.HAB.loadoutValido(rol, (raw && typeof raw === 'object' && raw.join) ? raw.join(',') : raw)).split(',');
+    var cat = CFG.HAB.catalogoDe(rol);
+    for (var k = 0; k < 4; k++) {
+      if (CFG.SUPERV.entra(ids[k])) continue;
+      for (var i = 0; i < cat[k].length; i++) {
+        if (CFG.SUPERV.entra(cat[k][i].id)) { ids[k] = cat[k][i].id; break; }
+      }
+    }
+    return ids.join(',');
+  };
+
+  /* ---------- LOS TABLEROS (10 oct 2026) ----------
+   * El laberinto de siempre mide 28 x 31. SUPERVIVENCIA se juega en uno de
+   * DOBLE ANCHO (56 x 31, 448 x 288 px): con poderes y cuatro jugadores, en
+   * el de 28 no hay sitio para esquivar nada.
+   *
+   * Un tablero es TODO lo que depende del ancho: las columnas, el laberinto,
+   * la casa, las salidas, el túnel, las zonas sin subir y las esquinas de
+   * los fantasmas. CFG.ponerTablero cambia las ocho cosas a la vez y nada
+   * más: quien lee CFG.COLS o CFG.HOUSE no se entera de que hay dos.
+   *
+   * CÓMO ESTÁ HECHO EL ANCHO. El clásico va entero EN EL CENTRO (columnas 14
+   * a 41), así que la casa, la puerta, las salidas de los fantasmas y la
+   * fruta son las de siempre corridas 14 columnas. A cada lado, un ALA de 14
+   * columnas con el mismo dibujo que medio laberinto clásico pero sin casa:
+   * dos bloques y el túnel cruzándola. El muro que era el borde del clásico
+   * se abre en ocho filas (1, 5, 8, 14, 20, 23, 26 y 29) para pasar del
+   * centro a las alas. Cumple las reglas de js/mazes.js: sin cuadros de 2x2,
+   * sin callejones y todo alcanzable (lo comprueba pruebas-node.js). */
+  (function () {
+    var ALA = [
+      '##############', '#.............', '#.####.#####.#', '#o####.#####.#',
+      '#.####.#####.#', '#.............', '#.####.##.####', '#.####.##.####',
+      '#......##.....', '######.##### #', '######.##### #', '######.##     ',
+      '######.## ### ', '######.## ### ', '      .       ', '######.## ### ',
+      '######.## ### ', '######.##     ', '######.## ####', '######.## ####',
+      '#.............', '#.####.#####.#', '#.####.#####.#', '#o..##........',
+      '###.##.##.####', '###.##.##.####', '#......##.....', '#.##########.#',
+      '#.##########.#', '#.............', '##############'
+    ];
+    var ABRE = { 1: 1, 5: 1, 8: 1, 20: 1, 23: 1, 26: 1, 29: 1 };   // el borde del clásico, abierto
+    var filas = [];
+    for (var r = 0; r < CFG.ROWS; r++) {
+      var izq = CFG.MAZE_CLASSIC[r].substr(0, 14);
+      if (ABRE[r]) izq = '.' + izq.substr(1);
+      var mitad = ALA[r] + izq;
+      filas.push(mitad + mitad.split('').reverse().join(''));
+    }
+    var D = 14;       // lo que se corre el clásico dentro del ancho
+    function corre(p) {
+      var o = {};
+      for (var k in p) if (p.hasOwnProperty(k)) o[k] = { x: p[k].x + D, y: p[k].y };
+      return o;
+    }
+    CFG.TABLEROS = {
+      clasico: {
+        id: 'clasico', cols: 28, maze: CFG.MAZE_CLASSIC,
+        tunel: CFG.TUNNEL_SLOW, casa: CFG.HOUSE, salida: CFG.START, salidas: CFG.STARTS,
+        sinSubir: CFG.NO_UP_TILES,
+        esquinas: CFG.GHOSTS.map(function (g) { return { x: g.scatter.x, y: g.scatter.y }; })
+      },
+      ancho: {
+        id: 'ancho', cols: 56, maze: filas,
+        tunel: [[0, 5], [50, 55]],
+        casa: {
+          doorRow: 12, doorCols: [13 + D, 14 + D],
+          top: 13, bottom: 15, left: 11 + D, right: 16 + D,
+          exitX: CFG.HOUSE.exitX + D * CFG.TILE, exitY: CFG.HOUSE.exitY, centerY: CFG.HOUSE.centerY
+        },
+        salida: corre(CFG.START),
+        /* cada uno en su esquina de las alas, lejos de los demás y de la
+         * casa; con tres, el tercero arriba en el centro */
+        salidas: {
+          1: [{ x: 6, y: 23, dir: 3 }],
+          2: [{ x: 6, y: 23, dir: 3 }, { x: 49, y: 5, dir: 1 }],
+          3: [{ x: 6, y: 23, dir: 3 }, { x: 49, y: 23, dir: 1 }, { x: 27.5, y: 5, dir: 1 }],
+          4: [{ x: 6, y: 23, dir: 3 }, { x: 49, y: 23, dir: 1 },
+              { x: 6, y: 5, dir: 3 }, { x: 49, y: 5, dir: 1 }]
+        },
+        sinSubir: CFG.NO_UP_TILES.map(function (t) { return [t[0] + D, t[1]]; }),
+        esquinas: [{ x: 53, y: -3 }, { x: 2, y: -3 }, { x: 55, y: 32 }, { x: 0, y: 32 }]
+      }
+    };
+    CFG.tablero = 'clasico';
+    /* El laberinto por defecto del tablero puesto (lo que devuelve setMaze
+     * sin filas): en el clásico, el de 1980. */
+    CFG.MAZE_BASE = CFG.MAZE_CLASSIC;
+    /* Pone un tablero. Devuelve si ha cambiado algo (quien pinta tiene que
+     * rehacer sus lienzos: Game.ponerTablero). Deja puesto su laberinto. */
+    CFG.ponerTablero = function (id) {
+      var t = CFG.TABLEROS[id] || CFG.TABLEROS.clasico;
+      if (CFG.tablero === t.id) return false;
+      CFG.tablero = t.id;
+      CFG.COLS = t.cols;
+      CFG.NATIVE_W = t.cols * CFG.TILE;
+      CFG.MAZE_BASE = t.maze;
+      CFG.TUNNEL_SLOW = t.tunel;
+      CFG.HOUSE = t.casa;
+      CFG.START = t.salida;
+      CFG.STARTS = t.salidas;
+      CFG.NO_UP_TILES = t.sinSubir;
+      /* las esquinas se cambian DENTRO del objeto: cada fantasma guarda el
+       * suyo desde que nace (Ghost: this.scatter) */
+      for (var i = 0; i < CFG.GHOSTS.length; i++) {
+        CFG.GHOSTS[i].scatter.x = t.esquinas[i].x;
+        CFG.GHOSTS[i].scatter.y = t.esquinas[i].y;
+      }
+      CFG.setMaze(null);
+      return true;
+    };
+  })();
 
   /* ---------- DESATADO: el REY FANTASMA (js/jefe.js) ----------
    * Cada CADA niveles. Vida = (VIDA + VIDA_POR_JUGADOR por cada jugador de
@@ -3551,8 +3694,10 @@
      * el '+600' que reparte el anfitrión, 'habProt'), y la 22, VOLVER A LA
      * PARTIDA (30 sep: 'vuelvo', 'revista', 'ausente' y
      * 'fuera', la 'r' del traspaso que le guarda el asiento a quien se va y
-     * los que se están esperando, 'au', en la foto). */
-    PROTO: 22,
+     * los que se están esperando, 'au', en la foto); la 23, SUPERVIVENCIA
+     * con poderes, corazones y tablero ancho (10 oct: 'svGolpe' y 'svDano',
+     * los corazones y los estados de los rivales en la foto). */
+    PROTO: 23,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

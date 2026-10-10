@@ -2,6 +2,32 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-10 · Ajustes de DESATADO
+
+- **VIDA EXTRA** da una vida a **cada jugador que siga en pie**, el Soporte
+  incluido (antes, a uno solo).
+- **HOSPITAL** recarga en **75 s** (eran 130) y **RESURRECCIÓN** en **90 s**
+  (eran 160).
+- Un poder **potenciado por la hiperpastilla** le entra siempre al REY
+  FANTASMA, aunque acabe de recibir otro golpe.
+- La **coraza del Tanque** se ve igual en todas las pantallas de la party.
+
+## 2026-10-10 · SUPERVIVENCIA con poderes
+
+- Se juega **con tu rol y tus cuatro poderes**, como DESATADO, pero todos
+  contra todos.
+- **Tres corazones** en vez de una vida: cada golpe quita uno, te deja dos
+  segundos a salvo y sigues donde estabas. Con el último, caes.
+- Te golpean los fantasmas, la zona (un corazón cada 2 s dentro, sin escudo
+  que valga), quien te toque con el poder de la superpastilla y **cualquier
+  poder ajeno que a un fantasma lo mataría**. Lo que congela, aturde o frena
+  a un fantasma te lo hace también a ti, y clavado no puedes lanzar nada.
+- Los poderes de equipo son **para uno mismo** (escudo aliado, vida extra,
+  campo). No entran CADENA, RELEVO, FARO, HOSPITAL ni CARROÑA.
+- **Mapa de doble ancho** (56 × 31): el clásico en el centro y un ala a cada
+  lado. La zona se cierra de dos en dos columnas.
+- La sala deja elegir rol y poderes también en este modo.
+
 ## 2026-10-09 · RESURRECCIÓN, mejorada
 
 - **Levanta a TODOS los compañeros eliminados**, no a uno solo.

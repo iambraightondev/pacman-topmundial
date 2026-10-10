@@ -737,6 +737,14 @@
     danar: function (G, n, quien, fuente, forzar) {
       if (!this.activo(G)) return false;
       var j = G.jefe;
+      /* UN PODER POTENCIADO NO SE PIERDE (10 oct, Braighton): el TERREMOTO x2
+       * de un compañero cayó en el respiro que deja el golpe anterior y no le
+       * quitó nada, con la hiperpastilla ya gastada. Lo que sale potenciado
+       * entra siempre. */
+      var PODER_DE = { rayo: 'tormenta', arcano: 'toque_arcano', guiada: 'bola_guiada',
+                       aplasta: 'arrollar', meteoro_fuego: 'meteoro' };
+      var A = window.PM.Hab, idP = PODER_DE[fuente] || fuente || '';
+      if (!forzar && A && quien >= 0 && idP && A.x2(quien, idP) > 1) forzar = true;
       if (j.inv > 0 && !forzar) return false;
       j.hp = Math.max(0, j.hp - n);
       j.inv = J.INV;

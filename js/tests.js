@@ -15870,9 +15870,12 @@
   // ---------------------------------------------------------------
   var SV = window.PM.Superv, CS = CFG.SUPERV;
 
-  function supervivencia(n) {
+  /* Partida de SUPERVIVENCIA: n jugadores (o los roles dados, uno por
+   * jugador), en marcha, sin rato de gracia y con los fantasmas en casa. */
+  function supervivencia(n, roles, cargas) {
     window.PM.settings.muted = true;
-    G.newGame({ players: n || 2, superv: true });
+    if (n && typeof n === 'object') { cargas = roles; roles = n; n = roles.length; }
+    G.newGame({ players: n || 2, superv: true, roles: roles || null, loadouts: cargas || null });
     G.state = 'PLAYING';
     G.readyTicks = 0;
     for (var i = 0; i < G.pacs.length; i++) G.pacs[i].safeTicks = 0;
@@ -15884,61 +15887,277 @@
     return G.superv;
   }
 
-  test('SUPERVIVENCIA: una vida cada uno, sin continuar ni récords', function () {
+  /* Estas pruebas cambian de TABLERO (el ancho). Pase lo que pase dentro, al
+   * salir vuelve el clásico: las de después cuentan con sus 28 columnas. */
+  function testSv(nombre, fn) {
+    test(nombre, function () {
+      try { fn(); }
+      finally {
+        G.superv = null;
+        G.hab = false;
+        if (window.PM.Hab) window.PM.Hab.empezar(false, 0);
+        G.ponerTablero('clasico');
+        G.applyMaze(null);
+        G.loadPellets();
+      }
+    });
+  }
+
+  /* Deja al jugador i listo para recibir otro golpe (sin rato de gracia) */
+  function sinGracia(i) {
+    G.pacs[i].safeTicks = 0;
+    if (G.superv) G.superv.inv[i] = 0;
+  }
+
+  testSv('SUPERVIVENCIA: tres corazones, con poderes y en el tablero ancho; sin continuar ni récords', function () {
     var s = supervivencia(3);
     ok(s, 'la partida es de supervivencia');
     eq(G.livesMode, 'individual', 'vidas de cada uno');
-    eq(G.pacs.map(function (p) { return p.lives; }).join(), '1,1,1', 'una vida');
+    eq(G.pacs.map(function (p) { return p.lives; }).join(), '3,3,3', 'tres corazones');
+    ok(G.hab && window.PM.Hab.on && window.PM.Hab.sv, 'con los poderes encendidos');
+    eq(CFG.COLS + 'x' + CFG.ROWS, '56x31', 'en el tablero de doble ancho');
+    eq(CFG.MAZE[0].length, 56, 'con su laberinto');
+    eq(G.pellets[0].length, 56, 'y sus pastillas');
+    eq(G.canvas.width, 56 * CFG.TILE * CFG.SCALE, 'y el lienzo a su medida');
+    eq(CFG.HOUSE.exitX, 27.5 * CFG.TILE + CFG.TILE / 2, 'la casa en el centro');
+    eq(G.ghosts[0].x, CFG.HOUSE.exitX, 'y Blinky sobre su puerta');
+    var xs = G.pacs.map(function (p) { return p.tileX(); });
+    ok(xs[0] < 14 && xs[1] > 41, 'cada uno sale en su ala (' + xs.join() + ')');
     ok(!G.puedeContinuar(), 'sin continuar');
     ok(!G.puedeRevivir(), 'ni revivir');
-    partida(1);
+    ok(!G.clasif, 'ni rango');
+    eq(G.achTags().join(), 'party,superv', 'sus logros no son los de DESATADO');
     G.newGame({ players: 1, superv: true });
     eq(G.superv, null, 'a uno no hay supervivencia');
+    eq(CFG.COLS, 28, 'y vuelve el tablero clásico');
+    eq(G.canvas.width, 28 * CFG.TILE * CFG.SCALE, 'con su lienzo');
+    eq(CFG.MAZE.join(), CFG.MAZE_CLASSIC.join(), 'y su laberinto');
+    eq(CFG.GHOSTS[0].scatter.x, 25, 'y las esquinas de los fantasmas');
   });
 
-  test('SUPERVIVENCIA: la superpastilla da poder para eliminar a otro Pac-Man', function () {
+  testSv('SUPERVIVENCIA: el tablero ancho cumple las reglas de los laberintos', function () {
     supervivencia(2);
+    var R = CFG.ROWS, C = CFG.COLS, r, c;
+    function abierta(col, fila) {
+      if (fila < 0 || fila >= R) return false;
+      if (col < 0 || col >= C) { if (fila !== CFG.TUNNEL_ROW) return false; col = (col + C) % C; }
+      return CFG.isOpen(col, fila, false);
+    }
+    function casa(col, fila) {
+      var h = CFG.HOUSE;
+      return fila >= h.top && fila <= h.bottom && col >= h.left && col <= h.right;
+    }
+    for (r = 0; r < R; r++) eq(CFG.MAZE[r].length, C, 'la fila ' + r + ' mide lo que el tablero');
+    for (r = 0; r < R - 1; r++) for (c = 0; c < C - 1; c++) {
+      if (casa(c, r) || casa(c + 1, r) || casa(c, r + 1) || casa(c + 1, r + 1)) continue;
+      ok(!(abierta(c, r) && abierta(c + 1, r) && abierta(c, r + 1) && abierta(c + 1, r + 1)),
+         'sin cuadros de 2x2 (' + c + ',' + r + ')');
+    }
+    var vista = {}, cola = [[Math.floor(CFG.START.pac.x), CFG.START.pac.y]], n = 0;
+    vista[cola[0][1] * C + cola[0][0]] = 1;
+    while (cola.length) {
+      var q = cola.shift();
+      [[0, -1], [-1, 0], [0, 1], [1, 0]].forEach(function (v) {
+        var nc = q[0] + v[0], nr = q[1] + v[1];
+        if (!abierta(nc, nr)) return;
+        nc = (nc + C) % C;
+        if (vista[nr * C + nc]) return;
+        vista[nr * C + nc] = 1;
+        cola.push([nc, nr]);
+      });
+    }
+    for (r = 0; r < R; r++) for (c = 0; c < C; c++) {
+      if (!abierta(c, r) || casa(c, r)) continue;
+      ok(vista[r * C + c], 'todo se alcanza (' + c + ',' + r + ')');
+      n = 0;
+      [[0, -1], [-1, 0], [0, 1], [1, 0]].forEach(function (v) { if (abierta(c + v[0], r + v[1])) n++; });
+      ok(n >= 2, 'sin callejones (' + c + ',' + r + ')');
+    }
+    [2, 3, 4].forEach(function (k) {
+      CFG.STARTS[k].forEach(function (st) {
+        ok(abierta(Math.floor(st.x), st.y) && abierta(Math.ceil(st.x), st.y), 'las salidas caen en pasillo');
+      });
+    });
+    CFG.NO_UP_TILES.forEach(function (t) { ok(abierta(t[0], t[1]), 'las zonas sin subir son pasillo'); });
+    eq(CFG.MAZE[CFG.HOUSE.doorRow].substr(CFG.HOUSE.doorCols[0], 2), '--', 'la puerta está donde dice la casa');
+    eq(G.dotsLeft, CFG.PELLET_TOTAL, 'las pastillas cuadran');
+  });
+
+  testSv('SUPERVIVENCIA: los poderes de equipo no entran', function () {
+    supervivencia(['soporte', 'asesino'], ['hielo,cadena,faro,hospital', 'mordisco,carrona,flash,grito']);
+    var H = window.PM.Hab;
+    eq(H.listaDe(G, 0).map(function (h) { return h.id; }).join(), 'hielo,inmunidad,aliado,vida',
+       'al Soporte se le cambian por la primera opción libre de cada tecla');
+    eq(H.listaDe(G, 1).map(function (h) { return h.id; }).join(), 'mordisco,turbo,flash,grito',
+       'y la CARROÑA del Asesino también');
+    ok(CFG.SUPERV.entra('meteoro') && !CFG.SUPERV.entra('relevo'), 'los demás entran todos');
+  });
+
+  testSv('SUPERVIVENCIA: la superpastilla da poder para golpear a otro Pac-Man', function () {
+    supervivencia(['asesino', 'mago']);      // sin Tanque: su coraza pararía el golpe
     var a = ponPac(0, 6, 5, DR.RIGHT), b = ponPac(1, 6, 5, DR.LEFT);
     G.step();
-    ok(!a.dying && !b.dying, 'sin poder, se cruzan sin pasar nada');
+    ok(!a.dying && !b.dying && b.lives === 3, 'sin poder, se cruzan sin pasar nada');
     ponPac(1, 20, 5, DR.LEFT);
     G.pellets[5][6] = 'o';
     G.eatAt(6, 5, a);
     eq(G.superv.poder[0], CS.PODER, 'quien se la come tiene poder');
-    ponPac(1, 6, 5, DR.LEFT);
-    G.step();
-    ok(b.dying, 'y al tocar al otro, lo elimina');
-    eq(G.superv.bajas[0], 1, 'apuntándose la baja');
     ok(G.superv.vuelven.length === 1, 'la superpastilla volverá');
+    ponPac(0, 6, 5); ponPac(1, 6, 5, DR.LEFT);
+    G.step();
+    ok(!b.dying, 'al tocar al otro no lo elimina');
+    eq(b.lives, 2, 'le quita un corazón');
+    eq(a.lives, 3, 'y a él no');
+    ok(b.safeTicks > 0, 'y lo deja un rato sin poder recibir otro');
+    for (var i = 0; i < 20; i++) { ponPac(0, 6, 5); ponPac(1, 6, 5); G.step(); }
+    eq(b.lives, 2, 'mientras dura, tocarlo otra vez no hace nada');
+    eq(G.superv.bajas[0], 0, 'y todavía no es una baja');
+    b.lives = 1; sinGracia(1);
+    ponPac(0, 6, 5); ponPac(1, 6, 5);
+    G.step();
+    ok(b.dying, 'con el último corazón, cae');
+    eq(G.superv.bajas[0], 1, 'y la baja es de quien lo tocó');
   });
 
-  test('SUPERVIVENCIA: gana el último en pie', function () {
-    supervivencia(2);
+  testSv('SUPERVIVENCIA: gana el último en pie', function () {
+    supervivencia(['asesino', 'mago']);
     G.pacs[0].safeTicks = 999999;
-    G.startDeath(1, -1);
+    G.pacs[1].lives = 1;
+    window.PM.Superv.golpear(G, 1, -1, 'fantasma');
+    ok(G.pacs[1].dying, 'el último golpe lo tumba');
     for (var i = 0; i < 400 && G.state === 'PLAYING'; i++) G.step();
     eq(G.state, 'GAME_OVER', 'se acaba');
     eq(G.superv.ganador, 0, 'y gana el que queda');
     eq(SV.clasificacion(G).join(), '0,1', 'primero el ganador');
   });
 
-  test('SUPERVIVENCIA: la zona se cierra y quien se queda dentro cae', function () {
-    supervivencia(2);
+  testSv('SUPERVIVENCIA: la zona se cierra de dos en dos columnas y dentro se pierde un corazón cada dos segundos', function () {
+    supervivencia(['tanque', 'asesino']);
     G.pacs[1].safeTicks = 999999;
-    ponPac(1, 13, 14);
+    ponPac(1, 27, 14);
     G.superv.t = CS.ZONA_INICIO - 1;
     G.step();
     eq(G.superv.anillo, 1, 'a su hora se cierra el primer anillo');
-    ok(SV.enZona(G, 0, 14) && !SV.enZona(G, 1, 1), 'solo el de fuera');
+    ok(SV.enZona(G, 0, 14) && SV.enZona(G, 1, 14) && !SV.enZona(G, 2, 14), 'dos columnas por lado');
+    ok(SV.enZona(G, 20, 0) && !SV.enZona(G, 20, 1), 'y una fila por arriba y por abajo');
+    G.superv.anillo = CS.ZONA_MAX;
+    ok(!SV.enZona(G, 27, 14) && !SV.enZona(G, 2 * CS.ZONA_MAX, CS.ZONA_MAX), 'al final queda el centro');
+    eq(SV.faltaCierre(G), -1, 'y ya no se cierra más');
     G.superv.anillo = 3;
     var p = ponPac(0, 1, 5, DR.LEFT);
+    ok(window.PM.Hab.corazaDe(G, 0), 'el Tanque lleva su coraza');
     for (var i = 0; i < CS.ZONA_GRACIA - 2; i++) { ponPac(0, 1, 5); G.step(); }
-    ok(!p.dying, 'dentro, un par de segundos de margen');
-    for (i = 0; i < 4 && !p.dying; i++) { ponPac(0, 1, 5); G.step(); }
-    ok(p.dying, 'y después cae');
+    eq(p.lives, 3, 'dentro, un par de segundos de margen');
+    for (i = 0; i < 4; i++) { ponPac(0, 1, 5); G.step(); }
+    eq(p.lives, 2, 'y después, un corazón menos');
+    ok(!p.dying, 'pero no cae');
+    ok(window.PM.Hab.corazaDe(G, 0), 'a la zona no la para la coraza');
+    for (i = 0; i < CS.ZONA_GRACIA + 2; i++) { ponPac(0, 1, 5); G.step(); }
+    eq(p.lives, 1, 'y otro a los dos segundos, sin rato de gracia que valga');
   });
 
-  test('SUPERVIVENCIA: las pastillas no se acaban y todo viaja en la foto', function () {
+  testSv('SUPERVIVENCIA: un fantasma quita un corazón y no te saca del sitio', function () {
+    supervivencia(['asesino', 'mago']);
+    G.pacs[1].safeTicks = 999999;
+    var p = ponPac(0, 6, 5, DR.LEFT);
+    fantasmaEn(0, 6, 5);
+    G.step();
+    eq(p.lives, 2, 'un corazón menos');
+    ok(!p.dying && G.state === 'PLAYING', 'la partida sigue');
+    ok(Math.abs(p.tileX() - 6) <= 1 && p.tileY() === 5, 'y él sigue donde estaba');
+    ok(p.safeTicks > 0, 'con su rato de gracia');
+    for (var i = 0; i < 30; i++) { ponPac(0, 6, 5); fantasmaEn(0, 6, 5); G.step(); }
+    eq(p.lives, 2, 'en el que el mismo fantasma no le vuelve a dar');
+  });
+
+  testSv('SUPERVIVENCIA: lo que mata a un fantasma le quita un corazón al rival', function () {
+    var H = window.PM.Hab;
+    supervivencia(['mago', 'asesino', 'tanque']);
+    var a = ponPac(0, 6, 5, DR.RIGHT), b = ponPac(1, 11, 5, DR.LEFT), c = ponPac(2, 40, 29, DR.LEFT);
+    ok(H.pulsar(G, 0, 0), 'el Mago lanza su BOLA DE FUEGO');
+    for (var i = 0; i < 40 && b.lives === 3; i++) { ponPac(0, 6, 5); ponPac(1, 11, 5); G.step(); }
+    eq(b.lives, 2, 'al rival que tiene delante le quita un corazón');
+    eq(a.lives + ',' + c.lives, '3,3', 'y a nadie más');
+    eq(H.balas.length, 0, 'la bola se gasta en él');
+    /* la TORMENTA: tres rayos seguidos, pero un solo corazón por el rato de gracia */
+    sinGracia(1);
+    ok(H.pulsar(G, 0, 3), 'la TORMENTA');
+    for (i = 0; i < 140; i++) { ponPac(0, 6, 5); ponPac(1, 11, 5); G.step(); }
+    eq(b.lives, 1, 'tres rayos seguidos son un corazón, no tres');
+    /* el MORDISCO del Asesino */
+    supervivencia(['asesino', 'mago']);
+    a = ponPac(0, 6, 5, DR.RIGHT); b = ponPac(1, 7, 5, DR.LEFT);
+    ok(H.pulsar(G, 0, 0), 'el MORDISCO alcanza al rival pegado');
+    eq(b.lives, 2, 'y le quita un corazón');
+    eq(G.score, 0, 'sin dar puntos: aquí no se come a nadie');
+  });
+
+  testSv('SUPERVIVENCIA: lo que frena a un fantasma clava al rival, y clavado no lanza nada', function () {
+    var H = window.PM.Hab;
+    supervivencia(['soporte', 'asesino']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var b = ponPac(1, 11, 5, DR.LEFT);
+    ok(H.puede(G, 1, 1), 'antes, el rival puede usar sus poderes');
+    ok(H.pulsar(G, 0, 0), 'el Soporte dispara su HIELO');
+    for (var i = 0; i < 40 && !(H.hielo[5] > 0); i++) { ponPac(0, 6, 5); ponPac(1, 11, 5); G.step(); }
+    ok(H.hielo[5] > 0, 'el rival queda congelado (su hueco de la mesa es el 4 + su asiento)');
+    eq(b.lives, 3, 'sin perder corazones');
+    eq(H.multVel(1), 0, 'no se mueve');
+    ok(!H.puede(G, 1, 1), 'ni puede lanzar nada');
+    eq(H.multVel(0), 1, 'a quien disparó no le pasa nada');
+    var x0 = b.x;
+    for (i = 0; i < 30; i++) G.step();
+    eq(b.x, x0, 'y sigue clavado mientras dure');
+    for (i = 0; i < CFG.HAB.HIELO_TICKS; i++) G.step();
+    ok(!(H.hielo[5] > 0) && H.multVel(1) > 0 && H.multVel(1) < 1, 'al descongelarse anda, un rato más lento');
+    ok(H.puede(G, 1, 1), 'y vuelve a poder');
+  });
+
+  testSv('SUPERVIVENCIA: un escudo para el golpe, y lo de equipo es para uno mismo', function () {
+    var H = window.PM.Hab;
+    supervivencia(['mago', 'soporte']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var b = ponPac(1, 11, 5, DR.LEFT);
+    ok(H.pulsar(G, 1, 2), 'el Soporte se pone su ESCUDO ALIADO');
+    ok(H.estado(1).escudo > 0 && !(H.estado(0).escudo > 0), 'a él, y no al rival');
+    ok(H.pulsar(G, 0, 0), 'el Mago le tira la bola');
+    for (var i = 0; i < 40 && H.estado(1).escudo > 0; i++) { ponPac(0, 6, 5); ponPac(1, 11, 5); G.step(); }
+    eq(H.estado(1).escudo, 0, 'el escudo se gasta');
+    eq(b.lives, 3, 'y el corazón se queda');
+    /* la VIDA EXTRA: un corazón para él, sin pasar de tres */
+    ok(!H.pulsar(G, 1, 3), 'con los tres corazones, la VIDA no sale');
+    b.lives = 1;
+    ok(H.pulsar(G, 1, 3), 'con uno, sí');
+    eq(b.lives + ',' + G.pacs[0].lives, '2,3', 'y es para él');
+  });
+
+  testSv('SUPERVIVENCIA: la MARCA hace que el siguiente golpe quite dos', function () {
+    var H = window.PM.Hab;
+    supervivencia(['asesino', 'mago'], ['mordisco,turbo,marca,grito', '']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var b = ponPac(1, 7, 5, DR.LEFT);
+    ok(H.pulsar(G, 0, 2), 'el Asesino marca al rival');
+    eq(H.marcaGhost[5], 0, 'queda marcado');
+    ok(H.pulsar(G, 0, 0), 'y lo muerde');
+    eq(b.lives, 1, 'dos corazones de un golpe');
+    eq(H.marcaGhost[5], -1, 'y la marca se gasta');
+  });
+
+  testSv('SUPERVIVENCIA: el GRITO da poder y la apisonadora atropella al rival', function () {
+    var H = window.PM.Hab;
+    supervivencia(['asesino', 'tanque']);
+    ponPac(0, 6, 5, DR.RIGHT); ponPac(1, 40, 29, DR.LEFT);
+    ok(H.pulsar(G, 0, 3), 'el GRITO');
+    eq(G.superv.poder[0], CS.PODER_GRITO, 'da poder contra los demás, la mitad que una superpastilla');
+    supervivencia(['tanque', 'asesino']);
+    ponPac(0, 6, 5, DR.RIGHT);
+    var b = ponPac(1, 9, 5, DR.LEFT);
+    ok(H.pulsar(G, 0, 3), 'la APISONADORA');
+    for (var i = 0; i < 30 && b.lives === 3; i++) { ponPac(1, 9, 5); G.step(); }
+    eq(b.lives, 2, 'se lleva por delante un corazón del rival');
+  });
+
+  testSv('SUPERVIVENCIA: las pastillas no se acaban y todo viaja en la foto', function () {
     supervivencia(2);
     G.pacs[0].safeTicks = G.pacs[1].safeTicks = 999999;
     G.dotsLeft = 0;
@@ -15950,6 +16169,22 @@
     G.superv = null;
     SV.aplicar(G, r);
     eq(G.superv.anillo + ',' + G.superv.poder[1] + ',' + G.superv.bajas[0], '2,77,3', 'la foto lo devuelve');
+  });
+
+  test('VIDA EXTRA: una vida a cada jugador en pie, sin pasar del tope; a los de fuera, no', function () {
+    var H = window.PM.Hab;
+    partidaRol(['soporte', 'asesino', 'tanque', 'mago'], 6, 5, DR.LEFT);
+    G.pacs[0].lives = 1; G.pacs[1].lives = 2; G.pacs[2].lives = HC.VIDA_MAX;
+    G.pacs[3].lives = 0; G.pacs[3].out = true;
+    ok(H.pulsar(G, 0, 3), 'el Soporte lanza la VIDA EXTRA');
+    eq(G.pacs.map(function (p) { return p.lives; }).join(), '2,3,' + HC.VIDA_MAX + ',0',
+       'una a cada uno en pie, él incluido; ni al que está a tope ni al de fuera');
+    eq(H.vidasDadas.length, 2, 'y quedan apuntadas para pagarlas si salvan a alguien');
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.LEFT);
+    G.reglasPts = HC.VIDA_REGLAS - 1;
+    G.pacs[0].lives = 2; G.pacs[1].lives = 1;
+    ok(H.pulsar(G, 0, 3), 'con las reglas de una repetición de antes');
+    eq(G.pacs[0].lives + ',' + G.pacs[1].lives, '2,2', 'sigue siendo una, al que menos tiene');
   });
 
   // ---------------------------------------------------------------

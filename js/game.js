@@ -607,17 +607,24 @@
        * máquinas. Hoy no la usa nadie del juego; queda para las repeticiones
        * viejas del RETO DE HOY, que la llevan dentro. */
       this.seedBase = (opts.seed | 0) || 0;
+      /* SUPERVIVENCIA (js/supervivencia.js): party, todos contra todos. Se
+       * decide LO PRIMERO porque de ella cuelgan el tablero (el de doble
+       * ancho), los poderes (los de DESATADO, encendidos por ella) y las
+       * vidas (los corazones). No convive con CACERÍA ni con PAC-MAN VS. */
+      var sv = !!opts.superv && !opts.caza && this.playerCount >= 2 &&
+               !!window.PM.Superv && !!window.PM.Hab;
+      this.ponerTablero(sv ? CFG.SUPERV.TABLERO : 'clasico');
       /* laberinto alternativo (modo LABERINTOS). Se pone ANTES de
        * resetLevel(), que es quien reparte las pastillas. */
-      this.mazeId = opts.maze || null;
+      this.mazeId = sv ? null : (opts.maze || null);
       this.applyMaze(this.mazeId);
       /* modo DESATADO: Q/W/E/R. Se monta antes que los Pac-Man porque
        * reparte un juego de recargas por jugador (js/habilidades.js). */
-      this.hab = !!opts.hab;
+      this.hab = !!opts.hab || sv;
       /* CLASIFICATORIA (23 sep): DESATADO con el rango del mes en juego. Es
        * de la partida y no de cada jugador (antes era un interruptor en los
        * ajustes): en party la elige quien manda, como el modo. */
-      this.clasif = !!opts.clasif && this.hab;
+      this.clasif = !!opts.clasif && this.hab && !sv;
       /* CONTINUAR RECARGA LOS PODERES (25 sep): quien paga sus 1.000 vuelve
        * con las cuatro teclas listas. Las repeticiones de antes no lo hacían
        * y se ven como se jugaron (Replay, bandera 'k'). */
@@ -640,17 +647,24 @@
        * máquinas, porque todas reciben el mismo reparto: un rol que no existe
        * es Asesino; en PAC-MAN VS. todos los Pac-Man son Asesino; y solo cabe
        * UN Soporte por partida (el segundo pasa a Asesino). */
-      this.roles = this.rolesDe(opts);
+      this.roles = this.rolesDe(opts, sv);
+      /* SUPERVIVENCIA: los poderes de equipo no entran (CFG.SUPERV.VETADAS);
+       * quien los traiga juega con la primera opción libre de esa tecla. Se
+       * cambia aquí, igual en todas las máquinas, y no solo en la sala. */
+      if (sv) {
+        var cargasSv = [];
+        for (var ls = 0; ls < this.playerCount; ls++) {
+          cargasSv.push(CFG.SUPERV.carga(this.roles[ls], this.loadouts && this.loadouts[ls]));
+        }
+        this.loadouts = cargasSv;
+      }
       /* (Hasta el 24 sep, a uno con un rol que no fuera el Asesino la partida
        * era de PRÁCTICA y no hacía récord ni iba al top. Ya no: cualquier rol
        * cuenta para todo.) */
-      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount, this.roles, this.loadouts);
+      if (window.PM.Hab) window.PM.Hab.empezar(this.hab, this.playerCount, this.roles, this.loadouts, sv);
       /* modo CACERÍA: todos de fantasma y un Pac-Man de máquina. Excluye
        * DESATADO a propósito: un bot con Q/W/E/R es otro juego. */
       this.caza = !!opts.caza && !this.hab && !!window.PM.Caza;
-      /* SUPERVIVENCIA (js/supervivencia.js): party, todos contra todos, una
-       * vida cada uno. No convive con DESATADO, CACERÍA ni PAC-MAN VS. */
-      var sv = !!opts.superv && !this.hab && !this.caza && this.playerCount >= 2 && !!window.PM.Superv;
       this.superv = null;
       this.cazaTicks = 0;
       this.runGhosts = 0;
@@ -722,7 +736,8 @@
         this.lives = s.startLives;
       }
       if (sv) {
-        for (i = 0; i < this.pacs.length; i++) this.pacs[i].lives = 1;
+        // las vidas son los CORAZONES: un golpe quita uno y no se reaparece
+        for (i = 0; i < this.pacs.length; i++) this.pacs[i].lives = CFG.SUPERV.CORAZONES;
         window.PM.Superv.empezar(this, this.playerCount);
       }
       /* El HIGH SCORE de la partida es el de SU liga, y la liga son las dos
@@ -818,12 +833,36 @@
       var M = window.PM.Mazes;
       if (!M) return;
       id = id || null;
-      if (this.mazeLoaded === id) return;
-      this.mazeLoaded = id;
+      /* la clave lleva el tablero: el clásico y el ancho no tienen id de
+       * laberinto ninguno de los dos, y sus muros no son los mismos */
+      var clave = CFG.tablero + '|' + (id || '');
+      if (this.mazeLoaded === clave) return;
+      this.mazeLoaded = clave;
       M.apply(id);
       this.mazeBlue = this.buildMazeCanvas(CFG.COLORS.wall);
       this.mazeWhite = this.buildMazeCanvas(CFG.COLORS.wallFlash);
       this.mazeVacio = null;     // el del PORTAL se rehace cuando haga falta
+    },
+
+    /* Pone el TABLERO (CFG.TABLEROS): el clásico de 28 columnas o el ancho de
+     * SUPERVIVENCIA. Cambia la configuración y, con ella, el lienzo: su ancho
+     * sale del tablero, y al tocarlo el navegador le borra la escala y el
+     * suavizado, que hay que volver a poner. Los muros los rehace applyMaze
+     * (se llama siempre después) y el tamaño en pantalla, la interfaz. */
+    ponerTablero: function (id) {
+      if (!CFG.ponerTablero || !CFG.ponerTablero(id)) return false;
+      if (this.canvas) {
+        this.canvas.width = CFG.NATIVE_W * CFG.SCALE;
+        this.ctx.imageSmoothingEnabled = false;
+        this.ctx.setTransform(CFG.SCALE, 0, 0, CFG.SCALE, 0, 0);
+      }
+      this.pastHuella = null;
+      this.mazeVacio = null;
+      /* lo que cada fantasma tenía pensado era para el otro tablero */
+      for (var g = 0; this.ghosts && g < this.ghosts.length; g++) this.ghosts[g].clearPlan();
+      this.outEaten = []; this.recentEaten = {}; this.snapEaten = [];
+      if (window.PM.UI && window.PM.UI.fitCanvas) window.PM.UI.fitCanvas();
+      return true;
     },
 
     /* Refresca los paneles y botones que dependen del estado (ui.js) */
@@ -874,10 +913,11 @@
      * cogido se le da el primero que quede libre. Este es el último filtro:
      * lo miran también la sala (Party.claimRol) y el selector de DESATADO,
      * pero aquí no entra ni una repetición aunque venga de fuera. */
-    rolesDe: function (opts) {
+    rolesDe: function (opts, sv) {
       var H = CFG.HAB, out = [], tomados = {}, i, k;
       var vs = false;
-      if (opts.ghosts) for (i = 0; i < opts.ghosts.length; i++) if (opts.ghosts[i] >= 0) vs = true;
+      // en SUPERVIVENCIA el reparto de fantasmas de la sala no cuenta
+      if (opts.ghosts && !sv) for (i = 0; i < opts.ghosts.length; i++) if (opts.ghosts[i] >= 0) vs = true;
       for (i = 0; i < this.playerCount; i++) {
         /* fuera de DESATADO (o en VS.) el rol no pinta nada: todos Asesino */
         if (!this.hab || vs) { out.push('asesino'); continue; }
@@ -1026,6 +1066,7 @@
       this.superv = null;
       this.jefe = null;
       if (window.PM.Hab) window.PM.Hab.empezar(false, 0);
+      this.ponerTablero('clasico');   // SUPERVIVENCIA se juega en el ancho
       this.applyMaze(null);     // el clásico vuelve antes de repartir puntos
       this.loadPellets();
       if (window.PM.UI) window.PM.UI.showMenu();
@@ -1414,7 +1455,7 @@
             if (p.out || p.dying || !this.isLocalAuth(i)) continue;
             if (this.hab && window.PM.Hab && window.PM.Hab.enDimension(i)) continue;
             if (p.tileY() === CFG.START.fruit.y &&
-                (p.tileX() === 13 || p.tileX() === 14)) {
+                (p.tileX() === Math.floor(CFG.START.fruit.x) || p.tileX() === Math.ceil(CFG.START.fruit.x))) {
               this.fruitActive = false;
               if (!p.bot) this.marca(i, 'frutas');
               // lo que come la máquina (CACERÍA) no es logro de nadie
@@ -1461,6 +1502,12 @@
             if (!this.hitGhost(p, g)) continue;
             // ...y ESCUDO, INMUNIDAD o la carrera de ARROLLAR salvan el choque
             if (this.hab && window.PM.Hab && window.PM.Hab.salvaDelChoque(this, i, g)) continue;
+            /* SUPERVIVENCIA: no muere, pierde un corazón y sigue donde está
+             * (los escudos ya se han mirado arriba, con el fantasma delante) */
+            if (this.superv && window.PM.Superv) {
+              window.PM.Superv.golpear(this, i, -1, 'fantasma', false, true);
+              break;
+            }
             this.startDeath(i, g.id);        // g.id: por si lo lleva un jugador
             break;                           // el otro jugador sigue a lo suyo
           }
@@ -2002,7 +2049,11 @@
           this.cuerpos[i] = { x: p.x, y: p.y, d: p.dir, t: CFG.REVIVIR.CUERPO_TICKS, n: 0, en: {} };
         }
       } else {
+        /* SUPERVIVENCIA: se sigue donde se estaba (su salida puede haberse
+         * quedado dentro de la zona roja) */
+        var enSitio = this.superv ? { x: p.x, y: p.y, d: p.dir } : null;
         p.reset(this.pacStart(i));
+        if (enSitio) { p.x = enSitio.x; p.y = enSitio.y; p.dir = enSitio.d; p.nextDir = enSitio.d; }
         p.safeTicks = CFG.RESPAWN_SAFE_TICKS;
       }
     },
@@ -3204,12 +3255,13 @@
     achTags: function () {
       var t = [(this.playerCount > 1) ? 'party' : 'solo'];
       if (this.caza) t.push('caza');
+      else if (this.superv) t.push('superv');   // con poderes, pero no es DESATADO
       else if (this.hab) t.push('hab');
       else if (this.isVersus()) t.push('vs');
       else if (this.mazeId) t.push('lab');
       else t.push('clasico');
       /* en DESATADO, también el rol de quien juega aquí (cifras por rol) */
-      if (this.hab && !this.caza && this.roles) {
+      if (this.hab && !this.caza && !this.superv && this.roles) {
         var rol = this.roles[this.localIdx >= 0 ? this.localIdx : 0];
         if (rol) t.push('rol_' + rol);
       }
@@ -4468,6 +4520,7 @@
           // vida (y para las pastillas), la posición la lleva el anfitrión
           // apuntando el METEORO: su Mago se queda plantado también aquí
           if (this.hab && window.PM.Hab) window.PM.Hab.quietoRemoto(idx, !!data.ap);
+          if (this.hab && window.PM.Hab && data.cp) window.PM.Hab.corazaRemota(this, idx, data.cp);
           if (!p.dying && !data.dy) {
             p.ponRemoto(data.x, data.y, data.d, data.nd);
             // un giro no espera a la foto: sale hacia los demás ahora mismo
@@ -4631,6 +4684,11 @@
         case 'habRebote':
         case 'habHospital':
           if (window.PM.Hab) window.PM.Hab.peticionGasto(this, who, d);
+          break;
+        /* SUPERVIVENCIA: acepta un golpe, o su REBOTE lo ha devuelto */
+        case 'svDano':
+        case 'svRebote':
+          if (this.superv && window.PM.Superv) window.PM.Superv.peticion(this, who, d);
           break;
         /* se le rompió el escudo en su máquina (los choques son suyos) */
         case 'habRoto':
@@ -4981,7 +5039,7 @@
       if (this.fruitActive && me && !me.out && !me.dying &&
           !(this.hab && window.PM.Hab && window.PM.Hab.enDimension(me.id))) {
         if (me.tileY() === CFG.START.fruit.y &&
-            (me.tileX() === 13 || me.tileX() === 14)) {
+            (me.tileX() === Math.floor(CFG.START.fruit.x) || me.tileX() === Math.ceil(CFG.START.fruit.x))) {
           this.fruitActive = false;               // el evt trae los puntos
           this.runFrutas++;
           this.bumpAch({ frutas: 1 });
@@ -5065,6 +5123,11 @@
           if (A && A.salvaDelChoque(this, me.id, g)) continue;
           // el HOSPITAL de un compañero también salva al invitado
           if (A && A.hospitalSalva(this, me.id)) continue;
+          /* SUPERVIVENCIA: un corazón menos (lo descuenta el anfitrión) */
+          if (this.superv && window.PM.Superv) {
+            window.PM.Superv.golpear(this, me.id, -1, 'fantasma', false, true);
+            return;
+          }
           /* predicción: se congela este Pac-Man (no la partida) y el
            * anfitrión confirma con 'death'; si es el último, parón clásico */
           this.startPacDeath(me.id);
@@ -5114,6 +5177,12 @@
       if (turned) msg.g = 1;
       if (dying) msg.dy = 1;
       if (planta) msg.ap = 1;
+      /* la CORAZA pasiva del Tanque es suya: su reloj de verdad es el de
+       * esta máquina, y el anfitrión (que se la enseña a los demás) lo copia */
+      if (Hq && Hq.esRol(this, this.localIdx, 'tanque')) {
+        var sc = Hq.estado(this.localIdx);
+        if (sc) msg.cp = [sc.corPas | 0, sc.corCd | 0];
+      }
       this.netSend('pos', msg);
       this.outEaten = [];
       for (var k in this.recentEaten) {
@@ -5384,6 +5453,8 @@
           break;
         case 'svZona':
         case 'svBaja':
+        case 'svGolpe':
+        case 'svDano':
           if (window.PM.Superv) window.PM.Superv.evento(this, e);
           break;
         case 'svFin':
@@ -5841,7 +5912,7 @@
        * una barra pegada encima. */
       var IN = CFG.WALL_INSET, G2 = this.wallHalf;
       c.fillStyle = CFG.COLORS.door;
-      c.fillRect(13 * T - IN, 12 * T + T - IN - G2 * 2, 2 * T + IN * 2, G2 * 2);
+      c.fillRect(CFG.HOUSE.doorCols[0] * T - IN, CFG.HOUSE.doorRow * T + T - IN - G2 * 2, 2 * T + IN * 2, G2 * 2);
       return cv;
     },
 
@@ -6421,27 +6492,32 @@
       /* En CACERÍA el marcador grande es el de Pac-Man (la máquina) y la
        * fila de nombres es la de los cazadores, también jugando solo. */
       var caza = (this.caza && this.state !== 'MENU');
+      /* SUPERVIVENCIA no es de puntos: arriba van el modo y los nombres, y
+       * ni marcador ni récord ni nivel */
+      var sv = (!!this.superv && this.state !== 'MENU');
       var team = ((this.playerCount > 1 || caza) && this.state !== 'MENU');
       ctx.font = window.PM.Letra.lienzo(8);
       ctx.textBaseline = 'top';
       ctx.fillStyle = CFG.COLORS.text;
 
       ctx.textAlign = 'left';
-      var leftLabel = caza ? CFG.CAZA.NOMBRE_PAC : team ? 'EQUIPO'
+      var leftLabel = sv ? CFG.SUPERV.NOMBRE : caza ? CFG.CAZA.NOMBRE_PAC : team ? 'EQUIPO'
         : ((this.state !== 'MENU' && this.rawName(0)) || '1UP');
       /* Hasta donde empieza "HIGH SCORE" (centrado en 112), con aire. Se mide
        * en vez de dar un número fijo: con la letra de máquina HIGH SCORE mide
        * 80 px y el hueco de antes (66) hacía que un nombre largo lo pisara. */
       ctx.font = window.PM.Letra.lienzo(8);
-      var hueco = caza ? 66 : Math.max(24, 112 - ctx.measureText('HIGH SCORE').width / 2 - 6 - 20);
+      var hueco = sv ? 160 : caza ? 66 : Math.max(24, (CFG.NATIVE_W / 2) - ctx.measureText('HIGH SCORE').width / 2 - 6 - 20);
       this.fitText(ctx, leftLabel, 20, 0, hueco, 8);
       ctx.font = window.PM.Letra.lienzo(8);
       ctx.textAlign = 'center';
       ctx.textAlign = 'right';
       var sc = (this.state === 'MENU') ? 0 : this.score;
       var hs = (this.state === 'MENU') ? this.highScore1 : this.highScore;
-      ctx.fillText(String(sc || 0), 56, 9);
-      if (caza) {
+      if (!sv) ctx.fillText(String(sc || 0), 56, 9);
+      if (sv) {
+        /* nada: lo que importa aquí son los corazones, y van sobre cada uno */
+      } else if (caza) {
         // aquí no hay récord que valga: en su hueco, el reloj del poder
         window.PM.Caza.hud(this, ctx);
         ctx.fillStyle = CFG.COLORS.text;
@@ -6450,16 +6526,16 @@
         ctx.fillStyle = CFG.COLORS.text;
       } else {
         ctx.textAlign = 'center';
-        ctx.fillText('HIGH SCORE', 112, 0);
+        ctx.fillText('HIGH SCORE', (CFG.NATIVE_W / 2), 0);
         ctx.textAlign = 'right';
-        ctx.fillText(String(hs || 0), 136, 9);
+        ctx.fillText(String(hs || 0), CFG.NATIVE_W / 2 + 24, 9);
       }
       /* EL NIVEL en el que vas (24 sep), arriba a la derecha como el 1UP a
        * la izquierda: pide nivel la CLASIFICATORIA y hay rey cada cinco */
-      if (this.state !== 'MENU') {
+      if (this.state !== 'MENU' && !sv) {
         ctx.textAlign = 'right';
-        ctx.fillText('NIVEL', 220, 0);
-        ctx.fillText(String(this.level || 1), 220, 9);
+        ctx.fillText('NIVEL', CFG.NATIVE_W - 4, 0);
+        ctx.fillText(String(this.level || 1), CFG.NATIVE_W - 4, 9);
       }
 
       /* la tercera línea en equipo: los PUNTOS de cada uno en su color (en
@@ -6468,14 +6544,14 @@
         ctx.textBaseline = 'top';
         var n = caza ? this.playerCount : this.pacs.length;   // la máquina no va en la fila
         var self = this;
-        var rotulo = function (i) { return caza ? self.hudNameFor(i) : self.hudPuntosDe(i); };
+        var rotulo = function (i) { return (caza || sv) ? self.hudNameFor(i) : self.hudPuntosDe(i); };
         if (n === 2) {
           ctx.textAlign = 'left';
           ctx.fillStyle = this.colorFor(0);
           this.fitText(ctx, rotulo(0), 20, 17, 88, 7);
           ctx.textAlign = 'right';
           ctx.fillStyle = this.colorFor(1);
-          this.fitText(ctx, rotulo(1), 204, 17, 88, 7);
+          this.fitText(ctx, rotulo(1), CFG.NATIVE_W - 20, 17, 88, 7);
         } else {
           ctx.textAlign = 'center';
           var ancho = (CFG.NATIVE_W - 16) / n;
@@ -6505,7 +6581,9 @@
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
           for (p = 0; p < this.pacs.length; p++) {
-            var quedan = Math.max(this.pacs[p].lives - 1, 0);
+            /* en SUPERVIVENCIA el número son los CORAZONES que le quedan */
+            var quedan = this.superv ? (this.pacs[p].out ? 0 : Math.max(this.pacs[p].lives, 0))
+              : Math.max(this.pacs[p].lives - 1, 0);
             var xv = 14 + p * 20;
             ctx.globalAlpha = quedan > 0 ? 1 : 0.3;
             window.PM.Sprites.drawPacman(ctx, xv, 278, D.LEFT, 2, this.colorFor(p), this.skinFor(p),
@@ -6536,7 +6614,7 @@
         /* con el REY FANTASMA en pie, la fila de abajo es para su barra de
          * vida: las frutas de nivel son adorno y ceden el sitio */
         var reyEnPie = !!(this.jefe && this.jefe.vivo);
-        for (i = this.level; i >= first && !reyEnPie; i--) {
+        for (i = this.level; i >= first && !reyEnPie && !sv; i--) {
           window.PM.Sprites.drawFruit(ctx, x, 278, CFG.fruitForLevel(i).id);
           x -= 16;
         }
@@ -6551,12 +6629,12 @@
         ctx.textAlign = reyVivo ? 'right' : 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#ffff00';
-        ctx.fillText(this.clockText(), reyVivo ? 216 : 112, reyVivo ? 9 : 279);
+        ctx.fillText(this.clockText(), reyVivo ? CFG.NATIVE_W - 8 : (CFG.NATIVE_W / 2), reyVivo ? 9 : 279);
         // de mirón conviene recordar que esta partida no es tuya
         if (this.isSpec()) {
           ctx.font = window.PM.Letra.lienzo(6);
           ctx.fillStyle = '#7ec8ff';
-          ctx.fillText('VIENDO LA PARTIDA', 112, 270);
+          ctx.fillText('VIENDO LA PARTIDA', (CFG.NATIVE_W / 2), 270);
         }
         ctx.textBaseline = 'top';
       }
@@ -6585,7 +6663,7 @@
       var n = this.badgeNotice;
       var total = n.total || CFG.BADGE_ANIM_TICKS;
       var t = 1 - (n.ticks / total);
-      window.PM.Sprites.drawBadgeStrip(ctx, 112, 11, CFG.NATIVE_W - 20,
+      window.PM.Sprites.drawBadgeStrip(ctx, (CFG.NATIVE_W / 2), 11, CFG.NATIVE_W - 20,
         t, n, this.tick);
     },
 
@@ -6596,16 +6674,17 @@
       if (this.state === 'READY') {
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.ready;
-        ctx.fillText('¡LISTO!', 112, y);
+        ctx.fillText('¡LISTO!', (CFG.NATIVE_W / 2), y);
         if (this.superv) {
           ctx.fillStyle = '#ff5a5a';
-          ctx.fillText('EL ÚLTIMO EN PIE GANA', 112, 20 * T + T / 2 + CFG.MAZE_Y);
+          ctx.fillText('TODOS CONTRA TODOS · ' + CFG.SUPERV.CORAZONES + ' CORAZONES · EL ÚLTIMO EN PIE GANA',
+            (CFG.NATIVE_W / 2), 20 * T + T / 2 + CFG.MAZE_Y);
         }
         // CACERÍA: en qué ronda vamos, que cada una aprieta más
         if (this.caza) {
           ctx.fillStyle = '#ffb8ff';
           ctx.fillText('RONDA ' + (window.PM.Caza.ronda(this) + 1) + ' DE ' +
-            CFG.CAZA.NIVELES, 112, 20 * T + T / 2 + CFG.MAZE_Y);
+            CFG.CAZA.NIVELES, (CFG.NATIVE_W / 2), 20 * T + T / 2 + CFG.MAZE_Y);
         }
         // en el móvil, la primera partida: cómo se mueve (UI.pistaMandos)
         var U = window.PM.UI;
@@ -6613,25 +6692,25 @@
           var pista = 'DESLIZA O USA LA CRUCETA', py = 20 * T + T / 2 + CFG.MAZE_Y;
           var pw = ctx.measureText(pista).width + 6;
           ctx.fillStyle = '#000';          // sobre las pastillas no se leía
-          ctx.fillRect(112 - pw / 2, py - 6, pw, 12);
+          ctx.fillRect((CFG.NATIVE_W / 2) - pw / 2, py - 6, pw, 12);
           ctx.fillStyle = '#ffffff';
-          ctx.fillText(pista, 112, py);
+          ctx.fillText(pista, (CFG.NATIVE_W / 2), py);
         }
       } else if (this.state === 'GAME_OVER' && this.replaying) {
         // viendo una repetición sí: ahí no sale la pantalla de recreativa
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.gameOver;
-        ctx.fillText('GAME OVER', 112, y);
+        ctx.fillText('GAME OVER', (CFG.NATIVE_W / 2), y);
       } else if (this.state === 'CONTINUE') {
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.gameOver;
-        ctx.fillText('CONTINUE? ' + Math.ceil((this.contTicks || 0) / 60), 112, y);
+        ctx.fillText('CONTINUE? ' + Math.ceil((this.contTicks || 0) / 60), (CFG.NATIVE_W / 2), y);
       }
       /* aviso breve (rendición rechazada, sin respuesta, ...) */
       if (this.flash) {
         ctx.font = window.PM.Letra.lienzo(8);
         ctx.fillStyle = CFG.COLORS.popup;
-        ctx.fillText(this.flash.text, 112, 20 * T + T / 2 + CFG.MAZE_Y);
+        ctx.fillText(this.flash.text, (CFG.NATIVE_W / 2), 20 * T + T / 2 + CFG.MAZE_Y);
       }
 
       /* maestría recién ganada: entra, se luce y se va. Espera turno detrás
@@ -6648,7 +6727,7 @@
        * después, y ni siquiera se cruza con el cartel de maestría. */
       if (this.achNotice) {
         var an = this.achNotice;
-        window.PM.Sprites.drawAchNotice(ctx, 112, 11,
+        window.PM.Sprites.drawAchNotice(ctx, (CFG.NATIVE_W / 2), 11,
           CFG.NATIVE_W - 20, 1 - (an.ticks / an.total), an, this.tick);
       }
 
@@ -6662,10 +6741,10 @@
         ctx.globalAlpha = Math.min(lin, lout);
         ctx.font = window.PM.Letra.lienzo(7);
         ctx.fillStyle = '#00ffff';
-        ctx.fillText('NIVEL DE JUGADOR', 112, ly - 5);
+        ctx.fillText('NIVEL DE JUGADOR', (CFG.NATIVE_W / 2), ly - 5);
         ctx.font = window.PM.Letra.lienzo(12);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(String(this.levelNotice.level), 112, ly + 7);
+        ctx.fillText(String(this.levelNotice.level), (CFG.NATIVE_W / 2), ly + 7);
         ctx.restore();
       }
 
@@ -6706,7 +6785,7 @@
         if (!menuUp) {
           ctx.font = window.PM.Letra.lienzo(12);
           ctx.fillStyle = CFG.COLORS.text;
-          ctx.fillText('PAUSA', 112, CFG.NATIVE_H / 2);
+          ctx.fillText('PAUSA', (CFG.NATIVE_W / 2), CFG.NATIVE_H / 2);
         }
       }
 
@@ -6721,16 +6800,16 @@
           ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
           ctx.fillStyle = CFG.COLORS.text;
           if (Math.floor(this.tick / 20) % 2 === 0) {
-            this.fitText(ctx, ar.a, 112, CFG.NATIVE_H / 2 - 6, CFG.NATIVE_W - 16, 9);
+            this.fitText(ctx, ar.a, (CFG.NATIVE_W / 2), CFG.NATIVE_H / 2 - 6, CFG.NATIVE_W - 16, 9);
           }
-          this.fitText(ctx, ar.b, 112, CFG.NATIVE_H / 2 + 6, CFG.NATIVE_W - 16, 9);
+          this.fitText(ctx, ar.b, (CFG.NATIVE_W / 2), CFG.NATIVE_H / 2 + 6, CFG.NATIVE_W - 16, 9);
         } else {
           ctx.fillStyle = 'rgba(0,0,0,0.7)';
           ctx.fillRect(0, 26, CFG.NATIVE_W, 18);
           ctx.fillStyle = CFG.COLORS.ready;
-          this.fitText(ctx, ar.a, 112, 31, CFG.NATIVE_W - 8, 7);
+          this.fitText(ctx, ar.a, (CFG.NATIVE_W / 2), 31, CFG.NATIVE_W - 8, 7);
           ctx.fillStyle = CFG.COLORS.text;
-          this.fitText(ctx, ar.b, 112, 39, CFG.NATIVE_W - 8, 7);
+          this.fitText(ctx, ar.b, (CFG.NATIVE_W / 2), 39, CFG.NATIVE_W - 8, 7);
         }
       }
       if (this.netNotice) {
@@ -6738,7 +6817,7 @@
         ctx.fillRect(0, 0, CFG.NATIVE_W, CFG.NATIVE_H);
         ctx.font = window.PM.Letra.lienzo(9);
         ctx.fillStyle = CFG.COLORS.ready;
-        ctx.fillText(this.netNotice.text, 112, CFG.NATIVE_H / 2);
+        ctx.fillText(this.netNotice.text, (CFG.NATIVE_W / 2), CFG.NATIVE_H / 2);
       }
     }
   };

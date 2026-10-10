@@ -93,7 +93,8 @@
    * blinkyTile {x,y}, globalMode ('scatter'|'chase'), elroy (0|1|2) */
   Ghost.prototype.targetTile = function (game) {
     if (this.mode === 'eyes') {
-      return { x: 13.5, y: 11 };   // sobre la puerta
+      // sobre la puerta (la del tablero puesto: en el ancho no está en la 13)
+      return { x: (CFG.HOUSE.doorCols[0] + CFG.HOUSE.doorCols[1]) / 2, y: CFG.HOUSE.doorRow - 1 };
     }
     /* DESATADO · PROVOCAR (Tanque): van a por él, se disperse o persiga */
     if (game.hab && window.PM.Hab) {

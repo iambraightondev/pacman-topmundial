@@ -147,7 +147,7 @@ var red = {
 
 /* ---------- montar una party ----------
  * n jugadores (mundos 0..n-1, el 0 manda) y o.mirones más detrás.
- * o: { hab, roles, loadouts, mirones, sinEmpezar } */
+ * o: { hab, superv, roles, loadouts, mirones, sinEmpezar } */
 var NOMBRES = ['UNO', 'DOS', 'TRES', 'CUATRO'];
 function montar(n, o) {
   o = o || {};
@@ -166,7 +166,8 @@ function montar(n, o) {
       net: miron ? 'spec' : (i === 0 ? 'host' : 'guest'),
       localIdx: miron ? -1 : i,
       names: NOMBRES.slice(0, n),
-      cfg: cfg, hab: !!o.hab, clasif: !!o.clasif, roles: o.roles || null, loadouts: o.loadouts || null
+      cfg: cfg, hab: !!o.hab, clasif: !!o.clasif, roles: o.roles || null, loadouts: o.loadouts || null,
+      superv: !!o.superv
     });
   }
   red.paso(1);
@@ -619,6 +620,18 @@ caso('7c · el REBOTE del Tanque invitado: 600 por aguantar y la baja, en el anf
   eq(A.G.ghosts[0].mode, 'eyes', 'y el fantasma cae');
 });
 
+caso('7f · la CORAZA del Tanque invitado: el anfitrión la ve como la lleva él, aunque los relojes se separen', function () {
+  var ms = tanqueInvitado(), A = ms[0], B = ms[1];
+  B.H.estado(1).corPas = 0; B.H.estado(1).corCd = 500;      // en su máquina ya no la lleva
+  ok(A.H.corazaDe(A.G, 1), 'el anfitrión aún se la veía puesta');
+  red.paso(12);
+  ok(!A.H.corazaDe(A.G, 1), 'y deja de vérsela');
+  ok(Math.abs(A.H.estado(1).corCd - B.H.estado(1).corCd) <= 12, 'con la misma recarga');
+  B.H.estado(1).corCd = 1;
+  red.paso(12);
+  ok(B.H.corazaDe(B.G, 1) && A.H.corazaDe(A.G, 1), 'cuando le vuelve, le vuelve en las dos');
+});
+
 /* La W (el ESCUDO de 8 s) del Tanque invitado, con la coraza pasiva gastada:
  * MAULIO decía que su escudo no le daba puntos y la pasiva sí (3 oct). */
 caso('7e · el ESCUDO (W) del Tanque invitado: cobra 600, con la pasiva gastada y con ella puesta', function () {
@@ -647,6 +660,7 @@ caso('7e · el ESCUDO (W) del Tanque invitado: cobra 600, con la pasiva gastada 
 
 caso('7d · un invitado que se inventa el golpe no cobra', function () {
   var ms = tanqueInvitado(), A = ms[0], B = ms[1];
+  red.paso(2);          // que no quede en camino una posición con la coraza de antes
   ms.forEach(function (m) { m.H.estado(1).corPas = 0; m.H.estado(1).corCd = 9999; });
   red.paso(2);
   var antes = A.G.ptsJ[1] || 0;
@@ -1113,6 +1127,158 @@ caso('H · HIPERPASTILLA: el invitado la pisa, el anfitrión se la da y su TURBO
   red.paso(10);
   ok(A.G.frightTicks > HC.SHOUT_SECS * 60, 'el azul que reparte el anfitrión dura el doble');
   ok(!A.H.st[1].hiper && !B.H.st[1].hiper, 'gastada en las dos');
+});
+
+/* =============================================================
+ * S. SUPERVIVENCIA con poderes, corazones y tablero ancho (10 oct)
+ * ============================================================= */
+/* Una party de SUPERVIVENCIA en marcha: los fantasmas a casa (que ninguno se
+ * cuele en la prueba) y nadie con rato de gracia. */
+function supervParty(roles, cargas, mirones) {
+  var ms = montar(roles.length, { superv: true, roles: roles, loadouts: cargas || null, mirones: mirones || 0 });
+  ms.forEach(function (m) {
+    for (var g = 0; g < 4; g++) {
+      var gh = m.G.ghosts[g];
+      gh.mode = 'house'; gh.x = CFG(m).HOUSE.exitX; gh.y = CFG(m).HOUSE.centerY;
+    }
+    m.G.pacs.forEach(function (p) { p.safeTicks = 0; });
+  });
+  /* que en estas pruebas ningún fantasma salga de casa por su cuenta */
+  ms[0].G.failsafeTicks = -1e9;
+  ms[0].G.globalActive = true; ms[0].G.globalCounter = -1e9;
+  return ms;
+}
+
+/* Deja al jugador i quieto en esa casilla en todas las máquinas */
+function pon(ms, i, col, fila, dir) {
+  ms.forEach(function (m) {
+    var p = m.G.pacs[i];
+    p.x = col * 8 + 4; p.y = fila * 8 + 4; p.errX = 0; p.errY = 0; p.pauseTicks = 240;
+    if (dir !== undefined) { p.dir = dir; p.nextDir = dir; }
+  });
+}
+
+function corazones(m) { return m.G.pacs.map(function (p) { return p.lives; }).join(); }
+
+caso('S1 · SUPERVIVENCIA: las dos máquinas juegan en el tablero ancho, con poderes y tres corazones', function () {
+  var ms = supervParty(['mago', 'asesino'], null, 1), A = ms[0], B = ms[1], M = ms[2];
+  ms.forEach(function (m) {
+    eq(CFG(m).COLS, 56, 'el tablero ancho en la máquina ' + m.k);
+    ok(m.G.superv && m.G.hab && m.H.sv, 'supervivencia con poderes en la ' + m.k);
+    eq(corazones(m), '3,3', 'tres corazones cada uno en la ' + m.k);
+  });
+  /* quietos, para que nadie coma mientras se compara */
+  pon(ms, 0, 6, 23, 3); pon(ms, 1, 49, 5, 1);
+  red.paso(60);
+  eq(B.G.pelletHex(), A.G.pelletHex(), 'el mismo mapa de pastillas (el del ancho)');
+  eq(M.G.pelletHex(), A.G.pelletHex(), 'también el del mirón');
+  eq(A.G.pelletHex().length, Math.ceil(56 * 31 / 4), 'que mide lo que el tablero');
+  eq(B.G.state, A.G.state, 'y el mismo estado');
+});
+
+caso('S2 · SUPERVIVENCIA: la bola del anfitrión le quita UN corazón al invitado, en todas las pantallas', function () {
+  var ms = supervParty(['mago', 'asesino'], null, 1), A = ms[0], B = ms[1], M = ms[2];
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 11, 5, 1);
+  red.paso(3);
+  B.enviados = []; A.enviados = [];
+  ok(A.H.pulsar(A.G, 0, 0), 'el anfitrión lanza la BOLA DE FUEGO');
+  red.paso(60);
+  ok(mensajes(A, 'evt', 'svGolpe').length >= 1, 'el anfitrión se lo anuncia');
+  eq(mensajes(B, 'gevt', 'svDano').length, 1, 'el invitado lo acepta una vez');
+  eq(corazones(A), '3,2', 'un corazón menos en el anfitrión');
+  eq(corazones(B), '3,2', 'en el invitado');
+  eq(corazones(M), '3,2', 'y en el mirón');
+  ok(!A.G.pacs[1].dying && !B.G.pacs[1].dying, 'sin morir');
+  ok(B.G.pacs[1].safeTicks > 0, 'y con su rato de gracia');
+  eq(A.G.state, 'PLAYING', 'la partida sigue');
+});
+
+caso('S3 · SUPERVIVENCIA: la bola del invitado le quita un corazón al anfitrión', function () {
+  var ms = supervParty(['asesino', 'mago']), A = ms[0], B = ms[1];
+  pon(ms, 0, 11, 5, 1); pon(ms, 1, 6, 5, 3);
+  red.paso(3);
+  ok(B.H.pulsar(B.G, 1, 0), 'el invitado lanza la BOLA DE FUEGO');
+  red.paso(60);
+  eq(corazones(A), '2,3', 'en el anfitrión');
+  eq(corazones(B), '2,3', 'y en el invitado');
+});
+
+caso('S4 · SUPERVIVENCIA: la coraza del Tanque invitado para el golpe en SU máquina', function () {
+  var ms = supervParty(['mago', 'tanque']), A = ms[0], B = ms[1];
+  ok(B.H.corazaDe(B.G, 1), 'el invitado lleva su coraza');
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 11, 5, 1);
+  red.paso(3);
+  B.enviados = [];
+  ok(A.H.pulsar(A.G, 0, 0), 'el anfitrión le tira la bola');
+  red.paso(60);
+  eq(corazones(A), '3,3', 'no pierde el corazón');
+  eq(mensajes(B, 'gevt', 'svDano').length, 0, 'ni lo acepta');
+  eq(mensajes(B, 'gevt', 'habRoto').length, 1, 'avisa de que se le ha roto la coraza');
+  ok(!B.H.corazaDe(B.G, 1) && !A.H.corazaDe(A.G, 1), 'y la pierde en las dos pantallas');
+});
+
+caso('S5 · SUPERVIVENCIA: el hielo del anfitrión clava al invitado en su propia pantalla', function () {
+  var ms = supervParty(['soporte', 'asesino']), A = ms[0], B = ms[1];
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 11, 5, 1);
+  red.paso(3);
+  ok(A.H.pulsar(A.G, 0, 0), 'el anfitrión dispara su HIELO');
+  red.paso(30);
+  ok(A.H.hielo[5] > 0, 'el invitado queda congelado en el anfitrión');
+  ok(B.H.hielo[5] > 0, 'y le llega en la foto');
+  eq(B.H.multVel(1), 0, 'en su máquina no se mueve');
+  ok(!B.H.puede(B.G, 1, 1), 'ni puede lanzar nada');
+  eq(corazones(A), '3,3', 'sin perder corazones');
+  var x0 = B.G.pacs[1].x;
+  B.G.pacs[1].pauseTicks = 0;
+  red.paso(40);
+  eq(B.G.pacs[1].x, x0, 'y sigue en el sitio');
+});
+
+caso('S6 · SUPERVIVENCIA: un fantasma toca al invitado: un corazón, lo descuenta el anfitrión', function () {
+  var ms = supervParty(['asesino', 'mago']), A = ms[0], B = ms[1];
+  pon(ms, 0, 40, 29, 1);
+  juntar(ms, 1, 0);
+  B.enviados = [];
+  red.paso(20);
+  eq(mensajes(B, 'gevt', 'svDano').length, 1, 'el invitado lo avisa una vez');
+  eq(mensajes(B, 'gevt', 'died').length, 0, 'y no dice que ha muerto');
+  eq(corazones(A), '3,2', 'un corazón menos en el anfitrión');
+  eq(corazones(B), '3,2', 'y en el invitado');
+  ok(!B.G.pacs[1].dying && B.G.state === 'PLAYING', 'sigue jugando');
+  var p = B.G.pacs[1];
+  /* sigue andando por su pasillo: lo que no hace es volver a su salida (la 49,5) */
+  ok(Math.abs(p.x - (6 * 8 + 4)) <= 40 && Math.abs(p.y - (5 * 8 + 4)) <= 12, 'por donde iba, sin reaparecer (' + p.x + ',' + p.y + ')');
+  ok(Math.abs(A.G.pacs[1].x - p.x) <= 8, 'y el anfitrión lo ve en el mismo sitio');
+});
+
+caso('S7 · SUPERVIVENCIA: con el último corazón cae, gana el otro y lo ven los dos', function () {
+  var ms = supervParty(['mago', 'asesino']), A = ms[0], B = ms[1];
+  ms.forEach(function (m) { m.G.pacs[1].lives = 1; });
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 11, 5, 1);
+  red.paso(3);
+  ok(A.H.pulsar(A.G, 0, 0), 'la bola');
+  for (var t = 0; t < 600 && A.G.state === 'PLAYING'; t++) { A.G.pacs[0].safeTicks = 999; red.paso(1); }
+  eq(A.G.state, 'GAME_OVER', 'se acaba en el anfitrión');
+  red.paso(20);
+  eq(B.G.state, 'GAME_OVER', 'y en el invitado');
+  eq(A.G.superv.ganador, 0, 'gana el que queda');
+  eq(B.G.superv.ganador, 0, 'también en la pantalla del invitado');
+  eq(A.G.superv.bajas[0], 1, 'con su baja apuntada');
+});
+
+caso('S8 · SUPERVIVENCIA: el GANCHO del anfitrión trae al invitado, que es quien manda en su posición', function () {
+  var ms = supervParty(['soporte', 'asesino'], ['gancho,inmunidad,aliado,vida', null]), A = ms[0], B = ms[1];
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 11, 5, 1);
+  red.paso(3);
+  ok(A.H.pulsar(A.G, 0, 0), 'el anfitrión lanza el GANCHO');
+  var cerca = false;
+  for (var t = 0; t < 240 && !cerca; t++) {
+    A.G.pacs[0].pauseTicks = 60;
+    red.paso(1);
+    cerca = Math.abs(B.G.pacs[1].x - B.G.pacs[0].x) <= 12;
+  }
+  ok(cerca, 'el invitado acaba junto al anfitrión EN SU PANTALLA (' + B.G.pacs[1].x + ')');
+  ok(Math.abs(A.G.pacs[1].x - B.G.pacs[1].x) <= 12, 'y las dos máquinas lo ven en el mismo sitio');
 });
 
 /* ---------- la ejecución ---------- */
