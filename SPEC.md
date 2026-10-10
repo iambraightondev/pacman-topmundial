@@ -3696,6 +3696,76 @@ the key index. `LIST` is the ASESINO (the original kit).
   DESATADO can yield by time (asesino points, mago ghosts) and the client sends
   `roles` for auditing.
 
+### La HIPERPASTILLA (`CFG.HAB.HIPER`, 9 Oct 2026)
+
+- **Where/when.** DESATADO only (not VS., CACERÍA or SUPERVIVENCIA), on levels
+  `DESDE` (15), `+CADA` (5)... — the REY FANTASMA levels. One per level, on a
+  random walkable tile (flood fill from pac 0's start, not within 4 tiles of a
+  player, not the tunnel mouths) at a random tick in `[MIN, VENTANA]` (5 s to
+  90 s). `Hab.alNivel(G)` draws it from `Game.resetLevel` with ITS OWN seed
+  (level, score, `seedBase`): it never touches `Game.rndState`, so the level's
+  randomness is unchanged and a replay redraws the same pellet. Gated by
+  `G.reglasPts >= HIPER.REGLAS` (4): older replays never see it.
+- **State.** `Hab.hiperP = { c, r, en, on, fin }` (level pellet, in `Hab.foto`
+  and in the net snapshot as `hx.hp`), `st[i].hiper` (carrying it, 12th field
+  of `hx.e`), `st[i].pot[id]` (the last cast of that power went out boosted;
+  travels in `ct.st[].pot`). `Hab.x2(idx, id)` is THE multiplier (2 or 1).
+- **Spending it.** `lanzar`/`peticion` wrap every dispatch in `potAbre` /
+  `potCierra`: the pellet is consumed only if the power actually came out. A
+  continuation (`enSerie`: SHURIKEN charges, detonating the BOMBA, the PORTAL
+  exit) keeps the first press's boost and never spends another. It survives
+  death and level changes; a carrier does not pick up a second one.
+- **What x2 means.** Duration, range/radius, points and damage/stun to the
+  king. NOT speed, NOT cooldown. Things that fly on their own carry the
+  multiplier themselves (`pot` on `proyectilesCat`, `m` on `balas`, `joyas`,
+  and on the objects left on the floor: bomba, mina, telaraña, faro, clon,
+  tótem, meteoro, fuegoMeteoro, placas). Special cases: VIDA +2, HOSPITAL and
+  RESURRECCIÓN bring them back with one more life, FARO refills the whole R,
+  TORMENTA 6 bolts, MARCA ×6, CADENA gifts double, SHURIKEN stays at 3 stars.
+- **Follow-up kills (`Hab.bocadoX2`, in `Game.eatGhost`).** Powers that only
+  set the ghost up pay double on the contact kill, to the caster only: GRITO
+  (`Hab.gritoPot`, while that blue lasts), CACERÍA (its mark), GANCHO and
+  TOQUE ARCANO (`azulCatalogo` owner). A boosted FRENESÍ doubles every kill
+  of its owner while it lasts (`frenesiX2`, also in `matarCatalogo`).
+- **Protection points.** `Hab.protege(..., mult)`: 1,200 per hit/save and
+  2,400 per rescue when the protecting power was boosted (tank W and REBOTE,
+  ESCUDO ALIADO and the MINA shield via `st.escudoM`, CADENA, and rescues via
+  `cuerpo.quien[idx] = 2`). The passive CORAZA never doubles.
+- **Party.** The host owns the pellet: countdown, spawn, and who gets it. A
+  guest stepping on it sends `gevt hiperCome`; the host validates (≤ 3 tiles)
+  and broadcasts `hiperCome`. A guest's cast carries `h: 1` only if it held
+  the pellet on ITS screen; the host boosts only if both agree (otherwise it
+  keeps the pellet for the next cast). After spending it the guest ignores
+  the snapshot's `hiper` for `VETO_RED` ticks so a late photo cannot hand it
+  back. `habEsc` now carries the shield ticks (`n`).
+- **UI.** `.hab-b.hiper` on the four keys of whoever carries it (gold blended
+  with the role colour `--hb`, rotating conic frame, `x2` badge), a gold
+  diamond around that Pac-Man, and the pellet itself (`Hab.dibujarHiper`).
+
+### RESURRECCIÓN, buffed (9 Oct 2026, rules ≥ `RESU_REGLAS` = 5)
+
+- Revives EVERY eliminated teammate (was one). With nobody out it is stored
+  as self-insurance (`st.seguro`, 1 or 2 when boosted): `Game.finishPacDeath`
+  asks `Hab.seguroSalva` when the Support runs out of lives and he comes back
+  once, with 1 life (2 if boosted). It survives deaths and levels, lights the
+  R key (`Hab.activa`), cannot be stacked, and is cleared on a guest through
+  `Hab.dar(..., 'seguro')`. Older replays keep the old behaviour.
+- MINA lasts 8 s (was 5) since the same day; old replays were NOT gated.
+
+### El LABORATORIO (`laboratorio/`, 9 Oct 2026 — not published)
+
+- `laboratorio.bat` → `node laboratorio/servidor.js` on port 8265. It serves
+  the repo with `no-store`, replaces `js/net-config.js` with an EMPTY Supabase
+  config (nothing can reach production, not even on load), serves a
+  self-unregistering `sw.js`, and injects `laboratorio/panel.{js,css}` into
+  `index.html`. `publicar.js` only copies the game, so none of it ships.
+- `PM.Lab` (the left sidebar; F2 hides it): start DESATADO/classic at any
+  level with a role and loadout, jump/clear level, sticky cheats (immortal
+  by turning `Game.startDeath` into a no-op, no cooldowns, hyper always),
+  give/spawn the pellet, king and ghost controls, `Game.timeScale`, and a
+  second tab for a `?red=local` party. Cheats act on this tab's game: use the
+  host's tab.
+
 ## Modo CACERÍA (everyone is a ghost, the machine is Pac-Man)
 
 **`PM.Caza` (`js/caceria.js`), `CFG.CAZA`.** PAC-MAN VS. turned around: one
