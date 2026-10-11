@@ -2,6 +2,30 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-11 · Party: cada uno elige su salida (pm-v361)
+
+En la sala, bajo la lista de jugadores, hay un plano del tablero con las
+salidas del formato: dos en dúo, tres en trío, cuatro en escuadra, y las
+cuatro esquinas del tablero ancho en SUPERVIVENCIA. Son **las de siempre**
+(`CFG.STARTS`); lo que se elige es cuál le toca a cada uno, que antes iba por
+orden de llegada a la sala.
+
+- Cada jugador pulsa la suya; **no se repiten** y reparte el líder, como con
+  el fantasma de PAC-MAN VS. Pulsar la propia la suelta.
+- A quien no elige le toca su sitio de siempre si sigue libre, y si no la
+  primera que quede. Una pedida que ya no cabe (la sala encogió) no cuenta.
+- Cada fila de la lista lleva su etiqueta `SALIDA N`, con el número del plano.
+- El reparto viaja en el orden de juego (`sp`) y en la revista (`sa`), así
+  que el que vuelve a la partida y el mirón ven lo mismo, y al reaparecer
+  cada uno vuelve a la suya. Un reparto que no sea una permutación se tira
+  entero (`Game.salidasValidas`).
+- En CACERÍA no sale: ahí todos llevan fantasma.
+- **Sube `NET.PROTO` a 24**: una sala con versiones mezcladas no arranca.
+
+Probado en el laboratorio con salas reales de tres y cuatro navegadores
+(clásico y SUPERVIVENCIA): mismo reparto y mismas posiciones en todas las
+máquinas. Sin probar en producción con jugadores de verdad.
+
 ## 2026-10-10 · Mudanza a un proyecto de Supabase nuevo
 
 El juego apunta ahora a `uamaukghqakuhacfpdsf` (cuenta nueva, organización

@@ -3712,8 +3712,10 @@
      * 'fuera', la 'r' del traspaso que le guarda el asiento a quien se va y
      * los que se están esperando, 'au', en la foto); la 23, SUPERVIVENCIA
      * con poderes, corazones y tablero ancho (10 oct: 'svGolpe' y 'svDano',
-     * los corazones y los estados de los rivales en la foto). */
-    PROTO: 23,
+     * los corazones y los estados de los rivales en la foto); la 24, LA
+     * SALIDA que elige cada uno en la sala (11 oct: 'sp' en la sala y en el
+     * orden de juego, 'sa' en la revista). */
+    PROTO: 24,
     SNAP_EVERY: 5,          // ticks entre instantáneas del anfitrión (12 Hz)
     POS_EVERY: 5,           // ticks entre posiciones del invitado (12 Hz)
     PELLET_SYNC_EVERY: 15,  // 1 de cada N instantáneas lleva el mapa de pastillas

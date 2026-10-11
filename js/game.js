@@ -582,6 +582,10 @@
       this.netLooks = opts.looks || null;
       this.miLook = null;            // lo puesto de la tienda: se lee al pintar (lookFor)
       this.loadouts = opts.loadouts || null;
+      /* LA SALIDA de cada uno (11 oct): en la sala de party cada jugador
+       * elige cuál de las salidas de su formato quiere. salidas[i] es el
+       * puesto del jugador i en CFG.STARTS[n]; null, las de siempre. */
+      this.salidas = this.salidasValidas(opts.salidas, this.playerCount);
       this.confetiTick = [];         // tick en que cada jugador se comió un fantasma
       // lo ganado de la TIENDA se cuenta como diferencia (partida + DAILY)
       this.monedasAntes = window.PM.Tienda ? window.PM.Tienda.ganadas() : 0;
@@ -938,8 +942,24 @@
     /* Posición inicial del jugador i según el número de jugadores */
     pacStart: function (i) {
       var tabla = CFG.STARTS[this.playerCount];
-      if (tabla && tabla[i]) return tabla[i];
+      var k = this.salidas ? this.salidas[i] : i;
+      if (tabla && tabla[k]) return tabla[k];
       return CFG.START.pac;
+    },
+
+    /* Un reparto de salidas solo vale si es eso, un reparto: cada puesto
+     * del formato, una vez. Cualquier otra cosa (viene de la red) se tira
+     * entero y cada uno sale de su sitio de siempre. */
+    salidasValidas: function (lista, n) {
+      if (!Array.isArray(lista) || lista.length !== n) return null;
+      var vistos = {}, out = [];
+      for (var i = 0; i < n; i++) {
+        var k = lista[i];
+        if (typeof k !== 'number' || k !== Math.floor(k) || k < 0 || k >= n || vistos[k]) return null;
+        vistos[k] = 1;
+        out.push(k);
+      }
+      return out;
     },
 
     resetActors: function () {
@@ -4761,6 +4781,7 @@
         gh: this.vsGhosts,          // PAC-MAN VS.: quién lleva qué fantasma
         hab: !!this.hab,            // modo DESATADO: el mirón tiene que verlo
         rl: this.roles.slice(),     // ...y con qué rol juega cada uno
+        sa: this.salidas ? this.salidas.slice() : null,   // y de dónde sale
         lo: this.loadouts ? this.loadouts.map(function (x) {
           return x instanceof Array ? x.map(function (h) { return h.id || h; }).join(',') : x;
         }) : null,

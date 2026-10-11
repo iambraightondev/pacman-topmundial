@@ -6342,6 +6342,47 @@ body { font-size-adjust: 0.56; }
 #online .ol-cols { align-items: stretch; }
 #online .ol-cols > .ol-card { height: 100%; box-sizing: border-box; }
 #online .ol-card-sala .ol-plazas { align-content: start; }
+/* LA SALIDA: el plano del tablero con un botón en cada salida del formato */
+#online .ol-salidas { display: grid; gap: 8px; width: 100%; justify-items: center; }
+#online .ol-salidas-plano {
+  position: relative; width: min(100%, 210px); aspect-ratio: 28 / 31;
+  border: 2px solid #2121ff; border-radius: 6px; background: #000;
+  box-shadow: inset 0 0 0 3px #000, inset 0 0 0 4px rgba(33, 33, 255, 0.55), 0 0 14px rgba(33, 33, 255, 0.25);
+}
+#online .ol-salidas-plano.ancho { width: min(100%, 360px); }
+/* la casa de los fantasmas, para orientarse */
+#online .ol-salidas-plano::before {
+  content: ''; position: absolute; left: 50%; top: 45%; width: 22%; height: 10%; transform: translate(-50%, -50%);
+  border: 2px solid rgba(33, 33, 255, 0.7); border-radius: 3px;
+}
+#online .ol-salidas-plano.ancho::before { width: 11%; }
+#online .btn.ol-salida {
+  --pj: #8a8ab0;
+  position: absolute; transform: translate(-50%, -50%); margin: 0; min-width: 0;
+  width: 30px; height: 30px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--pj); background: rgba(0, 0, 0, 0.75); border: 2px dashed color-mix(in srgb, var(--pj) 70%, transparent);
+  box-shadow: none; font-size: var(--fs-m);
+}
+#online .btn.ol-salida.fija { border-style: solid; box-shadow: 0 0 10px color-mix(in srgb, var(--pj) 45%, transparent); }
+#online .btn.ol-salida.mia.fija { color: #000; background: var(--pj); border-color: var(--pj); }
+#online .btn.ol-salida:hover:not(:disabled), #online .btn.ol-salida:focus-visible { border-style: solid; outline: none; transform: translate(-50%, -50%) scale(1.12); }
+#online .btn.ol-salida:disabled { opacity: 1; cursor: not-allowed; }
+#online .ol-salida-quien {
+  position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 3px;
+  font-size: var(--fs-xs); letter-spacing: 1px; white-space: nowrap; color: var(--pj);
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis;
+}
+/* COMPACTO: el plano a un lado y la nota al otro, y de quién es cada salida
+ * lo dice el color del botón y la etiqueta SALIDA N de su fila en la lista.
+ * Con el plano grande y los nombres dentro, la lista de jugadores se salía
+ * de la carta por arriba. */
+#online .ol-salidas { grid-template-columns: auto minmax(0, 1fr); align-items: center; justify-items: start; gap: 14px; }
+#online .ol-salidas-plano { width: 150px; }
+#online .ol-salidas-plano.ancho { width: 214px; }
+#online .btn.ol-salida { width: 28px; height: 28px; font-size: var(--fs-s); }
+#online .ol-salida-quien { display: none; }
+#online .ol-salidas-nota { text-align: left; }
 /* el nombre del póster no se parte: se encoge hasta caber en una línea */
 #online .ol-poster-nombre { white-space: nowrap; overflow-wrap: normal; font-size: clamp(5px, 0.8vh, 7px); letter-spacing: 0; }
 #online .ol-poster-tag { white-space: normal; }

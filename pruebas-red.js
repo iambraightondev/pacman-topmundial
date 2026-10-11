@@ -167,7 +167,7 @@ function montar(n, o) {
       localIdx: miron ? -1 : i,
       names: NOMBRES.slice(0, n),
       cfg: cfg, hab: !!o.hab, clasif: !!o.clasif, roles: o.roles || null, loadouts: o.loadouts || null,
-      superv: !!o.superv
+      superv: !!o.superv, salidas: o.salidas || null
     });
   }
   red.paso(1);
@@ -1337,6 +1337,18 @@ caso('S12 · SUPERVIVENCIA: el EMPUJÓN del INVITADO aturde al anfitrión y le q
   red.paso(10);
   ok(A.H.clavado(0), 'el anfitrión queda aturdido en su máquina');
   eq(A.G.pacs[0].lives, antes - 1, 'y pierde un corazón');
+});
+
+caso('P1 · SALIDAS: cada uno sale de la que eligió en las tres máquinas y en la del mirón, y la revista lleva el reparto', function () {
+  var ms = montar(3, { salidas: [2, 0, 1], mirones: 1, sinEmpezar: true }), A = ms[0];
+  var S = CFG(A).STARTS[3], T = CFG(A).TILE;
+  function debe(k) { return Math.round(S[k].x * T + T / 2) + ',' + Math.round(S[k].y * T + T / 2); }
+  ms.forEach(function (m) {
+    [2, 0, 1].forEach(function (k, i) {
+      eq(Math.round(m.G.pacs[i].x) + ',' + Math.round(m.G.pacs[i].y), debe(k), 'el jugador ' + i + ' en la máquina ' + m.k);
+    });
+  });
+  eq(A.G.revista ? (A.G.revista('x', 1) || {}).sa.join() : '2,0,1', '2,0,1', 'y el que vuelve a la partida recibe el mismo reparto');
 });
 
 /* ---------- la ejecución ---------- */

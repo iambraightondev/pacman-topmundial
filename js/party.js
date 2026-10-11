@@ -52,6 +52,7 @@
     userNick: null,
     beatTimer: null,
     ghostPick: -1,   // PAC-MAN VS.: fantasma pedido (-1 = jugar de Pac-Man)
+    salidaPick: -1,  // la SALIDA pedida (-1 = la que toque)
     /* Modo DESATADO: lo decide QUIEN MANDA y vale para todo el grupo. No
      * se pregunta uno por uno a propósito: media party con poderes y media
      * sin ellos no es una partida, son dos. */
@@ -130,6 +131,7 @@
         a: window.PM.Tienda ? window.PM.Tienda.accesorio() : '',
         x: window.PM.Tienda ? window.PM.Tienda.efecto() : '',
         g: this.ghostPick,
+        sp: this.salidaPick,
         // el rol de DESATADO que tiene elegido (lo reparte el líder)
         r: CFG.HAB.rol(s.habRol1),
         h: CFG.HAB.loadoutValido(CFG.HAB.rol(s.habRol1), s.habLoadout1),
@@ -296,6 +298,72 @@
       this.changed();
     },
 
+    /* ---------- LA SALIDA de cada uno (11 oct) ----------
+     * Cada formato tiene sus salidas (dos en dúo, tres en trío, cuatro en
+     * escuadra: CFG.STARTS) y hasta ahora tocaban por orden de llegada a la
+     * sala. Ahora cada uno pide la suya; no se repiten y, como con el
+     * fantasma, reparte el líder: el que pida una cogida se queda sin
+     * elegir. A quien no elige le toca la primera que quede libre. */
+    salidaDe: function (k) {
+      if (!this.st) return null;
+      for (var i = 0; i < this.st.members.length; i++) {
+        if (this.st.members[i].sp === k) return this.st.members[i].s;
+      }
+      return null;
+    },
+
+    claimSalida: function (sid, k) {
+      k = parseInt(k, 10);
+      if (!(k >= 0 && k < CFG.MAX_PLAYERS)) return -1;
+      var dueno = this.salidaDe(k);
+      return (!dueno || dueno === sid) ? k : -1;
+    },
+
+    mySalida: function () {
+      var m = this.selfEntry();
+      return (m && m.sp >= 0) ? m.sp : -1;
+    },
+
+    /* Pedir un puesto (o soltarlo con -1) desde la sala */
+    setSalida: function (k) {
+      k = parseInt(k, 10);
+      if (!(k >= 0 && k < CFG.MAX_PLAYERS)) k = -1;
+      this.salidaPick = k;
+      if (!this.st) return;
+      var m = this.selfEntry();
+      if (this.st.leader) {
+        if (m) m.sp = this.claimSalida(window.PM.Net.sid, k);
+        this.sendRoster();
+      } else {
+        /* en mi fila ya, si está libre: el líder dirá la última palabra */
+        if (m) m.sp = this.claimSalida(window.PM.Net.sid, k);
+        window.PM.Net.send('phello', this.hello());
+      }
+      this.changed();
+    },
+
+    /* El reparto con el que se va a jugar: el puesto de cada miembro, por su
+     * orden en la sala. Los pedidos que caben en el formato se respetan (uno
+     * de más de los que hay —alguien se fue y la sala encogió— no cuenta) y
+     * al resto le toca el primero libre. */
+    repartoSalidas: function () {
+      var ms = this.st ? this.st.members : [], n = Math.min(ms.length, CFG.MAX_PLAYERS);
+      var out = [], cogidos = {}, i, k;
+      for (i = 0; i < n; i++) {
+        k = ms[i].sp;
+        if (k >= 0 && k < n && !cogidos[k]) { cogidos[k] = 1; out.push(k); }
+        else out.push(-1);
+      }
+      for (i = 0; i < n; i++) {
+        if (out[i] >= 0) continue;
+        /* su sitio de siempre si sigue libre; si no, el primero que quede */
+        k = cogidos[i] ? 0 : i;
+        while (cogidos[k]) k++;
+        cogidos[k] = 1; out[i] = k;
+      }
+      return out;
+    },
+
     /* El modo de la party de una vez (la cartelera de la sala): 'equipo',
      * 'hab', 'caza' o 'superv'. Excluyentes entre sí. */
     setModo: function (id) {
@@ -368,7 +436,7 @@
       var m = this.me();
       /* h: los PODERES. Faltaban (23 sep): el rol viajaba y los poderes no,
        * así que el líder le ponía a cada invitado los de serie de su rol */
-      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, r: m.r, h: m.h,
+      return { v: CFG.NET.PROTO, n: m.n, c: m.c, k: m.k, a: m.a, x: m.x, g: m.g, sp: m.sp, r: m.r, h: m.h,
                rg: m.rg, ra: m.ra, cu: m.cu, l: this.listo ? 1 : 0 };
     },
 
@@ -594,6 +662,7 @@
       m.a = (typeof d.a === 'string') ? d.a : '';
       m.x = (typeof d.x === 'string') ? d.x : '';
       m.g = this.claim(sid, d.g);      // PAC-MAN VS.: el líder reparte
+      m.sp = this.claimSalida(sid, d.sp);   // la SALIDA: una por jugador
       m.r = this.claimRol(sid, d.r);   // DESATADO: un solo Soporte
       m.h = CFG.HAB.loadoutValido(m.r, d.h);
       m.l = d.l ? 1 : 0;               // ¿ha dicho que está listo?
@@ -650,6 +719,7 @@
      * no salen dos Pac-Man idénticos y no hay quien se distinga. */
     gameOrder: function () {
       var out = [], usados = {}, tomados = {}, i;
+      var reparto = this.repartoSalidas();
       for (i = 0; i < this.st.members.length && i < CFG.MAX_PLAYERS; i++) {
         var m = this.st.members[i];
         var c = m.c || CFG.PLAYER_COLORS[i];
@@ -665,7 +735,7 @@
         tomados[rol] = 1;
         out.push({ s: m.s, n: m.n || ('J' + (i + 1)), c: c, k: m.k || 'clasico',
                    a: m.a || '', x: m.x || '',
-                   g: (m.g >= 0 && m.g < 4) ? m.g : -1, r: rol,
+                   g: (m.g >= 0 && m.g < 4) ? m.g : -1, sp: reparto[i], r: rol,
                    h: CFG.HAB.loadoutValido(rol, m.h || CFG.HAB.ROLES[rol].map(function (x) { return x.id; }).join(',')) });
       }
       return out;

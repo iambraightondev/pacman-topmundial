@@ -15475,6 +15475,57 @@
     }
   });
 
+  /* 11 oct: cada uno elige de cuál de las salidas de su formato sale */
+  test('SALIDAS: en la sala cada uno pide la suya, no se repiten y al que no elige le toca la primera libre', function () {
+    var P = window.PM.Party, st = P.st;
+    try {
+      P.st = { code: 'ABCD', leader: true, status: 'dentro',
+               members: [{ s: 'a', n: 'A', sp: -1 }, { s: 'b', n: 'B', sp: -1 }, { s: 'c', n: 'C', sp: -1 }] };
+      eq(P.repartoSalidas().join(), '0,1,2', 'nadie elige: las de siempre, por orden de sala');
+      eq(P.claimSalida('c', 0), 0, 'una libre se concede');
+      P.st.members[2].sp = 0;
+      eq(P.claimSalida('a', 0), -1, 'la que ya tiene otro, no');
+      eq(P.claimSalida('c', 0), 0, 'pero su dueño la conserva');
+      eq(P.claimSalida('a', 9), -1, 'ni una que no existe');
+      eq(P.repartoSalidas().join(), '1,2,0', 'el que eligió sale de la suya y los demás se reparten el resto');
+      P.st.members[0].sp = 2;
+      eq(P.repartoSalidas().join(), '2,1,0', 'dos eligen: al tercero le queda la que sobra (la suya de siempre)');
+      var ord = P.gameOrder();
+      eq(ord.map(function (o) { return o.sp; }).join(), '2,1,0', 'y así viaja en el orden de juego');
+      /* uno se va: la tercera salida ya no existe en dúo */
+      P.st.members.pop();
+      eq(P.repartoSalidas().join(), '0,1', 'una pedida que ya no cabe en el formato no cuenta');
+      P.st.members = [{ s: 'a', sp: 1 }, { s: 'b', sp: 1 }];
+      eq(P.repartoSalidas().join(), '1,0', 'y si llegaran dos iguales, la primera manda');
+    } finally { P.st = st; }
+  });
+
+  test('SALIDAS: la partida coloca a cada uno donde eligió, y un reparto que no cuadra se ignora', function () {
+    function sitio(i) { var p = G.pacs[i]; return Math.round(p.x) + ',' + Math.round(p.y); }
+    function de(k, n) { var s = CFG.STARTS[n][k]; return Math.round(s.x * CFG.TILE + CFG.TILE / 2) + ',' + Math.round(s.y * CFG.TILE + CFG.TILE / 2); }
+    try {
+      G.newGame({ players: 3 });
+      var base = [sitio(0), sitio(1), sitio(2)];
+      eq(G.salidas, null, 'sin elegir no hay reparto');
+      G.newGame({ players: 3, salidas: [2, 0, 1] });
+      eq(sitio(0), base[2], 'el primero sale donde salía el tercero');
+      eq(sitio(1), base[0], 'el segundo, donde el primero');
+      eq(sitio(2), base[1], 'y el tercero, donde el segundo');
+      eq(G.pacStart(0), CFG.STARTS[3][2], 'y es de verdad una de las salidas del trío');
+      G.respawn();
+      eq(sitio(0), base[2], 'al reaparecer, vuelve a la que eligió');
+      [[0, 0, 1], [0, 1], [0, 1, 3], [0, 1, '2'], 'no', [0, 1, 1.5]].forEach(function (malo) {
+        G.newGame({ players: 3, salidas: malo });
+        eq(G.salidas, null, 'un reparto roto se tira: ' + JSON.stringify(malo));
+        eq(sitio(0), base[0], 'y cada uno sale de su sitio');
+      });
+      /* en el tablero ancho de SUPERVIVENCIA, sus cuatro esquinas */
+      G.newGame({ players: 4, superv: true, salidas: [3, 2, 1, 0] });
+      eq(G.pacStart(0), CFG.STARTS[4][3], 'en SUPERVIVENCIA se eligen las esquinas del tablero ancho');
+      eq(CFG.STARTS[4][3].x, 49, 'que son las del ancho');
+    } finally { G.toMenu(); }
+  });
+
   /* 18 sep: ya no es solo el Soporte. NINGÚN rol se repite. */
   test('ROLES: en la sala no se repite ninguno', function () {
     var P = window.PM.Party;

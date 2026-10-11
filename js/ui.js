@@ -7165,6 +7165,18 @@
       izq.appendChild(this.partyCountEl);
       this.partyList = el('div', 'ol-plazas');
       izq.appendChild(this.partyList);
+
+      /* LA SALIDA (11 oct): el plano del tablero con las salidas del formato;
+       * cada uno pulsa la suya. Los botones se rehacen solo si cambian el
+       * tablero o el número de jugadores (ver pintarSalidas). */
+      this.olSalidaTit = el('div', 'ol-card-titulo ol-sep', 'TU SALIDA');
+      izq.appendChild(this.olSalidaTit);
+      this.olSalidas = el('div', 'ol-salidas');
+      this.olSalidasPlano = el('div', 'ol-salidas-plano');
+      this.olSalidas.appendChild(this.olSalidasPlano);
+      this.olSalidasNota = el('div', 'ol-card-texto ol-salidas-nota', '');
+      this.olSalidas.appendChild(this.olSalidasNota);
+      izq.appendChild(this.olSalidas);
       cols.appendChild(izq);
 
       /* ---- derecha: la cartelera y la ficha del modo elegido ---- */
@@ -7618,6 +7630,74 @@
       this.onlineWarn.textContent = msg || 'SIN CONEXIÓN';
     },
 
+    /* EL PLANO DE SALIDAS de la sala: un rectángulo con las proporciones del
+     * tablero que se va a jugar y un botón en cada salida del formato (las
+     * de CFG.TABLEROS, las mismas de siempre). La mía, encendida; la de
+     * otro, con su color y su nombre, y no se puede pulsar. Con menos de
+     * dos jugadores no hay nada que repartir. */
+    pintarSalidas: function (ms, modo) {
+      var P = window.PM.Party, plano = this.olSalidasPlano;
+      if (!plano || !P) return;
+      var n = Math.min(ms.length, CFG.MAX_PLAYERS);
+      var tab = CFG.TABLEROS[modo === 'superv' ? 'ancho' : 'clasico'] || CFG.TABLEROS.clasico;
+      var lista = (n >= 2 && tab.salidas[n]) || [];
+      var hay = lista.length > 0 && modo !== 'caza';
+      this.olSalidaTit.style.display = hay ? '' : 'none';
+      this.olSalidas.style.display = hay ? '' : 'none';
+      if (!hay) { this.olSalidasSello = ''; return; }
+      var self = this, sello = tab.id + ':' + n, i;
+      if (this.olSalidasSello !== sello) {
+        this.olSalidasSello = sello;
+        plano.innerHTML = '';
+        plano.style.aspectRatio = tab.cols + ' / ' + CFG.ROWS;
+        plano.classList.toggle('ancho', tab.id === 'ancho');
+        this.olSalidaBtns = [];
+        lista.forEach(function (s, k) {
+          var b = self.makeButton('', function () {
+            var P2 = window.PM.Party;
+            if (P2) P2.setSalida(P2.mySalida() === k ? -1 : k);
+          });
+          b.classList.add('ol-salida');
+          /* en el clásico las salidas están a cuatro casillas una de otra y en
+           * un plano de este tamaño los botones se montarían: se abren hacia
+           * los lados (es un croquis: izquierda, derecha, arriba y abajo) */
+          var cx = s.x + 0.5, medio = tab.cols / 2;
+          if (tab.id === 'clasico') cx = medio + (cx - medio) * 2.6;
+          b.style.left = (cx / tab.cols * 100) + '%';
+          b.style.top = ((s.y + 0.5) / CFG.ROWS * 100) + '%';
+          var num = document.createElement('span');
+          num.className = 'ol-salida-num';
+          num.textContent = String(k + 1);
+          b.appendChild(num);
+          var quien = document.createElement('small');
+          quien.className = 'ol-salida-quien';
+          b.appendChild(quien);
+          self.olSalidaBtns.push({ b: b, quien: quien });
+          plano.appendChild(b);
+        });
+      }
+      /* de quién es cada una, tal y como se jugaría si se empezara ahora */
+      var reparto = P.repartoSalidas ? P.repartoSalidas() : [];
+      var yo = window.PM.Net.sid, mia = -1, elegida = false;
+      for (i = 0; i < this.olSalidaBtns.length; i++) {
+        var d = this.olSalidaBtns[i], dueno = -1, j;
+        for (j = 0; j < n; j++) if (reparto[j] === i) dueno = j;
+        var m = dueno >= 0 ? ms[dueno] : null;
+        var fija = !!(m && m.sp === i);          // la pidió; si no, solo le toca
+        var esMia = !!(m && m.s === yo);
+        if (esMia) { mia = i; elegida = fija; }
+        d.b.classList.toggle('mia', esMia);
+        d.b.classList.toggle('fija', fija);
+        d.b.disabled = !!(m && !esMia && fija);
+        d.b.style.setProperty('--pj', (m && m.c) || '#8a8ab0');
+        d.quien.textContent = m ? (esMia ? 'TÚ' : (m.n || 'JUGADOR')) : '';
+        d.b.setAttribute('aria-label', 'SALIDA ' + (i + 1) + (m ? ' · ' + (esMia ? 'TÚ' : m.n) : ''));
+        d.b.setAttribute('aria-pressed', esMia && fija ? 'true' : 'false');
+      }
+      this.olSalidasNota.textContent = elegida ? 'SALES DE LA ' + (mia + 1) + ' · PULSA OTRA LIBRE PARA CAMBIAR'
+        : 'PULSA UNA PARA QUEDÁRTELA · SI NO, TE TOCA LA ' + (mia + 1);
+    },
+
     /* Lista de miembros y estado de los botones */
     refreshParty: function () {
       var P = window.PM.Party;
@@ -7652,6 +7732,7 @@
       var ms = P.members();
       if (this.partyCountEl) this.partyCountEl.textContent = 'JUGADORES ' + ms.length + '/' + CFG.MAX_PLAYERS;
       this.partyList.innerHTML = '';
+      var repSal = P.repartoSalidas ? P.repartoSalidas() : [];
       for (var i = 0; i < CFG.MAX_PLAYERS; i++) {
         var row = document.createElement('div');
         var m = ms[i];
@@ -7725,6 +7806,10 @@
         if ((P.habPick || P.supervPick) && m.r && CFG.HAB.ROL_INFO[m.r]) {
           tags.appendChild(this.olTag(CFG.HAB.ROL_INFO[m.r].name, CFG.HAB.ROL_INFO[m.r].color));
         }
+        /* de cuál de las salidas del plano sale (el número es el del plano) */
+        if (ms.length >= 2 && !P.cazaPick && repSal[i] >= 0) {
+          tags.appendChild(this.olTag('SALIDA ' + (repSal[i] + 1), color));
+        }
         row.appendChild(tags);
         this.partyList.appendChild(row);
       }
@@ -7795,6 +7880,7 @@
         this.paletaDeRol(conRoles ? miRol : null);
         this.habArm.pintar();
       }
+      this.pintarSalidas(ms, modo);
       this.startPartyBtn.style.display = lider ? '' : 'none';
       this.startPartyBtn.disabled = !P.canStart();
       this.startPartyBtn.textContent = 'EMPEZAR PARTIDA (' +
@@ -8271,6 +8357,8 @@
       }
       window.PM.Game.newGame({
         players: order.length, net: role, localIdx: idx,
+        /* de dónde sale cada uno (lo eligieron en la sala; newGame lo tira si no cuadra) */
+        salidas: order.map(function (o) { return o.sp; }),
         cfg: (role === 'guest') ? this.sanitizeNetCfg(cfg) : null,
         colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!hab,           // lo enciende quien manda, y vale para todos
@@ -11437,6 +11525,7 @@
           colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
           hab: !!(d && d.hab),  // el mirón tiene que ver dientes y chispas
           roles: (d && d.rl) || null,
+          salidas: (d && d.sa) || null,
           loadouts: (d && d.lo) || null,
           caza: !!(d && d.caza), // y el Pac-Man de la máquina, con su reloj
           superv: !!(d && d.sv), // y la zona de SUPERVIVENCIA
@@ -15667,6 +15756,7 @@
         cfg: this.sanitizeNetCfg(d.cfg),
         colors: colors, names: names, skins: skins, ghosts: ghosts, looks: looks,
         hab: !!d.hab, clasif: !!d.cl, roles: roles, loadouts: loadouts,
+        salidas: d.sa || null,
         caza: !!d.caza, superv: !!d.sv, maze: d.maze || null
       });
       G.ponerRevista(d);
