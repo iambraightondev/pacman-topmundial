@@ -6688,6 +6688,13 @@
         Ac.restore(function (e) { err = e; });
       });
       eq(Ac.llaveRenovar(), 'llave-1', 'un servidor caído tampoco la tira');
+      /* 10 oct: Supabase con el proyecto restringido por cuota contesta 402 */
+      conRed(function () {
+        return respuesta(402, { message: 'Service for this project is restricted' });
+      }, function () {
+        Ac.restore(function (e) { err = e; });
+      });
+      eq(Ac.llaveRenovar(), 'llave-1', 'ni un proyecto restringido por cuota');
       conRed(function () {
         return respuesta(400, { error: 'invalid_grant', error_description: 'Invalid Refresh Token' });
       }, function () {

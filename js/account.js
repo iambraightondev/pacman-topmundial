@@ -449,8 +449,11 @@
         if (res.ok && d && d.access_token) return { ok: true, d: d };
         var s = res.status;
         /* 4xx es "esa llave no vale" (caducada, usada, revocada); 408, 429
-         * y 5xx son del camino, y con eso no se tira la sesión de nadie */
-        return { ok: false, invalida: s >= 400 && s < 500 && s !== 408 && s !== 429 };
+         * y 5xx son del camino, y con eso no se tira la sesión de nadie.
+         * Tampoco con un 402: es Supabase con el PROYECTO restringido por
+         * cuota (10 oct 2026), y ese día cerró la sesión de todo el que
+         * abrió el juego, sin que su llave tuviera nada de malo. */
+        return { ok: false, invalida: s >= 400 && s < 500 && s !== 402 && s !== 408 && s !== 429 };
       });
     }).catch(function () { return { ok: false, invalida: false }; });
   }
