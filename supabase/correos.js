@@ -38,7 +38,7 @@ function carta(titulo, cuerpo, pie) {
 '    <p style="margin:0 0 18px;color:#ffffff;font-size:16px;font-weight:bold;letter-spacing:1px;">' + titulo + '</p>\n' +
 '    ' + cuerpo + '\n' +
 '  </div>\n' +
-'  <p style="max-width:480px;margin:14px auto 0;color:#555555;font-size:11px;text-align:center;letter-spacing:1px;">' + pie + '</p>\n' +
+'  <p style="max-width:480px;margin:16px auto 0;color:#a0a0b4;font-size:12px;line-height:1.6;text-align:center;letter-spacing:1px;">' + pie + '</p>\n' +
 '</div>';
 }
 
@@ -47,13 +47,16 @@ function boton(texto) {
   return '<p style="text-align:center;margin:26px 0;">\n' +
 '      <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ffff00;color:#000000;text-decoration:none;font-weight:bold;font-size:15px;letter-spacing:2px;padding:14px 26px;border-radius:8px;">' + texto + '</a>\n' +
 '    </p>\n' +
-'    <p style="margin:0 0 16px;color:#888888;font-size:12px;line-height:1.6;">Si el botón no te funciona, copia esta dirección en el navegador:<br>\n' +
-'      <span style="color:#7ec8ff;word-break:break-all;">{{ .ConfirmationURL }}</span>\n' +
+'    <p style="margin:0 0 8px;color:#c4c4d4;font-size:13px;line-height:1.6;">Si el botón no te funciona, copia esta dirección en el navegador:</p>\n' +
+/* el color va EN el enlace: Gmail convierte la dirección en enlace y, sin
+ * esto, la pinta de su azul oscuro, que sobre negro no se lee */
+'    <p style="margin:0 0 18px;padding:12px;background:#14142a;border:1px solid #2a2a55;border-radius:8px;font-size:12px;line-height:1.6;word-break:break-all;">\n' +
+'      <a href="{{ .ConfirmationURL }}" style="color:#9fd6ff;text-decoration:underline;">{{ .ConfirmationURL }}</a>\n' +
 '    </p>';
 }
 
 function p(t) {
-  return '<p style="margin:0 0 14px;color:#dddddd;font-size:14px;line-height:1.6;">' + t + '</p>';
+  return '<p style="margin:0 0 14px;color:#f0f0f0;font-size:15px;line-height:1.6;">' + t + '</p>';
 }
 
 var config = {
@@ -63,7 +66,7 @@ var config = {
     'RECUPERAR TU CUENTA',
     p('Has pedido volver a entrar. Pulsa el botón y te dejamos poner una contraseña nueva; tu progreso sigue donde estaba.') +
     boton('PONER CONTRASEÑA NUEVA') +
-    p('<span style="color:#888888;font-size:12px;">¿No has sido tú? No hagas nada. Mientras no se abra el enlace, tu contraseña sigue igual.</span>'),
+    p('<span style="color:#c4c4d4;font-size:13px;">¿No has sido tú? No hagas nada. Mientras no se abra el enlace, tu contraseña sigue igual.</span>'),
     'Este correo se manda solo cuando alguien lo pide desde el juego.'),
 
   /* Aviso de que la contraseña ha cambiado: es la señal de alarma si el que
@@ -73,7 +76,7 @@ var config = {
   mailer_templates_password_changed_notification_content: carta(
     'CONTRASEÑA CAMBIADA',
     p('La contraseña de tu cuenta acaba de cambiar. Si has sido tú, aquí no hay nada que hacer.') +
-    p('<span style="color:#ff8c00;">Si NO has sido tú</span>, entra en el juego y pide recuperar la cuenta cuanto antes.'),
+    p('<span style="color:#ffa733;font-weight:bold;">Si NO has sido tú</span>, entra en el juego y pide recuperar la cuenta cuanto antes.'),
     'PAC-MAN TOP MUNDIAL'),
 
   mailer_subjects_email_change: 'Confirma tu correo de PAC-MAN TOP MUNDIAL',
@@ -88,7 +91,7 @@ var config = {
   mailer_templates_email_changed_notification_content: carta(
     'CORREO CAMBIADO',
     p('El correo de recuperación de tu cuenta acaba de cambiar.') +
-    p('<span style="color:#ff8c00;">Si no has sido tú</span>, avisa a quien lleva el juego.'),
+    p('<span style="color:#ffa733;font-weight:bold;">Si no has sido tú</span>, avisa a quien lleva el juego.'),
     'PAC-MAN TOP MUNDIAL')
 };
 
