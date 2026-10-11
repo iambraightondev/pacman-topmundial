@@ -24,8 +24,8 @@
   'use strict';
   window.PM = window.PM || {};
   window.PM.NET_CFG = {
-    SUPABASE_URL: 'https://yghnwkifbmmhrpvtjjit.supabase.co',
-    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaG53a2lmYm1taHJwdnRqaml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNzAwODcsImV4cCI6MjEwMDk0NjA4N30.YrDxWlKxIlYCGsr53DU--DISLtOWOHf-BdDPNJMG9mU',
+    SUPABASE_URL: 'https://uamaukghqakuhacfpdsf.supabase.co',
+    SUPABASE_KEY: 'sb_publishable_RWPOJhevuU3uThxvmD8pRQ_fM0CjR76',
     /* { url, key } de cada proyecto de canal, el preferido primero */
     CANALES: []
   };

@@ -218,7 +218,7 @@ drop table if exists public.cuenta_frenos;
 --        (cambiar la contraseña con /auth/v1/user pide una sesión de menos de
 --        24 h; la de la recuperación y la de acabar de entrar lo son)
 --    Para volver:
---      curl -X PATCH https://api.supabase.com/v1/projects/yghnwkifbmmhrpvtjjit/config/auth \
+--      curl -X PATCH https://api.supabase.com/v1/projects/uamaukghqakuhacfpdsf/config/auth \
 --        -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
 --        -d '{"disable_signup": false, "security_update_password_require_reauthentication": false}'
 --    o en el panel: Authentication -> Sign In / Providers -> "Allow new users

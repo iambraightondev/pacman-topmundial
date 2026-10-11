@@ -23,7 +23,7 @@
 var fs = require('fs');
 var path = require('path');
 
-var REF = 'yghnwkifbmmhrpvtjjit';
+var REF = 'uamaukghqakuhacfpdsf';
 var SBP = process.env.SBP;
 var slug = process.argv[2];
 var archivo = process.argv[3] ||

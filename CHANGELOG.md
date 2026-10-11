@@ -2,6 +2,28 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-10 · Mudanza a un proyecto de Supabase nuevo
+
+El juego apunta ahora a `uamaukghqakuhacfpdsf` (cuenta nueva, organización
+"Juegos Top Mundial", us-east-1, Postgres 17.11). El viejo, `yghnwkifbmmhrpvtjjit`,
+sigue restringido hasta el 30 de octubre y se deja quieto, sin borrar.
+
+- **Esquema** reconstruido desde el catálogo vivo del origen, no desde los `.sql`
+  del repo (que están desviados): 306 objetos, huella idéntica.
+- **Datos** copiados y comprobados por md5 tabla a tabla: 10 cuentas con sus
+  contraseñas, 1.011 marcas, 182 repeticiones y el resto. Secuencias al día.
+- **Auth** igual que el origen (alta pública apagada, sin confirmación de
+  correo) y las cuatro funciones subidas con `verify_jwt=false`.
+- El juego manda ahora la clave `sb_publishable_…` en vez de la `anon` clásica.
+- **Las sesiones abiertas no viajan**: cada jugador entra una vez con su
+  usuario y contraseña de siempre.
+- Sigue **sin SMTP propio**, como el origen: el correo de recuperación no llega.
+- `CANALES` sigue vacío: el canal de partidas va por el proyecto de datos hasta
+  que haya un proyecto de canal en OTRA organización (la cuota se cuenta por
+  organización, así que uno en la misma no protege los datos).
+- La copia, los guiones y el informe de la mudanza están fuera del repo, en
+  `../migracion-supabase` (lleva secretos: nunca a git).
+
 ## 2026-10-10 · La cuota de Supabase: enlaces directos que se recuperan
 
 El 10 de octubre Supabase **restringió el proyecto** por pasar los 2 millones

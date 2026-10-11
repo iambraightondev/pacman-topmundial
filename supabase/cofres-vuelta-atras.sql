@@ -15,7 +15,7 @@
 --
 -- La Edge Function se borra aparte, por la API de gestión:
 --   curl -X DELETE -H "Authorization: Bearer <token>" \
---     https://api.supabase.com/v1/projects/yghnwkifbmmhrpvtjjit/functions/cofres
+--     https://api.supabase.com/v1/projects/uamaukghqakuhacfpdsf/functions/cofres
 -- ============================================================
 
 -- 1) el trigger, como estaba
