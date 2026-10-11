@@ -1,0 +1,38 @@
+{
+  "cabecera": {
+    "w": 560,
+    "h": 181
+  },
+  "lado": {
+    "w": 560,
+    "h": 44
+  },
+  "pie": {
+    "w": 560,
+    "h": 49
+  },
+  "rotulo-recuperar": {
+    "w": 369,
+    "h": 41
+  },
+  "rotulo-clave": {
+    "w": 369,
+    "h": 41
+  },
+  "rotulo-confirma": {
+    "w": 350,
+    "h": 41
+  },
+  "rotulo-correo": {
+    "w": 293,
+    "h": 41
+  },
+  "boton-recuperar": {
+    "w": 514,
+    "h": 109
+  },
+  "boton-confirma": {
+    "w": 406,
+    "h": 109
+  }
+}

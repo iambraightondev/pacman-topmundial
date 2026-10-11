@@ -15,58 +15,81 @@
  * Settings), y luego esto.
  *
  *   SBP=<personal access token> node supabase/correos.js
+ *   node supabase/correos.js --ver=<carpeta>     solo para mirarlos
  *
  * Se puede ejecutar tantas veces como haga falta.
+ *
+ * Las imágenes (marco, rótulos, botones) las dibuja
+ * correos-imagenes.js y se sirven desde producción: si cambia un
+ * rótulo, primero aquello, publicar, y luego esto.
  * ============================================================ */
 'use strict';
 
 var REF = 'uamaukghqakuhacfpdsf';
 var SBP = process.env.SBP;
+var P = require('./correos-piezas.js');
+var MED = require('./correos-medidas.json');
 
-if (!SBP) {
-  console.log('Falta el token: SBP=<personal access token> node supabase/correos.js');
-  process.exit(1);
+/* Los correos se leen en clientes que se comen las hojas de estilo y las
+ * letras propias, así que todo va EN LÍNEA, en tablas, y lo que tiene que ir
+ * en letra de máquina (título, rótulo, botón) va como imagen, con los estilos
+ * del marco de recreativa del juego. El texto corrido sí es texto: se lee
+ * aunque las imágenes no carguen. */
+var LETRA = "font-family:'Press Start 2P','Courier New',Courier,monospace;";
+
+function img(pieza, alt, extra) {
+  var m = MED[pieza];
+  return '<img src="' + P.BASE + pieza + '.png" width="' + m.w + '" height="' + m.h + '" alt="' + alt + '" ' +
+    'style="display:block;border:0;outline:none;max-width:100%;height:auto;' + LETRA + 'font-weight:bold;' + (extra || '') + '">';
 }
 
-/* Los correos se leen en clientes que se comen las hojas de estilo, así que
- * todo va EN LÍNEA. Fondo oscuro, amarillo y azul: los del juego. */
-function carta(titulo, cuerpo, pie) {
-  return '<div style="background:#000000;padding:32px 16px;font-family:\'Courier New\',Courier,monospace;">\n' +
-'  <div style="max-width:480px;margin:0 auto;background:#0a0a14;border:2px solid #2121ff;border-radius:12px;padding:28px 24px;">\n' +
-'    <p style="margin:0 0 2px;color:#ffff00;font-size:24px;font-weight:bold;letter-spacing:4px;text-align:center;">PAC-MAN</p>\n' +
-'    <p style="margin:0 0 26px;color:#7ec8ff;font-size:11px;font-weight:bold;letter-spacing:5px;text-align:center;">TOP MUNDIAL</p>\n' +
-'    <p style="margin:0 0 18px;color:#ffffff;font-size:16px;font-weight:bold;letter-spacing:1px;">' + titulo + '</p>\n' +
+function carta(rotulo, cuerpo, pie) {
+  var A = P.ANCHO, r = P.ROTULOS[rotulo];
+  return '<div style="background:#000000;padding:24px 0;">\n' +
+'<table role="presentation" align="center" width="' + A + '" cellpadding="0" cellspacing="0" border="0" style="width:' + A + 'px;max-width:100%;margin:0 auto;border-collapse:collapse;background:' + P.FONDO + ';">\n' +
+'  <tr><td style="padding:0;line-height:0;font-size:0;">' +
+      img('cabecera', 'PAC-MAN TOP MUNDIAL', 'color:#ffff00;font-size:24px;line-height:60px;text-align:center;') + '</td></tr>\n' +
+'  <tr><td background="' + P.BASE + 'lado.png" bgcolor="' + P.FONDO + '" style="padding:14px 46px 10px;background:' + P.FONDO + ' url(' + P.BASE + 'lado.png) repeat-y center top;background-size:100% auto;">\n' +
+'    <table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 20px;"><tr><td>' +
+      img('rotulo-' + rotulo, r.texto, 'color:' + (r.aviso ? '#ffb852' : '#ffffff') + ';font-size:16px;line-height:40px;text-align:center;') + '</td></tr></table>\n' +
 '    ' + cuerpo + '\n' +
-'  </div>\n' +
-'  <p style="max-width:480px;margin:16px auto 0;color:#a0a0b4;font-size:12px;line-height:1.6;text-align:center;letter-spacing:1px;">' + pie + '</p>\n' +
+'  </td></tr>\n' +
+'  <tr><td style="padding:0;line-height:0;font-size:0;">' + img('pie', '') + '</td></tr>\n' +
+'</table>\n' +
+'<p style="max-width:' + (A - 40) + 'px;margin:18px auto 0;padding:0 20px;color:#aeb0d4;' + LETRA + 'font-size:12px;line-height:1.8;letter-spacing:1px;text-align:center;text-transform:uppercase;">' + pie + '</p>\n' +
 '</div>';
 }
 
 /* {{ .ConfirmationURL }} lo rellena Supabase con el enlace de un solo uso */
-function boton(texto) {
-  return '<p style="text-align:center;margin:26px 0;">\n' +
-'      <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#ffff00;color:#000000;text-decoration:none;font-weight:bold;font-size:15px;letter-spacing:2px;padding:14px 26px;border-radius:8px;">' + texto + '</a>\n' +
-'    </p>\n' +
-'    <p style="margin:0 0 8px;color:#c4c4d4;font-size:13px;line-height:1.6;">Si el botón no te funciona, copia esta dirección en el navegador:</p>\n' +
+function boton(cual) {
+  return '<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr><td>\n' +
+'      <a href="{{ .ConfirmationURL }}" style="display:block;text-decoration:none;color:#ffff00;">' +
+        img('boton-' + cual, P.BOTONES[cual], 'color:#ffff00;font-size:15px;line-height:60px;text-align:center;') + '</a>\n' +
+'    </td></tr></table>\n' +
+'    <p style="margin:0 0 10px;color:#aeb0d4;' + LETRA + 'font-size:12px;line-height:1.8;letter-spacing:1px;text-align:center;text-transform:uppercase;">Si el botón no te funciona, copia esta dirección en el navegador:</p>\n' +
 /* el color va EN el enlace: Gmail convierte la dirección en enlace y, sin
  * esto, la pinta de su azul oscuro, que sobre negro no se lee */
-'    <p style="margin:0 0 18px;padding:12px;background:#14142a;border:1px solid #2a2a55;border-radius:8px;font-size:12px;line-height:1.6;word-break:break-all;">\n' +
-'      <a href="{{ .ConfirmationURL }}" style="color:#9fd6ff;text-decoration:underline;">{{ .ConfirmationURL }}</a>\n' +
+'    <p style="margin:0 0 22px;padding:12px;background:#000000;border:2px solid #2121ff;font-family:\'Courier New\',Courier,monospace;font-size:12px;line-height:1.6;word-break:break-all;">\n' +
+'      <a href="{{ .ConfirmationURL }}" style="color:#00ffff;text-decoration:underline;">{{ .ConfirmationURL }}</a>\n' +
 '    </p>';
 }
 
-function p(t) {
-  return '<p style="margin:0 0 14px;color:#f0f0f0;font-size:15px;line-height:1.6;">' + t + '</p>';
+/* El texto corrido, como las descripciones del juego: mayúsculas, espaciado
+ * y lila claro. `tono` = 'pie' para la letra pequeña. */
+function p(t, tono) {
+  return '<p style="margin:0 0 16px;color:' + (tono === 'pie' ? '#aeb0d4' : '#d6d6f0') + ';' + LETRA +
+    'font-size:' + (tono === 'pie' ? 12 : 14) + 'px;font-weight:bold;line-height:1.9;letter-spacing:1px;text-align:center;text-transform:uppercase;">' + t + '</p>';
 }
+var AVISO = '<span style="color:#ffb852;">';
 
 var config = {
   /* El que importa: el enlace para volver a entrar */
   mailer_subjects_recovery: 'Recupera tu cuenta de PAC-MAN TOP MUNDIAL',
   mailer_templates_recovery_content: carta(
-    'RECUPERAR TU CUENTA',
+    'recuperar',
     p('Has pedido volver a entrar. Pulsa el botón y te dejamos poner una contraseña nueva; tu progreso sigue donde estaba.') +
-    boton('PONER CONTRASEÑA NUEVA') +
-    p('<span style="color:#c4c4d4;font-size:13px;">¿No has sido tú? No hagas nada. Mientras no se abra el enlace, tu contraseña sigue igual.</span>'),
+    boton('recuperar') +
+    p('¿No has sido tú? No hagas nada. Mientras no se abra el enlace, tu contraseña sigue igual.', 'pie'),
     'Este correo se manda solo cuando alguien lo pide desde el juego.'),
 
   /* Aviso de que la contraseña ha cambiado: es la señal de alarma si el que
@@ -74,26 +97,48 @@ var config = {
   mailer_subjects_password_changed_notification:
     'Tu contraseña de PAC-MAN TOP MUNDIAL ha cambiado',
   mailer_templates_password_changed_notification_content: carta(
-    'CONTRASEÑA CAMBIADA',
+    'clave',
     p('La contraseña de tu cuenta acaba de cambiar. Si has sido tú, aquí no hay nada que hacer.') +
-    p('<span style="color:#ffa733;font-weight:bold;">Si NO has sido tú</span>, entra en el juego y pide recuperar la cuenta cuanto antes.'),
+    p(AVISO + 'Si NO has sido tú</span>, entra en el juego y pide recuperar la cuenta cuanto antes.'),
     'PAC-MAN TOP MUNDIAL'),
 
   mailer_subjects_email_change: 'Confirma tu correo de PAC-MAN TOP MUNDIAL',
   mailer_templates_email_change_content: carta(
-    'CONFIRMA TU CORREO',
-    p('Has puesto {{ .NewEmail }} como correo de recuperación de tu cuenta. Confírmalo y listo.') +
-    boton('CONFIRMAR CORREO'),
+    'confirma',
+    p('Has puesto <span style="color:#ffff00;text-transform:none;">{{ .NewEmail }}</span> como correo de recuperación de tu cuenta. Confírmalo y listo.') +
+    boton('confirma'),
     'Sirve para una sola cosa: devolverte la cuenta si olvidas la contraseña.'),
 
   mailer_subjects_email_changed_notification:
     'El correo de tu cuenta de PAC-MAN TOP MUNDIAL ha cambiado',
   mailer_templates_email_changed_notification_content: carta(
-    'CORREO CAMBIADO',
+    'correo',
     p('El correo de recuperación de tu cuenta acaba de cambiar.') +
-    p('<span style="color:#ffa733;font-weight:bold;">Si no has sido tú</span>, avisa a quien lleva el juego.'),
+    p(AVISO + 'Si no has sido tú</span>, avisa a quien lleva el juego.'),
     'PAC-MAN TOP MUNDIAL')
 };
+
+/* --ver=<carpeta>: en vez de aplicarlos, deja cada correo en un .html con las
+ * imágenes de icons/correo de este repo, para mirarlo antes de publicar. */
+var ver = process.argv.filter(function (a) { return a.indexOf('--ver=') === 0; })[0];
+if (ver) {
+  var fs = require('fs'), path = require('path');
+  var local = 'file:///' + path.join(__dirname, '..', 'icons', 'correo').replace(/\\/g, '/') + '/';
+  Object.keys(config).filter(function (k) { return /_content$/.test(k); }).forEach(function (k) {
+    var f = path.join(ver.slice(6), k.replace(/^mailer_templates_|_content$/g, '') + '.html');
+    fs.writeFileSync(f, '<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">' +
+      config[k].split(P.BASE).join(local)
+        .replace(/\{\{ \.ConfirmationURL \}\}/g, 'https://' + REF + '.supabase.co/auth/v1/verify?token=0203ef43c2e1a56a2d5960781c500a9f41f0580e5c8cbef168fa2766&amp;type=recovery&amp;redirect_to=https://pacman-topmundial.vercel.app')
+        .replace(/\{\{ \.NewEmail \}\}/g, 'jugador@example.com'));
+    console.log(f);
+  });
+  process.exit(0);
+}
+
+if (!SBP) {
+  console.log('Falta el token: SBP=<personal access token> node supabase/correos.js');
+  process.exit(1);
+}
 
 fetch('https://api.supabase.com/v1/projects/' + REF + '/config/auth', {
   method: 'PATCH',
