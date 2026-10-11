@@ -9,6 +9,80 @@ cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
 Última puesta al día: **11 de octubre de 2026** (pm-v361, publicado: en party cada uno elige su salida; **el juego vive desde hoy en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG).
 
+> **SESIÓN DEL 10-11 OCT (pm-v355 a pm-v361), todo pedido por Braighton y
+> publicado. Se retoma en otra sesión. Detalle en CHANGELOG.**
+>
+> **▶ LO PRIMERO AL VOLVER — tres cosas que dependen de Braighton:**
+> 1. **Un token con acceso a la segunda organización.** La cuota gratuita de
+>    Supabase se cuenta POR ORGANIZACIÓN (deducido de cómo factura, no
+>    medido), así que un proyecto de canal solo protege los datos si vive en
+>    otra. En la cuenta nueva se creó «Juegos Top Mundial - canal»
+>    (`wuiwejkdlkkvdwxlwbwi`), vacía: el token del 10 oct no entra en ella
+>    (403). Con uno que entre: crear ahí un proyecto vacío y ponerlo PRIMERO
+>    en `CANALES` (js/net-config.js). Si no la quiere, la borra él en el panel.
+> 2. **Su login real en producción** y **recuperar la contraseña pulsando
+>    en el juego**: el servidor está probado de punta a punta con cuentas de
+>    usar y tirar, la pantalla del juego que pide la contraseña nueva
+>    (`Account.desdeRecuperacion`) no.
+> 3. **Preguntarle qué vio jugando**: equilibrio de SUPERVIVENCIA, las
+>    superpastillas al azar y la elección de salida no se han jugado con gente.
+>
+> **Supabase (10 oct).** El proyecto viejo `yghnwkifbmmhrpvtjjit` quedó
+> RESTRINGIDO (402 en todo) por pasar la cuota de mensajes de Realtime; se
+> reabre el **30 oct**. El juego se mudó a `uamaukghqakuhacfpdsf` (cuenta
+> nueva, us-east-1): esquema reconstruido desde el catálogo vivo (306
+> objetos, idéntico), datos idénticos por md5, Auth igual, cuatro funciones
+> subidas, clave `sb_publishable_…`. **No se vuelve al viejo: los datos se
+> quedan en el nuevo.** Las sesiones no viajaron (todos entran una vez).
+> La copia, los guiones y los informes están en `..\migracion-supabase`
+> (fuera del repo, CON SECRETOS: nunca a git); sirven para repetir la mudanza.
+> `.env.local` lleva el token nuevo (`SUPABASE_ACCESS_TOKEN`) y el viejo
+> (`SUPABASE_ACCESS_TOKEN_VIEJO`, solo lectura).
+>
+> **Canal de partidas con salto (pm-v358 / v360).** `NET_CFG.CANALES` =
+> [proyecto viejo, proyecto de datos]. `Net.sondearCanales` usa el primero
+> que no conteste 402/540. Hoy salta el viejo y juega por el de datos
+> (comprobado en producción con navegador real); **el 30 oct pasará solo al
+> viejo — eso no se ha podido ver.** Ojo: un proyecto gratuito se pausa tras
+> una semana sin uso (el juego lo saltaría, pero deja de contar). Hasta que
+> exista el canal de la segunda organización, datos y partidas comparten
+> cuota en el proyecto nuevo: si se agota, vuelve a caer el login.
+> **Fugas de mensajes corregidas (pm-v356):** los enlaces directos caídos se
+> reintentan y lo que solo necesita el anfitrión va solo a él. Siguen
+> gastando canal: quien no enlaza directo (haría falta TURN), las partidas
+> con mirones y la sala a solas (latido cada 2 s). No hay registro de qué
+> gastó la cuota: la causa exacta no se confirmó. Un 402 ya no cierra
+> sesiones (pm-v357).
+>
+> **Correo (10 oct).** SMTP de Gmail puesto en el proyecto nuevo
+> (juegostopmundial@gmail.com, 30/hora); el viejo nunca lo tuvo. Los cuatro
+> correos llevan el marco de recreativa: título, rótulo y botón son PNG
+> (`icons/correo/`, los dibuja `supabase/correos-imagenes.js` con Playwright;
+> Gmail no carga letras propias) y los monta `supabase/correos.js`
+> (`--ver=<carpeta>` para mirarlos sin aplicar). Braighton vio el de
+> recuperación en Gmail y le gustó; los otros tres solo en vista previa.
+>
+> **SUPERVIVENCIA (pm-v355).** Solo 2 superpastillas a la vez, en casilla al
+> azar y lejos de todos (`CFG.SUPERV.SUPER_A_LA_VEZ`, `SUPER_LEJOS`,
+> `Superv.nuevaSuper`); TÓTEM y METEORO quitan un corazón como mucho por
+> rival; el EMPUJÓN quita uno; BOLA GUIADA recarga 32 s aquí
+> (`CFG.SUPERV.RECARGA`). Flecos: el armario sigue diciendo 22 s para la
+> bola guiada; ningún caso de party ejercita las superpastillas entre dos
+> máquinas. Braighton avisó de que los aturdimientos del Tanque no paraban a
+> nadie: no se reprodujo (funcionan en local y en party simulada, casos S9 a
+> S12 nuevos) y luego dijo que ya iba; lo más probable, versiones mezcladas.
+>
+> **Elegir salida en party (pm-v361, 11 oct).** Plano en la sala con las
+> salidas predeterminadas del formato (pidió expresamente que NO fuera
+> selección libre por el mapa). `Party.setSalida / claimSalida /
+> repartoSalidas`, `Game.salidas` + `salidasValidas`, `UI.pintarSalidas`;
+> viaja como `sp` (orden de juego) y `sa` (revista). `NET.PROTO` 24.
+> Probado en el laboratorio con 3 y 4 navegadores; no en producción.
+>
+> **Herramientas de esta sesión:** `pruebas-node` 794, `pruebas-red` 48.
+> En Git Bash, `node -e` con varias líneas se quedó colgado varias veces:
+> mejor escribir el guion en un fichero y lanzarlo.
+
 > **SESIÓN DEL 10 OCT · SUPERVIVENCIA con poderes, tres corazones y tablero
 > ancho (Braighton eligió el mapa A y la regla 1). Hecho y probado
 > (`pruebas-node` 781, `pruebas-red` 42 con los casos «S» nuevos; visto en
