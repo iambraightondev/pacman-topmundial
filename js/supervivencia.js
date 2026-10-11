@@ -22,7 +22,8 @@
  *     extra, el campo), y lo que no tiene sentido sin equipo no entra
  *     (CFG.SUPERV.VETADAS).
  *   · SUPERPASTILLA: además de asustar a los fantasmas, a quien se la come
- *     le da PODER unos segundos. Vuelven a salir al rato.
+ *     le da PODER unos segundos. Hay pocas (SUPER_A_LA_VEZ) y cada una sale
+ *     en una casilla al azar, lejos de todos: no se pueden esperar.
  *   · LA ZONA: pasado un rato, el laberinto se cierra por fuera, un anillo
  *     cada poco. Dentro de la zona roja se pierde un corazón cada 2 s, y ahí
  *     no hay escudo que valga.
@@ -78,7 +79,9 @@
         zonaT: zt,         // ticks de cada uno dentro de la zona
         bajas: ba,         // Pac-Man eliminados por cada uno
         caidos: [],        // orden en que cayeron
-        vuelven: [],       // superpastillas comidas: [fila, col, ticks]
+        /* las superpastillas: pocas y sorteadas (CFG.SUPERV.SUPER_A_LA_VEZ) */
+        sp: [],            // casillas (fila * COLS + col) donde hay una ahora
+        vuelven: [],       // ticks que le faltan a cada una de las que están por salir
         ganador: -2,       // -2 en juego, -1 empate, i el que gana
         /* solo del anfitrión: el rato de gracia que le lleva a cada uno, los
          * anuncios de golpe que tiene sin contestar y cuándo recolocó a quién */
@@ -132,20 +135,18 @@
         if (s.posT[i] > 0) s.posT[i]--;
         for (k in s.aviso[i]) if (s.aviso[i].hasOwnProperty(k) && --s.aviso[i][k] <= 0) delete s.aviso[i][k];
       }
-      /* superpastillas que vuelven */
-      for (i = s.vuelven.length - 1; i >= 0; i--) {
-        var v = s.vuelven[i];
-        if (--v[2] > 0) continue;
-        s.vuelven.splice(i, 1);
-        if (!G.pellets[v[0]][v[1]] && !this.enZona(G, v[1], v[0])) {
-          G.pellets[v[0]][v[1]] = 'o';
-          G.dotsLeft++;
-        }
-      }
       /* las pastillas no se acaban */
       if (G.dotsLeft <= 0) {
         G.loadPellets();
         this.vaciarZona(G);
+      }
+      /* las superpastillas: siempre SUPER_A_LA_VEZ entre las que hay y las
+       * que están por salir, y cada una sale en una casilla sorteada */
+      while (s.sp.length + s.vuelven.length < S.SUPER_A_LA_VEZ) s.vuelven.push(1);
+      for (i = s.vuelven.length - 1; i >= 0; i--) {
+        if (--s.vuelven[i] > 0) continue;
+        if (this.nuevaSuper(G)) s.vuelven.splice(i, 1);
+        else s.vuelven[i] = 60;                 // no cabe ahora: se reintenta en 1 s
       }
       this.choques(G);
       if (G.state !== 'PLAYING') return;
@@ -164,12 +165,85 @@
       this.zonaPropia(G, false);
     },
 
-    /* Las pastillas que caen dentro de la zona desaparecen */
+    /* Las pastillas que caen dentro de la zona desaparecen (y la
+     * superpastilla que estuviera ahí saldrá en otro sitio) */
     vaciarZona: function (G) {
+      var s = G.superv;
       for (var r = 0; r < CFG.ROWS; r++) {
         for (var c = 0; c < CFG.COLS; c++) {
           if (G.pellets[r][c] && this.enZona(G, c, r)) { G.pellets[r][c] = null; G.dotsLeft--; }
         }
+      }
+      for (var i = s.sp.length - 1; i >= 0; i--) {
+        var col = s.sp[i] % CFG.COLS, row = (s.sp[i] - col) / CFG.COLS;
+        if (this.enZona(G, col, row)) { s.sp.splice(i, 1); s.vuelven.push(S.VUELVE); }
+      }
+    },
+
+    /* ---------- las superpastillas ---------- */
+    /* Qué pastilla hay en esa casilla del laberinto: las superpastillas
+     * dibujadas en él son aquí puntos normales, y solo es super la que está
+     * en la lista. Lo usa Game cada vez que rehace el mapa de pastillas. */
+    tipo: function (G, row, col, ch) {
+      if (!G.superv || (ch !== '.' && ch !== 'o')) return ch;
+      return G.superv.sp.indexOf(row * CFG.COLS + col) >= 0 ? 'o' : '.';
+    },
+
+    /* Saca una superpastilla en una casilla al azar: de pasillo con pastilla
+     * en el laberinto, fuera de la zona y del anillo que viene, y a
+     * SUPER_LEJOS casillas de todos y de las otras. Si no hay sitio tan
+     * lejos, vale cualquiera de las demás. Devuelve si ha salido. */
+    nuevaSuper: function (G) {
+      var s = G.superv, lejos = [], resto = [], r, c, i;
+      for (r = 0; r < CFG.ROWS; r++) {
+        for (c = 0; c < CFG.COLS; c++) {
+          var ch = CFG.MAZE[r].charAt(c);
+          if (ch !== '.' && ch !== 'o') continue;
+          if (this.anilloDe(c, r) < s.anillo + 1 && s.anillo < S.ZONA_MAX) continue;
+          if (this.enZona(G, c, r)) continue;
+          var idx = r * CFG.COLS + c;
+          if (s.sp.indexOf(idx) >= 0) continue;
+          var cerca = false;
+          for (i = 0; i < G.pacs.length && !cerca; i++) {
+            var p = G.pacs[i];
+            if (!p || p.out) continue;
+            cerca = Math.abs(p.tileX() - c) + Math.abs(p.tileY() - r) < S.SUPER_LEJOS;
+          }
+          for (i = 0; i < s.sp.length && !cerca; i++) {
+            var oc = s.sp[i] % CFG.COLS, or = (s.sp[i] - oc) / CFG.COLS;
+            cerca = Math.abs(oc - c) + Math.abs(or - r) < S.SUPER_LEJOS;
+          }
+          (cerca ? resto : lejos).push(idx);
+        }
+      }
+      var L = lejos.length ? lejos : resto;
+      if (!L.length) return false;
+      var e = L[Math.floor(Math.random() * L.length) % L.length];
+      c = e % CFG.COLS; r = (e - c) / CFG.COLS;
+      if (!G.pellets[r][c]) G.dotsLeft++;
+      G.pellets[r][c] = 'o';
+      s.sp.push(e);
+      return true;
+    },
+
+    /* El invitado: la lista que manda el anfitrión, puesta sobre su mapa */
+    ponerSuper: function (G, lista) {
+      var s = G.superv, i, c, r;
+      for (i = 0; i < s.sp.length; i++) {
+        if (lista.indexOf(s.sp[i]) >= 0) continue;
+        c = s.sp[i] % CFG.COLS; r = (s.sp[i] - c) / CFG.COLS;
+        if (G.pellets[r] && G.pellets[r][c] === 'o') G.pellets[r][c] = '.';
+      }
+      s.sp = [];
+      for (i = 0; i < lista.length; i++) {
+        var e = lista[i] | 0;
+        c = e % CFG.COLS; r = (e - c) / CFG.COLS;
+        if (!G.pellets[r] || c < 0 || c >= CFG.COLS) continue;
+        s.sp.push(e);
+        /* la que me acabo de comer sigue en la lista hasta que el anfitrión
+         * se entere: no me la vuelvo a poner delante */
+        if (G.recentEaten && G.recentEaten[e]) continue;
+        G.pellets[r][c] = 'o';
       }
     },
 
@@ -202,7 +276,9 @@
     superpastilla: function (G, pac, row, col) {
       if (!this.activo(G) || !pac) return;
       this.darPoder(G, pac.id | 0, S.PODER);
-      G.superv.vuelven.push([row, col, S.VUELVE]);
+      var s = G.superv, en = s.sp.indexOf(row * CFG.COLS + col);
+      if (en >= 0) s.sp.splice(en, 1);
+      s.vuelven.push(S.VUELVE);
     },
 
     /* Choques entre Pac-Man. Golpea al tocar:
@@ -415,7 +491,7 @@
       var s = G.superv;
       if (!s) return undefined;
       return { t: s.t, an: s.anillo, po: s.poder.slice(), ba: s.bajas.slice(),
-               ca: s.caidos.slice(), ga: s.ganador };
+               ca: s.caidos.slice(), ga: s.ganador, sp: s.sp.slice() };
     },
 
     aplicar: function (G, r) {
@@ -428,6 +504,7 @@
       if (r.ba) s.bajas = r.ba.slice();
       if (r.ca) s.caidos = r.ca.slice();
       if (typeof r.ga === 'number') s.ganador = r.ga;
+      if (r.sp && typeof r.sp === 'object') this.ponerSuper(G, r.sp);
     },
 
     /* Lo que cuenta el anfitrión (invitados y mirones) */

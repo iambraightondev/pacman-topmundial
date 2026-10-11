@@ -2,6 +2,18 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-10 · SUPERVIVENCIA: equilibrio de roles y superpastillas al azar
+
+- **Superpastillas: solo 2 en el mapa**, cada una en una casilla **sorteada**
+  lejos de todos; la que se come sale 25 s después en otro sitio. Las del
+  laberinto son puntos normales: ya no se pueden esperar en la esquina.
+- **TÓTEM** y **METEORO**: un corazón como mucho por rival y lanzamiento
+  (el tótem sacaba hasta 4 y la hoguera del meteoro, 3).
+- **BOLA GUIADA**: en este modo recarga en **32 s** (22 en el resto).
+- **EMPUJÓN** del Tanque: además de empujar y aturdir, **quita un corazón**.
+- Medido contra un rival quieto, el Mago quitaba ~12,8 corazones por minuto,
+  el Asesino ~5,4 y el Tanque ~1,3; quedan en ~4,7 / ~5,4 / ~4,6.
+
 ## 2026-10-10 · Ajustes de DESATADO
 
 - **VIDA EXTRA** da una vida a **cada jugador que siga en pie**, el Soporte

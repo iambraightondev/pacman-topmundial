@@ -16205,6 +16205,97 @@
     ok(H.puede(G, 1, 0), 'y el rival puede lanzar sus poderes en ese mismo momento');
   });
 
+  /* 10 oct: pocas superpastillas y sorteadas, para que no se puedan esperar */
+  testSv('SUPERVIVENCIA: solo hay dos superpastillas, sorteadas lejos de todos, y la comida sale en otro sitio', function () {
+    function cuenta() {
+      var n = 0;
+      for (var r = 0; r < CFG.ROWS; r++) for (var c = 0; c < CFG.COLS; c++) if (G.pellets[r][c] === 'o') n++;
+      return n;
+    }
+    var s = supervivencia(['asesino', 'mago']);
+    eq(cuenta(), 0, 'las del laberinto son puntos normales');
+    G.step();
+    eq(cuenta(), CS.SUPER_A_LA_VEZ, 'al empezar salen las justas');
+    eq(s.sp.length, CS.SUPER_A_LA_VEZ, 'y están apuntadas');
+    s.sp.forEach(function (e) {
+      var c = e % CFG.COLS, r = (e - c) / CFG.COLS;
+      eq(G.pellets[r][c], 'o', 'cada una en su casilla');
+      G.pacs.forEach(function (p) {
+        ok(Math.abs(p.tileX() - c) + Math.abs(p.tileY() - r) >= CS.SUPER_LEJOS, 'lejos de los jugadores');
+      });
+    });
+    /* se come una: da poder, desaparece de la lista y la siguiente tarda */
+    var e0 = s.sp[0], c0 = e0 % CFG.COLS, r0 = (e0 - c0) / CFG.COLS;
+    G.eatAt(c0, r0, G.pacs[0]);
+    eq(s.poder[0], CS.PODER, 'da poder');
+    eq(s.sp.length, CS.SUPER_A_LA_VEZ - 1, 'queda una menos');
+    eq(s.vuelven.length, 1, 'y la otra está por salir');
+    eq(s.vuelven[0], CS.VUELVE, 'dentro de un rato');
+    G.step();
+    eq(cuenta(), CS.SUPER_A_LA_VEZ - 1, 'no sale al momento');
+    s.vuelven[0] = 1;
+    G.pacs[0].safeTicks = 9999; G.pacs[1].safeTicks = 9999;
+    G.step();
+    eq(cuenta(), CS.SUPER_A_LA_VEZ, 'pasado el rato vuelve a haber dos');
+    /* sorteada de verdad: en muchas tiradas no cae siempre en la misma */
+    var vistas = {};
+    for (var k = 0; k < 30; k++) {
+      var e = s.sp[s.sp.length - 1], c = e % CFG.COLS, r = (e - c) / CFG.COLS;
+      vistas[e] = 1;
+      G.pellets[r][c] = null; G.dotsLeft--;
+      s.sp.pop();
+      ok(window.PM.Superv.nuevaSuper(G), 'sale otra');
+    }
+    ok(Object.keys(vistas).length > 5, 'en sitios distintos (' + Object.keys(vistas).length + ')');
+    /* al rellenarse el mapa siguen siendo dos */
+    G.loadPellets();
+    eq(cuenta(), CS.SUPER_A_LA_VEZ, 'rehacer el mapa no trae las del laberinto');
+    /* y la que pilla la zona sale en otro sitio */
+    s.anillo = 3;
+    window.PM.Superv.vaciarZona(G);
+    s.sp.forEach(function (x) {
+      var cc = x % CFG.COLS;
+      ok(!window.PM.Superv.enZona(G, cc, (x - cc) / CFG.COLS), 'ninguna dentro de la zona');
+    });
+  });
+
+  testSv('SUPERVIVENCIA: el invitado ve las superpastillas donde dice el anfitrión', function () {
+    var SVv = window.PM.Superv;
+    var s = supervivencia(['asesino', 'mago']);
+    var a = 5 * CFG.COLS + 6, b = 5 * CFG.COLS + 9;
+    SVv.aplicar(G, { t: 1, an: 0, sp: [a] });
+    eq(G.pellets[5][6], 'o', 'la pone donde le dicen');
+    SVv.aplicar(G, { t: 2, an: 0, sp: [b] });
+    eq(G.pellets[5][6], '.', 'la que ya no está vuelve a ser un punto');
+    eq(G.pellets[5][9], 'o', 'y sale la nueva');
+    eq(s.sp.join(), String(b), 'con su lista al día');
+    eq(SVv.resumen(G).sp.join(), String(b), 'que es la que viaja en la foto');
+  });
+
+  /* 10 oct: equilibrio de roles */
+  testSv('SUPERVIVENCIA: el TÓTEM y el METEORO quitan un corazón como mucho por rival; el EMPUJÓN quita uno', function () {
+    var H = window.PM.Hab, i, b, golpes = 0;
+    supervivencia(['mago', 'soporte'], ['fuego,totem,runa,meteoro', '']);
+    ponPac(0, 6, 5, DR.RIGHT); b = ponPac(1, 11, 5, DR.LEFT);
+    ok(H.pulsar(G, 0, 1), 'el TÓTEM');
+    for (i = 0; i < 600; i++) {
+      ponPac(1, 11, 5); ponPac(0, 6, 5); G.pacs[0].safeTicks = 9;
+      G.step();
+      if (b.lives < 3) { golpes += 3 - b.lives; b.lives = 3; sinGracia(1); }
+    }
+    eq(golpes, 1, 'una torre, un corazón, aunque el rival no se mueva y no tenga rato de gracia');
+
+    supervivencia(['tanque', 'soporte'], ['empujon,escudo,provocar,arrollar', '']);
+    ponPac(0, 6, 5, DR.RIGHT); b = ponPac(1, 8, 5, DR.LEFT);
+    ok(H.pulsar(G, 0, 0), 'el EMPUJÓN');
+    eq(b.lives, 2, 'le quita un corazón');
+    ok(H.clavado(1), 'y lo deja aturdido');
+
+    supervivencia(['mago', 'soporte'], ['bola_guiada,portal,runa,tormenta', '']);
+    eq(H.listaDe(G, 0)[0].cd, CS.RECARGA.bola_guiada, 'la BOLA GUIADA recarga más despacio aquí');
+    eq(HC.CATALOGO.mago[0][1].cd, 22 * 60, 'y fuera de este modo, lo de siempre');
+  });
+
   testSv('SUPERVIVENCIA: el GRITO da poder y la apisonadora atropella al rival', function () {
     var H = window.PM.Hab;
     supervivencia(['asesino', 'tanque']);

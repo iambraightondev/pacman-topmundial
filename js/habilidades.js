@@ -428,7 +428,10 @@
         /* el TANQUE empieza con su CORAZA puesta: es una pasiva, tiene que
          * estar desde el primer segundo y no al primer tick de reloj */
         if (this.roles[i] === 'tanque') this.st[i].corPas = H.CORAZA_DURA;
-        if (this.sv) this.st[i].guard = llena(this.nB, 0);
+        if (this.sv) {
+          this.st[i].guard = llena(this.nB, 0);
+          this.loadouts[i] = this.cargaSv(this.loadouts[i]);
+        }
       }
       /* Las VIDAS que ha regalado el Soporte y aún no han salvado a nadie:
        * { a: a quién (-1: el fondo común), de: quién la dio }. Sobreviven a
@@ -439,6 +442,25 @@
       this.hiperPido = 0;
       this.potH = false;
       this.limpiarMesa();
+    },
+
+    /* SUPERVIVENCIA: los poderes con otra recarga en este modo
+     * (CFG.SUPERV.RECARGA) van en una copia, que el catálogo es de todos */
+    cargaSv: function (lista) {
+      var R = CFG.SUPERV.RECARGA || {};
+      if (!lista || !lista.length) return lista;
+      var out = [];
+      for (var k = 0; k < lista.length; k++) {
+        var h = lista[k];
+        if (h && R.hasOwnProperty(h.id)) {
+          var c = {};
+          for (var p in h) if (h.hasOwnProperty(p)) c[p] = h[p];
+          c.cd = R[h.id];
+          h = c;
+        }
+        out.push(h);
+      }
+      return out;
     },
 
     /* Lo que no es de un jugador: fantasmas congelados o huyendo,
@@ -3888,11 +3910,11 @@
      * cadena clásica de la superpastilla.
      * ========================================================= */
     /* `de`: de quién es el poder (SUPERVIVENCIA: sus rivales también valen) */
-    ghostCercanoAt: function (G, c, r, radio, de) {
+    ghostCercanoAt: function (G, c, r, radio, de, sin) {
       var mejor = null, d0 = Infinity, L = (de >= 0) ? this.blancos(G, de) : G.ghosts;
       for (var i = 0; i < L.length; i++) {
         var g = L[i];
-        if (!this.enLaCalle(g)) continue;
+        if (!this.enLaCalle(g) || (sin && sin[g.id])) continue;
         var dx = Math.abs(g.tileX() - c), dy = Math.abs(g.tileY() - r);
         dx = Math.min(dx, CFG.COLS - dx);
         var d = Math.sqrt(dx * dx + dy * dy);
@@ -3906,12 +3928,15 @@
     blancoTotem: function (G, tt, de) {
       var g = tt.obj >= 0 ? this.blanco(G, tt.obj) : null, radio = 10 * (tt.m || 1);
       if (g && g.rival != null && g.rival === de) g = null;
+      /* SUPERVIVENCIA: al rival al que esta torre ya le quitó un corazón no
+       * le vuelve a tirar (tt.ya, 10 oct): sacaba cuatro de una sentada */
+      if (g && tt.ya && tt.ya[g.id]) g = null;
       if (g && this.enLaCalle(g)) {
         var dx = Math.abs(g.tileX() - tt.c), dy = Math.abs(g.tileY() - tt.r);
         dx = Math.min(dx, CFG.COLS - dx);
         if (Math.sqrt(dx * dx + dy * dy) <= radio) return g;
       }
-      g = this.ghostCercanoAt(G, tt.c, tt.r, radio, de);
+      g = this.ghostCercanoAt(G, tt.c, tt.r, radio, de, tt.ya);
       tt.obj = g ? g.id : -1;
       return g;
     },
@@ -4247,6 +4272,8 @@
       if (!g) return false;
       this.aturdido[g.id] = H.EMPUJON_STUN * mEm;
       if (this.manda(G)) this.empujarHacia(G, g, hacia, tilesEm);
+      /* SUPERVIVENCIA: al rival, además, le quita un corazón (10 oct) */
+      if (g.rival != null) this.golpeRival(G, g, idx, 'empujon');
       this.efecto('empujon', g.x, g.y, 24, p.x, p.y);
       sonDe(G, idx, 'playCharge'); return true;
     },
@@ -5241,6 +5268,11 @@
             else if (b.tipo === 'totem') {
               if (++this.totemGolpes[target.id] >= H.TOTEM_GOLPES) {
                 this.totemGolpes[target.id] = 0;
+                var stT = this.estado(b.w);
+                if (target.rival != null && stT && stT.totem) {
+                  (stT.totem.ya = stT.totem.ya || {})[target.id] = 1;
+                  this.totemToque[target.id] = 0;
+                }
                 this.matarCatalogo(G, target, b.w, H.MAGO_PUNTOS, 'totem', b.pot || 1);
               } else {
                 this.totemToque[target.id] = H.TOTEM_LENTO_TICKS;
@@ -5632,7 +5664,9 @@
         if (s.meteoro && s.meteoro.t <= 0) {
           var mMe = s.meteoro.m || 1;
           var mm = this.ghostsEn(G, s.meteoro.c, s.meteoro.r, H.METEORO_RADIO * mMe, i);
+          var yaMe = {};
           for (j = 0; j < mm.length; j++) {
+            if (mm[j].rival != null) yaMe[mm[j].id] = 1;
             if (this.matarCatalogo(G, mm[j], i, H.MAGO_PUNTOS, 'meteoro', mMe)) this.devolverMeteoro(G, i);
           }
           /* EL METEORO LE CAE ENCIMA AL REY (22 sep 2026): 5 de vida, la R
@@ -5650,6 +5684,8 @@
           /* cae una piedra del tamaño de un bloque: el suelo lo nota */
           this.temblar(METEORO_TEMBLOR, METEORO_SACUDIDA);
           s.fuegoMeteoro = { c: s.meteoro.c, r: s.meteoro.r, t: H.METEORO_FUEGO * (s.meteoro.m || 1), m: s.meteoro.m || 1 };
+          /* SUPERVIVENCIA: un corazón por rival y meteoro (10 oct) */
+          if (this.sv) s.fuegoMeteoro.ya = yaMe;
           s.meteoro = null;
         }
         /* LA HOGUERA QUEMA (23 sep): ya no mata en el acto. El fantasma que
@@ -5660,6 +5696,10 @@
           for (j = 0; j < fm.length; j++) {
             var qid = fm[j].id;
             if (this.quema[qid] > 0) continue;
+            if (fm[j].rival != null && s.fuegoMeteoro.ya) {
+              if (s.fuegoMeteoro.ya[qid]) continue;
+              s.fuegoMeteoro.ya[qid] = 1;
+            }
             this.quema[qid] = H.METEORO_QUEMA;
             this.quemaQuien[qid] = i;
           }

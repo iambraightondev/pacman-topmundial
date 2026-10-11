@@ -994,6 +994,8 @@
           var ch = CFG.MAZE[r].charAt(c);
           // CACERÍA: sin superpastillas; el poder de Pac-Man llega solo
           if (ch === 'o' && this.caza) ch = '.';
+          // SUPERVIVENCIA: las superpastillas son pocas y sorteadas
+          if (this.superv && window.PM.Superv) ch = window.PM.Superv.tipo(this, r, c, ch);
           if (ch === '.' || ch === 'o') { row.push(ch); this.dotsLeft++; }
           else row.push(null);
         }
@@ -4490,6 +4492,7 @@
             // no restaurar lo que acabamos de comer (aún viaja hacia el anfitrión)
             if (!this.recentEaten[idx]) {
               var ch = CFG.MAZE[row].charAt(col);
+              if (this.superv && window.PM.Superv) ch = window.PM.Superv.tipo(this, row, col, ch);
               if (ch === '.' || ch === 'o') this.pellets[row][col] = ch;
             }
           } else if (!present && local) {
@@ -5812,6 +5815,7 @@
           var ch = CFG.MAZE[r].charAt(c);
           var vale = (ch === '.' || ch === 'o');
           if (this.caza && ch === 'o') ch = '.';       // CACERÍA: sin superpastillas
+          if (this.superv && window.PM.Superv) ch = window.PM.Superv.tipo(this, r, c, ch);
           this.pellets[r][c] = (hay && vale) ? ch : null;
           if (this.pellets[r][c]) this.dotsLeft++;
           idx++;

@@ -3427,7 +3427,22 @@
     INVULNERABLE: 2 * 60,
     PODER: 6 * 60,          // la superpastilla deja golpear a otros Pac-Man
     PODER_GRITO: 3 * 60,    // ...y el GRITO del Asesino, la mitad
-    VUELVE: 20 * 60,        // y vuelve a salir al rato
+    /* POCAS Y AL AZAR (10 oct, Braighton: «menos superpastillas, que
+     * aparezcan aleatoriamente, para no campearlas»). Las del laberinto son
+     * aquí puntos normales; solo hay SUPER_A_LA_VEZ en el mapa, cada una en
+     * una casilla sorteada lejos de todos (SUPER_LEJOS casillas), y la que
+     * se come tarda VUELVE en salir en otro sitio. */
+    VUELVE: 25 * 60,
+    SUPER_A_LA_VEZ: 2,
+    SUPER_LEJOS: 8,
+    /* EQUILIBRIO DE ROLES (10 oct). Medido contra un rival quieto, el Mago
+     * quitaba ~12,8 corazones por minuto, el Asesino ~5,4 y el Tanque ~1,3:
+     *   · TÓTEM y METEORO: un corazón como mucho por rival y lanzamiento
+     *     (el tótem sacaba hasta 4 y la hoguera del meteoro, 3);
+     *   · la BOLA GUIADA, que no falla y llega a todo el mapa, recarga más
+     *     despacio aquí (RECARGA, en ticks; solo en este modo);
+     *   · el EMPUJÓN del Tanque quita un corazón. */
+    RECARGA: { bola_guiada: 32 * 60 },
     CHOQUE: 9,              // px: lo que tienen que acercarse dos Pac-Man
     ZONA_INICIO: 45 * 60,   // el primer anillo se cierra a los 45 s
     ZONA_CADA: 20 * 60,     // y luego uno cada 20 s
