@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **10 de octubre de 2026** (pm-v357, publicado; **Supabase restringido por cuota de Realtime hasta el 30 oct**, ver CHANGELOG).
+Última puesta al día: **10 de octubre de 2026** (pm-v358, publicado; **Supabase restringido por cuota de Realtime hasta el 30 oct**, ver CHANGELOG).
 
 > **SESIÓN DEL 10 OCT · SUPERVIVENCIA con poderes, tres corazones y tablero
 > ancho (Braighton eligió el mapa A y la regla 1). Hecho y probado

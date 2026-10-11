@@ -4106,6 +4106,59 @@
       }
     });
 
+  /* 10 oct: el canal de las partidas va aparte de los datos y salta solo */
+  test('con varios canales el juego usa el primero que no esté restringido, y un fallo de red no lo mueve',
+    function () {
+      var N = window.PM.Net, cfg = window.PM.NET_CFG;
+      var antes = { c: cfg.CANALES, i: N.canalIdx, v: N.canalVisto, f: window.fetch, st: window.setTimeout, ct: window.clearTimeout };
+      var estados = {}, pedidas = [];
+      function ya(v) { return { then: function (f) { var r = f(v); return { 'catch': function () {} , then: function () { return this; } }; }, 'catch': function () { return this; } }; }
+      function roto() { return { then: function () { return { 'catch': function (f) { f(new Error('sin red')); } }; } }; }
+      try {
+        window.setTimeout = function () { return 0; }; window.clearTimeout = function () {};
+        window.fetch = function (url, o) {
+          pedidas.push(url);
+          var k = /\/\/(\w+)\./.exec(url)[1];
+          return estados[k] === 'red' ? roto() : ya({ status: estados[k] || 200 });
+        };
+        delete cfg.CANALES;
+        eq(N.canales().length, 1, 'sin lista, el canal es el proyecto de los datos');
+        eq(N.canal().url, cfg.SUPABASE_URL);
+        ok(!N.canalDudoso(), 'y con uno solo no hay nada que mirar');
+        cfg.CANALES = [{ url: 'https://uno.supabase.co', key: 'k1' }, { url: 'https://dos.supabase.co', key: 'k2' },
+                       { url: 'https://tres.supabase.co', key: 'k3' }];
+        N.canalIdx = 0; N.canalVisto = 0;
+        ok(N.canalDudoso(), 'con varios, antes de entrar se mira');
+        var cambio = null;
+        N.sondearCanales(function (c) { cambio = c; }, true);
+        eq(N.canal().key, 'k1', 'todo en orden: el primero');
+        eq(cambio, false, 'sin cambio');
+        eq(pedidas[0], 'https://uno.supabase.co/auth/v1/health', 'preguntando por su salud');
+        ok(!N.canalDudoso(), 'y recién mirado no se vuelve a mirar');
+        estados.uno = 402;
+        N.sondearCanales(function (c) { cambio = c; }, true);
+        eq(N.canal().key, 'k2', 'el primero sin cuota: salta al segundo');
+        eq(cambio, true, 'y avisa del cambio');
+        estados.dos = 540;
+        N.sondearCanales(null, true);
+        eq(N.canal().key, 'k3', 'el segundo en pausa: al tercero');
+        estados.uno = 'red'; estados.dos = 200;
+        N.sondearCanales(null, true);
+        eq(N.canal().key, 'k1', 'un fallo de red no descarta un canal');
+        estados.uno = 200;
+        N.sondearCanales(null, true);
+        eq(N.canal().key, 'k1', 'y cuando el primero vuelve, se vuelve a él');
+        /* la conexión nueva sale por el canal que toque en ese momento */
+        N.canalIdx = 1;
+        var tr = N.newTransport();
+        if (tr.fuente) eq(tr.fuente().key, 'k2', 'el transporte pregunta cuál toca al abrir');
+      } finally {
+        if (antes.c === undefined) delete cfg.CANALES; else cfg.CANALES = antes.c;
+        N.canalIdx = antes.i; N.canalVisto = antes.v; N.canalEspera = null;
+        window.fetch = antes.f; window.setTimeout = antes.st; window.clearTimeout = antes.ct;
+      }
+    });
+
   test('el fantasma del jugador lleva marca encima todo el rato', function () {
     versus(2, 1, 1);
     var puntos = [];

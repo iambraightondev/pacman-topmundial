@@ -67,9 +67,14 @@
     return RECONEXION_MS;
   }
 
-  function SupaTransport(url, key) {
+  /* `fuente`: función que da { url, key } del canal que toca AHORA. Se
+   * consulta en cada apertura, así que una reconexión sale ya por el canal
+   * nuevo si el de antes se ha quedado sin cuota (Net.sondearCanales). */
+  function SupaTransport(url, key, fuente) {
     this.url = url;
     this.key = key;
+    this.fuente = fuente || null;
+    this.resondeado = false; // ya se miró si había que cambiar de canal
     this.ws = null;
     this.hb = null;          // latido periódico
     this.hbDesde = 0;        // cuándo salió el latido que aún no ha contestado
@@ -94,6 +99,14 @@
     this.cerrado = false;
     this.everOpen = false;
     this.errorDado = false;
+    this.resondeado = false;
+    /* con varios canales, antes de entrar se mira cuál toca (si hace poco
+     * que se miró, no): todos los de una sala tienen que acabar en el mismo */
+    var self = this, Nt = window.PM.Net;
+    if (this.fuente && Nt && Nt.canalDudoso && Nt.canalDudoso()) {
+      Nt.sondearCanales(function () { if (!self.cerrado) self.abrir(); });
+      return;
+    }
     this.abrir();
   };
 
@@ -101,6 +114,19 @@
   SupaTransport.prototype.fallo = function () {
     if (this.everOpen) { this.caida(); return; }
     if (this.errorDado || this.cerrado) return;
+    /* no se pudo entrar: puede ser que ese canal se haya quedado sin cuota.
+     * Se mira una vez y, si toca otro, se prueba por él */
+    var self = this, Nt = window.PM.Net;
+    if (this.fuente && !this.resondeado && Nt && Nt.canales && Nt.canales().length > 1) {
+      this.resondeado = true;
+      this.soltarSocket();
+      Nt.sondearCanales(function (cambio) {
+        if (self.cerrado) return;
+        if (cambio) self.abrir();
+        else { self.errorDado = true; self.cbs.onError('SIN CONEXIÓN'); }
+      }, true);
+      return;
+    }
     this.errorDado = true;
     this.soltarSocket();
     this.cbs.onError('SIN CONEXIÓN');
@@ -108,6 +134,8 @@
 
   SupaTransport.prototype.abrir = function () {
     var self = this;
+    var canal = this.fuente ? this.fuente() : null;
+    if (canal && canal.url) { this.url = canal.url; this.key = canal.key; }
     var base = String(this.url).replace(/\/+$/, '').replace(/^http/, 'ws');
     var wsUrl = base + '/realtime/v1/websocket?apikey=' +
       encodeURIComponent(this.key) + '&vsn=1.0.0';
@@ -246,6 +274,10 @@
   SupaTransport.prototype.caida = function () {
     if (this.cerrado) return;
     this.soltarSocket();
+    /* si se ha caído porque el canal se quedó sin cuota, el reintento ya
+     * sale por el siguiente */
+    var Nt = window.PM.Net;
+    if (this.fuente && Nt && Nt.canales && Nt.canales().length > 1) Nt.sondearCanales(null, !this.caidaDesde);
     if (!this.caidaDesde) this.caidaDesde = Date.now();
     if (Date.now() - this.caidaDesde > aguanteMs()) {
       this.caidaDesde = 0;
@@ -403,8 +435,8 @@
 
     configured: function () {
       if (this.forcedLocal()) return true;
-      var c = window.PM.NET_CFG || {};
-      return !!(c.SUPABASE_URL && c.SUPABASE_KEY);
+      var c = this.canal();
+      return !!(c.url && c.key);
     },
 
     /* ?sala=XXXX en la URL (enlace compartido) */
@@ -432,10 +464,79 @@
     },
 
     newTransport: function () {
-      var c = window.PM.NET_CFG || {};
+      var self = this, c = this.canal();
       return this.forcedLocal()
         ? new LocalTransport()
-        : new SupaTransport(c.SUPABASE_URL, c.SUPABASE_KEY);
+        : new SupaTransport(c.url, c.key, function () { return self.canal(); });
+    },
+
+    /* ---------- LOS CANALES (10 oct 2026) ----------
+     * Las partidas online van por un proyecto de Supabase APARTE del de los
+     * datos, y puede haber varios (NET_CFG.CANALES, el preferido primero).
+     * Se usa el primero que no esté restringido: cuando a uno se le acaba la
+     * cuota del mes, Supabase contesta 402 a todo, y el juego pasa al
+     * siguiente sin que nadie toque nada ni se mueva un dato. */
+    canalIdx: 0,
+    canalVisto: 0,        // cuándo se sondeó por última vez (ms)
+    canalEspera: null,    // quienes esperan al sondeo en marcha
+    CANAL_FRESCO_MS: 60000,
+
+    canales: function () {
+      var c = window.PM.NET_CFG || {};
+      if (c.CANALES && c.CANALES.length) return c.CANALES;
+      return [{ url: c.SUPABASE_URL, key: c.SUPABASE_KEY }];
+    },
+
+    canal: function () {
+      var L = this.canales();
+      return L[Math.min(this.canalIdx, L.length - 1)] || {};
+    },
+
+    /* ¿Hay que mirar cuál toca antes de entrar? Con un solo canal, nunca. */
+    canalDudoso: function () {
+      return this.canales().length > 1 && !this.forcedLocal() &&
+             Date.now() - this.canalVisto > this.CANAL_FRESCO_MS;
+    },
+
+    /* Mira, del primero en adelante, cuál está en servicio y se queda con
+     * ese. Llama a cb(cambio) al acabar. Solo descarta un canal si SUPABASE
+     * dice que está restringido (402) o en pausa (540): un fallo de red o un
+     * tiempo agotado no, que si no una mala racha de la wifi de uno lo
+     * mandaría a un canal distinto que al resto de su sala. `ya`: aunque se
+     * haya mirado hace nada. */
+    sondearCanales: function (cb, ya) {
+      var self = this, L = this.canales();
+      if (L.length < 2 || !window.fetch || this.forcedLocal()) { if (cb) cb(false); return; }
+      if (this.canalEspera) { if (cb) this.canalEspera.push(cb); return; }
+      if (!ya && Date.now() - this.canalVisto < 15000) { if (cb) cb(false); return; }
+      this.canalEspera = cb ? [cb] : [];
+      var antes = this.canalIdx;
+      function acaba(i) {
+        self.canalIdx = i;
+        self.canalVisto = Date.now();
+        var espera = self.canalEspera || [];
+        self.canalEspera = null;
+        for (var k = 0; k < espera.length; k++) espera[k](i !== antes);
+      }
+      function prueba(i) {
+        if (i >= L.length - 1) { acaba(L.length - 1); return; }   // el último, sin mirar: no hay más
+        var hecho = false;
+        function sigue(fuera) {
+          if (hecho) return;
+          hecho = true;
+          if (fuera) prueba(i + 1); else acaba(i);
+        }
+        var tope = setTimeout(function () { sigue(false); }, 4000);
+        var url = String(L[i].url || '').replace(/\/+$/, '') + '/auth/v1/health';
+        var p;
+        try { p = window.fetch(url, { headers: { apikey: L[i].key } }); }
+        catch (e) { clearTimeout(tope); sigue(false); return; }
+        p.then(function (res) {
+          clearTimeout(tope);
+          sigue(res.status === 402 || res.status === 540);
+        })['catch'](function () { clearTimeout(tope); sigue(false); });
+      }
+      prueba(0);
     },
 
     /* Canal suelto, aparte del de la partida: lo usan los avisos personales
