@@ -1281,6 +1281,64 @@ caso('S8 · SUPERVIVENCIA: el GANCHO del anfitrión trae al invitado, que es qui
   ok(Math.abs(A.G.pacs[1].x - B.G.pacs[1].x) <= 12, 'y las dos máquinas lo ven en el mismo sitio');
 });
 
+/* 10 oct: los aturdimientos del Tanque no paraban a nadie en party. Cada uno
+ * manda en su posición, así que el aturdido tiene que frenarse EN SU máquina. */
+/* le quita la pausa de pon(): si no lo frena el poder, echa a andar */
+function suelta(ms, i) { ms.forEach(function (m) { m.G.pacs[i].pauseTicks = 0; }); }
+
+caso('S9 · SUPERVIVENCIA: el GRITO DE GUERRA del anfitrión deja clavado al invitado en su propia pantalla', function () {
+  var ms = supervParty(['tanque', 'asesino'], ['empujon,escudo,grito_guerra,arrollar', null]), A = ms[0], B = ms[1];
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 16, 5, 3);
+  red.paso(3);
+  suelta(ms, 1);
+  ok(A.H.pulsar(A.G, 0, 2), 'el anfitrión grita');
+  red.paso(6);
+  ok(B.H.clavado(1), 'al invitado le llega que está aturdido');
+  var x0 = B.G.pacs[1].x;
+  red.paso(60);
+  ok(Math.abs(B.G.pacs[1].x - x0) <= 2, 'y no se mueve en su pantalla (' + (B.G.pacs[1].x - x0) + ' px)');
+  ok(Math.abs(A.G.pacs[1].x - B.G.pacs[1].x) <= 4, 'ni en la del anfitrión');
+});
+
+caso('S10 · SUPERVIVENCIA: el EMPUJÓN del anfitrión aturde al invitado', function () {
+  var ms = supervParty(['tanque', 'asesino'], ['empujon,escudo,grito_guerra,arrollar', null]), A = ms[0], B = ms[1];
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 8, 5, 3);
+  red.paso(3);
+  suelta(ms, 1);
+  ok(A.H.pulsar(A.G, 0, 0), 'el anfitrión empuja');
+  red.paso(8);
+  ok(B.H.clavado(1), 'al invitado le llega que está aturdido');
+  var x0 = B.G.pacs[1].x;
+  red.paso(30);
+  ok(Math.abs(B.G.pacs[1].x - x0) <= 2, 'y no se mueve en su pantalla (' + (B.G.pacs[1].x - x0) + ' px)');
+});
+
+caso('S11 · SUPERVIVENCIA: el GRITO DE GUERRA del INVITADO deja clavado al anfitrión', function () {
+  var ms = supervParty(['asesino', 'tanque'], [null, 'empujon,escudo,grito_guerra,arrollar']), A = ms[0], B = ms[1];
+  pon(ms, 0, 6, 5, 3); pon(ms, 1, 16, 5, 3);
+  red.paso(3);
+  suelta(ms, 0);
+  ok(B.H.pulsar(B.G, 1, 2), 'el invitado grita');
+  red.paso(8);
+  ok(A.H.clavado(0), 'el anfitrión queda aturdido en su máquina');
+  var x0 = A.G.pacs[0].x;
+  red.paso(60);
+  ok(Math.abs(A.G.pacs[0].x - x0) <= 2, 'y no se mueve (' + (A.G.pacs[0].x - x0) + ' px)');
+  ok(B.H.clavado(0), 'y el invitado lo ve aturdido');
+});
+
+caso('S12 · SUPERVIVENCIA: el EMPUJÓN del INVITADO aturde al anfitrión y le quita un corazón', function () {
+  var ms = supervParty(['asesino', 'tanque'], [null, 'empujon,escudo,grito_guerra,arrollar']), A = ms[0], B = ms[1];
+  pon(ms, 0, 8, 5, 3); pon(ms, 1, 6, 5, 3);
+  red.paso(3);
+  var antes = A.G.pacs[0].lives;
+  suelta(ms, 0);
+  ok(B.H.pulsar(B.G, 1, 0), 'el invitado empuja');
+  red.paso(10);
+  ok(A.H.clavado(0), 'el anfitrión queda aturdido en su máquina');
+  eq(A.G.pacs[0].lives, antes - 1, 'y pierde un corazón');
+});
+
 /* ---------- la ejecución ---------- */
 function CFG(m) { return m.w.PM.CFG; }
 
