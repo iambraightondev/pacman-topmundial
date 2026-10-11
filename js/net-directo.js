@@ -58,6 +58,17 @@
   /* Un compañero del que no se sabe nada en este rato se olvida: si no, su
    * enlace ausente obligaría a seguir pagando el canal de siempre. */
   var OLVIDO_MS = 30000;
+  /* UN ENLACE CAÍDO SE VUELVE A INTENTAR (10 oct 2026). Antes, uno que
+   * fallaba o parpadeaba una vez se daba por perdido para toda la sesión, y
+   * desde ahí esa party entera gastaba cuota doce veces por segundo: así se
+   * agotaron los 2 millones del mes y Supabase cortó el juego. Ahora quien
+   * ofrece lo reintenta a los 5 s, a los 15, a los 30 y luego cada minuto.
+   * Cada intento son una docena de mensajes de presentación; seguir sin
+   * enlace son 720 por minuto y jugador. */
+  var REINTENTO_MS = [5000, 15000, 30000, 60000];
+  /* Y un «disconnected» no es una caída: es el aviso de que el camino
+   * titubea, y lo normal es que vuelva solo. Se le da este rato. */
+  var TITUBEO_MS = 5000;
 
   function soportado() {
     return typeof RTCPeerConnection !== 'undefined';
@@ -76,7 +87,9 @@
     this.listo = false;
     this.muerto = false;   // no se pudo, o se cayó: este va por Supabase
     this.visto = Date.now();
+    this.cayo = 0;         // cuándo se dio por muerto (para reintentarlo)
     this.tope = null;
+    this.titubeo = null;
     this.pendientes = [];  // candidatos llegados antes de la descripción
   }
 
@@ -92,7 +105,14 @@
     };
     pc.onconnectionstatechange = function () {
       var st = pc.connectionState;
-      if (st === 'failed' || st === 'closed' || st === 'disconnected') self.cae();
+      if (st === 'failed' || st === 'closed') self.cae();
+      else if (st === 'disconnected') {
+        if (self.titubeo) return;
+        self.titubeo = setTimeout(function () {
+          self.titubeo = null;
+          if (self.pc === pc && pc.connectionState !== 'connected') self.cae();
+        }, TITUBEO_MS);
+      }
     };
     pc.ondatachannel = function (ev) {
       if (ev.channel.label === 'sn') self.ponCanal('sn', ev.channel);
@@ -138,6 +158,7 @@
     this.listo = true;
     if (this.tope) { clearTimeout(this.tope); this.tope = null; }
     this.visto = Date.now();
+    if (this.D.reintentos) delete this.D.reintentos[this.sid];   // este ya ha entrado
   };
 
   Enlace.prototype.oferta = function (sdp) {
@@ -195,7 +216,9 @@
     if (this.muerto) return;
     this.muerto = true;
     this.listo = false;
+    this.cayo = Date.now();
     if (this.tope) { clearTimeout(this.tope); this.tope = null; }
+    if (this.titubeo) { clearTimeout(this.titubeo); this.titubeo = null; }
     this.cierra();
   };
 
@@ -213,6 +236,7 @@
     activo: false,
     sid: null,
     enlaces: {},          // sid -> Enlace
+    reintentos: {},       // sid -> cuántas veces se ha vuelto a intentar
     envia: null,          // function(name, data) — señalización por Supabase
     entrega: null,        // function(name, wrap) — lo recibido, hacia Net
 
@@ -234,11 +258,41 @@
     ve: function (sid) {
       if (!this.activo || !sid || sid === this.sid) return;
       var e = this.enlaces[sid];
-      if (e) { e.visto = Date.now(); return; }
+      if (e) {
+        e.visto = Date.now();
+        /* caído: quien ofrece lo vuelve a intentar pasado su rato (el otro
+         * lado se rehace al llegarle la oferta nueva, ver senal) */
+        if (e.muerto && this.sid < sid && this.tocaReintento(sid, e)) {
+          this.reintentos[sid] = (this.reintentos[sid] || 0) + 1;
+          e = new Enlace(this, sid, true);
+          this.enlaces[sid] = e;
+          e.abre();
+        }
+        return;
+      }
       /* ofrece el del identificador más bajo, y así no chocan los dos */
       e = new Enlace(this, sid, this.sid < sid);
       this.enlaces[sid] = e;
       e.abre();
+    },
+
+    /* ¿Ha pasado ya el rato de espera de ese enlace caído? */
+    tocaReintento: function (sid, e) {
+      var n = this.reintentos[sid] || 0;
+      var espera = REINTENTO_MS[Math.min(n, REINTENTO_MS.length - 1)];
+      return Date.now() - (e.cayo || 0) >= espera;
+    },
+
+    /* ¿Hay enlace directo en marcha con ese? */
+    listoCon: function (sid) {
+      var e = this.activo ? this.enlaces[sid] : null;
+      return !!(e && e.listo);
+    },
+
+    /* Manda solo a ese, por su enlace. Devuelve si salió. */
+    mandaA: function (sid, name, wrap) {
+      var e = this.activo ? this.enlaces[sid] : null;
+      return !!(e && e.manda(name, wrap));
     },
 
     /* Señalización que llega por Supabase */
@@ -248,6 +302,14 @@
       if (!e) {
         /* nos ofrecen antes de haberle visto: se acepta */
         if (d.k !== 'o') return;
+        e = new Enlace(this, sid, false);
+        this.enlaces[sid] = e;
+        e.abre();
+      }
+      /* una oferta NUEVA sobre un enlace caído o ya negociado es un
+       * reintento del otro lado: se empieza de cero con ella */
+      if (d.k === 'o' && (e.muerto || (e.pc && e.pc.remoteDescription && e.pc.remoteDescription.type))) {
+        e.cae();
         e = new Enlace(this, sid, false);
         this.enlaces[sid] = e;
         e.abre();
@@ -327,6 +389,7 @@
         if (this.enlaces.hasOwnProperty(sid)) this.enlaces[sid].cae();
       }
       this.enlaces = {};
+      this.reintentos = {};
       this.activo = false;
       this.envia = null;
       this.entrega = null;

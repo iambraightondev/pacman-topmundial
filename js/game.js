@@ -4895,7 +4895,11 @@
      * ========================================================= */
     guestMsg: function (name, data, sid) {
       switch (name) {
-        case 'snap': if (data) this.applySnapshot(data); break;
+        case 'snap':
+          // quien manda las fotos es quien lleva la partida (Net.SOLO_ANFITRION)
+          if (sid && window.PM.Net) window.PM.Net.anfitrion = sid;
+          if (data) this.applySnapshot(data);
+          break;
         // giro ajeno repartido al instante, sin esperar a la foto
         case 'gir': this.aplicaGiro(data); break;
         case 'evt':  if (data) this.applyEvt(data); break;

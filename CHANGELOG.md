@@ -2,6 +2,26 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-10 · La cuota de Supabase: enlaces directos que se recuperan
+
+El 10 de octubre Supabase **restringió el proyecto** por pasar los 2 millones
+de mensajes de Realtime del plan gratuito (`exceed_realtime_message_count_quota`):
+sin login, ranking ni party hasta el 30 de octubre o hasta subir de plan.
+No hay registro de qué los gastó; en el código había dos caminos claros:
+
+- **Un enlace directo caído se reintenta** (5 s, 15 s, 30 s y luego cada
+  minuto). Antes, uno que fallaba o parpadeaba una vez quedaba muerto toda
+  la sesión y la party entera salía por el canal de pago, doce veces por
+  segundo. Un `disconnected` ya no cuenta como caída si vuelve en 5 s.
+- **La posición y los avisos de un invitado van solo al anfitrión** por su
+  enlace. Antes bastaba que dos invitados no enlazaran entre sí para que
+  los dos gastaran cuota, aunque nadie más que el anfitrión los lee.
+- `PM.Net.gasto` cuenta lo mandado por el canal y por enlace directo.
+
+Sigue gastando: quien no logra enlazar con el anfitrión (sin servidor TURN
+no hay remedio), las partidas con mirones y una sala de party a solas
+(un mensaje cada 2 s).
+
 ## 2026-10-10 · SUPERVIVENCIA: equilibrio de roles y superpastillas al azar
 
 - **Superpastillas: solo 2 en el mapa**, cada una en una casilla **sorteada**

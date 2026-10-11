@@ -371,6 +371,12 @@
   /* Un retroceso mayor que esto no es desorden, es alguien que ha vuelto a
    * empezar (recarga, reconexión): se le acepta y se sigue contando desde ahí. */
   var SALTO_ATRAS = 1000;
+  /* LO QUE SOLO LE IMPORTA AL ANFITRIÓN (10 oct 2026): la posición de un
+   * invitado y sus avisos los lee quien lleva la partida y nadie más. Si hay
+   * enlace directo con él, van por ahí y punto: antes, que un invitado no
+   * lograra enlazar con OTRO invitado bastaba para que sus doce posiciones
+   * por segundo salieran por el canal de pago, a toda la sala. */
+  var SOLO_ANFITRION = { pos: 1, gevt: 1 };
 
   var Net = {
     sid: randomId(),     // identificador de esta sesión
@@ -380,6 +386,12 @@
      * canal y no tiene enlace con nadie: si el anfitrión dejara de usarlo, se
      * le quedaría la pantalla congelada. Ver mantenCanal(). */
     forzarCanal: 0,
+    /* Quién lleva la partida, visto desde un invitado: el que le manda las
+     * fotos (lo apunta Game.guestMsg; ver SOLO_ANFITRION) */
+    anfitrion: null,
+    /* Mensajes mandados por el canal de pago y por enlace directo desde que
+     * se abrió la página: para ver desde la consola por dónde va la partida */
+    gasto: { canal: 0, directo: 0 },
     ultimoQ: {},         // sid -> último número aplicado
     peers: [],           // sesiones aceptadas ([] = se acepta a cualquiera)
     transport: null,
@@ -586,13 +598,23 @@
       var wrap = { s: this.sid, d: data };
       if (CADUCAN[name]) wrap.q = ++this.seq;
       var D = window.PM.Directo;
+      /* lo que solo lee el anfitrión, solo a él si hay enlace (SOLO_ANFITRION) */
+      if (D && SOLO_ANFITRION[name] && this.anfitrion && D.mandaA &&
+          D.mandaA(this.anfitrion, name, wrap)) {
+        this.gasto.directo++;
+        return;
+      }
       /* primero por los enlaces directos que haya (ver js/net-directo.js) */
       var porDirecto = D ? D.manda(name, wrap) : null;
       /* si a todos les ha llegado por ahí, el canal de pago no se toca...
        * salvo que haya alguien mirando, que solo escucha por ahí */
-      if (porDirecto && D.todosDirectos() && Date.now() > this.forzarCanal) return;
+      if (porDirecto && D.todosDirectos() && Date.now() > this.forzarCanal) {
+        this.gasto.directo++;
+        return;
+      }
       /* si no, sale por el canal, diciendo a quién no hay que repetírselo */
       if (porDirecto) wrap.x = porDirecto;
+      this.gasto.canal++;
       this.transport.send(name, wrap);
     },
 
@@ -626,6 +648,7 @@
 
     leaveTransport: function () {
       if (window.PM.Directo) window.PM.Directo.corta();
+      this.anfitrion = null;
       if (this.transport) { this.transport.close(); this.transport = null; }
     },
 

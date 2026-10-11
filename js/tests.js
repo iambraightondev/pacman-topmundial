@@ -4032,6 +4032,80 @@
       eq(D.todosDirectos(), false, 'así que el canal de siempre sigue haciendo el trabajo');
     });
 
+  /* 10 oct: la cuota de Supabase se agotó. Un enlace caído se reintenta y lo
+   * que solo lee el anfitrión no sale por el canal por culpa de un tercero */
+  test('un enlace directo caído se vuelve a intentar pasado su rato, y solo lo reintenta quien ofrece',
+    function () {
+      var D = window.PM.Directo;
+      var antes = { activo: D.activo, sid: D.sid, enlaces: D.enlaces, reintentos: D.reintentos, envia: D.envia };
+      try {
+        D.activo = true; D.sid = 'b'; D.enlaces = {}; D.reintentos = {}; D.envia = function () {};
+        var muerto = { muerto: true, listo: false, cayo: Date.now() - 1000, visto: 0, cae: function () {} };
+        D.enlaces.c = muerto;
+        D.ve('c');
+        ok(D.enlaces.c === muerto, 'recién caído no se toca todavía');
+        muerto.cayo = Date.now() - 6000;
+        D.ve('c');
+        ok(D.enlaces.c !== muerto, 'pasados cinco segundos se monta uno nuevo');
+        ok(D.enlaces.c.ofrezco, 'que vuelve a ofrecer');
+        eq(D.reintentos.c, 1, 'y queda apuntado el intento');
+        /* el segundo espera más */
+        var otro = { muerto: true, listo: false, cayo: Date.now() - 6000, visto: 0, cae: function () {} };
+        D.enlaces.c = otro;
+        D.ve('c');
+        ok(D.enlaces.c === otro, 'el segundo intento espera quince');
+        otro.cayo = Date.now() - 16000;
+        D.ve('c');
+        ok(D.enlaces.c !== otro, 'y entonces sí');
+        /* con el identificador más alto no se ofrece: espera la oferta del otro */
+        var suyo = { muerto: true, listo: false, cayo: Date.now() - 999999, visto: 0, cae: function () {} };
+        D.enlaces.a = suyo;
+        D.ve('a');
+        ok(D.enlaces.a === suyo, 'quien no ofrece no reintenta por su cuenta');
+        D.senal({ to: 'b', k: 'o', s: null }, 'a');
+        ok(D.enlaces.a !== suyo, 'pero se rehace cuando le llega la oferta nueva');
+      } finally {
+        for (var k in D.enlaces) if (D.enlaces.hasOwnProperty(k) && D.enlaces[k].cierra) D.enlaces[k].cae();
+        D.activo = antes.activo; D.sid = antes.sid; D.enlaces = antes.enlaces;
+        D.reintentos = antes.reintentos; D.envia = antes.envia;
+      }
+    });
+
+  test('la posición de un invitado va solo al anfitrión por su enlace, aunque le falte el de otro invitado',
+    function () {
+      var D = window.PM.Directo, N = window.PM.Net;
+      var antes = { activo: D.activo, enlaces: D.enlaces, tr: N.transport, anf: N.anfitrion, fz: N.forzarCanal };
+      var porCanal = [], alAnfitrion = [], alOtro = [];
+      try {
+        D.activo = true;
+        D.enlaces = {
+          anf: { listo: true, muerto: false, visto: Date.now(), manda: function (n) { alAnfitrion.push(n); return true; } },
+          inv: { listo: false, muerto: true, visto: Date.now(), cayo: Date.now(), manda: function (n) { alOtro.push(n); return false; } }
+        };
+        N.transport = { send: function (n, w) { porCanal.push({ n: n, x: w.x }); } };
+        N.forzarCanal = 0;
+        N.anfitrion = 'anf';
+        N.send('pos', { x: 1 });
+        N.send('gevt', { t: 'died' });
+        eq(alAnfitrion.join(), 'pos,gevt', 'le llegan por el enlace');
+        eq(porCanal.length, 0, 'y el canal de pago ni se toca');
+        N.send('phello', {});
+        eq(porCanal.length, 1, 'lo que es para todos sí sale por el canal mientras falte un enlace');
+        eq(porCanal[0].x.join(), 'anf', 'diciendo a quién ya le llegó');
+        /* sin saber aún quién manda, como siempre */
+        N.anfitrion = null; porCanal.length = 0;
+        N.send('pos', { x: 1 });
+        eq(porCanal.length, 1, 'sin anfitrión conocido, por el camino de siempre');
+        /* y si el enlace con el anfitrión está caído, también */
+        N.anfitrion = 'inv'; porCanal.length = 0;
+        N.send('pos', { x: 1 });
+        eq(porCanal.length, 1, 'con ese enlace caído, por el canal');
+      } finally {
+        D.activo = antes.activo; D.enlaces = antes.enlaces;
+        N.transport = antes.tr; N.anfitrion = antes.anf; N.forzarCanal = antes.fz;
+      }
+    });
+
   test('el fantasma del jugador lleva marca encima todo el rato', function () {
     versus(2, 1, 1);
     var puntos = [];
