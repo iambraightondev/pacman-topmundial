@@ -4121,6 +4121,9 @@
           var k = /\/\/(\w+)\./.exec(url)[1];
           return estados[k] === 'red' ? roto() : ya({ status: estados[k] || 200 });
         };
+        /* con la lista ya puesta en net-config puede haber un sondeo de verdad
+         * a medias: aquí se empieza de cero */
+        N.canalEspera = null;
         delete cfg.CANALES;
         eq(N.canales().length, 1, 'sin lista, el canal es el proyecto de los datos');
         eq(N.canal().url, cfg.SUPABASE_URL);
