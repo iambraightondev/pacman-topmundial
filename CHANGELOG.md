@@ -17,7 +17,10 @@ sigue restringido hasta el 30 de octubre y se deja quieto, sin borrar.
 - El juego manda ahora la clave `sb_publishable_…` en vez de la `anon` clásica.
 - **Las sesiones abiertas no viajan**: cada jugador entra una vez con su
   usuario y contraseña de siempre.
-- Sigue **sin SMTP propio**, como el origen: el correo de recuperación no llega.
+- **Correo propio puesto** (el origen nunca lo tuvo): sale por Gmail desde
+  juegostopmundial@gmail.com, 30 por hora, con las plantillas en español.
+  Envío de recuperación registrado por Supabase; falta verlo llegar al buzón
+  y abrir el enlace de punta a punta.
 - `CANALES` sigue vacío: el canal de partidas va por el proyecto de datos hasta
   que haya un proyecto de canal en OTRA organización (la cuota se cuenta por
   organización, así que uno en la misma no protege los datos).

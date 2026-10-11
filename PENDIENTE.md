@@ -1892,6 +1892,11 @@ que no se puede simular. Lo que hay que mirar en la primera party de verdad:
 3. **¿Se ve el aro y se oye la cuenta atrás en el móvil?** El aro es de 1.5 px
    de trazo sobre un Pac-Man de 13.
 
+> **Hecho el 10 oct 2026** en el proyecto nuevo: SMTP de Gmail
+> (juegostopmundial@gmail.com), 30 correos/hora y plantillas en español.
+> Queda solo el paso 5: ver llegar el correo y abrir el enlace. Lo de abajo
+> se conserva como referencia.
+
 Detrás de eso sigue lo de siempre: **el remitente de correo.**
 
 La recuperación de contraseña está entera, probada contra el servidor de verdad
