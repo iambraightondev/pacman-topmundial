@@ -27,6 +27,13 @@
     SUPABASE_URL: 'https://uamaukghqakuhacfpdsf.supabase.co',
     SUPABASE_KEY: 'sb_publishable_RWPOJhevuU3uThxvmD8pRQ_fM0CjR76',
     /* { url, key } de cada proyecto de canal, el preferido primero */
-    CANALES: []
+    /* 1.º el proyecto ANTIGUO (yghnw…): restringido hasta el 30 oct 2026, así
+     * que hasta entonces el juego lo salta; desde ese día las partidas van
+     * por él y dejan de gastar la cuota del proyecto de los datos.
+     * 2.º el de los datos, de reserva: es el que se usa si el primero cae. */
+    CANALES: [
+      { url: 'https://yghnwkifbmmhrpvtjjit.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnaG53a2lmYm1taHJwdnRqaml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNzAwODcsImV4cCI6MjEwMDk0NjA4N30.YrDxWlKxIlYCGsr53DU--DISLtOWOHf-BdDPNJMG9mU' },
+      { url: 'https://uamaukghqakuhacfpdsf.supabase.co', key: 'sb_publishable_RWPOJhevuU3uThxvmD8pRQ_fM0CjR76' }
+    ]
   };
 })();

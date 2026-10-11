@@ -21,9 +21,11 @@ sigue restringido hasta el 30 de octubre y se deja quieto, sin borrar.
   juegostopmundial@gmail.com, 30 por hora, con las plantillas en español.
   Envío de recuperación registrado por Supabase; falta verlo llegar al buzón
   y abrir el enlace de punta a punta.
-- `CANALES` sigue vacío: el canal de partidas va por el proyecto de datos hasta
-  que haya un proyecto de canal en OTRA organización (la cuota se cuenta por
-  organización, así que uno en la misma no protege los datos).
+- **Canal de partidas (pm-v360):** `CANALES` lleva primero el proyecto antiguo
+  y después el de los datos. Hasta el 30 de octubre el antiguo contesta 402 y
+  el juego lo salta; desde ese día las partidas van solas por él y dejan de
+  gastar la cuota del proyecto de los datos. Falta un canal en otra
+  organización de la cuenta nueva (la cuota se cuenta por organización).
 - La copia, los guiones y el informe de la mudanza están fuera del repo, en
   `../migracion-supabase` (lleva secretos: nunca a git).
 

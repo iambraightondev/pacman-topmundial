@@ -7,7 +7,7 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **10 de octubre de 2026** (pm-v359, publicado; **el juego vive desde hoy en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG).
+Última puesta al día: **10 de octubre de 2026** (pm-v360, publicado; **el juego vive desde hoy en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG).
 
 > **SESIÓN DEL 10 OCT · SUPERVIVENCIA con poderes, tres corazones y tablero
 > ancho (Braighton eligió el mapa A y la regla 1). Hecho y probado
