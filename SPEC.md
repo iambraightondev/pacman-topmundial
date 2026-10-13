@@ -3266,6 +3266,23 @@ Rules that are deliberate, not incidental:
   another week contributes its streak but no progress, exactly as `leer`
   already did locally. `limpiarLocal` now wipes it on sign-out, so the next
   person on that machine does not inherit the week.
+  **The cloud copy is last-write-wins** (seen 13 Oct): `perfiles_touch` only
+  protects `logros`, `xp` and the records, not `ajustes`. Every push carries
+  the device's own card (`localState`), and `pushQuiet` does not merge the
+  row it reads first, so an open tab that has not merged yet overwrites
+  whatever the cloud card held. It heals by itself between real devices (the
+  one that has the progress pushes it again), but **a card written by hand in
+  the cloud has no device behind it**. Crediting a day by hand therefore
+  takes: the card and the counters in one write (`dailyOk`, `daily:dailyOk`,
+  `dailyBasicos`, `dailyRacha`, `daily:dailyRacha`, `monedas`, `px_<month>`
+  at 5 per coin, and `xp`; the streak rebuilt with `ult`, `mejor` and `hito`
+  so no step is paid twice), then putting the card back each time a stale
+  push wipes it, adding 1 to `xp` — `Account.refrescar` only merges when the
+  cloud has more `xp` than this device gave it, or a newer `purga` (every
+  2 min on the menu, or on returning to the tab; never mid-game). A spare key
+  in the card works as a witness: `Daily.normalizar` drops unknown keys, so
+  the fixed card coming back without it means the device has merged and it
+  is settled.
 - **The MISIL never turns around** (22 Sep). It used to take the next id off
   `b.cola` — ordered by distance from the assassin *at launch* — and double
   back the way it came. Now every re-target goes through

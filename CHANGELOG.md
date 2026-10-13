@@ -20,6 +20,21 @@ le incluye).
 Deshace lo decidido el 17 de septiembre («a solas no sirve al propio
 Soporte, a propósito»).
 
+Publicado y comprobado en producción. Jugado en el laboratorio con la tecla
+de verdad; falta verlo con gente.
+
+## 2026-10-13 · Un DAILY abonado a mano
+
+ESTER hizo el DAILY del lunes 12 sin cuenta, en otro aparato, y al entrar se
+encontró la racha rota. A petición de Braighton se le dio por cumplido en la
+nube: el día entero (básico y reto), la racha (de rota en 11 a 13 con el
+martes), 160 monedas y la experiencia de ese día. No hay cambio en el juego.
+
+Lo que enseñó: la cartilla del DAILY no está protegida en la nube como los
+contadores. Su pestaña abierta la pisó a los pocos segundos y hubo que
+reponerla hasta que su juego la tomó. Cómo hacerlo la próxima vez, en SPEC;
+si se quiere cerrar el agujero, en PENDIENTE.
+
 ## 2026-10-11 · Party: cada uno elige su salida (pm-v361)
 
 En la sala, bajo la lista de jugadores, hay un plano del tablero con las

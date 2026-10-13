@@ -7,24 +7,62 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **13 de octubre de 2026** (pm-v362: a solas, la E del Soporte le da el escudo a él de un toque). Lo anterior, del 11 oct (pm-v361, publicado): en party cada uno elige su salida; **el juego vive desde el 10 oct en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG.
+Última puesta al día: **13 de octubre de 2026** (pm-v362, publicado y comprobado en producción: a solas, la E del Soporte le da el escudo a él de un toque). Lo anterior, del 11 oct (pm-v361): en party cada uno elige su salida; **el juego vive desde el 10 oct en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG.
 
-> **13 OCT, pedido por Braighton.** (1) **ESCUDO ALIADO a solas (pm-v362):**
-> la E del Soporte, jugando solo, es para él y sale al apretar
-> (`Hab.aSolas`, `Hab.mantiene`); deshace el «a solas NO sirve, a propósito»
-> del 17 sep. Su escudo no cuenta como apoyo para la maestría; sí cobra los
-> 600 si le salva. **Por mirar:** si con esto las notas del Soporte a solas
-> (`soporte_solo`) o sus puntos por minuto se disparan. (2) **A ESTER se le
-> abonó a mano el DAILY del lunes 12 oct** (lo hizo sin cuenta): cartilla,
-> racha (de rota en 11 a 13), 160 monedas y experiencia, escrito en la nube.
-> La cartilla (`ajustes.daily`) NO está protegida como los contadores: la
-> pestaña abierta la sube sin leer antes la nube y pisa lo escrito a mano;
-> hubo que reponerla hasta que su juego la fundió.
+> **SESIÓN DEL 13 OCT, las dos cosas pedidas por Braighton. Se retoma en
+> otra sesión.**
+>
+> **▶ LO QUE QUEDA ABIERTO DE HOY:**
+> 1. **Falta su respuesta sobre el reto del lunes de ESTER.** Se le abonó el
+>    día entero, básico Y reto (era «8.000 puntos en otro laberinto»), porque
+>    pidió «cuéntale como hecho el daily» y preguntó por las 100 monedas. Si
+>    ella solo hizo el básico, sobran 100 monedas, 2.500 de experiencia, 500
+>    del pase y un `dailyOk`: bajarlos pide una limpieza con `purga` (los
+>    contadores solo crecen) y quitar `h[0]`/`p[0]` de su cartilla.
+> 2. **Si ESTER entra con su cuenta en el aparato donde jugó sin ella**, lo
+>    de aquel día se le suma OTRA VEZ (lo pendiente de un aparato sin cuenta
+>    se suma a la que entra). Avisado a Braighton; nada que hacer hasta que
+>    pase.
+> 3. **Vigilar el Soporte a solas**: con el escudo de un toque puede subir
+>    sus puntos por minuto (600 cada vez que le salva) y sus notas
+>    (`soporte_solo`). Sin datos todavía.
+> 4. **La cartilla del DAILY no está protegida en la nube** (ver abajo). No se
+>    ha tocado: es una decisión, no un arreglo pedido.
+>
+> **ESCUDO ALIADO a solas (pm-v362).** La E del Soporte, jugando solo, es
+> para él y sale al apretar (`Hab.aSolas`, `Hab.mantiene`): a solas deja de
+> ser una tecla de mantener, porque las dos formas serían el mismo escudo.
+> En equipo no cambia nada, ni SUPERVIVENCIA. Deshace el «a solas NO sirve, a
+> propósito» del 17 sep. Su escudo no cuenta como apoyo para la maestría
+> (igual que el suyo en el de todo el equipo); sí cobra los 600 si le salva.
+> Jugado en el laboratorio con la tecla de verdad; no con gente.
+>
+> **DAILY abonado a mano a ESTER.** El lunes 12 oct jugó sin cuenta, en otro
+> aparato, y al entrar el 13 se encontró la racha rota (iba en 11; el
+> domingo 11 se lo cubrió el comodín). Escrito en la nube: lunes cumplido,
+> racha en 13 con el martes, `hito` 7 (los escalones de 3 y 7 ya los había
+> cobrado; el próximo es el de 14), 160 monedas, 3.500 de experiencia y 800
+> del pase. Queda apuntado en `perfiles_auditoria` como `sql`. Comprobado
+> una hora después: sigue ahí y ella siguió jugando encima.
+>
+> **El agujero que salió al hacerlo.** `ajustes.daily` va a la nube con cada
+> subida del aparato, que NO lee antes lo que hay: gana el último que
+> escribe. A los 11 segundos de escribir la cartilla, su pestaña abierta
+> acabó una partida y la pisó (los contadores no: esos solo crecen). Hubo
+> que reponerla hasta que su juego la fundió (`Account.refrescar` solo funde
+> si la nube tiene más experiencia que la que dio ese aparato: de ahí sumar
+> 1 de `xp` al reponer). Entre aparatos de verdad se cura solo (el que tiene
+> el progreso lo vuelve a subir); con una escritura a mano, no. El
+> procedimiento está en SPEC («The cloud copy is last-write-wins»). **Si se
+> quiere cerrar:** que `pushQuiet` funda la cartilla de la fila que ya lee
+> antes de subir (`Daily.desdeNube`), dos o tres líneas en el juego; hacerlo
+> en el trigger es más delicado porque la racha baja legítimamente.
 
 > **SESIÓN DEL 10-11 OCT (pm-v355 a pm-v361), todo pedido por Braighton y
 > publicado. Se retoma en otra sesión. Detalle en CHANGELOG.**
 >
-> **▶ LO PRIMERO AL VOLVER — tres cosas que dependen de Braighton:**
+> **▶ LO PRIMERO AL VOLVER — tres cosas que dependen de Braighton (siguen
+> pendientes el 13 oct):**
 > 1. **Un token con acceso a la segunda organización.** La cuota gratuita de
 >    Supabase se cuenta POR ORGANIZACIÓN (deducido de cómo factura, no
 >    medido), así que un proyecto de canal solo protege los datos si vive en
