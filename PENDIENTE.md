@@ -7,7 +7,19 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **11 de octubre de 2026** (pm-v361, publicado: en party cada uno elige su salida; **el juego vive desde hoy en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG).
+Última puesta al día: **13 de octubre de 2026** (pm-v362: a solas, la E del Soporte le da el escudo a él de un toque). Lo anterior, del 11 oct (pm-v361, publicado): en party cada uno elige su salida; **el juego vive desde el 10 oct en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG.
+
+> **13 OCT, pedido por Braighton.** (1) **ESCUDO ALIADO a solas (pm-v362):**
+> la E del Soporte, jugando solo, es para él y sale al apretar
+> (`Hab.aSolas`, `Hab.mantiene`); deshace el «a solas NO sirve, a propósito»
+> del 17 sep. Su escudo no cuenta como apoyo para la maestría; sí cobra los
+> 600 si le salva. **Por mirar:** si con esto las notas del Soporte a solas
+> (`soporte_solo`) o sus puntos por minuto se disparan. (2) **A ESTER se le
+> abonó a mano el DAILY del lunes 12 oct** (lo hizo sin cuenta): cartilla,
+> racha (de rota en 11 a 13), 160 monedas y experiencia, escrito en la nube.
+> La cartilla (`ajustes.daily`) NO está protegida como los contadores: la
+> pestaña abierta la sube sin leer antes la nube y pisa lo escrito a mano;
+> hubo que reponerla hasta que su juego la fundió.
 
 > **SESIÓN DEL 10-11 OCT (pm-v355 a pm-v361), todo pedido por Braighton y
 > publicado. Se retoma en otra sesión. Detalle en CHANGELOG.**
@@ -1319,7 +1331,7 @@ Decidido por Jarvis: las dos versiones comparten recarga; la placa dura 8 s;
 el escudo en área no incluye al propio Soporte; en pausa no carga; al perder
 el foco se suelta sin lanzar. ESCUDO ALIADO a 8 s (pedido de Braighton); **a solas NO
 sirve al propio Soporte, a propósito**: tiene que sentirse la falta de un
-compañero. Los botones de los diálogos (`.prompt-btns`) llevan la línea que
+compañero (deshecho el 13 oct, pm-v362: a solas es para él). Los botones de los diálogos (`.prompt-btns`) llevan la línea que
 recorre el borde del DAILY al señalarlos (`UI.ponRonda`, `pm-v127`).
 Por dónde seguir: MAGO. **Por mirar:** el aro de carga no se llegó a ver en
 pantalla (la lógica sí, con pruebas y en el navegador); probarlo en móvil.

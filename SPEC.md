@@ -3601,7 +3601,13 @@ the key index. `LIST` is the ASESINO (the original kit).
   gone — those are RESURRECCIÓN's —, with their four cooldowns at 0; its 10 s
   window and `hospitalSalva` are no longer switched on by anything). INMUNIDAD: 3 s
   untouchable. ESCUDO ALIADO: shield (`ALIADO_TICKS`, 8 s or one hit) to the
-  nearest living teammate; none = not cast (deliberately useless solo).
+  nearest living teammate; in a team game with none alive it is not cast.
+  **Solo (13 Oct, `Hab.aSolas`: one Pac-Man, not SUPERVIVENCIA) it goes to the
+  support himself and fires on key-down**: `Hab.mantiene` returns 0 for it, so
+  the key is not a held one there (both versions would be the same shield).
+  His own shield does not count as an `apoyos` mark for mastery, same as in
+  the whole-team version; it does pay `PROTEGE_PUNTOS` when it takes a hit.
+  Until then it was deliberately useless solo, except held for 2 s.
   **Hold** (`CFG.HAB.MANTENER`, ticks): Q and E are held abilities. On those
   keys the short version fires on **release** (`Hab.apretar` / `Hab.soltar`,
   from keydown/keyup and the touch buttons' pointerdown/pointerup; key

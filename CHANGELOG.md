@@ -2,6 +2,24 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-13 · Soporte a solas: el ESCUDO ALIADO es para él, de un toque (pm-v362)
+
+Pedido por Braighton. Jugando a solas, la E del Soporte no hacía nada al
+pulsarla: solo se cubría manteniéndola 2 s (el escudo a todo el equipo, que
+le incluye).
+
+- **A solas, la E le da el escudo a él al apretarla**: 8 s o un golpe, la
+  recarga de 32 s de siempre. Ya no hay que mantenerla ni soltarla.
+- **En equipo no cambia nada**: pulsada, al compañero vivo más cercano (y sin
+  nadie vivo no sale ni gasta); mantenida 2 s, a todos.
+- Su propio escudo **no cuenta para la maestría** (igual que el suyo en el de
+  todo el equipo); sí paga los 600 puntos si le salva de un golpe, como ya
+  hacía mantenido.
+- SUPERVIVENCIA sigue con sus reglas.
+
+Deshace lo decidido el 17 de septiembre («a solas no sirve al propio
+Soporte, a propósito»).
+
 ## 2026-10-11 · Party: cada uno elige su salida (pm-v361)
 
 En la sala, bajo la lista de jugadores, hay un plano del tablero con las

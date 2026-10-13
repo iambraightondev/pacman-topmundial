@@ -14903,14 +14903,12 @@
     eq(HB.balas.length, 0, 'el proyectil se para en el muro');
   });
 
-  test('SOPORTE · INMUNIDAD 3 s y ESCUDO ALIADO solo con compañeros', function () {
+  test('SOPORTE · INMUNIDAD 3 s y ESCUDO ALIADO al compañero', function () {
     eq(HC.INMUNE_TICKS, 3 * 60, 'la inmunidad dura 3 s');
     eq(HC.ALIADO_TICKS, 8 * 60, 'el escudo aliado dura 8 s');
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     var p = G.pacs[0];
     p.safeTicks = 0;
-    eq(HB.pulsar(G, 0, 2), false, 'a uno, el escudo aliado no sale');
-    ok(HB.lista(0, 2), 'ni gasta');
     ok(HB.pulsar(G, 0, 1), 'la inmunidad sale');
     var g = fantasmaEn(0, 6, 5);
     for (var i = 0; i < HC.INMUNE_TICKS - 2; i++) { g.x = p.x; g.y = p.y; g.mode = 'normal'; G.step(); }
@@ -14922,6 +14920,43 @@
     ponPac(1, 10, 5, DR.LEFT);
     ok(HB.pulsar(G, 0, 2), 'con un compañero vivo, sale');
     ok(HB.estado(1).escudo > 0, 'y el escudo es del compañero');
+    ok(!(HB.estado(0).escudo > 0), 'no del Soporte');
+    eq(G.marcador[0].apoyos, 1, 'y le cuenta para su maestría');
+
+    /* en equipo, sin nadie vivo a quien dárselo, sigue sin salir */
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    G.pacs[1].out = true;
+    eq(HB.pulsar(G, 0, 2), false, 'con el compañero fuera, no sale');
+    ok(HB.lista(0, 2), 'ni gasta');
+  });
+
+  /* 13 oct (Braighton): a solas la E no hacía nada salvo mantenida 2 s. */
+  test('SOPORTE · ESCUDO ALIADO a solas: es para él y sale al apretar', function () {
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    var p = G.pacs[0];
+    p.safeTicks = 0;
+    ok(HB.aSolas(G), 'una partida de uno es a solas');
+    eq(HB.mantiene(G, 0, 2), 0, 'a solas la E no se mantiene');
+    ok(HB.apretar(G, 0, 2, false), 'apretar la E ya da el escudo, sin soltar');
+    eq(HB.estado(0).escudo, HC.ALIADO_TICKS, 'los 8 s de siempre, para él');
+    ok(!HB.lista(0, 2), 'y gasta la recarga');
+    ok(!(HB.estado(0).mant >= 0), 'sin nada cargando');
+    eq(HB.soltar(G, 0, 2), false, 'soltar después no hace nada más');
+    eq(G.marcador[0].apoyos, 0, 'el suyo no cuenta para la maestría');
+    /* y aguanta un golpe, como el que se le da a un compañero */
+    var g = fantasmaEn(0, 6, 5);
+    g.x = p.x; g.y = p.y;
+    G.step();
+    ok(!p.dying, 'el golpe se lo lleva el escudo');
+    eq(HB.estado(0).escudo, 0, 'que se rompe');
+
+    /* la Q sigue teniendo sus dos formas */
+    eq(HB.mantiene(G, 0, 0), HC.MANTENER.hielo, 'el hielo se sigue manteniendo');
+
+    /* en equipo no cambia nada: se mantiene, y la corta es para el compañero */
+    partidaRol(['soporte', 'asesino'], 6, 5, DR.RIGHT);
+    ok(!HB.aSolas(G), 'con otro jugador no es a solas');
+    eq(HB.mantiene(G, 0, 2), HC.MANTENER.aliado, 'en equipo la E se mantiene 2 s');
   });
 
   /* 20 sep: la E mantenida llegaba a dos casillas y dejaba al Soporte a pelo.
@@ -15045,11 +15080,16 @@
     ok(HB.estado(0).escudo > 0, 'y el Soporte se lo pone también a sí mismo');
     ok(!HB.lista(0, 2), 'y gasta la recarga de la E');
 
-    /* jugando solo tampoco se desperdicia: él cuenta */
+    /* jugando solo tampoco se desperdicia: él cuenta (y desde el 13 oct ni
+     * siquiera hay que mantenerla: ver ESCUDO ALIADO a solas) */
     partidaRol(['soporte'], 6, 5, DR.RIGHT);
     HB.apretar(G, 0, 2, false);
     ticks(HC.MANTENER.aliado + 1);
     ok(HB.estado(0).escudo > 0, 'a uno, se la queda él');
+    /* una repetición de antes trae la versión mantenida: tiene que salir igual */
+    partidaRol(['soporte'], 6, 5, DR.RIGHT);
+    ok(HB.pulsar(G, 0, 2, true), 'la mantenida grabada a solas sigue saliendo');
+    ok(HB.estado(0).escudo > 0, 'y le deja su escudo');
   });
 
   test('SOPORTE · una partida con teclas mantenidas se reproduce exacta', function () {

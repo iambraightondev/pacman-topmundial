@@ -2891,15 +2891,16 @@
     HIELO_LENTO_MULT: 0.8,
     PROYECTIL_VEL: 3,             // px por tick (Pac-Man va a ~1)
     INMUNE_TICKS: 3 * 60,
-    /* escudo que se da al compañero: 8 s o un golpe. A solas no sale: el
-     * Soporte tiene que echar de menos a alguien a quien cuidar. */
+    /* escudo que se da al compañero: 8 s o un golpe. A solas es para él y
+     * sale al apretar (13 oct, Braighton; hasta entonces a uno no salía). */
     ALIADO_TICKS: 8 * 60,
     /* MANTENER PULSADO. Dos teclas del Soporte hacen otra cosa si se dejan
      * apretadas (ticks hasta que salta). Comparten recarga con la pulsación
      * corta, y la corta sale al SOLTAR:
      *   Q  HIELO   2 s: una placa de hielo en su casilla que congela a todo
      *              fantasma que la pise (a cada uno, una vez).
-     *   E  ALIADO  2 s: escudo a TODO EL EQUIPO, él incluido y sin alcance. */
+     *   E  ALIADO  2 s: escudo a TODO EL EQUIPO, él incluido y sin alcance.
+     *              (A solas no se mantiene: ver Hab.mantiene.) */
     /* El ESCUDO ALIADO a todo el equipo se mantiene DOS segundos, no tres
      * (22 sep 2026): tres eran una eternidad parado en medio del laberinto,
      * y dos lo dejan igualado con el HIELO del mismo rol. */
@@ -3295,7 +3296,7 @@
          h('estela', 'W', 'ESTELA', 24, 'Acelera al equipo con un rastro.'),
          h('puente', 'W', 'PUENTE', 32, 'Abre un paso por el muro de delante 8 s.'),
          h('cadena', 'W', 'CADENA', 28, 'Comparte puntos y absorbe un golpe.')],
-        [h('aliado', 'E', 'ESCUDO ALIADO', 32, 'Da escudo al compañero.'),
+        [h('aliado', 'E', 'ESCUDO ALIADO', 32, 'Da escudo al compañero; a solas, a ti.'),
          h('muro', 'E', 'MURO', 32, 'Pared que hace retroceder fantasmas.'),
          h('relevo', 'E', 'RELEVO', 26, 'Teletransporta al compañero cercano.'),
          h('faro', 'E', 'FARO', 30, 'Reduce la recarga de la R de un aliado.'),
@@ -3379,7 +3380,7 @@
       estela: "8 S CORRIENDO A X1,25 Y DEJANDO UN RASTRO · LOS COMPAÑEROS QUE LO PISAN VAN A X1,2 MIENTRAS DURE",
       puente: "ABRE UN PASO EN EL MURO QUE TIENES DELANTE (HASTA 4 CASILLAS DE GROSOR) DURANTE 8 S · LO CRUZA EL EQUIPO, LOS FANTASMAS NO",
       cadena: "TE ENLAZA 6 S AL COMPAÑERO MÁS CERCANO: LO QUE PUNTÚE CUALQUIERA DE LOS DOS VALE DOBLE · AGUANTA UN GOLPE A CUALQUIERA DE LOS DOS",
-      aliado: "ESCUDO DE UN GOLPE (8 S) AL COMPAÑERO VIVO MÁS CERCANO · MANTÉN 2 S: ESCUDO A TODO EL EQUIPO, TÚ INCLUIDO, ESTÉN DONDE ESTÉN",
+      aliado: "ESCUDO DE UN GOLPE (8 S) AL COMPAÑERO VIVO MÁS CERCANO · MANTÉN 2 S: ESCUDO A TODO EL EQUIPO, TÚ INCLUIDO, ESTÉN DONDE ESTÉN · A SOLAS, PARA TI AL PULSAR",
       muro: "PARED 10 S EN LA CASILLA DE DETRÁS DE TI: LOS FANTASMAS NO PASAN Y LOS QUE LLEGAN SALEN EMPUJADOS · EL EQUIPO LA ATRAVIESA",
       relevo: "TRAE AL INSTANTE A TU POSICIÓN AL COMPAÑERO VIVO MÁS CERCANO, SI ESTÁ A 6 CASILLAS O MENOS",
       faro: "FARO EN TU CASILLA DURANTE 6 S: EL PRIMER COMPAÑERO QUE LO PISE VE LA RECARGA DE SU R REDUCIDA A LA MITAD",

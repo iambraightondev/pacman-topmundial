@@ -1423,6 +1423,9 @@
      * exacto que la repetición puede volver a poner en el mismo sitio. */
     mantiene: function (G, idx, k) {
       var id = this.idDe(G, idx, k);
+      /* A solas el ESCUDO ALIADO no tiene versión larga: las dos son un
+       * escudo para él (ver aliado), así que sale al apretar, sin esperar */
+      if (id === 'aliado' && this.aSolas(G)) return 0;
       return (H.MANTENER && H.MANTENER.hasOwnProperty(id)) ? H.MANTENER[id] : 0;
     },
 
@@ -3479,8 +3482,8 @@
       return true;
     },
 
-    /* E — ESCUDO ALIADO: al compañero vivo más cercano. Sin compañeros, no
-     * sale ni gasta. */
+    /* E — ESCUDO ALIADO: al compañero vivo más cercano. En equipo, sin
+     * compañeros vivos no sale ni gasta. */
     aliadoDe: function (G, idx) {
       var p = G.pacs[idx], mejor = -1, mejorD = Infinity;
       if (!p) return -1;
@@ -3494,14 +3497,26 @@
       return mejor;
     },
 
+    /* ¿Juega sin nadie más? (SUPERVIVENCIA no: allí cada uno va por su
+     * cuenta y tiene sus propias reglas, ver this.sv) */
+    aSolas: function (G) {
+      return !this.sv && G.pacs.length === 1;
+    },
+
+    /* A SOLAS, PARA ÉL (13 oct, Braighton). Hasta ahora a uno no salía —«que
+     * eche de menos a un compañero»— y solo se cubría manteniendo la tecla
+     * (el escudo a todo el equipo, que le incluye). Como a solas las dos
+     * formas son la misma, la E deja de mantenerse (ver mantiene) y sale al
+     * apretar. El suyo no cuenta para la MAESTRÍA, igual que en aliadoArea. */
     aliado: function (G, idx, soloVisual) {
-      var j = this.aliadoDe(G, idx);
+      var paraMi = this.aSolas(G);
+      var j = paraMi ? (this.vivo(G, idx) ? idx : -1) : this.aliadoDe(G, idx);
       if (j < 0) return false;
       sonDe(G, idx, 'playStealth');
       if (soloVisual) return true;
       var tAl = H.ALIADO_TICKS * this.x2(idx, 'aliado');
       this.marcarEscudo(j, tAl, idx, this.x2(idx, 'aliado'));
-      if (G.marca) G.marca(idx, 'apoyos');      // para su MAESTRÍA
+      if (G.marca && !paraMi) G.marca(idx, 'apoyos');      // para su MAESTRÍA
       var o = G.pacs[j];
       this.efecto('amparo', o.x, o.y, 24);
       G.hostEvt({ t: 'habEsc', w: j, n: tAl });
