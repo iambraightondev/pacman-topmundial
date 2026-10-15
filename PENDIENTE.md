@@ -7,7 +7,38 @@ meses) no tenga que reconstruir el razonamiento.
 Lo que YA está hecho vive en [`CHANGELOG.md`](CHANGELOG.md) (qué cambió, en
 cristiano) y en [`SPEC.md`](SPEC.md) (cómo funciona por dentro).
 
-Última puesta al día: **13 de octubre de 2026** (pm-v362, publicado y comprobado en producción: a solas, la E del Soporte le da el escudo a él de un toque). Lo anterior, del 11 oct (pm-v361): en party cada uno elige su salida; **el juego vive desde el 10 oct en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG.
+Última puesta al día: **15 de octubre de 2026** (pm-v364, publicado y comprobado en producción: el panel del RANGO ya no enseña PR de menos al abrir el juego, y ESTER sube a GALAXIAN II con 2 PR). Lo anterior, del 13 oct (pm-v362): a solas, la E del Soporte le da el escudo a él de un toque. Lo anterior, del 11 oct (pm-v361): en party cada uno elige su salida; **el juego vive desde el 10 oct en un proyecto de Supabase nuevo, en otra cuenta**; el viejo sigue restringido hasta el 30 oct y no se borra; ver CHANGELOG.
+
+> **SESIÓN DEL 15 OCT (pm-v363 y pm-v364), pedida por Braighton. Se retoma
+> en otra sesión.**
+>
+> **Lo que pasó.** ESTER vio de madrugada que le faltaban pocos PR para
+> GALAXIAN II y por la mañana su panel decía 673 y «faltan 27», mientras la
+> tabla del mismo panel la ponía en 693. No perdió nada: sus 111
+> clasificatorias de octubre están en la nube (`perfiles_auditoria`) y cada
+> una movió lo que tocaba. La causa: al abrir el juego, `Account.restore()`
+> deja la sesión con token y SIN nombre hasta leer el perfil, y sin nombre
+> `Rango` no aplica `CFG.AJUSTES_CUENTA` (a ella, +41 en septiembre = +20 de
+> semilla en octubre). Abierto en ese instante, el panel se pintaba sin ellos
+> y no se rehacía. Arreglo: el panel se rehace en `Account.onchange`
+> (prueba nueva que reproduce su pantalla). Lo de «le faltaban 4» no cuadra:
+> a las 12:10 am (Perú) la nube daba 686, le faltaban 14.
+>
+> **Ajuste a mano.** Braighton pidió dejarla en GALAXIAN II con 2 PR para
+> que no se sintiera afectada: `AJUSTES_CUENTA.ESTER.rango['2026-10'] = 9`
+> (693 → 702). Llevado también al servidor: `tienda-precios.sql` aplicado
+> y la función `cofres` desplegada (versión 2). No cobra monedas: GALAXIAN
+> ya la tenía desde el 9 oct.
+>
+> **▶ ABIERTO:**
+> 1. **El ESCUDO DE ASCENSO, propuesto y sin respuesta.** En la frontera de
+>    un escalón el listón sube (GALAXIAN III 75.000 → II 82.500) y una
+>    partida normal ya resta: ESTER subió a 702 el 9 oct y bajó en la
+>    siguiente. Propuesta: 3 partidas tras subir sin poder caer del escalón
+>    nuevo (los PR sí se restan). Con 702 puede volver a rebotar.
+> 2. **Otras pantallas con números ajustados** (maestría, monedas del rango)
+>    leen igual el nombre de la sesión: si alguna se queda pintada en el
+>    arranque, mismo remedio. Sin quejas todavía.
 
 > **SESIÓN DEL 13 OCT, las dos cosas pedidas por Braighton. Se retoma en
 > otra sesión.**

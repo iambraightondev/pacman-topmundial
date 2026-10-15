@@ -400,6 +400,12 @@ still carries an **older** `purga` cannot write `logros` at all (the trigger
 keeps the cloud's) until it signs in and adopts the cloud, so it cannot undo a
 cleanup. Lowering a counter for good is still done in code
 (`CFG.AJUSTES_CUENTA`), which every device applies when reading.
+Those adjustments are keyed by the account NAME, and `Account.restore()`
+brings the session back with a token but an empty `usuario` until the
+profile is read: anything that reads the rank in that window sees it without
+the adjustment. Since 15 Oct 2026 (pm-v363) the RANGO panel repaints on
+`Account.onchange`; any other screen that shows adjusted numbers must do the
+same.
 
 ### Each upload is summed once (`perfiles_sube`, 29 Sep 2026)
 
