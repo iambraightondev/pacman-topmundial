@@ -17,6 +17,12 @@ cada una movió lo que tocaba.
 - **El arreglo**: el panel del RANGO se rehace cuando la cuenta termina de
   llegar. Solo cambia lo que se ve; ningún contador se toca.
 
+Además, a petición de Braighton y para que no se sienta afectada, ESTER
+sube a GALAXIAN II con 2 PR: +9 en octubre (de 693 a 702), puesto en
+`CFG.AJUSTES_CUENTA` y llevado al servidor (saldo de la tienda y función de
+los cofres). GALAXIAN ya la había alcanzado el 9 oct: no cobra monedas nuevas
+(pm-v364).
+
 ## 2026-10-13 · Soporte a solas: el ESCUDO ALIADO es para él, de un toque (pm-v362)
 
 Pedido por Braighton. Jugando a solas, la E del Soporte no hacía nada al

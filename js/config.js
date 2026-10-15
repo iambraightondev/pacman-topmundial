@@ -1681,7 +1681,9 @@
        * más los 7 que tenía que haberle dado (85.150 en MELÓN I) */
       rango: { '2026-09': 33 }
     },
-    ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] }, rango: { '2026-09': 41 } },
+    /* 15 oct (Braighton): +9 en octubre, de 693 a 702 (GALAXIAN II con 2),
+     * por el susto del panel que le enseñaba 20 PR de menos (pm-v363) */
+    ESTER: { maestria: { asesino: [-800, -8], soporte: [1730, 8, 7] }, rango: { '2026-09': 41, '2026-10': 9 } },
     MAULIO: { maestria: { asesino: [-700, -7], tanque: [410, 5, 1], soporte: [200, 2] }, rango: { '2026-09': 3 } }
   };
 

@@ -18871,11 +18871,14 @@
         Ac.user = { id: 'id-prueba', usuario: '', avatar: 'pac' };   // como en restore()
         UI.buildRango();
         UI.showPanel('rango');
+        var Rg = window.PM.Rango, crudo = A.stats();
+        var sin = Rg.estadoDe(crudo, '2026-10').pr, con = Rg.estadoDe(Rg.ajustados(crudo, 'ESTER'), '2026-10').pr;
+        ok(con > sin, 'su cuenta lleva ajuste: ' + sin + ' -> ' + con);
         UI.refreshRango();
-        ok(UI.rangoState.textContent.indexOf('673 PR') === 0, 'sin nombre, sin ajuste: ' + UI.rangoState.textContent);
+        ok(UI.rangoState.textContent.indexOf(sin + ' PR') === 0, 'sin nombre, sin ajuste: ' + UI.rangoState.textContent);
         Ac.user.usuario = 'ESTER';                                    // llega el perfil
         Ac.changed();
-        ok(UI.rangoState.textContent.indexOf('693 PR') === 0, 'con él, lo de la tabla: ' + UI.rangoState.textContent);
+        ok(UI.rangoState.textContent.indexOf(con + ' PR') === 0, 'con él, lo de la tabla: ' + UI.rangoState.textContent);
       } finally {
         S.actual = act0; Ac.user = u0; Ac.token = t0; Ac.onchange = ch0;
         UI.showPanel('menu');

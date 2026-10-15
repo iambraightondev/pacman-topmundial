@@ -369,7 +369,8 @@ export const DATOS = {
     "version": 4,
     "ajustes": {
       "ESTER": {
-        "2026-09": 41
+        "2026-09": 41,
+        "2026-10": 9
       },
       "IAMBRAIGHTON": {
         "2026-09": 33
