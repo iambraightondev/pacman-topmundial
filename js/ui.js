@@ -11071,6 +11071,14 @@
         if (self.els.friends && self.els.friends.style.display !== 'none') {
           self.refreshFriends();
         }
+        /* EL RANGO, otra vez (15 oct): al abrir el juego la sesión vuelve
+         * sin nombre hasta que llega el perfil, y sin nombre no se aplican
+         * los ajustes de la cuenta (CFG.AJUSTES_CUENTA). Abierto en ese
+         * momento, el panel se quedaba con 20 PR de menos (ESTER: 673 en
+         * vez de 693) mientras la tabla, que llega después, decía lo bueno. */
+        if (self.els.rango && self.els.rango.style.display !== 'none') {
+          self.refreshRango();
+        }
         // quién está conectado va con la cuenta: se une o se sale con ella
         if (window.PM.Conectados) window.PM.Conectados.arrancar();
         // PRIMEROS PASOS: entrar es una misión, y lo de la nube puede cumplir otras

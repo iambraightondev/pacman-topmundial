@@ -2,6 +2,21 @@
 
 Juego en producción: <https://pacman-topmundial.vercel.app>
 
+## 2026-10-15 · El panel del RANGO ya no se queda con PR de menos (pm-v363)
+
+ESTER vio de madrugada «faltan pocos para GALAXIAN II» y por la mañana su
+panel decía 673 PR y «faltan 27», mientras la tabla del mismo panel la ponía
+en 693. No perdió nada: sus 111 clasificatorias de octubre están en la nube y
+cada una movió lo que tocaba.
+
+- **La causa**: al abrir el juego, la sesión vuelve primero sin nombre y el
+  nombre llega con el perfil, un instante después. Sin nombre no se aplican
+  los ajustes de la cuenta (a ella, los +41 PR de septiembre, que le dan +20
+  de semilla en octubre). Abierto en ese instante, el panel se pintaba sin
+  ellos y no se volvía a pintar.
+- **El arreglo**: el panel del RANGO se rehace cuando la cuenta termina de
+  llegar. Solo cambia lo que se ve; ningún contador se toca.
+
 ## 2026-10-13 · Soporte a solas: el ESCUDO ALIADO es para él, de un toque (pm-v362)
 
 Pedido por Braighton. Jugando a solas, la E del Soporte no hacía nada al

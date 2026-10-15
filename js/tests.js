@@ -18855,6 +18855,34 @@
     ok(UI.rangoName.textContent.length > 0, 'y tu rango (o que aún no lo tienes)');
   });
 
+  /* 15 oct: ESTER abrió el RANGO mientras su sesión volvía (con token y aún
+   * sin nombre) y el panel se quedó en 673 PR sin el ajuste de septiembre de
+   * su cuenta; la tabla, que llega después, decía 693. */
+  test('RANGO: el panel se rehace cuando llega el nombre de la cuenta', function () {
+    var UI = window.PM.UI, Ac = window.PM.Account, S = window.PM.Season;
+    var u0 = Ac.user, t0 = Ac.token, act0 = S.actual, ch0 = Ac.onchange;
+    conContadores(function (A) {
+      try {
+        S.actual = function () { return '2026-10'; };
+        A.merge({ 'rc4_2026-09': 39, 'rt4_2026-09': 196212, 'rg4_2026-09': 178, 'rl4_2026-09': 128,
+                  'rm4_2026-09': 9, 'rc4_2026-10': 111, 'rg4_2026-10': 675, 'rl4_2026-10': 236,
+                  'ru4_2026-10': 146, 'rm4_2026-10': 20 });
+        Ac.token = 'token-de-prueba';
+        Ac.user = { id: 'id-prueba', usuario: '', avatar: 'pac' };   // como en restore()
+        UI.buildRango();
+        UI.showPanel('rango');
+        UI.refreshRango();
+        ok(UI.rangoState.textContent.indexOf('673 PR') === 0, 'sin nombre, sin ajuste: ' + UI.rangoState.textContent);
+        Ac.user.usuario = 'ESTER';                                    // llega el perfil
+        Ac.changed();
+        ok(UI.rangoState.textContent.indexOf('693 PR') === 0, 'con él, lo de la tabla: ' + UI.rangoState.textContent);
+      } finally {
+        S.actual = act0; Ac.user = u0; Ac.token = t0; Ac.onchange = ch0;
+        UI.showPanel('menu');
+      }
+    });
+  });
+
   test('RANGO: en CLASIFICATORIA la pausa no deja guardar; salir cuenta', function () {
     var UI = window.PM.UI;
     try {
